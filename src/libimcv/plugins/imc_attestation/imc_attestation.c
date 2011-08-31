@@ -282,7 +282,19 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				
 				case TCG_PTS_GET_AIK:
 				{
-					/* TODO: Implement AIK retrieve */
+					chunk_t aik;
+					bool is_naked_key;
+
+					if (!pts->get_aik(pts, &aik, &is_naked_key))
+					{
+						DBG1(DBG_IMC,"Obtaining AIK Certificate failed");
+						break;
+					}
+					
+					/* Send AIK attribute */ 
+					attr_to_send = tcg_pts_attr_aik_create(is_naked_key, aik);
+					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
+					attr_list->insert_last(attr_list,attr_to_send);
 					break;
 				}
 				
@@ -309,9 +321,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					request_id = attr_cast->get_request_id(attr_cast);
 					delimiter = attr_cast->get_delimiter(attr_cast);
 					path = attr_cast->get_file_path(attr_cast);
-					
-					DBG3(DBG_IMC,"requested %s to be measured: %s", 
-					     (directory_flag)? "directory":"file", path.ptr);
+					path = chunk_clone(path);
+
+					DBG3(DBG_IMC,"requested %s to be measured: %B", 
+					     (directory_flag)? "directory":"file", &path);
 					
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
@@ -342,8 +355,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							DBG1(DBG_IMC, "Hashing the given file has failed");
 							return TNC_RESULT_FATAL;
 						}
-						attr_file_meas->add_file_meas(attr_file_meas, file_hash, chunk_clone(path));
-												
+						attr_file_meas->add_file_meas(attr_file_meas, file_hash, path);
 					}
 					else
 					{

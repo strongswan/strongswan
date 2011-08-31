@@ -41,7 +41,7 @@
 #define REQURL		CAURL "api/pca/level%d?ResponseFormat=Binary"
 
 /* TPM has EK Certificate */
-/* #define REALEK */
+#define REALEK		FALSE
 
 typedef struct private_pts_t private_pts_t;
 
@@ -176,7 +176,7 @@ METHOD(pts_t, set_tpm_version_info, void,
  * Create a fake endorsement key cert using system's actual EK 
  */
 
-static bool makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCertLen, BYTE **pCert)
+static TSS_RESULT makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCertLen, BYTE **pCert)
 {
 	TSS_RESULT	result;
 	TSS_HKEY	hPubek;
@@ -186,18 +186,21 @@ static bool makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCertLen, B
 	result = Tspi_TPM_GetPubEndorsementKey (hTPM, TRUE, NULL, &hPubek);
 	if (result != TSS_SUCCESS)
 	{
-		goto err;
+		DBG1(DBG_IMC, "Error in: Tspi_TPM_GetPubEndorsementKey\n");
+		return result;
 	}
 	result = Tspi_GetAttribData (hPubek, TSS_TSPATTRIB_RSAKEY_INFO,
 		TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, &modulusLen, &modulus);
 	Tspi_Context_CloseObject (hContext, hPubek);
 	if (result != TSS_SUCCESS)
 	{
-		goto err;
+		DBG1(DBG_IMC, "Error in: Tspi_Context_CloseObject\n");
+		return result;
 	}
 	if (modulusLen != 256) {
+		DBG1(DBG_IMC, "Tspi_GetAttribData modulusLen != 256\n");
 		Tspi_Context_FreeMemory (hContext, modulus);
-		goto err;
+		return result;
 	}
 	*pCertLen = sizeof(fakeEKCert);
 	*pCert = malloc (*pCertLen);
@@ -205,11 +208,7 @@ static bool makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCertLen, B
 	memcpy (*pCert + 0xc6, modulus, modulusLen);
 	Tspi_Context_FreeMemory (hContext, modulus);
 
-	return TRUE;
-
-err:
-	DBG1(DBG_TNC, "TPM not available: tss error 0x%x", result);
-	return FALSE;
+	return TSS_SUCCESS;
 }
 
 /** 
@@ -226,7 +225,7 @@ static X509* readPCAcert (int level)
 	int		result;
 
 	hCurl = curl_easy_init ();
-	DBG1(DBG_IMC, url, CERTURL, level);
+	sprintf (url, CERTURL, level);
 	curl_easy_setopt (hCurl, CURLOPT_URL, url);
 	curl_easy_setopt(hCurl, CURLOPT_WRITEDATA, (BYTE **)f_tmp);
 
@@ -248,7 +247,7 @@ static X509* readPCAcert (int level)
  * Obtain an AIK, SRK and TPM Owner secret has to be both set to well known secret
  * of 20 bytes of zero
  */
-static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
+static bool obtain_aik(private_pts_t *this)
 {
 	TSS_HCONTEXT	hContext;
 	TSS_HTPM	hTPM;
@@ -278,24 +277,24 @@ static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
 	UINT32		asymBufSize;
 	UINT32		symBufSize;
 	UINT32		credBufSize;
-	BYTE		*blob;
-	UINT32		blobLen;
-#ifdef REALEK
-	const int	level = 1;
-#else
-	const int	level = 0;
+	static int	level = 0;
 	BYTE		*ekCert = NULL;
 	UINT32		ekCertLen;
-#endif
 	char		url[128];
 	int		result;
 	
-	*aik = chunk_empty;
-	*is_naked_key = false;
+	this->aik = chunk_empty;
+	this->is_naked_key = false;
 	
 	curl_global_init (CURL_GLOBAL_ALL);
+	
 	DBG3(DBG_IMC, "Retrieving PCA certificate...\n");
-
+	
+	/* TPM has EK Certificate */
+	if(REALEK)
+	{
+		level = 1;
+	}
 	x509 = readPCAcert (level);
 	if (x509 == NULL) {
 		DBG1(DBG_IMC, "Error reading PCA key\n");
@@ -385,20 +384,21 @@ static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
 		goto err;
 	}
 
-#ifndef REALEK
-	result = makeEKCert(hContext, hTPM, &ekCertLen, &ekCert);
-	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on makeEKCert\n", result);
-		goto err;
+	if(!REALEK)
+	{
+		result = makeEKCert(hContext, hTPM, &ekCertLen, &ekCert);
+		if (result != TSS_SUCCESS) {
+			DBG1(DBG_IMC, "Error 0x%x on makeEKCert\n", result);
+			goto err;
+		}
+		
+		result = Tspi_SetAttribData(hTPM, TSS_TSPATTRIB_TPM_CREDENTIAL,
+					    TSS_TPMATTRIB_EKCERT, ekCertLen, ekCert);
+		if (result != TSS_SUCCESS) {
+			DBG1(DBG_IMC, "Error 0x%x on SetAttribData for EKCert\n", result);
+			goto err;
+		}
 	}
-
-	result = Tspi_SetAttribData(hTPM, TSS_TSPATTRIB_TPM_CREDENTIAL,
-			TSS_TPMATTRIB_EKCERT, ekCertLen, ekCert);
-	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on SetAttribData for EKCert\n", result);
-		goto err;
-	}
-#endif
 
 	DBG3(DBG_IMC, "Generating attestation identity key...\n");
 	result = Tspi_TPM_CollateIdentityRequest(hTPM, hSRK, hPCAKey, 0,
@@ -415,7 +415,7 @@ static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
 	/* Send to server */
 	f_tmp = tmpfile();
 	hCurl = curl_easy_init ();
-	DBG3(DBG_IMC, "URL: %s\nRequest URL: %s\n Certificate Level: %d", url, REQURL, level);
+	sprintf (url, REQURL, level);
 	curl_easy_setopt (hCurl, CURLOPT_URL, url);
 	curl_easy_setopt (hCurl, CURLOPT_POSTFIELDS, (void *)rgbTCPAIdentityReq);
 	curl_easy_setopt (hCurl, CURLOPT_POSTFIELDSIZE, ulTCPAIdentityReqLength);
@@ -468,19 +468,7 @@ static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
 		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_ActivateIdentity\n", result);
 		goto err;
 	}
-
-	/* Output key blob */
-	result = Tspi_GetAttribData (hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-		TSS_TSPATTRIB_KEYBLOB_BLOB, &blobLen, &blob);
-	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetAttribData for key blob\n", result);
-		goto err;
-	}
-
-	/* TODO: Do something with blob variable */
-
-	Tspi_Context_FreeMemory (hContext, blob);
-
+	
 	/* Output credential in PEM format */
 	tbuf = credBuf;
 	x509 = d2i_X509(NULL, (const BYTE **)&tbuf, credBufSize);
@@ -492,9 +480,34 @@ static bool obtain_aik(chunk_t *aik, bool *is_naked_key)
 		DBG1(DBG_IMC, "Note, not all data from privacy ca was parsed correctly\n");
 	}
 	
-	/* TODO: Do something with X509 object */
-	X509_free (x509);
+	if(x509)
+	{
+		BUF_MEM *mem_buf;
+		BIO* bp;
+		u_int32_t len;
+		
+		bp = BIO_new(BIO_s_mem());
+		PEM_write_bio_X509(bp, x509);
+		
+		len = BIO_get_mem_data(bp, &mem_buf);
+		char tmp[len+1];
+		
+		memcpy(tmp, mem_buf, len);
+		tmp[len] = '\0';
 
+		DBG3(DBG_IMC,"X509 Certificate (PEM format):\n%s\n", tmp);
+		this->aik = chunk_create(tmp, len + 1);
+		this->aik = chunk_clone(this->aik);
+		
+		X509_free (x509);
+		
+	}
+	else
+	{
+		DBG1(DBG_IMC, "Neither AIK Key blob, nor AIK Certificate is available\n");
+		goto err;
+	}
+	
 	DBG3(DBG_IMC, "Succeeded at obtaining AIK Certificate from Privacy CA!\n");
 	return TRUE;
 	
@@ -505,7 +518,7 @@ err:
 METHOD(pts_t, get_aik, bool,
 	private_pts_t *this, chunk_t *aik, bool *is_naked_key)
 {
-	if(obtain_aik(aik, is_naked_key) != TSS_SUCCESS )
+	if(obtain_aik(this) != TRUE )
 	{
 		return FALSE;
 	}
@@ -527,6 +540,7 @@ METHOD(pts_t, hash_file, bool,
 	private_pts_t *this, chunk_t path, chunk_t *out)
 {
 	char buffer[PTS_BUF_SIZE];
+	chunk_t path_chunk;
 	FILE *file;
 	int bytes_read;
 	hasher_t *hasher;
@@ -540,8 +554,9 @@ METHOD(pts_t, hash_file, bool,
 		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
 		return false;
 	}
-
-	file = fopen(path.ptr, "rb");
+	
+	path_chunk = chunk_create_clone(malloc(path.len), path);
+	file = fopen(path_chunk.ptr, "rb");
 	if (!file)
 	{
 		DBG1(DBG_IMC,"file '%s' can not be opened, %s", path.ptr, strerror(errno));
@@ -573,13 +588,15 @@ METHOD(pts_t, hash_directory, bool,
 {
 	DIR *dir;
 	struct dirent *ent;
+	chunk_t path_chunk;
 	file_meas_entry_t *entry;
 	linked_list_t *list = *file_measurements;
 	
 	list = linked_list_create();
 	entry = malloc_thing(file_meas_entry_t);
 	
-	dir = opendir(path.ptr);
+	path_chunk = chunk_create_clone(malloc(path.len), path);
+	dir = opendir(path_chunk.ptr);
 	if (dir == NULL)
 	{
 		DBG1(DBG_IMC, "opening directory '%s' failed: %s", path.ptr, strerror(errno));

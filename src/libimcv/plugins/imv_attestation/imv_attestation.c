@@ -221,15 +221,15 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			{
 				pa_tnc_attr_t *attr_get_tpm_version, *attr_get_aik;
 				
+				/* Send Get TPM Version attribute */
 				attr_get_tpm_version = tcg_pts_attr_get_tpm_version_info_create();
 				attr_get_tpm_version->set_noskip_flag(attr_get_tpm_version, TRUE);
 				msg->add_attribute(msg, attr_get_tpm_version);
 				
 				/* Send Get AIK attribute */
-				/* TODO: Uncomment when the retrieving of AIK on IMC side is implemented */
-				//attr_get_aik = tcg_pts_attr_get_aik_create();
-				//attr_get_aik->set_noskip_flag(attr_get_aik, TRUE);
-				//msg->add_attribute(msg, attr_get_aik);
+				attr_get_aik = tcg_pts_attr_get_aik_create();
+				attr_get_aik->set_noskip_flag(attr_get_aik, TRUE);
+				msg->add_attribute(msg, attr_get_aik);
 			}
 
 			/* Send Request File Measurement attribute */
@@ -255,6 +255,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				DBG2(DBG_IMV, "id = %d, type = %d, path = '%s'", id, type, path);
 				
 				is_directory = (type != 0) ? true : false;
+				path[strlen(path)] = '\0';
 				path_chunk = chunk_create(path, strlen(path));
 				path_chunk = chunk_clone(path_chunk);
 				
@@ -406,7 +407,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				}
 				case TCG_PTS_AIK:
 				{
-					/* TODO: Save the AIK key and certificate */
+					tcg_pts_attr_aik_t *attr_cast;
+					chunk_t aik;
+					bool is_naked_key;
+					
+					attr_cast = (tcg_pts_attr_aik_t*)attr;
+					aik = attr_cast->get_aik(attr_cast);
+					is_naked_key = attr_cast->get_naked_flag(attr_cast);
+					pts->set_aik(pts, aik, is_naked_key);
+					
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					break;
@@ -457,7 +466,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 							DBG3(DBG_IMV, "Expected measurement: %B", &db_measurement);
 							
 							/* Compare the received hash measurement with one saved in db */
-							if(chunk_compare(db_measurement, meas_entry->measurement) == 0)
+							if(chunk_equals(db_measurement, meas_entry->measurement))
 							{
 								DBG1(DBG_IMV, "Measurement comparison succeeded for: %s", meas_entry->file_name.ptr);
 							}
