@@ -236,15 +236,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
 
-					if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
-					{
-						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
-					}
-					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
+					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
 						(selected_algorithm & PTS_MEAS_ALGO_SHA384))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
+					}
+					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
+						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
+					{
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
 					}
 
 					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
@@ -316,13 +316,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					/* Send File Measurement attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					meas_len = HASH_SIZE_SHA1;
-					if(selected_algorithm & PTS_MEAS_ALGO_SHA256) 
-					{
-						meas_len = HASH_SIZE_SHA256;
-					}
-					else if (selected_algorithm & PTS_MEAS_ALGO_SHA384)
+					if(selected_algorithm & PTS_MEAS_ALGO_SHA384) 
 					{
 						meas_len = HASH_SIZE_SHA384;
+					}
+					else if (selected_algorithm & PTS_MEAS_ALGO_SHA256)
+					{
+						meas_len = HASH_SIZE_SHA256;
 					}
 
 					/** 
