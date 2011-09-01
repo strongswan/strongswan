@@ -466,10 +466,12 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 
 /**
  * get the first non-virtual ip address on the given interface.
+ * if a candidate address is given, we first search for that address and if not
+ * found return the address as above.
  * returned host is a clone, has to be freed by caller.
  */
 static host_t *get_interface_address(private_kernel_netlink_net_t *this,
-									 int ifindex, int family)
+									 int ifindex, int family, host_t *candidate)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
@@ -485,10 +487,23 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 			addrs = iface->addrs->create_enumerator(iface->addrs);
 			while (addrs->enumerate(addrs, &addr))
 			{
-				if (!addr->virtual && addr->ip->get_family(addr->ip) == family)
+				if (addr->virtual)
 				{
-					ip = addr->ip->clone(addr->ip);
-					break;
+					continue;
+				}
+				if (addr->ip->get_family(addr->ip) == family)
+				{
+					if (!candidate || candidate->ip_equals(candidate, addr->ip))
+					{	/* stop at the first address if we don't search for a
+						 * candidate or if the candidate matches */
+						ip = addr->ip;
+						break;
+					}
+					else if (!ip)
+					{	/* store the first address as fallback if candidate is
+						 * not found */
+						ip = addr->ip;
+					}
 				}
 			}
 			addrs->destroy(addrs);
@@ -496,6 +511,10 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 		}
 	}
 	ifaces->destroy(ifaces);
+	if (ip)
+	{
+		ip = ip->clone(ip);
+	}
 	this->mutex->unlock(this->mutex);
 	return ip;
 }
@@ -815,7 +834,7 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	}
 	if (!host && rta_oif)
 	{
-		host = get_interface_address(this, rta_oif, msg->rtm_family);
+		host = get_interface_address(this, rta_oif, msg->rtm_family, NULL);
 	}
 	if (host)
 	{
@@ -1161,6 +1180,13 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	for (current = out; NLMSG_OK(current, len);
 		 current = NLMSG_NEXT(current, len))
 	{
+		if (!nexthop && candidate && src && src->ip_equals(src, candidate))
+		{	/* if we found a route that includes our preferred source address
+			 * we stop looking for any other routes. this is mainly for the
+			 * DUMP cases as there the RTA_PREFSRC attribute has no effect */
+			break;
+		}
+
 		switch (current->nlmsg_type)
 		{
 			case NLMSG_DONE:
@@ -1271,7 +1297,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				if (rta_oif)
 				{	/* no src or gtw, but an interface. Get address from it. */
 					new_src = get_interface_address(this, rta_oif,
-													msg->rtm_family);
+													msg->rtm_family, candidate);
 					if (new_src)
 					{
 						DESTROY_IF(src);
