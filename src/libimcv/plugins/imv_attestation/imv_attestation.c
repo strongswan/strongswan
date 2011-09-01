@@ -168,11 +168,12 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
 	pa_tnc_msg_t *msg;
-	TNC_Result result;
+	pa_tnc_attr_t *attr;
 	pts_t *pts;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
+	TNC_Result result;
 	
 	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
 	{
@@ -190,91 +191,89 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	{
 		case IMV_ATTESTATION_STATE_INIT:
 		{
-			pa_tnc_attr_t *attr_req_proto_cap, *attr_meas_algo;
 			pts_proto_caps_flag_t flags;
 
 			/* Send Request Protocol Capabilities attribute */
 			flags = pts->get_proto_caps(pts);
-			attr_req_proto_cap = tcg_pts_attr_proto_caps_create(flags, TRUE);
-			attr_req_proto_cap->set_noskip_flag(attr_req_proto_cap, TRUE);
-			msg->add_attribute(msg, attr_req_proto_cap);
+			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 			
 			/* Send Measurement Algorithms attribute */
-			attr_meas_algo = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
-			attr_meas_algo->set_noskip_flag(attr_meas_algo, TRUE);
-			msg->add_attribute(msg, attr_meas_algo);
+			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 			break;
 		}
 
 		case IMV_ATTESTATION_STATE_MEAS:
 		{
-			pa_tnc_attr_t *attr_req_file_meas;
 			enumerator_t *enumerator;
-			pts_meas_algorithms_t communicated_caps;
 			u_int32_t delimiter = SOLIDUS_UTF;
+			char *platform_info, *pathname;
 			int id, type;
-			char *product, *path;
-			
-			/* Send Get TPM Version Information attribute */
-			communicated_caps = pts->get_proto_caps(pts);
-			if (communicated_caps & PTS_PROTO_CAPS_T)
+			bool is_directory;
+
+			/* Does the PTS-IMC have TPM support? */
+			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
 			{
-				pa_tnc_attr_t *attr_get_tpm_version, *attr_get_aik;
-				
 				/* Send Get TPM Version attribute */
-				attr_get_tpm_version = tcg_pts_attr_get_tpm_version_info_create();
-				attr_get_tpm_version->set_noskip_flag(attr_get_tpm_version, TRUE);
-				msg->add_attribute(msg, attr_get_tpm_version);
+				attr = tcg_pts_attr_get_tpm_version_info_create();
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
 				
 				/* Send Get AIK attribute */
-				attr_get_aik = tcg_pts_attr_get_aik_create();
-				attr_get_aik->set_noskip_flag(attr_get_aik, TRUE);
-				msg->add_attribute(msg, attr_get_aik);
+				attr = tcg_pts_attr_get_aik_create();
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
 			}
 
-			/* Send Request File Measurement attribute */
-			/** 
-			 * Add files to measure to PTS Request File Measurement attribute
-			 */
-			product = "Ubuntu 11.4 i686";
+			/* Get Platform and OS of the PTS-IMC */
+			platform_info = pts->get_platform_info(pts);
 
-			if (!pts_db)
+			if (!pts_db || !platform_info)
 			{
+				DBG1(DBG_IMV, "%s%s%s not available",
+					(pts_db) ? "" : "pts database",
+					(!pts_db && !platform_info) ? "and" : "",
+					(platform_info) ? "" : "platform info");
 				break;
 			}
-			enumerator = pts_db->create_file_enumerator(pts_db, product);
+			DBG1(DBG_IMV, "platform is '%s'", platform_info);
+
+			/* Send Request File Measurement attribute */
+			enumerator = pts_db->create_file_enumerator(pts_db, platform_info);
 			if (!enumerator)
 			{
 				break;
 			}
-			while (enumerator->enumerate(enumerator, &id, &type, &path))
+			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
-				bool is_directory;
-				
-				DBG2(DBG_IMV, "id = %d, type = %d, path = '%s'", id, type, path);
-				
-				is_directory = (type != 0) ? TRUE : FALSE;
-				attr_req_file_meas = tcg_pts_attr_req_file_meas_create(is_directory, 
-							id, delimiter, path);
-				attr_req_file_meas->set_noskip_flag(attr_req_file_meas, TRUE);
-				msg->add_attribute(msg, attr_req_file_meas);
+				is_directory = (type != 0);				
+				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
+					 id, is_directory ? "directory" : "file", pathname);
+				attr = tcg_pts_attr_req_file_meas_create(is_directory, id,
+													delimiter, pathname);
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
 			}
 			enumerator->destroy(enumerator);
-
 			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		case IMV_ATTESTATION_STATE_IML:
-			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"", handshake_state);
+			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"",
+				 handshake_state);
 			return TNC_RESULT_FATAL;
 		default:
-			DBG1(DBG_IMV, "Attestation IMV is in unknown state: \"%s\"", handshake_state);
+			DBG1(DBG_IMV, "Attestation IMV is in unknown state: \"%s\"",
+				 handshake_state);
 			return TNC_RESULT_FATAL;
 	}
 	
 	msg->build(msg);
 	result = imv_attestation->send_message(imv_attestation, connection_id,
-							msg->get_encoding(msg));	
+										   msg->get_encoding(msg));	
 	msg->destroy(msg);
 	
 	return result;
@@ -297,7 +296,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
-	bool comparisons_succeeded = TRUE;
+	bool measurement_error = FALSE;
 
 	if (!imv_attestation)
 	{
@@ -359,7 +358,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		}
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
 		{
-			switch(attr->get_type(attr))
+			switch (attr->get_type(attr))
 			{
 				case TCG_PTS_PROTO_CAPS:
 				{
@@ -424,63 +423,62 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				case TCG_PTS_FILE_MEAS:
 				{
 					tcg_pts_attr_file_meas_t *attr_cast;
-					u_int64_t num_of_files;
 					u_int16_t request_id;
-					u_int16_t meas_len;
-					enumerator_t *meas_enumerator;
-					file_meas_entry_t *meas_entry;
-					
-					attr_cast = (tcg_pts_attr_file_meas_t*)attr;
-					num_of_files = attr_cast->get_number_of_files(attr_cast);
-					request_id = attr_cast->get_request_id(attr_cast);
-					meas_len = attr_cast->get_meas_len(attr_cast);
-					
-					meas_enumerator = attr_cast->create_file_meas_enumerator(attr_cast);
-					while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
+					pts_meas_algorithms_t algo;
+					pts_file_meas_t *measurements;
+					chunk_t measurement;
+					char *platform_info, *filename;
+					enumerator_t *e_meas;
+		
+					platform_info = pts->get_platform_info(pts);
+					if (!pts_db || !platform_info)
 					{
-						enumerator_t *hash_enumerator;
-						pts_meas_algorithms_t selected_algorithm;
-						char *product = "Ubuntu 11.4 i686";
-						chunk_t db_measurement;
-						
-						DBG3(DBG_IMV, "Received measurement: %B", &meas_entry->measurement);
-						
-						if (!pts_db)
-						{
-							break;
-						}
-						selected_algorithm = pts->get_meas_algorithm(pts);
-						
-						hash_enumerator = pts_db->create_meas_enumerator(pts_db, product, request_id, selected_algorithm);
-						if (!hash_enumerator)
-						{
-							break;
-						}
-						while (hash_enumerator->enumerate(hash_enumerator, &db_measurement))
-						{
-							DBG3(DBG_IMV, "Expected measurement: %B", &db_measurement);
-							
-							/* Compare the received hash measurement with one saved in db */
-							if(chunk_equals(db_measurement, meas_entry->measurement))
-							{
-								DBG1(DBG_IMV, "Measurement comparison succeeded for: %s",
-									 meas_entry->filename);
-							}
-							else
-							{
-								DBG1(DBG_IMV, "Measurement comparison failed for: %s",
-									 meas_entry->filename);
-								comparisons_succeeded = FALSE;
-							}
-						}
-						hash_enumerator->destroy(hash_enumerator);
-						
+						break;
 					}
-					
-					meas_enumerator->destroy(meas_enumerator);
+
+					attr_cast = (tcg_pts_attr_file_meas_t*)attr;
+					measurements = attr_cast->get_measurements(attr_cast);
+					algo = pts->get_meas_algorithm(pts);
+					request_id = measurements->get_request_id(measurements);
+
+					DBG1(DBG_IMV, "file measurement request %d:", request_id);
+
+					e_meas = measurements->create_enumerator(measurements);
+					while (e_meas->enumerate(e_meas, &filename, &measurement))
+					{
+						enumerator_t *e;
+						chunk_t db_measurement;
+
+						e = pts_db->create_meas_enumerator(pts_db,
+										platform_info, request_id, algo);
+						if (!e)
+						{
+							DBG1(DBG_IMV, "  database enumerator failed");
+							break;
+						}
+						if (!e->enumerate(e, &db_measurement))
+						{
+							DBG1(DBG_IMV, "  measurement for '%s' not found"
+										  " in database", filename);
+							e->destroy(e);
+							break;
+						}
+						if (chunk_equals(db_measurement, measurement))
+						{
+							DBG2(DBG_IMV, "  %#B for '%s' is ok",
+								 &measurement, filename);
+						}
+						else
+						{
+							DBG1(DBG_IMV, " %#B for '%s' does not match %#B",
+								 &measurement, filename, &db_measurement);
+							measurement_error = TRUE;
+						}
+						e->destroy(e);
+					}
+					e_meas->destroy(e_meas); 
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
-					
 					break;
 				}
 				
@@ -526,22 +524,27 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
-		return imv_attestation->provide_recommendation(imv_attestation, connection_id);
+		return imv_attestation->provide_recommendation(imv_attestation,
+													   connection_id);
 	}
-	
-	
-	if(attestation_state->get_handshake_state(attestation_state) & IMV_ATTESTATION_STATE_END)
+
+	if (attestation_state->get_handshake_state(attestation_state) &
+		IMV_ATTESTATION_STATE_END)
 	{
-		(comparisons_succeeded) ? 
+		if (measurement_error)
+		{
 			state->set_recommendation(state,
-				TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-				TNC_IMV_EVALUATION_RESULT_COMPLIANT) :
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
+		}
+		else
+		{
 			state->set_recommendation(state,
-				 TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-				 TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
-								    
-		return imv_attestation->provide_recommendation(imv_attestation, connection_id);
-		
+								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+		} 
+		return imv_attestation->provide_recommendation(imv_attestation,
+													   connection_id);
 	}
 	
 	return send_message(connection_id);

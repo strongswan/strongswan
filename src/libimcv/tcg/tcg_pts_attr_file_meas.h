@@ -25,8 +25,8 @@ typedef struct tcg_pts_attr_file_meas_t tcg_pts_attr_file_meas_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-/* TODO: for struct file_meas_entry_t */
 #include "pts/pts.h"
+#include "pts/pts_file_meas.h"
 
 /**
  * Class implementing the TCG PTS File Measurement attribute
@@ -40,79 +40,20 @@ struct tcg_pts_attr_file_meas_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 		
 	/**
-	 * Get Number of Files included
+	 * Get PTS File Measurements
 	 *
-	 * @return					Number of Files included
+	 * @return					PTS File Measurements
 	 */
-	u_int64_t (*get_number_of_files)(tcg_pts_attr_file_meas_t *this);
+	pts_file_meas_t* (*get_measurements)(tcg_pts_attr_file_meas_t *this);
 	
-	/**
-	 * Set Number of Files included
-	 *
-	 * @param num_files			Number of Files included
-	 */
-	void (*set_number_of_files)(tcg_pts_attr_file_meas_t *this,
-						u_int64_t num_files);
-	
-	/**
-	 * Get Request ID
-	 *
-	 * @return					Request ID
-	 */
-	u_int16_t (*get_request_id)(tcg_pts_attr_file_meas_t *this);
-	
-	/**
-	 * Set Request ID
-	 *
-	 * @param request_id		Request ID
-	 */
-	void (*set_request_id)(tcg_pts_attr_file_meas_t *this,
-						u_int16_t request_id);
-		
-	/**
-	 * Get Measurement Length
-	 *
-	 * @return					Measurement Length
-	 */
-	u_int16_t (*get_meas_len)(tcg_pts_attr_file_meas_t *this);
-	
-	/**
-	 * Set Measurement Length 
-	 *
-	 * @param meas_len			Measurement Length
-	 */
-	void (*set_meas_len)(tcg_pts_attr_file_meas_t *this,
-						u_int16_t meas_len);
-	
-	 /**
-	 * Add a file measurement entry
-	 *
-	 * @param measurement		Measurement value
-	 * @param filename			Filename
-	 */
-	void (*add_file_meas)(tcg_pts_attr_file_meas_t *this, chunk_t measurement,
-						  char  *filename);
-
-	/**
-	 * Enumerates over all file measurements
-	 * Format:  chunk_t *measurement, chunk_t *file_name
-	 *
-	 * @return					enumerator
-	 */
-	enumerator_t* (*create_file_meas_enumerator)(tcg_pts_attr_file_meas_t *this);
 };
 
 /**
  * Creates an tcg_pts_attr_file_meas_t object
  * 
- * @param directory_flag		Directory Contents Flag
- * @param request_id			Request ID
- * @param delimiter				Delimiter Character
- * @param path					File Path
+ * @param measurements			PTS File Measurements
  */
-pa_tnc_attr_t* tcg_pts_attr_file_meas_create(u_int64_t number_of_files,
-											 u_int16_t request_id,
-											 u_int16_t meas_len);
+pa_tnc_attr_t* tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements);
 
 /**
  * Creates an tcg_pts_attr_file_meas_t object from received data

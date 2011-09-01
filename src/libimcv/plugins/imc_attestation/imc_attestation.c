@@ -292,9 +292,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					}
 					
 					/* Send AIK attribute */ 
-					attr_to_send = tcg_pts_attr_aik_create(is_naked_key, aik);
-					attr_to_send = (pa_tnc_attr_t*)attr_to_send;
-					attr_list->insert_last(attr_list,attr_to_send);
+					attr = tcg_pts_attr_aik_create(is_naked_key, aik);
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				
@@ -306,80 +305,29 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				case TCG_PTS_REQ_FILE_MEAS:
 				{
 					tcg_pts_attr_req_file_meas_t *attr_cast;
-					tcg_pts_attr_file_meas_t *attr_out;
 					char *pathname;
-					u_int16_t request_id, meas_len;
-					pts_meas_algorithms_t selected_algorithm;
-					chunk_t file_hash;
-					bool directory_flag;
-					linked_list_t *file_measurements;
+					u_int16_t request_id;
+					bool is_directory;
+					pts_file_meas_t *measurements;
 
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
-					directory_flag = attr_cast->get_directory_flag(attr_cast);
+					is_directory = attr_cast->get_directory_flag(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
 					pathname = attr_cast->get_pathname(attr_cast);
-					
-					DBG2(DBG_IMC, "%s to be measured: '%s'", 
-					     directory_flag ? "directory" : "file", pathname);
-					
-					/* Send File Measurement attribute */
-					selected_algorithm = pts->get_meas_algorithm(pts);
-					meas_len = HASH_SIZE_SHA1;
-					if(selected_algorithm & PTS_MEAS_ALGO_SHA384) 
-					{
-						meas_len = HASH_SIZE_SHA384;
-					}
-					else if (selected_algorithm & PTS_MEAS_ALGO_SHA256)
-					{
-						meas_len = HASH_SIZE_SHA256;
-					}
 
-					/** 
-					* Hash the file or directory and add them as attribute
-					*/
-					
-					attr = directory_flag ? 
-						tcg_pts_attr_file_meas_create(0, request_id, meas_len) :
-						tcg_pts_attr_file_meas_create(1, request_id, meas_len);
+					/* Do PTS File Measurements and send them to PTS-IMV */
+					DBG2(DBG_IMC, "measurement request %d for %s '%s'",
+						 request_id, is_directory ? "directory" : "file",
+						 pathname);
+					measurements = pts->do_measurements(pts, request_id,
+											pathname, is_directory);
+					if (!measurements)
+					{
+						/* TODO handle error codes from measurements */
+						return TNC_RESULT_FATAL;
+					}
+					attr = tcg_pts_attr_file_meas_create(measurements);
 					attr->set_noskip_flag(attr, TRUE);
-					attr_out = (tcg_pts_attr_file_meas_t*)attr;
-					
-					if (!directory_flag)
-					{
-						if (!pts->hash_file(pts, pathname, &file_hash))
-						{
-							DBG1(DBG_IMC, "Hashing the given file has failed");
-							return TNC_RESULT_FATAL;
-						}
-						attr_out->add_file_meas(attr_out, file_hash, pathname);
-					}
-					else
-					{
-						enumerator_t *meas_enumerator;
-						file_meas_entry_t *meas_entry;
-						u_int64_t num_of_files = 0 ;
-
-						if (!pts->hash_directory(pts, pathname, &file_measurements))
-						{
-							DBG1(DBG_IMC, "Hashing the files in a given directory has failed");
-							return TNC_RESULT_FATAL;
-						}
-						
-						meas_enumerator = file_measurements->create_enumerator(file_measurements);
-						while (meas_enumerator->enumerate(meas_enumerator, &meas_entry))
-						{
-							num_of_files++;
-							attr_out->add_file_meas(attr_out,
-													meas_entry->measurement,
-													meas_entry->filename);
-						}
-						
-						attr_out->set_number_of_files(attr_out, num_of_files);
-						meas_enumerator->destroy(meas_enumerator);
-						file_measurements->destroy(file_measurements);
-						
-					}
-					
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}

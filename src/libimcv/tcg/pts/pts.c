@@ -26,12 +26,11 @@
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
-#include <dirent.h>
+#include <sys/stat.h>
 #include <errno.h>
 
-#include "fake_ek_cert.h"
 
-#define PTS_BUF_SIZE	32768
+#define PTS_BUF_SIZE	4096
 
 /* Size of endorsement key in bytes */
 #define	EKSIZE		(2048/8)
@@ -65,6 +64,11 @@ struct private_pts_t {
 	 * PTS Measurement Algorithm
 	 */
 	pts_meas_algorithms_t algorithm;
+
+	/**
+	 * Platform and OS Info
+	 */
+	char *platform_info;
 
 	/**
 	 * Do we have an activated TPM
@@ -153,6 +157,19 @@ static void print_tpm_version_info(private_pts_t *this)
 	}
 }
 
+METHOD(pts_t, get_platform_info, char*,
+	private_pts_t *this)
+{
+	return this->platform_info;
+}
+
+METHOD(pts_t, set_platform_info, void,
+	private_pts_t *this, char *info)
+{
+	free(this->platform_info);
+	this->platform_info = strdup(info);
+}
+
 METHOD(pts_t, get_tpm_version_info, bool,
 	private_pts_t *this, chunk_t *info)
 {
@@ -186,7 +203,7 @@ static TSS_RESULT makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCert
 	result = Tspi_TPM_GetPubEndorsementKey (hTPM, TRUE, NULL, &hPubek);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_IMC, "Error in: Tspi_TPM_GetPubEndorsementKey\n");
+		DBG1(DBG_IMC, "Error in: Tspi_TPM_GetPubEndorsementKey");
 		return result;
 	}
 	result = Tspi_GetAttribData (hPubek, TSS_TSPATTRIB_RSAKEY_INFO,
@@ -194,18 +211,20 @@ static TSS_RESULT makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCert
 	Tspi_Context_CloseObject (hContext, hPubek);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_IMC, "Error in: Tspi_Context_CloseObject\n");
+		DBG1(DBG_IMC, "Error in: Tspi_Context_CloseObject");
 		return result;
 	}
 	if (modulusLen != 256) {
-		DBG1(DBG_IMC, "Tspi_GetAttribData modulusLen != 256\n");
+		DBG1(DBG_IMC, "Tspi_GetAttribData modulusLen != 256");
 		Tspi_Context_FreeMemory (hContext, modulus);
 		return result;
 	}
+	/* TODO define fakeEKCert
 	*pCertLen = sizeof(fakeEKCert);
 	*pCert = malloc (*pCertLen);
 	memcpy (*pCert, fakeEKCert, *pCertLen);
 	memcpy (*pCert + 0xc6, modulus, modulusLen);
+	*/
 	Tspi_Context_FreeMemory (hContext, modulus);
 
 	return TSS_SUCCESS;
@@ -230,7 +249,7 @@ static X509* readPCAcert (int level)
 	curl_easy_setopt(hCurl, CURLOPT_WRITEDATA, (BYTE **)f_tmp);
 
 	if ((result = curl_easy_perform(hCurl))) {
-		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d\n", result);
+		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d", result);
 		fclose(f_tmp);
 		return NULL;
 	}
@@ -288,7 +307,7 @@ static bool obtain_aik(private_pts_t *this)
 	
 	curl_global_init (CURL_GLOBAL_ALL);
 	
-	DBG3(DBG_IMC, "Retrieving PCA certificate...\n");
+	DBG3(DBG_IMC, "Retrieving PCA certificate...");
 	
 	/* TPM has EK Certificate */
 	if(REALEK)
@@ -297,56 +316,56 @@ static bool obtain_aik(private_pts_t *this)
 	}
 	x509 = readPCAcert (level);
 	if (x509 == NULL) {
-		DBG1(DBG_IMC, "Error reading PCA key\n");
+		DBG1(DBG_IMC, "Error reading PCA key");
 		goto err;
 	}
 	pcaKey = X509_get_pubkey(x509);
 	rsa = EVP_PKEY_get1_RSA(pcaKey);
 	if (rsa == NULL) {
-		DBG1(DBG_IMC, "Error reading RSA key from PCA\n");
+		DBG1(DBG_IMC, "Error reading RSA key from PCA");
 		goto err;
 	}
 	X509_free (x509);
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Create\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Create", result);
 		goto err;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Connect\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Connect", result);
 		goto err;
 	}
 	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_GetTpmObject\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_GetTpmObject", result);
 		goto err;
 	}
 	result = Tspi_Context_LoadKeyByUUID(hContext,
 			TSS_PS_TYPE_SYSTEM, SRK_UUID, &hSRK);
         if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_LoadKeyByUUID for SRK\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_LoadKeyByUUID for SRK", result);
 		goto err;
 	}
 	result = Tspi_GetPolicyObject(hSRK, TSS_POLICY_USAGE, &hSrkPolicy);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for SRK\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for SRK", result);
 		goto err;
 	}
 	result = Tspi_Policy_SetSecret(hSrkPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for SRK\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for SRK", result);
 		goto err;
 	}
 	result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for TPM\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for TPM", result);
 		goto err;
 	}
 	result = Tspi_Policy_SetSecret(hTPMPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for TPM\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for TPM", result);
 		goto err;
 	}
 
@@ -354,7 +373,7 @@ static bool obtain_aik(private_pts_t *this)
 					   TSS_OBJECT_TYPE_RSAKEY,
 					   initFlags, &hIdentKey);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_CreateObject for key\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_CreateObject for key", result);
 		goto err;
 	}
 
@@ -373,14 +392,14 @@ static bool obtain_aik(private_pts_t *this)
 	result = Tspi_SetAttribData (hPCAKey, TSS_TSPATTRIB_RSAKEY_INFO,
 		TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, size_n, n);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribData for PCA modulus\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribData for PCA modulus", result);
 		goto err;
 	}
 	result = Tspi_SetAttribUint32(hPCAKey, TSS_TSPATTRIB_KEY_INFO,
 				      TSS_TSPATTRIB_KEYINFO_ENCSCHEME,
 				      TSS_ES_RSAESPKCSV15);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribUint32 for PCA encscheme\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribUint32 for PCA encscheme", result);
 		goto err;
 	}
 
@@ -395,22 +414,22 @@ static bool obtain_aik(private_pts_t *this)
 		result = Tspi_SetAttribData(hTPM, TSS_TSPATTRIB_TPM_CREDENTIAL,
 					    TSS_TPMATTRIB_EKCERT, ekCertLen, ekCert);
 		if (result != TSS_SUCCESS) {
-			DBG1(DBG_IMC, "Error 0x%x on SetAttribData for EKCert\n", result);
+			DBG1(DBG_IMC, "Error 0x%x on SetAttribData for EKCert", result);
 			goto err;
 		}
 	}
 
-	DBG3(DBG_IMC, "Generating attestation identity key...\n");
+	DBG3(DBG_IMC, "Generating attestation identity key...");
 	result = Tspi_TPM_CollateIdentityRequest(hTPM, hSRK, hPCAKey, 0,
 						 NULL, hIdentKey, TSS_ALG_AES,
 						 &ulTCPAIdentityReqLength,
 						 &rgbTCPAIdentityReq);
 	if (result != TSS_SUCCESS){
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_CollateIdentityRequest\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_CollateIdentityRequest", result);
 		goto err;
 	}
 
-	DBG3(DBG_IMC, "Sending request to PrivacyCA.com...\n");
+	DBG3(DBG_IMC, "Sending request to PrivacyCA.com...");
 
 	/* Send to server */
 	f_tmp = tmpfile();
@@ -425,12 +444,12 @@ static bool obtain_aik(private_pts_t *this)
 	slist = curl_slist_append (slist, "Content-Transfer-Encoding: binary");
 	curl_easy_setopt (hCurl, CURLOPT_HTTPHEADER, slist);
 	if ((result = curl_easy_perform(hCurl))) {
-		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d\n", result);
+		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d", result);
 		exit (result);
 	}
 	curl_slist_free_all(slist);
 
-	DBG3(DBG_IMC, "Processing response from PrivacyCA...\n");
+	DBG3(DBG_IMC, "Processing response from PrivacyCA...");
 
 	fflush (f_tmp);
 	symBufSize = ftell(f_tmp);
@@ -438,7 +457,7 @@ static bool obtain_aik(private_pts_t *this)
 	rewind(f_tmp);
 	if(!fread (symBuf, 1, symBufSize, f_tmp))
 	{
-		DBG1(DBG_IMC, "Failed to read buffer\n");
+		DBG1(DBG_IMC, "Failed to read buffer");
 		goto err;
 	}
 	
@@ -447,7 +466,7 @@ static bool obtain_aik(private_pts_t *this)
 	asymBufSize = sizeof(asymBuf);
 	if (symBufSize <= asymBufSize)
 	{
-		DBG1(DBG_IMC, "Bad response from PrivacyCA.com: %s\n", symBuf);
+		DBG1(DBG_IMC, "Bad response from PrivacyCA.com: %s", symBuf);
 		goto err;
 	}
 
@@ -457,7 +476,7 @@ static bool obtain_aik(private_pts_t *this)
 
 	result = Tspi_Key_LoadKey (hIdentKey, hSRK);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Key_LoadKey for AIK\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_Key_LoadKey for AIK", result);
 		goto err;
 	}
 
@@ -465,7 +484,7 @@ static bool obtain_aik(private_pts_t *this)
 						symBufSize, symBuf,
 						&credBufSize, &credBuf);
 	if (result != TSS_SUCCESS) {
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_ActivateIdentity\n", result);
+		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_ActivateIdentity", result);
 		goto err;
 	}
 	
@@ -473,11 +492,11 @@ static bool obtain_aik(private_pts_t *this)
 	tbuf = credBuf;
 	x509 = d2i_X509(NULL, (const BYTE **)&tbuf, credBufSize);
 	if (x509 == NULL) {
-		DBG1(DBG_IMC, "Unable to parse returned credential\n");
+		DBG1(DBG_IMC, "Unable to parse returned credential");
 		goto err;
 	}
 	if (tbuf-credBuf != credBufSize) {
-		DBG1(DBG_IMC, "Note, not all data from privacy ca was parsed correctly\n");
+		DBG1(DBG_IMC, "Note, not all data from privacy ca was parsed correctly");
 	}
 	
 	if(x509)
@@ -504,11 +523,11 @@ static bool obtain_aik(private_pts_t *this)
 	}
 	else
 	{
-		DBG1(DBG_IMC, "Neither AIK Key blob, nor AIK Certificate is available\n");
+		DBG1(DBG_IMC, "Neither AIK Key blob, nor AIK Certificate is available");
 		goto err;
 	}
 	
-	DBG3(DBG_IMC, "Succeeded at obtaining AIK Certificate from Privacy CA!\n");
+	DBG3(DBG_IMC, "Succeeded at obtaining AIK Certificate from Privacy CA!");
 	return TRUE;
 	
 err:
@@ -536,30 +555,20 @@ METHOD(pts_t, set_aik, void,
 	this->is_naked_key = is_naked_key;
 }
 
-METHOD(pts_t, hash_file, bool,
-	private_pts_t *this, char *pathname, chunk_t *out)
+/**
+ * Compute a hash over a file 
+ */
+static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
 {
-	char buffer[PTS_BUF_SIZE];
-	chunk_t path_chunk;
+	u_char buffer[PTS_BUF_SIZE];
 	FILE *file;
 	int bytes_read;
-	hasher_t *hasher;
-	hash_algorithm_t hash_alg;
-	
-	/* Create a hasher */
-	hash_alg = pts_meas_to_hash_algorithm(this->algorithm);
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-	if (!hasher)
-	{
-		DBG1(DBG_IMC, "hasher %N not available", hash_algorithm_names, hash_alg);
-		return FALSE;
-	}
 
 	file = fopen(pathname, "rb");
 	if (!file)
 	{
-		DBG1(DBG_IMC,"file '%s' can not be opened, %s", pathname, strerror(errno));
-		hasher->destroy(hasher);
+		DBG1(DBG_IMC,"  file '%s' can not be opened, %s", pathname,
+			 strerror(errno));
 		return FALSE;
 	}
 	while (TRUE)
@@ -567,66 +576,116 @@ METHOD(pts_t, hash_file, bool,
 		bytes_read = fread(buffer, 1, sizeof(buffer), file);
 		if (bytes_read > 0)
 		{
-			hasher->allocate_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
 		}
 		else
 		{
-			hasher->allocate_hash(hasher, chunk_empty, out);
+			hasher->get_hash(hasher, chunk_empty, hash);
 			break;
 		}
 	}
-		
 	fclose(file);
-	hasher->destroy(hasher);
 
 	return TRUE;
+} 
+
+/**
+ * Get the relative filename of a fully qualified file pathname 
+ */
+static char* get_filename(char *pathname)
+{
+	char *pos, *filename;
+
+	pos = filename = pathname;
+	while (pos && *(++pos) != '\0')
+	{
+		filename = pos;
+		pos = strchr(filename, '/');
+	}
+	return filename;			
 }
 
-METHOD(pts_t, hash_directory, bool,
-	private_pts_t *this, char *pathname, linked_list_t **file_measurements)
+METHOD(pts_t, do_measurements, pts_file_meas_t*,
+	private_pts_t *this, u_int16_t request_id, char *pathname,
+	bool directory_flag)
 {
-	DIR *dir;
-	struct dirent *ent;
-	chunk_t path_chunk;
-	file_meas_entry_t *entry;
-	linked_list_t *list = *file_measurements;
-	char filename[BUF_LEN];
-	
-	list = linked_list_create();
-	entry = malloc_thing(file_meas_entry_t);
-	
-	dir = opendir(pathname);
-	if (dir == NULL)
+	hasher_t *hasher;
+	hash_algorithm_t hash_alg;
+	u_char hash[HASH_SIZE_SHA384];
+	chunk_t measurement;
+	pts_file_meas_t *measurements;
+
+	/* Create a hasher */
+	hash_alg = pts_meas_to_hash_algorithm(this->algorithm);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
 	{
-		DBG1(DBG_IMC, "opening directory '%s' failed: %s", pathname, strerror(errno));
-		return FALSE;
+		DBG1(DBG_IMC, "  hasher %N not available", hash_algorithm_names, hash_alg);
+		return NULL;
 	}
-	while ((ent = readdir(dir)))
+
+	/* Create a measurement object */
+	measurements = pts_file_meas_create(request_id);
+
+	/* Link the hash to the measurement and set the measurement length */
+	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
+
+	if (directory_flag)
 	{
-		if (*ent->d_name == '.')
-		{	/* skip ".", ".." and hidden files (such as ".svn") */
-			continue;
-		}
-		snprintf(filename, BUF_LEN, "%s/%s", pathname, ent->d_name);
-		entry->filename = strdup(filename);
-				
-		if (!hash_file(this, filename, &entry->measurement))
+		enumerator_t *enumerator;
+		char *rel_name, *abs_name;
+		struct stat st;
+
+		enumerator = enumerator_create_directory(pathname);
+		if (!enumerator)
 		{
-			DBG1(DBG_IMC, "Hashing the given file has failed");
-			return FALSE;
+			DBG1(DBG_IMC,"  directory '%s' can not be opened, %s", pathname,
+				 strerror(errno));
+			hasher->destroy(hasher);
+			measurements->destroy(measurements);
+			return NULL;	
 		}
-		list->insert_last(list, entry);
+		while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
+		{
+			if (S_ISDIR(st.st_mode) && *rel_name != '.')
+			{
+				if (!hash_file(hasher, abs_name, hash))
+				{
+					enumerator->destroy(enumerator);
+					hasher->destroy(hasher);
+					measurements->destroy(measurements);
+					return NULL;	
+				}
+				DBG2(DBG_IMC, "  %#B for '%s'",
+					 &measurement, rel_name);
+				measurements->add(measurements, rel_name, measurement);
+			}	
+		}
+		enumerator->destroy(enumerator);		
 	}
-		
-	closedir(dir);
-	
-	*file_measurements = list;
-	return TRUE;
+	else
+	{
+		char *filename;
+
+		if (!hash_file(hasher, pathname, hash))
+		{
+			hasher->destroy(hasher);
+			measurements->destroy(measurements);
+			return NULL;	
+		}
+		filename = get_filename(pathname);
+		DBG2(DBG_IMC, "  %#B for '%s'", &measurement, filename);
+		measurements->add(measurements, filename, measurement);
+	}
+	hasher->destroy(hasher);
+
+	return measurements;
 }
 
 METHOD(pts_t, destroy, void,
 	private_pts_t *this)
 {
+	free(this->platform_info);
 	free(this->tpm_version_info.ptr);
 	free(this);
 }
@@ -683,12 +742,13 @@ pts_t *pts_create(bool is_imc)
 			.set_proto_caps = _set_proto_caps,
 			.get_meas_algorithm = _get_meas_algorithm,
 			.set_meas_algorithm = _set_meas_algorithm,
+			.get_platform_info = _get_platform_info,
+			.set_platform_info = _set_platform_info,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
 			.get_aik = _get_aik,
 			.set_aik = _set_aik,
-			.hash_file = _hash_file,
-			.hash_directory = _hash_directory,
+			.do_measurements = _do_measurements,
 			.destroy = _destroy,
 		},
 		.proto_caps = PTS_PROTO_CAPS_V,

@@ -31,25 +31,24 @@ typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t
  * 
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   		Number of Files included		    |
+ *  |                   Number of Files included                    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   		Number of Files included		    |
+ *  |                   Number of Files included                    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		Request ID    	    | 	Measurement Length	    |
+ *  |          Request ID           |      Measurement Length       |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   	Measurement #1 (Variable Length)		    |
+ *  |                   Measurement #1 (Variable Length)            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		Filename Length	    | 	Filename (Variable Length)  ~
+ *  |       Filename Length         | Filename (Variable Length)    ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Filename (Variable Length)  		    ~
+ *  ~                    Filename (Variable Length)                 ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |   	Measurement #2 (Variable Length)		    |
+ *  |                   Measurement #2 (Variable Length)            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		Filename Length	    | 	Filename (Variable Length)  ~
+ *  |       Filename Length         | Filename (Variable Length)    ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Filename (Variable Length)  		    ~
+ *  ~                    Filename (Variable Length)                 ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * 			...........................
  */
@@ -87,24 +86,9 @@ struct private_tcg_pts_attr_file_meas_t {
 	bool noskip_flag;
 	
 	/**
-	 * Number of files included
+	 * PTS File Measurements
 	 */
-	u_int64_t number_of_files;
-	
-	/**
-	 * Request ID
-	 */
-	u_int16_t request_id;
-	
-	/**
-	 * Measurement Length
-	 */
-	u_int16_t meas_len;
-		
-	/**
-	 * List of File Measurement entries
-	 */
-	linked_list_t *measurements;
+	pts_file_meas_t *measurements;
 
 };
 
@@ -143,24 +127,32 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	file_meas_entry_t *entry;
-	chunk_t filename;
+	u_int64_t number_of_files;
+	u_int16_t request_id;
+	char *filename;
+	chunk_t measurement;
+	bool first = TRUE;
 	
+	number_of_files = this->measurements->get_file_count(this->measurements);
+	request_id = this->measurements->get_request_id(this->measurements);
 	writer = bio_writer_create(PTS_FILE_MEAS_SIZE);
 
-	/* Write the 64 bit integer as 2 parts, first 32 bit and second */
-	writer->write_uint32 (writer, (this->number_of_files >> 32));
-	writer->write_uint32 (writer, (this->number_of_files & (int)(pow(2,32) - 1)));
-	writer->write_uint16(writer, this->request_id);
-	writer->write_uint16(writer, this->meas_len);
+	/* Write the 64 bit integer as two 32 bit parts */
+	writer->write_uint32(writer, number_of_files >> 32);
+	writer->write_uint32(writer, number_of_files & 0xffffffff);
+	writer->write_uint16(writer, request_id);
 
 	enumerator = this->measurements->create_enumerator(this->measurements);
-	while (enumerator->enumerate(enumerator, &entry))
+	while (enumerator->enumerate(enumerator, &filename, &measurement))
 	{
-		filename = chunk_create(entry->filename, strlen(entry->filename));
-		writer->write_data  (writer, entry->measurement);
-		writer->write_uint16(writer, strlen(entry->filename));
-		writer->write_data  (writer, filename);
+		if (first)
+		{
+			writer->write_uint16(writer, measurement.len);
+			first = FALSE;
+		}
+		writer->write_data  (writer, measurement);
+		writer->write_uint16(writer, strlen(filename));
+		writer->write_data  (writer, chunk_create(filename, strlen(filename)));
 	}
 	enumerator->destroy(enumerator);
 
@@ -172,113 +164,79 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_file_meas_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
+	int count;
 	u_int32_t number_of_files;
-	u_int16_t filename_length;
-	chunk_t filename;
-	file_meas_entry_t *entry;
+	u_int16_t request_id, meas_len, filename_len;
+	size_t len;
+	chunk_t measurement, filename;
+	char buf[BUF_LEN];
+	status_t status = FAILED;
 	
 	if (this->value.len < PTS_FILE_MEAS_SIZE)
 	{
-		DBG1(DBG_TNC, "insufficient data for File Measurement");
+		DBG1(DBG_TNC, "insufficient data for PTS file measurement header");
 		*offset = 0;
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	
-	reader->read_uint32(reader, &number_of_files);
-	this->number_of_files = (u_int64_t)number_of_files << 32;
-	reader->read_uint32(reader, &number_of_files);
-	this->number_of_files += number_of_files;
-	reader->read_uint16(reader, &this->request_id);
-	reader->read_uint16(reader, &this->meas_len);
-	
-	while (reader->remaining(reader))
-	{
-		entry = malloc_thing(file_meas_entry_t);
-		
-		reader->read_data (reader, this->meas_len, &entry->measurement);
-		entry->measurement = chunk_clone(entry->measurement);
-		reader->read_uint16 (reader, &filename_length);
-		reader->read_data(reader, filename_length, &filename);
-		entry->filename = malloc(filename.len + 1);
-		memcpy(entry->filename, filename.ptr, filename.len);
-		entry->filename[filename.len] = '\0';
-		
-		this->measurements->insert_last(this->measurements, entry);
-	}
 
+	reader->read_uint32(reader, &number_of_files);
+	count = (sizeof(count) > 4) ? number_of_files << 32 : 0;
+	reader->read_uint32(reader, &number_of_files);
+	count += number_of_files;
+	reader->read_uint16(reader, &request_id);
+	reader->read_uint16(reader, &meas_len);
+	
+	this->measurements = pts_file_meas_create(request_id);
+	
+	while (count--)
+	{
+		if (!reader->read_data(reader, meas_len, &measurement))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS file measurement");
+			goto end;
+		}
+		if (!reader->read_uint16(reader, &filename_len))
+		{
+			DBG1(DBG_TNC, "insufficient data for filename length");
+			goto end;
+		}
+		if (!reader->read_data(reader, filename_len, &filename))
+		{
+			DBG1(DBG_TNC, "insufficient data for filename");
+			goto end;
+		}
+
+		len = min(filename.len, BUF_LEN-1);
+		memcpy(buf, filename.ptr, len);
+		buf[len] = '\0';
+		this->measurements->add(this->measurements, buf, measurement);
+	}
+	status = SUCCESS;
+
+end:
 	reader->destroy(reader);
-	return SUCCESS;	
+	return status;	
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_file_meas_t *this)
 {
+	this->measurements->destroy(this->measurements);
 	free(this->value.ptr);
-	this->measurements->destroy_function(this->measurements, free);
 	free(this);
 }
 
-METHOD(tcg_pts_attr_file_meas_t, get_number_of_files, u_int64_t,
+METHOD(tcg_pts_attr_file_meas_t, get_measurements, pts_file_meas_t*,
 	private_tcg_pts_attr_file_meas_t *this)
 {
-	return this->number_of_files;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, set_number_of_files, void,
-	private_tcg_pts_attr_file_meas_t *this, u_int64_t number_of_files)
-{
-	this->number_of_files = number_of_files;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, get_request_id, u_int16_t,
-	private_tcg_pts_attr_file_meas_t *this)
-{
-	return this->request_id;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, set_request_id, void,
-	private_tcg_pts_attr_file_meas_t *this, u_int16_t request_id)
-{
-	this->request_id = request_id;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, get_meas_len, u_int16_t,
-	private_tcg_pts_attr_file_meas_t *this)
-{
-	return this->meas_len;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, set_meas_len, void,
-	private_tcg_pts_attr_file_meas_t *this, u_int16_t meas_len)
-{
-	this->meas_len = meas_len;
-}
-
-METHOD(tcg_pts_attr_file_meas_t, add_file_meas, void,
-	private_tcg_pts_attr_file_meas_t *this, chunk_t measurement, char *filename)
-{
-	file_meas_entry_t *entry;
-
-	entry = malloc_thing(file_meas_entry_t);
-	entry->measurement = measurement;
-	entry->filename = strdup(filename);
-	this->measurements->insert_last(this->measurements, entry);
-}
-
-METHOD(tcg_pts_attr_file_meas_t, create_file_meas_enumerator, enumerator_t*,
-	private_tcg_pts_attr_file_meas_t *this)
-{
-	return this->measurements->create_enumerator(this->measurements);
+	return this->measurements;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_file_meas_create(
-				       u_int64_t number_of_files,
-				       u_int16_t request_id,
-				       u_int16_t meas_len)
+pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 {
 	private_tcg_pts_attr_file_meas_t *this;
 
@@ -294,21 +252,11 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_number_of_files= _get_number_of_files,
-			.set_number_of_files= _set_number_of_files,
-			.get_request_id = _get_request_id,
-			.set_request_id = _set_request_id,
-			.get_meas_len = _get_meas_len,
-			.set_meas_len = _set_meas_len,
-			.add_file_meas = _add_file_meas,
-			.create_file_meas_enumerator = _create_file_meas_enumerator,
+			.get_measurements = _get_measurements,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_FILE_MEAS,
-		.number_of_files = number_of_files,
-		.request_id = request_id,
-		.meas_len = meas_len,
-		.measurements = linked_list_create(),
+		.measurements = measurements,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -334,19 +282,11 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_number_of_files= _get_number_of_files,
-			.set_number_of_files= _set_number_of_files,
-			.get_request_id = _get_request_id,
-			.set_request_id = _set_request_id,
-			.get_meas_len = _get_meas_len,
-			.set_meas_len = _set_meas_len,
-			.add_file_meas = _add_file_meas,
-			.create_file_meas_enumerator = _create_file_meas_enumerator,
+			.get_measurements = _get_measurements,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_FILE_MEAS,
 		.value = chunk_clone(data),
-		.measurements = linked_list_create(),
 	);
 
 	return &this->public.pa_tnc_attribute;

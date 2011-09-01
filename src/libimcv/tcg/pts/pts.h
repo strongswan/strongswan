@@ -25,20 +25,9 @@ typedef struct pts_t pts_t;
 
 #include "pts_proto_caps.h"
 #include "pts_meas_algo.h"
-#include <utils/linked_list.h>
-
+#include "pts_file_meas.h"
 
 #include <library.h>
-
-typedef struct file_meas_entry_t file_meas_entry_t;
-
-/**
- * File Measurement entry
- */
-struct file_meas_entry_t {
-	char 	*filename;
-	chunk_t  measurement;
-};
 
 /**
  * Class implementing the TCG Platform Trust System (PTS)
@@ -75,6 +64,20 @@ struct pts_t {
 	void (*set_meas_algorithm)(pts_t *this, pts_meas_algorithms_t algorithm);
 
 	/**
+	 * Get Platform and OS Info
+	 *
+	 * @return				platform and OS info
+	 */
+	char* (*get_platform_info)(pts_t *this);
+
+	/**
+	 * Set Platform and OS Info
+	 *
+	 * @param info			platform and OS info
+	 */
+	void (*set_platform_info)(pts_t *this, char *info);
+
+	/**
 	 * Get TPM 1.2 Version Info
 	 *
 	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
@@ -107,23 +110,16 @@ struct pts_t {
 	void (*set_aik)(pts_t *this, chunk_t aik, bool is_naked_key);
 	
 	/**
-	 * Hash the given file
+	 * Do PTS File Measurements
 	 *
-	 * @param pathname		absolute path to file to be hashed
-	 * @param out			hash output value of a given file
-	 * @return				TRUE if hashing file was successful 
+	 * @param request_id	ID of PTS File Measurement Request
+	 * @param pathname		Absolute pathname of file to be measured
+	 * @param is_directory	if TRUE directory contents are measured
+	 * @return				PTS File Measurements of NULL if FAILED 
 	 */
-	bool (*hash_file)(pts_t *this, char *pathname, chunk_t *out);
+	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
+					 					char *pathname, bool is_directory);
 	
-	/**
-	 * Hash the given directory
-	 *
-	 * @param pathname			absolute path to directory to be hashed
-	 * @param file_measurements	list of hash output values of files in a given folder
-	 * @return			TRUE if hashing directory was successful 
-	 */
-	bool (*hash_directory)(pts_t *this, char *pathname, linked_list_t **file_measurements);
-
 	/**
 	 * Destroys a pts_t object.
 	 */
