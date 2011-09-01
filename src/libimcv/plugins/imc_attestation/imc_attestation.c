@@ -269,11 +269,14 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 				{
-					chunk_t tpm_version_info;
+					chunk_t tpm_version_info, attr_info;
 
 					if (!pts->get_tpm_version_info(pts, &tpm_version_info))
 					{
-						/* TODO return TCG_PTS_TPM_VERS_NOT_SUPPORTED error attribute */
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+									TCG_PTS_TPM_VERS_NOT_SUPPORTED, attr_info);
+						attr_list->insert_last(attr_list, attr);
 						break;
 					}
 					
