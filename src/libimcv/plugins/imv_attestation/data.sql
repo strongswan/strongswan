@@ -62,6 +62,14 @@ INSERT INTO files (
   0, '/lib/libxtables.so.2'
 );
 
+INSERT INTO files (
+  type, path
+ ) VALUES (
+  1, '/lib/xtables/'
+);
+
+/* Product-File */
+
 INSERT INTO product_file (
   product, file
 ) VALUES (
@@ -78,6 +86,12 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   1, 5
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  1, 7
 );
 
 INSERT INTO product_file (
