@@ -34,7 +34,6 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |    Reserved   |            PA-TNC Error Code Vendor ID        |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -48,7 +47,7 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
 #define PA_ERROR_RESERVED			0x00
 
 /**
- * All Error Types return the first 8 bytes of the erroneous PA-TNC message
+ * All IETF Error Types return the first 8 bytes of the erroneous PA-TNC message
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -60,6 +59,7 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
  */
 
 #define PA_ERROR_MSG_INFO_SIZE		8
+#define PA_ERROR_MSG_INFO_MAX_SIZE	1024
 
 /**
  * "Invalid Parameter" Error Code
@@ -198,23 +198,25 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint32(writer, this->error_code);
 	writer->write_data  (writer, this->msg_info);
 	
-	switch (this->error_code)
+	if (this->error_vendor_id == PEN_IETF)
 	{
-		case PA_ERROR_INVALID_PARAMETER:
-			writer->write_uint32(writer, this->error_offset);
-			break;
-		case PA_ERROR_VERSION_NOT_SUPPORTED:
-			writer->write_uint8 (writer, PA_TNC_VERSION);
-			writer->write_uint8 (writer, PA_TNC_VERSION);
-			writer->write_uint16(writer, PA_ERROR_VERSION_RESERVED);
-			break;
-		case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
-			writer->write_data(writer, this->attr_info);
-			break;
-		default:
-			break;
+		switch (this->error_code)
+		{
+			case PA_ERROR_INVALID_PARAMETER:
+				writer->write_uint32(writer, this->error_offset);
+				break;
+			case PA_ERROR_VERSION_NOT_SUPPORTED:
+				writer->write_uint8 (writer, PA_TNC_VERSION);
+				writer->write_uint8 (writer, PA_TNC_VERSION);
+				writer->write_uint16(writer, PA_ERROR_VERSION_RESERVED);
+				break;
+			case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+				writer->write_data(writer, this->attr_info);
+				break;
+			default:
+				break;
+		}
 	}
-
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -225,10 +227,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	u_int8_t reserved;
 
-	if (this->value.len < PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE)
+	if (this->value.len < PA_ERROR_HEADER_SIZE)
 	{
-		DBG1(DBG_TNC, "insufficient data for PA-TNC error header and "
-					  "error information");
+		DBG1(DBG_TNC, "insufficient data for PA-TNC error header");
 		*offset = 0;
 		return FAILED;
 	}
@@ -236,34 +237,49 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint8 (reader, &reserved);
 	reader->read_uint24(reader, &this->error_vendor_id);
 	reader->read_uint32(reader, &this->error_code);
-	reader->read_data  (reader, PA_ERROR_MSG_INFO_SIZE, &this->msg_info);
-	this->msg_info = chunk_clone(this->msg_info);
 
-	switch (this->error_code)
+	if (this->error_vendor_id == PEN_IETF)
 	{
-		case PA_ERROR_INVALID_PARAMETER:
-			if (!reader->read_uint32(reader, &this->error_offset))
-			{
-				reader->destroy(reader);
-				DBG1(DBG_TNC, "insufficient data for error offset field");
-				*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
-				return FAILED;
-			}
-			break;
-		case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
-			if (!reader->read_data(reader, PA_ERROR_ATTR_INFO_SIZE,
-										   &this->attr_info))
-			{
-				reader->destroy(reader);
-				DBG1(DBG_TNC, "insufficient data for unsupported attribute "
-							  "information");
-				*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
-				return FAILED;
-			}
-			this->attr_info = chunk_clone(this->attr_info);
-			break;
-		default:
-			break;
+		if (!reader->read_data(reader, PA_ERROR_MSG_INFO_SIZE, &this->msg_info))
+		{
+			reader->destroy(reader);
+			DBG1(DBG_TNC, "insufficient data for IETF error information");
+			*offset = PA_ERROR_HEADER_SIZE;
+			return FAILED;
+		}
+		this->msg_info = chunk_clone(this->msg_info);
+
+		switch (this->error_code)
+		{
+			case PA_ERROR_INVALID_PARAMETER:
+				if (!reader->read_uint32(reader, &this->error_offset))
+				{
+					reader->destroy(reader);
+					DBG1(DBG_TNC, "insufficient data for error offset field");
+					*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
+					return FAILED;
+				}
+				break;
+			case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+				if (!reader->read_data(reader, PA_ERROR_ATTR_INFO_SIZE,
+											   &this->attr_info))
+				{
+					reader->destroy(reader);
+					DBG1(DBG_TNC, "insufficient data for unsupported attribute "
+								  "information");
+					*offset = PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE;
+					return FAILED;
+				}
+				this->attr_info = chunk_clone(this->attr_info);
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		reader->read_data(reader, reader->remaining(reader), &this->msg_info);
+		this->msg_info = chunk_clone(this->msg_info);
 	}
 	reader->destroy(reader);
 
@@ -334,8 +350,14 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
-	/* the first 8 bytes of the erroneous PA-TNC message are sent back */
-	msg_info.len = PA_ERROR_MSG_INFO_SIZE;
+	if (vendor_id == PEN_IETF)
+	{
+		msg_info.len = PA_ERROR_MSG_INFO_SIZE;
+	}
+	else if (msg_info.len > PA_ERROR_MSG_INFO_MAX_SIZE)
+	{
+		msg_info.len = PA_ERROR_MSG_INFO_MAX_SIZE;
+	}
 
 	INIT(this,
 		.public = {

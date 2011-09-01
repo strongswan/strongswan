@@ -15,6 +15,9 @@
 
 #include "pts_error.h"
 
+#include <bio/bio_writer.h>
+#include <ietf/ietf_attr_pa_tnc_error.h>
+
 ENUM(pts_error_code_names, TCG_PTS_RESERVED_ERROR, TCG_PTS_UNABLE_DET_PCR,
 	"Reserved Error",
 	"Hash Algorithm Not Supported",
@@ -34,3 +37,23 @@ ENUM(pts_error_code_names, TCG_PTS_RESERVED_ERROR, TCG_PTS_UNABLE_DET_PCR,
 	"Unable To Determine Transitive Trust Chain",
 	"Unable To Determine PCR"
 );
+
+/**
+ * Described in header.
+ */
+pa_tnc_attr_t* pts_hash_alg_error_create(pts_meas_algorithms_t algorithms)
+{
+	bio_writer_t *writer;
+	chunk_t msg_info;
+	pa_tnc_attr_t *attr;
+
+	writer = bio_writer_create(4);
+	writer->write_uint16(writer, 0x0000);
+	writer->write_uint16(writer, algorithms);
+	msg_info = writer->get_buf(writer);
+	attr = ietf_attr_pa_tnc_error_create(PEN_TCG, TCG_PTS_HASH_ALG_NOT_SUPPORTED,
+										 msg_info);
+	writer->destroy(writer);
+
+	return attr;
+}

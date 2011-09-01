@@ -23,6 +23,9 @@
 
 typedef enum pts_error_code_t pts_error_code_t;
 
+#include "pts_meas_algo.h"
+#include "pa_tnc/pa_tnc_attr.h"
+
 #include <library.h>
 
 /**
@@ -53,5 +56,13 @@ enum pts_error_code_t {
  * enum name for pts_error_code_t.
  */
 extern enum_name_t *pts_error_code_names;
+
+/**
+ * Creates a PTS Hash Algorithm Not Supported Error Attribute
+ * see section 4.2.2 of PTS Protocol: Binding to TNC IF-M Specification
+ *
+ * @param algorithms	supported measurement hash algorithms
+ */
+pa_tnc_attr_t* pts_hash_alg_error_create(pts_meas_algorithms_t algorithms);
 
 #endif /** PTS_ERROR_H_ @}*/

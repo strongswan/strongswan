@@ -20,6 +20,8 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
+#include <tcg/pts/pts_error.h>
+
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
@@ -38,7 +40,6 @@
 #include <pen/pen.h>
 #include <debug.h>
 #include <utils/linked_list.h>
-#include <crypto/hashers/hasher.h>
 
 /* IMC definitions */
 
@@ -241,19 +242,21 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
 					}
 					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA256))
+							 (selected_algorithm & PTS_MEAS_ALGO_SHA256))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
 					}
 
 					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA1))
+							 (selected_algorithm & PTS_MEAS_ALGO_SHA1))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA1);
 					}
 					else
 					{
-						/* TODO send a TCG_PTS_H_ALG_NOT_SUPPORTED error */
+						attr = pts_hash_alg_error_create(supported_algorithms);
+						attr_list->insert_last(attr_list, attr);
+						break;
 					}
 
 					/* Send Measurement Algorithm Selection attribute */ 
@@ -287,7 +290,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 					if (!pts->get_aik(pts, &aik, &is_naked_key))
 					{
-						DBG1(DBG_IMC,"Obtaining AIK Certificate failed");
+						DBG1(DBG_IMC, "Obtaining AIK Certificate failed");
 						break;
 					}
 					
@@ -360,8 +363,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						tcg_attr_names, attr->get_type(attr));
 					break;
 			}
-			
-			
 		}
 	}
 	enumerator->destroy(enumerator);
