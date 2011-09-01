@@ -606,8 +606,7 @@ static char* get_filename(char *pathname)
 }
 
 METHOD(pts_t, do_measurements, pts_file_meas_t*,
-	private_pts_t *this, u_int16_t request_id, char *pathname,
-	bool directory_flag)
+	private_pts_t *this, u_int16_t request_id, char *pathname, bool is_directory)
 {
 	hasher_t *hasher;
 	hash_algorithm_t hash_alg;
@@ -630,7 +629,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	/* Link the hash to the measurement and set the measurement length */
 	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
 
-	if (directory_flag)
+	if (is_directory)
 	{
 		enumerator_t *enumerator;
 		char *rel_name, *abs_name;
@@ -647,7 +646,8 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 		}
 		while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
 		{
-			if (S_ISDIR(st.st_mode) && *rel_name != '.')
+			/* measure regular files only */
+			if (S_ISREG(st.st_mode) && *rel_name != '.')
 			{
 				if (!hash_file(hasher, abs_name, hash))
 				{
@@ -656,8 +656,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 					measurements->destroy(measurements);
 					return NULL;	
 				}
-				DBG2(DBG_IMC, "  %#B for '%s'",
-					 &measurement, rel_name);
+				DBG2(DBG_IMC, "  %#B for '%s'", &measurement, rel_name);
 				measurements->add(measurements, rel_name, measurement);
 			}	
 		}

@@ -454,14 +454,14 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						if (!e)
 						{
 							DBG1(DBG_IMV, "  database enumerator failed");
-							break;
+							continue;
 						}
 						if (!e->enumerate(e, &db_measurement))
 						{
 							DBG1(DBG_IMV, "  measurement for '%s' not found"
 										  " in database", filename);
 							e->destroy(e);
-							break;
+							continue;
 						}
 						if (chunk_equals(db_measurement, measurement))
 						{

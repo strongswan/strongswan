@@ -156,6 +156,12 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 	enumerator->destroy(enumerator);
 
+	if (first)
+	{
+		/* no attached measurements */
+		writer->write_uint16(writer, 0);
+	}
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
