@@ -53,7 +53,7 @@ METHOD(simaka_provider_t, get_triplet, bool,
 
 	snprintf(buf, sizeof(buf), "%Y", id);
 	query = this->db->query(this->db,
-				"select rand, sres, kc from triplets where id = ? order by use",
+				"select rand, sres, kc from triplets where id = ? order by used",
 				DB_TEXT, buf, DB_BLOB, DB_BLOB, DB_BLOB);
 	if (query)
 	{
@@ -82,7 +82,7 @@ METHOD(simaka_provider_t, get_triplet, bool,
 		else
 		{
 			this->db->execute(this->db, NULL,
-					"update triplets set use = ? where id = ? and rand = ?",
+					"update triplets set used = ? where id = ? and rand = ?",
 					DB_UINT, time(NULL), DB_TEXT, buf,
 					DB_BLOB, chunk_create(rand, SIM_RAND_LEN));
 		}
@@ -102,7 +102,7 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 
 	snprintf(buf, sizeof(buf), "%Y", id);
 	query = this->db->query(this->db, "select rand, res, ck, ik, autn "
-				"from quintuplets where id = ? order by use", DB_TEXT, buf,
+				"from quintuplets where id = ? order by used", DB_TEXT, buf,
 				DB_BLOB, DB_BLOB, DB_BLOB, DB_BLOB, DB_BLOB);
 	if (query)
 	{
@@ -137,7 +137,7 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 		else
 		{
 			this->db->execute(this->db, NULL,
-					"update quintuplets set use = ? where id = ? and rand = ?",
+					"update quintuplets set used = ? where id = ? and rand = ?",
 					DB_UINT, time(NULL), DB_TEXT, buf,
 					DB_BLOB, chunk_create(rand, AKA_RAND_LEN));
 		}
