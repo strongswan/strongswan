@@ -424,6 +424,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_file_meas_t *attr_cast;
 					u_int16_t request_id;
+					int file_count;
 					pts_meas_algorithms_t algo;
 					pts_file_meas_t *measurements;
 					chunk_t measurement;
@@ -440,8 +441,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					measurements = attr_cast->get_measurements(attr_cast);
 					algo = pts->get_meas_algorithm(pts);
 					request_id = measurements->get_request_id(measurements);
+					file_count = measurements->get_file_count(measurements);
 
-					DBG1(DBG_IMV, "file measurement request %d:", request_id);
+					DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
+						 request_id, file_count, (file_count == 1) ? "":"s");
 
 					e_meas = measurements->create_enumerator(measurements);
 					while (e_meas->enumerate(e_meas, &filename, &measurement))
