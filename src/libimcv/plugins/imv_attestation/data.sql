@@ -187,6 +187,24 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
+  3, 4, 32768, X'4350f082511c742cc05050d18a23d1da9fb09340'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 4, 16384, X'f9e12408828b5842c45503342dc2af78bc74d701a19c5fd5483df0e203315e0a'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 4, 8192, X'1a5ea36e4ab0cda550c0da2af6a62d9310981d2f170c9e75bff1770be2efb9ddccc451743ff4c3d76876364f19fdf8c1'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
   4, 1, 32768, X'ff6deca0eeb7a257205c5f0ab5f5d821ea184098'
 );
 
@@ -241,6 +259,24 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
+  4, 4, 32768, X'86c4463293859874243d8374f7f3ef60f44f9309'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 4, 16384, X'348b711f16ee9810738857c8ffbc54f8e16a393df8635cb29b02fc62daeefc14'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 4, 8192, X'0cb6b7d91148b1bb1b9333bc71de01509cb6d12c646a6756e6942647046286fbbca92b25dc1999e8f81be1264061ee4d'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
   5, 1, 32768, X'7a3ca72158e60b0c91e48a420848f1b693aea26c'
 );
 
@@ -272,42 +308,6 @@ INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
   5, 2, 8192, X'237f4691f9b780bec7aff217d64a9780ceed2973a41e86c92e0d6dab81cc5d13a9b99ba408302264f5665de1f42ef6e1'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  3, 4, 32768, X'4350f082511c742cc05050d18a23d1da9fb09340'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  3, 4, 16384, X'f9e12408828b5842c45503342dc2af78bc74d701a19c5fd5483df0e203315e0a'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  3, 4, 8192, X'1a5ea36e4ab0cda550c0da2af6a62d9310981d2f170c9e75bff1770be2efb9ddccc451743ff4c3d76876364f19fdf8c1'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  4, 4, 32768, X'86c4463293859874243d8374f7f3ef60f44f9309'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  4, 4, 16384, X'348b711f16ee9810738857c8ffbc54f8e16a393df8635cb29b02fc62daeefc14'
-);
-
-INSERT INTO file_hashes (
-  file, product, algo, hash
-) VALUES (
-  4, 4, 8192, X'0cb6b7d91148b1bb1b9333bc71de01509cb6d12c646a6756e6942647046286fbbca92b25dc1999e8f81be1264061ee4d'
 );
 
 INSERT INTO file_hashes (
