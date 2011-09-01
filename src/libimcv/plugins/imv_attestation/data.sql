@@ -24,6 +24,12 @@ INSERT INTO products (
  'Ubuntu 10.10 x86_64'
 );
 
+INSERT INTO products (
+  name
+) VALUES (
+ 'Ubuntu 10.10 i686'
+);
+
 /* Files */
 
 INSERT INTO files (
@@ -115,6 +121,12 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
+  2, 7
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
   3, 3
 );
 
@@ -140,6 +152,36 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   4, 6
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  4, 7
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  5, 3
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  5, 4
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  5, 6
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  5, 7
 );
 
 /* File Hashes */
