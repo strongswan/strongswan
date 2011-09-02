@@ -55,7 +55,7 @@ struct pts_file_meas_t {
 	/**
 	 * Create a PTS File Measurement enumerator
 	 *
-	 * @return				Enumerator returning filename and measurement 
+	 * @return				Enumerator returning filename and measurement
 	 */
 	enumerator_t* (*create_enumerator)(pts_file_meas_t *this);
 

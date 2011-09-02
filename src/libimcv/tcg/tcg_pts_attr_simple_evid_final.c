@@ -26,20 +26,20 @@ typedef struct private_tcg_pts_attr_simple_evid_final_t private_tcg_pts_attr_sim
  * Simple Evidence Final
  * see section 3.15.2 of PTS Protocol: Binding to TNC IF-M Specification
  * 
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |    Reserved     | Optional Composite Hash Alg |
+ *  |	 Flags		|	Reserved	| Optional Composite Hash Alg 	|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                Optional TPM PCR Composite Length              |
+ *  |				Optional TPM PCR Composite Length				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~           Optional TPM PCR Composite (Variable Length)        ~
+ *  ~		   Optional TPM PCR Composite (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                Optional TPM Quote Signature Length            |
+ *  |				Optional TPM Quote Signature Length				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~         Optional TPM Quote Signature (Variable Length)        ~
+ *  ~		 Optional TPM Quote Signature (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~         Optional Evidence Signature (Variable Length)         ~
+ *  ~		 Optional Evidence Signature (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -163,7 +163,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->comp_hash_algorithm);
 
 	/* Optional fields */
-	if (this->pcr_comp.ptr && this->pcr_comp.len > 0) 
+	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
 	{
 		writer->write_uint32 (writer, this->pcr_comp.len);
 		writer->write_data (writer, this->pcr_comp);
@@ -202,11 +202,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	/* Determine the flags to set*/
 	if (!((flags >> 7) & 1) && !((flags >> 6) & 1))
-	{ 
+	{
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_NO;
 	}
 	else if (!((flags >> 7) & 1) && ((flags >> 6) & 1))
-	{ 
+	{
 		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
 	}
 	else if (((flags >> 7) & 1) && !((flags >> 6) & 1))
@@ -224,8 +224,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint8(reader, &reserved);
 	reader->read_uint16(reader, &algorithm);
-	this->comp_hash_algorithm = algorithm;	
-		
+	this->comp_hash_algorithm = algorithm;
+	
 	/*  Optional TPM PCR Composite field is included */
 	if (!(this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_NO))
 	{
@@ -248,7 +248,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	reader->destroy(reader);
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
@@ -289,7 +289,7 @@ METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_pcr_len, u_int32_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
-	{ 
+	{
 		return this->pcr_comp.len;
 	}
 	return 0;
@@ -345,11 +345,11 @@ METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sign, void,
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(
-				       pts_simple_evid_final_flag_t flags,
-				       pts_meas_algorithms_t comp_hash_algorithm,
-				       chunk_t pcr_comp,
-				       chunk_t tpm_quote_sign,
-				       chunk_t evid_sign)
+					   pts_simple_evid_final_flag_t flags,
+					   pts_meas_algorithms_t comp_hash_algorithm,
+					   chunk_t pcr_comp,
+					   chunk_t tpm_quote_sign,
+					   chunk_t evid_sign)
 {
 	private_tcg_pts_attr_simple_evid_final_t *this;
 

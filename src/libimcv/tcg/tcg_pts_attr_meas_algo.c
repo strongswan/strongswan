@@ -26,10 +26,10 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  * PTS Measurement Algorithm 
  * see section 3.9.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |            Reserved           |       Hash Algorithm Set      |
+ *  |			Reserved			|	   Hash Algorithm Set	  	|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  
  */
@@ -134,7 +134,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->algorithms = algorithms;
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

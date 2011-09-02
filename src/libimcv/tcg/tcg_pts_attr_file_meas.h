@@ -38,7 +38,7 @@ struct tcg_pts_attr_file_meas_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-		
+	
 	/**
 	 * Get PTS File Measurements
 	 *

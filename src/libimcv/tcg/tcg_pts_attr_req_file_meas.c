@@ -26,14 +26,14 @@ typedef struct private_tcg_pts_attr_req_file_meas_t private_tcg_pts_attr_req_fil
  * Request File Measurement
  * see section 3.19.1 of PTS Protocol: Binding to TNC IF-M Specification
  * 
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |   Reserved    |          Request ID           |
+ *  |	 Flags	 |   Reserved	|		  Request ID				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                           Delimiter                           |
+ *  |						   Delimiter							|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~       Fully Qualified File Pathname (Variable Length)         ~
+ *  ~	   Fully Qualified File Pathname (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -87,7 +87,7 @@ struct private_tcg_pts_attr_req_file_meas_t {
 	 * UTF8 Encoding of Delimiter Character
 	 */
 	u_int32_t delimiter;
-		
+	
 	/**
 	 * Fully Qualified File Pathname
 	 */
@@ -132,7 +132,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	chunk_t pathname;
 	bio_writer_t *writer;
 	
-	if (this->directory_flag) 
+	if (this->directory_flag)
 	{
 		flags |= DIRECTORY_CONTENTS_FLAG;
 	}
@@ -178,7 +178,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->pathname[pathname.len] = '\0';
 
 	reader->destroy(reader);
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

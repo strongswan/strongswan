@@ -23,8 +23,8 @@
 bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 {
 	enumerator_t *enumerator;
-    hash_algorithm_t hash_alg;
-    const char *plugin_name;
+	hash_algorithm_t hash_alg;
+	const char *plugin_name;
 	char format1[] = "  %s PTS measurement algorithm %N[%s] available";
 	char format2[] = "  %s PTS measurement algorithm %N not available";
 	
@@ -55,7 +55,7 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 	enumerator->destroy(enumerator);
 
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA384))
-	{	
+	{
 		DBG1(DBG_TNC, format2, "optional ", hash_algorithm_names, HASH_SHA384);
 	}
 	if ((*algorithms & PTS_MEAS_ALGO_SHA1) &&
@@ -64,11 +64,11 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 		return TRUE;
 	}
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA1))
-	{	
+	{
 		DBG1(DBG_TNC, format2, "mandatory", hash_algorithm_names, HASH_SHA1);
 	}
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA256))
-	{	
+	{
 		DBG1(DBG_TNC, format2, "mandatory", hash_algorithm_names, HASH_SHA256);
 	}
 	return FALSE;

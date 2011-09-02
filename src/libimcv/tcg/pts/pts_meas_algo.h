@@ -30,16 +30,16 @@ typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
  * PTS Measurement Algorithms
  */
 enum pts_meas_algorithms_t {
-	PTS_MEAS_ALGO_SHA1 =    (1<<15),
-	PTS_MEAS_ALGO_SHA256 = 	(1<<14),
-	PTS_MEAS_ALGO_SHA384 = 	(1<<13),
+	PTS_MEAS_ALGO_SHA1 =	(1<<15),
+	PTS_MEAS_ALGO_SHA256 =	 (1<<14),
+	PTS_MEAS_ALGO_SHA384 =	 (1<<13),
 };
 
 /**
  * Diffie-Hellman Hash Algorithm Values
  * see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1          
+ *					   1
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |1|2|3|R|R|R|R|R|R|R|R|R|R|R|R|R|

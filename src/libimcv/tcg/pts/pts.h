@@ -38,28 +38,28 @@ struct pts_t {
 	/**
 	 * Get PTS Protocol Capabilities
 	 *
-	 * @return				protocol capabilities flags 
+	 * @return				protocol capabilities flags
 	 */
 	pts_proto_caps_flag_t (*get_proto_caps)(pts_t *this);
 
 	/**
 	 * Set PTS Protocol Capabilities
 	 *
-	 * @param flags			protocol capabilities flags 
+	 * @param flags			protocol capabilities flags
 	 */
 	void (*set_proto_caps)(pts_t *this, pts_proto_caps_flag_t flags);
 
 	/**
 	 * Get PTS Measurement Algorithm
 	 *
-	 * @return				measurement algorithm 
+	 * @return				measurement algorithm
 	 */
 	pts_meas_algorithms_t (*get_meas_algorithm)(pts_t *this);
 
 	/**
 	 * Set PTS Measurement Algorithm
 	 *
-	 * @param algorithm		measurement algorithm 
+	 * @param algorithm		measurement algorithm
 	 */
 	void (*set_meas_algorithm)(pts_t *this, pts_meas_algorithms_t algorithm);
 
@@ -81,14 +81,14 @@ struct pts_t {
 	 * Get TPM 1.2 Version Info
 	 *
 	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
-	 * @return				TRUE if TPM Version Info available 
+	 * @return				TRUE if TPM Version Info available
 	 */
 	bool (*get_tpm_version_info)(pts_t *this, chunk_t *info);
 
 	/**
 	 * Set TPM 1.2 Version Info
 	 *
-	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct 
+	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
 	
@@ -104,7 +104,7 @@ struct pts_t {
 	/**
 	 * Set Attestation Identity Key
 	 *
-	 * @param aik			chunk containing a AIK naked public key or certificate 
+	 * @param aik			chunk containing a AIK naked public key or certificate
 	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
 	 */
 	void (*set_aik)(pts_t *this, chunk_t aik, bool is_naked_key);
@@ -115,10 +115,10 @@ struct pts_t {
 	 * @param request_id	ID of PTS File Measurement Request
 	 * @param pathname		Absolute pathname of file to be measured
 	 * @param is_directory	if TRUE directory contents are measured
-	 * @return				PTS File Measurements of NULL if FAILED 
+	 * @return				PTS File Measurements of NULL if FAILED
 	 */
 	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
-					 					char *pathname, bool is_directory);
+										 char *pathname, bool is_directory);
 	
 	/**
 	 * Destroys a pts_t object.

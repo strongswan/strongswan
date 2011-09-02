@@ -26,11 +26,11 @@ typedef struct private_tcg_pts_attr_tpm_version_info_t private_tcg_pts_attr_tpm_
  * TPM Version Information
  * see section 3.11 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |          TPM Version Information (Variable Lenght)            |
+ *  |		  TPM Version Information (Variable Lenght)				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  * see TPM Structure Specification Part 2, section 21.6: TPM_CAP_VERSION_INFO
@@ -132,7 +132,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->tpm_version_info = chunk_clone(this->tpm_version_info);
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

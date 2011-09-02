@@ -26,12 +26,12 @@ typedef struct private_tcg_pts_attr_aik_t private_tcg_pts_attr_aik_t;
  * Attestation Identity Key
  * see section 3.13 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |    Attestation Identity Key (Variable Length) ~
+ *  |	 Flags	    |	Attestation Identity Key (Variable Length)  ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |          Attestation Identity Key (Variable Length)           ~
+ *  |		   Attestation Identity Key (Variable Length)		    ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -116,7 +116,10 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_AIK_SIZE);
 	
-	if(this->naked_pub_aik) flags += 128;
+	if (this->naked_pub_aik)
+	{
+		flags += 128;
+	}
 	writer->write_uint8 (writer, flags);
 	writer->write_data(writer, this->aik);
 
@@ -139,13 +142,16 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	if((flags >> 7 ) & 1) this->naked_pub_aik = true;
+	if ((flags >> 7 ) & 1)
+	{
+		this->naked_pub_aik = true;
+	}
 	
 	reader->read_data  (reader, this->value.len - 1, &this->aik);
 	this->aik = chunk_clone(this->aik);
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

@@ -32,11 +32,11 @@ typedef struct pts_database_t pts_database_t;
  */
 struct pts_database_t {
 
-	/**
+/**
 	 * Get files to be measured by PTS
 	 *
 	 * @product				software product (os, vpn client, etc.)
-	 * @return				enumerator over all files matching a given release 
+	 * @return				enumerator over all files matching a given release
 	 */
 	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product);
 	
@@ -46,7 +46,7 @@ struct pts_database_t {
 	 * @product				software product (os, vpn client, etc.)
 	 * @id					primary key in files table
 	 * @algorithm				measurement algorithm type
-	 * @return				enumerator over all measurements matching a given release 
+	 * @return				enumerator over all measurements matching a given release
 	 */
 	enumerator_t* (*create_meas_enumerator)(pts_database_t *this, char *product, int id, pts_meas_algorithms_t algorithm);
 

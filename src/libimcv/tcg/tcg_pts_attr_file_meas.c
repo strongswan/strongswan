@@ -29,28 +29,28 @@ typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t
  * File Measurement
  * see section 3.19.2 of PTS Protocol: Binding to TNC IF-M Specification
  * 
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                   Number of Files included                    |
+ *  |				   Number of Files included						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                   Number of Files included                    |
+ *  |				   Number of Files included						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |          Request ID           |      Measurement Length       |
+ *  |		  Request ID		   |	  Measurement Length	    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                   Measurement #1 (Variable Length)            |
+ *  |				   Measurement #1 (Variable Length)				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |       Filename Length         | Filename (Variable Length)    ~
+ *  |	   Filename Length		 | Filename (Variable Length)		~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~                    Filename (Variable Length)                 ~
+ *  ~					Filename (Variable Length)					~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                   Measurement #2 (Variable Length)            |
+ *  |				   Measurement #2 (Variable Length)				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |       Filename Length         | Filename (Variable Length)    ~
+ *  |	   Filename Length		 | Filename (Variable Length)		~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~                    Filename (Variable Length)                 ~
+ *  ~					Filename (Variable Length)					~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * 			...........................
+ *					 ...........................
  */
 
 #define PTS_FILE_MEAS_SIZE		12
@@ -222,7 +222,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 end:
 	reader->destroy(reader);
-	return status;	
+	return status;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

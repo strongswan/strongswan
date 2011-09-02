@@ -35,11 +35,11 @@ enum pts_attr_req_funct_comp_evid_flag_t {
 	/** Transitive Trust Chain flag */
 	PTS_REQ_FUNC_COMP_FLAG_TTC =				(1<<7),
 	/** Verify Component flag */
-	PTS_REQ_FUNC_COMP_FLAG_VER = 				(1<<6),
+	PTS_REQ_FUNC_COMP_FLAG_VER =				 (1<<6),
 	/** Current Evidence flag */
-	PTS_REQ_FUNC_COMP_FLAG_CURR = 				(1<<5),
+	PTS_REQ_FUNC_COMP_FLAG_CURR =				 (1<<5),
 	/** PCR Information flag */
-	PTS_REQ_FUNC_COMP_FLAG_PCR = 				(1<<4),
+	PTS_REQ_FUNC_COMP_FLAG_PCR =				 (1<<4),
 };
 
 /**
@@ -65,7 +65,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 *
 	 * @param flags			Set of flags
 	 */
-	void (*set_flags)(tcg_pts_attr_req_funct_comp_evid_t *this, 
+	void (*set_flags)(tcg_pts_attr_req_funct_comp_evid_t *this,
 					  pts_attr_req_funct_comp_evid_flag_t flags);
 	
 	/**

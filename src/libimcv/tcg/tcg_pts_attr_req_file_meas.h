@@ -65,7 +65,7 @@ struct tcg_pts_attr_req_file_meas_t {
 	 * @return				Pathname
 	 */
 	char* (*get_pathname)(tcg_pts_attr_req_file_meas_t *this);
-		
+	
 };
 
 /**

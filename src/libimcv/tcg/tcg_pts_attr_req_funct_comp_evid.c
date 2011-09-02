@@ -26,13 +26,13 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  * Request Functional Component Evidence
  * see section 3.14.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |             Sub-component Depth               |
+ *  |	 Flags		|			 Sub-component Depth				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                    Component Functional Name                  |
+ *  |					Component Functional Name					|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
@@ -40,13 +40,13 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
 /**
  * Component Functional Name Structure (see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification)
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Component Functional Name Vendor ID	    |Fam| Qualifier |                 
+ *  |	 Component Functional Name Vendor ID		|Fam| Qualifier |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                    Component Functional Name                  |
+ *  |					Component Functional Name				  |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
@@ -55,8 +55,8 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  * Qualifier for Functional Component
  * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                 
- *    0 1 2 3 4 5 
+ *	
+ *	0 1 2 3 4 5
  *  +-+-+-+-+-+-+
  *  |K|S| Type  |
  *  +-+-+-+-+-+-+
@@ -187,7 +187,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
-	if(this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
+	if (this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
 	{
 		DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	}
@@ -256,7 +256,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	/* TODO: Generate an IF-M error attribute indicating */
 	/* TCG_PTS_INVALID_NAME_FAM */
-	//if(&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
+	//if (&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
 	//{
 	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	//}
@@ -276,7 +276,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/* TODO: Check the name is defined in pts_funct_comp_name_t */
 
 	reader->destroy(reader);
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
@@ -345,9 +345,9 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_comp_funct_name, void,
  */
 pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 									pts_attr_req_funct_comp_evid_flag_t flags,
-				       				u_int32_t depth, u_int32_t vendor_id,
-				      				pts_qualifier_t qualifier,
-				      				pts_funct_comp_name_t name)
+									   u_int32_t depth, u_int32_t vendor_id,
+									  pts_qualifier_t qualifier,
+									  pts_funct_comp_name_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
 

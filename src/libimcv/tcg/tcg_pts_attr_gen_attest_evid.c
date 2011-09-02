@@ -26,11 +26,11 @@ typedef struct private_tcg_pts_attr_gen_attest_evid_t private_tcg_pts_attr_gen_a
  * Generate Attestation Evidence
  * see section 3.14.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                           Reserved                            |
+ *  |						   Reserved								|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  
  */
@@ -127,7 +127,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint32 (reader, &reserved);
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

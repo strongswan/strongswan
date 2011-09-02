@@ -26,40 +26,40 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  * Simple Component Evidence 
  * see section 3.15.1 of PTS Protocol: Binding to TNC IF-M Specification
  * 
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Flags     |                Sub-Component Depth            |
+ *  |	 Flags		|				Sub-Component Depth				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                 Specific Functional Component                 |
+ *  |				 Specific Functional Component					|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                 Specific Functional Component                 |
+ *  |				 Specific Functional Component					|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  | Measure. Type |                Extended into PCR              |
+ *  | Measure. Type |				Extended into PCR				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |         Hash Algorithm        | PCR Transform |   Reserved    |
+ *  |		 Hash Algorithm		| PCR Transform |   Reserved		|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                     Measurement Date/Time                     |
+ *  |					 Measurement Date/Time						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                     Measurement Date/Time                     |
+ *  |					 Measurement Date/Time						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                     Measurement Date/Time                     |
+ *  |					 Measurement Date/Time						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                     Measurement Date/Time                     |
+ *  |					 Measurement Date/Time						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                     Measurement Date/Time                     |
+ *  |					 Measurement Date/Time						|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |  Optional Policy URI Length   |  Opt. Verification Policy URI ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~                 Optional Verification Policy URI              ~
+ *  ~				 Optional Verification Policy URI				~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Optional PCR Length       |   Optional PCR Before Value   ~
+ *  |	 Optional PCR Length	   |   Optional PCR Before Value    ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~            Optional PCR Before Value (Variable Length)        ~
+ *  ~			Optional PCR Before Value (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~            Optional PCR After Value (Variable Length)         ~
+ *  ~			Optional PCR After Value (Variable Length)			~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~            Component Measurement (Variable Length)            ~
+ *  ~			Component Measurement (Variable Length)				~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -67,12 +67,12 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  * Specific Functional Component -> Component Functional Name Structure 
  * see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |     Component Functional Name Vendor ID	    |Fam| Qualifier |                 
+ *  |	 Component Functional Name Vendor ID		|Fam| Qualifier |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                    Component Functional Name                  |
+ *  |					Component Functional Name					|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
@@ -81,7 +81,7 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  * Qualifier for Functional Component
  * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                 
+ *	
  *   0 1 2 3 4 5 
  *  +-+-+-+-+-+-+
  *  |K|S| Type  |
@@ -161,7 +161,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	u_int8_t measurement_type;
 	
 	/**
-	 * Which PCR the functional component is extended into 
+	 * Which PCR the functional component is extended into
 	 */
 	u_int32_t extended_pcr;
 	
@@ -171,7 +171,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	pts_meas_algorithms_t hash_algorithm;
 	
 	/**
-	 * Transformation type for PCR 
+	 * Transformation type for PCR
 	 */
 	pts_pcr_transform_t transformation;
 	
@@ -283,7 +283,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	if (!qualifier || qualifier == 63)
 	{
 		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
-			      " Functional Name Qualifier");
+				  " Functional Name Qualifier");
 	}
 	
 	writer->write_uint8 (writer, qualifier);
@@ -296,7 +296,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_data  (writer, this->measurement_time);
 	
 	/* Optional fields */
-	if (this->policy_uri.ptr && this->policy_uri.len > 0) 
+	if (this->policy_uri.ptr && this->policy_uri.len > 0)
 	{
 		writer->write_uint16(writer, this->policy_uri.len);
 		writer->write_data  (writer, this->policy_uri);
@@ -340,14 +340,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/* Determine the flags to set*/
 	if ((flags >> 7) & 1)
 	{
- 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
+		 this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
 	}
 	if (!((flags >> 6) & 1) && !((flags >> 5) & 1))
 	{
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
 	}
 	else if (!((flags >> 6) & 1) && ((flags >> 5) & 1))
-	{ 
+	{
 		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VER;
 	}
 	else if (((flags >> 6) & 1) && !((flags >> 5) & 1))
@@ -374,7 +374,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	/* TODO: Generate an IF-M error attribute indicating */
 	/* TCG_PTS_INVALID_NAME_FAM */
-	//if(&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
+	//if (&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
 	//{
 	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
 	//}
@@ -383,7 +383,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		this->qualifier.kernel = true;
 	}
-	if (((fam_and_qualifier >> 4) & 1) ) 
+	if (((fam_and_qualifier >> 4) & 1) )
 	{
 		this->qualifier.sub_component = true;
 	}
@@ -394,7 +394,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (!(fam_and_qualifier & 0x3F) || (fam_and_qualifier & 0x3F) == 0x3F)
 	{
 		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
-			      " Functional Name Qualifier");
+				  " Functional Name Qualifier");
 	}
 	
 	reader->read_uint32(reader, &this->name);
@@ -405,7 +405,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint24(reader, &this->extended_pcr);
 	reader->read_uint16(reader, &algorithm);
-	this->hash_algorithm = algorithm;	
+	this->hash_algorithm = algorithm;
 	
 	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
@@ -416,7 +416,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->measurement_time = chunk_clone(this->measurement_time);
 	
 	/*  Optional Policy URI field is included */
-	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL || 
+	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL ||
 		this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
 	{
 		u_int16_t policy_uri_len;
@@ -441,7 +441,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->measurement = chunk_clone(this->measurement);
 
 	reader->destroy(reader);
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
@@ -605,9 +605,9 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_after_value, void,
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_len, u_int16_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
-	if (this->pcr_before.ptr && this->pcr_after.ptr && 
+	if (this->pcr_before.ptr && this->pcr_after.ptr &&
 		this->pcr_before.len == this->pcr_after.len &&
-		this->pcr_before.len > 0 && this->pcr_after.len > 0) 
+		this->pcr_before.len > 0 && this->pcr_after.len > 0)
 	{
 		return this->pcr_before.len;
 	}

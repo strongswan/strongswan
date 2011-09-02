@@ -162,7 +162,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	attestation_state = (imc_attestation_state_t*)state;
 	pts = attestation_state->get_pts(attestation_state);
 
-	/* parse received PA-TNC message and automatically handle any errors */ 
+	/* parse received PA-TNC message and automatically handle any errors */
 	result = imc_attestation->receive_message(imc_attestation, connection_id,
 									   chunk_create(msg, msg_len), msg_type,
 									   &pa_tnc_msg);
@@ -222,7 +222,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					imc_flags = pts->get_proto_caps(pts);
 					pts->set_proto_caps(pts, imc_flags & imv_flags);
 
-					/* Send PTS Protocol Capabilities attribute */ 
+					/* Send PTS Protocol Capabilities attribute */
 					attr = tcg_pts_attr_proto_caps_create(imc_flags & imv_flags,
 														  FALSE);
 					attr_list->insert_last(attr_list, attr);
@@ -232,7 +232,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				{
 					tcg_pts_attr_meas_algo_t *attr_cast;
 					pts_meas_algorithms_t selected_algorithm;
-					
+	
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
 
@@ -259,14 +259,14 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						break;
 					}
 
-					/* Send Measurement Algorithm Selection attribute */ 
+					/* Send Measurement Algorithm Selection attribute */
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					attr = tcg_pts_attr_meas_algo_create(selected_algorithm,
 														 TRUE);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-					
+	
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 				{
 					chunk_t tpm_version_info, attr_info;
@@ -279,13 +279,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-					
-					/* Send TPM Version Info attribute */ 
+	
+					/* Send TPM Version Info attribute */
 					attr = tcg_pts_attr_tpm_version_info_create(tpm_version_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				
+	
 				case TCG_PTS_GET_AIK:
 				{
 					chunk_t aik;
@@ -296,13 +296,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						DBG1(DBG_IMC, "Obtaining AIK Certificate failed");
 						break;
 					}
-					
-					/* Send AIK attribute */ 
+	
+					/* Send AIK attribute */
 					attr = tcg_pts_attr_aik_create(is_naked_key, aik);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				
+	
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_REQ_FUNCT_COMP_EVID:
 					break;
@@ -353,7 +353,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				case TCG_PTS_MEAS_ALGO_SELECTION:
 				case TCG_PTS_TPM_VERSION_INFO:
 				case TCG_PTS_TEMPL_REF_MANI_SET_META:
-				case TCG_PTS_AIK:				
+				case TCG_PTS_AIK:
 				case TCG_PTS_SIMPLE_COMP_EVID:
 				case TCG_PTS_SIMPLE_EVID_FINAL:
 				case TCG_PTS_VERIFICATION_RESULT:
@@ -372,7 +372,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	result = TNC_RESULT_SUCCESS;
-		
+	
 	if (attr_list->get_count(attr_list))
 	{
 		pa_tnc_msg = pa_tnc_msg_create();

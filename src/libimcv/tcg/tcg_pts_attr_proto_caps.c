@@ -26,10 +26,10 @@ typedef struct private_tcg_pts_attr_proto_caps_t private_tcg_pts_attr_proto_caps
  * PTS Protocol Capabilities
  * see section 3.7 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *                       1                   2                   3
+ *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                        Reserved                     |C|V|D|T|X|
+ *  |						Reserved					  |C|V|D|T|X|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  
  */
@@ -135,7 +135,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->flags = flags;
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

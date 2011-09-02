@@ -47,7 +47,7 @@ typedef struct entry_t entry_t;
  * PTS File Measurement entry
  */
 struct entry_t {
-	char 	*filename;
+	char	 *filename;
 	chunk_t  measurement;
 };
 

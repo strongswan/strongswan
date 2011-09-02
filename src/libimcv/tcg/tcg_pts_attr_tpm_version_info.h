@@ -49,7 +49,7 @@ struct tcg_pts_attr_tpm_version_info_t {
 	 *
 	 * @param tpm_version_info		TPM version info
 	 */
-	void (*set_tpm_version_info)(tcg_pts_attr_tpm_version_info_t *this, 
+	void (*set_tpm_version_info)(tcg_pts_attr_tpm_version_info_t *this,
 				chunk_t tpm_version_info);
 };
 

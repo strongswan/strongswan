@@ -138,7 +138,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 			if (chunk_equals(lang, pref_lang))
 			{
 				*reason_language = lang;
-				*reason_string = chunk_create(reasons[i].string, 
+				*reason_string = chunk_create(reasons[i].string,
 										strlen(reasons[i].string));
 				return TRUE;
 			}
@@ -148,7 +148,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	/* no preferred language match found - use the default language */
 	*reason_string =   chunk_create(reasons[0].string,
 									strlen(reasons[0].string));
-	*reason_language = chunk_create(reasons[0].lang, 
+	*reason_language = chunk_create(reasons[0].lang,
 									strlen(reasons[0].lang));
 	return TRUE;
 }
@@ -209,7 +209,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 	);
 
 	platform_info = lib->settings->get_str(lib->settings,
-		 				"libimcv.plugins.imv-attestation.platform_info", NULL);
+						 "libimcv.plugins.imv-attestation.platform_info", NULL);
 	if (platform_info)
 	{
 		this->pts->set_platform_info(this->pts, platform_info);

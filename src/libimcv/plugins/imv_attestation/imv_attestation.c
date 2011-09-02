@@ -156,9 +156,9 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				return result;
 			}
 			attestation_state = (imv_attestation_state_t*)state;
-			
+	
 			/* TODO: Get some configurations */
-			
+	
 			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_attestation->change_state(imv_attestation, connection_id,
@@ -199,7 +199,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
-			
+	
 			/* Send Measurement Algorithms attribute */
 			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
 			attr->set_noskip_flag(attr, TRUE);
@@ -222,7 +222,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				attr = tcg_pts_attr_get_tpm_version_info_create();
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
-				
+	
 				/* Send Get AIK attribute */
 				attr = tcg_pts_attr_get_aik_create();
 				attr->set_noskip_flag(attr, TRUE);
@@ -250,7 +250,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			}
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
-				is_directory = (type != 0);				
+				is_directory = (type != 0);
 				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
 					 id, is_directory ? "directory" : "file", pathname);
 				attr = tcg_pts_attr_req_file_meas_create(is_directory, id,
@@ -274,7 +274,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	
 	msg->build(msg);
 	result = imv_attestation->send_message(imv_attestation, connection_id,
-										   msg->get_encoding(msg));	
+										   msg->get_encoding(msg));
 	msg->destroy(msg);
 	
 	return result;
@@ -311,9 +311,9 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		return TNC_RESULT_FATAL;
 	}
 	attestation_state = (imv_attestation_state_t*)state;
-	pts = attestation_state->get_pts(attestation_state);					
+	pts = attestation_state->get_pts(attestation_state);
 
-	/* parse received PA-TNC message and automatically handle any errors */ 
+	/* parse received PA-TNC message and automatically handle any errors */
 	result = imv_attestation->receive_message(imv_attestation, connection_id,
 									   chunk_create(msg, msg_len), msg_type,
 									   &pa_tnc_msg);
@@ -377,7 +377,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_proto_caps_t *attr_cast;
 					pts_proto_caps_flag_t flags;
-					
+	
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
 					flags = attr_cast->get_flags(attr_cast);
 					pts->set_proto_caps(pts, flags);
@@ -390,10 +390,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_meas_algo_t *attr_cast;
 					pts_meas_algorithms_t selected_algorithm;
-					
+	
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
-					pts->set_meas_algorithm(pts, selected_algorithm);					
+					pts->set_meas_algorithm(pts, selected_algorithm);
 
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_MEAS);
@@ -403,7 +403,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_tpm_version_info_t *attr_cast;
 					chunk_t tpm_version_info;
-					
+	
 					attr_cast = (tcg_pts_attr_tpm_version_info_t*)attr;
 					tpm_version_info = attr_cast->get_tpm_version_info(attr_cast);
 					pts->set_tpm_version_info(pts, tpm_version_info);
@@ -417,17 +417,17 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					tcg_pts_attr_aik_t *attr_cast;
 					chunk_t aik;
 					bool is_naked_key;
-					
+	
 					attr_cast = (tcg_pts_attr_aik_t*)attr;
 					aik = attr_cast->get_aik(attr_cast);
 					is_naked_key = attr_cast->get_naked_flag(attr_cast);
 					pts->set_aik(pts, aik, is_naked_key);
-					
+	
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					break;
 				}
-				
+	
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_SIMPLE_COMP_EVID:
 					break;
@@ -443,7 +443,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					chunk_t measurement;
 					char *platform_info, *filename;
 					enumerator_t *e_meas;
-		
+	
 					platform_info = pts->get_platform_info(pts);
 					if (!pts_db || !platform_info)
 					{
@@ -492,12 +492,12 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						}
 						e->destroy(e);
 					}
-					e_meas->destroy(e_meas); 
+					e_meas->destroy(e_meas);
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					break;
 				}
-				
+	
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_RESP:
 				case TCG_PTS_UNIX_FILE_META:
@@ -539,7 +539,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	{
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
-								TNC_IMV_EVALUATION_RESULT_ERROR);			  
+								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
 													   connection_id);
 	}
@@ -558,7 +558,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-		} 
+		}
 		return imv_attestation->provide_recommendation(imv_attestation,
 													   connection_id);
 	}

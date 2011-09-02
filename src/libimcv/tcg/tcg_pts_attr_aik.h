@@ -49,7 +49,7 @@ struct tcg_pts_attr_aik_t {
 	 *
 	 * @param naked				flag
 	 */
-	void (*set_naked_flag)(tcg_pts_attr_aik_t *this, 
+	void (*set_naked_flag)(tcg_pts_attr_aik_t *this,
 				bool naked_pub_aik);
 	
 	/**
@@ -64,7 +64,7 @@ struct tcg_pts_attr_aik_t {
 	 *
 	 * @param flags				set of flags
 	 */
-	void (*set_aik)(tcg_pts_attr_aik_t *this, 
+	void (*set_aik)(tcg_pts_attr_aik_t *this,
 				chunk_t aik);
 };
 

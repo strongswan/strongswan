@@ -32,11 +32,11 @@ enum pts_proto_caps_flag_t {
 	/** XML based Evidence Support flag */
 	PTS_PROTO_CAPS_X =		(1<<0),
 	/** Trusted Platform Evidence flag */
-	PTS_PROTO_CAPS_T = 		(1<<1),
+	PTS_PROTO_CAPS_T =		 (1<<1),
 	/** DH Nonce Negotiation Support flag */
-	PTS_PROTO_CAPS_D = 		(1<<2),
+	PTS_PROTO_CAPS_D =		 (1<<2),
 	/** Verification Support flag */
-	PTS_PROTO_CAPS_V = 		(1<<3),
+	PTS_PROTO_CAPS_V =		 (1<<3),
 	/** Current (In-Memory) Evidence Support flag */
 	PTS_PROTO_CAPS_C =		(1<<4),
 };
