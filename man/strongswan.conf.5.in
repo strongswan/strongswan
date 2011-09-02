@@ -478,6 +478,9 @@ Authentication password of strongSwan MAP client
 .BR charon.plugins.tnc-ifmap.server_cert
 Certificate of MAP server
 .TP
+.BR charon.plugins.tnc-ifmap.ssl_passphrase
+Passphrase protecting the private key 
+.TP
 .BR charon.plugins.tnc-ifmap.username
 Authentication username of strongSwan MAP client
 .TP
