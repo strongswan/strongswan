@@ -246,10 +246,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					goto err;
 				}
 			}
-			if (!end->allow_any)
-			{
-				end->host = clone_str(value);
-			}
+			end->host = clone_str(value);
 		}
 		break;
 	case KW_SUBNET:
