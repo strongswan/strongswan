@@ -20,15 +20,14 @@
 
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-
 #include <curl/curl.h>
+#include "fake_ek_cert.h"
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
 #include <sys/stat.h>
 #include <errno.h>
-
 
 #define PTS_BUF_SIZE	4096
 
