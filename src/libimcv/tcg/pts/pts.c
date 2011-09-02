@@ -80,9 +80,14 @@ struct private_pts_t {
 	chunk_t tpm_version_info;
 
 	/**
-	 * Contains a Attestation Identity Key
+	 * Contains a Attestation Identity Certificate
 	 */
-	chunk_t aik;
+ 	certificate_t *aik_cert;
+
+	/**
+	 * Contains a Attestation Identity Public Key
+	 */
+ 	public_key_t *aik_key;
 
 	/**
 	 * True if AIK is naked public key, not a certificate
@@ -101,7 +106,7 @@ METHOD(pts_t, set_proto_caps, void,
 	   private_pts_t *this, pts_proto_caps_flag_t flags)
 {
 	this->proto_caps = flags;
-	DBG2(DBG_TNC, "supported PTS protocol capabilities: %s%s%s%s%s",
+	DBG2(DBG_IMC, "supported PTS protocol capabilities: %s%s%s%s%s",
 		 flags & PTS_PROTO_CAPS_C ? "C" : ".",
 		 flags & PTS_PROTO_CAPS_V ? "V" : ".",
 		 flags & PTS_PROTO_CAPS_D ? "D" : ".",
@@ -121,7 +126,7 @@ METHOD(pts_t, set_meas_algorithm, void,
 	hash_algorithm_t hash_alg;
 
 	hash_alg = pts_meas_to_hash_algorithm(algorithm);
-	DBG2(DBG_TNC, "selected PTS measurement algorithm is %N",
+	DBG2(DBG_IMC, "selected PTS measurement algorithm is %N",
 		 hash_algorithm_names, hash_alg);
 	if (hash_alg != HASH_UNKNOWN)
 	{
@@ -142,12 +147,12 @@ static void print_tpm_version_info(private_pts_t *this)
 											   this->tpm_version_info.ptr, &versionInfo);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_TNC, "could not parse tpm version info: tss error 0x%x",
+		DBG1(DBG_IMC, "could not parse tpm version info: tss error 0x%x",
 			 result);
 	}
 	else
 	{
-		DBG2(DBG_TNC, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
+		DBG2(DBG_IMC, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
 					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
 					  versionInfo.version.major, versionInfo.version.minor,
 					  versionInfo.version.revMajor, versionInfo.version.revMinor,
@@ -188,396 +193,75 @@ METHOD(pts_t, set_tpm_version_info, void,
 	print_tpm_version_info(this);
 }
 
-/**
- * Create a fake endorsement key cert using system's actual EK
- */
-
-static TSS_RESULT makeEKCert(TSS_HCONTEXT hContext, TSS_HTPM hTPM, UINT32 *pCertLen, BYTE **pCert)
-{
-	TSS_RESULT	result;
-	TSS_HKEY	hPubek;
-	UINT32		modulusLen;
-	BYTE		*modulus;
-
-	result = Tspi_TPM_GetPubEndorsementKey (hTPM, TRUE, NULL, &hPubek);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error in: Tspi_TPM_GetPubEndorsementKey");
-		return result;
-	}
-	result = Tspi_GetAttribData (hPubek, TSS_TSPATTRIB_RSAKEY_INFO,
-								 TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, &modulusLen, &modulus);
-	Tspi_Context_CloseObject (hContext, hPubek);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error in: Tspi_Context_CloseObject");
-		return result;
-	}
-	if (modulusLen != 256)
-	{
-		DBG1(DBG_IMC, "Tspi_GetAttribData modulusLen != 256");
-		Tspi_Context_FreeMemory (hContext, modulus);
-		return result;
-	}
-	/* TODO define fakeEKCert
-	 * pCertLen = sizeof(fakeEKCert);
-	 *pCert = malloc (*pCertLen);
-	 memcpy (*pCert, fakeEKCert, *pCertLen);
-	 memcpy (*pCert + 0xc6, modulus, modulusLen);
-	 */
-	Tspi_Context_FreeMemory (hContext, modulus);
-
-	return TSS_SUCCESS;
-}
 
 /**
- * Read the level N CA from privacyca.com
- * Assume Curl library has been initialized
- */
-
-static X509* readPCAcert (int level)
-{
-	CURL		*hCurl;
-	char		url[128];
-	FILE		*f_tmp = tmpfile();
-	X509		*x509;
-	int		result;
-
-	hCurl = curl_easy_init ();
-	sprintf (url, CERTURL, level);
-	curl_easy_setopt (hCurl, CURLOPT_URL, url);
-	curl_easy_setopt(hCurl, CURLOPT_WRITEDATA, (BYTE **)f_tmp);
-
-	if ((result = curl_easy_perform(hCurl)))
-	{
-		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d", result);
-		fclose(f_tmp);
-		return NULL;
-	}
-
-	rewind (f_tmp);
-	x509 = PEM_read_X509 (f_tmp, NULL, NULL, NULL);
-	fclose(f_tmp);
-
-	return x509;
-}
-
-
-/**
- * Obtain an AIK, SRK and TPM Owner secret has to be both set to well known secret
- * of 20 bytes of zero
+ * Obtain an AIK Certificate or public key
+ * If the certificate is available in give path, ignore whether key is there
+ * If certificate is not available take the public key at given path
  */
 static bool obtain_aik(private_pts_t *this)
 {
-	TSS_HCONTEXT	hContext;
-	TSS_HTPM	hTPM;
-	TSS_HKEY	hSRK;
-	TSS_HKEY	hPCAKey;
-	TSS_HKEY	hIdentKey;
-	TSS_HPOLICY	hSrkPolicy;
-	TSS_HPOLICY	hTPMPolicy;
-	TSS_UUID	SRK_UUID = TSS_UUID_SRK;
-	BYTE		secret[] = TSS_WELL_KNOWN_SECRET;
-	X509		*x509;
-	EVP_PKEY	*pcaKey;
-	RSA		*rsa = NULL;
-	CURL		*hCurl;
-	struct curl_slist *slist = NULL;
-	BYTE		n[16384/8];
-	int		size_n;
-	FILE		*f_tmp;
-	BYTE		*rgbTCPAIdentityReq;
-	UINT32		ulTCPAIdentityReqLength;
-	UINT32		initFlags = TSS_KEY_TYPE_IDENTITY | TSS_KEY_SIZE_2048  |
-	TSS_KEY_VOLATILE | TSS_KEY_NOT_MIGRATABLE;
-	BYTE		asymBuf[EKSIZE];
-	BYTE		*symBuf;
-	BYTE		*credBuf;
-	BYTE		*tbuf;
-	UINT32		asymBufSize;
-	UINT32		symBufSize;
-	UINT32		credBufSize;
-	static int	level = 0;
-	BYTE		*ekCert = NULL;
-	UINT32		ekCertLen = 0;
-	char		url[128];
-	int		result;
+	char *certificate_path;
+	char *key_path;
 
-	this->aik = chunk_empty;
-	this->is_naked_key = false;
+	certificate_path = lib->settings->get_str(lib->settings,
+				 "libimcv.plugins.imc-attestation.aik_cert", NULL);
+	
+	key_path = lib->settings->get_str(lib->settings,
+				 "libimcv.plugins.imc-attestation.aik_key", NULL);
 
-	curl_global_init (CURL_GLOBAL_ALL);
+	DBG2(DBG_IMC,"AIK Certificate path %s",certificate_path);
+	DBG2(DBG_IMC,"AIK Public Key path %s", key_path);
 
-	DBG3(DBG_IMC, "Retrieving PCA certificate...");
-
-	/* TPM has EK Certificate */
-	if (REALEK)
+	if(certificate_path && (this->aik_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										   BUILD_FROM_FILE, certificate_path,
+										   BUILD_END)))
 	{
-		level = 1;
+		this->is_naked_key = FALSE;
 	}
-	x509 = readPCAcert (level);
-	if (x509 == NULL)
+	else if(key_path && (this->aik_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+										   BUILD_FROM_FILE, key_path,
+										   BUILD_END)))
 	{
-		DBG1(DBG_IMC, "Error reading PCA key");
-		goto err;
-	}
-	pcaKey = X509_get_pubkey(x509);
-	rsa = EVP_PKEY_get1_RSA(pcaKey);
-	if (rsa == NULL)
-	{
-		DBG1(DBG_IMC, "Error reading RSA key from PCA");
-		goto err;
-	}
-	X509_free (x509);
-
-	result = Tspi_Context_Create(&hContext);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Create", result);
-		goto err;
-	}
-	result = Tspi_Context_Connect(hContext, NULL);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_Connect", result);
-		goto err;
-	}
-	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_GetTpmObject", result);
-		goto err;
-	}
-	result = Tspi_Context_LoadKeyByUUID(hContext,
-										TSS_PS_TYPE_SYSTEM, SRK_UUID, &hSRK);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_LoadKeyByUUID for SRK", result);
-		goto err;
-	}
-	result = Tspi_GetPolicyObject(hSRK, TSS_POLICY_USAGE, &hSrkPolicy);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for SRK", result);
-		goto err;
-	}
-	result = Tspi_Policy_SetSecret(hSrkPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for SRK", result);
-		goto err;
-	}
-	result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_GetPolicyObject for TPM", result);
-		goto err;
-	}
-	result = Tspi_Policy_SetSecret(hTPMPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Policy_SetSecret for TPM", result);
-		goto err;
-	}
-
-	result = Tspi_Context_CreateObject(hContext,
-									   TSS_OBJECT_TYPE_RSAKEY,
-									   initFlags, &hIdentKey);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_CreateObject for key", result);
-		goto err;
-	}
-
-	result = Tspi_Context_CreateObject(hContext,
-									   TSS_OBJECT_TYPE_RSAKEY,
-									   TSS_KEY_TYPE_LEGACY|TSS_KEY_SIZE_2048,
-									   &hPCAKey);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Context_CreateObject for PCA", result);
-		goto err;
-	}
-	if ((size_n = BN_bn2bin(rsa->n, n)) <= 0)
-	{
-		DBG1(DBG_IMC, "BN_bn2bin failed");
-		goto err;;
-	}
-	result = Tspi_SetAttribData (hPCAKey, TSS_TSPATTRIB_RSAKEY_INFO,
-								 TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, size_n, n);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribData for PCA modulus", result);
-		goto err;
-	}
-	result = Tspi_SetAttribUint32(hPCAKey, TSS_TSPATTRIB_KEY_INFO,
-								  TSS_TSPATTRIB_KEYINFO_ENCSCHEME,
-								  TSS_ES_RSAESPKCSV15);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_SetAttribUint32 for PCA encscheme", result);
-		goto err;
-	}
-
-	if (!REALEK)
-	{
-		result = makeEKCert(hContext, hTPM, &ekCertLen, &ekCert);
-		if (result != TSS_SUCCESS)
-		{
-			DBG1(DBG_IMC, "Error 0x%x on makeEKCert", result);
-			goto err;
-		}
-
-		result = Tspi_SetAttribData(hTPM, TSS_TSPATTRIB_TPM_CREDENTIAL,
-									TSS_TPMATTRIB_EKCERT, ekCertLen, ekCert);
-		if (result != TSS_SUCCESS)
-		{
-			DBG1(DBG_IMC, "Error 0x%x on SetAttribData for EKCert", result);
-			goto err;
-		}
-	}
-
-	DBG3(DBG_IMC, "Generating attestation identity key...");
-	result = Tspi_TPM_CollateIdentityRequest(hTPM, hSRK, hPCAKey, 0,
-											 NULL, hIdentKey, TSS_ALG_AES,
-											 &ulTCPAIdentityReqLength,
-											 &rgbTCPAIdentityReq);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_CollateIdentityRequest", result);
-		goto err;
-	}
-
-	DBG3(DBG_IMC, "Sending request to PrivacyCA.com...");
-
-	/* Send to server */
-	f_tmp = tmpfile();
-	hCurl = curl_easy_init ();
-	sprintf (url, REQURL, level);
-	curl_easy_setopt (hCurl, CURLOPT_URL, url);
-	curl_easy_setopt (hCurl, CURLOPT_POSTFIELDS, (void *)rgbTCPAIdentityReq);
-	curl_easy_setopt (hCurl, CURLOPT_POSTFIELDSIZE, ulTCPAIdentityReqLength);
-	curl_easy_setopt (hCurl, CURLOPT_WRITEDATA, (BYTE **)f_tmp);
-	slist = curl_slist_append (slist, "Pragma: no-cache");
-	slist = curl_slist_append (slist, "Content-Type: application/octet-stream");
-	slist = curl_slist_append (slist, "Content-Transfer-Encoding: binary");
-	curl_easy_setopt (hCurl, CURLOPT_HTTPHEADER, slist);
-	if ((result = curl_easy_perform(hCurl)))
-	{
-		DBG1(DBG_IMC, "Unable to connect to Privacy CA, curl library result code %d", result);
-		exit (result);
-	}
-	curl_slist_free_all(slist);
-
-	DBG3(DBG_IMC, "Processing response from PrivacyCA...");
-
-	fflush (f_tmp);
-	symBufSize = ftell(f_tmp);
-	symBuf = malloc(symBufSize);
-	rewind(f_tmp);
-	if (!fread (symBuf, 1, symBufSize, f_tmp))
-	{
-		DBG1(DBG_IMC, "Failed to read buffer");
-		goto err;
-	}
-
-	fclose (f_tmp);
-
-	asymBufSize = sizeof(asymBuf);
-	if (symBufSize <= asymBufSize)
-	{
-		DBG1(DBG_IMC, "Bad response from PrivacyCA.com: %s", symBuf);
-		goto err;
-	}
-
-	memcpy (asymBuf, symBuf, asymBufSize);
-	symBufSize -= asymBufSize;
-	symBuf += asymBufSize;
-
-	result = Tspi_Key_LoadKey (hIdentKey, hSRK);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_Key_LoadKey for AIK", result);
-		goto err;
-	}
-
-	result = Tspi_TPM_ActivateIdentity (hTPM, hIdentKey, asymBufSize, asymBuf,
-										symBufSize, symBuf,
-										&credBufSize, &credBuf);
-	if (result != TSS_SUCCESS)
-	{
-		DBG1(DBG_IMC, "Error 0x%x on Tspi_TPM_ActivateIdentity", result);
-		goto err;
-	}
-
-	/* Output credential in PEM format */
-	tbuf = credBuf;
-	x509 = d2i_X509(NULL, (const BYTE **)&tbuf, credBufSize);
-	if (x509 == NULL)
-	{
-		DBG1(DBG_IMC, "Unable to parse returned credential");
-		goto err;
-	}
-	if (tbuf-credBuf != credBufSize)
-	{
-		DBG1(DBG_IMC, "Note, not all data from privacy ca was parsed correctly");
-	}
-
-	if (x509)
-	{
-		BUF_MEM *mem_buf;
-		BIO* bp;
-		u_int32_t len;
-
-		bp = BIO_new(BIO_s_mem());
-		PEM_write_bio_X509(bp, x509);
-
-		len = BIO_get_mem_data(bp, &mem_buf);
-		char tmp[len+1];
-
-		memcpy(tmp, mem_buf, len);
-		tmp[len] = '\0';
-
-		DBG3(DBG_IMC,"X509 Certificate (PEM format):");
-		DBG3(DBG_IMC,"%s", tmp);
-		this->aik = chunk_create(tmp, len + 1);
-		this->aik = chunk_clone(this->aik);
-
-		X509_free (x509);
-
+		this->is_naked_key = TRUE;
 	}
 	else
 	{
-		DBG1(DBG_IMC, "Neither AIK Key blob, nor AIK Certificate is available");
-		goto err;
+		DBG1(DBG_IMC, "Neither AIK Public Key nor AIK Certificate is available");
+		return FALSE;
 	}
-
+	
 	DBG3(DBG_IMC, "Succeeded at obtaining AIK Certificate from Privacy CA!");
 	return TRUE;
-
-	err:
-	return FALSE;
 }
 
 METHOD(pts_t, get_aik, bool,
-	   private_pts_t *this, chunk_t *aik, bool *is_naked_key)
+	   private_pts_t *this, certificate_t **aik_cert, public_key_t **aik_key, bool *is_naked_key)
 {
 	if (obtain_aik(this) != TRUE )
 	{
 		return FALSE;
 	}
 
-	*aik = this->aik;
+	*aik_cert = this->aik_cert;
+	*aik_key = this->aik_key;
 	*is_naked_key = this->is_naked_key;
 
 	return TRUE;
 }
 
-METHOD(pts_t, set_aik, void,
-	   private_pts_t *this, chunk_t aik, bool is_naked_key)
+METHOD(pts_t, set_aik_cert, void,
+	   private_pts_t *this, certificate_t *aik_cert)
 {
-	this->aik = chunk_clone(aik);
-	this->is_naked_key = is_naked_key;
+	this->aik_cert = aik_cert;
+	this->is_naked_key = FALSE;
+}
+
+METHOD(pts_t, set_aik_key, void,
+	   private_pts_t *this, public_key_t *aik_key)
+{
+	this->aik_key = aik_key;
+	this->is_naked_key = TRUE;
 }
 
 /**
@@ -749,7 +433,7 @@ static bool has_tpm(private_pts_t *this)
 	return TRUE;
 
 	err:
-	DBG1(DBG_TNC, "TPM not available: tss error 0x%x", result);
+	DBG1(DBG_IMC, "TPM not available: tss error 0x%x", result);
 	return FALSE;
 }
 
@@ -771,7 +455,8 @@ pts_t *pts_create(bool is_imc)
 			 .get_tpm_version_info = _get_tpm_version_info,
 			 .set_tpm_version_info = _set_tpm_version_info,
 			 .get_aik = _get_aik,
-			 .set_aik = _set_aik,
+			 .set_aik_cert = _set_aik_cert,
+			 .set_aik_key = _set_aik_key,
 			 .do_measurements = _do_measurements,
 			 .destroy = _destroy,
 		 },

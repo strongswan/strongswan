@@ -95,19 +95,28 @@ struct pts_t {
 	/**
 	 * Get Attestation Identity Key
 	 *
-	 * @param aik			chunk containing a AIK naked public key or certificate
+	 * @param aik_cert			structure containing a AIK naked public certificate
+	 * @param aik_key			structure containing a AIK naked public key
 	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
 	 * @return				TRUE if AIK available
 	 */
-	bool (*get_aik)(pts_t *this, chunk_t *aik, bool *is_naked_key);
+	bool (*get_aik)(pts_t *this, certificate_t **aik_cert, public_key_t **aik_key, bool *is_naked_key);
 	
+	/**
+	 * Set Attestation Identity Certificate
+	 *
+	 * @param aik_cert			structure containing a AIK naked public certificate
+	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
+	 */
+	void (*set_aik_cert)(pts_t *this, certificate_t *aik_cert);
+
 	/**
 	 * Set Attestation Identity Key
 	 *
-	 * @param aik			chunk containing a AIK naked public key or certificate
-	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
+	 * @param aik_key			structure containing a AIK naked public key
+	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
 	 */
-	void (*set_aik)(pts_t *this, chunk_t aik, bool is_naked_key);
+	void (*set_aik_key)(pts_t *this, public_key_t *aik_key);
 	
 	/**
 	 * Do PTS File Measurements
