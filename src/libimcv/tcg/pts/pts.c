@@ -297,7 +297,7 @@ static bool obtain_aik(private_pts_t *this)
 	UINT32		credBufSize;
 	static int	level = 0;
 	BYTE		*ekCert = NULL;
-	UINT32		ekCertLen;
+	UINT32		ekCertLen = 0;
 	char		url[128];
 	int		result;
 	
