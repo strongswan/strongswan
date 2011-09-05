@@ -74,6 +74,18 @@ INSERT INTO files (
   1, '/lib/xtables/'
 );
 
+INSERT INTO files (
+  type, path
+ ) VALUES (
+  0, 'libxt_udp.so'
+);
+
+INSERT INTO files (
+  type, path
+ ) VALUES (
+  0, 'libxt_tcp.so'
+);
+
 /* Product-File */
 
 INSERT INTO product_file (
@@ -382,4 +394,41 @@ INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
   6, 4, 8192, X'08fd91f9017763212d1491f178e4d7e41d34a21b0117ee3321d832f5b8e02d4c7152a6cdc53bb4ca7e8aad5b1f279d1f'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  8, 7, 4, 32768, X'200eab67377bf3d5a25372838c38841658a718e4'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  8, 7, 4, 16384, X'31045af9a12efdc58155a177e9391dd28b93fa38af58ce00f49259cc26e97687'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  8, 7, 4, 8192, X'e8c64b508171d947069382da58dc7e39a97ce878a07f494a6fb370efb09116d32f1d4cdddeef85f22e14d1c5d5a37625'
+);
+
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  9, 7, 4, 32768, X'd2bf3556a0b38cfba2962d058fa8ea777397e82d'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  9, 7, 4, 16384, X'4ec845e828af69dcbde3ecb981096ac1e25c9e3e607e9a24b27da7e44527edf9'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  9, 7, 4, 8192, X'3204a34ca409730298f60361865dace24900827ee9f3bc87884d50827911b4b17beb4c09bad77e43f28938f10bc5138a'
 );
