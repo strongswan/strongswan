@@ -109,13 +109,15 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	u_int8_t flags = PTS_AIK_FLAGS_NONE;
+	cred_encoding_type_t encoding_type = CERT_ASN1_DER;
 	chunk_t aik_blob;
 
 	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
 		flags |= PTS_AIK_FLAGS_NAKED_KEY;
+		encoding_type = PUBKEY_SPKI_ASN1_DER;
 	}
-	if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_blob))
+	if (!this->aik->get_encoding(this->aik, encoding_type, &aik_blob))
 	{
 		DBG1(DBG_TNC, "encoding of Attestation Identity Key failed");
 		aik_blob = chunk_empty;
