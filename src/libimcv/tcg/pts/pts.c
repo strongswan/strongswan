@@ -183,23 +183,23 @@ static void load_aik(private_pts_t *this)
 
 	if (cert_path)
 	{
-		DBG2(DBG_IMC,"AIK certificate path %s", cert_path);
 		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										CERT_X509, BUILD_FROM_FILE,
 										cert_path, BUILD_END);
 		if (this->aik)
 		{
+			DBG2(DBG_IMC, "loaded AIK certificate from '%s'", cert_path);
 			return;
 		}
 	}
 	if (key_path)
 	{
-		DBG2(DBG_IMC,"AIK public key path %s", key_path);
 		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										CERT_TRUSTED_PUBKEY, BUILD_FROM_FILE,
 										key_path, BUILD_END);
 		if (this->aik)
 		{
+			DBG2(DBG_IMC, "loaded AIK public key from '%s'", key_path);
 			return;
 		}
 	}
