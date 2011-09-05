@@ -18,11 +18,6 @@
 #include <debug.h>
 #include <crypto/hashers/hasher.h>
 
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <curl/curl.h>
-#include "fake_ek_cert.h"
-
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
@@ -30,16 +25,6 @@
 #include <errno.h>
 
 #define PTS_BUF_SIZE	4096
-
-/* Size of endorsement key in bytes */
-#define	EKSIZE		(2048/8)
-/* URL of Privacy CA */
-#define CAURL		"http://www.privacyca.com/"
-#define CERTURL		CAURL "api/pca/level%d?ResponseFormat=PEM"
-#define REQURL		CAURL "api/pca/level%d?ResponseFormat=Binary"
-
-/* TPM has EK Certificate */
-#define REALEK		FALSE
 
 typedef struct private_pts_t private_pts_t;
 
@@ -205,10 +190,10 @@ static bool obtain_aik(private_pts_t *this)
 	char *key_path;
 
 	certificate_path = lib->settings->get_str(lib->settings,
-				 "libimcv.plugins.imc-attestation.aik_cert", NULL);
+				 "libimcv.plugins.imc-attestation.aikcert", NULL);
 	
 	key_path = lib->settings->get_str(lib->settings,
-				 "libimcv.plugins.imc-attestation.aik_key", NULL);
+				 "libimcv.plugins.imc-attestation.aikkey", NULL);
 
 	DBG2(DBG_IMC,"AIK Certificate path %s",certificate_path);
 	DBG2(DBG_IMC,"AIK Public Key path %s", key_path);
