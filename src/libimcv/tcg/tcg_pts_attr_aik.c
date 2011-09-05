@@ -115,7 +115,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		flags |= PTS_AIK_FLAGS_NAKED_KEY;
 	}
-	if (this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_blob))
+	if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_blob))
 	{
 		DBG1(DBG_TNC, "encoding of Attestation Identity Key failed");
 		aik_blob = chunk_empty;
