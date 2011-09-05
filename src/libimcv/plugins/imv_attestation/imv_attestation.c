@@ -21,6 +21,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
 #include <tcg/pts/pts_database.h>
+#include <tcg/pts/pts_creds.h>
 #include <tcg/pts/pts_error.h>
 
 #include <tcg/tcg_attr.h>
@@ -69,6 +70,11 @@ static pts_meas_algorithms_t supported_algorithms = 0;
 static pts_database_t *pts_db;
 
 /**
+ * PTS credentials
+ */
+static pts_creds_t *pts_creds;
+
+/**
  * List of id's for the files that are requested for measurement
  */
 static linked_list_t *requested_files;
@@ -81,7 +87,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	char *hash_alg, *uri;
+	char *hash_alg, *uri, *cadir;
 
 	if (imv_attestation)
 	{
@@ -126,6 +132,11 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	uri = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.database", NULL);
 	pts_db = pts_database_create(uri);
+
+	/* create PTS credential set */
+	cadir = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.cadir", NULL);
+	pts_creds = pts_creds_create(cadir);
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -681,6 +692,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	DESTROY_IF(pts_db);
+	DESTROY_IF(pts_creds);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 
