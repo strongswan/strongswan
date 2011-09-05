@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.2.0, martin@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.3.0, martin@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -50,35 +50,21 @@ PKG_CHECK_MODULES(DBUS, dbus-glib-1 >= 0.30)
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
-if test x"$with_gnome" != xno; then
-	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
-	AC_SUBST(GTK_CFLAGS)
-	AC_SUBST(GTK_LIBS)
+PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LIBS)
 
-	PKG_CHECK_MODULES(GDK_PIXBUF, gdk-pixbuf-2.0)
-	AC_SUBST(GDK_PIXBUF_CFLAGS)
-	AC_SUBST(GDK_PIXBUF_LIBS)
+PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
+AC_SUBST(LIBGNOMEUI_CFLAGS)
+AC_SUBST(LIBGNOMEUI_LIBS)
 
-	PKG_CHECK_MODULES(GLADE, libglade-2.0)
-	AC_SUBST(GLADE_CFLAGS)
-	AC_SUBST(GLADE_LIBS)
-
-	PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
-	AC_SUBST(LIBGNOMEUI_CFLAGS)
-	AC_SUBST(LIBGNOMEUI_LIBS)
-
-	PKG_CHECK_MODULES(GCONF, gconf-2.0)
-	AC_SUBST(GCONF_CFLAGS)
-	AC_SUBST(GCONF_LIBS)
-
-	PKG_CHECK_MODULES(GNOMEKEYRING, gnome-keyring-1)
-	AC_SUBST(GNOMEKEYRING_CFLAGS)
-	AC_SUBST(GNOMEKEYRING_LIBS)
-fi
+PKG_CHECK_MODULES(GNOMEKEYRING, gnome-keyring-1)
+AC_SUBST(GNOMEKEYRING_CFLAGS)
+AC_SUBST(GNOMEKEYRING_LIBS)
 
 PKG_CHECK_EXISTS([libnm-glib],
-	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm-glib libnm-glib-vpn)],
-	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.7.0 libnm-util libnm_glib libnm_glib_vpn)]
+	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm-glib libnm-glib-vpn)],
+	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm_glib libnm_glib_vpn)]
 )
 AC_SUBST(NM_UTILS_CFLAGS)
 AC_SUBST(NM_UTILS_LIBS)

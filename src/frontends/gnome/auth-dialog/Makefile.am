@@ -7,11 +7,7 @@ nm_strongswan_auth_dialog_CPPFLAGS = \
 	$(GNOMEKEYRING_CFLAGS) \
 	$(NETWORK_MANAGER_CFLAGS) \
 	$(NM_UTILS_CFLAGS) \
-	-DICONDIR=\""$(datadir)/pixmaps"\" \
-	-DGLADEDIR=\""$(gladedir)"\" \
-	-DBINDIR=\""$(bindir)"\" \
 	-DG_DISABLE_DEPRECATED \
-	-DGDK_DISABLE_DEPRECATED \
 	-DGNOME_DISABLE_DEPRECATED \
 	-DGNOMELOCALEDIR=\"$(datadir)/locale\" \
 	-DVERSION=\"$(VERSION)\"
@@ -22,5 +18,6 @@ nm_strongswan_auth_dialog_SOURCES =	\
 nm_strongswan_auth_dialog_LDADD = \
 	$(GTK_LIBS) \
 	$(LIBGNOMEUI_LIBS) \
-	$(GNOMEKEYRING_LIBS)
+	$(GNOMEKEYRING_LIBS) \
+	$(NM_UTILS_LIBS)
 

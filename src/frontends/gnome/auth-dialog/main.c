@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2004 Dan Williams
  * Red Hat, Inc.
@@ -24,10 +24,10 @@
 #include <gtk/gtk.h>
 #include <gnome-keyring.h>
 #include <libgnomeui/libgnomeui.h>
-#include <gconf/gconf-client.h>
 #include <nm-vpn-plugin.h>
 #include <nm-setting-vpn.h>
 #include <nm-setting-connection.h>
+#include <nm-vpn-plugin-utils.h>
 
 #define NM_DBUS_SERVICE_STRONGSWAN	"org.freedesktop.NetworkManager.strongswan"
 
@@ -61,62 +61,63 @@ static char *lookup_password(char *name, char *service)
 }
 
 /**
+ * Wait for quit input
+ */
+static void wait_for_quit (void)
+{
+	GString *str;
+	char c;
+	ssize_t n;
+	time_t start;
+
+	str = g_string_sized_new (10);
+	start = time (NULL);
+	do {
+		errno = 0;
+		n = read (0, &c, 1);
+		if (n == 0 || (n < 0 && errno == EAGAIN))
+			g_usleep (G_USEC_PER_SEC / 10);
+		else if (n == 1) {
+			g_string_append_c (str, c);
+			if (strstr (str->str, "QUIT") || (str->len > 10))
+				break;
+		} else
+			break;
+	} while (time (NULL) < start + 20);
+	g_string_free (str, TRUE);
+}
+
+/**
  * get the connection type
  */
 static char* get_connection_type(char *uuid)
 {
-	GConfClient *client = NULL;
-	GSList *list;
-	GSList *iter;
-	char *key, *str, *path, *found = NULL, *method = NULL;
+	GHashTable *data = NULL, *secrets = NULL;
+	char *method;
 
-	client = gconf_client_get_default();
-
-	list = gconf_client_all_dirs(client, "/system/networking/connections", NULL);
-	g_return_val_if_fail(list, NULL);
-
-	for (iter = list; iter; iter = iter->next)
-	{
-		path = (char *) iter->data;
-
-		key = g_strdup_printf("%s/%s/%s", path,
-							  NM_SETTING_CONNECTION_SETTING_NAME,
-							  NM_SETTING_CONNECTION_UUID);
-		str = gconf_client_get_string(client, key, NULL);
-		g_free (key);
-
-		if (str && !strcmp(str, uuid))
-		{
-			found = g_strdup(path);
-		}
-		g_free (str);
-		if (found)
-		{
-			break;
-		}
+	if (!nm_vpn_plugin_utils_read_vpn_details (0, &data, &secrets)) {
+		fprintf (stderr, "Failed to read data and secrets from stdin.\n");
+		return NULL;
 	}
-	g_slist_foreach(list, (GFunc)g_free, NULL);
-	g_slist_free(list);
+	
+	method = g_hash_table_lookup (data, "method");
+	if (method)
+		method = g_strdup(method);
 
-	if (found)
-	{
-		key = g_strdup_printf ("%s/%s/%s", found,
-							   NM_SETTING_VPN_SETTING_NAME, "method");
-		method = gconf_client_get_string(client, key, NULL);
-		g_free(found);
-		g_free(key);
-	}
-	g_object_unref(client);
+	if (data)
+		g_hash_table_unref (data);
+	if (secrets)
+		g_hash_table_unref (secrets);
+
 	return method;
 }
 
 int main (int argc, char *argv[])
 {
-	gboolean retry = FALSE;
+	gboolean retry = FALSE, allow_interaction = FALSE;
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
 	GOptionContext *context;
-	GnomeProgram *program = NULL;
-	char buf, *agent, *type;
+	char *agent, *type;
 	guint32 itemid;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
@@ -124,6 +125,7 @@ int main (int argc, char *argv[])
 		{ "uuid", 'u', 0, G_OPTION_ARG_STRING, &uuid, "UUID of VPN connection", NULL},
 		{ "name", 'n', 0, G_OPTION_ARG_STRING, &name, "Name of VPN connection", NULL},
 		{ "service", 's', 0, G_OPTION_ARG_STRING, &service, "VPN service type", NULL},
+		{ "allow-interaction", 'i', 0, G_OPTION_ARG_NONE, &allow_interaction, "Allow user interaction", NULL},
 		{ NULL }
 	};
 
@@ -131,19 +133,16 @@ int main (int argc, char *argv[])
 	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
 	textdomain(GETTEXT_PACKAGE);
 
+	gtk_init (&argc, &argv);
+
 	context = g_option_context_new ("- strongswan auth dialog");
 	g_option_context_add_main_entries (context, entries, GETTEXT_PACKAGE);
-
-	program = gnome_program_init ("nm-strongswan-auth-dialog", VERSION,
-								LIBGNOMEUI_MODULE,
-								argc, argv,
-								GNOME_PARAM_GOPTION_CONTEXT, context,
-								GNOME_PARAM_NONE);
+	g_option_context_parse (context, &argc, &argv, NULL);
+	g_option_context_free (context);
 
 	if (uuid == NULL || name == NULL || service == NULL)
 	{
 		fprintf (stderr, "Have to supply UUID, name, and service\n");
-		g_object_unref (program);
 		return 1;
 	}
 
@@ -151,7 +150,6 @@ int main (int argc, char *argv[])
 	{
 		fprintf(stderr, "This dialog only works with the '%s' service\n",
 				NM_DBUS_SERVICE_STRONGSWAN);
-		g_object_unref (program);
 		return 1;
 	}
 
@@ -159,13 +157,12 @@ int main (int argc, char *argv[])
 	if (!type)
 	{
 		fprintf(stderr, "Connection lookup failed\n");
-		g_object_unref (program);
 		return 1;
 	}
 	if (!strcmp(type, "eap") || !strcmp(type, "key") || !strcmp(type, "smartcard"))
 	{
 		pass = lookup_password(name, service);
-		if (!pass || retry)
+		if ((!pass || retry) && allow_interaction)
 		{
 			if (!strcmp(type, "eap"))
 			{
@@ -195,7 +192,6 @@ int main (int argc, char *argv[])
 			}
 			if (!gnome_password_dialog_run_and_block(GNOME_PASSWORD_DIALOG(dialog)))
 			{
-				g_object_unref (program);
 				return 1;
 			}
 
@@ -217,7 +213,10 @@ int main (int argc, char *argv[])
 					break;
 			}
 		}
-		printf("password\n%s\n", pass);
+		if (pass)
+		{
+			printf("password\n%s\n", pass);
+		}
 	}
 	else
 	{
@@ -228,20 +227,21 @@ int main (int argc, char *argv[])
 		}
 		else
 		{
-			dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
-						  GTK_BUTTONS_OK,
-						  _("Configuration uses ssh-agent for authentication, "
-						  "but ssh-agent is not running!"));
-			gtk_dialog_run (GTK_DIALOG (dialog));
-			gtk_widget_destroy (dialog);
-			return 1;
+			if (allow_interaction)
+			{
+				dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
+							  GTK_BUTTONS_OK,
+							  _("Configuration uses ssh-agent for authentication, "
+							  "but ssh-agent is not running!"));
+				gtk_dialog_run (GTK_DIALOG (dialog));
+				gtk_widget_destroy (dialog);
+			}
 		}
 	}
 	printf("\n\n");
 	/* flush output, wait for input */
 	fflush(stdout);
-	if (fread(&buf, 1, sizeof(buf), stdin));
-	g_object_unref(program);
+	wait_for_quit ();
 	return 0;
 }
 

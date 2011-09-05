@@ -24,7 +24,6 @@
 #include <glib.h>
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
-#include <glade/glade.h>
 
 #define NM_VPN_API_SUBJECT_TO_CHANGE
 
@@ -59,7 +58,7 @@ G_DEFINE_TYPE_EXTENDED (StrongswanPluginUiWidget, strongswan_plugin_ui_widget, G
 #define STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, StrongswanPluginUiWidgetPrivate))
 
 typedef struct {
-	GladeXML *xml;
+	GtkBuilder *builder;
 	GtkWidget *widget;
 } StrongswanPluginUiWidgetPrivate;
 
@@ -106,7 +105,7 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	GtkWidget *widget;
 	char *str;
 
-	widget = glade_xml_get_widget (priv->xml, "address-entry");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (!str || !strlen (str)) {
 		g_set_error (error,
@@ -126,36 +125,36 @@ static void update_layout (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *p
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 			/* FALL */
 		case 0:
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "userkey-label"));
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "userkey-button"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
 			break;
 		case 1:
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-label"));
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "usercert-button"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
 			break;
 		case 2:
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "user-entry"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
 			break;
 		case 3:
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-label"));
-			gtk_widget_show (glade_xml_get_widget (priv->xml, "user-entry"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "usercert-button"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-label"));
-			gtk_widget_hide (glade_xml_get_widget (priv->xml, "userkey-button"));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")));
+			gtk_widget_show (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")));
+			gtk_widget_hide (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")));
 			break;
 	}
 
@@ -167,9 +166,9 @@ settings_changed_cb (GtkWidget *widget, gpointer user_data)
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (user_data);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 
-	if (widget == glade_xml_get_widget (priv->xml, "method-combo"))
+	if (widget == GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")))
 	{
-		update_layout(glade_xml_get_widget (priv->xml, "method-combo"), priv);
+		update_layout(GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")), priv);
 	}
 	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
 }
@@ -183,32 +182,32 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	const char *value;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
-	widget = glade_xml_get_widget (priv->xml, "address-entry");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "address");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "certificate-button");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "certificate-button"));
 	value = nm_setting_vpn_get_data_item (settings, "certificate");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "user-label");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label"));
 	gtk_widget_set_no_show_all (widget, TRUE);
-	widget = glade_xml_get_widget (priv->xml, "user-entry");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
 	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "user");
 	if (value)
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "method-combo");
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/private key"));
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Certificate/ssh-agent"));
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("Smartcard"));
-	gtk_combo_box_append_text (GTK_COMBO_BOX (widget), _("EAP"));
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate/private key"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate/ssh-agent"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Smartcard"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP"));
 	value = nm_setting_vpn_get_data_item (settings, "method");
 	if (value) {
 		if (g_strcmp0 (value, "key") == 0) {
@@ -231,25 +230,25 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	update_layout (widget, priv);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "usercert-label");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label"));
 	gtk_widget_set_no_show_all (widget, TRUE);
-	widget = glade_xml_get_widget (priv->xml, "usercert-button");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
 	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "usercert");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "userkey-label");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label"));
 	gtk_widget_set_no_show_all (widget, TRUE);
-	widget = glade_xml_get_widget (priv->xml, "userkey-button");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button"));
 	gtk_widget_set_no_show_all (widget, TRUE);
 	value = nm_setting_vpn_get_data_item (settings, "userkey");
 	if (value)
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "virtual-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "virtual-check"));
 	value = nm_setting_vpn_get_data_item (settings, "virtual");
 	if (value && strcmp(value, "yes") == 0)
 	{
@@ -257,7 +256,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "encap-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "encap-check"));
 	value = nm_setting_vpn_get_data_item (settings, "encap");
 	if (value && strcmp(value, "yes") == 0)
 	{
@@ -265,7 +264,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
-	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ipcomp-check"));
 	value = nm_setting_vpn_get_data_item (settings, "ipcomp");
 	if (value && strcmp(value, "yes") == 0)
 	{
@@ -304,29 +303,29 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	g_object_set (settings, NM_SETTING_VPN_SERVICE_TYPE,
 				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
 
-	widget = glade_xml_get_widget (priv->xml, "address-entry");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 	if (str && strlen (str)) {
 		nm_setting_vpn_add_data_item (settings, "address", str);
 	}
 
-	widget = glade_xml_get_widget (priv->xml, "certificate-button");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "certificate-button"));
 	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 	if (str) {
 		nm_setting_vpn_add_data_item (settings, "certificate", str);
 	}
 
-	widget = glade_xml_get_widget (priv->xml, "method-combo");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
 		default:
 		case 0:
-			widget = glade_xml_get_widget (priv->xml, "userkey-button");
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button"));
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
 				nm_setting_vpn_add_data_item (settings, "userkey", str);
 			}
-			widget = glade_xml_get_widget (priv->xml, "usercert-button");
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
 				nm_setting_vpn_add_data_item (settings, "usercert", str);
@@ -334,7 +333,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			str = "key";
 			break;
 		case 1:
-			widget = glade_xml_get_widget (priv->xml, "usercert-button");
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
 			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 			if (str) {
 				nm_setting_vpn_add_data_item (settings, "usercert", str);
@@ -345,7 +344,7 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 			str = "smartcard";
 			break;
 		case 3:
-			widget = glade_xml_get_widget (priv->xml, "user-entry");
+			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
 			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
 			if (str && strlen (str)) {
 				nm_setting_vpn_add_data_item (settings, "user", str);
@@ -355,27 +354,30 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	}
 	nm_setting_vpn_add_data_item (settings, "method", str);
 
-	widget = glade_xml_get_widget (priv->xml, "virtual-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "virtual-check"));
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "virtual", active ? "yes" : "no");
 
-	widget = glade_xml_get_widget (priv->xml, "encap-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "encap-check"));
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "encap", active ? "yes" : "no");
 
-	widget = glade_xml_get_widget (priv->xml, "ipcomp-check");
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ipcomp-check"));
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
 
-	nm_connection_add_setting (connection, NM_SETTING (settings));
-	return TRUE;
-}
 
-static gboolean
-save_secrets (NMVpnPluginUiWidgetInterface *iface,
-			  NMConnection *connection, GError **error)
-{
-	/* no secrets to save */
+	if (!nm_setting_set_secret_flags (NM_SETTING (settings),
+				"password", NM_SETTING_SECRET_FLAG_AGENT_OWNED, NULL))
+	{
+		fprintf(stderr, "no\n");
+	}
+	else
+	{
+		fprintf(stderr, "yes\n");
+	}
+
+	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
 }
 
@@ -384,7 +386,7 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 {
 	NMVpnPluginUiWidgetInterface *object;
 	StrongswanPluginUiWidgetPrivate *priv;
-	char *glade_file;
+	char *ui_file;
 
 	if (error)
 		g_return_val_if_fail (*error == NULL, NULL);
@@ -396,19 +398,24 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 	}
 
 	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (object);
+	ui_file = g_strdup_printf ("%s/%s", UIDIR, "nm-strongswan-dialog.ui");
+	priv->builder = gtk_builder_new ();
 
-	glade_file = g_strdup_printf ("%s/%s", GLADEDIR, "nm-strongswan-dialog.glade");
-	priv->xml = glade_xml_new (glade_file, "strongswan-vbox", GETTEXT_PACKAGE);
-	if (priv->xml == NULL) {
+	gtk_builder_set_translation_domain (priv->builder, GETTEXT_PACKAGE);
+
+	if (!gtk_builder_add_from_file (priv->builder, ui_file, error)) {
+		g_warning ("Couldn't load builder file: %s",
+		           error && *error ? (*error)->message : "(unknown)");
+		g_clear_error (error);
 		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0,
-					 "could not load required resources at %s", glade_file);
-		g_free (glade_file);
+		             "could not load required resources at %s", ui_file);
+		g_free (ui_file);
 		g_object_unref (object);
 		return NULL;
 	}
-	g_free (glade_file);
+	g_free (ui_file);
 
-	priv->widget = glade_xml_get_widget (priv->xml, "strongswan-vbox");
+	priv->widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "strongswan-vbox")	);
 	if (!priv->widget) {
 		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not load UI widget");
 		g_object_unref (object);
@@ -433,8 +440,8 @@ dispose (GObject *object)
 	if (priv->widget)
 		g_object_unref (priv->widget);
 
-	if (priv->xml)
-		g_object_unref (priv->xml);
+	if (priv->builder)
+		g_object_unref (priv->builder);
 
 	G_OBJECT_CLASS (strongswan_plugin_ui_widget_parent_class)->dispose (object);
 }
@@ -460,7 +467,6 @@ strongswan_plugin_ui_widget_interface_init (NMVpnPluginUiWidgetInterface *iface_
 	/* interface implementation */
 	iface_class->get_widget = get_widget;
 	iface_class->update_connection = update_connection;
-	iface_class->save_secrets = save_secrets;
 }
 
 static guint32
