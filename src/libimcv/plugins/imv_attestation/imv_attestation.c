@@ -69,6 +69,11 @@ static pts_meas_algorithms_t supported_algorithms = 0;
 static pts_database_t *pts_db;
 
 /**
+ * List of id's for the files that are requested for measurement
+ */
+static linked_list_t *requested_files;
+
+/**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
  */
 TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
@@ -248,6 +253,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			{
 				break;
 			}
+			
+			requested_files = linked_list_create();
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
 				is_directory = (type != 0);
@@ -257,6 +264,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 													delimiter, pathname);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
+				requested_files->insert_last(requested_files, (void*)id);
 			}
 			enumerator->destroy(enumerator);
 			break;
@@ -445,7 +453,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					chunk_t measurement;
 					char *platform_info, *filename;
 					enumerator_t *e_meas;
-	
+					bool is_directory;
+					linked_list_t *files_in_dir_with_meas;
+
+					files_in_dir_with_meas = linked_list_create();
 					platform_info = pts->get_platform_info(pts);
 					if (!pts_db || !platform_info)
 					{
@@ -461,13 +472,38 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
 						 request_id, file_count, (file_count == 1) ? "":"s");
 
+					if (!pts_db->is_directory(pts_db, request_id, &is_directory))
+					{
+						DBG1(DBG_IMV, "file entry with request id:%d not found", request_id);
+						break;
+					}
+					
+					if (!is_directory)
+					{
+						requested_files->remove(requested_files, (void*)request_id, NULL);
+					}
+					else
+					{
+						enumerator_t *e;
+						char *file;
+						
+						e = pts_db->create_files_in_dir_enumerator(pts_db, request_id);
+						while (e->enumerate(e, &file))
+						{
+							files_in_dir_with_meas->insert_last(files_in_dir_with_meas, file);
+							DBG3(DBG_IMV, "expecting measurement for: %s with request_id: %d", file, request_id);
+						}
+					}
+					
 					e_meas = measurements->create_enumerator(measurements);
 					while (e_meas->enumerate(e_meas, &filename, &measurement))
 					{
 						enumerator_t *e;
 						chunk_t db_measurement;
 
-						e = pts_db->create_meas_enumerator(pts_db,
+						e = (is_directory) ? pts_db->create_dir_meas_enumerator(pts_db,
+										platform_info, request_id, filename, algo) :
+										pts_db->create_file_meas_enumerator(pts_db,
 										platform_info, request_id, algo);
 						if (!e)
 						{
@@ -492,8 +528,20 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								 &measurement, filename, &db_measurement);
 							measurement_error = TRUE;
 						}
+
+						if (is_directory)
+						{
+							files_in_dir_with_meas->remove(files_in_dir_with_meas,
+													filename, (bool (*)(void*,void*))strcmp);
+						}
 						e->destroy(e);
 					}
+
+					if(is_directory && !files_in_dir_with_meas->get_count(files_in_dir_with_meas))
+					{
+						requested_files->remove(requested_files, (void*)request_id, NULL);
+					}
+
 					e_meas->destroy(e_meas);
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
@@ -549,8 +597,18 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	if (attestation_state->get_handshake_state(attestation_state) &
 		IMV_ATTESTATION_STATE_END)
 	{
-		if (measurement_error)
+		if (measurement_error || requested_files->get_count(requested_files))
 		{
+			enumerator_t *e;
+			int request;
+			
+			e  = requested_files->create_enumerator(requested_files);
+			while (e->enumerate(e, &request))
+			{
+				DBG1(DBG_IMV, "measurement/s not received for requests: %d", request);
+			}
+
+			e->destroy(e);
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
