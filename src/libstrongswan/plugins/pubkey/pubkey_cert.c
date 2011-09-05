@@ -166,7 +166,7 @@ static bool get_validity(private_pubkey_cert_t *this, time_t *when,
 static bool get_encoding(private_pubkey_cert_t *this, cred_encoding_type_t type,
 						 chunk_t *encoding)
 {
-	return this->key->get_encoding(this->key, PUBKEY_ASN1_DER, encoding);
+	return this->key->get_encoding(this->key, type, encoding);
 }
 
 /**
