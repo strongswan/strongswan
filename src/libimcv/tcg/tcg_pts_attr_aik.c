@@ -35,8 +35,9 @@ typedef struct private_tcg_pts_attr_aik_t private_tcg_pts_attr_aik_t;
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
-#define PTS_AIK_SIZE			4
-
+#define PTS_AIK_SIZE				4
+#define PTS_AIK_FLAGS_NONE			0
+#define PTS_AIK_FLAGS_NAKED_KEY		(1<<7)
 /**
  * Private data of an tcg_pts_attr_aik_t object.
  */
@@ -68,14 +69,9 @@ struct private_tcg_pts_attr_aik_t {
 	bool noskip_flag;
 
 	/**
-	 * Naked Public Key flag
+	 * AIK Certificate or Public Key
 	 */
-	bool naked_pub_aik;
-	
-	/**
-	 * Attestation Identity Key
-	 */
-	chunk_t aik;
+	certificate_t *aik;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -112,17 +108,21 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_aik_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
+	u_int8_t flags = PTS_AIK_FLAGS_NONE;
+	chunk_t aik_blob;
 
-	writer = bio_writer_create(PTS_AIK_SIZE);
-	
-	if (this->naked_pub_aik)
+	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
-		flags += 128;
+		flags |= PTS_AIK_FLAGS_NAKED_KEY;
 	}
-	writer->write_uint8 (writer, flags);
-	writer->write_data(writer, this->aik);
-
+	if (this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_blob))
+	{
+		DBG1(DBG_TNC, "encoding of Attestation Identity Key failed");
+		aik_blob = chunk_empty;
+	}
+	writer = bio_writer_create(PTS_AIK_SIZE);
+	writer->write_uint8(writer, flags);
+	writer->write_data (writer, aik_blob);
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -132,6 +132,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int8_t flags;
+	certificate_type_t type;
+	chunk_t aik_blob;
 	
 	if (this->value.len < PTS_AIK_SIZE)
 	{
@@ -140,57 +142,42 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	
 	reader->read_uint8(reader, &flags);
-	if ((flags >> 7 ) & 1)
-	{
-		this->naked_pub_aik = true;
-	}
-	
-	reader->read_data  (reader, this->value.len - 1, &this->aik);
-	this->aik = chunk_clone(this->aik);
+	reader->read_data (reader, reader->remaining(reader), &aik_blob);
+
+	type = (flags & PTS_AIK_FLAGS_NAKED_KEY) ? CERT_TRUSTED_PUBKEY : CERT_X509;
+
+	this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
+								   BUILD_BLOB_PEM, aik_blob, BUILD_END);
 	reader->destroy(reader);
 
+	if (!this->aik)
+	{
+		DBG1(DBG_TNC, "parsing of Attestation Identity Key failed");
+		*offset = 0;
+		return FAILED;
+	}
 	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_aik_t *this)
 {
+	DESTROY_IF(this->aik);
 	free(this->value.ptr);
-	free(this->aik.ptr);
 	free(this);
 }
 
-METHOD(tcg_pts_attr_aik_t, get_naked_flag, bool,
-	private_tcg_pts_attr_aik_t *this)
-{
-	return this->naked_pub_aik;
-}
-
-METHOD(tcg_pts_attr_aik_t, set_naked_flag, void,
-	private_tcg_pts_attr_aik_t *this, bool naked_pub_aik)
-{
-	this->naked_pub_aik = naked_pub_aik;
-}
-
-METHOD(tcg_pts_attr_aik_t, get_aik, chunk_t,
+METHOD(tcg_pts_attr_aik_t, get_aik, certificate_t*,
 	private_tcg_pts_attr_aik_t *this)
 {
 	return this->aik;
 }
 
-METHOD(tcg_pts_attr_aik_t, set_aik, void,
-		private_tcg_pts_attr_aik_t *this,
-		chunk_t aik)
-{
-	this->aik = aik;
-}
-
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_aik_create(bool naked_pub_aik, chunk_t aik)
+pa_tnc_attr_t *tcg_pts_attr_aik_create(certificate_t *aik)
 {
 	private_tcg_pts_attr_aik_t *this;
 
@@ -206,15 +193,11 @@ pa_tnc_attr_t *tcg_pts_attr_aik_create(bool naked_pub_aik, chunk_t aik)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_naked_flag = _get_naked_flag,
-			.set_naked_flag = _set_naked_flag,
 			.get_aik = _get_aik,
-			.set_aik = _set_aik,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_AIK,
-		.naked_pub_aik = naked_pub_aik,
-		.aik = aik,
+		.aik = aik->get_ref(aik),
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -240,10 +223,7 @@ pa_tnc_attr_t *tcg_pts_attr_aik_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_naked_flag = _get_naked_flag,
-			.set_naked_flag = _set_naked_flag,
 			.get_aik = _get_aik,
-			.set_aik = _set_aik,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_AIK,

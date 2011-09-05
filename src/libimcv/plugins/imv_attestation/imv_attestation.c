@@ -415,32 +415,16 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				case TCG_PTS_AIK:
 				{
 					tcg_pts_attr_aik_t *attr_cast;
-					chunk_t aik;
-					bool is_naked_key;
-	
+					certificate_t *aik;
+
 					attr_cast = (tcg_pts_attr_aik_t*)attr;
 					aik = attr_cast->get_aik(attr_cast);
-					is_naked_key = attr_cast->get_naked_flag(attr_cast);
-
-					if(!is_naked_key)
+					if (!aik)
 					{
-						certificate_t *aik_cert;
-
-						aik_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-										   BUILD_BLOB_PEM, aik,
-										   BUILD_END);
-						pts->set_aik_cert(pts, aik_cert);
+						/* TODO generate error attribute */
+						break;
 					}
-					else
-					{
-						public_key_t *aik_key;
-
-						aik_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-										   BUILD_BLOB_PEM, aik,
-										   BUILD_END);
-						pts->set_aik_key(pts, aik_key);
-					}
-
+					pts->set_aik(pts, aik);
 					attestation_state->set_handshake_state(attestation_state,
 											IMV_ATTESTATION_STATE_END);
 					break;

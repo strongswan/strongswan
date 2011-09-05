@@ -65,19 +65,9 @@ struct private_pts_t {
 	chunk_t tpm_version_info;
 
 	/**
-	 * Contains a Attestation Identity Certificate
+	 * Contains a Attestation Identity Key or Certificate
 	 */
- 	certificate_t *aik_cert;
-
-	/**
-	 * Contains a Attestation Identity Public Key
-	 */
- 	public_key_t *aik_key;
-
-	/**
-	 * True if AIK is naked public key, not a certificate
-	 */
-	bool is_naked_key;
+ 	certificate_t *aik;
 
 };
 
@@ -178,75 +168,55 @@ METHOD(pts_t, set_tpm_version_info, void,
 	print_tpm_version_info(this);
 }
 
-
 /**
- * Obtain an AIK Certificate or public key
- * If the certificate is available in give path, ignore whether key is there
- * If certificate is not available take the public key at given path
+ * Load an AIK certificate or public key,
+ * the certificate having precedence over the public key if both are present
  */
-static bool obtain_aik(private_pts_t *this)
+static void load_aik(private_pts_t *this)
 {
-	char *certificate_path;
-	char *key_path;
+	char *cert_path, *key_path;
 
-	certificate_path = lib->settings->get_str(lib->settings,
-				 "libimcv.plugins.imc-attestation.aikcert", NULL);
-	
+	cert_path = lib->settings->get_str(lib->settings,
+						"libimcv.plugins.imc-attestation.aik_cert", NULL);
 	key_path = lib->settings->get_str(lib->settings,
-				 "libimcv.plugins.imc-attestation.aikkey", NULL);
+						"libimcv.plugins.imc-attestation.aik_key", NULL);
 
-	DBG2(DBG_IMC,"AIK Certificate path %s",certificate_path);
-	DBG2(DBG_IMC,"AIK Public Key path %s", key_path);
-
-	if(certificate_path && (this->aik_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-										   BUILD_FROM_FILE, certificate_path,
-										   BUILD_END)))
+	if (cert_path)
 	{
-		this->is_naked_key = FALSE;
+		DBG2(DBG_IMC,"AIK certificate path %s", cert_path);
+		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_X509, BUILD_FROM_FILE,
+										cert_path, BUILD_END);
+		if (this->aik)
+		{
+			return;
+		}
 	}
-	else if(key_path && (this->aik_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-										   BUILD_FROM_FILE, key_path,
-										   BUILD_END)))
+	if (key_path)
 	{
-		this->is_naked_key = TRUE;
+		DBG2(DBG_IMC,"AIK public key path %s", key_path);
+		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_TRUSTED_PUBKEY, BUILD_FROM_FILE,
+										key_path, BUILD_END);
+		if (this->aik)
+		{
+			return;
+		}
 	}
-	else
-	{
-		DBG1(DBG_IMC, "Neither AIK Public Key nor AIK Certificate is available");
-		return FALSE;
-	}
-	
-	DBG3(DBG_IMC, "Succeeded at obtaining AIK Certificate from Privacy CA!");
-	return TRUE;
+	DBG1(DBG_IMC, "neither AIK certificate nor public key is available");
 }
 
-METHOD(pts_t, get_aik, bool,
-	   private_pts_t *this, certificate_t **aik_cert, public_key_t **aik_key, bool *is_naked_key)
+METHOD(pts_t, get_aik, certificate_t*,
+	   private_pts_t *this)
 {
-	if (obtain_aik(this) != TRUE )
-	{
-		return FALSE;
-	}
-
-	*aik_cert = this->aik_cert;
-	*aik_key = this->aik_key;
-	*is_naked_key = this->is_naked_key;
-
-	return TRUE;
+	return this->aik;	
 }
 
-METHOD(pts_t, set_aik_cert, void,
-	   private_pts_t *this, certificate_t *aik_cert)
+METHOD(pts_t, set_aik, void,
+	   private_pts_t *this, certificate_t *aik)
 {
-	this->aik_cert = aik_cert;
-	this->is_naked_key = FALSE;
-}
-
-METHOD(pts_t, set_aik_key, void,
-	   private_pts_t *this, public_key_t *aik_key)
-{
-	this->aik_key = aik_key;
-	this->is_naked_key = TRUE;
+	DESTROY_IF(this->aik);
+	this->aik = aik->get_ref(aik);
 }
 
 /**
@@ -378,6 +348,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 METHOD(pts_t, destroy, void,
 	   private_pts_t *this)
 {
+	DESTROY_IF(this->aik);
 	free(this->platform_info);
 	free(this->tpm_version_info.ptr);
 	free(this);
@@ -440,8 +411,7 @@ pts_t *pts_create(bool is_imc)
 			 .get_tpm_version_info = _get_tpm_version_info,
 			 .set_tpm_version_info = _set_tpm_version_info,
 			 .get_aik = _get_aik,
-			 .set_aik_cert = _set_aik_cert,
-			 .set_aik_key = _set_aik_key,
+			 .set_aik = _set_aik,
 			 .do_measurements = _do_measurements,
 			 .destroy = _destroy,
 		 },
@@ -455,6 +425,7 @@ pts_t *pts_create(bool is_imc)
 		{
 			this->has_tpm = TRUE;
 			this->proto_caps |= PTS_PROTO_CAPS_T;
+			load_aik(this);
 		}
 	}
 	else

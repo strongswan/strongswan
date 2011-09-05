@@ -93,31 +93,19 @@ struct pts_t {
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
 	
 	/**
-	 * Get Attestation Identity Key
+	 * Get Attestation Identity Certificate or Public Key
 	 *
-	 * @param aik_cert			structure containing a AIK naked public certificate
-	 * @param aik_key			structure containing a AIK naked public key
-	 * @param is_naked_key	TRUE if AIK is naked public key, without certificate
-	 * @return				TRUE if AIK available
+	 * @return				AIK Certificate or Public Key
 	 */
-	bool (*get_aik)(pts_t *this, certificate_t **aik_cert, public_key_t **aik_key, bool *is_naked_key);
+	certificate_t* (*get_aik)(pts_t *this);
 	
 	/**
-	 * Set Attestation Identity Certificate
+	 * Set Attestation Identity Certificate or Public Key
 	 *
-	 * @param aik_cert			structure containing a AIK naked public certificate
-	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
+	 * @param aik			AIK Certificate or Public Key
 	 */
-	void (*set_aik_cert)(pts_t *this, certificate_t *aik_cert);
+	void (*set_aik)(pts_t *this, certificate_t *aik);
 
-	/**
-	 * Set Attestation Identity Key
-	 *
-	 * @param aik_key			structure containing a AIK naked public key
-	 * @param is_naked_key		TRUE if AIK is naked public key, without certificate
-	 */
-	void (*set_aik_key)(pts_t *this, public_key_t *aik_key);
-	
 	/**
 	 * Do PTS File Measurements
 	 *
@@ -127,7 +115,7 @@ struct pts_t {
 	 * @return				PTS File Measurements of NULL if FAILED
 	 */
 	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
-										 char *pathname, bool is_directory);
+										char *pathname, bool is_directory);
 	
 	/**
 	 * Destroys a pts_t object.

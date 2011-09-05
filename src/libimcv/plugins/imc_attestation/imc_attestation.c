@@ -288,30 +288,17 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	
 				case TCG_PTS_GET_AIK:
 				{
-					certificate_t *aik_cert;
-					public_key_t *aik_key;
-					bool is_naked_key;
+					certificate_t *aik;
 
-					if (!pts->get_aik(pts, &aik_cert, &aik_key, &is_naked_key))
+					aik = pts->get_aik(pts);
+					if (!aik)
 					{
-						DBG1(DBG_IMC, "Obtaining AIK Certificate failed");
+						DBG1(DBG_IMC, "no AIK certificate or public key available");
 						break;
 					}
 	
 					/* Send AIK attribute */
-					if(!is_naked_key && aik_cert)
-					{
-						attr = tcg_pts_attr_aik_create(is_naked_key, chunk_from_thing(aik_cert));
-					}
-					else if(is_naked_key && aik_key)
-					{
-						attr = tcg_pts_attr_aik_create(is_naked_key, chunk_from_thing(aik_key));
-					}
-					else
-					{
-						DBG1(DBG_IMC, "Neither AIK Certificate nor AIK public was provided");
-						break;
-					}
+					attr = tcg_pts_attr_aik_create(aik);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}

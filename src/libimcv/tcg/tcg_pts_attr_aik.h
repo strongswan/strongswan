@@ -26,6 +26,8 @@ typedef struct tcg_pts_attr_aik_t tcg_pts_attr_aik_t;
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
+#include <credentials/certificates/certificate.h>
+
 /**
  * Class implementing the TCG PTS Attestation Identity Key attribute
  *
@@ -38,43 +40,20 @@ struct tcg_pts_attr_aik_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 	
 	/**
-	 * Get Naked Public Key flag
-	 *
-	 * @return				Naked Public Key flag
-	 */
-	bool (*get_naked_flag)(tcg_pts_attr_aik_t *this);
-
-	/**
-	 * Set Naked Public Key flag
-	 *
-	 * @param naked				flag
-	 */
-	void (*set_naked_flag)(tcg_pts_attr_aik_t *this,
-				bool naked_pub_aik);
-	
-	/**
 	 * Get AIK
 	 *
-	 * @return				Attestation Identity Key
+	 * @return				AIK Certificate or Public Key
 	 */
-	chunk_t (*get_aik)(tcg_pts_attr_aik_t *this);
+	certificate_t* (*get_aik)(tcg_pts_attr_aik_t *this);
 
-	/**
-	 * Set AIK
-	 *
-	 * @param flags				set of flags
-	 */
-	void (*set_aik)(tcg_pts_attr_aik_t *this,
-				chunk_t aik);
 };
 
 /**
  * Creates an tcg_pts_attr_aik_t object
  * 
- * @param naked_pub_aik			Sender only has naked public key
  * @param aik				Attestation Identity Key
  */
-pa_tnc_attr_t* tcg_pts_attr_aik_create(bool naked_pub_aik, chunk_t aik);
+pa_tnc_attr_t* tcg_pts_attr_aik_create(certificate_t *aik);
 
 /**
  * Creates an tcg_pts_attr_aik_t object from received data
