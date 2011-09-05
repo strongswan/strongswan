@@ -27,9 +27,10 @@ CREATE TABLE product_file (
 DROP TABLE IF EXISTS file_hashes;
 CREATE TABLE file_hashes (
   file INTEGER NOT NULL,
+  directory INTEGER DEFAULT 0,
   product INTEGER NOT NULL,
   algo INTEGER NOT NULL,
   hash BLOB NOT NULL,
-  PRIMARY KEY(file, product, algo)
+  PRIMARY KEY(file, directory, product, algo)
 );
 
