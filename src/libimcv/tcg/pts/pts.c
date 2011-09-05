@@ -177,9 +177,9 @@ static void load_aik(private_pts_t *this)
 	char *cert_path, *key_path;
 
 	cert_path = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.aikcert", NULL);
+						"libimcv.plugins.imc-attestation.aik_cert", NULL);
 	key_path = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.aikkey", NULL);
+						"libimcv.plugins.imc-attestation.aik_key", NULL);
 
 	if (cert_path)
 	{
