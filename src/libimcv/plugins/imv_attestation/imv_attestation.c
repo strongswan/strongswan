@@ -533,7 +533,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						}
 						if (!e->enumerate(e, &db_measurement))
 						{
-							DBG1(DBG_IMV, "  measurement for '%s' not found"
+							DBG2(DBG_IMV, "  measurement for '%s' not found"
 										  " in database", filename);
 							e->destroy(e);
 							continue;
