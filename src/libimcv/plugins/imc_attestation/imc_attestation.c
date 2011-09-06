@@ -19,6 +19,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ietf/ietf_attr_product_info.h>
 
 #include <tcg/pts/pts_error.h>
 
@@ -121,12 +122,42 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
+	imc_state_t *state;
+	imc_attestation_state_t *attestation_state;
+	pts_t *pts;
+	char *platform_info;
+	TNC_Result result = TNC_RESULT_SUCCESS;
+
 	if (!imc_attestation)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return TNC_RESULT_SUCCESS;
+
+	/* get current IMC state */
+	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	attestation_state = (imc_attestation_state_t*)state;
+	pts = attestation_state->get_pts(attestation_state);
+
+	platform_info = pts->get_platform_info(pts);
+	if (platform_info)
+	{
+		pa_tnc_msg_t *pa_tnc_msg;
+		pa_tnc_attr_t *attr;
+
+		pa_tnc_msg = pa_tnc_msg_create();
+		attr = ietf_attr_product_info_create(0, 0, platform_info);
+		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
+		pa_tnc_msg->build(pa_tnc_msg);
+		result = imc_attestation->send_message(imc_attestation, connection_id,
+									pa_tnc_msg->get_encoding(pa_tnc_msg));
+		pa_tnc_msg->destroy(pa_tnc_msg);
+	}
+
+	return result;
 }
 
 /**

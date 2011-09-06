@@ -19,6 +19,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ietf/ietf_attr_product_info.h>
 
 #include <tcg/pts/pts_database.h>
 #include <tcg/pts/pts_creds.h>
@@ -220,6 +221,9 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
+
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_MEAS);
 			break;
 		}
 
@@ -278,6 +282,9 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				requested_files->insert_last(requested_files, (void*)id);
 			}
 			enumerator->destroy(enumerator);
+
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_END);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
@@ -347,46 +354,60 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_IETF &&
-			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		if (attr->get_vendor_id(attr) == PEN_IETF)
 		{
-			ietf_attr_pa_tnc_error_t *error_attr;
-			pen_t error_vendor_id;
-			pa_tnc_error_code_t error_code;
-			chunk_t msg_info, attr_info;
-			u_int32_t offset;
-
-			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-			error_vendor_id = error_attr->get_vendor_id(error_attr);
-			error_code = error_attr->get_error_code(error_attr);
-			msg_info = error_attr->get_msg_info(error_attr);
-
-			if (error_vendor_id == PEN_IETF)
+			if (attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
 			{
-				DBG1(DBG_IMV, "received PA-TNC error '%N' concerning message %#B",
-					 pa_tnc_error_code_names, error_code, &msg_info);
+				ietf_attr_pa_tnc_error_t *error_attr;
+				pen_t error_vendor_id;
+				pa_tnc_error_code_t error_code;
+				chunk_t msg_info, attr_info;
+				u_int32_t offset;
 
-				switch (error_code)
+				error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+				error_vendor_id = error_attr->get_vendor_id(error_attr);
+				error_code = error_attr->get_error_code(error_attr);
+				msg_info = error_attr->get_msg_info(error_attr);
+
+				if (error_vendor_id == PEN_IETF)
 				{
-					case PA_ERROR_INVALID_PARAMETER:
-						offset = error_attr->get_offset(error_attr);
-						DBG1(DBG_IMV, "  occurred at offset of %u bytes", offset);
-						break;
-					case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
-						attr_info = error_attr->get_attr_info(error_attr);
-						DBG1(DBG_IMV, "  unsupported attribute %#B", &attr_info);
-						break;
-					default:
-						break;
+					DBG1(DBG_IMV, "received PA-TNC error '%N' "
+								  "concerning message %#B",
+						 pa_tnc_error_code_names, error_code, &msg_info);
+
+					switch (error_code)
+					{
+						case PA_ERROR_INVALID_PARAMETER:
+							offset = error_attr->get_offset(error_attr);
+							DBG1(DBG_IMV, "  occurred at offset of %u bytes",
+								 offset);
+							break;
+						case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+							attr_info = error_attr->get_attr_info(error_attr);
+							DBG1(DBG_IMV, "  unsupported attribute %#B",
+								 &attr_info);
+							break;
+						default:
+							break;
+					}
 				}
+				else if (error_vendor_id == PEN_TCG)
+				{
+					DBG1(DBG_IMV, "received TCG-PTS error '%N'",
+						 pts_error_code_names, error_code);
+					DBG1(DBG_IMV, "error information: %B", &msg_info);
+				}
+				fatal_error = TRUE;
 			}
-			else if (error_vendor_id == PEN_TCG)
+			else if (attr->get_type(attr) == IETF_ATTR_PRODUCT_INFORMATION)
 			{
-				DBG1(DBG_IMV, "received TCG-PTS error '%N'",
-					 pts_error_code_names, error_code);
-				DBG1(DBG_IMV, "error information: %B", &msg_info);
+				ietf_attr_product_info_t *attr_cast;
+				char *platform_info;
+
+				attr_cast = (ietf_attr_product_info_t*)attr;
+				platform_info = attr_cast->get_info(attr_cast, NULL, NULL);
+				pts->set_platform_info(pts, platform_info);	
 			}
-			fatal_error = TRUE;
 		}
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
 		{
@@ -400,9 +421,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
 					flags = attr_cast->get_flags(attr_cast);
 					pts->set_proto_caps(pts, flags);
-
-					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_MEAS);
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -413,9 +431,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
 					pts->set_meas_algorithm(pts, selected_algorithm);
-
-					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_MEAS);
 					break;
 				}
 				case TCG_PTS_TPM_VERSION_INFO:
@@ -426,9 +441,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attr_cast = (tcg_pts_attr_tpm_version_info_t*)attr;
 					tpm_version_info = attr_cast->get_tpm_version_info(attr_cast);
 					pts->set_tpm_version_info(pts, tpm_version_info);
-
-					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 				case TCG_PTS_AIK:
@@ -444,8 +456,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						break;
 					}
 					pts->set_aik(pts, aik);
-					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 	
@@ -543,19 +553,18 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						if (is_directory)
 						{
 							files_in_dir_with_meas->remove(files_in_dir_with_meas,
-													filename, (bool (*)(void*,void*))strcmp);
+										filename, (bool (*)(void*,void*))strcmp);
 						}
 						e->destroy(e);
 					}
 
-					if(is_directory && !files_in_dir_with_meas->get_count(files_in_dir_with_meas))
+					if (is_directory && 
+						!files_in_dir_with_meas->get_count(files_in_dir_with_meas))
 					{
 						requested_files->remove(requested_files, (void*)request_id, NULL);
 					}
 
 					e_meas->destroy(e_meas);
-					attestation_state->set_handshake_state(attestation_state,
-											IMV_ATTESTATION_STATE_END);
 					break;
 				}
 	

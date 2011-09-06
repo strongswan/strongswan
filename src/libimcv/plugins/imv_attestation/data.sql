@@ -3,13 +3,13 @@
 INSERT INTO products (
   name
 ) VALUES (
- 'Ubuntu 11.4 i686'
+ 'Ubuntu 11.04 i686'
 );
 
 INSERT INTO products (
   name
 ) VALUES (
- 'Ubuntu 11.4 x86_64'
+ 'Ubuntu 11.04 x86_64'
 );
 
 INSERT INTO products (

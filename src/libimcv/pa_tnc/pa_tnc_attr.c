@@ -17,6 +17,7 @@
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
+#include "ietf/ietf_attr_product_info.h"
 #include "tcg/tcg_attr.h"
 #include "tcg/tcg_pts_attr_proto_caps.h"
 #include "tcg/tcg_pts_attr_meas_algo.h"
@@ -48,9 +49,10 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 					return ietf_attr_port_filter_create_from_data(value);
 				case IETF_ATTR_PA_TNC_ERROR:
 					return ietf_attr_pa_tnc_error_create_from_data(value);
+				case IETF_ATTR_PRODUCT_INFORMATION:
+					return ietf_attr_product_info_create_from_data(value);
 				case IETF_ATTR_TESTING:
 				case IETF_ATTR_ATTRIBUTE_REQUEST:
-				case IETF_ATTR_PRODUCT_INFORMATION:
 				case IETF_ATTR_NUMERIC_VERSION:
 				case IETF_ATTR_STRING_VERSION:
 				case IETF_ATTR_OPERATIONAL_STATUS:

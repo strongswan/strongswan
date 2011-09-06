@@ -17,6 +17,7 @@
 
 #include <debug.h>
 #include <crypto/hashers/hasher.h>
+#include <utils/lexparser.h>
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
@@ -122,12 +123,12 @@ static void print_tpm_version_info(private_pts_t *this)
 											   this->tpm_version_info.ptr, &versionInfo);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_IMC, "could not parse tpm version info: tss error 0x%x",
+		DBG1(DBG_TNC, "could not parse tpm version info: tss error 0x%x",
 			 result);
 	}
 	else
 	{
-		DBG2(DBG_IMC, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
+		DBG2(DBG_TNC, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
 					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
 					  versionInfo.version.major, versionInfo.version.minor,
 					  versionInfo.version.revMajor, versionInfo.version.revMinor,
@@ -355,6 +356,76 @@ METHOD(pts_t, destroy, void,
 }
 
 /**
+ * Determine Linux distribution and hardware platform
+ */
+char* extract_platform_info(void)
+{
+	FILE *file;
+	const char description[] = "Description:";
+	char buf[BUF_LEN], *pos, *value;
+	int value_len;
+
+	/* Open a pipe stream for reading the output of the lsb_release commmand */
+	file = popen("/usr/bin/lsb_release -d" , "r");
+	if (!file)
+	{
+		DBG1(DBG_IMC, "Failed to run lsb_release command");
+		return NULL;
+	}
+
+	/* Read the output the lsb_release command */
+	if (!fgets(buf, BUF_LEN-1, file))
+	{
+		DBG1(DBG_IMC, "Failed to read output of lsb_release command");
+		pclose(file);
+		return NULL;
+	}
+	pclose(file);
+
+	pos = strstr(buf, description);
+	if (!pos)
+	{
+		DBG1(DBG_IMC, "Failed to find lsb_release description field");
+		return NULL;
+	}
+	value = pos + strlen(description);
+
+	/* eat whitespace */
+	while (*value == ' ' || *value == '\t')
+	{
+		value++;
+	}
+
+	/* remove newline at the end and move value to the front of the buffer */
+	value_len = strlen(value) - 1;
+	memcpy(buf, value, value_len);
+	buf[value_len] = ' ';
+
+ 	/* Open a pipe stream for reading the output of the uname commmand */
+	file = popen("/bin/uname -p" , "r");
+	if (!file)
+	{
+		DBG1(DBG_IMC, "Failed to run uname command");
+		return NULL;
+	}
+		
+	/* Read the output the uname command */
+	if (!fgets(buf + value_len + 1, BUF_LEN - value_len - 2, file))
+	{
+		DBG1(DBG_IMC, "Failed to read output of uname command");
+		pclose(file);
+		return NULL;
+	}
+	pclose(file);
+
+	/* remove newline at the end */
+	buf[strlen(buf)-1] = '\0';
+
+	DBG1(DBG_IMV, "platform is '%s'", buf);
+	return strdup(buf);	
+}
+
+/**
  * Check for a TPM by querying for TPM Version Info
  */
 static bool has_tpm(private_pts_t *this)
@@ -421,6 +492,8 @@ pts_t *pts_create(bool is_imc)
 
 	if (is_imc)
 	{
+		this->platform_info = extract_platform_info();
+
 		if (has_tpm(this))
 		{
 			this->has_tpm = TRUE;
