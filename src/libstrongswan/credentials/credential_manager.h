@@ -146,7 +146,7 @@ struct credential_manager_t {
 	 * Create an enumerator over trusted certificates.
 	 *
 	 * This method creates an enumerator over trusted certificates. The auth
-	 * parameter (if given) recevies the trustchain used to validate
+	 * parameter (if given) receives the trustchain used to validate
 	 * the certificate. The resulting enumerator enumerates over
 	 * certificate_t*, auth_cfg_t*.
 	 * If online is set, revocations are checked online for the whole
