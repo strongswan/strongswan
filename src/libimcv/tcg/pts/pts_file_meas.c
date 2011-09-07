@@ -135,6 +135,7 @@ METHOD(pts_file_meas_t, verify, bool,
 		{
 			DBG1(DBG_TNC, "  no measurement found for '%s'", filename);
 			success = FALSE;
+			continue;
 		}
 		if (chunk_equals(measurement, entry->measurement))
 		{

@@ -526,7 +526,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 									platform_info, algo, request_id, is_dir);
 					if (!measurements->verify(measurements, e_hash, is_dir))
 					{
-						DBG1(DBG_IMV, "  measurement error occured"); 
 						measurement_error = TRUE;
 					}
 					e_hash->destroy(e_hash);
