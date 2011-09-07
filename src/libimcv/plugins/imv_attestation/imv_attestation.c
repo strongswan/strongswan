@@ -453,6 +453,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					tcg_pts_attr_aik_t *attr_cast;
 					certificate_t *aik, *issuer;
 					enumerator_t *e;
+					bool trusted = FALSE;
 
 					attr_cast = (tcg_pts_attr_aik_t*)attr;
 					aik = attr_cast->get_aik(attr_cast);
@@ -461,18 +462,24 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						/* TODO generate error attribute */
 						break;
 					}
-					pts->set_aik(pts, aik);
-					e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
-								KEY_ANY, aik->get_issuer(aik), FALSE);
-					while (e->enumerate(e, &issuer))
+					if (aik->get_type(aik) == CERT_X509)
 					{
-						if (aik->issued_by(aik, issuer))
+						DBG1(DBG_IMV, "verifying AIK certificate");
+						e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
+									KEY_ANY, aik->get_issuer(aik), FALSE);
+						while (e->enumerate(e, &issuer))
 						{
-							DBG1(DBG_IMV, "AIK certificate is trusted");
-							break;
+							if (aik->issued_by(aik, issuer))
+							{
+								trusted = TRUE;
+								break;
+							}
 						}
+						e->destroy(e);
+						DBG1(DBG_IMV, "AIK certificate is %strusted",
+									   trusted ? "" : "not ");
 					}
-					e->destroy(e);
+					pts->set_aik(pts, aik);
 					break;
 				}
 	
