@@ -60,6 +60,11 @@ struct private_imv_attestation_state_t {
 	 */
 	pts_t *pts;
 
+	/**
+	 * Requested files and directories
+	 */
+	linked_list_t *requested_files;
+
 };
 
 typedef struct entry_t entry_t;
@@ -157,6 +162,7 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
 	this->pts->destroy(this->pts);
+	this->requested_files->destroy_function(this->requested_files, free);
 	free(this);
 }
 
@@ -177,6 +183,73 @@ METHOD(imv_attestation_state_t, get_pts, pts_t*,
 {
 	return this->pts;
 }
+
+METHOD(imv_attestation_state_t, create_requests_enumerator, enumerator_t*,
+	private_imv_attestation_state_t *this)
+{
+	enumerator_t *e;
+	e = this->requested_files->create_enumerator(this->requested_files);
+	return e;
+}
+
+METHOD(imv_attestation_state_t, get_requests_count, int,
+	private_imv_attestation_state_t *this)
+{
+	return this->requested_files->get_count(this->requested_files);
+}
+
+
+METHOD(imv_attestation_state_t, add_requested_file, void,
+	private_imv_attestation_state_t *this, int request_id, int is_dir)
+{
+	file_request_t *entry;
+
+	entry = malloc_thing(file_request_t);
+	entry->request_id = request_id;
+	entry->is_dir = is_dir;
+	this->requested_files->insert_last(this->requested_files, entry);
+}
+
+/**
+ * Comparison function to match an file request entry with its request_id
+ */
+static bool request_match(file_request_t *current_list_item, int request_id)
+{
+	return (current_list_item->request_id == request_id);
+}
+
+METHOD(imv_attestation_state_t, remove_requested_file, bool,
+	private_imv_attestation_state_t *this, int request_id)
+{
+	file_request_t *entry;
+
+	if (this->requested_files->find_first(this->requested_files,
+			(linked_list_match_t)request_match, (void**)&entry, request_id) != SUCCESS)
+	{
+		DBG1(DBG_IMV, "request entry with id: %d not found", request_id);
+		return FALSE;
+	}
+
+	this->requested_files->remove(this->requested_files, entry, NULL);
+	return TRUE;
+}
+
+METHOD(imv_attestation_state_t, is_request_dir, bool,
+	private_imv_attestation_state_t *this, int request_id, bool *is_dir)
+{
+	file_request_t *entry;
+
+	if (this->requested_files->find_first(this->requested_files,
+			(linked_list_match_t)request_match, (void**)&entry, request_id) != SUCCESS)
+	{
+		DBG1(DBG_IMV, "request entry with id: %d not found", request_id);
+		return FALSE;
+	}
+	
+	*is_dir = (entry->is_dir);
+	return TRUE;
+}
+
 
 /**
  * Described in header.
@@ -199,6 +272,11 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.get_handshake_state = _get_handshake_state,
 			.set_handshake_state = _set_handshake_state,
 			.get_pts = _get_pts,
+			.create_requests_enumerator = _create_requests_enumerator,
+			.get_requests_count = _get_requests_count,
+			.add_requested_file = _add_requested_file,
+			.remove_requested_file = _remove_requested_file,
+			.is_request_dir = _is_request_dir,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
@@ -206,6 +284,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.pts = pts_create(FALSE),
+		.requested_files = linked_list_create(),
 	);
 
 	platform_info = lib->settings->get_str(lib->settings,

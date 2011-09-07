@@ -43,7 +43,6 @@
 
 #include <pen/pen.h>
 #include <debug.h>
-#include <utils/linked_list.h>
 #include <credentials/credential_manager.h>
 
 /* IMV definitions */
@@ -80,11 +79,6 @@ static pts_creds_t *pts_creds;
  * PTS credential manager
  */
 static credential_manager_t *pts_credmgr;
-
-/**
- * List of id's for the files that are requested for measurement
- */
-static linked_list_t *requested_files;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
@@ -282,7 +276,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				break;
 			}
 			
-			requested_files = linked_list_create();
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
 				is_directory = (type != 0);
@@ -292,7 +285,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 													delimiter, pathname);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
-				requested_files->insert_last(requested_files, (void*)id);
+
+				attestation_state->add_requested_file(attestation_state, id, type);
 			}
 			enumerator->destroy(enumerator);
 
@@ -317,6 +311,15 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	msg->destroy(msg);
 	
 	return result;
+}
+
+/**
+ * String matching function with boolean return value
+ * Used to remove an item from linked list of strings
+ */
+static bool string_cmp(char *a, char *b)
+{
+	return (strcmp(a,b) == 0) ? TRUE : FALSE;
 }
 
 /**
@@ -518,15 +521,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
 						 request_id, file_count, (file_count == 1) ? "":"s");
 
-					if (!pts_db->is_directory(pts_db, request_id, &is_directory))
+					if (!attestation_state->is_request_dir(attestation_state, request_id, &is_directory))
 					{
-						DBG1(DBG_IMV, "file entry with request id:%d not found", request_id);
+						DBG1(DBG_IMV, "received measurement with id: %d was not requested", request_id);
+						fatal_error = TRUE;
 						break;
 					}
-					
 					if (!is_directory)
 					{
-						requested_files->remove(requested_files, (void*)request_id, NULL);
+						attestation_state->remove_requested_file(attestation_state, request_id);
 					}
 					else
 					{
@@ -536,61 +539,46 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						e = pts_db->create_files_in_dir_enumerator(pts_db, request_id);
 						while (e->enumerate(e, &file))
 						{
-							files_in_dir_with_meas->insert_last(files_in_dir_with_meas, file);
-							DBG3(DBG_IMV, "expecting measurement for: %s with request_id: %d", file, request_id);
+							char *file_copy = (char *)malloc(strlen(file) * sizeof(char));
+							strcpy(file_copy, file);
+							
+							files_in_dir_with_meas->insert_last(files_in_dir_with_meas, file_copy);
+							DBG3(DBG_IMV, "expecting measurement for: %s with request_id: %d", file_copy, request_id);
 						}
+						e->destroy(e);
 					}
 					
 					e_meas = measurements->create_enumerator(measurements);
 					while (e_meas->enumerate(e_meas, &filename, &measurement))
 					{
-						enumerator_t *e;
-						chunk_t db_measurement;
-
-						e = (is_directory) ? pts_db->create_dir_meas_enumerator(pts_db,
-										platform_info, request_id, filename, algo) :
-										pts_db->create_file_meas_enumerator(pts_db,
-										platform_info, request_id, algo);
-						if (!e)
+						bool hash_matched;
+						
+						hash_matched = pts_db->check_measurement(pts_db,
+												measurement, platform_info,
+												request_id, filename, algo, is_directory);
+						if (!hash_matched)
 						{
-							DBG1(DBG_IMV, "  database enumerator failed");
-							continue;
-						}
-						if (!e->enumerate(e, &db_measurement))
-						{
-							DBG2(DBG_IMV, "  measurement for '%s' not found"
-										  " in database", filename);
-							e->destroy(e);
-							continue;
-						}
-						if (chunk_equals(db_measurement, measurement))
-						{
-							DBG2(DBG_IMV, "  %#B for '%s' is ok",
-								 &measurement, filename);
-						}
-						else
-						{
-							DBG1(DBG_IMV, " %#B for '%s' does not match %#B",
-								 &measurement, filename, &db_measurement);
 							measurement_error = TRUE;
 						}
-
-						if (is_directory)
-						{
+						
+						if (is_directory &&
 							files_in_dir_with_meas->remove(files_in_dir_with_meas,
-										filename, (bool (*)(void*,void*))strcmp);
+										filename, (bool (*)(void*,void*))string_cmp))
+						{
+							DBG3(DBG_IMV, "Removed %s from expected files list", filename);
 						}
-						e->destroy(e);
 					}
 
 					if (is_directory && 
 						!files_in_dir_with_meas->get_count(files_in_dir_with_meas))
 					{
-						requested_files->remove(requested_files, (void*)request_id, NULL);
+						attestation_state->remove_requested_file(attestation_state, request_id);
+						DBG3(DBG_IMV, "Received all expected files measured for request: %d", request_id);
 					}
 
-					files_in_dir_with_meas->destroy(files_in_dir_with_meas);
+					files_in_dir_with_meas->destroy_function(files_in_dir_with_meas, free);
 					e_meas->destroy(e_meas);
+					
 					break;
 				}
 	
@@ -630,7 +618,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	pa_tnc_msg->destroy(pa_tnc_msg);
 	
 
-
 	if (fatal_error)
 	{
 		state->set_recommendation(state,
@@ -642,19 +629,19 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 	if (attestation_state->get_handshake_state(attestation_state) &
 		IMV_ATTESTATION_STATE_END)
-	{
-		if (measurement_error || requested_files->get_count(requested_files))
+	{	
+		if (measurement_error || attestation_state->get_requests_count(attestation_state))
 		{
 			enumerator_t *e;
 			int request;
 			
-			e  = requested_files->create_enumerator(requested_files);
+			e = attestation_state->create_requests_enumerator(attestation_state);
 			while (e->enumerate(e, &request))
 			{
 				DBG1(DBG_IMV, "measurement/s not received for requests: %d", request);
 			}
-
 			e->destroy(e);
+			
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
@@ -733,7 +720,6 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	pts_credmgr->destroy(pts_credmgr);
-	requested_files->destroy(requested_files);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 

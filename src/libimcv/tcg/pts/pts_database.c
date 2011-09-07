@@ -54,35 +54,6 @@ METHOD(pts_database_t, create_file_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, is_directory, bool,
-	private_pts_database_t *this, int id, bool *is_directory)
-{
-	enumerator_t *e;
-	int is_dir;
-
-	/* look for a entry in files table with matching id */
-	e = this->db->query(this->db,
-				"SELECT f.type FROM files AS f "
-				"WHERE f.id = ?",
-				DB_INT, id, DB_INT);
-
-	if (!e)
-	{
-		DBG1(DBG_TNC, "database enumerator failed", id);
-		return FALSE;
-	}
-	if (!e->enumerate(e, &is_dir))
-	{
-		e->destroy(e);
-		DBG1(DBG_TNC, "file entry with given id:%d not found", id);
-		return FALSE;
-	}
-
-	*is_directory = (is_dir == 1) ? TRUE : FALSE;
-	return TRUE;
-}
-
-
 METHOD(pts_database_t, create_files_in_dir_enumerator, enumerator_t*,
 	private_pts_database_t *this, int id)
 {
@@ -97,35 +68,53 @@ METHOD(pts_database_t, create_files_in_dir_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product, int id, pts_meas_algorithms_t algorithm)
+METHOD(pts_database_t, check_measurement, bool,
+	private_pts_database_t *this, chunk_t received_hash, char *product, int id, char *file_name, pts_meas_algorithms_t algorithm, bool is_dir)
 {
 	enumerator_t *e;
+	chunk_t db_measurement;
+
+	/* look for all entries belonging to a product, file and directory in file_hashes table */
 	
-	/* look for all entries belonging to a product and file in file_hashes table */
-	e = this->db->query(this->db,
+	e = (is_dir) ? this->db->query(this->db,
+				"SELECT fh.hash FROM file_hashes AS fh "
+				"JOIN files AS f ON fh.file = f.id "
+				"JOIN products AS p ON fh.product = p.id "
+				"WHERE f.path = ? AND p.name = ? AND fh.directory = ? AND fh.algo = ?",
+				DB_TEXT, file_name, DB_TEXT, product, DB_INT, id, DB_INT, algorithm, DB_BLOB) :
+				
+				this->db->query(this->db,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON fh.file = f.id "
 				"JOIN products AS p ON fh.product = p.id "
 				"WHERE p.name = ? AND f.id = ? AND fh.algo = ?",
 				DB_TEXT, product, DB_INT, id, DB_INT, algorithm, DB_BLOB);
-	return e;
+	
+	if (!e)
+	{
+		DBG1(DBG_TNC, "  database enumerator failed");
+		return FALSE;
+	}
+	if (!e->enumerate(e, &db_measurement))
+	{
+		DBG2(DBG_TNC, "  measurement for '%s' not found"
+					  " in database", file_name);
+		e->destroy(e);
+		/* Ignore the measurements for which we do not have the hash saved in database */
+		return TRUE;
+	}
+	if (chunk_equals(db_measurement, received_hash))
+	{
+		DBG2(DBG_TNC, "  %#B for '%s' is ok",
+			 &received_hash, file_name);
+		return TRUE;
+	}
+
+	DBG1(DBG_IMV, " %#B for '%s' does not match %#B",
+					&received_hash, file_name, &db_measurement);
+	return FALSE;
 }
 
-METHOD(pts_database_t, create_dir_meas_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product, int id, char *file_name, pts_meas_algorithms_t algorithm)
-{
-	enumerator_t *e;
-
-	/* look for all entries belonging to a product, file and directory in file_hashes table */
-	e = this->db->query(this->db,
-				"SELECT fh.hash FROM file_hashes AS fh "
-				"JOIN files AS f ON fh.file = f.id "
-				"JOIN products AS p ON fh.product = p.id "
-				"WHERE f.path = ? AND p.name = ? AND fh.directory = ? AND fh.algo = ?",
-				DB_TEXT, file_name, DB_TEXT, product, DB_INT, id, DB_INT, algorithm, DB_BLOB);
-	return e;
-}
 
 METHOD(pts_database_t, destroy, void,
 	private_pts_database_t *this)
@@ -144,10 +133,8 @@ pts_database_t *pts_database_create(char *uri)
 	INIT(this,
 		.public = {
 			.create_file_enumerator = _create_file_enumerator,
-			.is_directory = _is_directory,
 			.create_files_in_dir_enumerator = _create_files_in_dir_enumerator,
-			.create_file_meas_enumerator = _create_file_meas_enumerator,
-			.create_dir_meas_enumerator = _create_dir_meas_enumerator,
+			.check_measurement = _check_measurement,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),
