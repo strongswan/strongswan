@@ -358,25 +358,25 @@ METHOD(pts_t, destroy, void,
 /**
  * Determine Linux distribution and hardware platform
  */
-char* extract_platform_info(void)
+static char* extract_platform_info(void)
 {
 	FILE *file;
 	const char description[] = "Description:";
 	char buf[BUF_LEN], *pos, *value;
 	int value_len;
 
-	/* Open a pipe stream for reading the output of the lsb_release commmand */
+	/* open a pipe stream for reading the output of the lsb_release commmand */
 	file = popen("/usr/bin/lsb_release -d" , "r");
 	if (!file)
 	{
-		DBG1(DBG_IMC, "Failed to run lsb_release command");
+		DBG2(DBG_IMC, "failed to run lsb_release command");
 		return NULL;
 	}
 
-	/* Read the output the lsb_release command */
+	/* read the output the lsb_release command */
 	if (!fgets(buf, BUF_LEN-1, file))
 	{
-		DBG1(DBG_IMC, "Failed to read output of lsb_release command");
+		DBG2(DBG_IMC, "failed to read output of lsb_release command");
 		pclose(file);
 		return NULL;
 	}
@@ -385,7 +385,7 @@ char* extract_platform_info(void)
 	pos = strstr(buf, description);
 	if (!pos)
 	{
-		DBG1(DBG_IMC, "Failed to find lsb_release description field");
+		DBG2(DBG_IMC, "failed to find lsb_release description field");
 		return NULL;
 	}
 	value = pos + strlen(description);
@@ -401,18 +401,18 @@ char* extract_platform_info(void)
 	memcpy(buf, value, value_len);
 	buf[value_len] = ' ';
 
- 	/* Open a pipe stream for reading the output of the uname commmand */
+ 	/* open a pipe stream for reading the output of the uname commmand */
 	file = popen("/bin/uname -p" , "r");
 	if (!file)
 	{
-		DBG1(DBG_IMC, "Failed to run uname command");
+		DBG2(DBG_IMC, "failed to run uname command");
 		return NULL;
 	}
 		
 	/* Read the output the uname command */
 	if (!fgets(buf + value_len + 1, BUF_LEN - value_len - 2, file))
 	{
-		DBG1(DBG_IMC, "Failed to read output of uname command");
+		DBG2(DBG_IMC, "failed to read output of uname command");
 		pclose(file);
 		return NULL;
 	}
