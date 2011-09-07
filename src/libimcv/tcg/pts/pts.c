@@ -401,18 +401,18 @@ static char* extract_platform_info(void)
 	memcpy(buf, value, value_len);
 	buf[value_len] = ' ';
 
- 	/* open a pipe stream for reading the output of the uname commmand */
-	file = popen("/bin/uname -p" , "r");
+ 	/* open a pipe stream for reading the output of the arch commmand */
+	file = popen("/usr/bin/arch" , "r");
 	if (!file)
 	{
-		DBG2(DBG_IMC, "failed to run uname command");
+		DBG2(DBG_IMC, "failed to run arch command");
 		return NULL;
 	}
 		
-	/* Read the output the uname command */
+	/* Read the output the arch command */
 	if (!fgets(buf + value_len + 1, BUF_LEN - value_len - 2, file))
 	{
-		DBG2(DBG_IMC, "failed to read output of uname command");
+		DBG2(DBG_IMC, "failed to read output of arch command");
 		pclose(file);
 		return NULL;
 	}
