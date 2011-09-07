@@ -17,7 +17,6 @@
 
 #include <debug.h>
 #include <crypto/hashers/hasher.h>
-#include <utils/lexparser.h>
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
@@ -409,7 +408,7 @@ static char* extract_platform_info(void)
 		return NULL;
 	}
 		
-	/* Read the output the arch command */
+	/* read the output the arch command */
 	if (!fgets(buf + value_len + 1, BUF_LEN - value_len - 2, file))
 	{
 		DBG2(DBG_IMC, "failed to read output of arch command");
