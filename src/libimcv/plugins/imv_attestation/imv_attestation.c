@@ -275,7 +275,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			{
 				break;
 			}
-			
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
 				is_directory = (type != 0);
@@ -285,8 +284,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 													delimiter, pathname);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
-
-				attestation_state->add_requested_file(attestation_state, id, type);
+				attestation_state->add_requested_file(attestation_state, id , type);
 			}
 			enumerator->destroy(enumerator);
 
@@ -311,15 +309,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	msg->destroy(msg);
 	
 	return result;
-}
-
-/**
- * String matching function with boolean return value
- * Used to remove an item from linked list of strings
- */
-static bool string_cmp(char *a, char *b)
-{
-	return (strcmp(a,b) == 0) ? TRUE : FALSE;
 }
 
 /**
@@ -578,7 +567,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 					files_in_dir_with_meas->destroy_function(files_in_dir_with_meas, free);
 					e_meas->destroy(e_meas);
-					
 					break;
 				}
 	
@@ -632,13 +620,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	{	
 		if (measurement_error || attestation_state->get_requests_count(attestation_state))
 		{
+			file_request_t *entry;
 			enumerator_t *e;
 			int request;
 			
 			e = attestation_state->create_requests_enumerator(attestation_state);
 			while (e->enumerate(e, &request))
 			{
-				DBG1(DBG_IMV, "measurement/s not received for requests: %d", request);
+				DBG1(DBG_IMV, "%s measurement not received for request: %d",
+ 					 (entry->is_dir) ? "Directory" : "File", entry->request_id);
 			}
 			e->destroy(e);
 			
