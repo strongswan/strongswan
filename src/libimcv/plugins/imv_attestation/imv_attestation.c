@@ -240,7 +240,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			u_int32_t delimiter = SOLIDUS_UTF;
 			char *platform_info, *pathname;
 			int id, type;
-			bool is_directory;
+			bool is_dir;
 
 			/* Does the PTS-IMC have TPM support? */
 			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
@@ -277,14 +277,14 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			}
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
-				is_directory = (type != 0);
+				is_dir = (type != 0);
 				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
-					 id, is_directory ? "directory" : "file", pathname);
-				attr = tcg_pts_attr_req_file_meas_create(is_directory, id,
-													delimiter, pathname);
+					 id, is_dir ? "directory" : "file", pathname);
+				attr = tcg_pts_attr_req_file_meas_create(is_dir, id, delimiter,
+														 pathname);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
-				attestation_state->add_requested_file(attestation_state, id , type);
+				attestation_state->add_request(attestation_state, id , is_dir);
 			}
 			enumerator->destroy(enumerator);
 
@@ -491,7 +491,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					chunk_t measurement;
 					char *platform_info, *filename;
 					enumerator_t *e_meas;
-					bool is_directory;
+					bool is_dir;
 					linked_list_t *files_in_dir_with_meas;
 
 					files_in_dir_with_meas = linked_list_create();
@@ -510,17 +510,13 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
 						 request_id, file_count, (file_count == 1) ? "":"s");
 
-					if (!attestation_state->is_request_dir(attestation_state, request_id, &is_directory))
+					if (!attestation_state->check_off_request(attestation_state,
+						request_id, &is_dir))
 					{
-						DBG1(DBG_IMV, "received measurement with id: %d was not requested", request_id);
-						fatal_error = TRUE;
+						DBG1(DBG_IMV, "  no entry found for this request"); 
 						break;
 					}
-					if (!is_directory)
-					{
-						attestation_state->remove_requested_file(attestation_state, request_id);
-					}
-					else
+					if (is_dir)
 					{
 						enumerator_t *e;
 						char *file;
@@ -540,29 +536,27 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					e_meas = measurements->create_enumerator(measurements);
 					while (e_meas->enumerate(e_meas, &filename, &measurement))
 					{
-						bool hash_matched;
-						
-						hash_matched = pts_db->check_measurement(pts_db,
-												measurement, platform_info,
-												request_id, filename, algo, is_directory);
-						if (!hash_matched)
+						bool hash_match;
+
+						hash_match = pts_db->check_measurement(pts_db, measurement,
+										platform_info, request_id, filename, algo, is_dir);
+
+						if (!hash_match)
 						{
 							measurement_error = TRUE;
 						}
-						
-						if (is_directory &&
-							files_in_dir_with_meas->remove(files_in_dir_with_meas,
-										filename, (bool (*)(void*,void*))string_cmp))
+
+						if (is_dir && files_in_dir_with_meas->remove(files_in_dir_with_meas,
+										filename, (bool (*)(void*,void*))string_equals))
 						{
 							DBG3(DBG_IMV, "Removed %s from expected files list", filename);
 						}
 					}
 
-					if (is_directory && 
+					if (is_dir &&
 						!files_in_dir_with_meas->get_count(files_in_dir_with_meas))
 					{
-						attestation_state->remove_requested_file(attestation_state, request_id);
-						DBG3(DBG_IMV, "Received all expected files measured for request: %d", request_id);
+						DBG3(DBG_IMV, "recevied all expected file measurements for request: %d", request_id);
 					}
 
 					files_in_dir_with_meas->destroy_function(files_in_dir_with_meas, free);
@@ -617,21 +611,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 	if (attestation_state->get_handshake_state(attestation_state) &
 		IMV_ATTESTATION_STATE_END)
-	{	
-		if (measurement_error || attestation_state->get_requests_count(attestation_state))
+	{
+		if (attestation_state->get_request_count(attestation_state))
 		{
-			file_request_t *entry;
-			enumerator_t *e;
-			int request;
-			
-			e = attestation_state->create_requests_enumerator(attestation_state);
-			while (e->enumerate(e, &request))
-			{
-				DBG1(DBG_IMV, "%s measurement not received for request: %d",
- 					 (entry->is_dir) ? "Directory" : "File", entry->request_id);
-			}
-			e->destroy(e);
-			
+			DBG1(DBG_IMV, "failure due to %d pending file measurements",
+				 attestation_state->get_request_count(attestation_state));
+			measurement_error = TRUE;
+		}
+		if (measurement_error)
+		{
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);

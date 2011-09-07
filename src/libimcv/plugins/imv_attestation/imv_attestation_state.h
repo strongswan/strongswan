@@ -25,11 +25,9 @@
 #include <imv/imv_state.h>
 #include <tcg/pts/pts.h>
 #include <library.h>
-#include <utils/linked_list.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
 typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t;
-typedef struct file_request_t file_request_t;
 
 /**
  * IMV Attestation Handshake States (state machine)
@@ -40,14 +38,6 @@ enum imv_attestation_handshake_state_t {
 	IMV_ATTESTATION_STATE_COMP_EVID,
 	IMV_ATTESTATION_STATE_IML,
 	IMV_ATTESTATION_STATE_END,
-};
-
-/**
- * Defines an structure to hold requested file/directory
- */
-struct file_request_t {
-	int request_id;
-	int is_dir;
 };
 
 /**
@@ -83,42 +73,30 @@ struct imv_attestation_state_t {
 	pts_t* (*get_pts)(imv_attestation_state_t *this);
 
 	/**
-	 * Add an entry to list of requested files/directories
+	 * Add an entry to the list of pending file/directory measurement requests
 	 *
-	 * @param request_id				unique request id
-	 * @param is_dir					0 for file and 1 for directory
+	 * @param id				unique request ID
+	 * @param is_dir			TRUE if directory 
 	 */
-	void (*add_requested_file)(imv_attestation_state_t *this, int request_id, int is_dir);
+	void (*add_request)(imv_attestation_state_t *this, int id, bool is_dir);
 
 	/**
-	 * Creates enumerator over the list of requested file/directories
+	 * Returns the number of pending file/directory measurement requests
 	 *
-	 * @return							enumerator over requested files/directories list
+	 * @return					number of pending requests
 	 */
-	enumerator_t* (*create_requests_enumerator)(imv_attestation_state_t *this);
+	int (*get_request_count)(imv_attestation_state_t *this);
 
 	/**
-	 * Returns number of entries in the list of requested file/directories
+	 * Check for presence of request_id and if found remove it from the list
 	 *
-	 * @return							number of entries in the list of requested file/directories
+	 * @param id				unique request ID
+	 * @param is_dir			return TRUE if request was for a directory
+	 * @return					TRUE if request ID found, FALSE otherwise
 	 */
-	int (*get_requests_count)(imv_attestation_state_t *this);
+	bool (*check_off_request)(imv_attestation_state_t *this, int id,
+							  bool *is_dir);
 
-	/**
-	 * Removes an entry with matching request_id from list of requested files/directories
-	 *
-	 * @param request_id				unique request id
-	 * @return							TRUE if request entry found, FALSE otherwise
-	 */
-	bool (*remove_requested_file)(imv_attestation_state_t *this, int request_id);
-
-	/**
-	 * Returns TRUE if entry with given ID is directory and FALSE otherwise
-	 *
-	 * @param request_id				unique request id
-	 * @return							TRUE if request entry found, FALSE otherwise
-	 */
-	bool (*is_request_dir)(imv_attestation_state_t *this, int request_id, bool *is_dir);
 };
 
 /**

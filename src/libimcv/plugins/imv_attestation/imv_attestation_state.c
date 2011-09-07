@@ -16,9 +16,19 @@
 #include "imv_attestation_state.h"
 
 #include <utils/lexparser.h>
+#include <utils/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imv_attestation_state_t private_imv_attestation_state_t;
+typedef struct request_t request_t;
+
+/**
+ * PTS File/Directory Measurement request entry
+ */
+struct request_t {
+	int id;
+	bool is_dir;
+};
 
 /**
  * Private data of an imv_attestation_state_t object.
@@ -56,14 +66,14 @@ struct private_imv_attestation_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
+	 * List of PTS File/Directory Measurement requests
+	 */
+	linked_list_t *requests;
+
+	/**
 	 * PTS object
 	 */
 	pts_t *pts;
-
-	/**
-	 * Requested files and directories
-	 */
-	linked_list_t *requested_files;
 
 };
 
@@ -161,8 +171,8 @@ METHOD(imv_state_t, get_reason_string, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
+	this->requests->destroy_function(this->requests, free);
 	this->pts->destroy(this->pts);
-	this->requested_files->destroy_function(this->requested_files, free);
 	free(this);
 }
 
@@ -184,72 +194,45 @@ METHOD(imv_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
-METHOD(imv_attestation_state_t, create_requests_enumerator, enumerator_t*,
-	private_imv_attestation_state_t *this)
+METHOD(imv_attestation_state_t, add_request, void,
+	private_imv_attestation_state_t *this, int id, bool is_dir)
 {
-	enumerator_t *e;
-	e = this->requested_files->create_enumerator(this->requested_files);
-	return e;
+	request_t *request;
+
+	request = malloc_thing(request_t);
+	request->id = id;
+	request->is_dir = is_dir;
+	this->requests->insert_last(this->requests, request);
 }
 
-METHOD(imv_attestation_state_t, get_requests_count, int,
-	private_imv_attestation_state_t *this)
+METHOD(imv_attestation_state_t, check_off_request, bool,
+	private_imv_attestation_state_t *this, int id, bool* is_dir)
 {
-	return this->requested_files->get_count(this->requested_files);
-}
-
-
-METHOD(imv_attestation_state_t, add_requested_file, void,
-	private_imv_attestation_state_t *this, int request_id, int is_dir)
-{
-	file_request_t *entry;
-
-	entry = malloc_thing(file_request_t);
-	entry->request_id = request_id;
-	entry->is_dir = is_dir;
-	this->requested_files->insert_last(this->requested_files, entry);
-}
-
-/**
- * Comparison function to match an file request entry with its request_id
- */
-static bool request_match(file_request_t *current_list_item, int request_id)
-{
-	return (current_list_item->request_id == request_id);
-}
-
-METHOD(imv_attestation_state_t, remove_requested_file, bool,
-	private_imv_attestation_state_t *this, int request_id)
-{
-	file_request_t *entry;
-
-	if (this->requested_files->find_first(this->requested_files,
-			(linked_list_match_t)request_match, (void**)&entry, request_id) != SUCCESS)
-	{
-		DBG1(DBG_IMV, "request entry with id: %d not found", request_id);
-		return FALSE;
-	}
-
-	this->requested_files->remove(this->requested_files, entry, NULL);
-	return TRUE;
-}
-
-METHOD(imv_attestation_state_t, is_request_dir, bool,
-	private_imv_attestation_state_t *this, int request_id, bool *is_dir)
-{
-	file_request_t *entry;
-
-	if (this->requested_files->find_first(this->requested_files,
-			(linked_list_match_t)request_match, (void**)&entry, request_id) != SUCCESS)
-	{
-		DBG1(DBG_IMV, "request entry with id: %d not found", request_id);
-		return FALSE;
-	}
+	enumerator_t *enumerator;
+	request_t *request;
+	bool found = FALSE;
 	
-	*is_dir = (entry->is_dir);
-	return TRUE;
+	enumerator = this->requests->create_enumerator(this->requests);
+	while (enumerator->enumerate(enumerator, &request))
+	{
+		if (request->id == id)
+		{
+			found = TRUE;
+			*is_dir = request->is_dir;
+			this->requests->remove_at(this->requests, enumerator);
+			free(request);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
 }
 
+METHOD(imv_attestation_state_t, get_request_count, int,
+	private_imv_attestation_state_t *this)
+{
+	return this->requests->get_count(this->requests);
+}
 
 /**
  * Described in header.
@@ -272,19 +255,17 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.get_handshake_state = _get_handshake_state,
 			.set_handshake_state = _set_handshake_state,
 			.get_pts = _get_pts,
-			.create_requests_enumerator = _create_requests_enumerator,
-			.get_requests_count = _get_requests_count,
-			.add_requested_file = _add_requested_file,
-			.remove_requested_file = _remove_requested_file,
-			.is_request_dir = _is_request_dir,
+			.add_request = _add_request,
+			.check_off_request = _check_off_request,
+			.get_request_count = _get_request_count,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.handshake_state = IMV_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
+		.requests = linked_list_create(),
 		.pts = pts_create(FALSE),
-		.requested_files = linked_list_create(),
 	);
 
 	platform_info = lib->settings->get_str(lib->settings,
