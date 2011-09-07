@@ -565,26 +565,47 @@ Debug level for a stand-alone libimcv library
 Disable output to stderr with a stand-alone libimcv library
 .SS libimcv plugins section
 .TP
-.BR libimcv.plugins.imc_test.command " [none]"
-Command to be sent to the Test IMV
+.BR libimcv.plugins.imc-attestation.platform_info
+Information on operating system and hardware platform
 .TP
-.BR libimcv.plugins.imc_test.retry " [no]"
-Do a handshake retry
+.BR libimcv.plugins.imc-attestation.aik_cert
+AIK certificate file
 .TP
-.BR libimcv.plugins.imc_test.retry_command
-Command to be sent to the Test IMV in the handshake retry
+.BR libimcv.plugins.imc-attestation.aik_key
+AIK public key file
 .TP
-.BR libimcv.plugins.imv_test.rounds " [0]"
-Number of IMC-IMV retry rounds
+.BR libimcv.plugins.imv-attestation.cadir
+Path to directory with AIK cacerts
 .TP
-.BR libimcv.plugins.imv_scanner.closed_port_policy " [yes]"
+.BR libimcv.plugins.imv-attestation.database
+Path to database with file measurement information
+.TP
+.BR libimcv.plugins.imv-attestation.hash_algorithm " [sha1]"
+Preferred measurement hash algorithm
+.TP
+.BR libimcv.plugins.imv-attestation.platform_info
+Information on operating system and hardware platform
+.TP
+.BR libimcv.plugins.imv-scanner.closed_port_policy " [yes]"
 By default all ports must be closed (yes) or can be open (no)
 .TP
-.BR libimcv.plugins.imv_scanner.tcp_ports
+.BR libimcv.plugins.imv-scanner.tcp_ports
 List of TCP ports that can be open or must be closed
 .TP
-.BR libimcv.plugins.imv_scanner.udp_ports
+.BR libimcv.plugins.imv-scanner.udp_ports
 List of UDP ports that can be open or must be closed
+.TP
+.BR libimcv.plugins.imc-test.command " [none]"
+Command to be sent to the Test IMV
+.TP
+.BR libimcv.plugins.imc-test.retry " [no]"
+Do a handshake retry
+.TP
+.BR libimcv.plugins.imc-test.retry_command
+Command to be sent to the Test IMV in the handshake retry
+.TP
+.BR libimcv.plugins.imv-test.rounds " [0]"
+Number of IMC-IMV retry rounds
 .SS libtls section
 .TP
 .BR libtls.cipher
