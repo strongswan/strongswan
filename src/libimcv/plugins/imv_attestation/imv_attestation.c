@@ -564,6 +564,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						requested_files->remove(requested_files, (void*)request_id, NULL);
 					}
 
+					files_in_dir_with_meas->destroy(files_in_dir_with_meas);
 					e_meas->destroy(e_meas);
 					break;
 				}
@@ -702,6 +703,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_creds);
+	requested_files->destroy(requested_files);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 
