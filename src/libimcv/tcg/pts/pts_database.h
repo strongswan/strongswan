@@ -35,33 +35,23 @@ struct pts_database_t {
 	/**
 	* Get files to be measured by PTS
 	*
-	* @product				software product (os, vpn client, etc.)
-	* @return				enumerator over all files matching a given release
+	* @param product		software product (os, vpn client, etc.)
+	* @return				enumerator over all matching files
 	*/
 	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product);
 
 	/**
-	* Get Enumerator over files in a given directory with measurements
+	* Get stored measurement hash for single file or directory entries
 	*
-	* @id					primary key in files table, directory column in file_hashes table
-	* @return				enumerator over all measurements matching a given release
+	* @param product		software product (os, vpn client, etc.)
+	* @param algo			hash algorithm used for measurement
+	* @param id				primary key of measured file/directory
+	* @param is_dir			TRUE if directory was measured
+	* @return				enumerator over all matching measurement hashes
 	*/
-	enumerator_t* (*create_files_in_dir_enumerator)(pts_database_t *this, int id);
-
-	/**
-	* Get Hash measurement of a file in a folder with given id and hashing algorithm type
-	*
-	* @received_hash		measurement of a file to match with database entry
-	* @product				software product (os, vpn client, etc.)
-	* @id					primary key in files table
-	* @file_name			path in files table, obligatory for the files in directory
-	* @algorithm			measurement algorithm type
-	* @is_dir				TRUE if file is requested as content in a directory
-	* @return				enumerator over all measurements matching a given release
-	*/
-	bool (*check_measurement)(pts_database_t *this, chunk_t received_hash,
-					char *product, int id, char *file_name, pts_meas_algorithms_t algorithm, bool is_dir);
-
+	enumerator_t* (*create_hash_enumerator)(pts_database_t *this, char *product,
+											pts_meas_algorithms_t algo,
+											int id, bool is_dir);
 
 	/**
 	* Destroys a pts_database_t object.

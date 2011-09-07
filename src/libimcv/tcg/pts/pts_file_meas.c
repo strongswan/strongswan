@@ -16,6 +16,7 @@
 #include "pts_file_meas.h"
 
 #include <utils/linked_list.h>
+#include <debug.h>
 
 typedef struct private_pts_file_meas_t private_pts_file_meas_t;
 
@@ -106,6 +107,52 @@ METHOD(pts_file_meas_t, create_enumerator, enumerator_t*,
 								   (void*)entry_filter, NULL, NULL);
 }
 
+METHOD(pts_file_meas_t, verify, bool,
+	private_pts_file_meas_t *this, enumerator_t *e_hash, bool is_dir)
+{
+	char *filename;
+	chunk_t measurement;
+	entry_t *entry;
+	enumerator_t *enumerator;
+	bool found, success = TRUE;
+
+	while (e_hash->enumerate(e_hash, &filename, &measurement))
+	{
+		found = FALSE;
+
+		enumerator = this->list->create_enumerator(this->list);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			if (!is_dir || streq(filename, entry->filename))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		
+		if (!found)
+		{
+			DBG1(DBG_TNC, "  no measurement found for '%s'", filename);
+			success = FALSE;
+		}
+		if (chunk_equals(measurement, entry->measurement))
+		{
+			DBG2(DBG_TNC, "  %#B for '%s' is ok", &measurement, filename);
+		}
+		else
+		{
+			DBG1(DBG_TNC, "  %#B for '%s' is incorrect", &measurement, filename);
+			success = FALSE;
+		}
+		if (!is_dir)
+		{
+			break;
+		}
+	}
+	return success;	
+}
+
 METHOD(pts_file_meas_t, destroy, void,
 	private_pts_file_meas_t *this)
 {
@@ -126,6 +173,7 @@ pts_file_meas_t *pts_file_meas_create(u_int16_t request_id)
 			.get_file_count = _get_file_count,
 			.add = _add,
 			.create_enumerator = _create_enumerator,
+			.verify = _verify,
 			.destroy = _destroy,
 		},
 		.request_id = request_id,

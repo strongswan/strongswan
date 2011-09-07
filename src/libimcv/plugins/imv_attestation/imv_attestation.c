@@ -488,13 +488,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					int file_count;
 					pts_meas_algorithms_t algo;
 					pts_file_meas_t *measurements;
-					chunk_t measurement;
-					char *platform_info, *filename;
-					enumerator_t *e_meas;
+					char *platform_info;
+					enumerator_t *e_hash;
 					bool is_dir;
-					linked_list_t *files_in_dir_with_meas;
 
-					files_in_dir_with_meas = linked_list_create();
 					platform_info = pts->get_platform_info(pts);
 					if (!pts_db || !platform_info)
 					{
@@ -516,51 +513,16 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						DBG1(DBG_IMV, "  no entry found for this request"); 
 						break;
 					}
-					if (is_dir)
+
+					/* check hashes from database against measurements */
+					e_hash = pts_db->create_hash_enumerator(pts_db, 
+									platform_info, algo, request_id, is_dir);
+					if (!measurements->verify(measurements, e_hash, is_dir))
 					{
-						enumerator_t *e;
-						char *file;
-						
-						e = pts_db->create_files_in_dir_enumerator(pts_db, request_id);
-						while (e->enumerate(e, &file))
-						{
-							char *file_copy = (char *)malloc(strlen(file) * sizeof(char));
-							strcpy(file_copy, file);
-							
-							files_in_dir_with_meas->insert_last(files_in_dir_with_meas, file_copy);
-							DBG3(DBG_IMV, "expecting measurement for: %s with request_id: %d", file_copy, request_id);
-						}
-						e->destroy(e);
+						DBG1(DBG_IMV, "  measurement error occured"); 
+						measurement_error = TRUE;
 					}
-					
-					e_meas = measurements->create_enumerator(measurements);
-					while (e_meas->enumerate(e_meas, &filename, &measurement))
-					{
-						bool hash_match;
-
-						hash_match = pts_db->check_measurement(pts_db, measurement,
-										platform_info, request_id, filename, algo, is_dir);
-
-						if (!hash_match)
-						{
-							measurement_error = TRUE;
-						}
-
-						if (is_dir && files_in_dir_with_meas->remove(files_in_dir_with_meas,
-										filename, (bool (*)(void*,void*))string_equals))
-						{
-							DBG3(DBG_IMV, "Removed %s from expected files list", filename);
-						}
-					}
-
-					if (is_dir &&
-						!files_in_dir_with_meas->get_count(files_in_dir_with_meas))
-					{
-						DBG3(DBG_IMV, "recevied all expected file measurements for request: %d", request_id);
-					}
-
-					files_in_dir_with_meas->destroy_function(files_in_dir_with_meas, free);
-					e_meas->destroy(e_meas);
+					e_hash->destroy(e_hash);
 					break;
 				}
 	
