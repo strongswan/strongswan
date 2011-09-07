@@ -185,7 +185,7 @@ METHOD(crl_t, create_enumerator, enumerator_t*,
 		free(enumerator);
 		return enumerator_create_empty();
 	}
-	enumerator->num = sk_X509_EXTENSION_num(enumerator->stack);
+	enumerator->num = sk_X509_REVOKED_num(enumerator->stack);
 	return &enumerator->public;
 }
 

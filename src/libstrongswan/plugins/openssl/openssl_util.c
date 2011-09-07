@@ -130,7 +130,7 @@ chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1)
 {
 	if (asn1)
 	{
-		return chunk_create(asn1->data, asn1->length);
+		return chunk_create((u_char*)asn1->data, asn1->length);
 	}
 	return chunk_empty;
 }
