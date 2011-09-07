@@ -44,6 +44,7 @@
 #include <pen/pen.h>
 #include <debug.h>
 #include <utils/linked_list.h>
+#include <credentials/credential_manager.h>
 
 /* IMV definitions */
 
@@ -74,6 +75,11 @@ static pts_database_t *pts_db;
  * PTS credentials
  */
 static pts_creds_t *pts_creds;
+
+/**
+ * PTS credential manager
+ */
+static credential_manager_t *pts_credmgr;
 
 /**
  * List of id's for the files that are requested for measurement
@@ -129,15 +135,22 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		supported_algorithms &= ~PTS_MEAS_ALGO_SHA256;
 	}
 
-	/* attach file measurement database */
-	uri = lib->settings->get_str(lib->settings,
-				"libimcv.plugins.imv-attestation.database", NULL);
-	pts_db = pts_database_create(uri);
+	/* create a PTS credential manager */
+	pts_credmgr = credential_manager_create();
 
 	/* create PTS credential set */
 	cadir = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.cadir", NULL);
 	pts_creds = pts_creds_create(cadir);
+	if (pts_creds)
+	{
+		pts_credmgr->add_set(pts_credmgr, pts_creds->get_set(pts_creds));
+	}
+
+	/* attach file measurement database */
+	uri = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.database", NULL);
+	pts_db = pts_database_create(uri);
 
 	return TNC_RESULT_SUCCESS;
 }
@@ -446,7 +459,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				case TCG_PTS_AIK:
 				{
 					tcg_pts_attr_aik_t *attr_cast;
-					certificate_t *aik;
+					certificate_t *aik, *issuer;
+					enumerator_t *e;
 
 					attr_cast = (tcg_pts_attr_aik_t*)attr;
 					aik = attr_cast->get_aik(attr_cast);
@@ -456,6 +470,17 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						break;
 					}
 					pts->set_aik(pts, aik);
+					e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
+								KEY_ANY, aik->get_issuer(aik), FALSE);
+					while (e->enumerate(e, &issuer))
+					{
+						if (aik->issued_by(aik, issuer))
+						{
+							DBG1(DBG_IMV, "AIK certificate is trusted");
+							break;
+						}
+					}
+					e->destroy(e);
 					break;
 				}
 	
@@ -701,8 +726,13 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+	if (pts_creds)
+	{
+		pts_credmgr->remove_set(pts_credmgr, pts_creds->get_set(pts_creds));
+		pts_creds->destroy(pts_creds);
+	}
 	DESTROY_IF(pts_db);
-	DESTROY_IF(pts_creds);
+	pts_credmgr->destroy(pts_credmgr);
 	requested_files->destroy(requested_files);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;

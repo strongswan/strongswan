@@ -24,21 +24,19 @@
 typedef struct pts_creds_t pts_creds_t;
 
 #include <library.h>
+#include <credentials/credential_set.h>
 
 /**
  * Class implementing a PTS credentials set
- *
  */
 struct pts_creds_t {
 
-/**
-	 * Verify an AIK certificate
+	/**
+	 * Get the credential set
 	 *
-	 * @cert				certificate to be verified
-	 * @return				TRUE if valid and trusted
+	 * @return				credential set
 	 */
-	bool (*verify)(pts_creds_t *this, certificate_t *cert);
-	
+	credential_set_t* (*get_set)(pts_creds_t *this);
 
 	/**
 	 * Destroys a pts_creds_t object.

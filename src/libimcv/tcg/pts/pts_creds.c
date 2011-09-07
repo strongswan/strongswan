@@ -41,10 +41,10 @@ struct private_pts_creds_t {
 
 };
 
-METHOD(pts_creds_t, verify, bool,
-	private_pts_creds_t *this, certificate_t *cert)
+METHOD(pts_creds_t, get_set, credential_set_t*,
+	private_pts_creds_t *this)
 {
-	return FALSE;
+	return &this->creds->set;
 }
 
 
@@ -123,7 +123,7 @@ pts_creds_t *pts_creds_create(char *path)
 
 	INIT(this,
 		.public = {
-			.verify = _verify,
+			.get_set = _get_set,
 			.destroy = _destroy,
 		},
 		.creds = mem_cred_create(),
