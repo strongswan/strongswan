@@ -66,7 +66,8 @@ METHOD(pts_database_t, create_hash_enumerator, enumerator_t*,
 				"SELECT f.path, fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON fh.file = f.id "
 				"JOIN products AS p ON fh.product = p.id "
-				"WHERE p.name = ? AND fh.directory = ? AND fh.algo = ?",
+				"WHERE p.name = ? AND fh.directory = ? AND fh.algo = ? "
+				"ORDER BY f.path",
 				DB_TEXT, product, DB_INT, id, DB_INT, algo, DB_TEXT, DB_BLOB);
 	}
 	else
