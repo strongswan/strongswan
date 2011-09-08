@@ -23,7 +23,7 @@
 #define IMV_ATTESTATION_STATE_H_
 
 #include <imv/imv_state.h>
-#include <tcg/pts/pts.h>
+#include <pts/pts.h>
 #include <library.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;

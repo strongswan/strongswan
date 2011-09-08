@@ -17,8 +17,11 @@
 #include "pa_tnc_msg.h"
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
-#include "tcg/tcg_attr.h"
 #include "ita/ita_attr.h"
+
+#ifdef USE_PTS
+#include "tcg/tcg_attr.h"
+#endif /* USE_PTS */
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
@@ -375,8 +378,10 @@ enum_name_t* get_pa_attr_names(pen_t pen)
 	{
 		case PEN_IETF:
 			return ietf_attr_names;
+#ifdef USE_PTS
 		case PEN_TCG:
 			return tcg_attr_names;
+#endif /* USE_PTS */
 		case PEN_ITA:
 			return ita_attr_names;
 		default:

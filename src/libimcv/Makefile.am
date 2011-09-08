@@ -3,7 +3,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtncif
 
 ipseclib_LTLIBRARIES = libimcv.la
 
-libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la -ltspi -lcurl
+libimcv_la_LIBADD = $(top_builddir)/src/libtncif/libtncif.la
 
 libimcv_la_SOURCES = \
 	imcv.h imcv.c \
@@ -16,31 +16,14 @@ libimcv_la_SOURCES = \
 	ita/ita_attr.h ita/ita_attr.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
-	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c \
-	tcg/tcg_attr.h tcg/tcg_attr.c \
-	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
-	tcg/tcg_pts_attr_meas_algo.h tcg/tcg_pts_attr_meas_algo.c \
-	tcg/tcg_pts_attr_get_tpm_version_info.h tcg/tcg_pts_attr_get_tpm_version_info.c \
-	tcg/tcg_pts_attr_tpm_version_info.h tcg/tcg_pts_attr_tpm_version_info.c \
-	tcg/tcg_pts_attr_get_aik.h tcg/tcg_pts_attr_get_aik.c \
-	tcg/tcg_pts_attr_aik.h tcg/tcg_pts_attr_aik.c \
-	tcg/tcg_pts_attr_req_funct_comp_evid.h tcg/tcg_pts_attr_req_funct_comp_evid.c \
-	tcg/tcg_pts_attr_gen_attest_evid.h tcg/tcg_pts_attr_gen_attest_evid.c \
-	tcg/tcg_pts_attr_simple_comp_evid.h tcg/tcg_pts_attr_simple_comp_evid.c \
-	tcg/tcg_pts_attr_simple_evid_final.h tcg/tcg_pts_attr_simple_evid_final.c \
-	tcg/tcg_pts_attr_req_file_meas.h tcg/tcg_pts_attr_req_file_meas.c \
-	tcg/tcg_pts_attr_file_meas.h tcg/tcg_pts_attr_file_meas.c \
-	tcg/pts/pts.h tcg/pts/pts.c \
-	tcg/pts/pts_error.h tcg/pts/pts_error.c \
-	tcg/pts/pts_proto_caps.h tcg/pts/pts_funct_comp_name.h \
-	tcg/pts/pts_creds.h tcg/pts/pts_creds.c \
-	tcg/pts/pts_database.h tcg/pts/pts_database.c \
-	tcg/pts/pts_file_meas.h tcg/pts/pts_file_meas.c \
-	tcg/pts/pts_meas_algo.h tcg/pts/pts_meas_algo.c
-
-# CFLAGS = -Wall -Werror
+	pa_tnc/pa_tnc_attr.h pa_tnc/pa_tnc_attr.c
 
 SUBDIRS = .
+
+if USE_PTS
+  INCLUDES += -I$(top_srcdir)/src/libpts
+  AM_CFLAGS = -DUSE_PTS
+endif
 
 if USE_IMC_TEST
   SUBDIRS += plugins/imc_test

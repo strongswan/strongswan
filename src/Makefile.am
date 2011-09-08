@@ -20,6 +20,10 @@ if USE_LIBTNCIF
   SUBDIRS += libtncif
 endif
 
+if USE_PTS
+  SUBDIRS += libpts
+endif
+
 if USE_IMCV
   SUBDIRS += libimcv
 endif

@@ -254,6 +254,10 @@ if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$i
 	imcv=true;
 fi
 
+if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+	pts=true;
+fi
+
 if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse; then
 		sha1=true;
@@ -1003,6 +1007,7 @@ AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
+AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
@@ -1079,6 +1084,7 @@ AC_OUTPUT(
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libtncif/Makefile
+	src/libpts/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile

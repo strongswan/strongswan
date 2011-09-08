@@ -21,7 +21,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 
-#include <tcg/pts/pts_error.h>
+#include <pts/pts_error.h>
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>

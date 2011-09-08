@@ -18,6 +18,8 @@
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "ietf/ietf_attr_product_info.h"
+
+#ifdef USE_PTS
 #include "tcg/tcg_attr.h"
 #include "tcg/tcg_pts_attr_proto_caps.h"
 #include "tcg/tcg_pts_attr_meas_algo.h"
@@ -31,6 +33,8 @@
 #include "tcg/tcg_pts_attr_simple_evid_final.h"
 #include "tcg/tcg_pts_attr_req_file_meas.h"
 #include "tcg/tcg_pts_attr_file_meas.h"
+#endif /* USE_PTS */
+
 #include "ita/ita_attr.h"
 #include "ita/ita_attr_command.h"
 
@@ -66,6 +70,7 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 					break;
 			}
 			break;
+#ifdef USE_PTS
 		case PEN_TCG:
 			switch (type)
 			{
@@ -116,6 +121,7 @@ pa_tnc_attr_t* pa_tnc_attr_create_from_data(pen_t vendor_id, u_int32_t type,
 					break;
 			}
 			break;
+#endif /* HAVE _PTS */
 		case PEN_ITA:
 			switch (type)
 			{

@@ -21,9 +21,9 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 
-#include <tcg/pts/pts_database.h>
-#include <tcg/pts/pts_creds.h>
-#include <tcg/pts/pts_error.h>
+#include <pts/pts_database.h>
+#include <pts/pts_creds.h>
+#include <pts/pts_error.h>
 
 #include <tcg/tcg_attr.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>

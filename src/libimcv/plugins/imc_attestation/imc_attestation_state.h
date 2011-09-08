@@ -23,7 +23,7 @@
 #define IMC_ATTESTATION_STATE_H_
 
 #include <imc/imc_state.h>
-#include <tcg/pts/pts.h>
+#include <pts/pts.h>
 #include <library.h>
 
 typedef struct imc_attestation_state_t imc_attestation_state_t;
