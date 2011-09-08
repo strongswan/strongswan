@@ -418,10 +418,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		pa_tnc_msg->build(pa_tnc_msg);
 		result = imc_attestation->send_message(imc_attestation, connection_id,
 							pa_tnc_msg->get_encoding(pa_tnc_msg));
-	
-		attr_list->destroy(attr_list);
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
+	attr_list->destroy(attr_list);
 
 	return result;
 }
