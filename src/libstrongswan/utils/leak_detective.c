@@ -266,6 +266,9 @@ char *whitelist[] = {
 	"gpg_err_init",
 	/* gnutls */
 	"gnutls_global_init",
+	/* TrouSerS */
+	"Tspi_Context_Create",
+	"Tspi_Context_Connect",
 };
 
 
