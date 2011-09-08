@@ -242,6 +242,9 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			int id, type;
 			bool is_dir;
 
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_END);
+
 			/* Does the PTS-IMC have TPM support? */
 			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
 			{
@@ -287,9 +290,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				attestation_state->add_request(attestation_state, id , is_dir);
 			}
 			enumerator->destroy(enumerator);
-
-			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_END);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
