@@ -665,7 +665,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		pts_creds->destroy(pts_creds);
 	}
 	DESTROY_IF(pts_db);
-	pts_credmgr->destroy(pts_credmgr);
+	DESTROY_IF(pts_credmgr);
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 
