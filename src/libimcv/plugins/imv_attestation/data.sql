@@ -30,6 +30,12 @@ INSERT INTO products (
  'Ubuntu 10.10 i686'
 );
 
+INSERT INTO products (
+  name
+) VALUES (
+ 'Gentoo UML i686'
+);
+
 /* Files */
 
 INSERT INTO files (
@@ -152,6 +158,12 @@ INSERT INTO files (
   0, 'libxt_MARK.so'
 );
 
+INSERT INTO files (
+  type, path
+ ) VALUES (
+  1, '/lib/iptables'
+);
+
 /* Product-File */
 
 INSERT INTO product_file (
@@ -268,6 +280,30 @@ INSERT INTO product_file (
   5, 7
 );
 
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  6, 3
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  6, 4
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  6, 17
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  6, 21
+);
+
 /* File Hashes */
 
 INSERT INTO file_hashes (
@@ -345,6 +381,24 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
+  3, 6, 32768, X'91f4bb52404ca26b3a797152076ca5d233b93c1d'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 6, 16384, X'59bced619eabbde5dd3ef74b92ba660349e105d36be9756c8d1598abd4bc066c'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  3, 6, 8192, X'fc6b1350067d23fca711b8a674e0367ad255bae0ddb2efe10dca1b18b18985bd09a7459937fda729d349874bb2701df3'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
   4, 1, 32768, X'ff6deca0eeb7a257205c5f0ab5f5d821ea184098'
 );
 
@@ -412,6 +466,24 @@ INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
   4, 4, 8192, X'0cb6b7d91148b1bb1b9333bc71de01509cb6d12c646a6756e6942647046286fbbca92b25dc1999e8f81be1264061ee4d'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 6, 32768, X'e3cf3ef2ee5df0117972808bfa93b7795f5da873'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 6, 16384, X'fde81f544e49c44aabe0e312a00a7f8af01a0e3123dc5c54c65e3e78ba475b22'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  4, 6, 8192, X'e0cc89d1f229f9f35109bef3b163badc0941ca0a957d09e397a8d06e2b32e737f1f1135ebf0c0546d3d4c5354aaca40f'
 );
 
 INSERT INTO file_hashes (
@@ -507,6 +579,24 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, directory, product, algo, hash
 ) VALUES (
+  8, 21, 6, 32768, X'010873de0d682a26e1c6795dd4992248cc47cdd1'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  8, 21, 6, 16384, X'bfb45524d81a3645bf216a6cf52cd5624aadf6717012bf722afce2db3e31f712'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  8, 21, 6, 8192, X'f69b3f60b904f2deb39ea1fb9b0132638f0aea27357e365297f6b2ec895d42b260143b5e912d00df1a4a1d75a1b508fa'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
   9, 7, 1, 32768, X'1d740abd38f9f4bc81ca434a0e25b6e21704248b'
 );
 
@@ -543,6 +633,24 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, directory, product, algo, hash
 ) VALUES (
+  9, 21, 6, 32768, X'e1df4f3949b09c25e15b9c9b7088a60d683903a8'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  9, 21, 6, 16384, X'46f0ec6b0a2c3a24157019ed60f03de2ec9160d07f12b7e0b3d3f02b609a151d'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  9, 21, 6, 8192, X'4f73eae305e01e9ad57b5b1271a16bb8518fb82135aeb27311aa390d0d3a564b596adb723137f15bbf1db38b8dcbbdae'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
   10, 7, 1, 32768, X'339a58a1b313830c3cc74cb3fb52a5b8152f44e6'
 );
 
@@ -556,6 +664,24 @@ INSERT INTO file_hashes (
   file, directory, product, algo, hash
 ) VALUES (
   10, 7, 1, 8192, X'858310a6e4b6311c491c4370990bfd6b9f03a49bb5ddf45b0d788f7043f130016e11be6bd95db66e49e2906a87adf8cb'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  10, 21, 6, 32768, X'87df2d01b85d8354819b431bae0a0a65bfc5d2db'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  10, 21, 6, 16384, X'a25fef11c899d826ea61996f0bc05330bc88428eafb792be0182ad97b6283aae'
+);
+
+INSERT INTO file_hashes (
+  file, directory, product, algo, hash
+) VALUES (
+  10, 21, 6, 8192, X'357e5756dbfa22c21d3666521e644eefdf532b7d371cca62fc099579f3c98b97cb51d005dcbaf805f8a7def26dfde142'
 );
 
 INSERT INTO file_hashes (
@@ -682,6 +808,24 @@ INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
   17, 1, 8192, X'f40cb6e557ab18d70080e7995e3f96cc272842e822bf52bc1c59075313c2cd832f96cf03a8524905f3d3f7a61441c651'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  17, 6, 32768, X'8178f18dcb836e7f7432c4ad568bfd66b7ef4a96'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  17, 6, 16384, X'2d6aaed577bfac626ff4958ee1076bc343f8db46538aa6c381521bac94c5ca9e'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  17, 6, 8192, X'747bbaee322f9bf1849308f8907e2a43868eae8559a7be718113abb4ce535f6d509d005e51788cf3e83e148487fe7bf3'
 );
 
 INSERT INTO file_hashes (
