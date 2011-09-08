@@ -365,10 +365,10 @@ static char* extract_platform_info(void)
 	int value_len;
 
 	/* open a pipe stream for reading the output of the lsb_release commmand */
-	file = popen("/usr/bin/lsb_release -d" , "r");
+	file = popen("/usr/bin/lsb_release -d 2> /dev/null" , "r");
 	if (!file)
 	{
-		DBG2(DBG_IMC, "failed to run lsb_release command");
+		DBG2(DBG_IMC, "popen failed for lsb_release command");
 		return NULL;
 	}
 
@@ -401,10 +401,10 @@ static char* extract_platform_info(void)
 	buf[value_len] = ' ';
 
  	/* open a pipe stream for reading the output of the arch commmand */
-	file = popen("/usr/bin/arch" , "r");
+	file = popen("/usr/bin/arch 2> /dev/null" , "r");
 	if (!file)
 	{
-		DBG2(DBG_IMC, "failed to run arch command");
+		DBG2(DBG_IMC, "popen failed for arch command");
 		return NULL;
 	}
 		
