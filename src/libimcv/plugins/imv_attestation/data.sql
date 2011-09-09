@@ -33,7 +33,7 @@ INSERT INTO products (
 INSERT INTO products (
   name
 ) VALUES (
- 'Gentoo UML i686'
+ 'Gentoo Base System release 1.12.11.1 i686'
 );
 
 /* Files */

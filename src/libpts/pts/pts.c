@@ -391,68 +391,113 @@ METHOD(pts_t, destroy, void,
 static char* extract_platform_info(void)
 {
 	FILE *file;
-	const char description[] = "Description:";
-	char buf[BUF_LEN], *pos, *value;
-	int value_len;
+	char buf[BUF_LEN], *pos, *value = NULL;
+	int i, len, value_len;
 
-	/* open a pipe stream for reading the output of the lsb_release commmand */
-	file = popen("/usr/bin/lsb_release -d 2> /dev/null" , "r");
-	if (!file)
+	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
+	const char* releases[] = {
+		"/etc/lsb-release",           "/etc/debian_version",
+		"/etc/SuSE-release",          "/etc/novell-release",
+		"/etc/sles-release",          "/etc/redhat-release",
+		"/etc/fedora-release",        "/etc/gentoo-release", 
+		"/etc/slackware-version",     "/etc/annvix-release", 
+		"/etc/arch-release",          "/etc/arklinux-release", 
+		"/etc/aurox-release",         "/etc/blackcat-release",
+		"/etc/cobalt-release",        "/etc/conectiva-release",
+		"/etc/debian_release",        "/etc/immunix-release",
+		"/etc/lfs-release",           "/etc/linuxppc-release",
+		"/etc/mandrake-release",      "/etc/mandriva-release",
+		"/etc/mandrakelinux-release", "/etc/mklinux-release",
+		"/etc/pld-release",           "/etc/redhat_version",
+		"/etc/slackware-release",     "/etc/e-smith-release",
+		"/etc/release",               "/etc/sun-release",
+        "/etc/tinysofa-release",      "/etc/turbolinux-release",
+		"/etc/ultrapenguin-release",  "/etc/UnitedLinux-release",
+		"/etc/va-release",            "/etc/yellowdog-release"
+	};
+
+	const char description[] = "DISTRIB_DESCRIPTION=\"";
+
+	for (i = 0; i < countof(releases); i++)
 	{
-		DBG2(DBG_IMC, "popen failed for lsb_release command");
+		file = fopen(releases[i], "r");
+		if (!file)
+		{
+			continue;
+		}
+		fseek(file, 0, SEEK_END);
+		len = min(ftell(file), sizeof(buf)-1);
+		rewind(file);
+		buf[len] = '\0';
+		if (fread(buf, 1, len, file) != len)
+		{
+			DBG1(DBG_IMC, "failed to read file '%s'", releases[i]);
+			fclose(file);
+			return NULL;
+		}
+		fclose(file);
+
+		if (i == 0) /* LSB release */
+		{
+			pos = strstr(buf, description);
+			if (!pos)
+			{
+				DBG1(DBG_IMC, "failed to find begin of lsb-release "
+							  "DESCRIPTION field");
+				return NULL;
+			}
+			value = pos + strlen(description);
+			pos = strchr(value, '"');
+			if (!pos)
+			{
+				DBG1(DBG_IMC, "failed to find end of lsb-release "
+							  "DESCRIPTION field");
+				return NULL;
+			 }
+		}
+		else
+		{
+			value = buf;
+			pos = strchr(value, '\n');
+			if (!pos)
+			{
+				DBG1(DBG_IMC, "failed to find end of release string");
+				return NULL;
+			 }
+		}
+		value_len = pos - value;
+		value[value_len] = ' ';
+		break;
+	}
+	if (!value)
+	{
+		DBG1(DBG_IMC, "no distribution release file found");
 		return NULL;
 	}
-
-	/* read the output the lsb_release command */
-	if (!fgets(buf, BUF_LEN-1, file))
-	{
-		DBG2(DBG_IMC, "failed to read output of lsb_release command");
-		pclose(file);
-		return NULL;
-	}
-	pclose(file);
-
-	pos = strstr(buf, description);
-	if (!pos)
-	{
-		DBG2(DBG_IMC, "failed to find lsb_release description field");
-		return NULL;
-	}
-	value = pos + strlen(description);
-
-	/* eat whitespace */
-	while (*value == ' ' || *value == '\t')
-	{
-		value++;
-	}
-
-	/* remove newline at the end and move value to the front of the buffer */
-	value_len = strlen(value) - 1;
-	memcpy(buf, value, value_len);
-	buf[value_len] = ' ';
 
  	/* open a pipe stream for reading the output of the arch commmand */
 	file = popen("/usr/bin/arch 2> /dev/null" , "r");
 	if (!file)
 	{
-		DBG2(DBG_IMC, "popen failed for arch command");
+		DBG1(DBG_IMC, "popen failed for arch command");
 		return NULL;
 	}
 		
 	/* read the output the arch command */
-	if (!fgets(buf + value_len + 1, BUF_LEN - value_len - 2, file))
+	len = BUF_LEN - (value - buf) - value_len - 2;
+	if (!fgets(value + value_len + 1, len, file))
 	{
-		DBG2(DBG_IMC, "failed to read output of arch command");
+		DBG1(DBG_IMC, "failed to read output of arch command");
 		pclose(file);
 		return NULL;
 	}
 	pclose(file);
 
 	/* remove newline at the end */
-	buf[strlen(buf)-1] = '\0';
+	value[strlen(value)-1] = '\0';
 
-	DBG1(DBG_IMV, "platform is '%s'", buf);
-	return strdup(buf);	
+	DBG1(DBG_IMV, "platform is '%s'", value);
+	return strdup(value);	
 }
 
 /**
