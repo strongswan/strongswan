@@ -1,7 +1,7 @@
 moon::cat /var/log/daemon.log::authentication of.*carol.*successful::YES
 moon::cat /var/log/daemon.log::libcurl http request failed::YES
 moon::cat /var/log/daemon.log::certificate status is not available::YES
-moon::cat /var/log/daemon.log::constraint check failed: RULE_OCSP_VALIDATION is FAILED, but requires at least SKIPPED::YES
+moon::cat /var/log/daemon.log::constraint check failed: RULE_CRL_VALIDATION is FAILED, but requires at least SKIPPED::YES
 moon::ipsec status::ESTABLISHED.*carol::YES
 moon::ipsec status::ESTABLISHED.*dave::NO
 carol::ipsec status::ESTABLISHED::YES
