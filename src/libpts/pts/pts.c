@@ -463,6 +463,7 @@ static bool has_tpm(private_pts_t *this)
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
+	u_int32_t version_info_len;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -480,8 +481,9 @@ static bool has_tpm(private_pts_t *this)
 		goto err;
 	}
 	result = Tspi_TPM_GetCapability(hTPM, TSS_TPMCAP_VERSION_VAL,  0, NULL,
-									&this->tpm_version_info.len,
+									&version_info_len,
 									&this->tpm_version_info.ptr);
+	this->tpm_version_info.len = version_info_len;
 	if (result != TSS_SUCCESS)
 	{
 		goto err;

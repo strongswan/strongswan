@@ -19,8 +19,6 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/linked_list.h>
-/* For pow function */
-#include <math.h>
 #include <debug.h>
 
 typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t;
