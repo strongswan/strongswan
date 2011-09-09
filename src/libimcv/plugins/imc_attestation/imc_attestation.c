@@ -368,6 +368,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					if (pts->is_path_valid(pts, pathname, &pts_error) && pts_error)
 					{
+						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 												pts_error, attr_info);
 						attr_list->insert_last(attr_list, attr);
@@ -380,6 +381,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
 					{
+						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 												TCG_PTS_INVALID_DELIMITER, attr_info);
 						attr_list->insert_last(attr_list, attr);
