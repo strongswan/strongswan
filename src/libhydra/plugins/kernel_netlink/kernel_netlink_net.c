@@ -1276,26 +1276,45 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					best = msg->rtm_dst_len;
 					continue;
 				}
+
+				/* try to find an appropriate source address */
 				if (rta_src.ptr)
-				{	/* got a source address */
-					new_src = host_create_from_chunk(msg->rtm_family, rta_src, 0);
+				{	/* got a source address with the route */
+					new_src = host_create_from_chunk(msg->rtm_family,
+													 rta_src, 0);
 					if (new_src)
 					{
 						if (get_vip_refcount(this, new_src))
-						{	/* skip source address if it is installed by us */
+						{	/* skip route if it is installed by us */
 							new_src->destroy(new_src);
+							continue;
 						}
-						else
-						{
-							DESTROY_IF(src);
-							src = new_src;
-							best = msg->rtm_dst_len;
+						DESTROY_IF(src);
+						src = new_src;
+						if (candidate && !src->ip_equals(src, candidate) &&
+							rta_oif)
+						{	/* this source does not match our preferred source.
+							 * but maybe it is assigned to the same iface */
+							new_src = get_interface_address(this, rta_oif,
+															msg->rtm_family,
+															candidate);
+							if (new_src &&
+								new_src->ip_equals(new_src, candidate))
+							{
+								DESTROY_IF(src);
+								src = new_src;
+							}
+							else
+							{
+								DESTROY_IF(new_src);
+							}
 						}
+						best = msg->rtm_dst_len;
 					}
 					continue;
 				}
 				if (rta_oif)
-				{	/* no src or gtw, but an interface. Get address from it. */
+				{	/* no src, but an interface - get address from it */
 					new_src = get_interface_address(this, rta_oif,
 													msg->rtm_family, candidate);
 					if (new_src)
@@ -1307,7 +1326,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					continue;
 				}
 				if (rta_gtw.ptr)
-				{	/* no source, but a gateway. Lookup source to reach gtw. */
+				{	/* no src, but a gateway - lookup src to reach gtw */
 					new_gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
 					new_src = get_route(this, new_gtw, FALSE, candidate);
 					new_gtw->destroy(new_gtw);
