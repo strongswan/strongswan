@@ -22,6 +22,7 @@
 #include <trousers/trousers.h>
 
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <errno.h>
 
 #define PTS_BUF_SIZE	4096
@@ -392,7 +393,8 @@ static char* extract_platform_info(void)
 {
 	FILE *file;
 	char buf[BUF_LEN], *pos, *value = NULL;
-	int i, len, value_len;
+	int i, len;
+	struct utsname uninfo;
 
 	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
 	const char* releases[] = {
@@ -465,36 +467,24 @@ static char* extract_platform_info(void)
 				return NULL;
 			 }
 		}
-		value_len = pos - value;
-		value[value_len] = ' ';
 		break;
 	}
+
 	if (!value)
 	{
 		DBG1(DBG_IMC, "no distribution release file found");
 		return NULL;
 	}
 
- 	/* open a pipe stream for reading the output of the arch commmand */
-	file = popen("/usr/bin/arch 2> /dev/null" , "r");
-	if (!file)
+	if (uname(&uninfo) < 0)
 	{
-		DBG1(DBG_IMC, "popen failed for arch command");
+		DBG1(DBG_IMC, "could not retrieve machine architecture");
 		return NULL;
 	}
-		
-	/* read the output the arch command */
-	len = BUF_LEN - (value - buf) - value_len - 2;
-	if (!fgets(value + value_len + 1, len, file))
-	{
-		DBG1(DBG_IMC, "failed to read output of arch command");
-		pclose(file);
-		return NULL;
-	}
-	pclose(file);
 
-	/* remove newline at the end */
-	value[strlen(value)-1] = '\0';
+	*pos++ = ' ';
+	len = sizeof(buf)-1 + (pos - buf);
+	strncpy(pos, uninfo.machine, len);
 
 	DBG1(DBG_IMV, "platform is '%s'", value);
 	return strdup(value);	
