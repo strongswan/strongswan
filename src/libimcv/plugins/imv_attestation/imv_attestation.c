@@ -52,12 +52,6 @@ static const char imv_name[] = "Attestation";
 #define IMV_VENDOR_ID			PEN_TCG
 #define IMV_SUBTYPE				PA_SUBTYPE_TCG_PTS
 
-/**
- * UTF-8 encoding of the character used to delimiter the filename
- */
-#define SOLIDUS_UTF				0x002F
-#define REVERSE_SOLIDUS_UTF		0x005C
-
 static imv_agent_t *imv_attestation;
 
 /**

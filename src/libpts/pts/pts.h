@@ -23,11 +23,18 @@
 
 typedef struct pts_t pts_t;
 
+#include "pts_error.h"
 #include "pts_proto_caps.h"
 #include "pts_meas_algo.h"
 #include "pts_file_meas.h"
 
 #include <library.h>
+
+/**
+ * UTF-8 encoding of the character used to delimiter the filename
+ */
+#define SOLIDUS_UTF				0x002F
+#define REVERSE_SOLIDUS_UTF		0x005C
 
 /**
  * Class implementing the TCG Platform Trust System (PTS)
@@ -105,6 +112,17 @@ struct pts_t {
 	 * @param aik			AIK Certificate or Public Key
 	 */
 	void (*set_aik)(pts_t *this, certificate_t *aik);
+
+	/**
+	 * Check whether path is valid file/directory on filesystem
+	 *
+	 * @param path			Absolute path
+	 * @param error_code	Output variable for PTS error code
+	 * @return				TRUE if path is valid or file/directory doesn't exist
+	 * 							or path is invalid
+	 * 						FALSE if local error occured within stat function
+	 */
+	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
 	 * Do PTS File Measurements

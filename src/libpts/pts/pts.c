@@ -269,6 +269,37 @@ static char* get_filename(char *pathname)
 	return filename;
 }
 
+METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
+						pts_error_code_t *error_code)
+{
+	int error;
+	struct stat sb;
+	
+	error_code = NULL;
+	error = stat(path, &sb);
+	if (error == 0)
+	{
+		return TRUE;
+	}
+	else if (error == ENOENT || error == ENOTDIR)
+	{
+		DBG1(DBG_IMC, "file/directory does not exist %s", path);
+		*error_code = TCG_PTS_FILE_NOT_FOUND;
+	}
+	else if (error == EFAULT)
+	{
+		DBG1(DBG_IMC, "bad address %s", path);
+		*error_code = TCG_PTS_INVALID_PATH;
+	}
+	else
+	{
+		DBG1(DBG_IMC, "error: %s occured while validating path: %s", strerror(error), path);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	   private_pts_t *this, u_int16_t request_id, char *pathname, bool is_directory)
 {
@@ -482,6 +513,7 @@ pts_t *pts_create(bool is_imc)
 			 .set_tpm_version_info = _set_tpm_version_info,
 			 .get_aik = _get_aik,
 			 .set_aik = _set_aik,
+			 .is_path_valid = _is_path_valid,
 			 .do_measurements = _do_measurements,
 			 .destroy = _destroy,
 		 },

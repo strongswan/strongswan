@@ -345,12 +345,38 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					char *pathname;
 					u_int16_t request_id;
 					bool is_directory;
+					u_int32_t delimiter;
 					pts_file_meas_t *measurements;
-
+					pts_error_code_t pts_error;
+					chunk_t attr_info;
+					
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
 					is_directory = attr_cast->get_directory_flag(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
+					delimiter = attr_cast->get_delimiter(attr_cast);
 					pathname = attr_cast->get_pathname(attr_cast);
+					
+					if (pts->is_path_valid(pts, pathname, &pts_error) && pts_error)
+					{
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+												pts_error, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					else if (!pts->is_path_valid(pts, pathname, &pts_error))
+					{
+						break;
+					}
+					
+					if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
+					{
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+												TCG_PTS_INVALID_DELIMITER, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
 
 					/* Do PTS File Measurements and send them to PTS-IMV */
 					DBG2(DBG_IMC, "measurement request %d for %s '%s'",
