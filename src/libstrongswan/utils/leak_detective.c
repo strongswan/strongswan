@@ -204,6 +204,7 @@ char *whitelist[] = {
 	"getprotobynumber",
 	"getservbyport",
 	"getservbyname",
+	"gethostbyname",
 	"gethostbyname2",
 	"gethostbyname_r",
 	"gethostbyname2_r",
@@ -219,6 +220,9 @@ char *whitelist[] = {
 	"getaddrinfo",
 	"setlocale",
 	"getpass",
+	"getpwent_r",
+	"setpwent",
+	"endpwent",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
@@ -266,9 +270,6 @@ char *whitelist[] = {
 	"gpg_err_init",
 	/* gnutls */
 	"gnutls_global_init",
-	/* TrouSerS */
-	"Tspi_Context_Create",
-	"Tspi_Context_Connect",
 };
 
 
