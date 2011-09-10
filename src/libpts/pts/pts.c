@@ -120,7 +120,7 @@ static void print_tpm_version_info(private_pts_t *this)
 	TSS_RESULT result;
 
 	result = Trspi_UnloadBlob_CAP_VERSION_INFO(&offset,
-											   this->tpm_version_info.ptr, &versionInfo);
+						this->tpm_version_info.ptr, &versionInfo);
 	if (result != TSS_SUCCESS)
 	{
 		DBG1(DBG_TNC, "could not parse tpm version info: tss error 0x%x",
@@ -185,8 +185,8 @@ static void load_aik(private_pts_t *this)
 	if (cert_path)
 	{
 		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-										CERT_X509, BUILD_FROM_FILE,
-										cert_path, BUILD_END);
+									   CERT_X509, BUILD_FROM_FILE,
+									   cert_path, BUILD_END);
 		if (this->aik)
 		{
 			DBG2(DBG_IMC, "loaded AIK certificate from '%s'", cert_path);
@@ -196,8 +196,8 @@ static void load_aik(private_pts_t *this)
 	if (key_path)
 	{
 		this->aik = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-										CERT_TRUSTED_PUBKEY, BUILD_FROM_FILE,
-										key_path, BUILD_END);
+									   CERT_TRUSTED_PUBKEY, BUILD_FROM_FILE,
+									   key_path, BUILD_END);
 		if (this->aik)
 		{
 			DBG2(DBG_IMC, "loaded AIK public key from '%s'", key_path);
