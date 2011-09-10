@@ -13,18 +13,31 @@
  */
 
 #include "imcv.h"
+#include "ietf/ietf_attr.h"
+#include "ita/ita_attr.h"
 
-#include "utils.h"
+#include <utils.h>
 #include <debug.h>
+#include <pen/pen.h>
 
 #include <syslog.h>
 
 #define IMCV_DEBUG_LEVEL	1
 
 /**
- * Reference count for IMC/IMV instances
+ * PA-TNC attribute manager
  */
-refcount_t ref = 0;
+pa_tnc_attr_manager_t *imcv_pa_tnc_attributes;
+
+/**
+ * Reference count for libimcv
+ */
+static refcount_t libimcv_ref = 0;
+
+/**
+ * Reference count for libstrongswan
+ */
+static refcount_t libstrongswan_ref = 0;
 
 /**
  * Global configuration of imcv dbg function
@@ -81,9 +94,9 @@ bool libimcv_init(void)
 	if (lib)
 	{
 		/* did main program initialize libstrongswan? */
-		if (ref == 0)
+		if (libstrongswan_ref == 0)
 		{
-			ref_get(&ref);
+			ref_get(&libstrongswan_ref);
 		}
 	}
 	else
@@ -94,7 +107,8 @@ bool libimcv_init(void)
 			return FALSE;
 		}
 
-		if (!lib->plugins->load(lib->plugins, NULL, "random"))
+		if (!lib->plugins->load(lib->plugins, NULL,
+							"sha1 sha2 random gmp pubkey x509"))
 		{
 			library_deinit();
 			return FALSE;
@@ -109,10 +123,20 @@ bool libimcv_init(void)
 		/* activate the imcv debugging hook */
 		dbg = imcv_dbg;
 		openlog("imcv", 0, LOG_DAEMON);
+	}
+	ref_get(&libstrongswan_ref);
 
+	if (libimcv_ref == 0)
+	{
+		/* initialize the PA-TNC attribute manager */
+	 	imcv_pa_tnc_attributes = pa_tnc_attr_manager_create();
+		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_IETF,
+							ietf_attr_create_from_data, ietf_attr_names);
+		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_ITA,
+							ita_attr_create_from_data, ita_attr_names);
 		DBG1(DBG_LIB, "libimcv initialized");
 	}
-	ref_get(&ref);
+	ref_get(&libimcv_ref);
 
 	return TRUE;
 }
@@ -122,11 +146,16 @@ bool libimcv_init(void)
  */
 void libimcv_deinit(void)
 {
-	if (ref_put(&ref))
+	if (ref_put(&libimcv_ref))
 	{
+		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_IETF);
+		imcv_pa_tnc_attributes->remove_vendor(imcv_pa_tnc_attributes, PEN_ITA);
+		DESTROY_IF(imcv_pa_tnc_attributes);
 		DBG1(DBG_LIB, "libimcv terminated");
+	}
+	if (ref_put(&libstrongswan_ref))
+	{
 		library_deinit();		
 	}
 }
-
 

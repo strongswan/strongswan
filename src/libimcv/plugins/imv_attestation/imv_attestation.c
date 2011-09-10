@@ -21,6 +21,8 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 
+#include <libpts.h>
+
 #include <pts/pts_database.h>
 #include <pts/pts_creds.h>
 #include <pts/pts_error.h>
@@ -89,12 +91,19 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-								imv_id, actual_version);
-	if (!imv_attestation || !pts_meas_probe_algorithms(&supported_algorithms))
+	if (!pts_meas_probe_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}
+	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
+									   imv_id, actual_version);
+	if (!imv_attestation)
+	{
+		return TNC_RESULT_FATAL;
+	}
+
+	libpts_init();
+
 	if (min_version > TNC_IFIMV_VERSION_1 || max_version < TNC_IFIMV_VERSION_1)
 	{
 		DBG1(DBG_IMV, "no common IF-IMV version");
@@ -662,6 +671,9 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_credmgr);
+
+	libpts_deinit();
+
 	imv_attestation->destroy(imv_attestation);
 	imv_attestation = NULL;
 

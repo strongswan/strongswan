@@ -6,6 +6,7 @@ ipseclib_LTLIBRARIES = libpts.la
 libpts_la_LIBADD = -ltspi
 
 libpts_la_SOURCES = \
+	libpts.h libpts.c \
 	pts/pts.h pts/pts.c \
 	pts/pts_error.h pts/pts_error.c \
 	pts/pts_proto_caps.h pts/pts_funct_comp_name.h pts/pts_file_type.h \

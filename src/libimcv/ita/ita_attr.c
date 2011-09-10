@@ -14,8 +14,22 @@
  */
 
 #include "ita_attr.h"
+#include "ita/ita_attr_command.h"
 
 ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_COMMAND,
 	"Command",
 );
 
+/**
+ * See header
+ */
+pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, chunk_t value)
+{
+	switch (type)
+	{
+		case ITA_ATTR_COMMAND:
+			return ita_attr_command_create_from_data(value);
+		default:
+			return NULL;
+	}
+}

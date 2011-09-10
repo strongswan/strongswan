@@ -21,6 +21,8 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 
+#include <libpts.h>
+
 #include <pts/pts_error.h>
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
@@ -69,12 +71,19 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imc_attestation = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-								imc_id, actual_version);
-	if (!imc_attestation || !pts_meas_probe_algorithms(&supported_algorithms))
+	if (!pts_meas_probe_algorithms(&supported_algorithms))
 	{
 		return TNC_RESULT_FATAL;
 	}
+	imc_attestation = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
+									   imc_id, actual_version);
+	if (!imc_attestation)
+	{
+		return TNC_RESULT_FATAL;
+	}
+
+	libpts_init();
+
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
 		DBG1(DBG_IMC, "no common IF-IMC version");
@@ -474,6 +483,9 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+
+	libpts_deinit();
+
 	imc_attestation->destroy(imc_attestation);
 	imc_attestation = NULL;
 

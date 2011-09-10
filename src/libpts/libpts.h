@@ -13,37 +13,30 @@
  */
 
 /**
- * @defgroup libimcv libimcv
+ * @defgroup libpts libpts
  *
  * @defgroup iplugins plugins
- * @ingroup libimcv
+ * @ingroup libpts
  *
- * @addtogroup libimcv
+ * @addtogroup libpts
  * @{
  */
 
-#ifndef IMCV_H_
-#define IMCV_H_
-
-#include "pa_tnc/pa_tnc_attr_manager.h"
+#ifndef LIBPTS_H_
+#define LIBPTS_H_
 
 #include <library.h>
 
 /**
- * Initialize libimcv.
+ * Initialize libpts.
  *
- * @return				FALSE if initialization failed
+ * @return			FALSE if initialization failed
  */
-bool libimcv_init(void);
+bool libpts_init(void);
 
 /**
- * Deinitialize libimcv.
+ * Deinitialize libpts.
  */
-void libimcv_deinit(void);
+void libpts_deinit(void);
 
-/**
- * PA-TNC attribute manager
- */
-extern pa_tnc_attr_manager_t* imcv_pa_tnc_attributes;
-
-#endif /** IMCV_H_ @}*/
+#endif /** LIBPTS_H_ @}*/

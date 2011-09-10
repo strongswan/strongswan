@@ -21,6 +21,8 @@
 #ifndef IETF_ATTR_H_
 #define IETF_ATTR_H_
 
+#include "pa_tnc/pa_tnc_attr.h"
+
 #include <library.h>
 
 typedef enum ietf_attr_t ietf_attr_t;
@@ -49,5 +51,13 @@ enum ietf_attr_t {
  * enum name for ietf_attr_t.
  */
 extern enum_name_t *ietf_attr_names;
+
+/**
+ * Create an IETF PA-TNC attribute from data
+ *
+ * @param type				attribute type
+ * @param value				attribute value
+ */
+pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value);
 
 #endif /** IETF_ATTR_H_ @}*/

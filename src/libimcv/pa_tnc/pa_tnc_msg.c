@@ -14,14 +14,9 @@
  * for more details.
  */
 
+#include "imcv.h"
 #include "pa_tnc_msg.h"
-#include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
-#include "ita/ita_attr.h"
-
-#ifdef USE_PTS
-#include "tcg/tcg_attr.h"
-#endif /* USE_PTS */
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
@@ -148,7 +143,8 @@ METHOD(pa_tnc_msg_t, build, void,
 		flags = attr->get_noskip_flag(attr) ? PA_TNC_ATTR_FLAG_NOSKIP :
 											  PA_TNC_ATTR_FLAG_NONE;
 
-		pa_attr_names = get_pa_attr_names(vendor_id);
+		pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+														  vendor_id);
 		if (pa_attr_names)
 		{
 			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N/%N' "
@@ -226,7 +222,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		reader->read_uint32(reader, &type);
 		reader->read_uint32(reader, &length);
 
-		pa_attr_names = get_pa_attr_names(vendor_id);
+		pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+														  vendor_id);
 		if (pa_attr_names)
 		{
 			DBG2(DBG_TNC, "processing PA-TNC attribute type '%N/%N' "
@@ -260,7 +257,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		} 
 		DBG3(DBG_TNC, "%B", &value);
 
-		attr = pa_tnc_attr_create_from_data(vendor_id, type, value);
+		attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
+											  vendor_id, type, value);
 		if (!attr)
 		{
 			if (flags & PA_TNC_ATTR_FLAG_NOSKIP)
@@ -367,25 +365,5 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 pa_tnc_msg_t *pa_tnc_msg_create(void)
 {
 	return pa_tnc_msg_create_from_data(chunk_empty);
-}
-
-/**
- * See header
- */
-enum_name_t* get_pa_attr_names(pen_t pen)
-{
-	switch (pen)
-	{
-		case PEN_IETF:
-			return ietf_attr_names;
-#ifdef USE_PTS
-		case PEN_TCG:
-			return tcg_attr_names;
-#endif /* USE_PTS */
-		case PEN_ITA:
-			return ita_attr_names;
-		default:
-			return NULL;
-	}
 }
 

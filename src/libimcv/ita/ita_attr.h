@@ -21,6 +21,8 @@
 #ifndef ITA_ATTR_H_
 #define ITA_ATTR_H_
 
+#include "pa_tnc/pa_tnc_attr.h"
+
 #include <library.h>
 
 typedef enum ita_attr_t ita_attr_t;
@@ -36,5 +38,13 @@ enum ita_attr_t {
  * enum name for ita_attr_t.
  */
 extern enum_name_t *ita_attr_names;
+
+/**
+ * Create a ITA PA-TNC attribute from data
+ *
+ * @param type				attribute type
+ * @param value				attribute value
+ */
+pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, chunk_t value);
 
 #endif /** ITA_ATTR_H_ @}*/
