@@ -133,17 +133,17 @@ METHOD(pts_file_meas_t, verify, bool,
 		
 		if (!found)
 		{
-			DBG1(DBG_TNC, "  no measurement found for '%s'", filename);
+			DBG1(DBG_PTS, "  no measurement found for '%s'", filename);
 			success = FALSE;
 			continue;
 		}
 		if (chunk_equals(measurement, entry->measurement))
 		{
-			DBG2(DBG_TNC, "  %#B for '%s' is ok", &measurement, filename);
+			DBG2(DBG_PTS, "  %#B for '%s' is ok", &measurement, filename);
 		}
 		else
 		{
-			DBG1(DBG_TNC, "  %#B for '%s' is incorrect", &measurement, filename);
+			DBG1(DBG_PTS, "  %#B for '%s' is incorrect", &measurement, filename);
 			success = FALSE;
 		}
 		if (!is_dir)

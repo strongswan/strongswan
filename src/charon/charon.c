@@ -425,7 +425,7 @@ static void usage(const char *msg)
 					"         [--version]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
-					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|tnc|tls|lib)\n"
+					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|tnc|imc|imv|pts|tls|lib)\n"
 					"           <level>: log verbosity (-1 = silent, 0 = audit, 1 = control,\n"
 					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
 					"\n"
@@ -500,6 +500,7 @@ int main(int argc, char *argv[])
 			{ "debug-tnc", required_argument, &group, DBG_TNC },
 			{ "debug-imc", required_argument, &group, DBG_IMC },
 			{ "debug-imv", required_argument, &group, DBG_IMV },
+			{ "debug-pts", required_argument, &group, DBG_PTS },
 			{ "debug-tls", required_argument, &group, DBG_TLS },
 			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }

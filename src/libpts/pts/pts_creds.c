@@ -64,7 +64,7 @@ static void load_cacerts(private_pts_creds_t *this, char *path)
 	struct stat st;
 	char *file;
 
-	DBG1(DBG_TNC, "loading PTS ca certificates from '%s'", path);
+	DBG1(DBG_PTS, "loading PTS ca certificates from '%s'", path);
 
 	enumerator = enumerator_create_directory(path);
 	if (!enumerator)
@@ -89,20 +89,20 @@ static void load_cacerts(private_pts_creds_t *this, char *path)
 
 			if (!(x509->get_flags(x509) & X509_CA))
 			{
-				DBG1(DBG_TNC, "  ca certificate \"%Y\" lacks ca basic constraint"
+				DBG1(DBG_PTS, "  ca certificate \"%Y\" lacks ca basic constraint"
 							  ", discarded", cert->get_subject(cert));
 				cert->destroy(cert);
 			}
 			else
 			{
-				DBG1(DBG_TNC, "  loaded ca certificate \"%Y\" from '%s'",
+				DBG1(DBG_PTS, "  loaded ca certificate \"%Y\" from '%s'",
 							  cert->get_subject(cert), file);
 				this->creds->add_cert(this->creds, TRUE, cert);
 			}
 		}
 		else
 		{
-			DBG1(DBG_TNC, "  loading ca certificate from '%s' failed", file);
+			DBG1(DBG_PTS, "  loading ca certificate from '%s' failed", file);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -117,7 +117,7 @@ pts_creds_t *pts_creds_create(char *path)
 
 	if (!path)
 	{
-		DBG1(DBG_TNC, "no PTS cacerts directory defined");
+		DBG1(DBG_PTS, "no PTS cacerts directory defined");
 		return NULL;
 	}
 

@@ -82,7 +82,7 @@ METHOD(pts_t, set_proto_caps, void,
 	   private_pts_t *this, pts_proto_caps_flag_t flags)
 {
 	this->proto_caps = flags;
-	DBG2(DBG_IMC, "supported PTS protocol capabilities: %s%s%s%s%s",
+	DBG2(DBG_PTS, "supported PTS protocol capabilities: %s%s%s%s%s",
 		 flags & PTS_PROTO_CAPS_C ? "C" : ".",
 		 flags & PTS_PROTO_CAPS_V ? "V" : ".",
 		 flags & PTS_PROTO_CAPS_D ? "D" : ".",
@@ -102,7 +102,7 @@ METHOD(pts_t, set_meas_algorithm, void,
 	hash_algorithm_t hash_alg;
 
 	hash_alg = pts_meas_to_hash_algorithm(algorithm);
-	DBG2(DBG_IMC, "selected PTS measurement algorithm is %N",
+	DBG2(DBG_PTS, "selected PTS measurement algorithm is %N",
 		 hash_algorithm_names, hash_alg);
 	if (hash_alg != HASH_UNKNOWN)
 	{
@@ -123,12 +123,12 @@ static void print_tpm_version_info(private_pts_t *this)
 						this->tpm_version_info.ptr, &versionInfo);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_TNC, "could not parse tpm version info: tss error 0x%x",
+		DBG1(DBG_PTS, "could not parse tpm version info: tss error 0x%x",
 			 result);
 	}
 	else
 	{
-		DBG2(DBG_TNC, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
+		DBG2(DBG_PTS, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
 					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
 					  versionInfo.version.major, versionInfo.version.minor,
 					  versionInfo.version.revMajor, versionInfo.version.revMinor,
@@ -189,7 +189,7 @@ static void load_aik(private_pts_t *this)
 									   cert_path, BUILD_END);
 		if (this->aik)
 		{
-			DBG2(DBG_IMC, "loaded AIK certificate from '%s'", cert_path);
+			DBG2(DBG_PTS, "loaded AIK certificate from '%s'", cert_path);
 			return;
 		}
 	}
@@ -200,11 +200,11 @@ static void load_aik(private_pts_t *this)
 									   key_path, BUILD_END);
 		if (this->aik)
 		{
-			DBG2(DBG_IMC, "loaded AIK public key from '%s'", key_path);
+			DBG2(DBG_PTS, "loaded AIK public key from '%s'", key_path);
 			return;
 		}
 	}
-	DBG1(DBG_IMC, "neither AIK certificate nor public key is available");
+	DBG1(DBG_PTS, "neither AIK certificate nor public key is available");
 }
 
 METHOD(pts_t, get_aik, certificate_t*,
@@ -232,7 +232,7 @@ static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
 	file = fopen(pathname, "rb");
 	if (!file)
 	{
-		DBG1(DBG_IMC,"  file '%s' can not be opened, %s", pathname,
+		DBG1(DBG_PTS,"  file '%s' can not be opened, %s", pathname,
 			 strerror(errno));
 		return FALSE;
 	}
@@ -284,17 +284,17 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 	}
 	else if (error == ENOENT || error == ENOTDIR)
 	{
-		DBG1(DBG_IMC, "file/directory does not exist %s", path);
+		DBG1(DBG_PTS, "file/directory does not exist %s", path);
 		*error_code = TCG_PTS_FILE_NOT_FOUND;
 	}
 	else if (error == EFAULT)
 	{
-		DBG1(DBG_IMC, "bad address %s", path);
+		DBG1(DBG_PTS, "bad address %s", path);
 		*error_code = TCG_PTS_INVALID_PATH;
 	}
 	else
 	{
-		DBG1(DBG_IMC, "error: %s occured while validating path: %s",
+		DBG1(DBG_PTS, "error: %s occured while validating path: %s",
 			 		   strerror(error), path);
 		return FALSE;
 	}
@@ -316,7 +316,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 	if (!hasher)
 	{
-		DBG1(DBG_IMC, "  hasher %N not available", hash_algorithm_names, hash_alg);
+		DBG1(DBG_PTS, "  hasher %N not available", hash_algorithm_names, hash_alg);
 		return NULL;
 	}
 
@@ -335,7 +335,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 		enumerator = enumerator_create_directory(pathname);
 		if (!enumerator)
 		{
-			DBG1(DBG_IMC,"  directory '%s' can not be opened, %s", pathname,
+			DBG1(DBG_PTS,"  directory '%s' can not be opened, %s", pathname,
 				 strerror(errno));
 			hasher->destroy(hasher);
 			measurements->destroy(measurements);
@@ -353,7 +353,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 					measurements->destroy(measurements);
 					return NULL;
 				}
-				DBG2(DBG_IMC, "  %#B for '%s'", &measurement, rel_name);
+				DBG2(DBG_PTS, "  %#B for '%s'", &measurement, rel_name);
 				measurements->add(measurements, rel_name, measurement);
 			}
 		}
@@ -370,7 +370,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 			return NULL;
 		}
 		filename = get_filename(pathname);
-		DBG2(DBG_IMC, "  %#B for '%s'", &measurement, filename);
+		DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
 		measurements->add(measurements, filename, measurement);
 	}
 	hasher->destroy(hasher);
@@ -434,7 +434,7 @@ static char* extract_platform_info(void)
 		buf[len] = '\0';
 		if (fread(buf, 1, len, file) != len)
 		{
-			DBG1(DBG_IMC, "failed to read file '%s'", releases[i]);
+			DBG1(DBG_PTS, "failed to read file '%s'", releases[i]);
 			fclose(file);
 			return NULL;
 		}
@@ -445,7 +445,7 @@ static char* extract_platform_info(void)
 			pos = strstr(buf, description);
 			if (!pos)
 			{
-				DBG1(DBG_IMC, "failed to find begin of lsb-release "
+				DBG1(DBG_PTS, "failed to find begin of lsb-release "
 							  "DESCRIPTION field");
 				return NULL;
 			}
@@ -453,7 +453,7 @@ static char* extract_platform_info(void)
 			pos = strchr(value, '"');
 			if (!pos)
 			{
-				DBG1(DBG_IMC, "failed to find end of lsb-release "
+				DBG1(DBG_PTS, "failed to find end of lsb-release "
 							  "DESCRIPTION field");
 				return NULL;
 			 }
@@ -464,7 +464,7 @@ static char* extract_platform_info(void)
 			pos = strchr(value, '\n');
 			if (!pos)
 			{
-				DBG1(DBG_IMC, "failed to find end of release string");
+				DBG1(DBG_PTS, "failed to find end of release string");
 				return NULL;
 			 }
 		}
@@ -473,13 +473,13 @@ static char* extract_platform_info(void)
 
 	if (!value)
 	{
-		DBG1(DBG_IMC, "no distribution release file found");
+		DBG1(DBG_PTS, "no distribution release file found");
 		return NULL;
 	}
 
 	if (uname(&uninfo) < 0)
 	{
-		DBG1(DBG_IMC, "could not retrieve machine architecture");
+		DBG1(DBG_PTS, "could not retrieve machine architecture");
 		return NULL;
 	}
 
@@ -487,7 +487,7 @@ static char* extract_platform_info(void)
 	len = sizeof(buf)-1 + (pos - buf);
 	strncpy(pos, uninfo.machine, len);
 
-	DBG1(DBG_IMC, "platform is '%s'", value);
+	DBG1(DBG_PTS, "platform is '%s'", value);
 	return strdup(value);
 }
 
@@ -504,7 +504,7 @@ static bool has_tpm(private_pts_t *this)
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_IMC, "TPM context could not be created: tss error 0x%x", result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
 		return FALSE;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);
@@ -529,7 +529,7 @@ static bool has_tpm(private_pts_t *this)
 	return TRUE;
 
 	err:
-	DBG1(DBG_IMC, "TPM not available: tss error 0x%x", result);
+	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	Tspi_Context_Close(hContext);
 	return FALSE;
 }

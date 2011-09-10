@@ -36,19 +36,19 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 		if (hash_alg == HASH_SHA1)
 		{
 			*algorithms |= PTS_MEAS_ALGO_SHA1;
-			DBG2(DBG_TNC, format1, "mandatory", hash_algorithm_names, hash_alg,
+			DBG2(DBG_PTS, format1, "mandatory", hash_algorithm_names, hash_alg,
 								  plugin_name);
 		}
 		else if (hash_alg == HASH_SHA256)
 		{
 			*algorithms |= PTS_MEAS_ALGO_SHA256;
-			DBG2(DBG_TNC, format1, "mandatory", hash_algorithm_names, hash_alg,
+			DBG2(DBG_PTS, format1, "mandatory", hash_algorithm_names, hash_alg,
 								  plugin_name);
 		}
 		else if (hash_alg == HASH_SHA384)
 		{
 			*algorithms |= PTS_MEAS_ALGO_SHA384;
-			DBG2(DBG_TNC, format1, "optional ", hash_algorithm_names, hash_alg,
+			DBG2(DBG_PTS, format1, "optional ", hash_algorithm_names, hash_alg,
 								  plugin_name);
 		}
 	}
@@ -56,7 +56,7 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA384))
 	{
-		DBG1(DBG_TNC, format2, "optional ", hash_algorithm_names, HASH_SHA384);
+		DBG1(DBG_PTS, format2, "optional ", hash_algorithm_names, HASH_SHA384);
 	}
 	if ((*algorithms & PTS_MEAS_ALGO_SHA1) &&
 		(*algorithms & PTS_MEAS_ALGO_SHA256))
@@ -65,11 +65,11 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 	}
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA1))
 	{
-		DBG1(DBG_TNC, format2, "mandatory", hash_algorithm_names, HASH_SHA1);
+		DBG1(DBG_PTS, format2, "mandatory", hash_algorithm_names, HASH_SHA1);
 	}
 	if (!(*algorithms & PTS_MEAS_ALGO_SHA256))
 	{
-		DBG1(DBG_TNC, format2, "mandatory", hash_algorithm_names, HASH_SHA256);
+		DBG1(DBG_PTS, format2, "mandatory", hash_algorithm_names, HASH_SHA256);
 	}
 	return FALSE;
 }

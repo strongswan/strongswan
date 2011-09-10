@@ -56,6 +56,8 @@ enum debug_t {
 	DBG_IMC,
 	/** integrity measurement verifier */
 	DBG_IMV,
+	/** platform trust service */
+	DBG_PTS,
 	/** libtls */
 	DBG_TLS,
 	/** libstrongswan */

@@ -107,7 +107,7 @@ pts_database_t *pts_database_create(char *uri)
 
 	if (!this->db)
 	{
-		DBG1(DBG_TNC, "failed to connect to PTS file measurement database '%s'",
+		DBG1(DBG_PTS, "failed to connect to PTS file measurement database '%s'",
 			 uri);
 		free(this);
 		return NULL;
