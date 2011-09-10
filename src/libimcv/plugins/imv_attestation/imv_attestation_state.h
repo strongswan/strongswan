@@ -75,10 +75,12 @@ struct imv_attestation_state_t {
 	/**
 	 * Add an entry to the list of pending file/directory measurement requests
 	 *
-	 * @param id				unique request ID
-	 * @param is_dir			TRUE if directory 
+	 * @param file_id			primary key into file table
+	 * @param is_dir			TRUE if directory
+	 * @return					unique request ID 
 	 */
-	void (*add_request)(imv_attestation_state_t *this, int id, bool is_dir);
+	u_int16_t (*add_request)(imv_attestation_state_t *this, int file_id,
+							 bool is_dir);
 
 	/**
 	 * Returns the number of pending file/directory measurement requests
@@ -91,11 +93,12 @@ struct imv_attestation_state_t {
 	 * Check for presence of request_id and if found remove it from the list
 	 *
 	 * @param id				unique request ID
+	 * @param file_id			primary key into file table
 	 * @param is_dir			return TRUE if request was for a directory
 	 * @return					TRUE if request ID found, FALSE otherwise
 	 */
-	bool (*check_off_request)(imv_attestation_state_t *this, int id,
-							  bool *is_dir);
+	bool (*check_off_request)(imv_attestation_state_t *this, u_int16_t id,
+							  int *file_id, bool *is_dir);
 
 };
 

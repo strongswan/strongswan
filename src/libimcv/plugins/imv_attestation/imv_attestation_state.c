@@ -26,7 +26,8 @@ typedef struct request_t request_t;
  * PTS File/Directory Measurement request entry
  */
 struct request_t {
-	int id;
+	u_int16_t id;
+	int file_id;
 	bool is_dir;
 };
 
@@ -64,6 +65,11 @@ struct private_imv_attestation_state_t {
 	 * IMV evaluation result
 	 */
 	TNC_IMV_Evaluation_Result eval;
+
+	/**
+	 * Request counter
+	 */
+	u_int16_t request_counter;
 
 	/**
 	 * List of PTS File/Directory Measurement requests
@@ -194,19 +200,23 @@ METHOD(imv_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
-METHOD(imv_attestation_state_t, add_request, void,
-	private_imv_attestation_state_t *this, int id, bool is_dir)
+METHOD(imv_attestation_state_t, add_request, u_int16_t,
+	private_imv_attestation_state_t *this, int file_id, bool is_dir)
 {
 	request_t *request;
 
 	request = malloc_thing(request_t);
-	request->id = id;
+	request->id = ++this->request_counter;
+	request->file_id = file_id;
 	request->is_dir = is_dir;
 	this->requests->insert_last(this->requests, request);
+
+	return this->request_counter;
 }
 
 METHOD(imv_attestation_state_t, check_off_request, bool,
-	private_imv_attestation_state_t *this, int id, bool* is_dir)
+	private_imv_attestation_state_t *this, u_int16_t id, int *file_id,
+	bool* is_dir)
 {
 	enumerator_t *enumerator;
 	request_t *request;
@@ -218,6 +228,7 @@ METHOD(imv_attestation_state_t, check_off_request, bool,
 		if (request->id == id)
 		{
 			found = TRUE;
+			*file_id = request->file_id;
 			*is_dir = request->is_dir;
 			this->requests->remove_at(this->requests, enumerator);
 			free(request);
