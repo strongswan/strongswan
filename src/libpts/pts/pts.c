@@ -401,9 +401,9 @@ static char* extract_platform_info(void)
 		"/etc/lsb-release",           "/etc/debian_version",
 		"/etc/SuSE-release",          "/etc/novell-release",
 		"/etc/sles-release",          "/etc/redhat-release",
-		"/etc/fedora-release",        "/etc/gentoo-release", 
-		"/etc/slackware-version",     "/etc/annvix-release", 
-		"/etc/arch-release",          "/etc/arklinux-release", 
+		"/etc/fedora-release",        "/etc/gentoo-release",
+		"/etc/slackware-version",     "/etc/annvix-release",
+		"/etc/arch-release",          "/etc/arklinux-release",
 		"/etc/aurox-release",         "/etc/blackcat-release",
 		"/etc/cobalt-release",        "/etc/conectiva-release",
 		"/etc/debian_release",        "/etc/immunix-release",
@@ -413,7 +413,7 @@ static char* extract_platform_info(void)
 		"/etc/pld-release",           "/etc/redhat_version",
 		"/etc/slackware-release",     "/etc/e-smith-release",
 		"/etc/release",               "/etc/sun-release",
-        "/etc/tinysofa-release",      "/etc/turbolinux-release",
+		"/etc/tinysofa-release",      "/etc/turbolinux-release",
 		"/etc/ultrapenguin-release",  "/etc/UnitedLinux-release",
 		"/etc/va-release",            "/etc/yellowdog-release"
 	};
@@ -487,7 +487,7 @@ static char* extract_platform_info(void)
 	strncpy(pos, uninfo.machine, len);
 
 	DBG1(DBG_IMC, "platform is '%s'", value);
-	return strdup(value);	
+	return strdup(value);
 }
 
 /**

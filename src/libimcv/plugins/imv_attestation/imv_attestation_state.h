@@ -77,7 +77,7 @@ struct imv_attestation_state_t {
 	 *
 	 * @param file_id			primary key into file table
 	 * @param is_dir			TRUE if directory
-	 * @return					unique request ID 
+	 * @return					unique request ID
 	 */
 	u_int16_t (*add_request)(imv_attestation_state_t *this, int file_id,
 							 bool is_dir);
