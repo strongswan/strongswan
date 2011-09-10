@@ -350,6 +350,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					pts_error_code_t pts_error;
 					chunk_t attr_info;
 					
+					attr_info = attr->get_value(attr);
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
 					is_directory = attr_cast->get_directory_flag(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
@@ -358,7 +359,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					if (pts->is_path_valid(pts, pathname, &pts_error) && pts_error)
 					{
-						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 												pts_error, attr_info);
 						attr_list->insert_last(attr_list, attr);
@@ -371,7 +371,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					
 					if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
 					{
-						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 												TCG_PTS_INVALID_DELIMITER, attr_info);
 						attr_list->insert_last(attr_list, attr);
