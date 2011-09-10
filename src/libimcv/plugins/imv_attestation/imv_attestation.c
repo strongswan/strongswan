@@ -285,10 +285,10 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
 			{
 				is_dir = (type != 0);
-				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
-					 id, is_dir ? "directory" : "file", pathname);
 				request_id = attestation_state->add_request(attestation_state,
 															id, is_dir);
+				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
+					 request_id, is_dir ? "directory" : "file", pathname);
 				attr = tcg_pts_attr_req_file_meas_create(is_dir, request_id,
 													 delimiter, pathname);
 				attr->set_noskip_flag(attr, TRUE);
