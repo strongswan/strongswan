@@ -276,7 +276,7 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 	int error;
 	struct stat sb;
 	
-	error_code = NULL;
+	*error_code = 0;
 	error = stat(path, &sb);
 	if (error == 0)
 	{
@@ -294,7 +294,8 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 	}
 	else
 	{
-		DBG1(DBG_IMC, "error: %s occured while validating path: %s", strerror(error), path);
+		DBG1(DBG_IMC, "error: %s occured while validating path: %s",
+			 		   strerror(error), path);
 		return FALSE;
 	}
 
