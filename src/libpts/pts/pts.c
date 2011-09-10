@@ -486,7 +486,7 @@ static char* extract_platform_info(void)
 	len = sizeof(buf)-1 + (pos - buf);
 	strncpy(pos, uninfo.machine, len);
 
-	DBG1(DBG_IMV, "platform is '%s'", value);
+	DBG1(DBG_IMC, "platform is '%s'", value);
 	return strdup(value);	
 }
 
@@ -503,7 +503,8 @@ static bool has_tpm(private_pts_t *this)
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		goto err;
+		DBG1(DBG_IMC, "TPM context could not be created: tss error 0x%x", result);
+		return FALSE;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);
 	if (result != TSS_SUCCESS)
@@ -528,6 +529,7 @@ static bool has_tpm(private_pts_t *this)
 
 	err:
 	DBG1(DBG_IMC, "TPM not available: tss error 0x%x", result);
+	Tspi_Context_Close(hContext);
 	return FALSE;
 }
 
