@@ -1287,7 +1287,7 @@ A comma separated list containing type/level-pairs may
 be specified, e.g:
 .B dmn 3, ike 1, net -1.
 Acceptable values for types are
-.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib, tls, tnc, imc, imv
+.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib, tls, tnc, imc, imv, pts
 and the level is one of
 .B -1, 0, 1, 2, 3, 4
 (for silent, audit, control, controlmore, raw, private).  By default, the level
