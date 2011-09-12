@@ -1283,15 +1283,17 @@ parameters are used by the IKEv2 charon daemon only:
 .TP
 .BR charondebug " = <debug list>"
 how much charon debugging output should be logged.
-A comma separated list containing type level/pairs may
+A comma separated list containing type/level-pairs may
 be specified, e.g:
 .B dmn 3, ike 1, net -1.
 Acceptable values for types are
-.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
+.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib, tls, tnc, imc, imv
 and the level is one of
 .B -1, 0, 1, 2, 3, 4
-(for silent, audit, control, controlmore, raw, private).
-For more flexibility see LOGGER CONFIGURATION in
+(for silent, audit, control, controlmore, raw, private).  By default, the level
+is set to
+.B 1
+for all types.  For more flexibility see LOGGER CONFIGURATION in
 .IR strongswan.conf (5).
 
 .SH IKEv2 EXPIRY/REKEY
