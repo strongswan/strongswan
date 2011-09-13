@@ -15,8 +15,28 @@
 
 #include "eap_method.h"
 
+#include <daemon.h>
+
 ENUM(eap_role_names, EAP_SERVER, EAP_PEER,
 	"EAP_SERVER",
 	"EAP_PEER",
 );
 
+/**
+ * See header
+ */
+bool eap_method_register(plugin_t *plugin, plugin_feature_t *feature,
+						 bool reg, void *data)
+{
+	if (reg)
+	{
+		charon->eap->add_method(charon->eap, feature->eap, 0,
+					feature->type == FEATURE_EAP_SERVER ? EAP_SERVER : EAP_PEER,
+					(eap_constructor_t)data);
+	}
+	else
+	{
+		charon->eap->remove_method(charon->eap, (eap_constructor_t)data);
+	}
+	return TRUE;
+}

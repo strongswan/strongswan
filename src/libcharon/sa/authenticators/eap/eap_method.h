@@ -25,6 +25,7 @@ typedef struct eap_method_t eap_method_t;
 typedef enum eap_role_t eap_role_t;
 
 #include <library.h>
+#include <plugins/plugin.h>
 #include <utils/identification.h>
 #include <eap/eap.h>
 #include <encoding/payloads/eap_payload.h>
@@ -158,5 +159,19 @@ struct eap_method_t {
  */
 typedef eap_method_t *(*eap_constructor_t)(identification_t *server,
 										   identification_t *peer);
+
+/**
+ * Helper function to (un-)register EAP methods from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register a EAP method constructor.
+ *
+ * @param plugin		plugin registering the EAP method constructor
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister.
+ * @param data			data passed to callback, an eap_constructor_t
+ */
+bool eap_method_register(plugin_t *plugin, plugin_feature_t *feature,
+						 bool reg, void *data);
 
 #endif /** EAP_METHOD_H_ @}*/
