@@ -196,15 +196,12 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 							   id->get_encoding(id));
 		id->destroy(id);
 	}
-	else
+	id = this->mgr->provider_gen_pseudonym(this->mgr, this->permanent);
+	if (id)
 	{
-		id = this->mgr->provider_gen_pseudonym(this->mgr, this->permanent);
-		if (id)
-		{
-			message->add_attribute(message, AT_NEXT_PSEUDONYM,
-								   id->get_encoding(id));
-			id->destroy(id);
-		}
+		message->add_attribute(message, AT_NEXT_PSEUDONYM,
+							   id->get_encoding(id));
+		id->destroy(id);
 	}
 	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
 	message->destroy(message);
