@@ -17,7 +17,8 @@
 
 #include "public_key.h"
 
-ENUM(key_type_names, KEY_RSA, KEY_DSA,
+ENUM(key_type_names, KEY_ANY, KEY_DSA,
+	"ANY",
 	"RSA",
 	"ECDSA",
 	"DSA"
