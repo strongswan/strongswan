@@ -140,16 +140,8 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
+	pts_file_metadata_t *entry;
 	u_int64_t number_of_files;
-	char *filename;
-	u_int16_t meta_length;
-	pts_file_type_t type;
-	u_int64_t filesize;
-	time_t create_time;
-	time_t last_modify_time;
-	time_t last_access_time;
-	u_int64_t owner_id;
-	u_int64_t group_id;
 	
 	number_of_files = this->metadata->get_file_count(this->metadata);
 	writer = bio_writer_create(PTS_FILE_META_SIZE);
@@ -159,33 +151,27 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint32(writer, number_of_files & 0xffffffff);
 
 	enumerator = this->metadata->create_enumerator(this->metadata);
-	while (enumerator->enumerate(enumerator, &filename, &meta_length, &type,
-		&filesize, &filesize, &create_time, &last_modify_time, &last_access_time,
-		&owner_id, &group_id))
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		u_int64_t create_time64 = (u_int64_t)create_time;
-		u_int64_t modify_time64 = (u_int64_t)last_modify_time;
-		u_int64_t access_time64 = (u_int64_t)last_access_time;
-		
-		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE + strlen(filename));
-		writer->write_uint8 (writer, type);
+		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE + strlen(entry->filename));
+		writer->write_uint8 (writer, entry->type);
 		writer->write_uint8 (writer, PTS_FILE_MEAS_RESERVED);
 
 		/* Write the 64 bit integer fields as two 32 bit parts */
-		writer->write_uint32(writer, filesize >> 32);
-		writer->write_uint32(writer, filesize & 0xffffffff);
-		writer->write_uint32(writer, create_time64 >> 32);
-		writer->write_uint32(writer, create_time64 & 0xffffffff);
-		writer->write_uint32(writer, modify_time64 >> 32);
-		writer->write_uint32(writer, modify_time64 & 0xffffffff);
-		writer->write_uint32(writer, access_time64 >> 32);
-		writer->write_uint32(writer, access_time64 & 0xffffffff);
-		writer->write_uint32(writer, owner_id >> 32);
-		writer->write_uint32(writer, owner_id & 0xffffffff);
-		writer->write_uint32(writer, group_id >> 32);
-		writer->write_uint32(writer, group_id & 0xffffffff);
+		writer->write_uint32(writer, entry->filesize >> 32);
+		writer->write_uint32(writer, entry->filesize & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->create_time) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->create_time) & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) & 0xffffffff);
+		writer->write_uint32(writer, entry->owner_id >> 32);
+		writer->write_uint32(writer, entry->owner_id & 0xffffffff);
+		writer->write_uint32(writer, entry->group_id >> 32);
+		writer->write_uint32(writer, entry->group_id & 0xffffffff);
 		
-		writer->write_data  (writer, chunk_create(filename, strlen(filename)));
+		writer->write_data  (writer, chunk_create(entry->filename, strlen(entry->filename)));
 	}
 	enumerator->destroy(enumerator);
 	
@@ -197,6 +183,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_file_meta_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
+	pts_file_metadata_t *entry;
+	
 	int number_of_files;
 	u_int32_t number_of_files32;
 	
@@ -349,11 +337,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			goto end;
 		}
 		
-		len = min(filename.len, BUF_LEN-1);
+		len = min(filename.len, BUF_LEN - 1);
 		memcpy(buf, filename.ptr, len);
 		buf[len] = '\0';
-		this->metadata->add(this->metadata, buf, type, filesize, create_time_t,
-							modify_time_t, access_time_t, owner_id, group_id);
+
+		entry = malloc_thing(pts_file_metadata_t);
+		entry->filename = strdup(buf);
+		entry->meta_length = PTS_FILE_METADATA_SIZE + strlen(entry->filename);
+		entry->type = type;
+		entry->filesize = filesize;
+		entry->create_time = create_time_t;
+		entry->last_modify_time = modify_time_t;
+		entry->last_access_time = access_time_t;
+		entry->owner_id = owner_id;
+		entry->group_id = group_id;
+		
+		this->metadata->add(this->metadata, entry);
 	}
 	status = SUCCESS;
 

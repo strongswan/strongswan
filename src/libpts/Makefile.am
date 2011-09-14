@@ -28,4 +28,5 @@ libpts_la_SOURCES = \
 	tcg/tcg_pts_attr_simple_evid_final.h tcg/tcg_pts_attr_simple_evid_final.c \
 	tcg/tcg_pts_attr_req_file_meas.h tcg/tcg_pts_attr_req_file_meas.c \
 	tcg/tcg_pts_attr_file_meas.h tcg/tcg_pts_attr_file_meas.c \
+	tcg/tcg_pts_attr_req_file_meta.h tcg/tcg_pts_attr_req_file_meta.c \
 	tcg/tcg_pts_attr_unix_file_meta.h tcg/tcg_pts_attr_unix_file_meta.c

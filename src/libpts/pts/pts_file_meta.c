@@ -56,54 +56,15 @@ METHOD(pts_file_meta_t, get_file_count, int,
 }
 
 METHOD(pts_file_meta_t, add, void,
-	private_pts_file_meta_t *this, char *filename, pts_file_type_t type,
-	u_int64_t filesize, time_t create_time, time_t last_modify_time, time_t last_access_time,
-	u_int64_t owner_id, u_int64_t group_id)
+	private_pts_file_meta_t *this, pts_file_metadata_t *metadata)
 {
-	pts_file_metadata_t *entry;
-
-	entry = malloc_thing(pts_file_metadata_t);
-	
-	entry->filename = strdup(filename);
- 	entry->meta_length = PTS_FILE_METADATA_SIZE + strlen(entry->filename);
-	entry->type = type;
-	entry->filesize = filesize;
-	entry->create_time = create_time;
-	entry->last_modify_time = last_modify_time;
-	entry->last_access_time = last_access_time;
-	entry->owner_id = owner_id;
-	entry->group_id = group_id;
-	
-	this->list->insert_last(this->list, entry);
-}
-
-/**
- * Enumerate file metadata entries
- */
-static bool entry_filter(void *null, pts_file_metadata_t **entry,
-							char **filename,  void *i2, u_int16_t *meta_length, void *i3,
-							pts_file_type_t *type, void *i4, u_int64_t *filesize, void *i5,
-							time_t *create_time, void *i6, time_t *last_modify_time, void *i7,
-							time_t *last_access_time, void *i8, u_int64_t *owner_id, void *i9,
-							u_int64_t *group_id)
-{
-	*filename = (*entry)->filename;
-	*meta_length = (*entry)->meta_length;
-	*type = (*entry)->type;
-	*filesize = (*entry)->filesize;
-	*create_time = (*entry)->create_time;
-	*last_modify_time = (*entry)->last_modify_time;
-	*last_access_time = (*entry)->last_access_time;
-	*owner_id = (*entry)->owner_id;
-	*group_id = (*entry)->group_id;
-	return TRUE;
+	this->list->insert_last(this->list, metadata);
 }
 
 METHOD(pts_file_meta_t, create_enumerator, enumerator_t*,
 	private_pts_file_meta_t *this)
 {
-	return enumerator_create_filter(this->list->create_enumerator(this->list),
-								   (void*)entry_filter, NULL, NULL);
+	return this->list->create_enumerator(this->list);
 }
 
 METHOD(pts_file_meta_t, destroy, void,

@@ -65,9 +65,7 @@ struct pts_file_meta_t {
 	 * @param filename		Name of measured file or directory
 	 * @param metadata		File metadata
 	 */
-	void (*add)(pts_file_meta_t *this, char *filename, pts_file_type_t type,
-			u_int64_t filesize, time_t create_time, time_t last_modfy_time, time_t last_access_time,
-			u_int64_t owner_id, u_int64_t group_id);
+	void (*add)(pts_file_meta_t *this, pts_file_metadata_t *metadata);
 
 	/**
 	  * Create a PTS File Metadata enumerator

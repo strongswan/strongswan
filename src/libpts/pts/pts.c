@@ -274,10 +274,10 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 						pts_error_code_t *error_code)
 {
 	int error;
-	struct stat sb;
-	
+	struct stat st;
+
 	*error_code = 0;
-	error = stat(path, &sb);
+	error = stat(path, &st);
 	if (error == 0)
 	{
 		return TRUE;
@@ -377,6 +377,143 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 
 	return measurements;
 }
+
+/**
+ * Obtain statistical information describing a file
+ */
+static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
+{
+	struct stat st;
+	pts_file_metadata_t *tmp;
+
+	tmp = malloc_thing(pts_file_metadata_t);
+	
+	if (stat(pathname, &st))
+	{
+		DBG1(DBG_PTS, "Unable to obtain statistical information about %s", pathname);
+		return FALSE;
+	}
+	
+	tmp->filename = strdup(pathname);
+	tmp->meta_length = PTS_FILE_METADATA_SIZE + strlen(tmp->filename);
+
+	if (S_ISREG(st.st_mode))
+	{
+		tmp->type = PTS_FILE_REGULAR;
+	}
+	else if (S_ISDIR(st.st_mode))
+	{
+		tmp->type = PTS_FILE_DIRECTORY;
+	}
+	else if (S_ISCHR(st.st_mode))
+	{
+		tmp->type = PTS_FILE_CHAR_SPEC;
+	}
+	else if (S_ISBLK(st.st_mode))
+	{
+		tmp->type = PTS_FILE_BLOCK_SPEC;
+	}
+	else if (S_ISFIFO(st.st_mode))
+	{
+		tmp->type = PTS_FILE_FIFO;
+	}
+	else if (S_ISLNK(st.st_mode))
+	{
+		tmp->type = PTS_FILE_SYM_LINK;
+	}
+	else if (S_ISSOCK(st.st_mode))
+	{
+		tmp->type = PTS_FILE_SOCKET;
+	}
+	else
+	{
+		tmp->type = PTS_FILE_OTHER;
+	}
+	
+	tmp->filesize = (u_int64_t)st.st_size;
+	tmp->create_time = st.st_ctime;
+	tmp->last_modify_time = st.st_mtime;
+	tmp->last_access_time = st.st_atime;
+	tmp->owner_id = (u_int64_t)st.st_uid;
+	tmp->group_id = (u_int64_t)st.st_gid;
+
+	*entry = tmp;
+
+	return TRUE;
+}
+
+METHOD(pts_t, get_metadata, pts_file_meta_t*,
+	   private_pts_t *this, char *pathname, bool is_directory)
+{
+	pts_file_meta_t *metadata;
+	pts_file_metadata_t *entry;
+	
+	/* Create a metadata object */
+	metadata = pts_file_meta_create();
+
+	if (is_directory)
+	{
+		enumerator_t *enumerator;
+		char *rel_name, *abs_name;
+		struct stat st;
+
+		enumerator = enumerator_create_directory(pathname);
+		if (!enumerator)
+		{
+			DBG1(DBG_PTS,"  directory '%s' can not be opened, %s", pathname,
+				 strerror(errno));
+			metadata->destroy(metadata);
+			return NULL;
+		}
+		while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
+		{
+			/* measure regular files only */
+			if (S_ISREG(st.st_mode) && *rel_name != '.')
+			{
+				if (!file_metadata(abs_name, &entry))
+				{
+					enumerator->destroy(enumerator);
+					metadata->destroy(metadata);
+					return NULL;
+				}
+				DBG3(DBG_PTS, "File name:          %s", entry->filename);
+				DBG3(DBG_PTS, "     type:          %d", entry->type);
+				DBG3(DBG_PTS, "     size:          %d", entry->filesize);
+				DBG3(DBG_PTS, "     create time:   %s", ctime(&entry->create_time));
+				DBG3(DBG_PTS, "     last modified: %s", ctime(&entry->last_modify_time));
+				DBG3(DBG_PTS, "     last accessed: %s", ctime(&entry->last_access_time));
+				DBG3(DBG_PTS, "     owner id:      %d", entry->owner_id);
+				DBG3(DBG_PTS, "     group id:      %d", entry->group_id);
+				
+				metadata->add(metadata, entry);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		char *filename;
+
+		if (!file_metadata(pathname, &entry))
+		{
+			metadata->destroy(metadata);
+			return NULL;
+		}
+		filename = get_filename(pathname);
+		DBG3(DBG_PTS, "File name:          %s", entry->filename);
+		DBG3(DBG_PTS, "     type:          %d", entry->type);
+		DBG3(DBG_PTS, "     size:          %d", entry->filesize);
+		DBG3(DBG_PTS, "     create time:   %s", ctime(&entry->create_time));
+		DBG3(DBG_PTS, "     last modified: %s", ctime(&entry->last_modify_time));
+		DBG3(DBG_PTS, "     last accessed: %s", ctime(&entry->last_access_time));
+		DBG3(DBG_PTS, "     owner id:      %d", entry->owner_id);
+		DBG3(DBG_PTS, "     group id:      %d", entry->group_id);
+		metadata->add(metadata, entry);
+	}
+
+	return metadata;
+}
+
 
 METHOD(pts_t, destroy, void,
 	   private_pts_t *this)
@@ -555,6 +692,7 @@ pts_t *pts_create(bool is_imc)
 			 .set_aik = _set_aik,
 			 .is_path_valid = _is_path_valid,
 			 .do_measurements = _do_measurements,
+			 .get_metadata = _get_metadata,
 			 .destroy = _destroy,
 		 },
 		 .proto_caps = PTS_PROTO_CAPS_V,

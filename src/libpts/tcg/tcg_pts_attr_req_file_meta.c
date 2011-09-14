@@ -188,7 +188,7 @@ METHOD(tcg_pts_attr_req_file_meta_t, get_directory_flag, bool,
 	return this->directory_flag;
 }
 
-METHOD(tcg_pts_attr_req_file_meta_t, get_delimiter, u_int32_t,
+METHOD(tcg_pts_attr_req_file_meta_t, get_delimiter, u_int8_t,
 	private_tcg_pts_attr_req_file_meta_t *this)
 {
 	return this->delimiter;
@@ -203,7 +203,7 @@ METHOD(tcg_pts_attr_req_file_meta_t, get_pathname, char*,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create(bool directory_flag,
+pa_tnc_attr_t *tcg_pts_attr_req_file_meta_create(bool directory_flag,
 												 u_int8_t delimiter,
 												 char *pathname)
 {
@@ -239,7 +239,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create(bool directory_flag,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_req_file_meta_create_from_data(chunk_t data)
 {
 	private_tcg_pts_attr_req_file_meta_t *this;
 

@@ -27,14 +27,15 @@ typedef struct pts_t pts_t;
 #include "pts_proto_caps.h"
 #include "pts_meas_algo.h"
 #include "pts_file_meas.h"
+#include "pts_file_meta.h"
 
 #include <library.h>
 
 /**
  * UTF-8 encoding of the character used to delimiter the filename
  */
-#define SOLIDUS_UTF				0x002F
-#define REVERSE_SOLIDUS_UTF		0x005C
+#define SOLIDUS_UTF				0x2F
+#define REVERSE_SOLIDUS_UTF		0x5C
 
 /**
  * Class implementing the TCG Platform Trust System (PTS)
@@ -134,6 +135,15 @@ struct pts_t {
 	 */
 	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
 										char *pathname, bool is_directory);
+
+	/**
+	 * Obtain file metadata
+	 *
+	 * @param pathname		Absolute pathname of file/directory
+	 * @param is_directory	if TRUE directory contents are requested
+	 * @return				PTS File Metadata or NULL if FAILED
+	 */
+	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_directory);
 	
 	/**
 	 * Destroys a pts_t object.

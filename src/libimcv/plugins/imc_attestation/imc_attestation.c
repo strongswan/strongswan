@@ -37,6 +37,8 @@
 #include <tcg/tcg_pts_attr_simple_evid_final.h>
 #include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <tcg/tcg_pts_attr_file_meas.h>
+#include <tcg/tcg_pts_attr_req_file_meta.h>
+#include <tcg/tcg_pts_attr_unix_file_meta.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -187,6 +189,9 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	pts_t *pts;
 	TNC_Result result;
 	bool fatal_error = FALSE;
+	chunk_t attr_info;
+	pts_error_code_t pts_error;
+	bool valid_path;
 
 	if (!imc_attestation)
 	{
@@ -348,6 +353,56 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					break;
 				case TCG_PTS_GEN_ATTEST_EVID:
 					break;
+				case TCG_PTS_REQ_FILE_META:
+				{
+					tcg_pts_attr_req_file_meta_t *attr_cast;
+					char *pathname;
+					bool is_directory;
+					u_int8_t delimiter;
+					pts_file_meta_t *metadata;
+
+					attr_info = attr->get_value(attr);
+					attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
+					is_directory = attr_cast->get_directory_flag(attr_cast);
+					delimiter = attr_cast->get_delimiter(attr_cast);
+					pathname = attr_cast->get_pathname(attr_cast);
+
+					valid_path = pts->is_path_valid(pts, pathname, &pts_error);
+					if (valid_path && pts_error)
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+												pts_error, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					else if (!valid_path)
+					{
+						break;
+					}
+					if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+												TCG_PTS_INVALID_DELIMITER, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					/* Get File Metadata and send them to PTS-IMV */
+					DBG2(DBG_IMC, "metadata request for %s '%s'",
+							is_directory ? "directory" : "file",
+							pathname);
+					metadata = pts->get_metadata(pts, pathname, is_directory);
+					
+					if (!metadata)
+					{
+						/* TODO handle error codes from measurements */
+						return TNC_RESULT_FATAL;
+					}
+					attr = tcg_pts_attr_unix_file_meta_create(metadata);
+					attr->set_noskip_flag(attr, TRUE);
+					attr_list->insert_last(attr_list, attr);
+					
+					break;
+				}
 				case TCG_PTS_REQ_FILE_MEAS:
 				{
 					tcg_pts_attr_req_file_meas_t *attr_cast;
@@ -356,17 +411,16 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					bool is_directory;
 					u_int32_t delimiter;
 					pts_file_meas_t *measurements;
-					pts_error_code_t pts_error;
-					chunk_t attr_info;
-					
+
 					attr_info = attr->get_value(attr);
 					attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
 					is_directory = attr_cast->get_directory_flag(attr_cast);
 					request_id = attr_cast->get_request_id(attr_cast);
 					delimiter = attr_cast->get_delimiter(attr_cast);
 					pathname = attr_cast->get_pathname(attr_cast);
+					valid_path = pts->is_path_valid(pts, pathname, &pts_error);
 					
-					if (pts->is_path_valid(pts, pathname, &pts_error) && pts_error)
+					if (valid_path && pts_error)
 					{
 						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
@@ -374,7 +428,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-					else if (!pts->is_path_valid(pts, pathname, &pts_error))
+					else if (!valid_path)
 					{
 						break;
 					}
@@ -407,7 +461,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_REQ:
 				case TCG_PTS_DH_NONCE_FINISH:
-				case TCG_PTS_REQ_FILE_META:
 				case TCG_PTS_REQ_INTEG_MEAS_LOG:
 				/* Attributes using XML */
 				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:

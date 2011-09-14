@@ -40,6 +40,8 @@
 #include <tcg/tcg_pts_attr_simple_evid_final.h>
 #include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <tcg/tcg_pts_attr_file_meas.h>
+#include <tcg/tcg_pts_attr_req_file_meta.h>
+#include <tcg/tcg_pts_attr_unix_file_meta.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -275,6 +277,11 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				break;
 			}
 			DBG1(DBG_IMV, "platform is '%s'", platform_info);
+
+			/* Send Request File Metadata attribute */
+			attr = tcg_pts_attr_req_file_meta_create(FALSE, SOLIDUS_UTF, "/etc/tnc_config");
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 
 			/* Send Request File Measurement attribute */
 			enumerator = pts_db->create_file_enumerator(pts_db, platform_info);
@@ -536,10 +543,41 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					e_hash->destroy(e_hash);
 					break;
 				}
+				case TCG_PTS_UNIX_FILE_META:
+				{
+					tcg_pts_attr_file_meta_t *attr_cast;
+					int file_count;
+					pts_file_meta_t *metadata;
+					enumerator_t *e;
+					pts_file_metadata_t *entry;
+
+					attr_cast = (tcg_pts_attr_file_meta_t*)attr;
+					metadata = attr_cast->get_metadata(attr_cast);
+					file_count = metadata->get_file_count(metadata);
+
+					DBG1(DBG_IMV, "metadata request returned %d file%s:",
+						 file_count, (file_count == 1) ? "":"s");
+
+					e = metadata->create_enumerator(metadata);
+					while(e->enumerate(e, &entry))
+					{
+						DBG1(DBG_IMV, "File name:          %s", entry->filename);
+						DBG1(DBG_IMV, "     type:          %d", entry->type);
+						DBG1(DBG_IMV, "     size:          %d", entry->filesize);
+						DBG1(DBG_IMV, "     create time:   %s", ctime(&entry->create_time));
+						DBG1(DBG_IMV, "     last modified: %s", ctime(&entry->last_modify_time));
+						DBG1(DBG_IMV, "     last accessed: %s", ctime(&entry->last_access_time));
+						DBG1(DBG_IMV, "     owner id:      %d", entry->owner_id);
+						DBG1(DBG_IMV, "     group id:      %d", entry->group_id);
+					}
+					
+					e->destroy(e);
+					
+					break;
+				}
 	
 				/* TODO: Not implemented yet */
 				case TCG_PTS_DH_NONCE_PARAMS_RESP:
-				case TCG_PTS_UNIX_FILE_META:
 				case TCG_PTS_INTEG_MEAS_LOG:
 				/* Attributes using XML */
 				case TCG_PTS_TEMPL_REF_MANI_SET_META:

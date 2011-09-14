@@ -28,21 +28,21 @@ typedef enum pts_file_type_t pts_file_type_t;
  * see section 3.17.3 of PTS Protocol: Binding to TNC IF-M Specification
  */
 enum pts_file_type_t {
-	/** Ignore */
+	/** Either unknown or different from standardized types */
 	PTS_FILE_OTHER =				0x0000,
-	/** CRTM */
+	/** Pipe communication file */
 	PTS_FILE_FIFO =					0x0001,
-	/** BIOS */
+	/** Character special file */
 	PTS_FILE_CHAR_SPEC =			0x0002,
-	/** Platform Extensions */
+	/** Directory */
 	PTS_FILE_DIRECTORY =			0x0004,
-	/** Motherboard firmware */
+	/** Block special file */
 	PTS_FILE_BLOCK_SPEC =			0x0006,
-	/** Initial Program Loader */
+	/** Regular file */
 	PTS_FILE_REGULAR =		 		0x0008,
-	/** Option ROMs */
+	/** Symbolic link */
 	PTS_FILE_SYM_LINK =			 	0x000A,
-	/** Option ROMs */
+	/** Socket communication special file */
 	PTS_FILE_SOCKET =			 	0x000C,
 };
 

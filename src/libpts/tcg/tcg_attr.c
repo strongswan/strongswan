@@ -25,6 +25,8 @@
 #include "tcg/tcg_pts_attr_simple_evid_final.h"
 #include "tcg/tcg_pts_attr_req_file_meas.h"
 #include "tcg/tcg_pts_attr_file_meas.h"
+#include "tcg/tcg_pts_attr_req_file_meta.h"
+#include "tcg/tcg_pts_attr_unix_file_meta.h"
 
 ENUM_BEGIN(tcg_attr_names,	TCG_PTS_REQ_FUNCT_COMP_EVID,
 							TCG_PTS_REQ_FUNCT_COMP_EVID,
@@ -178,6 +180,10 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_req_file_meas_create_from_data(value);
 		case TCG_PTS_FILE_MEAS:
 			return tcg_pts_attr_file_meas_create_from_data(value);
+		case TCG_PTS_REQ_FILE_META:
+			return tcg_pts_attr_req_file_meta_create_from_data(value);
+		case TCG_PTS_UNIX_FILE_META:
+			return tcg_pts_attr_unix_file_meta_create_from_data(value);
 		case TCG_PTS_DH_NONCE_PARAMS_REQ:
 		case TCG_PTS_DH_NONCE_PARAMS_RESP:
 		case TCG_PTS_DH_NONCE_FINISH:
@@ -186,9 +192,7 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 		case TCG_PTS_UPDATE_TEMPL_REF_MANI:
 		case TCG_PTS_VERIFICATION_RESULT:
 		case TCG_PTS_INTEG_REPORT:
-		case TCG_PTS_REQ_FILE_META:
 		case TCG_PTS_WIN_FILE_META:
-		case TCG_PTS_UNIX_FILE_META:
 		case TCG_PTS_REQ_REGISTRY_VALUE:
 		case TCG_PTS_REGISTRY_VALUE:
 		case TCG_PTS_REQ_INTEG_MEAS_LOG:
