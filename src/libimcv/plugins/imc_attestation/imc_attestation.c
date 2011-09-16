@@ -260,15 +260,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				case TCG_PTS_REQ_PROTO_CAPS:
 				{
 					tcg_pts_attr_proto_caps_t *attr_cast;
-					pts_proto_caps_flag_t imc_flags, imv_flags;
+					pts_proto_caps_flag_t imc_caps, imv_caps;
 
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
-					imv_flags = attr_cast->get_flags(attr_cast);
-					imc_flags = pts->get_proto_caps(pts);
-					pts->set_proto_caps(pts, imc_flags & imv_flags);
+					imv_caps = attr_cast->get_flags(attr_cast);
+					imc_caps = pts->get_proto_caps(pts);
+					pts->set_proto_caps(pts, imc_caps & imv_caps);
 
 					/* Send PTS Protocol Capabilities attribute */
-					attr = tcg_pts_attr_proto_caps_create(imc_flags & imv_flags,
+					attr = tcg_pts_attr_proto_caps_create(imc_caps & imv_caps,
 														  FALSE);
 					attr_list->insert_last(attr_list, attr);
 					break;
@@ -350,9 +350,134 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_REQ_FUNCT_COMP_EVID:
+				{
+					tcg_pts_attr_req_funct_comp_evid_t *attr_cast;
+					pts_proto_caps_flag_t negotiated_caps;
+					pts_attr_req_funct_comp_evid_flag_t flags;
+					u_int32_t sub_comp_depth;
+					u_int32_t comp_name_vendor_id;
+					u_int8_t family;
+					pts_qualifier_t qualifier;
+					pts_funct_comp_name_t name;
+					
+					attr_info = attr->get_value(attr);
+					attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
+					negotiated_caps = pts->get_proto_caps(pts);
+					flags = attr_cast->get_flags(attr_cast);
+
+					if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_DET_TTC, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					if (flags & PTS_REQ_FUNC_COMP_FLAG_VER &&
+						!(negotiated_caps & PTS_PROTO_CAPS_V))
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_LOCAL_VAL, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					if (flags & PTS_REQ_FUNC_COMP_FLAG_CURR &&
+						!(negotiated_caps & PTS_PROTO_CAPS_C))
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_CUR_EVID, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					if (flags & PTS_REQ_FUNC_COMP_FLAG_PCR &&
+						!(negotiated_caps & PTS_PROTO_CAPS_T))
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_DET_PCR, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+
+					sub_comp_depth = attr_cast->get_sub_component_depth(attr_cast);
+					/* TODO: Implement checking of components with its sub-components */
+					if (sub_comp_depth != 1)
+					{
+						DBG1(DBG_IMC, "Current version of Attestation IMC does not support"
+									  "sub component measurement deeper than 1. "
+									   "Measuring top level component only.");
+					}
+					
+					comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(attr_cast);
+					if (comp_name_vendor_id != PEN_TCG)
+					{
+						DBG1(DBG_IMC, "Current version of Attestation IMC supports"
+									  "only functional component namings by TCG ");
+						break;
+					}
+					
+					family = attr_cast->get_family(attr_cast);
+					if (family)
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_NAME_FAM, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+
+					qualifier = attr_cast->get_qualifier(attr_cast);
+					/* Check if Unknown or Wildcard was set for qualifier */
+					if (qualifier.kernel && qualifier.sub_component &&
+									(qualifier.type & PTS_FUNC_COMP_TYPE_ALL))
+					{
+						DBG2(DBG_IMC, "Wildcard was set for the qualifier of functional"
+							" component. Identifying the component with name binary enumeration");
+					}
+					else if (!qualifier.kernel && !qualifier.sub_component &&
+									(qualifier.type & PTS_FUNC_COMP_TYPE_UNKNOWN))
+					{
+						DBG2(DBG_IMC, "Unknown was set for the qualifier of functional"
+							" component. Identifying the component with name binary enumeration");
+					}
+					else
+					{
+						/* TODO: Implement what todo with received qualifier */
+					}
+					
+					name = attr_cast->get_comp_funct_name(attr_cast);
+					switch (name)
+					{
+						case PTS_FUNC_COMP_NAME_BIOS:
+						{
+							/* TODO: Implement BIOS measurement */
+							DBG1(DBG_IMC, "TODO: Implement BIOS measurement");
+							break;
+						}
+						case PTS_FUNC_COMP_NAME_IGNORE:
+						case PTS_FUNC_COMP_NAME_CRTM:
+						case PTS_FUNC_COMP_NAME_PLATFORM_EXT:
+						case PTS_FUNC_COMP_NAME_BOARD:
+						case PTS_FUNC_COMP_NAME_INIT_LOADER:
+						case PTS_FUNC_COMP_NAME_OPT_ROMS:
+						default:
+						{
+							DBG1(DBG_IMC, "Unsupported Functional Component Name");
+							break;
+						}
+					}
+					
 					break;
+				}
 				case TCG_PTS_GEN_ATTEST_EVID:
+				{
+					pts_simple_evid_final_flag_t flags;
+					/* TODO: TPM quote operation over included PCR's */
+					
+					/* Send Simple Evidence Final attribute */
+					flags = PTS_SIMPLE_EVID_FINAL_FLAG_NO;
+					attr = tcg_pts_attr_simple_evid_final_create(flags, 0,
+											chunk_empty, chunk_empty, chunk_empty);
+					attr_list->insert_last(attr_list, attr);
 					break;
+				}
 				case TCG_PTS_REQ_FILE_META:
 				{
 					tcg_pts_attr_req_file_meta_t *attr_cast;

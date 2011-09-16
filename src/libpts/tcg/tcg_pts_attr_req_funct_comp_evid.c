@@ -160,30 +160,11 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
 	u_int8_t qualifier = 0;
 
 	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
 	
-	/* Determine the flags to set*/
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_PCR)
-	{
-		flags += 128;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_CURR)
-	{
-		flags += 64;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_VER)
-	{
-		flags += 32;
-	}
-	if (this->flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
-	{
-		flags += 16;
-	}
-	writer->write_uint8(writer, flags);
-	
+	writer->write_uint8(writer, this->flags);
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
@@ -253,14 +234,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		this->family += 2;
 	}
-	
-	/* TODO: Generate an IF-M error attribute indicating */
-	/* TCG_PTS_INVALID_NAME_FAM */
-	//if (&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
-	//{
-	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
-	//}
-	
+		
 	if (((fam_and_qualifier >> 5) & 1) )
 	{
 		this->qualifier.kernel = true;
@@ -270,10 +244,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		this->qualifier.sub_component = true;
 	}
 	this->qualifier.type = ( fam_and_qualifier & 0xF );
-	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
-	
 	reader->read_uint32(reader, &this->name);
-	/* TODO: Check the name is defined in pts_funct_comp_name_t */
 
 	reader->destroy(reader);
 	return SUCCESS;
@@ -345,9 +316,9 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_comp_funct_name, void,
  */
 pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 									pts_attr_req_funct_comp_evid_flag_t flags,
-									   u_int32_t depth, u_int32_t vendor_id,
-									  pts_qualifier_t qualifier,
-									  pts_funct_comp_name_t name)
+									u_int32_t depth, u_int32_t vendor_id,
+									pts_qualifier_t qualifier,
+									pts_funct_comp_name_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
 

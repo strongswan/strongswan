@@ -249,7 +249,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			bool is_dir;
 
 			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_END);
+										IMV_ATTESTATION_STATE_COMP_EVID);
 
 			/* Does the PTS-IMC have TPM support? */
 			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
@@ -305,6 +305,34 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			break;
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
+		{
+			pts_attr_req_funct_comp_evid_flag_t flags;
+			u_int32_t sub_comp_depth;
+			pts_qualifier_t qualifier;
+			pts_funct_comp_name_t name;
+			
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_END);
+
+			flags = PTS_REQ_FUNC_COMP_FLAG_PCR;
+			sub_comp_depth = 1;
+			qualifier.kernel = FALSE;
+			qualifier.sub_component = FALSE;
+			qualifier.type = PTS_FUNC_COMP_TYPE_ALL;
+			name = PTS_FUNC_COMP_NAME_BIOS;
+			
+			/* Send Request Functional Component Evidence attribute */
+			attr = tcg_pts_attr_req_funct_comp_evid_create(flags, sub_comp_depth,
+														PEN_TCG, qualifier, name);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
+			/* Send Generate Attestation Evidence attribute */
+			attr = tcg_pts_attr_gen_attest_evid_create();
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
+			
+			break;
+		}
 		case IMV_ATTESTATION_STATE_IML:
 			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"",
 				 handshake_state);
@@ -497,9 +525,21 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_SIMPLE_COMP_EVID:
+				{
+					/** TODO: Implement saving the PCR number, Hash Algo = communicated one,
+					 * PCR transform (truncate SHA256, SHA384), PCR before and after values
+					 */ 
 					break;
+				}
+					
 				case TCG_PTS_SIMPLE_EVID_FINAL:
+				{
+					/** TODO: Implement construct Quote structure over saved values from
+					 * TCG_PTS_SIMPLE_COMP_EVID and compare with received one
+					 */ 
 					break;
+				}
+					
 				case TCG_PTS_FILE_MEAS:
 				{
 					tcg_pts_attr_file_meas_t *attr_cast;
