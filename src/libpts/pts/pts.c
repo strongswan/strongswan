@@ -273,29 +273,28 @@ static char* get_filename(char *pathname)
 METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 						pts_error_code_t *error_code)
 {
-	int error;
 	struct stat st;
-
+	
 	*error_code = 0;
-	error = stat(path, &st);
-	if (error == 0)
+	
+	if (!stat(path, &st))
 	{
 		return TRUE;
 	}
-	else if (error == ENOENT || error == ENOTDIR)
+	else if (errno == ENOENT || errno == ENOTDIR)
 	{
 		DBG1(DBG_PTS, "file/directory does not exist %s", path);
 		*error_code = TCG_PTS_FILE_NOT_FOUND;
 	}
-	else if (error == EFAULT)
+	else if (errno == EFAULT)
 	{
 		DBG1(DBG_PTS, "bad address %s", path);
 		*error_code = TCG_PTS_INVALID_PATH;
 	}
 	else
 	{
-		DBG1(DBG_PTS, "error: %s occurred while validating path: %s",
-			 		   strerror(error), path);
+		DBG1(DBG_PTS, "error: %s occured while validating path: %s",
+			 		   strerror(errno), path);
 		return FALSE;
 	}
 
