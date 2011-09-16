@@ -303,7 +303,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 									pts_attr_req_funct_comp_evid_flag_t flags,
 									u_int32_t depth, u_int32_t vendor_id,
 									pts_qualifier_t qualifier,
-									pts_ita_funct_comp_name_t name)
+									pts_funct_comp_name_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
 

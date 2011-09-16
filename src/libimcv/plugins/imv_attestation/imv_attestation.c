@@ -30,23 +30,6 @@
 #include <pts/pts_creds.h>
 
 #include <tcg/tcg_attr.h>
-<<<<<<< HEAD
-=======
-#include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_meas_algo.h>
-#include <tcg/tcg_pts_attr_get_tpm_version_info.h>
-#include <tcg/tcg_pts_attr_tpm_version_info.h>
-#include <tcg/tcg_pts_attr_get_aik.h>
-#include <tcg/tcg_pts_attr_aik.h>
-#include <tcg/tcg_pts_attr_req_funct_comp_evid.h>
-#include <tcg/tcg_pts_attr_gen_attest_evid.h>
-#include <tcg/tcg_pts_attr_simple_comp_evid.h>
-#include <tcg/tcg_pts_attr_simple_evid_final.h>
-#include <tcg/tcg_pts_attr_req_file_meas.h>
-#include <tcg/tcg_pts_attr_file_meas.h>
-#include <tcg/tcg_pts_attr_req_file_meta.h>
-#include <tcg/tcg_pts_attr_unix_file_meta.h>
->>>>>>> Implemented handling of File Metadata
 
 #include <tncif_pa_subtypes.h>
 
@@ -211,7 +194,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	if (imv_attestation_build(msg, attestation_state, supported_algorithms,
 							  supported_dh_groups, pts_db))
 	{
-<<<<<<< HEAD
 		msg->build(msg);
 		result = imv_attestation->send_message(imv_attestation, connection_id,
 											   msg->get_encoding(msg));
@@ -219,102 +201,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	else
 	{
 		result = TNC_RESULT_FATAL;
-=======
-		case IMV_ATTESTATION_STATE_INIT:
-		{
-			pts_proto_caps_flag_t flags;
-
-			/* Send Request Protocol Capabilities attribute */
-			flags = pts->get_proto_caps(pts);
-			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-	
-			/* Send Measurement Algorithms attribute */
-			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-
-			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_MEAS);
-			break;
-		}
-
-		case IMV_ATTESTATION_STATE_MEAS:
-		{
-			enumerator_t *enumerator;
-			u_int32_t delimiter = SOLIDUS_UTF;
-			char *platform_info, *pathname;
-			u_int16_t request_id;
-			int id, type;
-			bool is_dir;
-
-			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_END);
-
-			/* Does the PTS-IMC have TPM support? */
-			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
-			{
-				/* Send Get TPM Version attribute */
-				attr = tcg_pts_attr_get_tpm_version_info_create();
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
-	
-				/* Send Get AIK attribute */
-				attr = tcg_pts_attr_get_aik_create();
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
-			}
-
-			/* Get Platform and OS of the PTS-IMC */
-			platform_info = pts->get_platform_info(pts);
-
-			if (!pts_db || !platform_info)
-			{
-				DBG1(DBG_IMV, "%s%s%s not available",
-					(pts_db) ? "" : "pts database",
-					(!pts_db && !platform_info) ? "and" : "",
-					(platform_info) ? "" : "platform info");
-				break;
-			}
-			DBG1(DBG_IMV, "platform is '%s'", platform_info);
-
-			/* Send Request File Metadata attribute */
-			attr = tcg_pts_attr_req_file_meta_create(FALSE, SOLIDUS_UTF, "/etc/tnc_config");
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-
-			/* Send Request File Measurement attribute */
-			enumerator = pts_db->create_file_enumerator(pts_db, platform_info);
-			if (!enumerator)
-			{
-				break;
-			}
-			while (enumerator->enumerate(enumerator, &id, &type, &pathname))
-			{
-				is_dir = (type != 0);
-				request_id = attestation_state->add_request(attestation_state,
-															id, is_dir);
-				DBG2(DBG_IMV, "measurement request %d for %s '%s'",
-					 request_id, is_dir ? "directory" : "file", pathname);
-				attr = tcg_pts_attr_req_file_meas_create(is_dir, request_id,
-													 delimiter, pathname);
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
-			}
-			enumerator->destroy(enumerator);
-			break;
-		}
-		case IMV_ATTESTATION_STATE_COMP_EVID:
-		case IMV_ATTESTATION_STATE_IML:
-			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"",
-				 handshake_state);
-			return TNC_RESULT_FATAL;
-		default:
-			DBG1(DBG_IMV, "Attestation IMV is in unknown state: \"%s\"",
-				 handshake_state);
-			return TNC_RESULT_FATAL;
->>>>>>> Implemented handling of File Metadata
 	}
 	msg->destroy(msg);
 
