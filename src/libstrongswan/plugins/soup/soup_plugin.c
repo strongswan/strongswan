@@ -40,11 +40,21 @@ METHOD(plugin_t, get_name, char*,
 	return "soup";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_soup_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(FETCHER, soup_fetcher_create),
+			PLUGIN_PROVIDE(FETCHER, "http://"),
+			PLUGIN_PROVIDE(FETCHER, "https://"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_soup_plugin_t *this)
 {
-	lib->fetcher->remove_fetcher(lib->fetcher,
-								 (fetcher_constructor_t)soup_fetcher_create);
 	free(this);
 }
 
@@ -65,16 +75,11 @@ plugin_t *soup_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->fetcher->add_fetcher(lib->fetcher,
-					(fetcher_constructor_t)soup_fetcher_create, "http://");
-	lib->fetcher->add_fetcher(lib->fetcher,
-					(fetcher_constructor_t)soup_fetcher_create, "https://");
 
 	return &this->public.plugin;
 }
