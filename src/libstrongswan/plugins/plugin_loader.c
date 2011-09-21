@@ -307,6 +307,8 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 		case FEATURE_PUBKEY:
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
+		case FEATURE_DATABASE:
+		case FEATURE_FETCHER:
 			/* require a registration function */
 			if (!reg ||
 				(reg->kind == FEATURE_REGISTER && reg->type != feature->type))
@@ -371,6 +373,13 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 			case FEATURE_CERT_ENCODE:
 				lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
 									feature->cert, reg->reg.final, reg->reg.f);
+				break;
+			case FEATURE_DATABASE:
+				lib->db->add_database(lib->db, reg->reg.f);
+				break;
+			case FEATURE_FETCHER:
+				lib->fetcher->add_fetcher(lib->fetcher, reg->reg.f,
+										  feature->fetcher);
 				break;
 			default:
 				break;

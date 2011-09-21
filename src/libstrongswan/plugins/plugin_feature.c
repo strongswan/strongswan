@@ -38,6 +38,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"EAP_SERVER",
 	"EAP_CLIENT",
 	"DATABASE",
+	"FETCHER",
 	"CUSTOM",
 );
 
@@ -65,8 +66,6 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->dh_group == b->dh_group;
 			case FEATURE_RNG:
 				return a->rng_quality <= b->rng_quality;
-			case FEATURE_DATABASE:
-				return a->database == b->database;
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
 			case FEATURE_PUBKEY:
@@ -83,6 +82,10 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_EAP_SERVER:
 			case FEATURE_EAP_PEER:
 				return a->eap == b->eap;
+			case FEATURE_DATABASE:
+				return a->database == DB_ANY || a->database == b->database;
+			case FEATURE_FETCHER:
+				return a->fetcher == NULL || streq(a->fetcher, b->fetcher);
 			case FEATURE_CUSTOM:
 				return streq(a->custom, b->custom);
 		}
@@ -148,13 +151,6 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 				return str;
 			}
 			break;
-		case FEATURE_DATABASE:
-			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					db_driver_names, feature->database) > 0)
-			{
-				return str;
-			}
-			break;
 		case FEATURE_PRIVKEY:
 		case FEATURE_PRIVKEY_GEN:
 		case FEATURE_PUBKEY:
@@ -196,9 +192,23 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 				return str;
 			}
 			break;
-		case FEATURE_CUSTOM:
+		case FEATURE_DATABASE:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
 					db_driver_names, feature->database) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_FETCHER:
+			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
+					feature->fetcher) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_CUSTOM:
+			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
+					feature->custom) > 0)
 			{
 				return str;
 			}
