@@ -14,6 +14,9 @@
 
 #include "tcg_attr.h"
 #include "tcg/tcg_pts_attr_proto_caps.h"
+#include "tcg/tcg_pts_attr_dh_nonce_params_req.h"
+#include "tcg/tcg_pts_attr_dh_nonce_params_resp.h"
+#include "tcg/tcg_pts_attr_dh_nonce_finish.h"
 #include "tcg/tcg_pts_attr_meas_algo.h"
 #include "tcg/tcg_pts_attr_get_tpm_version_info.h"
 #include "tcg/tcg_pts_attr_tpm_version_info.h"
@@ -156,6 +159,12 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_proto_caps_create_from_data(value, TRUE);
 		case TCG_PTS_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, FALSE);
+		case TCG_PTS_DH_NONCE_PARAMS_REQ:
+			return tcg_pts_attr_dh_nonce_params_req_create(value);
+		case TCG_PTS_DH_NONCE_PARAMS_RESP:
+			return tcg_pts_attr_dh_nonce_params_resp_create(value);
+		case TCG_PTS_DH_NONCE_FINISH:
+			return tcg_pts_attr_dh_nonce_finish_create(value);
 		case TCG_PTS_MEAS_ALGO:
 			return tcg_pts_attr_meas_algo_create_from_data(value, FALSE);
 		case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -184,9 +193,6 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_req_file_meta_create_from_data(value);
 		case TCG_PTS_UNIX_FILE_META:
 			return tcg_pts_attr_unix_file_meta_create_from_data(value);
-		case TCG_PTS_DH_NONCE_PARAMS_REQ:
-		case TCG_PTS_DH_NONCE_PARAMS_RESP:
-		case TCG_PTS_DH_NONCE_FINISH:
 		case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_UPDATE_TEMPL_REF_MANI:

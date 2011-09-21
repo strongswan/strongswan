@@ -29,6 +29,9 @@
 
 #include <tcg/tcg_attr.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
+#include <tcg/tcg_pts_attr_dh_nonce_params_req.h>
+#include <tcg/tcg_pts_attr_dh_nonce_params_resp.h>
+#include <tcg/tcg_pts_attr_dh_nonce_finish.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_tpm_version_info.h>
