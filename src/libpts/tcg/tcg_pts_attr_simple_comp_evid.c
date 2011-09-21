@@ -236,31 +236,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
 	u_int8_t qualifier = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
-	
-	/* Determine the flags to set*/
-	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
-	{
-		flags += 128;
-	}
-	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_NO_VER)
-	{
-		flags += 32;
-	}
-	else if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL)
-	{
-		flags += 64;
-	}
-	else if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
-	{
-		flags += 96;
-	}
-	
-	writer->write_uint8(writer, flags);
-	
+	writer->write_uint8(writer, this->flags);
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
@@ -336,28 +315,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	
-	/* Determine the flags to set*/
-	if ((flags >> 7) & 1)
-	{
-		 this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
-	}
-	if (!((flags >> 6) & 1) && !((flags >> 5) & 1))
-	{
-		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
-	}
-	else if (!((flags >> 6) & 1) && ((flags >> 5) & 1))
-	{
-		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_NO_VER;
-	}
-	else if (((flags >> 6) & 1) && !((flags >> 5) & 1))
-	{
-		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL;
-	}
-	else if (((flags >> 6) & 1) && ((flags >> 5) & 1))
-	{
-		this->flags |= PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS;
-	}
+	this->flags = flags;
 	
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);

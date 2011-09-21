@@ -137,29 +137,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
-	
-	/* Determine the flags to set*/
-	if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
-	{
-		flags += 64;
-	}
-	else if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2)
-	{
-		flags += 128;
-	}
-	else if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER)
-	{
-		flags += 192;
-	}
-	if (this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
-	{
-		flags += 32;
-	}
-	
-	writer->write_uint8 (writer, flags);
+	writer->write_uint8 (writer, this->flags);
 	writer->write_uint8 (writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
 	
 	/* Optional fields */
@@ -203,31 +183,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
+	this->flags = flags;
 	reader->read_uint8(reader, &reserved);
 	
-	/* Determine the flags to set*/
-	if ((flags >> 5) & 1)
-	{
-		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_EVID;
-	}
-	
-	if (!((flags >> 6) & PTS_SIMPLE_EVID_FINAL_FLAG_NO))
-	{
-		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_NO;
-	}
-	else if (!((flags >> 7) & 1) && ((flags >> 6) & 1))
-	{
-		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
-	}
-	else if (((flags >> 7) & 1) && !((flags >> 6) & 1))
-	{
-		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2;
-	}
-	else if (((flags >> 7) & 1) && ((flags >> 6) & 1))
-	{
-		this->flags |= PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER;
-	}
-
 	/*  Optional Composite Hash Algorithm and TPM PCR Composite field is included */
 	if ((flags >> 6) & PTS_SIMPLE_EVID_FINAL_FLAG_NO)
 	{

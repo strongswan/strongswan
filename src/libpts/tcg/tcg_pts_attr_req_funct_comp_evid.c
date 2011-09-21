@@ -205,22 +205,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	if ((flags >> 4) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_PCR;
-	}
-	if ((flags >> 5) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_CURR;
-	}
-	if ((flags >> 6) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_VER;
-	}
-	if ((flags >> 7) & 1)
-	{
-		this->flags |= PTS_REQ_FUNC_COMP_FLAG_TTC;
-	}
+	this->flags = flags;
 
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);
