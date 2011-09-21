@@ -38,11 +38,20 @@ METHOD(plugin_t, get_name, char*,
 	return "mysql";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_mysql_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(DATABASE, mysql_database_create),
+			PLUGIN_PROVIDE(DATABASE, DB_MYSQL),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_mysql_plugin_t *this)
 {
-	lib->db->remove_database(lib->db,
-							 (database_constructor_t)mysql_database_create);
 	mysql_database_deinit();
 	free(this);
 }
@@ -64,14 +73,11 @@ plugin_t *mysql_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->db->add_database(lib->db,
-						  (database_constructor_t)mysql_database_create);
 
 	return &this->public.plugin;
 }
