@@ -37,11 +37,21 @@ METHOD(plugin_t, get_name, char*,
 	return "ldap";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_ldap_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(FETCHER, ldap_fetcher_create),
+			PLUGIN_PROVIDE(FETCHER, "ldap://"),
+			PLUGIN_PROVIDE(FETCHER, "ldaps://"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ldap_plugin_t *this)
 {
-	lib->fetcher->remove_fetcher(lib->fetcher,
-								 (fetcher_constructor_t)ldap_fetcher_create);
 	free(this);
 }
 
@@ -56,16 +66,11 @@ plugin_t *ldap_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)ldap_fetcher_create, "ldap://");
-	lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)ldap_fetcher_create, "ldaps://");
 
 	return &this->public.plugin;
 }
