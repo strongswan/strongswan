@@ -78,9 +78,7 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names, ECP_256_BIT, plugin_name);
 	}
 
-	/* TODO: return FALSE : Elliptic Curves are not available */
-	return TRUE;
-	
+	return FALSE;
 }
 
 /**
