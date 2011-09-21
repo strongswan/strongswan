@@ -51,6 +51,21 @@ struct private_pts_t {
 	pts_meas_algorithms_t algorithm;
 
 	/**
+	 * PTS Diffie Hellman Group
+	 */
+	pts_dh_group_t dh_group;
+
+	/**
+	 * Contains a Diffie Hellman Nonce
+	 */
+	chunk_t dh_nonce;
+
+	/**
+	 * Contains a Diffie Hellman Public Value
+	 */
+	chunk_t dh_public_value;
+
+	/**
 	 * Platform and OS Info
 	 */
 	char *platform_info;
@@ -107,6 +122,26 @@ METHOD(pts_t, set_meas_algorithm, void,
 	if (hash_alg != HASH_UNKNOWN)
 	{
 		this->algorithm = algorithm;
+	}
+}
+
+METHOD(pts_t, get_dh_group, pts_dh_group_t,
+	   private_pts_t *this)
+{
+	return this->dh_group;
+}
+
+METHOD(pts_t, set_dh_group, void,
+	   private_pts_t *this, pts_dh_group_t group)
+{
+	diffie_hellman_group_t dh_group;
+
+	dh_group = pts_dh_group_to_strongswan_dh_group(group);
+	DBG2(DBG_PTS, "selected PTS Diffie Hellman Group is %N",
+		 diffie_hellman_group_names, dh_group);
+	if (dh_group != MODP_NONE)
+	{
+		this->dh_group = dh_group;
 	}
 }
 
@@ -518,6 +553,8 @@ METHOD(pts_t, destroy, void,
 	   private_pts_t *this)
 {
 	DESTROY_IF(this->aik);
+	free(this->dh_nonce.ptr);
+	free(this->dh_public_value.ptr);
 	free(this->platform_info);
 	free(this->tpm_version_info.ptr);
 	free(this);
@@ -683,6 +720,8 @@ pts_t *pts_create(bool is_imc)
 			 .set_proto_caps = _set_proto_caps,
 			 .get_meas_algorithm = _get_meas_algorithm,
 			 .set_meas_algorithm = _set_meas_algorithm,
+			 .get_dh_group = _get_dh_group,
+			 .set_dh_group = _set_dh_group,
 			 .get_platform_info = _get_platform_info,
 			 .set_platform_info = _set_platform_info,
 			 .get_tpm_version_info = _get_tpm_version_info,
@@ -696,6 +735,7 @@ pts_t *pts_create(bool is_imc)
 		 },
 		 .proto_caps = PTS_PROTO_CAPS_V,
 		 .algorithm = PTS_MEAS_ALGO_SHA256,
+		 .dh_group = PTS_DH_GROUP_IKE19,
 	);
 
 	if (is_imc)

@@ -25,7 +25,7 @@ typedef struct tcg_pts_attr_dh_nonce_params_resp_t tcg_pts_attr_dh_nonce_params_
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-#include "tcg_pts_attr_dh_nonce_params_req.h"
+#include "pts/pts_dh_group.h"
 #include "pts/pts_meas_algo.h"
 
 /**

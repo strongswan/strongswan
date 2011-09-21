@@ -51,6 +51,7 @@
 #include <pen/pen.h>
 #include <debug.h>
 #include <credentials/credential_manager.h>
+#include <utils/linked_list.h>
 
 /* IMV definitions */
 
@@ -65,6 +66,11 @@ static imv_agent_t *imv_attestation;
  * Supported PTS measurement algorithms
  */
 static pts_meas_algorithms_t supported_algorithms = 0;
+
+/**
+ * Supported PTS Diffie Hellman Groups
+ */
+static pts_dh_group_t supported_dh_groups = 0;
 
 /**
  * PTS file measurement database
@@ -89,7 +95,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	char *hash_alg, *uri, *cadir;
+	char *hash_alg, *dh_group, *uri, *cadir;
 
 	if (imv_attestation)
 	{
@@ -97,6 +103,10 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
 	if (!pts_meas_probe_algorithms(&supported_algorithms))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	if (!pts_probe_dh_groups(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -135,6 +145,24 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	{
 		/* remove SHA256 algorithm */
 		supported_algorithms &= ~PTS_MEAS_ALGO_SHA256;
+	}
+
+	/**
+	 * Specify supported PTS Diffie Hellman Groups
+	 *
+	 * ike2: PTS_DH_GROUP_IKE2
+	 * ike5: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5
+	 * ike14: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14
+	 * ike19: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19
+	 * ike20: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
+	 *
+	 * we expect the PTS-IMC to select the strongest supported group
+	 */
+	dh_group = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.dh_group", "ike19");
+	if (!pts_update_supported_dh_groups(dh_group, &supported_dh_groups))
+	{
+		return TNC_RESULT_FATAL;
 	}
 
 	/* create a PTS credential manager */
@@ -238,8 +266,36 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			msg->add_attribute(msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
-										IMV_ATTESTATION_STATE_MEAS);
+										IMV_ATTESTATION_STATE_DH_NONCE);
 			break;
+		}
+		case IMV_ATTESTATION_STATE_DH_NONCE:
+		{
+			bool request_sent = FALSE;
+
+			/* Jump to Measurement state if IMC has no TPM */
+			if(!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
+			{
+				attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_MEAS);
+			}
+			else if (!request_sent)
+			{
+				/* Send DH nonce parameters request attribute */
+				attr = tcg_pts_attr_dh_nonce_params_req_create(0, supported_dh_groups);
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+				request_sent = TRUE;
+			}
+			else if (request_sent)
+			{
+				/* Send DH nonce finish attribute */
+				attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_MEAS);
+			}
+
+			break;
+			
 		}
 
 		case IMV_ATTESTATION_STATE_MEAS:
@@ -255,7 +311,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 										IMV_ATTESTATION_STATE_COMP_EVID);
 
 			/* Does the PTS-IMC have TPM support? */
-			if (pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T)
 			{
 				/* Send Get TPM Version attribute */
 				attr = tcg_pts_attr_get_tpm_version_info_create();
@@ -336,10 +391,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			
 			break;
 		}
-		case IMV_ATTESTATION_STATE_IML:
-			DBG1(DBG_IMV, "Attestation IMV has nothing to send: \"%s\"",
-				 handshake_state);
-			return TNC_RESULT_FATAL;
 		default:
 			DBG1(DBG_IMV, "Attestation IMV is in unknown state: \"%s\"",
 				 handshake_state);
@@ -469,6 +520,11 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
 					flags = attr_cast->get_flags(attr_cast);
 					pts->set_proto_caps(pts, flags);
+					break;
+				}
+				case TCG_PTS_DH_NONCE_PARAMS_RESP:
+				{
+					/* TODO: Implement */
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO_SELECTION:
@@ -620,7 +676,6 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				}
 	
 				/* TODO: Not implemented yet */
-				case TCG_PTS_DH_NONCE_PARAMS_RESP:
 				case TCG_PTS_INTEG_MEAS_LOG:
 				/* Attributes using XML */
 				case TCG_PTS_TEMPL_REF_MANI_SET_META:

@@ -34,9 +34,9 @@ typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t
  */
 enum imv_attestation_handshake_state_t {
 	IMV_ATTESTATION_STATE_INIT,
+	IMV_ATTESTATION_STATE_DH_NONCE,
 	IMV_ATTESTATION_STATE_MEAS,
 	IMV_ATTESTATION_STATE_COMP_EVID,
-	IMV_ATTESTATION_STATE_IML,
 	IMV_ATTESTATION_STATE_END,
 };
 

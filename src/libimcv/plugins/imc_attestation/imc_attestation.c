@@ -64,6 +64,11 @@ static imc_agent_t *imc_attestation;
 static pts_meas_algorithms_t supported_algorithms = 0;
  
 /**
+ * Supported PTS Diffie Hellman Groups
+ */
+static pts_dh_group_t supported_dh_groups = 0;
+
+/**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
  */
 TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
@@ -77,6 +82,10 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
 	if (!pts_meas_probe_algorithms(&supported_algorithms))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	if (!pts_probe_dh_groups(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -276,27 +285,82 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
+				case TCG_PTS_DH_NONCE_PARAMS_REQ:
+				{
+					tcg_pts_attr_dh_nonce_params_req_t *attr_cast;
+					u_int8_t min_nonce_len;
+					pts_dh_group_t offered_dh_groups, selected_dh_group;
+
+					attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
+					min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
+					offered_dh_groups = attr_cast->get_dh_groups(attr_cast);
+
+					if ((supported_dh_groups & PTS_DH_GROUP_IKE20) &&
+						(offered_dh_groups & PTS_DH_GROUP_IKE20))
+					{
+						pts->set_dh_group(pts, PTS_DH_GROUP_IKE20);
+					}
+					else if ((supported_dh_groups & PTS_DH_GROUP_IKE19) &&
+							 (offered_dh_groups & PTS_DH_GROUP_IKE19))
+					{
+						pts->set_dh_group(pts, PTS_DH_GROUP_IKE19);
+					}
+					else if ((supported_dh_groups & PTS_DH_GROUP_IKE14) &&
+							 (offered_dh_groups & PTS_DH_GROUP_IKE14))
+					{
+						pts->set_dh_group(pts, PTS_DH_GROUP_IKE14);
+					}
+					else if ((supported_dh_groups & PTS_DH_GROUP_IKE5) &&
+							 (offered_dh_groups & PTS_DH_GROUP_IKE5))
+					{
+						pts->set_dh_group(pts, PTS_DH_GROUP_IKE5);
+					}
+					else if ((supported_dh_groups & PTS_DH_GROUP_IKE2) &&
+							 (offered_dh_groups & PTS_DH_GROUP_IKE2))
+					{
+						pts->set_dh_group(pts, PTS_DH_GROUP_IKE2);
+					}
+					else
+					{
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+									TCG_PTS_DH_GRPS_NOT_SUPPORTED, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+
+					/* Send DH Nonce Parameters Response attribute */
+					selected_dh_group = pts->get_dh_group(pts);
+					/* TODO: Implement */
+					
+					break;
+				}
+				case TCG_PTS_DH_NONCE_FINISH:
+				{
+					/* TODO: Implement */
+					break;
+				}
 				case TCG_PTS_MEAS_ALGO:
 				{
 					tcg_pts_attr_meas_algo_t *attr_cast;
-					pts_meas_algorithms_t selected_algorithm;
-	
+					pts_meas_algorithms_t offered_algorithms, selected_algorithm;
+
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
-					selected_algorithm = attr_cast->get_algorithms(attr_cast);
+					offered_algorithms = attr_cast->get_algorithms(attr_cast);
 
 					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
-						(selected_algorithm & PTS_MEAS_ALGO_SHA384))
+						(offered_algorithms & PTS_MEAS_ALGO_SHA384))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
 					}
 					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
-							 (selected_algorithm & PTS_MEAS_ALGO_SHA256))
+							 (offered_algorithms & PTS_MEAS_ALGO_SHA256))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
 					}
 
 					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
-							 (selected_algorithm & PTS_MEAS_ALGO_SHA1))
+							 (offered_algorithms & PTS_MEAS_ALGO_SHA1))
 					{
 						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA1);
 					}
@@ -587,8 +651,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					break;
 				}
 				/* TODO: Not implemented yet */
-				case TCG_PTS_DH_NONCE_PARAMS_REQ:
-				case TCG_PTS_DH_NONCE_FINISH:
 				case TCG_PTS_REQ_INTEG_MEAS_LOG:
 				/* Attributes using XML */
 				case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:

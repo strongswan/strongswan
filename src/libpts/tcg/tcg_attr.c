@@ -160,11 +160,11 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 		case TCG_PTS_PROTO_CAPS:
 			return tcg_pts_attr_proto_caps_create_from_data(value, FALSE);
 		case TCG_PTS_DH_NONCE_PARAMS_REQ:
-			return tcg_pts_attr_dh_nonce_params_req_create(value);
+			return tcg_pts_attr_dh_nonce_params_req_create_from_data(value);
 		case TCG_PTS_DH_NONCE_PARAMS_RESP:
-			return tcg_pts_attr_dh_nonce_params_resp_create(value);
+			return tcg_pts_attr_dh_nonce_params_resp_create_from_data(value);
 		case TCG_PTS_DH_NONCE_FINISH:
-			return tcg_pts_attr_dh_nonce_finish_create(value);
+			return tcg_pts_attr_dh_nonce_finish_create_from_data(value);
 		case TCG_PTS_MEAS_ALGO:
 			return tcg_pts_attr_meas_algo_create_from_data(value, FALSE);
 		case TCG_PTS_MEAS_ALGO_SELECTION:

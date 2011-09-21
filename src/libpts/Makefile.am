@@ -15,6 +15,7 @@ libpts_la_SOURCES = \
 	pts/pts_file_meas.h pts/pts_file_meas.c \
 	pts/pts_file_meta.h pts/pts_file_meta.c \
 	pts/pts_meas_algo.h pts/pts_meas_algo.c \
+	pts/pts_dh_group.h pts/pts_dh_group.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_dh_nonce_params_req.h tcg/tcg_pts_attr_dh_nonce_params_req.c \

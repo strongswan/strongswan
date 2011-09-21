@@ -28,6 +28,7 @@ typedef struct pts_t pts_t;
 #include "pts_meas_algo.h"
 #include "pts_file_meas.h"
 #include "pts_file_meta.h"
+#include "pts_dh_group.h"
 
 #include <library.h>
 
@@ -70,6 +71,20 @@ struct pts_t {
 	 * @param algorithm		measurement algorithm
 	 */
 	void (*set_meas_algorithm)(pts_t *this, pts_meas_algorithms_t algorithm);
+
+	/**
+	 * Get PTS Diffie Hellman Group
+	 *
+	 * @return				DH Group
+	 */
+	pts_dh_group_t (*get_dh_group)(pts_t *this);
+
+	/**
+	 * Set PTS Diffie Hellman Group
+	 *
+	 * @param dh_group		DH Group
+	 */
+	void (*set_dh_group)(pts_t *this, pts_dh_group_t dh_group);
 
 	/**
 	 * Get Platform and OS Info

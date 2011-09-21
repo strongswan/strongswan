@@ -22,26 +22,10 @@
 #define TCG_PTS_ATTR_DH_NONCE_PARAMS_REQ_H_
 
 typedef struct tcg_pts_attr_dh_nonce_params_req_t tcg_pts_attr_dh_nonce_params_req_t;
-typedef enum pts_dh_group_t pts_dh_group_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-/**
- * PTS Diffie Hellman Group Values
- */
-enum pts_dh_group_t {
-	/** IKE Group 2 */
-	PTS_DH_GROUP_IKE2 =					 (1<<15),
-	/** IKE Group 5 */
-	PTS_DH_GROUP_IKE5 =					 (1<<14),
-	/** IKE Group 14 */
-	PTS_DH_GROUP_IKE14 =				 (1<<13),
-	/** IKE Group 19, Elliptic curves using NIST 256 bit prime modules */
-	PTS_DH_GROUP_IKE19 =				 (1<<12),
-	/** IKE Group 20, Elliptic curves using NIST 384 bit prime modules */
-	PTS_DH_GROUP_IKE20 =				 (1<<11),
-};
+#include "pts/pts_dh_group.h"
 
 /**
  * Class implementing the TCG PTS DH Nonce Parameters Request Attribute
