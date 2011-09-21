@@ -37,11 +37,22 @@ METHOD(plugin_t, get_name, char*,
 	return "des";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_des_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CRYPTER, des_crypter_create),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_3DES, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_DES, 8),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_DES_ECB, 8),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_des_plugin_t *this)
 {
-	lib->crypto->remove_crypter(lib->crypto,
-								(crypter_constructor_t)des_crypter_create);
 	free(this);
 }
 
@@ -56,18 +67,11 @@ plugin_t *des_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->crypto->add_crypter(lib->crypto, ENCR_3DES, get_name(this),
-							 (crypter_constructor_t)des_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES, get_name(this),
-							 (crypter_constructor_t)des_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB, get_name(this),
-							 (crypter_constructor_t)des_crypter_create);
 
 	return &this->public.plugin;
 }
