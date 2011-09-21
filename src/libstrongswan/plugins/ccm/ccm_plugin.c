@@ -5,11 +5,11 @@
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ * option) any later version. See <http://www.fsf.org/copyleft/gpl.txt>.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
  * for more details.
  */
 
@@ -38,12 +38,55 @@ METHOD(plugin_t, get_name, char*,
 	return "ccm";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_ccm_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(AEAD, ccm_aead_create),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV8, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV8, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV8, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV12, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV12, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV12, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV16, 16),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV16, 24),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_CAMELLIA_CCM_ICV16, 32),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_CAMELLIA_CBC, 32),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ccm_plugin_t *this)
 {
-	lib->crypto->remove_aead(lib->crypto,
-					(aead_constructor_t)ccm_aead_create);
-
 	free(this);
 }
 
@@ -53,40 +96,16 @@ METHOD(plugin_t, destroy, void,
 plugin_t *ccm_plugin_create()
 {
 	private_ccm_plugin_t *this;
-	crypter_t *crypter;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 0);
-	if (crypter)
-	{
-		crypter->destroy(crypter);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV8, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV12, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_AES_CCM_ICV16, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-	}
-	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 0);
-	if (crypter)
-	{
-		crypter->destroy(crypter);
-		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV8, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV12, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-		lib->crypto->add_aead(lib->crypto, ENCR_CAMELLIA_CCM_ICV16, get_name(this),
-						(aead_constructor_t)ccm_aead_create);
-	}
 
 	return &this->public.plugin;
 }
