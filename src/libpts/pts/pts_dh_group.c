@@ -33,9 +33,6 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &dh_group, &plugin_name))
 	{
-		DBG2(DBG_PTS, format1, "Following ", diffie_hellman_group_names, dh_group,
-								  plugin_name);
-		
 		if (dh_group == MODP_1024_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE2;
