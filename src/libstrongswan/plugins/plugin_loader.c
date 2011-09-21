@@ -297,6 +297,7 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 	switch (feature->type)
 	{
 		case FEATURE_CRYPTER:
+		case FEATURE_AEAD:
 		case FEATURE_SIGNER:
 		case FEATURE_HASHER:
 		case FEATURE_PRF:
@@ -338,6 +339,10 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 		{
 			case FEATURE_CRYPTER:
 				lib->crypto->add_crypter(lib->crypto, feature->crypter.alg,
+									name, reg->reg.f);
+				break;
+			case FEATURE_AEAD:
+				lib->crypto->add_aead(lib->crypto, feature->aead.alg,
 									name, reg->reg.f);
 				break;
 			case FEATURE_SIGNER:

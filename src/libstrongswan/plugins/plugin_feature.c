@@ -21,6 +21,7 @@
 ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"NONE",
 	"CRYPTER",
+	"AEAD",
 	"SIGNER",
 	"HASHER",
 	"PRF",
@@ -56,6 +57,9 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_CRYPTER:
 				return a->crypter.alg == b->crypter.alg &&
 					   a->crypter.key_size == b->crypter.key_size;
+			case FEATURE_AEAD:
+				return a->aead.alg == b->aead.alg &&
+					   a->aead.key_size == b->aead.key_size;
 			case FEATURE_SIGNER:
 				return a->signer == b->signer;
 			case FEATURE_HASHER:
@@ -112,6 +116,14 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 			if (asprintf(&str, "%N:%N-%d", plugin_feature_names, feature->type,
 					encryption_algorithm_names, feature->crypter.alg,
 					feature->crypter.key_size) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_AEAD:
+			if (asprintf(&str, "%N:%N-%d", plugin_feature_names, feature->type,
+					encryption_algorithm_names, feature->aead.alg,
+					feature->aead.key_size) > 0)
 			{
 				return str;
 			}

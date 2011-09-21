@@ -95,6 +95,8 @@ struct plugin_feature_t {
 		FEATURE_NONE,
 		/** crypter_t */
 		FEATURE_CRYPTER,
+		/** aead_t */
+		FEATURE_AEAD,
 		/** signer_t */
 		FEATURE_SIGNER,
 		/** hasher_t */
@@ -141,6 +143,11 @@ struct plugin_feature_t {
 			encryption_algorithm_t alg;
 			size_t key_size;
 		} crypter;
+		/** FEATURE_AEAD */
+		struct {
+			encryption_algorithm_t alg;
+			size_t key_size;
+		} aead;
 		/** FEATURE_SIGNER */
 		integrity_algorithm_t signer;
 		/** FEATURE_PRF */
@@ -240,6 +247,7 @@ struct plugin_feature_t {
 
 #define __PLUGIN_FEATURE(kind, type, ...)					(plugin_feature_t){ FEATURE_##kind, FEATURE_##type, { __VA_ARGS__ }}
 #define _PLUGIN_FEATURE_CRYPTER(kind, alg, size)			__PLUGIN_FEATURE(kind, CRYPTER, .crypter = { alg, size })
+#define _PLUGIN_FEATURE_AEAD(kind, alg, size)				__PLUGIN_FEATURE(kind, AEAD, .aead = { alg, size })
 #define _PLUGIN_FEATURE_SIGNER(kind, alg)					__PLUGIN_FEATURE(kind, SIGNER, .signer = alg)
 #define _PLUGIN_FEATURE_HASHER(kind, alg)					__PLUGIN_FEATURE(kind, HASHER, .hasher = alg)
 #define _PLUGIN_FEATURE_PRF(kind, alg)						__PLUGIN_FEATURE(kind, PRF, .prf = alg)
@@ -262,6 +270,7 @@ struct plugin_feature_t {
 #define __PLUGIN_FEATURE_REGISTER(type, _f)					(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .reg.f = _f }
 #define __PLUGIN_FEATURE_REGISTER_BUILDER(type, _f, _final)	(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .reg = {.f = _f, .final = _final, }}
 #define _PLUGIN_FEATURE_REGISTER_CRYPTER(type, f) 			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_AEAD(type, f) 				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_SIGNER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_HASHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_PRF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
