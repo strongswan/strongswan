@@ -58,6 +58,11 @@ static pts_meas_algorithms_t supported_algorithms = PTS_MEAS_ALGO_NONE;
 static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
 
 /**
+ * Supported PTS Diffie Hellman Groups
+ */
+static pts_dh_group_t supported_dh_groups = 0;
+
+/**
  * PTS file measurement database
  */
 static pts_database_t *pts_db;
@@ -92,6 +97,10 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
+	if (!pts_probe_dh_groups(&supported_dh_groups))
+	{
+		return TNC_RESULT_FATAL;
+	}
 	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
 									   imv_id, actual_version);
 	if (!imv_attestation)
@@ -114,6 +123,24 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 
 	if (!pts_meas_algo_update(hash_alg, &supported_algorithms) ||
 		!pts_dh_group_update(dh_group, &supported_dh_groups))
+	{
+		return TNC_RESULT_FATAL;
+	}
+
+	/**
+	 * Specify supported PTS Diffie Hellman Groups
+	 *
+	 * ike2: PTS_DH_GROUP_IKE2
+	 * ike5: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5
+	 * ike14: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14
+	 * ike19: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19
+	 * ike20: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
+	 *
+	 * we expect the PTS-IMC to select the strongest supported group
+	 */
+	dh_group = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-attestation.dh_group", "ike19");
+	if (!pts_update_supported_dh_groups(dh_group, &supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}

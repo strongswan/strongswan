@@ -63,6 +63,11 @@ static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
 static linked_list_t *evidences = NULL;
 
 /**
+ * Supported PTS Diffie Hellman Groups
+ */
+static pts_dh_group_t supported_dh_groups = 0;
+
+/**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
  */
 TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
@@ -77,6 +82,10 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	}
 	if (!pts_meas_algo_probe(&supported_algorithms) ||
 		!pts_dh_group_probe(&supported_dh_groups))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	if (!pts_probe_dh_groups(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
