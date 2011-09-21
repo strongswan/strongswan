@@ -40,11 +40,23 @@ METHOD(plugin_t, get_name, char*,
 	return "curl";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_curl_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(FETCHER, curl_fetcher_create),
+			PLUGIN_PROVIDE(FETCHER, "file://"),
+			PLUGIN_PROVIDE(FETCHER, "http://"),
+			PLUGIN_PROVIDE(FETCHER, "https://"),
+			PLUGIN_PROVIDE(FETCHER, "ftp://"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_curl_plugin_t *this)
 {
-	lib->fetcher->remove_fetcher(lib->fetcher,
-								 (fetcher_constructor_t)curl_fetcher_create);
 	curl_global_cleanup();
 	free(this);
 }
@@ -61,28 +73,19 @@ plugin_t *curl_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
 
 	res = curl_global_init(CURL_GLOBAL_NOTHING);
-	if (res == CURLE_OK)
+	if (res != CURLE_OK)
 	{
-		lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)curl_fetcher_create, "file://");
-		lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)curl_fetcher_create, "http://");
-		lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)curl_fetcher_create, "https://");
-		lib->fetcher->add_fetcher(lib->fetcher,
-						(fetcher_constructor_t)curl_fetcher_create, "ftp://");
-	}
-	else
-	{
-		DBG1(DBG_LIB, "global libcurl initializing failed: %s, curl disabled",
+		DBG1(DBG_LIB, "global libcurl initializing failed: %s",
 			 curl_easy_strerror(res));
+		destroy(this);
+		return NULL;
 	}
 	return &this->public.plugin;
 }
