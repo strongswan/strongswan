@@ -441,6 +441,30 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 	return loaded;
 }
 
+/**
+ * Remove plugins that we were not able to load any features from.
+ */
+static void purge_plugins(private_plugin_loader_t *this)
+{
+	enumerator_t *enumerator;
+	plugin_entry_t *entry;
+
+	enumerator = this->plugins->create_enumerator(this->plugins);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (!entry->plugin->get_features)
+		{	/* feature interface not supported */
+			continue;
+		}
+		if (!entry->loaded->get_count(entry->loaded))
+		{
+			this->plugins->remove_at(this->plugins, enumerator);
+			plugin_entry_destroy(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(plugin_loader_t, load_plugins, bool,
 	private_plugin_loader_t *this, char *path, char *list)
 {
@@ -497,6 +521,8 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		}
 		/* report missing dependencies */
 		load_features(this, FALSE, TRUE);
+		/* unload plugins that we were not able to load any features for */
+		purge_plugins(this);
 	}
 	return !critical_failed;
 }
