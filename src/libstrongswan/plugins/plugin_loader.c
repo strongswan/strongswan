@@ -231,7 +231,6 @@ static bool feature_loaded(private_plugin_loader_t *this, plugin_entry_t *entry,
 /**
  * Check if dependencies are satisfied
  */
-
 static bool dependencies_satisfied(private_plugin_loader_t *this, char *name,
 				bool soft, bool report, plugin_feature_t *features, int count)
 {
@@ -266,7 +265,7 @@ static bool dependencies_satisfied(private_plugin_loader_t *this, char *name,
 		}
 		entries->destroy(entries);
 
-		if (!found && !(features[i].kind == FEATURE_SDEPEND && !soft))
+		if (!found && (features[i].kind != FEATURE_SDEPEND || soft))
 		{
 			if (report)
 			{
