@@ -324,7 +324,7 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 	}
 	if (reg && reg->kind == FEATURE_CALLBACK)
 	{
-		if (!reg->cb.f(entry->plugin, feature, TRUE, reg->cb.data))
+		if (!reg->arg.cb.f(entry->plugin, feature, TRUE, reg->arg.cb.data))
 		{
 			DBG1(DBG_LIB, "loading '%s' plugin feature %s with callback failed",
 				 name, str);
@@ -337,53 +337,56 @@ static bool load_feature(private_plugin_loader_t *this, plugin_entry_t *entry,
 		switch (feature->type)
 		{
 			case FEATURE_CRYPTER:
-				lib->crypto->add_crypter(lib->crypto, feature->crypter.alg,
-									name, reg->reg.f);
+				lib->crypto->add_crypter(lib->crypto, feature->arg.crypter.alg,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_AEAD:
-				lib->crypto->add_aead(lib->crypto, feature->aead.alg,
-									name, reg->reg.f);
+				lib->crypto->add_aead(lib->crypto, feature->arg.aead.alg,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_SIGNER:
-				lib->crypto->add_signer(lib->crypto, feature->signer,
-									name, reg->reg.f);
+				lib->crypto->add_signer(lib->crypto, feature->arg.signer,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_HASHER:
-				lib->crypto->add_hasher(lib->crypto, feature->hasher,
-									name, reg->reg.f);
+				lib->crypto->add_hasher(lib->crypto, feature->arg.hasher,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_PRF:
-				lib->crypto->add_prf(lib->crypto, feature->prf,
-									name, reg->reg.f);
+				lib->crypto->add_prf(lib->crypto, feature->arg.prf,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_DH:
-				lib->crypto->add_dh(lib->crypto, feature->dh_group,
-									name, reg->reg.f);
+				lib->crypto->add_dh(lib->crypto, feature->arg.dh_group,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_RNG:
-				lib->crypto->add_rng(lib->crypto, feature->rng_quality,
-									name, reg->reg.f);
+				lib->crypto->add_rng(lib->crypto, feature->arg.rng_quality,
+									name, reg->arg.reg.f);
 				break;
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
 				lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY,
-									feature->privkey, reg->reg.final, reg->reg.f);
+									feature->arg.privkey, reg->arg.reg.final,
+									reg->arg.reg.f);
 				break;
 			case FEATURE_PUBKEY:
 				lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY,
-									feature->pubkey, reg->reg.final, reg->reg.f);
+									feature->arg.pubkey, reg->arg.reg.final,
+									reg->arg.reg.f);
 				break;
 			case FEATURE_CERT_DECODE:
 			case FEATURE_CERT_ENCODE:
 				lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
-									feature->cert, reg->reg.final, reg->reg.f);
+									feature->arg.cert, reg->arg.reg.final,
+									reg->arg.reg.f);
 				break;
 			case FEATURE_DATABASE:
-				lib->db->add_database(lib->db, reg->reg.f);
+				lib->db->add_database(lib->db, reg->arg.reg.f);
 				break;
 			case FEATURE_FETCHER:
-				lib->fetcher->add_fetcher(lib->fetcher, reg->reg.f,
-										  feature->fetcher);
+				lib->fetcher->add_fetcher(lib->fetcher, reg->arg.reg.f,
+										  feature->arg.fetcher);
 				break;
 			default:
 				break;

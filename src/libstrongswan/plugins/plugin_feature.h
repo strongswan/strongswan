@@ -198,7 +198,7 @@ struct plugin_feature_t {
 			/** data to pass to callback */
 			void *data;
 		} cb;
-	};
+	} arg;
 };
 
 #define FEATURE(kind, type, ...) _PLUGIN_FEATURE_##type(kind, __VA_ARGS__)
@@ -267,10 +267,10 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
 
-#define __PLUGIN_FEATURE_REGISTER(type, _f)					(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .reg.f = _f }
-#define __PLUGIN_FEATURE_REGISTER_BUILDER(type, _f, _final)	(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .reg = {.f = _f, .final = _final, }}
-#define _PLUGIN_FEATURE_REGISTER_CRYPTER(type, f) 			__PLUGIN_FEATURE_REGISTER(type, f)
-#define _PLUGIN_FEATURE_REGISTER_AEAD(type, f) 				__PLUGIN_FEATURE_REGISTER(type, f)
+#define __PLUGIN_FEATURE_REGISTER(type, _f)					(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .arg.reg.f = _f }
+#define __PLUGIN_FEATURE_REGISTER_BUILDER(type, _f, _final)	(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .arg.reg = {.f = _f, .final = _final, }}
+#define _PLUGIN_FEATURE_REGISTER_CRYPTER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_AEAD(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_SIGNER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_HASHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_PRF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
@@ -284,7 +284,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_DATABASE(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_FETCHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 
-#define _PLUGIN_FEATURE_CALLBACK(_cb, _data) (plugin_feature_t){ FEATURE_CALLBACK, FEATURE_NONE, .cb = { .f = _cb, .data = _data } }
+#define _PLUGIN_FEATURE_CALLBACK(_cb, _data) (plugin_feature_t){ FEATURE_CALLBACK, FEATURE_NONE, .arg.cb = { .f = _cb, .data = _data } }
 
 /**
  * Names for plugin_feature_t types.

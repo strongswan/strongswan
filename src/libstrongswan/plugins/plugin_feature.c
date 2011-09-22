@@ -55,43 +55,45 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_NONE:
 				return FALSE;
 			case FEATURE_CRYPTER:
-				return a->crypter.alg == b->crypter.alg &&
-					   a->crypter.key_size == b->crypter.key_size;
+				return a->arg.crypter.alg == b->arg.crypter.alg &&
+					   a->arg.crypter.key_size == b->arg.crypter.key_size;
 			case FEATURE_AEAD:
-				return a->aead.alg == b->aead.alg &&
-					   a->aead.key_size == b->aead.key_size;
+				return a->arg.aead.alg == b->arg.aead.alg &&
+					   a->arg.aead.key_size == b->arg.aead.key_size;
 			case FEATURE_SIGNER:
-				return a->signer == b->signer;
+				return a->arg.signer == b->arg.signer;
 			case FEATURE_HASHER:
-				return a->hasher == b->hasher;
+				return a->arg.hasher == b->arg.hasher;
 			case FEATURE_PRF:
-				return a->prf == b->prf;
+				return a->arg.prf == b->arg.prf;
 			case FEATURE_DH:
-				return a->dh_group == b->dh_group;
+				return a->arg.dh_group == b->arg.dh_group;
 			case FEATURE_RNG:
-				return a->rng_quality <= b->rng_quality;
+				return a->arg.rng_quality <= b->arg.rng_quality;
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
 			case FEATURE_PUBKEY:
-				return a->privkey == b->privkey;
+				return a->arg.privkey == b->arg.privkey;
 			case FEATURE_PRIVKEY_SIGN:
 			case FEATURE_PUBKEY_VERIFY:
-				return a->privkey_sign == b->privkey_sign;
+				return a->arg.privkey_sign == b->arg.privkey_sign;
 			case FEATURE_PRIVKEY_DECRYPT:
 			case FEATURE_PUBKEY_ENCRYPT:
-				return a->privkey_decrypt == b->privkey_decrypt;
+				return a->arg.privkey_decrypt == b->arg.privkey_decrypt;
 			case FEATURE_CERT_DECODE:
 			case FEATURE_CERT_ENCODE:
-				return a->cert == b->cert;
+				return a->arg.cert == b->arg.cert;
 			case FEATURE_EAP_SERVER:
 			case FEATURE_EAP_PEER:
-				return a->eap == b->eap;
+				return a->arg.eap == b->arg.eap;
 			case FEATURE_DATABASE:
-				return a->database == DB_ANY || a->database == b->database;
+				return a->arg.database == DB_ANY ||
+					   a->arg.database == b->arg.database;
 			case FEATURE_FETCHER:
-				return a->fetcher == NULL || streq(a->fetcher, b->fetcher);
+				return a->arg.fetcher == NULL ||
+					   streq(a->arg.fetcher, b->arg.fetcher);
 			case FEATURE_CUSTOM:
-				return streq(a->custom, b->custom);
+				return streq(a->arg.custom, b->arg.custom);
 		}
 	}
 	return FALSE;
@@ -114,51 +116,51 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 			return strdup("NONE");
 		case FEATURE_CRYPTER:
 			if (asprintf(&str, "%N:%N-%d", plugin_feature_names, feature->type,
-					encryption_algorithm_names, feature->crypter.alg,
-					feature->crypter.key_size) > 0)
+					encryption_algorithm_names, feature->arg.crypter.alg,
+					feature->arg.crypter.key_size) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_AEAD:
 			if (asprintf(&str, "%N:%N-%d", plugin_feature_names, feature->type,
-					encryption_algorithm_names, feature->aead.alg,
-					feature->aead.key_size) > 0)
+					encryption_algorithm_names, feature->arg.aead.alg,
+					feature->arg.aead.key_size) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_SIGNER:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					integrity_algorithm_names, feature->signer) > 0)
+					integrity_algorithm_names, feature->arg.signer) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_HASHER:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					hash_algorithm_names, feature->hasher) > 0)
+					hash_algorithm_names, feature->arg.hasher) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_PRF:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					pseudo_random_function_names, feature->prf) > 0)
+					pseudo_random_function_names, feature->arg.prf) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_DH:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					diffie_hellman_group_names, feature->dh_group) > 0)
+					diffie_hellman_group_names, feature->arg.dh_group) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_RNG:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					rng_quality_names, feature->rng_quality) > 0)
+					rng_quality_names, feature->arg.rng_quality) > 0)
 			{
 				return str;
 			}
@@ -167,7 +169,7 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_PRIVKEY_GEN:
 		case FEATURE_PUBKEY:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					key_type_names, feature->privkey) > 0)
+					key_type_names, feature->arg.privkey) > 0)
 			{
 				return str;
 			}
@@ -175,7 +177,7 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_PRIVKEY_SIGN:
 		case FEATURE_PUBKEY_VERIFY:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					signature_scheme_names, feature->privkey_sign) > 0)
+					signature_scheme_names, feature->arg.privkey_sign) > 0)
 			{
 				return str;
 			}
@@ -183,7 +185,7 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_PRIVKEY_DECRYPT:
 		case FEATURE_PUBKEY_ENCRYPT:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					encryption_scheme_names, feature->privkey_decrypt) > 0)
+					encryption_scheme_names, feature->arg.privkey_decrypt) > 0)
 			{
 				return str;
 			}
@@ -191,7 +193,7 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					certificate_type_names, feature->cert) > 0)
+					certificate_type_names, feature->arg.cert) > 0)
 			{
 				return str;
 			}
@@ -199,28 +201,28 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					eap_type_short_names, feature->eap) > 0)
+					eap_type_short_names, feature->arg.eap) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_DATABASE:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					db_driver_names, feature->database) > 0)
+					db_driver_names, feature->arg.database) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_FETCHER:
 			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
-					feature->fetcher) > 0)
+					feature->arg.fetcher) > 0)
 			{
 				return str;
 			}
 			break;
 		case FEATURE_CUSTOM:
 			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
-					feature->custom) > 0)
+					feature->arg.custom) > 0)
 			{
 				return str;
 			}
