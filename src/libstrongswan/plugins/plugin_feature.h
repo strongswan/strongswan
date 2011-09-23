@@ -308,4 +308,24 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b);
  */
 char* plugin_feature_get_string(plugin_feature_t *feature);
 
+/**
+ * Load a plugin feature using a REGISTER/CALLBACK feature entry.
+ *
+ * @param plugin	plugin providing feature
+ * @param feature	feature to load
+ * @param reg		REGISTER/CALLBACK feature entry to use for registration
+ */
+bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
+						 plugin_feature_t *reg);
+
+/**
+ * Unload a plugin feature using a REGISTER/CALLBACK feature entry.
+ *
+ * @param plugin	plugin providing feature
+ * @param feature	feature to unload
+ * @param reg		REGISTER/CALLBACK feature entry to use for deregistration
+ */
+bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
+						   plugin_feature_t *reg);
+
 #endif /** PLUGIN_FEATURE_H_ @}*/

@@ -18,6 +18,8 @@
 
 #include "plugin_feature.h"
 
+#include <debug.h>
+
 ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"NONE",
 	"CRYPTER",
@@ -233,4 +235,152 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		str = strdup("(invalid)");
 	}
 	return str;
+}
+
+/**
+ * See header.
+ */
+bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
+						 plugin_feature_t *reg)
+{
+	char *name;
+
+	if (!reg)
+	{	/* noting to do for this feature */
+		return TRUE;
+	}
+	if (reg->kind == FEATURE_CALLBACK)
+	{
+		if (reg->arg.cb.f(plugin, feature, TRUE, reg->arg.cb.data))
+		{
+			return TRUE;
+		}
+		return FALSE;
+	}
+	name = plugin->get_name(plugin);
+	switch (feature->type)
+	{
+		case FEATURE_CRYPTER:
+			lib->crypto->add_crypter(lib->crypto, feature->arg.crypter.alg,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_AEAD:
+			lib->crypto->add_aead(lib->crypto, feature->arg.aead.alg,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_SIGNER:
+			lib->crypto->add_signer(lib->crypto, feature->arg.signer,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_HASHER:
+			lib->crypto->add_hasher(lib->crypto, feature->arg.hasher,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_PRF:
+			lib->crypto->add_prf(lib->crypto, feature->arg.prf,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_DH:
+			lib->crypto->add_dh(lib->crypto, feature->arg.dh_group,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_RNG:
+			lib->crypto->add_rng(lib->crypto, feature->arg.rng_quality,
+								name, reg->arg.reg.f);
+			break;
+		case FEATURE_PRIVKEY:
+		case FEATURE_PRIVKEY_GEN:
+			lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY,
+								feature->arg.privkey, reg->arg.reg.final,
+								reg->arg.reg.f);
+			break;
+		case FEATURE_PUBKEY:
+			lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY,
+								feature->arg.pubkey, reg->arg.reg.final,
+								reg->arg.reg.f);
+			break;
+		case FEATURE_CERT_DECODE:
+		case FEATURE_CERT_ENCODE:
+			lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
+								feature->arg.cert, reg->arg.reg.final,
+								reg->arg.reg.f);
+			break;
+		case FEATURE_DATABASE:
+			lib->db->add_database(lib->db, reg->arg.reg.f);
+			break;
+		case FEATURE_FETCHER:
+			lib->fetcher->add_fetcher(lib->fetcher, reg->arg.reg.f,
+									  feature->arg.fetcher);
+			break;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
+						   plugin_feature_t *reg)
+{
+	char *name;
+
+	if (!reg)
+	{	/* noting to do for this feature */
+		return TRUE;
+	}
+	name = plugin->get_name(plugin);
+	if (reg->kind == FEATURE_CALLBACK)
+	{
+		if (reg->arg.cb.f(plugin, feature, FALSE, reg->arg.cb.data))
+		{
+			return TRUE;
+		}
+		return FALSE;
+	}
+	switch (feature->type)
+	{
+		case FEATURE_CRYPTER:
+			lib->crypto->remove_crypter(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_AEAD:
+			lib->crypto->remove_aead(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_SIGNER:
+			lib->crypto->remove_signer(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_HASHER:
+			lib->crypto->remove_hasher(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_PRF:
+			lib->crypto->remove_prf(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_DH:
+			lib->crypto->remove_dh(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_RNG:
+			lib->crypto->remove_rng(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_PRIVKEY:
+		case FEATURE_PRIVKEY_GEN:
+			lib->creds->remove_builder(lib->creds, reg->arg.reg.f);
+			break;
+		case FEATURE_PUBKEY:
+			lib->creds->remove_builder(lib->creds, reg->arg.reg.f);
+			break;
+		case FEATURE_CERT_DECODE:
+		case FEATURE_CERT_ENCODE:
+			lib->creds->remove_builder(lib->creds, reg->arg.reg.f);
+			break;
+		case FEATURE_DATABASE:
+			lib->db->remove_database(lib->db, reg->arg.reg.f);
+			break;
+		case FEATURE_FETCHER:
+			lib->fetcher->remove_fetcher(lib->fetcher, reg->arg.reg.f);
+			break;
+		default:
+			break;
+	}
+	return TRUE;
 }
