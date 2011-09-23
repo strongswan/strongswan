@@ -68,6 +68,12 @@ static linked_list_t *evidences = NULL;
 static pts_dh_group_t supported_dh_groups = 0;
 
 /**
+ * High Entropy Random Data
+ * used in calculation of shared secret for the assessment session
+ */
+static chunk_t responder_nonce;
+
+/**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
  */
 TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,

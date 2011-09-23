@@ -63,6 +63,12 @@ static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
 static pts_dh_group_t supported_dh_groups = 0;
 
 /**
+ * High Entropy Random Data
+ * used in calculation of shared secret for the assessment session
+ */
+static chunk_t initiator_nonce;
+
+/**
  * PTS file measurement database
  */
 static pts_database_t *pts_db;
@@ -76,6 +82,11 @@ static pts_creds_t *pts_creds;
  * PTS credential manager
  */
 static credential_manager_t *pts_credmgr;
+
+/**
+ * TRUE if DH Nonce Parameters Request attribute is sent
+ */
+static bool dh_nonce_req_sent = FALSE;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
@@ -474,6 +485,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_credmgr);
+	free(initiator_nonce.ptr);
 
 	libpts_deinit();
 

@@ -176,6 +176,46 @@ struct pts_t {
 	bool (*calculate_secret) (pts_t *this);
 
 	/**
+	 * Set PTS Diffie Hellman Object
+	 *
+	 * @param dh			D-H object
+	 */
+	bool (*create_dh)(pts_t *this, pts_dh_group_t group);
+
+	/**
+	 * Gets Own Diffie Hellman Public Value
+	 *
+	 * @return				D-H Public Value
+	 */
+	chunk_t (*get_my_pub_val)(pts_t *this);
+
+	/**
+	 * Sets the public value of partner.
+	 *
+	 * @param value		public value of partner
+	 */
+	void (*set_other_pub_val) (pts_t *this, chunk_t value);
+
+	/**
+	 * Calculates secret assessment value to be used for TPM Quote as an external data
+	 *
+	 * @param initiator_nonce		Initiator nonce (IMV nonce)
+	 * @param responder_nonce		Responder nonce (IMC nonce)
+	 * @param algorithm				Hashing algorithm
+	 * @return						TRUE, FALSE if not both DH public values and
+	 *															 nonces are set
+	 */
+	bool (*calculate_secret) (pts_t *this, chunk_t initiator_nonce,
+						chunk_t responder_nonce, pts_meas_algorithms_t algorithm);
+
+	/**
+	 * Returns secret assessment value to be used for TPM Quote as an external data
+	 *
+	 * @return			Secret assessment value
+	 */
+	chunk_t (*get_secret) (pts_t *this);
+
+	/**
 	 * Get Platform and OS Info
 	 *
 	 * @return					Platform and OS info
