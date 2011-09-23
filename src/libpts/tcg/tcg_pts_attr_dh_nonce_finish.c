@@ -190,7 +190,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->hash_algo = hash_algo;
 	reader->read_data(reader, reader->remaining(reader) - this->nonce_len,
 										&this->initiator_pub_val);
+	this->initiator_pub_val = chunk_clone(this->initiator_pub_val);
 	reader->read_data(reader, this->nonce_len, &this->initiator_nonce);
+	this->initiator_nonce = chunk_clone(this->initiator_nonce);
 	
 >>>>>>> Implemented Diffie Hellman Nonce attributes
 	reader->destroy(reader);
