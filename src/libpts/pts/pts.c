@@ -56,14 +56,14 @@ struct private_pts_t {
 	pts_dh_group_t dh_group;
 
 	/**
-	 * Contains a Diffie Hellman Nonce
+	 * Contains a Diffie Hellman object
 	 */
-	chunk_t dh_nonce;
+	diffie_hellman_t *dh;
 
 	/**
-	 * Contains a Diffie Hellman Public Value
+	 * Secret assessment value to be used for TPM Quote as an external data
 	 */
-	chunk_t dh_public_value;
+	chunk_t secret;
 
 	/**
 	 * Platform and OS Info
@@ -141,8 +141,88 @@ METHOD(pts_t, set_dh_group, void,
 		 diffie_hellman_group_names, dh_group);
 	if (dh_group != MODP_NONE)
 	{
-		this->dh_group = dh_group;
+		this->dh_group = group;
 	}
+}
+
+METHOD(pts_t, create_dh, bool,
+	   private_pts_t *this, pts_dh_group_t group)
+{
+	diffie_hellman_group_t dh_group;
+
+	dh_group = pts_dh_group_to_strongswan_dh_group(group);
+	if (dh_group != MODP_NONE)
+	{
+		this->dh = lib->crypto->create_dh(lib->crypto, dh_group);
+		return TRUE;
+	}
+	DBG1(DBG_PTS, "Unable to create Diffie Hellman object with group %N",
+		diffie_hellman_group_names, dh_group);
+	return FALSE;
+}
+
+METHOD(pts_t, get_my_pub_val, chunk_t,
+	   private_pts_t *this)
+{
+	chunk_t public_value;
+
+	this->dh->get_my_public_value(this->dh, &public_value);
+	DBG3(DBG_PTS, "My Public value:%B", &public_value);
+	return public_value;
+}
+
+METHOD(pts_t, set_other_pub_val, void,
+	   private_pts_t *this, chunk_t value)
+{
+	DBG3(DBG_PTS, "Partner's Public value:%B", &value);
+	this->dh->set_other_public_value(this->dh, value);
+}
+
+METHOD(pts_t, calculate_secret, bool,
+	   private_pts_t *this, chunk_t initiator_nonce, chunk_t responder_nonce,
+	   pts_meas_algorithms_t algorithm)
+{
+	hasher_t *hasher;
+	hash_algorithm_t hash_alg;
+	u_char output[HASH_SIZE_SHA384];
+	chunk_t shared_secret;
+	
+	/* Create a hasher */
+	hash_alg = pts_meas_to_hash_algorithm(algorithm);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_PTS, "  hasher %N not available", hash_algorithm_names, hash_alg);
+		return FALSE;
+	}
+	
+	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
+	{
+		DBG1(DBG_PTS, "Shared secret couldn't be calculated");
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+
+	hasher->get_hash(hasher, chunk_create("1", sizeof("1")), NULL);
+	hasher->get_hash(hasher, initiator_nonce, NULL);
+	hasher->get_hash(hasher, responder_nonce, NULL);
+	hasher->get_hash(hasher, shared_secret, output);
+
+	/**
+	 * Link the hash output to the secret and set the length
+	 * Truncate the output to 20 bytes to fit ExternalDate argument of TPM Quote
+	 */
+	this->secret = chunk_create(output, HASH_SIZE_SHA1);
+	DBG3(DBG_PTS, "Secret assessment value: %B", &this->secret);
+	
+	hasher->destroy(hasher);
+	return TRUE;
+}
+
+METHOD(pts_t, get_secret, chunk_t,
+	   private_pts_t *this)
+{
+	return this->secret;
 }
 
 /**
@@ -553,8 +633,7 @@ METHOD(pts_t, destroy, void,
 	   private_pts_t *this)
 {
 	DESTROY_IF(this->aik);
-	free(this->dh_nonce.ptr);
-	free(this->dh_public_value.ptr);
+	DESTROY_IF(this->dh);
 	free(this->platform_info);
 	free(this->tpm_version_info.ptr);
 	free(this);
@@ -722,6 +801,11 @@ pts_t *pts_create(bool is_imc)
 			 .set_meas_algorithm = _set_meas_algorithm,
 			 .get_dh_group = _get_dh_group,
 			 .set_dh_group = _set_dh_group,
+			 .create_dh = _create_dh,
+			 .get_my_pub_val = _get_my_pub_val,
+			 .set_other_pub_val = _set_other_pub_val,
+			 .calculate_secret = _calculate_secret,
+			 .get_secret = _get_secret,
 			 .get_platform_info = _get_platform_info,
 			 .set_platform_info = _set_platform_info,
 			 .get_tpm_version_info = _get_tpm_version_info,

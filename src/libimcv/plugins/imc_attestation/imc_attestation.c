@@ -69,6 +69,12 @@ static pts_meas_algorithms_t supported_algorithms = 0;
 static pts_dh_group_t supported_dh_groups = 0;
 
 /**
+ * High Entropy Random Data
+ * used in calculation of shared secret for the assessment session
+ */
+static chunk_t responder_nonce;
+
+/**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
  */
 TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
@@ -290,9 +296,21 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					tcg_pts_attr_dh_nonce_params_req_t *attr_cast;
 					u_int8_t min_nonce_len;
 					pts_dh_group_t offered_dh_groups, selected_dh_group;
-
+					rng_t *rng;
+					chunk_t responder_pub_val;
+					char buf[NONCE_LEN];
+					
 					attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
 					min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
+					if (NONCE_LEN < min_nonce_len || NONCE_LEN <= 16)
+					{
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+									TCG_PTS_BAD_NONCE_LENGTH, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					
 					offered_dh_groups = attr_cast->get_dh_groups(attr_cast);
 
 					if ((supported_dh_groups & PTS_DH_GROUP_IKE20) &&
@@ -331,13 +349,58 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 					/* Send DH Nonce Parameters Response attribute */
 					selected_dh_group = pts->get_dh_group(pts);
-					/* TODO: Implement */
+					if (!pts->create_dh(pts, selected_dh_group))
+					{
+						return TNC_RESULT_FATAL;
+					}
+					responder_pub_val = pts->get_my_pub_val(pts);
 					
+					/* create a responder nonce */
+					rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+					if (rng)
+					{
+						rng->get_bytes(rng, sizeof(buf), buf);
+						rng->destroy(rng);
+					}
+					responder_nonce = chunk_create(buf, sizeof(buf));
+					
+					attr = tcg_pts_attr_dh_nonce_params_resp_create(NONCE_LEN,
+								selected_dh_group, supported_algorithms,
+								responder_nonce, responder_pub_val);
+					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				case TCG_PTS_DH_NONCE_FINISH:
 				{
-					/* TODO: Implement */
+					tcg_pts_attr_dh_nonce_finish_t *attr_cast;
+					u_int8_t nonce_len;
+					pts_meas_algorithms_t selected_algorithm;
+   					chunk_t initiator_nonce, initiator_pub_val;
+
+					attr_cast = (tcg_pts_attr_dh_nonce_finish_t*)attr;
+					nonce_len = attr_cast->get_nonce_len(attr_cast);
+					if (nonce_len < 0 || nonce_len <= 16)
+					{
+						attr_info = attr->get_value(attr);
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+									TCG_PTS_BAD_NONCE_LENGTH, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+
+					selected_algorithm = attr_cast->get_hash_algo(attr_cast);
+					initiator_pub_val = attr_cast->get_initiator_pub_val(attr_cast);
+					initiator_nonce = attr_cast->get_initiator_nonce(attr_cast);
+					
+					DBG3(DBG_IMC, "Initiator nonce: %B", &initiator_nonce);
+					DBG3(DBG_IMC, "Responder nonce: %B", &responder_nonce);
+					pts->set_other_pub_val(pts, initiator_pub_val);
+					if (!pts->calculate_secret(pts, initiator_nonce,
+										responder_nonce, selected_algorithm))
+					{
+						return TNC_RESULT_FATAL;
+					}
+					
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:
@@ -729,6 +792,7 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
+	free(responder_nonce.ptr);
 	libpts_deinit();
 
 	imc_attestation->destroy(imc_attestation);

@@ -39,6 +39,11 @@ typedef struct pts_t pts_t;
 #define REVERSE_SOLIDUS_UTF		0x5C
 
 /**
+ * Lenght of the generated nonce used for calculation of shared secret
+ */
+#define NONCE_LEN				20
+
+/**
  * Class implementing the TCG Platform Trust System (PTS)
  *
  */
@@ -85,6 +90,46 @@ struct pts_t {
 	 * @param dh_group		DH Group
 	 */
 	void (*set_dh_group)(pts_t *this, pts_dh_group_t dh_group);
+
+	/**
+	 * Set PTS Diffie Hellman Object
+	 *
+	 * @param dh			D-H object
+	 */
+	bool (*create_dh)(pts_t *this, pts_dh_group_t group);
+
+	/**
+	 * Gets Own Diffie Hellman Public Value
+	 *
+	 * @return				D-H Public Value
+	 */
+	chunk_t (*get_my_pub_val)(pts_t *this);
+
+	/**
+	 * Sets the public value of partner.
+	 *
+	 * @param value		public value of partner
+	 */
+	void (*set_other_pub_val) (pts_t *this, chunk_t value);
+
+	/**
+	 * Calculates secret assessment value to be used for TPM Quote as an external data
+	 *
+	 * @param initiator_nonce		Initiator nonce (IMV nonce)
+	 * @param responder_nonce		Responder nonce (IMC nonce)
+	 * @param algorithm				Hashing algorithm
+	 * @return						TRUE, FALSE if not both DH public values and
+	 *															 nonces are set
+	 */
+	bool (*calculate_secret) (pts_t *this, chunk_t initiator_nonce,
+						chunk_t responder_nonce, pts_meas_algorithms_t algorithm);
+
+	/**
+	 * Returns secret assessment value to be used for TPM Quote as an external data
+	 *
+	 * @return			Secret assessment value
+	 */
+	chunk_t (*get_secret) (pts_t *this);
 
 	/**
 	 * Get Platform and OS Info
