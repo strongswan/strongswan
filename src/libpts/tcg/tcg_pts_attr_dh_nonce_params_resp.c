@@ -168,7 +168,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint16(reader, &hash_algo_set);
 	this->hash_algo_set = hash_algo_set;
 	reader->read_data(reader, this->nonce_len, &this->responder_nonce);
+	this->responder_nonce = chunk_clone(this->responder_nonce);
 	reader->read_data(reader, reader->remaining(reader), &this->responder_pub_val);
+	this->responder_pub_val = chunk_clone(this->responder_pub_val);
 	reader->destroy(reader);
 
 	return SUCCESS;
