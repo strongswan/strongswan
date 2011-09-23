@@ -97,21 +97,21 @@ bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups)
 	else if (strcaseeq(dh_group, "ike14"))
 	{
 		/* remove DH Group 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 | ~PTS_DH_GROUP_IKE19;
+		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19;
 		return TRUE;
 	}
 	else if (strcaseeq(dh_group, "ike5"))
 	{
 		/* remove DH Group 14, 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 | ~PTS_DH_GROUP_IKE19
-		| ~PTS_DH_GROUP_IKE14;
+		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19
+		& ~PTS_DH_GROUP_IKE14;
 		return TRUE;
 	}
 	else if (strcaseeq(dh_group, "ike2"))
 	{
 		/* remove DH Group 5, 14, 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 | ~PTS_DH_GROUP_IKE19 |
-		~PTS_DH_GROUP_IKE14 | ~PTS_DH_GROUP_IKE5;
+		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19 &
+		~PTS_DH_GROUP_IKE14 & ~PTS_DH_GROUP_IKE5;
 		return TRUE;
 	}
 
