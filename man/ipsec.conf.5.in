@@ -415,19 +415,34 @@ comma-separated list of ESP encryption/authentication algorithms to be used
 for the connection, e.g.
 .BR aes128-sha256 .
 The notation is
-.BR encryption-integrity[-dhgroup][-esnmodes] .
+.BR encryption-integrity[-dhgroup][-esnmode] .
+.br
+Defaults to
+.BR aes128-sha1,3des-sha1
+for IKEv1.  The IKEv2 daemon adds its extensive default proposal to this default
+or the configured value.  To restrict it to the configured proposal an
+exclamation mark
+.RB ( ! )
+can be added at the end.
+.br
+.BR Note :
+As a responder both daemons accept the first supported proposal received from
+the peer. In order to restrict a responder to only accept specific cipher
+suites, the strict flag
+.RB ( ! ,
+exclamation mark) can be used, e.g: aes256-sha512-modp4096!
 .br
 If
 .B dh-group
-is specified, CHILD_SA setup and rekeying include a separate diffe hellman
-exchange (IKEv2 only). Valid
-.B esnmodes
+is specified, CHILD_SA setup and rekeying include a separate Diffie-Hellman
+exchange (IKEv2 only).  Valid values for
+.B esnmode
 (IKEv2 only) are
 .B esn
 and
-.B noesn.
-Specifying both negotiates Extended Sequence number support with the peer,
-the defaut is
+.BR noesn .
+Specifying both negotiates Extended Sequence Number support with the peer,
+the default is
 .B noesn.
 .TP
 .BR forceencaps " = yes | " no
@@ -442,7 +457,22 @@ to be used, e.g.
 The notation is
 .BR encryption-integrity-dhgroup .
 In IKEv2, multiple algorithms and proposals may be included, such as
-.B aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
+aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
+.br
+Defaults to
+.B aes128-sha1-modp2048,3des-sha1-modp1536
+for IKEv1.  The IKEv2 daemon adds its extensive default proposal to this
+default or the configured value.  To restrict it to the configured proposal an
+exclamation mark
+.RB ( ! )
+can be added at the end.
+.br
+.BR Note :
+As a responder both daemons accept the first supported proposal received from
+the peer.  In order to restrict a responder to only accept specific cipher
+suites, the strict flag
+.BR ( ! ,
+exclamation mark) can be used, e.g: aes256-sha512-modp4096!
 .TP
 .BR ikelifetime " = " 3h " | <time>"
 how long the keying channel of a connection (ISAKMP or IKE SA)
