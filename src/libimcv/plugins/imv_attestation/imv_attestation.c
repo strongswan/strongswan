@@ -66,7 +66,7 @@ static pts_dh_group_t supported_dh_groups = 0;
  * High Entropy Random Data
  * used in calculation of shared secret for the assessment session
  */
-static chunk_t initiator_nonce;
+static char *initiator_nonce = NULL;
 
 /**
  * PTS file measurement database
@@ -97,6 +97,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version *actual_version)
 {
 	char *hash_alg, *dh_group, *uri, *cadir;
+	rng_t *rng;
 
 	if (imv_attestation)
 	{
@@ -485,7 +486,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_credmgr);
-	free(initiator_nonce.ptr);
+	free(initiator_nonce);
 
 	libpts_deinit();
 

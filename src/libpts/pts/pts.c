@@ -474,7 +474,7 @@ METHOD(pts_t, is_path_valid, bool,
 	private_pts_t *this, char *path, pts_error_code_t *error_code)
 {
 	struct stat st;
-	
+
 	*error_code = 0;
 
 	if (!stat(path, &st))
