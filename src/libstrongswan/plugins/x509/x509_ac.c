@@ -616,7 +616,6 @@ static chunk_t build_attr_cert_info(private_x509_ac_t *this)
 				build_extensions(this));
 }
 
-
 /**
  * build an X.509 attribute certificate
  */
@@ -636,82 +635,62 @@ static chunk_t build_ac(private_x509_ac_t *this)
 				asn1_bitstring("m", signatureValue));
 }
 
-/**
- * Implementation of ac_t.get_serial.
- */
-static chunk_t get_serial(private_x509_ac_t *this)
+METHOD(ac_t, get_serial, chunk_t,
+	private_x509_ac_t *this)
 {
 	return this->serialNumber;
 }
 
-/**
- * Implementation of ac_t.get_holderSerial.
- */
-static chunk_t get_holderSerial(private_x509_ac_t *this)
+METHOD(ac_t, get_holderSerial, chunk_t,
+	private_x509_ac_t *this)
 {
 	return this->holderSerial;
 }
 
-/**
- * Implementation of ac_t.get_holderIssuer.
- */
-static identification_t* get_holderIssuer(private_x509_ac_t *this)
+METHOD(ac_t, get_holderIssuer, identification_t*,
+	private_x509_ac_t *this)
 {
 	return this->holderIssuer;
 }
 
-/**
- * Implementation of ac_t.get_authKeyIdentifier.
- */
-static chunk_t get_authKeyIdentifier(private_x509_ac_t *this)
+METHOD(ac_t, get_authKeyIdentifier, chunk_t,
+	private_x509_ac_t *this)
 {
 	return this->authKeyIdentifier;
 }
 
-/**
- * Implementation of certificate_t.get_groups.
- */
-static ietf_attributes_t* get_groups(private_x509_ac_t *this)
+METHOD(ac_t, get_groups, ietf_attributes_t*,
+	private_x509_ac_t *this)
 {
 	return this->groups ? this->groups->get_ref(this->groups) : NULL;
 }
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_ac_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_ac_t *this)
 {
 	return CERT_X509_AC;
 }
 
-/**
- * Implementation of certificate_t.get_subject
- */
-static identification_t* get_subject(private_x509_ac_t *this)
+METHOD(certificate_t, get_subject, identification_t*,
+	private_x509_ac_t *this)
 {
 	return this->entityName;
 }
 
-/**
- * Implementation of certificate_t.get_issuer
- */
-static identification_t* get_issuer(private_x509_ac_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_ac_t *this)
 {
 	return this->issuerName;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_subject(private_x509_ac_t *this, identification_t *subject)
+METHOD(certificate_t, has_subject, id_match_t,
+	private_x509_ac_t *this, identification_t *subject)
 {
 	return ID_MATCH_NONE;
 }
 
-/**
- * Implementation of certificate_t.has_issuer.
- */
-static id_match_t has_issuer(private_x509_ac_t *this, identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_ac_t *this, identification_t *issuer)
 {
 	if (issuer->get_type(issuer) == ID_KEY_ID && this->authKeyIdentifier.ptr &&
 		chunk_equals(this->authKeyIdentifier, issuer->get_encoding(issuer)))
@@ -721,10 +700,8 @@ static id_match_t has_issuer(private_x509_ac_t *this, identification_t *issuer)
 	return this->issuerName->matches(this->issuerName, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_ac_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -776,28 +753,21 @@ static bool issued_by(private_x509_ac_t *this, certificate_t *issuer)
 	return valid;
 }
 
-/**
- * Implementation of certificate_t.get_public_key.
- */
-static public_key_t* get_public_key(private_x509_ac_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_ac_t *this)
 {
 	return NULL;
 }
 
-/**
- * Implementation of certificate_t.get_ref.
- */
-static private_x509_ac_t* get_ref(private_x509_ac_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_ac_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface.certificate;
 }
 
-/**
- * Implementation of certificate_t.get_validity.
- */
-static bool get_validity(private_x509_ac_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_ac_t *this, time_t *when, time_t *not_before, time_t *not_after)
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -812,11 +782,8 @@ static bool get_validity(private_x509_ac_t *this, time_t *when,
 	return (t >= this->notBefore && t <= this->notAfter);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static bool get_encoding(private_x509_ac_t *this, cred_encoding_type_t type,
-						 chunk_t *encoding)
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_ac_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
 	if (type == CERT_ASN1_DER)
 	{
@@ -827,10 +794,8 @@ static bool get_encoding(private_x509_ac_t *this, cred_encoding_type_t type,
 					CRED_PART_X509_AC_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_ac_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_ac_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -852,10 +817,8 @@ static bool equals(private_x509_ac_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of x509_ac_t.destroy
- */
-static void destroy(private_x509_ac_t *this)
+METHOD(certificate_t, destroy, void,
+	private_x509_ac_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -879,41 +842,34 @@ static void destroy(private_x509_ac_t *this)
  */
 static private_x509_ac_t *create_empty(void)
 {
-	private_x509_ac_t *this = malloc_thing(private_x509_ac_t);
+	private_x509_ac_t *this;
 
-	/* public functions */
-	this->public.interface.get_serial = (chunk_t (*)(ac_t*))get_serial;
-	this->public.interface.get_holderSerial = (chunk_t (*)(ac_t*))get_holderSerial;
-	this->public.interface.get_holderIssuer = (identification_t* (*)(ac_t*))get_holderIssuer;
-	this->public.interface.get_authKeyIdentifier = (chunk_t (*)(ac_t*))get_authKeyIdentifier;
-	this->public.interface.get_groups = (ietf_attributes_t* (*)(ac_t*))get_groups;
-	this->public.interface.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.interface.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
-	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.certificate.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_subject;
-	this->public.interface.certificate.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.certificate.get_encoding = (bool(*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
-	this->public.interface.certificate.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
-	this->public.interface.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.interface.certificate.destroy = (void (*)(certificate_t *this))destroy;
-
-	/* initialize */
-	this->encoding = chunk_empty;
-	this->serialNumber = chunk_empty;
-	this->holderSerial = chunk_empty;
-	this->authKeyIdentifier = chunk_empty;
-	this->holderIssuer = NULL;
-	this->entityName = NULL;
-	this->issuerName = NULL;
-	this->holderCert = NULL;
-	this->signerCert = NULL;
-	this->signerKey = NULL;
-	this->charging = NULL;
-	this->groups = NULL;
-	this->ref = 1;
+	INIT(this,
+		.public = {
+			.interface = {
+				.certificate = {
+					.get_type = _get_type,
+					.get_subject = _get_subject,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_subject,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_serial = _get_serial,
+				.get_holderSerial = _get_holderSerial,
+				.get_holderIssuer = _get_holderIssuer,
+				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.get_groups = _get_groups,
+			},
+		},
+		.ref = 1,
+	);
 
 	return this;
 }
