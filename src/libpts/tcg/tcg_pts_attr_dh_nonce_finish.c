@@ -20,12 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-<<<<<<< HEAD
 typedef struct private_tcg_pts_attr_dh_nonce_finish_t
 					private_tcg_pts_attr_dh_nonce_finish_t;
-=======
-typedef struct private_tcg_pts_attr_dh_nonce_finish_t private_tcg_pts_attr_dh_nonce_finish_t;
->>>>>>> Implemented Diffie Hellman Nonce attributes
 
 /**
  * PTS DH Nonce Finish
@@ -77,14 +73,6 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	bool noskip_flag;
 	
 	/**
-<<<<<<< HEAD
-=======
-	 * Length of nonce
-	 */
-	u_int8_t nonce_len;
-
-	/**
->>>>>>> Implemented Diffie Hellman Nonce attributes
 	 * Selected Hashing Algorithm
 	 */
 	pts_meas_algorithms_t hash_algo;
@@ -92,11 +80,7 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	/**
 	 * DH Initiator Public Value
 	 */
-<<<<<<< HEAD
 	chunk_t initiator_value;
-=======
-	chunk_t initiator_pub_val;
->>>>>>> Implemented Diffie Hellman Nonce attributes
 
 	/**
 	 * DH Initiator Nonce
@@ -141,15 +125,9 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_DH_NONCE_FINISH_SIZE);
 	writer->write_uint8 (writer, PTS_DH_NONCE_FINISH_RESERVED);
-<<<<<<< HEAD
 	writer->write_uint8 (writer, this->initiator_nonce.len);
 	writer->write_uint16(writer, this->hash_algo);
 	writer->write_data  (writer, this->initiator_value);
-=======
-	writer->write_uint8 (writer, this->nonce_len);
-	writer->write_uint16(writer, this->hash_algo);
-	writer->write_data  (writer, this->initiator_pub_val);
->>>>>>> Implemented Diffie Hellman Nonce attributes
 	writer->write_data  (writer, this->initiator_nonce);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -160,11 +138,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_dh_nonce_finish_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-<<<<<<< HEAD
 	u_int8_t reserved, nonce_len;
-=======
-	u_int8_t reserved;
->>>>>>> Implemented Diffie Hellman Nonce attributes
 	u_int16_t hash_algo;
 
 	if (this->value.len < PTS_DH_NONCE_FINISH_SIZE)
@@ -175,7 +149,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	reader->read_uint8 (reader, &reserved);
-<<<<<<< HEAD
 	reader->read_uint8 (reader, &nonce_len);
 	reader->read_uint16(reader, &hash_algo);
 	reader->read_data(reader, reader->remaining(reader) - nonce_len,
@@ -184,17 +157,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	this->hash_algo = hash_algo;
 	this->initiator_value = chunk_clone(this->initiator_value);
 	this->initiator_nonce = chunk_clone(this->initiator_nonce);
-=======
-	reader->read_uint8 (reader, &this->nonce_len);
-	reader->read_uint16(reader, &hash_algo);
-	this->hash_algo = hash_algo;
-	reader->read_data(reader, reader->remaining(reader) - this->nonce_len,
-										&this->initiator_pub_val);
-	this->initiator_pub_val = chunk_clone(this->initiator_pub_val);
-	reader->read_data(reader, this->nonce_len, &this->initiator_nonce);
-	this->initiator_nonce = chunk_clone(this->initiator_nonce);
-	
->>>>>>> Implemented Diffie Hellman Nonce attributes
 	reader->destroy(reader);
 
 	return SUCCESS;
