@@ -29,6 +29,7 @@
 #include <arpa/nameser.h>       /* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
 #include <sys/prctl.h>
+#include <signal.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -83,6 +84,23 @@
  * Number of threads in the thread pool, if not specified in config.
  */
 #define DEFAULT_THREADS 4
+
+/**
+ * PID file, in which pluto stores its process id
+ */
+static char pluto_lock[sizeof(ctl_addr.sun_path)] = DEFAULT_CTLBASE LOCK_SUFFIX;
+
+/**
+ * TRUE if the lock has been checked.  This helps to avoid any unintended
+ * deletion of the lock or control socket.
+ */
+static bool pluto_lock_checked = FALSE;
+
+/**
+ * Global reference to PID file (required to truncate, if undeletable)
+ */
+static FILE *pidfile = NULL;
+
 
 static void usage(const char *mess)
 {
@@ -148,59 +166,66 @@ static void usage(const char *mess)
 	exit_pluto(mess == NULL? 0 : 1);
 }
 
-
-/* lock file support
- * - provides convenient way for scripts to find Pluto's pid
- * - prevents multiple Plutos competing for the same port
- * - same basename as unix domain control socket
- * NOTE: will not take account of sharing LOCK_DIR with other systems.
- */
-
-static char pluto_lock[sizeof(ctl_addr.sun_path)] = DEFAULT_CTLBASE LOCK_SUFFIX;
-static bool pluto_lock_created = FALSE;
-
-/* create lockfile, or die in the attempt */
-static int create_lock(void)
+static bool check_lock()
 {
-	int fd = open(pluto_lock, O_WRONLY | O_CREAT | O_EXCL | O_TRUNC
-		, S_IRUSR | S_IRGRP | S_IROTH);
+	struct stat stb;
+	FILE *fpid;
 
-	if (fd < 0)
+	if (stat(pluto_lock, &stb) == 0)
 	{
-		if (errno == EEXIST)
+		fpid = fopen(pluto_lock, "r");
+		if (fpid)
 		{
-			fprintf(stderr, "pluto: lock file \"%s\" already exists\n"
-				, pluto_lock);
-			exit_pluto(10);
+			char buf[64];
+			pid_t pid = 0;
+
+			memset(buf, 0, sizeof(buf));
+			if (fread(buf, 1, sizeof(buf), fpid))
+			{
+				buf[sizeof(buf) - 1] = '\0';
+				pid = atoi(buf);
+			}
+			fclose(fpid);
+			if (pid && kill(pid, 0) == 0)
+			{	/* such a process is running */
+				return TRUE;
+			}
 		}
-		else
-		{
-			fprintf(stderr
-				, "pluto: unable to create lock file \"%s\" (%d %s)\n"
-				, pluto_lock, errno, strerror(errno));
-			exit_pluto(1);
-		}
+		fprintf(stderr, "pluto: removing lock file \"%s\", process not "
+				"running\n", pluto_lock);
+		unlink(pluto_lock);
 	}
-	pluto_lock_created = TRUE;
-	return fd;
+	pluto_lock_checked = TRUE;
+	return FALSE;
 }
 
-static bool fill_lock(int lockfd, pid_t pid)
+static void fill_lock(void)
 {
-	char buf[30];       /* holds "<pid>\n" */
-	int len = snprintf(buf, sizeof(buf), "%u\n", (unsigned int) pid);
-	bool ok = len > 0 && write(lockfd, buf, len) == len;
-
-	close(lockfd);
-	return ok;
+	pidfile = fopen(pluto_lock, "w");
+	if (pidfile)
+	{
+		fprintf(pidfile, "%u\n", (u_int)getpid());
+		fflush(pidfile);
+	}
+	/* keep pidfile open so we can truncate it, if we cannot delete it */
 }
 
 static void delete_lock(void)
 {
-	if (pluto_lock_created)
+	/* because unlinking the PID file may fail, we truncate it to ensure the
+	 * daemon can be properly restarted.  one probable cause for this is the
+	 * combination of not running as root and the effective user lacking
+	 * permissions on the parent dir(s) of the PID file */
+	if (pluto_lock_checked)
 	{
+		if (pidfile)
+		{
+			ignore_result(ftruncate(fileno(pidfile), 0));
+			fclose(pidfile);
+		}
+		unlink(pluto_lock);
+		/* delete this here to avoid that exit_pluto calls delete the socket */
 		delete_ctl_socket();
-		unlink(pluto_lock);     /* is noting failure useful? */
 	}
 }
 
@@ -263,7 +288,6 @@ int main(int argc, char **argv)
 	unsigned int keep_alive = 0;
 	bool force_keepalive = FALSE;
 	char *virtual_private = NULL;
-	int lockfd;
 #ifdef CAPABILITIES
 	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
@@ -545,7 +569,12 @@ int main(int argc, char **argv)
 	if (optind != argc)
 		usage("unexpected argument");
 	reset_debugging();
-	lockfd = create_lock();
+
+	if (check_lock())
+	{
+		fprintf(stderr, "pluto: lock file \"%s\" already exists\n", pluto_lock);
+		exit_pluto(10);
+	}
 
 	/* select between logging methods */
 
@@ -598,11 +627,13 @@ int main(int argc, char **argv)
 
 			if (pid != 0)
 			{
-				/* parent: die, after filling PID into lock file.
+				/* parent: die
 				 * must not use exit_pluto: lock would be removed!
 				 */
-				exit(fill_lock(lockfd, pid)? 0 : 1);
+				exit(0);
 			}
+			/* child: fill PID into lock file */
+			fill_lock();
 		}
 
 		if (setsid() < 0)
@@ -617,7 +648,7 @@ int main(int argc, char **argv)
 	else
 	{
 		/* no daemon fork: we have to fill in lock file */
-		(void) fill_lock(lockfd, getpid());
+		fill_lock();
 		fprintf(stdout, "Pluto initialized\n");
 		fflush(stdout);
 	}
