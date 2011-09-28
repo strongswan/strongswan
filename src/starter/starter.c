@@ -217,6 +217,36 @@ static void generate_selfcert()
 		}
 }
 
+static bool check_pid(char *pid_file)
+{
+	struct stat stb;
+	FILE *pidfile;
+
+	if (stat(pid_file, &stb) == 0)
+	{
+		pidfile = fopen(pid_file, "r");
+		if (pidfile)
+		{
+			char buf[64];
+			pid_t pid = 0;
+			memset(buf, 0, sizeof(buf));
+			if (fread(buf, 1, sizeof(buf), pidfile))
+			{
+				buf[sizeof(buf) - 1] = '\0';
+				pid = atoi(buf);
+			}
+			fclose(pidfile);
+			if (pid && kill(pid, 0) == 0)
+			{	/* such a process is running */
+				return TRUE;
+			}
+		}
+		plog("removing pidfile '%s', process not running", pid_file);
+		unlink(pid_file);
+	}
+	return FALSE;
+}
+
 static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
@@ -322,17 +352,19 @@ int main (int argc, char **argv)
 		exit(LSB_RC_NOT_ALLOWED);
 	}
 
-	if (stat(PLUTO_PID_FILE, &stb) == 0)
+	if (check_pid(PLUTO_PID_FILE))
 	{
-		plog("pluto is already running (%s exists) -- skipping pluto start", PLUTO_PID_FILE);
+		plog("pluto is already running (%s exists) -- skipping pluto start",
+			 PLUTO_PID_FILE);
 	}
 	else
 	{
 		_action_ |= FLAG_ACTION_START_PLUTO;
 	}
-	if (stat(CHARON_PID_FILE, &stb) == 0)
+	if (check_pid(CHARON_PID_FILE))
 	{
-		plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
+		plog("charon is already running (%s exists) -- skipping charon start",
+			 CHARON_PID_FILE);
 	}
 	else
 	{
@@ -374,9 +406,10 @@ int main (int argc, char **argv)
 
 	last_reload = time_monotonic(NULL);
 
-	if (stat(STARTER_PID_FILE, &stb) == 0)
+	if (check_pid(STARTER_PID_FILE))
 	{
-		plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
+		plog("starter is already running (%s exists) -- no fork done",
+			 STARTER_PID_FILE);
 		confread_free(cfg);
 		exit(LSB_RC_SUCCESS);
 	}
