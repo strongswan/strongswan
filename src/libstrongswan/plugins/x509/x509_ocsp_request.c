@@ -304,18 +304,14 @@ static chunk_t build_OCSPRequest(private_x509_ocsp_request_t *this)
 }
 
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_ocsp_request_t *this)
 {
 	return CERT_X509_OCSP_REQUEST;
 }
 
-/**
- * Implementation of certificate_t.get_subject
- */
-static identification_t* get_subject(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, get_subject, identification_t*,
+	private_x509_ocsp_request_t *this)
 {
 	certificate_t *ca = (certificate_t*)this->ca;
 
@@ -330,21 +326,16 @@ static identification_t* get_subject(private_x509_ocsp_request_t *this)
 	return ca->get_subject(ca);
 }
 
-/**
- * Implementation of certificate_t.get_issuer
- */
-static identification_t* get_issuer(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_ocsp_request_t *this)
 {
 	certificate_t *ca = (certificate_t*)this->ca;
 
 	return ca->get_subject(ca);
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_subject(private_x509_ocsp_request_t *this,
-							  identification_t *subject)
+METHOD(certificate_t, has_subject, id_match_t,
+	private_x509_ocsp_request_t *this, identification_t *subject)
 {
 	certificate_t *current;
 	enumerator_t *enumerator;
@@ -363,10 +354,8 @@ static id_match_t has_subject(private_x509_ocsp_request_t *this,
 	return best;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_issuer(private_x509_ocsp_request_t *this,
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_ocsp_request_t *this,
 							 identification_t *issuer)
 {
 	certificate_t *ca = (certificate_t*)this->ca;
@@ -374,28 +363,22 @@ static id_match_t has_issuer(private_x509_ocsp_request_t *this,
 	return ca->has_subject(ca, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_x509_ocsp_request_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_ocsp_request_t *this, certificate_t *issuer)
 {
 	DBG1(DBG_LIB, "OCSP request validation not implemented!");
 	return FALSE;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_ocsp_request_t *this)
 {
 	return NULL;
 }
 
-/**
- * Implementation of x509_cert_t.get_validity.
- */
-static bool get_validity(private_x509_ocsp_request_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_ocsp_request_t *this, time_t *when, time_t *not_before,
+	time_t *not_after)
 {
 	certificate_t *cert;
 
@@ -410,11 +393,9 @@ static bool get_validity(private_x509_ocsp_request_t *this, time_t *when,
 	return cert->get_validity(cert, when, not_before, not_after);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static bool get_encoding(private_x509_ocsp_request_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_ocsp_request_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	if (type == CERT_ASN1_DER)
 	{
@@ -425,10 +406,8 @@ static bool get_encoding(private_x509_ocsp_request_t *this,
 				CRED_PART_X509_OCSP_REQ_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_ocsp_request_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_ocsp_request_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -454,19 +433,15 @@ static bool equals(private_x509_ocsp_request_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of certificate_t.asdf
- */
-static private_x509_ocsp_request_t* get_ref(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_ocsp_request_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface.interface;
 }
 
-/**
- * Implementation of x509_ocsp_request_t.destroy
- */
-static void destroy(private_x509_ocsp_request_t *this)
+METHOD(certificate_t, destroy, void,
+	private_x509_ocsp_request_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -486,29 +461,30 @@ static void destroy(private_x509_ocsp_request_t *this)
  */
 static private_x509_ocsp_request_t *create_empty()
 {
-	private_x509_ocsp_request_t *this = malloc_thing(private_x509_ocsp_request_t);
+	private_x509_ocsp_request_t *this;
 
-	this->public.interface.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.interface.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
-	this->public.interface.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.interface.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_subject;
-	this->public.interface.interface.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.interface.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.interface.interface.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.interface.get_encoding = (bool(*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
-	this->public.interface.interface.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
-	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;
-
-	this->ca = NULL;
-	this->requestor = NULL;
-	this->cert = NULL;
-	this->key = NULL;
-	this->nonce = chunk_empty;
-	this->encoding = chunk_empty;
-	this->candidates = linked_list_create();
-	this->ref = 1;
+	INIT(this,
+		.public = {
+			.interface = {
+				.interface = {
+					.get_type = _get_type,
+					.get_subject = _get_subject,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_subject,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+			},
+		},
+		.candidates = linked_list_create(),
+		.ref = 1,
+	);
 
 	return this;
 }
