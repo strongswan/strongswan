@@ -91,21 +91,26 @@ struct private_tls_protection_t {
 };
 
 /**
- * Create the header to append to the record data to create the MAC
+ * Create the header and feed it into a signer for MAC verification
  */
-static chunk_t sigheader(u_int32_t seq, u_int8_t type,
-						 u_int16_t version, u_int16_t length)
+static void sigheader(signer_t *signer, u_int32_t seq, u_int8_t type,
+					  u_int16_t version, u_int16_t length)
 {
 	/* we only support 32 bit sequence numbers, but TLS uses 64 bit */
-	u_int32_t seq_high = 0;
+	struct __attribute__((__packed__)) {
+		u_int32_t seq_high;
+		u_int32_t seq_low;
+		u_int8_t type;
+		u_int16_t version;
+		u_int16_t length;
+	} header = {
+		.type = type,
+	};
+	htoun32(&header.seq_low, seq);
+	htoun16(&header.version, version);
+	htoun16(&header.length, length);
 
-	seq = htonl(seq);
-	version = htons(version);
-	length = htons(length);
-
-	return chunk_cat("ccccc", chunk_from_thing(seq_high),
-					chunk_from_thing(seq), chunk_from_thing(type),
-					chunk_from_thing(version), chunk_from_thing(length));
+	signer->get_signature(signer, chunk_from_thing(header), NULL);
 }
 
 METHOD(tls_protection_t, process, status_t,
@@ -162,7 +167,7 @@ METHOD(tls_protection_t, process, status_t,
 	}
 	if (this->signer_in)
 	{
-		chunk_t mac, macdata, header;
+		chunk_t mac;
 		u_int8_t bs;
 
 		bs = this->signer_in->get_block_size(this->signer_in);
@@ -175,16 +180,13 @@ METHOD(tls_protection_t, process, status_t,
 		mac = chunk_skip(data, data.len - bs);
 		data.len -= bs;
 
-		header = sigheader(this->seq_in, type, this->version, data.len);
-		macdata = chunk_cat("mc", header, data);
-		if (!this->signer_in->verify_signature(this->signer_in, macdata, mac))
+		sigheader(this->signer_in, this->seq_in, type, this->version, data.len);
+		if (!this->signer_in->verify_signature(this->signer_in, data, mac))
 		{
 			DBG1(DBG_TLS, "TLS record MAC verification failed");
-			free(macdata.ptr);
 			this->alert->add(this->alert, TLS_FATAL, TLS_BAD_RECORD_MAC);
 			return NEED_MORE;
 		}
-		free(macdata.ptr);
 	}
 
 	if (type == TLS_CHANGE_CIPHER_SPEC)
@@ -214,11 +216,10 @@ METHOD(tls_protection_t, build, status_t,
 	{
 		if (this->signer_out)
 		{
-			chunk_t mac, header;
+			chunk_t mac;
 
-			header = sigheader(this->seq_out, *type, this->version, data->len);
-			this->signer_out->get_signature(this->signer_out, header, NULL);
-			free(header.ptr);
+			sigheader(this->signer_out, this->seq_out, *type,
+					  this->version, data->len);
 			this->signer_out->allocate_signature(this->signer_out, *data, &mac);
 			if (this->crypter_out)
 			{
