@@ -154,13 +154,11 @@ METHOD(tls_protection_t, process, status_t,
 		}
 
 		padding_length = data.ptr[data.len - 1];
-		if (padding_length >= data.len)
-		{
-			DBG1(DBG_TLS, "invalid TLS record padding");
-			this->alert->add(this->alert, TLS_FATAL, TLS_BAD_RECORD_MAC);
-			return NEED_MORE;
+		if (padding_length < data.len)
+		{	/* remove padding if it looks valid. Continue with no padding, try
+			 * to prevent timing attacks. */
+			data.len -= padding_length + 1;
 		}
-		data.len -= padding_length + 1;
 	}
 	if (this->signer_in)
 	{
