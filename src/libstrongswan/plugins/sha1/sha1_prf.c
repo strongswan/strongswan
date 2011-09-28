@@ -59,10 +59,8 @@ struct private_sha1_prf_t {
  */
 extern void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len);
 
-/**
- * Implementation of prf_t.get_bytes.
- */
-static void get_bytes(private_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
+METHOD(prf_t, get_bytes, void,
+	private_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
 {
 	u_int32_t *hash = (u_int32_t*)bytes;
 
@@ -75,35 +73,27 @@ static void get_bytes(private_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
 	hash[4] = htonl(this->hasher->state[4]);
 }
 
-/**
- * Implementation of prf_t.get_block_size.
- */
-static size_t get_block_size(private_sha1_prf_t *this)
+METHOD(prf_t, get_block_size, size_t,
+	private_sha1_prf_t *this)
 {
 	return HASH_SIZE_SHA1;
 }
 
-/**
- * Implementation of prf_t.allocate_bytes.
- */
-static void allocate_bytes(private_sha1_prf_t *this, chunk_t seed, chunk_t *chunk)
+METHOD(prf_t, allocate_bytes, void,
+	private_sha1_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(HASH_SIZE_SHA1);
 	get_bytes(this, seed, chunk->ptr);
 }
 
-/**
- * Implementation of prf_t.get_key_size.
- */
-static size_t get_key_size(private_sha1_prf_t *this)
+METHOD(prf_t, get_key_size, size_t,
+	private_sha1_prf_t *this)
 {
 	return sizeof(this->hasher->state);
 }
 
-/**
- * Implementation of prf_t.set_key.
- */
-static void set_key(private_sha1_prf_t *this, chunk_t key)
+METHOD(prf_t, set_key, void,
+	private_sha1_prf_t *this, chunk_t key)
 {
 	int i, rounds;
 	u_int32_t *iv = (u_int32_t*)key.ptr;
@@ -116,10 +106,8 @@ static void set_key(private_sha1_prf_t *this, chunk_t key)
 	}
 }
 
-/**
- * Implementation of prf_t.destroy.
- */
-static void destroy(private_sha1_prf_t *this)
+METHOD(prf_t, destroy, void,
+	private_sha1_prf_t *this)
 {
 	this->hasher->public.hasher_interface.destroy(&this->hasher->public.hasher_interface);
 	free(this);
@@ -131,19 +119,25 @@ static void destroy(private_sha1_prf_t *this)
 sha1_prf_t *sha1_prf_create(pseudo_random_function_t algo)
 {
 	private_sha1_prf_t *this;
+
 	if (algo != PRF_KEYED_SHA1)
 	{
 		return NULL;
 	}
-	this = malloc_thing(private_sha1_prf_t);
-	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
-	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
-	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
-	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
-	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
-	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
 
-	this->hasher = (private_sha1_hasher_t*)sha1_hasher_create(HASH_SHA1);
+	INIT(this,
+		.public = {
+			.prf_interface = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.get_block_size = _get_block_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
+		},
+		.hasher = (private_sha1_hasher_t*)sha1_hasher_create(HASH_SHA1),
+	);
 
 	return &this->public;
 }
