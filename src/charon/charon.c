@@ -242,6 +242,7 @@ static bool check_pidfile()
 			memset(buf, 0, sizeof(buf));
 			if (fread(buf, 1, sizeof(buf), pidfile))
 			{
+				buf[sizeof(buf) - 1] = '\0';
 				pid = atoi(buf);
 			}
 			fclose(pidfile);
