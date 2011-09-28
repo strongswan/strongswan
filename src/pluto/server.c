@@ -787,6 +787,7 @@ call_server(void)
 
 		act.sa_handler = &termhandler;
 		r = sigaction(SIGTERM, &act, NULL);
+		r = sigaction(SIGINT, &act, NULL);
 		passert(r == 0);
 	}
 
