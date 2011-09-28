@@ -186,7 +186,7 @@ METHOD(pts_t, calculate_secret, bool,
 	hash_algorithm_t hash_alg;
 	u_char output[HASH_SIZE_SHA384];
 	chunk_t shared_secret;
-	
+
 	/* Create a hasher */
 	hash_alg = pts_meas_to_hash_algorithm(algorithm);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
@@ -195,7 +195,7 @@ METHOD(pts_t, calculate_secret, bool,
 		DBG1(DBG_PTS, "  hasher %N not available", hash_algorithm_names, hash_alg);
 		return FALSE;
 	}
-	
+
 	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
 	{
 		DBG1(DBG_PTS, "Shared secret couldn't be calculated");
@@ -214,7 +214,7 @@ METHOD(pts_t, calculate_secret, bool,
 	 */
 	this->secret = chunk_create(output, HASH_SIZE_SHA1);
 	DBG3(DBG_PTS, "Secret assessment value: %B", &this->secret);
-	
+
 	hasher->destroy(hasher);
 	return TRUE;
 }
@@ -389,9 +389,9 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 						pts_error_code_t *error_code)
 {
 	struct stat st;
-	
+
 	*error_code = 0;
-	
+
 	if (!stat(path, &st))
 	{
 		return TRUE;
@@ -501,13 +501,13 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	pts_file_metadata_t *tmp;
 
 	tmp = malloc_thing(pts_file_metadata_t);
-	
+
 	if (stat(pathname, &st))
 	{
 		DBG1(DBG_PTS, "Unable to obtain statistical information about %s", pathname);
 		return FALSE;
 	}
-	
+
 	tmp->filename = strdup(pathname);
 	tmp->meta_length = PTS_FILE_METADATA_SIZE + strlen(tmp->filename);
 
@@ -543,7 +543,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	{
 		tmp->type = PTS_FILE_OTHER;
 	}
-	
+
 	tmp->filesize = (u_int64_t)st.st_size;
 	tmp->create_time = st.st_ctime;
 	tmp->last_modify_time = st.st_mtime;
@@ -561,7 +561,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 {
 	pts_file_meta_t *metadata;
 	pts_file_metadata_t *entry;
-	
+
 	/* Create a metadata object */
 	metadata = pts_file_meta_create();
 
@@ -598,7 +598,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 				DBG3(DBG_PTS, "     last accessed: %s", ctime(&entry->last_access_time));
 				DBG3(DBG_PTS, "     owner id:      %d", entry->owner_id);
 				DBG3(DBG_PTS, "     group id:      %d", entry->group_id);
-				
+
 				metadata->add(metadata, entry);
 			}
 		}

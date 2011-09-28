@@ -159,14 +159,14 @@ struct pts_t {
 	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
-	
+
 	/**
 	 * Get Attestation Identity Certificate or Public Key
 	 *
 	 * @return				AIK Certificate or Public Key
 	 */
 	certificate_t* (*get_aik)(pts_t *this);
-	
+
 	/**
 	 * Set Attestation Identity Certificate or Public Key
 	 *
@@ -204,7 +204,7 @@ struct pts_t {
 	 * @return				PTS File Metadata or NULL if FAILED
 	 */
 	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_directory);
-	
+
 	/**
 	 * Destroys a pts_t object.
 	 */

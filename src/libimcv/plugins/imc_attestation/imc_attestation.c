@@ -72,7 +72,7 @@ static pts_dh_group_t supported_dh_groups = 0;
  * High Entropy Random Data
  * used in calculation of shared secret for the assessment session
  */
-static chunk_t responder_nonce;
+static char *responder_nonce = NULL;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
@@ -82,6 +82,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
+	rng_t *rng;
+	
 	if (imc_attestation)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
@@ -104,6 +106,15 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 
 	libpts_init();
 
+	/* create a responder nonce */
+	responder_nonce = (char*)malloc(NONCE_LEN);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng)
+	{
+		rng->get_bytes(rng, NONCE_LEN, responder_nonce);
+		rng->destroy(rng);
+	}
+	
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
 		DBG1(DBG_IMC, "no common IF-IMC version");
@@ -296,10 +307,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					tcg_pts_attr_dh_nonce_params_req_t *attr_cast;
 					u_int8_t min_nonce_len;
 					pts_dh_group_t offered_dh_groups, selected_dh_group;
-					rng_t *rng;
 					chunk_t responder_pub_val;
-					char buf[NONCE_LEN];
-					
+
 					attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
 					min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
 					if (NONCE_LEN < min_nonce_len || NONCE_LEN <= 16)
@@ -310,7 +319,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-					
+
 					offered_dh_groups = attr_cast->get_dh_groups(attr_cast);
 
 					if ((supported_dh_groups & PTS_DH_GROUP_IKE20) &&
@@ -354,19 +363,11 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						return TNC_RESULT_FATAL;
 					}
 					responder_pub_val = pts->get_my_pub_val(pts);
-					
-					/* create a responder nonce */
-					rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-					if (rng)
-					{
-						rng->get_bytes(rng, sizeof(buf), buf);
-						rng->destroy(rng);
-					}
-					responder_nonce = chunk_create(buf, sizeof(buf));
-					
+
 					attr = tcg_pts_attr_dh_nonce_params_resp_create(NONCE_LEN,
 								selected_dh_group, supported_algorithms,
-								responder_nonce, responder_pub_val);
+								chunk_create(responder_nonce, NONCE_LEN),
+								responder_pub_val);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
@@ -375,7 +376,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					tcg_pts_attr_dh_nonce_finish_t *attr_cast;
 					u_int8_t nonce_len;
 					pts_meas_algorithms_t selected_algorithm;
-   					chunk_t initiator_nonce, initiator_pub_val;
+   					chunk_t initiator_nonce, initiator_pub_val, responder_non;
 
 					attr_cast = (tcg_pts_attr_dh_nonce_finish_t*)attr;
 					nonce_len = attr_cast->get_nonce_len(attr_cast);
@@ -391,16 +392,18 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					selected_algorithm = attr_cast->get_hash_algo(attr_cast);
 					initiator_pub_val = attr_cast->get_initiator_pub_val(attr_cast);
 					initiator_nonce = attr_cast->get_initiator_nonce(attr_cast);
+					responder_non = chunk_create(responder_nonce, NONCE_LEN);
 					
 					DBG3(DBG_IMC, "Initiator nonce: %B", &initiator_nonce);
-					DBG3(DBG_IMC, "Responder nonce: %B", &responder_nonce);
+					DBG3(DBG_IMC, "Responder nonce: %B", &responder_non);
+					
 					pts->set_other_pub_val(pts, initiator_pub_val);
 					if (!pts->calculate_secret(pts, initiator_nonce,
-										responder_nonce, selected_algorithm))
+										responder_non, selected_algorithm))
 					{
 						return TNC_RESULT_FATAL;
 					}
-					
+
 					break;
 				}
 				case TCG_PTS_MEAS_ALGO:
@@ -489,7 +492,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					u_int8_t family;
 					pts_qualifier_t qualifier;
 					pts_funct_comp_name_t name;
-					
+
 					attr_info = attr->get_value(attr);
 					attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
 					negotiated_caps = pts->get_proto_caps(pts);
@@ -535,7 +538,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 									  "sub component measurement deeper than 1. "
 									   "Measuring top level component only.");
 					}
-					
+
 					comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(attr_cast);
 					if (comp_name_vendor_id != PEN_TCG)
 					{
@@ -543,7 +546,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 									  "only functional component namings by TCG ");
 						break;
 					}
-					
+
 					family = attr_cast->get_family(attr_cast);
 					if (family)
 					{
@@ -571,7 +574,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					{
 						/* TODO: Implement what todo with received qualifier */
 					}
-					
+
 					name = attr_cast->get_comp_funct_name(attr_cast);
 					switch (name)
 					{
@@ -593,14 +596,14 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							break;
 						}
 					}
-					
+
 					break;
 				}
 				case TCG_PTS_GEN_ATTEST_EVID:
 				{
 					pts_simple_evid_final_flag_t flags;
 					/* TODO: TPM quote operation over included PCR's */
-					
+
 					/* Send Simple Evidence Final attribute */
 					flags = PTS_SIMPLE_EVID_FINAL_FLAG_NO;
 					attr = tcg_pts_attr_simple_evid_final_create(flags, 0,
@@ -646,7 +649,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							is_directory ? "directory" : "file",
 							pathname);
 					metadata = pts->get_metadata(pts, pathname, is_directory);
-					
+
 					if (!metadata)
 					{
 						/* TODO handle error codes from measurements */
@@ -655,7 +658,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr = tcg_pts_attr_unix_file_meta_create(metadata);
 					attr->set_noskip_flag(attr, TRUE);
 					attr_list->insert_last(attr_list, attr);
-					
+
 					break;
 				}
 				case TCG_PTS_REQ_FILE_MEAS:
@@ -674,7 +677,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					delimiter = attr_cast->get_delimiter(attr_cast);
 					pathname = attr_cast->get_pathname(attr_cast);
 					valid_path = pts->is_path_valid(pts, pathname, &pts_error);
-					
+
 					if (valid_path && pts_error)
 					{
 						attr_info = attr->get_value(attr);
@@ -792,7 +795,7 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	free(responder_nonce.ptr);
+	free(responder_nonce);
 	libpts_deinit();
 
 	imc_attestation->destroy(imc_attestation);

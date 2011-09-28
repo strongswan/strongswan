@@ -76,7 +76,7 @@ static pts_dh_group_t supported_dh_groups = 0;
  * High Entropy Random Data
  * used in calculation of shared secret for the assessment session
  */
-static chunk_t initiator_nonce;
+static char *initiator_nonce = NULL;
 
 /**
  * PTS file measurement database
@@ -107,6 +107,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version *actual_version)
 {
 	char *hash_alg, *dh_group, *uri, *cadir;
+	rng_t *rng;
 
 	if (imv_attestation)
 	{
@@ -129,6 +130,15 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 
 	libpts_init();
+	
+	/* Create a initiator nonce */
+	initiator_nonce = (char*)malloc(NONCE_LEN);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (rng)
+	{
+		rng->get_bytes(rng, NONCE_LEN, initiator_nonce);
+		rng->destroy(rng);
+	}
 
 	if (min_version > TNC_IFIMV_VERSION_1 || max_version < TNC_IFIMV_VERSION_1)
 	{
@@ -227,9 +237,9 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 				return result;
 			}
 			attestation_state = (imv_attestation_state_t*)state;
-	
+
 			/* TODO: Get some configurations */
-	
+
 			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_attestation->change_state(imv_attestation, connection_id,
@@ -246,7 +256,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	imv_attestation_state_t *attestation_state;
 	imv_attestation_handshake_state_t handshake_state;
 	TNC_Result result;
-	
+
 	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
@@ -254,10 +264,18 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	attestation_state = (imv_attestation_state_t*)state;
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
-	
+
 	msg = pa_tnc_msg_create();
-	
-	switch_state:
+
+	/* Jump to Measurement state if IMC has no TPM */
+	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
+		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
+	{
+		handshake_state = IMV_ATTESTATION_STATE_MEAS;
+		DBG3(DBG_IMV, "TPM is not available on IMC side, ",
+			 "jumping to measurement phase");
+	}
+
 	/* Switch on the attribute type IMV has received */
 	switch (handshake_state)
 	{
@@ -270,7 +288,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
-	
+
 			/* Send Measurement Algorithms attribute */
 			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
 			attr->set_noskip_flag(attr, TRUE);
@@ -282,15 +300,6 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		}
 		case IMV_ATTESTATION_STATE_TPM_INIT:
 		{
-			/* Jump to Measurement state if IMC has no TPM */
-			if(!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
-			{
-				handshake_state = IMV_ATTESTATION_STATE_MEAS;
-				DBG3(DBG_IMV, "TPM is not available on IMC side, ",
-							  "jumping to measurement phase");
-				goto switch_state;
-			}
-			
 			if (!dh_nonce_req_sent)
 			{
 				/* Send DH nonce parameters request attribute */
@@ -308,7 +317,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				selected_algorithm = pts->get_meas_algorithm(pts);
 				initiator_pub_val = pts->get_my_pub_val(pts);
 				attr = tcg_pts_attr_dh_nonce_finish_create(NONCE_LEN,
-									selected_algorithm, initiator_nonce,
+									selected_algorithm,
+									chunk_create(initiator_nonce, NONCE_LEN),
 									initiator_pub_val);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
@@ -331,7 +341,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		}
 		case IMV_ATTESTATION_STATE_MEAS:
 		{
-			
+
 			enumerator_t *enumerator;
 			u_int32_t delimiter = SOLIDUS_UTF;
 			char *platform_info, *pathname;
@@ -387,7 +397,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			u_int32_t sub_comp_depth;
 			pts_qualifier_t qualifier;
 			pts_funct_comp_name_t name;
-			
+
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
@@ -397,7 +407,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			qualifier.sub_component = FALSE;
 			qualifier.type = PTS_FUNC_COMP_TYPE_ALL;
 			name = PTS_FUNC_COMP_NAME_BIOS;
-			
+
 			/* Send Request Functional Component Evidence attribute */
 			attr = tcg_pts_attr_req_funct_comp_evid_create(flags, sub_comp_depth,
 														PEN_TCG, qualifier, name);
@@ -407,7 +417,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			attr = tcg_pts_attr_gen_attest_evid_create();
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
-			
+
 			break;
 		}
 		default:
@@ -415,12 +425,12 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 				 handshake_state);
 			return TNC_RESULT_FATAL;
 	}
-	
+
 	msg->build(msg);
 	result = imv_attestation->send_message(imv_attestation, connection_id,
 										   msg->get_encoding(msg));
 	msg->destroy(msg);
-	
+
 	return result;
 }
 
@@ -527,7 +537,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 				attr_cast = (ietf_attr_product_info_t*)attr;
 				platform_info = attr_cast->get_info(attr_cast, NULL, NULL);
-				pts->set_platform_info(pts, platform_info);	
+				pts->set_platform_info(pts, platform_info);
 			}
 		}
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
@@ -538,7 +548,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_proto_caps_t *attr_cast;
 					pts_proto_caps_flag_t flags;
-	
+
 					attr_cast = (tcg_pts_attr_proto_caps_t*)attr;
 					flags = attr_cast->get_flags(attr_cast);
 					pts->set_proto_caps(pts, flags);
@@ -548,7 +558,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_meas_algo_t *attr_cast;
 					pts_meas_algorithms_t selected_algorithm;
-	
+
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
 					pts->set_meas_algorithm(pts, selected_algorithm);
@@ -560,13 +570,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					u_int8_t nonce_len;
 					pts_dh_group_t dh_group;
 					pts_meas_algorithms_t offered_algorithms, selected_algorithm;
-					chunk_t responder_nonce;
-					chunk_t responder_pub_val;
-					rng_t *rng;
-					char buf[NONCE_LEN];
+					chunk_t responder_nonce, initiator_non, responder_pub_val;
 
 					attr_cast = (tcg_pts_attr_dh_nonce_params_resp_t*)attr;
-					
+
 					nonce_len = attr_cast->get_nonce_len(attr_cast);
 					if (nonce_len < 0 || nonce_len <= 16)
 					{
@@ -576,9 +583,9 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-					
+
 					dh_group = attr_cast->get_dh_group(attr_cast);
-					
+
 					offered_algorithms = attr_cast->get_hash_algo_set(attr_cast);
 					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
 						(offered_algorithms & PTS_MEAS_ALGO_SHA384))
@@ -606,27 +613,19 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					responder_nonce = attr_cast->get_responder_nonce(attr_cast);
 					responder_pub_val = attr_cast->get_responder_pub_val(attr_cast);
-
+					initiator_non = chunk_create(initiator_nonce, NONCE_LEN);
+					
 					/* Calculate secret assessment value */
 					if (!pts->create_dh(pts, dh_group))
 					{
 						return TNC_RESULT_FATAL;
 					}
 					pts->set_other_pub_val(pts, responder_pub_val);
-					
-					/* Create a initiator nonce */
-					rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-					if (rng)
-					{
-						rng->get_bytes(rng, sizeof(buf), buf);
-						rng->destroy(rng);
-					}
-					initiator_nonce = chunk_create(buf, sizeof(buf));
-					
-					DBG3(DBG_IMV, "Initiator nonce: %B", &initiator_nonce);
+
+					DBG3(DBG_IMV, "Initiator nonce: %B", &initiator_non);
 					DBG3(DBG_IMV, "Responder nonce: %B", &responder_nonce);
-					if (!pts->calculate_secret(pts, initiator_nonce,
-										responder_nonce, selected_algorithm))
+					if (!pts->calculate_secret(pts, initiator_non,
+							responder_nonce, selected_algorithm))
 					{
 						return TNC_RESULT_FATAL;
 					}
@@ -636,7 +635,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				{
 					tcg_pts_attr_tpm_version_info_t *attr_cast;
 					chunk_t tpm_version_info;
-	
+
 					attr_cast = (tcg_pts_attr_tpm_version_info_t*)attr;
 					tpm_version_info = attr_cast->get_tpm_version_info(attr_cast);
 					pts->set_tpm_version_info(pts, tpm_version_info);
@@ -676,24 +675,24 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					pts->set_aik(pts, aik);
 					break;
 				}
-	
+
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_SIMPLE_COMP_EVID:
 				{
 					/** TODO: Implement saving the PCR number, Hash Algo = communicated one,
 					 * PCR transform (truncate SHA256, SHA384), PCR before and after values
-					 */ 
+					 */
 					break;
 				}
-					
+
 				case TCG_PTS_SIMPLE_EVID_FINAL:
 				{
 					/** TODO: Implement construct Quote structure over saved values from
 					 * TCG_PTS_SIMPLE_COMP_EVID and compare with received one
-					 */ 
+					 */
 					break;
 				}
-					
+
 				case TCG_PTS_FILE_MEAS:
 				{
 					tcg_pts_attr_file_meas_t *attr_cast;
@@ -723,12 +722,12 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					if (!attestation_state->check_off_request(attestation_state,
 						request_id, &file_id, &is_dir))
 					{
-						DBG1(DBG_IMV, "  no entry found for this request"); 
+						DBG1(DBG_IMV, "  no entry found for this request");
 						break;
 					}
 
 					/* check hashes from database against measurements */
-					e_hash = pts_db->create_hash_enumerator(pts_db, 
+					e_hash = pts_db->create_hash_enumerator(pts_db,
 									platform_info, algo, file_id, is_dir);
 					if (!measurements->verify(measurements, e_hash, is_dir))
 					{
@@ -764,12 +763,12 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						DBG1(DBG_IMV, "     owner id:      %d", entry->owner_id);
 						DBG1(DBG_IMV, "     group id:      %d", entry->group_id);
 					}
-					
+
 					e->destroy(e);
-					
+
 					break;
 				}
-	
+
 				/* TODO: Not implemented yet */
 				case TCG_PTS_INTEG_MEAS_LOG:
 				/* Attributes using XML */
@@ -802,7 +801,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
-	
+
 
 	if (fatal_error)
 	{
@@ -827,10 +826,13 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		pa_tnc_msg->build(pa_tnc_msg);
 		result = imv_attestation->send_message(imv_attestation, connection_id,
 							pa_tnc_msg->get_encoding(pa_tnc_msg));
+		
 		pa_tnc_msg->destroy(pa_tnc_msg);
 		attr_list->destroy(attr_list);
+		
 		return result;
 	}
+	DESTROY_IF(attr_list);
 
 	if (attestation_state->get_handshake_state(attestation_state) &
 		IMV_ATTESTATION_STATE_END)
@@ -856,7 +858,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		return imv_attestation->provide_recommendation(imv_attestation,
 													   connection_id);
 	}
-	
+
 	return send_message(connection_id);
 }
 
@@ -921,7 +923,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_credmgr);
-	free(initiator_nonce.ptr);
+	free(initiator_nonce);
 
 	libpts_deinit();
 
