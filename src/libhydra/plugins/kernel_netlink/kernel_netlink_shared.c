@@ -61,11 +61,9 @@ struct private_netlink_socket_t {
  */
 extern enum_name_t *xfrm_msg_names;
 
-/**
- * Implementation of netlink_socket_t.send
- */
-static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in,
-			  struct nlmsghdr **out, size_t *out_len)
+METHOD(netlink_socket_t, netlink_send, status_t,
+	private_netlink_socket_t *this, struct nlmsghdr *in, struct nlmsghdr **out,
+	size_t *out_len)
 {
 	int len, addr_len;
 	struct sockaddr_nl addr;
@@ -182,10 +180,8 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	return SUCCESS;
 }
 
-/**
- * Implementation of netlink_socket_t.send_ack.
- */
-static status_t netlink_send_ack(private_netlink_socket_t *this, struct nlmsghdr *in)
+METHOD(netlink_socket_t, netlink_send_ack, status_t,
+	private_netlink_socket_t *this, struct nlmsghdr *in)
 {
 	struct nlmsghdr *out, *hdr;
 	size_t len;
@@ -231,10 +227,8 @@ static status_t netlink_send_ack(private_netlink_socket_t *this, struct nlmsghdr
 	return FAILED;
 }
 
-/**
- * Implementation of netlink_socket_t.destroy.
- */
-static void destroy(private_netlink_socket_t *this)
+METHOD(netlink_socket_t, destroy, void,
+	private_netlink_socket_t *this)
 {
 	if (this->socket > 0)
 	{
@@ -249,22 +243,23 @@ static void destroy(private_netlink_socket_t *this)
  */
 netlink_socket_t *netlink_socket_create(int protocol)
 {
-	private_netlink_socket_t *this = malloc_thing(private_netlink_socket_t);
+	private_netlink_socket_t *this;
 	struct sockaddr_nl addr;
 
-	/* public functions */
-	this->public.send = (status_t(*)(netlink_socket_t*,struct nlmsghdr*, struct nlmsghdr**, size_t*))netlink_send;
-	this->public.send_ack = (status_t(*)(netlink_socket_t*,struct nlmsghdr*))netlink_send_ack;
-	this->public.destroy = (void(*)(netlink_socket_t*))destroy;
-
-	/* private members */
-	this->seq = 200;
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.send = _netlink_send,
+			.send_ack = _netlink_send_ack,
+			.destroy = _destroy,
+		},
+		.seq = 200,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.protocol = protocol,
+	);
 
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 
-	this->protocol = protocol;
 	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if (this->socket < 0)
 	{
