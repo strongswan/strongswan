@@ -74,35 +74,26 @@ struct private_pgp_cert_t {
 };
 
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_pgp_cert_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_pgp_cert_t *this)
 {
 	return CERT_GPG;
 }
 
-/**
- * Implementation of certificate_t.get_subject
- */
-static identification_t* get_subject(private_pgp_cert_t *this)
+METHOD(certificate_t, get_subject,identification_t*,
+	private_pgp_cert_t *this)
 {
 	return this->user_id;
 }
 
-/**
- * Implementation of certificate_t.get_issuer
- */
-static identification_t* get_issuer(private_pgp_cert_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_pgp_cert_t *this)
 {
 	return this->user_id;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_subject(private_pgp_cert_t *this,
-							  identification_t *subject)
+METHOD(certificate_t, has_subject, id_match_t,
+	private_pgp_cert_t *this, identification_t *subject)
 {
 	id_match_t match_user_id;
 
@@ -116,46 +107,36 @@ static id_match_t has_subject(private_pgp_cert_t *this,
 	return match_user_id;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_issuer(private_pgp_cert_t *this, identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_pgp_cert_t *this, identification_t *issuer)
 {
 	return ID_MATCH_NONE;
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_pgp_cert_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by,bool,
+	private_pgp_cert_t *this, certificate_t *issuer)
 {
 	/* TODO: check signature blobs for a valid signature */
 	return FALSE;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_pgp_cert_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_pgp_cert_t *this)
 {
 	this->key->get_ref(this->key);
 	return this->key;
 }
 
-/**
- * Implementation of certificate_t.get_ref
- */
-static private_pgp_cert_t* get_ref(private_pgp_cert_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_pgp_cert_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface.interface;
 }
 
-/**
- * Implementation of certificate_t.get_validity.
- */
-static bool get_validity(private_pgp_cert_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_pgp_cert_t *this, time_t *when, time_t *not_before,
+	time_t *not_after)
 {
 	time_t t, until;
 
@@ -187,11 +168,8 @@ static bool get_validity(private_pgp_cert_t *this, time_t *when,
 	return (t >= this->valid && t <= until);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static bool get_encoding(private_pgp_cert_t *this, cred_encoding_type_t type,
-						 chunk_t *encoding)
+METHOD(certificate_t, get_encoding, bool,
+	private_pgp_cert_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
 	if (type == CERT_PGP_PKT)
 	{
@@ -202,10 +180,8 @@ static bool get_encoding(private_pgp_cert_t *this, cred_encoding_type_t type,
 						CRED_PART_PGP_CERT, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_pgp_cert_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_pgp_cert_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -231,10 +207,8 @@ static bool equals(private_pgp_cert_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of pgp_cert_t.destroy.
- */
-static void destroy(private_pgp_cert_t *this)
+METHOD(certificate_t, destroy, void,
+	private_pgp_cert_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -246,10 +220,8 @@ static void destroy(private_pgp_cert_t *this)
 	}
 }
 
-/**
- * Implementation of pgp_certificate_t.get_fingerprint.
- */
-static chunk_t get_fingerprint(private_pgp_cert_t *this)
+METHOD(pgp_certificate_t, get_fingerprint, chunk_t,
+	private_pgp_cert_t *this)
 {
 	return this->fingerprint;
 }
@@ -259,30 +231,30 @@ static chunk_t get_fingerprint(private_pgp_cert_t *this)
  */
 private_pgp_cert_t *create_empty()
 {
-	private_pgp_cert_t *this = malloc_thing(private_pgp_cert_t);
+	private_pgp_cert_t *this;
 
-	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
-	this->public.interface.interface.get_subject = (identification_t* (*) (certificate_t*))get_subject;
-	this->public.interface.interface.get_issuer = (identification_t* (*) (certificate_t*))get_issuer;
-	this->public.interface.interface.has_subject = (id_match_t (*) (certificate_t*, identification_t*))has_subject;
-	this->public.interface.interface.has_issuer = (id_match_t (*) (certificate_t*, identification_t*))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
-	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
-	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.get_encoding = (bool (*) (certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
-	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
-	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
-	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
-	this->public.interface.get_fingerprint = (chunk_t (*)(pgp_certificate_t*))get_fingerprint;
-
-	this->key = NULL;
-	this->version = 0;
-	this->created = 0;
-	this->valid = 0;
-	this->user_id = NULL;
-	this->fingerprint = chunk_empty;
-	this->encoding = chunk_empty;
-	this->ref = 1;
+	INIT(this,
+		.public = {
+			.interface = {
+				.interface = {
+					.get_type = _get_type,
+					.get_subject = _get_subject,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_subject,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_fingerprint = _get_fingerprint,
+			},
+		},
+		.ref = 1,
+	);
 
 	return this;
 }
