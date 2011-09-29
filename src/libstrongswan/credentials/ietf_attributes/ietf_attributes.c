@@ -102,15 +102,14 @@ static void ietf_attr_destroy(ietf_attr_t *this)
  */
 static ietf_attr_t* ietf_attr_create(ietf_attribute_type_t type, chunk_t value)
 {
-	ietf_attr_t *this = malloc_thing(ietf_attr_t);
+	ietf_attr_t *this;
 
-	/* initialize */
-	this->type = type;
-	this->value = chunk_clone(value);
-
-	/* function */
-	this->compare = ietf_attr_compare;
-	this->destroy = ietf_attr_destroy;
+	INIT(this,
+		.compare = ietf_attr_compare,
+		.destroy = ietf_attr_destroy,
+		.type = type,
+		.value = chunk_clone(value),
+	);
 
 	return this;
 }
@@ -142,10 +141,8 @@ struct private_ietf_attributes_t {
 	refcount_t ref;
 };
 
-/**
- * Implementation of ietf_attributes_t.get_string.
- */
-static char* get_string(private_ietf_attributes_t *this)
+METHOD(ietf_attributes_t, get_string, char*,
+	private_ietf_attributes_t *this)
 {
 	if (this->string == NULL)
 	{
@@ -217,10 +214,8 @@ static char* get_string(private_ietf_attributes_t *this)
 	return this->string;
 }
 
-/**
- * Implementation of ietf_attributes_t.get_encoding.
- */
-static chunk_t get_encoding(private_ietf_attributes_t *this)
+METHOD(ietf_attributes_t, get_encoding, chunk_t,
+	private_ietf_attributes_t *this)
 {
 	chunk_t values;
 	size_t size = 0;
@@ -270,7 +265,11 @@ static chunk_t get_encoding(private_ietf_attributes_t *this)
 	return asn1_wrap(ASN1_SEQUENCE, "m", values);
 }
 
-static bool equals(private_ietf_attributes_t *this, private_ietf_attributes_t *other)
+/**
+ * Implementation of ietf_attributes_t.equals.
+ */
+static bool equals(private_ietf_attributes_t *this,
+				   private_ietf_attributes_t *other)
 {
 	 bool result = TRUE;
 
@@ -304,7 +303,11 @@ static bool equals(private_ietf_attributes_t *this, private_ietf_attributes_t *o
 	return result;
 }
 
-static bool matches(private_ietf_attributes_t *this, private_ietf_attributes_t *other)
+/**
+ * Implementation of ietf_attributes_t.matches.
+ */
+static bool matches(private_ietf_attributes_t *this,
+					private_ietf_attributes_t *other)
 {
 	bool result = FALSE;
 	ietf_attr_t *attr_a, *attr_b;
@@ -364,19 +367,15 @@ static bool matches(private_ietf_attributes_t *this, private_ietf_attributes_t *
 	return result;
 }
 
-/**
- * Implementation of ietf_attributes_t.get_ref
- */
-static private_ietf_attributes_t* get_ref(private_ietf_attributes_t *this)
+METHOD(ietf_attributes_t, get_ref, ietf_attributes_t*,
+	private_ietf_attributes_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public;
 }
 
-/**
- * Implementation of ietf_attributes_t.destroy.
- */
-static void destroy(private_ietf_attributes_t *this)
+METHOD(ietf_attributes_t, destroy, void,
+	private_ietf_attributes_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -388,18 +387,21 @@ static void destroy(private_ietf_attributes_t *this)
 
 static private_ietf_attributes_t* create_empty(void)
 {
-	private_ietf_attributes_t *this = malloc_thing(private_ietf_attributes_t);
+	private_ietf_attributes_t *this;
 
-	this->public.get_string = (char* (*)(ietf_attributes_t*))get_string;
-	this->public.get_encoding = (chunk_t (*)(ietf_attributes_t*))get_encoding;
-	this->public.equals = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))equals;
-	this->public.matches = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))matches;
-	this->public.get_ref = (ietf_attributes_t* (*)(ietf_attributes_t*))get_ref;
-	this->public.destroy = (void (*)(ietf_attributes_t*))destroy;
+	INIT(this,
+		.public = {
+			.get_string = _get_string,
+			.get_encoding = _get_encoding,
+			.equals = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))equals,
+			.matches = (bool (*)(ietf_attributes_t*,ietf_attributes_t*))matches,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.list = linked_list_create(),
+		.ref = 1,
+	);
 
-	this->list = linked_list_create();
-	this->string = NULL;
-	this->ref = 1;
 	return this;
 }
 
@@ -517,7 +519,7 @@ ietf_attributes_t *ietf_attributes_create_from_encoding(chunk_t encoded)
 					ietf_attr_t *attr;
 
 					type = (objectID - IETF_ATTR_OCTETS) / 2;
-					attr   = ietf_attr_create(type, object);
+					attr = ietf_attr_create(type, object);
 					ietf_attributes_add(this, attr);
 				}
 				break;
