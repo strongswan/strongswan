@@ -148,14 +148,10 @@ static const chunk_t ASN1_response_content = chunk_from_chars(
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
 );
 
-/**
- * Implementaiton of ocsp_response_t.get_status
- */
-static cert_validation_t get_status(private_x509_ocsp_response_t *this,
-									x509_t *subject, x509_t *issuer,
-									time_t *revocation_time,
-									crl_reason_t *revocation_reason,
-									time_t *this_update, time_t *next_update)
+METHOD(ocsp_response_t, get_status, cert_validation_t,
+	private_x509_ocsp_response_t *this, x509_t *subject, x509_t *issuer,
+	time_t *revocation_time, crl_reason_t *revocation_reason,
+	time_t *this_update, time_t *next_update)
 {
 	enumerator_t *enumerator;
 	single_response_t *response;
@@ -236,10 +232,8 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 	return status;
 }
 
-/**
- * Implementation of ocsp_response_t.create_cert_enumerator.
- */
-static enumerator_t* create_cert_enumerator(private_x509_ocsp_response_t *this)
+METHOD(ocsp_response_t, create_cert_enumerator, enumerator_t*,
+	private_x509_ocsp_response_t *this)
 {
 	return this->certs->create_enumerator(this->certs);
 }
@@ -653,35 +647,26 @@ end:
 	return success;
 }
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_ocsp_response_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_ocsp_response_t *this)
 {
 	return CERT_X509_OCSP_RESPONSE;
 }
 
-/**
- * Implementation of certificate_t.get_issuer
- */
-static identification_t* get_issuer(private_x509_ocsp_response_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_ocsp_response_t *this)
 {
 	return this->responderId;
 }
 
-/**
- * Implementation of certificate_t.has_subject.
- */
-static id_match_t has_issuer(private_x509_ocsp_response_t *this,
-							 identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_ocsp_response_t *this, identification_t *issuer)
 {
 	return this->responderId->matches(this->responderId, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_ocsp_response_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -736,19 +721,15 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 	return valid;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_x509_ocsp_response_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_ocsp_response_t *this)
 {
 	return NULL;
 }
 
-/**
- * Implementation of certificate_t.get_validity.
- */
-static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_ocsp_response_t *this, time_t *when,
+	time_t *not_before, time_t *not_after)
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -763,11 +744,9 @@ static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 	return (t < this->usableUntil);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static bool get_encoding(private_x509_ocsp_response_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_ocsp_response_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	if (type == CERT_ASN1_DER)
 	{
@@ -778,10 +757,8 @@ static bool get_encoding(private_x509_ocsp_response_t *this,
 				CRED_PART_X509_OCSP_RES_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_ocsp_response_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -807,19 +784,15 @@ static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 	return equal;
 }
 
-/**
- * Implementation of certificate_t.get_ref
- */
-static private_x509_ocsp_response_t* get_ref(private_x509_ocsp_response_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_ocsp_response_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.interface.certificate;
 }
 
-/**
- * Implements ocsp_t.destroy.
- */
-static void destroy(private_x509_ocsp_response_t *this)
+METHOD(certificate_t, destroy, void,
+	private_x509_ocsp_response_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -838,34 +811,35 @@ static x509_ocsp_response_t *load(chunk_t blob)
 {
 	private_x509_ocsp_response_t *this;
 
-	this = malloc_thing(private_x509_ocsp_response_t);
-
-	this->public.interface.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.interface.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.certificate.has_subject = (id_match_t(*)(certificate_t*, identification_t *subject))has_issuer;
-	this->public.interface.certificate.has_issuer = (id_match_t(*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.certificate.get_encoding = (bool(*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
-	this->public.interface.certificate.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
-	this->public.interface.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.interface.certificate.destroy = (void (*)(certificate_t *this))destroy;
-	this->public.interface.get_status = (cert_validation_t(*)(ocsp_response_t*, x509_t *subject, x509_t *issuer, time_t *revocation_time,crl_reason_t *revocation_reason,time_t *this_update, time_t *next_update))get_status;
-	this->public.interface.create_cert_enumerator = (enumerator_t*(*)(ocsp_response_t*))create_cert_enumerator;
-
-	this->ref = 1;
-	this->encoding = chunk_clone(blob);
-	this->tbsResponseData = chunk_empty;
-	this->responderId = NULL;
-	this->producedAt = UNDEFINED_TIME;
-	this->usableUntil = UNDEFINED_TIME;
-	this->responses = linked_list_create();
-	this->nonce = chunk_empty;
-	this->signatureAlgorithm = OID_UNKNOWN;
-	this->signature = chunk_empty;
-	this->certs = linked_list_create();
+	INIT(this,
+		.public = {
+			.interface = {
+				.certificate = {
+					.get_type = _get_type,
+					.get_subject = _get_issuer,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_issuer,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_status = _get_status,
+				.create_cert_enumerator = _create_cert_enumerator,
+			},
+		},
+		.ref = 1,
+		.encoding = chunk_clone(blob),
+		.producedAt = UNDEFINED_TIME,
+		.usableUntil = UNDEFINED_TIME,
+		.responses = linked_list_create(),
+		.signatureAlgorithm = OID_UNKNOWN,
+		.certs = linked_list_create(),
+	);
 
 	if (!parse_OCSPResponse(this))
 	{
