@@ -232,12 +232,9 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 	return NULL;
 }
 
-/**
- * Implementation of attribute_provider_t.acquire_address
- */
-static host_t* acquire_address(private_sql_attribute_t *this,
-							   char *names, identification_t *id,
-							   host_t *requested)
+METHOD(attribute_provider_t, acquire_address, host_t*,
+	private_sql_attribute_t *this, char *names, identification_t *id,
+	host_t *requested)
 {
 	host_t *address = NULL;
 	u_int identity, pool, timeout;
@@ -302,11 +299,9 @@ static host_t* acquire_address(private_sql_attribute_t *this,
 	return address;
 }
 
-/**
- * Implementation of attribute_provider_t.release_address
- */
-static bool release_address(private_sql_attribute_t *this,
-							char *name, host_t *address, identification_t *id)
+METHOD(attribute_provider_t, release_address, bool,
+	private_sql_attribute_t *this, char *name, host_t *address,
+	identification_t *id)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
@@ -343,11 +338,9 @@ static bool release_address(private_sql_attribute_t *this,
 	return found;
 }
 
-/**
- * Implementation of sql_attribute_t.create_attribute_enumerator
- */
-static enumerator_t* create_attribute_enumerator(private_sql_attribute_t *this,
-								char *names, identification_t *id, host_t *vip)
+METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
+	private_sql_attribute_t *this, char *names, identification_t *id,
+	host_t *vip)
 {
 	enumerator_t *attr_enumerator = NULL;
 
@@ -444,10 +437,8 @@ static enumerator_t* create_attribute_enumerator(private_sql_attribute_t *this,
 	return (attr_enumerator ? attr_enumerator : enumerator_create_empty());
 }
 
-/**
- * Implementation of sql_attribute_t.destroy
- */
-static void destroy(private_sql_attribute_t *this)
+METHOD(sql_attribute_t, destroy, void,
+	private_sql_attribute_t *this)
 {
 	free(this);
 }
@@ -457,17 +448,22 @@ static void destroy(private_sql_attribute_t *this)
  */
 sql_attribute_t *sql_attribute_create(database_t *db)
 {
-	private_sql_attribute_t *this = malloc_thing(private_sql_attribute_t);
+	private_sql_attribute_t *this;
 	time_t now = time(NULL);
 
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
-	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, char *names, identification_t *id, host_t *host))create_attribute_enumerator;
-	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
-
-	this->db = db;
-	this->history = lib->settings->get_bool(lib->settings,
-						"libhydra.plugins.attr-sql.lease_history", TRUE);
+	INIT(this,
+		.public = {
+			.provider = {
+				.acquire_address = _acquire_address,
+				.release_address = _release_address,
+				.create_attribute_enumerator = _create_attribute_enumerator,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+		.history = lib->settings->get_bool(lib->settings,
+							"libhydra.plugins.attr-sql.lease_history", TRUE),
+	);
 
 	/* close any "online" leases in the case we crashed */
 	if (this->history)
