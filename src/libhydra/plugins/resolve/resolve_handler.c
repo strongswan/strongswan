@@ -44,11 +44,9 @@ struct private_resolve_handler_t {
 	mutex_t *mutex;
 };
 
-/**
- * Implementation of attribute_handler_t.handle
- */
-static bool handle(private_resolve_handler_t *this, identification_t *server,
-				   configuration_attribute_type_t type, chunk_t data)
+METHOD(attribute_handler_t, handle, bool,
+	private_resolve_handler_t *this, identification_t *server,
+	configuration_attribute_type_t type, chunk_t data)
 {
 	FILE *in, *out;
 	char buf[1024];
@@ -109,11 +107,9 @@ static bool handle(private_resolve_handler_t *this, identification_t *server,
 	return handled;
 }
 
-/**
- * Implementation of attribute_handler_t.release
- */
-static void release(private_resolve_handler_t *this, identification_t *server,
-					configuration_attribute_type_t type, chunk_t data)
+METHOD(attribute_handler_t, release,void,
+	private_resolve_handler_t *this, identification_t *server,
+	configuration_attribute_type_t type, chunk_t data)
 {
 	FILE *in, *out;
 	char line[1024], matcher[512];
@@ -179,11 +175,9 @@ typedef struct {
 	host_t *vip;
 } attribute_enumerator_t;
 
-/**
- * Implementation of create_attribute_enumerator().enumerate()
- */
 static bool attribute_enumerate(attribute_enumerator_t *this,
-						configuration_attribute_type_t *type, chunk_t *data)
+								configuration_attribute_type_t *type,
+								chunk_t *data)
 {
 	switch (this->vip->get_family(this->vip))
 	{
@@ -202,11 +196,8 @@ static bool attribute_enumerate(attribute_enumerator_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of attribute_handler_t.create_attribute_enumerator
- */
-static enumerator_t* create_attribute_enumerator(private_resolve_handler_t *this,
-										identification_t *server, host_t *vip)
+METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
+	private_resolve_handler_t *this, identification_t *server, host_t *vip)
 {
 	if (vip)
 	{
@@ -222,10 +213,8 @@ static enumerator_t* create_attribute_enumerator(private_resolve_handler_t *this
 	return enumerator_create_empty();
 }
 
-/**
- * Implementation of resolve_handler_t.destroy.
- */
-static void destroy(private_resolve_handler_t *this)
+METHOD(resolve_handler_t, destroy, void,
+	private_resolve_handler_t *this)
 {
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -236,16 +225,21 @@ static void destroy(private_resolve_handler_t *this)
  */
 resolve_handler_t *resolve_handler_create()
 {
-	private_resolve_handler_t *this = malloc_thing(private_resolve_handler_t);
+	private_resolve_handler_t *this;
 
-	this->public.handler.handle = (bool(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))handle;
-	this->public.handler.release = (void(*)(attribute_handler_t*, identification_t*, configuration_attribute_type_t, chunk_t))release;
-	this->public.handler.create_attribute_enumerator = (enumerator_t*(*)(attribute_handler_t*, identification_t *server, host_t *vip))create_attribute_enumerator;
-	this->public.destroy = (void(*)(resolve_handler_t*))destroy;
-
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->file = lib->settings->get_str(lib->settings,
-								"%s.plugins.resolve.file", RESOLV_CONF, hydra->daemon);
+	INIT(this,
+		.public = {
+			.handler = {
+				.handle = _handle,
+				.release = _release,
+				.create_attribute_enumerator = _create_attribute_enumerator,
+			},
+			.destroy = _destroy,
+		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.file = lib->settings->get_str(lib->settings, "%s.plugins.resolve.file",
+									   RESOLV_CONF, hydra->daemon),
+	);
 
 	return &this->public;
 }
