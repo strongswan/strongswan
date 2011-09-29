@@ -132,11 +132,8 @@ static void cache(private_cert_cache_t *this,
 	}
 }
 
-/**
- * Implementation of cert_cache_t.issued_by.
- */
-static bool issued_by(private_cert_cache_t *this,
-					  certificate_t *subject, certificate_t *issuer)
+METHOD(cert_cache_t, issued_by, bool,
+	private_cert_cache_t *this, certificate_t *subject, certificate_t *issuer)
 {
 	relation_t *found = NULL, *current;
 	int i;
@@ -270,12 +267,9 @@ static void cert_enumerator_destroy(cert_enumerator_t *this)
 	free(this);
 }
 
-/**
- * implementation of credential_set_t.create_cert_enumerator
- */
-static enumerator_t *create_enumerator(private_cert_cache_t *this,
-									   certificate_type_t cert, key_type_t key,
-									   identification_t *id, bool trusted)
+METHOD(credential_set_t, create_enumerator, enumerator_t*,
+	private_cert_cache_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	cert_enumerator_t *enumerator;
 
@@ -296,10 +290,8 @@ static enumerator_t *create_enumerator(private_cert_cache_t *this,
 	return &enumerator->public;
 }
 
-/**
- * Implementation of cert_cache_t.flush.
- */
-static void flush(private_cert_cache_t *this, certificate_type_t type)
+METHOD(cert_cache_t, flush, void,
+	private_cert_cache_t *this, certificate_type_t type)
 {
 	relation_t *rel;
 	int i;
@@ -339,10 +331,8 @@ static void flush(private_cert_cache_t *this, certificate_type_t type)
 	}
 }
 
-/**
- * Implementation of cert_cache_t.destroy
- */
-static void destroy(private_cert_cache_t *this)
+METHOD(cert_cache_t, destroy, void,
+	private_cert_cache_t *this)
 {
 	relation_t *rel;
 	int i;
@@ -368,15 +358,20 @@ cert_cache_t *cert_cache_create()
 	private_cert_cache_t *this;
 	int i;
 
-	this = malloc_thing(private_cert_cache_t);
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)create_enumerator;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.issued_by = (bool(*)(cert_cache_t*, certificate_t *subject, certificate_t *issuer))issued_by;
-	this->public.flush = (void(*)(cert_cache_t*, certificate_type_t type))flush;
-	this->public.destroy = (void(*)(cert_cache_t*))destroy;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_cert_enumerator = _create_enumerator,
+				.create_private_enumerator = (void*)return_null,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.issued_by = _issued_by,
+			.flush = _flush,
+			.destroy = _destroy,
+		},
+	);
 
 	for (i = 0; i < CACHE_SIZE; i++)
 	{
@@ -385,5 +380,6 @@ cert_cache_t *cert_cache_create()
 		this->relations[i].hits = 0;
 		this->relations[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	}
+
 	return &this->public;
 }
