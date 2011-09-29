@@ -94,12 +94,9 @@ static void enumerator_destroy(wrapper_enumerator_t *this)
 	free(this);
 }
 
-/**
- * implementation of ocsp_response_wrapper_t.set.create_cert_enumerator
- */
-static enumerator_t *create_enumerator(private_ocsp_response_wrapper_t *this,
-									   certificate_type_t cert, key_type_t key,
-									   identification_t *id, bool trusted)
+METHOD(credential_set_t, create_enumerator, enumerator_t*,
+	private_ocsp_response_wrapper_t *this,certificate_type_t cert,
+	key_type_t key, identification_t *id, bool trusted)
 {
 	wrapper_enumerator_t *enumerator;
 
@@ -118,10 +115,8 @@ static enumerator_t *create_enumerator(private_ocsp_response_wrapper_t *this,
 	return &enumerator->public;
 }
 
-/**
- * Implementation of ocsp_response_wrapper_t.destroy
- */
-static void destroy(private_ocsp_response_wrapper_t *this)
+METHOD(ocsp_response_wrapper_t, destroy, void,
+	private_ocsp_response_wrapper_t *this)
 {
 	free(this);
 }
@@ -131,16 +126,21 @@ static void destroy(private_ocsp_response_wrapper_t *this)
  */
 ocsp_response_wrapper_t *ocsp_response_wrapper_create(ocsp_response_t *response)
 {
-	private_ocsp_response_wrapper_t *this = malloc_thing(private_ocsp_response_wrapper_t);
+	private_ocsp_response_wrapper_t *this;
 
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)create_enumerator;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.destroy = (void(*)(ocsp_response_wrapper_t*))destroy;
-
-	this->response = response;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_cert_enumerator = _create_enumerator,
+				.create_private_enumerator = (void*)return_null,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+		.response = response,
+	);
 
 	return &this->public;
 }
