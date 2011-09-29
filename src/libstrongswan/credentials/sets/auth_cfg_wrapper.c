@@ -172,12 +172,9 @@ static void wrapper_enumerator_destroy(wrapper_enumerator_t *this)
 	free(this);
 }
 
-/**
- * implementation of auth_cfg_wrapper_t.set.create_cert_enumerator
- */
-static enumerator_t *create_enumerator(private_auth_cfg_wrapper_t *this,
-									   certificate_type_t cert, key_type_t key,
-									   identification_t *id, bool trusted)
+METHOD(credential_set_t, create_enumerator, enumerator_t*,
+	private_auth_cfg_wrapper_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	wrapper_enumerator_t *enumerator;
 
@@ -196,10 +193,8 @@ static enumerator_t *create_enumerator(private_auth_cfg_wrapper_t *this,
 	return &enumerator->public;
 }
 
-/**
- * Implementation of auth_cfg_wrapper_t.destroy
- */
-static void destroy(private_auth_cfg_wrapper_t *this)
+METHOD(auth_cfg_wrapper_t, destroy, void,
+	private_auth_cfg_wrapper_t *this)
 {
 	free(this);
 }
@@ -209,16 +204,20 @@ static void destroy(private_auth_cfg_wrapper_t *this)
  */
 auth_cfg_wrapper_t *auth_cfg_wrapper_create(auth_cfg_t *auth)
 {
-	private_auth_cfg_wrapper_t *this = malloc_thing(private_auth_cfg_wrapper_t);
+	private_auth_cfg_wrapper_t *this;
 
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)create_enumerator;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.destroy = (void(*)(auth_cfg_wrapper_t*))destroy;
-
-	this->auth = auth;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_cert_enumerator = _create_enumerator,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+		.auth = auth,
+	);
 
 	return &this->public;
 }
