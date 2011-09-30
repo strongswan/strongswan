@@ -351,10 +351,18 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 		id_match_t match_peer_me, match_peer_other;
 		ike_cfg_match_t match_ike;
 		match_entry_t *entry;
+		chunk_t data;
 
 		match_peer_me = get_peer_match(my_id, cfg, TRUE);
+		data = my_id->get_encoding(my_id);
+		DBG3(DBG_CFG, "match_peer_me: %d (%N -> %#B)", match_peer_me,
+			 id_type_names, my_id->get_type(my_id), &data);
 		match_peer_other = get_peer_match(other_id, cfg, FALSE);
+		data = other_id->get_encoding(other_id);
+		DBG3(DBG_CFG, "match_peer_other: %d (%N -> %#B)", match_peer_other,
+			 id_type_names, other_id->get_type(other_id), &data);
 		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other);
+		DBG3(DBG_CFG, "match_ike: %d (%H %H)", match_ike, me, other);
 
 		if (match_peer_me && match_peer_other && match_ike)
 		{
