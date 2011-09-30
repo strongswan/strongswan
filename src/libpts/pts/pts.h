@@ -270,7 +270,7 @@ struct pts_t {
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
-	* Compute a hash over a file
+	 * Compute a hash over a file
 	 * @param hasher			Hasher to be used
 	 * @param pathname			Absolute path of a file
 	 * @param hash				Buffer to keep hash output
@@ -360,6 +360,34 @@ struct pts_t {
 	 * @return			FALSE in case signature is not verified, TRUE otherwise
 	 */
 	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
+
+	/**
+	 * Reads given PCR value and returns it
+	 *
+	 * @param pcr_num		Number of PCR to read
+	 * @param pcr_value		Chunk to save pcr read output
+	 * @return				NULL in case of TSS error, PCR value otherwise
+	 */
+	bool (*read_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value);
+
+	/**
+	 * Extends given PCR with given value
+	 *
+	 * @param pcr_num		Number of PCR to extend
+	 * @param input			Value to extend
+	 * @param output		Chunk to save PCR value after extension
+	 * @return				FALSE in case of TSS error, TRUE otherwise
+	 */
+	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output);
+
+	/**
+	 * Quote over PCR's
+	 *
+	 * @param pcrs			Set of PCR's to make quotation over
+	 * @param quote			Chunk to save quote operation output
+	 * @return				FALSE in case of TSS error, TRUE otherwise
+	 */
+	 bool (*quote_tpm)(pts_t *this, u_int32_t pcrs, chunk_t *quote);
 
 	/**
 	 * Destroys a pts_t object.
