@@ -335,10 +335,8 @@ METHOD(pts_t, set_aik, void,
 	this->aik = aik->get_ref(aik);
 }
 
-/**
- * Compute a hash over a file
- */
-static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
+METHOD(pts_t, hash_file, bool,
+	   private_pts_t *this, hasher_t *hasher, char *pathname, u_char *hash)
 {
 	u_char buffer[PTS_BUF_SIZE];
 	FILE *file;
@@ -460,7 +458,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 			/* measure regular files only */
 			if (S_ISREG(st.st_mode) && *rel_name != '.')
 			{
-				if (!hash_file(hasher, abs_name, hash))
+				if (!hash_file(this, hasher, abs_name, hash))
 				{
 					enumerator->destroy(enumerator);
 					hasher->destroy(hasher);
@@ -477,7 +475,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	{
 		char *filename;
 
-		if (!hash_file(hasher, pathname, hash))
+		if (!hash_file(this, hasher, pathname, hash))
 		{
 			hasher->destroy(hasher);
 			measurements->destroy(measurements);
@@ -628,6 +626,131 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 	return metadata;
 }
 
+METHOD(pts_t, read_pcr, bool,
+	   private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
+{
+	TSS_HCONTEXT hContext;
+	TSS_HTPM hTPM;
+	TSS_RESULT result;
+	u_int32_t pcr_length;
+	chunk_t pcr_value;
+
+	result = Tspi_Context_Create(&hContext);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		return FALSE;
+	}
+	
+	result = Tspi_Context_Connect(hContext, NULL);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &pcr_length, &pcr_value.ptr);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	
+	*output = pcr_value;
+	*output = chunk_clone(*output);
+
+	Tspi_Context_Close(hContext);
+	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, output);
+	return TRUE;
+
+	err:
+	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	Tspi_Context_Close(hContext);
+	return FALSE;
+}
+
+METHOD(pts_t, extend_pcr, bool,
+	   private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
+{
+	TSS_HCONTEXT hContext;
+	TSS_HTPM hTPM;
+	TSS_RESULT result;
+	u_int32_t pcr_length;
+	chunk_t pcr_value;
+
+	result = Tspi_Context_Create(&hContext);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		return FALSE;
+	}
+	result = Tspi_Context_Connect(hContext, NULL);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_TPM_PcrExtend(hTPM, pcr_num, 20, input.ptr, NULL, &pcr_length, &pcr_value.ptr);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+
+	*output = pcr_value;
+	*output = chunk_clone(*output);
+
+	Tspi_Context_Close(hContext);
+	DBG3(DBG_PTS, "PCR %d extended with:      %B", pcr_num, &input);
+	DBG3(DBG_PTS, "PCR %d value after extend: %B", pcr_num, output);
+	
+	return TRUE;
+
+	err:
+	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	Tspi_Context_Close(hContext);
+	return FALSE;
+}
+
+METHOD(pts_t, quote_tpm, bool,
+	   private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
+{
+	TSS_HCONTEXT hContext;
+	TSS_HTPM hTPM;
+	TSS_HKEY hIdentKey;
+	TSS_HPCRS hPcrComposite;
+	TSS_RESULT result;
+
+	result = Tspi_Context_Create(&hContext);
+	if (result != TSS_SUCCESS)
+	{
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		return FALSE;
+	}
+	result = Tspi_Context_Connect(hContext, NULL);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
+	if (result != TSS_SUCCESS)
+	{
+		goto err;
+	}
+
+	Tspi_Context_Close(hContext);
+	return TRUE;
+
+	err:
+	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	Tspi_Context_Close(hContext);
+	return FALSE;
+}
 
 METHOD(pts_t, destroy, void,
 	   private_pts_t *this)
@@ -778,6 +901,7 @@ static bool has_tpm(private_pts_t *this)
 		goto err;
 	}
 	this->tpm_version_info = chunk_clone(this->tpm_version_info);
+	Tspi_Context_Close(hContext);
 	return TRUE;
 
 	err:
@@ -813,8 +937,12 @@ pts_t *pts_create(bool is_imc)
 			 .get_aik = _get_aik,
 			 .set_aik = _set_aik,
 			 .is_path_valid = _is_path_valid,
+			 .hash_file = _hash_file,
 			 .do_measurements = _do_measurements,
 			 .get_metadata = _get_metadata,
+			 .read_pcr = _read_pcr,
+			 .extend_pcr = _extend_pcr,
+			 .quote_tpm = _quote_tpm,
 			 .destroy = _destroy,
 		 },
 		 .proto_caps = PTS_PROTO_CAPS_V,
