@@ -402,7 +402,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 										IMV_ATTESTATION_STATE_END);
 
 			flags = PTS_REQ_FUNC_COMP_FLAG_PCR;
-			sub_comp_depth = 1;
+			sub_comp_depth = 0;
 			qualifier.kernel = FALSE;
 			qualifier.sub_component = FALSE;
 			qualifier.type = PTS_FUNC_COMP_TYPE_ALL;
@@ -679,6 +679,82 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				/* PTS-based Attestation Evidence */
 				case TCG_PTS_SIMPLE_COMP_EVID:
 				{
+					tcg_pts_attr_simple_comp_evid_t *attr_cast;
+					pts_attr_simple_comp_evid_flag_t flags;
+					u_int32_t depth, comp_vendor_id, extended_pcr;
+					u_int8_t family, measurement_type;
+					pts_qualifier_t qualifier;
+					pts_funct_comp_name_t name;
+					pts_meas_algorithms_t hash_algorithm;
+					pts_pcr_transform_t transformation;
+					chunk_t measurement_time, policy_uri, pcr_before, pcr_after, measurement;
+					
+					attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
+					attr_info = attr->get_value(attr);
+					
+					flags = attr_cast->get_flags(attr_cast);
+					depth = attr_cast->get_sub_component_depth(attr_cast);
+					/* TODO: Implement checking of components with its sub-components */
+					if (depth != 0)
+					{
+						DBG1(DBG_IMV, "Current version of Attestation IMV does not support"
+									  "sub component measurement deeper than zero");
+					}
+					comp_vendor_id = attr_cast->get_spec_comp_funct_name_vendor_id(attr_cast);
+					if (comp_vendor_id != PEN_TCG)
+					{
+						DBG1(DBG_IMV, "Current version of Attestation IMV supports"
+									  "only functional component namings by TCG ");
+						break;
+					}
+					family = attr_cast->get_family(attr_cast);
+					if (family)
+					{
+						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_NAME_FAM, attr_info);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+					qualifier = attr_cast->get_qualifier(attr_cast);
+					/* Check if Unknown or Wildcard was set for qualifier */
+					if (qualifier.kernel && qualifier.sub_component &&
+									(qualifier.type & PTS_FUNC_COMP_TYPE_ALL))
+					{
+						DBG1(DBG_IMV, "Wildcard was set for the qualifier"
+										"of functional component");
+						return TNC_RESULT_FATAL;
+					}
+					else if (!qualifier.kernel && !qualifier.sub_component &&
+									(qualifier.type & PTS_FUNC_COMP_TYPE_UNKNOWN))
+					{
+						DBG1(DBG_IMV, "Unknown feature was set for the qualifier"
+										"of functional component");
+						return TNC_RESULT_FATAL;
+					}
+					else
+					{
+						/* TODO: Implement what todo with received qualifier */
+					}
+					
+					name = attr_cast->get_comp_funct_name(attr_cast);
+					measurement_type = attr_cast->get_measurement_type(attr_cast);
+					hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
+					transformation = attr_cast->get_pcr_trans(attr_cast);
+					measurement_time = attr_cast->get_measurement_time(attr_cast);
+
+					/* Call getters of optional fields when corresponding flag is set */
+					if (flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
+					{
+						extended_pcr = attr_cast->get_extended_pcr(attr_cast);
+						pcr_before = attr_cast->get_pcr_before_value(attr_cast);
+						pcr_after = attr_cast->get_pcr_after_value(attr_cast);
+						measurement = attr_cast->get_comp_measurement(attr_cast);
+					}
+					if (!(flags & PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID))
+					{
+						policy_uri = attr_cast->get_policy_uri(attr_cast);
+					}
+					
 					/** TODO: Implement saving the PCR number, Hash Algo = communicated one,
 					 * PCR transform (truncate SHA256, SHA384), PCR before and after values
 					 */

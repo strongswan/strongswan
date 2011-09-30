@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+
 #include "imc_attestation_state.h"
 
 #include <imc/imc_agent.h>
@@ -55,6 +57,7 @@ static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID				PEN_TCG
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
+#define EXTEND_PCR					16
 
 static imc_agent_t *imc_attestation;
 
@@ -73,6 +76,12 @@ static pts_dh_group_t supported_dh_groups = 0;
  * used in calculation of shared secret for the assessment session
  */
 static char *responder_nonce = NULL;
+
+/**
+ * List of buffered Simple Component Evidences
+ * To be sent on reception of Generate Attestation Evidence attribute
+ */
+static linked_list_t *evidences = NULL;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
@@ -196,6 +205,8 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 									pa_tnc_msg->get_encoding(pa_tnc_msg));
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
+
+	evidences = linked_list_create();
 
 	return result;
 }
@@ -532,10 +543,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 					sub_comp_depth = attr_cast->get_sub_component_depth(attr_cast);
 					/* TODO: Implement checking of components with its sub-components */
-					if (sub_comp_depth != 1)
+					if (sub_comp_depth != 0)
 					{
 						DBG1(DBG_IMC, "Current version of Attestation IMC does not support"
-									  "sub component measurement deeper than 1. "
+									  "sub component measurement deeper than zero. "
 									   "Measuring top level component only.");
 					}
 
@@ -580,8 +591,102 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					{
 						case PTS_FUNC_COMP_NAME_BIOS:
 						{
+							tcg_pts_attr_simple_comp_evid_params_t params;
+							pts_qualifier_t qualifier;
+							time_t measurement_time_t;
+							struct tm *time_now;
+							char *utc_time;
+							hasher_t *hasher;
+							u_char hash_output[HASH_SIZE_SHA384];
+							hash_algorithm_t hash_alg;
+														
 							/* TODO: Implement BIOS measurement */
-							DBG1(DBG_IMC, "TODO: Implement BIOS measurement");
+							DBG1(DBG_IMC, "Experimental implementation:"
+								 " Extend TPM with etc/tnc_config file");
+
+							params.flags = PTS_SIMPLE_COMP_EVID_FLAG_PCR | PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
+							params.depth = 0;
+							params.vendor_id = PEN_TCG;
+							
+							qualifier.kernel = FALSE;
+							qualifier.sub_component = FALSE;
+							qualifier.type = PTS_FUNC_COMP_TYPE_TNC;
+							params.qualifier = qualifier;
+							
+							params.name = PTS_FUNC_COMP_NAME_BIOS;
+							params.extended_pcr = EXTEND_PCR;
+							params.hash_algorithm = pts->get_meas_algorithm(pts);
+
+							if (!(params.flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR))
+							{
+								params.transformation = PTS_PCR_TRANSFORM_NO;
+							}
+							else if (pts->get_meas_algorithm(pts) & PTS_MEAS_ALGO_SHA1)
+							{
+								params.transformation = PTS_PCR_TRANSFORM_MATCH;
+							}
+							else if (pts->get_meas_algorithm(pts) & PTS_MEAS_ALGO_SHA256)
+							{
+								params.transformation = PTS_PCR_TRANSFORM_LONG;
+							}
+							
+							/* Create a hasher */
+							hash_alg = pts_meas_to_hash_algorithm(pts->get_meas_algorithm(pts));
+							hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+							if (!hasher)
+							{
+								DBG1(DBG_IMC, "  hasher %N not available", hash_algorithm_names, hash_alg);
+								return TNC_RESULT_FATAL;
+							}
+
+							if (!pts->hash_file(pts, hasher, "/etc/tnc_config", hash_output))
+							{
+								hasher->destroy(hasher);
+								return TNC_RESULT_FATAL;
+							}
+							
+							measurement_time_t = time(NULL);
+							if (!measurement_time_t)
+							{
+								params.measurement_time = chunk_create("0000-00-00T00:00:00Z", 20);
+							}
+							else
+							{
+								time_now = localtime(&measurement_time_t);
+								if (asprintf(&utc_time, "%d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2dZ",
+														time_now->tm_year + 1900,
+														time_now->tm_mon + 1,
+														time_now->tm_mday,
+														time_now->tm_hour,
+														time_now->tm_min,
+														time_now->tm_sec) < 0)
+								{
+									DBG1(DBG_IMC, "Couldn not format local time to UTC");
+									return TNC_RESULT_FATAL;
+								}
+								params.measurement_time = chunk_create(utc_time, 20);
+								params.measurement_time = chunk_clone(params.measurement_time);
+							}
+							
+							params.measurement = chunk_create(hash_output, hasher->get_hash_size(hasher));
+							hasher->destroy(hasher);
+							
+							params.policy_uri = chunk_empty;
+							if (!pts->read_pcr(pts, EXTEND_PCR, &params.pcr_before))
+							{
+								DBG1(DBG_IMC, "Error occured while reading PCR: %d", EXTEND_PCR);
+								return TNC_RESULT_FATAL;
+							}
+							if (!pts->extend_pcr(pts, EXTEND_PCR,
+								params.measurement, &params.pcr_after))
+							{
+								DBG1(DBG_IMC, "Error occured while extending PCR: %d", EXTEND_PCR);
+								return TNC_RESULT_FATAL;
+							}
+
+							/* Buffer Simple Component Evidence attribute */
+							attr = tcg_pts_attr_simple_comp_evid_create(params);
+							evidences->insert_last(evidences, attr);
 							break;
 						}
 						case PTS_FUNC_COMP_NAME_IGNORE:
@@ -601,14 +706,26 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				}
 				case TCG_PTS_GEN_ATTEST_EVID:
 				{
+					enumerator_t *e;
 					pts_simple_evid_final_flag_t flags;
-					/* TODO: TPM quote operation over included PCR's */
 
+					/* Send buffered Simple Component Evidences */
+					e = evidences->create_enumerator(evidences);
+					while (e->enumerate(e, &attr))
+					{
+						attr_list->insert_last(attr_list, attr);
+					}
+
+					/* TODO: TPM quote operation over included PCR's */
 					/* Send Simple Evidence Final attribute */
 					flags = PTS_SIMPLE_EVID_FINAL_FLAG_NO;
 					attr = tcg_pts_attr_simple_evid_final_create(flags, 0,
-											chunk_empty, chunk_empty, chunk_empty);
+										chunk_empty, chunk_empty, chunk_empty);
 					attr_list->insert_last(attr_list, attr);
+					
+					e->destroy(e);
+					evidences->destroy(evidences);
+					
 					break;
 				}
 				case TCG_PTS_REQ_FILE_META:
@@ -796,6 +913,7 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 	}
 
 	free(responder_nonce);
+	DESTROY_IF(evidences);
 	libpts_deinit();
 
 	imc_attestation->destroy(imc_attestation);
