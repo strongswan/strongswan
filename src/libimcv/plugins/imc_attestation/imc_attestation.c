@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+
 #include "imc_attestation_state.h"
 #include "imc_attestation_process.h"
 
@@ -43,6 +45,7 @@ static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID				PEN_TCG
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
+#define EXTEND_PCR					16
 
 static imc_agent_t *imc_attestation;
 
@@ -72,6 +75,12 @@ static pts_dh_group_t supported_dh_groups = 0;
  * used in calculation of shared secret for the assessment session
  */
 static char *responder_nonce = NULL;
+
+/**
+ * List of buffered Simple Component Evidences
+ * To be sent on reception of Generate Attestation Evidence attribute
+ */
+static linked_list_t *evidences = NULL;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
