@@ -24,6 +24,7 @@
 typedef struct tcg_pts_attr_simple_comp_evid_t tcg_pts_attr_simple_comp_evid_t;
 typedef enum pts_attr_simple_comp_evid_flag_t pts_attr_simple_comp_evid_flag_t;
 typedef enum pts_pcr_transform_t pts_pcr_transform_t;
+typedef struct tcg_pts_attr_simple_comp_evid_params_t tcg_pts_attr_simple_comp_evid_params_t;
 
 #include "tcg_attr.h"
 #include "pts/pts_meas_algo.h"
@@ -61,6 +62,25 @@ enum pts_pcr_transform_t {
 };
 
 /**
+ * Parameters for Simple Component Evidence Attribute
+ */
+struct tcg_pts_attr_simple_comp_evid_params_t {
+	pts_attr_simple_comp_evid_flag_t flags;
+	u_int32_t depth;
+	u_int32_t vendor_id;
+	pts_qualifier_t qualifier;
+	pts_funct_comp_name_t name;
+	u_int32_t extended_pcr;
+	pts_meas_algorithms_t hash_algorithm;
+	pts_pcr_transform_t transformation;
+	chunk_t measurement_time;
+	chunk_t policy_uri;
+	chunk_t pcr_before;
+	chunk_t pcr_after;
+	chunk_t measurement;
+};
+
+/**
  * Class implementing the TCG PTS Simple Component Evidence attribute
  *
  */
@@ -77,14 +97,6 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @return					Set of flags
 	 */
 	pts_attr_simple_comp_evid_flag_t (*get_flags)(tcg_pts_attr_simple_comp_evid_t *this);
-
-	/**
-	 * Set flags for PTS Simple Component Evidence
-	 *
-	 * @param flags				Set of flags
-	 */
-	void (*set_flags)(tcg_pts_attr_simple_comp_evid_t *this,
-				pts_attr_simple_comp_evid_flag_t flags);
 	
 	/**
 	 * Get Sub-component Depth
@@ -115,28 +127,11 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	pts_qualifier_t (*get_qualifier)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Set qualifier for Component Functional Name
-	 *
-	 * @param qualifier			Functional Name Category Qualifier
-	 */
-	void (*set_qualifier)(tcg_pts_attr_simple_comp_evid_t *this,
-						  pts_qualifier_t qualifier);
-	
-	/**
 	 * Get Special Component Functional Name
 	 *
 	 * @return					Component Functional Name
 	 */
 	pts_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	
-	/**
-	 * Set Component Functional Name
-	 *
-	 * @param name				Component Functional Name
-	 */
-	void (*set_comp_funct_name)(tcg_pts_attr_simple_comp_evid_t *this,
-								pts_funct_comp_name_t name);
 	
 	/**
 	 * Get Measurement Type
@@ -153,27 +148,11 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	u_int32_t (*get_extended_pcr)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Set which PCR the functional component is extended into
-	 *
-	 * @param pcr_number		Number of PCR
-	 */
-	void (*set_extended_pcr)(tcg_pts_attr_simple_comp_evid_t *this,
-							 u_int32_t extended_pcr);
-	
-	/**
 	 * Get Hash Algorithm
 	 *
 	 * @return					Hash Algorithm
 	 */
 	pts_meas_algorithms_t (*get_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
-	 * Set Hash Algorithm
-	 *
-	 * @param hash_algorithm	Hash Algorithm
-	 */
-	void (*set_hash_algorithm)(tcg_pts_attr_simple_comp_evid_t *this,
-							   pts_meas_algorithms_t hash_algorithm);
 	
 	/**
 	 * Get PCR Transformation
@@ -183,14 +162,6 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	pts_pcr_transform_t (*get_pcr_trans)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Set PCR Transformation
-	 *
-	 * @param transformation	Transformation type of PCR
-	 */
-	void (*set_pcr_trans)(tcg_pts_attr_simple_comp_evid_t *this,
-						  pts_pcr_transform_t transformation);
-	
-	/**
 	 * Get Measurement Time
 	 *
 	 * @return					Measurement time
@@ -198,27 +169,11 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	chunk_t (*get_measurement_time)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Set Measurement Time
-	 *
-	 * @param time				Measurement time
-	 */
-	void (*set_measurement_time)(tcg_pts_attr_simple_comp_evid_t *this,
-								 chunk_t time);
-	
-	/**
 	 * Get Optional Policy URI
 	 *
 	 * @return					Policy URI
 	 */
 	chunk_t (*get_policy_uri)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
-	 * Set Optional Policy URI
-	 *
-	 * @param policy_uri		Policy URI
-	 */
-	void (*set_policy_uri)(tcg_pts_attr_simple_comp_evid_t *this,
-						   chunk_t policy_uri);
 	
 	/**
 	 * Get Optional PCR Length
@@ -233,15 +188,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @return					PCR before value
 	 */
 	chunk_t (*get_pcr_before_value)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
-	 * Set Optional PCR before value
-	 *
-	 * @param pcr_before		PCR before value
-	 */
-	void (*set_pcr_before_value)(tcg_pts_attr_simple_comp_evid_t *this,
-								 chunk_t pcr_before);
-	
+
 	/**
 	 * Get Optional PCR after value
 	 *
@@ -250,60 +197,20 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	chunk_t (*get_pcr_after_value)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Set Optional PCR after value
-	 *
-	 * @param pcr_after			PCR after value
-	 */
-	void (*set_pcr_after_value)(tcg_pts_attr_simple_comp_evid_t *this,
-								chunk_t pcr_after);
-	
-	/**
 	 * Get Component Measurement
 	 *
 	 * @return					Component Measurement Hash
 	 */
 	chunk_t (*get_comp_measurement)(tcg_pts_attr_simple_comp_evid_t *this);
 	
-	/**
-	 * Set Component Measurement
-	 *
-	 * @param measurement		Component Measurement Hash
-	 */
-	void (*set_comp_measurement)(tcg_pts_attr_simple_comp_evid_t *this,
-								 chunk_t measurement);
-	
 };
 
 /**
  * Creates an tcg_pts_attr_simple_comp_evid_t object
  * 
- * @param flags					Set of flags
- * @param depth					Sub-component Depth
- * @param vendor_id				Component Functional Name Vendor ID
- * @param qualifier				Functional Name Category Qualifier
- * @param name					Component Functional Name
- * @param extended_pcr			Which PCR the functional component is extended into
- * @param hash_algorithm		Hash Algorithm
- * @param transformation		Transformation type for PCR
- * @param measurement_time		Measurement time
- * @param policy_uri			Optional Policy URI
- * @param pcr_before			Optional PCR before value
- * @param pcr_after				Optional PCR after value
- * @param measurement			Component Measurement
+ * @param params				Struct of parameters
  */
-pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(pts_attr_simple_comp_evid_flag_t flags,
-								   u_int32_t depth,
-								   u_int32_t vendor_id,
-								   pts_qualifier_t qualifier,
-								   pts_funct_comp_name_t name,
-								   u_int32_t extended_pcr,
-								   pts_meas_algorithms_t hash_algorithm,
-								   pts_pcr_transform_t transformation,
-								   chunk_t measurement_time,
-								   chunk_t policy_uri,
-								   chunk_t pcr_before,
-								   chunk_t pcr_after,
-								   chunk_t measurement);
+pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evid_params_t params);
 
 /**
  * Creates an tcg_pts_attr_simple_comp_evid_t object from received data

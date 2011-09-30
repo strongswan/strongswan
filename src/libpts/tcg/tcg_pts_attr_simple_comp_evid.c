@@ -420,12 +420,6 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_flags, pts_attr_simple_comp_evid_fla
 	return this->flags;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_flags, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_attr_simple_comp_evid_flag_t flags)
-{
-	this->flags = flags;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_sub_component_depth, u_int32_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
@@ -450,23 +444,10 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, pts_qualifier_t,
 	return this->qualifier;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_qualifier, void,
-		private_tcg_pts_attr_simple_comp_evid_t *this,
-		pts_qualifier_t qualifier)
-{
-	this->qualifier = qualifier;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->name;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_comp_funct_name, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_funct_comp_name_t name)
-{
-	this->name = name;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_measurement_type, u_int8_t,
@@ -481,23 +462,10 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_extended_pcr, u_int32_t,
 	return this->extended_pcr;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_extended_pcr, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, u_int32_t extended_pcr)
-{
-	this->extended_pcr = extended_pcr;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_meas_algorithms_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->hash_algorithm;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_hash_algorithm, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this,
-	pts_meas_algorithms_t hash_algorithm)
-{
-	this->hash_algorithm = hash_algorithm;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_trans, pts_pcr_transform_t,
@@ -506,22 +474,10 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_trans, pts_pcr_transform_t,
 	return this->transformation;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_trans, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, pts_pcr_transform_t transformation)
-{
-	this->transformation = transformation;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_measurement_time, chunk_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->measurement_time;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_measurement_time, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, chunk_t measurement_time)
-{
-	this->measurement_time = measurement_time;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_policy_uri, chunk_t,
@@ -530,34 +486,16 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_policy_uri, chunk_t,
 	return this->policy_uri;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_policy_uri, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, chunk_t policy_uri)
-{
-	this->policy_uri = policy_uri;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_before_value, chunk_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->pcr_before;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_before_value, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, chunk_t pcr_before)
-{
-	this->pcr_before = pcr_before;
-}
-
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_after_value, chunk_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->pcr_after;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_pcr_after_value, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, chunk_t pcr_after)
-{
-	this->pcr_after = pcr_after;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_len, u_int16_t,
@@ -578,30 +516,14 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_measurement, chunk_t,
 	return this->measurement;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, set_comp_measurement, void,
-	private_tcg_pts_attr_simple_comp_evid_t *this, chunk_t measurement)
-{
-	this->measurement = measurement;
-}
-
 /**
  * Described in header.
  */
 pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
-									pts_attr_simple_comp_evid_flag_t flags,
-									u_int32_t depth, u_int32_t vendor_id,
-									pts_qualifier_t qualifier,
-									pts_funct_comp_name_t name,
-									u_int32_t extended_pcr,
-									pts_meas_algorithms_t hash_algorithm,
-									pts_pcr_transform_t transformation,
-									chunk_t measurement_time,
-									chunk_t policy_uri,
-									chunk_t pcr_before, chunk_t pcr_after,
-									chunk_t measurement)
+									tcg_pts_attr_simple_comp_evid_params_t params)
 {
 	private_tcg_pts_attr_simple_comp_evid_t *this;
-
+	
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
@@ -615,49 +537,38 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 				.destroy = _destroy,
 			},
 			.get_flags= _get_flags,
-			.set_flags= _set_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
 			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,
 			.get_family = _get_family,
 			.get_qualifier = _get_qualifier,
-			.set_qualifier = _set_qualifier,
 			.get_comp_funct_name = _get_comp_funct_name,
-			.set_comp_funct_name = _set_comp_funct_name,
 			.get_measurement_type = _get_measurement_type,
 			.get_extended_pcr = _get_extended_pcr,
-			.set_extended_pcr = _set_extended_pcr,
 			.get_hash_algorithm = _get_hash_algorithm,
-			.set_hash_algorithm = _set_hash_algorithm,
 			.get_pcr_trans = _get_pcr_trans,
-			.set_pcr_trans = _set_pcr_trans,
 			.get_measurement_time = _get_measurement_time,
-			.set_measurement_time = _set_measurement_time,
 			.get_policy_uri = _get_policy_uri,
-			.set_policy_uri = _set_policy_uri,
 			.get_pcr_before_value = _get_pcr_before_value,
-			.set_pcr_before_value = _set_pcr_before_value,
 			.get_pcr_after_value = _get_pcr_after_value,
-			.set_pcr_after_value = _set_pcr_after_value,
 			.get_pcr_len = _get_pcr_len,
 			.get_comp_measurement = _get_comp_measurement,
-			.set_comp_measurement = _set_comp_measurement,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,
-		.flags = flags,
-		.depth = depth,
-		.comp_vendor_id = vendor_id,
+		.flags = params.flags,
+		.depth = params.depth,
+		.comp_vendor_id = params.vendor_id,
 		.family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM,
-		.qualifier = qualifier,
-		.name = name,
-		.extended_pcr = extended_pcr,
-		.hash_algorithm = hash_algorithm,
-		.transformation = transformation,
-		.measurement_time = measurement_time,
-		.policy_uri = policy_uri,
-		.pcr_before = pcr_before,
-		.pcr_after = pcr_after,
-		.measurement = measurement,
+		.qualifier = params.qualifier,
+		.name = params.name,
+		.extended_pcr = params.extended_pcr,
+		.hash_algorithm = params.hash_algorithm,
+		.transformation = params.transformation,
+		.measurement_time = params.measurement_time,
+		.policy_uri = params.policy_uri,
+		.pcr_before = params.pcr_before,
+		.pcr_after = params.pcr_after,
+		.measurement = params.measurement,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -684,35 +595,25 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create_from_data(chunk_t data)
 				.destroy = _destroy,
 			},
 			.get_flags= _get_flags,
-			.set_flags= _set_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
 			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,
 			.get_family = _get_family,
 			.get_qualifier = _get_qualifier,
-			.set_qualifier = _set_qualifier,
 			.get_comp_funct_name = _get_comp_funct_name,
-			.set_comp_funct_name = _set_comp_funct_name,
 			.get_measurement_type = _get_measurement_type,
 			.get_extended_pcr = _get_extended_pcr,
-			.set_extended_pcr = _set_extended_pcr,
 			.get_hash_algorithm = _get_hash_algorithm,
-			.set_hash_algorithm = _set_hash_algorithm,
 			.get_pcr_trans = _get_pcr_trans,
-			.set_pcr_trans = _set_pcr_trans,
 			.get_measurement_time = _get_measurement_time,
-			.set_measurement_time = _set_measurement_time,
 			.get_policy_uri = _get_policy_uri,
-			.set_policy_uri = _set_policy_uri,
 			.get_pcr_before_value = _get_pcr_before_value,
-			.set_pcr_before_value = _set_pcr_before_value,
 			.get_pcr_after_value = _get_pcr_after_value,
-			.set_pcr_after_value = _set_pcr_after_value,
 			.get_pcr_len = _get_pcr_len,
 			.get_comp_measurement = _get_comp_measurement,
-			.set_comp_measurement = _set_comp_measurement,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,
+		.family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM,
 		.value = chunk_clone(data),
 	);
 
