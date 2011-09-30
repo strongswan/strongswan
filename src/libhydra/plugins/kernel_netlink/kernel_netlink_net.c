@@ -1236,8 +1236,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
-				if (msg->rtm_dst_len <= best)
-				{	/* not better than a previous one */
+				if (msg->rtm_dst_len < best ||
+					msg->rtm_dst_len == best && (nexthop || !candidate))
+				{	/* not better than a previous one, but if a preferred source
+					 * address is specified, we still check equal routes */
 					continue;
 				}
 				enumerator = this->rt_exclude->create_enumerator(this->rt_exclude);
