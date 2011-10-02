@@ -306,7 +306,7 @@ int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec
 }
 
 /**
- * implements traffic_selector_t.get_subset
+ * Implements traffic_selector_t.get_subset
  */
 static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
 {
@@ -377,7 +377,7 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 }
 
 /**
- * implements traffic_selector_t.equals
+ * Implements traffic_selector_t.equals
  */
 static bool equals(private_traffic_selector_t *this, private_traffic_selector_t *other)
 {
