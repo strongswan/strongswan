@@ -41,10 +41,8 @@ struct private_database_factory_t {
 	mutex_t *mutex;
 };
 
-/**
- * Implementation of database_factory_t.create.
- */
-static database_t* create(private_database_factory_t *this, char *uri)
+METHOD(database_factory_t, create, database_t*,
+	private_database_factory_t *this, char *uri)
 {
 	enumerator_t *enumerator;
 	database_t *database = NULL;
@@ -65,32 +63,24 @@ static database_t* create(private_database_factory_t *this, char *uri)
 	return database;
 }
 
-/**
- * Implementation of database_factory_t.add_database.
- */
-static void add_database(private_database_factory_t *this,
-						 database_constructor_t create)
+METHOD(database_factory_t, add_database, void,
+	private_database_factory_t *this, database_constructor_t create)
 {
 	this->mutex->lock(this->mutex);
 	this->databases->insert_last(this->databases, create);
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of database_factory_t.remove_database.
- */
-static void remove_database(private_database_factory_t *this,
-							database_constructor_t create)
+METHOD(database_factory_t, remove_database, void,
+	private_database_factory_t *this, database_constructor_t create)
 {
 	this->mutex->lock(this->mutex);
 	this->databases->remove(this->databases, create, NULL);
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of database_factory_t.destroy
- */
-static void destroy(private_database_factory_t *this)
+METHOD(database_factory_t, destroy, void,
+	private_database_factory_t *this)
 {
 	this->databases->destroy(this->databases);
 	this->mutex->destroy(this->mutex);
@@ -102,15 +92,18 @@ static void destroy(private_database_factory_t *this)
  */
 database_factory_t *database_factory_create()
 {
-	private_database_factory_t *this = malloc_thing(private_database_factory_t);
+	private_database_factory_t *this;
 
-	this->public.create = (database_t*(*)(database_factory_t*, char *url))create;
-	this->public.add_database = (void(*)(database_factory_t*, database_constructor_t))add_database;
-	this->public.remove_database = (void(*)(database_factory_t*, database_constructor_t))remove_database;
-	this->public.destroy = (void(*)(database_factory_t*))destroy;
-
-	this->databases = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.create = _create,
+			.add_database = _add_database,
+			.remove_database = _remove_database,
+			.destroy = _destroy,
+		},
+		.databases = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }
