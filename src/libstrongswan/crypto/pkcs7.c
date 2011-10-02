@@ -121,26 +121,20 @@ static const chunk_t ASN1_des_cbc_oid = chunk_from_chars(
 		  0x2B, 0x0E, 0x03, 0x02, 0x07
 );
 
-/**
- * Implements pkcs7_t.is_data.
- */
-static bool is_data(private_pkcs7_t *this)
+METHOD(pkcs7_t, is_data, bool,
+	private_pkcs7_t *this)
 {
 	return this->type == OID_PKCS7_DATA;
 }
 
-/**
- * Implements pkcs7_t.is_signedData.
- */
-static bool is_signedData(private_pkcs7_t *this)
+METHOD(pkcs7_t, is_signedData, bool,
+	private_pkcs7_t *this)
 {
 	return this->type == OID_PKCS7_SIGNED_DATA;
 }
 
-/**
- * Implements pkcs7_t.is_envelopedData.
- */
-static bool is_envelopedData(private_pkcs7_t *this)
+METHOD(pkcs7_t, is_envelopedData, bool,
+	private_pkcs7_t *this)
 {
 	return this->type == OID_PKCS7_ENVELOPED_DATA;
 }
@@ -165,10 +159,8 @@ static bool abort_parsing(private_pkcs7_t *this, int type)
 	return FALSE;
 }
 
-/**
- * Implements pkcs7_t.parse_data.
- */
-static bool parse_data(private_pkcs7_t *this)
+METHOD(pkcs7_t, parse_data, bool,
+	private_pkcs7_t *this)
 {
 	chunk_t data = this->content;
 
@@ -238,10 +230,8 @@ static const asn1Object_t signedDataObjects[] = {
 #define PKCS7_DIGEST_ENC_ALGORITHM	21
 #define PKCS7_ENCRYPTED_DIGEST		22
 
-/**
- * Implements pkcs7_t.parse_signedData.
- */
-static bool parse_signedData(private_pkcs7_t *this, x509_t *cacert)
+METHOD(pkcs7_t, parse_signedData, bool,
+	private_pkcs7_t *this, x509_t *cacert)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -448,11 +438,8 @@ static const asn1Object_t envelopedDataObjects[] = {
 #define PKCS7_CONTENT_ENC_ALGORITHM		13
 #define PKCS7_ENCRYPTED_CONTENT			14
 
-/**
- * Parse PKCS#7 envelopedData content
- */
-static bool parse_envelopedData(private_pkcs7_t *this, chunk_t serialNumber,
-								rsa_private_key_t *key)
+METHOD(parse_envelopedData, bool,
+	private_pkcs7_t *this, chunk_t serialNumber, rsa_private_key_t *key)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -618,18 +605,14 @@ failed:
 	return FALSE;
 }
 
-/**
- * Implements pkcs7_t.get_data.
- */
-static chunk_t get_data(private_pkcs7_t *this)
+METHOD(pkcs7_t, get_data, chunk_t,
+	private_pkcs7_t *this)
 {
 	return this->data;
 }
 
-/**
- * Implements pkcs7_t.get_contentInfo.
- */
-static chunk_t get_contentInfo(private_pkcs7_t *this)
+METHOD(pkcs7_t, get_contentInfo, chunk_t,
+	private_pkcs7_t *this)
 {
 	chunk_t content_type;
 
@@ -668,18 +651,14 @@ static chunk_t get_contentInfo(private_pkcs7_t *this)
 			  );
 }
 
-/**
- * Implements pkcs7_t.create_certificate_enumerator
- */
-static enumerator_t *create_certificate_enumerator(const private_pkcs7_t *this)
+METHOD(pkcs7_t, create_certificate_enumerator, enumerator_t*,
+	private_pkcs7_t *this)
 {
 	return this->certs->create_enumerator(this->certs);
 }
 
-/**
- * Implements pkcs7_t.set_certificate
- */
-static void set_certificate(private_pkcs7_t *this, x509_t *cert)
+METHOD(pkcs7_t, set_certificate, void,
+	private_pkcs7_t *this, x509_t *cert)
 {
 	if (cert)
 	{
@@ -688,10 +667,8 @@ static void set_certificate(private_pkcs7_t *this, x509_t *cert)
 	}
 }
 
-/**
- * Implements pkcs7_t.set_attributes
- */
-static void set_attributes(private_pkcs7_t *this, pkcs9_t *attributes)
+METHOD(pkcs7_t, set_attributes, void,
+	private_pkcs7_t *this, pkcs9_t *attributes)
 {
 	this->attributes = attributes;
 }
@@ -708,11 +685,8 @@ chunk_t pkcs7_build_issuerAndSerialNumber(x509_t *cert)
 			asn1_simple_object(ASN1_INTEGER, cert->get_serialNumber(cert)));
 }
 
-/**
- * Implements pkcs7_t.build_envelopedData.
- */
-bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
-						 encryption_algorithm_t alg)
+METHOD(pkcs7_t, build_envelopedData, bool,
+	private_pkcs7_t *this, x509_t *cert, encryption_algorithm_t alg)
 {
 	chunk_t iv, symmetricKey, in, out, alg_oid;
 	crypter_t *crypter;
@@ -819,11 +793,8 @@ bool build_envelopedData(private_pkcs7_t *this, x509_t *cert,
 	return TRUE;
 }
 
-/**
- * Implements pkcs7_t.build_signedData.
- */
-bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
-					  hash_algorithm_t alg)
+METHOD(pkcs7_t, build_signedData, bool,
+	private_pkcs7_t *this, rsa_private_key_t *private_key, hash_algorithm_t alg)
 {
 	int signature_oid = hasher_signature_algorithm_to_oid(alg,
 							private_key->get_type(private_key));
@@ -916,10 +887,8 @@ bool build_signedData(private_pkcs7_t *this, rsa_private_key_t *private_key,
 	return TRUE;
 }
 
-/**
- * Implements pkcs7_t.destroy
- */
-static void destroy(private_pkcs7_t *this)
+METHOD(pkcs7_t, destroy, void,
+	private_pkcs7_t *this)
 {
 	DESTROY_IF(this->attributes);
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
@@ -984,32 +953,28 @@ end:
  */
 static private_pkcs7_t *pkcs7_create_empty(void)
 {
-	private_pkcs7_t *this = malloc_thing(private_pkcs7_t);
+	private_pkcs7_t *this;
 
-	/* initialize */
-	this->type = OID_UNKNOWN;
-	this->content = chunk_empty;
-	this->parsed = FALSE;
-	this->level = 0;
-	this->data = chunk_empty;
-	this->attributes = NULL;
-	this->certs = linked_list_create();
-
-	/*public functions */
-	this->public.is_data = (bool (*) (pkcs7_t*))is_data;
-	this->public.is_signedData = (bool (*) (pkcs7_t*))is_signedData;
-	this->public.is_envelopedData = (bool (*) (pkcs7_t*))is_envelopedData;
-	this->public.parse_data = (bool (*) (pkcs7_t*))parse_data;
-	this->public.parse_signedData = (bool (*) (pkcs7_t*,x509_t*))parse_signedData;
-	this->public.parse_envelopedData = (bool (*) (pkcs7_t*,chunk_t,rsa_private_key_t*))parse_envelopedData;
-	this->public.get_data = (chunk_t (*) (pkcs7_t*))get_data;
-	this->public.get_contentInfo = (chunk_t (*) (pkcs7_t*))get_contentInfo;
-	this->public.create_certificate_enumerator = (enumerator_t* (*) (pkcs7_t*))create_certificate_enumerator;
-	this->public.set_certificate = (void (*) (pkcs7_t*,x509_t*))set_certificate;
-	this->public.set_attributes = (void (*) (pkcs7_t*,pkcs9_t*))set_attributes;
-	this->public.build_envelopedData = (bool (*) (pkcs7_t*,x509_t*,encryption_algorithm_t))build_envelopedData;
-	this->public.build_signedData = (bool (*) (pkcs7_t*,rsa_private_key_t*,hash_algorithm_t))build_signedData;
-	this->public.destroy = (void (*) (pkcs7_t*))destroy;
+	INIT(this,
+		.public = {
+			.is_data = _is_data,
+			.is_signedData = _is_signedData,
+			.is_envelopedData = _is_envelopedData,
+			.parse_data = _parse_data,
+			.parse_signedData = _parse_signedData,
+			.parse_envelopedData = _parse_envelopedData,
+			.get_data = _get_data,
+			.get_contentInfo = _get_contentInfo,
+			.create_certificate_enumerator = _create_certificate_enumerator,
+			.set_certificate = _set_certificate,
+			.set_attributes = _set_attributes,
+			.build_envelopedData = _build_envelopedData,
+			.build_signedData = _build_signedData,
+			.destroy = _destroy,
+		},
+		.type = OID_UNKNOWN,
+		.certs = linked_list_create(),
+	);
 
 	return this;
 }
