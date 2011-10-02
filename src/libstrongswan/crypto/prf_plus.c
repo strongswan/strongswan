@@ -56,10 +56,8 @@ struct private_prf_plus_t {
 	u_int8_t appending_octet;
 };
 
-/**
- * Implementation of prf_plus_t.get_bytes.
- */
-static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
+METHOD(prf_plus_t, get_bytes, void,
+	private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 {
 	chunk_t appending_chunk;
 	size_t bytes_in_round;
@@ -89,10 +87,8 @@ static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 	}
 }
 
-/**
- * Implementation of prf_plus_t.allocate_bytes.
- */
-static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
+METHOD(prf_plus_t, allocate_bytes, void,
+	private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
 	if (length)
 	{
@@ -106,10 +102,8 @@ static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chu
 	}
 }
 
-/**
- * Implementation of prf_plus_t.destroy.
- */
-static void destroy(private_prf_plus_t *this)
+METHOD(prf_plus_t, destroy, void,
+	private_prf_plus_t *this)
 {
 	free(this->buffer.ptr);
 	free(this->seed.ptr);
@@ -124,15 +118,14 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 	private_prf_plus_t *this;
 	chunk_t appending_chunk;
 
-	this = malloc_thing(private_prf_plus_t);
-
-	/* set public methods */
-	this->public.get_bytes = (void (*)(prf_plus_t *,size_t,u_int8_t*))get_bytes;
-	this->public.allocate_bytes = (void (*)(prf_plus_t *,size_t,chunk_t*))allocate_bytes;
-	this->public.destroy = (void (*)(prf_plus_t *))destroy;
-
-	/* take over prf */
-	this->prf = prf;
+	INIT(this,
+		.public = {
+			.get_bytes = _get_bytes,
+			.allocate_bytes = _allocate_bytes,
+			.destroy = _destroy,
+		},
+		.prf = prf,
+	);
 
 	/* allocate buffer for prf output */
 	this->buffer.len = prf->get_block_size(prf);
