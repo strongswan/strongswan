@@ -413,10 +413,8 @@ static bool equals(private_traffic_selector_t *this, private_traffic_selector_t 
 	return FALSE;
 }
 
-/**
- * Implements traffic_selector_t.get_from_address.
- */
-static chunk_t get_from_address(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_from_address, chunk_t,
+	private_traffic_selector_t *this)
 {
 	switch (this->type)
 	{
@@ -429,10 +427,8 @@ static chunk_t get_from_address(private_traffic_selector_t *this)
 	}
 }
 
-/**
- * Implements traffic_selector_t.get_to_address.
- */
-static chunk_t get_to_address(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_to_address, chunk_t,
+	private_traffic_selector_t *this)
 {
 	switch (this->type)
 	{
@@ -445,42 +441,32 @@ static chunk_t get_to_address(private_traffic_selector_t *this)
 	}
 }
 
-/**
- * Implements traffic_selector_t.get_from_port.
- */
-static u_int16_t get_from_port(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_from_port, u_int16_t,
+	private_traffic_selector_t *this)
 {
 	return this->from_port;
 }
 
-/**
- * Implements traffic_selector_t.get_to_port.
- */
-static u_int16_t get_to_port(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_to_port, u_int16_t,
+	private_traffic_selector_t *this)
 {
 	return this->to_port;
 }
 
-/**
- * Implements traffic_selector_t.get_type.
- */
-static ts_type_t get_type(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_type, ts_type_t,
+	private_traffic_selector_t *this)
 {
 	return this->type;
 }
 
-/**
- * Implements traffic_selector_t.get_protocol.
- */
-static u_int8_t get_protocol(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, get_protocol, u_int8_t,
+	private_traffic_selector_t *this)
 {
 	return this->protocol;
 }
 
-/**
- * Implements traffic_selector_t.is_host.
- */
-static bool is_host(private_traffic_selector_t *this, host_t *host)
+METHOD(traffic_selector_t, is_host, bool,
+	private_traffic_selector_t *this, host_t *host)
 {
 	if (host)
 	{
@@ -515,18 +501,14 @@ static bool is_host(private_traffic_selector_t *this, host_t *host)
 	return FALSE;
 }
 
-/**
- * Implementation of traffic_selector_t.is_dynamic
- */
-static bool is_dynamic(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, is_dynamic, bool,
+	private_traffic_selector_t *this)
 {
 	return this->dynamic;
 }
 
-/**
- * Implements traffic_selector_t.set_address.
- */
-static void set_address(private_traffic_selector_t *this, host_t *host)
+METHOD(traffic_selector_t, set_address, void,
+	private_traffic_selector_t *this, host_t *host)
 {
 	if (this->dynamic)
 	{
@@ -571,10 +553,8 @@ static bool is_contained_in(private_traffic_selector_t *this,
 	return contained_in;
 }
 
-/**
- * Implements traffic_selector_t.includes.
- */
-static bool includes(private_traffic_selector_t *this, host_t *host)
+METHOD(traffic_selector_t, includes, bool,
+	private_traffic_selector_t *this, host_t *host)
 {
 	chunk_t addr;
 	int family = host->get_family(host);
@@ -591,10 +571,8 @@ static bool includes(private_traffic_selector_t *this, host_t *host)
 	return FALSE;
 }
 
-/**
- * Implements traffic_selector_t.to_subnet.
- */
-static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *mask)
+METHOD(traffic_selector_t, to_subnet, void,
+	private_traffic_selector_t *this, host_t **net, u_int8_t *mask)
 {
 	/* there is no way to do this cleanly, as the address range may
 	 * be anything else but a subnet. We use from_addr as subnet
@@ -640,10 +618,8 @@ static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *
 	chunk_free(&net_chunk);
 }
 
-/**
- * Implements traffic_selector_t.clone.
- */
-static traffic_selector_t *clone_(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, clone_, traffic_selector_t*,
+	private_traffic_selector_t *this)
 {
 	private_traffic_selector_t *clone;
 
@@ -668,10 +644,8 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
 	}
 }
 
-/**
- * Implements traffic_selector_t.destroy.
- */
-static void destroy(private_traffic_selector_t *this)
+METHOD(traffic_selector_t, destroy, void,
+	private_traffic_selector_t *this)
 {
 	free(this);
 }
@@ -888,31 +862,32 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 						ts_type_t type, u_int16_t from_port, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = malloc_thing(private_traffic_selector_t);
+	private_traffic_selector_t *this;
 
-	/* public functions */
-	this->public.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset;
-	this->public.equals = (bool(*)(traffic_selector_t*,traffic_selector_t*))equals;
-	this->public.get_from_address = (chunk_t(*)(traffic_selector_t*))get_from_address;
-	this->public.get_to_address = (chunk_t(*)(traffic_selector_t*))get_to_address;
-	this->public.get_from_port = (u_int16_t(*)(traffic_selector_t*))get_from_port;
-	this->public.get_to_port = (u_int16_t(*)(traffic_selector_t*))get_to_port;
-	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;
-	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
-	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
-	this->public.is_dynamic = (bool(*)(traffic_selector_t*))is_dynamic;
-	this->public.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in;
-	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
-	this->public.set_address = (void(*)(traffic_selector_t*,host_t*))set_address;
-	this->public.to_subnet = (void(*)(traffic_selector_t*,host_t**,u_int8_t*))to_subnet;
-	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
-	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
-
-	this->from_port = from_port;
-	this->to_port = to_port;
-	this->protocol = protocol;
-	this->type = type;
-	this->dynamic = FALSE;
+	INIT(this,
+		.public = {
+			.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset,
+			.equals = (bool(*)(traffic_selector_t*,traffic_selector_t*))equals,
+			.get_from_address = _get_from_address,
+			.get_to_address = _get_to_address,
+			.get_from_port = _get_from_port,
+			.get_to_port = _get_to_port,
+			.get_type = _get_type,
+			.get_protocol = _get_protocol,
+			.is_host = _is_host,
+			.is_dynamic = _is_dynamic,
+			.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in,
+			.includes = _includes,
+			.set_address = _set_address,
+			.to_subnet = _to_subnet,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.from_port = from_port,
+		.to_port = to_port,
+		.protocol = protocol,
+		.type = type,
+	);
 
 	return this;
 }
