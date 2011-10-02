@@ -118,10 +118,8 @@ static void entry_enumerator_destroy(entry_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of auth_cfg_t.create_enumerator.
- */
-static enumerator_t* create_enumerator(private_auth_cfg_t *this)
+METHOD(auth_cfg_t, create_enumerator, enumerator_t*,
+	private_auth_cfg_t *this)
 {
 	entry_enumerator_t *enumerator;
 
@@ -181,7 +179,7 @@ static void destroy_entry_value(entry_t *entry)
 /**
  * Implementation of auth_cfg_t.replace.
  */
-static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
+static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 					auth_rule_t type, ...)
 {
 	if (enumerator->current)
@@ -225,10 +223,8 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 	}
 }
 
-/**
- * Implementation of auth_cfg_t.get.
- */
-static void* get(private_auth_cfg_t *this, auth_rule_t type)
+METHOD(auth_cfg_t, get, void*,
+	private_auth_cfg_t *this, auth_rule_t type)
 {
 	enumerator_t *enumerator;
 	void *current_value, *best_value = NULL;
@@ -335,11 +331,8 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 	this->entries->insert_last(this->entries, entry);
 }
 
-/**
- * Implementation of auth_cfg_t.complies.
- */
-static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
-					 bool log_error)
+METHOD(auth_cfg_t, complies, bool,
+	private_auth_cfg_t *this, auth_cfg_t *constraints, bool log_error)
 {
 	enumerator_t *e1, *e2;
 	bool success = TRUE, has_group = FALSE, group_match = FALSE;
@@ -788,10 +781,8 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 	return equal;
 }
 
-/**
- * Implementation of auth_cfg_t.purge
- */
-static void purge(private_auth_cfg_t *this, bool keep_ca)
+METHOD(auth_cfg_t, purge, void,
+	private_auth_cfg_t *this, bool keep_ca)
 {
 	entry_t *entry;
 	linked_list_t *cas;
@@ -816,10 +807,8 @@ static void purge(private_auth_cfg_t *this, bool keep_ca)
 	cas->destroy(cas);
 }
 
-/**
- * Implementation of auth_cfg_t.clone
- */
-static auth_cfg_t* clone_(private_auth_cfg_t *this)
+METHOD(auth_cfg_t, clone_, auth_cfg_t*,
+	private_auth_cfg_t *this)
 {
 	enumerator_t *enumerator;
 	auth_cfg_t *clone;
@@ -873,10 +862,8 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 	return clone;
 }
 
-/**
- * Implementation of auth_cfg_t.destroy
- */
-static void destroy(private_auth_cfg_t *this)
+METHOD(auth_cfg_t, destroy, void,
+	private_auth_cfg_t *this)
 {
 	purge(this, FALSE);
 	this->entries->destroy(this->entries);
@@ -888,20 +875,23 @@ static void destroy(private_auth_cfg_t *this)
  */
 auth_cfg_t *auth_cfg_create()
 {
-	private_auth_cfg_t *this = malloc_thing(private_auth_cfg_t);
+	private_auth_cfg_t *this;
 
-	this->public.add = (void(*)(auth_cfg_t*, auth_rule_t type, ...))add;
-	this->public.get = (void*(*)(auth_cfg_t*, auth_rule_t type))get;
-	this->public.create_enumerator = (enumerator_t*(*)(auth_cfg_t*))create_enumerator;
-	this->public.replace = (void(*)(auth_cfg_t*,enumerator_t*,auth_rule_t,...))replace;
-	this->public.complies = (bool(*)(auth_cfg_t*, auth_cfg_t *,bool))complies;
-	this->public.merge = (void(*)(auth_cfg_t*, auth_cfg_t *other,bool))merge;
-	this->public.purge = (void(*)(auth_cfg_t*,bool))purge;
-	this->public.equals = (bool(*)(auth_cfg_t*, auth_cfg_t *other))equals;
-	this->public.clone = (auth_cfg_t*(*)(auth_cfg_t*))clone_;
-	this->public.destroy = (void(*)(auth_cfg_t*))destroy;
-
-	this->entries = linked_list_create();
+	INIT(this,
+		.public = {
+			.add = (void(*)(auth_cfg_t*, auth_rule_t type, ...))add,
+			.get = _get,
+			.create_enumerator = _create_enumerator,
+			.replace = (void(*)(auth_cfg_t*,enumerator_t*,auth_rule_t,...))replace,
+			.complies = _complies,
+			.merge = (void(*)(auth_cfg_t*,auth_cfg_t*,bool))merge,
+			.purge = _purge,
+			.equals = (bool(*)(auth_cfg_t*,auth_cfg_t*))equals,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.entries = linked_list_create(),
+	);
 
 	return &this->public;
 }
