@@ -110,11 +110,9 @@ static bool equals(void *key1, void *key2)
 	return key1 == key2;
 }
 
-/**
- * Implementation of cred_encoding_t.get_cache
- */
-static bool get_cache(private_cred_encoding_t *this, cred_encoding_type_t type,
-					  void *cache, chunk_t *encoding)
+METHOD(cred_encoding_t, get_cache, bool,
+	private_cred_encoding_t *this, cred_encoding_type_t type, void *cache,
+	chunk_t *encoding)
 {
 	chunk_t *chunk;
 
@@ -191,11 +189,9 @@ static bool encode(private_cred_encoding_t *this, cred_encoding_type_t type,
 	return success;
 }
 
-/**
- * Implementation of cred_encoding_t.cache
- */
-static void cache(private_cred_encoding_t *this, cred_encoding_type_t type,
-				  void *cache, chunk_t encoding)
+METHOD(cred_encoding_t, cache, void,
+	private_cred_encoding_t *this, cred_encoding_type_t type, void *cache,
+	chunk_t encoding)
 {
 	chunk_t *chunk;
 
@@ -216,10 +212,8 @@ static void cache(private_cred_encoding_t *this, cred_encoding_type_t type,
 	}
 }
 
-/**
- * Implementation of cred_encoding_t.clear_cache
- */
-static void clear_cache(private_cred_encoding_t *this, void *cache)
+METHOD(cred_encoding_t, clear_cache, void,
+	private_cred_encoding_t *this, void *cache)
 {
 	cred_encoding_type_t type;
 	chunk_t *chunk;
@@ -237,30 +231,24 @@ static void clear_cache(private_cred_encoding_t *this, void *cache)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of cred_encoding_t.add_encoder
- */
-static void add_encoder(private_cred_encoding_t *this, cred_encoder_t encoder)
+METHOD(cred_encoding_t, add_encoder, void,
+	private_cred_encoding_t *this, cred_encoder_t encoder)
 {
 	this->lock->write_lock(this->lock);
 	this->encoders->insert_last(this->encoders, encoder);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of cred_encoding_t.remove_encoder
- */
-static void remove_encoder(private_cred_encoding_t *this, cred_encoder_t encoder)
+METHOD(cred_encoding_t, remove_encoder, void,
+	private_cred_encoding_t *this, cred_encoder_t encoder)
 {
 	this->lock->write_lock(this->lock);
 	this->encoders->remove(this->encoders, encoder, NULL);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of cred_encoder_t.destroy.
- */
-static void destroy(private_cred_encoding_t *this)
+METHOD(cred_encoding_t, destroy, void,
+	private_cred_encoding_t *this)
 {
 	cred_encoding_type_t type;
 
@@ -282,23 +270,27 @@ static void destroy(private_cred_encoding_t *this)
  */
 cred_encoding_t *cred_encoding_create()
 {
-	private_cred_encoding_t *this = malloc_thing(private_cred_encoding_t);
+	private_cred_encoding_t *this;
 	cred_encoding_type_t type;
 
-	this->public.encode = (bool(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode;
-	this->public.get_cache = (bool(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t *encoding))get_cache;
-	this->public.cache = (void(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t encoding))cache;
-	this->public.clear_cache = (void(*)(cred_encoding_t*, void *cache))clear_cache;
-	this->public.add_encoder = (void(*)(cred_encoding_t*, cred_encoder_t encoder))add_encoder;
-	this->public.remove_encoder = (void(*)(cred_encoding_t*, cred_encoder_t encoder))remove_encoder;
-	this->public.destroy = (void(*)(cred_encoding_t*))destroy;
+	INIT(this,
+		.public = {
+			.encode = (bool(*)(cred_encoding_t*, cred_encoding_type_t type, void *cache, chunk_t *encoding, ...))encode,
+			.get_cache = _get_cache,
+			.cache = _cache,
+			.clear_cache = _clear_cache,
+			.add_encoder = _add_encoder,
+			.remove_encoder = _remove_encoder,
+			.destroy = _destroy,
+		},
+		.encoders = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	for (type = 0; type < CRED_ENCODING_MAX; type++)
 	{
 		this->cache[type] = hashtable_create(hash, equals, 8);
 	}
-	this->encoders = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	return &this->public;
 }
