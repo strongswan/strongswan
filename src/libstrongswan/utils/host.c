@@ -59,26 +59,20 @@ struct private_host_t {
 };
 
 
-/**
- * implements host_t.get_sockaddr
- */
-static sockaddr_t *get_sockaddr(private_host_t *this)
+METHOD(host_t, get_sockaddr, sockaddr_t*,
+	private_host_t *this)
 {
 	return &(this->address);
 }
 
-/**
- * implements host_t.get_sockaddr_len
- */
-static socklen_t *get_sockaddr_len(private_host_t *this)
+METHOD(host_t, get_sockaddr_len, socklen_t*,
+	private_host_t *this)
 {
 	return &(this->socklen);
 }
 
-/**
- * Implementation of host_t.is_anyaddr.
- */
-static bool is_anyaddr(private_host_t *this)
+METHOD(host_t, is_anyaddr, bool,
+	private_host_t *this)
 {
 	switch (this->address.sa_family)
 	{
@@ -163,10 +157,8 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 	return print_in_hook(dst, dstlen, "%*s", spec->width, buffer);
 }
 
-/**
- * Implementation of host_t.get_address.
- */
-static chunk_t get_address(private_host_t *this)
+METHOD(host_t, get_address, chunk_t,
+	private_host_t *this)
 {
 	chunk_t address = chunk_empty;
 
@@ -192,18 +184,14 @@ static chunk_t get_address(private_host_t *this)
 	}
 }
 
-/**
- * implements host_t.get_family
- */
-static int get_family(private_host_t *this)
+METHOD(host_t, get_family, int,
+	private_host_t *this)
 {
 	return this->address.sa_family;
 }
 
-/**
- * implements host_t.get_port
- */
-static u_int16_t get_port(private_host_t *this)
+METHOD(host_t, get_port, u_int16_t,
+	private_host_t *this)
 {
 	switch (this->address.sa_family)
 	{
@@ -222,10 +210,8 @@ static u_int16_t get_port(private_host_t *this)
 	}
 }
 
-/**
- * implements host_t.set_port
- */
-static void set_port(private_host_t *this, u_int16_t port)
+METHOD(host_t, set_port, void,
+	private_host_t *this, u_int16_t port)
 {
 	switch (this->address.sa_family)
 	{
@@ -246,19 +232,19 @@ static void set_port(private_host_t *this, u_int16_t port)
 	}
 }
 
-/**
- * Implements host_t.clone.
- */
-static private_host_t *clone_(private_host_t *this)
+METHOD(host_t, clone_, host_t*,
+	private_host_t *this)
 {
-	private_host_t *new = malloc_thing(private_host_t);
+	private_host_t *new;
 
+	new = malloc_thing(private_host_t);
 	memcpy(new, this, sizeof(private_host_t));
-	return new;
+
+	return &new->public;
 }
 
 /**
- * Impelements host_t.ip_equals
+ * Implements host_t.ip_equals
  */
 static bool ip_equals(private_host_t *this, private_host_t *other)
 {
@@ -332,10 +318,8 @@ static bool equals(private_host_t *this, private_host_t *other)
 	return FALSE;
 }
 
-/**
- * Implements host_t.destroy
- */
-static void destroy(private_host_t *this)
+METHOD(host_t, destroy, void,
+	private_host_t *this)
 {
 	free(this);
 }
@@ -345,20 +329,24 @@ static void destroy(private_host_t *this)
  */
 static private_host_t *host_create_empty(void)
 {
-	private_host_t *this = malloc_thing(private_host_t);
+	private_host_t *this;
 
-	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
-	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
-	this->public.clone = (host_t* (*) (host_t*))clone_;
-	this->public.get_family = (int (*) (host_t*))get_family;
-	this->public.get_address = (chunk_t (*) (host_t *)) get_address;
-	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
-	this->public.set_port = (void (*) (host_t *,u_int16_t))set_port;
-	this->public.get_differences = get_differences;
-	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
-	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
-	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
-	this->public.destroy = (void (*) (host_t*))destroy;
+	INIT(this,
+		.public = {
+			.get_sockaddr = _get_sockaddr,
+			.get_sockaddr_len = _get_sockaddr_len,
+			.clone = _clone_,
+			.get_family = _get_family,
+			.get_address = _get_address,
+			.get_port = _get_port,
+			.set_port = _set_port,
+			.get_differences = get_differences,
+			.ip_equals = (bool (*)(host_t *,host_t *))ip_equals,
+			.equals = (bool (*)(host_t *,host_t *)) equals,
+			.is_anyaddr = _is_anyaddr,
+			.destroy = _destroy,
+		},
+	);
 
 	return this;
 }
