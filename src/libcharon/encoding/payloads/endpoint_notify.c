@@ -216,10 +216,8 @@ static chunk_t build_notification_data(private_endpoint_notify_t *this)
 	return data;
 }
 
-/**
- * Implementation of endpoint_notify_t.build_notify
- */
-static notify_payload_t *build_notify(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, build_notify, notify_payload_t*,
+	private_endpoint_notify_t *this)
 {
 	chunk_t data;
 	notify_payload_t *notify;
@@ -233,64 +231,53 @@ static notify_payload_t *build_notify(private_endpoint_notify_t *this)
 	return notify;
 }
 
-/**
- * Implementation of endpoint_notify_t.get_priority.
- */
-static u_int32_t get_priority(private_endpoint_notify_t *this)
+
+METHOD(endpoint_notify_t, get_priority, u_int32_t,
+	private_endpoint_notify_t *this)
 {
 	return this->priority;
 }
 
-/**
- * Implementation of endpoint_notify_t.set_priority.
- */
-static void set_priority(private_endpoint_notify_t *this, u_int32_t priority)
+METHOD(endpoint_notify_t, set_priority, void,
+	private_endpoint_notify_t *this, u_int32_t priority)
 {
 	this->priority = priority;
 }
 
-/**
- * Implementation of endpoint_notify_t.get_type.
- */
-static me_endpoint_type_t get_type(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, get_type,  me_endpoint_type_t,
+	private_endpoint_notify_t *this)
 {
 	return this->type;
 }
 
-/**
- * Implementation of endpoint_notify_t.get_family.
- */
-static me_endpoint_family_t get_family(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, get_family, me_endpoint_family_t,
+	private_endpoint_notify_t *this)
 {
 	return this->family;
 }
 
-/**
- * Implementation of endpoint_notify_t.get_host.
- */
-static host_t *get_host(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, get_host, host_t*,
+	private_endpoint_notify_t *this)
 {
 	return this->endpoint;
 }
 
-/**
- * Implementation of endpoint_notify_t.get_base.
- */
-static host_t *get_base(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, get_base, host_t*,
+	private_endpoint_notify_t *this)
 {
 	return (!this->base) ? this->endpoint : this->base;
 }
 
-/**
- * Implementation of endpoint_notify_t.clone.
- */
-static endpoint_notify_t *_clone(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, clone_, endpoint_notify_t*,
+	private_endpoint_notify_t *this)
 {
-	private_endpoint_notify_t *clone = (private_endpoint_notify_t*)endpoint_notify_create();
+	private_endpoint_notify_t *clone;
 
+	clone = endpoint_notify_create();
 	clone->priority = this->priority;
 	clone->type = this->type;
 	clone->family = this->family;
+
 	if (this->endpoint)
 	{
 		clone->endpoint = this->endpoint->clone(this->endpoint);
@@ -304,15 +291,12 @@ static endpoint_notify_t *_clone(private_endpoint_notify_t *this)
 	return &clone->public;
 }
 
-/**
- * Implementation of endpoint_notify_t.destroy.
- */
-static status_t destroy(private_endpoint_notify_t *this)
+METHOD(endpoint_notify_t, destroy, void,
+	private_endpoint_notify_t *this)
 {
 	DESTROY_IF(this->endpoint);
 	DESTROY_IF(this->base);
 	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -320,27 +304,25 @@ static status_t destroy(private_endpoint_notify_t *this)
  */
 endpoint_notify_t *endpoint_notify_create()
 {
-	private_endpoint_notify_t *this = malloc_thing(private_endpoint_notify_t);
+	private_endpoint_notify_t *this;
 
-	/* public functions */
-	this->public.get_priority = (u_int32_t (*) (endpoint_notify_t *)) get_priority;
-	this->public.set_priority = (void (*) (endpoint_notify_t *, u_int32_t)) set_priority;
-	this->public.get_type = (me_endpoint_type_t (*) (endpoint_notify_t *)) get_type;
-	this->public.get_family = (me_endpoint_family_t (*) (endpoint_notify_t *)) get_family;
-	this->public.get_host = (host_t *(*) (endpoint_notify_t *)) get_host;
-	this->public.get_base = (host_t *(*) (endpoint_notify_t *)) get_base;
-	this->public.build_notify = (notify_payload_t *(*) (endpoint_notify_t *)) build_notify;
-	this->public.clone = (endpoint_notify_t *(*) (endpoint_notify_t *)) _clone;
-	this->public.destroy = (void (*) (endpoint_notify_t *)) destroy;
+	INIT(this,
+		.public = {
+			.get_priority = _get_priority,
+			.set_priority = _set_priority,
+			.get_type = _get_type,
+			.get_family = _get_family,
+			.get_host = _get_host,
+			.get_base = _get_base,
+			.build_notify = _build_notify,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.family = NO_FAMILY,
+		.type = NO_TYPE,
+	);
 
-	/* set default values of the fields */
-	this->priority = 0;
-	this->family = NO_FAMILY;
-	this->type = NO_TYPE;
-	this->endpoint = NULL;
-	this->base = NULL;
-
-	return &this->public;
+	return this;
 }
 
 /**
@@ -348,8 +330,9 @@ endpoint_notify_t *endpoint_notify_create()
  */
 endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, host_t *host, host_t *base)
 {
-	private_endpoint_notify_t *this = (private_endpoint_notify_t*)endpoint_notify_create();
+	private_endpoint_notify_t *this;
 
+	this = endpoint_notify_create();
 	this->type = type;
 
 	switch(type)
@@ -406,13 +389,17 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
  */
 endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify)
 {
+	private_endpoint_notify_t *this;
+	chunk_t data;
+
 	if (notify->get_notify_type(notify) != ME_ENDPOINT)
 	{
 		return NULL;
 	}
 
-	private_endpoint_notify_t *this = (private_endpoint_notify_t*)endpoint_notify_create();
-	chunk_t data = notify->get_notification_data(notify);
+	this = endpoint_notify_create();
+	data = notify->get_notification_data(notify);
+
 	if (parse_notification_data(this, data) != SUCCESS)
 	{
 		destroy(this);
