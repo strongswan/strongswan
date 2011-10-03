@@ -73,10 +73,8 @@ struct private_stroke_cred_t {
 	bool cachecrl;
 };
 
-/**
- * Implementation of stroke_cred_t.load_ca.
- */
-static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
+METHOD(stroke_cred_t, load_ca, certificate_t*,
+	private_stroke_cred_t *this, char *filename)
 {
 	certificate_t *cert;
 	char path[PATH_MAX];
@@ -110,10 +108,8 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 	return NULL;
 }
 
-/**
- * Implementation of stroke_cred_t.load_peer.
- */
-static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
+METHOD(stroke_cred_t, load_peer, certificate_t*,
+	private_stroke_cred_t *this, char *filename)
 {
 	certificate_t *cert;
 	char path[PATH_MAX];
@@ -262,10 +258,8 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of credential_set_t.cache_cert.
- */
-static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
+METHOD(stroke_cred_t, cache_cert, void,
+	private_stroke_cred_t *this, certificate_t *cert)
 {
 	if (cert->get_type(cert) == CERT_X509_CRL && this->cachecrl)
 	{
@@ -292,10 +286,8 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 	}
 }
 
-/**
- * Implementation of stroke_cred_t.cachecrl.
- */
-static void cachecrl(private_stroke_cred_t *this, bool enabled)
+METHOD(stroke_cred_t, cachecrl, void,
+	private_stroke_cred_t *this, bool enabled)
 {
 	DBG1(DBG_CFG, "crl caching to %s %s",
 		 CRL_DIR, enabled ? "enabled" : "disabled");
@@ -994,10 +986,8 @@ static void load_certs(private_stroke_cred_t *this)
 	load_certdir(this, CRL_DIR, CERT_X509_CRL, 0);
 }
 
-/**
- * Implementation of stroke_cred_t.reread.
- */
-static void reread(private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
+METHOD(stroke_cred_t, reread, void,
+	private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
 {
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
@@ -1037,10 +1027,8 @@ static void reread(private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
 	}
 }
 
-/**
- * Implementation of stroke_cred_t.destroy
- */
-static void destroy(private_stroke_cred_t *this)
+METHOD(stroke_cred_t, destroy, void,
+	private_stroke_cred_t *this)
 {
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
@@ -1052,26 +1040,30 @@ static void destroy(private_stroke_cred_t *this)
  */
 stroke_cred_t *stroke_cred_create()
 {
-	private_stroke_cred_t *this = malloc_thing(private_stroke_cred_t);
+	private_stroke_cred_t *this;
 
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)return_null;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)cache_cert;
-	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg, FILE*))reread;
-	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;
-	this->public.load_peer = (certificate_t*(*)(stroke_cred_t*, char *filename))load_peer;
-	this->public.cachecrl = (void(*)(stroke_cred_t*, bool enabled))cachecrl;
-	this->public.destroy = (void(*)(stroke_cred_t*))destroy;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_private_enumerator = (void*)return_null,
+				.create_cert_enumerator = (void*)return_null,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)_cache_cert,
+			},
+			.reread = _reread,
+			.load_ca = _load_ca,
+			.load_peer = _load_peer,
+			.cachecrl = _cachecrl,
+			.destroy = _destroy,
+		},
+		.creds = mem_cred_create(),
+	);
 
-	this->creds = mem_cred_create();
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	load_certs(this);
 	load_secrets(this, SECRETS_FILE, 0, NULL);
-
-	this->cachecrl = FALSE;
 
 	return &this->public;
 }
