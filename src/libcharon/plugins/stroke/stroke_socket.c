@@ -680,10 +680,8 @@ static bool open_socket(private_stroke_socket_t *this)
 	return TRUE;
 }
 
-/**
- * Implementation of stroke_socket_t.destroy
- */
-static void destroy(private_stroke_socket_t *this)
+METHOD(stroke_socket_t, destroy, void,
+	private_stroke_socket_t *this)
 {
 	this->job->cancel(this->job);
 	lib->credmgr->remove_set(lib->credmgr, &this->ca->set);
@@ -704,9 +702,13 @@ static void destroy(private_stroke_socket_t *this)
  */
 stroke_socket_t *stroke_socket_create()
 {
-	private_stroke_socket_t *this = malloc_thing(private_stroke_socket_t);
+	private_stroke_socket_t *this;
 
-	this->public.destroy = (void(*)(stroke_socket_t*))destroy;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+		},
+	);
 
 	if (!open_socket(this))
 	{
