@@ -37,26 +37,20 @@ struct private_bridge_t {
  */
 bool iface_control(char *name, bool up);
 
-/**
- * Implementation of bridge_t.get_name.
- */
-static char* get_name(private_bridge_t *this)
+METHOD(bridge_t, get_name, char*,
+	private_bridge_t *this)
 {
 	return this->name;
 }
 
-/**
- * Implementation of bridge_t.create_iface_enumerator.
- */
-static enumerator_t* create_iface_enumerator(private_bridge_t *this)
+METHOD(bridge_t, create_iface_enumerator, enumerator_t*,
+	private_bridge_t *this)
 {
 	return this->ifaces->create_enumerator(this->ifaces);
 }
 
-/**
- * Implementation of bridge_t.disconnect_iface.
- */
-static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
+METHOD(bridge_t, disconnect_iface, bool,
+	private_bridge_t *this, iface_t *iface)
 {
 	enumerator_t *enumerator;
 	iface_t *current = NULL;
@@ -90,10 +84,8 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 	return good;
 }
 
-/**
- * Implementation of bridge_t.connect_iface.
- */
-static bool connect_iface(private_bridge_t *this, iface_t *iface)
+METHOD(bridge_t, connect_iface, bool,
+	private_bridge_t *this, iface_t *iface)
 {
 	if (br_add_interface(this->name, iface->get_hostif(iface)) != 0)
 	{
@@ -111,10 +103,8 @@ static bool connect_iface(private_bridge_t *this, iface_t *iface)
  */
 static int instances = 0;
 
-/**
- * Implementation of bridge_t.destroy.
- */
-static void destroy(private_bridge_t *this)
+METHOD(bridge_t, destroy, void,
+	private_bridge_t *this)
 {
 	enumerator_t *enumerator;
 	iface_t *iface;
@@ -161,12 +151,15 @@ bridge_t *bridge_create(char *name)
 		}
 	}
 
-	this = malloc_thing(private_bridge_t);
-	this->public.get_name = (char*(*)(bridge_t*))get_name;
-	this->public.create_iface_enumerator = (enumerator_t*(*)(bridge_t*))create_iface_enumerator;
-	this->public.disconnect_iface = (bool(*)(bridge_t*, iface_t *iface))disconnect_iface;
-	this->public.connect_iface = (bool(*)(bridge_t*, iface_t *iface))connect_iface;
-	this->public.destroy = (void*)destroy;
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.create_iface_enumerator = _create_iface_enumerator,
+			.disconnect_iface = _disconnect_iface,
+			.connect_iface = _connect_iface,
+			.destroy = _destroy,
+		}
+	);
 
 	if (br_add_bridge(name) != 0)
 	{
