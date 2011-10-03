@@ -242,10 +242,8 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_me_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -321,10 +319,8 @@ static status_t build_i(private_ike_me_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_me_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -381,10 +377,8 @@ static status_t process_r(private_ike_me_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_me_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -440,10 +434,8 @@ static status_t build_r(private_ike_me_t *this, message_t *message)
 	return SUCCESS;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_me_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -520,9 +512,10 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.build for initiator (mediation server)
+ *  For mediation server
  */
-static status_t build_i_ms(private_ike_me_t *this, message_t *message)
+METHOD(task_t, build_i_ms, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -559,9 +552,10 @@ static status_t build_i_ms(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for responder (mediation server)
+ * For mediation server
  */
-static status_t process_r_ms(private_ike_me_t *this, message_t *message)
+METHOD(task_t, process_r_ms, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -632,9 +626,10 @@ static status_t process_r_ms(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.build for responder (mediation server)
+ * For mediation server
  */
-static status_t build_r_ms(private_ike_me_t *this, message_t *message)
+METHOD(task_t, build_r_ms, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	switch(message->get_exchange_type(message))
 	{
@@ -703,9 +698,10 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator (mediation server)
+ * For mediation server
  */
-static status_t process_i_ms(private_ike_me_t *this, message_t *message)
+METHOD(task_t, process_i_ms, status_t,
+	private_ike_me_t *this, message_t *message)
 {
 	/* FIXME: theoretically we should be prepared to receive a ME_CONNECT_FAILED
 	 * here if the responding peer is not able to proceed. in this case we shall
@@ -714,40 +710,30 @@ static status_t process_i_ms(private_ike_me_t *this, message_t *message)
 	return SUCCESS;
 }
 
-/**
- * Implementation of ike_me.connect
- */
-static void me_connect(private_ike_me_t *this, identification_t *peer_id)
+METHOD(ike_me_t, me_connect, void,
+	private_ike_me_t *this, identification_t *peer_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 }
 
-/**
- * Implementation of ike_me.respond
- */
-static void me_respond(private_ike_me_t *this, identification_t *peer_id,
-					   chunk_t connect_id)
+METHOD(ike_me_t, me_respond, void,
+	private_ike_me_t *this, identification_t *peer_id, chunk_t connect_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 	this->connect_id = chunk_clone(connect_id);
 	this->response = TRUE;
 }
 
-/**
- * Implementation of ike_me.callback
- */
-static void me_callback(private_ike_me_t *this, identification_t *peer_id)
+METHOD(ike_me_t, me_callback, void,
+	private_ike_me_t *this, identification_t *peer_id)
 {
 	this->peer_id = peer_id->clone(peer_id);
 	this->callback = TRUE;
 }
 
-/**
- * Implementation of ike_me.relay
- */
-static void relay(private_ike_me_t *this, identification_t *requester,
-				  chunk_t connect_id, chunk_t connect_key,
-				  linked_list_t *endpoints, bool response)
+METHOD(ike_me_t, relay, void,
+	private_ike_me_t *this, identification_t *requester, chunk_t connect_id,
+	chunk_t connect_key, linked_list_t *endpoints, bool response)
 {
 	this->peer_id = requester->clone(requester);
 	this->connect_id = chunk_clone(connect_id);
@@ -761,26 +747,20 @@ static void relay(private_ike_me_t *this, identification_t *requester,
 	this->response = response;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_me_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_me_t *this)
 {
 	return IKE_ME;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_me_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_me_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_me_t *this)
+METHOD(tast_t, destroy, void,
+	private_ike_me_t *this)
 {
 	DESTROY_IF(this->peer_id);
 
@@ -801,23 +781,37 @@ static void destroy(private_ike_me_t *this)
  */
 ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_me_t *this = malloc_thing(private_ike_me_t);
+	private_ike_me_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+			.connect = _me_connect,
+			.respond = _me_respond,
+			.callback = _me_callback,
+			.relay = _relay,
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+		.local_endpoints = linked_list_create(),
+		.remote_endpoints = linked_list_create(),
+	);
 
 	if (ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
 	{
 		if (initiator)
 		{
-			this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
+			this->public.task.build = _build_i;
 			this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		}
 		else
 		{
-			this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-			this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+			this->public.task.build = _build_r;
+			this->public.task.process = _process_r;
 		}
 	}
 	else
@@ -825,36 +819,15 @@ ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 		/* mediation server */
 		if (initiator)
 		{
-			this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_ms;
-			this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_ms;
+			this->public.task.build = _build_i_ms;
+			this->public.task.process = _process_i_ms;
 		}
 		else
 		{
-			this->public.task.build = (status_t(*)(task_t*,message_t*))build_r_ms;
-			this->public.task.process = (status_t(*)(task_t*,message_t*))process_r_ms;
+			this->public.task.build = _build_r_ms;
+			this->public.task.process = _process_r_ms;
 		}
 	}
-
-	this->public.connect = (void(*)(ike_me_t*,identification_t*))me_connect;
-	this->public.respond = (void(*)(ike_me_t*,identification_t*,chunk_t))me_respond;
-	this->public.callback = (void(*)(ike_me_t*,identification_t*))me_callback;
-	this->public.relay = (void(*)(ike_me_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))relay;
-
-	this->ike_sa = ike_sa;
-	this->initiator = initiator;
-
-	this->peer_id = NULL;
-	this->connect_id = chunk_empty;
-	this->connect_key = chunk_empty;
-	this->local_endpoints = linked_list_create();
-	this->remote_endpoints = linked_list_create();
-	this->mediation = FALSE;
-	this->response = FALSE;
-	this->callback = FALSE;
-	this->failed = FALSE;
-	this->invalid_syntax = FALSE;
-
-	this->mediated_cfg = NULL;
 
 	return &this->public;
 }
