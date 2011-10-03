@@ -83,26 +83,20 @@ bool iface_control(char *name, bool up)
 	return good;
 }
 
-/**
- * Implementation of iface_t.get_guestif.
- */
-static char* get_guestif(private_iface_t *this)
+METHOD(iface_t, get_guestif, char*,
+	private_iface_t *this)
 {
 	return this->guestif;
 }
 
-/**
- * Implementation of iface_t.get_hostif.
- */
-static char* get_hostif(private_iface_t *this)
+METHOD(iface_t, get_hostif, char*,
+	private_iface_t *this)
 {
 	return this->hostif;
 }
 
-/**
- * Implementation of iface_t.add_address
- */
-static bool add_address(private_iface_t *this, host_t *addr, int bits)
+METHOD(iface_t, add_address, bool,
+	private_iface_t *this, host_t *addr, int bits)
 {
 	return (this->guest->exec(this->guest, NULL, NULL,
 			"exec ip addr add %H/%d dev %s", addr, bits, this->guestif) == 0);
@@ -128,10 +122,8 @@ static void destroy_address_list(linked_list_t *list)
 	list->destroy_offset(list, offsetof(host_t, destroy));
 }
 
-/**
- * Implementation of iface_t.create_address_enumerator
- */
-static enumerator_t* create_address_enumerator(private_iface_t *this)
+METHOD(iface_t, create_address_enumerator, enumerator_t*,
+	private_iface_t *this)
 {
 	linked_list_t *addresses = linked_list_create();
 	this->guest->exec_str(this->guest, (void(*)(void*,char*))compile_address_list,
@@ -143,19 +135,15 @@ static enumerator_t* create_address_enumerator(private_iface_t *this)
 					(void(*)(void*))destroy_address_list, addresses);
 }
 
-/**
- * Implementation of iface_t.delete_address
- */
-static bool delete_address(private_iface_t *this, host_t *addr, int bits)
+METHOD(iface_t, delete_address, bool,
+	private_iface_t *this, host_t *addr, int bits)
 {
 	return (this->guest->exec(this->guest, NULL, NULL,
 			"exec ip addr del %H/%d dev %s", addr, bits, this->guestif) == 0);
 }
 
-/**
- * Implementation of iface_t.set_bridge.
- */
-static void set_bridge(private_iface_t *this, bridge_t *bridge)
+METHOD(iface_t, set_bridge, void,
+	private_iface_t *this, bridge_t *bridge)
 {
 	if (this->bridge == NULL && bridge)
 	{
@@ -170,18 +158,14 @@ static void set_bridge(private_iface_t *this, bridge_t *bridge)
 	this->bridge = bridge;
 }
 
-/**
- * Implementation of iface_t.get_bridge
- */
-static bridge_t *get_bridge(private_iface_t *this)
+METHOD(iface_t, get_bridge, bridge_t*,
+	private_iface_t *this)
 {
 	return this->bridge;
 }
 
-/**
- * Implementation of iface_t.get_guest
- */
-static guest_t* get_guest(private_iface_t *this)
+METHOD(iface_t, get_guest, guest_t*,
+	private_iface_t *this)
 {
 	return this->guest;
 }
@@ -250,10 +234,8 @@ static char* create_tap(private_iface_t *this)
 	return strdup(ifr.ifr_name);
 }
 
-/**
- * Implementation of iface_t.destroy.
- */
-static void destroy(private_iface_t *this)
+METHOD(iface_t, destroy, void,
+	private_iface_t *this)
 {
 	if (this->bridge)
 	{
@@ -273,23 +255,25 @@ static void destroy(private_iface_t *this)
  */
 iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 {
-	private_iface_t *this = malloc_thing(private_iface_t);
+	private_iface_t *this;
 
-	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
-	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
-	this->public.add_address = (bool(*)(iface_t*,host_t*,int))add_address;
-	this->public.create_address_enumerator = (enumerator_t*(*)(iface_t*))create_address_enumerator;
-	this->public.delete_address = (bool(*)(iface_t*,host_t*,int))delete_address;
-	this->public.set_bridge = (void(*)(iface_t*, bridge_t*))set_bridge;
-	this->public.get_bridge = (bridge_t*(*)(iface_t*))get_bridge;
-	this->public.get_guest = (guest_t*(*)(iface_t*))get_guest;
-	this->public.destroy = (void*)destroy;
-
-	this->mconsole = mconsole;
-	this->guestif = strdup(name);
-	this->guest = guest;
+	INIT(this,
+		.public = {
+			.get_hostif = _get_hostif,
+			.get_guestif = _get_guestif,
+			.add_address = _add_address,
+			.create_address_enumerator = _create_address_enumerator,
+			.delete_address = _delete_address,
+			.set_bridge = _set_bridge,
+			.get_bridge = _get_bridge,
+			.get_guest = _get_guest,
+			.destroy = _destroy,
+		},
+		.mconsole = mconsole,
+		.guestif = strdup(name),
+		.guest = guest,
+	);
 	this->hostif = create_tap(this);
-	this->bridge = NULL;
 	if (this->hostif == NULL)
 	{
 		destroy_tap(this);
