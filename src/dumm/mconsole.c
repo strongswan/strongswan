@@ -168,10 +168,8 @@ static void ignore(void *data, char *buf, size_t len)
 {
 }
 
-/**
- * Implementation of mconsole_t.add_iface.
- */
-static bool add_iface(private_mconsole_t *this, char *guest, char *host)
+METHOD(mconsole_t, add_iface, bool,
+	private_mconsole_t *this, char *guest, char *host)
 {
 	int tries = 0;
 
@@ -186,10 +184,8 @@ static bool add_iface(private_mconsole_t *this, char *guest, char *host)
 	return FALSE;
 }
 
-/**
- * Implementation of mconsole_t.del_iface.
- */
-static bool del_iface(private_mconsole_t *this, char *guest)
+METHOD(mconsole_t, del_iface, bool,
+	private_mconsole_t *this, char *guest)
 {
 	if (request(this, NULL, NULL, "remove %s", guest) != 0)
 	{
@@ -198,11 +194,9 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 	return TRUE;
 }
 
-/**
- * Implementation of mconsole_t.exec
- */
-static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
-				void *data, char *cmd)
+METHOD(mconsole_t, exec, int,
+	private_mconsole_t *this, void(*cb)(void*,char*,size_t), void *data,
+	char *cmd)
 {
 	return request(this, cb, data, "%s", cmd);
 }
@@ -223,10 +217,8 @@ static void wait_bootup(private_mconsole_t *this)
 	}
 }
 
-/**
- * Implementation of mconsole_t.destroy.
- */
-static void destroy(private_mconsole_t *this)
+METHOD(mconsole_t, destroy, void,
+	private_mconsole_t *this)
 {
 	close(this->console);
 	close(this->notify);
@@ -327,14 +319,17 @@ static bool setup_console(private_mconsole_t *this)
  */
 mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 {
-	private_mconsole_t *this = malloc_thing(private_mconsole_t);
+	private_mconsole_t *this;
 
-	this->public.add_iface = (bool(*)(mconsole_t*, char *guest, char *host))add_iface;
-	this->public.del_iface = (bool(*)(mconsole_t*, char *guest))del_iface;
-	this->public.exec = (int(*)(mconsole_t*,  void(*cb)(void*,char*,size_t), void *data, char *cmd))exec;
-	this->public.destroy = (void*)destroy;
-
-	this->idle = idle;
+	INIT(this,
+		.public = {
+			.add_iface = _add_iface,
+			.del_iface = _del_iface,
+			.exec = _exec,
+			.destroy = _destroy,
+		},
+		.idle = idle,
+	);
 
 	if (!wait_for_notify(this, notify))
 	{
