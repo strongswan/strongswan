@@ -87,10 +87,8 @@ struct private_rwlock_t {
 
 #ifdef HAVE_PTHREAD_RWLOCK_INIT
 
-/**
- * Implementation of rwlock_t.read_lock
- */
-static void read_lock(private_rwlock_t *this)
+METHOD(rwlock_t, read_lock, void,
+	private_rwlock_t *this)
 {
 	int err;
 
@@ -103,10 +101,8 @@ static void read_lock(private_rwlock_t *this)
 	profiler_end(&this->profile);
 }
 
-/**
- * Implementation of rwlock_t.write_lock
- */
-static void write_lock(private_rwlock_t *this)
+METHOD(rwlock_t, write_lock, void,
+	private_rwlock_t *this)
 {
 	int err;
 
@@ -119,18 +115,14 @@ static void write_lock(private_rwlock_t *this)
 	profiler_end(&this->profile);
 }
 
-/**
- * Implementation of rwlock_t.try_write_lock
- */
-static bool try_write_lock(private_rwlock_t *this)
+METHOD(rwlock_t, try_write_lock, bool,
+	private_rwlock_t *this)
 {
 	return pthread_rwlock_trywrlock(&this->rwlock) == 0;
 }
 
-/**
- * Implementation of rwlock_t.unlock
- */
-static void rw_unlock(private_rwlock_t *this)
+METHOD(rwlock_t, unlock, void,
+	private_rwlock_t *this)
 {
 	int err;
 
@@ -141,10 +133,8 @@ static void rw_unlock(private_rwlock_t *this)
 	}
 }
 
-/**
- * Implementation of rwlock_t.destroy
- */
-static void rw_destroy(private_rwlock_t *this)
+METHOD(rwlock_t, destroy, void,
+	private_rwlock_t *this)
 {
 	pthread_rwlock_destroy(&this->rwlock);
 	profiler_cleanup(&this->profile);
@@ -161,13 +151,17 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 		case RWLOCK_TYPE_DEFAULT:
 		default:
 		{
-			private_rwlock_t *this = malloc_thing(private_rwlock_t);
+			private_rwlock_t *this;
 
-			this->public.read_lock = (void(*)(rwlock_t*))read_lock;
-			this->public.write_lock = (void(*)(rwlock_t*))write_lock;
-			this->public.try_write_lock = (bool(*)(rwlock_t*))try_write_lock;
-			this->public.unlock = (void(*)(rwlock_t*))rw_unlock;
-			this->public.destroy = (void(*)(rwlock_t*))rw_destroy;
+			INIT(this,
+				.public = {
+					.read_lock = _read_lock,
+					.write_lock = _write_lock,
+					.try_write_lock = _try_write_lock,
+					.unlock = _unlock,
+					.destroy = _destroy,
+				}
+			);
 
 			pthread_rwlock_init(&this->rwlock, NULL);
 			profiler_init(&this->profile);
@@ -200,10 +194,8 @@ rwlock_t *rwlock_create(rwlock_type_t type)
  * checked or enforced so behave yourself to prevent deadlocks).
  */
 
-/**
- * Implementation of rwlock_t.read_lock
- */
-static void read_lock(private_rwlock_t *this)
+METHOD(rwlock_t, read_lock, void,
+	private_rwlock_t *this)
 {
 	profiler_start(&this->profile);
 	this->mutex->lock(this->mutex);
@@ -216,10 +208,8 @@ static void read_lock(private_rwlock_t *this)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of rwlock_t.write_lock
- */
-static void write_lock(private_rwlock_t *this)
+METHOD(rwlock_t, write_lock, void,
+	private_rwlock_t *this)
 {
 	profiler_start(&this->profile);
 	this->mutex->lock(this->mutex);
@@ -234,10 +224,8 @@ static void write_lock(private_rwlock_t *this)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of rwlock_t.try_write_lock
- */
-static bool try_write_lock(private_rwlock_t *this)
+METHOD(rwlock_t, try_write_lock, bool,
+	private_rwlock_t *this)
 {
 	bool res = FALSE;
 	this->mutex->lock(this->mutex);
@@ -250,10 +238,8 @@ static bool try_write_lock(private_rwlock_t *this)
 	return res;
 }
 
-/**
- * Implementation of rwlock_t.unlock
- */
-static void rw_unlock(private_rwlock_t *this)
+METHOD(rwlock_t, unlock, void,
+	private_rwlock_t *this)
 {
 	this->mutex->lock(this->mutex);
 	if (this->writer == pthread_self())
@@ -279,10 +265,8 @@ static void rw_unlock(private_rwlock_t *this)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of rwlock_t.destroy
- */
-static void rw_destroy(private_rwlock_t *this)
+METHOD(rwlock_t, destroy, void,
+	private_rwlock_t *this)
 {
 	this->mutex->destroy(this->mutex);
 	this->writers->destroy(this->writers);
@@ -301,20 +285,20 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 		case RWLOCK_TYPE_DEFAULT:
 		default:
 		{
-			private_rwlock_t *this = malloc_thing(private_rwlock_t);
+			private_rwlock_t *this;
 
-			this->public.read_lock = (void(*)(rwlock_t*))read_lock;
-			this->public.write_lock = (void(*)(rwlock_t*))write_lock;
-			this->public.try_write_lock = (bool(*)(rwlock_t*))try_write_lock;
-			this->public.unlock = (void(*)(rwlock_t*))rw_unlock;
-			this->public.destroy = (void(*)(rwlock_t*))rw_destroy;
-
-			this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-			this->writers = condvar_create(CONDVAR_TYPE_DEFAULT);
-			this->readers = condvar_create(CONDVAR_TYPE_DEFAULT);
-			this->waiting_writers = 0;
-			this->reader_count = 0;
-			this->writer = 0;
+			INIT(this,
+				.public = {
+					.read_lock = _read_lock,
+					.write_lock = _write_lock,
+					.try_write_lock = _try_write_lock,
+					.unlock = _unlock,
+					.destroy = _destroy,
+				},
+				.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+				.writers = condvar_create(CONDVAR_TYPE_DEFAULT),
+				.readers = condvar_create(CONDVAR_TYPE_DEFAULT),
+			);
 
 			profiler_init(&this->profile);
 
