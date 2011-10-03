@@ -96,11 +96,8 @@ struct private_condvar_t {
 };
 
 
-
-/**
- * Implementation of mutex_t.lock.
- */
-static void lock(private_mutex_t *this)
+METHOD(mutex_t, lock, void,
+	private_mutex_t *this)
 {
 	int err;
 
@@ -113,10 +110,8 @@ static void lock(private_mutex_t *this)
 	profiler_end(&this->profile);
 }
 
-/**
- * Implementation of mutex_t.unlock.
- */
-static void unlock(private_mutex_t *this)
+METHOD(mutex_t, unlock, void,
+	private_mutex_t *this)
 {
 	int err;
 
@@ -127,10 +122,8 @@ static void unlock(private_mutex_t *this)
 	}
 }
 
-/**
- * Implementation of mutex_t.lock.
- */
-static void lock_r(private_r_mutex_t *this)
+METHOD(mutex_t, lock_r, void,
+	private_r_mutex_t *this)
 {
 	pthread_t self = pthread_self();
 
@@ -151,10 +144,8 @@ static void lock_r(private_r_mutex_t *this)
 	}
 }
 
-/**
- * Implementation of mutex_t.unlock.
- */
-static void unlock_r(private_r_mutex_t *this)
+METHOD(mutex_t, unlock_r, void,
+	private_r_mutex_t *this)
 {
 	uintptr_t times;
 
@@ -169,20 +160,16 @@ static void unlock_r(private_r_mutex_t *this)
 	}
 }
 
-/**
- * Implementation of mutex_t.destroy
- */
-static void mutex_destroy(private_mutex_t *this)
+METHOD(mutex_t, mutex_destroy, void,
+	private_mutex_t *this)
 {
 	profiler_cleanup(&this->profile);
 	pthread_mutex_destroy(&this->mutex);
 	free(this);
 }
 
-/**
- * Implementation of mutex_t.destroy for recursive mutex'
- */
-static void mutex_destroy_r(private_r_mutex_t *this)
+METHOD(mutex_t, mutex_destroy_r, void,
+	private_r_mutex_t *this)
 {
 	profiler_cleanup(&this->generic.profile);
 	pthread_mutex_destroy(&this->generic.mutex);
@@ -199,31 +186,39 @@ mutex_t *mutex_create(mutex_type_t type)
 	{
 		case MUTEX_TYPE_RECURSIVE:
 		{
-			private_r_mutex_t *this = malloc_thing(private_r_mutex_t);
+			private_r_mutex_t *this;
 
-			this->generic.public.lock = (void(*)(mutex_t*))lock_r;
-			this->generic.public.unlock = (void(*)(mutex_t*))unlock_r;
-			this->generic.public.destroy = (void(*)(mutex_t*))mutex_destroy_r;
+			INIT(this,
+				.generic = {
+					.public = {
+						.lock = _lock_r,
+						.unlock = _unlock_r,
+						.destroy = _mutex_destroy_r,
+					},
+					.recursive = TRUE,
+				},
+			);
 
 			pthread_mutex_init(&this->generic.mutex, NULL);
 			pthread_key_create(&this->times, NULL);
-			this->generic.recursive = TRUE;
 			profiler_init(&this->generic.profile);
-			this->thread = 0;
 
 			return &this->generic.public;
 		}
 		case MUTEX_TYPE_DEFAULT:
 		default:
 		{
-			private_mutex_t *this = malloc_thing(private_mutex_t);
+			private_mutex_t *this;
 
-			this->public.lock = (void(*)(mutex_t*))lock;
-			this->public.unlock = (void(*)(mutex_t*))unlock;
-			this->public.destroy = (void(*)(mutex_t*))mutex_destroy;
+			INIT(this,
+				.public = {
+					.lock = _lock,
+					.unlock = _unlock,
+					.destroy = _mutex_destroy,
+				},
+			);
 
 			pthread_mutex_init(&this->mutex, NULL);
-			this->recursive = FALSE;
 			profiler_init(&this->profile);
 
 			return &this->public;
@@ -232,11 +227,8 @@ mutex_t *mutex_create(mutex_type_t type)
 }
 
 
-
-/**
- * Implementation of condvar_t.wait.
- */
-static void _wait(private_condvar_t *this, private_mutex_t *mutex)
+METHOD(condvar_t, wait_, void,
+	private_condvar_t *this, private_mutex_t *mutex)
 {
 	if (mutex->recursive)
 	{
@@ -258,11 +250,8 @@ static void _wait(private_condvar_t *this, private_mutex_t *mutex)
 #define pthread_cond_timedwait pthread_cond_timedwait_monotonic
 #endif
 
-/**
- * Implementation of condvar_t.timed_wait_abs.
- */
-static bool timed_wait_abs(private_condvar_t *this, private_mutex_t *mutex,
-						   timeval_t time)
+METHOD(condvar_t, timed_wait_abs, bool,
+	private_condvar_t *this, private_mutex_t *mutex, timeval_t time)
 {
 	struct timespec ts;
 	bool timed_out;
@@ -287,11 +276,8 @@ static bool timed_wait_abs(private_condvar_t *this, private_mutex_t *mutex,
 	return timed_out;
 }
 
-/**
- * Implementation of condvar_t.timed_wait.
- */
-static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
-					   u_int timeout)
+METHOD(condvar_t, timed_wait, bool,
+	private_condvar_t *this, private_mutex_t *mutex, u_int timeout)
 {
 	timeval_t tv;
 	u_int s, ms;
@@ -312,26 +298,20 @@ static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
 	return timed_wait_abs(this, mutex, tv);
 }
 
-/**
- * Implementation of condvar_t.signal.
- */
-static void _signal(private_condvar_t *this)
+METHOD(condvar_t, signal_, void,
+	private_condvar_t *this)
 {
 	pthread_cond_signal(&this->condvar);
 }
 
-/**
- * Implementation of condvar_t.broadcast.
- */
-static void broadcast(private_condvar_t *this)
+METHOD(condvar_t, broadcast, void,
+	private_condvar_t *this)
 {
 	pthread_cond_broadcast(&this->condvar);
 }
 
-/**
- * Implementation of condvar_t.destroy
- */
-static void condvar_destroy(private_condvar_t *this)
+METHOD(condvar_t, condvar_destroy, void,
+	private_condvar_t *this)
 {
 	pthread_cond_destroy(&this->condvar);
 	free(this);
@@ -347,14 +327,18 @@ condvar_t *condvar_create(condvar_type_t type)
 		case CONDVAR_TYPE_DEFAULT:
 		default:
 		{
-			private_condvar_t *this = malloc_thing(private_condvar_t);
+			private_condvar_t *this;
 
-			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))_wait;
-			this->public.timed_wait = (bool(*)(condvar_t*, mutex_t *mutex, u_int timeout))timed_wait;
-			this->public.timed_wait_abs = (bool(*)(condvar_t*, mutex_t *mutex, timeval_t time))timed_wait_abs;
-			this->public.signal = (void(*)(condvar_t*))_signal;
-			this->public.broadcast = (void(*)(condvar_t*))broadcast;
-			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
+			INIT(this,
+				.public = {
+					.wait = (void*)_wait_,
+					.timed_wait = (void*)_timed_wait,
+					.timed_wait_abs = (void*)_timed_wait_abs,
+					.signal = _signal_,
+					.broadcast = _broadcast,
+					.destroy = _condvar_destroy,
+				}
+			);
 
 #ifdef HAVE_PTHREAD_CONDATTR_INIT
 			{
