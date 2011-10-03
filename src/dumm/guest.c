@@ -82,18 +82,14 @@ ENUM(guest_state_names, GUEST_STOPPED, GUEST_STOPPING,
 	"STOPPING",
 );
 
-/**
- * Implementation of guest_t.get_name.
- */
-static char* get_name(private_guest_t *this)
+METHOD(guest_t, get_name, char*,
+	private_guest_t *this)
 {
 	return this->name;
 }
 
-/**
- * Implementation of guest_t.create_iface.
- */
-static iface_t* create_iface(private_guest_t *this, char *name)
+METHOD(guest_t, create_iface, iface_t*,
+	private_guest_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	iface_t *iface;
@@ -126,10 +122,8 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	return iface;
 }
 
-/**
- * Implementation of guest_t.destroy_iface.
- */
-static void destroy_iface(private_guest_t *this, iface_t *iface)
+METHOD(guest_t, destroy_iface, void,
+	private_guest_t *this, iface_t *iface)
 {
 	enumerator_t *enumerator;
 	iface_t *current;
@@ -147,26 +141,20 @@ static void destroy_iface(private_guest_t *this, iface_t *iface)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of guest_t.create_iface_enumerator.
- */
-static enumerator_t* create_iface_enumerator(private_guest_t *this)
+METHOD(guest_t, create_iface_enumerator, enumerator_t*,
+	private_guest_t *this)
 {
 	return this->ifaces->create_enumerator(this->ifaces);
 }
 
-/**
- * Implementation of guest_t.get_state.
- */
-static guest_state_t get_state(private_guest_t *this)
+METHOD(guest_t, get_state, guest_state_t,
+	private_guest_t *this)
 {
 	return this->state;
 }
 
-/**
- * Implementation of guest_t.get_pid.
- */
-static pid_t get_pid(private_guest_t *this)
+METHOD(guest_t, get_pid, pid_t,
+	private_guest_t *this)
 {
 	return this->pid;
 }
@@ -193,10 +181,8 @@ static char* write_arg(char **pos, size_t *left, char *format, ...)
 	return res;
 }
 
-/**
- * Implementation of guest_t.stop.
- */
-static void stop(private_guest_t *this, idle_function_t idle)
+METHOD(guest_t, stop, void,
+	private_guest_t *this, idle_function_t idle)
 {
 	if (this->state != GUEST_STOPPED)
 	{
@@ -236,11 +222,9 @@ void savepid(private_guest_t *this)
 	}
 }
 
-/**
- * Implementation of guest_t.start.
- */
-static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
-				  idle_function_t idle)
+METHOD(guest_t, start, bool,
+	private_guest_t *this, invoke_function_t invoke, void* data,
+	idle_function_t idle)
 {
 	char buf[2048];
 	char *notify;
@@ -296,10 +280,8 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	return TRUE;
 }
 
-/**
- * Implementation of guest_t.add_overlay.
- */
-static bool add_overlay(private_guest_t *this, char *path)
+METHOD(guest_t, add_overlay, bool,
+	private_guest_t *this, char *path)
 {
 	if (path == NULL)
 	{
@@ -319,18 +301,14 @@ static bool add_overlay(private_guest_t *this, char *path)
 	return this->cowfs->add_overlay(this->cowfs, path);
 }
 
-/**
- * Implementation of guest_t.del_overlay.
- */
-static bool del_overlay(private_guest_t *this, char *path)
+METHOD(guest_t, del_overlay, bool,
+	private_guest_t *this, char *path)
 {
 	return this->cowfs->del_overlay(this->cowfs, path);
 }
 
-/**
- * Implementation of guest_t.pop_overlay.
- */
-static bool pop_overlay(private_guest_t *this)
+METHOD(guest_t, pop_overlay, bool,
+	private_guest_t *this)
 {
 	return this->cowfs->pop_overlay(this->cowfs);
 }
@@ -356,11 +334,9 @@ static int vexec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *dat
 	return -1;
 }
 
-/**
- * Implementation of guest_t.exec
- */
-static int exec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
-				char *cmd, ...)
+METHOD(guest_t, exec, int,
+	private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+	char *cmd, ...)
 {
 	int res;
 	va_list args;
@@ -411,11 +387,9 @@ static void exec_str_cb(exec_str_t *data, char *buf, size_t len)
 	}
 }
 
-/**
- * Implementation of guest_t.exec_str
- */
-static int exec_str(private_guest_t *this, void(*cb)(void*,char*), bool lines,
-					void *data, char *cmd, ...)
+METHOD(guest_t, exec_str, int,
+	private_guest_t *this, void(*cb)(void*,char*), bool lines, void *data,
+	char *cmd, ...)
 {
 	int res;
 	va_list args;
@@ -448,10 +422,8 @@ static int exec_str(private_guest_t *this, void(*cb)(void*,char*), bool lines,
 	return res;
 }
 
-/**
- * Implementation of guest_t.sigchild.
- */
-static void sigchild(private_guest_t *this)
+METHOD(guest_t, sigchild, void,
+	private_guest_t *this)
 {
 	DESTROY_IF(this->mconsole);
 	this->mconsole = NULL;
@@ -537,10 +509,8 @@ bool saveargs(private_guest_t *this, char *args)
 	return retval;
 }
 
-/**
- * Implementation of guest_t.destroy.
- */
-static void destroy(private_guest_t *this)
+METHOD(guest_t, destroy, void,
+	private_guest_t *this)
 {
 	stop(this, NULL);
 	umount_unionfs(this);
@@ -562,23 +532,27 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 											 bool create)
 {
 	char cwd[PATH_MAX];
-	private_guest_t *this = malloc_thing(private_guest_t);
+	private_guest_t *this;
 
-	this->public.get_name = (void*)get_name;
-	this->public.get_pid = (pid_t(*)(guest_t*))get_pid;
-	this->public.get_state = (guest_state_t(*)(guest_t*))get_state;
-	this->public.create_iface = (iface_t*(*)(guest_t*,char*))create_iface;
-	this->public.destroy_iface = (void(*)(guest_t*,iface_t*))destroy_iface;
-	this->public.create_iface_enumerator = (enumerator_t*(*)(guest_t*))create_iface_enumerator;
-	this->public.start = (void*)start;
-	this->public.stop = (void*)stop;
-	this->public.add_overlay = (bool(*)(guest_t*,char*))add_overlay;
-	this->public.del_overlay = (bool(*)(guest_t*,char*))del_overlay;
-	this->public.pop_overlay = (bool(*)(guest_t*))pop_overlay;
-	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t),void*,char*,...))exec;
-	this->public.exec_str = (int(*)(guest_t*, void(*cb)(void*,char*),bool,void*,char*,...))exec_str;
-	this->public.sigchild = (void(*)(guest_t*))sigchild;
-	this->public.destroy = (void*)destroy;
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.get_pid = _get_pid,
+			.get_state = _get_state,
+			.create_iface = _create_iface,
+			.destroy_iface = _destroy_iface,
+			.create_iface_enumerator = _create_iface_enumerator,
+			.start = _start,
+			.stop = _stop,
+			.add_overlay = _add_overlay,
+			.del_overlay = _del_overlay,
+			.pop_overlay = _pop_overlay,
+			.exec = _exec,
+			.exec_str = _exec_str,
+			.sigchild = _sigchild,
+			.destroy = _destroy,
+		}
+	);
 
 	if (*parent == '/' || getcwd(cwd, sizeof(cwd)) == NULL)
 	{
@@ -611,13 +585,9 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 		free(this);
 		return NULL;
 	}
-	this->pid = 0;
 	this->state = GUEST_STOPPED;
-	this->mconsole = NULL;
 	this->ifaces = linked_list_create();
-	this->args = NULL;
 	this->name = strdup(name);
-	this->cowfs = NULL;
 
 	return this;
 }
