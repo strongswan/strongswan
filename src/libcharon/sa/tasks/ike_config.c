@@ -230,10 +230,8 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t build_i(private_ike_config_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_config_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* in first IKE_AUTH only */
@@ -292,10 +290,8 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_config_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_config_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* in first IKE_AUTH only */
@@ -304,10 +300,8 @@ static status_t process_r(private_ike_config_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_config_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_config_t *this, message_t *message)
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
@@ -371,10 +365,8 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_config_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_config_t *this, message_t *message)
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
@@ -390,18 +382,14 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_config_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_config_t *this)
 {
 	return IKE_CONFIG;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_config_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->virtual_ip);
 
@@ -411,10 +399,8 @@ static void migrate(private_ike_config_t *this, ike_sa_t *ike_sa)
 	this->requested = linked_list_create();
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_config_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_config_t *this)
 {
 	DESTROY_IF(this->virtual_ip);
 	this->requested->destroy_function(this->requested, free);
@@ -426,26 +412,30 @@ static void destroy(private_ike_config_t *this)
  */
 ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_config_t *this = malloc_thing(private_ike_config_t);
+	private_ike_config_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
-
-	this->initiator = initiator;
-	this->ike_sa = ike_sa;
-	this->virtual_ip = NULL;
-	this->requested = linked_list_create();
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+		},
+		.initiator = initiator,
+		.ike_sa = ike_sa,
+		.requested = linked_list_create(),
+	);
 
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
 	else
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
 	}
 
 	return &this->public;
