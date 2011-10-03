@@ -53,13 +53,12 @@ static void peer_destroy(peer_t *this)
  */
 static peer_t *peer_create(identification_t *id, ike_sa_id_t* ike_sa_id)
 {
-	peer_t *this = malloc_thing(peer_t);
-
-	/* clone everything */
-	this->id = id->clone(id);
-	this->ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL;
-	this->requested_by = linked_list_create();
-
+	peer_t *this;
+	INIT(this,
+		.id = id->clone(id),
+		.ike_sa_id = ike_sa_id ? ike_sa_id->clone(ike_sa_id) : NULL,
+		.requested_by = linked_list_create(),
+	);
 	return this;
 }
 
@@ -174,10 +173,8 @@ static void unregister_peer(private_mediation_manager_t *this,
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of mediation_manager_t.remove
- */
-static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
+METHOD(mediation_manager_t, remove_sa, void,
+	private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
 	enumerator_t *enumerator;
 	peer_t *peer;
@@ -202,10 +199,9 @@ static void remove_sa(private_mediation_manager_t *this, ike_sa_id_t *ike_sa_id)
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of mediation_manager_t.update_sa_id
- */
-static void update_sa_id(private_mediation_manager_t *this, identification_t *peer_id, ike_sa_id_t *ike_sa_id)
+METHOD(mediation_manager_t, update_sa_id, void,
+	private_mediation_manager_t *this, identification_t *peer_id,
+	ike_sa_id_t *ike_sa_id)
 {
 	enumerator_t *enumerator;
 	peer_t *peer;
@@ -248,11 +244,8 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of mediation_manager_t.check.
- */
-static ike_sa_id_t *check(private_mediation_manager_t *this,
-			identification_t *peer_id)
+METHOD(mediation_manager_t, check, ike_sa_id_t*,
+	private_mediation_manager_t *this, identification_t *peer_id)
 {
 	peer_t *peer;
 	ike_sa_id_t *ike_sa_id;
@@ -272,11 +265,9 @@ static ike_sa_id_t *check(private_mediation_manager_t *this,
 	return ike_sa_id;
 }
 
-/**
- * Implementation of mediation_manager_t.check_and_register.
- */
-static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
-			identification_t *peer_id, identification_t *requester)
+METHOD(mediation_manager_t, check_and_register, ike_sa_id_t*,
+	private_mediation_manager_t *this, identification_t *peer_id,
+	identification_t *requester)
 {
 	peer_t *peer;
 	ike_sa_id_t *ike_sa_id;
@@ -307,10 +298,8 @@ static ike_sa_id_t *check_and_register(private_mediation_manager_t *this,
 	return ike_sa_id;
 }
 
-/**
- * Implementation of mediation_manager_t.destroy.
- */
-static void destroy(private_mediation_manager_t *this)
+METHOD(mediation_manager_t, destroy, void,
+	private_mediation_manager_t *this)
 {
 	this->mutex->lock(this->mutex);
 
@@ -326,16 +315,18 @@ static void destroy(private_mediation_manager_t *this)
  */
 mediation_manager_t *mediation_manager_create()
 {
-	private_mediation_manager_t *this = malloc_thing(private_mediation_manager_t);
+	private_mediation_manager_t *this;
 
-	this->public.destroy = (void(*)(mediation_manager_t*))destroy;
-	this->public.remove = (void(*)(mediation_manager_t*,ike_sa_id_t*))remove_sa;
-	this->public.update_sa_id = (void(*)(mediation_manager_t*,identification_t*,ike_sa_id_t*))update_sa_id;
-	this->public.check = (ike_sa_id_t*(*)(mediation_manager_t*,identification_t*))check;
-	this->public.check_and_register = (ike_sa_id_t*(*)(mediation_manager_t*,identification_t*,identification_t*))check_and_register;
-
-	this->peers = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-
-	return (mediation_manager_t*)this;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+			.remove = _remove_sa,
+			.update_sa_id = _update_sa_id,
+			.check = _check,
+			.check_and_register = _check_and_register,
+		},
+		.peers = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+	);
+	return &this->public;
 }
