@@ -130,24 +130,23 @@ static void endpoint_pair_destroy(endpoint_pair_t *this)
 static endpoint_pair_t *endpoint_pair_create(endpoint_notify_t *initiator,
 		endpoint_notify_t *responder, bool initiator_is_local)
 {
-	endpoint_pair_t *this = malloc_thing(endpoint_pair_t);
-
-	this->id = 0;
+	endpoint_pair_t *this;
 
 	u_int32_t pi = initiator->get_priority(initiator);
 	u_int32_t pr = responder->get_priority(responder);
-	this->priority = pow(2, 32) * min(pi, pr) + 2 * max(pi, pr) + (pi > pr ? 1 : 0);
 
-	this->local = initiator_is_local ? initiator->get_base(initiator)
-									 : responder->get_base(responder);
+	INIT(this,
+		.priority = pow(2, 32) * min(pi, pr) + 2 * max(pi, pr)
+											 + (pi > pr ? 1 : 0),
+		.local = initiator_is_local ? initiator->get_base(initiator)
+									: responder->get_base(responder),
+		.remote = initiator_is_local ? responder->get_host(responder)
+									 : initiator->get_host(initiator),
+		.state = CHECK_WAITING,
+	);
+
 	this->local = this->local->clone(this->local);
-	this->remote = initiator_is_local ? responder->get_host(responder)
-									  : initiator->get_host(initiator);
 	this->remote = this->remote->clone(this->remote);
-
-	this->state = CHECK_WAITING;
-	this->retransmitted = 0;
-	this->packet = NULL;
 
 	return this;
 }
@@ -239,23 +238,24 @@ static check_list_t *check_list_create(identification_t *initiator,
 									   linked_list_t *initiator_endpoints,
 									   bool is_initiator)
 {
-	check_list_t *this = malloc_thing(check_list_t);
+	check_list_t *this;
 
-	this->connect_id = chunk_clone(connect_id);
-
-	this->initiator.id = initiator->clone(initiator);
-	this->initiator.key = chunk_clone(initiator_key);
-	this->initiator.endpoints = initiator_endpoints->clone_offset(initiator_endpoints, offsetof(endpoint_notify_t, clone));
-
-	this->responder.id = responder->clone(responder);
-	this->responder.key = chunk_empty;
-	this->responder.endpoints = NULL;
-
-	this->pairs = linked_list_create();
-	this->triggered = linked_list_create();
-	this->state = CHECK_NONE;
-	this->is_initiator = is_initiator;
-	this->is_finishing = FALSE;
+	INIT(this,
+		.connect_id = chunk_clone(connect_id),
+		.initiator = {
+			.id = initiator->clone(initiator),
+			.key = chunk_clone(initiator_key),
+			.endpoints = initiator_endpoints->clone_offset(initiator_endpoints,
+											offsetof(endpoint_notify_t, clone)),
+		},
+		.responder = {
+			.id = responder->clone(responder),
+		},
+		.pairs = linked_list_create(),
+		.triggered = linked_list_create(),
+		.state = CHECK_NONE,
+		.is_initiator = is_initiator,
+	);
 
 	return this;
 }
@@ -294,11 +294,13 @@ static void initiated_destroy(initiated_t *this)
 static initiated_t *initiated_create(identification_t *id,
 									 identification_t *peer_id)
 {
-	initiated_t *this = malloc_thing(initiated_t);
+	initiated_t *this;
 
-	this->id = id->clone(id);
-	this->peer_id = peer_id->clone(peer_id);
-	this->mediated = linked_list_create();
+	INIT(this,
+		.id = id->clone(id),
+		.peer_id = peer_id->clone(peer_id),
+		.mediated = linked_list_create(),
+	);
 
 	return this;
 }
@@ -351,16 +353,11 @@ static void check_destroy(check_t *this)
  */
 static check_t *check_create()
 {
-	check_t *this = malloc_thing(check_t);
+	check_t *this;
 
-	this->connect_id = chunk_empty;
-	this->auth = chunk_empty;
-	this->endpoint_raw = chunk_empty;
-	this->src = NULL;
-	this->dst = NULL;
-	this->endpoint = NULL;
-
-	this->mid = 0;
+	INIT(this,
+		.mid = 0,
+	);
 
 	return this;
 }
@@ -396,10 +393,12 @@ static void callback_data_destroy(callback_data_t *this)
 static callback_data_t *callback_data_create(private_connect_manager_t *connect_manager,
 											 chunk_t connect_id)
 {
-	callback_data_t *this = malloc_thing(callback_data_t);
-	this->connect_manager = connect_manager;
-	this->connect_id = chunk_clone(connect_id);
-	this->mid = 0;
+	callback_data_t *this;
+	INIT(this,
+		.connect_manager = connect_manager,
+		.connect_id = chunk_clone(connect_id),
+		.mid = 0,
+	);
 	return this;
 }
 
@@ -443,11 +442,11 @@ static void initiate_data_destroy(initiate_data_t *this)
 static initiate_data_t *initiate_data_create(check_list_t *checklist,
 											 initiated_t *initiated)
 {
-	initiate_data_t *this = malloc_thing(initiate_data_t);
-
-	this->checklist = checklist;
-	this->initiated = initiated;
-
+	initiate_data_t *this;
+	INIT(this,
+		.checklist = checklist,
+		.initiated = initiated,
+	);
 	return this;
 }
 
@@ -1345,10 +1344,8 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 	check_destroy(response);
 }
 
-/**
- * Implementation of connect_manager_t.process_check.
- */
-static void process_check(private_connect_manager_t *this, message_t *message)
+METHOD(connect_manager_t, process_check, void,
+	private_connect_manager_t *this, message_t *message)
 {
 	if (message->parse_body(message, NULL) != SUCCESS)
 	{
@@ -1411,12 +1408,9 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	check_destroy(check);
 }
 
-/**
- * Implementation of connect_manager_t.check_and_register.
- */
-static bool check_and_register(private_connect_manager_t *this,
-			identification_t *id, identification_t *peer_id,
-			ike_sa_id_t *mediated_sa)
+METHOD(connect_manager_t, check_and_register, bool,
+	private_connect_manager_t *this, identification_t *id,
+	identification_t *peer_id, ike_sa_id_t *mediated_sa)
 {
 	initiated_t *initiated;
 	bool already_there = TRUE;
@@ -1445,12 +1439,9 @@ static bool check_and_register(private_connect_manager_t *this,
 	return already_there;
 }
 
-/**
- * Implementation of connect_manager_t.check_and_initiate.
- */
-static void check_and_initiate(private_connect_manager_t *this,
-							   ike_sa_id_t *mediation_sa, identification_t *id,
-							   identification_t *peer_id)
+METHOD(connect_manager_t, check_and_initiate, void,
+	private_connect_manager_t *this, ike_sa_id_t *mediation_sa,
+	identification_t *id, identification_t *peer_id)
 {
 	initiated_t *initiated;
 
@@ -1477,14 +1468,10 @@ static void check_and_initiate(private_connect_manager_t *this,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of connect_manager_t.set_initiator_data.
- */
-static status_t set_initiator_data(private_connect_manager_t *this,
-								   identification_t *initiator,
-								   identification_t *responder,
-								   chunk_t connect_id, chunk_t key,
-								   linked_list_t *endpoints, bool is_initiator)
+METHOD(connect_manager_t, set_initiator_data, status_t,
+	private_connect_manager_t *this, identification_t *initiator,
+	identification_t *responder, chunk_t connect_id, chunk_t key,
+	linked_list_t *endpoints, bool is_initiator)
 {
 	check_list_t *checklist;
 
@@ -1507,12 +1494,9 @@ static status_t set_initiator_data(private_connect_manager_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of connect_manager_t.set_responder_data.
- */
-static status_t set_responder_data(private_connect_manager_t *this,
-								   chunk_t connect_id, chunk_t key,
-								   linked_list_t *endpoints)
+METHOD(connect_manager_t, set_responder_data, status_t,
+	private_connect_manager_t *this, chunk_t connect_id, chunk_t key,
+	linked_list_t *endpoints)
 {
 	check_list_t *checklist;
 
@@ -1541,10 +1525,8 @@ static status_t set_responder_data(private_connect_manager_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of connect_manager_t.stop_checks.
- */
-static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
+METHOD(connect_manager_t, stop_checks, status_t,
+	private_connect_manager_t *this, chunk_t connect_id)
 {
 	check_list_t *checklist;
 
@@ -1568,16 +1550,16 @@ static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
 	return SUCCESS;
 }
 
-/**
- * Implementation of connect_manager_t.destroy.
- */
-static void destroy(private_connect_manager_t *this)
+METHOD(connect_manager_t, destroy, void,
+	private_connect_manager_t *this)
 {
 	this->mutex->lock(this->mutex);
 
-	this->hasher->destroy(this->hasher);
-	this->checklists->destroy_function(this->checklists, (void*)check_list_destroy);
-	this->initiated->destroy_function(this->initiated, (void*)initiated_destroy);
+	this->checklists->destroy_function(this->checklists,
+									   (void*)check_list_destroy);
+	this->initiated->destroy_function(this->initiated,
+									 (void*)initiated_destroy);
+	DESTROY_IF(this->hasher);
 
 	this->mutex->unlock(this->mutex);
 	this->mutex->destroy(this->mutex);
@@ -1589,28 +1571,30 @@ static void destroy(private_connect_manager_t *this)
  */
 connect_manager_t *connect_manager_create()
 {
-	private_connect_manager_t *this = malloc_thing(private_connect_manager_t);
+	private_connect_manager_t *this;
 
-	this->public.destroy = (void(*)(connect_manager_t*))destroy;
-	this->public.check_and_register = (bool(*)(connect_manager_t*,identification_t*,identification_t*,ike_sa_id_t*))check_and_register;
-	this->public.check_and_initiate = (void(*)(connect_manager_t*,ike_sa_id_t*,identification_t*,identification_t*))check_and_initiate;
-	this->public.set_initiator_data = (status_t(*)(connect_manager_t*,identification_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))set_initiator_data;
-	this->public.set_responder_data = (status_t(*)(connect_manager_t*,chunk_t,chunk_t,linked_list_t*))set_responder_data;
-	this->public.process_check = (void(*)(connect_manager_t*,message_t*))process_check;
-	this->public.stop_checks = (status_t(*)(connect_manager_t*,chunk_t))stop_checks;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+			.check_and_register = _check_and_register,
+			.check_and_initiate = _check_and_initiate,
+			.set_initiator_data = _set_initiator_data,
+			.set_responder_data = _set_responder_data,
+			.process_check = _process_check,
+			.stop_checks = _stop_checks,
+		},
+		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.checklists = linked_list_create(),
+		.initiated = linked_list_create(),
+	);
 
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (this->hasher == NULL)
 	{
 		DBG1(DBG_IKE, "unable to create connect manager, SHA1 not supported");
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
-	this->checklists = linked_list_create();
-	this->initiated = linked_list_create();
-
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-
-	return (connect_manager_t*)this;
+	return &this->public;
 }
