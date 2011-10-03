@@ -31,44 +31,33 @@ struct private_ike_dpd_t {
 	ike_dpd_t public;
 };
 
-/**
- * Implementation of task_t.build for initiator
- * Implementation of task_t.process for responder
- */
-static status_t return_need_more(private_ike_dpd_t *this, message_t *message)
+METHOD(task_t, return_need_more, status_t,
+	private_ike_dpd_t *this, message_t *message)
 {
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- * Implementation of task_t.build for responder
- */
-static status_t return_success(private_ike_dpd_t *this, message_t *message)
+METHOD(task_t, return_success, status_t,
+	private_ike_dpd_t *this, message_t *message)
 {
 	return SUCCESS;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_dpd_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_dpd_t *this)
 {
 	return IKE_DPD;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_dpd_t *this, ike_sa_t *ike_sa)
+
+METHOD(task_t, migrate, void,
+	private_ike_dpd_t *this, ike_sa_t *ike_sa)
 {
 
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_dpd_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_dpd_t *this)
 {
 	free(this);
 }
@@ -78,21 +67,27 @@ static void destroy(private_ike_dpd_t *this)
  */
 ike_dpd_t *ike_dpd_create(bool initiator)
 {
-	private_ike_dpd_t *this = malloc_thing(private_ike_dpd_t);
+	private_ike_dpd_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))return_need_more;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))return_success;
+		this->public.task.build = _return_need_more;
+		this->public.task.process = _return_success;
 	}
 	else
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))return_success;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))return_need_more;
+		this->public.task.build = _return_success;
+		this->public.task.process = _return_need_more;
 	}
 
 	return &this->public;
