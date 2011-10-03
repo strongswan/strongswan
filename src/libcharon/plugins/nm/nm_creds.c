@@ -270,24 +270,26 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	shared_enumerator_t *enumerator;
 	chunk_t key;
 
+	this->lock->read_lock(this->lock);
+
 	switch (type)
 	{
 		case SHARED_EAP:
 		case SHARED_IKE:
 			if (!this->pass || !this->user)
 			{
-				return NULL;
+				goto no_secret;
 			}
 			if (me && !me->equals(me, this->user))
 			{
-				return NULL;
+				goto no_secret;
 			}
 			key = chunk_create(this->pass, strlen(this->pass));
 			break;
 		case SHARED_PRIVATE_KEY_PASS:
 			if (!this->keypass)
 			{
-				return NULL;
+				goto no_secret;
 			}
 			key = chunk_create(this->keypass, strlen(this->keypass));
 			break;
@@ -295,12 +297,12 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 			if (!this->keypass || !me ||
 				!chunk_equals(me->get_encoding(me), this->keyid))
 			{
-				return NULL;
+				goto no_secret;
 			}
 			key = chunk_create(this->keypass, strlen(this->keypass));
 			break;
 		default:
-			return NULL;
+			goto no_secret;
 	}
 
 	INIT(enumerator,
@@ -310,9 +312,12 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 		},
 		.this = this,
 	);
-	this->lock->read_lock(this->lock);
 	enumerator->key = shared_key_create(type, chunk_clone(key));
 	return &enumerator->public;
+
+no_secret:
+	this->lock->unlock(this->lock);
+	return NULL;
 }
 
 METHOD(nm_creds_t, add_certificate, void,
