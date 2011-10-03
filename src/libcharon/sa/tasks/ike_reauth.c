@@ -42,18 +42,14 @@ struct private_ike_reauth_t {
 	ike_delete_t *ike_delete;
 };
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_reauth_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_reauth_t *this, message_t *message)
 {
 	return this->ike_delete->task.build(&this->ike_delete->task, message);
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_reauth_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_reauth_t *this, message_t *message)
 {
 	ike_sa_t *new;
 	host_t *host;
@@ -148,27 +144,21 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	return DESTROY_ME;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_reauth_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_reauth_t *this)
 {
 	return IKE_REAUTH;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_reauth_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_reauth_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_delete->task.migrate(&this->ike_delete->task, ike_sa);
 	this->ike_sa = ike_sa;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_reauth_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_reauth_t *this)
 {
 	this->ike_delete->task.destroy(&this->ike_delete->task);
 	free(this);
@@ -179,16 +169,21 @@ static void destroy(private_ike_reauth_t *this)
  */
 ike_reauth_t *ike_reauth_create(ike_sa_t *ike_sa)
 {
-	private_ike_reauth_t *this = malloc_thing(private_ike_reauth_t);
+	private_ike_reauth_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
-	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
-
-	this->ike_sa = ike_sa;
-	this->ike_delete = ike_delete_create(ike_sa, TRUE);
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.build = _build_i,
+				.process = _process_i,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.ike_delete = ike_delete_create(ike_sa, TRUE),
+	);
 
 	return &this->public;
 }
