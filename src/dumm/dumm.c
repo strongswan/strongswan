@@ -49,11 +49,8 @@ struct private_dumm_t {
 	linked_list_t *bridges;
 };
 
-/**
- * Implementation of dumm_t.create_guest.
- */
-static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel,
-							 char *master, char *args)
+METHOD(dumm_t, create_guest, guest_t*,
+	private_dumm_t *this, char *name, char *kernel, char *master, char *args)
 {
 	guest_t *guest;
 
@@ -65,18 +62,14 @@ static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel,
 	return guest;
 }
 
-/**
- * Implementation of dumm_t.create_guest_enumerator.
- */
-static enumerator_t* create_guest_enumerator(private_dumm_t *this)
+METHOD(dumm_t, create_guest_enumerator, enumerator_t*,
+	private_dumm_t *this)
 {
 	return this->guests->create_enumerator(this->guests);
 }
 
-/**
- * Implementation of dumm_t.delete_guest.
- */
-static void delete_guest(private_dumm_t *this, guest_t *guest)
+METHOD(dumm_t, delete_guest, void,
+	private_dumm_t *this, guest_t *guest)
 {
 	if (this->guests->remove(this->guests, guest, NULL))
 	{
@@ -93,10 +86,8 @@ static void delete_guest(private_dumm_t *this, guest_t *guest)
 	}
 }
 
-/**
- * Implementation of dumm_t.create_bridge.
- */
-static bridge_t* create_bridge(private_dumm_t *this, char *name)
+METHOD(dumm_t, create_bridge, bridge_t*,
+	private_dumm_t *this, char *name)
 {
 	bridge_t *bridge;
 
@@ -108,18 +99,14 @@ static bridge_t* create_bridge(private_dumm_t *this, char *name)
 	return bridge;
 }
 
-/**
- * Implementation of dumm_t.create_bridge_enumerator.
- */
-static enumerator_t* create_bridge_enumerator(private_dumm_t *this)
+METHOD(dumm_t, create_bridge_enumerator, enumerator_t*,
+	private_dumm_t *this)
 {
 	return this->bridges->create_enumerator(this->bridges);
 }
 
-/**
- * Implementation of dumm_t.delete_bridge.
- */
-static void delete_bridge(private_dumm_t *this, bridge_t *bridge)
+METHOD(dumm_t, delete_bridge, void,
+	private_dumm_t *this, bridge_t *bridge)
 {
 	if (this->bridges->remove(this->bridges, bridge, NULL))
 	{
@@ -127,10 +114,8 @@ static void delete_bridge(private_dumm_t *this, bridge_t *bridge)
 	}
 }
 
-/**
- * Implementation of dumm_t.add_overlay.
- */
-static bool add_overlay(private_dumm_t *this, char *dir)
+METHOD(dumm_t, add_overlay, bool,
+	private_dumm_t *this, char *dir)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
@@ -184,10 +169,8 @@ error:
 	return FALSE;
 }
 
-/**
- * Implementation of dumm_t.del_overlay.
- */
-static bool del_overlay(private_dumm_t *this, char *dir)
+METHOD(dumm_t, del_overlay, bool,
+	private_dumm_t *this, char *dir)
 {
 	bool ret = FALSE;
 	enumerator_t *enumerator;
@@ -209,10 +192,8 @@ static bool del_overlay(private_dumm_t *this, char *dir)
 	return ret;
 }
 
-/**
- * Implementation of dumm_t.pop_overlay.
- */
-static bool pop_overlay(private_dumm_t *this)
+METHOD(dumm_t, pop_overlay, bool,
+	private_dumm_t *this)
 {
 	bool ret = FALSE;
 	enumerator_t *enumerator;
@@ -240,10 +221,8 @@ static void clear_template(private_dumm_t *this)
 	}
 }
 
-/**
- * Implementation of dumm_t.load_template.
- */
-static bool load_template(private_dumm_t *this, char *name)
+METHOD(dumm_t, load_template, bool,
+	private_dumm_t *this, char *name)
 {
 	clear_template(this);
 	if (name == NULL)
@@ -287,10 +266,8 @@ typedef struct {
 	enumerator_t *inner;
 } template_enumerator_t;
 
-/**
- * Implementation of template_enumerator_t.enumerate.
- */
-static bool template_enumerate(template_enumerator_t *this, char **template)
+METHOD(enumerator_t, template_enumerate, bool,
+	template_enumerator_t *this, char **template)
 {
 	struct stat st;
 	char *rel;
@@ -306,25 +283,24 @@ static bool template_enumerate(template_enumerator_t *this, char **template)
 	return FALSE;
 }
 
-/**
- * Implementation of template_enumerator_t.destroy.
- */
-static void template_enumerator_destroy(template_enumerator_t *this)
+METHOD(enumerator_t, template_enumerator_destroy, void,
+	template_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of dumm_t.create_template_enumerator.
- */
-static enumerator_t* create_template_enumerator(private_dumm_t *this)
+METHOD(dumm_t, create_template_enumerator, enumerator_t*,
+	private_dumm_t *this)
 {
 	template_enumerator_t *enumerator;
-	enumerator = malloc_thing(template_enumerator_t);
-	enumerator->public.enumerate = (void*)template_enumerate;
-	enumerator->public.destroy = (void*)template_enumerator_destroy;
-	enumerator->inner = enumerator_create_directory(TEMPLATE_DIR);
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_template_enumerate,
+			.destroy = (void*)_template_enumerator_destroy,
+		},
+		.inner = enumerator_create_directory(TEMPLATE_DIR),
+	);
 	if (!enumerator->inner)
 	{
 		free(enumerator);
@@ -333,10 +309,8 @@ static enumerator_t* create_template_enumerator(private_dumm_t *this)
 	return &enumerator->public;
 }
 
-/**
- * Implementation of dumm_t.destroy.
- */
-static void destroy(private_dumm_t *this)
+METHOD(dumm_t, destroy, void,
+	private_dumm_t *this)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
@@ -402,20 +376,24 @@ static void load_guests(private_dumm_t *this)
 dumm_t *dumm_create(char *dir)
 {
 	char cwd[PATH_MAX];
-	private_dumm_t *this = malloc_thing(private_dumm_t);
+	private_dumm_t *this;
 
-	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,char*))create_guest;
-	this->public.create_guest_enumerator = (enumerator_t*(*)(dumm_t*))create_guest_enumerator;
-	this->public.delete_guest = (void(*)(dumm_t*,guest_t*))delete_guest;
-	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
-	this->public.create_bridge_enumerator = (enumerator_t*(*)(dumm_t*))create_bridge_enumerator;
-	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
-	this->public.add_overlay = (bool(*)(dumm_t*,char*))add_overlay;
-	this->public.del_overlay = (bool(*)(dumm_t*,char*))del_overlay;
-	this->public.pop_overlay = (bool(*)(dumm_t*))pop_overlay;
-	this->public.load_template = (bool(*)(dumm_t*,char*))load_template;
-	this->public.create_template_enumerator = (enumerator_t*(*)(dumm_t*))create_template_enumerator;
-	this->public.destroy = (void(*)(dumm_t*))destroy;
+	INIT(this,
+		.public = {
+			.create_guest = _create_guest,
+			.create_guest_enumerator = _create_guest_enumerator,
+			.delete_guest = _delete_guest,
+			.create_bridge = _create_bridge,
+			.create_bridge_enumerator = _create_bridge_enumerator,
+			.delete_bridge = _delete_bridge,
+			.add_overlay = _add_overlay,
+			.del_overlay = _del_overlay,
+			.pop_overlay = _pop_overlay,
+			.load_template = _load_template,
+			.create_template_enumerator = _create_template_enumerator,
+			.destroy = _destroy,
+		},
+	);
 
 	if (dir && *dir == '/')
 	{
@@ -440,11 +418,11 @@ dumm_t *dumm_create(char *dir)
 			this->dir = strdup(cwd);
 		}
 	}
-	this->template = NULL;
 	if (asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR) < 0)
 	{
 		this->guest_dir = NULL;
 	}
+
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
 
