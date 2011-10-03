@@ -66,10 +66,8 @@ struct private_mediation_job_t {
 	bool response;
 };
 
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_mediation_job_t *this)
+METHOD(job_t, destroy, void,
+	private_mediation_job_t *this)
 {
 	DESTROY_IF(this->target);
 	DESTROY_IF(this->source);
@@ -79,10 +77,8 @@ static void destroy(private_mediation_job_t *this)
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_mediation_job_t *this)
+METHOD(job_t, execute, void,
+	private_mediation_job_t *this)
 {
 	ike_sa_id_t *target_sa_id;
 
@@ -137,10 +133,8 @@ static void execute(private_mediation_job_t *this)
 	destroy(this);
 }
 
-/**
- * Implementation of job_t.get_priority.
- */
-static job_priority_t get_priority(private_mediation_job_t *this)
+METHOD(job_t, get_priority, job_priority_t,
+	private_mediation_job_t *this)
 {
 	return JOB_PRIO_MEDIUM;
 }
@@ -150,22 +144,16 @@ static job_priority_t get_priority(private_mediation_job_t *this)
  */
 static private_mediation_job_t *mediation_job_create_empty()
 {
-	private_mediation_job_t *this = malloc_thing(private_mediation_job_t);
-
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.get_priority = (job_priority_t (*) (job_t *)) get_priority;
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-
-	/* private variables */
-	this->target = NULL;
-	this->source = NULL;
-	this->callback = FALSE;
-	this->connect_id = chunk_empty;
-	this->connect_key = chunk_empty;
-	this->endpoints = NULL;
-	this->response = FALSE;
-
+	private_mediation_job_t *this;
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.get_priority = _get_priority,
+				.destroy = _destroy,
+			},
+		},
+	);
 	return this;
 }
 
