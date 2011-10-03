@@ -170,11 +170,13 @@ static bool cert_filter(cert_data_t *data, certificate_t **in,
 static enumerator_t *create_trusted_cert_enumerator(private_nm_creds_t *this,
 										key_type_t key, identification_t *id)
 {
-	cert_data_t *data = malloc_thing(cert_data_t);
+	cert_data_t *data;
 
-	data->this = this;
-	data->id = id;
-	data->key = key;
+	INIT(data,
+		.this = this,
+		.id = id,
+		.key = key,
+	);
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
@@ -182,12 +184,9 @@ static enumerator_t *create_trusted_cert_enumerator(private_nm_creds_t *this,
 					(void*)cert_filter, data, (void*)cert_data_destroy);
 }
 
-/**
- * Implements credential_set_t.create_cert_enumerator
- */
-static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
-							certificate_type_t cert, key_type_t key,
-							identification_t *id, bool trusted)
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_nm_creds_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	if (id && this->usercert &&
 		id->equals(id, this->usercert->get_subject(this->usercert)))
@@ -201,11 +200,8 @@ static enumerator_t* create_cert_enumerator(private_nm_creds_t *this,
 	return NULL;
 }
 
-/**
- * Implements credential_set_t.create_cert_enumerator
- */
-static enumerator_t* create_private_enumerator(private_nm_creds_t *this,
-										key_type_t type, identification_t *id)
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	private_nm_creds_t *this, key_type_t type, identification_t *id)
 {
 	if (this->key == NULL)
 	{
@@ -238,11 +234,9 @@ typedef struct {
 	bool done;
 } shared_enumerator_t;
 
-/**
- * enumerate function for shared enumerator
- */
-static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
-							 id_match_t *me, id_match_t *other)
+METHOD(enumerator_t, shared_enumerate, bool,
+	shared_enumerator_t *this, shared_key_t **key, id_match_t *me,
+	id_match_t *other)
 {
 	if (this->done)
 	{
@@ -261,21 +255,17 @@ static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
 	return TRUE;
 }
 
-/**
- * Destroy function for shared enumerator
- */
-static void shared_destroy(shared_enumerator_t *this)
+METHOD(enumerator_t, shared_destroy, void,
+	shared_enumerator_t *this)
 {
 	this->key->destroy(this->key);
 	this->this->lock->unlock(this->this->lock);
 	free(this);
 }
-/**
- * Implements credential_set_t.create_cert_enumerator
- */
-static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
-							shared_key_type_t type,	identification_t *me,
-							identification_t *other)
+
+METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+	private_nm_creds_t *this, shared_key_type_t type, identification_t *me,
+	identification_t *other)
 {
 	shared_enumerator_t *enumerator;
 	chunk_t key;
@@ -313,20 +303,20 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 			return NULL;
 	}
 
-	enumerator = malloc_thing(shared_enumerator_t);
-	enumerator->public.enumerate = (void*)shared_enumerate;
-	enumerator->public.destroy = (void*)shared_destroy;
-	enumerator->this = this;
-	enumerator->done = FALSE;
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_shared_enumerate,
+			.destroy = _shared_destroy,
+		},
+		.this = this,
+	);
 	this->lock->read_lock(this->lock);
 	enumerator->key = shared_key_create(type, chunk_clone(key));
 	return &enumerator->public;
 }
 
-/**
- * Implementation of nm_creds_t.add_certificate
- */
-static void add_certificate(private_nm_creds_t *this, certificate_t *cert)
+METHOD(nm_creds_t, add_certificate, void,
+	private_nm_creds_t *this, certificate_t *cert)
 {
 	this->lock->write_lock(this->lock);
 	this->certs->insert_last(this->certs, cert);
@@ -359,10 +349,8 @@ static void load_ca_file(private_nm_creds_t *this, char *file)
 	}
 }
 
-/**
- * Implementation of nm_creds_t.load_ca_dir
- */
-static void load_ca_dir(private_nm_creds_t *this, char *dir)
+METHOD(nm_creds_t, load_ca_dir, void,
+	private_nm_creds_t *this, char *dir)
 {
 	enumerator_t *enumerator;
 	char *rel, *abs;
@@ -390,11 +378,8 @@ static void load_ca_dir(private_nm_creds_t *this, char *dir)
 	}
 }
 
-/**
- * Implementation of nm_creds_t.set_password
- */
-static void set_username_password(private_nm_creds_t *this, identification_t *id,
-						 char *password)
+METHOD(nm_creds_t, set_username_password, void,
+	private_nm_creds_t *this, identification_t *id, char *password)
 {
 	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->user);
@@ -404,10 +389,8 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of nm_creds_t.set_key_password
- */
-static void set_key_password(private_nm_creds_t *this, char *password)
+METHOD(nm_creds_t, set_key_password, void,
+	private_nm_creds_t *this, char *password)
 {
 	this->lock->write_lock(this->lock);
 	free(this->keypass);
@@ -415,10 +398,8 @@ static void set_key_password(private_nm_creds_t *this, char *password)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of nm_creds_t.set_pin
- */
-static void set_pin(private_nm_creds_t *this, chunk_t keyid, char *pin)
+METHOD(nm_creds_t, set_pin, void,
+	private_nm_creds_t *this, chunk_t keyid, char *pin)
 {
 	this->lock->write_lock(this->lock);
 	free(this->keypass);
@@ -428,11 +409,8 @@ static void set_pin(private_nm_creds_t *this, chunk_t keyid, char *pin)
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of nm_creds_t.set_cert_and_key
- */
-static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,
-							 private_key_t *key)
+METHOD(nm_creds_t, set_cert_and_key, void,
+	private_nm_creds_t *this, certificate_t *cert, private_key_t *key)
 {
 	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->key);
@@ -442,10 +420,8 @@ static void set_cert_and_key(private_nm_creds_t *this, certificate_t *cert,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of nm_creds_t.clear
- */
-static void clear(private_nm_creds_t *this)
+METHOD(nm_creds_t, clear, void,
+	private_nm_creds_t *this)
 {
 	certificate_t *cert;
 
@@ -467,10 +443,8 @@ static void clear(private_nm_creds_t *this)
 	this->keyid = chunk_empty;
 }
 
-/**
- * Implementation of nm_creds_t.destroy
- */
-static void destroy(private_nm_creds_t *this)
+METHOD(nm_creds_t, destroy, void,
+	private_nm_creds_t *this)
 {
 	clear(this);
 	this->certs->destroy(this->certs);
@@ -483,32 +457,29 @@ static void destroy(private_nm_creds_t *this)
  */
 nm_creds_t *nm_creds_create()
 {
-	private_nm_creds_t *this = malloc_thing(private_nm_creds_t);
+	private_nm_creds_t *this;
 
-	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
-	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
-	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.add_certificate = (void(*)(nm_creds_t*, certificate_t *cert))add_certificate;
-	this->public.load_ca_dir = (void(*)(nm_creds_t*, char *dir))load_ca_dir;
-	this->public.set_username_password = (void(*)(nm_creds_t*, identification_t *id, char *password))set_username_password;
-	this->public.set_key_password = (void(*)(nm_creds_t*, char *password))set_key_password;
-	this->public.set_pin = (void(*)(nm_creds_t*, chunk_t keyid, char *pin))set_pin;
-	this->public.set_cert_and_key = (void(*)(nm_creds_t*, certificate_t *cert, private_key_t *key))set_cert_and_key;
-	this->public.clear = (void(*)(nm_creds_t*))clear;
-	this->public.destroy = (void(*)(nm_creds_t*))destroy;
-
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-
-	this->certs = linked_list_create();
-	this->user = NULL;
-	this->pass = NULL;
-	this->usercert = NULL;
-	this->key = NULL;
-	this->keypass = NULL;
-	this->keyid = chunk_empty;
-
+	INIT(this,
+		.public = {
+			.set = {
+				.create_private_enumerator = _create_private_enumerator,
+				.create_cert_enumerator = _create_cert_enumerator,
+				.create_shared_enumerator = _create_shared_enumerator,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.add_certificate = _add_certificate,
+			.load_ca_dir = _load_ca_dir,
+			.set_username_password = _set_username_password,
+			.set_key_password = _set_key_password,
+			.set_pin = _set_pin,
+			.set_cert_and_key = _set_cert_and_key,
+			.clear = _clear,
+			.destroy = _destroy,
+		},
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.certs = linked_list_create(),
+	);
 	return &this->public;
 }
 
