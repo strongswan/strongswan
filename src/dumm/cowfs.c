@@ -835,10 +835,8 @@ static struct fuse_operations cowfs_operations = {
 	.init		= cowfs_init,
 };
 
-/**
- * Implementation of cowfs_t.add_overlay.
- */
-static bool add_overlay(private_cowfs_t *this, char *path)
+METHOD(cowfs_t, add_overlay, bool,
+	private_cowfs_t *this, char *path)
 {
 	overlay_t *over = malloc_thing(overlay_t);
 	over->fd = open(path, O_RDONLY | O_DIRECTORY);
@@ -856,10 +854,8 @@ static bool add_overlay(private_cowfs_t *this, char *path)
 	return TRUE;
 }
 
-/**
- * Implementation of cowfs_t.del_overlay.
- */
-static bool del_overlay(private_cowfs_t *this, char *path)
+METHOD(cowfs_t, del_overlay, bool,
+	private_cowfs_t *this, char *path)
 {
 	bool removed;
 	char real[PATH_MAX];
@@ -869,10 +865,8 @@ static bool del_overlay(private_cowfs_t *this, char *path)
 	return removed;
 }
 
-/**
- * Implementation of cowfs_t.pop_overlay.
- */
-static bool pop_overlay(private_cowfs_t *this)
+METHOD(cowfs_t, pop_overlay, bool,
+	private_cowfs_t *this)
 {
 	overlay_t *over;
 	this->lock->write_lock(this->lock);
@@ -886,10 +880,8 @@ static bool pop_overlay(private_cowfs_t *this)
 	return TRUE;
 }
 
-/**
- * stop, umount and destroy a cowfs FUSE filesystem
- */
-static void destroy(private_cowfs_t *this)
+METHOD(cowfs_t, destroy, void,
+	private_cowfs_t *this)
 {
 	fuse_exit(this->fuse);
 	fuse_unmount(this->mount, this->chan);
@@ -911,12 +903,16 @@ static void destroy(private_cowfs_t *this)
 cowfs_t *cowfs_create(char *master, char *host, char *mount)
 {
 	struct fuse_args args = {0, NULL, 0};
-	private_cowfs_t *this = malloc_thing(private_cowfs_t);
+	private_cowfs_t *this;
 
-	this->public.add_overlay = (bool(*)(cowfs_t*, char *path))add_overlay;
-	this->public.del_overlay = (bool(*)(cowfs_t*, char *path))del_overlay;
-	this->public.pop_overlay = (bool(*)(cowfs_t*))pop_overlay;
-	this->public.destroy = (void(*)(cowfs_t*))destroy;
+	INIT(this,
+		.public = {
+			.add_overlay = _add_overlay,
+			.del_overlay = _del_overlay,
+			.pop_overlay = _pop_overlay,
+			.destroy = _destroy,
+		}
+	);
 
 	this->master_fd = open(master, O_RDONLY | O_DIRECTORY);
 	if (this->master_fd < 0)
