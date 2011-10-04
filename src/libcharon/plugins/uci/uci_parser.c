@@ -57,10 +57,8 @@ typedef struct {
 	char *keywords[];
 } section_enumerator_t;
 
-/**
- * Implementation of section_enumerator_t.enumerate
- */
-static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
+METHOD(enumerator_t, section_enumerator_enumerate, bool,
+	section_enumerator_t *this, ...)
 {
 	struct uci_element *element;
 	char **value;
@@ -104,19 +102,15 @@ static bool section_enumerator_enumerate(section_enumerator_t *this, ...)
 	return TRUE;
 }
 
-/**
- * Implementation of section_enumerator_t.public.destroy
- */
-static void section_enumerator_destroy(section_enumerator_t *this)
+METHOD(enumerator_t, section_enumerator_destroy, void,
+	section_enumerator_t *this)
 {
 	uci_free_context(this->ctx);
 	free(this);
 }
 
-/**
- * Implementation of backend_t.create_section_enumerator.
- */
-static enumerator_t* create_section_enumerator(private_uci_parser_t *this, ...)
+METHOD(uci_parser_t, create_section_enumerator, enumerator_t*,
+	private_uci_parser_t *this, ...)
 {
 	section_enumerator_t *e;
 	va_list args;
@@ -140,8 +134,8 @@ static enumerator_t* create_section_enumerator(private_uci_parser_t *this, ...)
 	while (e->keywords[i++]);
 	va_end(args);
 
-	e->public.enumerate = (void*)section_enumerator_enumerate;
-	e->public.destroy = (void*)section_enumerator_destroy;
+	e->public.enumerate = (void*)_section_enumerator_enumerate;
+	e->public.destroy = _section_enumerator_destroy;
 
 	/* load uci context */
 	e->ctx = uci_alloc_context();
@@ -160,10 +154,8 @@ static enumerator_t* create_section_enumerator(private_uci_parser_t *this, ...)
 	return &e->public;
 }
 
-/**
- * Implementation of uci_parser_t.destroy.
- */
-static void destroy(private_uci_parser_t *this)
+METHOD(uci_parser_t, destroy, void,
+	private_uci_parser_t *this)
 {
 	free(this->package);
 	free(this);
@@ -174,12 +166,15 @@ static void destroy(private_uci_parser_t *this)
  */
 uci_parser_t *uci_parser_create(char *package)
 {
-	private_uci_parser_t *this = malloc_thing(private_uci_parser_t);
+	private_uci_parser_t *this;
 
-	this->public.create_section_enumerator = (enumerator_t*(*)(uci_parser_t*, ...))create_section_enumerator;
-	this->public.destroy = (void(*)(uci_parser_t*))destroy;
-
-	this->package = strdup(package);
+	INIT(this,
+		.public = {
+			.create_section_enumerator = _create_section_enumerator,
+			.destroy = _destroy,
+		},
+		.package = strdup(package),
+	);
 
 	return &this->public;
 }
