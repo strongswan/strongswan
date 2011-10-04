@@ -40,11 +40,9 @@ struct private_auth_filter_t {
 	database_t *db;
 };
 
-/**
- * Implementation of filter_t.run
- */
-static bool run(private_auth_filter_t *this, request_t *request,
-				char *controller, char *action)
+METHOD(filter_t, run, bool,
+	private_auth_filter_t *this, request_t *request, char *controller,
+	char *action, char *p2, char *p3, char *p4, char *p5)
 {
 	if (this->user->get_user(this->user))
 	{
@@ -72,10 +70,8 @@ static bool run(private_auth_filter_t *this, request_t *request,
 	return FALSE;
 }
 
-/**
- * Implementation of filter_t.destroy
- */
-static void destroy(private_auth_filter_t *this)
+METHOD(filter_t, destroy, void,
+	private_auth_filter_t *this)
 {
 	free(this);
 }
@@ -85,13 +81,18 @@ static void destroy(private_auth_filter_t *this)
  */
 filter_t *auth_filter_create(user_t *user, database_t *db)
 {
-	private_auth_filter_t *this= malloc_thing(private_auth_filter_t);
+	private_auth_filter_t *this;
 
-	this->public.filter.destroy = (void(*)(filter_t*))destroy;
-	this->public.filter.run = (bool(*)(filter_t*, request_t*,char*,char*,char*,char*,char*,char*))run;
-
-	this->user = user;
-	this->db = db;
+	INIT(this,
+		.public = {
+			.filter = {
+				.destroy = _destroy,
+				.run = _run,
+			},
+		},
+		.user = user,
+		.db = db,
+	);
 
 	return &this->public.filter;
 }
