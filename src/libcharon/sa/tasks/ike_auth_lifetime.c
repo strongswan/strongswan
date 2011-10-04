@@ -75,10 +75,8 @@ static void process_payloads(private_ike_auth_lifetime_t *this, message_t *messa
 	}
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t build_i(private_ike_auth_lifetime_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_auth_lifetime_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
@@ -88,10 +86,8 @@ static status_t build_i(private_ike_auth_lifetime_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_auth_lifetime_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_auth_lifetime_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
@@ -101,10 +97,8 @@ static status_t process_r(private_ike_auth_lifetime_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_auth_lifetime_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_auth_lifetime_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -115,10 +109,8 @@ static status_t build_r(private_ike_auth_lifetime_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_auth_lifetime_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_auth_lifetime_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -129,26 +121,20 @@ static status_t process_i(private_ike_auth_lifetime_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_auth_lifetime_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_auth_lifetime_t *this)
 {
 	return IKE_AUTH_LIFETIME;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_auth_lifetime_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_auth_lifetime_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_auth_lifetime_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_auth_lifetime_t *this)
 {
 	free(this);
 }
@@ -158,24 +144,29 @@ static void destroy(private_ike_auth_lifetime_t *this)
  */
 ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_auth_lifetime_t *this = malloc_thing(private_ike_auth_lifetime_t);
+	private_ike_auth_lifetime_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+	);
 
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
 	else
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
 	}
-
-	this->ike_sa = ike_sa;
 
 	return &this->public;
 }
