@@ -7,7 +7,7 @@ main.c filter/auth_filter.c filter/auth_filter.h \
 controller/user_controller.c controller/user_controller.h \
 controller/peer_controller.c controller/peer_controller.h
 
-medsrv_fcgi_LDADD = $(top_srcdir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la
+medsrv_fcgi_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la
 main.o :	$(top_builddir)/config.status
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
