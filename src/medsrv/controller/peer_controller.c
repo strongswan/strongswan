@@ -312,19 +312,15 @@ static void delete(private_peer_controller_t *this, request_t *request, int id)
 					  DB_INT, id, DB_UINT, this->user->get_user(this->user));
 }
 
-/**
- * Implementation of controller_t.get_name
- */
-static char* get_name(private_peer_controller_t *this)
+METHOD(controller_t, get_name, char*,
+	private_peer_controller_t *this)
 {
 	return "peer";
 }
 
-/**
- * Implementation of controller_t.handle
- */
-static void handle(private_peer_controller_t *this, request_t *request,
-				   char *action, char *idstr)
+METHOD(controller_t, handle, void,
+	private_peer_controller_t *this, request_t *request, char *action,
+	char *idstr, char *p3, char *p4, char *p5)
 {
 	if (action)
 	{
@@ -354,10 +350,8 @@ static void handle(private_peer_controller_t *this, request_t *request,
 	request->redirect(request, "peer/list");
 }
 
-/**
- * Implementation of controller_t.destroy
- */
-static void destroy(private_peer_controller_t *this)
+METHOD(controller_t, destroy, void,
+	private_peer_controller_t *this)
 {
 	free(this);
 }
@@ -367,14 +361,19 @@ static void destroy(private_peer_controller_t *this)
  */
 controller_t *peer_controller_create(user_t *user, database_t *db)
 {
-	private_peer_controller_t *this= malloc_thing(private_peer_controller_t);
+	private_peer_controller_t *this;
 
-	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.handle = (void(*)(controller_t*, request_t*, char*, char*, char*, char*, char*))handle;
-	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-
-	this->user = user;
-	this->db = db;
+	INIT(this,
+		.public = {
+			.controller = {
+				.get_name = _get_name,
+				.handle = _handle,
+				.destroy = _destroy,
+			},
+		},
+		.user = user,
+		.db = db,
+	);
 
 	return &this->public.controller;
 }
