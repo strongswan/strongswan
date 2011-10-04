@@ -293,18 +293,15 @@ static void edit(private_user_controller_t *this, request_t *request)
 	request->render(request, "templates/user/edit.cs");
 }
 
-/**
- * Implementation of controller_t.get_name
- */
-static char* get_name(private_user_controller_t *this)
+METHOD(controller_t, get_name, char*,
+	private_user_controller_t *this)
 {
 	return "user";
 }
 
-/**
- * Implementation of controller_t.handle
- */
-static void handle(private_user_controller_t *this, request_t *request, char *action)
+METHOD(controller_t, handle, void,
+	private_user_controller_t *this, request_t *request, char *action,
+	char *p2, char *p3, char *p4, char *p5)
 {
 	if (action)
 	{
@@ -332,10 +329,8 @@ static void handle(private_user_controller_t *this, request_t *request, char *ac
 	request->redirect(request, "user/login");
 }
 
-/**
- * Implementation of controller_t.destroy
- */
-static void destroy(private_user_controller_t *this)
+METHOD(controller_t, destroy, void,
+	private_user_controller_t *this)
 {
 	free(this);
 }
@@ -345,16 +340,21 @@ static void destroy(private_user_controller_t *this)
  */
 controller_t *user_controller_create(user_t *user, database_t *db)
 {
-	private_user_controller_t *this= malloc_thing(private_user_controller_t);
+	private_user_controller_t *this;
 
-	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.handle = (void(*)(controller_t*, request_t*, char*, char*, char*, char*, char*))handle;
-	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-
-	this->user = user;
-	this->db = db;
-	this->password_length = lib->settings->get_int(lib->settings,
-												   "medsrv.password_length", 6);
+	INIT(this,
+		.public = {
+			.controller = {
+				.get_name = _get_name,
+				.handle = _handle,
+				.destroy = _destroy,
+			},
+		},
+		.user = user,
+		.db = db,
+		.password_length = lib->settings->get_int(lib->settings,
+												  "medsrv.password_length", 6),
+	);
 
 	return &this->public.controller;
 }
