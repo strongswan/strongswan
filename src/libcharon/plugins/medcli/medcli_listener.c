@@ -47,7 +47,7 @@ struct private_medcli_listener_t {
 };
 
 /**
- * Implementation of bus_listener_t.signal.
+ * Update connection status in the database
  */
 static void set_state(private_medcli_listener_t *this, char *alias,
 					  mediated_state_t state)
@@ -56,11 +56,9 @@ static void set_state(private_medcli_listener_t *this, char *alias,
 					  "UPDATE Connection SET Status = ? WHERE Alias = ?",
 					  DB_UINT, state, DB_TEXT, alias);
 }
-/**
- * Implementation of listener_t.ike_state_change
- */
-static bool ike_state_change(private_medcli_listener_t *this,
-							 ike_sa_t *ike_sa, ike_sa_state_t state)
+
+METHOD(listener_t, ike_state_change, bool,
+	private_medcli_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
 	if (ike_sa)
 	{
@@ -78,11 +76,9 @@ static bool ike_state_change(private_medcli_listener_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.child_state_change
- */
-static bool child_state_change(private_medcli_listener_t *this,
-				ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state)
+METHOD(listener_t, child_state_change, bool,
+	private_medcli_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	child_sa_state_t state)
 {
 	if (ike_sa && child_sa)
 	{
@@ -101,10 +97,8 @@ static bool child_state_change(private_medcli_listener_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of backend_t.destroy.
- */
-static void destroy(private_medcli_listener_t *this)
+METHOD(medcli_listener_t, destroy, void,
+	private_medcli_listener_t *this)
 {
 	this->db->execute(this->db, NULL, "UPDATE Connection SET Status = ?",
 					  DB_UINT, STATE_DOWN);
@@ -116,15 +110,19 @@ static void destroy(private_medcli_listener_t *this)
  */
 medcli_listener_t *medcli_listener_create(database_t *db)
 {
-	private_medcli_listener_t *this = malloc_thing(private_medcli_listener_t);
+	private_medcli_listener_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
+	INIT(this,
+		.public = {
+			.listener = {
+				.ike_state_change = _ike_state_change,
+				.child_state_change = _child_state_change,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+	);
 
-	this->public.listener.ike_state_change = (void*)ike_state_change;
-	this->public.listener.child_state_change = (void*)child_state_change;
-	this->public.destroy = (void (*)(medcli_listener_t*))destroy;
-
-	this->db = db;
 	db->execute(db, NULL, "UPDATE Connection SET Status = ?",
 				DB_UINT, STATE_DOWN);
 
