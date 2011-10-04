@@ -424,10 +424,8 @@ static bool final_auth(message_t *message)
 	return TRUE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t build_i(private_ike_cert_pre_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_cert_pre_t *this, message_t *message)
 {
 	if (message->get_message_id(message) == 1)
 	{	/* initiator sends CERTREQs in first IKE_AUTH */
@@ -436,10 +434,8 @@ static status_t build_i(private_ike_cert_pre_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_cert_pre_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_cert_pre_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) != IKE_SA_INIT)
 	{	/* handle certreqs/certs in any IKE_AUTH, just in case */
@@ -450,10 +446,8 @@ static status_t process_r(private_ike_cert_pre_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_cert_pre_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_cert_pre_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -466,10 +460,8 @@ static status_t build_r(private_ike_cert_pre_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_cert_pre_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_cert_pre_t *this, message_t *message)
 {
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -484,26 +476,20 @@ static status_t process_i(private_ike_cert_pre_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_cert_pre_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_cert_pre_t *this)
 {
 	return IKE_CERT_PRE;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_cert_pre_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_cert_pre_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_cert_pre_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_cert_pre_t *this)
 {
 	free(this);
 }
@@ -513,27 +499,30 @@ static void destroy(private_ike_cert_pre_t *this)
  */
 ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_cert_pre_t *this = malloc_thing(private_ike_cert_pre_t);
+	private_ike_cert_pre_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+	);
 
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
 	else
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
 	}
-
-	this->ike_sa = ike_sa;
-	this->initiator = initiator;
-	this->do_http_lookup = FALSE;
-	this->final = FALSE;
 
 	return &this->public;
 }
