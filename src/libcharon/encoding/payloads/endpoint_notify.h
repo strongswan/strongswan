@@ -125,7 +125,7 @@ struct endpoint_notify_t {
 	/**
 	 * Generates a notification payload from this endpoint.
 	 *
-	 * @return 			built notify_payload_t
+	 * @return			built notify_payload_t
 	 */
 	notify_payload_t *(*build_notify) (endpoint_notify_t *this);
 
@@ -143,19 +143,12 @@ struct endpoint_notify_t {
 };
 
 /**
- * Creates an empty endpoint_notify_t object.
- *
- * @return			created endpoint_notify_t object
- */
-endpoint_notify_t *endpoint_notify_create(void);
-
-
-/**
  * Creates an endpoint_notify_t object from a host.
  *
  * @param type		the endpoint type
  * @param host		host to base the notify on (gets cloned)
- * @param base		base of the endpoint, applies only to reflexive endpoints (gets cloned)
+ * @param base		base of the endpoint, applies only to reflexive
+ *					endpoints (gets cloned)
  * @return			created endpoint_notify_t object
  */
 endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type,
@@ -166,7 +159,7 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type,
  *
  * @param notify	the notify payload
  * @return			- created endpoint_notify_t object
- * 					- NULL if invalid payload
+ *					- NULL if invalid payload
  */
 endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify);
 

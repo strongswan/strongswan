@@ -76,6 +76,11 @@ ENUM(me_endpoint_type_names, HOST, RELAYED,
 );
 
 /**
+ * Forward declaration
+ */
+static private_endpoint_notify_t *endpoint_notify_create();
+
+/**
  * Helper functions to parse integer values
  */
 static status_t parse_uint8(u_int8_t **cur, u_int8_t *top, u_int8_t *val)
@@ -273,7 +278,7 @@ METHOD(endpoint_notify_t, clone_, endpoint_notify_t*,
 {
 	private_endpoint_notify_t *clone;
 
-	clone = (private_endpoint_notify_t*)endpoint_notify_create();
+	clone = endpoint_notify_create();
 	clone->priority = this->priority;
 	clone->type = this->type;
 	clone->family = this->family;
@@ -299,10 +304,10 @@ METHOD(endpoint_notify_t, destroy, void,
 	free(this);
 }
 
-/*
- * Described in header
+/**
+ * Creates an empty endpoint notify
  */
-endpoint_notify_t *endpoint_notify_create()
+static private_endpoint_notify_t *endpoint_notify_create()
 {
 	private_endpoint_notify_t *this;
 
@@ -322,17 +327,16 @@ endpoint_notify_t *endpoint_notify_create()
 		.type = NO_TYPE,
 	);
 
-	return &this->public;
+	return this;
 }
 
 /**
  * Described in header
  */
-endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, host_t *host, host_t *base)
+endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type,
+													host_t *host, host_t *base)
 {
-	private_endpoint_notify_t *this;
-
-	this = (private_endpoint_notify_t*)endpoint_notify_create();
+	private_endpoint_notify_t *this = endpoint_notify_create();
 	this->type = type;
 
 	switch(type)
@@ -397,7 +401,7 @@ endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify)
 		return NULL;
 	}
 
-	this = (private_endpoint_notify_t*)endpoint_notify_create();
+	this = endpoint_notify_create();
 	data = notify->get_notification_data(notify);
 
 	if (parse_notification_data(this, data) != SUCCESS)
