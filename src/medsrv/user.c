@@ -33,26 +33,20 @@ struct private_user_t {
 	u_int user;
 };
 
-/**
- * Implementation of user_t.set_user
- */
-static void set_user(private_user_t *this, u_int id)
+METHOD(user_t, set_user, void,
+	private_user_t *this, u_int id)
 {
 	this->user = id;
 }
 
-/**
- * Implementation of user_t.get_user
- */
-static u_int get_user(private_user_t *this)
+METHOD(user_t, get_user, u_int,
+	private_user_t *this)
 {
 	return this->user;
 }
 
-/**
- * Implementation of context_t.destroy
- */
-static void destroy(private_user_t *this)
+METHOD(context_t, destroy, void,
+	private_user_t *this)
 {
 	free(this);
 }
@@ -62,13 +56,17 @@ static void destroy(private_user_t *this)
  */
 user_t *user_create(void *param)
 {
-	private_user_t *this= malloc_thing(private_user_t);
+	private_user_t *this;
 
-	this->public.set_user = (void(*)(user_t*,u_int id))set_user;
-	this->public.get_user = (u_int(*)(user_t*))get_user;
-	this->public.context.destroy = (void(*)(context_t*))destroy;
-
-	this->user = 0;
+	INIT(this,
+		.public = {
+			.set_user = _set_user,
+			.get_user = _get_user,
+			.context = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	return &this->public;
 }
