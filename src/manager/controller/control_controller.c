@@ -120,19 +120,15 @@ static void terminate(private_control_controller_t *this, request_t *r,
 	handle_result(this, r, e);
 }
 
-/**
- * Implementation of controller_t.get_name
- */
-static char* get_name(private_control_controller_t *this)
+METHOD(controller_t, get_name, char*,
+	private_control_controller_t *this)
 {
 	return "control";
 }
 
-/**
- * Implementation of controller_t.handle
- */
-static void handle(private_control_controller_t *this,
-				   request_t *request, char *action, char *str)
+METHOD(controller_t, handle, void,
+	private_control_controller_t *this, request_t *request, char *action,
+	char *str, char *p3, char *p4, char *p5)
 {
 	if (!this->manager->logged_in(this->manager))
 	{
@@ -178,10 +174,8 @@ static void handle(private_control_controller_t *this,
 	return request->redirect(request, "ikesa/list");
 }
 
-/**
- * Implementation of controller_t.destroy
- */
-static void destroy(private_control_controller_t *this)
+METHOD(controller_t, destroy, void,
+	private_control_controller_t *this)
 {
 	free(this);
 }
@@ -191,13 +185,18 @@ static void destroy(private_control_controller_t *this)
  */
 controller_t *control_controller_create(context_t *context, void *param)
 {
-	private_control_controller_t *this = malloc_thing(private_control_controller_t);
+	private_control_controller_t *this;
 
-	this->public.controller.get_name = (char*(*)(controller_t*))get_name;
-	this->public.controller.handle = (void(*)(controller_t*,request_t*,char*,char*,char*,char*,char*))handle;
-	this->public.controller.destroy = (void(*)(controller_t*))destroy;
-
-	this->manager = (manager_t*)context;
+	INIT(this,
+		.public = {
+			.controller = {
+				.get_name = _get_name,
+				.handle = _handle,
+				.destroy = _destroy,
+			},
+		},
+		.manager = (manager_t*)context,
+	);
 
 	return &this->public.controller;
 }
