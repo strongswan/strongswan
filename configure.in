@@ -459,6 +459,17 @@ AC_TRY_COMPILE(
 	[AC_MSG_RESULT([no])]
 )
 
+AC_MSG_CHECKING([for RTA_TABLE])
+AC_TRY_COMPILE(
+	[#include <sys/socket.h>
+	#include <linux/netlink.h>
+	#include <linux/rtnetlink.h>],
+	[int rta_type = RTA_TABLE;
+	 return rta_type;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_RTA_TABLE])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_MSG_CHECKING([for gcc atomic operations])
 AC_TRY_RUN(
 [

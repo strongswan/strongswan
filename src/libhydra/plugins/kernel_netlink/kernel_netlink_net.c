@@ -933,12 +933,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 								rta_oif = *(u_int32_t*)RTA_DATA(rta);
 							}
 							break;
+#ifdef HAVE_RTA_TABLE
 						case RTA_TABLE:
 							if (RTA_PAYLOAD(rta) == sizeof(rta_table))
 							{
 								rta_table = *(u_int32_t*)RTA_DATA(rta);
 							}
 							break;
+#endif /* HAVE_RTA_TABLE*/
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
