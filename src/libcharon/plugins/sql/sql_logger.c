@@ -47,11 +47,9 @@ struct private_sql_logger_t {
 	bool recursive;
 };
 
-/**
- * Implementation of bus_listener_t.log.
- */
-static bool log_(private_sql_logger_t *this, debug_t group, level_t level,
-				 int thread, ike_sa_t* ike_sa, char *format, va_list args)
+METHOD(listener_t, log_, bool,
+	private_sql_logger_t *this, debug_t group, level_t level, int thread,
+	ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (this->recursive)
 	{
@@ -115,10 +113,8 @@ static bool log_(private_sql_logger_t *this, debug_t group, level_t level,
 	return TRUE;
 }
 
-/**
- * Implementation of sql_logger_t.destroy.
- */
-static void destroy(private_sql_logger_t *this)
+METHOD(sql_logger_t, destroy, void,
+	private_sql_logger_t *this)
 {
 	free(this);
 }
@@ -128,17 +124,19 @@ static void destroy(private_sql_logger_t *this)
  */
 sql_logger_t *sql_logger_create(database_t *db)
 {
-	private_sql_logger_t *this = malloc_thing(private_sql_logger_t);
+	private_sql_logger_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
-	this->public.destroy = (void(*)(sql_logger_t*))destroy;
-
-	this->db = db;
-	this->recursive = FALSE;
-
-	this->level = lib->settings->get_int(lib->settings,
-										 "charon.plugins.sql.loglevel", -1);
+	INIT(this,
+		.public = {
+			.listener = {
+				.log = _log_,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+		.level = lib->settings->get_int(lib->settings,
+										"charon.plugins.sql.loglevel", -1),
+	);
 
 	return &this->public;
 }
