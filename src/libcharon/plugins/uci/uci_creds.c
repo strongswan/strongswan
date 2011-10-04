@@ -51,11 +51,9 @@ typedef struct {
 	identification_t *other;
 } shared_enumerator_t;
 
-/**
- * Implementation of shared_enumerator_t.public.enumerate
- */
-static bool shared_enumerator_enumerate(shared_enumerator_t *this,
-						shared_key_t **key, id_match_t *me, id_match_t *other)
+METHOD(enumerator_t, shared_enumerator_enumerate, bool,
+	shared_enumerator_t *this, shared_key_t **key, id_match_t *me,
+	id_match_t *other)
 {
 	char *local_id, *remote_id, *psk;
 	identification_t *local, *remote;
@@ -107,23 +105,17 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of shared_enumerator_t.public.destroy
- */
-static void shared_enumerator_destroy(shared_enumerator_t *this)
+METHOD(enumerator_t, shared_enumerator_destroy, void,
+	shared_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	DESTROY_IF(this->current);
 	free(this);
 }
 
-/**
- * Implementation of backend_t.create_shared_cfg_enumerator.
- */
-static enumerator_t* create_shared_enumerator(private_uci_creds_t *this,
-											  shared_key_type_t type,
-											  identification_t *me,
-											  identification_t *other)
+METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+	private_uci_creds_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
 {
 	shared_enumerator_t *e;
 
@@ -132,14 +124,16 @@ static enumerator_t* create_shared_enumerator(private_uci_creds_t *this,
 		return NULL;
 	}
 
-	e = malloc_thing(shared_enumerator_t);
-	e->current = NULL;
-	e->public.enumerate = (void*)shared_enumerator_enumerate;
-	e->public.destroy = (void*)shared_enumerator_destroy;
-	e->me = me;
-	e->other = other;
-	e->inner = this->parser->create_section_enumerator(this->parser,
-								"local_id", "remote_id", "psk", NULL);
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_shared_enumerator_enumerate,
+			.destroy = _shared_enumerator_destroy,
+		},
+		.me = me,
+		.other = other,
+		.inner = this->parser->create_section_enumerator(this->parser,
+								"local_id", "remote_id", "psk", NULL),
+	);
 	if (!e->inner)
 	{
 		free(e);
@@ -148,24 +142,28 @@ static enumerator_t* create_shared_enumerator(private_uci_creds_t *this,
 	return &e->public;
 }
 
-/**
- * Implementation of uci_creds_t.destroy
- */
-static void destroy(private_uci_creds_t *this)
+METHOD(uci_creds_t, destroy, void,
+	private_uci_creds_t *this)
 {
 	free(this);
 }
 
 uci_creds_t *uci_creds_create(uci_parser_t *parser)
 {
-	private_uci_creds_t *this = malloc_thing(private_uci_creds_t);
+	private_uci_creds_t *this;
 
-	this->public.credential_set.create_shared_enumerator = (enumerator_t*(*)(credential_set_t*, shared_key_type_t, identification_t*, identification_t*))create_shared_enumerator;
-	this->public.credential_set.create_private_enumerator = (enumerator_t*(*) (credential_set_t*, key_type_t, identification_t*))return_null;
-	this->public.credential_set.create_cert_enumerator = (enumerator_t*(*) (credential_set_t*,	certificate_type_t, key_type_t,identification_t *, bool))return_null;
-	this->public.credential_set.create_cdp_enumerator  = (enumerator_t*(*) (credential_set_t *,certificate_type_t, identification_t *))return_null;
-	this->public.credential_set.cache_cert = (void (*)(credential_set_t *, certificate_t *))nop;
-	this->public.destroy = (void(*) (uci_creds_t*))destroy;
+	INIT(this,
+		.public = {
+			.credential_set = {
+				.create_shared_enumerator = _create_shared_enumerator,
+				.create_private_enumerator = (void*)return_null,
+				.create_cert_enumerator = (void*)return_null,
+				.create_cdp_enumerator  = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+	);
 
 	this->parser = parser;
 
