@@ -47,18 +47,14 @@ struct private_manager_t {
 	gateway_t *gateway;
 };
 
-/**
- * Implementation of manager_t.create_gateway_enumerator.
- */
-static enumerator_t* create_gateway_enumerator(private_manager_t *this)
+METHOD(manager_t, create_gateway_enumerator, enumerator_t*,
+	private_manager_t *this)
 {
 	return this->store->create_gateway_enumerator(this->store, this->user);
 }
 
-/**
- * Implementation of manager_t.select_gateway.
- */
-static gateway_t* select_gateway(private_manager_t *this, int select_id)
+METHOD(manager_t, select_gateway, gateway_t*,
+	private_manager_t *this, int select_id)
 {
 	if (select_id != 0)
 	{
@@ -95,18 +91,14 @@ static gateway_t* select_gateway(private_manager_t *this, int select_id)
 	return this->gateway;
 }
 
-/**
- * Implementation of manager_t.logged_in.
- */
-static bool logged_in(private_manager_t *this)
+METHOD(manager_t, logged_in, bool,
+	private_manager_t *this)
 {
 	return this->user != 0;
 }
 
-/**
- * Implementation of manager_t.login.
- */
-static bool login(private_manager_t *this, char *username, char *password)
+METHOD(manager_t, login, bool,
+	private_manager_t *this, char *username, char *password)
 {
 	if (!this->user)
 	{
@@ -115,10 +107,8 @@ static bool login(private_manager_t *this, char *username, char *password)
 	return this->user != 0;
 }
 
-/**
- * Implementation of manager_t.logout.
- */
-static void logout(private_manager_t *this)
+METHOD(manager_t, logout, void,
+	private_manager_t *this)
 {
 	if (this->gateway)
 	{
@@ -128,10 +118,8 @@ static void logout(private_manager_t *this)
 	this->user = 0;
 }
 
-/**
- * Implementation of manager_t.destroy
- */
-static void destroy(private_manager_t *this)
+METHOD(context_t, destroy, void,
+	private_manager_t *this)
 {
 	if (this->gateway) this->gateway->destroy(this->gateway);
 	free(this);
@@ -142,18 +130,21 @@ static void destroy(private_manager_t *this)
  */
 manager_t *manager_create(storage_t *storage)
 {
-	private_manager_t *this = malloc_thing(private_manager_t);
+	private_manager_t *this;
 
-	this->public.login = (bool(*)(manager_t*, char *username, char *password))login;
-	this->public.logged_in = (bool(*)(manager_t*))logged_in;
-	this->public.logout = (void(*)(manager_t*))logout;
-	this->public.create_gateway_enumerator = (enumerator_t*(*)(manager_t*))create_gateway_enumerator;
-	this->public.select_gateway = (gateway_t*(*)(manager_t*, int id))select_gateway;
-	this->public.context.destroy = (void(*)(context_t*))destroy;
-
-	this->user = 0;
-	this->store = storage;
-	this->gateway = NULL;
+	INIT(this,
+		.public = {
+			.login = _login,
+			.logged_in = _logged_in,
+			.logout = _logout,
+			.create_gateway_enumerator = _create_gateway_enumerator,
+			.select_gateway = _select_gateway,
+			.context = {
+				.destroy = _destroy,
+			},
+		},
+		.store = storage,
+	);
 
 	return &this->public;
 }
