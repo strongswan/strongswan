@@ -52,29 +52,21 @@ struct private_medsrv_config_t {
 	ike_cfg_t *ike;
 };
 
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_medsrv_config_t *this, char *name)
+METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
+	private_medsrv_config_t *this, char *name)
 {
 	return NULL;
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_medsrv_config_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_medsrv_config_t *this, host_t *me, host_t *other)
 {
 	return enumerator_create_single(this->ike, NULL);
 }
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
-												identification_t *me,
-												identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	private_medsrv_config_t *this, identification_t *me,
+	identification_t *other)
 {
 	enumerator_t *e;
 
@@ -98,11 +90,11 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 			peer_cfg = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
-				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-				TRUE, this->dpd, 				/* mobike, dpddelay */
-				NULL, NULL, 					/* vip, pool */
-				TRUE, NULL, NULL); 				/* mediation, med by, peer id */
+				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+				this->rekey*5, this->rekey*3,	/* jitter, overtime */
+				TRUE, this->dpd,				/* mobike, dpddelay */
+				NULL, NULL,						/* vip, pool */
+				TRUE, NULL, NULL);				/* mediation, med by, peer id */
 			e->destroy(e);
 
 			auth = auth_cfg_create();
@@ -121,10 +113,8 @@ static enumerator_t* create_peer_cfg_enumerator(private_medsrv_config_t *this,
 	return NULL;
 }
 
-/**
- * Implementation of medsrv_config_t.destroy.
- */
-static void destroy(private_medsrv_config_t *this)
+METHOD(medsrv_config_t, destroy, void,
+	private_medsrv_config_t *this)
 {
 	this->ike->destroy(this->ike);
 	free(this);
@@ -135,18 +125,23 @@ static void destroy(private_medsrv_config_t *this)
  */
 medsrv_config_t *medsrv_config_create(database_t *db)
 {
-	private_medsrv_config_t *this = malloc_thing(private_medsrv_config_t);
+	private_medsrv_config_t *this;
 
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(medsrv_config_t*))destroy;
-
-	this->db = db;
-	this->rekey = lib->settings->get_time(lib->settings, "medsrv.rekey", 1200);
-	this->dpd = lib->settings->get_time(lib->settings, "medsrv.dpd", 300);
-	this->ike = ike_cfg_create(FALSE, FALSE,
-						"0.0.0.0", IKEV2_UDP_PORT, "0.0.0.0", IKEV2_UDP_PORT);
+	INIT(this,
+		.public = {
+			.backend = {
+				.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+				.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+				.get_peer_cfg_by_name = _get_peer_cfg_by_name,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+		.rekey = lib->settings->get_time(lib->settings, "medsrv.rekey", 1200),
+		.dpd = lib->settings->get_time(lib->settings, "medsrv.dpd", 300),
+		.ike = ike_cfg_create(FALSE, FALSE,
+						"0.0.0.0", IKEV2_UDP_PORT, "0.0.0.0", IKEV2_UDP_PORT),
+	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 
 	return &this->public;
