@@ -86,12 +86,6 @@ struct private_parser_t {
 };
 
 /**
- * Forward declaration
- */
-static status_t parse_payload(private_parser_t *this,
-							  payload_type_t payload_type, payload_t **payload);
-
-/**
  * Log invalid length error
  */
 static bool short_input(private_parser_t *this, int number)
@@ -320,7 +314,8 @@ static bool parse_list(private_parser_t *this, int rule_number,
 		DBG2(DBG_ENC, "  %d bytes left, parsing recursively %N",
 			 length, payload_type_names, payload_type);
 
-		if (parse_payload(this, payload_type, &payload) != SUCCESS)
+		if (this->public.parse_payload(&this->public, payload_type,
+									   &payload) != SUCCESS)
 		{
 			DBG1(DBG_ENC, "  parsing of a %N substructure failed",
 				 payload_type_names, payload_type);
@@ -363,11 +358,8 @@ static bool parse_chunk(private_parser_t *this, int rule_number,
 	return TRUE;
 }
 
-/**
- * Implementation of parser_t.parse_payload.
- */
-static status_t parse_payload(private_parser_t *this,
-							  payload_type_t payload_type, payload_t **payload)
+METHOD(parser_t, parse_payload, status_t,
+	private_parser_t *this, payload_type_t payload_type, payload_t **payload)
 {
 	payload_t *pld;
 	void *output;
@@ -785,27 +777,21 @@ static status_t parse_payload(private_parser_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of parser_t.get_remaining_byte_count.
- */
-static int get_remaining_byte_count (private_parser_t *this)
+METHOD(parser_t, get_remaining_byte_count, int,
+	private_parser_t *this)
 {
 	return this->input_roof - this->byte_pos;
 }
 
-/**
- * Implementation of parser_t.reset_context.
- */
-static void reset_context (private_parser_t *this)
+METHOD(parser_t, reset_context, void,
+	private_parser_t *this)
 {
 	this->byte_pos = this->input;
 	this->bit_pos = 0;
 }
 
-/**
- * Implementation of parser_t.destroy.
- */
-static void destroy(private_parser_t *this)
+METHOD(parser_t, destroy, void,
+	private_parser_t *this)
 {
 	free(this);
 }
@@ -815,17 +801,19 @@ static void destroy(private_parser_t *this)
  */
 parser_t *parser_create(chunk_t data)
 {
-	private_parser_t *this = malloc_thing(private_parser_t);
+	private_parser_t *this;
 
-	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**))parse_payload;
-	this->public.reset_context = (void(*)(parser_t*)) reset_context;
-	this->public.get_remaining_byte_count = (int (*) (parser_t *))get_remaining_byte_count;
-	this->public.destroy = (void(*)(parser_t*)) destroy;
-
-	this->input = data.ptr;
-	this->byte_pos = data.ptr;
-	this->bit_pos = 0;
-	this->input_roof = data.ptr + data.len;
+	INIT(this,
+		.public = {
+			.parse_payload = _parse_payload,
+			.reset_context = _reset_context,
+			.get_remaining_byte_count = _get_remaining_byte_count,
+			.destroy = _destroy,
+		},
+		.input = data.ptr,
+		.byte_pos = data.ptr,
+		.input_roof = data.ptr + data.len,
+	);
 
 	return &this->public;
 }
