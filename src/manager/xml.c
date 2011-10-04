@@ -66,11 +66,8 @@ typedef struct {
 	xmlNode *node;
 } child_enum_t;
 
-/**
- * Implementation of xml_t.children().enumerate().
- */
-static bool child_enumerate(child_enum_t *e, private_xml_t **child,
-							char **name, char **value)
+METHOD(enumerator_t, child_enumerate, bool,
+	child_enum_t *e, private_xml_t **child, char **name, char **value)
 {
 	while (e->node && e->node->type != XML_ELEMENT_NODE)
 	{
@@ -100,18 +97,14 @@ static bool child_enumerate(child_enum_t *e, private_xml_t **child,
 	return FALSE;
 }
 
-/**
- * Implementation of xml_t.get_attribute.
- */
-static char* get_attribute(private_xml_t *this, char *name)
+METHOD(xml_t, get_attribute, char*,
+	private_xml_t *this, char *name)
 {
 	return NULL;
 }
 
-/**
- * destroy enumerator, and complete tree if this was the last enumerator
- */
-static void child_destroy(child_enum_t *this)
+METHOD(enumerator_t, child_destroy, void,
+	child_enum_t *this)
 {
 	if (--this->child.root->enums == 0)
 	{
@@ -121,20 +114,25 @@ static void child_destroy(child_enum_t *this)
 	free(this);
 }
 
-/**
- * Implementation of xml_t.children.
- */
-static enumerator_t* children(private_xml_t *this)
+METHOD(xml_t, children, enumerator_t*,
+	private_xml_t *this)
 {
-	child_enum_t *ce = malloc_thing(child_enum_t);
-	ce->e.enumerate = (void*)child_enumerate;
-	ce->e.destroy = (void*)child_destroy;
-	ce->node = this->node;
-	ce->child.public.children = (void*)children;
-	ce->child.public.get_attribute = (void*)get_attribute;
-	ce->child.node = NULL;
-	ce->child.doc = this->doc;
-	ce->child.root = this->root;
+	child_enum_t *ce;
+	INIT(ce,
+		.e = {
+			.enumerate = (void*)_child_enumerate,
+			.destroy = _child_destroy,
+		},
+		.child = {
+			.public = {
+				.get_attribute = _get_attribute,
+				.children = _children,
+			},
+			.doc = this->doc,
+			.root = this->root,
+		},
+		.node = this->node,
+	);
 	this->root->enums++;
 	return &ce->e;
 }
@@ -144,20 +142,24 @@ static enumerator_t* children(private_xml_t *this)
  */
 xml_t *xml_create(char *xml)
 {
-	private_xml_t *this = malloc_thing(private_xml_t);
+	private_xml_t *this;
 
-	this->public.get_attribute = (char*(*)(xml_t*,char*))get_attribute;
-	this->public.children = (enumerator_t*(*)(xml_t*))children;
+	INIT(this,
+		.public = {
+			.get_attribute = _get_attribute,
+			.children = _children,
+		},
+		.doc = xmlReadMemory(xml, strlen(xml), NULL, NULL, 0),
+	);
 
-	this->doc = xmlReadMemory(xml, strlen(xml), NULL, NULL, 0);
-	if (this->doc == NULL)
+	if (!this->doc)
 	{
 		free(this);
 		return NULL;
 	}
+
 	this->node = xmlDocGetRootElement(this->doc);
 	this->root = this;
-	this->enums = 0;
 
 	return &this->public;
 }
