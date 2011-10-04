@@ -88,10 +88,8 @@ static traffic_selector_t *ts_from_string(char *str)
 	return traffic_selector_create_dynamic(0, 0, 65535);
 }
 
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *name)
+METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
+	private_medcli_config_t *this, char *name)
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg, *med_cfg;
@@ -192,11 +190,8 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	return peer_cfg;
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_medcli_config_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_medcli_config_t *this, host_t *me, host_t *other)
 {
 	return enumerator_create_single(this->ike, NULL);
 }
@@ -216,10 +211,8 @@ typedef struct {
 	int dpd;
 } peer_enumerator_t;
 
-/**
- * Implementation of peer_enumerator_t.public.enumerate
- */
-static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
+METHOD(enumerator_t, peer_enumerator_enumerate, bool,
+	peer_enumerator_t *this, peer_cfg_t **cfg)
 {
 	char *name, *local_net, *remote_net;
 	chunk_t me, other;
@@ -271,31 +264,29 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	return TRUE;
 }
 
-/**
- * Implementation of peer_enumerator_t.public.destroy
- */
-static void peer_enumerator_destroy(peer_enumerator_t *this)
+METHOD(enumerator_t, peer_enumerator_destroy, void,
+	peer_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_medcli_config_t *this,
-												identification_t *me,
-												identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	private_medcli_config_t *this, identification_t *me,
+	identification_t *other)
 {
-	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
+	peer_enumerator_t *e;
 
-	e->current = NULL;
-	e->ike = this->ike;
-	e->rekey = this->rekey;
-	e->dpd = this->dpd;
-	e->public.enumerate = (void*)peer_enumerator_enumerate;
-	e->public.destroy = (void*)peer_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_peer_enumerator_enumerate,
+			.destroy = _peer_enumerator_destroy,
+		},
+		.ike = this->ike,
+		.rekey = this->rekey,
+		.dpd = this->dpd,
+	);
 
 	/* filter on IDs: NULL or ANY or matching KEY_ID */
 	e->inner = this->db->query(this->db,
@@ -374,10 +365,8 @@ static void schedule_autoinit(private_medcli_config_t *this)
 	}
 }
 
-/**
- * Implementation of medcli_config_t.destroy.
- */
-static void destroy(private_medcli_config_t *this)
+METHOD(medcli_config_t, destroy, void,
+	private_medcli_config_t *this)
 {
 	this->ike->destroy(this->ike);
 	free(this);
@@ -388,18 +377,23 @@ static void destroy(private_medcli_config_t *this)
  */
 medcli_config_t *medcli_config_create(database_t *db)
 {
-	private_medcli_config_t *this = malloc_thing(private_medcli_config_t);
+	private_medcli_config_t *this;
 
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(medcli_config_t*))destroy;
-
-	this->db = db;
-	this->rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200);
-	this->dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300);
-	this->ike = ike_cfg_create(FALSE, FALSE,
-						"0.0.0.0", IKEV2_UDP_PORT, "0.0.0.0", IKEV2_UDP_PORT);
+	INIT(this,
+		.public = {
+			.backend = {
+				.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+				.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+				.get_peer_cfg_by_name = _get_peer_cfg_by_name,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+		.rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200),
+		.dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300),
+		.ike = ike_cfg_create(FALSE, FALSE, "0.0.0.0", IKEV2_UDP_PORT,
+							  "0.0.0.0", IKEV2_UDP_PORT),
+	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 
 	schedule_autoinit(this);
