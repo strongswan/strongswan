@@ -266,10 +266,8 @@ static job_requeue_t receive(private_uci_control_t *this)
 	return JOB_REQUEUE_FAIR;
 }
 
-/**
- * Implementation of uci_control_t.destroy
- */
-static void destroy(private_uci_control_t *this)
+METHOD(uci_control_t, destroy, void,
+	private_uci_control_t *this)
 {
 	this->job->cancel(this->job);
 	unlink(FIFO_FILE);
@@ -281,9 +279,13 @@ static void destroy(private_uci_control_t *this)
  */
 uci_control_t *uci_control_create()
 {
-	private_uci_control_t *this = malloc_thing(private_uci_control_t);
+	private_uci_control_t *this;
 
-	this->public.destroy = (void(*)(uci_control_t*))destroy;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+		},
+	);
 
 	unlink(FIFO_FILE);
 	if (mkfifo(FIFO_FILE, S_IRUSR|S_IWUSR) != 0)
