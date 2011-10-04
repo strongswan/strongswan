@@ -759,7 +759,7 @@ METHOD(task_t, migrate, void,
 	this->ike_sa = ike_sa;
 }
 
-METHOD(tast_t, destroy, void,
+METHOD(task_t, destroy, void,
 	private_ike_me_t *this)
 {
 	DESTROY_IF(this->peer_id);
@@ -806,7 +806,7 @@ ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 		if (initiator)
 		{
 			this->public.task.build = _build_i;
-			this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+			this->public.task.process = _process_i;
 		}
 		else
 		{
