@@ -273,7 +273,7 @@ METHOD(endpoint_notify_t, clone_, endpoint_notify_t*,
 {
 	private_endpoint_notify_t *clone;
 
-	clone = endpoint_notify_create();
+	clone = (private_endpoint_notify_t*)endpoint_notify_create();
 	clone->priority = this->priority;
 	clone->type = this->type;
 	clone->family = this->family;
@@ -322,7 +322,7 @@ endpoint_notify_t *endpoint_notify_create()
 		.type = NO_TYPE,
 	);
 
-	return this;
+	return &this->public;
 }
 
 /**
@@ -332,7 +332,7 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type, hos
 {
 	private_endpoint_notify_t *this;
 
-	this = endpoint_notify_create();
+	this = (private_endpoint_notify_t*)endpoint_notify_create();
 	this->type = type;
 
 	switch(type)
@@ -397,7 +397,7 @@ endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify)
 		return NULL;
 	}
 
-	this = endpoint_notify_create();
+	this = (private_endpoint_notify_t*)endpoint_notify_create();
 	data = notify->get_notification_data(notify);
 
 	if (parse_notification_data(this, data) != SUCCESS)
