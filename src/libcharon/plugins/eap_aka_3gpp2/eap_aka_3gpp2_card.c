@@ -51,14 +51,10 @@ struct private_eap_aka_3gpp2_card_t {
 bool eap_aka_3gpp2_get_k(identification_t *id, char k[AKA_K_LEN]);
 void eap_aka_3gpp2_get_sqn(char sqn[AKA_SQN_LEN], int offset);
 
-/**
- * Implementation of simaka_card_t.get_quintuplet
- */
-static status_t get_quintuplet(private_eap_aka_3gpp2_card_t *this,
-							   identification_t *id, char rand[AKA_RAND_LEN],
-							   char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
-							   char ik[AKA_IK_LEN], char res[AKA_RES_MAX],
-							   int *res_len)
+METHOD(simaka_card_t, get_quintuplet, status_t,
+	private_eap_aka_3gpp2_card_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
+	char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len)
 {
 	char *amf, *mac;
 	char k[AKA_K_LEN], ak[AKA_AK_LEN], sqn[AKA_SQN_LEN], xmac[AKA_MAC_LEN];
@@ -112,11 +108,9 @@ static status_t get_quintuplet(private_eap_aka_3gpp2_card_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of simaka_card_t.resync
- */
-static bool resync(private_eap_aka_3gpp2_card_t *this, identification_t *id,
-				   char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
+METHOD(simaka_card_t, resync, bool,
+	private_eap_aka_3gpp2_card_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
 {
 	char amf[AKA_AMF_LEN], k[AKA_K_LEN], aks[AKA_AK_LEN], macs[AKA_MAC_LEN];
 
@@ -138,10 +132,8 @@ static bool resync(private_eap_aka_3gpp2_card_t *this, identification_t *id,
 	return TRUE;
 }
 
-/**
- * Implementation of eap_aka_3gpp2_card_t.destroy.
- */
-static void destroy(private_eap_aka_3gpp2_card_t *this)
+METHOD(eap_aka_3gpp2_card_t, destroy, void,
+	private_eap_aka_3gpp2_card_t *this)
 {
 	free(this);
 }
@@ -151,25 +143,30 @@ static void destroy(private_eap_aka_3gpp2_card_t *this)
  */
 eap_aka_3gpp2_card_t *eap_aka_3gpp2_card_create(eap_aka_3gpp2_functions_t *f)
 {
-	private_eap_aka_3gpp2_card_t *this = malloc_thing(private_eap_aka_3gpp2_card_t);
+	private_eap_aka_3gpp2_card_t *this;
 
-	this->public.card.get_triplet = (bool(*)(simaka_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_false;
-	this->public.card.get_quintuplet = (status_t(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))get_quintuplet;
-	this->public.card.resync = (bool(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))resync;
-	this->public.card.get_pseudonym = (identification_t*(*)(simaka_card_t*, identification_t *id))return_null;
-	this->public.card.set_pseudonym = (void(*)(simaka_card_t*, identification_t *id, identification_t *pseudonym))nop;
-	this->public.card.get_reauth = (identification_t*(*)(simaka_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))return_null;
-	this->public.card.set_reauth = (void(*)(simaka_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))nop;
-	this->public.destroy = (void(*)(eap_aka_3gpp2_card_t*))destroy;
-
-	this->f = f;
-	this->seq_check = lib->settings->get_bool(lib->settings,
+	INIT(this,
+		.public = {
+			.card = {
+				.get_triplet = (void*)return_false,
+				.get_quintuplet = _get_quintuplet,
+				.resync = _resync,
+				.get_pseudonym = (void*)return_null,
+				.set_pseudonym = (void*)nop,
+				.get_reauth = (void*)return_null,
+				.set_reauth = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+		.f = f,
+		.seq_check = lib->settings->get_bool(lib->settings,
 									"charon.plugins.eap-aka-3gpp2.seq_check",
 #ifdef SEQ_CHECK /* handle legacy compile time configuration as default */
-									TRUE);
+									TRUE),
 #else /* !SEQ_CHECK */
-									FALSE);
+									FALSE),
 #endif /* SEQ_CHECK */
+	);
 
 	eap_aka_3gpp2_get_sqn(this->sqn, 0);
 
