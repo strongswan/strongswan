@@ -35,9 +35,10 @@ struct gateway_t {
 	 * Send an XML request to the gateway.
 	 *
 	 * @param xml		xml request string
+	 * @param ...		printf style argument list for xml request string
 	 * @return			allocated xml response string
 	 */
-	char* (*request)(gateway_t *this, char *xml);
+	char* (*request)(gateway_t *this, char *xml, ...);
 
 	/**
 	 * Query the list of IKE_SAs and all its children.
