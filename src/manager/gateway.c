@@ -98,10 +98,8 @@ static bool connect_(private_gateway_t *this)
 	return TRUE;
 }
 
-/**
- * Implementation of gateway_t.request.
- */
-static char* request(private_gateway_t *this, char *xml, ...)
+METHOD(gateway_t, request, char*,
+	private_gateway_t *this, char *xml, ...)
 {
 	if (this->fd < 0)
 	{
@@ -145,10 +143,8 @@ static char* request(private_gateway_t *this, char *xml, ...)
 	}
 }
 
-/**
- * Implementation of gateway_t.query_ikesalist.
- */
-static enumerator_t* query_ikesalist(private_gateway_t *this)
+METHOD(gateway_t, query_ikesalist, enumerator_t*,
+	private_gateway_t *this)
 {
 	char *str, *name, *value;
 	xml_t *xml;
@@ -202,11 +198,8 @@ static enumerator_t* query_ikesalist(private_gateway_t *this)
 	return NULL;
 }
 
-
-/**
- * Implementation of gateway_t.query_configlist.
- */
-static enumerator_t* query_configlist(private_gateway_t *this)
+METHOD(gateway_t, query_configlist, enumerator_t*,
+	private_gateway_t *this)
 {
 	char *str, *name, *value;
 	xml_t *xml;
@@ -302,10 +295,8 @@ static enumerator_t* read_result(private_gateway_t *this, char *res)
 	return NULL;
 }
 
-/**
- * Implementation of gateway_t.initiate.
- */
-static enumerator_t* initiate(private_gateway_t *this, bool ike, char *name)
+METHOD(gateway_t, initiate, enumerator_t*,
+	private_gateway_t *this, bool ike, char *name)
 {
 	char *str, *kind;
 
@@ -325,10 +316,8 @@ static enumerator_t* initiate(private_gateway_t *this, bool ike, char *name)
 	return read_result(this, str);
 }
 
-/**
- * Implementation of gateway_t.terminate.
- */
-static enumerator_t* terminate(private_gateway_t *this, bool ike, u_int32_t id)
+METHOD(gateway_t, terminate, enumerator_t*,
+	private_gateway_t *this, bool ike, u_int32_t id)
 {
 	char *str, *kind;
 
@@ -348,10 +337,8 @@ static enumerator_t* terminate(private_gateway_t *this, bool ike, u_int32_t id)
 	return read_result(this, str);
 }
 
-/**
- * Implementation of gateway_t.destroy
- */
-static void destroy(private_gateway_t *this)
+METHOD(gateway_t, destroy, void,
+	private_gateway_t *this)
 {
 	if (this->fd >= 0)
 	{
@@ -367,19 +354,21 @@ static void destroy(private_gateway_t *this)
  */
 static private_gateway_t *gateway_create(char *name)
 {
-	private_gateway_t *this = malloc_thing(private_gateway_t);
+	private_gateway_t *this;
 
-	this->public.request = (char*(*)(gateway_t*, char *xml))request;
-	this->public.query_ikesalist = (enumerator_t*(*)(gateway_t*))query_ikesalist;
-	this->public.query_configlist = (enumerator_t*(*)(gateway_t*))query_configlist;
-	this->public.initiate = (enumerator_t*(*)(gateway_t*, bool ike, char *name))initiate;
-	this->public.terminate = (enumerator_t*(*)(gateway_t*, bool ike, u_int32_t id))terminate;
-	this->public.destroy = (void(*)(gateway_t*))destroy;
-
-	this->name = strdup(name);
-	this->host = NULL;
-	this->fd = -1;
-	this->xmlid = 1;
+	INIT(this,
+		.public = {
+			.request = _request,
+			.query_ikesalist = _query_ikesalist,
+			.query_configlist = _query_configlist,
+			.initiate = _initiate,
+			.terminate = _terminate,
+			.destroy = _destroy,
+		},
+		.name = strdup(name),
+		.fd = -1,
+		.xmlid = 1,
+	);
 
 	return this;
 }
