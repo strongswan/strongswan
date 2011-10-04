@@ -49,11 +49,8 @@ typedef struct {
 	private_key_t *current;
 } private_enumerator_t;
 
-/**
- * Implementation of private_enumerator_t.public.enumerate
- */
-static bool private_enumerator_enumerate(private_enumerator_t *this,
-										 private_key_t **key)
+METHOD(enumerator_t, private_enumerator_enumerate, bool,
+	private_enumerator_t *this, private_key_t **key)
 {
 	chunk_t chunk;
 
@@ -73,21 +70,16 @@ static bool private_enumerator_enumerate(private_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of private_enumerator_t.public.destroy
- */
-static void private_enumerator_destroy(private_enumerator_t *this)
+METHOD(enumerator_t, private_enumerator_destroy, void,
+	private_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of credential_set_t.create_private_enumerator.
- */
-static enumerator_t* create_private_enumerator(private_medcli_creds_t *this,
-										key_type_t type, identification_t *id)
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	private_medcli_creds_t *this, key_type_t type, identification_t *id)
 {
 	private_enumerator_t *e;
 
@@ -98,10 +90,12 @@ static enumerator_t* create_private_enumerator(private_medcli_creds_t *this,
 		return NULL;
 	}
 
-	e = malloc_thing(private_enumerator_t);
-	e->current = NULL;
-	e->public.enumerate = (void*)private_enumerator_enumerate;
-	e->public.destroy = (void*)private_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_private_enumerator_enumerate,
+			.destroy = _private_enumerator_destroy,
+		},
+	);
 	e->inner = this->db->query(this->db,
 						"SELECT PrivateKey FROM ClientConfig WHERE KeyId = ?",
 						DB_BLOB, id->get_encoding(id),
@@ -128,11 +122,8 @@ typedef struct {
 	key_type_t type;
 } cert_enumerator_t;
 
-/**
- * Implementation of cert_enumerator_t.public.enumerate
- */
-static bool cert_enumerator_enumerate(cert_enumerator_t *this,
-									  certificate_t **cert)
+METHOD(enumerator_t, cert_enumerator_enumerate, bool,
+	cert_enumerator_t *this, certificate_t **cert)
 {
 	public_key_t *public;
 	chunk_t chunk;
@@ -167,22 +158,17 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of cert_enumerator_t.public.destroy
- */
-static void cert_enumerator_destroy(cert_enumerator_t *this)
+METHOD(enumerator_t, cert_enumerator_destroy, void,
+	cert_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of credential_set_t.create_cert_enumerator.
- */
-static enumerator_t* create_cert_enumerator(private_medcli_creds_t *this,
-										certificate_type_t cert, key_type_t key,
-										identification_t *id, bool trusted)
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_medcli_creds_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
 
@@ -192,11 +178,13 @@ static enumerator_t* create_cert_enumerator(private_medcli_creds_t *this,
 		return NULL;
 	}
 
-	e = malloc_thing(cert_enumerator_t);
-	e->current = NULL;
-	e->type = key;
-	e->public.enumerate = (void*)cert_enumerator_enumerate;
-	e->public.destroy = (void*)cert_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_cert_enumerator_enumerate,
+			.destroy = _cert_enumerator_destroy,
+		},
+		.type = key,
+	);
 	e->inner = this->db->query(this->db,
 			"SELECT PublicKey FROM ClientConfig WHERE KeyId = ? UNION "
 			"SELECT PublicKey FROM MediationServerConfig WHERE KeyId = ? UNION "
@@ -213,10 +201,8 @@ static enumerator_t* create_cert_enumerator(private_medcli_creds_t *this,
 	return &e->public;
 }
 
-/**
- * Implementation of backend_t.destroy.
- */
-static void destroy(private_medcli_creds_t *this)
+METHOD(medcli_creds_t, destroy, void,
+	private_medcli_creds_t *this)
 {
 	free(this);
 }
@@ -226,17 +212,21 @@ static void destroy(private_medcli_creds_t *this)
  */
 medcli_creds_t *medcli_creds_create(database_t *db)
 {
-	private_medcli_creds_t *this = malloc_thing(private_medcli_creds_t);
+	private_medcli_creds_t *this;
 
-	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
-	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)nop;
-
-	this->public.destroy = (void (*)(medcli_creds_t*))destroy;
-
-	this->db = db;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_private_enumerator = _create_private_enumerator,
+				.create_cert_enumerator = _create_cert_enumerator,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)nop,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+	);
 
 	return &this->public;
 }
