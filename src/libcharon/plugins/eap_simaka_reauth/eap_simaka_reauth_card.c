@@ -66,12 +66,9 @@ static bool equals(identification_t *key1, identification_t *key2)
 	return key1->equals(key1, key2);
 }
 
-/**
- * Implementation of simaka_card_t.get_reauth
- */
-static identification_t *get_reauth(private_eap_simaka_reauth_card_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter)
+METHOD(simaka_card_t, get_reauth, identification_t*,
+	private_eap_simaka_reauth_card_t *this, identification_t *id,
+	char mk[HASH_SIZE_SHA1], u_int16_t *counter)
 {
 	reauth_data_t *data;
 	identification_t *reauth;
@@ -90,12 +87,9 @@ static identification_t *get_reauth(private_eap_simaka_reauth_card_t *this,
 	return reauth;
 }
 
-/**
- * Implementation of simaka_card_t.set_reauth
- */
-static void set_reauth(private_eap_simaka_reauth_card_t *this,
-					   identification_t *id, identification_t* next,
-					   char mk[HASH_SIZE_SHA1], u_int16_t counter)
+METHOD(simaka_card_t, set_reauth, void,
+	private_eap_simaka_reauth_card_t *this, identification_t *id,
+	identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter)
 {
 	reauth_data_t *data;
 
@@ -115,18 +109,16 @@ static void set_reauth(private_eap_simaka_reauth_card_t *this,
 	memcpy(data->mk, mk, HASH_SIZE_SHA1);
 }
 
-/**
- * Implementation of simaka_card_t.get_quintuplet
- */
-static status_t get_quintuplet()
+METHOD(simaka_card_t, get_quintuplet, status_t,
+	private_eap_simaka_reauth_card_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
+	char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len)
 {
 	return NOT_SUPPORTED;
 }
 
-/**
- * Implementation of eap_simaka_reauth_card_t.destroy.
- */
-static void destroy(private_eap_simaka_reauth_card_t *this)
+METHOD(eap_simaka_reauth_card_t, destroy, void,
+	private_eap_simaka_reauth_card_t *this)
 {
 	enumerator_t *enumerator;
 	reauth_data_t *data;
@@ -152,18 +144,21 @@ eap_simaka_reauth_card_t *eap_simaka_reauth_card_create()
 {
 	private_eap_simaka_reauth_card_t *this;
 
-	this = malloc_thing(private_eap_simaka_reauth_card_t);
-
-	this->public.card.get_triplet = (bool(*)(simaka_card_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))return_null;
-	this->public.card.get_quintuplet = (status_t(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))get_quintuplet;
-	this->public.card.resync = (bool(*)(simaka_card_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))return_false;
-	this->public.card.get_pseudonym = (identification_t*(*)(simaka_card_t*, identification_t *perm))return_null;
-	this->public.card.set_pseudonym = (void(*)(simaka_card_t*, identification_t *id, identification_t *pseudonym))nop;
-	this->public.card.get_reauth = (identification_t*(*)(simaka_card_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))get_reauth;
-	this->public.card.set_reauth = (void(*)(simaka_card_t*, identification_t *id, identification_t* next, char mk[HASH_SIZE_SHA1], u_int16_t counter))set_reauth;
-	this->public.destroy = (void(*)(eap_simaka_reauth_card_t*))destroy;
-
-	this->reauth = hashtable_create((void*)hash, (void*)equals, 0);
+	INIT(this,
+		.public = {
+			.card = {
+				.get_triplet = (void*)return_null,
+				.get_quintuplet = _get_quintuplet,
+				.resync = (void*)return_false,
+				.get_pseudonym = (void*)return_null,
+				.set_pseudonym = (void*)nop,
+				.get_reauth = _get_reauth,
+				.set_reauth = _set_reauth,
+			},
+			.destroy = _destroy,
+		},
+		.reauth = hashtable_create((void*)hash, (void*)equals, 0),
+	);
 
 	return &this->public;
 }
