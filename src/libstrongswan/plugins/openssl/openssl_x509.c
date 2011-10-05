@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -597,12 +600,47 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 		}
 		if (constraints->pathlen)
 		{
-			
+
 			pathlen = ASN1_INTEGER_get(constraints->pathlen);
 			this->pathlen = (pathlen >= 0 && pathlen < 128) ?
 							 pathlen : X509_NO_CONSTRAINT;
 		}
 		BASIC_CONSTRAINTS_free(constraints);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * parse key usage
+ */
+static bool parse_keyUsage_ext(private_openssl_x509_t *this,
+							   X509_EXTENSION *ext)
+{
+	ASN1_BIT_STRING *usage;
+
+	usage = X509V3_EXT_d2i(ext);
+	if (usage)
+	{
+		if (usage->length > 0)
+		{
+			int flags = usage->data[0];
+			if (usage->length > 1)
+			{
+				flags |= usage->data[1] << 8;
+			}
+			switch (flags)
+			{
+				case X509v3_KU_CRL_SIGN:
+					this->flags |= X509_CRL_SIGN;
+					break;
+				case X509v3_KU_KEY_CERT_SIGN:
+					/* we use the caBasicContraint, MUST be set */
+				default:
+					break;
+			}
+		}
+		ASN1_BIT_STRING_free(usage);
 		return TRUE;
 	}
 	return FALSE;
@@ -803,6 +841,9 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					break;
 				case NID_basic_constraints:
 					ok = parse_basicConstraints_ext(this, ext);
+					break;
+				case NID_key_usage:
+					ok = parse_keyUsage_ext(this, ext);
 					break;
 				case NID_crl_distribution_points:
 					ok = parse_crlDistributionPoints_ext(this, ext);
