@@ -232,7 +232,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(u_int8_t nonce_len,
 		.nonce_len = nonce_len,
 		.hash_algo = hash_algo,
 		.initiator_nonce = chunk_clone(initiator_nonce),
-		.initiator_pub_val = chunk_clone(initiator_pub_val),
+		.initiator_pub_val = initiator_pub_val,
 	);
 
 	return &this->public.pa_tnc_attribute;

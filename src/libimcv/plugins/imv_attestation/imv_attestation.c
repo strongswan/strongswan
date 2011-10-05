@@ -315,7 +315,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 
 				/* Send DH nonce finish attribute */
 				selected_algorithm = pts->get_meas_algorithm(pts);
-				initiator_pub_val = pts->get_my_pub_val(pts);
+				pts->get_my_pub_val(pts, &initiator_pub_val);
+
 				attr = tcg_pts_attr_dh_nonce_finish_create(NONCE_LEN,
 									selected_algorithm,
 									chunk_create(initiator_nonce, NONCE_LEN),

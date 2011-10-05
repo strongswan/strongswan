@@ -373,7 +373,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					{
 						return TNC_RESULT_FATAL;
 					}
-					responder_pub_val = pts->get_my_pub_val(pts);
+					pts->get_my_pub_val(pts, &responder_pub_val);
 
 					attr = tcg_pts_attr_dh_nonce_params_resp_create(NONCE_LEN,
 								selected_dh_group, supported_algorithms,
