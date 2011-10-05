@@ -161,14 +161,11 @@ METHOD(pts_t, create_dh, bool,
 	return FALSE;
 }
 
-METHOD(pts_t, get_my_pub_val, chunk_t,
-	   private_pts_t *this)
+METHOD(pts_t, get_my_pub_val, void,
+	   private_pts_t *this, chunk_t *pub_value)
 {
-	chunk_t public_value;
-
-	this->dh->get_my_public_value(this->dh, &public_value);
-	DBG3(DBG_PTS, "My Public value:%B", &public_value);
-	return public_value;
+	this->dh->get_my_public_value(this->dh, pub_value);
+	DBG3(DBG_PTS, "My Public value:%B", pub_value);
 }
 
 METHOD(pts_t, set_other_pub_val, void,
@@ -215,6 +212,7 @@ METHOD(pts_t, calculate_secret, bool,
 	this->secret = chunk_create(output, HASH_SIZE_SHA1);
 	DBG3(DBG_PTS, "Secret assessment value: %B", &this->secret);
 
+	chunk_free(&shared_secret);
 	hasher->destroy(hasher);
 	return TRUE;
 }

@@ -101,9 +101,9 @@ struct pts_t {
 	/**
 	 * Gets Own Diffie Hellman Public Value
 	 *
-	 * @return				D-H Public Value
+	 * @param info			chunk to keep own public value
 	 */
-	chunk_t (*get_my_pub_val)(pts_t *this);
+	void (*get_my_pub_val)(pts_t *this, chunk_t *pub_value);
 
 	/**
 	 * Sets the public value of partner.
