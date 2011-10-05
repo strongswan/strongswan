@@ -101,11 +101,6 @@ plugin_t *android_plugin_create()
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	this->service = android_service_create(this->creds);
-	if (!this->service)
-	{
-		destroy(this);
-		return NULL;
-	}
 
 	return &this->public.plugin;
 }
