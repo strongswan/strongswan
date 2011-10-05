@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2010-2011 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -44,7 +44,9 @@ struct android_handler_t {
 
 /**
  * Create a android_handler instance.
+ *
+ * @param frontend		TRUE if the VPN frontend is used
  */
-android_handler_t *android_handler_create();
+android_handler_t *android_handler_create(bool frontend);
 
 #endif /** ANDROID_HANDLER_H_ @}*/

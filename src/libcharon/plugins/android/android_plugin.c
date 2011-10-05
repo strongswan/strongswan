@@ -92,7 +92,6 @@ plugin_t *android_plugin_create()
 			},
 		},
 		.logger = android_logger_create(),
-		.handler = android_handler_create(),
 		.creds = android_creds_create(),
 	);
 
@@ -101,6 +100,7 @@ plugin_t *android_plugin_create()
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	this->service = android_service_create(this->creds);
+	this->handler = android_handler_create(this->service != NULL);
 
 	return &this->public.plugin;
 }

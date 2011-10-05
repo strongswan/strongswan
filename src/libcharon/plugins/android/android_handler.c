@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2010-2011 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,7 +36,18 @@ struct private_android_handler_t {
 	 * List of registered DNS servers
 	 */
 	linked_list_t *dns;
+
+	/**
+	 * Whether the VPN frontend is used
+	 */
+	bool frontend;
 };
+
+/**
+ * Prefixes to be used when installing DNS servers
+ */
+#define DNS_PREFIX_DEFAULT  "net"
+#define DNS_PREFIX_FRONTEND "vpn"
 
 /**
  * Struct to store a pair of old and installed DNS servers
@@ -70,12 +81,13 @@ bool filter_dns_pair(void *data, dns_pair_t **in, host_t **out)
 /**
  * Read DNS server property with a given index
  */
-host_t *get_dns_server(int index)
+host_t *get_dns_server(private_android_handler_t *this, int index)
 {
 	host_t *dns = NULL;
-	char key[10], value[PROPERTY_VALUE_MAX];
+	char key[10], value[PROPERTY_VALUE_MAX],
+		 *prefix = this->frontend ? DNS_PREFIX_FRONTEND : DNS_PREFIX_DEFAULT;
 
-	if (snprintf(key, sizeof(key), "vpn.dns%d", index) >= sizeof(key))
+	if (snprintf(key, sizeof(key), "%s.dns%d", prefix, index) >= sizeof(key))
 	{
 		return NULL;
 	}
@@ -90,11 +102,12 @@ host_t *get_dns_server(int index)
 /**
  * Set DNS server property with a given index
  */
-bool set_dns_server(int index, host_t *dns)
+bool set_dns_server(private_android_handler_t *this, int index, host_t *dns)
 {
-	char key[10], value[PROPERTY_VALUE_MAX];
+	char key[10], value[PROPERTY_VALUE_MAX],
+		 *prefix = this->frontend ? DNS_PREFIX_FRONTEND : DNS_PREFIX_DEFAULT;
 
-	if (snprintf(key, sizeof(key), "vpn.dns%d", index) >= sizeof(key))
+	if (snprintf(key, sizeof(key), "%s.dns%d", prefix, index) >= sizeof(key))
 	{
 		return FALSE;
 	}
@@ -136,8 +149,8 @@ METHOD(attribute_handler_t, handle, bool,
 				pair = malloc_thing(dns_pair_t);
 				pair->dns = dns;
 				index = this->dns->get_count(this->dns) + 1;
-				pair->old = get_dns_server(index);
-				set_dns_server(index, dns);
+				pair->old = get_dns_server(this, index);
+				set_dns_server(this, index, dns);
 				this->dns->insert_last(this->dns, pair);
 				return TRUE;
 			}
@@ -164,7 +177,7 @@ METHOD(attribute_handler_t, release, void,
 			if (chunk_equals(pair->dns->get_address(pair->dns), data))
 			{
 				this->dns->remove_at(this->dns, enumerator);
-				set_dns_server(index, pair->old);
+				set_dns_server(this, index, pair->old);
 				destroy_dns_pair(pair);
 			}
 		}
@@ -204,7 +217,7 @@ METHOD(android_handler_t, destroy, void,
 /**
  * See header
  */
-android_handler_t *android_handler_create()
+android_handler_t *android_handler_create(bool frontend)
 {
 	private_android_handler_t *this;
 
@@ -218,6 +231,7 @@ android_handler_t *android_handler_create()
 			.destroy = _destroy,
 		},
 		.dns = linked_list_create(),
+		.frontend = frontend,
 	);
 
 	return &this->public;
