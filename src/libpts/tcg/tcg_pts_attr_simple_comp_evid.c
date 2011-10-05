@@ -564,11 +564,11 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 		.extended_pcr = params.extended_pcr,
 		.hash_algorithm = params.hash_algorithm,
 		.transformation = params.transformation,
-		.measurement_time = params.measurement_time,
-		.policy_uri = params.policy_uri,
-		.pcr_before = params.pcr_before,
-		.pcr_after = params.pcr_after,
-		.measurement = params.measurement,
+		.measurement_time = chunk_clone(params.measurement_time),
+		.policy_uri = chunk_clone(params.policy_uri),
+		.pcr_before = chunk_clone(params.pcr_before),
+		.pcr_after = chunk_clone(params.pcr_after),
+		.measurement = chunk_clone(params.measurement),
 	);
 
 	return &this->public.pa_tnc_attribute;

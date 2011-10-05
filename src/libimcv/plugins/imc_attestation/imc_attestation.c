@@ -599,11 +599,11 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							hasher_t *hasher;
 							u_char hash_output[HASH_SIZE_SHA384];
 							hash_algorithm_t hash_alg;
-														
+
 							/* TODO: Implement BIOS measurement */
 							DBG1(DBG_IMC, "Experimental implementation:"
 								 " Extend TPM with etc/tnc_config file");
-
+							
 							params.flags = PTS_SIMPLE_COMP_EVID_FLAG_PCR | PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
 							params.depth = 0;
 							params.vendor_id = PEN_TCG;
@@ -635,7 +635,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 							if (!hasher)
 							{
-								DBG1(DBG_IMC, "  hasher %N not available", hash_algorithm_names, hash_alg);
+								DBG1(DBG_IMC, "  hasher %N not available",
+									 hash_algorithm_names, hash_alg);
 								return TNC_RESULT_FATAL;
 							}
 
@@ -665,7 +666,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 									return TNC_RESULT_FATAL;
 								}
 								params.measurement_time = chunk_create(utc_time, 20);
-								params.measurement_time = chunk_clone(params.measurement_time);
 							}
 							
 							params.measurement = chunk_create(hash_output, hasher->get_hash_size(hasher));
@@ -687,6 +687,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							/* Buffer Simple Component Evidence attribute */
 							attr = tcg_pts_attr_simple_comp_evid_create(params);
 							evidences->insert_last(evidences, attr);
+							
 							break;
 						}
 						case PTS_FUNC_COMP_NAME_IGNORE:
@@ -724,7 +725,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					
 					e->destroy(e);
-					evidences->destroy(evidences);
+					DESTROY_IF(evidences);
 					
 					break;
 				}
