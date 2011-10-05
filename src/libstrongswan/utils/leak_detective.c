@@ -194,6 +194,7 @@ char *whitelist[] = {
 	"__pthread_setspecific",
 	/* glibc functions */
 	"mktime",
+	"ctime",
 	"__gmtime_r",
 	"localtime_r",
 	"tzset",
