@@ -406,6 +406,7 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				case IKE_MOBIKE:
 					exchange = INFORMATIONAL;
+					break;
 				default:
 					continue;
 			}
