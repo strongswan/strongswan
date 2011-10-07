@@ -310,6 +310,10 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 	attr_list->destroy(attr_list);
 	return result;
+
+	err:
+	DESTROY_IF(attr_list);
+	return TNC_RESULT_FATAL;
 }
 
 /**
