@@ -313,6 +313,44 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
+				case TCG_PTS_MEAS_ALGO:
+				{
+					tcg_pts_attr_meas_algo_t *attr_cast;
+					pts_meas_algorithms_t offered_algorithms, selected_algorithm;
+
+					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
+					offered_algorithms = attr_cast->get_algorithms(attr_cast);
+
+					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
+						(offered_algorithms & PTS_MEAS_ALGO_SHA384))
+					{
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
+					}
+					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
+							 (offered_algorithms & PTS_MEAS_ALGO_SHA256))
+					{
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
+					}
+
+					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
+							 (offered_algorithms & PTS_MEAS_ALGO_SHA1))
+					{
+						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA1);
+					}
+					else
+					{
+						attr = pts_hash_alg_error_create(supported_algorithms);
+						attr_list->insert_last(attr_list, attr);
+						break;
+					}
+
+					/* Send Measurement Algorithm Selection attribute */
+					selected_algorithm = pts->get_meas_algorithm(pts);
+					attr = tcg_pts_attr_meas_algo_create(selected_algorithm,
+														 TRUE);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
 				case TCG_PTS_DH_NONCE_PARAMS_REQ:
 				{
 					tcg_pts_attr_dh_nonce_params_req_t *attr_cast;
@@ -417,6 +455,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 					break;
 				}
+<<<<<<< HEAD
 				case TCG_PTS_MEAS_ALGO:
 				{
 					tcg_pts_attr_meas_algo_t *attr_cast;
@@ -455,7 +494,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-	
 				case TCG_PTS_GET_TPM_VERSION_INFO:
 				{
 					chunk_t tpm_version_info, attr_info;
@@ -474,7 +512,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-	
 				case TCG_PTS_GET_AIK:
 				{
 					certificate_t *aik;
@@ -491,8 +528,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-	
-				/* PTS-based Attestation Evidence */
 				case TCG_PTS_REQ_FUNCT_COMP_EVID:
 				{
 					tcg_pts_attr_req_funct_comp_evid_t *attr_cast;

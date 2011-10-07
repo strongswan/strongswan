@@ -588,29 +588,15 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					dh_group = attr_cast->get_dh_group(attr_cast);
 
 					offered_algorithms = attr_cast->get_hash_algo_set(attr_cast);
-					if ((supported_algorithms & PTS_MEAS_ALGO_SHA384) &&
-						(offered_algorithms & PTS_MEAS_ALGO_SHA384))
-					{
-						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA384);
-					}
-					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA256) &&
-							 (offered_algorithms & PTS_MEAS_ALGO_SHA256))
-					{
-						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA256);
-					}
-
-					else if ((supported_algorithms & PTS_MEAS_ALGO_SHA1) &&
-							 (offered_algorithms & PTS_MEAS_ALGO_SHA1))
-					{
-						pts->set_meas_algorithm(pts, PTS_MEAS_ALGO_SHA1);
-					}
-					else
+					if (!(offered_algorithms & PTS_MEAS_ALGO_SHA1) &&
+						!(offered_algorithms & PTS_MEAS_ALGO_SHA256) &&
+						!(offered_algorithms & PTS_MEAS_ALGO_SHA384))
 					{
 						attr = pts_hash_alg_error_create(supported_algorithms);
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-
+					/* Use already negotiated measurement algorithm */
 					selected_algorithm = pts->get_meas_algorithm(pts);
 					responder_nonce = attr_cast->get_responder_nonce(attr_cast);
 					responder_pub_val = attr_cast->get_responder_pub_val(attr_cast);
