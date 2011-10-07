@@ -716,13 +716,21 @@ METHOD(pts_t, extend_pcr, bool,
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	   private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
+	   private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs, chunk_t *output)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
-	TSS_HKEY hIdentKey;
+	TSS_HKEY hAIK;
+	TSS_HKEY hSRK;
+	TSS_HPOLICY srkUsagePolicy;
+	TSS_UUID SRK_UUID = TSS_UUID_SRK;
+	BYTE secret[] = TSS_WELL_KNOWN_SECRET;
 	TSS_HPCRS hPcrComposite;
+	TSS_VALIDATION valData;
+	TPM_QUOTE_INFO *quoteInfo;
+	u_int32_t i;
 	TSS_RESULT result;
+	chunk_t aik_key_encoding;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -733,20 +741,144 @@ METHOD(pts_t, quote_tpm, bool,
 	result = Tspi_Context_Connect(hContext, NULL);
 	if (result != TSS_SUCCESS)
 	{
-		goto err;
+		goto err1;
 	}
 	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
 	if (result != TSS_SUCCESS)
 	{
-		goto err;
+		goto err1;
 	}
 
+	/* Retrieve SRK from TPM and set the authentication data as well known secret*/
+	result = Tspi_Context_LoadKeyByUUID(hContext, TSS_PS_TYPE_SYSTEM,
+									SRK_UUID, &hSRK);
+	if (result != TSS_SUCCESS)
+	{
+		goto err1;
+	}
+
+	result = Tspi_GetPolicyObject(hSRK, TSS_POLICY_USAGE, &srkUsagePolicy);
+	if (result != TSS_SUCCESS)
+	{
+		goto err1;
+	}
+	result = Tspi_Policy_SetSecret(srkUsagePolicy, TSS_SECRET_MODE_SHA1,
+					20, secret);
+	if (result != TSS_SUCCESS)
+	{
+		goto err1;
+	}
+
+	/* Create from AIK public key a HKEY object to sign Quote operation output*/
+	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
+	{
+		if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_key_encoding))
+		{
+			DBG1(DBG_PTS, "encoding AIK certificate for quote operation failed");
+			goto err1;
+		}
+	}
+	else if (this->aik->get_type(this->aik) == CERT_X509)
+	{
+		public_key_t *key = this->aik->get_public_key(this->aik);
+
+		if (key == NULL)
+		{
+			DBG1(DBG_PTS, "unable to retrieve public key from AIK certificate");
+			goto err1;
+		}
+		if (!key->get_encoding(key, PUBKEY_ASN1_DER, &aik_key_encoding))
+		{
+			DBG1(DBG_PTS, "encoding AIK Public Key for quote operation failed");
+			goto err1;
+		}
+	}
+	else
+	{
+		DBG1(DBG_PTS, "AIK is neither X509 certificate nor Public Key");
+		goto err1;
+	}
+
+	result = Tspi_Context_LoadKeyByBlob (hContext, hSRK, aik_key_encoding.len,
+										 (BYTE*)aik_key_encoding.ptr, &hAIK);
+	if (result != TSS_SUCCESS)
+	{
+		goto err1;
+	}
+
+	/* Create PCR composite object */
+	result = Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS, 0, &hPcrComposite);
+	if (result != TSS_SUCCESS)
+	{
+		goto err2;
+	}
+
+	/* Select PCR's */
+	for (i = 0; i < num_of_pcrs; i++)
+	{
+		u_int32_t pcr = pcrs[i];
+		if (pcr < 0 || pcr >= MAX_NUM_PCR )
+		{
+			DBG1(DBG_PTS, "Invalid PCR number: %d", pcr);
+			goto err3;
+		}
+		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, 1);
+		if (result != TSS_SUCCESS)
+		{
+			goto err3;
+		}
+	}
+
+	/* Set the Validation Data */
+	valData.ulExternalDataLength = this->secret.len;
+	valData.rgbExternalData = (BYTE *)this->secret.ptr;
+
+	/* TPM Quote */
+	result = Tspi_TPM_Quote(hTPM, hAIK, hPcrComposite, &valData);
+	if (result != TSS_SUCCESS)
+	{
+		goto err4;
+	}
+
+	quoteInfo = (TPM_QUOTE_INFO *)valData.rgbData;
+
+	//display quote info
+	printf("version:\n");
+	for(i=0;i<4;i++)
+		printf("%02x ",valData.rgbData[i]);
+	printf("\n");
+	printf("fixed value:\n");
+	for(i=4;i<8;i++)
+		printf("%c",valData.rgbData[i]);
+	printf("\n");
+	printf("pcr digest:\n");
+	for(i=8;i<28;i++)
+		printf("%02x ",valData.rgbData[i]);
+	printf("\n");
+	printf("nonce:\n");
+	for(i=28;i<valData.ulDataLength;i++)
+		printf("%c",valData.rgbData[i]);
+	printf("\n");
+	
+	Tspi_Context_FreeMemory(hContext, NULL);
+	Tspi_Context_CloseObject(hContext, hPcrComposite);
+	Tspi_Context_CloseObject(hContext, hAIK);
 	Tspi_Context_Close(hContext);
 	return TRUE;
 
-	err:
-	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	/* Cleanup */
+	err4:
+	Tspi_Context_FreeMemory(hContext, NULL);
+
+	err3:
+	Tspi_Context_CloseObject(hContext, hPcrComposite);
+
+	err2:
+	Tspi_Context_CloseObject(hContext, hAIK);
+	
+	err1:
 	Tspi_Context_Close(hContext);
+	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	return FALSE;
 }
 

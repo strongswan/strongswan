@@ -44,6 +44,16 @@ typedef struct pts_t pts_t;
 #define NONCE_LEN				20
 
 /**
+ * Lenght of the generated nonce used for calculation of shared secret
+ */
+#define ASSESSMENT_SECRET_LEN	20
+
+/**
+ * Maximum number of PCR's of TPM, TPM Spec 1.2
+ */
+#define MAX_NUM_PCR				24
+
+/**
  * Class implementing the TCG Platform Trust System (PTS)
  *
  */
@@ -216,6 +226,7 @@ struct pts_t {
 
 	/**
 	 * Reads given PCR value and returns it
+	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
 	 * @param pcr_num		Number of PCR to read
 	 * @param pcr_value		Chunk to save pcr read output
@@ -225,6 +236,7 @@ struct pts_t {
 
 	/**
 	 * Extends given PCR with given value
+	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
 	 * @param pcr_num		Number of PCR to extend
 	 * @param input			Value to extend
@@ -235,12 +247,14 @@ struct pts_t {
 
 	/**
 	 * Quote over PCR's
+	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
 	 * @param pcrs			Set of PCR's to make quotation over
+	 * @param num_of_pcr	Number of PCR's
 	 * @param quote			Chunk to save quote operation output
 	 * @return				FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, u_int32_t pcrs, chunk_t *quote);
+	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs, chunk_t *quote);
 
 	/**
 	 * Destroys a pts_t object.
