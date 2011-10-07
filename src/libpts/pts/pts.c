@@ -716,7 +716,8 @@ METHOD(pts_t, extend_pcr, bool,
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	   private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs, chunk_t *output)
+	   private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	   chunk_t *pcr_composite, chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -731,6 +732,7 @@ METHOD(pts_t, quote_tpm, bool,
 	u_int32_t i;
 	TSS_RESULT result;
 	chunk_t aik_key_encoding;
+	chunk_t pcr_composite_without_nonce;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -822,7 +824,7 @@ METHOD(pts_t, quote_tpm, bool,
 			DBG1(DBG_PTS, "Invalid PCR number: %d", pcr);
 			goto err3;
 		}
-		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, 1);
+		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr);
 		if (result != TSS_SUCCESS)
 		{
 			goto err3;
@@ -842,23 +844,36 @@ METHOD(pts_t, quote_tpm, bool,
 
 	quoteInfo = (TPM_QUOTE_INFO *)valData.rgbData;
 
-	//display quote info
-	printf("version:\n");
-	for(i=0;i<4;i++)
-		printf("%02x ",valData.rgbData[i]);
-	printf("\n");
-	printf("fixed value:\n");
-	for(i=4;i<8;i++)
-		printf("%c",valData.rgbData[i]);
-	printf("\n");
-	printf("pcr digest:\n");
-	for(i=8;i<28;i++)
-		printf("%02x ",valData.rgbData[i]);
-	printf("\n");
-	printf("nonce:\n");
-	for(i=28;i<valData.ulDataLength;i++)
-		printf("%c",valData.rgbData[i]);
-	printf("\n");
+	/* Display quote info */
+	DBG3(DBG_PTS, "version:");
+	for(i = 0 ; i < 4 ; i++)
+	{
+		DBG3(DBG_PTS, "%02x ",valData.rgbData[i]);
+	}
+	DBG3(DBG_PTS, "fixed value:");
+	for(i = 4 ; i < 8 ; i++)
+	{
+		DBG3(DBG_PTS, "%c",valData.rgbData[i]);
+	}
+	DBG3(DBG_PTS, "pcr digest:");
+	for(i = 8 ; i < 28 ; i++)
+	{
+		DBG3(DBG_PTS, "%02x ",valData.rgbData[i]);
+	}
+	DBG3(DBG_PTS, "nonce:");
+	for(i = 28 ; i < valData.ulDataLength ; i++)
+	{
+		DBG3(DBG_PTS, "%c",valData.rgbData[i]);
+	}
+
+	/* Set output chunks */
+	pcr_composite_without_nonce = chunk_alloc(
+		valData.ulDataLength - ASSESSMENT_SECRET_LEN);
+	memcpy(pcr_composite_without_nonce.ptr, valData.rgbData,
+		   valData.ulDataLength - ASSESSMENT_SECRET_LEN);
+	*pcr_composite = pcr_composite_without_nonce;
+	*quote_signature = chunk_from_thing(valData.rgbValidationData);
+	*quote_signature = chunk_clone(*quote_signature);
 	
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_CloseObject(hContext, hPcrComposite);

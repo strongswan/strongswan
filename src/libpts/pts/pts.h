@@ -249,12 +249,15 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param pcrs			Set of PCR's to make quotation over
-	 * @param num_of_pcr	Number of PCR's
-	 * @param quote			Chunk to save quote operation output
-	 * @return				FALSE in case of TSS error, TRUE otherwise
+	 * @param pcrs					Set of PCR's to make quotation over
+	 * @param num_of_pcr			Number of PCR's
+	 * @param pcr_composite			Chunk to save pcr composite structure
+	 * @param quote_signature		Chunk to save quote operation output
+	 *								without external data (anti-replay protection)
+	 * @return						FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs, chunk_t *quote);
+	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+					   chunk_t *pcr_composite, chunk_t *quote_signature);
 
 	/**
 	 * Destroys a pts_t object.
@@ -270,4 +273,4 @@ struct pts_t {
  */
 pts_t* pts_create(bool is_imc);
 
-#endif /** PTS_H_ @} */
+#endif /** PTS_H_ @}*/
