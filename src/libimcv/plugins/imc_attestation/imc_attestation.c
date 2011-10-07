@@ -97,12 +97,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	if (!pts_meas_algo_probe(&supported_algorithms) ||
-		!pts_dh_group_probe(&supported_dh_groups))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	if (!pts_probe_dh_groups(&supported_dh_groups))
+	if (!pts_meas_probe_algorithms(&supported_algorithms) ||
+		!pts_probe_dh_groups(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
