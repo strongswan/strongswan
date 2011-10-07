@@ -126,6 +126,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8(writer, flags);
 	writer->write_data (writer, aik_blob);
 	this->value = chunk_clone(writer->get_buf(writer));
+	free(aik_blob.ptr);
 	writer->destroy(writer);
 }
 
