@@ -169,18 +169,20 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 
 	/**
-	 * Specify supported PTS Diffie Hellman Groups
+	 * Specify supported PTS Diffie-Hellman groups
 	 *
-	 * ike2: PTS_DH_GROUP_IKE2
-	 * ike5: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5
-	 * ike14: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14
-	 * ike19: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19
-	 * ike20: PTS_DH_GROUP_IKE2 | PTS_DH_GROUP_IKE5 | PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
+	 * modp1024: PTS_DH_GROUP_IKE2
+	 * modp1536: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5
+	 * modp2048: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14
+	 * ecp256:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
+	 *           PTS_DH_GROUP_IKE19
+	 * ecp384:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
+	 *           PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
 	 *
 	 * we expect the PTS-IMC to select the strongest supported group
 	 */
 	dh_group = lib->settings->get_str(lib->settings,
-				"libimcv.plugins.imv-attestation.dh_group", "ike19");
+				"libimcv.plugins.imv-attestation.dh_group", "ecp256");
 	if (!pts_update_supported_dh_groups(dh_group, &supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
@@ -315,7 +317,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 
 				/* Send DH nonce finish attribute */
 				selected_algorithm = pts->get_meas_algorithm(pts);
-				pts->get_my_pub_val(pts, &initiator_pub_val);
+				pts->get_my_public_value(pts, &initiator_pub_val);
 
 				attr = tcg_pts_attr_dh_nonce_finish_create(NONCE_LEN,
 									selected_algorithm,
@@ -607,7 +609,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					{
 						return TNC_RESULT_FATAL;
 					}
-					pts->set_other_pub_val(pts, responder_pub_val);
+					pts->set_peer_public_value(pts, responder_pub_val);
 
 					DBG3(DBG_IMV, "Initiator nonce: %B", &initiator_non);
 					DBG3(DBG_IMV, "Responder nonce: %B", &responder_nonce);

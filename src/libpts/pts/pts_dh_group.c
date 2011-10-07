@@ -25,8 +25,8 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	enumerator_t *enumerator;
 	diffie_hellman_group_t dh_group;
 	const char *plugin_name;
-	char format1[] = "  %s PTS Diffie Hellman Group %N[%s] available";
-	char format2[] = "  %s PTS Diffie Hellman Group %N not available";
+	char format1[] = "  %s PTS DH group %N[%s] available";
+	char format2[] = "  %s PTS DH group %N not available";
 	
 	*groups = 0;
 
@@ -36,32 +36,32 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 		if (dh_group == MODP_1024_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE2;
-			DBG2(DBG_PTS, format1, "optional", diffie_hellman_group_names, dh_group,
+			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names, dh_group,
 								  plugin_name);
 		}
 		else if (dh_group == MODP_1536_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE5;
-			DBG2(DBG_PTS, format1, "optional", diffie_hellman_group_names, dh_group,
-								  plugin_name);
+			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
+									dh_group, plugin_name);
 		}
 		else if (dh_group == MODP_2048_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE14;
-			DBG2(DBG_PTS, format1, "optional", diffie_hellman_group_names, dh_group,
-								  plugin_name);
+			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
+									dh_group, plugin_name);
 		}
 		else if (dh_group == ECP_256_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE19;
-			DBG2(DBG_PTS, format1, "mandatory", diffie_hellman_group_names, dh_group,
-								  plugin_name);
+			DBG2(DBG_PTS, format1, "mandatory", diffie_hellman_group_names,
+									dh_group, plugin_name);
 		}
 		else if (dh_group == ECP_384_BIT)
 		{
 			*groups |= PTS_DH_GROUP_IKE20;
-			DBG2(DBG_PTS, format1, "optional", diffie_hellman_group_names, dh_group,
-								  plugin_name);
+			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
+									dh_group, plugin_name);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -72,7 +72,8 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	}
 	else
 	{
-		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names, ECP_256_BIT);
+		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names,
+											ECP_256_BIT);
 	}
 
 	return FALSE;
@@ -83,39 +84,39 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
  */
 bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups)
 {
-	if (strcaseeq(dh_group, "ike20"))
+	if (strcaseeq(dh_group, "ecp384"))
 	{
 		/* nothing to update, all groups are supported */
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "ike19"))
+	else if (strcaseeq(dh_group, "ecp256"))
 	{
-		/* remove DH Group 20 */
-		*groups = ~PTS_DH_GROUP_IKE20;
+		/* remove DH group 20 */
+		*groups &= ~PTS_DH_GROUP_IKE20;
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "ike14"))
+	else if (strcaseeq(dh_group, "modp2048"))
 	{
-		/* remove DH Group 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19;
+		/* remove DH groups 19 and 20 */
+		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19);
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "ike5"))
+	else if (strcaseeq(dh_group, "modp1536"))
 	{
-		/* remove DH Group 14, 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19
-		& ~PTS_DH_GROUP_IKE14;
+		/* remove DH groups 14, 19 and 20 */
+		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
+					 PTS_DH_GROUP_IKE14);
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "ike2"))
+	else if (strcaseeq(dh_group, "modp1024"))
 	{
-		/* remove DH Group 5, 14, 19 and 20 */
-		*groups = ~PTS_DH_GROUP_IKE20 & ~PTS_DH_GROUP_IKE19 &
-		~PTS_DH_GROUP_IKE14 & ~PTS_DH_GROUP_IKE5;
+		/* remove DH groups 5, 14, 19 and 20 */
+		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
+					 PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE5);
 		return TRUE;
 	}
 
-	DBG1(DBG_PTS, "Unknown DH Group: %s configured");
+	DBG1(DBG_PTS, "unknown DH group: %s configured", dh_group);
 	return FALSE;
 }
 

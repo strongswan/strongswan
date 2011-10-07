@@ -374,27 +374,27 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					if ((supported_dh_groups & PTS_DH_GROUP_IKE20) &&
 						(offered_dh_groups & PTS_DH_GROUP_IKE20))
 					{
-						pts->set_dh_group(pts, PTS_DH_GROUP_IKE20);
+						selected_dh_group = PTS_DH_GROUP_IKE20;
 					}
 					else if ((supported_dh_groups & PTS_DH_GROUP_IKE19) &&
 							 (offered_dh_groups & PTS_DH_GROUP_IKE19))
 					{
-						pts->set_dh_group(pts, PTS_DH_GROUP_IKE19);
+						selected_dh_group = PTS_DH_GROUP_IKE19;
 					}
 					else if ((supported_dh_groups & PTS_DH_GROUP_IKE14) &&
 							 (offered_dh_groups & PTS_DH_GROUP_IKE14))
 					{
-						pts->set_dh_group(pts, PTS_DH_GROUP_IKE14);
+						selected_dh_group = PTS_DH_GROUP_IKE14;
 					}
 					else if ((supported_dh_groups & PTS_DH_GROUP_IKE5) &&
 							 (offered_dh_groups & PTS_DH_GROUP_IKE5))
 					{
-						pts->set_dh_group(pts, PTS_DH_GROUP_IKE5);
+						selected_dh_group = PTS_DH_GROUP_IKE5;
 					}
 					else if ((supported_dh_groups & PTS_DH_GROUP_IKE2) &&
 							 (offered_dh_groups & PTS_DH_GROUP_IKE2))
 					{
-						pts->set_dh_group(pts, PTS_DH_GROUP_IKE2);
+						selected_dh_group = PTS_DH_GROUP_IKE2;
 					}
 					else
 					{
@@ -405,14 +405,14 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 						break;
 					}
 
-					/* Send DH Nonce Parameters Response attribute */
-					selected_dh_group = pts->get_dh_group(pts);
+					/* Create own DH factor */
 					if (!pts->create_dh(pts, selected_dh_group))
 					{
 						goto err;
 					}
-					pts->get_my_pub_val(pts, &responder_pub_val);
+					pts->get_my_public_value(pts, &responder_pub_val);
 
+					/* Send DH Nonce Parameters Response attribute */
 					attr = tcg_pts_attr_dh_nonce_params_resp_create(NONCE_LEN,
 								selected_dh_group, supported_algorithms,
 								chunk_create(responder_nonce, NONCE_LEN),
@@ -446,7 +446,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					DBG3(DBG_IMC, "Initiator nonce: %B", &initiator_nonce);
 					DBG3(DBG_IMC, "Responder nonce: %B", &responder_non);
 					
-					pts->set_other_pub_val(pts, initiator_pub_val);
+					pts->set_peer_public_value(pts, initiator_pub_val);
 					if (!pts->calculate_secret(pts, initiator_nonce,
 										responder_non, selected_algorithm))
 					{

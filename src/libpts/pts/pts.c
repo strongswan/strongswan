@@ -51,12 +51,7 @@ struct private_pts_t {
 	pts_meas_algorithms_t algorithm;
 
 	/**
-	 * PTS Diffie Hellman Group
-	 */
-	pts_dh_group_t dh_group;
-
-	/**
-	 * Contains a Diffie Hellman object
+	 * PTS Diffie Hellman Secret
 	 */
 	diffie_hellman_t *dh;
 
@@ -125,26 +120,6 @@ METHOD(pts_t, set_meas_algorithm, void,
 	}
 }
 
-METHOD(pts_t, get_dh_group, pts_dh_group_t,
-	   private_pts_t *this)
-{
-	return this->dh_group;
-}
-
-METHOD(pts_t, set_dh_group, void,
-	   private_pts_t *this, pts_dh_group_t group)
-{
-	diffie_hellman_group_t dh_group;
-
-	dh_group = pts_dh_group_to_strongswan_dh_group(group);
-	DBG2(DBG_PTS, "selected PTS Diffie Hellman Group is %N",
-		 diffie_hellman_group_names, dh_group);
-	if (dh_group != MODP_NONE)
-	{
-		this->dh_group = group;
-	}
-}
-
 METHOD(pts_t, create_dh, bool,
 	   private_pts_t *this, pts_dh_group_t group)
 {
@@ -154,24 +129,25 @@ METHOD(pts_t, create_dh, bool,
 	if (dh_group != MODP_NONE)
 	{
 		this->dh = lib->crypto->create_dh(lib->crypto, dh_group);
+		DBG2(DBG_PTS, "selected PTS DH group is %N",
+			 diffie_hellman_group_names, dh_group);
 		return TRUE;
 	}
-	DBG1(DBG_PTS, "Unable to create Diffie Hellman object with group %N",
-		diffie_hellman_group_names, dh_group);
+	DBG1(DBG_PTS, "unable to create DH group %N",
+			 diffie_hellman_group_names, dh_group);
+
 	return FALSE;
 }
 
-METHOD(pts_t, get_my_pub_val, void,
-	   private_pts_t *this, chunk_t *pub_value)
+METHOD(pts_t, get_my_public_value, void,
+	   private_pts_t *this, chunk_t *value)
 {
-	this->dh->get_my_public_value(this->dh, pub_value);
-	DBG3(DBG_PTS, "My Public value:%B", pub_value);
+	this->dh->get_my_public_value(this->dh, value);
 }
 
-METHOD(pts_t, set_other_pub_val, void,
+METHOD(pts_t, set_peer_public_value, void,
 	   private_pts_t *this, chunk_t value)
 {
-	DBG3(DBG_PTS, "Partner's Public value:%B", &value);
 	this->dh->set_other_public_value(this->dh, value);
 }
 
@@ -195,7 +171,7 @@ METHOD(pts_t, calculate_secret, bool,
 
 	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
 	{
-		DBG1(DBG_PTS, "Shared secret couldn't be calculated");
+		DBG1(DBG_PTS, "shared secret couldn't be calculated");
 		hasher->destroy(hasher);
 		return FALSE;
 	}
@@ -210,7 +186,7 @@ METHOD(pts_t, calculate_secret, bool,
 	 * Truncate the output to 20 bytes to fit ExternalDate argument of TPM Quote
 	 */
 	this->secret = chunk_create(output, HASH_SIZE_SHA1);
-	DBG3(DBG_PTS, "Secret assessment value: %B", &this->secret);
+	DBG3(DBG_PTS, "secret assessment value: %B", &this->secret);
 
 	chunk_free(&shared_secret);
 	hasher->destroy(hasher);
@@ -1080,11 +1056,9 @@ pts_t *pts_create(bool is_imc)
 			 .set_proto_caps = _set_proto_caps,
 			 .get_meas_algorithm = _get_meas_algorithm,
 			 .set_meas_algorithm = _set_meas_algorithm,
-			 .get_dh_group = _get_dh_group,
-			 .set_dh_group = _set_dh_group,
 			 .create_dh = _create_dh,
-			 .get_my_pub_val = _get_my_pub_val,
-			 .set_other_pub_val = _set_other_pub_val,
+			 .get_my_public_value = _get_my_public_value,
+			 .set_peer_public_value = _set_peer_public_value,
 			 .calculate_secret = _calculate_secret,
 			 .get_secret = _get_secret,
 			 .get_platform_info = _get_platform_info,
@@ -1104,7 +1078,6 @@ pts_t *pts_create(bool is_imc)
 		 },
 		 .proto_caps = PTS_PROTO_CAPS_V,
 		 .algorithm = PTS_MEAS_ALGO_SHA256,
-		 .dh_group = PTS_DH_GROUP_IKE19,
 	);
 
 	if (is_imc)

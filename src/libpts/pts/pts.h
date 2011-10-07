@@ -68,155 +68,142 @@ struct pts_t {
 	/**
 	 * Get PTS Protocol Capabilities
 	 *
-	 * @return				protocol capabilities flags
+	 * @return					Protocol capabilities flags
 	 */
 	pts_proto_caps_flag_t (*get_proto_caps)(pts_t *this);
 
 	/**
 	 * Set PTS Protocol Capabilities
 	 *
-	 * @param flags			protocol capabilities flags
+	 * @param flags				Protocol capabilities flags
 	 */
 	void (*set_proto_caps)(pts_t *this, pts_proto_caps_flag_t flags);
 
 	/**
 	 * Get PTS Measurement Algorithm
 	 *
-	 * @return				measurement algorithm
+	 * @return					Measurement algorithm
 	 */
 	pts_meas_algorithms_t (*get_meas_algorithm)(pts_t *this);
 
 	/**
 	 * Set PTS Measurement Algorithm
 	 *
-	 * @param algorithm		measurement algorithm
+	 * @param algorithm			Measurement algorithm
 	 */
 	void (*set_meas_algorithm)(pts_t *this, pts_meas_algorithms_t algorithm);
 
 	/**
-	 * Get PTS Diffie Hellman Group
+	 * Set PTS Diffie-Hellman object
 	 *
-	 * @return				DH Group
-	 */
-	pts_dh_group_t (*get_dh_group)(pts_t *this);
-
-	/**
-	 * Set PTS Diffie Hellman Group
-	 *
-	 * @param dh_group		DH Group
-	 */
-	void (*set_dh_group)(pts_t *this, pts_dh_group_t dh_group);
-
-	/**
-	 * Set PTS Diffie Hellman Object
-	 *
-	 * @param dh			D-H object
+	 * @param dh				DH object
 	 */
 	bool (*create_dh)(pts_t *this, pts_dh_group_t group);
 
 	/**
-	 * Gets Own Diffie Hellman Public Value
+	 * Get my Diffie-Hellman public value
 	 *
-	 * @param info			chunk to keep own public value
+	 * @param value				My public DH value
 	 */
-	void (*get_my_pub_val)(pts_t *this, chunk_t *pub_value);
+	void (*get_my_public_value)(pts_t *this, chunk_t *value);
 
 	/**
-	 * Sets the public value of partner.
+	 * Set peer Diffie.Hellman public value
 	 *
-	 * @param value		public value of partner
+	 * @param value				Peer public DH value
 	 */
-	void (*set_other_pub_val) (pts_t *this, chunk_t value);
+	void (*set_peer_public_value) (pts_t *this, chunk_t value);
 
 	/**
 	 * Calculates secret assessment value to be used for TPM Quote as an external data
 	 *
-	 * @param initiator_nonce		Initiator nonce (IMV nonce)
-	 * @param responder_nonce		Responder nonce (IMC nonce)
-	 * @param algorithm				Hashing algorithm
-	 * @return						TRUE, FALSE if not both DH public values and
-	 *															 nonces are set
+	 * @param initiator_nonce	Initiator nonce (IMV nonce)
+	 * @param responder_nonce	Responder nonce (IMC nonce)
+	 * @param algorithm			Hashing algorithm
+	 * @return					TRUE unless both DH public values
+	 *							and nonces are set
 	 */
 	bool (*calculate_secret) (pts_t *this, chunk_t initiator_nonce,
-						chunk_t responder_nonce, pts_meas_algorithms_t algorithm);
+							  chunk_t responder_nonce,
+							  pts_meas_algorithms_t algorithm);
 
 	/**
 	 * Returns secret assessment value to be used for TPM Quote as an external data
 	 *
-	 * @return			Secret assessment value
+	 * @return					Secret assessment value
 	 */
 	chunk_t (*get_secret) (pts_t *this);
 
 	/**
 	 * Get Platform and OS Info
 	 *
-	 * @return				platform and OS info
+	 * @return					Platform and OS info
 	 */
 	char* (*get_platform_info)(pts_t *this);
 
 	/**
 	 * Set Platform and OS Info
 	 *
-	 * @param info			platform and OS info
+	 * @param info				Platform and OS info
 	 */
 	void (*set_platform_info)(pts_t *this, char *info);
 
 	/**
 	 * Get TPM 1.2 Version Info
 	 *
-	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
-	 * @return				TRUE if TPM Version Info available
+	 * @param info				chunk containing a TPM_CAP_VERSION_INFO struct
+	 * @return					TRUE if TPM Version Info available
 	 */
 	bool (*get_tpm_version_info)(pts_t *this, chunk_t *info);
 
 	/**
 	 * Set TPM 1.2 Version Info
 	 *
-	 * @param info			chunk containing a TPM_CAP_VERSION_INFO struct
+	 * @param info				chunk containing a TPM_CAP_VERSION_INFO struct
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
 
 	/**
 	 * Get Attestation Identity Certificate or Public Key
 	 *
-	 * @return				AIK Certificate or Public Key
+	 * @return					AIK Certificate or Public Key
 	 */
 	certificate_t* (*get_aik)(pts_t *this);
 
 	/**
 	 * Set Attestation Identity Certificate or Public Key
 	 *
-	 * @param aik			AIK Certificate or Public Key
+	 * @param aik				AIK Certificate or Public Key
 	 */
 	void (*set_aik)(pts_t *this, certificate_t *aik);
 
 	/**
 	 * Check whether path is valid file/directory on filesystem
 	 *
-	 * @param path			Absolute path
-	 * @param error_code	Output variable for PTS error code
-	 * @return				TRUE if path is valid or file/directory doesn't exist
-	 * 							or path is invalid
-	 * 						FALSE if local error occurred within stat function
+	 * @param path				Absolute path
+	 * @param error_code		Output variable for PTS error code
+	 * @return					TRUE if path is valid or file/directory
+	 *							doesn't exist or path is invalid
+	 * 							FALSE if local error occured within stat function
 	 */
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
 	* Compute a hash over a file
-	 * @param hasher		Hasher to be used
-	 * @param pathname		Absolute path of a file
-	 * @param hash			Buffer to keep hash output
-	 * @return				TRUE if path is valid and hashing succeeded, FALSE otherwise
+	 * @param hasher			Hasher to be used
+	 * @param pathname			Absolute path of a file
+	 * @param hash				Buffer to keep hash output
+	 * @return					TRUE if path is valid and hashing succeeded
 	 */
 	bool (*hash_file)(pts_t *this, hasher_t *hasher, char *pathname, u_char *hash);
 
 	/**
 	 * Do PTS File Measurements
 	 *
-	 * @param request_id	ID of PTS File Measurement Request
-	 * @param pathname		Absolute pathname of file to be measured
-	 * @param is_directory	if TRUE directory contents are measured
-	 * @return				PTS File Measurements of NULL if FAILED
+	 * @param request_id		ID of PTS File Measurement Request
+	 * @param pathname			Absolute pathname of file to be measured
+	 * @param is_directory		TRUE if directory contents are measured
+	 * @return					PTS File Measurements of NULL if FAILED
 	 */
 	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
 										char *pathname, bool is_directory);
@@ -224,9 +211,9 @@ struct pts_t {
 	/**
 	 * Obtain file metadata
 	 *
-	 * @param pathname		Absolute pathname of file/directory
-	 * @param is_directory	if TRUE directory contents are requested
-	 * @return				PTS File Metadata or NULL if FAILED
+	 * @param pathname			Absolute pathname of file/directory
+	 * @param is_directory		TRUE if directory contents are requested
+	 * @return					PTS File Metadata or NULL if FAILED
 	 */
 	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_directory);
 
@@ -234,9 +221,9 @@ struct pts_t {
 	 * Reads given PCR value and returns it
 	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
-	 * @param pcr_num		Number of PCR to read
-	 * @param pcr_value		Chunk to save pcr read output
-	 * @return				NULL in case of TSS error, PCR value otherwise
+	 * @param pcr_num			Number of PCR to read
+	 * @param pcr_value			Chunk to save pcr read output
+	 * @return					NULL in case of TSS error, PCR value otherwise
 	 */
 	bool (*read_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value);
 
@@ -244,10 +231,10 @@ struct pts_t {
 	 * Extends given PCR with given value
 	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
-	 * @param pcr_num		Number of PCR to extend
-	 * @param input			Value to extend
-	 * @param output		Chunk to save PCR value after extension
-	 * @return				FALSE in case of TSS error, TRUE otherwise
+	 * @param pcr_num			Number of PCR to extend
+	 * @param input				Value to extend
+	 * @param output			Chunk to save PCR value after extension
+	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
 	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output);
 
@@ -255,11 +242,11 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param pcrs					List of PCR's to make quotation over
-	 * @param pcr_composite			Chunk to save pcr composite structure
-	 * @param quote_signature		Chunk to save quote operation output
-	 *								without external data (anti-replay protection)
-	 * @return						FALSE in case of TSS error, TRUE otherwise
+	 * @param pcrs				List of PCR's to make quotation over
+	 * @param pcr_composite		Chunk to save pcr composite structure
+	 * @param quote_signature	Chunk to save quote operation output
+	 *							without external data (anti-replay protection)
+	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
 	 bool (*quote_tpm)(pts_t *this, linked_list_t *pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
