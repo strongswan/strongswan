@@ -183,35 +183,36 @@ struct pts_t {
 	bool (*create_dh)(pts_t *this, pts_dh_group_t group);
 
 	/**
-	 * Gets Own Diffie Hellman Public Value
+	 * Get my Diffie-Hellman public value
 	 *
-	 * @param info			chunk to keep own public value
+	 * @param value				My public DH value
 	 */
-	void (*get_my_pub_val)(pts_t *this, chunk_t *pub_value);
+	void (*get_my_public_value)(pts_t *this, chunk_t *value);
 
 	/**
-	 * Sets the public value of partner.
+	 * Set peer Diffie.Hellman public value
 	 *
-	 * @param value		public value of partner
+	 * @param value				Peer public DH value
 	 */
-	void (*set_other_pub_val) (pts_t *this, chunk_t value);
+	void (*set_peer_public_value) (pts_t *this, chunk_t value);
 
 	/**
 	 * Calculates secret assessment value to be used for TPM Quote as an external data
 	 *
-	 * @param initiator_nonce		Initiator nonce (IMV nonce)
-	 * @param responder_nonce		Responder nonce (IMC nonce)
-	 * @param algorithm				Hashing algorithm
-	 * @return						TRUE, FALSE if not both DH public values and
-	 *															 nonces are set
+	 * @param initiator_nonce	Initiator nonce (IMV nonce)
+	 * @param responder_nonce	Responder nonce (IMC nonce)
+	 * @param algorithm			Hashing algorithm
+	 * @return					TRUE unless both DH public values
+	 *							and nonces are set
 	 */
 	bool (*calculate_secret) (pts_t *this, chunk_t initiator_nonce,
-						chunk_t responder_nonce, pts_meas_algorithms_t algorithm);
+							  chunk_t responder_nonce,
+							  pts_meas_algorithms_t algorithm);
 
 	/**
 	 * Returns secret assessment value to be used for TPM Quote as an external data
 	 *
-	 * @return			Secret assessment value
+	 * @return					Secret assessment value
 	 */
 	chunk_t (*get_secret) (pts_t *this);
 
@@ -265,12 +266,13 @@ struct pts_t {
 	 * @param error_code		Output variable for PTS error code
 	 * @return					TRUE if path is valid or file/directory
 	 *							doesn't exist or path is invalid
-	 * 						FALSE if local error occured within stat function
+	 * 							FALSE if local error occured within stat function
 	 */
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
 	 * Compute a hash over a file
+	 *
 	 * @param hasher			Hasher to be used
 	 * @param pathname			Absolute path of a file
 	 * @param hash				Buffer to keep hash output
@@ -365,9 +367,9 @@ struct pts_t {
 	 * Reads given PCR value and returns it
 	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
-	 * @param pcr_num		Number of PCR to read
-	 * @param pcr_value		Chunk to save pcr read output
-	 * @return				NULL in case of TSS error, PCR value otherwise
+	 * @param pcr_num			Number of PCR to read
+	 * @param pcr_value			Chunk to save pcr read output
+	 * @return					NULL in case of TSS error, PCR value otherwise
 	 */
 	bool (*read_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value);
 
@@ -375,10 +377,10 @@ struct pts_t {
 	 * Extends given PCR with given value
 	 * Expects owner secret to be WELL_KNOWN_SECRET
 	 *
-	 * @param pcr_num		Number of PCR to extend
-	 * @param input			Value to extend
-	 * @param output		Chunk to save PCR value after extension
-	 * @return				FALSE in case of TSS error, TRUE otherwise
+	 * @param pcr_num			Number of PCR to extend
+	 * @param input				Value to extend
+	 * @param output			Chunk to save PCR value after extension
+	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
 	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output);
 
@@ -386,11 +388,11 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param pcrs					List of PCR's to make quotation over
-	 * @param pcr_composite			Chunk to save pcr composite structure
-	 * @param quote_signature		Chunk to save quote operation output
-	 *								without external data (anti-replay protection)
-	 * @return						FALSE in case of TSS error, TRUE otherwise
+	 * @param pcrs				List of PCR's to make quotation over
+	 * @param pcr_composite		Chunk to save pcr composite structure
+	 * @param quote_signature	Chunk to save quote operation output
+	 *							without external data (anti-replay protection)
+	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
 	 bool (*quote_tpm)(pts_t *this, linked_list_t *pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
