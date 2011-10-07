@@ -250,7 +250,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(u_int8_t nonce_len,
 		.dh_group = dh_group,
 		.hash_algo_set = hash_algo_set,
 		.responder_nonce = chunk_clone(responder_nonce),
-		.responder_pub_val = chunk_clone(responder_pub_val),
+		.responder_pub_val = responder_pub_val,
 	);
 
 	return &this->public.pa_tnc_attribute;
