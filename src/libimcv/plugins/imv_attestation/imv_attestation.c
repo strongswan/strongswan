@@ -750,9 +750,31 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 				case TCG_PTS_SIMPLE_EVID_FINAL:
 				{
-					/** TODO: Implement construct Quote structure over saved values from
-					 * TCG_PTS_SIMPLE_COMP_EVID and compare with received one
+					tcg_pts_attr_simple_evid_final_t *attr_cast;
+					pts_simple_evid_final_flag_t flags;
+					chunk_t pcr_comp = chunk_empty;
+					chunk_t tpm_quote_sign = chunk_empty;
+					chunk_t evid_sign = chunk_empty;
+					
+					/** TODO: Ignoring Composite Hash Algorithm field
+					 * No flag defined which indicates the precense of it
 					 */
+					attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
+					flags = attr_cast->get_flags(attr_cast);
+
+					if ((flags >> 6) & PTS_SIMPLE_EVID_FINAL_FLAG_NO)
+					{
+						pcr_comp = attr_cast->get_pcr_comp(attr_cast);
+						tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
+						
+						/** TODO: Construct PCR Composite */
+					}
+					if (flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
+					{
+						/** TODO: What to do with Evidence Signature */
+						evid_sign = attr_cast->get_evid_sign(attr_cast);
+					}
+
 					break;
 				}
 

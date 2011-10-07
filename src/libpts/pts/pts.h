@@ -31,6 +31,7 @@ typedef struct pts_t pts_t;
 #include "pts_dh_group.h"
 
 #include <library.h>
+#include <utils/linked_list.h>
 
 /**
  * UTF-8 encoding of the character used to delimiter the filename
@@ -52,6 +53,11 @@ typedef struct pts_t pts_t;
  * Maximum number of PCR's of TPM, TPM Spec 1.2
  */
 #define MAX_NUM_PCR				24
+
+/**
+ * Number of bytes can be savedin a PCR of TPM, TPM Spec 1.2
+ */
+#define PCR_LEN					20
 
 /**
  * Class implementing the TCG Platform Trust System (PTS)
@@ -249,14 +255,13 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param pcrs					Set of PCR's to make quotation over
-	 * @param num_of_pcr			Number of PCR's
+	 * @param pcrs					List of PCR's to make quotation over
 	 * @param pcr_composite			Chunk to save pcr composite structure
 	 * @param quote_signature		Chunk to save quote operation output
 	 *								without external data (anti-replay protection)
 	 * @return						FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	 bool (*quote_tpm)(pts_t *this, linked_list_t *pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
 
 	/**

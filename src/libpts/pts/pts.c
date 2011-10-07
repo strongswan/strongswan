@@ -650,6 +650,7 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
+	pcr_value = chunk_alloc(PCR_LEN);
 	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &pcr_length, &pcr_value.ptr);
 	if (result != TSS_SUCCESS)
 	{
@@ -659,11 +660,13 @@ METHOD(pts_t, read_pcr, bool,
 	*output = pcr_value;
 	*output = chunk_clone(*output);
 
+	chunk_clear(&pcr_value);
 	Tspi_Context_Close(hContext);
 	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, output);
 	return TRUE;
 
 	err:
+	chunk_clear(&pcr_value);
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	Tspi_Context_Close(hContext);
 	return FALSE;
@@ -694,7 +697,10 @@ METHOD(pts_t, extend_pcr, bool,
 	{
 		goto err;
 	}
-	result = Tspi_TPM_PcrExtend(hTPM, pcr_num, 20, input.ptr, NULL, &pcr_length, &pcr_value.ptr);
+
+	pcr_value = chunk_alloc(PCR_LEN);
+	result = Tspi_TPM_PcrExtend(hTPM, pcr_num, PCR_LEN, input.ptr,
+								NULL, &pcr_length, &pcr_value.ptr);
 	if (result != TSS_SUCCESS)
 	{
 		goto err;
@@ -703,20 +709,21 @@ METHOD(pts_t, extend_pcr, bool,
 	*output = pcr_value;
 	*output = chunk_clone(*output);
 
+	chunk_clear(&pcr_value);
 	Tspi_Context_Close(hContext);
 	DBG3(DBG_PTS, "PCR %d extended with:      %B", pcr_num, &input);
 	DBG3(DBG_PTS, "PCR %d value after extend: %B", pcr_num, output);
-	
 	return TRUE;
 
 	err:
+	chunk_clear(&pcr_value);
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	Tspi_Context_Close(hContext);
 	return FALSE;
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	   private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	   private_pts_t *this, linked_list_t *pcrs,
 	   chunk_t *pcr_composite, chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
@@ -729,10 +736,11 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_HPCRS hPcrComposite;
 	TSS_VALIDATION valData;
 	TPM_QUOTE_INFO *quoteInfo;
-	u_int32_t i;
+	u_int32_t i, pcr;
 	TSS_RESULT result;
 	chunk_t aik_key_encoding;
 	chunk_t pcr_composite_without_nonce;
+	enumerator_t *enumerator;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -774,7 +782,7 @@ METHOD(pts_t, quote_tpm, bool,
 	/* Create from AIK public key a HKEY object to sign Quote operation output*/
 	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
-		if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_key_encoding))
+		if (!this->aik->get_encoding(this->aik, CERT_PEM, &aik_key_encoding))
 		{
 			DBG1(DBG_PTS, "encoding AIK certificate for quote operation failed");
 			goto err1;
@@ -789,7 +797,7 @@ METHOD(pts_t, quote_tpm, bool,
 			DBG1(DBG_PTS, "unable to retrieve public key from AIK certificate");
 			goto err1;
 		}
-		if (!key->get_encoding(key, PUBKEY_ASN1_DER, &aik_key_encoding))
+		if (!key->get_encoding(key, PUBKEY_PEM, &aik_key_encoding))
 		{
 			DBG1(DBG_PTS, "encoding AIK Public Key for quote operation failed");
 			goto err1;
@@ -816,9 +824,9 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Select PCR's */
-	for (i = 0; i < num_of_pcrs; i++)
+	enumerator = pcrs->create_enumerator(pcrs);
+	while (enumerator->enumerate(enumerator, &pcr))
 	{
-		u_int32_t pcr = pcrs[i];
 		if (pcr < 0 || pcr >= MAX_NUM_PCR )
 		{
 			DBG1(DBG_PTS, "Invalid PCR number: %d", pcr);
@@ -830,6 +838,7 @@ METHOD(pts_t, quote_tpm, bool,
 			goto err3;
 		}
 	}
+	enumerator->destroy(enumerator);
 
 	/* Set the Validation Data */
 	valData.ulExternalDataLength = this->secret.len;
@@ -872,6 +881,9 @@ METHOD(pts_t, quote_tpm, bool,
 	memcpy(pcr_composite_without_nonce.ptr, valData.rgbData,
 		   valData.ulDataLength - ASSESSMENT_SECRET_LEN);
 	*pcr_composite = pcr_composite_without_nonce;
+	*pcr_composite = chunk_clone(*pcr_composite);
+	free(pcr_composite_without_nonce.ptr);
+	
 	*quote_signature = chunk_from_thing(valData.rgbValidationData);
 	*quote_signature = chunk_clone(*quote_signature);
 	

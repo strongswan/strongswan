@@ -409,7 +409,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					selected_dh_group = pts->get_dh_group(pts);
 					if (!pts->create_dh(pts, selected_dh_group))
 					{
-						return TNC_RESULT_FATAL;
+						goto err;
 					}
 					pts->get_my_pub_val(pts, &responder_pub_val);
 
@@ -450,7 +450,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					if (!pts->calculate_secret(pts, initiator_nonce,
 										responder_non, selected_algorithm))
 					{
-						return TNC_RESULT_FATAL;
+						goto err;
 					}
 
 					break;
@@ -672,13 +672,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							{
 								DBG1(DBG_IMC, "  hasher %N not available",
 									 hash_algorithm_names, hash_alg);
-								return TNC_RESULT_FATAL;
+								goto err;
 							}
 
 							if (!pts->hash_file(pts, hasher, "/etc/tnc_config", hash_output))
 							{
 								hasher->destroy(hasher);
-								return TNC_RESULT_FATAL;
+								goto err;
 							}
 							
 							measurement_time_t = time(NULL);
@@ -698,9 +698,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 														time_now->tm_sec) < 0)
 								{
 									DBG1(DBG_IMC, "Couldn not format local time to UTC");
-									return TNC_RESULT_FATAL;
+									hasher->destroy(hasher);
+									goto err;
 								}
 								params.measurement_time = chunk_create(utc_time, 20);
+								params.measurement_time = chunk_clone(params.measurement_time);
+								free(utc_time);
+								
 							}
 							
 							params.measurement = chunk_create(hash_output, hasher->get_hash_size(hasher));
@@ -710,13 +714,14 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							if (!pts->read_pcr(pts, EXTEND_PCR, &params.pcr_before))
 							{
 								DBG1(DBG_IMC, "Error occured while reading PCR: %d", EXTEND_PCR);
-								return TNC_RESULT_FATAL;
+								goto err;
 							}
+							
 							if (!pts->extend_pcr(pts, EXTEND_PCR,
 								params.measurement, &params.pcr_after))
 							{
 								DBG1(DBG_IMC, "Error occured while extending PCR: %d", EXTEND_PCR);
-								return TNC_RESULT_FATAL;
+								goto err;
 							}
 
 							/* Buffer Simple Component Evidence attribute */
@@ -744,22 +749,47 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				{
 					enumerator_t *e;
 					pts_simple_evid_final_flag_t flags;
-
+					chunk_t pcr_composite, quote_signature;
+					linked_list_t *pcrs;
+					
 					/* Send buffered Simple Component Evidences */
+					pcrs = linked_list_create();
+					
 					e = evidences->create_enumerator(evidences);
 					while (e->enumerate(e, &attr))
 					{
+						tcg_pts_attr_simple_comp_evid_t *attr_cast;
+						u_int32_t extended_pcr;
+						
+						attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
+						extended_pcr = attr_cast->get_extended_pcr(attr_cast);
+						
+						/* Add extended PCR number to PCR list to quote */
+						/* Duplicated PCR numbers have no influence */
+						pcrs->insert_last(pcrs, &extended_pcr);
+						/* Send Simple Compoenent Evidence */
 						attr_list->insert_last(attr_list, attr);
 					}
 
-					/* TODO: TPM quote operation over included PCR's */
+					/* Quote */
+					if (!pts->quote_tpm(pts, pcrs, &pcr_composite, &quote_signature))
+					{
+						DBG1(DBG_IMC, "Error occured while TPM quote operation");
+						DESTROY_IF(e);
+						DESTROY_IF(pcrs);
+						DESTROY_IF(evidences);
+						goto err;
+					}
+					
 					/* Send Simple Evidence Final attribute */
-					flags = PTS_SIMPLE_EVID_FINAL_FLAG_NO;
+					flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
+					
 					attr = tcg_pts_attr_simple_evid_final_create(flags, 0,
-										chunk_empty, chunk_empty, chunk_empty);
+										pcr_composite, quote_signature, chunk_empty);
 					attr_list->insert_last(attr_list, attr);
 					
-					e->destroy(e);
+					DESTROY_IF(e);
+					DESTROY_IF(pcrs);
 					DESTROY_IF(evidences);
 					
 					break;
@@ -806,7 +836,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					if (!metadata)
 					{
 						/* TODO handle error codes from measurements */
-						return TNC_RESULT_FATAL;
+						goto err;
 					}
 					attr = tcg_pts_attr_unix_file_meta_create(metadata);
 					attr->set_noskip_flag(attr, TRUE);
@@ -862,7 +892,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 					if (!measurements)
 					{
 						/* TODO handle error codes from measurements */
-						return TNC_RESULT_FATAL;
+						goto err;
 					}
 					attr = tcg_pts_attr_file_meas_create(measurements);
 					attr->set_noskip_flag(attr, TRUE);
@@ -918,9 +948,13 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 							pa_tnc_msg->get_encoding(pa_tnc_msg));
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
-	attr_list->destroy(attr_list);
 
+	DESTROY_IF(attr_list);
 	return result;
+
+	err:
+	DESTROY_IF(attr_list);
+	return TNC_RESULT_FATAL;
 }
 
 /**
