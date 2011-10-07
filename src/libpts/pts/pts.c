@@ -782,7 +782,7 @@ METHOD(pts_t, quote_tpm, bool,
 	/* Create from AIK public key a HKEY object to sign Quote operation output*/
 	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
-		if (!this->aik->get_encoding(this->aik, CERT_PEM, &aik_key_encoding))
+		if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_key_encoding))
 		{
 			DBG1(DBG_PTS, "encoding AIK certificate for quote operation failed");
 			goto err1;
@@ -797,7 +797,7 @@ METHOD(pts_t, quote_tpm, bool,
 			DBG1(DBG_PTS, "unable to retrieve public key from AIK certificate");
 			goto err1;
 		}
-		if (!key->get_encoding(key, PUBKEY_PEM, &aik_key_encoding))
+		if (!key->get_encoding(key, PUBKEY_ASN1_DER, &aik_key_encoding))
 		{
 			DBG1(DBG_PTS, "encoding AIK Public Key for quote operation failed");
 			goto err1;
