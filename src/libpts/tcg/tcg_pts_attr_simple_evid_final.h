@@ -66,34 +66,11 @@ struct tcg_pts_attr_simple_evid_final_t {
 	pts_simple_evid_final_flag_t (*get_flags)(tcg_pts_attr_simple_evid_final_t *this);
 
 	/**
-	 * Set flags for PTS Simple Evidence Final
-	 *
-	 * @param flags				Set of flags
-	 */
-	void (*set_flags)(tcg_pts_attr_simple_evid_final_t *this,
-					  pts_simple_evid_final_flag_t flags);
-	
-	/**
 	 * Get Optional Composite Hash Algorithm
 	 *
 	 * @return				Composite Hash Algorithm
 	 */
 	pts_meas_algorithms_t (*get_comp_hash_algorithm)(tcg_pts_attr_simple_evid_final_t *this);
-	
-	/**
-	 * Set Optional Composite Hash Algorithm
-	 *
-	 * @param hash_algorithm		Composite Hash Algorithm
-	 */
-	void (*set_comp_hash_algorithm)(tcg_pts_attr_simple_evid_final_t *this,
-									pts_meas_algorithms_t hash_algorithm);
-	
-	/**
-	 * Get Optional TPM PCR Composite Length
-	 *
-	 * @return				Length of Composite PCR Length
-	 */
-	u_int32_t (*get_comp_pcr_len)(tcg_pts_attr_simple_evid_final_t *this);
 	
 	/**
 	 * Get Optional TPM PCR Composite
@@ -103,21 +80,6 @@ struct tcg_pts_attr_simple_evid_final_t {
 	chunk_t (*get_pcr_comp)(tcg_pts_attr_simple_evid_final_t *this);
 	
 	/**
-	 * Set Optional TPM PCR Composite
-	 *
-	 * @param pcr_comp			PCR Composite
-	 */
-	void (*set_pcr_comp)(tcg_pts_attr_simple_evid_final_t *this,
-						 chunk_t pcr_comp);
-	
-	/**
-	 * Get Optional TPM Quote Signature Length
-	 *
-	 * @return				TPM Quote Signature Length
-	 */
-	u_int32_t (*get_tpm_quote_sign_len)(tcg_pts_attr_simple_evid_final_t *this);
-	
-	/**
 	 * Get Optional TPM Quote Signature
 	 *
 	 * @return				TPM Quote Signature
@@ -125,27 +87,11 @@ struct tcg_pts_attr_simple_evid_final_t {
 	chunk_t (*get_tpm_quote_sign)(tcg_pts_attr_simple_evid_final_t *this);
 	
 	/**
-	 * Set Optional TPM Quote Signature
-	 *
-	 * @param tpm_quote_sign		TPM Quote Signature
-	 */
-	void (*set_tpm_quote_sign)(tcg_pts_attr_simple_evid_final_t *this,
-							   chunk_t tpm_quote_sign);
-	
-	/**
 	 * Get Optional Evidence Signature
 	 *
 	 * @return				Optional Evidence Signature
 	 */
 	chunk_t (*get_evid_sign)(tcg_pts_attr_simple_evid_final_t *this);
-	
-	/**
-	 * Set Optional Evidence Signature
-	 *
-	 * @param signature			Optional Evidence Signature
-	 */
-	void (*set_evid_sign)(tcg_pts_attr_simple_evid_final_t *this,
-						  chunk_t signature);
 	
 };
 

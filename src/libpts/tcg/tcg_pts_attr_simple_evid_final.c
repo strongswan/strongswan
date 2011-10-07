@@ -229,32 +229,10 @@ METHOD(tcg_pts_attr_simple_evid_final_t, get_flags, pts_simple_evid_final_flag_t
 	return this->flags;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, set_flags, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, pts_simple_evid_final_flag_t flags)
-{
-	this->flags = flags;
-}
-
 METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_hash_algorithm, pts_meas_algorithms_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	return this->comp_hash_algorithm;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, set_comp_hash_algorithm, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, pts_meas_algorithms_t comp_hash_algorithm)
-{
-	this->comp_hash_algorithm = comp_hash_algorithm;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_pcr_len, u_int32_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
-	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
-	{
-		return this->pcr_comp.len;
-	}
-	return 0;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, get_pcr_comp, chunk_t,
@@ -263,44 +241,16 @@ METHOD(tcg_pts_attr_simple_evid_final_t, get_pcr_comp, chunk_t,
 	return this->pcr_comp;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, set_pcr_comp, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t pcr_comp)
-{
-	this->pcr_comp = pcr_comp;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, get_tpm_quote_sign_len, u_int32_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
-	if (this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0)
-	{
-		return this->tpm_quote_sign.len;
-	}
-	return 0;
-}
-
 METHOD(tcg_pts_attr_simple_evid_final_t, get_tpm_quote_sign, chunk_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	return this->tpm_quote_sign;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, set_tpm_quote_sign, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t tpm_quote_sign)
-{
-	this->tpm_quote_sign = tpm_quote_sign;
-}
-
 METHOD(tcg_pts_attr_simple_evid_final_t, get_evid_sign, chunk_t,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	return this->evid_sign;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sign, void,
-	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t evid_sign)
-{
-	this->evid_sign = evid_sign;
 }
 
 /**
@@ -328,17 +278,10 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(
 				.destroy = _destroy,
 			},
 			.get_flags= _get_flags,
-			.set_flags= _set_flags,
 			.get_comp_hash_algorithm = _get_comp_hash_algorithm,
-			.set_comp_hash_algorithm = _set_comp_hash_algorithm,
-			.get_comp_pcr_len = _get_comp_pcr_len,
 			.get_pcr_comp = _get_pcr_comp,
-			.set_pcr_comp = _set_pcr_comp,
-			.get_tpm_quote_sign_len = _get_tpm_quote_sign_len,
 			.get_tpm_quote_sign = _get_tpm_quote_sign,
-			.set_tpm_quote_sign = _set_tpm_quote_sign,
 			.get_evid_sign = _get_evid_sign,
-			.set_evid_sign = _set_evid_sign,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,
@@ -373,17 +316,10 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create_from_data(chunk_t data)
 				.destroy = _destroy,
 			},
 			.get_flags= _get_flags,
-			.set_flags= _set_flags,
 			.get_comp_hash_algorithm = _get_comp_hash_algorithm,
-			.set_comp_hash_algorithm = _set_comp_hash_algorithm,
-			.get_comp_pcr_len = _get_comp_pcr_len,
 			.get_pcr_comp = _get_pcr_comp,
-			.set_pcr_comp = _set_pcr_comp,
-			.get_tpm_quote_sign_len = _get_tpm_quote_sign_len,
 			.get_tpm_quote_sign = _get_tpm_quote_sign,
-			.set_tpm_quote_sign = _set_tpm_quote_sign,
 			.get_evid_sign = _get_evid_sign,
-			.set_evid_sign = _set_evid_sign,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,
