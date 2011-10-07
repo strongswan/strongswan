@@ -26,7 +26,7 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	diffie_hellman_group_t dh_group;
 	const char *plugin_name;
 	char format1[] = "  %s PTS Diffie Hellman Group %N[%s] available";
-	char format2[] = "  %s PTS Diffie Hellman Group %N[%s] not available";
+	char format2[] = "  %s PTS Diffie Hellman Group %N not available";
 	
 	*groups = 0;
 
@@ -72,7 +72,7 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	}
 	else
 	{
-		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names, ECP_256_BIT, plugin_name);
+		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names, ECP_256_BIT);
 	}
 
 	return FALSE;
