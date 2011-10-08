@@ -155,7 +155,7 @@ pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 /**
  * Described in header.
  */
-diffie_hellman_group_t pts_dh_group_to_strongswan_dh_group(pts_dh_group_t dh_group)
+diffie_hellman_group_t pts_dh_group_to_ike(pts_dh_group_t dh_group)
 {
 	switch (dh_group)
 	{
