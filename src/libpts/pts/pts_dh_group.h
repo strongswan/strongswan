@@ -59,16 +59,16 @@ enum pts_dh_group_t {
 /**
  * Probe available PTS Diffie-Hellman groups
  *
- * @param dh_groups		returns set of available DH groups
- * @return				TRUE if mandatory DH groups are available
+ * @param dh_groups			returns set of available DH groups
+ * @return					TRUE if mandatory DH groups are available
  */
 bool pts_dh_group_probe(pts_dh_group_t *dh_groups);
 
 /**
  * Update supported Diffie-Hellman groups according to configuration
  *
- * @param dh_group		configured DH group
- * @param dh_groups		returns set of available DH groups
+ * @param dh_group			configured DH group
+ * @param dh_groups			returns set of available DH groups
  */
 bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups);
 
@@ -76,9 +76,9 @@ bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups);
  * Select the strongest supported Diffie-Hellman group
  * among a set of offered DH groups
  *
- * @param dh_group		set of supported DH groups
- * @param groups		set of offered DH groups
- * @return				selected DH group
+ * @param supported_groups	set of supported DH groups
+ * @param offered_groups	set of offered DH groups
+ * @return					selected DH group
  */
 pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 								   pts_dh_group_t offered_dh_groups);
@@ -86,8 +86,8 @@ pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 /**
  * Convert pts_dh_group_t to diffie_hellman_group_t
  *
- * @param dh_group		PTS DH group type
- * @return				IKE DH group type
+ * @param dh_group			PTS DH group type
+ * @return					IKE DH group type
  */
 diffie_hellman_group_t pts_dh_group_to_ike(pts_dh_group_t dh_group);
 
