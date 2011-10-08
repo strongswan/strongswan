@@ -95,7 +95,7 @@ pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 
 /**
  * Select the strongest supported Diffie-Hellman group
- * among a set of offered Diffie-Hellman groups
+ * among a set of offered DH groups
  *
  * @param dh_group		set of supported DH groups
  * @param groups		set of offered DH groups
