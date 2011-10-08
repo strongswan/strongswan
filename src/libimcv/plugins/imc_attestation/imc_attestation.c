@@ -45,6 +45,8 @@ static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID				PEN_TCG
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
+
+#define DEFAULT_NONCE_LEN			20
 #define EXTEND_PCR					16
 
 static imc_agent_t *imc_attestation;
@@ -71,10 +73,9 @@ static linked_list_t *evidences = NULL;
 static pts_dh_group_t supported_dh_groups = 0;
 
 /**
- * High Entropy Random Data
- * used in calculation of shared secret for the assessment session
+ * Supported PTS Diffie Hellman Groups
  */
-static char *responder_nonce = NULL;
+static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
 
 /**
  * List of buffered Simple Component Evidences
@@ -90,15 +91,13 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
-	rng_t *rng;
-	
 	if (imc_attestation)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	if (!pts_meas_probe_algorithms(&supported_algorithms) ||
-		!pts_probe_dh_groups(&supported_dh_groups))
+	if (!pts_meas_algo_probe(&supported_algorithms) ||
+		!pts_dh_group_probe(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}

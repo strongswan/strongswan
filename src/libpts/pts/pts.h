@@ -180,41 +180,31 @@ struct pts_t {
 	 *
 	 * @param dh			D-H object
 	 */
-	bool (*create_dh)(pts_t *this, pts_dh_group_t group);
+	bool (*create_dh_nonce)(pts_t *this, pts_dh_group_t group, int nonce_len);
 
 	/**
 	 * Get my Diffie-Hellman public value
 	 *
 	 * @param value				My public DH value
+	 * @param nonce				My DH nonce
 	 */
-	void (*get_my_public_value)(pts_t *this, chunk_t *value);
+	void (*get_my_public_value)(pts_t *this, chunk_t *value, chunk_t *nonce);
 
 	/**
 	 * Set peer Diffie.Hellman public value
 	 *
 	 * @param value				Peer public DH value
+	 * @param nonce				Peer DH nonce
 	 */
-	void (*set_peer_public_value) (pts_t *this, chunk_t value);
+	void (*set_peer_public_value) (pts_t *this, chunk_t value, chunk_t nonce);
 
 	/**
-	 * Calculates secret assessment value to be used for TPM Quote as an external data
+	 * Calculates secret assessment value to be used for TPM Quote as ExternalData
 	 *
-	 * @param initiator_nonce	Initiator nonce (IMV nonce)
-	 * @param responder_nonce	Responder nonce (IMC nonce)
-	 * @param algorithm			Hashing algorithm
 	 * @return					TRUE unless both DH public values
 	 *							and nonces are set
 	 */
-	bool (*calculate_secret) (pts_t *this, chunk_t initiator_nonce,
-							  chunk_t responder_nonce,
-							  pts_meas_algorithms_t algorithm);
-
-	/**
-	 * Returns secret assessment value to be used for TPM Quote as an external data
-	 *
-	 * @return					Secret assessment value
-	 */
-	chunk_t (*get_secret) (pts_t *this);
+	bool (*calculate_secret) (pts_t *this);
 
 	/**
 	 * Get Platform and OS Info
