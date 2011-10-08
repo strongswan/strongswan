@@ -123,6 +123,40 @@ bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups)
 /**
  * Described in header.
  */
+pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
+								   pts_dh_group_t offered_dh_groups)
+{
+	if ((supported_dh_groups & PTS_DH_GROUP_IKE20) &&
+		(offered_dh_groups   & PTS_DH_GROUP_IKE20))
+	{
+		return PTS_DH_GROUP_IKE20;
+	}
+	if ((supported_dh_groups & PTS_DH_GROUP_IKE19) &&
+		(offered_dh_groups   & PTS_DH_GROUP_IKE19))
+	{
+		return PTS_DH_GROUP_IKE19;
+	}
+	if ((supported_dh_groups & PTS_DH_GROUP_IKE14) &&
+		(offered_dh_groups   & PTS_DH_GROUP_IKE14))
+	{
+		return PTS_DH_GROUP_IKE14;
+	}
+	if ((supported_dh_groups & PTS_DH_GROUP_IKE5) &&
+		(offered_dh_groups   & PTS_DH_GROUP_IKE5))
+	{
+		return PTS_DH_GROUP_IKE5;
+	}
+	if ((supported_dh_groups & PTS_DH_GROUP_IKE2) &&
+		(offered_dh_groups   & PTS_DH_GROUP_IKE2))
+	{
+		return PTS_DH_GROUP_IKE2;
+	}
+	return PTS_DH_GROUP_NONE;
+}
+
+/**
+ * Described in header.
+ */
 diffie_hellman_group_t pts_dh_group_to_strongswan_dh_group(pts_dh_group_t dh_group)
 {
 	switch (dh_group)

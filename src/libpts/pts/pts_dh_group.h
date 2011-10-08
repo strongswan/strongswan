@@ -30,10 +30,12 @@ typedef enum pts_dh_group_t pts_dh_group_t;
  * PTS Diffie Hellman Group Values
  */
 enum pts_dh_group_t {
+	/** No DH Group */
+	PTS_DH_GROUP_NONE  =					0,
 	/** IKE Group 2 */
-	PTS_DH_GROUP_IKE2 =					 (1<<15),
+	PTS_DH_GROUP_IKE2  =				 (1<<15),
 	/** IKE Group 5 */
-	PTS_DH_GROUP_IKE5 =					 (1<<14),
+	PTS_DH_GROUP_IKE5  =				 (1<<14),
 	/** IKE Group 14 */
 	PTS_DH_GROUP_IKE14 =				 (1<<13),
 	/** IKE Group 19 */
@@ -63,17 +65,28 @@ enum pts_dh_group_t {
 bool pts_probe_dh_groups(pts_dh_group_t *groups);
 
 /**
- * Update supported Diffie Hellman Groups according to configuration
+ * Update supported Diffie-Hellman groups according to configuration
  *
- * @param dh_group		configured Diffie Hellman Group
+ * @param dh_group		configured Diffie-Hellman group
  * @param groups		set of available groups
  */
 bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups);
 
 /**
+ * Select the strongest supported Diffie-Hellman group
+ * among a set of offered Diffie-Hellman groups
+ *
+ * @param dh_group		set of supported DH groups
+ * @param groups		set of offered DH groups
+ * @return				selected DH group
+ */
+pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
+								   pts_dh_group_t offered_dh_groups);
+
+/**
  * Convert pts_dh_group_t to diffie_hellman_group_t
  *
- * @param dh_group		PTS Diffie Hellman Group type
+ * @param dh_group		PTS Diffie-Hellman group type
  * @return				libstrongswan diffie hellman group type
  */
 diffie_hellman_group_t pts_dh_group_to_strongswan_dh_group(pts_dh_group_t dh_group);
