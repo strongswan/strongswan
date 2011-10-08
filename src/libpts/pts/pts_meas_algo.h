@@ -30,9 +30,10 @@ typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
  * PTS Measurement Algorithms
  */
 enum pts_meas_algorithms_t {
-	PTS_MEAS_ALGO_SHA1 =	(1<<15),
-	PTS_MEAS_ALGO_SHA256 =	 (1<<14),
-	PTS_MEAS_ALGO_SHA384 =	 (1<<13),
+	PTS_MEAS_ALGO_NONE   =	   0,
+	PTS_MEAS_ALGO_SHA1   =	(1<<15),
+	PTS_MEAS_ALGO_SHA256 =	(1<<14),
+	PTS_MEAS_ALGO_SHA384 =	(1<<13),
 };
 
 /**
@@ -53,7 +54,26 @@ enum pts_meas_algorithms_t {
  * @param algorithms	set of available algorithms
  * @return				TRUE if mandatory algorithms are available
  */
-bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms);
+bool pts_meas_algo_probe(pts_meas_algorithms_t *algorithms);
+
+/**
+ * Update supported PTS measurement algorithms according to configuration
+ *
+ * @param hash_alg		configured hash algorithm
+ * @param algorithms	returns set of available PTS measurement algorithms
+ */
+bool pts_meas_algo_update(char *hash_alg, pts_meas_algorithms_t *algorithms);
+
+/**
+ * Select the strongest PTS measurement algorithm
+ * among a set of offered PTS measurement algorithms
+ *
+ * @param supported_algos	set of supported PTS measurement algorithms
+ * @param offered_algos		set of offered PTS measurements algorithms
+ * @return					selected algorithm
+ */
+pts_meas_algorithms_t pts_meas_algo_select(pts_meas_algorithms_t supported_algos,
+										   pts_meas_algorithms_t offered_algos);
 
 /**
  * Convert pts_meas_algorithms_t to hash_algorithm_t
@@ -61,6 +81,6 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms);
  * @param algorithm		PTS measurement algorithm type
  * @return				libstrongswan hash algorithm type
  */
-hash_algorithm_t pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm);
+hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm);
 
 #endif /** PTS_MEAS_ALGO_H_ @}*/

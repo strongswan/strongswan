@@ -20,7 +20,7 @@
 /**
  * Described in header.
  */
-bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
+bool pts_meas_algo_probe(pts_meas_algorithms_t *algorithms)
 {
 	enumerator_t *enumerator;
 	hash_algorithm_t hash_alg;
@@ -77,7 +77,57 @@ bool pts_meas_probe_algorithms(pts_meas_algorithms_t *algorithms)
 /**
  * Described in header.
  */
-hash_algorithm_t pts_meas_to_hash_algorithm(pts_meas_algorithms_t algorithm)
+bool pts_meas_algo_update(char *hash_alg, pts_meas_algorithms_t *algorithms)
+{
+	if (strcaseeq(hash_alg, "sha384") || strcaseeq(hash_alg, "sha2_384"))
+	{
+		/* nothing to update, all algorithms are supported */
+		return TRUE;
+	}
+	if (strcaseeq(hash_alg, "sha256") || strcaseeq(hash_alg, "sha2_256"))
+	{
+		/* remove SHA384algorithm */
+		*algorithms &= ~PTS_MEAS_ALGO_SHA384;
+		return TRUE;
+	}
+	if (strcaseeq(hash_alg, "sha1"))
+	{
+		/* remove SHA384 and SHA256 algorithms */
+		*algorithms &= ~(PTS_MEAS_ALGO_SHA384 | PTS_MEAS_ALGO_SHA256);
+		return TRUE;
+	}
+	DBG1(DBG_PTS, "unknown hash algorithm: %s configured", hash_alg);
+	return FALSE;
+}
+
+/**
+ * Described in header.
+ */
+pts_meas_algorithms_t pts_meas_algo_select(pts_meas_algorithms_t supported_algos,
+										   pts_meas_algorithms_t offered_algos)
+{
+	if ((supported_algos & PTS_MEAS_ALGO_SHA384) &&
+		(offered_algos   & PTS_MEAS_ALGO_SHA384))
+	{
+		return PTS_MEAS_ALGO_SHA384;
+	}
+	if ((supported_algos & PTS_MEAS_ALGO_SHA256) &&
+		(offered_algos   & PTS_MEAS_ALGO_SHA256))
+	{
+		return PTS_MEAS_ALGO_SHA256;
+	}
+	if ((supported_algos & PTS_MEAS_ALGO_SHA1) &&
+		(offered_algos   & PTS_MEAS_ALGO_SHA1))
+	{
+		return PTS_MEAS_ALGO_SHA1;
+	}
+	return PTS_MEAS_ALGO_NONE;
+}
+
+/**
+ * Described in header.
+ */
+hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm)
 {
 	switch (algorithm)
 	{
