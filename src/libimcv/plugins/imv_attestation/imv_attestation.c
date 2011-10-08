@@ -60,23 +60,19 @@ static const char imv_name[] = "Attestation";
 #define IMV_VENDOR_ID			PEN_TCG
 #define IMV_SUBTYPE				PA_SUBTYPE_TCG_PTS
 
+#define NONCE_LEN_LIMIT			16
+
 static imv_agent_t *imv_attestation;
 
 /**
  * Supported PTS measurement algorithms
  */
-static pts_meas_algorithms_t supported_algorithms = 0;
+static pts_meas_algorithms_t supported_algorithms = PTS_MEAS_ALGO_NONE;
 
 /**
  * Supported PTS Diffie Hellman Groups
  */
-static pts_dh_group_t supported_dh_groups = 0;
-
-/**
- * High Entropy Random Data
- * used in calculation of shared secret for the assessment session
- */
-static char *initiator_nonce = NULL;
+static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
 
 /**
  * PTS file measurement database
@@ -107,18 +103,14 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version *actual_version)
 {
 	char *hash_alg, *dh_group, *uri, *cadir;
-	rng_t *rng;
 
 	if (imv_attestation)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	if (!pts_meas_probe_algorithms(&supported_algorithms))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	if (!pts_probe_dh_groups(&supported_dh_groups))
+	if (!pts_meas_algo_probe(&supported_algorithms) ||
+		!pts_dh_group_probe(&supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -131,15 +123,6 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 
 	libpts_init();
 	
-	/* Create a initiator nonce */
-	initiator_nonce = (char*)malloc(NONCE_LEN);
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (rng)
-	{
-		rng->get_bytes(rng, NONCE_LEN, initiator_nonce);
-		rng->destroy(rng);
-	}
-
 	if (min_version > TNC_IFIMV_VERSION_1 || max_version < TNC_IFIMV_VERSION_1)
 	{
 		DBG1(DBG_IMV, "no common IF-IMV version");
@@ -157,17 +140,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	 */
 	hash_alg = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.hash_algorithm", "sha256");
-	if (!strcaseeq(hash_alg, "sha384") && !strcaseeq(hash_alg, "sha2_384"))
-	{
-		/* remove SHA384 algorithm */
-		supported_algorithms &= ~PTS_MEAS_ALGO_SHA384;
-	}
-	if (strcaseeq(hash_alg, "sha1"))
-	{
-		/* remove SHA256 algorithm */
-		supported_algorithms &= ~PTS_MEAS_ALGO_SHA256;
-	}
-
+	
 	/**
 	 * Specify supported PTS Diffie-Hellman groups
 	 *
@@ -183,7 +156,9 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	 */
 	dh_group = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.dh_group", "ecp256");
-	if (!pts_update_supported_dh_groups(dh_group, &supported_dh_groups))
+
+	if (!pts_meas_algo_update(hash_alg, &supported_algorithms) ||
+		!pts_dh_group_update(dh_group, &supported_dh_groups))
 	{
 		return TNC_RESULT_FATAL;
 	}
@@ -304,8 +279,13 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		{
 			if (!dh_nonce_req_sent)
 			{
+				int min_nonce_len;
+
 				/* Send DH nonce parameters request attribute */
-				attr = tcg_pts_attr_dh_nonce_params_req_create(0, supported_dh_groups);
+				min_nonce_len = lib->settings->get_int(lib->settings,
+						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
+				attr = tcg_pts_attr_dh_nonce_params_req_create(min_nonce_len,
+														 supported_dh_groups);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
 				dh_nonce_req_sent = TRUE;
@@ -313,16 +293,13 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			else
 			{
 				pts_meas_algorithms_t selected_algorithm;
-				chunk_t initiator_pub_val;
+				chunk_t initiator_value, initiator_nonce;
 
 				/* Send DH nonce finish attribute */
 				selected_algorithm = pts->get_meas_algorithm(pts);
-				pts->get_my_public_value(pts, &initiator_pub_val);
-
-				attr = tcg_pts_attr_dh_nonce_finish_create(NONCE_LEN,
-									selected_algorithm,
-									chunk_create(initiator_nonce, NONCE_LEN),
-									initiator_pub_val);
+				pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
+				attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
+										 initiator_value, initiator_nonce);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
 
@@ -484,6 +461,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 
 	attr_list = linked_list_create();
+
 	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
@@ -564,21 +542,32 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 					attr_cast = (tcg_pts_attr_meas_algo_t*)attr;
 					selected_algorithm = attr_cast->get_algorithms(attr_cast);
+					if (!(selected_algorithm & supported_algorithms))
+					{
+						DBG1(DBG_IMV, "PTS-IMC selected unsupported "
+									  "measurement algorithm");
+						return TNC_RESULT_FATAL;
+					}
 					pts->set_meas_algorithm(pts, selected_algorithm);
 					break;
 				}
 				case TCG_PTS_DH_NONCE_PARAMS_RESP:
 				{
 					tcg_pts_attr_dh_nonce_params_resp_t *attr_cast;
-					u_int8_t nonce_len;
+					int nonce_len, min_nonce_len;
 					pts_dh_group_t dh_group;
 					pts_meas_algorithms_t offered_algorithms, selected_algorithm;
-					chunk_t responder_nonce, initiator_non, responder_pub_val;
+					chunk_t responder_value, responder_nonce;
 
 					attr_cast = (tcg_pts_attr_dh_nonce_params_resp_t*)attr;
+					responder_nonce = attr_cast->get_responder_nonce(attr_cast);
 
-					nonce_len = attr_cast->get_nonce_len(attr_cast);
-					if (nonce_len < 0 || nonce_len <= 16)
+					/* check compliance of responder nonce length */
+					min_nonce_len = lib->settings->get_int(lib->settings,
+						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
+					nonce_len = responder_nonce.len;
+					if (nonce_len <= NONCE_LEN_LIMIT ||
+					   (min_nonce_len > 0 && nonce_len < min_nonce_len))
 					{
 						attr_info = attr->get_value(attr);
 						attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
@@ -588,33 +577,34 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 					}
 
 					dh_group = attr_cast->get_dh_group(attr_cast);
+					if (!(dh_group & supported_dh_groups))
+					{
+						DBG1(DBG_IMV, "PTS-IMC selected unsupported DH group");
+						return TNC_RESULT_FATAL;
+					}
 
 					offered_algorithms = attr_cast->get_hash_algo_set(attr_cast);
-					if (!(offered_algorithms & PTS_MEAS_ALGO_SHA1) &&
-						!(offered_algorithms & PTS_MEAS_ALGO_SHA256) &&
-						!(offered_algorithms & PTS_MEAS_ALGO_SHA384))
+					selected_algorithm = pts_meas_algo_select(supported_algorithms,
+															  offered_algorithms);
+					if (selected_algorithm == PTS_MEAS_ALGO_NONE)
 					{
 						attr = pts_hash_alg_error_create(supported_algorithms);
 						attr_list->insert_last(attr_list, attr);
 						break;
 					}
-					/* Use already negotiated measurement algorithm */
-					selected_algorithm = pts->get_meas_algorithm(pts);
-					responder_nonce = attr_cast->get_responder_nonce(attr_cast);
-					responder_pub_val = attr_cast->get_responder_pub_val(attr_cast);
-					initiator_non = chunk_create(initiator_nonce, NONCE_LEN);
-					
-					/* Calculate secret assessment value */
-					if (!pts->create_dh(pts, dh_group))
+					pts->set_dh_hash_algorithm(pts, selected_algorithm);
+
+					if (!pts->create_dh_nonce(pts, dh_group, nonce_len))
 					{
 						return TNC_RESULT_FATAL;
 					}
-					pts->set_peer_public_value(pts, responder_pub_val);
 
-					DBG3(DBG_IMV, "Initiator nonce: %B", &initiator_non);
-					DBG3(DBG_IMV, "Responder nonce: %B", &responder_nonce);
-					if (!pts->calculate_secret(pts, initiator_non,
-							responder_nonce, selected_algorithm))
+					responder_value = attr_cast->get_responder_value(attr_cast);
+					pts->set_peer_public_value(pts, responder_value,
+													responder_nonce);
+
+					/* Calculate secret assessment value */
+					if (!pts->calculate_secret(pts))
 					{
 						return TNC_RESULT_FATAL;
 					}
@@ -1010,7 +1000,6 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 	}
 	DESTROY_IF(pts_db);
 	DESTROY_IF(pts_credmgr);
-	free(initiator_nonce);
 
 	libpts_deinit();
 

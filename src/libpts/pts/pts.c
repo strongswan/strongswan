@@ -51,9 +51,24 @@ struct private_pts_t {
 	pts_meas_algorithms_t algorithm;
 
 	/**
-	 * PTS Diffie Hellman Secret
+	 * DH Hash Algorithm
+	 */
+	pts_meas_algorithms_t dh_hash_algorithm;
+
+	/**
+	 * PTS Diffie-Hellman Secret
 	 */
 	diffie_hellman_t *dh;
+
+	/**
+	 * PTS Diffie-Hellman Initiator Nonce
+	 */
+	chunk_t initiator_nonce;
+
+	/**
+	 * PTS Diffie-Hellman Responder Nonce
+	 */
+	chunk_t responder_nonce;
 
 	/**
 	 * Secret assessment value to be used for TPM Quote as an external data
@@ -64,6 +79,11 @@ struct private_pts_t {
 	 * Platform and OS Info
 	 */
 	char *platform_info;
+
+	/**
+	 * TRUE if IMC-PTS, FALSE if IMV-PTS
+	 */
+	bool is_imc;
 
 	/**
 	 * Do we have an activated TPM
@@ -89,7 +109,7 @@ METHOD(pts_t, get_proto_caps, pts_proto_caps_flag_t,
 }
 
 METHOD(pts_t, set_proto_caps, void,
-	   private_pts_t *this, pts_proto_caps_flag_t flags)
+	private_pts_t *this, pts_proto_caps_flag_t flags)
 {
 	this->proto_caps = flags;
 	DBG2(DBG_PTS, "supported PTS protocol capabilities: %s%s%s%s%s",
@@ -101,102 +121,141 @@ METHOD(pts_t, set_proto_caps, void,
 }
 
 METHOD(pts_t, get_meas_algorithm, pts_meas_algorithms_t,
-	   private_pts_t *this)
+	private_pts_t *this)
 {
 	return this->algorithm;
 }
 
 METHOD(pts_t, set_meas_algorithm, void,
-	   private_pts_t *this, pts_meas_algorithms_t algorithm)
+	private_pts_t *this, pts_meas_algorithms_t algorithm)
 {
 	hash_algorithm_t hash_alg;
 
-	hash_alg = pts_meas_to_hash_algorithm(algorithm);
+	hash_alg = pts_meas_algo_to_hash(algorithm);
 	DBG2(DBG_PTS, "selected PTS measurement algorithm is %N",
-		 hash_algorithm_names, hash_alg);
+				   hash_algorithm_names, hash_alg);
 	if (hash_alg != HASH_UNKNOWN)
 	{
 		this->algorithm = algorithm;
 	}
 }
 
-METHOD(pts_t, create_dh, bool,
-	   private_pts_t *this, pts_dh_group_t group)
+METHOD(pts_t, get_dh_hash_algorithm, pts_meas_algorithms_t,
+	private_pts_t *this)
+{
+	return this->dh_hash_algorithm;
+}
+
+METHOD(pts_t, set_dh_hash_algorithm, void,
+	private_pts_t *this, pts_meas_algorithms_t algorithm)
+{
+	hash_algorithm_t hash_alg;
+
+	hash_alg = pts_meas_algo_to_hash(algorithm);
+	DBG2(DBG_PTS, "selected DH hash algorithm is %N",
+				   hash_algorithm_names, hash_alg);
+	if (hash_alg != HASH_UNKNOWN)
+	{
+		this->dh_hash_algorithm = algorithm;
+	}
+}
+
+
+METHOD(pts_t, create_dh_nonce, bool,
+	private_pts_t *this, pts_dh_group_t group, int nonce_len)
 {
 	diffie_hellman_group_t dh_group;
+	chunk_t *nonce;
+	rng_t *rng;
 
-	dh_group = pts_dh_group_to_strongswan_dh_group(group);
-	if (dh_group != MODP_NONE)
+	dh_group = pts_dh_group_to_ike(group);
+	DBG2(DBG_PTS, "selected PTS DH group is %N",
+				   diffie_hellman_group_names, dh_group);
+	DESTROY_IF(this->dh);
+	this->dh = lib->crypto->create_dh(lib->crypto, dh_group);
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
 	{
-		this->dh = lib->crypto->create_dh(lib->crypto, dh_group);
-		DBG2(DBG_PTS, "selected PTS DH group is %N",
-			 diffie_hellman_group_names, dh_group);
-		return TRUE;
-	}
-	DBG1(DBG_PTS, "unable to create DH group %N",
-			 diffie_hellman_group_names, dh_group);
-
-	return FALSE;
-}
-
-METHOD(pts_t, get_my_public_value, void,
-	   private_pts_t *this, chunk_t *value)
-{
-	this->dh->get_my_public_value(this->dh, value);
-}
-
-METHOD(pts_t, set_peer_public_value, void,
-	   private_pts_t *this, chunk_t value)
-{
-	this->dh->set_other_public_value(this->dh, value);
-}
-
-METHOD(pts_t, calculate_secret, bool,
-	   private_pts_t *this, chunk_t initiator_nonce, chunk_t responder_nonce,
-	   pts_meas_algorithms_t algorithm)
-{
-	hasher_t *hasher;
-	hash_algorithm_t hash_alg;
-	u_char output[HASH_SIZE_SHA384];
-	chunk_t shared_secret;
-
-	/* Create a hasher */
-	hash_alg = pts_meas_to_hash_algorithm(algorithm);
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-	if (!hasher)
-	{
-		DBG1(DBG_PTS, "  hasher %N not available", hash_algorithm_names, hash_alg);
+		DBG1(DBG_PTS, "no rng available");
 		return FALSE;
 	}
+	DBG2(DBG_PTS, "nonce length is %d", nonce_len);
+	nonce = this->is_imc ? &this->responder_nonce : &this->initiator_nonce;
+	chunk_free(nonce);
+	rng->allocate_bytes(rng, nonce_len, nonce);
+	rng->destroy(rng);
 
-	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
-	{
-		DBG1(DBG_PTS, "shared secret couldn't be calculated");
-		hasher->destroy(hasher);
-		return FALSE;
-	}
-
-	hasher->get_hash(hasher, chunk_create("1", sizeof("1")), NULL);
-	hasher->get_hash(hasher, initiator_nonce, NULL);
-	hasher->get_hash(hasher, responder_nonce, NULL);
-	hasher->get_hash(hasher, shared_secret, output);
-
-	/**
-	 * Link the hash output to the secret and set the length
-	 * Truncate the output to 20 bytes to fit ExternalDate argument of TPM Quote
-	 */
-	this->secret = chunk_create(output, HASH_SIZE_SHA1);
-	DBG3(DBG_PTS, "secret assessment value: %B", &this->secret);
-
-	chunk_free(&shared_secret);
-	hasher->destroy(hasher);
 	return TRUE;
 }
 
-METHOD(pts_t, get_secret, chunk_t,
-	   private_pts_t *this)
+METHOD(pts_t, get_my_public_value, void,
+	private_pts_t *this, chunk_t *value, chunk_t *nonce)
 {
-	return this->secret;
+	this->dh->get_my_public_value(this->dh, value);
+	*nonce = this->is_imc ? this->responder_nonce : this->initiator_nonce;
+}
+
+METHOD(pts_t, set_peer_public_value, void,
+	private_pts_t *this, chunk_t value, chunk_t nonce)
+{
+	this->dh->set_other_public_value(this->dh, value);
+
+	nonce = chunk_clone(nonce);
+	if (this->is_imc)
+	{
+		this->initiator_nonce = nonce;
+	}
+	else
+	{
+		this->responder_nonce = nonce;
+	}
+}
+
+METHOD(pts_t, calculate_secret, bool,
+	private_pts_t *this)
+{
+	hasher_t *hasher;
+	hash_algorithm_t hash_alg;
+	chunk_t shared_secret;
+
+	/* Check presence of nonces */
+	if (!this->initiator_nonce.len || !this->responder_nonce.len)
+	{
+		DBG1(DBG_PTS, "initiator and/or responder nonce is not available");
+		return FALSE;
+	}
+	DBG3(DBG_PTS, "initiator nonce: %B", &this->initiator_nonce);
+	DBG3(DBG_PTS, "responder nonce: %B", &this->responder_nonce);
+
+	/* Calculate the DH secret */
+	if (this->dh->get_shared_secret(this->dh, &shared_secret) != SUCCESS)
+	{
+		DBG1(DBG_PTS, "shared DH secret computation failed");
+		return FALSE;
+	}
+	DBG4(DBG_PTS, "shared DH secret: %B", &shared_secret);
+
+	/* Calculate the secret assessment value */
+	hash_alg = pts_meas_algo_to_hash(this->dh_hash_algorithm);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+
+	hasher->allocate_hash(hasher, chunk_from_chars('1'), NULL);
+	hasher->allocate_hash(hasher, this->initiator_nonce, NULL);
+	hasher->allocate_hash(hasher, this->responder_nonce, NULL);
+	hasher->allocate_hash(hasher, shared_secret, &this->secret);
+	hasher->destroy(hasher);
+
+	/* The DH secret must be destroyed */
+	chunk_clear(&shared_secret);
+
+	/*
+	 * Truncate the hash to 20 bytes to fit the ExternalData
+	 * argument of the TPM Quote command
+	 */
+	this->secret.len = min(this->secret.len, 20);
+	DBG4(DBG_PTS, "secret assessment value: %B", &this->secret);
+	return TRUE;
 }
 
 /**
@@ -227,20 +286,20 @@ static void print_tpm_version_info(private_pts_t *this)
 }
 
 METHOD(pts_t, get_platform_info, char*,
-	   private_pts_t *this)
+	private_pts_t *this)
 {
 	return this->platform_info;
 }
 
 METHOD(pts_t, set_platform_info, void,
-	   private_pts_t *this, char *info)
+	private_pts_t *this, char *info)
 {
 	free(this->platform_info);
 	this->platform_info = strdup(info);
 }
 
 METHOD(pts_t, get_tpm_version_info, bool,
-	   private_pts_t *this, chunk_t *info)
+	private_pts_t *this, chunk_t *info)
 {
 	if (!this->has_tpm)
 	{
@@ -252,7 +311,7 @@ METHOD(pts_t, get_tpm_version_info, bool,
 }
 
 METHOD(pts_t, set_tpm_version_info, void,
-	   private_pts_t *this, chunk_t info)
+	private_pts_t *this, chunk_t info)
 {
 	this->tpm_version_info = chunk_clone(info);
 	print_tpm_version_info(this);
@@ -297,20 +356,20 @@ static void load_aik(private_pts_t *this)
 }
 
 METHOD(pts_t, get_aik, certificate_t*,
-	   private_pts_t *this)
+	private_pts_t *this)
 {
 	return this->aik;	
 }
 
 METHOD(pts_t, set_aik, void,
-	   private_pts_t *this, certificate_t *aik)
+	private_pts_t *this, certificate_t *aik)
 {
 	DESTROY_IF(this->aik);
 	this->aik = aik->get_ref(aik);
 }
 
 METHOD(pts_t, hash_file, bool,
-	   private_pts_t *this, hasher_t *hasher, char *pathname, u_char *hash)
+	private_pts_t *this, hasher_t *hasher, char *pathname, u_char *hash)
 {
 	u_char buffer[PTS_BUF_SIZE];
 	FILE *file;
@@ -357,8 +416,8 @@ static char* get_filename(char *pathname)
 	return filename;
 }
 
-METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
-						pts_error_code_t *error_code)
+METHOD(pts_t, is_path_valid, bool,
+	private_pts_t *this, char *path, pts_error_code_t *error_code)
 {
 	struct stat st;
 
@@ -389,7 +448,7 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 }
 
 METHOD(pts_t, do_measurements, pts_file_meas_t*,
-	   private_pts_t *this, u_int16_t request_id, char *pathname, bool is_directory)
+	private_pts_t *this, u_int16_t request_id, char *pathname, bool is_directory)
 {
 	hasher_t *hasher;
 	hash_algorithm_t hash_alg;
@@ -398,7 +457,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	pts_file_meas_t *measurements;
 
 	/* Create a hasher */
-	hash_alg = pts_meas_to_hash_algorithm(this->algorithm);
+	hash_alg = pts_meas_algo_to_hash(this->algorithm);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 	if (!hasher)
 	{
@@ -529,7 +588,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 }
 
 METHOD(pts_t, get_metadata, pts_file_meta_t*,
-	   private_pts_t *this, char *pathname, bool is_directory)
+	private_pts_t *this, char *pathname, bool is_directory)
 {
 	pts_file_meta_t *metadata;
 	pts_file_metadata_t *entry;
@@ -601,7 +660,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 }
 
 METHOD(pts_t, read_pcr, bool,
-	   private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
+	private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -649,7 +708,7 @@ METHOD(pts_t, read_pcr, bool,
 }
 
 METHOD(pts_t, extend_pcr, bool,
-	   private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
+	private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -699,8 +758,8 @@ METHOD(pts_t, extend_pcr, bool,
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	   private_pts_t *this, linked_list_t *pcrs,
-	   chunk_t *pcr_composite, chunk_t *quote_signature)
+	private_pts_t *this, linked_list_t *pcrs, chunk_t *pcr_composite,
+	chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -886,10 +945,12 @@ METHOD(pts_t, quote_tpm, bool,
 }
 
 METHOD(pts_t, destroy, void,
-	   private_pts_t *this)
+	private_pts_t *this)
 {
 	DESTROY_IF(this->aik);
 	DESTROY_IF(this->dh);
+	free(this->initiator_nonce.ptr);
+	free(this->responder_nonce.ptr);
 	free(this->platform_info);
 	free(this->tpm_version_info.ptr);
 	free(this);
@@ -1051,33 +1112,36 @@ pts_t *pts_create(bool is_imc)
 	private_pts_t *this;
 
 	INIT(this,
-		 .public = {
-			 .get_proto_caps = _get_proto_caps,
-			 .set_proto_caps = _set_proto_caps,
-			 .get_meas_algorithm = _get_meas_algorithm,
-			 .set_meas_algorithm = _set_meas_algorithm,
-			 .create_dh = _create_dh,
-			 .get_my_public_value = _get_my_public_value,
-			 .set_peer_public_value = _set_peer_public_value,
-			 .calculate_secret = _calculate_secret,
-			 .get_secret = _get_secret,
-			 .get_platform_info = _get_platform_info,
-			 .set_platform_info = _set_platform_info,
-			 .get_tpm_version_info = _get_tpm_version_info,
-			 .set_tpm_version_info = _set_tpm_version_info,
-			 .get_aik = _get_aik,
-			 .set_aik = _set_aik,
-			 .is_path_valid = _is_path_valid,
-			 .hash_file = _hash_file,
-			 .do_measurements = _do_measurements,
-			 .get_metadata = _get_metadata,
-			 .read_pcr = _read_pcr,
-			 .extend_pcr = _extend_pcr,
-			 .quote_tpm = _quote_tpm,
-			 .destroy = _destroy,
-		 },
-		 .proto_caps = PTS_PROTO_CAPS_V,
-		 .algorithm = PTS_MEAS_ALGO_SHA256,
+		.public = {
+			.get_proto_caps = _get_proto_caps,
+			.set_proto_caps = _set_proto_caps,
+			.get_meas_algorithm = _get_meas_algorithm,
+			.set_meas_algorithm = _set_meas_algorithm,
+			.get_dh_hash_algorithm = _get_dh_hash_algorithm,
+			.set_dh_hash_algorithm = _set_dh_hash_algorithm,
+			.create_dh_nonce = _create_dh_nonce,
+			.get_my_public_value = _get_my_public_value,
+			.set_peer_public_value = _set_peer_public_value,
+			.calculate_secret = _calculate_secret,
+			.get_platform_info = _get_platform_info,
+			.set_platform_info = _set_platform_info,
+			.get_tpm_version_info = _get_tpm_version_info,
+			.set_tpm_version_info = _set_tpm_version_info,
+			.get_aik = _get_aik,
+			.set_aik = _set_aik,
+			.is_path_valid = _is_path_valid,
+			.hash_file = _hash_file,
+			.do_measurements = _do_measurements,
+			.get_metadata = _get_metadata,
+			.read_pcr = _read_pcr,
+			.extend_pcr = _extend_pcr,
+			.quote_tpm = _quote_tpm,
+			.destroy = _destroy,
+		},
+		.is_imc = is_imc,
+		.proto_caps = PTS_PROTO_CAPS_V,
+		.algorithm = PTS_MEAS_ALGO_SHA256,
+		.dh_hash_algorithm = PTS_MEAS_ALGO_SHA256,
 	);
 
 	if (is_imc)

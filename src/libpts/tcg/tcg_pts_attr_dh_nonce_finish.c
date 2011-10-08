@@ -72,11 +72,6 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	bool noskip_flag;
 	
 	/**
-	 * Length of nonce
-	 */
-	u_int8_t nonce_len;
-
-	/**
 	 * Selected Hashing Algorithm
 	 */
 	pts_meas_algorithms_t hash_algo;
@@ -84,7 +79,7 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	/**
 	 * DH Initiator Public Value
 	 */
-	chunk_t initiator_pub_val;
+	chunk_t initiator_value;
 
 	/**
 	 * DH Initiator Nonce
@@ -129,9 +124,9 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_DH_NONCE_FINISH_SIZE);
 	writer->write_uint8 (writer, PTS_DH_NONCE_FINISH_RESERVED);
-	writer->write_uint8 (writer, this->nonce_len);
+	writer->write_uint8 (writer, this->initiator_nonce.len);
 	writer->write_uint16(writer, this->hash_algo);
-	writer->write_data  (writer, this->initiator_pub_val);
+	writer->write_data  (writer, this->initiator_value);
 	writer->write_data  (writer, this->initiator_nonce);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -142,7 +137,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_dh_nonce_finish_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t reserved;
+	u_int8_t reserved, nonce_len;
 	u_int16_t hash_algo;
 
 	if (this->value.len < PTS_DH_NONCE_FINISH_SIZE)
@@ -153,15 +148,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	reader->read_uint8 (reader, &reserved);
-	reader->read_uint8 (reader, &this->nonce_len);
+	reader->read_uint8 (reader, &nonce_len);
 	reader->read_uint16(reader, &hash_algo);
+	reader->read_data(reader, reader->remaining(reader) - nonce_len,
+							  &this->initiator_value);
+	reader->read_data(reader, nonce_len, &this->initiator_nonce);
 	this->hash_algo = hash_algo;
-	reader->read_data(reader, reader->remaining(reader) - this->nonce_len,
-										&this->initiator_pub_val);
-	this->initiator_pub_val = chunk_clone(this->initiator_pub_val);
-	reader->read_data(reader, this->nonce_len, &this->initiator_nonce);
+	this->initiator_value = chunk_clone(this->initiator_value);
 	this->initiator_nonce = chunk_clone(this->initiator_nonce);
-	
 	reader->destroy(reader);
 
 	return SUCCESS;
@@ -171,15 +165,9 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_dh_nonce_finish_t *this)
 {
 	free(this->value.ptr);
-	free(this->initiator_pub_val.ptr);
+	free(this->initiator_value.ptr);
 	free(this->initiator_nonce.ptr);
 	free(this);
-}
-
-METHOD(tcg_pts_attr_dh_nonce_finish_t, get_nonce_len, u_int8_t,
-	private_tcg_pts_attr_dh_nonce_finish_t *this)
-{
-	return this->nonce_len;
 }
 
 METHOD(tcg_pts_attr_dh_nonce_finish_t, get_hash_algo, pts_meas_algorithms_t,
@@ -188,10 +176,10 @@ METHOD(tcg_pts_attr_dh_nonce_finish_t, get_hash_algo, pts_meas_algorithms_t,
 	return this->hash_algo;
 }
 
-METHOD(tcg_pts_attr_dh_nonce_finish_t, get_initiator_pub_val, chunk_t,
+METHOD(tcg_pts_attr_dh_nonce_finish_t, get_initiator_value, chunk_t,
 	private_tcg_pts_attr_dh_nonce_finish_t *this)
 {
-	return this->initiator_pub_val;
+	return this->initiator_value;
 }
 
 METHOD(tcg_pts_attr_dh_nonce_finish_t, get_initiator_nonce, chunk_t,
@@ -203,10 +191,9 @@ METHOD(tcg_pts_attr_dh_nonce_finish_t, get_initiator_nonce, chunk_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(u_int8_t nonce_len,
-												pts_meas_algorithms_t hash_algo,
-   												chunk_t initiator_nonce,
-												chunk_t initiator_pub_val)
+pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(pts_meas_algorithms_t hash_algo,
+												   chunk_t initiator_value,
+   												   chunk_t initiator_nonce)
 {
 	private_tcg_pts_attr_dh_nonce_finish_t *this;
 
@@ -222,17 +209,15 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(u_int8_t nonce_len,
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_nonce_len = _get_nonce_len,
 			.get_hash_algo = _get_hash_algo,
 			.get_initiator_nonce = _get_initiator_nonce,
-			.get_initiator_pub_val = _get_initiator_pub_val,
+			.get_initiator_value = _get_initiator_value,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_FINISH,
-		.nonce_len = nonce_len,
 		.hash_algo = hash_algo,
+		.initiator_value = initiator_value,
 		.initiator_nonce = chunk_clone(initiator_nonce),
-		.initiator_pub_val = initiator_pub_val,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -257,10 +242,9 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(chunk_t value)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_nonce_len = _get_nonce_len,
 			.get_hash_algo = _get_hash_algo,
 			.get_initiator_nonce = _get_initiator_nonce,
-			.get_initiator_pub_val = _get_initiator_pub_val,
+			.get_initiator_value = _get_initiator_value,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_FINISH,

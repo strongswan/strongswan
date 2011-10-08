@@ -88,33 +88,33 @@ bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups)
 		/* nothing to update, all groups are supported */
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "ecp256"))
+	if (strcaseeq(dh_group, "ecp256"))
 	{
 		/* remove DH group 20 */
 		*dh_groups &= ~PTS_DH_GROUP_IKE20;
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "modp2048"))
+	if (strcaseeq(dh_group, "modp2048"))
 	{
 		/* remove DH groups 19 and 20 */
 		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19);
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "modp1536"))
+	if (strcaseeq(dh_group, "modp1536"))
 	{
 		/* remove DH groups 14, 19 and 20 */
 		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
 						PTS_DH_GROUP_IKE14);
 		return TRUE;
 	}
-	else if (strcaseeq(dh_group, "modp1024"))
+	if (strcaseeq(dh_group, "modp1024"))
 	{
 		/* remove DH groups 5, 14, 19 and 20 */
 		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
 						PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE5);
 		return TRUE;
 	}
-	DBG1(DBG_PTS, "unknown DH group: %s configured", dh_group);
+	DBG1(DBG_PTS, "unknown DH group '%s' configured", dh_group);
 	return FALSE;
 }
 

@@ -56,7 +56,7 @@ struct tcg_pts_attr_dh_nonce_finish_t {
 	 *
 	 * @return				DH Initiator Public Value
 	 */
-	chunk_t (*get_initiator_pub_val)(tcg_pts_attr_dh_nonce_finish_t *this);
+	chunk_t (*get_initiator_value)(tcg_pts_attr_dh_nonce_finish_t *this);
 
 	/**
 	 * Get DH Initiator Nonce
@@ -70,15 +70,13 @@ struct tcg_pts_attr_dh_nonce_finish_t {
 /**
  * Creates an tcg_pts_attr_dh_nonce_finish_t object
  *
- * @param nonce_len					Length of nonce
  * @param hash_algo					Selected hash algorithm
+ * @param initiator_value			DH Initiator Public Value
  * @param initiator_nonce			DH Initiator Nonce
- * @param initiator_pub_val			DH Initiator Public value
  */
-pa_tnc_attr_t* tcg_pts_attr_dh_nonce_finish_create(u_int8_t nonce_len,
-												pts_meas_algorithms_t hash_algo,
-   												chunk_t initiator_nonce,
-												chunk_t initiator_pub_val);
+pa_tnc_attr_t* tcg_pts_attr_dh_nonce_finish_create(pts_meas_algorithms_t hash_algo,
+   												   chunk_t initiator_value,
+												   chunk_t initiator_nonce);
 
 /**
  * Creates an tcg_pts_attr_dh_nonce_finish_t object from received data

@@ -39,13 +39,6 @@ struct tcg_pts_attr_dh_nonce_params_resp_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 
 	/**
-	 * Get nonce length
-	 *
-	 * @return				Length of nonce
-	 */
-	u_int8_t (*get_nonce_len)(tcg_pts_attr_dh_nonce_params_resp_t *this);
-
-	/**
 	 * Get selected Diffie Hellman Group
 	 *
 	 * @return				Selected Diffie Hellman Group
@@ -71,24 +64,22 @@ struct tcg_pts_attr_dh_nonce_params_resp_t {
 	 *
 	 * @return				DH Responder Public Value
 	 */
-	chunk_t (*get_responder_pub_val)(tcg_pts_attr_dh_nonce_params_resp_t *this);
+	chunk_t (*get_responder_value)(tcg_pts_attr_dh_nonce_params_resp_t *this);
 	
 };
 
 /**
  * Creates an tcg_pts_attr_dh_nonce_params_resp_t object
  *
- * @param nonce_len					Length of nonce
  * @param dh_group					Selected DH group
  * @param hash_algo_set				Set of supported hash algorithms
  * @param responder_nonce			DH Responder Nonce
  * @param responder_pub_val			DH Responder Public value
  */
-pa_tnc_attr_t* tcg_pts_attr_dh_nonce_params_resp_create(u_int8_t nonce_len,
-												pts_dh_group_t dh_group,
-												pts_meas_algorithms_t hash_algo_set,
-   												chunk_t responder_nonce,
-												chunk_t responder_pub_val);
+pa_tnc_attr_t* tcg_pts_attr_dh_nonce_params_resp_create(pts_dh_group_t dh_group,
+											pts_meas_algorithms_t hash_algo_set,
+   											chunk_t responder_nonce,
+											chunk_t responder_value);
 
 /**
  * Creates an tcg_pts_attr_dh_nonce_params_resp_t object from received data

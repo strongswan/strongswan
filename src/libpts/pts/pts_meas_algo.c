@@ -96,7 +96,7 @@ bool pts_meas_algo_update(char *hash_alg, pts_meas_algorithms_t *algorithms)
 		*algorithms &= ~(PTS_MEAS_ALGO_SHA384 | PTS_MEAS_ALGO_SHA256);
 		return TRUE;
 	}
-	DBG1(DBG_PTS, "unknown hash algorithm: %s configured", hash_alg);
+	DBG1(DBG_PTS, "unknown hash algorithm '%s' configured", hash_alg);
 	return FALSE;
 }
 

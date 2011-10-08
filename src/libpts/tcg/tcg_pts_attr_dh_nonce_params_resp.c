@@ -74,11 +74,6 @@ struct private_tcg_pts_attr_dh_nonce_params_resp_t {
 	bool noskip_flag;
 	
 	/**
-	 * Length of nonce
-	 */
-	u_int8_t nonce_len;
-
-	/**
 	 * Selected Diffie Hellman group
 	 */
 	pts_dh_group_t dh_group;
@@ -96,7 +91,7 @@ struct private_tcg_pts_attr_dh_nonce_params_resp_t {
 	/**
 	 * DH Responder Public Value
 	 */
-	chunk_t responder_pub_val;
+	chunk_t responder_value;
 	
 };
 
@@ -137,11 +132,11 @@ METHOD(pa_tnc_attr_t, build, void,
 
 	writer = bio_writer_create(PTS_DH_NONCE_PARAMS_RESP_SIZE);
 	writer->write_uint24(writer, PTS_DH_NONCE_PARAMS_RESP_RESERVED);
-	writer->write_uint8 (writer, this->nonce_len);
+	writer->write_uint8 (writer, this->responder_nonce.len);
 	writer->write_uint16(writer, this->dh_group);
 	writer->write_uint16(writer, this->hash_algo_set);
 	writer->write_data  (writer, this->responder_nonce);
-	writer->write_data  (writer, this->responder_pub_val);
+	writer->write_data  (writer, this->responder_value);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -152,6 +147,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t reserved;
+	u_int8_t nonce_len;
 	u_int16_t dh_group, hash_algo_set;
 
 	if (this->value.len < PTS_DH_NONCE_PARAMS_RESP_SIZE)
@@ -162,15 +158,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	reader->read_uint24(reader, &reserved);
-	reader->read_uint8 (reader, &this->nonce_len);
+	reader->read_uint8 (reader, &nonce_len);
 	reader->read_uint16(reader, &dh_group);
-	this->dh_group = dh_group;
 	reader->read_uint16(reader, &hash_algo_set);
+	reader->read_data(reader, nonce_len, &this->responder_nonce);
+	reader->read_data(reader, reader->remaining(reader), &this->responder_value);
+	this->dh_group = dh_group;
 	this->hash_algo_set = hash_algo_set;
-	reader->read_data(reader, this->nonce_len, &this->responder_nonce);
 	this->responder_nonce = chunk_clone(this->responder_nonce);
-	reader->read_data(reader, reader->remaining(reader), &this->responder_pub_val);
-	this->responder_pub_val = chunk_clone(this->responder_pub_val);
+	this->responder_value = chunk_clone(this->responder_value);
 	reader->destroy(reader);
 
 	return SUCCESS;
@@ -181,14 +177,8 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	free(this->value.ptr);
 	free(this->responder_nonce.ptr);
-	free(this->responder_pub_val.ptr);
+	free(this->responder_value.ptr);
 	free(this);
-}
-
-METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_nonce_len, u_int8_t,
-	private_tcg_pts_attr_dh_nonce_params_resp_t *this)
-{
-	return this->nonce_len;
 }
 
 METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_dh_group, pts_dh_group_t,
@@ -209,20 +199,19 @@ METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_responder_nonce, chunk_t,
 	return this->responder_nonce;
 }
 
-METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_responder_pub_val, chunk_t,
+METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_responder_value, chunk_t,
 	private_tcg_pts_attr_dh_nonce_params_resp_t *this)
 {
-	return this->responder_pub_val;
+	return this->responder_value;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(u_int8_t nonce_len,
-												pts_dh_group_t dh_group,
-												pts_meas_algorithms_t hash_algo_set,
-   												chunk_t responder_nonce,
-												chunk_t responder_pub_val)
+pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(pts_dh_group_t dh_group,
+											pts_meas_algorithms_t hash_algo_set,
+   											chunk_t responder_nonce,
+											chunk_t responder_value)
 {
 	private_tcg_pts_attr_dh_nonce_params_resp_t *this;
 
@@ -238,19 +227,17 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(u_int8_t nonce_len,
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_nonce_len = _get_nonce_len,
 			.get_dh_group = _get_dh_group,
 			.get_hash_algo_set = _get_hash_algo_set,
 			.get_responder_nonce = _get_responder_nonce,
-			.get_responder_pub_val = _get_responder_pub_val,
+			.get_responder_value = _get_responder_value,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_PARAMS_RESP,
-		.nonce_len = nonce_len,
 		.dh_group = dh_group,
 		.hash_algo_set = hash_algo_set,
 		.responder_nonce = chunk_clone(responder_nonce),
-		.responder_pub_val = responder_pub_val,
+		.responder_value = responder_value,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -275,11 +262,10 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create_from_data(chunk_t value)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_nonce_len = _get_nonce_len,
 			.get_dh_group = _get_dh_group,
 			.get_hash_algo_set = _get_hash_algo_set,
 			.get_responder_nonce = _get_responder_nonce,
-			.get_responder_pub_val = _get_responder_pub_val,
+			.get_responder_value = _get_responder_value,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_PARAMS_RESP,
