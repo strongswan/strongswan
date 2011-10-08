@@ -100,6 +100,18 @@ struct imv_attestation_state_t {
 	bool (*check_off_request)(imv_attestation_state_t *this, u_int16_t id,
 							  int *file_id, bool *is_dir);
 
+	/**
+	 * Indicates if a file measurement error occurred
+	 *
+	 * @return					TRUE in case of measurement error
+	 */
+	bool (*get_measurement_error)(imv_attestation_state_t *this);
+
+	/**
+	 * Call if a file measurement error is encountered
+	 */
+	void (*set_measurement_error)(imv_attestation_state_t *this);
+
 };
 
 /**

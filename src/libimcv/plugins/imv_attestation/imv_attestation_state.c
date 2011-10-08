@@ -81,6 +81,11 @@ struct private_imv_attestation_state_t {
 	 */
 	pts_t *pts;
 
+	/**
+	 * File Measurement error
+	 */
+	bool measurement_error;
+
 };
 
 typedef struct entry_t entry_t;
@@ -245,6 +250,18 @@ METHOD(imv_attestation_state_t, get_request_count, int,
 	return this->requests->get_count(this->requests);
 }
 
+METHOD(imv_attestation_state_t, get_measurement_error, bool,
+	private_imv_attestation_state_t *this)
+{
+	return this->measurement_error;
+}
+
+METHOD(imv_attestation_state_t, set_measurement_error, void,
+	private_imv_attestation_state_t *this)
+{
+	this->measurement_error = TRUE;
+}
+
 /**
  * Described in header.
  */
@@ -269,6 +286,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.add_request = _add_request,
 			.check_off_request = _check_off_request,
 			.get_request_count = _get_request_count,
+			.get_measurement_error = _get_measurement_error,
+			.set_measurement_error = _set_measurement_error,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
