@@ -94,6 +94,17 @@ pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 								   pts_dh_group_t offered_dh_groups);
 
 /**
+ * Select the strongest supported Diffie-Hellman group
+ * among a set of offered Diffie-Hellman groups
+ *
+ * @param dh_group		set of supported DH groups
+ * @param groups		set of offered DH groups
+ * @return				selected DH group
+ */
+pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
+								   pts_dh_group_t offered_dh_groups);
+
+/**
  * Convert pts_dh_group_t to diffie_hellman_group_t
  *
  * @param dh_group			PTS DH group type
