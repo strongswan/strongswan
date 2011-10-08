@@ -20,7 +20,7 @@
 /**
  * Described in header.
  */
-bool pts_probe_dh_groups(pts_dh_group_t *groups)
+bool pts_dh_group_probe(pts_dh_group_t *dh_groups)
 {
 	enumerator_t *enumerator;
 	diffie_hellman_group_t dh_group;
@@ -28,45 +28,45 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 	char format1[] = "  %s PTS DH group %N[%s] available";
 	char format2[] = "  %s PTS DH group %N not available";
 	
-	*groups = 0;
+	*dh_groups = PTS_DH_GROUP_NONE;
 
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &dh_group, &plugin_name))
 	{
 		if (dh_group == MODP_1024_BIT)
 		{
-			*groups |= PTS_DH_GROUP_IKE2;
-			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names, dh_group,
-								  plugin_name);
+			*dh_groups |= PTS_DH_GROUP_IKE2;
+			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
+									dh_group, plugin_name);
 		}
 		else if (dh_group == MODP_1536_BIT)
 		{
-			*groups |= PTS_DH_GROUP_IKE5;
+			*dh_groups |= PTS_DH_GROUP_IKE5;
 			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
 									dh_group, plugin_name);
 		}
 		else if (dh_group == MODP_2048_BIT)
 		{
-			*groups |= PTS_DH_GROUP_IKE14;
+			*dh_groups |= PTS_DH_GROUP_IKE14;
 			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
 									dh_group, plugin_name);
 		}
 		else if (dh_group == ECP_256_BIT)
 		{
-			*groups |= PTS_DH_GROUP_IKE19;
+			*dh_groups |= PTS_DH_GROUP_IKE19;
 			DBG2(DBG_PTS, format1, "mandatory", diffie_hellman_group_names,
 									dh_group, plugin_name);
 		}
 		else if (dh_group == ECP_384_BIT)
 		{
-			*groups |= PTS_DH_GROUP_IKE20;
+			*dh_groups |= PTS_DH_GROUP_IKE20;
 			DBG2(DBG_PTS, format1, "optional ", diffie_hellman_group_names,
 									dh_group, plugin_name);
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (*groups & PTS_DH_GROUP_IKE19)
+	if (*dh_groups & PTS_DH_GROUP_IKE19)
 	{
 		return TRUE;
 	}
@@ -75,14 +75,13 @@ bool pts_probe_dh_groups(pts_dh_group_t *groups)
 		DBG1(DBG_PTS, format2, "mandatory", diffie_hellman_group_names,
 											ECP_256_BIT);
 	}
-
 	return FALSE;
 }
 
 /**
  * Described in header.
  */
-bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups)
+bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups)
 {
 	if (strcaseeq(dh_group, "ecp384"))
 	{
@@ -92,30 +91,29 @@ bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups)
 	else if (strcaseeq(dh_group, "ecp256"))
 	{
 		/* remove DH group 20 */
-		*groups &= ~PTS_DH_GROUP_IKE20;
+		*dh_groups &= ~PTS_DH_GROUP_IKE20;
 		return TRUE;
 	}
 	else if (strcaseeq(dh_group, "modp2048"))
 	{
 		/* remove DH groups 19 and 20 */
-		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19);
+		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19);
 		return TRUE;
 	}
 	else if (strcaseeq(dh_group, "modp1536"))
 	{
 		/* remove DH groups 14, 19 and 20 */
-		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
-					 PTS_DH_GROUP_IKE14);
+		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
+						PTS_DH_GROUP_IKE14);
 		return TRUE;
 	}
 	else if (strcaseeq(dh_group, "modp1024"))
 	{
 		/* remove DH groups 5, 14, 19 and 20 */
-		*groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
-					 PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE5);
+		*dh_groups &= ~(PTS_DH_GROUP_IKE20 | PTS_DH_GROUP_IKE19 |
+						PTS_DH_GROUP_IKE14 | PTS_DH_GROUP_IKE5);
 		return TRUE;
 	}
-
 	DBG1(DBG_PTS, "unknown DH group: %s configured", dh_group);
 	return FALSE;
 }

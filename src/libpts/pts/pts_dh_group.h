@@ -57,24 +57,24 @@ enum pts_dh_group_t {
  */
 
 /**
- * Probe available PTS measurement algorithms
+ * Probe available PTS Diffie-Hellman groups
  *
- * @param groups		set of available groups
- * @return				TRUE if mandatory group PTS_DH_GROUP_IKE19 is available
+ * @param dh_groups		returns set of available DH groups
+ * @return				TRUE if mandatory DH groups are available
  */
-bool pts_probe_dh_groups(pts_dh_group_t *groups);
+bool pts_dh_group_probe(pts_dh_group_t *dh_groups);
 
 /**
  * Update supported Diffie-Hellman groups according to configuration
  *
- * @param dh_group		configured Diffie-Hellman group
- * @param groups		set of available groups
+ * @param dh_group		configured DH group
+ * @param dh_groups		returns set of available DH groups
  */
-bool pts_update_supported_dh_groups(char *dh_group, pts_dh_group_t *groups);
+bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups);
 
 /**
  * Select the strongest supported Diffie-Hellman group
- * among a set of offered Diffie-Hellman groups
+ * among a set of offered DH groups
  *
  * @param dh_group		set of supported DH groups
  * @param groups		set of offered DH groups
@@ -86,8 +86,8 @@ pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
 /**
  * Convert pts_dh_group_t to diffie_hellman_group_t
  *
- * @param dh_group		PTS Diffie-Hellman group type
- * @return				libstrongswan diffie hellman group type
+ * @param dh_group		PTS DH group type
+ * @return				libstrongswan DH group type
  */
 diffie_hellman_group_t pts_dh_group_to_strongswan_dh_group(pts_dh_group_t dh_group);
 
