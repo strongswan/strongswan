@@ -13,8 +13,6 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-
 #include "imc_attestation_state.h"
 #include "imc_attestation_process.h"
 
@@ -29,9 +27,6 @@
 #include <pts/pts_error.h>
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
-#include <tcg/tcg_pts_attr_dh_nonce_params_req.h>
-#include <tcg/tcg_pts_attr_dh_nonce_params_resp.h>
-#include <tcg/tcg_pts_attr_dh_nonce_finish.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tncif_pa_subtypes.h>
 
@@ -45,9 +40,6 @@ static const char imc_name[] = "Attestation";
 
 #define IMC_VENDOR_ID				PEN_TCG
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
-
-#define DEFAULT_NONCE_LEN			20
-#define EXTEND_PCR					16
 
 static imc_agent_t *imc_attestation;
 
@@ -305,10 +297,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 	attr_list->destroy(attr_list);
 	return result;
-
-	err:
-	DESTROY_IF(attr_list);
-	return TNC_RESULT_FATAL;
 }
 
 /**
