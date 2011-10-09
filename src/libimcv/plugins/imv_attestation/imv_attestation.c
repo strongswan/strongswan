@@ -116,31 +116,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		return TNC_RESULT_NO_COMMON_VERSION;
 	}
 
-	/**
-	 * Specify supported PTS measurement algorithms
-	 *
-	 * sha1 :  PTS_MEAS_ALGO_SHA1
-	 * sha256: PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256
-	 * sha384: PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256 | PTS_MEAS_ALGO_SHA384
-	 *
-	 * we expect the PTS-IMC to select the strongest supported algorithm
-	 */
 	hash_alg = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.hash_algorithm", "sha256");
-	
-	/**
-	 * Specify supported PTS Diffie-Hellman groups
-	 *
-	 * modp1024: PTS_DH_GROUP_IKE2
-	 * modp1536: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5
-	 * modp2048: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14
-	 * ecp256:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
-	 *           PTS_DH_GROUP_IKE19
-	 * ecp384:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
-	 *           PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
-	 *
-	 * we expect the PTS-IMC to select the strongest supported group
-	 */
 	dh_group = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-attestation.dh_group", "ecp256");
 

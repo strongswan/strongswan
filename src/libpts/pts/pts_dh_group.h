@@ -67,6 +67,16 @@ bool pts_dh_group_probe(pts_dh_group_t *dh_groups);
 /**
  * Update supported Diffie-Hellman groups according to configuration
  *
+ * modp1024: PTS_DH_GROUP_IKE2
+ * modp1536: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5
+ * modp2048: PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14
+ * ecp256:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
+ *           PTS_DH_GROUP_IKE19
+ * ecp384:   PTS_DH_GROUP_IKE2  | PTS_DH_GROUP_IKE5  | PTS_DH_GROUP_IKE14 |
+ *           PTS_DH_GROUP_IKE19 | PTS_DH_GROUP_IKE20
+ *
+ * The PTS-IMC is expected to select the strongest supported group
+ *
  * @param dh_group			configured DH group
  * @param dh_groups			returns set of available DH groups
  */

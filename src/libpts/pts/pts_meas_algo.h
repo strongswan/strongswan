@@ -59,6 +59,12 @@ bool pts_meas_algo_probe(pts_meas_algorithms_t *algorithms);
 /**
  * Update supported PTS measurement algorithms according to configuration
  *
+ * sha1 :  PTS_MEAS_ALGO_SHA1
+ * sha256: PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256
+ * sha384: PTS_MEAS_ALGO_SHA1 | PTS_MEAS_ALGO_SHA256 | PTS_MEAS_ALGO_SHA384
+ *
+ * The PTS-IMC is expected to select the strongest supported algorithm
+ *
  * @param hash_alg		configured hash algorithm
  * @param algorithms	returns set of available PTS measurement algorithms
  */
