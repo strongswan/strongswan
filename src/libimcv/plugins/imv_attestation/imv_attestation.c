@@ -82,11 +82,6 @@ static pts_creds_t *pts_creds;
 static credential_manager_t *pts_credmgr;
 
 /**
- * TRUE if DH Nonce Parameters Request attribute is sent
- */
-static bool dh_nonce_req_sent = FALSE;
-
-/**
  * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
  */
 TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
@@ -236,13 +231,12 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 
 	msg = pa_tnc_msg_create();
 
-	/* Jump to Measurement state if IMC has no TPM */
-	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
+	if (handshake_state == IMV_ATTESTATION_STATE_NONCE_REQ &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
 	{
+		DBG1(DBG_IMV, "PTS-IMC has no TPM capability - "
+					  "advancing to PTS measurement phase");
 		handshake_state = IMV_ATTESTATION_STATE_MEAS;
-		DBG3(DBG_IMV, "TPM is not available on IMC side, ",
-			 "jumping to measurement phase");
 	}
 
 	/* Switch on the attribute type IMV has received */
@@ -264,51 +258,50 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 			msg->add_attribute(msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_NONCE_REQ);
+			break;
+		}
+		case IMV_ATTESTATION_STATE_NONCE_REQ:
+		{
+			int min_nonce_len;
+
+			/* Send DH nonce parameters request attribute */
+			min_nonce_len = lib->settings->get_int(lib->settings,
+						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
+			attr = tcg_pts_attr_dh_nonce_params_req_create(min_nonce_len,
+													 supported_dh_groups);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
+
+			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_TPM_INIT);
 			break;
 		}
 		case IMV_ATTESTATION_STATE_TPM_INIT:
 		{
-			if (!dh_nonce_req_sent)
-			{
-				int min_nonce_len;
+			pts_meas_algorithms_t selected_algorithm;
+			chunk_t initiator_value, initiator_nonce;
 
-				/* Send DH nonce parameters request attribute */
-				min_nonce_len = lib->settings->get_int(lib->settings,
-						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
-				attr = tcg_pts_attr_dh_nonce_params_req_create(min_nonce_len,
-														 supported_dh_groups);
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
-				dh_nonce_req_sent = TRUE;
-			}
-			else
-			{
-				pts_meas_algorithms_t selected_algorithm;
-				chunk_t initiator_value, initiator_nonce;
-
-				/* Send DH nonce finish attribute */
-				selected_algorithm = pts->get_meas_algorithm(pts);
-				pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
-				attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
+			/* Send DH nonce finish attribute */
+			selected_algorithm = pts->get_meas_algorithm(pts);
+			pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
+			attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
 										 initiator_value, initiator_nonce);
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 
-				/* Send Get TPM Version attribute */
-				attr = tcg_pts_attr_get_tpm_version_info_create();
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
+			/* Send Get TPM Version attribute */
+			attr = tcg_pts_attr_get_tpm_version_info_create();
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 
-				/* Send Get AIK attribute */
-				attr = tcg_pts_attr_get_aik_create();
-				attr->set_noskip_flag(attr, TRUE);
-				msg->add_attribute(msg, attr);
+			/* Send Get AIK attribute */
+			attr = tcg_pts_attr_get_aik_create();
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
 
-				attestation_state->set_handshake_state(attestation_state,
+			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_MEAS);
-			}
-
 			break;
 		}
 		case IMV_ATTESTATION_STATE_MEAS:
@@ -556,7 +549,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 	attr_list->destroy(attr_list);
 
-	if (attestation_state->get_handshake_state(attestation_state) &
+	if (attestation_state->get_handshake_state(attestation_state) ==
 		IMV_ATTESTATION_STATE_END)
 	{
 		if (attestation_state->get_request_count(attestation_state))
