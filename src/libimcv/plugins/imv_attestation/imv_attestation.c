@@ -417,13 +417,12 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	linked_list_t *attr_list;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	pts_t *pts;
 	enumerator_t *enumerator;
 	TNC_Result result;
-	bool fatal_error = FALSE;
-	linked_list_t *attr_list;
 
 	if (!imv_attestation)
 	{
@@ -451,6 +450,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 
 	attr_list = linked_list_create();
+	result = TNC_RESULT_SUCCESS;
 
 	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
@@ -499,7 +499,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 						 pts_error_code_names, error_code);
 					DBG1(DBG_IMV, "error information: %B", &msg_info);
 				}
-				fatal_error = TRUE;
+				result = TNC_RESULT_FATAL;
 			}
 			else if (attr->get_type(attr) == IETF_ATTR_PRODUCT_INFORMATION)
 			{
@@ -516,15 +516,17 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 			if (!imv_attestation_process(attr, attr_list, attestation_state,
 				supported_algorithms, supported_dh_groups, pts_db, pts_credmgr))
 			{
-				return TNC_RESULT_FATAL;
+				result = TNC_RESULT_FATAL;
+				break;
 			}
 		}
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
-	if (fatal_error)
+	if (result != TNC_RESULT_SUCCESS)
 	{
+		attr_list->destroy(attr_list);
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
@@ -552,7 +554,7 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 		
 		return result;
 	}
-	DESTROY_IF(attr_list);
+	attr_list->destroy(attr_list);
 
 	if (attestation_state->get_handshake_state(attestation_state) &
 		IMV_ATTESTATION_STATE_END)
