@@ -109,11 +109,10 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
 			min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
-			if (min_nonce_len > 0 && nonce_len < min_nonce_len)
+			if (nonce_len < PTS_MIN_NONCE_LEN ||
+				min_nonce_len > 0 && nonce_len < min_nonce_len)
 			{
-				attr_info = attr->get_value(attr);
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-							TCG_PTS_BAD_NONCE_LENGTH, attr_info);
+				attr = pts_dh_nonce_error_create(nonce_len, PTS_MAX_NONCE_LEN);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -123,9 +122,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 													offered_dh_groups);
 			if (selected_dh_group == PTS_DH_GROUP_NONE)
 			{
-				attr_info = attr->get_value(attr);
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-							TCG_PTS_DH_GRPS_NOT_SUPPORTED, attr_info);
+				attr = pts_dh_group_error_create(supported_dh_groups);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -155,20 +152,21 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			if (!(selected_algorithm & supported_algorithms))
 			{
 				DBG1(DBG_IMC, "PTS-IMV selected unsupported DH hash algorithm");
-				return TNC_RESULT_FATAL;
+				return FALSE;
 			}
 			pts->set_dh_hash_algorithm(pts, selected_algorithm);
 
 			initiator_value = attr_cast->get_initiator_value(attr_cast);
 			initiator_nonce = attr_cast->get_initiator_nonce(attr_cast);
-			nonce_len = initiator_nonce.len;
-			if (nonce_len <= 16) /* TODO */
+
+			nonce_len = lib->settings->get_int(lib->settings,
+								"libimcv.plugins.imc-attestation.nonce_len",
+								 DEFAULT_NONCE_LEN);
+			if (nonce_len != initiator_nonce.len)
 			{
-				attr_info = attr->get_value(attr);
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-							TCG_PTS_BAD_NONCE_LENGTH, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
+				DBG1(DBG_IMC, "initiator and responder DH nonces "
+							  "have differing lengths");
+				return FALSE;
 			}
 					
 			pts->set_peer_public_value(pts, initiator_value, initiator_nonce);

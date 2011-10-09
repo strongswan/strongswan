@@ -24,9 +24,13 @@
 typedef enum pts_error_code_t pts_error_code_t;
 
 #include "pts_meas_algo.h"
+#include "pts_dh_group.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 #include <library.h>
+
+#define PTS_MIN_NONCE_LEN		17
+#define PTS_MAX_NONCE_LEN		0xffff
 
 /**
  * PTS Attestation Error Codes
@@ -61,8 +65,25 @@ extern enum_name_t *pts_error_code_names;
  * Creates a PTS Hash Algorithm Not Supported Error Attribute
  * see section 4.2.2 of PTS Protocol: Binding to TNC IF-M Specification
  *
- * @param algorithms	supported measurement hash algorithms
+ * @param algorithms		supported measurement hash algorithms
  */
 pa_tnc_attr_t* pts_hash_alg_error_create(pts_meas_algorithms_t algorithms);
+
+/**
+ * Creates a PTS DH Group Not Supported Error Attribute
+ * see section 4.2.4 of PTS Protocol: Binding to TNC IF-M Specification
+ *
+ * @param dh_groups			supported DH groups
+ */
+pa_tnc_attr_t* pts_dh_group_error_create(pts_dh_group_t dh_groups);
+
+/**
+ * Creates a PTS DH PN Nonce Not Supported Error Attribute
+ * see section 4.2.5 of PTS Protocol: Binding to TNC IF-M Specification
+ *
+ * @param min_nonce_len		minimum nonce length
+ * @param max_nonce_len		maximum nonce length
+ */
+pa_tnc_attr_t* pts_dh_nonce_error_create(int min_nonce_len, int max_nonce_len);
 
 #endif /** PTS_ERROR_H_ @}*/

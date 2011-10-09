@@ -31,8 +31,6 @@
 
 #include <debug.h>
 
-#define NONCE_LEN_LIMIT		16
-
 bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 imv_attestation_state_t *attestation_state,
 							 pts_meas_algorithms_t supported_algorithms,
@@ -87,12 +85,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			min_nonce_len = lib->settings->get_int(lib->settings,
 						"libimcv.plugins.imv-attestation.min_nonce_len", 0);
 			nonce_len = responder_nonce.len;
-			if (nonce_len <= NONCE_LEN_LIMIT ||
+			if (nonce_len < PTS_MIN_NONCE_LEN ||
 			   (min_nonce_len > 0 && nonce_len < min_nonce_len))
 			{
-				attr_info = attr->get_value(attr);
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-							TCG_PTS_BAD_NONCE_LENGTH, attr_info);
+				attr = pts_dh_nonce_error_create(
+									max(PTS_MIN_NONCE_LEN, min_nonce_len),
+										PTS_MAX_NONCE_LEN);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
