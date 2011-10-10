@@ -17,7 +17,10 @@
 
 #include <string.h>
 #include <stdlib.h>
+
+#ifdef HAVE_GLOB_H
 #include <glob.h>
+#endif
 
 #include "y.tab.h"
 
@@ -72,62 +75,83 @@ void _parser_y_fini (void)
 	yylex_destroy();
 }
 
-int _parser_y_include (const char *filename)
+/**
+ * parse the file located at filename
+ */
+int include_file(char *filename)
 {
-	glob_t files;
-	int i, ret;
+	unsigned int p = __parser_y_private.stack_ptr + 1;
+	FILE *f;
 
-	ret = glob(filename, GLOB_ERR, NULL, &files);
-	if (ret)
+	if (p >= MAX_INCLUDE_DEPTH)
 	{
-		const char *err;
-
-		switch (ret)
-		{
-		case GLOB_NOSPACE:
-			err = "include files ran out of memory";
-			break;
-		case GLOB_ABORTED:
-			err = "include files aborted due to read error";
-			break;
-		case GLOB_NOMATCH:
-			err = "include files found no matches";
-			break;
-		default:
-			err = "unknown include files error";
-		}
-		yyerror(err);
+		yyerror("max inclusion depth reached");
 		return 1;
 	}
 
-	for (i = 0; i < files.gl_pathc; i++)
+	f = fopen(filename, "r");
+	if (!f)
 	{
-		FILE *f;
-		unsigned int p = __parser_y_private.stack_ptr + 1;
+		yyerror("can't open include filename");
+		return 0; /* ignore this error */
+	}
 
-		if (p >= MAX_INCLUDE_DEPTH)
+	__parser_y_private.stack_ptr++;
+	__parser_y_private.file[p] = f;
+	__parser_y_private.stack[p] = YY_CURRENT_BUFFER;
+	__parser_y_private.line[p] = 1;
+	__parser_y_private.filename[p] = strdup(filename);
+
+	yy_switch_to_buffer(yy_create_buffer(f, YY_BUF_SIZE));
+	return 0;
+}
+
+int _parser_y_include (const char *filename)
+{
+	int ret = 0;
+#ifdef HAVE_GLOB_H
+	{
+		glob_t files;
+		int i;
+
+		ret = glob(filename, GLOB_ERR, NULL, &files);
+		if (ret)
 		{
-			yyerror("max inclusion depth reached");
+			const char *err;
+
+			switch (ret)
+			{
+				case GLOB_NOSPACE:
+					err = "include files ran out of memory";
+					break;
+				case GLOB_ABORTED:
+					err = "include files aborted due to read error";
+					break;
+				case GLOB_NOMATCH:
+					err = "include files found no matches";
+					break;
+				default:
+					err = "unknown include files error";
+			}
+			globfree(&files);
+			yyerror(err);
 			return 1;
 		}
 
-		f = fopen(files.gl_pathv[i], "r");
-		if (!f)
+		for (i = 0; i < files.gl_pathc; i++)
 		{
-			yyerror("can't open include filename");
-			continue;
+			if ((ret = include_file(files.gl_pathv[i])))
+			{
+				break;
+			}
 		}
-
-		__parser_y_private.stack_ptr++;
-		__parser_y_private.file[p] = f;
-		__parser_y_private.stack[p] = YY_CURRENT_BUFFER;
-		__parser_y_private.line[p] = 1;
-		__parser_y_private.filename[p] = strdup(files.gl_pathv[i]);
-
-		yy_switch_to_buffer(yy_create_buffer(f, YY_BUF_SIZE));
+		globfree(&files);
 	}
-	globfree(&files);
-	return 0;
+#else /* HAVE_GLOB_H */
+	/* if glob(3) is not available, try to load pattern directly */
+	ret = include_file(filename);
+#endif /* HAVE_GLOB_H */
+	return ret;
 }
 
 %}
