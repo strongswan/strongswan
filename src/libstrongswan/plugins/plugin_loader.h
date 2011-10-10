@@ -15,7 +15,7 @@
 
 /**
  * @defgroup plugin_loader plugin_loader
- * @{ @ingroup plugin
+ * @{ @ingroup plugins
  */
 
 #ifndef PLUGIN_LOADER_H_

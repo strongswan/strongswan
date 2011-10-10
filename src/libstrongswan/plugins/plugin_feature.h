@@ -215,7 +215,6 @@ struct plugin_feature_t {
 /**
  * Define a callback to invoke for registering all upcoming features.
  *
- * @param type		feature type to register
  * @param cb		type specific callback function to register
  * @param data		data pointer to pass to callback
  */
