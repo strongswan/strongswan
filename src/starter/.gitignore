@@ -1,2 +1,5 @@
 starter
-y.output
+lexer.c
+parser.h
+parser.c
+parser.output
