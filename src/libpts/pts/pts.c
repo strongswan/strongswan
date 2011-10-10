@@ -25,6 +25,10 @@
 #include <sys/utsname.h>
 #include <errno.h>
 
+#include <openssl/asn1t.h>
+#include <openssl/x509.h>
+#include <openssl/rsa.h>
+
 #define PTS_BUF_SIZE	4096
 
 typedef struct private_pts_t private_pts_t;
@@ -358,7 +362,7 @@ static void load_aik(private_pts_t *this)
 METHOD(pts_t, get_aik, certificate_t*,
 	private_pts_t *this)
 {
-	return this->aik;	
+	return this->aik;
 }
 
 METHOD(pts_t, set_aik, void,
@@ -817,7 +821,7 @@ METHOD(pts_t, quote_tpm, bool,
 	/* Create from AIK public key a HKEY object to sign Quote operation output*/
 	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
-		if (!this->aik->get_encoding(this->aik, CERT_ASN1_DER, &aik_key_encoding))
+		if (!this->aik->get_encoding(this->aik, PUBKEY_ASN1_DER, &aik_key_encoding))
 		{
 			DBG1(DBG_PTS, "encoding AIK certificate for quote operation failed");
 			goto err1;
@@ -826,7 +830,6 @@ METHOD(pts_t, quote_tpm, bool,
 	else if (this->aik->get_type(this->aik) == CERT_X509)
 	{
 		public_key_t *key = this->aik->get_public_key(this->aik);
-
 		if (key == NULL)
 		{
 			DBG1(DBG_PTS, "unable to retrieve public key from AIK certificate");
@@ -843,9 +846,9 @@ METHOD(pts_t, quote_tpm, bool,
 		DBG1(DBG_PTS, "AIK is neither X509 certificate nor Public Key");
 		goto err1;
 	}
-
+	
 	result = Tspi_Context_LoadKeyByBlob (hContext, hSRK, aik_key_encoding.len,
-										 (BYTE*)aik_key_encoding.ptr, &hAIK);
+										 aik_key_encoding.ptr, &hAIK);
 	if (result != TSS_SUCCESS)
 	{
 		goto err1;
