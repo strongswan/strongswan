@@ -110,7 +110,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_cast = (tcg_pts_attr_dh_nonce_params_req_t*)attr;
 			min_nonce_len = attr_cast->get_min_nonce_len(attr_cast);
 			if (nonce_len < PTS_MIN_NONCE_LEN ||
-				min_nonce_len > 0 && nonce_len < min_nonce_len)
+				(min_nonce_len > 0 && nonce_len < min_nonce_len))
 			{
 				attr = pts_dh_nonce_error_create(nonce_len, PTS_MAX_NONCE_LEN);
 				attr_list->insert_last(attr_list, attr);
