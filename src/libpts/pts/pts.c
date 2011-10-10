@@ -27,6 +27,10 @@
 #include <sys/utsname.h>
 #include <errno.h>
 
+#include <openssl/asn1t.h>
+#include <openssl/x509.h>
+#include <openssl/rsa.h>
+
 #define PTS_BUF_SIZE	4096
 
 typedef struct private_pts_t private_pts_t;
