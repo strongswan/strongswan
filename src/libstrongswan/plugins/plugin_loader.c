@@ -471,10 +471,9 @@ METHOD(plugin_loader_t, load_plugins, bool,
 			DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
 		}
 		free(token);
-	}
-	enumerator->destroy(enumerator);
-	if (!critical_failed)
-	{
+		/* TODO: we currently load features after each plugin is loaded. This
+		 * will not be necessary once we have features support in all plugins.
+		 */
 		while (load_features(this, TRUE, FALSE))
 		{
 			/* try load new features until we don't get new ones */
@@ -483,6 +482,10 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		{
 			/* second round, ignoring soft dependencies */
 		}
+	}
+	enumerator->destroy(enumerator);
+	if (!critical_failed)
+	{
 		/* report missing dependencies */
 		load_features(this, FALSE, TRUE);
 		/* unload plugins that we were not able to load any features for */
