@@ -511,6 +511,7 @@ METHOD(plugin_loader_t, unload, void,
 	{
 		this->plugins->insert_first(this->plugins, entry);
 	}
+	list->destroy(list);
 	while (this->plugins->get_count(this->plugins))
 	{
 		enumerator = this->plugins->create_enumerator(this->plugins);
