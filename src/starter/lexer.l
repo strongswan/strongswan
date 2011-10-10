@@ -22,7 +22,7 @@
 #include <glob.h>
 #endif
 
-#include "y.tab.h"
+#include "parser.h"
 
 #define MAX_INCLUDE_DEPTH  20
 

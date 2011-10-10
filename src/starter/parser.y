@@ -22,7 +22,7 @@
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "parser.h"
+#include "ipsec-parser.h"
 
 #define YYERROR_VERBOSE
 #define ERRSTRING_LEN   256

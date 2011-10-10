@@ -20,7 +20,7 @@
 #include <freeswan.h>
 #endif
 
-#include "parser.h"
+#include "ipsec-parser.h"
 #include "interfaces.h"
 
 typedef enum {

@@ -24,7 +24,6 @@
 #include "../pluto/log.h"
 
 #include "keywords.h"
-#include "parser.h"
 #include "confread.h"
 #include "args.h"
 

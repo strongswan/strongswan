@@ -1,9 +1,10 @@
 ipsec_PROGRAMS = starter
-starter_SOURCES = y.tab.c netkey.c y.tab.h parser.h args.h netkey.h \
+starter_SOURCES = \
+netkey.c parser.y lexer.l ipsec-parser.h args.h netkey.h \
 starterwhack.c starterwhack.h starterstroke.c invokepluto.c confread.c \
 starterstroke.h interfaces.c invokepluto.h confread.h interfaces.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
-exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
+exec.h invokecharon.h loglite.c klips.c klips.h
 
 INCLUDES = \
 -I${linux_headers} \
@@ -23,9 +24,12 @@ AM_CFLAGS = \
 -DDEV_URANDOM=\"${urandom_device}\" \
 -DDEBUG
 
+AM_YFLAGS = -v -d
+
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
-EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
-MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
+EXTRA_DIST = keywords.txt ipsec.conf
+MAINTAINERCLEANFILES = keywords.c
+BUILT_SOURCES = parser.h
 
 PLUTODIR=$(top_srcdir)/src/pluto
 SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
@@ -41,15 +45,6 @@ endif
 if USE_LOAD_WARNING
   AM_CFLAGS += -DLOAD_WARNING
 endif
-
-lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
-		$(LEX) $(srcdir)/parser.l
-
-y.tab.c:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
-		$(YACC) -v -d $(srcdir)/parser.y
-
-y.tab.h:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
-		$(YACC) -v -d $(srcdir)/parser.y
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@

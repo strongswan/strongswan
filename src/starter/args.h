@@ -17,7 +17,7 @@
 #define _ARGS_H_
 
 #include "keywords.h"
-#include "parser.h"
+#include "ipsec-parser.h"
 
 extern char **new_list(char *value);
 extern bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw
