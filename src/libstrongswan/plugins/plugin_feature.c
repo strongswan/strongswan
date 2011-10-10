@@ -324,13 +324,10 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 						   plugin_feature_t *reg)
 {
-	char *name;
-
 	if (!reg)
 	{	/* noting to do for this feature */
 		return TRUE;
 	}
-	name = plugin->get_name(plugin);
 	if (reg->kind == FEATURE_CALLBACK)
 	{
 		if (reg->arg.cb.f(plugin, feature, FALSE, reg->arg.cb.data))
