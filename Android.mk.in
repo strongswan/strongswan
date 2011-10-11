@@ -60,6 +60,7 @@ strongswan_CFLAGS := \
 	-DCAPABILITIES_NATIVE \
 	-DMONOLITHIC \
 	-DUSE_VSTR \
+	-DDEBUG \
 	-DROUTING_TABLE=0 \
 	-DROUTING_TABLE_PRIO=220 \
 	-DVERSION=\"$(strongswan_VERSION)\" \
@@ -84,4 +85,5 @@ include $(addprefix $(LOCAL_PATH)/src/,$(addsuffix /Android.mk, \
 		libtncif \
 		libfreeswan \
 		stroke \
+		starter \
 	))
