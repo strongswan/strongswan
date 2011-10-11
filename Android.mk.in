@@ -25,6 +25,15 @@ strongswan_PATH := $(LOCAL_PATH)
 libvstr_PATH := external/strongswan-support/vstr/include
 libgmp_PATH := external/strongswan-support/gmp
 
+# some definitions
+strongswan_VERSION := "@PACKAGE_VERSION@"
+strongswan_DIR := "/system/bin"
+strongswan_SBINDIR := "/system/bin"
+strongswan_PIDDIR := "/data/misc/vpn"
+strongswan_PLUGINDIR := "$(strongswan_IPSEC_DIR)/ipsec"
+strongswan_CONFDIR := "/system/etc"
+strongswan_STRONGSWAN_CONF := "$(strongswan_CONFDIR)/strongswan.conf"
+
 # CFLAGS (partially from a configure run using droid-gcc)
 strongswan_CFLAGS := \
 	-Wno-format \
@@ -53,12 +62,13 @@ strongswan_CFLAGS := \
 	-DUSE_VSTR \
 	-DROUTING_TABLE=0 \
 	-DROUTING_TABLE_PRIO=220 \
-	-DVERSION=\"@PACKAGE_VERSION@\" \
+	-DVERSION=\"$(strongswan_VERSION)\" \
 	-DPLUGINS='"$(strongswan_PLUGINS)"' \
-	-DPLUGINDIR=\"/system/bin/ipsec\" \
-	-DIPSEC_DIR=\"/system/bin\" \
-	-DIPSEC_PIDDIR=\"/data/misc/vpn\" \
-	-DSTRONGSWAN_CONF=\"/system/etc/strongswan.conf\" \
+	-DPLUGINDIR=\"$(strongswan_PLUGINDIR)\" \
+	-DIPSEC_DIR=\"$(strongswan_DIR)\" \
+	-DIPSEC_PIDDIR=\"$(strongswan_PIDDIR)\" \
+	-DIPSEC_CONFDIR=\"$(strongswan_CONFDIR)\" \
+	-DSTRONGSWAN_CONF=\"$(strongswan_STRONGSWAN_CONF)\" \
 	-DDEV_RANDOM=\"/dev/random\" \
 	-DDEV_URANDOM=\"/dev/urandom\"
 
