@@ -10,6 +10,7 @@ ipsec.8 : ipsec.8.in
 
 ipsec : ipsec.in
 	sed \
+	-e "s:@IPSEC_SHELL@:/bin/sh:" \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
 	-e "s:@IPSEC_NAME@:$(PACKAGE_NAME):" \
 	-e "s:@IPSEC_DISTRO@::" \

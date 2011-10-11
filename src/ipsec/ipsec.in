@@ -1,4 +1,4 @@
-#! /bin/sh
+#! @IPSEC_SHELL@
 # prefix command to run stuff from our programs directory
 # Copyright (C) 1998-2002  Henry Spencer.
 # Copyright (C) 2006 Andreas Steffen
