@@ -1,13 +1,14 @@
 noinst_LIBRARIES = libfreeswan.a
-libfreeswan_a_SOURCES = addrtoa.c addrtot.c addrtypeof.c anyaddr.c atoaddr.c atoasr.c \
-			atosubnet.c atoul.c copyright.c datatot.c freeswan.h \
-			goodmask.c initaddr.c initsaid.c initsubnet.c internal.h ipsec_param.h \
-			pfkey_v2_build.c pfkey_v2_debug.c \
-			pfkey_v2_ext_bits.c pfkey_v2_parse.c portof.c rangetoa.c \
-			pfkey.h pfkeyv2.h rangetosubnet.c sameaddr.c \
-			satot.c subnetof.c subnettoa.c subnettot.c \
-			subnettypeof.c ttoaddr.c ttodata.c ttoprotoport.c ttosa.c ttosubnet.c ttoul.c \
-			ultoa.c ultot.c
+libfreeswan_a_SOURCES = \
+addrtoa.c addrtot.c addrtypeof.c anyaddr.c atoaddr.c atoasr.c \
+atosubnet.c atoul.c copyright.c datatot.c freeswan.h \
+goodmask.c initaddr.c initsaid.c initsubnet.c internal.h ipsec_param.h \
+pfkey_v2_build.c pfkey_v2_debug.c \
+pfkey_v2_ext_bits.c pfkey_v2_parse.c portof.c rangetoa.c \
+pfkey.h pfkeyv2.h rangetosubnet.c sameaddr.c \
+satot.c subnetof.c subnettoa.c subnettot.c \
+subnettypeof.c ttoaddr.c ttodata.c ttoprotoport.c ttosa.c ttosubnet.c ttoul.c \
+ultoa.c ultot.c
 
 INCLUDES = \
 -I$(top_srcdir)/src/libstrongswan \
