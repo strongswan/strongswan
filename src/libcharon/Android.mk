@@ -147,6 +147,12 @@ LOCAL_SRC_FILES += $(call add_plugin, socket-default)
 
 LOCAL_SRC_FILES += $(call add_plugin, socket-dynamic)
 
+LOCAL_SRC_FILES += $(call add_plugin, stroke)
+ifneq ($(call plugin_enabled, stroke),)
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../stroke/
+endif
+
+
 # build libcharon --------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
