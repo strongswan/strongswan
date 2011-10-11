@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,12 +17,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
-#include <glob.h>
 #include <libgen.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif
 
 #include "stroke_cred.h"
 
@@ -844,7 +847,6 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		if (line.len > strlen("include ") &&
 			strneq(line.ptr, "include ", strlen("include ")))
 		{
-			glob_t buf;
 			char **expanded, *dir, pattern[PATH_MAX];
 			u_char *pos;
 
@@ -886,18 +888,27 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 						 dir, (int)line.len, line.ptr);
 				free(dir);
 			}
-			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)
+#ifdef HAVE_GLOB_H
 			{
-				DBG1(DBG_CFG, "expanding file expression '%s' failed", pattern);
-			}
-			else
-			{
-				for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+				glob_t buf;
+				if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)
 				{
-					load_secrets(this, *expanded, level + 1, prompt);
+					DBG1(DBG_CFG, "expanding file expression '%s' failed",
+						 pattern);
 				}
+				else
+				{
+					for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+					{
+						load_secrets(this, *expanded, level + 1, prompt);
+					}
+				}
+				globfree(&buf);
 			}
-			globfree(&buf);
+#else /* HAVE_GLOB_H */
+			/* if glob(3) is not available, try to load pattern directly */
+			load_secrets(this, pattern, level + 1, prompt);
+#endif /* HAVE_GLOB_H */
 			continue;
 		}
 
