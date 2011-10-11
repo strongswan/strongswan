@@ -83,4 +83,5 @@ include $(addprefix $(LOCAL_PATH)/src/,$(addsuffix /Android.mk, \
 		libstrongswan \
 		libtncif \
 		libfreeswan \
+		stroke \
 	))
