@@ -797,12 +797,14 @@ static void check_end(whack_end_t *this, whack_end_t *that,
 
 static void get_secret(int sock)
 {
-	const char *buf, *secret;
+	const char *buf = NULL, *secret;
 	int len;
 
 	fflush(stdout);
 	usleep(20000); /* give fflush time for flushing */
+#ifdef HAVE_GETPASS
 	buf = getpass("Enter: ");
+#endif
 	secret = (buf == NULL)? "" : buf;
 
 	/* send the secret to pluto */

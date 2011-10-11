@@ -101,7 +101,11 @@ static int send_stroke_msg (stroke_msg_t *msg)
 			{
 				*pass = ' ';
 			}
+#ifdef HAVE_GETPASS
 			pass = getpass(buffer);
+#else
+			pass = "";
+#endif
 			if (pass)
 			{
 				ignore_result(write(sock, pass, strlen(pass)));
