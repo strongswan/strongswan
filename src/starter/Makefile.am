@@ -46,6 +46,10 @@ if USE_LOAD_WARNING
   AM_CFLAGS += -DLOAD_WARNING
 endif
 
+if USE_TOOLS
+  AM_CFLAGS += -DGENERATE_SELFCERT
+endif
+
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
 

@@ -161,61 +161,63 @@ static void fsig(int signal)
 	}
 }
 
+#ifdef GENERATE_SELFCERT
 static void generate_selfcert()
 {
 	struct stat stb;
 
-		/* if ipsec.secrets file is missing then generate RSA default key pair */
-		if (stat(SECRETS_FILE, &stb) != 0)
-		{
-			mode_t oldmask;
-			FILE *f;
-			uid_t uid = 0;
-			gid_t gid = 0;
+	/* if ipsec.secrets file is missing then generate RSA default key pair */
+	if (stat(SECRETS_FILE, &stb) != 0)
+	{
+		mode_t oldmask;
+		FILE *f;
+		uid_t uid = 0;
+		gid_t gid = 0;
 
 #ifdef IPSEC_GROUP
-			{
-				char buf[1024];
-				struct group group, *grp;
+		{
+			char buf[1024];
+			struct group group, *grp;
 
-				if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&	grp)
-				{
-					gid = grp->gr_gid;
-				}
+			if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&	grp)
+			{
+				gid = grp->gr_gid;
 			}
+		}
 #endif
 #ifdef IPSEC_USER
+		{
+			char buf[1024];
+			struct passwd passwd, *pwp;
+
+			if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&	pwp)
 			{
-				char buf[1024];
-				struct passwd passwd, *pwp;
-
-				if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&	pwp)
-				{
-					uid = pwp->pw_uid;
-				}
+				uid = pwp->pw_uid;
 			}
-#endif
-			setegid(gid);
-			seteuid(uid);
-			ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
-			seteuid(0);
-			setegid(0);
-
-			/* ipsec.secrets is root readable only */
-			oldmask = umask(0066);
-
-			f = fopen(SECRETS_FILE, "w");
-			if (f)
-			{
-				fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
-				fprintf(f, "\n");
-				fprintf(f, ": RSA myKey.der\n");
-				fclose(f);
-			}
-			ignore_result(chown(SECRETS_FILE, uid, gid));
-			umask(oldmask);
 		}
+#endif
+		setegid(gid);
+		seteuid(uid);
+		ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
+		seteuid(0);
+		setegid(0);
+
+		/* ipsec.secrets is root readable only */
+		oldmask = umask(0066);
+
+		f = fopen(SECRETS_FILE, "w");
+		if (f)
+		{
+			fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
+			fprintf(f, "\n");
+			fprintf(f, ": RSA myKey.der\n");
+			fclose(f);
+		}
+		ignore_result(chown(SECRETS_FILE, uid, gid));
+		umask(oldmask);
+	}
 }
+#endif /* GENERATE_SELFCERT */
 
 static bool check_pid(char *pid_file)
 {
@@ -414,7 +416,9 @@ int main (int argc, char **argv)
 		exit(LSB_RC_SUCCESS);
 	}
 
+#ifdef GENERATE_SELFCERT
 	generate_selfcert();
+#endif
 
 	/* fork if we're not debugging stuff */
 	if (!no_fork)
