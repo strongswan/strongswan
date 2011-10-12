@@ -1130,6 +1130,94 @@ static bool addr_in_subnet(chunk_t addr, chunk_t net, int net_len)
 }
 
 /**
+ * Store information about a route retrieved via RTNETLINK
+ */
+typedef struct {
+	chunk_t gtw;
+	chunk_t src;
+	chunk_t dst;
+	host_t *src_host;
+	u_int8_t dst_len;
+	u_int32_t table;
+	u_int32_t oif;
+} rt_entry_t;
+
+/**
+ * Free a route entry
+ */
+static void rt_entry_destroy(rt_entry_t *this)
+{
+	DESTROY_IF(this->src_host);
+	free(this);
+}
+
+/**
+ * Parse route received with RTM_NEWROUTE. The given rt_entry_t object will be
+ * reused if not NULL.
+ *
+ * Returned chunks point to internal data of the Netlink message.
+ */
+static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
+{
+	struct rtattr *rta;
+	struct rtmsg *msg;
+	size_t rtasize;
+
+	msg = (struct rtmsg*)(NLMSG_DATA(hdr));
+	rta = RTM_RTA(msg);
+	rtasize = RTM_PAYLOAD(hdr);
+
+	if (route)
+	{
+		route->gtw = chunk_empty;
+		route->src = chunk_empty;
+		route->dst = chunk_empty;
+		route->dst_len = msg->rtm_dst_len;
+		route->table = msg->rtm_table;
+		route->oif = 0;
+	}
+	else
+	{
+		INIT(route,
+			.dst_len = msg->rtm_dst_len,
+			.table = msg->rtm_table,
+		);
+	}
+
+	while (RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case RTA_PREFSRC:
+				route->src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			case RTA_GATEWAY:
+				route->gtw = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			case RTA_DST:
+				route->dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			case RTA_OIF:
+				if (RTA_PAYLOAD(rta) == sizeof(route->oif))
+				{
+					route->oif = *(u_int32_t*)RTA_DATA(rta);
+				}
+				break;
+#ifdef HAVE_RTA_TABLE
+			case RTA_TABLE:
+				if (RTA_PAYLOAD(rta) == sizeof(route->table))
+				{
+					route->table = *(u_int32_t*)RTA_DATA(rta);
+				}
+				break;
+#endif /* HAVE_RTA_TABLE*/
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	return route;
+}
+
+/**
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
@@ -1140,11 +1228,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	struct rtmsg *msg;
 	chunk_t chunk;
 	size_t len;
-	int best = -1;
+	linked_list_t *routes;
+	rt_entry_t *route = NULL, *best = NULL;
 	enumerator_t *enumerator;
-	host_t *src = NULL, *gtw = NULL;
-
-	DBG2(DBG_KNL, "getting address to reach %H", dest);
+	host_t *addr = NULL;
 
 	memset(&request, 0, sizeof(request));
 
@@ -1172,174 +1259,69 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "getting address to %H failed", dest);
+		DBG2(DBG_KNL, "getting %s to reach %H failed",
+			 nexthop ? "nexthop" : "address", dest);
 		return NULL;
 	}
+	routes = linked_list_create();
 	this->mutex->lock(this->mutex);
 
 	for (current = out; NLMSG_OK(current, len);
 		 current = NLMSG_NEXT(current, len))
 	{
-		if (!nexthop && candidate && src && src->ip_equals(src, candidate))
-		{	/* if we found a route that includes our preferred source address
-			 * we stop looking for any other routes. this is mainly for the
-			 * DUMP cases as there the RTA_PREFSRC attribute has no effect */
-			break;
-		}
-
 		switch (current->nlmsg_type)
 		{
 			case NLMSG_DONE:
 				break;
 			case RTM_NEWROUTE:
 			{
-				struct rtattr *rta;
-				size_t rtasize;
-				chunk_t rta_gtw, rta_src, rta_dst;
-				u_int32_t rta_oif = 0, rta_table;
-				host_t *new_src, *new_gtw;
-				bool cont = FALSE;
+				rt_entry_t *other;
 				uintptr_t table;
 
-				rta_gtw = rta_src = rta_dst = chunk_empty;
-				msg = (struct rtmsg*)(NLMSG_DATA(current));
-				rta = RTM_RTA(msg);
-				rtasize = RTM_PAYLOAD(current);
-				rta_table = msg->rtm_table;
-				while (RTA_OK(rta, rtasize))
-				{
-					switch (rta->rta_type)
-					{
-						case RTA_PREFSRC:
-							rta_src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
-							break;
-						case RTA_GATEWAY:
-							rta_gtw = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
-							break;
-						case RTA_DST:
-							rta_dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
-							break;
-						case RTA_OIF:
-							if (RTA_PAYLOAD(rta) == sizeof(rta_oif))
-							{
-								rta_oif = *(u_int32_t*)RTA_DATA(rta);
-							}
-							break;
-#ifdef HAVE_RTA_TABLE
-						case RTA_TABLE:
-							if (RTA_PAYLOAD(rta) == sizeof(rta_table))
-							{
-								rta_table = *(u_int32_t*)RTA_DATA(rta);
-							}
-							break;
-#endif /* HAVE_RTA_TABLE*/
-					}
-					rta = RTA_NEXT(rta, rtasize);
-				}
-				if (msg->rtm_dst_len < best ||
-					msg->rtm_dst_len == best && (nexthop || !candidate))
-				{	/* not better than a previous one, but if a preferred source
-					 * address is specified, we still check equal routes */
-					continue;
-				}
-				enumerator = this->rt_exclude->create_enumerator(this->rt_exclude);
-				while (enumerator->enumerate(enumerator, &table))
-				{
-					if (table == rta_table)
-					{
-						cont = TRUE;
-						break;
-					}
-				}
-				enumerator->destroy(enumerator);
-				if (cont)
-				{
+				route = parse_route(current, route);
+
+				table = (uintptr_t)route->table;
+				if (this->rt_exclude->find_first(this->rt_exclude, NULL,
+												 (void**)&table) == SUCCESS)
+				{	/* route is from an excluded routing table */
 					continue;
 				}
 				if (this->routing_table != 0 &&
-					rta_table == this->routing_table)
+					route->table == this->routing_table)
 				{	/* route is from our own ipsec routing table */
 					continue;
 				}
-				if (rta_oif && !is_interface_up(this, rta_oif))
+				if (route->oif && !is_interface_up(this, route->oif))
 				{	/* interface is down */
 					continue;
 				}
-				if (!addr_in_subnet(chunk, rta_dst, msg->rtm_dst_len))
+				if (!addr_in_subnet(chunk, route->dst, route->dst_len))
 				{	/* route destination does not contain dest */
 					continue;
 				}
-
-				if (nexthop)
+				if (route->src.ptr)
+				{	/* verify source address, if any */
+					host_t *src = host_create_from_chunk(msg->rtm_family,
+														 route->src, 0);
+					if (src && get_vip_refcount(this, src))
+					{	/* ignore routes installed by us */
+						src->destroy(src);
+						continue;
+					}
+					route->src_host = src;
+				}
+				/* insert route, sorted by decreasing network prefix */
+				enumerator = routes->create_enumerator(routes);
+				while (enumerator->enumerate(enumerator, &other))
 				{
-					/* nexthop lookup, return gateway if any */
-					DESTROY_IF(gtw);
-					gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
-					best = msg->rtm_dst_len;
-					continue;
-				}
-
-				/* try to find an appropriate source address */
-				if (rta_src.ptr)
-				{	/* got a source address with the route */
-					new_src = host_create_from_chunk(msg->rtm_family,
-													 rta_src, 0);
-					if (new_src)
+					if (route->dst_len > other->dst_len)
 					{
-						if (get_vip_refcount(this, new_src))
-						{	/* skip route if it is installed by us */
-							new_src->destroy(new_src);
-							continue;
-						}
-						DESTROY_IF(src);
-						src = new_src;
-						if (candidate && !src->ip_equals(src, candidate) &&
-							rta_oif)
-						{	/* this source does not match our preferred source.
-							 * but maybe it is assigned to the same iface */
-							new_src = get_interface_address(this, rta_oif,
-															msg->rtm_family,
-															candidate);
-							if (new_src &&
-								new_src->ip_equals(new_src, candidate))
-							{
-								DESTROY_IF(src);
-								src = new_src;
-							}
-							else
-							{
-								DESTROY_IF(new_src);
-							}
-						}
-						best = msg->rtm_dst_len;
+						break;
 					}
-					continue;
 				}
-				if (rta_oif)
-				{	/* no src, but an interface - get address from it */
-					new_src = get_interface_address(this, rta_oif,
-													msg->rtm_family, candidate);
-					if (new_src)
-					{
-						DESTROY_IF(src);
-						src = new_src;
-						best = msg->rtm_dst_len;
-					}
-					continue;
-				}
-				if (rta_gtw.ptr)
-				{	/* no src, but a gateway - lookup src to reach gtw */
-					new_gtw = host_create_from_chunk(msg->rtm_family, rta_gtw, 0);
-					new_src = get_route(this, new_gtw, FALSE, candidate);
-					new_gtw->destroy(new_gtw);
-					if (new_src)
-					{
-						DESTROY_IF(src);
-						src = new_src;
-						best = msg->rtm_dst_len;
-					}
-					continue;
-				}
+				routes->insert_before(routes, enumerator, route);
+				enumerator->destroy(enumerator);
+				route = NULL;
 				continue;
 			}
 			default:
@@ -1347,18 +1329,111 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		}
 		break;
 	}
-	free(out);
-	this->mutex->unlock(this->mutex);
+	if (route)
+	{
+		rt_entry_destroy(route);
+	}
+
+	/* now we have a list of routes matching dest, sorted by net prefix.
+	 * we will look for source addresses for these routes and select the one
+	 * with the preferred source address, if possible */
+	enumerator = routes->create_enumerator(routes);
+	while (enumerator->enumerate(enumerator, &route))
+	{
+		if (route->src_host)
+		{	/* got a source address with the route, if no preferred source
+			 * is given or it matches we are done, as this is the best route */
+			if (!candidate || candidate->ip_equals(candidate, route->src_host))
+			{
+				best = route;
+				break;
+			}
+			else if (route->oif)
+			{	/* no match yet, maybe it is assigned to the same interface */
+				host_t *src = get_interface_address(this, route->oif,
+													msg->rtm_family, candidate);
+				if (src && src->ip_equals(src, candidate))
+				{
+					route->src_host->destroy(route->src_host);
+					route->src_host = src;
+					best = route;
+					break;
+				}
+				DESTROY_IF(src);
+			}
+			/* no luck yet with the source address. if this is the best (first)
+			 * route we store it as fallback in case we don't find a route with
+			 * the preferred source */
+			best = best ?: route;
+			continue;
+		}
+		if (route->oif)
+		{	/* no src, but an interface - get address from it */
+			route->src_host = get_interface_address(this, route->oif,
+													msg->rtm_family, candidate);
+			if (route->src_host)
+			{	/* we handle this address the same as the one above */
+				if (!candidate ||
+					 candidate->ip_equals(candidate, route->src_host))
+				{
+					best = route;
+					break;
+				}
+				best = best ?: route;
+				continue;
+			}
+		}
+		if (route->gtw.ptr)
+		{	/* no src, no iface, but a gateway - lookup src to reach gtw */
+			host_t *gtw;
+
+			gtw = host_create_from_chunk(msg->rtm_family, route->gtw, 0);
+			route->src_host = get_route(this, gtw, FALSE, candidate);
+			gtw->destroy(gtw);
+			if (route->src_host)
+			{	/* more of the same */
+				if (!candidate ||
+					 candidate->ip_equals(candidate, route->src_host))
+				{
+					best = route;
+					break;
+				}
+				best = best ?: route;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	if (nexthop)
-	{
-		if (gtw)
+	{	/* nexthop lookup, return gateway if any */
+		if (best || routes->get_first(routes, (void**)&best) == SUCCESS)
 		{
-			return gtw;
+			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
 		}
-		return dest->clone(dest);
+		addr = addr ?: dest->clone(dest);
 	}
-	return src;
+	else
+	{
+		if (best)
+		{
+			addr = best->src_host->clone(best->src_host);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+	routes->destroy_function(routes, (void*)rt_entry_destroy);
+	free(out);
+
+	if (addr)
+	{
+		DBG2(DBG_KNL, "using %H as %s to reach %H", addr,
+			 nexthop ? "nexthop" : "address", dest);
+	}
+	else
+	{
+		DBG2(DBG_KNL, "no %s found to reach %H",
+			 nexthop ? "nexthop" : "address", dest);
+	}
+	return addr;
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
