@@ -432,11 +432,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			enumerator_t *e;
 			pts_simple_evid_final_flag_t flags;
 			chunk_t pcr_composite, quote_signature;
-			linked_list_t *pcrs;
-					
+			u_int32_t num_of_evidences, i = 0;
+			u_int32_t *pcrs;
+
 			/* Send buffered Simple Component Evidences */
-			pcrs = linked_list_create();
-					
+			num_of_evidences = evidences->get_count(evidences);
+			pcrs = (u_int32_t*)malloc(sizeof(u_int32_t)*num_of_evidences);
+			
 			e = evidences->create_enumerator(evidences);
 			while (e->enumerate(e, &attr))
 			{
@@ -445,20 +447,20 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 						
 				attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
-						
+
 				/* Add extended PCR number to PCR list to quote */
 				/* Duplicated PCR numbers have no influence */
-				pcrs->insert_last(pcrs, &extended_pcr);
+				pcrs[i] = extended_pcr;
+				i++;
 				/* Send Simple Compoenent Evidence */
 				attr_list->insert_last(attr_list, attr);
 			}
-
+			
 			/* Quote */
-			if (!pts->quote_tpm(pts, pcrs, &pcr_composite, &quote_signature))
+			if (!pts->quote_tpm(pts, pcrs, num_of_evidences, &pcr_composite, &quote_signature))
 			{
-				DBG1(DBG_IMC, "error occured while TPM quote operation");
+				DBG1(DBG_IMC, "error occured during TPM quote operation");
 				DESTROY_IF(e);
-				DESTROY_IF(pcrs);
 				DESTROY_IF(evidences);
 				return FALSE;
 			}
@@ -471,7 +473,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_list->insert_last(attr_list, attr);
 					
 			DESTROY_IF(e);
-			DESTROY_IF(pcrs);
 			DESTROY_IF(evidences);
 					
 			break;

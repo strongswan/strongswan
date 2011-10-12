@@ -100,6 +100,11 @@ struct private_pts_t {
 	chunk_t tpm_version_info;
 
 	/**
+	 * Contains TSS Blob structure for AIK
+	 */
+	chunk_t aik_blob;
+
+	/**
 	 * Contains a Attestation Identity Key or Certificate
 	 */
  	certificate_t *aik;
@@ -322,7 +327,49 @@ METHOD(pts_t, set_tpm_version_info, void,
 }
 
 /**
- * Load an AIK certificate or public key,
+ * Load an AIK Blob (TSS_TSPATTRIB_KEYBLOB_BLOB attribute)
+ */
+static void load_aik_blob(private_pts_t *this)
+{
+	char *blob_path;
+	FILE *fp;
+	u_int32_t aikBlobLen;
+
+	blob_path = lib->settings->get_str(lib->settings,
+						"libimcv.plugins.imc-attestation.aik_blob", NULL);
+
+	if (blob_path)
+	{
+		/* Read aik key blob from a file */
+		if ((fp = fopen(blob_path, "r")) == NULL)
+		{
+			DBG1(DBG_PTS, "unable to open AIK Blob file: %s", blob_path);
+			return;
+		}
+
+		fseek(fp, 0, SEEK_END);
+		aikBlobLen = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		this->aik_blob = chunk_alloc(aikBlobLen);
+		if (fread(this->aik_blob.ptr, 1, aikBlobLen, fp))
+		{
+			DBG2(DBG_PTS, "loaded AIK Blob from '%s'", blob_path);
+			DBG3(DBG_PTS, "AIK Blob: %B", &this->aik_blob);
+		}
+		else
+		{
+			DBG1(DBG_PTS, "unable to read AIK Blob file '%s'", blob_path);
+		}
+		fclose(fp);
+		return;
+	}
+	
+	DBG1(DBG_PTS, "AIK Blob is not available");
+}
+
+/**
+ * Load an AIK certificate or public key
  * the certificate having precedence over the public key if both are present
  */
 static void load_aik(private_pts_t *this)
@@ -356,6 +403,7 @@ static void load_aik(private_pts_t *this)
 			return;
 		}
 	}
+
 	DBG1(DBG_PTS, "neither AIK certificate nor public key is available");
 }
 
@@ -762,8 +810,8 @@ METHOD(pts_t, extend_pcr, bool,
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	private_pts_t *this, linked_list_t *pcrs, chunk_t *pcr_composite,
-	chunk_t *quote_signature)
+	private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	chunk_t *pcr_composite, chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -775,11 +823,9 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_HPCRS hPcrComposite;
 	TSS_VALIDATION valData;
 	TPM_QUOTE_INFO *quoteInfo;
-	u_int32_t i, pcr;
+	u_int32_t i;
 	TSS_RESULT result;
-	chunk_t aik_key_encoding;
 	chunk_t pcr_composite_without_nonce;
-	enumerator_t *enumerator;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -817,38 +863,9 @@ METHOD(pts_t, quote_tpm, bool,
 	{
 		goto err1;
 	}
-
-	/* Create from AIK public key a HKEY object to sign Quote operation output*/
-	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
-	{
-		if (!this->aik->get_encoding(this->aik, PUBKEY_ASN1_DER, &aik_key_encoding))
-		{
-			DBG1(DBG_PTS, "encoding AIK certificate for quote operation failed");
-			goto err1;
-		}
-	}
-	else if (this->aik->get_type(this->aik) == CERT_X509)
-	{
-		public_key_t *key = this->aik->get_public_key(this->aik);
-		if (key == NULL)
-		{
-			DBG1(DBG_PTS, "unable to retrieve public key from AIK certificate");
-			goto err1;
-		}
-		if (!key->get_encoding(key, PUBKEY_ASN1_DER, &aik_key_encoding))
-		{
-			DBG1(DBG_PTS, "encoding AIK Public Key for quote operation failed");
-			goto err1;
-		}
-	}
-	else
-	{
-		DBG1(DBG_PTS, "AIK is neither X509 certificate nor Public Key");
-		goto err1;
-	}
 	
-	result = Tspi_Context_LoadKeyByBlob (hContext, hSRK, aik_key_encoding.len,
-										 aik_key_encoding.ptr, &hAIK);
+	result = Tspi_Context_LoadKeyByBlob (hContext, hSRK, this->aik_blob.len,
+										 this->aik_blob.ptr, &hAIK);
 	if (result != TSS_SUCCESS)
 	{
 		goto err1;
@@ -862,21 +879,19 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Select PCR's */
-	enumerator = pcrs->create_enumerator(pcrs);
-	while (enumerator->enumerate(enumerator, &pcr))
+	for (i = 0; i < num_of_pcrs ; i++)
 	{
-		if (pcr < 0 || pcr >= MAX_NUM_PCR )
+		if (pcrs[i] < 0 || pcrs[i] >= MAX_NUM_PCR )
 		{
-			DBG1(DBG_PTS, "Invalid PCR number: %d", pcr);
+			DBG1(DBG_PTS, "Invalid PCR number: %d", pcrs[i]);
 			goto err3;
 		}
-		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr);
+		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcrs[i]);
 		if (result != TSS_SUCCESS)
 		{
 			goto err3;
 		}
 	}
-	enumerator->destroy(enumerator);
 
 	/* Set the Validation Data */
 	valData.ulExternalDataLength = this->secret.len;
@@ -895,7 +910,7 @@ METHOD(pts_t, quote_tpm, bool,
 	DBG3(DBG_PTS, "version:");
 	for(i = 0 ; i < 4 ; i++)
 	{
-		DBG3(DBG_PTS, "%02x ",valData.rgbData[i]);
+		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
 	}
 	DBG3(DBG_PTS, "fixed value:");
 	for(i = 4 ; i < 8 ; i++)
@@ -905,12 +920,12 @@ METHOD(pts_t, quote_tpm, bool,
 	DBG3(DBG_PTS, "pcr digest:");
 	for(i = 8 ; i < 28 ; i++)
 	{
-		DBG3(DBG_PTS, "%02x ",valData.rgbData[i]);
+		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
 	}
 	DBG3(DBG_PTS, "nonce:");
 	for(i = 28 ; i < valData.ulDataLength ; i++)
 	{
-		DBG3(DBG_PTS, "%c",valData.rgbData[i]);
+		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
 	}
 
 	/* Set output chunks */
@@ -929,6 +944,7 @@ METHOD(pts_t, quote_tpm, bool,
 	Tspi_Context_CloseObject(hContext, hPcrComposite);
 	Tspi_Context_CloseObject(hContext, hAIK);
 	Tspi_Context_Close(hContext);
+	free(pcrs);
 	return TRUE;
 
 	/* Cleanup */
@@ -943,6 +959,7 @@ METHOD(pts_t, quote_tpm, bool,
 	
 	err1:
 	Tspi_Context_Close(hContext);
+	free(pcrs);
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	return FALSE;
 }
@@ -955,6 +972,7 @@ METHOD(pts_t, destroy, void,
 	free(this->initiator_nonce.ptr);
 	free(this->responder_nonce.ptr);
 	free(this->platform_info);
+	free(this->aik_blob.ptr);
 	free(this->tpm_version_info.ptr);
 	free(this);
 }
@@ -1156,6 +1174,7 @@ pts_t *pts_create(bool is_imc)
 			this->has_tpm = TRUE;
 			this->proto_caps |= PTS_PROTO_CAPS_T;
 			load_aik(this);
+			load_aik_blob(this);
 		}
 	}
 	else
