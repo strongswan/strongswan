@@ -879,7 +879,6 @@ METHOD(pts_t, quote_tpm, bool,
 			goto err3;
 		}
 	}
-	enumerator->destroy(enumerator);
 
 	/* Set the Validation Data */
 	valData.ulExternalDataLength = this->secret.len;
