@@ -205,7 +205,7 @@ void closefrom(int lowfd)
 
 	/* try to close only open file descriptors on Linux... */
 	len = snprintf(fd_dir, sizeof(fd_dir), "/proc/%u/fd", getpid());
-	if (len > 0 && len < sizeof(fd_dir))
+	if (len > 0 && len < sizeof(fd_dir) && access(fd_dir, F_OK) == 0)
 	{
 		enumerator_t *enumerator = enumerator_create_directory(fd_dir);
 		if (enumerator)
