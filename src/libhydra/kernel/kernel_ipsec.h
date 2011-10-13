@@ -37,6 +37,7 @@ typedef struct mark_t mark_t;
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
 #include <selectors/traffic_selector.h>
+#include <plugins/plugin.h>
 
 /**
  * Mode of an IPsec SA.
@@ -385,5 +386,19 @@ struct kernel_ipsec_t {
 	 */
 	void (*destroy) (kernel_ipsec_t *this);
 };
+
+/**
+ * Helper function to (un-)register IPsec kernel interfaces from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register an IPsec kernel interface constructor.
+ *
+ * @param plugin		plugin registering the kernel interface
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister
+ * @param data			data passed to callback, an kernel_ipsec_constructor_t
+ */
+bool kernel_ipsec_register(plugin_t *plugin, plugin_feature_t *feature,
+						   bool reg, void *data);
 
 #endif /** KERNEL_IPSEC_H_ @}*/

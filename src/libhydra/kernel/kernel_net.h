@@ -26,6 +26,7 @@ typedef struct kernel_net_t kernel_net_t;
 
 #include <utils/enumerator.h>
 #include <utils/host.h>
+#include <plugins/plugin.h>
 
 /**
  * Interface to the network subsystem of the kernel.
@@ -141,5 +142,19 @@ struct kernel_net_t {
 	 */
 	void (*destroy) (kernel_net_t *this);
 };
+
+/**
+ * Helper function to (un-)register net kernel interfaces from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register an net kernel interface constructor.
+ *
+ * @param plugin		plugin registering the kernel interface
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister
+ * @param data			data passed to callback, an kernel_net_constructor_t
+ */
+bool kernel_net_register(plugin_t *plugin, plugin_feature_t *feature,
+						 bool reg, void *data);
 
 #endif /** KERNEL_NET_H_ @}*/
