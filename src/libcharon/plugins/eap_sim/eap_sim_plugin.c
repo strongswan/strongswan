@@ -45,14 +45,34 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-sim";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_eap_sim_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_PROVIDE(CUSTOM, "sim-manager"),
+		PLUGIN_CALLBACK(eap_method_register, eap_sim_server_create),
+			PLUGIN_PROVIDE(EAP_SERVER, EAP_AKA),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(PRF, PRF_FIPS_SHA1_160),
+				PLUGIN_DEPENDS(SIGNER, AUTH_HMAC_SHA1_128),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+		PLUGIN_CALLBACK(eap_method_register, eap_sim_peer_create),
+			PLUGIN_PROVIDE(EAP_PEER, EAP_AKA),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(PRF, PRF_FIPS_SHA1_160),
+				PLUGIN_DEPENDS(SIGNER, AUTH_HMAC_SHA1_128),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_plugin_t *this)
 {
 	lib->set(lib, "sim-manager", NULL);
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_sim_server_create);
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_sim_peer_create);
 	this->mgr->destroy(this->mgr);
 	free(this);
 }
@@ -68,17 +88,12 @@ plugin_t *eap_sim_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.mgr = simaka_manager_create(),
 	);
-
-	charon->eap->add_method(charon->eap, EAP_SIM, 0, EAP_SERVER,
-							(eap_constructor_t)eap_sim_server_create);
-	charon->eap->add_method(charon->eap, EAP_SIM, 0, EAP_PEER,
-							(eap_constructor_t)eap_sim_peer_create);
 	lib->set(lib, "sim-manager", this->mgr);
 
 	return &this->public.plugin;
