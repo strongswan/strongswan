@@ -162,7 +162,8 @@ LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/libstrongswan \
 	$(strongswan_PATH)/src/libtncif
 
-LOCAL_CFLAGS := $(strongswan_CFLAGS)
+LOCAL_CFLAGS := $(strongswan_CFLAGS) \
+	-DPLUGINS='"$(strongswan_CHARON_PLUGINS)"'
 
 LOCAL_MODULE := libcharon
 

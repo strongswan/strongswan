@@ -3,9 +3,17 @@ include $(CLEAR_VARS)
 
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
-strongswan_PLUGINS := openssl fips-prf random pubkey pkcs1 \
+strongswan_CHARON_PLUGINS := openssl fips-prf random pubkey pkcs1 \
 	pem xcbc hmac kernel-netlink socket-default android \
 	stroke eap-identity eap-mschapv2 eap-md5
+
+# plugins loaded by pluto
+strongswan_PLUTO_PLUGINS := openssl fips-prf random pubkey pkcs1 \
+	pem xcbc hmac kernel-netlink xauth
+
+# list of all plugins - used to enable them with the function below
+strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
+			     $(strongswan_PLUTO_PLUGINS))
 
 # helper macros to only add source files for plugins included in the list above
 # source files are relative to the android.mk that called the macro
@@ -64,7 +72,6 @@ strongswan_CFLAGS := \
 	-DROUTING_TABLE=0 \
 	-DROUTING_TABLE_PRIO=220 \
 	-DVERSION=\"$(strongswan_VERSION)\" \
-	-DPLUGINS='"$(strongswan_PLUGINS)"' \
 	-DPLUGINDIR=\"$(strongswan_PLUGINDIR)\" \
 	-DIPSEC_DIR=\"$(strongswan_DIR)\" \
 	-DIPSEC_PIDDIR=\"$(strongswan_PIDDIR)\" \
