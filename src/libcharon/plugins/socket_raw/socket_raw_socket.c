@@ -31,7 +31,6 @@
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <linux/types.h>
 #include <linux/filter.h>
@@ -259,6 +258,8 @@ METHOD(socket_t, receiver, status_t,
 				DBG1(DBG_NET, "error reading IPv6 ancillary data");
 				return FAILED;
 			}
+
+#ifdef HAVE_IN6_PKTINFO
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
 				cmsgptr->cmsg_type == IPV6_2292PKTINFO)
 			{
@@ -273,6 +274,7 @@ METHOD(socket_t, receiver, status_t,
 				src.sin6_port = udp->source;
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
 			}
+#endif /* HAVE_IN6_PKTINFO */
 		}
 		/* ancillary data missing? */
 		if (dest == NULL)
@@ -397,6 +399,7 @@ METHOD(socket_t, sender, status_t,
 			sin = (struct sockaddr_in*)src->get_sockaddr(src);
 			memcpy(&pktinfo->ipi_spec_dst, &sin->sin_addr, sizeof(struct in_addr));
 		}
+#ifdef HAVE_IN6_PKTINFO
 		else
 		{
 			char buf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
@@ -414,6 +417,7 @@ METHOD(socket_t, sender, status_t,
 			sin = (struct sockaddr_in6*)src->get_sockaddr(src);
 			memcpy(&pktinfo->ipi6_addr, &sin->sin6_addr, sizeof(struct in6_addr));
 		}
+#endif /* HAVE_IN6_PKTINFO */
 	}
 
 	bytes_sent = sendmsg(skt, &msg, 0);
