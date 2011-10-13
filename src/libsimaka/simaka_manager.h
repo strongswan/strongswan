@@ -24,6 +24,7 @@
 #include <crypto/hashers/hasher.h>
 #include <utils/identification.h>
 #include <utils/enumerator.h>
+#include <plugins/plugin.h>
 
 typedef struct simaka_manager_t simaka_manager_t;
 
@@ -283,5 +284,27 @@ struct simaka_manager_t {
  * @return			simaka_t object
  */
 simaka_manager_t *simaka_manager_create();
+
+/**
+ * Callback for the simaka_manager_register_cb_t, provides backend to register.
+ *
+ * @param plugin		plugin registering a backend (card or provider)
+ * @return				a simaka_card_t* or simaka_provider_t*, NULL on failure
+ */
+typedef void* (*simaka_manager_register_cb_t)(plugin_t *plugin);
+
+/**
+ * Helper function to (un-)register SIM/AKA backend plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register a SIM/AKA backend.
+ *
+ * @param plugin		plugin registering the SIM/AKA backend
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister.
+ * @param data			data passed to callback, an simaka_manager_register_cb_t
+ */
+bool simaka_manager_register(plugin_t *plugin, plugin_feature_t *feature,
+							 bool reg, void *data);
 
 #endif /** SIMAKA_MANAGER_H_ @}*/

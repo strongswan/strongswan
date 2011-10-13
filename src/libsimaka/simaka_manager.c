@@ -531,3 +531,88 @@ simaka_manager_t *simaka_manager_create()
 
 	return &this->public;
 }
+
+/**
+ * (Un-)register a provider to a simaka manager
+ */
+static bool register_card(char *mgr_name, bool reg, simaka_card_t *card)
+{
+	simaka_manager_t *mgr;
+
+	if (!card)
+	{
+		return FALSE;
+	}
+	mgr = lib->get(lib, mgr_name);
+	if (mgr)
+	{
+		if (reg)
+		{
+			mgr->add_card(mgr, card);
+		}
+		else
+		{
+			mgr->remove_card(mgr, card);
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * (Un-)register a provider to a simaka manager
+ */
+static bool register_provider(char *mgr_name, bool reg,
+							  simaka_provider_t *provider)
+{
+	simaka_manager_t *mgr;
+
+	if (!provider)
+	{
+		return FALSE;
+	}
+	mgr = lib->get(lib, mgr_name);
+	if (mgr)
+	{
+		if (reg)
+		{
+			mgr->add_provider(mgr, provider);
+		}
+		else
+		{
+			mgr->remove_provider(mgr, provider);
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * See header
+ */
+bool simaka_manager_register(plugin_t *plugin, plugin_feature_t *feature,
+							 bool reg, void *data)
+{
+	simaka_manager_register_cb_t get = (simaka_manager_register_cb_t)data;
+
+	if (feature->type == FEATURE_CUSTOM)
+	{
+		if (streq(feature->arg.custom, "aka-card"))
+		{
+			return register_card("aka-manager", reg, get(plugin));
+		}
+		else if (streq(feature->arg.custom, "aka-provider"))
+		{
+			return register_provider("aka-manager", reg, get(plugin));
+		}
+		else if (streq(feature->arg.custom, "sim-card"))
+		{
+			return register_card("sim-manager", reg, get(plugin));
+		}
+		else if (streq(feature->arg.custom, "sim-provider"))
+		{
+			return register_provider("sim-manager", reg, get(plugin));
+		}
+	}
+	return FALSE;
+}
