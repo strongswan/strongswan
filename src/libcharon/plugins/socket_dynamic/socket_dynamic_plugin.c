@@ -34,6 +34,17 @@ struct private_socket_dynamic_plugin_t {
 	socket_dynamic_plugin_t public;
 };
 
+METHOD(plugin_t, get_features, int,
+	private_socket_dynamic_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(socket_register, socket_dynamic_socket_create),
+			PLUGIN_PROVIDE(CUSTOM, "socket"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, get_name, char*,
 	private_socket_dynamic_plugin_t *this)
 {
@@ -43,8 +54,6 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_socket_dynamic_plugin_t *this)
 {
-	charon->socket->remove_socket(charon->socket,
-						(socket_constructor_t)socket_dynamic_socket_create);
 	free(this);
 }
 
@@ -59,14 +68,11 @@ plugin_t *socket_dynamic_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	charon->socket->add_socket(charon->socket,
-						(socket_constructor_t)socket_dynamic_socket_create);
 
 	return &this->public.plugin;
 }
