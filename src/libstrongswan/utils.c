@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -192,6 +192,25 @@ bool mkdir_p(const char *path, mode_t mode)
 	}
 	return TRUE;
 }
+
+#ifndef HAVE_CLOSEFROM
+/**
+ * Described in header.
+ */
+void closefrom(int lowfd)
+{
+	int maxfd, fd;
+	maxfd = (int)sysconf(_SC_OPEN_MAX);
+	if (maxfd < 0)
+	{
+		maxfd = 256;
+	}
+	for (fd = lowfd; fd < maxfd; fd++)
+	{
+		close(fd);
+	}
+}
+#endif /* HAVE_CLOSEFROM */
 
 /**
  * Return monotonic time

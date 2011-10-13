@@ -375,7 +375,7 @@ dnl check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
 LIBS=$saved_LIBS
 
-AC_CHECK_FUNCS(prctl mallinfo getpass)
+AC_CHECK_FUNCS(prctl mallinfo getpass closefrom)
 
 AC_CHECK_HEADERS(sys/sockio.h glob.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)

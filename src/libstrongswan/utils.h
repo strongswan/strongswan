@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -407,6 +407,15 @@ char *translate(char *str, const char *from, const char *to);
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
+
+#ifndef HAVE_CLOSEFROM
+/**
+ * Close open file descriptors greater than or equal to lowfd.
+ *
+ * @param lowfd		start closing file descriptoros from here
+ */
+void closefrom(int lowfd);
+#endif
 
 /**
  * Get a timestamp from a monotonic time source.
