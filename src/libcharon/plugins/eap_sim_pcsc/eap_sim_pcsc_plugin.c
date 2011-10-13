@@ -41,16 +41,29 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-sim-pcsc";
 }
 
+/**
+ * Callback providing our card to register
+ */
+static simaka_card_t* get_card(private_eap_sim_pcsc_plugin_t *this)
+{
+	return &this->card->card;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_eap_sim_pcsc_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(simaka_manager_register, get_card),
+			PLUGIN_PROVIDE(CUSTOM, "sim-card"),
+				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_pcsc_plugin_t *this)
 {
-	simaka_manager_t *mgr;
-
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->remove_card(mgr, &this->card->card);
-	}
 	this->card->destroy(this->card);
 	free(this);
 }
@@ -61,24 +74,18 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_sim_pcsc_plugin_create()
 {
 	private_eap_sim_pcsc_plugin_t *this;
-	simaka_manager_t *mgr;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.card = eap_sim_pcsc_card_create(),
 	);
 
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->add_card(mgr, &this->card->card);
-	}
 	return &this->public.plugin;
 }
 
