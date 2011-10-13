@@ -210,7 +210,7 @@ void closefrom(int lowfd)
 		enumerator_t *enumerator = enumerator_create_directory(fd_dir);
 		if (enumerator)
 		{
-			char *rel, *end;
+			char *rel;
 			while (enumerator->enumerate(enumerator, &rel, NULL, NULL))
 			{
 				fd = atoi(rel);
