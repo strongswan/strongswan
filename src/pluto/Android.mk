@@ -51,6 +51,8 @@ x509.c x509.h \
 builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
+LOCAL_SRC_FILES += $(call add_plugin, xauth)
+
 # build pluto ------------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
