@@ -331,7 +331,7 @@ static bool dependency_required(private_plugin_loader_t *this,
 static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 {
 	enumerator_t *enumerator;
-	plugin_feature_t *feature, *reg = NULL;
+	plugin_feature_t *feature, *reg;
 	plugin_entry_t *entry;
 	int count, i, loaded = 0;
 
@@ -342,6 +342,7 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 		{	/* feature interface not supported */
 			continue;
 		}
+		reg = NULL;
 		count = entry->plugin->get_features(entry->plugin, &feature);
 		for (i = 0; i < count; i++)
 		{
