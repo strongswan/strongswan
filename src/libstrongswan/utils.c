@@ -28,6 +28,7 @@
 
 #include "enum.h"
 #include "debug.h"
+#include "utils/enumerator.h"
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
@@ -199,7 +200,31 @@ bool mkdir_p(const char *path, mode_t mode)
  */
 void closefrom(int lowfd)
 {
-	int maxfd, fd;
+	char fd_dir[PATH_MAX];
+	int maxfd, fd, len;
+
+	/* try to close only open file descriptors on Linux... */
+	len = snprintf(fd_dir, sizeof(fd_dir), "/proc/%u/fd", getpid());
+	if (len > 0 && len < sizeof(fd_dir))
+	{
+		enumerator_t *enumerator = enumerator_create_directory(fd_dir);
+		if (enumerator)
+		{
+			char *rel, *end;
+			while (enumerator->enumerate(enumerator, &rel, NULL, NULL))
+			{
+				fd = atoi(rel);
+				if (fd >= lowfd)
+				{
+					close(fd);
+				}
+			}
+			enumerator->destroy(enumerator);
+			return;
+		}
+	}
+
+	/* ...fall back to closing all fds otherwise */
 	maxfd = (int)sysconf(_SC_OPEN_MAX);
 	if (maxfd < 0)
 	{
