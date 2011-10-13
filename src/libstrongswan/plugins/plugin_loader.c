@@ -66,6 +66,11 @@ struct plugin_entry_t {
 	 * List of loaded features
 	 */
 	linked_list_t *loaded;
+
+	/**
+	 * List features failed to load
+	 */
+	linked_list_t *failed;
 };
 
 /**
@@ -79,6 +84,7 @@ static void plugin_entry_destroy(plugin_entry_t *entry)
 		dlclose(entry->handle);
 	}
 	entry->loaded->destroy(entry->loaded);
+	entry->failed->destroy(entry->failed);
 	free(entry);
 }
 
@@ -125,6 +131,7 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	INIT(*entry,
 		.plugin = plugin,
 		.loaded = linked_list_create(),
+		.failed = linked_list_create(),
 	);
 	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
 	return SUCCESS;
@@ -225,6 +232,16 @@ static bool feature_loaded(private_plugin_loader_t *this, plugin_entry_t *entry,
 						   plugin_feature_t *feature)
 {
 	return entry->loaded->find_first(entry->loaded, NULL,
+									 (void**)&feature) == SUCCESS;
+}
+
+/**
+ * Check if loading a feature of a plugin failed
+ */
+static bool feature_failed(private_plugin_loader_t *this, plugin_entry_t *entry,
+						   plugin_feature_t *feature)
+{
+	return entry->failed->find_first(entry->failed, NULL,
 									 (void**)&feature) == SUCCESS;
 }
 
@@ -350,12 +367,19 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 			{
 				case FEATURE_PROVIDE:
 					if (!feature_loaded(this, entry, feature) &&
+						!feature_failed(this, entry, feature) &&
 						dependencies_satisfied(this, entry, soft, report,
-											   feature, count - i) &&
-						plugin_feature_load(entry->plugin, feature, reg))
+											   feature, count - i))
 					{
-						entry->loaded->insert_last(entry->loaded, feature);
-						loaded++;
+						if (plugin_feature_load(entry->plugin, feature, reg))
+						{
+							entry->loaded->insert_last(entry->loaded, feature);
+							loaded++;
+						}
+						else
+						{
+							entry->failed->insert_last(entry->failed, feature);
+						}
 					}
 					break;
 				case FEATURE_REGISTER:
