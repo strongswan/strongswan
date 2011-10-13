@@ -39,10 +39,9 @@ encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 kernel/kernel_handler.c kernel/kernel_handler.h \
-network/packet.c network/packet.h \
-network/receiver.c network/receiver.h \
-network/sender.c network/sender.h \
-network/socket_manager.c network/socket_manager.h network/socket.h \
+network/receiver.c network/receiver.h network/sender.c network/sender.h \
+network/packet.c network/packet.h network/socket.c network/socket.h \
+network/socket_manager.c network/socket_manager.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \

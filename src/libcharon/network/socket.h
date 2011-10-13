@@ -29,6 +29,7 @@ typedef struct socket_t socket_t;
 #include <library.h>
 #include <network/packet.h>
 #include <utils/enumerator.h>
+#include <plugins/plugin.h>
 
 /**
  * Constructor prototype for sockets.
@@ -71,5 +72,19 @@ struct socket_t {
 	 */
 	void (*destroy) (socket_t *this);
 };
+
+/**
+ * Helper function to (un-)register socket interfaces from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register an socket interface constructor.
+ *
+ * @param plugin		plugin registering the socket interface
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister
+ * @param data			data passed to callback, a socket_constructor_t
+ */
+bool socket_register(plugin_t *plugin, plugin_feature_t *feature,
+					 bool reg, void *data);
 
 #endif /** SOCKET_H_ @}*/
