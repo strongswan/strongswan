@@ -21,7 +21,7 @@
 #ifndef PLUGIN_H_
 #define PLUGIN_H_
 
-#include <utils.h>
+#include "../utils.h"
 
 typedef struct plugin_t plugin_t;
 
