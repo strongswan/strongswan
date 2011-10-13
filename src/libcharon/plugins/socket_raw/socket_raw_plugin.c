@@ -40,11 +40,20 @@ METHOD(plugin_t, get_name, char*,
 	return "socket-raw";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_socket_raw_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(socket_register, socket_raw_socket_create),
+			PLUGIN_PROVIDE(CUSTOM, "socket"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_socket_raw_plugin_t *this)
 {
-	charon->socket->remove_socket(charon->socket,
-							(socket_constructor_t)socket_raw_socket_create);
 	free(this);
 }
 
@@ -59,14 +68,11 @@ plugin_t *socket_raw_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	charon->socket->add_socket(charon->socket,
-							(socket_constructor_t)socket_raw_socket_create);
 
 	return &this->public.plugin;
 }
