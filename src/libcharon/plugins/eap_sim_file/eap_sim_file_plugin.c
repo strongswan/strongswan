@@ -57,6 +57,32 @@ METHOD(plugin_t, get_name, char*,
 }
 
 /**
+ * Load triplet file
+ */
+static bool load_triplets(private_eap_sim_file_t *this,
+						  plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		this->triplets = eap_sim_file_triplets_create(TRIPLET_FILE);
+		if (!this->triplets)
+		{
+			return FALSE;
+		}
+		this->provider = eap_sim_file_provider_create(this->triplets);
+		this->card = eap_sim_file_card_create(this->triplets);
+		return TRUE;
+	}
+	this->card->destroy(this->card);
+	this->provider->destroy(this->provider);
+	this->triplets->destroy(this->triplets);
+	this->card = NULL;
+	this->provider = NULL;
+	this->triplets = NULL;
+	return TRUE;
+}
+
+/**
  * Callback providing our card to register
  */
 static simaka_card_t* get_card(private_eap_sim_file_t *this)
@@ -76,12 +102,16 @@ METHOD(plugin_t, get_features, int,
 	private_eap_sim_file_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((void*)load_triplets, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "eap-sim-file-triplets"),
 		PLUGIN_CALLBACK(simaka_manager_register, get_card),
 			PLUGIN_PROVIDE(CUSTOM, "sim-card"),
 				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-sim-file-triplets"),
 		PLUGIN_CALLBACK(simaka_manager_register, get_provider),
 			PLUGIN_PROVIDE(CUSTOM, "sim-provider"),
 				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-sim-file-triplets"),
 	};
 	*features = f;
 	return countof(f);
@@ -90,9 +120,6 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_file_t *this)
 {
-	this->card->destroy(this->card);
-	this->provider->destroy(this->provider);
-	this->triplets->destroy(this->triplets);
 	free(this);
 }
 
@@ -111,10 +138,7 @@ plugin_t *eap_sim_file_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.triplets = eap_sim_file_triplets_create(TRIPLET_FILE),
 	);
-	this->provider = eap_sim_file_provider_create(this->triplets);
-	this->card = eap_sim_file_card_create(this->triplets);
 
 	return &this->public.plugin;
 }
