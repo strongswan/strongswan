@@ -1,15 +1,23 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+# whether pluto (IKEv1 daemon) is built.  charon (IKEv2) is always enabled
+strongswan_BUILD_PLUTO := true
+
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
 strongswan_CHARON_PLUGINS := openssl fips-prf random pubkey pkcs1 \
 	pem xcbc hmac kernel-netlink socket-default android \
 	stroke eap-identity eap-mschapv2 eap-md5
 
+ifneq ($(strongswan_BUILD_PLUTO),)
+# if both daemons are enabled we use raw sockets in charon
+strongswan_CHARON_PLUGINS := $(subst socket-default,socket-raw, \
+				$(strongswan_CHARON_PLUGINS))
 # plugins loaded by pluto
 strongswan_PLUTO_PLUGINS := openssl fips-prf random pubkey pkcs1 \
 	pem xcbc hmac kernel-netlink xauth
+endif
 
 # list of all plugins - used to enable them with the function below
 strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
