@@ -429,8 +429,11 @@ int main (int argc, char **argv)
 		{
 			case 0:
 			{
-				int fnull = open("/dev/null", O_RDWR);
+				int fnull;
 
+				closefrom(3);
+
+				fnull = open("/dev/null", O_RDWR);
 				if (fnull >= 0)
 				{
 					dup2(fnull, STDIN_FILENO);
@@ -438,6 +441,7 @@ int main (int argc, char **argv)
 					dup2(fnull, STDERR_FILENO);
 					close(fnull);
 				}
+
 				setsid();
 			}
 			break;
