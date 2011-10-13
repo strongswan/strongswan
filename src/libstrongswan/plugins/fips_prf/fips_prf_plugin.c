@@ -37,11 +37,21 @@ METHOD(plugin_t, get_name, char*,
 	return "fips-prf";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_fips_prf_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRF, fips_prf_create),
+			PLUGIN_PROVIDE(PRF, PRF_FIPS_SHA1_160),
+				PLUGIN_DEPENDS(PRF, PRF_KEYED_SHA1),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_fips_prf_plugin_t *this)
 {
-	lib->crypto->remove_prf(lib->crypto,
-							(prf_constructor_t)fips_prf_create);
 	free(this);
 }
 
@@ -51,25 +61,16 @@ METHOD(plugin_t, destroy, void,
 plugin_t *fips_prf_plugin_create()
 {
 	private_fips_prf_plugin_t *this;
-	prf_t *prf;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);
-	if (prf)
-	{
-		prf->destroy(prf);
-		lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160, get_name(this),
-							 (prf_constructor_t)fips_prf_create);
-	}
 
 	return &this->public.plugin;
 }
