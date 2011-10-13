@@ -1,6 +1,7 @@
 ipsec_PROGRAMS = whack
 
-whack_SOURCES = whack.c whack.h
+whack_SOURCES = \
+whack.c whack.h
 
 INCLUDES = \
 -I$(top_srcdir)/src/libstrongswan \

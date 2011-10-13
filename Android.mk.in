@@ -86,6 +86,7 @@ include $(addprefix $(LOCAL_PATH)/src/,$(addsuffix /Android.mk, \
 		libfreeswan \
 		pluto \
 		stroke \
+		whack \
 		starter \
 		ipsec \
 	))
