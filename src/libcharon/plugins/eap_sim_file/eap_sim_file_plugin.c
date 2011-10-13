@@ -56,17 +56,40 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-sim-file";
 }
 
+/**
+ * Callback providing our card to register
+ */
+static simaka_card_t* get_card(private_eap_sim_file_t *this)
+{
+	return &this->card->card;
+}
+
+/**
+ * Callback providing our provider to register
+ */
+static simaka_provider_t* get_provider(private_eap_sim_file_t *this)
+{
+	return &this->provider->provider;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_eap_sim_file_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(simaka_manager_register, get_card),
+			PLUGIN_PROVIDE(CUSTOM, "sim-card"),
+				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+		PLUGIN_CALLBACK(simaka_manager_register, get_provider),
+			PLUGIN_PROVIDE(CUSTOM, "sim-provider"),
+				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_eap_sim_file_t *this)
 {
-	simaka_manager_t *mgr;
-
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->remove_card(mgr, &this->card->card);
-		mgr->remove_provider(mgr, &this->provider->provider);
-	}
 	this->card->destroy(this->card);
 	this->provider->destroy(this->provider);
 	this->triplets->destroy(this->triplets);
@@ -79,34 +102,20 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_sim_file_plugin_create()
 {
 	private_eap_sim_file_t *this;
-	simaka_manager_t *mgr;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 		.triplets = eap_sim_file_triplets_create(TRIPLET_FILE),
 	);
-
 	this->provider = eap_sim_file_provider_create(this->triplets);
-	if (!this->provider)
-	{
-		this->triplets->destroy(this->triplets);
-		free(this);
-		return NULL;
-	}
 	this->card = eap_sim_file_card_create(this->triplets);
 
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->add_card(mgr, &this->card->card);
-		mgr->add_provider(mgr, &this->provider->provider);
-	}
 	return &this->public.plugin;
 }
 
