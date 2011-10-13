@@ -53,26 +53,93 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-simaka-sql";
 }
 
-METHOD(plugin_t, destroy, void,
-	private_eap_simaka_sql_t *this)
+/**
+ * Load database
+ */
+static bool load_db(private_eap_simaka_sql_t *this,
+					plugin_feature_t *feature, bool reg, void *data)
 {
-	simaka_manager_t *mgr;
+	if (reg)
+	{
+		bool remove_used;
+		char *uri;
 
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->remove_card(mgr, &this->card->card);
-		mgr->remove_provider(mgr, &this->provider->provider);
-	}
-	mgr = lib->get(lib, "aka-manager");
-	if (mgr)
-	{
-		mgr->remove_card(mgr, &this->card->card);
-		mgr->remove_provider(mgr, &this->provider->provider);
+		uri = lib->settings->get_str(lib->settings,
+							"charon.plugins.eap-simaka-sql.database", NULL);
+		if (!uri)
+		{
+			DBG1(DBG_CFG, "eap-simaka-sql database URI missing");
+			return FALSE;
+		}
+		this->db = lib->db->create(lib->db, uri);
+		if (!this->db)
+		{
+			DBG1(DBG_CFG, "opening eap-simaka-sql database failed");
+			return FALSE;
+		}
+		remove_used = lib->settings->get_bool(lib->settings,
+							"charon.plugins.eap-simaka-sql.remove_used", FALSE);
+
+		this->provider = eap_simaka_sql_provider_create(this->db, remove_used);
+		this->card = eap_simaka_sql_card_create(this->db, remove_used);
+		return TRUE;
 	}
 	this->card->destroy(this->card);
 	this->provider->destroy(this->provider);
 	this->db->destroy(this->db);
+	this->card = NULL;
+	this->provider = NULL;
+	this->db = NULL;
+	return TRUE;
+}
+
+/**
+ * Callback providing our card to register
+ */
+static simaka_card_t* get_card(private_eap_simaka_sql_t *this)
+{
+	return &this->card->card;
+}
+
+/**
+ * Callback providing our provider to register
+ */
+static simaka_provider_t* get_provider(private_eap_simaka_sql_t *this)
+{
+	return &this->provider->provider;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_eap_simaka_sql_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((void*)load_db, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "eap-simaka-sql-db"),
+				PLUGIN_DEPENDS(DATABASE, DB_ANY),
+				PLUGIN_SDEPEND(DATABASE, DB_SQLITE),
+				PLUGIN_SDEPEND(DATABASE, DB_MYSQL),
+		PLUGIN_CALLBACK(simaka_manager_register, get_card),
+			PLUGIN_PROVIDE(CUSTOM, "aka-card"),
+				PLUGIN_DEPENDS(CUSTOM, "aka-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-simaka-sql-db"),
+			PLUGIN_PROVIDE(CUSTOM, "sim-card"),
+				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-simaka-sql-db"),
+		PLUGIN_CALLBACK(simaka_manager_register, get_provider),
+			PLUGIN_PROVIDE(CUSTOM, "aka-provider"),
+				PLUGIN_DEPENDS(CUSTOM, "aka-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-simaka-sql-db"),
+			PLUGIN_PROVIDE(CUSTOM, "sim-provider"),
+				PLUGIN_DEPENDS(CUSTOM, "sim-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-simaka-sql-db"),
+	};
+	*features = f;
+	return countof(f);
+}
+
+METHOD(plugin_t, destroy, void,
+	private_eap_simaka_sql_t *this)
+{
 	free(this);
 }
 
@@ -82,51 +149,16 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_simaka_sql_plugin_create()
 {
 	private_eap_simaka_sql_t *this;
-	simaka_manager_t *mgr;
-	database_t *db;
-	bool remove_used;
-	char *uri;
-
-	uri = lib->settings->get_str(lib->settings,
-							"charon.plugins.eap-simaka-sql.database", NULL);
-	if (!uri)
-	{
-		DBG1(DBG_CFG, "eap-simaka-sql database URI missing");
-		return NULL;
-	}
-	db = lib->db->create(lib->db, uri);
-	if (!db)
-	{
-		DBG1(DBG_CFG, "opening eap-simaka-sql database failed");
-		return NULL;
-	}
-	remove_used = lib->settings->get_bool(lib->settings,
-							"charon.plugins.eap-simaka-sql.remove_used", FALSE);
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.db = db,
-		.provider = eap_simaka_sql_provider_create(db, remove_used),
-		.card = eap_simaka_sql_card_create(db, remove_used),
 	);
 
-	mgr = lib->get(lib, "sim-manager");
-	if (mgr)
-	{
-		mgr->add_card(mgr, &this->card->card);
-		mgr->add_provider(mgr, &this->provider->provider);
-	}
-	mgr = lib->get(lib, "aka-manager");
-	if (mgr)
-	{
-		mgr->add_card(mgr, &this->card->card);
-		mgr->add_provider(mgr, &this->provider->provider);
-	}
 	return &this->public.plugin;
 }
