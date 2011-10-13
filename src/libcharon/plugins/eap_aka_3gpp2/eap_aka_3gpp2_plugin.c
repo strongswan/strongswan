@@ -54,20 +54,71 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-aka-3gpp2";
 }
 
-METHOD(plugin_t, destroy, void,
-	private_eap_aka_3gpp2_t *this)
+/**
+ * Try to instanciate 3gpp2 functions and card/provider backends
+ */
+static bool register_functions(private_eap_aka_3gpp2_t *this,
+							   plugin_feature_t *feature, bool reg, void *data)
 {
-	simaka_manager_t *mgr;
-
-	mgr = lib->get(lib, "aka-manager");
-	if (mgr)
+	if (reg)
 	{
-		mgr->remove_card(mgr, &this->card->card);
-		mgr->remove_provider(mgr, &this->provider->provider);
+		this->functions = eap_aka_3gpp2_functions_create();
+		if (!this->functions)
+		{
+			return FALSE;
+		}
+		this->card = eap_aka_3gpp2_card_create(this->functions);
+		this->provider = eap_aka_3gpp2_provider_create(this->functions);
+		return TRUE;
 	}
 	this->card->destroy(this->card);
 	this->provider->destroy(this->provider);
 	this->functions->destroy(this->functions);
+	this->card = NULL;
+	this->provider = NULL;
+	this->functions = NULL;
+	return TRUE;
+}
+
+/**
+ * Callback providing our card to register
+ */
+static simaka_card_t* get_card(private_eap_aka_3gpp2_t *this)
+{
+	return &this->card->card;
+}
+
+/**
+ * Callback providing our provider to register
+ */
+static simaka_provider_t* get_provider(private_eap_aka_3gpp2_t *this)
+{
+	return &this->provider->provider;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_eap_aka_3gpp2_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((void*)register_functions, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "eap-aka-3gpp2-functions"),
+				PLUGIN_DEPENDS(PRF, PRF_KEYED_SHA1),
+		PLUGIN_CALLBACK(simaka_manager_register, get_card),
+			PLUGIN_PROVIDE(CUSTOM, "aka-card"),
+				PLUGIN_DEPENDS(CUSTOM, "aka-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-aka-3gpp2-functions"),
+		PLUGIN_CALLBACK(simaka_manager_register, get_provider),
+			PLUGIN_PROVIDE(CUSTOM, "aka-provider"),
+				PLUGIN_DEPENDS(CUSTOM, "aka-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "eap-aka-3gpp2-functions"),
+	};
+	*features = f;
+	return countof(f);
+}
+
+METHOD(plugin_t, destroy, void,
+	private_eap_aka_3gpp2_t *this)
+{
 	free(this);
 }
 
@@ -77,33 +128,17 @@ METHOD(plugin_t, destroy, void,
 plugin_t *eap_aka_3gpp2_plugin_create()
 {
 	private_eap_aka_3gpp2_t *this;
-	simaka_manager_t *mgr;
 
 	INIT(this,
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.functions = eap_aka_3gpp2_functions_create(),
 	);
 
-	if (!this->functions)
-	{
-		free(this);
-		return NULL;
-	}
-	this->card = eap_aka_3gpp2_card_create(this->functions);
-	this->provider = eap_aka_3gpp2_provider_create(this->functions);
-
-	mgr = lib->get(lib, "aka-manager");
-	if (mgr)
-	{
-		mgr->add_card(mgr, &this->card->card);
-		mgr->add_provider(mgr, &this->provider->provider);
-	}
 	return &this->public.plugin;
 }
 
