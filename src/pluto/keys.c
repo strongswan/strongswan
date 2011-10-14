@@ -27,9 +27,11 @@
 #include <arpa/nameser.h>       /* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
 
+#ifdef HAVE_GLOB_H
 #include <glob.h>
 #ifndef GLOB_ABORTED
 # define GLOB_ABORTED    GLOB_ABEND     /* fix for old versions */
+#endif
 #endif
 
 #include <freeswan.h>
@@ -1033,7 +1035,6 @@ static void process_secrets_file(const char *file_pat, int whackfd)
 {
 	struct file_lex_position pos;
 	char **fnp;
-	glob_t globbuf;
 
 	pos.depth = flp == NULL? 0 : flp->depth + 1;
 
@@ -1043,8 +1044,10 @@ static void process_secrets_file(const char *file_pat, int whackfd)
 		return;
 	}
 
+#ifdef HAVE_GLOB_H
 	/* do globbing */
 	{
+		glob_t globbuf;
 		int r = glob(file_pat, GLOB_ERR, globugh, &globbuf);
 
 		if (r != 0)
@@ -1066,21 +1069,30 @@ static void process_secrets_file(const char *file_pat, int whackfd)
 			globfree(&globbuf);
 			return;
 		}
-	}
 
-	/* for each file... */
-	for (fnp = globbuf.gl_pathv; *fnp != NULL; fnp++)
-	{
-		if (lexopen(&pos, *fnp, FALSE))
+		/* for each file... */
+		for (fnp = globbuf.gl_pathv; *fnp != NULL; fnp++)
 		{
-			plog("loading secrets from \"%s\"", *fnp);
-			(void) flushline("file starts with indentation (continuation notation)");
-			process_secret_records(whackfd);
-			lexclose();
+			if (lexopen(&pos, *fnp, FALSE))
+			{
+				plog("loading secrets from \"%s\"", *fnp);
+				(void) flushline("file starts with indentation (continuation notation)");
+				process_secret_records(whackfd);
+				lexclose();
+			}
 		}
-	}
 
-	globfree(&globbuf);
+		globfree(&globbuf);
+	}
+#else /* HAVE_GLOB_H */
+	/* if glob(3) is not available, try to load pattern directly */
+	if (lexopen(&pos, file_pat, FALSE))
+	{
+		plog("loading secrets from \"%s\"", file_pat);
+		process_secret_records(whackfd);
+		lexclose();
+	}
+#endif /* HAVE_GLOB_H */
 }
 
 void free_preshared_secrets(void)
