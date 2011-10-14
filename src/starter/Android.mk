@@ -21,7 +21,11 @@ LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/whack \
 	$(strongswan_PATH)/src/stroke
 
-LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON -DSTART_PLUTO
+LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON
+
+ifneq ($(strongswan_BUILD_PLUTO),)
+LOCAL_CFLAGS += -DSTART_PLUTO
+endif
 
 LOCAL_MODULE := starter
 
