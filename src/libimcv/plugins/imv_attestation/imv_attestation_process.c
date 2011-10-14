@@ -176,6 +176,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_SIMPLE_COMP_EVID:
 		{
 			tcg_pts_attr_simple_comp_evid_t *attr_cast;
+			bool pcr_info_inclided;
 			pts_attr_simple_comp_evid_flag_t flags;
 			u_int32_t depth, comp_vendor_id, extended_pcr;
 			u_int8_t family, measurement_type;
@@ -188,7 +189,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 			attr_info = attr->get_value(attr);
-					
+
+			pcr_info_inclided = attr_cast->is_pcr_info_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
 			depth = attr_cast->get_sub_component_depth(attr_cast);
 			/* TODO: Implement checking of components with its sub-components */
@@ -241,14 +243,14 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			measurement_time = attr_cast->get_measurement_time(attr_cast);
 
 			/* Call getters of optional fields when corresponding flag is set */
-			if (flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
+			if (pcr_info_inclided)
 			{
 				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
 				pcr_before = attr_cast->get_pcr_before_value(attr_cast);
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
 				measurement = attr_cast->get_comp_measurement(attr_cast);
 			}
-			if (!(flags & PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID))
+			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
 			{
 				policy_uri = attr_cast->get_policy_uri(attr_cast);
 			}
@@ -262,27 +264,62 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			tcg_pts_attr_simple_evid_final_t *attr_cast;
 			pts_simple_evid_final_flag_t flags;
-			chunk_t pcr_comp = chunk_empty;
-			chunk_t tpm_quote_sign = chunk_empty;
-			chunk_t evid_sign = chunk_empty;
+			chunk_t pcr_comp;
+			chunk_t tpm_quote_sign;
+			chunk_t evid_sign;
+			bool evid_signature_included;
 					
 			/** TODO: Ignoring Composite Hash Algorithm field
 			 * No flag defined which indicates the precense of it
 			 */
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
+			evid_signature_included = attr_cast->is_evid_sign_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
 
-			if ((flags >> 6) & PTS_SIMPLE_EVID_FINAL_FLAG_NO)
+			if ((flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) ||
+				(flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER))
 			{
+				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
+					 " TPM Quote Info2 structure");
+				break;
+			}
+			if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
+			{
+				chunk_t digest;
 				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
-						
-				/** TODO: Construct PCR Composite */
+				
+				if (!pts->get_quote_digest(pts, &digest))
+				{
+					DBG1(DBG_IMV, "unable to contruct TPM Quote Digest");
+					chunk_clear(&digest);
+					return FALSE;
+				}
+				if (!pts->verify_quote_signature(pts, digest, tpm_quote_sign))
+				{
+					DBG1(DBG_IMV, "signature verification failed");
+					chunk_clear(&digest);
+					return FALSE;
+				}
+
+				DBG2(DBG_IMV, "signature verification succeeded for TPM Quote Info");
+
+				if (!chunk_equals(digest, pcr_comp))
+				{
+					DBG1(DBG_IMV, "calculated TPM Quote Info differs from received");
+					DBG1(DBG_IMV, "calculated: %B", &digest);
+					DBG1(DBG_IMV, "received: %B", &pcr_comp);
+					chunk_clear(&digest);
+				}
+				chunk_clear(&digest);
 			}
-			if (flags & PTS_SIMPLE_EVID_FINAL_FLAG_EVID)
+			
+			if (evid_signature_included)
 			{
 				/** TODO: What to do with Evidence Signature */
 				evid_sign = attr_cast->get_evid_sign(attr_cast);
+				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
+					 " Optional Evidence Signature field");
 			}
 
 			break;

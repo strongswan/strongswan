@@ -22,6 +22,7 @@
 #define PTS_H_
 
 typedef struct pts_t pts_t;
+typedef struct pcr_entry_t pcr_entry_t;
 
 #include "pts_error.h"
 #include "pts_proto_caps.h"
@@ -53,6 +54,19 @@ typedef struct pts_t pts_t;
  * Number of bytes that can be saved in a PCR of TPM, TPM Spec 1.2
  */
 #define PCR_LEN					20
+
+/**
+ * Lenght of the TPM_QUOTE_INFO structure, TPM Spec 1.2
+ */
+#define TPM_QUOTE_INFO_LEN		48
+
+/**
+ * PCR Entry structure which contains PCR number and current value
+ */
+struct pcr_entry_t {
+	u_int32_t pcr_number;
+	chunk_t pcr_value;
+};
 
 /**
  * Class implementing the TCG Platform Trust Service (PTS)
@@ -253,6 +267,23 @@ struct pts_t {
 	 */
 	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
+
+	 /**
+	 * Constructs and returns PCR Quote Digest structure expected from IMC
+	 * 
+	 * @param digest			Output variable to store quote digest
+	 * @return					FALSE in case of any error, TRUE otherwise
+	 */
+	 bool (*get_quote_digest)(pts_t *this, chunk_t *digest);
+
+	 /**
+	 * Constructs and returns PCR Quote Digest structure expected from IMC
+	 *
+	 * @param data				Calculated TPM Quote Digest
+	 * @param signature			TPM Quote Signature received from IMC
+	 * @return					FALSE in case signature is not verified, TRUE otherwise
+	 */
+	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
 
 	/**
 	 * Destroys a pts_t object.

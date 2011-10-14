@@ -321,8 +321,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					/* TODO: Implement BIOS measurement */
 					DBG1(DBG_IMC, "experimental implementation:"
 								 " Extend TPM with etc/tnc_config file");
-							
-					params.flags = PTS_SIMPLE_COMP_EVID_FLAG_PCR | PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
+					params.pcr_info_included = TRUE;
+					params.flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
 					params.depth = 0;
 					params.vendor_id = PEN_TCG;
 							
@@ -335,7 +335,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					params.extended_pcr = EXTEND_PCR;
 					params.hash_algorithm = pts->get_meas_algorithm(pts);
 
-					if (!(params.flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR))
+					if (!params.pcr_info_included)
 					{
 						params.transformation = PTS_PCR_TRANSFORM_NO;
 					}
@@ -464,11 +464,11 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DESTROY_IF(evidences);
 				return FALSE;
 			}
-					
+	
 			/* Send Simple Evidence Final attribute */
 			flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
 			
-			attr = tcg_pts_attr_simple_evid_final_create(flags, 0,
+			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags, 0,
 								pcr_composite, quote_signature, chunk_empty);
 			attr_list->insert_last(attr_list, attr);
 					
