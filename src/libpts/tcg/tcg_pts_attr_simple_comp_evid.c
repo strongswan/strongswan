@@ -131,6 +131,11 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	pts_attr_simple_comp_evid_flag_t flags;
 
 	/**
+	 * PCR Information included
+	 */
+	bool pcr_info_included;
+
+	/**
 	 * Sub-component Depth
 	 */
 	u_int32_t depth;
@@ -236,10 +241,28 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t qualifier = 0;
+	u_int8_t flags = 0, qualifier = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
-	writer->write_uint8(writer, this->flags);
+	/* Determine the flags to set*/
+	if (this->pcr_info_included)
+	{
+		flags += 128;
+	}
+	if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_NO_VER)
+	{
+		flags += 32;
+	}
+	else if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL)
+	{
+		flags += 64;
+	}
+	else if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
+	{
+		flags += 96;
+	}
+
+	writer->write_uint8(writer, flags);
 	writer->write_uint24 (writer, this->depth);
 	writer->write_uint24 (writer, this->comp_vendor_id);
 	
@@ -315,7 +338,27 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	this->flags = flags;
+	/* Determine the flags to set*/
+	if ((flags >> 7) & 1)
+	{
+		 this->pcr_info_included = TRUE;
+	}
+	if (!((flags >> 6) & 1) && !((flags >> 5) & 1))
+	{
+		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
+	}
+	else if (!((flags >> 6) & 1) && ((flags >> 5) & 1))
+	{
+		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VER;
+	}
+	else if (((flags >> 6) & 1) && !((flags >> 5) & 1))
+	{
+		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL;
+	}
+	else if (((flags >> 6) & 1) && ((flags >> 5) & 1))
+	{
+		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS;
+	}
 	
 	reader->read_uint24(reader, &this->depth);
 	reader->read_uint24(reader, &this->comp_vendor_id);
@@ -330,13 +373,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		this->family += 2;
 	}
 	
-	/* TODO: Generate an IF-M error attribute indicating */
-	/* TCG_PTS_INVALID_NAME_FAM */
-	//if (&this->comp_vendor_id==PEN_TCG && this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
-	//{
-	//	DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
-	//}
-	
 	if (((fam_and_qualifier >> 5) & 1) )
 	{
 		this->qualifier.kernel = true;
@@ -346,7 +382,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		this->qualifier.sub_component = true;
 	}
 	this->qualifier.type = ( fam_and_qualifier & 0xF );
-	/* TODO: Check the type is defined in pts_attr_req_funct_comp_type_t */
 
 	/* Unknown or Wildcard should not be used for Qualification*/
 	if (!(fam_and_qualifier & 0x3F) || (fam_and_qualifier & 0x3F) == 0x3F)
@@ -356,8 +391,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	reader->read_uint32(reader, &this->name);
-	/* TODO: Check the name is defined in pts_funct_comp_name_t */
-	
 	reader->read_uint8(reader, &measurement_type);
 	this->measurement_type = (measurement_type >> 7 ) & 1;
 	
@@ -367,15 +400,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
-	/* TODO: Check the transformation is defined in pts_pcr_transform_t */
 	
 	reader->read_data(reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
 			  &this->measurement_time);
 	this->measurement_time = chunk_clone(this->measurement_time);
-	
+
 	/*  Optional Policy URI field is included */
-	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL ||
-		this->flags & PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
+	if ((this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL) ||
+		(this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS))
 	{
 		u_int16_t policy_uri_len;
 		reader->read_uint16(reader, &policy_uri_len);
@@ -384,7 +416,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	/*  Optional PCR value fields are included */
-	if (this->flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
+	if (this->pcr_info_included)
 	{
 		u_int16_t pcr_value_len;
 		reader->read_uint16(reader, &pcr_value_len);
@@ -393,7 +425,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data(reader, pcr_value_len, &this->pcr_after);
 		this->pcr_after = chunk_clone(this->pcr_after);
 	}
-	
 	measurement_len = reader->remaining(reader);
 	reader->read_data(reader, measurement_len, &this->measurement);
 	this->measurement = chunk_clone(this->measurement);
@@ -412,6 +443,12 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	free(this->pcr_after.ptr);
 	free(this->measurement.ptr);
 	free(this);
+}
+
+METHOD(tcg_pts_attr_simple_comp_evid_t, is_pcr_info_included, bool,
+	private_tcg_pts_attr_simple_comp_evid_t *this)
+{
+	return this->pcr_info_included;
 }
 
 METHOD(tcg_pts_attr_simple_comp_evid_t, get_flags, pts_attr_simple_comp_evid_flag_t,
@@ -519,8 +556,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_measurement, chunk_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
-									tcg_pts_attr_simple_comp_evid_params_t params)
+pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evid_params_t params)
 {
 	private_tcg_pts_attr_simple_comp_evid_t *this;
 	
@@ -536,6 +572,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 				.process = _process,
 				.destroy = _destroy,
 			},
+			.is_pcr_info_included = _is_pcr_info_included,
 			.get_flags= _get_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
 			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,
@@ -555,6 +592,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,
+		.pcr_info_included = params.pcr_info_included,
 		.flags = params.flags,
 		.depth = params.depth,
 		.comp_vendor_id = params.vendor_id,
@@ -594,6 +632,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
+			.is_pcr_info_included = _is_pcr_info_included,
 			.get_flags= _get_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
 			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,

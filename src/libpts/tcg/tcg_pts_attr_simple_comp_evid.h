@@ -35,8 +35,6 @@ typedef struct tcg_pts_attr_simple_comp_evid_params_t tcg_pts_attr_simple_comp_e
  * PTS Simple Component Evidence Flags
  */
 enum pts_attr_simple_comp_evid_flag_t {
-	/** PCR information fields inlcuded */
-	PTS_SIMPLE_COMP_EVID_FLAG_PCR =			0,
 	/** No Validation was attempted */
 	PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID =	 1,
 	/** Attempted validation, unable to verify */
@@ -65,6 +63,7 @@ enum pts_pcr_transform_t {
  * Parameters for Simple Component Evidence Attribute
  */
 struct tcg_pts_attr_simple_comp_evid_params_t {
+	bool pcr_info_included;
 	pts_attr_simple_comp_evid_flag_t flags;
 	u_int32_t depth;
 	u_int32_t vendor_id;
@@ -90,6 +89,13 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
+
+	/**
+	 * Is Optional PCR Information fields included
+	 *
+	 * @return					TRUE if included, FALSE otherwise
+	 */
+	bool (*is_pcr_info_included)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Get flags for PTS Simple Component Evidence
