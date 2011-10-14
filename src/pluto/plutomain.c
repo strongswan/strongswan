@@ -711,7 +711,7 @@ int main(int argc, char **argv)
 	whack_attribute_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
-	prctl(PR_SET_KEEPCAPS, 1);
+	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
 
 #ifdef IPSEC_GROUP
 	{
