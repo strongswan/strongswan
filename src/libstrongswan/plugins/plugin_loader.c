@@ -503,14 +503,14 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		{
 			/* try load new features until we don't get new ones */
 		}
-		while (load_features(this, FALSE, FALSE))
-		{
-			/* second round, ignoring soft dependencies */
-		}
 	}
 	enumerator->destroy(enumerator);
 	if (!critical_failed)
 	{
+		while (load_features(this, FALSE, FALSE))
+		{
+			/* enforce loading features, ignoring soft dependencies */
+		}
 		/* report missing dependencies */
 		load_features(this, FALSE, TRUE);
 		/* unload plugins that we were not able to load any features for */
