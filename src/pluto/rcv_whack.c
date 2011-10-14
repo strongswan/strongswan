@@ -132,6 +132,8 @@ static void key_add_merge(struct key_add_common *oc, identification_t *keyid)
 	}
 }
 
+#ifdef ADNS
+
 static void key_add_continue(struct adns_continuation *ac, err_t ugh)
 {
 	struct key_add_continuation *kc = (void *) ac;
@@ -158,6 +160,8 @@ static void key_add_continue(struct adns_continuation *ac, err_t ugh)
 	key_add_merge(oc, ac->id);
 	whack_log_fd = NULL_FD;
 }
+
+#endif /* ADNS */
 
 static void key_add_request(const whack_message_t *msg)
 {
@@ -189,9 +193,11 @@ static void key_add_request(const whack_message_t *msg)
 			kc = malloc_thing(struct key_add_continuation);
 			kc->common = oc;
 			kc->lookingfor = kaa;
+			ugh = NULL;
 
 			switch (kaa)
 			{
+#ifdef ADNS
 				case ka_TXT:
 					ugh = start_adns_query(key_id
 							, key_id        /* same */
@@ -199,6 +205,7 @@ static void key_add_request(const whack_message_t *msg)
 							, key_add_continue
 							, &kc->ac);
 					break;
+#endif /* ADNS */
 #ifdef USE_KEYRR
 				case ka_KEY:
 					ugh = start_adns_query(key_id
@@ -437,7 +444,9 @@ void whack_handle(int whackctlfd)
 		plog("listening for IKE messages");
 		listening = TRUE;
 		daily_log_reset();
+#ifdef ADNS
 		reset_adns_restart_count();
+#endif
 		set_myFQDN();
 		find_ifaces();
 		load_preshared_secrets(NULL_FD);

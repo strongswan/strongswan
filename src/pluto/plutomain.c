@@ -491,11 +491,11 @@ int main(int argc, char **argv)
 		case 'f':       /* --policygroupsdir <policygroups-dir> */
 			policygroups_dir = optarg;
 			continue;
-
+#ifdef ADNS
 		case 'a':       /* --adns <pathname> */
 			pluto_adns_option = optarg;
 			continue;
-
+#endif
 		case 'm':       /* --pkcs11module <pathname> */
 			pkcs11_module_path = optarg;
 			continue;
@@ -701,7 +701,9 @@ int main(int argc, char **argv)
 	init_states();
 	init_demux();
 	init_kernel();
+#ifdef ADNS
 	init_adns();
+#endif
 	init_myid();
 	fetch_initialize();
 	ac_initialize();
@@ -820,7 +822,9 @@ void exit_pluto(int status)
 	free_ifaces();
 	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
+#ifdef ADNS
 	stop_adns();
+#endif
 	free_md_pool();
 	free_crypto();
 	free_myid();                /* free myids */

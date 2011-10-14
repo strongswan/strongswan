@@ -425,8 +425,9 @@ void delete_connection(connection_t *c, bool relations)
 		c->requested_ca->destroy_offset(c->requested_ca,
 										offsetof(identification_t, destroy));
 	}
+#ifdef ADNS
 	gw_delref(&c->gw_info);
-
+#endif
 	lock_certs_and_keys("delete_connection");
 	cert_release(c->spd.this.cert);
 	scx_release(c->spd.this.sc);
@@ -1477,6 +1478,8 @@ connection_t *rw_instantiate(connection_t *c, const ip_address *him,
 	return d;
 }
 
+#ifdef ADNS
+
 connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
 							   identification_t *his_id, struct gw_info *gw,
 							   const ip_address *our_client USED_BY_DEBUG,
@@ -1543,6 +1546,8 @@ connection_t *oppo_instantiate(connection_t *c, const ip_address *him,
 	);
 	return d;
 }
+
+#endif /* ADNS */
 
 /* priority formatting */
 void fmt_policy_prio(policy_prio_t pp, char buf[POLICY_PRIO_BUF])
@@ -1767,6 +1772,8 @@ connection_t *find_connection_for_clients(struct spd_route **srp,
 	return best;
 }
 
+#ifdef ADNS
+
 /* Find and instantiate a connection for an outgoing Opportunistic connection.
  * We've already discovered its gateway.
  * We look for a the connection such that:
@@ -1868,6 +1875,8 @@ connection_t *build_outgoing_opportunistic_connection(struct gw_info *gw,
 		return oppo_instantiate(best, &ip_addr, NULL, gw, our_client, peer_client);
 	}
 }
+
+#endif /* ADNS */
 
 bool orient(connection_t *c)
 {
@@ -2179,6 +2188,8 @@ void initiate_opportunistic(const ip_address *our_client,
 	initiate_opportunistic_body(&b, NULL, NULL);
 }
 
+#ifdef ADNS
+
 static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 {
 	struct find_oppo_continuation *cr = (void *)acr;    /* inherit, damn you! */
@@ -2242,6 +2253,8 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	close_any(whackfd);
 }
 
+#endif /* ADNS */
+
 #ifdef USE_KEYRR
 static err_t check_key_recs(enum myid_state try_state, const connection_t *c,
 							struct adns_continuation *ac)
@@ -2297,6 +2310,8 @@ static err_t check_key_recs(enum myid_state try_state, const connection_t *c,
 	return ugh;
 }
 #endif /* USE_KEYRR */
+
+#ifdef ADNS
 
 static err_t check_txt_recs(enum myid_state try_state, const connection_t *c,
 							struct adns_continuation *ac)
@@ -2354,6 +2369,8 @@ static err_t check_txt_recs(enum myid_state try_state, const connection_t *c,
 	}
 	return ugh;
 }
+
+#endif /* ADNS */
 
 
 /* note: gateways_from_dns must be NULL iff this is the first call */
@@ -2431,6 +2448,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		ipsecdoi_initiate(b->whackfd, c, c->policy, 1, SOS_NOBODY);
 		b->whackfd = NULL_FD;   /* protect from close */
 	}
+#ifdef ADNS
 	else
 	{
 		/* We are handling an opportunistic situation.
@@ -2996,6 +3014,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 				cannot_oppo(c, b, ugh);
 		}
 	}
+#endif /* ADNS */
 	close_any(b->whackfd);
 }
 

@@ -1105,6 +1105,8 @@ bool subnetisnone(const ip_subnet *sn)
 	return isanyaddr(&base) && subnetishost(sn);
 }
 
+#ifdef ADNS
+
 /* BIND enumerated types */
 
 #include <arpa/nameser.h>
@@ -1168,6 +1170,8 @@ static const char *const rr_class_name[] = {
 };
 
 enum_names rr_class_names = { C_IN, C_IN, rr_class_name, NULL };
+
+#endif /* ADNS */
 
 /*
  * NAT-Traversal defines for nat_traveral type from nat_traversal.h

@@ -822,6 +822,7 @@ call_server(void)
 			FD_ZERO(&writefds);
 			FD_SET(ctl_fd, &readfds);
 
+#ifdef ADNS
 			/* the only write file-descriptor of interest */
 			if (adns_qfd != NULL_FD && unsent_ADNS_queries)
 			{
@@ -836,6 +837,7 @@ call_server(void)
 					maxfd = adns_afd;
 				FD_SET(adns_afd, &readfds);
 			}
+#endif /* ADNS */
 
 			events_fd = pluto->events->get_event_fd(pluto->events);
 			if (maxfd < events_fd)
@@ -903,6 +905,7 @@ call_server(void)
 		{
 			/* at least one file descriptor is ready */
 
+#ifdef ADNS
 			if (adns_qfd != NULL_FD && FD_ISSET(adns_qfd, &writefds))
 			{
 				passert(ndes > 0);
@@ -921,6 +924,7 @@ call_server(void)
 				passert(GLOBALS_ARE_RESET());
 				ndes--;
 			}
+#endif /* ADNS*/
 
 			if (FD_ISSET(events_fd, &readfds))
 			{

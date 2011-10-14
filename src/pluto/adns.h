@@ -12,6 +12,14 @@
  * for more details.
  */
 
+#ifndef ADNS
+
+/* dummy struct to make compilers happy */
+struct adns_query {
+};
+
+#else /* rest of file */
+
 /* The interface in RHL6.x and BIND distribution 8.2.2 are different,
  * so we build some of our own :-(
  */
@@ -67,3 +75,4 @@ enum helper_exit_status {
 	HES_BAD_LEN,        /* implausible .len field */
 	HES_BAD_MAGIC,      /* .magic field wrong */
 };
+#endif /* ADNS */

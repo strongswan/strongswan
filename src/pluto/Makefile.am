@@ -2,7 +2,11 @@
 # painless way. Only the most important options are included,
 # further work may be necessary here...
 
-ipsec_PROGRAMS = pluto _pluto_adns
+ipsec_PROGRAMS = pluto
+
+if USE_ADNS
+ipsec_PROGRAMS += _pluto_adns
+endif
 
 pluto_SOURCES = \
 ac.c ac.h \
@@ -17,7 +21,6 @@ crypto.c crypto.h \
 db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
-dnskey.c dnskey.h \
 event_queue.c event_queue.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
@@ -53,7 +56,13 @@ x509.c x509.h \
 builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
-_pluto_adns_SOURCES = adns.c adns.h
+if USE_ADNS
+pluto_SOURCES += \
+dnskey.c dnskey.h
+
+_pluto_adns_SOURCES = \
+adns.c adns.h
+endif
 
 plutomain.o :	$(top_builddir)/config.status
 
@@ -84,9 +93,11 @@ $(LIBFREESWANDIR)/libfreeswan.a \
 $(LIBHYDRADIR)/libhydra.la \
 -lresolv $(PTHREADLIB) $(DLLIB)
 
+if USE_ADNS
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
+endif
 
 dist_man_MANS = pluto.8
 
@@ -124,6 +135,10 @@ endif
 
 if USE_THREADS
   AM_CFLAGS += -DTHREADS
+endif
+
+if USE_ADNS
+  AM_CFLAGS += -DADNS
 endif
 
 # build optional plugins

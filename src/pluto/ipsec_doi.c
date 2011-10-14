@@ -3862,10 +3862,11 @@ main_id_and_auth(struct msg_digest *md
 
 		if (r == STF_SUSPEND)
 		{
+			err_t ugh = NULL;
+#ifdef ADNS
 			/* initiate/resume asynchronous DNS lookup for key */
 			struct key_continuation *nkc = malloc_thing(struct key_continuation);
 			enum key_oppo_step step_done = kc == NULL? kos_null : kc->step;
-			err_t ugh = NULL;
 
 			/* Record that state is used by a suspended md */
 			passert(st->st_suspended_md == NULL);
@@ -3896,7 +3897,9 @@ main_id_and_auth(struct msg_digest *md
 			default:
 				bad_case(step_done);
 			}
-
+#else /* ADNS */
+			ugh = "adns not supported";
+#endif /* ADNS */
 			if (ugh != NULL)
 			{
 				report_key_dns_failure(peer, ugh);
@@ -4444,6 +4447,8 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 	return quick_inI1_outR1_tail(&b, NULL);
 }
 
+#ifdef ADNS
+
 static void
 report_verify_failure(struct verify_oppo_bundle *b, err_t ugh)
 {
@@ -4808,6 +4813,8 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 	return next_step;
 }
 
+#endif /* ADNS */
+
 static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 										struct adns_continuation *ac)
 {
@@ -4871,6 +4878,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 				 */
 				if (p->policy & POLICY_OPPO)
 				{
+#ifdef ADNS
 					/* Opportunistic case: delegation must be verified.
 					 * Here be dragons.
 					 */
@@ -4925,6 +4933,11 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 */
 					p = oppo_instantiate(p, &c->spd.that.host_addr, c->spd.that.id
 						, NULL, &our_client, &his_client);
+#else /* ADNS */
+					plog("opportunistic connections not supported because"
+						 " adns is not available");
+					return STF_INTERNAL_ERROR;
+#endif /* ADNS */
 				}
 				else
 				{
