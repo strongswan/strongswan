@@ -28,13 +28,22 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-gtc";
 }
 
+METHOD(plugin_t, get_features, int,
+	eap_gtc_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(eap_method_register, eap_gtc_create_server),
+			PLUGIN_PROVIDE(EAP_SERVER, EAP_GTC),
+		PLUGIN_CALLBACK(eap_method_register, eap_gtc_create_peer),
+			PLUGIN_PROVIDE(EAP_PEER, EAP_GTC),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_gtc_plugin_t *this)
 {
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_gtc_create_server);
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_gtc_create_peer);
 	free(this);
 }
 
@@ -48,7 +57,7 @@ plugin_t *eap_gtc_plugin_create()
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
-			.reload = (void*)return_false,
+			.get_features = _get_features,
 			.destroy = _destroy,
 		},
 	);
