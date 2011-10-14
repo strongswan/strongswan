@@ -337,11 +337,7 @@ int main(int argc, char **argv)
 			{ "perpeerlogbase", required_argument, NULL, 'P' },
 			{ "perpeerlog", no_argument, NULL, 'l' },
 			{ "policygroupsdir", required_argument, NULL, 'f' },
-#ifdef USE_LWRES
-			{ "lwdnsq", required_argument, NULL, 'a' },
-#else /* !USE_LWRES */
 			{ "adns", required_argument, NULL, 'a' },
-#endif /* !USE_LWRES */
 			{ "pkcs11module", required_argument, NULL, 'm' },
 			{ "pkcs11keepstate", no_argument, NULL, 'k' },
 			{ "pkcs11initargs", required_argument, NULL, 'z' },

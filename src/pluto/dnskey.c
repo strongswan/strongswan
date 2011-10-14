@@ -60,13 +60,8 @@ void
 init_adns(void)
 {
 	const char *adns_path = pluto_adns_option;
-#ifndef USE_LWRES
 	static const char adns_name[] = "_pluto_adns";
 	const char *helper_bin_dir = getenv("IPSEC_LIBDIR");
-#else /* USE_LWRES */
-	static const char adns_name[] = "lwdnsq";
-	const char *helper_bin_dir = getenv("IPSEC_EXECDIR");
-#endif /* USE_LWRES */
 	char adns_path_space[4096]; /* plenty long? */
 	int qfds[2];
 	int afds[2];
@@ -459,85 +454,6 @@ rr_typename(int type)
 	}
 }
 
-
-#ifdef USE_LWRES
-
-# ifdef USE_KEYRR
-static err_t
-process_lwdnsq_key(u_char *str
-, enum dns_auth_level dns_auth_level
-, struct adns_continuation *const cr)
-{
-	/* fields of KEY record.  See RFC 2535 3.1 KEY RDATA format. */
-	unsigned long flags /* 16 bits */
-		, protocol      /* 8 bits */
-		, algorithm;    /* 8 bits */
-
-	char *rest = str
-		, *p
-		, *endofnumber;
-
-	/* flags */
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq KEY: missing flags";
-
-	flags = strtoul(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq KEY: malformed flags";
-
-	/* protocol */
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq KEY: missing protocol";
-
-	protocol = strtoul(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq KEY: malformed protocol";
-
-	/* algorithm */
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq KEY: missing algorithm";
-
-	algorithm = strtoul(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq KEY: malformed algorithm";
-
-	/* is this key interesting? */
-	if (protocol == 4   /* IPSEC (RFC 2535 3.1.3) */
-	&& algorithm == 1   /* RSA/MD5 (RFC 2535 3.2) */
-	&& (flags & 0x8000ul) == 0  /* use for authentication (3.1.2) */
-	&& (flags & 0x2CF0ul) == 0) /* must be zero */
-	{
-		/* Decode base 64 encoding of key.
-		 * Similar code is in process_txt_rr_body.
-		 */
-		u_char kb[RSA_MAX_ENCODING_BYTES];      /* plenty of space for binary form of public key */
-		chunk_t kbc;
-		err_t ugh = ttodatav(rest, 0, 64, kb, sizeof(kb), &kbc.len
-			, diag_space, sizeof(diag_space), TTODATAV_IGNORESPACE);
-
-		if (ugh != NULL)
-			return builddiag("malformed key data: %s", ugh);
-
-		if (kbc.len > sizeof(kb))
-			return builddiag("key data larger than %lu bytes"
-				, (unsigned long) sizeof(kb));
-
-		kbc.ptr = kb;
-		TRY(add_public_key(&cr->id, dns_auth_level, PUBKEY_ALG_RSA, &kbc
-			, &cr->keys_from_dns));
-
-		/* keep a reference to last one */
-		unreference_key(&cr->last_info);
-		cr->last_info = reference_key(cr->keys_from_dns->key);
-	}
-	return NULL;
-}
-# endif /* USE_KEYRR */
-
-#else  /* ! USE_LWRES */
 
 /* structure of Query Reply (RFC 1035 4.1.1):
  *
@@ -1218,9 +1134,6 @@ process_dns_answer(struct adns_continuation *const cr
 		, qr_header.ancount, cr);
 }
 
-#endif /* ! USE_LWRES */
-
-
 /****************************************************************/
 
 static err_t build_dns_name(u_char name_buf[NS_MAXDNAME + 2],
@@ -1515,21 +1428,6 @@ send_unsent_ADNS_queries(void)
 				break;  /* done! */
 			}
 
-#ifdef USE_LWRES
-			next_query->used = FALSE;
-			{
-				/* NOTE STATIC: */
-				static unsigned char qbuf[LWDNSQ_CMDBUF_LEN + 1];       /* room for NUL */
-
-				snprintf(qbuf, sizeof(qbuf), "%s %lu %s\n"
-					, rr_typename(next_query->type)
-					, next_query->qtid
-					, next_query->query.name_buf);
-				DBG(DBG_DNS, DBG_log("lwdnsq query: %.*s", (int)(strlen(qbuf) - 1), qbuf));
-				buf_cur = qbuf;
-				buf_end = qbuf + strlen(qbuf);
-			}
-#else /* !USE_LWRES */
 			next_query->query.debugging = next_query->debugging;
 			next_query->query.serial = next_query->qtid;
 			next_query->query.len = sizeof(next_query->query);
@@ -1537,209 +1435,12 @@ send_unsent_ADNS_queries(void)
 			next_query->query.type = next_query->type;
 			buf_cur = (const void *)&next_query->query;
 			buf_end = buf_cur + sizeof(next_query->query);
-#endif /* !USE_LWRES */
+
 			next_query = next_query->next;
 			adns_in_flight++;
 		}
 	}
 }
-
-#ifdef USE_LWRES
-/* Process a line of lwdnsq answer.
- * Returns with error message iff lwdnsq result is malformed.
- * Most errors will be in DNS data and will be handled by cr->cont_fn.
- */
-static err_t process_lwdnsq_answer(char *ts)
-{
-	err_t ugh = NULL;
-	char *rest;
-	char *p;
-	char *endofnumber;
-	struct adns_continuation *cr = NULL;
-	unsigned long qtid;
-	time_t anstime;     /* time of answer */
-	char *atype;        /* type of answer */
-	long ttl;   /* ttl of answer; int, but long for conversion */
-	bool AuthenticatedData = FALSE;
-	static char scratch_null_str[] = "";        /* cannot be const, but isn't written */
-
-	/* query transaction id */
-	rest = ts;
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq: answer missing query transaction ID";
-
-	qtid = strtoul(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq: malformed query transaction ID";
-
-	cr = continuation_for_qtid(qtid);
-	if (qtid != 0 && cr == NULL)
-		return "lwdnsq: unrecognized qtid";     /* can't happen! */
-
-	/* time */
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq: missing time";
-
-	anstime = strtoul(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq: malformed time";
-
-	/* TTL */
-	p = strsep(&rest, " \t");
-	if (p == NULL)
-		return "lwdnsq: missing TTL";
-
-	ttl = strtol(p, &endofnumber, 10);
-	if (*endofnumber != '\0')
-		return "lwdnsq: malformed TTL";
-
-	/* type */
-	atype = strsep(&rest, " \t");
-	if (atype == NULL)
-		return "lwdnsq: missing type";
-
-	/* if rest is NULL, make it "", otherwise eat whitespace after type */
-	rest = rest == NULL? scratch_null_str : rest + strspn(rest, " \t");
-
-	if (strncasecmp(atype, "AD-", 3) == 0)
-	{
-		AuthenticatedData = TRUE;
-		atype += 3;
-	}
-
-	/* deal with each type */
-
-	if (cr == NULL)
-	{
-		/* we don't actually know which this applies to */
-		return builddiag("lwdnsq: 0 qtid invalid with %s", atype);
-	}
-	else if (strcaseeq(atype, "START"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "DONE"))
-	{
-		if (!cr->used)
-		{
-			/* "no results returned by lwdnsq" should not happen */
-			cr->cont_fn(cr
-				, cr->gateways_from_dns == NULL
-#ifdef USE_KEYRR
-				  && cr->keys_from_dns == NULL
-#endif /* USE_KEYRR */
-					? "no results returned by lwdnsq" : NULL);
-			cr->used = TRUE;
-		}
-		reset_globals();
-		release_adns_continuation(cr);
-		adns_in_flight--;
-	}
-	else if (strcaseeq(atype, "RETRY"))
-	{
-		if (!cr->used)
-		{
-			cr->cont_fn(cr, rest);
-			cr->used = TRUE;
-		}
-	}
-	else if (strcaseeq(atype, "FATAL"))
-	{
-		if (!cr->used)
-		{
-			cr->cont_fn(cr, rest);
-			cr->used = TRUE;
-		}
-	}
-	else if (strcaseeq(atype, "DNSSEC"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "NAME"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "TXT"))
-	{
-		char *end = rest + strlen(rest);
-		err_t txt_ugh;
-
-		if (*rest == '"' && end[-1] == '"')
-		{
-			/* strip those pesky quotes */
-			rest++;
-			*--end = '\0';
-		}
-
-		txt_ugh = process_txt_rr_body(rest
-			, TRUE
-			, AuthenticatedData? DAL_SIGNED : DAL_NOTSEC
-			, cr);
-
-		if (txt_ugh != NULL)
-		{
-			DBG(DBG_DNS,
-				DBG_log("error processing TXT resource record (%s) while processing: %s"
-						, txt_ugh, rest));
-			cr->cont_fn(cr, txt_ugh);
-			cr->used = TRUE;
-		}
-	}
-	else if (strcaseeq(atype, "SIG"))
-	{
-		/* record the SIG records for posterity */
-		if (cr->last_info != NULL)
-		{
-			free(cr->last_info->dns_sig);
-			cr->last_info->dns_sig = clone_str(rest);
-		}
-	}
-	else if (strcaseeq(atype, "A"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "AAAA"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "CNAME"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "CNAMEFROM"))
-	{
-		/* ignore */
-	}
-	else if (strcaseeq(atype, "PTR"))
-	{
-		/* ignore */
-	}
-#ifdef USE_KEYRR
-	else if (strcaseeq(atype, "KEY"))
-	{
-		err_t key_ugh = process_lwdnsq_key(rest
-			, AuthenticatedData? DAL_SIGNED : DAL_NOTSEC
-			, cr);
-
-		if (key_ugh != NULL)
-		{
-			DBG(DBG_DNS,
-				DBG_log("error processing KEY resource record (%s) while processing: %s"
-						, key_ugh, rest));
-			cr->cont_fn(cr, key_ugh);
-			cr->used = TRUE;
-		}
-	}
-#endif /* USE_KEYRR */
-	else
-	{
-		ugh = "lwdnsq: unrecognized type";
-	}
-	return ugh;
-}
-#endif /* USE_LWRES */
 
 static void recover_adns_die(void)
 {
@@ -1779,12 +1480,7 @@ void handle_adns_answer(void)
 {
   /* These are retained across calls to handle_adns_answer. */
 	static size_t buflen = 0;   /* bytes in answer buffer */
-#ifndef USE_LWRES
 	static struct adns_answer buf;
-#else /* USE_LWRES */
-	static char buf[LWDNSQ_RESULT_LEN_MAX];
-	static char buf_copy[LWDNSQ_RESULT_LEN_MAX];
-#endif /* USE_LWRES */
 
 	ssize_t n;
 
@@ -1826,7 +1522,6 @@ void handle_adns_answer(void)
 	}
 
 	buflen += n;
-#ifndef USE_LWRES
 	while (buflen >= offsetof(struct adns_answer, ans) && buflen >= buf.len)
 	{
 		/* we've got a tasty answer -- process it */
@@ -1892,36 +1587,4 @@ void handle_adns_answer(void)
 		buflen -= buf.len;
 		memmove((unsigned char *)&buf, (unsigned char *)&buf + buf.len, buflen);
 	}
-#else /* USE_LWRES */
-	for (;;)
-	{
-		err_t ugh;
-		char *nlp = memchr(buf, '\n', buflen);
-
-		if (nlp == NULL)
-			break;
-
-		/* we've got a line */
-		*nlp++ = '\0';
-
-		DBG(DBG_RAW | DBG_CRYPT | DBG_PARSING | DBG_CONTROL | DBG_DNS
-			, DBG_log("lwdns: %s", buf));
-
-		/* process lwdnsq_answer may modify buf, so make a copy. */
-		buf_copy[0]='\0';
-		strncat(buf_copy, buf, sizeof(buf_copy));
-
-		ugh = process_lwdnsq_answer(buf_copy);
-		if (ugh != NULL)
-			plog("failure processing lwdnsq output: %s; record: %s"
-				 , ugh, buf);
-
-		passert(GLOBALS_ARE_RESET());
-		reset_globals();
-
-		/* shift out answer that we've consumed */
-		buflen -= nlp - buf;
-		memmove(buf, nlp, buflen);
-	}
-#endif /* USE_LWRES */
 }
