@@ -13,5 +13,5 @@ whack_LDADD = \
 $(top_builddir)/src/libstrongswan/libstrongswan.la \
 $(top_builddir)/src/libfreeswan/libfreeswan.a
 
-AM_CFLAGS = -DDEBUG
+AM_CFLAGS = -DDEBUG -DIPSEC_PIDDIR=\"${piddir}\"
 
