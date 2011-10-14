@@ -24,13 +24,22 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-identity";
 }
 
+METHOD(plugin_t, get_features, int,
+	eap_identity_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(eap_method_register, eap_identity_create_server),
+			PLUGIN_PROVIDE(EAP_SERVER, EAP_IDENTITY),
+		PLUGIN_CALLBACK(eap_method_register, eap_identity_create_peer),
+			PLUGIN_PROVIDE(EAP_PEER, EAP_IDENTITY),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_identity_plugin_t *this)
 {
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_identity_create_server);
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_identity_create_peer);
 	free(this);
 }
 
@@ -44,15 +53,10 @@ plugin_t *eap_identity_plugin_create()
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
-			.reload = (void*)return_false,
+			.get_features = _get_features,
 			.destroy = _destroy,
 		},
 	);
-
-	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_SERVER,
-							(eap_constructor_t)eap_identity_create_server);
-	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_PEER,
-							(eap_constructor_t)eap_identity_create_peer);
 
 	return &this->plugin;
 }
