@@ -25,13 +25,29 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-tls";
 }
 
+METHOD(plugin_t, get_features, int,
+	eap_tls_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(eap_method_register, eap_tls_create_server),
+			PLUGIN_PROVIDE(EAP_SERVER, EAP_TLS),
+				PLUGIN_DEPENDS(HASHER, HASH_MD5),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+		PLUGIN_CALLBACK(eap_method_register, eap_tls_create_peer),
+			PLUGIN_PROVIDE(EAP_PEER, EAP_TLS),
+				PLUGIN_DEPENDS(HASHER, HASH_MD5),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+				PLUGIN_DEPENDS(RNG, RNG_STRONG),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	eap_tls_plugin_t *this)
 {
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_tls_create_server);
-	charon->eap->remove_method(charon->eap,
-							   (eap_constructor_t)eap_tls_create_peer);
 	free(this);
 }
 
@@ -45,15 +61,10 @@ plugin_t *eap_tls_plugin_create()
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
-			.reload = (void*)return_false,
+			.get_features = _get_features,
 			.destroy = _destroy,
 		},
 	);
-
-	charon->eap->add_method(charon->eap, EAP_TLS, 0, EAP_SERVER,
-							(eap_constructor_t)eap_tls_create_server);
-	charon->eap->add_method(charon->eap, EAP_TLS, 0, EAP_PEER,
-							(eap_constructor_t)eap_tls_create_peer);
 
 	return &this->plugin;
 }
