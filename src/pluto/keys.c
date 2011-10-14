@@ -1076,7 +1076,7 @@ static void process_secrets_file(const char *file_pat, int whackfd)
 			if (lexopen(&pos, *fnp, FALSE))
 			{
 				plog("loading secrets from \"%s\"", *fnp);
-				(void) flushline("file starts with indentation (continuation notation)");
+				flushline("file starts with indentation (continuation notation)");
 				process_secret_records(whackfd);
 				lexclose();
 			}
@@ -1089,6 +1089,7 @@ static void process_secrets_file(const char *file_pat, int whackfd)
 	if (lexopen(&pos, file_pat, FALSE))
 	{
 		plog("loading secrets from \"%s\"", file_pat);
+		flushline("file starts with indentation (continuation notation)");
 		process_secret_records(whackfd);
 		lexclose();
 	}
