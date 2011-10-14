@@ -6,6 +6,26 @@ strongswan-4.6.0
   MAP server. The tnc-ifmap plugin requires the Apache Axis2/C library.
 
 
+strongswan-4.6.0
+----------------
+
+- The new libstrongswan certexpire plugin collects expiration information of
+  all used certificates and exports them to CSV files. It either directly
+  exports them or uses cron style scheduling for batch exports.
+
+- starter passes unresolved hostnames to charon, allowing it to do name
+  resolution not before the connection attempt. This is especially useful with
+  connections between hosts using dynamic IP addresses. Thanks to Mirko Parthey
+  for the initial patch.
+
+- The libstrongswan plugin system now supports detailed plugin dependencies.
+  Many plugins have been extended to export its capabilities and requirements.
+  This allows the plugin loader to resolve plugin loading order automatically,
+  and in future releases, to dynamically load the required features on demand.
+  Existing third party plugins are source (but not binary) compatible if they
+  properly initialize the new get_features() plugin function to NULL.
+
+
 strongswan-4.5.3
 ----------------
 
