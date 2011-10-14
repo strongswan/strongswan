@@ -1,14 +1,6 @@
 strongswan-4.6.0
 ----------------
 
-- The tnc-ifmap plugin implements a TNC IF-MAP 2.0 client that which
-  can deliver metadata about IKE_SAs via a SOAP interface to a
-  MAP server. The tnc-ifmap plugin requires the Apache Axis2/C library.
-
-
-strongswan-4.6.0
-----------------
-
 - The new libstrongswan certexpire plugin collects expiration information of
   all used certificates and exports them to CSV files. It either directly
   exports them or uses cron style scheduling for batch exports.
@@ -24,6 +16,10 @@ strongswan-4.6.0
   and in future releases, to dynamically load the required features on demand.
   Existing third party plugins are source (but not binary) compatible if they
   properly initialize the new get_features() plugin function to NULL.
+
+- The tnc-ifmap plugin implements a TNC IF-MAP 2.0 client which can deliver
+  metadata about IKE_SAs via a SOAP interface to a MAP server. The tnc-ifmap
+  plugin requires the Apache Axis2/C library.
 
 
 strongswan-4.5.3
