@@ -142,6 +142,20 @@ METHOD(plugin_t, get_name, char*,
 	return "eap-radius";
 }
 
+METHOD(plugin_t, get_features, int,
+	eap_radius_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(eap_method_register, eap_radius_create),
+			PLUGIN_PROVIDE(EAP_SERVER, EAP_RADIUS),
+				PLUGIN_DEPENDS(HASHER, HASH_MD5),
+				PLUGIN_DEPENDS(SIGNER, AUTH_HMAC_MD5_128),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, reload, bool,
 	private_eap_radius_plugin_t *this)
 {
@@ -157,7 +171,6 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
-	charon->eap->remove_method(charon->eap, (eap_constructor_t)eap_radius_create);
 	this->servers->destroy_offset(this->servers,
 								  offsetof(radius_server_t, destroy));
 	this->lock->destroy(this->lock);
@@ -176,6 +189,7 @@ plugin_t *eap_radius_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.reload = _reload,
 				.destroy = _destroy,
 			},
@@ -185,10 +199,6 @@ plugin_t *eap_radius_plugin_create()
 	);
 
 	load_servers(this);
-
-	charon->eap->add_method(charon->eap, EAP_RADIUS, 0,
-							EAP_SERVER, (eap_constructor_t)eap_radius_create);
-
 	instance = this;
 
 	return &this->public.plugin;
