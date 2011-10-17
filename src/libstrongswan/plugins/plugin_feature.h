@@ -185,10 +185,10 @@ struct plugin_feature_t {
 
 		/** FEATURE_REGISTER */
 		struct {
-			/** feature specific function to register for this type */
-			void *f;
 			/** final flag to pass for builder_function_t */
 			bool final;
+			/** feature specific function to register for this type */
+			void *f;
 		} reg;
 
 		/** FEATURE_CALLBACK */
