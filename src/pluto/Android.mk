@@ -72,6 +72,6 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libfreeswan
+LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libfreeswan libcutils
 
 include $(BUILD_EXECUTABLE)

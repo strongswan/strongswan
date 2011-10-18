@@ -28,6 +28,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#ifdef ANDROID
+#include <android/log.h>
+#endif
+
 #include <freeswan.h>
 #include <library.h>
 #include <debug.h>
@@ -124,7 +128,11 @@ static void pluto_dbg(debug_t group, level_t level, char *fmt, ...)
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 		}
-		if (log_to_syslog)
+		if (log_to_syslog
+#ifdef ANDROID
+			|| TRUE
+#endif
+			)
 		{
 			/* write in memory buffer first */
 			vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -138,6 +146,11 @@ static void pluto_dbg(debug_t group, level_t level, char *fmt, ...)
 					*(next++) = '\0';
 				}
 				syslog(priority, "%s%s\n", (level > 1)? "| ":"", current);
+#ifdef ANDROID
+				__android_log_print(level > 1 ? ANDROID_LOG_DEBUG
+											  : ANDROID_LOG_INFO, "pluto",
+									"%s%s\n", level > 1 ? "| " : "", current);
+#endif
 				current = next;
 			}
 		}
@@ -497,6 +510,9 @@ plog(const char *message, ...)
 		syslog(LOG_WARNING, "%s", m);
 	if (log_to_perpeer)
 		peerlog("", m);
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_WARN, "pluto", "%s\n", m);
+#endif
 
 	whack_log(RC_LOG, "~%s", m);
 }
@@ -517,6 +533,9 @@ loglog(int mess_no, const char *message, ...)
 		syslog(LOG_WARNING, "%s", m);
 	if (log_to_perpeer)
 		peerlog("", m);
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_WARN, "pluto", "%s\n", m);
+#endif
 
 	whack_log(mess_no, "~%s", m);
 }
@@ -536,9 +555,11 @@ log_errno_routine(int e, const char *message, ...)
 	if (log_to_syslog)
 		syslog(LOG_ERR, "ERROR: %s. Errno %d: %s", m, e, strerror(e));
 	if (log_to_perpeer)
-	{
 		peerlog(strerror(e), m);
-	}
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_ERROR, "pluto", "ERROR: %s. Errno %d: %s\n",
+						m, e, strerror(e));
+#endif
 
 	whack_log(RC_LOG_SERIOUS
 		, "~ERROR: %s. Errno %d: %s", m, e, strerror(e));
@@ -560,6 +581,9 @@ exit_log(const char *message, ...)
 		syslog(LOG_ERR, "FATAL ERROR: %s", m);
 	if (log_to_perpeer)
 		peerlog("FATAL ERROR: ", m);
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_ERROR, "pluto", "FATAL ERROR: %s\n", m);
+#endif
 
 	whack_log(RC_LOG_SERIOUS, "~FATAL ERROR: %s", m);
 
@@ -582,6 +606,10 @@ exit_log_errno_routine(int e, const char *message, ...)
 		syslog(LOG_ERR, "FATAL ERROR: %s. Errno %d: %s", m, e, strerror(e));
 	if (log_to_perpeer)
 		peerlog(strerror(e), m);
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_ERROR, "pluto", "FATAL ERROR: %s. "
+						"Errno %d: %s\n", m, e, strerror(e));
+#endif
 
 	whack_log(RC_LOG_SERIOUS
 		, "~FATAL ERROR: %s. Errno %d: %s", m, e, strerror(e));
@@ -631,6 +659,9 @@ whack_log(int mess_no, const char *message, ...)
 				syslog(LOG_WARNING, "%s", m + prelen);
 			if (log_to_perpeer)
 				peerlog("", m);
+#ifdef ANDROID
+			__android_log_print(ANDROID_LOG_WARN, "pluto", "%s\n", m + prelen);
+#endif
 		}
 #endif
 
@@ -763,6 +794,9 @@ DBG_log(const char *message, ...)
 		syslog(LOG_DEBUG, "| %s", m);
 	if (log_to_perpeer)
 		peerlog("| ", m);
+#ifdef ANDROID
+	__android_log_print(ANDROID_LOG_DEBUG, "pluto", "| %s\n", m);
+#endif
 }
 
 /* dump raw bytes in hex to stderr (for lack of any better destination) */
