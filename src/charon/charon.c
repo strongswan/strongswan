@@ -41,7 +41,7 @@
 #include <threading/thread.h>
 
 #ifdef ANDROID
-#include <private/android_filesystem_config.h>
+#include <private/android_filesystem_config.h> /* for AID_VPN */
 #endif
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */

@@ -81,6 +81,10 @@
 #include "whack_attribute.h"
 #include "pluto.h"
 
+#ifdef ANDROID
+#include <private/android_filesystem_config.h> /* for AID_VPN */
+#endif
+
 /**
  * Number of threads in the thread pool, if not specified in config.
  */
@@ -716,10 +720,10 @@ int main(int argc, char **argv)
 #ifdef IPSEC_GROUP
 	{
 		struct group group, *grp;
-	char buf[1024];
+		char buf[1024];
 
 		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
-				grp == NULL || setgid(grp->gr_gid) != 0)
+			grp == NULL || setgid(grp->gr_gid) != 0)
 		{
 			plog("unable to change daemon group");
 			abort();
@@ -729,15 +733,22 @@ int main(int argc, char **argv)
 #ifdef IPSEC_USER
 	{
 		struct passwd passwd, *pwp;
-	char buf[1024];
+		char buf[1024];
 
 		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
-				pwp == NULL || setuid(pwp->pw_uid) != 0)
+			pwp == NULL || setuid(pwp->pw_uid) != 0)
 		{
 			plog("unable to change daemon user");
 			abort();
 		}
-		}
+	}
+#endif
+#ifdef ANDROID
+	if (setuid(AID_VPN) != 0)
+	{
+		plog("unable to change daemon user");
+		abort();
+	}
 #endif
 
 #ifdef CAPABILITIES_LIBCAP
