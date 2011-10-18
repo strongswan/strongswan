@@ -47,6 +47,7 @@ METHOD(listener_t, log_, bool,
 {
 	if (level <= this->level)
 	{
+		int prio = level > 1 ? ANDROID_LOG_DEBUG : ANDROID_LOG_INFO;
 		char sgroup[16], buffer[8192];
 		char *current = buffer, *next;
 		snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
@@ -58,7 +59,7 @@ METHOD(listener_t, log_, bool,
 			{
 				*(next++) = '\0';
 			}
-			__android_log_print(ANDROID_LOG_INFO, "charon", "%.2d[%s] %s\n",
+			__android_log_print(prio, "charon", "%.2d[%s] %s\n",
 								thread, sgroup, current);
 			current = next;
 		}
