@@ -229,7 +229,7 @@ find_raw_ifaces4(void)
 	struct ifconf ifconf;
 	struct ifreq buf[300];      /* for list of interfaces -- arbitrary limit */
 	struct raw_iface *rifaces = NULL;
-	int master_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);    /* Get a UDP socket */
+	int master_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);    /* Get a UDP socket */
 
 	/* get list of interfaces with assigned IPv4 addresses from system */
 

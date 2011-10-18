@@ -294,7 +294,13 @@ int main(int argc, char **argv)
 	bool force_keepalive = FALSE;
 	char *virtual_private = NULL;
 #ifdef CAPABILITIES
-	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
+	int keep[] = {
+			CAP_NET_ADMIN,
+			CAP_NET_BIND_SERVICE,
+#ifdef ANDROID
+			CAP_NET_RAW,
+#endif
+	};
 #endif /* CAPABILITIES */
 
 	/* initialize library and optionsfrom */
