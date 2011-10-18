@@ -222,10 +222,6 @@ use_interface(const char *rifn)
 	}
 }
 
-#ifndef IPSECDEVPREFIX
-# define IPSECDEVPREFIX "ipsec"
-#endif
-
 static struct raw_iface *
 find_raw_ifaces4(void)
 {
@@ -401,7 +397,6 @@ find_raw_ifaces6(void)
 	return rifaces;
 }
 
-#if 1
 static int
 create_socket(struct raw_iface *ifp, const char *v_name, int port)
 {
@@ -414,7 +409,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 		return -1;
 	}
 
-#if 1
 	/* Set socket Nonblocking */
 	if ((fcntl_flags=fcntl(fd, F_GETFL)) >= 0) {
 		if (!(fcntl_flags & O_NONBLOCK)) {
@@ -422,7 +416,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 			fcntl(fd, F_SETFL, fcntl_flags);
 		}
 	}
-#endif
 
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
 	{
@@ -467,7 +460,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 	}
 #endif
 
-#if defined(linux) && defined(KERNEL26_SUPPORT)
 	{
 		struct sadb_x_policy policy;
 		int level, opt;
@@ -509,7 +501,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 			return -1;
 		}
 	}
-#endif
 
 	setportof(htons(port), &ifp->addr);
 	if (bind(fd, sockaddrof(&ifp->addr), sockaddrlenof(&ifp->addr)) < 0)
@@ -523,28 +514,20 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 	setportof(htons(pluto_port), &ifp->addr);
 	return fd;
 }
-#endif
 
 static void
 process_raw_ifaces(struct raw_iface *rifaces)
 {
 	struct raw_iface *ifp;
 
-	/* Find all virtual/real interface pairs.
-	 * For each real interface...
+	/* For each real interface...
 	 */
 	for (ifp = rifaces; ifp != NULL; ifp = ifp->next)
 	{
-		struct raw_iface *v = NULL;     /* matching ipsecX interface */
+		struct raw_iface *v = NULL;
 		bool after = FALSE; /* has vfp passed ifp on the list? */
 		bool bad = FALSE;
 		struct raw_iface *vfp;
-
-		/* ignore if virtual (ipsec*) interface */
-		if (strneq(ifp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1))
-		{
-			continue;
-		}
 
 		for (vfp = rifaces; vfp != NULL; vfp = vfp->next)
 		{
@@ -554,74 +537,26 @@ process_raw_ifaces(struct raw_iface *rifaces)
 			}
 			else if (sameaddr(&ifp->addr, &vfp->addr))
 			{
-				/* Different entries with matching IP addresses.
-				 * Many interesting cases.
+				/* ugh: a second interface with the same IP address
+				 * "after" allows us to avoid double reporting.
 				 */
-				if (strneq(vfp->name, IPSECDEVPREFIX, sizeof(IPSECDEVPREFIX)-1))
+				if (after)
 				{
-					if (v != NULL  && !streq(v->name, vfp->name))
-					{
-						loglog(RC_LOG_SERIOUS
-							, "ipsec interfaces %s and %s share same address %s"
-							, v->name, vfp->name, ip_str(&ifp->addr));
-						bad = TRUE;
-					}
-					else
-					{
-						v = vfp;        /* current winner */
-					}
-				}
-				else
-				{
-					/* ugh: a second real interface with the same IP address
-					 * "after" allows us to avoid double reporting.
-					 */
-#if defined(linux) && defined(KERNEL26_SUPPORT)
-					{
-						if (after)
-						{
-							bad = TRUE;
-							break;
-						}
-						continue;
-					}
-#endif
-					if (after)
-					{
-						loglog(RC_LOG_SERIOUS
-							, "IP interfaces %s and %s share address %s!"
-							, ifp->name, vfp->name, ip_str(&ifp->addr));
-					}
 					bad = TRUE;
+					break;
 				}
+				continue;
 			}
 		}
 
 		if (bad)
 			continue;
 
-#if defined(linux) && defined(KERNEL26_SUPPORT)
-		{
-			v = ifp;
-			goto add_entry;
-		}
-#endif
-
-		/* what if we didn't find a virtual interface? */
-		if (v == NULL)
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("IP interface %s %s has no matching ipsec* interface -- ignored"
-					, ifp->name, ip_str(&ifp->addr)));
-			continue;
-		}
+		v = ifp;
 
 		/* We've got all we need; see if this is a new thing:
 		 * search old interfaces list.
 		 */
-#if defined(linux) && defined(KERNEL26_SUPPORT)
-add_entry:
-#endif
 		{
 			struct iface **p = &interfaces;
 
