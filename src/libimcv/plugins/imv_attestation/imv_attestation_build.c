@@ -142,10 +142,22 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			DBG1(DBG_IMV, "platform is '%s'", platform_info);
 
 			/* Send Request File Metadata attribute */
-			attr = tcg_pts_attr_req_file_meta_create(FALSE, SOLIDUS_UTF, "/etc/tnc_config");
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-
+			enumerator = pts_db->create_file_meta_enumerator(pts_db, platform_info);
+			if (!enumerator)
+			{
+				break;
+			}
+			while (enumerator->enumerate(enumerator, &type, &pathname))
+			{
+				is_dir = (type != 0);
+				DBG2(DBG_IMV, "metadata request for %s '%s'",
+					 is_dir ? "directory" : "file", pathname);
+				attr = tcg_pts_attr_req_file_meta_create(is_dir, delimiter, pathname);
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+			}
+			enumerator->destroy(enumerator);
+			
 			/* Send Request File Measurement attribute */
 			enumerator = pts_db->create_file_enumerator(pts_db, platform_info);
 			if (!enumerator)
