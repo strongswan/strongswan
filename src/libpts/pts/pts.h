@@ -65,7 +65,7 @@ typedef struct pcr_entry_t pcr_entry_t;
  */
 struct pcr_entry_t {
 	u_int32_t pcr_number;
-	chunk_t pcr_value;
+	char pcr_value[PCR_LEN];
 };
 
 /**
@@ -267,6 +267,13 @@ struct pts_t {
 	 */
 	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
+
+	 /**
+	 * Check PCR after value in Simple Component Evidence matches configured value
+	 *
+	 * @return					FALSE in case of any error or non-match, TRUE otherwise
+	 */
+	 bool (*does_pcr_value_match)(pts_t *this, chunk_t pcr_after_value);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC

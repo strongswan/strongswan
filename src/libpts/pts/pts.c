@@ -977,8 +977,8 @@ static u_int8_t* pcr_string_to_bytearray(char *str_value)
 
 	if (strlen(str_value) != PCR_LEN * 2)
 	{
-		DBG1(DBG_PTS, "expected PCR value with %d characters, current:%B",
-			 PCR_LEN * 2, &str_value);
+		DBG1(DBG_PTS, "expected PCR value with %d characters, current:%s",
+			 PCR_LEN * 2, str_value);
 		return NULL;
 	}
 
@@ -1055,8 +1055,9 @@ static bool load_pcr_entries(linked_list_t **output)
 			entry->pcr_number = i;
 
 			pcr_value = pcr_string_to_bytearray(string_pcr_value);
-			entry->pcr_value = chunk_from_thing(pcr_value);
+			strcpy(entry->pcr_value, pcr_value);
 			entries->insert_last(entries, entry);
+			free(pcr_value);
 		}
 	}
 	
@@ -1069,6 +1070,45 @@ static bool load_pcr_entries(linked_list_t **output)
 	DBG1(DBG_PTS, "pcr value(s) not available");
 	DESTROY_IF(entries);
 	*output = NULL;
+	return FALSE;
+}
+
+METHOD(pts_t, does_pcr_value_match, bool,
+	private_pts_t *this, chunk_t pcr_after_value)
+{
+	linked_list_t *entries;
+	enumerator_t *e;
+	pcr_entry_t *pcr_entry;
+	bool match_found = FALSE;
+	
+	if (!load_pcr_entries(&entries))
+	{
+		DBG1(DBG_PTS, "failed to load PCR entries");
+		return FALSE;
+	}
+	
+	e = entries->create_enumerator(entries);
+	while (e->enumerate(e, &pcr_entry))
+	{
+		if (chunk_equals(chunk_create(pcr_entry->pcr_value, PCR_LEN), pcr_after_value))
+		{
+			DBG1(DBG_PTS, "PCR %d value matched with configured value",
+				 pcr_entry->pcr_number);
+			match_found = TRUE;
+			break;
+		}
+	}
+	
+	DESTROY_IF(e);
+	DESTROY_IF(entries);
+	free(pcr_entry);
+
+	if (match_found)
+	{
+		return TRUE;
+	}
+	
+	DBG1(DBG_PTS, "PCR after value didn't match with any of the configured values");
 	return FALSE;
 }
 
@@ -1122,6 +1162,7 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 		u_int32_t index = pcr_entry->pcr_number;
 		mask_bytes[index / 8] |= (1 << (index % 8));
 	}
+	
 	e->destroy(e);
 	for (i = 0; i< (MAX_NUM_PCR / 8) ; i++)
 	{
@@ -1134,9 +1175,9 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 	e = pcr_entries->create_enumerator(pcr_entries);
 	while (e->enumerate(e, &pcr_entry))
 	{
-		writer->write_data(writer, pcr_entry->pcr_value);
+		writer->write_data(writer, chunk_create(pcr_entry->pcr_value, PCR_LEN));
 	}
-
+	
 	pcr_composite = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 	
@@ -1167,16 +1208,16 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 
 	/* SHA1(TPM Quote Info) expected from IMC */
 	hasher->allocate_hash(hasher, digest, &hash_digest);
-	hash_digest = chunk_clone(hash_digest);
-
+	
 	e->destroy(e);
 	writer->destroy(writer);
 	hasher->destroy(hasher);
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
 	chunk_clear(&digest);
+	free(pcr_entry);
 	pcr_entries->destroy(pcr_entries);
-
+	
 	return hash_digest;
 }
 
@@ -1188,12 +1229,10 @@ METHOD(pts_t, get_quote_digest, bool,
 	if (!load_pcr_entries(&entries))
 	{
 		DBG1(DBG_PTS, "failed to load PCR entries");
-		//DESTROY_IF(entries);
 		return FALSE;
 	}
-	
+
 	*digest = calculate_quote_digest(this, entries);
-	//DESTROY_IF(entries);
 	return TRUE;
 }
 
@@ -1415,6 +1454,7 @@ pts_t *pts_create(bool is_imc)
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote_tpm = _quote_tpm,
+			.does_pcr_value_match = _does_pcr_value_match,
 			.get_quote_digest = _get_quote_digest,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,
