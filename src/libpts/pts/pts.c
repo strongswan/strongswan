@@ -984,6 +984,45 @@ static u_int32_t get_max_pcr_index(private_pts_t *this)
 	return ret;
 }
 
+METHOD(pts_t, does_pcr_value_match, bool,
+	private_pts_t *this, chunk_t pcr_after_value)
+{
+	linked_list_t *entries;
+	enumerator_t *e;
+	pcr_entry_t *pcr_entry;
+	bool match_found = FALSE;
+	
+	if (!load_pcr_entries(&entries))
+	{
+		DBG1(DBG_PTS, "failed to load PCR entries");
+		return FALSE;
+	}
+	
+	e = entries->create_enumerator(entries);
+	while (e->enumerate(e, &pcr_entry))
+	{
+		if (chunk_equals(chunk_create(pcr_entry->pcr_value, PCR_LEN), pcr_after_value))
+		{
+			DBG1(DBG_PTS, "PCR %d value matched with configured value",
+				 pcr_entry->pcr_number);
+			match_found = TRUE;
+			break;
+		}
+	}
+	
+	DESTROY_IF(e);
+	DESTROY_IF(entries);
+	free(pcr_entry);
+
+	if (match_found)
+	{
+		return TRUE;
+	}
+	
+	DBG1(DBG_PTS, "PCR after value didn't match with any of the configured values");
+	return FALSE;
+}
+
 /**
  * 1. build a TCPA_PCR_COMPOSITE structure which contains (pcrCompositeBuf)
  * TCPA_PCR_SELECTION structure (bitmask length + bitmask)
@@ -1045,6 +1084,7 @@ METHOD(pts_t, get_quote_info, bool,
 		u_int32_t index = pcr_entry->pcr_number;
 		mask_bytes[index / 8] |= (1 << (index % 8));
 	}
+	
 	e->destroy(e);
 
 	for (i = 0; i< bitmask_len ; i++)

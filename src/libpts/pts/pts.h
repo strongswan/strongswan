@@ -389,6 +389,13 @@ struct pts_t {
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
 
 	 /**
+	 * Check PCR after value in Simple Component Evidence matches configured value
+	 *
+	 * @return					FALSE in case of any error or non-match, TRUE otherwise
+	 */
+	 bool (*does_pcr_value_match)(pts_t *this, chunk_t pcr_after_value);
+
+	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
 	 * 
 	 * @param digest			Output variable to store quote digest
