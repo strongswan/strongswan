@@ -102,9 +102,9 @@ struct entry_t {
  * Table of multi-lingual reason string entries 
  */
 static entry_t reasons[] = {
-	{ "en", "IMC Attestation Measurement/s of requested file didn't match" },
-	{ "mn", "IMC Attestation Шалгахаар тохируулсан файлуудын хэмжилтүүд таарсангүй" },
-	{ "de", "IMC Attestation Messung/en von angefordeten Datein stimmt nicht überein" },
+	{ "en", "IMC Attestation: Non-matching file measurement/s or invalid TPM Quote signature" },
+	{ "mn", "IMC Attestation: Файлуудын хэмжилт зөрсөн эсвэл буруу TPM Quote гарын үсэг" },
+	{ "de", "IMC Attestation: Falsche Datei Messung/en oder TPM Quote Unterschrift ist ungültig" },
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
