@@ -39,129 +39,135 @@ INSERT INTO products (
 /* Files */
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/lib/i386-linux-gnu/libdl.so.2'
+  0, '/lib/i386-linux-gnu/libdl.so.2', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/lib/x86_64-linux-gnu/libdl.so.2'
+  0, '/lib/x86_64-linux-gnu/libdl.so.2', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/lib/libdl.so.2'
+  0, '/lib/libdl.so.2', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/sbin/iptables'
+  0, '/sbin/iptables', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/lib/libxtables.so.5'
+  0, '/lib/libxtables.so.5', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/lib/libxtables.so.2'
+  0, '/lib/libxtables.so.2', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  1, '/lib/xtables/'
+  1, '/lib/xtables/', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_udp.so'
+  0, 'libxt_udp.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_tcp.so'
+  0, 'libxt_tcp.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_esp.so'
+  0, 'libxt_esp.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_policy.so'
+  0, 'libxt_policy.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_conntrack.so'
+  0, 'libxt_conntrack.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libipt_SNAT.so'
+  0, 'libipt_SNAT.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libipt_DNAT.so'
+  0, 'libipt_DNAT.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libipt_MASQUERADE.so'
+  0, 'libipt_MASQUERADE.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libipt_LOG.so'
+  0, 'libipt_LOG.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, '/sbin/ip6tables'
+  0, '/sbin/ip6tables', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libip6t_LOG.so'
+  0, 'libip6t_LOG.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_mark.so'
+  0, 'libxt_mark.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  0, 'libxt_MARK.so'
+  0, 'libxt_MARK.so', 1
 );
 
 INSERT INTO files (
-  type, path
+  type, path, measurement
  ) VALUES (
-  1, '/lib/iptables'
+  1, '/lib/iptables', 1
+);
+
+INSERT INTO files (
+  type, path, metadata
+ ) VALUES (
+  0, '/etc/tnc_config', 1
 );
 
 /* Product-File */
@@ -199,6 +205,12 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
+  1, 22
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
   2, 2
 );
 
@@ -223,6 +235,12 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
+  2, 22
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
   3, 3
 );
 
@@ -230,6 +248,12 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   3, 4
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  3, 22
 );
 
 INSERT INTO product_file (
@@ -259,6 +283,13 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
+  4, 22
+);
+
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
   5, 3
 );
 
@@ -283,6 +314,12 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
+  5, 22
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
   6, 3
 );
 
@@ -302,6 +339,12 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   6, 21
+);
+
+INSERT INTO product_file (
+  product, file
+) VALUES (
+  6, 22
 );
 
 /* File Hashes */
