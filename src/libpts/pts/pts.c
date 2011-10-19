@@ -1103,7 +1103,7 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 {
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
-	chunk_t digest, pcr_composite, hash_pcr_composite;
+	chunk_t digest, hash_digest, pcr_composite, hash_pcr_composite;
 	u_int32_t pcr_composite_len;
 	bio_writer_t *writer;
 	u_int8_t mask_bytes[MAX_NUM_PCR / 8], i;
@@ -1161,17 +1161,23 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 	/* Secret assessment value 20 bytes (nonce) */
 	writer->write_data(writer, this->secret);
 
-	/* TPM Quote Info expected from IMC */
+	/* TPM Quote Info */
 	digest = chunk_clone(writer->get_buf(writer));
+	DBG3(DBG_PTS, "Calculated TPM Quote Digest: %B", &digest);
+
+	/* SHA1(TPM Quote Info) expected from IMC */
+	hasher->allocate_hash(hasher, digest, &hash_digest);
+	hash_digest = chunk_clone(hash_digest);
 
 	e->destroy(e);
 	writer->destroy(writer);
 	hasher->destroy(hasher);
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
+	chunk_clear(&digest);
 	pcr_entries->destroy(pcr_entries);
 
-	return digest;
+	return hash_digest;
 }
 
 METHOD(pts_t, get_quote_digest, bool,
