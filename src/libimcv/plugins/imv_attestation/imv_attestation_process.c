@@ -297,7 +297,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 				if (!pts->verify_quote_signature(pts, digest, tpm_quote_sign))
 				{
-					DBG1(DBG_IMV, "signature verification failed");
 					chunk_clear(&digest);
 					return FALSE;
 				}
