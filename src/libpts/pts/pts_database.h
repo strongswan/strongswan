@@ -33,12 +33,20 @@ typedef struct pts_database_t pts_database_t;
 struct pts_database_t {
 
 	/**
-	* Get files to be measured by PTS
+	* Get files/directories to be measured by PTS
 	*
 	* @param product		software product (os, vpn client, etc.)
-	* @return				enumerator over all matching files
+	* @return				enumerator over all matching files/directories
 	*/
 	enumerator_t* (*create_file_enumerator)(pts_database_t *this, char *product);
+
+	/**
+	* Get files/directories to request metadata of
+	*
+	* @param product		software product (os, vpn client, etc.)
+	* @return				enumerator over all matching files/directories
+	*/
+	enumerator_t* (*create_file_meta_enumerator)(pts_database_t *this, char *product);
 
 	/**
 	* Get stored measurement hash for single file or directory entries

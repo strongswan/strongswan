@@ -49,8 +49,23 @@ METHOD(pts_database_t, create_file_enumerator, enumerator_t*,
 				"SELECT f.id, f.type, f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
 				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.name = ?",
+				"WHERE p.name = ? AND f.measurement = 1",
 				DB_TEXT, product, DB_INT, DB_INT, DB_TEXT);
+	return e;
+}
+
+METHOD(pts_database_t, create_file_meta_enumerator, enumerator_t*,
+	private_pts_database_t *this, char *product)
+{
+	enumerator_t *e;
+
+	/* look for all entries belonging to a product in the files table */
+	e = this->db->query(this->db,
+				"SELECT f.type, f.path FROM files AS f "
+				"JOIN product_file AS pf ON f.id = pf.file "
+				"JOIN products AS p ON p.id = pf.product "
+				"WHERE p.name = ? AND f.metadata = 1",
+				DB_TEXT, product, DB_INT, DB_TEXT);
 	return e;
 }
 
@@ -99,6 +114,7 @@ pts_database_t *pts_database_create(char *uri)
 	INIT(this,
 		.public = {
 			.create_file_enumerator = _create_file_enumerator,
+			.create_file_meta_enumerator = _create_file_meta_enumerator,
 			.create_hash_enumerator = _create_hash_enumerator,
 			.destroy = _destroy,
 		},
