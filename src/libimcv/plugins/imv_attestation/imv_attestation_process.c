@@ -249,6 +249,15 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				pcr_before = attr_cast->get_pcr_before_value(attr_cast);
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
 				measurement = attr_cast->get_comp_measurement(attr_cast);
+
+				DBG3(DBG_IMV,"PCR: %d was extended with %B", extended_pcr, &measurement);
+				DBG3(DBG_IMV,"PCR: %d before value: %B", extended_pcr, &pcr_before);
+				DBG3(DBG_IMV,"PCR: %d after value: %B", extended_pcr, &pcr_after);
+
+				if (!pts->does_pcr_value_match(pts, pcr_after))
+				{
+					return FALSE;
+				}
 			}
 			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
 			{
@@ -292,12 +301,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				if (!pts->get_quote_digest(pts, &digest))
 				{
 					DBG1(DBG_IMV, "unable to contruct TPM Quote Digest");
-					chunk_clear(&digest);
+					free(digest.ptr);
 					return FALSE;
 				}
 				if (!pts->verify_quote_signature(pts, digest, tpm_quote_sign))
 				{
-					chunk_clear(&digest);
+					free(digest.ptr);
 					return FALSE;
 				}
 
@@ -308,9 +317,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					DBG1(DBG_IMV, "calculated TPM Quote Info differs from received");
 					DBG1(DBG_IMV, "calculated: %B", &digest);
 					DBG1(DBG_IMV, "received: %B", &pcr_comp);
-					chunk_clear(&digest);
+					return FALSE;
 				}
-				chunk_clear(&digest);
+				free(digest.ptr);
 			}
 			
 			if (evid_signature_included)
