@@ -18,7 +18,7 @@
 #include "tnccs_manager.h"
 
 #include <imc/imc_manager.h>
-#include <tnc/imv/imv_recommendations.h>
+#include <imv/imv_manager.h>
 
 #include <debug.h>
 #include <daemon.h>
@@ -116,6 +116,11 @@ struct private_tnccs_manager_t {
 	 */
 	imc_manager_t *imcs;
 
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+
 };
 
 METHOD(tnccs_manager_t, add_method, void,
@@ -193,13 +198,17 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	if (recs)
 	{
 		/* we assume a TNC Server needing recommendations from IMVs */
-		if (!charon->imvs)
+		if (!this->imvs)
+		{
+			this->imvs = lib->get(lib, "imv-manager");
+		}
+		if (!this->imvs)
 		{
 			DBG1(DBG_TNC, "no IMV manager available!");
 			free(entry);
 			return 0;
 		}
-		entry->recs = charon->imvs->create_recommendations(charon->imvs);
+		entry->recs = this->imvs->create_recommendations(this->imvs);
 		*recs = entry->recs;
 	}
 	else
@@ -234,9 +243,9 @@ METHOD(tnccs_manager_t, remove_connection, void,
 
 	if (is_server)
 	{
-		if (charon->imvs)
+		if (this->imvs)
 		{
-			charon->imvs->notify_connection_change(charon->imvs, id,
+			this->imvs->notify_connection_change(this->imvs, id,
 										TNC_CONNECTION_STATE_DELETE);
 		}
 	}
@@ -511,6 +520,7 @@ tnccs_manager_t *tnccs_manager_create()
 			.protocol_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 			.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 			.imcs = lib->get(lib, "imc-manager"),
+			.imvs = lib->get(lib, "imv-manager"),
 	);
 
 	return &this->public;

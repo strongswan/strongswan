@@ -23,8 +23,6 @@
 
 typedef struct imv_manager_t imv_manager_t;
 
-#ifdef USE_TNC
-
 #include "imv.h"
 #include "imv_recommendations.h"
 
@@ -143,7 +141,5 @@ struct imv_manager_t {
 	 */
 	void (*destroy)(imv_manager_t *this);
 };
-
-#endif /* USE_TNC */
 
 #endif /** IMV_MANAGER_H_ @}*/

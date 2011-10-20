@@ -27,7 +27,7 @@ typedef struct tnccs_manager_t tnccs_manager_t;
 
 #include "tnccs.h"
 
-#include <tnc/imv/imv_recommendations.h>
+#include <imv/imv_recommendations.h>
 
 /**
  * The TNCCS manager manages all TNCCS implementations and creates instances.

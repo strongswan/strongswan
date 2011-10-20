@@ -24,13 +24,31 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <daemon.h>
 #include <utils/lexparser.h>
+#include <debug.h>
+
+typedef struct private_tnc_imv_plugin_t private_tnc_imv_plugin_t;
+
+/**
+ * Private data of a tnc_imv_plugin_t object.
+ */
+struct private_tnc_imv_plugin_t {
+
+	/**
+	 * Public interface.
+	 */
+	tnc_imv_plugin_t public;
+
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+};
 
 /**
  * load IMVs from a configuration file
  */
-static bool load_imvs(char *filename)
+static bool load_imvs(private_tnc_imv_plugin_t *this, char *filename)
 {
 	int fd, line_nr = 0;
 	chunk_t src, line;
@@ -128,7 +146,7 @@ static bool load_imvs(char *filename)
 			free(path);
 			return FALSE;
 		}
-		if (!charon->imvs->add(charon->imvs, imv))
+		if (!this->imvs->add(this->imvs, imv))
 		{
 			if (imv->terminate &&
 				imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
@@ -153,10 +171,21 @@ METHOD(plugin_t, get_name, char*,
 	return "tnc-imv";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_tnc_imv_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_PROVIDE(CUSTOM, "imv-manager"),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	tnc_imv_plugin_t *this)
 {
-	charon->imvs->destroy(charon->imvs);
+	lib->set(lib, "imv-manager", NULL);
+	this->imvs->destroy(this->imvs);
 	free(this);
 }
 
@@ -169,27 +198,26 @@ plugin_t *tnc_imv_plugin_create()
 	tnc_imv_plugin_t *this;
 
 	INIT(this,
-		.plugin = {
-			.get_name = _get_name,
-			.reload = (void*)return_false,
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.get_features = _get_features,
+				.destroy = _destroy,
+			},
 		},
+		.imvs = tnc_imv_manager_create(),
 	);
 
-	tnc_config = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imv.tnc_config", "/etc/tnc_config");
-
-	/* Create IMV manager */
-	charon->imvs = tnc_imv_manager_create();
+	lib->set(lib, "imv-manager", this->imvs);
 
 	/* Load IMVs and abort if not all instances initalize successfully */
-	if (!load_imvs(tnc_config))
+	tnc_config = lib->settings->get_str(lib->settings,
+					"charon.plugins.tnc-imv.tnc_config", "/etc/tnc_config");
+	if (!load_imvs(this, tnc_config))
 	{
-		charon->imvs->destroy(charon->imvs);
-		charon->imvs = NULL;
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-	return &this->plugin;
+	return &this->public.plugin;
 }
 

@@ -152,7 +152,6 @@ typedef struct daemon_t daemon_t;
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
-#include <tnc/imv/imv_manager.h>
 #include <tnc/tnccs/tnccs_manager.h>
 
 #ifdef ME
@@ -239,11 +238,6 @@ struct daemon_t {
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
-
-	/**
-	 * TNC IMV manager controlling Integrity Measurement Verifiers
-	 */
-	imv_manager_t *imvs;
 
 	/**
 	 * TNCCS manager to maintain registered TNCCS protocols

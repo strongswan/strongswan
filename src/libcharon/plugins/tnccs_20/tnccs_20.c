@@ -99,6 +99,11 @@ struct private_tnccs_20_t {
 	 */
 	imc_manager_t *imcs;
 
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+
 };
 
 METHOD(tnccs_t, send_msg, TNC_Result,
@@ -198,7 +203,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			this->send_msg = TRUE;
 			if (this->is_server)
 			{
-				charon->imvs->receive_message(charon->imvs,
+				this->imvs->receive_message(this->imvs,
 				this->connection_id, msg_body.ptr, msg_body.len, msg_type);
 			}
 			else
@@ -447,7 +452,7 @@ METHOD(tls_t, process, status_t,
 		this->send_msg = TRUE;
 		if (this->is_server)
 		{
-			charon->imvs->batch_ending(charon->imvs, this->connection_id);
+			this->imvs->batch_ending(this->imvs, this->connection_id);
 		}
 		else
 		{
@@ -740,6 +745,7 @@ tls_t *tnccs_20_create(bool is_server)
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.imcs = lib->get(lib, "imc-manager"),
+		.imvs = lib->get(lib, "imv-manager"),
 	);
 
 	return &this->public;

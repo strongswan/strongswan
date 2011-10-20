@@ -87,8 +87,6 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnc/imv/imv.h tnc/imv/imv_manager.h \
-tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
 tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
 tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 
