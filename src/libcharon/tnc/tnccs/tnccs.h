@@ -24,13 +24,15 @@
 #ifndef TNCCS_H_
 #define TNCCS_H_
 
+typedef struct tnccs_t tnccs_t;
+typedef enum tnccs_type_t tnccs_type_t;
+
 #include <tncif.h>
 #include <tncifimc.h>
 #include <tncifimv.h>
 
 #include <library.h>
-
-typedef enum tnccs_type_t tnccs_type_t;
+#include <plugins/plugin.h>
 
 /**
  * Type of TNC Client/Server protocol
@@ -48,15 +50,27 @@ enum tnccs_type_t {
  */
 extern enum_name_t *tnccs_type_names;
 
-typedef struct tnccs_t tnccs_t;
-
 /**
  * Constructor definition for a pluggable TNCCS protocol implementation.
  *
  * @param is_server		TRUE if TNC Server, FALSE if TNC Client
  * @return				implementation of the tnccs_t interface
  */
-typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
+typedef tnccs_t *(*tnccs_constructor_t)(bool is_server);
+
+/**
+ * Helper function to (un-)register TNCCS methods from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register a TNCCS method constructor.
+ *
+ * @param plugin		plugin registering the TNCCS method constructor
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister.
+ * @param data			data passed to callback, a tnccs_constructor_t
+ */
+bool tnccs_method_register(plugin_t *plugin, plugin_feature_t *feature,
+						   bool reg, void *data);
 
 /**
  * Callback function adding a message to a TNCCS batch

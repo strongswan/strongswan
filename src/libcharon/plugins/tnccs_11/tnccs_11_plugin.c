@@ -24,11 +24,22 @@ METHOD(plugin_t, get_name, char*,
 	return "tnccs-11";
 }
 
+METHOD(plugin_t, get_features, int,
+	tnccs_11_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK(tnccs_method_register, tnccs_11_create),
+			PLUGIN_PROVIDE(CUSTOM, "tnccs-1.1"),
+				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
+				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	tnccs_11_plugin_t *this)
 {
-	charon->tnccs->remove_method(charon->tnccs,
-								(tnccs_constructor_t)tnccs_11_create);
 	free(this);
 }
 
@@ -42,13 +53,10 @@ plugin_t *tnccs_11_plugin_create()
 	INIT(this,
 		.plugin = {
 			.get_name = _get_name,
-			.reload = (void*)return_false,
+			.get_features = _get_features,
 			.destroy = _destroy,
 		},
 	);
-
-	charon->tnccs->add_method(charon->tnccs, TNCCS_1_1,
-							 (tnccs_constructor_t)tnccs_11_create);
 
 	return &this->plugin;
 }
