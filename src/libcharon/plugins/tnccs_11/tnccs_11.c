@@ -25,6 +25,8 @@
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
 
+#include <imc/imc_manager.h>
+
 #include <daemon.h>
 #include <debug.h>
 #include <threading/mutex.h>
@@ -91,6 +93,12 @@ struct private_tnccs_11_t {
 	 * Set of IMV recommendations  (TNC Server only)
 	 */
 	recommendations_t *recs;
+
+	/**
+	 * TNC IMC manager controlling Integrity Measurement Collectors
+	 */
+	imc_manager_t *imcs;
+
 };
 
 METHOD(tnccs_t, send_msg, TNC_Result,
@@ -178,7 +186,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			}
 			else
 			{
-				charon->imcs->receive_message(charon->imcs,
+				this->imcs->receive_message(this->imcs,
 				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
 			}
 			this->send_msg = FALSE;
@@ -212,8 +220,8 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 				default:
 					state = TNC_CONNECTION_STATE_ACCESS_NONE;
 			}
-			charon->imcs->notify_connection_change(charon->imcs,
-												   this->connection_id, state);
+			this->imcs->notify_connection_change(this->imcs,
+												 this->connection_id, state);
 			this->delete_state = TRUE;
 			break;
 		}
@@ -339,7 +347,7 @@ METHOD(tls_t, process, status_t,
 		}
 		else
 		{
-			charon->imcs->batch_ending(charon->imcs, this->connection_id);
+			this->imcs->batch_ending(this->imcs, this->connection_id);
 		}
 		this->send_msg = FALSE;
 	}
@@ -409,19 +417,19 @@ METHOD(tls_t, build, status_t,
 		}
 
 		/* Create TNCCS-PreferredLanguage message */
-		pref_lang = charon->imcs->get_preferred_language(charon->imcs);
+		pref_lang = this->imcs->get_preferred_language(this->imcs);
 		msg = tnccs_preferred_language_msg_create(pref_lang);
 		this->mutex->lock(this->mutex);
 		this->batch = tnccs_batch_create(this->is_server, ++this->batch_id);
 		this->batch->add_msg(this->batch, msg);
 		this->mutex->unlock(this->mutex);
 
-		charon->imcs->notify_connection_change(charon->imcs,
+		this->imcs->notify_connection_change(this->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
-		charon->imcs->notify_connection_change(charon->imcs,
+		this->imcs->notify_connection_change(this->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 		this->send_msg = TRUE;
-		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+		this->imcs->begin_handshake(this->imcs, this->connection_id);
 		this->send_msg = FALSE;
 	}
 
@@ -531,6 +539,7 @@ tls_t *tnccs_11_create(bool is_server)
 		},
 		.is_server = is_server,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.imcs = lib->get(lib, "imc-manager"),
 	);
 
 	return &this->public;

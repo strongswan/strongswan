@@ -22,7 +22,7 @@
 #ifndef TNC_IMC_H_
 #define TNC_IMC_H_
 
-#include <tnc/imc/imc.h>
+#include <imc/imc.h>
 
 /**
  * Create an Integrity Measurement Collector.

@@ -32,6 +32,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CUSTOM, "tnccs-1.1"),
 				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
 				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
+				PLUGIN_SDEPEND(CUSTOM, "imc-manager"),
+				PLUGIN_SDEPEND(CUSTOM, "imv-manager"),
 	};
 	*features = f;
 	return countof(f);

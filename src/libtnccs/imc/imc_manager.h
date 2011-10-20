@@ -23,8 +23,6 @@
 
 typedef struct imc_manager_t imc_manager_t;
 
-#ifdef USE_TNC
-
 #include "imc.h"
 
 #include <library.h>
@@ -122,7 +120,5 @@ struct imc_manager_t {
 	 */
 	void (*destroy)(imc_manager_t *this);
 };
-
-#endif /* USE_TNC */
 
 #endif /** IMC_MANAGER_H_ @}*/

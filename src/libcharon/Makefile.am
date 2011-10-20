@@ -87,7 +87,6 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnc/imc/imc.h tnc/imc/imc_manager.h \
 tnc/imv/imv.h tnc/imv/imv_manager.h \
 tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
 tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
@@ -100,7 +99,8 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
-	-I$(top_srcdir)/src/libtncif
+	-I$(top_srcdir)/src/libtncif \
+	-I$(top_srcdir)/src/libtnccs
 
 AM_CFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \

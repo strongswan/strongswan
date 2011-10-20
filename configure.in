@@ -251,6 +251,10 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 	tls=true;
 fi
 
+if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_dynamic = xtrue; then
+	tnccs=true;
+fi
+
 if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
 	imcv=true;
 fi
@@ -1019,6 +1023,7 @@ AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
+AM_CONDITIONAL(USE_TNCCS, test x$tnccs = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
@@ -1097,6 +1102,7 @@ AC_OUTPUT(
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libtncif/Makefile
+	src/libtnccs/Makefile
 	src/libpts/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile

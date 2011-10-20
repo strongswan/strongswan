@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "tnc_imc.h"
+#include <imc/imc_manager.h>
 
 #include <debug.h>
 #include <daemon.h>
@@ -28,14 +28,15 @@ TNC_Result TNC_TNCC_ReportMessageTypes(TNC_IMCID imc_id,
 									   TNC_MessageTypeList supported_types,
 									   TNC_UInt32 type_count)
 {
-	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	imc_manager_t *imcs = lib->get(lib, "imc-manager");
+
+	if (!imcs->is_registered(imcs, imc_id))
 	{
 		DBG1(DBG_TNC, "ignoring ReportMessageTypes() from unregistered IMC %u",
 					   imc_id);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
-	return charon->imcs->set_message_types(charon->imcs, imc_id,
-										   supported_types, type_count);
+	return imcs->set_message_types(imcs, imc_id, supported_types, type_count);
 }
 
 /**
@@ -45,7 +46,9 @@ TNC_Result TNC_TNCC_RequestHandshakeRetry(TNC_IMCID imc_id,
 										  TNC_ConnectionID connection_id,
 										  TNC_RetryReason reason)
 {
-	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	imc_manager_t *imcs = lib->get(lib, "imc-manager");
+
+	if (!imcs->is_registered(imcs, imc_id))
 	{
 		DBG1(DBG_TNC, "ignoring RequestHandshakeRetry() from unregistered IMC %u",
 					   imc_id);
@@ -64,7 +67,9 @@ TNC_Result TNC_TNCC_SendMessage(TNC_IMCID imc_id,
 								TNC_UInt32 msg_len,
 								TNC_MessageType msg_type)
 {
-	if (!charon->imcs->is_registered(charon->imcs, imc_id))
+	imc_manager_t *imcs = lib->get(lib, "imc-manager");
+
+	if (!imcs->is_registered(imcs, imc_id))
 	{
 		DBG1(DBG_TNC, "ignoring SendMessage() from unregistered IMC %u",
 					   imc_id);

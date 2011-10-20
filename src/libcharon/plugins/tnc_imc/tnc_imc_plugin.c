@@ -24,13 +24,31 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <daemon.h>
 #include <utils/lexparser.h>
+#include <debug.h>
+
+typedef struct private_tnc_imc_plugin_t private_tnc_imc_plugin_t;
+
+/**
+ * Private data of a tnc_imc_plugin_t object.
+ */
+struct private_tnc_imc_plugin_t {
+
+	/**
+	 * Public interface.
+	 */
+	tnc_imc_plugin_t public;
+
+	/**
+	 * TNC IMC manager controlling Integrity Measurement Collectors
+	 */
+	imc_manager_t *imcs;
+};
 
 /**
  * load IMCs from a configuration file
  */
-static bool load_imcs(char *filename)
+static bool load_imcs(private_tnc_imc_plugin_t *this, char *filename)
 {
 	int fd, line_nr = 0;
 	chunk_t src, line;
@@ -128,7 +146,7 @@ static bool load_imcs(char *filename)
 			free(path);
 			return FALSE;
 		}
-		if (!charon->imcs->add(charon->imcs, imc))
+		if (!this->imcs->add(this->imcs, imc))
 		{
 			if (imc->terminate &&
 				imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
@@ -148,47 +166,59 @@ static bool load_imcs(char *filename)
 }
 
 METHOD(plugin_t, get_name, char*,
-	tnc_imc_plugin_t *this)
+	private_tnc_imc_plugin_t *this)
 {
 	return "tnc-imc";
 }
 
-METHOD(plugin_t, destroy, void,
-	tnc_imc_plugin_t *this)
+METHOD(plugin_t, get_features, int,
+	private_tnc_imc_plugin_t *this, plugin_feature_t *features[])
 {
-	charon->imcs->destroy(charon->imcs);
+	static plugin_feature_t f[] = {
+		PLUGIN_PROVIDE(CUSTOM, "imc-manager"),
+	};
+	*features = f;
+	return countof(f);
+}
+
+METHOD(plugin_t, destroy, void,
+	private_tnc_imc_plugin_t *this)
+{
+	lib->set(lib, "imc-manager", NULL);
+	this->imcs->destroy(this->imcs);
 	free(this);
 }
 
 /*
  * see header file
  */
-plugin_t *tnc_imc_plugin_create()
+plugin_t *tnc_imc_plugin_create(void)
 {
+	private_tnc_imc_plugin_t *this;
 	char *tnc_config;
-	tnc_imc_plugin_t *this;
 
 	INIT(this,
-		.plugin = {
-			.get_name = _get_name,
-				.reload = (void*)return_false,
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.get_features = _get_features,
+				.destroy = _destroy,
+			},
 		},
+		.imcs = tnc_imc_manager_create(),
 	);
 
-	/* Create IMC manager */
-	charon->imcs = tnc_imc_manager_create();
+	lib->set(lib, "imc-manager", this->imcs);
 
 	/* Load IMCs and abort if not all instances initalize successfully */
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
-	if (!load_imcs(tnc_config))
+	if (!load_imcs(this, tnc_config))
 	{
-		charon->imcs->destroy(charon->imcs);
-		charon->imcs = NULL;
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-	return &this->plugin;
+
+	return &this->public.plugin;
 }
 

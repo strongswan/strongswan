@@ -22,7 +22,7 @@
 #ifndef TNC_IMC_MANAGER_H_
 #define TNC_IMC_MANAGER_H_
 
-#include <tnc/imc/imc_manager.h>
+#include <imc/imc_manager.h>
 
 /**
  * Create an IMC manager instance.
