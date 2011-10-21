@@ -27,7 +27,7 @@ AM_CFLAGS = \
 
 AM_YFLAGS = -v -d
 
-starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
+starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libhydra/libhydra.la $(SOCKLIB)
 EXTRA_DIST = keywords.txt ipsec.conf
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = parser.h

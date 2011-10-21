@@ -17,6 +17,7 @@
 #include <stdlib.h>
 
 #include <freeswan.h>
+#include <hydra.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -66,18 +67,6 @@ starter_netkey_init(void)
 void
 starter_netkey_cleanup(void)
 {
-	if (system("ip xfrm state > /dev/null 2>&1") == 0)
-	{
-		ignore_result(system("ip xfrm state flush"));
-		ignore_result(system("ip xfrm policy flush"));
-	}
-	else if (system("type setkey > /dev/null 2>&1") == 0)
-	{
-		ignore_result(system("setkey -F"));
-		ignore_result(system("setkey -FP"));
-	}
-	else
-	{
-		plog("WARNING: cannot flush IPsec state/policy database");
-	}
+	hydra->kernel_interface->flush_sas(hydra->kernel_interface);
+	hydra->kernel_interface->flush_policies(hydra->kernel_interface);
 }

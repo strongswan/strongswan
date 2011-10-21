@@ -29,6 +29,7 @@
 
 #include <freeswan.h>
 #include <library.h>
+#include <hydra.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -280,6 +281,9 @@ int main (int argc, char **argv)
 
 	library_init(NULL);
 	atexit(library_deinit);
+
+	libhydra_init("starter");
+	atexit(libhydra_deinit);
 
 	/* parse command line */
 	for (i = 1; i < argc; i++)
