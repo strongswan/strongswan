@@ -312,8 +312,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				hasher->allocate_hash(hasher, quote_info, &quote_digest);
 				hasher->destroy(hasher);
 				
-				if (!chunk_equals(pcr_comp, chunk_empty)
-					&& strncmp(quote_info.ptr, pcr_comp.ptr,
+				if (pcr_comp.ptr && strncmp(quote_info.ptr, pcr_comp.ptr,
 								quote_info.len - ASSESSMENT_SECRET_LEN) != 0)
 				{
 					DBG1(DBG_IMV, "calculated TPM Quote Info differs from received");
@@ -325,7 +324,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 				DBG2(DBG_IMV, "received TPM Quote Info matches with calculated");
 				
-				if (!chunk_equals(tpm_quote_sign, chunk_empty) &&
+				if (tpm_quote_sign.ptr &&
 					!pts->verify_quote_signature(pts, quote_digest, tpm_quote_sign))
 				{
 					free(quote_digest.ptr);
