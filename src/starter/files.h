@@ -33,7 +33,6 @@
 #define CHARON_PID_FILE IPSEC_PIDDIR "/charon.pid"
 
 #define DYNIP_DIR       IPSEC_PIDDIR "/dynip"
-#define INFO_FILE       IPSEC_PIDDIR "/ipsec.info"
 
 #endif /* _STARTER_FILES_H_ */
 

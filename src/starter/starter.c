@@ -483,7 +483,6 @@ int main (int argc, char **argv)
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
-			unlink(INFO_FILE);
 			plog("ipsec starter stopped");
 			close_log();
 			exit(LSB_RC_SUCCESS);
