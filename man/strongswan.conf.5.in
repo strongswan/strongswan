@@ -722,6 +722,9 @@ Plugins to load in ipsec pool tool
 Plugins to load in ipsec scepclient tool
 .SS starter section
 .TP
+.BR starter.load
+Plugins to load in starter
+.TP
 .BR starter.load_warning " [yes]"
 Disable charon/pluto plugin load option warning
 
