@@ -22,6 +22,7 @@ AM_CFLAGS = \
 -DIPSEC_EAPDIR=\"${eapdir}\" \
 -DDEV_RANDOM=\"${random_device}\" \
 -DDEV_URANDOM=\"${urandom_device}\" \
+-DPLUGINS=\""${starter_plugins}\"" \
 -DDEBUG
 
 AM_YFLAGS = -v -d

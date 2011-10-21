@@ -752,6 +752,7 @@ m4_include(m4/macros/add-plugin.m4)
 # plugin lists for all components
 libcharon_plugins=
 pluto_plugins=
+starter_plugins=
 pool_plugins=
 openac_plugins=
 scepclient_plugins=
@@ -860,6 +861,7 @@ ADD_PLUGIN([unit-tester],          [c libcharon])
 
 AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
+AC_SUBST(starter_plugins)
 AC_SUBST(pool_plugins)
 AC_SUBST(openac_plugins)
 AC_SUBST(scepclient_plugins)

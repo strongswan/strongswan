@@ -465,6 +465,13 @@ int main (int argc, char **argv)
 		}
 	}
 
+	/* load plugins */
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "starter.load", PLUGINS)))
+	{
+		exit(LSB_RC_FAILURE);
+	}
+
 	for (;;)
 	{
 		/*
@@ -484,6 +491,7 @@ int main (int argc, char **argv)
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
 			plog("ipsec starter stopped");
+			lib->plugins->unload(lib->plugins);
 			close_log();
 			exit(LSB_RC_SUCCESS);
 		}
