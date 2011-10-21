@@ -175,6 +175,13 @@ struct kernel_interface_t {
 						mark_t mark);
 
 	/**
+	 * Flush all SAs from the SAD.
+	 *
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*flush_sas) (kernel_interface_t *this);
+
+	/**
 	 * Add a policy to the SPD.
 	 *
 	 * A policy is always associated to an SA. Traffic which matches a
@@ -239,6 +246,13 @@ struct kernel_interface_t {
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, u_int32_t reqid,
 							mark_t mark, policy_priority_t priority);
+
+	/**
+	 * Flush all policies from the SPD.
+	 *
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*flush_policies) (kernel_interface_t *this);
 
 	/**
 	 * Get our outgoing source address for a destination.

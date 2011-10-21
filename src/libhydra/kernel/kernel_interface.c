@@ -138,6 +138,16 @@ METHOD(kernel_interface_t, del_sa, status_t,
 	return this->ipsec->del_sa(this->ipsec, src, dst, spi, protocol, cpi, mark);
 }
 
+METHOD(kernel_interface_t, flush_sas, status_t,
+	private_kernel_interface_t *this)
+{
+	if (!this->ipsec)
+	{
+		return NOT_SUPPORTED;
+	}
+	return this->ipsec->flush_sas(this->ipsec);
+}
+
 METHOD(kernel_interface_t, add_policy, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
@@ -176,6 +186,16 @@ METHOD(kernel_interface_t, del_policy, status_t,
 	}
 	return this->ipsec->del_policy(this->ipsec, src_ts, dst_ts,
 								   direction, reqid, mark, priority);
+}
+
+METHOD(kernel_interface_t, flush_policies, status_t,
+	private_kernel_interface_t *this)
+{
+	if (!this->ipsec)
+	{
+		return NOT_SUPPORTED;
+	}
+	return this->ipsec->flush_policies(this->ipsec);
 }
 
 METHOD(kernel_interface_t, get_source_addr, host_t*,
@@ -505,9 +525,11 @@ kernel_interface_t *kernel_interface_create()
 			.update_sa = _update_sa,
 			.query_sa = _query_sa,
 			.del_sa = _del_sa,
+			.flush_sas = _flush_sas,
 			.add_policy = _add_policy,
 			.query_policy = _query_policy,
 			.del_policy = _del_policy,
+			.flush_policies = _flush_policies,
 			.get_source_addr = _get_source_addr,
 			.get_nexthop = _get_nexthop,
 			.get_interface = _get_interface,
