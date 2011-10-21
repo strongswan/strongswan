@@ -1840,6 +1840,39 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, flush_sas, status_t,
+	private_kernel_pfkey_ipsec_t *this)
+{
+	unsigned char request[PFKEY_BUFFER_SIZE];
+	struct sadb_msg *msg, *out;
+	size_t len;
+
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "flushing all SAD entries");
+
+	msg = (struct sadb_msg*)request;
+	msg->sadb_msg_version = PF_KEY_V2;
+	msg->sadb_msg_type = SADB_FLUSH;
+	msg->sadb_msg_satype = SADB_SATYPE_UNSPEC;
+	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
+
+	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to flush SAD entries");
+		return FAILED;
+	}
+	else if (out->sadb_msg_errno)
+	{
+		DBG1(DBG_KNL, "unable to flush SAD entries: %s (%d)",
+					   strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		free(out);
+		return FAILED;
+	}
+	free(out);
+	return SUCCESS;
+}
+
 /**
  * Add or update a policy in the kernel.
  *
@@ -2346,6 +2379,39 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, flush_policies, status_t,
+	private_kernel_pfkey_ipsec_t *this)
+{
+	unsigned char request[PFKEY_BUFFER_SIZE];
+	struct sadb_msg *msg, *out;
+	size_t len;
+
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "flushing all policies from SPD");
+
+	msg = (struct sadb_msg*)request;
+	msg->sadb_msg_version = PF_KEY_V2;
+	msg->sadb_msg_type = SADB_X_SPDFLUSH;
+	msg->sadb_msg_satype = SADB_SATYPE_UNSPEC;
+	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
+
+	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to flush SPD entries");
+		return FAILED;
+	}
+	else if (out->sadb_msg_errno)
+	{
+		DBG1(DBG_KNL, "unable to flush SPD entries: %s (%d)",
+					   strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		free(out);
+		return FAILED;
+	}
+	free(out);
+	return SUCCESS;
+}
+
 /**
  * Register a socket for ACQUIRE/EXPIRE messages
  */
@@ -2467,9 +2533,11 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 				.update_sa = _update_sa,
 				.query_sa = _query_sa,
 				.del_sa = _del_sa,
+				.flush_sas = _flush_sas,
 				.add_policy = _add_policy,
 				.query_policy = _query_policy,
 				.del_policy = _del_policy,
+				.flush_policies = _flush_policies,
 				.bypass_socket = _bypass_socket,
 				.destroy = _destroy,
 			},
