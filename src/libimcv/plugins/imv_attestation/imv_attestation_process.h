@@ -27,6 +27,7 @@
 #include <library.h>
 #include <utils/linked_list.h>
 #include <credentials/credential_manager.h>
+#include <crypto/hashers/hasher.h>
 
 #include <pa_tnc/pa_tnc_attr.h>
 
