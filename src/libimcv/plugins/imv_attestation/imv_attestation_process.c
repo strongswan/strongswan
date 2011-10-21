@@ -30,6 +30,7 @@
 #include <tcg/tcg_pts_attr_unix_file_meta.h>
 
 #include <debug.h>
+#include <crypto/hashers/hasher.h>
 
 bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 imv_attestation_state_t *attestation_state,
@@ -294,32 +295,46 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
 			{
-				chunk_t digest;
+				chunk_t quote_info, quote_digest;
+				hasher_t *hasher;
 				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
 				
-				if (!pts->get_quote_digest(pts, &digest))
+				if (!pts->get_quote_info(pts, &quote_info))
 				{
-					DBG1(DBG_IMV, "unable to contruct TPM Quote Digest");
-					free(digest.ptr);
-					return FALSE;
-				}
-				if (!pts->verify_quote_signature(pts, digest, tpm_quote_sign))
-				{
-					free(digest.ptr);
+					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
+					free(quote_info.ptr);
 					return FALSE;
 				}
 
-				DBG2(DBG_IMV, "signature verification succeeded for TPM Quote Info");
-
-				if (!chunk_equals(digest, pcr_comp))
+				/* SHA1(TPM Quote Info) expected from IMC */
+				hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+				hasher->allocate_hash(hasher, quote_info, &quote_digest);
+				hasher->destroy(hasher);
+				
+				if (!chunk_equals(pcr_comp, chunk_empty)
+					&& strncmp(quote_info.ptr, pcr_comp.ptr,
+								quote_info.len - ASSESSMENT_SECRET_LEN) != 0)
 				{
 					DBG1(DBG_IMV, "calculated TPM Quote Info differs from received");
-					DBG1(DBG_IMV, "calculated: %B", &digest);
-					DBG1(DBG_IMV, "received: %B", &pcr_comp);
+					DBG3(DBG_IMV, "calculated: %B", &quote_info);
+					DBG3(DBG_IMV, "received: %B", &pcr_comp);
+					free(quote_digest.ptr);
+					free(quote_info.ptr);
 					return FALSE;
 				}
-				free(digest.ptr);
+				DBG2(DBG_IMV, "received TPM Quote Info matches with calculated");
+				
+				if (!chunk_equals(tpm_quote_sign, chunk_empty) &&
+					!pts->verify_quote_signature(pts, quote_digest, tpm_quote_sign))
+				{
+					free(quote_digest.ptr);
+					free(quote_info.ptr);
+					return FALSE;
+				}
+				DBG2(DBG_IMV, "signature verification succeeded for TPM Quote Info");
+				free(quote_digest.ptr);
+				free(quote_info.ptr);
 			}
 			
 			if (evid_signature_included)

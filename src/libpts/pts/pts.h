@@ -61,6 +61,11 @@ typedef struct pcr_entry_t pcr_entry_t;
 #define TPM_QUOTE_INFO_LEN		48
 
 /**
+ * Bitmask Lenght for PCR Composite structure
+ */
+#define PCR_MASK_LEN			MAX_NUM_PCR / 8
+
+/**
  * PCR Entry structure which contains PCR number and current value
  */
 struct pcr_entry_t {
@@ -276,12 +281,12 @@ struct pts_t {
 	 bool (*does_pcr_value_match)(pts_t *this, chunk_t pcr_after_value);
 
 	 /**
-	 * Constructs and returns PCR Quote Digest structure expected from IMC
+	 * Constructs and returns TPM Quote Info structure expected from IMC
 	 * 
 	 * @param digest			Output variable to store quote digest
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_digest)(pts_t *this, chunk_t *digest);
+	 bool (*get_quote_info)(pts_t *this, chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC

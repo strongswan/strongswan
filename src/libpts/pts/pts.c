@@ -904,28 +904,6 @@ METHOD(pts_t, quote_tpm, bool,
 		goto err4;
 	}
 
-	/* Display quote info */
-	DBG3(DBG_PTS, "version:");
-	for(i = 0 ; i < 4 ; i++)
-	{
-		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
-	}
-	DBG3(DBG_PTS, "fixed value:");
-	for(i = 4 ; i < 8 ; i++)
-	{
-		DBG3(DBG_PTS, "%c",valData.rgbData[i]);
-	}
-	DBG3(DBG_PTS, "pcr digest:");
-	for(i = 8 ; i < 28 ; i++)
-	{
-		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
-	}
-	DBG3(DBG_PTS, "nonce:");
-	for(i = 28 ; i < valData.ulDataLength ; i++)
-	{
-		DBG3(DBG_PTS, "%02X ",valData.rgbData[i]);
-	}
-
 	/* Set output chunks */
 	pcr_comp = chunk_alloc(valData.ulDataLength - ASSESSMENT_SECRET_LEN);
 	memcpy(pcr_comp.ptr, valData.rgbData,
@@ -1090,7 +1068,7 @@ METHOD(pts_t, does_pcr_value_match, bool,
 	e = entries->create_enumerator(entries);
 	while (e->enumerate(e, &pcr_entry))
 	{
-		if (chunk_equals(chunk_create(pcr_entry->pcr_value, PCR_LEN), pcr_after_value))
+		if (strncmp(pcr_entry->pcr_value, pcr_after_value.ptr, PCR_LEN) == 0)
 		{
 			DBG1(DBG_PTS, "PCR %d value matched with configured value",
 				 pcr_entry->pcr_number);
@@ -1136,25 +1114,23 @@ METHOD(pts_t, does_pcr_value_match, bool,
  *	4 bytes 'Q' 'U' 'O' 'T'
  *	20 byte SHA1 of TCPA_PCR_COMPOSITE
  *	20 byte nonce
- *
- *	4. SHA1(TCPA_QUOTE_INFO) gives quoteDigest
  */
-static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_entries)
+static chunk_t calculate_quote_info(private_pts_t *this, linked_list_t *pcr_entries)
 {
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
-	chunk_t digest, hash_digest, pcr_composite, hash_pcr_composite;
+	chunk_t quote_info, pcr_composite, hash_pcr_composite;
 	u_int32_t pcr_composite_len;
 	bio_writer_t *writer;
-	u_int8_t mask_bytes[MAX_NUM_PCR / 8], i;
+	u_int8_t mask_bytes[PCR_MASK_LEN] = {0,0,0}, i;
 	hasher_t *hasher;
 
-	pcr_composite_len = 2 + (MAX_NUM_PCR / 8) + 4 +
+	pcr_composite_len = 2 + PCR_MASK_LEN + 4 +
 						pcr_entries->get_count(pcr_entries) * PCR_LEN;
 	
 	writer = bio_writer_create(pcr_composite_len);
 	/* Lenght of the bist mask field */
-	writer->write_uint16(writer, (MAX_NUM_PCR / 8));
+	writer->write_uint16(writer, PCR_MASK_LEN);
 	/* Bit mask indicating selected PCRs */
 	e = pcr_entries->create_enumerator(pcr_entries);
 	while (e->enumerate(e, &pcr_entry))
@@ -1164,7 +1140,7 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 	}
 	
 	e->destroy(e);
-	for (i = 0; i< (MAX_NUM_PCR / 8) ; i++)
+	for (i = 0; i< PCR_MASK_LEN ; i++)
 	{
 		writer->write_uint8(writer, mask_bytes[i]);
 	}
@@ -1203,26 +1179,22 @@ static chunk_t calculate_quote_digest(private_pts_t *this, linked_list_t *pcr_en
 	writer->write_data(writer, this->secret);
 
 	/* TPM Quote Info */
-	digest = chunk_clone(writer->get_buf(writer));
-	DBG3(DBG_PTS, "Calculated TPM Quote Digest: %B", &digest);
-
-	/* SHA1(TPM Quote Info) expected from IMC */
-	hasher->allocate_hash(hasher, digest, &hash_digest);
+	quote_info = chunk_clone(writer->get_buf(writer));
+	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", &quote_info);
 	
 	e->destroy(e);
 	writer->destroy(writer);
 	hasher->destroy(hasher);
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
-	chunk_clear(&digest);
 	free(pcr_entry);
 	pcr_entries->destroy(pcr_entries);
 	
-	return hash_digest;
+	return quote_info;
 }
 
-METHOD(pts_t, get_quote_digest, bool,
-	private_pts_t *this, chunk_t *digest)
+METHOD(pts_t, get_quote_info, bool,
+	private_pts_t *this, chunk_t *quote_info)
 {
 	linked_list_t *entries;
 
@@ -1232,13 +1204,14 @@ METHOD(pts_t, get_quote_digest, bool,
 		return FALSE;
 	}
 
-	*digest = calculate_quote_digest(this, entries);
+	*quote_info = calculate_quote_info(this, entries);
 	return TRUE;
 }
 
 METHOD(pts_t, verify_quote_signature, bool,
 				private_pts_t *this, chunk_t data, chunk_t signature)
 {
+	/** Implementation using strongswan -> not working */
 	public_key_t *aik_pub_key;
 
 	aik_pub_key = this->aik->get_public_key(this->aik);
@@ -1257,6 +1230,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 	}
 
 	aik_pub_key->destroy(aik_pub_key);
+	
 	return TRUE;
 }
 
@@ -1455,7 +1429,7 @@ pts_t *pts_create(bool is_imc)
 			.extend_pcr = _extend_pcr,
 			.quote_tpm = _quote_tpm,
 			.does_pcr_value_match = _does_pcr_value_match,
-			.get_quote_digest = _get_quote_digest,
+			.get_quote_info = _get_quote_info,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,
 		},
