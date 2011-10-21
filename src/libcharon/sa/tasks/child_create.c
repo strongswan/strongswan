@@ -886,6 +886,10 @@ static void handle_child_sa_failure(private_child_create_t *this,
 			delete_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa), TRUE),
 			100);
 	}
+	else
+	{
+		DBG1(DBG_IKE, "failed to establish CHILD_SA, keeping IKE_SA");
+	}
 }
 
 METHOD(task_t, build_r, status_t,
