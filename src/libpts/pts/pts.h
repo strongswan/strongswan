@@ -396,12 +396,12 @@ struct pts_t {
 	 bool (*does_pcr_value_match)(pts_t *this, chunk_t pcr_after_value);
 
 	 /**
-	 * Constructs and returns PCR Quote Digest structure expected from IMC
+	 * Constructs and returns TPM Quote Info structure expected from IMC
 	 * 
 	 * @param digest			Output variable to store quote digest
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_digest)(pts_t *this, chunk_t *digest);
+	 bool (*get_quote_info)(pts_t *this, chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC

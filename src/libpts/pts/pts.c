@@ -1001,7 +1001,7 @@ METHOD(pts_t, does_pcr_value_match, bool,
 	e = entries->create_enumerator(entries);
 	while (e->enumerate(e, &pcr_entry))
 	{
-		if (chunk_equals(chunk_create(pcr_entry->pcr_value, PCR_LEN), pcr_after_value))
+		if (strncmp(pcr_entry->pcr_value, pcr_after_value.ptr, PCR_LEN) == 0)
 		{
 			DBG1(DBG_PTS, "PCR %d value matched with configured value",
 				 pcr_entry->pcr_number);
@@ -1170,6 +1170,7 @@ METHOD(pts_t, get_quote_info, bool,
 METHOD(pts_t, verify_quote_signature, bool,
 				private_pts_t *this, chunk_t data, chunk_t signature)
 {
+	/** Implementation using strongswan -> not working */
 	public_key_t *aik_pub_key;
 
 	aik_pub_key = this->aik->get_public_key(this->aik);
@@ -1188,6 +1189,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 	}
 
 	aik_pub_key->destroy(aik_pub_key);
+	
 	return TRUE;
 }
 
