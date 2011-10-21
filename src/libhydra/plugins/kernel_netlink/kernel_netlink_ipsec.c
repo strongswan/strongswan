@@ -1958,6 +1958,33 @@ failed:
 	return status;
 }
 
+METHOD(kernel_ipsec_t, flush_sas, status_t,
+	private_kernel_netlink_ipsec_t *this)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_flush *flush;
+
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "flushing all SAD entries");
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_FLUSHSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_flush));
+
+	flush = (struct xfrm_usersa_flush*)NLMSG_DATA(hdr);
+	flush->proto = IPSEC_PROTO_ANY;
+
+	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to flush SAD entries");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 /**
  * Add or update a policy in the kernel.
  *
@@ -2553,6 +2580,33 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	return SUCCESS;
 }
 
+METHOD(kernel_ipsec_t, flush_policies, status_t,
+	private_kernel_netlink_ipsec_t *this)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr;
+
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "flushing all policies from SPD");
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_FLUSHPOLICY;
+	hdr->nlmsg_len = NLMSG_LENGTH(0); /* no data associated */
+
+	/* by adding an rtattr of type  XFRMA_POLICY_TYPE we could restrict this
+	 * to main or sub policies (default is main) */
+
+	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to flush SPD entries");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+
 METHOD(kernel_ipsec_t, bypass_socket, bool,
 	private_kernel_netlink_ipsec_t *this, int fd, int family)
 {
@@ -2639,9 +2693,11 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 				.update_sa = _update_sa,
 				.query_sa = _query_sa,
 				.del_sa = _del_sa,
+				.flush_sas = _flush_sas,
 				.add_policy = _add_policy,
 				.query_policy = _query_policy,
 				.del_policy = _del_policy,
+				.flush_policies = _flush_policies,
 				.bypass_socket = _bypass_socket,
 				.destroy = _destroy,
 			},
