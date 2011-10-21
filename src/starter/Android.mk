@@ -21,7 +21,8 @@ LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/whack \
 	$(strongswan_PATH)/src/stroke
 
-LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON
+LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON \
+	-DPLUGINS='"$(strongswan_STARTER_PLUGINS)"'
 
 ifneq ($(strongswan_BUILD_PLUTO),)
 LOCAL_CFLAGS += -DSTART_PLUTO
@@ -33,7 +34,7 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libfreeswan
+LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libfreeswan
 
 include $(BUILD_EXECUTABLE)
 

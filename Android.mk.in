@@ -22,9 +22,12 @@ strongswan_PLUTO_PLUGINS := openssl fips-prf random pubkey pkcs1 \
 	pem xcbc hmac kernel-netlink xauth
 endif
 
+strongswan_STARTER_PLUGINS := kernel-netlink
+
 # list of all plugins - used to enable them with the function below
 strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
-			     $(strongswan_PLUTO_PLUGINS))
+			     $(strongswan_PLUTO_PLUGINS) \
+			     $(strongswan_STARTER_PLUGINS))
 
 # helper macros to only add source files for plugins included in the list above
 # source files are relative to the android.mk that called the macro
