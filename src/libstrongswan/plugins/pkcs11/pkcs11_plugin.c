@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -25,6 +28,7 @@
 #include "pkcs11_private_key.h"
 #include "pkcs11_public_key.h"
 #include "pkcs11_hasher.h"
+#include "pkcs11_rng.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -121,6 +125,7 @@ METHOD(plugin_t, destroy, void,
 	}
 	lib->crypto->remove_hasher(lib->crypto,
 							(hasher_constructor_t)pkcs11_hasher_create);
+	lib->crypto->remove_rng(lib->crypto, (rng_constructor_t)pkcs11_rng_create);
 	this->creds->destroy(this->creds);
 	lib->set(lib, "pkcs11-manager", NULL);
 	this->manager->destroy(this->manager);
@@ -169,6 +174,17 @@ plugin_t *pkcs11_plugin_create()
 					(hasher_constructor_t)pkcs11_hasher_create);
 		lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
+	}
+
+	if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_rng", FALSE))
+	{
+		lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
+					(rng_constructor_t)pkcs11_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
+					(rng_constructor_t)pkcs11_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_WEAK, get_name(this),
+					(rng_constructor_t)pkcs11_rng_create);
 	}
 
 	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
