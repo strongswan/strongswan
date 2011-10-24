@@ -266,11 +266,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
 			{
 				policy_uri = attr_cast->get_policy_uri(attr_cast);
+				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
+					 " Verification Policies");
 			}
-					
-			/** TODO: Implement saving the PCR number, Hash Algo = communicated one,
-			 * PCR transform (truncate SHA256, SHA384), PCR before and after values
-			 */
+
 			break;
 		}
 		case TCG_PTS_SIMPLE_EVID_FINAL:
