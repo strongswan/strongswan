@@ -86,9 +86,7 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h \
-tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
-tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
+sa/tasks/task.c sa/tasks/task.h
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -96,9 +94,7 @@ INCLUDES = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon \
-	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libtnccs
+	-I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
@@ -348,6 +344,13 @@ if USE_TNC_IMV
   SUBDIRS += plugins/tnc_imv
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
+endif
+endif
+
+if USE_TNC_TNCCS
+  SUBDIRS += plugins/tnc_tnccs
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_tnccs/libstrongswan-tnc_tnccs.la
 endif
 endif
 

@@ -23,11 +23,8 @@
 
 typedef struct tnccs_manager_t tnccs_manager_t;
 
-#ifdef USE_TNC
-
 #include "tnccs.h"
-
-#include <imv/imv_recommendations.h>
+#include "tnc/imv/imv_recommendations.h"
 
 /**
  * The TNCCS manager manages all TNCCS implementations and creates instances.
@@ -181,10 +178,17 @@ struct tnccs_manager_t {
 };
 
 /**
- * Create a tnccs_manager instance.
+ * Helper function to (un-)register TNCCS methods from plugin features.
+ *
+ * This function is a plugin_feature_callback_t and can be used with the
+ * PLUGIN_CALLBACK macro to register a TNCCS method constructor.
+ *
+ * @param plugin		plugin registering the TNCCS method constructor
+ * @param feature		associated plugin feature
+ * @param reg			TRUE to register, FALSE to unregister.
+ * @param data			data passed to callback, a tnccs_constructor_t
  */
-tnccs_manager_t *tnccs_manager_create();
-
-#endif /* USE_TNC */
+bool tnccs_method_register(plugin_t *plugin, plugin_feature_t *feature,
+						   bool reg, void *data);
 
 #endif /** TNCCS_MANAGER_H_ @}*/

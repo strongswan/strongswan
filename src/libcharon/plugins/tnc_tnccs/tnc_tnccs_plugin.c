@@ -13,52 +13,69 @@
  * for more details.
  */
 
-#include "tnccs_20_plugin.h"
-#include "tnccs_20.h"
+#include "tnc_tnccs_plugin.h"
+#include "tnc_tnccs_manager.h"
 
-#include <tnc/tnccs/tnccs_manager.h>
+#include <tnc/tnc.h>
+
+typedef struct private_tnc_tnccs_plugin_t private_tnc_tnccs_plugin_t;
+
+/**
+ * Private data of a tnc_tnccs_plugin_t object.
+ */
+struct private_tnc_tnccs_plugin_t {
+
+	/**
+	 * Public interface.
+	 */
+	tnc_tnccs_plugin_t public;
+
+};
+
 
 METHOD(plugin_t, get_name, char*,
-	tnccs_20_plugin_t *this)
+	private_tnc_tnccs_plugin_t *this)
 {
-	return "tnccs-20";
+	return "tnc-tnccs";
 }
 
 METHOD(plugin_t, get_features, int,
-	tnccs_20_plugin_t *this, plugin_feature_t *features[])
+	private_tnc_tnccs_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK(tnccs_method_register, tnccs_20_create),
-			PLUGIN_PROVIDE(CUSTOM, "tnccs-2.0"),
-				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
-				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
-				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
+		PLUGIN_CALLBACK(tnc_manager_register, tnc_tnccs_manager_create),
+			PLUGIN_PROVIDE(CUSTOM, "tnccs-manager"),
 	};
 	*features = f;
 	return countof(f);
 }
 
 METHOD(plugin_t, destroy, void,
-	tnccs_20_plugin_t *this)
+	private_tnc_tnccs_plugin_t *this)
 {
+	libtnccs_deinit();
 	free(this);
 }
 
 /*
  * see header file
  */
-plugin_t *tnccs_20_plugin_create()
+plugin_t *tnc_tnccs_plugin_create(void)
 {
-	tnccs_20_plugin_t *this;
+	private_tnc_tnccs_plugin_t *this;
 
 	INIT(this,
-		.plugin = {
-			.get_name = _get_name,
-			.get_features = _get_features,
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.get_features = _get_features,
+				.destroy = _destroy,
+			},
 		},
 	);
 
-	return &this->plugin;
+	libtnccs_init();
+
+	return &this->public.plugin;
 }
 

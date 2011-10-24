@@ -31,9 +31,11 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_CALLBACK(eap_method_register, eap_tnc_create_server),
 			PLUGIN_PROVIDE(EAP_SERVER, EAP_TNC),
 				PLUGIN_DEPENDS(EAP_SERVER, EAP_TTLS),
+				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
 		PLUGIN_CALLBACK(eap_method_register, eap_tnc_create_peer),
 			PLUGIN_PROVIDE(EAP_PEER, EAP_TNC),
 				PLUGIN_DEPENDS(EAP_PEER, EAP_TTLS),
+				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
 	};
 	*features = f;
 	return countof(f);

@@ -8,7 +8,7 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libtnccs \
 	${xml_CFLAGS}
 
-AM_CFLAGS = -DUSE_TNC -rdynamic
+AM_CFLAGS = -rdynamic
 
 libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
 

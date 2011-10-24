@@ -14,23 +14,29 @@
  */
 
 /**
+ * @defgroup tnccs tnccs
+ * @ingroup cplugins
  *
- * @defgroup tnc_imc_t tnc_imc
- * @{ @ingroup tnc_imc
+ * @defgroup tnc_tnccs_plugin tnc_tnccs_plugin
+ * @{ @ingroup tnccs
  */
 
-#ifndef TNC_IMC_H_
-#define TNC_IMC_H_
+#ifndef TNC_TNCCS_PLUGIN_H_
+#define TNC_TNCCS_PLUGIN_H_
 
-#include <tnc/imc/imc.h>
+#include <plugins/plugin.h>
+
+typedef struct tnc_tnccs_plugin_t tnc_tnccs_plugin_t;
 
 /**
- * Create an Integrity Measurement Collector.
- *
- * @param name			name of the IMC
- * @param filename		path to the dynamic IMC library
- * @return				instance of the imc_t interface
+ * TNCCS manager plugin
  */
-imc_t* tnc_imc_create(char *name, char *filename);
+struct tnc_tnccs_plugin_t {
 
-#endif /** TNC_IMC_H_ @}*/
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** TNC_TNCCS_PLUGIN_H_ @}*/

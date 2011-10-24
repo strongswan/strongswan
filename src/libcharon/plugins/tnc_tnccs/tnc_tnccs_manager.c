@@ -13,19 +13,18 @@
  * for more details.
  */
 
-#define USE_TNC
+#include "tnc_tnccs_manager.h"
 
-#include "tnccs_manager.h"
-
-#include <imc/imc_manager.h>
-#include <imv/imv_manager.h>
+#include <tnc/tnc.h>
+#include <tnc/imv/imv_manager.h>
+#include <tnc/imc/imc_manager.h>
+#include <tnc/imv/imv_manager.h>
 
 #include <debug.h>
-#include <daemon.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
-typedef struct private_tnccs_manager_t private_tnccs_manager_t;
+typedef struct private_tnc_tnccs_manager_t private_tnc_tnccs_manager_t;
 typedef struct tnccs_entry_t tnccs_entry_t;
 typedef struct tnccs_connection_entry_t tnccs_connection_entry_t;
 
@@ -77,9 +76,9 @@ struct tnccs_connection_entry_t {
 };
 
 /**
- * private data of tnccs_manager
+ * private data of tnc_tnccs_manager
  */
-struct private_tnccs_manager_t {
+struct private_tnc_tnccs_manager_t {
 
 	/**
 	 * public functions
@@ -111,20 +110,10 @@ struct private_tnccs_manager_t {
 	 */
 	rwlock_t *connection_lock;
 
-	/**
-	 * TNC IMC manager controlling Integrity Measurement Collectors
-	 */
-	imc_manager_t *imcs;
-
-	/**
-	 * TNC IMV manager controlling Integrity Measurement Verifiers
-	 */
-	imv_manager_t *imvs;
-
 };
 
 METHOD(tnccs_manager_t, add_method, void,
-	private_tnccs_manager_t *this, tnccs_type_t type,
+	private_tnc_tnccs_manager_t *this, tnccs_type_t type,
 	tnccs_constructor_t constructor)
 {
 	tnccs_entry_t *entry;
@@ -139,7 +128,7 @@ METHOD(tnccs_manager_t, add_method, void,
 }
 
 METHOD(tnccs_manager_t, remove_method, void,
-	private_tnccs_manager_t *this, tnccs_constructor_t constructor)
+	private_tnc_tnccs_manager_t *this, tnccs_constructor_t constructor)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -159,7 +148,7 @@ METHOD(tnccs_manager_t, remove_method, void,
 }
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
-	private_tnccs_manager_t *this, tnccs_type_t type, bool is_server)
+	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -185,7 +174,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 }
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
-	private_tnccs_manager_t *this, tnccs_t *tnccs,
+	private_tnc_tnccs_manager_t *this, tnccs_t *tnccs,
 	tnccs_send_message_t send_message, bool* request_handshake_retry,
 	recommendations_t **recs)
 {
@@ -198,27 +187,19 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	if (recs)
 	{
 		/* we assume a TNC Server needing recommendations from IMVs */
-		if (!this->imvs)
-		{
-			this->imvs = lib->get(lib, "imv-manager");
-		}
-		if (!this->imvs)
+		if (!tnc->imvs)
 		{
 			DBG1(DBG_TNC, "no IMV manager available!");
 			free(entry);
 			return 0;
 		}
-		entry->recs = this->imvs->create_recommendations(this->imvs);
+		entry->recs = tnc->imvs->create_recommendations(tnc->imvs);
 		*recs = entry->recs;
 	}
 	else
 	{
 		/* we assume a TNC Client */
-		if (!this->imcs)
-		{
-			this->imcs = lib->get(lib, "imc-manager");
-		}
-		if (!this->imcs)
+		if (!tnc->imcs)
 		{
 			DBG1(DBG_TNC, "no IMC manager available!");
 			free(entry);
@@ -236,24 +217,24 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 }
 
 METHOD(tnccs_manager_t, remove_connection, void,
-	private_tnccs_manager_t *this, TNC_ConnectionID id, bool is_server)
+	private_tnc_tnccs_manager_t *this, TNC_ConnectionID id, bool is_server)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 
 	if (is_server)
 	{
-		if (this->imvs)
+		if (tnc->imvs)
 		{
-			this->imvs->notify_connection_change(this->imvs, id,
+			tnc->imvs->notify_connection_change(tnc->imvs, id,
 										TNC_CONNECTION_STATE_DELETE);
 		}
 	}
 	else
 	{
-		if (this->imcs)
+		if (tnc->imcs)
 		{
-			this->imcs->notify_connection_change(this->imcs, id,
+			tnc->imcs->notify_connection_change(tnc->imcs, id,
 										TNC_CONNECTION_STATE_DELETE);
 		}
 	}
@@ -278,9 +259,9 @@ METHOD(tnccs_manager_t, remove_connection, void,
 }
 
 METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
-	private_tnccs_manager_t *this, bool is_imc, TNC_UInt32 imcv_id,
-												TNC_ConnectionID id,
-												TNC_RetryReason reason)
+	private_tnc_tnccs_manager_t *this, bool is_imc, TNC_UInt32 imcv_id,
+													TNC_ConnectionID id,
+													TNC_RetryReason reason)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
@@ -312,11 +293,11 @@ METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, send_message, TNC_Result,
-	private_tnccs_manager_t *this, TNC_IMCID imc_id, TNC_IMVID imv_id,
-								   TNC_ConnectionID id,
-								   TNC_BufferReference msg,
-								   TNC_UInt32 msg_len,
-								   TNC_MessageType msg_type)
+	private_tnc_tnccs_manager_t *this, TNC_IMCID imc_id, TNC_IMVID imv_id,
+									   TNC_ConnectionID id,
+									   TNC_BufferReference msg,
+									   TNC_UInt32 msg_len,
+									   TNC_MessageType msg_type)
 
 {
 	enumerator_t *enumerator;
@@ -357,10 +338,10 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
-	private_tnccs_manager_t *this, TNC_IMVID imv_id,
-								   TNC_ConnectionID id,
-								   TNC_IMV_Action_Recommendation rec,
-								   TNC_IMV_Evaluation_Result eval)
+	private_tnc_tnccs_manager_t *this, TNC_IMVID imv_id,
+									   TNC_ConnectionID id,
+									   TNC_IMV_Action_Recommendation rec,
+									   TNC_IMV_Evaluation_Result eval)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
@@ -388,12 +369,12 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, get_attribute, TNC_Result,
-	private_tnccs_manager_t *this, TNC_IMVID imv_id,
-								   TNC_ConnectionID id,
-								   TNC_AttributeID attribute_id,
-								   TNC_UInt32 buffer_len,
-								   TNC_BufferReference buffer,
-								   TNC_UInt32 *out_value_len)
+	private_tnc_tnccs_manager_t *this, TNC_IMVID imv_id,
+									   TNC_ConnectionID id,
+									   TNC_AttributeID attribute_id,
+									   TNC_UInt32 buffer_len,
+									   TNC_BufferReference buffer,
+									   TNC_UInt32 *out_value_len)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
@@ -438,11 +419,11 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, set_attribute, TNC_Result,
-	private_tnccs_manager_t *this, TNC_IMVID imv_id,
-								   TNC_ConnectionID id,
-								   TNC_AttributeID attribute_id,
-								   TNC_UInt32 buffer_len,
-								   TNC_BufferReference buffer)
+	private_tnc_tnccs_manager_t *this, TNC_IMVID imv_id,
+									   TNC_ConnectionID id,
+									   TNC_AttributeID attribute_id,
+									   TNC_UInt32 buffer_len,
+									   TNC_BufferReference buffer)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
@@ -485,7 +466,7 @@ METHOD(tnccs_manager_t, set_attribute, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, destroy, void,
-	private_tnccs_manager_t *this)
+	private_tnc_tnccs_manager_t *this)
 {
 	this->protocols->destroy_function(this->protocols, free);
 	this->protocol_lock->destroy(this->protocol_lock);
@@ -497,9 +478,9 @@ METHOD(tnccs_manager_t, destroy, void,
 /*
  * See header
  */
-tnccs_manager_t *tnccs_manager_create()
+tnccs_manager_t *tnc_tnccs_manager_create()
 {
-	private_tnccs_manager_t *this;
+	private_tnc_tnccs_manager_t *this;
 
 	INIT(this,
 			.public = {
@@ -519,8 +500,6 @@ tnccs_manager_t *tnccs_manager_create()
 			.connections = linked_list_create(),
 			.protocol_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 			.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-			.imcs = lib->get(lib, "imc-manager"),
-			.imvs = lib->get(lib, "imv-manager"),
 	);
 
 	return &this->public;

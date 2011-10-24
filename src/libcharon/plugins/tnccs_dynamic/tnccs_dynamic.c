@@ -15,8 +15,9 @@
 
 #include "tnccs_dynamic.h"
 
-#include <tnc/tnccs/tnccs.h>
-#include <daemon.h>
+#include <tnc/tnc.h>
+
+#include <debug.h>
 
 typedef struct private_tnccs_dynamic_t private_tnccs_dynamic_t;
 
@@ -75,8 +76,7 @@ METHOD(tls_t, process, status_t,
 		type = determine_tnccs_protocol(*(char*)buf);
 		DBG1(DBG_TNC, "%N protocol detected dynamically",
 					   tnccs_type_names, type);
-		this->tls = (tls_t*)charon->tnccs->create_instance(charon->tnccs,
-														   type, TRUE);
+		this->tls = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, type, TRUE);
 		if (!this->tls)
 		{
 			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);

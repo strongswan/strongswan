@@ -49,6 +49,14 @@ struct imc_manager_t {
 	imc_t* (*remove)(imc_manager_t *this, TNC_IMCID id);
 
 	/**
+	 * Load all IMC instances
+	 *
+	 * @param filename			configuration file containt IMC paths
+	 * @return					TRUE if initialization of all IMCs succeeded
+	 */
+	 bool (*load_all)(imc_manager_t *this, char *filename);
+
+	/**
 	 * Check if an IMC with a given ID is registered with the IMC manager
 	 *
 	 * @param id				ID of IMC instance

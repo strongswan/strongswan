@@ -17,9 +17,10 @@
 
 #include "pb_pa_msg.h"
 
+#include <tnc/tnccs/tnccs.h>
+
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <tnc/tnccs/tnccs.h>
 #include <pen/pen.h>
 #include <debug.h>
 

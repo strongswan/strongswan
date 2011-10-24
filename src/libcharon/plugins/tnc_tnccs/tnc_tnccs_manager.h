@@ -15,22 +15,18 @@
 
 /**
  *
- * @defgroup tnc_imc_t tnc_imc
- * @{ @ingroup tnc_imc
+ * @defgroup tnc_tnccs_manager tnc_tnccs_manager
+ * @{ @ingroup tnc_tnccs
  */
 
-#ifndef TNC_IMC_H_
-#define TNC_IMC_H_
+#ifndef TNC_TNCCS_MANAGER_H_
+#define TNC_TNCCS_MANAGER_H_
 
-#include <tnc/imc/imc.h>
+#include <tnc/tnccs/tnccs_manager.h>
 
 /**
- * Create an Integrity Measurement Collector.
- *
- * @param name			name of the IMC
- * @param filename		path to the dynamic IMC library
- * @return				instance of the imc_t interface
+ * Create a TNCCS manager instance.
  */
-imc_t* tnc_imc_create(char *name, char *filename);
+tnccs_manager_t *tnc_tnccs_manager_create();
 
-#endif /** TNC_IMC_H_ @}*/
+#endif /** TNC_TNCCS_MANAGER_H_ @}*/

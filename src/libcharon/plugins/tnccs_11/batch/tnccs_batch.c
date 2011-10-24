@@ -16,9 +16,10 @@
 #include "tnccs_batch.h"
 #include "messages/tnccs_error_msg.h"
 
-#include <debug.h>
-#include <utils/linked_list.h>
 #include <tnc/tnccs/tnccs.h>
+
+#include <utils/linked_list.h>
+#include <debug.h>
 
 #include <libxml/parser.h>
 

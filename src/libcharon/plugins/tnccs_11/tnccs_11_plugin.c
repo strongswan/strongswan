@@ -16,7 +16,7 @@
 #include "tnccs_11_plugin.h"
 #include "tnccs_11.h"
 
-#include <daemon.h>
+#include <tnc/tnccs/tnccs_manager.h>
 
 METHOD(plugin_t, get_name, char*,
 	tnccs_11_plugin_t *this)
@@ -32,8 +32,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CUSTOM, "tnccs-1.1"),
 				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
 				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
-				PLUGIN_SDEPEND(CUSTOM, "imc-manager"),
-				PLUGIN_SDEPEND(CUSTOM, "imv-manager"),
+				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
 	};
 	*features = f;
 	return countof(f);

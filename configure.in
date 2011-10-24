@@ -841,12 +841,13 @@ ADD_PLUGIN([eap-tls],              [c libcharon])
 ADD_PLUGIN([eap-ttls],             [c libcharon])
 ADD_PLUGIN([eap-peap],             [c libcharon])
 ADD_PLUGIN([eap-tnc],              [c libcharon])
-ADD_PLUGIN([tnccs-20],             [c libcharon])
-ADD_PLUGIN([tnccs-11],             [c libcharon])
-ADD_PLUGIN([tnccs-dynamic],        [c libcharon])
 ADD_PLUGIN([tnc-ifmap],            [c libcharon])
 ADD_PLUGIN([tnc-imc],              [c libcharon])
 ADD_PLUGIN([tnc-imv],              [c libcharon])
+ADD_PLUGIN([tnc-tnccs],            [c libcharon])
+ADD_PLUGIN([tnccs-20],             [c libcharon])
+ADD_PLUGIN([tnccs-11],             [c libcharon])
+ADD_PLUGIN([tnccs-dynamic],        [c libcharon])
 ADD_PLUGIN([medsrv],               [c libcharon])
 ADD_PLUGIN([medcli],               [c libcharon])
 ADD_PLUGIN([nm],                   [c libcharon])
@@ -962,6 +963,7 @@ AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
+AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnccs = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
@@ -1017,13 +1019,13 @@ AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$charon = xtrue -o x$conftest = xtrue -o x$imcv = xtrue)
+AM_CONDITIONAL(USE_LIBTNCCS, test x$tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$pluto = xtrue -o x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
-AM_CONDITIONAL(USE_TNCCS, test x$tnccs = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
@@ -1136,6 +1138,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile
 	src/libcharon/plugins/tnc_imv/Makefile
+	src/libcharon/plugins/tnc_tnccs/Makefile
 	src/libcharon/plugins/tnccs_11/Makefile
 	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/tnccs_dynamic/Makefile

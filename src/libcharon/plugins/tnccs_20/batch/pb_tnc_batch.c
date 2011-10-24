@@ -18,12 +18,13 @@
 #include "messages/pb_error_msg.h"
 #include "state_machine/pb_tnc_state_machine.h"
 
-#include <debug.h>
+#include <tnc/tnccs/tnccs.h>
+
 #include <utils/linked_list.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <tnc/tnccs/tnccs.h>
 #include <pen/pen.h>
+#include <debug.h>
 
 ENUM(pb_tnc_batch_type_names, PB_BATCH_CDATA, PB_BATCH_CLOSE,
 	"CDATA",

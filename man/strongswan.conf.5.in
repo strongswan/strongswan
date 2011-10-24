@@ -487,12 +487,6 @@ Authentication username of strongSwan MAP client
 .BR charon.plugins.tnc-imc.preferred_language " [en]"
 Preferred language for TNC recommendations
 .TP
-.BR charon.plugins.tnc-imc.tnc_config " [/etc/tnc_config]"
-TNC IMC configuration directory
-.TP
-.BR charon.plugins.tnc-imv.tnc_config " [/etc/tnc_config]"
-TNC IMV configuration directory
-.TP
 .BR charon.plugins.whitelist.enable " [yes]"
 enable loaded whitelist plugin
 .SS libstrongswan section
@@ -556,6 +550,10 @@ List of available PKCS#11 modules
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
 Whether the PKCS#11 modules should be used to hash data
+.SS libtnccs section
+.TP
+.BR libtnccs.tnc_config " [/etc/tnc_config]"
+TNC IMC/IMV configuration directory
 .SS libimcv section
 .TP
 .BR libimcv.debug_level " [1]"

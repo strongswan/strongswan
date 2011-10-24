@@ -64,9 +64,6 @@
  * @defgroup tasks tasks
  * @ingroup sa
  *
- * @defgroup tnc tnc
- * @ingroup libcharon
- *
  * @addtogroup libcharon
  * @{
  *
@@ -152,7 +149,6 @@ typedef struct daemon_t daemon_t;
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
-#include <tnc/tnccs/tnccs_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -238,11 +234,6 @@ struct daemon_t {
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
-
-	/**
-	 * TNCCS manager to maintain registered TNCCS protocols
-	 */
-	tnccs_manager_t *tnccs;
 
 #ifdef ME
 	/**

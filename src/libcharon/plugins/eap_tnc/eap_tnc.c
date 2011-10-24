@@ -15,12 +15,10 @@
 
 #include "eap_tnc.h"
 
+#include <tnc/tnc.h>
+#include <tnc/tnccs/tnccs_manager.h>
 #include <tls_eap.h>
 #include <debug.h>
-
-#define USE_TNC
-
-#include <daemon.h>
 
 typedef struct private_eap_tnc_t private_eap_tnc_t;
 
@@ -174,7 +172,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	tnccs = charon->tnccs->create_instance(charon->tnccs, type, is_server);
+	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size,
 											 max_msg_count, include_length);
 	if (!this->tls_eap)

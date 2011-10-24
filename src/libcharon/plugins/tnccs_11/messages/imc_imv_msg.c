@@ -16,8 +16,9 @@
 #include "imc_imv_msg.h"
 
 #include <tnc/tnccs/tnccs.h>
-#include <debug.h>
+
 #include <utils/lexparser.h>
+#include <debug.h>
 
 typedef struct private_imc_imv_msg_t private_imc_imv_msg_t;
 

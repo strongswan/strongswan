@@ -16,7 +16,7 @@
 #include "tnccs_dynamic_plugin.h"
 #include "tnccs_dynamic.h"
 
-#include <daemon.h>
+#include <tnc/tnccs/tnccs_manager.h>
 
 METHOD(plugin_t, get_name, char*,
 	tnccs_dynamic_plugin_t *this)

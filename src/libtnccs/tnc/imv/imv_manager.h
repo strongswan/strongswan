@@ -50,6 +50,14 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
+	 * Load all IMV instances
+	 *
+	 * @param filename			configuration file containing IMV paths
+	 * @return					TRUE if initialization of all IMVs succeeded
+	 */
+	 bool (*load_all)(imv_manager_t *this, char *filename);
+
+	/**
 	 * Check if an IMV with a given ID is registered with the IMV manager
 	 *
 	 * @param id				ID of IMV instance
