@@ -810,7 +810,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_VALIDATION valData;
 	u_int32_t i;
 	TSS_RESULT result;
-	chunk_t quote_sign;
+	chunk_t pcr_comp, quote_sign;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -1143,6 +1143,10 @@ METHOD(pts_t, get_quote_info, bool,
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
 
+	chunk_clear(&pcr_composite);
+	hasher->destroy(hasher);
+	writer->write_data(writer, *out_pcr_composite);
+	
 	if (!this->secret.ptr)
 	{
 		DBG1(DBG_PTS, "Secret assessment value unavailable",
