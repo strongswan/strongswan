@@ -197,7 +197,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	u_int8_t flags;
 	u_int8_t reserved;
-	//u_int16_t algorithm;
+	/** u_int16_t algorithm;*/
 	
 	if (this->value.len < PTS_SIMPLE_EVID_FINAL_SIZE)
 	{

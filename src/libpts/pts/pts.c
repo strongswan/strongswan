@@ -1205,7 +1205,8 @@ METHOD(pts_t, verify_quote_signature, bool,
 	}
 	*/
 
-	if (!aik_pub_key->get_encoding(aik_pub_key, PUBKEY_SPKI_ASN1_DER, &key_encoding))
+	if (!aik_pub_key->get_encoding(aik_pub_key,
+		PUBKEY_SPKI_ASN1_DER, &key_encoding))
 	{
 		DBG1(DBG_PTS, "failed to get encoding of AIK public key");
 		goto cleanup;
@@ -1215,7 +1216,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 	pkey = d2i_PUBKEY(NULL, (const unsigned char**)&p, key_encoding.len);
 	if (!pkey)
 	{
-		DBG1(DBG_PTS, "failed to get EVP_PKEY object from AIK public key encoding");
+		DBG1(DBG_PTS, "failed to get EVP_PKEY object from AIK public key");
 		goto cleanup;
 	}
 
@@ -1226,7 +1227,8 @@ METHOD(pts_t, verify_quote_signature, bool,
 		goto cleanup;
 	}
 
-	if (RSA_verify(NID_sha1, data.ptr, data.len, signature.ptr, signature.len, rsa) != 1)
+	if (RSA_verify(NID_sha1, data.ptr, data.len,
+		signature.ptr, signature.len, rsa) != 1)
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		goto cleanup;
