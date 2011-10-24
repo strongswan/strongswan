@@ -389,19 +389,20 @@ struct pts_t {
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
 
 	 /**
-	 * Check PCR after value in Simple Component Evidence matches configured value
+	 * Add extended PCR with its corresponding value
 	 *
 	 * @return					FALSE in case of any error or non-match, TRUE otherwise
 	 */
-	 bool (*does_pcr_value_match)(pts_t *this, chunk_t pcr_after_value);
+	 void (*add_pcr_entry)(pts_t *this, pcr_entry_t *entry);
 
 	 /**
 	 * Constructs and returns TPM Quote Info structure expected from IMC
-	 * 
-	 * @param digest			Output variable to store quote digest
+	 *
+	 * @param pcr_composite			Output variable to store PCR Composite
+	 * @param quote_info			Output variable to store TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, chunk_t *quote_info);
+	 bool (*get_quote_info)(pts_t *this, chunk_t *pcr_composite, chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC

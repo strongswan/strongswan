@@ -810,7 +810,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_VALIDATION valData;
 	u_int32_t i;
 	TSS_RESULT result;
-	chunk_t pcr_comp, quote_sign;
+	chunk_t quote_sign;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -991,40 +991,31 @@ static u_int32_t get_max_pcr_index(private_pts_t *this)
 METHOD(pts_t, does_pcr_value_match, bool,
 	private_pts_t *this, chunk_t pcr_after_value)
 {
-	linked_list_t *entries;
 	enumerator_t *e;
-	pcr_entry_t *pcr_entry;
-	bool match_found = FALSE;
+	pcr_entry_t *entry;
 	
-	if (!load_pcr_entries(&entries))
+	if (!this->pcrs)
 	{
-		DBG1(DBG_PTS, "failed to load PCR entries");
-		return FALSE;
+		this->pcrs = linked_list_create();
 	}
-	
-	e = entries->create_enumerator(entries);
-	while (e->enumerate(e, &pcr_entry))
+
+	e = this->pcrs->create_enumerator(this->pcrs);
+	while (e->enumerate(e, &entry))
 	{
-		if (strncmp(pcr_entry->pcr_value, pcr_after_value.ptr, PCR_LEN) == 0)
+		if (entry->pcr_number == new->pcr_number)
 		{
-			DBG1(DBG_PTS, "PCR %d value matched with configured value",
-				 pcr_entry->pcr_number);
-			match_found = TRUE;
+			DBG4(DBG_PTS, "updating already added PCR%d value",
+				 entry->pcr_number);
+			this->pcrs->remove_at(this->pcrs, e);
+			free(entry);
 			break;
 		}
 	}
-	
 	DESTROY_IF(e);
-	DESTROY_IF(entries);
-	free(pcr_entry);
-
-	if (match_found)
-	{
-		return TRUE;
-	}
 	
-	DBG1(DBG_PTS, "PCR after value didn't match with any of the configured values");
-	return FALSE;
+	this->pcrs->insert_last(this->pcrs, new);
+
+	/* TODO: Sort pcr entries with pcr index */
 }
 
 /**
@@ -1088,7 +1079,6 @@ METHOD(pts_t, get_quote_info, bool,
 		u_int32_t index = pcr_entry->pcr_number;
 		mask_bytes[index / 8] |= (1 << (index % 8));
 	}
-	
 	e->destroy(e);
 
 	for (i = 0; i< bitmask_len ; i++)
