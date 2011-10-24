@@ -113,6 +113,10 @@ struct private_pts_t {
 	 */
  	certificate_t *aik;
 
+	/**
+	 * List of extended PCR's with corresponding values
+	 */
+	linked_list_t *pcrs;
 };
 
 METHOD(pts_t, get_proto_caps, pts_proto_caps_flag_t,
@@ -828,7 +832,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_VALIDATION valData;
 	u_int32_t i;
 	TSS_RESULT result;
-	chunk_t pcr_comp, quote_sign;
+	chunk_t quote_sign;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -909,12 +913,7 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Set output chunks */
-	pcr_comp = chunk_alloc(valData.ulDataLength - ASSESSMENT_SECRET_LEN);
-	memcpy(pcr_comp.ptr, valData.rgbData,
-							valData.ulDataLength - ASSESSMENT_SECRET_LEN);
-	*pcr_composite = pcr_comp;
-	*pcr_composite = chunk_clone(*pcr_composite);
-	DBG3(DBG_PTS, "PCR comp: %B",pcr_composite);
+	*pcr_composite = chunk_empty;
 	
 	quote_sign = chunk_alloc(valData.ulValidationDataLength);
 	memcpy(quote_sign.ptr, valData.rgbValidationData,
@@ -923,7 +922,6 @@ METHOD(pts_t, quote_tpm, bool,
 	*quote_signature = chunk_clone(*quote_signature);
 	DBG3(DBG_PTS, "Quote sign: %B",quote_signature);
 
-	chunk_clear(&pcr_comp);
 	chunk_clear(&quote_sign);
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_CloseObject(hContext, hPcrComposite);
@@ -949,149 +947,34 @@ METHOD(pts_t, quote_tpm, bool,
 	return FALSE;
 }
 
-/**
- *  Convert from string to byte array (configured PCR values)
- */
-static u_int8_t* pcr_string_to_bytearray(char *str_value)
+METHOD(pts_t, add_pcr_entry, void,
+	private_pts_t *this, pcr_entry_t *new)
 {
-	u_int32_t i;
-	u_int8_t *ret;
-
-	if (strlen(str_value) != PCR_LEN * 2)
-	{
-		DBG1(DBG_PTS, "expected PCR value with %d characters, current:%s",
-			 PCR_LEN * 2, str_value);
-		return NULL;
-	}
-
-	ret = malloc(PCR_LEN);
-	for (i = 0; i < strlen(str_value)/2; i++)
-	{
-		char c1, c2;
-		u_int8_t d1, d2;
-
-		c1 = str_value[i*2];
-		c2 = str_value[i*2 + 1];
-
-		/**
-		 * Convert characters to u_int8_t
-		 * code taken from http://www.codeguru.com/forum/showthread.php?t=316299
-		*/
-		
-		if (isdigit(c1))
-		{
-			d1 = c1 - '0';
-		}
-		else if (c1 >= 'A' && c1 <= 'F')
-		{
-			d1 = c1 - 'A' + 10;
-		}
-		else if (c1 >= 'a' && c1 <= 'f')
-		{
-			d1 = c1 - 'a' + 10;
-		}
-		
-		if (isdigit(c2))
-		{
-			d2 = c2 - '0';
-		}
-		else if (c2 >= 'A' && c2 <= 'F')
-		{
-			d2 = c2 - 'A' + 10;
-		}
-		else if (c2 >= 'a' && c2 <= 'f')
-		{
-			d2 = c2 - 'a' + 10;
-		}
-		/* save value of two characters in one byte */
-		ret[i] = d1*16 + d2;
-	}
-	
-	return ret;
-}
-
-/**
- *  Build PCR Entries from the configuration
- */
-static bool load_pcr_entries(linked_list_t **output)
-{
-	linked_list_t *entries;
-	int i, len;
-
-	entries = linked_list_create();
-	for(i = 0; i < MAX_NUM_PCR; i++)
-	{
-		char *string_pcr_value;
-		pcr_entry_t *entry;
-		len = snprintf(NULL, 0, "%s%d", "libimcv.plugins.imv-attestation.pcr", i);
-
-		char var[len + 1];
-		len = snprintf(var, len + 1, "%s%d", "libimcv.plugins.imv-attestation.pcr", i);	
-		string_pcr_value = lib->settings->get_str(lib->settings, var, NULL);
-
-		if (string_pcr_value)
-		{
-			u_int8_t *pcr_value;
-			
-			entry = malloc_thing(pcr_entry_t);
-			entry->pcr_number = i;
-
-			pcr_value = pcr_string_to_bytearray(string_pcr_value);
-			strcpy(entry->pcr_value, pcr_value);
-			entries->insert_last(entries, entry);
-			free(pcr_value);
-		}
-	}
-	
-	if (entries->get_count(entries))
-	{
-		*output = entries;
-		return TRUE;
-	}
-
-	DBG1(DBG_PTS, "pcr value(s) not available");
-	DESTROY_IF(entries);
-	*output = NULL;
-	return FALSE;
-}
-
-METHOD(pts_t, does_pcr_value_match, bool,
-	private_pts_t *this, chunk_t pcr_after_value)
-{
-	linked_list_t *entries;
 	enumerator_t *e;
-	pcr_entry_t *pcr_entry;
-	bool match_found = FALSE;
+	pcr_entry_t *entry;
 	
-	if (!load_pcr_entries(&entries))
+	if (!this->pcrs)
 	{
-		DBG1(DBG_PTS, "failed to load PCR entries");
-		return FALSE;
+		this->pcrs = linked_list_create();
 	}
-	
-	e = entries->create_enumerator(entries);
-	while (e->enumerate(e, &pcr_entry))
+
+	e = this->pcrs->create_enumerator(this->pcrs);
+	while (e->enumerate(e, &entry))
 	{
-		if (strncmp(pcr_entry->pcr_value, pcr_after_value.ptr, PCR_LEN) == 0)
+		if (entry->pcr_number == new->pcr_number)
 		{
-			DBG1(DBG_PTS, "PCR %d value matched with configured value",
-				 pcr_entry->pcr_number);
-			match_found = TRUE;
+			DBG4(DBG_PTS, "updating already added PCR%d value",
+				 entry->pcr_number);
+			this->pcrs->remove_at(this->pcrs, e);
+			free(entry);
 			break;
 		}
 	}
-	
 	DESTROY_IF(e);
-	DESTROY_IF(entries);
-	free(pcr_entry);
-
-	if (match_found)
-	{
-		return TRUE;
-	}
 	
-	DBG1(DBG_PTS, "PCR after value didn't match with any of the configured values");
-	return FALSE;
+	this->pcrs->insert_last(this->pcrs, new);
+
+	/* TODO: Sort pcr entries with pcr index */
 }
 
 /**
@@ -1103,7 +986,7 @@ METHOD(pts_t, does_pcr_value_match, bool,
  * The first two bytes of the message represent the length
  * of the bitmask that follows. The bitmask represents the
  * requested PCRs to be quoted.
- * 
+ *
  * TPM Main-Part 2 TPM Structures_v1.2 8.1
  * The bitmask is in big endian order"
  *
@@ -1119,48 +1002,61 @@ METHOD(pts_t, does_pcr_value_match, bool,
  *	20 byte SHA1 of TCPA_PCR_COMPOSITE
  *	20 byte nonce
  */
-static chunk_t calculate_quote_info(private_pts_t *this, linked_list_t *pcr_entries)
+
+METHOD(pts_t, get_quote_info, bool,
+	private_pts_t *this, chunk_t *out_pcr_composite, chunk_t *out_quote_info)
 {
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
-	chunk_t quote_info, pcr_composite, hash_pcr_composite;
+	chunk_t pcr_composite, hash_pcr_composite, quote_info;
 	u_int32_t pcr_composite_len;
 	bio_writer_t *writer;
 	u_int8_t mask_bytes[PCR_MASK_LEN] = {0,0,0}, i;
 	hasher_t *hasher;
 
+	if (this->pcrs->get_count(this->pcrs) == 0)
+	{
+		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct TPM Quote Info");
+		return FALSE;
+	}
+
 	pcr_composite_len = 2 + PCR_MASK_LEN + 4 +
-						pcr_entries->get_count(pcr_entries) * PCR_LEN;
-	
+						this->pcrs->get_count(this->pcrs) * PCR_LEN;
+
 	writer = bio_writer_create(pcr_composite_len);
 	/* Lenght of the bist mask field */
 	writer->write_uint16(writer, PCR_MASK_LEN);
 	/* Bit mask indicating selected PCRs */
-	e = pcr_entries->create_enumerator(pcr_entries);
+	e = this->pcrs->create_enumerator(this->pcrs);
 	while (e->enumerate(e, &pcr_entry))
 	{
 		u_int32_t index = pcr_entry->pcr_number;
 		mask_bytes[index / 8] |= (1 << (index % 8));
 	}
-	
 	e->destroy(e);
+
 	for (i = 0; i< PCR_MASK_LEN ; i++)
 	{
 		writer->write_uint8(writer, mask_bytes[i]);
 	}
-	
+
 	/* Lenght of the pcr entries */
-	writer->write_uint32(writer, pcr_entries->get_count(pcr_entries) * PCR_LEN);
+	writer->write_uint32(writer, this->pcrs->get_count(this->pcrs) * PCR_LEN);
 	/* Actual PCR values */
-	e = pcr_entries->create_enumerator(pcr_entries);
+	e = this->pcrs->create_enumerator(this->pcrs);
 	while (e->enumerate(e, &pcr_entry))
 	{
 		writer->write_data(writer, chunk_create(pcr_entry->pcr_value, PCR_LEN));
 	}
+	free(pcr_entry);
+	e->destroy(e);
 	
+	/* PCR Composite structure */
 	pcr_composite = chunk_clone(writer->get_buf(writer));
+	*out_pcr_composite = pcr_composite;
+	DBG4(DBG_PTS, "Calculated PCR Composite: %B", out_pcr_composite);
 	writer->destroy(writer);
-	
+
 	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
 	/* Version number */
 	writer->write_uint8(writer, 1);
@@ -1177,38 +1073,27 @@ static chunk_t calculate_quote_info(private_pts_t *this, linked_list_t *pcr_entr
 	/* SHA1 hash of PCR Composite Structure */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
+	hasher->destroy(hasher);
 	writer->write_data(writer, hash_pcr_composite);
 
-	/* Secret assessment value 20 bytes (nonce) */
-	writer->write_data(writer, this->secret);
-
-	/* TPM Quote Info */
-	quote_info = chunk_clone(writer->get_buf(writer));
-	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", &quote_info);
-	
-	e->destroy(e);
-	writer->destroy(writer);
-	hasher->destroy(hasher);
-	chunk_clear(&pcr_composite);
-	chunk_clear(&hash_pcr_composite);
-	free(pcr_entry);
-	pcr_entries->destroy(pcr_entries);
-	
-	return quote_info;
-}
-
-METHOD(pts_t, get_quote_info, bool,
-	private_pts_t *this, chunk_t *quote_info)
-{
-	linked_list_t *entries;
-
-	if (!load_pcr_entries(&entries))
+	if (!this->secret.ptr)
 	{
-		DBG1(DBG_PTS, "failed to load PCR entries");
+		DBG1(DBG_PTS, "Secret assessment value unavailable",
+			 "unable to construct TPM Quote Info");
+		chunk_clear(&pcr_composite);
+		chunk_clear(&hash_pcr_composite);
+		writer->destroy(writer);
 		return FALSE;
 	}
-
-	*quote_info = calculate_quote_info(this, entries);
+	/* Secret assessment value 20 bytes (nonce) */
+	writer->write_data(writer, this->secret);
+	/* TPM Quote Info */
+	quote_info = chunk_clone(writer->get_buf(writer));
+	*out_quote_info = quote_info;
+	DBG4(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
+	
+	writer->destroy(writer);
+	chunk_clear(&hash_pcr_composite);
 	return TRUE;
 }
 
@@ -1294,6 +1179,7 @@ METHOD(pts_t, destroy, void,
 {
 	DESTROY_IF(this->aik);
 	DESTROY_IF(this->dh);
+	DESTROY_IF(this->pcrs);
 	free(this->initiator_nonce.ptr);
 	free(this->responder_nonce.ptr);
 	free(this->secret.ptr);
@@ -1483,7 +1369,7 @@ pts_t *pts_create(bool is_imc)
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote_tpm = _quote_tpm,
-			.does_pcr_value_match = _does_pcr_value_match,
+			.add_pcr_entry = _add_pcr_entry,
 			.get_quote_info = _get_quote_info,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,

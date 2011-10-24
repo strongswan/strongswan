@@ -246,19 +246,22 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			/* Call getters of optional fields when corresponding flag is set */
 			if (pcr_info_inclided)
 			{
+				pcr_entry_t *entry;
+				
 				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
 				pcr_before = attr_cast->get_pcr_before_value(attr_cast);
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
 				measurement = attr_cast->get_comp_measurement(attr_cast);
 
-				DBG3(DBG_IMV,"PCR: %d was extended with %B", extended_pcr, &measurement);
-				DBG3(DBG_IMV,"PCR: %d before value: %B", extended_pcr, &pcr_before);
-				DBG3(DBG_IMV,"PCR: %d after value: %B", extended_pcr, &pcr_after);
+				DBG4(DBG_IMV,"PCR: %d was extended with %B", extended_pcr, &measurement);
+				DBG4(DBG_IMV,"PCR: %d before value: %B", extended_pcr, &pcr_before);
+				DBG4(DBG_IMV,"PCR: %d after value: %B", extended_pcr, &pcr_after);
 
-				if (!pts->does_pcr_value_match(pts, pcr_after))
-				{
-					return FALSE;
-				}
+				entry = malloc_thing(pcr_entry_t);
+				entry->pcr_number = extended_pcr;
+				strcpy(entry->pcr_value, pcr_after.ptr);
+				pts->add_pcr_entry(pts, entry);
+				
 			}
 			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
 			{
@@ -295,34 +298,32 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
 			{
-				chunk_t quote_info, quote_digest;
+				chunk_t pcr_composite, quote_info, quote_digest;
 				hasher_t *hasher;
 				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
-				
-				if (!pts->get_quote_info(pts, &quote_info))
+
+				/* Construct PCR Composite and TPM Quote Info structures*/
+				if (!pts->get_quote_info(pts, &pcr_composite, &quote_info))
 				{
 					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
-					free(quote_info.ptr);
 					return FALSE;
 				}
 
+				/* Check calculated PCR composite structure matches with received */
+				if (pcr_comp.ptr && !chunk_equals(pcr_comp, pcr_composite))
+				{
+					DBG1(DBG_IMV, "received PCR Compsosite didn't match with constructed");
+					free(pcr_composite.ptr);
+					free(quote_info.ptr);
+					return FALSE;
+				}
+				free(pcr_composite.ptr);
+				
 				/* SHA1(TPM Quote Info) expected from IMC */
 				hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 				hasher->allocate_hash(hasher, quote_info, &quote_digest);
 				hasher->destroy(hasher);
-				
-				if (pcr_comp.ptr && strncmp(quote_info.ptr, pcr_comp.ptr,
-								quote_info.len - ASSESSMENT_SECRET_LEN) != 0)
-				{
-					DBG1(DBG_IMV, "calculated TPM Quote Info differs from received");
-					DBG3(DBG_IMV, "calculated: %B", &quote_info);
-					DBG3(DBG_IMV, "received: %B", &pcr_comp);
-					free(quote_digest.ptr);
-					free(quote_info.ptr);
-					return FALSE;
-				}
-				DBG2(DBG_IMV, "received TPM Quote Info matches with calculated");
 				
 				if (tpm_quote_sign.ptr &&
 					!pts->verify_quote_signature(pts, quote_digest, tpm_quote_sign))
