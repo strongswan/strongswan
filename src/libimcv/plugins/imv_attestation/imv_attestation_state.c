@@ -187,14 +187,15 @@ METHOD(imv_state_t, destroy, void,
 	free(this);
 }
 
-METHOD(imv_attestation_state_t, get_handshake_state, imv_attestation_handshake_state_t,
-	private_imv_attestation_state_t *this)
+METHOD(imv_attestation_state_t, get_handshake_state,
+	   imv_attestation_handshake_state_t, private_imv_attestation_state_t *this)
 {
 	return this->handshake_state;
 }
 
 METHOD(imv_attestation_state_t, set_handshake_state, void,
-	private_imv_attestation_state_t *this, imv_attestation_handshake_state_t new_state)
+	private_imv_attestation_state_t *this,
+	imv_attestation_handshake_state_t new_state)
 {
 	this->handshake_state = new_state;
 }

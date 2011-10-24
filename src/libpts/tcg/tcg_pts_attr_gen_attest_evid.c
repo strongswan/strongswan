@@ -20,7 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_gen_attest_evid_t private_tcg_pts_attr_gen_attest_evid_t;
+typedef struct private_tcg_pts_attr_gen_attest_evid_t
+					private_tcg_pts_attr_gen_attest_evid_t;
 
 /**
  * Generate Attestation Evidence

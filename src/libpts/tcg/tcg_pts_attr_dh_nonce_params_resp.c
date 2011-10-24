@@ -20,7 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_dh_nonce_params_resp_t private_tcg_pts_attr_dh_nonce_params_resp_t;
+typedef struct private_tcg_pts_attr_dh_nonce_params_resp_t
+					private_tcg_pts_attr_dh_nonce_params_resp_t;
 
 /**
  * PTS DH Nonce Parameters Response
@@ -187,8 +188,8 @@ METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_dh_group, pts_dh_group_t,
 	return this->dh_group;
 }
 
-METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_hash_algo_set, pts_meas_algorithms_t,
-	private_tcg_pts_attr_dh_nonce_params_resp_t *this)
+METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_hash_algo_set,
+	   pts_meas_algorithms_t, private_tcg_pts_attr_dh_nonce_params_resp_t *this)
 {
 	return this->hash_algo_set;
 }

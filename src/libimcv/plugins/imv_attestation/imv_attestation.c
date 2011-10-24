@@ -162,8 +162,8 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_attestation->delete_state(imv_attestation, connection_id);
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			result = imv_attestation->change_state(imv_attestation, connection_id,
-												   new_state, &state);
+			result = imv_attestation->change_state(imv_attestation,
+									connection_id, new_state, &state);
 			if (result != TNC_RESULT_SUCCESS)
 			{
 				return result;
@@ -396,7 +396,8 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imv_attestation->provide_recommendation(imv_attestation, connection_id);
+	return imv_attestation->provide_recommendation(imv_attestation,
+												   connection_id);
 }
 
 /**
@@ -459,7 +460,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
  * see section 4.2.8.1 of TCG TNC IF-IMV Specification 1.2
  */
 TNC_Result TNC_IMV_ProvideBindFunction(TNC_IMVID imv_id,
-									   TNC_TNCS_BindFunctionPointer bind_function)
+								TNC_TNCS_BindFunctionPointer bind_function)
 {
 	if (!imv_attestation)
 	{

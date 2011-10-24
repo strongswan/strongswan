@@ -323,7 +323,7 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
  * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.2
  */
 TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
-									   TNC_TNCC_BindFunctionPointer bind_function)
+								TNC_TNCC_BindFunctionPointer bind_function)
 {
 	if (!imc_attestation)
 	{

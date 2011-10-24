@@ -20,7 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_get_tpm_version_info_t private_tcg_pts_attr_get_tpm_version_info_t;
+typedef struct private_tcg_pts_attr_get_tpm_version_info_t
+					private_tcg_pts_attr_get_tpm_version_info_t;
 
 /**
  * Get TPM Version Information

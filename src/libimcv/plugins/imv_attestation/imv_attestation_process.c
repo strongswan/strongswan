@@ -65,7 +65,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			selected_algorithm = attr_cast->get_algorithms(attr_cast);
 			if (!(selected_algorithm & supported_algorithms))
 			{
-				DBG1(DBG_IMV, "PTS-IMC selected unsupported measurement algorithm");
+				DBG1(DBG_IMV, "PTS-IMC selected unsupported"
+							  " measurement algorithm");
 				return FALSE;
 			}
 			pts->set_meas_algorithm(pts, selected_algorithm);
@@ -194,13 +195,14 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pcr_info_inclided = attr_cast->is_pcr_info_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
 			depth = attr_cast->get_sub_component_depth(attr_cast);
-			/* TODO: Implement checking of components with its sub-components */
+			/* TODO: Implement check of components with its sub-components */
 			if (depth != 0)
 			{
-				DBG1(DBG_IMV, "Current version of Attestation IMV does not support"
-							  "sub component measurement deeper than zero");
+				DBG1(DBG_IMV, "Current version of Attestation IMV does not"
+						" support sub component measurement deeper than zero");
 			}
-			comp_vendor_id = attr_cast->get_spec_comp_funct_name_vendor_id(attr_cast);
+			comp_vendor_id = attr_cast->get_spec_comp_funct_name_vendor_id(
+														attr_cast);
 			if (comp_vendor_id != PEN_TCG)
 			{
 				DBG1(DBG_IMV, "Current version of Attestation IMV supports"
@@ -253,9 +255,12 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
 				measurement = attr_cast->get_comp_measurement(attr_cast);
 
-				DBG4(DBG_IMV,"PCR: %d was extended with %B", extended_pcr, &measurement);
-				DBG4(DBG_IMV,"PCR: %d before value: %B", extended_pcr, &pcr_before);
-				DBG4(DBG_IMV,"PCR: %d after value: %B", extended_pcr, &pcr_after);
+				DBG4(DBG_IMV,"PCR: %d was extended with %B",
+					 extended_pcr, &measurement);
+				DBG4(DBG_IMV,"PCR: %d before value: %B",
+					 extended_pcr, &pcr_before);
+				DBG4(DBG_IMV,"PCR: %d after value: %B",
+					 extended_pcr, &pcr_after);
 
 				entry = malloc_thing(pcr_entry_t);
 				entry->pcr_number = extended_pcr;
@@ -312,7 +317,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				/* Check calculated PCR composite structure matches with received */
 				if (pcr_comp.ptr && !chunk_equals(pcr_comp, pcr_composite))
 				{
-					DBG1(DBG_IMV, "received PCR Compsosite didn't match with constructed");
+					DBG1(DBG_IMV, "received PCR Compsosite didn't match"
+								  " with constructed");
 					chunk_clear(&pcr_composite);
 					chunk_clear(&quote_info);
 					return FALSE;
@@ -327,13 +333,15 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				chunk_clear(&quote_info);
 				
 				if (tpm_quote_sign.ptr &&
-					!pts->verify_quote_signature(pts, quote_digest, tpm_quote_sign))
+					!pts->verify_quote_signature(pts, quote_digest,
+												 tpm_quote_sign))
 				{
 					chunk_clear(&quote_digest);
 					return FALSE;
 				}
 				
-				DBG2(DBG_IMV, "signature verification succeeded for TPM Quote Info");
+				DBG2(DBG_IMV, "signature verification succeeded for "
+							  "TPM Quote Info");
 				chunk_clear(&quote_digest);
 			}
 			
@@ -406,16 +414,24 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				 file_count, (file_count == 1) ? "":"s");
 
 			e = metadata->create_enumerator(metadata);
-			while(e->enumerate(e, &entry))
+			while (e->enumerate(e, &entry))
 			{
-				DBG1(DBG_IMV, "File name:          %s", entry->filename);
-				DBG1(DBG_IMV, "     type:          %d", entry->type);
-				DBG1(DBG_IMV, "     size:          %d", entry->filesize);
-				DBG1(DBG_IMV, "     create time:   %s", ctime(&entry->create_time));
-				DBG1(DBG_IMV, "     last modified: %s", ctime(&entry->last_modify_time));
-				DBG1(DBG_IMV, "     last accessed: %s", ctime(&entry->last_access_time));
-				DBG1(DBG_IMV, "     owner id:      %d", entry->owner_id);
-				DBG1(DBG_IMV, "     group id:      %d", entry->group_id);
+				DBG1(DBG_IMV, "File name:          %s",
+					 entry->filename);
+				DBG1(DBG_IMV, "     type:          %d",
+					 entry->type);
+				DBG1(DBG_IMV, "     size:          %d",
+					 entry->filesize);
+				DBG1(DBG_IMV, "     create time:   %s",
+					 ctime(&entry->create_time));
+				DBG1(DBG_IMV, "     last modified: %s",
+					 ctime(&entry->last_modify_time));
+				DBG1(DBG_IMV, "     last accessed: %s",
+					 ctime(&entry->last_access_time));
+				DBG1(DBG_IMV, "     owner id:      %d",
+					 entry->owner_id);
+				DBG1(DBG_IMV, "     group id:      %d",
+					 entry->group_id);
 			}
 			e->destroy(e);
 

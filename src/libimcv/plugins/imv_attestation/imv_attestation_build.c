@@ -142,7 +142,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			DBG1(DBG_IMV, "platform is '%s'", platform_info);
 
 			/* Send Request File Metadata attribute */
-			enumerator = pts_db->create_file_meta_enumerator(pts_db, platform_info);
+			enumerator = pts_db->create_file_meta_enumerator(pts_db,
+															 platform_info);
 			if (!enumerator)
 			{
 				break;
@@ -152,7 +153,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				is_dir = (type != 0);
 				DBG2(DBG_IMV, "metadata request for %s '%s'",
 					 is_dir ? "directory" : "file", pathname);
-				attr = tcg_pts_attr_req_file_meta_create(is_dir, delimiter, pathname);
+				attr = tcg_pts_attr_req_file_meta_create(is_dir, delimiter,
+														 pathname);
 				attr->set_noskip_flag(attr, TRUE);
 				msg->add_attribute(msg, attr);
 			}
@@ -197,8 +199,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			name = PTS_FUNC_COMP_NAME_BIOS;
 
 			/* Send Request Functional Component Evidence attribute */
-			attr = tcg_pts_attr_req_funct_comp_evid_create(flags, sub_comp_depth,
-														PEN_TCG, qualifier, name);
+			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
+									sub_comp_depth, PEN_TCG, qualifier, name);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
 			/* Send Generate Attestation Evidence attribute */

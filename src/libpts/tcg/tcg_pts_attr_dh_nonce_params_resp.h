@@ -21,7 +21,8 @@
 #ifndef TCG_PTS_ATTR_DH_NONCE_PARAMS_RESP_H_
 #define TCG_PTS_ATTR_DH_NONCE_PARAMS_RESP_H_
 
-typedef struct tcg_pts_attr_dh_nonce_params_resp_t tcg_pts_attr_dh_nonce_params_resp_t;
+typedef struct tcg_pts_attr_dh_nonce_params_resp_t
+					tcg_pts_attr_dh_nonce_params_resp_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"
@@ -50,7 +51,8 @@ struct tcg_pts_attr_dh_nonce_params_resp_t {
 	 *
 	 * @return				Hash algorithm set
 	 */
-	pts_meas_algorithms_t (*get_hash_algo_set)(tcg_pts_attr_dh_nonce_params_resp_t *this);
+	pts_meas_algorithms_t (*get_hash_algo_set)(
+									tcg_pts_attr_dh_nonce_params_resp_t *this);
 
 	/**
 	 * Get DH Responder Nonce

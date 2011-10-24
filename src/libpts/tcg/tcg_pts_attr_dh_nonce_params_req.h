@@ -21,7 +21,8 @@
 #ifndef TCG_PTS_ATTR_DH_NONCE_PARAMS_REQ_H_
 #define TCG_PTS_ATTR_DH_NONCE_PARAMS_REQ_H_
 
-typedef struct tcg_pts_attr_dh_nonce_params_req_t tcg_pts_attr_dh_nonce_params_req_t;
+typedef struct tcg_pts_attr_dh_nonce_params_req_t
+					tcg_pts_attr_dh_nonce_params_req_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"

@@ -21,7 +21,8 @@
 #ifndef TCG_PTS_ATTR_GET_TPM_VERSION_INFO_H_
 #define TCG_PTS_ATTR_GET_TPM_VERSION_INFO_H_
 
-typedef struct tcg_pts_attr_get_tpm_version_info_t tcg_pts_attr_get_tpm_version_info_t;
+typedef struct tcg_pts_attr_get_tpm_version_info_t
+					tcg_pts_attr_get_tpm_version_info_t;
 
 #include "tcg_attr.h"
 #include "pa_tnc/pa_tnc_attr.h"

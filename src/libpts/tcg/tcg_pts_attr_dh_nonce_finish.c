@@ -20,7 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_dh_nonce_finish_t private_tcg_pts_attr_dh_nonce_finish_t;
+typedef struct private_tcg_pts_attr_dh_nonce_finish_t
+					private_tcg_pts_attr_dh_nonce_finish_t;
 
 /**
  * PTS DH Nonce Finish
@@ -191,9 +192,10 @@ METHOD(tcg_pts_attr_dh_nonce_finish_t, get_initiator_nonce, chunk_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(pts_meas_algorithms_t hash_algo,
-												   chunk_t initiator_value,
-   												   chunk_t initiator_nonce)
+pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(
+											pts_meas_algorithms_t hash_algo,
+											chunk_t initiator_value,
+   											chunk_t initiator_nonce)
 {
 	private_tcg_pts_attr_dh_nonce_finish_t *this;
 

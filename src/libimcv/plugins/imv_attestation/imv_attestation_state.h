@@ -56,7 +56,8 @@ struct imv_attestation_state_t {
 	 *
 	 * @return					the handshake state of IMV
 	 */
-	imv_attestation_handshake_state_t (*get_handshake_state)(imv_attestation_state_t *this);
+	imv_attestation_handshake_state_t (*get_handshake_state)(
+		imv_attestation_state_t *this);
 	
 	/**
 	 * Set state of the handshake

@@ -148,7 +148,7 @@ struct pts_t {
 	void (*set_peer_public_value) (pts_t *this, chunk_t value, chunk_t nonce);
 
 	/**
-	 * Calculates secret assessment value to be used for TPM Quote as ExternalData
+	 * Calculates assessment secret to be used for TPM Quote as ExternalData
 	 *
 	 * @return					TRUE unless both DH public values
 	 *							and nonces are set
@@ -205,7 +205,7 @@ struct pts_t {
 	 * @param error_code		Output variable for PTS error code
 	 * @return					TRUE if path is valid or file/directory
 	 *							doesn't exist or path is invalid
-	 * 							FALSE if local error occured within stat function
+	 * 						FALSE if local error occured within stat function
 	 */
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
@@ -236,7 +236,8 @@ struct pts_t {
 	 * @param is_directory		TRUE if directory contents are requested
 	 * @return					PTS File Metadata or NULL if FAILED
 	 */
-	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_directory);
+	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname,
+									 bool is_directory);
 
 	/**
 	 * Reads given PCR value and returns it
@@ -257,7 +258,8 @@ struct pts_t {
 	 * @param output			Chunk to save PCR value after extension
 	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
-	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output);
+	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input,
+					   chunk_t *output);
 
 	/**
 	 * Quote over PCR's
@@ -276,7 +278,7 @@ struct pts_t {
 	 /**
 	 * Add extended PCR with its corresponding value
 	 *
-	 * @return					FALSE in case of any error or non-match, TRUE otherwise
+	 * @return			FALSE in case of any error or non-match, TRUE otherwise
 	 */
 	 void (*add_pcr_entry)(pts_t *this, pcr_entry_t *entry);
 
@@ -287,14 +289,15 @@ struct pts_t {
 	 * @param quote_info			Output variable to store TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, chunk_t *pcr_composite, chunk_t *quote_info);
+	 bool (*get_quote_info)(pts_t *this, chunk_t *pcr_composite,
+							chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
 	 *
 	 * @param data				Calculated TPM Quote Digest
 	 * @param signature			TPM Quote Signature received from IMC
-	 * @return					FALSE in case signature is not verified, TRUE otherwise
+	 * @return			FALSE in case signature is not verified, TRUE otherwise
 	 */
 	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
 

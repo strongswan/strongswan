@@ -20,7 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_dh_nonce_params_req_t private_tcg_pts_attr_dh_nonce_params_req_t;
+typedef struct private_tcg_pts_attr_dh_nonce_params_req_t
+					private_tcg_pts_attr_dh_nonce_params_req_t;
 
 /**
  * PTS DH Nonce Parameters Request

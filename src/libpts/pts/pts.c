@@ -521,7 +521,7 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 	if (!hasher)
 	{
-		DBG1(DBG_PTS, "  hasher %N not available", hash_algorithm_names, hash_alg);
+		DBG1(DBG_PTS, "hasher %N not available", hash_algorithm_names, hash_alg);
 		return NULL;
 	}
 
@@ -595,7 +595,8 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 
 	if (stat(pathname, &st))
 	{
-		DBG1(DBG_PTS, "Unable to obtain statistical information about %s", pathname);
+		DBG1(DBG_PTS, "Unable to obtain statistical information about %s",
+			 pathname);
 		return FALSE;
 	}
 
@@ -714,7 +715,8 @@ METHOD(pts_t, read_pcr, bool,
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x",
+			 result);
 		return FALSE;
 	}
 	
@@ -762,7 +764,8 @@ METHOD(pts_t, extend_pcr, bool,
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x",
+			 result);
 		return FALSE;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);
@@ -820,7 +823,8 @@ METHOD(pts_t, quote_tpm, bool,
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x",
+			 result);
 		return FALSE;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);
@@ -834,7 +838,7 @@ METHOD(pts_t, quote_tpm, bool,
 		goto err1;
 	}
 
-	/* Retrieve SRK from TPM and set the authentication data as well known secret*/
+	/* Retrieve SRK from TPM and set the authentication to well known secret*/
 	result = Tspi_Context_LoadKeyByUUID(hContext, TSS_PS_TYPE_SYSTEM,
 									SRK_UUID, &hSRK);
 	if (result != TSS_SUCCESS)
@@ -862,7 +866,8 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Create PCR composite object */
-	result = Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS, 0, &hPcrComposite);
+	result = Tspi_Context_CreateObject(hContext,
+									   TSS_OBJECT_TYPE_PCRS, 0, &hPcrComposite);
 	if (result != TSS_SUCCESS)
 	{
 		goto err2;
@@ -981,7 +986,7 @@ METHOD(pts_t, add_pcr_entry, void,
 
 /**
  * 1. build a TCPA_PCR_COMPOSITE structure which contains (pcrCompositeBuf)
- * TCPA_PCR_SELECTION structure (bitmask length network order + length bytes bitmask)
+ * TCPA_PCR_SELECTION structure (bitmask length + bitmask)
  * UINT32 (network order) gives the number of bytes following (pcr entries * 20)
  * TCPA_PCRVALUE[] with the pcr values
  *
@@ -1018,7 +1023,8 @@ METHOD(pts_t, get_quote_info, bool,
 
 	if (this->pcrs->get_count(this->pcrs) == 0)
 	{
-		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct TPM Quote Info");
+		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct "
+					  "TPM Quote Info");
 		return FALSE;
 	}
 
@@ -1114,14 +1120,16 @@ METHOD(pts_t, verify_quote_signature, bool,
 	}
 
 	/** Implementation using strongswan -> not working */
-	/*if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_EMSA_PKCS1_SHA1, data, signature))
+	/**if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_EMSA_PKCS1_SHA1,
+															data, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		goto cleanup;
 	}
 	*/
 
-	if (!aik_pub_key->get_encoding(aik_pub_key, PUBKEY_SPKI_ASN1_DER, &key_encoding))
+	if (!aik_pub_key->get_encoding(aik_pub_key,
+		PUBKEY_SPKI_ASN1_DER, &key_encoding))
 	{
 		DBG1(DBG_PTS, "failed to get encoding of AIK public key");
 		goto cleanup;
@@ -1131,7 +1139,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 	pkey = d2i_PUBKEY(NULL, (const unsigned char**)&p, key_encoding.len);
 	if (!pkey)
 	{
-		DBG1(DBG_PTS, "failed to get EVP_PKEY object from AIK public key encoding");
+		DBG1(DBG_PTS, "failed to get EVP_PKEY object from AIK public key");
 		goto cleanup;
 	}
 
@@ -1142,7 +1150,8 @@ METHOD(pts_t, verify_quote_signature, bool,
 		goto cleanup;
 	}
 
-	if (RSA_verify(NID_sha1, data.ptr, data.len, signature.ptr, signature.len, rsa) != 1)
+	if (RSA_verify(NID_sha1, data.ptr, data.len,
+		signature.ptr, signature.len, rsa) != 1)
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		goto cleanup;
@@ -1306,7 +1315,8 @@ static bool has_tpm(private_pts_t *this)
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x",
+			 result);
 		return FALSE;
 	}
 	result = Tspi_Context_Connect(hContext, NULL);

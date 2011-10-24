@@ -262,12 +262,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			/* TODO: Implement checking of components with its sub-components */
 			if (sub_comp_depth != 0)
 			{
-				DBG1(DBG_IMC, "current version of Attestation IMC does not support"
-							  "sub component measurement deeper than zero. "
-							   "Measuring top level component only.");
+				DBG1(DBG_IMC, "current version of Attestation IMC does not "
+							  "support sub component measurement deeper than "
+							  "zero. Measuring top level component only.");
 			}
 
-			comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(attr_cast);
+			comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(
+																	attr_cast);
 			if (comp_name_vendor_id != PEN_TCG)
 			{
 				DBG1(DBG_IMC, "current version of Attestation IMC supports"
@@ -291,13 +292,15 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			   (qualifier.type & PTS_FUNC_COMP_TYPE_ALL))
 			{
 				DBG2(DBG_IMC, "wildcard was set for the qualifier of functional"
-					" component. Identifying the component with name binary enumeration");
+					" component. Identifying the component with "
+					"name binary enumeration");
 			}
 			else if (!qualifier.kernel && !qualifier.sub_component &&
 					(qualifier.type & PTS_FUNC_COMP_TYPE_UNKNOWN))
 			{
 				DBG2(DBG_IMC, "unknown was set for the qualifier of functional"
-					" component. Identifying the component with name binary enumeration");
+					" component. Identifying the component with "
+					"name binary enumeration");
 			}
 			else
 			{
@@ -358,7 +361,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 						return FALSE;
 					}
 
-					if (!pts->hash_file(pts, hasher, "/etc/tnc_config", hash_output))
+					if (!pts->hash_file(pts, hasher, "/etc/tnc_config",
+						hash_output))
 					{
 						hasher->destroy(hasher);
 						return FALSE;
@@ -367,43 +371,49 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					measurement_time_t = time(NULL);
 					if (!measurement_time_t)
 					{
-						params.measurement_time = chunk_create("0000-00-00T00:00:00Z", 20);
+						params.measurement_time = chunk_create(
+							"0000-00-00T00:00:00Z", 20);
 					}
 					else
 					{
 						time_now = localtime(&measurement_time_t);
-						if (asprintf(&utc_time, "%d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2dZ",
-												time_now->tm_year + 1900,
-												time_now->tm_mon + 1,
-												time_now->tm_mday,
-												time_now->tm_hour,
-												time_now->tm_min,
-												time_now->tm_sec) < 0)
+						if (asprintf(&utc_time,
+								"%d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2dZ",
+								time_now->tm_year + 1900,
+								time_now->tm_mon + 1,
+								time_now->tm_mday,
+								time_now->tm_hour,
+								time_now->tm_min,
+								time_now->tm_sec) < 0)
 						{
 							DBG1(DBG_IMC, "could not format local time to UTC");
 							hasher->destroy(hasher);
 							return FALSE;
 						}
 						params.measurement_time = chunk_create(utc_time, 20);
-						params.measurement_time = chunk_clone(params.measurement_time);
+						params.measurement_time = chunk_clone(
+							params.measurement_time);
 						free(utc_time);
 						
 					}
 						
-					params.measurement = chunk_create(hash_output, hasher->get_hash_size(hasher));
+					params.measurement = chunk_create(hash_output,
+											hasher->get_hash_size(hasher));
 					hasher->destroy(hasher);
 							
 					params.policy_uri = chunk_empty;
 					if (!pts->read_pcr(pts, EXTEND_PCR, &params.pcr_before))
 					{
-						DBG1(DBG_IMC, "error occured while reading PCR: %d", EXTEND_PCR);
+						DBG1(DBG_IMC, "error occured while reading PCR: %d",
+							 EXTEND_PCR);
 						return FALSE;
 					}
 							
 					if (!pts->extend_pcr(pts, EXTEND_PCR,
 						params.measurement, &params.pcr_after))
 					{
-						DBG1(DBG_IMC, "error occured while extending PCR: %d", EXTEND_PCR);
+						DBG1(DBG_IMC, "error occured while extending PCR: %d",
+							 EXTEND_PCR);
 						return FALSE;
 					}
 
@@ -457,7 +467,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			
 			/* Quote */
-			if (!pts->quote_tpm(pts, pcrs, num_of_evidences, &pcr_composite, &quote_signature))
+			if (!pts->quote_tpm(pts, pcrs, num_of_evidences,
+				&pcr_composite, &quote_signature))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
 				DESTROY_IF(e);
