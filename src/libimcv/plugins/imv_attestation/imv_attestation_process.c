@@ -264,7 +264,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 				entry = malloc_thing(pcr_entry_t);
 				entry->pcr_number = extended_pcr;
-				strcpy(entry->pcr_value, pcr_after.ptr);
+				strncpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
 				pts->add_pcr_entry(pts, entry);
 				
 			}
