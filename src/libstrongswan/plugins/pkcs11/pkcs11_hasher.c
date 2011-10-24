@@ -315,6 +315,7 @@ pkcs11_hasher_t *pkcs11_hasher_create(hash_algorithm_t algo)
 	this->lib = find_token(algo, &this->session, &this->mech, &this->size);
 	if (!this->lib)
 	{
+		this->mutex->destroy(this->mutex);
 		free(this);
 		return NULL;
 	}
