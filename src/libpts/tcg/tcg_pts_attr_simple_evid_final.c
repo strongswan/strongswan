@@ -236,7 +236,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/*  Optional Composite Hash Algorithm and TPM PCR Composite field is included */
 	if (this->flags != PTS_SIMPLE_EVID_FINAL_FLAG_NO)
 	{
-		u_int32_t pcr_comp_len;
+		/** u_int32_t pcr_comp_len;*/
 		u_int32_t tpm_quote_sign_len;
 		
 		/** TODO: Ignoring Hashing algorithm field
