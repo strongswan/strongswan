@@ -934,6 +934,20 @@ METHOD(pts_t, quote_tpm, bool,
 	return FALSE;
 }
 
+/**
+ * Comparison function for pcr_entry_t struct
+ */
+static int pcr_entry_compare(const pcr_entry_t *a, const pcr_entry_t *b)
+{
+	return (a->pcr_number - b->pcr_number);
+}
+
+static int pcr_entry_compare_qsort(const void *a, const void *b)
+{
+	return pcr_entry_compare(*(const pcr_entry_t *const *)a
+							, *(const pcr_entry_t *const *)b);
+}
+
 METHOD(pts_t, add_pcr_entry, void,
 	private_pts_t *this, pcr_entry_t *new)
 {
@@ -1015,7 +1029,8 @@ METHOD(pts_t, does_pcr_value_match, bool,
 	
 	this->pcrs->insert_last(this->pcrs, new);
 
-	/* TODO: Sort pcr entries with pcr index */
+	qsort(this->pcrs, this->pcrs->get_count(this->pcrs),
+		  sizeof(pcr_entry_t *), pcr_entry_compare_qsort);
 }
 
 /**
