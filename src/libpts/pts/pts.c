@@ -681,15 +681,6 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 					metadata->destroy(metadata);
 					return NULL;
 				}
-				DBG3(DBG_PTS, "File name:          %s", entry->filename);
-				DBG3(DBG_PTS, "     type:          %d", entry->type);
-				DBG3(DBG_PTS, "     size:          %d", entry->filesize);
-				DBG3(DBG_PTS, "     create time:   %s", ctime(&entry->create_time));
-				DBG3(DBG_PTS, "     last modified: %s", ctime(&entry->last_modify_time));
-				DBG3(DBG_PTS, "     last accessed: %s", ctime(&entry->last_access_time));
-				DBG3(DBG_PTS, "     owner id:      %d", entry->owner_id);
-				DBG3(DBG_PTS, "     group id:      %d", entry->group_id);
-
 				metadata->add(metadata, entry);
 			}
 		}
@@ -705,14 +696,6 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 			return NULL;
 		}
 		filename = get_filename(pathname);
-		DBG3(DBG_PTS, "File name:          %s", entry->filename);
-		DBG3(DBG_PTS, "     type:          %d", entry->type);
-		DBG3(DBG_PTS, "     size:          %d", entry->filesize);
-		DBG3(DBG_PTS, "     create time:   %s", ctime(&entry->create_time));
-		DBG3(DBG_PTS, "     last modified: %s", ctime(&entry->last_modify_time));
-		DBG3(DBG_PTS, "     last accessed: %s", ctime(&entry->last_access_time));
-		DBG3(DBG_PTS, "     owner id:      %d", entry->owner_id);
-		DBG3(DBG_PTS, "     group id:      %d", entry->group_id);
 		metadata->add(metadata, entry);
 	}
 
