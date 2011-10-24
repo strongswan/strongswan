@@ -314,27 +314,28 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				if (pcr_comp.ptr && !chunk_equals(pcr_comp, pcr_composite))
 				{
 					DBG1(DBG_IMV, "received PCR Compsosite didn't match with constructed");
-					free(pcr_composite.ptr);
-					free(quote_info.ptr);
+					chunk_clear(&pcr_composite);
+					chunk_clear(&quote_info);
 					return FALSE;
 				}
-				free(pcr_composite.ptr);
+				DBG2(DBG_IMV, "received PCR Composite matches with constructed");
+				chunk_clear(&pcr_composite);
 				
 				/* SHA1(TPM Quote Info) expected from IMC */
 				hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 				hasher->allocate_hash(hasher, quote_info, &quote_digest);
 				hasher->destroy(hasher);
+				chunk_clear(&quote_info);
 				
 				if (tpm_quote_sign.ptr &&
 					!pts->verify_quote_signature(pts, quote_digest, tpm_quote_sign))
 				{
-					free(quote_digest.ptr);
-					free(quote_info.ptr);
+					chunk_clear(&quote_digest);
 					return FALSE;
 				}
+				
 				DBG2(DBG_IMV, "signature verification succeeded for TPM Quote Info");
-				free(quote_digest.ptr);
-				free(quote_info.ptr);
+				chunk_clear(&quote_digest);
 			}
 			
 			if (evid_signature_included)

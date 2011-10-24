@@ -832,7 +832,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_VALIDATION valData;
 	u_int32_t i;
 	TSS_RESULT result;
-	chunk_t quote_sign;
+	chunk_t pcr_comp, quote_sign;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -913,14 +913,18 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Set output chunks */
-	*pcr_composite = chunk_empty;
+	pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
+	memcpy(pcr_comp.ptr, valData.rgbData + 8, HASH_SIZE_SHA1);
+	*pcr_composite = pcr_comp;
+	*pcr_composite = chunk_clone(*pcr_composite);
+	DBG3(DBG_PTS, "Hash of PCR Composite: %B",pcr_composite);
 	
 	quote_sign = chunk_alloc(valData.ulValidationDataLength);
 	memcpy(quote_sign.ptr, valData.rgbValidationData,
 							  valData.ulValidationDataLength);
 	*quote_signature = quote_sign;
 	*quote_signature = chunk_clone(*quote_signature);
-	DBG3(DBG_PTS, "Quote sign: %B",quote_signature);
+	DBG3(DBG_PTS, "TOM Quote Signature: %B",quote_signature);
 
 	chunk_clear(&quote_sign);
 	Tspi_Context_FreeMemory(hContext, NULL);
@@ -1008,7 +1012,7 @@ METHOD(pts_t, get_quote_info, bool,
 {
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
-	chunk_t pcr_composite, hash_pcr_composite, quote_info;
+	chunk_t pcr_composite;
 	u_int32_t pcr_composite_len;
 	bio_writer_t *writer;
 	u_int8_t mask_bytes[PCR_MASK_LEN] = {0,0,0}, i;
@@ -1053,8 +1057,6 @@ METHOD(pts_t, get_quote_info, bool,
 	
 	/* PCR Composite structure */
 	pcr_composite = chunk_clone(writer->get_buf(writer));
-	*out_pcr_composite = pcr_composite;
-	DBG4(DBG_PTS, "Calculated PCR Composite: %B", out_pcr_composite);
 	writer->destroy(writer);
 
 	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
@@ -1072,28 +1074,28 @@ METHOD(pts_t, get_quote_info, bool,
 
 	/* SHA1 hash of PCR Composite Structure */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
-	hasher->destroy(hasher);
-	writer->write_data(writer, hash_pcr_composite);
+	hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
+	DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
 
+	chunk_clear(&pcr_composite);
+	hasher->destroy(hasher);
+	writer->write_data(writer, *out_pcr_composite);
+	
 	if (!this->secret.ptr)
 	{
 		DBG1(DBG_PTS, "Secret assessment value unavailable",
 			 "unable to construct TPM Quote Info");
-		chunk_clear(&pcr_composite);
-		chunk_clear(&hash_pcr_composite);
+		chunk_clear(out_pcr_composite);
 		writer->destroy(writer);
 		return FALSE;
 	}
 	/* Secret assessment value 20 bytes (nonce) */
 	writer->write_data(writer, this->secret);
 	/* TPM Quote Info */
-	quote_info = chunk_clone(writer->get_buf(writer));
-	*out_quote_info = quote_info;
+	*out_quote_info = chunk_clone(writer->get_buf(writer));
 	DBG4(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
-	
 	writer->destroy(writer);
-	chunk_clear(&hash_pcr_composite);
+	
 	return TRUE;
 }
 
