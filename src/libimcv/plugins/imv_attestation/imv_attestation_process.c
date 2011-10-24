@@ -151,8 +151,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			aik = attr_cast->get_aik(attr_cast);
 			if (!aik)
 			{
-				/* TODO generate error attribute */
-				break;
+				DBG1(DBG_IMV, "AIK unavailable");
+				return FALSE;
 			}
 			if (aik->get_type(aik) == CERT_X509)
 			{

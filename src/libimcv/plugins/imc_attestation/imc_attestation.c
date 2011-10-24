@@ -103,8 +103,6 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 										  TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
-	/* TODO: Not used so far */
-	//imc_attestation_state_t *attestation_state;
 
 	if (!imc_attestation)
 	{
