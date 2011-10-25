@@ -167,7 +167,7 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libtncif
+LOCAL_SHARED_LIBRARIES += libstrongswan libhydra
 
 include $(BUILD_SHARED_LIBRARY)
 
