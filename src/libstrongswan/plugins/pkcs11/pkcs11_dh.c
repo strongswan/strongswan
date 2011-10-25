@@ -93,7 +93,11 @@ static bool get_cka_value(private_pkcs11_dh_t *this, CK_OBJECT_HANDLE obj,
 METHOD(diffie_hellman_t, set_other_public_value, void,
 	private_pkcs11_dh_t *this, chunk_t value)
 {
+	CK_OBJECT_CLASS klass = CKO_SECRET_KEY;
+	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
 	CK_ATTRIBUTE attr[] = {
+		{ CKA_CLASS, &klass, sizeof(klass) },
+		{ CKA_KEY_TYPE, &type, sizeof(type) },
 	};
 	CK_MECHANISM mech = {
 		CKM_DH_PKCS_DERIVE,
