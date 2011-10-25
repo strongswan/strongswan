@@ -17,6 +17,7 @@ libstrongswan_pkcs11_la_SOURCES = \
 	pkcs11_public_key.h pkcs11_public_key.c \
 	pkcs11_hasher.h pkcs11_hasher.c \
 	pkcs11_rng.h pkcs11_rng.c \
+	pkcs11_dh.h pkcs11_dh.c \
 	pkcs11_manager.h pkcs11_manager.c
 
 libstrongswan_pkcs11_la_LDFLAGS = -module -avoid-version

@@ -29,6 +29,7 @@
 #include "pkcs11_public_key.h"
 #include "pkcs11_hasher.h"
 #include "pkcs11_rng.h"
+#include "pkcs11_dh.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -126,6 +127,8 @@ METHOD(plugin_t, destroy, void,
 	lib->crypto->remove_hasher(lib->crypto,
 							(hasher_constructor_t)pkcs11_hasher_create);
 	lib->crypto->remove_rng(lib->crypto, (rng_constructor_t)pkcs11_rng_create);
+	lib->crypto->remove_dh(lib->crypto, (dh_constructor_t)pkcs11_dh_create_custom);
+	lib->crypto->remove_dh(lib->crypto, (dh_constructor_t)pkcs11_dh_create);
 	this->creds->destroy(this->creds);
 	lib->set(lib, "pkcs11-manager", NULL);
 	this->manager->destroy(this->manager);
@@ -191,6 +194,23 @@ plugin_t *pkcs11_plugin_create()
 							(builder_function_t)pkcs11_private_key_connect);
 	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 							(builder_function_t)pkcs11_public_key_load);
+
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_160, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, get_name(this),
+					(dh_constructor_t)pkcs11_dh_create_custom);
 
 	enumerator = this->manager->create_token_enumerator(this->manager);
 	while (enumerator->enumerate(enumerator, &p11, &slot))
