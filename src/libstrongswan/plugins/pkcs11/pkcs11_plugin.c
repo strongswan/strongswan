@@ -112,23 +112,94 @@ METHOD(plugin_t, get_name, char*,
 	return "pkcs11";
 }
 
+/**
+ * Add a set of features
+ */
+static inline void add_features(plugin_feature_t *f, plugin_feature_t *n,
+								int count, int *pos)
+{
+	int i;
+	for (i = 0; i < count; i++)
+	{
+		f[(*pos)++] = n[i];
+	}
+}
+
+METHOD(plugin_t, get_features, int,
+	private_pkcs11_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f_hash[] = {
+		PLUGIN_REGISTER(HASHER, pkcs11_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_MD2),
+			PLUGIN_PROVIDE(HASHER, HASH_MD5),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA256),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
+	};
+	static plugin_feature_t f_dh[] = {
+		PLUGIN_REGISTER(DH, pkcs11_dh_create),
+			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
+			PLUGIN_PROVIDE(DH, MODP_2048_224),
+			PLUGIN_PROVIDE(DH, MODP_2048_256),
+			PLUGIN_PROVIDE(DH, MODP_1536_BIT),
+			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+			PLUGIN_PROVIDE(DH, MODP_6144_BIT),
+			PLUGIN_PROVIDE(DH, MODP_8192_BIT),
+			PLUGIN_PROVIDE(DH, MODP_1024_BIT),
+			PLUGIN_PROVIDE(DH, MODP_1024_160),
+			PLUGIN_PROVIDE(DH, MODP_768_BIT),
+			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
+	};
+	static plugin_feature_t f_rng[] = {
+		PLUGIN_REGISTER(RNG, pkcs11_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+	};
+	static plugin_feature_t f_key[] = {
+		PLUGIN_REGISTER(PRIVKEY, pkcs11_private_key_connect, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+	};
+	static plugin_feature_t f[countof(f_hash) + countof(f_dh) + countof(f_rng) +
+							  countof(f_key)] = {};
+	static int count = 0;
+
+	if (!count)
+	{	/* initialize only once */
+		add_features(f, f_key, countof(f_key), &count);
+		if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
+		{
+			add_features(f, f_hash, countof(f_hash), &count);
+		}
+		if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_rng", FALSE))
+		{
+			add_features(f, f_rng, countof(f_rng), &count);
+		}
+		if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_dh", FALSE))
+		{
+			add_features(f, f_dh, countof(f_dh), &count);
+		}
+	}
+	*features = f;
+	return count;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
 	pkcs11_creds_t *creds;
 
-	lib->creds->remove_builder(lib->creds,
-							(builder_function_t)pkcs11_private_key_connect);
 	while (this->creds->remove_last(this->creds, (void**)&creds) == SUCCESS)
 	{
 		lib->credmgr->remove_set(lib->credmgr, &creds->set);
 		creds->destroy(creds);
 	}
-	lib->crypto->remove_hasher(lib->crypto,
-							(hasher_constructor_t)pkcs11_hasher_create);
-	lib->crypto->remove_rng(lib->crypto, (rng_constructor_t)pkcs11_rng_create);
-	lib->crypto->remove_dh(lib->crypto, (dh_constructor_t)pkcs11_dh_create_custom);
-	lib->crypto->remove_dh(lib->crypto, (dh_constructor_t)pkcs11_dh_create);
 	this->creds->destroy(this->creds);
 	lib->set(lib, "pkcs11-manager", NULL);
 	this->manager->destroy(this->manager);
@@ -150,7 +221,7 @@ plugin_t *pkcs11_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
@@ -161,56 +232,6 @@ plugin_t *pkcs11_plugin_create()
 	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
 
 	lib->set(lib, "pkcs11-manager", this->manager);
-
-	if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
-	{
-		lib->crypto->add_hasher(lib->crypto, HASH_MD2, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_MD5, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
-					(hasher_constructor_t)pkcs11_hasher_create);
-	}
-
-	if (lib->settings->get_bool(lib->settings,
-							"libstrongswan.plugins.pkcs11.use_rng", FALSE))
-	{
-		lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
-					(rng_constructor_t)pkcs11_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
-					(rng_constructor_t)pkcs11_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_WEAK, get_name(this),
-					(rng_constructor_t)pkcs11_rng_create);
-	}
-
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
-							(builder_function_t)pkcs11_private_key_connect);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
-							(builder_function_t)pkcs11_public_key_load);
-
-	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_160, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, get_name(this),
-					(dh_constructor_t)pkcs11_dh_create_custom);
 
 	enumerator = this->manager->create_token_enumerator(this->manager);
 	while (enumerator->enumerate(enumerator, &p11, &slot))

@@ -269,10 +269,15 @@ pkcs11_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 /*
  * Described in header.
  */
-pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group)
+pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group,
+							  chunk_t g, chunk_t p)
 {
-
 	diffie_hellman_params_t *params;
+
+	if (group == MODP_CUSTOM)
+	{
+		return create_generic(group, p.len, g, p);
+	}
 
 	params = diffie_hellman_get_params(group);
 	if (!params)
@@ -283,15 +288,3 @@ pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group)
 						  params->generator, params->prime);
 }
 
-/*
- * Described in header.
- */
-pkcs11_dh_t *pkcs11_dh_create_custom(diffie_hellman_group_t group,
-									 chunk_t g, chunk_t p)
-{
-	if (group == MODP_CUSTOM)
-	{
-		return create_generic(group, p.len, g, p);
-	}
-	return NULL;
-}
