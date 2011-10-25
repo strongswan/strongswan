@@ -103,7 +103,8 @@ strongswan_BUILD := \
 	libcharon \
 	libhydra \
 	libstrongswan \
-	libtncif
+	libtncif \
+	libtnccs
 
 ifneq ($(strongswan_BUILD_STARTER),)
 strongswan_BUILD += \
