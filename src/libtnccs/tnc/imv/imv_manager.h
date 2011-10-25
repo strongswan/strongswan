@@ -50,12 +50,14 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
-	 * Load all IMV instances
+	 * Load and initialize an IMV as a dynamic library and add it to the list
 	 *
-	 * @param filename			configuration file containing IMV paths
-	 * @return					TRUE if initialization of all IMVs succeeded
+	 * @param name				name of the IMV to be loaded
+	 * @param path				path of the IMV dynamic library file
+	 * @return					TRUE if loading succeeded
 	 */
-	 bool (*load_all)(imv_manager_t *this, char *filename);
+	 bool (*load)(imv_manager_t *this, char *name, char *path);
+
 
 	/**
 	 * Check if an IMV with a given ID is registered with the IMV manager

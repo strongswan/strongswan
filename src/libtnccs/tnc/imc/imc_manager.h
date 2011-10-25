@@ -49,12 +49,13 @@ struct imc_manager_t {
 	imc_t* (*remove)(imc_manager_t *this, TNC_IMCID id);
 
 	/**
-	 * Load all IMC instances
+	 * Load and initialize an IMC as a dynamic library and add it to the list
 	 *
-	 * @param filename			configuration file containt IMC paths
-	 * @return					TRUE if initialization of all IMCs succeeded
+	 * @param name				name of the IMC to be loaded
+	 * @param path				path of the IMC dynamic library file
+	 * @return					TRUE if loading succeeded
 	 */
-	 bool (*load_all)(imc_manager_t *this, char *filename);
+	 bool (*load)(imc_manager_t *this, char *name, char *path);
 
 	/**
 	 * Check if an IMC with a given ID is registered with the IMC manager

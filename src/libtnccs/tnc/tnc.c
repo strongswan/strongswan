@@ -15,6 +15,16 @@
 
 #include "tnc.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#include <utils/lexparser.h>
+#include <debug.h>
+
 typedef struct private_tnc_t private_tnc_t;
 
 typedef tnccs_manager_t *(*tnc_create_tnccs_manager_t)(void);
@@ -63,16 +73,126 @@ void libtnccs_deinit(void)
 	tnc = NULL;
 }
 
+static bool load_imcvs_from_config(char *filename, bool is_imc)
+{
+	int fd, line_nr = 0;
+	chunk_t src, line;
+	struct stat sb;
+	void *addr;
+	char *label;
+
+	label = is_imc ? "IMC" : "IMV";
+
+	DBG1(DBG_TNC, "loading %ss from '%s'", label, filename);
+	fd = open(filename, O_RDONLY);
+	if (fd == -1)
+	{
+		DBG1(DBG_TNC, "opening configuration file '%s' failed: %s", filename,
+			 strerror(errno));
+		return FALSE;
+	}
+	if (fstat(fd, &sb) == -1)
+	{
+		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", filename,
+			 strerror(errno));
+		close(fd);
+		return FALSE;
+	}
+	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		DBG1(DBG_LIB, "mapping '%s' failed: %s", filename, strerror(errno));
+		close(fd);
+		return FALSE;
+	}
+	src = chunk_create(addr, sb.st_size);
+
+	while (fetchline(&src, &line))
+	{
+		char *name, *path;
+		bool success;
+		chunk_t token;
+
+		line_nr++;
+
+		/* skip comments or empty lines */
+		if (*line.ptr == '#' || !eat_whitespace(&line))
+		{
+			continue;
+		}
+
+		/* determine keyword */
+		if (!extract_token(&token, ' ', &line))
+		{
+			DBG1(DBG_TNC, "line %d: keyword must be followed by a space",
+						   line_nr);
+			return FALSE;
+		}
+
+		/* only interested in IMCs or IMVs depending on label */
+		if (!match(label, &token))
+		{
+			continue;
+		}
+
+		/* advance to the IMC/IMV name and extract it */
+		if (!extract_token(&token, '"', &line) ||
+			!extract_token(&token, '"', &line))
+		{
+			DBG1(DBG_TNC, "line %d: %s name must be set in double quotes",
+						   line_nr, label);
+			return FALSE;
+		}
+
+		/* copy the IMC/IMV name */
+		name = malloc(token.len + 1);
+		memcpy(name, token.ptr, token.len);
+		name[token.len] = '\0';
+
+		/* advance to the IMC/IMV path and extract it */
+		if (!eat_whitespace(&line))
+		{
+			DBG1(DBG_TNC, "line %d: %s path is missing", line_nr, label);
+			free(name);
+			return FALSE;
+		}
+		if (!extract_token(&token, ' ', &line))
+		{
+			token = line;
+		}
+
+		/* copy the IMC/IMV path */
+		path = malloc(token.len + 1);
+		memcpy(path, token.ptr, token.len);
+		path[token.len] = '\0';
+
+		/* load and register an IMC/IMV instance */
+		if (is_imc)
+		{
+			success = tnc->imcs->load(tnc->imcs, name, path);
+		}
+		else
+		{
+			success = tnc->imvs->load(tnc->imvs, name, path);
+		}
+		if (!success)
+		{
+			return FALSE;
+		}
+	}
+	munmap(addr, sb.st_size);
+	close(fd);
+	return TRUE;
+}
+
 /**
  * Described in header.
  */
 bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 						  bool reg, void *data)
 {
-	char *tnc_config;
-
-	tnc_config = lib->settings->get_str(lib->settings,
-						"libtnccs.tnc_config", "/etc/tnc_config");
+	bool load_imcvs = FALSE;
+	bool is_imc = FALSE;
 
 	if (feature->type == FEATURE_CUSTOM)
 	{
@@ -93,14 +213,8 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 			if (reg)
 			{
 				tnc->imcs = ((tnc_create_imc_manager_t)data)();
-
-
-				if (!tnc->imcs->load_all(tnc->imcs, tnc_config))
-				{
-					tnc->imcs->destroy(tnc->imcs);
-					tnc->imcs = NULL;
-					return FALSE;
-				}
+				is_imc = TRUE;
+				load_imcvs = TRUE;
 			}
 			else
 			{
@@ -113,13 +227,8 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 			if (reg)
 			{
 				tnc->imvs = ((tnc_create_imv_manager_t)data)();
-
-				if (!tnc->imvs->load_all(tnc->imvs, tnc_config))
-				{
-					tnc->imvs->destroy(tnc->imvs);
-					tnc->imvs = NULL;
-					return FALSE;
-				}
+				is_imc = FALSE;
+				load_imcvs = TRUE;
 			}
 			else
 			{
@@ -130,6 +239,28 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 		else
 		{
 			return FALSE;
+		}
+
+		if (load_imcvs)
+		{
+			char *tnc_config;
+
+			tnc_config = lib->settings->get_str(lib->settings,
+								"libtnccs.tnc_config", "/etc/tnc_config");
+			if (!load_imcvs_from_config(tnc_config, is_imc))
+			{
+				if (is_imc)
+				{
+					tnc->imcs->destroy(tnc->imcs);
+					tnc->imcs = NULL;
+				}
+				else
+				{
+					tnc->imvs->destroy(tnc->imvs);
+					tnc->imvs = NULL;
+				}
+				return FALSE;
+			}
 		}
 	}
 	return TRUE;
