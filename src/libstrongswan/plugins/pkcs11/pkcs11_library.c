@@ -552,7 +552,7 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 	if (rv != CKR_OK)
 	{
 		free_attrs(this);
-		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
+		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
 		return FALSE;
 	}
 	return TRUE;
