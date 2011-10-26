@@ -117,7 +117,6 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		}
 		case IMV_ATTESTATION_STATE_MEAS:
 		{
-
 			enumerator_t *enumerator;
 			u_int32_t delimiter = SOLIDUS_UTF;
 			char *platform_info, *pathname;
