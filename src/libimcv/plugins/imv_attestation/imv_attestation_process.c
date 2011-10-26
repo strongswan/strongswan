@@ -420,13 +420,13 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DBG1(DBG_IMV, " '%s' (%d bytes) owner %d, group %d, type %d",
 					 entry->filename,
 					 entry->filesize,
-					 entry->owner_id,
-					 entry->group_id,
+					 entry->owner,
+					 entry->group,
 					 entry->type);
 				DBG1(DBG_IMV, "    created %T, modified %T, accessed %T",
-					 &entry->create_time, utc,
-					 &entry->last_modify_time, utc,
-					 &entry->last_access_time, utc);
+					 &entry->created, utc,
+					 &entry->modified, utc,
+					 &entry->accessed, utc);
 			}
 			e->destroy(e);
 			break;

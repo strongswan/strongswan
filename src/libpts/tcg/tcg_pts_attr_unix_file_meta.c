@@ -160,16 +160,16 @@ METHOD(pa_tnc_attr_t, build, void,
 		/* Write the 64 bit integer fields as two 32 bit parts */
 		writer->write_uint32(writer, entry->filesize >> 32);
 		writer->write_uint32(writer, entry->filesize & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->create_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->create_time) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) & 0xffffffff);
-		writer->write_uint32(writer, entry->owner_id >> 32);
-		writer->write_uint32(writer, entry->owner_id & 0xffffffff);
-		writer->write_uint32(writer, entry->group_id >> 32);
-		writer->write_uint32(writer, entry->group_id & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->created) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->created) & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->modified) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->modified) & 0xffffffff);
+		writer->write_uint32(writer, ((u_int64_t)entry->accessed) >> 32);
+		writer->write_uint32(writer, ((u_int64_t)entry->accessed) & 0xffffffff);
+		writer->write_uint32(writer, entry->owner >> 32);
+		writer->write_uint32(writer, entry->owner & 0xffffffff);
+		writer->write_uint32(writer, entry->group >> 32);
+		writer->write_uint32(writer, entry->group & 0xffffffff);
 		
 		writer->write_data  (writer, chunk_create(entry->filename, strlen(entry->filename)));
 	}
@@ -346,11 +346,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		entry->meta_length = PTS_FILE_METADATA_SIZE + strlen(entry->filename);
 		entry->type = type;
 		entry->filesize = filesize;
-		entry->create_time = create_time_t;
-		entry->last_modify_time = modify_time_t;
-		entry->last_access_time = access_time_t;
-		entry->owner_id = owner_id;
-		entry->group_id = group_id;
+		entry->created = create_time_t;
+		entry->modified = modify_time_t;
+		entry->accessed = access_time_t;
+		entry->owner = owner_id;
+		entry->group = group_id;
 		
 		this->metadata->add(this->metadata, entry);
 	}

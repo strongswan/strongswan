@@ -36,15 +36,15 @@ typedef struct pts_file_metadata_t pts_file_metadata_t;
  * Structure holding file metadata
  */
 struct pts_file_metadata_t {
-	u_int16_t	  		meta_length;
-	pts_file_type_t	  	type;
-	u_int64_t			filesize;
-	time_t				create_time;
-	time_t				last_modify_time;
-	time_t				last_access_time;
-	u_int64_t			owner_id;
-	u_int64_t			group_id;
-	char				*filename;
+	u_int16_t        meta_length;
+	pts_file_type_t  type;
+	u_int64_t        filesize;
+	time_t           created;
+	time_t           modified;
+	time_t           accessed;
+	u_int64_t        owner;
+	u_int64_t        group;
+	char             *filename;
 };
 
 /**
@@ -60,7 +60,7 @@ struct pts_file_meta_t {
 	int (*get_file_count)(pts_file_meta_t *this);
 
 	/**
-	 * Add a PTS File Metadata
+	 * Add PTS File Metadata
 	 *
 	 * @param filename		Name of measured file or directory
 	 * @param metadata		File metadata

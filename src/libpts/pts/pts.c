@@ -19,8 +19,6 @@
 #include <crypto/hashers/hasher.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-/* for isdigit()*/
-#include <ctype.h>
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
@@ -589,62 +587,60 @@ METHOD(pts_t, do_measurements, pts_file_meas_t*,
 static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 {
 	struct stat st;
-	pts_file_metadata_t *tmp;
+	pts_file_metadata_t *this;
 
-	tmp = malloc_thing(pts_file_metadata_t);
+	this = malloc_thing(pts_file_metadata_t);
 
 	if (stat(pathname, &st))
 	{
-		DBG1(DBG_PTS, "Unable to obtain statistical information about %s",
-			 pathname);
+		DBG1(DBG_PTS, "Unable to obtain statistics about '%s'", pathname);
 		return FALSE;
 	}
 
-	tmp->filename = strdup(pathname);
-	tmp->meta_length = PTS_FILE_METADATA_SIZE + strlen(tmp->filename);
+	this->filename = strdup(pathname);
+	this->meta_length = PTS_FILE_METADATA_SIZE + strlen(this->filename);
 
 	if (S_ISREG(st.st_mode))
 	{
-		tmp->type = PTS_FILE_REGULAR;
+		this->type = PTS_FILE_REGULAR;
 	}
 	else if (S_ISDIR(st.st_mode))
 	{
-		tmp->type = PTS_FILE_DIRECTORY;
+		this->type = PTS_FILE_DIRECTORY;
 	}
 	else if (S_ISCHR(st.st_mode))
 	{
-		tmp->type = PTS_FILE_CHAR_SPEC;
+		this->type = PTS_FILE_CHAR_SPEC;
 	}
 	else if (S_ISBLK(st.st_mode))
 	{
-		tmp->type = PTS_FILE_BLOCK_SPEC;
+		this->type = PTS_FILE_BLOCK_SPEC;
 	}
 	else if (S_ISFIFO(st.st_mode))
 	{
-		tmp->type = PTS_FILE_FIFO;
+		this->type = PTS_FILE_FIFO;
 	}
 	else if (S_ISLNK(st.st_mode))
 	{
-		tmp->type = PTS_FILE_SYM_LINK;
+		this->type = PTS_FILE_SYM_LINK;
 	}
 	else if (S_ISSOCK(st.st_mode))
 	{
-		tmp->type = PTS_FILE_SOCKET;
+		this->type = PTS_FILE_SOCKET;
 	}
 	else
 	{
-		tmp->type = PTS_FILE_OTHER;
+		this->type = PTS_FILE_OTHER;
 	}
 
-	tmp->filesize = (u_int64_t)st.st_size;
-	tmp->create_time = st.st_ctime;
-	tmp->last_modify_time = st.st_mtime;
-	tmp->last_access_time = st.st_atime;
-	tmp->owner_id = (u_int64_t)st.st_uid;
-	tmp->group_id = (u_int64_t)st.st_gid;
+	this->filesize = st.st_size;
+	this->created =  st.st_ctime;
+	this->modified = st.st_mtime;
+	this->accessed = st.st_atime;
+	this->owner =    st.st_uid;
+	this->group =    st.st_gid;
 
-	*entry = tmp;
-
+	*entry = this;
 	return TRUE;
 }
 
