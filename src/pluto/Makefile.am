@@ -39,6 +39,7 @@ nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
 pkcs7.c pkcs7.h \
+plugin_list.c plugin_list.h \
 pluto.c pluto.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \

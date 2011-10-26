@@ -207,6 +207,7 @@ static void help(void)
 			" [--listcrls]"
 			" [--listocsp]"
 			" [--listcards]"
+			" [--listplugins]"
 			" [--listall]"
 			"\n\n"
 		"purge: whack"
@@ -379,6 +380,7 @@ enum {
 	LST_CRLS,
 	LST_OCSP,
 	LST_CARDS,
+	LST_PLUGINS,
 	LST_ALL,
 
 #   define LST_LAST LST_ALL     /* last list option */
@@ -571,6 +573,7 @@ static const struct option long_opts[] = {
 	{ "listcrls", no_argument, NULL, LST_CRLS + OO },
 	{ "listocsp", no_argument, NULL, LST_OCSP + OO },
 	{ "listcards", no_argument, NULL, LST_CARDS + OO },
+	{ "listplugins", no_argument, NULL, LST_PLUGINS + OO },
 	{ "listall", no_argument, NULL, LST_ALL + OO },
 
 	/* options for an end description */
@@ -1234,6 +1237,7 @@ int main(int argc, char **argv)
 		case LST_CRLS:          /* --listcrls */
 		case LST_OCSP:          /* --listocsp */
 		case LST_CARDS:         /* --listcards */
+		case LST_PLUGINS:       /* --listplugins */
 			msg.whack_list |= LELEM(c - LST_ALGS);
 			continue;
 

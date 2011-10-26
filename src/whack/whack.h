@@ -333,8 +333,9 @@ enum rc_type {
 #define LIST_CRLS       0x0200  /* list all crls */
 #define LIST_OCSP       0x0400  /* list all ocsp cache entries */
 #define LIST_CARDS      0x0800  /* list all smartcard records */
+#define LIST_PLUGINS    0x1000  /* list all plugins with dependencies */
 
-#define LIST_ALL        LRANGES(LIST_ALGS, LIST_CARDS)  /* all list options */
+#define LIST_ALL        LRANGES(LIST_ALGS, LIST_PLUGINS) /* all list options */
 
 /* options of whack --reread*** command */
 

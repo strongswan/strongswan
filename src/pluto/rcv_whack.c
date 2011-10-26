@@ -57,6 +57,7 @@
 #include "myid.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
+#include "plugin_list.h"
 #include "whack_attribute.h"
 
 /* helper variables and function to decode strings from whack message */
@@ -555,6 +556,11 @@ void whack_handle(int whackctlfd)
 	{
 		ike_alg_list();
 		kernel_alg_list();
+	}
+
+	if (msg.whack_list & LIST_PLUGINS)
+	{
+		plugin_list();
 	}
 
 	if (msg.whack_key)
