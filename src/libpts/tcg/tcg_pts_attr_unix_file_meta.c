@@ -152,7 +152,6 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->metadata->create_enumerator(this->metadata);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-<<<<<<< HEAD
 		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE +
 									 strlen(entry->filename));
 		writer->write_uint8 (writer, entry->type);
@@ -165,27 +164,6 @@ METHOD(pa_tnc_attr_t, build, void,
 		writer->write_uint64(writer, entry->group);
 		writer->write_data  (writer, chunk_create(entry->filename,
 												  strlen(entry->filename)));
-=======
-		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE + strlen(entry->filename));
-		writer->write_uint8 (writer, entry->type);
-		writer->write_uint8 (writer, PTS_FILE_MEAS_RESERVED);
-
-		/* Write the 64 bit integer fields as two 32 bit parts */
-		writer->write_uint32(writer, entry->filesize >> 32);
-		writer->write_uint32(writer, entry->filesize & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->create_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->create_time) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_modify_time) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->last_access_time) & 0xffffffff);
-		writer->write_uint32(writer, entry->owner_id >> 32);
-		writer->write_uint32(writer, entry->owner_id & 0xffffffff);
-		writer->write_uint32(writer, entry->group_id >> 32);
-		writer->write_uint32(writer, entry->group_id & 0xffffffff);
-		
-		writer->write_data  (writer, chunk_create(entry->filename, strlen(entry->filename)));
->>>>>>> Implemented handling of File Metadata
 	}
 	enumerator->destroy(enumerator);
 	
