@@ -1220,7 +1220,8 @@ static void list_plugins(FILE *out)
 	char *str;
 
 	fprintf(out, "\n");
-	fprintf(out, "List of loaded plugins:\n");
+	fprintf(out, "List of loaded Plugins:\n");
+	fprintf(out, "\n");
 
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (enumerator->enumerate(enumerator, &plugin, &list))
