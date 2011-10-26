@@ -61,7 +61,7 @@ case "$1" in
 	echo "	listalgs|listpubkeys|listcerts [--utc]"
 	echo "	listcacerts|listaacerts|listocspcerts [--utc]"
 	echo "	listacerts|listgroups|listcainfos [--utc]"
-	echo "	listcrls|listocsp|listcards|listall [--utc]"
+	echo "	listcrls|listocsp|listcards|listplugins|listall [--utc]"
 	echo "	leases [<poolname> [<address>]]"
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
@@ -170,7 +170,7 @@ leases)
 	fi
 	exit "$rc"
 	;;
-listalgs|\listpubkeys|\
+listalgs|listpubkeys|listplugins|\
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
 listcainfos|listcrls|listocsp|listall|\
