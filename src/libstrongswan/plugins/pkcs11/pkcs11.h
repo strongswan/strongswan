@@ -179,6 +179,14 @@ extern "C" {
 #define unlock_mutex UnlockMutex
 #define reserved pReserved
 
+#define ck_ec_kdf_type_t CK_EC_KDF_TYPE
+
+#define ck_ecdh1_derive_args _CK_ECDH1_DERIVE_PARAMS
+#define shared_data_len ulSharedDataLen
+#define shared_data pSharedData
+#define public_data_len ulPublicDataLen
+#define public_data pPublicData
+
 #endif	/* CRYPTOKI_COMPAT */
 
 
@@ -1090,6 +1098,19 @@ struct ck_c_initialize_args
   void *reserved;
 };
 
+typedef unsigned long ck_ec_kdf_type_t;
+
+#define CKD_NULL				(1)
+#define CKD_SHA1_DKF			(2)
+
+struct ck_ecdh1_derive_params
+{
+  ck_ec_kdf_type_t kdf;
+  unsigned long shared_data_len;
+  void *shared_data;
+  unsigned long public_data_len;
+  void *public_data;
+};
 
 #define CKF_LIBRARY_CANT_CREATE_OS_THREADS	(1 << 0)
 #define CKF_OS_LOCKING_OK			(1 << 1)
@@ -1259,6 +1280,9 @@ typedef struct ck_function_list **CK_FUNCTION_LIST_PTR_PTR;
 
 typedef struct ck_c_initialize_args CK_C_INITIALIZE_ARGS;
 typedef struct ck_c_initialize_args *CK_C_INITIALIZE_ARGS_PTR;
+
+typedef struct ck_ecdh1_derive_params CK_ECDH1_DERIVE_PARAMS;
+typedef struct ck_ecdh1_derive_params *CK_ECDH1_DERIVE_PARAMS_PTR;
 
 #define NULL_PTR NULL
 
