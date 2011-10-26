@@ -37,11 +37,19 @@ METHOD(plugin_t, get_name, char*,
 	return "pubkey";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_pubkey_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CERT_ENCODE, pubkey_cert_wrap, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_TRUSTED_PUBKEY),
+	};
+	*features = f;
+	return countof(f);
+}
 METHOD(plugin_t, destroy, void,
 	private_pubkey_plugin_t *this)
 {
-	lib->creds->remove_builder(lib->creds,
-							(builder_function_t)pubkey_cert_wrap);
 	free(this);
 }
 
@@ -56,14 +64,11 @@ plugin_t *pubkey_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY, FALSE,
-							(builder_function_t)pubkey_cert_wrap);
 
 	return &this->public.plugin;
 }
