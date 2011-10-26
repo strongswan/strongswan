@@ -30,6 +30,7 @@
 #include "pkcs11_hasher.h"
 #include "pkcs11_rng.h"
 #include "pkcs11_dh.h"
+#include "pkcs11_ec_dh.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -163,12 +164,23 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 	};
+	static plugin_feature_t f_ecdh[] = {
+		PLUGIN_REGISTER(DH, pkcs11_ec_dh_create),
+			PLUGIN_PROVIDE(DH, ECP_192_BIT),
+			PLUGIN_PROVIDE(DH, ECP_224_BIT),
+			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+			PLUGIN_PROVIDE(DH, ECP_384_BIT),
+			PLUGIN_PROVIDE(DH, ECP_521_BIT),
+	};
 	static plugin_feature_t f[countof(f_hash) + countof(f_dh) + countof(f_rng) +
-							  countof(f_key)] = {};
+							  countof(f_key) + countof(f_ecdh)] = {};
 	static int count = 0;
 
 	if (!count)
 	{	/* initialize only once */
+		bool use_ecc = lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_ecc", FALSE);
+
 		add_features(f, f_key, countof(f_key), &count);
 		if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
@@ -184,6 +196,10 @@ METHOD(plugin_t, get_features, int,
 							"libstrongswan.plugins.pkcs11.use_dh", FALSE))
 		{
 			add_features(f, f_dh, countof(f_dh), &count);
+			if (use_ecc)
+			{
+				add_features(f, f_ecdh, countof(f_ecdh), &count);
+			}
 		}
 	}
 	*features = f;
