@@ -42,29 +42,46 @@ METHOD(plugin_t, get_name, char*,
 	return "x509";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_x509_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CERT_ENCODE, x509_cert_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+		PLUGIN_REGISTER(CERT_DECODE, x509_cert_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+
+		PLUGIN_REGISTER(CERT_ENCODE, x509_ac_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509_AC),
+		PLUGIN_REGISTER(CERT_DECODE, x509_ac_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_AC),
+
+		PLUGIN_REGISTER(CERT_ENCODE, x509_crl_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509_CRL),
+		PLUGIN_REGISTER(CERT_DECODE, x509_crl_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_CRL),
+
+		PLUGIN_REGISTER(CERT_ENCODE, x509_ocsp_request_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_X509_OCSP_REQUEST),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(RNG, RNG_WEAK),
+		PLUGIN_REGISTER(CERT_DECODE, x509_ocsp_response_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_OCSP_RESPONSE),
+
+		PLUGIN_REGISTER(CERT_ENCODE, x509_pkcs10_gen, FALSE),
+			PLUGIN_PROVIDE(CERT_ENCODE, CERT_PKCS10_REQUEST),
+		PLUGIN_REGISTER(CERT_DECODE, x509_pkcs10_load, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_PKCS10_REQUEST),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_x509_plugin_t *this)
 {
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_cert_gen);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_cert_load);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_ac_gen);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_ac_load);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_crl_load);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_crl_gen);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_ocsp_request_gen);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_ocsp_response_load);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_pkcs10_gen);
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)x509_pkcs10_load);
 	free(this);
 }
 
@@ -79,32 +96,11 @@ plugin_t *x509_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, FALSE,
-							(builder_function_t)x509_cert_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, TRUE,
-							(builder_function_t)x509_cert_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC, FALSE,
-							(builder_function_t)x509_ac_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC, TRUE,
-							(builder_function_t)x509_ac_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, TRUE,
-							(builder_function_t)x509_crl_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, FALSE,
-							(builder_function_t)x509_crl_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST, FALSE,
-							(builder_function_t)x509_ocsp_request_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE, TRUE,
-							(builder_function_t)x509_ocsp_response_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST, FALSE,
-							(builder_function_t)x509_pkcs10_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST, TRUE,
-							(builder_function_t)x509_pkcs10_load);
 
 	return &this->public.plugin;
 }
