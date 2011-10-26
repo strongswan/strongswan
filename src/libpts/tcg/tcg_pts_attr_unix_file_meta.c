@@ -67,6 +67,7 @@ typedef struct private_tcg_pts_attr_file_meta_t private_tcg_pts_attr_file_meta_t
 
 #define PTS_FILE_META_SIZE			8
 #define PTS_FILE_MEAS_RESERVED		0x00
+#define PTS_FILE_METADATA_SIZE		52
 
 /**
  * Private data of an tcg_pts_attr_file_meta_t object.
@@ -146,32 +147,23 @@ METHOD(pa_tnc_attr_t, build, void,
 	number_of_files = this->metadata->get_file_count(this->metadata);
 	writer = bio_writer_create(PTS_FILE_META_SIZE);
 
-	/* Write the 64 bit integer field - number of files as two 32 bit parts */
-	writer->write_uint32(writer, number_of_files >> 32);
-	writer->write_uint32(writer, number_of_files & 0xffffffff);
+	writer->write_uint64(writer, number_of_files);
 
 	enumerator = this->metadata->create_enumerator(this->metadata);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE + strlen(entry->filename));
+		writer->write_uint16(writer, PTS_FILE_METADATA_SIZE +
+									 strlen(entry->filename));
 		writer->write_uint8 (writer, entry->type);
 		writer->write_uint8 (writer, PTS_FILE_MEAS_RESERVED);
-
-		/* Write the 64 bit integer fields as two 32 bit parts */
-		writer->write_uint32(writer, entry->filesize >> 32);
-		writer->write_uint32(writer, entry->filesize & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->created) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->created) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->modified) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->modified) & 0xffffffff);
-		writer->write_uint32(writer, ((u_int64_t)entry->accessed) >> 32);
-		writer->write_uint32(writer, ((u_int64_t)entry->accessed) & 0xffffffff);
-		writer->write_uint32(writer, entry->owner >> 32);
-		writer->write_uint32(writer, entry->owner & 0xffffffff);
-		writer->write_uint32(writer, entry->group >> 32);
-		writer->write_uint32(writer, entry->group & 0xffffffff);
-		
-		writer->write_data  (writer, chunk_create(entry->filename, strlen(entry->filename)));
+		writer->write_uint64(writer, entry->filesize);
+		writer->write_uint64(writer, entry->created);
+		writer->write_uint64(writer, entry->modified);
+		writer->write_uint64(writer, entry->accessed);
+		writer->write_uint64(writer, entry->owner);
+		writer->write_uint64(writer, entry->group);
+		writer->write_data  (writer, chunk_create(entry->filename,
+												  strlen(entry->filename)));
 	}
 	enumerator->destroy(enumerator);
 	
@@ -184,37 +176,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	pts_file_metadata_t *entry;
-	
-	int number_of_files;
-	u_int32_t number_of_files32;
-	
-	u_int16_t meta_length;
-	pts_file_type_t type;
-	u_int8_t type8;
-	u_int8_t reserved;
-	
-	int filesize;
-	u_int32_t filesize32;
-	
-	int create_time;
-	u_int32_t create_time32;
-	time_t create_time_t;
-	int modify_time;
-	u_int32_t modify_time32;
-	time_t modify_time_t;
-	int access_time;
-	u_int32_t access_time32;
-	time_t access_time_t;
-	
-	int owner_id;
-	u_int32_t owner_id32;
-
-	int group_id;
-	u_int32_t group_id32;
-	
-	size_t len;
+	u_int8_t type, reserved;
+	u_int16_t len;
+	u_int64_t number_of_files, filesize, created, modified, accessed;
+	u_int64_t owner, group;
 	chunk_t filename;
-	char buf[BUF_LEN];
 	status_t status = FAILED;
 	
 	if (this->value.len < PTS_FILE_META_SIZE)
@@ -224,134 +190,75 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
+	reader->read_uint64(reader, &number_of_files);
 
-	reader->read_uint32(reader, &number_of_files32);
-	number_of_files = (sizeof(number_of_files) > 4) ? number_of_files32 << 32 : 0;
-	reader->read_uint32(reader, &number_of_files32);
-	number_of_files += number_of_files32;
-		
 	this->metadata = pts_file_meta_create();
 	
 	while (number_of_files--)
 	{
-		if (!reader->read_uint16(reader, &meta_length))
+		if (!reader->read_uint16(reader, &len))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS file metadata length");
 			goto end;
 		}
-		if (!reader->read_uint8 (reader, &type8))
+		if (!reader->read_uint8(reader, &type))
 		{
 			DBG1(DBG_TNC, "insufficient data for file type");
 			goto end;
 		}
-		type = (pts_file_type_t)type8;
-		if (!reader->read_uint8 (reader, &reserved))
+		if (!reader->read_uint8(reader, &reserved))
 		{
 			DBG1(DBG_TNC, "insufficient data for reserved field");
 			goto end;
 		}
-		if (!reader->read_uint32(reader, &filesize32))
+		if (!reader->read_uint64(reader, &filesize))
 		{
 			DBG1(DBG_TNC, "insufficient data for file size");
 			goto end;
 		}
-		filesize = (sizeof(filesize) > 4) ? filesize32 << 32 : 0;
-		if (!reader->read_uint32(reader, &filesize32))
+		if (!reader->read_uint64(reader, &created))
 		{
-			DBG1(DBG_TNC, "insufficient data for file size");
+			DBG1(DBG_TNC, "insufficient data for file create time");
 			goto end;
 		}
-		filesize += filesize32;
-		
-		if (!reader->read_uint32(reader, &create_time32))
+		if (!reader->read_uint64(reader, &modified))
 		{
-			DBG1(DBG_TNC, "insufficient data for file size");
+			DBG1(DBG_TNC, "insufficient data for last modify time");
 			goto end;
 		}
-		create_time = (sizeof(create_time) > 4) ? create_time32 << 32 : 0;
-		if (!reader->read_uint32(reader, &create_time32))
+		if (!reader->read_uint64(reader, &accessed))
 		{
-			DBG1(DBG_TNC, "insufficient data for file size");
+			DBG1(DBG_TNC, "insufficient data for last access time");
 			goto end;
 		}
-		create_time += create_time32;
-		create_time_t = (time_t)create_time;
-		
-		if (!reader->read_uint32(reader, &modify_time32))
+		if (!reader->read_uint64(reader, &owner))
 		{
-			DBG1(DBG_TNC, "insufficient data for file size");
+			DBG1(DBG_TNC, "insufficient data for owner id");
 			goto end;
 		}
-		modify_time = (sizeof(modify_time) > 4) ? modify_time32 << 32 : 0;
-		if (!reader->read_uint32(reader, &modify_time32))
+		if (!reader->read_uint64(reader, &group))
 		{
-			DBG1(DBG_TNC, "insufficient data for file size");
+			DBG1(DBG_TNC, "insufficient data for group id");
 			goto end;
 		}
-		modify_time += modify_time32;
-		modify_time_t = (time_t)modify_time;
-		
-		if (!reader->read_uint32(reader, &access_time32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		access_time = (sizeof(access_time) > 4) ? access_time32 << 32 : 0;
-		if (!reader->read_uint32(reader, &access_time32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		access_time += access_time32;
-		access_time_t = (time_t)access_time;
-
-		if (!reader->read_uint32(reader, &owner_id32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		owner_id = (sizeof(owner_id) > 4) ? owner_id32 << 32 : 0;
-		if (!reader->read_uint32(reader, &owner_id32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		owner_id += owner_id32;
-
-		if (!reader->read_uint32(reader, &group_id32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		group_id = (sizeof(group_id) > 4) ? group_id32 << 32 : 0;
-		if (!reader->read_uint32(reader, &group_id32))
-		{
-			DBG1(DBG_TNC, "insufficient data for file size");
-			goto end;
-		}
-		group_id += group_id32;
-
-		if (!reader->read_data(reader, meta_length - PTS_FILE_METADATA_SIZE, &filename))
+		if (!reader->read_data(reader, len - PTS_FILE_METADATA_SIZE, &filename))
 		{
 			DBG1(DBG_TNC, "insufficient data for filename");
 			goto end;
 		}
 		
-		len = min(filename.len, BUF_LEN - 1);
-		memcpy(buf, filename.ptr, len);
-		buf[len] = '\0';
-
 		entry = malloc_thing(pts_file_metadata_t);
-		entry->filename = strdup(buf);
-		entry->meta_length = PTS_FILE_METADATA_SIZE + strlen(entry->filename);
 		entry->type = type;
 		entry->filesize = filesize;
-		entry->created = create_time_t;
-		entry->modified = modify_time_t;
-		entry->accessed = access_time_t;
-		entry->owner = owner_id;
-		entry->group = group_id;
-		
+		entry->created = created;
+		entry->modified = modified;
+		entry->accessed = accessed;
+		entry->owner = owner;
+		entry->group = group;
+		entry->filename = malloc(filename.len + 1);
+		entry->filename[filename.len] = '\0';
+		memcpy(entry->filename, filename.ptr, filename.len);
+
 		this->metadata->add(this->metadata, entry);
 	}
 	status = SUCCESS;

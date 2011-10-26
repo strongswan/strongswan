@@ -32,6 +32,8 @@
 #include <debug.h>
 #include <crypto/hashers/hasher.h>
 
+#include <inttypes.h>
+
 bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 imv_attestation_state_t *attestation_state,
 							 pts_meas_algorithms_t supported_algorithms,
@@ -404,8 +406,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			int file_count;
 			pts_file_meta_t *metadata;
 			pts_file_metadata_t *entry;
-			enumerator_t *e;
+			time_t created, modified, accessed;
 			bool utc = FALSE;
+			enumerator_t *e;
 
 			attr_cast = (tcg_pts_attr_file_meta_t*)attr;
 			metadata = attr_cast->get_metadata(attr_cast);
@@ -417,16 +420,17 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			e = metadata->create_enumerator(metadata);
 			while (e->enumerate(e, &entry))
 			{
-				DBG1(DBG_IMV, " '%s' (%d bytes) owner %d, group %d, type %d",
-					 entry->filename,
-					 entry->filesize,
-					 entry->owner,
-					 entry->group,
-					 entry->type);
+				DBG1(DBG_IMV, " '%s' (%"PRIu64" bytes)"
+							  " owner %"PRIu64", group %"PRIu64", type %d",
+					 entry->filename, entry->filesize, entry->owner,
+					 entry->group, entry->type);
+
+				created = entry->created;
+				modified = entry->modified;
+				accessed = entry->accessed;
+
 				DBG1(DBG_IMV, "    created %T, modified %T, accessed %T",
-					 &entry->created, utc,
-					 &entry->modified, utc,
-					 &entry->accessed, utc);
+					 &created, utc, &modified, utc, &accessed, utc);
 			}
 			e->destroy(e);
 			break;

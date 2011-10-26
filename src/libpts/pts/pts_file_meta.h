@@ -29,22 +29,18 @@
 typedef struct pts_file_meta_t pts_file_meta_t;
 typedef struct pts_file_metadata_t pts_file_metadata_t;
 
-/* Without filename field included */
-#define PTS_FILE_METADATA_SIZE		52
-
 /**
  * Structure holding file metadata
  */
 struct pts_file_metadata_t {
-	u_int16_t        meta_length;
-	pts_file_type_t  type;
-	u_int64_t        filesize;
-	time_t           created;
-	time_t           modified;
-	time_t           accessed;
-	u_int64_t        owner;
-	u_int64_t        group;
-	char             *filename;
+	pts_file_type_t type;
+	u_int64_t       filesize;
+	u_int64_t       created;
+	u_int64_t       modified;
+	u_int64_t       accessed;
+	u_int64_t       owner;
+	u_int64_t       group;
+	char           *filename;
 };
 
 /**

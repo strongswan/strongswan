@@ -598,7 +598,6 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 	}
 
 	this->filename = strdup(pathname);
-	this->meta_length = PTS_FILE_METADATA_SIZE + strlen(this->filename);
 
 	if (S_ISREG(st.st_mode))
 	{
