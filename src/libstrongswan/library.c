@@ -61,7 +61,6 @@ void library_deinit()
 	detailed = lib->settings->get_bool(lib->settings,
 								"libstrongswan.leak_detective.detailed", TRUE);
 
-	this->objects->destroy(this->objects);
 	this->public.scheduler->destroy(this->public.scheduler);
 	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
@@ -73,6 +72,7 @@ void library_deinit()
 	this->public.fetcher->destroy(this->public.fetcher);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
+	this->objects->destroy(this->objects);
 	if (this->public.integrity)
 	{
 		this->public.integrity->destroy(this->public.integrity);
