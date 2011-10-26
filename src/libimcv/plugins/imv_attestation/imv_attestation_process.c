@@ -403,8 +403,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			tcg_pts_attr_file_meta_t *attr_cast;
 			int file_count;
 			pts_file_meta_t *metadata;
-			enumerator_t *e;
 			pts_file_metadata_t *entry;
+			enumerator_t *e;
+			bool utc = FALSE;
 
 			attr_cast = (tcg_pts_attr_file_meta_t*)attr;
 			metadata = attr_cast->get_metadata(attr_cast);
@@ -416,25 +417,18 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			e = metadata->create_enumerator(metadata);
 			while (e->enumerate(e, &entry))
 			{
-				DBG1(DBG_IMV, "File name:          %s",
-					 entry->filename);
-				DBG1(DBG_IMV, "     type:          %d",
+				DBG1(DBG_IMV, " '%s' (%d bytes) owner %d, group %d, type %d",
+					 entry->filename,
+					 entry->filesize,
+					 entry->owner_id,
+					 entry->group_id,
 					 entry->type);
-				DBG1(DBG_IMV, "     size:          %d",
-					 entry->filesize);
-				DBG1(DBG_IMV, "     create time:   %s",
-					 ctime(&entry->create_time));
-				DBG1(DBG_IMV, "     last modified: %s",
-					 ctime(&entry->last_modify_time));
-				DBG1(DBG_IMV, "     last accessed: %s",
-					 ctime(&entry->last_access_time));
-				DBG1(DBG_IMV, "     owner id:      %d",
-					 entry->owner_id);
-				DBG1(DBG_IMV, "     group id:      %d",
-					 entry->group_id);
+				DBG1(DBG_IMV, "    created %T, modified %T, accessed %T",
+					 &entry->create_time, utc,
+					 &entry->last_modify_time, utc,
+					 &entry->last_access_time, utc);
 			}
 			e->destroy(e);
-
 			break;
 		}
 
