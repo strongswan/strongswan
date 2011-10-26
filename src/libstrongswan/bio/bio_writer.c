@@ -97,6 +97,17 @@ METHOD(bio_writer_t, write_uint32, void,
 	this->used += 4;
 }
 
+METHOD(bio_writer_t, write_uint64, void,
+	private_bio_writer_t *this, u_int64_t value)
+{
+	if (this->used + 8 > this->buf.len)
+	{
+		increase(this);
+	}
+	htoun64(this->buf.ptr + this->used, value);
+	this->used += 8;
+}
+
 METHOD(bio_writer_t, write_data, void,
 	private_bio_writer_t *this, chunk_t value)
 {
@@ -214,6 +225,7 @@ bio_writer_t *bio_writer_create(u_int32_t bufsize)
 			.write_uint16 = _write_uint16,
 			.write_uint24 = _write_uint24,
 			.write_uint32 = _write_uint32,
+			.write_uint64 = _write_uint64,
 			.write_data = _write_data,
 			.write_data8 = _write_data8,
 			.write_data16 = _write_data16,

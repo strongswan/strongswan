@@ -77,6 +77,14 @@ struct bio_reader_t {
 	bool (*read_uint32)(bio_reader_t *this, u_int32_t *res);
 
 	/**
+	 * Read a 64-bit integer from the buffer, advance.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint64)(bio_reader_t *this, u_int64_t *res);
+
+	/**
 	 * Read a chunk of len bytes, advance.
 	 *
 	 * @param len		number of bytes to read

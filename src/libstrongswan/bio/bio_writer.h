@@ -59,6 +59,13 @@ struct bio_writer_t {
 	void (*write_uint32)(bio_writer_t *this, u_int32_t value);
 
 	/**
+	 * Append a 64-bit integer to the buffer.
+	 *
+	 * @param value		value to append
+	 */
+	void (*write_uint64)(bio_writer_t *this, u_int64_t value);
+
+	/**
 	 * Append a chunk of data without a length header.
 	 *
 	 * @param value		value to append

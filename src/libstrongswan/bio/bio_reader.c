@@ -103,6 +103,20 @@ METHOD(bio_reader_t, read_uint32, bool,
 	return TRUE;
 }
 
+METHOD(bio_reader_t, read_uint64, bool,
+	private_bio_reader_t *this, u_int64_t *res)
+{
+	if (this->buf.len < 8)
+	{
+		DBG1(DBG_LIB, "%d bytes insufficient to parse u_int64 data",
+			 this->buf.len);
+		return FALSE;
+	}
+	*res = untoh64(this->buf.ptr);
+	this->buf = chunk_skip(this->buf, 8);
+	return TRUE;
+}
+
 METHOD(bio_reader_t, read_data, bool,
 	private_bio_reader_t *this, u_int32_t len, chunk_t *res)
 {
@@ -186,6 +200,7 @@ bio_reader_t *bio_reader_create(chunk_t data)
 			.read_uint16 = _read_uint16,
 			.read_uint24 = _read_uint24,
 			.read_uint32 = _read_uint32,
+			.read_uint64 = _read_uint64,
 			.read_data = _read_data,
 			.read_data8 = _read_data8,
 			.read_data16 = _read_data16,
