@@ -597,8 +597,6 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 		return FALSE;
 	}
 
-	this->filename = strdup(pathname);
-
 	if (S_ISREG(st.st_mode))
 	{
 		this->type = PTS_FILE_REGULAR;
@@ -677,6 +675,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 					metadata->destroy(metadata);
 					return NULL;
 				}
+				entry->filename = strdup(rel_name);
 				metadata->add(metadata, entry);
 			}
 		}
@@ -684,14 +683,12 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 	}
 	else
 	{
-		char *filename;
-
 		if (!file_metadata(pathname, &entry))
 		{
 			metadata->destroy(metadata);
 			return NULL;
 		}
-		filename = get_filename(pathname);
+		entry->filename = strdup(get_filename(pathname));
 		metadata->add(metadata, entry);
 	}
 
