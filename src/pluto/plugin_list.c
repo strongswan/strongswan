@@ -14,6 +14,7 @@
  */
 
 #include <whack.h>
+#include <log.h>
 
 #include <library.h>
 #include <utils/linked_list.h>
