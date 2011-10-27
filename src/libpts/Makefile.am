@@ -9,13 +9,14 @@ libpts_la_SOURCES = \
 	libpts.h libpts.c \
 	pts/pts.h pts/pts.c \
 	pts/pts_error.h pts/pts_error.c \
-	pts/pts_proto_caps.h pts/pts_funct_comp_name.h pts/pts_file_type.h \
+	pts/pts_proto_caps.h pts/pts_funct_comp_name.h \
 	pts/pts_creds.h pts/pts_creds.c \
 	pts/pts_database.h pts/pts_database.c \
+	pts/pts_dh_group.h pts/pts_dh_group.c \
 	pts/pts_file_meas.h pts/pts_file_meas.c \
 	pts/pts_file_meta.h pts/pts_file_meta.c \
+	pts/pts_file_type.h pts/pts_file_type.c \
 	pts/pts_meas_algo.h pts/pts_meas_algo.c \
-	pts/pts_dh_group.h pts/pts_dh_group.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_dh_nonce_params_req.h tcg/tcg_pts_attr_dh_nonce_params_req.c \

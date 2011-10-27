@@ -421,9 +421,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			while (e->enumerate(e, &entry))
 			{
 				DBG1(DBG_IMV, " '%s' (%"PRIu64" bytes)"
-							  " owner %"PRIu64", group %"PRIu64", type %d",
+							  " owner %"PRIu64", group %"PRIu64", type %N",
 					 entry->filename, entry->filesize, entry->owner,
-					 entry->group, entry->type);
+					 entry->group, pts_file_type_names, entry->type);
 
 				created = entry->created;
 				modified = entry->modified;
