@@ -133,11 +133,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	
 	number_of_files = this->measurements->get_file_count(this->measurements);
 	request_id = this->measurements->get_request_id(this->measurements);
-	writer = bio_writer_create(PTS_FILE_MEAS_SIZE);
 
-	/* Write the 64 bit integer as two 32 bit parts */
-	writer->write_uint32(writer, number_of_files >> 32);
-	writer->write_uint32(writer, number_of_files & 0xffffffff);
+	writer = bio_writer_create(PTS_FILE_MEAS_SIZE);
+	writer->write_uint64(writer, number_of_files);
 	writer->write_uint16(writer, request_id);
 
 	enumerator = this->measurements->create_enumerator(this->measurements);
@@ -168,8 +166,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_file_meas_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	int count;
-	u_int32_t number_of_files;
+	u_int64_t number_of_files;
 	u_int16_t request_id, meas_len, filename_len;
 	size_t len;
 	chunk_t measurement, filename;
@@ -182,18 +179,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset = 0;
 		return FAILED;
 	}
-	reader = bio_reader_create(this->value);
 
-	reader->read_uint32(reader, &number_of_files);
-	count = (sizeof(count) > 4) ? number_of_files << 32 : 0;
-	reader->read_uint32(reader, &number_of_files);
-	count += number_of_files;
+	reader = bio_reader_create(this->value);
+	reader->read_uint64(reader, &number_of_files);
 	reader->read_uint16(reader, &request_id);
 	reader->read_uint16(reader, &meas_len);
 	
 	this->measurements = pts_file_meas_create(request_id);
 	
-	while (count--)
+	while (number_of_files--)
 	{
 		if (!reader->read_data(reader, meas_len, &measurement))
 		{
