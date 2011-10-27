@@ -14,7 +14,7 @@ tnc/tnccs/tnccs_manager.h tnc/tnccs/tnccs_manager.c
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
-	$(strongswan_PATH)/src/libtncif
+	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
