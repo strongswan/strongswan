@@ -39,7 +39,7 @@ struct private_pts_database_t {
 
 };
 
-METHOD(pts_database_t, create_file_enumerator, enumerator_t*,
+METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 	private_pts_database_t *this, char *product)
 {
 	enumerator_t *e;
@@ -113,7 +113,7 @@ pts_database_t *pts_database_create(char *uri)
 
 	INIT(this,
 		.public = {
-			.create_file_enumerator = _create_file_enumerator,
+			.create_file_meas_enumerator = _create_file_meas_enumerator,
 			.create_file_meta_enumerator = _create_file_meta_enumerator,
 			.create_hash_enumerator = _create_hash_enumerator,
 			.destroy = _destroy,

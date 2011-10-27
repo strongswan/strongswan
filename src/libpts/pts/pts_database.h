@@ -38,8 +38,8 @@ struct pts_database_t {
 	* @param product		software product (os, vpn client, etc.)
 	* @return				enumerator over all matching files/directories
 	*/
-	enumerator_t* (*create_file_enumerator)(pts_database_t *this,
-											char *product);
+	enumerator_t* (*create_file_meas_enumerator)(pts_database_t *this,
+												 char *product);
 
 	/**
 	* Get files/directories to request metadata of

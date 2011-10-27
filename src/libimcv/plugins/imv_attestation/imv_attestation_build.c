@@ -160,7 +160,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			enumerator->destroy(enumerator);
 			
 			/* Send Request File Measurement attribute */
-			enumerator = pts_db->create_file_enumerator(pts_db, platform_info);
+			enumerator = pts_db->create_file_meas_enumerator(pts_db,
+															 platform_info);
 			if (!enumerator)
 			{
 				break;
