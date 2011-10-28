@@ -64,32 +64,6 @@ struct private_pkcs11_dh_t {
 
 };
 
-/**
- * Retrieve a CKA_VALUE from a CK_OBJECT_HANDLE, memory gets allocated
- */
-static bool get_cka_value(private_pkcs11_dh_t *this, CK_OBJECT_HANDLE obj,
-						  chunk_t *value)
-{
-	CK_ATTRIBUTE attr = { CKA_VALUE, NULL, 0 };
-	CK_RV rv;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
-		return FALSE;
-	}
-	*value = chunk_alloc(attr.ulValueLen);
-	attr.pValue = value->ptr;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
-		chunk_free(value);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(diffie_hellman_t, set_other_public_value, void,
 	private_pkcs11_dh_t *this, chunk_t value)
 {
@@ -114,8 +88,10 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		DBG1(DBG_CFG, "C_DeriveKey() error: %N", ck_rv_names, rv);
 		return;
 	}
-	if (!get_cka_value(this, secret, &this->secret))
+	if (!this->lib->get_ck_attribute(this->lib, this->session, secret,
+									 CKA_VALUE, &this->secret))
 	{
+		chunk_free(&this->secret);
 		return;
 	}
 }
@@ -183,8 +159,10 @@ static bool generate_key_pair(private_pkcs11_dh_t *this, size_t exp_len,
 		return FALSE;
 	}
 
-	if (!get_cka_value(this, pub_key, &this->pub_key))
+	if (!this->lib->get_ck_attribute(this->lib, this->session, pub_key,
+									 CKA_VALUE, &this->pub_key))
 	{
+		chunk_free(&this->pub_key);
 		return FALSE;
 	}
 	return TRUE;
