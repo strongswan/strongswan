@@ -733,8 +733,8 @@ METHOD(pts_t, read_pcr, bool,
 	*output = chunk_clone(*output);
 
 	chunk_clear(&pcr_value);
-	Tspi_Context_Close(hContext);
 	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, output);
+	Tspi_Context_Close(hContext);
 	return TRUE;
 
 	err:
@@ -1330,11 +1330,14 @@ static bool has_tpm(private_pts_t *this)
 		goto err;
 	}
 	this->tpm_version_info = chunk_clone(this->tpm_version_info);
+	
+	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
 	return TRUE;
 
 	err:
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
 	return FALSE;
 }
