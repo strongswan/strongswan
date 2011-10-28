@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup tnccs tnccs
+ * @defgroup tnc_tnccs tnc_tnccs
  * @ingroup cplugins
  *
  * @defgroup tnc_tnccs_plugin tnc_tnccs_plugin
- * @{ @ingroup tnccs
+ * @{ @ingroup tnc_tnccs
  */
 
 #ifndef TNC_TNCCS_PLUGIN_H_

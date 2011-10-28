@@ -15,10 +15,9 @@
 
 /**
  * @defgroup tnc tnc
- * @ingroup tnc
  *
- * @defgroup tnc tnc
- * @{ @ingroup tnc
+ * @addtogroup tnc
+ * @{
  */
 
 #ifndef TNC_H_
@@ -48,7 +47,7 @@ struct tnc_t {
 	imv_manager_t *imvs;
 
 	/**
-	 * TNC-TNCCS manager controlling the TNC Server and Client protocols 
+	 * TNC-TNCCS manager controlling the TNC Server and Client protocols
 	 */
 	tnccs_manager_t *tnccs;
 

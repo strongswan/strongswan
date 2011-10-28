@@ -532,6 +532,8 @@ INPUT                  = @SRC_DIR@/src/libstrongswan \
                          @SRC_DIR@/src/libcharon \
                          @SRC_DIR@/src/libsimaka \
                          @SRC_DIR@/src/libtls \
+                         @SRC_DIR@/src/libtnccs \
+                         @SRC_DIR@/src/libtncif \
                          @SRC_DIR@/src/libfast \
                          @SRC_DIR@/src/manager
 

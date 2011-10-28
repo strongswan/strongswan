@@ -14,7 +14,6 @@
  */
 
 /**
- *
  * @defgroup tnc_tnccs_manager tnc_tnccs_manager
  * @{ @ingroup tnc_tnccs
  */
