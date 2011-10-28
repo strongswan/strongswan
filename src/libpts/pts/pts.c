@@ -1389,14 +1389,14 @@ pts_t *pts_create(bool is_imc)
 		if (has_tpm(this))
 		{
 			this->has_tpm = TRUE;
-			this->proto_caps |= PTS_PROTO_CAPS_T;
+			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			load_aik(this);
 			load_aik_blob(this);
 		}
 	}
 	else
 	{
-		this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_C;
+		this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 	}
 
 	return &this->public;

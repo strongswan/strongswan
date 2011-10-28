@@ -43,11 +43,25 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 	pts = attestation_state->get_pts(attestation_state);
 
 	if (handshake_state == IMV_ATTESTATION_STATE_NONCE_REQ &&
+		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
+	{
+		DBG1(DBG_IMV, "PTS-IMC is not using Diffie-Hellman Nonce negotiation,"
+					  "advancing to TPM Initialization phase");
+		handshake_state = IMV_ATTESTATION_STATE_TPM_INIT;
+	}
+	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
 	{
-		DBG1(DBG_IMV, "PTS-IMC has no TPM capability - "
-					  "advancing to PTS measurement phase");
+		DBG1(DBG_IMV, "PTS-IMC has not got TPM available,"
+					  "advancing to File Measurement phase");
 		handshake_state = IMV_ATTESTATION_STATE_MEAS;
+	}
+	if (handshake_state == IMV_ATTESTATION_STATE_COMP_EVID &&
+		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
+	{
+		DBG1(DBG_IMV, "PTS-IMC has not got TPM available,"
+					  "skipping Component Measurement phase");
+		handshake_state = IMV_ATTESTATION_STATE_END;
 	}
 
 	/* Switch on the attribute type IMV has received */
