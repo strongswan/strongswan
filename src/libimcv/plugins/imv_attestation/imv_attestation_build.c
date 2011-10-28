@@ -42,6 +42,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
 
+	/* D-H attributes are redundant */
+	/*  when D-H Nonce Exchange is not selected on IMC side */
 	if (handshake_state == IMV_ATTESTATION_STATE_NONCE_REQ &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
 	{
@@ -49,6 +51,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					  "advancing to TPM Initialization phase");
 		handshake_state = IMV_ATTESTATION_STATE_TPM_INIT;
 	}
+	/* TPM Version Info, AIK attributes are redundant */
+	/*  when TPM is not available on IMC side */
 	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
 	{
@@ -56,8 +60,11 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					  "advancing to File Measurement phase");
 		handshake_state = IMV_ATTESTATION_STATE_MEAS;
 	}
+	/* Component Measurement cannot be done without D-H Nonce Exchange */
+	/*  or TPM on IMC side */
 	if (handshake_state == IMV_ATTESTATION_STATE_COMP_EVID &&
-		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
+		(!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T) ||
+		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D)) )
 	{
 		DBG1(DBG_IMV, "PTS-IMC has not got TPM available,"
 					  "skipping Component Measurement phase");
@@ -107,13 +114,16 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			pts_meas_algorithms_t selected_algorithm;
 			chunk_t initiator_value, initiator_nonce;
 
-			/* Send DH nonce finish attribute */
-			selected_algorithm = pts->get_meas_algorithm(pts);
-			pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
-			attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
-										 initiator_value, initiator_nonce);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
+			if ((pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
+			{
+				/* Send DH nonce finish attribute */
+				selected_algorithm = pts->get_meas_algorithm(pts);
+				pts->get_my_public_value(pts, &initiator_value, &initiator_nonce);
+				attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
+											initiator_value, initiator_nonce);
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+			}
 
 			/* Send Get TPM Version attribute */
 			attr = tcg_pts_attr_get_tpm_version_info_create();
