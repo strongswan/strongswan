@@ -72,67 +72,6 @@ struct private_pkcs11_ec_dh_t {
 
 };
 
-/**
- * Retrieve a CKA_EC_POINT from a CK_OBJECT_HANDLE, memory gets allocated
- *
- * The point is returned uncompressed (i.e. x-coordinate followed by the
- * y-coordinate) without indication that this is the case (usually 0x04).
- */
-static bool get_cka_ec_point(private_pkcs11_ec_dh_t *this, CK_OBJECT_HANDLE obj,
-							 chunk_t *value)
-{
-	CK_ATTRIBUTE attr = { CKA_EC_POINT, NULL, 0 };
-	CK_RV rv;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
-		return FALSE;
-	}
-	*value = chunk_alloc(attr.ulValueLen);
-	attr.pValue = value->ptr;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
-		chunk_free(value);
-		return FALSE;
-	}
-	if ((*value).len <= 0 || (*value).ptr[0] != 0x04)
-	{	/* we currently only support uncompressed points */
-		chunk_clear(value);
-		return FALSE;
-	}
-	*value = chunk_skip(*value, 1);
-	return TRUE;
-}
-
-/**
- * Retrieve a CKA_VALUE from a CK_OBJECT_HANDLE, memory gets allocated
- */
-static bool get_cka_value(private_pkcs11_ec_dh_t *this, CK_OBJECT_HANDLE obj,
-						  chunk_t *value)
-{
-	CK_ATTRIBUTE attr = { CKA_VALUE, NULL, 0 };
-	CK_RV rv;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
-		return FALSE;
-	}
-	*value = chunk_alloc(attr.ulValueLen);
-	attr.pValue = value->ptr;
-	rv = this->lib->f->C_GetAttributeValue(this->session, obj, &attr, 1);
-	if (rv != CKR_OK)
-	{
-		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
-		chunk_free(value);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(diffie_hellman_t, set_other_public_value, void,
 	private_pkcs11_ec_dh_t *this, chunk_t value)
 {
@@ -176,8 +115,10 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		DBG1(DBG_CFG, "C_DeriveKey() error: %N", ck_rv_names, rv);
 		return;
 	}
-	if (!get_cka_value(this, secret, &this->secret))
+	if (!this->lib->get_ck_attribute(this->lib, this->session, secret,
+									 CKA_VALUE, &this->secret))
 	{
+		chunk_free(&this->secret);
 		return;
 	}
 }
@@ -239,10 +180,19 @@ static bool generate_key_pair(private_pkcs11_ec_dh_t *this)
 		return FALSE;
 	}
 
-	if (!get_cka_ec_point(this, pub_key, &this->pub_key))
+	if (!this->lib->get_ck_attribute(this->lib, this->session, pub_key,
+									 CKA_EC_POINT, &this->pub_key))
 	{
+		chunk_free(&this->pub_key);
 		return FALSE;
 	}
+	if (this->pub_key.len <= 0 || this->pub_key.ptr[0] != 0x04)
+	{	/* we currently only support the point in uncompressed form which
+		 * looks like this: 0x04 || x || y */
+		chunk_clear(&this->pub_key);
+		return FALSE;
+	}
+	this->pub_key = chunk_skip(this->pub_key, 1);
 	return TRUE;
 }
 
