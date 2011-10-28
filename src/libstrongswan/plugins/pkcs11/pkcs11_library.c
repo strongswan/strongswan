@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -824,6 +827,32 @@ METHOD(pkcs11_library_t, create_mechanism_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
+METHOD(pkcs11_library_t, get_ck_attribute, bool,
+	private_pkcs11_library_t *this, CK_SESSION_HANDLE session,
+	CK_OBJECT_HANDLE obj, CK_ATTRIBUTE_TYPE type, chunk_t *data)
+{
+	CK_ATTRIBUTE attr = { type, NULL, 0 };
+	CK_RV rv;
+	rv = this->public.f->C_GetAttributeValue(session, obj, &attr, 1);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetAttributeValue(%N) error: %N", ck_attr_names, type,
+			 ck_rv_names, rv);
+		return FALSE;
+	}
+	*data = chunk_alloc(attr.ulValueLen);
+	attr.pValue = data->ptr;
+	rv = this->public.f->C_GetAttributeValue(session, obj, &attr, 1);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "C_GetAttributeValue(%N) error: %N", ck_attr_names, type,
+			 ck_rv_names, rv);
+		chunk_free(data);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
 {
@@ -1007,6 +1036,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 			.get_features = _get_features,
 			.create_object_enumerator = _create_object_enumerator,
 			.create_mechanism_enumerator = _create_mechanism_enumerator,
+			.get_ck_attribute = _get_ck_attribute,
 			.destroy = _destroy,
 		},
 		.name = name,

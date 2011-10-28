@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -27,6 +30,7 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 #include "pkcs11.h"
 
 #include <enum.h>
+#include <chunk.h>
 #include <utils/enumerator.h>
 
 /**
@@ -93,6 +97,21 @@ struct pkcs11_library_t {
 												 CK_SLOT_ID slot);
 
 	/**
+	 * Retrieve a single attribute from the given object.
+	 *
+	 * Memory for the data is allocated.
+	 *
+	 * @param session			session with the PKCS#11 library
+	 * @param obj				object handle
+	 * @param type				attribute type to extract
+	 * @param data				extracted data
+	 * @return					TRUE if successful
+	 */
+	bool (*get_ck_attribute)(pkcs11_library_t *this, CK_SESSION_HANDLE session,
+							 CK_OBJECT_HANDLE obj, CK_ATTRIBUTE_TYPE type,
+							 chunk_t *data);
+
+	/**
 	 * Destroy a pkcs11_library_t.
 	 */
 	void (*destroy)(pkcs11_library_t *this);
@@ -114,7 +133,7 @@ extern enum_name_t *ck_mech_names;
 extern enum_name_t *ck_attr_names;
 
 /**
- * Trim/null terminate a string returned by the varius PKCS#11 functions.
+ * Trim/null terminate a string returned by the various PKCS#11 functions.
  *
  * @param str		string to trim
  * @param len		max length of the string
