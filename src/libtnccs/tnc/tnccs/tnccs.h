@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-1011 Andreas Steffen
+ * Copyright (C) 2010-2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ typedef tnccs_t *(*tnccs_constructor_t)(bool is_server);
  */
 typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tncss, TNC_IMCID imc_id,
 													 TNC_IMVID imv_id,
-									 				 TNC_BufferReference msg,
+													 TNC_BufferReference msg,
 													 TNC_UInt32 msg_len,
 													 TNC_MessageType msg_type);
 
