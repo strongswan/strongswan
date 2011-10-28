@@ -30,7 +30,6 @@
 #include "pkcs11_hasher.h"
 #include "pkcs11_rng.h"
 #include "pkcs11_dh.h"
-#include "pkcs11_ec_dh.h"
 
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
@@ -165,7 +164,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 	};
 	static plugin_feature_t f_ecdh[] = {
-		PLUGIN_REGISTER(DH, pkcs11_ec_dh_create),
+		PLUGIN_REGISTER(DH, pkcs11_dh_create),
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
 			PLUGIN_PROVIDE(DH, ECP_224_BIT),
 			PLUGIN_PROVIDE(DH, ECP_256_BIT),

@@ -17,6 +17,8 @@
 
 #include <debug.h>
 #include <library.h>
+#include <asn1/asn1.h>
+#include <asn1/oid.h>
 
 #include "pkcs11_manager.h"
 
@@ -62,10 +64,24 @@ struct private_pkcs11_dh_t {
 	 */
 	chunk_t secret;
 
+	/**
+	 * Mechanism to use to generate a key pair
+	 */
+	CK_MECHANISM_TYPE mech_key;
+
+	/**
+	 * Mechanism to use to derive a shared secret
+	 */
+	CK_MECHANISM_TYPE mech_derive;
+
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, void,
-	private_pkcs11_dh_t *this, chunk_t value)
+/**
+ * Derive a DH/ECDH shared secret.
+ *
+ * If this succeeds the shared secret is stored in this->secret.
+ */
+static void derive_secret(private_pkcs11_dh_t *this, chunk_t other)
 {
 	CK_OBJECT_CLASS klass = CKO_SECRET_KEY;
 	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
@@ -74,9 +90,9 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		{ CKA_KEY_TYPE, &type, sizeof(type) },
 	};
 	CK_MECHANISM mech = {
-		CKM_DH_PKCS_DERIVE,
-		value.ptr,
-		value.len,
+		this->mech_derive,
+		other.ptr,
+		other.len,
 	};
 	CK_OBJECT_HANDLE secret;
 	CK_RV rv;
@@ -94,6 +110,42 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		chunk_free(&this->secret);
 		return;
 	}
+}
+
+METHOD(diffie_hellman_t, set_other_public_value, void,
+	private_pkcs11_dh_t *this, chunk_t value)
+{
+	switch (this->group)
+	{
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		{	/* we expect the public value to just be the concatenated x and y
+			 * coordinates, so we tag the value as an uncompressed ECPoint */
+			chunk_t tag = chunk_from_chars(0x04);
+			chunk_t pubkey = chunk_cata("cc", tag, value);
+			CK_ECDH1_DERIVE_PARAMS params = {
+				CKD_NULL,
+				0,
+				NULL,
+				pubkey.len,
+				pubkey.ptr,
+			};
+
+			if (!lib->settings->get_bool(lib->settings,
+								"libstrongswan.ecp_x_coordinate_only", TRUE))
+			{	/* we only get the x coordinate back */
+				return;
+			}
+			value = chunk_from_thing(params);
+			break;
+		}
+		default:
+			break;
+	}
+	derive_secret(this, value);
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, void,
@@ -129,38 +181,32 @@ METHOD(diffie_hellman_t, destroy, void,
 }
 
 /**
- * Generate DH key pair
+ * Generate a DH/ECDH key pair.
+ *
+ * If this succeeds, this->pri_key has a handle to the private key and
+ * this->pub_key stores the public key.
  */
-static bool generate_key_pair(private_pkcs11_dh_t *this, size_t exp_len,
-							  chunk_t g, chunk_t p)
+static bool generate_key_pair(private_pkcs11_dh_t *this, CK_ATTRIBUTE_PTR pub,
+							  int pub_len, CK_ATTRIBUTE_PTR pri, int pri_len,
+							  CK_ATTRIBUTE_TYPE attr)
 {
-	CK_ULONG bits = exp_len * 8;
-	CK_ATTRIBUTE pub_attr[] = {
-		{ CKA_PRIME, p.ptr, p.len },
-		{ CKA_BASE, g.ptr, g.len },
-	};
-	CK_ATTRIBUTE pri_attr[] = {
-		{ CKA_VALUE_BITS, &bits, sizeof(bits) },
-	};
 	CK_MECHANISM mech = {
-		CKM_DH_PKCS_KEY_PAIR_GEN,
+		this->mech_key,
 		NULL,
 		0,
 	};
 	CK_OBJECT_HANDLE pub_key;
 	CK_RV rv;
 
-	rv = this->lib->f->C_GenerateKeyPair(this->session, &mech, pub_attr,
-							countof(pub_attr), pri_attr, countof(pri_attr),
-							&pub_key, &this->pri_key);
+	rv = this->lib->f->C_GenerateKeyPair(this->session, &mech, pub, pub_len,
+							pri, pri_len, &pub_key, &this->pri_key);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_GenerateKeyPair() error: %N", ck_rv_names, rv);
 		return FALSE;
 	}
-
 	if (!this->lib->get_ck_attribute(this->lib, this->session, pub_key,
-									 CKA_VALUE, &this->pub_key))
+									 attr, &this->pub_key))
 	{
 		chunk_free(&this->pub_key);
 		return FALSE;
@@ -169,9 +215,52 @@ static bool generate_key_pair(private_pkcs11_dh_t *this, size_t exp_len,
 }
 
 /**
- * Find a token we can use for DH algorithm
+ * Generate DH key pair.
  */
-static pkcs11_library_t *find_token(CK_SESSION_HANDLE *session)
+static bool generate_key_pair_modp(private_pkcs11_dh_t *this, size_t exp_len,
+								   chunk_t g, chunk_t p)
+{
+	CK_ATTRIBUTE pub_attr[] = {
+		{ CKA_PRIME, p.ptr, p.len },
+		{ CKA_BASE, g.ptr, g.len },
+	};
+	CK_ULONG bits = exp_len * 8;
+	CK_ATTRIBUTE pri_attr[] = {
+		{ CKA_VALUE_BITS, &bits, sizeof(bits) },
+	};
+	return generate_key_pair(this, pub_attr, countof(pub_attr), pri_attr,
+							 countof(pri_attr), CKA_VALUE);
+}
+
+/**
+ * Generate ECDH key pair.
+ */
+static bool generate_key_pair_ecp(private_pkcs11_dh_t *this,
+								  chunk_t ecparams)
+{
+	CK_ATTRIBUTE pub_attr[] = {
+		{ CKA_EC_PARAMS, ecparams.ptr, ecparams.len },
+	};
+	if (!generate_key_pair(this, pub_attr, countof(pub_attr), NULL, 0,
+						   CKA_EC_POINT))
+	{
+		return FALSE;
+	}
+	if (this->pub_key.len <= 0 || this->pub_key.ptr[0] != 0x04)
+	{	/* we currently only support the point in uncompressed form which
+		 * looks like this: 0x04 || x || y */
+		chunk_clear(&this->pub_key);
+		return FALSE;
+	}
+	this->pub_key = chunk_skip(this->pub_key, 1);
+	return TRUE;
+}
+
+/**
+ * Find a token we can use for DH/ECDH algorithm
+ */
+static pkcs11_library_t *find_token(private_pkcs11_dh_t *this,
+									CK_SESSION_HANDLE *session)
 {
 	enumerator_t *tokens, *mechs;
 	pkcs11_manager_t *manager;
@@ -189,9 +278,9 @@ static pkcs11_library_t *find_token(CK_SESSION_HANDLE *session)
 	{
 		mechs = current->create_mechanism_enumerator(current, slot);
 		while (mechs->enumerate(mechs, &type, NULL))
-		{
-			/* we assume CKM_DH_PKCS_DERIVE is supported too */
-			if (type == CKM_DH_PKCS_KEY_PAIR_GEN)
+		{	/* we assume we can generate key pairs if the derive mechanism
+			 * is supported */
+			if (type == this->mech_derive)
 			{
 				if (current->f->C_OpenSession(slot, CKF_SERIAL_SESSION,
 											  NULL, NULL, session) == CKR_OK)
@@ -211,11 +300,12 @@ static pkcs11_library_t *find_token(CK_SESSION_HANDLE *session)
 	return found;
 }
 
-/*
+/**
  * Generic internal constructor
  */
-pkcs11_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
-							chunk_t g, chunk_t p)
+static private_pkcs11_dh_t *create_generic(diffie_hellman_group_t group,
+										   CK_MECHANISM_TYPE key,
+										   CK_MECHANISM_TYPE derive)
 {
 	private_pkcs11_dh_t *this;
 
@@ -230,43 +320,114 @@ pkcs11_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 			},
 		},
 		.group = group,
+		.mech_key = key,
+		.mech_derive = derive,
 	);
 
-	this->lib = find_token(&this->session);
+	this->lib = find_token(this, &this->session);
 	if (!this->lib)
 	{
 		free(this);
 		return NULL;
 	}
-
-	if (!generate_key_pair(this, exp_len, g, p))
-	{
-		free(this);
-		return NULL;
-	}
-	return &this->public;
+	return this;
 }
 
+static pkcs11_dh_t *create_ecp(diffie_hellman_group_t group, chunk_t ecparam)
+{
+	private_pkcs11_dh_t *this = create_generic(group, CKM_EC_KEY_PAIR_GEN,
+											   CKM_ECDH1_DERIVE);
 
-/*
+	if (this)
+	{
+		if (generate_key_pair_ecp(this, ecparam))
+		{
+			return &this->public;
+		}
+		free(this);
+	}
+	return NULL;
+}
+
+/**
+ * Constructor for MODP DH
+ */
+static pkcs11_dh_t *create_modp(diffie_hellman_group_t group, size_t exp_len,
+								chunk_t g, chunk_t p)
+{
+	private_pkcs11_dh_t *this = create_generic(group, CKM_DH_PKCS_KEY_PAIR_GEN,
+											   CKM_DH_PKCS_DERIVE);
+
+	if (this)
+	{
+		if (generate_key_pair_modp(this, exp_len, g, p))
+		{
+			return &this->public;
+		}
+		free(this);
+	}
+	return NULL;
+}
+
+/**
+ * Lookup the EC params for the given group.
+ */
+static chunk_t ecparams_lookup(diffie_hellman_group_t group)
+{
+	switch (group)
+	{
+		case ECP_192_BIT:
+			return asn1_build_known_oid(OID_PRIME192V1);
+		case ECP_224_BIT:
+			return asn1_build_known_oid(OID_SECT224R1);
+		case ECP_256_BIT:
+			return asn1_build_known_oid(OID_PRIME256V1);
+		case ECP_384_BIT:
+			return asn1_build_known_oid(OID_SECT384R1);
+		case ECP_521_BIT:
+			return asn1_build_known_oid(OID_SECT521R1);
+		default:
+			break;
+	}
+	return chunk_empty;
+}
+
+/**
  * Described in header.
  */
 pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group,
 							  chunk_t g, chunk_t p)
 {
-	diffie_hellman_params_t *params;
-
-	if (group == MODP_CUSTOM)
+	switch (group)
 	{
-		return create_generic(group, p.len, g, p);
+		case MODP_CUSTOM:
+		{
+			return create_modp(group, p.len, g, p);
+		}
+		case ECP_192_BIT:
+		case ECP_224_BIT:
+		case ECP_256_BIT:
+		case ECP_384_BIT:
+		case ECP_521_BIT:
+		{
+			chunk_t params = ecparams_lookup(group);
+			if (params.ptr)
+			{
+				return create_ecp(group, params);
+			}
+			break;
+		}
+		default:
+		{
+			diffie_hellman_params_t *params = diffie_hellman_get_params(group);
+			if (params)
+			{
+				return create_modp(group, params->exp_len, params->generator,
+								   params->prime);
+			}
+			break;
+		}
 	}
-
-	params = diffie_hellman_get_params(group);
-	if (!params)
-	{
-		return NULL;
-	}
-	return create_generic(group, params->exp_len,
-						  params->generator, params->prime);
+	return NULL;
 }
 
