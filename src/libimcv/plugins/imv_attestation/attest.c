@@ -145,29 +145,65 @@ static void list_products(char *file, int fid)
 }
 
 /**
+ * get the directory if there is one from the files tables
+ */
+static void get_directory(int did, char **directory)
+{
+	enumerator_t *e;
+	char *dir;
+
+	free(*directory);
+	*directory = strdup("");
+
+	if (did)
+	{
+		e = db->query(db, "SELECT path from files WHERE id = ?",
+					  DB_INT, did, DB_TEXT);
+		if (e)
+		{
+			if (e->enumerate(e, &dir))
+			{
+				free(*directory);
+				*directory = strdup(dir);
+			}
+			e->destroy(e);
+		}
+	}
+}
+
+/**
  * ipsec attest --hashes - show all file measurement hashes
  */
 static void list_hashes(pts_meas_algorithms_t algo)
 {
 	enumerator_t *e;
 	chunk_t hash;
-	char *file, *product;
-	int fid, fid_old = 0, count = 0;
+	char *file, *dir, *product;
+	int fid, fid_old = 0, did, did_old = 0, count = 0;
+	bool slash;
+
+	dir = strdup("");
 
 	e = db->query(db,
-			"SELECT f.id, f.path, p.name, fh.hash "
+			"SELECT f.id, f.path, p.name, fh.hash, fh.directory "
 			"FROM files AS f, products AS p, file_hashes AS fh "
 			"WHERE fh.algo = ? AND f.id = fh.file AND p.id = fh.product "
-			"ORDER BY f.path",
-			DB_INT, algo, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB);
+			"ORDER BY fh.directory, f.path, p.name",
+			DB_INT, algo, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB, DB_INT);
 	if (e)
 	{
-		while (e->enumerate(e, &fid, &file, &product, &hash))
+		while (e->enumerate(e, &fid, &file, &product, &hash, &did))
 		{
-			if (fid != fid_old)
+			if (fid != fid_old || did != did_old)
 			{
-				printf("%3d: %s\n", fid, file);
+				if (did != did_old)
+				{
+					get_directory(did, &dir);
+				}
+				slash = *file != '/' && dir[max(0, strlen(dir)-1)] != '/';
+				printf("%3d: %s%s%s\n", fid, dir, slash ? "/":"", file);
 				fid_old = fid;
+				did_old = did;
 			}
 			printf("     %#B '%s'\n", &hash, product);
 			count++;
@@ -176,6 +212,7 @@ static void list_hashes(pts_meas_algorithms_t algo)
 
 		printf("%d %N value%s found\n", count, hash_algorithm_names,
 			   pts_meas_algo_to_hash(algo), (count == 1) ? "" : "s");
+		free(dir);
 	}
 }
 
@@ -187,37 +224,46 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 {
 	enumerator_t *e;
 	chunk_t hash;
-	char *file;
-	int fid, fid_old = 0, count = 0;
+	char *file, *dir;
+	int fid, fid_old = 0, did, did_old = 0, count = 0;
+	bool slash;
+
+	dir = strdup("");
 
 	if (pid)
 	{
 		e = db->query(db,
-				"SELECT f.id, f.path, fh.hash "
+				"SELECT f.id, f. f.path, fh.hash, fh.directory "
 				"FROM files AS f, file_hashes AS fh "
 				"JOIN products AS p ON p.id = fh.product "
 				"WHERE fh.algo = ? AND p.id = ? AND f.id = fh.file "
-				"ORDER BY f.path",
-				DB_INT, algo, DB_INT, pid, DB_INT, DB_TEXT, DB_BLOB);
+				"ORDER BY fh.directory, f.path",
+				DB_INT, algo, DB_INT, pid, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
 	}
 	else
 	{
 		e = db->query(db,
-				"SELECT f.id, f.path, fh.hash "
+				"SELECT f.id, f.path, fh.hash, fh.directory "
 				"FROM files AS f, file_hashes AS fh "
 				"JOIN products AS p ON p.id = fh.product "
 				"WHERE fh.algo = ? AND p.name = ? AND f.id = fh.file "
-				"ORDER BY f.path",
-				DB_INT, algo, DB_TEXT, product, DB_INT, DB_TEXT, DB_BLOB);
+				"ORDER BY fh.directory, f.path",
+				DB_INT, algo, DB_TEXT, product, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
 	}
 	if (e)
 	{
-		while (e->enumerate(e, &fid, &file, &hash))
+		while (e->enumerate(e, &fid,  &file, &hash, &did))
 		{
-			if (fid != fid_old)
+			if (fid != fid_old || did != did_old)
 			{
-				printf("%3d: %s\n", fid, file);
+				if (did != did_old)
+				{
+					get_directory(did, &dir);
+				}
+				slash = *file != '/' && dir[max(0, strlen(dir)-1)] != '/';
+				printf("%3d: %s%s%s\n", fid, dir, slash ? "/":"", file);
 				fid_old = fid;
+				did_old = did;
 			}
 			printf("     %#B\n", &hash);
 			count++;
@@ -227,6 +273,7 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 		printf("%d %N value%s found for product '%s'\n",
 			   count, hash_algorithm_names, pts_meas_algo_to_hash(algo),
 			   (count == 1) ? "" : "s", product);
+		free(dir);
 	}
 }
 
