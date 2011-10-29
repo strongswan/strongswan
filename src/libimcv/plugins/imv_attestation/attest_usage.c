@@ -33,7 +33,11 @@ Usage:\n\
     its primary key as an optional selector.\n\
   \n\
   ipsec attest --hashes [--sha1|--sha256|--sha384] [--product <name>|--pid <id>]\n\
-    Show a list of hashes s with a software product name or\n\
+    Show a list of measurement hashes for a given software product or\n\
+    its primary key as an optional selector.\n\
+  \n\
+  ipsec attest --hashes [--sha1|--sha256|--sha384] [--file <path>|--fid <id>]\n\
+    Show a list of measurement hashes for a given file or\n\
     its primary key as an optional selector.\n\
    \n");
 }

@@ -171,6 +171,11 @@ static void get_directory(int did, char **directory)
 	}
 }
 
+static bool slash(char *directory, char *file)
+{
+	return *file != '/' && directory[max(0, strlen(directory)-1)] != '/';
+}
+
 /**
  * ipsec attest --hashes - show all file measurement hashes
  */
@@ -180,7 +185,6 @@ static void list_hashes(pts_meas_algorithms_t algo)
 	chunk_t hash;
 	char *file, *dir, *product;
 	int fid, fid_old = 0, did, did_old = 0, count = 0;
-	bool slash;
 
 	dir = strdup("");
 
@@ -200,8 +204,8 @@ static void list_hashes(pts_meas_algorithms_t algo)
 				{
 					get_directory(did, &dir);
 				}
-				slash = *file != '/' && dir[max(0, strlen(dir)-1)] != '/';
-				printf("%3d: %s%s%s\n", fid, dir, slash ? "/":"", file);
+				printf("%3d: %s%s%s\n", fid,
+					   dir, slash(dir, file) ? "/" : "", file);
 				fid_old = fid;
 				did_old = did;
 			}
@@ -217,6 +221,56 @@ static void list_hashes(pts_meas_algorithms_t algo)
 }
 
 /**
+ * ipsec attest --hashes - show file measurement hashes for a given file
+ */
+static void list_hashes_for_file(pts_meas_algorithms_t algo, char *file, int fid)
+{
+	enumerator_t *e;
+	chunk_t hash;
+	char *product, *dir;
+	int did, count = 0;
+
+	dir = strdup("");
+
+	if (fid)
+	{
+		e = db->query(db,
+				"SELECT p.name, fh.hash, fh.directory "
+				"FROM products AS p, file_hashes AS fh "
+				"JOIN files AS f ON f.id = fh.file "
+				"WHERE fh.algo = ? AND f.id = ? AND p.id = fh.product "
+				"ORDER BY p.name",
+				DB_INT, algo, DB_INT, fid, DB_TEXT, DB_BLOB, DB_INT);
+	}
+	else
+	{
+		e = db->query(db,
+				"SELECT p.name, fh.hash, fh.directory "
+				"FROM products AS p, file_hashes AS fh "
+				"JOIN files AS f ON f.id = fh.file "
+				"WHERE fh.algo = ? AND f.path = ? AND p.id = fh.product "
+				"ORDER BY p.name",
+				DB_INT, algo, DB_TEXT, file, DB_TEXT, DB_BLOB, DB_INT);
+	}
+	if (e)
+	{
+		while (e->enumerate(e, &product, &hash, &did))
+		{
+			printf("%#B '%s'\n", &hash, product);
+			count++;
+		}
+		e->destroy(e);
+
+		get_directory(did, &dir);
+		printf("%d %N value%s found for file '%s%s%s'\n",
+			   count, hash_algorithm_names, pts_meas_algo_to_hash(algo),
+			   (count == 1) ? "" : "s",
+			   dir, slash(dir, file) ? "/" : "", file);
+		free(dir);
+	}
+}
+
+/**
  * ipsec attest --hashes - show file measurement hashes for a given product
  */
 static void list_hashes_for_product(pts_meas_algorithms_t algo,
@@ -226,7 +280,6 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 	chunk_t hash;
 	char *file, *dir;
 	int fid, fid_old = 0, did, did_old = 0, count = 0;
-	bool slash;
 
 	dir = strdup("");
 
@@ -260,8 +313,8 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 				{
 					get_directory(did, &dir);
 				}
-				slash = *file != '/' && dir[max(0, strlen(dir)-1)] != '/';
-				printf("%3d: %s%s%s\n", fid, dir, slash ? "/":"", file);
+				printf("%3d: %s%s%s\n", fid,
+					   dir, slash(dir, file) ? "/" : "", file);
 				fid_old = fid;
 				did_old = did;
 			}
@@ -286,7 +339,7 @@ static bool fid_to_file(int fid, char **file)
 	bool found = FALSE;
 	char *f;
 
-	e = db->query(db, "SELECT name FROM products WHERE id = ?",
+	e = db->query(db, "SELECT path FROM files WHERE id = ?",
 				  DB_INT, fid, DB_TEXT);
 	if (e)
 	{
@@ -441,9 +494,13 @@ static void do_args(int argc, char *argv[])
 			{
 				list_hashes(algo);
 			}
-			else
+			else if (product)
 			{
 				list_hashes_for_product(algo, product, pid);
+			}
+			else
+			{
+				list_hashes_for_file(algo, file, fid);
 			}
 			break;
 		default:
