@@ -23,6 +23,8 @@
 #include <debug.h>
 #include <library.h>
 
+#include <pts/pts_meas_algo.h>
+
 #include "attest_usage.h"
 
 /**
@@ -47,23 +49,6 @@ static void list_files(char *product, int pid)
 
 	if (pid)
 	{
-		e = db->query(db,
-				"SELECT name FROM products WHERE id = ?",
-				DB_INT, pid, DB_TEXT);
-		if (e)
-		{
-			if (e->enumerate(e, &product))
-			{
-				product = strdup(product);
-				e->destroy(e);
-			}
-			else
-			{
-				printf("no product found with pid %d\n", pid);
-				e->destroy(e);
-				return;
-			}
-		}
 		e = db->query(db,
 				"SELECT f.id, f.type, f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
@@ -92,7 +77,7 @@ static void list_files(char *product, int pid)
 	{
 		while (e->enumerate(e, &fid, &is_dir, &file))
 		{
-			printf("%3d: %s %s\n", fid, is_dir ? "d":"f", file);
+			printf("%3d: %s %s\n", fid, is_dir ? "d":" ", file);
 			count++;
 		}
 		e->destroy(e);
@@ -103,10 +88,6 @@ static void list_files(char *product, int pid)
 			printf(" for product '%s'", product);
 		}
 		printf("\n");
-		if (pid)
-		{
-			free(product);
-		}
 	}
 }
 
@@ -122,23 +103,6 @@ static void list_products(char *file, int fid)
 
 	if (fid)
 	{
-		e = db->query(db,
-				"SELECT path FROM files WHERE id = ?",
-				DB_INT, fid, DB_TEXT);
-		if (e)
-		{
-			if (e->enumerate(e, &file))
-			{
-				file = strdup(file);
-				e->destroy(e);
-			}
-			else
-			{
-				printf("no file found with fid %d\n", fid);
-				e->destroy(e);
-				return;
-			}
-		}
 		e = db->query(db,
 				"SELECT p.id, p.name FROM products AS p "
 				"JOIN product_file AS pf ON p.id = pf.product "
@@ -177,11 +141,147 @@ static void list_products(char *file, int fid)
 			printf(" for file '%s'", file);
 		}
 		printf("\n");
-		if (fid)
-		{
-			free(file);
-		}
 	}
+}
+
+/**
+ * ipsec attest --hashes - show all file measurement hashes
+ */
+static void list_hashes(pts_meas_algorithms_t algo)
+{
+	enumerator_t *e;
+	chunk_t hash;
+	char *file, *product;
+	int fid, fid_old = 0, count = 0;
+
+	e = db->query(db,
+			"SELECT f.id, f.path, p.name, fh.hash "
+			"FROM files AS f, products AS p, file_hashes AS fh "
+			"WHERE fh.algo = ? AND f.id = fh.file AND p.id = fh.product "
+			"ORDER BY f.path",
+			DB_INT, algo, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB);
+	if (e)
+	{
+		while (e->enumerate(e, &fid, &file, &product, &hash))
+		{
+			if (fid != fid_old)
+			{
+				printf("%3d: %s\n", fid, file);
+				fid_old = fid;
+			}
+			printf("     %#B '%s'\n", &hash, product);
+			count++;
+		}
+		e->destroy(e);
+
+		printf("%d %N value%s found\n", count, hash_algorithm_names,
+			   pts_meas_algo_to_hash(algo), (count == 1) ? "" : "s");
+	}
+}
+
+/**
+ * ipsec attest --hashes - show file measurement hashes for a given product
+ */
+static void list_hashes_for_product(pts_meas_algorithms_t algo,
+									char *product, int pid)
+{
+	enumerator_t *e;
+	chunk_t hash;
+	char *file;
+	int fid, fid_old = 0, count = 0;
+
+	if (pid)
+	{
+		e = db->query(db,
+				"SELECT f.id, f.path, fh.hash "
+				"FROM files AS f, file_hashes AS fh "
+				"JOIN products AS p ON p.id = fh.product "
+				"WHERE fh.algo = ? AND p.id = ? AND f.id = fh.file "
+				"ORDER BY f.path",
+				DB_INT, algo, DB_INT, pid, DB_INT, DB_TEXT, DB_BLOB);
+	}
+	else
+	{
+		e = db->query(db,
+				"SELECT f.id, f.path, fh.hash "
+				"FROM files AS f, file_hashes AS fh "
+				"JOIN products AS p ON p.id = fh.product "
+				"WHERE fh.algo = ? AND p.name = ? AND f.id = fh.file "
+				"ORDER BY f.path",
+				DB_INT, algo, DB_TEXT, product, DB_INT, DB_TEXT, DB_BLOB);
+	}
+	if (e)
+	{
+		while (e->enumerate(e, &fid, &file, &hash))
+		{
+			if (fid != fid_old)
+			{
+				printf("%3d: %s\n", fid, file);
+				fid_old = fid;
+			}
+			printf("     %#B\n", &hash);
+			count++;
+		}
+		e->destroy(e);
+
+		printf("%d %N value%s found for product '%s'\n",
+			   count, hash_algorithm_names, pts_meas_algo_to_hash(algo),
+			   (count == 1) ? "" : "s", product);
+	}
+}
+
+/**
+ * find file corresponding to primary key fid
+ */
+static bool fid_to_file(int fid, char **file)
+{
+	enumerator_t *e;
+	bool found = FALSE;
+	char *f;
+
+	e = db->query(db, "SELECT name FROM products WHERE id = ?",
+				  DB_INT, fid, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &f))
+		{
+			found = TRUE;
+			*file = strdup(f);
+		}
+		else
+		{
+			printf("no file found with fid %d\n", fid);
+		}
+		e->destroy(e);
+	}
+	return found;
+}
+
+/**
+ * find product corresponding to primary key pid
+ */
+static bool pid_to_product(int pid, char **product)
+{
+	enumerator_t *e;
+	bool found = FALSE;
+	char *p;
+
+	e = db->query(db, "SELECT name FROM products WHERE id = ?",
+				  DB_INT, pid, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &p))
+		{
+			found = TRUE;
+			*product = strdup(p);
+		}
+		else
+		{
+			printf("no product found with pid %d\n", pid);
+		}
+		e->destroy(e);
+	}
+	return found;
 }
 
 /**
@@ -196,12 +296,14 @@ static void do_args(int argc, char *argv[])
 {
 	char *product = NULL, *file = NULL;
 	int fid = 0, pid = 0;
+	pts_meas_algorithms_t algo = PTS_MEAS_ALGO_SHA256;
 
 	enum {
 		OP_UNDEF,
 		OP_USAGE,
-		OP_PRODUCTS,
 		OP_FILES,
+		OP_PRODUCTS,
+		OP_HASHES,
 	} operation = OP_UNDEF;
 
 	/* reinit getopt state */
@@ -215,10 +317,14 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "products", no_argument, NULL, 'p' },
+			{ "hashes", no_argument, NULL, 'H' },
 			{ "file", required_argument, NULL, 'F' },
 			{ "product", required_argument, NULL, 'P' },
-			{ "fid", required_argument, NULL, '1' },
-			{ "pid", required_argument, NULL, '2' },
+			{ "sha1", no_argument, NULL, '1' },
+			{ "sha256", no_argument, NULL, '2' },
+			{ "sha384", no_argument, NULL, '3' },
+			{ "fid", required_argument, NULL, '4' },
+			{ "pid", required_argument, NULL, '5' },
 			{ 0,0,0,0 }
 		};
 
@@ -236,6 +342,9 @@ static void do_args(int argc, char *argv[])
 			case 'p':
 				operation = OP_PRODUCTS;
 				continue;
+			case 'H':
+				operation = OP_HASHES;
+				continue;
 			case 'F':
 				file = optarg;
 				continue;
@@ -243,10 +352,27 @@ static void do_args(int argc, char *argv[])
 				product = optarg;
 				continue;
 			case '1':
-				fid = atoi(optarg);
+				algo = PTS_MEAS_ALGO_SHA1;
 				continue;
 			case '2':
+				algo = PTS_MEAS_ALGO_SHA256;
+				continue;
+			case '3':
+				algo = PTS_MEAS_ALGO_SHA384;
+				continue;
+			case '4':
+				fid = atoi(optarg);
+				if (!fid_to_file(fid, &file))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			case '5':
 				pid = atoi(optarg);
+				if (!pid_to_product(pid, &product))
+				{
+					exit(EXIT_FAILURE);
+				}
 				continue;
 		}
 		break;
@@ -263,10 +389,30 @@ static void do_args(int argc, char *argv[])
 		case OP_FILES:
 			list_files(product, pid);
 			break;
+		case OP_HASHES:
+			if ((!product || *product == '\0') && (!file || *file == '\0'))
+			{
+				list_hashes(algo);
+			}
+			else
+			{
+				list_hashes_for_product(algo, product, pid);
+			}
+			break;
 		default:
 			usage();
 			exit(EXIT_FAILURE);
 	}
+
+	if (fid)
+	{
+		free(file);
+	}
+	if (pid)
+	{
+		free(product);
+	}
+
 }
 
 int main(int argc, char *argv[])
