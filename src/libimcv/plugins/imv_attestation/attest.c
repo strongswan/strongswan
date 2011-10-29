@@ -180,9 +180,13 @@ static void do_args(int argc, char *argv[])
 			{
 				list_hashes(algo);
 			}
-			else
+			else if (product)
 			{
 				list_hashes_for_product(algo, product, pid);
+			}
+			else
+			{
+				list_hashes_for_file(algo, file, fid);
 			}
 			break;
 		default:
