@@ -15,6 +15,8 @@
 
 #include <stdio.h>
 
+#include "attest_usage.h"
+
 /**
  * print attest usage info
  */

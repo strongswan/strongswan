@@ -20,390 +20,28 @@
 #include <string.h>
 #include <errno.h>
 
-#include <debug.h>
 #include <library.h>
 
 #include <pts/pts_meas_algo.h>
 
+#include "attest_db.h"
 #include "attest_usage.h"
 
 /**
- * global database handle
+ * global attestation database object
  */
-database_t *db;
-
-/**
- * forward declarations
- */
-static void do_args(int argc, char *argv[]);
-
-/**
- * ipsec attest --files - show files
- */
-static void list_files(char *product, int pid)
-{
-	enumerator_t *e;
-	char *file;
-	bool select = TRUE;
-	int fid, is_dir, count = 0;
-
-	if (pid)
-	{
-		e = db->query(db,
-				"SELECT f.id, f.type, f.path FROM files AS f "
-				"JOIN product_file AS pf ON f.id = pf.file "
-				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.id = ? ORDER BY f.path",
-				DB_INT, pid, DB_INT, DB_INT, DB_TEXT);
-	}
-	else if (!product || *product == '\0')
-	{
-		select = FALSE;
-		e = db->query(db,
-				"SELECT id, type, path FROM files "
-				"ORDER BY path",
-				DB_INT, DB_INT, DB_TEXT);
-	}
-	else
-	{
-		e = db->query(db,
-				"SELECT f.id, f.type, f.path FROM files AS f "
-				"JOIN product_file AS pf ON f.id = pf.file "
-				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.name = ? ORDER BY f.path",
-				DB_TEXT, product, DB_INT, DB_INT, DB_TEXT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &fid, &is_dir, &file))
-		{
-			printf("%3d: %s %s\n", fid, is_dir ? "d":" ", file);
-			count++;
-		}
-		e->destroy(e);
-
-		printf("%d file%s found", count, (count == 1) ? "" : "s");
-		if (select)
-		{
-			printf(" for product '%s'", product);
-		}
-		printf("\n");
-	}
-}
-
-/**
- * ipsec attest --products - show products
- */
-static void list_products(char *file, int fid)
-{
-	enumerator_t *e;
-	char *product;
-	bool select = TRUE;
-	int pid, count = 0;
-
-	if (fid)
-	{
-		e = db->query(db,
-				"SELECT p.id, p.name FROM products AS p "
-				"JOIN product_file AS pf ON p.id = pf.product "
-				"JOIN files AS f ON f.id = pf.file "
-				"WHERE f.id = ? ORDER BY p.name",
-				DB_INT, fid, DB_INT, DB_TEXT);
-	}
-	else if (!file || *file == '\0')
-	{
-		select = FALSE;
-		e = db->query(db, "SELECT id, name FROM products "
-					  "ORDER BY name",
-					  DB_INT, DB_TEXT);
-	}
-	else
-	{
-		e = db->query(db,
-				"SELECT p.id, p.name FROM products AS p "
-				"JOIN product_file AS pf ON p.id = pf.product "
-				"JOIN files AS f ON f.id = pf.file "
-				"WHERE f.path = ? ORDER BY p.name",
-				DB_TEXT, file, DB_INT, DB_TEXT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &pid, &product))
-		{
-			printf("%3d:  %s\n", pid, product);
-			count++;
-		}
-		e->destroy(e);
-
-		printf("%d product%s found", count, (count == 1) ? "" : "s");
-		if (select)
-		{
-			printf(" for file '%s'", file);
-		}
-		printf("\n");
-	}
-}
-
-/**
- * get the directory if there is one from the files tables
- */
-static void get_directory(int did, char **directory)
-{
-	enumerator_t *e;
-	char *dir;
-
-	free(*directory);
-	*directory = strdup("");
-
-	if (did)
-	{
-		e = db->query(db, "SELECT path from files WHERE id = ?",
-					  DB_INT, did, DB_TEXT);
-		if (e)
-		{
-			if (e->enumerate(e, &dir))
-			{
-				free(*directory);
-				*directory = strdup(dir);
-			}
-			e->destroy(e);
-		}
-	}
-}
-
-static bool slash(char *directory, char *file)
-{
-	return *file != '/' && directory[max(0, strlen(directory)-1)] != '/';
-}
-
-/**
- * ipsec attest --hashes - show all file measurement hashes
- */
-static void list_hashes(pts_meas_algorithms_t algo)
-{
-	enumerator_t *e;
-	chunk_t hash;
-	char *file, *dir, *product;
-	int fid, fid_old = 0, did, did_old = 0, count = 0;
-
-	dir = strdup("");
-
-	e = db->query(db,
-			"SELECT f.id, f.path, p.name, fh.hash, fh.directory "
-			"FROM file_hashes AS fh "
-			"JOIN files AS f ON f.id = fh.file "
-			"JOIN products AS p ON p.id = fh.product "
-			"WHERE fh.algo = ? "
-			"ORDER BY fh.directory, f.path, p.name",
-			DB_INT, algo, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB, DB_INT);
-	if (e)
-	{
-		while (e->enumerate(e, &fid, &file, &product, &hash, &did))
-		{
-			if (fid != fid_old || did != did_old)
-			{
-				if (did != did_old)
-				{
-					get_directory(did, &dir);
-					did_old = did;
-				}
-				printf("%3d: %s%s%s\n", fid,
-					   dir, slash(dir, file) ? "/" : "", file);
-				fid_old = fid;
-			}
-			printf("     %#B '%s'\n", &hash, product);
-			count++;
-		}
-		e->destroy(e);
-
-		printf("%d %N value%s found\n", count, hash_algorithm_names,
-			   pts_meas_algo_to_hash(algo), (count == 1) ? "" : "s");
-		free(dir);
-	}
-}
-
-/**
- * ipsec attest --hashes - show file measurement hashes for a given file
- */
-static void list_hashes_for_file(pts_meas_algorithms_t algo, char *file, int fid)
-{
-	enumerator_t *e;
-	chunk_t hash;
-	char *product, *dir;
-	int did, count = 0;
-
-	dir = strdup("");
-
-	if (fid)
-	{
-		e = db->query(db,
-				"SELECT p.name, fh.hash, fh.directory "
-				"FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.file "
-				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND f.id = ? "
-				"ORDER BY p.name",
-				DB_INT, algo, DB_INT, fid, DB_TEXT, DB_BLOB, DB_INT);
-	}
-	else
-	{
-		e = db->query(db,
-				"SELECT p.name, fh.hash, fh.directory "
-				"FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.file "
-				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND f.path = ? "
-				"ORDER BY p.name",
-				DB_INT, algo, DB_TEXT, file, DB_TEXT, DB_BLOB, DB_INT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &product, &hash, &did))
-		{
-			printf("%#B '%s'\n", &hash, product);
-			count++;
-		}
-		e->destroy(e);
-
-		get_directory(did, &dir);
-		printf("%d %N value%s found for file '%s%s%s'\n",
-			   count, hash_algorithm_names, pts_meas_algo_to_hash(algo),
-			   (count == 1) ? "" : "s",
-			   dir, slash(dir, file) ? "/" : "", file);
-		free(dir);
-	}
-}
-
-/**
- * ipsec attest --hashes - show file measurement hashes for a given product
- */
-static void list_hashes_for_product(pts_meas_algorithms_t algo,
-									char *product, int pid)
-{
-	enumerator_t *e;
-	chunk_t hash;
-	char *file, *dir;
-	int fid, fid_old = 0, did, did_old = 0, count = 0;
-
-	dir = strdup("");
-
-	if (pid)
-	{
-		e = db->query(db,
-				"SELECT f.id, f. f.path, fh.hash, fh.directory "
-				"FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.file "
-				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND p.id = ? "
-				"ORDER BY fh.directory, f.path",
-				DB_INT, algo, DB_INT, pid, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
-	}
-	else
-	{
-		e = db->query(db,
-				"SELECT f.id, f.path, fh.hash, fh.directory "
-				"FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.file "
-				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND p.name = ? "
-				"ORDER BY fh.directory, f.path",
-				DB_INT, algo, DB_TEXT, product, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &fid,  &file, &hash, &did))
-		{
-			if (fid != fid_old || did != did_old)
-			{
-				if (did != did_old)
-				{
-					get_directory(did, &dir);
-				}
-				printf("%3d: %s%s%s\n", fid,
-					   dir, slash(dir, file) ? "/" : "", file);
-				fid_old = fid;
-				did_old = did;
-			}
-			printf("     %#B\n", &hash);
-			count++;
-		}
-		e->destroy(e);
-
-		printf("%d %N value%s found for product '%s'\n",
-			   count, hash_algorithm_names, pts_meas_algo_to_hash(algo),
-			   (count == 1) ? "" : "s", product);
-		free(dir);
-	}
-}
-
-/**
- * find file corresponding to primary key fid
- */
-static bool fid_to_file(int fid, char **file)
-{
-	enumerator_t *e;
-	bool found = FALSE;
-	char *f;
-
-	e = db->query(db, "SELECT path FROM files WHERE id = ?",
-				  DB_INT, fid, DB_TEXT);
-	if (e)
-	{
-		if (e->enumerate(e, &f))
-		{
-			found = TRUE;
-			*file = strdup(f);
-		}
-		else
-		{
-			printf("no file found with fid %d\n", fid);
-		}
-		e->destroy(e);
-	}
-	return found;
-}
-
-/**
- * find product corresponding to primary key pid
- */
-static bool pid_to_product(int pid, char **product)
-{
-	enumerator_t *e;
-	bool found = FALSE;
-	char *p;
-
-	e = db->query(db, "SELECT name FROM products WHERE id = ?",
-				  DB_INT, pid, DB_TEXT);
-	if (e)
-	{
-		if (e->enumerate(e, &p))
-		{
-			found = TRUE;
-			*product = strdup(p);
-		}
-		else
-		{
-			printf("no product found with pid %d\n", pid);
-		}
-		e->destroy(e);
-	}
-	return found;
-}
+attest_db_t *attest;
 
 /**
  * atexit handler to close db on shutdown
  */
 static void cleanup(void)
 {
-	db->destroy(db);
+	attest->destroy(attest);
 }
 
 static void do_args(int argc, char *argv[])
 {
-	char *product = NULL, *file = NULL;
-	int fid = 0, pid = 0;
-	pts_meas_algorithms_t algo = PTS_MEAS_ALGO_SHA256;
-
 	enum {
 		OP_UNDEF,
 		OP_USAGE,
@@ -424,13 +62,15 @@ static void do_args(int argc, char *argv[])
 			{ "files", no_argument, NULL, 'f' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
+			{ "directory", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
 			{ "product", required_argument, NULL, 'P' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
 			{ "sha384", no_argument, NULL, '3' },
-			{ "fid", required_argument, NULL, '4' },
-			{ "pid", required_argument, NULL, '5' },
+			{ "did", required_argument, NULL, '4' },
+			{ "fid", required_argument, NULL, '5' },
+			{ "pid", required_argument, NULL, '6' },
 			{ 0,0,0,0 }
 		};
 
@@ -451,31 +91,47 @@ static void do_args(int argc, char *argv[])
 			case 'H':
 				operation = OP_HASHES;
 				continue;
+			case 'D':
+				if (!attest->set_directory(attest, optarg))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
 			case 'F':
-				file = optarg;
+				if (!attest->set_file(attest, optarg))
+				{
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			case 'P':
-				product = optarg;
+				if (!attest->set_product(attest, optarg))
+				{
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			case '1':
-				algo = PTS_MEAS_ALGO_SHA1;
+				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);
 				continue;
 			case '2':
-				algo = PTS_MEAS_ALGO_SHA256;
+				attest->set_algo(attest, PTS_MEAS_ALGO_SHA256);
 				continue;
 			case '3':
-				algo = PTS_MEAS_ALGO_SHA384;
+				attest->set_algo(attest, PTS_MEAS_ALGO_SHA384);
 				continue;
 			case '4':
-				fid = atoi(optarg);
-				if (!fid_to_file(fid, &file))
+				if (!attest->set_did(attest, atoi(optarg)))
 				{
 					exit(EXIT_FAILURE);
 				}
 				continue;
 			case '5':
-				pid = atoi(optarg);
-				if (!pid_to_product(pid, &product))
+				if (!attest->set_fid(attest, atoi(optarg)))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			case '6':
+				if (!attest->set_pid(attest, atoi(optarg)))
 				{
 					exit(EXIT_FAILURE);
 				}
@@ -490,39 +146,18 @@ static void do_args(int argc, char *argv[])
 			usage();
 			break;
 		case OP_PRODUCTS:
-			list_products(file, fid);
+			attest->list_products(attest);
 			break;
 		case OP_FILES:
-			list_files(product, pid);
+			attest->list_files(attest);
 			break;
 		case OP_HASHES:
-			if ((!product || *product == '\0') && (!file || *file == '\0'))
-			{
-				list_hashes(algo);
-			}
-			else if (product)
-			{
-				list_hashes_for_product(algo, product, pid);
-			}
-			else
-			{
-				list_hashes_for_file(algo, file, fid);
-			}
+			attest->list_hashes(attest);
 			break;
 		default:
 			usage();
 			exit(EXIT_FAILURE);
 	}
-
-	if (fid)
-	{
-		free(file);
-	}
-	if (pid)
-	{
-		free(product);
-	}
-
 }
 
 int main(int argc, char *argv[])
@@ -548,10 +183,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "database URI attest.database not set.\n");
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	db = lib->db->create(lib->db, uri);
-	if (!db)
+	attest = attest_db_create(uri);
+	if (!attest)
 	{
-		fprintf(stderr, "opening database failed.\n");
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(cleanup);
