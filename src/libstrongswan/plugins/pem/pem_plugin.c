@@ -99,6 +99,8 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_pem_plugin_t *this)
 {
+	lib->encoding->remove_encoder(lib->encoding, pem_encoder_encode);
+
 	free(this);
 }
 
