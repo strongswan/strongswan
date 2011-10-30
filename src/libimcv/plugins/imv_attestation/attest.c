@@ -190,8 +190,10 @@ static void list_hashes(pts_meas_algorithms_t algo)
 
 	e = db->query(db,
 			"SELECT f.id, f.path, p.name, fh.hash, fh.directory "
-			"FROM files AS f, products AS p, file_hashes AS fh "
-			"WHERE fh.algo = ? AND f.id = fh.file AND p.id = fh.product "
+			"FROM file_hashes AS fh "
+			"JOIN files AS f ON f.id = fh.file "
+			"JOIN products AS p ON p.id = fh.product "
+			"WHERE fh.algo = ? "
 			"ORDER BY fh.directory, f.path, p.name",
 			DB_INT, algo, DB_INT, DB_TEXT, DB_TEXT, DB_BLOB, DB_INT);
 	if (e)
@@ -203,11 +205,11 @@ static void list_hashes(pts_meas_algorithms_t algo)
 				if (did != did_old)
 				{
 					get_directory(did, &dir);
+					did_old = did;
 				}
 				printf("%3d: %s%s%s\n", fid,
 					   dir, slash(dir, file) ? "/" : "", file);
 				fid_old = fid;
-				did_old = did;
 			}
 			printf("     %#B '%s'\n", &hash, product);
 			count++;
@@ -236,9 +238,10 @@ static void list_hashes_for_file(pts_meas_algorithms_t algo, char *file, int fid
 	{
 		e = db->query(db,
 				"SELECT p.name, fh.hash, fh.directory "
-				"FROM products AS p, file_hashes AS fh "
+				"FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"WHERE fh.algo = ? AND f.id = ? AND p.id = fh.product "
+				"JOIN products AS p ON p.id = fh.product "
+				"WHERE fh.algo = ? AND f.id = ? "
 				"ORDER BY p.name",
 				DB_INT, algo, DB_INT, fid, DB_TEXT, DB_BLOB, DB_INT);
 	}
@@ -246,9 +249,10 @@ static void list_hashes_for_file(pts_meas_algorithms_t algo, char *file, int fid
 	{
 		e = db->query(db,
 				"SELECT p.name, fh.hash, fh.directory "
-				"FROM products AS p, file_hashes AS fh "
+				"FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"WHERE fh.algo = ? AND f.path = ? AND p.id = fh.product "
+				"JOIN products AS p ON p.id = fh.product "
+				"WHERE fh.algo = ? AND f.path = ? "
 				"ORDER BY p.name",
 				DB_INT, algo, DB_TEXT, file, DB_TEXT, DB_BLOB, DB_INT);
 	}
@@ -287,9 +291,10 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 	{
 		e = db->query(db,
 				"SELECT f.id, f. f.path, fh.hash, fh.directory "
-				"FROM files AS f, file_hashes AS fh "
+				"FROM file_hashes AS fh "
+				"JOIN files AS f ON f.id = fh.file "
 				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND p.id = ? AND f.id = fh.file "
+				"WHERE fh.algo = ? AND p.id = ? "
 				"ORDER BY fh.directory, f.path",
 				DB_INT, algo, DB_INT, pid, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
 	}
@@ -297,9 +302,10 @@ static void list_hashes_for_product(pts_meas_algorithms_t algo,
 	{
 		e = db->query(db,
 				"SELECT f.id, f.path, fh.hash, fh.directory "
-				"FROM files AS f, file_hashes AS fh "
+				"FROM file_hashes AS fh "
+				"JOIN files AS f ON f.id = fh.file "
 				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND p.name = ? AND f.id = fh.file "
+				"WHERE fh.algo = ? AND p.name = ? "
 				"ORDER BY fh.directory, f.path",
 				DB_INT, algo, DB_TEXT, product, DB_INT, DB_TEXT, DB_BLOB, DB_INT);
 	}
