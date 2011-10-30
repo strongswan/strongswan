@@ -179,7 +179,7 @@ METHOD(attest_db_t, set_fid, bool,
 	enumerator_t *e;
 	char *file;
 
-	if (this->product_set)
+	if (this->file_set)
 	{
 		printf("file has already been set\n");
 		return FALSE;
@@ -394,7 +394,34 @@ METHOD(attest_db_t, list_hashes, void,
 
 	dir = strdup("");
 
-	if (this->pid)
+	if (this->pid && this->fid)
+	{
+		e = this->db->query(this->db,
+				"SELECT hash FROM file_hashes "
+				"WHERE algo = ? AND file = ? AND directory = ? AND product = ?",
+				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->did,
+				DB_INT, this->pid, DB_BLOB);
+		if (e)
+		{
+			while (e->enumerate(e, &hash))
+			{
+				if (this->fid != fid_old)
+				{
+					printf("%3d: %s%s%s\n", this->fid, this->dir,
+						   slash(this->dir, this->file) ? "/" : "", this->file);
+					fid_old = this->fid;
+				}
+				printf("     %#B\n", &hash);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for product '%s'\n", count,
+				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   (count == 1) ? "" : "s", this->product);
+		}
+	}
+	else if (this->pid)
 	{
 		e = this->db->query(this->db,
 				"SELECT f.id, f. f.path, fh.hash, fh.directory "
