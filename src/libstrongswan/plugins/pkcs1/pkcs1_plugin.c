@@ -38,14 +38,24 @@ METHOD(plugin_t, get_name, char*,
 	return "pkcs1";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_pkcs1_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRIVKEY, pkcs1_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
+		PLUGIN_REGISTER(PUBKEY, pkcs1_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
+		PLUGIN_REGISTER(PUBKEY, pkcs1_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pkcs1_plugin_t *this)
 {
-	lib->creds->remove_builder(lib->creds,
-							(builder_function_t)pkcs1_public_key_load);
-	lib->creds->remove_builder(lib->creds,
-							(builder_function_t)pkcs1_private_key_load);
-
 	lib->encoding->remove_encoder(lib->encoding, pkcs1_encoder_encode);
 
 	free(this);
@@ -62,18 +72,11 @@ plugin_t *pkcs1_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
-				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
 	);
-
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
-							(builder_function_t)pkcs1_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, FALSE,
-							(builder_function_t)pkcs1_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
-							(builder_function_t)pkcs1_private_key_load);
 
 	lib->encoding->add_encoder(lib->encoding, pkcs1_encoder_encode);
 
