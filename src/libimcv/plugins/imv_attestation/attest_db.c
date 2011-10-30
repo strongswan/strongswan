@@ -156,7 +156,7 @@ METHOD(attest_db_t, set_file, bool,
 	}
 	this->file = strdup(file);
 
-	e = this->db->query(this->db, "SELECT id FROM file WHERE path = ?",
+	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
 						DB_TEXT, file, DB_INT);
 	if (e)
 	{
@@ -217,7 +217,7 @@ METHOD(attest_db_t, set_directory, bool,
 	free(this->dir);
 	this->dir = strdup(dir);
 
-	e = this->db->query(this->db, "SELECT id FROM file WHERE path = ?",
+	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
 						DB_TEXT, dir, DB_INT);
 	if (e)
 	{
@@ -247,7 +247,7 @@ METHOD(attest_db_t, set_did, bool,
 	}
 	this->did = did;
 
-	e = this->db->query(this->db, "SELECT path FROM file WHERE id = ?",
+	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
 						DB_INT, did, DB_TEXT);
 	if (e)
 	{
@@ -284,8 +284,7 @@ METHOD(attest_db_t, list_files, void,
 		e = this->db->query(this->db,
 				"SELECT f.id, f.type, f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
-				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.id = ? ORDER BY f.path",
+				"WHERE pf.product = ? ORDER BY f.path",
 				DB_INT, this->pid, DB_INT, DB_INT, DB_TEXT);
 	}
 	else
@@ -325,8 +324,7 @@ METHOD(attest_db_t, list_products, void,
 		e = this->db->query(this->db,
 				"SELECT p.id, p.name FROM products AS p "
 				"JOIN product_file AS pf ON p.id = pf.product "
-				"JOIN files AS f ON f.id = pf.file "
-				"WHERE f.id = ? ORDER BY p.name",
+				"WHERE pf.file = ? ORDER BY p.name",
 				DB_INT, this->fid, DB_INT, DB_TEXT);
 	}
 	else
@@ -402,8 +400,7 @@ METHOD(attest_db_t, list_hashes, void,
 				"SELECT f.id, f. f.path, fh.hash, fh.directory "
 				"FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND p.id = ? "
+				"WHERE fh.algo = ? AND fh.product = ? "
 				"ORDER BY fh.directory, f.path",
 				DB_INT, this->algo, DB_INT, this->pid,
 				DB_INT, DB_TEXT, DB_BLOB, DB_INT);
@@ -437,11 +434,10 @@ METHOD(attest_db_t, list_hashes, void,
 		e = this->db->query(this->db,
 				"SELECT p.name, fh.hash, fh.directory "
 				"FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.file "
 				"JOIN products AS p ON p.id = fh.product "
-				"WHERE fh.algo = ? AND f.id = ? "
+				"WHERE fh.algo = ? AND fh.file = ? AND fh.directory = ?"
 				"ORDER BY p.name",
-				DB_INT, this->algo, DB_INT, this->fid,
+				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->did,
 				DB_TEXT, DB_BLOB, DB_INT);
 		if (e)
 		{
@@ -452,11 +448,10 @@ METHOD(attest_db_t, list_hashes, void,
 			}
 			e->destroy(e);
 
-			get_directory(this, did, &dir);
 			printf("%d %N value%s found for file '%s%s%s'\n",
 				   count, hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
-				   (count == 1) ? "" : "s",
-				   dir, slash(dir, this->file) ? "/" : "", this->file);
+				   (count == 1) ? "" : "s", this->dir,
+				   slash(this->dir, this->file) ? "/" : "", this->file);
 		}
 	}
 	else
