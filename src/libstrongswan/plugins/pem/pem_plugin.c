@@ -96,6 +96,7 @@ METHOD(plugin_t, get_features, int,
 	*features = f;
 	return countof(f);
 }
+
 METHOD(plugin_t, destroy, void,
 	private_pem_plugin_t *this)
 {
