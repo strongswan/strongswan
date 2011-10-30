@@ -37,11 +37,20 @@ METHOD(plugin_t, get_name, char*,
 	return "agent";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_agent_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRIVKEY, agent_private_key_open, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_agent_plugin_t *this)
 {
-	lib->creds->remove_builder(lib->creds,
-							   (builder_function_t)agent_private_key_open);
 	free(this);
 }
 
@@ -62,8 +71,6 @@ plugin_t *agent_plugin_create()
 		},
 	);
 
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
-							(builder_function_t)agent_private_key_open);
 	return &this->public.plugin;
 }
 
