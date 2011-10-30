@@ -112,6 +112,12 @@ static void do_args(int argc, char *argv[])
 			case 'H':
 				operation = OP_HASHES;
 				continue;
+			case 'D':
+				if (!attest->set_directory(attest, optarg))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
 			case 'F':
 				if (!attest->set_file(attest, optarg, op == OP_ADD))
 				{
@@ -176,33 +182,12 @@ static void do_args(int argc, char *argv[])
 			attest->delete(attest);
 			break;
 		case OP_HASHES:
-			if ((!product || *product == '\0') && (!file || *file == '\0'))
-			{
-				list_hashes(algo);
-			}
-			else if (product)
-			{
-				list_hashes_for_product(algo, product, pid);
-			}
-			else
-			{
-				list_hashes_for_file(algo, file, fid);
-			}
+			attest->list_hashes(attest);
 			break;
 		default:
 			usage();
 			exit(EXIT_FAILURE);
 	}
-
-	if (fid)
-	{
-		free(file);
-	}
-	if (pid)
-	{
-		free(product);
-	}
-
 }
 
 int main(int argc, char *argv[])
