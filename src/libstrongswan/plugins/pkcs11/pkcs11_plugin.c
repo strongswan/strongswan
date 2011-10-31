@@ -113,6 +113,44 @@ METHOD(plugin_t, get_name, char*,
 }
 
 /**
+ * Register/unregister PKCS#11 manager.
+ */
+static bool register_manager(private_pkcs11_plugin_t *this,
+							 plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		enumerator_t *enumerator;
+		pkcs11_library_t *p11;
+		CK_SLOT_ID slot;
+
+		this->manager = pkcs11_manager_create((void*)token_event_cb, this);
+		lib->set(lib, "pkcs11-manager", this->manager);
+
+		enumerator = this->manager->create_token_enumerator(this->manager);
+		while (enumerator->enumerate(enumerator, &p11, &slot))
+		{
+			token_event_cb(this, p11, slot, TRUE);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		pkcs11_creds_t *creds;
+
+		while (this->creds->remove_last(this->creds, (void**)&creds) == SUCCESS)
+		{
+			lib->credmgr->remove_set(lib->credmgr, &creds->set);
+			creds->destroy(creds);
+		}
+
+		lib->set(lib, "pkcs11-manager", NULL);
+		this->manager->destroy(this->manager);
+	}
+	return TRUE;
+}
+
+/**
  * Add a set of features
  */
 static inline void add_features(plugin_feature_t *f, plugin_feature_t *n,
@@ -131,55 +169,88 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f_hash[] = {
 		PLUGIN_REGISTER(HASHER, pkcs11_hasher_create),
 			PLUGIN_PROVIDE(HASHER, HASH_MD2),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(HASHER, HASH_MD5),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA256),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 	};
 	static plugin_feature_t f_dh[] = {
 		PLUGIN_REGISTER(DH, pkcs11_dh_create),
 			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_2048_224),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_2048_256),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_1536_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_6144_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_8192_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_1024_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_1024_160),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_768_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 	};
 	static plugin_feature_t f_rng[] = {
 		PLUGIN_REGISTER(RNG, pkcs11_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 	};
 	static plugin_feature_t f_key[] = {
 		PLUGIN_REGISTER(PRIVKEY, pkcs11_private_key_connect, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 	};
 	static plugin_feature_t f_ecdh[] = {
 		PLUGIN_REGISTER(DH, pkcs11_dh_create),
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, ECP_224_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, ECP_384_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
 			PLUGIN_PROVIDE(DH, ECP_521_BIT),
+				PLUGIN_DEPENDS(CUSTOM, "pkcs11-manager"),
+	};
+	static plugin_feature_t f_manager[] = {
+		PLUGIN_CALLBACK(register_manager, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "pkcs11-manager"),
+				PLUGIN_DEPENDS(CERT_DECODE, CERT_X509),
 	};
 	static plugin_feature_t f[countof(f_hash) + countof(f_dh) + countof(f_rng) +
-							  countof(f_key) + countof(f_ecdh)] = {};
+							  countof(f_key) + countof(f_ecdh) +
+							  countof(f_manager)] = {};
 	static int count = 0;
 
 	if (!count)
 	{	/* initialize only once */
 		bool use_ecc = lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_ecc", FALSE);
-
+		add_features(f, f_manager, countof(f_manager), &count);
 		add_features(f, f_key, countof(f_key), &count);
 		if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
@@ -208,16 +279,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
-	pkcs11_creds_t *creds;
-
-	while (this->creds->remove_last(this->creds, (void**)&creds) == SUCCESS)
-	{
-		lib->credmgr->remove_set(lib->credmgr, &creds->set);
-		creds->destroy(creds);
-	}
 	this->creds->destroy(this->creds);
-	lib->set(lib, "pkcs11-manager", NULL);
-	this->manager->destroy(this->manager);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -228,9 +290,6 @@ METHOD(plugin_t, destroy, void,
 plugin_t *pkcs11_plugin_create()
 {
 	private_pkcs11_plugin_t *this;
-	enumerator_t *enumerator;
-	pkcs11_library_t *p11;
-	CK_SLOT_ID slot;
 
 	INIT(this,
 		.public = {
@@ -243,17 +302,6 @@ plugin_t *pkcs11_plugin_create()
 		.creds = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
-
-	this->manager = pkcs11_manager_create((void*)token_event_cb, this);
-
-	lib->set(lib, "pkcs11-manager", this->manager);
-
-	enumerator = this->manager->create_token_enumerator(this->manager);
-	while (enumerator->enumerate(enumerator, &p11, &slot))
-	{
-		token_event_cb(this, p11, slot, TRUE);
-	}
-	enumerator->destroy(enumerator);
 
 	return &this->public.plugin;
 }
