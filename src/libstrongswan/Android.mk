@@ -104,6 +104,8 @@ LOCAL_SRC_FILES += $(call add_plugin, pem)
 
 LOCAL_SRC_FILES += $(call add_plugin, pkcs1)
 
+LOCAL_SRC_FILES += $(call add_plugin, pkcs11)
+
 LOCAL_SRC_FILES += $(call add_plugin, pubkey)
 
 LOCAL_SRC_FILES += $(call add_plugin, random)
