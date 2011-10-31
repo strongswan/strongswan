@@ -167,11 +167,13 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8 (writer, flags);
 	writer->write_uint8 (writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
 	
+	/** Optional Composite Hash Algorithm field is always present
+	 * Field has value of all zeroes if not used.
+	 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
+	 */
+	writer->write_uint16(writer, this->comp_hash_algorithm);
+
 	/* Optional fields */
-	if (this->comp_hash_algorithm)
-	{
-		writer->write_uint16(writer, this->comp_hash_algorithm);
-	}
 	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
 	{
 		writer->write_uint32 (writer, this->pcr_comp.len);
@@ -197,7 +199,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	bio_reader_t *reader;
 	u_int8_t flags;
 	u_int8_t reserved;
-	/** u_int16_t algorithm;*/
+	u_int16_t algorithm;
 	
 	if (this->value.len < PTS_SIMPLE_EVID_FINAL_SIZE)
 	{
@@ -232,18 +234,20 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	reader->read_uint8(reader, &reserved);
+
+	/** Optional Composite Hash Algorithm field is always present
+	 * Field has value of all zeroes if not used.
+	 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
+	 */
+	
+	reader->read_uint16(reader, &algorithm);
+	this->comp_hash_algorithm = algorithm;
 	
 	/*  Optional Composite Hash Algorithm and TPM PCR Composite field is included */
 	if (this->flags != PTS_SIMPLE_EVID_FINAL_FLAG_NO)
 	{
 		u_int32_t pcr_comp_len, tpm_quote_sign_len;
 		
-		/** TODO: Ignoring Hashing algorithm field
-		 * There is no flag defined which indicates the precense of it
-		 * reader->read_uint16(reader, &algorithm);
-		 * this->comp_hash_algorithm = algorithm;
-		 */
-
 		reader->read_uint32(reader, &pcr_comp_len);
 		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
 		this->pcr_comp = chunk_clone(this->pcr_comp);

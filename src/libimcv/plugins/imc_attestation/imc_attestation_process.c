@@ -441,6 +441,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			enumerator_t *e;
 			pts_simple_evid_final_flag_t flags;
+			pts_meas_algorithms_t composite_algorithm = 0;
 			chunk_t pcr_composite, quote_signature;
 			u_int32_t num_of_evidences, i = 0;
 			u_int32_t *pcrs;
@@ -478,9 +479,11 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 	
 			/* Send Simple Evidence Final attribute */
 			flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
+			composite_algorithm |= PTS_MEAS_ALGO_SHA1;
 			
-			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags, 0,
-								pcr_composite, quote_signature, chunk_empty);
+			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags,
+								composite_algorithm, pcr_composite,
+								quote_signature, chunk_empty);
 			attr_list->insert_last(attr_list, attr);
 					
 			DESTROY_IF(e);

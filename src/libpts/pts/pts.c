@@ -1003,11 +1003,12 @@ METHOD(pts_t, add_pcr_entry, void,
  */
 
 METHOD(pts_t, get_quote_info, bool,
-	private_pts_t *this, chunk_t *out_pcr_composite, chunk_t *out_quote_info)
+	private_pts_t *this, pts_meas_algorithms_t composite_algo,
+	chunk_t *out_pcr_composite, chunk_t *out_quote_info)
 {
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
-	chunk_t pcr_composite;
+	chunk_t pcr_composite, hash_pcr_composite;
 	u_int32_t pcr_composite_len;
 	bio_writer_t *writer;
 	u_int8_t mask_bytes[PCR_MASK_LEN] = {0,0,0}, i;
@@ -1068,14 +1069,33 @@ METHOD(pts_t, get_quote_info, bool,
 	writer->write_uint8(writer, 'O');
 	writer->write_uint8(writer, 'T');
 
-	/* SHA1 hash of PCR Composite Structure */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
-	DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
+	/* Output the TPM_PCR_COMPOSITE expected from IMC */
+	if (composite_algo)
+	{
+		hash_algorithm_t algo;
+		
+		algo = pts_meas_algo_to_hash(composite_algo);
+		hasher = lib->crypto->create_hasher(lib->crypto, algo);
 
-	chunk_clear(&pcr_composite);
+		/* Hash the PCR Composite Structure */
+		hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
+		DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
+		hasher->destroy(hasher);
+	}
+	else
+	{
+		*out_pcr_composite = chunk_clone(pcr_composite);
+		DBG4(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
+	}
+	
+	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
 	hasher->destroy(hasher);
-	writer->write_data(writer, *out_pcr_composite);
+	
+	writer->write_data(writer, hash_pcr_composite);
+	chunk_clear(&pcr_composite);
+	chunk_clear(&hash_pcr_composite);
 	
 	if (!this->secret.ptr)
 	{

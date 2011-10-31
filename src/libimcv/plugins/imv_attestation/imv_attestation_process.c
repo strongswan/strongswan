@@ -283,17 +283,21 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			tcg_pts_attr_simple_evid_final_t *attr_cast;
 			pts_simple_evid_final_flag_t flags;
+			pts_meas_algorithms_t composite_algorithm;
 			chunk_t pcr_comp;
 			chunk_t tpm_quote_sign;
 			chunk_t evid_sign;
 			bool evid_signature_included;
-					
-			/** TODO: Ignoring Composite Hash Algorithm field
-			 * No flag defined which indicates the precense of it
-			 */
+			
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
 			evid_signature_included = attr_cast->is_evid_sign_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
+			
+			/** Optional Composite Hash Algorithm field is always present
+			 * Field has value of all zeroes if not used.
+			 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
+			 */
+			composite_algorithm = attr_cast->get_comp_hash_algorithm(attr_cast);
 
 			if ((flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) ||
 				(flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER))
@@ -310,13 +314,14 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
 
 				/* Construct PCR Composite and TPM Quote Info structures*/
-				if (!pts->get_quote_info(pts, &pcr_composite, &quote_info))
+				if (!pts->get_quote_info(pts, composite_algorithm,
+					&pcr_composite, &quote_info))
 				{
 					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
 					return FALSE;
 				}
 
-				/* Check calculated PCR composite structure matches with received */
+				/* Check calculated PCR composite matches with received */
 				if (pcr_comp.ptr && !chunk_equals(pcr_comp, pcr_composite))
 				{
 					DBG1(DBG_IMV, "received PCR Compsosite didn't match"

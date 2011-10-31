@@ -289,8 +289,8 @@ struct pts_t {
 	 * @param quote_info			Output variable to store TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, chunk_t *pcr_composite,
-							chunk_t *quote_info);
+	 bool (*get_quote_info)(pts_t *this, pts_meas_algorithms_t composite_algo,
+							chunk_t *pcr_composite, chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
