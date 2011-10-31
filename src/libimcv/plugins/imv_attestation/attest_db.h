@@ -37,9 +37,10 @@ struct attest_db_t {
 	 * Set software product to be queried
 	 *
 	 * @param product		software product
+	 * @param create		if TRUE create database entry if it doesn't exist
 	 * @return				TRUE if successful
 	 */
-	bool (*set_product)(attest_db_t *this, char *product);
+	bool (*set_product)(attest_db_t *this, char *product, bool create);
 
 	/**
 	 * Set primary key of the software product to be queried
@@ -53,9 +54,10 @@ struct attest_db_t {
 	 * Set measurement file to be queried
 	 *
 	 * @param file			measurement file
+	 * @param create		if TRUE create database entry if it doesn't exist
 	 * @return				TRUE if successful
 	 */
-	bool (*set_file)(attest_db_t *this, char *file);
+	bool (*set_file)(attest_db_t *this, char *file, bool create);
 
 	/**
 	 * Set primary key of the measurement file to be queried
@@ -69,9 +71,10 @@ struct attest_db_t {
 	 * Set directory of the measurement file to be queried
 	 *
 	 * @param directory		directory containing the measurement file
+	 * @param create		if TRUE create database entry if it doesn't exist
 	 * @return				TRUE if successful
 	 */
-	bool (*set_directory)(attest_db_t *this, char *dir);
+	bool (*set_directory)(attest_db_t *this, char *dir, bool create);
 
 	/**
 	 * Set primary key of the directory to be queried
@@ -102,6 +105,16 @@ struct attest_db_t {
 	 * List selected measurement hashes stored in the database
 	 */
 	void (*list_hashes)(attest_db_t *this);
+
+	/**
+	 * Add an entry to the database
+	 */
+	bool (*add)(attest_db_t *this);
+
+	/**
+	 * Delete an entry from the database
+	 */
+	bool (*delete)(attest_db_t *this);
 
 	/**
 	 * Destroy attest_db_t object

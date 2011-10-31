@@ -85,7 +85,7 @@ struct private_attest_db_t {
 };
 
 METHOD(attest_db_t, set_product, bool,
-	private_attest_db_t *this, char *product)
+	private_attest_db_t *this, char *product, bool create)
 {
 	enumerator_t *e;
 
@@ -104,12 +104,26 @@ METHOD(attest_db_t, set_product, bool,
 		{
 			this->product_set = TRUE;
 		}
-		else
-		{
-			printf("product '%s' not found in database\n", product);
-		}
 		e->destroy(e);
 	}
+	if (this->product_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("product '%s' not found in database\n", product);
+	}
+
+	/* Add a new database entry */
+	this->product_set = this->db->execute(this->db, &this->pid,
+									"INSERT INTO products (name) VALUES (?)",
+									DB_TEXT, product);
+
+	printf("product '%s' %sinserted into database\n", product,
+		   this->product_set ? "" : "could not be ");
+
 	return this->product_set;
 }
 
@@ -145,7 +159,7 @@ METHOD(attest_db_t, set_pid, bool,
 }
 
 METHOD(attest_db_t, set_file, bool,
-	private_attest_db_t *this, char *file)
+	private_attest_db_t *this, char *file, bool create)
 {
 	enumerator_t *e;
 
@@ -164,12 +178,26 @@ METHOD(attest_db_t, set_file, bool,
 		{
 			this->file_set = TRUE;
 		}
-		else
-		{
-			printf("file '%s' not found in database\n", file);
-		}
 		e->destroy(e);
 	}
+	if (this->file_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("file '%s' not found in database\n", file);
+	}
+
+	/* Add a new database entry */
+	this->file_set = this->db->execute(this->db, &this->fid,
+								"INSERT INTO files (type, path) VALUES (0, ?)",
+								DB_TEXT, file);
+
+	printf("file '%s' %sinserted into database\n", file,
+		   this->file_set ? "" : "could not be ");
+
 	return this->file_set;
 }
 
@@ -205,7 +233,7 @@ METHOD(attest_db_t, set_fid, bool,
 }
 
 METHOD(attest_db_t, set_directory, bool,
-	private_attest_db_t *this, char *dir)
+	private_attest_db_t *this, char *dir, bool create)
 {
 	enumerator_t *e;
 
@@ -217,7 +245,8 @@ METHOD(attest_db_t, set_directory, bool,
 	free(this->dir);
 	this->dir = strdup(dir);
 
-	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
+	e = this->db->query(this->db,
+						"SELECT id FROM files WHERE type = 1 AND path = ?",
 						DB_TEXT, dir, DB_INT);
 	if (e)
 	{
@@ -225,12 +254,26 @@ METHOD(attest_db_t, set_directory, bool,
 		{
 			this->dir_set = TRUE;
 		}
-		else
-		{
-			printf("directory '%s' not found in database\n", dir);
-		}
 		e->destroy(e);
 	}
+	if (this->dir_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("directory '%s' not found in database\n", dir);
+	}
+
+	/* Add a new database entry */
+	this->dir_set = this->db->execute(this->db, &this->did,
+								"INSERT INTO files (type, path) VALUES (1, ?)",
+								DB_TEXT, dir);
+
+	printf("directory '%s' %sinserted into database\n", dir,
+		   this->dir_set ? "" : "could not be ");
+
 	return this->dir_set;
 }
 
@@ -519,6 +562,18 @@ METHOD(attest_db_t, list_hashes, void,
 	free(dir);
 }
 
+METHOD(attest_db_t, add, bool,
+	private_attest_db_t *this)
+{
+	return FALSE;
+}
+
+METHOD(attest_db_t, delete, bool,
+	private_attest_db_t *this)
+{
+	return FALSE;
+}
+
 METHOD(attest_db_t, destroy, void,
 	private_attest_db_t *this)
 {
@@ -548,6 +603,8 @@ attest_db_t *attest_db_create(char *uri)
 			.list_products = _list_products,
 			.list_files = _list_files,
 			.list_hashes = _list_hashes,
+			.add = _add,
+			.delete = _delete,
 			.destroy = _destroy,
 		},
 		.dir = strdup(""),

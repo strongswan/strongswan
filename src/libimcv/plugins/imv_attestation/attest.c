@@ -48,7 +48,9 @@ static void do_args(int argc, char *argv[])
 		OP_FILES,
 		OP_PRODUCTS,
 		OP_HASHES,
-	} operation = OP_UNDEF;
+		OP_ADD,
+		OP_DEL,
+	} op = OP_UNDEF;
 
 	/* reinit getopt state */
 	optind = 0;
@@ -60,9 +62,12 @@ static void do_args(int argc, char *argv[])
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
 			{ "files", no_argument, NULL, 'f' },
+			{ "add", no_argument, NULL, 'a' },
+			{ "del", no_argument, NULL, 'd' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
 			{ "directory", required_argument, NULL, 'D' },
+			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
 			{ "product", required_argument, NULL, 'P' },
 			{ "sha1", no_argument, NULL, '1' },
@@ -80,31 +85,37 @@ static void do_args(int argc, char *argv[])
 			case EOF:
 				break;
 			case 'h':
-				operation = OP_USAGE;
+				op = OP_USAGE;
 				break;
 			case 'f':
-				operation = OP_FILES;
+				op = OP_FILES;
 				continue;
 			case 'p':
-				operation = OP_PRODUCTS;
+				op = OP_PRODUCTS;
 				continue;
 			case 'H':
-				operation = OP_HASHES;
+				op = OP_HASHES;
+				continue;
+			case 'a':
+				op = OP_ADD;
+				continue;
+			case 'd':
+				op = OP_DEL;
 				continue;
 			case 'D':
-				if (!attest->set_directory(attest, optarg))
+				if (!attest->set_directory(attest, optarg, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 'F':
-				if (!attest->set_file(attest, optarg))
+				if (!attest->set_file(attest, optarg, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
 				continue;
 			case 'P':
-				if (!attest->set_product(attest, optarg))
+				if (!attest->set_product(attest, optarg, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
@@ -140,7 +151,7 @@ static void do_args(int argc, char *argv[])
 		break;
 	}
 
-	switch (operation)
+	switch (op)
 	{
 		case OP_USAGE:
 			usage();
@@ -153,6 +164,12 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_HASHES:
 			attest->list_hashes(attest);
+			break;
+		case OP_ADD:
+			attest->add(attest);
+			break;
+		case OP_DEL:
+			attest->delete(attest);
 			break;
 		default:
 			usage();
