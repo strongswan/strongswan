@@ -252,7 +252,7 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 fi
 
 if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_dynamic = xtrue; then
-	tnccs=true;
+	tnc_tnccs=true;
 fi
 
 if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
@@ -963,7 +963,7 @@ AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
-AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnccs = xtrue)
+AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
@@ -1019,7 +1019,7 @@ AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$charon = xtrue -o x$conftest = xtrue -o x$imcv = xtrue)
-AM_CONDITIONAL(USE_LIBTNCCS, test x$tnccs = xtrue)
+AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$pluto = xtrue -o x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
