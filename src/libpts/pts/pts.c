@@ -1120,9 +1120,6 @@ METHOD(pts_t, verify_quote_signature, bool,
 {
 	public_key_t *aik_pub_key;
 	chunk_t key_encoding;
-	EVP_PKEY *pkey = NULL;
-	RSA *rsa = NULL;
-	unsigned char *p;
 
 	aik_pub_key = this->aik->get_public_key(this->aik);
 	if (!aik_pub_key)
@@ -1131,68 +1128,15 @@ METHOD(pts_t, verify_quote_signature, bool,
 		return FALSE;
 	}
 
-	/** Implementation using strongswan -> not working */
-	/**if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_EMSA_PKCS1_SHA1,
-															data, signature))
+	if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_SHA1, data, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
-		goto cleanup;
-	}
-	*/
-
-	if (!aik_pub_key->get_encoding(aik_pub_key,
-		PUBKEY_SPKI_ASN1_DER, &key_encoding))
-	{
-		DBG1(DBG_PTS, "failed to get encoding of AIK public key");
-		goto cleanup;
+		DESTROY_IF(aik_pub_key);
+		return FALSE;
 	}
 	
-	p = key_encoding.ptr;
-	pkey = d2i_PUBKEY(NULL, (const unsigned char**)&p, key_encoding.len);
-	if (!pkey)
-	{
-		DBG1(DBG_PTS, "failed to get EVP_PKEY object from AIK public key");
-		goto cleanup;
-	}
-
-	rsa = EVP_PKEY_get1_RSA(pkey);
-	if (!rsa)
-	{
-		DBG1(DBG_PTS, "failed to get RSA object from EVP_PKEY");
-		goto cleanup;
-	}
-
-	if (RSA_verify(NID_sha1, data.ptr, data.len,
-		signature.ptr, signature.len, rsa) != 1)
-	{
-		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
-		goto cleanup;
-	}
-
-	RSA_free(rsa);
-	EVP_PKEY_free(pkey);
-	if (key_encoding.ptr)
-	{
-		chunk_clear(&key_encoding);
-	}
 	aik_pub_key->destroy(aik_pub_key);
 	return TRUE;
-
-cleanup:
-	if (rsa)
-	{
-		RSA_free(rsa);
-	}
-	if (pkey)
-	{
-		EVP_PKEY_free(pkey);
-	}
-	if (key_encoding.ptr)
-	{
-		chunk_clear(&key_encoding);
-	}
-	DESTROY_IF(aik_pub_key);
-	return FALSE;
 }
 
 METHOD(pts_t, destroy, void,
