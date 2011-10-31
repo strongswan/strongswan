@@ -62,6 +62,8 @@ static void do_args(int argc, char *argv[])
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
 			{ "files", no_argument, NULL, 'f' },
+			{ "add", no_argument, NULL, 'a' },
+			{ "del", no_argument, NULL, 'd' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
 			{ "add", no_argument, NULL, 'a' },
@@ -110,10 +112,16 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 'H':
-				operation = OP_HASHES;
+				op = OP_HASHES;
+				continue;
+			case 'a':
+				op = OP_ADD;
+				continue;
+			case 'd':
+				op = OP_DEL;
 				continue;
 			case 'D':
-				if (!attest->set_directory(attest, optarg))
+				if (!attest->set_directory(attest, optarg, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
