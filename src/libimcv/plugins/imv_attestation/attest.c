@@ -63,6 +63,7 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "add", no_argument, NULL, 'a' },
+			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },

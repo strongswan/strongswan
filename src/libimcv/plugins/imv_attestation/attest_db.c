@@ -114,12 +114,13 @@ METHOD(attest_db_t, set_product, bool,
 	if (!create)
 	{
 		printf("product '%s' not found in database\n", product);
+		return FALSE;
 	}
 
 	/* Add a new database entry */
 	this->product_set = this->db->execute(this->db, &this->pid,
 									"INSERT INTO products (name) VALUES (?)",
-									DB_TEXT, product);
+									DB_TEXT, product) == 1;
 
 	printf("product '%s' %sinserted into database\n", product,
 		   this->product_set ? "" : "could not be ");
@@ -188,12 +189,13 @@ METHOD(attest_db_t, set_file, bool,
 	if (!create)
 	{
 		printf("file '%s' not found in database\n", file);
+		return FALSE;
 	}
 
 	/* Add a new database entry */
 	this->file_set = this->db->execute(this->db, &this->fid,
 								"INSERT INTO files (type, path) VALUES (0, ?)",
-								DB_TEXT, file);
+								DB_TEXT, file) == 1;
 
 	printf("file '%s' %sinserted into database\n", file,
 		   this->file_set ? "" : "could not be ");
@@ -264,12 +266,13 @@ METHOD(attest_db_t, set_directory, bool,
 	if (!create)
 	{
 		printf("directory '%s' not found in database\n", dir);
+		return FALSE;
 	}
 
 	/* Add a new database entry */
 	this->dir_set = this->db->execute(this->db, &this->did,
 								"INSERT INTO files (type, path) VALUES (1, ?)",
-								DB_TEXT, dir);
+								DB_TEXT, dir) == 1;
 
 	printf("directory '%s' %sinserted into database\n", dir,
 		   this->dir_set ? "" : "could not be ");
@@ -571,6 +574,48 @@ METHOD(attest_db_t, add, bool,
 METHOD(attest_db_t, delete, bool,
 	private_attest_db_t *this)
 {
+	bool success;
+
+	if (this->pid && (this->fid || this->did))
+	{
+		printf("deletion of product/file entries not supported yet\n");
+		return FALSE;
+	}
+
+	if (this->pid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM products WHERE id = ?",
+								DB_UINT, this->pid) > 0;
+
+		printf("product '%s' %sdeleted from database\n", this->product,
+			   success ? "" : "could not be ");
+		return success;
+	}
+
+	if (this->fid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM files WHERE id = ?",
+								DB_UINT, this->fid) > 0;
+
+		printf("file '%s' %sdeleted from database\n", this->file,
+			   success ? "" : "could not be ");
+		return success;
+	}
+
+	if (this->did)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM files WHERE type = 1 AND id = ?",
+								DB_UINT, this->did) > 0;
+
+		printf("directory '%s' %sdeleted from database\n", this->dir,
+			   success ? "" : "could not be ");
+		return success;
+	}
+
+	printf("empty delete command\n");
 	return FALSE;
 }
 
