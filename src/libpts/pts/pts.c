@@ -1158,9 +1158,25 @@ METHOD(pts_t, get_quote_info, bool,
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
 
-	chunk_clear(&pcr_composite);
+		/* Hash the PCR Composite Structure */
+		hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
+		DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
+		hasher->destroy(hasher);
+	}
+	else
+	{
+		*out_pcr_composite = chunk_clone(pcr_composite);
+		DBG4(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
+	}
+	
+	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
 	hasher->destroy(hasher);
-	writer->write_data(writer, *out_pcr_composite);
+	
+	writer->write_data(writer, hash_pcr_composite);
+	chunk_clear(&pcr_composite);
+	chunk_clear(&hash_pcr_composite);
 	
 	if (!this->secret.ptr)
 	{
