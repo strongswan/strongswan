@@ -220,12 +220,15 @@ static bool generate_key_pair(private_pkcs11_dh_t *this, CK_ATTRIBUTE_PTR pub,
 static bool generate_key_pair_modp(private_pkcs11_dh_t *this, size_t exp_len,
 								   chunk_t g, chunk_t p)
 {
+	CK_BBOOL ck_true = CK_TRUE;
 	CK_ATTRIBUTE pub_attr[] = {
+		{ CKA_DERIVE, &ck_true, sizeof(ck_true) },
 		{ CKA_PRIME, p.ptr, p.len },
 		{ CKA_BASE, g.ptr, g.len },
 	};
 	CK_ULONG bits = exp_len * 8;
 	CK_ATTRIBUTE pri_attr[] = {
+		{ CKA_DERIVE, &ck_true, sizeof(ck_true) },
 		{ CKA_VALUE_BITS, &bits, sizeof(bits) },
 	};
 	return generate_key_pair(this, pub_attr, countof(pub_attr), pri_attr,
@@ -238,11 +241,16 @@ static bool generate_key_pair_modp(private_pkcs11_dh_t *this, size_t exp_len,
 static bool generate_key_pair_ecp(private_pkcs11_dh_t *this,
 								  chunk_t ecparams)
 {
+	CK_BBOOL ck_true = CK_TRUE;
 	CK_ATTRIBUTE pub_attr[] = {
+		{ CKA_DERIVE, &ck_true, sizeof(ck_true) },
 		{ CKA_EC_PARAMS, ecparams.ptr, ecparams.len },
 	};
-	if (!generate_key_pair(this, pub_attr, countof(pub_attr), NULL, 0,
-						   CKA_EC_POINT))
+	CK_ATTRIBUTE pri_attr[] = {
+		{ CKA_DERIVE, &ck_true, sizeof(ck_true) },
+	};
+	if (!generate_key_pair(this, pub_attr, countof(pub_attr), pri_attr,
+						   countof(pri_attr), CKA_EC_POINT))
 	{
 		return FALSE;
 	}
