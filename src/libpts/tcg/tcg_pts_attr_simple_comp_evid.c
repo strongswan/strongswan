@@ -484,7 +484,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, pts_qualifier_t,
 	return this->qualifier;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_ita_funct_comp_name_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->name;

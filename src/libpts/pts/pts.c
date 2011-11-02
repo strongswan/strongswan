@@ -27,10 +27,6 @@
 #include <sys/utsname.h>
 #include <errno.h>
 
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-
 #define PTS_BUF_SIZE	4096
 
 typedef struct private_pts_t private_pts_t;
@@ -934,20 +930,6 @@ METHOD(pts_t, quote_tpm, bool,
 	return FALSE;
 }
 
-/**
- * Comparison function for pcr_entry_t struct
- */
-static int pcr_entry_compare(const pcr_entry_t *a, const pcr_entry_t *b)
-{
-	return (a->pcr_number - b->pcr_number);
-}
-
-static int pcr_entry_compare_qsort(const void *a, const void *b)
-{
-	return pcr_entry_compare(*(const pcr_entry_t *const *)a
-							, *(const pcr_entry_t *const *)b);
-}
-
 METHOD(pts_t, add_pcr_entry, void,
 	private_pts_t *this, pcr_entry_t *new)
 {
@@ -1026,11 +1008,7 @@ METHOD(pts_t, does_pcr_value_match, bool,
 		}
 	}
 	DESTROY_IF(e);
-
 	this->pcrs->insert_last(this->pcrs, new);
-
-	qsort(this->pcrs, this->pcrs->get_count(this->pcrs),
-		  sizeof(pcr_entry_t *), pcr_entry_compare_qsort);
 }
 
 /**
@@ -1166,7 +1144,7 @@ METHOD(pts_t, get_quote_info, bool,
 	else
 	{
 		*out_pcr_composite = chunk_clone(pcr_composite);
-		DBG4(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
+		DBG3(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
 	}
 
 	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */

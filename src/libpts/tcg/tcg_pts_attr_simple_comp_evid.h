@@ -68,7 +68,7 @@ struct tcg_pts_attr_simple_comp_evid_params_t {
 	u_int32_t depth;
 	u_int32_t vendor_id;
 	pts_qualifier_t qualifier;
-	pts_funct_comp_name_t name;
+	pts_ita_funct_comp_name_t name;
 	u_int32_t extended_pcr;
 	pts_meas_algorithms_t hash_algorithm;
 	pts_pcr_transform_t transformation;
@@ -137,7 +137,7 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 *
 	 * @return					Component Functional Name
 	 */
-	pts_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_simple_comp_evid_t *this);
+	pts_ita_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Get Measurement Type
