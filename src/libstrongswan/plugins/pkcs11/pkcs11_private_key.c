@@ -81,6 +81,13 @@ struct private_pkcs11_private_key_t {
 	key_type_t type;
 };
 
+/**
+ * Implemented in pkcs11_public_key.c
+ */
+public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11,
+									int slot, key_type_t type, chunk_t keyid);
+
+
 METHOD(private_key_t, get_type, key_type_t,
 	private_pkcs11_private_key_t *this)
 {
@@ -613,6 +620,8 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		return NULL;
 	}
 
+	this->pubkey = pkcs11_public_key_connect(this->lib, slot, this->type,
+											 keyid);
 	if (!this->pubkey)
 	{
 		destroy(this);

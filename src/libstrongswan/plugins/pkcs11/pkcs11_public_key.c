@@ -772,3 +772,119 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 	return NULL;
 }
 
+static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
+												int slot, key_type_t key_type,
+												chunk_t keyid)
+{
+	CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+	CK_KEY_TYPE type;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_ID, keyid.ptr, keyid.len},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+	};
+	CK_OBJECT_HANDLE object;
+	CK_ATTRIBUTE attr[] = {
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+	};
+	CK_SESSION_HANDLE session;
+	CK_RV rv;
+	enumerator_t *enumerator;
+	int count = countof(tmpl);
+	bool found = FALSE;
+	size_t keylen;
+
+	switch (type)
+	{
+		case KEY_RSA:
+			type = CKK_RSA;
+			break;
+		case KEY_ECDSA:
+			type = CKK_ECDSA;
+			break;
+		default:
+			/* don't specify key type on KEY_ANY */
+			count--;
+			break;
+	}
+
+	rv = p11->f->C_OpenSession(slot, CKF_SERIAL_SESSION, NULL, NULL, &session);
+	if (rv != CKR_OK)
+	{
+		DBG1(DBG_CFG, "opening public key session on '%s':%d failed: %N",
+			 p11->get_name(p11), slot, ck_rv_names, rv);
+		return NULL;
+	}
+
+	enumerator = p11->create_object_enumerator(p11, session, tmpl, count, attr,
+											   countof(attr));
+	if (enumerator->enumerate(enumerator, &object))
+	{
+		switch (type)
+		{
+			case CKK_ECDSA:
+			{
+				chunk_t ecparams;
+				if (p11->get_ck_attribute(p11, session, object, CKA_EC_PARAMS,
+										  &ecparams) &&
+					keylen_from_ecparams(ecparams, &keylen))
+				{
+					chunk_free(&ecparams);
+					key_type = KEY_ECDSA;
+					found = TRUE;
+				}
+				break;
+			}
+			case CKK_RSA:
+			{
+				chunk_t n;
+				if (p11->get_ck_attribute(p11, session, object, CKA_MODULUS,
+										  &n) && n.len > 0)
+				{
+					keylen = n.len * 8;
+					chunk_free(&n);
+					key_type = KEY_RSA;
+					found = TRUE;
+				}
+				break;
+			}
+			default:
+				DBG1(DBG_CFG, "PKCS#11 key type %d not supported", type);
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found)
+	{
+		return create(key_type, keylen, p11, slot, session, object);
+	}
+	p11->f->C_CloseSession(session);
+	return NULL;
+}
+
+/**
+ * Find a public key on the given token with a specific keyid.
+ *
+ * Used by pkcs11_private_key_t.
+ *
+ * TODO: if no public key is found, we should perhaps search for a certificate
+ * with the given keyid and extract the key from there
+ *
+ * @param p11		PKCS#11 module
+ * @param slot		slot id
+ * @param type		type of the key
+ * @param keyid		key id
+ */
+pkcs11_public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11,
+									int slot, key_type_t type, chunk_t keyid)
+{
+	private_pkcs11_public_key_t *this;
+
+	this = find_key_by_keyid(p11, slot, type, keyid);
+	if (!this)
+	{
+		return NULL;
+	}
+	return &this->public;
+}
