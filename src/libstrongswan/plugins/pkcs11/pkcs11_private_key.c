@@ -103,18 +103,42 @@ METHOD(private_key_t, get_keysize, int,
 /**
  * See header.
  */
-CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme)
+CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
+												 hash_algorithm_t *hash)
 {
 	static struct {
 		signature_scheme_t scheme;
 		CK_MECHANISM mechanism;
+		hash_algorithm_t hash;
 	} mappings[] = {
-		{SIGN_RSA_EMSA_PKCS1_NULL,		{CKM_RSA_PKCS,				NULL, 0}},
-		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,			NULL, 0}},
-		{SIGN_RSA_EMSA_PKCS1_SHA256,	{CKM_SHA256_RSA_PKCS,		NULL, 0}},
-		{SIGN_RSA_EMSA_PKCS1_SHA384,	{CKM_SHA384_RSA_PKCS,		NULL, 0}},
-		{SIGN_RSA_EMSA_PKCS1_SHA512,	{CKM_SHA512_RSA_PKCS,		NULL, 0}},
-		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,			NULL, 0}},
+		{SIGN_RSA_EMSA_PKCS1_NULL,		{CKM_RSA_PKCS,			NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,		NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,		NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_ECDSA_WITH_NULL,			{CKM_ECDSA,				NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_ECDSA_WITH_SHA1_DER,		{CKM_ECDSA_SHA1,		NULL, 0},
+														   HASH_UNKNOWN},
+		{SIGN_ECDSA_WITH_SHA256_DER,	{CKM_ECDSA,				NULL, 0},
+															HASH_SHA256},
+		{SIGN_ECDSA_WITH_SHA384_DER,	{CKM_ECDSA,				NULL, 0},
+															HASH_SHA384},
+		{SIGN_ECDSA_WITH_SHA512_DER,	{CKM_ECDSA,				NULL, 0},
+															HASH_SHA512},
+		{SIGN_ECDSA_256,				{CKM_ECDSA,				NULL, 0},
+															HASH_SHA256},
+		{SIGN_ECDSA_384,				{CKM_ECDSA,				NULL, 0},
+															HASH_SHA384},
+		{SIGN_ECDSA_521,				{CKM_ECDSA,				NULL, 0},
+															HASH_SHA512},
 	};
 	int i;
 
@@ -122,6 +146,10 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme)
 	{
 		if (mappings[i].scheme == scheme)
 		{
+			if (hash)
+			{
+				*hash = mappings[i].hash;
+			}
 			return &mappings[i].mechanism;
 		}
 	}
@@ -198,8 +226,10 @@ METHOD(private_key_t, sign, bool,
 	CK_BYTE_PTR buf;
 	CK_ULONG len;
 	CK_RV rv;
+	hash_algorithm_t hash_alg;
+	chunk_t hash = chunk_empty;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme);
+	mechanism = pkcs11_signature_scheme_to_mech(scheme, &hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -225,10 +255,27 @@ METHOD(private_key_t, sign, bool,
 		DBG1(DBG_LIB, "C_SignInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
+	if (hash_alg != HASH_UNKNOWN)
+	{
+		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		if (!hasher)
+		{
+			this->lib->f->C_CloseSession(session);
+			return FALSE;
+		}
+		hasher->allocate_hash(hasher, data, &hash);
+		hasher->destroy(hasher);
+		data = hash;
+	}
 	len = (get_keysize(this) + 7) / 8;
+	if (this->type == KEY_ECDSA)
+	{	/* signature is twice the length of the base point order */
+		len *= 2;
+	}
 	buf = malloc(len);
 	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	this->lib->f->C_CloseSession(session);
+	chunk_free(&hash);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Sign() failed: %N", ck_rv_names, rv);

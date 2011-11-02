@@ -204,8 +204,10 @@ METHOD(public_key_t, verify, bool,
 	CK_MECHANISM_PTR mechanism;
 	CK_SESSION_HANDLE session;
 	CK_RV rv;
+	hash_algorithm_t hash_alg;
+	chunk_t hash = chunk_empty;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme);
+	mechanism = pkcs11_signature_scheme_to_mech(scheme, &hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -230,8 +232,21 @@ METHOD(public_key_t, verify, bool,
 		DBG1(DBG_LIB, "C_VerifyInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
+	if (hash_alg != HASH_UNKNOWN)
+	{
+		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		if (!hasher)
+		{
+			this->lib->f->C_CloseSession(session);
+			return FALSE;
+		}
+		hasher->allocate_hash(hasher, data, &hash);
+		hasher->destroy(hasher);
+		data = hash;
+	}
 	rv = this->lib->f->C_Verify(session, data.ptr, data.len, sig.ptr, sig.len);
 	this->lib->f->C_CloseSession(session);
+	chunk_free(&hash);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Verify() failed: %N", ck_rv_names, rv);

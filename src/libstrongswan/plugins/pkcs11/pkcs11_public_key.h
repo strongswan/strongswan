@@ -42,7 +42,7 @@ struct pkcs11_public_key_t {
  *
  * @param type		type of the key
  * @param args		builder_part_t argument list
- * @return 			loaded key, NULL on failure
+ * @return			loaded key, NULL on failure
  */
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args);
 
