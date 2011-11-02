@@ -178,35 +178,25 @@ METHOD(public_key_t, encrypt, bool,
 static bool encode_rsa(private_pkcs11_public_key_t *this,
 					cred_encoding_type_t type, void *cache, chunk_t *encoding)
 {
-	CK_RV rv;
+	enumerator_t *enumerator;
 	bool success = FALSE;
-	chunk_t n, e;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_MODULUS, NULL, 0},
 		{CKA_PUBLIC_EXPONENT, NULL, 0},
 	};
 
-	rv = this->lib->f->C_GetAttributeValue(this->session, this->object,
-										   attr, countof(attr));
-	if (rv != CKR_OK ||
-		attr[0].ulValueLen == 0 || attr[0].ulValueLen == -1 ||
-		attr[1].ulValueLen == 0 || attr[1].ulValueLen == -1)
+	enumerator = this->lib->create_object_attr_enumerator(this->lib,
+							this->session, this->object, attr, countof(attr));
+	if (enumerator && enumerator->enumerate(enumerator, NULL) &&
+		attr[0].ulValueLen > 0 && attr[1].ulValueLen > 0)
 	{
-		return FALSE;
-	}
-	attr[0].pValue = malloc(attr[0].ulValueLen);
-	attr[1].pValue = malloc(attr[1].ulValueLen);
-	rv = this->lib->f->C_GetAttributeValue(this->session, this->object,
-										   attr, countof(attr));
-	if (rv == CKR_OK)
-	{
+		chunk_t n, e;
 		n = chunk_create(attr[0].pValue, attr[0].ulValueLen);
 		e = chunk_create(attr[1].pValue, attr[1].ulValueLen);
 		success = lib->encoding->encode(lib->encoding, type, cache, encoding,
 			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
 	}
-	free(attr[0].pValue);
-	free(attr[1].pValue);
+	DESTROY_IF(enumerator);
 	return success;
 }
 
