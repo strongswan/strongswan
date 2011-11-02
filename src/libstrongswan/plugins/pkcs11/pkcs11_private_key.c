@@ -74,12 +74,17 @@ struct private_pkcs11_private_key_t {
 	 * References to this key
 	 */
 	refcount_t ref;
+
+	/**
+	 * Type of this private key
+	 */
+	key_type_t type;
 };
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_pkcs11_private_key_t *this)
 {
-	return this->pubkey->get_type(this->pubkey);
+	return this->type;
 }
 
 METHOD(private_key_t, get_keysize, int,
@@ -422,13 +427,11 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	CK_BBOOL reauth = FALSE;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
-		{CKA_MODULUS, NULL, 0},
-		{CKA_PUBLIC_EXPONENT, NULL, 0},
 		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
 	};
 	enumerator_t *enumerator;
-	chunk_t modulus, pubexp;
 	int count = countof(attr);
+	bool found = FALSE;
 
 	/* do not use CKA_ALWAYS_AUTHENTICATE if not supported */
 	if (!(this->lib->get_features(this->lib) & PKCS11_ALWAYS_AUTH_KEYS))
@@ -439,26 +442,16 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 							this->session, tmpl, countof(tmpl), attr, count);
 	if (enumerator->enumerate(enumerator, &object))
 	{
+		this->type = KEY_RSA;
 		switch (type)
 		{
+			case CKK_ECDSA:
+				this->type = KEY_ECDSA;
+				/* fall-through */
 			case CKK_RSA:
-				if (attr[1].ulValueLen == -1 || attr[2].ulValueLen == -1)
-				{
-					DBG1(DBG_CFG, "reading modulus/exponent from PKCS#1 failed");
-					break;
-				}
-				modulus = chunk_create(attr[1].pValue, attr[1].ulValueLen);
-				pubexp = chunk_create(attr[2].pValue, attr[2].ulValueLen);
-				this->pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-									KEY_RSA, BUILD_RSA_MODULUS, modulus,
-									BUILD_RSA_PUB_EXP, pubexp, BUILD_END);
-				if (!this->pubkey)
-				{
-					DBG1(DBG_CFG, "extracting public key from PKCS#11 RSA "
-						 "private key failed");
-				}
 				this->reauth = reauth;
 				this->object = object;
+				found = TRUE;
 				break;
 			default:
 				DBG1(DBG_CFG, "PKCS#11 key type %d not supported", type);
@@ -466,7 +459,7 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 		}
 	}
 	enumerator->destroy(enumerator);
-	return this->pubkey != NULL;
+	return found;
 }
 
 /**
@@ -615,6 +608,12 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 	}
 
 	if (!find_key(this, keyid))
+	{
+		destroy(this);
+		return NULL;
+	}
+
+	if (!this->pubkey)
 	{
 		destroy(this);
 		return NULL;
