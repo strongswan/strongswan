@@ -162,7 +162,7 @@ METHOD(imv_t, type_supported, bool,
 METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
-	dlclose(this->handle);
+	//dlclose(this->handle);
 	this->mutex->destroy(this->mutex);
 	free(this->supported_types);
 	free(this->name);

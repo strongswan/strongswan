@@ -370,7 +370,7 @@ static void load_aik_blob(private_pts_t *this)
 		fclose(fp);
 		return;
 	}
-	
+
 	DBG1(DBG_PTS, "AIK Blob is not available");
 }
 
@@ -711,7 +711,7 @@ METHOD(pts_t, read_pcr, bool,
 			 result);
 		return FALSE;
 	}
-	
+
 	result = Tspi_Context_Connect(hContext, NULL);
 	if (result != TSS_SUCCESS)
 	{
@@ -728,7 +728,7 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
-	
+
 	*output = pcr_value;
 	*output = chunk_clone(*output);
 
@@ -849,7 +849,7 @@ METHOD(pts_t, quote_tpm, bool,
 	{
 		goto err1;
 	}
-	
+
 	result = Tspi_Context_LoadKeyByBlob (hContext, hSRK, this->aik_blob.len,
 										 this->aik_blob.ptr, &hAIK);
 	if (result != TSS_SUCCESS)
@@ -884,7 +884,7 @@ METHOD(pts_t, quote_tpm, bool,
 	valData.ulExternalDataLength = this->secret.len;
 	valData.rgbExternalData = (BYTE *)this->secret.ptr;
 
-	
+
 	/* TPM Quote */
 	result = Tspi_TPM_Quote(hTPM, hAIK, hPcrComposite, &valData);
 	if (result != TSS_SUCCESS)
@@ -898,7 +898,7 @@ METHOD(pts_t, quote_tpm, bool,
 	*pcr_composite = pcr_comp;
 	*pcr_composite = chunk_clone(*pcr_composite);
 	DBG3(DBG_PTS, "Hash of PCR Composite: %B",pcr_composite);
-	
+
 	quote_sign = chunk_alloc(valData.ulValidationDataLength);
 	memcpy(quote_sign.ptr, valData.rgbValidationData,
 							  valData.ulValidationDataLength);
@@ -923,7 +923,7 @@ METHOD(pts_t, quote_tpm, bool,
 
 	err2:
 	Tspi_Context_CloseObject(hContext, hAIK);
-	
+
 	err1:
 	Tspi_Context_Close(hContext);
 	free(pcrs);
@@ -950,7 +950,7 @@ METHOD(pts_t, add_pcr_entry, void,
 {
 	enumerator_t *e;
 	pcr_entry_t *entry;
-	
+
 	if (!this->pcrs)
 	{
 		this->pcrs = linked_list_create();
@@ -969,7 +969,7 @@ METHOD(pts_t, add_pcr_entry, void,
 		}
 	}
 	DESTROY_IF(e);
-	
+
 	this->pcrs->insert_last(this->pcrs, new);
 
 	qsort(this->pcrs, this->pcrs->get_count(this->pcrs),
@@ -1051,7 +1051,7 @@ METHOD(pts_t, get_quote_info, bool,
 	}
 	free(pcr_entry);
 	e->destroy(e);
-	
+
 	/* PCR Composite structure */
 	pcr_composite = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -1073,7 +1073,7 @@ METHOD(pts_t, get_quote_info, bool,
 	if (composite_algo)
 	{
 		hash_algorithm_t algo;
-		
+
 		algo = pts_meas_algo_to_hash(composite_algo);
 		hasher = lib->crypto->create_hasher(lib->crypto, algo);
 
@@ -1087,16 +1087,16 @@ METHOD(pts_t, get_quote_info, bool,
 		*out_pcr_composite = chunk_clone(pcr_composite);
 		DBG4(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
 	}
-	
+
 	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
 	hasher->destroy(hasher);
-	
+
 	writer->write_data(writer, hash_pcr_composite);
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
-	
+
 	if (!this->secret.ptr)
 	{
 		DBG1(DBG_PTS, "Secret assessment value unavailable",
@@ -1111,7 +1111,7 @@ METHOD(pts_t, get_quote_info, bool,
 	*out_quote_info = chunk_clone(writer->get_buf(writer));
 	DBG4(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
 	writer->destroy(writer);
-	
+
 	return TRUE;
 }
 
@@ -1119,7 +1119,6 @@ METHOD(pts_t, verify_quote_signature, bool,
 				private_pts_t *this, chunk_t data, chunk_t signature)
 {
 	public_key_t *aik_pub_key;
-	chunk_t key_encoding;
 
 	aik_pub_key = this->aik->get_public_key(this->aik);
 	if (!aik_pub_key)
@@ -1134,7 +1133,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 		DESTROY_IF(aik_pub_key);
 		return FALSE;
 	}
-	
+
 	aik_pub_key->destroy(aik_pub_key);
 	return TRUE;
 }
@@ -1294,7 +1293,7 @@ static bool has_tpm(private_pts_t *this)
 		goto err;
 	}
 	this->tpm_version_info = chunk_clone(this->tpm_version_info);
-	
+
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
 	return TRUE;
