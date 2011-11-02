@@ -249,6 +249,7 @@ static bool generate_key_pair_ecp(private_pkcs11_dh_t *this,
 	CK_ATTRIBUTE pri_attr[] = {
 		{ CKA_DERIVE, &ck_true, sizeof(ck_true) },
 	};
+	chunk_t pub_key;
 	if (!generate_key_pair(this, pub_attr, countof(pub_attr), pri_attr,
 						   countof(pri_attr), CKA_EC_POINT))
 	{
@@ -260,7 +261,9 @@ static bool generate_key_pair_ecp(private_pkcs11_dh_t *this,
 		chunk_clear(&this->pub_key);
 		return FALSE;
 	}
-	this->pub_key = chunk_skip(this->pub_key, 1);
+	pub_key = chunk_clone(chunk_skip(this->pub_key, 1));
+	chunk_clear(&this->pub_key);
+	this->pub_key = pub_key;
 	return TRUE;
 }
 
