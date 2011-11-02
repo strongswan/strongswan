@@ -207,7 +207,8 @@ METHOD(public_key_t, verify, bool,
 	hash_algorithm_t hash_alg;
 	chunk_t hash = chunk_empty;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, &hash_alg);
+	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k,
+												&hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
