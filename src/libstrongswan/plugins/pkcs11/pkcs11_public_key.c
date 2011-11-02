@@ -192,6 +192,10 @@ static bool encode_rsa(private_pkcs11_public_key_t *this,
 	{
 		chunk_t n, e;
 		n = chunk_create(attr[0].pValue, attr[0].ulValueLen);
+		if (n.ptr[0] & 0x80)
+		{	/* add leading 0x00, encoders expect it already like this */
+			n = chunk_cata("cc", chunk_from_chars(0x00), n);
+		}
 		e = chunk_create(attr[1].pValue, attr[1].ulValueLen);
 		success = lib->encoding->encode(lib->encoding, type, cache, encoding,
 			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
