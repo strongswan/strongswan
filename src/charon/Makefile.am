@@ -18,6 +18,10 @@ charon_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	-lm $(PTHREADLIB) $(DLLIB)
 
+if USE_TLS
+  charon_LDADD += $(top_builddir)/src/libtls/libtls.la
+endif
+
 if USE_LIBTNCCS
   charon_LDADD += $(top_builddir)/src/libtnccs/libtnccs.la
 endif
