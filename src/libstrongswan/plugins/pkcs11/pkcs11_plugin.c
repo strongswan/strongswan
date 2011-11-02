@@ -219,6 +219,11 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_384_BIT),
 			PLUGIN_PROVIDE(DH, ECP_521_BIT),
 	};
+	static plugin_feature_t f_ecdsa[] = {
+		/* *_connect is already registered for KEY_ANY */
+		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
+	};
 	static plugin_feature_t f_manager[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)handle_certs, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "pkcs11-certs"),
@@ -226,7 +231,7 @@ METHOD(plugin_t, get_features, int,
 	};
 	static plugin_feature_t f[countof(f_hash) + countof(f_dh) + countof(f_rng) +
 							  countof(f_key) + countof(f_ecdh) +
-							  countof(f_manager)] = {};
+							  countof(f_ecdsa) + countof(f_manager)] = {};
 	static int count = 0;
 
 	if (!count)
@@ -253,6 +258,10 @@ METHOD(plugin_t, get_features, int,
 			{
 				add_features(f, f_ecdh, countof(f_ecdh), &count);
 			}
+		}
+		if (use_ecc)
+		{
+			add_features(f, f_ecdsa, countof(f_ecdsa), &count);
 		}
 	}
 	*features = f;
