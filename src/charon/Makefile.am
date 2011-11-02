@@ -18,5 +18,9 @@ charon_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	-lm $(PTHREADLIB) $(DLLIB)
 
+if USE_LIBTNCCS
+  charon_LDADD += $(top_builddir)/src/libtnccs/libtnccs.la
+endif
+
 EXTRA_DIST = Android.mk
 

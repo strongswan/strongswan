@@ -18,6 +18,8 @@
 
 #include <tnc/tnc.h>
 
+#include <debug.h>
+
 typedef struct private_tnc_tnccs_plugin_t private_tnc_tnccs_plugin_t;
 
 /**
@@ -63,6 +65,21 @@ METHOD(plugin_t, destroy, void,
 plugin_t *tnc_tnccs_plugin_create(void)
 {
 	private_tnc_tnccs_plugin_t *this;
+
+	if (lib->integrity)
+	{
+		if (lib->integrity->check(lib->integrity, "libtnccs", libtnccs_init))
+		{
+			DBG1(DBG_LIB,
+				 "lib    'libtnccs': passed file and segment integrity tests");
+		}
+		else
+		{
+			DBG1(DBG_LIB,
+				 "lib    'libtnccs': failed integrity tests");
+			return NULL;
+		}
+	}
 
 	INIT(this,
 		.public = {

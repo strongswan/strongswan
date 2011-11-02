@@ -12,8 +12,7 @@ noinst_LTLIBRARIES = libstrongswan-tnccs-20.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-20.la
 libstrongswan_tnccs_20_la_LIBADD = \
-	$(top_builddir)/src/libtncif/libtncif.la \
-	$(top_builddir)/src/libtnccs/libtnccs.la
+	$(top_builddir)/src/libtncif/libtncif.la
 endif
 
 libstrongswan_tnccs_20_la_SOURCES = \

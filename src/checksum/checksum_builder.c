@@ -23,6 +23,10 @@
 #include <daemon.h>
 #include <utils/enumerator.h>
 
+#ifdef HAS_TNC
+#include <tnc/tnc.h>
+#endif
+
 /* we need to fake the pluto symbol to dlopen() the xauth plugin */
 void *pluto;
 
@@ -132,6 +136,11 @@ int main(int argc, char* argv[])
 	/* forces link against libhydra/libcharon */
 	hydra = NULL;
 	charon = NULL;
+
+#ifdef HAS_TNC
+	/* forces link against libtnccs */
+	tnc = NULL;
+#endif
 
 	/* avoid confusing leak reports in build process */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 0);

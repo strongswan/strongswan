@@ -13,9 +13,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-tnc.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-tnc.la
-libstrongswan_eap_tnc_la_LIBADD = \
-	$(top_builddir)/src/libtls/libtls.la \
-	$(top_builddir)/src/libtnccs/libtnccs.la
 endif
 
 libstrongswan_eap_tnc_la_SOURCES = \

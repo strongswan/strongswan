@@ -13,8 +13,7 @@ noinst_LTLIBRARIES = libstrongswan-tnc-imv.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnc-imv.la
 libstrongswan_tnc_imv_la_LIBADD = \
-	$(top_builddir)/src/libtncif/libtncif.la \
-	$(top_builddir)/src/libtnccs/libtnccs.la
+	$(top_builddir)/src/libtncif/libtncif.la
 endif
 
 libstrongswan_tnc_imv_la_SOURCES = \
