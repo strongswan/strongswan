@@ -353,8 +353,10 @@ static pkcs11_dh_t *create_ecp(diffie_hellman_group_t group, chunk_t ecparam)
 	{
 		if (generate_key_pair_ecp(this, ecparam))
 		{
+			chunk_free(&ecparam);
 			return &this->public;
 		}
+		chunk_free(&ecparam);
 		free(this);
 	}
 	return NULL;
