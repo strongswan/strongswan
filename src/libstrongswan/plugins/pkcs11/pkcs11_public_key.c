@@ -22,6 +22,9 @@
 #include "pkcs11_private_key.h"
 #include "pkcs11_manager.h"
 
+#include <asn1/oid.h>
+#include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <debug.h>
 
 typedef struct private_pkcs11_public_key_t private_pkcs11_public_key_t;
@@ -71,6 +74,116 @@ struct private_pkcs11_public_key_t {
 	 */
 	refcount_t ref;
 };
+
+/**
+ * Helper function that returns the base point order length in bits of the
+ * given named curve.
+ *
+ * Currently only a subset of defined curves is supported (namely the 5 curves
+ * over Fp recommended by NIST). IKEv2 only supports 3 out of these.
+ *
+ * 0 is returned if the given curve is not supported.
+ */
+static size_t basepoint_order_len(int oid)
+{
+	switch (oid)
+	{
+		case OID_PRIME192V1:
+			return 192;
+		case OID_SECT224R1:
+			return 224;
+		case OID_PRIME256V1:
+			return 256;
+		case OID_SECT384R1:
+			return 384;
+		case OID_SECT521R1:
+			return 521;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Parses the given ecParameters (ASN.1) and returns the key length.
+ */
+static bool keylen_from_ecparams(chunk_t ecparams, size_t *keylen)
+{
+	if (!asn1_parse_simple_object(&ecparams, ASN1_OID, 0, "named curve"))
+	{
+		return FALSE;
+	}
+	*keylen = basepoint_order_len(asn1_known_oid(ecparams));
+	return *keylen > 0;
+}
+
+/**
+ * ASN.1 definition of a subjectPublicKeyInfo structure when used with ECDSA
+ * we currently only support named curves.
+ */
+static const asn1Object_t pkinfoObjects[] = {
+	{ 0, "subjectPublicKeyInfo",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
+	{ 1,   "algorithmIdentifier",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 1 */
+	{ 2,     "algorithm",			ASN1_OID,			ASN1_BODY	}, /* 2 */
+	{ 2,     "namedCurve",			ASN1_OID,			ASN1_RAW	}, /* 3 */
+	{ 1,   "subjectPublicKey",		ASN1_BIT_STRING,	ASN1_BODY	}, /* 4 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT	}
+};
+#define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM		2
+#define PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE	3
+#define PKINFO_SUBJECT_PUBLIC_KEY				4
+
+/**
+ * Extract the DER encoded Parameters and ECPoint from the given DER encoded
+ * subjectPublicKeyInfo.
+ */
+static bool parse_ecdsa_public_key(chunk_t blob, chunk_t *ecparams,
+								   chunk_t *ecpoint, size_t *keylen)
+{
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+	bool success = FALSE;
+
+	parser = asn1_parser_create(pkinfoObjects, blob);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
+			{
+				if (asn1_known_oid(object) != OID_EC_PUBLICKEY)
+				{
+					goto end;
+				}
+				break;
+			}
+			case PKINFO_SUBJECT_PUBLIC_KEY_NAMEDCURVE:
+			{
+				*ecparams = object;
+				if (!keylen_from_ecparams(object, keylen))
+				{
+					goto end;
+				}
+				break;
+			}
+			case PKINFO_SUBJECT_PUBLIC_KEY:
+			{
+				if (object.len > 0 && *object.ptr == 0x00)
+				{	/* skip initial bit string octet defining 0 unused bits */
+					object = chunk_skip(object, 1);
+				}
+				*ecpoint = object;
+				break;
+			}
+		}
+	}
+	success = parser->success(parser);
+end:
+	parser->destroy(parser);
+	return success;
+}
+
 
 METHOD(public_key_t, get_type, key_type_t,
 	private_pkcs11_public_key_t *this)
@@ -352,6 +465,24 @@ static private_pkcs11_public_key_t* find_rsa_key(chunk_t n, chunk_t e,
 }
 
 /**
+ * Find an ECDSA key object
+ */
+static private_pkcs11_public_key_t* find_ecdsa_key(chunk_t ecparams,
+												   chunk_t ecpoint,
+												   size_t keylen)
+{
+	CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+	CK_KEY_TYPE type = CKK_ECDSA;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_EC_PARAMS, ecparams.ptr, ecparams.len},
+		{CKA_EC_POINT, ecpoint.ptr, ecpoint.len},
+	};
+	return find_key(KEY_ECDSA, keylen, tmpl, countof(tmpl));
+}
+
+/**
  * Create a key object in a suitable token session
  */
 static private_pkcs11_public_key_t* create_key(key_type_t type, size_t keylen,
@@ -461,19 +592,45 @@ static private_pkcs11_public_key_t* create_rsa_key(chunk_t n, chunk_t e,
 }
 
 /**
+ * Create an ECDSA key object in a suitable token session
+ */
+static private_pkcs11_public_key_t* create_ecdsa_key(chunk_t ecparams,
+													 chunk_t ecpoint,
+													 size_t keylen)
+{
+	CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+	CK_KEY_TYPE type = CKK_ECDSA;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_EC_PARAMS, ecparams.ptr, ecparams.len},
+		{CKA_EC_POINT, ecpoint.ptr, ecpoint.len},
+	};
+	CK_MECHANISM_TYPE mechs[] = {
+		CKM_ECDSA,
+		CKM_ECDSA_SHA1,
+	};
+	return create_key(KEY_ECDSA, keylen, mechs,
+					  countof(mechs), tmpl, countof(tmpl));
+}
+
+/**
  * See header
  */
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 {
 	private_pkcs11_public_key_t *this;
-	chunk_t n, e;
+	chunk_t n, e, blob;
 	size_t keylen;
 
-	n = e = chunk_empty;
+	n = e = blob = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
 			case BUILD_RSA_MODULUS:
 				n = va_arg(args, chunk_t);
 				continue;
@@ -503,6 +660,24 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 		if (this)
 		{
 			return &this->public;
+		}
+	}
+	else if (type == KEY_ECDSA && blob.ptr)
+	{
+		chunk_t ecparams, ecpoint;
+		ecparams = ecpoint = chunk_empty;
+		if (parse_ecdsa_public_key(blob, &ecparams, &ecpoint, &keylen))
+		{
+			this = find_ecdsa_key(ecparams, ecpoint, keylen);
+			if (this)
+			{
+				return &this->public;
+			}
+			this = create_ecdsa_key(ecparams, ecpoint, keylen);
+			if (this)
+			{
+				return &this->public;
+			}
 		}
 	}
 	return NULL;
