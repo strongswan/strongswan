@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -20,7 +23,6 @@
 #include "pkcs11_manager.h"
 
 #include <debug.h>
-#include <threading/mutex.h>
 
 typedef struct private_pkcs11_public_key_t private_pkcs11_public_key_t;
 
@@ -65,11 +67,6 @@ struct private_pkcs11_public_key_t {
 	CK_OBJECT_HANDLE object;
 
 	/**
-	 * Mutex to lock session
-	 */
-	mutex_t *mutex;
-
-	/**
 	 * References to this key
 	 */
 	refcount_t ref;
@@ -92,6 +89,7 @@ METHOD(public_key_t, verify, bool,
 	chunk_t data, chunk_t sig)
 {
 	CK_MECHANISM_PTR mechanism;
+	CK_SESSION_HANDLE session;
 	CK_RV rv;
 
 	mechanism = pkcs11_signature_scheme_to_mech(scheme);
@@ -105,17 +103,22 @@ METHOD(public_key_t, verify, bool,
 	{	/* trim leading zero byte in sig */
 		sig = chunk_skip(sig, 1);
 	}
-	this->mutex->lock(this->mutex);
-	rv = this->lib->f->C_VerifyInit(this->session, mechanism, this->object);
+	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,
+									 &session);
 	if (rv != CKR_OK)
 	{
-		this->mutex->unlock(this->mutex);
+		DBG1(DBG_CFG, "opening PKCS#11 session failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	rv = this->lib->f->C_VerifyInit(session, mechanism, this->object);
+	if (rv != CKR_OK)
+	{
+		this->lib->f->C_CloseSession(session);
 		DBG1(DBG_LIB, "C_VerifyInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
-	rv = this->lib->f->C_Verify(this->session, data.ptr, data.len,
-								sig.ptr, sig.len);
-	this->mutex->unlock(this->mutex);
+	rv = this->lib->f->C_Verify(session, data.ptr, data.len, sig.ptr, sig.len);
+	this->lib->f->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Verify() failed: %N", ck_rv_names, rv);
@@ -129,6 +132,7 @@ METHOD(public_key_t, encrypt, bool,
 	chunk_t plain, chunk_t *crypt)
 {
 	CK_MECHANISM_PTR mechanism;
+	CK_SESSION_HANDLE session;
 	CK_BYTE_PTR buf;
 	CK_ULONG len;
 	CK_RV rv;
@@ -140,18 +144,24 @@ METHOD(public_key_t, encrypt, bool,
 			 encryption_scheme_names, scheme);
 		return FALSE;
 	}
-	this->mutex->lock(this->mutex);
-	rv = this->lib->f->C_EncryptInit(this->session, mechanism, this->object);
+	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,
+									 &session);
 	if (rv != CKR_OK)
 	{
-		this->mutex->unlock(this->mutex);
+		DBG1(DBG_CFG, "opening PKCS#11 session failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	rv = this->lib->f->C_EncryptInit(session, mechanism, this->object);
+	if (rv != CKR_OK)
+	{
+		this->lib->f->C_CloseSession(session);
 		DBG1(DBG_LIB, "C_EncryptInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
 	len = (get_keysize(this) + 7) / 8;
 	buf = malloc(len);
-	rv = this->lib->f->C_Encrypt(this->session, plain.ptr, plain.len, buf, &len);
-	this->mutex->unlock(this->mutex);
+	rv = this->lib->f->C_Encrypt(session, plain.ptr, plain.len, buf, &len);
+	this->lib->f->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Encrypt() failed: %N", ck_rv_names, rv);
@@ -243,7 +253,6 @@ METHOD(public_key_t, destroy, void,
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
 		this->lib->f->C_CloseSession(this->session);
-		this->mutex->destroy(this->mutex);
 		free(this);
 	}
 }
@@ -278,7 +287,6 @@ static private_pkcs11_public_key_t *create(key_type_t type, size_t k,
 		.slot = slot,
 		.session = session,
 		.object = object,
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ref = 1,
 	);
 

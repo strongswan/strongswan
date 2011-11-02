@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -19,7 +22,6 @@
 #include "pkcs11_manager.h"
 
 #include <debug.h>
-#include <threading/mutex.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 
@@ -39,14 +41,14 @@ struct private_pkcs11_private_key_t {
 	pkcs11_library_t *lib;
 
 	/**
+	 * Slot the token is in
+	 */
+	CK_SLOT_ID slot;
+
+	/**
 	 * Token session
 	 */
 	CK_SESSION_HANDLE session;
-
-	/**
-	 * Mutex to lock session
-	 */
-	mutex_t *mutex;
 
 	/**
 	 * Key object on the token
@@ -141,7 +143,8 @@ CK_MECHANISM_PTR pkcs11_encryption_scheme_to_mech(encryption_scheme_t scheme)
 /**
  * Reauthenticate to do a signature
  */
-static bool reauth(private_pkcs11_private_key_t *this)
+static bool reauth(private_pkcs11_private_key_t *this,
+				   CK_SESSION_HANDLE session)
 {
 	enumerator_t *enumerator;
 	shared_key_t *shared;
@@ -155,7 +158,7 @@ static bool reauth(private_pkcs11_private_key_t *this)
 	{
 		found = TRUE;
 		pin = shared->get_key(shared);
-		rv = this->lib->f->C_Login(this->session, CKU_CONTEXT_SPECIFIC,
+		rv = this->lib->f->C_Login(session, CKU_CONTEXT_SPECIFIC,
 								   pin.ptr, pin.len);
 		if (rv == CKR_OK)
 		{
@@ -179,6 +182,7 @@ METHOD(private_key_t, sign, bool,
 	chunk_t data, chunk_t *signature)
 {
 	CK_MECHANISM_PTR mechanism;
+	CK_SESSION_HANDLE session;
 	CK_BYTE_PTR buf;
 	CK_ULONG len;
 	CK_RV rv;
@@ -190,22 +194,29 @@ METHOD(private_key_t, sign, bool,
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
-	this->mutex->lock(this->mutex);
-	rv = this->lib->f->C_SignInit(this->session, mechanism, this->object);
-	if (this->reauth && !reauth(this))
+	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,
+									 &session);
+	if (rv != CKR_OK)
 	{
+		DBG1(DBG_CFG, "opening PKCS#11 session failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	rv = this->lib->f->C_SignInit(session, mechanism, this->object);
+	if (this->reauth && !reauth(this, session))
+	{
+		this->lib->f->C_CloseSession(session);
 		return FALSE;
 	}
 	if (rv != CKR_OK)
 	{
-		this->mutex->unlock(this->mutex);
+		this->lib->f->C_CloseSession(session);
 		DBG1(DBG_LIB, "C_SignInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
 	len = (get_keysize(this) + 7) / 8;
 	buf = malloc(len);
-	rv = this->lib->f->C_Sign(this->session, data.ptr, data.len, buf, &len);
-	this->mutex->unlock(this->mutex);
+	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
+	this->lib->f->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Sign() failed: %N", ck_rv_names, rv);
@@ -221,6 +232,7 @@ METHOD(private_key_t, decrypt, bool,
 	chunk_t crypt, chunk_t *plain)
 {
 	CK_MECHANISM_PTR mechanism;
+	CK_SESSION_HANDLE session;
 	CK_BYTE_PTR buf;
 	CK_ULONG len;
 	CK_RV rv;
@@ -232,22 +244,29 @@ METHOD(private_key_t, decrypt, bool,
 			 encryption_scheme_names, scheme);
 		return FALSE;
 	}
-	this->mutex->lock(this->mutex);
-	rv = this->lib->f->C_DecryptInit(this->session, mechanism, this->object);
-	if (this->reauth && !reauth(this))
+	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,
+									 &session);
+	if (rv != CKR_OK)
 	{
+		DBG1(DBG_CFG, "opening PKCS#11 session failed: %N", ck_rv_names, rv);
+		return FALSE;
+	}
+	rv = this->lib->f->C_DecryptInit(session, mechanism, this->object);
+	if (this->reauth && !reauth(this, session))
+	{
+		this->lib->f->C_CloseSession(session);
 		return FALSE;
 	}
 	if (rv != CKR_OK)
 	{
-		this->mutex->unlock(this->mutex);
+		this->lib->f->C_CloseSession(session);
 		DBG1(DBG_LIB, "C_DecryptInit() failed: %N", ck_rv_names, rv);
 		return FALSE;
 	}
 	len = (get_keysize(this) + 7) / 8;
 	buf = malloc(len);
-	rv = this->lib->f->C_Decrypt(this->session, crypt.ptr, crypt.len, buf, &len);
-	this->mutex->unlock(this->mutex);
+	rv = this->lib->f->C_Decrypt(session, crypt.ptr, crypt.len, buf, &len);
+	this->lib->f->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Decrypt() failed: %N", ck_rv_names, rv);
@@ -294,7 +313,6 @@ METHOD(private_key_t, destroy, void,
 		{
 			this->pubkey->destroy(this->pubkey);
 		}
-		this->mutex->destroy(this->mutex);
 		this->keyid->destroy(this->keyid);
 		this->lib->f->C_CloseSession(this->session);
 		free(this);
@@ -587,7 +605,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->slot = slot;
 	this->keyid = identification_create_from_encoding(ID_KEY_ID, keyid);
 
 	if (!login(this, slot))
