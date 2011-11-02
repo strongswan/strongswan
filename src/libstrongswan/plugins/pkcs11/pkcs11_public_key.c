@@ -42,7 +42,7 @@ struct private_pkcs11_public_key_t {
 	key_type_t type;
 
 	/**
-	 * Key size in bytes
+	 * Key size in bits
 	 */
 	size_t k;
 
@@ -81,7 +81,7 @@ METHOD(public_key_t, get_type, key_type_t,
 METHOD(public_key_t, get_keysize, int,
 	private_pkcs11_public_key_t *this)
 {
-	return this->k * 8;
+	return this->k;
 }
 
 METHOD(public_key_t, verify, bool,
@@ -276,7 +276,7 @@ static private_pkcs11_public_key_t *create(key_type_t type, size_t k,
 			},
 		},
 		.type = type,
-		.k = k,
+		.k = k * 8,
 		.lib = p11,
 		.slot = slot,
 		.session = session,
