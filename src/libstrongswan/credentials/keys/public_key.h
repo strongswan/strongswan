@@ -60,8 +60,6 @@ extern enum_name_t *key_type_names;
 enum signature_scheme_t {
 	/** Unknown signature scheme                                       */
 	SIGN_UNKNOWN,
-	/** Generic PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-1  */
-	SIGN_RSA_SHA1,
 	/** EMSA-PKCS1_v1.5 signature over digest without digestInfo       */
 	SIGN_RSA_EMSA_PKCS1_NULL,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and MD5       */
