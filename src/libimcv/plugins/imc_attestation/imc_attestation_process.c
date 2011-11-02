@@ -43,7 +43,106 @@
 #include <debug.h>
 
 #define DEFAULT_NONCE_LEN		20
-#define EXTEND_PCR				16
+
+/**
+ * Set parameters of Simple Component Evidence
+ */
+static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
+								tcg_pts_attr_simple_comp_evid_params_t *out)
+{
+	tcg_pts_attr_simple_comp_evid_params_t params;
+	pts_qualifier_t qualifier;
+	time_t measurement_time_t;
+	struct tm *time_now;
+	char *utc_time;
+
+	params.name = name;
+	params.pcr_info_included = TRUE;
+	params.flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
+	params.depth = 0;
+	params.vendor_id = PEN_ITA;
+
+	qualifier.kernel = FALSE;
+	qualifier.sub_component = FALSE;
+	qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
+	params.qualifier = qualifier;
+	/* The measurements done by tboot and trustedGRUB are SHA1 hashes */
+	params.hash_algorithm = TRUSTED_HASH_ALGO;
+	params.transformation = PTS_PCR_TRANSFORM_NO;
+
+	measurement_time_t = time(NULL);
+	if (!measurement_time_t)
+	{
+		params.measurement_time = chunk_create("0000-00-00T00:00:00Z", 20);
+		params.measurement_time = chunk_clone(params.measurement_time);
+	}
+	else
+	{
+		time_now = localtime(&measurement_time_t);
+		if (asprintf(&utc_time,
+			"%d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2dZ",
+			time_now->tm_year + 1900,
+			time_now->tm_mon + 1,
+			time_now->tm_mday,
+			time_now->tm_hour,
+			time_now->tm_min,
+			time_now->tm_sec) < 0)
+		{
+			DBG1(DBG_IMC, "could not format local time to UTC");
+			return FALSE;
+		}
+		params.measurement_time = chunk_create(utc_time, 20);
+		params.measurement_time = chunk_clone(params.measurement_time);
+		free(utc_time);
+	}
+	params.policy_uri = chunk_empty;
+	params.measurement = chunk_empty;
+	
+	params.pcr_before = chunk_alloc(PCR_LEN);
+	memset(params.pcr_before.ptr, 0, PCR_LEN);
+	
+	/* Set extended PCR, which varies from component to component */
+	if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY)
+	{
+		params.extended_pcr = PCR_TBOOT_POLICY;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE)
+	{
+		params.extended_pcr = PCR_TBOOT_MLE;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_MBR_STAGE1)
+	{
+		params.extended_pcr = PCR_TGRUB_MBR_STAGE1;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART1)
+	{
+		params.extended_pcr = PCR_TGRUB_STAGE2_PART1;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART2)
+	{
+		params.extended_pcr = PCR_TGRUB_STAGE2_PART2;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_CMD_LINE_ARGS)
+	{
+		params.extended_pcr = PCR_TGRUB_CMD_LINE_ARGS;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_CHECKFILE)
+	{
+		params.extended_pcr = PCR_TGRUB_CHECKFILE;
+	}
+	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_LOADED_FILES)
+	{
+		params.extended_pcr = PCR_TGRUB_LOADED_FILES;
+	}
+	else
+	{
+		DBG1(DBG_IMC, "unsupported Functional Component Name: %d", params.name);
+		return FALSE;
+	}
+	
+	*out = params;
+	return TRUE;
+}
 
 bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 imc_attestation_state_t *attestation_state,
@@ -219,7 +318,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			u_int32_t comp_name_vendor_id;
 			u_int8_t family;
 			pts_qualifier_t qualifier;
-			pts_funct_comp_name_t name;
+			pts_ita_funct_comp_name_t name;
 
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
@@ -259,21 +358,21 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 
 			sub_comp_depth = attr_cast->get_sub_component_depth(attr_cast);
-			/* TODO: Implement checking of components with its sub-components */
 			if (sub_comp_depth != 0)
 			{
 				DBG1(DBG_IMC, "current version of Attestation IMC does not "
 							  "support sub component measurement deeper than "
 							  "zero. Measuring top level component only.");
+				return FALSE;
 			}
 
 			comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(
 																	attr_cast);
-			if (comp_name_vendor_id != PEN_TCG)
+			if (comp_name_vendor_id != PEN_ITA)
 			{
 				DBG1(DBG_IMC, "current version of Attestation IMC supports"
-							  "only functional component namings by TCG ");
-				break;
+						"only functional component namings by ITA");
+				return FALSE;
 			}
 
 			family = attr_cast->get_family(attr_cast);
@@ -289,152 +388,51 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			/* Check if Unknown or Wildcard was set for qualifier */
 			if (qualifier.kernel && qualifier.sub_component &&
-			   (qualifier.type & PTS_FUNC_COMP_TYPE_ALL))
+			   (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_ALL))
 			{
 				DBG2(DBG_IMC, "wildcard was set for the qualifier of functional"
 					" component. Identifying the component with "
 					"name binary enumeration");
 			}
 			else if (!qualifier.kernel && !qualifier.sub_component &&
-					(qualifier.type & PTS_FUNC_COMP_TYPE_UNKNOWN))
+					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_UNKNOWN))
 			{
 				DBG2(DBG_IMC, "unknown was set for the qualifier of functional"
 					" component. Identifying the component with "
 					"name binary enumeration");
 			}
+			else if (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_TRUSTED)
+			{
+				tcg_pts_attr_simple_comp_evid_params_t params;
+
+				/* Set parameters of Simple Component Evidence */
+				name = attr_cast->get_comp_funct_name(attr_cast);
+				if (!set_simple_comp_evid_params(name, &params))
+				{
+					DBG1(DBG_IMC, "error occured while setting parameters"
+								  "for Simple Component Evidence");
+					return FALSE;
+				}
+				
+				if (!pts->read_pcr(pts, params.extended_pcr, &params.pcr_after))
+				{
+					DBG1(DBG_IMC, "error occured while reading PCR: %d",
+						 params.extended_pcr);
+					return FALSE;
+				}
+				
+				/* Buffer Simple Component Evidence attribute */
+				attr = tcg_pts_attr_simple_comp_evid_create(params);
+				evidences->insert_last(evidences, attr);
+				break;
+			}
 			else
 			{
-				/* TODO: Implement what todo with received qualifier */
+				DBG1(DBG_IMC, "Functional Component with unsupported type: %d"
+					"was requested for evidence", qualifier.type);
+				break;
 			}
 
-			name = attr_cast->get_comp_funct_name(attr_cast);
-			switch (name)
-			{
-				case PTS_FUNC_COMP_NAME_BIOS:
-				{
-					tcg_pts_attr_simple_comp_evid_params_t params;
-					pts_qualifier_t qualifier;
-					time_t measurement_time_t;
-					struct tm *time_now;
-					char *utc_time;
-					hasher_t *hasher;
-					u_char hash_output[HASH_SIZE_SHA384];
-					hash_algorithm_t hash_alg;
-
-					/* TODO: Implement BIOS measurement */
-					DBG1(DBG_IMC, "experimental implementation:"
-								 " Extend TPM with etc/tnc_config file");
-					params.pcr_info_included = TRUE;
-					params.flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
-					params.depth = 0;
-					params.vendor_id = PEN_TCG;
-							
-					qualifier.kernel = FALSE;
-					qualifier.sub_component = FALSE;
-					qualifier.type = PTS_FUNC_COMP_TYPE_TNC;
-					params.qualifier = qualifier;
-							
-					params.name = PTS_FUNC_COMP_NAME_BIOS;
-					params.extended_pcr = EXTEND_PCR;
-					params.hash_algorithm = pts->get_meas_algorithm(pts);
-
-					if (!params.pcr_info_included)
-					{
-						params.transformation = PTS_PCR_TRANSFORM_NO;
-					}
-					else if (pts->get_meas_algorithm(pts) & PTS_MEAS_ALGO_SHA1)
-					{
-						params.transformation = PTS_PCR_TRANSFORM_MATCH;
-					}
-					else if (pts->get_meas_algorithm(pts) & PTS_MEAS_ALGO_SHA256)
-					{
-						params.transformation = PTS_PCR_TRANSFORM_LONG;
-					}
-							
-					/* Create a hasher */
-					hash_alg = pts_meas_algo_to_hash(pts->get_meas_algorithm(pts));
-					hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-					if (!hasher)
-					{
-						DBG1(DBG_IMC, "  hasher %N not available",
-							 hash_algorithm_names, hash_alg);
-						return FALSE;
-					}
-
-					if (!pts->hash_file(pts, hasher, "/etc/tnc_config",
-						hash_output))
-					{
-						hasher->destroy(hasher);
-						return FALSE;
-					}
-						
-					measurement_time_t = time(NULL);
-					if (!measurement_time_t)
-					{
-						params.measurement_time = chunk_create(
-							"0000-00-00T00:00:00Z", 20);
-					}
-					else
-					{
-						time_now = localtime(&measurement_time_t);
-						if (asprintf(&utc_time,
-								"%d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2dZ",
-								time_now->tm_year + 1900,
-								time_now->tm_mon + 1,
-								time_now->tm_mday,
-								time_now->tm_hour,
-								time_now->tm_min,
-								time_now->tm_sec) < 0)
-						{
-							DBG1(DBG_IMC, "could not format local time to UTC");
-							hasher->destroy(hasher);
-							return FALSE;
-						}
-						params.measurement_time = chunk_create(utc_time, 20);
-						params.measurement_time = chunk_clone(
-							params.measurement_time);
-						free(utc_time);
-						
-					}
-						
-					params.measurement = chunk_create(hash_output,
-											hasher->get_hash_size(hasher));
-					hasher->destroy(hasher);
-							
-					params.policy_uri = chunk_empty;
-					if (!pts->read_pcr(pts, EXTEND_PCR, &params.pcr_before))
-					{
-						DBG1(DBG_IMC, "error occured while reading PCR: %d",
-							 EXTEND_PCR);
-						return FALSE;
-					}
-							
-					if (!pts->extend_pcr(pts, EXTEND_PCR,
-						params.measurement, &params.pcr_after))
-					{
-						DBG1(DBG_IMC, "error occured while extending PCR: %d",
-							 EXTEND_PCR);
-						return FALSE;
-					}
-
-					/* Buffer Simple Component Evidence attribute */
-					attr = tcg_pts_attr_simple_comp_evid_create(params);
-					evidences->insert_last(evidences, attr);
-						
-					break;
-				}
-				case PTS_FUNC_COMP_NAME_IGNORE:
-				case PTS_FUNC_COMP_NAME_CRTM:
-				case PTS_FUNC_COMP_NAME_PLATFORM_EXT:
-				case PTS_FUNC_COMP_NAME_BOARD:
-				case PTS_FUNC_COMP_NAME_INIT_LOADER:
-				case PTS_FUNC_COMP_NAME_OPT_ROMS:
-				default:
-				{
-					DBG1(DBG_IMC, "unsupported Functional Component Name");
-					break;
-				}
-			}
 			break;
 		}
 		case TCG_PTS_GEN_ATTEST_EVID:

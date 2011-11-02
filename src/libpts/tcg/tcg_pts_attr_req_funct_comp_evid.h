@@ -109,7 +109,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 *
 	 * @return				Component Functional Name
 	 */
-	pts_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this);
+	pts_ita_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this);
 	
 	
 	/**
@@ -118,7 +118,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 * @param name			Component Functional Name
 	 */
 	void (*set_comp_funct_name)(tcg_pts_attr_req_funct_comp_evid_t *this,
-								pts_funct_comp_name_t name);
+								pts_ita_funct_comp_name_t name);
 	
 	
 };
@@ -135,7 +135,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(pts_attr_req_funct_comp_evid_flag_t flags,
 							u_int32_t depth, u_int32_t vendor_id,
 							pts_qualifier_t qualifier,
-							pts_funct_comp_name_t name);
+							pts_ita_funct_comp_name_t name);
 
 /**
  * Creates an tcg_pts_attr_req_funct_comp_evid_t object from received data

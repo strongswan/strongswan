@@ -252,7 +252,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
 		this->pcr_comp = chunk_clone(this->pcr_comp);
 		
-		this->pcr_comp = chunk_empty;
 		reader->read_uint32(reader, &tpm_quote_sign_len);
 		reader->read_data(reader, tpm_quote_sign_len, &this->tpm_quote_sign);
 		this->tpm_quote_sign = chunk_clone(this->tpm_quote_sign);

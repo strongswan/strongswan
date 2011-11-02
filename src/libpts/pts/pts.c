@@ -27,10 +27,6 @@
 #include <sys/utsname.h>
 #include <errno.h>
 
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-
 #define PTS_BUF_SIZE	4096
 
 typedef struct private_pts_t private_pts_t;
@@ -249,7 +245,7 @@ METHOD(pts_t, calculate_secret, bool,
 		DBG1(DBG_PTS, "shared DH secret computation failed");
 		return FALSE;
 	}
-	DBG4(DBG_PTS, "shared DH secret: %B", &shared_secret);
+	DBG3(DBG_PTS, "shared DH secret: %B", &shared_secret);
 
 	/* Calculate the secret assessment value */
 	hash_alg = pts_meas_algo_to_hash(this->dh_hash_algorithm);
@@ -269,7 +265,7 @@ METHOD(pts_t, calculate_secret, bool,
 	 * argument of the TPM Quote command
 	 */
 	this->secret.len = min(this->secret.len, 20);
-	DBG4(DBG_PTS, "secret assessment value: %B", &this->secret);
+	DBG3(DBG_PTS, "secret assessment value: %B", &this->secret);
 	return TRUE;
 }
 
@@ -899,6 +895,9 @@ METHOD(pts_t, quote_tpm, bool,
 	*pcr_composite = chunk_clone(*pcr_composite);
 	DBG3(DBG_PTS, "Hash of PCR Composite: %B",pcr_composite);
 
+	chunk_t tmp = chunk_create(valData.rgbData, valData.ulDataLength);
+	DBG3(DBG_PTS, "TPM Quote Info: %B",&tmp);
+
 	quote_sign = chunk_alloc(valData.ulValidationDataLength);
 	memcpy(quote_sign.ptr, valData.rgbValidationData,
 							  valData.ulValidationDataLength);
@@ -931,20 +930,6 @@ METHOD(pts_t, quote_tpm, bool,
 	return FALSE;
 }
 
-/**
- * Comparison function for pcr_entry_t struct
- */
-static int pcr_entry_compare(const pcr_entry_t *a, const pcr_entry_t *b)
-{
-	return (a->pcr_number - b->pcr_number);
-}
-
-static int pcr_entry_compare_qsort(const void *a, const void *b)
-{
-	return pcr_entry_compare(*(const pcr_entry_t *const *)a
-							, *(const pcr_entry_t *const *)b);
-}
-
 METHOD(pts_t, add_pcr_entry, void,
 	private_pts_t *this, pcr_entry_t *new)
 {
@@ -961,7 +946,7 @@ METHOD(pts_t, add_pcr_entry, void,
 	{
 		if (entry->pcr_number == new->pcr_number)
 		{
-			DBG4(DBG_PTS, "updating already added PCR%d value",
+			DBG3(DBG_PTS, "updating already added PCR%d value",
 				 entry->pcr_number);
 			this->pcrs->remove_at(this->pcrs, e);
 			free(entry);
@@ -969,11 +954,7 @@ METHOD(pts_t, add_pcr_entry, void,
 		}
 	}
 	DESTROY_IF(e);
-
 	this->pcrs->insert_last(this->pcrs, new);
-
-	qsort(this->pcrs, this->pcrs->get_count(this->pcrs),
-		  sizeof(pcr_entry_t *), pcr_entry_compare_qsort);
 }
 
 /**
@@ -1023,7 +1004,7 @@ METHOD(pts_t, get_quote_info, bool,
 
 	pcr_composite_len = 2 + PCR_MASK_LEN + 4 +
 						this->pcrs->get_count(this->pcrs) * PCR_LEN;
-
+	
 	writer = bio_writer_create(pcr_composite_len);
 	/* Lenght of the bist mask field */
 	writer->write_uint16(writer, PCR_MASK_LEN);
@@ -1054,6 +1035,7 @@ METHOD(pts_t, get_quote_info, bool,
 
 	/* PCR Composite structure */
 	pcr_composite = chunk_clone(writer->get_buf(writer));
+	DBG3(DBG_PTS, "PCR Composite: %B", &pcr_composite);
 	writer->destroy(writer);
 
 	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
@@ -1079,13 +1061,13 @@ METHOD(pts_t, get_quote_info, bool,
 
 		/* Hash the PCR Composite Structure */
 		hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
-		DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
+		DBG3(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
 		hasher->destroy(hasher);
 	}
 	else
 	{
 		*out_pcr_composite = chunk_clone(pcr_composite);
-		DBG4(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
+		DBG3(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
 	}
 
 	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
@@ -1109,7 +1091,7 @@ METHOD(pts_t, get_quote_info, bool,
 	writer->write_data(writer, this->secret);
 	/* TPM Quote Info */
 	*out_quote_info = chunk_clone(writer->get_buf(writer));
-	DBG4(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
+	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
 	writer->destroy(writer);
 
 	return TRUE;
@@ -1127,7 +1109,8 @@ METHOD(pts_t, verify_quote_signature, bool,
 		return FALSE;
 	}
 
-	if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_SHA1, data, signature))
+	if (!aik_pub_key->verify(aik_pub_key, SIGN_RSA_EMSA_PKCS1_SHA1,
+		data, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		DESTROY_IF(aik_pub_key);

@@ -158,7 +158,7 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	/**
 	 * Component Functional Name
 	 */
-	pts_funct_comp_name_t name;
+	pts_ita_funct_comp_name_t name;
 	
 	/**
 	 * Measurement type
@@ -311,8 +311,11 @@ METHOD(pa_tnc_attr_t, build, void,
 		writer->write_data  (writer, this->pcr_before);
 		writer->write_data  (writer, this->pcr_after);
 	}
-	
-	writer->write_data (writer, this->measurement);
+
+	if (this->measurement.ptr && this->measurement.len > 0)
+	{
+		writer->write_data (writer, this->measurement);
+	}
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -481,7 +484,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, pts_qualifier_t,
 	return this->qualifier;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_ita_funct_comp_name_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->name;
@@ -602,7 +605,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evi
 		.extended_pcr = params.extended_pcr,
 		.hash_algorithm = params.hash_algorithm,
 		.transformation = params.transformation,
-		.measurement_time = chunk_clone(params.measurement_time),
+		.measurement_time = params.measurement_time,
 		.policy_uri = chunk_clone(params.policy_uri),
 		.pcr_before = params.pcr_before,
 		.pcr_after = params.pcr_after,

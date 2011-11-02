@@ -23,6 +23,8 @@
 
 typedef enum pts_funct_comp_type_t pts_funct_comp_type_t;
 typedef enum pts_funct_comp_name_t pts_funct_comp_name_t;
+typedef enum pts_ita_funct_comp_type_t pts_ita_funct_comp_type_t;
+typedef enum pts_ita_funct_comp_name_t pts_ita_funct_comp_name_t;
 typedef struct pts_qualifier_t pts_qualifier_t;
 
 /**
@@ -34,7 +36,7 @@ enum pts_funct_comp_type_t {
 	/** Trusted Platform */
 	PTS_FUNC_COMP_TYPE_TRUSTED =			 0x1,
 	/** Operating System */
-	PTS_FUNC_COMP_TYPE_OS =				 0x2,
+	PTS_FUNC_COMP_TYPE_OS =					0x2,
 	/** Graphical User Interface */
 	PTS_FUNC_COMP_TYPE_GUI =				 0x3,
 	/** Application */
@@ -70,12 +72,47 @@ enum pts_funct_comp_name_t {
 };
 
 /**
+ * PTS Component Functional Type for Qualifier field in ITA namespace
+ */
+enum pts_ita_funct_comp_type_t {
+	/** Unknown */
+	PTS_ITA_FUNC_COMP_TYPE_UNKNOWN =			0x0,
+	/** Trusted Platform */
+	PTS_ITA_FUNC_COMP_TYPE_TRUSTED =			0x1,
+	/** All matching Components */
+	PTS_ITA_FUNC_COMP_TYPE_ALL =				0xF,
+};
+
+/**
+ * PTS Component Functional Name Binary Enumeration in ITA namespace
+ */
+enum pts_ita_funct_comp_name_t {
+	/** Components measured into PCR17 during tboot */
+	PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY =				0x0000,
+	/** Components measured into PCR18 during tboot */
+	PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE =			 		0x0001,
+	/** MBR information and stage1 during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_MBR_STAGE1 =			0x0002,
+	/** bootloader information stage2 part1 during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART1 =			0x0003,
+	/** bootloader information stage2 part2 during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART2 =			0x0004,
+	/** all commandline arguments from menu.lst and those entered in the shell
+	 * during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_CMD_LINE_ARGS =		0x0005,
+	/** all files checked via the checkfile-routine during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_CHECKFILE =			0x0006,
+	/** all files which are actually loaded during boot by trustedGRUB */
+	PTS_ITA_FUNC_COMP_NAME_TGRUB_LOADED_FILES =			0x0007,
+};
+
+/**
  * Qualifier for Functional Component
  */
 struct pts_qualifier_t {
 	bool	  kernel;
 	bool	  sub_component;
-	pts_funct_comp_type_t  type;
+	pts_ita_funct_comp_type_t  type;
 };
 
 #endif /** PTS_FUNCT_COMP_NAME_H_ @}*/

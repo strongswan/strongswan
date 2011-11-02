@@ -210,7 +210,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			pts_attr_req_funct_comp_evid_flag_t flags;
 			u_int32_t sub_comp_depth;
 			pts_qualifier_t qualifier;
-			pts_funct_comp_name_t name;
+			pts_ita_funct_comp_name_t name;
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
@@ -219,14 +219,22 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			sub_comp_depth = 0;
 			qualifier.kernel = FALSE;
 			qualifier.sub_component = FALSE;
-			qualifier.type = PTS_FUNC_COMP_TYPE_ALL;
-			name = PTS_FUNC_COMP_NAME_BIOS;
+			qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
 
 			/* Send Request Functional Component Evidence attribute */
+			name = PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART1;
 			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
-									sub_comp_depth, PEN_TCG, qualifier, name);
+									sub_comp_depth, PEN_ITA, qualifier, name);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
+			
+			/* Send Request Functional Component Evidence attribute */
+			name = PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART2;
+			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
+									sub_comp_depth, PEN_ITA, qualifier, name);
+			attr->set_noskip_flag(attr, TRUE);
+			msg->add_attribute(msg, attr);
+			
 			/* Send Generate Attestation Evidence attribute */
 			attr = tcg_pts_attr_gen_attest_evid_create();
 			attr->set_noskip_flag(attr, TRUE);

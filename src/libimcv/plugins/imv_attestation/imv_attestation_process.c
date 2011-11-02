@@ -185,7 +185,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			u_int32_t depth, comp_vendor_id, extended_pcr;
 			u_int8_t family, measurement_type;
 			pts_qualifier_t qualifier;
-			pts_funct_comp_name_t name;
+			pts_ita_funct_comp_name_t name;
 			pts_meas_algorithms_t hash_algorithm;
 			pts_pcr_transform_t transformation;
 			chunk_t measurement_time, policy_uri;
@@ -197,7 +197,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pcr_info_inclided = attr_cast->is_pcr_info_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
 			depth = attr_cast->get_sub_component_depth(attr_cast);
-			/* TODO: Implement check of components with its sub-components */
 			if (depth != 0)
 			{
 				DBG1(DBG_IMV, "Current version of Attestation IMV does not"
@@ -205,10 +204,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			comp_vendor_id = attr_cast->get_spec_comp_funct_name_vendor_id(
 														attr_cast);
-			if (comp_vendor_id != PEN_TCG)
+			if (comp_vendor_id != PEN_ITA)
 			{
 				DBG1(DBG_IMV, "Current version of Attestation IMV supports"
-							  "only functional component namings by TCG ");
+							  "only functional component namings by ITA ");
 				break;
 			}
 			family = attr_cast->get_family(attr_cast);
@@ -223,24 +222,20 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			/* Check if Unknown or Wildcard was set for qualifier */
 			if (qualifier.kernel && qualifier.sub_component &&
-			   (qualifier.type & PTS_FUNC_COMP_TYPE_ALL))
+			   (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_ALL))
 			{
 				DBG1(DBG_IMV, "Wildcard was set for the qualifier "
 							  "of functional component");
 				return FALSE;
 			}
 			else if (!qualifier.kernel && !qualifier.sub_component &&
-					(qualifier.type & PTS_FUNC_COMP_TYPE_UNKNOWN))
+					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_UNKNOWN))
 			{
 				DBG1(DBG_IMV, "Unknown feature was set for the qualifier "
 							  "of functional component");
 				return FALSE;
 			}
-			else
-			{
-				/* TODO: Implement what todo with received qualifier */
-			}
-					
+
 			name = attr_cast->get_comp_funct_name(attr_cast);
 			measurement_type = attr_cast->get_measurement_type(attr_cast);
 			hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
@@ -257,18 +252,17 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
 				measurement = attr_cast->get_comp_measurement(attr_cast);
 
-				DBG4(DBG_IMV,"PCR: %d was extended with %B",
+				DBG3(DBG_IMV,"PCR: %d was extended with %B",
 					 extended_pcr, &measurement);
-				DBG4(DBG_IMV,"PCR: %d before value: %B",
+				DBG3(DBG_IMV,"PCR: %d before value: %B",
 					 extended_pcr, &pcr_before);
-				DBG4(DBG_IMV,"PCR: %d after value: %B",
+				DBG3(DBG_IMV,"PCR: %d after value: %B",
 					 extended_pcr, &pcr_after);
 
 				entry = malloc_thing(pcr_entry_t);
 				entry->pcr_number = extended_pcr;
-				strncpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
+				memcpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
 				pts->add_pcr_entry(pts, entry);
-				
 			}
 			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
 			{
@@ -308,11 +302,18 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
 			{
-				chunk_t pcr_composite, quote_info, quote_digest;
-				hasher_t *hasher;
+				chunk_t pcr_composite, quote_info;
 				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
 
+				if (!pcr_comp.ptr || !tpm_quote_sign.ptr)
+				{
+					DBG1(DBG_IMV, "PCR composite: %B", &pcr_comp);
+					DBG1(DBG_IMV, "TPM Quote Signature: %B", &tpm_quote_sign);
+					DBG1(DBG_IMV, "Either PCR Composite or Quote Signature missing");
+					return FALSE;
+				}
+				
 				/* Construct PCR Composite and TPM Quote Info structures*/
 				if (!pts->get_quote_info(pts, composite_algorithm,
 					&pcr_composite, &quote_info))
@@ -320,9 +321,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
 					return FALSE;
 				}
-
+				
 				/* Check calculated PCR composite matches with received */
-				if (pcr_comp.ptr && !chunk_equals(pcr_comp, pcr_composite))
+				if (!chunk_equals(pcr_comp, pcr_composite))
 				{
 					DBG1(DBG_IMV, "received PCR Compsosite didn't match"
 								  " with constructed");
@@ -332,24 +333,16 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 				DBG2(DBG_IMV, "received PCR Composite matches with constructed");
 				chunk_clear(&pcr_composite);
-				
-				/* SHA1(TPM Quote Info) expected from IMC */
-				hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-				hasher->allocate_hash(hasher, quote_info, &quote_digest);
-				hasher->destroy(hasher);
-				chunk_clear(&quote_info);
-				
-				if (tpm_quote_sign.ptr &&
-					!pts->verify_quote_signature(pts, quote_digest,
-												 tpm_quote_sign))
+								
+				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sign))
 				{
-					chunk_clear(&quote_digest);
+					chunk_clear(&quote_info);
 					return FALSE;
 				}
 				
 				DBG2(DBG_IMV, "signature verification succeeded for "
 							  "TPM Quote Info");
-				chunk_clear(&quote_digest);
+				chunk_clear(&quote_info);
 			}
 			
 			if (evid_signature_included)

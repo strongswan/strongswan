@@ -123,7 +123,7 @@ struct private_tcg_pts_attr_req_funct_comp_evid_t {
 	/**
 	 * Component Functional Name
 	 */
-	pts_funct_comp_name_t name;
+	pts_ita_funct_comp_name_t name;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -284,14 +284,14 @@ METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_qualifier, void,
 	this->qualifier = qualifier;
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_comp_funct_name, pts_funct_comp_name_t,
+METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_comp_funct_name, pts_ita_funct_comp_name_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this)
 {
 	return this->name;
 }
 
 METHOD(tcg_pts_attr_req_funct_comp_evid_t, set_comp_funct_name, void,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this, pts_funct_comp_name_t name)
+	private_tcg_pts_attr_req_funct_comp_evid_t *this, pts_ita_funct_comp_name_t name)
 {
 	this->name = name;
 }
@@ -303,7 +303,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 									pts_attr_req_funct_comp_evid_flag_t flags,
 									u_int32_t depth, u_int32_t vendor_id,
 									pts_qualifier_t qualifier,
-									pts_funct_comp_name_t name)
+									pts_ita_funct_comp_name_t name)
 {
 	private_tcg_pts_attr_req_funct_comp_evid_t *this;
 
