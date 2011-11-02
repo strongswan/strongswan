@@ -619,6 +619,8 @@ typedef struct {
 	CK_ATTRIBUTE_PTR attr;
 	/* number of attributes */
 	CK_ULONG count;
+	/* object handle in case of a single object */
+	CK_OBJECT_HANDLE object;
 	/* currently allocated attributes, to free */
 	linked_list_t *freelist;
 } object_enumerator_t;
@@ -685,11 +687,19 @@ METHOD(enumerator_t, object_enumerate, bool,
 	CK_ULONG found;
 	CK_RV rv;
 
-	rv = this->lib->f->C_FindObjects(this->session, &object, 1, &found);
-	if (rv != CKR_OK)
+	if (!this->object)
 	{
-		DBG1(DBG_CFG, "C_FindObjects() failed: %N", ck_rv_names, rv);
-		return FALSE;
+		rv = this->lib->f->C_FindObjects(this->session, &object, 1, &found);
+		if (rv != CKR_OK)
+		{
+			DBG1(DBG_CFG, "C_FindObjects() failed: %N", ck_rv_names, rv);
+			return FALSE;
+		}
+	}
+	else
+	{
+		object = this->object;
+		found = 1;
 	}
 	if (found)
 	{
@@ -700,7 +710,10 @@ METHOD(enumerator_t, object_enumerate, bool,
 				return FALSE;
 			}
 		}
-		*out = object;
+		if (out)
+		{
+			*out = object;
+		}
 		return TRUE;
 	}
 	return FALSE;
@@ -709,7 +722,10 @@ METHOD(enumerator_t, object_enumerate, bool,
 METHOD(enumerator_t, object_destroy, void,
 	object_enumerator_t *this)
 {
-	this->lib->f->C_FindObjectsFinal(this->session);
+	if (!this->object)
+	{
+		this->lib->f->C_FindObjectsFinal(this->session);
+	}
 	free_attrs(this);
 	this->freelist->destroy(this->freelist);
 	free(this);
@@ -739,6 +755,27 @@ METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 		.lib = &this->public,
 		.attr = attr,
 		.count = acount,
+		.freelist = linked_list_create(),
+	);
+	return &enumerator->public;
+}
+
+METHOD(pkcs11_library_t, create_object_attr_enumerator, enumerator_t*,
+	private_pkcs11_library_t *this, CK_SESSION_HANDLE session,
+	CK_OBJECT_HANDLE object, CK_ATTRIBUTE_PTR attr, CK_ULONG count)
+{
+	object_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_object_enumerate,
+			.destroy = _object_destroy,
+		},
+		.session = session,
+		.lib = &this->public,
+		.attr = attr,
+		.count = count,
+		.object = object,
 		.freelist = linked_list_create(),
 	);
 	return &enumerator->public;
@@ -1035,6 +1072,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 			.get_name = _get_name,
 			.get_features = _get_features,
 			.create_object_enumerator = _create_object_enumerator,
+			.create_object_attr_enumerator = _create_object_attr_enumerator,
 			.create_mechanism_enumerator = _create_mechanism_enumerator,
 			.get_ck_attribute = _get_ck_attribute,
 			.destroy = _destroy,

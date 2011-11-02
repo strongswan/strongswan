@@ -85,6 +85,24 @@ struct pkcs11_library_t {
 			CK_ATTRIBUTE_PTR attr, CK_ULONG acount);
 
 	/**
+	 * This is very similar to the object enumerator but is only used to
+	 * easily retrieve multiple attributes from a single object for which
+	 * a handle is already known.
+	 *
+	 * The given attribute array is automatically filled in with the
+	 * associated attributes. If the value of an output attribute is NULL,
+	 * the required memory gets allocated/freed during enumeration.
+	 *
+	 * @param session	session to use
+	 * @param object	object handle
+	 * @param attr		attributes to read from object
+	 * @param count		number of attributes to read
+	 */
+	enumerator_t* (*create_object_attr_enumerator)(pkcs11_library_t *this,
+			CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object,
+			CK_ATTRIBUTE_PTR attr, CK_ULONG count);
+
+	/**
 	 * Create an enumerator over supported mechanisms of a token.
 	 *
 	 * The resulting enumerator enumerates over the mechanism type, and if
