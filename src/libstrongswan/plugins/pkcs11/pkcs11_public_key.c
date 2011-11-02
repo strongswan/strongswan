@@ -286,6 +286,91 @@ METHOD(public_key_t, encrypt, bool,
 }
 
 /**
+ * Encode ECDSA key using a given encoding type
+ */
+static bool encode_ecdsa(private_pkcs11_public_key_t *this,
+						 cred_encoding_type_t type, chunk_t *encoding)
+{
+	enumerator_t *enumerator;
+	bool success = FALSE;
+	CK_ATTRIBUTE attr[] = {
+		{CKA_EC_PARAMS, NULL, 0},
+		{CKA_EC_POINT, NULL, 0},
+	};
+
+	if (type != PUBKEY_SPKI_ASN1_DER && type != PUBKEY_PEM)
+	{
+		return FALSE;
+	}
+
+	enumerator = this->lib->create_object_attr_enumerator(this->lib,
+							this->session, this->object, attr, countof(attr));
+	if (enumerator && enumerator->enumerate(enumerator, NULL) &&
+		attr[0].ulValueLen > 0 && attr[1].ulValueLen > 0)
+	{
+		chunk_t ecparams, ecpoint;
+		ecparams = chunk_create(attr[0].pValue, attr[0].ulValueLen);
+		ecpoint = chunk_create(attr[1].pValue, attr[1].ulValueLen);
+		/* encode as subjectPublicKeyInfo */
+		*encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_SEQUENCE, "mc",
+							asn1_build_known_oid(OID_EC_PUBLICKEY), ecparams),
+						asn1_bitstring("c", ecpoint));
+		success = TRUE;
+		if (type == PUBKEY_PEM)
+		{
+			chunk_t asn1 = *encoding;
+			success = lib->encoding->encode(lib->encoding, PUBKEY_PEM,
+							NULL, encoding, CRED_PART_ECDSA_PUB_ASN1_DER,
+							asn1, CRED_PART_END);
+			chunk_clear(&asn1);
+		}
+	}
+	DESTROY_IF(enumerator);
+	return success;
+}
+
+/**
+ * Compute fingerprint of an ECDSA key
+ */
+static bool fingerprint_ecdsa(private_pkcs11_public_key_t *this,
+							  cred_encoding_type_t type, chunk_t *fp)
+{
+	hasher_t *hasher;
+	chunk_t asn1;
+
+	switch (type)
+	{
+		case KEYID_PUBKEY_SHA1:
+			if (!this->lib->get_ck_attribute(this->lib, this->session,
+						this->object, CKA_EC_POINT, &asn1))
+			{
+				return FALSE;
+			}
+			break;
+		case KEYID_PUBKEY_INFO_SHA1:
+			if (!encode_ecdsa(this, PUBKEY_SPKI_ASN1_DER, &asn1))
+			{
+				return FALSE;
+			}
+			break;
+		default:
+			return FALSE;
+	}
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher)
+	{
+		chunk_clear(&asn1);
+		return FALSE;
+	}
+	hasher->allocate_hash(hasher, asn1, fp);
+	hasher->destroy(hasher);
+	chunk_clear(&asn1);
+	lib->encoding->cache(lib->encoding, type, this, *fp);
+	return TRUE;
+}
+
+/**
  * Encode RSA key using a given encoding type
  */
 static bool encode_rsa(private_pkcs11_public_key_t *this,
@@ -325,6 +410,8 @@ METHOD(public_key_t, get_encoding, bool,
 	{
 		case KEY_RSA:
 			return encode_rsa(this, type, NULL, encoding);
+		case KEY_ECDSA:
+			return encode_ecdsa(this, type, encoding);
 		default:
 			return FALSE;
 	}
@@ -341,6 +428,8 @@ METHOD(public_key_t, get_fingerprint, bool,
 	{
 		case KEY_RSA:
 			return encode_rsa(this, type, this, fp);
+		case KEY_ECDSA:
+			return fingerprint_ecdsa(this, type, fp);
 		default:
 			return FALSE;
 	}
