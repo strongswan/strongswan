@@ -10,6 +10,13 @@ strongswan-4.6.0
   connections between hosts using dynamic IP addresses. Thanks to Mirko Parthey
   for the initial patch.
 
+- Support for ECDSA private and public key operations has been added to the
+  pkcs11 plugin.  The plugin now also provides DH and ECDH via PKCS#11 and can
+  use tokens as random number generators (RNG).  By default only private key
+  operations are enabled, more advanced features have to be enabled by their
+  option in strongswan.conf.  This also applies to public key operations (even
+  for keys not stored on the token) which were enabled by default before.
+
 - The libstrongswan plugin system now supports detailed plugin dependencies.
   Many plugins have been extended to export its capabilities and requirements.
   This allows the plugin loader to resolve plugin loading order automatically,
