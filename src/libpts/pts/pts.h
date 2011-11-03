@@ -120,7 +120,7 @@ struct pts_t {
 	 * @param error_code	Output variable for PTS error code
 	 * @return				TRUE if path is valid or file/directory doesn't exist
 	 * 							or path is invalid
-	 * 						FALSE if local error occured within stat function
+	 * 						FALSE if local error occurred within stat function
 	 */
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 

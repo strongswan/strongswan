@@ -294,7 +294,7 @@ METHOD(pts_t, is_path_valid, bool, private_pts_t *this, char *path,
 	}
 	else
 	{
-		DBG1(DBG_PTS, "error: %s occured while validating path: %s",
+		DBG1(DBG_PTS, "error: %s occurred while validating path: %s",
 			 		   strerror(error), path);
 		return FALSE;
 	}

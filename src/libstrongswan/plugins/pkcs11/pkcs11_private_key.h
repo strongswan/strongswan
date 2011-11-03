@@ -60,7 +60,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args);
  *
  * @param scheme		signature scheme
  * @param type			key type
- * @param keylen		key lenght in bits
+ * @param keylen		key length in bits
  * @param hash			hash algorithm to apply first (HASH_UNKNOWN if none)
  */
 CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,

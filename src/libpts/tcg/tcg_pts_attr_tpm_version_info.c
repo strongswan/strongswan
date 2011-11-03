@@ -30,7 +30,7 @@ typedef struct private_tcg_pts_attr_tpm_version_info_t private_tcg_pts_attr_tpm_
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		  TPM Version Information (Variable Lenght)				|
+ *  |		  TPM Version Information (Variable Length)				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  * see TPM Structure Specification Part 2, section 21.6: TPM_CAP_VERSION_INFO
