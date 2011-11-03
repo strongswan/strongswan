@@ -549,13 +549,18 @@ ENGINE ID to use in the OpenSSL plugin
 List of available PKCS#11 modules
 .TP
 .BR libstrongswan.plugins.pkcs11.use_dh " [no]"
-Whether the PKCS#11 modules should be used for DH/ECDH (see use_ecc option)
+Whether the PKCS#11 modules should be used for DH and ECDH (see use_ecc option)
 .TP
 .BR libstrongswan.plugins.pkcs11.use_ecc " [no]"
-Whether the PKCS#11 modules should be used for ECDH/ECDSA
+Whether the PKCS#11 modules should be used for ECDH and ECDSA public key
+operations. ECDSA private keys can be used regardless of this option
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
 Whether the PKCS#11 modules should be used to hash data
+.TP
+.BR libstrongswan.plugins.pkcs11.use_pubkey " [no]"
+Whether the PKCS#11 modules should be used for public key operations, even for
+keys not stored on tokens
 .TP
 .BR libstrongswan.plugins.pkcs11.use_rng " [no]"
 Whether the PKCS#11 modules should be used as RNG
