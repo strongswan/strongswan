@@ -200,17 +200,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, MODP_768_BIT),
 			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
 	};
-	static plugin_feature_t f_rng[] = {
-		PLUGIN_REGISTER(RNG, pkcs11_rng_create),
-			PLUGIN_PROVIDE(RNG, RNG_STRONG),
-			PLUGIN_PROVIDE(RNG, RNG_TRUE),
-	};
-	static plugin_feature_t f_key[] = {
-		PLUGIN_REGISTER(PRIVKEY, pkcs11_private_key_connect, FALSE),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
-		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
-			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
-	};
 	static plugin_feature_t f_ecdh[] = {
 		PLUGIN_REGISTER(DH, pkcs11_dh_create),
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
@@ -219,9 +208,18 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_384_BIT),
 			PLUGIN_PROVIDE(DH, ECP_521_BIT),
 	};
-	static plugin_feature_t f_ecdsa[] = {
-		/* *_connect is already registered for KEY_ANY */
+	static plugin_feature_t f_rng[] = {
+		PLUGIN_REGISTER(RNG, pkcs11_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+	};
+	static plugin_feature_t f_privkey[] = {
+		PLUGIN_REGISTER(PRIVKEY, pkcs11_private_key_connect, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+	};
+	static plugin_feature_t f_pubkey[] = {
 		PLUGIN_REGISTER(PUBKEY, pkcs11_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 	};
 	static plugin_feature_t f_manager[] = {
@@ -230,8 +228,8 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_DEPENDS(CERT_DECODE, CERT_X509),
 	};
 	static plugin_feature_t f[countof(f_hash) + countof(f_dh) + countof(f_rng) +
-							  countof(f_key) + countof(f_ecdh) +
-							  countof(f_ecdsa) + countof(f_manager)] = {};
+							  countof(f_ecdh) + countof(f_privkey) +
+							  countof(f_pubkey) + countof(f_manager)] = {};
 	static int count = 0;
 
 	if (!count)
@@ -239,7 +237,14 @@ METHOD(plugin_t, get_features, int,
 		bool use_ecc = lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_ecc", FALSE);
 		add_features(f, f_manager, countof(f_manager), &count);
-		add_features(f, f_key, countof(f_key), &count);
+		/* private key handling for EC keys is not disabled by use_ecc */
+		add_features(f, f_privkey, countof(f_privkey), &count);
+		if (lib->settings->get_bool(lib->settings,
+							"libstrongswan.plugins.pkcs11.use_pubkey", FALSE))
+		{
+			add_features(f, f_pubkey, countof(f_pubkey) - (use_ecc ? 0 : 1),
+						 &count);
+		}
 		if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
 		{
@@ -258,10 +263,6 @@ METHOD(plugin_t, get_features, int,
 			{
 				add_features(f, f_ecdh, countof(f_ecdh), &count);
 			}
-		}
-		if (use_ecc)
-		{
-			add_features(f, f_ecdsa, countof(f_ecdsa), &count);
 		}
 	}
 	*features = f;
