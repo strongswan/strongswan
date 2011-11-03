@@ -11,7 +11,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-sim-pcsc.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-sim-pcsc.la
-libstrongswan_eap_sim_pcsc_la_LIBADD += $(top_builddir)/src/libsimaka/libsimaka.la
 endif
 
 libstrongswan_eap_sim_pcsc_la_SOURCES = \

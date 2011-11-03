@@ -8,7 +8,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-simaka-pseudonym.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-simaka-pseudonym.la
-libstrongswan_eap_simaka_pseudonym_la_LIBADD = $(top_builddir)/src/libsimaka/libsimaka.la
 endif
 
 libstrongswan_eap_simaka_pseudonym_la_SOURCES = \

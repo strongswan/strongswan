@@ -8,7 +8,6 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-sim-file.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-sim-file.la
-libstrongswan_eap_sim_file_la_LIBADD = $(top_builddir)/src/libsimaka/libsimaka.la
 endif
 
 libstrongswan_eap_sim_file_la_SOURCES = \
