@@ -305,6 +305,11 @@ static void status(void)
 				lease->enumerate(lease, &size);
 				lease->destroy(lease);
 			}
+			if (!size)
+			{	/* empty pool */
+				printf("%6d %11s %11s ", 0, "n/a", "n/a");
+				goto next_pool;
+			}
 			printf("%6d ", size);
 			/* get number of online hosts */
 			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
@@ -316,7 +321,7 @@ static void status(void)
 				lease->destroy(lease);
 			}
 			printf("%5d (%2d%%) ", online, online*100/size);
-			/* get number of online or valid lieases */
+			/* get number of online or valid leases */
 			lease = db->query(db, "SELECT COUNT(*) FROM addresses "
 							  "WHERE addresses.pool = ? "
 							  "AND ((? AND acquired != 0) "
@@ -330,6 +335,7 @@ static void status(void)
 			}
 			printf("%5d (%2d%%) ", used, used*100/size);
 
+next_pool:
 			printf("\n");
 			DESTROY_IF(start);
 			DESTROY_IF(end);
