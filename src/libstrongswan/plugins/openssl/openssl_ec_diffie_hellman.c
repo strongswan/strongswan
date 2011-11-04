@@ -219,7 +219,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 		return;
 	}
 
-	chunk_free(&this->shared_secret);
+	chunk_clear(&this->shared_secret);
 
 	if (!compute_shared_key(this, &this->shared_secret)) {
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
