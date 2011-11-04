@@ -958,6 +958,33 @@ METHOD(pts_t, add_pcr_entry, void,
 }
 
 /**
+ * Get the maximum PCR index received in pcr_after_value field
+ */
+static u_int32_t get_max_pcr_index(private_pts_t *this)
+{
+	enumerator_t *e;
+	pcr_entry_t *pcr_entry;
+	u_int32_t ret = 0;
+
+	if (this->pcrs->get_count(this->pcrs) == 0)
+	{
+		return -1;
+	}
+	
+	e = this->pcrs->create_enumerator(this->pcrs);
+	while (e->enumerate(e, &pcr_entry))
+	{
+		if (pcr_entry->pcr_number > ret)
+		{
+			ret = pcr_entry->pcr_number;
+		}
+	}
+	e->destroy(e);
+
+	return ret;
+}
+
+/**
  * 1. build a TCPA_PCR_COMPOSITE structure which contains (pcrCompositeBuf)
  * TCPA_PCR_SELECTION structure (bitmask length + bitmask)
  * UINT32 (network order) gives the number of bytes following (pcr entries * 20)
@@ -990,24 +1017,27 @@ METHOD(pts_t, get_quote_info, bool,
 	enumerator_t *e;
 	pcr_entry_t *pcr_entry;
 	chunk_t pcr_composite, hash_pcr_composite;
-	u_int32_t pcr_composite_len;
+	u_int32_t pcr_composite_len, i, maximum_pcr_index, bitmask_len;
 	bio_writer_t *writer;
-	u_int8_t mask_bytes[PCR_MASK_LEN] = {0,0,0}, i;
 	hasher_t *hasher;
 
-	if (this->pcrs->get_count(this->pcrs) == 0)
+	maximum_pcr_index = get_max_pcr_index(this);
+	if (maximum_pcr_index == -1)
 	{
 		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct "
 					  "TPM Quote Info");
 		return FALSE;
 	}
-
-	pcr_composite_len = 2 + PCR_MASK_LEN + 4 +
+	
+	bitmask_len = maximum_pcr_index/8 +1;
+	u_int8_t mask_bytes[MAX_NUM_PCR/8] = {0};
+	
+	pcr_composite_len = 2 + bitmask_len + 4 +
 						this->pcrs->get_count(this->pcrs) * PCR_LEN;
 	
 	writer = bio_writer_create(pcr_composite_len);
 	/* Lenght of the bist mask field */
-	writer->write_uint16(writer, PCR_MASK_LEN);
+	writer->write_uint16(writer, bitmask_len);
 	/* Bit mask indicating selected PCRs */
 	e = this->pcrs->create_enumerator(this->pcrs);
 	while (e->enumerate(e, &pcr_entry))
@@ -1017,7 +1047,7 @@ METHOD(pts_t, get_quote_info, bool,
 	}
 	e->destroy(e);
 
-	for (i = 0; i< PCR_MASK_LEN ; i++)
+	for (i = 0; i< bitmask_len ; i++)
 	{
 		writer->write_uint8(writer, mask_bytes[i]);
 	}

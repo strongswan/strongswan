@@ -43,7 +43,6 @@ typedef struct pcr_entry_t pcr_entry_t;
 /**
  * PCR indices used for measurements of various functional components
  */
-/** Commented the real PCR indices out, use just PCR16 for debugging
 #define PCR_BIOS						0
 #define PCR_PLATFORM_EXT				1
 #define PCR_MOTHERBOARD					1
@@ -59,23 +58,7 @@ typedef struct pcr_entry_t pcr_entry_t;
 #define PCR_TGRUB_CMD_LINE_ARGS			12
 #define PCR_TGRUB_CHECKFILE				13
 #define PCR_TGRUB_LOADED_FILES			14
-*/
 
-#define PCR_BIOS						16
-#define PCR_PLATFORM_EXT				16
-#define PCR_MOTHERBOARD					16
-#define PCR_OPTION_ROMS					16
-#define PCR_IPL							16
-
-#define PCR_TBOOT_POLICY				16
-#define PCR_TBOOT_MLE					16
-
-#define PCR_TGRUB_MBR_STAGE1			16
-#define PCR_TGRUB_STAGE2_PART1			16
-#define PCR_TGRUB_STAGE2_PART2			16
-#define PCR_TGRUB_CMD_LINE_ARGS			16
-#define PCR_TGRUB_CHECKFILE				16
-#define PCR_TGRUB_LOADED_FILES			16
 
 /**
  * Length of the generated nonce used for calculation of shared secret
@@ -96,11 +79,6 @@ typedef struct pcr_entry_t pcr_entry_t;
  * Lenght of the TPM_QUOTE_INFO structure, TPM Spec 1.2
  */
 #define TPM_QUOTE_INFO_LEN		48
-
-/**
- * Bitmask Lenght for PCR Composite structure
- */
-#define PCR_MASK_LEN			MAX_NUM_PCR/8
 
 /**
  * Hashing algorithm used by tboot and trustedGRUB
