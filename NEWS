@@ -10,6 +10,11 @@ strongswan-4.6.0
   connections between hosts using dynamic IP addresses. Thanks to Mirko Parthey
   for the initial patch.
 
+- The android plugin can now be used without the Android frontend patch and
+  provides DNS server registration and logging to logcat.
+
+- Pluto and starter (plus stroke and whack) have been ported to Android.
+
 - Support for ECDSA private and public key operations has been added to the
   pkcs11 plugin.  The plugin now also provides DH and ECDH via PKCS#11 and can
   use tokens as random number generators (RNG).  By default only private key
