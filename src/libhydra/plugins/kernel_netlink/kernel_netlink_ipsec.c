@@ -1957,6 +1957,7 @@ failed:
 	free(replay);
 	free(replay_esn);
 	memwipe(out, len);
+	memwipe(request, sizeof(request));
 	free(out);
 
 	return status;
