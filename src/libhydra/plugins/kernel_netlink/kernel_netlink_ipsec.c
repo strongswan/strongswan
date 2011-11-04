@@ -485,7 +485,7 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 	}
 	else
 	{
-		INIT(policy);
+		INIT(policy, .priority = 0);
 	}
 	policy->type = type;
 	policy->sa = ipsec_sa_create(this, src, dst, mark, cfg);
