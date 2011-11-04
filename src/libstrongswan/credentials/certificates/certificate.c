@@ -38,6 +38,7 @@ ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,
 	"SKIPPED",
 	"STALE",
 	"FAILED",
+	"ON_HOLD",
 	"REVOKED",
 );
 

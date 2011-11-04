@@ -404,7 +404,15 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		{
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
 				 &revocation, TRUE, crl_reason_names, reason);
-			*valid = VALIDATION_REVOKED;
+			if (reason != CRL_REASON_CERTIFICATE_HOLD)
+			{
+				*valid = VALIDATION_REVOKED;
+			}
+			else
+			{
+				/* if the cert is on hold, a newer CRL might not contain it */
+				*valid = VALIDATION_ON_HOLD;
+			}
 			enumerator->destroy(enumerator);
 			DESTROY_IF(best);
 			return cand;
@@ -681,6 +689,7 @@ METHOD(cert_validator_t, validate, bool,
 				DBG1(DBG_CFG, "certificate status is good");
 				return TRUE;
 			case VALIDATION_REVOKED:
+			case VALIDATION_ON_HOLD:
 				/* has already been logged */
 				return FALSE;
 			case VALIDATION_SKIPPED:
@@ -700,6 +709,7 @@ METHOD(cert_validator_t, validate, bool,
 				DBG1(DBG_CFG, "certificate status is good");
 				return TRUE;
 			case VALIDATION_REVOKED:
+			case VALIDATION_ON_HOLD:
 				/* has already been logged */
 				return FALSE;
 			case VALIDATION_FAILED:
