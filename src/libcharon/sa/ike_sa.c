@@ -349,8 +349,8 @@ METHOD(ike_sa_t, get_peer_cfg, peer_cfg_t*,
 METHOD(ike_sa_t, set_peer_cfg, void,
 	private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 {
-	DESTROY_IF(this->peer_cfg);
 	peer_cfg->get_ref(peer_cfg);
+	DESTROY_IF(this->peer_cfg);
 	this->peer_cfg = peer_cfg;
 
 	if (this->ike_cfg == NULL)
