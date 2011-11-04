@@ -373,6 +373,10 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 		}
 		this->responses->insert_last(this->responses, response);
 	}
+	else
+	{
+		free(response);
+	}
 	return success;
 }
 
