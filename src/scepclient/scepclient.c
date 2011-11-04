@@ -334,6 +334,7 @@ int main(int argc, char **argv)
 	char *file_out_pkcs7     = DEFAULT_FILENAME_PKCS7;
 	char *file_out_cert_self = DEFAULT_FILENAME_CERT_SELF;
 	char *file_out_cert      = DEFAULT_FILENAME_CERT;
+	char *file_out_ca_cert   = DEFAULT_FILENAME_CACERT_ENC;
 
 	/* by default user certificate is requested */
 	bool request_ca_certificate = FALSE;
@@ -540,6 +541,8 @@ int main(int argc, char **argv)
 				else if (strcaseeq("cacert", optarg))
 				{
 					request_ca_certificate = TRUE;
+					if (filename)
+						file_out_ca_cert = filename;
 				}
 				else
 				{
@@ -781,6 +784,24 @@ int main(int argc, char **argv)
 	if (!filetype_in && (filetype_in > filetype_out))
 	{
 		usage("cannot generate --out of given --in!");
+	}
+
+	/* get CA cert */
+	if (request_ca_certificate)
+	{
+		char *path = concatenate_paths(CA_CERT_PATH, file_out_ca_cert);
+
+		if (!scep_http_request(scep_url, chunk_empty, SCEP_GET_CA_CERT,
+							   http_get_request, &scep_response))
+		{
+			exit_scepclient("did not receive a valid scep response");
+		}
+
+		if (!chunk_write(scep_response, path, "ca cert",  0022, force))
+		{
+			exit_scepclient("could not write ca cert file '%s'", path);
+		}
+		exit_scepclient(NULL); /* no further output required */
 	}
 
 	/*
