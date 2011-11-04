@@ -751,7 +751,7 @@ static bool parse_authorityInfoAccess_ext(private_openssl_x509_t *this,
 				{
 					if (asprintf(&uri, "%Y", id) > 0)
 					{
-						this->ocsp_uris->insert_first(this->ocsp_uris, uri);
+						this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 					}
 					id->destroy(id);
 				}
