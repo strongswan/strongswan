@@ -2,10 +2,10 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # whether starter is built.  allows to control the daemons from the command line
-strongswan_BUILD_STARTER := true
+strongswan_BUILD_STARTER := false
 
 # whether pluto (IKEv1 daemon) is built.  charon (IKEv2) is always enabled
-strongswan_BUILD_PLUTO := true
+strongswan_BUILD_PLUTO := false
 
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
