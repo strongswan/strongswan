@@ -26,7 +26,7 @@ if USE_LIBTNCCS
   charon_LDADD += $(top_builddir)/src/libtnccs/libtnccs.la
 endif
 
-if USE_LIBSIMAKA
+if USE_SIMAKA
   charon_LDADD += $(top_builddir)/src/libsimaka/libsimaka.la
 endif
 
