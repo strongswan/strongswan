@@ -37,6 +37,10 @@ if USE_LIBTNCCS
   AM_CFLAGS += -DHAS_TNC
 endif
 
+if USE_SIMAKA
+  checksum_builder_LDADD += $(top_builddir)/src/libsimaka/libsimaka.la
+endif
+
 if USE_CHARON
   libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
   libs += $(top_builddir)/src/charon/.libs/charon
