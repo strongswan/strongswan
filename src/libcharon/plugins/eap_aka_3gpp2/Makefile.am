@@ -11,6 +11,7 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-aka-3gpp2.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-aka-3gpp2.la
+libstrongswan_eap_aka_3gpp2_la_LIBADD += $(top_builddir)/src/libsimaka/libsimaka.la
 endif
 
 libstrongswan_eap_aka_3gpp2_la_SOURCES = \
