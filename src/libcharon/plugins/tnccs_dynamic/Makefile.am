@@ -12,7 +12,8 @@ noinst_LTLIBRARIES = libstrongswan-tnccs-dynamic.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-dynamic.la
 libstrongswan_tnccs_dynamic_la_LIBADD = \
-	$(top_builddir)/src/libtncif/libtncif.la
+	$(top_builddir)/src/libtncif/libtncif.la \
+	$(top_builddir)/src/libtnccs/libtnccs.la
 endif
 
 libstrongswan_tnccs_dynamic_la_SOURCES = \

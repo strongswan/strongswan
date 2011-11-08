@@ -8,6 +8,7 @@ if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-ttls.la
 else
 plugin_LTLIBRARIES = libstrongswan-eap-ttls.la
+libstrongswan_eap_ttls_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
 libstrongswan_eap_ttls_la_SOURCES = \
