@@ -71,9 +71,9 @@ static void build_checksum(char *path, char *name, char *sname)
 }
 
 /**
- * Build checksums for a set of plugins in a given path prefix
+ * Build checksums for a set of plugins
  */
-static void build_plugin_checksums(char *plugins, char *prefix)
+static void build_plugin_checksums(char *plugins)
 {
 	enumerator_t *enumerator;
 	char *plugin, path[256], under[128], sname[128], name[128];
@@ -83,8 +83,8 @@ static void build_plugin_checksums(char *plugins, char *prefix)
 	{
 		snprintf(under, sizeof(under), "%s", plugin);
 		translate(under, "-", "_");
-		snprintf(path, sizeof(path), "%s/%s/.libs/libstrongswan-%s.so",
-				 prefix, under, plugin);
+		snprintf(path, sizeof(path), "%s/libstrongswan-%s.so",
+				 PLUGINDIR, plugin);
 		snprintf(sname, sizeof(sname), "%s_plugin_create", under);
 		snprintf(name, sizeof(name), "%s\",", plugin);
 		build_checksum(path, name, sname);
@@ -157,16 +157,16 @@ int main(int argc, char* argv[])
 		build_binary_checksum(argv[i]);
 	}
 #ifdef S_PLUGINS
-	build_plugin_checksums(S_PLUGINS, S_PATH);
+	build_plugin_checksums(S_PLUGINS);
 #endif
 #ifdef H_PLUGINS
-	build_plugin_checksums(H_PLUGINS, H_PATH);
+	build_plugin_checksums(H_PLUGINS);
 #endif
 #ifdef P_PLUGINS
-	build_plugin_checksums(P_PLUGINS, P_PATH);
+	build_plugin_checksums(P_PLUGINS);
 #endif
 #ifdef C_PLUGINS
-	build_plugin_checksums(C_PLUGINS, C_PATH);
+	build_plugin_checksums(C_PLUGINS);
 #endif
 
 	printf("};\n");

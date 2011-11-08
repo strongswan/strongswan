@@ -1,9 +1,10 @@
-ipseclib_LTLIBRARIES = libchecksum.la
-noinst_PROGRAMS = checksum_builder
-
+# this lib is not built until make install is called (see rules at the bottom)
+EXTRA_LTLIBRARIES = libchecksum.la
+ipseclib_LTLIBRARIES = $(LIBCHECKSUM_LIBS)
 nodist_libchecksum_la_SOURCES = checksum.c
-libchecksum_la_LDFLAGS = -module -avoid-version
+libchecksum_la_LDFLAGS = -module -avoid-version -rpath '$(ipseclibdir)'
 
+noinst_PROGRAMS = checksum_builder
 checksum_builder_SOURCES = checksum_builder.c
 checksum_builder_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
@@ -11,27 +12,38 @@ checksum_builder_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	$(DLLIB)
 
-BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+INCLUDES = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = \
+	-DPLUGINDIR=\"${plugindir}\" \
+	-rdynamic
 
-libs = $(top_builddir)/src/libstrongswan/.libs/libstrongswan.so
+# we keep track of build dependencies in deps and use libs to store the paths
+# to the installed libraries. for executables we use the built files directly
+# as these are not relinked during installation.
+deps = $(top_builddir)/src/libstrongswan/libstrongswan.la
+libs = $(DESTDIR)$(ipseclibdir)/libstrongswan.so
+exes =
 
 if !MONOLITHIC
-  AM_CFLAGS += -DS_PLUGINS=\""${s_plugins}\"" -DS_PATH=\""${top_builddir}/src/libstrongswan/plugins\""
+  AM_CFLAGS += -DS_PLUGINS=\""${s_plugins}\""
 endif
 
 if USE_LIBHYDRA
-  libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
+  deps += $(top_builddir)/src/libhydra/libhydra.la
+  libs += $(DESTDIR)$(ipseclibdir)/libhydra.so
 if !MONOLITHIC
-  AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\"" -DH_PATH=\""${top_builddir}/src/libhydra/plugins\""
+  AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\""
+endif
 endif
 endif
 
 if USE_LIBTNCCS
-  libs += $(top_builddir)/src/libtnccs/.libs/libtnccs.so
+  deps += $(top_builddir)/src/libtnccs/libtnccs.la
+  libs += $(DESTDIR)$(ipseclibdir)/libtnccs.so
 endif
 
 if USE_SIMAKA
@@ -39,27 +51,37 @@ if USE_SIMAKA
 endif
 
 if USE_CHARON
-  libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
-  libs += $(top_builddir)/src/charon/.libs/charon
+  deps += $(top_builddir)/src/libcharon/libcharon.la
+  libs += $(DESTDIR)$(ipseclibdir)/libcharon.so
+  exes += $(top_builddir)/src/charon/.libs/charon
 if !MONOLITHIC
-  AM_CFLAGS += -DC_PLUGINS=\""${c_plugins}\"" -DC_PATH=\""${top_builddir}/src/libcharon/plugins\""
+  AM_CFLAGS += -DC_PLUGINS=\""${c_plugins}\""
 endif
 endif
 
 if USE_PLUTO
-  libs += $(top_builddir)/src/pluto/.libs/pluto
-  AM_CFLAGS += -DP_PLUGINS=\""${p_plugins}\"" -DP_PATH=\""${top_builddir}/src/pluto/plugins\""
+  exes += $(top_builddir)/src/pluto/.libs/pluto
+  AM_CFLAGS += -DP_PLUGINS=\""${p_plugins}\""
 endif
 
 if USE_TOOLS
-  libs += $(top_builddir)/src/openac/.libs/openac
-  libs += $(top_builddir)/src/pki/.libs/pki
-  libs += $(top_builddir)/src/scepclient/.libs/scepclient
+  exes += $(top_builddir)/src/openac/.libs/openac
+  exes += $(top_builddir)/src/pki/.libs/pki
+  exes += $(top_builddir)/src/scepclient/.libs/scepclient
 endif
 
 if USE_ATTR_SQL
-  libs += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
+  exes += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
 endif
 
-checksum.c : checksum_builder $(libs)
-		./checksum_builder $(libs) > checksum.c
+checksum.c : checksum_builder $(deps) $(exes)
+		./checksum_builder $(libs) $(exes) > checksum.c
+
+install-data-hook : $(EXTRA_LTLIBRARIES)
+	$(MAKE) $(AM_MAKEFLAGS) LIBCHECKSUM_LIBS='$(EXTRA_LTLIBRARIES)' install-ipseclibLTLIBRARIES
+
+uninstall-hook :
+	$(MAKE) $(AM_MAKEFLAGS) LIBCHECKSUM_LIBS='$(EXTRA_LTLIBRARIES)' uninstall-ipseclibLTLIBRARIES
+
+clean-local :
+	$(MAKE) $(AM_MAKEFLAGS) LIBCHECKSUM_LIBS='$(EXTRA_LTLIBRARIES)' clean-ipseclibLTLIBRARIES
