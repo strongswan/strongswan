@@ -39,6 +39,10 @@ if !MONOLITHIC
   AM_CFLAGS += -DH_PLUGINS=\""${h_plugins}\""
 endif
 endif
+
+if USE_TLS
+  deps += $(top_builddir)/src/libtls/libtls.la
+  libs += $(DESTDIR)$(ipseclibdir)/libtls.so
 endif
 
 if USE_LIBTNCCS
@@ -47,7 +51,8 @@ if USE_LIBTNCCS
 endif
 
 if USE_SIMAKA
-  checksum_builder_LDADD += $(top_builddir)/src/libsimaka/libsimaka.la
+  deps += $(top_builddir)/src/libsimaka/libsimaka.la
+  libs += $(DESTDIR)$(ipseclibdir)/libsimaka.so
 endif
 
 if USE_CHARON
