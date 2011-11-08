@@ -64,9 +64,9 @@ static void build_checksum(char *path, char *name, char *sname)
 			fprintf(stderr, "dlopen failed: %s\n", dlerror());
 		}
 	}
-	printf("\t{\"%-20s%7u, 0x%08x, %6u, 0x%08x},\n",
+	printf("\t{\"%-25s%7u, 0x%08x, %6u, 0x%08x},\n",
 		   name, fsize, fsum, ssize, ssum);
-	fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n",
+	fprintf(stderr, "\"%-25s%7u / 0x%08x       %6u / 0x%08x\n",
 			name, fsize, fsum, ssize, ssum);
 }
 
