@@ -192,6 +192,14 @@ struct private_tls_t {
 	size_t headpos;
 };
 
+/**
+ * Described in header.
+ */
+void libtls_init(void)
+{
+	/* empty */
+}
+
 METHOD(tls_t, process, status_t,
 	private_tls_t *this, void *buf, size_t buflen)
 {

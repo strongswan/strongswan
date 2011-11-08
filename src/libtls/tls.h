@@ -228,6 +228,11 @@ struct tls_t {
 };
 
 /**
+ * Dummy libtls initialization function needed for integrity test
+ */
+void libtls_init(void);
+
+/**
  * Create a tls instance.
  *
  * @param is_server			TRUE to act as server, FALSE for client
