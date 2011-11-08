@@ -350,7 +350,7 @@ endif
 if USE_TNC_TNCCS
   SUBDIRS += plugins/tnc_tnccs
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_tnccs/libstrongswan-tnc_tnccs.la
+  libcharon_la_LIBADD += plugins/tnc_tnccs/libstrongswan-tnc-tnccs.la
 endif
 endif
 
