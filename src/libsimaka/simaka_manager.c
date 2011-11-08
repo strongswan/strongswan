@@ -52,6 +52,14 @@ struct private_simaka_manager_t {
 	rwlock_t *lock;
 };
 
+/**
+ * Described in header.
+ */
+void libsimaka_init(void)
+{
+	/* empty */
+}
+
 METHOD(simaka_manager_t, add_card, void,
 	private_simaka_manager_t *this, simaka_card_t *card)
 {
