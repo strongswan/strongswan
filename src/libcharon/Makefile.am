@@ -375,6 +375,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_LIBTNCCS
+if MONOLITHIC
+  # otherwise this library is linked to the respective plugins
+  libcharon_la_LIBADD += $(top_builddir)/src/libtnccs/libtnccs.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 if MONOLITHIC
