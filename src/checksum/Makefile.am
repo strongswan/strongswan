@@ -32,9 +32,6 @@ endif
 
 if USE_LIBTNCCS
   libs += $(top_builddir)/src/libtnccs/.libs/libtnccs.so
-  checksum_builder_LDADD += $(top_builddir)/src/libtnccs/libtnccs.la
-  INCLUDES += -I$(top_srcdir)/src/libtncif -I$(top_srcdir)/src/libtnccs
-  AM_CFLAGS += -DHAS_TNC
 endif
 
 if USE_SIMAKA
