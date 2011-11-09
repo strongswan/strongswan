@@ -810,7 +810,7 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 	bool found = FALSE;
 	size_t keylen;
 
-	switch (type)
+	switch (key_type)
 	{
 		case KEY_RSA:
 			type = CKK_RSA;
