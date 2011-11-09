@@ -222,14 +222,14 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
 
 			/* Send Request Functional Component Evidence attribute */
-			name = PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART1;
+			name = PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY;
 			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
 									sub_comp_depth, PEN_ITA, qualifier, name);
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
 			
 			/* Send Request Functional Component Evidence attribute */
-			name = PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART2;
+			name = PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE;
 			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
 									sub_comp_depth, PEN_ITA, qualifier, name);
 			attr->set_noskip_flag(attr, TRUE);

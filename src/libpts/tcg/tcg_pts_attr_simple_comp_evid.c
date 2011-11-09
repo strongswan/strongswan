@@ -609,7 +609,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evi
 		.policy_uri = chunk_clone(params.policy_uri),
 		.pcr_before = params.pcr_before,
 		.pcr_after = params.pcr_after,
-		.measurement = chunk_clone(params.measurement),
+		.measurement = params.measurement,
 	);
 
 	return &this->public.pa_tnc_attribute;
