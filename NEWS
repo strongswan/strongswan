@@ -4,11 +4,11 @@ strongswan-4.6.1
 - Because of changing checksums before and after installation which caused
   the integrity tests to fail we avoided directly linking libsimaka, libtls and
   libtnccs to those libcharon plugins which make use of these dynamic libraries.
-  Instead we linked the libraries to the charon daemon. Unfortunately the most
-  recent libtool versions do no keep links to dynamic libraries that are not
-  actually used by the charon daemon itself, thus causing failures during the
-  loading of the plugins which depend on these libraries for resolving external
-  symbols.
+  Instead we linked the libraries to the charon daemon. Unfortunately Ubuntu
+  11.10 activated the --as-needed ld option which discards explicit links
+  to dynamic libraries that are not actually used by the charon daemon itself,
+  thus causing failures during the loading of the plugins which depend on these
+  libraries for resolving external symbols.
 
 -  Therefore our approach of computing  integrity checksums for plugins had to be
    changed radically by moving the hash generation from the compilation to the
