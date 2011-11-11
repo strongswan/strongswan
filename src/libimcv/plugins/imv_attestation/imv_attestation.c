@@ -550,10 +550,16 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	if (attestation_state->get_handshake_state(attestation_state) ==
 		IMV_ATTESTATION_STATE_END)
 	{
-		if (attestation_state->get_request_count(attestation_state))
+		if (attestation_state->get_file_meas_request_count(attestation_state))
 		{
 			DBG1(DBG_IMV, "failure due to %d pending file measurements",
-				 attestation_state->get_request_count(attestation_state));
+				attestation_state->get_file_meas_request_count(attestation_state));
+			attestation_state->set_measurement_error(attestation_state);
+		}
+		if (attestation_state->get_comp_evid_request_count(attestation_state))
+		{
+			DBG1(DBG_IMV, "failure due to %d pending simple component evidences",
+				attestation_state->get_comp_evid_request_count(attestation_state));
 			attestation_state->set_measurement_error(attestation_state);
 		}
 		if (attestation_state->get_measurement_error(attestation_state))

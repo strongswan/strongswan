@@ -81,7 +81,7 @@ struct imv_attestation_state_t {
 	 * @param is_dir			TRUE if directory
 	 * @return					unique request ID
 	 */
-	u_int16_t (*add_request)(imv_attestation_state_t *this, int file_id,
+	u_int16_t (*add_file_meas_request)(imv_attestation_state_t *this, int file_id,
 							 bool is_dir);
 
 	/**
@@ -89,7 +89,7 @@ struct imv_attestation_state_t {
 	 *
 	 * @return					number of pending requests
 	 */
-	int (*get_request_count)(imv_attestation_state_t *this);
+	int (*get_file_meas_request_count)(imv_attestation_state_t *this);
 
 	/**
 	 * Check for presence of request_id and if found remove it from the list
@@ -99,8 +99,38 @@ struct imv_attestation_state_t {
 	 * @param is_dir			return TRUE if request was for a directory
 	 * @return					TRUE if request ID found, FALSE otherwise
 	 */
-	bool (*check_off_request)(imv_attestation_state_t *this, u_int16_t id,
-							  int *file_id, bool *is_dir);
+	bool (*check_off_file_meas_request)(imv_attestation_state_t *this,
+						u_int16_t id, int *file_id, bool *is_dir);
+
+	/**
+	 * Add an entry to the list of pending Function Component Evidences
+	 *
+	 * @param vendor_id			Functional Component Name Vendor ID
+	 * @param qualifier			Qualifier of the requested Functional Component
+	 * @param comp_name			Name of the requested Functional Component
+	 */
+	void (*add_comp_evid_request)(imv_attestation_state_t *this,
+				u_int32_t vendor_id, pts_qualifier_t qualifier,
+				pts_ita_funct_comp_name_t comp_name);
+
+	/**
+	 * Returns the number of pending Function Component Evidences
+	 *
+	 * @return					number of pending evidences
+	 */
+	int (*get_comp_evid_request_count)(imv_attestation_state_t *this);
+
+	/**
+	 * Check for presence of Component Evidence Request and remove if exists
+	 *
+	 * @param vendor_id			Functional Component Name Vendor ID
+	 * @param qualifier			Qualifier of the requested Functional Component
+	 * @param comp_name			Name of the requested Functional Component
+	 * @return					TRUE if component request found, FALSE otherwise
+	 */
+	bool (*check_off_comp_evid_request)(imv_attestation_state_t *this,
+					u_int32_t vendor_id, pts_qualifier_t qualifier,
+					pts_ita_funct_comp_name_t comp_name);
 
 	/**
 	 * Indicates if a file measurement error occurred

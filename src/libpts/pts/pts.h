@@ -30,6 +30,7 @@ typedef struct pcr_entry_t pcr_entry_t;
 #include "pts_file_meas.h"
 #include "pts_file_meta.h"
 #include "pts_dh_group.h"
+#include "pts_funct_comp_name.h"
 
 #include <library.h>
 #include <utils/linked_list.h>

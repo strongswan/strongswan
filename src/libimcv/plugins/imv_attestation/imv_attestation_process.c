@@ -237,6 +237,13 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 
 			name = attr_cast->get_comp_funct_name(attr_cast);
+			if (!attestation_state->check_off_comp_evid_request(attestation_state,
+				comp_vendor_id, qualifier, name))
+			{
+				DBG1(DBG_IMV, "  no entry found for component evidence request");
+				break;
+			}
+			
 			measurement_type = attr_cast->get_measurement_type(attr_cast);
 			hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
 			transformation = attr_cast->get_pcr_trans(attr_cast);
@@ -385,10 +392,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
 				 request_id, file_count, (file_count == 1) ? "":"s");
 
-			if (!attestation_state->check_off_request(attestation_state,
+			if (!attestation_state->check_off_file_meas_request(attestation_state,
 				request_id, &file_id, &is_dir))
 			{
-				DBG1(DBG_IMV, "  no entry found for this request");
+				DBG1(DBG_IMV, "  no entry found for file measurement request %d",
+					 request_id);
 				break;
 			}
 

@@ -20,15 +20,25 @@
 #include <debug.h>
 
 typedef struct private_imv_attestation_state_t private_imv_attestation_state_t;
-typedef struct request_t request_t;
+typedef struct file_meas_request_t file_meas_request_t;
+typedef struct comp_evid_request_t comp_evid_request_t;
 
 /**
  * PTS File/Directory Measurement request entry
  */
-struct request_t {
+struct file_meas_request_t {
 	u_int16_t id;
 	int file_id;
 	bool is_dir;
+};
+
+/**
+ * Functional Component Evidence Request entry
+ */
+struct comp_evid_request_t {
+	u_int32_t vendor_id;
+	pts_qualifier_t qualifier;
+	pts_ita_funct_comp_name_t name;
 };
 
 /**
@@ -67,14 +77,19 @@ struct private_imv_attestation_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
-	 * Request counter
+	 * File Measurement Request counter
 	 */
-	u_int16_t request_counter;
+	u_int16_t file_meas_request_counter;
 
 	/**
 	 * List of PTS File/Directory Measurement requests
 	 */
-	linked_list_t *requests;
+	linked_list_t *file_meas_requests;
+
+	/**
+	 * List of Functional Component Evidence requests
+	 */
+	linked_list_t *comp_evid_requests;
 
 	/**
 	 * PTS object
@@ -82,7 +97,7 @@ struct private_imv_attestation_state_t {
 	pts_t *pts;
 
 	/**
-	 * File Measurement error
+	 * Measurement error
 	 */
 	bool measurement_error;
 
@@ -182,7 +197,8 @@ METHOD(imv_state_t, get_reason_string, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
-	this->requests->destroy_function(this->requests, free);
+	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
+	this->comp_evid_requests->destroy_function(this->comp_evid_requests, free);
 	this->pts->destroy(this->pts);
 	free(this);
 }
@@ -206,29 +222,29 @@ METHOD(imv_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
-METHOD(imv_attestation_state_t, add_request, u_int16_t,
+METHOD(imv_attestation_state_t, add_file_meas_request, u_int16_t,
 	private_imv_attestation_state_t *this, int file_id, bool is_dir)
 {
-	request_t *request;
+	file_meas_request_t *request;
 
-	request = malloc_thing(request_t);
-	request->id = ++this->request_counter;
+	request = malloc_thing(file_meas_request_t);
+	request->id = ++this->file_meas_request_counter;
 	request->file_id = file_id;
 	request->is_dir = is_dir;
-	this->requests->insert_last(this->requests, request);
+	this->file_meas_requests->insert_last(this->file_meas_requests, request);
 
-	return this->request_counter;
+	return this->file_meas_request_counter;
 }
 
-METHOD(imv_attestation_state_t, check_off_request, bool,
+METHOD(imv_attestation_state_t, check_off_file_meas_request, bool,
 	private_imv_attestation_state_t *this, u_int16_t id, int *file_id,
 	bool* is_dir)
 {
 	enumerator_t *enumerator;
-	request_t *request;
+	file_meas_request_t *request;
 	bool found = FALSE;
 	
-	enumerator = this->requests->create_enumerator(this->requests);
+	enumerator = this->file_meas_requests->create_enumerator(this->file_meas_requests);
 	while (enumerator->enumerate(enumerator, &request))
 	{
 		if (request->id == id)
@@ -236,7 +252,7 @@ METHOD(imv_attestation_state_t, check_off_request, bool,
 			found = TRUE;
 			*file_id = request->file_id;
 			*is_dir = request->is_dir;
-			this->requests->remove_at(this->requests, enumerator);
+			this->file_meas_requests->remove_at(this->file_meas_requests, enumerator);
 			free(request);
 			break;
 		}
@@ -245,10 +261,56 @@ METHOD(imv_attestation_state_t, check_off_request, bool,
 	return found;
 }
 
-METHOD(imv_attestation_state_t, get_request_count, int,
+METHOD(imv_attestation_state_t, get_file_meas_request_count, int,
 	private_imv_attestation_state_t *this)
 {
-	return this->requests->get_count(this->requests);
+	return this->file_meas_requests->get_count(this->file_meas_requests);
+}
+
+METHOD(imv_attestation_state_t, add_comp_evid_request, void,
+	private_imv_attestation_state_t *this, u_int32_t vendor_id,
+	pts_qualifier_t qualifier, pts_ita_funct_comp_name_t comp_name)
+{
+	comp_evid_request_t *request;
+
+	request = malloc_thing(comp_evid_request_t);
+	request->vendor_id = vendor_id;
+	request->qualifier = qualifier;
+	request->name = comp_name;
+	this->comp_evid_requests->insert_last(this->comp_evid_requests, request);
+}
+
+METHOD(imv_attestation_state_t, check_off_comp_evid_request, bool,
+	private_imv_attestation_state_t *this, u_int32_t vendor_id,
+	pts_qualifier_t qualifier, pts_ita_funct_comp_name_t comp_name)
+{
+	enumerator_t *enumerator;
+	comp_evid_request_t *request;
+	bool found = FALSE;
+
+	enumerator = this->comp_evid_requests->create_enumerator(this->comp_evid_requests);
+	while (enumerator->enumerate(enumerator, &request))
+	{
+		if (request->vendor_id == vendor_id &&
+			request->qualifier.kernel == qualifier.kernel &&
+			request->qualifier.sub_component == qualifier.sub_component &&
+			request->qualifier.type == qualifier.type &&
+			request->name == comp_name)
+		{
+			found = TRUE;
+			this->comp_evid_requests->remove_at(this->comp_evid_requests, enumerator);
+			free(request);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+METHOD(imv_attestation_state_t, get_comp_evid_request_count, int,
+	private_imv_attestation_state_t *this)
+{
+	return this->comp_evid_requests->get_count(this->comp_evid_requests);
 }
 
 METHOD(imv_attestation_state_t, get_measurement_error, bool,
@@ -284,9 +346,12 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.get_handshake_state = _get_handshake_state,
 			.set_handshake_state = _set_handshake_state,
 			.get_pts = _get_pts,
-			.add_request = _add_request,
-			.check_off_request = _check_off_request,
-			.get_request_count = _get_request_count,
+			.add_file_meas_request = _add_file_meas_request,
+			.check_off_file_meas_request = _check_off_file_meas_request,
+			.get_file_meas_request_count = _get_file_meas_request_count,
+			.add_comp_evid_request = _add_comp_evid_request,
+			.check_off_comp_evid_request = _check_off_comp_evid_request,
+			.get_comp_evid_request_count = _get_comp_evid_request_count,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,
 		},
@@ -295,7 +360,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 		.handshake_state = IMV_ATTESTATION_STATE_INIT,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
-		.requests = linked_list_create(),
+		.file_meas_requests = linked_list_create(),
+		.comp_evid_requests = linked_list_create(),
 		.pts = pts_create(FALSE),
 	);
 
