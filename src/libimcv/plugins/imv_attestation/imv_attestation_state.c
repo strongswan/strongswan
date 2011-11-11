@@ -117,9 +117,12 @@ struct entry_t {
  * Table of multi-lingual reason string entries 
  */
 static entry_t reasons[] = {
-	{ "en", "IMV Attestation: Non-matching file measurement/s or invalid TPM Quote signature" },
-	{ "mn", "IMV Attestation: Файлуудын хэмжилт зөрсөн эсвэл буруу TPM Quote гарын үсэг" },
-	{ "de", "IMV Attestation: Falsche Datei Messung/en oder TPM Quote Unterschrift ist ungültig" },
+	{ "en", "IMV Attestation: Incorrect/pending file measurement/component"
+			" evidence or invalid TPM Quote signature received" },
+	{ "mn", "IMV Attestation:  Буруу/хүлээгдэж байгаа файл/компонент хэмжилт "
+			"эсвэл буруу TPM Quote гарын үсэг" },
+	{ "de", "IMV Attestation: Falsche/Fehlende Dateimessung/Komponenten Beweis "
+			"oder ungültige TPM Quote Unterschrift ist erhalten" },
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
