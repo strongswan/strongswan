@@ -317,6 +317,7 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
+	 * @param use_quote2		Version of the Quote funtion to be used
 	 * @param pcrs				Array of PCR's to make quotation over
 	 * @param num_of_pcrs		Number of elements in pcrs array
 	 * @param pcr_composite		Chunk to save pcr composite structure
@@ -324,7 +325,8 @@ struct pts_t {
 	 *							without external data (anti-replay protection)
 	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	 bool (*quote_tpm)(pts_t *this, bool use_quote2,
+					   u_int32_t *pcrs, u_int32_t num_of_pcrs,
 					   chunk_t *pcr_composite, chunk_t *quote_signature);
 
 	 /**
@@ -337,11 +339,14 @@ struct pts_t {
 	 /**
 	 * Constructs and returns TPM Quote Info structure expected from IMC
 	 *
-	 * @param pcr_composite			Output variable to store PCR Composite
-	 * @param quote_info			Output variable to store TPM Quote Info
+	 * @param use_quote2		Version of the TPM_QUOTE_INFO to be constructed
+	 * @param ver_info_included Version info is concatenated to TPM_QUOTE_INFO2
+	 * @param pcr_composite		Output variable to store PCR Composite
+	 * @param quote_info		Output variable to store TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, pts_meas_algorithms_t composite_algo,
+	 bool (*get_quote_info)(pts_t *this, bool use_quote2, bool ver_info_included,
+							pts_meas_algorithms_t composite_algo,
 							chunk_t *pcr_composite, chunk_t *quote_info);
 
 	 /**

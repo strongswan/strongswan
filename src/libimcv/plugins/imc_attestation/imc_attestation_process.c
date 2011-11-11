@@ -60,7 +60,7 @@ static u_int8_t* string_to_bytearray(char *str_value)
 	for (i = 0; i < strlen(str_value)/2; i++)
 	{
 		char c1, c2;
-		u_int8_t d1, d2;
+		u_int8_t d1 = 0, d2 = 0;
 
 		c1 = str_value[i*2];
 		c2 = str_value[i*2 + 1];
@@ -547,6 +547,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			chunk_t pcr_composite, quote_signature;
 			u_int32_t num_of_evidences, i = 0;
 			u_int32_t *pcrs;
+			bool use_quote2;
 
 			/* Send buffered Simple Component Evidences */
 			num_of_evidences = evidences->get_count(evidences);
@@ -568,9 +569,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				/* Send Simple Compoenent Evidence */
 				attr_list->insert_last(attr_list, attr);
 			}
+
+			use_quote2 = (lib->settings->get_int(lib->settings,
+					"libimcv.plugins.imc-attestation.quote_version", 1) == 1) ?
+							FALSE : TRUE;
 			
 			/* Quote */
-			if (!pts->quote_tpm(pts, pcrs, num_of_evidences,
+			if (!pts->quote_tpm(pts, use_quote2, pcrs, num_of_evidences,
 				&pcr_composite, &quote_signature))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
@@ -580,7 +585,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 	
 			/* Send Simple Evidence Final attribute */
-			flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
+			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2:
+								 PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
 			composite_algorithm |= PTS_MEAS_ALGO_SHA1;
 			
 			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags,

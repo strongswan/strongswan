@@ -281,7 +281,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			chunk_t pcr_comp;
 			chunk_t tpm_quote_sign;
 			chunk_t evid_sign;
-			bool evid_signature_included;
+			bool evid_signature_included = FALSE, use_quote2 = FALSE,
+												ver_info_included = FALSE;
+			chunk_t pcr_composite, quote_info;
 			
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
 			evid_signature_included = attr_cast->is_evid_sign_included(attr_cast);
@@ -293,16 +295,18 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			 */
 			composite_algorithm = attr_cast->get_comp_hash_algorithm(attr_cast);
 
-			if ((flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) ||
-				(flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER))
+			if (flags != PTS_SIMPLE_EVID_FINAL_FLAG_NO)
 			{
-				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
-					 " TPM Quote Info2 structure");
-				break;
-			}
-			if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
-			{
-				chunk_t pcr_composite, quote_info;
+				if ((flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) ||
+					(flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER))
+				{
+					use_quote2 = TRUE;
+				}
+				if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER)
+				{
+					ver_info_included = TRUE;
+				}
+
 				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
 				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
 
@@ -313,15 +317,15 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					DBG1(DBG_IMV, "Either PCR Composite or Quote Signature missing");
 					return FALSE;
 				}
-				
-				/* Construct PCR Composite and TPM Quote Info structures*/
-				if (!pts->get_quote_info(pts, composite_algorithm,
-					&pcr_composite, &quote_info))
+
+				/* Construct PCR Composite and TPM Quote Info structures */
+				if (!pts->get_quote_info(pts, use_quote2, ver_info_included,
+					composite_algorithm, &pcr_composite, &quote_info))
 				{
 					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
 					return FALSE;
 				}
-				
+
 				/* Check calculated PCR composite matches with received */
 				if (!chunk_equals(pcr_comp, pcr_composite))
 				{
@@ -333,18 +337,18 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 				DBG2(DBG_IMV, "received PCR Composite matches with constructed");
 				chunk_clear(&pcr_composite);
-								
+
 				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sign))
 				{
 					chunk_clear(&quote_info);
 					return FALSE;
 				}
-				
+
 				DBG2(DBG_IMV, "signature verification succeeded for "
 							  "TPM Quote Info");
 				chunk_clear(&quote_info);
 			}
-			
+
 			if (evid_signature_included)
 			{
 				/** TODO: What to do with Evidence Signature */

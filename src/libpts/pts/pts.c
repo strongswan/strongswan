@@ -792,7 +792,8 @@ METHOD(pts_t, extend_pcr, bool,
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	private_pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
+	private_pts_t *this, bool use_quote2,
+	u_int32_t *pcrs, u_int32_t num_of_pcrs,
 	chunk_t *pcr_composite, chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
@@ -804,9 +805,10 @@ METHOD(pts_t, quote_tpm, bool,
 	BYTE secret[] = TSS_WELL_KNOWN_SECRET;
 	TSS_HPCRS hPcrComposite;
 	TSS_VALIDATION valData;
-	u_int32_t i;
+	u_int32_t i, versionInfoSize;
 	TSS_RESULT result;
 	chunk_t pcr_comp, quote_sign;
+	BYTE* versionInfo;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -854,8 +856,11 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Create PCR composite object */
-	result = Tspi_Context_CreateObject(hContext,
-									   TSS_OBJECT_TYPE_PCRS, 0, &hPcrComposite);
+	result = use_quote2 ?
+			Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS,
+							TSS_PCRS_STRUCT_INFO_SHORT, &hPcrComposite) :
+			Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS,
+							0, &hPcrComposite);
 	if (result != TSS_SUCCESS)
 	{
 		goto err2;
@@ -869,7 +874,10 @@ METHOD(pts_t, quote_tpm, bool,
 			DBG1(DBG_PTS, "Invalid PCR number: %d", pcrs[i]);
 			goto err3;
 		}
-		result = Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcrs[i]);
+		result = use_quote2 ?
+				Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcrs[i],
+												   TSS_PCRS_DIRECTION_RELEASE):
+				Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcrs[i]);
 		if (result != TSS_SUCCESS)
 		{
 			goto err3;
@@ -882,7 +890,10 @@ METHOD(pts_t, quote_tpm, bool,
 
 
 	/* TPM Quote */
-	result = Tspi_TPM_Quote(hTPM, hAIK, hPcrComposite, &valData);
+	result = use_quote2 ?
+			Tspi_TPM_Quote2(hTPM, hAIK, FALSE, hPcrComposite, &valData,
+							&versionInfoSize,&versionInfo):
+			Tspi_TPM_Quote(hTPM, hAIK, hPcrComposite, &valData);
 	if (result != TSS_SUCCESS)
 	{
 		goto err4;
@@ -890,7 +901,18 @@ METHOD(pts_t, quote_tpm, bool,
 
 	/* Set output chunks */
 	pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
-	memcpy(pcr_comp.ptr, valData.rgbData + 8, HASH_SIZE_SHA1);
+	if (use_quote2)
+	{
+		/* TPM_Composite_Hash is last 20 bytes of TPM_Quote_Info2 structure */
+		memcpy(pcr_comp.ptr, valData.rgbData + valData.ulDataLength - HASH_SIZE_SHA1,
+			   HASH_SIZE_SHA1);
+	}
+	else
+	{
+		/* TPM_Composite_Hash is 8-28th bytes of TPM_Quote_Info structure */
+		memcpy(pcr_comp.ptr, valData.rgbData + 8, HASH_SIZE_SHA1);
+	}
+	
 	*pcr_composite = pcr_comp;
 	*pcr_composite = chunk_clone(*pcr_composite);
 	DBG3(DBG_PTS, "Hash of PCR Composite: %B",pcr_composite);
@@ -903,7 +925,7 @@ METHOD(pts_t, quote_tpm, bool,
 							  valData.ulValidationDataLength);
 	*quote_signature = quote_sign;
 	*quote_signature = chunk_clone(*quote_signature);
-	DBG3(DBG_PTS, "TOM Quote Signature: %B",quote_signature);
+	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_signature);
 
 	chunk_clear(&quote_sign);
 	Tspi_Context_FreeMemory(hContext, NULL);
@@ -1012,33 +1034,22 @@ METHOD(pts_t, does_pcr_value_match, bool,
 }
 
 /**
- * 1. build a TCPA_PCR_COMPOSITE structure which contains (pcrCompositeBuf)
- * TCPA_PCR_SELECTION structure (bitmask length + bitmask)
- * UINT32 (network order) gives the number of bytes following (pcr entries * 20)
- * TCPA_PCRVALUE[] with the pcr values
- *
- * The first two bytes of the message represent the length
- * of the bitmask that follows. The bitmask represents the
- * requested PCRs to be quoted.
- *
- * TPM Main-Part 2 TPM Structures_v1.2 8.1
- * The bitmask is in big endian order"
- *
- *        BYTE 1             BYTE 2                   ...
- * Bit:   1 1 1 1 0 0 0 0    1  1  1  1  0  0  0 0    ...
- * Pcr:   7 6 5 4 3 2 1 0    15 14 13 12 11 10 9 8    ...
- *
- * 2. SHA1(pcrCompositeBuf)
- *
- * 3. build a TCPA_QUOTE_INFO structure which contains
+ * TPM_QUOTE_INFO structure:
  *	4 bytes of version
  *	4 bytes 'Q' 'U' 'O' 'T'
  *	20 byte SHA1 of TCPA_PCR_COMPOSITE
  *	20 byte nonce
+ *
+ * TPM_QUOTE_INFO2 structure:
+ * 2 bytes Tag 0x0036 TPM_Tag_Quote_info2
+ * 4 bytes 'Q' 'U' 'T' '2'
+ * 20 bytes nonce
+ * 26 bytes PCR_INFO_SHORT
  */
 
 METHOD(pts_t, get_quote_info, bool,
-	private_pts_t *this, pts_meas_algorithms_t composite_algo,
+	private_pts_t *this, bool use_quote2, bool ver_info_included,
+	pts_meas_algorithms_t composite_algo,
 	chunk_t *out_pcr_composite, chunk_t *out_quote_info)
 {
 	enumerator_t *e;
@@ -1053,6 +1064,18 @@ METHOD(pts_t, get_quote_info, bool,
 	{
 		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct "
 					  "TPM Quote Info");
+		return FALSE;
+	}
+	if (!this->secret.ptr)
+	{
+		DBG1(DBG_PTS, "Secret assessment value unavailable",
+			 "unable to construct TPM Quote Info");
+		return FALSE;
+	}
+	if (use_quote2 && ver_info_included && !this->tpm_version_info.ptr)
+	{
+		DBG1(DBG_PTS, "TPM Version Information unavailable",
+			 "unable to construct TPM Quote Info2");
 		return FALSE;
 	}
 	
@@ -1094,19 +1117,6 @@ METHOD(pts_t, get_quote_info, bool,
 	pcr_composite = chunk_clone(writer->get_buf(writer));
 	DBG3(DBG_PTS, "PCR Composite: %B", &pcr_composite);
 	writer->destroy(writer);
-
-	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
-	/* Version number */
-	writer->write_uint8(writer, 1);
-	writer->write_uint8(writer, 1);
-	writer->write_uint8(writer, 0);
-	writer->write_uint8(writer, 0);
-
-	/* Magic QUOT value, depends on TPM Ordinal */
-	writer->write_uint8(writer, 'Q');
-	writer->write_uint8(writer, 'U');
-	writer->write_uint8(writer, 'O');
-	writer->write_uint8(writer, 'T');
 
 	/* Output the TPM_PCR_COMPOSITE expected from IMC */
 	if (composite_algo)
@@ -1152,20 +1162,68 @@ METHOD(pts_t, get_quote_info, bool,
 	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
 	hasher->destroy(hasher);
 
-	writer->write_data(writer, hash_pcr_composite);
+	/* Construct TPM_QUOTE_INFO/TPM_QUOTE_INFO2 structure */
+	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
+
+	if (use_quote2)
+	{
+		/* TPM Structure Tag */
+		writer->write_uint16(writer, TPM_TAG_QUOTE_INFO2);
+
+		/* Magic QUT2 value */
+		writer->write_uint8(writer, 'Q');
+		writer->write_uint8(writer, 'U');
+		writer->write_uint8(writer, 'T');
+		writer->write_uint8(writer, '2');
+
+		/* Secret assessment value 20 bytes (nonce) */
+		writer->write_data(writer, this->secret);
+
+		/* Lenght of the bist mask field */
+		writer->write_uint16(writer, bitmask_len);
+
+		/* PCR selection Bitmask */
+		for (i = 0; i< bitmask_len ; i++)
+		{
+			writer->write_uint8(writer, mask_bytes[i]);
+		}
+		
+		/* TPM Locality Selection */
+		writer->write_uint8(writer, TPM_LOC_ZERO);
+
+		/* PCR Composite Hash */
+		writer->write_data(writer, hash_pcr_composite);
+
+		if (ver_info_included)
+		{
+			/* TPM version Info */
+			writer->write_data(writer, this->tpm_version_info);
+		}
+	}
+	else
+	{
+		/* Version number */
+		writer->write_uint8(writer, 1);
+		writer->write_uint8(writer, 1);
+		writer->write_uint8(writer, 0);
+		writer->write_uint8(writer, 0);
+
+		/* Magic QUOT value */
+		writer->write_uint8(writer, 'Q');
+		writer->write_uint8(writer, 'U');
+		writer->write_uint8(writer, 'O');
+		writer->write_uint8(writer, 'T');
+
+		/* PCR Composite Hash */
+		writer->write_data(writer, hash_pcr_composite);
+
+		/* Secret assessment value 20 bytes (nonce) */
+		writer->write_data(writer, this->secret);
+	}
+	
 	chunk_clear(&pcr_composite);
 	chunk_clear(&hash_pcr_composite);
 
-	if (!this->secret.ptr)
-	{
-		DBG1(DBG_PTS, "Secret assessment value unavailable",
-			 "unable to construct TPM Quote Info");
-		chunk_clear(out_pcr_composite);
-		writer->destroy(writer);
-		return FALSE;
-	}
-	/* Secret assessment value 20 bytes (nonce) */
-	writer->write_data(writer, this->secret);
 	/* TPM Quote Info */
 	*out_quote_info = chunk_clone(writer->get_buf(writer));
 	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
