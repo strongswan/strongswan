@@ -131,6 +131,7 @@ ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
+ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
@@ -871,6 +872,7 @@ ADD_PLUGIN([eap-ttls],             [c libcharon])
 ADD_PLUGIN([eap-peap],             [c libcharon])
 ADD_PLUGIN([eap-tnc],              [c libcharon])
 ADD_PLUGIN([tnc-ifmap],            [c libcharon])
+ADD_PLUGIN([tnc-pdp],              [c libcharon])
 ADD_PLUGIN([tnc-imc],              [c libcharon])
 ADD_PLUGIN([tnc-imv],              [c libcharon])
 ADD_PLUGIN([tnc-tnccs],            [c libcharon])
@@ -994,6 +996,7 @@ AM_CONDITIONAL(USE_EAP_PEAP, test x$eap_peap = xtrue)
 AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
+AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
@@ -1172,6 +1175,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
+	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile
 	src/libcharon/plugins/tnc_imv/Makefile
 	src/libcharon/plugins/tnc_tnccs/Makefile

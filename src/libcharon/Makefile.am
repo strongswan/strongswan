@@ -340,6 +340,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TNC_PDP
+  SUBDIRS += plugins/tnc_pdp
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_pdp/libstrongswan-tnc-pdp.la
+endif
+endif
+
 if USE_TNC_IMC
   SUBDIRS += plugins/tnc_imc
 if MONOLITHIC

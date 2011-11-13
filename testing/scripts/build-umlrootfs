@@ -192,6 +192,11 @@ then
     echo -n " --enable-eap-tnc" >> $INSTALLSHELL
 fi
 
+if [ "$USE_TNC_PDP" = "yes" ]
+then
+    echo -n " --enable-tnc-pdp" >> $INSTALLSHELL
+fi
+
 if [ "$USE_TNC_IMC" = "yes" ]
 then
     echo -n " --enable-tnc-imc" >> $INSTALLSHELL
