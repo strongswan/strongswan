@@ -375,9 +375,13 @@ static void process_link(private_kernel_netlink_net_t *this,
 			{
 				if (current->ifindex == msg->ifi_index)
 				{
-					/* we do not remove it, as an address may be added to a
-					 * "down" interface and we wan't to know that. */
-					current->flags = msg->ifi_flags;
+					if (event)
+					{
+						update = TRUE;
+						DBG1(DBG_KNL, "interface %s deleted", current->ifname);
+					}
+					this->ifaces->remove_at(this->ifaces, enumerator);
+					iface_entry_destroy(current);
 					break;
 				}
 			}
