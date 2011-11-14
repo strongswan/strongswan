@@ -177,15 +177,15 @@ INSERT INTO files (
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path, component
  ) VALUES (
-  0, 'pcr17', 1
+  0, 'tboot_pcr17', 1
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path, component
  ) VALUES (
-  0, 'pcr18', 1
+  0, 'tboot_pcr18', 1
 );
 
 /* Product-File */

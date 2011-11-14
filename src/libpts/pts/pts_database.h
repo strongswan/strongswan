@@ -51,6 +51,15 @@ struct pts_database_t {
 												 char *product);
 
 	/**
+	* Get functional components to request evidence of
+	*
+	* @param product		software product (os, vpn client, etc.)
+	* @return				enumerator over all matching components
+	*/
+	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this,
+												 char *product);
+
+	/**
 	* Get stored measurement hash for single file or directory entries
 	*
 	* @param product		software product (os, vpn client, etc.)
@@ -62,6 +71,17 @@ struct pts_database_t {
 	enumerator_t* (*create_hash_enumerator)(pts_database_t *this, char *product,
 											pts_meas_algorithms_t algo,
 											int id, bool is_dir);
+
+	/**
+	* Get stored measurement hash for functional component entries
+	*
+	* @param product		software product (os, vpn client, etc.)
+	* @param algo			hash algorithm used for measurement
+	* @param comp_name		value of path column in files table
+	* @return				enumerator over all matching measurement hashes
+	*/
+	enumerator_t* (*create_comp_hash_enumerator)(pts_database_t *this, char *product,
+									pts_meas_algorithms_t algo, char *comp_name);
 
 	/**
 	* Destroys a pts_database_t object.

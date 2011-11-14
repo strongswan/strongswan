@@ -69,6 +69,22 @@ METHOD(pts_database_t, create_file_meta_enumerator, enumerator_t*,
 	return e;
 }
 
+METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
+	private_pts_database_t *this, char *product)
+{
+	enumerator_t *e;
+
+	/* look for all entries belonging to a product in the files table */
+	e = this->db->query(this->db,
+				"SELECT f.type, f.path FROM files AS f "
+				"JOIN product_file AS pf ON f.id = pf.file "
+				"JOIN products AS p ON p.id = pf.product "
+				"WHERE p.name = ? AND f.component = 1",
+				DB_TEXT, product, DB_INT, DB_TEXT);
+	return e;
+}
+
+
 METHOD(pts_database_t, create_hash_enumerator, enumerator_t*,
 	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
 	int id, bool is_dir)
@@ -97,6 +113,22 @@ METHOD(pts_database_t, create_hash_enumerator, enumerator_t*,
 	return e;
 }
 
+METHOD(pts_database_t, create_comp_hash_enumerator, enumerator_t*,
+	private_pts_database_t *this, char *product,
+	pts_meas_algorithms_t algo, char *comp_name)
+{
+	enumerator_t *e;
+	
+	e = this->db->query(this->db,
+				"SELECT fh.hash FROM file_hashes AS fh "
+				"JOIN files AS f ON fh.file = f.id "
+				"JOIN products AS p ON fh.product = p.id "
+				"WHERE p.name = ? AND f.path = ? AND fh.algo = ? ",
+				DB_TEXT, product, DB_TEXT, comp_name, DB_INT, algo, DB_BLOB);
+
+	return e;
+}
+
 METHOD(pts_database_t, destroy, void,
 	private_pts_database_t *this)
 {
@@ -115,7 +147,9 @@ pts_database_t *pts_database_create(char *uri)
 		.public = {
 			.create_file_meas_enumerator = _create_file_meas_enumerator,
 			.create_file_meta_enumerator = _create_file_meta_enumerator,
+			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_hash_enumerator = _create_hash_enumerator,
+			.create_comp_hash_enumerator = _create_comp_hash_enumerator,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),
@@ -123,8 +157,8 @@ pts_database_t *pts_database_create(char *uri)
 
 	if (!this->db)
 	{
-		DBG1(DBG_PTS, "failed to connect to PTS file measurement database '%s'",
-			 uri);
+		DBG1(DBG_PTS,
+			 "failed to connect to PTS file measurement database '%s'", uri);
 		free(this);
 		return NULL;
 	}

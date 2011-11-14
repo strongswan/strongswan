@@ -6,7 +6,8 @@ CREATE TABLE files (
   type INTEGER NOT NULL,
   path TEXT NOT NULL,
   measurement INTEGER DEFAULT 0,
-  metadata INTEGER DEFAULT 0
+  metadata INTEGER DEFAULT 0,
+  component INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS products;
