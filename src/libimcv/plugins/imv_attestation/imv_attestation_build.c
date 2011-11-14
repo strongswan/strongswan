@@ -211,6 +211,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			u_int32_t sub_comp_depth;
 			pts_qualifier_t qualifier;
 			pts_ita_funct_comp_name_t name;
+			enumerator_t *enumerator;
+			char *platform_info, *pathname;
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
@@ -221,29 +223,59 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			qualifier.sub_component = FALSE;
 			qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
 
-			/* Send Request Functional Component Evidence attribute */
-			name = PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY;
-			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
-									sub_comp_depth, PEN_ITA, qualifier, name);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-			attestation_state->add_comp_evid_request( attestation_state,
-													  PEN_ITA, qualifier, name);
+			/* Get Platform and OS of the PTS-IMC */
+			platform_info = pts->get_platform_info(pts);
+			if (!pts_db || !platform_info)
+			{
+				DBG1(DBG_IMV, "%s%s%s not available",
+					(pts_db) ? "" : "pts database",
+					(!pts_db && !platform_info) ? "and" : "",
+					(platform_info) ? "" : "platform info");
+				break;
+			}
+			DBG1(DBG_IMV, "platform is '%s'", platform_info);
+
 			
-			/* Send Request Functional Component Evidence attribute */
-			name = PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE;
-			attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
+			enumerator = pts_db->create_comp_evid_enumerator(pts_db,
+															 platform_info);
+			if (!enumerator)
+			{
+				break;
+			}
+			while (enumerator->enumerate(enumerator, &pathname))
+			{
+				if (strcmp(pathname, TBOOT_POLICY_STR) == 0)
+				{
+					name = PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY;
+				}
+				else if (strcmp(pathname, TBOOT_MLE_STR) == 0)
+				{
+					name = PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE;
+				}
+				else
+				{
+					DBG1(DBG_IMV, "Unknown functional component name: \"%s\"",
+						 pathname);
+					enumerator->destroy(enumerator);
+					return FALSE;
+				}
+
+				/* Send Request Functional Component Evidence attribute */
+				attr = tcg_pts_attr_req_funct_comp_evid_create(flags,
 									sub_comp_depth, PEN_ITA, qualifier, name);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-			attestation_state->add_comp_evid_request(attestation_state,
-													 PEN_ITA, qualifier, name);
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+				attestation_state->add_comp_evid_request( attestation_state,
+									 PEN_ITA, qualifier, name);
+			}
+			enumerator->destroy(enumerator);
+			
 			
 			/* Send Generate Attestation Evidence attribute */
 			attr = tcg_pts_attr_gen_attest_evid_create();
 			attr->set_noskip_flag(attr, TRUE);
 			msg->add_attribute(msg, attr);
-
+			
 			break;
 		}
 		default:

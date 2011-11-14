@@ -410,6 +410,109 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_list->insert_last(attr_list, attr);
 			break;
 		}
+		case TCG_PTS_REQ_FILE_META:
+		{
+			tcg_pts_attr_req_file_meta_t *attr_cast;
+			char *pathname;
+			bool is_directory;
+			u_int8_t delimiter;
+			pts_file_meta_t *metadata;
+
+			attr_info = attr->get_value(attr);
+			attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
+			is_directory = attr_cast->get_directory_flag(attr_cast);
+			delimiter = attr_cast->get_delimiter(attr_cast);
+			pathname = attr_cast->get_pathname(attr_cast);
+
+			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
+			if (valid_path && pts_error)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										pts_error, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+			else if (!valid_path)
+			{
+				break;
+			}
+			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_DELIMITER, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+			/* Get File Metadata and send them to PTS-IMV */
+			DBG2(DBG_IMC, "metadata request for %s '%s'",
+					is_directory ? "directory" : "file",
+					pathname);
+			metadata = pts->get_metadata(pts, pathname, is_directory);
+
+			if (!metadata)
+			{
+				/* TODO handle error codes from measurements */
+				return FALSE;
+			}
+			attr = tcg_pts_attr_unix_file_meta_create(metadata);
+			attr->set_noskip_flag(attr, TRUE);
+			attr_list->insert_last(attr_list, attr);
+
+			break;
+		}
+		case TCG_PTS_REQ_FILE_MEAS:
+		{
+			tcg_pts_attr_req_file_meas_t *attr_cast;
+			char *pathname;
+			u_int16_t request_id;
+			bool is_directory;
+			u_int32_t delimiter;
+			pts_file_meas_t *measurements;
+
+			attr_info = attr->get_value(attr);
+			attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
+			is_directory = attr_cast->get_directory_flag(attr_cast);
+			request_id = attr_cast->get_request_id(attr_cast);
+			delimiter = attr_cast->get_delimiter(attr_cast);
+			pathname = attr_cast->get_pathname(attr_cast);
+			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
+
+			if (valid_path && pts_error)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										pts_error, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+			else if (!valid_path)
+			{
+				break;
+			}
+
+			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_DELIMITER, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+
+			/* Do PTS File Measurements and send them to PTS-IMV */
+			DBG2(DBG_IMC, "measurement request %d for %s '%s'",
+				 request_id, is_directory ? "directory" : "file",
+				 pathname);
+			measurements = pts->do_measurements(pts, request_id,
+									pathname, is_directory);
+			if (!measurements)
+			{
+				/* TODO handle error codes from measurements */
+				return FALSE;
+			}
+			attr = tcg_pts_attr_file_meas_create(measurements);
+			attr->set_noskip_flag(attr, TRUE);
+			attr_list->insert_last(attr_list, attr);
+			break;
+		}
 		case TCG_PTS_REQ_FUNCT_COMP_EVID:
 		{
 			tcg_pts_attr_req_funct_comp_evid_t *attr_cast;
@@ -514,7 +617,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 								  "for Simple Component Evidence");
 					return FALSE;
 				}
-				
+
 				/* Get PCR after value from log when TBOOT is measuring entity */
 				if (!(name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
 						name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE) &&
@@ -524,7 +627,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 						 params.extended_pcr);
 					return FALSE;
 				}
-				
+
 				/* Buffer Simple Component Evidence attribute */
 				attr = tcg_pts_attr_simple_comp_evid_create(params);
 				evidences->insert_last(evidences, attr);
@@ -552,13 +655,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			/* Send buffered Simple Component Evidences */
 			num_of_evidences = evidences->get_count(evidences);
 			pcrs = (u_int32_t*)malloc(sizeof(u_int32_t)*num_of_evidences);
-			
+
 			e = evidences->create_enumerator(evidences);
 			while (e->enumerate(e, &attr))
 			{
 				tcg_pts_attr_simple_comp_evid_t *attr_cast;
 				u_int32_t extended_pcr;
-						
+
 				attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
 
@@ -573,7 +676,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			use_quote2 = (lib->settings->get_int(lib->settings,
 					"libimcv.plugins.imc-attestation.quote_version", 1) == 1) ?
 							FALSE : TRUE;
-			
+
 			/* Quote */
 			if (!pts->quote_tpm(pts, use_quote2, pcrs, num_of_evidences,
 				&pcr_composite, &quote_signature))
@@ -583,123 +686,20 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DESTROY_IF(evidences);
 				return FALSE;
 			}
-	
+
 			/* Send Simple Evidence Final attribute */
 			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2:
 								 PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
 			composite_algorithm |= PTS_MEAS_ALGO_SHA1;
-			
+
 			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags,
 								composite_algorithm, pcr_composite,
 								quote_signature, chunk_empty);
 			attr_list->insert_last(attr_list, attr);
-					
+
 			DESTROY_IF(e);
 			DESTROY_IF(evidences);
-					
-			break;
-		}
-		case TCG_PTS_REQ_FILE_META:
-		{
-			tcg_pts_attr_req_file_meta_t *attr_cast;
-			char *pathname;
-			bool is_directory;
-			u_int8_t delimiter;
-			pts_file_meta_t *metadata;
 
-			attr_info = attr->get_value(attr);
-			attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
-			is_directory = attr_cast->get_directory_flag(attr_cast);
-			delimiter = attr_cast->get_delimiter(attr_cast);
-			pathname = attr_cast->get_pathname(attr_cast);
-
-			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
-			if (valid_path && pts_error)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										pts_error, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			else if (!valid_path)
-			{
-				break;
-			}
-			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_DELIMITER, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			/* Get File Metadata and send them to PTS-IMV */
-			DBG2(DBG_IMC, "metadata request for %s '%s'",
-					is_directory ? "directory" : "file",
-					pathname);
-			metadata = pts->get_metadata(pts, pathname, is_directory);
-
-			if (!metadata)
-			{
-				/* TODO handle error codes from measurements */
-				return FALSE;
-			}
-			attr = tcg_pts_attr_unix_file_meta_create(metadata);
-			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
-
-			break;
-		}
-		case TCG_PTS_REQ_FILE_MEAS:
-		{
-			tcg_pts_attr_req_file_meas_t *attr_cast;
-			char *pathname;
-			u_int16_t request_id;
-			bool is_directory;
-			u_int32_t delimiter;
-			pts_file_meas_t *measurements;
-
-			attr_info = attr->get_value(attr);
-			attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
-			is_directory = attr_cast->get_directory_flag(attr_cast);
-			request_id = attr_cast->get_request_id(attr_cast);
-			delimiter = attr_cast->get_delimiter(attr_cast);
-			pathname = attr_cast->get_pathname(attr_cast);
-			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
-
-			if (valid_path && pts_error)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										pts_error, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			else if (!valid_path)
-			{
-				break;
-			}
-
-			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_DELIMITER, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-
-			/* Do PTS File Measurements and send them to PTS-IMV */
-			DBG2(DBG_IMC, "measurement request %d for %s '%s'",
-				 request_id, is_directory ? "directory" : "file",
-				 pathname);
-			measurements = pts->do_measurements(pts, request_id,
-									pathname, is_directory);
-			if (!measurements)
-			{
-				/* TODO handle error codes from measurements */
-				return FALSE;
-			}
-			attr = tcg_pts_attr_file_meas_create(measurements);
-			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
 			break;
 		}
 		/* TODO: Not implemented yet */

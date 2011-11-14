@@ -177,10 +177,93 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pts->set_aik(pts, aik);
 			break;
 		}
+		case TCG_PTS_FILE_MEAS:
+		{
+			tcg_pts_attr_file_meas_t *attr_cast;
+			u_int16_t request_id;
+			int file_count, file_id;
+			pts_meas_algorithms_t algo;
+			pts_file_meas_t *measurements;
+			char *platform_info;
+			enumerator_t *e_hash;
+			bool is_dir;
+
+			platform_info = pts->get_platform_info(pts);
+			if (!pts_db || !platform_info)
+			{
+				DBG1(DBG_IMV, "%s%s%s not available",
+					(pts_db) ? "" : "pts database",
+					(!pts_db && !platform_info) ? "and" : "",
+					(platform_info) ? "" : "platform info");
+				break;
+			}
+
+			attr_cast = (tcg_pts_attr_file_meas_t*)attr;
+			measurements = attr_cast->get_measurements(attr_cast);
+			algo = pts->get_meas_algorithm(pts);
+			request_id = measurements->get_request_id(measurements);
+			file_count = measurements->get_file_count(measurements);
+
+			DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
+				 request_id, file_count, (file_count == 1) ? "":"s");
+
+			if (!attestation_state->check_off_file_meas_request(attestation_state,
+				request_id, &file_id, &is_dir))
+			{
+				DBG1(DBG_IMV, "  no entry found for file measurement request %d",
+					 request_id);
+				break;
+			}
+
+			/* check hashes from database against measurements */
+			e_hash = pts_db->create_hash_enumerator(pts_db,
+							platform_info, algo, file_id, is_dir);
+			if (!measurements->verify(measurements, e_hash, is_dir))
+			{
+				attestation_state->set_measurement_error(attestation_state);
+			}
+			e_hash->destroy(e_hash);
+			break;
+		}
+		case TCG_PTS_UNIX_FILE_META:
+		{
+			tcg_pts_attr_file_meta_t *attr_cast;
+			int file_count;
+			pts_file_meta_t *metadata;
+			pts_file_metadata_t *entry;
+			time_t created, modified, accessed;
+			bool utc = FALSE;
+			enumerator_t *e;
+
+			attr_cast = (tcg_pts_attr_file_meta_t*)attr;
+			metadata = attr_cast->get_metadata(attr_cast);
+			file_count = metadata->get_file_count(metadata);
+
+			DBG1(DBG_IMV, "metadata request returned %d file%s:",
+				 file_count, (file_count == 1) ? "":"s");
+
+			e = metadata->create_enumerator(metadata);
+			while (e->enumerate(e, &entry))
+			{
+				DBG1(DBG_IMV, " '%s' (%"PRIu64" bytes)"
+							  " owner %"PRIu64", group %"PRIu64", type %N",
+					 entry->filename, entry->filesize, entry->owner,
+					 entry->group, pts_file_type_names, entry->type);
+
+				created = entry->created;
+				modified = entry->modified;
+				accessed = entry->accessed;
+
+				DBG1(DBG_IMV, "    created %T, modified %T, accessed %T",
+					 &created, utc, &modified, utc, &accessed, utc);
+			}
+			e->destroy(e);
+			break;
+		}
 		case TCG_PTS_SIMPLE_COMP_EVID:
 		{
 			tcg_pts_attr_simple_comp_evid_t *attr_cast;
-			bool pcr_info_inclided;
+			bool pcr_info_inclided, component_meas_error = FALSE;
 			pts_attr_simple_comp_evid_flag_t flags;
 			u_int32_t depth, comp_vendor_id, extended_pcr;
 			u_int8_t family, measurement_type;
@@ -189,8 +272,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pts_meas_algorithms_t hash_algorithm;
 			pts_pcr_transform_t transformation;
 			chunk_t measurement_time, policy_uri;
-			chunk_t pcr_before, pcr_after, measurement;
-					
+			chunk_t pcr_before, pcr_after, measurement, comp_hash;
+			enumerator_t *enumerator;
+			char *platform_info;
+			const char *component_name;
+
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 			attr_info = attr->get_value(attr);
 
@@ -243,12 +329,64 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
-			
+
 			measurement_type = attr_cast->get_measurement_type(attr_cast);
 			hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
 			transformation = attr_cast->get_pcr_trans(attr_cast);
 			measurement_time = attr_cast->get_measurement_time(attr_cast);
+			measurement = attr_cast->get_comp_measurement(attr_cast);
 
+			platform_info = pts->get_platform_info(pts);
+			if (!pts_db || !platform_info)
+			{
+				DBG1(DBG_IMV, "%s%s%s not available",
+					(pts_db) ? "" : "pts database",
+					(!pts_db && !platform_info) ? "and" : "",
+					(platform_info) ? "" : "platform info");
+				break;
+			}
+
+			if (name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY)
+			{
+				component_name = TBOOT_POLICY_STR;
+			}
+			else if (name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE)
+			{
+				component_name = TBOOT_MLE_STR;
+			}
+			else
+			{
+					DBG1(DBG_IMV, "Unknown functional component name: \"%d\"",
+						 name);
+					return FALSE;
+			}
+			enumerator = pts_db->create_comp_hash_enumerator(pts_db,
+					platform_info, PTS_MEAS_ALGO_SHA1, (char *)component_name);
+			if (!enumerator)
+			{
+				break;
+			}
+			while (enumerator->enumerate(enumerator, &comp_hash))
+			{
+				if (!chunk_equals(comp_hash, measurement))
+				{
+					DBG1(DBG_IMV, "Unmatching Functional Component Measurement:"
+							"%B, expected: %B", &measurement, &comp_hash);
+					component_meas_error = TRUE;
+				}
+				else
+				{
+					DBG2(DBG_IMV, "Matching Functional Component Measurement:"
+							"%B, expected: %B", &measurement, &comp_hash);
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			if (component_meas_error)
+			{
+				attestation_state->set_measurement_error(attestation_state);
+			}
+			
 			/* Call getters of optional fields when corresponding flag is set */
 			if (pcr_info_inclided)
 			{
@@ -257,8 +395,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
 				pcr_before = attr_cast->get_pcr_before_value(attr_cast);
 				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
-				measurement = attr_cast->get_comp_measurement(attr_cast);
-
+				
 				DBG3(DBG_IMV,"PCR: %d was extended with %B",
 					 extended_pcr, &measurement);
 				DBG3(DBG_IMV,"PCR: %d before value: %B",
@@ -291,11 +428,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			bool evid_signature_included = FALSE, use_quote2 = FALSE,
 												ver_info_included = FALSE;
 			chunk_t pcr_composite, quote_info;
-			
+
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
 			evid_signature_included = attr_cast->is_evid_sign_included(attr_cast);
 			flags = attr_cast->get_flags(attr_cast);
-			
+
 			/** Optional Composite Hash Algorithm field is always present
 			 * Field has value of all zeroes if not used.
 			 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
@@ -364,85 +501,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					 " Optional Evidence Signature field");
 			}
 
-			break;
-		}
-		case TCG_PTS_FILE_MEAS:
-		{
-			tcg_pts_attr_file_meas_t *attr_cast;
-			u_int16_t request_id;
-			int file_count, file_id;
-			pts_meas_algorithms_t algo;
-			pts_file_meas_t *measurements;
-			char *platform_info;
-			enumerator_t *e_hash;
-			bool is_dir;
-
-			platform_info = pts->get_platform_info(pts);
-			if (!pts_db || !platform_info)
-			{
-				break;
-			}
-
-			attr_cast = (tcg_pts_attr_file_meas_t*)attr;
-			measurements = attr_cast->get_measurements(attr_cast);
-			algo = pts->get_meas_algorithm(pts);
-			request_id = measurements->get_request_id(measurements);
-			file_count = measurements->get_file_count(measurements);
-
-			DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
-				 request_id, file_count, (file_count == 1) ? "":"s");
-
-			if (!attestation_state->check_off_file_meas_request(attestation_state,
-				request_id, &file_id, &is_dir))
-			{
-				DBG1(DBG_IMV, "  no entry found for file measurement request %d",
-					 request_id);
-				break;
-			}
-
-			/* check hashes from database against measurements */
-			e_hash = pts_db->create_hash_enumerator(pts_db,
-							platform_info, algo, file_id, is_dir);
-			if (!measurements->verify(measurements, e_hash, is_dir))
-			{
-				attestation_state->set_measurement_error(attestation_state);
-			}
-			e_hash->destroy(e_hash);
-			break;
-		}
-		case TCG_PTS_UNIX_FILE_META:
-		{
-			tcg_pts_attr_file_meta_t *attr_cast;
-			int file_count;
-			pts_file_meta_t *metadata;
-			pts_file_metadata_t *entry;
-			time_t created, modified, accessed;
-			bool utc = FALSE;
-			enumerator_t *e;
-
-			attr_cast = (tcg_pts_attr_file_meta_t*)attr;
-			metadata = attr_cast->get_metadata(attr_cast);
-			file_count = metadata->get_file_count(metadata);
-
-			DBG1(DBG_IMV, "metadata request returned %d file%s:",
-				 file_count, (file_count == 1) ? "":"s");
-
-			e = metadata->create_enumerator(metadata);
-			while (e->enumerate(e, &entry))
-			{
-				DBG1(DBG_IMV, " '%s' (%"PRIu64" bytes)"
-							  " owner %"PRIu64", group %"PRIu64", type %N",
-					 entry->filename, entry->filesize, entry->owner,
-					 entry->group, pts_file_type_names, entry->type);
-
-				created = entry->created;
-				modified = entry->modified;
-				accessed = entry->accessed;
-
-				DBG1(DBG_IMV, "    created %T, modified %T, accessed %T",
-					 &created, utc, &modified, utc, &accessed, utc);
-			}
-			e->destroy(e);
 			break;
 		}
 

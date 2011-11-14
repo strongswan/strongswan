@@ -76,11 +76,11 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
 
 	/* look for all entries belonging to a product in the files table */
 	e = this->db->query(this->db,
-				"SELECT f.type, f.path FROM files AS f "
+				"SELECT f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
 				"JOIN products AS p ON p.id = pf.product "
 				"WHERE p.name = ? AND f.component = 1",
-				DB_TEXT, product, DB_INT, DB_TEXT);
+				DB_TEXT, product, DB_TEXT);
 	return e;
 }
 

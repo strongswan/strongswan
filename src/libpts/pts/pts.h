@@ -60,6 +60,8 @@ typedef struct pcr_entry_t pcr_entry_t;
 #define PCR_TGRUB_CHECKFILE				13
 #define PCR_TGRUB_LOADED_FILES			14
 
+#define TBOOT_POLICY_STR				(const char *)("tboot_pcr17")
+#define TBOOT_MLE_STR					(const char *)("tboot_pcr18")
 
 /**
  * Length of the generated nonce used for calculation of shared secret
