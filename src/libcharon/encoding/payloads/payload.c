@@ -192,7 +192,8 @@ payload_t *payload_create(payload_type_t type)
 		case DELETE:
 			return (payload_t*)delete_payload_create(0);
 		case VENDOR_ID:
-			return (payload_t*)vendor_id_payload_create();
+		case VENDOR_ID_V1:
+			return (payload_t*)vendor_id_payload_create(type);
 		case CONFIGURATION:
 			return (payload_t*)cp_payload_create();
 		case CONFIGURATION_ATTRIBUTE:

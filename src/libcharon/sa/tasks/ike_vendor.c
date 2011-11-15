@@ -57,7 +57,8 @@ METHOD(task_t, build, status_t,
 	{
 		vendor_id_payload_t *vid;
 
-		vid = vendor_id_payload_create_data(chunk_clone(strongswan_vid));
+		vid = vendor_id_payload_create_data(VENDOR_ID,
+											chunk_clone(strongswan_vid));
 		message->add_payload(message, &vid->payload_interface);
 	}
 
