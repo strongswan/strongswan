@@ -1120,9 +1120,8 @@ METHOD(message_t, generate, status_t,
 		DBG2(DBG_ENC, "not encrypting payloads");
 	}
 
-	ike_header = ike_header_create();
-	ike_header->set_maj_version(ike_header, this->major_version);
-	ike_header->set_min_version(ike_header, this->minor_version);
+	ike_header = ike_header_create_version(this->major_version,
+										   this->minor_version);
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
@@ -1567,8 +1566,8 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet_data = _get_packet_data,
 			.destroy = _destroy,
 		},
-		.major_version = IKE_MAJOR_VERSION,
-		.minor_version = IKE_MINOR_VERSION,
+		.major_version = IKEV2_MAJOR_VERSION,
+		.minor_version = IKEV2_MINOR_VERSION,
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 		.is_request = TRUE,
 		.first_payload = NO_PAYLOAD,

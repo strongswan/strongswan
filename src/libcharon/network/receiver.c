@@ -371,7 +371,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 
 	/* check IKE major version */
-	if (message->get_major_version(message) != IKE_MAJOR_VERSION)
+	if (message->get_major_version(message) != IKEV2_MAJOR_VERSION)
 	{
 		DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, "
 			 "sending INVALID_MAJOR_VERSION", message->get_major_version(message),
