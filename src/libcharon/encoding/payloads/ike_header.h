@@ -35,7 +35,7 @@ typedef struct ike_header_t ike_header_t;
 #define IKEV1_MAJOR_VERSION 1
 
 /**
- * Minor Version of IKEv2 we implement.
+ * Minor Version of IKEv1 we implement.
  */
 #define IKEV1_MINOR_VERSION 0
 
