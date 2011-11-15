@@ -211,8 +211,15 @@ payload_t *payload_create(payload_type_t type)
  */
 bool payload_is_known(payload_type_t type)
 {
-	if (type == HEADER ||
-		(type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION))
+	if (type == HEADER)
+	{
+		return TRUE;
+	}
+	if (type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION)
+	{
+		return TRUE;
+	}
+	if (type >= SECURITY_ASSOCIATION_V1 && type <= VENDOR_ID_V1)
 	{
 		return TRUE;
 	}
