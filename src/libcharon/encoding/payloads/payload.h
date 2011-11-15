@@ -31,17 +31,82 @@ typedef struct payload_t payload_t;
 
 
 /**
- * Payload-Types of a IKEv2-Message.
+ * Payload-Types of an IKE message.
  *
  * Header and substructures are also defined as
  * payload types with values from PRIVATE USE space.
  */
-enum payload_type_t{
+enum payload_type_t {
 
 	/**
 	 * End of payload list in next_payload
 	 */
 	NO_PAYLOAD = 0,
+
+	/**
+	 * The security association (SA) payload containing proposals.
+	 */
+	SECURITY_ASSOCIATION_V1 = 1,
+
+	/**
+	 * The proposal payload, containing transforms.
+	 */
+	PROPOSAL_V1 = 2,
+
+	/**
+	 * The transform payload.
+	 */
+	TRANSFORM_V1 = 3,
+
+	/**
+	 * The key exchange (KE) payload containing diffie-hellman values.
+	 */
+	KEY_EXCHANGE_V1 = 4,
+
+	/**
+	 * ID payload.
+	 */
+	ID_V1 = 5,
+
+	/**
+	 * Certificate payload with certificates (CERT).
+	 */
+	CERTIFICATE_V1 = 6,
+
+	/**
+	 * Certificate request payload.
+	 */
+	CERTIFICATE_REQUEST_V1 = 7,
+
+	/**
+	 * Hash payload.
+	 */
+	HASH_V1 = 8,
+
+	/**
+	 * Signature payload
+	 */
+	SIGNATURE_V1 = 9,
+
+	/**
+	 * Nonce payload.
+	 */
+	NONCE_V1 = 10,
+
+	/**
+	 * Notification payload.
+	 */
+	NOTIFICATION_V1 = 11,
+
+	/**
+	 * Delete payload.
+	 */
+	DELETE_V1 = 12,
+
+	/**
+	 * Vendor id payload.
+	 */
+	VENDOR_ID_V1 = 13,
 
 	/**
 	 * The security association (SA) payload containing proposals.
