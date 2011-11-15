@@ -478,6 +478,70 @@ static payload_order_t id_prot_r_order[] = {
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
+
+/**
+ * Message rule for AGGRESSIVE from initiator.
+ */
+static payload_rule_t aggressive_i_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
+	{HASH_V1,					0,	1,						FALSE,	FALSE},
+};
+
+/**
+ * payload order for AGGRESSIVE from initiator.
+ */
+static payload_order_t aggressive_i_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{NOTIFICATION_V1,			0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
+ * Message rule for AGGRESSIVE from responder.
+ */
+static payload_rule_t aggressive_r_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
+	{HASH_V1,					0,	1,						FALSE,	FALSE},
+};
+
+/**
+ * payload order for AGGRESSIVE from responder.
+ */
+static payload_order_t aggressive_r_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{NOTIFICATION_V1,			0},
+	{VENDOR_ID_V1,				0},
+};
 #endif /* USE_IKEV1 */
 
 /**
@@ -534,6 +598,14 @@ static message_rule_t message_rules[] = {
 	{ID_PROT,			FALSE,	FALSE,
 		countof(id_prot_r_rules), id_prot_r_rules,
 		countof(id_prot_r_order), id_prot_r_order,
+	},
+	{AGGRESSIVE,		TRUE,	FALSE,
+		countof(aggressive_i_rules), aggressive_i_rules,
+		countof(aggressive_i_order), aggressive_i_order,
+	},
+	{AGGRESSIVE,		FALSE,	FALSE,
+		countof(aggressive_r_rules), aggressive_r_rules,
+		countof(aggressive_r_order), aggressive_r_order,
 	},
 	/* TODO-IKEv1: define rules for other exchanges */
 #endif /* USE_IKEV1 */
