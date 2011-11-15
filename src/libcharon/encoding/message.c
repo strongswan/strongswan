@@ -542,6 +542,26 @@ static payload_order_t aggressive_r_order[] = {
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
+
+/**
+ * Message rule for INFORMATIONAL_V1 from initiator.
+ */
+static payload_rule_t informational_i_rules_v1[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL_V1 from initiator.
+ */
+static payload_order_t informational_i_order_v1[] = {
+/*	payload type				notify type */
+	{NOTIFICATION_V1,			0},
+	{DELETE_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
 #endif /* USE_IKEV1 */
 
 /**
@@ -606,6 +626,10 @@ static message_rule_t message_rules[] = {
 	{AGGRESSIVE,		FALSE,	FALSE,
 		countof(aggressive_r_rules), aggressive_r_rules,
 		countof(aggressive_r_order), aggressive_r_order,
+	},
+	{INFORMATIONAL_V1,	TRUE,	TRUE,
+		countof(informational_i_rules_v1), informational_i_rules_v1,
+		countof(informational_i_order_v1), informational_i_order_v1,
 	},
 	/* TODO-IKEv1: define rules for other exchanges */
 #endif /* USE_IKEV1 */
