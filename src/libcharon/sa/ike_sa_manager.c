@@ -970,6 +970,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	ike_sa_id_t *id;
+	bool is_init = FALSE;
 
 	id = message->get_ike_sa_id(message);
 	id = id->clone(id);
@@ -977,11 +978,29 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	DBG2(DBG_MGR, "checkout IKE_SA by message");
 
-	if (message->get_request(message) &&
-		message->get_exchange_type(message) == IKE_SA_INIT &&
-		this->hasher)
+	if (id->get_responder_spi(id) == 0)
 	{
-		/* IKE_SA_INIT request. Check for an IKE_SA with such a message hash. */
+		if (message->get_major_version(message) == IKEV2_MAJOR_VERSION)
+		{
+			if (message->get_exchange_type(message) == IKE_SA_INIT &&
+				message->get_request(message))
+			{
+				is_init = TRUE;
+			}
+		}
+		else
+		{
+			if (message->get_exchange_type(message) == ID_PROT ||
+				message->get_exchange_type(message) == AGGRESSIVE)
+			{
+				is_init = TRUE;
+			}
+		}
+	}
+
+	if (is_init && this->hasher)
+	{
+		/* First request. Check for an IKE_SA with such a message hash. */
 		chunk_t data, hash;
 
 		data = message->get_packet_data(message);
@@ -990,7 +1009,8 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 		if (get_entry_by_hash(this, id, hash, &entry, &segment) == SUCCESS)
 		{
-			if (entry->message_id == 0)
+			if (message->get_exchange_type(message) == IKE_SA_INIT &&
+				entry->message_id == 0)
 			{
 				unlock_single_segment(this, segment);
 				chunk_free(&hash);
@@ -1011,8 +1031,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 		if (ike_sa == NULL)
 		{
-			if (id->get_responder_spi(id) == 0 &&
-				message->get_exchange_type(message) == IKE_SA_INIT)
+			if (is_init)
 			{
 				/* no IKE_SA found, create a new one */
 				id->set_responder_spi(id, get_spi(this));
@@ -1048,7 +1067,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	if (get_entry_by_id(this, id, &entry, &segment) == SUCCESS)
 	{
-		/* only check out if we are not processing this request */
+		/* only check out in IKEv2 if we are not already processing it */
 		if (message->get_request(message) &&
 			message->get_message_id(message) == entry->message_id)
 		{
@@ -1057,7 +1076,9 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		}
 		else if (wait_for_entry(this, entry, segment))
 		{
-			ike_sa_id_t *ike_id = entry->ike_sa->get_id(entry->ike_sa);
+			ike_sa_id_t *ike_id;
+
+			ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			entry->checked_out = TRUE;
 			entry->message_id = message->get_message_id(message);
 			if (ike_id->get_responder_spi(ike_id) == 0)
