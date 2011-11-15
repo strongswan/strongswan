@@ -162,6 +162,7 @@ static void send_notify(message_t *request, notify_type_t type, chunk_t data)
 			response->destroy(response);
 		}
 	}
+	/* TODO-IKEv1: send IKEv1 specific notifies */
 }
 
 /**
@@ -371,16 +372,26 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 
 	/* check IKE major version */
-	if (message->get_major_version(message) != IKEV2_MAJOR_VERSION)
+	switch (message->get_major_version(message))
 	{
-		DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, "
-			 "sending INVALID_MAJOR_VERSION", message->get_major_version(message),
-			 message->get_minor_version(message), packet->get_source(packet));
-		send_notify(message, INVALID_MAJOR_VERSION, chunk_empty);
-		message->destroy(message);
-		return JOB_REQUEUE_DIRECT;
+		case IKEV2_MAJOR_VERSION:
+			break;
+#ifdef USE_IKEV1
+		case IKEV1_MAJOR_VERSION:
+			break;
+#endif /* USE_IKEV1 */
+		default:
+			DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, "
+				 "sending INVALID_MAJOR_VERSION",
+				 message->get_major_version(message),
+				 message->get_minor_version(message),
+				 packet->get_source(packet));
+			send_notify(message, INVALID_MAJOR_VERSION, chunk_empty);
+			message->destroy(message);
+			return JOB_REQUEUE_DIRECT;
 	}
 
+	/* TODO-IKEv1: drop too agressive mainmodes */
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
