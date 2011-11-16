@@ -22,6 +22,8 @@
 #include <utils/linked_list.h>
 #include <daemon.h>
 
+/* IKEv1 situation */
+#define SIT_IDENTITY_ONLY 1
 
 typedef struct private_sa_payload_t private_sa_payload_t;
 
@@ -48,7 +50,7 @@ struct private_sa_payload_t {
 	/**
 	 * Reserved bits
 	 */
-	bool reserved[7];
+	bool reserved[8];
 
 	/**
 	 * Length of this payload.
@@ -58,21 +60,75 @@ struct private_sa_payload_t {
 	/**
 	 * Proposals in this payload are stored in a linked_list_t.
 	 */
-	linked_list_t * proposals;
+	linked_list_t *proposals;
+
+	/**
+	 * Type of this payload, V1 or V2
+	 */
+	payload_type_t type;
+
+	/**
+	 * IKEv1 DOI
+	 */
+	u_int32_t doi;
+
+	/**
+	 * IKEv1 situation
+	 */
+	u_int32_t situation;
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-SA Payload
- *
- * The defined offsets are the positions in a object of type
- * private_sa_payload_t.
+ * Encoding rules for IKEv1 SA payload
  */
-encoding_rule_t sa_payload_encodings[] = {
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_sa_payload_t, next_payload)	},
+	/* 8 reserved bits */
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[0])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[1])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[2])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[3])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[4])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[5])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[6])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[7])			},
+	/* Length of the whole SA payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)	},
+	/* DOI*/
+	{ U_INT_32,			offsetof(private_sa_payload_t, doi)				},
+	/* Situation*/
+	{ U_INT_32,			offsetof(private_sa_payload_t, situation)		},
+	/* Proposals are stored in a proposal substructure,
+	   offset points to a linked_list_t pointer */
+	{ PROPOSALS_V1,		offsetof(private_sa_payload_t, proposals)		},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !    RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                           DOI                                 !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                           Situation                           !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                          <Proposals>                          ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Encoding rules for IKEv2 SA payload
+ */
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_sa_payload_t, next_payload)		},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_sa_payload_t, critical)			},
-	/* 7 Bit reserved bits, nowhere stored */
+	/* 7 Bit reserved bits */
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[0])			},
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[1])			},
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[2])			},
@@ -144,14 +200,22 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, void,
 	private_sa_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
-	*rules = sa_payload_encodings;
-	*rule_count = countof(sa_payload_encodings);
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		*rules = encodings_v1;
+		*rule_count = countof(encodings_v1);
+	}
+	else
+	{
+		*rules = encodings_v2;
+		*rule_count = countof(encodings_v2);
+	}
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_sa_payload_t *this)
 {
-	return SECURITY_ASSOCIATION;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -174,6 +238,11 @@ static void compute_length(private_sa_payload_t *this)
 	enumerator_t *enumerator;
 	payload_t *current;
 	size_t length = SA_PAYLOAD_HEADER_LENGTH;
+
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		length = SA_PAYLOAD_V1_HEADER_LENGTH;
+	}
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, (void **)&current))
@@ -270,14 +339,14 @@ METHOD2(payload_t, sa_payload_t, destroy, void,
 	private_sa_payload_t *this)
 {
 	this->proposals->destroy_offset(this->proposals,
-									offsetof(proposal_substructure_t, destroy));
+									offsetof(payload_t, destroy));
 	free(this);
 }
 
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create()
+sa_payload_t *sa_payload_create(payload_type_t type)
 {
 	private_sa_payload_t *this;
 
@@ -298,41 +367,49 @@ sa_payload_t *sa_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = SA_PAYLOAD_HEADER_LENGTH,
 		.proposals = linked_list_create(),
+		.type = type,
+		/* for IKEv1 only */
+		.doi = IKEV1_DOI_IPSEC,
+		.situation = SIT_IDENTITY_ONLY,
 	);
+
+	compute_length(this);
+
 	return &this->public;
 }
 
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
+sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
+												   linked_list_t *proposals)
 {
-	private_sa_payload_t *this;
+	sa_payload_t *this;
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 
-	this = (private_sa_payload_t*)sa_payload_create();
+	this = sa_payload_create(type);
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		add_proposal(this, proposal);
+		this->add_proposal(this, proposal);
 	}
 	enumerator->destroy(enumerator);
 
-	return &this->public;
+	return this;
 }
 
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal)
+sa_payload_t *sa_payload_create_from_proposal(payload_type_t type,
+											  proposal_t *proposal)
 {
-	private_sa_payload_t *this;
+	sa_payload_t *this;
 
-	this = (private_sa_payload_t*)sa_payload_create();
-	add_proposal(this, proposal);
+	this = sa_payload_create(type);
+	this->add_proposal(this, proposal);
 
-	return &this->public;
+	return this;
 }

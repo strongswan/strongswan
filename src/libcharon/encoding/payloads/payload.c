@@ -156,7 +156,8 @@ payload_t *payload_create(payload_type_t type)
 		case HEADER:
 			return (payload_t*)ike_header_create();
 		case SECURITY_ASSOCIATION:
-			return (payload_t*)sa_payload_create();
+		case SECURITY_ASSOCIATION_V1:
+			return (payload_t*)sa_payload_create(type);
 		case PROPOSAL_SUBSTRUCTURE:
 			return (payload_t*)proposal_substructure_create();
 		case TRANSFORM_SUBSTRUCTURE:

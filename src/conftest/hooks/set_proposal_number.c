@@ -121,7 +121,7 @@ METHOD(listener_t, message, bool,
 			}
 			enumerator->destroy(enumerator);
 		}
-		sa = sa_payload_create_from_proposal_list(updated);
+		sa = sa_payload_create_from_proposal_list(SECURITY_ASSOCIATION, updated);
 		list->destroy_offset(list, offsetof(proposal_t, destroy));
 		updated->destroy_offset(updated, offsetof(proposal_t, destroy));
 		message->add_payload(message, (payload_t*)sa);

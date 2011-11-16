@@ -496,6 +496,18 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
+			case PROPOSALS_V1:
+			{
+				if (payload_length < SA_PAYLOAD_V1_HEADER_LENGTH ||
+					!parse_list(this, rule_number, output + rule->offset,
+								PROPOSAL_SUBSTRUCTURE_V1,
+								payload_length - SA_PAYLOAD_V1_HEADER_LENGTH))
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;
+			}
 			case TRANSFORMS:
 			{
 				if (payload_length <

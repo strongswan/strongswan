@@ -294,7 +294,8 @@ static void process_auth_response(private_pretend_auth_t *this,
 	if (this->proposal)
 	{
 		message->add_payload(message, (payload_t*)
-					sa_payload_create_from_proposal(this->proposal));
+					sa_payload_create_from_proposal(SECURITY_ASSOCIATION,
+													this->proposal));
 	}
 	if (this->tsi)
 	{

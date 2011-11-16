@@ -220,6 +220,11 @@ enum encoding_type_t {
 	PROPOSALS,
 
 	/**
+	 * Same as PROPOSALS, but for IKEv1 in a SECURITY_ASSOCIATION_V1
+	 */
+	PROPOSALS_V1,
+
+	/**
 	 * Representating one or more transform substructures.
 	 *
 	 * The offset points to a linked_list_t pointer.

@@ -30,12 +30,17 @@ typedef struct sa_payload_t sa_payload_t;
 #include <utils/linked_list.h>
 
 /**
- * SA_PAYLOAD length in bytes without any proposal substructure.
+ * SECURITY_ASSOCIATION length in bytes without any proposal substructure.
  */
 #define SA_PAYLOAD_HEADER_LENGTH 4
 
 /**
- * Class representing an IKEv2-SA Payload.
+ * SECURITY_ASSOCIATION_V1 length in bytes without any proposal substructure.
+ */
+#define SA_PAYLOAD_V1_HEADER_LENGTH 12
+
+/**
+ * Class representing an IKEv1 or IKEv2 SA Payload.
  *
  * The SA Payload format is described in RFC section 3.3.
  */
@@ -76,17 +81,20 @@ struct sa_payload_t {
 /**
  * Creates an empty sa_payload_t object
  *
+ * @param type				SECURITY_ASSOCIATION or SECURITY_ASSOCIATION_V1
  * @return					created sa_payload_t object
  */
-sa_payload_t *sa_payload_create(void);
+sa_payload_t *sa_payload_create(payload_type_t type);
 
 /**
  * Creates a sa_payload_t object from a list of proposals.
  *
+ * @param type				SECURITY_ASSOCIATION or SECURITY_ASSOCIATION_V1
  * @param proposals			list of proposals to build the payload from
  * @return					sa_payload_t object
  */
-sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
+sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
+												   linked_list_t *proposals);
 
 /**
  * Creates a sa_payload_t object from a single proposal.
@@ -94,9 +102,11 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
  * This is only for convenience. Use sa_payload_create_from_proposal_list
  * if you want to add more than one proposal.
  *
+ * @param type				SECURITY_ASSOCIATION or SECURITY_ASSOCIATION_V1
  * @param proposal			proposal from which the payload should be built.
  * @return					sa_payload_t object
  */
-sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal);
+sa_payload_t *sa_payload_create_from_proposal(payload_type_t type,
+											  proposal_t *proposal);
 
 #endif /** SA_PAYLOAD_H_ @}*/

@@ -526,11 +526,13 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	/* add SA payload */
 	if (this->initiator)
 	{
-		sa_payload = sa_payload_create_from_proposal_list(this->proposals);
+		sa_payload = sa_payload_create_from_proposal_list(SECURITY_ASSOCIATION,
+														  this->proposals);
 	}
 	else
 	{
-		sa_payload = sa_payload_create_from_proposal(this->proposal);
+		sa_payload = sa_payload_create_from_proposal(SECURITY_ASSOCIATION,
+													 this->proposal);
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 

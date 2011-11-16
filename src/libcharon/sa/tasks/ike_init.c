@@ -132,7 +132,8 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 			enumerator->destroy(enumerator);
 		}
 
-		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
+		sa_payload = sa_payload_create_from_proposal_list(SECURITY_ASSOCIATION,
+														  proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 	}
 	else
@@ -142,7 +143,8 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 			/* include SPI of new IKE_SA when we are rekeying */
 			this->proposal->set_spi(this->proposal, id->get_responder_spi(id));
 		}
-		sa_payload = sa_payload_create_from_proposal(this->proposal);
+		sa_payload = sa_payload_create_from_proposal(SECURITY_ASSOCIATION,
+													 this->proposal);
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 

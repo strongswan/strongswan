@@ -145,7 +145,8 @@ METHOD(listener_t, message, bool,
 										   proposal->get_protocol(proposal),
 										   proposal->get_spi(proposal));
 				DBG1(DBG_CFG, "injecting custom proposal: %#P", new_props);
-				new = sa_payload_create_from_proposal_list(new_props);
+				new = sa_payload_create_from_proposal_list(
+											SECURITY_ASSOCIATION, new_props);
 				message->add_payload(message, (payload_t*)new);
 				new_props->destroy_offset(new_props, offsetof(proposal_t, destroy));
 			}

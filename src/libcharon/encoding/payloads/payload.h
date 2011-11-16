@@ -29,6 +29,10 @@ typedef struct payload_t payload_t;
 #include <library.h>
 #include <encoding/payloads/encodings.h>
 
+/**
+ * Domain of interpretation used by IPsec/IKEv1
+ */
+#define IKEV1_DOI_IPSEC 1
 
 /**
  * Payload-Types of an IKE message.
@@ -243,6 +247,14 @@ enum payload_type_t {
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 261,
+
+	/**
+	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
+	 *
+	 * This payload type is not sent over wire and just
+	 * used internally to handle a proposal substructure like a payload.
+	 */
+	PROPOSAL_SUBSTRUCTURE_V1 = 262,
 };
 
 /**
