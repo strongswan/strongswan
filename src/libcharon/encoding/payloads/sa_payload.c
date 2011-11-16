@@ -272,12 +272,12 @@ METHOD(sa_payload_t, add_proposal, void,
 	payload_type_t subtype = PROPOSAL_SUBSTRUCTURE;
 	u_int count;
 
-	count = this->proposals->get_count(this->proposals);
 	if (this->type == SECURITY_ASSOCIATION_V1)
 	{
 		subtype = PROPOSAL_SUBSTRUCTURE_V1;
 	}
 	substruct = proposal_substructure_create_from_proposal(subtype, proposal);
+	count = this->proposals->get_count(this->proposals);
 	if (count > 0)
 	{
 		this->proposals->get_last(this->proposals, (void**)&last);

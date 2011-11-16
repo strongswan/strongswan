@@ -163,11 +163,14 @@ struct transform_attribute_t {
 transform_attribute_t *transform_attribute_create(payload_type_t type);
 
 /**
- * Creates an transform_attribute_t of type KEY_LENGTH.
+ * Creates a two byte value attribute for a given attribute kind.
  *
- * @param key_length	key length in bytes
+ * @param type			TRANSFORM_ATTRIBUTE or TRANSFORM_ATTRIBUTE_V1
+ * @param kind			attribute kind
+ * @param value			fixed two byte value
  * @return				transform_attribute_t object
  */
-transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length);
+transform_attribute_t *transform_attribute_create_value(payload_type_t type,
+							transform_attribute_type_t kind, u_int16_t value);
 
 #endif /** TRANSFORM_ATTRIBUTE_H_ @}*/

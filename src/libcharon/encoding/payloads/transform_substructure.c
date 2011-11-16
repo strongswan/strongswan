@@ -213,6 +213,13 @@ METHOD(payload_t, get_length, size_t,
 	return this->transform_length;
 }
 
+METHOD(transform_substructure_t, add_transform_attribute, void,
+	private_transform_substructure_t *this, transform_attribute_t *attribute)
+{
+	this->attributes->insert_last(this->attributes, attribute);
+	compute_length(this);
+}
+
 METHOD(transform_substructure_t, set_is_last_transform, void,
 	private_transform_substructure_t *this, bool is_last)
 {
@@ -272,6 +279,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
+			.add_transform_attribute = _add_transform_attribute,
 			.set_is_last_transform = _set_is_last_transform,
 			.get_transform_type_or_number = _get_transform_type_or_number,
 			.get_transform_id = _get_transform_id,
@@ -290,7 +298,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
  * Described in header
  */
 transform_substructure_t *transform_substructure_create_type(payload_type_t type,
-				u_int8_t type_or_number, u_int16_t id, u_int16_t key_length)
+				u_int8_t type_or_number, u_int16_t id)
 {
 	private_transform_substructure_t *this;
 
@@ -304,12 +312,6 @@ transform_substructure_t *transform_substructure_create_type(payload_type_t type
 	else
 	{
 		this->transform_id_v1 = id;
-	}
-	if (key_length)
-	{
-		this->attributes->insert_last(this->attributes,
-					(void*)transform_attribute_create_key_length(key_length));
-		compute_length(this);
 	}
 	return &this->public;
 }

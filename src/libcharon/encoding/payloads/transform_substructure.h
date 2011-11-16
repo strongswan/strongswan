@@ -113,10 +113,9 @@ transform_substructure_t *transform_substructure_create(payload_type_t type);
  * @param type				TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
  * @param type_or_number	Type (IKEv2) or number (IKEv1) of transform
  * @param id				transform id specifc for the transform type
- * @param key_length		key length for key length attribute, 0 to omit
  * @return					transform_substructure_t object
  */
 transform_substructure_t *transform_substructure_create_type(payload_type_t type,
-				u_int8_t type_or_number, u_int16_t id, u_int16_t key_length);
+										u_int8_t type_or_number, u_int16_t id);
 
 #endif /** TRANSFORM_SUBSTRUCTURE_H_ @}*/

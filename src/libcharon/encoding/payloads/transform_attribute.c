@@ -283,13 +283,14 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
 /*
  * Described in header.
  */
-transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length)
+transform_attribute_t *transform_attribute_create_value(payload_type_t type,
+							transform_attribute_type_t kind, u_int16_t value)
 {
 	transform_attribute_t *attribute;
 
-	attribute = transform_attribute_create(TRANSFORM_ATTRIBUTE);
-	attribute->set_attribute_type(attribute, TATTR_IKEV2_KEY_LENGTH);
-	attribute->set_value(attribute, key_length);
+	attribute = transform_attribute_create(type);
+	attribute->set_attribute_type(attribute, kind);
+	attribute->set_value(attribute, value);
 
 	return attribute;
 }
