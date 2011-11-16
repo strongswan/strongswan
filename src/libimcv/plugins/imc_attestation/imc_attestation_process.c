@@ -48,56 +48,6 @@
 #define DEFAULT_NONCE_LEN		20
 
 /**
- * Convert string to u_int8_t
- * code taken from http://www.codeguru.com/forum/showthread.php?t=316299
- */
-static u_int8_t* string_to_bytearray(char *str_value)
-{
-	u_int32_t i;
-	u_int8_t *ret;
-
-	ret = malloc(strlen(str_value)/2);
-	for (i = 0; i < strlen(str_value)/2; i++)
-	{
-		char c1, c2;
-		u_int8_t d1 = 0, d2 = 0;
-
-		c1 = str_value[i*2];
-		c2 = str_value[i*2 + 1];
-
-		if (isdigit(c1))
-		{
-			d1 = c1 - '0';
-		}
-		else if (c1 >= 'A' && c1 <= 'F')
-		{
-			d1 = c1 - 'A' + 10;
-		}
-		else if (c1 >= 'a' && c1 <= 'f')
-		{
-			d1 = c1 - 'a' + 10;
-		}
-
-		if (isdigit(c2))
-		{
-			d2 = c2 - '0';
-		}
-		else if (c2 >= 'A' && c2 <= 'F')
-		{
-			d2 = c2 - 'A' + 10;
-		}
-		else if (c2 >= 'a' && c2 <= 'f')
-		{
-			d2 = c2 - 'a' + 10;
-		}
-		/* save value of two characters in one byte */
-		ret[i] = d1*16 + d2;
-	}
-
-	return ret;
-}
-
-/**
  * Set parameters of Simple Component Evidence
  */
 static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
@@ -165,51 +115,43 @@ static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
 	if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
 		params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE)
 	{
-		char *measurement_str, *pcr_before_str, *pcr_after_str;
-		u_int8_t *measurement, *pcr_before, *pcr_after;
+		char *measurement, *pcr_before, *pcr_after;
 
 		if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY)
 		{
 			params.extended_pcr = PCR_TBOOT_POLICY;
-			measurement_str = lib->settings->get_str(lib->settings,
+			measurement = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr17_meas", NULL);
-			pcr_before_str = lib->settings->get_str(lib->settings,
+			pcr_before = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr17_before", NULL);
-			pcr_after_str = lib->settings->get_str(lib->settings,
+			pcr_after = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr17_after", NULL);
 		}
 		else
 		{
 			params.extended_pcr = PCR_TBOOT_MLE;
-			measurement_str = lib->settings->get_str(lib->settings,
+			measurement = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr18_meas", NULL);
-			pcr_before_str = lib->settings->get_str(lib->settings,
+			pcr_before = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr18_before", NULL);
-			pcr_after_str = lib->settings->get_str(lib->settings,
+			pcr_after = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr18_after", NULL);
 		}
 
-		if (!measurement_str || !pcr_before_str || !pcr_after_str)
+		if (!measurement || !pcr_before || !pcr_after)
 		{
 			DBG1(DBG_IMC, "tboot: configure measurement, before and after value"
 						  " for PCR%d", params.extended_pcr);
 			return FALSE;
 		}
 
-		params.measurement = chunk_alloc(HASH_SIZE_SHA1);
-		measurement = string_to_bytearray(measurement_str);
-		memcpy(params.measurement.ptr, measurement, HASH_SIZE_SHA1);
-		free(measurement);
-
-		params.pcr_before = chunk_alloc(PCR_LEN);
-		pcr_before = string_to_bytearray(pcr_before_str);
-		memcpy(params.pcr_before.ptr, pcr_before, PCR_LEN);
-		free(pcr_before);
-
-		params.pcr_after = chunk_alloc(PCR_LEN);
-		pcr_after = string_to_bytearray(pcr_after_str);
-		memcpy(params.pcr_after.ptr, pcr_after, PCR_LEN);
-		free(pcr_after);
+		params.measurement = chunk_from_hex(
+			chunk_create(measurement, strlen(measurement)), NULL);
+		params.pcr_before = chunk_from_hex(
+			chunk_create(pcr_before, strlen(pcr_before)), NULL);
+		params.pcr_after = chunk_from_hex(
+			chunk_create(pcr_after, strlen(pcr_after)), NULL);
+		
 	}
 	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_MBR_STAGE1)
 	{
