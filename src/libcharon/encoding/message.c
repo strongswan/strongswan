@@ -1483,6 +1483,53 @@ static bool is_connectivity_check(private_message_t *this, payload_t *payload)
 }
 
 /**
+ * Parses and verifies the unencrypted payloads contained in the message
+ */
+static status_t parse_payloads(private_message_t *this)
+{
+	payload_type_t type = this->first_payload;
+
+	while (type != NO_PAYLOAD)
+	{
+		DBG2(DBG_ENC, "starting parsing a %N payload",
+			 payload_type_names, type);
+
+		status = this->parser->parse_payload(this->parser, type, &payload);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "payload type %N could not be parsed",
+				 payload_type_names, type);
+			return PARSE_ERROR;
+		}
+
+		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
+		status = payload->verify(payload);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "%N payload verification failed",
+				 payload_type_names, type);
+			payload->destroy(payload);
+			return VERIFY_ERROR;
+		}
+
+		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
+			 payload_type_names, type);
+		this->payloads->insert_last(this->payloads, payload);
+
+		/* an encryption payload is the last one, so STOP here. decryption is
+		 * done later */
+		if (type == ENCRYPTED)
+		{
+			DBG2(DBG_ENC, "%N payload found. Stop parsing",
+				 payload_type_names, type);
+			break;
+		}
+		type = payload->get_next_type(payload);
+	}
+	return SUCCESS;
+}
+
+/**
  * Decrypt payload from the encryption payload
  */
 static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
@@ -1632,13 +1679,10 @@ METHOD(message_t, parse_body, status_t,
 {
 	status_t status = SUCCESS;
 	payload_t *payload;
-	payload_type_t type;
 	char str[BUF_LEN];
 
-	type = this->first_payload;
-
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
-		 payload_type_names, type);
+		 payload_type_names, this->first_payload);
 
 	this->rule = get_message_rule(this);
 	if (!this->rule)
@@ -1649,42 +1693,10 @@ METHOD(message_t, parse_body, status_t,
 		return PARSE_ERROR;
 	}
 
-	while (type != NO_PAYLOAD)
-	{
-		DBG2(DBG_ENC, "starting parsing a %N payload",
-			 payload_type_names, type);
-
-		status = this->parser->parse_payload(this->parser, type, &payload);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_ENC, "payload type %N could not be parsed",
-				 payload_type_names, type);
-			return this->exchange_type == IKE_SA_INIT ? PARSE_ERROR : FAILED;
-		}
-
-		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
-		status = payload->verify(payload);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_ENC, "%N payload verification failed",
-				 payload_type_names, type);
-			payload->destroy(payload);
-			return this->exchange_type == IKE_SA_INIT ? VERIFY_ERROR : FAILED;
-		}
-
-		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
-			 payload_type_names, type);
-		this->payloads->insert_last(this->payloads, payload);
-
-		/* an encryption payload is the last one, so STOP here. decryption is
-		 * done later */
-		if (type == ENCRYPTED)
-		{
-			DBG2(DBG_ENC, "%N payload found. Stop parsing",
-				 payload_type_names, type);
-			break;
-		}
-		type = payload->get_next_type(payload);
+	status = parse_payloads(this);
+	if (status != SUCCESS)
+	{	/* error is already logged */
+		return status;
 	}
 
 	status = decrypt_payloads(this, aead);
