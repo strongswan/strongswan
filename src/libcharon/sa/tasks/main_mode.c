@@ -23,7 +23,6 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 
-
 typedef struct private_main_mode_t private_main_mode_t;
 
 /**
@@ -50,6 +49,11 @@ struct private_main_mode_t {
 	 * IKE config to establish
 	 */
 	ike_cfg_t *config;
+
+	/**
+	 * selected IKE proposal
+	 */
+	proposal_t *proposal;
 };
 
 METHOD(task_t, build_i, status_t,
@@ -66,15 +70,39 @@ METHOD(task_t, process_r,  status_t,
 	DBG0(DBG_IKE, "%H is initiating a Main Mode", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	/* TODO-IKEv1: process mainmode request */
+	if (!this->proposal)
+	{
+		linked_list_t *list;
+		sa_payload_t *sa_payload;
+
+		sa_payload = (sa_payload_t*)message->get_payload(message,
+												SECURITY_ASSOCIATION_V1);
+		if (!sa_payload)
+		{
+			DBG1(DBG_IKE, "SA payload missing");
+			return FAILED;
+		}
+		list = sa_payload->get_proposals(sa_payload);
+		this->proposal = this->config->select_proposal(this->config, list, FALSE);
+
+		if (!this->proposal)
+		{
+			DBG1(DBG_IKE, "no proposal found");
+			return FAILED;
+		}
+	}
 	return NEED_MORE;
 }
 
 METHOD(task_t, build_r, status_t,
 	private_main_mode_t *this, message_t *message)
 {
-	/* TODO-IKEv1: build mainmode response */
-	return FAILED;
+	sa_payload_t *sa_payload;
+
+	sa_payload = sa_payload_create_from_proposal(SECURITY_ASSOCIATION_V1,
+												 this->proposal);
+	message->add_payload(message, &sa_payload->payload_interface);
+	return NEED_MORE;
 }
 
 METHOD(task_t, process_i, status_t,
@@ -99,6 +127,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	private_main_mode_t *this)
 {
+	DESTROY_IF(this->proposal);
 	free(this);
 }
 
