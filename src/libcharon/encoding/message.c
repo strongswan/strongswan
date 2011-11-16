@@ -1315,10 +1315,13 @@ METHOD(message_t, generate, status_t,
 										   this->minor_version);
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
-	ike_header->set_response_flag(ike_header, !this->is_request);
-	ike_header->set_version_flag(ike_header, this->version_flag);
-	ike_header->set_initiator_flag(ike_header,
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		ike_header->set_response_flag(ike_header, !this->is_request);
+		ike_header->set_version_flag(ike_header, this->version_flag);
+		ike_header->set_initiator_flag(ike_header,
 						this->ike_sa_id->is_initiator(this->ike_sa_id));
+	}
 	ike_header->set_initiator_spi(ike_header,
 						this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header,
