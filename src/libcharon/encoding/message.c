@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -35,24 +35,29 @@
 #include <encoding/payloads/cp_payload.h>
 
 /**
- * Max number of notify payloads per IKEv2 Message
+ * Max number of notify payloads per IKEv2 message
  */
 #define MAX_NOTIFY_PAYLOADS 20
 
 /**
- * Max number of delete payloads per IKEv2 Message
+ * Max number of delete payloads per IKEv2 message
  */
 #define MAX_DELETE_PAYLOADS 20
 
 /**
- * Max number of certificate payloads per IKEv2 Message
+ * Max number of certificate payloads per IKEv2 message
  */
 #define MAX_CERT_PAYLOADS 8
 
 /**
- * Max number of Vendor ID payloads per IKEv2 Message
+ * Max number of vendor ID payloads per IKEv2 message
  */
 #define MAX_VID_PAYLOADS 20
+
+/**
+ * Max number of certificate request payloads per IKEv1 message
+ */
+#define MAX_CERTREQ_PAYLOADS 5
 
 /**
  * A payload rule defines the rules for a payload
@@ -425,6 +430,7 @@ static payload_rule_t id_prot_i_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
@@ -443,6 +449,7 @@ static payload_order_t id_prot_i_order[] = {
 	{CERTIFICATE_V1,			0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
@@ -457,6 +464,7 @@ static payload_rule_t id_prot_r_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
@@ -475,6 +483,7 @@ static payload_order_t id_prot_r_order[] = {
 	{CERTIFICATE_V1,			0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
@@ -489,6 +498,7 @@ static payload_rule_t aggressive_i_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{ID_V1,						0,	1,						FALSE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
@@ -507,6 +517,7 @@ static payload_order_t aggressive_i_order[] = {
 	{CERTIFICATE_V1,			0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
@@ -521,6 +532,7 @@ static payload_rule_t aggressive_r_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{ID_V1,						0,	1,						FALSE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
@@ -539,6 +551,7 @@ static payload_order_t aggressive_r_order[] = {
 	{CERTIFICATE_V1,			0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFICATION_V1,			0},
 	{VENDOR_ID_V1,				0},
 };
