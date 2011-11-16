@@ -687,6 +687,11 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+	 * The message is encrypted (IKEv1)
+	 */
+	bool is_encrypted;
+
+	/**
 	 * Higher version supported?
 	 */
 	bool version_flag;
@@ -694,7 +699,7 @@ struct private_message_t {
 	/**
 	 * Reserved bits in IKE header
 	 */
-	bool reserved[5];
+	bool reserved[2];
 
 	/**
 	 * Sorting of message disabled?
@@ -1422,13 +1427,15 @@ METHOD(message_t, parse_header, status_t,
 	}
 
 	DESTROY_IF(this->ike_sa_id);
-	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),
+	this->ike_sa_id = ike_sa_id_create(
+									ike_header->get_initiator_spi(ike_header),
 									ike_header->get_responder_spi(ike_header),
 									ike_header->get_initiator_flag(ike_header));
 
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
 	this->is_request = !ike_header->get_response_flag(ike_header);
+	this->is_encrypted = ike_header->get_encryption_flag(ike_header);
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(
@@ -1442,19 +1449,12 @@ METHOD(message_t, parse_header, status_t,
 			this->reserved[i] = *reserved;
 		}
 	}
-	DBG2(DBG_ENC, "parsed a %N %s", exchange_type_names, this->exchange_type,
-		 this->is_request ? "request" : "response");
-
 	ike_header->destroy(ike_header);
 
-	this->rule = get_message_rule(this);
-	if (!this->rule)
-	{
-		DBG1(DBG_ENC, "no message rules specified for a %N %s",
-			 exchange_type_names, this->exchange_type,
-			 this->is_request ? "request" : "response");
-	}
-	return status;
+	DBG2(DBG_ENC, "parsed a %N %s header", exchange_type_names,
+		 this->exchange_type, this->major_version == IKEV1_MAJOR_VERSION ?
+		 "message" : (this->is_request ? "request" : "response"));
+	return SUCCESS;
 }
 
 /**
@@ -1640,6 +1640,15 @@ METHOD(message_t, parse_body, status_t,
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
 		 payload_type_names, type);
 
+	this->rule = get_message_rule(this);
+	if (!this->rule)
+	{
+		DBG1(DBG_ENC, "no message rules specified for a %N %s",
+			 exchange_type_names, this->exchange_type,
+			 this->is_request ? "request" : "response");
+		return PARSE_ERROR;
+	}
+
 	while (type != NO_PAYLOAD)
 	{
 		DBG2(DBG_ENC, "starting parsing a %N payload",
@@ -1707,7 +1716,7 @@ METHOD(message_t, destroy, void,
 }
 
 /*
- * Described in Header-File
+ * Described in header.
  */
 message_t *message_create_from_packet(packet_t *packet)
 {
@@ -1752,8 +1761,6 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet_data = _get_packet_data,
 			.destroy = _destroy,
 		},
-		.major_version = IKEV2_MAJOR_VERSION,
-		.minor_version = IKEV2_MINOR_VERSION,
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 		.is_request = TRUE,
 		.first_payload = NO_PAYLOAD,
@@ -1762,14 +1769,19 @@ message_t *message_create_from_packet(packet_t *packet)
 		.parser = parser_create(packet->get_data(packet)),
 	);
 
-	return (&this->public);
+	return &this->public;
 }
 
 /*
- * Described in Header.
+ * Described in header.
  */
-message_t *message_create()
+message_t *message_create(int major, int minor)
 {
-	return message_create_from_packet(packet_create());
+	message_t *this = message_create_from_packet(packet_create());
+
+	this->set_major_version(this, major);
+	this->set_minor_version(this, minor);
+
+	return this;
 }
 

@@ -1028,7 +1028,7 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 		check_t *check, endpoint_pair_t *pair, bool request)
 {
-	message_t *message = message_create();
+	message_t *message = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 	message->set_message_id(message, check->mid);
 	message->set_exchange_type(message, INFORMATIONAL);
 	message->set_request(message, request);

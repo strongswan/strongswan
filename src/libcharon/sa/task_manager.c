@@ -425,7 +425,7 @@ METHOD(task_manager_t, initiate, status_t,
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 
-	message = message_create();
+	message = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 	message->set_message_id(message, this->initiating.mid);
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
@@ -607,7 +607,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	me = request->get_destination(request);
 	other = request->get_source(request);
 
-	message = message_create();
+	message = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 	message->set_exchange_type(message, request->get_exchange_type(request));
 	/* send response along the path the request came in */
 	message->set_source(message, me->clone(me));

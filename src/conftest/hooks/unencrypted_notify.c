@@ -95,7 +95,7 @@ METHOD(listener_t, ike_updown, bool,
 
 		DBG1(DBG_CFG, "injecting unencrypted INFORMATIONAL message");
 
-		message = message_create();
+		message = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 		message->set_message_id(message, this->id);
 		message->set_ike_sa_id(message, ike_sa->get_id(ike_sa));
 		message->set_exchange_type(message, INFORMATIONAL);

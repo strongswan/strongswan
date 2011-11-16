@@ -144,7 +144,7 @@ static void send_notify(message_t *request, notify_type_t type, chunk_t data)
 		packet_t *packet;
 		ike_sa_id_t *ike_sa_id;
 
-		response = message_create();
+		response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 		dst = request->get_source(request);
 		src = request->get_destination(request);
 		response->set_source(response, src->clone(src));

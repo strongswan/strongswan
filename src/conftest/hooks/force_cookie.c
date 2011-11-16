@@ -68,7 +68,7 @@ METHOD(listener_t, message, bool,
 			chunk_t data = chunk_from_thing("COOKIE test data");
 
 			DBG1(DBG_CFG, "sending COOKIE: %#B", &data);
-			response = message_create();
+			response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 			dst = message->get_source(message);
 			src = message->get_destination(message);
 			response->set_source(response, src->clone(src));

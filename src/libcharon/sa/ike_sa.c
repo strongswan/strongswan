@@ -926,7 +926,7 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	message_t *response;
 	packet_t *packet;
 
-	response = message_create();
+	response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
 	response->set_exchange_type(response, request->get_exchange_type(request));
 	response->set_request(response, FALSE);
 	response->set_message_id(response, request->get_message_id(request));
