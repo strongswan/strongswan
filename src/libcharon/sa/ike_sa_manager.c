@@ -1031,34 +1031,27 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 		if (ike_sa == NULL)
 		{
-			if (is_init)
-			{
-				/* no IKE_SA found, create a new one */
-				id->set_responder_spi(id, get_spi(this));
-				entry = entry_create();
-				entry->ike_sa = ike_sa_create(id);
-				entry->ike_sa_id = id->clone(id);
+			/* no IKE_SA found, create a new one */
+			id->set_responder_spi(id, get_spi(this));
+			entry = entry_create();
+			entry->ike_sa = ike_sa_create(id);
+			entry->ike_sa_id = id->clone(id);
 
-				segment = put_entry(this, entry);
-				entry->checked_out = TRUE;
-				unlock_single_segment(this, segment);
+			segment = put_entry(this, entry);
+			entry->checked_out = TRUE;
+			unlock_single_segment(this, segment);
 
-				entry->message_id = message->get_message_id(message);
-				entry->init_hash = hash;
-				ike_sa = entry->ike_sa;
+			entry->message_id = message->get_message_id(message);
+			entry->init_hash = hash;
+			ike_sa = entry->ike_sa;
 
-				DBG2(DBG_MGR, "created IKE_SA %s[%u]",
-						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
-			}
-			else
-			{
-				chunk_free(&hash);
-				DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
-			}
+			DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
 		else
 		{
 			chunk_free(&hash);
+			DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
 		}
 		id->destroy(id);
 		charon->bus->set_sa(charon->bus, ike_sa);
