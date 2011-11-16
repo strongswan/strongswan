@@ -28,7 +28,6 @@ typedef struct tcg_pts_attr_req_funct_comp_evid_t tcg_pts_attr_req_funct_comp_ev
 #include "pts/pts_funct_comp_evid_req.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
-
 /**
  * Class implementing the TCG PTS Request Functional Component Evidence attribute
  *
@@ -47,7 +46,6 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 */
 	pts_funct_comp_evid_req_t* (*get_requests)(
 									tcg_pts_attr_req_funct_comp_evid_t *this);
-	
 	
 };
 
