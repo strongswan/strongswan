@@ -465,8 +465,11 @@ METHOD(generator_t, generate_payload, void,
 				generate_from_chunk(this, rules[i].offset);
 				break;
 			case PROPOSALS:
+			case PROPOSALS_V1:
 			case TRANSFORMS:
+			case TRANSFORMS_V1:
 			case TRANSFORM_ATTRIBUTES:
+			case TRANSFORM_ATTRIBUTES_V1:
 			case CONFIGURATION_ATTRIBUTES:
 			case TRAFFIC_SELECTORS:
 			{
