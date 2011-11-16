@@ -377,7 +377,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				else
 				{
 					DBG2(DBG_IMV, "Matching Functional Component Measurement:"
-							"%B, expected: %B", &measurement, &comp_hash);
+							"%B", &measurement);
 				}
 			}
 			enumerator->destroy(enumerator);
