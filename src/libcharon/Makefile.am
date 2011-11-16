@@ -66,7 +66,7 @@ sa/child_sa.c sa/child_sa.h \
 sa/ike_sa.c sa/ike_sa.h \
 sa/ike_sa_id.c sa/ike_sa_id.h \
 sa/ike_sa_manager.c sa/ike_sa_manager.h \
-sa/task_manager.c sa/task_manager.h \
+sa/task_manager.h sa/task_manager_v2.c sa/task_manager_v2.h \
 sa/keymat.c sa/keymat.h \
 sa/shunt_manager.c sa/shunt_manager.h \
 sa/trap_manager.c sa/trap_manager.h \

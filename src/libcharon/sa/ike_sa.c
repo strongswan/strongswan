@@ -28,7 +28,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
-#include <sa/task_manager.h>
+#include <sa/task_manager_v2.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
 #include <sa/tasks/ike_mobike.h>
@@ -2209,7 +2209,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL),
 	);
-	this->task_manager = task_manager_create(&this->public);
+	this->task_manager = &(task_manager_v2_create(&this->public)->task_manager);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 
 	return &this->public;

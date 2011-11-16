@@ -194,11 +194,4 @@ struct task_manager_t {
 	void (*destroy) (task_manager_t *this);
 };
 
-/**
- * Create an instance of the task manager.
- *
- * @param ike_sa		IKE_SA to manage.
- */
-task_manager_t *task_manager_create(ike_sa_t *ike_sa);
-
 #endif /** TASK_MANAGER_H_ @}*/

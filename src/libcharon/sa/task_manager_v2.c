@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include "task_manager.h"
+#include "task_manager_v2.h"
 
 #include <math.h>
 
@@ -69,7 +69,7 @@ struct private_task_manager_t {
 	/**
 	 * public functions
 	 */
-	task_manager_t public;
+	task_manager_v2_t public;
 
 	/**
 	 * associated IKE_SA we are serving
@@ -1106,22 +1106,24 @@ METHOD(task_manager_t, destroy, void,
 /*
  * see header file
  */
-task_manager_t *task_manager_create(ike_sa_t *ike_sa)
+task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 {
 	private_task_manager_t *this;
 
 	INIT(this,
 		.public = {
-			.process_message = _process_message,
-			.queue_task = _queue_task,
-			.initiate = _initiate,
-			.retransmit = _retransmit,
-			.incr_mid = _incr_mid,
-			.reset = _reset,
-			.adopt_tasks = _adopt_tasks,
-			.busy = _busy,
-			.create_task_enumerator = _create_task_enumerator,
-			.destroy = _destroy,
+			.task_manager = {
+				.process_message = _process_message,
+				.queue_task = _queue_task,
+				.initiate = _initiate,
+				.retransmit = _retransmit,
+				.incr_mid = _incr_mid,
+				.reset = _reset,
+				.adopt_tasks = _adopt_tasks,
+				.busy = _busy,
+				.create_task_enumerator = _create_task_enumerator,
+				.destroy = _destroy,
+			},
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
@@ -1138,4 +1140,3 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 
 	return &this->public;
 }
-
