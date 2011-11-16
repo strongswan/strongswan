@@ -25,7 +25,7 @@
 #include <daemon.h>
 
 /**
- * IKEv1 Value for a proposal payload.
+ * IKEv2 Value for a proposal payload.
  */
 #define PROPOSAL_TYPE_VALUE 2
 
@@ -84,16 +84,43 @@ struct private_proposal_substructure_t {
 	/**
 	 * Transforms are stored in a linked_list_t.
 	 */
-	linked_list_t * transforms;
+	linked_list_t *transforms;
+
+	/**
+	 * Type of this payload, PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a Proposal substructure.
- *
- * The defined offsets are the positions in a object of type
- * private_proposal_substructure_t.
+ * Encoding rules for a IKEv1 Proposal substructure.
  */
-encoding_rule_t proposal_substructure_encodings[] = {
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload)		},
+	/* 1 Reserved Byte */
+	{ RESERVED_BYTE,	offsetof(private_proposal_substructure_t, reserved)			},
+	/* Length of the whole proposal substructure payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_proposal_substructure_t, proposal_length)	},
+	/* proposal number is a number of 8 bit */
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, proposal_number)	},
+	/* protocol ID is a number of 8 bit */
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, protocol_id)		},
+	/* SPI Size has its own type */
+	{ SPI_SIZE,			offsetof(private_proposal_substructure_t, spi_size)			},
+	/* Number of transforms is a number of 8 bit */
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, transforms_count)	},
+	/* SPI is a chunk of variable size*/
+	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
+	/* Transforms are stored in a transform substructure,
+	   offset points to a linked_list_t pointer */
+	{ TRANSFORMS_V1,	offsetof(private_proposal_substructure_t, transforms)		}
+};
+
+/**
+ * Encoding rules for a IKEv2 Proposal substructure.
+ */
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload)		},
 	/* 1 Reserved Byte */
@@ -130,6 +157,76 @@ encoding_rule_t proposal_substructure_encodings[] = {
       !                                                               !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
+
+/**
+ * Encryption.
+ */
+typedef enum {
+	IKEV1_ENCR_DES_CBC = 1,
+	IKEV1_ENCR_IDEA_CBC = 2,
+	IKEV1_ENCR_BLOWFISH_CBC = 3,
+	IKEV1_ENCR_RC5_R16_B64_CBC = 4,
+	IKEV1_ENCR_3DES_CBC = 5,
+	IKEV1_ENCR_CAST_CBC = 6,
+	IKEV1_ENCR_AES_CBC = 7,
+	IKEV1_ENCR_CAMELLIA_CBC = 8,
+	IKEV1_ENCR_LAST = 9,
+} ikev1_encryption_t;
+
+/**
+ * IKEv1 hash.
+ */
+typedef enum {
+	IKEV1_HASH_MD5 = 1,
+	IKEV1_HASH_SHA1 = 2,
+	IKEV1_HASH_TIGER = 3,
+	IKEV1_HASH_SHA2_256 = 4,
+	IKEV1_HASH_SHA2_384 = 5,
+	IKEV1_HASH_SHA2_512 = 6,
+} ikev1_hash_t;
+
+/**
+ * IKEv1 Transform ID IKE.
+ */
+typedef enum {
+	IKEV1_TRANSID_KEY_IKE = 1,
+} ikev1_ike_transid_t;
+
+/**
+ * IKEv1 Transform ID ESP.
+ */
+typedef enum {
+	IKEV1_TRANSID_ESP_DES_IV64 = 1,
+	IKEV1_TRANSID_ESP_DES = 2,
+	IKEV1_TRANSID_ESP_3DES = 3,
+	IKEV1_TRANSID_ESP_RC5 = 4,
+	IKEV1_TRANSID_ESP_IDEA = 5,
+	IKEV1_TRANSID_ESP_CAST = 6,
+	IKEV1_TRANSID_ESP_BLOWFISH = 7,
+	IKEV1_TRANSID_ESP_3IDEA = 8,
+	IKEV1_TRANSID_ESP_DES_IV32 = 9,
+	IKEV1_TRANSID_ESP_RC4 = 10,
+	IKEV1_TRANSID_ESP_NULL = 11,
+	IKEV1_TRANSID_ESP_AES_CBC = 12,
+} ikev1_esp_transid_t;
+
+/**
+ * IKEv1 ESP Encapsulation mode.
+ */
+typedef enum {
+  IKEV1_ENCAP_TUNNEL = 1,
+  IKEV1_ENCAP_TRANSPORT = 2,
+  IKEV1_ENCAP_UDP_TUNNEL = 3,
+  IKEV1_ENCAP_UDP_TRANSPORT = 4,
+} ikev1_esp_encap_t;
+
+/**
+ * IKEv1 Life duration types.
+ */
+typedef enum {
+	IKEV1_LIFE_TYPE_SECONDS = 1,
+	IKEV1_LIFE_TYPE_KILOBYTES = 2,
+} ikev1_life_type_t;
 
 METHOD(payload_t, verify, status_t,
 	private_proposal_substructure_t *this)
@@ -192,14 +289,22 @@ METHOD(payload_t, get_encoding_rules, void,
 	private_proposal_substructure_t *this, encoding_rule_t **rules,
 	size_t *rule_count)
 {
-	*rules = proposal_substructure_encodings;
-	*rule_count = countof(proposal_substructure_encodings);
+	if (this->type == PROPOSAL_SUBSTRUCTURE)
+	{
+		*rules = encodings_v2;
+		*rule_count = countof(encodings_v2);
+	}
+	else
+	{
+		*rules = encodings_v1;
+		*rule_count = countof(encodings_v1);
+	}
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_proposal_substructure_t *this)
 {
-	return PROPOSAL_SUBSTRUCTURE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -301,43 +406,206 @@ METHOD(proposal_substructure_t, get_spi, chunk_t,
 	return this->spi;
 }
 
+/**
+ * Add a transform to a proposal for IKEv2
+ */
+static void add_to_proposal_v2(proposal_t *proposal,
+							   transform_substructure_t *transform)
+{
+	transform_attribute_t *tattr;
+	enumerator_t *enumerator;
+	u_int16_t key_length = 0;
+
+	enumerator = transform->create_attribute_enumerator(transform);
+	while (enumerator->enumerate(enumerator, &tattr))
+	{
+		if (tattr->get_attribute_type(tattr) == TATTR_IKEV2_KEY_LENGTH)
+		{
+			key_length = tattr->get_value(tattr);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	proposal->add_algorithm(proposal,
+						transform->get_transform_type_or_number(transform),
+						transform->get_transform_id(transform), key_length);
+}
+
+/**
+ * Get IKEv2 algorithm from IKEv1 identifier
+ */
+static u_int16_t get_alg_from_ikev1(transform_type_t type, u_int16_t value)
+{
+	typedef struct {
+		u_int16_t ikev1;
+		u_int16_t ikev2;
+	} algo_map_t;
+
+	static algo_map_t encr[] = {
+		{ IKEV1_ENCR_DES_CBC,		ENCR_DES },
+		{ IKEV1_ENCR_IDEA_CBC,		ENCR_IDEA },
+		{ IKEV1_ENCR_BLOWFISH_CBC,	ENCR_BLOWFISH },
+		{ IKEV1_ENCR_3DES_CBC,		ENCR_3DES },
+		{ IKEV1_ENCR_CAST_CBC,		ENCR_CAST },
+		{ IKEV1_ENCR_AES_CBC,		ENCR_AES_CBC },
+		{ IKEV1_ENCR_CAMELLIA_CBC,	ENCR_CAMELLIA_CBC },
+	};
+	static algo_map_t integ[] = {
+		{ IKEV1_HASH_MD5,			AUTH_HMAC_MD5_96 },
+		{ IKEV1_HASH_SHA1,			AUTH_HMAC_SHA1_96 },
+		{ IKEV1_HASH_SHA2_256,		AUTH_HMAC_SHA2_256_128 },
+		{ IKEV1_HASH_SHA2_384,		AUTH_HMAC_SHA2_384_192 },
+		{ IKEV1_HASH_SHA2_512,		AUTH_HMAC_SHA2_512_256 },
+	};
+	static algo_map_t prf[] = {
+		{ IKEV1_HASH_MD5,			PRF_HMAC_MD5 },
+		{ IKEV1_HASH_SHA1,			PRF_HMAC_SHA1 },
+		{ IKEV1_HASH_SHA2_256,		PRF_HMAC_SHA2_256 },
+		{ IKEV1_HASH_SHA2_384,		PRF_HMAC_SHA2_384 },
+		{ IKEV1_HASH_SHA2_512,		PRF_HMAC_SHA2_512 },
+	};
+	int i, count;
+	u_int16_t def;
+	algo_map_t *map;
+
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			map = encr;
+			count = countof(encr);
+			def = ENCR_UNDEFINED;
+			break;
+		case INTEGRITY_ALGORITHM:
+			map = integ;
+			count = countof(integ);
+			def = AUTH_UNDEFINED;
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			map = prf;
+			count = countof(prf);
+			def = PRF_UNDEFINED;
+			break;
+		default:
+			return 0;
+	}
+
+	for (i = 0; i < count; i++)
+	{
+		if (map[i].ikev1 == value)
+		{
+			return map[i].ikev2;
+		}
+	}
+	return def;
+}
+
+/**
+ * Add an IKE transform to a proposal for IKEv1
+ */
+static void add_to_proposal_v1_ike(proposal_t *proposal,
+								   transform_substructure_t *transform)
+{
+	transform_attribute_type_t type;
+	transform_attribute_t *tattr;
+	enumerator_t *enumerator;
+	u_int16_t value, key_length = 0;
+	u_int16_t encr = ENCR_UNDEFINED;
+
+	enumerator = transform->create_attribute_enumerator(transform);
+	while (enumerator->enumerate(enumerator, &tattr))
+	{
+		type = tattr->get_attribute_type(tattr);
+		value = tattr->get_value(tattr);
+		switch (type)
+		{
+			case TATTR_PH1_ENCRYPTION_ALGORITHM:
+				encr = get_alg_from_ikev1(ENCRYPTION_ALGORITHM, value);
+				break;
+			case TATTR_PH1_KEY_LENGTH:
+				key_length = value;
+				break;
+			case TATTR_PH1_HASH_ALGORITHM:
+				proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM,
+						get_alg_from_ikev1(INTEGRITY_ALGORITHM, value), 0);
+				proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION,
+						get_alg_from_ikev1(PSEUDO_RANDOM_FUNCTION, value), 0);
+				break;
+			case TATTR_PH1_GROUP:
+				proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+						value, 0);
+				break;
+			default:
+				/* TODO-IKEv1: lifetimes, authentication and other attributes */
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (encr != ENCR_UNDEFINED)
+	{
+		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, key_length);
+	}
+}
+
+/**
+ * Add an ESP transform to a proposal for IKEv1
+ */
+static void add_to_proposal_v1_esp(proposal_t *proposal,
+								   transform_substructure_t *transform)
+{
+	/* TODO-IKEv1: create ESP proposals */
+}
+
 METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 	private_proposal_substructure_t *this)
 {
-	enumerator_t *enumerator;
 	transform_substructure_t *transform;
+	enumerator_t *enumerator;
 	proposal_t *proposal;
-	u_int64_t spi;
 
 	proposal = proposal_create(this->protocol_id, this->proposal_number);
 
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
 	{
-		transform_type_t transform_type;
-		u_int16_t transform_id;
-		u_int16_t key_length = 0;
-
-		transform_type = transform->get_transform_type(transform);
-		transform_id = transform->get_transform_id(transform);
-		transform->get_key_length(transform, &key_length);
-
-		proposal->add_algorithm(proposal, transform_type, transform_id, key_length);
+		if (this->type == PROPOSAL_SUBSTRUCTURE)
+		{
+			add_to_proposal_v2(proposal, transform);
+		}
+		else
+		{
+			switch (this->protocol_id)
+			{
+				case PROTO_IKE:
+					add_to_proposal_v1_ike(proposal, transform);
+					break;
+				case PROTO_ESP:
+					add_to_proposal_v1_esp(proposal, transform);
+					break;
+				default:
+					break;
+			}
+			/* TODO-IKEv1: We currently accept the first set of transforms
+			 * in a substructure only. We need to return multiple proposals,
+			 * but this messes up proposal numbering, as we don't support
+			 * transform numbering. */
+			break;
+		}
 	}
 	enumerator->destroy(enumerator);
 
 	switch (this->spi.len)
 	{
 		case 4:
-			spi = *((u_int32_t*)this->spi.ptr);
+			proposal->set_spi(proposal, *((u_int32_t*)this->spi.ptr));
 			break;
 		case 8:
-			spi = *((u_int64_t*)this->spi.ptr);
+			proposal->set_spi(proposal, *((u_int64_t*)this->spi.ptr));
 			break;
 		default:
-			spi = 0;
+			break;
 	}
-	proposal->set_spi(proposal, spi);
 
 	return proposal;
 }
@@ -352,7 +620,7 @@ METHOD2(payload_t, proposal_substructure_t, destroy, void,
 	private_proposal_substructure_t *this)
 {
 	this->transforms->destroy_offset(this->transforms,
-									 offsetof(transform_substructure_t, destroy));
+									 offsetof(payload_t, destroy));
 	chunk_free(&this->spi);
 	free(this);
 }
@@ -360,7 +628,7 @@ METHOD2(payload_t, proposal_substructure_t, destroy, void,
 /*
  * Described in header.
  */
-proposal_substructure_t *proposal_substructure_create()
+proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 {
 	private_proposal_substructure_t *this;
 
@@ -389,6 +657,7 @@ proposal_substructure_t *proposal_substructure_create()
 		.next_payload = NO_PAYLOAD,
 		.proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH,
 		.transforms = linked_list_create(),
+		.type = type,
 	);
 
 	return &this->public;
@@ -398,21 +667,28 @@ proposal_substructure_t *proposal_substructure_create()
  * Described in header.
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal(
-														proposal_t *proposal)
+									payload_type_t type, proposal_t *proposal)
 {
 	transform_substructure_t *transform;
 	private_proposal_substructure_t *this;
 	u_int16_t alg, key_size;
 	enumerator_t *enumerator;
+	payload_type_t subtype = TRANSFORM_SUBSTRUCTURE;
 
-	this = (private_proposal_substructure_t*)proposal_substructure_create();
+	if (type == PROPOSAL_SUBSTRUCTURE_V1)
+	{
+		/* TODO-IKEv1: IKEv1 specific proposal encoding */
+		subtype = TRANSFORM_SUBSTRUCTURE_V1;
+	}
+
+	this = (private_proposal_substructure_t*)proposal_substructure_create(type);
 
 	/* encryption algorithm is only available in ESP */
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM,
-													   alg, key_size);
+		transform = transform_substructure_create_type(subtype,
+										ENCRYPTION_ALGORITHM, alg, key_size);
 		add_transform_substructure(this, transform);
 	}
 	enumerator->destroy(enumerator);
@@ -421,8 +697,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM,
-													   alg, key_size);
+		transform = transform_substructure_create_type(subtype,
+										INTEGRITY_ALGORITHM, alg, key_size);
 		add_transform_substructure(this, transform);
 	}
 	enumerator->destroy(enumerator);
@@ -431,8 +707,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	enumerator = proposal->create_enumerator(proposal, PSEUDO_RANDOM_FUNCTION);
 	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION,
-													   alg, key_size);
+		transform = transform_substructure_create_type(subtype,
+										PSEUDO_RANDOM_FUNCTION, alg, key_size);
 		add_transform_substructure(this, transform);
 	}
 	enumerator->destroy(enumerator);
@@ -441,8 +717,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
 	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
-		transform = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP,
-													   alg, 0);
+		transform = transform_substructure_create_type(subtype,
+										DIFFIE_HELLMAN_GROUP, alg, 0);
 		add_transform_substructure(this, transform);
 	}
 	enumerator->destroy(enumerator);
@@ -451,8 +727,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	enumerator = proposal->create_enumerator(proposal, EXTENDED_SEQUENCE_NUMBERS);
 	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
-		transform = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS,
-													   alg, 0);
+		transform = transform_substructure_create_type(subtype,
+										EXTENDED_SEQUENCE_NUMBERS, alg, 0);
 		add_transform_substructure(this, transform);
 	}
 	enumerator->destroy(enumerator);

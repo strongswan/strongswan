@@ -37,9 +37,7 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
 
 /**
- * Class representing an IKEv2-PROPOSAL SUBSTRUCTURE.
- *
- * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
+ * Class representing an IKEv1/IKEv2 proposal substructure.
  */
 struct proposal_substructure_t {
 
@@ -126,17 +124,19 @@ struct proposal_substructure_t {
 /**
  * Creates an empty proposal_substructure_t object
  *
- * @return proposal_substructure_t object
+ * @param type		PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
+ * @return			proposal_substructure_t object
  */
-proposal_substructure_t *proposal_substructure_create(void);
+proposal_substructure_t *proposal_substructure_create(payload_type_t type);
 
 /**
  * Creates a proposal_substructure_t from a proposal_t.
  *
+ * @param type		PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
  * @param proposal		proposal to build a substruct out of it
  * @return 				proposal_substructure_t object
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal(
-														proposal_t *proposal);
+									payload_type_t type, proposal_t *proposal);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

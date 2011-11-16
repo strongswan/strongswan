@@ -158,10 +158,15 @@ static encoding_rule_t encodings_v2[] = {
 METHOD(payload_t, verify, status_t,
 	private_sa_payload_t *this)
 {
-	int expected_number = 1, current_number;
+	int expected_number = 0, current_number;
 	status_t status = SUCCESS;
 	enumerator_t *enumerator;
 	proposal_substructure_t *substruct;
+
+	if (this->type == SECURITY_ASSOCIATION)
+	{
+		expected_number = 1;
+	}
 
 	/* check proposal numbering */
 	enumerator = this->proposals->create_enumerator(this->proposals);
@@ -264,10 +269,15 @@ METHOD(sa_payload_t, add_proposal, void,
 	private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substruct, *last;
+	payload_type_t subtype = PROPOSAL_SUBSTRUCTURE;
 	u_int count;
 
 	count = this->proposals->get_count(this->proposals);
-	substruct = proposal_substructure_create_from_proposal(proposal);
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		subtype = PROPOSAL_SUBSTRUCTURE_V1;
+	}
+	substruct = proposal_substructure_create_from_proposal(subtype, proposal);
 	if (count > 0)
 	{
 		this->proposals->get_last(this->proposals, (void**)&last);
@@ -296,6 +306,11 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	proposal_substructure_t *substruct;
 	linked_list_t *list;
 	proposal_t *proposal;
+
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{	/* IKEv1 proposals start with 0 */
+		struct_number = ignore_struct_number = -1;
+	}
 
 	list = linked_list_create();
 	/* we do not support proposals split up to two proposal substructures, as

@@ -28,26 +28,66 @@ typedef struct transform_attribute_t transform_attribute_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 
-
 /**
- * Type of the attribute, as in IKEv2 RFC 3.3.5.
+ * Type of the attribute.
  */
 enum transform_attribute_type_t {
-	ATTRIBUTE_UNDEFINED = 16384,
-	KEY_LENGTH = 14
+	/** IKEv1 Phase 1 attributes */
+	TATTR_PH1_ENCRYPTION_ALGORITHM = 1,
+	TATTR_PH1_HASH_ALGORITHM = 2,
+	TATTR_PH1_AUTH_METHOD = 3,
+	TATTR_PH1_GROUP = 4,
+	TATTR_PH1_GROUP_TYPE = 5,
+	TATTR_PH1_GROUP_PRIME = 6,
+	TATTR_PH1_GROUP_GENONE = 7,
+	TATTR_PH1_GROUP_GENTWO = 8,
+	TATTR_PH1_GROUP_CURVE_A = 9,
+	TATTR_PH1_GROUP_CURVE_B = 10,
+	TATTR_PH1_LIFE_TYPE = 11,
+	TATTR_PH1_LIFE_DURATION = 12,
+	TATTR_PH1_PRF = 13,
+	TATTR_PH1_KEY_LENGTH = 14,
+	TATTR_PH1_FIELD_SIZE = 15,
+	TATTR_PH1_GROUP_ORDER = 16,
+	/** IKEv1 Phase 2 attributes */
+	TATTR_PH2_SA_LIFE_TYPE = 1,
+	TATTR_PH2_SA_LIFE_DURATION = 2,
+	TATTR_PH2_GROUP = 3,
+	TATTR_PH2_ENCAP_MODE = 4,
+	TATTR_PH2_AUTH_ALGORITHM = 5,
+	TATTR_PH2_KEY_LENGTH = 6,
+	TATTR_PH2_KEY_ROUNDS = 7,
+	TATTR_PH2_COMP_DICT_SIZE = 8,
+	TATTR_PH2_COMP_PRIV_ALGORITHM = 9,
+	TATTR_PH2_ECN_TUNNEL = 10,
+	TATTR_PH2_EXT_SEQ_NUMBER = 11,
+	/* IKEv2 key length attribute */
+	TATTR_IKEV2_KEY_LENGTH = 14,
+	/* undefined, private use attribute */
+	TATTR_UNDEFINED = 16384,
 };
 
 /**
- * enum name for transform_attribute_type_t.
+ * Enum names for IKEv1 Phase 1 transform_attribute_type_t.
  */
-extern enum_name_t *transform_attribute_type_names;
+extern enum_name_t *tattr_ph1_names;
 
 /**
- * Class representing an IKEv2- TRANSFORM Attribute.
- *
- * The TRANSFORM ATTRIBUTE format is described in RFC section 3.3.5.
+ * Enum names for IKEv1 Phase 2 transform_attribute_type_t.
+ */
+extern enum_name_t *tattr_ph2_names;
+
+/**
+ * Enum names for IKEv2 transform_attribute_type_t.
+ */
+extern enum_name_t *tattr_ikev2_names;
+
+
+/**
+ * Class representing an IKEv1/IKEv2 TRANSFORM Attribute.
  */
 struct transform_attribute_t {
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -117,9 +157,10 @@ struct transform_attribute_t {
 /**
  * Creates an empty transform_attribute_t object.
  *
+ * @param type			TRANSFORM_ATTRIBUTE or TRANSFORM_ATTRIBUTE_V1
  * @return				transform_attribute_t object
  */
-transform_attribute_t *transform_attribute_create(void);
+transform_attribute_t *transform_attribute_create(payload_type_t type);
 
 /**
  * Creates an transform_attribute_t of type KEY_LENGTH.

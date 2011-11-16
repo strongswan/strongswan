@@ -23,6 +23,44 @@
 #include <encoding/payloads/encodings.h>
 #include <library.h>
 
+ENUM(tattr_ph1_names, TATTR_PH1_ENCRYPTION_ALGORITHM, TATTR_PH1_GROUP_ORDER,
+	"ENCRYPTION_ALGORITHM",
+	"HASH_ALGORITHM",
+	"AUTH_METHOD",
+	"GROUP",
+	"GROUP_TYPE",
+	"GROUP_PRIME",
+	"GROUP_GENONE",
+	"GROUP_GENTWO",
+	"GROUP_CURVE_A",
+	"GROUP_CURVE_B",
+	"LIFE_TYPE",
+	"LIFE_DURATION",
+	"PRF",
+	"KEY_LENGTH",
+	"FIELD_SIZE",
+	"GROUP_ORDER",
+);
+
+ENUM(tattr_ph2_names, TATTR_PH2_SA_LIFE_TYPE, TATTR_PH2_EXT_SEQ_NUMBER,
+	"SA_LIFE_TYPE",
+	"SA_LIFE_DURATION",
+	"GROUP",
+	"ENCAP_MODE",
+	"AUTH_ALGORITHM",
+	"KEY_LENGTH",
+	"KEY_ROUNDS",
+	"COMP_DICT_SIZE",
+	"COMP_PRIV_ALGORITHM",
+	"ECN_TUNNEL",
+	"EXT_SEQ_NUMBER",
+);
+
+ENUM(tattr_ikev2_names, TATTR_IKEV2_KEY_LENGTH, TATTR_IKEV2_KEY_LENGTH,
+	"KEY_LENGTH",
+);
+
+
 typedef struct private_transform_attribute_t private_transform_attribute_t;
 
 /**
@@ -57,22 +95,17 @@ struct private_transform_attribute_t {
 	 * Attribute value as chunk if attribute_format is 0 (FALSE).
 	 */
 	chunk_t attribute_value;
+
+	/**
+	 * Payload type, TRANSFORM_ATTRIBUTE or TRANSFORM_ATTRIBUTE_V1
+	 */
+	payload_type_t type;
 };
 
-
-ENUM_BEGIN(transform_attribute_type_name, ATTRIBUTE_UNDEFINED, ATTRIBUTE_UNDEFINED,
-	"ATTRIBUTE_UNDEFINED");
-ENUM_NEXT(transform_attribute_type_name, KEY_LENGTH, KEY_LENGTH, ATTRIBUTE_UNDEFINED,
-	"KEY_LENGTH");
-ENUM_END(transform_attribute_type_name, KEY_LENGTH);
-
 /**
- * Encoding rules to parse or generate a Transform attribute.
- *
- * The defined offsets are the positions in a object of type
- * private_transform_attribute_t.
+ * Encoding rules for IKEv1/IKEv2 transform attributes
  */
-encoding_rule_t transform_attribute_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* Flag defining the format of this payload */
 	{ ATTRIBUTE_FORMAT,			offsetof(private_transform_attribute_t, attribute_format) 			},
 	/* type of the attribute as 15 bit unsigned integer */
@@ -105,14 +138,14 @@ METHOD(payload_t, get_encoding_rules, void,
 	private_transform_attribute_t *this, encoding_rule_t **rules,
 	size_t *rule_count)
 {
-	*rules = transform_attribute_encodings;
-	*rule_count = countof(transform_attribute_encodings);
+	*rules = encodings;
+	*rule_count = countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_transform_attribute_t *this)
 {
-	return TRANSFORM_ATTRIBUTE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -192,19 +225,19 @@ METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
 METHOD(transform_attribute_t, clone_, transform_attribute_t*,
 	private_transform_attribute_t *this)
 {
-	private_transform_attribute_t *new_clone;
+	private_transform_attribute_t *new;
 
-	new_clone = (private_transform_attribute_t *)transform_attribute_create();
+	new = (private_transform_attribute_t*)transform_attribute_create(this->type);
 
-	new_clone->attribute_format = this->attribute_format;
-	new_clone->attribute_type = this->attribute_type;
-	new_clone->attribute_length_or_value = this->attribute_length_or_value;
+	new->attribute_format = this->attribute_format;
+	new->attribute_type = this->attribute_type;
+	new->attribute_length_or_value = this->attribute_length_or_value;
 
-	if (!new_clone->attribute_format)
+	if (!new->attribute_format)
 	{
-		new_clone->attribute_value = chunk_clone(this->attribute_value);
+		new->attribute_value = chunk_clone(this->attribute_value);
 	}
-	return &new_clone->public;
+	return &new->public;
 }
 
 METHOD2(payload_t, transform_attribute_t, destroy, void,
@@ -217,7 +250,7 @@ METHOD2(payload_t, transform_attribute_t, destroy, void,
 /*
  * Described in header.
  */
-transform_attribute_t *transform_attribute_create()
+transform_attribute_t *transform_attribute_create(payload_type_t type)
 {
 	private_transform_attribute_t *this;
 
@@ -242,6 +275,7 @@ transform_attribute_t *transform_attribute_create()
 			.destroy = _destroy,
 		},
 		.attribute_format = TRUE,
+		.type = type,
 	);
 	return &this->public;
 }
@@ -251,8 +285,11 @@ transform_attribute_t *transform_attribute_create()
  */
 transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length)
 {
-	transform_attribute_t *attribute = transform_attribute_create();
-	attribute->set_attribute_type(attribute, KEY_LENGTH);
+	transform_attribute_t *attribute;
+
+	attribute = transform_attribute_create(TRANSFORM_ATTRIBUTE);
+	attribute->set_attribute_type(attribute, TATTR_IKEV2_KEY_LENGTH);
 	attribute->set_value(attribute, key_length);
+
 	return attribute;
 }
