@@ -105,13 +105,10 @@ struct imv_attestation_state_t {
 	/**
 	 * Add an entry to the list of pending Function Component Evidences
 	 *
-	 * @param vendor_id			Functional Component Name Vendor ID
-	 * @param qualifier			Qualifier of the requested Functional Component
-	 * @param comp_name			Name of the requested Functional Component
+	 * @param entry				Functional Component Evidence Request
 	 */
 	void (*add_comp_evid_request)(imv_attestation_state_t *this,
-				u_int32_t vendor_id, pts_qualifier_t qualifier,
-				pts_ita_funct_comp_name_t comp_name);
+				funct_comp_evid_req_entry_t *entry);
 
 	/**
 	 * Returns the number of pending Function Component Evidences

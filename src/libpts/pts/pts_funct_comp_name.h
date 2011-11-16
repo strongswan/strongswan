@@ -26,6 +26,7 @@ typedef enum pts_funct_comp_name_t pts_funct_comp_name_t;
 typedef enum pts_ita_funct_comp_type_t pts_ita_funct_comp_type_t;
 typedef enum pts_ita_funct_comp_name_t pts_ita_funct_comp_name_t;
 typedef struct pts_qualifier_t pts_qualifier_t;
+typedef struct pts_comp_funct_name_t pts_comp_funct_name_t;
 
 /**
  * PTS Component Functional Type for Qualifier field
@@ -113,6 +114,15 @@ struct pts_qualifier_t {
 	bool	  kernel;
 	bool	  sub_component;
 	pts_ita_funct_comp_type_t  type;
+};
+
+/**
+ * Component Functional Name
+ */
+struct pts_comp_funct_name_t {
+	u_int32_t vendor_id;
+	u_int8_t  family_qualifier;
+	u_int32_t name;
 };
 
 #endif /** PTS_FUNCT_COMP_NAME_H_ @}*/

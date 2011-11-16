@@ -352,56 +352,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_list->insert_last(attr_list, attr);
 			break;
 		}
-		case TCG_PTS_REQ_FILE_META:
-		{
-			tcg_pts_attr_req_file_meta_t *attr_cast;
-			char *pathname;
-			bool is_directory;
-			u_int8_t delimiter;
-			pts_file_meta_t *metadata;
-
-			attr_info = attr->get_value(attr);
-			attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
-			is_directory = attr_cast->get_directory_flag(attr_cast);
-			delimiter = attr_cast->get_delimiter(attr_cast);
-			pathname = attr_cast->get_pathname(attr_cast);
-
-			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
-			if (valid_path && pts_error)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										pts_error, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			else if (!valid_path)
-			{
-				break;
-			}
-			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_DELIMITER, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			/* Get File Metadata and send them to PTS-IMV */
-			DBG2(DBG_IMC, "metadata request for %s '%s'",
-					is_directory ? "directory" : "file",
-					pathname);
-			metadata = pts->get_metadata(pts, pathname, is_directory);
-
-			if (!metadata)
-			{
-				/* TODO handle error codes from measurements */
-				return FALSE;
-			}
-			attr = tcg_pts_attr_unix_file_meta_create(metadata);
-			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
-
-			break;
-		}
 		case TCG_PTS_REQ_FILE_MEAS:
 		{
 			tcg_pts_attr_req_file_meas_t *attr_cast;
@@ -455,133 +405,196 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_list->insert_last(attr_list, attr);
 			break;
 		}
+		case TCG_PTS_REQ_FILE_META:
+		{
+			tcg_pts_attr_req_file_meta_t *attr_cast;
+			char *pathname;
+			bool is_directory;
+			u_int8_t delimiter;
+			pts_file_meta_t *metadata;
+
+			attr_info = attr->get_value(attr);
+			attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
+			is_directory = attr_cast->get_directory_flag(attr_cast);
+			delimiter = attr_cast->get_delimiter(attr_cast);
+			pathname = attr_cast->get_pathname(attr_cast);
+
+			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
+			if (valid_path && pts_error)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										pts_error, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+			else if (!valid_path)
+			{
+				break;
+			}
+			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
+			{
+				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_DELIMITER, attr_info);
+				attr_list->insert_last(attr_list, attr);
+				break;
+			}
+			/* Get File Metadata and send them to PTS-IMV */
+			DBG2(DBG_IMC, "metadata request for %s '%s'",
+					is_directory ? "directory" : "file",
+					pathname);
+			metadata = pts->get_metadata(pts, pathname, is_directory);
+
+			if (!metadata)
+			{
+				/* TODO handle error codes from measurements */
+				return FALSE;
+			}
+			attr = tcg_pts_attr_unix_file_meta_create(metadata);
+			attr->set_noskip_flag(attr, TRUE);
+			attr_list->insert_last(attr_list, attr);
+
+			break;
+		}
 		case TCG_PTS_REQ_FUNCT_COMP_EVID:
 		{
 			tcg_pts_attr_req_funct_comp_evid_t *attr_cast;
 			pts_proto_caps_flag_t negotiated_caps;
+			enumerator_t *e;
+			pts_funct_comp_evid_req_t *requests;
+			funct_comp_evid_req_entry_t *entry;
+			u_int32_t requests_count;
 			pts_attr_req_funct_comp_evid_flag_t flags;
-			u_int32_t sub_comp_depth;
-			u_int32_t comp_name_vendor_id;
+			u_int32_t sub_comp_depth, comp_name_vendor_id;
 			u_int8_t family;
 			pts_qualifier_t qualifier;
 			pts_ita_funct_comp_name_t name;
 
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
-			negotiated_caps = pts->get_proto_caps(pts);
-			flags = attr_cast->get_flags(attr_cast);
+			requests = attr_cast->get_requests(attr_cast);
+			requests_count = requests->get_req_count(requests);
 
-			if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_UNABLE_DET_TTC, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			if (flags & PTS_REQ_FUNC_COMP_FLAG_VER &&
-				!(negotiated_caps & PTS_PROTO_CAPS_V))
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_UNABLE_LOCAL_VAL, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			if (flags & PTS_REQ_FUNC_COMP_FLAG_CURR &&
-				!(negotiated_caps & PTS_PROTO_CAPS_C))
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_UNABLE_CUR_EVID, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-			if (flags & PTS_REQ_FUNC_COMP_FLAG_PCR &&
-				!(negotiated_caps & PTS_PROTO_CAPS_T))
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_UNABLE_DET_PCR, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
+			DBG1(DBG_IMC, "IMV requests evidence%s for: %d functional components",
+				 (requests_count == 1) ? "":"s", requests_count);
 
-			sub_comp_depth = attr_cast->get_sub_component_depth(attr_cast);
-			if (sub_comp_depth != 0)
+			e = requests->create_enumerator(requests);
+			while (e->enumerate(e, &entry))
 			{
-				DBG1(DBG_IMC, "current version of Attestation IMC does not "
-							  "support sub component measurement deeper than "
-							  "zero. Measuring top level component only.");
-				return FALSE;
-			}
+				flags = entry->flags;
+				sub_comp_depth = entry->sub_comp_depth;
+				comp_name_vendor_id = entry->vendor_id;
+				family = entry->family;
+				qualifier = entry->qualifier;
+				name = entry->name;
+				negotiated_caps = pts->get_proto_caps(pts);
 
-			comp_name_vendor_id = attr_cast->get_comp_funct_name_vendor_id(
-																	attr_cast);
-			if (comp_name_vendor_id != PEN_ITA)
-			{
-				DBG1(DBG_IMC, "current version of Attestation IMC supports"
-						"only functional component namings by ITA");
-				return FALSE;
-			}
+				DBG1(DBG_IMC, "Requested Evidence flags: %d, depth: %d,"
+							  " vendor_id: %d, family: %d, qualifier %d, name: %d",
+								flags, sub_comp_depth, comp_name_vendor_id, family,
+								qualifier, name);
 
-			family = attr_cast->get_family(attr_cast);
-			if (family)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_INVALID_NAME_FAM, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
+				if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
+				{
+					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+											TCG_PTS_UNABLE_DET_TTC, attr_info);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
+				if (flags & PTS_REQ_FUNC_COMP_FLAG_VER &&
+					!(negotiated_caps & PTS_PROTO_CAPS_V))
+				{
+					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_LOCAL_VAL, attr_info);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
+				if (flags & PTS_REQ_FUNC_COMP_FLAG_CURR &&
+					!(negotiated_caps & PTS_PROTO_CAPS_C))
+				{
+					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_CUR_EVID, attr_info);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
+				if (flags & PTS_REQ_FUNC_COMP_FLAG_PCR &&
+					!(negotiated_caps & PTS_PROTO_CAPS_T))
+				{
+					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_UNABLE_DET_PCR, attr_info);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
+				if (sub_comp_depth != 0)
+				{
+					DBG1(DBG_IMC, "current version of Attestation IMC does not "
+							"support sub component measurement deeper than "
+							"zero. Measuring top level component only.");
+					return FALSE;
+				}
+				if (comp_name_vendor_id != PEN_ITA)
+				{
+					DBG1(DBG_IMC, "current version of Attestation IMC supports"
+								  "only functional component namings by ITA");
+					return FALSE;
+				}
+				if (family)
+				{
+					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
+										TCG_PTS_INVALID_NAME_FAM, attr_info);
+					attr_list->insert_last(attr_list, attr);
+					break;
+				}
 
-			qualifier = attr_cast->get_qualifier(attr_cast);
-
-			/* Check if Unknown or Wildcard was set for qualifier */
-			if (qualifier.kernel && qualifier.sub_component &&
-			   (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_ALL))
-			{
-				DBG2(DBG_IMC, "wildcard was set for the qualifier of functional"
-					" component. Identifying the component with "
-					"name binary enumeration");
-			}
-			else if (!qualifier.kernel && !qualifier.sub_component &&
+				/* Check if Unknown or Wildcard was set for qualifier */
+				if (qualifier.kernel && qualifier.sub_component &&
+					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_ALL))
+				{
+					DBG2(DBG_IMC, "wildcard was set for the qualifier of functional"
+								  " component. Identifying the component with "
+								  "name binary enumeration");
+				}
+				else if (!qualifier.kernel && !qualifier.sub_component &&
 					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_UNKNOWN))
-			{
-				DBG2(DBG_IMC, "unknown was set for the qualifier of functional"
-					" component. Identifying the component with "
-					"name binary enumeration");
-			}
-			else if (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_TRUSTED)
-			{
-				tcg_pts_attr_simple_comp_evid_params_t params;
-
-				/* Set parameters of Simple Component Evidence */
-				name = attr_cast->get_comp_funct_name(attr_cast);
-				if (!set_simple_comp_evid_params(name, &params))
 				{
-					DBG1(DBG_IMC, "error occured while setting parameters"
-								  "for Simple Component Evidence");
-					return FALSE;
+					DBG2(DBG_IMC, "unknown was set for the qualifier of functional"
+								  " component. Identifying the component with "
+								  "name binary enumeration");
 				}
+				else if (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_TRUSTED)
+				{
+					tcg_pts_attr_simple_comp_evid_params_t params;
 
-				/* Get PCR after value from log when TBOOT is measuring entity */
-				if (!(name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
+					/* Set parameters of Simple Component Evidence */
+					if (!set_simple_comp_evid_params(name, &params))
+					{
+						DBG1(DBG_IMC, "error occured while setting parameters"
+									  "for Simple Component Evidence");
+						return FALSE;
+					}
+
+					/* Get PCR after value from log when TBOOT is measuring entity */
+					if (!(name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
 						name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE) &&
-					!pts->read_pcr(pts, params.extended_pcr, &params.pcr_after))
-				{
-					DBG1(DBG_IMC, "error occured while reading PCR: %d",
-						 params.extended_pcr);
-					return FALSE;
+						!pts->read_pcr(pts, params.extended_pcr, &params.pcr_after))
+					{
+						DBG1(DBG_IMC, "error occured while reading PCR: %d",
+							 params.extended_pcr);
+						return FALSE;
+					}
+
+					/* Buffer Simple Component Evidence attribute */
+					attr = tcg_pts_attr_simple_comp_evid_create(params);
+					evidences->insert_last(evidences, attr);
+					break;
 				}
-
-				/* Buffer Simple Component Evidence attribute */
-				attr = tcg_pts_attr_simple_comp_evid_create(params);
-				evidences->insert_last(evidences, attr);
-				break;
+				else
+				{
+					DBG1(DBG_IMC, "Functional Component with unsupported type: %d"
+								  "was requested for evidence", qualifier.type);
+					break;
+				}
 			}
-			else
-			{
-				DBG1(DBG_IMC, "Functional Component with unsupported type: %d"
-					"was requested for evidence", qualifier.type);
-				break;
-			}
-
+			e->destroy(e);
 			break;
 		}
 		case TCG_PTS_GEN_ATTEST_EVID:

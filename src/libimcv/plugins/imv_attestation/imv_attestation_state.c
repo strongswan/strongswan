@@ -271,15 +271,14 @@ METHOD(imv_attestation_state_t, get_file_meas_request_count, int,
 }
 
 METHOD(imv_attestation_state_t, add_comp_evid_request, void,
-	private_imv_attestation_state_t *this, u_int32_t vendor_id,
-	pts_qualifier_t qualifier, pts_ita_funct_comp_name_t comp_name)
+	private_imv_attestation_state_t *this, funct_comp_evid_req_entry_t *entry)
 {
 	comp_evid_request_t *request;
 
 	request = malloc_thing(comp_evid_request_t);
-	request->vendor_id = vendor_id;
-	request->qualifier = qualifier;
-	request->name = comp_name;
+	request->vendor_id = entry->vendor_id;
+	request->qualifier = entry->qualifier;
+	request->name = entry->name;
 	this->comp_evid_requests->insert_last(this->comp_evid_requests, request);
 }
 
