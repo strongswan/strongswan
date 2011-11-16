@@ -23,6 +23,7 @@
 #ifndef PEER_CFG_H_
 #define PEER_CFG_H_
 
+typedef enum ike_version_t ike_version_t;
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
@@ -37,6 +38,21 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <sa/authenticators/authenticator.h>
 #include <sa/authenticators/eap/eap_method.h>
 #include <credentials/auth_cfg.h>
+
+/**
+ * IKE version.
+ */
+enum ike_version_t {
+	/** IKE version 1 */
+	IKEV1 = 1,
+	/** IKE version 2 */
+	IKEV2 = 2,
+};
+
+/**
+ * enum strings fro ike_version_t
+ */
+extern enum_name_t *ike_version_names;
 
 /**
  * Certificate sending policy. This is also used for certificate
@@ -130,7 +146,7 @@ struct peer_cfg_t {
 	 *
 	 * @return				IKE major version
 	 */
-	u_int (*get_ike_version)(peer_cfg_t *this);
+	ike_version_t (*get_ike_version)(peer_cfg_t *this);
 
 	/**
 	 * Get the IKE config to use for initiaton.
@@ -347,13 +363,13 @@ struct peer_cfg_t {
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return					peer_cfg_t object
  */
-peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
-							cert_policy_t cert_policy, unique_policy_t unique,
-							u_int32_t keyingtries, u_int32_t rekey_time,
-							u_int32_t reauth_time, u_int32_t jitter_time,
-							u_int32_t over_time, bool mobike, u_int32_t dpd,
-							host_t *virtual_ip, char *pool,
-							bool mediation, peer_cfg_t *mediated_by,
+peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
+							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
+							unique_policy_t unique, u_int32_t keyingtries,
+							u_int32_t rekey_time, u_int32_t reauth_time,
+							u_int32_t jitter_time, u_int32_t over_time,
+							bool mobike, u_int32_t dpd, host_t *virtual_ip,
+							char *pool, bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 
 #endif /** PEER_CFG_H_ @}*/

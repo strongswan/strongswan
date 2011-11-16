@@ -122,7 +122,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 						"0.0.0.0", IKEV2_UDP_PORT, address, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	med_cfg = peer_cfg_create(
-		"mediation", 2, ike_cfg,
+		"mediation", IKEV2, ike_cfg,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3,	/* jitter, overtime */
@@ -159,7 +159,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 		return NULL;
 	}
 	peer_cfg = peer_cfg_create(
-		name, 2, this->ike->get_ref(this->ike),
+		name, IKEV2, this->ike->get_ref(this->ike),
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3,	/* jitter, overtime */
@@ -234,7 +234,7 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 		return FALSE;
 	}
 	this->current = peer_cfg_create(
-				name, 2, this->ike->get_ref(this->ike),
+				name, IKEV2, this->ike->get_ref(this->ike),
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3,	/* jitter, overtime */

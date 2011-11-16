@@ -25,6 +25,11 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
+ENUM(ike_version_names, IKEV1, IKEV2,
+	"IKEv1",
+	"IKEv2",
+);
+
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_ALWAYS_SEND",
 	"CERT_SEND_IF_ASKED",
@@ -62,7 +67,7 @@ struct private_peer_cfg_t {
 	/**
 	 * IKE version to use for initiation
 	 */
-	u_int ike_version;
+	ike_version_t ike_version;
 
 	/**
 	 * IKE config associated to this peer config
@@ -169,7 +174,7 @@ METHOD(peer_cfg_t, get_name, char*,
 	return this->name;
 }
 
-METHOD(peer_cfg_t, get_ike_version, u_int,
+METHOD(peer_cfg_t, get_ike_version, ike_version_t,
 	private_peer_cfg_t *this)
 {
 	return this->ike_version;
@@ -563,13 +568,13 @@ METHOD(peer_cfg_t, destroy, void,
 /*
  * Described in header-file
  */
-peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
-							cert_policy_t cert_policy, unique_policy_t unique,
-							u_int32_t keyingtries, u_int32_t rekey_time,
-							u_int32_t reauth_time, u_int32_t jitter_time,
-							u_int32_t over_time, bool mobike, u_int32_t dpd,
-							host_t *virtual_ip, char *pool,
-							bool mediation, peer_cfg_t *mediated_by,
+peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
+							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
+							unique_policy_t unique, u_int32_t keyingtries,
+							u_int32_t rekey_time, u_int32_t reauth_time,
+							u_int32_t jitter_time, u_int32_t over_time,
+							bool mobike, u_int32_t dpd, host_t *virtual_ip,
+							char *pool, bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
 	private_peer_cfg_t *this;

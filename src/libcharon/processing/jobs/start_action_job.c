@@ -49,7 +49,7 @@ METHOD(job_t, execute, void,
 													NULL, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 		{
 			continue;
 		}

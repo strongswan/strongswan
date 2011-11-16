@@ -302,7 +302,7 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 		ike_cfg_t *ike_cfg;
 		linked_list_t *list;
 
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 		{	/* only IKEv2 connections yet */
 			continue;
 		}

@@ -126,10 +126,10 @@ METHOD(stroke_control_t, initiate, void,
 													  msg->initiate.name);
 	if (peer_cfg)
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 		{
-			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-				 peer_cfg->get_ike_version(peer_cfg));
+			DBG1(DBG_CFG, "ignoring initiation request for %N config",
+				 ike_version_names, peer_cfg->get_ike_version(peer_cfg));
 			peer_cfg->destroy(peer_cfg);
 			return;
 		}
@@ -161,7 +161,7 @@ METHOD(stroke_control_t, initiate, void,
 													NULL, NULL, NULL, NULL);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 			{
 				continue;
 			}
@@ -568,10 +568,10 @@ METHOD(stroke_control_t, route, void,
 													  msg->route.name);
 	if (peer_cfg)
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 		{
-			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-				 peer_cfg->get_ike_version(peer_cfg));
+			DBG1(DBG_CFG, "ignoring initiation request for %N config",
+				 ike_version_names, peer_cfg->get_ike_version(peer_cfg));
 			peer_cfg->destroy(peer_cfg);
 			return;
 		}
@@ -603,7 +603,7 @@ METHOD(stroke_control_t, route, void,
 													NULL, NULL, NULL, NULL);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			if (peer_cfg->get_ike_version(peer_cfg) != IKEV2)
 			{
 				continue;
 			}
