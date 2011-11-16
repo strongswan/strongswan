@@ -16,30 +16,8 @@
 
 #include "task_manager_v1.h"
 
-#include <math.h>
-
 #include <daemon.h>
-#include <sa/tasks/ike_init.h>
-#include <sa/tasks/ike_natd.h>
-#include <sa/tasks/ike_mobike.h>
-#include <sa/tasks/ike_auth.h>
-#include <sa/tasks/ike_auth_lifetime.h>
-#include <sa/tasks/ike_cert_pre.h>
-#include <sa/tasks/ike_cert_post.h>
-#include <sa/tasks/ike_rekey.h>
-#include <sa/tasks/ike_delete.h>
-#include <sa/tasks/ike_config.h>
-#include <sa/tasks/ike_dpd.h>
-#include <sa/tasks/ike_vendor.h>
-#include <sa/tasks/child_create.h>
-#include <sa/tasks/child_rekey.h>
-#include <sa/tasks/child_delete.h>
-#include <encoding/payloads/delete_payload.h>
-#include <processing/jobs/retransmit_job.h>
-
-#ifdef ME
-#include <sa/tasks/ike_me.h>
-#endif
+#include <sa/tasks/main_mode.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -285,7 +263,8 @@ static status_t process_request(private_task_manager_t *this,
 		switch (message->get_exchange_type(message))
 		{
 			case ID_PROT:
-				/* TODO-IKEv1: handle mainmode */
+				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
 				/* TODO-IKEv1: agressive mode */

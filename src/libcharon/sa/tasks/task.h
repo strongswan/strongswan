@@ -69,6 +69,8 @@ enum task_type_t {
 	CHILD_DELETE,
 	/** rekey an CHILD_SA */
 	CHILD_REKEY,
+	/** IKEv1 main mode */
+	MAIN_MODE,
 };
 
 /**
