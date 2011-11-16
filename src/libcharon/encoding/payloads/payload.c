@@ -76,16 +76,22 @@ ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
+	"PROPOSAL_SUBSTRUCTURE_V1",
 	"TRANSFORM_SUBSTRUCTURE",
+	"TRANSFORM_SUBSTRUCTURE_V1",
 	"TRANSFORM_ATTRIBUTE",
+	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
 	"CONFIGURATION_ATTRIBUTE");
 #else
 ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
+	"PROPOSAL_SUBSTRUCTURE_V1",
 	"TRANSFORM_SUBSTRUCTURE",
+	"TRANSFORM_SUBSTRUCTURE_V1",
 	"TRANSFORM_ATTRIBUTE",
+	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
 	"CONFIGURATION_ATTRIBUTE");
 #endif /* ME */
@@ -131,18 +137,24 @@ ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
 	"HDR",
 	"PROP",
+	"PROP",
+	"TRANS",
 	"TRANS",
 	"TRANSATTR",
+	"TRANSATTR",
 	"TSSUB",
-	"CPATTR");
+	"CATTR");
 #else
 ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
 	"HDR",
 	"PROP",
+	"PROP",
+	"TRANS",
 	"TRANS",
 	"TRANSATTR",
+	"TRANSATTR",
 	"TSSUB",
-	"CPATTR");
+	"CATTR");
 #endif /* ME */
 ENUM_END(payload_type_short_names, CONFIGURATION_ATTRIBUTE);
 
@@ -159,21 +171,22 @@ payload_t *payload_create(payload_type_t type)
 		case SECURITY_ASSOCIATION_V1:
 			return (payload_t*)sa_payload_create(type);
 		case PROPOSAL_SUBSTRUCTURE:
-			return (payload_t*)proposal_substructure_create();
+		case PROPOSAL_SUBSTRUCTURE_V1:
+			return (payload_t*)proposal_substructure_create(type);
 		case TRANSFORM_SUBSTRUCTURE:
-			return (payload_t*)transform_substructure_create();
+		case TRANSFORM_SUBSTRUCTURE_V1:
+			return (payload_t*)transform_substructure_create(type);
 		case TRANSFORM_ATTRIBUTE:
-			return (payload_t*)transform_attribute_create();
+		case TRANSFORM_ATTRIBUTE_V1:
+			return (payload_t*)transform_attribute_create(type);
 		case NONCE:
 			return (payload_t*)nonce_payload_create();
 		case ID_INITIATOR:
-			return (payload_t*)id_payload_create(ID_INITIATOR);
 		case ID_RESPONDER:
-			return (payload_t*)id_payload_create(ID_RESPONDER);
 #ifdef ME
 		case ID_PEER:
-			return (payload_t*)id_payload_create(ID_PEER);
 #endif /* ME */
+			return (payload_t*)id_payload_create(type);
 		case AUTHENTICATION:
 			return (payload_t*)auth_payload_create();
 		case CERTIFICATE:

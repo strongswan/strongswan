@@ -521,11 +521,36 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
+			case TRANSFORMS_V1:
+			{
+				if (payload_length <
+							spi_size + PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH ||
+					!parse_list(this, rule_number, output + rule->offset,
+							TRANSFORM_SUBSTRUCTURE_V1, payload_length - spi_size -
+										PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH))
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;
+			}
 			case TRANSFORM_ATTRIBUTES:
 			{
 				if (payload_length < TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH ||
 					!parse_list(this, rule_number, output + rule->offset,
 						TRANSFORM_ATTRIBUTE,
+						payload_length - TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH))
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;
+			}
+			case TRANSFORM_ATTRIBUTES_V1:
+			{
+				if (payload_length < TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH ||
+					!parse_list(this, rule_number, output + rule->offset,
+						TRANSFORM_ATTRIBUTE_V1,
 						payload_length - TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH))
 				{
 					pld->destroy(pld);

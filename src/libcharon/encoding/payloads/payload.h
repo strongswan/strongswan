@@ -203,58 +203,50 @@ enum payload_type_t {
 	/**
 	 * Header has a value of PRIVATE USE space.
 	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle IKEv2-Header like a payload.
+	 * This type and all the following are never sent over wire and are
+	 * used internally only.
 	 */
 	HEADER = 256,
 
 	/**
-	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a proposal substructure like a payload.
+	 * PROPOSAL_SUBSTRUCTURE, IKEv2 proposals in a SA payload.
 	 */
-	PROPOSAL_SUBSTRUCTURE = 257,
+	PROPOSAL_SUBSTRUCTURE,
 
 	/**
-	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform substructure like a payload.
+	 * PROPOSAL_SUBSTRUCTURE_V1, IKEv1 proposals in a SA payload.
 	 */
-	TRANSFORM_SUBSTRUCTURE = 258,
+	PROPOSAL_SUBSTRUCTURE_V1,
 
 	/**
-	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform attribute like a payload.
+	 * TRANSFORM_SUBSTRUCTURE, IKEv2 transforms in a proposal substructure.
 	 */
-	TRANSFORM_ATTRIBUTE = 259,
+	TRANSFORM_SUBSTRUCTURE,
 
 	/**
-	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform selector like a payload.
+	 * TRANSFORM_SUBSTRUCTURE_V1, IKEv1 transforms in a proposal substructure.
 	 */
-	TRAFFIC_SELECTOR_SUBSTRUCTURE = 260,
+	TRANSFORM_SUBSTRUCTURE_V1,
 
 	/**
-	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform attribute like a payload.
+	 * TRANSFORM_ATTRIBUTE, IKEv2 attribute in a transform.
 	 */
-	CONFIGURATION_ATTRIBUTE = 261,
+	TRANSFORM_ATTRIBUTE,
 
 	/**
-	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a proposal substructure like a payload.
+	 * TRANSFORM_ATTRIBUTE_V1, IKEv1 attribute in a transform.
 	 */
-	PROPOSAL_SUBSTRUCTURE_V1 = 262,
+	TRANSFORM_ATTRIBUTE_V1,
+
+	/**
+	 * TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic selector in a TS payload.
+	 */
+	TRAFFIC_SELECTOR_SUBSTRUCTURE,
+
+	/**
+	 * CONFIGURATION_ATTRIBUTE, attribute in a configuration payload.
+	 */
+	CONFIGURATION_ATTRIBUTE,
 };
 
 /**

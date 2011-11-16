@@ -238,6 +238,11 @@ enum encoding_type_t {
 	TRANSFORMS,
 
 	/**
+	 * Same as TRANSFORMS, but for IKEv1 in a PROPOSAL_SUBSTRUCTURE_V1.
+	 */
+	TRANSFORMS_V1,
+
+	/**
 	 * Representating one or more Attributes of a transform substructure.
 	 *
 	 * The offset points to a linked_list_t pointer.
@@ -249,6 +254,11 @@ enum encoding_type_t {
 	 * to be stored in the pointed linked_list.
 	 */
 	TRANSFORM_ATTRIBUTES,
+
+	/**
+	 * Same as TRANSFORM_ATTRIBUTES, but for IKEv1 in TRANSFORMS_V1.
+	 */
+	TRANSFORM_ATTRIBUTES_V1,
 
 	/**
 	 * Representating one or more Attributes of a configuration payload.
