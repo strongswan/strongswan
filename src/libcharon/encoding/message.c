@@ -1488,6 +1488,8 @@ static bool is_connectivity_check(private_message_t *this, payload_t *payload)
 static status_t parse_payloads(private_message_t *this)
 {
 	payload_type_t type = this->first_payload;
+	payload_t *payload;
+	status_t status;
 
 	while (type != NO_PAYLOAD)
 	{
@@ -1678,7 +1680,6 @@ METHOD(message_t, parse_body, status_t,
 	private_message_t *this, aead_t *aead)
 {
 	status_t status = SUCCESS;
-	payload_t *payload;
 	char str[BUF_LEN];
 
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
