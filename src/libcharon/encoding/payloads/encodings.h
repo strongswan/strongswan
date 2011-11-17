@@ -405,6 +405,16 @@ enum encoding_type_t {
 	NONCE_DATA,
 
 	/**
+	 * Representating a Hash Data field.
+	 *
+	 * When generating the content of the chunkt pointing to
+	 * is written.
+	 *
+	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 */
+	HASH_DATA,
+
+	/**
 	 * Representating a ID Data field.
 	 *
 	 * When generating the content of the chunkt pointing to

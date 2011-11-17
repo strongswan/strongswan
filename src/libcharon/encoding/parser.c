@@ -534,6 +534,7 @@ METHOD(parser_t, parse_payload, status_t,
 			}
 			/* chunks */
 			case NONCE_DATA:
+			case HASH_DATA:
 			case ID_DATA:
 			case AUTH_DATA:
 			case CERT_DATA:

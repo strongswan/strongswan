@@ -452,6 +452,7 @@ METHOD(generator_t, generate_payload, void,
 			case KEY_EXCHANGE_DATA_V1:
 			case NOTIFICATION_DATA:
 			case NONCE_DATA:
+			case HASH_DATA:
 			case ID_DATA:
 			case AUTH_DATA:
 			case CERT_DATA:
