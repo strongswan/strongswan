@@ -941,7 +941,7 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 }
 
 METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
-	private_ike_sa_manager_t* this, bool initiator)
+	private_ike_sa_manager_t* this, ike_version_t version, bool initiator)
 {
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
@@ -954,7 +954,7 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	{
 		ike_sa_id = ike_sa_id_create(0, get_spi(this), FALSE);
 	}
-	ike_sa = ike_sa_create(ike_sa_id);
+	ike_sa = ike_sa_create(ike_sa_id, version);
 	ike_sa_id->destroy(ike_sa_id);
 
 	DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
@@ -970,6 +970,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	ike_sa_id_t *id;
+	ike_version_t ike_version;
 	bool is_init = FALSE;
 
 	id = message->get_ike_sa_id(message);
@@ -985,6 +986,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			if (message->get_exchange_type(message) == IKE_SA_INIT &&
 				message->get_request(message))
 			{
+				ike_version = IKEV2;
 				is_init = TRUE;
 			}
 		}
@@ -993,6 +995,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			if (message->get_exchange_type(message) == ID_PROT ||
 				message->get_exchange_type(message) == AGGRESSIVE)
 			{
+				ike_version = IKEV1;
 				is_init = TRUE;
 			}
 		}
@@ -1034,7 +1037,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			/* no IKE_SA found, create a new one */
 			id->set_responder_spi(id, get_spi(this));
 			entry = entry_create();
-			entry->ike_sa = ike_sa_create(id);
+			entry->ike_sa = ike_sa_create(id, ike_version);
 			entry->ike_sa_id = id->clone(id);
 
 			segment = put_entry(this, entry);
@@ -1103,7 +1106,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	if (!this->reuse_ikesa)
 	{	/* IKE_SA reuse disable by config */
-		ike_sa = checkout_new(this, TRUE);
+		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		charon->bus->set_sa(charon->bus, ike_sa);
 		return ike_sa;
 	}
@@ -1139,7 +1142,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	if (!ike_sa)
 	{	/* no IKE_SA using such a config, hand out a new */
-		ike_sa = checkout_new(this, TRUE);
+		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;

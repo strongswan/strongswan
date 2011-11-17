@@ -270,6 +270,11 @@ struct ike_sa_t {
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
+	 * Gets the IKE version of the SA
+	 */
+	ike_version_t (*get_version)(ike_sa_t *this);
+
+	/**
 	 * Get the numerical ID uniquely defining this IKE_SA.
 	 *
 	 * @return				unique ID
@@ -288,7 +293,7 @@ struct ike_sa_t {
 	 *
 	 * @param state			state to set for the IKE_SA
 	 */
-	void (*set_state) (ike_sa_t *this, ike_sa_state_t ike_sa);
+	void (*set_state) (ike_sa_t *this, ike_sa_state_t state);
 
 	/**
 	 * Get the name of the connection this IKE_SA uses.
@@ -951,11 +956,12 @@ struct ike_sa_t {
 };
 
 /**
- * Creates an ike_sa_t object with a specific ID.
+ * Creates an ike_sa_t object with a specific ID and IKE version.
  *
- * @param ike_sa_id		ike_sa_id_t object to associate with new IKE_SA
+ * @param ike_sa_id		ike_sa_id_t to associate with new IKE_SA/ISAKMP_SA
+ * @param version		IKE version of this SA
  * @return				ike_sa_t object
  */
-ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
+ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version);
 
 #endif /** IKE_SA_H_ @}*/

@@ -52,10 +52,12 @@ struct ike_sa_manager_t {
 	/**
 	 * Create and check out a new IKE_SA.
 	 *
+	 * @param version			IKE version of this SA
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
 	 */
-	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
+	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, ike_version_t version,
+							   bool initiator);
 
 	/**
 	 * Checkout an IKE_SA by a message.

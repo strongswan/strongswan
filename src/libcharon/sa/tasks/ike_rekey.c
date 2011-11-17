@@ -129,8 +129,9 @@ METHOD(task_t, build_i, status_t,
 	/* create new SA only on first try */
 	if (this->new_sa == NULL)
 	{
-		this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-															TRUE);
+		ike_version_t version = this->ike_sa->get_version(this->ike_sa);
+		this->new_sa = charon->ike_sa_manager->checkout_new(
+										charon->ike_sa_manager, version, TRUE);
 
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		other_host = this->ike_sa->get_other_host(this->ike_sa);
@@ -148,6 +149,7 @@ METHOD(task_t, process_r, status_t,
 	private_ike_rekey_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
+	ike_version_t version;
 	peer_cfg_t *peer_cfg;
 	child_sa_t *child_sa;
 
@@ -175,8 +177,9 @@ METHOD(task_t, process_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 
+	version = this->ike_sa->get_version(this->ike_sa);
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-														FALSE);
+														version, FALSE);
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);

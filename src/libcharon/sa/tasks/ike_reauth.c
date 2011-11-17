@@ -54,6 +54,7 @@ METHOD(task_t, process_i, status_t,
 	ike_sa_t *new;
 	host_t *host;
 	enumerator_t *enumerator;
+	ike_version_t version;
 	child_sa_t *child_sa;
 	peer_cfg_t *peer_cfg;
 
@@ -74,7 +75,9 @@ METHOD(task_t, process_i, status_t,
 		return FAILED;
 	}
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
+	version = this->ike_sa->get_version(this->ike_sa);
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, version,
+											   TRUE);
 
 	new->set_peer_cfg(new, peer_cfg);
 	host = this->ike_sa->get_other_host(this->ike_sa);

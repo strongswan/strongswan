@@ -87,6 +87,11 @@ struct private_ike_sa_t {
 	ike_sa_id_t *ike_sa_id;
 
 	/**
+	 * IKE version of this SA.
+	 */
+	ike_version_t version;
+
+	/**
 	 * unique numerical ID for this IKE_SA.
 	 */
 	u_int32_t unique_id;
@@ -1328,6 +1333,12 @@ METHOD(ike_sa_t, get_id, ike_sa_id_t*,
 	return this->ike_sa_id;
 }
 
+METHOD(ike_sa_t, get_version, ike_version_t,
+	private_ike_sa_t *this)
+{
+	return this->version;
+}
+
 METHOD(ike_sa_t, get_my_id, identification_t*,
 	private_ike_sa_t *this)
 {
@@ -1606,7 +1617,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 		return FAILED;
 	}
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+											   this->version, TRUE);
 	new->set_peer_cfg(new, this->peer_cfg);
 	host = this->other_host;
 	new->set_other_host(new, host->clone(host));
@@ -2105,13 +2117,14 @@ METHOD(ike_sa_t, destroy, void,
 /*
  * Described in header.
  */
-ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
+ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version)
 {
 	private_ike_sa_t *this;
 	static u_int32_t unique_id = 0;
 
 	INIT(this,
 		.public = {
+			.get_version = _get_version,
 			.get_state = _get_state,
 			.set_state = _set_state,
 			.get_name = _get_name,
@@ -2191,6 +2204,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 #endif /* ME */
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+		.version = version,
 		.child_sas = linked_list_create(),
 		.my_host = host_create_any(AF_INET),
 		.other_host = host_create_any(AF_INET),
