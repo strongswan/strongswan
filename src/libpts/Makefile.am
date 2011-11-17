@@ -18,6 +18,13 @@ libpts_la_SOURCES = \
 	pts/pts_file_meta.h pts/pts_file_meta.c \
 	pts/pts_file_type.h pts/pts_file_type.c \
 	pts/pts_meas_algo.h pts/pts_meas_algo.c \
+	pts/components/pts_component.h \
+	pts/components/pts_component_manager.h pts/components/pts_component_manager.c \
+	pts/components/pts_comp_func_name.h pts/components/pts_comp_func_name.c \
+	pts/components/ita/ita_comp_func_name.h pts/components/ita/ita_comp_func_name.c \
+	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \
+	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
+	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/tcg_pts_attr_proto_caps.h tcg/tcg_pts_attr_proto_caps.c \
 	tcg/tcg_pts_attr_dh_nonce_params_req.h tcg/tcg_pts_attr_dh_nonce_params_req.c \

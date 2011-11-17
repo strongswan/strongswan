@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011 Sansar Choinyambuu
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,37 +14,21 @@
  */
 
 /**
- * @defgroup libpts libpts
- *
- * @defgroup iplugins plugins
- * @ingroup libpts
- *
- * @addtogroup libpts
- * @{
+ * @defgroup pts_ita_comp_func_name pts_ita_comp_func_name
+ * @{ @ingroup pts
  */
 
-#ifndef LIBPTS_H_
-#define LIBPTS_H_
+#ifndef PTS_ITA_COMP_TBOOT_H_
+#define PTS_ITA_COMP_TBOOT_H_
 
-#include "pts/components/pts_component_manager.h"
-
-#include <library.h>
+#include "pts/components/pts_component.h"
 
 /**
- * Initialize libpts.
+ * Create a PTS ITS Functional Component object
  *
- * @return			FALSE if initialization failed
+ * @param qualifier		PTS Component Functional Name Qualifier
+ *
  */
-bool libpts_init(void);
+pts_component_t* pts_ita_comp_tboot_create(u_int8_t qualifier);
 
-/**
- * Deinitialize libpts.
- */
-void libpts_deinit(void);
-
-/**
- * PTS Functional Component manager
- */
-extern pts_component_manager_t* pts_components;
-
-#endif /** LIBPTS_H_ @}*/
+#endif /** PTS_ITA_COMP_TBOOT_H_ @}*/

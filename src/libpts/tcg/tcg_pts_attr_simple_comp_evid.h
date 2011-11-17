@@ -28,7 +28,7 @@ typedef struct tcg_pts_attr_simple_comp_evid_params_t tcg_pts_attr_simple_comp_e
 
 #include "tcg_attr.h"
 #include "pts/pts_meas_algo.h"
-#include "pts/pts_funct_comp_name.h" 
+#include "pts/components/pts_comp_func_name.h" 
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**
@@ -66,9 +66,7 @@ struct tcg_pts_attr_simple_comp_evid_params_t {
 	bool pcr_info_included;
 	pts_attr_simple_comp_evid_flag_t flags;
 	u_int32_t depth;
-	u_int32_t vendor_id;
-	pts_qualifier_t qualifier;
-	pts_ita_funct_comp_name_t name;
+	pts_comp_func_name_t *name;
 	u_int32_t extended_pcr;
 	pts_meas_algorithms_t hash_algorithm;
 	pts_pcr_transform_t transformation;
@@ -112,32 +110,11 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	u_int32_t (*get_sub_component_depth)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
-	 * Get Specific Component Functional Name Vendor ID
-	 *
-	 * @return					Component Functional Name Vendor ID
-	 */
-	u_int32_t (*get_spec_comp_funct_name_vendor_id)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
-	 * Get Family
-	 *
-	 * @return					Functional Name Family
-	 */
-	u_int8_t (*get_family)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
-	 * Get Qualifier
-	 *
-	 * @return					Functional Name Category Qualifier
-	 */
-	pts_qualifier_t (*get_qualifier)(tcg_pts_attr_simple_comp_evid_t *this);
-	
-	/**
 	 * Get Special Component Functional Name
 	 *
 	 * @return					Component Functional Name
 	 */
-	pts_ita_funct_comp_name_t (*get_comp_funct_name)(tcg_pts_attr_simple_comp_evid_t *this);
+	pts_comp_func_name_t* (*get_comp_func_name)(tcg_pts_attr_simple_comp_evid_t *this);
 	
 	/**
 	 * Get Measurement Type

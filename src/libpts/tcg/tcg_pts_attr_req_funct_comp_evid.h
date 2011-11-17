@@ -24,7 +24,7 @@
 typedef struct tcg_pts_attr_req_funct_comp_evid_t tcg_pts_attr_req_funct_comp_evid_t;
 
 #include "tcg_attr.h"
-#include "pts/pts_funct_comp_name.h"
+#include "pts/components/pts_comp_func_name.h"
 #include "pts/pts_funct_comp_evid_req.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
@@ -44,8 +44,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	 *
 	 * @return					PTS Functional Component Evidence Requests
 	 */
-	pts_funct_comp_evid_req_t* (*get_requests)(
-									tcg_pts_attr_req_funct_comp_evid_t *this);
+	pts_funct_comp_evid_req_t* (*get_requests)(tcg_pts_attr_req_funct_comp_evid_t *this);
 	
 };
 
@@ -54,8 +53,7 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
  * 
  * @param requests	Linked list of PTS Functional Component Evidence Requests
  */
-pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(
-										pts_funct_comp_evid_req_t *requests);
+pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(pts_funct_comp_evid_req_t *requests);
 
 /**
  * Creates an tcg_pts_attr_req_funct_comp_evid_t object from received data

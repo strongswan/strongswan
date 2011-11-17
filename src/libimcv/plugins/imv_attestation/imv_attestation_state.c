@@ -21,7 +21,6 @@
 
 typedef struct private_imv_attestation_state_t private_imv_attestation_state_t;
 typedef struct file_meas_request_t file_meas_request_t;
-typedef struct comp_evid_request_t comp_evid_request_t;
 
 /**
  * PTS File/Directory Measurement request entry
@@ -30,15 +29,6 @@ struct file_meas_request_t {
 	u_int16_t id;
 	int file_id;
 	bool is_dir;
-};
-
-/**
- * Functional Component Evidence Request entry
- */
-struct comp_evid_request_t {
-	u_int32_t vendor_id;
-	pts_qualifier_t qualifier;
-	pts_ita_funct_comp_name_t name;
 };
 
 /**
@@ -273,31 +263,23 @@ METHOD(imv_attestation_state_t, get_file_meas_request_count, int,
 METHOD(imv_attestation_state_t, add_comp_evid_request, void,
 	private_imv_attestation_state_t *this, funct_comp_evid_req_entry_t *entry)
 {
-	comp_evid_request_t *request;
+	pts_comp_func_name_t *request;
 
-	request = malloc_thing(comp_evid_request_t);
-	request->vendor_id = entry->vendor_id;
-	request->qualifier = entry->qualifier;
-	request->name = entry->name;
+	request = entry->name->clone(entry->name);
 	this->comp_evid_requests->insert_last(this->comp_evid_requests, request);
 }
 
 METHOD(imv_attestation_state_t, check_off_comp_evid_request, bool,
-	private_imv_attestation_state_t *this, u_int32_t vendor_id,
-	pts_qualifier_t qualifier, pts_ita_funct_comp_name_t comp_name)
+	private_imv_attestation_state_t *this, pts_comp_func_name_t *name)
 {
 	enumerator_t *enumerator;
-	comp_evid_request_t *request;
+	pts_comp_func_name_t *request;
 	bool found = FALSE;
 
 	enumerator = this->comp_evid_requests->create_enumerator(this->comp_evid_requests);
 	while (enumerator->enumerate(enumerator, &request))
 	{
-		if (request->vendor_id == vendor_id &&
-			request->qualifier.kernel == qualifier.kernel &&
-			request->qualifier.sub_component == qualifier.sub_component &&
-			request->qualifier.type == qualifier.type &&
-			request->name == comp_name)
+		if (name->equals(name, request))
 		{
 			found = TRUE;
 			this->comp_evid_requests->remove_at(this->comp_evid_requests, enumerator);

@@ -25,8 +25,9 @@ typedef struct pts_funct_comp_evid_req_t pts_funct_comp_evid_req_t;
 typedef enum pts_attr_req_funct_comp_evid_flag_t pts_attr_req_funct_comp_evid_flag_t;
 typedef struct funct_comp_evid_req_entry_t funct_comp_evid_req_entry_t;
 
+#include "pts/components/pts_comp_func_name.h"
+
 #include <library.h>
-#include "pts_funct_comp_name.h"
 
 #define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM		0x00
 
@@ -50,10 +51,7 @@ enum pts_attr_req_funct_comp_evid_flag_t {
 struct funct_comp_evid_req_entry_t {
 	pts_attr_req_funct_comp_evid_flag_t flags;
 	u_int32_t sub_comp_depth;
-	u_int32_t vendor_id;
-	u_int8_t family;
-	pts_qualifier_t qualifier;
-	pts_ita_funct_comp_name_t name;
+	pts_comp_func_name_t *name;
 };
 
 /**

@@ -77,23 +77,10 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  *
  */
 
-/**
- * Qualifier for Functional Component
- * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
- *
- *	
- *   0 1 2 3 4 5 
- *  +-+-+-+-+-+-+
- *  |K|S| Type  |
- *  +-+-+-+-+-+-+
- */
-
-
-
 #define PTS_SIMPLE_COMP_EVID_SIZE					40
 #define PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE	20
 #define PTS_SIMPLE_COMP_EVID_RESERVED				0x00
-#define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM				0x00
+#define PTS_SIMPLE_COMP_EVID_FAMILY_MASK			0xC0
 
 /**
  * Private data of an tcg_pts_attr_simple_comp_evid_t object.
@@ -139,26 +126,11 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	 * Sub-component Depth
 	 */
 	u_int32_t depth;
-	
-	/**
-	 * Component Functional Name Vendor ID
-	 */
-	u_int32_t comp_vendor_id;
-	
-	/**
-	 * Functional Name Encoding Family
-	 */
-	u_int8_t family;
-	
-	/**
-	 * Functional Name Category Qualifier
-	 */
-	pts_qualifier_t qualifier;
-	
+		
 	/**
 	 * Component Functional Name
 	 */
-	pts_ita_funct_comp_name_t name;
+	pts_comp_func_name_t *name;
 	
 	/**
 	 * Measurement type
@@ -241,7 +213,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0, qualifier = 0;
+	u_int8_t flags = 0;
 	
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
 	/* Determine the flags to set*/
@@ -262,35 +234,11 @@ METHOD(pa_tnc_attr_t, build, void,
 		flags += 96;
 	}
 
-	writer->write_uint8(writer, flags);
-	writer->write_uint24 (writer, this->depth);
-	writer->write_uint24 (writer, this->comp_vendor_id);
-	
-	if (this->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
-	{
-		DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
-	}
-	
-	qualifier += this->qualifier.type;
-	if (this->qualifier.kernel)
-	{
-		qualifier += 16;
-	}
-	if (this->qualifier.sub_component)
-	{
-		qualifier += 32;
-	}
-	
-	/* Unknown or Wildcard should not be used for Qualification*/
-	if (!qualifier || qualifier == 63)
-	{
-		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
-				  " Functional Name Qualifier");
-	}
-	
-	writer->write_uint8 (writer, qualifier);
-	writer->write_uint32(writer, this->name);
-	
+	writer->write_uint8 (writer, flags);
+	writer->write_uint24(writer, this->depth);
+	writer->write_uint24(writer, this->name->get_vendor_id(this->name));
+	writer->write_uint8 (writer, this->name->get_qualifier(this->name));
+	writer->write_uint32(writer, this->name->get_name(this->name));
 	writer->write_uint8 (writer, (this->measurement_type << 7));
 	writer->write_uint24(writer, this->extended_pcr);
 	writer->write_uint16(writer, this->hash_algorithm);
@@ -325,12 +273,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
-	u_int8_t fam_and_qualifier;
-	u_int8_t measurement_type;
+	u_int8_t flags, fam_and_qualifier, qualifier;
+	u_int8_t measurement_type, transformation;
 	u_int16_t algorithm;
-	u_int8_t transformation;
-	u_int32_t measurement_len;
+	u_int32_t vendor_id, name, measurement_len;
 	
 	if (this->value.len < PTS_SIMPLE_COMP_EVID_SIZE)
 	{
@@ -364,48 +310,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	
 	reader->read_uint24(reader, &this->depth);
-	reader->read_uint24(reader, &this->comp_vendor_id);
-	reader->read_uint8(reader, &fam_and_qualifier);
-	
-	if (((fam_and_qualifier >> 6) & 1) )
-	{
-		this->family += 1;
-	}
-	if (((fam_and_qualifier >> 7) & 1) )
-	{
-		this->family += 2;
-	}
-	
-	if (((fam_and_qualifier >> 5) & 1) )
-	{
-		this->qualifier.kernel = true;
-	}
-	if (((fam_and_qualifier >> 4) & 1) )
-	{
-		this->qualifier.sub_component = true;
-	}
-	this->qualifier.type = ( fam_and_qualifier & 0xF );
-
-	/* Unknown or Wildcard should not be used for Qualification*/
-	if (!(fam_and_qualifier & 0x3F) || (fam_and_qualifier & 0x3F) == 0x3F)
-	{
-		DBG1(DBG_TNC, "Unknown or Wildcard should not be used for"
-				  " Functional Name Qualifier");
-	}
-	
-	reader->read_uint32(reader, &this->name);
-	reader->read_uint8(reader, &measurement_type);
-	this->measurement_type = (measurement_type >> 7 ) & 1;
-	
+	reader->read_uint24(reader, &vendor_id);
+	reader->read_uint8 (reader, &fam_and_qualifier);
+	reader->read_uint32(reader, &name);
+	reader->read_uint8 (reader, &measurement_type);
 	reader->read_uint24(reader, &this->extended_pcr);
 	reader->read_uint16(reader, &algorithm);
+	reader->read_uint8 (reader, &transformation);
+	reader->read_data  (reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
+								&this->measurement_time);
+
+	qualifier = fam_and_qualifier & (!PTS_SIMPLE_COMP_EVID_FAMILY_MASK);
+	
+	this->name = pts_comp_func_name_create(vendor_id, name, qualifier);
+	this->measurement_type = (measurement_type >> 7 ) & 1;
 	this->hash_algorithm = algorithm;
-	
-	reader->read_uint8(reader, &transformation);
 	this->transformation = transformation;
-	
-	reader->read_data(reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
-			  &this->measurement_time);
 	this->measurement_time = chunk_clone(this->measurement_time);
 
 	/*  Optional Policy URI field is included */
@@ -466,25 +386,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_sub_component_depth, u_int32_t,
 	return this->depth;
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_spec_comp_funct_name_vendor_id, u_int32_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->comp_vendor_id;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_family, u_int8_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->family;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_qualifier, pts_qualifier_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->qualifier;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_funct_name, pts_ita_funct_comp_name_t,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_func_name, pts_comp_func_name_t*,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	return this->name;
@@ -578,10 +480,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evi
 			.is_pcr_info_included = _is_pcr_info_included,
 			.get_flags= _get_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
-			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,
-			.get_family = _get_family,
-			.get_qualifier = _get_qualifier,
-			.get_comp_funct_name = _get_comp_funct_name,
+			.get_comp_func_name = _get_comp_func_name,
 			.get_measurement_type = _get_measurement_type,
 			.get_extended_pcr = _get_extended_pcr,
 			.get_hash_algorithm = _get_hash_algorithm,
@@ -598,9 +497,6 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evi
 		.pcr_info_included = params.pcr_info_included,
 		.flags = params.flags,
 		.depth = params.depth,
-		.comp_vendor_id = params.vendor_id,
-		.family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM,
-		.qualifier = params.qualifier,
 		.name = params.name,
 		.extended_pcr = params.extended_pcr,
 		.hash_algorithm = params.hash_algorithm,
@@ -638,10 +534,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create_from_data(chunk_t data)
 			.is_pcr_info_included = _is_pcr_info_included,
 			.get_flags= _get_flags,
 			.get_sub_component_depth = _get_sub_component_depth,
-			.get_spec_comp_funct_name_vendor_id = _get_spec_comp_funct_name_vendor_id,
-			.get_family = _get_family,
-			.get_qualifier = _get_qualifier,
-			.get_comp_funct_name = _get_comp_funct_name,
+			.get_comp_func_name = _get_comp_func_name,
 			.get_measurement_type = _get_measurement_type,
 			.get_extended_pcr = _get_extended_pcr,
 			.get_hash_algorithm = _get_hash_algorithm,
@@ -655,7 +548,6 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create_from_data(chunk_t data)
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,
-		.family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM,
 		.value = chunk_clone(data),
 	);
 

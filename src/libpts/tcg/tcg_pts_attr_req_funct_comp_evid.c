@@ -29,19 +29,19 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Flags		|		Sub-component Depth	(for Component #1)	|
+ *  |     Flags     |     Sub-component Depth (for Component #1)    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name #1				|
+ *  |					Component Functional Name #1                |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name #1				|
+ *  |					Component Functional Name #1                |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |							........							|
+ *  |                           ........                            |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Flags		|		Sub-component Depth	(for Component #N)	|
+ *  |     Flags     |    Sub-component Depth  (for Component #N)    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name #N				|
+ *  |                   Component Functional Name #N                |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name #N				|
+ *  |                   Component Functional Name #N                |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -52,25 +52,14 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Component Functional Name Vendor ID		|Fam| Qualifier |
+ *  |	 Component Functional Name Vendor ID        |Fam| Qualifier |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name				  |
+ *  |                   Component Functional Name                   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *
  */
-
-/**
- * Qualifier for Functional Component
- * see section 5.2 of PTS Protocol: Binding to TNC IF-M Specification
- *
- *	
- *	0 1 2 3 4 5
- *  +-+-+-+-+-+-+
- *  |K|S| Type  |
- *  +-+-+-+-+-+-+
- */
-
+ 
 #define PTS_REQ_FUNCT_COMP_EVID_SIZE		12
+#define PTS_REQ_FUNCT_COMP_FAMILY_MASK		0xC0
 
 /**
  * Private data of an tcg_pts_attr_req_funct_comp_evid_t object.
@@ -143,7 +132,6 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	u_int8_t qualifier = 0;
 	funct_comp_evid_req_entry_t *entry;
 
 	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
@@ -151,26 +139,11 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->requests->create_enumerator(this->requests);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		writer->write_uint8(writer, entry->flags);
-		writer->write_uint24 (writer, entry->sub_comp_depth);
-		writer->write_uint24 (writer, entry->vendor_id);
-
-		if (entry->family != PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM)
-		{
-			DBG1(DBG_TNC, "Functional Name Encoding Family is not set to 00");
-		}
-
-		qualifier += entry->qualifier.type;
-		if (entry->qualifier.kernel)
-		{
-			qualifier += 16;
-		}
-		if (entry->qualifier.sub_component)
-		{
-			qualifier += 32;
-		}
-		writer->write_uint8 (writer, qualifier);
-		writer->write_uint32 (writer, entry->name);
+		writer->write_uint8 (writer, entry->flags);
+		writer->write_uint24(writer, entry->sub_comp_depth);
+		writer->write_uint24(writer, entry->name->get_vendor_id(entry->name));
+		writer->write_uint8 (writer, entry->name->get_qualifier(entry->name));
+		writer->write_uint32(writer, entry->name->get_name(entry->name));
 	}
 	enumerator->destroy(enumerator);
 
@@ -182,15 +155,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_req_funct_comp_evid_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags, fam_and_qualifier, family = 0;
 	status_t status = FAILED;
 	funct_comp_evid_req_entry_t *entry = NULL;
-	u_int32_t sub_comp_depth, vendor_id, comp_name;
-	pts_qualifier_t qualifier;
+	u_int32_t sub_comp_depth, vendor_id, name;
+	u_int8_t flags, fam_and_qualifier, qualifier;
 	
 	if (this->value.len < PTS_REQ_FUNCT_COMP_EVID_SIZE)
 	{
-		DBG1(DBG_TNC, "insufficient data for Request Functional Component Evidence");
+		DBG1(DBG_TNC, "insufficient data for Request Functional "
+					  "Component Evidence");
 		*offset = 0;
 		return FAILED;
 	}
@@ -202,64 +175,46 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		if (!reader->read_uint8(reader, &flags))
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS Request Functional"
-						  " Component Evidence Flags");
+			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
+						  "Component Evidence Flags");
 			goto end;
 		}
 		if (!reader->read_uint24(reader, &sub_comp_depth))
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS Request Functional"
-						  " Component Evidence Sub Component Depth");
+			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
+						  "Component Evidence Sub Component Depth");
 			goto end;
 		}
 		if (!reader->read_uint24(reader, &vendor_id))
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS Request Functional"
-						  " Component Evidence Component Name Vendor ID");
+			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
+						  "Component Evidence Component Name Vendor ID");
 			goto end;
 		}
 		if (!reader->read_uint8(reader, &fam_and_qualifier))
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS Request Functional"
-						  " Component Evidence Family and Qualifier");
+			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
+						  "Component Evidence Family and Qualifier");
 			goto end;
 		}
-		if (!reader->read_uint32(reader, &comp_name))
+		if (fam_and_qualifier & PTS_REQ_FUNCT_COMP_FAMILY_MASK)
 		{
-			DBG1(DBG_TNC, "insufficient data for PTS Request Functional"
-						  " Component Evidence Component Functional Name");
+			DBG1(DBG_TNC, "the Functional Name Encoding Family "
+						  "is not Binary Enumeration");
 			goto end;
 		}
-
-		DBG1(DBG_TNC, "Fam and Qualifier: %d", fam_and_qualifier);
+		if (!reader->read_uint32(reader, &name))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
+						  "Component Evidence Component Functional Name");
+			goto end;
+		}
+		qualifier = fam_and_qualifier & !PTS_REQ_FUNCT_COMP_FAMILY_MASK;
 
 		entry = malloc_thing(funct_comp_evid_req_entry_t);
-
-		if (((fam_and_qualifier >> 6) & 1) )
-		{
-			family += 1;
-		}
-		if (((fam_and_qualifier >> 7) & 1) )
-		{
-			family += 2;
-		}
-		
-		if (((fam_and_qualifier >> 5) & 1) )
-		{
-			qualifier.kernel = TRUE;
-		}
-		if (((fam_and_qualifier >> 4) & 1) )
-		{
-			qualifier.sub_component = TRUE;
-		}
-		qualifier.type = (fam_and_qualifier & 0xFF);
-		
 		entry->flags = flags;
 		entry->sub_comp_depth = sub_comp_depth;
-		entry->vendor_id = vendor_id;
-		entry->family = family;
-		entry->qualifier = qualifier;
-		entry->name = comp_name;
+		entry->name = pts_comp_func_name_create(vendor_id, name, qualifier);
 		
 		this->requests->add(this->requests, entry);
 	}

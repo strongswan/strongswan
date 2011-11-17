@@ -266,7 +266,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			bool pcr_info_inclided, component_meas_error = FALSE;
 			pts_attr_simple_comp_evid_flag_t flags;
 			u_int32_t depth, comp_vendor_id, extended_pcr;
-			u_int8_t family, measurement_type;
+			u_int8_t  measurement_type;
 			pts_qualifier_t qualifier;
 			pts_ita_funct_comp_name_t name;
 			pts_meas_algorithms_t hash_algorithm;
