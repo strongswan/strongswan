@@ -117,6 +117,7 @@ METHOD(task_t, process_r,  status_t,
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->config->select_proposal(this->config,
 														   list, FALSE);
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
