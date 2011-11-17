@@ -21,14 +21,15 @@
 #ifndef KEYMAT_H_
 #define KEYMAT_H_
 
+typedef struct keymat_t keymat_t;
+
 #include <library.h>
 #include <utils/identification.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/aead.h>
 #include <config/proposal.h>
+#include <config/peer_cfg.h> /* for ike_version_t */
 #include <sa/ike_sa_id.h>
-
-typedef struct keymat_t keymat_t;
 
 /**
  * Derivation an management of sensitive keying material.
@@ -146,5 +147,14 @@ struct keymat_t {
 	 */
 	void (*destroy)(keymat_t *this);
 };
+
+/**
+ * Create the appropriate keymat_t implementation based on the IKE version.
+ *
+ * @param version			requested IKE version
+ * @param initiator			TRUE if we are initiator
+ * @return					keymat_t implmenetation
+ */
+keymat_t *keymat_create(ike_version_t version, bool initiator);
 
 #endif /** KEYMAT_H_ @}*/

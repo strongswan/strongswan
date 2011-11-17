@@ -28,7 +28,6 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
-#include <sa/keymat_v2.h>
 #include <sa/task_manager_v2.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
@@ -719,7 +718,8 @@ METHOD(ike_sa_t, reset, void,
 	flush_auth_cfgs(this);
 
 	this->keymat->destroy(this->keymat);
-	this->keymat = &(keymat_v2_create(this->ike_sa_id->is_initiator(this->ike_sa_id))->keymat);
+	this->keymat = keymat_create(this->version,
+							this->ike_sa_id->is_initiator(this->ike_sa_id));
 
 	this->task_manager->reset(this->task_manager, 0, 0);
 }
@@ -2210,6 +2210,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version)
 		.other_host = host_create_any(AF_INET),
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
+		.keymat = keymat_create(version, ike_sa_id->is_initiator(ike_sa_id)),
 		.state = IKE_CREATED,
 		.stats[STAT_INBOUND] = time_monotonic(NULL),
 		.stats[STAT_OUTBOUND] = time_monotonic(NULL),
@@ -2223,7 +2224,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version)
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL),
 	);
-	this->keymat = &(keymat_v2_create(ike_sa_id->is_initiator(ike_sa_id))->keymat);
+
 	this->task_manager = &(task_manager_v2_create(&this->public)->task_manager);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 
