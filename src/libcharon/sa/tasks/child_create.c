@@ -539,7 +539,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	/* add nonce payload if not in IKE_AUTH */
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
-		nonce_payload = nonce_payload_create();
+		nonce_payload = nonce_payload_create(NONCE);
 		nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 		message->add_payload(message, (payload_t*)nonce_payload);
 	}

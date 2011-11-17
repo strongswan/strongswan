@@ -180,7 +180,8 @@ payload_t *payload_create(payload_type_t type)
 		case TRANSFORM_ATTRIBUTE_V1:
 			return (payload_t*)transform_attribute_create(type);
 		case NONCE:
-			return (payload_t*)nonce_payload_create();
+		case NONCE_V1:
+			return (payload_t*)nonce_payload_create(type);
 		case ID_INITIATOR:
 		case ID_RESPONDER:
 #ifdef ME

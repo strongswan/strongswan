@@ -57,6 +57,11 @@ struct private_nonce_payload_t {
 	 * The contained nonce value.
 	 */
 	chunk_t nonce;
+
+	/**
+	 * Payload type, NONCE or NONCE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
@@ -115,7 +120,7 @@ METHOD(payload_t, get_encoding_rules, void,
 METHOD(payload_t, get_type, payload_type_t,
 	private_nonce_payload_t *this)
 {
-	return NONCE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -159,7 +164,7 @@ METHOD2(payload_t, nonce_payload_t, destroy, void,
 /*
  * Described in header
  */
-nonce_payload_t *nonce_payload_create()
+nonce_payload_t *nonce_payload_create(payload_type_t type)
 {
 	private_nonce_payload_t *this;
 
@@ -180,6 +185,7 @@ nonce_payload_t *nonce_payload_create()
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = NONCE_PAYLOAD_HEADER_LENGTH,
+		.type = type,
 	);
 	return &this->public;
 }
