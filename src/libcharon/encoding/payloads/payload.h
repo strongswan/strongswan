@@ -277,6 +277,13 @@ struct payload_t {
 	int (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules);
 
 	/**
+	 * Get non-variable header length for a variable length payload.
+	 *
+	 * @return				fixed length of the payload
+	 */
+	int (*get_header_length)(payload_t *this);
+
+	/**
 	 * Get type of payload.
 	 *
 	 * @return 				type of this payload

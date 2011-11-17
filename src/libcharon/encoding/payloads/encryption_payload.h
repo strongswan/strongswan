@@ -30,11 +30,6 @@ typedef struct encryption_payload_t encryption_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Encrpytion payload length in bytes without IV and following data.
- */
-#define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * The encryption payload as described in RFC section 3.14.
  */
 struct encryption_payload_t {

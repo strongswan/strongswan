@@ -174,6 +174,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings_v1);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_transform_substructure_t *this)
+{
+	return 8;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_transform_substructure_t *this)
 {
@@ -194,7 +200,7 @@ static void compute_length(private_transform_substructure_t *this)
 	enumerator_t *enumerator;
 	payload_t *attribute;
 
-	this->transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	this->transform_length = get_header_length(this);
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attribute))
 	{
@@ -269,6 +275,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -283,7 +290,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH,
+		.transform_length = get_header_length(this),
 		.attributes = linked_list_create(),
 		.type = type,
 	);

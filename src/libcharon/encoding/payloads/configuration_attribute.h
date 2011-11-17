@@ -29,11 +29,6 @@ typedef struct configuration_attribute_t configuration_attribute_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Configuration attribute header length in bytes.
- */
-#define CONFIGURATION_ATTRIBUTE_HEADER_LENGTH 4
-
-/**
  * Class representing an IKEv2-CONFIGURATION Attribute.
  *
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.

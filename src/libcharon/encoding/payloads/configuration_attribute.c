@@ -161,6 +161,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_configuration_attribute_t *this)
+{
+	return 4;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_configuration_attribute_t *this)
 {
@@ -181,7 +187,7 @@ METHOD(payload_t, set_next_type, void,
 METHOD(payload_t, get_length, size_t,
 	private_configuration_attribute_t *this)
 {
-	return this->value.len + CONFIGURATION_ATTRIBUTE_HEADER_LENGTH;
+	return get_header_length(this) + this->value.len;
 }
 
 METHOD(configuration_attribute_t, get_cattr_type, configuration_attribute_type_t,
@@ -215,6 +221,7 @@ configuration_attribute_t *configuration_attribute_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,

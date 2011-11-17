@@ -30,11 +30,6 @@ typedef struct id_payload_t id_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a id payload without the data in bytes.
- */
-#define ID_PAYLOAD_HEADER_LENGTH 8
-
-/**
  * Object representing an IKEv2 ID payload.
  *
  * The ID payload format is described in RFC section 3.5.

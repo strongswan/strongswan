@@ -33,11 +33,6 @@ typedef struct notify_payload_t notify_payload_t;
 #include <utils/linked_list.h>
 
 /**
- * Notify payload length in bytes without any spi and notification data.
- */
-#define NOTIFY_PAYLOAD_HEADER_LENGTH 8
-
-/**
  * Notify message types.
  *
  * See IKEv2 RFC 3.10.1.

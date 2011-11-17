@@ -122,6 +122,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_encryption_payload_t *this)
+{
+	return 4;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_encryption_payload_t *this)
 {
@@ -173,7 +179,7 @@ static void compute_length(private_encryption_payload_t *this)
 			length += this->aead->get_icv_size(this->aead);
 		}
 	}
-	length += ENCRYPTION_PAYLOAD_HEADER_LENGTH;
+	length += get_header_length(this);
 	this->payload_length = length;
 }
 
@@ -463,6 +469,7 @@ encryption_payload_t *encryption_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -478,7 +485,7 @@ encryption_payload_t *encryption_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = ENCRYPTION_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		.payloads = linked_list_create(),
 	);
 

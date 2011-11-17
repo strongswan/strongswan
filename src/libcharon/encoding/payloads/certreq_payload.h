@@ -29,11 +29,6 @@ typedef struct certreq_payload_t certreq_payload_t;
 #include <encoding/payloads/cert_payload.h>
 
 /**
- * Length of a CERTREQ payload without the CERTREQ data in bytes.
- */
-#define CERTREQ_PAYLOAD_HEADER_LENGTH 5
-
-/**
  * Class representing an IKEv2 CERTREQ payload.
  *
  * The CERTREQ payload format is described in RFC section 3.7.

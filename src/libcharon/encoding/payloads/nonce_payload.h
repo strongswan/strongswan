@@ -33,11 +33,6 @@ typedef struct nonce_payload_t nonce_payload_t;
 #define NONCE_SIZE 32
 
 /**
- * Length of a nonce payload without a nonce in bytes.
- */
-#define NONCE_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * Object representing an IKEv1/IKEv2 Nonce payload.
  */
 struct nonce_payload_t {

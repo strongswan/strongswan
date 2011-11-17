@@ -152,6 +152,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_delete_payload_t *this)
+{
+	return 8;
+}
+
 METHOD(payload_t, get_payload_type, payload_type_t,
 	private_delete_payload_t *this)
 {
@@ -258,6 +264,7 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -270,7 +277,7 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = DELETE_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		.protocol_id = protocol_id,
 		.spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0,
 	);

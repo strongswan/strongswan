@@ -214,6 +214,16 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings_v2);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_sa_payload_t *this)
+{
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		return 12;
+	}
+	return 4;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_sa_payload_t *this)
 {
@@ -239,21 +249,15 @@ static void compute_length(private_sa_payload_t *this)
 {
 	enumerator_t *enumerator;
 	payload_t *current;
-	size_t length = SA_PAYLOAD_HEADER_LENGTH;
 
-	if (this->type == SECURITY_ASSOCIATION_V1)
-	{
-		length = SA_PAYLOAD_V1_HEADER_LENGTH;
-	}
+	this->payload_length = get_header_length(this);
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, (void **)&current))
 	{
-		length += current->get_length(current);
+		this->payload_length += current->get_length(current);
 	}
 	enumerator->destroy(enumerator);
-
-	this->payload_length = length;
 }
 
 METHOD(payload_t, get_length, size_t,
@@ -367,6 +371,7 @@ sa_payload_t *sa_payload_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,

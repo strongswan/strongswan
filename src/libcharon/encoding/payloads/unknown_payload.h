@@ -28,11 +28,6 @@ typedef struct unknown_payload_t unknown_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Header length of the unknown payload.
- */
-#define UNKNOWN_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * Payload which can't be processed further.
  *
  * When the parser finds an unknown payload, he builds an instance of

@@ -141,6 +141,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_transform_attribute_t *this)
+{
+	return 0;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_transform_attribute_t *this)
 {
@@ -258,6 +264,7 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,

@@ -157,6 +157,16 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings_v1);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_ke_payload_t *this)
+{
+	if (this->type == KEY_EXCHANGE)
+	{
+		return 8;
+	}
+	return 4;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_ke_payload_t *this)
 {
@@ -212,6 +222,7 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -223,14 +234,10 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = KE_PAYLOAD_HEADER_LENGTH,
 		.dh_group_number = MODP_NONE,
 		.type = type,
 	);
-	if (type == KEY_EXCHANGE_V1)
-	{
-		this->payload_length = KE_PAYLOAD_V1_HEADER_LENGTH;
-	}
+	this->payload_length = get_header_length(this);
 	return &this->public;
 }
 

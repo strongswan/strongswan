@@ -430,6 +430,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_notify_payload_t *this)
+{
+	return 8 + this->spi_size;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_notify_payload_t *this)
 {
@@ -451,19 +457,9 @@ METHOD(payload_t, set_next_type, void,
 /**
  * recompute the payloads length.
  */
-static void compute_length (private_notify_payload_t *this)
+static void compute_length(private_notify_payload_t *this)
 {
-	size_t length = NOTIFY_PAYLOAD_HEADER_LENGTH;
-
-	if (this->notification_data.ptr != NULL)
-	{
-		length += this->notification_data.len;
-	}
-	if (this->spi.ptr != NULL)
-	{
-		length += this->spi.len;
-	}
-	this->payload_length = length;
+	this->payload_length = get_header_length(this) + this->notification_data.len;
 }
 
 METHOD(payload_t, get_length, size_t,
@@ -565,6 +561,7 @@ notify_payload_t *notify_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -582,8 +579,8 @@ notify_payload_t *notify_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH,
 	);
+	compute_length(this);
 	return &this->public;
 }
 

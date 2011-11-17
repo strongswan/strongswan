@@ -31,11 +31,6 @@ typedef enum cert_encoding_t cert_encoding_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a cert payload without the cert data in bytes.
- */
-#define CERT_PAYLOAD_HEADER_LENGTH 5
-
-/**
  * Certifcate encodings, as in RFC4306
  */
 enum cert_encoding_t {

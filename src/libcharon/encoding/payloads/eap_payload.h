@@ -29,11 +29,6 @@ typedef struct eap_payload_t eap_payload_t;
 #include <sa/authenticators/eap/eap_method.h>
 
 /**
- * Length of a EAP payload without the EAP Message in bytes.
- */
-#define EAP_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * Class representing an IKEv2 EAP payload.
  *
  * The EAP payload format is described in RFC section 3.16.

@@ -31,16 +31,6 @@ typedef struct ke_payload_t ke_payload_t;
 #include <crypto/diffie_hellman.h>
 
 /**
- * KE payload length in bytes without any key exchange data (IKEv2).
- */
-#define KE_PAYLOAD_HEADER_LENGTH 8
-
-/**
- * KE payload length in bytes without any key exchange data (IKEv1).
- */
-#define KE_PAYLOAD_V1_HEADER_LENGTH 4
-
-/**
  * Class representing an IKEv1 or IKEv2 key exchange payload.
  */
 struct ke_payload_t {

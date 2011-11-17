@@ -51,7 +51,10 @@ struct private_ike_auth_fill_t {
 
 /** size of non ESP-Marker */
 #define NON_ESP_MARKER_LEN 4
-
+/** length of fixed encryption payload header */
+#define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
+/** length of fixed cert payload header */
+#define CERT_PAYLOAD_HEADER_LENGTH 5
 /**
  * Calculate packet size on wire (without ethernet/IP header)
  */

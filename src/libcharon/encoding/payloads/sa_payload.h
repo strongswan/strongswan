@@ -30,16 +30,6 @@ typedef struct sa_payload_t sa_payload_t;
 #include <utils/linked_list.h>
 
 /**
- * SECURITY_ASSOCIATION length in bytes without any proposal substructure.
- */
-#define SA_PAYLOAD_HEADER_LENGTH 4
-
-/**
- * SECURITY_ASSOCIATION_V1 length in bytes without any proposal substructure.
- */
-#define SA_PAYLOAD_V1_HEADER_LENGTH 12
-
-/**
  * Class representing an IKEv1 or IKEv2 SA Payload.
  *
  * The SA Payload format is described in RFC section 3.3.

@@ -30,12 +30,6 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #include <config/proposal.h>
 #include <utils/linked_list.h>
 
-
-/**
- * Length of the proposal substructure header (without spi).
- */
-#define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
-
 /**
  * Class representing an IKEv1/IKEv2 proposal substructure.
  */

@@ -155,6 +155,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_traffic_selector_substructure_t *this)
+{
+	return 8;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_traffic_selector_substructure_t *this)
 {
@@ -207,6 +213,7 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -216,7 +223,7 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 			.get_traffic_selector = _get_traffic_selector,
 			.destroy = _destroy,
 		},
-		.payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		/* must be set to be valid */
 		.ts_type = TS_IPV4_ADDR_RANGE,
 	);
@@ -238,7 +245,7 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->end_port = ts->get_to_port(ts);
 	this->starting_address = chunk_clone(ts->get_from_address(ts));
 	this->ending_address = chunk_clone(ts->get_to_address(ts));
-	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH +
+	this->payload_length = get_header_length(this) +
 						this->ending_address.len + this->starting_address.len;
 
 	return &this->public;

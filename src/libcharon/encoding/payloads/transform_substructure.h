@@ -40,11 +40,6 @@ typedef struct transform_substructure_t transform_substructure_t;
 #define TRANSFORM_TYPE_VALUE 3
 
 /**
- * Length of the transform substructure header in bytes.
- */
-#define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
-
-/**
  * Class representing an IKEv1/IKEv2 transform substructure.
  */
 struct transform_substructure_t {

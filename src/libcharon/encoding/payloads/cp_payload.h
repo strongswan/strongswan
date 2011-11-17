@@ -31,11 +31,6 @@ typedef struct cp_payload_t cp_payload_t;
 #include <utils/enumerator.h>
 
 /**
- * CP_PAYLOAD length in bytes without any proposal substructure.
- */
-#define CP_PAYLOAD_HEADER_LENGTH 8
-
-/**
  * Config Type of an Configuration Payload.
  */
 enum config_type_t {

@@ -308,6 +308,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings_v1);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_proposal_substructure_t *this)
+{
+	return 8 + this->spi_size;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_proposal_substructure_t *this)
 {
@@ -334,7 +340,7 @@ static void compute_length(private_proposal_substructure_t *this)
 	payload_t *transform;
 
 	this->transforms_count = 0;
-	this->proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->spi.len;
+	this->proposal_length = get_header_length(this);
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
 	{
@@ -692,6 +698,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -710,10 +717,10 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH,
 		.transforms = linked_list_create(),
 		.type = type,
 	);
+	compute_length(this);
 
 	return &this->public;
 }

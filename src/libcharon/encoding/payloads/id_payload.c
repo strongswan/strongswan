@@ -141,6 +141,12 @@ METHOD(payload_t, get_encoding_rules, int,
 	return countof(encodings);
 }
 
+METHOD(payload_t, get_header_length, int,
+	private_id_payload_t *this)
+{
+	return 8;
+}
+
 METHOD(payload_t, get_type, payload_type_t,
 	private_id_payload_t *this)
 {
@@ -190,6 +196,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -200,7 +207,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = ID_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		.payload_type = payload_type,
 	);
 	return &this->public;

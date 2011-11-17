@@ -28,11 +28,6 @@ typedef struct vendor_id_payload_t vendor_id_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a VENDOR ID payload without the VID data in bytes.
- */
-#define VENDOR_ID_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * Class representing an IKEv1/IKEv2 VENDOR ID payload.
  *
  * The VENDOR ID payload format is described in RFC section 3.12.

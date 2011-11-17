@@ -38,6 +38,8 @@
 #define BLOCK_THRESHOLD_DEFAULT 5
 /** length of the secret to use for cookie calculation */
 #define SECRET_LENGTH 16
+/** Length of a notify payload header */
+#define NOTIFY_PAYLOAD_HEADER_LENGTH 8
 
 typedef struct private_receiver_t private_receiver_t;
 
