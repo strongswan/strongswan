@@ -152,7 +152,7 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 	{
 		hash = generate_natd_hash(this, ike_sa_id, host);
 	}
-	notify = notify_payload_create();
+	notify = notify_payload_create(NOTIFY);
 	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, hash);
 	chunk_free(&hash);

@@ -153,8 +153,8 @@ METHOD(task_t, build_i, status_t,
 	config = this->child_sa->get_config(this->child_sa);
 
 	/* we just need the rekey notify ... */
-	notify = notify_payload_create_from_protocol_and_type(this->protocol,
-														  REKEY_SA);
+	notify = notify_payload_create_from_protocol_and_type(NOTIFY,
+													this->protocol, REKEY_SA);
 	notify->set_spi(notify, this->spi);
 	message->add_payload(message, (payload_t*)notify);
 
@@ -462,7 +462,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		.protocol = protocol,
 		.spi = spi,
 	);
- 
+
 	if (protocol != PROTO_NONE)
 	{
 		this->public.task.build = _build_i;

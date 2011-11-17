@@ -780,10 +780,10 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: Add lifetime, non-fixed auth-method and other attributes */
+	/* TODO-IKEv1: Add lifetime, non-fixed auth-method and other attributes
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));
+							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));*/
 
 	add_transform_substructure(this, transform);
 }

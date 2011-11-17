@@ -50,7 +50,7 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, VENDOR_ID_V1, NO_PAYLOAD,
 	"HASH_V1",
 	"SIGNATURE_V1",
 	"NONCE_V1",
-	"NOTIFICATION_V1",
+	"NOTIFY_V1",
 	"DELETE_V1",
 	"VENDOR_ID_V1");
 ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, VENDOR_ID_V1,
@@ -111,7 +111,7 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, VENDOR_ID_V1, NO_PA
 	"HASH",
 	"SIG",
 	"No",
-	"NO",
+	"N",
 	"D",
 	"V");
 ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, VENDOR_ID_V1,
@@ -205,7 +205,8 @@ payload_t *payload_create(payload_type_t type)
 		case KEY_EXCHANGE_V1:
 			return (payload_t*)ke_payload_create(type);
 		case NOTIFY:
-			return (payload_t*)notify_payload_create();
+		case NOTIFY_V1:
+			return (payload_t*)notify_payload_create(type);
 		case DELETE:
 			return (payload_t*)delete_payload_create(0);
 		case VENDOR_ID:

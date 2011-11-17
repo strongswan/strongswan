@@ -38,7 +38,8 @@ ENUM_NEXT(notify_type_names, INVALID_SPI, INVALID_SPI, INVALID_MESSAGE_ID,
 	"INVALID_SPI");
 ENUM_NEXT(notify_type_names, NO_PROPOSAL_CHOSEN, NO_PROPOSAL_CHOSEN, INVALID_SPI,
 	"NO_PROPOSAL_CHOSEN");
-ENUM_NEXT(notify_type_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+ENUM_NEXT(notify_type_names, PAYLOAD_MALFORMED, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+	"PAYLOAD_MALFORMED",
 	"INVALID_KE_PAYLOAD");
 ENUM_NEXT(notify_type_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTHENTICATION_FAILED");
@@ -99,7 +100,9 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, IPSEC_REPLAY_COUNTER_SYNC, MS_NOTI
 	"IKEV2_REPLAY_COUNTER_SYNC_SUPPORTED",
 	"IKEV2_MESSAGE_ID_SYNC",
 	"IPSEC_REPLAY_COUNTER_SYNC");
-ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, IPSEC_REPLAY_COUNTER_SYNC,
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT_IKEV1, INITIAL_CONTACT_IKEV1, IPSEC_REPLAY_COUNTER_SYNC,
+	"INITIAL_CONTACT");
+ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, INITIAL_CONTACT_IKEV1,
 	"USE_BEET_MODE");
 ENUM_NEXT(notify_type_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
 	"ME_MEDIATION",
@@ -125,7 +128,8 @@ ENUM_NEXT(notify_type_short_names, INVALID_SPI, INVALID_SPI, INVALID_MESSAGE_ID,
 	"INVAL_SPI");
 ENUM_NEXT(notify_type_short_names, NO_PROPOSAL_CHOSEN, NO_PROPOSAL_CHOSEN, INVALID_SPI,
 	"NO_PROP");
-ENUM_NEXT(notify_type_short_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+ENUM_NEXT(notify_type_short_names, PAYLOAD_MALFORMED, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+	"PLD_MAL",
 	"INVAL_KE");
 ENUM_NEXT(notify_type_short_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTH_FAILED");
@@ -186,7 +190,9 @@ ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, IPSEC_REPLAY_COUNTER_SYNC, M
 	"RPL_CTR_SYN_SUP",
 	"MSG_ID_SYN",
 	"RPL_CTR_SYN");
-ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, IPSEC_REPLAY_COUNTER_SYNC,
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT_IKEV1, INITIAL_CONTACT_IKEV1, IPSEC_REPLAY_COUNTER_SYNC,
+	"INITIAL_CONTACT");
+ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, INITIAL_CONTACT_IKEV1,
 	"BEET_MODE");
 ENUM_NEXT(notify_type_short_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
 	"ME_MED",
@@ -224,12 +230,17 @@ struct private_notify_payload_t {
 	/**
 	 * reserved bits
 	 */
-	bool reserved[7];
+	bool reserved[8];
 
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
+
+	/**
+	 * Domain of interpretation, IKEv1 only.
+	 */
+	u_int32_t doi;
 
 	/**
 	 * Protocol id.
@@ -254,40 +265,42 @@ struct private_notify_payload_t {
 	/**
 	 * Notification data.
 	 */
-	chunk_t notification_data;
+	chunk_t notify_data;
+
+	/**
+	 * Type of payload, NOTIFY or NOTIFY_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-Notify Payload.
- *
- * The defined offsets are the positions in a object of type
- * private_notify_payload_t.
+ * Encoding rules for an IKEv2 notification payload
  */
-static encoding_rule_t encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload)		},
+	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_notify_payload_t, critical)			},
+	{ FLAG,				offsetof(private_notify_payload_t, critical)		},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[0])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[1])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[2])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[3])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[4])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[5])			},
-	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[6])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[0])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[1])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[2])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[3])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[4])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[5])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[6])		},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)		},
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)	},
 	/* Protocol ID as 8 bit field*/
-	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id)			},
+	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id)		},
 	/* SPI Size as 8 bit field*/
-	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)			},
+	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)		},
 	/* Notify message type as 16 bit field*/
-	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)			},
+	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)		},
 	/* SPI as variable length field*/
-	{ SPI,				offsetof(private_notify_payload_t, spi)					},
+	{ SPI,				offsetof(private_notify_payload_t, spi)				},
 	/* Key Exchange Data is from variable size */
-	{ CHUNK_DATA,		offsetof(private_notify_payload_t, notification_data)	}
+	{ CHUNK_DATA,		offsetof(private_notify_payload_t, notify_data)		},
 };
 
 /*
@@ -307,6 +320,57 @@ static encoding_rule_t encodings[] = {
       !                                                               !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
+/**
+ * Encoding rules for an IKEv1 notification payload
+ */
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload)	},
+	/* 8 reserved bits */
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[0])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[1])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[2])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[3])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[4])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[5])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[6])		},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[7])		},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)	},
+	/* DOI as  32 bit field*/
+	{ U_INT_32,			offsetof(private_notify_payload_t, doi)				},
+	/* Protocol ID as 8 bit field*/
+	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id)		},
+	/* SPI Size as 8 bit field*/
+	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)		},
+	/* Notify message type as 16 bit field*/
+	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)		},
+	/* SPI as variable length field*/
+	{ SPI,				offsetof(private_notify_payload_t, spi)				},
+	/* Key Exchange Data is from variable size */
+	{ CHUNK_DATA,		offsetof(private_notify_payload_t, notify_data)		},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !    RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                             DOI                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !  Protocol ID  !   SPI Size    !      Notify Message Type      !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                Security Parameter Index (SPI)                 ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                       Notification Data                       ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
 
 METHOD(payload_t, verify, status_t,
 	private_notify_payload_t *this)
@@ -329,7 +393,7 @@ METHOD(payload_t, verify, status_t,
 	{
 		case INVALID_KE_PAYLOAD:
 		{
-			if (this->notification_data.len != 2)
+			if (this->notify_data.len != 2)
 			{
 				bad_length = TRUE;
 			}
@@ -339,7 +403,7 @@ METHOD(payload_t, verify, status_t,
 		case NAT_DETECTION_DESTINATION_IP:
 		case ME_CONNECTAUTH:
 		{
-			if (this->notification_data.len != HASH_SIZE_SHA1)
+			if (this->notify_data.len != HASH_SIZE_SHA1)
 			{
 				bad_length = TRUE;
 			}
@@ -349,7 +413,7 @@ METHOD(payload_t, verify, status_t,
 		case INVALID_MAJOR_VERSION:
 		case NO_PROPOSAL_CHOSEN:
 		{
-			if (this->notification_data.len != 0)
+			if (this->notify_data.len != 0)
 			{
 				bad_length = TRUE;
 			}
@@ -357,7 +421,7 @@ METHOD(payload_t, verify, status_t,
 		}
 		case ADDITIONAL_IP4_ADDRESS:
 		{
-			if (this->notification_data.len != 4)
+			if (this->notify_data.len != 4)
 			{
 				bad_length = TRUE;
 			}
@@ -365,7 +429,7 @@ METHOD(payload_t, verify, status_t,
 		}
 		case ADDITIONAL_IP6_ADDRESS:
 		{
-			if (this->notification_data.len != 16)
+			if (this->notify_data.len != 16)
 			{
 				bad_length = TRUE;
 			}
@@ -373,7 +437,7 @@ METHOD(payload_t, verify, status_t,
 		}
 		case AUTH_LIFETIME:
 		{
-			if (this->notification_data.len != 4)
+			if (this->notify_data.len != 4)
 			{
 				bad_length = TRUE;
 			}
@@ -381,30 +445,30 @@ METHOD(payload_t, verify, status_t,
 		}
 		case IPCOMP_SUPPORTED:
 		{
-			if (this->notification_data.len != 3)
+			if (this->notify_data.len != 3)
 			{
 				bad_length = TRUE;
 			}
 			break;
 		}
 		case ME_ENDPOINT:
-			if (this->notification_data.len != 8 &&
-				this->notification_data.len != 12 &&
-				this->notification_data.len != 24)
+			if (this->notify_data.len != 8 &&
+				this->notify_data.len != 12 &&
+				this->notify_data.len != 24)
 			{
 				bad_length = TRUE;
 			}
 			break;
 		case ME_CONNECTID:
-			if (this->notification_data.len < 4 ||
-				this->notification_data.len > 16)
+			if (this->notify_data.len < 4 ||
+				this->notify_data.len > 16)
 			{
 				bad_length = TRUE;
 			}
 			break;
 		case ME_CONNECTKEY:
-			if (this->notification_data.len < 16 ||
-				this->notification_data.len > 32)
+			if (this->notify_data.len < 16 ||
+				this->notify_data.len > 32)
 			{
 				bad_length = TRUE;
 			}
@@ -417,7 +481,7 @@ METHOD(payload_t, verify, status_t,
 	{
 		DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
 			 notify_type_names, this->notify_type,
-			 this->notification_data.len);
+			 this->notify_data.len);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -426,20 +490,29 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_notify_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = encodings;
-	return countof(encodings);
+	if (this->type == NOTIFY)
+	{
+		*rules = encodings_v2;
+		return countof(encodings_v2);
+	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
 }
 
 METHOD(payload_t, get_header_length, int,
 	private_notify_payload_t *this)
 {
-	return 8 + this->spi_size;
+	if (this->type == NOTIFY)
+	{
+		return 8 + this->spi_size;
+	}
+	return 12 + this->spi_size;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_notify_payload_t *this)
 {
-	return NOTIFY;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -459,7 +532,7 @@ METHOD(payload_t, set_next_type, void,
  */
 static void compute_length(private_notify_payload_t *this)
 {
-	this->payload_length = get_header_length(this) + this->notification_data.len;
+	this->payload_length = get_header_length(this) + this->notify_data.len;
 }
 
 METHOD(payload_t, get_length, size_t,
@@ -530,21 +603,21 @@ METHOD(notify_payload_t, set_spi, void,
 METHOD(notify_payload_t, get_notification_data, chunk_t,
 	private_notify_payload_t *this)
 {
-	return this->notification_data;
+	return this->notify_data;
 }
 
 METHOD(notify_payload_t, set_notification_data, void,
 	private_notify_payload_t *this, chunk_t data)
 {
-	free(this->notification_data.ptr);
-	this->notification_data = chunk_clone(data);
+	free(this->notify_data.ptr);
+	this->notify_data = chunk_clone(data);
 	compute_length(this);
 }
 
 METHOD2(payload_t, notify_payload_t, destroy, void,
 	private_notify_payload_t *this)
 {
-	free(this->notification_data.ptr);
+	free(this->notify_data.ptr);
 	free(this->spi.ptr);
 	free(this);
 }
@@ -552,7 +625,7 @@ METHOD2(payload_t, notify_payload_t, destroy, void,
 /*
  * Described in header
  */
-notify_payload_t *notify_payload_create()
+notify_payload_t *notify_payload_create(payload_type_t type)
 {
 	private_notify_payload_t *this;
 
@@ -578,7 +651,9 @@ notify_payload_t *notify_payload_create()
 			.set_notification_data = _set_notification_data,
 			.destroy = _destroy,
 		},
+		.doi = IKEV1_DOI_IPSEC,
 		.next_payload = NO_PAYLOAD,
+		.type = type,
 	);
 	compute_length(this);
 	return &this->public;
@@ -588,12 +663,12 @@ notify_payload_t *notify_payload_create()
  * Described in header.
  */
 notify_payload_t *notify_payload_create_from_protocol_and_type(
-						protocol_id_t protocol_id, notify_type_t notify_type)
+			payload_type_t type, protocol_id_t protocol, notify_type_t notify)
 {
-	notify_payload_t *notify = notify_payload_create();
+	notify_payload_t *this = notify_payload_create(type);
 
-	notify->set_notify_type(notify, notify_type);
-	notify->set_protocol_id(notify, protocol_id);
+	this->set_notify_type(this, notify);
+	this->set_protocol_id(this, protocol);
 
-	return notify;
+	return this;
 }

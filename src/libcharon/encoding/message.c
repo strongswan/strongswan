@@ -425,7 +425,7 @@ static payload_order_t me_connect_r_order[] = {
  */
 static payload_rule_t id_prot_i_rules[] = {
 /*	payload type				min	max						encr	suff */
-	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
 	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
@@ -450,7 +450,7 @@ static payload_order_t id_prot_i_order[] = {
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFICATION_V1,			0},
+	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
 
@@ -459,7 +459,7 @@ static payload_order_t id_prot_i_order[] = {
  */
 static payload_rule_t id_prot_r_rules[] = {
 /*	payload type				min	max						encr	suff */
-	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
 	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
@@ -484,7 +484,7 @@ static payload_order_t id_prot_r_order[] = {
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFICATION_V1,			0},
+	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
 
@@ -493,7 +493,7 @@ static payload_order_t id_prot_r_order[] = {
  */
 static payload_rule_t aggressive_i_rules[] = {
 /*	payload type				min	max						encr	suff */
-	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
 	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
@@ -518,7 +518,7 @@ static payload_order_t aggressive_i_order[] = {
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFICATION_V1,			0},
+	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
 
@@ -527,7 +527,7 @@ static payload_order_t aggressive_i_order[] = {
  */
 static payload_rule_t aggressive_r_rules[] = {
 /*	payload type				min	max						encr	suff */
-	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
 	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
 	{NONCE_V1,					0,	1,						FALSE,	FALSE},
@@ -552,7 +552,7 @@ static payload_order_t aggressive_r_order[] = {
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
-	{NOTIFICATION_V1,			0},
+	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
 
@@ -561,7 +561,7 @@ static payload_order_t aggressive_r_order[] = {
  */
 static payload_rule_t informational_i_rules_v1[] = {
 /*	payload type				min	max						encr	suff */
-	{NOTIFICATION_V1,			0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
 };
@@ -571,7 +571,7 @@ static payload_rule_t informational_i_rules_v1[] = {
  */
 static payload_order_t informational_i_order_v1[] = {
 /*	payload type				notify type */
-	{NOTIFICATION_V1,			0},
+	{NOTIFY_V1,					0},
 	{DELETE_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
@@ -930,7 +930,14 @@ METHOD(message_t, add_notify, void,
 			payload->destroy(payload);
 		}
 	}
-	notify = notify_payload_create();
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		notify = notify_payload_create(NOTIFY);
+	}
+	else
+	{
+		notify = notify_payload_create(NOTIFY_V1);
+	}
 	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, data);
 	add_payload(this, (payload_t*)notify);

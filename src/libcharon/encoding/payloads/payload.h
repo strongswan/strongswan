@@ -100,7 +100,7 @@ enum payload_type_t {
 	/**
 	 * Notification payload.
 	 */
-	NOTIFICATION_V1 = 11,
+	NOTIFY_V1 = 11,
 
 	/**
 	 * Delete payload.

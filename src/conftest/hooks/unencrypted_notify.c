@@ -84,7 +84,7 @@ METHOD(listener_t, ike_updown, bool,
 		{
 			data = chunk_clone(chunk_create(this->data, strlen(this->data)));
 		}
-		notify = notify_payload_create_from_protocol_and_type(
+		notify = notify_payload_create_from_protocol_and_type(NOTIFY,
 									this->esp ? PROTO_ESP : PROTO_IKE, type);
 		notify->set_spi(notify, this->spi);
 		if (data.len)
