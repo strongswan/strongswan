@@ -228,6 +228,17 @@ typedef enum {
 	IKEV1_LIFE_TYPE_KILOBYTES = 2,
 } ikev1_life_type_t;
 
+/**
+ * IKEv1 authenticaiton methods
+ */
+typedef enum {
+	IKEV1_AUTH_PSK = 1,
+	IKEV1_AUTH_DSS_SIG = 2,
+	IKEV1_AUTH_RSA_SIG = 3,
+	IKEV1_AUTH_RSA_ENC = 4,
+	IKEV1_AUTH_RSA_ENC_REV = 5,
+} ikev1_auth_method_t;
+
 METHOD(payload_t, verify, status_t,
 	private_proposal_substructure_t *this)
 {
@@ -766,7 +777,10 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: Add lifetime, auth and other attributes */
+	/* TODO-IKEv1: Add lifetime, non-fixed auth-method and other attributes */
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));
 
 	add_transform_substructure(this, transform);
 }
