@@ -74,7 +74,7 @@ struct private_traffic_selector_substructure_t {
  * The defined offsets are the positions in a object of type
  * private_traffic_selector_substructure_t.
  */
-encoding_rule_t traffic_selector_substructure_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next ts type*/
 	{ TS_TYPE,		offsetof(private_traffic_selector_substructure_t, ts_type) 			},
 	/* 1 Byte IP protocol id*/
@@ -148,12 +148,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_traffic_selector_substructure_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_traffic_selector_substructure_t *this, encoding_rule_t **rules)
 {
-	*rules = traffic_selector_substructure_encodings;
-	*rule_count = countof(traffic_selector_substructure_encodings);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

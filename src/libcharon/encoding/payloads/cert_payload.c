@@ -95,7 +95,7 @@ struct private_cert_payload_t {
  * private_cert_payload_t.
  *
  */
-encoding_rule_t cert_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_cert_payload_t, next_payload)	},
 	/* the critical bit */
@@ -166,11 +166,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_cert_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_cert_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = cert_payload_encodings;
-	*rule_count = countof(cert_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

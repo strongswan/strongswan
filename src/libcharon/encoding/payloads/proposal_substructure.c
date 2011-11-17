@@ -296,20 +296,16 @@ METHOD(payload_t, verify, status_t,
 	return status;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_proposal_substructure_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_proposal_substructure_t *this, encoding_rule_t **rules)
 {
 	if (this->type == PROPOSAL_SUBSTRUCTURE)
 	{
 		*rules = encodings_v2;
-		*rule_count = countof(encodings_v2);
+		return countof(encodings_v2);
 	}
-	else
-	{
-		*rules = encodings_v1;
-		*rule_count = countof(encodings_v1);
-	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

@@ -134,12 +134,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_transform_attribute_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_transform_attribute_t *this, encoding_rule_t **rules)
 {
 	*rules = encodings;
-	*rule_count = countof(encodings);
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

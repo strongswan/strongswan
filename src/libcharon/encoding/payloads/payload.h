@@ -271,10 +271,10 @@ struct payload_t {
 	/**
 	 * Get encoding rules for this payload.
 	 *
-	 * @param rules			location to store pointer of first rule
-	 * @param rule_count	location to store number of rules
+	 * @param rules			location to store pointer to rules
+	 * @return				number of rules
 	 */
-	void (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules, size_t *rule_count);
+	int (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules);
 
 	/**
 	 * Get type of payload.

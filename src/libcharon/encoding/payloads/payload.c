@@ -255,10 +255,9 @@ bool payload_is_known(payload_type_t type)
 void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip)
 {
 	encoding_rule_t *rule;
-	size_t count;
-	int i;
+	int i, count;
 
-	payload->get_encoding_rules(payload, &rule, &count);
+	count = payload->get_encoding_rules(payload, &rule);
 	for (i = 0; i < count; i++)
 	{
 		if (rule[i].type == type && skip-- == 0)

@@ -404,8 +404,7 @@ METHOD(generator_t, get_chunk, chunk_t,
 METHOD(generator_t, generate_payload, void,
 	private_generator_t *this,payload_t *payload)
 {
-	int i, offset_start;
-	size_t rule_count;
+	int i, offset_start, rule_count;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
 
@@ -418,7 +417,7 @@ METHOD(generator_t, generate_payload, void,
 		 payload_type_names, payload_type);
 
 	/* each payload has its own encoding rules */
-	payload->get_encoding_rules(payload, &rules, &rule_count);
+	rule_count = payload->get_encoding_rules(payload, &rules);
 
 	for (i = 0; i < rule_count;i++)
 	{

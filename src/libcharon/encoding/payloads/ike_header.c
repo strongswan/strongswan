@@ -146,7 +146,7 @@ ENUM_END(exchange_type_names, EXCHANGE_TYPE_UNDEFINED);
  * The defined offsets are the positions in a object of type
  * ike_header_t.
  */
-encoding_rule_t ike_header_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 8 Byte SPI, stored in the field initiator_spi */
 	{ IKE_SPI,		offsetof(private_ike_header_t, initiator_spi)	},
 	/* 8 Byte SPI, stored in the field responder_spi */
@@ -244,11 +244,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_ike_header_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_ike_header_t *this, encoding_rule_t **rules)
 {
-	*rules = ike_header_encodings;
-	*rule_count = sizeof(ike_header_encodings) / sizeof(encoding_rule_t);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

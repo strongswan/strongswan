@@ -62,7 +62,7 @@ struct private_configuration_attribute_t {
  * The defined offsets are the positions in a object of type
  * private_configuration_attribute_t.
  */
-encoding_rule_t configuration_attribute_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 reserved bit */
 	{ RESERVED_BIT,						offsetof(private_configuration_attribute_t, reserved)},
 	/* type of the attribute as 15 bit unsigned integer */
@@ -154,12 +154,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_configuration_attribute_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_configuration_attribute_t *this, encoding_rule_t **rules)
 {
-	*rules = configuration_attribute_encodings;
-	*rule_count = countof(configuration_attribute_encodings);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

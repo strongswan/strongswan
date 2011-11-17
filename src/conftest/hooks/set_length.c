@@ -76,11 +76,10 @@ METHOD(listener_t, message, bool,
 			if (type == payload->get_type(payload))
 			{
 				encoding_rule_t *rules;
-				size_t count;
 				u_int16_t *len;
-				int i;
+				int i, count;
 
-				payload->get_encoding_rules(payload, &rules, &count);
+				count = payload->get_encoding_rules(payload, &rules);
 				for (i = 0; i < count; i++)
 				{
 					if (rules[i].type == PAYLOAD_LENGTH)

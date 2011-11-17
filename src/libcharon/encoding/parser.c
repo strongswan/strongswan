@@ -363,11 +363,10 @@ METHOD(parser_t, parse_payload, status_t,
 {
 	payload_t *pld;
 	void *output;
-	size_t rule_count;
 	int payload_length = 0, spi_size = 0, attribute_length = 0;
 	u_int16_t ts_type = 0;
 	bool attribute_format = FALSE;
-	int rule_number;
+	int rule_number, rule_count;
 	encoding_rule_t *rule;
 
 	/* create instance of the payload to parse */
@@ -383,7 +382,7 @@ METHOD(parser_t, parse_payload, status_t,
 	output = pld;
 
 	/* parse the payload with its own rulse */
-	pld->get_encoding_rules(pld, &this->rules, &rule_count);
+	rule_count = pld->get_encoding_rules(pld, &this->rules);
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);

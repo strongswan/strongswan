@@ -79,7 +79,7 @@ struct private_encryption_payload_t {
  * The defined offsets are the positions in a object of type
  * private_encryption_payload_t.
  */
-encoding_rule_t encryption_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_encryption_payload_t, next_payload)	},
 	/* Critical and 7 reserved bits, all stored for reconstruction */
@@ -115,12 +115,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_encryption_payload_t *this, encoding_rule_t **rules,
-	size_t *count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_encryption_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = encryption_payload_encodings;
-	*count = countof(encryption_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,

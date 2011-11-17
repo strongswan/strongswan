@@ -68,7 +68,7 @@ struct private_vendor_id_payload_t {
  * The defined offsets are the positions in a object of type
  * private_vendor_id_payload_t.
  */
-encoding_rule_t vendor_id_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_vendor_id_payload_t, next_payload)	},
 	/* the critical bit */
@@ -105,12 +105,11 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_vendor_id_payload_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_vendor_id_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = vendor_id_payload_encodings;
-	*rule_count = countof(vendor_id_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
 }
 
 METHOD(payload_t, get_type, payload_type_t,
