@@ -98,7 +98,7 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[0])},
 	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[1])},
 	/* Key Exchange Data is from variable size */
-	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data)},
+	{ CHUNK_DATA,			offsetof(private_ke_payload_t, key_exchange_data)},
 };
 
 /*
@@ -123,7 +123,7 @@ static encoding_rule_t encodings_v1[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,		offsetof(private_ke_payload_t, payload_length)	},
 	/* Key Exchange Data is from variable size */
-	{ KEY_EXCHANGE_DATA_V1,	offsetof(private_ke_payload_t, key_exchange_data)},
+	{ CHUNK_DATA,			offsetof(private_ke_payload_t, key_exchange_data)},
 };
 
 /*

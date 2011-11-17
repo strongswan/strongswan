@@ -98,7 +98,7 @@ static encoding_rule_t encodings[] = {
 	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
 	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
 	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
-	{ SPIS,				offsetof(private_delete_payload_t, spis) 			}
+	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis) 			}
 };
 
 /*

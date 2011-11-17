@@ -532,22 +532,7 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
-			/* chunks */
-			case NONCE_DATA:
-			case HASH_DATA:
-			case ID_DATA:
-			case AUTH_DATA:
-			case CERT_DATA:
-			case CERTREQ_DATA:
-			case EAP_DATA:
-			case SPIS:
-			case VID_DATA:
-			case CONFIGURATION_ATTRIBUTE_VALUE:
-			case KEY_EXCHANGE_DATA:
-			case KEY_EXCHANGE_DATA_V1:
-			case NOTIFICATION_DATA:
-			case ENCRYPTED_DATA:
-			case UNKNOWN_DATA:
+			case CHUNK_DATA:
 			{
 				if (payload_length < header_length ||
 					!parse_chunk(this, rule_number, output + rule->offset,

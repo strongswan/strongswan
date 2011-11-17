@@ -62,7 +62,7 @@ static encoding_rule_t encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_hash_payload_t, payload_length)	},
 	/* Hash Data is from variable size */
-	{ HASH_DATA,		offsetof(private_hash_payload_t, hash)				},
+	{ CHUNK_DATA,		offsetof(private_hash_payload_t, hash)				},
 };
 
 /*

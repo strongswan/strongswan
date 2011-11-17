@@ -96,7 +96,7 @@ static encoding_rule_t encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[1])	},
 	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[2])	},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
-	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data)	}
+	{ CHUNK_DATA,		offsetof(private_auth_payload_t, auth_data)	}
 };
 
 /*

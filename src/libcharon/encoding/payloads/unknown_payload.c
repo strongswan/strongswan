@@ -84,7 +84,7 @@ static encoding_rule_t encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_unknown_payload_t, payload_length)	},
 	/* some unknown data bytes, length is defined in PAYLOAD_LENGTH */
-	{ UNKNOWN_DATA,		offsetof(private_unknown_payload_t, data)			},
+	{ CHUNK_DATA,		offsetof(private_unknown_payload_t, data)			},
 };
 
 /*

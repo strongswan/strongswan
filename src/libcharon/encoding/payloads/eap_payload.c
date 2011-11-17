@@ -81,7 +81,7 @@ static encoding_rule_t encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_eap_payload_t, payload_length)	},
 	/* chunt to data, starting at "code" */
-	{ EAP_DATA,			offsetof(private_eap_payload_t, data)			},
+	{ CHUNK_DATA,		offsetof(private_eap_payload_t, data)			},
 };
 
 /*

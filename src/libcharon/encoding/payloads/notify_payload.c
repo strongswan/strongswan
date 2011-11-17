@@ -287,7 +287,7 @@ static encoding_rule_t encodings[] = {
 	/* SPI as variable length field*/
 	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
-	{ NOTIFICATION_DATA,offsetof(private_notify_payload_t, notification_data)	}
+	{ CHUNK_DATA,		offsetof(private_notify_payload_t, notification_data)	}
 };
 
 /*

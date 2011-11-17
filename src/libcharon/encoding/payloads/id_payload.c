@@ -112,7 +112,7 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BYTE,	offsetof(private_id_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_id_payload_t, reserved_byte[2])},
 	/* some id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ ID_DATA,			offsetof(private_id_payload_t, id_data)			},
+	{ CHUNK_DATA,		offsetof(private_id_payload_t, id_data)			},
 };
 
 /*
@@ -144,7 +144,7 @@ static encoding_rule_t encodings_v1[] = {
 	{ U_INT_8,			offsetof(private_id_payload_t, protocol_id)		},
 	{ U_INT_16,			offsetof(private_id_payload_t, port)			},
 	/* some id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ ID_DATA,			offsetof(private_id_payload_t, id_data)			},
+	{ CHUNK_DATA,		offsetof(private_id_payload_t, id_data)			},
 };
 
 /*

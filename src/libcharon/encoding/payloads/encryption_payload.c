@@ -87,7 +87,7 @@ static encoding_rule_t encodings[] = {
 	/* Length of the whole encryption payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_encryption_payload_t, payload_length)	},
 	/* encrypted data, stored in a chunk. contains iv, data, padding */
-	{ ENCRYPTED_DATA,	offsetof(private_encryption_payload_t, encrypted)		},
+	{ CHUNK_DATA,		offsetof(private_encryption_payload_t, encrypted)		},
 };
 
 /*

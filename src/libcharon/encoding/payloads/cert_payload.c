@@ -113,7 +113,7 @@ static encoding_rule_t encodings[] = {
 	/* 1 Byte CERT type*/
 	{ U_INT_8,			offsetof(private_cert_payload_t, encoding)		},
 	/* some cert data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CERT_DATA,		offsetof(private_cert_payload_t, data)			}
+	{ CHUNK_DATA,		offsetof(private_cert_payload_t, data)			}
 };
 
 /*

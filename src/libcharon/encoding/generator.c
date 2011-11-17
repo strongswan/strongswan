@@ -448,21 +448,7 @@ METHOD(generator_t, generate_payload, void,
 				break;
 			case ADDRESS:
 			case SPI:
-			case KEY_EXCHANGE_DATA:
-			case KEY_EXCHANGE_DATA_V1:
-			case NOTIFICATION_DATA:
-			case NONCE_DATA:
-			case HASH_DATA:
-			case ID_DATA:
-			case AUTH_DATA:
-			case CERT_DATA:
-			case CERTREQ_DATA:
-			case SPIS:
-			case CONFIGURATION_ATTRIBUTE_VALUE:
-			case VID_DATA:
-			case EAP_DATA:
-			case ENCRYPTED_DATA:
-			case UNKNOWN_DATA:
+			case CHUNK_DATA:
 				generate_from_chunk(this, rules[i].offset);
 				break;
 			case PROPOSALS:

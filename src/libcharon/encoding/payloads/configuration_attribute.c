@@ -70,7 +70,7 @@ static encoding_rule_t encodings[] = {
 	/* Length of attribute value */
 	{ CONFIGURATION_ATTRIBUTE_LENGTH,	offsetof(private_configuration_attribute_t, length)	},
 	/* Value of attribute if attribute format flag is zero */
-	{ CONFIGURATION_ATTRIBUTE_VALUE,	offsetof(private_configuration_attribute_t, value)	}
+	{ CHUNK_DATA,						offsetof(private_configuration_attribute_t, value)	}
 };
 
 /*

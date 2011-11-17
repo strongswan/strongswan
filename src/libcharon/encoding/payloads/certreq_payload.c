@@ -90,7 +90,7 @@ static encoding_rule_t encodings[] = {
 	/* 1 Byte CERTREQ type*/
 	{ U_INT_8,			offsetof(private_certreq_payload_t, encoding)		},
 	/* some certreq data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CERTREQ_DATA,		offsetof(private_certreq_payload_t, data)			}
+	{ CHUNK_DATA,		offsetof(private_certreq_payload_t, data)			}
 };
 
 /*
