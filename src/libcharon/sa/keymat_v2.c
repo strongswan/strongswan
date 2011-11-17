@@ -13,22 +13,22 @@
  * for more details.
  */
 
-#include "keymat.h"
+#include "keymat_v2.h"
 
 #include <daemon.h>
 #include <crypto/prf_plus.h>
 
-typedef struct private_keymat_t private_keymat_t;
+typedef struct private_keymat_v2_t private_keymat_v2_t;
 
 /**
  * Private data of an keymat_t object.
  */
-struct private_keymat_t {
+struct private_keymat_v2_t {
 
 	/**
-	 * Public keymat_t interface.
+	 * Public keymat_v2_t interface.
 	 */
-	keymat_t public;
+	keymat_v2_t public;
 
 	/**
 	 * IKE_SA Role, initiator or responder
@@ -125,7 +125,7 @@ static int lookup_keylen(keylen_entry_t *list, int algo)
 }
 
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
-	private_keymat_t *this, diffie_hellman_group_t group)
+	private_keymat_v2_t *this, diffie_hellman_group_t group)
 {
 	return lib->crypto->create_dh(lib->crypto, group);;
 }
@@ -133,7 +133,7 @@ METHOD(keymat_t, create_dh, diffie_hellman_t*,
 /**
  * Derive IKE keys for a combined AEAD algorithm
  */
-static bool derive_ike_aead(private_keymat_t *this, u_int16_t alg,
+static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 							u_int16_t key_size, prf_plus_t *prf_plus)
 {
 	aead_t *aead_i, *aead_r;
@@ -177,7 +177,7 @@ static bool derive_ike_aead(private_keymat_t *this, u_int16_t alg,
 /**
  * Derive IKE keys for traditional encryption and MAC algorithms
  */
-static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
+static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 					u_int16_t enc_size, u_int16_t int_alg, prf_plus_t *prf_plus)
 {
 	crypter_t *crypter_i, *crypter_r;
@@ -245,7 +245,7 @@ static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
 }
 
 METHOD(keymat_t, derive_ike_keys, bool,
-	private_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
@@ -421,7 +421,7 @@ METHOD(keymat_t, derive_ike_keys, bool,
 }
 
 METHOD(keymat_t, derive_child_keys, bool,
-	private_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
@@ -526,20 +526,20 @@ METHOD(keymat_t, derive_child_keys, bool,
 }
 
 METHOD(keymat_t, get_skd, pseudo_random_function_t,
-	private_keymat_t *this, chunk_t *skd)
+	private_keymat_v2_t *this, chunk_t *skd)
 {
 	*skd = this->skd;
 	return this->prf_alg;
 }
 
 METHOD(keymat_t, get_aead, aead_t*,
-	private_keymat_t *this, bool in)
+	private_keymat_v2_t *this, bool in)
 {
 	return in ? this->aead_in : this->aead_out;
 }
 
 METHOD(keymat_t, get_auth_octets, chunk_t,
-	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, identification_t *id, char reserved[3])
 {
 	chunk_t chunk, idx, octets;
@@ -569,7 +569,7 @@ METHOD(keymat_t, get_auth_octets, chunk_t,
 #define IKEV2_KEY_PAD_LENGTH 17
 
 METHOD(keymat_t, get_psk_sig, chunk_t,
-	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t secret, identification_t *id, char reserved[3])
 {
 	chunk_t key_pad, key, sig, octets;
@@ -595,7 +595,7 @@ METHOD(keymat_t, get_psk_sig, chunk_t,
 }
 
 METHOD(keymat_t, destroy, void,
-	private_keymat_t *this)
+	private_keymat_v2_t *this)
 {
 	DESTROY_IF(this->aead_in);
 	DESTROY_IF(this->aead_out);
@@ -609,20 +609,22 @@ METHOD(keymat_t, destroy, void,
 /**
  * See header
  */
-keymat_t *keymat_create(bool initiator)
+keymat_v2_t *keymat_v2_create(bool initiator)
 {
-	private_keymat_t *this;
+	private_keymat_v2_t *this;
 
 	INIT(this,
 		.public = {
-			.create_dh = _create_dh,
-			.derive_ike_keys = _derive_ike_keys,
-			.derive_child_keys = _derive_child_keys,
-			.get_skd = _get_skd,
-			.get_aead = _get_aead,
-			.get_auth_octets = _get_auth_octets,
-			.get_psk_sig = _get_psk_sig,
-			.destroy = _destroy,
+			.keymat = {
+				.create_dh = _create_dh,
+				.derive_ike_keys = _derive_ike_keys,
+				.derive_child_keys = _derive_child_keys,
+				.get_skd = _get_skd,
+				.get_aead = _get_aead,
+				.get_auth_octets = _get_auth_octets,
+				.get_psk_sig = _get_psk_sig,
+				.destroy = _destroy,
+			},
 		},
 		.initiator = initiator,
 		.prf_alg = PRF_UNDEFINED,
@@ -630,4 +632,3 @@ keymat_t *keymat_create(bool initiator)
 
 	return &this->public;
 }
-

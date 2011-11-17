@@ -147,12 +147,4 @@ struct keymat_t {
 	void (*destroy)(keymat_t *this);
 };
 
-/**
- * Create a keymat instance.
- *
- * @param initiator		TRUE if we are the initiator
- * @return				keymat instance
- */
-keymat_t *keymat_create(bool initiator);
-
 #endif /** KEYMAT_H_ @}*/
