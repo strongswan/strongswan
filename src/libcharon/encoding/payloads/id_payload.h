@@ -30,9 +30,7 @@ typedef struct id_payload_t id_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Object representing an IKEv2 ID payload.
- *
- * The ID payload format is described in RFC section 3.5.
+ * Object representing an IKEv1 or an IKEv2 ID payload.
  */
 struct id_payload_t {
 
@@ -57,19 +55,19 @@ struct id_payload_t {
 /**
  * Creates an empty id_payload_t object.
  *
- * @param payload_type	one of ID_INITIATOR, ID_RESPONDER
- * @return				id_payload_t object
+ * @param type		one of ID_INITIATOR, ID_RESPONDER and ID_V1
+ * @return			id_payload_t object
  */
 id_payload_t *id_payload_create(payload_type_t payload_type);
 
 /**
  * Creates an id_payload_t from an existing identification_t object.
  *
- * @param payload_type		one of ID_INITIATOR, ID_RESPONDER
- * @param identification	identification_t object
- * @return					id_payload_t object
+ * @param type		one of ID_INITIATOR, ID_RESPONDER and ID_V1
+ * @param id		identification_t object
+ * @return			id_payload_t object
  */
-id_payload_t *id_payload_create_from_identification(payload_type_t payload_type,
-											identification_t *identification);
+id_payload_t *id_payload_create_from_identification(payload_type_t type,
+													identification_t *id);
 
 #endif /** ID_PAYLOAD_H_ @}*/

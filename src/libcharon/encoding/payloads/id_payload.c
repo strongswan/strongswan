@@ -28,18 +28,13 @@ typedef struct private_id_payload_t private_id_payload_t;
 
 /**
  * Private data of an id_payload_t object.
- *
  */
 struct private_id_payload_t {
+
 	/**
 	 * Public id_payload_t interface.
 	 */
 	id_payload_t public;
-
-	/**
-	 * one of ID_INITIATOR, ID_RESPONDER
-	 */
-	payload_type_t payload_type;
 
 	/**
 	 * Next payload type.
@@ -75,15 +70,27 @@ struct private_id_payload_t {
 	 * The contained id data value.
 	 */
 	chunk_t id_data;
+
+	/**
+	 * Tunneled protocol ID for IKEv1 quick modes.
+	 */
+	u_int8_t protocol_id;
+
+	/**
+	 * Tunneled port for IKEv1 quick modes.
+	 */
+	u_int16_t port;
+
+	/**
+	 * one of ID_INITIATOR, ID_RESPONDER and IDv1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a ID payload
- *
- * The defined offsets are the positions in a object of type
- * private_id_payload_t.
+ * Encoding rules for an IKEv2 ID payload
  */
-static encoding_rule_t encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_id_payload_t, next_payload) 	},
 	/* the critical bit */
@@ -105,7 +112,7 @@ static encoding_rule_t encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_id_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_id_payload_t, reserved_byte[2])},
 	/* some id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ ID_DATA,			offsetof(private_id_payload_t, id_data)			}
+	{ ID_DATA,			offsetof(private_id_payload_t, id_data)			},
 };
 
 /*
@@ -122,6 +129,39 @@ static encoding_rule_t encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+/**
+ * Encoding rules for an IKEv1 ID payload
+ */
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_id_payload_t, next_payload)	},
+	/* Reserved Byte is skipped */
+	{ RESERVED_BYTE,	offsetof(private_id_payload_t, reserved_byte[0])},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_id_payload_t, payload_length)	},
+	/* 1 Byte ID type*/
+	{ U_INT_8,			offsetof(private_id_payload_t, id_type)			},
+	{ U_INT_8,			offsetof(private_id_payload_t, protocol_id)		},
+	{ U_INT_16,			offsetof(private_id_payload_t, port)			},
+	/* some id data bytes, length is defined in PAYLOAD_LENGTH */
+	{ ID_DATA,			offsetof(private_id_payload_t, id_data)			},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !    RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !   ID Type     ! Protocol ID   !           Port                |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                   Identification Data                         ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+
 METHOD(payload_t, verify, status_t,
 	private_id_payload_t *this)
 {
@@ -137,8 +177,13 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_id_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = encodings;
-	return countof(encodings);
+	if (this->type == ID_V1)
+	{
+		*rules = encodings_v1;
+		return countof(encodings_v1);
+	}
+	*rules = encodings_v2;
+	return countof(encodings_v2);
 }
 
 METHOD(payload_t, get_header_length, int,
@@ -150,7 +195,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_id_payload_t *this)
 {
-	return this->payload_type;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -187,7 +232,7 @@ METHOD2(payload_t, id_payload_t, destroy, void,
 /*
  * Described in header.
  */
-id_payload_t *id_payload_create(payload_type_t payload_type)
+id_payload_t *id_payload_create(payload_type_t type)
 {
 	private_id_payload_t *this;
 
@@ -208,7 +253,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = get_header_length(this),
-		.payload_type = payload_type,
+		.type = type,
 	);
 	return &this->public;
 }
@@ -216,12 +261,12 @@ id_payload_t *id_payload_create(payload_type_t payload_type)
 /*
  * Described in header.
  */
-id_payload_t *id_payload_create_from_identification(payload_type_t payload_type,
+id_payload_t *id_payload_create_from_identification(payload_type_t type,
 													identification_t *id)
 {
 	private_id_payload_t *this;
 
-	this = (private_id_payload_t*)id_payload_create(payload_type);
+	this = (private_id_payload_t*)id_payload_create(type);
 	this->id_data = chunk_clone(id->get_encoding(id));
 	this->id_type = id->get_type(id);
 	this->payload_length += this->id_data.len;

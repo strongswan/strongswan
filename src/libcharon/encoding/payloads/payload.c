@@ -184,6 +184,7 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)nonce_payload_create(type);
 		case ID_INITIATOR:
 		case ID_RESPONDER:
+		case ID_V1:
 #ifdef ME
 		case ID_PEER:
 #endif /* ME */
