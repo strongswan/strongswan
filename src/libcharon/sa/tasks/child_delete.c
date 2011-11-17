@@ -87,7 +87,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_ESP:
 				if (esp == NULL)
 				{
-					esp = delete_payload_create(PROTO_ESP);
+					esp = delete_payload_create(DELETE, PROTO_ESP);
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
@@ -97,7 +97,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_AH:
 				if (ah == NULL)
 				{
-					ah = delete_payload_create(PROTO_AH);
+					ah = delete_payload_create(DELETE, PROTO_AH);
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);

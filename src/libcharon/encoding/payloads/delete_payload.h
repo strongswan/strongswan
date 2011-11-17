@@ -29,9 +29,7 @@ typedef struct delete_payload_t delete_payload_t;
 #include <encoding/payloads/proposal_substructure.h>
 
 /**
- * Class representing an IKEv2 DELETE payload.
- *
- * The DELETE payload format is described in RFC section 3.11.
+ * Class representing an IKEv1 or a IKEv2 DELETE payload.
  */
 struct delete_payload_t {
 
@@ -70,9 +68,11 @@ struct delete_payload_t {
 /**
  * Creates an empty delete_payload_t object.
  *
+ * @param type			DELETE or DELETE_V1
  * @param protocol_id	protocol, such as AH|ESP
  * @return 				delete_payload_t object
  */
-delete_payload_t *delete_payload_create(protocol_id_t protocol_id);
+delete_payload_t *delete_payload_create(payload_type_t type,
+										protocol_id_t protocol_id);
 
 #endif /** DELETE_PAYLOAD_H_ @}*/
