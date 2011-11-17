@@ -358,34 +358,6 @@ static bool parse_chunk(private_parser_t *this, int rule_number,
 	return TRUE;
 }
 
-/**
- * Map a encoding type to a encoded payload
- */
-static payload_type_t map_wrapped_payload(encoding_type_t type)
-{
-	switch (type)
-	{
-		case PROPOSALS:
-			return PROPOSAL_SUBSTRUCTURE;
-		case PROPOSALS_V1:
-			return PROPOSAL_SUBSTRUCTURE_V1;
-		case TRANSFORMS:
-			return TRANSFORM_SUBSTRUCTURE;
-		case TRANSFORMS_V1:
-			return TRANSFORM_SUBSTRUCTURE_V1;
-		case TRANSFORM_ATTRIBUTES:
-			return TRANSFORM_ATTRIBUTE;
-		case TRANSFORM_ATTRIBUTES_V1:
-			return TRANSFORM_ATTRIBUTE_V1;
-		case CONFIGURATION_ATTRIBUTES:
-			return CONFIGURATION_ATTRIBUTE;
-		case TRAFFIC_SELECTORS:
-			return TRAFFIC_SELECTOR_SUBSTRUCTURE;
-		default:
-			return NO_PAYLOAD;
-	}
-}
-
 METHOD(parser_t, parse_payload, status_t,
 	private_parser_t *this, payload_type_t payload_type, payload_t **payload)
 {
@@ -513,18 +485,18 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
-			/* lists */
-			case PROPOSALS:
-			case PROPOSALS_V1:
-			case TRANSFORMS:
-			case TRANSFORMS_V1:
-			case TRANSFORM_ATTRIBUTES:
-			case TRANSFORM_ATTRIBUTES_V1:
-			case TRAFFIC_SELECTORS:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1:
+			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE:
+			case PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			{
 				if (payload_length < header_length ||
 					!parse_list(this, rule_number, output + rule->offset,
-								map_wrapped_payload(rule->type),
+								rule->type - PAYLOAD_LIST,
 								payload_length - header_length))
 				{
 					pld->destroy(pld);

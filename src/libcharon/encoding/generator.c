@@ -451,14 +451,14 @@ METHOD(generator_t, generate_payload, void,
 			case CHUNK_DATA:
 				generate_from_chunk(this, rules[i].offset);
 				break;
-			case PROPOSALS:
-			case PROPOSALS_V1:
-			case TRANSFORMS:
-			case TRANSFORMS_V1:
-			case TRANSFORM_ATTRIBUTES:
-			case TRANSFORM_ATTRIBUTES_V1:
-			case CONFIGURATION_ATTRIBUTES:
-			case TRAFFIC_SELECTORS:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1:
+			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE:
+			case PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			{
 				linked_list_t *proposals;
 				enumerator_t *enumerator;

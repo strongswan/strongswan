@@ -102,8 +102,9 @@ static encoding_rule_t encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[0])},
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[2])},
-	/* some ts data bytes, length is defined in PAYLOAD_LENGTH */
-	{ TRAFFIC_SELECTORS,offsetof(private_ts_payload_t, substrs)			}
+	/* wrapped list of traffic selectors substructures */
+	{ PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE,
+						offsetof(private_ts_payload_t, substrs)			},
 };
 
 /*

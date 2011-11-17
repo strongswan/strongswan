@@ -112,9 +112,9 @@ static encoding_rule_t encodings_v1[] = {
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, transforms_count)	},
 	/* SPI is a chunk of variable size*/
 	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
-	/* Transforms are stored in a transform substructure,
-	   offset points to a linked_list_t pointer */
-	{ TRANSFORMS_V1,	offsetof(private_proposal_substructure_t, transforms)		}
+	/* Transforms are stored in a transform substructure list */
+	{ PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE_V1,
+						offsetof(private_proposal_substructure_t, transforms)		},
 };
 
 /**
@@ -137,9 +137,9 @@ static encoding_rule_t encodings_v2[] = {
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, transforms_count)	},
 	/* SPI is a chunk of variable size*/
 	{ SPI,				offsetof(private_proposal_substructure_t, spi)				},
-	/* Transforms are stored in a transform substructure,
-	   offset points to a linked_list_t pointer */
-	{ TRANSFORMS,		offsetof(private_proposal_substructure_t, transforms)		}
+	/* Transforms are stored in a transform substructure list */
+	{ PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE,
+						offsetof(private_proposal_substructure_t, transforms)		},
 };
 
 /*

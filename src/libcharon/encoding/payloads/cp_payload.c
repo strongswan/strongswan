@@ -85,27 +85,27 @@ struct private_cp_payload_t {
  */
 static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,					offsetof(private_cp_payload_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_cp_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,						offsetof(private_cp_payload_t, critical)		},
+	{ FLAG,				offsetof(private_cp_payload_t, critical)		},
 	/* 7 Bit reserved bits */
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[0])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[1])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[2])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[3])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[4])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[5])	},
-	{ RESERVED_BIT,				offsetof(private_cp_payload_t, reserved_bit[6])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,		offsetof(private_cp_payload_t, reserved_bit[6])	},
 	/* Length of the whole CP payload*/
-	{ PAYLOAD_LENGTH,			offsetof(private_cp_payload_t, payload_length)	},
-	/* Proposals are stored in a proposal substructure,
-	   offset points to a linked_list_t pointer */
-	{ U_INT_8,					offsetof(private_cp_payload_t, type)			},
+	{ PAYLOAD_LENGTH,	offsetof(private_cp_payload_t, payload_length)	},
+	{ U_INT_8,			offsetof(private_cp_payload_t, type)			},
 	/* 3 reserved bytes */
-	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[0])},
-	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[1])},
-	{ RESERVED_BYTE,			offsetof(private_cp_payload_t, reserved_byte[2])},
-	{ CONFIGURATION_ATTRIBUTES,	offsetof(private_cp_payload_t, attributes)		}
+	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[0])},
+	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[1])},
+	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[2])},
+	/* list of configuration attributes in a list */
+	{ PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE,
+						offsetof(private_cp_payload_t, attributes)		},
 };
 
 /*

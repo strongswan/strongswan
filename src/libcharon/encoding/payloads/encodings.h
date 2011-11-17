@@ -187,73 +187,6 @@ enum encoding_type_t {
 	SPI,
 
 	/**
-	 * Representating one or more proposal substructures.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the proposal_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed proposal_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	PROPOSALS,
-
-	/**
-	 * Same as PROPOSALS, but for IKEv1 in a SECURITY_ASSOCIATION_V1
-	 */
-	PROPOSALS_V1,
-
-	/**
-	 * Representating one or more transform substructures.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the transform_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed transform_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRANSFORMS,
-
-	/**
-	 * Same as TRANSFORMS, but for IKEv1 in a PROPOSAL_SUBSTRUCTURE_V1.
-	 */
-	TRANSFORMS_V1,
-
-	/**
-	 * Representating one or more Attributes of a transform substructure.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the transform_attribute_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed transform_attribute_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRANSFORM_ATTRIBUTES,
-
-	/**
-	 * Same as TRANSFORM_ATTRIBUTES, but for IKEv1 in TRANSFORMS_V1.
-	 */
-	TRANSFORM_ATTRIBUTES_V1,
-
-	/**
-	 * Representating one or more Attributes of a configuration payload.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the configuration_attribute_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed configuration_attribute_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	CONFIGURATION_ATTRIBUTES,
-
-	/**
 	 * Representing a 1 Bit flag specifying the format of a transform attribute.
 	 *
 	 * When generation, the next bit is set to 1 if the associated value
@@ -323,19 +256,6 @@ enum encoding_type_t {
 	ATTRIBUTE_VALUE,
 
 	/**
-	 * Representating one or more Traffic selectors of a TS payload.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the traffic_selector_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed traffic_selector_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRAFFIC_SELECTORS,
-
-	/**
 	 * Representating a Traffic selector type field.
 	 *
 	 * When generating it must be changed from host to network order.
@@ -375,6 +295,17 @@ enum encoding_type_t {
 	 * When parsing 8 bytes are read and written into the u_int64_t pointing to.
 	 */
 	IKE_SPI,
+
+	/**
+	 * Reprensenting a field containing a set of wrapped payloads.
+	 *
+	 * This type is not used directly, but as an offset to the wrapped payloads.
+	 * The type of the wrapped payload is added to this encoding type.
+	 *
+	 * @note As payload types are added to this encoding type, it has
+	 * to be the last in encoding_type_t.
+	 */
+	PAYLOAD_LIST = 1000 /* no comma, read above! */
 };
 
 /**

@@ -99,9 +99,9 @@ static encoding_rule_t encodings_v1[] = {
 	{ U_INT_32,			offsetof(private_sa_payload_t, doi)				},
 	/* Situation*/
 	{ U_INT_32,			offsetof(private_sa_payload_t, situation)		},
-	/* Proposals are stored in a proposal substructure,
-	   offset points to a linked_list_t pointer */
-	{ PROPOSALS_V1,		offsetof(private_sa_payload_t, proposals)		},
+	/* Proposals are stored in a proposal substructure list */
+	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1,
+						offsetof(private_sa_payload_t, proposals)		},
 };
 
 /*
@@ -138,9 +138,9 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[6])			},
 	/* Length of the whole SA payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)		},
-	/* Proposals are stored in a proposal substructure,
-	   offset points to a linked_list_t pointer */
-	{ PROPOSALS,		offsetof(private_sa_payload_t, proposals)			},
+	/* Proposals are stored in a proposal substructure list */
+	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE,
+						offsetof(private_sa_payload_t, proposals)			},
 };
 
 /*

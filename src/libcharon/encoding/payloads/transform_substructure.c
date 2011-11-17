@@ -83,19 +83,20 @@ struct private_transform_substructure_t {
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,					offsetof(private_transform_substructure_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, next_payload)	},
 	/* 1 Reserved Byte */
-	{ RESERVED_BYTE,			offsetof(private_transform_substructure_t, reserved[0])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[0])		},
 	/* Length of the whole transform substructure*/
-	{ PAYLOAD_LENGTH,			offsetof(private_transform_substructure_t, transform_length)},
+	{ PAYLOAD_LENGTH,	offsetof(private_transform_substructure_t, transform_length)},
 	/* transform type */
-	{ U_INT_8,					offsetof(private_transform_substructure_t, transform_ton)	},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_ton)	},
 	/* transform identifier, as used by IKEv1 */
-	{ RESERVED_BYTE,			offsetof(private_transform_substructure_t, reserved[1])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[1])		},
 	/* transform identifier, as used by IKEv2 */
-	{ U_INT_16,					offsetof(private_transform_substructure_t, transform_id_v2)	},
+	{ U_INT_16,			offsetof(private_transform_substructure_t, transform_id_v2)	},
 	/* Attributes in a transform attribute list */
-	{ TRANSFORM_ATTRIBUTES,		offsetof(private_transform_substructure_t, attributes)		}
+	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE,
+						offsetof(private_transform_substructure_t, attributes)		}
 };
 
 /**
@@ -103,20 +104,21 @@ static encoding_rule_t encodings_v2[] = {
  */
 static encoding_rule_t encodings_v1[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,					offsetof(private_transform_substructure_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, next_payload)	},
 	/* 1 Reserved Byte */
-	{ RESERVED_BYTE,			offsetof(private_transform_substructure_t, reserved[0])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[0])		},
 	/* Length of the whole transform substructure*/
-	{ PAYLOAD_LENGTH,			offsetof(private_transform_substructure_t, transform_length)},
+	{ PAYLOAD_LENGTH,	offsetof(private_transform_substructure_t, transform_length)},
 	/* transform number */
-	{ U_INT_8,					offsetof(private_transform_substructure_t, transform_ton)},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_ton)},
 	/* transform identifier, as used by IKEv1 */
-	{ U_INT_8,					offsetof(private_transform_substructure_t, transform_id_v1)	},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_id_v1)	},
 	/* transform identifier, as used by IKEv2 */
-	{ RESERVED_BYTE,			offsetof(private_transform_substructure_t, reserved[1])		},
-	{ RESERVED_BYTE,			offsetof(private_transform_substructure_t, reserved[2])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[1])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[2])		},
 	/* Attributes in a transform attribute list */
-	{ TRANSFORM_ATTRIBUTES_V1,	offsetof(private_transform_substructure_t, attributes)		}
+	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1,
+						offsetof(private_transform_substructure_t, attributes)		}
 };
 
 /*
