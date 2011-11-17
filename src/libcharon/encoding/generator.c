@@ -450,6 +450,7 @@ METHOD(generator_t, generate_payload, void,
 			case ADDRESS:
 			case SPI:
 			case KEY_EXCHANGE_DATA:
+			case KEY_EXCHANGE_DATA_V1:
 			case NOTIFICATION_DATA:
 			case NONCE_DATA:
 			case ID_DATA:

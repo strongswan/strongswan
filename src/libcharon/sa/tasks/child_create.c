@@ -547,7 +547,8 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	/* diffie hellman exchange, if PFS enabled */
 	if (this->dh)
 	{
-		ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
+		ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE,
+														   this->dh);
 		message->add_payload(message, (payload_t*)ke_payload);
 	}
 

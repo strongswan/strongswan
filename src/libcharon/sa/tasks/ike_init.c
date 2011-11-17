@@ -150,7 +150,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 
 	nonce_payload = nonce_payload_create(NONCE);
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
-	ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
+	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE, this->dh);
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */

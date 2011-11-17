@@ -729,6 +729,17 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
+			case KEY_EXCHANGE_DATA_V1:
+			{
+				if (payload_length < KE_PAYLOAD_V1_HEADER_LENGTH ||
+					!parse_chunk(this, rule_number, output + rule->offset,
+								 payload_length - KE_PAYLOAD_V1_HEADER_LENGTH))
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;
+			}
 			case NOTIFICATION_DATA:
 			{
 				if (payload_length < NOTIFY_PAYLOAD_HEADER_LENGTH + spi_size ||

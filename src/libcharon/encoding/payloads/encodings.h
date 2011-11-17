@@ -197,6 +197,11 @@ enum encoding_type_t {
 	KEY_EXCHANGE_DATA,
 
 	/**
+	 * Same as KEY_EXCHANGE_DATA, but for KEY_EXCHANGE_V1
+	 */
+	KEY_EXCHANGE_DATA_V1,
+
+	/**
 	 * Representating a Notification field.
 	 *
 	 * When generating the content of the chunkt pointing to

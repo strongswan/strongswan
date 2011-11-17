@@ -201,7 +201,8 @@ payload_t *payload_create(payload_type_t type)
 		case TRAFFIC_SELECTOR_RESPONDER:
 			return (payload_t*)ts_payload_create(FALSE);
 		case KEY_EXCHANGE:
-			return (payload_t*)ke_payload_create();
+		case KEY_EXCHANGE_V1:
+			return (payload_t*)ke_payload_create(type);
 		case NOTIFY:
 			return (payload_t*)notify_payload_create();
 		case DELETE:
