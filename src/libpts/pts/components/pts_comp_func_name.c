@@ -18,9 +18,6 @@
 
 #include <debug.h>
 
-#define PTS_QUALIFIER_UNKNOWN		0x00
-#define PTS_QUALIFIER_WILDCARD		0x3F
-
 typedef struct private_pts_comp_func_name_t private_pts_comp_func_name_t;
 
 /**

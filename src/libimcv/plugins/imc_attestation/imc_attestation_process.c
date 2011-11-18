@@ -50,11 +50,10 @@
 /**
  * Set parameters of Simple Component Evidence
  */
-static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
-								tcg_pts_attr_simple_comp_evid_params_t *out)
+static bool set_simple_comp_evid_params(pts_t *pts, pts_comp_func_name_t *name,
+				u_int8_t sequence, tcg_pts_attr_simple_comp_evid_params_t *out)
 {
 	tcg_pts_attr_simple_comp_evid_params_t params;
-	pts_qualifier_t qualifier;
 	time_t measurement_time_t;
 	struct tm *time_now;
 	char *utc_time;
@@ -63,12 +62,7 @@ static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
 	params.pcr_info_included = TRUE;
 	params.flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
 	params.depth = 0;
-	params.vendor_id = PEN_ITA;
 
-	qualifier.kernel = FALSE;
-	qualifier.sub_component = FALSE;
-	qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
-	params.qualifier = qualifier;
 	/* The measurements done by tboot and trustedGRUB are SHA1 hashes */
 	params.hash_algorithm = TRUSTED_HASH_ALGO;
 	params.transformation = PTS_PCR_TRANSFORM_NO;
@@ -101,23 +95,30 @@ static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
 	
 	params.policy_uri = chunk_empty;
 
-	/* Provisional/temporal implementation for trsutedGRUB measurements */
-	if (params.name != PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY &&
-		params.name != PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE)
+	/* Provisional/temporal implementation for components except tboot */
+	if (params.name->get_name(params.name) == PTS_ITA_COMP_FUNC_NAME_TGRUB)
 	{
+		params.extended_pcr = PCR_DEBUG;
+		
 		params.measurement = chunk_alloc(HASH_SIZE_SHA1);
 		memset(params.measurement.ptr, 0, HASH_SIZE_SHA1);
+		
 		params.pcr_before = chunk_alloc(PCR_LEN);
 		memset(params.pcr_before.ptr, 0, PCR_LEN);
+		
+		if(!pts->read_pcr(pts, params.extended_pcr,	&params.pcr_after))
+		{
+			DBG1(DBG_IMC, "error occured while reading PCR: %d",
+				 params.extended_pcr);
+			return FALSE;
+		}
 	}
-
 	/* Set parameters which varies from component to component */
-	if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
-		params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE)
+	else if (params.name->get_name(params.name) == PTS_ITA_COMP_FUNC_NAME_TBOOT)
 	{
 		char *measurement, *pcr_before, *pcr_after;
 
-		if (params.name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY)
+		if (sequence == 1)
 		{
 			params.extended_pcr = PCR_TBOOT_POLICY;
 			measurement = lib->settings->get_str(lib->settings,
@@ -153,33 +154,13 @@ static bool set_simple_comp_evid_params(pts_ita_funct_comp_name_t name,
 			chunk_create(pcr_after, strlen(pcr_after)), NULL);
 		
 	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_MBR_STAGE1)
-	{
-		params.extended_pcr = PCR_TGRUB_MBR_STAGE1;
-	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART1)
-	{
-		params.extended_pcr = PCR_TGRUB_STAGE2_PART1;
-	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_STAGE2_PART2)
-	{
-		params.extended_pcr = PCR_TGRUB_STAGE2_PART2;
-	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_CMD_LINE_ARGS)
-	{
-		params.extended_pcr = PCR_TGRUB_CMD_LINE_ARGS;
-	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_CHECKFILE)
-	{
-		params.extended_pcr = PCR_TGRUB_CHECKFILE;
-	}
-	else if (params.name == PTS_ITA_FUNC_COMP_NAME_TGRUB_LOADED_FILES)
-	{
-		params.extended_pcr = PCR_TGRUB_LOADED_FILES;
-	}
 	else
 	{
-		DBG1(DBG_IMC, "unsupported Functional Component Name: %d", params.name);
+		DBG1(DBG_IMC, "unsupported Functional Component Name: Vendor ID: %d"
+					  " Name: %d, Qualifier: %d", 
+						params.name->get_vendor_id(params.name),
+						params.name->get_name(params.name),
+						params.name->get_qualifier(params.name));
 		return FALSE;
 	}
 	
@@ -464,11 +445,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			funct_comp_evid_req_entry_t *entry;
 			u_int32_t requests_count;
 			pts_attr_req_funct_comp_evid_flag_t flags;
-			u_int32_t sub_comp_depth, comp_name_vendor_id;
-			u_int8_t family;
-			pts_qualifier_t qualifier;
-			pts_ita_funct_comp_name_t name;
-
+			u_int32_t sub_comp_depth;
+			pts_comp_func_name_t *name;
+			
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
 			requests = attr_cast->get_requests(attr_cast);
@@ -482,16 +461,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			{
 				flags = entry->flags;
 				sub_comp_depth = entry->sub_comp_depth;
-				comp_name_vendor_id = entry->vendor_id;
-				family = entry->family;
-				qualifier = entry->qualifier;
-				name = entry->name;
+				name = entry->name->clone(entry->name);
 				negotiated_caps = pts->get_proto_caps(pts);
 
 				DBG1(DBG_IMC, "Requested Evidence flags: %d, depth: %d,"
-							  " vendor_id: %d, family: %d, qualifier %d, name: %d",
-								flags, sub_comp_depth, comp_name_vendor_id, family,
-								qualifier, name);
+							  " vendor_id: %d, qualifier %d, name: %d",
+								flags, sub_comp_depth, name->get_vendor_id(name),
+								name->get_qualifier(name), name->get_name(name));
 
 				if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
 				{
@@ -531,13 +507,14 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							"zero. Measuring top level component only.");
 					return FALSE;
 				}
-				if (comp_name_vendor_id != PEN_ITA)
+				if (name->get_vendor_id(name) != PEN_ITA)
 				{
 					DBG1(DBG_IMC, "current version of Attestation IMC supports"
 								  "only functional component namings by ITA");
 					return FALSE;
 				}
-				if (family)
+				/* Check Family */
+				if (name->get_qualifier(name) & PTS_REQ_FUNCT_COMP_FAMILY_MASK)
 				{
 					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 										TCG_PTS_INVALID_NAME_FAM, attr_info);
@@ -546,51 +523,64 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 
 				/* Check if Unknown or Wildcard was set for qualifier */
-				if (qualifier.kernel && qualifier.sub_component &&
-					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_ALL))
+				if (name->get_qualifier(name) & PTS_QUALIFIER_WILDCARD)
 				{
 					DBG2(DBG_IMC, "wildcard was set for the qualifier of functional"
 								  " component. Identifying the component with "
 								  "name binary enumeration");
 				}
-				else if (!qualifier.kernel && !qualifier.sub_component &&
-					(qualifier.type & PTS_ITA_FUNC_COMP_TYPE_UNKNOWN))
+				else if (name->get_qualifier(name) & PTS_QUALIFIER_UNKNOWN)
 				{
 					DBG2(DBG_IMC, "unknown was set for the qualifier of functional"
 								  " component. Identifying the component with "
 								  "name binary enumeration");
 				}
-				else if (qualifier.type & PTS_ITA_FUNC_COMP_TYPE_TRUSTED)
+				else if ((name->get_qualifier(name) >> PTS_ITA_QUALIFIER_TYPE_SIZE)
+					& PTS_ITA_QUALIFIER_TYPE_TRUSTED)
 				{
 					tcg_pts_attr_simple_comp_evid_params_t params;
 
-					/* Set parameters of Simple Component Evidence */
-					if (!set_simple_comp_evid_params(name, &params))
+					if (name->get_name(name) == PTS_ITA_COMP_FUNC_NAME_TBOOT)
 					{
-						DBG1(DBG_IMC, "error occured while setting parameters"
-									  "for Simple Component Evidence");
-						return FALSE;
-					}
+						u_int8_t i;
+						for (i = 1; i <= TBOOT_SEQUENCE_COUNT; i++)
+						{
+							 /* Set parameters of Simple Component Evidence */
+							 if (!set_simple_comp_evid_params(pts, name, i, &params))
+							 {
+								 DBG1(DBG_IMC, "error occured while setting "
+									" parameters for Simple Component Evidence");
+								 return FALSE;
+							 }
+							 /* Buffer Simple Component Evidence attribute */
+							attr = tcg_pts_attr_simple_comp_evid_create(params);
+							evidences->insert_last(evidences, attr);
 
-					/* Get PCR after value from log when TBOOT is measuring entity */
-					if (!(name == PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY ||
-						name == PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE) &&
-						!pts->read_pcr(pts, params.extended_pcr, &params.pcr_after))
+						}
+						break;
+					}
+					else
 					{
-						DBG1(DBG_IMC, "error occured while reading PCR: %d",
-							 params.extended_pcr);
-						return FALSE;
-					}
+						/* Set parameters of Simple Component Evidence */
+						if (!set_simple_comp_evid_params(pts, name, 0, &params))
+						{
+							DBG1(DBG_IMC, "error occured while setting parameters"
+										  "for Simple Component Evidence");
+							return FALSE;
+						}
+						
+						/* Buffer Simple Component Evidence attribute */
+						attr = tcg_pts_attr_simple_comp_evid_create(params);
+						evidences->insert_last(evidences, attr);
 
-					/* Buffer Simple Component Evidence attribute */
-					attr = tcg_pts_attr_simple_comp_evid_create(params);
-					evidences->insert_last(evidences, attr);
-					break;
+						break;
+					}
 				}
 				else
 				{
 					DBG1(DBG_IMC, "Functional Component with unsupported type: %d"
-								  "was requested for evidence", qualifier.type);
+								  "was requested for evidence",
+					(name->get_qualifier(name) >> PTS_ITA_QUALIFIER_TYPE_SIZE));
 					break;
 				}
 			}

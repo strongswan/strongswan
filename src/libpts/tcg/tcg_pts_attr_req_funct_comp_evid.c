@@ -59,7 +59,6 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  */
  
 #define PTS_REQ_FUNCT_COMP_EVID_SIZE		12
-#define PTS_REQ_FUNCT_COMP_FAMILY_MASK		0xC0
 
 /**
  * Private data of an tcg_pts_attr_req_funct_comp_evid_t object.

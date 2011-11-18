@@ -31,6 +31,8 @@ typedef struct tcg_pts_attr_simple_comp_evid_params_t tcg_pts_attr_simple_comp_e
 #include "pts/components/pts_comp_func_name.h" 
 #include "pa_tnc/pa_tnc_attr.h"
 
+#define PTS_SIMPLE_COMP_EVID_FAMILY_MASK			0xC0
+
 /**
  * PTS Simple Component Evidence Flags
  */

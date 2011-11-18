@@ -31,6 +31,11 @@ typedef struct pcr_entry_t pcr_entry_t;
 #include "pts_file_meta.h"
 #include "pts_dh_group.h"
 #include "pts_funct_comp_evid_req.h"
+#include "components/pts_comp_func_name.h"
+#include "components/tcg/tcg_comp_func_name.h"
+#include "components/ita/ita_comp_func_name.h"
+#include "components/ita/ita_comp_tboot.h"
+#include "components/ita/ita_comp_tgrub.h"
 
 #include <library.h>
 #include <utils/linked_list.h>
@@ -60,8 +65,13 @@ typedef struct pcr_entry_t pcr_entry_t;
 #define PCR_TGRUB_CHECKFILE				13
 #define PCR_TGRUB_LOADED_FILES			14
 
-#define TBOOT_POLICY_STR				(const char *)("tboot_pcr17")
-#define TBOOT_MLE_STR					(const char *)("tboot_pcr18")
+#define PCR_DEBUG						16
+
+/**
+ * Number of sequences for functional components
+ */
+#define TBOOT_SEQUENCE_COUNT			2
+#define TGRUB_SEQUENCE_COUNT			6
 
 /**
  * Length of the generated nonce used for calculation of shared secret

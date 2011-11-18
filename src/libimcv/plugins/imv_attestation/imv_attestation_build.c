@@ -209,11 +209,15 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
 			enumerator_t *enumerator;
-			char flags[8];
+			/* TODO: pts_components undeclared */
+			/*char flags[8];
+			int type;
+			*/
 			char *platform_info;
 			pts_funct_comp_evid_req_t *requests = NULL;
 			funct_comp_evid_req_entry_t *entry;
-			int vid, name, qualifier, type;
+			int vid, name, qualifier;
+			
 			bool first_req = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
@@ -244,7 +248,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				entry->sub_comp_depth = 0;
 				entry->name = pts_comp_func_name_create(vid, name, qualifier);
 
-				type = pts_components->get_qualifier(pts_components,
+				/* TODO: pts_components undeclared */
+				/*type = pts_components->get_qualifier(pts_components,
 													 entry->name, &flags);
 
 				DBG2(DBG_TNC, "%N functional component '%N' with qualifier %s '%N'",
@@ -253,7 +258,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					 name, flags,
 					 pts_components->get_qualifier_type_names(pts_components, vid),
 					 type);
-
+				*/
 				if (first_req)
 				{
 					/* Create a requests object */

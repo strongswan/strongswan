@@ -80,7 +80,6 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
 #define PTS_SIMPLE_COMP_EVID_SIZE					40
 #define PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE	20
 #define PTS_SIMPLE_COMP_EVID_RESERVED				0x00
-#define PTS_SIMPLE_COMP_EVID_FAMILY_MASK			0xC0
 
 /**
  * Private data of an tcg_pts_attr_simple_comp_evid_t object.
