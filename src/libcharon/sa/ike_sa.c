@@ -44,6 +44,7 @@
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_delete.h>
 #include <sa/tasks/child_rekey.h>
+#include <sa/tasks/main_mode.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/send_dpd_job.h>
@@ -1129,31 +1130,39 @@ METHOD(ike_sa_t, initiate, status_t,
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
 
-		task = (task_t*)ike_vendor_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_natd_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_post_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		if (this->peer_cfg->use_mobike(this->peer_cfg))
+		if (this->version == IKEV1)
 		{
-			task = (task_t*)ike_mobike_create(&this->public, TRUE);
+			task = (task_t*)main_mode_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 		}
+		else
+		{
+			task = (task_t*)ike_vendor_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_natd_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_auth_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_cert_post_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_config_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			if (this->peer_cfg->use_mobike(this->peer_cfg))
+			{
+				task = (task_t*)ike_mobike_create(&this->public, TRUE);
+				this->task_manager->queue_task(this->task_manager, task);
+			}
 #ifdef ME
-		task = (task_t*)ike_me_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_me_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
 #endif /* ME */
+		}
 	}
 
 #ifdef ME
@@ -1172,15 +1181,22 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
-		task = (task_t*)child_create_create(&this->public, child_cfg, FALSE,
-											tsi, tsr);
-		child_cfg->destroy(child_cfg);
-		if (reqid)
+		if (this->version == IKEV2)
 		{
-			child_create_t *child_create = (child_create_t*)task;
-			child_create->use_reqid(child_create, reqid);
+			task = (task_t*)child_create_create(&this->public, child_cfg, FALSE,
+												tsi, tsr);
+			if (reqid)
+			{
+				child_create_t *child_create = (child_create_t*)task;
+				child_create->use_reqid(child_create, reqid);
+			}
+			this->task_manager->queue_task(this->task_manager, task);
 		}
-		this->task_manager->queue_task(this->task_manager, task);
+		else
+		{
+			/* TODO-IKEv1: create quick mode task */
+		}
+		child_cfg->destroy(child_cfg);
 
 #ifdef ME
 		if (this->peer_cfg->get_mediated_by(this->peer_cfg))

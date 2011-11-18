@@ -154,10 +154,155 @@ METHOD(task_manager_t, retransmit, status_t,
 	return FAILED;
 }
 
+/**
+ * move a task of a specific type from the queue to the active list
+ */
+static bool activate_task(private_task_manager_t *this, task_type_t type)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+	bool found = FALSE;
+
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, (void**)&task))
+	{
+		if (task->get_type(task) == type)
+		{
+			DBG2(DBG_IKE, "  activating %N task", task_type_names, type);
+			this->queued_tasks->remove_at(this->queued_tasks, enumerator);
+			this->active_tasks->insert_last(this->active_tasks, task);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
 METHOD(task_manager_t, initiate, status_t,
 	private_task_manager_t *this)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	task_t *task;
+	message_t *message;
+	host_t *me, *other;
+	status_t status;
+	exchange_type_t exchange = 0;
+
+	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
+	{
+		DBG2(DBG_IKE, "delaying task initiation, %N exchange in progress",
+				exchange_type_names, this->initiating.type);
+		/* do not initiate if we already have a message in the air */
+		return SUCCESS;
+	}
+
+	if (this->active_tasks->get_count(this->active_tasks) == 0)
+	{
+		DBG2(DBG_IKE, "activating new tasks");
+		switch (this->ike_sa->get_state(this->ike_sa))
+		{
+			case IKE_CREATED:
+				if (activate_task(this, MAIN_MODE))
+				{
+					exchange = ID_PROT;
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		DBG2(DBG_IKE, "reinitiating already active tasks");
+		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, (void**)&task))
+		{
+			DBG2(DBG_IKE, "  %N task", task_type_names, task->get_type(task));
+			switch (task->get_type(task))
+			{
+				case MAIN_MODE:
+					exchange = ID_PROT;
+					break;
+				default:
+					continue;
+			}
+			break;
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (exchange == 0)
+	{
+		DBG2(DBG_IKE, "nothing to initiate");
+		/* nothing to do yet... */
+		return SUCCESS;
+	}
+
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+
+	message = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
+	if (exchange != ID_PROT)
+	{
+		/* TODO-IKEv1: Set random message id */
+	}
+	message->set_source(message, me->clone(me));
+	message->set_destination(message, other->clone(other));
+	message->set_exchange_type(message, exchange);
+	this->initiating.type = exchange;
+	this->initiating.retransmitted = 0;
+
+	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
+	{
+		switch (task->build(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				/* processed, but task needs another exchange */
+				break;
+			case FAILED:
+			default:
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				{
+					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				}
+				/* FALL */
+			case DESTROY_ME:
+				/* critical failure, destroy IKE_SA */
+				enumerator->destroy(enumerator);
+				message->destroy(message);
+				flush(this);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* update exchange type if a task changed it */
+	this->initiating.type = message->get_exchange_type(message);
+
+	status = this->ike_sa->generate_message(this->ike_sa, message,
+											&this->initiating.packet);
+	if (status != SUCCESS)
+	{
+		/* message generation failed. There is nothing more to do than to
+		 * close the SA */
+		message->destroy(message);
+		flush(this);
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+		return DESTROY_ME;
+	}
+	message->destroy(message);
+
+	charon->sender->send(charon->sender,
+				this->initiating.packet->clone(this->initiating.packet));
+
+	return SUCCESS;
 }
 
 /**
@@ -310,11 +455,62 @@ static status_t process_request(private_task_manager_t *this,
 	return build_response(this, message);
 }
 
+/**
+ * handle an incoming response message
+ */
+static status_t process_response(private_task_manager_t *this,
+								 message_t *message)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	if (message->get_exchange_type(message) != this->initiating.type)
+	{
+		DBG1(DBG_IKE, "received %N response, but expected %N",
+			 exchange_type_names, message->get_exchange_type(message),
+			 exchange_type_names, this->initiating.type);
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+		return DESTROY_ME;
+	}
+
+	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
+	{
+		switch (task->process(task, message))
+		{
+			case SUCCESS:
+				/* task completed, remove it */
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				/* processed, but task needs another exchange */
+				break;
+			case FAILED:
+			default:
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				/* FALL */
+			case DESTROY_ME:
+				/* critical failure, destroy IKE_SA */
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				enumerator->destroy(enumerator);
+				task->destroy(task);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	this->initiating.packet->destroy(this->initiating.packet);
+	this->initiating.packet = NULL;
+
+	return initiate(this);
+}
+
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	/* TODO-IKEv1: detect request/response */
-	if (TRUE)
+	if (this->active_tasks->get_count(this->active_tasks) == 0)
 	{
 		/* TODO-IKEv1: detect mainmode retransmission */
 		charon->bus->message(charon->bus, msg, TRUE);
@@ -326,8 +522,12 @@ METHOD(task_manager_t, process_message, status_t,
 	}
 	else
 	{
-		/* TODO-IKEv1: handle response */
-		return DESTROY_ME;
+		charon->bus->message(charon->bus, msg, FALSE);
+		if (process_response(this, msg) != SUCCESS)
+		{
+			flush(this);
+			return DESTROY_ME;
+		}
 	}
 	return SUCCESS;
 }

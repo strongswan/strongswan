@@ -48,7 +48,7 @@ struct private_main_mode_t {
 	/**
 	 * IKE config to establish
 	 */
-	ike_cfg_t *config;
+	ike_cfg_t *ike_cfg;
 
 	/**
 	 * selected IKE proposal
@@ -87,8 +87,74 @@ struct private_main_mode_t {
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
-	/* TODO-IKEv1: initiate mainmode */
-	return FAILED;
+	switch (this->state)
+	{
+		case MM_INIT:
+		{
+			sa_payload_t *sa_payload;
+			linked_list_t *proposals;
+
+			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+			DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
+				 this->ike_sa->get_name(this->ike_sa),
+				 this->ike_sa->get_unique_id(this->ike_sa),
+				 this->ike_sa->get_other_host(this->ike_sa));
+			this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
+
+			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
+
+			sa_payload = sa_payload_create_from_proposal_list(
+											SECURITY_ASSOCIATION_V1, proposals);
+			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
+
+			message->add_payload(message, &sa_payload->payload_interface);
+
+			this->state = MM_SA;
+			return NEED_MORE;
+		}
+		case MM_SA:
+		{
+			ke_payload_t *ke_payload;
+			nonce_payload_t *nonce_payload;
+			u_int16_t group;
+			rng_t *rng;
+
+			if (!this->proposal->get_algorithm(this->proposal,
+										DIFFIE_HELLMAN_GROUP, &group, NULL))
+			{
+				DBG1(DBG_IKE, "DH group selection failed");
+				return FAILED;
+			}
+			this->dh = lib->crypto->create_dh(lib->crypto, group);
+			if (!this->dh)
+			{
+				DBG1(DBG_IKE, "negotiated DH group not supported");
+				return FAILED;
+			}
+			ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1,
+															   this->dh);
+			message->add_payload(message, &ke_payload->payload_interface);
+
+			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+			if (!rng)
+			{
+				DBG1(DBG_IKE, "no RNG found to create nonce");
+				return FAILED;
+			}
+			/* TODO-IKEv1: nonce size? */
+			rng->allocate_bytes(rng, 20, &this->nonce_i);
+			rng->destroy(rng);
+
+			nonce_payload = nonce_payload_create(NONCE_V1);
+			nonce_payload->set_nonce(nonce_payload, this->nonce_i);
+			message->add_payload(message, &nonce_payload->payload_interface);
+
+			this->state = MM_KE;
+			return NEED_MORE;
+		}
+		default:
+			return FAILED;
+	}
 }
 
 METHOD(task_t, process_r,  status_t,
@@ -102,7 +168,7 @@ METHOD(task_t, process_r,  status_t,
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
 
-			this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
+			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "%H is initiating a Main Mode",
 				 message->get_source(message));
 			this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
@@ -115,8 +181,8 @@ METHOD(task_t, process_r,  status_t,
 				return FAILED;
 			}
 			list = sa_payload->get_proposals(sa_payload);
-			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE);
+			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
+															list, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -222,8 +288,62 @@ METHOD(task_t, build_r, status_t,
 METHOD(task_t, process_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
-	/* TODO-IKEv1: process main mode as initiator */
-	return FAILED;
+	switch (this->state)
+	{
+		case MM_SA:
+		{
+			linked_list_t *list;
+			sa_payload_t *sa_payload;
+
+			sa_payload = (sa_payload_t*)message->get_payload(message,
+													SECURITY_ASSOCIATION_V1);
+			if (!sa_payload)
+			{
+				DBG1(DBG_IKE, "SA payload missing");
+				return FAILED;
+			}
+			list = sa_payload->get_proposals(sa_payload);
+			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
+															list, FALSE);
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
+			if (!this->proposal)
+			{
+				DBG1(DBG_IKE, "no proposal found");
+				return FAILED;
+			}
+			return NEED_MORE;
+		}
+		case MM_KE:
+		{
+			ke_payload_t *ke_payload;
+			nonce_payload_t *nonce_payload;
+
+			ke_payload = (ke_payload_t*)message->get_payload(message,
+															 KEY_EXCHANGE_V1);
+			if (!ke_payload)
+			{
+				DBG1(DBG_IKE, "KE payload missing");
+				return FAILED;
+			}
+			this->dh_value = ke_payload->get_key_exchange_data(ke_payload);
+			this->dh_value = chunk_clone(this->dh_value);
+			this->dh->set_other_public_value(this->dh, this->dh_value);
+
+			nonce_payload = (nonce_payload_t*)message->get_payload(message,
+																   NONCE_V1);
+			if (!nonce_payload)
+			{
+				DBG1(DBG_IKE, "Nonce payload missing");
+				return FAILED;
+			}
+			this->nonce_r = nonce_payload->get_nonce(nonce_payload);
+			/* TODO-IKEv1: verify nonce length */
+
+			return NEED_MORE;
+		}
+		default:
+			return FAILED;
+	}
 }
 
 METHOD(task_t, get_type, task_type_t,
