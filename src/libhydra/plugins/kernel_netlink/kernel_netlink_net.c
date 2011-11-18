@@ -1542,7 +1542,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		return NULL;
 	}
 	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
-					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_LINK;
+					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
 	if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		DBG1(DBG_KNL, "unable to bind RT event socket");
