@@ -68,7 +68,7 @@ struct pts_component_manager_t {
 	 */
 	void (*remove_vendor)(pts_component_manager_t *this, pen_t vendor_id);
 
-	/*
+	/**
 	 * Return the Functional Component names for a given vendor ID
 	 *
 	 * @param vendor_id				Private Enterprise Number (PEN)
@@ -77,7 +77,7 @@ struct pts_component_manager_t {
 	enum_name_t* (*get_comp_func_names)(pts_component_manager_t *this,
 										pen_t vendor_id);
 
-	/*
+	/**
 	 * Return the Functional Component Qualifier Type names for a given vendor ID
 	 *
 	 * @param vendor_id				Private Enterprise Number (PEN)
@@ -86,7 +86,7 @@ struct pts_component_manager_t {
 	enum_name_t* (*get_qualifier_type_names)(pts_component_manager_t *this,
 											 pen_t vendor_id);
 
-	/*
+	/**
 	 * Return the Qualifier Type and Flags
 	 *
 	 * @param name					Component Functional Name
