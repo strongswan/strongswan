@@ -216,7 +216,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 
 			/* check hashes from database against measurements */
-			e_hash = pts_db->create_hash_enumerator(pts_db,
+			e_hash = pts_db->create_file_hash_enumerator(pts_db,
 							platform_info, algo, file_id, is_dir);
 			if (!measurements->verify(measurements, e_hash, is_dir))
 			{

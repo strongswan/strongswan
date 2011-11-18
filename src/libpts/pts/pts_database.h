@@ -68,7 +68,8 @@ struct pts_database_t {
 	* @param is_dir			TRUE if directory was measured
 	* @return				enumerator over all matching measurement hashes
 	*/
-	enumerator_t* (*create_hash_enumerator)(pts_database_t *this, char *product,
+	enumerator_t* (*create_file_hash_enumerator)(
+											pts_database_t *this, char *product,
 											pts_meas_algorithms_t algo,
 											int id, bool is_dir);
 
@@ -77,11 +78,12 @@ struct pts_database_t {
 	*
 	* @param product		software product (os, vpn client, etc.)
 	* @param algo			hash algorithm used for measurement
-	* @param comp_name		value of path column in files table
+	* @param comp_name		functional component name object
 	* @return				enumerator over all matching measurement hashes
 	*/
-	enumerator_t* (*create_comp_hash_enumerator)(pts_database_t *this, char *product,
-									pts_meas_algorithms_t algo, char *comp_name);
+	enumerator_t* (*create_comp_hash_enumerator)(pts_database_t *this,
+						char *product, pts_meas_algorithms_t algo,
+						pts_comp_func_name_t *comp_name);
 
 	/**
 	* Destroys a pts_database_t object.

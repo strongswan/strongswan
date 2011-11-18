@@ -85,7 +85,7 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
 }
 
 
-METHOD(pts_database_t, create_hash_enumerator, enumerator_t*,
+METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
 	int id, bool is_dir)
 {
@@ -114,17 +114,20 @@ METHOD(pts_database_t, create_hash_enumerator, enumerator_t*,
 }
 
 METHOD(pts_database_t, create_comp_hash_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product,
-	pts_meas_algorithms_t algo, char *comp_name)
+	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
+	pts_comp_func_name_t *comp_name)
 {
 	enumerator_t *e;
 	
 	e = this->db->query(this->db,
-				"SELECT fh.hash FROM file_hashes AS fh "
-				"JOIN files AS f ON fh.file = f.id "
-				"JOIN products AS p ON fh.product = p.id "
-				"WHERE p.name = ? AND f.path = ? AND fh.algo = ? ",
-				DB_TEXT, product, DB_TEXT, comp_name, DB_INT, algo, DB_BLOB);
+				"SELECT ch.hash FROM component_hashes AS ch "
+				"JOIN components AS c ON ch.component = c.id "
+				"JOIN products AS p ON ch.product = p.id "
+				"WHERE p.name = ? AND c.vendor_id = ? "
+				"AND c.name = ? AND c.qualifier = ? AND ch.algo = ? ",
+				DB_TEXT, product, DB_INT, comp_name->vendor_id,
+				DB_INT, comp_name->name, DB_INT, comp_name->qualifier,
+				DB_INT, algo, DB_BLOB);
 
 	return e;
 }
@@ -148,7 +151,7 @@ pts_database_t *pts_database_create(char *uri)
 			.create_file_meas_enumerator = _create_file_meas_enumerator,
 			.create_file_meta_enumerator = _create_file_meta_enumerator,
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
-			.create_hash_enumerator = _create_hash_enumerator,
+			.create_file_hash_enumerator = _create_file_hash_enumerator,
 			.create_comp_hash_enumerator = _create_comp_hash_enumerator,
 			.destroy = _destroy,
 		},

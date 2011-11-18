@@ -176,18 +176,6 @@ INSERT INTO files (
   0, '/etc/tnc_config', 1
 );
 
-INSERT INTO files (
-  type, path
-) VALUES (
-  0, 'tboot_pcr17'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  0, 'tboot_pcr18'
-);
-
 /* Components */
 
 INSERT INTO components (
@@ -243,18 +231,6 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
-  1, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  1, 24
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
   2, 2
 );
 
@@ -285,18 +261,6 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
-  2, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  2, 24
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
   3, 3
 );
 
@@ -310,18 +274,6 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   3, 22
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  3, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  3, 24
 );
 
 INSERT INTO product_file (
@@ -357,18 +309,6 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
-  4, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  4, 24
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
   5, 3
 );
 
@@ -399,18 +339,6 @@ INSERT INTO product_file (
 INSERT INTO product_file (
   product, file
 ) VALUES (
-  5, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  5, 24
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
   6, 3
 );
 
@@ -436,18 +364,6 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   6, 22
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  6, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  6, 24
 );
 
 INSERT INTO product_file (
@@ -486,28 +402,30 @@ INSERT INTO product_file (
   7, 22
 );
 
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  7, 23
-);
+/* Product Component */
 
-INSERT INTO product_file (
-  product, file
+INSERT INTO product_component (
+  product, component
 ) VALUES (
-  7, 24
+  4, 1
 );
 
 INSERT INTO product_component (
-  product, component, sequence
+  product, component
 ) VALUES (
-  7, 1, 1
+  4, 2
 );
 
 INSERT INTO product_component (
-  product, component, sequence
+  product, component
 ) VALUES (
-  7, 2, 2
+  7, 1
+);
+
+INSERT INTO product_component (
+  product, component
+) VALUES (
+  7, 2
 );
 
 /* File Hashes */
@@ -1377,14 +1295,14 @@ INSERT INTO file_hashes (
   20, 7, 7, 8192, X'84200bd318bb022915150842ddf4002e061ef593604ad0d07021dc662cc40bfa749cce084ddf25d0e5137f6380f613d8'
 );
 
-INSERT INTO file_hashes (
-  file, product, algo, hash
+INSERT INTO component_hashes (
+  component, product, sequence, algo, hash
 ) VALUES (
-  23, 4, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
+  2, 4, 1, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
 );
 
-INSERT INTO file_hashes (
-  file, product, algo, hash
+INSERT INTO component_hashes (
+  component, product, sequence, algo, hash
 ) VALUES (
-  24, 4, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
+  2, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
