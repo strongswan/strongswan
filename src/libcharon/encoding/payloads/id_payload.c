@@ -161,14 +161,26 @@ static encoding_rule_t encodings_v1[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-
 METHOD(payload_t, verify, status_t,
 	private_id_payload_t *this)
 {
-	if (this->id_type == 0 || this->id_type == 4)
+	bool bad_length = FALSE;
+
+	switch (this->id_type)
 	{
-		/* reserved IDs */
-		DBG1(DBG_ENC, "received ID with reserved type %d", this->id_type);
+		case ID_IPV4_ADDR_RANGE:
+		case ID_IPV4_ADDR_SUBNET:
+			bad_length = this->id_data.len != 8;
+			break;
+		case ID_IPV6_ADDR_RANGE:
+		case ID_IPV6_ADDR_SUBNET:
+			bad_length = this->id_data.len != 32;
+			break;
+	}
+	if (bad_length)
+	{
+		DBG1(DBG_ENC, "invalid %N length (%d bytes)",
+			 id_type_names, this->id_type, this->id_data.len);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -222,6 +234,71 @@ METHOD(id_payload_t, get_identification, identification_t*,
 	return identification_create_from_encoding(this->id_type, this->id_data);
 }
 
+/**
+ * Create a traffic selector from an range ID
+ */
+static traffic_selector_t *get_ts_from_range(private_id_payload_t *this,
+											 ts_type_t type)
+{
+	return traffic_selector_create_from_bytes(this->protocol_id, type,
+		chunk_create(this->id_data.ptr, this->id_data.len / 2), this->port,
+		chunk_skip(this->id_data, this->id_data.len / 2), this->port ?: 65535);
+}
+
+/**
+ * Create a traffic selector from an subnet ID
+ */
+static traffic_selector_t *get_ts_from_subnet(private_id_payload_t *this,
+											  ts_type_t type)
+{
+	chunk_t net, netmask;
+	int i;
+
+	net = chunk_create(this->id_data.ptr, this->id_data.len / 2);
+	netmask = chunk_skip(this->id_data, this->id_data.len / 2);
+	for (i = 0; i < net.len; i++)
+	{
+		netmask.ptr[i] = (netmask.ptr[i] ^ 0xFF) | net.ptr[i];
+	}
+	return traffic_selector_create_from_bytes(this->protocol_id, type,
+								net, this->port, netmask, this->port ?: 65535);
+}
+
+METHOD(id_payload_t, get_ts, traffic_selector_t*,
+	private_id_payload_t *this)
+{
+	switch (this->id_type)
+	{
+		case ID_IPV4_ADDR_SUBNET:
+			if (this->id_data.len == 8)
+			{
+				return get_ts_from_subnet(this, TS_IPV4_ADDR_RANGE);
+			}
+			break;
+		case ID_IPV6_ADDR_SUBNET:
+			if (this->id_data.len == 32)
+			{
+				return get_ts_from_subnet(this, TS_IPV6_ADDR_RANGE);
+			}
+			break;
+		case ID_IPV4_ADDR_RANGE:
+			if (this->id_data.len == 8)
+			{
+				return get_ts_from_range(this, TS_IPV4_ADDR_RANGE);
+			}
+			break;
+		case ID_IPV6_ADDR_RANGE:
+			if (this->id_data.len == 32)
+			{
+				return get_ts_from_range(this, TS_IPV6_ADDR_RANGE);
+			}
+			break;
+		default:
+			break;
+	}
+	return NULL;
+}
+
 METHOD2(payload_t, id_payload_t, destroy, void,
 	private_id_payload_t *this)
 {
@@ -249,6 +326,7 @@ id_payload_t *id_payload_create(payload_type_t type)
 				.destroy = _destroy,
 			},
 			.get_identification = _get_identification,
+			.get_ts = _get_ts,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
@@ -270,6 +348,66 @@ id_payload_t *id_payload_create_from_identification(payload_type_t type,
 	this->id_data = chunk_clone(id->get_encoding(id));
 	this->id_type = id->get_type(id);
 	this->payload_length += this->id_data.len;
+
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
+{
+	private_id_payload_t *this;
+	u_int8_t mask;
+	host_t *net;
+
+	this = (private_id_payload_t*)id_payload_create(ID_V1);
+
+	if (ts->to_subnet(ts, &net, &mask))
+	{
+		u_int8_t netmask[16], len, byte;
+
+		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE)
+		{
+			this->id_type = ID_IPV4_ADDR_SUBNET;
+			len = 4;
+		}
+		else
+		{
+			this->id_type = ID_IPV6_ADDR_SUBNET;
+			len = 16;
+		}
+		memset(netmask, 0, sizeof(netmask));
+		for (byte = 0; byte < sizeof(netmask); byte++)
+		{
+			if (mask < 8)
+			{
+				netmask[byte] = 0xFF << (8 - mask);
+				break;
+			}
+			netmask[byte] = 0xFF;
+			mask -= 8;
+		}
+		this->id_data = chunk_cat("cc", net->get_address(net),
+								  chunk_create(netmask, len));
+	}
+	else
+	{
+		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE)
+		{
+			this->id_type = ID_IPV4_ADDR_RANGE;
+		}
+		else
+		{
+			this->id_type = ID_IPV6_ADDR_RANGE;
+		}
+		this->id_data = chunk_cat("cc",
+							ts->get_from_address(ts), ts->get_to_address(ts));
+	}
+	this->port = ts->get_from_port(ts);
+	this->protocol_id = ts->get_protocol(ts);
+
+	net->destroy(net);
 
 	return &this->public;
 }

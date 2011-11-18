@@ -28,6 +28,7 @@ typedef struct id_payload_t id_payload_t;
 #include <library.h>
 #include <utils/identification.h>
 #include <encoding/payloads/payload.h>
+#include <selectors/traffic_selector.h>
 
 /**
  * Object representing an IKEv1 or an IKEv2 ID payload.
@@ -45,6 +46,13 @@ struct id_payload_t {
 	 * @return				identification_t object
 	 */
 	identification_t *(*get_identification) (id_payload_t *this);
+
+	/**
+	 * Creates a traffic selector form a ID_ADDR_SUBNET/RANGE identity.
+	 *
+	 * @return				traffic selector, NULL on failure
+	 */
+	traffic_selector_t* (*get_ts)(id_payload_t *this);
 
 	/**
 	 * Destroys an id_payload_t object.
@@ -69,5 +77,13 @@ id_payload_t *id_payload_create(payload_type_t payload_type);
  */
 id_payload_t *id_payload_create_from_identification(payload_type_t type,
 													identification_t *id);
+
+/**
+ * Create an IKEv1 ID_ADDR_SUBNET/RANGE identity from a traffic selector.
+ *
+ * @param ts		traffic selector
+ * @return			ID_V1 id_paylad_t object.
+ */
+id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts);
 
 #endif /** ID_PAYLOAD_H_ @}*/
