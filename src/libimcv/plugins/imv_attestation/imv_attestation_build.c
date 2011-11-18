@@ -209,16 +209,13 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
 			enumerator_t *enumerator;
-			/* TODO: pts_components undeclared */
-			/*char flags[8];
-			int type;
-			*/
+			char flags[8];
 			char *platform_info;
 			pts_funct_comp_evid_req_t *requests = NULL;
 			funct_comp_evid_req_entry_t *entry;
-			int vid, name, qualifier;
-			
-			bool first_req = TRUE;
+			int vid, name, qualifier, type;
+			enum_name_t *names, *types;
+			bool first = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
@@ -248,22 +245,25 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				entry->sub_comp_depth = 0;
 				entry->name = pts_comp_func_name_create(vid, name, qualifier);
 
-				/* TODO: pts_components undeclared */
-				/*type = pts_components->get_qualifier(pts_components,
-													 entry->name, &flags);
-
-				DBG2(DBG_TNC, "%N functional component '%N' with qualifier %s '%N'",
-					 pen_names, vid,
-					 pts_components->get_comp_func_names(pts_components, vid),
-					 name, flags,
-					 pts_components->get_qualifier_type_names(pts_components, vid),
-					 type);
-				*/
-				if (first_req)
+				names = pts_components->get_comp_func_names(pts_components, vid);
+				types = pts_components->get_qualifier_type_names(pts_components, vid);
+				if (names && types)
+				{
+					type = pts_components->get_qualifier(pts_components,
+														 entry->name, &flags);
+					DBG2(DBG_TNC, "%N component evidence request '%N' [%s] '%N'",
+						 pen_names, vid, names, name, flags, types, type);
+				}
+				else
+				{
+					DBG2(DBG_TNC, "0x%06x component evidence request 0x%08x 0x%02x",
+						 vid, name, qualifier);
+				}
+				if (first)
 				{
 					/* Create a requests object */
 					requests = pts_funct_comp_evid_req_create();
-					first_req = FALSE;
+					first = FALSE;
 				}
 				requests->add(requests, entry);
 				attestation_state->add_comp_evid_request(attestation_state, entry);
