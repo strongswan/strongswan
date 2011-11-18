@@ -1404,7 +1404,7 @@ METHOD(message_t, get_packet_data, chunk_t,
 	{
 		return chunk_empty;
 	}
-	return chunk_clone(this->packet->get_data(this->packet));
+	return this->packet->get_data(this->packet);
 }
 
 METHOD(message_t, parse_header, status_t,

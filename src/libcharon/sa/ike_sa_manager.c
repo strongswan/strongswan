@@ -1004,11 +1004,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	if (is_init && this->hasher)
 	{
 		/* First request. Check for an IKE_SA with such a message hash. */
-		chunk_t data, hash;
+		chunk_t hash;
 
-		data = message->get_packet_data(message);
-		this->hasher->allocate_hash(this->hasher, data, &hash);
-		chunk_free(&data);
+		this->hasher->allocate_hash(this->hasher,
+									message->get_packet_data(message), &hash);
 
 		if (get_entry_by_hash(this, id, hash, &entry, &segment) == SUCCESS)
 		{

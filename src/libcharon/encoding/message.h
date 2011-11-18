@@ -344,9 +344,9 @@ struct message_t {
 	packet_t * (*get_packet) (message_t *this);
 
 	/**
-	 * Returns a clone of the internal stored packet_t data.
+	 * Returns a chunk pointing to internal packet_t data.
 	 *
-	 * @return			clone of the internal stored packet_t data.
+	 * @return			packet data.
 	 */
 	chunk_t (*get_packet_data) (message_t *this);
 

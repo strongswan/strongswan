@@ -135,7 +135,7 @@ static void process_auth_request(private_pretend_auth_t *this,
 static void process_init_response(private_pretend_auth_t *this,
 								  ike_sa_t *ike_sa, message_t *message)
 {
-	this->ike_init = message->get_packet_data(message);
+	this->ike_init = chunk_clone(message->get_packet_data(message));
 }
 
 /**
