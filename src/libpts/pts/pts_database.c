@@ -79,7 +79,7 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
 				"SELECT c.vendor_id, c.name, c.qualifier FROM components AS c "
 				"JOIN product_component AS pc ON c.id = pc.component "
 				"JOIN products AS p ON p.id = pc.product "
-				"WHERE p.name = ? ORDER BY pf.order",
+				"WHERE p.name = ? ORDER BY pc.sequence",
 				DB_TEXT, product, DB_INT, DB_INT, DB_INT);
 	return e;
 }
