@@ -203,8 +203,9 @@ struct traffic_selector_t {
 	 *
 	 * @param net		converted subnet (has to be freed)
 	 * @param mask		converted net mask
+	 * @return			TRUE if traffic selector matches exactly to the subnet
 	 */
-	void (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
+	bool (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
 
 	/**
 	 * Destroys the ts object
