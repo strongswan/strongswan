@@ -46,146 +46,160 @@ INSERT INTO products (
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/lib/i386-linux-gnu/libdl.so.2', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/lib/x86_64-linux-gnu/libdl.so.2', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/lib/libdl.so.2', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/sbin/iptables', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/lib/libxtables.so.5', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/lib/libxtables.so.2', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   1, '/lib/xtables/', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_udp.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_tcp.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_esp.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_policy.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_conntrack.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libipt_SNAT.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libipt_DNAT.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libipt_MASQUERADE.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libipt_LOG.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, '/sbin/ip6tables', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libip6t_LOG.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_mark.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   0, 'libxt_MARK.so', 1
 );
 
 INSERT INTO files (
   type, path, measurement
- ) VALUES (
+) VALUES (
   1, '/lib/iptables', 1
 );
 
 INSERT INTO files (
   type, path, metadata
- ) VALUES (
+) VALUES (
   0, '/etc/tnc_config', 1
 );
 
 INSERT INTO files (
-  type, path, component
- ) VALUES (
-  0, 'tboot_pcr17', 1
+  type, path
+) VALUES (
+  0, 'tboot_pcr17'
 );
 
 INSERT INTO files (
-  type, path, component
- ) VALUES (
-  0, 'tboot_pcr18', 1
+  type, path
+) VALUES (
+  0, 'tboot_pcr18'
+);
+
+/* Components */
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 1, 33  /* ITA TGRUB */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 2, 33  /* ITA TBOOT */
 );
 
 /* Product-File */
@@ -482,6 +496,18 @@ INSERT INTO product_file (
   product, file
 ) VALUES (
   7, 24
+);
+
+INSERT INTO product_component (
+  product, component, sequence
+) VALUES (
+  7, 1, 1
+);
+
+INSERT INTO product_component (
+  product, component, sequence
+) VALUES (
+  7, 2, 2
 );
 
 /* File Hashes */

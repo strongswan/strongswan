@@ -6,8 +6,15 @@ CREATE TABLE files (
   type INTEGER NOT NULL,
   path TEXT NOT NULL,
   measurement INTEGER DEFAULT 0,
-  metadata INTEGER DEFAULT 0,
-  component INTEGER DEFAULT 0
+  metadata INTEGER DEFAULT 0
+);
+
+DROP TABLE IF EXISTS components;
+CREATE TABLE components (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  vendor_id INTEGER NOT NULL,
+  name INTEGER NOT NULL,
+  qualifier INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS products;
@@ -25,6 +32,14 @@ CREATE TABLE product_file (
   product INTEGER NOT NULL,
   file INTEGER NOT NULL,
   PRIMARY KEY (product, file)
+);
+
+DROP TABLE IF EXISTS product_component;
+CREATE TABLE product_component (
+  product INTEGER NOT NULL,
+  component INTEGER NOT NULL,
+  sequence INTEGER DEFAULT 0,
+  PRIMARY KEY (product, component)
 );
 
 DROP TABLE IF EXISTS file_hashes;

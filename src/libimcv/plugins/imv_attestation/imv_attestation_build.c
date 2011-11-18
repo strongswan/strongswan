@@ -16,6 +16,7 @@
 #include "imv_attestation_build.h"
 #include "imv_attestation_state.h"
 
+#include <libpts.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_dh_nonce_params_req.h>
@@ -208,9 +209,11 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
 			enumerator_t *enumerator;
-			char *platform_info, *pathname;
+			char flags[8];
+			char *platform_info;
 			pts_funct_comp_evid_req_t *requests = NULL;
 			funct_comp_evid_req_entry_t *entry;
+			int vid, name, qualifier, type;
 			bool first_req = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
@@ -229,41 +232,28 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			DBG1(DBG_IMV, "platform is '%s'", platform_info);
 
 			
-			enumerator = pts_db->create_comp_evid_enumerator(pts_db,
-															 platform_info);
+			enumerator = pts_db->create_comp_evid_enumerator(pts_db, platform_info);
 			if (!enumerator)
 			{
 				break;
 			}
-			while (enumerator->enumerate(enumerator, &pathname))
+			while (enumerator->enumerate(enumerator, &vid, &name, &qualifier))
 			{
 				entry = malloc_thing(funct_comp_evid_req_entry_t);
-				
 				entry->flags = PTS_REQ_FUNC_COMP_FLAG_PCR;
 				entry->sub_comp_depth = 0;
-				entry->vendor_id = PEN_ITA;
-				entry->family = PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM;
-				entry->qualifier.kernel = FALSE;
-				entry->qualifier.sub_component = FALSE;
-				entry->qualifier.type = PTS_ITA_FUNC_COMP_TYPE_TRUSTED;
-				
-				if (strcmp(pathname, TBOOT_POLICY_STR) == 0)
-				{
-					entry->name = PTS_ITA_FUNC_COMP_NAME_TBOOT_POLICY;
-				}
-				else if (strcmp(pathname, TBOOT_MLE_STR) == 0)
-				{
-					entry->name = PTS_ITA_FUNC_COMP_NAME_TBOOT_MLE;
-				}
-				else
-				{
-					DBG1(DBG_IMV, "Unknown functional component name: \"%s\"",
-						 pathname);
-					enumerator->destroy(enumerator);
-					return FALSE;
-				}
+				entry->name = pts_comp_func_name_create(vid, name, qualifier);
 
-				
+				type = pts_components->get_qualifier(pts_components,
+													 entry->name, &flags);
+
+				DBG2(DBG_TNC, "%N functional component '%N' with qualifier %s '%N'",
+					 pen_names, vid,
+					 pts_components->get_comp_func_names(pts_components, vid),
+					 name, flags,
+					 pts_components->get_qualifier_type_names(pts_components, vid),
+					 type);
+
 				if (first_req)
 				{
 					/* Create a requests object */
