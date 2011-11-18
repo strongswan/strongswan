@@ -125,8 +125,9 @@ METHOD(pts_database_t, create_comp_hash_enumerator, enumerator_t*,
 				"JOIN products AS p ON ch.product = p.id "
 				"WHERE p.name = ? AND c.vendor_id = ? "
 				"AND c.name = ? AND c.qualifier = ? AND ch.algo = ? ",
-				DB_TEXT, product, DB_INT, comp_name->vendor_id,
-				DB_INT, comp_name->name, DB_INT, comp_name->qualifier,
+				DB_TEXT, product, DB_INT, comp_name->get_vendor_id(comp_name),
+				DB_INT, comp_name->get_name(comp_name),
+				DB_INT, comp_name->get_qualifier(comp_name),
 				DB_INT, algo, DB_BLOB);
 
 	return e;

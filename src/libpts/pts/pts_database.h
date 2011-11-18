@@ -24,6 +24,7 @@
 typedef struct pts_database_t pts_database_t;
 
 #include "pts_meas_algo.h"
+#include "components/pts_comp_func_name.h"
 #include <library.h>
 
 /**
@@ -68,10 +69,9 @@ struct pts_database_t {
 	* @param is_dir			TRUE if directory was measured
 	* @return				enumerator over all matching measurement hashes
 	*/
-	enumerator_t* (*create_file_hash_enumerator)(
-											pts_database_t *this, char *product,
-											pts_meas_algorithms_t algo,
-											int id, bool is_dir);
+	enumerator_t* (*create_file_hash_enumerator)(pts_database_t *this,
+								char *product, pts_meas_algorithms_t algo,
+								int id, bool is_dir);
 
 	/**
 	* Get stored measurement hash for functional component entries
