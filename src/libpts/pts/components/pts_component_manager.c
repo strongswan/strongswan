@@ -227,20 +227,19 @@ METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
 		{
 			qualifier = name->get_qualifier(name);
 			size = entry->qualifier_type_size;
-			flag = (1 << size);
 
 			/* mask qualifier type field */
-			type = qualifier & (flag - 1);
+			type = qualifier & ((1 << size) - 1);
 
 			/* determine flags */
-			size = PTS_QUALIFIER_SIZE - size;
+			flag = (1 << (PTS_QUALIFIER_SIZE - 1));
 			if (flags)
 			{
-				for (i = 0 ; i < size; i++)
+				for (i = 0 ; i < PTS_QUALIFIER_SIZE - size; i++)
 				{
-					flags[size-i-1] = (qualifier & flag) ? 
-									   entry->qualifier_flag_names[i] : '.';
-					flag <<= 1;
+					flags[i] = (qualifier & flag) ?
+								entry->qualifier_flag_names[i] : '.';
+					flag >>= 1;
 				}
 				flags[size] = '\0';
 			}
