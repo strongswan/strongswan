@@ -238,10 +238,11 @@ METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
 			{
 				for (i = 0 ; i < size; i++)
 				{
-					flags[size-i+1] = (qualifier & flag) ? 
+					flags[size-i-1] = (qualifier & flag) ? 
 									   entry->qualifier_flag_names[i] : '.';
 					flag <<= 1;
 				}
+				flags[size] = '\0';
 			}
 		}
 	}
