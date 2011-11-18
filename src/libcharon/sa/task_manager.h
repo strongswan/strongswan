@@ -194,4 +194,12 @@ struct task_manager_t {
 	void (*destroy) (task_manager_t *this);
 };
 
+/**
+ * Create a task manager instance for the correct IKE version.
+ *
+ * @param ike_sa			IKE_SA to create a task manager for
+ * @return					task manager implementation for IKE version
+ */
+task_manager_t *task_manager_create(ike_sa_t *ike_sa);
+
 #endif /** TASK_MANAGER_H_ @}*/
