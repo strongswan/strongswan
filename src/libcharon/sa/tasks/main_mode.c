@@ -22,6 +22,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/id_payload.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -49,6 +50,21 @@ struct private_main_mode_t {
 	 * IKE config to establish
 	 */
 	ike_cfg_t *ike_cfg;
+
+	/**
+	 * Peer config to use
+	 */
+	peer_cfg_t *peer_cfg;
+
+	/**
+	 * Local authentication configuration
+	 */
+	auth_cfg_t *my_auth;
+
+	/**
+	 * Remote authentication configuration
+	 */
+	auth_cfg_t *other_auth;
 
 	/**
 	 * selected IKE proposal
@@ -80,9 +96,23 @@ struct private_main_mode_t {
 		MM_INIT,
 		MM_SA,
 		MM_KE,
-		MM_ID,
+		MM_AUTH,
 	} state;
 };
+
+/**
+ * Get the first authentcation config from peer config
+ */
+static auth_cfg_t *get_auth_cfg(private_main_mode_t *this, bool local)
+{
+	enumerator_t *enumerator;
+	auth_cfg_t *cfg = NULL;
+
+	enumerator = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg,
+															local);
+	enumerator->enumerate(enumerator, &cfg);
+	return cfg;
+}
 
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
@@ -152,12 +182,44 @@ METHOD(task_t, build_i, status_t,
 			this->state = MM_KE;
 			return NEED_MORE;
 		}
+		case MM_KE:
+		{
+			id_payload_t *id_payload;
+			identification_t *id;
+
+			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->peer_cfg->get_ref(this->peer_cfg);
+
+			this->my_auth = get_auth_cfg(this, TRUE);
+			this->other_auth = get_auth_cfg(this, FALSE);
+			if (!this->my_auth || !this->other_auth)
+			{
+				DBG1(DBG_CFG, "no auth config found");
+				return FAILED;
+			}
+			id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
+			if (!id)
+			{
+				DBG1(DBG_CFG, "own identity not known");
+				return FAILED;
+			}
+
+			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
+
+			id_payload = id_payload_create_from_identification(ID_V1, id);
+			message->add_payload(message, &id_payload->payload_interface);
+
+			/* TODO-IKEv1: authenticate */
+
+			this->state = MM_AUTH;
+			return NEED_MORE;
+		}
 		default:
 			return FAILED;
 	}
 }
 
-METHOD(task_t, process_r,  status_t,
+METHOD(task_t, process_r, status_t,
 	private_main_mode_t *this, message_t *message)
 {
 	switch (this->state)
@@ -172,6 +234,10 @@ METHOD(task_t, process_r,  status_t,
 			DBG0(DBG_IKE, "%H is initiating a Main Mode",
 				 message->get_source(message));
 			this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
+
+			this->ike_sa->update_hosts(this->ike_sa,
+									   message->get_destination(message),
+									   message->get_source(message), TRUE);
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													SECURITY_ASSOCIATION_V1);
@@ -236,6 +302,55 @@ METHOD(task_t, process_r,  status_t,
 			this->state = MM_KE;
 			return NEED_MORE;
 		}
+		case MM_KE:
+		{
+			enumerator_t *enumerator;
+			id_payload_t *id_payload;
+			identification_t *id, *any;
+
+			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
+			if (!id_payload)
+			{
+				DBG1(DBG_IKE, "IDii payload missing");
+				return FAILED;
+			}
+
+			id = id_payload->get_identification(id_payload);
+			any = identification_create_from_encoding(ID_ANY, chunk_empty);
+			enumerator = charon->backends->create_peer_cfg_enumerator(
+									charon->backends,
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa),
+									any, id);
+			if (!enumerator->enumerate(enumerator, &this->peer_cfg))
+			{
+				DBG1(DBG_IKE, "no peer config found");
+				id->destroy(id);
+				any->destroy(any);
+				enumerator->destroy(enumerator);
+				return FAILED;
+			}
+			this->peer_cfg->get_ref(this->peer_cfg);
+			enumerator->destroy(enumerator);
+			any->destroy(any);
+
+			this->ike_sa->set_other_id(this->ike_sa, id);
+
+			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
+
+			this->my_auth = get_auth_cfg(this, TRUE);
+			this->other_auth = get_auth_cfg(this, FALSE);
+			if (!this->my_auth || !this->other_auth)
+			{
+				DBG1(DBG_CFG, "auth config missing");
+				return FAILED;
+			}
+
+			/* TODO-IKEv1: authenticate peer */
+
+			this->state = MM_AUTH;
+			return NEED_MORE;
+		}
 		default:
 			return FAILED;
 	}
@@ -279,6 +394,37 @@ METHOD(task_t, build_r, status_t,
 			nonce_payload->set_nonce(nonce_payload, this->nonce_r);
 			message->add_payload(message, &nonce_payload->payload_interface);
 			return NEED_MORE;
+		}
+		case MM_AUTH:
+		{
+			id_payload_t *id_payload;
+			identification_t *id;
+
+			id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
+			if (!id)
+			{
+				DBG1(DBG_CFG, "own identity not known");
+				return FAILED;
+			}
+
+			this->ike_sa->set_my_id(this->ike_sa, id);
+
+			id_payload = id_payload_create_from_identification(ID_V1, id);
+			message->add_payload(message, &id_payload->payload_interface);
+
+			/* TODO-IKEv1: authenticate us */
+
+			/* TODO-IKEv1: check for XAUTH rounds, queue them */
+			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+				 this->ike_sa->get_name(this->ike_sa),
+				 this->ike_sa->get_unique_id(this->ike_sa),
+				 this->ike_sa->get_my_host(this->ike_sa),
+				 this->ike_sa->get_my_id(this->ike_sa),
+				 this->ike_sa->get_other_host(this->ike_sa),
+				 this->ike_sa->get_other_id(this->ike_sa));
+			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+			return SUCCESS;
 		}
 		default:
 			return FAILED;
@@ -341,6 +487,41 @@ METHOD(task_t, process_i, status_t,
 
 			return NEED_MORE;
 		}
+		case MM_AUTH:
+		{
+			id_payload_t *id_payload;
+			identification_t *id;
+
+			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
+			if (!id_payload)
+			{
+				DBG1(DBG_IKE, "IDir payload missing");
+				return FAILED;
+			}
+			id = id_payload->get_identification(id_payload);
+			if (!id->matches(id, this->other_auth->get(this->other_auth,
+													   AUTH_RULE_IDENTITY)))
+			{
+				DBG1(DBG_IKE, "IDir does not match");
+				id->destroy(id);
+				return FAILED;
+			}
+			this->ike_sa->set_other_id(this->ike_sa, id);
+
+			/* TODO-IKEv1: verify auth */
+
+			/* TODO-IKEv1: check for XAUTH rounds, queue them */
+			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+				 this->ike_sa->get_name(this->ike_sa),
+				 this->ike_sa->get_unique_id(this->ike_sa),
+				 this->ike_sa->get_my_host(this->ike_sa),
+				 this->ike_sa->get_my_id(this->ike_sa),
+				 this->ike_sa->get_other_host(this->ike_sa),
+				 this->ike_sa->get_other_id(this->ike_sa));
+			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+			return SUCCESS;
+		}
 		default:
 			return FAILED;
 	}
@@ -361,6 +542,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	private_main_mode_t *this)
 {
+	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
 	free(this->dh_value.ptr);
