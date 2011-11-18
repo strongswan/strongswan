@@ -489,8 +489,7 @@ METHOD(stroke_list_t, status, void,
 									charon->backends, NULL, NULL, NULL, NULL);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != IKEV2 ||
-				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
+			if (name && !streq(name, peer_cfg->get_name(peer_cfg)))
 			{
 				continue;
 			}

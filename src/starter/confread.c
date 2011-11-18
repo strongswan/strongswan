@@ -466,7 +466,7 @@ static void handle_dns_failure(const char *label, starter_end_t *end,
 			plog("# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
 				label, label);
 		}
-		else if (!end->host || conn->keyexchange == KEY_EXCHANGE_IKEV1)
+		else if (!end->host)
 		{
 			/* declare an error */
 			cfg->err++;
