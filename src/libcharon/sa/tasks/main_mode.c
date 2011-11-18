@@ -171,8 +171,7 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			/* TODO-IKEv1: nonce size? */
-			rng->allocate_bytes(rng, 20, &this->nonce_i);
+			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_i);
 			rng->destroy(rng);
 
 			nonce_payload = nonce_payload_create(NONCE_V1);
@@ -297,7 +296,6 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 			this->nonce_i = nonce_payload->get_nonce(nonce_payload);
-			/* TODO-IKEv1: verify nonce length */
 
 			this->state = MM_KE;
 			return NEED_MORE;
@@ -386,8 +384,7 @@ METHOD(task_t, build_r, status_t,
 				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			/* TODO-IKEv1: nonce size? */
-			rng->allocate_bytes(rng, 20, &this->nonce_r);
+			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_r);
 			rng->destroy(rng);
 
 			nonce_payload = nonce_payload_create(NONCE_V1);
@@ -483,7 +480,6 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 			}
 			this->nonce_r = nonce_payload->get_nonce(nonce_payload);
-			/* TODO-IKEv1: verify nonce length */
 
 			return NEED_MORE;
 		}

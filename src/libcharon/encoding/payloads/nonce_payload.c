@@ -19,6 +19,7 @@
 
 #include "nonce_payload.h"
 
+#include <daemon.h>
 #include <encoding/payloads/encodings.h>
 
 typedef struct private_nonce_payload_t private_nonce_payload_t;
@@ -103,8 +104,26 @@ static encoding_rule_t encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_nonce_payload_t *this)
 {
-	if (this->nonce.len < 16 || this->nonce.len > 256)
+	bool bad_length = FALSE;
+
+	if (this->nonce.len > 256)
 	{
+		bad_length = TRUE;
+	}
+	if (this->type == NONCE &&
+		this->nonce.len < 16)
+	{
+		bad_length = TRUE;
+	}
+	if (this->type == NONCE_V1 &&
+		this->nonce.len < 8)
+	{
+		bad_length = TRUE;
+	}
+	if (bad_length)
+	{
+		DBG1(DBG_ENC, "%N payload has invalid length (%d bytes)",
+			 payload_type_names, this->type, this->nonce.len);
 		return FAILED;
 	}
 	return SUCCESS;
