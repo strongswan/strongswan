@@ -2,7 +2,8 @@
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
+	-I$(top_srcdir)/src/libcharon \
+	-I$(top_srcdir)/src/libradius
 
 AM_CFLAGS = -rdynamic
 
@@ -11,6 +12,7 @@ noinst_LTLIBRARIES = libstrongswan-tnc-pdp.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnc-pdp.la
 libstrongswan_tnc_pdp_la_LIBADD = \
+	$(top_builddir)/src/libradius/libradius.la \
 	$(top_builddir)/src/libtls/libtls.la \
 	$(top_builddir)/src/libtnccs/libtnccs.la
 endif

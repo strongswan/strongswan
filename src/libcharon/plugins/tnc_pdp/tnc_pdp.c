@@ -18,6 +18,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <radius_message.h>
+
 #include <daemon.h>
 #include <debug.h>
 #include <threading/thread.h>
@@ -28,7 +30,7 @@ typedef struct private_tnc_pdp_t private_tnc_pdp_t;
 /**
  * Maximum size of a RADIUS IP packet
  */
-#define MAX_PACKET 2048
+#define MAX_PACKET 4096
 
 /**
  * private data of tnc_pdp_t
@@ -128,6 +130,7 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 {
 	while (TRUE)
 	{
+		radius_message_t *request;
 		char buffer[MAX_PACKET];
 		int max_fd = 0, selected = 0, bytes_read = 0;
 		fd_set rfds;
@@ -198,6 +201,16 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 		source = host_create_from_sockaddr((sockaddr_t*)&src);
 		DBG2(DBG_NET, "received RADIUS packet from %#H", source);
 		DBG3(DBG_NET, "%b", buffer, bytes_read);
+		request = radius_message_parse_response(chunk_create(buffer, bytes_read));
+		if (request)
+		{
+			DBG2(DBG_NET, "received valid RADIUS message");
+			request->destroy(request);
+		}
+		else
+		{
+			DBG1(DBG_NET, "received invalid RADIUS message, ignored");
+		}
 		source->destroy(source);
 	}
 	return JOB_REQUEUE_FAIR;
