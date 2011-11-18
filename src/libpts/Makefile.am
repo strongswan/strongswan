@@ -9,7 +9,7 @@ libpts_la_SOURCES = \
 	libpts.h libpts.c \
 	pts/pts.h pts/pts.c \
 	pts/pts_error.h pts/pts_error.c \
-	pts/pts_proto_caps.h pts/pts_funct_comp_name.h \
+	pts/pts_proto_caps.h \
 	pts/pts_funct_comp_evid_req.h pts/pts_funct_comp_evid_req.c \
 	pts/pts_creds.h pts/pts_creds.c \
 	pts/pts_database.h pts/pts_database.c \
