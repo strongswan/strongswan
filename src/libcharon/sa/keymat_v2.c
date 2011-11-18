@@ -127,7 +127,7 @@ static int lookup_keylen(keylen_entry_t *list, int algo)
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	private_keymat_v2_t *this, diffie_hellman_group_t group)
 {
-	return lib->crypto->create_dh(lib->crypto, group);;
+	return lib->crypto->create_dh(lib->crypto, group);
 }
 
 /**
@@ -244,7 +244,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 	return TRUE;
 }
 
-METHOD(keymat_t, derive_ike_keys, bool,
+METHOD(keymat_v2_t, derive_ike_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
@@ -420,7 +420,7 @@ METHOD(keymat_t, derive_ike_keys, bool,
 	return TRUE;
 }
 
-METHOD(keymat_t, derive_child_keys, bool,
+METHOD(keymat_v2_t, derive_child_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
@@ -525,7 +525,7 @@ METHOD(keymat_t, derive_child_keys, bool,
 	return TRUE;
 }
 
-METHOD(keymat_t, get_skd, pseudo_random_function_t,
+METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 	private_keymat_v2_t *this, chunk_t *skd)
 {
 	*skd = this->skd;
@@ -538,7 +538,7 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return in ? this->aead_in : this->aead_out;
 }
 
-METHOD(keymat_t, get_auth_octets, chunk_t,
+METHOD(keymat_v2_t, get_auth_octets, chunk_t,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, identification_t *id, char reserved[3])
 {
@@ -568,7 +568,7 @@ METHOD(keymat_t, get_auth_octets, chunk_t,
 #define IKEV2_KEY_PAD "Key Pad for IKEv2"
 #define IKEV2_KEY_PAD_LENGTH 17
 
-METHOD(keymat_t, get_psk_sig, chunk_t,
+METHOD(keymat_v2_t, get_psk_sig, chunk_t,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t secret, identification_t *id, char reserved[3])
 {
@@ -617,14 +617,14 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 		.public = {
 			.keymat = {
 				.create_dh = _create_dh,
-				.derive_ike_keys = _derive_ike_keys,
-				.derive_child_keys = _derive_child_keys,
-				.get_skd = _get_skd,
 				.get_aead = _get_aead,
-				.get_auth_octets = _get_auth_octets,
-				.get_psk_sig = _get_psk_sig,
 				.destroy = _destroy,
 			},
+			.derive_ike_keys = _derive_ike_keys,
+			.derive_child_keys = _derive_child_keys,
+			.get_skd = _get_skd,
+			.get_auth_octets = _get_auth_octets,
+			.get_psk_sig = _get_psk_sig,
 		},
 		.initiator = initiator,
 		.prf_alg = PRF_UNDEFINED,

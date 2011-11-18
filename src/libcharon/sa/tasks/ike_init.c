@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <sa/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -68,7 +69,7 @@ struct private_ike_init_t {
 	/**
 	 * Keymat derivation (from IKE_SA)
 	 */
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	/**
 	 * nonce chosen by us
@@ -199,8 +200,8 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
-					this->dh = this->keymat->create_dh(this->keymat,
-													   this->dh_group);
+					this->dh = this->keymat->keymat.create_dh(
+										&this->keymat->keymat, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -245,7 +246,8 @@ METHOD(task_t, build_i, status_t,
 	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+												  this->dh_group);
 		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "configured DH group %N not supported",
@@ -329,7 +331,7 @@ METHOD(task_t, process_r,  status_t,
 static bool derive_keys(private_ike_init_t *this,
 						chunk_t nonce_i, chunk_t nonce_r)
 {
-	keymat_t *old_keymat;
+	keymat_v2_t *old_keymat;
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
 	ike_sa_id_t *id;
@@ -338,7 +340,7 @@ static bool derive_keys(private_ike_init_t *this,
 	if (this->old_sa)
 	{
 		/* rekeying: Include old SKd, use old PRF, apply SPI */
-		old_keymat = this->old_sa->get_keymat(this->old_sa);
+		old_keymat = (keymat_v2_t*)this->old_sa->get_keymat(this->old_sa);
 		prf_alg = old_keymat->get_skd(old_keymat, &skd);
 		if (this->initiator)
 		{
@@ -517,10 +519,11 @@ METHOD(task_t, migrate, void,
 	chunk_free(&this->other_nonce);
 
 	this->ike_sa = ike_sa;
-	this->keymat = ike_sa->get_keymat(ike_sa);
+	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
 	DESTROY_IF(this->dh);
-	this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+	this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+											  this->dh_group);
 }
 
 METHOD(task_t, destroy, void,
@@ -567,7 +570,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		.ike_sa = ike_sa,
 		.initiator = initiator,
 		.dh_group = MODP_NONE,
-		.keymat = ike_sa->get_keymat(ike_sa),
+		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.old_sa = old_sa,
 	);
 

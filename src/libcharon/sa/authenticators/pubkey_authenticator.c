@@ -19,6 +19,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/auth_payload.h>
+#include <sa/keymat_v2.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -64,7 +65,7 @@ METHOD(authenticator_t, build, status_t,
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
@@ -110,7 +111,7 @@ METHOD(authenticator_t, build, status_t,
 					key_type_names, private->get_type(private));
 			return status;
 	}
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
 									 this->nonce, id, this->reserved);
 	if (private->sign(private, scheme, octets, &auth_data))
@@ -144,7 +145,7 @@ METHOD(authenticator_t, process, status_t,
 	key_type_t key_type = KEY_ECDSA;
 	signature_scheme_t scheme;
 	status_t status = NOT_FOUND;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	if (!auth_payload)
@@ -174,7 +175,7 @@ METHOD(authenticator_t, process, status_t,
 	}
 	auth_data = auth_payload->get_data(auth_payload);
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
 									 this->nonce, id, this->reserved);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);

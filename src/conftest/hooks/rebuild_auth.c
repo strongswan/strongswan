@@ -15,6 +15,7 @@
 
 #include "hook.h"
 
+#include <sa/keymat_v2.h>
 #include <encoding/generator.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/auth_payload.h>
@@ -62,7 +63,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 	identification_t *id;
 	char reserved[3];
 	generator_t *generator;
@@ -137,7 +138,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 			id->destroy(id);
 			return FALSE;
 	}
-	keymat = ike_sa->get_keymat(ike_sa);
+	keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_init,
 									 this->nonce, id, reserved);
 	if (!private->sign(private, scheme, octets, &auth_data))

@@ -18,6 +18,7 @@
 #include "child_create.h"
 
 #include <daemon.h>
+#include <sa/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
 #include <credentials/certificates/x509.h>
 #include <encoding/payloads/sa_payload.h>
@@ -109,7 +110,7 @@ struct private_child_create_t {
 	/**
 	 * IKE_SAs keymat
 	 */
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	/**
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
@@ -683,7 +684,8 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				if (!this->initiator)
 				{
 					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-					this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+					this->dh = this->keymat->keymat.create_dh(
+										&this->keymat->keymat, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -815,7 +817,8 @@ METHOD(task_t, build_i, status_t,
 
 	if (this->dh_group != MODP_NONE)
 	{
-		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+												  this->dh_group);
 	}
 
 	if (this->config->use_ipcomp(this->config))
@@ -1307,7 +1310,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.packet_tsi = tsi ? tsi->clone(tsi) : NULL,
 		.packet_tsr = tsr ? tsr->clone(tsr) : NULL,
 		.dh_group = MODP_NONE,
-		.keymat = ike_sa->get_keymat(ike_sa),
+		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.mode = MODE_TUNNEL,
 		.tfcv3 = TRUE,
 		.ipcomp = IPCOMP_NONE,

@@ -16,6 +16,7 @@
 #include "eap_authenticator.h"
 
 #include <daemon.h>
+#include <sa/keymat_v2.h>
 #include <sa/authenticators/eap/eap_method.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/eap_payload.h>
@@ -376,7 +377,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		if (vendor)
 		{
 			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d ",
-				 		  "(id 0x%02X)", type, vendor, in->get_identifier(in));
+						  "(id 0x%02X)", type, vendor, in->get_identifier(in));
 		}
 		else
 		{
@@ -419,7 +420,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	chunk_t auth_data, recv_auth_data;
 	identification_t *other_id;
 	auth_cfg_t *auth;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
 														 AUTHENTICATION);
@@ -429,7 +430,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 		return FALSE;
 	}
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	auth_data = keymat->get_psk_sig(keymat, TRUE, init, nonce,
 									this->msk, other_id, this->reserved);
 	recv_auth_data = auth_payload->get_data(auth_payload);
@@ -459,10 +460,10 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message,
 	auth_payload_t *auth_payload;
 	identification_t *my_id;
 	chunk_t auth_data;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);

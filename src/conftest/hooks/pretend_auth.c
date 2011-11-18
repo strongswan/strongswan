@@ -15,6 +15,7 @@
 
 #include "hook.h"
 
+#include <sa/keymat_v2.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/auth_payload.h>
@@ -190,7 +191,7 @@ static bool build_auth(private_pretend_auth_t *this,
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	auth = auth_cfg_create();
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, this->id, auth);
@@ -235,7 +236,7 @@ static bool build_auth(private_pretend_auth_t *this,
 					key_type_names, private->get_type(private));
 			return FALSE;
 	}
-	keymat = ike_sa->get_keymat(ike_sa);
+	keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_init,
 									 this->nonce, this->id, this->reserved);
 	if (!private->sign(private, scheme, octets, &auth_data))

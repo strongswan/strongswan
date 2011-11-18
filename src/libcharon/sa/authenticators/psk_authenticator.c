@@ -18,6 +18,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/auth_payload.h>
+#include <sa/keymat_v2.h>
 
 typedef struct private_psk_authenticator_t private_psk_authenticator_t;
 
@@ -59,9 +60,9 @@ METHOD(authenticator_t, build, status_t,
 	auth_payload_t *auth_payload;
 	shared_key_t *key;
 	chunk_t auth_data;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
@@ -96,14 +97,14 @@ METHOD(authenticator_t, process, status_t,
 	enumerator_t *enumerator;
 	bool authenticated = FALSE;
 	int keys_found = 0;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	if (!auth_payload)
 	{
 		return FAILED;
 	}
-	keymat = this->ike_sa->get_keymat(this->ike_sa);
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);

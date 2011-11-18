@@ -81,20 +81,6 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return NULL;
 }
 
-METHOD(keymat_t, get_auth_octets, chunk_t,
-	private_keymat_v1_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3])
-{
-	return chunk_empty;
-}
-
-METHOD(keymat_t, get_psk_sig, chunk_t,
-	private_keymat_v1_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, chunk_t secret, identification_t *id, char reserved[3])
-{
-	return chunk_empty;
-}
-
 METHOD(keymat_t, destroy, void,
 	private_keymat_v1_t *this)
 {
@@ -113,12 +99,7 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 		.public = {
 			.keymat = {
 				.create_dh = _create_dh,
-				.derive_ike_keys = _derive_ike_keys,
-				.derive_child_keys = _derive_child_keys,
-				.get_skd = _get_skd,
 				.get_aead = _get_aead,
-				.get_auth_octets = _get_auth_octets,
-				.get_psk_sig = _get_psk_sig,
 				.destroy = _destroy,
 			},
 		},
