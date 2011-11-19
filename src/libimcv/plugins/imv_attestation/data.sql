@@ -405,27 +405,27 @@ INSERT INTO product_file (
 /* Product Component */
 
 INSERT INTO product_component (
-  product, component
+  product, component, sequence
 ) VALUES (
-  4, 1
+  4, 1, 1
 );
 
 INSERT INTO product_component (
-  product, component
+  product, component, sequence
 ) VALUES (
-  4, 2
+  4, 2, 2
 );
 
 INSERT INTO product_component (
-  product, component
+  product, component, sequence
 ) VALUES (
-  7, 1
+  7, 1, 1
 );
 
 INSERT INTO product_component (
-  product, component
+  product, component, sequence
 ) VALUES (
-  7, 2
+  7, 2, 2
 );
 
 /* File Hashes */
@@ -1296,13 +1296,13 @@ INSERT INTO file_hashes (
 );
 
 INSERT INTO component_hashes (
-  component, product, sequence, algo, hash
+  component, product, algo, hash
 ) VALUES (
-  2, 4, 1, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
+  2, 4, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
 );
 
 INSERT INTO component_hashes (
-  component, product, sequence, algo, hash
+  component, product, algo, hash
 ) VALUES (
-  2, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
+  2, 4, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
