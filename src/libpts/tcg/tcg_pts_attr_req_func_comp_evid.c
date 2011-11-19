@@ -245,7 +245,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 						  "Component Evidence Component Functional Name");
 			goto end;
 		}
-		qualifier = fam_and_qualifier & !PTS_REQ_FUNC_COMP_FAMILY_MASK;
+		qualifier = fam_and_qualifier & ~PTS_REQ_FUNC_COMP_FAMILY_MASK;
 
 		entry = malloc_thing(entry_t);
 		entry->flags = flags;
