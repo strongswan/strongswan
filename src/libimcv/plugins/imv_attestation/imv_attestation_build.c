@@ -245,7 +245,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				comp = pts_components->create(pts_components, comp_name);
 				if (!comp)
 				{
-					DBG2(DBG_TNC, "    not registered: removed from request");
+					DBG2(DBG_IMV, "    not registered: removed from request");
 					comp_name->destroy(comp_name);
 					continue;
 				}
