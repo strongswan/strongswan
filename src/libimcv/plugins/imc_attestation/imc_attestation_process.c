@@ -448,18 +448,14 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_func_comp_evid_t*)attr;
 
-			DBG1(DBG_IMC, "IMV requests evidence for %d functional components",
+			DBG1(DBG_IMC, "evidence requested for %d functional components",
 						   attr_cast->get_count(attr_cast));
 
 			e = attr_cast->create_enumerator(attr_cast);
 			while (e->enumerate(e, &flags, &depth, &name))
 			{
+				name->log(name, "  ");
 				negotiated_caps = pts->get_proto_caps(pts);
-
-				DBG1(DBG_IMC, "Requested Evidence flags: %d, depth: %d,"
-							  " vendor_id: %d, qualifier %d, name: %d",
-								flags, depth, name->get_vendor_id(name),
-								name->get_qualifier(name), name->get_name(name));
 
 				if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
 				{
@@ -497,12 +493,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					DBG1(DBG_IMC, "current version of Attestation IMC does not "
 							"support sub component measurement deeper than "
 							"zero. Measuring top level component only.");
-					return FALSE;
-				}
-				if (name->get_vendor_id(name) != PEN_ITA)
-				{
-					DBG1(DBG_IMC, "current version of Attestation IMC supports"
-								  "only functional component namings by ITA");
 					return FALSE;
 				}
 

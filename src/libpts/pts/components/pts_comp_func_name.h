@@ -70,6 +70,13 @@ struct pts_comp_func_name_t {
 	pts_comp_func_name_t* (*clone)(pts_comp_func_name_t *this);
 
 	/**
+	 * Write PTS Component Functional Name information to the standard logfile
+	 *
+	 * @param label			Label added to log output
+	 */
+	void (*log)(pts_comp_func_name_t *this, char *label);
+
+	/**
 	 * Destroys a pts_component_t object.
 	 */
 	void (*destroy)(pts_comp_func_name_t *this);
@@ -79,12 +86,11 @@ struct pts_comp_func_name_t {
 /**
  * Create a PTS Component Functional Name object
  *
- * @param vendor_id			PTS Component Functional Name Vendor ID
+ * @param vid				PTS Component Functional Name Vendor ID
  * @param name				PTS Component Functional Name
  * @param					PTS Component Functional Name Qualifier
  */
-pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vendor_id, 
-												u_int32_t name,
+pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vid, u_int32_t name,
 												u_int8_t qualifier);
 
 #endif /** PTS_FUNC_COMP_NAME_H_ @}*/

@@ -210,11 +210,11 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		{
 			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			enumerator_t *enumerator;
-			char flags[8], *platform_info;
+			char *platform_info;
 			pts_component_t *comp;
 			pts_comp_func_name_t *comp_name;
-			int vid, name, qualifier, type;
-			enum_name_t *names, *types;
+			int vid, name, qualifier;
+			u_int8_t flags;
 			bool first = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
@@ -236,28 +236,16 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			{
 				break;
 			}
+			DBG2(DBG_IMV, "evidence request by");
 			while (enumerator->enumerate(enumerator, &vid, &name, &qualifier))
 			{
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
+				comp_name->log(comp_name, "  ");
 
-				names = pts_components->get_comp_func_names(pts_components, vid);
-				types = pts_components->get_qualifier_type_names(pts_components, vid);
-				if (names && types)
-				{
-					type = pts_components->get_qualifier(pts_components,
-														 comp_name, flags);
-					DBG2(DBG_TNC, "%N component evidence request '%N' [%s] '%N'",
-						 pen_names, vid, names, name, flags, types, type);
-				}
-				else
-				{
-					DBG2(DBG_TNC, "0x%06x component evidence request 0x%08x 0x%02x",
-						 vid, name, qualifier);
-				}
 				comp = pts_components->create(pts_components, comp_name);
 				if (!comp)
 				{
-					DBG2(DBG_TNC, "  functional component not registered");
+					DBG2(DBG_TNC, "    not registered: removed from request");
 					comp_name->destroy(comp_name);
 					continue;
 				}
@@ -268,9 +256,10 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					attr->set_noskip_flag(attr, TRUE);
 					first = FALSE;
 				}
+				flags = comp->get_evidence_flags(comp);
+				/* TODO check flags against negotiated_caps */
 				attr_cast = (tcg_pts_attr_req_func_comp_evid_t *)attr;
-				attr_cast->add_component(attr, comp->get_evidence_flags(comp),
-										 0, comp_name);
+				attr_cast->add_component(attr_cast, flags, 0, comp_name);
 			}
 			enumerator->destroy(enumerator);
 

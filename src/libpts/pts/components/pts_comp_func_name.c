@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include "libpts.h"
 #include "pts/components/pts_comp_func_name.h"
 
 #include <debug.h>
@@ -34,7 +35,7 @@ struct private_pts_comp_func_name_t {
 	/**
 	 * PTS Component Functional Name Vendor ID
 	 */
-	u_int32_t vendor_id;
+	u_int32_t vid;
 
 	/**
 	 * PTS Component Functional Name
@@ -51,7 +52,7 @@ struct private_pts_comp_func_name_t {
 METHOD(pts_comp_func_name_t, get_vendor_id, u_int32_t,
 	private_pts_comp_func_name_t *this)
 {
-	return this->vendor_id;
+	return this->vid;
 }
 
 METHOD(pts_comp_func_name_t, get_name, u_int32_t,
@@ -69,8 +70,7 @@ METHOD(pts_comp_func_name_t, get_qualifier, u_int8_t,
 static bool equals(private_pts_comp_func_name_t *this,
 				   private_pts_comp_func_name_t *other)
 {
-	if (this->vendor_id != other->vendor_id ||
-		this->name  != other->name)
+	if (this->vid != other->vid || this->name != other->name)
 	{
 		return FALSE;
 	}
@@ -95,6 +95,29 @@ METHOD(pts_comp_func_name_t, clone_, pts_comp_func_name_t*,
 	return &clone->public;
 }
 
+METHOD(pts_comp_func_name_t, log_, void,
+	private_pts_comp_func_name_t *this, char *label)
+{
+	enum_name_t *names, *types;
+	char flags[8];
+	int type;
+
+	names = pts_components->get_comp_func_names(pts_components, this->vid);
+	types = pts_components->get_qualifier_type_names(pts_components, this->vid);
+	type =  pts_components->get_qualifier(pts_components, &this->public, flags);
+
+	if (names && types)
+	{
+		DBG2(DBG_TNC, "%s%N functional component '%N' [%s] '%N'",
+			 label, pen_names, this->vid, names, this->name, flags, types, type);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "%s0x%06x functional component 0x%08x 0x%02x",
+			 label, this->vid, this->name, this->qualifier);
+	}
+}
+
 METHOD(pts_comp_func_name_t, destroy, void,
 	private_pts_comp_func_name_t *this)
 {
@@ -104,8 +127,7 @@ METHOD(pts_comp_func_name_t, destroy, void,
 /**
  * See header
  */
-pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vendor_id, 
-												u_int32_t name,
+pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vid, u_int32_t name,
 												u_int8_t qualifier)
 {
 	private_pts_comp_func_name_t *this;
@@ -117,9 +139,10 @@ pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vendor_id,
 			.get_qualifier = _get_qualifier,
 			.equals = (bool(*)(pts_comp_func_name_t*,pts_comp_func_name_t*))equals,
 			.clone = _clone_,
+			.log = _log_,
 			.destroy = _destroy,
 		},
-		.vendor_id = vendor_id,
+		.vid = vid,
 		.name = name,
 		.qualifier = qualifier,
 	);

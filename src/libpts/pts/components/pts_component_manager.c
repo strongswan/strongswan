@@ -119,7 +119,7 @@ METHOD(pts_component_manager_t, add_vendor, void,
 	entry->components = linked_list_create();
 
 	this->list->insert_last(this->list, entry);
-	DBG2(DBG_TNC, "added %N functional component namespace",
+	DBG2(DBG_PTS, "added %N functional component namespace",
 		 pen_names, vendor_id);
 }
 
@@ -183,7 +183,7 @@ METHOD(pts_component_manager_t, add_component, void,
 			component->create = create;
 
 			entry->components->insert_last(entry->components, component);
-			DBG2(DBG_TNC, "added %N functional component \"%N\"",
+			DBG2(DBG_PTS, "added %N functional component '%N'",
 				 pen_names, vendor_id,
 				 get_comp_func_names(this, vendor_id), name);
 		}
@@ -204,7 +204,7 @@ METHOD(pts_component_manager_t, remove_vendor, void,
 		{
 			this->list->remove_at(this->list, enumerator);
 			vendor_entry_destroy(entry);
-			DBG2(DBG_TNC, "removed %N functional component namespace",
+			DBG2(DBG_PTS, "removed %N functional component namespace",
 				 pen_names, vendor_id);
 		}
 	}
@@ -232,10 +232,11 @@ METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
 			type = qualifier & ((1 << size) - 1);
 
 			/* determine flags */
+			size = PTS_QUALIFIER_SIZE - size;
 			flag = (1 << (PTS_QUALIFIER_SIZE - 1));
 			if (flags)
 			{
-				for (i = 0 ; i < PTS_QUALIFIER_SIZE - size; i++)
+				for (i = 0 ; i < size; i++)
 				{
 					flags[i] = (qualifier & flag) ?
 								entry->qualifier_flag_names[i] : '.';
