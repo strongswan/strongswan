@@ -22,7 +22,7 @@
 #include "tcg/tcg_pts_attr_tpm_version_info.h"
 #include "tcg/tcg_pts_attr_get_aik.h"
 #include "tcg/tcg_pts_attr_aik.h"
-#include "tcg/tcg_pts_attr_req_funct_comp_evid.h"
+#include "tcg/tcg_pts_attr_req_func_comp_evid.h"
 #include "tcg/tcg_pts_attr_gen_attest_evid.h"
 #include "tcg/tcg_pts_attr_simple_comp_evid.h"
 #include "tcg/tcg_pts_attr_simple_evid_final.h"
@@ -31,12 +31,12 @@
 #include "tcg/tcg_pts_attr_req_file_meta.h"
 #include "tcg/tcg_pts_attr_unix_file_meta.h"
 
-ENUM_BEGIN(tcg_attr_names,	TCG_PTS_REQ_FUNCT_COMP_EVID,
-							TCG_PTS_REQ_FUNCT_COMP_EVID,
+ENUM_BEGIN(tcg_attr_names,	TCG_PTS_REQ_FUNC_COMP_EVID,
+							TCG_PTS_REQ_FUNC_COMP_EVID,
 	"Request Functional Component Evidence");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_GEN_ATTEST_EVID,
 							TCG_PTS_GEN_ATTEST_EVID,
-							TCG_PTS_REQ_FUNCT_COMP_EVID,
+							TCG_PTS_REQ_FUNC_COMP_EVID,
 	"Generate Attestation Evidence");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_SIMPLE_COMP_EVID,
 							TCG_PTS_SIMPLE_COMP_EVID,
@@ -177,8 +177,8 @@ pa_tnc_attr_t* tcg_attr_create_from_data(u_int32_t type, chunk_t value)
 			return tcg_pts_attr_get_aik_create_from_data(value);
 		case TCG_PTS_AIK:
 			return tcg_pts_attr_aik_create_from_data(value);
-		case TCG_PTS_REQ_FUNCT_COMP_EVID:
-			return tcg_pts_attr_req_funct_comp_evid_create_from_data(value);
+		case TCG_PTS_REQ_FUNC_COMP_EVID:
+			return tcg_pts_attr_req_func_comp_evid_create_from_data(value);
 		case TCG_PTS_GEN_ATTEST_EVID:
 			return tcg_pts_attr_gen_attest_evid_create_from_data(value);
 		case TCG_PTS_SIMPLE_COMP_EVID:

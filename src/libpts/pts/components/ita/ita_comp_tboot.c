@@ -17,6 +17,7 @@
 #include "ita_comp_tboot.h"
 #include "ita_comp_func_name.h"
 
+#include "pts/pts_func_comp_evid_req.h"
 #include "pts/components/pts_component.h"
 
 #include <debug.h>
@@ -45,6 +46,12 @@ METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
 	pts_ita_comp_tboot_t *this)
 {
 	return this->name;
+}
+
+METHOD(pts_component_t, get_evidence_flags, u_int8_t,
+	pts_ita_comp_tboot_t *this)
+{
+	return PTS_REQ_FUNC_COMP_FLAG_PCR;
 }
 
 METHOD(pts_component_t, measure, bool,
@@ -78,6 +85,7 @@ pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier)
 	INIT(this,
 		.public = {
 			.get_comp_func_name = _get_comp_func_name,
+			.get_evidence_flags = _get_evidence_flags,
 			.measure = _measure,
 			.verify = _verify,
 			.destroy = _destroy,

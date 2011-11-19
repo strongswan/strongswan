@@ -48,7 +48,7 @@ enum tcg_attr_t {
 	TCG_PTS_AIK =                         0x0E000000,
 
 	/* PTS-based Attestation Evidence */
-	TCG_PTS_REQ_FUNCT_COMP_EVID =         0x00100000,
+	TCG_PTS_REQ_FUNC_COMP_EVID =          0x00100000,
 	TCG_PTS_GEN_ATTEST_EVID =             0x00200000,
 	TCG_PTS_SIMPLE_COMP_EVID =            0x00300000,
 	TCG_PTS_SIMPLE_EVID_FINAL =           0x00400000,

@@ -556,10 +556,10 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 				attestation_state->get_file_meas_request_count(attestation_state));
 			attestation_state->set_measurement_error(attestation_state);
 		}
-		if (attestation_state->get_comp_evid_request_count(attestation_state))
+		if (attestation_state->get_component_count(attestation_state))
 		{
-			DBG1(DBG_IMV, "failure due to %d pending simple component evidences",
-				attestation_state->get_comp_evid_request_count(attestation_state));
+			DBG1(DBG_IMV, "failure due to %d components waiting for evidence",
+				 attestation_state->get_component_count(attestation_state));
 			attestation_state->set_measurement_error(attestation_state);
 		}
 		if (attestation_state->get_measurement_error(attestation_state))

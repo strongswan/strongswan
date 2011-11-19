@@ -14,22 +14,16 @@
  */
 
 /**
- * @defgroup pts_funct_comp_evid_req pts_funct_comp_evid_req
+ * @defgroup pts_func_comp_evid_req pts_func_comp_evid_req
  * @{ @ingroup pts
  */
 
-#ifndef PTS_FUNCT_COMP_EVID_REQ_H_
-#define PTS_FUNCT_COMP_EVID_REQ_H_
+#ifndef PTS_FUNC_COMP_EVID_REQ_H_
+#define PTS_FUNC_COMP_EVID_REQ_H_
 
-typedef struct pts_funct_comp_evid_req_t pts_funct_comp_evid_req_t;
-typedef enum pts_attr_req_funct_comp_evid_flag_t pts_attr_req_funct_comp_evid_flag_t;
-typedef struct funct_comp_evid_req_entry_t funct_comp_evid_req_entry_t;
-
-#include "pts/components/pts_comp_func_name.h"
+typedef enum pts_attr_req_func_comp_evid_flag_t pts_attr_req_func_comp_evid_flag_t;
 
 #include <library.h>
-
-#define PTS_REQ_FUNCT_COMP_FAM_BIN_ENUM		0x00
 
 /**
  * PTS Request Functional Component Evidence Flags
@@ -38,60 +32,11 @@ enum pts_attr_req_funct_comp_evid_flag_t {
 	/** Transitive Trust Chain flag */
 	PTS_REQ_FUNC_COMP_FLAG_TTC =				(1<<7),
 	/** Verify Component flag */
-	PTS_REQ_FUNC_COMP_FLAG_VER =				 (1<<6),
+	PTS_REQ_FUNC_COMP_FLAG_VER =				(1<<6),
 	/** Current Evidence flag */
-	PTS_REQ_FUNC_COMP_FLAG_CURR =				 (1<<5),
+	PTS_REQ_FUNC_COMP_FLAG_CURR =				(1<<5),
 	/** PCR Information flag */
-	PTS_REQ_FUNC_COMP_FLAG_PCR =				 (1<<4),
+	PTS_REQ_FUNC_COMP_FLAG_PCR =				(1<<4),
 };
-
-/**
- * PTS Functional Component Evidence Request entry
- */
-struct funct_comp_evid_req_entry_t {
-	pts_attr_req_funct_comp_evid_flag_t flags;
-	u_int32_t sub_comp_depth;
-	pts_comp_func_name_t *name;
-};
-
-/**
- * Class storing PTS Functional Component Evidence Request
- */
-struct pts_funct_comp_evid_req_t {
-
-	/**
-	 * Get the number of requested components
-	 *
-	 * @return				Number of requested components
-	 */
-	int (*get_req_count)(pts_funct_comp_evid_req_t *this);
-
-	/**
-	 * Add a PTS File Measurement
-	 *
-	 * @param entry			PTS Functional Component Evidence Request entry		
-	 */
-	void (*add)(pts_funct_comp_evid_req_t *this,
-									funct_comp_evid_req_entry_t *entry);
-
-	/**
-	  * Create a PTS Functional Component Evidence Request enumerator
-	  *
-	  * @return				Enumerator returning flags, sub-component depth and
-	  *						functional component name 
-	  */
-	enumerator_t* (*create_enumerator)(pts_funct_comp_evid_req_t *this);
-
-	/**
-	 * Destroys a pts_funct_comp_evid_req_t object.
-	 */
-	void (*destroy)(pts_funct_comp_evid_req_t *this);
-
-};
-
-/**
- * Creates a pts_funct_comp_evid_req_t object
- */
-pts_funct_comp_evid_req_t* pts_funct_comp_evid_req_create();
 
 #endif /** PTS_FUNCT_COMP_EVID_REQ_H_ @}*/

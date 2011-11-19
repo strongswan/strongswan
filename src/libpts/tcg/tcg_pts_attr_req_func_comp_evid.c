@@ -13,14 +13,15 @@
  * for more details.
  */
 
-#include "tcg_pts_attr_req_funct_comp_evid.h"
+#include "tcg_pts_attr_req_func_comp_evid.h"
 
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
+#include <utils/linked_list.h>
 #include <debug.h>
 
-typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_req_funct_comp_evid_t;
+typedef struct private_tcg_pts_attr_req_func_comp_evid_t private_tcg_pts_attr_req_func_comp_evid_t;
 
 /**
  * Request Functional Component Evidence
@@ -58,17 +59,18 @@ typedef struct private_tcg_pts_attr_req_funct_comp_evid_t private_tcg_pts_attr_r
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
  
-#define PTS_REQ_FUNCT_COMP_EVID_SIZE		12
+#define PTS_REQ_FUNC_COMP_EVID_SIZE		12
+#define PTS_REQ_FUNC_COMP_FAMILY_MASK	0xC0
 
 /**
- * Private data of an tcg_pts_attr_req_funct_comp_evid_t object.
+ * Private data of an tcg_pts_attr_req_func_comp_evid_t object.
  */
-struct private_tcg_pts_attr_req_funct_comp_evid_t {
+struct private_tcg_pts_attr_req_func_comp_evid_t {
 
 	/**
-	 * Public members of tcg_pts_attr_req_funct_comp_evid_t
+	 * Public members of tcg_pts_attr_req_func_comp_evid_t
 	 */
-	tcg_pts_attr_req_funct_comp_evid_t public;
+	tcg_pts_attr_req_func_comp_evid_t public;
 
 	/**
 	 * Attribute vendor ID
@@ -91,55 +93,92 @@ struct private_tcg_pts_attr_req_funct_comp_evid_t {
 	bool noskip_flag;
 
 	/**
-	 * PTS Functional Component Evidence Requests
+	 * List of Functional Components
 	 */
-	pts_funct_comp_evid_req_t *requests;
+	linked_list_t *list;
 };
 
+typedef struct entry_t entry_t;
+
+/**
+ * Functional component entry
+ */
+struct entry_t {
+	u_int8_t flags;
+	u_int32_t depth;
+	pts_comp_func_name_t *name;
+};
+
+/**
+ * Enumerate functional component entries
+ */
+static bool entry_filter(void *null, entry_t **entry, u_int8_t *flags,
+						 void *i2, u_int32_t *depth, void *i3,
+						 pts_comp_func_name_t **name)
+{
+	*flags = (*entry)->flags;
+	*depth = (*entry)->depth;
+	*name  = (*entry)->name;
+
+	return TRUE;
+}
+
+/**
+ * Free an entry_t object
+ */
+static void free_entry(entry_t *this)
+{
+	if (this)
+	{
+		this->name->destroy(this->name);
+		free(this);
+	}
+}
+
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	return this->vendor_id;
 }
 
 METHOD(pa_tnc_attr_t, get_type, u_int32_t,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this, bool noskip)
+	private_tcg_pts_attr_req_func_comp_evid_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	funct_comp_evid_req_entry_t *entry;
+	entry_t *entry;
 
-	writer = bio_writer_create(PTS_REQ_FUNCT_COMP_EVID_SIZE);
+	writer = bio_writer_create(PTS_REQ_FUNC_COMP_EVID_SIZE);
 
-	enumerator = this->requests->create_enumerator(this->requests);
+	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		writer->write_uint8 (writer, entry->flags);
-		writer->write_uint24(writer, entry->sub_comp_depth);
+		writer->write_uint24(writer, entry->depth);
 		writer->write_uint24(writer, entry->name->get_vendor_id(entry->name));
 		writer->write_uint8 (writer, entry->name->get_qualifier(entry->name));
 		writer->write_uint32(writer, entry->name->get_name(entry->name));
@@ -151,24 +190,22 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this, u_int32_t *offset)
+	private_tcg_pts_attr_req_func_comp_evid_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	status_t status = FAILED;
-	funct_comp_evid_req_entry_t *entry = NULL;
-	u_int32_t sub_comp_depth, vendor_id, name;
+	u_int32_t depth, vendor_id, name;
 	u_int8_t flags, fam_and_qualifier, qualifier;
-	
-	if (this->value.len < PTS_REQ_FUNCT_COMP_EVID_SIZE)
+	status_t status = FAILED;
+	entry_t *entry = NULL;
+
+	if (this->value.len < PTS_REQ_FUNC_COMP_EVID_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Request Functional "
 					  "Component Evidence");
 		*offset = 0;
 		return FAILED;
 	}
-	
 	reader = bio_reader_create(this->value);
-	this->requests = pts_funct_comp_evid_req_create();
 
 	while (reader->remaining(reader))
 	{
@@ -178,7 +215,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 						  "Component Evidence Flags");
 			goto end;
 		}
-		if (!reader->read_uint24(reader, &sub_comp_depth))
+		if (!reader->read_uint24(reader, &depth))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS Request Functional "
 						  "Component Evidence Sub Component Depth");
@@ -196,7 +233,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 						  "Component Evidence Family and Qualifier");
 			goto end;
 		}
-		if (fam_and_qualifier & PTS_REQ_FUNCT_COMP_FAMILY_MASK)
+		if (fam_and_qualifier & PTS_REQ_FUNC_COMP_FAMILY_MASK)
 		{
 			DBG1(DBG_TNC, "the Functional Name Encoding Family "
 						  "is not Binary Enumeration");
@@ -208,48 +245,62 @@ METHOD(pa_tnc_attr_t, process, status_t,
 						  "Component Evidence Component Functional Name");
 			goto end;
 		}
-		qualifier = fam_and_qualifier & !PTS_REQ_FUNCT_COMP_FAMILY_MASK;
+		qualifier = fam_and_qualifier & !PTS_REQ_FUNC_COMP_FAMILY_MASK;
 
-		entry = malloc_thing(funct_comp_evid_req_entry_t);
+		entry = malloc_thing(entry_t);
 		entry->flags = flags;
-		entry->sub_comp_depth = sub_comp_depth;
+		entry->depth = depth;
 		entry->name = pts_comp_func_name_create(vendor_id, name, qualifier);
 		
-		this->requests->add(this->requests, entry);
+		this->list->insert_last(this->list, entry);
 	}
 	status = SUCCESS;
 
 end:
-	if (entry)
-	{
-		free(entry);
-	}
 	reader->destroy(reader);
 	return status;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_tcg_pts_attr_req_funct_comp_evid_t *this)
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
-	this->requests->destroy(this->requests);
+	this->list->destroy_function(this->list, (void *)free_entry);
 	free(this->value.ptr);
 	free(this);
 }
 
-METHOD(tcg_pts_attr_req_funct_comp_evid_t, get_requests,
-		pts_funct_comp_evid_req_t*,
-		private_tcg_pts_attr_req_funct_comp_evid_t *this)
+METHOD(tcg_pts_attr_req_func_comp_evid_t, add_component, void,
+	private_tcg_pts_attr_req_func_comp_evid_t *this, u_int8_t flags,
+	u_int32_t depth, pts_comp_func_name_t *name)
 {
-	return this->requests;
+	entry_t *entry;
+
+	entry = malloc_thing(entry_t);
+	entry->flags = flags;
+	entry->depth = depth;
+	entry->name = name->clone(name);
+	this->list->insert_last(this->list, entry);
+}
+
+METHOD(tcg_pts_attr_req_func_comp_evid_t, get_count, int,
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
+{
+	return this->list->get_count(this->list);
+}
+
+METHOD(tcg_pts_attr_req_func_comp_evid_t, create_enumerator, enumerator_t*,
+	private_tcg_pts_attr_req_func_comp_evid_t *this)
+{
+	return enumerator_create_filter(this->list->create_enumerator(this->list),
+								   (void*)entry_filter, NULL, NULL);
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
-										pts_funct_comp_evid_req_t *requests)
+pa_tnc_attr_t *tcg_pts_attr_req_func_comp_evid_create(void)
 {
-	private_tcg_pts_attr_req_funct_comp_evid_t *this;
+	private_tcg_pts_attr_req_func_comp_evid_t *this;
 
 	INIT(this,
 		.public = {
@@ -263,23 +314,24 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create(
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_requests = _get_requests,
+			.add_component = _add_component,
+			.get_count = _get_count,
+			.create_enumerator = _create_enumerator,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_REQ_FUNCT_COMP_EVID,
-		.requests = requests,
+		.type = TCG_PTS_REQ_FUNC_COMP_EVID,
+		.list = linked_list_create(),
 	);
 
 	return &this->public.pa_tnc_attribute;
 }
 
-
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create_from_data(chunk_t data)
+pa_tnc_attr_t *tcg_pts_attr_req_func_comp_evid_create_from_data(chunk_t data)
 {
-	private_tcg_pts_attr_req_funct_comp_evid_t *this;
+	private_tcg_pts_attr_req_func_comp_evid_t *this;
 
 	INIT(this,
 		.public = {
@@ -293,10 +345,13 @@ pa_tnc_attr_t *tcg_pts_attr_req_funct_comp_evid_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_requests = _get_requests,
+			.add_component = _add_component,
+			.get_count = _get_count,
+			.create_enumerator = _create_enumerator,
 		},
 		.vendor_id = PEN_TCG,
-		.type = TCG_PTS_REQ_FUNCT_COMP_EVID,
+		.type = TCG_PTS_REQ_FUNC_COMP_EVID,
+		.list = linked_list_create(),
 		.value = chunk_clone(data),
 	);
 

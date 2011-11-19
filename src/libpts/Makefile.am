@@ -10,7 +10,7 @@ libpts_la_SOURCES = \
 	pts/pts.h pts/pts.c \
 	pts/pts_error.h pts/pts_error.c \
 	pts/pts_proto_caps.h \
-	pts/pts_funct_comp_evid_req.h pts/pts_funct_comp_evid_req.c \
+	pts/pts_func_comp_evid_req.h \
 	pts/pts_creds.h pts/pts_creds.c \
 	pts/pts_database.h pts/pts_database.c \
 	pts/pts_dh_group.h pts/pts_dh_group.c \
@@ -35,7 +35,7 @@ libpts_la_SOURCES = \
 	tcg/tcg_pts_attr_tpm_version_info.h tcg/tcg_pts_attr_tpm_version_info.c \
 	tcg/tcg_pts_attr_get_aik.h tcg/tcg_pts_attr_get_aik.c \
 	tcg/tcg_pts_attr_aik.h tcg/tcg_pts_attr_aik.c \
-	tcg/tcg_pts_attr_req_funct_comp_evid.h tcg/tcg_pts_attr_req_funct_comp_evid.c \
+	tcg/tcg_pts_attr_req_func_comp_evid.h tcg/tcg_pts_attr_req_func_comp_evid.c \
 	tcg/tcg_pts_attr_gen_attest_evid.h tcg/tcg_pts_attr_gen_attest_evid.c \
 	tcg/tcg_pts_attr_simple_comp_evid.h tcg/tcg_pts_attr_simple_comp_evid.c \
 	tcg/tcg_pts_attr_simple_evid_final.h tcg/tcg_pts_attr_simple_evid_final.c \

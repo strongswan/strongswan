@@ -33,7 +33,7 @@
 #include <tcg/tcg_pts_attr_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_get_aik.h>
 #include <tcg/tcg_pts_attr_aik.h>
-#include <tcg/tcg_pts_attr_req_funct_comp_evid.h>
+#include <tcg/tcg_pts_attr_req_func_comp_evid.h>
 #include <tcg/tcg_pts_attr_gen_attest_evid.h>
 #include <tcg/tcg_pts_attr_simple_comp_evid.h>
 #include <tcg/tcg_pts_attr_simple_evid_final.h>
@@ -436,37 +436,29 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			break;
 		}
-		case TCG_PTS_REQ_FUNCT_COMP_EVID:
+		case TCG_PTS_REQ_FUNC_COMP_EVID:
 		{
-			tcg_pts_attr_req_funct_comp_evid_t *attr_cast;
+			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			pts_proto_caps_flag_t negotiated_caps;
-			enumerator_t *e;
-			pts_funct_comp_evid_req_t *requests;
-			funct_comp_evid_req_entry_t *entry;
-			u_int32_t requests_count;
-			pts_attr_req_funct_comp_evid_flag_t flags;
-			u_int32_t sub_comp_depth;
 			pts_comp_func_name_t *name;
+			u_int32_t depth;
+			u_int8_t flags;
+			enumerator_t *e;
 			
 			attr_info = attr->get_value(attr);
-			attr_cast = (tcg_pts_attr_req_funct_comp_evid_t*)attr;
-			requests = attr_cast->get_requests(attr_cast);
-			requests_count = requests->get_req_count(requests);
+			attr_cast = (tcg_pts_attr_req_func_comp_evid_t*)attr;
 
-			DBG1(DBG_IMC, "IMV requests evidence%s for: %d functional components",
-				 (requests_count == 1) ? "":"s", requests_count);
+			DBG1(DBG_IMC, "IMV requests evidence for %d functional components",
+						   attr_cast->get_count(attr_cast));
 
-			e = requests->create_enumerator(requests);
-			while (e->enumerate(e, &entry))
+			e = attr_cast->create_enumerator(attr_cast);
+			while (e->enumerate(e, &flags, &depth, &name))
 			{
-				flags = entry->flags;
-				sub_comp_depth = entry->sub_comp_depth;
-				name = entry->name->clone(entry->name);
 				negotiated_caps = pts->get_proto_caps(pts);
 
 				DBG1(DBG_IMC, "Requested Evidence flags: %d, depth: %d,"
 							  " vendor_id: %d, qualifier %d, name: %d",
-								flags, sub_comp_depth, name->get_vendor_id(name),
+								flags, depth, name->get_vendor_id(name),
 								name->get_qualifier(name), name->get_name(name));
 
 				if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
@@ -500,7 +492,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				if (sub_comp_depth != 0)
+				if (depth != 0)
 				{
 					DBG1(DBG_IMC, "current version of Attestation IMC does not "
 							"support sub component measurement deeper than "
@@ -512,14 +504,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					DBG1(DBG_IMC, "current version of Attestation IMC supports"
 								  "only functional component namings by ITA");
 					return FALSE;
-				}
-				/* Check Family */
-				if (name->get_qualifier(name) & PTS_REQ_FUNCT_COMP_FAMILY_MASK)
-				{
-					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_NAME_FAM, attr_info);
-					attr_list->insert_last(attr_list, attr);
-					break;
 				}
 
 				/* Check if Unknown or Wildcard was set for qualifier */

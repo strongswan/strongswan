@@ -77,9 +77,9 @@ struct private_imv_attestation_state_t {
 	linked_list_t *file_meas_requests;
 
 	/**
-	 * List of Functional Component Evidence requests
+	 * List of Functional Components
 	 */
-	linked_list_t *comp_evid_requests;
+	linked_list_t *components;
 
 	/**
 	 * PTS object
@@ -191,7 +191,8 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
 	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
-	this->comp_evid_requests->destroy_function(this->comp_evid_requests, free);
+	this->components->destroy_offset(this->components,
+									 offsetof(pts_component_t, destroy));
 	this->pts->destroy(this->pts);
 	free(this);
 }
@@ -260,30 +261,25 @@ METHOD(imv_attestation_state_t, get_file_meas_request_count, int,
 	return this->file_meas_requests->get_count(this->file_meas_requests);
 }
 
-METHOD(imv_attestation_state_t, add_comp_evid_request, void,
-	private_imv_attestation_state_t *this, funct_comp_evid_req_entry_t *entry)
+METHOD(imv_attestation_state_t, add_component, void,
+	private_imv_attestation_state_t *this, pts_component_t *entry)
 {
-	pts_comp_func_name_t *request;
-
-	request = entry->name->clone(entry->name);
-	this->comp_evid_requests->insert_last(this->comp_evid_requests, request);
+	this->components->insert_last(this->components, entry);
 }
 
-METHOD(imv_attestation_state_t, check_off_comp_evid_request, bool,
+METHOD(imv_attestation_state_t, check_off_component, pts_component_t*,
 	private_imv_attestation_state_t *this, pts_comp_func_name_t *name)
 {
 	enumerator_t *enumerator;
-	pts_comp_func_name_t *request;
-	bool found = FALSE;
+	pts_component_t *entry, *found = NULL;
 
-	enumerator = this->comp_evid_requests->create_enumerator(this->comp_evid_requests);
-	while (enumerator->enumerate(enumerator, &request))
+	enumerator = this->components->create_enumerator(this->components);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (name->equals(name, request))
+		if (name->equals(name, entry->get_comp_func_name(entry)))
 		{
-			found = TRUE;
-			this->comp_evid_requests->remove_at(this->comp_evid_requests, enumerator);
-			free(request);
+			found = entry;
+			this->components->remove_at(this->components, enumerator);
 			break;
 		}
 	}
@@ -291,10 +287,10 @@ METHOD(imv_attestation_state_t, check_off_comp_evid_request, bool,
 	return found;
 }
 
-METHOD(imv_attestation_state_t, get_comp_evid_request_count, int,
+METHOD(imv_attestation_state_t, get_component_count, int,
 	private_imv_attestation_state_t *this)
 {
-	return this->comp_evid_requests->get_count(this->comp_evid_requests);
+	return this->components->get_count(this->components);
 }
 
 METHOD(imv_attestation_state_t, get_measurement_error, bool,
@@ -333,9 +329,9 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.add_file_meas_request = _add_file_meas_request,
 			.check_off_file_meas_request = _check_off_file_meas_request,
 			.get_file_meas_request_count = _get_file_meas_request_count,
-			.add_comp_evid_request = _add_comp_evid_request,
-			.check_off_comp_evid_request = _check_off_comp_evid_request,
-			.get_comp_evid_request_count = _get_comp_evid_request_count,
+			.add_component = _add_component,
+			.check_off_component = _check_off_component,
+			.get_component_count = _get_component_count,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,
 		},
@@ -345,7 +341,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.file_meas_requests = linked_list_create(),
-		.comp_evid_requests = linked_list_create(),
+		.components = linked_list_create(),
 		.pts = pts_create(FALSE),
 	);
 

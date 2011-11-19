@@ -268,6 +268,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			u_int32_t depth, extended_pcr;
 			u_int8_t  measurement_type;
 			pts_comp_func_name_t *name;
+			pts_component_t *component;
 			pts_meas_algorithms_t hash_algorithm;
 			pts_pcr_transform_t transformation;
 			chunk_t measurement_time, policy_uri;
@@ -317,12 +318,15 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				return FALSE;
 			}
 
-			if (!attestation_state->check_off_comp_evid_request(
-					attestation_state, name))
+			component = attestation_state->check_off_component(attestation_state,
+														 	   name);
+			if (!component)
 			{
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
+			component->verify(component);
+			component->destroy(component);
 
 			measurement_type = attr_cast->get_measurement_type(attr_cast);
 			hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
@@ -508,7 +512,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_REQ_TEMPL_REF_MANI_SET_META:
 		case TCG_PTS_UPDATE_TEMPL_REF_MANI:
 		case TCG_PTS_GET_AIK:
-		case TCG_PTS_REQ_FUNCT_COMP_EVID:
+		case TCG_PTS_REQ_FUNC_COMP_EVID:
 		case TCG_PTS_GEN_ATTEST_EVID:
 		case TCG_PTS_REQ_FILE_META:
 		case TCG_PTS_REQ_FILE_MEAS:

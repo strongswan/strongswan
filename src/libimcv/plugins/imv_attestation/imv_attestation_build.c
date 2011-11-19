@@ -23,7 +23,7 @@
 #include <tcg/tcg_pts_attr_dh_nonce_finish.h>
 #include <tcg/tcg_pts_attr_get_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_get_aik.h>
-#include <tcg/tcg_pts_attr_req_funct_comp_evid.h>
+#include <tcg/tcg_pts_attr_req_func_comp_evid.h>
 #include <tcg/tcg_pts_attr_gen_attest_evid.h>
 #include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <tcg/tcg_pts_attr_req_file_meta.h>
@@ -38,7 +38,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 {
 	imv_attestation_handshake_state_t handshake_state;
 	pts_t *pts;
-	pa_tnc_attr_t *attr;
+	pa_tnc_attr_t *attr = NULL;
 
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
@@ -208,11 +208,11 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
+			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			enumerator_t *enumerator;
-			char flags[8];
-			char *platform_info;
-			pts_funct_comp_evid_req_t *requests = NULL;
-			funct_comp_evid_req_entry_t *entry;
+			char flags[8], *platform_info;
+			pts_component_t *comp;
+			pts_comp_func_name_t *comp_name;
 			int vid, name, qualifier, type;
 			enum_name_t *names, *types;
 			bool first = TRUE;
@@ -230,8 +230,6 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					(platform_info) ? "" : "platform info");
 				break;
 			}
-			DBG1(DBG_IMV, "platform is '%s'", platform_info);
-
 			
 			enumerator = pts_db->create_comp_evid_enumerator(pts_db, platform_info);
 			if (!enumerator)
@@ -240,17 +238,14 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			}
 			while (enumerator->enumerate(enumerator, &vid, &name, &qualifier))
 			{
-				entry = malloc_thing(funct_comp_evid_req_entry_t);
-				entry->flags = PTS_REQ_FUNC_COMP_FLAG_PCR;
-				entry->sub_comp_depth = 0;
-				entry->name = pts_comp_func_name_create(vid, name, qualifier);
+				comp_name = pts_comp_func_name_create(vid, name, qualifier);
 
 				names = pts_components->get_comp_func_names(pts_components, vid);
 				types = pts_components->get_qualifier_type_names(pts_components, vid);
 				if (names && types)
 				{
 					type = pts_components->get_qualifier(pts_components,
-														 entry->name, &flags);
+														 comp_name, flags);
 					DBG2(DBG_TNC, "%N component evidence request '%N' [%s] '%N'",
 						 pen_names, vid, names, name, flags, types, type);
 				}
@@ -259,27 +254,36 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 					DBG2(DBG_TNC, "0x%06x component evidence request 0x%08x 0x%02x",
 						 vid, name, qualifier);
 				}
+				comp = pts_components->create(pts_components, comp_name);
+				if (!comp)
+				{
+					DBG2(DBG_TNC, "  functional component not registered");
+					comp_name->destroy(comp_name);
+					continue;
+				}
+				attestation_state->add_component(attestation_state, comp);
 				if (first)
 				{
-					/* Create a requests object */
-					requests = pts_funct_comp_evid_req_create();
+					attr = tcg_pts_attr_req_func_comp_evid_create();
+					attr->set_noskip_flag(attr, TRUE);
 					first = FALSE;
 				}
-				requests->add(requests, entry);
-				attestation_state->add_comp_evid_request(attestation_state, entry);
+				attr_cast = (tcg_pts_attr_req_func_comp_evid_t *)attr;
+				attr_cast->add_component(attr, comp->get_evidence_flags(comp),
+										 0, comp_name);
 			}
 			enumerator->destroy(enumerator);
 
-			/* Send Request Functional Component Evidence attribute */
-			attr = tcg_pts_attr_req_funct_comp_evid_create(requests);
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
+			if (attr)
+			{
+				/* Send Request Functional Component Evidence attribute */
+				msg->add_attribute(msg, attr);
 
-			/* Send Generate Attestation Evidence attribute */
-			attr = tcg_pts_attr_gen_attest_evid_create();
-			attr->set_noskip_flag(attr, TRUE);
-			msg->add_attribute(msg, attr);
-			
+				/* Send Generate Attestation Evidence attribute */
+				attr = tcg_pts_attr_gen_attest_evid_create();
+				attr->set_noskip_flag(attr, TRUE);
+				msg->add_attribute(msg, attr);
+			}
 			break;
 		}
 		default:

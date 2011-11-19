@@ -103,28 +103,27 @@ struct imv_attestation_state_t {
 										u_int16_t id, int *file_id, bool *is_dir);
 
 	/**
-	 * Add an entry to the list of pending Function Component Evidences
+	 * Add an entry to the list of Functional Components waiting for evidence
 	 *
-	 * @param entry				Functional Component Evidence Request
+	 * @param entry				Functional Component
 	 */
-	void (*add_comp_evid_request)(imv_attestation_state_t *this,
-								  funct_comp_evid_req_entry_t *entry);
+	void (*add_component)(imv_attestation_state_t *this, pts_component_t *entry);
 
 	/**
-	 * Returns the number of pending Function Component Evidences
+	 * Returns the number of Functional Component waiting for evidence
 	 *
-	 * @return					Number of pending evidences
+	 * @return					Number of waiting Functional Components
 	 */
-	int (*get_comp_evid_request_count)(imv_attestation_state_t *this);
+	int (*get_component_count)(imv_attestation_state_t *this);
 
 	/**
-	 * Check for presence of Component Evidence Request and remove if exists
+	 * Check for presence of Functional Component and remove and return it
 	 *
 	 * @param name			 	Name of the requested Functional Component
-	 * @return					TRUE if component request found, FALSE otherwise
+	 * @return					Functional Component if found, NULL otherwise
 	 */
-	bool (*check_off_comp_evid_request)(imv_attestation_state_t *this,
-										pts_comp_func_name_t *name);
+	pts_component_t* (*check_off_component)(imv_attestation_state_t *this,
+											pts_comp_func_name_t *name);
 
 	/**
 	 * Indicates if a file measurement error occurred

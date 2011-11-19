@@ -40,6 +40,13 @@ struct pts_component_t {
 	pts_comp_func_name_t* (*get_comp_func_name)(pts_component_t *this);
 
 	/**
+	 * Get the PTS Component Evidence Flags
+	 *
+	 * @return				PTS Component Functional Name
+	 */
+	u_int8_t (*get_evidence_flags)(pts_component_t *this);
+
+	/**
 	 * Do measurements on the PTS Functional Component
 	 *
 	 * @return				TRUE if component measurements are successful

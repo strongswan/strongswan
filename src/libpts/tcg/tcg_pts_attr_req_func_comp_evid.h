@@ -14,27 +14,24 @@
  */
 
 /**
- * @defgroup tcg_pts_attr_req_funct_comp_evid tcg_pts_attr_req_funct_comp_evid
- * @{ @ingroup tcg_pts_attr_req_funct_comp_evid
+ * @defgroup tcg_pts_attr_req_func_comp_evid tcg_pts_attr_req_func_comp_evid
+ * @{ @ingroup tcg_pts_attr_req_func_comp_evid
  */
 
-#ifndef TCG_PTS_ATTR_REQ_FUNCT_COMP_EVID_H_
-#define TCG_PTS_ATTR_REQ_FUNCT_COMP_EVID_H_
+#ifndef TCG_PTS_ATTR_REQ_FUNC_COMP_EVID_H_
+#define TCG_PTS_ATTR_REQ_FUNC_COMP_EVID_H_
 
-typedef struct tcg_pts_attr_req_funct_comp_evid_t tcg_pts_attr_req_funct_comp_evid_t;
+typedef struct tcg_pts_attr_req_func_comp_evid_t tcg_pts_attr_req_func_comp_evid_t;
 
 #include "tcg_attr.h"
 #include "pts/components/pts_comp_func_name.h"
-#include "pts/pts_funct_comp_evid_req.h"
 #include "pa_tnc/pa_tnc_attr.h"
-
-#define PTS_REQ_FUNCT_COMP_FAMILY_MASK		0xC0
 
 /**
  * Class implementing the TCG PTS Request Functional Component Evidence attribute
  *
  */
-struct tcg_pts_attr_req_funct_comp_evid_t {
+struct tcg_pts_attr_req_func_comp_evid_t {
 
 	/**
 	 * Public PA-TNC attribute interface
@@ -42,26 +39,42 @@ struct tcg_pts_attr_req_funct_comp_evid_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 	
 	/**
-	 * Get PTS Functional Component Evidence Requests
+	 * Add a component to the Functional Component Evidence Request
 	 *
-	 * @return					PTS Functional Component Evidence Requests
+	 * @param flags				Component Evidence Request Flags
+	 * @param depth				Sub-component Depth
+	 * @param name				Functional Component Name
 	 */
-	pts_funct_comp_evid_req_t* (*get_requests)(tcg_pts_attr_req_funct_comp_evid_t *this);
+	void (*add_component)(tcg_pts_attr_req_func_comp_evid_t *this,
+						  u_int8_t flags, u_int32_t depth,
+						  pts_comp_func_name_t *name);
+
+	/**
+	 * Returns the number of Functional Component entries
+	 *
+	 * @return					Number of entries
+	 */
+	int (*get_count)(tcg_pts_attr_req_func_comp_evid_t *this);
+
+	/**
+	 * Enumerator over Functional Component entries
+	 *
+	 * @return					Entry enumerator
+	 */
+	enumerator_t* (*create_enumerator)(tcg_pts_attr_req_func_comp_evid_t *this);
 	
 };
 
 /**
- * Creates an tcg_pts_attr_req_funct_comp_evid_t object
- * 
- * @param requests	Linked list of PTS Functional Component Evidence Requests
+ * Creates a tcg_pts_attr_req_func_comp_evid_t object
  */
-pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create(pts_funct_comp_evid_req_t *requests);
+pa_tnc_attr_t* tcg_pts_attr_req_func_comp_evid_create(void);
 
 /**
- * Creates an tcg_pts_attr_req_funct_comp_evid_t object from received data
+ * Creates a tcg_pts_attr_req_func_comp_evid_t object from received data
  *
  * @param value				Unparsed attribute value
  */
-pa_tnc_attr_t* tcg_pts_attr_req_funct_comp_evid_create_from_data(chunk_t value);
+pa_tnc_attr_t* tcg_pts_attr_req_func_comp_evid_create_from_data(chunk_t value);
 
-#endif /** TCG_PTS_ATTR_REQ_FUNCT_COMP_EVID_H_ @}*/
+#endif /** TCG_PTS_ATTR_REQ_FUNC_COMP_EVID_H_ @}*/
