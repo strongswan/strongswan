@@ -1240,7 +1240,7 @@ METHOD(task_t, migrate, void,
 	}
 
 	this->ike_sa = ike_sa;
-	this->keymat = ike_sa->get_keymat(ike_sa);
+	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
 	this->proposals = NULL;
 	this->tsi = NULL;
