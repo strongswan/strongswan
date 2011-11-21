@@ -27,6 +27,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/hash_payload.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -100,6 +101,11 @@ struct private_main_mode_t {
 	 */
 	chunk_t nonce_r;
 
+	/**
+	 * Encoded SA initiator payload used for authentication
+	 */
+	chunk_t sa_payload;
+
 	/** states of main mode */
 	enum {
 		MM_INIT,
@@ -124,6 +130,30 @@ static auth_cfg_t *get_auth_cfg(private_main_mode_t *this, bool local)
 	return cfg;
 }
 
+/**
+ * Save the encoded SA payload of a message
+ */
+static bool save_sa_payload(private_main_mode_t *this, message_t *message,
+							sa_payload_t *sa_payload)
+{
+	payload_t *payload;
+	chunk_t data;
+
+	/* TODO-IKEv1: handle other payloads in front of SA? */
+	payload = &sa_payload->payload_interface;
+	data = message->get_packet_data(message);
+	if (data.len >= IKE_HEADER_LENGTH + payload->get_length(payload))
+	{
+		/* Get SA payload without 4 byte fixed header */
+		data = chunk_skip(data, IKE_HEADER_LENGTH);
+		data.len = payload->get_length(payload);
+		data = chunk_skip(data, 4);
+		this->sa_payload = chunk_clone(data);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -133,6 +163,7 @@ METHOD(task_t, build_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *proposals;
+			packet_t *packet;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
@@ -148,6 +179,20 @@ METHOD(task_t, build_i, status_t,
 			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 
 			message->add_payload(message, &sa_payload->payload_interface);
+
+			/* pregenerate message to store SA payload */
+			if (this->ike_sa->generate_message(this->ike_sa, message,
+											   &packet) != SUCCESS)
+			{
+				DBG1(DBG_IKE, "pregenerating SA payload failed");
+				return FAILED;
+			}
+			packet->destroy(packet);
+			if (!save_sa_payload(this, message, sa_payload))
+			{
+				DBG1(DBG_IKE, "SA payload invalid");
+				return FAILED;
+			}
 
 			this->state = MM_SA;
 			return NEED_MORE;
@@ -195,7 +240,9 @@ METHOD(task_t, build_i, status_t,
 		case MM_KE:
 		{
 			id_payload_t *id_payload;
+			hash_payload_t *hash_payload;
 			identification_t *id;
+			chunk_t hash, dh;
 
 			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 			this->peer_cfg->get_ref(this->peer_cfg);
@@ -219,7 +266,15 @@ METHOD(task_t, build_i, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			/* TODO-IKEv1: authenticate */
+			this->dh->get_my_public_value(this->dh, &dh);
+			hash = this->keymat->get_hash(this->keymat, TRUE,
+						dh, this->dh_value, this->ike_sa->get_id(this->ike_sa),
+						this->sa_payload, id);
+			free(dh.ptr);
+			hash_payload = hash_payload_create();
+			hash_payload->set_hash(hash_payload, hash);
+			free(hash.ptr);
+			message->add_payload(message, &hash_payload->payload_interface);
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -236,7 +291,6 @@ METHOD(task_t, process_r, status_t,
 	{
 		case MM_INIT:
 		{
-
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
 
@@ -251,11 +305,12 @@ METHOD(task_t, process_r, status_t,
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													SECURITY_ASSOCIATION_V1);
-			if (!sa_payload)
+			if (!sa_payload || !save_sa_payload(this, message, sa_payload))
 			{
-				DBG1(DBG_IKE, "SA payload missing");
+				DBG1(DBG_IKE, "SA payload missing or invalid");
 				return FAILED;
 			}
+
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
 															list, FALSE);
@@ -298,7 +353,6 @@ METHOD(task_t, process_r, status_t,
 			}
 			this->dh->set_other_public_value(this->dh, this->dh_value);
 
-
 			nonce_payload = (nonce_payload_t*)message->get_payload(message,
 																   NONCE_V1);
 			if (!nonce_payload)
@@ -315,7 +369,9 @@ METHOD(task_t, process_r, status_t,
 		{
 			enumerator_t *enumerator;
 			id_payload_t *id_payload;
+			hash_payload_t *hash_payload;
 			identification_t *id, *any;
+			chunk_t hash, dh;
 
 			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 			if (!id_payload)
@@ -351,11 +407,30 @@ METHOD(task_t, process_r, status_t,
 			this->other_auth = get_auth_cfg(this, FALSE);
 			if (!this->my_auth || !this->other_auth)
 			{
-				DBG1(DBG_CFG, "auth config missing");
+				DBG1(DBG_IKE, "auth config missing");
 				return FAILED;
 			}
 
-			/* TODO-IKEv1: authenticate peer */
+			hash_payload = (hash_payload_t*)message->get_payload(message,
+																 HASH_V1);
+			if (!hash_payload)
+			{
+				DBG1(DBG_IKE, "hash payload missing");
+				return FAILED;
+			}
+			hash = hash_payload->get_hash(hash_payload);
+			this->dh->get_my_public_value(this->dh, &dh);
+			hash = this->keymat->get_hash(this->keymat, TRUE,
+						this->dh_value, dh, this->ike_sa->get_id(this->ike_sa),
+						this->sa_payload, id);
+			free(dh.ptr);
+			if (!chunk_equals(hash, hash_payload->get_hash(hash_payload)))
+			{
+				DBG1(DBG_IKE, "calculated hash does not match to hash payload");
+				free(hash.ptr);
+				return FAILED;
+			}
+			free(hash.ptr);
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -439,6 +514,7 @@ METHOD(task_t, build_r, status_t,
 			sa_payload = sa_payload_create_from_proposal(SECURITY_ASSOCIATION_V1,
 														 this->proposal);
 			message->add_payload(message, &sa_payload->payload_interface);
+
 			return NEED_MORE;
 		}
 		case MM_KE:
@@ -474,7 +550,9 @@ METHOD(task_t, build_r, status_t,
 		case MM_AUTH:
 		{
 			id_payload_t *id_payload;
+			hash_payload_t *hash_payload;
 			identification_t *id;
+			chunk_t hash, dh;
 
 			id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
 			if (!id)
@@ -488,7 +566,15 @@ METHOD(task_t, build_r, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			/* TODO-IKEv1: authenticate us */
+			this->dh->get_my_public_value(this->dh, &dh);
+			hash = this->keymat->get_hash(this->keymat, FALSE,
+						dh, this->dh_value, this->ike_sa->get_id(this->ike_sa),
+						this->sa_payload, id);
+			free(dh.ptr);
+			hash_payload = hash_payload_create();
+			hash_payload->set_hash(hash_payload, hash);
+			free(hash.ptr);
+			message->add_payload(message, &hash_payload->payload_interface);
 
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
@@ -571,7 +657,9 @@ METHOD(task_t, process_i, status_t,
 		case MM_AUTH:
 		{
 			id_payload_t *id_payload;
+			hash_payload_t *hash_payload;
 			identification_t *id;
+			chunk_t hash, dh;
 
 			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 			if (!id_payload)
@@ -589,7 +677,26 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
-			/* TODO-IKEv1: verify auth */
+			hash_payload = (hash_payload_t*)message->get_payload(message,
+																 HASH_V1);
+			if (!hash_payload)
+			{
+				DBG1(DBG_IKE, "hash payload missing");
+				return FAILED;
+			}
+			hash = hash_payload->get_hash(hash_payload);
+			this->dh->get_my_public_value(this->dh, &dh);
+			hash = this->keymat->get_hash(this->keymat, FALSE,
+						this->dh_value, dh, this->ike_sa->get_id(this->ike_sa),
+						this->sa_payload, id);
+			free(dh.ptr);
+			if (!chunk_equals(hash, hash_payload->get_hash(hash_payload)))
+			{
+				DBG1(DBG_IKE, "calculated hash does not match to hash payload");
+				free(hash.ptr);
+				return FAILED;
+			}
+			free(hash.ptr);
 
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
@@ -629,6 +736,7 @@ METHOD(task_t, destroy, void,
 	free(this->dh_value.ptr);
 	free(this->nonce_i.ptr);
 	free(this->nonce_r.ptr);
+	free(this->sa_payload.ptr);
 	free(this);
 }
 
