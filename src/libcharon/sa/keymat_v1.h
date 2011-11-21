@@ -34,6 +34,28 @@ struct keymat_v1_t {
 	 * Implements keymat_t.
 	 */
 	keymat_t keymat;
+
+	/**
+	 * Derive keys for the IKE_SA.
+	 *
+	 * These keys are not handed out, but are used by the associated signers,
+	 * crypters and authentication functions.
+	 *
+	 * @param proposal		selected algorithms
+	 * @param dh			diffie hellman key allocated by create_dh()
+	 * @param dh_other		public DH value from other peer
+	 * @param nonce_i		initiators nonce value
+	 * @param nonce_r		responders nonce value
+	 * @param id			IKE_SA identifier
+	 * @param auth			authentication method
+	 * @param shared_key	PSK in case of AUTH_CLASS_PSK, NULL otherwise
+	 * @return				TRUE on success
+	 */
+	bool (*derive_ike_keys)(keymat_v1_t *this, proposal_t *proposal,
+							diffie_hellman_t *dh, chunk_t dh_other,
+							chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
+							auth_class_t auth, shared_key_t *shared_key);
+
 };
 
 /**
