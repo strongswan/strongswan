@@ -87,6 +87,8 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
 #define PTS_SIMPLE_COMP_EVID_MEAS_TYPE				(1<<7)
 #define PTS_SIMPLE_COMP_EVID_FLAG_PCR				(1<<7)
 
+static char *utc_undefined_time_str = "0000-00-00T00:00:00Z";
+
 /**
  * Private data of an tcg_pts_attr_simple_comp_evid_t object.
  */
@@ -154,12 +156,32 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 	this->noskip_flag = noskip;
 }
 
+/**
+ * Convert time_t to Simple Component Evidence UTS string format
+ */
+void measurement_time_to_utc(time_t measurement_time, chunk_t *utc_time)
+{
+	struct tm t;
+
+	if (measurement_time == UNDEFINED_TIME)
+	{
+		utc_time->ptr = utc_undefined_time_str;
+	}
+	else
+	{
+		gmtime_r(&measurement_time, &t);
+		sprintf(utc_time->ptr, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+				t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+				t.tm_hour, t.tm_min, t.tm_sec);
+	}
+}
+
 METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	bio_writer_t *writer;
 	bool has_pcr_info;
-	char *utc_time_str, utc_time_buf[25];
+	char utc_time_buf[25];
 	u_int8_t flags;
 	u_int32_t depth, extended_pcr;
 	pts_comp_func_name_t *name;
@@ -187,22 +209,8 @@ METHOD(pa_tnc_attr_t, build, void,
 		flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
 	}
 
-	/* Form the UTC measurement time string */
-	if (measurement_time == UNDEFINED_TIME)
-	{
-		utc_time_str = "0000-00-00T00:00:00Z";
-	}
-	else
-	{
-		struct tm t;
-
-		gmtime_r(&measurement_time, &t);
-		utc_time_str = utc_time_buf;
-		sprintf(utc_time_str, "%04d-%.02d-%.02dT%.02d:%.02d:%.02dZ",
-							  t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
-							  t.tm_hour, t.tm_min, t.tm_sec);
-	}
-	utc_time = chunk_create(utc_time_str, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE);	
+	utc_time = chunk_create(utc_time_buf, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE);	
+	measurement_time_to_utc(measurement_time, &utc_time);
 
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
 
@@ -236,6 +244,53 @@ METHOD(pa_tnc_attr_t, build, void,
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
+}
+
+static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+static const int tm_leap_1970 = 477;
+
+/**
+ * Convert Simple Component Evidence UTS string format to time_t  
+ */
+bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
+{
+	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec, tm_secs;
+	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+
+	if (memeq(utc_undefined_time_str, utc_time.ptr, utc_time.len))
+	{
+		*measurement_time = 0;
+		return TRUE;
+	}
+	if (sscanf(utc_time.ptr, "%4d-%2d-%2dT%2d:%2d:%2dZ",
+		&tm_year, &tm_mon, &tm_day, &tm_hour, &tm_min, &tm_sec) != 6)
+	{
+		return FALSE;
+	}
+
+	/* representation of months as 0..11 */
+	tm_mon--;
+
+	/* representation of days as 0..30 */
+	tm_day--;
+
+	/* number of leap years between last year and 1970? */
+	tm_leap_4 = (tm_year - 1) / 4;
+	tm_leap_100 = tm_leap_4 / 25;
+	tm_leap_400 = tm_leap_100 / 4;
+	tm_leap = tm_leap_4 - tm_leap_100 + tm_leap_400 - tm_leap_1970;
+
+	/* if date later then February, is the current year a leap year? */
+	if (tm_mon > 1 && (tm_year % 4 == 0) &&
+		(tm_year % 100 != 0 || tm_year % 400 == 0))
+	{
+		tm_leap++;
+	}
+	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
+	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec;
+
+	*measurement_time = tm_secs;
+	return TRUE;
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
@@ -273,17 +328,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	if (measurement_type != PTS_SIMPLE_COMP_EVID_MEAS_TYPE)
 	{
-		DBG1(DBG_TNC, "unsupported Measurement Type in Simple Component Evidence");
+		DBG1(DBG_TNC, "unsupported Measurement Type in "
+					  "Simple Component Evidence");
 		*offset = 12;
 		reader->destroy(reader);
 		return FAILED;
 	}
-
+	if (!measurement_time_from_utc(&measurement_time, utc_time))
+	{
+		DBG1(DBG_TNC, "invalid Measurement Time field in "
+					  "Simple Component Evidence");
+		*offset = 20;
+		reader->destroy(reader);
+		return FAILED;
+	}
 	validation = flags & PTS_SIMPLE_COMP_EVID_VALIDATION_MASK;
 	qualifier = fam_and_qualifier & ~PTS_SIMPLE_COMP_EVID_FAMILY_MASK;
-
-	/* TODO Parse the UTC time string */
-	measurement_time = 0;
 
 	/*  Is optional Policy URI field included? */
 	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||

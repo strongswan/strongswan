@@ -218,6 +218,7 @@ pts_comp_evidence_t *pts_comp_evidence_create(pts_comp_func_name_t *name,
 	);
 
 	name->log(name, "");
+	DBG2(DBG_PTS, "measurement time: %T", &measurement_time, FALSE);
 	DBG2(DBG_PTS, "PCR %2d extended with: %#B", extended_pcr, &measurement);
 
 	return &this->public;
