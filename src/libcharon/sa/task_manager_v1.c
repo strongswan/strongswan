@@ -454,7 +454,8 @@ static status_t process_request(private_task_manager_t *this,
 				/* task completed, remove it */
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
-				break;
+				enumerator->destroy(enumerator);
+				return SUCCESS;
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */
 				break;
