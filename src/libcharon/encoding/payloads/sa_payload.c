@@ -175,16 +175,6 @@ METHOD(payload_t, verify, status_t,
 		current_number = substruct->get_proposal_number(substruct);
 		if (current_number < expected_number)
 		{
-			if (current_number != expected_number + 1)
-			{
-				DBG1(DBG_ENC, "proposal number is %d, expected %d or %d",
-					 current_number, expected_number, expected_number + 1);
-				status = FAILED;
-				break;
-			}
-		}
-		else if (current_number < expected_number)
-		{
 			DBG1(DBG_ENC, "proposal number smaller than previous");
 			status = FAILED;
 			break;
