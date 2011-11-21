@@ -531,14 +531,20 @@ METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
 	u_int32_t hash, mid;
+	host_t *me, *other;
 
 	mid = msg->get_message_id(msg);
 	hash = chunk_hash(msg->get_packet_data(msg));
+
+	/* TODO-IKEv1: update hosts more selectively */
+	me = msg->get_destination(msg);
+	other = msg->get_source(msg);
 
 	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
 		 this->active_tasks->get_count(this->active_tasks)))
 	{
+		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
 		charon->bus->message(charon->bus, msg, FALSE);
 		if (process_response(this, msg) != SUCCESS)
 		{
@@ -557,7 +563,7 @@ METHOD(task_manager_t, process_message, status_t,
 						this->responding.packet->clone(this->responding.packet));
 			return SUCCESS;
 		}
-
+		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
 		charon->bus->message(charon->bus, msg, TRUE);
 		if (process_request(this, msg) != SUCCESS)
 		{
