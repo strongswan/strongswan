@@ -55,6 +55,11 @@ struct private_task_manager_t {
 	ike_sa_t *ike_sa;
 
 	/**
+	 * RNG to create message IDs
+	 */
+	rng_t *rng;
+
+	/**
 	 * Exchange we are currently handling as responder
 	 */
 	struct {
@@ -110,11 +115,6 @@ struct private_task_manager_t {
 	 * List of tasks initiated by peer
 	 */
 	linked_list_t *passive_tasks;
-
-	/**
-	 * the task manager has been reset
-	 */
-	bool reset;
 
 	/**
 	 * Number of times we retransmit messages before giving up
@@ -187,7 +187,13 @@ METHOD(task_manager_t, initiate, status_t,
 	message_t *message;
 	host_t *me, *other;
 	status_t status;
-	exchange_type_t exchange = 0;
+	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
+
+	if (!this->rng)
+	{
+		DBG1(DBG_IKE, "no RNG supported");
+		return FAILED;
+	}
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -232,7 +238,7 @@ METHOD(task_manager_t, initiate, status_t,
 		enumerator->destroy(enumerator);
 	}
 
-	if (exchange == 0)
+	if (exchange == EXCHANGE_TYPE_UNDEFINED)
 	{
 		DBG2(DBG_IKE, "nothing to initiate");
 		/* nothing to do yet... */
@@ -245,7 +251,9 @@ METHOD(task_manager_t, initiate, status_t,
 	message = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
 	if (exchange != ID_PROT)
 	{
-		/* TODO-IKEv1: Set random message id */
+		this->rng->get_bytes(this->rng, sizeof(this->initiating.mid),
+							 (void*)&this->initiating.mid);
+		message->set_message_id(message, this->initiating.mid);
 	}
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
@@ -333,7 +341,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* send response along the path the request came in */
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
-	message->set_message_id(message, this->responding.mid);
+	message->set_message_id(message, request->get_message_id(request));
 	message->set_request(message, FALSE);
 
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
@@ -510,17 +518,14 @@ static status_t process_response(private_task_manager_t *this,
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	if (this->active_tasks->get_count(this->active_tasks) == 0)
-	{
-		/* TODO-IKEv1: detect mainmode retransmission */
-		charon->bus->message(charon->bus, msg, TRUE);
-		if (process_request(this, msg) != SUCCESS)
-		{
-			flush(this);
-			return DESTROY_ME;
-		}
-	}
-	else
+	u_int32_t hash, mid;
+
+	mid = msg->get_message_id(msg);
+	hash = chunk_hash(msg->get_packet_data(msg));
+
+	if ((mid && mid == this->initiating.mid) ||
+		(this->initiating.mid == 0 &&
+		 this->active_tasks->get_count(this->active_tasks)))
 	{
 		charon->bus->message(charon->bus, msg, FALSE);
 		if (process_response(this, msg) != SUCCESS)
@@ -528,6 +533,31 @@ METHOD(task_manager_t, process_message, status_t,
 			flush(this);
 			return DESTROY_ME;
 		}
+	}
+	else
+	{
+		if ((mid && mid == this->responding.mid) ||
+			hash == this->responding.mid)
+		{
+			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
+				 "retransmitting response", mid);
+			charon->sender->send(charon->sender,
+						this->responding.packet->clone(this->responding.packet));
+			return SUCCESS;
+		}
+
+		charon->bus->message(charon->bus, msg, TRUE);
+		if (process_request(this, msg) != SUCCESS)
+		{
+			flush(this);
+			return DESTROY_ME;
+		}
+
+		if (!mid)
+		{
+			mid = hash;
+		}
+		this->responding.mid = mid;
 	}
 	return SUCCESS;
 }
@@ -564,20 +594,11 @@ METHOD(task_manager_t, busy, bool,
 METHOD(task_manager_t, incr_mid, void,
 	private_task_manager_t *this, bool initiate)
 {
-	if (initiate)
-	{
-		this->initiating.mid++;
-	}
-	else
-	{
-		this->responding.mid++;
-	}
 }
 
 METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
-
 }
 
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
@@ -607,6 +628,7 @@ METHOD(task_manager_t, destroy, void,
 
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
+	DESTROY_IF(this->rng);
 	free(this);
 }
 
@@ -634,6 +656,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
+		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.queued_tasks = linked_list_create(),
 		.active_tasks = linked_list_create(),
 		.passive_tasks = linked_list_create(),
