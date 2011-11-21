@@ -616,7 +616,38 @@ static void add_to_proposal_v1_ike(proposal_t *proposal,
 static void add_to_proposal_v1_esp(proposal_t *proposal,
 								   transform_substructure_t *transform)
 {
-	/* TODO-IKEv1: create ESP proposals */
+	transform_attribute_type_t type;
+	transform_attribute_t *tattr;
+	enumerator_t *enumerator;
+	u_int16_t value, key_length = 0;
+
+	enumerator = transform->create_attribute_enumerator(transform);
+	while (enumerator->enumerate(enumerator, &tattr))
+	{
+		type = tattr->get_attribute_type(tattr);
+		value = tattr->get_value(tattr);
+		switch (type)
+		{
+			case TATTR_PH2_KEY_LENGTH:
+				key_length = value;
+				break;
+			case TATTR_PH2_AUTH_ALGORITHM:
+				proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM,
+						get_alg_from_ikev1(INTEGRITY_ALGORITHM, value), 0);
+				break;
+			default:
+				/* TODO-IKEv1: lifetimes other attributes */
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* TODO-IKEv1: handle ESN attribute */
+	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
+							NO_EXT_SEQ_NUMBERS, 0);
+
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM,
+							transform->get_transform_id(transform), key_length);
 }
 
 METHOD(proposal_substructure_t, get_proposal, proposal_t*,
@@ -794,7 +825,47 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 									 proposal_t *proposal)
 {
-	/* TODO-IKEv1: add ESP proposal to transform substr */
+	transform_substructure_t *transform = NULL;
+	u_int16_t alg, key_size;
+	enumerator_t *enumerator;
+
+	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
+	{
+		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
+												   0, alg);
+		if (key_size)
+		{
+			transform->add_transform_attribute(transform,
+				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+									TATTR_PH2_KEY_LENGTH, key_size));
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!transform)
+	{
+		return;
+	}
+
+	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
+	while (enumerator->enumerate(enumerator, &alg, &key_size))
+	{
+		alg = get_ikev1_from_alg(INTEGRITY_ALGORITHM, alg);
+		if (alg)
+		{
+			transform->add_transform_attribute(transform,
+				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+									TATTR_PH2_AUTH_ALGORITHM, alg));
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* TODO-IKEv1: Add lifetime and other attributes, non-fixes ESN */
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_EXT_SEQ_NUMBER, NO_EXT_SEQ_NUMBERS));
+
+	add_transform_substructure(this, transform);
 }
 
 /**
