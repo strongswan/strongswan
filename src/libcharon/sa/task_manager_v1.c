@@ -18,6 +18,7 @@
 
 #include <daemon.h>
 #include <sa/tasks/main_mode.h>
+#include <sa/tasks/quick_mode.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -214,6 +215,12 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = ID_PROT;
 				}
 				break;
+			case IKE_ESTABLISHED:
+				if (activate_task(this, TASK_QUICK_MODE))
+				{
+					exchange = QUICK_MODE;
+				}
+				break;
 			default:
 				break;
 		}
@@ -229,6 +236,9 @@ METHOD(task_manager_t, initiate, status_t,
 			{
 				case MAIN_MODE:
 					exchange = ID_PROT;
+					break;
+				case TASK_QUICK_MODE:
+					exchange = QUICK_MODE;
 					break;
 				default:
 					continue;
@@ -423,8 +433,10 @@ static status_t process_request(private_task_manager_t *this,
 				/* TODO-IKEv1: agressive mode */
 				return FAILED;
 			case QUICK_MODE:
-				/* TODO-IKEv1: quick mode */
-				return FAILED;
+				task = (task_t *)quick_mode_create(this->ike_sa, NULL,
+												   NULL, NULL);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			case INFORMATIONAL_V1:
 				/* TODO-IKEv1: informational */
 				return FAILED;

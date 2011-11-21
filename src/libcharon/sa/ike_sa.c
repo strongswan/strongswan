@@ -45,6 +45,7 @@
 #include <sa/tasks/child_delete.h>
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/main_mode.h>
+#include <sa/tasks/quick_mode.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/send_dpd_job.h>
@@ -1190,13 +1191,13 @@ METHOD(ike_sa_t, initiate, status_t,
 				child_create_t *child_create = (child_create_t*)task;
 				child_create->use_reqid(child_create, reqid);
 			}
-			this->task_manager->queue_task(this->task_manager, task);
 		}
 		else
 		{
-			/* TODO-IKEv1: create quick mode task */
+			task = (task_t*)quick_mode_create(&this->public, child_cfg,
+											  tsi, tsr);
 		}
-		child_cfg->destroy(child_cfg);
+		this->task_manager->queue_task(this->task_manager, task);
 
 #ifdef ME
 		if (this->peer_cfg->get_mediated_by(this->peer_cfg))
