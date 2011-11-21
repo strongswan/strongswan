@@ -56,6 +56,37 @@ struct keymat_v1_t {
 							chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 							auth_class_t auth, shared_key_t *shared_key);
 
+	/**
+	 * Returns the IV for a message with the given message ID.
+	 *
+	 * @param mid			message ID
+	 * @return				IV (needs to be freed)
+	 */
+	chunk_t (*get_iv)(keymat_v1_t *this, u_int32_t mid);
+
+	/**
+	 * Updates the IV for the next message with the given message ID.
+	 *
+	 * A call of confirm_iv() is required in order to actually make the IV
+	 * available.  This is needed for the inbound case where we store the last
+	 * block of the encrypted message but want to update the IV only after
+	 * verification of the decrypted message.
+	 *
+	 * @param mid			message ID
+	 * @param last_block	last block of encrypted message (gets cloned)
+	 */
+	void (*update_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t last_block);
+
+	/**
+	 * Confirms the updated IV for the given message ID.
+	 *
+	 * To actually make the new IV available via get_iv this method has to
+	 * be called after update_iv.
+	 *
+	 * @param mid			message ID
+	 */
+	void (*confirm_iv)(keymat_v1_t *this, u_int32_t mid);
+
 };
 
 /**

@@ -16,8 +16,26 @@
 #include "keymat_v1.h"
 
 #include <daemon.h>
+#include <utils/linked_list.h>
 
 typedef struct private_keymat_v1_t private_keymat_v1_t;
+
+/**
+ * Max. number of IVs to track.
+ */
+#define MAX_IV 3
+
+/**
+ * Data stored for IVs
+ */
+typedef struct {
+	/** message ID */
+	u_int32_t mid;
+	/** current IV */
+	chunk_t iv;
+	/** last block of encrypted message */
+	chunk_t last_block;
+} iv_data_t;
 
 /**
  * Private data of an keymat_t object.
@@ -50,6 +68,11 @@ struct private_keymat_v1_t {
 	aead_t *aead;
 
 	/**
+	 * Hasher used for IV generation
+	 */
+	hasher_t *hasher;
+
+	/**
 	 * Key used for authentication during main mode
 	 */
 	chunk_t skeyid;
@@ -63,7 +86,29 @@ struct private_keymat_v1_t {
 	 * Key used for authentication after main mode
 	 */
 	chunk_t skeyid_a;
+
+	/**
+	 * Phase 1 IV
+	 */
+	iv_data_t phase1_iv;
+
+	/**
+	 * Keep track of IVs for exchanges after phase 1. We store only a limited
+	 * number of IVs in an MRU sort of way. Stores iv_data_t objects.
+	 */
+	linked_list_t *ivs;
 };
+
+
+/**
+ * Destroy an iv_data_t object.
+ */
+static void iv_data_destroy(iv_data_t *this)
+{
+	chunk_free(&this->last_block);
+	chunk_free(&this->iv);
+	free(this);
+}
 
 /**
  * Constants used in key derivation.
@@ -240,6 +285,28 @@ static u_int16_t auth_to_prf(u_int16_t alg)
 }
 
 /**
+ * Converts integrity algorithm to hash algorithm
+ */
+static u_int16_t auth_to_hash(u_int16_t alg)
+{
+	switch (alg)
+	{
+		case AUTH_HMAC_SHA1_96:
+			return HASH_SHA1;
+		case AUTH_HMAC_SHA2_256_128:
+			return HASH_SHA256;
+		case AUTH_HMAC_SHA2_384_192:
+			return HASH_SHA384;
+		case AUTH_HMAC_SHA2_512_256:
+			return HASH_SHA512;
+		case AUTH_HMAC_MD5_96:
+			return HASH_MD5;
+		default:
+			return HASH_UNKNOWN;
+	}
+}
+
+/**
  * Adjust the key length for PRF algorithms that expect a fixed key length.
  */
 static void adjust_keylen(u_int16_t alg, chunk_t *key)
@@ -367,7 +434,130 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL) ||
+		(alg = auth_to_hash(alg)) == HASH_UNKNOWN)
+	{
+		DBG1(DBG_IKE, "no %N selected", transform_type_names, HASH_ALGORITHM);
+		return FALSE;
+	}
+	this->hasher = lib->crypto->create_hasher(lib->crypto, alg);
+	if (!this->hasher)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, HASH_ALGORITHM,
+			 hash_algorithm_names, alg);
+		return FALSE;
+	}
+
+	dh->get_my_public_value(dh, &dh_me);
+	g_xi = this->initiator ? dh_me : dh_other;
+	g_xr = this->initiator ? dh_other : dh_me;
+
+	/* initial IV = hash(g^xi | g^xr) */
+	data = chunk_cata("cc", g_xi, g_xr);
+	this->hasher->allocate_hash(this->hasher, data, &this->phase1_iv.iv);
+	if (this->phase1_iv.iv.len > this->aead->get_block_size(this->aead))
+	{
+		this->phase1_iv.iv.len = this->aead->get_block_size(this->aead);
+	}
+	chunk_free(&dh_me);
+	DBG4(DBG_IKE, "initial IV %B", &this->phase1_iv.iv);
+
 	return TRUE;
+}
+
+/**
+ * Generate an IV
+ */
+static void generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
+{
+	if (iv->mid == 0 || iv->iv.ptr)
+	{	/* use last block of previous encrypted message */
+		chunk_free(&iv->iv);
+		iv->iv = iv->last_block;
+		iv->last_block = chunk_empty;
+	}
+	else
+	{
+		/* initial phase 2 IV = hash(last_phase1_block | mid) */
+		u_int32_t net = htonl(iv->mid);
+		chunk_t data = chunk_cata("cc", this->phase1_iv.iv,
+								  chunk_from_thing(net));
+		this->hasher->allocate_hash(this->hasher, data, &iv->iv);
+		if (iv->iv.len > this->aead->get_block_size(this->aead))
+		{
+			iv->iv.len = this->aead->get_block_size(this->aead);
+		}
+	}
+	DBG4(DBG_IKE, "next IV for MID %u %B", iv->mid, &iv->iv);
+}
+
+/**
+ * Try to find an IV for the given message ID, if not found, generate it.
+ */
+static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
+{
+	enumerator_t *enumerator;
+	iv_data_t *iv, *found = NULL;
+
+	if (mid == 0)
+	{
+		return &this->phase1_iv;
+	}
+
+	enumerator = this->ivs->create_enumerator(this->ivs);
+	while (enumerator->enumerate(enumerator, &iv))
+	{
+		if (iv->mid == mid)
+		{	/* IV gets moved to the front of the list */
+			this->ivs->remove_at(this->ivs, enumerator);
+			found = iv;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		INIT(found,
+			.mid = mid,
+		);
+		generate_iv(this, found);
+	}
+	this->ivs->insert_first(this->ivs, found);
+	/* remove least recently used IV if maximum reached */
+	if (this->ivs->get_count(this->ivs) > MAX_IV &&
+		this->ivs->remove_last(this->ivs, (void**)&iv) == SUCCESS)
+	{
+		iv_data_destroy(iv);
+	}
+	return found;
+}
+
+METHOD(keymat_v1_t, get_iv, chunk_t,
+	private_keymat_v1_t *this, u_int32_t mid)
+{
+	return chunk_clone(lookup_iv(this, mid)->iv);
+}
+
+METHOD(keymat_v1_t, update_iv, void,
+	private_keymat_v1_t *this, u_int32_t mid, chunk_t last_block)
+{
+	iv_data_t *iv = lookup_iv(this, mid);
+	if (iv)
+	{	/* update last block */
+		chunk_free(&iv->last_block);
+		iv->last_block = chunk_clone(last_block);
+	}
+}
+
+METHOD(keymat_v1_t, confirm_iv, void,
+	private_keymat_v1_t *this, u_int32_t mid)
+{
+	iv_data_t *iv = lookup_iv(this, mid);
+	if (iv)
+	{
+		generate_iv(this, iv);
+	}
 }
 
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
@@ -387,9 +577,13 @@ METHOD(keymat_t, destroy, void,
 {
 	DESTROY_IF(this->prf);
 	DESTROY_IF(this->aead);
+	DESTROY_IF(this->hasher);
 	chunk_clear(&this->skeyid);
 	chunk_clear(&this->skeyid_d);
 	chunk_clear(&this->skeyid_a);
+	chunk_free(&this->phase1_iv.iv);
+	chunk_free(&this->phase1_iv.last_block);
+	this->ivs->destroy_function(this->ivs, (void*)iv_data_destroy);
 	free(this);
 }
 
@@ -408,7 +602,11 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 				.destroy = _destroy,
 			},
 			.derive_ike_keys = _derive_ike_keys,
+			.get_iv = _get_iv,
+			.update_iv = _update_iv,
+			.confirm_iv = _confirm_iv,
 		},
+		.ivs = linked_list_create(),
 		.initiator = initiator,
 		.prf_alg = PRF_UNDEFINED,
 	);
