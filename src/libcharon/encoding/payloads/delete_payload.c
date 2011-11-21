@@ -211,9 +211,9 @@ METHOD(payload_t, get_header_length, int,
 {
 	if (this->type == DELETE)
 	{
-		return 8;
+		return 8 + this->spi_size;
 	}
-	return 12;
+	return 12 + this->spi_size;
 }
 
 METHOD(payload_t, get_payload_type, payload_type_t,
@@ -255,6 +255,7 @@ METHOD(delete_payload_t, add_spi, void,
 		case PROTO_ESP:
 			this->spi_count++;
 			this->payload_length += sizeof(spi);
+			this->spi_size += sizeof(spi);
 			this->spis = chunk_cat("mc", this->spis, chunk_from_thing(spi));
 			break;
 		default:
@@ -336,11 +337,12 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = get_header_length(this),
 		.doi = IKEV1_DOI_IPSEC,
 		.protocol_id = protocol_id,
 		.spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0,
 		.type = type,
 	);
+	this->payload_length = get_header_length(this);
+
 	return &this->public;
 }
