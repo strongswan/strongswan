@@ -23,7 +23,10 @@
 
 typedef struct pts_component_t pts_component_t;
 
+#include "pts/pts.h"
+#include "pts/pts_database.h"
 #include "pts/components/pts_comp_func_name.h"
+#include "pts/components/pts_comp_evidence.h"
 
 #include <library.h>
 
@@ -47,18 +50,26 @@ struct pts_component_t {
 	u_int8_t (*get_evidence_flags)(pts_component_t *this);
 
 	/**
-	 * Do measurements on the PTS Functional Component
+	 * Do evidence measurements on the PTS Functional Component
 	 *
-	 * @return				TRUE if component measurements are successful
+	 * @param pts			PTS interface
+	 * @param evidence		returns component evidence measureemt
+	 * @return				status return code
 	 */
-	bool (*measure)(pts_component_t *this);
+	status_t (*measure)(pts_component_t *this, pts_t *pts,
+						pts_comp_evidence_t** evidence);
 
 	/**
-	 * Verify the measurements of the PTS Functional Component
+	 * Verify the evidence measurements of the PTS Functional Component
 	 *
-	 * @return				TRUE if verification is successful
+	 * @param pts			PTS interface
+	 * @param pts_db		PTS measurement database
+	 * @param evidence		component evidence measurement to be verified
+	 * @return				status return code
 	 */
-	bool (*verify)(pts_component_t *this);
+	status_t (*verify)(pts_component_t *this, pts_t *pts,
+					   pts_database_t *pts_db,
+					   pts_comp_evidence_t *evidence);
 
 	/**
 	 * Destroys a pts_component_t object.

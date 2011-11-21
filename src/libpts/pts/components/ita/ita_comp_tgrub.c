@@ -17,7 +17,6 @@
 #include "ita_comp_tgrub.h"
 #include "ita_comp_func_name.h"
 
-#include "pts/pts_func_comp_evid_req.h"
 #include "pts/components/pts_component.h"
 
 #include <debug.h>
@@ -32,7 +31,7 @@ typedef struct pts_ita_comp_tgrub_t pts_ita_comp_tgrub_t;
 struct pts_ita_comp_tgrub_t {
 
 	/**
-	 * Public pts_component_manager_t interface.
+	 * Public pts_component_t interface.
 	 */
 	pts_component_t public;
 
@@ -54,18 +53,69 @@ METHOD(pts_component_t, get_evidence_flags, u_int8_t,
 	return PTS_REQ_FUNC_COMP_FLAG_PCR;
 }
 
-METHOD(pts_component_t, measure, bool,
-	pts_ita_comp_tgrub_t *this)
+METHOD(pts_component_t, measure, status_t,
+	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
 {
-	/* TODO measure the tgrub functional component */
-	return FALSE;
+	pts_comp_evidence_t *evid;
+	u_int32_t extended_pcr;
+	time_t measurement_time;
+	chunk_t measurement, pcr_before, pcr_after;
+
+	/* Provisional implementation for TGRUB */
+	extended_pcr = PCR_DEBUG;
+	time(&measurement_time);
+		
+	if (!pts->read_pcr(pts, extended_pcr, &pcr_after))
+	{
+		DBG1(DBG_PTS, "error occured while reading PCR: %d", extended_pcr);
+		return FAILED;
+	}
+
+	measurement = chunk_alloc(HASH_SIZE_SHA1);
+	memset(measurement.ptr, 0x00, measurement.len);
+		
+	pcr_before = chunk_alloc(PCR_LEN);
+	memset(pcr_before.ptr, 0x00, pcr_before.len);
+
+	evid = *evidence = pts_comp_evidence_create(this->name, 0, extended_pcr,
+								PTS_MEAS_ALGO_SHA1, PTS_PCR_TRANSFORM_NO,
+								measurement_time, measurement);
+	evid->set_pcr_info(evid, pcr_before, pcr_after);
+
+	return SUCCESS;
 }
 
-METHOD(pts_component_t, verify, bool,
-	pts_ita_comp_tgrub_t *this)
+METHOD(pts_component_t, verify, status_t,
+	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_database_t *pts_db,
+	pts_comp_evidence_t *evidence)
 {
-	/* TODO verify the measurement of the tgrub functional component */
-	return FALSE;
+	bool has_pcr_info;
+	u_int32_t extended_pcr;
+	pts_meas_algorithms_t algo;
+	pts_pcr_transform_t transform;
+	time_t measurement_time;
+	chunk_t measurement, pcr_before, pcr_after;
+	pcr_entry_t *entry;
+
+	measurement = evidence->get_measurement(evidence, &extended_pcr,
+								&algo, &transform, &measurement_time);
+	if (extended_pcr != PCR_DEBUG)
+	{
+		return FAILED;
+	}
+
+	/* TODO check measurement in database */
+
+	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
+	if (has_pcr_info)
+	{
+		entry = malloc_thing(pcr_entry_t);
+		entry->pcr_number = extended_pcr;
+		memcpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
+		pts->add_pcr_entry(pts, entry);
+	}
+	
+	return SUCCESS;
 }
 
 METHOD(pts_component_t, destroy, void,

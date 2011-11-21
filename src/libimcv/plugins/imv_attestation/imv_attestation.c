@@ -177,8 +177,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
-	imv_attestation_state_t *attestation_state;
-	TNC_Result result;
 
 	if (!imv_attestation)
 	{
@@ -193,15 +191,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_attestation->delete_state(imv_attestation, connection_id);
 		case TNC_CONNECTION_STATE_HANDSHAKE:
-			result = imv_attestation->change_state(imv_attestation,
-									connection_id, new_state, &state);
-			if (result != TNC_RESULT_SUCCESS)
-			{
-				return result;
-			}
-			attestation_state = (imv_attestation_state_t*)state;
-
-			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_attestation->change_state(imv_attestation, connection_id,
 												 new_state, NULL);

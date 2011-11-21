@@ -263,148 +263,39 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_SIMPLE_COMP_EVID:
 		{
 			tcg_pts_attr_simple_comp_evid_t *attr_cast;
-			bool pcr_info_inclided, component_meas_found = FALSE;
-			pts_attr_simple_comp_evid_flag_t flags;
-			u_int32_t depth, extended_pcr;
-			u_int8_t  measurement_type;
 			pts_comp_func_name_t *name;
-			pts_component_t *component;
-			pts_meas_algorithms_t hash_algorithm;
-			pts_pcr_transform_t transformation;
-			chunk_t measurement_time, policy_uri;
-			chunk_t pcr_before, pcr_after, measurement, comp_hash;
-			enumerator_t *enumerator;
-			char *platform_info;
+			pts_comp_evidence_t *evidence;
+			pts_component_t *comp;
+			u_int32_t depth;
+			status_t status;
 
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
-			attr_info = attr->get_value(attr);
+			evidence = attr_cast->get_comp_evidence(attr_cast);
+			name = evidence->get_comp_func_name(evidence, &depth);
 
-			pcr_info_inclided = attr_cast->is_pcr_info_included(attr_cast);
-			flags = attr_cast->get_flags(attr_cast);
-			depth = attr_cast->get_sub_component_depth(attr_cast);
-			if (depth != 0)
-			{
-				DBG1(DBG_IMV, "Current version of Attestation IMV does not"
-						" support sub component measurement deeper than zero");
-			}
-			name = attr_cast->get_comp_func_name(attr_cast);
-			if (name->get_vendor_id(name) != PEN_ITA)
-			{
-				DBG1(DBG_IMV, "Current version of Attestation IMV supports"
-							  "only functional component namings by ITA ");
-				break;
-			}
-
-			/* Check Family */
-			if (name->get_qualifier(name) & PTS_SIMPLE_COMP_EVID_FAMILY_MASK)
-			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-								TCG_PTS_INVALID_NAME_FAM, attr_info);
-				attr_list->insert_last(attr_list, attr);
-				break;
-			}
-
-			/* Check if Unknown or Wildcard was set for qualifier */
-			if (name->get_qualifier(name) & PTS_QUALIFIER_WILDCARD)
-			{
-				DBG1(DBG_IMV, "Wildcard was set for the qualifier "
-							  "of functional component");
-				return FALSE;
-			}
-			else if (name->get_qualifier(name) & PTS_QUALIFIER_UNKNOWN)
-			{
-				DBG1(DBG_IMV, "Unknown feature was set for the qualifier "
-							  "of functional component");
-				return FALSE;
-			}
-
-			component = attestation_state->check_off_component(attestation_state,
-														 	   name);
-			if (!component)
+			comp = attestation_state->check_off_component(attestation_state, name);
+			if (!comp)
 			{
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
+				evidence->destroy(evidence);
 				break;
 			}
-			component->verify(component);
-			component->destroy(component);
-
-			measurement_type = attr_cast->get_measurement_type(attr_cast);
-			hash_algorithm = attr_cast->get_hash_algorithm(attr_cast);
-			transformation = attr_cast->get_pcr_trans(attr_cast);
-			measurement_time = attr_cast->get_measurement_time(attr_cast);
-			measurement = attr_cast->get_comp_measurement(attr_cast);
-
-			platform_info = pts->get_platform_info(pts);
-			if (!pts_db || !platform_info)
-			{
-				DBG1(DBG_IMV, "%s%s%s not available",
-					(pts_db) ? "" : "pts database",
-					(!pts_db && !platform_info) ? "and" : "",
-					(platform_info) ? "" : "platform info");
-				break;
-			}
-
-			if (name->get_name(name) != PTS_ITA_COMP_FUNC_NAME_TBOOT &&
-				name->get_name(name) != PTS_ITA_COMP_FUNC_NAME_TGRUB)
-			{
-				DBG1(DBG_IMV, "Unknown functional component name: \"%d\"",
-					 name->get_name(name));
-				return FALSE;
-			}
+			status = comp->verify(comp, pts, pts_db, evidence);
 			
-			enumerator = pts_db->create_comp_hash_enumerator(pts_db,
-					platform_info, PTS_MEAS_ALGO_SHA1, name);
-			if (!enumerator)
+			switch (status)
 			{
-				break;
-			}
-			while (enumerator->enumerate(enumerator, &comp_hash))
-			{
-				if (chunk_equals(comp_hash, measurement))
-				{
-					DBG2(DBG_IMV, "Matching Functional Component Measurement:"
-							"%B", &measurement);
-					component_meas_found = TRUE;
+				default:
+				case FAILED:
+					attestation_state->set_measurement_error(attestation_state);
+					/* fall through to next case */
+				case SUCCESS:
+					comp->destroy(comp);
 					break;
-				}
+				case NEED_MORE:
+					/* re-enter component into list */
+					attestation_state->add_component(attestation_state, comp);
 			}
-			enumerator->destroy(enumerator);
-
-			if (!component_meas_found)
-			{
-				DBG1(DBG_IMV, "Unmatching Functional Component Measurement:"
-								"%B, expected: %B", &measurement, &comp_hash);
-				attestation_state->set_measurement_error(attestation_state);
-			}
-			
-			/* Call getters of optional fields when corresponding flag is set */
-			if (pcr_info_inclided)
-			{
-				pcr_entry_t *entry;
-				
-				extended_pcr = attr_cast->get_extended_pcr(attr_cast);
-				pcr_before = attr_cast->get_pcr_before_value(attr_cast);
-				pcr_after = attr_cast->get_pcr_after_value(attr_cast);
-				
-				DBG3(DBG_IMV,"PCR: %d was extended with %B",
-					 extended_pcr, &measurement);
-				DBG3(DBG_IMV,"PCR: %d before value: %B",
-					 extended_pcr, &pcr_before);
-				DBG3(DBG_IMV,"PCR: %d after value: %B",
-					 extended_pcr, &pcr_after);
-
-				entry = malloc_thing(pcr_entry_t);
-				entry->pcr_number = extended_pcr;
-				memcpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
-				pts->add_pcr_entry(pts, entry);
-			}
-			if (flags != PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID)
-			{
-				policy_uri = attr_cast->get_policy_uri(attr_cast);
-				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
-					 " Verification Policies");
-			}
-
+			evidence->destroy(evidence);
 			break;
 		}
 		case TCG_PTS_SIMPLE_EVID_FINAL:

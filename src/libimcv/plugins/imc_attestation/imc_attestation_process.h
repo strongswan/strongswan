@@ -25,7 +25,6 @@
 #include "imc_attestation_state.h"
 
 #include <library.h>
-#include <utils/linked_list.h>
 
 #include <pa_tnc/pa_tnc_attr.h>
 
@@ -40,13 +39,11 @@
  * @param attestation_state		attestation state of a given connection
  * @param supported_algorithms	supported PTS measurement algorithms
  * @param supported_dh_groups	supported DH groups
- * @param evidences				evidence
  * @return						TRUE if successful
  */
 bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 imc_attestation_state_t *attestation_state,
 							 pts_meas_algorithms_t supported_algorithms,
-							 pts_dh_group_t supported_dh_groups,
-							 linked_list_t *evidences);
+							 pts_dh_group_t supported_dh_groups);
 
 #endif /** IMC_ATTESTATION_PROCESS_H_ @}*/

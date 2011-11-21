@@ -20,6 +20,8 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
+#include <time.h>
+
 typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simple_comp_evid_t;
 
 /**
@@ -29,37 +31,37 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Flags		|				Sub-Component Depth				|
+ *  |    Flags      |               Sub-Component Depth             |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |				 Specific Functional Component					|
+ *  |                Specific Functional Component                  |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |				 Specific Functional Component					|
+ *  |                Specific Functional Component                  |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  | Measure. Type |				Extended into PCR				|
+ *  | Measure. Type |               Extended into PCR               |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |		 Hash Algorithm		| PCR Transform |   Reserved		|
+ *  |        Hash Algorithm     | PCR Transform |     Reserved      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					 Measurement Date/Time						|
+ *  |                    Measurement Date/Time                      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					 Measurement Date/Time						|
+ *  |                    Measurement Date/Time                      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					 Measurement Date/Time						|
+ *  |                    Measurement Date/Time                      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					 Measurement Date/Time						|
+ *  |                    Measurement Date/Time                      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					 Measurement Date/Time						|
+ *  |                    Measurement Date/Time                      |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |  Optional Policy URI Length   |  Opt. Verification Policy URI ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~				 Optional Verification Policy URI				~
+ *  ~                Optional Verification Policy URI               ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Optional PCR Length	   |   Optional PCR Before Value    ~
+ *  |    Optional PCR Length        |   Optional PCR Before Value   ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Optional PCR Before Value (Variable Length)			~
+ *  ~           Optional PCR Before Value (Variable Length)         ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Optional PCR After Value (Variable Length)			~
+ *  ~           Optional PCR After Value (Variable Length)          ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~			Component Measurement (Variable Length)				~
+ *  ~           Component Measurement (Variable Length)             ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
@@ -70,16 +72,20 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Component Functional Name Vendor ID		|Fam| Qualifier |
+ *  |    Component Functional Name Vendor ID        |Fam| Qualifier |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |					Component Functional Name					|
+ *  |                   Component Functional Name                   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
  */
 
 #define PTS_SIMPLE_COMP_EVID_SIZE					40
-#define PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE	20
+#define PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE			20
 #define PTS_SIMPLE_COMP_EVID_RESERVED				0x00
+#define PTS_SIMPLE_COMP_EVID_FAMILY_MASK			0xC0
+#define PTS_SIMPLE_COMP_EVID_VALIDATION_MASK		0x60
+#define PTS_SIMPLE_COMP_EVID_MEAS_TYPE				(1<<7)
+#define PTS_SIMPLE_COMP_EVID_FLAG_PCR				(1<<7)
 
 /**
  * Private data of an tcg_pts_attr_simple_comp_evid_t object.
@@ -112,69 +118,9 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	bool noskip_flag;
 	
 	/**
-	 * Set of flags for Simple Component Evidence
+	 * PTS Component Evidence
 	 */
-	pts_attr_simple_comp_evid_flag_t flags;
-
-	/**
-	 * PCR Information included
-	 */
-	bool pcr_info_included;
-
-	/**
-	 * Sub-component Depth
-	 */
-	u_int32_t depth;
-		
-	/**
-	 * Component Functional Name
-	 */
-	pts_comp_func_name_t *name;
-	
-	/**
-	 * Measurement type
-	 */
-	u_int8_t measurement_type;
-	
-	/**
-	 * Which PCR the functional component is extended into
-	 */
-	u_int32_t extended_pcr;
-	
-	/**
-	 * Hash Algorithm
-	 */
-	pts_meas_algorithms_t hash_algorithm;
-	
-	/**
-	 * Transformation type for PCR
-	 */
-	pts_pcr_transform_t transformation;
-	
-	/**
-	 * Measurement time
-	 */
-	chunk_t measurement_time;
-	
-	/**
-	 * Optional Policy URI
-	 */
-	chunk_t policy_uri;
-	
-	/**
-	 * Optional PCR before value
-	 */
-	chunk_t pcr_before;
-	
-	/**
-	 * Optional PCR after value
-	 */
-	chunk_t pcr_after;
-	
-	/**
-	 * Component Measurement
-	 */
-	chunk_t measurement;
+	pts_comp_evidence_t *evidence;
 
 };
 
@@ -212,57 +158,81 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
+	bool has_pcr_info;
+	char *utc_time_str, utc_time_buf[25];
+	u_int8_t flags;
+	u_int32_t depth, extended_pcr;
+	pts_comp_func_name_t *name;
+	pts_meas_algorithms_t hash_algorithm;
+	pts_pcr_transform_t transform;
+	pts_comp_evid_validation_t validation;
+	time_t measurement_time;
+	chunk_t measurement, utc_time, pcr_before, pcr_after, policy_uri;
 	
-	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
+	/* Extract parameters from comp_evidence_t object */
+	name         = this->evidence->get_comp_func_name(this->evidence,
+							&depth);
+	measurement  = this->evidence->get_measurement(this->evidence,
+							&extended_pcr, &hash_algorithm, &transform,
+							&measurement_time);
+	has_pcr_info = this->evidence->get_pcr_info(this->evidence,
+							&pcr_before, &pcr_after);
+	validation   = this->evidence->get_validation(this->evidence,
+							&policy_uri);
+	
 	/* Determine the flags to set*/
-	if (this->pcr_info_included)
+	flags = validation;
+	if (has_pcr_info)
 	{
-		flags += 128;
+		flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
 	}
-	if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_NO_VER)
+
+	/* Form the UTC measurement time string */
+	if (measurement_time == UNDEFINED_TIME)
 	{
-		flags += 32;
+		utc_time_str = "0000-00-00T00:00:00Z";
 	}
-	else if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL)
+	else
 	{
-		flags += 64;
+		struct tm t;
+
+		gmtime_r(&measurement_time, &t);
+		utc_time_str = utc_time_buf;
+		sprintf(utc_time_str, "%04d-%.02d-%.02dT%.02d:%.02d:%.02dZ",
+							  t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+							  t.tm_hour, t.tm_min, t.tm_sec);
 	}
-	else if (this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS)
-	{
-		flags += 96;
-	}
+	utc_time = chunk_create(utc_time_str, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE);	
+
+	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
 
 	writer->write_uint8 (writer, flags);
-	writer->write_uint24(writer, this->depth);
-	writer->write_uint24(writer, this->name->get_vendor_id(this->name));
-	writer->write_uint8 (writer, this->name->get_qualifier(this->name));
-	writer->write_uint32(writer, this->name->get_name(this->name));
-	writer->write_uint8 (writer, (this->measurement_type << 7));
-	writer->write_uint24(writer, this->extended_pcr);
-	writer->write_uint16(writer, this->hash_algorithm);
-	writer->write_uint8 (writer, this->transformation);
-	writer->write_data  (writer, this->measurement_time);
+	writer->write_uint24(writer, depth);
+	writer->write_uint24(writer, name->get_vendor_id(name));
+	writer->write_uint8 (writer, name->get_qualifier(name));
+	writer->write_uint32(writer, name->get_name(name));
+	writer->write_uint8 (writer, PTS_SIMPLE_COMP_EVID_MEAS_TYPE);
+	writer->write_uint24(writer, extended_pcr);
+	writer->write_uint16(writer, hash_algorithm);
+	writer->write_uint8 (writer, transform);
+	writer->write_uint8 (writer, PTS_SIMPLE_COMP_EVID_RESERVED);
+	writer->write_data  (writer, utc_time);
 	
 	/* Optional fields */
-	if (this->policy_uri.ptr && this->policy_uri.len > 0)
+	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||
+		validation == PTS_COMP_EVID_VALIDATION_PASSED)
 	{
-		writer->write_uint16(writer, this->policy_uri.len);
-		writer->write_data  (writer, this->policy_uri);
+		writer->write_uint16(writer, policy_uri.len);
+		writer->write_data  (writer, policy_uri);
 	}
-	if (this->pcr_before.ptr && this->pcr_after.ptr &&
-		this->pcr_before.len == this->pcr_after.len &&
-		this->pcr_before.len > 0 && this->pcr_after.len > 0)
+	if (has_pcr_info)
 	{
-		writer->write_uint16(writer, this->pcr_before.len);
-		writer->write_data  (writer, this->pcr_before);
-		writer->write_data  (writer, this->pcr_after);
+		writer->write_uint16(writer, pcr_before.len);
+		writer->write_data  (writer, pcr_before);
+		writer->write_data  (writer, pcr_after);
 	}
 
-	if (this->measurement.ptr && this->measurement.len > 0)
-	{
-		writer->write_data (writer, this->measurement);
-	}
+	writer->write_data(writer, measurement);
 	
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -272,11 +242,15 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_simple_comp_evid_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags, fam_and_qualifier, qualifier;
-	u_int8_t measurement_type, transformation;
-	u_int16_t algorithm;
-	u_int32_t vendor_id, name, measurement_len;
-	
+	pts_comp_func_name_t *name;
+	u_int8_t flags, fam_and_qualifier, qualifier, reserved;
+	u_int8_t measurement_type, transform, validation;
+	u_int16_t hash_algorithm, len;
+	u_int32_t depth, vendor_id, comp_name, extended_pcr;
+	chunk_t measurement, utc_time, policy_uri, pcr_before, pcr_after;
+	time_t measurement_time;
+	bool has_pcr_info = FALSE, has_validation = FALSE;
+
 	if (this->value.len < PTS_SIMPLE_COMP_EVID_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Simple Component Evidence");
@@ -285,182 +259,96 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	
-	reader->read_uint8(reader, &flags);
-	/* Determine the flags to set*/
-	if ((flags >> 7) & 1)
-	{
-		 this->pcr_info_included = TRUE;
-	}
-	if (!((flags >> 6) & 1) && !((flags >> 5) & 1))
-	{
-		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VALID;
-	}
-	else if (!((flags >> 6) & 1) && ((flags >> 5) & 1))
-	{
-		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_NO_VER;
-	}
-	else if (((flags >> 6) & 1) && !((flags >> 5) & 1))
-	{
-		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL;
-	}
-	else if (((flags >> 6) & 1) && ((flags >> 5) & 1))
-	{
-		this->flags = PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS;
-	}
-	
-	reader->read_uint24(reader, &this->depth);
+	reader->read_uint8 (reader, &flags);
+	reader->read_uint24(reader, &depth);
 	reader->read_uint24(reader, &vendor_id);
 	reader->read_uint8 (reader, &fam_and_qualifier);
-	reader->read_uint32(reader, &name);
+	reader->read_uint32(reader, &comp_name);
 	reader->read_uint8 (reader, &measurement_type);
-	reader->read_uint24(reader, &this->extended_pcr);
-	reader->read_uint16(reader, &algorithm);
-	reader->read_uint8 (reader, &transformation);
-	reader->read_data  (reader, PTS_SIMPLE_COMP_EVID_MEASUREMENT_TIME_SIZE,
-								&this->measurement_time);
+	reader->read_uint24(reader, &extended_pcr);
+	reader->read_uint16(reader, &hash_algorithm);
+	reader->read_uint8 (reader, &transform);
+	reader->read_uint8 (reader, &reserved);
+	reader->read_data  (reader, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE, &utc_time);
 
-	qualifier = fam_and_qualifier & (!PTS_SIMPLE_COMP_EVID_FAMILY_MASK);
-	
-	this->name = pts_comp_func_name_create(vendor_id, name, qualifier);
-	this->measurement_type = (measurement_type >> 7 ) & 1;
-	this->hash_algorithm = algorithm;
-	this->transformation = transformation;
-	this->measurement_time = chunk_clone(this->measurement_time);
-
-	/*  Optional Policy URI field is included */
-	if ((this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_FAIL) ||
-		(this->flags == PTS_SIMPLE_COMP_EVID_FLAG_VER_PASS))
+	if (measurement_type != PTS_SIMPLE_COMP_EVID_MEAS_TYPE)
 	{
-		u_int16_t policy_uri_len;
-		reader->read_uint16(reader, &policy_uri_len);
-		reader->read_data(reader, policy_uri_len, &this->policy_uri);
-		this->policy_uri = chunk_clone(this->policy_uri);
+		DBG1(DBG_TNC, "unsupported Measurement Type in Simple Component Evidence");
+		*offset = 12;
+		reader->destroy(reader);
+		return FAILED;
+	}
+
+	validation = flags & PTS_SIMPLE_COMP_EVID_VALIDATION_MASK;
+	qualifier = fam_and_qualifier & ~PTS_SIMPLE_COMP_EVID_FAMILY_MASK;
+
+	/* TODO Parse the UTC time string */
+	measurement_time = 0;
+
+	/*  Is optional Policy URI field included? */
+	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||
+		validation == PTS_COMP_EVID_VALIDATION_PASSED)
+	{
+		reader->read_uint16(reader, &len);
+		reader->read_data(reader, len, &policy_uri);
+		has_validation = TRUE;
 	}
 	
-	/*  Optional PCR value fields are included */
-	if (this->pcr_info_included)
+	/*  Are optional PCR value fields included? */
+	if (flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
 	{
-		u_int16_t pcr_value_len;
-		reader->read_uint16(reader, &pcr_value_len);
-		reader->read_data(reader, pcr_value_len, &this->pcr_before);
-		this->pcr_before = chunk_clone(this->pcr_before);
-		reader->read_data(reader, pcr_value_len, &this->pcr_after);
-		this->pcr_after = chunk_clone(this->pcr_after);
+		reader->read_uint16(reader, &len);
+		reader->read_data(reader, len, &pcr_before);
+		reader->read_data(reader, len, &pcr_after);
+		has_pcr_info = TRUE;
 	}
-	measurement_len = reader->remaining(reader);
-	reader->read_data(reader, measurement_len, &this->measurement);
-	this->measurement = chunk_clone(this->measurement);
 
+	/* Measurement field comes at the very end */ 
+	reader->read_data(reader,reader->remaining(reader), &measurement);
 	reader->destroy(reader);
+
+	/* Create Component Functional Name object */	
+	name = pts_comp_func_name_create(vendor_id, comp_name, qualifier);
+
+	/* Create Component Evidence object */
+	measurement = chunk_clone(measurement);
+	this->evidence = pts_comp_evidence_create(name, depth, extended_pcr,
+											  hash_algorithm, transform,
+											  measurement_time, measurement);
+
+	/* Add options */
+	if (has_validation)
+	{
+		policy_uri = chunk_clone(policy_uri);
+		this->evidence->set_validation(this->evidence, validation, policy_uri);
+	}
+	if (has_pcr_info)
+	{
+		pcr_before = chunk_clone(pcr_before);
+		pcr_after =  chunk_clone(pcr_after);
+		this->evidence->set_pcr_info(this->evidence, pcr_before, pcr_after);
+	}
+
 	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
-	free(this->value.ptr);
-	free(this->measurement_time.ptr);
-	free(this->policy_uri.ptr);
-	free(this->pcr_before.ptr);
-	free(this->pcr_after.ptr);
-	free(this->measurement.ptr);
+	this->evidence->destroy(this->evidence);
 	free(this);
 }
 
-METHOD(tcg_pts_attr_simple_comp_evid_t, is_pcr_info_included, bool,
+METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_evidence, pts_comp_evidence_t*,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
-	return this->pcr_info_included;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_flags, pts_attr_simple_comp_evid_flag_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->flags;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_sub_component_depth, u_int32_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->depth;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_func_name, pts_comp_func_name_t*,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->name;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_measurement_type, u_int8_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->measurement_type;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_extended_pcr, u_int32_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->extended_pcr;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_hash_algorithm, pts_meas_algorithms_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->hash_algorithm;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_trans, pts_pcr_transform_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->transformation;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_measurement_time, chunk_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->measurement_time;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_policy_uri, chunk_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->policy_uri;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_before_value, chunk_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->pcr_before;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_after_value, chunk_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->pcr_after;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_pcr_len, u_int16_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	if (this->pcr_before.ptr && this->pcr_after.ptr &&
-		this->pcr_before.len == this->pcr_after.len &&
-		this->pcr_before.len > 0 && this->pcr_after.len > 0)
-	{
-		return this->pcr_before.len;
-	}
-	return 0;
-}
-
-METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_measurement, chunk_t,
-	private_tcg_pts_attr_simple_comp_evid_t *this)
-{
-	return this->measurement;
+	return this->evidence;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evid_params_t params)
+pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(pts_comp_evidence_t *evid)
 {
 	private_tcg_pts_attr_simple_comp_evid_t *this;
 	
@@ -476,35 +364,11 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(tcg_pts_attr_simple_comp_evi
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.is_pcr_info_included = _is_pcr_info_included,
-			.get_flags= _get_flags,
-			.get_sub_component_depth = _get_sub_component_depth,
-			.get_comp_func_name = _get_comp_func_name,
-			.get_measurement_type = _get_measurement_type,
-			.get_extended_pcr = _get_extended_pcr,
-			.get_hash_algorithm = _get_hash_algorithm,
-			.get_pcr_trans = _get_pcr_trans,
-			.get_measurement_time = _get_measurement_time,
-			.get_policy_uri = _get_policy_uri,
-			.get_pcr_before_value = _get_pcr_before_value,
-			.get_pcr_after_value = _get_pcr_after_value,
-			.get_pcr_len = _get_pcr_len,
-			.get_comp_measurement = _get_comp_measurement,
+			.get_comp_evidence = _get_comp_evidence,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,
-		.pcr_info_included = params.pcr_info_included,
-		.flags = params.flags,
-		.depth = params.depth,
-		.name = params.name,
-		.extended_pcr = params.extended_pcr,
-		.hash_algorithm = params.hash_algorithm,
-		.transformation = params.transformation,
-		.measurement_time = params.measurement_time,
-		.policy_uri = chunk_clone(params.policy_uri),
-		.pcr_before = params.pcr_before,
-		.pcr_after = params.pcr_after,
-		.measurement = params.measurement,
+		.evidence = evid,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -530,20 +394,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.is_pcr_info_included = _is_pcr_info_included,
-			.get_flags= _get_flags,
-			.get_sub_component_depth = _get_sub_component_depth,
-			.get_comp_func_name = _get_comp_func_name,
-			.get_measurement_type = _get_measurement_type,
-			.get_extended_pcr = _get_extended_pcr,
-			.get_hash_algorithm = _get_hash_algorithm,
-			.get_pcr_trans = _get_pcr_trans,
-			.get_measurement_time = _get_measurement_time,
-			.get_policy_uri = _get_policy_uri,
-			.get_pcr_before_value = _get_pcr_before_value,
-			.get_pcr_after_value = _get_pcr_after_value,
-			.get_pcr_len = _get_pcr_len,
-			.get_comp_measurement = _get_comp_measurement,
+			.get_comp_evidence = _get_comp_evidence,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_COMP_EVID,

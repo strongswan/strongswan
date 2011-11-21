@@ -15,6 +15,7 @@
 
 #include "imc_attestation_state.h"
 
+#include <utils/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imc_attestation_state_t private_imc_attestation_state_t;
@@ -44,6 +45,11 @@ struct private_imc_attestation_state_t {
 	 */
 	pts_t *pts;
 
+	/**
+	 * PTS Component Evidence list
+	 */
+	linked_list_t *list;
+
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -58,10 +64,12 @@ METHOD(imc_state_t, change_state, void,
 	this->state = new_state;
 }
 
+
 METHOD(imc_state_t, destroy, void,
 	private_imc_attestation_state_t *this)
 {
 	this->pts->destroy(this->pts);
+	this->list->destroy_offset(this->list, offsetof(pts_comp_evidence_t, destroy));
 	free(this);
 }
 
@@ -71,6 +79,32 @@ METHOD(imc_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
+METHOD(imc_attestation_state_t, add_evidence, void,
+	private_imc_attestation_state_t *this, pts_comp_evidence_t *evidence)
+{
+	this->list->insert_last(this->list, evidence);
+}
+
+METHOD(imc_attestation_state_t, get_evid_count, int,
+	private_imc_attestation_state_t *this)
+{
+	return this->list->get_count(this->list);
+}
+
+METHOD(imc_attestation_state_t, next_evidence, pts_comp_evidence_t*,
+	private_imc_attestation_state_t *this)
+{
+	pts_comp_evidence_t *evidence;
+
+	if (this->list->remove_first(this->list, (void**)&evidence) == SUCCESS)
+	{
+		return evidence;
+	}
+	else
+	{	
+		return NULL;
+	}
+}
 /**
  * Described in header.
  */
@@ -87,10 +121,14 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.destroy = _destroy,
 			},
 			.get_pts = _get_pts,
+			.add_evidence = _add_evidence,
+			.get_evid_count = _get_evid_count,
+			.next_evidence = _next_evidence,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.pts = pts_create(TRUE),
+		.list = linked_list_create(),
 	);
 
 	platform_info = lib->settings->get_str(lib->settings,

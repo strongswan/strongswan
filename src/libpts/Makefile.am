@@ -20,6 +20,7 @@ libpts_la_SOURCES = \
 	pts/pts_meas_algo.h pts/pts_meas_algo.c \
 	pts/components/pts_component.h \
 	pts/components/pts_component_manager.h pts/components/pts_component_manager.c \
+	pts/components/pts_comp_evidence.h pts/components/pts_comp_evidence.c \
 	pts/components/pts_comp_func_name.h pts/components/pts_comp_func_name.c \
 	pts/components/ita/ita_comp_func_name.h pts/components/ita/ita_comp_func_name.c \
 	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \

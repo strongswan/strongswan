@@ -24,6 +24,7 @@
 
 #include <imc/imc_state.h>
 #include <pts/pts.h>
+#include <pts/components/pts_comp_evidence.h>
 #include <library.h>
 
 typedef struct imc_attestation_state_t imc_attestation_state_t;
@@ -44,6 +45,27 @@ struct imc_attestation_state_t {
 	 * @return					PTS object
 	 */
 	pts_t* (*get_pts)(imc_attestation_state_t *this);
+
+	/**
+	 * Add an entry to the Component Evidence list
+	 *
+	 * @param entry				Component Evidence entry
+	 */
+	void (*add_evidence)(imc_attestation_state_t *this, pts_comp_evidence_t *entry);
+
+	/**
+	 * Get the number of entries in the Component Evidence list
+	 *
+	 * @return					number of Component Evidence entries
+	 */
+	int (*get_evid_count)(imc_attestation_state_t *this);
+
+	/**
+	 * Removes next Component Evidence entry from list and returns it
+	 *
+	 * @return					Next Component Evidence entry
+	 */
+	pts_comp_evidence_t* (*next_evidence)(imc_attestation_state_t *this);
 
 };
 

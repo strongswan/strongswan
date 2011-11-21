@@ -182,8 +182,6 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
 
-	evidences = linked_list_create();
-
 	return result;
 }
 
@@ -202,7 +200,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	imc_state_t *state;
 	imc_attestation_state_t *attestation_state;
 	enumerator_t *enumerator;
-	pts_t *pts;
 	TNC_Result result;
 
 	if (!imc_attestation)
@@ -217,7 +214,6 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 	attestation_state = (imc_attestation_state_t*)state;
-	pts = attestation_state->get_pts(attestation_state);
 
 	/* parse received PA-TNC message and automatically handle any errors */
 	result = imc_attestation->receive_message(imc_attestation, connection_id,
@@ -269,7 +265,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		else if (attr->get_vendor_id(attr) == PEN_TCG)
 		{
 			if (!imc_attestation_process(attr, attr_list, attestation_state,
-				supported_algorithms, supported_dh_groups, evidences))
+				supported_algorithms, supported_dh_groups))
 			{
 				result = TNC_RESULT_FATAL;
 			}
@@ -324,7 +320,6 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	DESTROY_IF(evidences);
 	libpts_deinit();
 
 	imc_attestation->destroy(imc_attestation);
