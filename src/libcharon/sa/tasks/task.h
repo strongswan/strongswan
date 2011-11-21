@@ -71,6 +71,8 @@ enum task_type_t {
 	CHILD_REKEY,
 	/** IKEv1 main mode */
 	MAIN_MODE,
+	/** IKEv1 quick mode */
+	TASK_QUICK_MODE,
 };
 
 /**

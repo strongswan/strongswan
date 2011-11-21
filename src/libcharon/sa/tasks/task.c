@@ -17,7 +17,7 @@
 #include "task.h"
 
 #ifdef ME
-ENUM(task_type_names, IKE_INIT, MAIN_MODE,
+ENUM(task_type_names, IKE_INIT, TASK_QUICK_MODE,
 	"IKE_INIT",
 	"IKE_NATD",
 	"IKE_MOBIKE",
@@ -36,9 +36,10 @@ ENUM(task_type_names, IKE_INIT, MAIN_MODE,
 	"CHILD_DELETE",
 	"CHILD_REKEY",
 	"MAIN_MODE",
+	"QUICK_MODE",
 );
 #else
-ENUM(task_type_names, IKE_INIT, MAIN_MODE,
+ENUM(task_type_names, IKE_INIT, TASK_QUICK_MODE,
 	"IKE_INIT",
 	"IKE_NATD",
 	"IKE_MOBIKE",
@@ -56,5 +57,6 @@ ENUM(task_type_names, IKE_INIT, MAIN_MODE,
 	"CHILD_DELETE",
 	"CHILD_REKEY",
 	"MAIN_MODE",
+	"QUICK_MODE",
 );
 #endif /* ME */
