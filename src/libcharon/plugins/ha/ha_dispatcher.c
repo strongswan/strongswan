@@ -89,7 +89,8 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		switch (attribute)
 		{
 			case HA_IKE_ID:
-				ike_sa = ike_sa_create(value.ike_sa_id, IKEV2);
+				ike_sa = ike_sa_create(value.ike_sa_id,
+						value.ike_sa_id->is_initiator(value.ike_sa_id), IKEV2);
 				break;
 			case HA_IKE_REKEY_ID:
 				old_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,

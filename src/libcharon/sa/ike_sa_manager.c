@@ -163,7 +163,6 @@ static entry_t *entry_create()
 static bool entry_match_by_hash(entry_t *entry, ike_sa_id_t *id, chunk_t *hash)
 {
 	return id->get_responder_spi(id) == 0 &&
-		id->is_initiator(id) == entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
 		id->get_initiator_spi(id) == entry->ike_sa_id->get_initiator_spi(entry->ike_sa_id) &&
 		chunk_equals(*hash, entry->init_hash);
 }
@@ -179,7 +178,6 @@ static bool entry_match_by_id(entry_t *entry, ike_sa_id_t *id)
 	}
 	if ((id->get_responder_spi(id) == 0 ||
 		 entry->ike_sa_id->get_responder_spi(entry->ike_sa_id) == 0) &&
-		id->is_initiator(id) == entry->ike_sa_id->is_initiator(entry->ike_sa_id) &&
 		id->get_initiator_spi(id) == entry->ike_sa_id->get_initiator_spi(entry->ike_sa_id))
 	{
 		/* this is TRUE for IKE_SAs that we initiated but have not yet received a response */
@@ -954,7 +952,7 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	{
 		ike_sa_id = ike_sa_id_create(0, get_spi(this), FALSE);
 	}
-	ike_sa = ike_sa_create(ike_sa_id, version);
+	ike_sa = ike_sa_create(ike_sa_id, initiator, version);
 	ike_sa_id->destroy(ike_sa_id);
 
 	DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
@@ -1036,7 +1034,8 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			/* no IKE_SA found, create a new one */
 			id->set_responder_spi(id, get_spi(this));
 			entry = entry_create();
-			entry->ike_sa = ike_sa_create(id, ike_version);
+			/* a new SA checked out by message is a responder SA */
+			entry->ike_sa = ike_sa_create(id, FALSE, ike_version);
 			entry->ike_sa_id = id->clone(id);
 
 			segment = put_entry(this, entry);

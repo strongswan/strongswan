@@ -77,18 +77,8 @@ METHOD(ike_sa_id_t, equals, bool,
 	{
 		return FALSE;
 	}
-	if ((this->is_initiator_flag == other->is_initiator_flag) &&
-		(this->initiator_spi == other->initiator_spi) &&
-		(this->responder_spi == other->responder_spi))
-	{
-		/* private_ike_sa_id's are equal */
-		return TRUE;
-	}
-	else
-	{
-		/* private_ike_sa_id's are not equal */
-		return FALSE;
-	}
+	return this->initiator_spi == other->initiator_spi &&
+		   this->responder_spi == other->responder_spi;
 }
 
 METHOD(ike_sa_id_t, replace_values, void,

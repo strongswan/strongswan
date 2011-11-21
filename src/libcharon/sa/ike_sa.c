@@ -2131,7 +2131,8 @@ METHOD(ike_sa_t, destroy, void,
 /*
  * Described in header.
  */
-ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version)
+ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
+						 ike_version_t version)
 {
 	private_ike_sa_t *this;
 	static u_int32_t unique_id = 0;
@@ -2224,7 +2225,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version)
 		.other_host = host_create_any(AF_INET),
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
-		.keymat = keymat_create(version, ike_sa_id->is_initiator(ike_sa_id)),
+		.keymat = keymat_create(version, initiator),
 		.state = IKE_CREATED,
 		.stats[STAT_INBOUND] = time_monotonic(NULL),
 		.stats[STAT_OUTBOUND] = time_monotonic(NULL),

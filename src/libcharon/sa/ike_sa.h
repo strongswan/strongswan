@@ -959,9 +959,11 @@ struct ike_sa_t {
  * Creates an ike_sa_t object with a specific ID and IKE version.
  *
  * @param ike_sa_id		ike_sa_id_t to associate with new IKE_SA/ISAKMP_SA
+ * @param initiator		TRUE to create this IKE_SA as initiator
  * @param version		IKE version of this SA
  * @return				ike_sa_t object
  */
-ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, ike_version_t version);
+ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
+						ike_version_t version);
 
 #endif /** IKE_SA_H_ @}*/
