@@ -560,6 +560,12 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->nonce_r = nonce_payload->get_nonce(nonce_payload);
 
+			if (!derive_keys(this, this->nonce_i, this->nonce_r))
+			{
+				DBG1(DBG_IKE, "key derivation failed");
+				return FAILED;
+			}
+
 			return NEED_MORE;
 		}
 		case MM_AUTH:
