@@ -406,6 +406,7 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 	}
 	this->port = ts->get_from_port(ts);
 	this->protocol_id = ts->get_protocol(ts);
+	this->payload_length += this->id_data.len;
 
 	net->destroy(net);
 
