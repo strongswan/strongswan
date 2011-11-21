@@ -220,7 +220,8 @@ payload_t *payload_create(payload_type_t type)
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
 		case ENCRYPTED:
-			return (payload_t*)encryption_payload_create();
+		case ENCRYPTED_V1:
+			return (payload_t*)encryption_payload_create(type);
 		default:
 			return (payload_t*)unknown_payload_create(type);
 	}

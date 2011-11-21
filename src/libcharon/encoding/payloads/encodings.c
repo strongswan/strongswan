@@ -17,7 +17,7 @@
 
 #include "encodings.h"
 
-ENUM(encoding_type_names, U_INT_4, IKE_SPI,
+ENUM(encoding_type_names, U_INT_4, ENCRYPTED_DATA,
 	"U_INT_4",
 	"U_INT_8",
 	"U_INT_16",
@@ -38,4 +38,5 @@ ENUM(encoding_type_names, U_INT_4, IKE_SPI,
 	"ADDRESS",
 	"CHUNK_DATA",
 	"IKE_SPI",
+	"ENCRYPTED",
 );

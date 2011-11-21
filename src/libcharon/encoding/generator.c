@@ -449,6 +449,7 @@ METHOD(generator_t, generate_payload, void,
 			case ADDRESS:
 			case SPI:
 			case CHUNK_DATA:
+			case ENCRYPTED_DATA:
 				generate_from_chunk(this, rules[i].offset);
 				break;
 			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE:

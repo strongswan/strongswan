@@ -297,6 +297,11 @@ enum encoding_type_t {
 	IKE_SPI,
 
 	/**
+	 * Representating an encrypted IKEv1 message.
+	 */
+	ENCRYPTED_DATA,
+
+	/**
 	 * Reprensenting a field containing a set of wrapped payloads.
 	 *
 	 * This type is not used directly, but as an offset to the wrapped payloads.

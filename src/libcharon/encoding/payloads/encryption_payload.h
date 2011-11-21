@@ -97,8 +97,9 @@ struct encryption_payload_t {
 /**
  * Creates an empty encryption_payload_t object.
  *
+ * @param type		ENCRYPTED or ENCRYPTED_V1
  * @return			encryption_payload_t object
  */
-encryption_payload_t *encryption_payload_create(void);
+encryption_payload_t *encryption_payload_create(payload_type_t type);
 
 #endif /** ENCRYPTION_PAYLOAD_H_ @}*/

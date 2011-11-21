@@ -516,6 +516,16 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
+			case ENCRYPTED_DATA:
+			{
+				if (!parse_chunk(this, rule_number, output + rule->offset,
+								 this->input_roof - this->byte_pos))
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;
+			}
 			case ATTRIBUTE_FORMAT:
 			{
 				if (!parse_bit(this, rule_number, output + rule->offset))

@@ -247,6 +247,11 @@ enum payload_type_t {
 	 * CONFIGURATION_ATTRIBUTE, attribute in a configuration payload.
 	 */
 	CONFIGURATION_ATTRIBUTE,
+
+	/**
+	 * This is not really a payload, but rather the complete IKEv1 message.
+	 */
+	ENCRYPTED_V1,
 };
 
 /**
@@ -286,35 +291,35 @@ struct payload_t {
 	/**
 	 * Get type of payload.
 	 *
-	 * @return 				type of this payload
+	 * @return				type of this payload
 	 */
 	payload_type_t (*get_type) (payload_t *this);
 
 	/**
 	 * Get type of next payload or NO_PAYLOAD (0) if this is the last one.
 	 *
-	 * @return 				type of next payload
+	 * @return				type of next payload
 	 */
 	payload_type_t (*get_next_type) (payload_t *this);
 
 	/**
 	 * Set type of next payload.
 	 *
-	 * @param type 			type of next payload
+	 * @param type			type of next payload
 	 */
 	void (*set_next_type) (payload_t *this,payload_type_t type);
 
 	/**
 	 * Get length of payload.
 	 *
-	 * @return 				length of this payload
+	 * @return				length of this payload
 	 */
 	size_t (*get_length) (payload_t *this);
 
 	/**
 	 * Verifies payload structure and makes consistence check.
 	 *
-	 * @return 				SUCCESS,  FAILED if consistence not given
+	 * @return				SUCCESS,  FAILED if consistence not given
 	 */
 	status_t (*verify) (payload_t *this);
 
