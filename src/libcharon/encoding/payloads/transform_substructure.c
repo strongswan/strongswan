@@ -167,7 +167,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_transform_substructure_t *this, encoding_rule_t **rules)
 {
-	if (this->type == TRANSFORM_ATTRIBUTE)
+	if (this->type == TRANSFORM_SUBSTRUCTURE)
 	{
 		*rules = encodings_v2;
 		return countof(encodings_v2);
