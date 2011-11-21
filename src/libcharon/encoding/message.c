@@ -24,6 +24,7 @@
 
 #include <library.h>
 #include <daemon.h>
+#include <sa/keymat_v1.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <encoding/payloads/encodings.h>
@@ -1566,6 +1567,23 @@ static status_t parse_payloads(private_message_t *this)
 	payload_t *payload;
 	status_t status;
 
+	if (this->is_encrypted)
+	{	/* wrap the whole encrypted IKEv1 message in a special encryption
+		 * payload which is then handled just like a regular payload */
+		encryption_payload_t *encryption;
+		status = this->parser->parse_payload(this->parser, ENCRYPTED_V1,
+											 (payload_t**)&encryption);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "failed to wrap encrypted IKEv1 message");
+			return PARSE_ERROR;
+		}
+		encryption->payload_interface.set_next_type((payload_t*)encryption,
+													this->first_payload);
+		this->payloads->insert_last(this->payloads, encryption);
+		return SUCCESS;
+	}
+
 	while (type != NO_PAYLOAD)
 	{
 		DBG2(DBG_ENC, "starting parsing a %N payload",
@@ -1626,11 +1644,12 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 
 		DBG2(DBG_ENC, "process payload of type %N", payload_type_names, type);
 
-		if (type == ENCRYPTED)
+		if (type == ENCRYPTED || type == ENCRYPTED_V1)
 		{
 			encryption_payload_t *encryption;
 			payload_t *encrypted;
 			chunk_t chunk;
+			size_t bs;
 
 			encryption = (encryption_payload_t*)payload;
 
@@ -1643,15 +1662,29 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 				break;
 			}
 			aead = keymat->get_aead(keymat, TRUE);
+			bs = aead->get_block_size(aead);
 			encryption->set_transform(encryption, aead);
 			chunk = this->packet->get_data(this->packet);
-			if (chunk.len < encryption->get_length(encryption))
+			if (chunk.len < encryption->get_length(encryption) ||
+				chunk.len < bs)
 			{
 				DBG1(DBG_ENC, "invalid payload length");
 				status = VERIFY_ERROR;
 				break;
 			}
-			chunk.len -= encryption->get_length(encryption);
+			if (type == ENCRYPTED_V1)
+			{	/* instead of associated data we provide the IV, we also update
+				 * the IV with the last encrypted block */
+				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+				chunk_t last_block = chunk_create(chunk.ptr + chunk.len - bs,
+												  bs);
+				chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
+				keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
+			}
+			else
+			{
+				chunk.len -= encryption->get_length(encryption);
+			}
 			status = encryption->decrypt(encryption, chunk);
 			if (status != SUCCESS)
 			{
@@ -1791,6 +1824,13 @@ METHOD(message_t, parse_body, status_t,
 	}
 
 	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
+
+	if (this->is_encrypted)
+	{	/* TODO-IKEv1: this should be done later when we know this is no
+		 * retransmit */
+		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+		keymat_v1->confirm_iv(keymat_v1, this->message_id);
+	}
 
 	return SUCCESS;
 }
