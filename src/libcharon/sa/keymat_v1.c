@@ -466,6 +466,43 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	return TRUE;
 }
 
+METHOD(keymat_v1_t, get_hash, chunk_t,
+	private_keymat_v1_t *this, bool initiator, chunk_t dh, chunk_t dh_other,
+	ike_sa_id_t *ike_sa_id, chunk_t sa_i, identification_t *id)
+{
+	chunk_t hash, data;
+	u_int64_t spi, spi_other;
+	/* TODO-IKEv1: get real bytes from ID header? */
+	u_int8_t id_header[4] = { id->get_type(id), 0, 0, 0 };
+
+	/* HASH_I = prf(SKEYID, g^xi | g^xr | CKY-I | CKY-R | SAi_b | IDii_b )
+	 * HASH_R = prf(SKEYID, g^xr | g^xi | CKY-R | CKY-I | SAi_b | IDir_b )
+	 */
+	if (initiator)
+	{
+		spi = ike_sa_id->get_initiator_spi(ike_sa_id);
+		spi_other = ike_sa_id->get_responder_spi(ike_sa_id);
+	}
+	else
+	{
+		spi_other = ike_sa_id->get_initiator_spi(ike_sa_id);
+		spi = ike_sa_id->get_responder_spi(ike_sa_id);
+	}
+	data = chunk_cat("ccccccc", dh, dh_other,
+					 chunk_from_thing(spi), chunk_from_thing(spi_other),
+					 sa_i, chunk_from_thing(id_header), id->get_encoding(id));
+
+	DBG3(DBG_IKE, "HASH_%c data %B", initiator ? 'I' : 'R', &data);
+
+	this->prf->set_key(this->prf, this->skeyid);
+	this->prf->allocate_bytes(this->prf, data, &hash);
+
+	DBG3(DBG_IKE, "HASH_%c %B", initiator ? 'I' : 'R', &hash);
+
+	free(data.ptr);
+	return hash;
+}
+
 /**
  * Generate an IV
  */
@@ -602,6 +639,7 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 				.destroy = _destroy,
 			},
 			.derive_ike_keys = _derive_ike_keys,
+			.get_hash = _get_hash,
 			.get_iv = _get_iv,
 			.update_iv = _update_iv,
 			.confirm_iv = _confirm_iv,

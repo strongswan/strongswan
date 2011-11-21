@@ -57,6 +57,21 @@ struct keymat_v1_t {
 							auth_class_t auth, shared_key_t *shared_key);
 
 	/**
+	 * Get HASH data for authentication.
+	 *
+	 * @param initiatior	TRUE to create HASH_I, FALSE for HASH_R
+	 * @param dh			public DH value of peer to create HASH for
+	 * @param dh_other		others public DH value
+	 * @param ike_sa_id		IKE_SA identifier
+	 * @param sa_i			encoded SA payload of initiator
+	 * @param id			ID of peer to create hash for
+	 * @return				allocated HASH data
+	 */
+	chunk_t (*get_hash)(keymat_v1_t *this, bool initiator,
+						chunk_t dh, chunk_t dh_other, ike_sa_id_t *ike_sa_id,
+						chunk_t sa_i, identification_t *id);
+
+	/**
 	 * Returns the IV for a message with the given message ID.
 	 *
 	 * @param mid			message ID
