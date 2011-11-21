@@ -111,6 +111,7 @@ static auth_cfg_t *get_auth_cfg(private_main_mode_t *this, bool local)
 	enumerator = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg,
 															local);
 	enumerator->enumerate(enumerator, &cfg);
+	enumerator->destroy(enumerator);
 	return cfg;
 }
 
@@ -404,7 +405,7 @@ METHOD(task_t, build_r, status_t,
 				return FAILED;
 			}
 
-			this->ike_sa->set_my_id(this->ike_sa, id);
+			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
