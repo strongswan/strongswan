@@ -34,6 +34,7 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+#include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 
 
@@ -217,6 +218,8 @@ payload_t *payload_create(payload_type_t type)
 		case VENDOR_ID:
 		case VENDOR_ID_V1:
 			return (payload_t*)vendor_id_payload_create(type);
+		case HASH_V1:
+			return (payload_t*)hash_payload_create();
 		case CONFIGURATION:
 			return (payload_t*)cp_payload_create();
 		case CONFIGURATION_ATTRIBUTE:
