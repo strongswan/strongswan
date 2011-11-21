@@ -105,8 +105,8 @@ METHOD(pts_component_t, measure, status_t,
 	pcr_after = chunk_from_hex(
 					chunk_create(pcr_after_hex, strlen(pcr_after_hex)), NULL);
 
-	evid = *evidence = pts_comp_evidence_create(this->name, 0,
-							    this->extended_pcr,
+	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
+								0, this->extended_pcr,
 								PTS_MEAS_ALGO_SHA1, PTS_PCR_TRANSFORM_NO,
 								this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);

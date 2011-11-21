@@ -77,7 +77,8 @@ METHOD(pts_component_t, measure, status_t,
 	pcr_before = chunk_alloc(PCR_LEN);
 	memset(pcr_before.ptr, 0x00, pcr_before.len);
 
-	evid = *evidence = pts_comp_evidence_create(this->name, 0, extended_pcr,
+	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
+								0, extended_pcr,
 								PTS_MEAS_ALGO_SHA1, PTS_PCR_TRANSFORM_NO,
 								measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
