@@ -1100,7 +1100,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	memset(buf, 0, len);
 	len--;
 
-	written = snprintf(pos, len, "%N %s %d [",
+	written = snprintf(pos, len, "%N %s %u [",
 					   exchange_type_names, this->exchange_type,
 					   this->is_request ? "request" : "response",
 					   this->message_id);
