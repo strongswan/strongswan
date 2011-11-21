@@ -38,5 +38,5 @@ ENUM(encoding_type_names, U_INT_4, ENCRYPTED_DATA,
 	"ADDRESS",
 	"CHUNK_DATA",
 	"IKE_SPI",
-	"ENCRYPTED",
+	"ENCRYPTED_DATA",
 );
