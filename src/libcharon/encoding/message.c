@@ -575,6 +575,63 @@ static payload_order_t informational_i_order_v1[] = {
 	{DELETE_V1,					0},
 	{VENDOR_ID_V1,				0},
 };
+
+/**
+ * Message rule for QUICK_MODE from initiator.
+ */
+static payload_rule_t quick_mode_i_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
+	{NONCE_V1,					0,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
+	{ID_V1,						0,	2,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for QUICK_MODE from initiator.
+ */
+static payload_order_t quick_mode_i_order[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{HASH_V1,					0},
+	{SECURITY_ASSOCIATION_V1,	0},
+	{NONCE_V1,					0},
+	{KEY_EXCHANGE_V1,			0},
+	{ID_V1,						0},
+};
+
+/**
+ * Message rule for QUICK_MODE from responder.
+ */
+static payload_rule_t quick_mode_r_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
+	{NONCE_V1,					0,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
+	{ID_V1,						0,	2,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for QUICK_MODE from responder.
+ */
+static payload_order_t quick_mode_r_order[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{HASH_V1,					0},
+	{SECURITY_ASSOCIATION_V1,	0},
+	{NONCE_V1,					0},
+	{KEY_EXCHANGE_V1,			0},
+	{ID_V1,						0},
+};
+
 #endif /* USE_IKEV1 */
 
 /**
@@ -643,6 +700,14 @@ static message_rule_t message_rules[] = {
 	{INFORMATIONAL_V1,	TRUE,	TRUE,
 		countof(informational_i_rules_v1), informational_i_rules_v1,
 		countof(informational_i_order_v1), informational_i_order_v1,
+	},
+	{QUICK_MODE,		TRUE,	TRUE,
+		countof(quick_mode_i_rules), quick_mode_i_rules,
+		countof(quick_mode_i_order), quick_mode_i_order,
+	},
+	{QUICK_MODE,		FALSE,	TRUE,
+		countof(quick_mode_r_rules), quick_mode_r_rules,
+		countof(quick_mode_r_order), quick_mode_r_order,
 	},
 	/* TODO-IKEv1: define rules for other exchanges */
 #endif /* USE_IKEV1 */
