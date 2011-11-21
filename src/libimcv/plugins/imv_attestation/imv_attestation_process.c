@@ -41,7 +41,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 pts_database_t *pts_db,
 							 credential_manager_t *pts_credmgr)
 {
-	chunk_t attr_info;
 	pts_t *pts;
 
 	pts = attestation_state->get_pts(attestation_state);
@@ -295,7 +294,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					/* re-enter component into list */
 					attestation_state->add_component(attestation_state, comp);
 			}
-			evidence->destroy(evidence);
 			break;
 		}
 		case TCG_PTS_SIMPLE_EVID_FINAL:
