@@ -390,7 +390,7 @@ METHOD(parser_t, parse_payload, status_t,
 		rule = &(this->rules[rule_number]);
 		DBG2(DBG_ENC, "  parsing rule %d %N",
 			 rule_number, encoding_type_names, rule->type);
-		switch (rule->type)
+		switch ((int)rule->type)
 		{
 			case U_INT_4:
 			{

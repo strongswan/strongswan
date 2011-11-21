@@ -423,7 +423,7 @@ METHOD(generator_t, generate_payload, void,
 	{
 		DBG2(DBG_ENC, "  generating rule %d %N",
 			 i, encoding_type_names, rules[i].type);
-		switch (rules[i].type)
+		switch ((int)rules[i].type)
 		{
 			case U_INT_4:
 			case U_INT_8:
