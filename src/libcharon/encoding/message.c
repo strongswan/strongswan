@@ -1559,10 +1559,16 @@ METHOD(message_t, parse_header, status_t,
 
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
-	this->is_request = !ike_header->get_response_flag(ike_header);
-	this->is_encrypted = ike_header->get_encryption_flag(ike_header);
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		this->is_request = !ike_header->get_response_flag(ike_header);
+	}
+	else
+	{
+		this->is_encrypted = ike_header->get_encryption_flag(ike_header);
+	}
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
 	for (i = 0; i < countof(this->reserved); i++)
