@@ -24,10 +24,8 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <sa/ike_sa_id.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
-#include <utils/linked_list.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/encryption_payload.h>
@@ -1334,13 +1332,14 @@ METHOD(message_t, disable_sort, void,
 }
 
 METHOD(message_t, generate, status_t,
-	private_message_t *this, aead_t *aead, packet_t **packet)
+	private_message_t *this, keymat_t *keymat, packet_t **packet)
 {
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next;
 	encryption_payload_t *encryption = NULL;
 	enumerator_t *enumerator;
+	aead_t *aead;
 	chunk_t chunk;
 	char str[BUF_LEN];
 	u_int32_t *lenpos;
@@ -1374,6 +1373,7 @@ METHOD(message_t, generate, status_t,
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
+	aead = keymat->get_aead(keymat, FALSE);
 	if (aead && this->rule->encrypted)
 	{
 		encryption = wrap_payloads(this);
@@ -1609,13 +1609,14 @@ static status_t parse_payloads(private_message_t *this)
 /**
  * Decrypt payload from the encryption payload
  */
-static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
+static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 {
 	bool was_encrypted = FALSE;
 	payload_t *payload, *previous = NULL;
 	enumerator_t *enumerator;
 	payload_rule_t *rule;
 	payload_type_t type;
+	aead_t *aead;
 	status_t status = SUCCESS;
 
 	enumerator = this->payloads->create_enumerator(this->payloads);
@@ -1641,6 +1642,7 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 				status = VERIFY_ERROR;
 				break;
 			}
+			aead = keymat->get_aead(keymat, TRUE);
 			encryption->set_transform(encryption, aead);
 			chunk = this->packet->get_data(this->packet);
 			if (chunk.len < encryption->get_length(encryption))
@@ -1752,7 +1754,7 @@ static status_t verify(private_message_t *this)
 }
 
 METHOD(message_t, parse_body, status_t,
-	private_message_t *this, aead_t *aead)
+	private_message_t *this, keymat_t *keymat)
 {
 	status_t status = SUCCESS;
 	char str[BUF_LEN];
@@ -1775,7 +1777,7 @@ METHOD(message_t, parse_body, status_t,
 		return status;
 	}
 
-	status = decrypt_payloads(this, aead);
+	status = decrypt_payloads(this, keymat);
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_ENC, "could not decrypt payloads");
@@ -1872,4 +1874,3 @@ message_t *message_create(int major, int minor)
 
 	return this;
 }
-

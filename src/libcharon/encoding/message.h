@@ -27,15 +27,15 @@
 typedef struct message_t message_t;
 
 #include <library.h>
-#include <sa/ike_sa_id.h>
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/notify_payload.h>
+#include <sa/keymat.h>
+#include <sa/ike_sa_id.h>
 #include <utils/linked_list.h>
-#include <crypto/aead.h>
 
 /**
- * This class is used to represent an IKEv2-Message.
+ * This class is used to represent an IKE-Message.
  *
  * The message handles parsing and generation of payloads
  * via parser_t/generator_t. Encryption is done transparently
@@ -228,7 +228,7 @@ struct message_t {
 	 * If there are encrypted payloads, they get decrypted and verified using
 	 * the given aead transform (if given).
 	 *
-	 * @param aead		aead transform to verify/decrypt message
+	 * @param keymat	keymat to verify/decrypt message
 	 * @return
 	 *					- SUCCESS if parsing successful
 	 *					- PARSE_ERROR if message parsing failed
@@ -236,7 +236,7 @@ struct message_t {
 	 *					- FAILED if integrity check failed
 	 *					- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*parse_body) (message_t *this, aead_t *aead);
+	status_t (*parse_body) (message_t *this, keymat_t *keymat);
 
 	/**
 	 * Generates the UDP packet of specific message.
@@ -247,7 +247,7 @@ struct message_t {
 	 * Generation is only done once, multiple calls will just return a copy
 	 * of the packet.
 	 *
-	 * @param aead		aead transform to encrypt/sign message
+	 * @param keymat	keymat to encrypt/sign message
 	 * @param packet	copy of generated packet
 	 * @return
 	 *					- SUCCESS if packet could be generated
@@ -255,7 +255,7 @@ struct message_t {
 	 *					- NOT_FOUND if no rules found for message generation
 	 *					- INVALID_STATE if aead not supplied but needed.
 	 */
-	status_t (*generate) (message_t *this, aead_t *aead, packet_t **packet);
+	status_t (*generate) (message_t *this, keymat_t *keymat, packet_t **packet);
 
 	/**
 	 * Check if the message has already been encoded using generate().

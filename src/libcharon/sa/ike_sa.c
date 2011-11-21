@@ -920,8 +920,7 @@ METHOD(ike_sa_t, generate_message, status_t,
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	charon->bus->message(charon->bus, message, FALSE);
-	return message->generate(message,
-				this->keymat->get_aead(this->keymat, FALSE), packet);
+	return message->generate(message, this->keymat, packet);
 }
 
 /**
@@ -1227,8 +1226,7 @@ METHOD(ike_sa_t, process_message, status_t,
 
 	is_request = message->get_request(message);
 
-	status = message->parse_body(message,
-								 this->keymat->get_aead(this->keymat, TRUE));
+	status = message->parse_body(message, this->keymat);
 	if (status == SUCCESS)
 	{	/* check for unsupported critical payloads */
 		enumerator_t *enumerator;
