@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -18,6 +21,7 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <sa/keymat_v1.h>
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -75,6 +79,11 @@ struct private_main_mode_t {
 	 * DH exchange
 	 */
 	diffie_hellman_t *dh;
+
+	/**
+	 * Keymat derivation (from SA)
+	 */
+	keymat_v1_t *keymat;
 
 	/**
 	 * Received public DH value from peer
@@ -156,7 +165,8 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_IKE, "DH group selection failed");
 				return FAILED;
 			}
-			this->dh = lib->crypto->create_dh(lib->crypto, group);
+			this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+													  group);
 			if (!this->dh)
 			{
 				DBG1(DBG_IKE, "negotiated DH group not supported");
@@ -355,6 +365,68 @@ METHOD(task_t, process_r, status_t,
 	}
 }
 
+/**
+ * Lookup a shared secret for this IKE_SA
+ */
+static shared_key_t *lookup_shared_key(private_main_mode_t *this)
+{
+	host_t *me, *other;
+	identification_t *my_id, *other_id;
+	shared_key_t *shared_key;
+
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = identification_create_from_sockaddr(me->get_sockaddr(me));
+	other_id = identification_create_from_sockaddr(other->get_sockaddr(other));
+	if (!my_id || !other_id)
+	{
+		DESTROY_IF(my_id);
+		DESTROY_IF(other_id);
+		return NULL;
+	}
+	shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id,
+										  other_id);
+	if (!shared_key)
+	{
+		DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
+	}
+	my_id->destroy(my_id);
+	other_id->destroy(other_id);
+	return shared_key;
+}
+
+/**
+ * Derive key material for this IKE_SA
+ */
+static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
+						chunk_t nonce_r)
+{
+	ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
+	shared_key_t *shared_key = NULL;
+	auth_class_t auth;
+
+	/* TODO-IKEv1: support other authentication classes */
+	auth = AUTH_CLASS_PSK;
+	switch (auth)
+	{
+		case AUTH_CLASS_PSK:
+			shared_key = lookup_shared_key(this);
+			break;
+		default:
+			break;
+	}
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+						this->dh_value, nonce_i, nonce_r, id, auth, shared_key))
+	{
+		DESTROY_IF(shared_key);
+		return FALSE;
+	}
+	DESTROY_IF(shared_key);
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, nonce_i, nonce_r,
+						  NULL);
+	return TRUE;
+}
+
 METHOD(task_t, build_r, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -387,6 +459,12 @@ METHOD(task_t, build_r, status_t,
 			}
 			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_r);
 			rng->destroy(rng);
+
+			if (!derive_keys(this, this->nonce_i, this->nonce_r))
+			{
+				DBG1(DBG_IKE, "key derivation failed");
+				return FAILED;
+			}
 
 			nonce_payload = nonce_payload_create(NONCE_V1);
 			nonce_payload->set_nonce(nonce_payload, this->nonce_r);
@@ -564,6 +642,7 @@ main_mode_t *main_mode_create(ike_sa_t *ike_sa, bool initiator)
 			},
 		},
 		.ike_sa = ike_sa,
+		.keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa),
 		.initiator = initiator,
 		.state = MM_INIT,
 	);
