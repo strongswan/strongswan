@@ -324,7 +324,7 @@ METHOD(task_t, build_r, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_child_delete_t *this)
 {
-	return CHILD_DELETE;
+	return TASK_CHILD_DELETE;
 }
 
 METHOD(child_delete_t , get_child, child_sa_t*,

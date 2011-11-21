@@ -479,7 +479,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_cert_pre_t *this)
 {
-	return IKE_CERT_PRE;
+	return TASK_IKE_CERT_PRE;
 }
 
 METHOD(task_t, migrate, void,

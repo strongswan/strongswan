@@ -750,7 +750,7 @@ METHOD(ike_me_t, relay, void,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_me_t *this)
 {
-	return IKE_ME;
+	return TASK_IKE_ME;
 }
 
 METHOD(task_t, migrate, void,

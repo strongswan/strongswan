@@ -17,11 +17,11 @@
 #include "task.h"
 
 #ifdef ME
-ENUM(task_type_names, IKE_INIT, TASK_QUICK_MODE,
+ENUM(task_type_names, TASK_IKE_INIT, TASK_QUICK_MODE,
 	"IKE_INIT",
 	"IKE_NATD",
 	"IKE_MOBIKE",
-	"IKE_AUTHENTICATE",
+	"IKE_AUTH",
 	"IKE_AUTH_LIFETIME",
 	"IKE_CERT_PRE",
 	"IKE_CERT_POST",
@@ -39,11 +39,11 @@ ENUM(task_type_names, IKE_INIT, TASK_QUICK_MODE,
 	"QUICK_MODE",
 );
 #else
-ENUM(task_type_names, IKE_INIT, TASK_QUICK_MODE,
+ENUM(task_type_names, TASK_IKE_INIT, TASK_QUICK_MODE,
 	"IKE_INIT",
 	"IKE_NATD",
 	"IKE_MOBIKE",
-	"IKE_AUTHENTICATE",
+	"IKE_AUTH",
 	"IKE_AUTH_LIFETIME",
 	"IKE_CERT_PRE",
 	"IKE_CERT_POST",

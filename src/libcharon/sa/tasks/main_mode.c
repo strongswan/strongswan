@@ -527,7 +527,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_main_mode_t *this)
 {
-	return MAIN_MODE;
+	return TASK_MAIN_MODE;
 }
 
 METHOD(task_t, migrate, void,

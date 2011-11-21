@@ -149,7 +149,7 @@ METHOD(task_t, build_r, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_delete_t *this)
 {
-	return IKE_DELETE;
+	return TASK_IKE_DELETE;
 }
 
 METHOD(task_t, migrate, void,

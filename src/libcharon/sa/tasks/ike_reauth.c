@@ -150,7 +150,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_reauth_t *this)
 {
-	return IKE_REAUTH;
+	return TASK_IKE_REAUTH;
 }
 
 METHOD(task_t, migrate, void,

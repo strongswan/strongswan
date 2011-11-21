@@ -507,7 +507,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_init_t *this)
 {
-	return IKE_INIT;
+	return TASK_IKE_INIT;
 }
 
 METHOD(task_t, migrate, void,

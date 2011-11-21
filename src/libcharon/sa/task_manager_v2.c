@@ -211,7 +211,7 @@ METHOD(task_manager_t, retransmit, status_t,
 		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
 		while (enumerator->enumerate(enumerator, (void*)&task))
 		{
-			if (task->get_type(task) == IKE_MOBIKE)
+			if (task->get_type(task) == TASK_IKE_MOBIKE)
 			{
 				mobike = (ike_mobike_t*)task;
 				if (!mobike->is_probing(mobike))
@@ -303,78 +303,78 @@ METHOD(task_manager_t, initiate, status_t,
 		switch (this->ike_sa->get_state(this->ike_sa))
 		{
 			case IKE_CREATED:
-				activate_task(this, IKE_VENDOR);
-				if (activate_task(this, IKE_INIT))
+				activate_task(this, TASK_IKE_VENDOR);
+				if (activate_task(this, TASK_IKE_INIT))
 				{
 					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
-					activate_task(this, IKE_NATD);
-					activate_task(this, IKE_CERT_PRE);
+					activate_task(this, TASK_IKE_NATD);
+					activate_task(this, TASK_IKE_CERT_PRE);
 #ifdef ME
-					/* this task has to be activated before the IKE_AUTHENTICATE
+					/* this task has to be activated before the TASK_IKE_AUTH
 					 * task, because that task pregenerates the packet after
 					 * which no payloads can be added to the message anymore.
 					 */
-					activate_task(this, IKE_ME);
+					activate_task(this, TASK_IKE_ME);
 #endif /* ME */
-					activate_task(this, IKE_AUTHENTICATE);
-					activate_task(this, IKE_CERT_POST);
-					activate_task(this, IKE_CONFIG);
-					activate_task(this, CHILD_CREATE);
-					activate_task(this, IKE_AUTH_LIFETIME);
-					activate_task(this, IKE_MOBIKE);
+					activate_task(this, TASK_IKE_AUTH);
+					activate_task(this, TASK_IKE_CERT_POST);
+					activate_task(this, TASK_IKE_CONFIG);
+					activate_task(this, TASK_CHILD_CREATE);
+					activate_task(this, TASK_IKE_AUTH_LIFETIME);
+					activate_task(this, TASK_IKE_MOBIKE);
 				}
 				break;
 			case IKE_ESTABLISHED:
-				if (activate_task(this, CHILD_CREATE))
+				if (activate_task(this, TASK_CHILD_CREATE))
 				{
 					exchange = CREATE_CHILD_SA;
 					break;
 				}
-				if (activate_task(this, CHILD_DELETE))
+				if (activate_task(this, TASK_CHILD_DELETE))
 				{
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, CHILD_REKEY))
+				if (activate_task(this, TASK_CHILD_REKEY))
 				{
 					exchange = CREATE_CHILD_SA;
 					break;
 				}
-				if (activate_task(this, IKE_DELETE))
+				if (activate_task(this, TASK_IKE_DELETE))
 				{
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, IKE_REKEY))
+				if (activate_task(this, TASK_IKE_REKEY))
 				{
 					exchange = CREATE_CHILD_SA;
 					break;
 				}
-				if (activate_task(this, IKE_REAUTH))
+				if (activate_task(this, TASK_IKE_REAUTH))
 				{
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, IKE_MOBIKE))
+				if (activate_task(this, TASK_IKE_MOBIKE))
 				{
 					exchange = INFORMATIONAL;
 					break;
 				}
-				if (activate_task(this, IKE_DPD))
+				if (activate_task(this, TASK_IKE_DPD))
 				{
 					exchange = INFORMATIONAL;
 					break;
 				}
 #ifdef ME
-				if (activate_task(this, IKE_ME))
+				if (activate_task(this, TASK_IKE_ME))
 				{
 					exchange = ME_CONNECT;
 					break;
 				}
 #endif /* ME */
 			case IKE_REKEYING:
-				if (activate_task(this, IKE_DELETE))
+				if (activate_task(this, TASK_IKE_DELETE))
 				{
 					exchange = INFORMATIONAL;
 					break;
@@ -393,18 +393,18 @@ METHOD(task_manager_t, initiate, status_t,
 			DBG2(DBG_IKE, "  %N task", task_type_names, task->get_type(task));
 			switch (task->get_type(task))
 			{
-				case IKE_INIT:
+				case TASK_IKE_INIT:
 					exchange = IKE_SA_INIT;
 					break;
-				case IKE_AUTHENTICATE:
+				case TASK_IKE_AUTH:
 					exchange = IKE_AUTH;
 					break;
-				case CHILD_CREATE:
-				case CHILD_REKEY:
-				case IKE_REKEY:
+				case TASK_CHILD_CREATE:
+				case TASK_CHILD_REKEY:
+				case TASK_IKE_REKEY:
 					exchange = CREATE_CHILD_SA;
 					break;
-				case IKE_MOBIKE:
+				case TASK_IKE_MOBIKE:
 					exchange = INFORMATIONAL;
 					break;
 				default:
@@ -555,8 +555,9 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 	type = task->get_type(task);
 
 	/* do we have to check  */
-	if (type == IKE_REKEY || type == CHILD_REKEY ||
-		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
+	if (type == TASK_IKE_REKEY || type == TASK_CHILD_REKEY ||
+		type == TASK_CHILD_DELETE || type == TASK_IKE_DELETE ||
+		type == TASK_IKE_REAUTH)
 	{
 		/* find an exchange collision, and notify these tasks */
 		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
@@ -564,17 +565,17 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 		{
 			switch (active->get_type(active))
 			{
-				case IKE_REKEY:
-					if (type == IKE_REKEY || type == IKE_DELETE ||
-						type == IKE_REAUTH)
+				case TASK_IKE_REKEY:
+					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE ||
+						type == TASK_IKE_REAUTH)
 					{
 						ike_rekey_t *rekey = (ike_rekey_t*)active;
 						rekey->collide(rekey, task);
 						break;
 					}
 					continue;
-				case CHILD_REKEY:
-					if (type == CHILD_REKEY || type == CHILD_DELETE)
+				case TASK_CHILD_REKEY:
+					if (type == TASK_CHILD_REKEY || type == TASK_CHILD_DELETE)
 					{
 						child_rekey_t *rekey = (child_rekey_t*)active;
 						rekey->collide(rekey, task);
@@ -977,7 +978,7 @@ METHOD(task_manager_t, process_message, status_t,
 METHOD(task_manager_t, queue_task, void,
 	private_task_manager_t *this, task_t *task)
 {
-	if (task->get_type(task) == IKE_MOBIKE)
+	if (task->get_type(task) == TASK_IKE_MOBIKE)
 	{	/*  there is no need to queue more than one mobike task */
 		enumerator_t *enumerator;
 		task_t *current;
@@ -985,7 +986,7 @@ METHOD(task_manager_t, queue_task, void,
 		enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
 		while (enumerator->enumerate(enumerator, (void**)&current))
 		{
-			if (current->get_type(current) == IKE_MOBIKE)
+			if (current->get_type(current) == TASK_IKE_MOBIKE)
 			{
 				enumerator->destroy(enumerator);
 				task->destroy(task);

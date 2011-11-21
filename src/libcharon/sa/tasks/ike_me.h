@@ -28,7 +28,7 @@ typedef struct ike_me_t ike_me_t;
 #include <sa/tasks/task.h>
 
 /**
- * Task of type IKE_ME, detects and handles IKE-ME extensions.
+ * Task of type TASK_IKE_ME, detects and handles IKE-ME extensions.
  *
  * This tasks handles the ME_MEDIATION Notify exchange to setup a mediation
  * connection, allows to initiate mediated connections using ME_CONNECT

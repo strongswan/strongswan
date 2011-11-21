@@ -29,7 +29,7 @@ typedef struct child_rekey_t child_rekey_t;
 #include <sa/tasks/task.h>
 
 /**
- * Task of type CHILD_REKEY, rekey an established CHILD_SA.
+ * Task of type TASK_CHILD_REKEY, rekey an established CHILD_SA.
  */
 struct child_rekey_t {
 
@@ -51,7 +51,7 @@ struct child_rekey_t {
 };
 
 /**
- * Create a new CHILD_REKEY task.
+ * Create a new TASK_CHILD_REKEY task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param protocol		protocol of CHILD_SA to rekey, PROTO_NONE as responder

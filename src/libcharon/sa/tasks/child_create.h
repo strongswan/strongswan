@@ -29,7 +29,7 @@ typedef struct child_create_t child_create_t;
 #include <config/child_cfg.h>
 
 /**
- * Task of type CHILD_CREATE, established a new CHILD_SA.
+ * Task of type TASK_CHILD_CREATE, established a new CHILD_SA.
  *
  * This task may be included in the IKE_AUTH message or in a separate
  * CREATE_CHILD_SA exchange.

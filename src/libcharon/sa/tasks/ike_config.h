@@ -28,7 +28,7 @@ typedef struct ike_config_t ike_config_t;
 #include <sa/tasks/task.h>
 
 /**
- * Task of type IKE_CONFIG, sets up a virtual IP and other
+ * Task of type TASK_IKE_CONFIG, sets up a virtual IP and other
  * configurations for an IKE_SA.
  */
 struct ike_config_t {

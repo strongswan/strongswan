@@ -53,7 +53,7 @@ struct private_ike_mobike_t {
 	chunk_t cookie2;
 
 	/**
-	 * NAT discovery reusing the IKE_NATD task
+	 * NAT discovery reusing the TASK_IKE_NATD task
 	 */
 	ike_natd_t *natd;
 
@@ -587,7 +587,7 @@ METHOD(ike_mobike_t, is_probing, bool,
 METHOD(task_t, get_type, task_type_t,
 	   private_ike_mobike_t *this)
 {
-	return IKE_MOBIKE;
+	return TASK_IKE_MOBIKE;
 }
 
 METHOD(task_t, migrate, void,

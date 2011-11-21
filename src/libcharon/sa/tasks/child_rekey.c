@@ -224,7 +224,7 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 {
 	child_sa_t *to_delete;
 
-	if (this->collision->get_type(this->collision) == CHILD_REKEY)
+	if (this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
 	{
 		chunk_t this_nonce, other_nonce;
 		private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
@@ -311,7 +311,7 @@ METHOD(task_t, process_i, status_t,
 		/* establishing new child failed, reuse old. but not when we
 		 * received a delete in the meantime */
 		if (!(this->collision &&
-			  this->collision->get_type(this->collision) == CHILD_DELETE))
+			  this->collision->get_type(this->collision) == TASK_CHILD_DELETE))
 		{
 			job_t *job;
 			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
@@ -362,7 +362,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_child_rekey_t *this)
 {
-	return CHILD_REKEY;
+	return TASK_CHILD_REKEY;
 }
 
 METHOD(child_rekey_t, collide, void,
@@ -370,7 +370,7 @@ METHOD(child_rekey_t, collide, void,
 {
 	/* the task manager only detects exchange collision, but not if
 	 * the collision is for the same child. we check it here. */
-	if (other->get_type(other) == CHILD_REKEY)
+	if (other->get_type(other) == TASK_CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
 		if (rekey->child_sa != this->child_sa)
@@ -380,7 +380,7 @@ METHOD(child_rekey_t, collide, void,
 			return;
 		}
 	}
-	else if (other->get_type(other) == CHILD_DELETE)
+	else if (other->get_type(other) == TASK_CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
 		if (del->get_child(del) == this->child_create->get_child(this->child_create))
@@ -403,8 +403,8 @@ METHOD(child_rekey_t, collide, void,
 		other->destroy(other);
 		return;
 	}
-	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, CHILD_REKEY,
-		 task_type_names, other->get_type(other));
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
+		 TASK_CHILD_REKEY, task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }

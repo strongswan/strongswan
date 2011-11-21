@@ -1023,7 +1023,7 @@ peer_auth_failed:
 METHOD(task_t, get_type, task_type_t,
 	private_ike_auth_t *this)
 {
-	return IKE_AUTHENTICATE;
+	return TASK_IKE_AUTH;
 }
 
 METHOD(task_t, migrate, void,

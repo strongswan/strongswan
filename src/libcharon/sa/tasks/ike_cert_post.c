@@ -207,7 +207,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_cert_post_t *this)
 {
-	return IKE_CERT_POST;
+	return TASK_IKE_CERT_POST;
 }
 
 METHOD(task_t, migrate, void,

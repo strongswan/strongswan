@@ -34,43 +34,43 @@ typedef struct task_t task_t;
  */
 enum task_type_t {
 	/** establish an unauthenticated IKE_SA */
-	IKE_INIT,
+	TASK_IKE_INIT,
 	/** detect NAT situation */
-	IKE_NATD,
+	TASK_IKE_NATD,
 	/** handle MOBIKE stuff */
-	IKE_MOBIKE,
+	TASK_IKE_MOBIKE,
 	/** authenticate the initiated IKE_SA */
-	IKE_AUTHENTICATE,
+	TASK_IKE_AUTH,
 	/** AUTH_LIFETIME negotiation, RFC4478 */
-	IKE_AUTH_LIFETIME,
+	TASK_IKE_AUTH_LIFETIME,
 	/** certificate processing before authentication (certreqs, cert parsing) */
-	IKE_CERT_PRE,
+	TASK_IKE_CERT_PRE,
 	/** certificate processing after authentication (certs payload generation) */
-	IKE_CERT_POST,
+	TASK_IKE_CERT_POST,
 	/** Configuration payloads, virtual IP and such */
-	IKE_CONFIG,
+	TASK_IKE_CONFIG,
 	/** rekey an IKE_SA */
-	IKE_REKEY,
+	TASK_IKE_REKEY,
 	/** reestablish a complete IKE_SA */
-	IKE_REAUTH,
+	TASK_IKE_REAUTH,
 	/** delete an IKE_SA */
-	IKE_DELETE,
+	TASK_IKE_DELETE,
 	/** liveness check */
-	IKE_DPD,
+	TASK_IKE_DPD,
 	/** Vendor ID processing */
-	IKE_VENDOR,
+	TASK_IKE_VENDOR,
 #ifdef ME
 	/** handle ME stuff */
-	IKE_ME,
+	TASK_IKE_ME,
 #endif /* ME */
 	/** establish a CHILD_SA within an IKE_SA */
-	CHILD_CREATE,
+	TASK_CHILD_CREATE,
 	/** delete an established CHILD_SA */
-	CHILD_DELETE,
+	TASK_CHILD_DELETE,
 	/** rekey an CHILD_SA */
-	CHILD_REKEY,
+	TASK_CHILD_REKEY,
 	/** IKEv1 main mode */
-	MAIN_MODE,
+	TASK_MAIN_MODE,
 	/** IKEv1 quick mode */
 	TASK_QUICK_MODE,
 };

@@ -46,7 +46,7 @@ METHOD(task_t, return_success, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_dpd_t *this)
 {
-	return IKE_DPD;
+	return TASK_IKE_DPD;
 }
 
 

@@ -385,7 +385,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_natd_t *this)
 {
-	return IKE_NATD;
+	return TASK_IKE_NATD;
 }
 
 METHOD(task_t, migrate, void,

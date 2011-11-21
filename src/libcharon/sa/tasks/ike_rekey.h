@@ -28,7 +28,7 @@ typedef struct ike_rekey_t ike_rekey_t;
 #include <sa/tasks/task.h>
 
 /**
- * Task of type IKE_REKEY, rekey an established IKE_SA.
+ * Task of type TASK_IKE_REKEY, rekey an established IKE_SA.
  */
 struct ike_rekey_t {
 
@@ -50,11 +50,11 @@ struct ike_rekey_t {
 };
 
 /**
- * Create a new IKE_REKEY task.
+ * Create a new TASK_IKE_REKEY task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE for initiator, FALSE for responder
- * @return				IKE_REKEY task to handle by the task_manager
+ * @return				TASK_IKE_REKEY task to handle by the task_manager
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator);
 

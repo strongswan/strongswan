@@ -1715,7 +1715,7 @@ static void requeue_init_tasks(private_ike_sa_t *this)
 										this->task_manager, TASK_QUEUE_QUEUED);
 	while (enumerator->enumerate(enumerator, &task))
 	{
-		if (task->get_type(task) == IKE_INIT)
+		if (task->get_type(task) == TASK_IKE_INIT)
 		{
 			has_init = TRUE;
 			break;

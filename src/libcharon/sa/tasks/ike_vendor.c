@@ -107,7 +107,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_vendor_t *this)
 {
-	return IKE_VENDOR;
+	return TASK_IKE_VENDOR;
 }
 
 METHOD(task_t, destroy, void,

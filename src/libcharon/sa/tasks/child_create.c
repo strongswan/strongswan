@@ -1212,7 +1212,7 @@ METHOD(child_create_t, get_lower_nonce, chunk_t,
 METHOD(task_t, get_type, task_type_t,
 	private_child_create_t *this)
 {
-	return CHILD_CREATE;
+	return TASK_CHILD_CREATE;
 }
 
 METHOD(task_t, migrate, void,

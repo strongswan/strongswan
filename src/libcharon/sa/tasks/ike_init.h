@@ -28,7 +28,7 @@ typedef struct ike_init_t ike_init_t;
 #include <sa/tasks/task.h>
 
 /**
- * Task of type IKE_INIT, creates an IKE_SA without authentication.
+ * Task of type TASK_IKE_INIT, creates an IKE_SA without authentication.
  *
  * The authentication of is handle in the ike_auth task.
  */
@@ -48,7 +48,7 @@ struct ike_init_t {
 };
 
 /**
- * Create a new IKE_INIT task.
+ * Create a new TASK_IKE_INIT task.
  *
  * @param ike_sa		IKE_SA this task works for (new one when rekeying)
  * @param initiator		TRUE if task is the original initiator

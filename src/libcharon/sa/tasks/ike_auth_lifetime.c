@@ -124,7 +124,7 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_auth_lifetime_t *this)
 {
-	return IKE_AUTH_LIFETIME;
+	return TASK_IKE_AUTH_LIFETIME;
 }
 
 METHOD(task_t, migrate, void,

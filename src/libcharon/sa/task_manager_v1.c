@@ -210,7 +210,7 @@ METHOD(task_manager_t, initiate, status_t,
 		switch (this->ike_sa->get_state(this->ike_sa))
 		{
 			case IKE_CREATED:
-				if (activate_task(this, MAIN_MODE))
+				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
 				}
@@ -234,7 +234,7 @@ METHOD(task_manager_t, initiate, status_t,
 			DBG2(DBG_IKE, "  %N task", task_type_names, task->get_type(task));
 			switch (task->get_type(task))
 			{
-				case MAIN_MODE:
+				case TASK_MAIN_MODE:
 					exchange = ID_PROT;
 					break;
 				case TASK_QUICK_MODE:

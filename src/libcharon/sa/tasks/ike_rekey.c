@@ -52,7 +52,7 @@ struct private_ike_rekey_t {
 	bool initiator;
 
 	/**
-	 * the IKE_INIT task which is reused to simplify rekeying
+	 * the TASK_IKE_INIT task which is reused to simplify rekeying
 	 */
 	ike_init_t *ike_init;
 
@@ -233,8 +233,8 @@ METHOD(task_t, process_i, status_t,
 		case FAILED:
 			/* rekeying failed, fallback to old SA */
 			if (!(this->collision && (
-				this->collision->get_type(this->collision) == IKE_DELETE ||
-				this->collision->get_type(this->collision) == IKE_REAUTH)))
+				this->collision->get_type(this->collision) == TASK_IKE_DELETE ||
+				this->collision->get_type(this->collision) == TASK_IKE_REAUTH)))
 			{
 				job_t *job;
 				u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
@@ -256,7 +256,7 @@ METHOD(task_t, process_i, status_t,
 
 	/* check for collisions */
 	if (this->collision &&
-		this->collision->get_type(this->collision) == IKE_REKEY)
+		this->collision->get_type(this->collision) == TASK_IKE_REKEY)
 	{
 		private_ike_rekey_t *other = (private_ike_rekey_t*)this->collision;
 
@@ -326,14 +326,14 @@ METHOD(task_t, process_i, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_ike_rekey_t *this)
 {
-	return IKE_REKEY;
+	return TASK_IKE_REKEY;
 }
 
 METHOD(ike_rekey_t, collide, void,
 	private_ike_rekey_t* this, task_t *other)
 {
-	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, IKE_REKEY,
-		 task_type_names, other->get_type(other));
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
+		 TASK_IKE_REKEY, task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }
