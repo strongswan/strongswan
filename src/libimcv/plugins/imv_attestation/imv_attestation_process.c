@@ -276,7 +276,6 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			if (!comp)
 			{
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
-				evidence->destroy(evidence);
 				break;
 			}
 			status = comp->verify(comp, pts, pts_db, evidence);
