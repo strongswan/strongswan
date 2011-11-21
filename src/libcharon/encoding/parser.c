@@ -380,12 +380,13 @@ METHOD(parser_t, parse_payload, status_t,
 
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
-
-	header_length = pld->get_header_length(pld);
 	/* parse the payload with its own rulse */
 	rule_count = pld->get_encoding_rules(pld, &this->rules);
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
+		/* update header length for each rule, as it is dynamic (SPIs) */
+		header_length = pld->get_header_length(pld);
+
 		rule = &(this->rules[rule_number]);
 		DBG2(DBG_ENC, "  parsing rule %d %N",
 			 rule_number, encoding_type_names, rule->type);
