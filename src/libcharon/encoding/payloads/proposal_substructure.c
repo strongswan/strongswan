@@ -770,7 +770,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 												   0, IKEV1_TRANSID_KEY_IKE);
 
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
-	while (enumerator->enumerate(enumerator, &alg, &key_size))
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		alg = get_ikev1_from_alg(ENCRYPTION_ALGORITHM, alg);
 		if (alg)
@@ -790,7 +790,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 
 	/* encode the integrity algorithm as hash and assume use the same PRF */
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
-	while (enumerator->enumerate(enumerator, &alg, &key_size))
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		alg = get_ikev1_from_alg(INTEGRITY_ALGORITHM, alg);
 		if (alg)
@@ -803,7 +803,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	enumerator->destroy(enumerator);
 
 	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
-	while (enumerator->enumerate(enumerator, &alg, &key_size))
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform->add_transform_attribute(transform,
 			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
@@ -854,7 +854,7 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	}
 
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
-	while (enumerator->enumerate(enumerator, &alg, &key_size))
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		alg = get_ikev1_from_alg(INTEGRITY_ALGORITHM, alg);
 		if (alg)
