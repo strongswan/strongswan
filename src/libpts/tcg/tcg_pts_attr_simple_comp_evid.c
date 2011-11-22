@@ -396,6 +396,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_simple_comp_evid_t *this)
 {
 	this->evidence->destroy(this->evidence);
+	free(this->value.ptr);
 	free(this);
 }
 
