@@ -466,6 +466,119 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	return TRUE;
 }
 
+METHOD(keymat_v1_t, derive_child_keys, bool,
+	private_keymat_v1_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
+	chunk_t *encr_r, chunk_t *integ_r)
+{
+	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
+	u_int8_t protocol;
+	u_int32_t spi;
+	prf_plus_t *prf_plus;
+	chunk_t seed, secret = chunk_empty;
+
+	/* KEYMAT = prf+(SKEYID_d, [ g(qm)^xy | ] protocol | SPI | Ni_b | Nr_b) */
+
+	protocol = proposal->get_protocol(proposal);
+	spi = proposal->get_spi(proposal);
+
+	if (dh)
+	{
+		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "DH secret %B", &secret);
+	}
+	seed = chunk_cata("mcc", secret, chunk_from_thing(protocol),
+					  chunk_from_thing(spi), nonce_i, nonce_r);
+	DBG4(DBG_CHD, "seed %B", &seed);
+
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+								&enc_alg, &enc_size))
+	{
+		DBG2(DBG_CHD, "  using %N for encryption",
+			 encryption_algorithm_names, enc_alg);
+
+		if (!enc_size)
+		{
+			enc_size = keymat_get_keylen_encr(enc_alg);
+		}
+		if (enc_alg != ENCR_NULL && !enc_size)
+		{
+			DBG1(DBG_CHD, "no keylength defined for %N",
+				 encryption_algorithm_names, enc_alg);
+			return FALSE;
+		}
+		/* to bytes */
+		enc_size /= 8;
+
+		/* CCM/GCM/CTR/GMAC needs additional bytes */
+		switch (enc_alg)
+		{
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+			case ENCR_CAMELLIA_CCM_ICV8:
+			case ENCR_CAMELLIA_CCM_ICV12:
+			case ENCR_CAMELLIA_CCM_ICV16:
+				enc_size += 3;
+				break;
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+			case ENCR_AES_CTR:
+			case ENCR_NULL_AUTH_AES_GMAC:
+				enc_size += 4;
+				break;
+			default:
+				break;
+		}
+	}
+
+	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+								&int_alg, &int_size))
+	{
+		DBG2(DBG_CHD, "  using %N for integrity",
+			 integrity_algorithm_names, int_alg);
+
+		if (!int_size)
+		{
+			int_size = keymat_get_keylen_integ(int_alg);
+		}
+		if (!int_size)
+		{
+			DBG1(DBG_CHD, "no keylength defined for %N",
+				 integrity_algorithm_names, int_alg);
+			return FALSE;
+		}
+		/* to bytes */
+		int_size /= 8;
+	}
+
+	this->prf->set_key(this->prf, this->skeyid_d);
+	prf_plus = prf_plus_create(this->prf, FALSE, seed);
+
+	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
+	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
+	prf_plus->allocate_bytes(prf_plus, enc_size, encr_r);
+	prf_plus->allocate_bytes(prf_plus, int_size, integ_r);
+
+	prf_plus->destroy(prf_plus);
+
+	if (enc_size)
+	{
+		DBG4(DBG_CHD, "encryption initiator key %B", encr_i);
+		DBG4(DBG_CHD, "encryption responder key %B", encr_r);
+	}
+	if (int_size)
+	{
+		DBG4(DBG_CHD, "integrity initiator key %B", integ_i);
+		DBG4(DBG_CHD, "integrity responder key %B", integ_r);
+	}
+	return TRUE;
+}
+
 METHOD(keymat_v1_t, get_hash, chunk_t,
 	private_keymat_v1_t *this, bool initiator, chunk_t dh, chunk_t dh_other,
 	ike_sa_id_t *ike_sa_id, chunk_t sa_i, identification_t *id)
@@ -639,6 +752,7 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 				.destroy = _destroy,
 			},
 			.derive_ike_keys = _derive_ike_keys,
+			.derive_child_keys = _derive_child_keys,
 			.get_hash = _get_hash,
 			.get_iv = _get_iv,
 			.update_iv = _update_iv,

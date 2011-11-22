@@ -57,6 +57,23 @@ struct keymat_v1_t {
 							auth_class_t auth, shared_key_t *shared_key);
 
 	/**
+	 * Derive keys for the CHILD_SA.
+	 *
+	 * @param proposal		selected algorithms
+	 * @param dh			diffie hellman key, NULL if none used
+	 * @param nonce_i		quick mode initiator nonce
+	 * @param nonce_r		quick mode responder nonce
+	 * @param encr_i		allocated initiators encryption key
+	 * @param integ_i		allocated initiators integrity key
+	 * @param encr_r		allocated responders encryption key
+	 * @param integ_r		allocated responders integrity key
+	 */
+	bool (*derive_child_keys)(keymat_v1_t *this, proposal_t *proposal,
+						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+						chunk_t *encr_i, chunk_t *integ_i,
+						chunk_t *encr_r, chunk_t *integ_r);
+
+	/**
 	 * Get HASH data for authentication.
 	 *
 	 * @param initiatior	TRUE to create HASH_I, FALSE for HASH_R
