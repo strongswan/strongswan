@@ -713,19 +713,19 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 }
 
 METHOD(pts_t, read_pcr, bool,
-	private_pts_t *this, u_int32_t pcr_num, chunk_t *output)
+	private_pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
-	u_int32_t pcr_length;
-	chunk_t pcr_value;
+	chunk_t rgbPcrValue;
+
+	bool success = FALSE;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
 	{
-		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x",
-			 result);
+		DBG1(DBG_PTS, "TPM context could not be created: tss error 0x%x", result);
 		return FALSE;
 	}
 
@@ -739,26 +739,24 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
-	pcr_value = chunk_alloc(PCR_LEN);
-	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &pcr_length, &pcr_value.ptr);
+	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &rgbPcrValue.len, &rgbPcrValue.ptr);
 	if (result != TSS_SUCCESS)
 	{
 		goto err;
 	}
+	*pcr_value = chunk_clone(rgbPcrValue);
+	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, pcr_value);
+	success = TRUE;
 
-	*output = pcr_value;
-	*output = chunk_clone(*output);
-
-	chunk_clear(&pcr_value);
-	DBG3(DBG_PTS, "PCR %d value:%B", pcr_num, output);
+err:
+	if (!success)
+	{
+		DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	}
+	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
-	return TRUE;
 
-	err:
-	chunk_clear(&pcr_value);
-	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
-	Tspi_Context_Close(hContext);
-	return FALSE;
+	return success;
 }
 
 METHOD(pts_t, extend_pcr, bool,
@@ -933,7 +931,7 @@ METHOD(pts_t, quote_tpm, bool,
 	/* TPM Quote */
 	result = use_quote2 ?
 			Tspi_TPM_Quote2(hTPM, hAIK, FALSE, hPcrComposite, &valData,
-							&versionInfoSize,&versionInfo):
+							&versionInfoSize, &versionInfo):
 			Tspi_TPM_Quote(hTPM, hAIK, hPcrComposite, &valData);
 	if (result != TSS_SUCCESS)
 	{
