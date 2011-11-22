@@ -168,6 +168,58 @@ static bool save_sa_payload(private_main_mode_t *this, message_t *message)
 	return FALSE;
 }
 
+/**
+ * Build main mode hash payloads
+ */
+static void build_hash(private_main_mode_t *this, bool initiator,
+					   message_t *message, identification_t *id)
+{
+	hash_payload_t *hash_payload;
+	chunk_t hash, dh;
+
+	this->dh->get_my_public_value(this->dh, &dh);
+	hash = this->keymat->get_hash(this->keymat, initiator, dh, this->dh_value,
+					this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
+	free(dh.ptr);
+
+	hash_payload = hash_payload_create();
+	hash_payload->set_hash(hash_payload, hash);
+	free(hash.ptr);
+
+	message->add_payload(message, &hash_payload->payload_interface);
+}
+
+/**
+ * Verify main mode hash payload
+ */
+static bool verify_hash(private_main_mode_t *this, bool initiator,
+					   message_t *message, identification_t *id)
+{
+	hash_payload_t *hash_payload;
+	chunk_t hash, dh;
+	bool equal;
+
+	hash_payload = (hash_payload_t*)message->get_payload(message,
+														 HASH_V1);
+	if (!hash_payload)
+	{
+		DBG1(DBG_IKE, "HASH payload missing in message");
+		return FALSE;
+	}
+	hash = hash_payload->get_hash(hash_payload);
+	this->dh->get_my_public_value(this->dh, &dh);
+	hash = this->keymat->get_hash(this->keymat, initiator, this->dh_value, dh,
+				this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
+	free(dh.ptr);
+	equal = chunk_equals(hash, hash_payload->get_hash(hash_payload));
+	free(hash.ptr);
+	if (!equal)
+	{
+		DBG1(DBG_IKE, "calculated HASH does not match HASH payload");
+	}
+	return equal;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -254,9 +306,7 @@ METHOD(task_t, build_i, status_t,
 		case MM_KE:
 		{
 			id_payload_t *id_payload;
-			hash_payload_t *hash_payload;
 			identification_t *id;
-			chunk_t hash, dh;
 
 			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 			this->peer_cfg->get_ref(this->peer_cfg);
@@ -280,15 +330,7 @@ METHOD(task_t, build_i, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			this->dh->get_my_public_value(this->dh, &dh);
-			hash = this->keymat->get_hash(this->keymat, TRUE,
-						dh, this->dh_value, this->ike_sa->get_id(this->ike_sa),
-						this->sa_payload, id);
-			free(dh.ptr);
-			hash_payload = hash_payload_create();
-			hash_payload->set_hash(hash_payload, hash);
-			free(hash.ptr);
-			message->add_payload(message, &hash_payload->payload_interface);
+			build_hash(this, TRUE, message, id);
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -383,9 +425,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			enumerator_t *enumerator;
 			id_payload_t *id_payload;
-			hash_payload_t *hash_payload;
 			identification_t *id, *any;
-			chunk_t hash, dh;
 
 			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 			if (!id_payload)
@@ -425,26 +465,10 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 
-			hash_payload = (hash_payload_t*)message->get_payload(message,
-																 HASH_V1);
-			if (!hash_payload)
+			if (!verify_hash(this, TRUE, message, id))
 			{
-				DBG1(DBG_IKE, "hash payload missing");
 				return FAILED;
 			}
-			hash = hash_payload->get_hash(hash_payload);
-			this->dh->get_my_public_value(this->dh, &dh);
-			hash = this->keymat->get_hash(this->keymat, TRUE,
-						this->dh_value, dh, this->ike_sa->get_id(this->ike_sa),
-						this->sa_payload, id);
-			free(dh.ptr);
-			if (!chunk_equals(hash, hash_payload->get_hash(hash_payload)))
-			{
-				DBG1(DBG_IKE, "calculated hash does not match to hash payload");
-				free(hash.ptr);
-				return FAILED;
-			}
-			free(hash.ptr);
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -564,9 +588,7 @@ METHOD(task_t, build_r, status_t,
 		case MM_AUTH:
 		{
 			id_payload_t *id_payload;
-			hash_payload_t *hash_payload;
 			identification_t *id;
-			chunk_t hash, dh;
 
 			id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
 			if (!id)
@@ -580,15 +602,7 @@ METHOD(task_t, build_r, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			this->dh->get_my_public_value(this->dh, &dh);
-			hash = this->keymat->get_hash(this->keymat, FALSE,
-						dh, this->dh_value, this->ike_sa->get_id(this->ike_sa),
-						this->sa_payload, id);
-			free(dh.ptr);
-			hash_payload = hash_payload_create();
-			hash_payload->set_hash(hash_payload, hash);
-			free(hash.ptr);
-			message->add_payload(message, &hash_payload->payload_interface);
+			build_hash(this, FALSE, message, id);
 
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
@@ -671,9 +685,7 @@ METHOD(task_t, process_i, status_t,
 		case MM_AUTH:
 		{
 			id_payload_t *id_payload;
-			hash_payload_t *hash_payload;
 			identification_t *id;
-			chunk_t hash, dh;
 
 			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 			if (!id_payload)
@@ -691,26 +703,10 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
-			hash_payload = (hash_payload_t*)message->get_payload(message,
-																 HASH_V1);
-			if (!hash_payload)
+			if (!verify_hash(this, FALSE, message, id))
 			{
-				DBG1(DBG_IKE, "hash payload missing");
 				return FAILED;
 			}
-			hash = hash_payload->get_hash(hash_payload);
-			this->dh->get_my_public_value(this->dh, &dh);
-			hash = this->keymat->get_hash(this->keymat, FALSE,
-						this->dh_value, dh, this->ike_sa->get_id(this->ike_sa),
-						this->sa_payload, id);
-			free(dh.ptr);
-			if (!chunk_equals(hash, hash_payload->get_hash(hash_payload)))
-			{
-				DBG1(DBG_IKE, "calculated hash does not match to hash payload");
-				free(hash.ptr);
-				return FAILED;
-			}
-			free(hash.ptr);
 
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
