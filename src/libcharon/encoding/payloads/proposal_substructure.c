@@ -650,18 +650,35 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 							transform->get_transform_id(transform), key_length);
 }
 
-METHOD(proposal_substructure_t, get_proposal, proposal_t*,
-	private_proposal_substructure_t *this)
+METHOD(proposal_substructure_t, get_proposals, void,
+	private_proposal_substructure_t *this, linked_list_t *proposals)
 {
 	transform_substructure_t *transform;
 	enumerator_t *enumerator;
-	proposal_t *proposal;
+	proposal_t *proposal = NULL;
+	u_int64_t spi = 0;
 
-	proposal = proposal_create(this->protocol_id, this->proposal_number);
+	switch (this->spi.len)
+	{
+		case 4:
+			spi =  *((u_int32_t*)this->spi.ptr);
+			break;
+		case 8:
+			spi = *((u_int64_t*)this->spi.ptr);
+			break;
+		default:
+			break;
+	}
 
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
 	{
+		if (!proposal)
+		{
+			proposal = proposal_create(this->protocol_id, this->proposal_number);
+			proposal->set_spi(proposal, spi);
+			proposals->insert_last(proposals, proposal);
+		}
 		if (this->type == PROPOSAL_SUBSTRUCTURE)
 		{
 			add_to_proposal_v2(proposal, transform);
@@ -679,27 +696,11 @@ METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 				default:
 					break;
 			}
-			/* TODO-IKEv1: We currently accept the first set of transforms
-			 * in a substructure only. We need to return multiple proposals,
-			 * but this messes up proposal numbering, as we don't support
-			 * transform numbering. */
-			break;
+			/* create a new proposal for each transform in IKEv1 */
+			proposal = NULL;
 		}
 	}
 	enumerator->destroy(enumerator);
-
-	switch (this->spi.len)
-	{
-		case 4:
-			proposal->set_spi(proposal, *((u_int32_t*)this->spi.ptr));
-			break;
-		case 8:
-			proposal->set_spi(proposal, *((u_int64_t*)this->spi.ptr));
-			break;
-		default:
-			break;
-	}
-	return proposal;
 }
 
 METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
@@ -741,7 +742,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.set_protocol_id = _set_protocol_id,
 			.get_protocol_id = _get_protocol_id,
 			.set_is_last_proposal = _set_is_last_proposal,
-			.get_proposal = _get_proposal,
+			.get_proposals = _get_proposals,
 			.create_substructure_enumerator = _create_substructure_enumerator,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,

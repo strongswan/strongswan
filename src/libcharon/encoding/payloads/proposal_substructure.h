@@ -96,11 +96,11 @@ struct proposal_substructure_t {
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 
 	/**
-	 * Get a proposal_t from the propsal_substructure_t.
+	 * Get proposals contained in a propsal_substructure_t.
 	 *
-	 * @return			proposal_t
+	 * @param list		list to add created proposals to
 	 */
-	proposal_t * (*get_proposal) (proposal_substructure_t *this);
+	void (*get_proposals) (proposal_substructure_t *this, linked_list_t *list);
 
 	/**
 	 * Create an enumerator over transform substructures.
