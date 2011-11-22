@@ -133,20 +133,34 @@ static auth_cfg_t *get_auth_cfg(private_main_mode_t *this, bool local)
 /**
  * Save the encoded SA payload of a message
  */
-static bool save_sa_payload(private_main_mode_t *this, message_t *message,
-							sa_payload_t *sa_payload)
+static bool save_sa_payload(private_main_mode_t *this, message_t *message)
 {
-	payload_t *payload;
+	enumerator_t *enumerator;
+	payload_t *payload, *sa = NULL;
 	chunk_t data;
+	size_t offset = IKE_HEADER_LENGTH;
 
-	/* TODO-IKEv1: handle other payloads in front of SA? */
-	payload = &sa_payload->payload_interface;
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == SECURITY_ASSOCIATION_V1)
+		{
+			sa = payload;
+			break;
+		}
+		else
+		{
+			offset += payload->get_length(payload);
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	data = message->get_packet_data(message);
-	if (data.len >= IKE_HEADER_LENGTH + payload->get_length(payload))
+	if (sa && data.len >= offset + sa->get_length(sa))
 	{
 		/* Get SA payload without 4 byte fixed header */
-		data = chunk_skip(data, IKE_HEADER_LENGTH);
-		data.len = payload->get_length(payload);
+		data = chunk_skip(data, offset);
+		data.len = sa->get_length(sa);
 		data = chunk_skip(data, 4);
 		this->sa_payload = chunk_clone(data);
 		return TRUE;
@@ -188,7 +202,7 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 			packet->destroy(packet);
-			if (!save_sa_payload(this, message, sa_payload))
+			if (!save_sa_payload(this, message))
 			{
 				DBG1(DBG_IKE, "SA payload invalid");
 				return FAILED;
@@ -305,7 +319,7 @@ METHOD(task_t, process_r, status_t,
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													SECURITY_ASSOCIATION_V1);
-			if (!sa_payload || !save_sa_payload(this, message, sa_payload))
+			if (!sa_payload || !save_sa_payload(this, message))
 			{
 				DBG1(DBG_IKE, "SA payload missing or invalid");
 				return FAILED;
