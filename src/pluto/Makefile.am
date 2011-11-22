@@ -102,6 +102,8 @@ endif
 
 dist_man_MANS = pluto.8
 
+EXTRA_DIST = Android.mk
+
 # compile options
 #################
 

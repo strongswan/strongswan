@@ -13,4 +13,4 @@ tnc/imv/imv_recommendations.h tnc/imv/imv_recommendations.c \
 tnc/tnccs/tnccs.h tnc/tnccs/tnccs.c \
 tnc/tnccs/tnccs_manager.h tnc/tnccs/tnccs_manager.c
 
-
+EXTRA_DIST = Android.mk

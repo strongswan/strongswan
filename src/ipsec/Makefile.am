@@ -1,7 +1,7 @@
 sbin_SCRIPTS = ipsec
 CLEANFILES = ipsec ipsec.8
 dist_man8_MANS = ipsec.8
-EXTRA_DIST = ipsec.in ipsec.8.in
+EXTRA_DIST = ipsec.in ipsec.8.in Android.mk
 
 ipsec.8 : ipsec.8.in
 	sed \

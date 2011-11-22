@@ -15,3 +15,4 @@ $(top_builddir)/src/libfreeswan/libfreeswan.a
 
 AM_CFLAGS = -DDEBUG -DIPSEC_PIDDIR=\"${piddir}\"
 
+EXTRA_DIST = Android.mk
