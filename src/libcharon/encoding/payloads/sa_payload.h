@@ -49,13 +49,6 @@ struct sa_payload_t {
 	linked_list_t *(*get_proposals) (sa_payload_t *this);
 
 	/**
-	 * Add a child proposal (AH/ESP) to the payload.
-	 *
-	 * @param proposal			child proposal to add to the payload
-	 */
-	void (*add_proposal) (sa_payload_t *this, proposal_t *proposal);
-
-	/**
 	 * Create an enumerator over all proposal substructures.
 	 *
 	 * @return					enumerator over proposal_substructure_t

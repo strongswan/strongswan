@@ -256,8 +256,10 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(sa_payload_t, add_proposal, void,
-	private_sa_payload_t *this, proposal_t *proposal)
+/**
+ * Create a transform substructure from a proposal, add to payload
+ */
+static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substruct, *last;
 	payload_type_t subtype = PROPOSAL_SUBSTRUCTURE;
@@ -368,7 +370,6 @@ sa_payload_t *sa_payload_create(payload_type_t type)
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
-			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
 			.create_substructure_enumerator = _create_substructure_enumerator,
 			.destroy = _destroy,
@@ -392,19 +393,19 @@ sa_payload_t *sa_payload_create(payload_type_t type)
 sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
 												   linked_list_t *proposals)
 {
-	sa_payload_t *this;
+	private_sa_payload_t *this;
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 
-	this = sa_payload_create(type);
+	this = (private_sa_payload_t*)sa_payload_create(type);
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		this->add_proposal(this, proposal);
+		add_proposal(this, proposal);
 	}
 	enumerator->destroy(enumerator);
 
-	return this;
+	return &this->public;
 }
 
 /*
@@ -413,10 +414,10 @@ sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
 sa_payload_t *sa_payload_create_from_proposal(payload_type_t type,
 											  proposal_t *proposal)
 {
-	sa_payload_t *this;
+	private_sa_payload_t *this;
 
-	this = sa_payload_create(type);
-	this->add_proposal(this, proposal);
+	this = (private_sa_payload_t*)sa_payload_create(type);
+	add_proposal(this, proposal);
 
-	return this;
+	return &this->public;
 }
