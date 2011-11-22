@@ -815,6 +815,12 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH1_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH1_LIFE_DURATION, 10800));
 
 	add_transform_substructure(this, transform);
 }
@@ -864,6 +870,12 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH2_EXT_SEQ_NUMBER, NO_EXT_SEQ_NUMBERS));
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_DURATION, 3600));
 
 	add_transform_substructure(this, transform);
 }
