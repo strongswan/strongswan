@@ -323,13 +323,13 @@ struct pts_t {
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
 	 * @param use_quote2		Version of the Quote funtion to be used
-	 * @param pcr_composite		Chunk to save pcr composite structure
-	 * @param quote_signature	Chunk to save quote operation output
+	 * @param pcr_comp			Chunk to save PCR composite structure
+	 * @param quote_sig			Chunk to save quote operation output
 	 *							without external data (anti-replay protection)
 	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, bool use_quote2, chunk_t *pcr_composite,
-					   chunk_t *quote_signature);
+	 bool (*quote_tpm)(pts_t *this, bool use_quote2, chunk_t *pcr_comp,
+													 chunk_t *quote_sig);
 
 	 /**
 	 * Mark an extended PCR as selected
@@ -348,27 +348,28 @@ struct pts_t {
 	 * @return					TRUE if PCR number and register length is valid
 	 */
 	bool (*add_pcr)(pts_t *this, u_int32_t pcr, chunk_t pcr_before,
-												 chunk_t pcr_after);
+												chunk_t pcr_after);
 
 	 /**
 	 * Constructs and returns TPM Quote Info structure expected from IMC
 	 *
 	 * @param use_quote2		Version of the TPM_QUOTE_INFO to be constructed
-	 * @param ver_info_included Version info is concatenated to TPM_QUOTE_INFO2
-	 * @param pcr_composite		Output variable to store PCR Composite
+	 * @param use_ver_info		Version info is concatenated to TPM_QUOTE_INFO2
+	 * @param comp_hash_algo	Composite Hash Algorithm
+	 * @param pcr_comp			Output variable to store PCR Composite
 	 * @param quote_info		Output variable to store TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
 	 bool (*get_quote_info)(pts_t *this, bool use_quote2, bool ver_info_included,
-							pts_meas_algorithms_t composite_algo,
-							chunk_t *pcr_composite, chunk_t *quote_info);
+							pts_meas_algorithms_t comp_hash_algo,
+							chunk_t *pcr_comp, chunk_t *quote_info);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
 	 *
 	 * @param data				Calculated TPM Quote Digest
 	 * @param signature			TPM Quote Signature received from IMC
-	 * @return			FALSE in case signature is not verified, TRUE otherwise
+	 * @return					FALSE if signature is not verified
 	 */
 	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
 

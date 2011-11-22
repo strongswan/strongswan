@@ -318,18 +318,19 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				if (!pts->get_quote_info(pts, use_quote2, use_ver_info,
 						comp_hash_algorithm, &pcr_composite, &quote_info))
 				{
-					DBG1(DBG_IMV, "unable to compute TPM Quote Info");
+					DBG1(DBG_IMV, "unable to construct TPM Quote Info");
 					return FALSE;
 				}
 
 				if (!chunk_equals(pcr_comp, pcr_composite))
 				{
-					DBG1(DBG_IMV, "received and computed PCR Composite match");
+					DBG1(DBG_IMV, "received PCR Composite does not match "
+								  "constructed one");
 					free(pcr_composite.ptr);
 					free(quote_info.ptr);
 					return FALSE;
 				}
-				DBG2(DBG_IMV, "received and computed PCR Composite do not match");
+				DBG2(DBG_IMV, "received PCR Composite matches constructed one");
 				free(pcr_composite.ptr);
 
 				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sig))

@@ -829,8 +829,7 @@ static void clear_pcrs(private_pts_t *this)
 }
 
 METHOD(pts_t, quote_tpm, bool,
-	private_pts_t *this, bool use_quote2, chunk_t *pcr_composite,
-	chunk_t *quote_signature)
+	private_pts_t *this, bool use_quote2, chunk_t *pcr_comp, chunk_t *quote_sig)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -842,7 +841,7 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_HPCRS hPcrComposite;
 	TSS_VALIDATION valData;
 	TSS_RESULT result;
-	chunk_t pcr_comp, quote_sign;
+	chunk_t quote_info;
 	BYTE* versionInfo;
 	u_int32_t versionInfoSize, pcr, i = 0, f = 1;
 	bool success = FALSE;
@@ -942,34 +941,28 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Set output chunks */
-	pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
+	*pcr_comp = chunk_alloc(HASH_SIZE_SHA1);
+
 	if (use_quote2)
 	{
 		/* TPM_Composite_Hash is last 20 bytes of TPM_Quote_Info2 structure */
-		memcpy(pcr_comp.ptr, valData.rgbData + valData.ulDataLength - HASH_SIZE_SHA1,
+		memcpy(pcr_comp->ptr, valData.rgbData + valData.ulDataLength - HASH_SIZE_SHA1,
 			   HASH_SIZE_SHA1);
 	}
 	else
 	{
 		/* TPM_Composite_Hash is 8-28th bytes of TPM_Quote_Info structure */
-		memcpy(pcr_comp.ptr, valData.rgbData + 8, HASH_SIZE_SHA1);
+		memcpy(pcr_comp->ptr, valData.rgbData + 8, HASH_SIZE_SHA1);
 	}
-	
-	*pcr_composite = pcr_comp;
-	*pcr_composite = chunk_clone(*pcr_composite);
-	DBG3(DBG_PTS, "Hash of PCR Composite: %B",pcr_composite);
+	DBG3(DBG_PTS, "Hash of PCR Composite: %#B", pcr_comp);
 
-	chunk_t tmp = chunk_create(valData.rgbData, valData.ulDataLength);
-	DBG3(DBG_PTS, "TPM Quote Info: %B",&tmp);
+	quote_info = chunk_create(valData.rgbData, valData.ulDataLength);
+	DBG3(DBG_PTS, "TPM Quote Info: %B",&quote_info);
 
-	quote_sign = chunk_alloc(valData.ulValidationDataLength);
-	memcpy(quote_sign.ptr, valData.rgbValidationData,
-							  valData.ulValidationDataLength);
-	*quote_signature = quote_sign;
-	*quote_signature = chunk_clone(*quote_signature);
-	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_signature);
+	*quote_sig = chunk_clone(chunk_create(valData.rgbValidationData,
+							  			   valData.ulValidationDataLength));
+	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_sig);
 
-	chunk_clear(&quote_sign);
 	success = TRUE;
 
 	/* Cleanup */
@@ -1114,13 +1107,13 @@ METHOD(pts_t, does_pcr_value_match, bool,
  */
 
 METHOD(pts_t, get_quote_info, bool,
-	private_pts_t *this, bool use_quote2, bool ver_info_included,
-	pts_meas_algorithms_t composite_algo,
-	chunk_t *out_pcr_composite, chunk_t *out_quote_info)
+	private_pts_t *this, bool use_quote2, bool use_ver_info,
+	pts_meas_algorithms_t comp_hash_algo,
+	chunk_t *out_pcr_comp, chunk_t *out_quote_info)
 {
 	u_int8_t size_of_select;
-	int pcr_composite_len, i;
-	chunk_t pcr_composite, hash_pcr_composite;
+	int pcr_comp_len, i;
+	chunk_t pcr_comp, hash_pcr_comp;
 	bio_writer_t *writer;
 	hasher_t *hasher;
 
@@ -1136,7 +1129,7 @@ METHOD(pts_t, get_quote_info, bool,
 					  "unable to construct TPM Quote Info");
 		return FALSE;
 	}
-	if (use_quote2 && ver_info_included && !this->tpm_version_info.ptr)
+	if (use_quote2 && use_ver_info && !this->tpm_version_info.ptr)
 	{
 		DBG1(DBG_PTS, "TPM Version Information unavailable, ",
 					  "unable to construct TPM Quote Info2");
@@ -1144,10 +1137,9 @@ METHOD(pts_t, get_quote_info, bool,
 	}
 	
 	size_of_select = 1 + this->pcr_max / 8;	
-	pcr_composite_len = 2 + size_of_select +
-						4 + this->pcr_count * this->pcr_len;
+	pcr_comp_len = 2 + size_of_select + 4 + this->pcr_count * this->pcr_len;
 	
-	writer = bio_writer_create(pcr_composite_len);
+	writer = bio_writer_create(pcr_comp_len);
 
 	writer->write_uint16(writer, size_of_select);
 	for (i = 0; i < size_of_select; i++)
@@ -1163,33 +1155,32 @@ METHOD(pts_t, get_quote_info, bool,
 			writer->write_data(writer, chunk_create(this->pcrs[i], this->pcr_len));
 		}
 	}
-	pcr_composite = chunk_clone(writer->get_buf(writer));
-	DBG3(DBG_PTS, "PCR Composite: %B", &pcr_composite);
+	pcr_comp = chunk_clone(writer->get_buf(writer));
+	DBG3(DBG_PTS, "constructed PCR Composite: %B", &pcr_comp);
 
 	writer->destroy(writer);
 
 	/* Output the TPM_PCR_COMPOSITE expected from IMC */
-	if (composite_algo)
+	if (comp_hash_algo)
 	{
 		hash_algorithm_t algo;
 
-		algo = pts_meas_algo_to_hash(composite_algo);
+		algo = pts_meas_algo_to_hash(comp_hash_algo);
 		hasher = lib->crypto->create_hasher(lib->crypto, algo);
 
 		/* Hash the PCR Composite Structure */
-		hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
-		DBG3(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
+		hasher->allocate_hash(hasher, pcr_comp, out_pcr_comp);
+		DBG3(DBG_PTS, "constructed PCR Composite hash: %#B", out_pcr_comp);
 		hasher->destroy(hasher);
 	}
 	else
 	{
-		*out_pcr_composite = chunk_clone(pcr_composite);
-		DBG3(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
+		*out_pcr_comp = chunk_clone(pcr_comp);
 	}
 
 	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
+	hasher->allocate_hash(hasher, pcr_comp, &hash_pcr_comp);
 	hasher->destroy(hasher);
 
 	writer->write_data(writer, hash_pcr_composite);
@@ -1239,9 +1230,9 @@ METHOD(pts_t, get_quote_info, bool,
 		writer->write_uint8(writer, TPM_LOC_ZERO);
 
 		/* PCR Composite Hash */
-		writer->write_data(writer, hash_pcr_composite);
+		writer->write_data(writer, hash_pcr_comp);
 
-		if (ver_info_included)
+		if (use_ver_info)
 		{
 			/* TPM version Info */
 			writer->write_data(writer, this->tpm_version_info);
@@ -1256,20 +1247,19 @@ METHOD(pts_t, get_quote_info, bool,
 		writer->write_data(writer, chunk_create("QUOT", 4));
 
 		/* PCR Composite Hash */
-		writer->write_data(writer, hash_pcr_composite);
+		writer->write_data(writer, hash_pcr_comp);
 
 		/* Secret assessment value 20 bytes (nonce) */
 		writer->write_data(writer, this->secret);
 	}
-	
-	chunk_clear(&pcr_composite);
-	chunk_clear(&hash_pcr_composite);
 
 	/* TPM Quote Info */
 	*out_quote_info = chunk_clone(writer->get_buf(writer));
-	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
+	DBG3(DBG_PTS, "constructed TPM Quote Info: %B", out_quote_info);
 
 	writer->destroy(writer);
+	free(pcr_comp.ptr);
+	free(hash_pcr_comp.ptr);
 	clear_pcrs(this);
 
 	return TRUE;

@@ -287,7 +287,7 @@ METHOD(tcg_pts_attr_simple_evid_final_t, get_evid_sig, bool,
 METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sig, void,
 	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t evid_sig)
 {
-	this->evid_sig = chunk_clone(evid_sig);
+	this->evid_sig = evid_sig;
 	this->has_evid_sig = TRUE;
 }
 
@@ -320,8 +320,8 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(u_int8_t flags,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,
 		.flags = flags,
 		.comp_hash_algorithm = comp_hash_algorithm,
-		.pcr_comp = chunk_clone(pcr_comp),
-		.tpm_quote_sig = chunk_clone(tpm_quote_sig),
+		.pcr_comp = pcr_comp,
+		.tpm_quote_sig = tpm_quote_sig,
 	);
 
 	return &this->public.pa_tnc_attribute;

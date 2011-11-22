@@ -422,8 +422,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			use_quote2 = lib->settings->get_bool(lib->settings,
 							"libimcv.plugins.imc-attestation.use_quote2", TRUE);
-
-			/* Quote */
 			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_sig))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
@@ -433,7 +431,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			/* Send Simple Evidence Final attribute */
 			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2 :
 								 PTS_SIMPLE_EVID_FINAL_QUOTE_INFO;
-			comp_hash_algorithm == PTS_MEAS_ALGO_SHA1;
+			comp_hash_algorithm = PTS_MEAS_ALGO_SHA1;
 
 			attr = tcg_pts_attr_simple_evid_final_create(flags,
 								comp_hash_algorithm, pcr_composite, quote_sig);
