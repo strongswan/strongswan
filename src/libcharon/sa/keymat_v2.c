@@ -316,7 +316,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		this->prf->set_key(this->prf, fixed_nonce);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
-		prf_plus = prf_plus_create(this->prf, prf_plus_seed);
+		prf_plus = prf_plus_create(this->prf, TRUE, prf_plus_seed);
 	}
 	else
 	{
@@ -336,7 +336,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		rekey_prf->set_key(rekey_prf, rekey_skd);
 		rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed);
 		rekey_prf->set_key(rekey_prf, skeyseed);
-		prf_plus = prf_plus_create(rekey_prf, prf_plus_seed);
+		prf_plus = prf_plus_create(rekey_prf, TRUE, prf_plus_seed);
 	}
 	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 
@@ -503,7 +503,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	}
 
 	this->prf->set_key(this->prf, this->skd);
-	prf_plus = prf_plus_create(this->prf, seed);
+	prf_plus = prf_plus_create(this->prf, TRUE, seed);
 
 	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
 	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
