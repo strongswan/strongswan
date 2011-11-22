@@ -29,7 +29,7 @@ typedef struct pts_t pts_t;
 #include "pts_file_meas.h"
 #include "pts_file_meta.h"
 #include "pts_dh_group.h"
-#include "pts_func_comp_evid_req.h"
+#include "pts_req_func_comp_evid.h"
 #include "components/pts_comp_func_name.h"
 #include "components/tcg/tcg_comp_func_name.h"
 #include "components/ita/ita_comp_func_name.h"

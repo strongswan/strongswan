@@ -14,29 +14,29 @@
  */
 
 /**
- * @defgroup pts_func_comp_evid_req pts_func_comp_evid_req
+ * @defgroup pts_req_func_comp_evid pts_req_func_comp_evid
  * @{ @ingroup pts
  */
 
-#ifndef PTS_FUNC_COMP_EVID_REQ_H_
-#define PTS_FUNC_COMP_EVID_REQ_H_
+#ifndef PTS_REQ_FUNC_COMP_EVID_H_
+#define PTS_REQ_FUNC_COMP_EVID_H_
 
-typedef enum pts_attr_req_func_comp_evid_flag_t pts_attr_req_func_comp_evid_flag_t;
+typedef enum pts_req_func_comp_evid_t pts_req_func_comp_evid_t;
 
 #include <library.h>
 
 /**
  * PTS Request Functional Component Evidence Flags
  */
-enum pts_attr_req_funct_comp_evid_flag_t {
+enum pts_req_func_comp_evid_t {
 	/** Transitive Trust Chain flag */
-	PTS_REQ_FUNC_COMP_FLAG_TTC =				(1<<7),
+	PTS_REQ_FUNC_COMP_EVID_TTC =			(1<<7),
 	/** Verify Component flag */
-	PTS_REQ_FUNC_COMP_FLAG_VER =				(1<<6),
+	PTS_REQ_FUNC_COMP_EVID_VER =			(1<<6),
 	/** Current Evidence flag */
-	PTS_REQ_FUNC_COMP_FLAG_CURR =				(1<<5),
+	PTS_REQ_FUNC_COMP_EVID_CURR =			(1<<5),
 	/** PCR Information flag */
-	PTS_REQ_FUNC_COMP_FLAG_PCR =				(1<<4),
+	PTS_REQ_FUNC_COMP_EVID_PCR =			(1<<4),
 };
 
 #endif /** PTS_FUNCT_COMP_EVID_REQ_H_ @}*/

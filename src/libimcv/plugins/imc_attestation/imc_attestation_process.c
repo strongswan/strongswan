@@ -340,14 +340,14 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				name->log(name, "* ");
 				negotiated_caps = pts->get_proto_caps(pts);
 
-				if (flags & PTS_REQ_FUNC_COMP_FLAG_TTC)
+				if (flags & PTS_REQ_FUNC_COMP_EVID_TTC)
 				{
 					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
 											TCG_PTS_UNABLE_DET_TTC, attr_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				if (flags & PTS_REQ_FUNC_COMP_FLAG_VER &&
+				if (flags & PTS_REQ_FUNC_COMP_EVID_VER &&
 					!(negotiated_caps & PTS_PROTO_CAPS_V))
 				{
 					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
@@ -355,7 +355,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				if (flags & PTS_REQ_FUNC_COMP_FLAG_CURR &&
+				if (flags & PTS_REQ_FUNC_COMP_EVID_CURR &&
 					!(negotiated_caps & PTS_PROTO_CAPS_C))
 				{
 					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
@@ -363,7 +363,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
-				if (flags & PTS_REQ_FUNC_COMP_FLAG_PCR &&
+				if (flags & PTS_REQ_FUNC_COMP_EVID_PCR &&
 					!(negotiated_caps & PTS_PROTO_CAPS_T))
 				{
 					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,

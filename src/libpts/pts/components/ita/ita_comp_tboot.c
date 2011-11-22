@@ -61,7 +61,7 @@ METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
 METHOD(pts_component_t, get_evidence_flags, u_int8_t,
 	pts_ita_comp_tboot_t *this)
 {
-	return PTS_REQ_FUNC_COMP_FLAG_PCR;
+	return PTS_REQ_FUNC_COMP_EVID_PCR;
 }
 
 METHOD(pts_component_t, measure, status_t,
