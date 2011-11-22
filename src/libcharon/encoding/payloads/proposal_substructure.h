@@ -127,10 +127,19 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type);
  * Creates a proposal_substructure_t from a proposal_t.
  *
  * @param type		PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
- * @param proposal		proposal to build a substruct out of it
- * @return 				proposal_substructure_t object
+ * @param proposal	proposal to build a substruct out of it
+ * @return 			proposal_substructure_t object
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal(
 									payload_type_t type, proposal_t *proposal);
+
+/**
+ * Creates a proposal_substructure_t from a list of proposal_t (IKEv1 only).
+ *
+ * @param proposal	proposal to build a substruct out of it
+ * @return 			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
+ */
+proposal_substructure_t *proposal_substructure_create_from_proposals(
+									linked_list_t *proposals);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

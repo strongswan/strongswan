@@ -398,13 +398,25 @@ sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
 	proposal_t *proposal;
 
 	this = (private_sa_payload_t*)sa_payload_create(type);
-	enumerator = proposals->create_enumerator(proposals);
-	while (enumerator->enumerate(enumerator, &proposal))
+	if (type == SECURITY_ASSOCIATION)
 	{
-		add_proposal(this, proposal);
+		enumerator = proposals->create_enumerator(proposals);
+		while (enumerator->enumerate(enumerator, &proposal))
+		{
+			add_proposal(this, proposal);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
+	else
+	{	/* IKEv1 encodes multiple proposals in a single substructure
+		 * TODO-IKEv1: Encode ESP+AH proposals in two different substructs */
+		proposal_substructure_t *substruct;
 
+		substruct = proposal_substructure_create_from_proposals(proposals);
+		substruct->set_is_last_proposal(substruct, TRUE);
+		this->proposals->insert_last(this->proposals, substruct);
+		compute_length(this);
+	}
 	return &this->public;
 }
 

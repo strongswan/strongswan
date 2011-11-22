@@ -760,14 +760,14 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
  * Add an IKEv1 IKE proposal to the substructure
  */
 static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
-									 proposal_t *proposal)
+									 proposal_t *proposal, int number)
 {
 	transform_substructure_t *transform;
 	u_int16_t alg, key_size;
 	enumerator_t *enumerator;
 
 	transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
-												   0, IKEV1_TRANSID_KEY_IKE);
+												number, IKEV1_TRANSID_KEY_IKE);
 
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
@@ -829,7 +829,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
  * Add an IKEv1 ESP proposal to the substructure
  */
 static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
-									 proposal_t *proposal)
+									 proposal_t *proposal, int number)
 {
 	transform_substructure_t *transform = NULL;
 	u_int16_t alg, key_size;
@@ -839,7 +839,7 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
-												   0, alg);
+												   number, alg);
 		if (key_size)
 		{
 			transform->add_transform_attribute(transform,
@@ -968,10 +968,10 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 		switch (proposal->get_protocol(proposal))
 		{
 			case PROTO_IKE:
-				set_from_proposal_v1_ike(this, proposal);
+				set_from_proposal_v1_ike(this, proposal, 0);
 				break;
 			case PROTO_ESP:
-				set_from_proposal_v1_esp(this, proposal);
+				set_from_proposal_v1_esp(this, proposal, 0);
 				break;
 			default:
 				break;
@@ -1000,6 +1000,46 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proposal->get_protocol(proposal);
 	compute_length(this);
+
+	return &this->public;
+}
+
+/**
+ * See header.
+ */
+proposal_substructure_t *proposal_substructure_create_from_proposals(
+													linked_list_t *proposals)
+{
+	private_proposal_substructure_t *this = NULL;
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+	int number = 0;
+
+	enumerator = proposals->create_enumerator(proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (!this)
+		{
+			this = (private_proposal_substructure_t*)
+						proposal_substructure_create_from_proposal(
+										PROPOSAL_SUBSTRUCTURE_V1, proposal);
+		}
+		else
+		{
+			switch (proposal->get_protocol(proposal))
+			{
+				case PROTO_IKE:
+					set_from_proposal_v1_ike(this, proposal, ++number);
+					break;
+				case PROTO_ESP:
+					set_from_proposal_v1_esp(this, proposal, ++number);
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	return &this->public;
 }
