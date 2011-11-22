@@ -220,6 +220,65 @@ static bool verify_hash(private_main_mode_t *this, bool initiator,
 	return equal;
 }
 
+/**
+ * Generate and add NONCE, KE payload
+ */
+static bool add_nonce_ke(private_main_mode_t *this, chunk_t *nonce,
+						 message_t *message)
+{
+	nonce_payload_t *nonce_payload;
+	ke_payload_t *ke_payload;
+	rng_t *rng;
+
+	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1,
+													   this->dh);
+	message->add_payload(message, &ke_payload->payload_interface);
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
+	{
+		DBG1(DBG_IKE, "no RNG found to create nonce");
+		return FALSE;
+	}
+	rng->allocate_bytes(rng, NONCE_SIZE, nonce);
+	rng->destroy(rng);
+
+	nonce_payload = nonce_payload_create(NONCE_V1);
+	nonce_payload->set_nonce(nonce_payload, *nonce);
+	message->add_payload(message, &nonce_payload->payload_interface);
+
+	return TRUE;
+}
+
+/**
+ * Extract nonce from NONCE payload, process KE payload
+ */
+static bool get_nonce_ke(private_main_mode_t *this, chunk_t *nonce,
+						 message_t *message)
+{
+	nonce_payload_t *nonce_payload;
+	ke_payload_t *ke_payload;
+
+	ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE_V1);
+	if (!ke_payload)
+	{
+		DBG1(DBG_IKE, "KE payload missing in message");
+		return FALSE;
+	}
+	this->dh_value = chunk_clone(ke_payload->get_key_exchange_data(ke_payload));
+	this->dh->set_other_public_value(this->dh, this->dh_value);
+
+	nonce_payload = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	if (!nonce_payload)
+	{
+		DBG1(DBG_IKE, "NONCE payload missing in message");
+		return FALSE;
+	}
+	*nonce = nonce_payload->get_nonce(nonce_payload);
+
+	return TRUE;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -265,10 +324,7 @@ METHOD(task_t, build_i, status_t,
 		}
 		case MM_SA:
 		{
-			ke_payload_t *ke_payload;
-			nonce_payload_t *nonce_payload;
 			u_int16_t group;
-			rng_t *rng;
 
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
@@ -283,23 +339,10 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_IKE, "negotiated DH group not supported");
 				return FAILED;
 			}
-			ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1,
-															   this->dh);
-			message->add_payload(message, &ke_payload->payload_interface);
-
-			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-			if (!rng)
+			if (!add_nonce_ke(this, &this->nonce_i, message))
 			{
-				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_i);
-			rng->destroy(rng);
-
-			nonce_payload = nonce_payload_create(NONCE_V1);
-			nonce_payload->set_nonce(nonce_payload, this->nonce_i);
-			message->add_payload(message, &nonce_payload->payload_interface);
-
 			this->state = MM_KE;
 			return NEED_MORE;
 		}
@@ -381,19 +424,7 @@ METHOD(task_t, process_r, status_t,
 		}
 		case MM_SA:
 		{
-			ke_payload_t *ke_payload;
-			nonce_payload_t *nonce_payload;
 			u_int16_t group;
-
-			ke_payload = (ke_payload_t*)message->get_payload(message,
-															 KEY_EXCHANGE_V1);
-			if (!ke_payload)
-			{
-				DBG1(DBG_IKE, "KE payload missing");
-				return FAILED;
-			}
-			this->dh_value = ke_payload->get_key_exchange_data(ke_payload);
-			this->dh_value = chunk_clone(this->dh_value);
 
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
@@ -407,17 +438,10 @@ METHOD(task_t, process_r, status_t,
 				DBG1(DBG_IKE, "negotiated DH group not supported");
 				return FAILED;
 			}
-			this->dh->set_other_public_value(this->dh, this->dh_value);
-
-			nonce_payload = (nonce_payload_t*)message->get_payload(message,
-																   NONCE_V1);
-			if (!nonce_payload)
+			if (!get_nonce_ke(this, &this->nonce_i, message))
 			{
-				DBG1(DBG_IKE, "Nonce payload missing");
 				return FAILED;
 			}
-			this->nonce_i = nonce_payload->get_nonce(nonce_payload);
-
 			this->state = MM_KE;
 			return NEED_MORE;
 		}
@@ -557,32 +581,15 @@ METHOD(task_t, build_r, status_t,
 		}
 		case MM_KE:
 		{
-			ke_payload_t *ke_payload;
-			nonce_payload_t *nonce_payload;
-			rng_t *rng;
-
-			ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1,
-															   this->dh);
-			message->add_payload(message, &ke_payload->payload_interface);
-
-			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-			if (!rng)
+			if (!add_nonce_ke(this, &this->nonce_r, message))
 			{
-				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_r);
-			rng->destroy(rng);
-
 			if (!derive_keys(this, this->nonce_i, this->nonce_r))
 			{
 				DBG1(DBG_IKE, "key derivation failed");
 				return FAILED;
 			}
-
-			nonce_payload = nonce_payload_create(NONCE_V1);
-			nonce_payload->set_nonce(nonce_payload, this->nonce_r);
-			message->add_payload(message, &nonce_payload->payload_interface);
 			return NEED_MORE;
 		}
 		case MM_AUTH:
@@ -651,35 +658,15 @@ METHOD(task_t, process_i, status_t,
 		}
 		case MM_KE:
 		{
-			ke_payload_t *ke_payload;
-			nonce_payload_t *nonce_payload;
-
-			ke_payload = (ke_payload_t*)message->get_payload(message,
-															 KEY_EXCHANGE_V1);
-			if (!ke_payload)
+			if (!get_nonce_ke(this, &this->nonce_r, message))
 			{
-				DBG1(DBG_IKE, "KE payload missing");
 				return FAILED;
 			}
-			this->dh_value = ke_payload->get_key_exchange_data(ke_payload);
-			this->dh_value = chunk_clone(this->dh_value);
-			this->dh->set_other_public_value(this->dh, this->dh_value);
-
-			nonce_payload = (nonce_payload_t*)message->get_payload(message,
-																   NONCE_V1);
-			if (!nonce_payload)
-			{
-				DBG1(DBG_IKE, "Nonce payload missing");
-				return FAILED;
-			}
-			this->nonce_r = nonce_payload->get_nonce(nonce_payload);
-
 			if (!derive_keys(this, this->nonce_i, this->nonce_r))
 			{
 				DBG1(DBG_IKE, "key derivation failed");
 				return FAILED;
 			}
-
 			return NEED_MORE;
 		}
 		case MM_AUTH:
