@@ -31,3 +31,60 @@ keymat_t *keymat_create(ike_version_t version, bool initiator)
 	}
 	return NULL;
 }
+
+/**
+ * Implicit key length for an algorithm
+ */
+typedef struct {
+	/** IKEv2 algorithm identifier */
+	int alg;
+	/** key length in bits */
+	int len;
+} keylen_entry_t;
+
+/**
+ * See header.
+ */
+int keymat_get_keylen_encr(encryption_algorithm_t alg)
+{
+	keylen_entry_t map[] = {
+		{ENCR_DES,					 64},
+		{ENCR_3DES,					192},
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (map[i].alg == alg)
+		{
+			return map[i].len;
+		}
+	}
+	return 0;
+}
+
+/**
+ * See header.
+ */
+int keymat_get_keylen_integ(integrity_algorithm_t alg)
+{
+	keylen_entry_t map[] = {
+		{AUTH_HMAC_MD5_96,			128},
+		{AUTH_HMAC_SHA1_96,			160},
+		{AUTH_HMAC_SHA2_256_96,		256},
+		{AUTH_HMAC_SHA2_256_128,	256},
+		{AUTH_HMAC_SHA2_384_192,	384},
+		{AUTH_HMAC_SHA2_512_256,	512},
+		{AUTH_AES_XCBC_96,			128},
+	};
+	int i;
+
+	for (i = 0; i < countof(map); i++)
+	{
+		if (map[i].alg == alg)
+		{
+			return map[i].len;
+		}
+	}
+	return 0;
+}

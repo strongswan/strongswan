@@ -71,59 +71,6 @@ struct private_keymat_v2_t {
 	chunk_t skp_verify;
 };
 
-typedef struct keylen_entry_t keylen_entry_t;
-
-/**
- * Implicit key length for an algorithm
- */
-struct keylen_entry_t {
-	/** IKEv2 algorithm identifier */
-	int algo;
-	/** key length in bits */
-	int len;
-};
-
-#define END_OF_LIST -1
-
-/**
- * Keylen for encryption algos
- */
-keylen_entry_t keylen_enc[] = {
-	{ENCR_DES,					 64},
-	{ENCR_3DES,					192},
-	{END_OF_LIST,				  0}
-};
-
-/**
- * Keylen for integrity algos
- */
-keylen_entry_t keylen_int[] = {
-	{AUTH_HMAC_MD5_96,			128},
-	{AUTH_HMAC_SHA1_96,			160},
-	{AUTH_HMAC_SHA2_256_96,		256},
-	{AUTH_HMAC_SHA2_256_128,	256},
-	{AUTH_HMAC_SHA2_384_192,	384},
-	{AUTH_HMAC_SHA2_512_256,	512},
-	{AUTH_AES_XCBC_96,			128},
-	{END_OF_LIST,				  0}
-};
-
-/**
- * Lookup key length of an algorithm
- */
-static int lookup_keylen(keylen_entry_t *list, int algo)
-{
-	while (list->algo != END_OF_LIST)
-	{
-		if (algo == list->algo)
-		{
-			return list->len;
-		}
-		list++;
-	}
-	return 0;
-}
-
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	private_keymat_v2_t *this, diffie_hellman_group_t group)
 {
@@ -448,7 +395,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 		if (!enc_size)
 		{
-			enc_size = lookup_keylen(keylen_enc, enc_alg);
+			enc_size = keymat_get_keylen_encr(enc_alg);
 		}
 		if (enc_alg != ENCR_NULL && !enc_size)
 		{
@@ -490,7 +437,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 		if (!int_size)
 		{
-			int_size = lookup_keylen(keylen_int, int_alg);
+			int_size = keymat_get_keylen_integ(int_alg);
 		}
 		if (!int_size)
 		{

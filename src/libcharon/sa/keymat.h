@@ -72,4 +72,20 @@ struct keymat_t {
  */
 keymat_t *keymat_create(ike_version_t version, bool initiator);
 
+/**
+ * Look up the key length of an encryption algorithm.
+ *
+ * @param alg				algorithm to get key length for
+ * @return					key length in bits
+ */
+int keymat_get_keylen_encr(encryption_algorithm_t alg);
+
+/**
+ * Look up the key length of an integrity algorithm.
+ *
+ * @param alg				algorithm to get key length for
+ * @return					key length in bits
+ */
+int keymat_get_keylen_integ(integrity_algorithm_t alg);
+
 #endif /** KEYMAT_H_ @}*/
