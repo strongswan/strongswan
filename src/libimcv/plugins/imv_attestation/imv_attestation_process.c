@@ -298,86 +298,55 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_SIMPLE_EVID_FINAL:
 		{
 			tcg_pts_attr_simple_evid_final_t *attr_cast;
-			pts_simple_evid_final_flag_t flags;
-			pts_meas_algorithms_t composite_algorithm;
-			chunk_t pcr_comp;
-			chunk_t tpm_quote_sign;
-			chunk_t evid_sign;
-			bool evid_signature_included = FALSE, use_quote2 = FALSE,
-				 ver_info_included = FALSE;
+			u_int8_t flags;
+			pts_meas_algorithms_t comp_hash_algorithm;
+			chunk_t pcr_comp, tpm_quote_sig, evid_sig;
 			chunk_t pcr_composite, quote_info;
+			bool use_quote2, use_ver_info;
 
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
-			evid_signature_included = attr_cast->is_evid_sign_included(attr_cast);
-			flags = attr_cast->get_flags(attr_cast);
+			flags = attr_cast->get_quote_info(attr_cast, &comp_hash_algorithm,
+											  &pcr_comp, &tpm_quote_sig);
 
-			/** Optional Composite Hash Algorithm field is always present
-			 * Field has value of all zeroes if not used.
-			 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
-			 */
-			composite_algorithm = attr_cast->get_comp_hash_algorithm(attr_cast);
-
-			if (flags != PTS_SIMPLE_EVID_FINAL_FLAG_NO)
+			if (flags != PTS_SIMPLE_EVID_FINAL_NO)
 			{
-				if ((flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2) ||
-					(flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER))
-				{
-					use_quote2 = TRUE;
-				}
-				if (flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER)
-				{
-					ver_info_included = TRUE;
-				}
-
-				pcr_comp = attr_cast->get_pcr_comp(attr_cast);
-				tpm_quote_sign = attr_cast->get_tpm_quote_sign(attr_cast);
-
-				if (!pcr_comp.ptr || !tpm_quote_sign.ptr)
-				{
-					DBG1(DBG_IMV, "PCR composite: %B", &pcr_comp);
-					DBG1(DBG_IMV, "TPM Quote Signature: %B", &tpm_quote_sign);
-					DBG1(DBG_IMV, "Either PCR Composite or Quote Signature missing");
-					return FALSE;
-				}
+				use_quote2   = (flags == PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2 ||
+							    flags == PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2_CAP_VER);
+				use_ver_info = (flags == PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2_CAP_VER);
 
 				/* Construct PCR Composite and TPM Quote Info structures */
-				if (!pts->get_quote_info(pts, use_quote2, ver_info_included,
-					composite_algorithm, &pcr_composite, &quote_info))
+				if (!pts->get_quote_info(pts, use_quote2, use_ver_info,
+						comp_hash_algorithm, &pcr_composite, &quote_info))
 				{
-					DBG1(DBG_IMV, "unable to contruct TPM Quote Info");
+					DBG1(DBG_IMV, "unable to compute TPM Quote Info");
 					return FALSE;
 				}
 
 				if (!chunk_equals(pcr_comp, pcr_composite))
 				{
-					DBG1(DBG_IMV, "received PCR Composite didn't match "
-								  "with constructed");
-					chunk_clear(&pcr_composite);
-					chunk_clear(&quote_info);
+					DBG1(DBG_IMV, "received and computed PCR Composite match");
+					free(pcr_composite.ptr);
+					free(quote_info.ptr);
 					return FALSE;
 				}
-				DBG2(DBG_IMV, "received PCR Composite matches with constructed");
-				chunk_clear(&pcr_composite);
+				DBG2(DBG_IMV, "received and computed PCR Composite do not match");
+				free(pcr_composite.ptr);
 
-				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sign))
+				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sig))
 				{
-					chunk_clear(&quote_info);
+					free(quote_info.ptr);
 					return FALSE;
 				}
-
-				DBG2(DBG_IMV, "signature verification succeeded for "
-							  "TPM Quote Info");
-				chunk_clear(&quote_info);
+				DBG2(DBG_IMV, "TPM Quote Info signature verification successful");
+				free(quote_info.ptr);
 			}
 
-			if (evid_signature_included)
+			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))
 			{
 				/** TODO: What to do with Evidence Signature */
-				evid_sign = attr_cast->get_evid_sign(attr_cast);
-				DBG1(DBG_IMV, "This version of Attestation IMV can not handle"
-					 " Optional Evidence Signature field");
+				DBG1(DBG_IMV, "This version of the Attestation IMV can not "
+							  "handle Evidence Signatures");
 			}
-
 			break;
 		}
 

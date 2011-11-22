@@ -14,6 +14,7 @@
  */
 
 #include "tcg_pts_attr_simple_evid_final.h"
+#include "pts/pts_simple_evid_final.h"
 
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
@@ -29,23 +30,23 @@ typedef struct private_tcg_pts_attr_simple_evid_final_t private_tcg_pts_attr_sim
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |	 Flags		|	Reserved	| Optional Composite Hash Alg 	|
+ *  |    Flags      |   Reserved    | Optional Composite Hash Alg   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |				Optional TPM PCR Composite Length				|
+ *  |               Optional TPM PCR Composite Length               |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		   Optional TPM PCR Composite (Variable Length)			~
+ *  ~          Optional TPM PCR Composite (Variable Length)         ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |				Optional TPM Quote Signature Length				|
+ *  |              Optional TPM Quote Signature Length              |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		 Optional TPM Quote Signature (Variable Length)			~
+ *  ~        Optional TPM Quote Signature (Variable Length)         ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  ~		 Optional Evidence Signature (Variable Length)			~
+ *  ~        Optional Evidence Signature (Variable Length)          ~
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
 #define PTS_SIMPLE_EVID_FINAL_SIZE			2
 #define PTS_SIMPLE_EVID_FINAL_RESERVED		0x00
-
+#define PTS_SIMPLE_EVID_FINAL_FLAG_MASK		0xC0
 /**
  * Private data of an tcg_pts_attr_simple_evid_final_t object.
  */
@@ -77,14 +78,9 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	bool noskip_flag;
 
 	/**
-	 * Is Evidence Signature included
-	 */
-	bool evid_sign_included;
-	
-	/**
 	 * Set of flags for Simple Evidence Final
 	 */
-	pts_simple_evid_final_flag_t flags;
+	u_int8_t flags;
 
 	/**
 	 * Optional Composite Hash Algorithm
@@ -99,12 +95,17 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	/**
 	 * Optional TPM Quote Signature
 	 */
-	chunk_t tpm_quote_sign;
+	chunk_t tpm_quote_sig;
+	
+	/**
+	 * Is Evidence Signature included?
+	 */
+	bool has_evid_sig;
 	
 	/**
 	 * Optional Evidence Signature
 	 */
-	chunk_t evid_sign;
+	chunk_t evid_sig;
 
 };
 
@@ -138,32 +139,30 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 	this->noskip_flag = noskip;
 }
 
+METHOD(pa_tnc_attr_t, destroy, void,
+	private_tcg_pts_attr_simple_evid_final_t *this)
+{
+	free(this->value.ptr);
+	free(this->pcr_comp.ptr);
+	free(this->tpm_quote_sig.ptr);
+	free(this->evid_sig.ptr);
+	free(this);
+}
+
 METHOD(pa_tnc_attr_t, build, void,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
 	bio_writer_t *writer;
-	u_int8_t flags = 0;
+	u_int8_t flags;
 	
-	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
+	flags = this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_MASK;
 
-	/* Determine the flags to set*/
-	if (this->flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO)
+	if (this->has_evid_sig)
 	{
-		flags += 64;
+		flags |= PTS_SIMPLE_EVID_FINAL_EVID_SIG;
 	}
-	else if (this->flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2)
-	{
-		flags += 128;
-	}
-	else if (this->flags == PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER)
-	{
-		flags += 192;
-	}
-	if (this->evid_sign_included)
-	{
-		flags += 32;
-	}
-	
+
+	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
 	writer->write_uint8 (writer, flags);
 	writer->write_uint8 (writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
 	
@@ -174,19 +173,18 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->comp_hash_algorithm);
 
 	/* Optional fields */
-	if (this->pcr_comp.ptr && this->pcr_comp.len > 0)
+	if (this->flags != PTS_SIMPLE_EVID_FINAL_NO)
 	{
 		writer->write_uint32 (writer, this->pcr_comp.len);
 		writer->write_data (writer, this->pcr_comp);
+
+		writer->write_uint32 (writer, this->tpm_quote_sig.len);
+		writer->write_data (writer, this->tpm_quote_sig);
 	}
-	if (this->tpm_quote_sign.ptr && this->tpm_quote_sign.len > 0)
+
+	if (this->has_evid_sig)
 	{
-		writer->write_uint32 (writer, this->tpm_quote_sign.len);
-		writer->write_data (writer, this->tpm_quote_sign);
-	}
-	if (this->evid_sign.ptr && this->evid_sign.len > 0)
-	{
-		writer->write_data (writer, this->evid_sign);
+		writer->write_data (writer, this->evid_sig);
 	}
 	
 	this->value = chunk_clone(writer->get_buf(writer));
@@ -197,9 +195,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_simple_evid_final_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	u_int8_t flags;
-	u_int8_t reserved;
+	u_int8_t flags, reserved;
 	u_int16_t algorithm;
+	u_int32_t pcr_comp_len, tpm_quote_sig_len, evid_sig_len;
+		
 	
 	if (this->value.len < PTS_SIMPLE_EVID_FINAL_SIZE)
 	{
@@ -210,30 +209,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	
 	reader->read_uint8(reader, &flags);
-	
-	/* Determine the flags to set*/
-	if (!((flags >> 7) & 1) && !((flags >> 6) & 1))
-	{
-		this->flags = PTS_SIMPLE_EVID_FINAL_FLAG_NO;
-	}
-	else if (!((flags >> 7) & 1) && ((flags >> 6) & 1))
-	{
-		this->flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
-	}
-	else if (((flags >> 7) & 1) && !((flags >> 6) & 1))
-	{
-		this->flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2;
-	}
-	else if (((flags >> 7) & 1) && ((flags >> 6) & 1))
-	{
-		this->flags = PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2_CAP_VER;
-	}
-	if ((flags >> 5) & 1)
-	{
-		this->evid_sign_included = TRUE;
-	}
-	
 	reader->read_uint8(reader, &reserved);
+
+	this->flags = flags & PTS_SIMPLE_EVID_FINAL_FLAG_MASK;
+
+	this->has_evid_sig = (flags & PTS_SIMPLE_EVID_FINAL_EVID_SIG) != 0;
 
 	/** Optional Composite Hash Algorithm field is always present
 	 * Field has value of all zeroes if not used.
@@ -243,8 +223,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint16(reader, &algorithm);
 	this->comp_hash_algorithm = algorithm;
 	
-	/*  Optional Composite Hash Algorithm and TPM PCR Composite field is included */
-	if (this->flags != PTS_SIMPLE_EVID_FINAL_FLAG_NO)
+	/*  Optional Composite Hash Algorithm and TPM PCR Composite fields */
+	if (this->flags != PTS_SIMPLE_EVID_FINAL_NO)
 	{
 		u_int32_t pcr_comp_len, tpm_quote_sign_len;
 		
@@ -257,79 +237,66 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
 		this->pcr_comp = chunk_clone(this->pcr_comp);
 		
-		reader->read_uint32(reader, &tpm_quote_sign_len);
-		reader->read_data(reader, tpm_quote_sign_len, &this->tpm_quote_sign);
-		this->tpm_quote_sign = chunk_clone(this->tpm_quote_sign);
+		/* TODO check if enough message data is available */
+		reader->read_uint32(reader, &tpm_quote_sig_len);
+		reader->read_data(reader, tpm_quote_sig_len, &this->tpm_quote_sig);
+		this->tpm_quote_sig = chunk_clone(this->tpm_quote_sig);
 	}
 	
-	/*  Optional Evidence Signature field is included */
-	if (this->evid_sign_included)
+	/*  Optional Evidence Signature field */
+	if (this->has_evid_sig)
 	{
-		u_int32_t evid_sign_len = reader->remaining(reader);
-		reader->read_data(reader, evid_sign_len, &this->evid_sign);
-		this->evid_sign = chunk_clone(this->evid_sign);
+		evid_sig_len = reader->remaining(reader);
+		reader->read_data(reader, evid_sig_len, &this->evid_sig);
+		this->evid_sig = chunk_clone(this->evid_sig);
 	}
 	
 	reader->destroy(reader);
 	return SUCCESS;
 }
 
-METHOD(pa_tnc_attr_t, destroy, void,
-	private_tcg_pts_attr_simple_evid_final_t *this)
+METHOD(tcg_pts_attr_simple_evid_final_t, get_quote_info, u_int8_t,
+	private_tcg_pts_attr_simple_evid_final_t *this,
+	pts_meas_algorithms_t *comp_hash_algo, chunk_t *pcr_comp, chunk_t *tpm_quote_sig)
 {
-	free(this->value.ptr);
-	free(this->pcr_comp.ptr);
-	free(this->tpm_quote_sign.ptr);
-	free(this->evid_sign.ptr);
-	free(this);
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, is_evid_sign_included, bool,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
-	return this->evid_sign_included;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, get_flags, pts_simple_evid_final_flag_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
+	if (comp_hash_algo)
+	{
+		*comp_hash_algo = this->comp_hash_algorithm;
+	}
+	if (pcr_comp)
+	{
+		*pcr_comp = this->pcr_comp;
+	}
+	if (tpm_quote_sig)
+	{
+		*tpm_quote_sig = this->tpm_quote_sig;
+	}
 	return this->flags;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, get_comp_hash_algorithm, pts_meas_algorithms_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
+METHOD(tcg_pts_attr_simple_evid_final_t, get_evid_sig, bool,
+	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t *evid_sig)
 {
-	return this->comp_hash_algorithm;
+	if (evid_sig)
+	{
+		*evid_sig = this->evid_sig;
+	}
+	return this->has_evid_sig;
 }
 
-METHOD(tcg_pts_attr_simple_evid_final_t, get_pcr_comp, chunk_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
+METHOD(tcg_pts_attr_simple_evid_final_t, set_evid_sig, void,
+	private_tcg_pts_attr_simple_evid_final_t *this, chunk_t evid_sig)
 {
-	return this->pcr_comp;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, get_tpm_quote_sign, chunk_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
-	return this->tpm_quote_sign;
-}
-
-METHOD(tcg_pts_attr_simple_evid_final_t, get_evid_sign, chunk_t,
-	private_tcg_pts_attr_simple_evid_final_t *this)
-{
-	return this->evid_sign;
+	this->evid_sig = chunk_clone(evid_sig);
+	this->has_evid_sig = TRUE;
 }
 
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(
-					   bool evid_sign_included,
-					   pts_simple_evid_final_flag_t flags,
-					   pts_meas_algorithms_t comp_hash_algorithm,
-					   chunk_t pcr_comp,
-					   chunk_t tpm_quote_sign,
-					   chunk_t evid_sign)
+pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(u_int8_t flags,
+							pts_meas_algorithms_t comp_hash_algorithm,
+							chunk_t pcr_comp, chunk_t tpm_quote_sig)
 {
 	private_tcg_pts_attr_simple_evid_final_t *this;
 
@@ -345,21 +312,16 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.is_evid_sign_included = _is_evid_sign_included,
-			.get_flags = _get_flags,
-			.get_comp_hash_algorithm = _get_comp_hash_algorithm,
-			.get_pcr_comp = _get_pcr_comp,
-			.get_tpm_quote_sign = _get_tpm_quote_sign,
-			.get_evid_sign = _get_evid_sign,
+			.get_quote_info = _get_quote_info,
+			.get_evid_sig = _get_evid_sig,
+			.set_evid_sig = _set_evid_sig,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,
-		.evid_sign_included = evid_sign_included,
 		.flags = flags,
 		.comp_hash_algorithm = comp_hash_algorithm,
 		.pcr_comp = chunk_clone(pcr_comp),
-		.tpm_quote_sign = chunk_clone(tpm_quote_sign),
-		.evid_sign = chunk_clone(evid_sign),
+		.tpm_quote_sig = chunk_clone(tpm_quote_sig),
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -385,12 +347,9 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.is_evid_sign_included = _is_evid_sign_included,
-			.get_flags= _get_flags,
-			.get_comp_hash_algorithm = _get_comp_hash_algorithm,
-			.get_pcr_comp = _get_pcr_comp,
-			.get_tpm_quote_sign = _get_tpm_quote_sign,
-			.get_evid_sign = _get_evid_sign,
+			.get_quote_info = _get_quote_info,
+			.get_evid_sig = _get_evid_sig,
+			.set_evid_sig = _set_evid_sig,
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,

@@ -405,9 +405,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_GEN_ATTEST_EVID:
 		{
 			pts_simple_evid_final_flag_t flags;
-			pts_meas_algorithms_t composite_algorithm = 0;
+			pts_meas_algorithms_t comp_hash_algorithm;
 			pts_comp_evidence_t *evid;
-			chunk_t pcr_composite, quote_signature;
+			chunk_t pcr_composite, quote_sig;
 			bool use_quote2;
 
 			/* Send buffered Simple Component Evidences */
@@ -424,20 +424,19 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							"libimcv.plugins.imc-attestation.use_quote2", TRUE);
 
 			/* Quote */
-			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_signature))
+			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_sig))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
 				return FALSE;
 			}
 
 			/* Send Simple Evidence Final attribute */
-			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO2:
-								 PTS_SIMPLE_EVID_FINAL_FLAG_TPM_QUOTE_INFO;
-			composite_algorithm |= PTS_MEAS_ALGO_SHA1;
+			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2 :
+								 PTS_SIMPLE_EVID_FINAL_QUOTE_INFO;
+			comp_hash_algorithm == PTS_MEAS_ALGO_SHA1;
 
-			attr = tcg_pts_attr_simple_evid_final_create(FALSE, flags,
-								composite_algorithm, pcr_composite,
-								quote_signature, chunk_empty);
+			attr = tcg_pts_attr_simple_evid_final_create(flags,
+								comp_hash_algorithm, pcr_composite, quote_sig);
 			attr_list->insert_last(attr_list, attr);
 			break;
 		}
