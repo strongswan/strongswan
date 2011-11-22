@@ -304,7 +304,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			chunk_t tpm_quote_sign;
 			chunk_t evid_sign;
 			bool evid_signature_included = FALSE, use_quote2 = FALSE,
-												ver_info_included = FALSE;
+				 ver_info_included = FALSE;
 			chunk_t pcr_composite, quote_info;
 
 			attr_cast = (tcg_pts_attr_simple_evid_final_t*)attr;
@@ -348,11 +348,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					return FALSE;
 				}
 
-				/* Check calculated PCR composite matches with received */
 				if (!chunk_equals(pcr_comp, pcr_composite))
 				{
-					DBG1(DBG_IMV, "received PCR Compsosite didn't match"
-								  " with constructed");
+					DBG1(DBG_IMV, "received PCR Composite didn't match "
+								  "with constructed");
 					chunk_clear(&pcr_composite);
 					chunk_clear(&quote_info);
 					return FALSE;

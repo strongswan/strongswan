@@ -406,39 +406,25 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			pts_simple_evid_final_flag_t flags;
 			pts_meas_algorithms_t composite_algorithm = 0;
-			pts_comp_evidence_t *evidence;
+			pts_comp_evidence_t *evid;
 			chunk_t pcr_composite, quote_signature;
-			u_int32_t i, evid_count, extended_pcr;
-			u_int32_t *pcrs;
 			bool use_quote2;
 
 			/* Send buffered Simple Component Evidences */
-			evid_count = attestation_state->get_evid_count(attestation_state);
-			pcrs = (u_int32_t*)malloc(sizeof(u_int32_t)*evid_count);
-
-			for (i = 0; i < evid_count; i++)
+			while (attestation_state->next_evidence(attestation_state, &evid))
 			{
-				evidence = attestation_state->next_evidence(attestation_state);
-				extended_pcr = evidence->get_extended_pcr(evidence);
-
-				/**
-				 * Add extended PCR number to PCR list to quote
-				 * Duplicated PCR numbers have no influence 
-				 */
-				pcrs[i] = extended_pcr;
+				pts->select_pcr(pts, evid->get_extended_pcr(evid));
 
 				/* Send Simple Component Evidence */
-				attr = tcg_pts_attr_simple_comp_evid_create(evidence);
+				attr = tcg_pts_attr_simple_comp_evid_create(evid);
 				attr_list->insert_last(attr_list, attr);
 			}
 
-			use_quote2 = (lib->settings->get_int(lib->settings,
-					"libimcv.plugins.imc-attestation.quote_version", 1) == 1) ?
-							FALSE : TRUE;
+			use_quote2 = lib->settings->get_bool(lib->settings,
+							"libimcv.plugins.imc-attestation.use_quote2", TRUE);
 
 			/* Quote */
-			if (!pts->quote_tpm(pts, use_quote2, pcrs, evid_count,
-				&pcr_composite, &quote_signature))
+			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_signature))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
 				return FALSE;

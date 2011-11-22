@@ -108,9 +108,30 @@ struct private_pts_t {
  	certificate_t *aik;
 
 	/**
-	 * List of extended PCR's with corresponding values
+	 * Table of extended PCRs with corresponding values
 	 */
-	linked_list_t *pcrs;
+	u_char* pcrs[PCR_MAX_NUM];
+
+	/**
+	 * Length of PCR registers
+	 */
+	size_t pcr_len;
+
+	/**
+	 * Number of extended PCR registers
+	 */
+	u_int32_t pcr_count;
+
+	/**
+	 * Highest extended PCR register
+	 */
+	u_int32_t pcr_max;
+
+	/**
+	 * Bitmap of extended PCR registers
+	 */
+	u_int8_t pcr_select[PCR_MAX_NUM / 8];
+
 };
 
 METHOD(pts_t, get_proto_caps, pts_proto_caps_flag_t,
@@ -784,17 +805,32 @@ METHOD(pts_t, extend_pcr, bool,
 	DBG3(DBG_PTS, "PCR %d value after extend: %B", pcr_num, output);
 	return TRUE;
 
-	err:
+err:
 	chunk_clear(&pcr_value);
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	Tspi_Context_Close(hContext);
 	return FALSE;
 }
 
+
+static void clear_pcrs(private_pts_t *this)
+{
+	int i;
+
+	for (i = 0; i <= this->pcr_max; i++)
+	{
+		free(this->pcrs[i]);
+		this->pcrs[i] = NULL;
+	}
+	this->pcr_count = 0;
+	this->pcr_max = 0;
+
+	memset(this->pcr_select, 0x00, sizeof(this->pcr_select));
+}
+
 METHOD(pts_t, quote_tpm, bool,
-	private_pts_t *this, bool use_quote2,
-	u_int32_t *pcrs, u_int32_t num_of_pcrs,
-	chunk_t *pcr_composite, chunk_t *quote_signature)
+	private_pts_t *this, bool use_quote2, chunk_t *pcr_composite,
+	chunk_t *quote_signature)
 {
 	TSS_HCONTEXT hContext;
 	TSS_HTPM hTPM;
@@ -805,10 +841,11 @@ METHOD(pts_t, quote_tpm, bool,
 	BYTE secret[] = TSS_WELL_KNOWN_SECRET;
 	TSS_HPCRS hPcrComposite;
 	TSS_VALIDATION valData;
-	u_int32_t i, versionInfoSize;
 	TSS_RESULT result;
 	chunk_t pcr_comp, quote_sign;
 	BYTE* versionInfo;
+	u_int32_t versionInfoSize, pcr, i = 0, f = 1;
+	bool success = FALSE;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
@@ -866,22 +903,27 @@ METHOD(pts_t, quote_tpm, bool,
 		goto err2;
 	}
 
-	/* Select PCR's */
-	for (i = 0; i < num_of_pcrs ; i++)
+	/* Select PCRs */
+	for (pcr = 0; pcr <= this->pcr_max ; pcr++)
 	{
-		if (pcrs[i] < 0 || pcrs[i] >= MAX_NUM_PCR )
+		if (f == 256)
 		{
-			DBG1(DBG_PTS, "Invalid PCR number: %d", pcrs[i]);
-			goto err3;
-		}
-		result = use_quote2 ?
-				Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcrs[i],
-												   TSS_PCRS_DIRECTION_RELEASE):
-				Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcrs[i]);
-		if (result != TSS_SUCCESS)
+			i++;
+			f = 1;
+		}		
+		if (this->pcr_select[i] & f)
 		{
-			goto err3;
+			DBG2(DBG_TNC, "PCR %02d selected for TPM Quote", pcr);
+			result = use_quote2 ?
+					Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
+												TSS_PCRS_DIRECTION_RELEASE) :
+					Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr);
+			if (result != TSS_SUCCESS)
+			{
+				goto err3;
+			}
 		}
+		f <<= 1;
 	}
 
 	/* Set the Validation Data */
@@ -928,82 +970,106 @@ METHOD(pts_t, quote_tpm, bool,
 	DBG3(DBG_PTS, "TPM Quote Signature: %B",quote_signature);
 
 	chunk_clear(&quote_sign);
-	Tspi_Context_FreeMemory(hContext, NULL);
-	Tspi_Context_CloseObject(hContext, hPcrComposite);
-	Tspi_Context_CloseObject(hContext, hAIK);
-	Tspi_Context_Close(hContext);
-	free(pcrs);
-	return TRUE;
+	success = TRUE;
 
 	/* Cleanup */
-	err4:
+err4:
 	Tspi_Context_FreeMemory(hContext, NULL);
 
-	err3:
+err3:
 	Tspi_Context_CloseObject(hContext, hPcrComposite);
 
-	err2:
+err2:
 	Tspi_Context_CloseObject(hContext, hAIK);
 
-	err1:
+err1:
 	Tspi_Context_Close(hContext);
-	free(pcrs);
-	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
-	return FALSE;
+
+	if (!success)
+	{
+		DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	}
+	clear_pcrs(this);
+
+	return success;
 }
 
-METHOD(pts_t, add_pcr_entry, void,
-	private_pts_t *this, pcr_entry_t *new)
+METHOD(pts_t, select_pcr, bool,
+	private_pts_t *this, u_int32_t pcr)
 {
-	enumerator_t *e;
-	pcr_entry_t *entry;
+	u_int32_t i, f;
 
-	if (!this->pcrs)
+	if (pcr >= PCR_MAX_NUM)
 	{
-		this->pcrs = linked_list_create();
+		DBG1(DBG_PTS, "PCR %u: number is larger than maximum of %u",
+					   pcr, PCR_MAX_NUM-1);
+		return FALSE;
 	}
 
-	e = this->pcrs->create_enumerator(this->pcrs);
-	while (e->enumerate(e, &entry))
+	/* Determine PCR selection flag */
+	i = pcr / 8;
+	f = 1 << (pcr - 8*i);
+
+	/* Has this PCR already been selected? */
+	if (!(this->pcr_select[i] & f))
 	{
-		if (entry->pcr_number == new->pcr_number)
-		{
-			DBG3(DBG_PTS, "updating already added PCR%d value",
-				 entry->pcr_number);
-			this->pcrs->remove_at(this->pcrs, e);
-			free(entry);
-			break;
-		}
+		this->pcr_select[i] |= f;
+		this->pcr_max = max(this->pcr_max, pcr);
+		this->pcr_count++;
 	}
-	DESTROY_IF(e);
-	this->pcrs->insert_last(this->pcrs, new);
+
+	return TRUE;
 }
 
-/**
- * Get the maximum PCR index received in pcr_after_value field
- */
-static u_int32_t get_max_pcr_index(private_pts_t *this)
+METHOD(pts_t, add_pcr, bool,
+	private_pts_t *this, u_int32_t pcr, chunk_t pcr_before, chunk_t pcr_after)
 {
-	enumerator_t *e;
-	pcr_entry_t *pcr_entry;
-	u_int32_t ret = 0;
-
-	if (this->pcrs->get_count(this->pcrs) == 0)
+	if (pcr >= PCR_MAX_NUM)
 	{
-		return -1;
+		DBG1(DBG_PTS, "PCR %u: number is larger than maximum of %u",
+					   pcr, PCR_MAX_NUM-1);
+		return FALSE;
 	}
-	
-	e = this->pcrs->create_enumerator(this->pcrs);
-	while (e->enumerate(e, &pcr_entry))
+
+	/* Is the length of the PCR registers already set? */
+	if (this->pcr_len)
 	{
-		if (pcr_entry->pcr_number > ret)
+		if (pcr_after.len != this->pcr_len)
 		{
-			ret = pcr_entry->pcr_number;
+			DBG1(DBG_PTS, "PCR %02u: length is %d bytes but should be %d bytes",
+						   pcr_after.len, this->pcr_len);
+			return FALSE;
 		}
 	}
-	e->destroy(e);
+	else
+	{
+		this->pcr_len = pcr_after.len;
+	}
 
-	return ret;
+	/* Has the value of the PCR register already been assigned? */
+	if (this->pcrs[pcr])
+	{
+		if (!memeq(this->pcrs[pcr], pcr_before.ptr, this->pcr_len))
+		{
+			DBG1(DBG_PTS, "PCR %02u: new pcr_before value does not equal "
+						  "old pcr_after value");
+		}
+		/* remove the old PCR value */
+		free(this->pcrs[pcr]);
+	}
+	else
+	{
+		/* add extended PCR Register */
+		this->pcr_select[pcr / 8] |= 1 << (pcr % 8);
+		this->pcr_max = max(this->pcr_max, pcr);
+		this->pcr_count++;
+	}
+
+	/* Duplicate and store current PCR value */
+	pcr_after = chunk_clone(pcr_after);
+	this->pcrs[pcr] = pcr_after.ptr;
+
+	return TRUE;
 }
 
 METHOD(pts_t, does_pcr_value_match, bool,
@@ -1052,70 +1118,54 @@ METHOD(pts_t, get_quote_info, bool,
 	pts_meas_algorithms_t composite_algo,
 	chunk_t *out_pcr_composite, chunk_t *out_quote_info)
 {
-	enumerator_t *e;
-	pcr_entry_t *pcr_entry;
+	u_int8_t size_of_select;
+	int pcr_composite_len, i;
 	chunk_t pcr_composite, hash_pcr_composite;
-	u_int32_t pcr_composite_len, i, maximum_pcr_index, bitmask_len;
 	bio_writer_t *writer;
 	hasher_t *hasher;
 
-	maximum_pcr_index = get_max_pcr_index(this);
-	if (maximum_pcr_index == -1)
+	if (this->pcr_count == 0)
 	{
-		DBG1(DBG_PTS, "PCR entries unavailable, unable to construct "
-					  "TPM Quote Info");
+		DBG1(DBG_PTS, "No extended PCR entries available, "
+					  "unable to construct TPM Quote Info");
 		return FALSE;
 	}
 	if (!this->secret.ptr)
 	{
-		DBG1(DBG_PTS, "Secret assessment value unavailable",
-			 "unable to construct TPM Quote Info");
+		DBG1(DBG_PTS, "Secret assessment value unavailable, ",
+					  "unable to construct TPM Quote Info");
 		return FALSE;
 	}
 	if (use_quote2 && ver_info_included && !this->tpm_version_info.ptr)
 	{
-		DBG1(DBG_PTS, "TPM Version Information unavailable",
-			 "unable to construct TPM Quote Info2");
+		DBG1(DBG_PTS, "TPM Version Information unavailable, ",
+					  "unable to construct TPM Quote Info2");
 		return FALSE;
 	}
 	
-	bitmask_len = maximum_pcr_index/8 +1;
-	u_int8_t mask_bytes[MAX_NUM_PCR/8] = {0};
-	
-	pcr_composite_len = 2 + bitmask_len + 4 +
-						this->pcrs->get_count(this->pcrs) * PCR_LEN;
+	size_of_select = 1 + this->pcr_max / 8;	
+	pcr_composite_len = 2 + size_of_select +
+						4 + this->pcr_count * this->pcr_len;
 	
 	writer = bio_writer_create(pcr_composite_len);
-	/* Lenght of the bist mask field */
-	writer->write_uint16(writer, bitmask_len);
-	/* Bit mask indicating selected PCRs */
-	e = this->pcrs->create_enumerator(this->pcrs);
-	while (e->enumerate(e, &pcr_entry))
-	{
-		u_int32_t index = pcr_entry->pcr_number;
-		mask_bytes[index / 8] |= (1 << (index % 8));
-	}
-	e->destroy(e);
 
-	for (i = 0; i< bitmask_len ; i++)
+	writer->write_uint16(writer, size_of_select);
+	for (i = 0; i < size_of_select; i++)
 	{
-		writer->write_uint8(writer, mask_bytes[i]);
+		writer->write_uint8(writer, this->pcr_select[i]);
 	}
 
-	/* Lenght of the pcr entries */
-	writer->write_uint32(writer, this->pcrs->get_count(this->pcrs) * PCR_LEN);
-	/* Actual PCR values */
-	e = this->pcrs->create_enumerator(this->pcrs);
-	while (e->enumerate(e, &pcr_entry))
+	writer->write_uint32(writer, this->pcr_count * this->pcr_len);
+	for (i = 0; i < 8 * size_of_select; i++)
 	{
-		writer->write_data(writer, chunk_create(pcr_entry->pcr_value, PCR_LEN));
+		if (this->pcrs[i])
+		{
+			writer->write_data(writer, chunk_create(this->pcrs[i], this->pcr_len));
+		}
 	}
-	free(pcr_entry);
-	e->destroy(e);
-
-	/* PCR Composite structure */
 	pcr_composite = chunk_clone(writer->get_buf(writer));
 	DBG3(DBG_PTS, "PCR Composite: %B", &pcr_composite);
+
 	writer->destroy(writer);
 
 	/* Output the TPM_PCR_COMPOSITE expected from IMC */
@@ -1171,21 +1221,18 @@ METHOD(pts_t, get_quote_info, bool,
 		writer->write_uint16(writer, TPM_TAG_QUOTE_INFO2);
 
 		/* Magic QUT2 value */
-		writer->write_uint8(writer, 'Q');
-		writer->write_uint8(writer, 'U');
-		writer->write_uint8(writer, 'T');
-		writer->write_uint8(writer, '2');
+		writer->write_data(writer, chunk_create("QUT2", 4));
 
 		/* Secret assessment value 20 bytes (nonce) */
 		writer->write_data(writer, this->secret);
 
-		/* Lenght of the bist mask field */
-		writer->write_uint16(writer, bitmask_len);
+		/* Length of the PCR selection field */
+		writer->write_uint16(writer, size_of_select);
 
-		/* PCR selection Bitmask */
-		for (i = 0; i< bitmask_len ; i++)
+		/* PCR selection */
+		for (i = 0; i < size_of_select ; i++)
 		{
-			writer->write_uint8(writer, mask_bytes[i]);
+			writer->write_uint8(writer, this->pcr_select[i]);
 		}
 		
 		/* TPM Locality Selection */
@@ -1203,16 +1250,10 @@ METHOD(pts_t, get_quote_info, bool,
 	else
 	{
 		/* Version number */
-		writer->write_uint8(writer, 1);
-		writer->write_uint8(writer, 1);
-		writer->write_uint8(writer, 0);
-		writer->write_uint8(writer, 0);
+		writer->write_data(writer, chunk_from_chars(1, 1, 0, 0));
 
 		/* Magic QUOT value */
-		writer->write_uint8(writer, 'Q');
-		writer->write_uint8(writer, 'U');
-		writer->write_uint8(writer, 'O');
-		writer->write_uint8(writer, 'T');
+		writer->write_data(writer, chunk_create("QUOT", 4));
 
 		/* PCR Composite Hash */
 		writer->write_data(writer, hash_pcr_composite);
@@ -1227,7 +1268,9 @@ METHOD(pts_t, get_quote_info, bool,
 	/* TPM Quote Info */
 	*out_quote_info = chunk_clone(writer->get_buf(writer));
 	DBG3(DBG_PTS, "Calculated TPM Quote Info: %B", out_quote_info);
+
 	writer->destroy(writer);
+	clear_pcrs(this);
 
 	return TRUE;
 }
@@ -1267,9 +1310,9 @@ METHOD(pts_t, verify_quote_signature, bool,
 METHOD(pts_t, destroy, void,
 	private_pts_t *this)
 {
+	clear_pcrs(this);
 	DESTROY_IF(this->aik);
 	DESTROY_IF(this->dh);
-	DESTROY_IF(this->pcrs);
 	free(this->initiator_nonce.ptr);
 	free(this->responder_nonce.ptr);
 	free(this->secret.ptr);
@@ -1463,7 +1506,8 @@ pts_t *pts_create(bool is_imc)
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote_tpm = _quote_tpm,
-			.add_pcr_entry = _add_pcr_entry,
+			.select_pcr = _select_pcr,
+			.add_pcr = _add_pcr,
 			.get_quote_info = _get_quote_info,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,

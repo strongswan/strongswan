@@ -54,18 +54,12 @@ struct imc_attestation_state_t {
 	void (*add_evidence)(imc_attestation_state_t *this, pts_comp_evidence_t *entry);
 
 	/**
-	 * Get the number of entries in the Component Evidence list
-	 *
-	 * @return					number of Component Evidence entries
-	 */
-	int (*get_evid_count)(imc_attestation_state_t *this);
-
-	/**
 	 * Removes next Component Evidence entry from list and returns it
 	 *
-	 * @return					Next Component Evidence entry
+	 * @param evid				Next Component Evidence entry
+	 * @return					TRUE if next entry is available
 	 */
-	pts_comp_evidence_t* (*next_evidence)(imc_attestation_state_t *this);
+	bool (*next_evidence)(imc_attestation_state_t *this, pts_comp_evidence_t** evid);
 
 };
 

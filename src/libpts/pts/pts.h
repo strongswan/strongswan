@@ -22,7 +22,6 @@
 #define PTS_H_
 
 typedef struct pts_t pts_t;
-typedef struct pcr_entry_t pcr_entry_t;
 
 #include "pts_error.h"
 #include "pts_proto_caps.h"
@@ -81,7 +80,7 @@ typedef struct pcr_entry_t pcr_entry_t;
 /**
  * Maximum number of PCR's of TPM, TPM Spec 1.2
  */
-#define MAX_NUM_PCR				24
+#define PCR_MAX_NUM				24
 
 /**
  * Number of bytes that can be saved in a PCR of TPM, TPM Spec 1.2
@@ -97,14 +96,6 @@ typedef struct pcr_entry_t pcr_entry_t;
  * Hashing algorithm used by tboot and trustedGRUB
  */
 #define TRUSTED_HASH_ALGO		PTS_MEAS_ALGO_SHA1
-
-/**
- * PCR Entry structure which contains PCR number and current value
- */
-struct pcr_entry_t {
-	u_int32_t pcr_number;
-	char pcr_value[PCR_LEN];
-};
 
 /**
  * Class implementing the TCG Platform Trust Service (PTS)
@@ -331,23 +322,32 @@ struct pts_t {
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
 	 * @param use_quote2		Version of the Quote funtion to be used
-	 * @param pcrs				Array of PCR's to make quotation over
-	 * @param num_of_pcrs		Number of elements in pcrs array
 	 * @param pcr_composite		Chunk to save pcr composite structure
 	 * @param quote_signature	Chunk to save quote operation output
 	 *							without external data (anti-replay protection)
 	 * @return					FALSE in case of TSS error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, bool use_quote2,
-					   u_int32_t *pcrs, u_int32_t num_of_pcrs,
-					   chunk_t *pcr_composite, chunk_t *quote_signature);
+	 bool (*quote_tpm)(pts_t *this, bool use_quote2, chunk_t *pcr_composite,
+					   chunk_t *quote_signature);
 
 	 /**
-	 * Add extended PCR with its corresponding value
+	 * Mark an extended PCR as selected
 	 *
-	 * @return			FALSE in case of any error or non-match, TRUE otherwise
+	 * @param pcr				Number of the extended PCR
+	 * @return					TRUE if PCR number is valid
 	 */
-	 void (*add_pcr_entry)(pts_t *this, pcr_entry_t *entry);
+	 bool (*select_pcr)(pts_t *this, u_int32_t pcr);
+
+	 /**
+	 * Add an extended PCR with its corresponding value
+	 *
+	 * @param pcr				Number of the extended PCR
+	 * @param pcr_before		PCR value before extension
+	 * @param pcr_after			PCR value after extension
+	 * @return					TRUE if PCR number and register length is valid
+	 */
+	bool (*add_pcr)(pts_t *this, u_int32_t pcr, chunk_t pcr_before,
+												 chunk_t pcr_after);
 
 	 /**
 	 * Constructs and returns TPM Quote Info structure expected from IMC

@@ -96,7 +96,6 @@ METHOD(pts_component_t, verify, status_t,
 	pts_pcr_transform_t transform;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
-	pcr_entry_t *entry;
 
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
@@ -110,10 +109,10 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		entry = malloc_thing(pcr_entry_t);
-		entry->pcr_number = extended_pcr;
-		memcpy(entry->pcr_value, pcr_after.ptr, PCR_LEN);
-		pts->add_pcr_entry(pts, entry);
+		if (!pts->add_pcr(pts, extended_pcr, pcr_before, pcr_after))
+		{
+			return FAILED;
+		}
 	}
 	
 	return SUCCESS;

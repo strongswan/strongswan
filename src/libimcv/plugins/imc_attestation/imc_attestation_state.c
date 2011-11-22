@@ -85,26 +85,12 @@ METHOD(imc_attestation_state_t, add_evidence, void,
 	this->list->insert_last(this->list, evidence);
 }
 
-METHOD(imc_attestation_state_t, get_evid_count, int,
-	private_imc_attestation_state_t *this)
+METHOD(imc_attestation_state_t, next_evidence, bool,
+	private_imc_attestation_state_t *this, pts_comp_evidence_t **evid)
 {
-	return this->list->get_count(this->list);
+	return this->list->remove_first(this->list, (void**)evid) == SUCCESS;
 }
 
-METHOD(imc_attestation_state_t, next_evidence, pts_comp_evidence_t*,
-	private_imc_attestation_state_t *this)
-{
-	pts_comp_evidence_t *evidence;
-
-	if (this->list->remove_first(this->list, (void**)&evidence) == SUCCESS)
-	{
-		return evidence;
-	}
-	else
-	{	
-		return NULL;
-	}
-}
 /**
  * Described in header.
  */
@@ -122,7 +108,6 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 			},
 			.get_pts = _get_pts,
 			.add_evidence = _add_evidence,
-			.get_evid_count = _get_evid_count,
 			.next_evidence = _next_evidence,
 		},
 		.connection_id = connection_id,
