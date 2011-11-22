@@ -115,11 +115,12 @@ enum exchange_type_t{
 	 * IKE_SESSION_RESUME (RFC 5723).
 	 */
 	IKE_SESSION_RESUME = 38,
+
 #ifdef ME
 	/**
 	 * ME_CONNECT
 	 */
-	ME_CONNECT = 240
+	ME_CONNECT = 240,
 #endif /* ME */
 
 	/**
@@ -146,7 +147,7 @@ struct ike_header_t {
 	/**
 	 * Get the initiator spi.
 	 *
-	 * @return 				initiator_spi
+	 * @return				initiator_spi
 	 */
 	u_int64_t (*get_initiator_spi) (ike_header_t *this);
 
@@ -160,7 +161,7 @@ struct ike_header_t {
 	/**
 	 * Get the responder spi.
 	 *
-	 * @return 				responder_spi
+	 * @return				responder_spi
 	 */
 	u_int64_t (*get_responder_spi) (ike_header_t *this);
 
@@ -174,7 +175,7 @@ struct ike_header_t {
 	/**
 	 * Get the major version.
 	 *
-	 * @return 				major version
+	 * @return				major version
 	 */
 	u_int8_t (*get_maj_version) (ike_header_t *this);
 
@@ -188,7 +189,7 @@ struct ike_header_t {
 	/**
 	 * Get the minor version.
 	 *
-	 * @return 				minor version
+	 * @return				minor version
 	 */
 	u_int8_t (*get_min_version) (ike_header_t *this);
 
@@ -202,7 +203,7 @@ struct ike_header_t {
 	/**
 	 * Get the response flag.
 	 *
-	 * @return 				response flag
+	 * @return				response flag
 	 */
 	bool (*get_response_flag) (ike_header_t *this);
 
@@ -216,7 +217,7 @@ struct ike_header_t {
 	/**
 	 * Get "higher version supported"-flag.
 	 *
-	 * @return 				version flag
+	 * @return				version flag
 	 */
 	bool (*get_version_flag) (ike_header_t *this);
 
@@ -230,7 +231,7 @@ struct ike_header_t {
 	/**
 	 * Get the initiator flag.
 	 *
-	 * @return 				initiator flag
+	 * @return				initiator flag
 	 */
 	bool (*get_initiator_flag) (ike_header_t *this);
 
@@ -244,7 +245,7 @@ struct ike_header_t {
 	/**
 	 * Get the encryption flag.
 	 *
-	 * @return 				encryption flag
+	 * @return				encryption flag
 	 */
 	bool (*get_encryption_flag) (ike_header_t *this);
 
@@ -258,7 +259,7 @@ struct ike_header_t {
 	/**
 	 * Get the commit flag.
 	 *
-	 * @return 				commit flag
+	 * @return				commit flag
 	 */
 	bool (*get_commit_flag) (ike_header_t *this);
 
@@ -272,7 +273,7 @@ struct ike_header_t {
 	/**
 	 * Get the authentication only flag.
 	 *
-	 * @return 				authonly flag
+	 * @return				authonly flag
 	 */
 	bool (*get_authonly_flag) (ike_header_t *this);
 
@@ -286,7 +287,7 @@ struct ike_header_t {
 	/**
 	 * Get the exchange type.
 	 *
-	 * @return 				exchange type
+	 * @return				exchange type
 	 */
 	u_int8_t (*get_exchange_type) (ike_header_t *this);
 
@@ -300,7 +301,7 @@ struct ike_header_t {
 	/**
 	 * Get the message id.
 	 *
-	 * @return 				message id
+	 * @return				message id
 	 */
 	u_int32_t (*get_message_id) (ike_header_t *this);
 
