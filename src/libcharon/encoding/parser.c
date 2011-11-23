@@ -254,7 +254,7 @@ static bool parse_bytes(private_parser_t *this, int rule_number,
 	if (output_pos)
 	{
 		memcpy(output_pos, this->byte_pos, bytes);
-		DBG3(DBG_ENC, "   => %b", output_pos, bytes);
+		DBG3(DBG_ENC, "   %b", output_pos, bytes);
 	}
 	this->byte_pos += bytes;
 	return TRUE;
@@ -352,7 +352,7 @@ static bool parse_chunk(private_parser_t *this, int rule_number,
 	{
 		*output_pos = chunk_alloc(length);
 		memcpy(output_pos->ptr, this->byte_pos, length);
-		DBG3(DBG_ENC, "   => %b", output_pos->ptr, length);
+		DBG3(DBG_ENC, "   %b", output_pos->ptr, length);
 	}
 	this->byte_pos += length;
 	return TRUE;
