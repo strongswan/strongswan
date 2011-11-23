@@ -180,7 +180,7 @@ pa_tnc_attr_t *tcg_pts_attr_tpm_version_info_create(chunk_t tpm_version_info)
 		},
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_TPM_VERSION_INFO,
-		.tpm_version_info = tpm_version_info,
+		.tpm_version_info = chunk_clone(tpm_version_info),
 	);
 
 	return &this->public.pa_tnc_attribute;
