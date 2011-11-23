@@ -188,6 +188,12 @@ INSERT INTO files (
   0, 'tboot_pcr18'
 );
 
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'tboot_pcr18'
+);
+
 /* Components */
 
 INSERT INTO components (
@@ -432,6 +438,18 @@ INSERT INTO product_component (
   product, component, depth, sequence
 ) VALUES (
   4, 2, 0, 1
+);
+
+INSERT INTO product_component (
+  product, component, depth, sequence
+) VALUES (
+  7, 1, 0, 1
+);
+
+INSERT INTO product_component (
+  product, component, depth, sequence
+) VALUES (
+  7, 2, 0, 2
 );
 
 /* File Hashes */
@@ -1312,3 +1330,18 @@ INSERT INTO file_hashes (
 ) VALUES (
   24, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  23, 7, 2, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  24, 7, 2, 32768, X'160d2b04d11eb225fb148615b699081869e15b6c'
+);
+
+
+
