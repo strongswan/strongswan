@@ -525,7 +525,7 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 		}
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
-	seed = chunk_cata("mcc", secret, chunk_from_thing(protocol),
+	seed = chunk_cata("mcccc", secret, chunk_from_thing(protocol),
 					  chunk_from_thing(spi), nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
 
