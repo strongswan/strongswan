@@ -1402,8 +1402,6 @@ METHOD(message_t, generate, status_t,
 		order_payloads(this);
 	}
 
-	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
-
 	if (this->major_version == IKEV2_MAJOR_VERSION)
 	{
 		encrypted = this->rule->encrypted;
@@ -1437,6 +1435,8 @@ METHOD(message_t, generate, status_t,
 		}
 		enumerator->destroy(enumerator);
 	}
+
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
 	aead = keymat->get_aead(keymat, FALSE);
 	if (aead && encrypted)
