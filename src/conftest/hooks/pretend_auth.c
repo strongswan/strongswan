@@ -154,7 +154,7 @@ static void build_certs(private_pretend_auth_t *this,
 	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
 	{
-		payload = cert_payload_create_from_cert(cert);
+		payload = cert_payload_create_from_cert(cert, CERTIFICATE);
 		if (payload)
 		{
 			DBG1(DBG_IKE, "pretending end entity cert \"%Y\"",
@@ -167,7 +167,7 @@ static void build_certs(private_pretend_auth_t *this,
 	{
 		if (type == AUTH_RULE_IM_CERT)
 		{
-			payload = cert_payload_create_from_cert(cert);
+			payload = cert_payload_create_from_cert(cert, CERTIFICATE);
 			if (payload)
 			{
 				DBG1(DBG_IKE, "pretending issuer cert \"%Y\"",

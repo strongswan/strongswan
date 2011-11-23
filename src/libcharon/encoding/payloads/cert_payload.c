@@ -332,7 +332,8 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert, payload_type_
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url, payload_type_t type)
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url,
+													  payload_type_t type)
 {
 	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
 
@@ -345,7 +346,8 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url, p
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_custom(cert_encoding_t encoding, chunk_t data, payload_type_t type)
+cert_payload_t *cert_payload_create_custom(cert_encoding_t encoding,
+										   chunk_t data, payload_type_t type)
 {
 	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
 
