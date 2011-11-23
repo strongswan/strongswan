@@ -114,12 +114,13 @@ struct private_ike_header_t {
 	u_int32_t length;
 };
 
-ENUM_BEGIN(exchange_type_names, ID_PROT, INFORMATIONAL_V1,
+ENUM_BEGIN(exchange_type_names, ID_PROT, TRANSACTION,
 	"ID_PROT",
 	"AUTH_ONLY",
 	"AGGRESSIVE",
-	"INFORMATIONAL_V1");
-ENUM_NEXT(exchange_type_names, QUICK_MODE, IKE_SESSION_RESUME, INFORMATIONAL_V1,
+	"INFORMATIONAL_V1",
+	"TRANSACTION");
+ENUM_NEXT(exchange_type_names, QUICK_MODE, IKE_SESSION_RESUME, TRANSACTION,
 	"QUICK_MODE",
 	"NEW_GROUP_MODE",
 	"IKE_SA_INIT",
@@ -172,10 +173,10 @@ static encoding_rule_t encodings[] = {
 	/* 4 Byte message id, stored in the field message_id */
 	{ U_INT_32,		offsetof(private_ike_header_t, message_id)		},
 	/* 4 Byte length fied, stored in the field length */
-	{ HEADER_LENGTH,offsetof(private_ike_header_t, length)			},
+	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length)			}
 };
 
-/*                           1                   2                   3
+/*                         1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !                       IKE_SA Initiator's SPI                  !
@@ -206,6 +207,7 @@ METHOD(payload_t, verify, status_t,
 			/* fall */
 		case AUTH_ONLY:
 		case INFORMATIONAL_V1:
+		case TRANSACTION:
 		case QUICK_MODE:
 		case NEW_GROUP_MODE:
 			if (this->maj_version != IKEV1_MAJOR_VERSION)

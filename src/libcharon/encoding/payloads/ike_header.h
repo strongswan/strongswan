@@ -82,6 +82,11 @@ enum exchange_type_t{
 	INFORMATIONAL_V1 = 5,
 
 	/**
+	 * Transaction (ISAKMP Cfg Mode "draft-ietf-ipsec-isakmp-mode-cfg-05")
+	 */
+	TRANSACTION = 6,
+
+	/**
 	 * Quick Mode
 	 */
 	QUICK_MODE = 32,
@@ -138,7 +143,6 @@ extern enum_name_t *exchange_type_names;
  * An object of this type represents an IKE header of either IKEv1 or IKEv2.
  */
 struct ike_header_t {
-
 	/**
 	 * The payload_t interface.
 	 */
