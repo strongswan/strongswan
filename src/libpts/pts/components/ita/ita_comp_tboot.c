@@ -191,6 +191,16 @@ METHOD(pts_component_t, verify, status_t,
 	/* check measurement in database */
 	enumerator = pts_db->create_comp_hash_enumerator(pts_db, file,
 								platform_info, this->name, TRUSTED_HASH_ALGO);
+	if (!enumerator->enumerate(enumerator, &hash))
+	{
+		DBG1(DBG_PTS, "No Measurement found in database for component:%s ,"
+			" on platform: %s with hashing algorithm: %N",
+			file, platform_info, pts_meas_algorithm_names, TRUSTED_HASH_ALGO);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = pts_db->create_comp_hash_enumerator(pts_db, file,
+								platform_info, this->name, TRUSTED_HASH_ALGO);
 	while (enumerator->enumerate(enumerator, &hash))
 	{
 		if (!chunk_equals(hash, measurement))
