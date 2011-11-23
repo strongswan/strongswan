@@ -2135,7 +2135,7 @@ METHOD(ike_sa_t, initiate_xauth, void,
 	xauth_request_t *xauth_request_task = xauth_request_create(this, TRUE);
 	this->task_manager->queue_task(this->task_manager, (task_t*)xauth_request_task);
 
-	this->task_manager->initiate_later(this->task_manager);
+//	this->task_manager->initiate_later(this->task_manager);
 }
 
 /*
