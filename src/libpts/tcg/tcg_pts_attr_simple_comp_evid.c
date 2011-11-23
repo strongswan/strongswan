@@ -305,6 +305,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t measurement, utc_time, policy_uri, pcr_before, pcr_after;
 	time_t measurement_time;
 	bool has_pcr_info = FALSE, has_validation = FALSE;
+	status_t status = FAILED;
 
 	if (this->value.len < PTS_SIMPLE_COMP_EVID_SIZE)
 	{
@@ -349,17 +350,42 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||
 		validation == PTS_COMP_EVID_VALIDATION_PASSED)
 	{
-		reader->read_uint16(reader, &len);
-		reader->read_data(reader, len, &policy_uri);
+		if (!reader->read_uint16(reader, &len))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
+						  "Verification Policy URI Lenght");
+			goto end;
+		}
+		if (!reader->read_data(reader, len, &policy_uri))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
+						  "Verification Policy URI");
+			goto end;
+		}
 		has_validation = TRUE;
 	}
 	
 	/*  Are optional PCR value fields included? */
 	if (flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
 	{
-		reader->read_uint16(reader, &len);
-		reader->read_data(reader, len, &pcr_before);
-		reader->read_data(reader, len, &pcr_after);
+		if (!reader->read_uint16(reader, &len))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
+						  "PCR Value length");
+			goto end;
+		}
+		if (!reader->read_data(reader, len, &pcr_before))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
+						  "PCR Before Value");
+			goto end;
+		}
+		if (!reader->read_data(reader, len, &pcr_after))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
+						  "PCR After Value");
+			goto end;
+		}
 		has_pcr_info = TRUE;
 	}
 
@@ -390,6 +416,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 
 	return SUCCESS;
+
+end:
+	reader->destroy(reader);
+	return status;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,

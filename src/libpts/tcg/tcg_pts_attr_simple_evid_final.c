@@ -198,7 +198,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int8_t flags, reserved;
 	u_int16_t algorithm;
 	u_int32_t pcr_comp_len, tpm_quote_sig_len, evid_sig_len;
-		
+	status_t status = FAILED;
 	
 	if (this->value.len < PTS_SIMPLE_EVID_FINAL_SIZE)
 	{
@@ -237,9 +237,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
 		this->pcr_comp = chunk_clone(this->pcr_comp);
 		
-		/* TODO check if enough message data is available */
-		reader->read_uint32(reader, &tpm_quote_sig_len);
-		reader->read_data(reader, tpm_quote_sig_len, &this->tpm_quote_sig);
+		if (!reader->read_uint32(reader, &tpm_quote_sig_len))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
+						  "TPM Quote Singature Lenght");
+			goto end;
+		}
+		if (!reader->read_data(reader, tpm_quote_sig_len, &this->tpm_quote_sig))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
+						  "TPM Quote Singature");
+			goto end;
+		}
 		this->tpm_quote_sig = chunk_clone(this->tpm_quote_sig);
 	}
 	
@@ -253,6 +262,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	
 	reader->destroy(reader);
 	return SUCCESS;
+
+end:
+	reader->destroy(reader);
+	return status;
 }
 
 METHOD(tcg_pts_attr_simple_evid_final_t, get_quote_info, u_int8_t,
