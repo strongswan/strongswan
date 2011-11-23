@@ -236,6 +236,7 @@ METHOD(task_manager_t, initiate, status_t,
 	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
+	bool new_mid = FALSE;
 
 	if (!this->rng)
 	{
@@ -266,11 +267,14 @@ METHOD(task_manager_t, initiate, status_t,
 				if (activate_task(this, TASK_QUICK_MODE))
 				{
 					exchange = QUICK_MODE;
+					new_mid = TRUE;
+					break;
 				}
-
 				if (activate_task(this, TASK_XAUTH_REQUEST))
 				{
 					exchange = TRANSACTION;
+					new_mid = TRUE;
+					break;
 				}
 				break;
 			default:
@@ -311,12 +315,12 @@ METHOD(task_manager_t, initiate, status_t,
 	other = this->ike_sa->get_other_host(this->ike_sa);
 
 	message = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
-	if (exchange != ID_PROT)
+	if (new_mid)
 	{
 		this->rng->get_bytes(this->rng, sizeof(this->initiating.mid),
 							 (void*)&this->initiating.mid);
-		message->set_message_id(message, this->initiating.mid);
 	}
+	message->set_message_id(message, this->initiating.mid);
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
 	message->set_exchange_type(message, exchange);
