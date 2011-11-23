@@ -1505,7 +1505,8 @@ METHOD(message_t, generate, status_t,
 	ike_header->destroy(ike_header);
 
 	if (encryption)
-	{
+	{	/* set_transform() has to be called before get_length() */
+		encryption->set_transform(encryption, aead);
 		if (this->is_encrypted)
 		{	/* for IKEv1 instead of associated data we provide the IV */
 			chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
@@ -1516,7 +1517,6 @@ METHOD(message_t, generate, status_t,
 			/* fill in length, including encryption payload */
 			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
 		}
-		encryption->set_transform(encryption, aead);
 		this->payloads->insert_last(this->payloads, encryption);
 		if (!encryption->encrypt(encryption, chunk))
 		{
