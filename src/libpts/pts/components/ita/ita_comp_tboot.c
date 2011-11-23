@@ -81,6 +81,8 @@ METHOD(pts_component_t, measure, status_t,
 	pts_comp_evidence_t *evid;
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
 	chunk_t measurement, pcr_before, pcr_after;
+	pts_pcr_transform_t pcr_transform;
+	pts_meas_algorithms_t hash_algo;
 	
 	switch (this->extended_pcr)
 	{
@@ -109,6 +111,19 @@ METHOD(pts_component_t, measure, status_t,
 			return FAILED;
 	}
 
+	hash_algo = pts->get_meas_algorithm(pts);
+	switch (hash_algo)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+			pcr_transform = PTS_PCR_TRANSFORM_MATCH;
+		case PTS_MEAS_ALGO_SHA256:
+		case PTS_MEAS_ALGO_SHA384:
+			pcr_transform = PTS_PCR_TRANSFORM_LONG;
+		case PTS_MEAS_ALGO_NONE:
+		default:
+			pcr_transform = PTS_PCR_TRANSFORM_NO;
+	}
+
 	measurement = chunk_from_hex(
 					chunk_create(meas_hex, strlen(meas_hex)), NULL);
 	pcr_before = chunk_from_hex(
@@ -117,10 +132,12 @@ METHOD(pts_component_t, measure, status_t,
 					chunk_create(pcr_after_hex, strlen(pcr_after_hex)), NULL);
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								0, this->extended_pcr,
-								PTS_MEAS_ALGO_SHA1, PTS_PCR_TRANSFORM_NO,
+								this->depth, this->extended_pcr,
+								hash_algo, pcr_transform,
 								this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
+
+
 
 	return (this->extended_pcr == PCR_TBOOT_MLE) ? SUCCESS : NEED_MORE;
 }
@@ -170,10 +187,10 @@ METHOD(pts_component_t, verify, status_t,
 	{
 		return FAILED;
 	}
-
+	
 	/* check measurement in database */
 	enumerator = pts_db->create_comp_hash_enumerator(pts_db, file,
-								platform_info, this->name, algo);
+								platform_info, this->name, TRUSTED_HASH_ALGO);
 	while (enumerator->enumerate(enumerator, &hash))
 	{
 		if (!chunk_equals(hash, measurement))

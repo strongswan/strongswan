@@ -71,6 +71,8 @@ METHOD(pts_component_t, measure, status_t,
 	u_int32_t extended_pcr;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
+	pts_pcr_transform_t pcr_transform;
+	pts_meas_algorithms_t hash_algo;
 
 	/* Provisional implementation for TGRUB */
 	extended_pcr = PCR_DEBUG;
@@ -82,6 +84,19 @@ METHOD(pts_component_t, measure, status_t,
 		return FAILED;
 	}
 
+	hash_algo = pts->get_meas_algorithm(pts);
+	switch (hash_algo)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+			pcr_transform = PTS_PCR_TRANSFORM_MATCH;
+		case PTS_MEAS_ALGO_SHA256:
+		case PTS_MEAS_ALGO_SHA384:
+			pcr_transform = PTS_PCR_TRANSFORM_LONG;
+		case PTS_MEAS_ALGO_NONE:
+		default:
+			pcr_transform = PTS_PCR_TRANSFORM_NO;
+	}
+
 	measurement = chunk_alloc(HASH_SIZE_SHA1);
 	memset(measurement.ptr, 0x00, measurement.len);
 		
@@ -89,8 +104,8 @@ METHOD(pts_component_t, measure, status_t,
 	memset(pcr_before.ptr, 0x00, pcr_before.len);
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								0, extended_pcr,
-								PTS_MEAS_ALGO_SHA1, PTS_PCR_TRANSFORM_NO,
+								this->depth, extended_pcr,
+								hash_algo, pcr_transform,
 								measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
 

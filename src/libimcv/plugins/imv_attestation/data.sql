@@ -426,30 +426,12 @@ INSERT INTO product_file (
   7, 22
 );
 
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  7, 23
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  7, 24
-);
-
 /* Product Component */
 
 INSERT INTO product_component (
   product, component, depth, sequence
 ) VALUES (
-  4, 2, 0, 2
-);
-
-INSERT INTO product_component (
-  product, component, depth, sequence
-) VALUES (
-  7, 2, 0, 2
+  4, 2, 0, 1
 );
 
 /* File Hashes */
