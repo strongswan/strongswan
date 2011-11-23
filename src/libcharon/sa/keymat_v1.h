@@ -61,6 +61,8 @@ struct keymat_v1_t {
 	 *
 	 * @param proposal		selected algorithms
 	 * @param dh			diffie hellman key, NULL if none used
+	 * @param spi_i			SPI chosen by initiatior
+	 * @param spi_r			SPI chosen by responder
 	 * @param nonce_i		quick mode initiator nonce
 	 * @param nonce_r		quick mode responder nonce
 	 * @param encr_i		allocated initiators encryption key
@@ -69,7 +71,8 @@ struct keymat_v1_t {
 	 * @param integ_r		allocated responders integrity key
 	 */
 	bool (*derive_child_keys)(keymat_v1_t *this, proposal_t *proposal,
-						diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+						diffie_hellman_t *dh, u_int32_t spi_i, u_int32_t spi_r,
+						chunk_t nonce_i, chunk_t nonce_r,
 						chunk_t *encr_i, chunk_t *integ_i,
 						chunk_t *encr_r, chunk_t *integ_r);
 

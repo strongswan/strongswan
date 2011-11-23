@@ -124,7 +124,8 @@ static bool install(private_quick_mode_t *this)
 	tsi->insert_last(tsi, this->tsi);
 	tsr->insert_last(tsr, this->tsr);
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal, NULL,
-			this->nonce_i, this->nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
+						this->spi_i, this->spi_r, this->nonce_i, this->nonce_r,
+						&encr_i, &integ_i, &encr_r, &integ_r))
 	{
 		if (this->initiator)
 		{

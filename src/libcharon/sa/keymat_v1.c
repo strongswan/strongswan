@@ -503,31 +503,13 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 METHOD(keymat_v1_t, derive_child_keys, bool,
 	private_keymat_v1_t *this, proposal_t *proposal, diffie_hellman_t *dh,
-	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
-	chunk_t *encr_r, chunk_t *integ_r)
+	u_int32_t spi_i, u_int32_t spi_r, chunk_t nonce_i, chunk_t nonce_r,
+	chunk_t *encr_i, chunk_t *integ_i, chunk_t *encr_r, chunk_t *integ_r)
 {
 	u_int16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	u_int8_t protocol;
-	u_int32_t spi;
 	prf_plus_t *prf_plus;
 	chunk_t seed, secret = chunk_empty;
-
-	/* KEYMAT = prf+(SKEYID_d, [ g(qm)^xy | ] protocol | SPI | Ni_b | Nr_b) */
-
-	protocol = proposal->get_protocol(proposal);
-	spi = proposal->get_spi(proposal);
-
-	if (dh)
-	{
-		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
-		{
-			return FALSE;
-		}
-		DBG4(DBG_CHD, "DH secret %B", &secret);
-	}
-	seed = chunk_cata("mcccc", secret, chunk_from_thing(protocol),
-					  chunk_from_thing(spi), nonce_i, nonce_r);
-	DBG4(DBG_CHD, "seed %B", &seed);
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 								&enc_alg, &enc_size))
@@ -591,15 +573,36 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 		int_size /= 8;
 	}
 
+	/* KEYMAT = prf+(SKEYID_d, [ g(qm)^xy | ] protocol | SPI | Ni_b | Nr_b) */
 	this->prf->set_key(this->prf, this->skeyid_d);
-	prf_plus = prf_plus_create(this->prf, FALSE, seed);
+	protocol = proposal->get_protocol(proposal);
+	if (dh)
+	{
+		if (dh->get_shared_secret(dh, &secret) != SUCCESS)
+		{
+			return FALSE;
+		}
+		DBG4(DBG_CHD, "DH secret %B", &secret);
+	}
 
+	seed = chunk_cata("ccccc", secret, chunk_from_thing(protocol),
+					  chunk_from_thing(spi_r), nonce_i, nonce_r);
+	DBG4(DBG_CHD, "initiator SA seed %B", &seed);
+
+	prf_plus = prf_plus_create(this->prf, FALSE, seed);
 	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
 	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
+	prf_plus->destroy(prf_plus);
+
+	seed = chunk_cata("ccccc", secret, chunk_from_thing(protocol),
+					  chunk_from_thing(spi_i), nonce_i, nonce_r);
+	DBG4(DBG_CHD, "responder SA seed %B", &seed);
+	prf_plus = prf_plus_create(this->prf, FALSE, seed);
 	prf_plus->allocate_bytes(prf_plus, enc_size, encr_r);
 	prf_plus->allocate_bytes(prf_plus, int_size, integ_r);
-
 	prf_plus->destroy(prf_plus);
+
+	chunk_clear(&secret);
 
 	if (enc_size)
 	{
