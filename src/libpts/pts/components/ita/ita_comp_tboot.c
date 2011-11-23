@@ -151,11 +151,9 @@ METHOD(pts_component_t, verify, status_t,
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	time_t measurement_time;
-	chunk_t measurement, pcr_before, pcr_after;
+	chunk_t measurement, pcr_before, pcr_after, hash;
 	enumerator_t *enumerator;
-	char *file;
-	chunk_t hash;
-	char *platform_info;
+	char *file, *platform_info;
 
 	platform_info = pts->get_platform_info(pts);
 	if (!pts_db || !platform_info)
@@ -193,8 +191,8 @@ METHOD(pts_component_t, verify, status_t,
 								platform_info, this->name, TRUSTED_HASH_ALGO);
 	if (!enumerator->enumerate(enumerator, &hash))
 	{
-		DBG1(DBG_PTS, "No Measurement found in database for component:%s ,"
-			" on platform: %s with hashing algorithm: %N",
+		DBG1(DBG_PTS, "no measurement found in database for component:%s "
+					  "for platform: %s with hash algorithm %N",
 			file, platform_info, pts_meas_algorithm_names, TRUSTED_HASH_ALGO);
 	}
 	enumerator->destroy(enumerator);
@@ -205,15 +203,16 @@ METHOD(pts_component_t, verify, status_t,
 	{
 		if (!chunk_equals(hash, measurement))
 		{
-			DBG1(DBG_PTS, "Incorrect TBOOT component measurement for PCR %d. "
-						  "Expected: %#B, Received: %#B",
-						  this->extended_pcr, &hash, &measurement);
+			DBG1(DBG_PTS, "PCR %2d: no matching TBOOT component measurement "
+						  "found in database", this->extended_pcr);
+			DBG1(DBG_PTS, "  expected: %#B", &hash);
+			DBG1(DBG_PTS, "  received: %#B", &measurement);
 			return FAILED;
 		}
 		else
 		{
-			DBG3(DBG_PTS, "Matching TBOOT component measurement for PCR %d",
-						  this->extended_pcr);
+			DBG2(DBG_PTS, "PCR %2d: matching TBOOT component measurement "
+						  "found in database", this->extended_pcr);
 			break;
 		}
 	}
