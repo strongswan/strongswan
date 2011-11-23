@@ -86,6 +86,11 @@ struct private_cert_payload_t {
 	 * TRUE if the "Hash and URL" data is invalid
 	 */
 	bool invalid_hash_and_url;
+
+	/**
+	 * The payload type.
+	 */
+	payload_type_t type;
 };
 
 /**
@@ -182,7 +187,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_cert_payload_t *this)
 {
-	return CERTIFICATE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -267,7 +272,7 @@ METHOD2(payload_t, cert_payload_t, destroy, void,
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create()
+cert_payload_t *cert_payload_create(payload_type_t type)
 {
 	private_cert_payload_t *this;
 
@@ -291,6 +296,7 @@ cert_payload_t *cert_payload_create()
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = get_header_length(this),
+		.type = type,
 	);
 	return &this->public;
 }
@@ -298,9 +304,9 @@ cert_payload_t *cert_payload_create()
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
+cert_payload_t *cert_payload_create_from_cert(certificate_t *cert, payload_type_t type)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
 
 	switch (cert->get_type(cert))
 	{
@@ -326,9 +332,9 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert)
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url, payload_type_t type)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
 
 	this->encoding = ENC_X509_HASH_AND_URL;
 	this->data = chunk_cat("cc", hash, chunk_create(url, strlen(url)));
@@ -339,11 +345,11 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_custom(cert_encoding_t type, chunk_t data)
+cert_payload_t *cert_payload_create_custom(cert_encoding_t encoding, chunk_t data, payload_type_t type)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create();
+	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
 
-	this->encoding = type;
+	this->encoding = encoding;
 	this->data = data;
 	this->payload_length = get_header_length(this) + this->data.len;
 	return &this->public;

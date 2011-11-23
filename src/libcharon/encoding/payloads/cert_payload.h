@@ -108,34 +108,39 @@ struct cert_payload_t {
 /**
  * Creates an empty certificate payload.
  *
+ * @param type				payload type (for IKEv1 or IKEv2)
+ * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create(void);
+cert_payload_t *cert_payload_create(payload_type_t type);
 
 /**
  * Creates a certificate payload with an embedded certificate.
  *
+ * @param type				payload type (for IKEv1 or IKEv2)
  * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
+cert_payload_t *cert_payload_create_from_cert(certificate_t *cert, payload_type_t type);
 
 /**
  * Creates a certificate payload with hash and URL encoding of a certificate.
  *
+ * @param type				payload type (for IKEv1 or IKEv2)
  * @param hash				hash of the DER encoded certificate (get's cloned)
  * @param url				the URL to locate the certificate (get's cloned)
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url, payload_type_t type);
 
 /**
  * Creates a custom certificate payload using type and associated data.
  *
- * @param type				encoding type of certificate
+ * @param type				payload type (for IKEv1 or IKEv2)
+ * @param encoding			encoding type of certificate
  * @param data				associated data (gets owned)
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create_custom(cert_encoding_t type, chunk_t data);
+cert_payload_t *cert_payload_create_custom(cert_encoding_t encoding, chunk_t data, payload_type_t type);
 
 #endif /** CERT_PAYLOAD_H_ @}*/
