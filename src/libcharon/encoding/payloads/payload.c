@@ -38,12 +38,9 @@
 #include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 
-#include <encoding/payloads/attribute_payload_v1.h>
-#include <encoding/payloads/data_attribute_v1.h>
-
 ENUM_BEGIN(payload_type_names, NO_PAYLOAD, NO_PAYLOAD,
 	"NO_PAYLOAD");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, ATTRIBUTE_V1, NO_PAYLOAD,
+ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
 	"SECURITY_ASSOCIATION_V1",
 	"PROPOSAL_V1",
 	"TRANSFORM_V1",
@@ -57,8 +54,8 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, ATTRIBUTE_V1, NO_PAYLOAD,
 	"NOTIFY_V1",
 	"DELETE_V1",
 	"VENDOR_ID_V1",
-	"ATTRIBUTE_V1");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, ATTRIBUTE_V1,
+	"CONFIGURATION_V1");
+ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, CONFIGURATION_V1,
 	"SECURITY_ASSOCIATION",
 	"KEY_EXCHANGE",
 	"ID_INITIATOR",
@@ -78,7 +75,7 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, A
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, HEADER, DATA_ATTRIBUTE_V1, ID_PEER,
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, ID_PEER,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"PROPOSAL_SUBSTRUCTURE_V1",
@@ -88,10 +85,10 @@ ENUM_NEXT(payload_type_names, HEADER, DATA_ATTRIBUTE_V1, ID_PEER,
 	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
 	"CONFIGURATION_ATTRIBUTE",
-	"ENCRYPTED_V1",
-	"DATA_ATTRIBUTE_V1");
+	"CONFIGURATION_ATTRIBUTE_V1",
+	"ENCRYPTED_V1");
 #else
-ENUM_NEXT(payload_type_names, HEADER, DATA_ATTRIBUTE_V1, EXTENSIBLE_AUTHENTICATION,
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, EXTENSIBLE_AUTHENTICATION,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"PROPOSAL_SUBSTRUCTURE_V1",
@@ -101,15 +98,15 @@ ENUM_NEXT(payload_type_names, HEADER, DATA_ATTRIBUTE_V1, EXTENSIBLE_AUTHENTICATI
 	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
 	"CONFIGURATION_ATTRIBUTE",
-	"ENCRYPTED_V1",
-	"DATA_ATTRIBUTE_V1");
+	"CONFIGURATION_ATTRIBUTE_V1",
+	"ENCRYPTED_V1");
 #endif /* ME */
-ENUM_END(payload_type_names, DATA_ATTRIBUTE_V1);
+ENUM_END(payload_type_names, ENCRYPTED_V1);
 
 /* short forms of payload names */
 ENUM_BEGIN(payload_type_short_names, NO_PAYLOAD, NO_PAYLOAD,
 	"--");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, VENDOR_ID_V1, NO_PAYLOAD,
+ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
 	"SA",
 	"PROP",
 	"TRANS",
@@ -122,8 +119,9 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, VENDOR_ID_V1, NO_PA
 	"No",
 	"N",
 	"D",
-	"V");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, VENDOR_ID_V1,
+	"V",
+	"CP");
+ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, CONFIGURATION_V1,
 	"SA",
 	"KE",
 	"IDi",
@@ -143,7 +141,7 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICAT
 #ifdef ME
 ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, HEADER, DATA_ATTRIBUTE_V1, ID_PEER,
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, ID_PEER,
 	"HDR",
 	"PROP",
 	"PROP",
@@ -153,10 +151,10 @@ ENUM_NEXT(payload_type_short_names, HEADER, DATA_ATTRIBUTE_V1, ID_PEER,
 	"TRANSATTR",
 	"TSSUB",
 	"CATTR",
-	"E",
-	"DATAATTR");
+	"CATTR",
+	"E");
 #else
-ENUM_NEXT(payload_type_short_names, HEADER, DATA_ATTRIBUTE_V1, EXTENSIBLE_AUTHENTICATION,
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, EXTENSIBLE_AUTHENTICATION,
 	"HDR",
 	"PROP",
 	"PROP",
@@ -166,10 +164,10 @@ ENUM_NEXT(payload_type_short_names, HEADER, DATA_ATTRIBUTE_V1, EXTENSIBLE_AUTHEN
 	"TRANSATTR",
 	"TSSUB",
 	"CATTR",
-	"E",
-	"DATAATTR");
+	"CATTR",
+	"E");
 #endif /* ME */
-ENUM_END(payload_type_short_names, DATA_ATTRIBUTE_V1);
+ENUM_END(payload_type_short_names, ENCRYPTED_V1);
 
 /*
  * see header
@@ -230,18 +228,16 @@ payload_t *payload_create(payload_type_t type)
 		case HASH_V1:
 			return (payload_t*)hash_payload_create();
 		case CONFIGURATION:
-			return (payload_t*)cp_payload_create();
+		case CONFIGURATION_V1:
+			return (payload_t*)cp_payload_create(type);
 		case CONFIGURATION_ATTRIBUTE:
-			return (payload_t*)configuration_attribute_create();
+		case CONFIGURATION_ATTRIBUTE_V1:
+			return (payload_t*)configuration_attribute_create(type);
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
 		case ENCRYPTED:
 		case ENCRYPTED_V1:
 			return (payload_t*)encryption_payload_create(type);
-		case ATTRIBUTE_V1:
-			return (payload_t*)attribute_payload_v1_create();
-		case DATA_ATTRIBUTE_V1:
-			return (payload_t*)data_attribute_v1_create();
 		default:
 			return (payload_t*)unknown_payload_create(type);
 	}
@@ -260,7 +256,7 @@ bool payload_is_known(payload_type_t type)
 	{
 		return TRUE;
 	}
-	if (type >= SECURITY_ASSOCIATION_V1 && type <= VENDOR_ID_V1)
+	if (type >= SECURITY_ASSOCIATION_V1 && type <= CONFIGURATION_V1)
 	{
 		return TRUE;
 	}

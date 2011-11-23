@@ -15,13 +15,11 @@ daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
 encoding/message.c encoding/message.h \
 encoding/parser.c encoding/parser.h \
-encoding/payloads/attribute_payload_v1.c encoding/payloads/attribute_payload_v1.h \
 encoding/payloads/auth_payload.c encoding/payloads/auth_payload.h \
 encoding/payloads/cert_payload.c encoding/payloads/cert_payload.h \
 encoding/payloads/certreq_payload.c encoding/payloads/certreq_payload.h \
 encoding/payloads/configuration_attribute.c encoding/payloads/configuration_attribute.h \
 encoding/payloads/cp_payload.c encoding/payloads/cp_payload.h \
-encoding/payloads/data_attribute_v1.c encoding/payloads/data_attribute_v1.h \
 encoding/payloads/delete_payload.c encoding/payloads/delete_payload.h \
 encoding/payloads/eap_payload.c encoding/payloads/eap_payload.h \
 encoding/payloads/encodings.c encoding/payloads/encodings.h \

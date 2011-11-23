@@ -113,9 +113,9 @@ enum payload_type_t {
 	VENDOR_ID_V1 = 13,
 
 	/**
-	 * Attribute payload (ISAKMP Cfg Mode "draft-ietf-ipsec-isakmp-mode-cfg-05")
+	 * Attribute payload (ISAKMP Mode Config, aka configuration payload.
 	 */
-	ATTRIBUTE_V1 = 14,
+	CONFIGURATION_V1 = 14,
 
 	/**
 	 * The security association (SA) payload containing proposals.
@@ -249,20 +249,19 @@ enum payload_type_t {
 	TRAFFIC_SELECTOR_SUBSTRUCTURE,
 
 	/**
-	 * CONFIGURATION_ATTRIBUTE, attribute in a configuration payload.
+	 * CONFIGURATION_ATTRIBUTE, IKEv2 attribute in a configuration payload.
 	 */
 	CONFIGURATION_ATTRIBUTE,
+
+	/**
+	 * CONFIGURATION_ATTRIBUTE_V1, IKEv1 attribute in a configuration payload.
+	 */
+	CONFIGURATION_ATTRIBUTE_V1,
 
 	/**
 	 * This is not really a payload, but rather the complete IKEv1 message.
 	 */
 	ENCRYPTED_V1,
-
-	/**
-	 * DATA_ATTRIBUTE, attribute in an ATTRIBUTE payload.
-	 */
-	DATA_ATTRIBUTE_V1,
-
 };
 
 /**

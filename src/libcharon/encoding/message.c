@@ -635,9 +635,9 @@ static payload_order_t quick_mode_r_order[] = {
  * Message rule for TRANSACTION.
  */
 static payload_rule_t transaction_payload_rules_v1[] = {
-/*	payload type			min	max	encr	suff */
-	{HASH_V1,			0,	1,	TRUE,	FALSE},
-	{ATTRIBUTE_V1,			1,	1,	FALSE,	FALSE},
+/*	payload type				min	max	encr	suff */
+	{HASH_V1,					0,	1,	TRUE,	FALSE},
+	{CONFIGURATION_V1,			1,	1,	FALSE,	FALSE},
 };
 
 /**
@@ -645,8 +645,8 @@ static payload_rule_t transaction_payload_rules_v1[] = {
  */
 static payload_order_t transaction_payload_order_v1[] = {
 /*	payload type			notify type */
-	{HASH_V1,			0},
-	{ATTRIBUTE_V1,			0},
+	{HASH_V1,					0},
+	{CONFIGURATION_V1,			0},
 };
 
 #endif /* USE_IKEV1 */

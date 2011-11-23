@@ -3,8 +3,7 @@
 
 #include <daemon.h>
 #include <hydra.h>
-#include <encoding/payloads/attribute_payload_v1.h>
-#include <encoding/payloads/data_attribute_v1.h>
+#include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/hash_payload.h>
 #include <encoding/generator.h>
 
@@ -61,10 +60,9 @@ static void process_payloads(private_xauth_request_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_xauth_request_t *this, message_t *message)
 {
-	attribute_payload_v1_t *ap = NULL;
+	cp_payload_t *cp;
 	chunk_t chunk = chunk_empty;
-	data_attribute_v1_t *da = NULL;
-	hash_payload_t *hash_payload = NULL;
+	hash_payload_t *hash_payload;
 	generator_t *generator;
 	chunk_t attr_chunk;
 	chunk_t mid_chunk;
@@ -76,13 +74,11 @@ METHOD(task_t, build_i, status_t,
 
 	DBG1(DBG_IKE, "BUILDING XAUTH REQUEST PACKET");
 	/* TODO1: Create ATTR payload */
-	ap = attribute_payload_v1_create();
-
-	da = data_attribute_v1_create_value(XAUTH_USER_NAME, chunk);
-	ap->add_attribute(ap, da);
-
-	da = data_attribute_v1_create_value(XAUTH_USER_PASSWORD, chunk);
-	ap->add_attribute(ap, da);
+	cp = cp_payload_create(CONFIGURATION_V1);
+	cp->add_attribute(cp, configuration_attribute_create_chunk(
+				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk));
+	cp->add_attribute(cp, configuration_attribute_create_chunk(
+				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, chunk));
 
 	/* Create HASH payload */
 	hash_payload = hash_payload_create();
@@ -90,8 +86,8 @@ METHOD(task_t, build_i, status_t,
 
 	/* Calculate the chunk for the ATTR payload */
 	generator = generator_create();
-	ap->payload_interface.set_next_type(&ap->payload_interface, NO_PAYLOAD);
-	generator->generate_payload(generator, (payload_t *)ap);
+	cp->payload_interface.set_next_type(&cp->payload_interface, NO_PAYLOAD);
+	generator->generate_payload(generator, (payload_t *)cp);
 	attr_chunk = generator->get_chunk(generator, &lenpos);
 
 	/* Get the message ID in network order */
@@ -102,7 +98,7 @@ METHOD(task_t, build_i, status_t,
 	hash_in = chunk_cat("cc", mid_chunk, attr_chunk);
 
 	message->add_payload(message, (payload_t *)hash_payload);
-	message->add_payload(message, (payload_t *)ap);
+	message->add_payload(message, (payload_t *)cp);
 
 	return NEED_MORE;
 }

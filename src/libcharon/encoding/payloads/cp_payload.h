@@ -46,9 +46,7 @@ enum config_type_t {
 extern enum_name_t *config_type_names;
 
 /**
- * Class representing an IKEv2-CP Payload.
- *
- * The CP Payload format is described in RFC section 3.15.
+ * Class representing an IKEv2 configuration / IKEv1 attribute payload.
  */
 struct cp_payload_t {
 
@@ -88,16 +86,18 @@ struct cp_payload_t {
 /**
  * Creates an empty configuration payload
  *
- * @return		empty configuration payload
+ * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @return			empty configuration payload
  */
-cp_payload_t *cp_payload_create();
+cp_payload_t *cp_payload_create(payload_type_t type);
 
 /**
  * Creates an cp_payload_t with type and value
  *
- * @param config_type	type of configuration payload to create
- * @return				created configuration payload
+ * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @param cfg_type	type of configuration payload to create
+ * @return			created configuration payload
  */
-cp_payload_t *cp_payload_create_type(config_type_t config_type);
+cp_payload_t *cp_payload_create_type(payload_type_t type, config_type_t cfg_type);
 
 #endif /** CP_PAYLOAD_H_ @}*/

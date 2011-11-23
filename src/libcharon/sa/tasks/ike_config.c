@@ -98,7 +98,8 @@ static configuration_attribute_t *build_vip(host_t *vip)
 			chunk = chunk_cata("cc", chunk, prefix);
 		}
 	}
-	return configuration_attribute_create_value(type, chunk);
+	return configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE,
+												type, chunk);
 }
 
 /**
@@ -128,11 +129,11 @@ static void handle_attribute(private_ike_config_t *this,
 	/* and pass it to the handle function */
 	handler = hydra->attributes->handle(hydra->attributes,
 							this->ike_sa->get_other_id(this->ike_sa), handler,
-							ca->get_type(ca), ca->get_value(ca));
+							ca->get_type(ca), ca->get_chunk(ca));
 	if (handler)
 	{
 		this->ike_sa->add_configuration_attribute(this->ike_sa,
-				handler, ca->get_type(ca), ca->get_value(ca));
+				handler, ca->get_type(ca), ca->get_chunk(ca));
 	}
 }
 
@@ -153,7 +154,7 @@ static void process_attribute(private_ike_config_t *this,
 			/* fall */
 		case INTERNAL_IP6_ADDRESS:
 		{
-			addr = ca->get_value(ca);
+			addr = ca->get_chunk(ca);
 			if (addr.len == 0)
 			{
 				ip = host_create_any(family);
@@ -252,7 +253,7 @@ METHOD(task_t, build_i, status_t,
 		}
 		if (vip)
 		{
-			cp = cp_payload_create_type(CFG_REQUEST);
+			cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
 			cp->add_attribute(cp, build_vip(vip));
 		}
 
@@ -266,10 +267,11 @@ METHOD(task_t, build_i, status_t,
 			/* create configuration attribute */
 			DBG2(DBG_IKE, "building %N attribute",
 				 configuration_attribute_type_names, type);
-			ca = configuration_attribute_create_value(type, data);
+			ca = configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE,
+													  type, data);
 			if (!cp)
 			{
-				cp = cp_payload_create_type(CFG_REQUEST);
+				cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
 			}
 			cp->add_attribute(cp, ca);
 
@@ -335,7 +337,7 @@ METHOD(task_t, build_r, status_t,
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", vip, id);
 			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 
-			cp = cp_payload_create_type(CFG_REPLY);
+			cp = cp_payload_create_type(CONFIGURATION, CFG_REPLY);
 			cp->add_attribute(cp, build_vip(vip));
 		}
 
@@ -346,12 +348,13 @@ METHOD(task_t, build_r, status_t,
 		{
 			if (!cp)
 			{
-				cp = cp_payload_create_type(CFG_REPLY);
+				cp = cp_payload_create_type(CONFIGURATION, CFG_REPLY);
 			}
 			DBG2(DBG_IKE, "building %N attribute",
 				 configuration_attribute_type_names, type);
 			cp->add_attribute(cp,
-						configuration_attribute_create_value(type, value));
+				configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE,
+													 type, value));
 		}
 		enumerator->destroy(enumerator);
 

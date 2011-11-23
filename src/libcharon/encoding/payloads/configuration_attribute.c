@@ -36,41 +36,48 @@ struct private_configuration_attribute_t {
 	configuration_attribute_t public;
 
 	/**
-	 * Reserved bit
+	 * Value encoded in length field?
+	 */
+	bool af_flag;
+
+	/**
+	 * Reserved bit (af_flag in IKEv2)
 	 */
 	bool reserved;
 
 	/**
 	 * Type of the attribute.
 	 */
-	u_int16_t type;
+	u_int16_t attr_type;
 
 	/**
-	 * Length of the attribute.
+	 * Length of the attribute, value if af_flag set.
 	 */
-	u_int16_t length;
+	u_int16_t length_or_value;
 
 	/**
 	 * Attribute value as chunk.
 	 */
 	chunk_t value;
+
+	/**
+	 * Payload type, CONFIGURATION_ATTRIBUTE or DATA_ATTRIBUTE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a configuration attribute.
- *
- * The defined offsets are the positions in a object of type
- * private_configuration_attribute_t.
+ * Encoding rules for a IKEv2 configuration attribute / IKEv1 data attribute
  */
-static encoding_rule_t encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 reserved bit */
-	{ RESERVED_BIT,						offsetof(private_configuration_attribute_t, reserved)},
+	{ RESERVED_BIT,						offsetof(private_configuration_attribute_t, reserved)		},
 	/* type of the attribute as 15 bit unsigned integer */
-	{ ATTRIBUTE_TYPE,					offsetof(private_configuration_attribute_t, type)	},
+	{ ATTRIBUTE_TYPE,					offsetof(private_configuration_attribute_t, attr_type)		},
 	/* Length of attribute value */
-	{ CONFIGURATION_ATTRIBUTE_LENGTH,	offsetof(private_configuration_attribute_t, length)	},
+	{ CONFIGURATION_ATTRIBUTE_LENGTH,	offsetof(private_configuration_attribute_t, length_or_value)},
 	/* Value of attribute if attribute format flag is zero */
-	{ CHUNK_DATA,						offsetof(private_configuration_attribute_t, value)	}
+	{ CHUNK_DATA,						offsetof(private_configuration_attribute_t, value)			},
 };
 
 /*
@@ -85,18 +92,39 @@ static encoding_rule_t encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+/**
+ * Encoding rules for a IKEv1 data attribute
+ */
+static encoding_rule_t encodings_v1[] = {
+	/* AF Flag */
+	{ FLAG,							offsetof(private_configuration_attribute_t, af_flag)		},
+	/* type of the attribute as 15 bit unsigned integer */
+	{ ATTRIBUTE_TYPE,				offsetof(private_configuration_attribute_t, type)			},
+	/* Length of attribute value */
+	{ ATTRIBUTE_LENGTH_OR_VALUE,	offsetof(private_configuration_attribute_t, length_or_value)},
+	/* Value of attribute if attribute format flag is zero */
+	{ ATTRIBUTE_VALUE,				offsetof(private_configuration_attribute_t, value)			},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !F|         Attribute Type      !            Length             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      ~                             Value                             ~
+      |                                                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+
 METHOD(payload_t, verify, status_t,
 	private_configuration_attribute_t *this)
 {
 	bool failed = FALSE;
 
-	if (this->length != this->value.len)
-	{
-		DBG1(DBG_ENC, "invalid attribute length");
-		return FAILED;
-	}
-
-	switch (this->type)
+	switch (this->attr_type)
 	{
 		 case INTERNAL_IP4_ADDRESS:
 		 case INTERNAL_IP4_NETMASK:
@@ -104,20 +132,20 @@ METHOD(payload_t, verify, status_t,
 		 case INTERNAL_IP4_NBNS:
 		 case INTERNAL_ADDRESS_EXPIRY:
 		 case INTERNAL_IP4_DHCP:
-			if (this->length != 0 && this->length != 4)
+			if (this->length_or_value != 0 && this->length_or_value != 4)
 			{
 				failed = TRUE;
 			}
 			break;
 		 case INTERNAL_IP4_SUBNET:
-			if (this->length != 0 && this->length != 8)
+			if (this->length_or_value != 0 && this->length_or_value != 8)
 			{
 				failed = TRUE;
 			}
 			break;
 		 case INTERNAL_IP6_ADDRESS:
 		 case INTERNAL_IP6_SUBNET:
-			if (this->length != 0 && this->length != 17)
+			if (this->length_or_value != 0 && this->length_or_value != 17)
 			{
 				failed = TRUE;
 			}
@@ -125,13 +153,13 @@ METHOD(payload_t, verify, status_t,
 		 case INTERNAL_IP6_DNS:
 		 case INTERNAL_IP6_NBNS:
 		 case INTERNAL_IP6_DHCP:
-			if (this->length != 0 && this->length != 16)
+			if (this->length_or_value != 0 && this->length_or_value != 16)
 			{
 				failed = TRUE;
 			}
 			break;
 		 case SUPPORTED_ATTRIBUTES:
-			if (this->length % 2)
+			if (this->length_or_value % 2)
 			{
 				failed = TRUE;
 			}
@@ -141,14 +169,15 @@ METHOD(payload_t, verify, status_t,
 			break;
 		 default:
 			DBG1(DBG_ENC, "unknown attribute type %N",
-				 configuration_attribute_type_names, this->type);
+				 configuration_attribute_type_names, this->attr_type);
 			break;
 	}
 
 	if (failed)
 	{
 		DBG1(DBG_ENC, "invalid attribute length %d for %N",
-			 this->length, configuration_attribute_type_names, this->type);
+			 this->length_or_value, configuration_attribute_type_names,
+			 this->attr_type);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -157,8 +186,13 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_configuration_attribute_t *this, encoding_rule_t **rules)
 {
-	*rules = encodings;
-	return countof(encodings);
+	if (this->type == CONFIGURATION_ATTRIBUTE)
+	{
+		*rules = encodings_v2;
+		return countof(encodings_v2);
+	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
 }
 
 METHOD(payload_t, get_header_length, int,
@@ -170,7 +204,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_configuration_attribute_t *this)
 {
-	return CONFIGURATION_ATTRIBUTE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -193,13 +227,27 @@ METHOD(payload_t, get_length, size_t,
 METHOD(configuration_attribute_t, get_cattr_type, configuration_attribute_type_t,
 	private_configuration_attribute_t *this)
 {
-	return this->type;
+	return this->attr_type;
 }
 
-METHOD(configuration_attribute_t, get_value, chunk_t,
+METHOD(configuration_attribute_t, get_chunk, chunk_t,
 	private_configuration_attribute_t *this)
 {
+	if (this->af_flag)
+	{
+		return chunk_from_thing(this->length_or_value);
+	}
 	return this->value;
+}
+
+METHOD(configuration_attribute_t, get_value, u_int16_t,
+	private_configuration_attribute_t *this)
+{
+	if (this->af_flag)
+	{
+		return this->length_or_value;
+	}
+	return 0;
 }
 
 METHOD2(payload_t, configuration_attribute_t, destroy, void,
@@ -212,7 +260,7 @@ METHOD2(payload_t, configuration_attribute_t, destroy, void,
 /*
  * Described in header.
  */
-configuration_attribute_t *configuration_attribute_create()
+configuration_attribute_t *configuration_attribute_create(payload_type_t type)
 {
 	private_configuration_attribute_t *this;
 
@@ -228,10 +276,12 @@ configuration_attribute_t *configuration_attribute_create()
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
+			.get_chunk = _get_chunk,
 			.get_value = _get_value,
 			.get_type = _get_cattr_type,
 			.destroy = _destroy,
 		},
+		.type = type
 	);
 	return &this->public;
 }
@@ -239,15 +289,33 @@ configuration_attribute_t *configuration_attribute_create()
 /*
  * Described in header.
  */
-configuration_attribute_t *configuration_attribute_create_value(
-							configuration_attribute_type_t type, chunk_t value)
+configuration_attribute_t *configuration_attribute_create_chunk(
+	payload_type_t type, configuration_attribute_type_t attr_type, chunk_t chunk)
 {
 	private_configuration_attribute_t *this;
 
-	this = (private_configuration_attribute_t*)configuration_attribute_create();
-	this->type = ((u_int16_t)type) & 0x7FFF;
-	this->value = chunk_clone(value);
-	this->length = value.len;
+	this = (private_configuration_attribute_t*)
+							configuration_attribute_create(type);
+	this->attr_type = ((u_int16_t)attr_type) & 0x7FFF;
+	this->value = chunk_clone(chunk);
+	this->length_or_value = chunk.len;
+
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+configuration_attribute_t *configuration_attribute_create_value(
+					configuration_attribute_type_t attr_type, u_int16_t value)
+{
+	private_configuration_attribute_t *this;
+
+	this = (private_configuration_attribute_t*)
+					configuration_attribute_create(CONFIGURATION_ATTRIBUTE_V1);
+	this->attr_type = ((u_int16_t)attr_type) & 0x7FFF;
+	this->length_or_value = value;
+	this->af_flag = TRUE;
 
 	return &this->public;
 }
