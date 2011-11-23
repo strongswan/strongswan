@@ -178,10 +178,19 @@ METHOD(payload_t, verify, status_t,
 			break;
 		case PROTO_IKE:
 		case 0:
-			/* IKE deletion has no spi assigned! */
-			if (this->spi_size != 0)
-			{
-				return FAILED;
+			if (this->type == DELETE)
+			{	/* IKEv2 deletion has no spi assigned! */
+				if (this->spi_size != 0)
+				{
+					return FAILED;
+				}
+			}
+			else
+			{	/* IKEv1 uses the two concatenated ISAKMP cookies as SPI */
+				if (this->spi_size != 16)
+				{
+					return FAILED;
+				}
 			}
 			break;
 		default:
