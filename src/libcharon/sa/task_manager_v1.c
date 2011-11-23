@@ -16,9 +16,12 @@
 
 #include "task_manager_v1.h"
 
+#include <math.h>
+
 #include <daemon.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
+#include <processing/jobs/retransmit_job.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -190,10 +193,8 @@ METHOD(task_manager_t, retransmit, status_t,
 	if (message_id == this->initiating.mid)
 	{
 		u_int32_t timeout;
-		job_t *job;
-		enumerator_t *enumerator;
 		packet_t *packet;
-		task_t *task;
+		job_t *job;
 
 		if (this->initiating.retransmitted <= this->retransmit_tries)
 		{
