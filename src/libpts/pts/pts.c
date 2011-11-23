@@ -739,7 +739,7 @@ METHOD(pts_t, read_pcr, bool,
 	{
 		goto err;
 	}
-	result = Tspi_TPM_PcrRead(hTPM, pcr_num, &rgbPcrValue.len, &rgbPcrValue.ptr);
+	result = Tspi_TPM_PcrRead(hTPM, pcr_num, (UINT32*)&rgbPcrValue.len, &rgbPcrValue.ptr);
 	if (result != TSS_SUCCESS)
 	{
 		goto err;
@@ -797,16 +797,22 @@ METHOD(pts_t, extend_pcr, bool,
 	*output = pcr_value;
 	*output = chunk_clone(*output);
 
-	chunk_clear(&pcr_value);
-	Tspi_Context_Close(hContext);
 	DBG3(DBG_PTS, "PCR %d extended with:      %B", pcr_num, &input);
 	DBG3(DBG_PTS, "PCR %d value after extend: %B", pcr_num, output);
+	
+	chunk_clear(&pcr_value);
+	Tspi_Context_FreeMemory(hContext, NULL);
+	Tspi_Context_Close(hContext);
+
 	return TRUE;
 
 err:
-	chunk_clear(&pcr_value);
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
+	
+	chunk_clear(&pcr_value);
+	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
+	
 	return FALSE;
 }
 
