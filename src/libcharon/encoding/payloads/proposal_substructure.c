@@ -867,10 +867,10 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: Add lifetime and other attributes, non-fixes ESN */
+	/* TODO-IKEv1: Add lifetime and other attributes, ESN */
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH2_EXT_SEQ_NUMBER, NO_EXT_SEQ_NUMBERS));
+							TATTR_PH2_ENCAP_MODE, IKEV1_ENCAP_TUNNEL));
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
