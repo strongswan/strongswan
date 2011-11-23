@@ -131,13 +131,6 @@ struct private_task_manager_t {
 	 * Base to calculate retransmission timeout
 	 */
 	double retransmit_base;
-
-	/**
-	 * Flag to tell the task manager to initiate a transaction at
-	 * a later time.
-	 */
-	bool initiate_later_flag;
-
 };
 
 /**
