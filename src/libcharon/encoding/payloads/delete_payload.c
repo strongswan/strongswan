@@ -88,9 +88,9 @@ struct private_delete_payload_t {
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_delete_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_delete_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_delete_payload_t, critical) 		},
+	{ FLAG,				offsetof(private_delete_payload_t, critical)		},
 	/* 7 Bit reserved bits */
 	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[0])		},
 	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[1])		},
@@ -105,7 +105,7 @@ static encoding_rule_t encodings_v2[] = {
 	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
 	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
 	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis) 			},
+	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis)			},
 };
 
 /*
@@ -145,7 +145,7 @@ static encoding_rule_t encodings_v1[] = {
 	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
 	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
 	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis) 			},
+	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis)			},
 };
 
 /*
@@ -211,9 +211,9 @@ METHOD(payload_t, get_header_length, int,
 {
 	if (this->type == DELETE)
 	{
-		return 8 + this->spi_size;
+		return 8;
 	}
-	return 12 + this->spi_size;
+	return 12;
 }
 
 METHOD(payload_t, get_payload_type, payload_type_t,
