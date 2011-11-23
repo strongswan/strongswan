@@ -4,8 +4,6 @@
 #include <daemon.h>
 #include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
-#include <encoding/payloads/hash_payload.h>
-#include <encoding/generator.h>
 
 typedef struct private_xauth_request_t private_xauth_request_t;
 
@@ -62,15 +60,6 @@ METHOD(task_t, build_i, status_t,
 {
 	cp_payload_t *cp;
 	chunk_t chunk = chunk_empty;
-	hash_payload_t *hash_payload;
-	generator_t *generator;
-	chunk_t attr_chunk;
-	chunk_t mid_chunk;
-	u_int32_t *lenpos;
-	u_int32_t message_id;
-	keymat_t *keymat;
-	prf_t *prf;
-	chunk_t hash_in, hash_out;
 
 	DBG1(DBG_IKE, "BUILDING XAUTH REQUEST PACKET");
 	/* TODO1: Create ATTR payload */
@@ -79,25 +68,6 @@ METHOD(task_t, build_i, status_t,
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk));
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, chunk));
-
-	/* Create HASH payload */
-	hash_payload = hash_payload_create();
-	/* TODO1: Add data into the hash */
-
-	/* Calculate the chunk for the ATTR payload */
-	generator = generator_create();
-	cp->payload_interface.set_next_type(&cp->payload_interface, NO_PAYLOAD);
-	generator->generate_payload(generator, (payload_t *)cp);
-	attr_chunk = generator->get_chunk(generator, &lenpos);
-
-	/* Get the message ID in network order */
-	htoun32(&message_id, message->get_message_id(message));
-	mid_chunk = chunk_from_thing(message_id);
-
-	/* Get the hashed data */
-	hash_in = chunk_cat("cc", mid_chunk, attr_chunk);
-
-	message->add_payload(message, (payload_t *)hash_payload);
 	message->add_payload(message, (payload_t *)cp);
 
 	return NEED_MORE;
