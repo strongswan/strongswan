@@ -131,6 +131,13 @@ struct private_task_manager_t {
 	 * Base to calculate retransmission timeout
 	 */
 	double retransmit_base;
+
+	/**
+	 * Flag to tell the task manager to initiate a transaction at
+	 * a later time.
+	 */
+	bool initiate_later_flag;
+
 };
 
 /**
@@ -147,12 +154,6 @@ static void flush(private_task_manager_t *this)
 	this->active_tasks->destroy_offset(this->active_tasks,
 										offsetof(task_t, destroy));
 	this->active_tasks = linked_list_create();
-}
-
-METHOD(task_manager_t, retransmit, status_t,
-	private_task_manager_t *this, u_int32_t message_id)
-{
-	return FAILED;
 }
 
 /**
@@ -178,6 +179,49 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	}
 	enumerator->destroy(enumerator);
 	return found;
+}
+
+METHOD(task_manager_t, retransmit, status_t,
+	private_task_manager_t *this, u_int32_t message_id)
+{
+	if (message_id == this->initiating.mid)
+	{
+		u_int32_t timeout;
+		job_t *job;
+		enumerator_t *enumerator;
+		packet_t *packet;
+		task_t *task;
+
+		if (this->initiating.retransmitted <= this->retransmit_tries)
+		{
+			timeout = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+				pow(this->retransmit_base, this->initiating.retransmitted));
+		}
+		else
+		{
+			DBG1(DBG_IKE, "giving up after %d retransmits",
+				 this->initiating.retransmitted - 1);
+			if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+			{
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+			}
+			return DESTROY_ME;
+		}
+
+		if (this->initiating.retransmitted)
+		{
+			DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
+				 this->initiating.retransmitted, message_id);
+		}
+		packet = this->initiating.packet->clone(this->initiating.packet);
+		charon->sender->send(charon->sender, packet);
+
+		this->initiating.retransmitted++;
+		job = (job_t*)retransmit_job_create(this->initiating.mid,
+											this->ike_sa->get_id(this->ike_sa));
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, timeout);
+	}
+	return SUCCESS;
 }
 
 METHOD(task_manager_t, initiate, status_t,
@@ -219,6 +263,11 @@ METHOD(task_manager_t, initiate, status_t,
 				if (activate_task(this, TASK_QUICK_MODE))
 				{
 					exchange = QUICK_MODE;
+				}
+
+				if (activate_task(this, TASK_XAUTH_REQUEST))
+				{
+					exchange = TRANSACTION;
 				}
 				break;
 			default:

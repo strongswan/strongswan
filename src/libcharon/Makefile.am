@@ -93,7 +93,8 @@ sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/main_mode.c sa/tasks/main_mode.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
-sa/tasks/task.c sa/tasks/task.h
+sa/tasks/task.c sa/tasks/task.h \
+sa/tasks/xauth_request.c sa/tasks/xauth_request.h
 
 daemon.lo :		$(top_builddir)/config.status
 

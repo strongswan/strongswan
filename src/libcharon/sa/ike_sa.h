@@ -102,6 +102,11 @@ enum ike_extension_t {
 	 * peer is probably a Windows 7 RAS client
 	 */
 	EXT_MS_WINDOWS = (1<<6),
+
+	/**
+	 * peer supports XAuth authentication, draft-ietf-ipsec-isakmp-xauth-06
+	 */
+	EXT_XAUTH = (1<<7),
 };
 
 /**
@@ -953,6 +958,11 @@ struct ike_sa_t {
 	 * Destroys a ike_sa_t object.
 	 */
 	void (*destroy) (ike_sa_t *this);
+
+	/**
+	 * Initiate XAUTH authentication
+	 */
+	status_t (*initiate_xauth)(ike_sa_t *this);
 };
 
 /**

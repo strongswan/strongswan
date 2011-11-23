@@ -49,6 +49,10 @@ static chunk_t strongswan_vid = chunk_from_chars(
 	0x22,0x51,0x61,0x3b,0x2e,0xbe,0x5b,0xeb
 );
 
+static chunk_t xauth6_vid = chunk_from_chars(
+	0x09,0x00,0x26,0x89,0xdf,0xd6,0xb7,0x12
+);
+
 METHOD(task_t, build, status_t,
 	private_ike_vendor_t *this, message_t *message)
 {
@@ -60,6 +64,11 @@ METHOD(task_t, build, status_t,
 		vid = vendor_id_payload_create_data(VENDOR_ID,
 											chunk_clone(strongswan_vid));
 		message->add_payload(message, &vid->payload_interface);
+
+		vid = vendor_id_payload_create_data(VENDOR_ID,
+											chunk_clone(xauth6_vid));
+		message->add_payload(message, &vid->payload_interface);
+
 	}
 
 	return this->initiator ? NEED_MORE : SUCCESS;
@@ -86,6 +95,25 @@ METHOD(task_t, process, status_t,
 			{
 				DBG1(DBG_IKE, "received strongSwan vendor id");
 				this->ike_sa->enable_extension(this->ike_sa, EXT_STRONGSWAN);
+			}
+			else
+			{
+				DBG1(DBG_ENC, "received unknown vendor id: %#B", &data);
+			}
+		}
+
+		if (payload->get_type(payload) == VENDOR_ID_V1)
+		{
+			vendor_id_payload_t *vid;
+			chunk_t data;
+
+			vid = (vendor_id_payload_t*)payload;
+			data = vid->get_data(vid);
+
+			if (chunk_equals(data, xauth6_vid))
+			{
+				DBG1(DBG_IKE, "received XAuth vendor id");
+				this->ike_sa->enable_extension(this->ike_sa, EXT_XAUTH);
 			}
 			else
 			{

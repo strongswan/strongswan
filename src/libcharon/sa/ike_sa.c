@@ -46,6 +46,7 @@
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
+#include <sa/tasks/xauth_request.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/send_dpd_job.h>
@@ -2126,6 +2127,15 @@ METHOD(ike_sa_t, destroy, void,
 
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
+}
+
+METHOD(ike_sa_t, initiate_xauth, void,
+			 private_ike_sa_t *this)
+{
+	xauth_request_t *xauth_request_task = xauth_request_create(this, TRUE);
+	this->task_manager->queue_task(this->task_manager, (task_t*)xauth_request_task);
+
+	this->task_manager->initiate_later(this->task_manager);
 }
 
 /*
