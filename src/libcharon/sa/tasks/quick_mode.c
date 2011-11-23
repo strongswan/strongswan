@@ -303,7 +303,7 @@ METHOD(task_t, process_r, status_t,
 			payload_t *payload;
 			linked_list_t *tsi, *tsr, *list;
 			peer_cfg_t *peer_cfg;
-			host_t *me, *other;
+			host_t *me, *other, *host;
 			enumerator_t *enumerator;
 			bool first = TRUE;
 
@@ -328,7 +328,18 @@ METHOD(task_t, process_r, status_t,
 			}
 			enumerator->destroy(enumerator);
 
-			/* TODO-IKEv1: create host2host TS if ID payloads missing */
+			if (!this->tsi)
+			{
+				host = this->ike_sa->get_other_host(this->ike_sa);
+				this->tsi = traffic_selector_create_from_subnet(host->clone(host),
+						host->get_family(host) == AF_INET ? 32 : 128, 0, 0);
+			}
+			if (!this->tsr)
+			{
+				host = this->ike_sa->get_my_host(this->ike_sa);
+				this->tsr = traffic_selector_create_from_subnet(host->clone(host),
+						host->get_family(host) == AF_INET ? 32 : 128, 0, 0);
+			}
 
 			me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 			if (!me)
@@ -471,6 +482,7 @@ METHOD(task_t, process_i, status_t,
 			traffic_selector_t *tsi = NULL, *tsr = NULL;
 			linked_list_t *list;
 			enumerator_t *enumerator;
+			host_t *host;
 			bool first = TRUE;
 
 			enumerator = message->create_payload_enumerator(message);
@@ -494,7 +506,18 @@ METHOD(task_t, process_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
-			/* TODO-IKEv1: create host2host TS if ID payloads missing */
+			if (!tsr)
+			{
+				host = this->ike_sa->get_other_host(this->ike_sa);
+				tsr = traffic_selector_create_from_subnet(host->clone(host),
+						host->get_family(host) == AF_INET ? 32 : 128, 0, 0);
+			}
+			if (!tsi)
+			{
+				host = this->ike_sa->get_my_host(this->ike_sa);
+				tsi = traffic_selector_create_from_subnet(host->clone(host),
+						host->get_family(host) == AF_INET ? 32 : 128, 0, 0);
+			}
 
 			if (!tsr->is_contained_in(tsr, this->tsr) ||
 				!tsi->is_contained_in(tsi, this->tsi))
