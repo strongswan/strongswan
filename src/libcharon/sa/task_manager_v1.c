@@ -70,6 +70,11 @@ struct private_task_manager_t {
 		u_int32_t mid;
 
 		/**
+		 * Hash of a previously received message
+		 */
+		u_int32_t hash;
+
+		/**
 		 * packet for retransmission
 		 */
 		packet_t *packet;
@@ -84,6 +89,11 @@ struct private_task_manager_t {
 		 * Message ID of the exchange
 		 */
 		u_int32_t mid;
+
+		/**
+		 * Hash of a previously received message
+		 */
+		u_int32_t hash;
 
 		/**
 		 * how many times we have retransmitted so far
@@ -577,7 +587,6 @@ METHOD(task_manager_t, process_message, status_t,
 	host_t *me, *other;
 
 	mid = msg->get_message_id(msg);
-	hash = chunk_hash(msg->get_packet_data(msg));
 
 	/* TODO-IKEv1: update hosts more selectively */
 	me = msg->get_destination(msg);
@@ -597,8 +606,8 @@ METHOD(task_manager_t, process_message, status_t,
 	}
 	else
 	{
-		if ((mid && mid == this->responding.mid) ||
-			hash == this->responding.mid)
+		hash = chunk_hash(msg->get_packet_data(msg));
+		if (hash == this->responding.hash)
 		{
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
@@ -614,11 +623,8 @@ METHOD(task_manager_t, process_message, status_t,
 			return DESTROY_ME;
 		}
 
-		if (!mid)
-		{
-			mid = hash;
-		}
 		this->responding.mid = mid;
+		this->responding.hash = hash;
 	}
 	return SUCCESS;
 }
