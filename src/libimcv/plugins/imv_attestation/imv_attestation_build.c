@@ -215,6 +215,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			pts_comp_func_name_t *comp_name;
 			int vid, name, qualifier;
 			u_int8_t flags;
+			u_int32_t depth;
 			bool first = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
@@ -237,12 +238,13 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				break;
 			}
 			DBG2(DBG_IMV, "evidence request by");
-			while (enumerator->enumerate(enumerator, &vid, &name, &qualifier))
+			while (enumerator->enumerate(enumerator, &vid, &name,
+				&qualifier, &depth))
 			{
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
 				comp_name->log(comp_name, "  ");
 
-				comp = pts_components->create(pts_components, comp_name);
+				comp = pts_components->create(pts_components, comp_name, depth);
 				if (!comp)
 				{
 					DBG2(DBG_IMV, "    not registered: removed from request");
@@ -259,7 +261,7 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				flags = comp->get_evidence_flags(comp);
 				/* TODO check flags against negotiated_caps */
 				attr_cast = (tcg_pts_attr_req_func_comp_evid_t *)attr;
-				attr_cast->add_component(attr_cast, flags, 0, comp_name);
+				attr_cast->add_component(attr_cast, flags, depth, comp_name);
 			}
 			enumerator->destroy(enumerator);
 

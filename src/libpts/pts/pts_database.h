@@ -76,14 +76,16 @@ struct pts_database_t {
 	/**
 	* Get stored measurement hash for functional component entries
 	*
+	* @param file			file path in files table
 	* @param product		software product (os, vpn client, etc.)
 	* @param algo			hash algorithm used for measurement
 	* @param comp_name		functional component name object
 	* @return				enumerator over all matching measurement hashes
 	*/
 	enumerator_t* (*create_comp_hash_enumerator)(pts_database_t *this,
-						char *product, pts_meas_algorithms_t algo,
-						pts_comp_func_name_t *comp_name);
+						char *file, char *product,
+						pts_comp_func_name_t *comp_name,
+						pts_meas_algorithms_t algo);
 
 	/**
 	* Destroys a pts_database_t object.

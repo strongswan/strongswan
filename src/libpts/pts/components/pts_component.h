@@ -50,6 +50,13 @@ struct pts_component_t {
 	u_int8_t (*get_evidence_flags)(pts_component_t *this);
 
 	/**
+	 * Get the PTS Sub-component Depth
+	 *
+	 * @return				PTS Sub-component Depth
+	 */
+	u_int32_t (*get_depth)(pts_component_t *this);
+
+	/**
 	 * Do evidence measurements on the PTS Functional Component
 	 *
 	 * @param pts			PTS interface

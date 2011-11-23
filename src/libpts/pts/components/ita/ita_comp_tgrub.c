@@ -39,6 +39,11 @@ struct pts_ita_comp_tgrub_t {
 	 * Component Functional Name
 	 */
 	pts_comp_func_name_t *name;
+
+	/**
+	 * Sub-component depth
+	 */
+	u_int32_t depth;
 };
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -51,6 +56,12 @@ METHOD(pts_component_t, get_evidence_flags, u_int8_t,
 	pts_ita_comp_tgrub_t *this)
 {
 	return PTS_REQ_FUNC_COMP_EVID_PCR;
+}
+
+METHOD(pts_component_t, get_depth, u_int32_t,
+	pts_ita_comp_tgrub_t *this)
+{
+	return this->depth;
 }
 
 METHOD(pts_component_t, measure, status_t,
@@ -128,7 +139,7 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier)
+pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth)
 {
 	pts_ita_comp_tgrub_t *this;
 
@@ -136,12 +147,14 @@ pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier)
 		.public = {
 			.get_comp_func_name = _get_comp_func_name,
 			.get_evidence_flags = _get_evidence_flags,
+			.get_depth = _get_depth,
 			.measure = _measure,
 			.verify = _verify,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TBOOT,
 										  qualifier),
+		.depth = depth,
 	);
 
 	return &this->public;

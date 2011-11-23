@@ -76,11 +76,12 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
 
 	/* look for all entries belonging to a product in the components table */
 	e = this->db->query(this->db,
-				"SELECT c.vendor_id, c.name, c.qualifier FROM components AS c "
+				"SELECT c.vendor_id, c.name, c.qualifier, pc.depth "
+ 				"FROM components AS c "
 				"JOIN product_component AS pc ON c.id = pc.component "
 				"JOIN products AS p ON p.id = pc.product "
 				"WHERE p.name = ? ORDER BY pc.sequence",
-				DB_TEXT, product, DB_INT, DB_INT, DB_INT);
+				DB_TEXT, product, DB_INT, DB_INT, DB_INT, DB_INT);
 	return e;
 }
 
@@ -114,18 +115,20 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 }
 
 METHOD(pts_database_t, create_comp_hash_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
-	pts_comp_func_name_t *comp_name)
+	private_pts_database_t *this, char *file, char *product,
+	pts_comp_func_name_t *comp_name, pts_meas_algorithms_t algo)
 {
 	enumerator_t *e;
 	
 	e = this->db->query(this->db,
-				"SELECT ch.hash FROM component_hashes AS ch "
-				"JOIN components AS c ON ch.component = c.id "
-				"JOIN products AS p ON ch.product = p.id "
-				"WHERE p.name = ? AND c.vendor_id = ? "
-				"AND c.name = ? AND c.qualifier = ? AND ch.algo = ? ",
-				DB_TEXT, product, DB_INT, comp_name->get_vendor_id(comp_name),
+				"SELECT fh.hash FROM file_hashes AS fh "
+				"JOIN files AS f ON fh.file = f.id "
+				"JOIN products AS p ON fh.product = p.id "
+				"JOIN components AS c ON fh.component = c.id "
+				"WHERE f.path = ? AND p.name = ? AND c.vendor_id = ? "
+				"AND c.name = ? AND c.qualifier = ? AND fh.algo = ? ",
+				DB_TEXT, file, DB_TEXT, product,
+				DB_INT, comp_name->get_vendor_id(comp_name),
 				DB_INT, comp_name->get_name(comp_name),
 				DB_INT, comp_name->get_qualifier(comp_name),
 				DB_INT, algo, DB_BLOB);

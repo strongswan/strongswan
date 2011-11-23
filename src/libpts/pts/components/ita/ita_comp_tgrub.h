@@ -29,6 +29,6 @@
  * @param qualifier		PTS Component Functional Name Qualifier
  *
  */
-pts_component_t* pts_ita_comp_tgrub_create(u_int8_t qualifier);
+pts_component_t* pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth);
 
 #endif /** PTS_ITA_COMP_TGRUB_H_ @}*/

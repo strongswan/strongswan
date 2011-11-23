@@ -29,7 +29,8 @@ typedef struct pts_component_manager_t pts_component_manager_t;
 #include <library.h>
 #include <pen/pen.h>
 
-typedef pts_component_t* (*pts_component_create_t)(u_int8_t qualifier);
+typedef pts_component_t* (*pts_component_create_t)(u_int8_t qualifier,
+												   u_int32_t depth);
 
 /**
  * Manages PTS Functional Components
@@ -100,10 +101,11 @@ struct pts_component_manager_t {
 	 * Create a PTS Component object from a Functional Component Name object
 	 *
 	 * @param name					Component Functional Name
+	 * @param depth					Sub-component Depth
 	 * @return						Component object if supported, NULL else
 	 */
 	pts_component_t* (*create)(pts_component_manager_t *this, 
-							   pts_comp_func_name_t *name);
+							   pts_comp_func_name_t *name, u_int32_t depth);
 
 	/**
 	 * Destroys a pts_component_manager_t object.

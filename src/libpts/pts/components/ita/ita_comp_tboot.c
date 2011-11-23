@@ -41,6 +41,11 @@ struct pts_ita_comp_tboot_t {
 	pts_comp_func_name_t *name;
 
 	/**
+	 * Sub-component depth
+	 */
+	u_int32_t depth;
+
+	/**
 	 * Extended PCR last handled
 	 */
 	u_int32_t extended_pcr;
@@ -62,6 +67,12 @@ METHOD(pts_component_t, get_evidence_flags, u_int8_t,
 	pts_ita_comp_tboot_t *this)
 {
 	return PTS_REQ_FUNC_COMP_EVID_PCR;
+}
+
+METHOD(pts_component_t, get_depth, u_int32_t,
+	pts_ita_comp_tboot_t *this)
+{
+	return this->depth;
 }
 
 METHOD(pts_component_t, measure, status_t,
@@ -124,27 +135,62 @@ METHOD(pts_component_t, verify, status_t,
 	pts_pcr_transform_t transform;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
+	enumerator_t *enumerator;
+	char *file;
+	chunk_t hash;
+	char *platform_info;
+
+	platform_info = pts->get_platform_info(pts);
+	if (!pts_db || !platform_info)
+	{
+		DBG1(DBG_PTS, "%s%s%s not available",
+			 (pts_db) ? "" : "pts database",
+			 (!pts_db && !platform_info) ? "and" : "",
+			 (platform_info) ? "" : "platform info");
+		return FAILED;
+	}
 
 	switch (this->extended_pcr)
 	{
 		case 0:
 			this->extended_pcr = PCR_TBOOT_POLICY;
+			file = "tboot_pcr17";
 			break;
 		case PCR_TBOOT_POLICY:
 			this->extended_pcr = PCR_TBOOT_MLE;
+			file = "tboot_pcr18";
 			break;
 		default:
 			return FAILED;
 	}
 
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
-								&algo, &transform, &measurement_time);
+											&algo, &transform, &measurement_time);
 	if (extended_pcr != this->extended_pcr)
 	{
 		return FAILED;
 	}
 
-	/* TODO check measurement in database */
+	/* check measurement in database */
+	enumerator = pts_db->create_comp_hash_enumerator(pts_db, file,
+								platform_info, this->name, algo);
+	while (enumerator->enumerate(enumerator, &hash))
+	{
+		if (!chunk_equals(hash, measurement))
+		{
+			DBG1(DBG_PTS, "Incorrect TBOOT component measurement for PCR %d. "
+						  "Expected: %#B, Received: %#B",
+						  this->extended_pcr, &hash, &measurement);
+			return FAILED;
+		}
+		else
+		{
+			DBG3(DBG_PTS, "Matching TBOOT component measurement for PCR %d",
+						  this->extended_pcr);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
@@ -159,7 +205,7 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, destroy, void,
-	pts_ita_comp_tboot_t *this)
+	   pts_ita_comp_tboot_t *this)
 {
 	this->name->destroy(this->name);
 	free(this);
@@ -168,7 +214,7 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier)
+pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier, u_int32_t depth)
 {
 	pts_ita_comp_tboot_t *this;
 
@@ -176,12 +222,14 @@ pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier)
 		.public = {
 			.get_comp_func_name = _get_comp_func_name,
 			.get_evidence_flags = _get_evidence_flags,
+			.get_depth = _get_depth,
 			.measure = _measure,
 			.verify = _verify,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TBOOT,
 										  qualifier),
+		.depth = depth,
 	);
 
 	return &this->public;
