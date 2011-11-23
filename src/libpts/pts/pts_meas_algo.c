@@ -17,6 +17,13 @@
 
 #include <debug.h>
 
+ENUM(pts_meas_algorithm_names, PTS_MEAS_ALGO_NONE, PTS_MEAS_ALGO_SHA384,
+	"None",
+	"SHA1",
+	"SHA256",
+	"SHA384"
+);
+
 /**
  * Described in header.
  */

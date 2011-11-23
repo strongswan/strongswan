@@ -37,6 +37,11 @@ enum pts_meas_algorithms_t {
 };
 
 /**
+ * enum name for pts_meas_algorithms_t.
+ */
+extern enum_name_t *pts_meas_algorithm_names;
+
+/**
  * Diffie-Hellman Hash Algorithm Values
  * see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification
  *
