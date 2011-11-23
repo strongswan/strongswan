@@ -29,6 +29,7 @@
 #include <encoding/parser.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
+#include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
@@ -1408,7 +1409,19 @@ METHOD(message_t, generate, status_t,
 		encrypted = this->rule->encrypted;
 	}
 	else
-	{	/* if at least one payload requires encryption, encrypt the message */
+	{
+		/* get a hash for this message, if any is required */
+		chunk_t hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		if (hash.ptr)
+		{	/* insert a HASH payload as first payload */
+			hash_payload_t *hash_payload = hash_payload_create();
+			hash_payload->set_hash(hash_payload, hash);
+			this->payloads->insert_first(this->payloads,
+										 (payload_t*)hash_payload);
+			chunk_free(&hash);
+		}
+
+		/* if at least one payload requires encryption, encrypt the message */
 		/* TODO-IKEV1: set is_encrypted externally instead of this check? */
 		enumerator = this->payloads->create_enumerator(this->payloads);
 		while (enumerator->enumerate(enumerator, (void**)&payload))
@@ -1821,7 +1834,7 @@ static status_t verify(private_message_t *this)
 
 	DBG2(DBG_ENC, "verifying message structure");
 
-	/* check for payloads with wrong count*/
+	/* check for payloads with wrong count */
 	for (i = 0; i < this->rule->rule_count; i++)
 	{
 		enumerator_t *enumerator;
@@ -1905,6 +1918,35 @@ METHOD(message_t, parse_body, status_t,
 	}
 
 	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
+
+	if (this->major_version == IKEV1_MAJOR_VERSION)
+	{
+		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+		chunk_t hash;
+		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		if (hash.ptr)
+		{
+			hash_payload_t *hash_payload;
+			chunk_t other_hash;
+			if (this->first_payload != HASH_V1)
+			{
+				DBG1(DBG_ENC, "expected HASH payload as first payload");
+				chunk_free(&hash);
+				return VERIFY_ERROR;
+			}
+			hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
+			other_hash = hash_payload->get_hash(hash_payload);
+			if (!chunk_equals(hash, other_hash))
+			{
+				DBG1(DBG_ENC, "our hash does not match received %B",
+					 &other_hash);
+				chunk_free(&hash);
+				return VERIFY_ERROR;
+			}
+			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
+			chunk_free(&hash);
+		}
+	}
 
 	if (this->is_encrypted)
 	{	/* TODO-IKEv1: this should be done later when we know this is no

@@ -89,6 +89,15 @@ struct keymat_v1_t {
 						chunk_t sa_i, identification_t *id);
 
 	/**
+	 * Get HASH data for integrity/authentication in Phase 2 exchanges.
+	 *
+	 * @param message		message to generate the HASH data for
+	 * @return				allocated HASH data
+	 */
+	chunk_t (*get_hash_phase2)(keymat_v1_t *this, message_t *message);
+
+
+	/**
 	 * Returns the IV for a message with the given message ID.
 	 *
 	 * @param mid			message ID

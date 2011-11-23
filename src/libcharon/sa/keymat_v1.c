@@ -16,6 +16,8 @@
 #include "keymat_v1.h"
 
 #include <daemon.h>
+#include <encoding/generator.h>
+#include <encoding/payloads/nonce_payload.h>
 #include <utils/linked_list.h>
 
 typedef struct private_keymat_v1_t private_keymat_v1_t;
@@ -24,6 +26,11 @@ typedef struct private_keymat_v1_t private_keymat_v1_t;
  * Max. number of IVs to track.
  */
 #define MAX_IV 3
+
+/**
+ * Max. number of Quick Modes to track.
+ */
+#define MAX_QM 2
 
 /**
  * Data stored for IVs
@@ -97,6 +104,12 @@ struct private_keymat_v1_t {
 	 * number of IVs in an MRU sort of way. Stores iv_data_t objects.
 	 */
 	linked_list_t *ivs;
+
+	/**
+	 * Keep track of Nonces during Quick Mode exchanges. Only a limited number
+	 * of QMs are tracked at the same time. Stores qm_data_t objects.
+	 */
+	linked_list_t *qms;
 };
 
 
@@ -107,6 +120,28 @@ static void iv_data_destroy(iv_data_t *this)
 {
 	chunk_free(&this->last_block);
 	chunk_free(&this->iv);
+	free(this);
+}
+
+/**
+ * Data stored for Quick Mode exchanges
+ */
+typedef struct {
+	/** message ID */
+	u_int32_t mid;
+	/** Ni_b (Nonce from first message) */
+	chunk_t n_i;
+	/** Nr_b (Nonce from second message) */
+	chunk_t n_r;
+} qm_data_t;
+
+/**
+ * Destroy a qm_data_t object.
+ */
+static void qm_data_destroy(qm_data_t *this)
+{
+	chunk_free(&this->n_i);
+	chunk_free(&this->n_r);
 	free(this);
 }
 
@@ -617,6 +652,180 @@ METHOD(keymat_v1_t, get_hash, chunk_t,
 }
 
 /**
+ * Get the nonce value found in the given message.
+ * Returns FALSE if none is found.
+ */
+static bool get_nonce(message_t *message, chunk_t *n)
+{
+	nonce_payload_t *nonce;
+	nonce = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	if (nonce)
+	{
+		*n = nonce->get_nonce(nonce);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Generate the message data in order to generate the hashes.
+ */
+static chunk_t get_message_data(message_t *message, generator_t *generator)
+{
+	payload_t *payload, *next;
+	enumerator_t *enumerator;
+	u_int32_t *lenpos;
+
+	if (message->is_encoded(message))
+	{	/* inbound, although the message is generated, we cannot access the
+		 * cleartext message data, so generate it anyway */
+		enumerator = message->create_payload_enumerator(message);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			if (payload->get_type(payload) == HASH_V1)
+			{
+				continue;
+			}
+			generator->generate_payload(generator, payload);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		/* outbound, generate the payloads (there is no HASH payload yet) */
+		enumerator = message->create_payload_enumerator(message);
+		if (enumerator->enumerate(enumerator, &payload))
+		{
+			while (enumerator->enumerate(enumerator, &next))
+			{
+				payload->set_next_type(payload, next->get_type(next));
+				generator->generate_payload(generator, payload);
+				payload = next;
+			}
+			payload->set_next_type(payload, NO_PAYLOAD);
+			generator->generate_payload(generator, payload);
+		}
+		enumerator->destroy(enumerator);
+	}
+	return generator->get_chunk(generator, &lenpos);
+}
+
+/**
+ * Try to find data about a Quick Mode with the given message ID,
+ * if none is found, state is generated.
+ */
+static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, u_int32_t mid)
+{
+	enumerator_t *enumerator;
+	qm_data_t *qm, *found = NULL;
+
+	enumerator = this->qms->create_enumerator(this->qms);
+	while (enumerator->enumerate(enumerator, &qm))
+	{
+		if (qm->mid == mid)
+		{	/* state gets moved to the front of the list */
+			this->qms->remove_at(this->qms, enumerator);
+			found = qm;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		INIT(found,
+			.mid = mid,
+		);
+	}
+	this->qms->insert_first(this->qms, found);
+	/* remove least recently used state if maximum reached */
+	if (this->qms->get_count(this->qms) > MAX_QM &&
+		this->qms->remove_last(this->qms, (void**)&qm) == SUCCESS)
+	{
+		qm_data_destroy(qm);
+	}
+	return found;
+}
+
+METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
+	private_keymat_v1_t *this, message_t *message)
+{
+	u_int32_t mid = message->get_message_id(message), mid_n = htonl(mid);
+	chunk_t data = chunk_empty, hash = chunk_empty;
+	bool add_message = TRUE;
+	char *name = "Hash";
+
+	/* Hashes are simple for most exchanges in Phase 2:
+	 *   Hash = prf(SKEYID_a, M-ID | Complete message after HASH payload)
+	 * For Quick Mode there are three hashes:
+	 *   Hash(1) = same as above
+	 *   Hash(2) = prf(SKEYID_a, M-ID | Ni_b | Message after HASH payload)
+	 *   Hash(3) = prf(SKEYID_a, 0 | M-ID | Ni_b | Nr_b)
+	 * So, for Quick Mode we keep track of the nonce values.
+	 */
+	switch (message->get_exchange_type(message))
+	{
+		case QUICK_MODE:
+		{
+			qm_data_t *qm = lookup_quick_mode(this, mid);
+			if (!qm->n_i.ptr)
+			{	/* Hash(1) = prf(SKEYID_a, M-ID | Message after HASH payload) */
+				name = "Hash(1)";
+				if (!get_nonce(message, &qm->n_i))
+				{
+					return hash;
+				}
+				data = chunk_from_thing(mid_n);
+			}
+			else if (!qm->n_r.ptr)
+			{	/* Hash(2) = prf(SKEYID_a, M-ID | Ni_b | Message after HASH) */
+				name = "Hash(2)";
+				if (!get_nonce(message, &qm->n_r))
+				{
+					return hash;
+				}
+				data = chunk_cata("cc", chunk_from_thing(mid_n), qm->n_i);
+			}
+			else
+			{	/* Hash(3) = prf(SKEYID_a, 0 | M-ID | Ni_b | Nr_b) */
+				name = "Hash(3)";
+				data = chunk_cata("cccc", octet_0, chunk_from_thing(mid_n),
+								  qm->n_i, qm->n_r);
+				add_message = FALSE;
+				/* we don't need the state anymore */
+				this->qms->remove(this->qms, qm, NULL);
+				qm_data_destroy(qm);
+			}
+			break;
+		}
+		case TRANSACTION:
+		case INFORMATIONAL_V1:
+			/* Hash = prf(SKEYID_a, M-ID | Message after HASH payload) */
+			data = chunk_from_thing(mid_n);
+			break;
+		default:
+			break;
+	}
+	if (data.ptr)
+	{
+		this->prf->set_key(this->prf, this->skeyid_a);
+		if (add_message)
+		{
+			generator_t *generator = generator_create();
+			chunk_t msg = get_message_data(message, generator);
+			this->prf->allocate_bytes(this->prf, data, NULL);
+			this->prf->allocate_bytes(this->prf, msg, &hash);
+			generator->destroy(generator);
+		}
+		else
+		{
+			this->prf->allocate_bytes(this->prf, data, &hash);
+		}
+		DBG3(DBG_IKE, "%s %B", name, &hash);
+	}
+	return hash;
+}
+
+/**
  * Generate an IV
  */
 static void generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
@@ -734,6 +943,7 @@ METHOD(keymat_t, destroy, void,
 	chunk_free(&this->phase1_iv.iv);
 	chunk_free(&this->phase1_iv.last_block);
 	this->ivs->destroy_function(this->ivs, (void*)iv_data_destroy);
+	this->qms->destroy_function(this->qms, (void*)qm_data_destroy);
 	free(this);
 }
 
@@ -754,11 +964,13 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 			.derive_ike_keys = _derive_ike_keys,
 			.derive_child_keys = _derive_child_keys,
 			.get_hash = _get_hash,
+			.get_hash_phase2 = _get_hash_phase2,
 			.get_iv = _get_iv,
 			.update_iv = _update_iv,
 			.confirm_iv = _confirm_iv,
 		},
 		.ivs = linked_list_create(),
+		.qms = linked_list_create(),
 		.initiator = initiator,
 		.prf_alg = PRF_UNDEFINED,
 	);
