@@ -106,6 +106,16 @@ struct private_main_mode_t {
 	 */
 	chunk_t sa_payload;
 
+	/**
+	 * Negotiated SA lifetime
+	 */
+	u_int32_t lifetime;
+
+	/**
+	 * Negotiated authentication method
+	 */
+	auth_method_t auth_method;
+
 	/** states of main mode */
 	enum {
 		MM_INIT,
@@ -279,6 +289,23 @@ static bool get_nonce_ke(private_main_mode_t *this, chunk_t *nonce,
 	return TRUE;
 }
 
+/**
+ * Get auth method to use
+ */
+static auth_method_t get_auth_method(private_main_mode_t *this)
+{
+	switch ((uintptr_t)this->my_auth->get(this->my_auth, AUTH_RULE_AUTH_CLASS))
+	{
+		case AUTH_CLASS_PSK:
+			return AUTH_PSK;
+		case AUTH_CLASS_PUBKEY:
+			/* TODO-IKEv1: look for a key, return RSA or ECDSA */
+		default:
+			/* TODO-IKEv1: XAUTH methods */
+			return AUTH_RSA;
+	}
+}
+
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -297,10 +324,28 @@ METHOD(task_t, build_i, status_t,
 				 this->ike_sa->get_other_host(this->ike_sa));
 			this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
+			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->peer_cfg->get_ref(this->peer_cfg);
 
+			this->my_auth = get_auth_cfg(this, TRUE);
+			this->other_auth = get_auth_cfg(this, FALSE);
+			if (!this->my_auth || !this->other_auth)
+			{
+				DBG1(DBG_CFG, "no auth config found");
+				return FAILED;
+			}
+
+			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
+			this->auth_method = get_auth_method(this);
+			this->lifetime = this->peer_cfg->get_reauth_time(this->peer_cfg,
+															FALSE);
+			if (!this->lifetime)
+			{	/* fall back to rekey time of no rekey time configured */
+				this->lifetime = this->peer_cfg->get_rekey_time(this->peer_cfg,
+																 FALSE);
+			}
 			sa_payload = sa_payload_create_from_proposals_v1(proposals,
-								0, 0, AUTH_NONE, MODE_NONE, FALSE);
+						this->lifetime, 0, this->auth_method, MODE_NONE, FALSE);
 			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 
 			message->add_payload(message, &sa_payload->payload_interface);
@@ -351,16 +396,6 @@ METHOD(task_t, build_i, status_t,
 			id_payload_t *id_payload;
 			identification_t *id;
 
-			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-			this->peer_cfg->get_ref(this->peer_cfg);
-
-			this->my_auth = get_auth_cfg(this, TRUE);
-			this->other_auth = get_auth_cfg(this, FALSE);
-			if (!this->my_auth || !this->other_auth)
-			{
-				DBG1(DBG_CFG, "no auth config found");
-				return FAILED;
-			}
 			id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
 			if (!id)
 			{
@@ -419,6 +454,10 @@ METHOD(task_t, process_r, status_t,
 				DBG1(DBG_IKE, "no proposal found");
 				return FAILED;
 			}
+
+			this->auth_method = sa_payload->get_auth_method(sa_payload);
+			this->lifetime = sa_payload->get_lifetime(sa_payload);
+
 			this->state = MM_SA;
 			return NEED_MORE;
 		}
@@ -574,7 +613,7 @@ METHOD(task_t, build_r, status_t,
 			sa_payload_t *sa_payload;
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
-											0, 0, AUTH_NONE, MODE_NONE, FALSE);
+					this->lifetime, 0, this->auth_method, MODE_NONE, FALSE);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			return NEED_MORE;
@@ -641,6 +680,8 @@ METHOD(task_t, process_i, status_t,
 		{
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
+			auth_method_t auth_method;
+			u_int32_t lifetime;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													SECURITY_ASSOCIATION_V1);
@@ -657,6 +698,21 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "no proposal found");
 				return FAILED;
+			}
+
+			lifetime = sa_payload->get_lifetime(sa_payload);
+			if (lifetime != this->lifetime)
+			{
+				DBG1(DBG_IKE, "received lifetime %us does not match configured "
+					 "%us, using lower value", lifetime, this->lifetime);
+			}
+			this->lifetime = min(this->lifetime, lifetime);
+			auth_method = sa_payload->get_auth_method(sa_payload);
+			if (auth_method != this->auth_method)
+			{
+				DBG1(DBG_IKE, "received %N authentication, but configured %N, "
+					 "continue with configured", auth_method_names, auth_method,
+					 auth_method_names, this->auth_method);
 			}
 			return NEED_MORE;
 		}
