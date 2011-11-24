@@ -174,31 +174,6 @@ METHOD(payload_t, get_length, size_t,
 	return this->attribute_length_or_value + 4;
 }
 
-METHOD(transform_attribute_t, set_value_chunk, void,
-	private_transform_attribute_t *this, chunk_t value)
-{
-	chunk_free(&this->attribute_value);
-
-	if (value.len != 2)
-	{
-		this->attribute_value = chunk_clone(value);
-		this->attribute_length_or_value = value.len;
-		this->attribute_format = FALSE;
-	}
-	else
-	{
-		memcpy(&this->attribute_length_or_value, value.ptr, value.len);
-	}
-}
-
-METHOD(transform_attribute_t, set_value, void,
-	private_transform_attribute_t *this, u_int16_t value)
-{
-	chunk_free(&this->attribute_value);
-	this->attribute_length_or_value = value;
-	this->attribute_format = TRUE;
-}
-
 METHOD(transform_attribute_t, get_value_chunk, chunk_t,
 	private_transform_attribute_t *this)
 {
@@ -227,34 +202,10 @@ METHOD(transform_attribute_t, get_value, u_int64_t,
 	return be64toh(value);
 }
 
-METHOD(transform_attribute_t, set_attribute_type, void,
-	private_transform_attribute_t *this, u_int16_t type)
-{
-	this->attribute_type = type & 0x7FFF;
-}
-
 METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
 	private_transform_attribute_t *this)
 {
 	return this->attribute_type;
-}
-
-METHOD(transform_attribute_t, clone_, transform_attribute_t*,
-	private_transform_attribute_t *this)
-{
-	private_transform_attribute_t *new;
-
-	new = (private_transform_attribute_t*)transform_attribute_create(this->type);
-
-	new->attribute_format = this->attribute_format;
-	new->attribute_type = this->attribute_type;
-	new->attribute_length_or_value = this->attribute_length_or_value;
-
-	if (!new->attribute_format)
-	{
-		new->attribute_value = chunk_clone(this->attribute_value);
-	}
-	return &new->public;
 }
 
 METHOD2(payload_t, transform_attribute_t, destroy, void,
@@ -283,16 +234,12 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
-			.set_value_chunk = _set_value_chunk,
-			.set_value = _set_value,
 			.get_value_chunk = _get_value_chunk,
 			.get_value = _get_value,
-			.set_attribute_type = _set_attribute_type,
 			.get_attribute_type = _get_attribute_type,
-			.clone = _clone_,
 			.destroy = _destroy,
 		},
-		.attribute_format = TRUE,
+		.attribute_format = FALSE,
 		.type = type,
 	);
 	return &this->public;
@@ -304,26 +251,30 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
 transform_attribute_t *transform_attribute_create_value(payload_type_t type,
 							transform_attribute_type_t kind, u_int64_t value)
 {
-	transform_attribute_t *attribute;
+	private_transform_attribute_t *this;
 
-	attribute = transform_attribute_create(type);
-	attribute->set_attribute_type(attribute, kind);
+	this = (private_transform_attribute_t*)transform_attribute_create(type);
+
+	this->attribute_type = kind & 0x7FFF;
 
 	if (value <= UINT16_MAX)
 	{
-		attribute->set_value(attribute, value);
+		this->attribute_length_or_value = value;
+		this->attribute_format = TRUE;
 	}
 	else if (value <= UINT32_MAX)
 	{
 		u_int32_t val32;
 
 		val32 = htonl(value);
-		attribute->set_value_chunk(attribute, chunk_from_thing(val32));
+		this->attribute_value = chunk_clone(chunk_from_thing(val32));
+		this->attribute_length_or_value = sizeof(val32);
 	}
 	else
 	{
 		value = htobe64(value);
-		attribute->set_value_chunk(attribute, chunk_from_thing(value));
+		this->attribute_value = chunk_clone(chunk_from_thing(value));
+		this->attribute_length_or_value = sizeof(value);
 	}
-	return attribute;
+	return &this->public;
 }

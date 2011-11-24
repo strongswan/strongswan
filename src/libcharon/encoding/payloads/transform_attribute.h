@@ -98,7 +98,7 @@ struct transform_attribute_t {
 	 *
 	 * Returned data are not copied.
 	 *
-	 * @return 		chunk_t pointing to the value
+	 * @return 		chunk_t pointing to internal value
 	 */
 	chunk_t (*get_value_chunk) (transform_attribute_t *this);
 
@@ -112,41 +112,11 @@ struct transform_attribute_t {
 	u_int64_t (*get_value) (transform_attribute_t *this);
 
 	/**
-	 * Sets the value of the attribute.
-	 *
-	 * Value is getting copied.
-	 *
-	 * @param value chunk_t pointing to the value to set
-	 */
-	void (*set_value_chunk) (transform_attribute_t *this, chunk_t value);
-
-	/**
-	 * Sets the value of the attribute.
-	 *
-	 * @param value value to set
-	 */
-	void (*set_value) (transform_attribute_t *this, u_int16_t value);
-
-	/**
-	 * Sets the type of the attribute.
-	 *
-	 * @param type	type to set (most significant bit is set to zero)
-	 */
-	void (*set_attribute_type) (transform_attribute_t *this, u_int16_t type);
-
-	/**
 	 * get the type of the attribute.
 	 *
 	 * @return 		type of the value
 	 */
 	u_int16_t (*get_attribute_type) (transform_attribute_t *this);
-
-	/**
-	 * Clones an transform_attribute_t object.
-	 *
-	 * @return		cloned transform_attribute_t object
-	 */
-	transform_attribute_t * (*clone) (transform_attribute_t *this);
 
 	/**
 	 * Destroys an transform_attribute_t object.
