@@ -13,22 +13,22 @@
  * for more details.
  */
 
-#include "ike_vendor.h"
+#include "ike_vendor_v1.h"
 
 #include <daemon.h>
 #include <encoding/payloads/vendor_id_payload.h>
 
-typedef struct private_ike_vendor_t private_ike_vendor_t;
+typedef struct private_ike_vendor_v1_t private_ike_vendor_v1_t;
 
 /**
- * Private data of an ike_vendor_t object.
+ * Private data of an ike_vendor_v1_t object.
  */
-struct private_ike_vendor_t {
+struct private_ike_vendor_v1_t {
 
 	/**
-	 * Public ike_vendor_t interface.
+	 * Public ike_vendor_v1_t interface.
 	 */
-	ike_vendor_t public;
+	ike_vendor_v1_t public;
 
 	/**
 	 * Associated IKE_SA
@@ -41,6 +41,10 @@ struct private_ike_vendor_t {
 	bool initiator;
 };
 
+static chunk_t xauth6_vid = chunk_from_chars(
+	0x09,0x00,0x26,0x89,0xdf,0xd6,0xb7,0x12
+);
+
 /**
  * strongSwan specific vendor ID without version, MD5("strongSwan")
  */
@@ -49,24 +53,35 @@ static chunk_t strongswan_vid = chunk_from_chars(
 	0x22,0x51,0x61,0x3b,0x2e,0xbe,0x5b,0xeb
 );
 
-METHOD(task_t, build, status_t,
-	private_ike_vendor_t *this, message_t *message)
+/**
+ * Add a vendor ID to message
+ */
+static void add_vendor_id(private_ike_vendor_v1_t *this, message_t *message,
+						  chunk_t vid)
 {
+	vendor_id_payload_t *vid_payload;
+
+	vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1, chunk_clone(vid));
+	message->add_payload(message, &vid_payload->payload_interface);
+}
+
+METHOD(task_t, build, status_t,
+	private_ike_vendor_v1_t *this, message_t *message)
+{
+
 	if (lib->settings->get_bool(lib->settings,
 								"charon.send_vendor_id", FALSE))
 	{
-		vendor_id_payload_t *vid;
-
-		vid = vendor_id_payload_create_data(VENDOR_ID,
-											chunk_clone(strongswan_vid));
-		message->add_payload(message, &vid->payload_interface);
+		add_vendor_id(this, message, strongswan_vid);
 	}
+
+	add_vendor_id(this, message, xauth6_vid);
 
 	return this->initiator ? NEED_MORE : SUCCESS;
 }
 
 METHOD(task_t, process, status_t,
-	private_ike_vendor_t *this, message_t *message)
+	private_ike_vendor_v1_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -74,7 +89,7 @@ METHOD(task_t, process, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == VENDOR_ID)
+		if (payload->get_type(payload) == VENDOR_ID_V1)
 		{
 			vendor_id_payload_t *vid;
 			chunk_t data;
@@ -86,6 +101,11 @@ METHOD(task_t, process, status_t,
 			{
 				DBG1(DBG_IKE, "received strongSwan vendor id");
 				this->ike_sa->enable_extension(this->ike_sa, EXT_STRONGSWAN);
+			}
+			else if (chunk_equals(data, xauth6_vid))
+			{
+				DBG1(DBG_IKE, "received XAuth vendor id");
+				this->ike_sa->enable_extension(this->ike_sa, EXT_XAUTH);
 			}
 			else
 			{
@@ -99,19 +119,19 @@ METHOD(task_t, process, status_t,
 }
 
 METHOD(task_t, migrate, void,
-	private_ike_vendor_t *this, ike_sa_t *ike_sa)
+	private_ike_vendor_v1_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
 METHOD(task_t, get_type, task_type_t,
-	private_ike_vendor_t *this)
+	private_ike_vendor_v1_t *this)
 {
-	return TASK_IKE_VENDOR;
+	return TASK_VENDOR_V1;
 }
 
 METHOD(task_t, destroy, void,
-	private_ike_vendor_t *this)
+	private_ike_vendor_v1_t *this)
 {
 	free(this);
 }
@@ -119,9 +139,9 @@ METHOD(task_t, destroy, void,
 /**
  * See header
  */
-ike_vendor_t *ike_vendor_create(ike_sa_t *ike_sa, bool initiator)
+ike_vendor_v1_t *ike_vendor_v1_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_vendor_t *this;
+	private_ike_vendor_v1_t *this;
 
 	INIT(this,
 		.public = {
@@ -139,4 +159,3 @@ ike_vendor_t *ike_vendor_create(ike_sa_t *ike_sa, bool initiator)
 
 	return &this->public;
 }
-

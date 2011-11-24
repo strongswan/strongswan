@@ -23,6 +23,7 @@
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth_request.h>
+#include <sa/tasks/ike_vendor_v1.h>
 #include <processing/jobs/retransmit_job.h>
 
 typedef struct exchange_t exchange_t;
@@ -285,6 +286,7 @@ METHOD(task_manager_t, initiate, status_t,
 		switch (this->ike_sa->get_state(this->ike_sa))
 		{
 			case IKE_CREATED:
+				activate_task(this, TASK_VENDOR_V1);
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
@@ -533,7 +535,7 @@ static status_t process_request(private_task_manager_t *this,
 		switch (message->get_exchange_type(message))
 		{
 			case ID_PROT:
-				task = (task_t *)ike_vendor_create(this->ike_sa, FALSE);
+				task = (task_t *)ike_vendor_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);

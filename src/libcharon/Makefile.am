@@ -89,6 +89,7 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
+sa/tasks/ike_vendor_v1.c sa/tasks/ike_vendor_v1.h \
 sa/tasks/main_mode.c sa/tasks/main_mode.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
 sa/tasks/task.c sa/tasks/task.h \
