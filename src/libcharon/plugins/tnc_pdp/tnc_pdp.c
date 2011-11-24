@@ -204,8 +204,8 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 		request = radius_message_parse_response(chunk_create(buffer, bytes_read));
 		if (request)
 		{
-			DBG2(DBG_NET, "received valid RADIUS message");
-			request->destroy(request);
+		DBG1(DBG_NET, "received RADIUS %N from client '%H'",
+			 radius_message_code_names, request->get_code(request), source);
 		}
 		else
 		{
