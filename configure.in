@@ -1108,13 +1108,13 @@ AC_OUTPUT(
 	src/libtncif/Makefile
 	src/libtnccs/Makefile
 	src/libpts/Makefile
+	src/libpts/plugins/imc_attestation/Makefile
+	src/libpts/plugins/imv_attestation/Makefile
 	src/libimcv/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile
 	src/libimcv/plugins/imc_scanner/Makefile
 	src/libimcv/plugins/imv_scanner/Makefile
-	src/libimcv/plugins/imc_attestation/Makefile
-	src/libimcv/plugins/imv_attestation/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile

@@ -90,7 +90,7 @@ if USE_ATTR_SQL
 endif
 
 if USE_IMV_ATTESTATION
-  exes += $(top_builddir)/src/libimcv/plugins/imv_attestation/.libs/attest
+  exes += $(top_builddir)/src/libpts/plugins/imv_attestation/.libs/attest
 endif
 
 checksum.c : checksum_builder $(deps) $(exes)

@@ -24,12 +24,12 @@ if USE_LIBTNCCS
   SUBDIRS += libtnccs
 endif
 
-if USE_PTS
-  SUBDIRS += libpts
-endif
-
 if USE_IMCV
   SUBDIRS += libimcv
+endif
+
+if USE_PTS
+  SUBDIRS += libpts
 endif
 
 if USE_LIBCHARON

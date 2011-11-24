@@ -46,3 +46,12 @@ libpts_la_SOURCES = \
 	tcg/tcg_pts_attr_req_file_meta.h tcg/tcg_pts_attr_req_file_meta.c \
 	tcg/tcg_pts_attr_unix_file_meta.h tcg/tcg_pts_attr_unix_file_meta.c
 	
+SUBDIRS = .
+
+if USE_IMC_ATTESTATION
+  SUBDIRS += plugins/imc_attestation
+endif
+
+if USE_IMV_ATTESTATION
+  SUBDIRS += plugins/imv_attestation
+endif

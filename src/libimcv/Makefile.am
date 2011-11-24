@@ -36,11 +36,3 @@ endif
 if USE_IMV_SCANNER
   SUBDIRS += plugins/imv_scanner
 endif 
-
-if USE_IMC_ATTESTATION
-  SUBDIRS += plugins/imc_attestation
-endif
-
-if USE_IMV_ATTESTATION
-  SUBDIRS += plugins/imv_attestation
-endif
