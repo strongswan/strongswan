@@ -282,14 +282,37 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
 /**
  * Add selected traffic selectors to message
  */
-static void add_ts(private_quick_mode_t *this, message_t *message)
+static void add_ts(private_quick_mode_t *this, message_t *message,
+				   bool initiator)
 {
 	id_payload_t *id_payload;
+	host_t *hsi, *hsr;
 
-	id_payload = id_payload_create_from_ts(this->tsi);
-	message->add_payload(message, &id_payload->payload_interface);
-	id_payload = id_payload_create_from_ts(this->tsr);
-	message->add_payload(message, &id_payload->payload_interface);
+	if (initiator)
+	{
+		hsi = this->ike_sa->get_my_host(this->ike_sa);
+		hsr = this->ike_sa->get_other_host(this->ike_sa);
+	}
+	else
+	{
+		hsr = this->ike_sa->get_my_host(this->ike_sa);
+		hsi = this->ike_sa->get_other_host(this->ike_sa);
+	}
+	/* add ID payload only if negotiating non host2host tunnels */
+	if (!this->tsi->is_host(this->tsi, hsi) ||
+		!this->tsr->is_host(this->tsr, hsr) ||
+		this->tsi->get_protocol(this->tsi) ||
+		this->tsr->get_protocol(this->tsr) ||
+		this->tsi->get_from_port(this->tsi) ||
+		this->tsr->get_from_port(this->tsr) ||
+		this->tsi->get_to_port(this->tsi) != 65535 ||
+		this->tsr->get_to_port(this->tsr) != 65535)
+	{
+		id_payload = id_payload_create_from_ts(this->tsi);
+		message->add_payload(message, &id_payload->payload_interface);
+		id_payload = id_payload_create_from_ts(this->tsr);
+		message->add_payload(message, &id_payload->payload_interface);
+	}
 }
 
 /**
@@ -419,7 +442,7 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-			add_ts(this, message);
+			add_ts(this, message, TRUE);
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
@@ -538,7 +561,7 @@ METHOD(task_t, build_r, status_t,
 			{
 				return FAILED;
 			}
-			add_ts(this, message);
+			add_ts(this, message, FALSE);
 
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
