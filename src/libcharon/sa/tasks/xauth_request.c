@@ -221,6 +221,23 @@ METHOD(task_t, destroy, void,
 	free(this);
 }
 
+METHOD(task_t, swap_initiator, void,
+	private_xauth_request_t *this)
+{
+	if(this->initiator)
+	{
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
+		this->initiator = FALSE;
+	}
+	else
+	{
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
+		this->initiator = TRUE;
+	}
+}
+
 /*
  * Described in header.
  */
@@ -234,6 +251,7 @@ xauth_request_t *xauth_request_create(ike_sa_t *ike_sa, bool initiator)
 				.get_type = _get_type,
 				.migrate = _migrate,
 				.destroy = _destroy,
+				.swap_initiator = _swap_initiator,
 			},
 		},
 		.initiator = initiator,
