@@ -611,7 +611,6 @@ METHOD(task_t, build_r, status_t,
 
 			build_hash(this, FALSE, message, id);
 
-			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
@@ -621,6 +620,11 @@ METHOD(task_t, build_r, status_t,
 				 this->ike_sa->get_other_id(this->ike_sa));
 			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+			/* TODO-IKEv1: Check the proposal for XAuthInit* auth modes */
+			/* TODO-IKEv1: check for XAUTH rounds, queue them */
+			if(0) /* TODO-IKEv1: Change to 1 if XAUTH is desired. */
+			this->ike_sa->initiate_xauth(this->ike_sa);
 			return SUCCESS;
 		}
 		default:
