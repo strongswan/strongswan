@@ -234,6 +234,25 @@ METHOD(task_manager_t, retransmit, status_t,
 	return SUCCESS;
 }
 
+void migrate_tasks(linked_list_t *from, linked_list_t *to)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	enumerator = from->create_enumerator(from);
+	while(enumerator->enumerate(enumerator, (void**)&task))
+	{
+		DBG4(DBG_IKE, "  Migrating %N task to new queue", task_type_names, task->get_type(task));
+		if(task->swap_initiator)
+		{
+			task->swap_initiator(task);
+		}
+		to->insert_last(to, task);
+		from->remove_at(from, enumerator);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(task_manager_t, initiate, status_t,
 	private_task_manager_t *this)
 {
@@ -348,6 +367,13 @@ METHOD(task_manager_t, initiate, status_t,
 				this->active_tasks->remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
 				break;
+			case MIGRATE:
+				/* task completed, remove it */
+				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				task->destroy(task);
+				/* migrate the remaining active tasks to the passive queue */
+				migrate_tasks(this->active_tasks, this->passive_tasks);
+				break;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
 				break;
@@ -409,6 +435,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	host_t *me, *other;
 	bool delete = FALSE;
 	status_t status;
+	bool migrate = FALSE;
 
 	me = request->get_destination(request);
 	other = request->get_source(request);
@@ -426,6 +453,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	{
 		switch (task->build(task, message))
 		{
+			case MIGRATE:
+				migrate = TRUE;
+				/* FALL */
 			case SUCCESS:
 				/* task completed, remove it */
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
@@ -472,6 +502,14 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 
 	charon->sender->send(charon->sender,
 						 this->responding.packet->clone(this->responding.packet));
+
+	if (migrate)
+	{
+		migrate_tasks(this->passive_tasks, this->queued_tasks);
+		/* Kick off the newly installed tasks */
+		initiate(this);
+	}
+
 	if (delete)
 	{
 		return DESTROY_ME;
@@ -525,6 +563,16 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
 				enumerator->destroy(enumerator);
+				return SUCCESS;
+			case MIGRATE:
+				/* task completed, remove it */
+				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
+				task->destroy(task);
+				enumerator->destroy(enumerator);
+				/* migrate the remaining tasks */
+				migrate_tasks(this->passive_tasks, this->queued_tasks);
+				/* Kick off the newly installed tasks */
+				initiate(this);
 				return SUCCESS;
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */

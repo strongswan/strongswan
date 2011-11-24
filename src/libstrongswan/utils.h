@@ -299,6 +299,12 @@ enum status_t {
 	 * Another call to the method is required.
 	 */
 	NEED_MORE,
+
+	/**
+	 * For tasks only, same as SUCCESS, but also migrate all remaining tasks
+	 * in the current queue to the opposite queue (passive->active or active->passive)
+	 */
+	MIGRATE,
 };
 
 /**
