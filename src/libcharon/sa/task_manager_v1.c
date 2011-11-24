@@ -144,6 +144,11 @@ struct private_task_manager_t {
 	 * Base to calculate retransmission timeout
 	 */
 	double retransmit_base;
+
+	/**
+	 * Signal to the task manager that we need to initiate a transaction after the response is sent.
+	 */
+	bool initiate_later_flag;
 };
 
 /**
@@ -296,6 +301,10 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				case TASK_QUICK_MODE:
 					exchange = QUICK_MODE;
+					break;
+				case TASK_XAUTH_REQUEST:
+					exchange = TRANSACTION;
+					new_mid = TRUE;
 					break;
 				default:
 					continue;
@@ -477,6 +486,7 @@ static status_t process_request(private_task_manager_t *this,
 {
 	enumerator_t *enumerator;
 	task_t *task = NULL;
+	status_t process_status;
 
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
@@ -530,7 +540,14 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	return build_response(this, message);
+	process_status = build_response(this, message);
+
+	if(((process_status == SUCCESS) || (process_status == NEED_MORE)) && (this->initiate_later_flag == TRUE))
+	{
+		this->initiate_later_flag = FALSE;
+		return initiate(this);
+	}
+	return process_status;
 }
 
 /**
@@ -704,6 +721,12 @@ METHOD(task_manager_t, destroy, void,
 	free(this);
 }
 
+METHOD(task_manager_t, initiate_later, void,
+	private_task_manager_t *this)
+{
+	this->initiate_later_flag = TRUE;
+}
+
 /*
  * see header file
  */
@@ -724,6 +747,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
 				.destroy = _destroy,
+				.initiate_later = _initiate_later,
 			},
 		},
 		.ike_sa = ike_sa,
@@ -738,6 +762,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT),
 		.retransmit_base = lib->settings->get_double(lib->settings,
 								"charon.retransmit_base", RETRANSMIT_BASE),
+		.initiate_later_flag = FALSE,
 	);
 
 	return &this->public;
