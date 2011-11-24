@@ -290,13 +290,28 @@ transform_attribute_t *transform_attribute_create(payload_type_t type)
  * Described in header.
  */
 transform_attribute_t *transform_attribute_create_value(payload_type_t type,
-							transform_attribute_type_t kind, u_int16_t value)
+							transform_attribute_type_t kind, u_int64_t value)
 {
 	transform_attribute_t *attribute;
 
 	attribute = transform_attribute_create(type);
 	attribute->set_attribute_type(attribute, kind);
-	attribute->set_value(attribute, value);
 
+	if (value <= UINT16_MAX)
+	{
+		attribute->set_value(attribute, value);
+	}
+	else if (value <= UINT32_MAX)
+	{
+		u_int32_t val32;
+
+		val32 = htonl(value);
+		attribute->set_value_chunk(attribute, chunk_from_thing(val32));
+	}
+	else
+	{
+		value = htobe64(value);
+		attribute->set_value_chunk(attribute, chunk_from_thing(value));
+	}
 	return attribute;
 }

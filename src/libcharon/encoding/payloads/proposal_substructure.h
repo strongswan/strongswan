@@ -29,6 +29,8 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #include <encoding/payloads/transform_substructure.h>
 #include <config/proposal.h>
 #include <utils/linked_list.h>
+#include <kernel/kernel_ipsec.h>
+#include <sa/authenticators/authenticator.h>
 
 /**
  * Class representing an IKEv1/IKEv2 proposal substructure.
@@ -124,22 +126,43 @@ struct proposal_substructure_t {
 proposal_substructure_t *proposal_substructure_create(payload_type_t type);
 
 /**
- * Creates a proposal_substructure_t from a proposal_t.
+ * Creates an IKEv2 proposal_substructure_t from a proposal_t.
  *
- * @param type		PROPOSAL_SUBSTRUCTURE or PROPOSAL_SUBSTRUCTURE_V1
  * @param proposal	proposal to build a substruct out of it
- * @return 			proposal_substructure_t object
+ * @return 			proposal_substructure_t PROPOSAL_SUBSTRUCTURE
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal(
-									payload_type_t type, proposal_t *proposal);
+proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
+														proposal_t *proposal);
+/**
+ * Creates an IKEv1 proposal_substructure_t from a proposal_t.
+ *
+ * @param proposal	proposal to build a substruct out of it
+ * @param lifetime	lifetime in seconds
+ * @param lifebytes	lifebytes, in bytes
+ * @param auth		authentication method to use, or AUTH_NONE
+ * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
+ * @param udp		TRUE to use UDP encapsulation
+ *
+ *
+ * @return 			proposal_substructure_t object PROPOSAL_SUBSTRUCTURE_V1
+ */
+proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
+			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
+			auth_method_t auth, ipsec_mode_t mode, bool udp);
 
 /**
- * Creates a proposal_substructure_t from a list of proposal_t (IKEv1 only).
+ * Creates an IKEv1 proposal_substructure_t from a list of proposal_t.
  *
- * @param proposal	proposal to build a substruct out of it
+ * @param proposals	list of proposal_t to encode in a substructure
+ * @param lifetime	lifetime in seconds
+ * @param lifebytes	lifebytes, in bytes
+ * @param auth		authentication method to use, or AUTH_NONE
+ * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
+ * @param udp		TRUE to use UDP encapsulation
  * @return 			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
  */
-proposal_substructure_t *proposal_substructure_create_from_proposals(
-									linked_list_t *proposals);
+proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
+			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
+			auth_method_t auth, ipsec_mode_t mode, bool udp);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

@@ -259,17 +259,12 @@ METHOD(payload_t, get_length, size_t,
 /**
  * Create a transform substructure from a proposal, add to payload
  */
-static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
+static void add_proposal_v2(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substruct, *last;
-	payload_type_t subtype = PROPOSAL_SUBSTRUCTURE;
 	u_int count;
 
-	if (this->type == SECURITY_ASSOCIATION_V1)
-	{
-		subtype = PROPOSAL_SUBSTRUCTURE_V1;
-	}
-	substruct = proposal_substructure_create_from_proposal(subtype, proposal);
+	substruct = proposal_substructure_create_from_proposal_v2(proposal);
 	count = this->proposals->get_count(this->proposals);
 	if (count > 0)
 	{
@@ -417,53 +412,6 @@ sa_payload_t *sa_payload_create(payload_type_t type)
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_proposal_list(payload_type_t type,
-												   linked_list_t *proposals)
-{
-	private_sa_payload_t *this;
-	enumerator_t *enumerator;
-	proposal_t *proposal;
-
-	this = (private_sa_payload_t*)sa_payload_create(type);
-	if (type == SECURITY_ASSOCIATION)
-	{
-		enumerator = proposals->create_enumerator(proposals);
-		while (enumerator->enumerate(enumerator, &proposal))
-		{
-			add_proposal(this, proposal);
-		}
-		enumerator->destroy(enumerator);
-	}
-	else
-	{	/* IKEv1 encodes multiple proposals in a single substructure
-		 * TODO-IKEv1: Encode ESP+AH proposals in two different substructs */
-		proposal_substructure_t *substruct;
-
-		substruct = proposal_substructure_create_from_proposals(proposals);
-		substruct->set_is_last_proposal(substruct, TRUE);
-		this->proposals->insert_last(this->proposals, substruct);
-		compute_length(this);
-	}
-	return &this->public;
-}
-
-/*
- * Described in header.
- */
-sa_payload_t *sa_payload_create_from_proposal(payload_type_t type,
-											  proposal_t *proposal)
-{
-	private_sa_payload_t *this;
-
-	this = (private_sa_payload_t*)sa_payload_create(type);
-	add_proposal(this, proposal);
-
-	return &this->public;
-}
-
-/*
- * Described in header.
- */
 sa_payload_t *sa_payload_create_from_proposals_v2(linked_list_t *proposals)
 {
 	private_sa_payload_t *this;
@@ -474,7 +422,7 @@ sa_payload_t *sa_payload_create_from_proposals_v2(linked_list_t *proposals)
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		add_proposal(this, proposal);
+		add_proposal_v2(this, proposal);
 	}
 	enumerator->destroy(enumerator);
 
@@ -489,7 +437,7 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal)
 	private_sa_payload_t *this;
 
 	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
-	add_proposal(this, proposal);
+	add_proposal_v2(this, proposal);
 
 	return &this->public;
 
@@ -505,11 +453,12 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 	proposal_substructure_t *substruct;
 	private_sa_payload_t *this;
 
-	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
+	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
 
 	/* IKEv1 encodes multiple proposals in a single substructure
 	 * TODO-IKEv1: Encode ESP+AH proposals in two different substructs */
-	substruct = proposal_substructure_create_from_proposals(proposals);
+	substruct = proposal_substructure_create_from_proposals_v1(proposals,
+										lifetime, lifebytes, auth, mode, udp);
 	substruct->set_is_last_proposal(substruct, TRUE);
 	this->proposals->insert_last(this->proposals, substruct);
 	compute_length(this);
@@ -529,8 +478,8 @@ sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
 
 	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
 
-	substruct = proposal_substructure_create_from_proposal(
-											PROPOSAL_SUBSTRUCTURE_V1, proposal);
+	substruct = proposal_substructure_create_from_proposal_v1(proposal,
+										lifetime, lifebytes, auth, mode, udp);
 	substruct->set_is_last_proposal(substruct, TRUE);
 	this->proposals->insert_last(this->proposals, substruct);
 	compute_length(this);

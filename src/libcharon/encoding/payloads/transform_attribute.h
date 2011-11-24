@@ -163,7 +163,7 @@ struct transform_attribute_t {
 transform_attribute_t *transform_attribute_create(payload_type_t type);
 
 /**
- * Creates a two byte value attribute for a given attribute kind.
+ * Creates a two byte value or a larger attribute for a given attribute kind.
  *
  * @param type			TRANSFORM_ATTRIBUTE or TRANSFORM_ATTRIBUTE_V1
  * @param kind			attribute kind
@@ -171,6 +171,6 @@ transform_attribute_t *transform_attribute_create(payload_type_t type);
  * @return				transform_attribute_t object
  */
 transform_attribute_t *transform_attribute_create_value(payload_type_t type,
-							transform_attribute_type_t kind, u_int16_t value);
+							transform_attribute_type_t kind, u_int64_t value);
 
 #endif /** TRANSFORM_ATTRIBUTE_H_ @}*/

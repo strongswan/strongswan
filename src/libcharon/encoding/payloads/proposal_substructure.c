@@ -573,6 +573,41 @@ static u_int16_t get_ikev1_from_alg(transform_type_t type, u_int16_t value)
 }
 
 /**
+ * Get IKEv1 authentication attribute from auth_method_t
+ */
+static u_int16_t get_ikev1_auth(auth_method_t method)
+{
+	switch (method)
+	{
+		case AUTH_RSA:
+			return IKEV1_AUTH_RSA_SIG;
+		case AUTH_DSS:
+			return IKEV1_AUTH_DSS_SIG;
+		default:
+			/* TODO-IKEv1: Handle XAUTH methods */
+			/* TODO-IKEv1: Handle ECDSA methods */
+		case AUTH_PSK:
+			return IKEV1_AUTH_PSK;
+	}
+}
+
+/**
+ * Get IKEv1 encapsulation mode
+ */
+static u_int16_t get_ikev1_mode(ipsec_mode_t mode, bool udp)
+{
+	switch (mode)
+	{
+		case MODE_TUNNEL:
+			return udp ? IKEV1_ENCAP_UDP_TUNNEL : IKEV1_ENCAP_TUNNEL;
+		case MODE_TRANSPORT:
+			return udp ? IKEV1_ENCAP_UDP_TRANSPORT : IKEV1_ENCAP_TRANSPORT;
+		default:
+			return IKEV1_ENCAP_TUNNEL;
+	}
+}
+
+/**
  * Add an IKE transform to a proposal for IKEv1
  */
 static void add_to_proposal_v1_ike(proposal_t *proposal,
@@ -771,7 +806,8 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
  * Add an IKEv1 IKE proposal to the substructure
  */
 static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
-									 proposal_t *proposal, int number)
+									 proposal_t *proposal, u_int32_t lifetime,
+									 auth_method_t method, int number)
 {
 	transform_substructure_t *transform;
 	u_int16_t alg, key_size;
@@ -822,23 +858,15 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: Add lifetime, non-fixed auth-method and other attributes */
-	if(1) /* TODO-IKEv1: Change to 0 if XAUTH is desired. */
-	{
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));
-	}else{
-	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_XAUTH_INIT_PSK));
-	}
+							TATTR_PH1_AUTH_METHOD, get_ikev1_auth(method)));
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH1_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH1_LIFE_DURATION, 10800));
+							TATTR_PH1_LIFE_DURATION, lifetime));
 
 	add_transform_substructure(this, transform);
 }
@@ -847,7 +875,8 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
  * Add an IKEv1 ESP proposal to the substructure
  */
 static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
-									 proposal_t *proposal, int number)
+				proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
+				ipsec_mode_t mode, bool udp, int number)
 {
 	transform_substructure_t *transform = NULL;
 	u_int16_t alg, key_size;
@@ -884,16 +913,27 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	/* TODO-IKEv1: Add lifetime and other attributes, ESN */
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH2_ENCAP_MODE, IKEV1_ENCAP_TUNNEL));
-	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_ENCAP_MODE, get_ikev1_mode(mode, udp)));
+	if (lifetime)
+	{
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
-	transform->add_transform_attribute(transform,
-		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-							TATTR_PH2_SA_LIFE_DURATION, 3600));
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_DURATION, lifetime));
+	}
+	else if (lifebytes)
+	{
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_KILOBYTES));
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_DURATION, lifebytes / 1000));
+	}
 
 	add_transform_substructure(this, transform);
 }
@@ -965,36 +1005,14 @@ static void set_from_proposal_v2(private_proposal_substructure_t *this,
 	enumerator->destroy(enumerator);
 }
 
-/*
- * Described in header.
+/**
+ * Set SPI and other data from proposal, compute length
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal(
-									payload_type_t type, proposal_t *proposal)
+static void set_data(private_proposal_substructure_t *this, proposal_t *proposal)
 {
-	private_proposal_substructure_t *this;
 	u_int64_t spi64;
 	u_int32_t spi32;
 
-	this = (private_proposal_substructure_t*)proposal_substructure_create(type);
-
-	if (type == PROPOSAL_SUBSTRUCTURE)
-	{
-		set_from_proposal_v2(this, proposal);
-	}
-	else
-	{
-		switch (proposal->get_protocol(proposal))
-		{
-			case PROTO_IKE:
-				set_from_proposal_v1_ike(this, proposal, 0);
-				break;
-			case PROTO_ESP:
-				set_from_proposal_v1_esp(this, proposal, 0);
-				break;
-			default:
-				break;
-		}
-	}
 	/* add SPI, if necessary */
 	switch (proposal->get_protocol(proposal))
 	{
@@ -1018,6 +1036,20 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proposal->get_protocol(proposal);
 	compute_length(this);
+}
+
+/*
+ * Described in header.
+ */
+proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
+														proposal_t *proposal)
+{
+	private_proposal_substructure_t *this;
+
+	this = (private_proposal_substructure_t*)
+							proposal_substructure_create(SECURITY_ASSOCIATION);
+	set_from_proposal_v2(this, proposal);
+	set_data(this, proposal);
 
 	return &this->public;
 }
@@ -1025,8 +1057,37 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 /**
  * See header.
  */
-proposal_substructure_t *proposal_substructure_create_from_proposals(
-													linked_list_t *proposals)
+proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
+			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
+			auth_method_t auth, ipsec_mode_t mode, bool udp)
+{
+	private_proposal_substructure_t *this;
+
+	this = (private_proposal_substructure_t*)
+						proposal_substructure_create(PROPOSAL_SUBSTRUCTURE_V1);
+	switch (proposal->get_protocol(proposal))
+	{
+		case PROTO_IKE:
+			set_from_proposal_v1_ike(this, proposal, lifetime, auth, 0);
+			break;
+		case PROTO_ESP:
+			set_from_proposal_v1_esp(this, proposal, lifetime,
+									 lifebytes, mode, udp, 0);
+			break;
+		default:
+			break;
+	}
+	set_data(this, proposal);
+
+	return &this->public;
+}
+
+/**
+ * See header.
+ */
+proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
+			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
+			auth_method_t auth, ipsec_mode_t mode, bool udp)
 {
 	private_proposal_substructure_t *this = NULL;
 	enumerator_t *enumerator;
@@ -1039,18 +1100,20 @@ proposal_substructure_t *proposal_substructure_create_from_proposals(
 		if (!this)
 		{
 			this = (private_proposal_substructure_t*)
-						proposal_substructure_create_from_proposal(
-										PROPOSAL_SUBSTRUCTURE_V1, proposal);
+						proposal_substructure_create_from_proposal_v1(
+								proposal, lifetime, lifebytes, auth, mode, udp);
 		}
 		else
 		{
 			switch (proposal->get_protocol(proposal))
 			{
 				case PROTO_IKE:
-					set_from_proposal_v1_ike(this, proposal, ++number);
+					set_from_proposal_v1_ike(this, proposal, lifetime,
+											 auth, ++number);
 					break;
 				case PROTO_ESP:
-					set_from_proposal_v1_esp(this, proposal, ++number);
+					set_from_proposal_v1_esp(this, proposal, lifetime,
+											 lifebytes, mode, udp, ++number);
 					break;
 				default:
 					break;
