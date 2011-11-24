@@ -43,6 +43,8 @@ typedef struct mark_t mark_t;
  * Mode of an IPsec SA.
  */
 enum ipsec_mode_t {
+	/** not using any encapsulation */
+	MODE_NONE = 0,
 	/** transport mode, no inner address */
 	MODE_TRANSPORT = 1,
 	/** tunnel mode, inner and outer addresses */

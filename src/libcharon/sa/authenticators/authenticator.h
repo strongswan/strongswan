@@ -34,6 +34,12 @@ typedef struct authenticator_t authenticator_t;
  * Method to use for authentication, as defined in IKEv2.
  */
 enum auth_method_t {
+
+	/**
+	 * No authentication used.
+	 */
+	AUTH_NONE = 0,
+
 	/**
 	 * Computed as specified in section 2.15 of RFC using
 	 * an RSA private key over a PKCS#1 padded hash.

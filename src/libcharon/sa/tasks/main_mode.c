@@ -299,8 +299,8 @@ METHOD(task_t, build_i, status_t,
 
 			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
 
-			sa_payload = sa_payload_create_from_proposal_list(
-											SECURITY_ASSOCIATION_V1, proposals);
+			sa_payload = sa_payload_create_from_proposals_v1(proposals,
+								0, 0, AUTH_NONE, MODE_NONE, FALSE);
 			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 
 			message->add_payload(message, &sa_payload->payload_interface);
@@ -573,8 +573,8 @@ METHOD(task_t, build_r, status_t,
 		{
 			sa_payload_t *sa_payload;
 
-			sa_payload = sa_payload_create_from_proposal(SECURITY_ASSOCIATION_V1,
-														 this->proposal);
+			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
+											0, 0, AUTH_NONE, MODE_NONE, FALSE);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			return NEED_MORE;

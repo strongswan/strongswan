@@ -425,8 +425,8 @@ METHOD(task_t, build_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
-			sa_payload = sa_payload_create_from_proposal_list(
-												SECURITY_ASSOCIATION_V1, list);
+			sa_payload = sa_payload_create_from_proposals_v1(list,
+											0, 0, AUTH_NONE, MODE_NONE, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -551,8 +551,8 @@ METHOD(task_t, build_r, status_t,
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
-			sa_payload = sa_payload_create_from_proposal(
-									SECURITY_ASSOCIATION_V1, this->proposal);
+			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
+											0, 0, AUTH_NONE, MODE_NONE, FALSE);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
