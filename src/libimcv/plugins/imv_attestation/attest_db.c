@@ -381,8 +381,8 @@ METHOD(attest_db_t, list_files, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e;
-	char *file;
-	int fid, is_dir, meas, meta, count = 0;
+	char *file, *file_type[] = { " ", "d", "r" };
+	int fid, type, meas, meta, count = 0;
 
 	if (this->pid)
 	{
@@ -394,10 +394,11 @@ METHOD(attest_db_t, list_files, void,
 				DB_INT, this->pid, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
 		if (e)
 		{
-			while (e->enumerate(e, &fid, &is_dir, &file, &meas, &meta))
+			while (e->enumerate(e, &fid, &type, &file, &meas, &meta))
 			{
+				type = (type < 0 || type > 2) ? 0 : type;
 				printf("%3d: |%s%s| %s %s\n", fid, meas ? "M":" ", meta ? "T":" ",
-											 is_dir ? "d":" ", file);
+											  file_type[type], file);
 				count++;
 			}
 			e->destroy(e);
@@ -411,9 +412,10 @@ METHOD(attest_db_t, list_files, void,
 				DB_INT, DB_INT, DB_TEXT);
 		if (e)
 		{
-			while (e->enumerate(e, &fid, &is_dir, &file))
+			while (e->enumerate(e, &fid, &type, &file))
 			{
-				printf("%3d: %s %s\n", fid, is_dir ? "d":" ", file);
+				type = (type < 0 || type > 2) ? 0 : type;
+				printf("%3d: %s %s\n", fid, file_type[type], file);
 				count++;
 			}
 			e->destroy(e);

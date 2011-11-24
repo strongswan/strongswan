@@ -179,145 +179,145 @@ INSERT INTO files (
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr00'
+  2, 'pcr00'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr01'
+  2, 'pcr01'
 );
 
 INSERT INTO files (			/* 25 */
   type, path
 ) VALUES (
-  0, 'pcr02'
+  2, 'pcr02'
 );
              
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr03'
+  2, 'pcr03'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr04'
+  2, 'pcr04'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr05'
+  2, 'pcr05'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr06'
+  2, 'pcr06'
 );
 
 INSERT INTO files (			/* 30 */
   type, path
 ) VALUES (
-  0, 'pcr07'
+  2, 'pcr07'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr08'
+  2, 'pcr08'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr09'
+  2, 'pcr09'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr10'
+  2, 'pcr10'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr11'
+  2, 'pcr11'
 );
 
 INSERT INTO files (			/* 35 */
   type, path
 ) VALUES (
-  0, 'pcr12'
+  2, 'pcr12'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr13'
+  2, 'pcr13'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr14'
+  2, 'pcr14'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr15'
+  2, 'pcr15'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr16'
+  2, 'pcr16'
 );
 
 INSERT INTO files (			/* 40 */
   type, path
 ) VALUES (
-  0, 'pcr17'
+  2, 'pcr17'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr18'
+  2, 'pcr18'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr19'
+  2, 'pcr19'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr20'
+  2, 'pcr20'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr21'
+  2, 'pcr21'
 );
 
 INSERT INTO files (			/* 45 */
   type, path
 ) VALUES (
-  0, 'pcr22'
+  2, 'pcr22'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'pcr23'
+  2, 'pcr23'
 );
 
 /* Components */
@@ -332,6 +332,12 @@ INSERT INTO components (
   vendor_id, name, qualifier
 ) VALUES (
   36906, 2, 33  /* ITA TBOOT */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 3, 33  /* ITA IMA */
 );
 
 /* Product-File */
@@ -1436,67 +1442,67 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
+  23, 7, 3, 32768, X'284ae59c737c4d1ddf785374cbb59a4c8d635590'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  24, 7, 3, 32768, X'311087044256d9c3a0b570ba3124cbb4d46f1197'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  25, 7, 3, 32768, X'b1f1f675427640aaa77bef93f26a333f0d57c9c5'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  26, 7, 3, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  27, 7, 3, 32768, X'781c3cee5c3468a09f5ebee8e7d534acea0d2513'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  28, 7, 3, 32768, X'fec194a9d8f3af2b3876d4bfbbebf980e87e36e9'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  29, 7, 3, 32768, X'ee1b0f997d7517b286bc9d73a4cf742c65a769be'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  30, 7, 3, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
   40, 4, 2, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
 );
 
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
-  41, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  23, 7, 2, 32768, X'284ae59c737c4d1ddf785374cbb59a4c8d635590'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  24, 7, 2, 32768, X'311087044256d9c3a0b570ba3124cbb4d46f1197'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  25, 7, 2, 32768, X'b1f1f675427640aaa77bef93f26a333f0d57c9c5'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  26, 7, 2, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  27, 7, 2, 32768, X'781c3cee5c3468a09f5ebee8e7d534acea0d2513'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  28, 7, 2, 32768, X'fec194a9d8f3af2b3876d4bfbbebf980e87e36e9'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  29, 7, 2, 32768, X'ee1b0f997d7517b286bc9d73a4cf742c65a769be'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
-  30, 7, 2, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
-);
-
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
-) VALUES (
   40, 7, 2, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  41, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
 
 INSERT INTO file_hashes (
