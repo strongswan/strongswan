@@ -24,7 +24,7 @@ void usage(void)
 {
 	printf("\
 Usage:\n\
-  ipsec attest --files|--components|--products|--hashes [options]\n\
+  ipsec attest --files|--components|--products|--hashes|--add|--del [options]\n\
   \n\
   ipsec attest --files [--product <name>|--pid <id>]\n\
     Show a list of files with a software product name or\n\
@@ -45,6 +45,12 @@ Usage:\n\
   ipsec attest --hashes [--sha1|--sha256|--sha384] [--file <path>|--fid <id>]\n\
     Show a list of measurement hashes for a given file or\n\
     its primary key as an optional selector.\n\
-   \n");
+   \n\
+  ipsec attest --add --file <path>|--dir <path>|--product <name>\n\
+    Add a file, directory or product entry\n\
+   \n\
+  ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>|--product <name>|--pid <id>\n\
+    Delete a file, directory or product entry referenced either by value or by primary key\n\
+  \n");
 }
 
