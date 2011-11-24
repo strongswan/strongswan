@@ -363,7 +363,7 @@ static void adjust_keylen(u_int16_t alg, chunk_t *key)
 METHOD(keymat_v1_t, derive_ike_keys, bool,
 	private_keymat_v1_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
-	auth_class_t auth, shared_key_t *shared_key)
+	auth_method_t auth, shared_key_t *shared_key)
 {
 	chunk_t g_xy, g_xi, g_xr, dh_me, spi_i, spi_r, nonces, data, skeyid_e;
 	u_int16_t alg;
@@ -411,7 +411,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 	switch (auth)
 	{
-		case AUTH_CLASS_PSK:
+		case AUTH_PSK:
+		case AUTH_XAUTH_INIT_PSK:
 		{	/* SKEYID = prf(pre-shared-key, Ni_b | Nr_b) */
 			chunk_t psk;
 			if (!shared_key)
@@ -425,7 +426,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			this->prf->allocate_bytes(this->prf, nonces, &this->skeyid);
 			break;
 		}
-		case AUTH_CLASS_PUBKEY:
+		case AUTH_RSA:
+		case AUTH_XAUTH_INIT_RSA:
 		{
 			/* signatures : SKEYID = prf(Ni_b | Nr_b, g^xy)
 			 * pubkey encr: SKEYID = prf(hash(Ni_b | Nr_b), CKY-I | CKY-R) */

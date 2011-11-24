@@ -583,11 +583,8 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 {
 	ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
 	shared_key_t *shared_key = NULL;
-	auth_class_t auth;
 
-	/* TODO-IKEv1: support other authentication classes */
-	auth = AUTH_CLASS_PSK;
-	switch (auth)
+	switch (this->auth_method)
 	{
 		case AUTH_CLASS_PSK:
 		case AUTH_CLASS_XAUTH_PSK:
@@ -597,7 +594,7 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 			break;
 	}
 	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
-						this->dh_value, nonce_i, nonce_r, id, auth, shared_key))
+			this->dh_value, nonce_i, nonce_r, id, this->auth_method, shared_key))
 	{
 		DESTROY_IF(shared_key);
 		return FALSE;

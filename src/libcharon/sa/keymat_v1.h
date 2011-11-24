@@ -54,7 +54,7 @@ struct keymat_v1_t {
 	bool (*derive_ike_keys)(keymat_v1_t *this, proposal_t *proposal,
 							diffie_hellman_t *dh, chunk_t dh_other,
 							chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
-							auth_class_t auth, shared_key_t *shared_key);
+							auth_method_t auth, shared_key_t *shared_key);
 
 	/**
 	 * Derive keys for the CHILD_SA.
