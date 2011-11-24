@@ -473,6 +473,10 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH_PSK);
 	}
+	else if (streq(auth, "xauthrsasig"))
+	{
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH_PUBKEY);
+	}
 	else if (strneq(auth, "eap", 3))
 	{
 		enumerator_t *enumerator;

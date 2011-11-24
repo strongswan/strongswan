@@ -44,6 +44,8 @@ enum auth_class_t {
 	AUTH_CLASS_EAP = 3,
 	/** authentication using pre-shared secrets in combination with XAuth */
 	AUTH_CLASS_XAUTH_PSK = 4,
+	/** authentication using public keys in combination with XAuth */
+	AUTH_CLASS_XAUTH_PUBKEY = 5,
 };
 
 /**

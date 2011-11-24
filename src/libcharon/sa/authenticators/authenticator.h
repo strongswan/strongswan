@@ -73,6 +73,16 @@ enum auth_method_t {
 	 * ECDSA with SHA-512 on the P-521 curve as specified in RFC 4754
 	 */
 	AUTH_ECDSA_521 = 11,
+
+	/**
+	 * IKEv1 initiator XAUTH with PSK, outside of IANA range
+	 */
+	AUTH_XAUTH_INIT_PSK = 256,
+
+	/**
+	 * IKEv1 initiator XAUTH with RSA, outside of IANA range
+	 */
+	AUTH_XAUTH_INIT_RSA,
 };
 
 /**

@@ -298,6 +298,10 @@ static auth_method_t get_auth_method(private_main_mode_t *this)
 	{
 		case AUTH_CLASS_PSK:
 			return AUTH_PSK;
+		case AUTH_CLASS_XAUTH_PSK:
+			return AUTH_XAUTH_INIT_PSK;
+		case AUTH_CLASS_XAUTH_PUBKEY:
+			return AUTH_XAUTH_INIT_RSA;
 		case AUTH_CLASS_PUBKEY:
 			/* TODO-IKEv1: look for a key, return RSA or ECDSA */
 		default:
@@ -586,6 +590,7 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 	switch (auth)
 	{
 		case AUTH_CLASS_PSK:
+		case AUTH_CLASS_XAUTH_PSK:
 			shared_key = lookup_shared_key(this);
 			break;
 		default:

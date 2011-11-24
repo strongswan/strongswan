@@ -583,8 +583,12 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 			return IKEV1_AUTH_RSA_SIG;
 		case AUTH_DSS:
 			return IKEV1_AUTH_DSS_SIG;
+		case AUTH_XAUTH_INIT_PSK:
+			return IKEV1_AUTH_XAUTH_INIT_PSK;
+		case AUTH_XAUTH_INIT_RSA:
+			return IKEV1_AUTH_XAUTH_INIT_RSA;
 		default:
-			/* TODO-IKEv1: Handle XAUTH methods */
+			/* TODO-IKEv1: Handle other XAUTH methods */
 			/* TODO-IKEv1: Handle ECDSA methods */
 		case AUTH_PSK:
 			return IKEV1_AUTH_PSK;
@@ -877,8 +881,12 @@ METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
 			return AUTH_RSA;
 		case IKEV1_AUTH_DSS_SIG:
 			return AUTH_DSS;
+		case IKEV1_AUTH_XAUTH_INIT_PSK:
+			return AUTH_XAUTH_INIT_PSK;
+		case IKEV1_AUTH_XAUTH_INIT_RSA:
+			return AUTH_XAUTH_INIT_RSA;
 		default:
-			/* TODO-IKEv1: XAUTH, ECDSA sigs */
+			/* TODO-IKEv1: other XAUTH, ECDSA sigs */
 			return AUTH_NONE;
 	}
 }
