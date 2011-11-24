@@ -55,6 +55,16 @@ if USE_SIMAKA
   libs += $(DESTDIR)$(ipseclibdir)/libsimaka.so
 endif
 
+if USE_IMCV
+  deps += $(top_builddir)/src/libimcv/libimcv.la
+  libs += $(DESTDIR)$(ipseclibdir)/libimcv.so
+endif
+
+if USE_PTS
+  deps += $(top_builddir)/src/libpts/libpts.la
+  libs += $(DESTDIR)$(ipseclibdir)/libpts.so
+endif
+
 if USE_CHARON
   deps += $(top_builddir)/src/libcharon/libcharon.la
   libs += $(DESTDIR)$(ipseclibdir)/libcharon.so
@@ -77,6 +87,10 @@ endif
 
 if USE_ATTR_SQL
   exes += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
+endif
+
+if USE_IMV_ATTESTATION
+  exes += $(top_builddir)/src/libimcv/plugins/imv_attestation/.libs/attest
 endif
 
 checksum.c : checksum_builder $(deps) $(exes)

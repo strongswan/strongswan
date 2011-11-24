@@ -3,7 +3,7 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libimcv
 
 ipseclib_LTLIBRARIES = libpts.la
 
-libpts_la_LIBADD = -ltspi
+libpts_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la -ltspi
 
 libpts_la_SOURCES = \
 	libpts.h libpts.c \
