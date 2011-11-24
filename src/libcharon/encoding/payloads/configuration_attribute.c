@@ -99,7 +99,7 @@ static encoding_rule_t encodings_v1[] = {
 	/* AF Flag */
 	{ FLAG,							offsetof(private_configuration_attribute_t, af_flag)		},
 	/* type of the attribute as 15 bit unsigned integer */
-	{ ATTRIBUTE_TYPE,				offsetof(private_configuration_attribute_t, type)			},
+	{ ATTRIBUTE_TYPE,				offsetof(private_configuration_attribute_t, attr_type)			},
 	/* Length of attribute value */
 	{ ATTRIBUTE_LENGTH_OR_VALUE,	offsetof(private_configuration_attribute_t, length_or_value)},
 	/* Value of attribute if attribute format flag is zero */
