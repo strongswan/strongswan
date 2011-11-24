@@ -624,7 +624,7 @@ METHOD(task_t, build_r, status_t,
 			/* TODO-IKEv1: Check the proposal for XAuthInit* auth modes */
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */
 			if(0) /* TODO-IKEv1: Change to 1 if XAUTH is desired. */
-			this->ike_sa->initiate_xauth(this->ike_sa);
+				return MIGRATE;
 			return SUCCESS;
 		}
 		default:

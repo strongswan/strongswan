@@ -22,6 +22,7 @@
 #include <sa/tasks/ike_vendor.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
+#include <sa/tasks/xauth_request.h>
 #include <processing/jobs/retransmit_job.h>
 
 typedef struct exchange_t exchange_t;
@@ -535,6 +536,8 @@ static status_t process_request(private_task_manager_t *this,
 				task = (task_t *)ike_vendor_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t *)xauth_request_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
