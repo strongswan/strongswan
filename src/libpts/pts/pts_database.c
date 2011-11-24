@@ -49,7 +49,7 @@ METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 				"SELECT f.id, f.type, f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
 				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.name = ? AND f.measurement = 1",
+				"WHERE p.name = ? AND pf.measurement = 1",
 				DB_TEXT, product, DB_INT, DB_INT, DB_TEXT);
 	return e;
 }
@@ -64,7 +64,7 @@ METHOD(pts_database_t, create_file_meta_enumerator, enumerator_t*,
 				"SELECT f.type, f.path FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
 				"JOIN products AS p ON p.id = pf.product "
-				"WHERE p.name = ? AND f.metadata = 1",
+				"WHERE p.name = ? AND pf.metadata = 1",
 				DB_TEXT, product, DB_INT, DB_TEXT);
 	return e;
 }

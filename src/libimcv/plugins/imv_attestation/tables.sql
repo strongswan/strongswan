@@ -4,9 +4,7 @@ DROP TABLE IF EXISTS files;
 CREATE TABLE files (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   type INTEGER NOT NULL,
-  path TEXT NOT NULL,
-  measurement INTEGER DEFAULT 0,
-  metadata INTEGER DEFAULT 0
+  path TEXT NOT NULL
 );
 
 DROP TABLE IF EXISTS components;
@@ -31,6 +29,8 @@ DROP TABLE IF EXISTS product_file;
 CREATE TABLE product_file (
   product INTEGER NOT NULL,
   file INTEGER NOT NULL,
+  measurement INTEGER DEFAULT 0,
+  metadata INTEGER DEFAULT 0,
   PRIMARY KEY (product, file)
 );
 

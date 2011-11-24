@@ -87,6 +87,9 @@ attest_db_t *attest;
 static void cleanup(void)
 {
 	attest->destroy(attest);
+	libpts_deinit();
+	libimcv_deinit();
+	closelog();
 }
 
 static void do_args(int argc, char *argv[])
@@ -295,10 +298,6 @@ int main(int argc, char *argv[])
 	libpts_init();
 
 	do_args(argc, argv);
-
-	libpts_deinit();
-	libimcv_deinit();
-	closelog();
 
 	exit(EXIT_SUCCESS);
 }

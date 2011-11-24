@@ -45,135 +45,135 @@ INSERT INTO products (
 /* Files */
 
 INSERT INTO files (			/* 1 */
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/lib/i386-linux-gnu/libdl.so.2', 1
+  0, '/lib/i386-linux-gnu/libdl.so.2'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/lib/x86_64-linux-gnu/libdl.so.2', 1
+  0, '/lib/x86_64-linux-gnu/libdl.so.2'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/lib/libdl.so.2', 1
+  0, '/lib/libdl.so.2'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/sbin/iptables', 1
+  0, '/sbin/iptables'
 );
 
 INSERT INTO files (			/* 5 */
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/lib/libxtables.so.5', 1
+  0, '/lib/libxtables.so.5'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/lib/libxtables.so.2', 1
+  0, '/lib/libxtables.so.2'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  1, '/lib/xtables/', 1
+  1, '/lib/xtables/'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_udp.so', 1
+  0, 'libxt_udp.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_tcp.so', 1
+  0, 'libxt_tcp.so'
 );
 
 INSERT INTO files (			/* 10 */
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_esp.so', 1
+  0, 'libxt_esp.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_policy.so', 1
+  0, 'libxt_policy.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_conntrack.so', 1
+  0, 'libxt_conntrack.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libipt_SNAT.so', 1
+  0, 'libipt_SNAT.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libipt_DNAT.so', 1
+  0, 'libipt_DNAT.so'
 );
 
 INSERT INTO files (			/* 15 */
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libipt_MASQUERADE.so', 1
+  0, 'libipt_MASQUERADE.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libipt_LOG.so', 1
+  0, 'libipt_LOG.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, '/sbin/ip6tables', 1
+  0, '/sbin/ip6tables'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libip6t_LOG.so', 1
+  0, 'libip6t_LOG.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_mark.so', 1
+  0, 'libxt_mark.so'
 );
 
 INSERT INTO files (			/* 20 */
-  type, path, measurement
+  type, path
 ) VALUES (
-  0, 'libxt_MARK.so', 1
+  0, 'libxt_MARK.so'
 );
 
 INSERT INTO files (
-  type, path, measurement
+  type, path
 ) VALUES (
-  1, '/lib/iptables', 1
+  1, '/lib/iptables'
 );
 
 INSERT INTO files (
-  type, path, metadata
+  type, path
 ) VALUES (
-  0, '/etc/tnc_config', 1
+  0, '/etc/tnc_config'
 );
 
 INSERT INTO files (
@@ -337,225 +337,213 @@ INSERT INTO components (
 /* Product-File */
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  1, 1
+  1, 1, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  1, 4
+  1, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  1, 5
+  1, 5, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  1, 7
+  1, 7, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  1, 17
+  1, 17, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  1, 22
+  1, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  2, 2
+  2, 2, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  2, 4
+  2, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  2, 5
+  2, 5, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  2, 7
+  2, 7, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  2, 22
+  2, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  3, 3
+  3, 3, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  3, 4
+  3, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  3, 22
+  3, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 3
+  4, 3, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 4
+  4, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 6
+  4, 6, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 7
+  4, 7, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  4, 22
+  4, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 23
+  5, 3, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  4, 24
+  5, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  5, 3
+  5, 6, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  5, 4
+  5, 7, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  5, 6
+  5, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  5, 7
+  6, 3, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  5, 22
+  6, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  6, 3
+  6, 17, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  6, 4
+  6, 21, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  6, 17
+  6, 22, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  6, 21
+  7, 1, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  6, 22
+  7, 4, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  7, 1
+  7, 5, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  7, 4
+  7, 7, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, measurement
 ) VALUES (
-  7, 5
+  7, 17, 1
 );
 
 INSERT INTO product_file (
-  product, file
+  product, file, metadata
 ) VALUES (
-  7, 7
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  7, 17
-);
-
-INSERT INTO product_file (
-  product, file
-) VALUES (
-  7, 22
+  7, 22, 1
 );
 
 /* Product Component */

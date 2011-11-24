@@ -382,15 +382,26 @@ METHOD(attest_db_t, list_files, void,
 {
 	enumerator_t *e;
 	char *file;
-	int fid, is_dir, count = 0;
+	int fid, is_dir, meas, meta, count = 0;
 
 	if (this->pid)
 	{
 		e = this->db->query(this->db,
-				"SELECT f.id, f.type, f.path FROM files AS f "
+				"SELECT f.id, f.type, f.path, pf.measurement, pf.metadata "
+				"FROM files AS f "
 				"JOIN product_file AS pf ON f.id = pf.file "
 				"WHERE pf.product = ? ORDER BY f.path",
-				DB_INT, this->pid, DB_INT, DB_INT, DB_TEXT);
+				DB_INT, this->pid, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
+		if (e)
+		{
+			while (e->enumerate(e, &fid, &is_dir, &file, &meas, &meta))
+			{
+				printf("%3d: |%s%s| %s %s\n", fid, meas ? "M":" ", meta ? "T":" ",
+											 is_dir ? "d":" ", file);
+				count++;
+			}
+			e->destroy(e);
+		}
 	}
 	else
 	{
@@ -398,23 +409,23 @@ METHOD(attest_db_t, list_files, void,
 				"SELECT id, type, path FROM files "
 				"ORDER BY path",
 				DB_INT, DB_INT, DB_TEXT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &fid, &is_dir, &file))
+		if (e)
 		{
-			printf("%3d: %s %s\n", fid, is_dir ? "d":" ", file);
-			count++;
+			while (e->enumerate(e, &fid, &is_dir, &file))
+			{
+				printf("%3d: %s %s\n", fid, is_dir ? "d":" ", file);
+				count++;
+			}
+			e->destroy(e);
 		}
-		e->destroy(e);
+	}
 
-		printf("%d file%s found", count, (count == 1) ? "" : "s");
-		if (this->product)
-		{
-			printf(" for product '%s'", this->product);
-		}
-		printf("\n");
+	printf("%d file%s found", count, (count == 1) ? "" : "s");
+	if (this->product)
+	{
+		printf(" for product '%s'", this->product);
 	}
+	printf("\n");
 }
 
 METHOD(attest_db_t, list_products, void,
@@ -422,38 +433,49 @@ METHOD(attest_db_t, list_products, void,
 {
 	enumerator_t *e;
 	char *product;
-	int pid, count = 0;
+	int pid, meas, meta, count = 0;
 
 	if (this->fid)
 	{
 		e = this->db->query(this->db,
-				"SELECT p.id, p.name FROM products AS p "
+				"SELECT p.id, p.name, pf.measurement, pf.metadata "
+				"FROM products AS p "
 				"JOIN product_file AS pf ON p.id = pf.product "
 				"WHERE pf.file = ? ORDER BY p.name",
-				DB_INT, this->fid, DB_INT, DB_TEXT);
+				DB_INT, this->fid, DB_INT, DB_TEXT, DB_INT, DB_INT);
+		if (e)
+		{
+			while (e->enumerate(e, &pid, &product, &meas, &meta))
+			{
+				printf("%3d: |%s%s| %s\n", pid, meas ? "M":" ", meta ? "T":" ",
+										   product);
+				count++;
+			}
+			e->destroy(e);
+		}
 	}
 	else
 	{
 		e = this->db->query(this->db, "SELECT id, name FROM products "
 				"ORDER BY name",
 				DB_INT, DB_TEXT);
-	}
-	if (e)
-	{
-		while (e->enumerate(e, &pid, &product))
+		if (e)
 		{
-			printf("%3d: %s\n", pid, product);
-			count++;
+			while (e->enumerate(e, &pid, &product))
+			{
+				printf("%3d: %s\n", pid, product);
+				count++;
+			}
+			e->destroy(e);
 		}
-		e->destroy(e);
+	}
 
-		printf("%d product%s found", count, (count == 1) ? "" : "s");
-		if (this->file)
-		{
-			printf(" for file '%s'", this->file);
-		}
-		printf("\n");
+	printf("%d product%s found", count, (count == 1) ? "" : "s");
+	if (this->file)
+	{
+		printf(" for file '%s'", this->file);
 	}
+	printf("\n");
 }
 
 /**
