@@ -265,7 +265,7 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
 		if (list->get_count(list) > 1)
 		{
 			DBG1(DBG_IKE, "configuration has more than one %s traffic selector,"
-				 " using first IKEv1", initiator ? "initiator" : "responder");
+				 " using first only", initiator ? "initiator" : "responder");
 		}
 		ts = ts->clone(ts);
 	}
@@ -282,13 +282,12 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
 /**
  * Add selected traffic selectors to message
  */
-static void add_ts(private_quick_mode_t *this, message_t *message,
-				   bool initiator)
+static void add_ts(private_quick_mode_t *this, message_t *message)
 {
 	id_payload_t *id_payload;
 	host_t *hsi, *hsr;
 
-	if (initiator)
+	if (this->initiator)
 	{
 		hsi = this->ike_sa->get_my_host(this->ike_sa);
 		hsr = this->ike_sa->get_other_host(this->ike_sa);
@@ -318,8 +317,7 @@ static void add_ts(private_quick_mode_t *this, message_t *message,
 /**
  * Get traffic selectors from received message
  */
-static bool get_ts(private_quick_mode_t *this, message_t *message,
-				   bool initiator)
+static bool get_ts(private_quick_mode_t *this, message_t *message)
 {
 	traffic_selector_t *tsi = NULL, *tsr = NULL;
 	enumerator_t *enumerator;
@@ -350,7 +348,7 @@ static bool get_ts(private_quick_mode_t *this, message_t *message,
 	enumerator->destroy(enumerator);
 
 	/* create host2host selectors if ID payloads missing */
-	if (initiator)
+	if (this->initiator)
 	{
 		hsi = this->ike_sa->get_my_host(this->ike_sa);
 		hsr = this->ike_sa->get_other_host(this->ike_sa);
@@ -370,7 +368,7 @@ static bool get_ts(private_quick_mode_t *this, message_t *message,
 		tsr = traffic_selector_create_from_subnet(hsr->clone(hsr),
 							hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0);
 	}
-	if (initiator)
+	if (this->initiator)
 	{
 		/* check if peer selection valid */
 		if (!tsr->is_contained_in(tsr, this->tsr) ||
@@ -442,7 +440,7 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-			add_ts(this, message, TRUE);
+			add_ts(this, message);
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
@@ -466,7 +464,7 @@ METHOD(task_t, process_r, status_t,
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
 
-			if (!get_ts(this, message, FALSE))
+			if (!get_ts(this, message))
 			{
 				return FAILED;
 			}
@@ -561,7 +559,7 @@ METHOD(task_t, build_r, status_t,
 			{
 				return FAILED;
 			}
-			add_ts(this, message, FALSE);
+			add_ts(this, message);
 
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
@@ -603,7 +601,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				return FAILED;
 			}
-			if (!get_ts(this, message, TRUE))
+			if (!get_ts(this, message))
 			{
 				return FAILED;
 			}
