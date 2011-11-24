@@ -68,9 +68,26 @@ struct attest_db_t {
 	bool (*set_fid)(attest_db_t *this, int fid);
 
 	/**
-	 * Set directory of the measurement file to be queried
+	 * Set functional component to be queried
 	 *
-	 * @param directory		directory containing the measurement file
+	 * @param comp			functional component
+	 * @param create		if TRUE create database entry if it doesn't exist
+	 * @return				TRUE if successful
+	 */
+	bool (*set_component)(attest_db_t *this, char *comp, bool create);
+
+	/**
+	 * Set primary key of the functional component to be queried
+	 *
+	 * @param fid			primary key of functional component
+	 * @return				TRUE if successful
+	 */
+	bool (*set_cid)(attest_db_t *this, int fid);
+
+	/**
+	 * Set directory to be queried
+	 *
+	 * @param dir			directory
 	 * @param create		if TRUE create database entry if it doesn't exist
 	 * @return				TRUE if successful
 	 */

@@ -76,6 +76,21 @@ struct private_attest_db_t {
 	bool dir_set;
 
 	/**
+	 * Component Functional Name to be queried
+	 */
+	pts_comp_func_name_t *cfn;
+
+	/**
+	 * Primary key of the Component Functional Name to be queried
+	 */
+	int cid;
+
+	/**
+	 * TRUE if Component Functional Name has been set
+	 */
+	bool comp_set;
+
+	/**
 	 * File measurement hash algorithm
 	 */
 	pts_meas_algorithms_t algo;
@@ -86,6 +101,29 @@ struct private_attest_db_t {
 	database_t *db;
 
 };
+
+char* print_cfn(pts_comp_func_name_t *cfn)
+{
+	static char buf[BUF_LEN];
+	char flags[8];
+	int type, vid, name, qualifier, n;
+	enum_name_t *names, *types;
+
+	vid = cfn->get_vendor_id(cfn),
+	name = cfn->get_name(cfn);
+	qualifier = cfn->get_qualifier(cfn);
+	n = snprintf(buf, BUF_LEN, "0x%06x/0x%08x-0x%02x", vid, name, qualifier);
+
+	names = pts_components->get_comp_func_names(pts_components, vid);
+	types = pts_components->get_qualifier_type_names(pts_components, vid);
+	type =  pts_components->get_qualifier(pts_components, cfn, flags);
+	if (names && types)
+	{
+		n = snprintf(buf + n, BUF_LEN - n, " %N/%N [%s] %N",
+					 pen_names, vid, names, name, flags, types, type);
+	}
+	return buf;
+}
 
 METHOD(attest_db_t, set_product, bool,
 	private_attest_db_t *this, char *product, bool create)
@@ -315,6 +353,109 @@ METHOD(attest_db_t, set_did, bool,
 	return this->dir_set;
 }
 
+METHOD(attest_db_t, set_component, bool,
+	private_attest_db_t *this, char *comp, bool create)
+{
+	enumerator_t *e;
+	char *pos1, *pos2;
+	int vid, name, qualifier;
+	pts_comp_func_name_t *cfn;
+
+	if (this->comp_set)
+	{
+		printf("component has already been set\n");
+		return FALSE;
+	}
+
+	/* parse component string */
+	pos1 = strchr(comp, '/');
+	pos2 = strchr(comp, '-');
+	if (!pos1 || !pos2)
+	{
+		printf("component string must have the form \"vendor_id/name-qualifier\"\n");
+		return FALSE;
+	}
+	vid       = atoi(comp);
+	name      = atoi(pos1 + 1);
+	qualifier = atoi(pos2 + 1);
+	cfn = pts_comp_func_name_create(vid, name, qualifier);
+
+	e = this->db->query(this->db,
+					   "SELECT id FROM components "
+					   "WHERE vendor_id = ? AND name = ? AND qualifier = ?",
+						DB_INT, vid, DB_INT, name, DB_INT, qualifier, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->cid))
+		{
+			this->comp_set = TRUE;
+			this->cfn = cfn;
+		}
+		e->destroy(e);
+	}
+	if (this->comp_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("component '%s' not found in database\n", print_cfn(cfn));
+		cfn->destroy(cfn);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	this->comp_set = this->db->execute(this->db, &this->cid,
+						"INSERT INTO components (vendor_id, name, qualifier) "
+						"VALUES (?, ?, ?)",
+						DB_INT, vid, DB_INT, name, DB_INT, qualifier) == 1;
+
+	printf("component '%s' %sinserted into database\n", print_cfn(cfn),
+		   this->comp_set ? "" : "could not be ");
+	if (this->comp_set)
+	{
+		this->cfn = cfn;
+	}
+	else
+	{
+		cfn->destroy(cfn);
+	}
+	return this->comp_set;
+}
+
+METHOD(attest_db_t, set_cid, bool,
+	private_attest_db_t *this, int cid)
+{
+	enumerator_t *e;
+	int vid, name, qualifier;
+
+	if (this->comp_set)
+	{
+		printf("component has already been set\n");
+		return FALSE;
+	}
+	this->cid = cid;
+
+	e = this->db->query(this->db, "SELECT vendor_id, name, qualifier "
+								  "FROM components WHERE id = ?",
+						DB_INT, cid, DB_INT, DB_INT, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &vid, &name, &qualifier))
+		{
+			this->cfn = pts_comp_func_name_create(vid, name, qualifier);
+			this->comp_set = TRUE;
+		}
+		else
+		{
+			printf("no component found with cid %d\n", cid);
+		}
+		e->destroy(e);
+	}
+	return this->comp_set;
+}
+
 METHOD(attest_db_t, set_algo, void,
 	private_attest_db_t *this, pts_meas_algorithms_t algo)
 {
@@ -325,10 +466,8 @@ METHOD(attest_db_t, list_components, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e;
-	enum_name_t *names, *types;
 	pts_comp_func_name_t *cfn;
-	int type, cid, vid, name, qualifier, count = 0;
-	char flags[8];
+	int cid, vid, name, qualifier, count = 0;
 
 	if (this->pid)
 	{
@@ -350,26 +489,15 @@ METHOD(attest_db_t, list_components, void,
 	{
 		while (e->enumerate(e, &cid, &vid, &name, &qualifier))
 		{
-			printf("%3d: 0x%06x/0x%08x-0x%02x", cid, vid, name, qualifier);
-
 			cfn   = pts_comp_func_name_create(vid, name, qualifier);
-			names = pts_components->get_comp_func_names(pts_components, vid);
-			types = pts_components->get_qualifier_type_names(pts_components, vid);
-			type =  pts_components->get_qualifier(pts_components, cfn, flags);
-			if (names && types)
-			{
-				printf(" %N '%N' [%s] '%N'", pen_names, vid, names, name, flags,
-											types, type);
-			}
-			printf("\n");
+			printf("%3d: %s\n", cid, print_cfn(cfn));
 			cfn->destroy(cfn);
-
 			count++;
 		}
 		e->destroy(e);
 
 		printf("%d component%s found", count, (count == 1) ? "" : "s");
-		if (this->product)
+		if (this->product_set)
 		{
 			printf(" for product '%s'", this->product);
 		}
@@ -423,7 +551,7 @@ METHOD(attest_db_t, list_files, void,
 	}
 
 	printf("%d file%s found", count, (count == 1) ? "" : "s");
-	if (this->product)
+	if (this->product_set)
 	{
 		printf(" for product '%s'", this->product);
 	}
@@ -456,6 +584,23 @@ METHOD(attest_db_t, list_products, void,
 			e->destroy(e);
 		}
 	}
+	else if (this->cid)
+	{
+		e = this->db->query(this->db,
+				"SELECT p.id, p.name FROM products AS p "
+				"JOIN product_component AS pc ON p.id = pc.product "
+				"WHERE pc.component = ? ORDER BY p.name",
+				DB_INT, this->cid, DB_INT, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &pid, &product, &meas, &meta))
+			{
+				printf("%3d: %s\n", pid, product);
+				count++;
+			}
+			e->destroy(e);
+		}
+	}
 	else
 	{
 		e = this->db->query(this->db, "SELECT id, name FROM products "
@@ -473,9 +618,13 @@ METHOD(attest_db_t, list_products, void,
 	}
 
 	printf("%d product%s found", count, (count == 1) ? "" : "s");
-	if (this->file)
+	if (this->file_set)
 	{
 		printf(" for file '%s'", this->file);
+	}
+	else if (this->comp_set)
+	{
+		printf(" for component '%s'", print_cfn(this->cfn));
 	}
 	printf("\n");
 }
@@ -523,7 +672,34 @@ METHOD(attest_db_t, list_hashes, void,
 
 	dir = strdup("");
 
-	if (this->pid && this->fid)
+	if (this->pid && this->fid && this->cid)
+	{
+		e = this->db->query(this->db,
+				"SELECT hash FROM file_hashes "
+				"WHERE algo = ? AND file = ? AND component = ? AND product = ?",
+				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->cid,
+				DB_INT, this->pid, DB_BLOB);
+		if (e)
+		{
+			while (e->enumerate(e, &hash))
+			{
+				if (this->fid != fid_old)
+				{
+					printf("%3d: %s%s%s\n", this->fid, this->dir,
+						   slash(this->dir, this->file) ? "/" : "", this->file);
+					fid_old = this->fid;
+				}
+				printf("     %#B '%s'\n", &hash, this->product);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for component '%s'\n", count,
+				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   (count == 1) ? "" : "s", print_cfn(this->cfn));
+		}
+	}
+	else if (this->pid && this->fid)
 	{
 		e = this->db->query(this->db,
 				"SELECT hash FROM file_hashes "
@@ -698,6 +874,17 @@ METHOD(attest_db_t, delete, bool,
 		return success;
 	}
 
+	if (this->cid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM components WHERE id = ?",
+								DB_UINT, this->cid) > 0;
+
+		printf("component '%s' %sdeleted from database\n", print_cfn(this->cfn),
+			   success ? "" : "could not be ");
+		return success;
+	}
+
 	printf("empty delete command\n");
 	return FALSE;
 }
@@ -706,6 +893,7 @@ METHOD(attest_db_t, destroy, void,
 	private_attest_db_t *this)
 {
 	DESTROY_IF(this->db);
+	DESTROY_IF(this->cfn);
 	free(this->product);
 	free(this->file);
 	free(this->dir);
@@ -727,6 +915,8 @@ attest_db_t *attest_db_create(char *uri)
 			.set_fid = _set_fid,
 			.set_directory = _set_directory,
 			.set_did = _set_did,
+			.set_component = _set_component,
+			.set_cid = _set_cid,
 			.set_algo = _set_algo,
 			.list_products = _list_products,
 			.list_files = _list_files,

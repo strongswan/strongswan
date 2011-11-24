@@ -136,6 +136,7 @@ static void do_args(int argc, char *argv[])
 			{ "did", required_argument, NULL, '4' },
 			{ "fid", required_argument, NULL, '5' },
 			{ "pid", required_argument, NULL, '6' },
+			{ "cid", required_argument, NULL, '7' },
 			{ 0,0,0,0 }
 		};
 
@@ -164,6 +165,12 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'd':
 				op = OP_DEL;
+				continue;
+			case 'C':
+				if (!attest->set_component(attest, optarg, op == OP_ADD))
+				{
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			case 'D':
 				if (!attest->set_directory(attest, optarg, op == OP_ADD))
@@ -221,6 +228,12 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case '6':
 				if (!attest->set_pid(attest, atoi(optarg)))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			case '7':
+				if (!attest->set_cid(attest, atoi(optarg)))
 				{
 					exit(EXIT_FAILURE);
 				}
