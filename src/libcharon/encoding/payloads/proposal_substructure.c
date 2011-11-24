@@ -237,6 +237,16 @@ typedef enum {
 	IKEV1_AUTH_RSA_SIG = 3,
 	IKEV1_AUTH_RSA_ENC = 4,
 	IKEV1_AUTH_RSA_ENC_REV = 5,
+	IKEV1_AUTH_XAUTH_INIT_PSK = 65001,
+	IKEV1_AUTH_XAUTH_RESP_PSK = 65002,
+	IKEV1_AUTH_XAUTH_INIT_DSS = 65003,
+	IKEV1_AUTH_XAUTH_RESP_DSS = 65004,
+	IKEV1_AUTH_XAUTH_INIT_RSA = 65005,
+	IKEV1_AUTH_XAUTH_RESP_RSA = 65006,
+	IKEV1_AUTH_XAUTH_INIT_RSA_ENC = 65007,
+	IKEV1_AUTH_XAUTH_RESP_RSA_ENC = 65008,
+	IKEV1_AUTH_XAUTH_INIT_RSA_ENC_REV = 65009,
+	IKEV1_AUTH_XAUTH_RESP_RSA_ENC_REV = 65010,
 } ikev1_auth_method_t;
 
 METHOD(payload_t, verify, status_t,
@@ -813,9 +823,16 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
 	enumerator->destroy(enumerator);
 
 	/* TODO-IKEv1: Add lifetime, non-fixed auth-method and other attributes */
+	if(1) /* TODO-IKEv1: Change to 0 if XAUTH is desired. */
+	{
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_PSK));
+	}else{
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH1_AUTH_METHOD, IKEV1_AUTH_XAUTH_INIT_PSK));
+	}
 	transform->add_transform_attribute(transform,
 		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH1_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
