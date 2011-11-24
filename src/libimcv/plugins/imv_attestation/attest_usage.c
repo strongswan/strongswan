@@ -24,10 +24,14 @@ void usage(void)
 {
 	printf("\
 Usage:\n\
-  ipsec attest --files|--products|--hashes [options]\n\
+  ipsec attest --files|--components|--products|--hashes [options]\n\
   \n\
   ipsec attest --files [--product <name>|--pid <id>]\n\
     Show a list of files with a software product name or\n\
+    its primary key as an optional selector.\n\
+  \n\
+  ipsec attest --components [--product <name>|--pid <id>]\n\
+    Show a list of components with a software product name or\n\
     its primary key as an optional selector.\n\
   \n\
   ipsec attest --products [--file <path>|--fid <id>]\n\

@@ -27,7 +27,7 @@ attest_SOURCES = attest.c \
 	attest_db.h attest_db.c \
 	tables.sql data.sql
 attest_LDADD = \
-	$(top_builddir)/src/libpts/libpts.la \
 	$(top_builddir)/src/libimcv/libimcv.la \
+	$(top_builddir)/src/libpts/libpts.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 attest.o :	$(top_builddir)/config.status

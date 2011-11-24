@@ -102,6 +102,11 @@ struct attest_db_t {
 	void (*list_files)(attest_db_t *this);
 
 	/**
+	 * List all components stored in the database
+	 */
+	void (*list_components)(attest_db_t *this);
+
+	/**
 	 * List selected measurement hashes stored in the database
 	 */
 	void (*list_hashes)(attest_db_t *this);

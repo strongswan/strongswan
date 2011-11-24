@@ -15,6 +15,9 @@
 
 #include "attest_db.h"
 
+#include "libpts.h"
+#include "pts/components/pts_comp_func_name.h"
+
 typedef struct private_attest_db_t private_attest_db_t;
 
 /**
@@ -318,6 +321,62 @@ METHOD(attest_db_t, set_algo, void,
 	this->algo = algo;
 }
 
+METHOD(attest_db_t, list_components, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	enum_name_t *names, *types;
+	pts_comp_func_name_t *cfn;
+	int type, cid, vid, name, qualifier, count = 0;
+	char flags[8];
+
+	if (this->pid)
+	{
+		e = this->db->query(this->db,
+				"SELECT c.id, c.vendor_id, c.name, c.qualifier "
+				"FROM components AS c "
+				"JOIN product_component AS pc ON c.id = pc.component "
+				"WHERE pc.product = ? ORDER BY c.vendor_id, c.name, c.qualifier",
+				DB_INT, this->pid, DB_INT, DB_INT, DB_INT, DB_INT);
+	}
+	else
+	{
+		e = this->db->query(this->db,
+				"SELECT id, vendor_id, name, qualifier FROM components "
+				"ORDER BY vendor_id, name, qualifier",
+				DB_INT, DB_INT, DB_INT, DB_INT);
+	}
+	if (e)
+	{
+		while (e->enumerate(e, &cid, &vid, &name, &qualifier))
+		{
+			printf("%3d: 0x%06x/0x%08x-0x%02x", cid, vid, name, qualifier);
+
+			cfn   = pts_comp_func_name_create(vid, name, qualifier);
+			names = pts_components->get_comp_func_names(pts_components, vid);
+			types = pts_components->get_qualifier_type_names(pts_components, vid);
+			type =  pts_components->get_qualifier(pts_components, cfn, flags);
+			if (names && types)
+			{
+				printf(" %N '%N' [%s] '%N'", pen_names, vid, names, name, flags,
+											types, type);
+			}
+			printf("\n");
+			cfn->destroy(cfn);
+
+			count++;
+		}
+		e->destroy(e);
+
+		printf("%d component%s found", count, (count == 1) ? "" : "s");
+		if (this->product)
+		{
+			printf(" for product '%s'", this->product);
+		}
+		printf("\n");
+	}
+}
+
 METHOD(attest_db_t, list_files, void,
 	private_attest_db_t *this)
 {
@@ -383,7 +442,7 @@ METHOD(attest_db_t, list_products, void,
 	{
 		while (e->enumerate(e, &pid, &product))
 		{
-			printf("%3d:  %s\n", pid, product);
+			printf("%3d: %s\n", pid, product);
 			count++;
 		}
 		e->destroy(e);
@@ -647,6 +706,7 @@ attest_db_t *attest_db_create(char *uri)
 			.set_algo = _set_algo,
 			.list_products = _list_products,
 			.list_files = _list_files,
+			.list_components = _list_components,
 			.list_hashes = _list_hashes,
 			.add = _add,
 			.delete = _delete,

@@ -19,13 +19,62 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <syslog.h>
 
 #include <library.h>
+#include <debug.h>
 
+#include <imcv.h>
+#include <libpts.h>
 #include <pts/pts_meas_algo.h>
 
 #include "attest_db.h"
 #include "attest_usage.h"
+
+/**
+ * global debug output variables
+ */
+static int debug_level = 0;
+static bool stderr_quiet = TRUE;
+
+/**
+ * attest dbg function
+ */
+static void attest_dbg(debug_t group, level_t level, char *fmt, ...)
+{
+	int priority = LOG_INFO;
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
+
+	if (level <= debug_level)
+	{
+		if (!stderr_quiet)
+		{
+			va_start(args, fmt);
+			vfprintf(stderr, fmt, args);
+			fprintf(stderr, "\n");
+			va_end(args);
+		}
+
+		/* write in memory buffer first */
+		va_start(args, fmt);
+		vsnprintf(buffer, sizeof(buffer), fmt, args);
+		va_end(args);
+
+		/* do a syslog with every line */
+		while (current)
+		{
+			next = strchr(current, '\n');
+			if (next)
+			{
+				*(next++) = '\0';
+			}
+			syslog(priority, "%s\n", current);
+			current = next;
+		}
+	}
+}
 
 /**
  * global attestation database object
@@ -46,6 +95,7 @@ static void do_args(int argc, char *argv[])
 		OP_UNDEF,
 		OP_USAGE,
 		OP_FILES,
+		OP_COMPONENTS,
 		OP_PRODUCTS,
 		OP_HASHES,
 		OP_ADD,
@@ -61,6 +111,7 @@ static void do_args(int argc, char *argv[])
 
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
+			{ "components", no_argument, NULL, 'c' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
@@ -93,6 +144,9 @@ static void do_args(int argc, char *argv[])
 			case 'h':
 				op = OP_USAGE;
 				break;
+			case 'c':
+				op = OP_COMPONENTS;
+				continue;
 			case 'f':
 				op = OP_FILES;
 				continue;
@@ -180,6 +234,9 @@ static void do_args(int argc, char *argv[])
 		case OP_PRODUCTS:
 			attest->list_products(attest);
 			break;
+		case OP_COMPONENTS:
+			attest->list_components(attest);
+			break;
 		case OP_FILES:
 			attest->list_files(attest);
 			break;
@@ -204,6 +261,10 @@ static void do_args(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	char *uri;
+
+	/* enable attest debugging hook */
+	dbg = attest_dbg;
+	openlog("attest", 0, LOG_DEBUG);
 
 	atexit(library_deinit);
 
@@ -230,8 +291,14 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	atexit(cleanup);
+	libimcv_init();
+	libpts_init();
 
 	do_args(argc, argv);
+
+	libpts_deinit();
+	libimcv_deinit();
+	closelog();
 
 	exit(EXIT_SUCCESS);
 }
