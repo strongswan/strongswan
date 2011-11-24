@@ -44,7 +44,7 @@ INSERT INTO products (
 
 /* Files */
 
-INSERT INTO files (
+INSERT INTO files (			/* 1 */
   type, path, measurement
 ) VALUES (
   0, '/lib/i386-linux-gnu/libdl.so.2', 1
@@ -68,7 +68,7 @@ INSERT INTO files (
   0, '/sbin/iptables', 1
 );
 
-INSERT INTO files (
+INSERT INTO files (			/* 5 */
   type, path, measurement
 ) VALUES (
   0, '/lib/libxtables.so.5', 1
@@ -98,7 +98,7 @@ INSERT INTO files (
   0, 'libxt_tcp.so', 1
 );
 
-INSERT INTO files (
+INSERT INTO files (			/* 10 */
   type, path, measurement
 ) VALUES (
   0, 'libxt_esp.so', 1
@@ -128,7 +128,7 @@ INSERT INTO files (
   0, 'libipt_DNAT.so', 1
 );
 
-INSERT INTO files (
+INSERT INTO files (			/* 15 */
   type, path, measurement
 ) VALUES (
   0, 'libipt_MASQUERADE.so', 1
@@ -158,7 +158,7 @@ INSERT INTO files (
   0, 'libxt_mark.so', 1
 );
 
-INSERT INTO files (
+INSERT INTO files (			/* 20 */
   type, path, measurement
 ) VALUES (
   0, 'libxt_MARK.so', 1
@@ -179,19 +179,145 @@ INSERT INTO files (
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'tboot_pcr17'
+  0, 'pcr00'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'tboot_pcr18'
+  0, 'pcr01'
+);
+
+INSERT INTO files (			/* 25 */
+  type, path
+) VALUES (
+  0, 'pcr02'
+);
+             
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr03'
 );
 
 INSERT INTO files (
   type, path
 ) VALUES (
-  0, 'tboot_pcr18'
+  0, 'pcr04'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr05'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr06'
+);
+
+INSERT INTO files (			/* 30 */
+  type, path
+) VALUES (
+  0, 'pcr07'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr08'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr09'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr10'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr11'
+);
+
+INSERT INTO files (			/* 35 */
+  type, path
+) VALUES (
+  0, 'pcr12'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr13'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr14'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr15'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr16'
+);
+
+INSERT INTO files (			/* 40 */
+  type, path
+) VALUES (
+  0, 'pcr17'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr18'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr19'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr20'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr21'
+);
+
+INSERT INTO files (			/* 45 */
+  type, path
+) VALUES (
+  0, 'pcr22'
+);
+
+INSERT INTO files (
+  type, path
+) VALUES (
+  0, 'pcr23'
 );
 
 /* Components */
@@ -1322,25 +1448,73 @@ INSERT INTO file_hashes (
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
-  23, 4, 2, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
+  40, 4, 2, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
 );
 
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
-  24, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
+  41, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
 
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
-  23, 7, 2, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
+  23, 7, 2, 32768, X'284ae59c737c4d1ddf785374cbb59a4c8d635590'
 );
 
 INSERT INTO file_hashes (
   file, product, component, algo, hash
 ) VALUES (
-  24, 7, 2, 32768, X'160d2b04d11eb225fb148615b699081869e15b6c'
+  24, 7, 2, 32768, X'311087044256d9c3a0b570ba3124cbb4d46f1197'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  25, 7, 2, 32768, X'b1f1f675427640aaa77bef93f26a333f0d57c9c5'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  26, 7, 2, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  27, 7, 2, 32768, X'781c3cee5c3468a09f5ebee8e7d534acea0d2513'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  28, 7, 2, 32768, X'fec194a9d8f3af2b3876d4bfbbebf980e87e36e9'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  29, 7, 2, 32768, X'ee1b0f997d7517b286bc9d73a4cf742c65a769be'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  30, 7, 2, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  40, 7, 2, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
+);
+
+INSERT INTO file_hashes (
+  file, product, component, algo, hash
+) VALUES (
+  41, 7, 2, 32768, X'160d2b04d11eb225fb148615b699081869e15b6c'
 );
 
 
