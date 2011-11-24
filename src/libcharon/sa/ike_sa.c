@@ -2129,6 +2129,18 @@ METHOD(ike_sa_t, destroy, void,
 	free(this);
 }
 
+METHOD(ike_sa_t, initiate_xauth, void,
+			 private_ike_sa_t *this)
+{
+	if(this->extensions & EXT_XAUTH)
+	{
+		xauth_request_t *xauth_request_task = xauth_request_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, (task_t*)xauth_request_task);
+
+		this->task_manager->initiate_later(this->task_manager);
+	}
+}
+
 /*
  * Described in header.
  */
@@ -2218,6 +2230,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.callback = _callback,
 			.respond = _respond,
 #endif /* ME */
+			.initiate_xauth = _initiate_xauth,
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,
