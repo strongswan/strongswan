@@ -152,7 +152,7 @@ static encoding_rule_t encodings_v1[] = {
 	{ RESERVED_BYTE,	offsetof(private_cp_payload_t, reserved_byte[0])},
 	{ U_INT_16,			offsetof(private_cp_payload_t, identifier)},
 	/* list of configuration attributes in a list */
-	{ PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE,
+	{ PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE_V1,
 						offsetof(private_cp_payload_t, attributes)		},
 };
 

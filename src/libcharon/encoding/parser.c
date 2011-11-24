@@ -493,6 +493,7 @@ METHOD(parser_t, parse_payload, status_t,
 			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE:
 			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1:
 			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE:
+			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE_V1:
 			case PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			{
 				if (payload_length < header_length ||
