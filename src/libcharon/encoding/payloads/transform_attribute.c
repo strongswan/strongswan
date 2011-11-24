@@ -209,10 +209,22 @@ METHOD(transform_attribute_t, get_value_chunk, chunk_t,
 	return this->attribute_value;
 }
 
-METHOD(transform_attribute_t, get_value, u_int16_t,
+METHOD(transform_attribute_t, get_value, u_int64_t,
 	private_transform_attribute_t *this)
 {
-	return this->attribute_length_or_value;
+	u_int64_t value = 0;
+
+	if (this->attribute_format)
+	{
+		return this->attribute_length_or_value;
+	}
+	if (this->attribute_value.len > sizeof(value))
+	{
+		return UINT64_MAX;
+	}
+	memcpy(((char*)&value) + sizeof(value) - this->attribute_value.len,
+		   this->attribute_value.ptr, this->attribute_value.len);
+	return be64toh(value);
 }
 
 METHOD(transform_attribute_t, set_attribute_type, void,

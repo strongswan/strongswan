@@ -754,6 +754,157 @@ METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
 	return this->transforms->create_enumerator(this->transforms);
 }
 
+/**
+ * Get an attribute from a selected transform
+ */
+static u_int64_t get_attr_tfrm(transform_substructure_t *transform,
+							   transform_attribute_type_t type)
+{
+	enumerator_t *enumerator;
+	transform_attribute_t *attr;
+	u_int64_t value = 0;
+
+	enumerator = transform->create_attribute_enumerator(transform);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		if (attr->get_attribute_type(attr) == type)
+		{
+			value = attr->get_value(attr);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return value;
+}
+
+
+/**
+ * Get an attribute from any transform, 0 if not found
+ */
+static u_int64_t get_attr(private_proposal_substructure_t *this,
+				transform_attribute_type_t type, transform_substructure_t **sel)
+{
+	transform_substructure_t *transform;
+	enumerator_t *enumerator;
+	u_int64_t value = 0;
+
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &transform))
+	{
+		value = get_attr_tfrm(transform, type);
+		if (value)
+		{
+			if (sel)
+			{
+				*sel = transform;
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return value;
+}
+
+METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
+	private_proposal_substructure_t *this)
+{
+	transform_substructure_t *transform;
+	transform_attribute_type_t type;
+
+	switch (this->protocol_id)
+	{
+		case PROTO_IKE:
+			type = get_attr(this, TATTR_PH1_LIFE_TYPE, &transform);
+			if (type == IKEV1_LIFE_TYPE_SECONDS)
+			{
+				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
+			}
+			break;
+		case PROTO_ESP:
+			type = get_attr(this, TATTR_PH2_SA_LIFE_TYPE, &transform);
+			if (type == IKEV1_LIFE_TYPE_SECONDS)
+			{
+				return get_attr_tfrm(transform, TATTR_PH2_SA_LIFE_DURATION);
+			}
+			else if (type != IKEV1_LIFE_TYPE_KILOBYTES)
+			{	/* default to 8 hours, RFC 2407 */
+				return 28800;
+			}
+			break;
+		default:
+			break;
+	}
+	return 0;
+}
+
+METHOD(proposal_substructure_t, get_lifebytes, u_int64_t,
+	private_proposal_substructure_t *this)
+{
+	transform_substructure_t *transform;
+	transform_attribute_type_t type;
+
+	switch (this->protocol_id)
+	{
+		case PROTO_IKE:
+			type = get_attr(this, TATTR_PH1_LIFE_TYPE, &transform);
+			if (type == IKEV1_LIFE_TYPE_KILOBYTES)
+			{
+				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
+			}
+			break;
+		case PROTO_ESP:
+			type = get_attr(this, TATTR_PH2_SA_LIFE_TYPE, &transform);
+			if (type == IKEV1_LIFE_TYPE_KILOBYTES)
+			{
+				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
+			}
+			break;
+		default:
+			break;
+	}
+	return 0;
+
+}
+
+METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
+	private_proposal_substructure_t *this)
+{
+	switch (get_attr(this, TATTR_PH1_AUTH_METHOD, NULL))
+	{
+		case IKEV1_AUTH_PSK:
+			return AUTH_PSK;
+		case IKEV1_AUTH_RSA_SIG:
+			return AUTH_RSA;
+		case IKEV1_AUTH_DSS_SIG:
+			return AUTH_DSS;
+		default:
+			/* TODO-IKEv1: XAUTH, ECDSA sigs */
+			return AUTH_NONE;
+	}
+}
+
+METHOD(proposal_substructure_t, get_encap_mode, ipsec_mode_t,
+	private_proposal_substructure_t *this, bool *udp)
+{
+	*udp = FALSE;
+	switch (get_attr(this, TATTR_PH2_ENCAP_MODE, NULL))
+	{
+		case IKEV1_ENCAP_TRANSPORT:
+			return MODE_TRANSPORT;
+		case IKEV1_ENCAP_TUNNEL:
+			return MODE_TRANSPORT;
+		case IKEV1_ENCAP_UDP_TRANSPORT:
+			*udp = TRUE;
+			return MODE_TRANSPORT;
+		case IKEV1_ENCAP_UDP_TUNNEL:
+			*udp = TRUE;
+			return MODE_TUNNEL;
+		default:
+			/* default to TUNNEL, RFC 2407 says implementation specific */
+			return MODE_TUNNEL;
+	}
+}
+
 METHOD2(payload_t, proposal_substructure_t, destroy, void,
 	private_proposal_substructure_t *this)
 {
@@ -791,6 +942,10 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.create_substructure_enumerator = _create_substructure_enumerator,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
+			.get_lifetime = _get_lifetime,
+			.get_lifebytes = _get_lifebytes,
+			.get_auth_method = _get_auth_method,
+			.get_encap_mode = _get_encap_mode,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,

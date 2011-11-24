@@ -109,7 +109,7 @@ struct transform_attribute_t {
 	 *
 	 * @return 		value
 	 */
-	u_int16_t (*get_value) (transform_attribute_t *this);
+	u_int64_t (*get_value) (transform_attribute_t *this);
 
 	/**
 	 * Sets the value of the attribute.

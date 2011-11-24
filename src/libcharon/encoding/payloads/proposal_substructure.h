@@ -112,6 +112,35 @@ struct proposal_substructure_t {
 	enumerator_t* (*create_substructure_enumerator)(proposal_substructure_t *this);
 
 	/**
+	 * Get the (shortest) lifetime of a proposal (IKEv1 only).
+	 *
+	 * @return					lifetime, in seconds
+	 */
+	u_int32_t (*get_lifetime)(proposal_substructure_t *this);
+
+	/**
+	 * Get the (shortest) life duration of a proposal (IKEv1 only).
+	 *
+	 * @return					life duration, in bytes
+	 */
+	u_int64_t (*get_lifebytes)(proposal_substructure_t *this);
+
+	/**
+	 * Get the first authentication method from the proposal (IKEv1 only).
+	 *
+	 * @return					auth method, or AUTH_NONE
+	 */
+	auth_method_t (*get_auth_method)(proposal_substructure_t *this);
+
+	/**
+	 * Get the (first) encapsulation mode from a proposal (IKEv1 only).
+	 *
+	 * @param udp				set to TRUE if UDP encapsulation used
+	 * @return					ipsec encapsulation mode
+	 */
+	ipsec_mode_t (*get_encap_mode)(proposal_substructure_t *this, bool *udp);
+
+	/**
 	 * Destroys an proposal_substructure_t object.
 	 */
 	void (*destroy) (proposal_substructure_t *this);

@@ -339,26 +339,69 @@ METHOD(sa_payload_t, create_substructure_enumerator, enumerator_t*,
 METHOD(sa_payload_t, get_lifetime, u_int32_t,
 	private_sa_payload_t *this)
 {
-	return 0;
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	u_int32_t lifetime = 0;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		lifetime = substruct->get_lifetime(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return lifetime;
 }
 
 METHOD(sa_payload_t, get_lifebytes, u_int64_t,
 	private_sa_payload_t *this)
 {
-	return 0;
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	u_int64_t lifebytes = 0;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		lifebytes = substruct->get_lifebytes(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return lifebytes;
 }
 
 METHOD(sa_payload_t, get_auth_method, auth_method_t,
 	private_sa_payload_t *this)
 {
-	return AUTH_NONE;
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	auth_method_t method = AUTH_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		method = substruct->get_auth_method(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return method;
 }
 
 METHOD(sa_payload_t, get_encap_mode, ipsec_mode_t,
 	private_sa_payload_t *this, bool *udp)
 {
-	*udp = FALSE;
-	return MODE_NONE;
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	ipsec_mode_t mode = MODE_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		mode = substruct->get_encap_mode(substruct, udp);
+	}
+	enumerator->destroy(enumerator);
+
+	return mode;
 }
 
 METHOD2(payload_t, sa_payload_t, destroy, void,
