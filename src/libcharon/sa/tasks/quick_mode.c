@@ -95,6 +95,16 @@ struct private_quick_mode_t {
 	 */
 	keymat_v1_t *keymat;
 
+	/**
+	 * Negotiated lifetime of new SA
+	 */
+	u_int32_t lifetime;
+
+	/**
+	 * Negotaited lifebytes of new SA
+	 */
+	u_int64_t lifebytes;
+
 	/** states of quick mode */
 	enum {
 		QM_INIT,
@@ -393,6 +403,49 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 	return TRUE;
 }
 
+/**
+ * Look up lifetimes
+ */
+static void get_lifetimes(private_quick_mode_t *this)
+{
+	lifetime_cfg_t *lft;
+
+	lft = this->config->get_lifetime(this->config);
+	if (lft->time.life)
+	{
+		this->lifetime = lft->time.life;
+	}
+	else if (lft->bytes.life)
+	{
+		this->lifebytes = lft->bytes.life;
+	}
+	free(lft);
+}
+
+/**
+ * Check and apply lifetimes
+ */
+static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload)
+{
+	u_int32_t lifetime;
+	u_int64_t lifebytes;
+
+	lifetime = sa_payload->get_lifetime(sa_payload);
+	lifebytes = sa_payload->get_lifebytes(sa_payload);
+	if (this->lifetime != lifetime)
+	{
+		DBG1(DBG_IKE, "received %us lifetime, configured %us, using lower",
+			 lifetime, this->lifetime);
+		this->lifetime = min(this->lifetime, lifetime);
+	}
+	if (this->lifebytes != lifebytes)
+	{
+		DBG1(DBG_IKE, "received %llu lifebytes, configured %llu, using lower",
+			 lifebytes, this->lifebytes);
+		this->lifebytes = min(this->lifebytes, lifebytes);
+	}
+}
+
 METHOD(task_t, build_i, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
@@ -425,8 +478,10 @@ METHOD(task_t, build_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
+			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
-											0, 0, AUTH_NONE, MODE_NONE, FALSE);
+								this->lifetime, this->lifebytes, AUTH_NONE,
+								this->config->get_mode(this->config), FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -504,6 +559,10 @@ METHOD(task_t, process_r, status_t,
 			this->proposal = this->config->select_proposal(this->config,
 														   list, TRUE, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
+
+			get_lifetimes(this);
+			apply_lifetimes(this, sa_payload);
+
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no matching proposal found");
@@ -515,6 +574,8 @@ METHOD(task_t, process_r, status_t,
 			{
 				return FAILED;
 			}
+
+
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
@@ -552,7 +613,8 @@ METHOD(task_t, build_r, status_t,
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
-											0, 0, AUTH_NONE, MODE_NONE, FALSE);
+								this->lifetime, this->lifebytes, AUTH_NONE,
+								this->config->get_mode(this->config), FALSE);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
@@ -596,6 +658,8 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 			}
 			this->spi_r = this->proposal->get_spi(this->proposal);
+
+			apply_lifetimes(this, sa_payload);
 
 			if (!get_nonce(this, &this->nonce_r, message))
 			{
