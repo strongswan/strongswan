@@ -197,6 +197,50 @@ static bool install(private_quick_mode_t *this)
 	return TRUE;
 }
 
+/**
+ * Generate and add NONCE
+ */
+static bool add_nonce(private_quick_mode_t *this, chunk_t *nonce,
+					  message_t *message)
+{
+	nonce_payload_t *nonce_payload;
+	rng_t *rng;
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
+	{
+		DBG1(DBG_IKE, "no RNG found to create nonce");
+		return FALSE;
+	}
+	rng->allocate_bytes(rng, NONCE_SIZE, nonce);
+	rng->destroy(rng);
+
+	nonce_payload = nonce_payload_create(NONCE_V1);
+	nonce_payload->set_nonce(nonce_payload, *nonce);
+	message->add_payload(message, &nonce_payload->payload_interface);
+
+	return TRUE;
+}
+
+/**
+ * Extract nonce from NONCE payload
+ */
+static bool get_nonce(private_quick_mode_t *this, chunk_t *nonce,
+					  message_t *message)
+{
+	nonce_payload_t *nonce_payload;
+
+	nonce_payload = (nonce_payload_t*)message->get_payload(message, NONCE_V1);
+	if (!nonce_payload)
+	{
+		DBG1(DBG_IKE, "NONCE payload missing in message");
+		return FALSE;
+	}
+	*nonce = nonce_payload->get_nonce(nonce_payload);
+
+	return TRUE;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
@@ -206,12 +250,10 @@ METHOD(task_t, build_i, status_t,
 		{
 			enumerator_t *enumerator;
 			sa_payload_t *sa_payload;
-			nonce_payload_t *nonce_payload;
 			id_payload_t *id_payload;
 			traffic_selector_t *ts;
 			linked_list_t *list;
 			proposal_t *proposal;
-			rng_t *rng;
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
@@ -238,17 +280,10 @@ METHOD(task_t, build_i, status_t,
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
-			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-			if (!rng)
+			if (!add_nonce(this, &this->nonce_i, message))
 			{
-				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_i);
-			rng->destroy(rng);
-			nonce_payload = nonce_payload_create(NONCE_V1);
-			nonce_payload->set_nonce(nonce_payload, this->nonce_i);
-			message->add_payload(message, &nonce_payload->payload_interface);
 
 			list = this->config->get_traffic_selectors(this->config, TRUE, NULL,
 									this->ike_sa->get_my_host(this->ike_sa));
@@ -276,13 +311,10 @@ METHOD(task_t, build_i, status_t,
 			list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
 			message->add_payload(message, &id_payload->payload_interface);
 
-			/* TODO-IKEv1: Add HASH(1) */
-
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
 		{
-			/* TODO-IKEv1: Send HASH(3) */
 			return SUCCESS;
 		}
 		default:
@@ -298,7 +330,6 @@ METHOD(task_t, process_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			nonce_payload_t *nonce_payload;
 			id_payload_t *id_payload;
 			payload_t *payload;
 			linked_list_t *tsi, *tsr, *list;
@@ -384,17 +415,10 @@ METHOD(task_t, process_r, status_t,
 			}
 			this->spi_i = this->proposal->get_spi(this->proposal);
 
-			nonce_payload = (nonce_payload_t*)message->get_payload(message,
-																   NONCE_V1);
-			if (!nonce_payload)
+			if (!get_nonce(this, &this->nonce_i, message))
 			{
-				DBG1(DBG_IKE, "Nonce payload missing");
 				return FAILED;
 			}
-			this->nonce_i = nonce_payload->get_nonce(nonce_payload);
-
-			/* TODO-IKEv1: verify HASH(1) */
-
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
@@ -403,13 +427,10 @@ METHOD(task_t, process_r, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
-			/* TODO-IKEv1: verify HASH(3) */
-
 			if (!install(this))
 			{
 				return FAILED;
 			}
-
 			return SUCCESS;
 		}
 		default:
@@ -425,9 +446,7 @@ METHOD(task_t, build_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			nonce_payload_t *nonce_payload;
 			id_payload_t *id_payload;
-			rng_t *rng;
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_r)
@@ -441,24 +460,15 @@ METHOD(task_t, build_r, status_t,
 									SECURITY_ASSOCIATION_V1, this->proposal);
 			message->add_payload(message, &sa_payload->payload_interface);
 
-			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-			if (!rng)
+			if (!add_nonce(this, &this->nonce_r, message))
 			{
-				DBG1(DBG_IKE, "no RNG found to create nonce");
 				return FAILED;
 			}
-			rng->allocate_bytes(rng, NONCE_SIZE, &this->nonce_r);
-			rng->destroy(rng);
-			nonce_payload = nonce_payload_create(NONCE_V1);
-			nonce_payload->set_nonce(nonce_payload, this->nonce_r);
-			message->add_payload(message, &nonce_payload->payload_interface);
 
 			id_payload = id_payload_create_from_ts(this->tsi);
 			message->add_payload(message, &id_payload->payload_interface);
 			id_payload = id_payload_create_from_ts(this->tsr);
 			message->add_payload(message, &id_payload->payload_interface);
-
-			/* TODO-IKEv1: add HASH(2) */
 
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
@@ -476,7 +486,6 @@ METHOD(task_t, process_i, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			nonce_payload_t *nonce_payload;
 			id_payload_t *id_payload;
 			payload_t *payload;
 			traffic_selector_t *tsi = NULL, *tsr = NULL;
@@ -550,22 +559,14 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->spi_r = this->proposal->get_spi(this->proposal);
 
-			nonce_payload = (nonce_payload_t*)message->get_payload(message,
-																   NONCE_V1);
-			if (!nonce_payload)
+			if (!get_nonce(this, &this->nonce_r, message))
 			{
-				DBG1(DBG_IKE, "Nonce payload missing");
 				return FAILED;
 			}
-			this->nonce_r = nonce_payload->get_nonce(nonce_payload);
-
-			/* TODO-IKEv1: verify HASH(2) */
-
 			if (!install(this))
 			{
 				return FAILED;
 			}
-
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
 		}
