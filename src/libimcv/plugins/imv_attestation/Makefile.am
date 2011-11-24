@@ -5,7 +5,7 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libpts
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic -DPLUGINS=\""${attest_plugins}\""
 
 imcv_LTLIBRARIES = imv-attestation.la
 

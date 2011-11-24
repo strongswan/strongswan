@@ -758,6 +758,7 @@ libcharon_plugins=
 pluto_plugins=
 starter_plugins=
 pool_plugins=
+attest_plugins=
 openac_plugins=
 scepclient_plugins=
 pki_plugins=
@@ -776,8 +777,8 @@ ADD_PLUGIN([test-vectors],         [s libcharon pluto openac scepclient pki])
 ADD_PLUGIN([curl],                 [s libcharon pluto scepclient scripts])
 ADD_PLUGIN([soup],                 [s libcharon pluto scripts])
 ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient scripts])
-ADD_PLUGIN([mysql],                [s libcharon pluto pool manager medsrv])
-ADD_PLUGIN([sqlite],               [s libcharon pluto pool manager medsrv])
+ADD_PLUGIN([mysql],                [s libcharon pluto pool manager medsrv attest])
+ADD_PLUGIN([sqlite],               [s libcharon pluto pool manager medsrv attest])
 ADD_PLUGIN([pkcs11],               [s libcharon pki])
 ADD_PLUGIN([aes],                  [s libcharon pluto openac scepclient pki scripts])
 ADD_PLUGIN([des],                  [s libcharon pluto openac scepclient pki scripts])
@@ -868,6 +869,7 @@ AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
 AC_SUBST(starter_plugins)
 AC_SUBST(pool_plugins)
+AC_SUBST(attest_plugins)
 AC_SUBST(openac_plugins)
 AC_SUBST(scepclient_plugins)
 AC_SUBST(pki_plugins)
