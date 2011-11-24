@@ -642,7 +642,7 @@ METHOD(ike_sa_t, set_state, void,
 
 				/* schedule rekeying if we have a time which is smaller than
 				 * an already scheduled rekeying */
-				t = this->peer_cfg->get_rekey_time(this->peer_cfg);
+				t = this->peer_cfg->get_rekey_time(this->peer_cfg, TRUE);
 				if (t && (this->stats[STAT_REKEY] == 0 ||
 					(this->stats[STAT_REKEY] > t + this->stats[STAT_ESTABLISHED])))
 				{
@@ -651,7 +651,7 @@ METHOD(ike_sa_t, set_state, void,
 					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
-				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
+				t = this->peer_cfg->get_reauth_time(this->peer_cfg, TRUE);
 				if (t && (this->stats[STAT_REAUTH] == 0 ||
 					(this->stats[STAT_REAUTH] > t + this->stats[STAT_ESTABLISHED])))
 				{

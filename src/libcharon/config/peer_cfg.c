@@ -341,13 +341,13 @@ METHOD(peer_cfg_t, get_keyingtries, u_int32_t,
 }
 
 METHOD(peer_cfg_t, get_rekey_time, u_int32_t,
-	private_peer_cfg_t *this)
+	private_peer_cfg_t *this, bool jitter)
 {
 	if (this->rekey_time == 0)
 	{
 		return 0;
 	}
-	if (this->jitter_time == 0)
+	if (this->jitter_time == 0 || !jitter)
 	{
 		return this->rekey_time;
 	}
@@ -355,13 +355,13 @@ METHOD(peer_cfg_t, get_rekey_time, u_int32_t,
 }
 
 METHOD(peer_cfg_t, get_reauth_time, u_int32_t,
-	private_peer_cfg_t *this)
+	private_peer_cfg_t *this, bool jitter)
 {
 	if (this->reauth_time == 0)
 	{
 		return 0;
 	}
-	if (this->jitter_time == 0)
+	if (this->jitter_time == 0 || !jitter)
 	{
 		return this->reauth_time;
 	}

@@ -227,18 +227,20 @@ struct peer_cfg_t {
 	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
 
 	/**
-	 * Get a time to start rekeying (is randomized with jitter).
+	 * Get a time to start rekeying.
 	 *
+	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
-	u_int32_t (*get_rekey_time)(peer_cfg_t *this);
+	u_int32_t (*get_rekey_time)(peer_cfg_t *this, bool jitter);
 
 	/**
-	 * Get a time to start reauthentication (is randomized with jitter).
+	 * Get a time to start reauthentication.
 	 *
+	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
-	u_int32_t (*get_reauth_time)(peer_cfg_t *this);
+	u_int32_t (*get_reauth_time)(peer_cfg_t *this, bool jitter);
 
 	/**
 	 * Get the timeout of a rekeying/reauthenticating SA.
