@@ -76,6 +76,8 @@ enum pts_ita_comp_func_name_t {
 	PTS_ITA_COMP_FUNC_NAME_TGRUB =				0x0001,
 	/** Trusted Boot */
 	PTS_ITA_COMP_FUNC_NAME_TBOOT =				0x0002,
+	/** Linux Integrity Measurement Architecture */
+	PTS_ITA_COMP_FUNC_NAME_IMA =				0x0003,
 };
 
 extern enum_name_t *pts_ita_comp_func_names;

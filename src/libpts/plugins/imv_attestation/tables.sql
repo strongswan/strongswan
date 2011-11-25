@@ -39,7 +39,7 @@ CREATE TABLE product_component (
   product INTEGER NOT NULL,
   component INTEGER NOT NULL,
   depth INTEGER DEFAULT 0,
-  sequence INTEGER DEFAULT 0,
+  seq_no INTEGER DEFAULT 0,
   PRIMARY KEY (product, component)
 );
 
@@ -48,8 +48,18 @@ CREATE TABLE file_hashes (
   file INTEGER NOT NULL,
   directory INTEGER DEFAULT 0,
   product INTEGER NOT NULL,
-  component INTEGER DEFAULT 0,
   algo INTEGER NOT NULL,
   hash BLOB NOT NULL,
-  PRIMARY KEY(file, directory, product, component, algo)
+  PRIMARY KEY(file, directory, product, algo)
+);
+
+DROP TABLE IF EXISTS component_hashes;
+CREATE TABLE component_hashes (
+  component INTEGER NOT NULL,
+  product INTEGER NOT NULL,
+  seq_no INTEGER NOT NULL,
+  pcr INTEGER NOT NULL,
+  algo INTEGER NOT NULL,
+  hash BLOB NOT NULL,
+  PRIMARY KEY(component, product, seq_no, algo)
 );

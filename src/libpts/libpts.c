@@ -18,6 +18,7 @@
 #include "pts/components/pts_component_manager.h"
 #include "pts/components/tcg/tcg_comp_func_name.h"
 #include "pts/components/ita/ita_comp_func_name.h"
+#include "pts/components/ita/ita_comp_ima.h"
 #include "pts/components/ita/ita_comp_tboot.h"
 #include "pts/components/ita/ita_comp_tgrub.h"
 
@@ -62,6 +63,9 @@ bool libpts_init(void)
 		pts_components->add_component(pts_components, PEN_ITA,
 									  PTS_ITA_COMP_FUNC_NAME_TBOOT,
 									  pts_ita_comp_tboot_create);
+		pts_components->add_component(pts_components, PEN_ITA,
+									  PTS_ITA_COMP_FUNC_NAME_IMA,
+									  pts_ita_comp_ima_create);
 
 		DBG1(DBG_LIB, "libpts initialized");
 	}

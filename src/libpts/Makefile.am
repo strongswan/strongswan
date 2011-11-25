@@ -24,6 +24,7 @@ libpts_la_SOURCES = \
 	pts/components/pts_comp_evidence.h pts/components/pts_comp_evidence.c \
 	pts/components/pts_comp_func_name.h pts/components/pts_comp_func_name.c \
 	pts/components/ita/ita_comp_func_name.h pts/components/ita/ita_comp_func_name.c \
+	pts/components/ita/ita_comp_ima.h pts/components/ita/ita_comp_ima.c \
 	pts/components/ita/ita_comp_tboot.h pts/components/ita/ita_comp_tboot.c \
 	pts/components/ita/ita_comp_tgrub.h pts/components/ita/ita_comp_tgrub.c \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \

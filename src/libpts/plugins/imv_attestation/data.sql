@@ -176,150 +176,6 @@ INSERT INTO files (
   0, '/etc/tnc_config'
 );
 
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr00'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr01'
-);
-
-INSERT INTO files (			/* 25 */
-  type, path
-) VALUES (
-  2, 'pcr02'
-);
-             
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr03'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr04'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr05'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr06'
-);
-
-INSERT INTO files (			/* 30 */
-  type, path
-) VALUES (
-  2, 'pcr07'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr08'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr09'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr10'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr11'
-);
-
-INSERT INTO files (			/* 35 */
-  type, path
-) VALUES (
-  2, 'pcr12'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr13'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr14'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr15'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr16'
-);
-
-INSERT INTO files (			/* 40 */
-  type, path
-) VALUES (
-  2, 'pcr17'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr18'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr19'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr20'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr21'
-);
-
-INSERT INTO files (			/* 45 */
-  type, path
-) VALUES (
-  2, 'pcr22'
-);
-
-INSERT INTO files (
-  type, path
-) VALUES (
-  2, 'pcr23'
-);
-
 /* Components */
 
 INSERT INTO components (
@@ -555,19 +411,19 @@ INSERT INTO product_file (
 /* Product Component */
 
 INSERT INTO product_component (
-  product, component, depth, sequence
+  product, component, depth, seq_no
 ) VALUES (
   4, 2, 0, 1
 );
 
 INSERT INTO product_component (
-  product, component, depth, sequence
+  product, component, depth, seq_no
 ) VALUES (
-  7, 1, 0, 1
+  7, 3, 0, 1
 );
 
 INSERT INTO product_component (
-  product, component, depth, sequence
+  product, component, depth, seq_no
 ) VALUES (
   7, 2, 0, 2
 );
@@ -1439,77 +1295,789 @@ INSERT INTO file_hashes (
   20, 7, 7, 8192, X'84200bd318bb022915150842ddf4002e061ef593604ad0d07021dc662cc40bfa749cce084ddf25d0e5137f6380f613d8'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+/* Component Hashes */
+
+/* ITA TBOOT Functional Component */
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  23, 7, 3, 32768, X'284ae59c737c4d1ddf785374cbb59a4c8d635590'
+  2, 4, 1, 17, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  24, 7, 3, 32768, X'311087044256d9c3a0b570ba3124cbb4d46f1197'
+  2, 4, 2, 18, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  25, 7, 3, 32768, X'b1f1f675427640aaa77bef93f26a333f0d57c9c5'
+  2, 7, 1, 17, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  26, 7, 3, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+  2, 7, 2, 18, 32768, X'160d2b04d11eb225fb148615b699081869e15b6c'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+/* ITA IMA Functional Component */
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  27, 7, 3, 32768, X'781c3cee5c3468a09f5ebee8e7d534acea0d2513'
+  3, 7,  1, 0, 32768, X'4d894eef0ae7cb124740df4f6c5c35aa0fe7dae8'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  28, 7, 3, 32768, X'fec194a9d8f3af2b3876d4bfbbebf980e87e36e9'
+  3, 7,  2, 0, 32768, X'f2c846e7f335f7b9e9dd0a44f48c48e1986750c7'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  29, 7, 3, 32768, X'ee1b0f997d7517b286bc9d73a4cf742c65a769be'
+  3, 7,  3, 0, 32768, X'db0b68f3ad06b5c0c35deb56af22b8f0bc23ea50'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  30, 7, 3, 32768, X'b2a83b0ebf2f8374299a5b2bdfc31ea955ad7236'
+  3, 7,  4, 0, 32768, X'a662680c8564f92cf20c5857d781ed3f0806da5d'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  40, 4, 2, 32768, X'9704353630674bfe21b86b64a7b0f99c297cf902'
+  3, 7,  5, 0, 32768, X'10bfa817da3a9e5760fbe78f216502e8ca4f94ef'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  40, 7, 2, 32768, X'd537d437f058136eb3d7be517dbe7647b623c619'
+  3, 7,  6, 0, 32768, X'd0e1af1be845f570e44612613c4ddf3f08996151'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  41, 4, 2, 32768, X'8397d8048ee36d7955e38da16fc33e86ef61d6b0'
+  3, 7,  7, 0, 32768, X'f05553c39e8130c7bb5db6cd6a6bf627311a9b01'
 );
 
-INSERT INTO file_hashes (
-  file, product, component, algo, hash
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
 ) VALUES (
-  41, 7, 2, 32768, X'160d2b04d11eb225fb148615b699081869e15b6c'
+  3, 7,  8, 0, 32768, X'96ef1ad4efc5be2b894a12e5bffddcd496044a08'
 );
 
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7,  9, 0, 32768, X'e9055f2050b99b9127b6feef3164cb8ead8eb2eb'
+);
 
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 10, 0, 32768, X'6f8150aa3423544ea59ea10025993e660568cc08'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 11, 0, 32768, X'f843e55c9061fec89f2aeb369a74b73fe8eb09e4'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 12, 0, 32768, X'1d1efd1cb89be96f8fdf20ee0b67a89670659208'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 13, 0, 32768, X'f907598ec6fcc5779ff9091ba0925c1d58500352'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 14, 0, 32768, X'42f32d6fba099b0eea2e9a480dc8d4482e20412e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 15, 0, 32768, X'e8a7cd52522ebacf4637a2b875494cda1c26bd8c'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 16, 0, 32768, X'd62d2c550fd06cae76f3e9c4d63f5fc22e34d4fe'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 17, 0, 32768, X'dc1293a87cab43024a4eaeb684a0186e33dacfe3'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 18, 0, 32768, X'03df488f642a9614ed718bf149fb7289d124189a'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 19, 0, 32768, X'46f1426433c57ee44b5593584308f8b7ac414e17'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 20, 0, 32768, X'1a837850cff01cd311948abd611174fa5699804b'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 21, 0, 32768, X'1c15052b28ac97e6e1cd0b4671fe75607c07de02'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 22, 0, 32768, X'1839bc8b6cd9351565a6bacb57f0e35562962cba'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 23, 0, 32768, X'f428189580a77b142b3de6cd3c183cb0a24dba6f'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 24, 0, 32768, X'f9b7302c9212a5398057ddea9c7506b265c3276f'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 25, 0, 32768, X'3af5d2929b9606b94b404a45deed9a9d673f49b7'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 26, 0, 32768, X'51a7df78bd7a23399b2824ec053f2abe5e4ee049'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 27, 0, 32768, X'2a3675f5efce9151670e9d4ec41e2edf4708d336'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 28, 0, 32768, X'a0cc14b4fde29d7251673af434b2ab246e5acf5a'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 29, 0, 32768, X'5932b35ba45894e65d6aa1afbe2101f677e17000'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 30, 0, 32768, X'ee12ad673d19d8f436ea7832e64935a0ddf9930e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 31, 0, 32768, X'7bd9b4947ae9b600e6a2d61ead80104d878bb9d2'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 32, 0, 32768, X'849c60fc7b366717aea2295a37b341e40626dd28'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 33, 0, 32768, X'cdd448834760041cc30edd09f41ae36cbf9459ef'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 34, 0, 32768, X'9471225809633ae61f2693711cd878ba2ac59ef9'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 35, 0, 32768, X'4aaa26a4d1389b2400138269d3415bb492cc4312'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 36, 0, 32768, X'a08b0c957c8f741e273e8aa9a88d87b32b860228'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 37, 0, 32768, X'7ecbc26a2272256969e4c626998570c7e013be9c'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 38, 0, 32768, X'12dcf52c5a92b64dd5113031379f27b9f42d5c49'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 39, 0, 32768, X'ca1b8cc8e8ee8b209fc7b55656c3f6ac0b8f86fd'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 40, 0, 32768, X'8566865ae43d19574e85f9f3b6376715ffb3c707'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 41, 0, 32768, X'39c9fda07d57fc185b37bac70ba1068d6e7c41d3'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 42, 0, 32768, X'96a2c8b6caf11da5a37b41706217d4e94bb627c0'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 43, 0, 32768, X'6ee8c5a500af82a1fdf42e5122196fad4f2bbc06'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 44, 0, 32768, X'd2f71dff59d0ab86d0ada6ea288227602d6cf371'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 45, 0, 32768, X'095c8df0b106947e2c62a4458b13f38c6fc4f982'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 46, 0, 32768, X'706071d37157e1030900df60e6efaf897fbab1ec'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 47, 0, 32768, X'97f093c5ab5e2baf9b6f1473b631d3db2595fe99'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 48, 0, 32768, X'c12dd08ffbb4c09e3c282dd7f94cdcc9148ab866'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 49, 0, 32768, X'fb3df3be6d847db26e07eb61312bdc533bda53d2'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 50, 0, 32768, X'88195da5656b80c68bd3e131fb673b197281c2b0'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 51, 0, 32768, X'28353744f0fab757b1a870de007b6c8821d4723e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 52, 0, 32768, X'9338b619160d4fb1a844acc95b0556b3d6109a77'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 53, 0, 32768, X'cd7f42895c6e4f9752f8b34184059d7ad4e5e6ce'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 54, 0, 32768, X'da5611278bf6855a44e5b1b5d62c76822a81674d'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 55, 0, 32768, X'eb4148c57806114b755416ba96b282fcc99ac2d1'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 56, 0, 32768, X'5e05f61508a391480dc83f741920a5de059546bc'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 57, 0, 32768, X'a23b279883915b0dc3313081924366ea5e75bdc1'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 58, 2, 32768, X'ef7511b5248557ae637f46b552f8af59020f2b00'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 59, 2, 32768, X'6240c588a2d7740f5c2c9523bff7d98334998d77'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 60, 2, 32768, X'808ce28868d844d547e0c2cc4271c14be2a568b6'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 61, 2, 32768, X'd736a206033ecbefc09e909f0d2d72c38d49d50b'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 62, 2, 32768, X'387a7087c3159f7d0a6388d722c200a599b4703b'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 63, 2, 32768, X'b6a679dda488042eee3cf9a525a9ae88b9514229'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 64, 2, 32768, X'693b89dc96682f85b389208ec052f4853fd971eb'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 65, 2, 32768, X'e4b83a6888c69eeb1c65c7ff50ee39897ca51008'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 66, 2, 32768, X'9e0735ad94f4d10faa43f75d02c4edb9b7eb91d4'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 67, 2, 32768, X'881dd3cb2f1f0e3323bf8c5586dfaba2ffcb1a55'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 68, 2, 32768, X'6461d3771999c3a4b3c15bf4e38da30b91bc1b17'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 69, 6, 32768, X'fcad787f7771637d659638d92b5eee9385b3d7b9'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 70, 0, 32768, X'4b90d9178efc5cf9a9ddf4f8bcc49008785d76ec'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 71, 2, 32768, X'e79e468b1921b2293a80c5917efa6a45c379e810'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 72, 2, 32768, X'be1bdec0aa74b4dcb079943e70528096cca985f8'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 73, 2, 32768, X'bc3a1d50aaffa207d2e6645228bb4f1cd40c88e0'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 74, 2, 32768, X'96ea8b0ccfb43fa6da4e98d8f51609cf8eabd91e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 75, 2, 32768, X'd05ef7250cc103540601fb8956c89c3ba1f47a4e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 76, 2, 32768, X'd5c28da6b58a66fba125e99c6b6d0e36a1b18315'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 77, 2, 32768, X'0ba611dd45de9acbe3d0da0d2e478e4aa77ff515'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 78, 4, 32768, X'9b4d80cfefc7d5576c4d9f224872505896ef2798'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 79, 2, 32768, X'e79e468b1921b2293a80c5917efa6a45c379e810'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 80, 2, 32768, X'be1bdec0aa74b4dcb079943e70528096cca985f8'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 81, 2, 32768, X'e79e468b1921b2293a80c5917efa6a45c379e810'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 82, 2, 32768, X'be1bdec0aa74b4dcb079943e70528096cca985f8'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 83, 1, 32768, X'230b3bf13c752834decf47f5a86a75582abee51c'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 84, 1, 32768, X'61f59f7782bb39610dbb6b1f57033c161810a267'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 85, 1, 32768, X'c744cac6af7621524fc3a2b0a9a135a32b33c81b'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 86, 1, 32768, X'8a7532af1862f9f61ed08d2b92b82a2ecc99c54f'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 87, 1, 32768, X'ba8fa710d303b3b2a594cba1cb73797c970ffa0b'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 88, 1, 32768, X'a46c5c8b58e67fbe9d3203bae335c0e39f68eff9'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 89, 1, 32768, X'67476198f63603b84afa235970611cd614560cf2'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 90, 2, 32768, X'cdf4d79ac0a10d46a1d9d7ec9642883c71f77fc7'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 91, 2, 32768, X'436067385bf6cd43e2f65f8d70d264af8fca876d'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 92, 2, 32768, X'4916c4e9f1e91b34bd8acef1f827f0b444bdb858'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 93, 2, 32768, X'c66007c47ea62816006d220bbb8fc9d5681c4cc6'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 94, 2, 32768, X'85782c59534d3915298da3da35101891a84be99e'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 95, 2, 32768, X'335f1897c44fef511bed7eb4394375bc2a36dbc3'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 96, 2, 32768, X'82ca255a4c2655eca1516b4249dcdd1edb892eef'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 97, 2, 32768, X'1086445009abbad955b9e915be04ac9afc74567d'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 98, 2, 32768, X'18fe7ae42869e2b3b11bf67215ef4f1c2e260251'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 99, 2, 32768, X'061efe921cad309990e63ed35a7b833e2eabfd2f'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 100, 2, 32768, X'aab5803005883807e91538fdc71968edf81f367c'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 101, 2, 32768, X'aab5803005883807e91538fdc71968edf81f367c'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 102, 2, 32768, X'0ba199b3cd6991a884fe30f40e89d3d603aa5cbd'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 103, 2, 32768, X'0ba199b3cd6991a884fe30f40e89d3d603aa5cbd'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 104, 2, 32768, X'2a5aa44e77a223d701a53b0f9af6d13cf8443b2a'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 105, 2, 32768, X'2a5aa44e77a223d701a53b0f9af6d13cf8443b2a'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 106, 2, 32768, X'c32ab71e81421207255b2665316a9049ddff3653'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 107, 2, 32768, X'c32ab71e81421207255b2665316a9049ddff3653'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 108, 2, 32768, X'cafaeff88886bf0d07b0a6527341da22c08b609d'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 109, 2, 32768, X'cafaeff88886bf0d07b0a6527341da22c08b609d'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 110, 2, 32768, X'68d74b6eacdc3360615744c6aaddb357df9bdbec'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 111, 2, 32768, X'68d74b6eacdc3360615744c6aaddb357df9bdbec'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 112, 2, 32768, X'ac254b04f277ca7e887a4141bf5ed0cf62600d10'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 113, 2, 32768, X'ac254b04f277ca7e887a4141bf5ed0cf62600d10'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 114, 1, 32768, X'4f135c9ee49ca7fbfea079e5d6714802f0405407'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 115, 0, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 116, 1, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 117, 2, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 118, 3, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 119, 4, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 120, 5, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 121, 6, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 122, 7, 32768, X'9069ca78e7450a285173431b3e52c5c25299e473'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 123, 4, 32768, X'c1e25c3f6b0dc78d57296aa2870ca6f782ccf80f'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 124, 4, 32768, X'67a0a98bc4d6321142895a4d938b342f6959c1a9'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 125, 4, 32768, X'06d60b3a0dee9bb9beb2f0b04aff2e75bd1d2860'
+);
+
+INSERT INTO component_hashes (
+  component, product, seq_no, pcr, algo, hash
+) VALUES (
+  3, 7, 126, 5, 32768, X'1b87003b6c7d90483713c90100cca3e62392b9bc'
+);
 

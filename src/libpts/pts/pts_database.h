@@ -36,8 +36,8 @@ struct pts_database_t {
 	/**
 	* Get files/directories to be measured by PTS
 	*
-	* @param product		software product (os, vpn client, etc.)
-	* @return				enumerator over all matching files/directories
+	* @param product		Software product (os, vpn client, etc.)
+	* @return				Enumerator over all matching files/directories
 	*/
 	enumerator_t* (*create_file_meas_enumerator)(pts_database_t *this,
 												 char *product);
@@ -45,8 +45,8 @@ struct pts_database_t {
 	/**
 	* Get files/directories to request metadata of
 	*
-	* @param product		software product (os, vpn client, etc.)
-	* @return				enumerator over all matching files/directories
+	* @param product		Software product (os, vpn client, etc.)
+	* @return				Enumerator over all matching files/directories
 	*/
 	enumerator_t* (*create_file_meta_enumerator)(pts_database_t *this,
 												 char *product);
@@ -54,8 +54,8 @@ struct pts_database_t {
 	/**
 	* Get functional components to request evidence of
 	*
-	* @param product		software product (os, vpn client, etc.)
-	* @return				enumerator over all matching components
+	* @param product		Software product (os, vpn client, etc.)
+	* @return				Enumerator over all matching components
 	*/
 	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this,
 												 char *product);
@@ -63,29 +63,30 @@ struct pts_database_t {
 	/**
 	* Get stored measurement hash for single file or directory entries
 	*
-	* @param product		software product (os, vpn client, etc.)
-	* @param algo			hash algorithm used for measurement
-	* @param id				primary key of measured file/directory
+	* @param product		Software product (os, vpn client, etc.)
+	* @param algo			Hash algorithm used for measurement
+	* @param id				Primary key of measured file/directory
 	* @param is_dir			TRUE if directory was measured
-	* @return				enumerator over all matching measurement hashes
+	* @return				Enumerator over all matching measurement hashes
 	*/
 	enumerator_t* (*create_file_hash_enumerator)(pts_database_t *this,
 								char *product, pts_meas_algorithms_t algo,
 								int id, bool is_dir);
 
 	/**
-	* Get stored measurement hash for functional component entries
+	* Check a functional component measurement against value stored in database
 	*
-	* @param file			file path in files table
-	* @param product		software product (os, vpn client, etc.)
-	* @param algo			hash algorithm used for measurement
-	* @param comp_name		functional component name object
-	* @return				enumerator over all matching measurement hashes
+	* @param measurement	measurement hash
+	* @param comp_name		Component Functional Name
+	* @param product		Software product (os, vpn client, etc.)
+	* @param seq_no			Measurement sequence number
+	* @param prc			Number of the PCR the measurement was extended into
+	* @param algo			Hash algorithm used for measurement
+	* @return				return code
 	*/
-	enumerator_t* (*create_comp_hash_enumerator)(pts_database_t *this,
-						char *file, char *product,
-						pts_comp_func_name_t *comp_name,
-						pts_meas_algorithms_t algo);
+	status_t (*check_comp_measurement)(pts_database_t *this, chunk_t measurement,
+							pts_comp_func_name_t *comp_name, char *product,
+							int seq_no, int pcr, pts_meas_algorithms_t algo);
 
 	/**
 	* Destroys a pts_database_t object.

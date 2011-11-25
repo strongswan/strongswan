@@ -80,7 +80,7 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
  				"FROM components AS c "
 				"JOIN product_component AS pc ON c.id = pc.component "
 				"JOIN products AS p ON p.id = pc.product "
-				"WHERE p.name = ? ORDER BY pc.sequence",
+				"WHERE p.name = ? ORDER BY pc.seq_no",
 				DB_TEXT, product, DB_INT, DB_INT, DB_INT, DB_INT);
 	return e;
 }
@@ -114,26 +114,60 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, create_comp_hash_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *file, char *product,
-	pts_comp_func_name_t *comp_name, pts_meas_algorithms_t algo)
+METHOD(pts_database_t, check_comp_measurement, status_t,
+	private_pts_database_t *this, chunk_t measurement,
+	pts_comp_func_name_t *comp_name,  char *product,
+	int seq_no, int pcr, pts_meas_algorithms_t algo)
 {
 	enumerator_t *e;
+	chunk_t hash;
+	status_t status = NOT_FOUND;
 	
 	e = this->db->query(this->db,
-				"SELECT fh.hash FROM file_hashes AS fh "
-				"JOIN files AS f ON fh.file = f.id "
-				"JOIN products AS p ON fh.product = p.id "
-				"JOIN components AS c ON fh.component = c.id "
-				"WHERE f.path = ? AND p.name = ? AND c.vendor_id = ? "
-				"AND c.name = ? AND c.qualifier = ? AND fh.algo = ? ",
-				DB_TEXT, file, DB_TEXT, product,
-				DB_INT, comp_name->get_vendor_id(comp_name),
-				DB_INT, comp_name->get_name(comp_name),
-				DB_INT, comp_name->get_qualifier(comp_name),
-				DB_INT, algo, DB_BLOB);
+			"SELECT ch.hash FROM component_hashes AS ch "
+			"JOIN products AS p ON ch.product = p.id "
+			"JOIN components AS c ON ch.component = c.id "
+			"WHERE c.vendor_id = ?  AND c.name = ? AND c.qualifier = ? "
+			"AND p.name = ? AND ch.seq_no = ? AND ch.pcr = ? AND ch.algo = ? ",
+			DB_INT, comp_name->get_vendor_id(comp_name),
+			DB_INT, comp_name->get_name(comp_name),
+			DB_INT, comp_name->get_qualifier(comp_name),
+			DB_TEXT, product, DB_INT, seq_no, DB_INT, pcr, DB_INT, algo,
+			DB_BLOB);
+	if (!e)
+	{
+		DBG1(DBG_PTS, "no database query enumerator returned"); 
+		return FAILED;
+	}
 
-	return e;
+	while (e->enumerate(e, &hash))
+	{
+		if (chunk_equals(hash, measurement))
+		{
+			DBG2(DBG_PTS, "PCR %2d matching component measurement #%d "
+						  "found in database", pcr, seq_no);
+			status = SUCCESS;
+			break;
+		}
+		else
+		{
+			DBG1(DBG_PTS, "PCR %2d no matching component measurement #%d "
+						  "found in database", pcr, seq_no);
+			DBG1(DBG_PTS, "  expected: %#B", &hash);
+			DBG1(DBG_PTS, "  received: %#B", &measurement);
+			status = FAILED;
+			break;
+		}
+	}
+	e->destroy(e);
+
+	if (status == NOT_FOUND)
+	{
+		DBG1(DBG_PTS, "PCR %2d no measurement #%d "
+					  "found in database", pcr, seq_no);
+	}
+
+	return status;
 }
 
 METHOD(pts_database_t, destroy, void,
@@ -156,7 +190,7 @@ pts_database_t *pts_database_create(char *uri)
 			.create_file_meta_enumerator = _create_file_meta_enumerator,
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
-			.create_comp_hash_enumerator = _create_comp_hash_enumerator,
+			.check_comp_measurement = _check_comp_measurement,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),

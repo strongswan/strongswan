@@ -23,6 +23,8 @@
 #include <debug.h>
 #include <pen/pen.h>
 
+#define TBOOT_SEQUENCE		2
+
 typedef struct pts_ita_comp_tboot_t pts_ita_comp_tboot_t;
 
 /**
@@ -47,14 +49,14 @@ struct pts_ita_comp_tboot_t {
 	u_int32_t depth;
 
 	/**
-	 * Extended PCR last handled
-	 */
-	u_int32_t extended_pcr;
-
-	/**
 	 * Time of TBOOT measurement
 	 */
 	time_t measurement_time;
+
+	/**
+	 * Measurement sequence number
+	 */
+	int seq_no;
 
 };
 
@@ -83,10 +85,11 @@ METHOD(pts_component_t, measure, status_t,
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
 	chunk_t measurement, pcr_before, pcr_after;
 	size_t hash_size, pcr_len;
+	u_int32_t extended_pcr;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	
-	switch (this->extended_pcr)
+	switch (this->seq_no++)
 	{
 		case 0:
 			/* dummy data since currently the TBOOT log is not retrieved */
@@ -97,9 +100,9 @@ METHOD(pts_component_t, measure, status_t,
 						"libimcv.plugins.imc-attestation.pcr17_before", NULL);
 			pcr_after_hex = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr17_after", NULL);
-			this->extended_pcr = PCR_TBOOT_POLICY;
+			extended_pcr = PCR_TBOOT_POLICY;
 			break;
-		case PCR_TBOOT_POLICY:
+		case 1:
 			/* dummy data since currently the TBOOT log is not retrieved */
 			meas_hex = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr18_meas", NULL);
@@ -107,7 +110,7 @@ METHOD(pts_component_t, measure, status_t,
 						"libimcv.plugins.imc-attestation.pcr18_before", NULL);
 			pcr_after_hex = lib->settings->get_str(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr18_after", NULL);
-			this->extended_pcr = PCR_TBOOT_MLE;
+			extended_pcr = PCR_TBOOT_MLE;
 			break;
 		default:
 			return FAILED;
@@ -136,12 +139,12 @@ METHOD(pts_component_t, measure, status_t,
 	}
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								this->depth, this->extended_pcr,
+								this->depth, extended_pcr,
 								hash_algo, pcr_transform,
 								this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
 
-	return (this->extended_pcr == PCR_TBOOT_MLE) ? SUCCESS : NEED_MORE;
+	return (this->seq_no < TBOOT_SEQUENCE) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(pts_component_t, verify, status_t,
@@ -149,14 +152,12 @@ METHOD(pts_component_t, verify, status_t,
 	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
+	char *platform_info;
 	u_int32_t extended_pcr;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after, hash;
-	enumerator_t *enumerator;
-	char *file, *platform_info;
-	status_t status = NOT_FOUND;
 
 	platform_info = pts->get_platform_info(pts);
 	if (!pts_db || !platform_info)
@@ -167,58 +168,12 @@ METHOD(pts_component_t, verify, status_t,
 					  (platform_info) ? "" : "platform info");
 		return FAILED;
 	}
-
-	switch (this->extended_pcr)
-	{
-		case 0:
-			this->extended_pcr = PCR_TBOOT_POLICY;
-			file = "pcr17";
-			break;
-		case PCR_TBOOT_POLICY:
-			this->extended_pcr = PCR_TBOOT_MLE;
-			file = "pcr18";
-			break;
-		default:
-			return FAILED;
-	}
-
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
-											&algo, &transform, &measurement_time);
-	if (extended_pcr != this->extended_pcr)
-	{
-		DBG1(DBG_PTS, "expected PCR %2d but received measurement for PCR %2d",
-					   this->extended_pcr, extended_pcr);
-		return FAILED;
-	}
-	
-	/* check measurement in database */
-	enumerator = pts_db->create_comp_hash_enumerator(pts_db, file,
-								platform_info, this->name, TRUSTED_HASH_ALGO);
-	while (enumerator->enumerate(enumerator, &hash))
-	{
-		if (chunk_equals(hash, measurement))
-		{
-			DBG2(DBG_PTS, "PCR %2d matching TBOOT component measurement "
-						  "found in database", this->extended_pcr);
-			status = SUCCESS;
-			break;
-		}
-		else
-		{
-			DBG1(DBG_PTS, "PCR %2d no matching TBOOT component measurement "
-						  "found in database", this->extended_pcr);
-			DBG1(DBG_PTS, "  expected: %#B", &hash);
-			DBG1(DBG_PTS, "  received: %#B", &measurement);
-			status = FAILED;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
+								&algo, &transform, &measurement_time);
 
-	if (status == NOT_FOUND)
+	if (pts_db->check_comp_measurement(pts_db, measurement, this->name,
+			platform_info,	++this->seq_no, extended_pcr, algo) != SUCCESS)
 	{
-		DBG1(DBG_PTS, "PCR %2d no measurement found in database",
-					   this->extended_pcr);
 		return FAILED;
 	}
 
@@ -231,7 +186,7 @@ METHOD(pts_component_t, verify, status_t,
 		}
 	}
 
-	return (this->extended_pcr == PCR_TBOOT_MLE) ? SUCCESS : NEED_MORE;
+	return (this->seq_no < TBOOT_SEQUENCE) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(pts_component_t, destroy, void,

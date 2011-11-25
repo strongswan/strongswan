@@ -626,7 +626,7 @@ static bool file_metadata(char *pathname, pts_file_metadata_t **entry)
 
 	if (stat(pathname, &st))
 	{
-		DBG1(DBG_PTS, "Unable to obtain statistics about '%s'", pathname);
+		DBG1(DBG_PTS, "unable to obtain statistics about '%s'", pathname);
 		return FALSE;
 	}
 

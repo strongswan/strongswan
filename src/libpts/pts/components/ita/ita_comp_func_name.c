@@ -36,9 +36,10 @@ ENUM_NEXT(pts_ita_qualifier_type_names, PTS_ITA_QUALIFIER_TYPE_ALL,
 ENUM_END(pts_ita_qualifier_type_names, PTS_ITA_QUALIFIER_TYPE_ALL);
 
 ENUM(pts_ita_comp_func_names, PTS_ITA_COMP_FUNC_NAME_IGNORE,
-							  PTS_ITA_COMP_FUNC_NAME_TBOOT,
+							  PTS_ITA_COMP_FUNC_NAME_IMA,
 	"Ignore",
 	"Trusted GRUB Boot Loader",
-	"Trusted Boot"
+	"Trusted Boot",
+	"Linux IMA"
 );
 
