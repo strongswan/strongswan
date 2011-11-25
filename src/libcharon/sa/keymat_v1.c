@@ -820,7 +820,7 @@ METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
 		this->prf->set_key(this->prf, this->skeyid_a);
 		if (add_message)
 		{
-			generator_t *generator = generator_create();
+			generator_t *generator = generator_create_no_dbg();
 			chunk_t msg = get_message_data(message, generator);
 			this->prf->allocate_bytes(this->prf, data, NULL);
 			this->prf->allocate_bytes(this->prf, msg, &hash);
