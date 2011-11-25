@@ -192,11 +192,6 @@ struct task_manager_t {
 	 * Destroy the task_manager_t.
 	 */
 	void (*destroy) (task_manager_t *this);
-
-	/**
-	 * Signals the task manager to initiate immediately after completing a response
-	 */
-	void (*initiate_later) (task_manager_t *this);
 };
 
 /**
