@@ -94,4 +94,12 @@ pts_meas_algorithms_t pts_meas_algo_select(pts_meas_algorithms_t supported_algos
  */
 hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm);
 
+/**
+ * Return the hash size of a pts_meas_algorithm
+ *
+ * @param algorithm		PTS measurement algorithm type
+ * @return				hash size in bytes
+ */
+size_t pts_meas_algo_hash_size(pts_meas_algorithms_t algorithm);
+
 #endif /** PTS_MEAS_ALGO_H_ @}*/

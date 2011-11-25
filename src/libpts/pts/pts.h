@@ -68,25 +68,9 @@ typedef struct pts_t pts_t;
 #define PCR_DEBUG						16
 
 /**
- * Number of sequences for functional components
- */
-#define TBOOT_SEQUENCE_COUNT			2
-#define TGRUB_SEQUENCE_COUNT			6
-
-/**
  * Length of the generated nonce used for calculation of shared secret
  */
 #define ASSESSMENT_SECRET_LEN	20
-
-/**
- * Maximum number of PCR's of TPM, TPM Spec 1.2
- */
-#define PCR_MAX_NUM				24
-
-/**
- * Number of bytes that can be saved in a PCR of TPM, TPM Spec 1.2
- */
-#define PCR_LEN					20
 
 /**
  * Lenght of the TPM_QUOTE_INFO structure, TPM Spec 1.2
@@ -239,6 +223,13 @@ struct pts_t {
 	 * @param info				chunk containing a TPM_CAP_VERSION_INFO struct
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
+
+	/**
+	 * Get the length of the TPM PCR registers
+	 *
+	 * @return					Length of PCR registers in bytes, 0 if undefined
+	 */
+	size_t (*get_pcr_len)(pts_t *this);
 
 	/**
 	 * Get Attestation Identity Certificate or Public Key

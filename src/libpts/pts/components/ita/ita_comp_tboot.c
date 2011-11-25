@@ -18,6 +18,7 @@
 #include "ita_comp_func_name.h"
 
 #include "pts/components/pts_component.h"
+#include "pts/components/pts_comp_evidence.h"
 
 #include <debug.h>
 #include <pen/pen.h>
@@ -81,6 +82,7 @@ METHOD(pts_component_t, measure, status_t,
 	pts_comp_evidence_t *evid;
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
 	chunk_t measurement, pcr_before, pcr_after;
+	size_t hash_size, pcr_len;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	
@@ -112,32 +114,32 @@ METHOD(pts_component_t, measure, status_t,
 	}
 
 	hash_algo = pts->get_meas_algorithm(pts);
-	switch (hash_algo)
-	{
-		case PTS_MEAS_ALGO_SHA1:
-			pcr_transform = PTS_PCR_TRANSFORM_MATCH;
-		case PTS_MEAS_ALGO_SHA256:
-		case PTS_MEAS_ALGO_SHA384:
-			pcr_transform = PTS_PCR_TRANSFORM_LONG;
-		case PTS_MEAS_ALGO_NONE:
-		default:
-			pcr_transform = PTS_PCR_TRANSFORM_NO;
-	}
+	hash_size = pts_meas_algo_hash_size(hash_algo);
+	pcr_len = pts->get_pcr_len(pts);
+	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 
+	/* get and check the measurement data */
 	measurement = chunk_from_hex(
 					chunk_create(meas_hex, strlen(meas_hex)), NULL);
 	pcr_before = chunk_from_hex(
 					chunk_create(pcr_before_hex, strlen(pcr_before_hex)), NULL);
 	pcr_after = chunk_from_hex(
 					chunk_create(pcr_after_hex, strlen(pcr_after_hex)), NULL);
+	if (pcr_before.len != pcr_len || pcr_after.len != pcr_len ||
+		measurement.len != hash_size)
+	{
+		DBG1(DBG_PTS, "TBOOT measurement or pcr data have the wrong size");
+		free(measurement.ptr);
+		free(pcr_before.ptr);
+		free(pcr_after.ptr);
+		return FAILED;
+	}
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
 								this->depth, this->extended_pcr,
 								hash_algo, pcr_transform,
 								this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
-
-
 
 	return (this->extended_pcr == PCR_TBOOT_MLE) ? SUCCESS : NEED_MORE;
 }

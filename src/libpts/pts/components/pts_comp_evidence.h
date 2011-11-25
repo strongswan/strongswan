@@ -157,4 +157,14 @@ pts_comp_evidence_t* pts_comp_evidence_create(pts_comp_func_name_t *name,
 											  time_t measurement_time,
 											  chunk_t measurement);
 
+/**
+ * Determine transform to fit measurement hash into PCR register
+ *
+ * @param algo					Measurement hash algorithm 
+ * @param pcr_len				Length of the PCR registers in bytes
+ * @return						PCR transform type
+ */
+pts_pcr_transform_t pts_meas_algo_to_pcr_transform(pts_meas_algorithms_t algo,
+												   size_t pcr_len);
+
 #endif /** PTS_COMP_EVIDENCE_H_ @}*/

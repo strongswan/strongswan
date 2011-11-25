@@ -148,3 +148,23 @@ hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm)
 			return HASH_UNKNOWN;
 	}
 }
+
+/**
+ * Described in header.
+ */
+size_t pts_meas_algo_hash_size(pts_meas_algorithms_t algorithm)
+{
+	switch (algorithm)
+	{
+		case PTS_MEAS_ALGO_SHA1:
+			return HASH_SIZE_SHA1;
+		case PTS_MEAS_ALGO_SHA256:
+			return HASH_SIZE_SHA256;
+		case PTS_MEAS_ALGO_SHA384:
+			return HASH_SIZE_SHA384;
+		case PTS_MEAS_ALGO_NONE:
+		default:
+			return 0;
+	}
+}
+

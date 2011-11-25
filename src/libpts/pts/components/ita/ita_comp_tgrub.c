@@ -73,6 +73,7 @@ METHOD(pts_component_t, measure, status_t,
 	chunk_t measurement, pcr_before, pcr_after;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
+	size_t hash_size, pcr_len;
 
 	/* Provisional implementation for TGRUB */
 	extended_pcr = PCR_DEBUG;
@@ -85,22 +86,14 @@ METHOD(pts_component_t, measure, status_t,
 	}
 
 	hash_algo = pts->get_meas_algorithm(pts);
-	switch (hash_algo)
-	{
-		case PTS_MEAS_ALGO_SHA1:
-			pcr_transform = PTS_PCR_TRANSFORM_MATCH;
-		case PTS_MEAS_ALGO_SHA256:
-		case PTS_MEAS_ALGO_SHA384:
-			pcr_transform = PTS_PCR_TRANSFORM_LONG;
-		case PTS_MEAS_ALGO_NONE:
-		default:
-			pcr_transform = PTS_PCR_TRANSFORM_NO;
-	}
+	hash_size = pts_meas_algo_hash_size(hash_algo);
+	pcr_len = pts->get_pcr_len(pts);
+	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 
-	measurement = chunk_alloc(HASH_SIZE_SHA1);
+	measurement = chunk_alloc(hash_size);
 	memset(measurement.ptr, 0x00, measurement.len);
 		
-	pcr_before = chunk_alloc(PCR_LEN);
+	pcr_before = chunk_alloc(pcr_len);
 	memset(pcr_before.ptr, 0x00, pcr_before.len);
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
@@ -167,7 +160,7 @@ pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth)
 			.verify = _verify,
 			.destroy = _destroy,
 		},
-		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TBOOT,
+		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TGRUB,
 										  qualifier),
 		.depth = depth,
 	);

@@ -106,6 +106,7 @@ METHOD(pts_comp_evidence_t, get_extended_pcr, u_int32_t,
 {
 	return this->extended_pcr;
 }
+
 METHOD(pts_comp_evidence_t, get_measurement, chunk_t,
 	private_pts_comp_evidence_t *this, u_int32_t *extended_pcr,
 	pts_meas_algorithms_t *algo, pts_pcr_transform_t *transform,
@@ -222,5 +223,29 @@ pts_comp_evidence_t *pts_comp_evidence_create(pts_comp_func_name_t *name,
 	DBG2(DBG_PTS, "PCR %2d extended with: %#B", extended_pcr, &measurement);
 
 	return &this->public;
+}
+
+/**
+ * See header
+ */
+pts_pcr_transform_t pts_meas_algo_to_pcr_transform(pts_meas_algorithms_t algo,
+												   size_t pcr_len)
+{
+	size_t hash_size;
+
+	hash_size = pts_meas_algo_hash_size(algo);
+	if (hash_size == 0)
+	{
+		return PTS_PCR_TRANSFORM_NO;
+	}
+	if (hash_size == pcr_len)
+	{
+		return PTS_PCR_TRANSFORM_MATCH;
+	}
+	if (hash_size > pcr_len)
+	{
+		return PTS_PCR_TRANSFORM_LONG;
+	}
+	return PTS_PCR_TRANSFORM_SHORT;
 }
 

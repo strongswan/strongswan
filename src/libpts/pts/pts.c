@@ -29,6 +29,16 @@
 
 #define PTS_BUF_SIZE	4096
 
+/**
+ * Maximum number of PCR's of TPM, TPM Spec 1.2
+ */
+#define PCR_MAX_NUM				24
+
+/**
+ * Number of bytes that can be saved in a PCR of TPM, TPM Spec 1.2
+ */
+#define PCR_LEN					20
+
 typedef struct private_pts_t private_pts_t;
 
 /**
@@ -347,6 +357,12 @@ METHOD(pts_t, set_tpm_version_info, void,
 {
 	this->tpm_version_info = chunk_clone(info);
 	print_tpm_version_info(this);
+}
+
+METHOD(pts_t, get_pcr_len, size_t,
+	private_pts_t *this)
+{
+	return this->pcr_len;
 }
 
 /**
@@ -1491,6 +1507,7 @@ pts_t *pts_create(bool is_imc)
 			.set_platform_info = _set_platform_info,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
+			.get_pcr_len = _get_pcr_len,
 			.get_aik = _get_aik,
 			.set_aik = _set_aik,
 			.is_path_valid = _is_path_valid,
@@ -1519,6 +1536,7 @@ pts_t *pts_create(bool is_imc)
 		if (has_tpm(this))
 		{
 			this->has_tpm = TRUE;
+			this->pcr_len = PCR_LEN;
 			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			load_aik(this);
 			load_aik_blob(this);
