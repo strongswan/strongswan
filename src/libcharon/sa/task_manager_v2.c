@@ -945,10 +945,8 @@ static void send_notify_response(private_task_manager_t *this,
 static status_t parse_message(private_task_manager_t *this, message_t *msg)
 {
 	status_t status;
-	bool is_request;
 	u_int8_t type = 0;
 
-	is_request = msg->get_request(msg);
 	status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
 
 	if (status == SUCCESS)
@@ -975,47 +973,46 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 
 	if (status != SUCCESS)
 	{
-		if (is_request)
+		bool is_request = msg->get_request(msg);
+
+		switch (status)
 		{
-			switch (status)
-			{
-				case NOT_SUPPORTED:
-					DBG1(DBG_IKE, "critical unknown payloads found");
-					if (is_request)
-					{
-						send_notify_response(this, msg,
-											 UNSUPPORTED_CRITICAL_PAYLOAD,
-											 chunk_from_thing(type));
-						incr_mid(this, FALSE);
-					}
-					break;
-				case PARSE_ERROR:
-					DBG1(DBG_IKE, "message parsing failed");
-					if (is_request)
-					{
-						send_notify_response(this, msg,
-											 INVALID_SYNTAX, chunk_empty);
-						incr_mid(this, FALSE);
-					}
-					break;
-				case VERIFY_ERROR:
-					DBG1(DBG_IKE, "message verification failed");
-					if (is_request)
-					{
-						send_notify_response(this, msg,
-											 INVALID_SYNTAX, chunk_empty);
-						incr_mid(this, FALSE);
-					}
-					break;
-				case FAILED:
-					DBG1(DBG_IKE, "integrity check failed");
-					/* ignored */
-					break;
-				case INVALID_STATE:
-					DBG1(DBG_IKE, "found encrypted message, but no keys available");
-				default:
-					break;
-			}
+			case NOT_SUPPORTED:
+				DBG1(DBG_IKE, "critical unknown payloads found");
+				if (is_request)
+				{
+					send_notify_response(this, msg,
+										 UNSUPPORTED_CRITICAL_PAYLOAD,
+										 chunk_from_thing(type));
+					incr_mid(this, FALSE);
+				}
+				break;
+			case PARSE_ERROR:
+				DBG1(DBG_IKE, "message parsing failed");
+				if (is_request)
+				{
+					send_notify_response(this, msg,
+										 INVALID_SYNTAX, chunk_empty);
+					incr_mid(this, FALSE);
+				}
+				break;
+			case VERIFY_ERROR:
+				DBG1(DBG_IKE, "message verification failed");
+				if (is_request)
+				{
+					send_notify_response(this, msg,
+										 INVALID_SYNTAX, chunk_empty);
+					incr_mid(this, FALSE);
+				}
+				break;
+			case FAILED:
+				DBG1(DBG_IKE, "integrity check failed");
+				/* ignored */
+				break;
+			case INVALID_STATE:
+				DBG1(DBG_IKE, "found encrypted message, but no keys available");
+			default:
+				break;
 		}
 		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
 			 exchange_type_names, msg->get_exchange_type(msg),
