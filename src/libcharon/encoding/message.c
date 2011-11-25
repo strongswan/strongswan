@@ -1896,7 +1896,7 @@ METHOD(message_t, parse_body, status_t,
 		DBG1(DBG_ENC, "no message rules specified for a %N %s",
 			 exchange_type_names, this->exchange_type,
 			 this->is_request ? "request" : "response");
-		return PARSE_ERROR;
+		return NOT_SUPPORTED;
 	}
 
 	status = parse_payloads(this);

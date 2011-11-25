@@ -699,6 +699,11 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	{
 		switch (status)
 		{
+			case NOT_SUPPORTED:
+				DBG1(DBG_IKE, "unsupported exchange type");
+				send_notify_response(this, msg,
+									 INVALID_EXCHANGE_TYPE, chunk_empty);
+				break;
 			case PARSE_ERROR:
 				DBG1(DBG_IKE, "message parsing failed");
 				send_notify_response(this, msg,
