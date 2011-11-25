@@ -704,10 +704,6 @@ int main(int argc, char **argv)
 
 		case 'x':       /* --maxpolltime */
 			max_poll_time = atoi(optarg);
-			if (max_poll_time < 0)
-			{
-				usage("invalid maxpolltime specified");
-			}
 			continue;
 
 		case 'a':       /*--algorithm */
