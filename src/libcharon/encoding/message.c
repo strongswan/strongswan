@@ -1942,7 +1942,7 @@ METHOD(message_t, parse_body, status_t,
 				DBG1(DBG_ENC, "our hash does not match received %B",
 					 &other_hash);
 				chunk_free(&hash);
-				return VERIFY_ERROR;
+				return FAILED;
 			}
 			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
 			chunk_free(&hash);

@@ -717,7 +717,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 			case FAILED:
 				DBG1(DBG_IKE, "integrity check failed");
 				send_notify_response(this, msg,
-									 PAYLOAD_MALFORMED, chunk_empty);
+									 INVALID_HASH_INFORMATION, chunk_empty);
 				break;
 			case INVALID_STATE:
 				DBG1(DBG_IKE, "found encrypted message, but no keys available");
