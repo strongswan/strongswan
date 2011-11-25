@@ -658,6 +658,12 @@ static void send_notify_response(private_task_manager_t *this,
 	host_t *me, *other;
 	u_int32_t mid;
 
+	if (request->get_exchange_type(request) == INFORMATIONAL_V1)
+	{	/* don't respond to INFORMATIONAL requests to avoid a notify war */
+		DBG1(DBG_IKE, "ignore malformed INFORMATIONAL request");
+		return;
+	}
+
 	response = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
 	response->set_exchange_type(response, INFORMATIONAL_V1);
 	response->set_request(response, TRUE);
