@@ -662,6 +662,7 @@ METHOD(task_manager_t, process_message, status_t,
 		(this->initiating.mid == 0 &&
 		 this->active_tasks->get_count(this->active_tasks)))
 	{
+		msg->set_request(msg, FALSE);
 		status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
 		if (status != SUCCESS)
 		{
@@ -688,6 +689,7 @@ METHOD(task_manager_t, process_message, status_t,
 						this->responding.packet->clone(this->responding.packet));
 			return SUCCESS;
 		}
+		msg->set_request(msg, TRUE);
 		status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
 		if (status != SUCCESS)
 		{
