@@ -813,7 +813,7 @@ METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
 	private_proposal_substructure_t *this)
 {
 	transform_substructure_t *transform;
-	transform_attribute_type_t type;
+	ikev1_life_type_t type;
 
 	switch (this->protocol_id)
 	{
@@ -845,7 +845,7 @@ METHOD(proposal_substructure_t, get_lifebytes, u_int64_t,
 	private_proposal_substructure_t *this)
 {
 	transform_substructure_t *transform;
-	transform_attribute_type_t type;
+	ikev1_life_type_t type;
 
 	switch (this->protocol_id)
 	{
