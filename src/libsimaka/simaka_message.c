@@ -139,7 +139,7 @@ ENUM(simaka_client_error_names, SIM_UNABLE_TO_PROCESS, SIM_RANDS_NOT_FRESH,
  */
 bool simaka_attribute_skippable(simaka_attribute_t attribute)
 {
-	bool skippable = !(attribute >= 0 && attribute <= 127);
+	bool skippable = !((int)attribute >= 0 && attribute <= 127);
 
 	DBG1(DBG_LIB, "%sskippable EAP-SIM/AKA attribute %N",
 		 skippable ? "ignoring " : "found non-",

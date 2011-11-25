@@ -230,7 +230,7 @@ METHOD(processor_t, get_idle_threads, u_int,
  */
 static job_priority_t sane_prio(job_priority_t prio)
 {
-	if (prio < 0 || prio >= JOB_PRIO_MAX)
+	if ((int)prio < 0 || prio >= JOB_PRIO_MAX)
 	{
 		return JOB_PRIO_MAX - 1;
 	}

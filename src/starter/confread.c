@@ -137,7 +137,7 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 
 		kw_token_t token = kw->entry->token;
 
-		if (token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
+		if ((int)token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
 		{
 			plog("# unsupported keyword '%s' in config setup", kw->entry->name);
 			cfg->err++;

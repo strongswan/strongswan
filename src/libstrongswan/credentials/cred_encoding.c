@@ -116,7 +116,7 @@ METHOD(cred_encoding_t, get_cache, bool,
 {
 	chunk_t *chunk;
 
-	if (type >= CRED_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || (int)type < 0)
 	{
 		return FALSE;
 	}
@@ -142,7 +142,7 @@ static bool encode(private_cred_encoding_t *this, cred_encoding_type_t type,
 	bool success = FALSE;
 	chunk_t *chunk;
 
-	if (type >= CRED_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || (int)type < 0)
 	{
 		return FALSE;
 	}
@@ -195,7 +195,7 @@ METHOD(cred_encoding_t, cache, void,
 {
 	chunk_t *chunk;
 
-	if (type >= CRED_ENCODING_MAX || type < 0)
+	if (type >= CRED_ENCODING_MAX || (int)type < 0)
 	{
 		return free(encoding.ptr);
 	}
