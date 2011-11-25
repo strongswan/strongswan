@@ -586,8 +586,8 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 
 	switch (this->auth_method)
 	{
-		case AUTH_CLASS_PSK:
-		case AUTH_CLASS_XAUTH_PSK:
+		case AUTH_PSK:
+		case AUTH_XAUTH_INIT_PSK:
 			shared_key = lookup_shared_key(this);
 			break;
 		default:
