@@ -45,12 +45,16 @@ Usage:\n\
   ipsec attest --hashes [--sha1|--sha256|--sha384] [--file <path>|--fid <id>]\n\
     Show a list of measurement hashes for a given file or\n\
     its primary key as an optional selector.\n\
-   \n\
-  ipsec attest --add --file <path>|--dir <path>|--product <name>\n\
-    Add a file, directory or product entry\n\
-   \n\
-  ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>|--product <name>|--pid <id>\n\
-    Delete a file, directory or product entry referenced either by value or by primary key\n\
+  \n\
+  ipsec attest --add --file <path>|--dir <path>|--product <name>|--component <cfn>\n\
+    Add a file, directory, product or component entry\n\
+    Component <cfn> entries must be of the form <vendor_id>/<name>-<qualifier>\n\
+  \n\
+  ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>\n\
+    Delete a file or directoryentry referenced either by value or primary key\n\
+  \n\
+  ipsec attest --del --product <name>|--pid <id>|--component <cfn>|--cid <id>\n\
+    Delete a product or component entry referenced either by value or primary key\n\
   \n");
 }
 
