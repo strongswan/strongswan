@@ -76,12 +76,12 @@ enum x509_constraint_t {
  * X.509 certPolicy extension.
  */
 struct x509_cert_policy_t {
-	/** OID of certPolicy */
-	chunk_t oid;
 	/** Certification Practice Statement URI qualifier */
 	char *cps_uri;
 	/** UserNotice Text qualifier */
 	char *unotice_text;
+	/** OID of certPolicy */
+	chunk_t oid;
 };
 
 /**
