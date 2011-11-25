@@ -316,6 +316,14 @@ struct ike_sa_t {
 	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
 
 	/**
+	 * Set statistic value of the IKE_SA.
+	 *
+	 * @param kind			kind of value to update
+	 * @param value			value as integer
+	 */
+	void (*set_statistic)(ike_sa_t *this, statistic_t kind, u_int32_t value);
+
+	/**
 	 * Get the own host address.
 	 *
 	 * @return				host address

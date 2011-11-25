@@ -322,6 +322,15 @@ METHOD(ike_sa_t, get_statistic, u_int32_t,
 	return 0;
 }
 
+METHOD(ike_sa_t, set_statistic, void,
+	private_ike_sa_t *this, statistic_t kind, u_int32_t value)
+{
+	if (kind < STAT_MAX)
+	{
+		this->stats[kind] = value;
+	}
+}
+
 METHOD(ike_sa_t, get_my_host, host_t*,
 	private_ike_sa_t *this)
 {
@@ -2148,6 +2157,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.set_state = _set_state,
 			.get_name = _get_name,
 			.get_statistic = _get_statistic,
+			.set_statistic = _set_statistic,
 			.process_message = _process_message,
 			.initiate = _initiate,
 			.get_ike_cfg = _get_ike_cfg,
