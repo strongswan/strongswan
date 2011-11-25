@@ -183,8 +183,8 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 	INIT(entry,
 		.cond = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.session = load_session(this),
-		.used = time_monotonic(NULL),
 		.host = strdup(host),
+		.used = time_monotonic(NULL),
 	);
 	return entry;
 }
