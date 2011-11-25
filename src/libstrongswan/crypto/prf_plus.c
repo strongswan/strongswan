@@ -42,9 +42,9 @@ struct private_prf_plus_t {
 	chunk_t seed;
 
 	/**
-	 * Buffer to store current PRF result.
+	 * Octet which will be appended to the seed, 0 if not used
 	 */
-	chunk_t buffer;
+	u_int8_t counter;
 
 	/**
 	 * Already given out bytes in current buffer.
@@ -52,9 +52,9 @@ struct private_prf_plus_t {
 	size_t used;
 
 	/**
-	 * Octet which will be appended to the seed, 0 if not used
+	 * Buffer to store current PRF result.
 	 */
-	u_int8_t counter;
+	chunk_t buffer;
 };
 
 METHOD(prf_plus_t, get_bytes, void,
@@ -125,8 +125,8 @@ prf_plus_t *prf_plus_create(prf_t *prf, bool counter, chunk_t seed)
 			.destroy = _destroy,
 		},
 		.prf = prf,
-		.buffer = chunk_alloc(prf->get_block_size(prf)),
 		.seed = chunk_clone(seed),
+		.buffer = chunk_alloc(prf->get_block_size(prf)),
 	);
 
 	if (counter)
