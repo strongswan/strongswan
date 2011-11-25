@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
- * Copyright (C) 2007-2010 Martin Willi
+ * Copyright (C) 2007-2011 Tobias Brunner
+ * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 #include <sa/tasks/xauth_request.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <processing/jobs/retransmit_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -650,13 +651,44 @@ METHOD(task_manager_t, process_message, status_t,
 {
 	u_int32_t hash, mid;
 	host_t *me, *other;
+	status_t status;
 
-	mid = msg->get_message_id(msg);
+	status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 
-	/* TODO-IKEv1: update hosts more selectively */
 	me = msg->get_destination(msg);
 	other = msg->get_source(msg);
 
+	/* if this IKE_SA is virgin, we check for a config */
+	if (this->ike_sa->get_ike_cfg(this->ike_sa) == NULL)
+	{
+		ike_sa_id_t *ike_sa_id;
+		ike_cfg_t *ike_cfg;
+		job_t *job;
+		ike_cfg = charon->backends->get_ike_cfg(charon->backends, me, other);
+		if (ike_cfg == NULL)
+		{
+			/* no config found for these hosts, destroy */
+			DBG1(DBG_IKE, "no IKE config found for %H...%H", me, other);
+			return DESTROY_ME;
+		}
+		this->ike_sa->set_ike_cfg(this->ike_sa, ike_cfg);
+		ike_cfg->destroy(ike_cfg);
+		/* add a timeout if peer does not establish it completely */
+		ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+		job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
+		lib->scheduler->schedule_job(lib->scheduler, job,
+				lib->settings->get_int(lib->settings,
+					"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
+	}
+	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+								time_monotonic(NULL));
+
+	/* TODO-IKEv1: update hosts more selectively */
+	mid = msg->get_message_id(msg);
 	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
 		 this->active_tasks->get_count(this->active_tasks)))

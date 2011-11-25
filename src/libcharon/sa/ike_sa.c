@@ -53,7 +53,6 @@
 #include <processing/jobs/send_dpd_job.h>
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
-#include <encoding/payloads/unknown_payload.h>
 
 #ifdef ME
 #include <sa/tasks/ike_me.h>
@@ -934,41 +933,6 @@ METHOD(ike_sa_t, generate_message, status_t,
 	return message->generate(message, this->keymat, packet);
 }
 
-/**
- * send a notify back to the sender
- */
-static void send_notify_response(private_ike_sa_t *this, message_t *request,
-								 notify_type_t type, chunk_t data)
-{
-	message_t *response;
-	packet_t *packet;
-
-	response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
-	response->set_exchange_type(response, request->get_exchange_type(request));
-	response->set_request(response, FALSE);
-	response->set_message_id(response, request->get_message_id(request));
-	response->add_notify(response, FALSE, type, data);
-	if (this->my_host->is_anyaddr(this->my_host))
-	{
-		this->my_host->destroy(this->my_host);
-		this->my_host = request->get_destination(request);
-		this->my_host = this->my_host->clone(this->my_host);
-	}
-	if (this->other_host->is_anyaddr(this->other_host))
-	{
-		this->other_host->destroy(this->other_host);
-		this->other_host = request->get_source(request);
-		this->other_host = this->other_host->clone(this->other_host);
-	}
-	response->set_source(response, this->my_host->clone(this->my_host));
-	response->set_destination(response, this->other_host->clone(this->other_host));
-	if (generate_message(this, response, &packet) == SUCCESS)
-	{
-		charon->sender->send(charon->sender, packet);
-	}
-	response->destroy(response);
-}
-
 METHOD(ike_sa_t, set_kmaddress, void,
 	private_ike_sa_t *this, host_t *local, host_t *remote)
 {
@@ -1229,127 +1193,17 @@ METHOD(ike_sa_t, process_message, status_t,
 	private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
-	bool is_request;
-	u_int8_t type = 0;
-
 	if (this->state == IKE_PASSIVE)
 	{	/* do not handle messages in passive state */
 		return FAILED;
 	}
-
-	is_request = message->get_request(message);
-
-	status = message->parse_body(message, this->keymat);
-	if (status == SUCCESS)
-	{	/* check for unsupported critical payloads */
-		enumerator_t *enumerator;
-		unknown_payload_t *unknown;
-		payload_t *payload;
-
-		enumerator = message->create_payload_enumerator(message);
-		while (enumerator->enumerate(enumerator, &payload))
-		{
-			unknown = (unknown_payload_t*)payload;
-			type = payload->get_type(payload);
-			if (!payload_is_known(type) &&
-				unknown->is_critical(unknown))
-			{
-				DBG1(DBG_ENC, "payload type %N is not supported, "
-					 "but its critical!", payload_type_names, type);
-				status = NOT_SUPPORTED;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	if (status != SUCCESS)
-	{
-		if (is_request)
-		{
-			switch (status)
-			{
-				case NOT_SUPPORTED:
-					DBG1(DBG_IKE, "critical unknown payloads found");
-					if (is_request)
-					{
-						send_notify_response(this, message,
-											 UNSUPPORTED_CRITICAL_PAYLOAD,
-											 chunk_from_thing(type));
-						this->task_manager->incr_mid(this->task_manager, FALSE);
-					}
-					break;
-				case PARSE_ERROR:
-					DBG1(DBG_IKE, "message parsing failed");
-					if (is_request)
-					{
-						send_notify_response(this, message,
-											 INVALID_SYNTAX, chunk_empty);
-						this->task_manager->incr_mid(this->task_manager, FALSE);
-					}
-					break;
-				case VERIFY_ERROR:
-					DBG1(DBG_IKE, "message verification failed");
-					if (is_request)
-					{
-						send_notify_response(this, message,
-											 INVALID_SYNTAX, chunk_empty);
-						this->task_manager->incr_mid(this->task_manager, FALSE);
-					}
-					break;
-				case FAILED:
-					DBG1(DBG_IKE, "integrity check failed");
-					/* ignored */
-					break;
-				case INVALID_STATE:
-					DBG1(DBG_IKE, "found encrypted message, but no keys available");
-				default:
-					break;
-			}
-		}
-		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
-			 exchange_type_names, message->get_exchange_type(message),
-			 message->get_request(message) ? "request" : "response",
-			 message->get_message_id(message));
-
-		if (this->state == IKE_CREATED)
-		{	/* invalid initiation attempt, close SA */
-			return DESTROY_ME;
-		}
-	}
-	else
-	{
-		/* if this IKE_SA is virgin, we check for a config */
-		if (this->ike_cfg == NULL)
-		{
-			job_t *job;
-			host_t *me = message->get_destination(message),
-				   *other = message->get_source(message);
-			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
-														  me, other);
-			if (this->ike_cfg == NULL)
-			{
-				/* no config found for these hosts, destroy */
-				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
-					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
-				send_notify_response(this, message,
-									 NO_PROPOSAL_CHOSEN, chunk_empty);
-				return DESTROY_ME;
-			}
-			/* add a timeout if peer does not establish it completely */
-			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			lib->scheduler->schedule_job(lib->scheduler, job,
-					lib->settings->get_int(lib->settings,
-						"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
-		}
-		this->stats[STAT_INBOUND] = time_monotonic(NULL);
-		status = this->task_manager->process_message(this->task_manager,
-													 message);
-		if (message->get_exchange_type(message) == IKE_AUTH &&
-			this->state == IKE_ESTABLISHED &&
-			lib->settings->get_bool(lib->settings,
-									"charon.flush_auth_cfg", FALSE))
-		{	/* authentication completed */
-			flush_auth_cfgs(this);
-		}
+	status = this->task_manager->process_message(this->task_manager, message);
+	if (message->get_exchange_type(message) == IKE_AUTH &&
+		this->state == IKE_ESTABLISHED &&
+		lib->settings->get_bool(lib->settings,
+								"charon.flush_auth_cfg", FALSE))
+	{	/* authentication completed */
+		flush_auth_cfgs(this);
 	}
 	return status;
 }

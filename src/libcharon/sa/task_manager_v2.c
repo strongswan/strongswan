@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2011 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -35,7 +35,9 @@
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
+#include <encoding/payloads/unknown_payload.h>
 #include <processing/jobs/retransmit_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 #ifdef ME
 #include <sa/tasks/ike_me.h>
@@ -886,16 +888,194 @@ static status_t process_request(private_task_manager_t *this,
 	return build_response(this, message);
 }
 
+METHOD(task_manager_t, incr_mid, void,
+	private_task_manager_t *this, bool initiate)
+{
+	if (initiate)
+	{
+		this->initiating.mid++;
+	}
+	else
+	{
+		this->responding.mid++;
+	}
+}
+
+/**
+ * Send a notify back to the sender
+ */
+static void send_notify_response(private_task_manager_t *this,
+								 message_t *request, notify_type_t type,
+								 chunk_t data)
+{
+	message_t *response;
+	packet_t *packet;
+	host_t *me, *other;
+
+	response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
+	response->set_exchange_type(response, request->get_exchange_type(request));
+	response->set_request(response, FALSE);
+	response->set_message_id(response, request->get_message_id(request));
+	response->add_notify(response, FALSE, type, data);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	if (me->is_anyaddr(me))
+	{
+		me = request->get_destination(request);
+		this->ike_sa->set_my_host(this->ike_sa, me->clone(me));
+	}
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	if (other->is_anyaddr(other))
+	{
+		other = request->get_source(request);
+		this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
+	}
+	response->set_source(response, me->clone(me));
+	response->set_destination(response, other->clone(other));
+	if (this->ike_sa->generate_message(this->ike_sa, response,
+									   &packet) == SUCCESS)
+	{
+		charon->sender->send(charon->sender, packet);
+	}
+	response->destroy(response);
+}
+
+/**
+ * Parse the given message and verify that it is valid.
+ */
+static status_t parse_message(private_task_manager_t *this, message_t *msg)
+{
+	status_t status;
+	bool is_request;
+	u_int8_t type = 0;
+
+	is_request = msg->get_request(msg);
+	status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+
+	if (status == SUCCESS)
+	{	/* check for unsupported critical payloads */
+		enumerator_t *enumerator;
+		unknown_payload_t *unknown;
+		payload_t *payload;
+
+		enumerator = msg->create_payload_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			unknown = (unknown_payload_t*)payload;
+			type = payload->get_type(payload);
+			if (!payload_is_known(type) &&
+				unknown->is_critical(unknown))
+			{
+				DBG1(DBG_ENC, "payload type %N is not supported, "
+					 "but its critical!", payload_type_names, type);
+				status = NOT_SUPPORTED;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (status != SUCCESS)
+	{
+		if (is_request)
+		{
+			switch (status)
+			{
+				case NOT_SUPPORTED:
+					DBG1(DBG_IKE, "critical unknown payloads found");
+					if (is_request)
+					{
+						send_notify_response(this, msg,
+											 UNSUPPORTED_CRITICAL_PAYLOAD,
+											 chunk_from_thing(type));
+						incr_mid(this, FALSE);
+					}
+					break;
+				case PARSE_ERROR:
+					DBG1(DBG_IKE, "message parsing failed");
+					if (is_request)
+					{
+						send_notify_response(this, msg,
+											 INVALID_SYNTAX, chunk_empty);
+						incr_mid(this, FALSE);
+					}
+					break;
+				case VERIFY_ERROR:
+					DBG1(DBG_IKE, "message verification failed");
+					if (is_request)
+					{
+						send_notify_response(this, msg,
+											 INVALID_SYNTAX, chunk_empty);
+						incr_mid(this, FALSE);
+					}
+					break;
+				case FAILED:
+					DBG1(DBG_IKE, "integrity check failed");
+					/* ignored */
+					break;
+				case INVALID_STATE:
+					DBG1(DBG_IKE, "found encrypted message, but no keys available");
+				default:
+					break;
+			}
+		}
+		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
+			 exchange_type_names, msg->get_exchange_type(msg),
+			 is_request ? "request" : "response",
+			 msg->get_message_id(msg));
+
+		if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED)
+		{	/* invalid initiation attempt, close SA */
+			return DESTROY_ME;
+		}
+	}
+	return status;
+}
+
+
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
 	host_t *me, *other;
+	status_t status;
 	u_int32_t mid;
 
-	mid = msg->get_message_id(msg);
+	status = parse_message(this, msg);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
 	me = msg->get_destination(msg);
 	other = msg->get_source(msg);
 
+	/* if this IKE_SA is virgin, we check for a config */
+	if (this->ike_sa->get_ike_cfg(this->ike_sa) == NULL)
+	{
+		ike_sa_id_t *ike_sa_id;
+		ike_cfg_t *ike_cfg;
+		job_t *job;
+		ike_cfg = charon->backends->get_ike_cfg(charon->backends, me, other);
+		if (ike_cfg == NULL)
+		{
+			/* no config found for these hosts, destroy */
+			DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
+				 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
+			send_notify_response(this, msg,
+								 NO_PROPOSAL_CHOSEN, chunk_empty);
+			return DESTROY_ME;
+		}
+		this->ike_sa->set_ike_cfg(this->ike_sa, ike_cfg);
+		ike_cfg->destroy(ike_cfg);
+		/* add a timeout if peer does not establish it completely */
+		ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+		job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
+		lib->scheduler->schedule_job(lib->scheduler, job,
+				lib->settings->get_int(lib->settings,
+					"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
+	}
+	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+								time_monotonic(NULL));
+
+	mid = msg->get_message_id(msg);
 	if (msg->get_request(msg))
 	{
 		if (mid == this->responding.mid)
@@ -1019,19 +1199,6 @@ METHOD(task_manager_t, busy, bool,
 	private_task_manager_t *this)
 {
 	return (this->active_tasks->get_count(this->active_tasks) > 0);
-}
-
-METHOD(task_manager_t, incr_mid, void,
-	private_task_manager_t *this, bool initiate)
-{
-	if (initiate)
-	{
-		this->initiating.mid++;
-	}
-	else
-	{
-		this->responding.mid++;
-	}
 }
 
 METHOD(task_manager_t, reset, void,
