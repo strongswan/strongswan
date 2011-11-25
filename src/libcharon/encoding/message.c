@@ -1419,8 +1419,8 @@ METHOD(message_t, generate, status_t,
 			chunk_free(&hash);
 		}
 
-		/* if at least one payload requires encryption, encrypt the message */
-		/* TODO-IKEV1: set is_encrypted externally instead of this check? */
+		/* if at least one payload requires encryption, encrypt the message.
+		 * if we have no key material available, the flag will be reset below */
 		enumerator = this->payloads->create_enumerator(this->payloads);
 		while (enumerator->enumerate(enumerator, (void**)&payload))
 		{
@@ -1447,6 +1447,7 @@ METHOD(message_t, generate, status_t,
 	else
 	{
 		DBG2(DBG_ENC, "not encrypting payloads");
+		this->is_encrypted = FALSE;
 	}
 
 	ike_header = ike_header_create_version(this->major_version,

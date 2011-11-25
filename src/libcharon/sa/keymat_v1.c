@@ -759,6 +759,11 @@ METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
 	bool add_message = TRUE;
 	char *name = "Hash";
 
+	if (!this->prf)
+	{	/* no keys derived yet */
+		return hash;
+	}
+
 	/* Hashes are simple for most exchanges in Phase 2:
 	 *   Hash = prf(SKEYID_a, M-ID | Complete message after HASH payload)
 	 * For Quick Mode there are three hashes:
