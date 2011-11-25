@@ -320,6 +320,10 @@ METHOD(task_manager_t, initiate, status_t,
 				case TASK_QUICK_MODE:
 					exchange = QUICK_MODE;
 					break;
+				case TASK_XAUTH_REQUEST:
+					exchange = TRANSACTION;
+					new_mid = TRUE;
+					break;
 				default:
 					continue;
 			}
