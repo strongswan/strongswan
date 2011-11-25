@@ -804,7 +804,10 @@ METHOD(task_manager_t, process_message, status_t,
 			if (ike_cfg == NULL)
 			{
 				/* no config found for these hosts, destroy */
-				DBG1(DBG_IKE, "no IKE config found for %H...%H", me, other);
+				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
+					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
+				send_notify_response(this, msg,
+									 NO_PROPOSAL_CHOSEN, chunk_empty);
 				return DESTROY_ME;
 			}
 			this->ike_sa->set_ike_cfg(this->ike_sa, ike_cfg);
