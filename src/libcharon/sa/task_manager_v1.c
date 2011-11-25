@@ -646,6 +646,94 @@ static status_t process_response(private_task_manager_t *this,
 	return initiate(this);
 }
 
+/**
+ * Send a notify in a separate INFORMATIONAL exchange back to the sender.
+ */
+static void send_notify_response(private_task_manager_t *this,
+								 message_t *request, notify_type_t type,
+								 chunk_t data)
+{
+	message_t *response;
+	packet_t *packet;
+	host_t *me, *other;
+	u_int32_t mid;
+
+	response = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
+	response->set_exchange_type(response, INFORMATIONAL_V1);
+	response->set_request(response, TRUE);
+	this->rng->get_bytes(this->rng, sizeof(mid), (void*)&mid);
+	response->set_message_id(response, mid);
+	response->add_notify(response, FALSE, type, data);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	if (me->is_anyaddr(me))
+	{
+		me = request->get_destination(request);
+		this->ike_sa->set_my_host(this->ike_sa, me->clone(me));
+	}
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	if (other->is_anyaddr(other))
+	{
+		other = request->get_source(request);
+		this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
+	}
+	response->set_source(response, me->clone(me));
+	response->set_destination(response, other->clone(other));
+	if (this->ike_sa->generate_message(this->ike_sa, response,
+									   &packet) == SUCCESS)
+	{
+		charon->sender->send(charon->sender, packet);
+	}
+	response->destroy(response);
+}
+
+/**
+ * Parse the given message and verify that it is valid.
+ */
+static status_t parse_message(private_task_manager_t *this, message_t *msg)
+{
+	status_t status;
+
+	status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+
+	if (status != SUCCESS)
+	{
+		switch (status)
+		{
+			case PARSE_ERROR:
+				DBG1(DBG_IKE, "message parsing failed");
+				send_notify_response(this, msg,
+									 PAYLOAD_MALFORMED, chunk_empty);
+				break;
+			case VERIFY_ERROR:
+				DBG1(DBG_IKE, "message verification failed");
+				send_notify_response(this, msg,
+									 PAYLOAD_MALFORMED, chunk_empty);
+				break;
+			case FAILED:
+				DBG1(DBG_IKE, "integrity check failed");
+				send_notify_response(this, msg,
+									 PAYLOAD_MALFORMED, chunk_empty);
+				break;
+			case INVALID_STATE:
+				DBG1(DBG_IKE, "found encrypted message, but no keys available");
+				send_notify_response(this, msg,
+									 PAYLOAD_MALFORMED, chunk_empty);
+			default:
+				break;
+		}
+		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
+			 exchange_type_names, msg->get_exchange_type(msg),
+			 msg->get_request(msg) ? "request" : "response",
+			 msg->get_message_id(msg));
+
+		if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED)
+		{	/* invalid initiation attempt, close SA */
+			return DESTROY_ME;
+		}
+	}
+	return status;
+}
+
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
@@ -663,7 +751,7 @@ METHOD(task_manager_t, process_message, status_t,
 		 this->active_tasks->get_count(this->active_tasks)))
 	{
 		msg->set_request(msg, FALSE);
-		status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+		status = parse_message(this, msg);
 		if (status != SUCCESS)
 		{
 			return status;
@@ -690,7 +778,7 @@ METHOD(task_manager_t, process_message, status_t,
 			return SUCCESS;
 		}
 		msg->set_request(msg, TRUE);
-		status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+		status = parse_message(this, msg);
 		if (status != SUCCESS)
 		{
 			return status;
