@@ -32,10 +32,6 @@ typedef struct pts_t pts_t;
 #include "pts_req_func_comp_evid.h"
 #include "pts_simple_evid_final.h"
 #include "components/pts_comp_func_name.h"
-#include "components/tcg/tcg_comp_func_name.h"
-#include "components/ita/ita_comp_func_name.h"
-#include "components/ita/ita_comp_tboot.h"
-#include "components/ita/ita_comp_tgrub.h"
 
 #include <library.h>
 #include <utils/linked_list.h>

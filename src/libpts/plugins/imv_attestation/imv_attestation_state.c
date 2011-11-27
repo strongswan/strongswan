@@ -287,6 +287,24 @@ METHOD(imv_attestation_state_t, check_off_component, pts_component_t*,
 	return found;
 }
 
+METHOD(imv_attestation_state_t, check_off_registrations, void,
+	private_imv_attestation_state_t *this)
+{
+	enumerator_t *enumerator;
+	pts_component_t *entry;
+
+	enumerator = this->components->create_enumerator(this->components);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->check_off_registrations(entry))
+		{
+			this->components->remove_at(this->components, enumerator);
+			entry->destroy(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(imv_attestation_state_t, get_component_count, int,
 	private_imv_attestation_state_t *this)
 {
@@ -331,6 +349,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.get_file_meas_request_count = _get_file_meas_request_count,
 			.add_component = _add_component,
 			.check_off_component = _check_off_component,
+			.check_off_registrations = _check_off_registrations,
 			.get_component_count = _get_component_count,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,

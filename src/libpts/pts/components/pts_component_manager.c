@@ -253,7 +253,7 @@ METHOD(pts_component_manager_t, get_qualifier, u_int8_t,
 
 METHOD(pts_component_manager_t, create, pts_component_t*,
 	private_pts_component_manager_t *this,
-	pts_comp_func_name_t *name, u_int32_t depth)
+	pts_comp_func_name_t *name, u_int32_t depth, pts_database_t *pts_db)
 {
 	enumerator_t *enumerator, *e2;
 	vendor_entry_t *entry;
@@ -270,7 +270,8 @@ METHOD(pts_component_manager_t, create, pts_component_t*,
 			{
 				if (entry2->name == name->get_name(name) && entry2->create)
 				{
-					component = entry2->create(name->get_qualifier(name), depth);
+					component = entry2->create(name->get_qualifier(name),
+											   depth, pts_db);
 					break;
 				}
 			}

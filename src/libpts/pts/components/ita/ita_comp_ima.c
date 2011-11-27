@@ -57,9 +57,19 @@ struct pts_ita_comp_ima_t {
 	u_int32_t depth;
 
 	/**
+	 * PTS measurement database
+	 */
+	pts_database_t *pts_db;
+
+	/**
 	 * AIK keyid
 	 */
 	chunk_t keyid;
+
+	/**
+	 * Component is registering measurements 
+	 */
+	bool is_registering;
 
 	/**
      * IMA BIOS measurement time
@@ -253,8 +263,7 @@ METHOD(pts_component_t, measure, status_t,
 }
 
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_ima_t *this, pts_t *pts, pts_database_t *pts_db,
-	pts_comp_evidence_t *evidence)
+	pts_ita_comp_ima_t *this, pts_t *pts, pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
 	u_int32_t extended_pcr, vid, name;
@@ -265,7 +274,7 @@ METHOD(pts_component_t, verify, status_t,
 	chunk_t measurement, pcr_before, pcr_after;
 
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
-									&algo, &transform, &measurement_time);
+								&algo, &transform, &measurement_time);
 
 	if (!this->keyid.ptr)
 	{
@@ -275,13 +284,13 @@ METHOD(pts_component_t, verify, status_t,
 		}
 		this->keyid = chunk_clone(this->keyid);
 
-		if (!pts_db)
+		if (!this->pts_db)
 		{
 			DBG1(DBG_PTS, "pts database not available");
 			return FAILED;
 		}
-		if (!pts_db->get_comp_measurement_count(pts_db, this->name, this->keyid,
-												algo, &this->count))
+		if (this->pts_db->get_comp_measurement_count(this->pts_db, this->name,
+						 		this->keyid, algo, &this->count) != SUCCESS)
 		{
 			return FAILED;
 		}
@@ -289,20 +298,37 @@ METHOD(pts_component_t, verify, status_t,
 		name = this->name->get_name(this->name);
 		names = pts_components->get_comp_func_names(pts_components, vid);
 
-		if (this->count == 0)
+		if (this->count)
 		{
-			DBG1(DBG_PTS, "no %N '%N' functional component evidence measurements "
-						  "available", pen_names, vid, names, name);
+			DBG1(DBG_PTS, "checking %d %N '%N' functional component evidence "
+				 "measurements", this->count, pen_names, vid, names, name);
+		}
+		else
+		{
+			DBG1(DBG_PTS, "registering %N '%N' functional component evidence "
+				 "measurements", pen_names, vid, names, name);
+			this->is_registering = TRUE;
+		}
+	}
+
+	if (this->is_registering)
+	{
+		if (this->pts_db->insert_comp_measurement(this->pts_db, measurement,
+									this->name, this->keyid, ++this->seq_no,
+									extended_pcr, algo) != SUCCESS)
+		{
 			return FAILED;
 		}
-		DBG1(DBG_PTS, "checking %d %N '%N' functional component evidence measurements",
-					  this->count, pen_names, vid, names, name);
-		}
-
-	if (pts_db->check_comp_measurement(pts_db, measurement, this->name,
-				this->keyid, ++this->seq_no, extended_pcr, algo) != SUCCESS)
+		this->count = this->seq_no + 1;
+	}
+	else
 	{
-		return FAILED;
+		if (this->pts_db->check_comp_measurement(this->pts_db, measurement,
+									this->name, this->keyid, ++this->seq_no,
+									extended_pcr, algo) != SUCCESS)
+		{
+			return FAILED;
+		}
 	}
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
@@ -317,14 +343,42 @@ METHOD(pts_component_t, verify, status_t,
 	return (this->seq_no < this->count) ? NEED_MORE : SUCCESS;
 }
 
+METHOD(pts_component_t, check_off_registrations, bool,
+	pts_ita_comp_ima_t *this)
+{
+	u_int32_t vid, name;
+	enum_name_t *names;
+		
+	if (!this->is_registering)
+	{
+		return FALSE;
+	}
+
+	/* Finalize registration */
+	this->is_registering = FALSE;
+
+	vid = this->name->get_vendor_id(this->name);
+	name = this->name->get_name(this->name);
+	names = pts_components->get_comp_func_names(pts_components, vid);
+	DBG1(DBG_PTS, "registered %d %N '%N' functional component evidence "
+				  "measurements", this->seq_no, pen_names, vid, names, name);
+	return TRUE;
+}
+
 METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_ima_t *this)
 {
-	int i;
+	int i, count;
 
 	for (i = 0; i < IMA_PCR_MAX; i++)
 	{
 		free(this->pcrs[i].ptr);
+	}
+	if (this->is_registering)
+	{
+		count = this->pts_db->delete_comp_measurements(this->pts_db, this->name,
+													   this->keyid);
+		DBG1(DBG_PTS, "  deleted %d measurements", count);
 	}
 	this->list->destroy_function(this->list, (void *)free_entry);
 	this->name->destroy(this->name);
@@ -335,7 +389,8 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth)
+pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
+										 pts_database_t *pts_db)
 {
 	pts_ita_comp_ima_t *this;
 	int i;
@@ -347,11 +402,13 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth)
 			.get_depth = _get_depth,
 			.measure = _measure,
 			.verify = _verify,
+			.check_off_registrations = _check_off_registrations,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_IMA,
 										  qualifier),
 		.depth = depth,
+		.pts_db = pts_db,
 		.list = linked_list_create(),
 	);
 

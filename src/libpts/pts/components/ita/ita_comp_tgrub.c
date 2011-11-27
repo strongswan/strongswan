@@ -44,6 +44,12 @@ struct pts_ita_comp_tgrub_t {
 	 * Sub-component depth
 	 */
 	u_int32_t depth;
+
+	/**
+	 * PTS measurement database
+	 */
+	pts_database_t *pts_db;
+
 };
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -106,8 +112,7 @@ METHOD(pts_component_t, measure, status_t,
 }
 
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_database_t *pts_db,
-	pts_comp_evidence_t *evidence)
+	pts_ita_comp_tgrub_t *this, pts_t *pts,	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
 	u_int32_t extended_pcr;
@@ -137,6 +142,12 @@ METHOD(pts_component_t, verify, status_t,
 	return SUCCESS;
 }
 
+METHOD(pts_component_t, check_off_registrations, bool,
+	pts_ita_comp_tgrub_t *this)
+{
+	return FALSE;
+}
+
 METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_tgrub_t *this)
 {
@@ -147,7 +158,8 @@ METHOD(pts_component_t, destroy, void,
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth)
+pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth,
+										   pts_database_t *pts_db)
 {
 	pts_ita_comp_tgrub_t *this;
 
@@ -158,11 +170,13 @@ pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth)
 			.get_depth = _get_depth,
 			.measure = _measure,
 			.verify = _verify,
+			.check_off_registrations = _check_off_registrations,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TGRUB,
 										  qualifier),
 		.depth = depth,
+		.pts_db = pts_db,
 	);
 
 	return &this->public;

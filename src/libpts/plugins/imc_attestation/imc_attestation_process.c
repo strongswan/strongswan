@@ -377,7 +377,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 								  "support sub component measurements");
 					return FALSE;
 				}
-				comp = pts_components->create(pts_components, name, depth);
+				comp = pts_components->create(pts_components, name, depth, NULL);
 				if (!comp)
 				{
 					DBG2(DBG_IMC, "    not registered: no evidence provided");

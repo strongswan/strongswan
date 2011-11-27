@@ -284,7 +284,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
-			status = comp->verify(comp, pts, pts_db, evidence);
+			status = comp->verify(comp, pts, evidence);
 			
 			switch (status)
 			{
@@ -348,6 +348,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				}
 				DBG2(DBG_IMV, "TPM Quote Info signature verification successful");
 				free(quote_info.ptr);
+
+				/* Finalize any pending measurement registrations */
+				attestation_state->check_off_registrations(attestation_state);
 			}
 
 			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))

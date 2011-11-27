@@ -167,13 +167,53 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	return status;
 }
 
-METHOD(pts_database_t, get_comp_measurement_count, bool,
+METHOD(pts_database_t, insert_comp_measurement, status_t,
+	private_pts_database_t *this, chunk_t measurement,
+	pts_comp_func_name_t *comp_name, chunk_t keyid,
+	int seq_no, int pcr, pts_meas_algorithms_t algo)
+{
+	int id;
+	
+	if (this->db->execute(this->db, &id,
+				"INSERT INTO component_hashes "
+				"(component, key, seq_no, pcr, algo, hash) VALUES ("
+				"(SELECT id FROM components"
+				" WHERE vendor_id = ?  AND name = ? AND qualifier = ?), "
+				"(SELECT id FROM keys WHERE keyid = ?), ?, ?, ?, ?)",
+				DB_INT, comp_name->get_vendor_id(comp_name),
+				DB_INT, comp_name->get_name(comp_name),
+				DB_INT, comp_name->get_qualifier(comp_name),
+				DB_BLOB, keyid, DB_INT, seq_no, DB_INT, pcr,
+				DB_INT, algo, DB_BLOB, measurement) == 1)
+	{
+		return SUCCESS;
+	}
+
+	DBG1(DBG_PTS, "could not insert component measurement into database");
+	return FAILED;
+}
+
+METHOD(pts_database_t, delete_comp_measurements, int,
+	private_pts_database_t *this, pts_comp_func_name_t *comp_name, chunk_t keyid)
+{
+	return this->db->execute(this->db, NULL,
+				"DELETE FROM component_hashes WHERE "
+				"component = (SELECT id FROM components"
+				" WHERE vendor_id = ?  AND name = ? AND qualifier = ?) AND "
+				"key = (SELECT id FROM keys WHERE keyid = ?))",
+				DB_INT, comp_name->get_vendor_id(comp_name),
+				DB_INT, comp_name->get_name(comp_name),
+				DB_INT, comp_name->get_qualifier(comp_name),
+				DB_BLOB, keyid);
+}
+
+METHOD(pts_database_t, get_comp_measurement_count, status_t,
 	private_pts_database_t *this, pts_comp_func_name_t *comp_name,
 	chunk_t keyid, pts_meas_algorithms_t algo, int *count)
 {
 	enumerator_t *e;
 	int kid;
-	bool success = TRUE;
+	status_t status = SUCCESS;
 
 	/* Initialize count */
 	*count = 0;
@@ -184,13 +224,13 @@ METHOD(pts_database_t, get_comp_measurement_count, bool,
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned");
-		return FALSE;
+		return FAILED;
 	}
 	if (!e->enumerate(e, &kid))
 	{
 		DBG1(DBG_PTS, "AIK %#B is not registered in database", &keyid);
 		e->destroy(e);
-		return FALSE;
+		return FAILED;
 	}
 	e->destroy(e);
 
@@ -207,16 +247,16 @@ METHOD(pts_database_t, get_comp_measurement_count, bool,
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned");
-		return FALSE;
+		return FAILED;
 	}
 	if (!e->enumerate(e, count))
 	{
 		DBG1(DBG_PTS, "no component measurement count returned from database");
-		success = FALSE;
+		status = FAILED;
 	}
 	e->destroy(e);
 
-	return success;
+	return status;
 }
 
 METHOD(pts_database_t, destroy, void,
@@ -240,6 +280,8 @@ pts_database_t *pts_database_create(char *uri)
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
 			.check_comp_measurement = _check_comp_measurement,
+			.insert_comp_measurement = _insert_comp_measurement,
+			.delete_comp_measurements = _delete_comp_measurements,
 			.get_comp_measurement_count = _get_comp_measurement_count,
 			.destroy = _destroy,
 		},

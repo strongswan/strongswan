@@ -243,7 +243,8 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
 				comp_name->log(comp_name, "  ");
 
-				comp = pts_components->create(pts_components, comp_name, depth);
+				comp = pts_components->create(pts_components, comp_name,
+											  depth, pts_db);
 				if (!comp)
 				{
 					DBG2(DBG_IMV, "    not registered: removed from request");

@@ -82,11 +82,36 @@ struct pts_database_t {
 	* @param seq_no			Measurement sequence number
 	* @param prc			Number of the PCR the measurement was extended into
 	* @param algo			Hash algorithm used for measurement
-	* @return				return code
+	* @return				SUCCESS if check was successful
 	*/
 	status_t (*check_comp_measurement)(pts_database_t *this, chunk_t measurement,
 							pts_comp_func_name_t *comp_name, chunk_t keyid,
 							int seq_no, int pcr, pts_meas_algorithms_t algo);
+
+	/**
+	* Insert a functional component measurement into the database
+	*
+	* @param measurement	measurement hash
+	* @param comp_name		Component Functional Name
+	* @param keyid			SHA-1 hash of AIK public key info
+	* @param seq_no			Measurement sequence number
+	* @param prc			Number of the PCR the measurement was extended into
+	* @param algo			Hash algorithm used for measurement
+	* @return				SUCCESS if INSERT was successful
+	*/
+	status_t (*insert_comp_measurement)(pts_database_t *this, chunk_t measurement,
+							pts_comp_func_name_t *comp_name, chunk_t keyid,
+							int seq_no, int pcr, pts_meas_algorithms_t algo);
+
+	/**
+	* Delete functional component measurements from the database
+	*
+	* @param comp_name		Component Functional Name
+	* @param keyid			SHA-1 hash of AIK public key info
+	* @return				number of deleted measurement entries
+	*/
+	int (*delete_comp_measurements)(pts_database_t *this,
+							pts_comp_func_name_t *comp_name, chunk_t keyid);
 
 	/**
 	* Get the number of measurements for a functional component and AIK
@@ -94,9 +119,10 @@ struct pts_database_t {
 	* @param comp_name		Component Functional Name
 	* @param keyid			SHA-1 hash of AIK public key info
 	* @param algo			Hash algorithm used for measurement
-	* @return				measurement count
+	* @param count			measurement count
+	* @return				SUCCESS if COUNT was successful
 	*/
-	bool (*get_comp_measurement_count)(pts_database_t *this,
+	status_t (*get_comp_measurement_count)(pts_database_t *this,
 							pts_comp_func_name_t *comp_name, chunk_t keyid,
 							pts_meas_algorithms_t algo, int *count);
 

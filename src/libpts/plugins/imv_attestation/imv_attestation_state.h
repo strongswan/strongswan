@@ -24,6 +24,7 @@
 
 #include <imv/imv_state.h>
 #include <pts/pts.h>
+#include <pts/components/pts_component.h>
 #include <library.h>
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
@@ -124,6 +125,11 @@ struct imv_attestation_state_t {
 	 */
 	pts_component_t* (*check_off_component)(imv_attestation_state_t *this,
 											pts_comp_func_name_t *name);
+
+	/**
+	 * Tell the Functional Components to finalize any measurement registrations
+	 */
+	void (*check_off_registrations)(imv_attestation_state_t *this);
 
 	/**
 	 * Indicates if a file measurement error occurred

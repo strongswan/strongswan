@@ -70,13 +70,19 @@ struct pts_component_t {
 	 * Verify the evidence measurements of the PTS Functional Component
 	 *
 	 * @param pts			PTS interface
-	 * @param pts_db		PTS measurement database
 	 * @param evidence		component evidence measurement to be verified
 	 * @return				status return code
 	 */
 	status_t (*verify)(pts_component_t *this, pts_t *pts,
-					   pts_database_t *pts_db,
 					   pts_comp_evidence_t *evidence);
+
+
+	/**
+	 * Tell the PTS Functional Component to finalize pending registrations
+	 *
+	 * @return				TRUE if there are pending registrations
+	 */
+	bool (*check_off_registrations)(pts_component_t *this);
 
 	/**
 	 * Destroys a pts_component_t object.

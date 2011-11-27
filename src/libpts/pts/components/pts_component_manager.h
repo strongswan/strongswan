@@ -23,6 +23,7 @@
 
 typedef struct pts_component_manager_t pts_component_manager_t;
 
+#include "pts/pts_database.h"
 #include "pts/components/pts_component.h"
 #include "pts/components/pts_comp_func_name.h"
 
@@ -30,7 +31,8 @@ typedef struct pts_component_manager_t pts_component_manager_t;
 #include <pen/pen.h>
 
 typedef pts_component_t* (*pts_component_create_t)(u_int8_t qualifier,
-												   u_int32_t depth);
+												   u_int32_t depth,
+												   pts_database_t *pts_db);
 
 /**
  * Manages PTS Functional Components
@@ -102,10 +104,12 @@ struct pts_component_manager_t {
 	 *
 	 * @param name					Component Functional Name
 	 * @param depth					Sub-component Depth
+	 * @param pts_db				PTS measurement database
 	 * @return						Component object if supported, NULL else
 	 */
 	pts_component_t* (*create)(pts_component_manager_t *this, 
-							   pts_comp_func_name_t *name, u_int32_t depth);
+							   pts_comp_func_name_t *name, u_int32_t depth,
+							   pts_database_t *pts_db);
 
 	/**
 	 * Destroys a pts_component_manager_t object.
