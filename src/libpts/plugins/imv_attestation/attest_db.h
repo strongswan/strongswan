@@ -34,40 +34,6 @@ typedef struct attest_db_t attest_db_t;
 struct attest_db_t {
 
 	/**
-	 * Set software product to be queried
-	 *
-	 * @param product		software product
-	 * @param create		if TRUE create database entry if it doesn't exist
-	 * @return				TRUE if successful
-	 */
-	bool (*set_product)(attest_db_t *this, char *product, bool create);
-
-	/**
-	 * Set primary key of the software product to be queried
-	 *
-	 * @param pid			primary key of software product
-	 * @return				TRUE if successful
-	 */
-	bool (*set_pid)(attest_db_t *this, int pid);
-
-	/**
-	 * Set measurement file to be queried
-	 *
-	 * @param file			measurement file
-	 * @param create		if TRUE create database entry if it doesn't exist
-	 * @return				TRUE if successful
-	 */
-	bool (*set_file)(attest_db_t *this, char *file, bool create);
-
-	/**
-	 * Set primary key of the measurement file to be queried
-	 *
-	 * @param fid			primary key of measurement file
-	 * @return				TRUE if successful
-	 */
-	bool (*set_fid)(attest_db_t *this, int fid);
-
-	/**
 	 * Set functional component to be queried
 	 *
 	 * @param comp			functional component
@@ -102,11 +68,70 @@ struct attest_db_t {
 	bool (*set_did)(attest_db_t *this, int did);
 
 	/**
+	 * Set measurement file to be queried
+	 *
+	 * @param file			measurement file
+	 * @param create		if TRUE create database entry if it doesn't exist
+	 * @return				TRUE if successful
+	 */
+	bool (*set_file)(attest_db_t *this, char *file, bool create);
+
+	/**
+	 * Set primary key of the measurement file to be queried
+	 *
+	 * @param fid			primary key of measurement file
+	 * @return				TRUE if successful
+	 */
+	bool (*set_fid)(attest_db_t *this, int fid);
+
+	/**
+	 * Set functional component to be queried
+	 *
+	 * @param key			AIK
+	 * @param create		if TRUE create database entry if it doesn't exist
+	 * @return				TRUE if successful
+	 */
+	bool (*set_key)(attest_db_t *this, char *key, bool create);
+
+	/**
+	 * Set primary key of the AIK to be queried
+	 *
+	 * @param kid			primary key of AIK
+	 * @return				TRUE if successful
+	 */
+	bool (*set_kid)(attest_db_t *this, int kid);
+
+	/**
+	 * Set software product to be queried
+	 *
+	 * @param product		software product
+	 * @param create		if TRUE create database entry if it doesn't exist
+	 * @return				TRUE if successful
+	 */
+	bool (*set_product)(attest_db_t *this, char *product, bool create);
+
+	/**
+	 * Set primary key of the software product to be queried
+	 *
+	 * @param pid			primary key of software product
+	 * @return				TRUE if successful
+	 */
+	bool (*set_pid)(attest_db_t *this, int pid);
+
+	/**
 	 * Set measurement hash algorithm
 	 *
 	 * @param algo			hash algorithm
 	 */
 	void (*set_algo)(attest_db_t *this, pts_meas_algorithms_t algo);
+
+	/**
+	 * Set owner [user/host] of an AIK
+	 *
+	 * @param owner			user/host name
+	 * @return				TRUE if successful
+	 */
+	void (*set_owner)(attest_db_t *this, char *owner);
 
 	/**
 	 * List all products stored in the database
@@ -124,9 +149,19 @@ struct attest_db_t {
 	void (*list_components)(attest_db_t *this);
 
 	/**
+	 * List all AIKs stored in the database
+	 */
+	void (*list_keys)(attest_db_t *this);
+
+	/**
 	 * List selected measurement hashes stored in the database
 	 */
 	void (*list_hashes)(attest_db_t *this);
+
+	/**
+	 * List selected component measurement stored in the database
+	 */
+	void (*list_measurements)(attest_db_t *this);
 
 	/**
 	 * Add an entry to the database

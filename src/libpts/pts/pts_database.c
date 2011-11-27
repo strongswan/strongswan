@@ -69,23 +69,6 @@ METHOD(pts_database_t, create_file_meta_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
-	private_pts_database_t *this, char *product)
-{
-	enumerator_t *e;
-
-	/* look for all entries belonging to a product in the components table */
-	e = this->db->query(this->db,
-				"SELECT c.vendor_id, c.name, c.qualifier, pc.depth "
- 				"FROM components AS c "
-				"JOIN product_component AS pc ON c.id = pc.component "
-				"JOIN products AS p ON p.id = pc.product "
-				"WHERE p.name = ? ORDER BY pc.seq_no",
-				DB_TEXT, product, DB_INT, DB_INT, DB_INT, DB_INT);
-	return e;
-}
-
-
 METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
 	int id, bool is_dir)
@@ -114,9 +97,25 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	return e;
 }
 
+METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
+	private_pts_database_t *this, chunk_t keyid)
+{
+	enumerator_t *e;
+
+	/* look for all entries belonging to a product in the components table */
+	e = this->db->query(this->db,
+				"SELECT c.vendor_id, c.name, c.qualifier, kc.depth "
+ 				"FROM components AS c "
+				"JOIN key_component AS kc ON c.id = kc.component "
+				"JOIN keys AS k ON k.id = kc.key "
+				"WHERE k.keyid = ? ORDER BY kc.seq_no",
+				DB_BLOB, keyid, DB_INT, DB_INT, DB_INT, DB_INT);
+	return e;
+}
+
 METHOD(pts_database_t, check_comp_measurement, status_t,
 	private_pts_database_t *this, chunk_t measurement,
-	pts_comp_func_name_t *comp_name,  char *product,
+	pts_comp_func_name_t *comp_name, chunk_t keyid,
 	int seq_no, int pcr, pts_meas_algorithms_t algo)
 {
 	enumerator_t *e;
@@ -125,14 +124,14 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	
 	e = this->db->query(this->db,
 			"SELECT ch.hash FROM component_hashes AS ch "
-			"JOIN products AS p ON ch.product = p.id "
+			"JOIN keys AS k ON ch.key = k.id "
 			"JOIN components AS c ON ch.component = c.id "
 			"WHERE c.vendor_id = ?  AND c.name = ? AND c.qualifier = ? "
-			"AND p.name = ? AND ch.seq_no = ? AND ch.pcr = ? AND ch.algo = ? ",
+			"AND k.keyid = ? AND ch.seq_no = ? AND ch.pcr = ? AND ch.algo = ? ",
 			DB_INT, comp_name->get_vendor_id(comp_name),
 			DB_INT, comp_name->get_name(comp_name),
 			DB_INT, comp_name->get_qualifier(comp_name),
-			DB_TEXT, product, DB_INT, seq_no, DB_INT, pcr, DB_INT, algo,
+			DB_BLOB, keyid, DB_INT, seq_no, DB_INT, pcr, DB_INT, algo,
 			DB_BLOB);
 	if (!e)
 	{
@@ -144,8 +143,6 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	{
 		if (chunk_equals(hash, measurement))
 		{
-			DBG2(DBG_PTS, "PCR %2d matching component measurement #%d "
-						  "found in database", pcr, seq_no);
 			status = SUCCESS;
 			break;
 		}
@@ -170,6 +167,58 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	return status;
 }
 
+METHOD(pts_database_t, get_comp_measurement_count, bool,
+	private_pts_database_t *this, pts_comp_func_name_t *comp_name,
+	chunk_t keyid, pts_meas_algorithms_t algo, int *count)
+{
+	enumerator_t *e;
+	int kid;
+	bool success = TRUE;
+
+	/* Initialize count */
+	*count = 0;
+
+	/* Is the AIK registered? */
+	e = this->db->query(this->db,
+			"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
+	if (!e)
+	{
+		DBG1(DBG_PTS, "no database query enumerator returned");
+		return FALSE;
+	}
+	if (!e->enumerate(e, &kid))
+	{
+		DBG1(DBG_PTS, "AIK %#B is not registered in database", &keyid);
+		e->destroy(e);
+		return FALSE;
+	}
+	e->destroy(e);
+
+	/* Get the number of stored measurements for a given AIK and component */
+	e = this->db->query(this->db,
+			"SELECT COUNT(*) FROM component_hashes AS ch "
+			"JOIN components AS c ON ch.component = c.id "
+			"WHERE c.vendor_id = ?  AND c.name = ? AND c.qualifier = ? "
+			"AND ch.key = ? AND ch.algo = ? ",
+			DB_INT, comp_name->get_vendor_id(comp_name),
+			DB_INT, comp_name->get_name(comp_name),
+			DB_INT, comp_name->get_qualifier(comp_name),
+			DB_INT, kid, DB_INT, algo, DB_INT);
+	if (!e)
+	{
+		DBG1(DBG_PTS, "no database query enumerator returned");
+		return FALSE;
+	}
+	if (!e->enumerate(e, count))
+	{
+		DBG1(DBG_PTS, "no component measurement count returned from database");
+		success = FALSE;
+	}
+	e->destroy(e);
+
+	return success;
+}
+
 METHOD(pts_database_t, destroy, void,
 	private_pts_database_t *this)
 {
@@ -191,6 +240,7 @@ pts_database_t *pts_database_create(char *uri)
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
 			.check_comp_measurement = _check_comp_measurement,
+			.get_comp_measurement_count = _get_comp_measurement_count,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),

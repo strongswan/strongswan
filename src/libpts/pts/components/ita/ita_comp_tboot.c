@@ -17,13 +17,11 @@
 #include "ita_comp_tboot.h"
 #include "ita_comp_func_name.h"
 
+#include "libpts.h"
 #include "pts/components/pts_component.h"
-#include "pts/components/pts_comp_evidence.h"
 
 #include <debug.h>
 #include <pen/pen.h>
-
-#define TBOOT_SEQUENCE		2
 
 typedef struct pts_ita_comp_tboot_t pts_ita_comp_tboot_t;
 
@@ -49,9 +47,19 @@ struct pts_ita_comp_tboot_t {
 	u_int32_t depth;
 
 	/**
+	 * AIK keyid
+	 */
+	chunk_t keyid;
+
+	/**
 	 * Time of TBOOT measurement
 	 */
 	time_t measurement_time;
+
+	/**
+	 * Expected measurement count
+	 */
+	int count;
 
 	/**
 	 * Measurement sequence number
@@ -144,7 +152,7 @@ METHOD(pts_component_t, measure, status_t,
 								this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
 
-	return (this->seq_no < TBOOT_SEQUENCE) ? NEED_MORE : SUCCESS;
+	return (this->seq_no < 2) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(pts_component_t, verify, status_t,
@@ -152,27 +160,50 @@ METHOD(pts_component_t, verify, status_t,
 	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
-	char *platform_info;
-	u_int32_t extended_pcr;
+	u_int32_t extended_pcr, vid, name;
+	enum_name_t *names;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
 	time_t measurement_time;
-	chunk_t measurement, pcr_before, pcr_after, hash;
+	chunk_t measurement, pcr_before, pcr_after;
 
-	platform_info = pts->get_platform_info(pts);
-	if (!pts_db || !platform_info)
-	{
-		DBG1(DBG_PTS, "%s%s%s not available",
-					  (pts_db) ? "" : "pts database",
-					  (!pts_db && !platform_info) ? "and" : "",
-					  (platform_info) ? "" : "platform info");
-		return FAILED;
-	}
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
 
+	if (!this->keyid.ptr)
+	{
+		if (!pts->get_aik_keyid(pts, &this->keyid))
+		{
+			return FAILED;
+		}
+		this->keyid = chunk_clone(this->keyid);
+
+		if (!pts_db)
+		{
+			DBG1(DBG_PTS, "pts database not available");
+			return FAILED;
+		}
+		if (!pts_db->get_comp_measurement_count(pts_db, this->name, this->keyid,
+												algo, &this->count))
+		{
+			return FAILED;
+		}
+		vid = this->name->get_vendor_id(this->name);
+		name = this->name->get_name(this->name);
+		names = pts_components->get_comp_func_names(pts_components, vid);
+
+		if (this->count == 0)
+		{
+			DBG1(DBG_PTS, "no %N '%N' functional component evidence measurements "
+						  "available", pen_names, vid, names, name);
+			return FAILED;
+		}
+		DBG1(DBG_PTS, "checking %d %N '%N' functional component evidence measurements",
+					  this->count, pen_names, vid, names, name);
+		}
+
 	if (pts_db->check_comp_measurement(pts_db, measurement, this->name,
-			platform_info,	++this->seq_no, extended_pcr, algo) != SUCCESS)
+			this->keyid, ++this->seq_no, extended_pcr, algo) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -186,13 +217,14 @@ METHOD(pts_component_t, verify, status_t,
 		}
 	}
 
-	return (this->seq_no < TBOOT_SEQUENCE) ? NEED_MORE : SUCCESS;
+	return (this->seq_no < this->count) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(pts_component_t, destroy, void,
 	   pts_ita_comp_tboot_t *this)
 {
 	this->name->destroy(this->name);
+	free(this->keyid.ptr);
 	free(this);
 }
 

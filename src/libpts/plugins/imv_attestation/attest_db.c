@@ -31,34 +31,19 @@ struct private_attest_db_t {
 	attest_db_t public;
 
 	/**
-	 * Software product to be queried
+	 * Component Functional Name to be queried
 	 */
-	char *product;
+	pts_comp_func_name_t *cfn;
 
 	/**
-	 * Primary key of software product to be queried
+	 * Primary key of the Component Functional Name to be queried
 	 */
-	int pid;
+	int cid;
 
 	/**
-	 * TRUE if product has been set
+	 * TRUE if Component Functional Name has been set
 	 */
-	bool product_set;
-
-	/**
-	 * Measurement file to be queried
-	 */
-	char *file;
-
-	/**
-	 * Primary key of measurement file to be queried
-	 */
-	int fid;
-
-	/**
-	 * TRUE if file has been set
-	 */
-	bool file_set;
+	bool comp_set;
 
 	/**
 	 * Directory containing the Measurement file to be queried
@@ -76,24 +61,59 @@ struct private_attest_db_t {
 	bool dir_set;
 
 	/**
-	 * Component Functional Name to be queried
+	 * Measurement file to be queried
 	 */
-	pts_comp_func_name_t *cfn;
+	char *file;
 
 	/**
-	 * Primary key of the Component Functional Name to be queried
+	 * Primary key of measurement file to be queried
 	 */
-	int cid;
+	int fid;
 
 	/**
-	 * TRUE if Component Functional Name has been set
+	 * TRUE if file has been set
 	 */
-	bool comp_set;
+	bool file_set;
+
+	/**
+	 *  AIK to be queried
+	 */
+	chunk_t key;
+
+	/**
+	 * Primary key of the AIK to be queried
+	 */
+	int kid;
+
+	/**
+	 * TRUE if AIK has been set
+	 */
+	bool key_set;
+
+	/**
+	 * Software product to be queried
+	 */
+	char *product;
+
+	/**
+	 * Primary key of software product to be queried
+	 */
+	int pid;
+
+	/**
+	 * TRUE if product has been set
+	 */
+	bool product_set;
 
 	/**
 	 * File measurement hash algorithm
 	 */
 	pts_meas_algorithms_t algo;
+
+	/**
+	 * Optional owner (user/host name)
+	 */
+	char *owner;
 
 	/**
 	 * Attestation database
@@ -123,234 +143,6 @@ char* print_cfn(pts_comp_func_name_t *cfn)
 					 pen_names, vid, names, name, flags, types, type);
 	}
 	return buf;
-}
-
-METHOD(attest_db_t, set_product, bool,
-	private_attest_db_t *this, char *product, bool create)
-{
-	enumerator_t *e;
-
-	if (this->product_set)
-	{
-		printf("product has already been set\n");
-		return FALSE;
-	}
-	this->product = strdup(product);
-
-	e = this->db->query(this->db, "SELECT id FROM products WHERE name = ?",
-						DB_TEXT, product, DB_INT);
-	if (e)
-	{
-		if (e->enumerate(e, &this->pid))
-		{
-			this->product_set = TRUE;
-		}
-		e->destroy(e);
-	}
-	if (this->product_set)
-	{
-		return TRUE;
-	}
-
-	if (!create)
-	{
-		printf("product '%s' not found in database\n", product);
-		return FALSE;
-	}
-
-	/* Add a new database entry */
-	this->product_set = this->db->execute(this->db, &this->pid,
-									"INSERT INTO products (name) VALUES (?)",
-									DB_TEXT, product) == 1;
-
-	printf("product '%s' %sinserted into database\n", product,
-		   this->product_set ? "" : "could not be ");
-
-	return this->product_set;
-}
-
-METHOD(attest_db_t, set_pid, bool,
-	private_attest_db_t *this, int pid)
-{
-	enumerator_t *e;
-	char *product;
-
-	if (this->product_set)
-	{
-		printf("product has already been set\n");
-		return FALSE;
-	}
-	this->pid = pid;
-
-	e = this->db->query(this->db, "SELECT name FROM products WHERE id = ?",
-						DB_INT, pid, DB_TEXT);
-	if (e)
-	{
-		if (e->enumerate(e, &product))
-		{
-			this->product = strdup(product);
-			this->product_set = TRUE;
-		}
-		else
-		{
-			printf("no product found with pid %d in database\n", pid);
-		}
-		e->destroy(e);
-	}
-	return this->product_set;
-}
-
-METHOD(attest_db_t, set_file, bool,
-	private_attest_db_t *this, char *file, bool create)
-{
-	enumerator_t *e;
-
-	if (this->file_set)
-	{
-		printf("file has already been set\n");
-		return FALSE;
-	}
-	this->file = strdup(file);
-
-	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
-						DB_TEXT, file, DB_INT);
-	if (e)
-	{
-		if (e->enumerate(e, &this->fid))
-		{
-			this->file_set = TRUE;
-		}
-		e->destroy(e);
-	}
-	if (this->file_set)
-	{
-		return TRUE;
-	}
-
-	if (!create)
-	{
-		printf("file '%s' not found in database\n", file);
-		return FALSE;
-	}
-
-	/* Add a new database entry */
-	this->file_set = this->db->execute(this->db, &this->fid,
-								"INSERT INTO files (type, path) VALUES (0, ?)",
-								DB_TEXT, file) == 1;
-
-	printf("file '%s' %sinserted into database\n", file,
-		   this->file_set ? "" : "could not be ");
-
-	return this->file_set;
-}
-
-METHOD(attest_db_t, set_fid, bool,
-	private_attest_db_t *this, int fid)
-{
-	enumerator_t *e;
-	char *file;
-
-	if (this->file_set)
-	{
-		printf("file has already been set\n");
-		return FALSE;
-	}
-	this->fid = fid;
-
-	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
-						DB_INT, fid, DB_TEXT);
-	if (e)
-	{
-		if (e->enumerate(e, &file))
-		{
-			this->file = strdup(file);
-			this->file_set = TRUE;
-		}
-		else
-		{
-			printf("no file found with fid %d\n", fid);
-		}
-		e->destroy(e);
-	}
-	return this->file_set;
-}
-
-METHOD(attest_db_t, set_directory, bool,
-	private_attest_db_t *this, char *dir, bool create)
-{
-	enumerator_t *e;
-
-	if (this->dir_set)
-	{
-		printf("directory has already been set\n");
-		return FALSE;
-	}
-	free(this->dir);
-	this->dir = strdup(dir);
-
-	e = this->db->query(this->db,
-						"SELECT id FROM files WHERE type = 1 AND path = ?",
-						DB_TEXT, dir, DB_INT);
-	if (e)
-	{
-		if (e->enumerate(e, &this->did))
-		{
-			this->dir_set = TRUE;
-		}
-		e->destroy(e);
-	}
-	if (this->dir_set)
-	{
-		return TRUE;
-	}
-
-	if (!create)
-	{
-		printf("directory '%s' not found in database\n", dir);
-		return FALSE;
-	}
-
-	/* Add a new database entry */
-	this->dir_set = this->db->execute(this->db, &this->did,
-								"INSERT INTO files (type, path) VALUES (1, ?)",
-								DB_TEXT, dir) == 1;
-
-	printf("directory '%s' %sinserted into database\n", dir,
-		   this->dir_set ? "" : "could not be ");
-
-	return this->dir_set;
-}
-
-METHOD(attest_db_t, set_did, bool,
-	private_attest_db_t *this, int did)
-{
-	enumerator_t *e;
-	char *dir;
-
-	if (this->dir_set)
-	{
-		printf("directory has already been set\n");
-		return FALSE;
-	}
-	this->did = did;
-
-	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
-						DB_INT, did, DB_TEXT);
-	if (e)
-	{
-		if (e->enumerate(e, &dir))
-		{
-			free(this->dir);
-			this->dir = strdup(dir);
-			this->dir_set = TRUE;
-		}
-		else
-		{
-			printf("no directory found with did %d\n", did);
-		}
-		e->destroy(e);
-	}
-	return this->dir_set;
 }
 
 METHOD(attest_db_t, set_component, bool,
@@ -456,10 +248,330 @@ METHOD(attest_db_t, set_cid, bool,
 	return this->comp_set;
 }
 
+METHOD(attest_db_t, set_directory, bool,
+	private_attest_db_t *this, char *dir, bool create)
+{
+	enumerator_t *e;
+
+	if (this->dir_set)
+	{
+		printf("directory has already been set\n");
+		return FALSE;
+	}
+	free(this->dir);
+	this->dir = strdup(dir);
+
+	e = this->db->query(this->db,
+						"SELECT id FROM files WHERE type = 1 AND path = ?",
+						DB_TEXT, dir, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->did))
+		{
+			this->dir_set = TRUE;
+		}
+		e->destroy(e);
+	}
+	if (this->dir_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("directory '%s' not found in database\n", dir);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	this->dir_set = this->db->execute(this->db, &this->did,
+								"INSERT INTO files (type, path) VALUES (1, ?)",
+								DB_TEXT, dir) == 1;
+
+	printf("directory '%s' %sinserted into database\n", dir,
+		   this->dir_set ? "" : "could not be ");
+
+	return this->dir_set;
+}
+
+METHOD(attest_db_t, set_did, bool,
+	private_attest_db_t *this, int did)
+{
+	enumerator_t *e;
+	char *dir;
+
+	if (this->dir_set)
+	{
+		printf("directory has already been set\n");
+		return FALSE;
+	}
+	this->did = did;
+
+	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
+						DB_INT, did, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &dir))
+		{
+			free(this->dir);
+			this->dir = strdup(dir);
+			this->dir_set = TRUE;
+		}
+		else
+		{
+			printf("no directory found with did %d\n", did);
+		}
+		e->destroy(e);
+	}
+	return this->dir_set;
+}
+
+METHOD(attest_db_t, set_file, bool,
+	private_attest_db_t *this, char *file, bool create)
+{
+	enumerator_t *e;
+
+	if (this->file_set)
+	{
+		printf("file has already been set\n");
+		return FALSE;
+	}
+	this->file = strdup(file);
+
+	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
+						DB_TEXT, file, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->fid))
+		{
+			this->file_set = TRUE;
+		}
+		e->destroy(e);
+	}
+	if (this->file_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("file '%s' not found in database\n", file);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	this->file_set = this->db->execute(this->db, &this->fid,
+								"INSERT INTO files (type, path) VALUES (0, ?)",
+								DB_TEXT, file) == 1;
+
+	printf("file '%s' %sinserted into database\n", file,
+		   this->file_set ? "" : "could not be ");
+
+	return this->file_set;
+}
+
+METHOD(attest_db_t, set_fid, bool,
+	private_attest_db_t *this, int fid)
+{
+	enumerator_t *e;
+	char *file;
+
+	if (this->file_set)
+	{
+		printf("file has already been set\n");
+		return FALSE;
+	}
+	this->fid = fid;
+
+	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
+						DB_INT, fid, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &file))
+		{
+			this->file = strdup(file);
+			this->file_set = TRUE;
+		}
+		else
+		{
+			printf("no file found with fid %d\n", fid);
+		}
+		e->destroy(e);
+	}
+	return this->file_set;
+}
+
+METHOD(attest_db_t, set_key, bool,
+	private_attest_db_t *this, char *key, bool create)
+{
+	enumerator_t *e;
+	char *owner;
+
+	if (this->key_set)
+	{
+		printf("key has already been set\n");
+		return FALSE;
+	}
+	this->key = chunk_from_hex(chunk_create(key, strlen(key)), NULL);
+
+	e = this->db->query(this->db, "SELECT id, owner FROM keys WHERE keyid= ?",
+						DB_BLOB, this->key, DB_INT, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->kid, &owner))
+		{
+			this->owner = strdup(owner);
+			this->key_set = TRUE;
+		}
+		e->destroy(e);
+	}
+	if (this->key_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("key '%#B' not found in database\n", &this->key);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	if (!this->owner)
+	{
+		this->owner = strdup("");
+	}
+	this->key_set = this->db->execute(this->db, &this->kid,
+								"INSERT INTO keys (keyid, owner) VALUES (?, ?)",
+								DB_BLOB, this->key, DB_TEXT, this->owner) == 1;
+
+	printf("key '%#B' %sinserted into database\n", &this->key,
+		   this->key_set ? "" : "could not be ");
+
+	return this->key_set;
+
+};
+
+METHOD(attest_db_t, set_kid, bool,
+	private_attest_db_t *this, int kid)
+{
+	enumerator_t *e;
+	chunk_t key;
+	char *owner;
+
+	if (this->key_set)
+	{
+		printf("key has already been set\n");
+		return FALSE;
+	}
+	this->kid = kid;
+
+	e = this->db->query(this->db, "SELECT keyid, owner FROM keys WHERE id = ?",
+						DB_INT, kid, DB_BLOB, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &key, &owner))
+		{
+			this->owner = strdup(owner);
+			this->key = chunk_clone(key);
+			this->key_set = TRUE;
+		}
+		else
+		{
+			printf("no key found with kid %d\n", kid);
+		}
+		e->destroy(e);
+	}
+	return this->key_set;
+
+};
+
+METHOD(attest_db_t, set_product, bool,
+	private_attest_db_t *this, char *product, bool create)
+{
+	enumerator_t *e;
+
+	if (this->product_set)
+	{
+		printf("product has already been set\n");
+		return FALSE;
+	}
+	this->product = strdup(product);
+
+	e = this->db->query(this->db, "SELECT id FROM products WHERE name = ?",
+						DB_TEXT, product, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->pid))
+		{
+			this->product_set = TRUE;
+		}
+		e->destroy(e);
+	}
+	if (this->product_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("product '%s' not found in database\n", product);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	this->product_set = this->db->execute(this->db, &this->pid,
+									"INSERT INTO products (name) VALUES (?)",
+									DB_TEXT, product) == 1;
+
+	printf("product '%s' %sinserted into database\n", product,
+		   this->product_set ? "" : "could not be ");
+
+	return this->product_set;
+}
+
+METHOD(attest_db_t, set_pid, bool,
+	private_attest_db_t *this, int pid)
+{
+	enumerator_t *e;
+	char *product;
+
+	if (this->product_set)
+	{
+		printf("product has already been set\n");
+		return FALSE;
+	}
+	this->pid = pid;
+
+	e = this->db->query(this->db, "SELECT name FROM products WHERE id = ?",
+						DB_INT, pid, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &product))
+		{
+			this->product = strdup(product);
+			this->product_set = TRUE;
+		}
+		else
+		{
+			printf("no product found with pid %d in database\n", pid);
+		}
+		e->destroy(e);
+	}
+	return this->product_set;
+}
+
 METHOD(attest_db_t, set_algo, void,
 	private_attest_db_t *this, pts_meas_algorithms_t algo)
 {
 	this->algo = algo;
+}
+
+METHOD(attest_db_t, set_owner, void,
+	private_attest_db_t *this, char *owner)
+{
+	free(this->owner);
+	this->owner = strdup(owner);
 }
 
 METHOD(attest_db_t, list_components, void,
@@ -469,14 +581,14 @@ METHOD(attest_db_t, list_components, void,
 	pts_comp_func_name_t *cfn;
 	int cid, vid, name, qualifier, count = 0;
 
-	if (this->pid)
+	if (this->kid)
 	{
 		e = this->db->query(this->db,
 				"SELECT c.id, c.vendor_id, c.name, c.qualifier "
 				"FROM components AS c "
-				"JOIN product_component AS pc ON c.id = pc.component "
-				"WHERE pc.product = ? ORDER BY c.vendor_id, c.name, c.qualifier",
-				DB_INT, this->pid, DB_INT, DB_INT, DB_INT, DB_INT);
+				"JOIN key_component AS kc ON c.id = kc.component "
+				"WHERE kc.key = ? ORDER BY c.vendor_id, c.name, c.qualifier",
+				DB_INT, this->kid, DB_INT, DB_INT, DB_INT, DB_INT);
 	}
 	else
 	{
@@ -497,12 +609,61 @@ METHOD(attest_db_t, list_components, void,
 		e->destroy(e);
 
 		printf("%d component%s found", count, (count == 1) ? "" : "s");
-		if (this->product_set)
+		if (this->key_set)
 		{
-			printf(" for product '%s'", this->product);
+			printf(" for key %#B", &this->key);
 		}
 		printf("\n");
 	}
+}
+
+METHOD(attest_db_t, list_keys, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	chunk_t keyid;
+	char *owner;
+	int kid, count = 0;
+
+	if (this->cid)
+	{
+		e = this->db->query(this->db,
+				"SELECT k.id, k.keyid, k.owner FROM keys AS k "
+				"JOIN key_component AS kc ON k.id = kc.key "
+				"WHERE kc.component = ? ORDER BY k.keyid",
+				DB_INT, this->cid, DB_INT, DB_BLOB, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &kid, &keyid, &owner))
+			{
+				printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+				count++;
+			}
+			e->destroy(e);
+		}
+	}
+	else
+	{
+		e = this->db->query(this->db, "SELECT id, keyid, owner FROM keys "
+				"ORDER BY keyid",
+				DB_INT, DB_BLOB, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &kid, &keyid, &owner))
+			{
+				printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+				count++;
+			}
+			e->destroy(e);
+		}
+	}
+
+	printf("%d key%s found", count, (count == 1) ? "" : "s");
+	if (this->comp_set)
+	{
+		printf(" for component '%s'", print_cfn(this->cfn));
+	}
+	printf("\n");
 }
 
 METHOD(attest_db_t, list_files, void,
@@ -584,23 +745,6 @@ METHOD(attest_db_t, list_products, void,
 			e->destroy(e);
 		}
 	}
-	else if (this->cid)
-	{
-		e = this->db->query(this->db,
-				"SELECT p.id, p.name FROM products AS p "
-				"JOIN product_component AS pc ON p.id = pc.product "
-				"WHERE pc.component = ? ORDER BY p.name",
-				DB_INT, this->cid, DB_INT, DB_TEXT);
-		if (e)
-		{
-			while (e->enumerate(e, &pid, &product, &meas, &meta))
-			{
-				printf("%3d: %s\n", pid, product);
-				count++;
-			}
-			e->destroy(e);
-		}
-	}
 	else
 	{
 		e = this->db->query(this->db, "SELECT id, name FROM products "
@@ -621,10 +765,6 @@ METHOD(attest_db_t, list_products, void,
 	if (this->file_set)
 	{
 		printf(" for file '%s'", this->file);
-	}
-	else if (this->comp_set)
-	{
-		printf(" for component '%s'", print_cfn(this->cfn));
 	}
 	printf("\n");
 }
@@ -672,34 +812,7 @@ METHOD(attest_db_t, list_hashes, void,
 
 	dir = strdup("");
 
-	if (this->pid && this->fid && this->cid)
-	{
-		e = this->db->query(this->db,
-				"SELECT hash FROM file_hashes "
-				"WHERE algo = ? AND file = ? AND component = ? AND product = ?",
-				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->cid,
-				DB_INT, this->pid, DB_BLOB);
-		if (e)
-		{
-			while (e->enumerate(e, &hash))
-			{
-				if (this->fid != fid_old)
-				{
-					printf("%3d: %s%s%s\n", this->fid, this->dir,
-						   slash(this->dir, this->file) ? "/" : "", this->file);
-					fid_old = this->fid;
-				}
-				printf("     %#B '%s'\n", &hash, this->product);
-				count++;
-			}
-			e->destroy(e);
-
-			printf("%d %N value%s found for component '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
-				   (count == 1) ? "" : "s", print_cfn(this->cfn));
-		}
-	}
-	else if (this->pid && this->fid)
+	if (this->pid && this->fid)
 	{
 		e = this->db->query(this->db,
 				"SELECT hash FROM file_hashes "
@@ -824,6 +937,110 @@ METHOD(attest_db_t, list_hashes, void,
 	free(dir);
 }
 
+METHOD(attest_db_t, list_measurements, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	chunk_t hash, keyid;
+	pts_comp_func_name_t *cfn;
+	char *owner;
+	int seq_no, pcr, vid, name, qualifier;
+	int cid, cid_old = 0, kid, kid_old = 0, count = 0;
+
+	if (this->kid && this->cid)
+	{
+		e = this->db->query(this->db,
+				"SELECT ch.seq_no, ch.pcr, ch.hash, k.owner "
+				"FROM component_hashes AS ch "
+				"JOIN keys AS k ON k.id = ch.key "
+				"WHERE ch.algo = ? AND ch.key = ? AND ch.component = ? "
+				"ORDER BY seq_no",
+				DB_INT, this->algo, DB_INT, this->kid, DB_INT, this->cid,
+				DB_INT, DB_INT, DB_BLOB, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &seq_no, &pcr, &hash, &owner))
+			{
+				if (this->kid != kid_old)
+				{
+					printf("%3d: %#B '%s'\n", this->kid, &this->key, owner);
+					kid_old = this->kid;
+				}
+				printf("%5d %02d %#B\n", seq_no, pcr, &hash);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for component '%s'\n", count,
+				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   (count == 1) ? "" : "s", print_cfn(this->cfn));
+		}
+	}
+	else if (this->cid)
+	{
+		e = this->db->query(this->db,
+				"SELECT ch.seq_no, ch.pcr, ch.hash, k.id, k.keyid, k.owner "
+				"FROM component_hashes AS ch "
+				"JOIN keys AS k ON k.id = ch.key "
+				"WHERE ch.algo = ? AND ch.component = ? "
+				"ORDER BY keyid, seq_no",
+				DB_INT, this->algo, DB_INT, this->cid,
+				DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &seq_no, &pcr, &hash, &kid, &keyid, &owner))
+			{
+				if (kid != kid_old)
+				{
+					printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+					kid_old = kid;
+				}
+				printf("%5d %02d %#B\n", seq_no, pcr, &hash);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for component '%s'\n", count,
+				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   (count == 1) ? "" : "s", print_cfn(this->cfn));
+		}
+
+	}
+	else if (this->kid)
+	{
+		e = this->db->query(this->db,
+				"SELECT ch.seq_no, ch.pcr, ch.hash, "
+				"c.id, c.vendor_id, c.name, c.qualifier "
+				"FROM component_hashes AS ch "
+				"JOIN components AS c ON c.id = ch.component "
+				"WHERE ch.algo = ? AND ch.key = ? "
+				"ORDER BY vendor_id, name, qualifier, seq_no",
+				DB_INT, this->algo, DB_INT, this->kid, DB_INT, DB_INT, DB_BLOB,
+				DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
+		if (e)
+		{
+			while (e->enumerate(e, &seq_no, &pcr, &hash, &cid, &vid, &name,
+								   &qualifier))
+			{
+				if (cid != cid_old)
+				{
+					cfn = pts_comp_func_name_create(vid, name, qualifier);
+					printf("%3d: %s\n", cid, print_cfn(cfn));
+					cfn->destroy(cfn);
+					cid_old = cid;
+				}
+				printf("%5d %02d %#B\n", seq_no, pcr, &hash);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for key %#B '%s'\n", count,
+				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   (count == 1) ? "" : "s", &this->key, this->owner);
+		}
+	}
+}
+
 METHOD(attest_db_t, add, bool,
 	private_attest_db_t *this)
 {
@@ -841,24 +1058,19 @@ METHOD(attest_db_t, delete, bool,
 		return FALSE;
 	}
 
-	if (this->pid)
+	if (this->kid && this->did)
 	{
-		success = this->db->execute(this->db, NULL,
-								"DELETE FROM products WHERE id = ?",
-								DB_UINT, this->pid) > 0;
-
-		printf("product '%s' %sdeleted from database\n", this->product,
-			   success ? "" : "could not be ");
-		return success;
+		printf("deletion of key/component entries not supported yet\n");
+		return FALSE;
 	}
 
-	if (this->fid)
+	if (this->cid)
 	{
 		success = this->db->execute(this->db, NULL,
-								"DELETE FROM files WHERE id = ?",
-								DB_UINT, this->fid) > 0;
+								"DELETE FROM components WHERE id = ?",
+								DB_UINT, this->cid) > 0;
 
-		printf("file '%s' %sdeleted from database\n", this->file,
+		printf("component '%s' %sdeleted from database\n", print_cfn(this->cfn),
 			   success ? "" : "could not be ");
 		return success;
 	}
@@ -874,13 +1086,34 @@ METHOD(attest_db_t, delete, bool,
 		return success;
 	}
 
-	if (this->cid)
+	if (this->fid)
 	{
 		success = this->db->execute(this->db, NULL,
-								"DELETE FROM components WHERE id = ?",
-								DB_UINT, this->cid) > 0;
+								"DELETE FROM files WHERE id = ?",
+								DB_UINT, this->fid) > 0;
 
-		printf("component '%s' %sdeleted from database\n", print_cfn(this->cfn),
+		printf("file '%s' %sdeleted from database\n", this->file,
+			   success ? "" : "could not be ");
+		return success;
+	}
+
+	if (this->kid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM keys WHERE id = ?",
+								DB_UINT, this->kid) > 0;
+
+		printf("key %#B %sdeleted from database\n", &this->key,
+			   success ? "" : "could not be ");
+		return success;
+	}
+	if (this->pid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM products WHERE id = ?",
+								DB_UINT, this->pid) > 0;
+
+		printf("product '%s' %sdeleted from database\n", this->product,
 			   success ? "" : "could not be ");
 		return success;
 	}
@@ -897,6 +1130,8 @@ METHOD(attest_db_t, destroy, void,
 	free(this->product);
 	free(this->file);
 	free(this->dir);
+	free(this->owner);
+	free(this->key.ptr);
 	free(this);
 }
 
@@ -909,19 +1144,24 @@ attest_db_t *attest_db_create(char *uri)
 
 	INIT(this,
 		.public = {
-			.set_product = _set_product,
-			.set_pid = _set_pid,
-			.set_file = _set_file,
-			.set_fid = _set_fid,
-			.set_directory = _set_directory,
-			.set_did = _set_did,
 			.set_component = _set_component,
 			.set_cid = _set_cid,
+			.set_directory = _set_directory,
+			.set_did = _set_did,
+			.set_file = _set_file,
+			.set_fid = _set_fid,
+			.set_key = _set_key,
+			.set_kid = _set_kid,
+			.set_product = _set_product,
+			.set_pid = _set_pid,
 			.set_algo = _set_algo,
+			.set_owner = _set_owner,
 			.list_products = _list_products,
 			.list_files = _list_files,
 			.list_components = _list_components,
+			.list_keys = _list_keys,
 			.list_hashes = _list_hashes,
+			.list_measurements = _list_measurements,
 			.add = _add,
 			.delete = _delete,
 			.destroy = _destroy,

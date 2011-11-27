@@ -146,6 +146,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			tcg_pts_attr_aik_t *attr_cast;
 			certificate_t *aik, *issuer;
+			public_key_t *public;
+			chunk_t keyid;
 			enumerator_t *e;
 			bool trusted = FALSE;
 
@@ -158,7 +160,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			if (aik->get_type(aik) == CERT_X509)
 			{
-				DBG1(DBG_IMV, "verifying AIK certificate");
+				public = aik->get_public_key(aik);
+				public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid);
+				DBG1(DBG_IMV, "verifying AIK certificate with keyid %#B", &keyid);
+				public->destroy(public);
+
 				e = pts_credmgr->create_trusted_enumerator(pts_credmgr,
 							KEY_ANY, aik->get_issuer(aik), FALSE);
 				while (e->enumerate(e, &issuer))
@@ -285,8 +291,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				default:
 				case FAILED:
 					attestation_state->set_measurement_error(attestation_state);
-					/* fall through to next case */
+					comp->destroy(comp);
+					break;
 				case SUCCESS:
+					name->log(name, "  successfully measured ");
 					comp->destroy(comp);
 					break;
 				case NEED_MORE:

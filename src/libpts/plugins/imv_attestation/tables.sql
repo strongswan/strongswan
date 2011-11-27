@@ -7,14 +7,6 @@ CREATE TABLE files (
   path TEXT NOT NULL
 );
 
-DROP TABLE IF EXISTS components;
-CREATE TABLE components (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  vendor_id INTEGER NOT NULL,
-  name INTEGER NOT NULL,
-  qualifier INTEGER DEFAULT 0
-);
-
 DROP TABLE IF EXISTS products;
 CREATE TABLE products (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -34,15 +26,6 @@ CREATE TABLE product_file (
   PRIMARY KEY (product, file)
 );
 
-DROP TABLE IF EXISTS product_component;
-CREATE TABLE product_component (
-  product INTEGER NOT NULL,
-  component INTEGER NOT NULL,
-  depth INTEGER DEFAULT 0,
-  seq_no INTEGER DEFAULT 0,
-  PRIMARY KEY (product, component)
-);
-
 DROP TABLE IF EXISTS file_hashes;
 CREATE TABLE file_hashes (
   file INTEGER NOT NULL,
@@ -53,13 +36,47 @@ CREATE TABLE file_hashes (
   PRIMARY KEY(file, directory, product, algo)
 );
 
+DROP TABLE IF EXISTS keys;
+CREATE TABLE keys (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  keyid BLOB NOT NULL,
+  owner TEXT NOT NULL
+);
+DROP INDEX IF EXISTS keys_keyid;
+CREATE INDEX keys_keyid ON keys (
+  keyid
+);
+DROP INDEX IF EXISTS keys_owner;
+CREATE INDEX keys_owner ON keys (
+  owner
+);
+
+DROP TABLE IF EXISTS components;
+CREATE TABLE components (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  vendor_id INTEGER NOT NULL,
+  name INTEGER NOT NULL,
+  qualifier INTEGER DEFAULT 0
+);
+
+
+DROP TABLE IF EXISTS key_component;
+CREATE TABLE key_component (
+  key INTEGER NOT NULL,
+  component INTEGER NOT NULL,
+  depth INTEGER DEFAULT 0,
+  seq_no INTEGER DEFAULT 0,
+  PRIMARY KEY (key, component)
+);
+
+
 DROP TABLE IF EXISTS component_hashes;
 CREATE TABLE component_hashes (
   component INTEGER NOT NULL,
-  product INTEGER NOT NULL,
+  key INTEGER NOT NULL,
   seq_no INTEGER NOT NULL,
   pcr INTEGER NOT NULL,
   algo INTEGER NOT NULL,
   hash BLOB NOT NULL,
-  PRIMARY KEY(component, product, seq_no, algo)
+  PRIMARY KEY(component, key, seq_no, algo)
 );

@@ -459,6 +459,33 @@ METHOD(pts_t, set_aik, void,
 	this->aik = aik->get_ref(aik);
 }
 
+METHOD(pts_t, get_aik_keyid, bool,
+	private_pts_t *this, chunk_t *keyid)
+{
+	public_key_t *public;
+	bool success;
+
+	if (!this->aik)
+	{
+		DBG1(DBG_PTS, "no AIK certificate available");
+		return FALSE;
+	}
+	public = this->aik->get_public_key(this->aik);
+	if (!public)
+	{
+		DBG1(DBG_PTS, "no AIK public key available");
+		return FALSE;
+	}
+	success = public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, keyid);
+	if (!success)
+	{
+		DBG1(DBG_PTS, "no SHA-1 AIK public key info ID available");
+	}
+	public->destroy(public);
+
+	return success;
+}
+
 METHOD(pts_t, hash_file, bool,
 	private_pts_t *this, hasher_t *hasher, char *pathname, u_char *hash)
 {
@@ -932,7 +959,6 @@ METHOD(pts_t, quote_tpm, bool,
 		}		
 		if (this->pcr_select[i] & f)
 		{
-			DBG2(DBG_TNC, "PCR %02d selected for TPM Quote", pcr);
 			result = use_quote2 ?
 					Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
 												TSS_PCRS_DIRECTION_RELEASE) :
@@ -1510,6 +1536,7 @@ pts_t *pts_create(bool is_imc)
 			.get_pcr_len = _get_pcr_len,
 			.get_aik = _get_aik,
 			.set_aik = _set_aik,
+			.get_aik_keyid = _get_aik_keyid,
 			.is_path_valid = _is_path_valid,
 			.hash_file = _hash_file,
 			.do_measurements = _do_measurements,

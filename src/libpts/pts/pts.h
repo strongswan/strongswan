@@ -246,6 +246,14 @@ struct pts_t {
 	void (*set_aik)(pts_t *this, certificate_t *aik);
 
 	/**
+	 * Get SHA-1 Attestation Identity Public Key Info ID
+	 *
+	 * @param keyid				AIK ID
+	 * @return					TRUE if AIK ID exists
+	 */
+	bool (*get_aik_keyid)(pts_t *this, chunk_t *keyid);
+
+	/**
 	 * Check whether path is valid file/directory on filesystem
 	 *
 	 * @param path				Absolute path

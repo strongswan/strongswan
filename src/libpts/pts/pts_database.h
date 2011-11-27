@@ -52,15 +52,6 @@ struct pts_database_t {
 												 char *product);
 
 	/**
-	* Get functional components to request evidence of
-	*
-	* @param product		Software product (os, vpn client, etc.)
-	* @return				Enumerator over all matching components
-	*/
-	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this,
-												 char *product);
-
-	/**
 	* Get stored measurement hash for single file or directory entries
 	*
 	* @param product		Software product (os, vpn client, etc.)
@@ -74,19 +65,40 @@ struct pts_database_t {
 								int id, bool is_dir);
 
 	/**
+	* Get functional components to request evidence of
+	*
+	* @param keyid			SHA-1 hash of AIK public key info
+	* @return				Enumerator over all matching components
+	*/
+	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this,
+												 chunk_t keyid);
+
+	/**
 	* Check a functional component measurement against value stored in database
 	*
 	* @param measurement	measurement hash
 	* @param comp_name		Component Functional Name
-	* @param product		Software product (os, vpn client, etc.)
+	* @param keyid			SHA-1 hash of AIK public key info
 	* @param seq_no			Measurement sequence number
 	* @param prc			Number of the PCR the measurement was extended into
 	* @param algo			Hash algorithm used for measurement
 	* @return				return code
 	*/
 	status_t (*check_comp_measurement)(pts_database_t *this, chunk_t measurement,
-							pts_comp_func_name_t *comp_name, char *product,
+							pts_comp_func_name_t *comp_name, chunk_t keyid,
 							int seq_no, int pcr, pts_meas_algorithms_t algo);
+
+	/**
+	* Get the number of measurements for a functional component and AIK
+	*
+	* @param comp_name		Component Functional Name
+	* @param keyid			SHA-1 hash of AIK public key info
+	* @param algo			Hash algorithm used for measurement
+	* @return				measurement count
+	*/
+	bool (*get_comp_measurement_count)(pts_database_t *this,
+							pts_comp_func_name_t *comp_name, chunk_t keyid,
+							pts_meas_algorithms_t algo, int *count);
 
 	/**
 	* Destroys a pts_database_t object.

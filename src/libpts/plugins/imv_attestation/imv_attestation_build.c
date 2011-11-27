@@ -210,9 +210,9 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 		{
 			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			enumerator_t *enumerator;
-			char *platform_info;
 			pts_component_t *comp;
 			pts_comp_func_name_t *comp_name;
+			chunk_t keyid;
 			int vid, name, qualifier;
 			u_int8_t flags;
 			u_int32_t depth;
@@ -221,18 +221,17 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
-			/* Get Platform and OS of the PTS-IMC */
-			platform_info = pts->get_platform_info(pts);
-			if (!pts_db || !platform_info)
+			if (!pts->get_aik_keyid(pts, &keyid))
 			{
-				DBG1(DBG_IMV, "%s%s%s not available",
-					(pts_db) ? "" : "pts database",
-					(!pts_db && !platform_info) ? "and" : "",
-					(platform_info) ? "" : "platform info");
+				break;
+			}
+			if (!pts_db)
+			{
+				DBG1(DBG_PTS, "pts database not available");
 				break;
 			}
 			
-			enumerator = pts_db->create_comp_evid_enumerator(pts_db, platform_info);
+			enumerator = pts_db->create_comp_evid_enumerator(pts_db, keyid);
 			if (!enumerator)
 			{
 				break;

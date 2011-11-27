@@ -97,10 +97,12 @@ static void do_args(int argc, char *argv[])
 	enum {
 		OP_UNDEF,
 		OP_USAGE,
-		OP_FILES,
+		OP_KEYS,
 		OP_COMPONENTS,
-		OP_PRODUCTS,
+		OP_FILES,
 		OP_HASHES,
+		OP_MEASUREMENTS,
+		OP_PRODUCTS,
 		OP_ADD,
 		OP_DEL,
 	} op = OP_UNDEF;
@@ -116,8 +118,10 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "components", no_argument, NULL, 'c' },
 			{ "files", no_argument, NULL, 'f' },
+			{ "keys", no_argument, NULL, 'k' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
+			{ "measurements", no_argument, NULL, 'M' },
 			{ "add", no_argument, NULL, 'a' },
 			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
@@ -129,6 +133,8 @@ static void do_args(int argc, char *argv[])
 			{ "directory", required_argument, NULL, 'D' },
 			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
+			{ "key", required_argument, NULL, 'K' },
+			{ "owner", required_argument, NULL, 'O' },
 			{ "product", required_argument, NULL, 'P' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
@@ -137,6 +143,7 @@ static void do_args(int argc, char *argv[])
 			{ "fid", required_argument, NULL, '5' },
 			{ "pid", required_argument, NULL, '6' },
 			{ "cid", required_argument, NULL, '7' },
+			{ "kid", required_argument, NULL, '8' },
 			{ 0,0,0,0 }
 		};
 
@@ -154,11 +161,17 @@ static void do_args(int argc, char *argv[])
 			case 'f':
 				op = OP_FILES;
 				continue;
+			case 'k':
+				op = OP_KEYS;
+				continue;
 			case 'p':
 				op = OP_PRODUCTS;
 				continue;
 			case 'H':
 				op = OP_HASHES;
+				continue;
+			case 'M':
+				op = OP_MEASUREMENTS;
 				continue;
 			case 'a':
 				op = OP_ADD;
@@ -199,6 +212,15 @@ static void do_args(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			case 'K':
+				if (!attest->set_key(attest, optarg, op == OP_ADD))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			case 'O':
+				attest->set_owner(attest, optarg);
+				continue;
 			case 'P':
 				if (!attest->set_product(attest, optarg, op == OP_ADD))
 				{
@@ -238,6 +260,12 @@ static void do_args(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			case '8':
+				if (!attest->set_kid(attest, atoi(optarg)))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
 		}
 		break;
 	}
@@ -250,6 +278,9 @@ static void do_args(int argc, char *argv[])
 		case OP_PRODUCTS:
 			attest->list_products(attest);
 			break;
+		case OP_KEYS:
+			attest->list_keys(attest);
+			break;
 		case OP_COMPONENTS:
 			attest->list_components(attest);
 			break;
@@ -258,6 +289,9 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_HASHES:
 			attest->list_hashes(attest);
+			break;
+		case OP_MEASUREMENTS:
+			attest->list_measurements(attest);
 			break;
 		case OP_ADD:
 			attest->add(attest);
