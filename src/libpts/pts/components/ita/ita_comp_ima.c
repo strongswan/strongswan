@@ -31,7 +31,7 @@
 
 #define IMA_SECURITY_DIR			"/sys/kernel/security/tpm0/"
 #define IMA_BIOS_MEASUREMENT_PATH	IMA_SECURITY_DIR "binary_bios_measurements"
-#define IMA_PCR_MAX					8
+#define IMA_PCR_MAX					16
 
 typedef struct pts_ita_comp_ima_t pts_ita_comp_ima_t;
 
