@@ -114,8 +114,7 @@ METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
 }
 
 METHOD(pts_database_t, check_comp_measurement, status_t,
-	private_pts_database_t *this, chunk_t measurement,
-	pts_comp_func_name_t *comp_name, chunk_t keyid,
+	private_pts_database_t *this, chunk_t measurement, int cid, int kid,
 	int seq_no, int pcr, pts_meas_algorithms_t algo)
 {
 	enumerator_t *e;
@@ -123,16 +122,11 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	status_t status = NOT_FOUND;
 	
 	e = this->db->query(this->db,
-			"SELECT ch.hash FROM component_hashes AS ch "
-			"JOIN keys AS k ON ch.key = k.id "
-			"JOIN components AS c ON ch.component = c.id "
-			"WHERE c.vendor_id = ?  AND c.name = ? AND c.qualifier = ? "
-			"AND k.keyid = ? AND ch.seq_no = ? AND ch.pcr = ? AND ch.algo = ? ",
-			DB_INT, comp_name->get_vendor_id(comp_name),
-			DB_INT, comp_name->get_name(comp_name),
-			DB_INT, comp_name->get_qualifier(comp_name),
-			DB_BLOB, keyid, DB_INT, seq_no, DB_INT, pcr, DB_INT, algo,
-			DB_BLOB);
+					"SELECT hash FROM component_hashes "
+					"WHERE component = ?  AND key = ? "
+					"AND seq_no = ? AND pcr = ? AND algo = ? ",
+					DB_INT, cid, DB_INT, kid, DB_INT, seq_no,
+					DB_INT, pcr, DB_INT, algo, DB_BLOB);
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned"); 
@@ -168,23 +162,17 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 }
 
 METHOD(pts_database_t, insert_comp_measurement, status_t,
-	private_pts_database_t *this, chunk_t measurement,
-	pts_comp_func_name_t *comp_name, chunk_t keyid,
+	private_pts_database_t *this, chunk_t measurement, int cid, int kid,
 	int seq_no, int pcr, pts_meas_algorithms_t algo)
 {
 	int id;
 	
 	if (this->db->execute(this->db, &id,
-				"INSERT INTO component_hashes "
-				"(component, key, seq_no, pcr, algo, hash) VALUES ("
-				"(SELECT id FROM components"
-				" WHERE vendor_id = ?  AND name = ? AND qualifier = ?), "
-				"(SELECT id FROM keys WHERE keyid = ?), ?, ?, ?, ?)",
-				DB_INT, comp_name->get_vendor_id(comp_name),
-				DB_INT, comp_name->get_name(comp_name),
-				DB_INT, comp_name->get_qualifier(comp_name),
-				DB_BLOB, keyid, DB_INT, seq_no, DB_INT, pcr,
-				DB_INT, algo, DB_BLOB, measurement) == 1)
+					"INSERT INTO component_hashes "
+					"(component, key, seq_no, pcr, algo, hash) "
+					"VALUES (?, ?, ?, ?, ?, ?)",
+					DB_INT, cid, DB_INT, kid, DB_INT, seq_no, DB_INT, pcr,
+					DB_INT, algo, DB_BLOB, measurement) == 1)
 	{
 		return SUCCESS;
 	}
@@ -194,39 +182,33 @@ METHOD(pts_database_t, insert_comp_measurement, status_t,
 }
 
 METHOD(pts_database_t, delete_comp_measurements, int,
-	private_pts_database_t *this, pts_comp_func_name_t *comp_name, chunk_t keyid)
+	private_pts_database_t *this, int cid, int kid)
 {
 	return this->db->execute(this->db, NULL,
-				"DELETE FROM component_hashes WHERE "
-				"component = (SELECT id FROM components"
-				" WHERE vendor_id = ?  AND name = ? AND qualifier = ?) AND "
-				"key = (SELECT id FROM keys WHERE keyid = ?)",
-				DB_INT, comp_name->get_vendor_id(comp_name),
-				DB_INT, comp_name->get_name(comp_name),
-				DB_INT, comp_name->get_qualifier(comp_name),
-				DB_BLOB, keyid);
+					"DELETE FROM component_hashes "
+					"WHERE component = ? AND key = ?",
+					DB_INT, cid, DB_INT, kid);
 }
 
 METHOD(pts_database_t, get_comp_measurement_count, status_t,
 	private_pts_database_t *this, pts_comp_func_name_t *comp_name,
-	chunk_t keyid, pts_meas_algorithms_t algo, int *count)
+	chunk_t keyid, pts_meas_algorithms_t algo, int *cid, int *kid, int *count)
 {
 	enumerator_t *e;
-	int kid;
 	status_t status = SUCCESS;
 
 	/* Initialize count */
 	*count = 0;
 
-	/* Is the AIK registered? */
+	/* If the AIK is registered get the primary key */
 	e = this->db->query(this->db,
-			"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
+				"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned");
 		return FAILED;
 	}
-	if (!e->enumerate(e, &kid))
+	if (!e->enumerate(e, kid))
 	{
 		DBG1(DBG_PTS, "AIK %#B is not registered in database", &keyid);
 		e->destroy(e);
@@ -234,16 +216,32 @@ METHOD(pts_database_t, get_comp_measurement_count, status_t,
 	}
 	e->destroy(e);
 
+	/* Get the primary key of the Component Functional Name */
+	e = this->db->query(this->db,
+				"SELECT id FROM components "
+			"	WHERE vendor_id = ?  AND name = ? AND qualifier = ?",
+				DB_INT, comp_name->get_vendor_id(comp_name),
+				DB_INT, comp_name->get_name(comp_name),
+				DB_INT, comp_name->get_qualifier(comp_name),
+				DB_INT);
+	if (!e)
+	{
+		DBG1(DBG_PTS, "no database query enumerator returned");
+		return FAILED;
+	}
+	if (!e->enumerate(e, cid))
+	{
+		DBG1(DBG_PTS, "component functional name not found in database");
+		e->destroy(e);
+		return FAILED;
+	}
+	e->destroy(e);
+
 	/* Get the number of stored measurements for a given AIK and component */
 	e = this->db->query(this->db,
-			"SELECT COUNT(*) FROM component_hashes AS ch "
-			"JOIN components AS c ON ch.component = c.id "
-			"WHERE c.vendor_id = ?  AND c.name = ? AND c.qualifier = ? "
-			"AND ch.key = ? AND ch.algo = ? ",
-			DB_INT, comp_name->get_vendor_id(comp_name),
-			DB_INT, comp_name->get_name(comp_name),
-			DB_INT, comp_name->get_qualifier(comp_name),
-			DB_INT, kid, DB_INT, algo, DB_INT);
+				"SELECT COUNT(*) FROM component_hashes AS ch "
+				"WHERE component = ?  AND key = ? AND algo = ?",
+				DB_INT, *cid, DB_INT, *kid, DB_INT, algo, DB_INT);
 	if (!e)
 	{
 		DBG1(DBG_PTS, "no database query enumerator returned");

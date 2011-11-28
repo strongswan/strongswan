@@ -52,6 +52,11 @@ struct pts_ita_comp_ima_t {
 	pts_comp_func_name_t *name;
 
 	/**
+	 * AIK keyid
+	 */
+	chunk_t keyid;
+
+	/**
 	 * Sub-component depth
 	 */
 	u_int32_t depth;
@@ -62,9 +67,14 @@ struct pts_ita_comp_ima_t {
 	pts_database_t *pts_db;
 
 	/**
-	 * AIK keyid
+	 * Primary key for Component Functional Name database entry
 	 */
-	chunk_t keyid;
+	int cid;
+
+	/**
+	 * Primary key for AIK database entry
+	 */
+	int kid;
 
 	/**
 	 * Component is registering measurements 
@@ -289,8 +299,9 @@ METHOD(pts_component_t, verify, status_t,
 			DBG1(DBG_PTS, "pts database not available");
 			return FAILED;
 		}
-		if (this->pts_db->get_comp_measurement_count(this->pts_db, this->name,
-						 		this->keyid, algo, &this->count) != SUCCESS)
+		if (this->pts_db->get_comp_measurement_count(this->pts_db,
+							this->name, this->keyid, algo,
+							&this->cid, &this->kid, &this->count) != SUCCESS)
 		{
 			return FAILED;
 		}
@@ -314,8 +325,8 @@ METHOD(pts_component_t, verify, status_t,
 	if (this->is_registering)
 	{
 		if (this->pts_db->insert_comp_measurement(this->pts_db, measurement,
-									this->name, this->keyid, ++this->seq_no,
-									extended_pcr, algo) != SUCCESS)
+										this->cid, this->kid, ++this->seq_no,
+										extended_pcr, algo) != SUCCESS)
 		{
 			return FAILED;
 		}
@@ -324,8 +335,8 @@ METHOD(pts_component_t, verify, status_t,
 	else
 	{
 		if (this->pts_db->check_comp_measurement(this->pts_db, measurement,
-									this->name, this->keyid, ++this->seq_no,
-									extended_pcr, algo) != SUCCESS)
+										this->cid, this->kid, ++this->seq_no,
+										extended_pcr, algo) != SUCCESS)
 		{
 			return FAILED;
 		}
@@ -378,8 +389,8 @@ METHOD(pts_component_t, destroy, void,
 	}
 	if (this->is_registering)
 	{
-		count = this->pts_db->delete_comp_measurements(this->pts_db, this->name,
-													   this->keyid);
+		count = this->pts_db->delete_comp_measurements(this->pts_db,
+													   this->cid, this->kid);
 		vid = this->name->get_vendor_id(this->name);
 		name = this->name->get_name(this->name);
 		names = pts_components->get_comp_func_names(pts_components, vid);
