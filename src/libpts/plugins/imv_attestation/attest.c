@@ -125,11 +125,8 @@ static void do_args(int argc, char *argv[])
 			{ "add", no_argument, NULL, 'a' },
 			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
-			{ "products", no_argument, NULL, 'p' },
-			{ "hashes", no_argument, NULL, 'H' },
-			{ "add", no_argument, NULL, 'a' },
-			{ "delete", no_argument, NULL, 'd' },
-			{ "del", no_argument, NULL, 'd' },
+			{ "component", required_argument, NULL, 'C' },
+			{ "comp", required_argument, NULL, 'C' },
 			{ "directory", required_argument, NULL, 'D' },
 			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
@@ -184,21 +181,6 @@ static void do_args(int argc, char *argv[])
 				{
 					exit(EXIT_FAILURE);
 				}
-				continue;
-			case 'D':
-				if (!attest->set_directory(attest, optarg, op == OP_ADD))
-				{
-					exit(EXIT_FAILURE);
-				}
-				continue;
-			case 'H':
-				op = OP_HASHES;
-				continue;
-			case 'a':
-				op = OP_ADD;
-				continue;
-			case 'd':
-				op = OP_DEL;
 				continue;
 			case 'D':
 				if (!attest->set_directory(attest, optarg, op == OP_ADD))
@@ -298,9 +280,6 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_DEL:
 			attest->delete(attest);
-			break;
-		case OP_HASHES:
-			attest->list_hashes(attest);
 			break;
 		default:
 			usage();

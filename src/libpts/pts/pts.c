@@ -1111,33 +1111,6 @@ METHOD(pts_t, add_pcr, bool,
 	return TRUE;
 }
 
-METHOD(pts_t, does_pcr_value_match, bool,
-	private_pts_t *this, chunk_t pcr_after_value)
-{
-	enumerator_t *e;
-	pcr_entry_t *entry;
-	
-	if (!this->pcrs)
-	{
-		this->pcrs = linked_list_create();
-	}
-
-	e = this->pcrs->create_enumerator(this->pcrs);
-	while (e->enumerate(e, &entry))
-	{
-		if (entry->pcr_number == new->pcr_number)
-		{
-			DBG4(DBG_PTS, "updating already added PCR%d value",
-				 entry->pcr_number);
-			this->pcrs->remove_at(this->pcrs, e);
-			free(entry);
-			break;
-		}
-	}
-	DESTROY_IF(e);
-	this->pcrs->insert_last(this->pcrs, new);
-}
-
 /**
  * TPM_QUOTE_INFO structure:
  *	4 bytes of version
@@ -1229,26 +1202,6 @@ METHOD(pts_t, get_quote_info, bool,
 	hasher->allocate_hash(hasher, pcr_comp, &hash_pcr_comp);
 	hasher->destroy(hasher);
 
-	writer->write_data(writer, hash_pcr_composite);
-	chunk_clear(&pcr_composite);
-	chunk_clear(&hash_pcr_composite);
-
-		/* Hash the PCR Composite Structure */
-		hasher->allocate_hash(hasher, pcr_composite, out_pcr_composite);
-		DBG4(DBG_PTS, "Hash of calculated PCR Composite: %B", out_pcr_composite);
-		hasher->destroy(hasher);
-	}
-	else
-	{
-		*out_pcr_composite = chunk_clone(pcr_composite);
-		DBG3(DBG_PTS, "calculated PCR Composite: %B", out_pcr_composite);
-	}
-
-	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	hasher->allocate_hash(hasher, pcr_composite, &hash_pcr_composite);
-	hasher->destroy(hasher);
-
 	/* Construct TPM_QUOTE_INFO/TPM_QUOTE_INFO2 structure */
 	writer = bio_writer_create(TPM_QUOTE_INFO_LEN);
 
@@ -1330,15 +1283,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 		DESTROY_IF(aik_pub_key);
 		return FALSE;
 	}
-	*/
 
-	if (!aik_pub_key->get_encoding(aik_pub_key,
-		PUBKEY_SPKI_ASN1_DER, &key_encoding))
-	{
-		DBG1(DBG_PTS, "failed to get encoding of AIK public key");
-		goto cleanup;
-	}
-	
 	aik_pub_key->destroy(aik_pub_key);
 	return TRUE;
 }

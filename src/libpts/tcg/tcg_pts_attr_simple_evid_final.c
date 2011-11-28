@@ -226,15 +226,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/*  Optional Composite Hash Algorithm and TPM PCR Composite fields */
 	if (this->flags != PTS_SIMPLE_EVID_FINAL_NO)
 	{
-		u_int32_t pcr_comp_len, tpm_quote_sign_len;
-		
-		/** TODO: Ignoring Hashing algorithm field
-		 * There is no flag defined which indicates the precense of it
-		 * reader->read_uint16(reader, &algorithm);
-		 * this->comp_hash_algorithm = algorithm;
-		 */
-		reader->read_uint32(reader, &pcr_comp_len);
-		reader->read_data(reader, pcr_comp_len, &this->pcr_comp);
+		if (!reader->read_uint32(reader, &pcr_comp_len))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
+						  "PCR Composite Lenght");
+			goto end;
+		}
+		if (!reader->read_data(reader, pcr_comp_len, &this->pcr_comp))
+		{
+			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
+						  "PCR Composite");
+			goto end;
+		}
 		this->pcr_comp = chunk_clone(this->pcr_comp);
 		
 		if (!reader->read_uint32(reader, &tpm_quote_sig_len))

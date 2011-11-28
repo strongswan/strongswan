@@ -161,37 +161,6 @@ struct pts_t {
 	bool (*calculate_secret) (pts_t *this);
 
 	/**
-	 * Set PTS Diffie Hellman Object
-	 *
-	 * @param dh			D-H object
-	 */
-	bool (*create_dh_nonce)(pts_t *this, pts_dh_group_t group, int nonce_len);
-
-	/**
-	 * Get my Diffie-Hellman public value
-	 *
-	 * @param value				My public DH value
-	 * @param nonce				My DH nonce
-	 */
-	void (*get_my_public_value)(pts_t *this, chunk_t *value, chunk_t *nonce);
-
-	/**
-	 * Set peer Diffie.Hellman public value
-	 *
-	 * @param value				Peer public DH value
-	 * @param nonce				Peer DH nonce
-	 */
-	void (*set_peer_public_value) (pts_t *this, chunk_t value, chunk_t nonce);
-
-	/**
-	 * Calculates secret assessment value to be used for TPM Quote as ExternalData
-	 *
-	 * @return					TRUE unless both DH public values
-	 *							and nonces are set
-	 */
-	bool (*calculate_secret) (pts_t *this);
-
-	/**
 	 * Get Platform and OS Info
 	 *
 	 * @return					Platform and OS info
@@ -261,8 +230,7 @@ struct pts_t {
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
-	 * Compute a hash over a file
-	 *
+	* Compute a hash over a file
 	 * @param hasher			Hasher to be used
 	 * @param pathname			Absolute path of a file
 	 * @param hash				Buffer to keep hash output
@@ -369,68 +337,6 @@ struct pts_t {
 	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
 
 	/**
-	 * Reads given PCR value and returns it
-	 * Expects owner secret to be WELL_KNOWN_SECRET
-	 *
-	 * @param pcr_num			Number of PCR to read
-	 * @param pcr_value			Chunk to save pcr read output
-	 * @return					NULL in case of TSS error, PCR value otherwise
-	 */
-	bool (*read_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value);
-
-	/**
-	 * Extends given PCR with given value
-	 * Expects owner secret to be WELL_KNOWN_SECRET
-	 *
-	 * @param pcr_num			Number of PCR to extend
-	 * @param input				Value to extend
-	 * @param output			Chunk to save PCR value after extension
-	 * @return					FALSE in case of TSS error, TRUE otherwise
-	 */
-	bool (*extend_pcr)(pts_t *this, u_int32_t pcr_num, chunk_t input,
-					   chunk_t *output);
-
-	/**
-	 * Quote over PCR's
-	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
-	 *
-	 * @param pcrs				Array of PCR's to make quotation over
-	 * @param num_of_pcrs		Number of elements in pcrs array
-	 * @param pcr_composite		Chunk to save pcr composite structure
-	 * @param quote_signature	Chunk to save quote operation output
-	 *							without external data (anti-replay protection)
-	 * @return					FALSE in case of TSS error, TRUE otherwise
-	 */
-	 bool (*quote_tpm)(pts_t *this, u_int32_t *pcrs, u_int32_t num_of_pcrs,
-					   chunk_t *pcr_composite, chunk_t *quote_signature);
-
-	 /**
-	 * Add extended PCR with its corresponding value
-	 *
-	 * @return			FALSE in case of any error or non-match, TRUE otherwise
-	 */
-	 void (*add_pcr_entry)(pts_t *this, pcr_entry_t *entry);
-
-	 /**
-	 * Constructs and returns TPM Quote Info structure expected from IMC
-	 *
-	 * @param pcr_composite			Output variable to store PCR Composite
-	 * @param quote_info			Output variable to store TPM Quote Info
-	 * @return					FALSE in case of any error, TRUE otherwise
-	 */
-	 bool (*get_quote_info)(pts_t *this, chunk_t *pcr_composite,
-							chunk_t *quote_info);
-
-	 /**
-	 * Constructs and returns PCR Quote Digest structure expected from IMC
-	 *
-	 * @param data				Calculated TPM Quote Digest
-	 * @param signature			TPM Quote Signature received from IMC
-	 * @return			FALSE in case signature is not verified, TRUE otherwise
-	 */
-	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
-
-	/**
 	 * Destroys a pts_t object.
 	 */
 	void (*destroy)(pts_t *this);
@@ -445,4 +351,3 @@ struct pts_t {
 pts_t* pts_create(bool is_imc);
 
 #endif /** PTS_H_ @}*/
-

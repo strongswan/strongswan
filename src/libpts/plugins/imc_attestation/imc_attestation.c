@@ -28,6 +28,7 @@
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
+
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
@@ -52,28 +53,6 @@ static pts_meas_algorithms_t supported_algorithms = PTS_MEAS_ALGO_NONE;
  * Supported PTS Diffie Hellman Groups
  */
 static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
-
-/**
- * List of buffered Simple Component Evidences
- * To be sent on reception of Generate Attestation Evidence attribute
- */
-static linked_list_t *evidences = NULL;
-
-/**
- * Supported PTS Diffie Hellman Groups
- */
-static pts_dh_group_t supported_dh_groups = 0;
-
-/**
- * Supported PTS Diffie Hellman Groups
- */
-static pts_dh_group_t supported_dh_groups = PTS_DH_GROUP_NONE;
-
-/**
- * List of buffered Simple Component Evidences
- * To be sent on reception of Generate Attestation Evidence attribute
- */
-static linked_list_t *evidences = NULL;
 
 /**
  * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
@@ -268,6 +247,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 				supported_algorithms, supported_dh_groups))
 			{
 				result = TNC_RESULT_FATAL;
+				break;
 			}
 		}
 	}
