@@ -369,6 +369,8 @@ METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_ima_t *this)
 {
 	int i, count;
+	u_int32_t vid, name;
+	enum_name_t *names;
 
 	for (i = 0; i < IMA_PCR_MAX; i++)
 	{
@@ -378,7 +380,11 @@ METHOD(pts_component_t, destroy, void,
 	{
 		count = this->pts_db->delete_comp_measurements(this->pts_db, this->name,
 													   this->keyid);
-		DBG1(DBG_PTS, "  deleted %d measurements", count);
+		vid = this->name->get_vendor_id(this->name);
+		name = this->name->get_name(this->name);
+		names = pts_components->get_comp_func_names(pts_components, vid);
+		DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
+			 "evidence measurements", count, pen_names, vid, names, name);
 	}
 	this->list->destroy_function(this->list, (void *)free_entry);
 	this->name->destroy(this->name);

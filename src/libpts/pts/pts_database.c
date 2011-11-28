@@ -200,7 +200,7 @@ METHOD(pts_database_t, delete_comp_measurements, int,
 				"DELETE FROM component_hashes WHERE "
 				"component = (SELECT id FROM components"
 				" WHERE vendor_id = ?  AND name = ? AND qualifier = ?) AND "
-				"key = (SELECT id FROM keys WHERE keyid = ?))",
+				"key = (SELECT id FROM keys WHERE keyid = ?)",
 				DB_INT, comp_name->get_vendor_id(comp_name),
 				DB_INT, comp_name->get_name(comp_name),
 				DB_INT, comp_name->get_qualifier(comp_name),

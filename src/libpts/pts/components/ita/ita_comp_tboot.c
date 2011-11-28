@@ -272,12 +272,18 @@ METHOD(pts_component_t, destroy, void,
 	   pts_ita_comp_tboot_t *this)
 {
 	int count;
+	u_int32_t vid, name;
+	enum_name_t *names;
 
 	if (this->is_registering)
 	{
 		count = this->pts_db->delete_comp_measurements(this->pts_db, this->name,
 													   this->keyid);
-		DBG1(DBG_PTS, "  deleted %d measurements", count);
+		vid = this->name->get_vendor_id(this->name);
+		name = this->name->get_name(this->name);
+		names = pts_components->get_comp_func_names(pts_components, vid);
+		DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
+			 "evidence measurements", count, pen_names, vid, names, name);
 	}
 	this->name->destroy(this->name);
 	free(this->keyid.ptr);
