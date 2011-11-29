@@ -1,9 +1,8 @@
 /*
- * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2010 revosec AG
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2011 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
- *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -82,7 +81,7 @@ struct private_id_payload_t {
 	u_int16_t port;
 
 	/**
-	 * one of ID_INITIATOR, ID_RESPONDER and IDv1
+	 * one of ID_INITIATOR, ID_RESPONDER, IDv1 and NAT_OA_V1
 	 */
 	payload_type_t type;
 };
@@ -92,9 +91,9 @@ struct private_id_payload_t {
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_id_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_id_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_id_payload_t, critical) 		},
+	{ FLAG,				offsetof(private_id_payload_t, critical)		},
 	/* 7 Bit reserved bits */
 	{ RESERVED_BIT,		offsetof(private_id_payload_t, reserved_bit[0])	},
 	{ RESERVED_BIT,		offsetof(private_id_payload_t, reserved_bit[1])	},
@@ -104,7 +103,7 @@ static encoding_rule_t encodings_v2[] = {
 	{ RESERVED_BIT,		offsetof(private_id_payload_t, reserved_bit[5])	},
 	{ RESERVED_BIT,		offsetof(private_id_payload_t, reserved_bit[6])	},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_id_payload_t, payload_length) 	},
+	{ PAYLOAD_LENGTH,	offsetof(private_id_payload_t, payload_length)	},
 	/* 1 Byte ID type*/
 	{ U_INT_8,			offsetof(private_id_payload_t, id_type)			},
 	/* 3 reserved bytes */
@@ -166,6 +165,13 @@ METHOD(payload_t, verify, status_t,
 {
 	bool bad_length = FALSE;
 
+	if (this->type == NAT_OA_V1 &&
+		this->id_type != ID_IPV4_ADDR && this->id_type != ID_IPV6_ADDR)
+	{
+		DBG1(DBG_ENC, "invalid ID type %N for %N payload", id_type_names,
+			 this->id_type, payload_type_short_names, this->type);
+		return FAILED;
+	}
 	switch (this->id_type)
 	{
 		case ID_IPV4_ADDR_RANGE:
@@ -189,7 +195,7 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_id_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == ID_V1)
+	if (this->type == ID_V1 || this->type == NAT_OA_V1)
 	{
 		*rules = encodings_v1;
 		return countof(encodings_v1);

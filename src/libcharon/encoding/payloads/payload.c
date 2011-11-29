@@ -55,7 +55,10 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYL
 	"DELETE_V1",
 	"VENDOR_ID_V1",
 	"CONFIGURATION_V1");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, CONFIGURATION_V1,
+ENUM_NEXT(payload_type_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+	"NAT_D_V1",
+	"NAT_OA_V1");
+ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, NAT_OA_V1,
 	"SECURITY_ASSOCIATION",
 	"KEY_EXCHANGE",
 	"ID_INITIATOR",
@@ -121,7 +124,10 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, N
 	"D",
 	"V",
 	"CP");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, CONFIGURATION_V1,
+ENUM_NEXT(payload_type_short_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+	"NAT-D",
+	"NAT-OA");
+ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, NAT_OA_V1,
 	"SA",
 	"KE",
 	"IDi",
@@ -196,6 +202,7 @@ payload_t *payload_create(payload_type_t type)
 		case ID_INITIATOR:
 		case ID_RESPONDER:
 		case ID_V1:
+		case NAT_OA_V1:
 #ifdef ME
 		case ID_PEER:
 #endif /* ME */
@@ -226,7 +233,8 @@ payload_t *payload_create(payload_type_t type)
 		case VENDOR_ID_V1:
 			return (payload_t*)vendor_id_payload_create(type);
 		case HASH_V1:
-			return (payload_t*)hash_payload_create();
+		case NAT_D_V1:
+			return (payload_t*)hash_payload_create(type);
 		case CONFIGURATION:
 		case CONFIGURATION_V1:
 			return (payload_t*)cp_payload_create(type);
@@ -257,6 +265,10 @@ bool payload_is_known(payload_type_t type)
 		return TRUE;
 	}
 	if (type >= SECURITY_ASSOCIATION_V1 && type <= CONFIGURATION_V1)
+	{
+		return TRUE;
+	}
+	if (type >= NAT_D_V1 && type <= NAT_OA_V1)
 	{
 		return TRUE;
 	}

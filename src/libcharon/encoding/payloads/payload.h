@@ -118,6 +118,16 @@ enum payload_type_t {
 	CONFIGURATION_V1 = 14,
 
 	/**
+	 * NAT discovery payload (NAT-D).
+	 */
+	NAT_D_V1 = 20,
+
+	/**
+	 * NAT original address payload (NAT-OA)
+	 */
+	NAT_OA_V1 = 21,
+
+	/**
 	 * The security association (SA) payload containing proposals.
 	 */
 	SECURITY_ASSOCIATION = 33,

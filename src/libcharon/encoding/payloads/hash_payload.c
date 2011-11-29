@@ -50,6 +50,11 @@ struct private_hash_payload_t {
 	 * The contained hash value.
 	 */
 	chunk_t hash;
+
+	/**
+	 * either HASH_V1 or NAT_D_V1
+	 */
+	payload_type_t type;
 };
 
 /**
@@ -99,7 +104,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_hash_payload_t *this)
 {
-	return HASH_V1;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -166,6 +171,7 @@ hash_payload_t *hash_payload_create(payload_type_t type)
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = get_header_length(this),
+		.type = type,
 	);
 	return &this->public;
 }

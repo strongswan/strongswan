@@ -193,7 +193,7 @@ static void build_hash(private_main_mode_t *this, bool initiator,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
 	free(dh.ptr);
 
-	hash_payload = hash_payload_create();
+	hash_payload = hash_payload_create(HASH_V1);
 	hash_payload->set_hash(hash_payload, hash);
 	free(hash.ptr);
 

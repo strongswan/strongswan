@@ -1412,7 +1412,7 @@ METHOD(message_t, generate, status_t,
 		chunk_t hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
 		if (hash.ptr)
 		{	/* insert a HASH payload as first payload */
-			hash_payload_t *hash_payload = hash_payload_create();
+			hash_payload_t *hash_payload = hash_payload_create(HASH_V1);
 			hash_payload->set_hash(hash_payload, hash);
 			this->payloads->insert_first(this->payloads,
 										 (payload_t*)hash_payload);

@@ -63,7 +63,7 @@ struct id_payload_t {
 /**
  * Creates an empty id_payload_t object.
  *
- * @param type		one of ID_INITIATOR, ID_RESPONDER and ID_V1
+ * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
  * @return			id_payload_t object
  */
 id_payload_t *id_payload_create(payload_type_t payload_type);
@@ -71,7 +71,7 @@ id_payload_t *id_payload_create(payload_type_t payload_type);
 /**
  * Creates an id_payload_t from an existing identification_t object.
  *
- * @param type		one of ID_INITIATOR, ID_RESPONDER and ID_V1
+ * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
  * @param id		identification_t object
  * @return			id_payload_t object
  */
