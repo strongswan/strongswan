@@ -28,6 +28,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/hash_payload.h>
+#include <processing/jobs/initiate_xauth_job.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -662,10 +663,18 @@ METHOD(task_t, build_r, status_t,
 			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 
-			/* TODO-IKEv1: Check the proposal for XAuthInit* auth modes */
-			/* TODO-IKEv1: check for XAUTH rounds, queue them */
-			if(0) /* TODO-IKEv1: Change to 1 if XAUTH is desired. */
-				return MIGRATE;
+			switch (this->auth_method)
+			{
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_INIT_RSA: /* There should be more INIT cases here once added */
+				{
+					job_t *job = (job_t *) initiate_xauth_job_create(this->ike_sa->get_id(this->ike_sa));
+					lib->processor->queue_job(lib->processor, job);
+					break;
+				}
+				default:
+					break;
+			}
 			return SUCCESS;
 		}
 		default:
@@ -767,6 +776,20 @@ METHOD(task_t, process_i, status_t,
 				 this->ike_sa->get_other_id(this->ike_sa));
 			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+			switch (this->auth_method)
+			{
+				case AUTH_XAUTH_RESP_PSK:
+				case AUTH_XAUTH_RESP_RSA: /* There should be more RESP cases here once added */
+				{
+					job_t *job = (job_t *) initiate_xauth_job_create(this->ike_sa->get_id(this->ike_sa));
+					lib->processor->queue_job(lib->processor, job);
+					break;
+				}
+				default:
+					break;
+			}
+
 			return SUCCESS;
 		}
 		default:
