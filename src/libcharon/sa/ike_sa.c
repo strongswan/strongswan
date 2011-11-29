@@ -1018,6 +1018,14 @@ METHOD(ike_sa_t, initiate_mediated, status_t,
 }
 #endif /* ME */
 
+METHOD(ike_sa_t, initiate_xauth, status_t,
+	private_ike_sa_t *this)
+{
+	xauth_request_t *task = xauth_request_create(&this->public, TRUE);
+	this->task_manager->queue_task(this->task_manager, (task_t*)task);
+	return this->task_manager->initiate(this->task_manager);
+}
+
 /**
  * Resolve DNS host in configuration
  */
@@ -2085,6 +2093,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.callback = _callback,
 			.respond = _respond,
 #endif /* ME */
+			.initiate_xauth = _initiate_xauth,
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,

@@ -966,6 +966,11 @@ struct ike_sa_t {
 	 * Destroys a ike_sa_t object.
 	 */
 	void (*destroy) (ike_sa_t *this);
+
+	/**
+	 * Initiate an XAuth authentication exchange.
+	 */
+	status_t (*initiate_xauth) (ike_sa_t *this);
 };
 
 /**
