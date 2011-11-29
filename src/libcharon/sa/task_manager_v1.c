@@ -496,8 +496,6 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t *)xauth_request_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
 				/* TODO-IKEv1: agressive mode */
