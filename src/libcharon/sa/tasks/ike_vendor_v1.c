@@ -41,8 +41,20 @@ struct private_ike_vendor_v1_t {
 	bool initiator;
 };
 
+/**
+ * Indicate support for XAuth, MD5("draft-ietf-ipsra-isakmp-xauth-06.txt")
+ * Truncated to the first half.
+ */
 static chunk_t xauth6_vid = chunk_from_chars(
 	0x09,0x00,0x26,0x89,0xdf,0xd6,0xb7,0x12
+);
+
+/**
+ * Indicate support for NAT-Traversal, MD5("RFC 3947")
+ */
+static chunk_t natt_vid = chunk_from_chars(
+	0x4a,0x13,0x1c,0x81,0x07,0x03,0x58,0x45,
+	0x5c,0x57,0x28,0xf2,0x0e,0x95,0x45,0x2f
 );
 
 /**
@@ -76,6 +88,7 @@ METHOD(task_t, build, status_t,
 	}
 
 	add_vendor_id(this, message, xauth6_vid);
+	add_vendor_id(this, message, natt_vid);
 
 	return this->initiator ? NEED_MORE : SUCCESS;
 }
@@ -106,6 +119,11 @@ METHOD(task_t, process, status_t,
 			{
 				DBG1(DBG_IKE, "received XAuth vendor id");
 				this->ike_sa->enable_extension(this->ike_sa, EXT_XAUTH);
+			}
+			else if (chunk_equals(data, natt_vid))
+			{
+				DBG1(DBG_IKE, "received NAT-T vendor id");
+				this->ike_sa->enable_extension(this->ike_sa, EXT_NATT);
 			}
 			else
 			{

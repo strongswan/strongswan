@@ -69,7 +69,7 @@ typedef struct ike_sa_t ike_sa_t;
 enum ike_extension_t {
 
 	/**
-	 * peer supports NAT traversal as specified in RFC4306
+	 * peer supports NAT traversal as specified in RFC4306 or RFC3947
 	 */
 	EXT_NATT = (1<<0),
 
