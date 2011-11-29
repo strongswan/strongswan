@@ -361,14 +361,11 @@ METHOD(task_t, build_i, status_t,
 	configuration_attribute_type_t type;
 	chunk_t data;
 
-	DBG1(DBG_IKE, "%s: state %d", __func__, this->state);
-
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
 	{
 		if(this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 		{
-			DBG1(DBG_IKE, "!!!!!!!!!!!!!!!!!!!!!!!!!NEED_MORE!!!!!!!!!!!!!!!!!!!!!");
 			return NEED_MORE;
 		}
 
@@ -383,7 +380,6 @@ METHOD(task_t, build_i, status_t,
 				break;
 			default:
 				/* We aren't XAuth, so do nothing */
-			DBG1(DBG_IKE, "!!!!!!!!!!!!!!!!!!!!!!!!!SUCCESS!!!!!!!!!!!!!!!!!!!!!");
 				return SUCCESS;
 		}
 		cp_type = CONFIGURATION_V1;
@@ -395,7 +391,6 @@ METHOD(task_t, build_i, status_t,
 		this->state = TASK_XAUTH_COMPLETE;
 		if (message->get_message_id(message) == 1)
 		{	/* in first IKE_AUTH only */
-			DBG1(DBG_IKE, "!!!!!!!!!!!!!!!!!!!!!!!!!NEED_MORE!!!!!!!!!!!!!!!!!!!!!");
 			return NEED_MORE;
 		}
 		cp_type = CONFIGURATION;
@@ -460,7 +455,6 @@ METHOD(task_t, build_i, status_t,
 
 			break;
 		default:
-			DBG1(DBG_IKE, "!!!!!!!!!!!!!!!!!!!!!!!!!FAILED!!!!!!!!!!!!!!!!!!!!!");
 			return FAILED;
 
 	}
@@ -470,7 +464,6 @@ METHOD(task_t, build_i, status_t,
 		message->add_payload(message, (payload_t *)cp);
 	}
 
-			DBG1(DBG_IKE, "!!!!!!!!!!!!!!!!!!!!!!!!!NEED_MORE!!!!!!!!!!!!!!!!!!!!!");
 	return NEED_MORE;
 }
 
@@ -479,7 +472,6 @@ METHOD(task_t, process_r, status_t,
 {
 	ike_version_t version;
 	payload_type_t cp_type;
-	DBG1(DBG_IKE, "%s: state %d", __func__, this->state);
 
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
@@ -534,7 +526,6 @@ METHOD(task_t, build_r, status_t,
 	host_t *vip = NULL;
 	peer_cfg_t *config;
 
-	DBG1(DBG_IKE, "%s: state %d", __func__, this->state);
 	if(this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 	{
 		return NEED_MORE;
@@ -636,15 +627,11 @@ METHOD(task_t, process_i, status_t,
 	private_xauth_request_t *this, message_t *message)
 {
 	status_t status;
-	DBG1(DBG_IKE, "%s: state %d", __func__, this->state);
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
 
 		status = process_payloads(this, message);
 		this->state = this->next_state;
-
-		DBG1(DBG_IKE, "state %d, complete state %d", this->state, TASK_XAUTH_COMPLETE);
-		DBG1(DBG_IKE, "status %d SUCCESS %d", this->status, SUCCESS);
 
 		if (this->virtual_ip)
 		{
