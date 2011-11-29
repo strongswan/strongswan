@@ -80,9 +80,19 @@ enum auth_method_t {
 	AUTH_XAUTH_INIT_PSK = 256,
 
 	/**
+	 * IKEv1 responder XAUTH with PSK, outside of IANA range
+	 */
+	AUTH_XAUTH_RESP_PSK,
+
+	/**
 	 * IKEv1 initiator XAUTH with RSA, outside of IANA range
 	 */
 	AUTH_XAUTH_INIT_RSA,
+
+	/**
+	 * IKEv1 responder XAUTH with RSA, outside of IANA range
+	 */
+	AUTH_XAUTH_RESP_RSA,
 };
 
 /**
