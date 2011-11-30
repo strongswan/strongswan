@@ -77,6 +77,21 @@ struct keymat_v1_t {
 						chunk_t *encr_r, chunk_t *integ_r);
 
 	/**
+	 * Create the negotiated hasher.
+	 *
+	 * @param proposal		selected algorithms
+	 * @return				TRUE, if creation was successful
+	 */
+	bool (*create_hasher)(keymat_v1_t *this, proposal_t *proposal);
+
+	/**
+	 * Get the negotiated hasher.
+	 *
+	 * @return				allocated hasher or NULL
+	 */
+	hasher_t *(*get_hasher)(keymat_v1_t *this);
+
+	/**
 	 * Get HASH data for authentication.
 	 *
 	 * @param initiatior	TRUE to create HASH_I, FALSE for HASH_R

@@ -75,7 +75,7 @@ struct private_keymat_v1_t {
 	aead_t *aead;
 
 	/**
-	 * Hasher used for IV generation
+	 * Hasher used for IV generation (and other things like e.g. NAT-T)
 	 */
 	hasher_t *hasher;
 
@@ -350,8 +350,8 @@ static void adjust_keylen(u_int16_t alg, chunk_t *key)
 	{
 		case PRF_AES128_XCBC:
 			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
-				 * not and therefore fixed key semantics apply to XCBC for key
-				 * derivation. */
+			 * not and therefore fixed key semantics apply to XCBC for key
+			 * derivation. */
 			key->len = min(key->len, 16);
 			break;
 		default:
@@ -470,19 +470,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		return FALSE;
 	}
-
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL) ||
-		(alg = auth_to_hash(alg)) == HASH_UNKNOWN)
+	if (!this->hasher && !this->public.create_hasher(&this->public, proposal))
 	{
-		DBG1(DBG_IKE, "no %N selected", transform_type_names, HASH_ALGORITHM);
-		return FALSE;
-	}
-	this->hasher = lib->crypto->create_hasher(lib->crypto, alg);
-	if (!this->hasher)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, HASH_ALGORITHM,
-			 hash_algorithm_names, alg);
 		return FALSE;
 	}
 
@@ -617,6 +606,33 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 		DBG4(DBG_CHD, "integrity responder key %B", integ_r);
 	}
 	return TRUE;
+}
+
+METHOD(keymat_v1_t, create_hasher, bool,
+	private_keymat_v1_t *this, proposal_t *proposal)
+{
+	u_int16_t alg;
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL) ||
+		(alg = auth_to_hash(alg)) == HASH_UNKNOWN)
+	{
+		DBG1(DBG_IKE, "no %N selected", transform_type_names, HASH_ALGORITHM);
+		return FALSE;
+	}
+	this->hasher = lib->crypto->create_hasher(lib->crypto, alg);
+	if (!this->hasher)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, HASH_ALGORITHM,
+			 hash_algorithm_names, alg);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+METHOD(keymat_v1_t, get_hasher, hasher_t*,
+	private_keymat_v1_t *this)
+{
+	return this->hasher;
 }
 
 METHOD(keymat_v1_t, get_hash, chunk_t,
@@ -973,6 +989,8 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 			},
 			.derive_ike_keys = _derive_ike_keys,
 			.derive_child_keys = _derive_child_keys,
+			.create_hasher = _create_hasher,
+			.get_hasher = _get_hasher,
 			.get_hash = _get_hash,
 			.get_hash_phase2 = _get_hash_phase2,
 			.get_iv = _get_iv,
