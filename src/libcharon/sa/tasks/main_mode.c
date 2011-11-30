@@ -376,6 +376,10 @@ METHOD(task_t, build_i, status_t,
 		{
 			u_int16_t group;
 
+			if (!this->keymat->create_hasher(this->keymat, this->proposal))
+			{
+				return FAILED;
+			}
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
@@ -470,6 +474,10 @@ METHOD(task_t, process_r, status_t,
 		{
 			u_int16_t group;
 
+			if (!this->keymat->create_hasher(this->keymat, this->proposal))
+			{
+				return FAILED;
+			}
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
