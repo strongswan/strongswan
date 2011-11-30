@@ -457,6 +457,7 @@ METHOD(task_t, build_i, status_t,
 			sa_payload_t *sa_payload;
 			linked_list_t *list;
 			proposal_t *proposal;
+			bool udp = FALSE;
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
@@ -478,10 +479,15 @@ METHOD(task_t, build_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
+			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+			{
+				udp = TRUE;
+			}
+
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->config->get_mode(this->config), FALSE);
+								this->config->get_mode(this->config), udp);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -603,6 +609,7 @@ METHOD(task_t, build_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
+			bool udp = FALSE;
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_r)
@@ -612,9 +619,14 @@ METHOD(task_t, build_r, status_t,
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
+			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+			{
+				udp = TRUE;
+			}
+
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->config->get_mode(this->config), FALSE);
+								this->config->get_mode(this->config), udp);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
