@@ -660,8 +660,6 @@ METHOD(task_t, build_r, status_t,
 				 this->ike_sa->get_my_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa),
 				 this->ike_sa->get_other_id(this->ike_sa));
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 
 			switch (this->auth_method)
 			{
@@ -672,8 +670,17 @@ METHOD(task_t, build_r, status_t,
 					lib->processor->queue_job(lib->processor, job);
 					break;
 				}
-				default:
+				case AUTH_XAUTH_RESP_PSK:
+				case AUTH_XAUTH_RESP_RSA: /* There should be more RESP cases here once added */
+				{
 					break;
+				}
+				default:
+				{
+					this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+					charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+					break;
+				}
 			}
 			return SUCCESS;
 		}
@@ -774,20 +781,26 @@ METHOD(task_t, process_i, status_t,
 				 this->ike_sa->get_my_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa),
 				 this->ike_sa->get_other_id(this->ike_sa));
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 
 			switch (this->auth_method)
 			{
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA: /* There should be more RESP cases here once added */
 				{
-					job_t *job = (job_t *) initiate_xauth_job_create(this->ike_sa->get_id(this->ike_sa));
-					lib->processor->queue_job(lib->processor, job);
+					this->ike_sa->initiate_xauth(this->ike_sa, FALSE);
+					break;
+				}
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_INIT_RSA: /* There should be more INIT cases here once added */
+				{
 					break;
 				}
 				default:
+				{
+					this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+					charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 					break;
+				}
 			}
 
 			return SUCCESS;

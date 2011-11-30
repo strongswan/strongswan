@@ -269,16 +269,17 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = ID_PROT;
 				}
 				break;
+			case IKE_CONNECTING:
+				if (activate_task(this, TASK_XAUTH_REQUEST))
+				{
+					exchange = TRANSACTION;
+					new_mid = TRUE;
+				}
+				break;
 			case IKE_ESTABLISHED:
 				if (activate_task(this, TASK_QUICK_MODE))
 				{
 					exchange = QUICK_MODE;
-					new_mid = TRUE;
-					break;
-				}
-				if (activate_task(this, TASK_XAUTH_REQUEST))
-				{
-					exchange = TRANSACTION;
 					new_mid = TRUE;
 					break;
 				}
@@ -508,6 +509,10 @@ static status_t process_request(private_task_manager_t *this,
 			case INFORMATIONAL_V1:
 				/* TODO-IKEv1: informational */
 				return FAILED;
+			case TRANSACTION:
+				task = (task_t *)xauth_request_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			default:
 				return FAILED;
 		}

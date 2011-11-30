@@ -364,11 +364,6 @@ METHOD(task_t, build_i, status_t,
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
 	{
-		if(this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
-		{
-			return NEED_MORE;
-		}
-
 		if(!this->auth_cfg)
 		{
 			this->auth_cfg = get_auth_cfg(this, TRUE);
@@ -476,10 +471,6 @@ METHOD(task_t, process_r, status_t,
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
 	{
-		if(this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
-		{
-			return NEED_MORE;
-		}
 		if(!this->auth_cfg)
 		{
 			this->auth_cfg = get_auth_cfg(this, TRUE);
@@ -488,10 +479,11 @@ METHOD(task_t, process_r, status_t,
 		{
 			case AUTH_CLASS_XAUTH_PSK:
 			case AUTH_CLASS_XAUTH_PUBKEY:
+				this->state = TASK_XAUTH_INIT;
 				break;
 			default:
 				/* We aren't XAuth, so do we should expect ConfigMode stuff */
-				return SUCCESS;
+				this->state = TASK_XAUTH_COMPLETE;
 		}
 		cp_type = CONFIGURATION_V1;
 	}
@@ -620,6 +612,11 @@ METHOD(task_t, build_r, status_t,
 		default:
 			return FAILED;
 	}
+	if(status == SUCCESS)
+	{
+		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+		charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+	}
 	return status;
 }
 
@@ -627,7 +624,9 @@ METHOD(task_t, process_i, status_t,
 	private_xauth_request_t *this, message_t *message)
 {
 	status_t status;
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	if (((this->ike_sa->get_version(this->ike_sa) == IKEV2) &&
+			(this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)) ||
+			(this->ike_sa->get_version(this->ike_sa) == IKEV1))
 	{	/* in last IKE_AUTH exchange */
 
 		status = process_payloads(this, message);
@@ -638,7 +637,15 @@ METHOD(task_t, process_i, status_t,
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
 		}
 		if(this->state == TASK_XAUTH_COMPLETE)
+		{
+			if(this->status == SUCCESS)
+			{
+				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+			}
+
 			return this->status;
+		}
 		return status;
 	}
 	return NEED_MORE;
