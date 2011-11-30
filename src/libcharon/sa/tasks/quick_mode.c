@@ -404,6 +404,34 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 }
 
 /**
+ * Add NAT-OA payloads
+ */
+static void add_nat_oa_payloads(private_quick_mode_t *this, message_t *message)
+{
+	identification_t *id;
+	id_payload_t *nat_oa;
+	host_t *src, *dst;
+
+	src = message->get_source(message);
+	dst = message->get_destination(message);
+
+	src = this->initiator ? src : dst;
+	dst = this->initiator ? dst : src;
+
+	/* first NAT-OA is the initiator's address */
+	id = identification_create_from_sockaddr(src->get_sockaddr(src));
+	nat_oa = id_payload_create_from_identification(NAT_OA_V1, id);
+	message->add_payload(message, (payload_t*)nat_oa);
+	id->destroy(id);
+
+	/* second NAT-OA is that of the responder */
+	id = identification_create_from_sockaddr(dst->get_sockaddr(dst));
+	nat_oa = id_payload_create_from_identification(NAT_OA_V1, id);
+	message->add_payload(message, (payload_t*)nat_oa);
+	id->destroy(id);
+}
+
+/**
  * Look up lifetimes
  */
 static void get_lifetimes(private_quick_mode_t *this)
@@ -457,6 +485,7 @@ METHOD(task_t, build_i, status_t,
 			sa_payload_t *sa_payload;
 			linked_list_t *list;
 			proposal_t *proposal;
+			ipsec_mode_t mode;
 			bool udp = FALSE;
 
 			this->child_sa = child_sa_create(
@@ -479,15 +508,21 @@ METHOD(task_t, build_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
+			mode = this->config->get_mode(this->config);
 			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 			{
 				udp = TRUE;
+				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
+				if (mode == MODE_TRANSPORT)
+				{
+					add_nat_oa_payloads(this, message);
+				}
 			}
 
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->config->get_mode(this->config), udp);
+								mode, udp);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -609,6 +644,7 @@ METHOD(task_t, build_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
+			ipsec_mode_t mode;
 			bool udp = FALSE;
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
@@ -619,14 +655,20 @@ METHOD(task_t, build_r, status_t,
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
+			mode = this->config->get_mode(this->config);
 			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
 			{
 				udp = TRUE;
+				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
+				if (mode == MODE_TRANSPORT)
+				{
+					add_nat_oa_payloads(this, message);
+				}
 			}
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->config->get_mode(this->config), udp);
+								mode, udp);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
