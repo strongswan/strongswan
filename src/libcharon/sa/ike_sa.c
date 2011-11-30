@@ -1019,11 +1019,15 @@ METHOD(ike_sa_t, initiate_mediated, status_t,
 #endif /* ME */
 
 METHOD(ike_sa_t, initiate_xauth, status_t,
-	private_ike_sa_t *this)
+	private_ike_sa_t *this, bool initiate)
 {
 	xauth_request_t *task = xauth_request_create(&this->public, TRUE);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
-	return this->task_manager->initiate(this->task_manager);
+	if(initiate)
+	{
+		return this->task_manager->initiate(this->task_manager);
+	}
+	return SUCCESS;
 }
 
 /**

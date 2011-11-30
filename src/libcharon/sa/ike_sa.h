@@ -970,7 +970,7 @@ struct ike_sa_t {
 	/**
 	 * Initiate an XAuth authentication exchange.
 	 */
-	status_t (*initiate_xauth) (ike_sa_t *this);
+	status_t (*initiate_xauth) (ike_sa_t *this, bool initiate);
 };
 
 /**

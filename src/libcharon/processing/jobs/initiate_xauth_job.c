@@ -52,8 +52,7 @@ METHOD(job_t, initiate, void,
 												   this->ike_sa_id);
 	if (ike_sa)
 	{
-		DBG1(DBG_IKE, "INITIATING XAUTH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-		ike_sa->initiate_xauth(ike_sa);
+		ike_sa->initiate_xauth(ike_sa, TRUE);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	destroy(this);
