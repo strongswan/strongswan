@@ -38,6 +38,7 @@ ENUM(task_type_names, TASK_IKE_INIT, TASK_XAUTH_REQUEST,
 	"MAIN_MODE",
 	"QUICK_MODE",
 	"VENDOR_V1",
+	"IKE_NATD_V1",
 	"XAUTH_REQUEST",
 );
 #else
@@ -61,6 +62,7 @@ ENUM(task_type_names, TASK_IKE_INIT, TASK_XAUTH_REQUEST,
 	"MAIN_MODE",
 	"QUICK_MODE",
 	"VENDOR_V1",
+	"IKE_NATD_V1",
 	"XAUTH_REQUEST",
 );
 #endif /* ME */

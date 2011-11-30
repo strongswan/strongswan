@@ -19,10 +19,10 @@
 #include <math.h>
 
 #include <daemon.h>
-#include <sa/tasks/ike_vendor.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth_request.h>
+#include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -267,6 +267,7 @@ METHOD(task_manager_t, initiate, status_t,
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
+					activate_task(this, TASK_IKE_NATD_V1);
 				}
 				break;
 			case IKE_CONNECTING:
@@ -496,6 +497,8 @@ static status_t process_request(private_task_manager_t *this,
 				task = (task_t *)ike_vendor_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t *)ike_natd_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:

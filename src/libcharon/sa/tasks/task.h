@@ -75,6 +75,8 @@ enum task_type_t {
 	TASK_QUICK_MODE,
 	/** IKEv1 vendor ID payload handling */
 	TASK_VENDOR_V1,
+	/** IKEv1 NAT detection */
+	TASK_IKE_NATD_V1,
 	/** Request the user/pass with XAUTH */
 	TASK_XAUTH_REQUEST,
 };
@@ -122,7 +124,7 @@ struct task_t {
 	 *
 	 * @param message		message to read payloads from
 	 * @return
-	 * 						- FAILED if a critical error occurred
+	 *						- FAILED if a critical error occurred
 	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
 	 *						- SUCCESS if task completed
