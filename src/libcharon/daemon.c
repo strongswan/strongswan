@@ -122,6 +122,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
+	DESTROY_IF(this->public.xauth);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -291,6 +292,7 @@ private_daemon_t *daemon_create()
 	charon = &this->public;
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
+	this->public.xauth = xauth_manager_create();
 	this->public.backends = backend_manager_create();
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();

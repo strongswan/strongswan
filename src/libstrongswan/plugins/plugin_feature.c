@@ -96,6 +96,9 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 					   streq(a->arg.fetcher, b->arg.fetcher);
 			case FEATURE_CUSTOM:
 				return streq(a->arg.custom, b->arg.custom);
+			case FEATURE_XAUTH_SERVER:
+			case FEATURE_XAUTH_PEER:
+				return a->arg.xauth == b->arg.xauth;
 		}
 	}
 	return FALSE;
@@ -225,6 +228,14 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_CUSTOM:
 			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
 					feature->arg.custom) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
+					xauth_method_type_short_names, feature->arg.xauth) > 0)
 			{
 				return str;
 			}
