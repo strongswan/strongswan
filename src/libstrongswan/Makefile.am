@@ -70,7 +70,8 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/backtrace.c utils/backtrace.h
+utils/backtrace.c utils/backtrace.h \
+xauth/xauth.h xauth/xauth.c
 
 
 library.lo :	$(top_builddir)/config.status
