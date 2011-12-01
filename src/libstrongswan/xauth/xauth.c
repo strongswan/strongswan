@@ -15,13 +15,15 @@
 
 #include "xauth.h"
 
-ENUM_BEGIN(xauth_method_type_names, XAUTH_RADIUS, XAUTH_RADIUS,
-	"XAUTH_RADIUS");
-ENUM_END(xauth_method_type_names, XAUTH_RADIUS);
+ENUM_BEGIN(xauth_method_type_names, XAUTH_RADIUS, XAUTH_NULL,
+	"XAUTH_RADIUS",
+	"XAUTH_NULL");
+ENUM_END(xauth_method_type_names, XAUTH_NULL);
 
-ENUM_BEGIN(xauth_method_type_short_names, XAUTH_RADIUS, XAUTH_RADIUS,
-	"RAD");
-ENUM_END(xauth_method_type_short_names, XAUTH_RADIUS);
+ENUM_BEGIN(xauth_method_type_short_names, XAUTH_RADIUS, XAUTH_NULL,
+	"RAD",
+	"NULL");
+ENUM_END(xauth_method_type_short_names, XAUTH_NULL);
 
 /*
  * See header
@@ -34,6 +36,7 @@ xauth_type_t xauth_type_from_string(char *name)
 		xauth_type_t type;
 	} types[] = {
 		{"radius",		XAUTH_RADIUS},
+		{"null",		XAUTH_NULL},
 	};
 
 	for (i = 0; i < countof(types); i++)

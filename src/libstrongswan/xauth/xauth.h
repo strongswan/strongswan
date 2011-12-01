@@ -30,6 +30,7 @@ typedef enum xauth_type_t xauth_type_t;
  */
 enum xauth_type_t {
 	XAUTH_RADIUS = 253,
+	XAUTH_NULL = 254,
 };
 
 /**

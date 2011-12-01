@@ -193,6 +193,7 @@ ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using livene
 ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
+ARG_ENABL_SET([xauth-null],     [enable XAuth module which does no actual identity authentication (testing only).])
 
 dnl =========================
 dnl  set up compiler and flags
@@ -864,6 +865,7 @@ ADD_PLUGIN([maemo],                [c libcharon])
 ADD_PLUGIN([uci],                  [c libcharon])
 ADD_PLUGIN([addrblock],            [c libcharon])
 ADD_PLUGIN([unit-tester],          [c libcharon])
+ADD_PLUGIN([xauth-null],           [c libcharon])
 
 AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
@@ -979,6 +981,7 @@ AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
+AM_CONDITIONAL(USE_XAUTH_NULL, test x$xauth_null = xtrue)
 
 dnl hydra plugins
 dnl =============
@@ -1170,6 +1173,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/unit_tester/Makefile
 	src/libcharon/plugins/load_tester/Makefile
+	src/libcharon/plugins/xauth_null/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

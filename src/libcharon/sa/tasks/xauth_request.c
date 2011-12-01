@@ -4,6 +4,7 @@
 #include <daemon.h>
 #include <hydra.h>
 #include <encoding/payloads/cp_payload.h>
+#include <sa/authenticators/xauth_authenticator.h>
 
 typedef struct private_xauth_request_t private_xauth_request_t;
 
@@ -90,6 +91,11 @@ struct private_xauth_request_t {
 	 * Whether the XAuth status attribute was received
 	 */
 	bool xauth_status_recv;
+
+	/**
+	 * The XAuth authenticator_t object
+	 */
+	authenticator_t *xauth_authenticator;
 };
 
 /**
@@ -343,6 +349,11 @@ static status_t process_payloads(private_xauth_request_t *this, message_t *messa
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if(this->xauth_authenticator)
+	{
+		this->xauth_authenticator->process(this->xauth_authenticator, message);
+	}
 	return NEED_MORE;
 }
 
@@ -360,6 +371,7 @@ METHOD(task_t, build_i, status_t,
 	attribute_handler_t *handler;
 	configuration_attribute_type_t type;
 	chunk_t data;
+	status_t status;
 
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
@@ -401,10 +413,11 @@ METHOD(task_t, build_i, status_t,
 						ca_type, XAUTH_USER_PASSWORD, chunk));
 			break;
 		case TASK_XAUTH_PASS_VERIFY:
+			status = this->xauth_authenticator->build(this->xauth_authenticator, message);
 			cp = cp_payload_create_type(cp_type, CFG_SET);
 			cp->add_attribute(cp, configuration_attribute_create_value(
 						XAUTH_STATUS,
-						(this->status == FAILED ? XAUTH_STATUS_FAIL : XAUTH_STATUS_OK)));
+						(status == FAILED ? XAUTH_STATUS_FAIL : XAUTH_STATUS_OK)));
 			break;
 		case TASK_XAUTH_COMPLETE:
 			/* ConfigMode stuff */
@@ -467,6 +480,7 @@ METHOD(task_t, process_r, status_t,
 {
 	ike_version_t version;
 	payload_type_t cp_type;
+	status_t status;
 
 	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
@@ -485,6 +499,10 @@ METHOD(task_t, process_r, status_t,
 				/* We aren't XAuth, so do we should expect ConfigMode stuff */
 				this->state = TASK_XAUTH_COMPLETE;
 		}
+		if((this->xauth_authenticator == NULL) && (this->state == TASK_XAUTH_INIT))
+		{
+			this->xauth_authenticator = (authenticator_t *)xauth_authenticator_create_builder(this->ike_sa);
+		}
 		cp_type = CONFIGURATION_V1;
 	}
 	else /* IKEv2 */
@@ -498,14 +516,17 @@ METHOD(task_t, process_r, status_t,
 		cp_type = CONFIGURATION;
 	}
 
-	return process_payloads(this, message);
+	status = process_payloads(this, message);
+	if(this->xauth_authenticator != NULL)
+	{
+		status = this->xauth_authenticator->process(this->xauth_authenticator, message);
+	}
+	return status;
 }
 
 METHOD(task_t, build_r, status_t,
 	private_xauth_request_t *this, message_t *message)
 {
-	chunk_t user_name = chunk_from_chars('j', 'o', 's', 't');
-	chunk_t user_pass = chunk_from_chars('j', 'o', 's', 't');
 	status_t status;
 	cp_payload_t *cp = NULL;
 	payload_type_t cp_type = CONFIGURATION;
@@ -518,11 +539,11 @@ METHOD(task_t, build_r, status_t,
 	host_t *vip = NULL;
 	peer_cfg_t *config;
 
-	if(this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	version = this->ike_sa->get_version(this->ike_sa);
+	if ((version == IKEV2) && (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED))
 	{
 		return NEED_MORE;
 	}
-	version = this->ike_sa->get_version(this->ike_sa);
 	if(version == IKEV1)
 	{
 		if(!this->auth_cfg)
@@ -545,17 +566,8 @@ METHOD(task_t, build_r, status_t,
 	switch(this->state)
 	{
 		case TASK_XAUTH_INIT:
-			/* TODO-IKEv1: Fetch the user/pass from an authenticator */
-			cp = cp_payload_create_type(cp_type, CFG_REPLY);
-			cp->add_attribute(cp, configuration_attribute_create_chunk(
-						ca_type, XAUTH_USER_NAME, user_name));
-			cp->add_attribute(cp, configuration_attribute_create_chunk(
-						ca_type, XAUTH_USER_PASSWORD, user_pass));
-			chunk_clear(&user_name);
-			chunk_clear(&user_pass);
-
+			status = this->xauth_authenticator->build(this->xauth_authenticator, message);
 			this->state = TASK_XAUTH_PASS_VERIFY;
-			status = NEED_MORE;
 			break;
 		case TASK_XAUTH_PASS_VERIFY:
 			cp = cp_payload_create_type(cp_type, CFG_ACK);
@@ -612,6 +624,10 @@ METHOD(task_t, build_r, status_t,
 		default:
 			return FAILED;
 	}
+	if(cp != NULL)
+	{
+		message->add_payload(message, (payload_t *)cp);
+	}
 	if(status == SUCCESS)
 	{
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
@@ -629,6 +645,10 @@ METHOD(task_t, process_i, status_t,
 			(this->ike_sa->get_version(this->ike_sa) == IKEV1))
 	{	/* in last IKE_AUTH exchange */
 
+		if(this->xauth_authenticator == NULL)
+		{
+			this->xauth_authenticator = (authenticator_t *)xauth_authenticator_create_verifier(this->ike_sa);
+		}
 		status = process_payloads(this, message);
 		this->state = this->next_state;
 
@@ -674,6 +694,7 @@ METHOD(task_t, destroy, void,
 {
 	DESTROY_IF(this->virtual_ip);
 	this->requested->destroy_function(this->requested, free);
+	this->xauth_authenticator->destroy(this->xauth_authenticator);
 	free(this);
 }
 

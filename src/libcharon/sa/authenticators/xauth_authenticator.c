@@ -98,7 +98,7 @@ METHOD(authenticator_t, process, status_t,
 
 	cp_in = (cp_payload_t *)message->get_payload(message, CONFIGURATION_V1);
 
-	xauth_method = load_method(this, XAUTH_RADIUS, 0);
+	xauth_method = load_method(this, XAUTH_NULL, 0);
 
 	if(xauth_method != NULL)
 	{
