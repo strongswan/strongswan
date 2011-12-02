@@ -488,6 +488,7 @@ static status_t process_request(private_task_manager_t *this,
 {
 	enumerator_t *enumerator;
 	task_t *task = NULL;
+	bool send_response = FALSE;
 
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
@@ -530,10 +531,10 @@ static status_t process_request(private_task_manager_t *this,
 				/* task completed, remove it */
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
-				enumerator->destroy(enumerator);
-				return SUCCESS;
+				break;
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */
+				send_response = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -549,7 +550,11 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	return build_response(this, message);
+	if (send_response)
+	{
+		return build_response(this, message);
+	}
+	return SUCCESS;
 }
 
 /**
