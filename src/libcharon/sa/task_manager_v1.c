@@ -489,6 +489,8 @@ static status_t process_request(private_task_manager_t *this,
 	enumerator_t *enumerator;
 	task_t *task = NULL;
 	bool send_response = FALSE;
+	payload_t *payload;
+	notify_payload_t *notify;
 
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
@@ -511,8 +513,44 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case INFORMATIONAL_V1:
-				/* TODO-IKEv1: informational */
-				return FAILED;
+				enumerator = message->create_payload_enumerator(message);
+				while (enumerator->enumerate(enumerator, &payload))
+				{
+					switch (payload->get_type(payload))
+					{
+						case NOTIFY_V1:
+						{
+							notify = (notify_payload_t*)payload;
+							switch (notify->get_notify_type(notify))
+							{
+								/* TODO-IKEv1: Add notification types here as needed */
+								case INITIAL_CONTACT_IKEV1:
+									break;
+								default:
+									if(notify->get_notify_type(notify) < 16384)
+									{
+										DBG1(DBG_IKE, "Received %N error notification.", notify_type_names, notify->get_notify_type(notify));
+										return FAILED;
+									}
+									break;
+							}
+							break;
+						}
+						case DELETE_V1:
+						{
+							/* TODO-IKEv1: Delete payload handling. */
+							break;
+						}
+						default:
+							break;
+					}
+					if (task)
+					{
+						break;
+					}
+				}
+				enumerator->destroy(enumerator);
+				break;
 			case TRANSACTION:
 				task = (task_t *)xauth_request_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);

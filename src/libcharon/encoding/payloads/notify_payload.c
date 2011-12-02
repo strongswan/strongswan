@@ -413,7 +413,7 @@ METHOD(payload_t, verify, status_t,
 		case INVALID_MAJOR_VERSION:
 		case NO_PROPOSAL_CHOSEN:
 		{
-			if (this->notify_data.len != 0)
+			if ((this->notify_data.len != 0) && (this->type == NOTIFY))
 			{
 				bad_length = TRUE;
 			}

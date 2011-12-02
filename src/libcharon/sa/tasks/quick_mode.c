@@ -22,6 +22,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/payload.h>
 
 typedef struct private_quick_mode_t private_quick_mode_t;
 
@@ -548,9 +549,24 @@ METHOD(task_t, build_i, status_t,
 	}
 }
 
+status_t process_notify(notify_payload_t *notify)
+{
+	if(notify->get_notify_type(notify) < 16384)
+	{
+		DBG1(DBG_IKE, "Received %N error notification.", notify_type_names, notify->get_notify_type(notify));
+		return FAILED;
+	}
+	DBG1(DBG_IKE, "Received %N notification.", notify_type_names, notify->get_notify_type(notify));
+	return SUCCESS;
+}
+
 METHOD(task_t, process_r, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
+	enumerator_t *enumerator;
+	payload_t *payload;
+	status_t status;
+
 	switch (this->state)
 	{
 		case QM_INIT:
@@ -625,6 +641,19 @@ METHOD(task_t, process_r, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
+			enumerator = message->create_payload_enumerator(message);
+			while(enumerator->enumerate(enumerator, &payload))
+			{
+				if(payload->get_type(payload) == NOTIFY_V1)
+				{
+					status = process_notify((notify_payload_t *)payload);
+					if(status != SUCCESS)
+					{
+						return status;
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
 			if (!install(this))
 			{
 				return FAILED;
