@@ -500,3 +500,9 @@ if MONOLITHIC
 endif
 endif
 
+if USE_XAUTH_NULL
+  SUBDIRS += plugins/xauth_null
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/xauth_null/libstrongswan-xauth-null.la
+endif
+endif
