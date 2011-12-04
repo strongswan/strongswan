@@ -485,7 +485,7 @@ static inline void htoun32(void *network, u_int32_t host)
 /**
  * Write a 64-bit host order value in network order to an unaligned address.
  *
- * @param host		host order 32-bit value
+ * @param host		host order 64-bit value
  * @param network	unaligned address to write network order value to
  */
 static inline void htoun64(void *network, u_int64_t host)
