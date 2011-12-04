@@ -19,8 +19,6 @@
 
 #include <debug.h>
 
-#define TNC_IMCID_ANY	0xffff
-
 /**
  * Called by the IMV to inform a TNCS about the set of message types the IMV
  * is able to receive

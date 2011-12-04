@@ -19,8 +19,6 @@
 
 #include <debug.h>
 
-#define TNC_IMVID_ANY	0xffff
-
 /**
  * Called by the IMC to inform a TNCC about the set of message types the IMC
  * is able to receive

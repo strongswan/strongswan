@@ -12,6 +12,16 @@
  * for more details.
  */
 
+/**
+ * @defgroup libtncif libtncif
+ *
+ * @addtogroup libtncif
+ * TNC interface definitions
+ *
+ * @defgroup tncif_names tncif_names
+ * @{ @ingroup libtncif
+ */
+
 #ifndef TNCIF_NAMES_H_
 #define TNCIF_NAMES_H_
 

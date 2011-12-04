@@ -12,6 +12,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tncif_pa_subtypes tncif_pa_subtypes
+ * @{ @ingroup libtncif
+ */
+
 #ifndef TNCIF_PA_SUBTYPES_H_
 #define TNCIF_PA_SUBTYPES_H_
 

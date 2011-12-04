@@ -1,22 +1,25 @@
 /* tncif.h
  *
- * Trusted Network Connect IF-IMV API version 1.20
+ * Trusted Network Connect IF-IMC/IMV API version 1.30
  * Microsoft Windows DLL Platform Binding C Header
- * February 5, 2007
+ * October 14, 2011
  *
- * Copyright(c) 2005-2007, Trusted Computing Group, Inc. All rights
+ *   Common definitions for IF-IMC and IF-IMV
+ *   extracted from tncifimc.h and tncifimv.h
+ *
+ * Copyright(c) 2005-2011, Trusted Computing Group, Inc. All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * - Redistributions of source code must retain the above copyright
+ * o Redistributions of source code must retain the above copyright
  *   notice, this list of conditions and the following disclaimer.
- * - Redistributions in binary form must reproduce the above copyright
+ * o Redistributions in binary form must reproduce the above copyright
  *   notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the
  *   distribution.
- * - Neither the name of the Trusted Computing Group nor the names of
+ * o Neither the name of the Trusted Computing Group nor the names of
  *   its contributors may be used to endorse or promote products
  *   derived from this software without specific prior written
  *   permission.
@@ -41,32 +44,38 @@
  * Any marks and brands contained herein are the property of their
  * respective owners.
  *
- * Trusted Network Connect IF-IMC/IF-IMV API version 1.00 Revision 3
- * Microsoft Windows DLL Platform Binding C Header
- * Common definitions for IF-IMC and IF-IMV
- * extracted from tncifimc.h and tncifimv.h
- * Feb 12, 2007
+ */
+
+/**
+ * @defgroup tncif tncif
+ * @{ @ingroup libtncif
  */
 
 #ifndef TNCIF_H_
 #define TNCIF_H_
 
 /* Basic Types */
+
 typedef unsigned long TNC_UInt32;
 typedef unsigned char *TNC_BufferReference;
 
 /* Derived Types */
+
 typedef TNC_UInt32 TNC_ConnectionID;
 typedef TNC_UInt32 TNC_ConnectionState;
 typedef TNC_UInt32 TNC_RetryReason;
 typedef TNC_UInt32 TNC_MessageType;
 typedef TNC_MessageType *TNC_MessageTypeList;
 typedef TNC_UInt32 TNC_VendorID;
+typedef TNC_VendorID *TNC_VendorIDList;
 typedef TNC_UInt32 TNC_MessageSubtype;
+typedef TNC_MessageSubtype *TNC_MessageSubtypeList;
 typedef TNC_UInt32 TNC_Version;
 typedef TNC_UInt32 TNC_Result;
+typedef TNC_UInt32 TNC_AttributeID;
 
 /* Result Codes */
+
 #define TNC_RESULT_SUCCESS 0
 #define TNC_RESULT_NOT_INITIALIZED 1
 #define TNC_RESULT_ALREADY_INITIALIZED 2
@@ -78,11 +87,17 @@ typedef TNC_UInt32 TNC_Result;
 #define TNC_RESULT_ILLEGAL_OPERATION 8
 #define TNC_RESULT_OTHER 9
 #define TNC_RESULT_FATAL 10
+#define TNC_RESULT_EXCEEDED_MAX_ROUND_TRIPS 0x00559700
+#define TNC_RESULT_EXCEEDED_MAX_MESSAGE_SIZE 0x00559701
+#define TNC_RESULT_NO_LONG_MESSAGE_TYPES 0x00559702
+#define TNC_RESULT_NO_SOH_SUPPORT 0x00559703
 
 /* Network Connection ID Values */
+
 #define TNC_CONNECTIONID_ANY 0xFFFFFFFF
 
 /* Network Connection State Values */
+
 #define TNC_CONNECTION_STATE_CREATE 0
 #define TNC_CONNECTION_STATE_HANDSHAKE 1
 #define TNC_CONNECTION_STATE_ACCESS_ALLOWED 2
@@ -90,10 +105,38 @@ typedef TNC_UInt32 TNC_Result;
 #define TNC_CONNECTION_STATE_ACCESS_NONE 4
 #define TNC_CONNECTION_STATE_DELETE 5
 
+/* IMC/IMV ID Values */
+
+#define TNC_IMVID_ANY ((TNC_UInt32) 0xffff)
+#define TNC_IMCID_ANY ((TNC_UInt32) 0xffff)
+
 /* Vendor ID Values */
+
 #define TNC_VENDORID_TCG 0
+#define TNC_VENDORID_TCG_NEW 0x005597
 #define TNC_VENDORID_ANY ((TNC_VendorID) 0xffffff)
+
 /* Message Subtype Values */
+
 #define TNC_SUBTYPE_ANY ((TNC_MessageSubtype) 0xff)
+
+/* Message Flags Values */
+
+#define TNC_MESSAGE_FLAGS_EXCLUSIVE ((TNC_Uint32) 0x80000000)
+
+/* Message Attribute ID Values */
+
+#define TNC_ATTRIBUTEID_PREFERRED_LANGUAGE ((TNC_AttributeID) 0x00000001)
+#define TNC_ATTRIBUTEID_MAX_ROUND_TRIPS ((TNC_AttributeID) 0x00559700)
+#define TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE ((TNC_AttributeID) 0x00559701)
+#define TNC_ATTRIBUTEID_DHPN ((TNC_AttributeID) 0x00559702)
+#define TNC_ATTRIBUTEID_HAS_LONG_TYPES  ((TNC_AttributeID) 0x00559703)
+#define TNC_ATTRIBUTEID_HAS_EXCLUSIVE ((TNC_AttributeID) 0x00559704)
+#define TNC_ATTRIBUTEID_HAS_SOH ((TNC_AttributeID) 0x00559705)
+#define TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL ((TNC_AttributeID) 0x0055970A)
+#define TNC_ATTRIBUTEID_IFTNCCS_VERSION ((TNC_AttributeID) 0x0055970B)
+#define TNC_ATTRIBUTEID_IFT_PROTOCOL ((TNC_AttributeID) 0x0055970C)
+#define TNC_ATTRIBUTEID_IFT_VERSION ((TNC_AttributeID) 0x0055970D)
+#define TNC_ATTRIBUTEID_TLS_UNIQUE ((TNC_AttributeID) 0x0055970E)
 
 #endif /** TNCIF_H_ @}*/
