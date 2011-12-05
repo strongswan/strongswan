@@ -1235,7 +1235,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			break;
 		case PROTO_ESP:
 			set_from_proposal_v1_esp(this, proposal, lifetime,
-									 lifebytes, mode, udp, 0);
+									 lifebytes, mode, udp, proposal->get_number(proposal));
 			break;
 		default:
 			break;
