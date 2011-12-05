@@ -180,9 +180,65 @@ static bool save_sa_payload(private_main_mode_t *this, message_t *message)
 }
 
 /**
- * Build main mode hash payloads
+ * Add signature payload to message
  */
-static void build_hash(private_main_mode_t *this, bool initiator,
+static bool add_signature(private_main_mode_t *this,
+					   message_t *message, chunk_t hash)
+{
+	chunk_t auth_data;
+	bool status = FALSE;
+	private_key_t *private;
+	identification_t *id;
+	auth_cfg_t *auth;
+	hash_payload_t *signature_payload;
+	signature_scheme_t scheme;
+
+	id = this->ike_sa->get_my_id(this->ike_sa);
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
+	if (private == NULL)
+	{
+		DBG1(DBG_IKE, "no private key found for '%Y' type %d", id, id->get_type(id));
+		free(hash.ptr);
+		return FALSE;
+	}
+
+	switch (private->get_type(private))
+	{
+		case KEY_RSA:
+			scheme = SIGN_RSA_EMSA_PKCS1_NULL;
+			break;
+
+		default:
+			DBG1(DBG_IKE, "private key of type %N not supported",
+					key_type_names, private->get_type(private));
+			private->destroy(private);
+			free(hash.ptr);
+			return FALSE;
+	}
+
+	if (private->sign(private, scheme, hash, &auth_data))
+	{
+		signature_payload = hash_payload_create(SIGNATURE_V1);
+		signature_payload->set_hash(signature_payload, auth_data);
+		chunk_free(&auth_data);
+		message->add_payload(message, (payload_t*)signature_payload);
+		status = TRUE;
+	}
+
+	DBG1(DBG_IKE, "authentication of '%Y' (myself) %s", id,
+		 (status == TRUE)? "successful":"failed");
+
+	free(hash.ptr);
+	private->destroy(private);
+	return status;
+}
+
+
+/**
+ * Build main mode hash or signature payloads
+ */
+static bool build_hash(private_main_mode_t *this, bool initiator,
 					   message_t *message, identification_t *id)
 {
 	hash_payload_t *hash_payload;
@@ -193,11 +249,25 @@ static void build_hash(private_main_mode_t *this, bool initiator,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
 	free(dh.ptr);
 
-	hash_payload = hash_payload_create(HASH_V1);
-	hash_payload->set_hash(hash_payload, hash);
-	free(hash.ptr);
+	switch (this->auth_method)
+	{
+		case AUTH_RSA:
+		case AUTH_XAUTH_INIT_RSA:
+		case AUTH_XAUTH_RESP_RSA:
+		{
+			return add_signature(this, message, hash);
+		}
+		default:
+		{
+			hash_payload = hash_payload_create(HASH_V1);
+			hash_payload->set_hash(hash_payload, hash);
+			message->add_payload(message, &hash_payload->payload_interface);
+			free(hash.ptr);
+			break;
+		}
+	}
 
-	message->add_payload(message, &hash_payload->payload_interface);
+	return TRUE;
 }
 
 /**
@@ -230,6 +300,84 @@ static bool verify_hash(private_main_mode_t *this, bool initiator,
 	}
 	return equal;
 }
+
+/**
+ * Verify main mode signature payload
+ */
+static bool verify_signature(private_main_mode_t *this, bool initiator,
+					   message_t *message, identification_t *id)
+{
+	chunk_t hash, dh;
+	public_key_t *public;
+	hash_payload_t *signature_payload;
+	auth_method_t auth_method;
+	chunk_t auth_data;
+	auth_cfg_t *auth, *current_auth;
+	enumerator_t *enumerator;
+	key_type_t key_type = KEY_ECDSA;
+	signature_scheme_t scheme;
+	status_t status = NOT_FOUND;
+
+	signature_payload = (hash_payload_t*)message->get_payload(message, SIGNATURE_V1);
+	if (!signature_payload)
+	{
+		DBG1(DBG_IKE, "no signature_payload found");
+		return FALSE;
+	}
+
+	auth_method = this->auth_method;
+
+	switch (auth_method)
+	{
+		case AUTH_XAUTH_INIT_RSA:
+		case AUTH_XAUTH_RESP_RSA:
+			key_type = KEY_RSA;
+			scheme = SIGN_RSA_EMSA_PKCS1_NULL;
+			break;
+
+		default:
+			DBG1(DBG_IKE, "unsupported auth_method (%d)",auth_method);
+			return FALSE;
+	}
+
+	this->dh->get_my_public_value(this->dh, &dh);
+	hash = this->keymat->get_hash(this->keymat, initiator, this->dh_value, dh,
+																this->ike_sa->get_id(this->ike_sa),
+																this->sa_payload, id);
+	free(dh.ptr);
+
+	auth_data = signature_payload->get_hash(signature_payload);
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+														key_type, id, auth);
+	while (enumerator->enumerate(enumerator, &public, &current_auth))
+	{
+		if (public->verify(public, scheme, hash, auth_data))
+		{
+			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
+						   id, auth_method_names, auth_method);
+			status = SUCCESS;
+			auth->merge(auth, current_auth, FALSE);
+			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			break;
+		}
+		else
+		{
+			status = NOT_FOUND;
+			DBG1(DBG_IKE, "signature validation failed, looking for another key");
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (status == NOT_FOUND)
+	{
+		DBG1(DBG_IKE, "no trusted %N public key found for '%Y'",
+			 key_type_names, key_type, id);
+	}
+
+	free(hash.ptr);
+	return status == SUCCESS;
+}
+
 
 /**
  * Generate and add NONCE, KE payload
@@ -417,7 +565,11 @@ METHOD(task_t, build_i, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			build_hash(this, TRUE, message, id);
+			if (!build_hash(this, TRUE, message, id))
+			{
+				DBG1(DBG_CFG, "failed to build hash");
+				return FAILED;
+			}
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -541,9 +693,31 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 
-			if (!verify_hash(this, TRUE, message, id))
+			switch (this->auth_method)
 			{
-				return FAILED;
+				case AUTH_PSK:
+				case AUTH_XAUTH_INIT_PSK:
+					if (!verify_hash(this, TRUE, message, id))
+					{
+						return FAILED;
+					}
+					break;
+
+				case AUTH_XAUTH_RESP_RSA:
+				case AUTH_XAUTH_INIT_RSA:
+				case AUTH_RSA:
+				{
+					if (!verify_signature(this, TRUE, message, id))
+					{
+						return FAILED;
+					}
+					break;
+				}
+
+				default:
+					DBG1(DBG_IKE, "unknown auth_method:%d",get_auth_method(this));
+					return FAILED;
+					break;
 			}
 
 			this->state = MM_AUTH;
@@ -659,7 +833,11 @@ METHOD(task_t, build_r, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			build_hash(this, FALSE, message, id);
+			if (!build_hash(this, FALSE, message, id))
+			{
+				DBG1(DBG_CFG, "failed to build hash");
+				return FAILED;
+			}
 
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 				 this->ike_sa->get_name(this->ike_sa),
