@@ -299,6 +299,24 @@ METHOD(id_payload_t, get_ts, traffic_selector_t*,
 				return get_ts_from_range(this, TS_IPV6_ADDR_RANGE);
 			}
 			break;
+		case ID_IPV4_ADDR:
+		{
+			if (this->id_data.len == 4)
+			{
+				return traffic_selector_create_from_bytes(this->protocol_id,
+								TS_IPV4_ADDR_RANGE, this->id_data, this->port,
+								this->id_data, this->port ?: 65535);
+			}
+		}
+		case ID_IPV6_ADDR:
+		{
+			if (this->id_data.len == 16)
+			{
+				return traffic_selector_create_from_bytes(this->protocol_id,
+								TS_IPV4_ADDR_RANGE, this->id_data, this->port,
+								this->id_data, this->port ?: 65535);
+			}
+		}
 		default:
 			break;
 	}
