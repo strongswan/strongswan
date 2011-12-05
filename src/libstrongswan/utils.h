@@ -491,6 +491,11 @@ static inline void htoun32(void *network, u_int32_t host)
 static inline void htoun64(void *network, u_int64_t host)
 {
 	char *unaligned = (char*)network;
+
+#ifdef be64toh
+	host = htobe64(host);
+	memcpy((char*)unaligned, &host, sizeof(host));
+#else
 	u_int32_t high_part, low_part;
 
 	high_part = host >> 32;
@@ -501,6 +506,7 @@ static inline void htoun64(void *network, u_int64_t host)
 	memcpy(unaligned, &high_part, sizeof(high_part));
 	unaligned += sizeof(high_part);
 	memcpy(unaligned, &low_part, sizeof(low_part));
+#endif
 }
 
 /**
@@ -542,6 +548,13 @@ static inline u_int32_t untoh32(void *network)
 static inline u_int64_t untoh64(void *network)
 {
 	char *unaligned = (char*)network;
+
+#ifdef be64toh
+	u_int64_t tmp;
+
+	memcpy(&tmp, unaligned, sizeof(tmp));
+	return be64toh(tmp);
+#else
 	u_int32_t high_part, low_part;
 
 	memcpy(&high_part, unaligned, sizeof(high_part));
@@ -552,6 +565,7 @@ static inline u_int64_t untoh64(void *network)
 	low_part  = ntohl(low_part);
 
 	return (((u_int64_t)high_part) << 32) + low_part;
+#endif
 }
 
 /**
