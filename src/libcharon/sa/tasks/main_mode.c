@@ -274,7 +274,7 @@ static bool build_hash(private_main_mode_t *this, bool initiator,
  * Verify main mode hash payload
  */
 static bool verify_hash(private_main_mode_t *this, bool initiator,
-					   message_t *message, identification_t *id)
+						message_t *message, identification_t *id)
 {
 	hash_payload_t *hash_payload;
 	chunk_t hash, dh;
@@ -305,12 +305,11 @@ static bool verify_hash(private_main_mode_t *this, bool initiator,
  * Verify main mode signature payload
  */
 static bool verify_signature(private_main_mode_t *this, bool initiator,
-					   message_t *message, identification_t *id)
+							 message_t *message, identification_t *id)
 {
 	chunk_t hash, dh;
 	public_key_t *public;
 	hash_payload_t *signature_payload;
-	auth_method_t auth_method;
 	chunk_t auth_data;
 	auth_cfg_t *auth, *current_auth;
 	enumerator_t *enumerator;
@@ -325,25 +324,25 @@ static bool verify_signature(private_main_mode_t *this, bool initiator,
 		return FALSE;
 	}
 
-	auth_method = this->auth_method;
-
-	switch (auth_method)
+	switch (this->auth_method)
 	{
+		case AUTH_RSA:
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:
 			key_type = KEY_RSA;
 			scheme = SIGN_RSA_EMSA_PKCS1_NULL;
 			break;
-
 		default:
-			DBG1(DBG_IKE, "unsupported auth_method (%d)",auth_method);
+			/* TODO-IKEv1: other auth methods */
+			DBG1(DBG_IKE, "unsupported auth method: %N",
+				 auth_method_names, this->auth_method);
 			return FALSE;
 	}
 
 	this->dh->get_my_public_value(this->dh, &dh);
 	hash = this->keymat->get_hash(this->keymat, initiator, this->dh_value, dh,
-																this->ike_sa->get_id(this->ike_sa),
-																this->sa_payload, id);
+								  this->ike_sa->get_id(this->ike_sa),
+								  this->sa_payload, id);
 	free(dh.ptr);
 
 	auth_data = signature_payload->get_hash(signature_payload);
@@ -355,7 +354,7 @@ static bool verify_signature(private_main_mode_t *this, bool initiator,
 		if (public->verify(public, scheme, hash, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
-						   id, auth_method_names, auth_method);
+						   id, auth_method_names, this->auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -377,7 +376,6 @@ static bool verify_signature(private_main_mode_t *this, bool initiator,
 	free(hash.ptr);
 	return status == SUCCESS;
 }
-
 
 /**
  * Generate and add NONCE, KE payload
@@ -697,29 +695,25 @@ METHOD(task_t, process_r, status_t,
 			{
 				case AUTH_PSK:
 				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_RESP_PSK:
 					if (!verify_hash(this, TRUE, message, id))
 					{
 						return FAILED;
 					}
 					break;
-
-				case AUTH_XAUTH_RESP_RSA:
-				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_RSA:
-				{
+				case AUTH_XAUTH_INIT_RSA:
+				case AUTH_XAUTH_RESP_RSA:
 					if (!verify_signature(this, TRUE, message, id))
 					{
 						return FAILED;
 					}
 					break;
-				}
-
 				default:
-					DBG1(DBG_IKE, "unknown auth_method:%d",get_auth_method(this));
+					DBG1(DBG_IKE, "unsupported auth method: %N",
+						 auth_method_names, this->auth_method);
 					return FAILED;
-					break;
 			}
-
 			this->state = MM_AUTH;
 			return NEED_MORE;
 		}
@@ -771,6 +765,7 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 	{
 		case AUTH_PSK:
 		case AUTH_XAUTH_INIT_PSK:
+		case AUTH_XAUTH_RESP_PSK:
 			shared_key = lookup_shared_key(this);
 			break;
 		default:
@@ -954,9 +949,28 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
-			if (!verify_hash(this, FALSE, message, id))
+			switch (this->auth_method)
 			{
-				return FAILED;
+				case AUTH_PSK:
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_RESP_PSK:
+					if (!verify_hash(this, FALSE, message, id))
+					{
+						return FAILED;
+					}
+					break;
+				case AUTH_RSA:
+				case AUTH_XAUTH_INIT_RSA:
+				case AUTH_XAUTH_RESP_RSA:
+					if (!verify_signature(this, FALSE, message, id))
+					{
+						return FAILED;
+					}
+					break;
+				default:
+					DBG1(DBG_IKE, "unsupported auth method: %N",
+						 auth_method_names, this->auth_method);
+					return FAILED;
 			}
 
 			/* TODO-IKEv1: check for XAUTH rounds, queue them */

@@ -426,6 +426,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			this->prf->allocate_bytes(this->prf, nonces, &this->skeyid);
 			break;
 		}
+		case AUTH_RSA:
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:
 		{
@@ -433,14 +434,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			this->prf->allocate_bytes(this->prf, g_xy, &this->skeyid);
 			break;
 		}
-		case AUTH_RSA:
-		{
-			/* signatures : SKEYID = prf(Ni_b | Nr_b, g^xy)
-			 * pubkey encr: SKEYID = prf(hash(Ni_b | Nr_b), CKY-I | CKY-R) */
-			/* TODO-IKEv1: implement key derivation for other schemes,
-			 * fall for now */
-		}
 		default:
+			/* TODO-IKEv1: implement key derivation for other schemes */
 			/* authentication class not supported */
 			chunk_clear(&g_xy);
 			return FALSE;
