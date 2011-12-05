@@ -74,21 +74,18 @@ struct private_ike_cert_pre_t {
 /**
  * add certificate to auth
  */
-static bool add_certificate(auth_cfg_t *auth, chunk_t keyid, id_type_t id_type )
+static bool add_certificate(auth_cfg_t *auth, id_type_t type, chunk_t data)
 {
-	identification_t *id = NULL;
+	identification_t *id;
 	certificate_t *cert;
 	bool status = TRUE;
 
-	id = identification_create_from_encoding(id_type, keyid);
-
-	if (!id)
+	if (!data.len)
 	{
 		return FALSE;
 	}
-
-	cert = lib->credmgr->get_cert(lib->credmgr,
-									CERT_X509, KEY_ANY, id, TRUE);
+	id = identification_create_from_encoding(type, data);
+	cert = lib->credmgr->get_cert(lib->credmgr, CERT_X509, KEY_ANY, id, TRUE);
 	if (cert)
 	{
 		DBG1(DBG_IKE, "received cert request for \"%Y\"",
@@ -97,11 +94,9 @@ static bool add_certificate(auth_cfg_t *auth, chunk_t keyid, id_type_t id_type )
 	}
 	else
 	{
-		DBG2(DBG_IKE, "received cert request for unknown ca "
-						"with keyid %Y", id);
+		DBG2(DBG_IKE, "received cert request for unknown ca %Y", id);
 		status = FALSE;
 	}
-
 	id->destroy(id);
 
 	return status;
@@ -129,7 +124,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				certreq_payload_t *certreq = (certreq_payload_t*)payload;
 				enumerator_t *enumerator;
 				u_int unknown = 0;
-				chunk_t keyid;
+				chunk_t chunk;
 
 				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
 
@@ -143,9 +138,9 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				if (payload->get_type(payload) == CERTIFICATE_REQUEST)
 				{
 					enumerator = certreq->create_keyid_enumerator(certreq);
-					while (enumerator->enumerate(enumerator, &keyid))
+					while (enumerator->enumerate(enumerator, &chunk))
 					{
-						if (!add_certificate(auth, keyid, ID_KEY_ID))
+						if (!add_certificate(auth, ID_KEY_ID, chunk))
 						{
 							unknown++;
 						}
@@ -154,16 +149,12 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 				}
 				else
 				{
-					keyid = certreq->get_dn(certreq);
-
-					/* In case client (iPhone) is sending empty cert requests */
-					if (!keyid.ptr || !keyid.len ||
-						!add_certificate(auth, keyid, ID_DER_ASN1_DN))
+					chunk = certreq->get_dn(certreq);
+					if (!add_certificate(auth, ID_DER_ASN1_DN, chunk))
 					{
 						unknown++;
 					}
 				}
-
 				if (unknown)
 				{
 					DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
@@ -245,7 +236,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == CERTIFICATE ||
-				payload->get_type(payload) == CERTIFICATE_V1)
+			payload->get_type(payload) == CERTIFICATE_V1)
 		{
 			cert_payload_t *cert_payload;
 			cert_encoding_t encoding;
@@ -346,7 +337,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
  * add the keyid of a certificate to the certificate request payload
  */
 static void add_certreq(private_ike_cert_pre_t *this,
-												certreq_payload_t **req, certificate_t *cert)
+						certreq_payload_t **req, certificate_t *cert)
 {
 	switch (cert->get_type(cert))
 	{
@@ -365,32 +356,48 @@ static void add_certreq(private_ike_cert_pre_t *this,
 			{
 				break;
 			}
-
 			if (*req == NULL)
 			{
-				*req = certreq_payload_create_type(this->cert_req_payload_type, CERT_X509);
+				*req = certreq_payload_create_type(CERTIFICATE_REQUEST, CERT_X509);
 			}
-
-			if (this->cert_req_payload_type == CERTIFICATE_REQUEST)
+			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 			{
-				if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
-				{
-					(*req)->add_keyid(*req, keyid);
-					DBG1(DBG_IKE, "sending cert request for \"%Y\"",
-						 cert->get_subject(cert));
-				}
-			}
-			else
-			{
-				identification_t *id;
-				id = cert->get_subject(cert);
-
-				(*req)->set_dn(*req, id->get_encoding(id));
+				(*req)->add_keyid(*req, keyid);
 				DBG1(DBG_IKE, "sending cert request for \"%Y\"",
-						 cert->get_subject(cert));
-
+					 cert->get_subject(cert));
 			}
 			public->destroy(public);
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+/**
+ * Add the subject of a CA certificate a message
+ */
+static void add_certreq_v1(private_ike_cert_pre_t *this,
+						   message_t *message, certificate_t *cert)
+{
+	switch (cert->get_type(cert))
+	{
+		case CERT_X509:
+		{
+			x509_t *x509 = (x509_t*)cert;
+			identification_t *id;
+			certreq_payload_t *req;
+
+			if (!(x509->get_flags(x509) & X509_CA))
+			{	/* no CA cert, skip */
+				break;
+			}
+			req = certreq_payload_create_type(CERTIFICATE_REQUEST_V1, CERT_X509);
+			id = cert->get_subject(cert);
+			req->set_dn(req, id->get_encoding(id));
+			DBG1(DBG_IKE, "sending cert request for \"%Y\"",
+				 cert->get_subject(cert));
+			message->add_payload(message, &req->payload_interface);
 			break;
 		}
 		default:
@@ -402,7 +409,7 @@ static void add_certreq(private_ike_cert_pre_t *this,
  * add a auth_cfg's CA certificates to the certificate request
  */
 static void add_certreqs(private_ike_cert_pre_t *this,
-												 certreq_payload_t **req, auth_cfg_t *auth)
+						 certreq_payload_t **req, auth_cfg_t *auth)
 {
 	enumerator_t *enumerator;
 	auth_rule_t type;
@@ -427,8 +434,7 @@ static void add_certreqs(private_ike_cert_pre_t *this,
  * add a auth_cfg's CA certificates to the certificate request
  */
 static void add_certreqs_v1(private_ike_cert_pre_t *this,
-														certreq_payload_t **req,
-														auth_cfg_t *auth, message_t *message)
+							auth_cfg_t *auth, message_t *message)
 {
 	enumerator_t *enumerator;
 	auth_rule_t type;
@@ -440,11 +446,7 @@ static void add_certreqs_v1(private_ike_cert_pre_t *this,
 		switch (type)
 		{
 			case AUTH_RULE_CA_CERT:
-				add_certreq(this, req, (certificate_t*)value);
-				if (req)
-				{
-					message->add_payload(message,(payload_t*)req);
-				}
+				add_certreq_v1(this, message, (certificate_t*)value);
 				break;
 			default:
 				break;
@@ -518,7 +520,6 @@ static void build_certreqs_v1(private_ike_cert_pre_t *this, message_t *message)
 	peer_cfg_t *peer_cfg;
 	certificate_t *cert;
 	auth_cfg_t *auth;
-	certreq_payload_t *req = NULL;
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (!ike_cfg->send_certreq(ike_cfg))
@@ -534,27 +535,19 @@ static void build_certreqs_v1(private_ike_cert_pre_t *this, message_t *message)
 		enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, FALSE);
 		if (enumerator->enumerate(enumerator, &auth))
 		{
-			add_certreqs_v1(this, &req, auth, message);
-			if (req)
-			{
-				message->add_payload(message, (payload_t*)req);
-			}
+			add_certreqs_v1(this, auth, message);
 		}
 		enumerator->destroy(enumerator);
 	}
 
-	if (!req)
+	if (!message->get_payload(message, CERTIFICATE_REQUEST_V1))
 	{
 		/* otherwise add all trusted CA certificates */
 		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
 												CERT_ANY, KEY_ANY, NULL, TRUE);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			add_certreq(this, &req, cert);
-			if (req)
-			{
-				message->add_payload(message, (payload_t*)req);
-			}
+			add_certreq_v1(this, message, cert);
 		}
 		enumerator->destroy(enumerator);
 	}
