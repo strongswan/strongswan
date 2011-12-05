@@ -64,6 +64,11 @@ struct private_certreq_payload_t {
 	 * The contained certreq data value.
 	 */
 	chunk_t data;
+
+	/**
+	 * Payload type for certificate request.
+	 */
+	payload_type_t payload_type;
 };
 
 /**
@@ -122,6 +127,13 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
+METHOD(payload_t, verify_v1, status_t,
+			 private_certreq_payload_t *this)
+{
+	/*TODO: */
+	return SUCCESS;
+}
+
 METHOD(payload_t, get_encoding_rules, int,
 	private_certreq_payload_t *this, encoding_rule_t **rules)
 {
@@ -138,7 +150,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_certreq_payload_t *this)
 {
-	return CERTIFICATE_REQUEST;
+	return this->payload_type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -157,6 +169,23 @@ METHOD(payload_t, get_length, size_t,
 	private_certreq_payload_t *this)
 {
 	return this->payload_length;
+}
+
+METHOD(certreq_payload_t, get_dn, chunk_t,
+	private_certreq_payload_t *this)
+{
+	return this->data;
+}
+
+METHOD(certreq_payload_t, set_dn, void,
+	private_certreq_payload_t *this, chunk_t dn)
+{
+	if (this->data.ptr)
+	{
+		free(this->data.ptr);
+	}
+	this->data = chunk_clone(dn);
+	this->payload_length = get_header_length(this) + this->data.len;
 }
 
 METHOD(certreq_payload_t, add_keyid, void,
@@ -238,7 +267,7 @@ METHOD2(payload_t, certreq_payload_t, destroy, void,
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create()
+certreq_payload_t *certreq_payload_create(payload_type_t payload_type)
 {
 	private_certreq_payload_t *this;
 
@@ -258,19 +287,28 @@ certreq_payload_t *certreq_payload_create()
 			.get_cert_type = _get_cert_type,
 			.add_keyid = _add_keyid,
 			.destroy = _destroy,
+			.get_dn = _get_dn,
+			.set_dn = _set_dn,
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = get_header_length(this),
+		.payload_type = payload_type,
 	);
+
+	if (payload_type == CERTIFICATE_REQUEST_V1)
+	{
+		this->public.payload_interface.verify = _verify_v1;
+	}
+
 	return &this->public;
 }
 
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
+certreq_payload_t *certreq_payload_create_type(payload_type_t payload_type, certificate_type_t type)
 {
-	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create();
+	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create(payload_type);
 
 	switch (type)
 	{

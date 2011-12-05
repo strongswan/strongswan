@@ -213,7 +213,8 @@ payload_t *payload_create(payload_type_t type)
 		case CERTIFICATE_V1:
 			return (payload_t*)cert_payload_create(type);
 		case CERTIFICATE_REQUEST:
-			return (payload_t*)certreq_payload_create();
+		case CERTIFICATE_REQUEST_V1:
+			return (payload_t*)certreq_payload_create(type);
 		case TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			return (payload_t*)traffic_selector_substructure_create();
 		case TRAFFIC_SELECTOR_INITIATOR:
@@ -233,6 +234,7 @@ payload_t *payload_create(payload_type_t type)
 		case VENDOR_ID_V1:
 			return (payload_t*)vendor_id_payload_create(type);
 		case HASH_V1:
+		case SIGNATURE_V1:
 		case NAT_D_V1:
 			return (payload_t*)hash_payload_create(type);
 		case CONFIGURATION:

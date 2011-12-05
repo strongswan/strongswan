@@ -40,7 +40,7 @@ struct certreq_payload_t {
 	payload_t payload_interface;
 
 	/**
-	 * Create an enumerator over contained keyids.
+	 * Create an enumerator over contained keyids (IKEv2 only).
 	 *
 	 * @return			enumerator over chunk_t's.
 	 */
@@ -54,12 +54,27 @@ struct certreq_payload_t {
 	certificate_type_t (*get_cert_type)(certreq_payload_t *this);
 
 	/**
-	 * Add a certificates keyid to the payload.
+	 * Add a certificates keyid to the payload (IKEv2 only).
 	 *
 	 * @param keyid		keyid of the trusted certifcate
 	 * @return
 	 */
 	void (*add_keyid)(certreq_payload_t *this, chunk_t keyid);
+
+	/**
+	 * Get certificate request data (IKEv1 only).
+	 *
+	  * @return certifcate request data
+	 */
+	chunk_t (*get_dn)(certreq_payload_t *this);
+
+	/**
+	 * Set certificate request data (IKEv1 only).
+	 *
+	 * @param dn		certifcate request data to set
+	 * @return
+	 */
+	void (*set_dn)(certreq_payload_t *this, chunk_t dn);
 
 	/**
 	 * Destroys an certreq_payload_t object.
@@ -72,7 +87,7 @@ struct certreq_payload_t {
  *
  * @return 				certreq payload
  */
-certreq_payload_t *certreq_payload_create(void);
+certreq_payload_t *certreq_payload_create(payload_type_t payload_type);
 
 /**
  * Creates an empty certreq_payload_t for a kind of certificates.
@@ -80,6 +95,6 @@ certreq_payload_t *certreq_payload_create(void);
  * @param type			type of the added keyids
  * @return 				certreq payload
  */
-certreq_payload_t *certreq_payload_create_type(certificate_type_t type);
+certreq_payload_t *certreq_payload_create_type(payload_type_t payload_type, certificate_type_t type);
 
 #endif /** CERTREQ_PAYLOAD_H_ @}*/

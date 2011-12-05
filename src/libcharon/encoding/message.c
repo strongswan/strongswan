@@ -438,7 +438,7 @@ static payload_rule_t id_prot_i_rules[] = {
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
-	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
+	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
 	{HASH_V1,					0,	1,						TRUE,	FALSE},
 };
@@ -474,7 +474,7 @@ static payload_rule_t id_prot_r_rules[] = {
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
-	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
+	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
 	{HASH_V1,					0,	1,						TRUE,	FALSE},
 };
