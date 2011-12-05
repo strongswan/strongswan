@@ -391,7 +391,19 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 
 	this = (private_id_payload_t*)id_payload_create(ID_V1);
 
-	if (ts->to_subnet(ts, &net, &mask))
+	if (ts->is_host(ts, NULL))
+	{
+		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE)
+		{
+			this->id_type = ID_IPV4_ADDR;
+		}
+		else
+		{
+			this->id_type = ID_IPV6_ADDR;
+		}
+		this->id_data = chunk_clone(ts->get_from_address(ts));
+	}
+	else if (ts->to_subnet(ts, &net, &mask))
 	{
 		u_int8_t netmask[16], len, byte;
 
@@ -418,6 +430,7 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 		}
 		this->id_data = chunk_cat("cc", net->get_address(net),
 								  chunk_create(netmask, len));
+		net->destroy(net);
 	}
 	else
 	{
@@ -431,12 +444,12 @@ id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts)
 		}
 		this->id_data = chunk_cat("cc",
 							ts->get_from_address(ts), ts->get_to_address(ts));
+		net->destroy(net);
 	}
 	this->port = ts->get_from_port(ts);
 	this->protocol_id = ts->get_protocol(ts);
 	this->payload_length += this->id_data.len;
 
-	net->destroy(net);
-
 	return &this->public;
 }
+
