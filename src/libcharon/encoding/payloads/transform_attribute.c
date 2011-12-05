@@ -272,7 +272,7 @@ transform_attribute_t *transform_attribute_create_value(payload_type_t type,
 	}
 	else
 	{
-		value = htobe64(value);
+		htoun64(&value, value);
 		this->attribute_value = chunk_clone(chunk_from_thing(value));
 		this->attribute_length_or_value = sizeof(value);
 	}
