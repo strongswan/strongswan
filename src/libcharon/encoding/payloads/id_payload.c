@@ -270,6 +270,16 @@ static traffic_selector_t *get_ts_from_subnet(private_id_payload_t *this,
 								net, this->port, netmask, this->port ?: 65535);
 }
 
+/**
+ * Create a traffic selector from an IP ID
+ */
+static traffic_selector_t *get_ts_from_ip(private_id_payload_t *this,
+										  ts_type_t type)
+{
+	return traffic_selector_create_from_bytes(this->protocol_id, type,
+				this->id_data, this->port, this->id_data, this->port ?: 65535);
+}
+
 METHOD(id_payload_t, get_ts, traffic_selector_t*,
 	private_id_payload_t *this)
 {
@@ -300,23 +310,17 @@ METHOD(id_payload_t, get_ts, traffic_selector_t*,
 			}
 			break;
 		case ID_IPV4_ADDR:
-		{
 			if (this->id_data.len == 4)
 			{
-				return traffic_selector_create_from_bytes(this->protocol_id,
-								TS_IPV4_ADDR_RANGE, this->id_data, this->port,
-								this->id_data, this->port ?: 65535);
+				return get_ts_from_ip(this, TS_IPV4_ADDR_RANGE);
 			}
-		}
+			break;
 		case ID_IPV6_ADDR:
-		{
 			if (this->id_data.len == 16)
 			{
-				return traffic_selector_create_from_bytes(this->protocol_id,
-								TS_IPV4_ADDR_RANGE, this->id_data, this->port,
-								this->id_data, this->port ?: 65535);
+				return get_ts_from_ip(this, TS_IPV6_ADDR_RANGE);
 			}
-		}
+			break;
 		default:
 			break;
 	}
