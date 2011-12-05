@@ -127,7 +127,7 @@ static auth_cfg_t *get_auth_cfg(private_xauth_request_t *this, bool local)
 /**
  * build INTERNAL_IPV4/6_ADDRESS attribute from virtual ip
  */
-static configuration_attribute_t *build_vip(host_t *vip)
+static configuration_attribute_t *build_vip(payload_type_t ca_type, host_t *vip)
 {
 	configuration_attribute_type_t type;
 	chunk_t chunk, prefix;
@@ -159,7 +159,7 @@ static configuration_attribute_t *build_vip(host_t *vip)
 			chunk = chunk_cata("cc", chunk, prefix);
 		}
 	}
-	return configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE,
+	return configuration_attribute_create_chunk(ca_type,
 												type, chunk);
 }
 
@@ -431,7 +431,7 @@ METHOD(task_t, build_i, status_t,
 			if (vip)
 			{
 				cp = cp_payload_create_type(cp_type, CFG_REQUEST);
-				cp->add_attribute(cp, build_vip(vip));
+				cp->add_attribute(cp, build_vip(ca_type, vip));
 			}
 
 			enumerator = hydra->attributes->create_initiator_enumerator(hydra->attributes,
@@ -489,16 +489,25 @@ METHOD(task_t, process_r, status_t,
 		{
 			this->auth_cfg = get_auth_cfg(this, TRUE);
 		}
+
 		switch((uintptr_t)this->auth_cfg->get(this->auth_cfg, AUTH_RULE_AUTH_CLASS))
 		{
 			case AUTH_CLASS_XAUTH_PSK:
 			case AUTH_CLASS_XAUTH_PUBKEY:
-				this->state = TASK_XAUTH_INIT;
+				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+				{
+					this->state = TASK_XAUTH_COMPLETE;
+				}
+				else
+				{
+					this->state = TASK_XAUTH_INIT;
+				}
 				break;
 			default:
 				/* We aren't XAuth, so do we should expect ConfigMode stuff */
 				this->state = TASK_XAUTH_COMPLETE;
 		}
+
 		if((this->xauth_authenticator == NULL) && (this->state == TASK_XAUTH_INIT))
 		{
 			this->xauth_authenticator = (authenticator_t *)xauth_authenticator_create_builder(this->ike_sa);
@@ -556,6 +565,7 @@ METHOD(task_t, build_r, status_t,
 			case AUTH_CLASS_XAUTH_PUBKEY:
 				break;
 			default:
+
 				this->state = TASK_XAUTH_COMPLETE;
 				return SUCCESS;
 		}
@@ -600,7 +610,7 @@ METHOD(task_t, build_r, status_t,
 				this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
 
 				cp = cp_payload_create_type(cp_type, CFG_REPLY);
-				cp->add_attribute(cp, build_vip(vip));
+				cp->add_attribute(cp, build_vip(ca_type, vip));
 			}
 
 			/* query registered providers for additional attributes to include */
@@ -640,6 +650,7 @@ METHOD(task_t, process_i, status_t,
 	private_xauth_request_t *this, message_t *message)
 {
 	status_t status;
+
 	if (((this->ike_sa->get_version(this->ike_sa) == IKEV2) &&
 			(this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)) ||
 			(this->ike_sa->get_version(this->ike_sa) == IKEV1))
@@ -694,7 +705,7 @@ METHOD(task_t, destroy, void,
 {
 	DESTROY_IF(this->virtual_ip);
 	this->requested->destroy_function(this->requested, free);
-	this->xauth_authenticator->destroy(this->xauth_authenticator);
+	DESTROY_IF(this->xauth_authenticator);
 	free(this);
 }
 
