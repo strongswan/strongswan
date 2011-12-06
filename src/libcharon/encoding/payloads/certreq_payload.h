@@ -27,13 +27,13 @@ typedef struct certreq_payload_t certreq_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <utils/identification.h>
 
 /**
- * Class representing an IKEv2 CERTREQ payload.
- *
- * The CERTREQ payload format is described in RFC section 3.7.
+ * Class representing an IKEv1/IKEv2 CERTREQ payload.
  */
 struct certreq_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -62,19 +62,11 @@ struct certreq_payload_t {
 	void (*add_keyid)(certreq_payload_t *this, chunk_t keyid);
 
 	/**
-	 * Get certificate request data (IKEv1 only).
+	 * Get the distinguished name of the payload (IKEv1 only).
 	 *
-	  * @return certifcate request data
+	 * @return			DN as identity, must be destroyed
 	 */
-	chunk_t (*get_dn)(certreq_payload_t *this);
-
-	/**
-	 * Set certificate request data (IKEv1 only).
-	 *
-	 * @param dn		certifcate request data to set
-	 * @return
-	 */
-	void (*set_dn)(certreq_payload_t *this, chunk_t dn);
+	identification_t* (*get_dn)(certreq_payload_t *this);
 
 	/**
 	 * Destroys an certreq_payload_t object.
@@ -90,11 +82,19 @@ struct certreq_payload_t {
 certreq_payload_t *certreq_payload_create(payload_type_t payload_type);
 
 /**
- * Creates an empty certreq_payload_t for a kind of certificates.
+ * Creates an empty IKEv2 certreq_payload_t for a kind of certificates.
  *
  * @param type			type of the added keyids
  * @return 				certreq payload
  */
-certreq_payload_t *certreq_payload_create_type(payload_type_t payload_type, certificate_type_t type);
+certreq_payload_t *certreq_payload_create_type(certificate_type_t type);
+
+/**
+ * Creates a IKEv1 certreq_payload_t for a given distinguished name.
+ *
+ * @param dn			distinguished name, does not get owned
+ * @return 				certreq payload
+ */
+certreq_payload_t *certreq_payload_create_dn(identification_t *id);
 
 #endif /** CERTREQ_PAYLOAD_H_ @}*/

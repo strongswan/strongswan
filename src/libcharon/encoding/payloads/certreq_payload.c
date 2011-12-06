@@ -66,16 +66,13 @@ struct private_certreq_payload_t {
 	chunk_t data;
 
 	/**
-	 * Payload type for certificate request.
+	 * Payload type CERTIFICATE_REQUEST or CERTIFICATE_REQUEST_V1
 	 */
-	payload_type_t payload_type;
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a CERTREQ payload
- *
- * The defined offsets are the positions in a object of type
- * private_certreq_payload_t.
+ * Encoding rules for CERTREQ payload.
  */
 static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -114,7 +111,8 @@ static encoding_rule_t encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_certreq_payload_t *this)
 {
-	if (this->encoding == ENC_X509_SIGNATURE)
+	if (this->type == CERTIFICATE_REQUEST &&
+		this->encoding == ENC_X509_SIGNATURE)
 	{
 		if (this->data.len < HASH_SIZE_SHA1 ||
 			this->data.len % HASH_SIZE_SHA1)
@@ -124,13 +122,6 @@ METHOD(payload_t, verify, status_t,
 			return FAILED;
 		}
 	}
-	return SUCCESS;
-}
-
-METHOD(payload_t, verify_v1, status_t,
-			 private_certreq_payload_t *this)
-{
-	/*TODO: */
 	return SUCCESS;
 }
 
@@ -150,7 +141,7 @@ METHOD(payload_t, get_header_length, int,
 METHOD(payload_t, get_type, payload_type_t,
 	private_certreq_payload_t *this)
 {
-	return this->payload_type;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -171,21 +162,14 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(certreq_payload_t, get_dn, chunk_t,
+METHOD(certreq_payload_t, get_dn, identification_t*,
 	private_certreq_payload_t *this)
 {
-	return this->data;
-}
-
-METHOD(certreq_payload_t, set_dn, void,
-	private_certreq_payload_t *this, chunk_t dn)
-{
-	if (this->data.ptr)
+	if (this->data.len)
 	{
-		free(this->data.ptr);
+		return identification_create_from_encoding(ID_DER_ASN1_DN, this->data);
 	}
-	this->data = chunk_clone(dn);
-	this->payload_length = get_header_length(this) + this->data.len;
+	return NULL;
 }
 
 METHOD(certreq_payload_t, add_keyid, void,
@@ -235,6 +219,10 @@ METHOD(certreq_payload_t, create_keyid_enumerator, enumerator_t*,
 {
 	keyid_enumerator_t *enumerator;
 
+	if (this->type == CERTIFICATE_REQUEST_V1)
+	{
+		return enumerator_create_empty();
+	}
 	INIT(enumerator,
 		.public = {
 			.enumerate = (void*)_keyid_enumerate,
@@ -267,7 +255,7 @@ METHOD2(payload_t, certreq_payload_t, destroy, void,
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create(payload_type_t payload_type)
+certreq_payload_t *certreq_payload_create(payload_type_t type)
 {
 	private_certreq_payload_t *this;
 
@@ -288,28 +276,23 @@ certreq_payload_t *certreq_payload_create(payload_type_t payload_type)
 			.add_keyid = _add_keyid,
 			.destroy = _destroy,
 			.get_dn = _get_dn,
-			.set_dn = _set_dn,
 		},
 		.next_payload = NO_PAYLOAD,
 		.payload_length = get_header_length(this),
-		.payload_type = payload_type,
+		.type = type,
 	);
-
-	if (payload_type == CERTIFICATE_REQUEST_V1)
-	{
-		this->public.payload_interface.verify = _verify_v1;
-	}
-
 	return &this->public;
 }
 
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create_type(payload_type_t payload_type, certificate_type_t type)
+certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 {
-	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create(payload_type);
+	private_certreq_payload_t *this;
 
+	this = (private_certreq_payload_t*)
+					certreq_payload_create(CERTIFICATE_REQUEST);
 	switch (type)
 	{
 		case CERT_X509:
@@ -324,3 +307,19 @@ certreq_payload_t *certreq_payload_create_type(payload_type_t payload_type, cert
 	return &this->public;
 }
 
+/*
+ * Described in header
+ */
+certreq_payload_t *certreq_payload_create_dn(identification_t *id)
+{
+	private_certreq_payload_t *this;
+
+	this = (private_certreq_payload_t*)
+					certreq_payload_create(CERTIFICATE_REQUEST_V1);
+
+	this->encoding = ENC_X509_SIGNATURE;
+	this->data = chunk_clone(id->get_encoding(id));
+	this->payload_length = get_header_length(this) + this->data.len;
+
+	return &this->public;
+}
