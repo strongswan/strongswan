@@ -84,6 +84,7 @@ sa/tasks/ike_auth.c sa/tasks/ike_auth.h \
 sa/tasks/ike_cert_pre.c sa/tasks/ike_cert_pre.h \
 sa/tasks/ike_cert_post.c sa/tasks/ike_cert_post.h \
 sa/tasks/ike_cert_pre_v1.c sa/tasks/ike_cert_pre_v1.h \
+sa/tasks/ike_cert_post_v1.c sa/tasks/ike_cert_post_v1.h \
 sa/tasks/ike_config.c sa/tasks/ike_config.h \
 sa/tasks/ike_delete.c sa/tasks/ike_delete.h \
 sa/tasks/ike_dpd.c sa/tasks/ike_dpd.h \
