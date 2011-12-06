@@ -304,10 +304,12 @@ cert_payload_t *cert_payload_create(payload_type_t type)
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_cert(certificate_t *cert, payload_type_t type)
+cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
+											  certificate_t *cert)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
+	private_cert_payload_t *this;
 
+	this = (private_cert_payload_t*)cert_payload_create(type);
 	switch (cert->get_type(cert))
 	{
 		case CERT_X509:
@@ -326,33 +328,38 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert, payload_type_
 		return NULL;
 	}
 	this->payload_length = get_header_length(this) + this->data.len;
+
 	return &this->public;
 }
 
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url,
-													  payload_type_t type)
+cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
+	private_cert_payload_t *this;
 
+	this = (private_cert_payload_t*)cert_payload_create(CERTIFICATE);
 	this->encoding = ENC_X509_HASH_AND_URL;
 	this->data = chunk_cat("cc", hash, chunk_create(url, strlen(url)));
 	this->payload_length = get_header_length(this) + this->data.len;
+
 	return &this->public;
 }
 
 /*
  * Described in header
  */
-cert_payload_t *cert_payload_create_custom(cert_encoding_t encoding,
-										   chunk_t data, payload_type_t type)
+cert_payload_t *cert_payload_create_custom(payload_type_t type,
+										cert_encoding_t encoding, chunk_t data)
 {
-	private_cert_payload_t *this = (private_cert_payload_t*)cert_payload_create(type);
+	private_cert_payload_t *this;
 
+	this = (private_cert_payload_t*)cert_payload_create(type);
 	this->encoding = encoding;
 	this->data = data;
 	this->payload_length = get_header_length(this) + this->data.len;
+
 	return &this->public;
 }
+

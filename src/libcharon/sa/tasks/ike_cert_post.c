@@ -62,14 +62,14 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
 	{
-		return cert_payload_create_from_cert(cert, CERTIFICATE);
+		return cert_payload_create_from_cert(CERTIFICATE, cert);
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
 		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
-		return cert_payload_create_from_cert(cert, CERTIFICATE);
+		return cert_payload_create_from_cert(CERTIFICATE, cert);
 	}
 
 	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
@@ -86,12 +86,12 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	enumerator = lib->credmgr->create_cdp_enumerator(lib->credmgr, CERT_X509, id);
 	if (enumerator->enumerate(enumerator, &url))
 	{
-		payload = cert_payload_create_from_hash_and_url(hash, url, CERTIFICATE);
+		payload = cert_payload_create_from_hash_and_url(hash, url);
 		DBG1(DBG_IKE, "sending hash-and-url \"%s\"", url);
 	}
 	else
 	{
-		payload = cert_payload_create_from_cert(cert, CERTIFICATE);
+		payload = cert_payload_create_from_cert(CERTIFICATE, cert);
 	}
 	enumerator->destroy(enumerator);
 	chunk_free(&hash);
@@ -154,7 +154,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			{
 				if (type == AUTH_RULE_IM_CERT)
 				{
-					payload = cert_payload_create_from_cert(cert, CERTIFICATE);
+					payload = cert_payload_create_from_cert(CERTIFICATE, cert);
 					if (payload)
 					{
 						DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
