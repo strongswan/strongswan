@@ -106,10 +106,10 @@ struct imv_manager_t {
 	/**
 	 * Sets the supported message types reported by a given IMV
 	 *
-	 * @param id				ID of reporting IMV
-	 * @param supported_types	list of messages type supported by IMV
-	 * @param type_count		number of supported message types
-	 * @return					TNC result code
+	 * @param id					ID of reporting IMV
+	 * @param supported_types		list of messages type supported by IMV
+	 * @param type_count			number of supported message types
+	 * @return						TNC result code
 	 */
 	TNC_Result (*set_message_types)(imv_manager_t *this,
 									TNC_IMVID id,
@@ -117,9 +117,24 @@ struct imv_manager_t {
 									TNC_UInt32 type_count);
 
 	/**
+	 * Sets the supported long message types reported by a given IMV
+	 *
+	 * @param id					ID of reporting IMV
+	 * @param supported_vids		list of vendor IDs supported by IMV
+	 * @param supported_subtypes	list of messages type supported by IMV
+	 * @param type_count			number of supported message types
+	 * @return						TNC result code
+	 */
+	TNC_Result (*set_message_types_long)(imv_manager_t *this,
+									TNC_IMVID id,
+									TNC_VendorIDList supported_vids,
+									TNC_MessageSubtypeList supported_subtypes,
+									TNC_UInt32 type_count);
+
+	/**
 	 * Solicit recommendations from IMVs that have not yet provided one
 	 *
-	 * @param id				connection ID
+	 * @param id					connection ID
 	 */
 	void (*solicit_recommendation)(imv_manager_t *this, TNC_ConnectionID id);
 

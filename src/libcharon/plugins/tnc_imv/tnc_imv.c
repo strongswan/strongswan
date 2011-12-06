@@ -17,6 +17,8 @@
 
 #include <dlfcn.h>
 
+#include <tncif_pa_subtypes.h>
+
 #include <debug.h>
 #include <library.h>
 #include <threading/mutex.h>
@@ -54,9 +56,14 @@ struct private_tnc_imv_t {
 	TNC_IMVID id;
 
 	/**
-	 * List of message types supported by IMC
+	 * List of message types supported by IMV - Vendor ID part
 	 */
-	TNC_MessageTypeList supported_types;
+	TNC_VendorIDList supported_vids;
+
+	/**
+	 * List of message types supported by IMV - Subtype part
+	 */
+	TNC_MessageSubtypeList supported_subtypes;
 
 	/**
 	 * Number of supported message types
@@ -91,29 +98,119 @@ METHOD(imv_t, set_message_types, void,
 	private_tnc_imv_t *this, TNC_MessageTypeList supported_types,
 							 TNC_UInt32 type_count)
 {
-	char buf[512];
+	char buf[BUF_LEN];
 	char *pos = buf;
 	int len = sizeof(buf);
-	int written;
+	int i, written;
+	size_t size;
+	TNC_VendorID vid;
+	TNC_MessageSubtype subtype;
+	enum_name_t *pa_subtype_names;
 
 	/* lock the imv_t instance */
 	this->mutex->lock(this->mutex);
 
-	/* Free an existing MessageType list */
-	free(this->supported_types);
-	this->supported_types = NULL;
+	/* Free existing VendorID and MessageSubtype lists */
+	free(this->supported_vids);
+	this->supported_vids = NULL;
+	free(this->supported_subtypes);
+	this->supported_subtypes = NULL;
 
 	/* Store the new MessageType list */
 	this->type_count = type_count;
 	if (type_count && supported_types)
 	{
-		size_t size = type_count * sizeof(TNC_MessageType);
-
-		int i;
+		size = type_count * sizeof(TNC_VendorID);
+		this->supported_vids = malloc(size);
+		size = type_count * sizeof(TNC_MessageSubtype);
+		this->supported_subtypes = malloc(size);
 
 		for (i = 0; i < type_count; i++)
 		{
-			written = snprintf(pos, len, " 0x%08x", supported_types[i]);
+			vid = (supported_types[i] >> 8) & TNC_VENDORID_ANY;
+			subtype = supported_types[i] & TNC_SUBTYPE_ANY;
+
+			pa_subtype_names = get_pa_subtype_names(vid);
+			if (pa_subtype_names)
+			{
+				written = snprintf(pos, len," '%N/%N' 0x%06x/0x%02x",
+								   pen_names, vid, pa_subtype_names, subtype,
+								   vid, subtype);
+			}
+			else
+			{
+				written = snprintf(pos, len," '%N' 0x%06x/0x%02x",
+								   pen_names, vid, vid, subtype);
+			}
+			if (written >= len)
+			{
+				break;
+			}
+			pos += written;
+			len -= written;
+
+			this->supported_vids[i] = vid;
+			this->supported_subtypes[i] = subtype;
+		}
+	}
+	*pos = '\0';
+	DBG2(DBG_TNC, "IMV %u supports %u message type%s:%s",
+				  this->id, type_count, (type_count == 1) ? "":"s", buf);
+
+	/* unlock the imv_t instance */
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(imv_t, set_message_types_long, void,
+	private_tnc_imv_t *this, TNC_VendorIDList supported_vids,
+	TNC_MessageSubtypeList supported_subtypes, TNC_UInt32 type_count)
+{
+	char buf[BUF_LEN];
+	char *pos = buf;
+	int len = sizeof(buf);
+	int i, written;
+	size_t size;
+	TNC_VendorID vid;
+	TNC_MessageSubtype subtype;
+	enum_name_t *pa_subtype_names;
+
+	/* lock the imv_t instance */
+	this->mutex->lock(this->mutex);
+
+	/* Free existing VendorID and MessageSubtype lists */
+	free(this->supported_vids);
+	this->supported_vids = NULL;
+	free(this->supported_subtypes);
+	this->supported_subtypes = NULL;
+
+	/* Store the new MessageType list */
+	this->type_count = type_count;
+	if (type_count && supported_vids && supported_subtypes)
+	{
+		size = type_count * sizeof(TNC_VendorID);
+		this->supported_vids = malloc(size);
+		memcpy(this->supported_vids, supported_vids, size);
+		size = type_count * sizeof(TNC_MessageSubtype);
+		this->supported_subtypes = malloc(size);
+		memcpy(this->supported_subtypes, supported_subtypes, size);
+
+		for (i = 0; i < type_count; i++)
+		{
+			vid = supported_vids[i];
+			subtype = supported_subtypes[i];
+
+			pa_subtype_names = get_pa_subtype_names(vid);
+			if (pa_subtype_names)
+			{
+				written = snprintf(pos, len," '%N/%N' 0x%06x/0x%08x",
+								   pen_names, vid, pa_subtype_names, subtype,
+								   vid, subtype);
+			}
+			else
+			{
+				written = snprintf(pos, len," '%N' 0x%06x/0x%08x",
+								   pen_names, vid, vid, subtype);
+			}
 			if (written >= len)
 			{
 				break;
@@ -121,14 +218,12 @@ METHOD(imv_t, set_message_types, void,
 			pos += written;
 			len -= written;
 		}
-		this->supported_types = malloc(size);
-		memcpy(this->supported_types, supported_types, size);
 	}
 	*pos = '\0';
 	DBG2(DBG_TNC, "IMV %u supports %u message type%s:%s",
 				  this->id, type_count, (type_count == 1) ? "":"s", buf);
 
-	/* lock the imv_t instance */
+	/* unlock the imv_t instance */
 	this->mutex->unlock(this->mutex);
 }
 
@@ -144,14 +239,12 @@ METHOD(imv_t, type_supported, bool,
 
 	for (i = 0; i < this->type_count; i++)
 	{
-		vid = (this->supported_types[i] >> 8) & TNC_VENDORID_ANY;
-		subtype = this->supported_types[i] & TNC_SUBTYPE_ANY;
+	    vid = this->supported_vids[i];
+	    subtype = this->supported_subtypes[i];
 
-		if (this->supported_types[i] == message_type
-		|| (subtype == TNC_SUBTYPE_ANY
-			&& (msg_vid == vid || vid == TNC_VENDORID_ANY))
-		|| (vid == TNC_VENDORID_ANY
-			&& (msg_subtype == subtype || subtype == TNC_SUBTYPE_ANY)))
+	    if ((vid == TNC_VENDORID_ANY && subtype == TNC_SUBTYPE_ANY) ||
+			(vid == msg_vid && (subtype == TNC_SUBTYPE_ANY ||
+			 subtype == msg_subtype)))
 		{
 			return TRUE;
 		}
@@ -164,7 +257,8 @@ METHOD(imv_t, destroy, void,
 {
 	dlclose(this->handle);
 	this->mutex->destroy(this->mutex);
-	free(this->supported_types);
+	free(this->supported_vids);
+	free(this->supported_subtypes);
 	free(this->name);
 	free(this->path);
 	free(this);
@@ -183,6 +277,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 			.get_id = _get_id,
 			.get_name = _get_name,
 			.set_message_types = _set_message_types,
+			.set_message_types_long = _set_message_types_long,
 			.type_supported = _type_supported,
 			.destroy = _destroy,
 		},

@@ -267,6 +267,31 @@ METHOD(imv_manager_t, set_message_types, TNC_Result,
 	return result;
 }
 
+METHOD(imv_manager_t, set_message_types_long, TNC_Result,
+	private_tnc_imv_manager_t *this, TNC_IMVID id,
+									 TNC_VendorIDList supported_vids,
+									 TNC_MessageSubtypeList supported_subtypes,
+									 TNC_UInt32 type_count)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+	TNC_Result result = TNC_RESULT_FATAL;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		if (id == imv->get_id(imv))
+		{
+			imv->set_message_types_long(imv, supported_vids, supported_subtypes,
+										type_count);
+			result = TNC_RESULT_SUCCESS;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return result;
+}
+
 METHOD(imv_manager_t, solicit_recommendation, void,
 	private_tnc_imv_manager_t *this, TNC_ConnectionID id)
 {
@@ -364,6 +389,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.enforce_recommendation = _enforce_recommendation,
 			.notify_connection_change = _notify_connection_change,
 			.set_message_types = _set_message_types,
+			.set_message_types_long = _set_message_types_long,
 			.solicit_recommendation = _solicit_recommendation,
 			.receive_message = _receive_message,
 			.batch_ending = _batch_ending,

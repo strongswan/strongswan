@@ -126,13 +126,13 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 	pa_subtype_names = get_pa_subtype_names(msg_vendor_id);
 	if (pa_subtype_names)
 	{
-		DBG2(DBG_TNC, "creating PB-PA message type '%N/%N' 0x%06x/0x%02x",
+		DBG2(DBG_TNC, "creating PB-PA message type '%N/%N' 0x%06x/0x%08x",
 			 pen_names, msg_vendor_id, pa_subtype_names, msg_sub_type,
 			 msg_vendor_id, msg_sub_type);
 	}
 	else
 	{
-		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%02x",
+		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%08x",
 			 pen_names, msg_vendor_id, msg_vendor_id, msg_sub_type);
 	}
 
@@ -181,13 +181,13 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			pa_subtype_names = get_pa_subtype_names(vendor_id);
 			if (pa_subtype_names)
 			{
-				DBG2(DBG_TNC, "handling PB-PA message type '%N/%N' 0x%06x/0x%02x",
+				DBG2(DBG_TNC, "handling PB-PA message type '%N/%N' 0x%06x/0x%08x",
 					 pen_names, vendor_id, pa_subtype_names, subtype,
 			 		 vendor_id, subtype);
 			}
 			else
 			{
-				DBG2(DBG_TNC, "handling PB-PA message type '%N' 0x%06x/0x%02x",
+				DBG2(DBG_TNC, "handling PB-PA message type '%N' 0x%06x/0x%08x",
 					 pen_names, vendor_id, vendor_id, subtype);
 			}
 

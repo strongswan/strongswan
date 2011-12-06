@@ -38,6 +38,25 @@ TNC_Result TNC_TNCS_ReportMessageTypes(TNC_IMVID imv_id,
 }
 
 /**
+ * Called by the IMV to inform a TNCS about the set of message types the IMV
+ * is able to receive. This function supports long message types.
+ */
+TNC_Result TNC_TNCS_ReportMessageTypesLong(TNC_IMVID imv_id,
+									   TNC_VendorIDList supported_vids,
+									   TNC_MessageSubtypeList supported_subtypes,
+									   TNC_UInt32 type_count)
+{
+	if (!tnc->imvs->is_registered(tnc->imvs, imv_id))
+	{
+		DBG1(DBG_TNC, "ignoring ReportMessageTypes() from unregistered IMV %u",
+					   imv_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+	return tnc->imvs->set_message_types_long(tnc->imvs, imv_id, supported_vids,
+											 supported_subtypes, type_count);
+}
+
+/**
  * Called by the IMV to ask a TNCS to retry an Integrity Check Handshake
  */
 TNC_Result TNC_TNCS_RequestHandshakeRetry(TNC_IMVID imv_id,
@@ -143,6 +162,10 @@ TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
 	if (streq(function_name, "TNC_TNCS_ReportMessageTypes"))
 	{
 		*function_pointer = (void*)TNC_TNCS_ReportMessageTypes;
+	}
+	else if (streq(function_name, "TNC_TNCS_ReportMessageTypesLong"))
+	{
+		*function_pointer = (void*)TNC_TNCS_ReportMessageTypesLong;
 	}
 	else if (streq(function_name, "TNC_TNCS_RequestHandshakeRetry"))
 	{

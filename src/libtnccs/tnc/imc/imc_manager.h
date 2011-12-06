@@ -84,21 +84,36 @@ struct imc_manager_t {
 	/**
 	 * Begin a handshake between the IMCs and a connection
 	 *
-	 * @param id				connection ID
+	 * @param id					connection ID
 	 */
 	void (*begin_handshake)(imc_manager_t *this, TNC_ConnectionID id);
 
 	/**
 	 * Sets the supported message types reported by a given IMC
 	 *
-	 * @param id				ID of reporting IMC
-	 * @param supported_types	list of messages type supported by IMC
-	 * @param type_count		number of supported message types
-	 * @return					TNC result code
+	 * @param id					ID of reporting IMC
+	 * @param supported_types		list of messages type supported by IMC
+	 * @param type_count			number of supported message types
+	 * @return						TNC result code
 	 */
 	TNC_Result (*set_message_types)(imc_manager_t *this,
 									TNC_IMCID id,
 									TNC_MessageTypeList supported_types,
+									TNC_UInt32 type_count);
+
+	/**
+	 * Sets the supported long message types reported by a given IMC
+	 *
+	 * @param id					ID of reporting IMC
+	 * @param supported_vids		list of vendor IDs supported by IMC
+	 * @param supported_subtypes	list of messages type supported by IMC
+	 * @param type_count			number of supported message types
+	 * @return						TNC result code
+	 */
+	TNC_Result (*set_message_types_long)(imc_manager_t *this,
+									TNC_IMCID id,
+									TNC_VendorIDList supported_vids,
+									TNC_MessageSubtypeList supported_subtypes,
 									TNC_UInt32 type_count);
 
 	/**

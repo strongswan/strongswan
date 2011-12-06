@@ -40,11 +40,11 @@ struct imv_t {
 	 * the API version number to be used. It also supplies the IMV ID, an IMV
 	 * identifier that the IMV must use when calling TNC Server callback functions.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param minVersion		minimum API version supported
-	 * @param maxVersion		maximum API version supported by TNCS
-	 * @param OutActualVersion	mutually supported API version number
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param minVersion			minimum API version supported
+	 * @param maxVersion			maximum API version supported by TNCS
+	 * @param OutActualVersion		mutually supported API version number
+	 * @return						TNC result code
 	 */
 	TNC_Result (*initialize)(TNC_IMVID imvID,
 							 TNC_Version minVersion,
@@ -55,10 +55,10 @@ struct imv_t {
 	 * The TNC Server calls this function to inform the IMV that the state of
 	 * the network connection identified by connectionID has changed to newState.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		network connection ID assigned by TNCS
-	 * @param newState			new network connection state
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param connectionID			network connection ID assigned by TNCS
+	 * @param newState				new network connection state
+	 * @return						TNC result code
 	 */
 	TNC_Result (*notify_connection_change)(TNC_IMVID imvID,
 										   TNC_ConnectionID connectionID,
@@ -69,9 +69,9 @@ struct imv_t {
 	 * Handshake (after all IMC-IMV messages have been delivered) to solicit
 	 * recommendations from IMVs that have not yet provided a recommendation.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		network connection ID assigned by TNCS
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param connectionID			network connection ID assigned by TNCS
+	 * @return						TNC result code
 	 */
 	TNC_Result (*solicit_recommendation)(TNC_IMVID imvID,
 										 TNC_ConnectionID connectionID);
@@ -82,12 +82,12 @@ struct imv_t {
 	 * the number of octets indicated by messageLength. The type of the message
 	 * is indicated by messageType.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		network connection ID assigned by TNCS
-	 * @param message			reference to buffer containing message
-	 * @param messageLength		number of octets in message
-	 * @param messageType		message type of message
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param connectionID			network connection ID assigned by TNCS
+	 * @param message				reference to buffer containing message
+	 * @param messageLength			number of octets in message
+	 * @param messageType			message type of message
+	 * @return						TNC result code
 	 */
 	TNC_Result (*receive_message)(TNC_IMVID imvID,
 								  TNC_ConnectionID connectionID,
@@ -100,9 +100,9 @@ struct imv_t {
 	 * received in a batch have been delivered and this is the IMV’s last chance
 	 * to send a message in the batch of IMV messages currently being collected.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param connectionID		network connection ID assigned by TNCS
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param connectionID			network connection ID assigned by TNCS
+	 * @return						TNC result code
 	 */
 	TNC_Result (*batch_ending)(TNC_IMVID imvID,
 							   TNC_ConnectionID connectionID);
@@ -110,8 +110,8 @@ struct imv_t {
 	/**
 	 * The TNC Server calls this function to close down the IMV.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @return						TNC result code
 	 */
 	TNC_Result (*terminate)(TNC_IMVID imvID);
 
@@ -122,9 +122,9 @@ struct imv_t {
 	 * TNCS bind function. The IMV can then use the TNCS bind function to obtain
 	 * pointers to any other TNCS functions.
 	 *
-	 * @param imvID				IMV ID assigned by TNCS
-	 * @param bindFunction		pointer to TNC_TNCS_BindFunction
-	 * @return					TNC result code
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param bindFunction			pointer to TNC_TNCS_BindFunction
+	 * @return						TNC result code
 	 */
 	TNC_Result (*provide_bind_function)(TNC_IMVID imvID,
 										TNC_TNCS_BindFunctionPointer bindFunction);
@@ -132,38 +132,49 @@ struct imv_t {
 	/**
 	 * Sets the ID of an imv_t object.
 	 *
-	 * @param id				IMV ID to be assigned
+	 * @param id					IMV ID to be assigned
 	 */
 	void (*set_id)(imv_t *this, TNC_IMVID id);
 
 	/**
 	 * Returns the ID of an imv_t object.
 	 *
-	 * @return					IMV ID assigned by TNCS
+	 * @return						IMV ID assigned by TNCS
 	 */
 	TNC_IMVID (*get_id)(imv_t *this);
 
 	/**
 	 * Returns the name of an imv_t object.
 	 *
-	 * @return					name of IMV
+	 * @return						name of IMV
 	 */
 	char* (*get_name)(imv_t *this);
 
 	/**
 	 * Sets the supported message types of an imv_t object.
 	 *
-	 * @param supported_types	list of messages type supported by IMV
-	 * @param type_count		number of supported message types
+	 * @param supported_types		list of messages type supported by IMV
+	 * @param type_count			number of supported message types
 	 */
 	void (*set_message_types)(imv_t *this, TNC_MessageTypeList supported_types,
 										   TNC_UInt32 type_count);
 
 	/**
+	 * Sets the supported long message types of an imv_t object.
+	 *
+	 * @param supported_vids		list of vendor IDs supported by IMC
+	 * @param supported_subtypes	list of messages type supported by IMC
+	 * @param type_count			number of supported message types
+	 */
+	void (*set_message_types_long)(imv_t *this, TNC_VendorIDList supported_vids,
+								   TNC_MessageSubtypeList supported_subtypes,
+								   TNC_UInt32 type_count);
+
+	/**
 	 * Check if the IMV supports a given message type.
 	 *
-	 * @param message_type		message type
-	 * @return					TRUE if supported
+	 * @param message_type			message type
+	 * @return						TRUE if supported
 	 */
 	bool (*type_supported)(imv_t *this, TNC_MessageType message_type);
 
