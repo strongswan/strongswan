@@ -35,6 +35,7 @@
 #include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_pre_v1.h>
 #include <sa/tasks/ike_cert_post.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_reauth.h>
@@ -1121,6 +1122,8 @@ METHOD(ike_sa_t, initiate, status_t,
 		if (this->version == IKEV1)
 		{
 			task = (task_t*)ike_vendor_v1_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, task);
+			task = (task_t*)ike_cert_pre_v1_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 			task = (task_t*)main_mode_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);

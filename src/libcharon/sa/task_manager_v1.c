@@ -24,7 +24,7 @@
 #include <sa/tasks/xauth_request.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
-#include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_pre_v1.h>
 #include <sa/tasks/ike_cert_post.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -266,6 +266,7 @@ METHOD(task_manager_t, initiate, status_t,
 		{
 			case IKE_CREATED:
 				activate_task(this, TASK_VENDOR_V1);
+				activate_task(this, TASK_IKE_CERT_PRE_V1);
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
@@ -501,13 +502,11 @@ static status_t process_request(private_task_manager_t *this,
 			case ID_PROT:
 				task = (task_t *)ike_vendor_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
+				task = (task_t*)ike_cert_pre_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)ike_natd_v1_create(this->ike_sa, FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
