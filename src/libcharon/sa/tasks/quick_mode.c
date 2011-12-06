@@ -487,12 +487,12 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *list;
 			proposal_t *proposal;
 			ipsec_mode_t mode;
-			bool udp = FALSE;
+			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, 0, FALSE);
+									this->config, 0, udp);
 
 			list = this->config->get_proposals(this->config, TRUE);
 
@@ -510,14 +510,10 @@ METHOD(task_t, build_i, status_t,
 			enumerator->destroy(enumerator);
 
 			mode = this->config->get_mode(this->config);
-			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+			if (udp && mode == MODE_TRANSPORT)
 			{
-				udp = TRUE;
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
-				if (mode == MODE_TRANSPORT)
-				{
-					add_nat_oa_payloads(this, message);
-				}
+				add_nat_oa_payloads(this, message);
 			}
 
 			get_lifetimes(this);
@@ -575,6 +571,7 @@ METHOD(task_t, process_r, status_t,
 			linked_list_t *tsi, *tsr, *list;
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
+			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 
 			if (!get_ts(this, message))
 			{
@@ -636,7 +633,7 @@ METHOD(task_t, process_r, status_t,
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, 0, FALSE);
+									this->config, 0, udp);
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
@@ -674,7 +671,7 @@ METHOD(task_t, build_r, status_t,
 		{
 			sa_payload_t *sa_payload;
 			ipsec_mode_t mode;
-			bool udp = FALSE;
+			bool udp = this->child_sa->has_encap(this->child_sa);
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_r)
@@ -685,14 +682,10 @@ METHOD(task_t, build_r, status_t,
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
 			mode = this->config->get_mode(this->config);
-			if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+			if (udp && mode == MODE_TRANSPORT)
 			{
-				udp = TRUE;
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
-				if (mode == MODE_TRANSPORT)
-				{
-					add_nat_oa_payloads(this, message);
-				}
+				add_nat_oa_payloads(this, message);
 			}
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
