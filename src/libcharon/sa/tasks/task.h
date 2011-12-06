@@ -77,6 +77,10 @@ enum task_type_t {
 	TASK_VENDOR_V1,
 	/** IKEv1 NAT detection */
 	TASK_IKE_NATD_V1,
+	/** IKEv1 pre-authentication certificate handling */
+	TASK_IKE_CERT_PRE_V1,
+	/** IKEv1 post-authentication certificate handling */
+	TASK_IKE_CERT_POST_V1,
 	/** Request the user/pass with XAUTH */
 	TASK_XAUTH_REQUEST,
 };
