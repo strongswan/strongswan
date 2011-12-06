@@ -48,7 +48,7 @@ TNC_Result TNC_TNCS_ReportMessageTypesLong(TNC_IMVID imv_id,
 {
 	if (!tnc->imvs->is_registered(tnc->imvs, imv_id))
 	{
-		DBG1(DBG_TNC, "ignoring ReportMessageTypes() from unregistered IMV %u",
+		DBG1(DBG_TNC, "ignoring ReportMessageTypesLong() from unregistered IMV %u",
 					   imv_id);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
