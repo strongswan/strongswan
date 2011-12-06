@@ -21,7 +21,6 @@
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/auth_payload.h>
-#include <encoding/payloads/sa_payload.h>
 #include <credentials/certificates/x509.h>
 
 
@@ -46,20 +45,6 @@ struct private_ike_cert_post_t {
 	 * Are we the initiator?
 	 */
 	bool initiator;
-
-	/**
-	 * Certificate payload type that we are handling
-	 */
-	payload_type_t payload_type;
-
-	/**
-	 * States of ike cert pre
-	 */
-	enum {
-		CP_INIT,
-		CP_SA,
-		CP_SA_POST,
-	} state;
 };
 
 /**
@@ -77,14 +62,14 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_HASH_AND_URL))
 	{
-		return cert_payload_create_from_cert(cert, this->payload_type);
+		return cert_payload_create_from_cert(cert, CERTIFICATE);
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
 		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
-		return cert_payload_create_from_cert(cert, this->payload_type);
+		return cert_payload_create_from_cert(cert, CERTIFICATE);
 	}
 
 	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
@@ -101,12 +86,12 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 	enumerator = lib->credmgr->create_cdp_enumerator(lib->credmgr, CERT_X509, id);
 	if (enumerator->enumerate(enumerator, &url))
 	{
-		payload = cert_payload_create_from_hash_and_url(hash, url, this->payload_type);
+		payload = cert_payload_create_from_hash_and_url(hash, url, CERTIFICATE);
 		DBG1(DBG_IKE, "sending hash-and-url \"%s\"", url);
 	}
 	else
 	{
-		payload = cert_payload_create_from_cert(cert, this->payload_type);
+		payload = cert_payload_create_from_cert(cert, CERTIFICATE);
 	}
 	enumerator->destroy(enumerator);
 	chunk_free(&hash);
@@ -115,71 +100,18 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 }
 
 /**
- * Checks for the auth_method to see if this task should handle certificates.
- * (IKEv1 only)
- */
-static status_t check_auth_method(private_ike_cert_post_t *this,
-																	message_t *message)
-{
-	enumerator_t *enumerator;
-	payload_t *payload;
-	status_t status = SUCCESS;
-
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
-	{
-		if (payload->get_type(payload) == SECURITY_ASSOCIATION_V1)
-		{
-			sa_payload_t *sa_payload = (sa_payload_t*)payload;
-
-			switch (sa_payload->get_auth_method(sa_payload))
-			{
-				case 	AUTH_RSA:
-				case 	AUTH_XAUTH_INIT_RSA:
-				case  AUTH_XAUTH_RESP_RSA:
-					DBG3(DBG_IKE, "handling certs method (%d)",
-								sa_payload->get_auth_method(sa_payload));
-					status = NEED_MORE;
-					break;
-				default:
-					DBG3(DBG_IKE, "not handling certs method (%d)",
-								sa_payload->get_auth_method(sa_payload));
-					status = SUCCESS;
-					break;
-			}
-
-			this->state = CP_SA;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	return status;
-}
-
-/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
+	auth_payload_t *payload;
 
+	payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-
-	if (!peer_cfg)
-	{
+	if (!peer_cfg || !payload || payload->get_auth_method(payload) == AUTH_PSK)
+	{	/* no CERT payload for EAP/PSK */
 		return;
-	}
-
-	if (this->payload_type == CERTIFICATE)
-	{
-		auth_payload_t *payload;
-		payload = (auth_payload_t*)message->get_payload(message, AUTHENTICATION);
-
-		if (!payload || payload->get_auth_method(payload) == AUTH_PSK)
-		{	/* no CERT payload for EAP/PSK */
-			return;
-		}
 	}
 
 	switch (peer_cfg->get_cert_policy(peer_cfg))
@@ -222,7 +154,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			{
 				if (type == AUTH_RULE_IM_CERT)
 				{
-					payload = cert_payload_create_from_cert(cert, this->payload_type);
+					payload = cert_payload_create_from_cert(cert, CERTIFICATE);
 					if (payload)
 					{
 						DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
@@ -234,8 +166,6 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			enumerator->destroy(enumerator);
 		}
 	}
-
-	return;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -244,14 +174,6 @@ METHOD(task_t, build_i, status_t,
 	build_certs(this, message);
 
 	return NEED_MORE;
-}
-
-METHOD(task_t, build_i_v1, status_t,
-	private_ike_cert_post_t *this, message_t *message)
-{
-	/* TODO:*/
-
-	return FAILED;
 }
 
 METHOD(task_t, process_r, status_t,
@@ -269,52 +191,6 @@ METHOD(task_t, build_r, status_t,
 	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
 	}
-	return SUCCESS;
-}
-
-METHOD(task_t, build_r_v1, status_t,
-	private_ike_cert_post_t *this, message_t *message)
-{
-	switch (message->get_exchange_type(message))
-	{
-		case ID_PROT:
-		{
-			switch (this->state)
-			{
-				case CP_INIT:
-					this->state = CP_SA;
-					return check_auth_method(this, message);
-					break;
-
-				case CP_SA:
-					this->state = CP_SA_POST;
-					build_certs(this, message);
-					break;
-
-				case CP_SA_POST:
-					build_certs(this, message);
-					return SUCCESS;
-			}
-			break;
-		}
-		case AGGRESSIVE:
-		{
-			if (check_auth_method(this, message) == NEED_MORE)
-			{
-				build_certs(this, message);
-			}
-			return SUCCESS;
-			break;
-		}
-		default:
-			break;
-	}
-
-	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
-	{
-		return NEED_MORE;
-	}
-
 	return SUCCESS;
 }
 
@@ -365,41 +241,15 @@ ike_cert_post_t *ike_cert_post_create(ike_sa_t *ike_sa, bool initiator)
 		.initiator = initiator,
 	);
 
-
 	if (initiator)
 	{
+		this->public.task.build = _build_i;
 		this->public.task.process = _process_i;
 	}
 	else
 	{
+		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
-	}
-
-	if (ike_sa->get_version(ike_sa) == IKEV2)
-	{
-		this->payload_type = CERTIFICATE;
-
-		if (initiator)
-		{
-			this->public.task.build = _build_i;
-		}
-		else
-		{
-			this->public.task.build = _build_r;
-		}
-	}
-	else
-	{
-		this->payload_type = CERTIFICATE_V1;
-
-		if (initiator)
-		{
-			this->public.task.build = _build_i_v1;
-		}
-		else
-		{
-			this->public.task.build = _build_r_v1;
-		}
 	}
 
 	return &this->public;

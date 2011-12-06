@@ -19,7 +19,6 @@
 #include <daemon.h>
 #include <sa/ike_sa.h>
 #include <encoding/payloads/cert_payload.h>
-#include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <credentials/certificates/x509.h>
 
@@ -55,52 +54,7 @@ struct private_ike_cert_pre_t {
 	 * wheter this is the final authentication round
 	 */
 	bool final;
-
-	/** states of ike cert pre */
-	enum {
-		CP_INIT,
-		CP_SA,
-		CP_SA_POST,
-		CP_REQ_SENT,
-		CP_NO_CERT,
-	} state;
-
-	/**
-	 * type of certicate request to send
-	 */
-	payload_type_t cert_req_payload_type;
 };
-
-/**
- * add certificate to auth
- */
-static bool add_certificate(auth_cfg_t *auth, id_type_t type, chunk_t data)
-{
-	identification_t *id;
-	certificate_t *cert;
-	bool status = TRUE;
-
-	if (!data.len)
-	{
-		return FALSE;
-	}
-	id = identification_create_from_encoding(type, data);
-	cert = lib->credmgr->get_cert(lib->credmgr, CERT_X509, KEY_ANY, id, TRUE);
-	if (cert)
-	{
-		DBG1(DBG_IKE, "received cert request for \"%Y\"",
-			 cert->get_subject(cert));
-		auth->add(auth, AUTH_RULE_CA_CERT, cert);
-	}
-	else
-	{
-		DBG2(DBG_IKE, "received cert request for unknown ca %Y", id);
-		status = FALSE;
-	}
-	id->destroy(id);
-
-	return status;
-}
 
 /**
  * read certificate requests
@@ -119,12 +73,11 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		switch (payload->get_type(payload))
 		{
 			case CERTIFICATE_REQUEST:
-			case CERTIFICATE_REQUEST_V1:
 			{
 				certreq_payload_t *certreq = (certreq_payload_t*)payload;
 				enumerator_t *enumerator;
 				u_int unknown = 0;
-				chunk_t chunk;
+				chunk_t keyid;
 
 				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
 
@@ -134,27 +87,30 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 						 certificate_type_names, certreq->get_cert_type(certreq));
 					break;
 				}
+				enumerator = certreq->create_keyid_enumerator(certreq);
+				while (enumerator->enumerate(enumerator, &keyid))
+				{
+					identification_t *id;
+					certificate_t *cert;
 
-				if (payload->get_type(payload) == CERTIFICATE_REQUEST)
-				{
-					enumerator = certreq->create_keyid_enumerator(certreq);
-					while (enumerator->enumerate(enumerator, &chunk))
+					id = identification_create_from_encoding(ID_KEY_ID, keyid);
+					cert = lib->credmgr->get_cert(lib->credmgr,
+												  CERT_X509, KEY_ANY, id, TRUE);
+					if (cert)
 					{
-						if (!add_certificate(auth, ID_KEY_ID, chunk))
-						{
-							unknown++;
-						}
+						DBG1(DBG_IKE, "received cert request for \"%Y\"",
+							 cert->get_subject(cert));
+						auth->add(auth, AUTH_RULE_CA_CERT, cert);
 					}
-					enumerator->destroy(enumerator);
-				}
-				else
-				{
-					chunk = certreq->get_dn(certreq);
-					if (!add_certificate(auth, ID_DER_ASN1_DN, chunk))
+					else
 					{
+						DBG2(DBG_IKE, "received cert request for unknown ca "
+									  "with keyid %Y", id);
 						unknown++;
 					}
+					id->destroy(id);
 				}
+				enumerator->destroy(enumerator);
 				if (unknown)
 				{
 					DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
@@ -235,8 +191,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == CERTIFICATE ||
-			payload->get_type(payload) == CERTIFICATE_V1)
+		if (payload->get_type(payload) == CERTIFICATE)
 		{
 			cert_payload_t *cert_payload;
 			cert_encoding_t encoding;
@@ -336,8 +291,7 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 /**
  * add the keyid of a certificate to the certificate request payload
  */
-static void add_certreq(private_ike_cert_pre_t *this,
-						certreq_payload_t **req, certificate_t *cert)
+static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 {
 	switch (cert->get_type(cert))
 	{
@@ -358,7 +312,7 @@ static void add_certreq(private_ike_cert_pre_t *this,
 			}
 			if (*req == NULL)
 			{
-				*req = certreq_payload_create_type(CERTIFICATE_REQUEST, CERT_X509);
+				*req = certreq_payload_create_type(CERT_X509);
 			}
 			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 			{
@@ -375,41 +329,9 @@ static void add_certreq(private_ike_cert_pre_t *this,
 }
 
 /**
- * Add the subject of a CA certificate a message
- */
-static void add_certreq_v1(private_ike_cert_pre_t *this,
-						   message_t *message, certificate_t *cert)
-{
-	switch (cert->get_type(cert))
-	{
-		case CERT_X509:
-		{
-			x509_t *x509 = (x509_t*)cert;
-			identification_t *id;
-			certreq_payload_t *req;
-
-			if (!(x509->get_flags(x509) & X509_CA))
-			{	/* no CA cert, skip */
-				break;
-			}
-			req = certreq_payload_create_type(CERTIFICATE_REQUEST_V1, CERT_X509);
-			id = cert->get_subject(cert);
-			req->set_dn(req, id->get_encoding(id));
-			DBG1(DBG_IKE, "sending cert request for \"%Y\"",
-				 cert->get_subject(cert));
-			message->add_payload(message, &req->payload_interface);
-			break;
-		}
-		default:
-			break;
-	}
-}
-
-/**
  * add a auth_cfg's CA certificates to the certificate request
  */
-static void add_certreqs(private_ike_cert_pre_t *this,
-						 certreq_payload_t **req, auth_cfg_t *auth)
+static void add_certreqs(certreq_payload_t **req, auth_cfg_t *auth)
 {
 	enumerator_t *enumerator;
 	auth_rule_t type;
@@ -421,32 +343,7 @@ static void add_certreqs(private_ike_cert_pre_t *this,
 		switch (type)
 		{
 			case AUTH_RULE_CA_CERT:
-				add_certreq(this, req, (certificate_t*)value);
-				break;
-			default:
-				break;
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
- * add a auth_cfg's CA certificates to the certificate request
- */
-static void add_certreqs_v1(private_ike_cert_pre_t *this,
-							auth_cfg_t *auth, message_t *message)
-{
-	enumerator_t *enumerator;
-	auth_rule_t type;
-	void *value;
-
-	enumerator = auth->create_enumerator(auth);
-	while (enumerator->enumerate(enumerator, &type, &value))
-	{
-		switch (type)
-		{
-			case AUTH_RULE_CA_CERT:
-				add_certreq_v1(this, message, (certificate_t*)value);
+				add_certreq(req, (certificate_t*)value);
 				break;
 			default:
 				break;
@@ -480,7 +377,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, FALSE);
 		while (enumerator->enumerate(enumerator, &auth))
 		{
-			add_certreqs(this, &req, auth);
+			add_certreqs(&req, auth);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -492,7 +389,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 												CERT_ANY, KEY_ANY, NULL, TRUE);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			add_certreq(this, &req, cert);
+			add_certreq(&req, cert);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -511,49 +408,6 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 }
 
 /**
- * build certificate requests
- */
-static void build_certreqs_v1(private_ike_cert_pre_t *this, message_t *message)
-{
-	enumerator_t *enumerator;
-	ike_cfg_t *ike_cfg;
-	peer_cfg_t *peer_cfg;
-	certificate_t *cert;
-	auth_cfg_t *auth;
-
-	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
-	if (!ike_cfg->send_certreq(ike_cfg))
-	{
-		return;
-	}
-
-	/* check if we require a specific CA for that peer */
-	/* Get the first authentcation config from peer config */
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg)
-	{
-		enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, FALSE);
-		if (enumerator->enumerate(enumerator, &auth))
-		{
-			add_certreqs_v1(this, auth, message);
-		}
-		enumerator->destroy(enumerator);
-	}
-
-	if (!message->get_payload(message, CERTIFICATE_REQUEST_V1))
-	{
-		/* otherwise add all trusted CA certificates */
-		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
-												CERT_ANY, KEY_ANY, NULL, TRUE);
-		while (enumerator->enumerate(enumerator, &cert))
-		{
-			add_certreq_v1(this, message, cert);
-		}
-		enumerator->destroy(enumerator);
-	}
-}
-
-/**
  * Check if this is the final authentication round
  */
 static bool final_auth(message_t *message)
@@ -568,55 +422,6 @@ static bool final_auth(message_t *message)
 		return FALSE;
 	}
 	return TRUE;
-}
-
-/**
- * Checks for the auth_method to see if this task should handle certificates.
- * (IKEv1 only)
- */
-static status_t check_auth_method(private_ike_cert_pre_t *this,
-																	message_t *message)
-{
-	enumerator_t *enumerator;
-	payload_t *payload;
-	status_t status = SUCCESS;
-
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
-	{
-		if (payload->get_type(payload) == SECURITY_ASSOCIATION_V1)
-		{
-			sa_payload_t *sa_payload = (sa_payload_t*)payload;
-
-			switch (sa_payload->get_auth_method(sa_payload))
-			{
-				case 	AUTH_RSA:
-				case 	AUTH_XAUTH_INIT_RSA:
-				case  AUTH_XAUTH_RESP_RSA:
-					DBG3(DBG_IKE, "handling certs method (%d)",
-								sa_payload->get_auth_method(sa_payload));
-					status = NEED_MORE;
-					break;
-				default:
-					DBG3(DBG_IKE, "not handling certs method (%d)",
-								sa_payload->get_auth_method(sa_payload));
-					status = SUCCESS;
-					break;
-			}
-
-			this->state = CP_SA;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (status != NEED_MORE)
-	{
-		this->state = CP_NO_CERT;
-		this->final = TRUE;
-	}
-
-	return status;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -671,97 +476,6 @@ METHOD(task_t, process_i, status_t,
 	return NEED_MORE;
 }
 
-METHOD(task_t, process_r_v1, status_t,
-	private_ike_cert_pre_t *this, message_t *message)
-{
-	switch (message->get_exchange_type(message))
-	{
-		case ID_PROT:
-		{
-			switch (this->state)
-			{
-				case CP_INIT:
-					check_auth_method(this, message);
-					break;
-				case CP_SA:
-					process_certreqs(this, message);
-					this->state = CP_SA_POST;
-					break;
-				case CP_SA_POST:
-					process_certreqs(this, message);
-					process_certs(this, message);
-					this->state = CP_REQ_SENT;
-					this->final = TRUE;
-					break;
-				default:
-					break;
-			}
-			break;
-		}
-		case AGGRESSIVE:
-		{
-			if (check_auth_method(this, message) == NEED_MORE)
-			{
-				process_certreqs(this, message);
-				process_certs(this, message);
-			}
-			this->final = TRUE;
-			break;
-		}
-		default:
-			break;
-	}
-
-	return NEED_MORE;
-}
-
-METHOD(task_t, process_i_v1, status_t,
-	private_ike_cert_pre_t *this, message_t *message)
-{
-	/* TODO: */
-	return FAILED;
-}
-
-METHOD(task_t, build_r_v1, status_t,
-	private_ike_cert_pre_t *this, message_t *message)
-{
-
-	switch (message->get_exchange_type(message))
-	{
-		case ID_PROT:
-		{
-			if (this->state == CP_SA_POST)
-			{
-				build_certreqs_v1(this, message);
-			}
-			break;
-		}
-		case AGGRESSIVE:
-		{
-			if (this->state != CP_NO_CERT)
-			{
-				build_certreqs_v1(this, message);
-			}
-		}
-		default:
-			break;
-
-	}
-
-	if (this->final)
-	{
-		return SUCCESS;
-	}
-	return NEED_MORE;
-}
-
-METHOD(task_t, build_i_v1, status_t,
-	private_ike_cert_pre_t *this, message_t *message)
-{
-	/* TODO: */
-	return FAILED;
-}
-
 METHOD(task_t, get_type, task_type_t,
 	private_ike_cert_pre_t *this)
 {
@@ -799,35 +513,15 @@ ike_cert_pre_t *ike_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 		.initiator = initiator,
 	);
 
-	if (ike_sa->get_version(ike_sa) == IKEV2)
+	if (initiator)
 	{
-		if (initiator)
-		{
-			this->public.task.build = _build_i;
-			this->public.task.process = _process_i;
-		}
-		else
-		{
-			this->public.task.build = _build_r;
-			this->public.task.process = _process_r;
-		}
-		this->cert_req_payload_type = CERTIFICATE_REQUEST;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
 	else
 	{
-		this->state = CP_INIT;
-		if (initiator)
-		{
-			this->public.task.build = _build_i_v1;
-			this->public.task.process = _process_i_v1;
-		}
-		else
-		{
-			this->public.task.build = _build_r_v1;
-			this->public.task.process = _process_r_v1;
-		}
-		this->cert_req_payload_type = CERTIFICATE_REQUEST_V1;
-
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
 	}
 
 	return &this->public;
