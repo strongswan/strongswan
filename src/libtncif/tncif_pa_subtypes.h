@@ -32,15 +32,16 @@ typedef enum pa_subtype_ita_t pa_subtype_ita_t;
  * PA-TNC IETF Standard Subtypes as defined in section 3.5 of RFC 5792
  */
  enum pa_subtype_ietf_t {
-	PA_SUBTYPE_IETF_TESTING =			0,
-	PA_SUBTYPE_IETF_OPERATING_SYSTEM =	1,
-	PA_SUBTYPE_IETF_ANTI_VIRUS =		2,
-	PA_SUBTYPE_IETF_ANTI_SPYWARE =		3,
-	PA_SUBTYPE_IETF_ANTI_MALWARE =		4,
-	PA_SUBTYPE_IETF_FIREWALL =			5,
-	PA_SUBTYPE_IETF_IDPS =				6,
-	PA_SUBTYPE_IETF_VPN =				7,
-	PA_SUBTYPE_IETF_NEA_CLIENT =		8
+	PA_SUBTYPE_IETF_TESTING =			0x00,
+	PA_SUBTYPE_IETF_OPERATING_SYSTEM =	0x01,
+	PA_SUBTYPE_IETF_ANTI_VIRUS =		0x02,
+	PA_SUBTYPE_IETF_ANTI_SPYWARE =		0x03,
+	PA_SUBTYPE_IETF_ANTI_MALWARE =		0x04,
+	PA_SUBTYPE_IETF_FIREWALL =			0x05,
+	PA_SUBTYPE_IETF_IDPS =				0x06,
+	PA_SUBTYPE_IETF_VPN =				0x07,
+	PA_SUBTYPE_IETF_NEA_CLIENT =		0x08,
+	PA_SUBTYPE_IETF_ANY =				0xff
 };
 
 /**
@@ -52,7 +53,8 @@ extern enum_name_t *pa_subtype_ietf_names;
  * PA-TNC TCG Subtypes
  */
  enum pa_subtype_tcg_t {
-	PA_SUBTYPE_TCG_PTS =				1
+	PA_SUBTYPE_TCG_PTS =				0x01,
+	PA_SUBTYPE_TCG_ANY =				0xff
 };
 
 /**
@@ -64,11 +66,12 @@ extern enum_name_t *pa_subtype_tcg_names;
  * PA-TNC FHH Subtypes
  */
  enum pa_subtype_fhh_t {
-	PA_SUBTYPE_FHH_HOSTSCANNER =	0x30,
-	PA_SUBTYPE_FHH_DUMMY =			0x31,
-	PA_SUBTYPE_FHH_PLATID =			0x33,
-	PA_SUBTYPE_FHH_ATTESTATION =	0x34,
-	PA_SUBTYPE_FHH_CLAMAV =			0x41
+	PA_SUBTYPE_FHH_HOSTSCANNER =		0x30,
+	PA_SUBTYPE_FHH_DUMMY =				0x31,
+	PA_SUBTYPE_FHH_PLATID =				0x33,
+	PA_SUBTYPE_FHH_ATTESTATION =		0x34,
+	PA_SUBTYPE_FHH_CLAMAV =				0x41,
+	PA_SUBTYPE_FHH_ANY =				0xff
 };
 
 /**
@@ -80,8 +83,9 @@ extern enum_name_t *pa_subtype_fhh_names;
  * PA-TNC ITA-HSR Subtypes
  */
  enum pa_subtype_ita_t {
-	PA_SUBTYPE_ITA_TEST =				1,
-	PA_SUBTYPE_ITA_SCANNER =			2
+	PA_SUBTYPE_ITA_TEST =				0x01,
+	PA_SUBTYPE_ITA_SCANNER =			0x02,
+	PA_SUBTYPE_ITA_ANY =				0xff
 };
 
 /**

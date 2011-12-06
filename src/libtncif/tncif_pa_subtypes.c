@@ -16,7 +16,7 @@
 
 #include "tncif_pa_subtypes.h"
 
-ENUM(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
+ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
 	"Testing",
 	"Operating System",
 	"Anti-Virus",
@@ -27,10 +27,20 @@ ENUM(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
 	"VPN",
 	"NEA Client"
 );
+ENUM_NEXT(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY, PA_SUBTYPE_IETF_ANY,
+								PA_SUBTYPE_IETF_NEA_CLIENT,
+	"ANY"
+);
+ENUM_END(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY);
 
-ENUM(pa_subtype_tcg_names, PA_SUBTYPE_TCG_PTS, PA_SUBTYPE_TCG_PTS,
+ENUM_BEGIN(pa_subtype_tcg_names, PA_SUBTYPE_TCG_PTS, PA_SUBTYPE_TCG_PTS,
 	"PTS"
 );
+ENUM_NEXT(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY, PA_SUBTYPE_TCG_ANY,
+								PA_SUBTYPE_TCG_PTS,
+	"ANY"
+);
+ENUM_END(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY);
 
 ENUM_BEGIN(pa_subtype_fhh_names, PA_SUBTYPE_FHH_HOSTSCANNER, PA_SUBTYPE_FHH_DUMMY,
 	"HostScanner",
@@ -45,12 +55,21 @@ ENUM_NEXT(pa_subtype_fhh_names, PA_SUBTYPE_FHH_CLAMAV, PA_SUBTYPE_FHH_CLAMAV,
 								PA_SUBTYPE_FHH_ATTESTATION,
 	"ClamAV"
 );
-ENUM_END(pa_subtype_fhh_names, PA_SUBTYPE_FHH_CLAMAV);
+ENUM_NEXT(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY, PA_SUBTYPE_FHH_ANY,
+								PA_SUBTYPE_FHH_CLAMAV,
+	"ANY"
+);
+ENUM_END(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY);
 
-ENUM(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_SCANNER,
+ENUM_BEGIN(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_SCANNER,
 	"Test",
 	"Scanner"
 );
+ENUM_NEXT(pa_subtype_ita_names, PA_SUBTYPE_ITA_ANY, PA_SUBTYPE_ITA_ANY,
+								PA_SUBTYPE_ITA_SCANNER,
+	"ANY"
+);
+ENUM_END(pa_subtype_ita_names, PA_SUBTYPE_ITA_ANY);
 
 /**
  * See header
