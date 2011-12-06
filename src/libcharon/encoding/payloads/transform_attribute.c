@@ -199,7 +199,7 @@ METHOD(transform_attribute_t, get_value, u_int64_t,
 	}
 	memcpy(((char*)&value) + sizeof(value) - this->attribute_value.len,
 		   this->attribute_value.ptr, this->attribute_value.len);
-	return be64toh(value);
+	return untoh64((char*)&value);
 }
 
 METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
