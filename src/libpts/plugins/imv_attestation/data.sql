@@ -1263,6 +1263,12 @@ INSERT INTO keys (
   X'b772a6730776b9f028e5adfccd40b55c320a13b6', 'Andreas, merthyr (Fujitsu Siemens Lifebook S6420)'
 );
 
+INSERT INTO keys (
+  keyid, owner
+) VALUES (
+  X'59cf6f765cdb59110b5e41f194392dd613443966', 'Sansar Choinyambuu ITA HSR'
+);
+
 /* Components */
 
 INSERT INTO components (
@@ -1288,12 +1294,6 @@ INSERT INTO components (
 INSERT INTO key_component (
   key, component, depth, seq_no
 ) VALUES (
-  2, 2, 0, 1
-);
-
-INSERT INTO key_component (
-  key, component, depth, seq_no
-) VALUES (
   1, 3, 0, 1
 );
 
@@ -1303,3 +1303,14 @@ INSERT INTO key_component (
   1, 2, 0, 2
 );
 
+INSERT INTO key_component (
+  key, component, depth, seq_no
+) VALUES (
+  2, 2, 0, 1
+);
+
+INSERT INTO key_component (
+  key, component, depth, seq_no
+) VALUES (
+  2, 3, 0, 2
+);
