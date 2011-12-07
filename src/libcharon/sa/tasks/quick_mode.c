@@ -21,6 +21,7 @@
 #include <sa/keymat_v1.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/payload.h>
 
@@ -97,6 +98,11 @@ struct private_quick_mode_t {
 	keymat_v1_t *keymat;
 
 	/**
+	 * DH exchange, when PFS is in use
+	 */
+	diffie_hellman_t *dh;
+
+	/**
 	 * Negotiated lifetime of new SA
 	 */
 	u_int32_t lifetime;
@@ -134,7 +140,7 @@ static bool install(private_quick_mode_t *this)
 	tsr = linked_list_create();
 	tsi->insert_last(tsi, this->tsi);
 	tsr->insert_last(tsr, this->tsr);
-	if (this->keymat->derive_child_keys(this->keymat, this->proposal, NULL,
+	if (this->keymat->derive_child_keys(this->keymat, this->proposal, this->dh,
 						this->spi_i, this->spi_r, this->nonce_i, this->nonce_r,
 						&encr_i, &integ_i, &encr_r, &integ_r))
 	{
@@ -186,7 +192,7 @@ static bool install(private_quick_mode_t *this)
 	}
 
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
-							NULL, this->nonce_i, this->nonce_r);
+							this->dh, this->nonce_i, this->nonce_r);
 
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
@@ -249,6 +255,35 @@ static bool get_nonce(private_quick_mode_t *this, chunk_t *nonce,
 	}
 	*nonce = nonce_payload->get_nonce(nonce_payload);
 
+	return TRUE;
+}
+
+/**
+ * Add KE payload to message
+ */
+static void add_ke(private_quick_mode_t *this, message_t *message)
+{
+	ke_payload_t *ke_payload;
+
+	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1, this->dh);
+	message->add_payload(message, &ke_payload->payload_interface);
+}
+
+/**
+ * Get DH value from a KE payload
+ */
+static bool get_ke(private_quick_mode_t *this, message_t *message)
+{
+	ke_payload_t *ke_payload;
+
+	ke_payload = (ke_payload_t*)message->get_payload(message, KEY_EXCHANGE_V1);
+	if (!ke_payload)
+	{
+		DBG1(DBG_IKE, "KE payload missing");
+		return FALSE;
+	}
+	this->dh->set_other_public_value(this->dh,
+								ke_payload->get_key_exchange_data(ke_payload));
 	return TRUE;
 }
 
@@ -487,6 +522,7 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *list;
 			proposal_t *proposal;
 			ipsec_mode_t mode;
+			diffie_hellman_group_t group;
 			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 
 			this->child_sa = child_sa_create(
@@ -494,7 +530,7 @@ METHOD(task_t, build_i, status_t,
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, 0, udp);
 
-			list = this->config->get_proposals(this->config, TRUE);
+			list = this->config->get_proposals(this->config, FALSE);
 
 			this->spi_i = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_i)
@@ -526,6 +562,20 @@ METHOD(task_t, build_i, status_t,
 			if (!add_nonce(this, &this->nonce_i, message))
 			{
 				return FAILED;
+			}
+
+			group = this->config->get_dh_group(this->config);
+			if (group != MODP_NONE)
+			{
+				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+														  group);
+				if (!this->dh)
+				{
+					DBG1(DBG_IKE, "configured DH group %N not supported",
+						 diffie_hellman_group_names, group);
+					return FAILED;
+				}
+				add_ke(this, message);
 			}
 			this->tsi = select_ts(this, TRUE);
 			this->tsr = select_ts(this, FALSE);
@@ -571,6 +621,7 @@ METHOD(task_t, process_r, status_t,
 			linked_list_t *tsi, *tsr, *list;
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
+			u_int16_t group;
 			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 
 			if (!get_ts(this, message))
@@ -611,7 +662,7 @@ METHOD(task_t, process_r, status_t,
 			}
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->config->select_proposal(this->config,
-														   list, TRUE, FALSE);
+														   list, FALSE, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			get_lifetimes(this);
@@ -629,6 +680,22 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 
+			if (this->proposal->get_algorithm(this->proposal,
+										DIFFIE_HELLMAN_GROUP, &group, NULL))
+			{
+				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+														  group);
+				if (!this->dh)
+				{
+					DBG1(DBG_IKE, "negotiated DH group %N not supported",
+						 diffie_hellman_group_names, group);
+					return FAILED;
+				}
+				if (!get_ke(this, message))
+				{
+					return FAILED;
+				}
+			}
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
@@ -697,6 +764,11 @@ METHOD(task_t, build_r, status_t,
 			{
 				return FAILED;
 			}
+			if (this->dh)
+			{
+				add_ke(this, message);
+			}
+
 			add_ts(this, message);
 
 			this->state = QM_NEGOTIATED;
@@ -726,7 +798,7 @@ METHOD(task_t, process_i, status_t,
 			}
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->config->select_proposal(this->config,
-														   list, TRUE, FALSE);
+														   list, FALSE, FALSE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -738,6 +810,10 @@ METHOD(task_t, process_i, status_t,
 			apply_lifetimes(this, sa_payload);
 
 			if (!get_nonce(this, &this->nonce_r, message))
+			{
+				return FAILED;
+			}
+			if (this->dh && !get_ke(this, message))
 			{
 				return FAILED;
 			}
@@ -779,6 +855,7 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->config);
+	DESTROY_IF(this->dh);
 	free(this);
 }
 
