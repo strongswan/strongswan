@@ -22,6 +22,14 @@
 
 #include <debug.h>
 #include <pen/pen.h>
+#include <utils/lexparser.h>
+
+#include <sys/stat.h>
+#include <errno.h>
+
+#define TBOOT_PCR_MIN					17
+#define TBOOT_PCR_COUNT					2
+#define TBOOT_LOG_MEAS_BEGIN			16000
 
 typedef struct pts_ita_comp_tboot_t pts_ita_comp_tboot_t;
 
@@ -86,7 +94,158 @@ struct pts_ita_comp_tboot_t {
 	 */
 	int seq_no;
 
+	/**
+     * tboot measurements
+	 */
+	linked_list_t *list;
+
 };
+
+typedef struct entry_t entry_t;
+
+/**
+ * tboot measurement entry
+ */
+struct entry_t {
+
+	/**
+	 * PCR register
+	 */
+	u_int32_t pcr;
+
+	/**
+	 * PCR before value
+	 */
+	chunk_t pcr_before;
+
+	/**
+	 * PCR after value
+	 */
+	chunk_t pcr_after;
+
+	/**
+	 * SHA1 measurement hash
+	 */
+	chunk_t measurement;
+};
+
+/**
+ * Free an entry_t object
+ */
+static void free_entry(entry_t *this)
+{
+	free(this->measurement.ptr);
+	free(this->pcr_before.ptr);
+	free(this->pcr_after.ptr);
+	free(this);
+}
+
+/**
+ * Load a tboot logfile and determine the creation date
+ */
+static bool load_measurements(linked_list_t *list, time_t *created)
+{
+	char *file, *buffer;
+	u_int32_t i, j, tboot_log_len;
+	entry_t *entry;
+	struct stat st;
+	FILE *fp;
+
+	file = lib->settings->get_str(lib->settings,
+						"libimcv.plugins.imc-attestation.tboot_log", NULL);
+	if (!file)
+	{
+		DBG1(DBG_PTS, "tboot log file unavailable, please configure tboot_log");
+		return FALSE;
+	}
+
+	if ((fp = fopen(file, "r")) == NULL)
+	{
+		DBG1(DBG_PTS, "  opening '%s' failed: %s", file, strerror(errno));
+		return FALSE;
+	}
+
+	if (stat(file, &st))
+	{
+		DBG1(DBG_PTS, "  getting statistics of '%s' failed: %s", file,
+			 strerror(errno));
+		fclose(fp);
+		return FALSE;
+	}
+	*created = st.st_ctime;
+
+	fseek(fp, 0, SEEK_END);
+	tboot_log_len = ftell(fp);
+	fseek(fp, TBOOT_LOG_MEAS_BEGIN, SEEK_SET);
+
+	buffer = (char*) malloc (sizeof(char)*tboot_log_len);
+	if (!fread(buffer, 1, tboot_log_len - TBOOT_LOG_MEAS_BEGIN, fp))
+	{
+		DBG1(DBG_PTS, "unable to read tboot log file '%s'", file);
+		fclose(fp);
+		return FALSE;
+	}
+
+	fclose(fp);
+	DBG2(DBG_PTS, "loaded tboot log file from '%s'", file);
+	
+	for (i = 0 ; i < TBOOT_PCR_COUNT ; i++)
+	{
+		char pcr_index[10];
+		char hex[HASH_SIZE_SHA1*3];
+		char const *p;
+		chunk_t temp;
+
+		entry = malloc_thing(entry_t);
+		entry->measurement = chunk_alloc(HASH_SIZE_SHA1);
+		entry->pcr_before = chunk_alloc(HASH_SIZE_SHA1);
+		entry->pcr_after = chunk_alloc(HASH_SIZE_SHA1);
+		entry->pcr = TBOOT_PCR_MIN + i;
+
+		p = buffer;
+		sprintf(pcr_index, "PCR %d", entry->pcr);
+		
+		/* measurement, pcr before and after value for each tboot PCR */
+		for (j = 0 ; j < 3 ; j++)
+		{
+			p = strstr(p, pcr_index);
+			if (!p)
+			{
+				DBG1(DBG_PTS, "unable to read measurement for '%s'", pcr_index);
+				free(entry);
+				free(buffer);
+				return FALSE;
+			}
+			
+			/* skip the index ('PCR 17: ') and copy actual hex */
+			strncpy(hex, p + 8, HASH_SIZE_SHA1*3);
+			hex[HASH_SIZE_SHA1*3 - 1] = '\0';
+			temp = chunk_from_hex(chunk_create(hex, HASH_SIZE_SHA1*3), temp.ptr);
+
+			switch (j)
+			{
+				case 0:
+					memcpy(entry->measurement.ptr,
+						temp.ptr + (temp.len - HASH_SIZE_SHA1), HASH_SIZE_SHA1);
+					break;
+				case 1:
+					memcpy(entry->pcr_before.ptr,
+						temp.ptr + (temp.len - HASH_SIZE_SHA1), HASH_SIZE_SHA1);
+					break;
+				case 2:
+					memcpy(entry->pcr_after.ptr,
+						temp.ptr + (temp.len - HASH_SIZE_SHA1), HASH_SIZE_SHA1);
+					break;
+			}
+			chunk_clear(&temp);
+			p++;
+		}
+		list->insert_last(list, entry);
+	}
+
+	free(buffer);
+	return TRUE;
+}
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
 	pts_ita_comp_tboot_t *this)
@@ -110,69 +269,38 @@ METHOD(pts_component_t, measure, status_t,
 	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
 {
 	pts_comp_evidence_t *evid;
-	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
-	chunk_t measurement, pcr_before, pcr_after;
-	size_t hash_size, pcr_len;
-	u_int32_t extended_pcr;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
-	
-	switch (this->seq_no++)
-	{
-		case 0:
-			/* dummy data since currently the TBOOT log is not retrieved */
-			time(&this->measurement_time);
-			meas_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_meas", NULL);
-			pcr_before_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_before", NULL);
-			pcr_after_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr17_after", NULL);
-			extended_pcr = PCR_TBOOT_POLICY;
-			break;
-		case 1:
-			/* dummy data since currently the TBOOT log is not retrieved */
-			meas_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_meas", NULL);
-			pcr_before_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_before", NULL);
-			pcr_after_hex = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imc-attestation.pcr18_after", NULL);
-			extended_pcr = PCR_TBOOT_MLE;
-			break;
-		default:
-			return FAILED;
-	}
+	size_t pcr_len;
+	entry_t *entry;
 
-	hash_algo = pts->get_meas_algorithm(pts);
-	hash_size = pts_meas_algo_hash_size(hash_algo);
+	hash_algo = PTS_MEAS_ALGO_SHA1;
 	pcr_len = pts->get_pcr_len(pts);
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 
-	/* get and check the measurement data */
-	measurement = chunk_from_hex(
-					chunk_create(meas_hex, strlen(meas_hex)), NULL);
-	pcr_before = chunk_from_hex(
-					chunk_create(pcr_before_hex, strlen(pcr_before_hex)), NULL);
-	pcr_after = chunk_from_hex(
-					chunk_create(pcr_after_hex, strlen(pcr_after_hex)), NULL);
-	if (pcr_before.len != pcr_len || pcr_after.len != pcr_len ||
-		measurement.len != hash_size)
+	if (this->list->get_count(this->list) == 0)
 	{
-		DBG1(DBG_PTS, "TBOOT measurement or pcr data have the wrong size");
-		free(measurement.ptr);
-		free(pcr_before.ptr);
-		free(pcr_after.ptr);
+		if (!load_measurements(this->list,
+							   &this->measurement_time))
+		{
+			return FAILED;
+		}
+	}
+
+	if (this->list->remove_first(this->list, (void**)&entry) != SUCCESS)
+	{
+		DBG1(DBG_PTS, "could not retrieve measurement entry");
 		return FAILED;
 	}
 
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								this->depth, extended_pcr,
-								hash_algo, pcr_transform,
-								this->measurement_time, measurement);
-	evid->set_pcr_info(evid, pcr_before, pcr_after);
+							this->depth, entry->pcr, hash_algo, pcr_transform,
+							this->measurement_time, entry->measurement);
+	evid->set_pcr_info(evid, entry->pcr_before, entry->pcr_after);
 
-	return (this->seq_no < 2) ? NEED_MORE : SUCCESS;
+	free(entry);
+
+	return (this->list->get_count(this->list)) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(pts_component_t, verify, status_t,
@@ -296,6 +424,7 @@ METHOD(pts_component_t, destroy, void,
 		DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
 			 "evidence measurements", count, pen_names, vid, names, name);
 	}
+	this->list->destroy_function(this->list, (void *)free_entry);
 	this->name->destroy(this->name);
 	free(this->keyid.ptr);
 	free(this);
@@ -323,6 +452,7 @@ pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier, u_int32_t depth,
 										  qualifier),
 		.depth = depth,
 		.pts_db = pts_db,
+		.list = linked_list_create(),
 	);
 
 	return &this->public;
