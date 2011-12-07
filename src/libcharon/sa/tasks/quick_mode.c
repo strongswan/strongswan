@@ -595,24 +595,45 @@ METHOD(task_t, build_i, status_t,
 	}
 }
 
-status_t process_notify(notify_payload_t *notify)
+/**
+ * Check for notify errors, return TRUE if error found
+ */
+static bool has_notify_errors(private_quick_mode_t *this, message_t *message)
 {
-	if(notify->get_notify_type(notify) < 16384)
+	enumerator_t *enumerator;
+	payload_t *payload;
+	bool err = FALSE;
+
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
-		DBG1(DBG_IKE, "Received %N error notification.", notify_type_names, notify->get_notify_type(notify));
-		return FAILED;
+		if (payload->get_type(payload) == NOTIFY_V1)
+		{
+			notify_payload_t *notify;
+			notify_type_t type;
+
+			notify = (notify_payload_t*)payload;
+			type = notify->get_notify_type(notify);
+			if (type < 16384)
+			{
+				DBG1(DBG_IKE, "received %N error notify",
+					 notify_type_names, type);
+				err = TRUE;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
+			}
+		}
 	}
-	DBG1(DBG_IKE, "Received %N notification.", notify_type_names, notify->get_notify_type(notify));
-	return SUCCESS;
+	enumerator->destroy(enumerator);
+
+	return err;
 }
 
 METHOD(task_t, process_r, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
-	status_t status;
-
 	switch (this->state)
 	{
 		case QM_INIT:
@@ -705,19 +726,10 @@ METHOD(task_t, process_r, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
-			enumerator = message->create_payload_enumerator(message);
-			while(enumerator->enumerate(enumerator, &payload))
+			if (has_notify_errors(this, message))
 			{
-				if(payload->get_type(payload) == NOTIFY_V1)
-				{
-					status = process_notify((notify_payload_t *)payload);
-					if(status != SUCCESS)
-					{
-						return status;
-					}
-				}
+				return FAILED;
 			}
-			enumerator->destroy(enumerator);
 			if (!install(this))
 			{
 				return FAILED;
