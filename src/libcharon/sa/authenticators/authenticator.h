@@ -148,7 +148,7 @@ struct authenticator_t {
 };
 
 /**
- * Create an authenticator to build signatures.
+ * Create an IKEv2 authenticator to build signatures.
  *
  * @param ike_sa			associated ike_sa
  * @param cfg				authentication configuration
@@ -166,7 +166,7 @@ authenticator_t *authenticator_create_builder(
 									char reserved[3]);
 
 /**
- * Create an authenticator to verify signatures.
+ * Create an IKEv2 authenticator to verify signatures.
  *
  * @param ike_sa			associated ike_sa
  * @param message			message containing authentication data
@@ -182,5 +182,20 @@ authenticator_t *authenticator_create_verifier(
 									chunk_t received_nonce, chunk_t sent_nonce,
 									chunk_t received_init, chunk_t sent_init,
 									char reserved[3]);
+
+/**
+ * Create an IKEv1 authenticator to build and verify signatures or hash payloads.
+ *
+ * @param ike_sa			associated IKE_SA
+ * @param initiator			TRUE if we are the IKE_SA initiator
+ * @param auth_method		negotiated authentication method to use
+ * @param dh				diffie hellman key exchange
+ * @param dh_value			others public diffie hellman value
+ * @param sa_payload		generated SA payload data, without payload header
+ * @return					authenticator, NULL if not supported
+ */
+authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
+								auth_method_t auth_method, diffie_hellman_t *dh,
+								chunk_t dh_value, chunk_t sa_payload);
 
 #endif /** AUTHENTICATOR_H_ @}*/

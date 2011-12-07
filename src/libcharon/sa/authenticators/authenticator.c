@@ -21,6 +21,8 @@
 #include <sa/authenticators/pubkey_authenticator.h>
 #include <sa/authenticators/psk_authenticator.h>
 #include <sa/authenticators/eap_authenticator.h>
+#include <sa/authenticators/psk_v1_authenticator.h>
+#include <sa/authenticators/pubkey_v1_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
 
 
@@ -95,3 +97,26 @@ authenticator_t *authenticator_create_verifier(
 	}
 }
 
+/**
+ * Described in header.
+ */
+authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
+								auth_method_t auth_method, diffie_hellman_t *dh,
+								chunk_t dh_value, chunk_t sa_payload)
+{
+	switch (auth_method)
+	{
+		case AUTH_PSK:
+		case AUTH_XAUTH_INIT_PSK:
+		case AUTH_XAUTH_RESP_PSK:
+			return (authenticator_t*)psk_v1_authenticator_create(ike_sa,
+										initiator, dh, dh_value, sa_payload);
+		case AUTH_RSA:
+		case AUTH_XAUTH_INIT_RSA:
+		case AUTH_XAUTH_RESP_RSA:
+			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
+										initiator, dh, dh_value, sa_payload);
+		default:
+			return NULL;
+	}
+}
