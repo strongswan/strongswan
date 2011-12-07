@@ -292,7 +292,7 @@ static bool dependencies_satisfied(private_plugin_loader_t *this,
 				name = entry->plugin->get_name(entry->plugin);
 				provide = plugin_feature_get_string(&features[0]);
 				depend = plugin_feature_get_string(&features[i]);
-				DBG1(DBG_LIB, "feature %s in '%s' plugin has unsatisfied "
+				DBG2(DBG_LIB, "feature %s in '%s' plugin has unsatisfied "
 					 "dependency: %s", provide, name, depend);
 				free(provide);
 				free(depend);
