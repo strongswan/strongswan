@@ -1309,10 +1309,8 @@ INSERT INTO key_component (
   2, 3, 0, 1
 );
 
-/*
 INSERT INTO key_component (
   key, component, depth, seq_no
 ) VALUES (
   2, 2, 0, 2
 );
-*/
