@@ -181,11 +181,18 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	msg = pa_tnc_msg_create();
 
 	if (imv_attestation_build(msg, attestation_state, supported_algorithms,
-							  supported_dh_groups, pts_db))
+		supported_dh_groups, pts_db))
 	{
-		msg->build(msg);
-		result = imv_attestation->send_message(imv_attestation, connection_id,
-											   msg->get_encoding(msg));
+		if (!msg->get_attribute_count(msg))
+		{
+			result = TNC_RESULT_SUCCESS;
+		}
+		else
+		{
+			msg->build(msg);
+			result = imv_attestation->send_message(imv_attestation,
+									connection_id, msg->get_encoding(msg));
+		}
 	}
 	else
 	{

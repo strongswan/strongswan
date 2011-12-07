@@ -69,6 +69,13 @@ struct pa_tnc_msg_t {
 	enumerator_t* (*create_attribute_enumerator)(pa_tnc_msg_t *this);
 
 	/**
+	 * Get Count of the PA-TNC attributes
+	 *
+	 * @return				return attributes count
+	 */
+	int (*get_attribute_count)(pa_tnc_msg_t *this);
+
+	/**
 	 * Enumerates over all parsing errors
 	 *
 	 * @return				return error enumerator

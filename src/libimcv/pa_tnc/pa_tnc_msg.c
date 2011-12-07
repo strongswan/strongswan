@@ -317,6 +317,12 @@ METHOD(pa_tnc_msg_t, create_attribute_enumerator, enumerator_t*,
 	return this->attributes->create_enumerator(this->attributes);
 }
 
+METHOD(pa_tnc_msg_t, get_attribute_count, int,
+	private_pa_tnc_msg_t *this)
+{
+	return this->attributes->get_count(this->attributes);
+}
+
 METHOD(pa_tnc_msg_t, create_error_enumerator, enumerator_t*,
 	private_pa_tnc_msg_t *this)
 {
@@ -348,6 +354,7 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 			.build = _build,
 			.process = _process,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_attribute_count = _get_attribute_count,
 			.create_error_enumerator = _create_error_enumerator,
 			.destroy = _destroy,
 		},

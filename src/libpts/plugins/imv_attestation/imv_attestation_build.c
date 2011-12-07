@@ -236,11 +236,11 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 			{
 				break;
 			}
-			DBG2(DBG_IMV, "evidence request by");
 			while (enumerator->enumerate(enumerator, &vid, &name,
 				&qualifier, &depth))
 			{
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
+				DBG2(DBG_IMV, "evidence request by");
 				comp_name->log(comp_name, "  ");
 
 				comp = pts_components->create(pts_components, comp_name,
