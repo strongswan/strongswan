@@ -315,7 +315,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 	ptr = hex.ptr;
 	for (i = 0; i < hex.len; i++)
 	{
-		if (*ptr++ == ':')
+		if (*ptr++ == ':' || *ptr++ == ' ')
 		{
 			len--;
 		}
@@ -342,7 +342,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 	for (i = len - 1; i >= 0; i--)
 	{
 		/* skip separation characters */
-		if (*(--hex.ptr) == ':')
+		if (*(--hex.ptr) == ':' || *(--hex.ptr) == ' ')
 		{
 			--hex.ptr;
 		}
