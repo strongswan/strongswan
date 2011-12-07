@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -142,6 +142,20 @@ struct imc_t {
 	 * @return						assigned IMC ID
 	 */
 	TNC_IMCID (*get_id)(imc_t *this);
+
+	/**
+	 * Assign an additional ID to an imc_t object.
+	 *
+	 * @param id					additional IMC ID to be assigned
+	 */
+	void (*add_id)(imc_t *this, TNC_IMCID id);
+
+	/**
+	 * Checks if the ID is assigned to the imc_t object.
+	 *
+	 * @return						TRUE if IMC ID is assigned to imc_t object
+	 */
+	bool (*has_id)(imc_t *this, TNC_IMCID id);
 
 	/**
 	 * Returns the name of an imc_t object.

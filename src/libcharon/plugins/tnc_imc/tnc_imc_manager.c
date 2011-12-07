@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Mike McCauley
- * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2011 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -130,8 +131,30 @@ METHOD(imc_manager_t, is_registered, bool,
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
 	{
-		if (id == imc->get_id(imc))
+		if (imc->has_id(imc, id))
 		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
+METHOD(imc_manager_t, reserve_id, bool,
+	private_tnc_imc_manager_t *this, TNC_IMCID id, TNC_UInt32 *new_id)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+	bool found = FALSE;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (imc->get_id(imc))
+		{
+			imc->add_id(imc, this->next_imc_id++);
 			found = TRUE;
 			break;
 		}
@@ -304,6 +327,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.load = _load,
 			.is_registered = _is_registered,
+			.reserve_id = _reserve_id,
 			.get_preferred_language = _get_preferred_language,
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,

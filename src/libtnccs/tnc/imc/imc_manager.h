@@ -66,6 +66,15 @@ struct imc_manager_t {
 	bool (*is_registered)(imc_manager_t *this, TNC_IMCID id);
 
 	/**
+	 * Reserve an additional ID for an IMC
+	 *
+	 * @param id				ID of IMC instance
+	 * @param new_id			reserved ID assigned to IMC
+	 * @return					TRUE if primary IMC ID was used
+	 */
+	bool (*reserve_id)(imc_manager_t *this, TNC_IMCID id, TNC_UInt32 *new_id);
+
+	/**
 	 * Return the preferred language for recommendations
 	 *
 	 * @return					preferred language string

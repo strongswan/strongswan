@@ -121,6 +121,19 @@ TNC_Result TNC_TNCC_SendMessageLong(TNC_IMCID imc_id,
 }
 
 /**
+ * Called by the IMC when it wants to reserve an additional IMC ID for itself
+ */
+TNC_Result TNC_TNCC_ReserveAdditionalIMCID(TNC_IMCID imc_id, TNC_UInt32 *new_id)
+{
+	if (!tnc->imcs->reserve_id(tnc->imcs, imc_id, new_id))
+	{
+		DBG1(DBG_TNC, "ignoring ReserveAdditionalIMCID() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+}
+
+/**
  * Called by the IMC when it needs a function pointer
  */
 TNC_Result TNC_TNCC_BindFunction(TNC_IMCID id,
@@ -146,6 +159,10 @@ TNC_Result TNC_TNCC_BindFunction(TNC_IMCID id,
     else if (streq(function_name, "TNC_TNCC_SendMessageLong"))
 	{
 		*function_pointer = (void*)TNC_TNCC_SendMessageLong;
+	}
+    else if (streq(function_name, "TNC_TNCC_ReserveAdditionalIMCID"))
+	{
+		*function_pointer = (void*)TNC_TNCC_ReserveAdditionalIMCID;
 	}
     else
 	{

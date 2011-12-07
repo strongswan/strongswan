@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Mike McCauley
- * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2011 Andreas Steffen,
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +22,7 @@
 
 #include <debug.h>
 #include <library.h>
+#include <utils/linked_list.h>
 #include <threading/mutex.h>
 
 typedef struct private_tnc_imc_t private_tnc_imc_t;
@@ -56,6 +58,11 @@ struct private_tnc_imc_t {
 	TNC_IMCID id;
 
 	/**
+	 * list of additional IMC IDs
+	 */
+	linked_list_t *additional_ids;
+
+	/**
 	 * List of message types supported by IMC - Vendor ID part
 	 */
 	TNC_VendorIDList supported_vids;
@@ -86,6 +93,50 @@ METHOD(imc_t, get_id, TNC_IMCID,
 	private_tnc_imc_t *this)
 {
 	return this->id;
+}
+
+METHOD(imc_t, add_id, void,
+	private_tnc_imc_t *this, TNC_IMCID id)
+{
+	TNC_IMCID *new_id;
+
+	new_id = malloc_thing(TNC_IMCID);
+	*new_id = id;
+	this->additional_ids->insert_last(this->additional_ids, new_id);
+}
+
+METHOD(imc_t, has_id, bool,
+	private_tnc_imc_t *this, TNC_IMCID id)
+{
+	enumerator_t *enumerator;
+	TNC_IMCID *additional_id;
+	bool found = FALSE;
+
+	/* check primary IMC ID */
+	if (id == this->id)
+	{
+		return TRUE;
+	}
+
+	/* return if there are no additional IMC IDs */
+	if (this->additional_ids->get_count(this->additional_ids) == 0)
+	{
+		return FALSE;
+	}
+
+	/* check additional IMC IDs */
+	enumerator = this->additional_ids->create_enumerator(this->additional_ids);
+	while (enumerator->enumerate(enumerator, &additional_id))
+	{
+		if (id == *additional_id)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(imc_t, get_name, char*,
@@ -257,6 +308,7 @@ METHOD(imc_t, destroy, void,
 {
 	dlclose(this->handle);
 	this->mutex->destroy(this->mutex);
+	this->additional_ids->destroy_function(this->additional_ids, free);
 	free(this->supported_vids);
 	free(this->supported_subtypes);
 	free(this->name);
@@ -275,6 +327,8 @@ imc_t* tnc_imc_create(char *name, char *path)
 		.public = {
 			.set_id = _set_id,
 			.get_id = _get_id,
+			.add_id = _add_id,
+			.has_id = _has_id,
 			.get_name = _get_name,
 			.set_message_types = _set_message_types,
 			.set_message_types_long = _set_message_types_long,
@@ -283,6 +337,7 @@ imc_t* tnc_imc_create(char *name, char *path)
         },
 		.name = name,
 		.path = path,
+		.additional_ids = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
