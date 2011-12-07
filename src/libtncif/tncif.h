@@ -122,7 +122,7 @@ typedef TNC_UInt32 TNC_AttributeID;
 
 /* Message Flags Values */
 
-#define TNC_MESSAGE_FLAGS_EXCLUSIVE ((TNC_Uint32) 0x80000000)
+#define TNC_MESSAGE_FLAGS_EXCLUSIVE ((TNC_UInt32) 0x80000000)
 
 /* Message Attribute ID Values */
 
