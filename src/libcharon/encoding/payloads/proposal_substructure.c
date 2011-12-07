@@ -684,6 +684,10 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 				proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM,
 						get_alg_from_ikev1(INTEGRITY_ALGORITHM, value), 0);
 				break;
+			case TATTR_PH2_GROUP:
+				proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+						value, 0);
+				break;
 			default:
 				/* TODO-IKEv1: lifetimes other attributes */
 				break;
@@ -1073,6 +1077,15 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 									TATTR_PH2_AUTH_ALGORITHM, alg));
 		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
+	if (enumerator->enumerate(enumerator, &alg, &key_size))
+	{
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+									TATTR_PH2_GROUP, alg));
 	}
 	enumerator->destroy(enumerator);
 
