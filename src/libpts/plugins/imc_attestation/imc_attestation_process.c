@@ -418,8 +418,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				attr_list->insert_last(attr_list, attr);
 			}
 
-			use_quote2 = lib->settings->get_bool(lib->settings,
-							"libimcv.plugins.imc-attestation.use_quote2", TRUE);
+			use_quote2 = lib->settings->get_int(lib->settings,
+					"libimcv.plugins.imc-attestation.quote_version", 2) == 2 ?
+					TRUE : FALSE;
 			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_sig))
 			{
 				DBG1(DBG_IMC, "error occured during TPM quote operation");
