@@ -295,24 +295,22 @@ METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
 METHOD(tnccs_manager_t, send_message, TNC_Result,
 	private_tnc_tnccs_manager_t *this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 									   TNC_ConnectionID id,
+									   TNC_UInt32 msg_flags,
 									   TNC_BufferReference msg,
 									   TNC_UInt32 msg_len,
-									   TNC_MessageType msg_type)
+									   TNC_VendorID msg_vid,
+									   TNC_MessageSubtype msg_subtype)
 
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 	tnccs_send_message_t send_message = NULL;
 	tnccs_t *tnccs = NULL;
-	TNC_VendorID msg_vid;
-	TNC_MessageSubtype msg_subtype;
-
-	msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
-	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
 	if (msg_vid == TNC_VENDORID_ANY || msg_subtype == TNC_SUBTYPE_ANY)
 	{
-		DBG1(DBG_TNC, "not sending message of invalid type 0x%08x", msg_type);
+		DBG1(DBG_TNC, "not sending message of invalid type 0x%02x/0x%08x",
+					   msg_vid, msg_subtype);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
 
@@ -332,7 +330,8 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 
 	if (tnccs && send_message)
 	{
-		return send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
+		return send_message(tnccs, imc_id, imv_id, msg_flags, msg, msg_len,
+							msg_vid, msg_subtype);
 	}
 	return TNC_RESULT_FATAL;
 }

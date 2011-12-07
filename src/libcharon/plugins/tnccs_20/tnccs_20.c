@@ -99,15 +99,16 @@ struct private_tnccs_20_t {
 
 METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
+						      TNC_UInt32 msg_flags,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
-							  TNC_MessageType msg_type)
+						      TNC_VendorID msg_vid,
+						      TNC_MessageSubtype msg_subtype)
 {
-	TNC_MessageSubtype msg_sub_type;
-	TNC_VendorID msg_vendor_id;
 	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
 	enum_name_t *pa_subtype_names;
+	bool excl;
 
 	if (!this->send_msg)
 	{
@@ -116,24 +117,22 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 			this->is_server ? imv_id : imc_id);
 		return TNC_RESULT_ILLEGAL_OPERATION;
 	}
+	excl = (msg_flags & TNC_MESSAGE_FLAGS_EXCLUSIVE) != 0;
 
-	msg_sub_type =   msg_type       & TNC_SUBTYPE_ANY;
-	msg_vendor_id = (msg_type >> 8) & TNC_VENDORID_ANY;
+	pb_tnc_msg = pb_pa_msg_create(msg_vid, msg_subtype, imc_id, imv_id,
+								  excl, chunk_create(msg, msg_len));
 
-	pb_tnc_msg = pb_pa_msg_create(msg_vendor_id, msg_sub_type, imc_id, imv_id,
-									  chunk_create(msg, msg_len));
-
-	pa_subtype_names = get_pa_subtype_names(msg_vendor_id);
+	pa_subtype_names = get_pa_subtype_names(msg_vid);
 	if (pa_subtype_names)
 	{
 		DBG2(DBG_TNC, "creating PB-PA message type '%N/%N' 0x%06x/0x%08x",
-			 pen_names, msg_vendor_id, pa_subtype_names, msg_sub_type,
-			 msg_vendor_id, msg_sub_type);
+					   pen_names, msg_vid, pa_subtype_names, msg_subtype,
+					   msg_vid, msg_subtype);
 	}
 	else
 	{
 		DBG2(DBG_TNC, "creating PB-PA message type '%N' 0x%06x/0x%08x",
-			 pen_names, msg_vendor_id, msg_vendor_id, msg_sub_type);
+					   pen_names, msg_vid, msg_vid, msg_subtype);
 	}
 
 	/* adding PA message to SDATA or CDATA batch only */

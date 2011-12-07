@@ -63,15 +63,20 @@ typedef tnccs_t *(*tnccs_constructor_t)(bool is_server);
  *
  * @param imc_id		ID of IMC or TNC_IMCID_ANY
  * @param imc_id		ID of IMV or TNC_IMVID_ANY
+ * @param msg_flags		message flags
  * @param msg			message to be added
  * @param msg_len		message length
- * @param msg_type		message type
- * @return			result code
+ * @param msg_vid		message vendor ID
+ * @param msg_subtype	message subtype
+ * @return				return code
  */
-typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tncss, TNC_IMCID imc_id,
-													 TNC_IMVID imv_id,
-													 TNC_BufferReference msg,
-													 TNC_UInt32 msg_len,
-													 TNC_MessageType msg_type);
+typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tncss,
+										  TNC_IMCID imc_id,
+										  TNC_IMVID imv_id,
+										  TNC_UInt32 msg_flags,
+										  TNC_BufferReference msg,
+										  TNC_UInt32 msg_len,
+									 	  TNC_VendorID msg_vid,
+										  TNC_MessageSubtype msg_subtype);
 
 #endif /** TNCCS_H_ @}*/

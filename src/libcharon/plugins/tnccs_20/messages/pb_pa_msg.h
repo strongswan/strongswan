@@ -71,12 +71,6 @@ struct pb_pa_msg_t {
 	 */
 	bool (*get_exclusive_flag)(pb_pa_msg_t *this);
 
-	/**
-	 * Set the exclusive flag
-	 *
-	 * @param excl			vexclusive flag
-	 */
-	void (*set_exclusive_flag)(pb_pa_msg_t *this, bool excl);
 };
 
 /**
@@ -86,11 +80,12 @@ struct pb_pa_msg_t {
  * @param subtype			PA Subtype		
  * @param collector_id		Posture Collector ID
  * @param validator_id		Posture Validator ID
+ * @param excl				Exclusive Flag
  * @param msg_body		 	PA Message Body
  */
 pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
 							   u_int16_t collector_id, u_int16_t validator_id,
-							   chunk_t msg_body);
+							   bool excl, chunk_t msg_body);
 
 /**
  * Create an unprocessed PB-PA message from raw data

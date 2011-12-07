@@ -211,12 +211,6 @@ METHOD(pb_pa_msg_t, get_exclusive_flag, bool,
 	return this->excl;
 }
 
-METHOD(pb_pa_msg_t, set_exclusive_flag, void,
-	private_pb_pa_msg_t *this, bool excl)
-{
-	this->excl = excl;
-}
-
 /**
  * See header
  */
@@ -237,7 +231,6 @@ pb_tnc_msg_t *pb_pa_msg_create_from_data(chunk_t data)
 			.get_validator_id = _get_validator_id,
 			.get_body = _get_body,
 			.get_exclusive_flag = _get_exclusive_flag,
-			.set_exclusive_flag = _set_exclusive_flag,
 		},
 		.type = PB_MSG_PA,
 		.encoding = chunk_clone(data),
@@ -251,7 +244,7 @@ pb_tnc_msg_t *pb_pa_msg_create_from_data(chunk_t data)
  */
 pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
 							   u_int16_t collector_id, u_int16_t validator_id,
-							   chunk_t msg_body)
+							   bool excl, chunk_t msg_body)
 {
 	private_pb_pa_msg_t *this;
 
@@ -269,13 +262,13 @@ pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
 			.get_validator_id = _get_validator_id,
 			.get_body = _get_body,
 			.get_exclusive_flag = _get_exclusive_flag,
-			.set_exclusive_flag = _set_exclusive_flag,
 		},
 		.type = PB_MSG_PA,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
 		.collector_id = collector_id,
 		.validator_id = validator_id,
+		.excl = excl,
 		.msg_body = chunk_clone(msg_body),
 	);
 

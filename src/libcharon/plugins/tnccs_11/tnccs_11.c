@@ -100,12 +100,14 @@ struct private_tnccs_11_t {
 
 METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_11_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
+						      TNC_UInt32 msg_flags,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
-							  TNC_MessageType msg_type)
+						      TNC_VendorID msg_vid,
+						      TNC_MessageSubtype msg_subtype)
 {
 	tnccs_msg_t *tnccs_msg;
-	u_int32_t vendor_id, subtype;
+	TNC_MessageType msg_type;
 	enum_name_t *pa_subtype_names;
 
 	if (!this->send_msg)
@@ -115,18 +117,23 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 			this->is_server ? imv_id : imc_id);
 		return TNC_RESULT_ILLEGAL_OPERATION;
 	}
-	vendor_id = msg_type >> 8;
-	subtype = msg_type & 0xff;
-	pa_subtype_names = get_pa_subtype_names(vendor_id);
+	if (msg_vid > TNC_VENDORID_ANY || msg_subtype > TNC_SUBTYPE_ANY)
+	{
+		return TNC_RESULT_NO_LONG_MESSAGE_TYPES;
+	}
+	msg_type = (msg_vid << 8) | msg_subtype;
+ 
+	pa_subtype_names = get_pa_subtype_names(msg_vid);
 	if (pa_subtype_names)
 	{
 		DBG2(DBG_TNC, "creating IMC-IMV message type '%N/%N' 0x%06x/0x%02x",
-			 pen_names, vendor_id, pa_subtype_names, subtype, vendor_id, subtype);
+					   pen_names, msg_vid, pa_subtype_names, msg_subtype,
+					   msg_vid, msg_subtype);
 	}
 	else
 	{
 		DBG2(DBG_TNC, "creating IMC-IMV message type '%N' 0x%06x/0x%02x",
-			 pen_names, vendor_id, vendor_id, subtype);
+			 		   pen_names, msg_vid, msg_vid, msg_subtype);
 	}
 	tnccs_msg = imc_imv_msg_create(msg_type, chunk_create(msg, msg_len));
 

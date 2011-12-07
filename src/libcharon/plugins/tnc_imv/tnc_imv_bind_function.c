@@ -82,14 +82,42 @@ TNC_Result TNC_TNCS_SendMessage(TNC_IMVID imv_id,
 								TNC_UInt32 msg_len,
 								TNC_MessageType msg_type)
 {
+	TNC_VendorID msg_vid;
+	TNC_MessageSubtype msg_subtype;
+
 	if (!tnc->imvs->is_registered(tnc->imvs, imv_id))
 	{
 		DBG1(DBG_TNC, "ignoring SendMessage() from unregistered IMV %u",
 					   imv_id);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
+	msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
+	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+
 	return tnc->tnccs->send_message(tnc->tnccs, TNC_IMCID_ANY, imv_id,
-									connection_id, msg, msg_len, msg_type);
+						connection_id, 0, msg, msg_len, msg_vid, msg_subtype);
+}
+
+/**
+ * Called by the IMV when an IMV-IMC message is to be sent over IF-TNCCS 2.0
+ */
+TNC_Result TNC_TNCS_SendMessageLong(TNC_IMVID imv_id,
+									TNC_ConnectionID connection_id,
+									TNC_UInt32 msg_flags,
+									TNC_BufferReference msg,
+									TNC_UInt32 msg_len,
+									TNC_VendorID msg_vid,
+									TNC_MessageSubtype msg_subtype,
+	 						 		TNC_UInt32 imc_id)
+{
+	if (!tnc->imvs->is_registered(tnc->imvs, imv_id))
+	{
+		DBG1(DBG_TNC, "ignoring SendMessageLong() from unregistered IMV %u",
+					   imv_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+	return tnc->tnccs->send_message(tnc->tnccs, imc_id, imv_id, connection_id,
+								msg_flags, msg, msg_len, msg_vid, msg_subtype);
 }
 
 /**
@@ -174,6 +202,10 @@ TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
 	else if (streq(function_name, "TNC_TNCS_SendMessage"))
 	{
 		*function_pointer = (void*)TNC_TNCS_SendMessage;
+	}
+	else if (streq(function_name, "TNC_TNCS_SendMessageLong"))
+	{
+		*function_pointer = (void*)TNC_TNCS_SendMessageLong;
 	}
 	else if (streq(function_name, "TNC_TNCS_ProvideRecommendation"))
 	{
