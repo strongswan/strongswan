@@ -1306,11 +1306,13 @@ INSERT INTO key_component (
 INSERT INTO key_component (
   key, component, depth, seq_no
 ) VALUES (
-  2, 2, 0, 1
+  2, 3, 0, 1
 );
 
+/*
 INSERT INTO key_component (
   key, component, depth, seq_no
 ) VALUES (
-  2, 3, 0, 2
+  2, 2, 0, 2
 );
+*/
