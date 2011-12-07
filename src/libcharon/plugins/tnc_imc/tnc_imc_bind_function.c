@@ -125,12 +125,13 @@ TNC_Result TNC_TNCC_SendMessageLong(TNC_IMCID imc_id,
  */
 TNC_Result TNC_TNCC_ReserveAdditionalIMCID(TNC_IMCID imc_id, TNC_UInt32 *new_id)
 {
-	if (!tnc->imcs->reserve_id(tnc->imcs, imc_id, new_id))
+	if (tnc->imcs->reserve_id(tnc->imcs, imc_id, new_id))
 	{
-		DBG1(DBG_TNC, "ignoring ReserveAdditionalIMCID() from unregistered IMC %u",
-					   imc_id);
-		return TNC_RESULT_INVALID_PARAMETER;
+		return TNC_RESULT_SUCCESS;
 	}
+	DBG1(DBG_TNC, "ignoring ReserveAdditionalIMCID() from unregistered IMC %u",
+				   imc_id);
+	return TNC_RESULT_INVALID_PARAMETER;
 }
 
 /**
