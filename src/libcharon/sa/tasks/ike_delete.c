@@ -114,7 +114,15 @@ METHOD(task_t, process_r, status_t,
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
-			return NEED_MORE;
+			if (this->ike_sa->get_version(this->ike_sa) == IKEV2)
+			{
+				return NEED_MORE;
+			}
+			else
+			{
+				/* Dont send message to other side */
+				return DESTROY_ME;
+			}
 		case IKE_REKEYING:
 			this->rekeyed = TRUE;
 			break;

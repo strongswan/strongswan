@@ -19,13 +19,16 @@
 #include <math.h>
 
 #include <daemon.h>
+#include <sa/tasks/child_delete.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth_request.h>
+#include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/ike_cert_pre_v1.h>
 #include <sa/tasks/ike_cert_post_v1.h>
+#include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -546,7 +549,19 @@ static status_t process_request(private_task_manager_t *this,
 						}
 						case DELETE_V1:
 						{
-							/* TODO-IKEv1: Delete payload handling. */
+							delete_payload_t *delete;
+							delete = (delete_payload_t*)payload;
+
+							if (delete->get_protocol_id(delete) == PROTO_IKE)
+							{
+								task = (task_t*)ike_delete_create(this->ike_sa,
+									FALSE);
+							}
+							else
+							{
+								task = (task_t*)child_delete_create(this->ike_sa,
+									PROTO_NONE, 0);
+							}
 							break;
 						}
 						default:
@@ -554,7 +569,7 @@ static status_t process_request(private_task_manager_t *this,
 					}
 					if (task)
 					{
-						break;
+						this->passive_tasks->insert_last(this->passive_tasks, task);
 					}
 				}
 				enumerator->destroy(enumerator);

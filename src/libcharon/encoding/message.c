@@ -591,6 +591,27 @@ static payload_order_t informational_i_order_v1[] = {
 };
 
 /**
+ * Message rule for INFORMATIONAL_V1 from responder.
+ */
+static payload_rule_t informational_r_rules_v1[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL_V1 from responder.
+ */
+static payload_order_t informational_r_order_v1[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{DELETE_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
  * Message rule for QUICK_MODE from initiator.
  */
 static payload_rule_t quick_mode_i_rules[] = {
@@ -736,6 +757,10 @@ static message_rule_t message_rules[] = {
 	{INFORMATIONAL_V1,	TRUE,	TRUE,
 		countof(informational_i_rules_v1), informational_i_rules_v1,
 		countof(informational_i_order_v1), informational_i_order_v1,
+	},
+	{INFORMATIONAL_V1,	FALSE,	TRUE,
+		countof(informational_r_rules_v1), informational_r_rules_v1,
+		countof(informational_r_order_v1), informational_r_order_v1,
 	},
 	{QUICK_MODE,		TRUE,	TRUE,
 		countof(quick_mode_i_rules), quick_mode_i_rules,

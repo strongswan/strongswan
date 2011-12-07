@@ -65,6 +65,11 @@ struct private_child_delete_t {
 	 * CHILD_SAs which get deleted
 	 */
 	linked_list_t *child_sas;
+
+	/**
+	 * CHILD_SAs which get deleted
+	 */
+	payload_type_t payload_type;
 };
 
 /**
@@ -87,7 +92,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_ESP:
 				if (esp == NULL)
 				{
-					esp = delete_payload_create(DELETE, PROTO_ESP);
+					esp = delete_payload_create(this->payload_type, PROTO_ESP);
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
@@ -97,7 +102,7 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 			case PROTO_AH:
 				if (ah == NULL)
 				{
-					ah = delete_payload_create(DELETE, PROTO_AH);
+					ah = delete_payload_create(this->payload_type, PROTO_AH);
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);
@@ -127,7 +132,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
 	{
-		if (payload->get_type(payload) == DELETE)
+		if (payload->get_type(payload) == this->payload_type)
 		{
 			delete_payload = (delete_payload_t*)payload;
 			protocol = delete_payload->get_protocol_id(delete_payload);
@@ -386,6 +391,15 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
 		this->initiator = FALSE;
+	}
+
+	if (ike_sa->get_version(ike_sa) == IKEV2)
+	{
+		this->payload_type = DELETE;
+	}
+	else
+	{
+		this->payload_type = DELETE_V1;
 	}
 	return &this->public;
 }
