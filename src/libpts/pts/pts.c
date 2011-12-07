@@ -956,7 +956,7 @@ METHOD(pts_t, quote_tpm, bool,
 		{
 			i++;
 			f = 1;
-		}		
+		}
 		if (this->pcr_select[i] & f)
 		{
 			result = use_quote2 ?
@@ -1154,8 +1154,9 @@ METHOD(pts_t, get_quote_info, bool,
 					  "unable to construct TPM Quote Info2");
 		return FALSE;
 	}
-	
-	size_of_select = 1 + this->pcr_max / 8;	
+
+	/* TPM v1.2 24 PCR Registers, so bitmask field lenght is 3 */
+	size_of_select = max(PCR_MAX_NUM / 8, 1 + this->pcr_max / 8);
 	pcr_comp_len = 2 + size_of_select + 4 + this->pcr_count * this->pcr_len;
 	
 	writer = bio_writer_create(pcr_comp_len);
