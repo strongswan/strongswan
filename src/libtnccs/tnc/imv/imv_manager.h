@@ -67,6 +67,14 @@ struct imv_manager_t {
 	 */
 	bool (*is_registered)(imv_manager_t *this, TNC_IMVID id);
 
+	/**
+	 * Reserve an additional ID for an IMV
+	 *
+	 * @param id				ID of IMV instance
+	 * @param new_id			reserved ID assigned to IMV
+	 * @return					TRUE if primary IMV ID was used
+	 */
+	bool (*reserve_id)(imv_manager_t *this, TNC_IMVID id, TNC_UInt32 *new_id);
 
 	/**
 	 * Get the configured recommendation policy

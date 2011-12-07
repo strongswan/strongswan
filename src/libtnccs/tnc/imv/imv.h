@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -142,6 +142,20 @@ struct imv_t {
 	 * @return						IMV ID assigned by TNCS
 	 */
 	TNC_IMVID (*get_id)(imv_t *this);
+
+	/**
+	 * Assign an additional ID to an imv_t object.
+	 *
+	 * @param id					additional IMV ID to be assigned
+	 */
+	void (*add_id)(imv_t *this, TNC_IMVID id);
+
+	/**
+	 * Checks if the ID is assigned to the imv_t object.
+	 *
+	 * @return						TRUE if IMV ID is assigned to imv_t object
+	 */
+	bool (*has_id)(imv_t *this, TNC_IMVID id);
 
 	/**
 	 * Returns the name of an imv_t object.

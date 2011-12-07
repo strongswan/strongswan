@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Mike McCauley
- * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2011 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -181,6 +182,20 @@ TNC_Result TNC_TNCS_SetAttribute(TNC_IMVID imv_id,
 }
 
 /**
+ * Called by the IMV when it wants to reserve an additional IMV ID for itself
+ */
+TNC_Result TNC_TNCC_ReserveAdditionalIMVID(TNC_IMVID imv_id, TNC_UInt32 *new_id)
+{
+	if (tnc->imvs->reserve_id(tnc->imvs, imv_id, new_id))
+	{
+		return TNC_RESULT_SUCCESS;
+	}
+	DBG1(DBG_TNC, "ignoring ReserveAdditionalIMVID() from unregistered IMV %u",
+				   imv_id);
+	return TNC_RESULT_INVALID_PARAMETER;
+}
+
+/**
  * Called by the IMV when it needs a function pointer
  */
 TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
@@ -218,6 +233,10 @@ TNC_Result TNC_TNCS_BindFunction(TNC_IMVID id,
 	else if (streq(function_name, "TNC_TNCS_SetAttribute"))
 	{
 		*function_pointer = (void*)TNC_TNCS_SetAttribute;
+	}
+    else if (streq(function_name, "TNC_TNCS_ReserveAdditionalIMVID"))
+	{
+		*function_pointer = (void*)TNC_TNCS_ReserveAdditionalIMVID;
 	}
 	else
 	{
