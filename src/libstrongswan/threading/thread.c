@@ -414,11 +414,19 @@ void thread_exit(void *val)
 }
 
 /**
+ * A dummy thread value that reserved pthread_key_t value "0". A buggy PKCS#11
+ * library mangles this key, without owning it, so we allocate it for them.
+ */
+static thread_value_t *dummy1;
+
+/**
  * Described in header.
  */
 void threads_init()
 {
 	private_thread_t *main_thread = thread_create_internal();
+
+	dummy1 = thread_value_create(NULL);
 
 	main_thread->id = 0;
 	main_thread->thread_id = pthread_self();
@@ -442,6 +450,8 @@ void threads_init()
 void threads_deinit()
 {
 	private_thread_t *main_thread = (private_thread_t*)thread_current();
+
+	dummy1->destroy(dummy1);
 
 	main_thread->mutex->lock(main_thread->mutex);
 	thread_destroy(main_thread);
