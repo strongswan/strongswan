@@ -103,9 +103,9 @@ struct private_task_manager_t {
 		u_int32_t mid;
 
 		/**
-		 * Hash of a previously received message
+		 * Sequence number of the last sent message
 		 */
-		u_int32_t hash;
+		u_int32_t seqnr;
 
 		/**
 		 * how many times we have retransmitted so far
@@ -197,9 +197,10 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 }
 
 METHOD(task_manager_t, retransmit, status_t,
-	private_task_manager_t *this, u_int32_t message_id)
+	private_task_manager_t *this, u_int32_t message_seqnr)
 {
-	if (message_id == this->initiating.mid)
+	/* this.initiating packet used as marker for received response */
+	if (message_seqnr == this->initiating.seqnr && this->initiating.packet )
 	{
 		u_int32_t timeout;
 		packet_t *packet;
@@ -223,14 +224,14 @@ METHOD(task_manager_t, retransmit, status_t,
 
 		if (this->initiating.retransmitted)
 		{
-			DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
-				 this->initiating.retransmitted, message_id);
+			DBG1(DBG_IKE, "retransmit %d of request with message ID %d seqnr (%d)",
+				 this->initiating.retransmitted, this->initiating.mid, message_seqnr);
 		}
 		packet = this->initiating.packet->clone(this->initiating.packet);
 		charon->sender->send(charon->sender, packet);
 
 		this->initiating.retransmitted++;
-		job = (job_t*)retransmit_job_create(this->initiating.mid,
+		job = (job_t*)retransmit_job_create(this->initiating.seqnr,
 											this->ike_sa->get_id(this->ike_sa));
 		lib->scheduler->schedule_job_ms(lib->scheduler, job, timeout);
 	}
@@ -247,6 +248,7 @@ METHOD(task_manager_t, initiate, status_t,
 	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
 	bool new_mid = FALSE;
+	bool expect_response = FALSE;
 
 	if (!this->rng)
 	{
@@ -357,6 +359,7 @@ METHOD(task_manager_t, initiate, status_t,
 				task->destroy(task);
 				break;
 			case NEED_MORE:
+				expect_response = TRUE;
 				/* processed, but task needs another exchange */
 				break;
 			case FAILED:
@@ -378,6 +381,7 @@ METHOD(task_manager_t, initiate, status_t,
 
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
+	this->initiating.seqnr++;
 
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
@@ -392,10 +396,19 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	message->destroy(message);
 
-	charon->sender->send(charon->sender,
-				this->initiating.packet->clone(this->initiating.packet));
+	if (expect_response)
+	{
+		return retransmit(this, this->initiating.seqnr);
+	}
+	else
+	{
+		charon->sender->send(charon->sender,
+					this->initiating.packet->clone(this->initiating.packet));
 
-	return SUCCESS;
+		this->initiating.packet->destroy(this->initiating.packet);
+		this->initiating.packet = NULL;
+		return SUCCESS;
+	}
 }
 
 /**
