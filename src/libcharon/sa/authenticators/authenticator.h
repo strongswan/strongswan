@@ -93,6 +93,16 @@ enum auth_method_t {
 	 * IKEv1 responder XAUTH with RSA, outside of IANA range
 	 */
 	AUTH_XAUTH_RESP_RSA,
+
+	/**
+	 * IKEv1 initiator XAUTH, responder RSA, outside of IANA range
+	 */
+	AUTH_HYBRID_INIT_RSA,
+
+	/**
+	 * IKEv1 responder XAUTH, initiator RSA, outside of IANA range
+	 */
+	AUTH_HYBRID_RESP_RSA,
 };
 
 /**
