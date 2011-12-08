@@ -184,7 +184,7 @@ TNC_Result TNC_TNCS_SetAttribute(TNC_IMVID imv_id,
 /**
  * Called by the IMV when it wants to reserve an additional IMV ID for itself
  */
-TNC_Result TNC_TNCC_ReserveAdditionalIMVID(TNC_IMVID imv_id, TNC_UInt32 *new_id)
+TNC_Result TNC_TNCS_ReserveAdditionalIMVID(TNC_IMVID imv_id, TNC_UInt32 *new_id)
 {
 	if (tnc->imvs->reserve_id(tnc->imvs, imv_id, new_id))
 	{
