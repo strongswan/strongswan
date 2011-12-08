@@ -234,8 +234,8 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 			break;
 		case FEATURE_XAUTH_SERVER:
 		case FEATURE_XAUTH_PEER:
-			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
-					xauth_method_type_short_names, feature->arg.xauth) > 0)
+			if (asprintf(&str, "%N:%s", plugin_feature_names, feature->type,
+					feature->arg.xauth) > 0)
 			{
 				return str;
 			}
