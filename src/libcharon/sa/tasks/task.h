@@ -159,11 +159,6 @@ struct task_t {
 	 * Destroys a task_t object.
 	 */
 	void (*destroy) (task_t *this);
-
-	/**
-	 * Swaps the initiator flag in a task (if applicable, NULL OK)
-	 */
-	void (*swap_initiator) (task_t *this);
 };
 
 #endif /** TASK_H_ @}*/
