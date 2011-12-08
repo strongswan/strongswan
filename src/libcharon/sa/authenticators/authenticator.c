@@ -34,7 +34,15 @@ ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_ECDSA_521, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
 	"ECDSA-521 signature");
-ENUM_END(auth_method_names, AUTH_ECDSA_521);
+ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_ECDSA_521,
+	"XAuthInitPSK",
+	"XAuthRespPSK",
+	"XAuthInitRSA",
+	"XauthRespRSA",
+	"HybridInitRSA",
+	"HybridRespRSA",
+);
+ENUM_END(auth_method_names, AUTH_HYBRID_RESP_RSA);
 
 /**
  * Described in header.
