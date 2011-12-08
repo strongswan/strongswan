@@ -50,7 +50,6 @@
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
-#include <sa/tasks/xauth_request.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/send_dpd_job.h>
@@ -1021,18 +1020,6 @@ METHOD(ike_sa_t, initiate_mediated, status_t,
 }
 #endif /* ME */
 
-METHOD(ike_sa_t, initiate_xauth, status_t,
-	private_ike_sa_t *this, bool initiate)
-{
-	xauth_request_t *task = xauth_request_create(&this->public, TRUE);
-	this->task_manager->queue_task(this->task_manager, (task_t*)task);
-	if(initiate)
-	{
-		return this->task_manager->initiate(this->task_manager);
-	}
-	return SUCCESS;
-}
-
 /**
  * Resolve DNS host in configuration
  */
@@ -1839,6 +1826,12 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
+METHOD(ike_sa_t, queue_task, void,
+	private_ike_sa_t *this, task_t *task)
+{
+	this->task_manager->queue_task(this->task_manager, task);
+}
+
 METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
@@ -2095,6 +2088,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
+			.queue_task = _queue_task,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
 			.get_server_reflexive_host = _get_server_reflexive_host,
@@ -2106,7 +2100,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.callback = _callback,
 			.respond = _respond,
 #endif /* ME */
-			.initiate_xauth = _initiate_xauth,
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,

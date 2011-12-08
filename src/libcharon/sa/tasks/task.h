@@ -71,6 +71,8 @@ enum task_type_t {
 	TASK_CHILD_REKEY,
 	/** IKEv1 main mode */
 	TASK_MAIN_MODE,
+	/** IKEv1 XAUTH authentication */
+	TASK_XAUTH,
 	/** IKEv1 quick mode */
 	TASK_QUICK_MODE,
 	/** IKEv1 vendor ID payload handling */
@@ -81,8 +83,6 @@ enum task_type_t {
 	TASK_IKE_CERT_PRE_V1,
 	/** IKEv1 post-authentication certificate handling */
 	TASK_IKE_CERT_POST_V1,
-	/** Request the user/pass with XAUTH */
-	TASK_XAUTH_REQUEST,
 };
 
 /**

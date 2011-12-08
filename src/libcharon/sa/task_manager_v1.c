@@ -22,7 +22,7 @@
 #include <sa/tasks/child_delete.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
-#include <sa/tasks/xauth_request.h>
+#include <sa/tasks/xauth.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
@@ -280,7 +280,7 @@ METHOD(task_manager_t, initiate, status_t,
 				}
 				break;
 			case IKE_CONNECTING:
-				if (activate_task(this, TASK_XAUTH_REQUEST))
+				if (activate_task(this, TASK_XAUTH))
 				{
 					exchange = TRANSACTION;
 					new_mid = TRUE;
@@ -313,7 +313,7 @@ METHOD(task_manager_t, initiate, status_t,
 				case TASK_QUICK_MODE:
 					exchange = QUICK_MODE;
 					break;
-				case TASK_XAUTH_REQUEST:
+				case TASK_XAUTH:
 					exchange = TRANSACTION;
 					new_mid = TRUE;
 					break;
@@ -648,7 +648,7 @@ static status_t process_request(private_task_manager_t *this,
 				enumerator->destroy(enumerator);
 				break;
 			case TRANSACTION:
-				task = (task_t *)xauth_request_create(this->ike_sa, FALSE);
+				task = (task_t *)xauth_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			default:
@@ -688,7 +688,17 @@ static status_t process_request(private_task_manager_t *this,
 
 	if (send_response)
 	{
-		return build_response(this, message);
+		if (build_response(this, message) != SUCCESS)
+		{
+			return DESTROY_ME;
+		}
+	}
+	if (this->passive_tasks->get_count(this->passive_tasks) == 0 &&
+		this->queued_tasks->get_count(this->queued_tasks) > 0)
+	{
+		/* passive tasks completed, check if an active task has been queued,
+		 * such as XAUTH or modeconfig push */
+		return initiate(this);
 	}
 	return SUCCESS;
 }

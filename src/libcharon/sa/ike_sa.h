@@ -37,6 +37,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
+#include <sa/tasks/task.h>
 #include <sa/task_manager.h>
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
@@ -952,6 +953,13 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Queue a task for initiaton to the task manager.
+	 *
+	 * @param task			task to queue
+	 */
+	void (*queue_task)(ike_sa_t *this, task_t *task);
+
+	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
@@ -971,11 +979,6 @@ struct ike_sa_t {
 	 * Destroys a ike_sa_t object.
 	 */
 	void (*destroy) (ike_sa_t *this);
-
-	/**
-	 * Initiate an XAuth authentication exchange.
-	 */
-	status_t (*initiate_xauth) (ike_sa_t *this, bool initiate);
 };
 
 /**

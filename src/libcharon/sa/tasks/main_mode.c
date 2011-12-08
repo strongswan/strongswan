@@ -28,7 +28,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/hash_payload.h>
-#include <processing/jobs/initiate_xauth_job.h>
+#include <sa/tasks/xauth.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -738,6 +738,21 @@ METHOD(task_t, build_r, status_t,
 				return FAILED;
 			}
 
+			switch (this->auth_method)
+			{
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_INIT_RSA:
+					this->ike_sa->queue_task(this->ike_sa,
+									(task_t*)xauth_create(this->ike_sa, TRUE));
+					return SUCCESS;
+				case AUTH_XAUTH_RESP_PSK:
+				case AUTH_XAUTH_RESP_RSA:
+					/* TODO-IKEv1: not yet supported */
+					return FAILED;
+				default:
+					break;
+			}
+
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
@@ -746,27 +761,9 @@ METHOD(task_t, build_r, status_t,
 				 this->ike_sa->get_other_host(this->ike_sa),
 				 this->ike_sa->get_other_id(this->ike_sa));
 
-			switch (this->auth_method)
-			{
-				case AUTH_XAUTH_INIT_PSK:
-				case AUTH_XAUTH_INIT_RSA: /* There should be more INIT cases here once added */
-				{
-					job_t *job = (job_t *) initiate_xauth_job_create(this->ike_sa->get_id(this->ike_sa));
-					lib->processor->queue_job(lib->processor, job);
-					break;
-				}
-				case AUTH_XAUTH_RESP_PSK:
-				case AUTH_XAUTH_RESP_RSA: /* There should be more RESP cases here once added */
-				{
-					break;
-				}
-				default:
-				{
-					this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-					charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-					break;
-				}
-			}
+			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
 			return SUCCESS;
 		}
 		default:
@@ -858,7 +855,20 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 			}
 
-			/* TODO-IKEv1: check for XAUTH rounds, queue them */
+			switch (this->auth_method)
+			{
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_INIT_RSA:
+					/* TODO-IKEv1: wait for XAUTH request */
+					return SUCCESS;
+				case AUTH_XAUTH_RESP_PSK:
+				case AUTH_XAUTH_RESP_RSA:
+					/* TODO-IKEv1: not yet */
+					return FAILED;
+				default:
+					break;
+			}
+
 			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
@@ -867,26 +877,8 @@ METHOD(task_t, process_i, status_t,
 				 this->ike_sa->get_other_host(this->ike_sa),
 				 this->ike_sa->get_other_id(this->ike_sa));
 
-			switch (this->auth_method)
-			{
-				case AUTH_XAUTH_RESP_PSK:
-				case AUTH_XAUTH_RESP_RSA: /* There should be more RESP cases here once added */
-				{
-					this->ike_sa->initiate_xauth(this->ike_sa, FALSE);
-					break;
-				}
-				case AUTH_XAUTH_INIT_PSK:
-				case AUTH_XAUTH_INIT_RSA: /* There should be more INIT cases here once added */
-				{
-					break;
-				}
-				default:
-				{
-					this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-					charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-					break;
-				}
-			}
+			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
 
 			return SUCCESS;
 		}

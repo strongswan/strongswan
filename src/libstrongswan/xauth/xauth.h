@@ -18,8 +18,8 @@
  * @{ @ingroup libstrongswan
  */
 
-#ifndef XAUTH_H_
-#define XAUTH_H_
+#ifndef XAUTH_H__
+#define XAUTH_H__
 
 typedef enum xauth_type_t xauth_type_t;
 

@@ -57,7 +57,6 @@ processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
-processing/jobs/initiate_xauth_job.c processing/jobs/initiate_xauth_job.h \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
@@ -100,8 +99,8 @@ sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/ike_vendor_v1.c sa/tasks/ike_vendor_v1.h \
 sa/tasks/main_mode.c sa/tasks/main_mode.h \
+sa/tasks/xauth.c sa/tasks/xauth.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
-sa/tasks/xauth_request.c sa/tasks/xauth_request.h \
 sa/tasks/task.c sa/tasks/task.h
 
 
