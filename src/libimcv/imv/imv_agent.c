@@ -39,9 +39,14 @@ struct private_imv_agent_t {
 	const char *name;
 
 	/**
-	 * message type of IMV
+	 * message vendor ID of IMV
 	 */
-	TNC_MessageType type;
+	TNC_VendorID vendor_id;
+
+	/**
+	 * message subtype of IMV
+	 */
+	TNC_MessageSubtype subtype;
 
 	/**
 	 * ID of IMV as assigned by TNCS
@@ -59,7 +64,7 @@ struct private_imv_agent_t {
 	rwlock_t *connection_lock;
 
 	/**
-	 * Inform a TNCS about the set of message types the IMV is able to receive 
+	 * Inform a TNCS about the set of message types the IMV is able to receive
 	 *
 	 * @param imv_id			IMV ID assigned by TNCS
 	 * @param supported_types	list of supported message types
@@ -69,6 +74,20 @@ struct private_imv_agent_t {
 	TNC_Result (*report_message_types)(TNC_IMVID imv_id,
 									   TNC_MessageTypeList supported_types,
 									   TNC_UInt32 type_count);
+
+	/**
+	 * Inform a TNCS about the set of message types the IMV is able to receive
+	 *
+	 * @param imv_id				IMV ID assigned by TNCS
+	 * @param supported_vids		list of supported message vendor IDs
+	 * @param supported_subtypes	list of supported message subtypes
+	 * @param type_count			number of list elements
+	 * @return						TNC result code
+	 */
+	TNC_Result (*report_message_types_long)(TNC_IMVID imv_id,
+									TNC_VendorIDList supported_vids,
+									TNC_MessageSubtypeList supported_subtypes,
+									TNC_UInt32 type_count);
 
 	/**
 	 * Call when an IMV-IMC message is to be sent
@@ -150,6 +169,11 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 	{
 		this->report_message_types = NULL;
 	}
+	if (bind_function(this->id, "TNC_TNCS_ReportMessageTypesLong",
+			(void**)&this->report_message_types_long) != TNC_RESULT_SUCCESS)
+	{
+		this->report_message_types_long = NULL;
+	}
 	if (bind_function(this->id, "TNC_TNCS_RequestHandshakeRetry",
 			(void**)&this->public.request_handshake_retry) != TNC_RESULT_SUCCESS)
 	{
@@ -178,9 +202,19 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 	DBG2(DBG_IMV, "IMV %u \"%s\" provided with bind function",
 				  this->id, this->name);
 
-	if (this->report_message_types)
+	if (this->report_message_types_long)
 	{
-		this->report_message_types(this->id, &this->type, 1);
+		this->report_message_types_long(this->id, &this->vendor_id,
+										&this->subtype, 1);
+	}
+	else if (this->report_message_types &&
+			 this->vendor_id <= TNC_VENDORID_ANY &&
+			 this->subtype <= TNC_SUBTYPE_ANY)
+	{
+		TNC_MessageType type;
+
+		type = (this->vendor_id << 8) | this->subtype;
+		this->report_message_types(this->id, &type, 1);
 	}
 	return TNC_RESULT_SUCCESS;
 }
@@ -335,12 +369,14 @@ METHOD(imv_agent_t, get_state, bool,
 METHOD(imv_agent_t, send_message, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id, chunk_t msg)
 {
+	TNC_MessageType type;
+
 	if (!this->send_message)
 	{
 		return TNC_RESULT_FATAL;
 	}
-	return this->send_message(this->id, connection_id, msg.ptr, msg.len,
-							  this->type);
+	type = (this->vendor_id << 8) | this->subtype;
+	return this->send_message(this->id, connection_id, msg.ptr, msg.len, type);
 }
 
 METHOD(imv_agent_t, set_recommendation, TNC_Result,
@@ -513,7 +549,8 @@ imv_agent_t *imv_agent_create(const char *name,
 			.destroy = _destroy,
 		},
 		.name = name,
-		.type = (vendor_id << 8) | (subtype & 0xff),
+		.vendor_id = vendor_id,
+		.subtype = subtype,
 		.id = id,
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
