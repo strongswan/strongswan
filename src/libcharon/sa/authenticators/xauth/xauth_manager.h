@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -38,34 +38,32 @@ struct xauth_manager_t {
 	/**
 	 * Register a XAuth method implementation.
 	 *
-	 * @param method		vendor specific method, if vendor != 0
-	 * @param vendor		vendor ID, 0 for non-vendor (default) XAuth methods
-	 * @param role			XAuth role of the registered method
+	 * @param name			backend name to register
+	 * @param role			XAUTH_SERVER or XAUTH_PEER
 	 * @param constructor	constructor function, returns an xauth_method_t
 	 */
-	void (*add_method)(xauth_manager_t *this, xauth_type_t type, u_int32_t vendor,
+	void (*add_method)(xauth_manager_t *this, char *name,
 					   xauth_role_t role, xauth_constructor_t constructor);
 
 	/**
 	 * Unregister a XAuth method implementation using it's constructor.
 	 *
-	 * @param constructor	constructor function to remove, as added in add_method
+	 * @param constructor	constructor function, as added in add_method
 	 */
 	void (*remove_method)(xauth_manager_t *this, xauth_constructor_t constructor);
 
 	/**
 	 * Create a new XAuth method instance.
 	 *
-	 * @param vendor		vendor ID, 0 for non-vendor (default) XAuth methods
-	 * @param role			role of XAuth method, either XAUTH_SERVER or XAUTH_PEER
+	 * @param name			backend name, as it was registered with
+	 * @param role			XAUTH_SERVER or XAUTH_PEER
 	 * @param server		identity of the server
 	 * @param peer			identity of the peer (client)
 	 * @return				XAUTH method instance, NULL if no constructor found
 	 */
-	xauth_method_t* (*create_instance)(xauth_manager_t *this, xauth_type_t type,
-									 u_int32_t vendor, xauth_role_t role,
-									 identification_t *server,
-									 identification_t *peer);
+	xauth_method_t* (*create_instance)(xauth_manager_t *this,
+							char *name, xauth_role_t role,
+							identification_t *server, identification_t *peer);
 
 	/**
 	 * Destroy a eap_manager instance.
@@ -78,4 +76,4 @@ struct xauth_manager_t {
  */
 xauth_manager_t *xauth_manager_create();
 
-#endif /** EAP_MANAGER_H_ @}*/
+#endif /** XAUTH_MANAGER_H_ @}*/

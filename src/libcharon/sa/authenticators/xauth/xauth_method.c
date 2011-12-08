@@ -30,9 +30,9 @@ bool xauth_method_register(plugin_t *plugin, plugin_feature_t *feature,
 {
 	if (reg)
 	{
-		charon->xauth->add_method(charon->xauth, feature->arg.xauth, 0,
-					feature->type == FEATURE_XAUTH_SERVER ? XAUTH_SERVER : XAUTH_PEER,
-					(xauth_constructor_t)data);
+		charon->xauth->add_method(charon->xauth, feature->arg.xauth,
+			feature->type == FEATURE_XAUTH_SERVER ? XAUTH_SERVER : XAUTH_PEER,
+			(xauth_constructor_t)data);
 	}
 	else
 	{

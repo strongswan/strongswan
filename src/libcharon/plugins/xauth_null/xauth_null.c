@@ -72,12 +72,6 @@ METHOD(xauth_method_t, initiate_server, status_t,
 	return NEED_MORE;
 }
 
-METHOD(xauth_method_t, get_type, xauth_type_t,
-	private_xauth_null_t *this, u_int32_t *vendor)
-{
-	return XAUTH_NULL;
-}
-
 METHOD(xauth_method_t, destroy, void,
 	private_xauth_null_t *this)
 {
@@ -89,7 +83,7 @@ METHOD(xauth_method_t, destroy, void,
  * Described in header.
  */
 xauth_null_t *xauth_null_create_peer(identification_t *server,
-										 identification_t *peer)
+									 identification_t *peer)
 {
 	private_xauth_null_t *this;
 
@@ -98,7 +92,6 @@ xauth_null_t *xauth_null_create_peer(identification_t *server,
 			.xauth_method = {
 				.initiate = _initiate_peer,
 				.process = _process_peer,
-				.get_type = _get_type,
 				.destroy = _destroy,
 			},
 		},
@@ -121,7 +114,6 @@ xauth_null_t *xauth_null_create_server(identification_t *server,
 			.xauth_method = {
 				.initiate = _initiate_server,
 				.process = _process_server,
-				.get_type = _get_type,
 				.destroy = _destroy,
 			},
 		},

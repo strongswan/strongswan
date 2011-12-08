@@ -44,7 +44,7 @@ struct xauth_null_t {
  * @return			xauth_null_t object
  */
 xauth_null_t *xauth_null_create_server(identification_t *server,
-										   identification_t *peer);
+									   identification_t *peer);
 
 /**
  * Creates the XAuth method XAuth NULL, acting as peer.
@@ -54,6 +54,6 @@ xauth_null_t *xauth_null_create_server(identification_t *server,
  * @return			xauth_null_t object
  */
 xauth_null_t *xauth_null_create_peer(identification_t *server,
-										 identification_t *peer);
+									 identification_t *peer);
 
 #endif /** XAUTH_NULL_H_ @}*/

@@ -28,7 +28,6 @@ typedef enum xauth_role_t xauth_role_t;
 #include <plugins/plugin.h>
 #include <utils/identification.h>
 #include <encoding/payloads/cp_payload.h>
-#include <xauth/xauth.h>
 
 /**
  * Role of an xauth_method, SERVER or PEER (client)
@@ -37,6 +36,7 @@ enum xauth_role_t {
 	XAUTH_SERVER,
 	XAUTH_PEER,
 };
+
 /**
  * enum names for xauth_role_t.
  */
@@ -46,12 +46,8 @@ extern enum_name_t *xauth_role_names;
  * Interface of an XAuth method for server and client side.
  *
  * An XAuth method initiates an XAuth exchange and processes requests and
- * responses. An XAuth method may need multiple exchanges before succeeding, and
- * the xauth_authentication may use multiple XAuth methods to authenticate a peer.
- * To accomplish these requirements, all XAuth methods have their own
- * implementation while the xauth_authenticatior uses one or more of these
- * XAuth methods. Sending of XAUTH(STATUS) message is not the job
- * of the method, the xauth_authenticator does this.
+ * responses. An XAuth method may need multiple exchanges before succeeding.
+ * Sending of XAUTH(STATUS) message is done by the framework, not a method.
  */
 struct xauth_method_t {
 
@@ -85,14 +81,6 @@ struct xauth_method_t {
 						 cp_payload_t **out);
 
 	/**
-	 * Get the XAuth type implemented in this method.
-	 *
-	 * @param vendor	pointer receiving vendor identifier for type, 0 for none
-	 * @return			type of the XAuth method
-	 */
-	xauth_type_t (*get_type) (xauth_method_t *this, u_int32_t *vendor);
-
-	/**
 	 * Destroys a eap_method_t object.
 	 */
 	void (*destroy) (xauth_method_t *this);
@@ -106,8 +94,6 @@ struct xauth_method_t {
  * Constructors for server and peers are identical, to support both roles
  * of a XAuth method, a plugin needs register two constructors in the
  * xauth_manager_t.
- * The passed identites are of type ID_EAP and valid only during the
- * constructor invocation.
  *
  * @param server		ID of the server to use for credential lookup
  * @param peer			ID of the peer to use for credential lookup
@@ -128,6 +114,6 @@ typedef xauth_method_t *(*xauth_constructor_t)(identification_t *server,
  * @param data			data passed to callback, an xauth_constructor_t
  */
 bool xauth_method_register(plugin_t *plugin, plugin_feature_t *feature,
-						 bool reg, void *data);
+						   bool reg, void *data);
 
 #endif /** XAUTH_METHOD_H_ @}*/

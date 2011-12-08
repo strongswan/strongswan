@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,17 +27,12 @@ typedef struct xauth_entry_t xauth_entry_t;
 struct xauth_entry_t {
 
 	/**
-	 * XAuth method type, vendor specific if vendor is set
+	 * Xauth backend name
 	 */
-	xauth_type_t type;
+	char *name;
 
 	/**
-	 * vendor ID, 0 for default XAuth methods
-	 */
-	u_int32_t vendor;
-
-	/**
-	 * Role of the method returned by the constructor, XAUTH_SERVER or XAUTH_PEER
+	 * Role of the method, XAUTH_SERVER or XAUTH_PEER
 	 */
 	xauth_role_t role;
 
@@ -69,15 +64,16 @@ struct private_xauth_manager_t {
 };
 
 METHOD(xauth_manager_t, add_method, void,
-	private_xauth_manager_t *this, xauth_type_t type, u_int32_t vendor,
-	xauth_role_t role, xauth_constructor_t constructor)
+	private_xauth_manager_t *this, char *name, xauth_role_t role,
+	xauth_constructor_t constructor)
 {
-	xauth_entry_t *entry = malloc_thing(xauth_entry_t);
+	xauth_entry_t *entry;
 
-	entry->type = type;
-	entry->vendor = vendor;
-	entry->role = role;
-	entry->constructor = constructor;
+	INIT(entry,
+		.name = name,
+		.role = role,
+		.constructor = constructor,
+	);
 
 	this->lock->write_lock(this->lock);
 	this->methods->insert_last(this->methods, entry);
@@ -105,8 +101,8 @@ METHOD(xauth_manager_t, remove_method, void,
 }
 
 METHOD(xauth_manager_t, create_instance, xauth_method_t*,
-	private_xauth_manager_t *this, xauth_type_t type, u_int32_t vendor,
-	xauth_role_t role, identification_t *server, identification_t *peer)
+	private_xauth_manager_t *this, char *name, xauth_role_t role,
+	identification_t *server, identification_t *peer)
 {
 	enumerator_t *enumerator;
 	xauth_entry_t *entry;
@@ -116,8 +112,7 @@ METHOD(xauth_manager_t, create_instance, xauth_method_t*,
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (type == entry->type && vendor == entry->vendor &&
-			role == entry->role)
+		if (streq(name, entry->name) && role == entry->role)
 		{
 			method = entry->constructor(server, peer);
 			if (method)
@@ -147,14 +142,14 @@ xauth_manager_t *xauth_manager_create()
 	private_xauth_manager_t *this;
 
 	INIT(this,
-			.public = {
-				.add_method = _add_method,
-				.remove_method = _remove_method,
-				.create_instance = _create_instance,
-				.destroy = _destroy,
-			},
-			.methods = linked_list_create(),
-			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.public = {
+			.add_method = _add_method,
+			.remove_method = _remove_method,
+			.create_instance = _create_instance,
+			.destroy = _destroy,
+		},
+		.methods = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;

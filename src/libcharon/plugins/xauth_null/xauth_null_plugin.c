@@ -29,9 +29,9 @@ METHOD(plugin_t, get_features, int,
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(xauth_method_register, xauth_null_create_server),
-			PLUGIN_PROVIDE(XAUTH_SERVER, XAUTH_NULL),
+			PLUGIN_PROVIDE(XAUTH_SERVER, "null"),
 		PLUGIN_CALLBACK(xauth_method_register, xauth_null_create_peer),
-			PLUGIN_PROVIDE(XAUTH_PEER, XAUTH_NULL),
+			PLUGIN_PROVIDE(XAUTH_PEER, "null"),
 	};
 	*features = f;
 	return countof(f);
