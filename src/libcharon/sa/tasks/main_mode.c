@@ -254,24 +254,103 @@ static bool get_nonce_ke(private_main_mode_t *this, chunk_t *nonce,
 }
 
 /**
- * Get auth method to use
+ * Get the two auth classes from local or remote config
  */
-static auth_method_t get_auth_method(private_main_mode_t *this)
+static void get_auth_class(peer_cfg_t *peer_cfg, bool local,
+						   auth_class_t *c1, auth_class_t *c2)
 {
-	switch ((uintptr_t)this->my_auth->get(this->my_auth, AUTH_RULE_AUTH_CLASS))
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+
+	*c1 = *c2 = AUTH_CLASS_ANY;
+
+	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
+	while (enumerator->enumerate(enumerator, &auth))
 	{
-		case AUTH_CLASS_PSK:
-			return AUTH_PSK;
-		case AUTH_CLASS_XAUTH_PSK:
-			return AUTH_XAUTH_INIT_PSK;
-		case AUTH_CLASS_XAUTH_PUBKEY:
-			return AUTH_XAUTH_INIT_RSA;
-		case AUTH_CLASS_PUBKEY:
-			/* TODO-IKEv1: look for a key, return RSA or ECDSA */
-		default:
-			/* TODO-IKEv1: XAUTH methods */
-			return AUTH_RSA;
+		if (*c1 == AUTH_CLASS_ANY)
+		{
+			*c1 = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
+		}
+		else
+		{
+			*c2 = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
+			break;
+		}
 	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Get auth method to use from a peer config
+ */
+static auth_method_t get_auth_method(private_main_mode_t *this,
+									 peer_cfg_t *peer_cfg)
+{
+	auth_class_t i1, i2, r1, r2;
+
+	get_auth_class(peer_cfg, this->initiator, &i1, &i2);
+	get_auth_class(peer_cfg, !this->initiator, &r1, &r2);
+
+	if (i1 == AUTH_CLASS_PUBKEY && r1 == AUTH_CLASS_PUBKEY)
+	{
+		if (i2 == AUTH_CLASS_ANY && r2 == AUTH_CLASS_ANY)
+		{
+			/* TODO-IKEv1: ECDSA? */
+			return AUTH_RSA;
+		}
+		if (i2 == AUTH_CLASS_XAUTH)
+		{
+			return AUTH_XAUTH_INIT_RSA;
+		}
+		if (r2 == AUTH_CLASS_XAUTH)
+		{
+			return AUTH_XAUTH_RESP_RSA;
+		}
+	}
+	if (i1 == AUTH_CLASS_PSK && r2 == AUTH_CLASS_PSK)
+	{
+		if (i2 == AUTH_CLASS_ANY && r2 == AUTH_CLASS_ANY)
+		{
+			return AUTH_PSK;
+		}
+		if (i2 == AUTH_CLASS_XAUTH)
+		{
+			return AUTH_XAUTH_INIT_PSK;
+		}
+		if (r2 == AUTH_CLASS_XAUTH)
+		{
+			return AUTH_XAUTH_RESP_PSK;
+		}
+	}
+	/* TODO-IKEv1: Hybrid methods? */
+	return AUTH_NONE;;
+}
+
+/**
+ * Select the best configuration as responder
+ */
+static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id)
+{
+	enumerator_t *enumerator;
+	identification_t *any;
+	peer_cfg_t *current, *found = NULL;
+
+	any = identification_create_from_encoding(ID_ANY, chunk_empty);
+	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+						this->ike_sa->get_my_host(this->ike_sa),
+						this->ike_sa->get_other_host(this->ike_sa), any, id);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (get_auth_method(this, current) == this->auth_method)
+		{
+			found = current->get_ref(current);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	any->destroy(any);
+
+	return found;
 }
 
 /**
@@ -392,9 +471,12 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_CFG, "no auth config found");
 				return FAILED;
 			}
-
-			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
-			this->auth_method = get_auth_method(this);
+			this->auth_method = get_auth_method(this, this->peer_cfg);
+			if (this->auth_method == AUTH_NONE)
+			{
+				DBG1(DBG_CFG, "configuration uses unsupported authentication");
+				return FAILED;
+			}
 			this->lifetime = this->peer_cfg->get_reauth_time(this->peer_cfg,
 															FALSE);
 			if (!this->lifetime)
@@ -402,6 +484,7 @@ METHOD(task_t, build_i, status_t,
 				this->lifetime = this->peer_cfg->get_rekey_time(this->peer_cfg,
 																 FALSE);
 			}
+			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
 			sa_payload = sa_payload_create_from_proposals_v1(proposals,
 						this->lifetime, 0, this->auth_method, MODE_NONE, FALSE);
 			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
@@ -555,9 +638,8 @@ METHOD(task_t, process_r, status_t,
 		}
 		case MM_KE:
 		{
-			enumerator_t *enumerator;
 			id_payload_t *id_payload;
-			identification_t *id, *any;
+			identification_t *id;
 
 			id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 			if (!id_payload)
@@ -567,26 +649,13 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			id = id_payload->get_identification(id_payload);
-			any = identification_create_from_encoding(ID_ANY, chunk_empty);
-			enumerator = charon->backends->create_peer_cfg_enumerator(
-									charon->backends,
-									this->ike_sa->get_my_host(this->ike_sa),
-									this->ike_sa->get_other_host(this->ike_sa),
-									any, id);
-			if (!enumerator->enumerate(enumerator, &this->peer_cfg))
+			this->ike_sa->set_other_id(this->ike_sa, id);
+			this->peer_cfg = select_config(this, id);
+			if (!this->peer_cfg)
 			{
 				DBG1(DBG_IKE, "no peer config found");
-				id->destroy(id);
-				any->destroy(any);
-				enumerator->destroy(enumerator);
 				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
-			this->peer_cfg->get_ref(this->peer_cfg);
-			enumerator->destroy(enumerator);
-			any->destroy(any);
-
-			this->ike_sa->set_other_id(this->ike_sa, id);
-
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 
 			this->my_auth = get_auth_cfg(this, TRUE);
