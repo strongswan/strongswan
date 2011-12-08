@@ -279,14 +279,11 @@ METHOD(imv_t, set_message_types_long, void,
 }
 
 METHOD(imv_t, type_supported, bool,
-	private_tnc_imv_t *this, TNC_MessageType message_type)
+	private_tnc_imv_t *this, TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype)
 {
-	TNC_VendorID msg_vid, vid;
-	TNC_MessageSubtype msg_subtype, subtype;
+	TNC_VendorID vid;
+	TNC_MessageSubtype subtype;
 	int i;
-
-	msg_vid = (message_type >> 8) & TNC_VENDORID_ANY;
-	msg_subtype = message_type & TNC_SUBTYPE_ANY;
 
 	for (i = 0; i < this->type_count; i++)
 	{

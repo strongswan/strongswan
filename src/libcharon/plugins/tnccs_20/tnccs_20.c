@@ -167,39 +167,44 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 		case PB_MSG_PA:
 		{
 			pb_pa_msg_t *pa_msg;
-			TNC_MessageType msg_type;
-			u_int32_t vendor_id, subtype;
+			u_int32_t msg_vid, msg_subtype;
+			u_int16_t imc_id, imv_id;
 			chunk_t msg_body;
+			bool excl;
 			enum_name_t *pa_subtype_names;
 
 			pa_msg = (pb_pa_msg_t*)msg;
-			vendor_id = pa_msg->get_vendor_id(pa_msg, &subtype);
-			msg_type = (vendor_id << 8) | (subtype & 0xff);
+			msg_vid = pa_msg->get_vendor_id(pa_msg, &msg_subtype);
 			msg_body = pa_msg->get_body(pa_msg);
+			imc_id = pa_msg->get_collector_id(pa_msg);
+			imv_id = pa_msg->get_validator_id(pa_msg);
+			excl = pa_msg->get_exclusive_flag(pa_msg);
 
-			pa_subtype_names = get_pa_subtype_names(vendor_id);
+			pa_subtype_names = get_pa_subtype_names(msg_vid);
 			if (pa_subtype_names)
 			{
 				DBG2(DBG_TNC, "handling PB-PA message type '%N/%N' 0x%06x/0x%08x",
-					 pen_names, vendor_id, pa_subtype_names, subtype,
-			 		 vendor_id, subtype);
+					 pen_names, msg_vid, pa_subtype_names, msg_subtype,
+					 msg_vid, msg_subtype);
 			}
 			else
 			{
 				DBG2(DBG_TNC, "handling PB-PA message type '%N' 0x%06x/0x%08x",
-					 pen_names, vendor_id, vendor_id, subtype);
+					 pen_names, msg_vid, msg_vid, msg_subtype);
 			}
 
 			this->send_msg = TRUE;
 			if (this->is_server)
 			{
-				tnc->imvs->receive_message(tnc->imvs,
-				this->connection_id, msg_body.ptr, msg_body.len, msg_type);
+				tnc->imvs->receive_message(tnc->imvs, this->connection_id,
+										   excl, msg_body.ptr, msg_body.len,
+										   msg_vid, msg_subtype, imc_id, imv_id);
 			}
 			else
 			{
-				tnc->imcs->receive_message(tnc->imcs,
-				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
+				tnc->imcs->receive_message(tnc->imcs, this->connection_id,
+										   excl, msg_body.ptr, msg_body.len,
+										   msg_vid, msg_subtype, imv_id, imc_id);
 			}
 			this->send_msg = FALSE;
 			break;

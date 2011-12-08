@@ -149,16 +149,24 @@ struct imv_manager_t {
 	/**
 	 * Delivers a message to interested IMVs.
 	 *
-	 * @param connection_id		ID of connection over which message was received
-	 * @param message			message
-	 * @param message_len		message length
-	 * @param message_type		message type
+	 * @param connection_id			connection ID
+	 * @param excl					exclusive message flag
+	 * @param msg					message
+	 * @param msg_len				message length
+	 * @param msg_vid				message Vendor ID
+	 * @param msg_subtype			message subtype
+	 * @param src_imc_id			source IMC ID
+	 * @param dst_imv_id			destination IMV ID
 	 */
 	void (*receive_message)(imv_manager_t *this,
 							TNC_ConnectionID connection_id,
-							TNC_BufferReference message,
-							TNC_UInt32 message_len,
-							TNC_MessageType message_type);
+							bool excl,
+							TNC_BufferReference msg,
+							TNC_UInt32 msg_len,
+							TNC_VendorID msg_vid,
+							TNC_MessageSubtype msg_subtype,
+							TNC_UInt32 src_imc_id,
+							TNC_UInt32 dst_imv_id);
 
 	/**
 	 * Notify all IMVs that all IMC messages received in a batch have been

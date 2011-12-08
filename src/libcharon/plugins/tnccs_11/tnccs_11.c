@@ -160,38 +160,40 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 			imc_imv_msg_t *imc_imv_msg;
 			TNC_MessageType msg_type;
 			chunk_t msg_body;
-			u_int32_t vendor_id, subtype;
+			u_int32_t msg_vid, msg_subtype;
 			enum_name_t *pa_subtype_names;
 
 			imc_imv_msg = (imc_imv_msg_t*)msg;
 			msg_type = imc_imv_msg->get_msg_type(imc_imv_msg);
 			msg_body = imc_imv_msg->get_msg_body(imc_imv_msg);
-			vendor_id = msg_type >> 8;
-			subtype = msg_type & 0xff;
+			msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
+			msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
-			pa_subtype_names = get_pa_subtype_names(vendor_id);
+			pa_subtype_names = get_pa_subtype_names(msg_vid);
 			if (pa_subtype_names)
 			{
 				DBG2(DBG_TNC, "handling IMC-IMV message type '%N/%N' 0x%06x/0x%02x",
-					 pen_names, vendor_id, pa_subtype_names, subtype,
-			 		 vendor_id, subtype);
+					 pen_names, msg_vid, pa_subtype_names, msg_subtype,
+					 msg_vid, msg_subtype);
 			}
 			else
 			{
 				DBG2(DBG_TNC, "handling IMC-IMV message type '%N' 0x%06x/0x%02x",
-					 pen_names, vendor_id, vendor_id, subtype);
+					 pen_names, msg_vid, msg_vid, msg_subtype);
 			}
 
 			this->send_msg = TRUE;
 			if (this->is_server)
 			{
-				tnc->imvs->receive_message(tnc->imvs,
-				this->connection_id, msg_body.ptr, msg_body.len, msg_type);
+				tnc->imvs->receive_message(tnc->imvs, this->connection_id,
+										   FALSE, msg_body.ptr, msg_body.len,
+										   msg_vid, msg_subtype, 0, TNC_IMVID_ANY);
 			}
 			else
 			{
-				tnc->imcs->receive_message(tnc->imcs,
-				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
+				tnc->imcs->receive_message(tnc->imcs, this->connection_id,
+										   FALSE, msg_body.ptr, msg_body.len,
+										   msg_vid, msg_subtype, 0, TNC_IMCID_ANY);
 			}
 			this->send_msg = FALSE;
 			break;

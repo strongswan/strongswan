@@ -96,6 +96,33 @@ struct imv_t {
 								  TNC_MessageType messageType);
 
 	/**
+	 * The TNC Server calls this function to deliver a message to the IMV.
+	 * The message is contained in the buffer referenced by message and contains
+	 * the number of octets indicated by messageLength. The type of the message
+	 * is indicated by the message Vendor ID and message subtype.
+	 *
+	 * @param imvID					IMV ID assigned by TNCS
+	 * @param connectionID			network connection ID assigned by TNCS
+	 * @param messageFlags			message flags
+	 * @param message				reference to buffer containing message
+	 * @param messageLength			number of octets in message
+	 * @param messageVendorID		message Vendor ID
+	 * @param messageSubtype		message subtype
+	 * @param sourceIMCID			source IMC ID
+	 * @param destinationIMVID		destination IMV ID
+	 * @return						TNC result code
+	 */
+	TNC_Result (*receive_message_long)(TNC_IMVID imvID,
+									   TNC_ConnectionID connectionID,
+									   TNC_UInt32 messageFlags,
+									   TNC_BufferReference message,
+									   TNC_UInt32 messageLength,
+									   TNC_VendorID messageVendorID,
+									   TNC_MessageSubtype messageSubtype,
+									   TNC_UInt32 sourceIMCID,
+									   TNC_UInt32 destinationIMVID);
+
+	/**
 	 * The TNC Server calls this function to notify IMVs that all IMC messages
 	 * received in a batch have been delivered and this is the IMV’s last chance
 	 * to send a message in the batch of IMV messages currently being collected.
@@ -187,10 +214,12 @@ struct imv_t {
 	/**
 	 * Check if the IMV supports a given message type.
 	 *
-	 * @param message_type			message type
+	 * @param msg_vid				message vendor ID
+	 * @param msg_subtype			message subtype
 	 * @return						TRUE if supported
 	 */
-	bool (*type_supported)(imv_t *this, TNC_MessageType message_type);
+	bool (*type_supported)(imv_t *this, TNC_VendorID msg_vid,
+										TNC_MessageSubtype msg_subtype);
 
 	/**
 	 * Destroys an imv_t object.

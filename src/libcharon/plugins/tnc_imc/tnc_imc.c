@@ -279,14 +279,11 @@ METHOD(imc_t, set_message_types_long, void,
 }
 
 METHOD(imc_t, type_supported, bool,
-	private_tnc_imc_t *this, TNC_MessageType message_type)
+	private_tnc_imc_t *this, TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype)
 {
-	TNC_VendorID msg_vid, vid;
-	TNC_MessageSubtype msg_subtype, subtype;
+	TNC_VendorID vid;
+	TNC_MessageSubtype subtype;
 	int i;
-
-    msg_vid = (message_type >> 8) & TNC_VENDORID_ANY;
-	msg_subtype = message_type & TNC_SUBTYPE_ANY;
 
 	for (i = 0; i < this->type_count; i++)
 	{
@@ -371,6 +368,8 @@ imc_t* tnc_imc_create(char *name, char *path)
 	}
     this->public.receive_message =
 						dlsym(this->handle, "TNC_IMC_ReceiveMessage");
+    this->public.receive_message_long =
+						dlsym(this->handle, "TNC_IMC_ReceiveMessageLong");
     this->public.batch_ending =
 						dlsym(this->handle, "TNC_IMC_BatchEnding");
     this->public.terminate =

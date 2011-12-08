@@ -253,28 +253,50 @@ METHOD(imc_manager_t, set_message_types_long, TNC_Result,
 
 METHOD(imc_manager_t, receive_message, void,
 	private_tnc_imc_manager_t *this, TNC_ConnectionID connection_id,
-									 TNC_BufferReference message,
-									 TNC_UInt32 message_len,
-									 TNC_MessageType message_type)
+									 bool excl,
+									 TNC_BufferReference msg,
+									 TNC_UInt32 msg_len,
+									 TNC_VendorID msg_vid,
+									 TNC_MessageSubtype msg_subtype,
+									 TNC_UInt32 src_imv_id,
+									 TNC_UInt32 dst_imc_id)
 {
 	bool type_supported = FALSE;
+	TNC_MessageType	msg_type;
+	TNC_UInt32 msg_flags;
 	enumerator_t *enumerator;
 	imc_t *imc;
 
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
 	{
-		if (imc->receive_message && imc->type_supported(imc, message_type))
+		if (imc->type_supported(imc, msg_vid, msg_subtype) &&
+		   (!excl || (excl && imc->has_id(imc, dst_imc_id)) ))
 		{
-			type_supported = TRUE;
-			imc->receive_message(imc->get_id(imc), connection_id,
-								 message, message_len, message_type);
+			if (imc->receive_message_long && src_imv_id)
+			{
+				type_supported = TRUE;
+				msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+				imc->receive_message_long(imc->get_id(imc), connection_id,
+								msg_flags, msg, msg_len, msg_vid, msg_subtype,
+								src_imv_id, dst_imc_id);
+
+			}
+			else if (imc->receive_message && msg_vid <= TNC_VENDORID_ANY &&
+					 msg_subtype <= TNC_SUBTYPE_ANY)
+			{
+				type_supported = TRUE;
+				msg_type = (msg_vid << 8) | msg_subtype;
+				imc->receive_message(imc->get_id(imc), connection_id,
+									 msg, msg_len, msg_type);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!type_supported)
 	{
-		DBG2(DBG_TNC, "message type 0x%08x not supported by any IMC", message_type);
+		DBG2(DBG_TNC, "message type 0x%06x/0x%08x not supported by any IMC",
+			 msg_vid, msg_subtype);
 	}
 }
 
