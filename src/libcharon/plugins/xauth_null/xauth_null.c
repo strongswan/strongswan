@@ -29,21 +29,15 @@ struct private_xauth_null_t {
 	 * Public authenticator_t interface.
 	 */
 	xauth_null_t public;
-
-	/**
-	 * ID of the peer
-	 */
-	identification_t *peer;
 };
 
 METHOD(xauth_method_t, process_peer, status_t,
 	private_xauth_null_t *this, cp_payload_t *in, cp_payload_t **out)
 {
-	chunk_t user_name = chunk_from_chars('j', 'o', 's', 't');
-	chunk_t user_pass = chunk_from_chars('j', 'o', 's', 't');
+	chunk_t user_name = chunk_from_chars('t', 'e', 's', 't');
+	chunk_t user_pass = chunk_from_chars('t', 'e', 's', 't');
 	cp_payload_t *cp;
 
-	/* TODO-IKEv1: Fetch the user/pass from an authenticator */
 	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, user_name));
@@ -63,19 +57,28 @@ METHOD(xauth_method_t, initiate_peer, status_t,
 METHOD(xauth_method_t, process_server, status_t,
 	private_xauth_null_t *this, cp_payload_t *in, cp_payload_t **out)
 {
+	/* always successful */
 	return SUCCESS;
 }
 
 METHOD(xauth_method_t, initiate_server, status_t,
 	private_xauth_null_t *this, cp_payload_t **out)
 {
+	cp_payload_t *cp;
+
+	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+	cp->add_attribute(cp, configuration_attribute_create_chunk(
+				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, chunk_empty));
+	cp->add_attribute(cp, configuration_attribute_create_chunk(
+				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, chunk_empty));
+
+	*out = cp;
 	return NEED_MORE;
 }
 
 METHOD(xauth_method_t, destroy, void,
 	private_xauth_null_t *this)
 {
-	this->peer->destroy(this->peer);
 	free(this);
 }
 
@@ -95,7 +98,6 @@ xauth_null_t *xauth_null_create_peer(identification_t *server,
 				.destroy = _destroy,
 			},
 		},
-		.peer = peer->clone(peer),
 	);
 
 	return &this->public;
@@ -117,7 +119,6 @@ xauth_null_t *xauth_null_create_server(identification_t *server,
 				.destroy = _destroy,
 			},
 		},
-		.peer = peer->clone(peer),
 	);
 
 	return &this->public;
