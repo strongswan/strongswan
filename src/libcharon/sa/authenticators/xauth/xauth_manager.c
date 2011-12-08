@@ -112,7 +112,8 @@ METHOD(xauth_manager_t, create_instance, xauth_method_t*,
 	enumerator = this->methods->create_enumerator(this->methods);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (streq(name, entry->name) && role == entry->role)
+		if (role == entry->role &&
+			(!name || streq(name, entry->name)))
 		{
 			method = entry->constructor(server, peer);
 			if (method)
