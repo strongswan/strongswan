@@ -121,6 +121,47 @@ TNC_Result TNC_TNCC_SendMessageLong(TNC_IMCID imc_id,
 }
 
 /**
+ * Called by the IMC to get the value of an attribute associated with a
+ * connection or with the TNCC as a whole.
+ */
+TNC_Result TNC_TNCC_GetAttribute(TNC_IMCID imc_id,
+								 TNC_ConnectionID connection_id,
+								 TNC_AttributeID attribute_id,
+								 TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer,
+								 TNC_UInt32 *out_value_len)
+{
+	if (!tnc->imcs->is_registered(tnc->imcs, imc_id))
+	{
+		DBG1(DBG_TNC, "ignoring GetAttribute() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+	return tnc->tnccs->get_attribute(tnc->tnccs, TRUE, imc_id, connection_id,
+							attribute_id, buffer_len, buffer, out_value_len);
+}
+
+/**
+ * Called by the IMC to set the value of an attribute associated with a
+ * connection or with the TNCC as a whole.
+ */
+TNC_Result TNC_TNCC_SetAttribute(TNC_IMCID imc_id,
+								 TNC_ConnectionID connection_id,
+								 TNC_AttributeID attribute_id,
+								 TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer)
+{
+	if (!tnc->imcs->is_registered(tnc->imcs, imc_id))
+	{
+		DBG1(DBG_TNC, "ignoring SetAttribute() from unregistered IMC %u",
+					   imc_id);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+	return tnc->tnccs->set_attribute(tnc->tnccs, TRUE, imc_id, connection_id,
+									 attribute_id, buffer_len, buffer);
+}
+
+/**
  * Called by the IMC when it wants to reserve an additional IMC ID for itself
  */
 TNC_Result TNC_TNCC_ReserveAdditionalIMCID(TNC_IMCID imc_id, TNC_UInt32 *new_id)
@@ -160,6 +201,14 @@ TNC_Result TNC_TNCC_BindFunction(TNC_IMCID id,
     else if (streq(function_name, "TNC_TNCC_SendMessageLong"))
 	{
 		*function_pointer = (void*)TNC_TNCC_SendMessageLong;
+	}
+	else if (streq(function_name, "TNC_TNCC_GetAttribute"))
+	{
+		*function_pointer = (void*)TNC_TNCC_GetAttribute;
+	}
+	else if (streq(function_name, "TNC_TNCC_SetAttribute"))
+	{
+		*function_pointer = (void*)TNC_TNCC_SetAttribute;
 	}
     else if (streq(function_name, "TNC_TNCC_ReserveAdditionalIMCID"))
 	{

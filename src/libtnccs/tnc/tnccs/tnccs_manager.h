@@ -142,7 +142,8 @@ struct tnccs_manager_t {
 	 * Get the value of an attribute associated with a connection or with the
 	 * TNCS as a whole.
 	 *
-	 * @param imv_id			ID of the IMV requesting the attribute
+	 * @param is_imc			TRUE if IMC, FALSE if IMV
+	 * @param imcv_id			ID of the IMC/IMV requesting the attribute
 	 * @param id				ID of target connection
 	 * @param attribute_id		ID of the requested attribute
 	 * @param buffer_len		length of the buffer in bytes
@@ -150,8 +151,8 @@ struct tnccs_manager_t {
 	 * @param out_value_len		actual length of the returned attribute
 	 * @return					return code
 	 */
-	TNC_Result (*get_attribute)(tnccs_manager_t *this,
-							   TNC_IMVID imv_id,
+	TNC_Result (*get_attribute)(tnccs_manager_t *this, bool is_imc,
+							   TNC_UInt32 imcv_id,
 							   TNC_ConnectionID id,
 							   TNC_AttributeID attribute_id,
 							   TNC_UInt32 buffer_len,
@@ -162,15 +163,16 @@ struct tnccs_manager_t {
 	 * Set the value of an attribute associated with a connection or with the
 	 * TNCS as a whole.
 	 *
-	 * @param imv_id			ID of the IMV setting the attribute
+	 * @param is_imc			TRUE if IMC, FALSE if IMV
+	 * @param imcv_id			ID of the IMC/IMV setting the attribute
 	 * @param id				ID of target connection
 	 * @param attribute_id		ID of the attribute to be set
 	 * @param buffer_len		length of the buffer in bytes
 	 * @param buffer			pointer to the buffer
 	 * @return					return code
 	 */
-	TNC_Result (*set_attribute)(tnccs_manager_t *this,
-								TNC_IMVID imv_id,
+	TNC_Result (*set_attribute)(tnccs_manager_t *this, bool is_imc,
+								TNC_UInt32 imcv_id,
 								TNC_ConnectionID id,
 								TNC_AttributeID attribute_id,
 								TNC_UInt32 buffer_len,

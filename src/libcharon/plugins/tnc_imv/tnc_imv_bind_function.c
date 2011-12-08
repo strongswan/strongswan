@@ -157,7 +157,7 @@ TNC_Result TNC_TNCS_GetAttribute(TNC_IMVID imv_id,
 					   imv_id);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
-	return tnc->tnccs->get_attribute(tnc->tnccs, imv_id, connection_id,
+	return tnc->tnccs->get_attribute(tnc->tnccs, FALSE, imv_id, connection_id,
 							attribute_id, buffer_len, buffer, out_value_len);
 }
 
@@ -177,7 +177,7 @@ TNC_Result TNC_TNCS_SetAttribute(TNC_IMVID imv_id,
 					   imv_id);
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
-	return tnc->tnccs->set_attribute(tnc->tnccs, imv_id, connection_id,
+	return tnc->tnccs->set_attribute(tnc->tnccs, FALSE, imv_id, connection_id,
 									 attribute_id, buffer_len, buffer);
 }
 

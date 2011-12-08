@@ -368,7 +368,8 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, get_attribute, TNC_Result,
-	private_tnc_tnccs_manager_t *this, TNC_IMVID imv_id,
+	private_tnc_tnccs_manager_t *this, bool is_imc,
+									   TNC_UInt32 imcv_id,
 									   TNC_ConnectionID id,
 									   TNC_AttributeID attribute_id,
 									   TNC_UInt32 buffer_len,
@@ -379,7 +380,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	tnccs_connection_entry_t *entry;
 	recommendations_t *recs = NULL;
 
-	if (id == TNC_CONNECTIONID_ANY ||
+	if (is_imc || id == TNC_CONNECTIONID_ANY ||
 		attribute_id != TNC_ATTRIBUTEID_PREFERRED_LANGUAGE)
 	{
 		return TNC_RESULT_INVALID_PARAMETER;
@@ -418,7 +419,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 }
 
 METHOD(tnccs_manager_t, set_attribute, TNC_Result,
-	private_tnc_tnccs_manager_t *this, TNC_IMVID imv_id,
+	private_tnc_tnccs_manager_t *this, bool is_imc,
+									   TNC_UInt32 imcv_id,
 									   TNC_ConnectionID id,
 									   TNC_AttributeID attribute_id,
 									   TNC_UInt32 buffer_len,
@@ -428,7 +430,7 @@ METHOD(tnccs_manager_t, set_attribute, TNC_Result,
 	tnccs_connection_entry_t *entry;
 	recommendations_t *recs = NULL;
 
-	if (id == TNC_CONNECTIONID_ANY ||
+	if (is_imc || id == TNC_CONNECTIONID_ANY ||
 		(attribute_id != TNC_ATTRIBUTEID_REASON_STRING &&
 		 attribute_id != TNC_ATTRIBUTEID_REASON_LANGUAGE))
 	{
@@ -454,11 +456,11 @@ METHOD(tnccs_manager_t, set_attribute, TNC_Result,
 
 		if (attribute_id == TNC_ATTRIBUTEID_REASON_STRING)
 		{
-			return recs->set_reason_string(recs, imv_id, attribute);
+			return recs->set_reason_string(recs, imcv_id, attribute);
 		}
 		else
 		{
-			return recs->set_reason_language(recs, imv_id, attribute);
+			return recs->set_reason_language(recs, imcv_id, attribute);
 		}
 	}
 	return TNC_RESULT_INVALID_PARAMETER;
