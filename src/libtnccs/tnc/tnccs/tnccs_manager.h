@@ -66,13 +66,15 @@ struct tnccs_manager_t {
 	 * callback function for adding a message to a TNCCS batch and create
 	 * an empty set for collecting IMV recommendations
 	 *
+	 * @param type						TNCCS protocol type
 	 * @param tnccs						TNCCS connection instance
 	 * @param send_message				TNCCS callback function
 	 * @param request_handshake_retry	pointer to boolean variable
 	 * @param recs						pointer to IMV recommendation set
 	 * @return							assigned connection ID
 	 */
-	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this, tnccs_t *tnccs,
+	TNC_ConnectionID (*create_connection)(tnccs_manager_t *this,
+										  tnccs_type_t type, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message,
 										  bool *request_handshake_retry,
 										  recommendations_t **recs);
@@ -148,7 +150,7 @@ struct tnccs_manager_t {
 	 * @param attribute_id		ID of the requested attribute
 	 * @param buffer_len		length of the buffer in bytes
 	 * @param buffer			pointer to the buffer
-	 * @param out_value_len		actual length of the returned attribute
+	 * @param value_len			actual length of the returned attribute
 	 * @return					return code
 	 */
 	TNC_Result (*get_attribute)(tnccs_manager_t *this, bool is_imc,
@@ -157,7 +159,7 @@ struct tnccs_manager_t {
 							   TNC_AttributeID attribute_id,
 							   TNC_UInt32 buffer_len,
 							   TNC_BufferReference buffer,
-							   TNC_UInt32 *out_value_len);
+							   TNC_UInt32 *value_len);
 
 	/**
 	 * Set the value of an attribute associated with a connection or with the

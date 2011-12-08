@@ -55,6 +55,11 @@ struct tnccs_connection_entry_t {
 	TNC_ConnectionID id;
 
 	/**
+	 * TNCCS protocol type
+	 */
+	tnccs_type_t type;
+
+	/**
 	 * TNCCS instance
 	 */
 	tnccs_t *tnccs;
@@ -174,13 +179,14 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 }
 
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
-	private_tnc_tnccs_manager_t *this, tnccs_t *tnccs,
+	private_tnc_tnccs_manager_t *this, tnccs_type_t type, tnccs_t *tnccs,
 	tnccs_send_message_t send_message, bool* request_handshake_retry,
 	recommendations_t **recs)
 {
 	tnccs_connection_entry_t *entry;
 
 	entry = malloc_thing(tnccs_connection_entry_t);
+	entry->type = type;
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
 	entry->request_handshake_retry = request_handshake_retry;
@@ -367,6 +373,69 @@ METHOD(tnccs_manager_t, provide_recommendation, TNC_Result,
 	return TNC_RESULT_FATAL;
 }
 
+/**
+ * Write the value of a boolean attribute into the buffer
+ */
+static TNC_Result bool_attribute(TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer,
+								 TNC_UInt32 *value_len,
+								 bool value)
+{
+	*value_len = 1;
+
+	if (buffer && buffer_len > 0)
+	{
+		*buffer = value ? 0x01 : 0x00;
+		return TNC_RESULT_SUCCESS;
+	}
+	else
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+}
+
+/**
+ * Write the value of an u_int32_t attribute into the buffer
+ */
+static TNC_Result uint_attribute(TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer,
+								 TNC_UInt32 *value_len,
+								 u_int32_t value)
+{
+	*value_len = sizeof(u_int32_t);
+
+	if (buffer && buffer_len >= *value_len)
+	{
+		htoun32(buffer, value);
+		return TNC_RESULT_SUCCESS;
+	}
+	else
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+}
+
+/**
+ * Write the value of string attribute into the buffer
+ */
+static TNC_Result str_attribute(TNC_UInt32 buffer_len,
+								 TNC_BufferReference buffer,
+								 TNC_UInt32 *value_len,
+								 char *value)
+{
+	*value_len = 1 + strlen(value);
+
+	if (buffer && buffer_len >= *value_len)
+	{
+		snprintf(buffer, buffer_len, "%s", value);
+		return TNC_RESULT_SUCCESS;
+	}
+	else
+	{
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
+}
+
 METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	private_tnc_tnccs_manager_t *this, bool is_imc,
 									   TNC_UInt32 imcv_id,
@@ -374,14 +443,80 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 									   TNC_AttributeID attribute_id,
 									   TNC_UInt32 buffer_len,
 									   TNC_BufferReference buffer,
-									   TNC_UInt32 *out_value_len)
+									   TNC_UInt32 *value_len)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
-	recommendations_t *recs = NULL;
+	bool attribute_match = FALSE, entry_found = FALSE;
+	
+	if (is_imc)
+	{
+		switch (attribute_id)
+		{
+			/* these attributes are unsupported */
+			case TNC_ATTRIBUTEID_SOHR:
+			case TNC_ATTRIBUTEID_SSOHR:
+				return TNC_RESULT_INVALID_PARAMETER;
 
-	if (is_imc || id == TNC_CONNECTIONID_ANY ||
-		attribute_id != TNC_ATTRIBUTEID_PREFERRED_LANGUAGE)
+			/* these attributes are supported */
+			case TNC_ATTRIBUTEID_PRIMARY_IMC_ID:
+				attribute_match = TRUE;
+				break;
+
+			/* these attributes are yet to be matched */
+			default:
+				break;
+		}
+	}
+	else
+	{
+		switch (attribute_id)
+		{
+			/* these attributes are unsupported or invalid */
+			case TNC_ATTRIBUTEID_REASON_STRING:
+			case TNC_ATTRIBUTEID_REASON_LANGUAGE:
+			case TNC_ATTRIBUTEID_SOH:
+			case TNC_ATTRIBUTEID_SSOH:
+				return TNC_RESULT_INVALID_PARAMETER;
+
+			/* these attributes are supported */
+			case TNC_ATTRIBUTEID_PRIMARY_IMV_ID:
+				attribute_match = TRUE;
+				break;
+
+			/* these attributes are yet to be matched */
+			default:
+				break;
+		}
+	}
+
+	if (!attribute_match)
+	{
+		switch (attribute_id)
+		{
+			/* these attributes are supported */
+			case TNC_ATTRIBUTEID_PREFERRED_LANGUAGE:
+			case TNC_ATTRIBUTEID_MAX_ROUND_TRIPS:
+			case TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE:
+			case TNC_ATTRIBUTEID_HAS_LONG_TYPES:
+			case TNC_ATTRIBUTEID_HAS_EXCLUSIVE:
+			case TNC_ATTRIBUTEID_HAS_SOH:
+			case TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL:
+			case TNC_ATTRIBUTEID_IFTNCCS_VERSION:
+			case TNC_ATTRIBUTEID_IFT_PROTOCOL:
+			case TNC_ATTRIBUTEID_IFT_VERSION:
+				break;
+
+			/* these attributes are unsupported or unknown */
+			case TNC_ATTRIBUTEID_DHPN:
+			case TNC_ATTRIBUTEID_TLS_UNIQUE:
+			default:
+				return TNC_RESULT_INVALID_PARAMETER;
+		}
+	}
+	
+	/* attributes specific to the TNCC or TNCS are unsupported */
+	if (id == TNC_CONNECTIONID_ANY)
 	{
 		return TNC_RESULT_INVALID_PARAMETER;
 	}
@@ -392,30 +527,99 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	{
 		if (id == entry->id)
 		{
-			recs = entry->recs;
+			entry_found = TRUE;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->connection_lock->unlock(this->connection_lock);
 
-	if (recs)
+	if (!entry_found)
 	{
-		chunk_t pref_lang;
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 
-		pref_lang = recs->get_preferred_language(recs);
-		if (pref_lang.len == 0)
+	switch (attribute_id)
+	{
+		case TNC_ATTRIBUTEID_PREFERRED_LANGUAGE:
 		{
+			recommendations_t *recs;
+			chunk_t pref_lang;
+
+			recs = entry->recs;
+			if (!recs)
+			{
+				return TNC_RESULT_INVALID_PARAMETER;
+			}
+			pref_lang = recs->get_preferred_language(recs);
+			if (pref_lang.len == 0)
+			{
+				return TNC_RESULT_INVALID_PARAMETER;
+			}
+			*value_len = pref_lang.len;
+			if (buffer && buffer_len >= pref_lang.len)
+			{
+				memcpy(buffer, pref_lang.ptr, pref_lang.len);
+			}
+			return TNC_RESULT_SUCCESS;
+		}
+		case TNC_ATTRIBUTEID_MAX_ROUND_TRIPS:
+			return uint_attribute(buffer_len, buffer, value_len, 0xffffffff);
+		case TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE:
+			return uint_attribute(buffer_len, buffer, value_len, 0x00000000);
+		case TNC_ATTRIBUTEID_HAS_LONG_TYPES:
+		case TNC_ATTRIBUTEID_HAS_EXCLUSIVE:
+			return bool_attribute(buffer_len, buffer, value_len, 
+								 	 entry->type == TNCCS_2_0);
+		case TNC_ATTRIBUTEID_HAS_SOH:
+			return bool_attribute(buffer_len, buffer, value_len, 
+								  	entry->type == TNCCS_SOH);
+		case TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL:
+		{
+			char *protocol;
+
+			switch (entry->type)
+			{
+				case TNCCS_1_1:
+				case TNCCS_2_0:
+					protocol = "IF-TNCCS";
+					break;
+				case TNCCS_SOH:
+					protocol = "IF-TNCCS-SOH";
+					break;
+				default:
+				return TNC_RESULT_INVALID_PARAMETER;
+			}
+			return str_attribute(buffer_len, buffer, value_len, protocol);
+		}
+		case TNC_ATTRIBUTEID_IFTNCCS_VERSION:
+		{
+			char *version;
+
+			switch (entry->type)
+			{
+				case TNCCS_1_1:
+					version = "1.1";
+					break;
+				case TNCCS_2_0:
+					version = "2.0";
+					break;
+				case TNCCS_SOH:
+					version = "1.0";
+					break;
+				default:
+				return TNC_RESULT_INVALID_PARAMETER;
+			}
+			return str_attribute(buffer_len, buffer, value_len, version);
+		}
+		case TNC_ATTRIBUTEID_IFT_PROTOCOL:
+			return str_attribute(buffer_len, buffer, value_len,
+										 "IF-T for Tunneled EAP");
+ 		case TNC_ATTRIBUTEID_IFT_VERSION:
+			return str_attribute(buffer_len, buffer, value_len, "1.1");
+		default:
 			return TNC_RESULT_INVALID_PARAMETER;
-		}
-		*out_value_len = pref_lang.len;
-		if (buffer && buffer_len >= pref_lang.len)
-		{
-			memcpy(buffer, pref_lang.ptr, pref_lang.len);
-		}
-		return TNC_RESULT_SUCCESS;
 	 }
-	return TNC_RESULT_INVALID_PARAMETER;
 }
 
 METHOD(tnccs_manager_t, set_attribute, TNC_Result,

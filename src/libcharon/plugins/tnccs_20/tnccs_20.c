@@ -375,7 +375,7 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
-								(tnccs_t*)this,	_send_msg,
+								TNCCS_2_0, (tnccs_t*)this, _send_msg,
 								&this->request_handshake_retry, &this->recs);
 		if (!this->connection_id)
 		{
@@ -556,7 +556,7 @@ METHOD(tls_t, build, status_t,
 		char *pref_lang;
 
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
-										(tnccs_t*)this, _send_msg,
+										TNCCS_2_0, (tnccs_t*)this, _send_msg,
 										&this->request_handshake_retry, NULL);
 		if (!this->connection_id)
 		{
