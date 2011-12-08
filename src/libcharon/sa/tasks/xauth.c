@@ -118,6 +118,23 @@ static xauth_method_t *load_method(ike_sa_t *ike_sa, bool initiator)
 	return xauth;
 }
 
+/**
+ * Set IKE_SA to established state
+ */
+static void establish(private_xauth_t *this)
+{
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
+
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+}
+
 METHOD(task_t, build_i_status, status_t,
 	private_xauth_t *this, message_t *message)
 {
@@ -161,16 +178,92 @@ METHOD(task_t, build_i, status_t,
 	return FAILED;
 }
 
+METHOD(task_t, build_r_ack, status_t,
+	private_xauth_t *this, message_t *message)
+{
+	cp_payload_t *cp;
+
+	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_ACK);
+	cp->add_attribute(cp,
+			configuration_attribute_create_chunk(
+					CONFIGURATION_ATTRIBUTE_V1, XAUTH_STATUS, chunk_empty));
+
+	message->add_payload(message, (payload_t *)cp);
+
+	if (this->status == XAUTH_OK)
+	{
+		establish(this);
+		return SUCCESS;
+	}
+	return FAILED;
+}
+
 METHOD(task_t, process_r, status_t,
 	private_xauth_t *this, message_t *message)
 {
-	return FAILED;
+	cp_payload_t *cp;
+
+	if (!this->xauth)
+	{
+		this->xauth = load_method(this->ike_sa, this->initiator);
+		if (!this->xauth)
+		{	/* send empty reply */
+			return NEED_MORE;
+		}
+	}
+	cp = (cp_payload_t*)message->get_payload(message, CONFIGURATION_V1);
+	if (!cp)
+	{
+		DBG1(DBG_IKE, "configuration payload missing in XAuth request");
+		return FAILED;
+	}
+	if (cp->get_type(cp) == CFG_REQUEST)
+	{
+		switch (this->xauth->process(this->xauth, cp, &this->cp))
+		{
+			case NEED_MORE:
+				return NEED_MORE;
+			case SUCCESS:
+				DBG1(DBG_IKE, "XAuth authentication successful");
+				establish(this);
+				break;
+			case FAILED:
+			default:
+				DBG1(DBG_IKE, "XAuth authentication failed");
+				break;
+		}
+		this->cp = NULL;
+		return NEED_MORE;
+	}
+	if (cp->get_type(cp) == CFG_SET)
+	{
+		configuration_attribute_t *attribute;
+		enumerator_t *enumerator;
+
+		enumerator = cp->create_attribute_enumerator(cp);
+		while (enumerator->enumerate(enumerator, &attribute))
+		{
+			if (attribute->get_type(attribute) == XAUTH_STATUS)
+			{
+				this->status = attribute->get_value(attribute);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	this->public.task.build = _build_r_ack;
+	return NEED_MORE;
 }
 
 METHOD(task_t, build_r, status_t,
 	private_xauth_t *this, message_t *message)
 {
-	return FAILED;
+	if (!this->cp)
+	{	/* send empty reply if building data failed */
+		this->cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
+	}
+	message->add_payload(message, (payload_t *)this->cp);
+	this->cp = NULL;
+	return NEED_MORE;
 }
 
 METHOD(task_t, process_i_status, status_t,
@@ -185,16 +278,7 @@ METHOD(task_t, process_i_status, status_t,
 		return FAILED;
 	}
 
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-		 this->ike_sa->get_name(this->ike_sa),
-		 this->ike_sa->get_unique_id(this->ike_sa),
-		 this->ike_sa->get_my_host(this->ike_sa),
-		 this->ike_sa->get_my_id(this->ike_sa),
-		 this->ike_sa->get_other_host(this->ike_sa),
-		 this->ike_sa->get_other_id(this->ike_sa));
-
-	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+	establish(this);
 
 	return SUCCESS;
 }
