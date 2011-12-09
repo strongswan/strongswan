@@ -369,6 +369,8 @@ imv_t* tnc_imv_create(char *name, char *path)
 	}
 	this->public.receive_message =
 						dlsym(this->handle, "TNC_IMV_ReceiveMessage");
+	this->public.receive_message_long =
+						dlsym(this->handle, "TNC_IMV_ReceiveMessageLong");
 	this->public.batch_ending =
 						dlsym(this->handle, "TNC_IMV_BatchEnding");
 	this->public.terminate =

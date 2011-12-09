@@ -111,7 +111,7 @@ static linked_list_t* get_port_list(char *label)
 
 
 /*
- * see section 3.7.1 of TCG TNC IF-IMV Specification 1.2
+ * see section 3.8.1 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version min_version,
@@ -149,7 +149,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 }
 
 /**
- * see section 3.7.2 of TCG TNC IF-IMV Specification 1.2
+ * see section 3.8.2 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionID connection_id,
@@ -175,14 +175,14 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	}
 }
 
-/**
- * see section 3.7.3 of TCG TNC IF-IMV Specification 1.2
- */
-TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
+static TNC_Result receive_message(TNC_IMVID imv_id,
 								  TNC_ConnectionID connection_id,
-								  TNC_BufferReference msg,
-								  TNC_UInt32 msg_len,
-								  TNC_MessageType msg_type)
+								  TNC_UInt32 msg_flags,
+								  chunk_t msg,
+								  TNC_VendorID msg_vid,
+								  TNC_MessageSubtype msg_subtype,
+								  TNC_UInt32 src_imc_id,
+								  TNC_UInt32 dst_imv_id)
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
@@ -204,9 +204,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 
 	/* parse received PA-TNC message and automatically handle any errors */ 
-	result = imv_scanner->receive_message(imv_scanner, connection_id,
-									   chunk_create(msg, msg_len), msg_type,
-									   &pa_tnc_msg);
+	result = imv_scanner->receive_message(imv_scanner, state, msg, msg_vid,
+					 		msg_subtype, src_imc_id, dst_imv_id, &pa_tnc_msg);
 
 	/* no parsed PA-TNC attributes available if an error occurred */
 	if (!pa_tnc_msg)
@@ -339,10 +338,47 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 	}
 
 	return imv_scanner->provide_recommendation(imv_scanner, connection_id);
+ }
+
+/**
+ * see section 3.8.4 of TCG TNC IF-IMV Specification 1.3
+ */
+TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
+								  TNC_ConnectionID connection_id,
+								  TNC_BufferReference msg,
+								  TNC_UInt32 msg_len,
+								  TNC_MessageType msg_type)
+{
+	TNC_VendorID msg_vid;
+	TNC_MessageSubtype msg_subtype;
+
+	msg_vid = msg_type >> 8;
+	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+
+	return receive_message(imv_id, connection_id, 0, chunk_create(msg, msg_len),
+						   msg_vid,	msg_subtype, 0, TNC_IMVID_ANY);
 }
 
 /**
- * see section 3.7.4 of TCG TNC IF-IMV Specification 1.2
+ * see section 3.8.6 of TCG TNC IF-IMV Specification 1.3
+ */
+TNC_Result TNC_IMV_ReceiveMessageLong(TNC_IMVID imv_id,
+									  TNC_ConnectionID connection_id,
+									  TNC_UInt32 msg_flags,
+									  TNC_BufferReference msg,
+									  TNC_UInt32 msg_len,
+									  TNC_VendorID msg_vid,
+									  TNC_MessageSubtype msg_subtype,
+									  TNC_UInt32 src_imc_id,
+									  TNC_UInt32 dst_imv_id)
+{
+	return receive_message(imv_id, connection_id, msg_flags,
+						   chunk_create(msg, msg_len), msg_vid, msg_subtype,
+						   src_imc_id, dst_imv_id);
+}
+
+/**
+ * see section 3.8.7 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 										 TNC_ConnectionID connection_id)
@@ -356,7 +392,7 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 }
 
 /**
- * see section 3.7.5 of TCG TNC IF-IMV Specification 1.2
+ * see section 3.8.8 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 							   TNC_ConnectionID connection_id)
@@ -370,7 +406,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 }
 
 /**
- * see section 3.7.6 of TCG TNC IF-IMV Specification 1.2
+ * see section 3.8.9 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 {
@@ -388,7 +424,7 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 }
 
 /**
- * see section 4.2.8.1 of TCG TNC IF-IMV Specification 1.2
+ * see section 4.2.8.1 of TCG TNC IF-IMV Specification 1.3
  */
 TNC_Result TNC_IMV_ProvideBindFunction(TNC_IMVID imv_id,
 									   TNC_TNCS_BindFunctionPointer bind_function)

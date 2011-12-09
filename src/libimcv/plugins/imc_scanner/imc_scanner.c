@@ -39,7 +39,7 @@ static const char imc_name[] = "Scanner";
 static imc_agent_t *imc_scanner;
  
 /**
- * see section 3.7.1 of TCG TNC IF-IMC Specification 1.2
+ * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 							  TNC_Version min_version,
@@ -66,7 +66,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 }
 
 /**
- * see section 3.7.2 of TCG TNC IF-IMC Specification 1.2
+ * see section 3.8.2 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 										  TNC_ConnectionID connection_id,
@@ -245,7 +245,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 }
 
 /**
- * see section 3.7.3 of TCG TNC IF-IMC Specification 1.2
+ * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
@@ -258,17 +258,18 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	return send_message(connection_id);
 }
 
-/**
- * see section 3.7.4 of TCG TNC IF-IMC Specification 1.2
- */
-TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
+static TNC_Result receive_message(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id,
-								  TNC_BufferReference msg,
-								  TNC_UInt32 msg_len,
-								  TNC_MessageType msg_type)
+								  TNC_UInt32 msg_flags,
+								  chunk_t msg,
+								  TNC_VendorID msg_vid,
+								  TNC_MessageSubtype msg_subtype,
+								  TNC_UInt32 src_imv_id,
+								  TNC_UInt32 dst_imc_id)
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	imc_state_t *state;
 	enumerator_t *enumerator;
 	TNC_Result result;
 	bool fatal_error = FALSE;
@@ -279,10 +280,15 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
+	/* get current IMC state */
+	if (!imc_scanner->get_state(imc_scanner, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+
 	/* parse received PA-TNC message and automatically handle any errors */ 
-	result = imc_scanner->receive_message(imc_scanner, connection_id,
-									   chunk_create(msg, msg_len), msg_type,
-									   &pa_tnc_msg);
+	result = imc_scanner->receive_message(imc_scanner, state, msg, msg_vid,
+							msg_subtype, src_imv_id, dst_imc_id, &pa_tnc_msg);
 
 	/* no parsed PA-TNC attributes available if an error occurred */
 	if (!pa_tnc_msg)
@@ -334,7 +340,44 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 }
 
 /**
- * see section 3.7.5 of TCG TNC IF-IMC Specification 1.2
+ * see section 3.8.4 of TCG TNC IF-IMC Specification 1.3
+ */
+TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
+								  TNC_ConnectionID connection_id,
+								  TNC_BufferReference msg,
+								  TNC_UInt32 msg_len,
+								  TNC_MessageType msg_type)
+{
+	TNC_VendorID msg_vid;
+	TNC_MessageSubtype msg_subtype;
+
+	msg_vid = msg_type >> 8;
+	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+
+	return receive_message(imc_id, connection_id, 0, chunk_create(msg, msg_len),
+						   msg_vid,	msg_subtype, 0, TNC_IMCID_ANY);
+}
+
+/**
+ * see section 3.8.6 of TCG TNC IF-IMV Specification 1.3
+ */
+TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
+									  TNC_ConnectionID connection_id,
+									  TNC_UInt32 msg_flags,
+									  TNC_BufferReference msg,
+									  TNC_UInt32 msg_len,
+									  TNC_VendorID msg_vid,
+									  TNC_MessageSubtype msg_subtype,
+									  TNC_UInt32 src_imv_id,
+									  TNC_UInt32 dst_imc_id)
+{
+	return receive_message(imc_id, connection_id, msg_flags,
+						   chunk_create(msg, msg_len), msg_vid, msg_subtype,
+						   src_imv_id, dst_imc_id);
+}
+
+/**
+ * see section 3.8.7 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
 							   TNC_ConnectionID connection_id)
@@ -348,7 +391,7 @@ TNC_Result TNC_IMC_BatchEnding(TNC_IMCID imc_id,
 }
 
 /**
- * see section 3.7.6 of TCG TNC IF-IMC Specification 1.2
+ * see section 3.8.8 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 {
@@ -364,7 +407,7 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 }
 
 /**
- * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.2
+ * see section 4.2.8.1 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
 									   TNC_TNCC_BindFunctionPointer bind_function)

@@ -115,15 +115,21 @@ struct imc_agent_t {
 	/**
 	 * Call when a PA-TNC message was received
 	 *
-	 * @param connection_id		network connection ID assigned by TNCC
+	 * @param state				state for current connection
 	 * @param msg				received unparsed message
-	 * @param msg_type			message type of the received message
+	 * @param msg_vid			message vendorID of the received message
+	 * @param msg_subtype		message subtype of the received message
+	 * @param src_imv_id		source IMV ID
+	 * @param dst_imc_id		destination IMC ID
 	 * @param pa_tnc_message	parsed PA-TNC message or NULL if an error occurred
 	 * @return					TNC result code
 	 */
 	TNC_Result (*receive_message)(imc_agent_t *this,
-								  TNC_ConnectionID connection_id, chunk_t msg,
-								  TNC_MessageType msg_type,
+								  imc_state_t *state, chunk_t msg,
+								  TNC_VendorID msg_vid,
+								  TNC_MessageSubtype msg_subtype,
+								  TNC_UInt32 src_imv_id,
+								  TNC_UInt32 dst_imc_id,
 								  pa_tnc_msg_t **pa_tnc_msg);
 
 	/**
