@@ -592,6 +592,12 @@ static status_t process_request(private_task_manager_t *this,
 				/* TODO-IKEv1: agressive mode */
 				return FAILED;
 			case QUICK_MODE:
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+				{
+					DBG1(DBG_IKE, "received quick mode request for "
+						 "unestablished IKE_SA, ignored");
+					return FAILED;
+				}
 				task = (task_t *)quick_mode_create(this->ike_sa, NULL,
 												   NULL, NULL);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
