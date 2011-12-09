@@ -1459,24 +1459,35 @@ METHOD(message_t, generate, status_t,
 			hash_payload->set_hash(hash_payload, hash);
 			this->payloads->insert_first(this->payloads,
 										 (payload_t*)hash_payload);
+
+			if (this->exchange_type == INFORMATIONAL_V1)
+			{
+				DBG3(DBG_ENC, "encrypting IKEv1 INFORMATIONAL exchange message");
+				this->is_encrypted = TRUE;
+				encrypted = TRUE;
+			}
+
 			chunk_free(&hash);
 		}
 
-		/* if at least one payload requires encryption, encrypt the message.
-		 * if we have no key material available, the flag will be reset below */
-		enumerator = this->payloads->create_enumerator(this->payloads);
-		while (enumerator->enumerate(enumerator, (void**)&payload))
+		if (!encrypted)
 		{
-			payload_rule_t *rule;
-			rule = get_payload_rule(this, payload->get_type(payload));
-			if (rule && rule->encrypted)
+			/* if at least one payload requires encryption, encrypt the message.
+			 * if we have no key material available, the flag will be reset below */
+			enumerator = this->payloads->create_enumerator(this->payloads);
+			while (enumerator->enumerate(enumerator, (void**)&payload))
 			{
-				this->is_encrypted = TRUE;
-				encrypted = TRUE;
-				break;
+				payload_rule_t *rule;
+				rule = get_payload_rule(this, payload->get_type(payload));
+				if (rule && rule->encrypted)
+				{
+					this->is_encrypted = TRUE;
+					encrypted = TRUE;
+					break;
+				}
 			}
+			enumerator->destroy(enumerator);
 		}
-		enumerator->destroy(enumerator);
 	}
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
