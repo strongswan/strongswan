@@ -104,6 +104,42 @@ struct private_imc_agent_t {
 							   TNC_BufferReference msg,
 							   TNC_UInt32 msg_len,
 							   TNC_MessageType msg_type);
+
+	/**
+	 * Get the value of an attribute associated with a connection
+	 * or with the TNCC as a whole.
+	 *
+	 * @param imc_id			IMC ID assigned by TNCC
+	 * @param connection_id		network connection ID assigned by TNCC
+	 * @param attribute_id		attribute ID
+	 * @param buffer_len		length of buffer in bytes
+	 * @param buffer			buffer
+	 * @param out_value_len		size in bytes of attribute stored in buffer
+	 * @return					TNC result code
+	 */
+	TNC_Result (*get_attribute)(TNC_IMCID imc_id,
+								TNC_ConnectionID connection_id,
+								TNC_AttributeID attribute_id,
+								TNC_UInt32 buffer_len,
+								TNC_BufferReference buffer,
+								TNC_UInt32 *out_value_len);
+
+	/**
+	 * Set the value of an attribute associated with a connection
+	 * or with the TNCC as a whole.
+	 *
+	 * @param imc_id			IMV ID assigned by TNCC
+	 * @param connection_id		network connection ID assigned by TNCC
+	 * @param attribute_id		attribute ID
+	 * @param buffer_len		length of buffer in bytes
+	 * @param buffer			buffer
+	 * @return					TNC result code
+	 */
+	TNC_Result (*set_attribute)(TNC_IMCID imc_id,
+								TNC_ConnectionID connection_id,
+								TNC_AttributeID attribute_id,
+								TNC_UInt32 buffer_len,
+								TNC_BufferReference buffer);
 };
 
 METHOD(imc_agent_t, bind_functions, TNC_Result,
@@ -133,6 +169,16 @@ METHOD(imc_agent_t, bind_functions, TNC_Result,
 			(void**)&this->send_message) != TNC_RESULT_SUCCESS)
 	{
 		this->send_message = NULL;
+	}
+	if (bind_function(this->id, "TNC_TNCC_GetAttribute",
+			(void**)&this->get_attribute) != TNC_RESULT_SUCCESS)
+	{
+		this->get_attribute = NULL;
+	}
+	if (bind_function(this->id, "TNC_TNCC_SetAttribute",
+			(void**)&this->set_attribute) != TNC_RESULT_SUCCESS)
+	{
+		this->set_attribute = NULL;
 	}
 	DBG2(DBG_IMC, "IMC %u \"%s\" provided with bind function",
 				  this->id, this->name);
@@ -206,24 +252,76 @@ static bool delete_connection(private_imc_agent_t *this, TNC_ConnectionID id)
 	return found;
 }
 
+/**
+ * Read a boolean attribute
+ */
+static bool get_bool_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
+							   TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[4];
+
+	return this->get_attribute  &&
+		   this->get_attribute(this->id, id, attribute_id, 4, buf, &len) ==
+							   TNC_RESULT_SUCCESS && len == 1 && *buf == 0x01;
+ }
+
+/**
+ * Read a string attribute
+ */
+static char* get_str_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
+								TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[BUF_LEN];
+
+	if (this->get_attribute  &&
+		this->get_attribute(this->id, id, attribute_id, BUF_LEN, buf, &len) ==
+							TNC_RESULT_SUCCESS && len <= BUF_LEN)
+	{
+		return strdup(buf);
+	}
+	return NULL;
+ }
+
 METHOD(imc_agent_t, create_state, TNC_Result,
 	private_imc_agent_t *this, imc_state_t *state)
 {
-	TNC_ConnectionID connection_id;
+	TNC_ConnectionID conn_id;
+	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
+	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
 
-	connection_id = state->get_connection_id(state);
-	if (find_connection(this, connection_id))
+	conn_id = state->get_connection_id(state);
+	if (find_connection(this, conn_id))
 	{
 		DBG1(DBG_IMC, "IMC %u \"%s\" already created a state for Connection ID %u",
-					   this->id, this->name, connection_id);
+					   this->id, this->name, conn_id);
 		state->destroy(state);
 		return TNC_RESULT_OTHER;
 	}
+
+	/* Get and display attributes from TNCC via IF-IMC */
+	has_long = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_LONG_TYPES);
+	has_excl = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
+	has_soh  = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_SOH);
+	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL); 
+	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
+	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
+	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
+
+	DBG2(DBG_IMC, "IMC %u \"%s\" created a state for Connection ID %u: "
+				  "%s %s with %slong %sexcl %ssoh over %s %s",
+				  this->id, this->name, conn_id, tnccs_p ? tnccs_p:"?",
+				  tnccs_v ? tnccs_v:"?", has_long ? "+":"-", has_excl ? "+":"-",
+				  has_soh ? "+":"-",  t_p ? t_p:"?", t_v ? t_v :"?");
+	free(tnccs_p);
+	free(tnccs_v);
+	free(t_p);
+	free(t_v);
+
 	this->connection_lock->write_lock(this->connection_lock);
 	this->connections->insert_last(this->connections, state);
 	this->connection_lock->unlock(this->connection_lock);
-	DBG2(DBG_IMC, "IMC %u \"%s\" created a state for Connection ID %u",
-				  this->id, this->name, connection_id);
 	return TNC_RESULT_SUCCESS;
 }
 

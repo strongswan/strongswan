@@ -271,24 +271,76 @@ static bool delete_connection(private_imv_agent_t *this, TNC_ConnectionID id)
 	return found;
 }
 
+/**
+ * Read a boolean attribute
+ */
+static bool get_bool_attribute(private_imv_agent_t *this, TNC_ConnectionID id,
+							   TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[4];
+
+	return this->get_attribute  &&
+		   this->get_attribute(this->id, id, attribute_id, 4, buf, &len) ==
+							   TNC_RESULT_SUCCESS && len == 1 && *buf == 0x01;
+ }
+
+/**
+ * Read a string attribute
+ */
+static char* get_str_attribute(private_imv_agent_t *this, TNC_ConnectionID id,
+								TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[BUF_LEN];
+
+	if (this->get_attribute  &&
+		this->get_attribute(this->id, id, attribute_id, BUF_LEN, buf, &len) ==
+							TNC_RESULT_SUCCESS && len <= BUF_LEN)
+	{
+		return strdup(buf);
+	}
+	return NULL;
+ }
+
 METHOD(imv_agent_t, create_state, TNC_Result,
 	private_imv_agent_t *this, imv_state_t *state)
 {
-	TNC_ConnectionID connection_id;
+	TNC_ConnectionID conn_id;
+	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
+	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
 
-	connection_id = state->get_connection_id(state);
-	if (find_connection(this, connection_id))
+	conn_id = state->get_connection_id(state);
+	if (find_connection(this, conn_id))
 	{
 		DBG1(DBG_IMV, "IMV %u \"%s\" already created a state for Connection ID %u",
-					   this->id, this->name, connection_id);
+					   this->id, this->name, conn_id);
 		state->destroy(state);
 		return TNC_RESULT_OTHER;
 	}
+
+	/* Get and display attributes from TNCS via IF-IMV */
+	has_long = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_LONG_TYPES);
+	has_excl = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
+	has_soh  = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_SOH);
+	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL); 
+	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
+	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
+	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
+
+	DBG2(DBG_IMV, "IMV %u \"%s\" created a state for Connection ID %u: "
+				  "%s %s with %slong %sexcl %ssoh over %s %s",
+				  this->id, this->name, conn_id, tnccs_p ? tnccs_p:"?",
+				  tnccs_v ? tnccs_v:"?", has_long ? "+":"-", has_excl ? "+":"-",
+				  has_soh ? "+":"-",  t_p ? t_p:"?", t_v ? t_v :"?");
+	free(tnccs_p);
+	free(tnccs_v);
+	free(t_p);
+	free(t_v);
+
 	this->connection_lock->write_lock(this->connection_lock);
 	this->connections->insert_last(this->connections, state);
 	this->connection_lock->unlock(this->connection_lock);
-	DBG2(DBG_IMV, "IMV %u \"%s\" created a state for Connection ID %u",
-				  this->id, this->name, connection_id);
 	return TNC_RESULT_SUCCESS;
 }
 
