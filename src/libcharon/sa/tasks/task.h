@@ -73,6 +73,8 @@ enum task_type_t {
 	TASK_MAIN_MODE,
 	/** IKEv1 XAUTH authentication */
 	TASK_XAUTH,
+	/** IKEv1 Mode Config */
+	TASK_MODE_CONFIG,
 	/** IKEv1 quick mode */
 	TASK_QUICK_MODE,
 	/** IKEv1 vendor ID payload handling */
