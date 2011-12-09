@@ -296,13 +296,17 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
 	linked_list_t *list;
 	host_t *host;
 
-	if (initiator)
+	host = this->ike_sa->get_virtual_ip(this->ike_sa, initiator);
+	if (!host)
 	{
-		host = this->ike_sa->get_my_host(this->ike_sa);
-	}
-	else
-	{
-		host = this->ike_sa->get_other_host(this->ike_sa);
+		if (initiator)
+		{
+			host = this->ike_sa->get_my_host(this->ike_sa);
+		}
+		else
+		{
+			host = this->ike_sa->get_other_host(this->ike_sa);
+		}
 	}
 	list = this->config->get_traffic_selectors(this->config, initiator,
 											   NULL, host);
