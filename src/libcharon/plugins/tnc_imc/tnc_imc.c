@@ -98,18 +98,19 @@ METHOD(imc_t, get_id, TNC_IMCID,
 METHOD(imc_t, add_id, void,
 	private_tnc_imc_t *this, TNC_IMCID id)
 {
-	TNC_IMCID *new_id;
+	void *pointer;
 
-	new_id = malloc_thing(TNC_IMCID);
-	*new_id = id;
-	this->additional_ids->insert_last(this->additional_ids, new_id);
+	/* store the scalar value in the pointer */
+	pointer = (void*)id;
+	this->additional_ids->insert_last(this->additional_ids, pointer);
 }
 
 METHOD(imc_t, has_id, bool,
 	private_tnc_imc_t *this, TNC_IMCID id)
 {
 	enumerator_t *enumerator;
-	TNC_IMCID *additional_id;
+	TNC_IMCID additional_id;
+	void *pointer;
 	bool found = FALSE;
 
 	/* check primary IMC ID */
@@ -126,9 +127,12 @@ METHOD(imc_t, has_id, bool,
 
 	/* check additional IMC IDs */
 	enumerator = this->additional_ids->create_enumerator(this->additional_ids);
-	while (enumerator->enumerate(enumerator, &additional_id))
+	while (enumerator->enumerate(enumerator, &pointer))
 	{
-		if (id == *additional_id)
+		/* interpret pointer as scalar value */
+		additional_id = (TNC_UInt32)pointer;
+
+		if (id == additional_id)
 		{
 			found = TRUE;
 			break;
@@ -305,7 +309,7 @@ METHOD(imc_t, destroy, void,
 {
 	dlclose(this->handle);
 	this->mutex->destroy(this->mutex);
-	this->additional_ids->destroy_function(this->additional_ids, free);
+	this->additional_ids->destroy(this->additional_ids);
 	free(this->supported_vids);
 	free(this->supported_subtypes);
 	free(this->name);

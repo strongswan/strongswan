@@ -106,6 +106,28 @@ struct private_imv_agent_t {
 							   TNC_MessageType msg_type);
 
 	/**
+	 * Call when an IMV-IMC message is to be sent with long message types
+	 *
+	 * @param imv_id			IMV ID assigned by TNCS
+	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param msg_flags			message flags
+	 * @param msg				message to send
+	 * @param msg_len			message length in bytes
+	 * @param msg_vid			message vendor ID
+	 * @param msg_subtype		message subtype
+	 * @param dst_imc_id		destination IMC ID
+	 * @return					TNC result code
+	 */
+	TNC_Result (*send_message_long)(TNC_IMVID imv_id,
+									TNC_ConnectionID connection_id,
+									TNC_UInt32 msg_flags,
+									TNC_BufferReference msg,
+									TNC_UInt32 msg_len,
+									TNC_VendorID msg_vid,
+									TNC_MessageSubtype msg_subtype,
+									TNC_UInt32 dst_imc_id);
+
+	/**
 	 * Deliver IMV Action Recommendation and IMV Evaluation Results to the TNCS
 	 *
 	 * @param imv_id			IMV ID assigned by TNCS
@@ -154,6 +176,17 @@ struct private_imv_agent_t {
 								TNC_AttributeID attribute_id,
 								TNC_UInt32 buffer_len,
 								TNC_BufferReference buffer);
+
+	/**
+	 * Reserve an additional IMV ID
+	 *
+	 * @param imv_id			primary IMV ID assigned by TNCS
+	 * @param out_imv_id		additional IMV ID assigned by TNCS
+	 * @return					TNC result code
+	 */
+	TNC_Result (*reserve_additional_id)(TNC_IMVID imv_id,
+										TNC_UInt32 *out_imv_id);
+
 };
 
 METHOD(imv_agent_t, bind_functions, TNC_Result,
@@ -184,6 +217,11 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 	{
 		this->send_message = NULL;
 	}
+	if (bind_function(this->id, "TNC_TNCS_SendMessageLong",
+			(void**)&this->send_message_long) != TNC_RESULT_SUCCESS)
+	{
+		this->send_message_long = NULL;
+	}
 	if (bind_function(this->id, "TNC_TNCS_ProvideRecommendation",
 			(void**)&this->provide_recommendation) != TNC_RESULT_SUCCESS)
 	{
@@ -198,6 +236,11 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 			(void**)&this->set_attribute) != TNC_RESULT_SUCCESS)
 	{
 		this->set_attribute = NULL;
+	}
+	if (bind_function(this->id, "TNC_TNCC_ReserveAdditionalIMVID",
+			(void**)&this->reserve_additional_id) != TNC_RESULT_SUCCESS)
+	{
+		this->reserve_additional_id = NULL;
 	}
 	DBG2(DBG_IMV, "IMV %u \"%s\" provided with bind function",
 				  this->id, this->name);
@@ -421,16 +464,41 @@ METHOD(imv_agent_t, get_state, bool,
 }
 
 METHOD(imv_agent_t, send_message, TNC_Result,
-	private_imv_agent_t *this, TNC_ConnectionID connection_id, chunk_t msg)
+	private_imv_agent_t *this, TNC_ConnectionID connection_id, bool excl,
+	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, chunk_t msg)
 {
 	TNC_MessageType type;
+	TNC_UInt32 msg_flags;
+	imv_state_t *state;
 
-	if (!this->send_message)
+	state = find_connection(this, connection_id);
+	if (!state)
 	{
+		DBG1(DBG_IMV, "IMV %u \"%s\" has no state for Connection ID %u",
+					  this->id, this->name, connection_id);
 		return TNC_RESULT_FATAL;
 	}
-	type = (this->vendor_id << 8) | this->subtype;
-	return this->send_message(this->id, connection_id, msg.ptr, msg.len, type);
+
+	if (state->has_long(state) && this->send_message_long)
+	{
+		if (!src_imv_id)
+		{
+			src_imv_id = this->id;
+		}
+		msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+
+		return this->send_message_long(src_imv_id, connection_id, msg_flags,
+									   msg.ptr, msg.len, this->vendor_id,
+									   this->subtype, dst_imc_id);
+	}
+	if (this->send_message)
+	{
+		type = (this->vendor_id << 8) | this->subtype;
+
+		return this->send_message(this->id, connection_id, msg.ptr, msg.len,
+								  type);
+	}
+	return TNC_RESULT_FATAL;
 }
 
 METHOD(imv_agent_t, set_recommendation, TNC_Result,
@@ -561,6 +629,16 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
+METHOD(imv_agent_t, reserve_additional_id, TNC_Result,
+	private_imv_agent_t *this, TNC_UInt32 *id)
+{
+	if (!this->reserve_additional_id)
+	{
+		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
+	return this->reserve_additional_id(this->id, id);
+}
+
 METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
@@ -600,6 +678,7 @@ imv_agent_t *imv_agent_create(const char *name,
 			.receive_message = _receive_message,
 			.set_recommendation = _set_recommendation,
 			.provide_recommendation = _provide_recommendation,
+			.reserve_additional_id = _reserve_additional_id,
 			.destroy = _destroy,
 		},
 		.name = name,

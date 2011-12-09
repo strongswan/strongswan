@@ -21,6 +21,7 @@
 #ifndef IMC_TEST_STATE_H_
 #define IMC_TEST_STATE_H_
 
+#include <tncifimc.h>
 #include <imc/imc_state.h>
 #include <library.h>
 
@@ -63,6 +64,18 @@ struct imc_test_state_t {
 	 * @return				TRUE if a handshake retry should be done
 	 */
 	bool (*do_handshake_retry)(imc_test_state_t *this);
+
+	/**
+	 * Add and additional IMC ID
+	 *
+	 * @param id			Additional IMC ID
+	 */
+	void (*add_id)(imc_test_state_t *this, TNC_IMCID id);
+
+	/**
+	 * Create an enumerator for additional IMC IDs
+	 */
+	enumerator_t* (*create_id_enumerator)(imc_test_state_t *this);
 };
 
 /**

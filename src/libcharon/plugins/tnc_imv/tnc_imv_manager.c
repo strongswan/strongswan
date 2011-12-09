@@ -171,8 +171,11 @@ METHOD(imv_manager_t, reserve_id, bool,
 	{
 		if (imv->get_id(imv))
 		{
-			imv->add_id(imv, this->next_imv_id++);
 			found = TRUE;
+			*new_id = this->next_imv_id++;
+			imv->add_id(imv, *new_id);
+			DBG2(DBG_TNC, "additional ID %u reserved for IMV with primary ID %u",
+						  *new_id, id);
 			break;
 		}
 	}

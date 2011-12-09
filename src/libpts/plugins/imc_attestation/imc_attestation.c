@@ -157,7 +157,8 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
 		pa_tnc_msg->build(pa_tnc_msg);
 		result = imc_attestation->send_message(imc_attestation, connection_id,
-									pa_tnc_msg->get_encoding(pa_tnc_msg));
+										FALSE, 0, TNC_IMVID_ANY,
+										pa_tnc_msg->get_encoding(pa_tnc_msg));
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
 
@@ -267,7 +268,8 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 
 		pa_tnc_msg->build(pa_tnc_msg);
 		result = imc_attestation->send_message(imc_attestation, connection_id,
-							pa_tnc_msg->get_encoding(pa_tnc_msg));
+										FALSE, 0, TNC_IMVID_ANY,
+										pa_tnc_msg->get_encoding(pa_tnc_msg));
 		pa_tnc_msg->destroy(pa_tnc_msg);
 	}
 

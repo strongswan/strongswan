@@ -101,11 +101,16 @@ struct imv_agent_t {
 	 * Call when a PA-TNC message is to be sent
 	 *
 	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param excl				exclusive flag
+	 * @param src_imv_id		IMV ID to be set as source
+	 * @param dst_imc_id		IMD ID to be set as destination
 	 * @param msg				message to send
 	 * @return					TNC result code
 	 */
 	TNC_Result (*send_message)(imv_agent_t *this,
-							   TNC_ConnectionID connection_id, chunk_t msg);
+							   TNC_ConnectionID connection_id, bool excl,
+							   TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id,
+							   chunk_t msg);
 
 	/**
 	 * Call when a PA-TNC message was received
@@ -142,6 +147,14 @@ struct imv_agent_t {
 	 */
 	TNC_Result (*provide_recommendation)(imv_agent_t *this,
 										 TNC_ConnectionID connection_id);
+
+	/**
+	 * Reserve an additional IMV ID
+	 *
+	 * @param id				additional IMV ID assigned by TNCS
+	 * @return					TNC result code
+	 */
+	TNC_Result (*reserve_additional_id)(imv_agent_t *this, TNC_UInt32 *id);
 
 	/**
 	 * Destroys an imv_agent_t object

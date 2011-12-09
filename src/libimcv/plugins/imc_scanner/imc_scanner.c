@@ -237,8 +237,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
 	msg->build(msg);
-	result = imc_scanner->send_message(imc_scanner, connection_id,
-									   msg->get_encoding(msg));	
+	result = imc_scanner->send_message(imc_scanner, connection_id, FALSE, 0,
+									   TNC_IMVID_ANY, msg->get_encoding(msg));	
 	msg->destroy(msg);
 
 	return result;

@@ -154,8 +154,11 @@ METHOD(imc_manager_t, reserve_id, bool,
 	{
 		if (imc->get_id(imc))
 		{
-			imc->add_id(imc, this->next_imc_id++);
 			found = TRUE;
+			*new_id = this->next_imc_id++;
+			imc->add_id(imc, *new_id);
+			DBG2(DBG_TNC, "additional ID %u reserved for IMC with primary ID %u",
+						  *new_id, id);
 			break;
 		}
 	}

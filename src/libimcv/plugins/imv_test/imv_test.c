@@ -118,8 +118,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
 	msg->build(msg);
-	result = imv_test->send_message(imv_test, connection_id,
-									msg->get_encoding(msg));	
+	result = imv_test->send_message(imv_test, connection_id, FALSE, 0,
+									TNC_IMCID_ANY, msg->get_encoding(msg));	
 	msg->destroy(msg);
 
 	return result;

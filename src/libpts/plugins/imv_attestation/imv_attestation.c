@@ -185,6 +185,7 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	{
 		msg->build(msg);
 		result = imv_attestation->send_message(imv_attestation, connection_id,
+											   FALSE, 0, TNC_IMCID_ANY,
 											   msg->get_encoding(msg));
 	}
 	else
@@ -337,7 +338,8 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 
 		pa_tnc_msg->build(pa_tnc_msg);
 		result = imv_attestation->send_message(imv_attestation, connection_id,
-							pa_tnc_msg->get_encoding(pa_tnc_msg));
+										FALSE, 0, TNC_IMCID_ANY,
+										pa_tnc_msg->get_encoding(pa_tnc_msg));
 		
 		pa_tnc_msg->destroy(pa_tnc_msg);
 		attr_list->destroy(attr_list);

@@ -73,8 +73,10 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	imc_state_t *state;
 	imc_test_state_t *test_state;
 	TNC_Result result;
+	TNC_UInt32 new_imc_id;
 	char *command;
 	bool retry;
+	int additional_ids;
 
 	if (!imc_test)
 	{
@@ -85,11 +87,48 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	{
 		case TNC_CONNECTION_STATE_CREATE:
 			command = lib->settings->get_str(lib->settings,
-						 "libimcv.plugins.imc-test.command", "none");
+						 		"libimcv.plugins.imc-test.command", "none");
 			retry = lib->settings->get_bool(lib->settings,
 								"libimcv.plugins.imc-test.retry", FALSE);
 			state = imc_test_state_create(connection_id, command, retry);
-			return imc_test->create_state(imc_test, state);
+
+			result = imc_test->create_state(imc_test, state);
+			if (result != TNC_RESULT_SUCCESS)
+			{
+				return result;
+			}
+
+			/* Do we want to reserve additional IMC IDs? */
+			additional_ids = lib->settings->get_int(lib->settings,
+						 		"libimcv.plugins.imc-test.additional_ids", 0);
+			if (additional_ids < 1)
+			{
+				return TNC_RESULT_SUCCESS;
+			}
+
+			if (!state->has_long(state))
+			{
+				DBG1(DBG_IMC, "IMC %u \"%s\" did not detect support of "
+							   "multiple IMC IDs", imc_id, imc_name);
+				return TNC_RESULT_SUCCESS;
+			}
+			test_state = (imc_test_state_t*)state;
+
+			while (additional_ids-- > 0)
+			{
+				if (imc_test->reserve_additional_id(imc_test, &new_imc_id) !=
+					TNC_RESULT_SUCCESS)
+				{
+					DBG1(DBG_IMC, "IMC %u \"%s\" failed to reserve "
+								  "%d additional IMC IDs",
+								   imc_id, imc_name, additional_ids);
+					break;
+				}
+				DBG2(DBG_IMC, "IMC %u \"%s\" reserved additional ID %u",
+							   imc_id, imc_name, new_imc_id);
+				test_state->add_id(test_state, new_imc_id);
+			}
+			return TNC_RESULT_SUCCESS;
 
 		case TNC_CONNECTION_STATE_HANDSHAKE:
 			/* get updated IMC state */
@@ -145,6 +184,9 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	pa_tnc_attr_t *attr;
 	imc_state_t *state;
 	imc_test_state_t *test_state;
+	enumerator_t *enumerator;
+	void *pointer;
+	TNC_UInt32 imc_id;
 	TNC_Result result;
 
 	if (!imc_test->get_state(imc_test, connection_id, &state))
@@ -152,14 +194,35 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		return TNC_RESULT_FATAL;
 	}
 	test_state = (imc_test_state_t*)state;
+
+	/* send PA message for primary IMC ID */
 	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
 	msg->build(msg);
-	result = imc_test->send_message(imc_test, connection_id,
-									msg->get_encoding(msg));	
+	result = imc_test->send_message(imc_test, connection_id, FALSE, 0,
+									TNC_IMVID_ANY, msg->get_encoding(msg));	
 	msg->destroy(msg);
+
+	/* send PA messages for additional IMC IDs */
+	enumerator = test_state->create_id_enumerator(test_state);
+	while (result == TNC_RESULT_SUCCESS &&
+		   enumerator->enumerate(enumerator, &pointer))
+	{
+		/* interpret pointer as scalar value */
+		imc_id = (TNC_UInt32)pointer;
+
+		attr = ita_attr_command_create(test_state->get_command(test_state));
+		attr->set_noskip_flag(attr, TRUE);
+		msg = pa_tnc_msg_create();
+		msg->add_attribute(msg, attr);
+		msg->build(msg);
+		result = imc_test->send_message(imc_test, connection_id, FALSE, imc_id,
+										TNC_IMVID_ANY, msg->get_encoding(msg));	
+		msg->destroy(msg);
+	}
+	enumerator->destroy(enumerator);
 
 	return result;
 }
