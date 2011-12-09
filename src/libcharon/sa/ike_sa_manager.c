@@ -1358,6 +1358,17 @@ METHOD(ike_sa_manager_t, checkin, void,
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		entry->my_id == NULL && entry->other_id == NULL)
 	{
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{
+			/* If authenticated and received INITIAL_CONTACT,
+			 * delete any existing IKE_SAs with that peer. */
+			if (ike_sa->has_condition(ike_sa, COND_INIT_CONTACT_SEEN))
+			{
+				this->public.check_uniqueness(&this->public, ike_sa, TRUE);
+				ike_sa->set_condition(ike_sa, COND_INIT_CONTACT_SEEN, FALSE);
+			}
+		}
+
 		entry->my_id = my_id->clone(my_id);
 		entry->other_id = other_id->clone(other_id);
 		if (!entry->other)

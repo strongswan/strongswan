@@ -263,6 +263,52 @@ static auth_method_t get_auth_method(private_main_mode_t *this)
 			return AUTH_RSA;
 	}
 }
+/**
+ * Check for notify errors, return TRUE if error found
+ */
+static bool has_notify_errors(private_main_mode_t *this, message_t *message)
+{
+	enumerator_t *enumerator;
+	payload_t *payload;
+	bool err = FALSE;
+
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == NOTIFY_V1)
+		{
+			notify_payload_t *notify;
+			notify_type_t type;
+
+			notify = (notify_payload_t*)payload;
+			type = notify->get_notify_type(notify);
+			if (type < 16384)
+			{
+				DBG1(DBG_IKE, "received %N error notify",
+					 notify_type_names, type);
+				err = TRUE;
+			}
+			else if (type == INITIAL_CONTACT_IKEV1)
+			{
+				if (!this->initiator && this->state == MM_AUTH)
+				{
+					/* If authenticated and received INITIAL_CONTACT,
+					 * delete any existing IKE_SAs with that peer.
+					 * The delete takes place when the SA is checked in due
+					 * to other id not known until the 3rd message.*/
+					this->ike_sa->set_condition(this->ike_sa, COND_INIT_CONTACT_SEEN, TRUE);
+				}
+			}
+			else
+			{
+				DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return err;
+}
 
 METHOD(task_t, build_i, status_t,
 	private_main_mode_t *this, message_t *message)
@@ -503,6 +549,11 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 			this->state = MM_AUTH;
+
+			if (has_notify_errors(this, message))
+			{
+				return FAILED;
+			}
 			return NEED_MORE;
 		}
 		default:

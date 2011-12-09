@@ -153,6 +153,11 @@ enum ike_condition_t {
 	 * IKE_SA is stale, the peer is currently unreachable (MOBIKE)
 	 */
 	COND_STALE = (1<<7),
+
+	/**
+	 * Initial contact received
+	 */
+	COND_INIT_CONTACT_SEEN = (1<<8),
 };
 
 /**
