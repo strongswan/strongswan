@@ -122,6 +122,16 @@ struct private_main_mode_t {
 	 */
 	authenticator_t *authenticator;
 
+	/**
+	 * Notify type in case of error
+	 */
+	notify_type_t notify_type;
+
+	/**
+	 * Notify data in case of error
+	 */
+	chunk_t notify_data;
+
 	/** states of main mode */
 	enum {
 		MM_INIT,
@@ -263,6 +273,7 @@ static auth_method_t get_auth_method(private_main_mode_t *this)
 			return AUTH_RSA;
 	}
 }
+
 /**
  * Check for notify errors, return TRUE if error found
  */
@@ -308,6 +319,49 @@ static bool has_notify_errors(private_main_mode_t *this, message_t *message)
 	enumerator->destroy(enumerator);
 
 	return err;
+}
+
+METHOD(task_t, build_notify_error, status_t,
+	private_main_mode_t *this, message_t *message)
+{
+	notify_payload_t *notify;
+	ike_sa_id_t *ike_sa_id;
+	chunk_t spi;
+	u_int64_t spi_i, spi_r;
+
+	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+						PROTO_IKE, this->notify_type);
+
+	if (this->notify_data.ptr)
+	{
+		notify->set_notification_data(notify, this->notify_data);
+	}
+
+	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+
+	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
+	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
+
+	spi = chunk_cata("cc", chunk_from_thing(spi_i), chunk_from_thing(spi_r));
+
+	notify->set_spi_data(notify, spi);
+
+	message->add_payload(message, (payload_t*)notify);
+
+	return SUCCESS;
+}
+
+/**
+ * Set the task ready to build notify error message
+ */
+static status_t set_notify_error(private_main_mode_t *this,
+																 notify_type_t type, chunk_t data)
+{
+	this->notify_type = type;
+	this->notify_data = data;
+	/* The task will be destroyed after build */
+	this->public.task.build = _build_notify_error;
+	return FAILED_SEND_ERROR;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -463,7 +517,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
-				return FAILED;
+				return set_notify_error(this, NO_PROPOSAL_CHOSEN, chunk_empty);
 			}
 
 			this->auth_method = sa_payload->get_auth_method(sa_payload);
@@ -525,7 +579,7 @@ METHOD(task_t, process_r, status_t,
 				id->destroy(id);
 				any->destroy(any);
 				enumerator->destroy(enumerator);
-				return FAILED;
+				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			this->peer_cfg->get_ref(this->peer_cfg);
 			enumerator->destroy(enumerator);
@@ -540,13 +594,13 @@ METHOD(task_t, process_r, status_t,
 			if (!this->my_auth || !this->other_auth)
 			{
 				DBG1(DBG_IKE, "auth config missing");
-				return FAILED;
+				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 
 			if (this->authenticator->process(this->authenticator,
 											 message) != SUCCESS)
 			{
-				return FAILED;
+				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			this->state = MM_AUTH;
 
