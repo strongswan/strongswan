@@ -23,11 +23,12 @@
 #include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
 
-ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
+ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_XAUTH,
 	"any",
 	"public key",
 	"pre-shared key",
 	"EAP",
+	"XAuth",
 );
 
 ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
