@@ -39,6 +39,16 @@ struct private_imc_test_state_t {
 	TNC_ConnectionState state;
 
 	/**
+	 * Does the TNCCS connection support long message types?
+	 */
+	bool has_long;
+
+	/**
+	 * Does the TNCCS connection support exclusive delivery?
+	 */
+	bool has_excl;
+
+	/**
 	 * Command to transmit to IMV
 	 */
 	char *command;
@@ -58,6 +68,25 @@ METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
 	private_imc_test_state_t *this)
 {
 	return this->connection_id;
+}
+
+METHOD(imc_state_t, has_long, bool,
+	private_imc_test_state_t *this)
+{
+	return this->has_long;
+}
+
+METHOD(imc_state_t, has_excl, bool,
+	private_imc_test_state_t *this)
+{
+	return this->has_excl;
+}
+
+METHOD(imc_state_t, set_flags, void,
+	private_imc_test_state_t *this, bool has_long, bool has_excl)
+{
+	this->has_long = has_long;
+	this->has_excl = has_excl;
 }
 
 METHOD(imc_state_t, change_state, void,
@@ -123,6 +152,9 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 		.public = {
 			.interface = {
 				.get_connection_id = _get_connection_id,
+				.has_long = _has_long,
+				.has_excl = _has_excl,
+				.set_flags = _set_flags,
 				.change_state = _change_state,
 				.destroy = _destroy,
 			},

@@ -40,6 +40,29 @@ struct imv_state_t {
 	 TNC_ConnectionID (*get_connection_id)(imv_state_t *this);
 
 	/**
+	 * Checks if long message types are supported for this TNCCS connection
+	 *
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	bool (*has_long)(imv_state_t *this);
+
+	/**
+	 * Checks if the exclusive delivery is supported for this TNCCS connection
+	 *
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	bool (*has_excl)(imv_state_t *this);
+
+	/**
+	 * Sets the long message types and exclusive flags for this TNCCS connection
+	 *
+	 * @param has_long		TNCCS connection supports long message types
+	 * @param has_excl		TNCCS connection supports exclusive delivery
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	void (*set_flags)(imv_state_t *this, bool has_long, bool has_excl);
+
+	/**
 	 * Change the connection state
 	 *
 	 * @param new_state		new connection state

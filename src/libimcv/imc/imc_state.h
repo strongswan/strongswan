@@ -33,11 +33,35 @@ typedef struct imc_state_t imc_state_t;
 struct imc_state_t {
 
 	/**
-	 * Get the TNCS connection ID attached to the state
+	 * Get the TNCS connection I
+D attached to the state
 	 *
 	 * @return				TNCS connection ID of the state
 	 */
 	 TNC_ConnectionID (*get_connection_id)(imc_state_t *this);
+
+	/**
+	 * Checks if long message types are supported for this TNCCS connection
+	 *
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	bool (*has_long)(imc_state_t *this);
+
+	/**
+	 * Checks if the exclusive delivery is supported for this TNCCS connection
+	 *
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	bool (*has_excl)(imc_state_t *this);
+
+	/**
+	 * Sets the long message types and exclusive flags for this TNCCS connection
+	 *
+	 * @param has_long		TNCCS connection supports long message types
+	 * @param has_excl		TNCCS connection supports exclusive delivery
+	 * @return				TRUE if set, FALSE otherwise
+	 */
+	void (*set_flags)(imc_state_t *this, bool has_long, bool has_excl);
 
 	/**
 	 * Change the connection state

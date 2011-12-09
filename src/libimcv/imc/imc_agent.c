@@ -309,6 +309,8 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
 	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
 
+	state->set_flags(state, has_long, has_excl);
+
 	DBG2(DBG_IMC, "IMC %u \"%s\" created a state for Connection ID %u: "
 				  "%s %s with %slong %sexcl %ssoh over %s %s",
 				  this->id, this->name, conn_id, tnccs_p ? tnccs_p:"?",
