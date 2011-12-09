@@ -600,6 +600,37 @@ METHOD(notify_payload_t, set_spi, void,
 	compute_length(this);
 }
 
+METHOD(notify_payload_t, get_spi_data, chunk_t,
+	private_notify_payload_t *this)
+{
+	switch (this->protocol_id)
+	{
+		case PROTO_IKE:
+			if (this->spi.len == 16)
+			{
+				return this->spi;
+			}
+		default:
+			break;
+	}
+	return chunk_empty;
+}
+
+METHOD(notify_payload_t, set_spi_data, void,
+	private_notify_payload_t *this, chunk_t spi)
+{
+	chunk_free(&this->spi);
+	switch (this->protocol_id)
+	{
+		case PROTO_IKE:
+			this->spi = chunk_clone(spi);
+		default:
+			break;
+	}
+	this->spi_size = this->spi.len;
+	compute_length(this);
+}
+
 METHOD(notify_payload_t, get_notification_data, chunk_t,
 	private_notify_payload_t *this)
 {
@@ -647,6 +678,8 @@ notify_payload_t *notify_payload_create(payload_type_t type)
 			.set_notify_type = _set_notify_type,
 			.get_spi = _get_spi,
 			.set_spi = _set_spi,
+			.get_spi_data = _get_spi_data,
+			.set_spi_data = _set_spi_data,
 			.get_notification_data = _get_notification_data,
 			.set_notification_data = _set_notification_data,
 			.destroy = _destroy,

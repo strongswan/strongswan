@@ -210,6 +210,24 @@ struct notify_payload_t {
 	void (*set_spi) (notify_payload_t *this, u_int32_t spi);
 
 	/**
+	 * Returns the currently set spi of this payload.
+	 *
+	 * This is only valid for notifys with protocol ISAKMP
+	 *
+	 * @return		SPI value
+	 */
+	chunk_t (*get_spi_data) (notify_payload_t *this);
+
+	/**
+	 * Sets the spi of this payload.
+	 *
+	 * This is only valid for notifys with protocol ISAKMP
+	 *
+	 * @param spi	SPI value
+	 */
+	void (*set_spi_data) (notify_payload_t *this, chunk_t spi);
+
+	/**
 	 * Returns the currently set notification data of payload.
 	 *
 	 * Returned data are not copied.
