@@ -126,48 +126,71 @@ METHOD(payload_t, verify, status_t,
 
 	switch (this->attr_type)
 	{
-		 case INTERNAL_IP4_ADDRESS:
-		 case INTERNAL_IP4_NETMASK:
-		 case INTERNAL_IP4_DNS:
-		 case INTERNAL_IP4_NBNS:
-		 case INTERNAL_ADDRESS_EXPIRY:
-		 case INTERNAL_IP4_DHCP:
+		case INTERNAL_IP4_ADDRESS:
+		case INTERNAL_IP4_NETMASK:
+		case INTERNAL_IP4_DNS:
+		case INTERNAL_IP4_NBNS:
+		case INTERNAL_ADDRESS_EXPIRY:
+		case INTERNAL_IP4_DHCP:
 			if (this->length_or_value != 0 && this->length_or_value != 4)
 			{
 				failed = TRUE;
 			}
 			break;
-		 case INTERNAL_IP4_SUBNET:
+		case INTERNAL_IP4_SUBNET:
 			if (this->length_or_value != 0 && this->length_or_value != 8)
 			{
 				failed = TRUE;
 			}
 			break;
-		 case INTERNAL_IP6_ADDRESS:
-		 case INTERNAL_IP6_SUBNET:
+		case INTERNAL_IP6_ADDRESS:
+		case INTERNAL_IP6_SUBNET:
 			if (this->length_or_value != 0 && this->length_or_value != 17)
 			{
 				failed = TRUE;
 			}
 			break;
-		 case INTERNAL_IP6_DNS:
-		 case INTERNAL_IP6_NBNS:
-		 case INTERNAL_IP6_DHCP:
+		case INTERNAL_IP6_DNS:
+		case INTERNAL_IP6_NBNS:
+		case INTERNAL_IP6_DHCP:
 			if (this->length_or_value != 0 && this->length_or_value != 16)
 			{
 				failed = TRUE;
 			}
 			break;
-		 case SUPPORTED_ATTRIBUTES:
+		case SUPPORTED_ATTRIBUTES:
 			if (this->length_or_value % 2)
 			{
 				failed = TRUE;
 			}
 			break;
-		 case APPLICATION_VERSION:
+		case APPLICATION_VERSION:
+		case INTERNAL_IP4_SERVER:
+		case INTERNAL_IP6_SERVER:
+		case XAUTH_TYPE:
+		case XAUTH_USER_NAME:
+		case XAUTH_USER_PASSWORD:
+		case XAUTH_PASSCODE:
+		case XAUTH_MESSAGE:
+		case XAUTH_CHALLENGE:
+		case XAUTH_DOMAIN:
+		case XAUTH_STATUS:
+		case XAUTH_NEXT_PIN:
+		case XAUTH_ANSWER:
+		case UNITY_BANNER:
+		case UNITY_SAVE_PASSWD:
+		case UNITY_DEF_DOMAIN:
+		case UNITY_SPLITDNS_NAME:
+		case UNITY_SPLIT_INCLUDE:
+		case UNITY_NATT_PORT:
+		case UNITY_LOCAL_LAN:
+		case UNITY_PFS:
+		case UNITY_FW_TYPE:
+		case UNITY_BACKUP_SERVERS:
+		case UNITY_DDNS_HOSTNAME:
 			/* any length acceptable */
 			break;
-		 default:
+		default:
 			DBG1(DBG_ENC, "unknown attribute type %N",
 				 configuration_attribute_type_names, this->attr_type);
 			break;
