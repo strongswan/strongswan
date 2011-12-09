@@ -29,6 +29,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/hash_payload.h>
 #include <sa/tasks/xauth.h>
+#include <sa/tasks/mode_config.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -822,6 +823,12 @@ METHOD(task_t, build_r, status_t,
 										   message) != SUCCESS)
 			{
 				return FAILED;
+			}
+
+			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			{
+				this->ike_sa->queue_task(this->ike_sa,
+							(task_t*)mode_config_create(this->ike_sa, TRUE));
 			}
 
 			switch (this->auth_method)

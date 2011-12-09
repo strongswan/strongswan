@@ -23,6 +23,7 @@
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth.h>
+#include <sa/tasks/mode_config.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
@@ -287,6 +288,12 @@ METHOD(task_manager_t, initiate, status_t,
 				}
 				break;
 			case IKE_ESTABLISHED:
+				if (activate_task(this, TASK_MODE_CONFIG))
+				{
+					exchange = TRANSACTION;
+					new_mid = TRUE;
+					break;
+				}
 				if (activate_task(this, TASK_QUICK_MODE))
 				{
 					exchange = QUICK_MODE;
@@ -400,15 +407,11 @@ METHOD(task_manager_t, initiate, status_t,
 	{
 		return retransmit(this, this->initiating.seqnr);
 	}
-	else
-	{
-		charon->sender->send(charon->sender,
-					this->initiating.packet->clone(this->initiating.packet));
-
-		this->initiating.packet->destroy(this->initiating.packet);
-		this->initiating.packet = NULL;
-		return SUCCESS;
-	}
+	charon->sender->send(charon->sender,
+				this->initiating.packet->clone(this->initiating.packet));
+	this->initiating.packet->destroy(this->initiating.packet);
+	this->initiating.packet = NULL;
+	return SUCCESS;
 }
 
 /**
@@ -654,7 +657,14 @@ static status_t process_request(private_task_manager_t *this,
 				enumerator->destroy(enumerator);
 				break;
 			case TRANSACTION:
-				task = (task_t *)xauth_create(this->ike_sa, FALSE);
+				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+				{
+					task = (task_t *)mode_config_create(this->ike_sa, FALSE);
+				}
+				else
+				{
+					task = (task_t *)xauth_create(this->ike_sa, FALSE);
+				}
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			default:
