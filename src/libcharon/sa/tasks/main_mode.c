@@ -757,6 +757,23 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 	return TRUE;
 }
 
+/**
+ * Set IKE_SA to established state
+ */
+static void establish(private_main_mode_t *this)
+{
+	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
+
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+}
+
 METHOD(task_t, build_r, status_t,
 	private_main_mode_t *this, message_t *message)
 {
@@ -819,21 +836,9 @@ METHOD(task_t, build_r, status_t,
 					/* TODO-IKEv1: not yet supported */
 					return FAILED;
 				default:
-					break;
+					establish(this);
+					return SUCCESS;
 			}
-
-			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-				 this->ike_sa->get_name(this->ike_sa),
-				 this->ike_sa->get_unique_id(this->ike_sa),
-				 this->ike_sa->get_my_host(this->ike_sa),
-				 this->ike_sa->get_my_id(this->ike_sa),
-				 this->ike_sa->get_other_host(this->ike_sa),
-				 this->ike_sa->get_other_id(this->ike_sa));
-
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-
-			return SUCCESS;
 		}
 		default:
 			return FAILED;
@@ -928,28 +933,16 @@ METHOD(task_t, process_i, status_t,
 			{
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
-					/* TODO-IKEv1: wait for XAUTH request */
+					/* wait for XAUTH request */
 					return SUCCESS;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 					/* TODO-IKEv1: not yet */
 					return FAILED;
 				default:
-					break;
+					establish(this);
+					return SUCCESS;
 			}
-
-			DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-				 this->ike_sa->get_name(this->ike_sa),
-				 this->ike_sa->get_unique_id(this->ike_sa),
-				 this->ike_sa->get_my_host(this->ike_sa),
-				 this->ike_sa->get_my_id(this->ike_sa),
-				 this->ike_sa->get_other_host(this->ike_sa),
-				 this->ike_sa->get_other_id(this->ike_sa));
-
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
-
-			return SUCCESS;
 		}
 		default:
 			return FAILED;
