@@ -580,6 +580,9 @@ Disable output to stderr with a stand-alone libimcv library
 .BR libimcv.plugins.imc-attestation.platform_info
 Information on operating system and hardware platform
 .TP
+.BR libimcv.plugins.imc-attestation.aik_blob
+AIK encrypted private key blob file
+.TP
 .BR libimcv.plugins.imc-attestation.aik_cert
 AIK certificate file
 .TP
