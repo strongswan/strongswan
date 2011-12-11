@@ -311,6 +311,63 @@ err:
 	return VERIFY_ERROR;
 }
 
+METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
+	private_pa_tnc_msg_t *this)
+{
+	enumerator_t *enumerator;
+	pa_tnc_attr_t *attr;
+	bool fatal_error = FALSE;
+
+	enumerator = this->attributes->create_enumerator(this->attributes);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		if (attr->get_vendor_id(attr) == PEN_IETF &&
+			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		{
+			ietf_attr_pa_tnc_error_t *error_attr;
+			pen_t error_vendor_id;
+			pa_tnc_error_code_t error_code;
+			chunk_t msg_info, attr_info;
+			u_int32_t offset;
+
+			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+			error_vendor_id = error_attr->get_vendor_id(error_attr);
+			error_code = error_attr->get_error_code(error_attr);
+			msg_info = error_attr->get_msg_info(error_attr);
+
+			/* skip errors from non-IETF namespaces */
+			if (error_vendor_id != PEN_IETF)
+			{
+				continue;
+			}
+			DBG1(DBG_IMC, "received PA-TNC error '%N' concerning message "
+				 "0x%08x/0x%08x", pa_tnc_error_code_names, error_code,
+				 untoh32(msg_info.ptr), untoh32(msg_info.ptr + 4));
+
+			switch (error_code)
+			{
+				case PA_ERROR_INVALID_PARAMETER:
+					offset = error_attr->get_offset(error_attr);
+					DBG1(DBG_IMC, "  occurred at offset of %u bytes", offset);
+					break;
+				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
+					attr_info = error_attr->get_attr_info(error_attr);
+					DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);
+					break;
+				default:
+					break;
+			}
+
+			/* remove the processed IETF standard error attribute */
+			this->attributes->remove_at(this->attributes, enumerator);
+			fatal_error = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return fatal_error;
+}
+
 METHOD(pa_tnc_msg_t, create_attribute_enumerator, enumerator_t*,
 	private_pa_tnc_msg_t *this)
 {
@@ -347,6 +404,7 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 			.add_attribute = _add_attribute,
 			.build = _build,
 			.process = _process,
+			.process_ietf_std_errors = _process_ietf_std_errors,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.create_error_enumerator = _create_error_enumerator,
 			.destroy = _destroy,

@@ -140,7 +140,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	imv_test_state_t *imv_test_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
-	bool fatal_error = FALSE, retry = FALSE;
+	bool fatal_error, retry = FALSE;
 
 	if (!imv_test)
 	{
@@ -164,41 +164,15 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		return result;
 	}
 
+	/* preprocess any IETF standard error attributes */
+	fatal_error = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg);
+
 	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_IETF &&
-			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
-		{
-			ietf_attr_pa_tnc_error_t *error_attr;
-			pa_tnc_error_code_t error_code;
-			chunk_t msg_info, attr_info;
-			u_int32_t offset;
-
-			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-			error_code = error_attr->get_error_code(error_attr);
-			msg_info = error_attr->get_msg_info(error_attr);
-
-			DBG1(DBG_IMV, "received PA-TNC error '%N' concerning message %#B",
-				 pa_tnc_error_code_names, error_code, &msg_info);
-			switch (error_code)
-			{
-				case PA_ERROR_INVALID_PARAMETER:
-					offset = error_attr->get_offset(error_attr);
-					DBG1(DBG_IMV, "  occurred at offset of %u bytes", offset);
-					break;
-				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
-					attr_info = error_attr->get_attr_info(error_attr);
-					DBG1(DBG_IMV, "  unsupported attribute %#B", &attr_info);
-					break;
-				default:
-					break;
-			}
-			fatal_error = TRUE;
-		}
-		else if (attr->get_vendor_id(attr) == PEN_ITA &&
-				 attr->get_type(attr) == ITA_ATTR_COMMAND)
+		if (attr->get_vendor_id(attr) == PEN_ITA &&
+			attr->get_type(attr) == ITA_ATTR_COMMAND)
 		{
 			ita_attr_command_t *ita_attr;
 			char *command;
