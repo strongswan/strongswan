@@ -607,6 +607,9 @@ List of TCP ports that can be open or must be closed
 .BR libimcv.plugins.imv-scanner.udp_ports
 List of UDP ports that can be open or must be closed
 .TP
+.BR libimcv.plugins.imc-test.additional_ids " [0]"
+Number of additional IMC IDs
+.TP
 .BR libimcv.plugins.imc-test.command " [none]"
 Command to be sent to the Test IMV
 .TP

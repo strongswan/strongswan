@@ -71,9 +71,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 										  TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
-	imv_test_state_t *test_state;
-	TNC_Result result;
-	int rounds;
 
 	if (!imv_test)
 	{
@@ -87,42 +84,10 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 			return imv_test->create_state(imv_test, state);
 		case TNC_CONNECTION_STATE_DELETE:
 			return imv_test->delete_state(imv_test, connection_id);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
-			/* get updated IMV state */
-			result = imv_test->change_state(imv_test, connection_id,
-											new_state, &state);
-			if (result != TNC_RESULT_SUCCESS)
-			{
-				return result;
-			}
-			test_state = (imv_test_state_t*)state;
-
-			/* set the number of measurement rounds */
-			rounds = lib->settings->get_int(lib->settings,
-								"libimcv.plugins.imv-test.rounds", 0);
-			test_state->set_rounds(test_state, rounds);
-			return TNC_RESULT_SUCCESS;
 		default:
 			return imv_test->change_state(imv_test, connection_id,
 										  new_state, NULL);
 	}
-}
-
-static TNC_Result send_message(TNC_ConnectionID connection_id)
-{
-	pa_tnc_msg_t *msg;
-	pa_tnc_attr_t *attr;
-	TNC_Result result;
-
-	attr = ita_attr_command_create("repeat");
-	msg = pa_tnc_msg_create();
-	msg->add_attribute(msg, attr);
-	msg->build(msg);
-	result = imv_test->send_message(imv_test, connection_id, FALSE, 0,
-									TNC_IMCID_ANY, msg->get_encoding(msg));	
-	msg->destroy(msg);
-
-	return result;
 }
 
 static TNC_Result receive_message(TNC_IMVID imv_id,
@@ -137,9 +102,10 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
 	imv_state_t *state;
-	imv_test_state_t *imv_test_state;
+	imv_test_state_t *test_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
+	int rounds;
 	bool fatal_error, retry = FALSE;
 
 	if (!imv_test)
@@ -153,6 +119,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
+	test_state = (imv_test_state_t*)state;
 
 	/* parse received PA-TNC message and automatically handle any errors */ 
 	result = imv_test->receive_message(imv_test, state, msg, msg_vid,
@@ -166,6 +133,11 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 	/* preprocess any IETF standard error attributes */
 	fatal_error = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg);
+
+	/* add any new IMC and set its number of rounds */
+	rounds = lib->settings->get_int(lib->settings,
+								"libimcv.plugins.imv-test.rounds", 0);
+	test_state->add_imc(test_state, src_imc_id, rounds);
 
 	/* analyze PA-TNC attributes */
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
@@ -225,15 +197,23 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	/* request a handshake retry ? */
 	if (retry)
 	{
+		test_state->set_rounds(test_state, rounds);
 		return imv_test->request_handshake_retry(imv_id, connection_id,
 								TNC_RETRY_REASON_IMV_SERIOUS_EVENT);
 	}
 	
 	/* repeat the measurement ? */
-	imv_test_state = (imv_test_state_t*)state;
-	if (imv_test_state->another_round(imv_test_state))
+	if (test_state->another_round(test_state, src_imc_id))
 	{
-		return send_message(connection_id);
+		attr = ita_attr_command_create("repeat");
+		pa_tnc_msg = pa_tnc_msg_create();
+		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
+		pa_tnc_msg->build(pa_tnc_msg);
+		result = imv_test->send_message(imv_test, connection_id, TRUE, imv_id,
+							src_imc_id, pa_tnc_msg->get_encoding(pa_tnc_msg));	
+		pa_tnc_msg->destroy(pa_tnc_msg);
+
+		return result;
 	}
 
 	return imv_test->provide_recommendation(imv_test, connection_id);

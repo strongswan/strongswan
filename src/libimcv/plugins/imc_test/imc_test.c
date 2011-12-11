@@ -83,6 +83,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
@@ -91,6 +92,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			retry = lib->settings->get_bool(lib->settings,
 								"libimcv.plugins.imc-test.retry", FALSE);
 			state = imc_test_state_create(connection_id, command, retry);
+			test_state = (imc_test_state_t*)state;
 
 			result = imc_test->create_state(imc_test, state);
 			if (result != TNC_RESULT_SUCCESS)
@@ -112,7 +114,6 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 							   "multiple IMC IDs", imc_id, imc_name);
 				return TNC_RESULT_SUCCESS;
 			}
-			test_state = (imc_test_state_t*)state;
 
 			while (additional_ids-- > 0)
 			{
@@ -178,51 +179,27 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	}
 }
 
-static TNC_Result send_message(TNC_ConnectionID connection_id)
+static TNC_Result send_message(imc_state_t *state, TNC_UInt32 src_imc_id,
+												   TNC_UInt32 dst_imv_id)
 {
+	imc_test_state_t *test_state;
 	pa_tnc_msg_t *msg;
 	pa_tnc_attr_t *attr;
-	imc_state_t *state;
-	imc_test_state_t *test_state;
-	enumerator_t *enumerator;
-	void *pointer;
-	TNC_UInt32 imc_id;
+	bool excl;
+	TNC_ConnectionID connection_id;
 	TNC_Result result;
 
-	if (!imc_test->get_state(imc_test, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
+	connection_id = state->get_connection_id(state);
 	test_state = (imc_test_state_t*)state;
-
-	/* send PA message for primary IMC ID */
 	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
 	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
 	msg->build(msg);
-	result = imc_test->send_message(imc_test, connection_id, FALSE, 0,
-									TNC_IMVID_ANY, msg->get_encoding(msg));	
+	excl = dst_imv_id != TNC_IMVID_ANY;
+	result = imc_test->send_message(imc_test, connection_id, excl, src_imc_id,
+									dst_imv_id, msg->get_encoding(msg));	
 	msg->destroy(msg);
-
-	/* send PA messages for additional IMC IDs */
-	enumerator = test_state->create_id_enumerator(test_state);
-	while (result == TNC_RESULT_SUCCESS &&
-		   enumerator->enumerate(enumerator, &pointer))
-	{
-		/* interpret pointer as scalar value */
-		imc_id = (TNC_UInt32)pointer;
-
-		attr = ita_attr_command_create(test_state->get_command(test_state));
-		attr->set_noskip_flag(attr, TRUE);
-		msg = pa_tnc_msg_create();
-		msg->add_attribute(msg, attr);
-		msg->build(msg);
-		result = imc_test->send_message(imc_test, connection_id, FALSE, imc_id,
-										TNC_IMVID_ANY, msg->get_encoding(msg));	
-		msg->destroy(msg);
-	}
-	enumerator->destroy(enumerator);
 
 	return result;
 }
@@ -233,12 +210,41 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
+	imc_state_t *state;
+	imc_test_state_t *test_state;
+	enumerator_t *enumerator;
+	void *pointer;
+	TNC_UInt32 additional_id;
+	TNC_Result result;
+
 	if (!imc_test)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return send_message(connection_id);
+
+	/* get current IMC state */
+	if (!imc_test->get_state(imc_test, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	test_state = (imc_test_state_t*)state;
+
+	/* send PA message for primary IMC ID */
+	result = send_message(state, imc_id, TNC_IMVID_ANY);
+	
+	/* send PA messages for additional IMC IDs */
+	enumerator = test_state->create_id_enumerator(test_state);
+	while (result == TNC_RESULT_SUCCESS &&
+		   enumerator->enumerate(enumerator, &pointer))
+	{
+		/* interpret pointer as scalar value */
+		additional_id = (TNC_UInt32)pointer;
+		result = send_message(state, additional_id, TNC_IMVID_ANY);	
+	}
+	enumerator->destroy(enumerator);
+
+	return result;
 }
 
 static TNC_Result receive_message(TNC_IMCID imc_id,
@@ -300,7 +306,8 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	/* if no error occurred then always return the same response */
-	return fatal_error ? TNC_RESULT_FATAL : send_message(connection_id);
+	return fatal_error ? TNC_RESULT_FATAL :
+						 send_message(state, dst_imc_id, src_imv_id);
 }
 
 /**

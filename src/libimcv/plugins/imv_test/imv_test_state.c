@@ -15,6 +15,7 @@
 #include "imv_test_state.h"
 
 #include <utils/lexparser.h>
+#include <utils/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imv_test_state_t private_imv_test_state_t;
@@ -60,10 +61,20 @@ struct private_imv_test_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
-	 * IMC-IMV round-trip count
+	 * List of IMCs
 	 */
-	int rounds;
+	linked_list_t *imcs;
 
+};
+
+typedef struct imc_entry_t imc_entry_t;
+
+/**
+ * Define an internal IMC entry
+ */
+struct imc_entry_t {
+	TNC_UInt32 imc_id;
+	int rounds;
 };
 
 typedef struct entry_t entry_t;
@@ -180,19 +191,73 @@ METHOD(imv_state_t, get_reason_string, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_test_state_t *this)
 {
+	this->imcs->destroy_function(this->imcs, free);
 	free(this);
+}
+
+METHOD(imv_test_state_t, add_imc, void,
+	private_imv_test_state_t *this, TNC_UInt32 imc_id, int rounds)
+{
+	enumerator_t *enumerator;
+	imc_entry_t *imc_entry;
+	bool found = FALSE;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc_entry))
+	{
+		if (imc_entry->imc_id == imc_id)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		imc_entry = malloc_thing(imc_entry_t);
+		imc_entry->imc_id = imc_id;
+		imc_entry->rounds = rounds;
+		this->imcs->insert_last(this->imcs, imc_entry);
+	}
 }
 
 METHOD(imv_test_state_t, set_rounds, void,
 	private_imv_test_state_t *this, int rounds)
 {
-	this->rounds = rounds;
+	enumerator_t *enumerator;
+	imc_entry_t *imc_entry;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc_entry))
+	{
+		imc_entry->rounds = rounds;
+	}
+	enumerator->destroy(enumerator);
 }
 
 METHOD(imv_test_state_t, another_round, bool,
-	private_imv_test_state_t *this)
+	private_imv_test_state_t *this, TNC_UInt32 imc_id)
 {
-	return (this->rounds-- > 0);
+	enumerator_t *enumerator;
+	imc_entry_t *imc_entry;
+	bool not_finished = FALSE;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc_entry))
+	{
+		if (imc_entry->rounds > 0)
+		{
+			not_finished = TRUE;
+		}
+		if (imc_entry->imc_id == imc_id)
+		{
+			imc_entry->rounds--;
+		}
+	}
+	enumerator->destroy(enumerator);
+	
+	return not_finished;	
 }
 
 /**
@@ -215,6 +280,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.get_reason_string = _get_reason_string,
 				.destroy = _destroy,
 			},
+			.add_imc = _add_imc,
 			.set_rounds = _set_rounds,
 			.another_round = _another_round,
 		},
@@ -222,6 +288,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.imcs = linked_list_create(),
 	);
 	
 	return &this->public.interface;
