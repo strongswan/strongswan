@@ -871,12 +871,12 @@ METHOD(task_manager_t, process_message, status_t,
 	else
 	{
 		hash = chunk_hash(msg->get_packet_data(msg));
-		if (hash == this->responding.hash)
+		if (hash == this->responding.hash && this->responding.packet)
 		{
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
 			charon->sender->send(charon->sender,
-						this->responding.packet->clone(this->responding.packet));
+					this->responding.packet->clone(this->responding.packet));
 			return SUCCESS;
 		}
 		msg->set_request(msg, TRUE);
