@@ -634,6 +634,7 @@ static status_t process_request(private_task_manager_t *this,
 									if(notify->get_notify_type(notify) < 16384)
 									{
 										DBG1(DBG_IKE, "Received %N error notification.", notify_type_names, notify->get_notify_type(notify));
+										enumerator->destroy(enumerator);
 										return FAILED;
 									}
 									break;
