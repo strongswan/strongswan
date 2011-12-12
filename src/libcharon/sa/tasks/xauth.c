@@ -277,9 +277,12 @@ METHOD(task_t, process_i_status, status_t,
 		DBG1(DBG_IKE, "received invalid XAUTH status response");
 		return FAILED;
 	}
-
+	if (this->status != XAUTH_OK)
+	{
+		DBG1(DBG_IKE, "destroying IKE_SA after failed XAuth authentication");
+		return FAILED;
+	}
 	establish(this);
-
 	return SUCCESS;
 }
 
