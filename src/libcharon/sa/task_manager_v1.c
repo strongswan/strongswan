@@ -371,10 +371,13 @@ METHOD(task_manager_t, initiate, status_t,
 				/* task completed, remove it */
 				this->active_tasks->remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
-				break;
+				continue;
 			case NEED_MORE:
 				expect_response = TRUE;
 				/* processed, but task needs another exchange */
+				continue;
+			case ALREADY_DONE:
+				flush_queue(this, this->active_tasks);
 				break;
 			case FAILED:
 			default:
@@ -390,6 +393,7 @@ METHOD(task_manager_t, initiate, status_t,
 				flush(this);
 				return DESTROY_ME;
 		}
+		break;
 	}
 	enumerator->destroy(enumerator);
 
@@ -464,7 +468,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				{
 					task->destroy(task);
 				}
-				break;
+				continue;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
 				if (handle_collisions(this, task))
@@ -472,6 +476,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 					this->passive_tasks->remove_at(this->passive_tasks,
 												   enumerator);
 				}
+				continue;
+			case ALREADY_DONE:
+				flush_queue(this, this->passive_tasks);
 				break;
 			case FAILED:
 			default:
@@ -482,10 +489,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				delete = TRUE;
 				break;
 		}
-		if (delete)
-		{
-			break;
-		}
+		break;
 	}
 	enumerator->destroy(enumerator);
 
@@ -700,13 +704,15 @@ static status_t process_request(private_task_manager_t *this,
 				/* task completed, remove it */
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
 				task->destroy(task);
-				break;
+				continue;
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */
 				send_response = TRUE;
+				continue;
+			case ALREADY_DONE:
+				send_response = FALSE;
+				flush_queue(this, this->passive_tasks);
 				break;
-			case FAILED_SEND_ERROR:
-				send_notify_response(this, NULL, 0, chunk_empty, task);
 			case FAILED:
 			default:
 				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
@@ -718,6 +724,7 @@ static status_t process_request(private_task_manager_t *this,
 				task->destroy(task);
 				return DESTROY_ME;
 		}
+		break;
 	}
 	enumerator->destroy(enumerator);
 
@@ -765,9 +772,12 @@ static status_t process_response(private_task_manager_t *this,
 				/* task completed, remove it */
 				this->active_tasks->remove_at(this->active_tasks, enumerator);
 				task->destroy(task);
-				break;
+				continue;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
+				continue;
+			case ALREADY_DONE:
+				flush_queue(this, this->active_tasks);
 				break;
 			case FAILED:
 			default:
@@ -780,6 +790,7 @@ static status_t process_response(private_task_manager_t *this,
 				task->destroy(task);
 				return DESTROY_ME;
 		}
+		break;
 	}
 	enumerator->destroy(enumerator);
 
