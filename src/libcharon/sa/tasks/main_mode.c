@@ -145,13 +145,12 @@ struct private_main_mode_t {
 /**
  * Get the first authentcation config from peer config
  */
-static auth_cfg_t *get_auth_cfg(private_main_mode_t *this, bool local)
+static auth_cfg_t *get_auth_cfg(peer_cfg_t *peer_cfg, bool local)
 {
 	enumerator_t *enumerator;
 	auth_cfg_t *cfg = NULL;
 
-	enumerator = this->peer_cfg->create_auth_cfg_enumerator(this->peer_cfg,
-															local);
+	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
 	enumerator->enumerate(enumerator, &cfg);
 	enumerator->destroy(enumerator);
 	return cfg;
@@ -465,8 +464,8 @@ METHOD(task_t, build_i, status_t,
 			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 			this->peer_cfg->get_ref(this->peer_cfg);
 
-			this->my_auth = get_auth_cfg(this, TRUE);
-			this->other_auth = get_auth_cfg(this, FALSE);
+			this->my_auth = get_auth_cfg(this->peer_cfg, TRUE);
+			this->other_auth = get_auth_cfg(this->peer_cfg, FALSE);
 			if (!this->my_auth || !this->other_auth)
 			{
 				DBG1(DBG_CFG, "no auth config found");
@@ -659,8 +658,8 @@ METHOD(task_t, process_r, status_t,
 			}
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 
-			this->my_auth = get_auth_cfg(this, TRUE);
-			this->other_auth = get_auth_cfg(this, FALSE);
+			this->my_auth = get_auth_cfg(this->peer_cfg, TRUE);
+			this->other_auth = get_auth_cfg(this->peer_cfg, FALSE);
 			if (!this->my_auth || !this->other_auth)
 			{
 				DBG1(DBG_IKE, "auth config missing");
@@ -694,24 +693,76 @@ static shared_key_t *lookup_shared_key(private_main_mode_t *this)
 	identification_t *my_id, *other_id;
 	shared_key_t *shared_key;
 
+	/* try to get a PSK for IP addresses */
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	my_id = identification_create_from_sockaddr(me->get_sockaddr(me));
 	other_id = identification_create_from_sockaddr(other->get_sockaddr(other));
-	if (!my_id || !other_id)
+	if (my_id && other_id)
 	{
-		DESTROY_IF(my_id);
-		DESTROY_IF(other_id);
-		return NULL;
+		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
+											  my_id, other_id);
 	}
-	shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE, my_id,
-										  other_id);
-	if (!shared_key)
+	DESTROY_IF(my_id);
+	DESTROY_IF(other_id);
+	if (shared_key)
 	{
-		DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
+		return shared_key;
 	}
-	my_id->destroy(my_id);
-	other_id->destroy(other_id);
+
+	if (this->my_auth && this->other_auth)
+	{	/* as initiator, use identities from configuraiton */
+		my_id = this->my_auth->get(this->my_auth, AUTH_RULE_IDENTITY);
+		other_id = this->other_auth->get(this->other_auth, AUTH_RULE_IDENTITY);
+		if (my_id && other_id)
+		{
+			shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
+												  my_id, other_id);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
+				 my_id, me, other_id, other);
+		}
+	}
+	else
+	{	/* as responder, we try to find a config by IP */
+		enumerator_t *enumerator;
+		auth_cfg_t *my_auth, *other_auth;
+		peer_cfg_t *peer_cfg = NULL;
+
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+									charon->backends, me, other, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
+		{
+			my_auth = get_auth_cfg(peer_cfg, TRUE);
+			other_auth = get_auth_cfg(peer_cfg, FALSE);
+			if (my_auth && other_auth)
+			{
+				my_id = my_auth->get(my_auth, AUTH_RULE_IDENTITY);
+				other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
+				if (my_id && other_id)
+				{
+					shared_key = lib->credmgr->get_shared(lib->credmgr,
+												SHARED_IKE, my_id, other_id);
+					if (shared_key)
+					{
+						break;
+					}
+					else
+					{
+						DBG1(DBG_IKE, "no shared key found for "
+							"'%Y'[%H] - '%Y'[%H]", my_id, me, other_id, other);
+					}
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (!peer_cfg)
+		{
+			DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
+		}
+	}
 	return shared_key;
 }
 
