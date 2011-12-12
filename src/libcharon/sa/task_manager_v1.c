@@ -293,6 +293,11 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = TRANSACTION;
 					new_mid = TRUE;
 				}
+				if (activate_task(this, TASK_INFORMATIONAL))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+				}
 				break;
 			case IKE_ESTABLISHED:
 				if (activate_task(this, TASK_MODE_CONFIG))
@@ -306,6 +311,11 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = QUICK_MODE;
 					new_mid = TRUE;
 					break;
+				}
+				if (activate_task(this, TASK_INFORMATIONAL))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
 				}
 				break;
 			default:

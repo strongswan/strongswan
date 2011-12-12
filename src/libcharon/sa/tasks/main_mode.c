@@ -30,6 +30,7 @@
 #include <encoding/payloads/hash_payload.h>
 #include <sa/tasks/xauth.h>
 #include <sa/tasks/mode_config.h>
+#include <sa/tasks/informational.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -122,16 +123,6 @@ struct private_main_mode_t {
 	 * Authenticator to use
 	 */
 	authenticator_t *authenticator;
-
-	/**
-	 * Notify type in case of error
-	 */
-	notify_type_t notify_type;
-
-	/**
-	 * Notify data in case of error
-	 */
-	chunk_t notify_data;
 
 	/** states of main mode */
 	enum {
@@ -386,7 +377,8 @@ static bool has_notify_errors(private_main_mode_t *this, message_t *message)
 					 * delete any existing IKE_SAs with that peer.
 					 * The delete takes place when the SA is checked in due
 					 * to other id not known until the 3rd message.*/
-					this->ike_sa->set_condition(this->ike_sa, COND_INIT_CONTACT_SEEN, TRUE);
+					this->ike_sa->set_condition(this->ike_sa,
+												COND_INIT_CONTACT_SEEN, TRUE);
 				}
 			}
 			else
@@ -400,47 +392,30 @@ static bool has_notify_errors(private_main_mode_t *this, message_t *message)
 	return err;
 }
 
-METHOD(task_t, build_notify_error, status_t,
-	private_main_mode_t *this, message_t *message)
+/**
+ * Queue a task sending a notify in an INFORMATIONAL exchange
+ */
+static status_t send_notify(private_main_mode_t *this,
+							notify_type_t type, chunk_t data)
 {
 	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
-	chunk_t spi;
 	u_int64_t spi_i, spi_r;
+	chunk_t spi;
 
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-						PROTO_IKE, this->notify_type);
-
-	if (this->notify_data.ptr)
-	{
-		notify->set_notification_data(notify, this->notify_data);
-	}
-
+														  PROTO_IKE, type);
+	notify->set_notification_data(notify, data);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
-
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
 	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
-
 	spi = chunk_cata("cc", chunk_from_thing(spi_i), chunk_from_thing(spi_r));
-
 	notify->set_spi_data(notify, spi);
 
-	message->add_payload(message, (payload_t*)notify);
-
-	return SUCCESS;
-}
-
-/**
- * Set the task ready to build notify error message
- */
-static status_t set_notify_error(private_main_mode_t *this,
-																 notify_type_t type, chunk_t data)
-{
-	this->notify_type = type;
-	this->notify_data = data;
-	/* The task will be destroyed after build */
-	this->public.task.build = _build_notify_error;
-	return FAILED_SEND_ERROR;
+	this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)informational_create(this->ike_sa, notify));
+	/* cancel all active/passive tasks in favour of informational */
+	return ALREADY_DONE;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -600,7 +575,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
-				return set_notify_error(this, NO_PROPOSAL_CHOSEN, chunk_empty);
+				return send_notify(this, NO_PROPOSAL_CHOSEN, chunk_empty);
 			}
 
 			this->auth_method = sa_payload->get_auth_method(sa_payload);
@@ -654,7 +629,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->peer_cfg)
 			{
 				DBG1(DBG_IKE, "no peer config found");
-				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 
@@ -663,13 +638,13 @@ METHOD(task_t, process_r, status_t,
 			if (!this->my_auth || !this->other_auth)
 			{
 				DBG1(DBG_IKE, "auth config missing");
-				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 
 			if (this->authenticator->process(this->authenticator,
 											 message) != SUCCESS)
 			{
-				return set_notify_error(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			this->state = MM_AUTH;
 
