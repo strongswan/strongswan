@@ -503,4 +503,10 @@ if MONOLITHIC
 endif
 endif
 
+if USE_XAUTH_GENERIC
+  SUBDIRS += plugins/xauth_generic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/xauth_generic/libstrongswan-xauth-generic.la
+endif
+endif
 

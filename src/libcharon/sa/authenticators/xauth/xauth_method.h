@@ -100,7 +100,7 @@ struct xauth_method_t {
  * @return				implementation of the eap_method_t interface
  */
 typedef xauth_method_t *(*xauth_constructor_t)(identification_t *server,
-										   identification_t *peer);
+											   identification_t *peer);
 
 /**
  * Helper function to (un-)register XAuth methods from plugin features.
