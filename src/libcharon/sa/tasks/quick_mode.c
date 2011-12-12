@@ -24,6 +24,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/payload.h>
+#include <sa/tasks/informational.h>
 
 typedef struct private_quick_mode_t private_quick_mode_t;
 
@@ -519,31 +520,21 @@ static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload
 	}
 }
 
-METHOD(task_t, build_notify_error, status_t,
-	private_quick_mode_t *this, message_t *message)
+/**
+ * Set the task ready to build notify error message
+ */
+static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 {
 	notify_payload_t *notify;
 
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-						PROTO_ESP, this->notify_type);
-
+														  PROTO_ESP, type);
 	notify->set_spi(notify, this->spi_i);
 
-	message->add_payload(message, (payload_t*)notify);
-
-	return SUCCESS;
-}
-
-/**
- * Set the task ready to build notify error message
- */
-static status_t set_notify_error(private_quick_mode_t *this,
-																 notify_type_t type)
-{
-	this->notify_type = type;
-	/* The task will be destroyed after build */
-	this->public.task.build = _build_notify_error;
-	return FAILED_SEND_ERROR;
+	this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)informational_create(this->ike_sa, notify));
+	/* cancel all active/passive tasks in favour of informational */
+	return ALREADY_DONE;
 }
 
 METHOD(task_t, build_i, status_t,
@@ -727,8 +718,9 @@ METHOD(task_t, process_r, status_t,
 
 			if (!this->proposal)
 			{
-				DBG1(DBG_IKE, "no matching proposal found");
-				return set_notify_error(this, NO_PROPOSAL_CHOSEN);
+				DBG1(DBG_IKE, "no matching proposal found, sending %N",
+					 notify_type_names, NO_PROPOSAL_CHOSEN);
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->spi_i = this->proposal->get_spi(this->proposal);
 
