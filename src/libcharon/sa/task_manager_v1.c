@@ -505,6 +505,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 
 /**
  * Send a notify in a separate INFORMATIONAL exchange back to the sender.
+ * The notify protocol_id is set to ISAKMP
  */
 static void send_notify_response(private_task_manager_t *this,
 								 message_t *request, notify_type_t type,
@@ -538,7 +539,17 @@ static void send_notify_response(private_task_manager_t *this,
 	}
 	else
 	{
-		response->add_notify(response, FALSE, type, data);
+		notify_payload_t *notify;
+
+		notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+							PROTO_IKE, type);
+
+		if (data.ptr)
+		{
+			notify->set_notification_data(notify, data);
+		}
+
+		response->add_payload(response, (payload_t*)notify);
 	}
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
