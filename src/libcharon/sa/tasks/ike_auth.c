@@ -269,6 +269,8 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 
+	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
+		 me, my_id, other, other_id);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
 													me, other, my_id, other_id);
 	while (enumerator->enumerate(enumerator, &peer_cfg))

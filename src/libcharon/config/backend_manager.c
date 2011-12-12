@@ -347,9 +347,6 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 		return enumerator;
 	}
 
-	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
-		 me, my_id, other, other_id);
-
 	configs = linked_list_create();
 	/* only once allocated helper list for sorting */
 	helper = linked_list_create();

@@ -334,10 +334,13 @@ static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *current, *found = NULL;
+	host_t *me, *other;
 
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	DBG1(DBG_CFG, "looking for peer configs matching %H...%H[%Y]", me, other, id);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-						this->ike_sa->get_my_host(this->ike_sa),
-						this->ike_sa->get_other_host(this->ike_sa), NULL, id);
+														me, other, NULL, id);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (get_auth_method(this, current) == this->auth_method)
