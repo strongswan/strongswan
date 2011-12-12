@@ -112,6 +112,11 @@ struct private_quick_mode_t {
 	 */
 	u_int64_t lifebytes;
 
+	/**
+	 * Notify type in case of error
+	 */
+	notify_type_t notify_type;
+
 	/** states of quick mode */
 	enum {
 		QM_INIT,
@@ -514,6 +519,33 @@ static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload
 	}
 }
 
+METHOD(task_t, build_notify_error, status_t,
+	private_quick_mode_t *this, message_t *message)
+{
+	notify_payload_t *notify;
+
+	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+						PROTO_ESP, this->notify_type);
+
+	notify->set_spi(notify, this->spi_i);
+
+	message->add_payload(message, (payload_t*)notify);
+
+	return SUCCESS;
+}
+
+/**
+ * Set the task ready to build notify error message
+ */
+static status_t set_notify_error(private_quick_mode_t *this,
+																 notify_type_t type)
+{
+	this->notify_type = type;
+	/* The task will be destroyed after build */
+	this->public.task.build = _build_notify_error;
+	return FAILED_SEND_ERROR;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
@@ -696,7 +728,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no matching proposal found");
-				return FAILED;
+				return set_notify_error(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->spi_i = this->proposal->get_spi(this->proposal);
 
