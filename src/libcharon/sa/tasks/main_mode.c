@@ -308,7 +308,7 @@ static auth_method_t get_auth_method(private_main_mode_t *this,
 			return AUTH_XAUTH_RESP_RSA;
 		}
 	}
-	if (i1 == AUTH_CLASS_PSK && r2 == AUTH_CLASS_PSK)
+	if (i1 == AUTH_CLASS_PSK && r1 == AUTH_CLASS_PSK)
 	{
 		if (i2 == AUTH_CLASS_ANY && r2 == AUTH_CLASS_ANY)
 		{
