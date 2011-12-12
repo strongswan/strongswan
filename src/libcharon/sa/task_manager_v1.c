@@ -528,9 +528,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
  * Send a notify in a separate INFORMATIONAL exchange back to the sender.
  * The notify protocol_id is set to ISAKMP
  */
-static void send_notify_response(private_task_manager_t *this,
-								 message_t *request, notify_type_t type,
-								 chunk_t data, task_t *task)
+static void send_notify(private_task_manager_t *this, message_t *request,
+						notify_type_t type)
 {
 	message_t *response;
 	packet_t *packet;
@@ -548,30 +547,9 @@ static void send_notify_response(private_task_manager_t *this,
 	response->set_request(response, TRUE);
 	this->rng->get_bytes(this->rng, sizeof(mid), (void*)&mid);
 	response->set_message_id(response, mid);
-
-	if (task)
-	{
-		/* Let the task build the response */
-		if (task->build(task,response) != SUCCESS)
-		{
-			response->destroy(response);
-			return;
-		}
-	}
-	else
-	{
-		notify_payload_t *notify;
-
-		notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-							PROTO_IKE, type);
-
-		if (data.ptr)
-		{
-			notify->set_notification_data(notify, data);
-		}
-
-		response->add_payload(response, (payload_t*)notify);
-	}
+	response->add_payload(response, (payload_t*)
+				notify_payload_create_from_protocol_and_type(NOTIFY_V1,
+													PROTO_IKE, type));
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	if (me->is_anyaddr(me))
@@ -826,28 +804,23 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		{
 			case NOT_SUPPORTED:
 				DBG1(DBG_IKE, "unsupported exchange type");
-				send_notify_response(this, msg,
-									 INVALID_EXCHANGE_TYPE, chunk_empty, NULL);
+				send_notify(this, msg, INVALID_EXCHANGE_TYPE);
 				break;
 			case PARSE_ERROR:
 				DBG1(DBG_IKE, "message parsing failed");
-				send_notify_response(this, msg,
-									 PAYLOAD_MALFORMED, chunk_empty, NULL);
+				send_notify(this, msg, PAYLOAD_MALFORMED);
 				break;
 			case VERIFY_ERROR:
 				DBG1(DBG_IKE, "message verification failed");
-				send_notify_response(this, msg,
-									 PAYLOAD_MALFORMED, chunk_empty, NULL);
+				send_notify(this, msg, PAYLOAD_MALFORMED);
 				break;
 			case FAILED:
 				DBG1(DBG_IKE, "integrity check failed");
-				send_notify_response(this, msg,
-									 INVALID_HASH_INFORMATION, chunk_empty, NULL);
+				send_notify(this, msg, INVALID_HASH_INFORMATION);
 				break;
 			case INVALID_STATE:
 				DBG1(DBG_IKE, "found encrypted message, but no keys available");
-				send_notify_response(this, msg,
-									 PAYLOAD_MALFORMED, chunk_empty, NULL);
+				send_notify(this, msg, PAYLOAD_MALFORMED);
 			default:
 				break;
 		}
@@ -925,8 +898,7 @@ METHOD(task_manager_t, process_message, status_t,
 				/* no config found for these hosts, destroy */
 				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
 					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
-				send_notify_response(this, msg,
-									 NO_PROPOSAL_CHOSEN, chunk_empty, NULL);
+				send_notify(this, msg, NO_PROPOSAL_CHOSEN);
 				return DESTROY_ME;
 			}
 			this->ike_sa->set_ike_cfg(this->ike_sa, ike_cfg);
