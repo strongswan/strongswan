@@ -1,3 +1,17 @@
+strongswan-4.6.2
+----------------
+
+- Upgraded the TCG IF-IMC and IF-IMV C API to the upcoming version 1.3
+  which supports IF-TNCCS 2.0 long message types, the exclusive flags
+  and multiple IMC/IMV IDs. Both the TNC Client and Server as well as
+  the "Test", "Scanner", and "Attestation" IMC/IMV pairs were updated.
+
+- Fully implemented the "TCG Attestation PTS Protocol: Binding to IF-M"
+  standard (TLV-based messages only). TPM-based remote attestation of
+  Linux IMA possible. Measurement reference values are automatically stored
+  in an SQLite database.
+
+
 strongswan-4.6.1
 ----------------
 
