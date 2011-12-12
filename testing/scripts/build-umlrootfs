@@ -342,6 +342,11 @@ then
     echo -n " --enable-whitelist" >> $INSTALLSHELL
 fi
 
+if [ "$USE_IFMAP" = "yes" ]
+then
+    echo -n " --enable-tnc-ifmap" >> $INSTALLSHELL
+fi
+
 if [ "$USE_CISCO_QUIRKS" = "yes" ]
 then
     echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
