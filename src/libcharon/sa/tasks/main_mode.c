@@ -333,13 +333,11 @@ static auth_method_t get_auth_method(private_main_mode_t *this,
 static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
-	identification_t *any;
 	peer_cfg_t *current, *found = NULL;
 
-	any = identification_create_from_encoding(ID_ANY, chunk_empty);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
 						this->ike_sa->get_my_host(this->ike_sa),
-						this->ike_sa->get_other_host(this->ike_sa), any, id);
+						this->ike_sa->get_other_host(this->ike_sa), NULL, id);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (get_auth_method(this, current) == this->auth_method)
@@ -349,7 +347,6 @@ static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id
 		}
 	}
 	enumerator->destroy(enumerator);
-	any->destroy(any);
 
 	return found;
 }
