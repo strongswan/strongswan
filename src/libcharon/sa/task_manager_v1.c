@@ -157,19 +157,26 @@ struct private_task_manager_t {
 };
 
 /**
+ * Flush a single task queue
+ */
+static void flush_queue(private_task_manager_t *this, linked_list_t *list)
+{
+	task_t *task;
+
+	while (list->remove_last(list, (void**)&task) == SUCCESS)
+	{
+		task->destroy(task);
+	}
+}
+
+/**
  * flush all tasks in the task manager
  */
 static void flush(private_task_manager_t *this)
 {
-	this->queued_tasks->destroy_offset(this->queued_tasks,
-										offsetof(task_t, destroy));
-	this->queued_tasks = linked_list_create();
-	this->passive_tasks->destroy_offset(this->passive_tasks,
-										offsetof(task_t, destroy));
-	this->passive_tasks = linked_list_create();
-	this->active_tasks->destroy_offset(this->active_tasks,
-										offsetof(task_t, destroy));
-	this->active_tasks = linked_list_create();
+	flush_queue(this, this->queued_tasks);
+	flush_queue(this, this->passive_tasks);
+	flush_queue(this, this->active_tasks);
 }
 
 /**
