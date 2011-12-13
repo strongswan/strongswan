@@ -24,7 +24,7 @@
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth.h>
 #include <sa/tasks/mode_config.h>
-#include <sa/tasks/ike_delete.h>
+#include <sa/tasks/informational.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/ike_cert_pre_v1.h>
@@ -582,8 +582,6 @@ static status_t process_request(private_task_manager_t *this,
 	enumerator_t *enumerator;
 	task_t *task = NULL;
 	bool send_response = FALSE;
-	payload_t *payload;
-	notify_payload_t *notify;
 
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
@@ -616,56 +614,8 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case INFORMATIONAL_V1:
-				enumerator = message->create_payload_enumerator(message);
-				while (enumerator->enumerate(enumerator, &payload))
-				{
-					switch (payload->get_type(payload))
-					{
-						case NOTIFY_V1:
-						{
-							notify = (notify_payload_t*)payload;
-							switch (notify->get_notify_type(notify))
-							{
-								/* TODO-IKEv1: Add notification types here as needed */
-								case INITIAL_CONTACT_IKEV1:
-									break;
-								default:
-									if(notify->get_notify_type(notify) < 16384)
-									{
-										DBG1(DBG_IKE, "Received %N error notification.", notify_type_names, notify->get_notify_type(notify));
-										enumerator->destroy(enumerator);
-										return FAILED;
-									}
-									break;
-							}
-							break;
-						}
-						case DELETE_V1:
-						{
-							delete_payload_t *delete;
-							delete = (delete_payload_t*)payload;
-
-							if (delete->get_protocol_id(delete) == PROTO_IKE)
-							{
-								task = (task_t*)ike_delete_create(this->ike_sa,
-									FALSE);
-							}
-							else
-							{
-								task = (task_t*)child_delete_create(this->ike_sa,
-									PROTO_NONE, 0);
-							}
-							break;
-						}
-						default:
-							break;
-					}
-					if (task)
-					{
-						this->passive_tasks->insert_last(this->passive_tasks, task);
-					}
-				}
-				enumerator->destroy(enumerator);
+				task = (task_t *)informational_create(this->ike_sa, NULL);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)

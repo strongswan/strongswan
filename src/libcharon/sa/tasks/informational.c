@@ -51,7 +51,49 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r, status_t,
 	private_informational_t *this, message_t *message)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	notify_payload_t *notify;
+	notify_type_t type;
+	payload_t *payload;
+	status_t status = SUCCESS;
+
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		switch (payload->get_type(payload))
+		{
+			case NOTIFY_V1:
+				notify = (notify_payload_t*)payload;
+				type = notify->get_notify_type(notify);
+
+				if (type == INITIAL_CONTACT_IKEV1)
+				{
+					this->ike_sa->set_condition(this->ike_sa,
+												COND_INIT_CONTACT_SEEN, TRUE);
+				}
+				else if (type < 16384)
+				{
+					DBG1(DBG_IKE, "received %N error notify",
+						 notify_type_names, notify->get_notify_type(notify));
+					status = FAILED;
+					break;
+				}
+				else
+				{
+					DBG1(DBG_IKE, "received %N notify",
+						 notify_type_names, notify->get_notify_type(notify));
+				}
+				continue;
+			case DELETE_V1:
+				/* TODO-IKEv1: handle delete */
+			default:
+				continue;
+		}
+		break;
+	}
+	enumerator->destroy(enumerator);
+
+	return status;
 }
 
 METHOD(task_t, build_r, status_t,
