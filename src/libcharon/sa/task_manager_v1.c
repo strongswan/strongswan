@@ -76,11 +76,6 @@ struct private_task_manager_t {
 	 */
 	struct {
 		/**
-		 * Message ID of the exchange
-		 */
-		u_int32_t mid;
-
-		/**
 		 * Hash of a previously received message
 		 */
 		u_int32_t hash;
@@ -695,6 +690,12 @@ static status_t process_request(private_task_manager_t *this,
 			return DESTROY_ME;
 		}
 	}
+	else
+	{	/* We don't send a response, so don't retransmit one if we get
+		 * the same message again. */
+		DESTROY_IF(this->responding.packet);
+		this->responding.packet = NULL;
+	}
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0 &&
 		this->queued_tasks->get_count(this->queued_tasks) > 0)
 	{
@@ -858,12 +859,20 @@ METHOD(task_manager_t, process_message, status_t,
 	else
 	{
 		hash = chunk_hash(msg->get_packet_data(msg));
-		if (hash == this->responding.hash && this->responding.packet)
+		if (hash == this->responding.hash)
 		{
-			DBG1(DBG_IKE, "received retransmit of request with ID %u, "
-				 "retransmitting response", mid);
-			charon->sender->send(charon->sender,
-					this->responding.packet->clone(this->responding.packet));
+			if (this->responding.packet)
+			{
+				DBG1(DBG_IKE, "received retransmit of request with ID %u, "
+					 "retransmitting response", mid);
+				charon->sender->send(charon->sender,
+						this->responding.packet->clone(this->responding.packet));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "received retransmit of request with ID %u, "
+					 "but no response to retransmit", mid);
+			}
 			return SUCCESS;
 		}
 
@@ -922,8 +931,6 @@ METHOD(task_manager_t, process_message, status_t,
 			flush(this);
 			return DESTROY_ME;
 		}
-
-		this->responding.mid = mid;
 		this->responding.hash = hash;
 	}
 	return SUCCESS;
