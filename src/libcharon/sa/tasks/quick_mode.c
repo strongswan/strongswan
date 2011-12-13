@@ -296,16 +296,17 @@ static bool get_ke(private_quick_mode_t *this, message_t *message)
 /**
  * Select a traffic selector from configuration
  */
-static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
+static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
+									 linked_list_t *supplied)
 {
 	traffic_selector_t *ts;
 	linked_list_t *list;
 	host_t *host;
 
-	host = this->ike_sa->get_virtual_ip(this->ike_sa, initiator);
+	host = this->ike_sa->get_virtual_ip(this->ike_sa, local);
 	if (!host)
 	{
-		if (initiator)
+		if (local)
 		{
 			host = this->ike_sa->get_my_host(this->ike_sa);
 		}
@@ -314,21 +315,21 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool initiator)
 			host = this->ike_sa->get_other_host(this->ike_sa);
 		}
 	}
-	list = this->config->get_traffic_selectors(this->config, initiator,
-											   NULL, host);
+	list = this->config->get_traffic_selectors(this->config, local,
+											   supplied, host);
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{
 		if (list->get_count(list) > 1)
 		{
 			DBG1(DBG_IKE, "configuration has more than one %s traffic selector,"
-				 " using first only", initiator ? "initiator" : "responder");
+				 " using first only", local ? "local" : "remote");
 		}
 		ts = ts->clone(ts);
 	}
 	else
 	{
 		DBG1(DBG_IKE, "%s traffic selector missing in configuration",
-			 initiator ? "initiator" : "responder");
+			 local ? "local" : "local");
 		ts = NULL;
 	}
 	list->destroy_offset(list, offsetof(traffic_selector_t, destroy));
@@ -604,8 +605,8 @@ METHOD(task_t, build_i, status_t,
 				}
 				add_ke(this, message);
 			}
-			this->tsi = select_ts(this, TRUE);
-			this->tsr = select_ts(this, FALSE);
+			this->tsi = select_ts(this, TRUE, NULL);
+			this->tsr = select_ts(this, FALSE, NULL);
 			if (!this->tsi || !this->tsr)
 			{
 				return FAILED;
@@ -691,10 +692,13 @@ METHOD(task_t, process_r, status_t,
 			tsr = linked_list_create();
 			tsi->insert_last(tsi, this->tsi);
 			tsr->insert_last(tsr, this->tsr);
+			this->tsi = this->tsr = NULL;
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
 													  me, other);
-			tsi->destroy(tsi);
-			tsr->destroy(tsr);
+			this->tsi = select_ts(this, FALSE, tsi);
+			this->tsr = select_ts(this, TRUE, tsr);
+			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 			if (!this->config)
 			{
 				DBG1(DBG_IKE, "no child config found");
