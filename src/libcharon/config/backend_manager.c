@@ -195,12 +195,13 @@ static id_match_t get_peer_match(identification_t *id,
 	auth_cfg_t *auth;
 	identification_t *candidate;
 	id_match_t match = ID_MATCH_NONE;
+	char *where = local ? "local" : "remote";
 	chunk_t data;
 
 	if (!id)
 	{
 		DBG3(DBG_CFG, "peer config match %s: %d (%N)",
-			 local ? "local" : "remote", ID_MATCH_ANY, id_type_names, ID_ANY);
+			 where, ID_MATCH_ANY, id_type_names, ID_ANY);
 		return ID_MATCH_ANY;
 	}
 
@@ -227,7 +228,7 @@ static id_match_t get_peer_match(identification_t *id,
 
 	data = id->get_encoding(id);
 	DBG3(DBG_CFG, "peer config match %s: %d (%N -> %#B)",
-		 match, id_type_names, id->get_type(id), &data);
+		 where, match, id_type_names, id->get_type(id), &data);
 	return match;
 }
 
