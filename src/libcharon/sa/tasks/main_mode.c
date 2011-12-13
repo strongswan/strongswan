@@ -119,11 +119,6 @@ struct private_main_mode_t {
 	 */
 	auth_method_t auth_method;
 
-	/**
-	 * Authenticator to use
-	 */
-	authenticator_t *authenticator;
-
 	/** states of main mode */
 	enum {
 		MM_INIT,
@@ -145,6 +140,23 @@ static auth_cfg_t *get_auth_cfg(peer_cfg_t *peer_cfg, bool local)
 	enumerator->enumerate(enumerator, &cfg);
 	enumerator->destroy(enumerator);
 	return cfg;
+}
+
+/**
+ * Create an authenticator, if supported
+ */
+static authenticator_t *create_authenticator(private_main_mode_t *this)
+{
+	authenticator_t *authenticator;
+	authenticator = authenticator_create_v1(this->ike_sa, this->initiator,
+											this->auth_method, this->dh,
+											this->dh_value, this->sa_payload);
+	if (!authenticator)
+	{
+		DBG1(DBG_IKE, "negotiated authentication method %N not supported",
+			 auth_method_names, this->auth_method);
+	}
+	return authenticator;
 }
 
 /**
@@ -517,6 +529,7 @@ METHOD(task_t, build_i, status_t,
 		}
 		case MM_KE:
 		{
+			authenticator_t *authenticator;
 			id_payload_t *id_payload;
 			identification_t *id;
 
@@ -532,11 +545,15 @@ METHOD(task_t, build_i, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			if (this->authenticator->build(this->authenticator,
-										   message) != SUCCESS)
+			authenticator = create_authenticator(this);
+			if (!authenticator || authenticator->build(authenticator,
+													   message) != SUCCESS)
 			{
+				DESTROY_IF(authenticator);
 				return FAILED;
 			}
+			authenticator->destroy(authenticator);
+
 			this->state = MM_AUTH;
 			return NEED_MORE;
 		}
@@ -617,6 +634,7 @@ METHOD(task_t, process_r, status_t,
 		}
 		case MM_KE:
 		{
+			authenticator_t *authenticator;
 			id_payload_t *id_payload;
 			identification_t *id;
 
@@ -645,13 +663,16 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 
-			if (this->authenticator->process(this->authenticator,
-											 message) != SUCCESS)
+			authenticator = create_authenticator(this);
+			if (!authenticator || authenticator->process(authenticator,
+														 message) != SUCCESS)
 			{
+				DESTROY_IF(authenticator);
 				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
-			this->state = MM_AUTH;
+			authenticator->destroy(authenticator);
 
+			this->state = MM_AUTH;
 			if (has_notify_errors(this, message))
 			{
 				return FAILED;
@@ -776,15 +797,6 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, nonce_i, nonce_r,
 						  NULL);
 
-	this->authenticator = authenticator_create_v1(this->ike_sa, this->initiator,
-											this->auth_method, this->dh,
-											this->dh_value, this->sa_payload);
-	if (!this->authenticator)
-	{
-		DBG1(DBG_IKE, "negotiated authentication method %N not supported",
-			 auth_method_names, this->auth_method);
-		return FALSE;
-	}
 	return TRUE;
 }
 
@@ -834,6 +846,7 @@ METHOD(task_t, build_r, status_t,
 		}
 		case MM_AUTH:
 		{
+			authenticator_t *authenticator;
 			id_payload_t *id_payload;
 			identification_t *id;
 
@@ -849,11 +862,14 @@ METHOD(task_t, build_r, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			if (this->authenticator->build(this->authenticator,
-										   message) != SUCCESS)
+			authenticator = create_authenticator(this);
+			if (!authenticator || authenticator->build(authenticator,
+													   message) != SUCCESS)
 			{
+				DESTROY_IF(authenticator);
 				return FAILED;
 			}
+			authenticator->destroy(authenticator);
 
 			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
 			{
@@ -941,6 +957,7 @@ METHOD(task_t, process_i, status_t,
 		}
 		case MM_AUTH:
 		{
+			authenticator_t *authenticator;
 			id_payload_t *id_payload;
 			identification_t *id;
 
@@ -960,11 +977,14 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
-			if (this->authenticator->process(this->authenticator,
-											 message) != SUCCESS)
+			authenticator = create_authenticator(this);
+			if (!authenticator || authenticator->process(authenticator,
+														 message) != SUCCESS)
 			{
+				DESTROY_IF(authenticator);
 				return FAILED;
 			}
+			authenticator->destroy(authenticator);
 
 			switch (this->auth_method)
 			{
@@ -1004,7 +1024,6 @@ METHOD(task_t, destroy, void,
 	DESTROY_IF(this->peer_cfg);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
-	DESTROY_IF(this->authenticator);
 	free(this->dh_value.ptr);
 	free(this->nonce_i.ptr);
 	free(this->nonce_r.ptr);
