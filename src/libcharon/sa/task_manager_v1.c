@@ -235,7 +235,7 @@ METHOD(task_manager_t, retransmit, status_t,
 
 		if (this->initiating.retransmitted)
 		{
-			DBG1(DBG_IKE, "retransmit %d of request with message ID %d seqnr (%d)",
+			DBG1(DBG_IKE, "retransmit %d of request with message ID %u seqnr (%d)",
 				 this->initiating.retransmitted, this->initiating.mid, message_seqnr);
 		}
 		packet = this->initiating.packet->clone(this->initiating.packet);
@@ -809,7 +809,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 			default:
 				break;
 		}
-		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
+		DBG1(DBG_IKE, "%N %s with message ID %u processing failed",
 			 exchange_type_names, msg->get_exchange_type(msg),
 			 msg->get_request(msg) ? "request" : "response",
 			 msg->get_message_id(msg));
@@ -860,7 +860,7 @@ METHOD(task_manager_t, process_message, status_t,
 		hash = chunk_hash(msg->get_packet_data(msg));
 		if (hash == this->responding.hash && this->responding.packet)
 		{
-			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
+			DBG1(DBG_IKE, "received retransmit of request with ID %u, "
 				 "retransmitting response", mid);
 			charon->sender->send(charon->sender,
 					this->responding.packet->clone(this->responding.packet));
