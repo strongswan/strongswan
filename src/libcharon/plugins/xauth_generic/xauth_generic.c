@@ -73,6 +73,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, user));
 	cp->add_attribute(cp, configuration_attribute_create_chunk(
 				CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, pass));
+	shared->destroy(shared);
 	*out = cp;
 	return NEED_MORE;
 }
@@ -151,6 +152,7 @@ METHOD(xauth_method_t, process_server, status_t,
 	{
 		DBG2(DBG_IKE, "authentication of '%Y' with XAuth successful", peer);
 	}
+	DESTROY_IF(shared);
 	DESTROY_IF(id);
 	return status;
 }
