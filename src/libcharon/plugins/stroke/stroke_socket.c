@@ -195,6 +195,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
 	DBG2(DBG_CFG, "  mediated_by=%s", msg->add_conn.ikeme.mediated_by);
 	DBG2(DBG_CFG, "  me_peerid=%s", msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  keyexchange=%s", msg->add_conn.ikev2 ? "ikev2" : "ikev1");
 
 	this->config->add(this->config, msg);
 	this->attribute->add_pool(this->attribute, msg);
