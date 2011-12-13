@@ -31,6 +31,15 @@
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
+/**
+ * Number of old messages hashes we keep for retransmission.
+ *
+ * In Main Mode, we must ignore messages from a previous message pair if
+ * we already continued to the next. Otherwise a late retransmission
+ * could be considered as a reply to the newer request.
+ */
+#define MAX_OLD_HASHES 2
+
 typedef struct exchange_t exchange_t;
 
 /**
@@ -95,6 +104,16 @@ struct private_task_manager_t {
 		 * Message ID of the exchange
 		 */
 		u_int32_t mid;
+
+		/**
+		 * Hashes of old responses we can ignore
+		 */
+		u_int32_t old_hashes[MAX_OLD_HASHES];
+
+		/**
+		 * Position in old hash array
+		 */
+		int old_hash_pos;
 
 		/**
 		 * Sequence number of the last sent message
@@ -826,7 +845,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	u_int32_t hash, mid;
+	u_int32_t hash, mid, i;
 	host_t *me, *other;
 	status_t status;
 
@@ -834,11 +853,21 @@ METHOD(task_manager_t, process_message, status_t,
 	me = msg->get_destination(msg);
 	other = msg->get_source(msg);
 	mid = msg->get_message_id(msg);
+	hash = chunk_hash(msg->get_packet_data(msg));
+	for (i = 0; i < MAX_OLD_HASHES; i++)
+	{
+		if (this->initiating.old_hashes[i] == hash)
+		{
+			DBG1(DBG_IKE, "received retransmit of response with ID %u, "
+				 "but next request already sent", mid);
+			return SUCCESS;
+		}
+	}
 
 	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
 		 msg->get_exchange_type(msg) == this->initiating.type &&
-		 this->active_tasks->get_count(this->active_tasks)))
+		this->active_tasks->get_count(this->active_tasks)))
 	{
 		msg->set_request(msg, FALSE);
 		status = parse_message(this, msg);
@@ -855,10 +884,11 @@ METHOD(task_manager_t, process_message, status_t,
 			flush(this);
 			return DESTROY_ME;
 		}
+		this->initiating.old_hashes[(this->initiating.old_hash_pos++) %
+									MAX_OLD_HASHES] = hash;
 	}
 	else
 	{
-		hash = chunk_hash(msg->get_packet_data(msg));
 		if (hash == this->responding.hash)
 		{
 			if (this->responding.packet)
@@ -875,7 +905,6 @@ METHOD(task_manager_t, process_message, status_t,
 			}
 			return SUCCESS;
 		}
-
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
 			this->active_tasks->get_count(this->active_tasks) &&
 			!this->queued)
