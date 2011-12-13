@@ -393,6 +393,11 @@ METHOD(credential_manager_t, remove_local_set, void,
 
 	sets = this->local_sets->get(this->local_sets);
 	sets->remove(sets, set, NULL);
+	if (sets->get_count(sets) == 0)
+	{
+		this->local_sets->set(this->local_sets, NULL);
+		sets->destroy(sets);
+	}
 }
 
 METHOD(credential_manager_t, cache_cert, void,
