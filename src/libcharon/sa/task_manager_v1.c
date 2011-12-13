@@ -139,6 +139,11 @@ struct private_task_manager_t {
 	linked_list_t *passive_tasks;
 
 	/**
+	 * Queued messages not yet ready to process
+	 */
+	message_t *queued;
+
+	/**
 	 * Number of times we retransmit messages before giving up
 	 */
 	u_int retransmit_tries;
@@ -707,6 +712,7 @@ static status_t process_response(private_task_manager_t *this,
 								 message_t *message)
 {
 	enumerator_t *enumerator;
+	status_t status;
 	task_t *task;
 
 	if (message->get_exchange_type(message) != this->initiating.type)
@@ -752,6 +758,18 @@ static status_t process_response(private_task_manager_t *this,
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
+
+	if (this->queued && this->active_tasks->get_count(this->active_tasks) == 0)
+	{
+		status = this->public.task_manager.process_message(
+									&this->public.task_manager, this->queued);
+		this->queued->destroy(this->queued);
+		this->queued = NULL;
+		if (status == DESTROY_ME)
+		{
+			return status;
+		}
+	}
 
 	return initiate(this);
 }
@@ -848,6 +866,23 @@ METHOD(task_manager_t, process_message, status_t,
 					this->responding.packet->clone(this->responding.packet));
 			return SUCCESS;
 		}
+
+		if (msg->get_exchange_type(msg) == TRANSACTION &&
+			this->active_tasks->get_count(this->active_tasks) &&
+			!this->queued)
+		{	/* main mode not yet complete, queue XAuth/Mode config tasks */
+			this->queued = message_create_from_packet(msg->get_packet(msg));
+			if (this->queued->parse_header(this->queued) != SUCCESS)
+			{
+				this->queued->destroy(this->queued);
+				this->queued = NULL;
+				return FAILED;
+			}
+			DBG1(DBG_IKE, "queueing %N request as tasks still active",
+				 exchange_type_names, TRANSACTION);
+			return SUCCESS;
+		}
+
 		msg->set_request(msg, TRUE);
 		status = parse_message(this, msg);
 		if (status != SUCCESS)
@@ -958,6 +993,7 @@ METHOD(task_manager_t, destroy, void,
 	this->queued_tasks->destroy(this->queued_tasks);
 	this->passive_tasks->destroy(this->passive_tasks);
 
+	DESTROY_IF(this->queued);
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
 	DESTROY_IF(this->rng);
