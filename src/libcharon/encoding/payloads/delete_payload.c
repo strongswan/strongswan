@@ -264,7 +264,6 @@ METHOD(delete_payload_t, add_spi, void,
 		case PROTO_ESP:
 			this->spi_count++;
 			this->payload_length += sizeof(spi);
-			this->spi_size += sizeof(spi);
 			this->spis = chunk_cat("mc", this->spis, chunk_from_thing(spi));
 			break;
 		default:
@@ -362,17 +361,17 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 	);
 	this->payload_length = get_header_length(this);
 
-	if (type == DELETE_V1)
+	if (protocol_id == PROTO_IKE)
 	{
-		if (protocol_id == PROTO_IKE)
+		if (type == DELETE_V1)
 		{
 			this->spi_size = 16;
 		}
-		else
-		{
-			this->doi = IKEV1_DOI_IPSEC,
-			this->spi_size = 4;
-		}
+	}
+	else
+	{
+		this->doi = IKEV1_DOI_IPSEC,
+		this->spi_size = 4;
 	}
 	return &this->public;
 }
