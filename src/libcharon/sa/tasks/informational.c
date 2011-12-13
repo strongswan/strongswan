@@ -94,15 +94,19 @@ METHOD(task_t, process_r, status_t,
 				}
 				continue;
 			case DELETE_V1:
-				delete = (delete_payload_t*)payload;
-				if (delete->get_protocol_id(delete) == PROTO_IKE)
+				if (!this->del)
 				{
-					this->del = (task_t*)ike_delete_create(this->ike_sa, FALSE);
-				}
-				else
-				{
-					this->del = (task_t*)child_delete_create(this->ike_sa,
-															 PROTO_NONE, 0);
+					delete = (delete_payload_t*)payload;
+					if (delete->get_protocol_id(delete) == PROTO_IKE)
+					{
+						this->del = (task_t*)ike_delete_create(this->ike_sa,
+															   FALSE);
+					}
+					else
+					{
+						this->del = (task_t*)child_delete_create(this->ike_sa,
+																 PROTO_NONE, 0);
+					}
 				}
 				break;
 			default:
@@ -112,7 +116,7 @@ METHOD(task_t, process_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 
-	if (status == SUCCESS)
+	if (this->del && status == SUCCESS)
 	{
 		return this->del->process(this->del, message);
 	}
