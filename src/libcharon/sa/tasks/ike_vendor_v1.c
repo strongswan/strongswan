@@ -42,54 +42,53 @@ struct private_ike_vendor_v1_t {
 };
 
 /**
- * Indicate support for XAuth, MD5("draft-ietf-ipsra-isakmp-xauth-06.txt")
- * Truncated to the first half.
+ * IKEv1 Vendor ID database
  */
-static chunk_t xauth6_vid = chunk_from_chars(
-	0x09,0x00,0x26,0x89,0xdf,0xd6,0xb7,0x12
-);
+static struct {
+	/* Description */
+	char *desc;
+	/* extension flag negotiated with vendor ID, if any */
+	ike_extension_t extension;
+	/* send yourself? */
+	bool send;
+	/* length of vendor ID string */
+	int len;
+	/* vendor ID string */
+	char *id;
+} vendor_ids[] = {
 
-/**
- * Indicate support for NAT-Traversal, MD5("RFC 3947")
- */
-static chunk_t natt_vid = chunk_from_chars(
-	0x4a,0x13,0x1c,0x81,0x07,0x03,0x58,0x45,
-	0x5c,0x57,0x28,0xf2,0x0e,0x95,0x45,0x2f
-);
+	/* strongSwan MD5("strongSwan") */
+	{ "strongSwan", EXT_STRONGSWAN, FALSE, 16,
+	  "\x88\x2f\xe5\x6d\x6f\xd2\x0d\xbc\x22\x51\x61\x3b\x2e\xbe\x5b\xeb"},
 
-/**
- * strongSwan specific vendor ID without version, MD5("strongSwan")
- */
-static chunk_t strongswan_vid = chunk_from_chars(
-	0x88,0x2f,0xe5,0x6d,0x6f,0xd2,0x0d,0xbc,
-	0x22,0x51,0x61,0x3b,0x2e,0xbe,0x5b,0xeb
-);
+	/* XAuth, MD5("draft-ietf-ipsra-isakmp-xauth-06.txt") */
+	{ "XAuth", EXT_XAUTH, TRUE, 8,
+	  "\x09\x00\x26\x89\xdf\xd6\xb7\x12"},
 
-/**
- * Add a vendor ID to message
- */
-static void add_vendor_id(private_ike_vendor_v1_t *this, message_t *message,
-						  chunk_t vid)
-{
-	vendor_id_payload_t *vid_payload;
-
-	vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1, chunk_clone(vid));
-	message->add_payload(message, &vid_payload->payload_interface);
-}
+	/* NAT-Traversal, MD5("RFC 3947") */
+	{ "NAT-T (RFC 3947)", EXT_NATT, TRUE, 16,
+	  "\x4a\x13\x1c\x81\x07\x03\x58\x45\x5c\x57\x28\xf2\x0e\x95\x45\x2f"},
+};
 
 METHOD(task_t, build, status_t,
 	private_ike_vendor_v1_t *this, message_t *message)
 {
+	vendor_id_payload_t *vid_payload;
+	bool strongswan;
+	int i;
 
-	if (lib->settings->get_bool(lib->settings,
-								"charon.send_vendor_id", FALSE))
+	strongswan = lib->settings->get_bool(lib->settings,
+										 "charon.send_vendor_id", FALSE);
+	for (i = 0; i < countof(vendor_ids); i++)
 	{
-		add_vendor_id(this, message, strongswan_vid);
+		if (vendor_ids[i].send ||
+			(vendor_ids[i].extension == EXT_STRONGSWAN && strongswan))
+		{
+			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
+				chunk_clone(chunk_create(vendor_ids[i].id, vendor_ids[i].len)));
+			message->add_payload(message, &vid_payload->payload_interface);
+		}
 	}
-
-	add_vendor_id(this, message, xauth6_vid);
-	add_vendor_id(this, message, natt_vid);
-
 	return this->initiator ? NEED_MORE : SUCCESS;
 }
 
@@ -98,6 +97,7 @@ METHOD(task_t, process, status_t,
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
+	int i;
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -105,27 +105,27 @@ METHOD(task_t, process, status_t,
 		if (payload->get_type(payload) == VENDOR_ID_V1)
 		{
 			vendor_id_payload_t *vid;
+			bool found = FALSE;
 			chunk_t data;
 
 			vid = (vendor_id_payload_t*)payload;
 			data = vid->get_data(vid);
 
-			if (chunk_equals(data, strongswan_vid))
+			for (i = 0; i < countof(vendor_ids); i++)
 			{
-				DBG1(DBG_IKE, "received strongSwan vendor id");
-				this->ike_sa->enable_extension(this->ike_sa, EXT_STRONGSWAN);
+				if (chunk_equals(data, chunk_create(vendor_ids[i].id,
+													vendor_ids[i].len)))
+				{
+					DBG1(DBG_IKE, "received %s vendor id", vendor_ids[i].desc);
+					if (vendor_ids[i].extension)
+					{
+						this->ike_sa->enable_extension(this->ike_sa,
+													   vendor_ids[i].extension);
+					}
+					found = TRUE;
+				}
 			}
-			else if (chunk_equals(data, xauth6_vid))
-			{
-				DBG1(DBG_IKE, "received XAuth vendor id");
-				this->ike_sa->enable_extension(this->ike_sa, EXT_XAUTH);
-			}
-			else if (chunk_equals(data, natt_vid))
-			{
-				DBG1(DBG_IKE, "received NAT-T vendor id");
-				this->ike_sa->enable_extension(this->ike_sa, EXT_NATT);
-			}
-			else
+			if (!found)
 			{
 				DBG1(DBG_ENC, "received unknown vendor id: %#B", &data);
 			}
