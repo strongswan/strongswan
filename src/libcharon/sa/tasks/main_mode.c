@@ -341,6 +341,10 @@ static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id
 	}
 	enumerator->destroy(enumerator);
 
+	if (found)
+	{
+		DBG2(DBG_CFG, "selected peer config \"%s\"", found->get_name(found));
+	}
 	return found;
 }
 
