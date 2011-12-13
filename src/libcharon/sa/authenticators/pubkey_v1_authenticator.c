@@ -76,7 +76,7 @@ METHOD(authenticator_t, build, status_t,
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	private = lib->credmgr->get_private(lib->credmgr, KEY_RSA, id, auth);
+	private = lib->credmgr->get_private(lib->credmgr, type, id, auth);
 	if (!private)
 	{
 		DBG1(DBG_IKE, "no private key found for '%Y'", id);
