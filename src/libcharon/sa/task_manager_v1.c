@@ -19,7 +19,6 @@
 #include <math.h>
 
 #include <daemon.h>
-#include <sa/tasks/child_delete.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/xauth.h>
@@ -29,7 +28,6 @@
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/ike_cert_pre_v1.h>
 #include <sa/tasks/ike_cert_post_v1.h>
-#include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 

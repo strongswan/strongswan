@@ -16,6 +16,9 @@
 #include "informational.h"
 
 #include <daemon.h>
+#include <sa/tasks/ike_delete.h>
+#include <sa/tasks/child_delete.h>
+#include <encoding/payloads/delete_payload.h>
 
 typedef struct private_informational_t private_informational_t;
 
@@ -38,6 +41,11 @@ struct private_informational_t {
 	 * Notify payload to send
 	 */
 	notify_payload_t *notify;
+
+	/**
+	 * Delete subtask
+	 */
+	task_t *del;
 };
 
 METHOD(task_t, build_i, status_t,
@@ -52,6 +60,7 @@ METHOD(task_t, process_r, status_t,
 	private_informational_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
+	delete_payload_t *delete;
 	notify_payload_t *notify;
 	notify_type_t type;
 	payload_t *payload;
@@ -85,7 +94,17 @@ METHOD(task_t, process_r, status_t,
 				}
 				continue;
 			case DELETE_V1:
-				/* TODO-IKEv1: handle delete */
+				delete = (delete_payload_t*)payload;
+				if (delete->get_protocol_id(delete) == PROTO_IKE)
+				{
+					this->del = (task_t*)ike_delete_create(this->ike_sa, FALSE);
+				}
+				else
+				{
+					this->del = (task_t*)child_delete_create(this->ike_sa,
+															 PROTO_NONE, 0);
+				}
+				break;
 			default:
 				continue;
 		}
@@ -93,12 +112,20 @@ METHOD(task_t, process_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 
+	if (status == SUCCESS)
+	{
+		return this->del->process(this->del, message);
+	}
 	return status;
 }
 
 METHOD(task_t, build_r, status_t,
 	private_informational_t *this, message_t *message)
 {
+	if (this->del)
+	{
+		return this->del->build(this->del, message);
+	}
 	return FAILED;
 }
 
@@ -124,6 +151,7 @@ METHOD(task_t, destroy, void,
 	private_informational_t *this)
 {
 	DESTROY_IF(this->notify);
+	DESTROY_IF(this->del);
 	free(this);
 }
 
