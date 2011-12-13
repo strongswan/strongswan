@@ -415,8 +415,10 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	enumerator->destroy(enumerator);
 
-	/* update exchange type if a task changed it */
-	this->initiating.type = message->get_exchange_type(message);
+	if (this->active_tasks->get_count(this->active_tasks) == 0)
+	{	/* tasks completed, no exchange active anymore */
+		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	}
 	this->initiating.seqnr++;
 
 	status = this->ike_sa->generate_message(this->ike_sa, message,
@@ -442,7 +444,7 @@ METHOD(task_manager_t, initiate, status_t,
 	this->initiating.packet = NULL;
 
 	/* close after sending an INFORMATIONAL error but not yet established */
-	if (this->initiating.type == INFORMATIONAL_V1 &&
+	if (exchange == INFORMATIONAL_V1 &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
 	{
 		return FAILED;
