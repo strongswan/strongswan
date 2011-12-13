@@ -666,7 +666,7 @@ static shared_key_t *lookup_shared_key(private_main_mode_t *this)
 {
 	host_t *me, *other;
 	identification_t *my_id, *other_id;
-	shared_key_t *shared_key;
+	shared_key_t *shared_key = NULL;
 
 	/* try to get a PSK for IP addresses */
 	me = this->ike_sa->get_my_host(this->ike_sa);
