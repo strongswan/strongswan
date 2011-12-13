@@ -272,6 +272,16 @@ METHOD(delete_payload_t, add_spi, void,
 	}
 }
 
+METHOD(delete_payload_t, set_ike_spi, void,
+	private_delete_payload_t *this, u_int64_t spi_i, u_int64_t spi_r)
+{
+	free(this->spis.ptr);
+	this->spis = chunk_cat("cc", chunk_from_thing(spi_i),
+								 chunk_from_thing(spi_r));
+	this->spi_count = 1;
+	this->payload_length = get_header_length(this) + this->spi_size;
+}
+
 /**
  * SPI enumerator implementation
  */
@@ -342,16 +352,27 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 			},
 			.get_protocol_id = _get_protocol_id,
 			.add_spi = _add_spi,
+			.set_ike_spi = _set_ike_spi,
 			.create_spi_enumerator = _create_spi_enumerator,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.doi = IKEV1_DOI_IPSEC,
 		.protocol_id = protocol_id,
-		.spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0,
 		.type = type,
 	);
 	this->payload_length = get_header_length(this);
 
+	if (type == DELETE_V1)
+	{
+		if (protocol_id == PROTO_IKE)
+		{
+			this->spi_size = 16;
+		}
+		else
+		{
+			this->doi = IKEV1_DOI_IPSEC,
+			this->spi_size = 4;
+		}
+	}
 	return &this->public;
 }

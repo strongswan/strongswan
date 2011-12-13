@@ -53,6 +53,14 @@ struct delete_payload_t {
 	void (*add_spi) (delete_payload_t *this, u_int32_t spi);
 
 	/**
+	 * Set the IKE SPIs for an IKEv1 delete.
+	 *
+	 * @param spi_i			initiator SPI
+	 * @param spi_r			responder SPI
+	 */
+	void (*set_ike_spi)(delete_payload_t *this, u_int64_t spi_i, u_int64_t spi_r);
+
+	/**
 	 * Get an enumerator over the SPIs in network order.
 	 *
 	 * @return				enumerator over SPIs, u_int32_t
