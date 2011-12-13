@@ -55,6 +55,13 @@ struct id_payload_t {
 	traffic_selector_t* (*get_ts)(id_payload_t *this);
 
 	/**
+	 * Get encoded payload without fixed payload header (used for IKEv1).
+	 *
+	 * @return				encoded payload (gets allocated)
+	 */
+	chunk_t (*get_encoded)(id_payload_t *this);
+
+	/**
 	 * Destroys an id_payload_t object.
 	 */
 	void (*destroy) (id_payload_t *this);

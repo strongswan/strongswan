@@ -327,6 +327,15 @@ METHOD(id_payload_t, get_ts, traffic_selector_t*,
 	return NULL;
 }
 
+METHOD(id_payload_t, get_encoded, chunk_t,
+	private_id_payload_t *this)
+{
+	u_int16_t port = htons(this->port);
+	return chunk_cat("cccc", chunk_from_thing(this->id_type),
+					 chunk_from_thing(this->protocol_id),
+					 chunk_from_thing(port), this->id_data);
+}
+
 METHOD2(payload_t, id_payload_t, destroy, void,
 	private_id_payload_t *this)
 {
@@ -354,6 +363,7 @@ id_payload_t *id_payload_create(payload_type_t type)
 				.destroy = _destroy,
 			},
 			.get_identification = _get_identification,
+			.get_encoded = _get_encoded,
 			.get_ts = _get_ts,
 			.destroy = _destroy,
 		},
