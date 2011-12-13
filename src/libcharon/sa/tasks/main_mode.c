@@ -145,12 +145,14 @@ static auth_cfg_t *get_auth_cfg(peer_cfg_t *peer_cfg, bool local)
 /**
  * Create an authenticator, if supported
  */
-static authenticator_t *create_authenticator(private_main_mode_t *this)
+static authenticator_t *create_authenticator(private_main_mode_t *this,
+											 id_payload_t *id)
 {
 	authenticator_t *authenticator;
 	authenticator = authenticator_create_v1(this->ike_sa, this->initiator,
 											this->auth_method, this->dh,
-											this->dh_value, this->sa_payload);
+											this->dh_value, this->sa_payload,
+											id->get_encoded(id));
 	if (!authenticator)
 	{
 		DBG1(DBG_IKE, "negotiated authentication method %N not supported",
@@ -545,7 +547,7 @@ METHOD(task_t, build_i, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			authenticator = create_authenticator(this);
+			authenticator = create_authenticator(this, id_payload);
 			if (!authenticator || authenticator->build(authenticator,
 													   message) != SUCCESS)
 			{
@@ -663,7 +665,7 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 
-			authenticator = create_authenticator(this);
+			authenticator = create_authenticator(this, id_payload);
 			if (!authenticator || authenticator->process(authenticator,
 														 message) != SUCCESS)
 			{
@@ -862,7 +864,7 @@ METHOD(task_t, build_r, status_t,
 			id_payload = id_payload_create_from_identification(ID_V1, id);
 			message->add_payload(message, &id_payload->payload_interface);
 
-			authenticator = create_authenticator(this);
+			authenticator = create_authenticator(this, id_payload);
 			if (!authenticator || authenticator->build(authenticator,
 													   message) != SUCCESS)
 			{
@@ -977,7 +979,7 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
-			authenticator = create_authenticator(this);
+			authenticator = create_authenticator(this, id_payload);
 			if (!authenticator || authenticator->process(authenticator,
 														 message) != SUCCESS)
 			{

@@ -55,6 +55,11 @@ struct private_pubkey_v1_authenticator_t {
 	 * Encoded SA payload, without fixed header
 	 */
 	chunk_t sa_payload;
+
+	/**
+	 * Encoded ID payload, without fixed header
+	 */
+	chunk_t id_payload;
 };
 
 METHOD(authenticator_t, build, status_t,
@@ -86,7 +91,8 @@ METHOD(authenticator_t, build, status_t,
 	this->dh->get_my_public_value(this->dh, &dh);
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	hash = keymat->get_hash(keymat, this->initiator, dh, this->dh_value,
-					this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
+					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
+					this->id_payload);
 	free(dh.ptr);
 
 	if (private->sign(private, scheme, hash, &sig))
@@ -138,7 +144,8 @@ METHOD(authenticator_t, process, status_t,
 	this->dh->get_my_public_value(this->dh, &dh);
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	hash = keymat->get_hash(keymat, !this->initiator, this->dh_value, dh,
-					this->ike_sa->get_id(this->ike_sa), this->sa_payload, id);
+					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
+					this->id_payload);
 	free(dh.ptr);
 
 	sig = sig_payload->get_hash(sig_payload);
@@ -175,6 +182,7 @@ METHOD(authenticator_t, process, status_t,
 METHOD(authenticator_t, destroy, void,
 	private_pubkey_v1_authenticator_t *this)
 {
+	chunk_free(&this->id_payload);
 	free(this);
 }
 
@@ -183,7 +191,8 @@ METHOD(authenticator_t, destroy, void,
  */
 pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
-										chunk_t dh_value, chunk_t sa_payload)
+										chunk_t dh_value, chunk_t sa_payload,
+										chunk_t id_payload)
 {
 	private_pubkey_v1_authenticator_t *this;
 
@@ -201,6 +210,7 @@ pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
 		.dh = dh,
 		.dh_value = dh_value,
 		.sa_payload = sa_payload,
+		.id_payload = id_payload,
 	);
 
 	return &this->public;

@@ -194,7 +194,11 @@ authenticator_t *authenticator_create_verifier(
 									char reserved[3]);
 
 /**
- * Create an IKEv1 authenticator to build and verify signatures or hash payloads.
+ * Create an IKEv1 authenticator to build and verify signatures or hash
+ * payloads.
+ *
+ * @note Due to the fixed ID, these authenticators can only be used in one
+ * direction at a time.
  *
  * @param ike_sa			associated IKE_SA
  * @param initiator			TRUE if we are the IKE_SA initiator
@@ -202,10 +206,13 @@ authenticator_t *authenticator_create_verifier(
  * @param dh				diffie hellman key exchange
  * @param dh_value			others public diffie hellman value
  * @param sa_payload		generated SA payload data, without payload header
+ * @param id_payload		encoded ID payload of peer to authenticate or verify
+ *							without payload header (gets owned)
  * @return					authenticator, NULL if not supported
  */
 authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 								auth_method_t auth_method, diffie_hellman_t *dh,
-								chunk_t dh_value, chunk_t sa_payload);
+								chunk_t dh_value, chunk_t sa_payload,
+								chunk_t id_payload);
 
 #endif /** AUTHENTICATOR_H_ @}*/

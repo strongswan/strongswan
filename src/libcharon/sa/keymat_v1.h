@@ -99,12 +99,12 @@ struct keymat_v1_t {
 	 * @param dh_other		others public DH value
 	 * @param ike_sa_id		IKE_SA identifier
 	 * @param sa_i			encoded SA payload of initiator
-	 * @param id			ID of peer to create hash for
+	 * @param id			encoded IDii payload for HASH_I (IDir for HASH_R)
 	 * @return				allocated HASH data
 	 */
 	chunk_t (*get_hash)(keymat_v1_t *this, bool initiator,
 						chunk_t dh, chunk_t dh_other, ike_sa_id_t *ike_sa_id,
-						chunk_t sa_i, identification_t *id);
+						chunk_t sa_i, chunk_t id);
 
 	/**
 	 * Get HASH data for integrity/authentication in Phase 2 exchanges.

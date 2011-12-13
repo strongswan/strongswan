@@ -55,6 +55,11 @@ struct private_psk_v1_authenticator_t {
 	 * Encoded SA payload, without fixed header
 	 */
 	chunk_t sa_payload;
+
+	/**
+	 * Encoded ID payload, without fixed header
+	 */
+	chunk_t id_payload;
 };
 
 METHOD(authenticator_t, build, status_t,
@@ -68,7 +73,7 @@ METHOD(authenticator_t, build, status_t,
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	hash = keymat->get_hash(keymat, this->initiator, dh, this->dh_value,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->ike_sa->get_my_id(this->ike_sa));
+					this->id_payload);
 	free(dh.ptr);
 
 	hash_payload = hash_payload_create(HASH_V1);
@@ -97,9 +102,8 @@ METHOD(authenticator_t, process, status_t,
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	hash = keymat->get_hash(keymat, !this->initiator, this->dh_value, dh,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->ike_sa->get_other_id(this->ike_sa));
+					this->id_payload);
 	free(dh.ptr);
-
 	if (chunk_equals(hash, hash_payload->get_hash(hash_payload)))
 	{
 		free(hash.ptr);
@@ -113,6 +117,7 @@ METHOD(authenticator_t, process, status_t,
 METHOD(authenticator_t, destroy, void,
 	private_psk_v1_authenticator_t *this)
 {
+	chunk_free(&this->id_payload);
 	free(this);
 }
 
@@ -121,7 +126,8 @@ METHOD(authenticator_t, destroy, void,
  */
 psk_v1_authenticator_t *psk_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
-										chunk_t dh_value, chunk_t sa_payload)
+										chunk_t dh_value, chunk_t sa_payload,
+										chunk_t id_payload)
 {
 	private_psk_v1_authenticator_t *this;
 
@@ -139,6 +145,7 @@ psk_v1_authenticator_t *psk_v1_authenticator_create(ike_sa_t *ike_sa,
 		.dh = dh,
 		.dh_value = dh_value,
 		.sa_payload = sa_payload,
+		.id_payload = id_payload,
 	);
 
 	return &this->public;

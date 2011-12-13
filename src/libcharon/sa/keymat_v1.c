@@ -638,12 +638,10 @@ METHOD(keymat_v1_t, get_hasher, hasher_t*,
 
 METHOD(keymat_v1_t, get_hash, chunk_t,
 	private_keymat_v1_t *this, bool initiator, chunk_t dh, chunk_t dh_other,
-	ike_sa_id_t *ike_sa_id, chunk_t sa_i, identification_t *id)
+	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id)
 {
 	chunk_t hash, data;
 	u_int64_t spi, spi_other;
-	/* TODO-IKEv1: get real bytes from ID header? */
-	u_int8_t id_header[4] = { id->get_type(id), 0, 0, 0 };
 
 	/* HASH_I = prf(SKEYID, g^xi | g^xr | CKY-I | CKY-R | SAi_b | IDii_b )
 	 * HASH_R = prf(SKEYID, g^xr | g^xi | CKY-R | CKY-I | SAi_b | IDir_b )
@@ -658,9 +656,9 @@ METHOD(keymat_v1_t, get_hash, chunk_t,
 		spi_other = ike_sa_id->get_initiator_spi(ike_sa_id);
 		spi = ike_sa_id->get_responder_spi(ike_sa_id);
 	}
-	data = chunk_cat("ccccccc", dh, dh_other,
+	data = chunk_cat("cccccc", dh, dh_other,
 					 chunk_from_thing(spi), chunk_from_thing(spi_other),
-					 sa_i, chunk_from_thing(id_header), id->get_encoding(id));
+					 sa_i, id);
 
 	DBG3(DBG_IKE, "HASH_%c data %B", initiator ? 'I' : 'R', &data);
 
