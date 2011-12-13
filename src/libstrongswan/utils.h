@@ -299,11 +299,6 @@ enum status_t {
 	 * Another call to the method is required.
 	 */
 	NEED_MORE,
-
-	/**
-	 * Call failed, send error to other side.
-	 */
-	FAILED_SEND_ERROR,
 };
 
 /**
