@@ -432,6 +432,13 @@ METHOD(task_manager_t, initiate, status_t,
 				this->initiating.packet->clone(this->initiating.packet));
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
+
+	/* close after sending an INFORMATIONAL error but not yet established */
+	if (this->initiating.type == INFORMATIONAL_V1 &&
+		this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+	{
+		return FAILED;
+	}
 	return SUCCESS;
 }
 
