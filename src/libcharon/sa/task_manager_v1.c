@@ -906,9 +906,14 @@ METHOD(task_manager_t, process_message, status_t,
 			return SUCCESS;
 		}
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
-			this->active_tasks->get_count(this->active_tasks) &&
-			!this->queued)
+			this->active_tasks->get_count(this->active_tasks))
 		{	/* main mode not yet complete, queue XAuth/Mode config tasks */
+			if (this->queued)
+			{
+				DBG1(DBG_IKE, "ignoring additional %N request, queue full",
+					 exchange_type_names, TRANSACTION);
+				return SUCCESS;
+			}
 			this->queued = message_create_from_packet(msg->get_packet(msg));
 			if (this->queued->parse_header(this->queued) != SUCCESS)
 			{
