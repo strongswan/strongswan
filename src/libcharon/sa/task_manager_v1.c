@@ -851,6 +851,7 @@ METHOD(task_manager_t, process_message, status_t,
 
 	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
+		 msg->get_exchange_type(msg) == this->initiating.type &&
 		 this->active_tasks->get_count(this->active_tasks)))
 	{
 		msg->set_request(msg, FALSE);
