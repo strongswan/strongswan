@@ -56,6 +56,7 @@ METHOD(task_t, build_i, status_t,
 	private_ike_delete_t *this, message_t *message)
 {
 	delete_payload_t *delete_payload;
+	ike_sa_id_t *id;
 
 	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
@@ -68,6 +69,9 @@ METHOD(task_t, build_i, status_t,
 	if (this->ike_sa->get_version(this->ike_sa) == IKEV1)
 	{
 		delete_payload = delete_payload_create(DELETE_V1, PROTO_IKE);
+		id = this->ike_sa->get_id(this->ike_sa);
+		delete_payload->set_ike_spi(delete_payload, id->get_initiator_spi(id),
+									id->get_responder_spi(id));
 	}
 	else
 	{
