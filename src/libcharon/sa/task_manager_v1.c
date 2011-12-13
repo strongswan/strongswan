@@ -315,6 +315,16 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
 				}
+				if (activate_task(this, TASK_IKE_DELETE))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+				}
+				if (activate_task(this, TASK_CHILD_DELETE))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+				}
 				break;
 			default:
 				break;
