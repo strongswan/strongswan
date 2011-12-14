@@ -72,12 +72,12 @@ METHOD(prf_plus_t, get_bytes, void,
 				this->prf->get_bytes(this->prf, this->seed, NULL);
 				this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
 									 this->buffer.ptr);
+				this->counter++;
 			}
 			else
 			{
 				this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
 			}
-			this->counter++;
 			this->used = 0;
 		}
 		round = min(length, this->buffer.len - this->used);
