@@ -111,6 +111,10 @@ static void destroy(private_daemon_t *this)
 	}
 	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.sender);
+#ifdef ME
+	DESTROY_IF(this->public.connect_manager);
+	DESTROY_IF(this->public.mediation_manager);
+#endif /* ME */
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
 #ifdef CAPABILITIES_LIBCAP
@@ -122,10 +126,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
-#ifdef ME
-	DESTROY_IF(this->public.connect_manager);
-	DESTROY_IF(this->public.mediation_manager);
-#endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
 
