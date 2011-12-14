@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "2010-10-19" "@IPSEC_VERSION@" "strongSwan"
+.TH IPSEC.CONF 5 "2011-12-14" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -268,7 +268,7 @@ IKEv1 additionally supports the values
 .B xauthpsk
 and
 .B xauthrsasig
-that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
+that will enable eXtended Authentication (XAuth) in addition to IKEv1 main mode
 based on shared secrets  or digital RSA signatures, respectively.
 IKEv2 additionally supports the value
 .BR eap ,
@@ -1039,7 +1039,7 @@ and
 connection types, only.
 .TP
 .BR xauth " = " client " | server"
-specifies the role in the XAUTH protocol if activated by
+specifies the role in the XAuth protocol if activated by
 .B authby=xauthpsk
 or
 .B authby=xauthrsasig.
@@ -1048,6 +1048,10 @@ Accepted values are
 and
 .B client
 (the default).
+.TP
+.BR xauth_identity " = <id>"
+defines the identity/username the client uses to reply to an XAuth request.
+If not defined, the IKEv1 identity will be used as XAuth identity.
 
 .SS "CONN PARAMETERS: IKEv2 MEDIATION EXTENSION"
 The following parameters are relevant to IKEv2 Mediation Extension
