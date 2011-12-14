@@ -45,6 +45,11 @@ struct private_ike_cert_pre_v1_t {
 	 */
 	bool initiator;
 
+	/**
+	 * Send certificate requests?
+	 */
+	bool send_req;
+
 	/** next message we expect */
 	enum {
 		CR_SA,
@@ -304,6 +309,13 @@ static bool use_certs(private_ike_cert_pre_v1_t *this, message_t *message)
 
 			switch (sa_payload->get_auth_method(sa_payload))
 			{
+				case AUTH_HYBRID_INIT_RSA:
+				case AUTH_HYBRID_RESP_RSA:
+					if (!this->initiator)
+					{
+						this->send_req = FALSE;
+					}
+					/* FALL */
 				case AUTH_RSA:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_XAUTH_RESP_RSA:
@@ -401,7 +413,10 @@ METHOD(task_t, build_r, status_t,
 					this->state = CR_KE;
 					return NEED_MORE;
 				case CR_KE:
-					build_certreqs(this, message);
+					if (this->send_req)
+					{
+						build_certreqs(this, message);
+					}
 					this->state = CR_AUTH;
 					return NEED_MORE;
 				case CR_AUTH:
@@ -502,6 +517,7 @@ ike_cert_pre_v1_t *ike_cert_pre_v1_create(ike_sa_t *ike_sa, bool initiator)
 		.ike_sa = ike_sa,
 		.initiator = initiator,
 		.state = CR_SA,
+		.send_req = TRUE,
 	);
 	if (initiator)
 	{

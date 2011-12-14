@@ -77,6 +77,8 @@ static bool use_certs(private_ike_cert_post_v1_t *this, message_t *message)
 				case AUTH_RSA:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_XAUTH_RESP_RSA:
+				case AUTH_HYBRID_INIT_RSA:
+				case AUTH_HYBRID_RESP_RSA:
 					use = TRUE;
 					break;
 				default:
