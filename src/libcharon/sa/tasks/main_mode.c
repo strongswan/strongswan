@@ -346,7 +346,8 @@ static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	DBG1(DBG_CFG, "looking for peer configs matching %H...%H[%Y]", me, other, id);
+	DBG1(DBG_CFG, "looking for %N peer configs matching %H...%H[%Y]",
+		 auth_method_names, this->auth_method, me, other, id);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
 														me, other, NULL, id);
 	while (enumerator->enumerate(enumerator, &current))
