@@ -100,6 +100,7 @@ sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/ike_vendor_v1.c sa/tasks/ike_vendor_v1.h \
 sa/tasks/main_mode.c sa/tasks/main_mode.h \
 sa/tasks/informational.c sa/tasks/informational.h \
+sa/tasks/isakmp_delete.c sa/tasks/isakmp_delete.h \
 sa/tasks/xauth.c sa/tasks/xauth.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
 sa/tasks/mode_config.c sa/tasks/mode_config.h \

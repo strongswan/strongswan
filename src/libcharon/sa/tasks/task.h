@@ -73,6 +73,8 @@ enum task_type_t {
 	TASK_MAIN_MODE,
 	/** IKEv1 informational exchange */
 	TASK_INFORMATIONAL,
+	/** IKEv1 delete using an informational */
+	TASK_ISAKMP_DELETE,
 	/** IKEv1 XAUTH authentication */
 	TASK_XAUTH,
 	/** IKEv1 Mode Config */
