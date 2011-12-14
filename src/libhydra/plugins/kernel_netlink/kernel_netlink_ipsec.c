@@ -1993,7 +1993,8 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 /**
  * Add or update a policy in the kernel.
  *
- * Note: The mutex has to be locked when entering this function.
+ * Note: The mutex has to be locked when entering this function
+ * and is unlocked here in any case.
  */
 static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_entry_t *policy, policy_sa_t *mapping, bool update)
@@ -2063,6 +2064,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			hdr->nlmsg_len += RTA_ALIGN(RTA_LENGTH(sizeof(struct xfrm_user_tmpl)));
 			if (hdr->nlmsg_len > sizeof(request))
 			{
+				this->mutex->unlock(this->mutex);
 				return FAILED;
 			}
 
@@ -2099,6 +2101,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
+			this->mutex->unlock(this->mutex);
 			return FAILED;
 		}
 
@@ -2547,6 +2550,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
+			this->mutex->unlock(this->mutex);
 			return FAILED;
 		}
 
