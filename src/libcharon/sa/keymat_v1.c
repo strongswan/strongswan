@@ -429,6 +429,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		case AUTH_RSA:
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:
+		case AUTH_HYBRID_INIT_RSA:
+		case AUTH_HYBRID_RESP_RSA:
 		{
 			this->prf->set_key(this->prf, nonces);
 			this->prf->allocate_bytes(this->prf, g_xy, &this->skeyid);

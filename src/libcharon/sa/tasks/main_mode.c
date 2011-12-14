@@ -327,7 +327,11 @@ static auth_method_t get_auth_method(private_main_mode_t *this,
 			return AUTH_XAUTH_RESP_PSK;
 		}
 	}
-	/* TODO-IKEv1: Hybrid methods? */
+	if (i1 == AUTH_CLASS_XAUTH && r1 == AUTH_CLASS_PUBKEY &&
+		i2 == AUTH_CLASS_ANY && r2 == AUTH_CLASS_ANY)
+	{
+		return AUTH_HYBRID_INIT_RSA;
+	}
 	return AUTH_NONE;;
 }
 
@@ -883,11 +887,13 @@ METHOD(task_t, build_r, status_t,
 			{
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
+				case AUTH_HYBRID_INIT_RSA:
 					this->ike_sa->queue_task(this->ike_sa,
 									(task_t*)xauth_create(this->ike_sa, TRUE));
 					return SUCCESS;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
+				case AUTH_HYBRID_RESP_RSA:
 					/* TODO-IKEv1: not yet supported */
 					return FAILED;
 				default:
@@ -992,10 +998,12 @@ METHOD(task_t, process_i, status_t,
 			{
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
+				case AUTH_HYBRID_INIT_RSA:
 					/* wait for XAUTH request */
 					return SUCCESS;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
+				case AUTH_HYBRID_RESP_RSA:
 					/* TODO-IKEv1: not yet */
 					return FAILED;
 				default:
