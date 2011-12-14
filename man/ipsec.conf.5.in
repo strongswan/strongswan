@@ -1031,12 +1031,6 @@ signifying that packets should be discarded; and
 signifying that packets should be discarded and a diagnostic ICMP returned
 .RB ( reject
 is currently not supported by the NETKEY stack of the Linux 2.6 kernel).
-The IKEv2 daemon charon currently supports
-.BR tunnel ,
-.BR transport ,
-and
-.BR transport_proxy
-connection types, only.
 .TP
 .BR xauth " = " client " | server"
 specifies the role in the XAuth protocol if activated by
