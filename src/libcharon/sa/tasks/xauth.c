@@ -93,11 +93,15 @@ static xauth_method_t *load_method(ike_sa_t *ike_sa, bool initiator)
 	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, !initiator);
 	if (!enumerator->enumerate(enumerator, &auth) ||
-		!enumerator->enumerate(enumerator, &auth))
+		(uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_XAUTH)
 	{
-		DBG1(DBG_CFG, "no second authentication round found for XAuth");
-		enumerator->destroy(enumerator);
-		return NULL;
+		if (!enumerator->enumerate(enumerator, &auth) ||
+			(uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_XAUTH)
+		{
+			DBG1(DBG_CFG, "no XAuth authentication round found");
+			enumerator->destroy(enumerator);
+			return NULL;
+		}
 	}
 	name = auth->get(auth, AUTH_RULE_XAUTH_BACKEND);
 	enumerator->destroy(enumerator);
