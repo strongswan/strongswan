@@ -132,6 +132,8 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libsimaka/
 LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 		simaka_message.h simaka_message.c \
 		simaka_crypto.h simaka_crypto.c \
+		simaka_manager.h simaka_manager.c \
+		simaka_card.h simaka_provider.h simaka_hooks.h \
 	)
 endif
 
