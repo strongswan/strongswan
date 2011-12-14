@@ -17,7 +17,7 @@
 
 #include <daemon.h>
 #include <sa/tasks/isakmp_delete.h>
-#include <sa/tasks/child_delete.h>
+#include <sa/tasks/quick_delete.h>
 #include <encoding/payloads/delete_payload.h>
 
 typedef struct private_informational_t private_informational_t;
@@ -104,7 +104,7 @@ METHOD(task_t, process_r, status_t,
 					}
 					else
 					{
-						this->del = (task_t*)child_delete_create(this->ike_sa,
+						this->del = (task_t*)quick_delete_create(this->ike_sa,
 																 PROTO_NONE, 0);
 					}
 				}

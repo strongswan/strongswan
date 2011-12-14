@@ -48,6 +48,7 @@
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/quick_mode.h>
+#include <sa/tasks/quick_delete.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/isakmp_delete.h>
@@ -1341,10 +1342,17 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 METHOD(ike_sa_t, delete_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	child_delete_t *child_delete;
+	task_t *task;
 
-	child_delete = child_delete_create(&this->public, protocol, spi);
-	this->task_manager->queue_task(this->task_manager, &child_delete->task);
+	if (this->version == IKEV1)
+	{
+		task = (task_t*)quick_delete_create(&this->public, protocol, spi);
+	}
+	else
+	{
+		task = (task_t*)child_delete_create(&this->public, protocol, spi);
+	}
+	this->task_manager->queue_task(this->task_manager, task);
 	return this->task_manager->initiate(this->task_manager);
 }
 
