@@ -247,6 +247,11 @@ typedef enum {
 	IKEV1_AUTH_XAUTH_RESP_RSA_ENC = 65008,
 	IKEV1_AUTH_XAUTH_INIT_RSA_ENC_REV = 65009,
 	IKEV1_AUTH_XAUTH_RESP_RSA_ENC_REV = 65010,
+	IKEV1_AUTH_HYBRID_INIT_RSA = 64221,
+	IKEV1_AUTH_HYBRID_RESP_RSA = 64222,
+	IKEV1_AUTH_HYBRID_INIT_DSS = 64223,
+	IKEV1_AUTH_HYBRID_RESP_DSS = 64224,
+
 } ikev1_auth_method_t;
 
 METHOD(payload_t, verify, status_t,
@@ -587,6 +592,8 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 			return IKEV1_AUTH_XAUTH_INIT_PSK;
 		case AUTH_XAUTH_INIT_RSA:
 			return IKEV1_AUTH_XAUTH_INIT_RSA;
+		case AUTH_HYBRID_INIT_RSA:
+			return IKEV1_AUTH_HYBRID_INIT_RSA;
 		default:
 			/* TODO-IKEv1: Handle other XAUTH methods */
 			/* TODO-IKEv1: Handle ECDSA methods */
@@ -889,6 +896,8 @@ METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
 			return AUTH_XAUTH_INIT_PSK;
 		case IKEV1_AUTH_XAUTH_INIT_RSA:
 			return AUTH_XAUTH_INIT_RSA;
+		case IKEV1_AUTH_HYBRID_INIT_RSA:
+			return AUTH_HYBRID_INIT_RSA;
 		default:
 			/* TODO-IKEv1: other XAUTH, ECDSA sigs */
 			return AUTH_NONE;
