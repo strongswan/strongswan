@@ -81,6 +81,8 @@ enum task_type_t {
 	TASK_MODE_CONFIG,
 	/** IKEv1 quick mode */
 	TASK_QUICK_MODE,
+	/** IKEv1 delete of a quick mode SA */
+	TASK_QUICK_DELETE,
 	/** IKEv1 vendor ID payload handling */
 	TASK_VENDOR_V1,
 	/** IKEv1 NAT detection */

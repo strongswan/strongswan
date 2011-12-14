@@ -103,6 +103,7 @@ sa/tasks/informational.c sa/tasks/informational.h \
 sa/tasks/isakmp_delete.c sa/tasks/isakmp_delete.h \
 sa/tasks/xauth.c sa/tasks/xauth.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
+sa/tasks/quick_delete.c sa/tasks/quick_delete.h \
 sa/tasks/mode_config.c sa/tasks/mode_config.h \
 sa/tasks/task.c sa/tasks/task.h
 
