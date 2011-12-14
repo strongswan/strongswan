@@ -462,11 +462,19 @@ METHOD(task_manager_t, initiate, status_t,
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
 
-	/* close after sending an INFORMATIONAL error but not yet established */
-	if (exchange == INFORMATIONAL_V1 &&
-		this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+	if (exchange == INFORMATIONAL_V1)
 	{
-		return FAILED;
+		switch (this->ike_sa->get_state(this->ike_sa))
+		{
+			case IKE_CONNECTING:
+				/* close after sending an INFORMATIONAL when unestablished */
+				return FAILED;
+			case IKE_DELETING:
+				/* close after sending a DELETE */
+				return DESTROY_ME;
+			default:
+				break;
+		}
 	}
 	return SUCCESS;
 }
