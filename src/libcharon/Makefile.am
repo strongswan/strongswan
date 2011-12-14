@@ -65,6 +65,7 @@ sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/authenticators/psk_v1_authenticator.c sa/authenticators/psk_v1_authenticator.h \
 sa/authenticators/pubkey_v1_authenticator.c sa/authenticators/pubkey_v1_authenticator.h \
+sa/authenticators/hybrid_authenticator.c sa/authenticators/hybrid_authenticator.h \
 sa/authenticators/xauth/xauth_method.c sa/authenticators/xauth/xauth_method.h \
 sa/authenticators/xauth/xauth_manager.c sa/authenticators/xauth/xauth_manager.h \
 sa/child_sa.c sa/child_sa.h \

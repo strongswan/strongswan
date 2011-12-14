@@ -23,6 +23,7 @@
 #include <sa/authenticators/eap_authenticator.h>
 #include <sa/authenticators/psk_v1_authenticator.h>
 #include <sa/authenticators/pubkey_v1_authenticator.h>
+#include <sa/authenticators/hybrid_authenticator.h>
 #include <encoding/payloads/auth_payload.h>
 
 
@@ -125,6 +126,11 @@ authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:
 			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
+										initiator, dh, dh_value, sa_payload,
+										id_payload);
+		case AUTH_HYBRID_INIT_RSA:
+		case AUTH_HYBRID_RESP_RSA:
+			return (authenticator_t*)hybrid_authenticator_create(ike_sa,
 										initiator, dh, dh_value, sa_payload,
 										id_payload);
 		default:
