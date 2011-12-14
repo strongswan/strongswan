@@ -56,7 +56,6 @@ METHOD(task_t, build_i, status_t,
 	private_ike_delete_t *this, message_t *message)
 {
 	delete_payload_t *delete_payload;
-	ike_sa_id_t *id;
 
 	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
@@ -66,17 +65,7 @@ METHOD(task_t, build_i, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa),
 		 this->ike_sa->get_other_id(this->ike_sa));
 
-	if (this->ike_sa->get_version(this->ike_sa) == IKEV1)
-	{
-		delete_payload = delete_payload_create(DELETE_V1, PROTO_IKE);
-		id = this->ike_sa->get_id(this->ike_sa);
-		delete_payload->set_ike_spi(delete_payload, id->get_initiator_spi(id),
-									id->get_responder_spi(id));
-	}
-	else
-	{
-		delete_payload = delete_payload_create(DELETE, PROTO_IKE);
-	}
+	delete_payload = delete_payload_create(DELETE, PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
@@ -125,15 +114,7 @@ METHOD(task_t, process_r, status_t,
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			this->ike_sa->reestablish(this->ike_sa);
-			if (this->ike_sa->get_version(this->ike_sa) == IKEV2)
-			{
-				return NEED_MORE;
-			}
-			else
-			{
-				/* Dont send message to other side */
-				return DESTROY_ME;
-			}
+			return NEED_MORE;
 		case IKE_REKEYING:
 			this->rekeyed = TRUE;
 			break;
