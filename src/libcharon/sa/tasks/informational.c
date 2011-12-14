@@ -16,7 +16,7 @@
 #include "informational.h"
 
 #include <daemon.h>
-#include <sa/tasks/ike_delete.h>
+#include <sa/tasks/isakmp_delete.h>
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
 
@@ -99,8 +99,8 @@ METHOD(task_t, process_r, status_t,
 					delete = (delete_payload_t*)payload;
 					if (delete->get_protocol_id(delete) == PROTO_IKE)
 					{
-						this->del = (task_t*)ike_delete_create(this->ike_sa,
-															   FALSE);
+						this->del = (task_t*)isakmp_delete_create(this->ike_sa,
+																  FALSE);
 					}
 					else
 					{

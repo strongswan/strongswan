@@ -50,6 +50,7 @@
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
+#include <sa/tasks/isakmp_delete.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/send_dpd_job.h>
@@ -1373,14 +1374,21 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 METHOD(ike_sa_t, delete_, status_t,
 	private_ike_sa_t *this)
 {
-	ike_delete_t *ike_delete;
+	task_t *task;
 
 	switch (this->state)
 	{
 		case IKE_ESTABLISHED:
 		case IKE_REKEYING:
-			ike_delete = ike_delete_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
+			if (this->version == IKEV1)
+			{
+				task = (task_t*)isakmp_delete_create(&this->public, TRUE);
+			}
+			else
+			{
+				task = (task_t*)ike_delete_create(&this->public, TRUE);
+			}
+			this->task_manager->queue_task(this->task_manager, task);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
 			DBG1(DBG_IKE, "deleting unestablished IKE_SA");
