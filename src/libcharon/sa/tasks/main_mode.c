@@ -336,17 +336,52 @@ static auth_method_t get_auth_method(private_main_mode_t *this,
 }
 
 /**
+ * Check if a peer skipped authentication by using Hybrid authentication
+ */
+static bool skipped_auth(private_main_mode_t *this, bool local)
+{
+	bool initiator;
+
+	initiator = local == this->initiator;
+	if (initiator && this->auth_method == AUTH_HYBRID_INIT_RSA)
+	{
+		return TRUE;
+	}
+	if (!initiator && this->auth_method == AUTH_HYBRID_RESP_RSA)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Check if remote authentication constraints fulfilled
+ */
+static bool check_constraints(private_main_mode_t *this)
+{
+	identification_t *id;
+	auth_cfg_t *auth;
+
+	if (skipped_auth(this, FALSE))
+	{
+		return TRUE;
+	}
+	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	/* auth identity to comply */
+	id = this->ike_sa->get_other_id(this->ike_sa);
+	auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+	return auth->complies(auth, this->other_auth, TRUE);
+}
+
+/**
  * Save authentication information after authentication succeeded
  */
 static void save_auth_cfg(private_main_mode_t *this, bool local)
 {
 	auth_cfg_t *auth;
-	bool initiator;
 
-	initiator = local == this->initiator;
-	if ((initiator && this->auth_method == AUTH_HYBRID_INIT_RSA) ||
-		(!initiator && this->auth_method == AUTH_HYBRID_RESP_RSA))
-	{	/* peer not authenticated in main mode with hybrid methods */
+	if (skipped_auth(this, local))
+	{
 		return;
 	}
 	auth = auth_cfg_create();
@@ -700,6 +735,10 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			authenticator->destroy(authenticator);
+			if (!check_constraints(this))
+			{
+				return FAILED;
+			}
 			save_auth_cfg(this, FALSE);
 
 			this->state = MM_AUTH;
@@ -1018,6 +1057,10 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 			}
 			authenticator->destroy(authenticator);
+			if (!check_constraints(this))
+			{
+				return FAILED;
+			}
 			save_auth_cfg(this, FALSE);
 
 			switch (this->auth_method)
