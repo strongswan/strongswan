@@ -275,8 +275,8 @@ static const asn1Object_t basicConstraintsObjects[] = {
 	{ 0, "basicConstraints",	ASN1_SEQUENCE,	ASN1_NONE			}, /*  0 */
 	{ 1,   "CA",				ASN1_BOOLEAN,	ASN1_DEF|ASN1_BODY	}, /*  1 */
 	{ 1,   "pathLenConstraint",	ASN1_INTEGER,	ASN1_OPT|ASN1_BODY	}, /*  2 */
-	{ 1,   "end opt",			ASN1_EOC,		ASN1_END  			}, /*  3 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT  			}
+	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /*  3 */
+	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT			}
 };
 #define BASIC_CONSTRAINTS_CA		1
 #define BASIC_CONSTRAINTS_PATH_LEN	2
@@ -394,7 +394,7 @@ static const asn1Object_t generalNameObjects[] = {
 	{ 0, "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
 	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  1 */
 	{ 0, "rfc822Name",		ASN1_CONTEXT_S_1,  ASN1_OPT|ASN1_BODY	}, /*  2 */
-	{ 0, "end choice",		ASN1_EOC,          ASN1_END 			}, /*  3 */
+	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  3 */
 	{ 0, "dnsName",			ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  4 */
 	{ 0, "end choice",		ASN1_EOC,          ASN1_END				}, /*  5 */
 	{ 0, "x400Address",		ASN1_CONTEXT_S_3,  ASN1_OPT|ASN1_BODY	}, /*  6 */
@@ -536,14 +536,14 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
  * ASN.1 definition of a authorityKeyIdentifier extension
  */
 static const asn1Object_t authKeyIdentifierObjects[] = {
-	{ 0, "authorityKeyIdentifier",		ASN1_SEQUENCE,		ASN1_NONE 			}, /* 0 */
+	{ 0, "authorityKeyIdentifier",		ASN1_SEQUENCE,		ASN1_NONE			}, /* 0 */
 	{ 1,   "keyIdentifier",				ASN1_CONTEXT_S_0,	ASN1_OPT|ASN1_BODY	}, /* 1 */
-	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 2 */
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END			}, /* 2 */
 	{ 1,   "authorityCertIssuer",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_OBJ	}, /* 3 */
-	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 4 */
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END			}, /* 4 */
 	{ 1,   "authorityCertSerialNumber",	ASN1_CONTEXT_S_2,	ASN1_OPT|ASN1_BODY	}, /* 5 */
-	{ 1,   "end opt",					ASN1_EOC,			ASN1_END  			}, /* 6 */
-	{ 0, "exit",						ASN1_EOC,			ASN1_EXIT  			}
+	{ 1,   "end opt",					ASN1_EOC,			ASN1_END			}, /* 6 */
+	{ 0, "exit",						ASN1_EOC,			ASN1_EXIT			}
 };
 #define AUTH_KEY_ID_KEY_ID			1
 #define AUTH_KEY_ID_CERT_ISSUER		3
@@ -1105,19 +1105,19 @@ static void parse_policyConstraints(chunk_t blob, int level0,
  * ASN.1 definition of ipAddrBlocks according to RFC 3779
  */
 static const asn1Object_t ipAddrBlocksObjects[] = {
-	{ 0, "ipAddrBlocks",	        ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
+	{ 0, "ipAddrBlocks",			ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
 	{ 1,   "ipAddressFamily",		ASN1_SEQUENCE,		ASN1_NONE			}, /*  1 */
-	{ 2,     "addressFamily",	    ASN1_OCTET_STRING,	ASN1_BODY          	}, /*  2 */
-	{ 2,     "inherit",             ASN1_NULL,          ASN1_OPT|ASN1_NONE  }, /*  3 */
-	{ 2,     "end choice",          ASN1_EOC,           ASN1_END            }, /*  4 */
-	{ 2,     "addressesOrRanges",	ASN1_SEQUENCE,	    ASN1_OPT|ASN1_LOOP 	}, /*  5 */
-	{ 3,       "addressPrefix",	    ASN1_BIT_STRING,	ASN1_OPT|ASN1_BODY  }, /*  6 */
-	{ 3,       "end choice",        ASN1_EOC,           ASN1_END            }, /*  7 */
-	{ 3,       "addressRange",      ASN1_SEQUENCE,      ASN1_OPT|ASN1_NONE  }, /*  8 */
-	{ 4,         "min",             ASN1_BIT_STRING,    ASN1_BODY           }, /*  9 */
-	{ 4,         "max",             ASN1_BIT_STRING,    ASN1_BODY           }, /* 10 */
-	{ 3,       "end choice",        ASN1_EOC,           ASN1_END            }, /* 11 */
-	{ 2,     "end opt/loop",        ASN1_EOC,           ASN1_END            }, /* 12 */
+	{ 2,     "addressFamily",		ASN1_OCTET_STRING,	ASN1_BODY			}, /*  2 */
+	{ 2,     "inherit",				ASN1_NULL,			ASN1_OPT|ASN1_NONE	}, /*  3 */
+	{ 2,     "end choice",			ASN1_EOC,			ASN1_END			}, /*  4 */
+	{ 2,     "addressesOrRanges",	ASN1_SEQUENCE,		ASN1_OPT|ASN1_LOOP	}, /*  5 */
+	{ 3,       "addressPrefix",		ASN1_BIT_STRING,	ASN1_OPT|ASN1_BODY  }, /*  6 */
+	{ 3,       "end choice",		ASN1_EOC,			ASN1_END			}, /*  7 */
+	{ 3,       "addressRange",		ASN1_SEQUENCE,		ASN1_OPT|ASN1_NONE	}, /*  8 */
+	{ 4,         "min",				ASN1_BIT_STRING,	ASN1_BODY			}, /*  9 */
+	{ 4,         "max",				ASN1_BIT_STRING,	ASN1_BODY			}, /* 10 */
+	{ 3,       "end choice",		ASN1_EOC,			ASN1_END			}, /* 11 */
+	{ 2,     "end opt/loop",		ASN1_EOC,			ASN1_END			}, /* 12 */
 	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 13 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
@@ -1280,7 +1280,7 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_VERSION						 3
 #define X509_OBJ_SERIAL_NUMBER					 4
 #define X509_OBJ_SIG_ALG						 5
-#define X509_OBJ_ISSUER 						 6
+#define X509_OBJ_ISSUER							 6
 #define X509_OBJ_NOT_BEFORE						 8
 #define X509_OBJ_NOT_AFTER						 9
 #define X509_OBJ_SUBJECT						10
@@ -1706,7 +1706,7 @@ METHOD(x509_t, get_subjectKeyIdentifier, chunk_t,
 		chunk_t fingerprint;
 
 		if (this->public_key->get_fingerprint(this->public_key,
-					 				KEYID_PUBKEY_SHA1, &fingerprint))
+									KEYID_PUBKEY_SHA1, &fingerprint))
 		{
 			return fingerprint;
 		}
