@@ -1983,25 +1983,30 @@ METHOD(message_t, parse_body, status_t,
 		{
 			hash_payload_t *hash_payload;
 			chunk_t other_hash;
-			if ((this->first_payload != HASH_V1) && (this->public.get_exchange_type(&this->public) != INFORMATIONAL_V1))
+			if (this->first_payload != HASH_V1)
 			{
-				DBG1(DBG_ENC, "expected HASH payload as first payload");
+				if (this->exchange_type == INFORMATIONAL_V1)
+				{	/* TODO-IKEv1: Parse and log contents? */
+					DBG1(DBG_ENC, "ignoring unprotected INFORMATIONAL from %H",
+						 this->packet->get_source(this->packet));
+				}
+				else
+				{
+					DBG1(DBG_ENC, "expected HASH payload as first payload");
+				}
 				chunk_free(&hash);
 				return VERIFY_ERROR;
 			}
-			if (this->first_payload == HASH_V1)
+			hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
+			other_hash = hash_payload->get_hash(hash_payload);
+			if (!chunk_equals(hash, other_hash))
 			{
-				hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
-				other_hash = hash_payload->get_hash(hash_payload);
-				if (!chunk_equals(hash, other_hash))
-				{
-					DBG1(DBG_ENC, "our hash does not match received %B",
-						 &other_hash);
-					chunk_free(&hash);
-					return FAILED;
-				}
-				DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
+				DBG1(DBG_ENC, "our hash does not match received %B",
+					 &other_hash);
+				chunk_free(&hash);
+				return FAILED;
 			}
+			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
 			chunk_free(&hash);
 		}
 	}
