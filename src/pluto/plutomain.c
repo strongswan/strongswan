@@ -852,6 +852,7 @@ void exit_pluto(int status)
 	delete_lock();
 	options->destroy(options);
 	pluto_deinit();
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 	lib->plugins->unload(lib->plugins);
 	libhydra_deinit();
 	library_deinit();

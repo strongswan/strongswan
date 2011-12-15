@@ -115,6 +115,8 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
+	/* make sure the cache is clear before unloading plugins */
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
 #ifdef CAPABILITIES_LIBCAP

@@ -61,6 +61,9 @@ void library_deinit()
 	detailed = lib->settings->get_bool(lib->settings,
 								"libstrongswan.leak_detective.detailed", TRUE);
 
+	/* make sure the cache is clear before unloading plugins */
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
+
 	this->public.scheduler->destroy(this->public.scheduler);
 	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
