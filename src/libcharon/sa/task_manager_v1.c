@@ -277,8 +277,7 @@ METHOD(task_manager_t, initiate, status_t,
 	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
-	bool new_mid = FALSE;
-	bool expect_response = FALSE;
+	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE;
 
 	if (!this->rng)
 	{
@@ -431,6 +430,7 @@ METHOD(task_manager_t, initiate, status_t,
 				continue;
 			case ALREADY_DONE:
 				flush_queue(this, this->active_tasks);
+				flushed = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -453,6 +453,11 @@ METHOD(task_manager_t, initiate, status_t,
 	if (this->active_tasks->get_count(this->active_tasks) == 0)
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	}
+	if (flushed)
+	{
+		message->destroy(message);
+		return initiate(this);
 	}
 	this->initiating.seqnr++;
 
@@ -512,7 +517,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE;
+	bool delete = FALSE, flushed = FALSE;
 	status_t status;
 
 	me = request->get_destination(request);
@@ -549,6 +554,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				continue;
 			case ALREADY_DONE:
 				flush_queue(this, this->passive_tasks);
+				flushed = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -563,9 +569,13 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	}
 	enumerator->destroy(enumerator);
 
-	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
+	if (flushed)
+	{
+		message->destroy(message);
+		return initiate(this);
+	}
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	message->destroy(message);
