@@ -137,7 +137,7 @@ METHOD(authenticator_t, process, status_t,
 	if (!sig_payload)
 	{
 		DBG1(DBG_IKE, "SIG payload missing in message");
-		return FALSE;
+		return FAILED;
 	}
 
 	id = this->ike_sa->get_other_id(this->ike_sa);
