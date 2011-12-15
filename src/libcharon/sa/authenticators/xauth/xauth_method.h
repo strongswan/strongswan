@@ -81,6 +81,13 @@ struct xauth_method_t {
 						 cp_payload_t **out);
 
 	/**
+	 * Get the XAuth username received as XAuth initiator.
+	 *
+	 * @return			used XAuth username, pointer to internal data
+	 */
+	identification_t* (*get_identity)(xauth_method_t *this);
+
+	/**
 	 * Destroys a eap_method_t object.
 	 */
 	void (*destroy) (xauth_method_t *this);

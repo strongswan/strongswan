@@ -98,7 +98,7 @@ METHOD(xauth_method_t, process_server, status_t,
 	configuration_attribute_t *attr;
 	enumerator_t *enumerator;
 	shared_key_t *shared;
-	identification_t *id = NULL, *peer;
+	identification_t *id;
 	chunk_t user = chunk_empty, pass = chunk_empty;
 	status_t status = SUCCESS;
 
@@ -132,29 +132,31 @@ METHOD(xauth_method_t, process_server, status_t,
 			DBG1(DBG_IKE, "failed to parse provided XAuth username");
 			return FAILED;
 		}
+		this->peer->destroy(this->peer);
+		this->peer = id;
 	}
 
-	peer = id ?: this->peer;
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, this->server,
-									  peer);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
+									  this->server, this->peer);
 	if (!shared)
 	{
-		DBG1(DBG_IKE, "no XAuth secret found for '%Y' - '%Y'", this->server,
-			 peer);
+		DBG1(DBG_IKE, "no XAuth secret found for '%Y' - '%Y'",
+			 this->server, this->peer);
 		status = FAILED;
 	}
 	else if (!chunk_equals(shared->get_key(shared), pass))
 	{
-		DBG1(DBG_IKE, "failed to authenticate '%Y' with XAuth", peer);
+		DBG1(DBG_IKE, "failed to authenticate '%Y' with XAuth", this->peer);
 		status = FAILED;
 	}
-	else
-	{
-		DBG2(DBG_IKE, "authentication of '%Y' with XAuth successful", peer);
-	}
 	DESTROY_IF(shared);
-	DESTROY_IF(id);
 	return status;
+}
+
+METHOD(xauth_method_t, get_identity, identification_t*,
+	private_xauth_generic_t *this)
+{
+	return this->peer;
 }
 
 METHOD(xauth_method_t, destroy, void,
@@ -178,6 +180,7 @@ xauth_generic_t *xauth_generic_create_peer(identification_t *server,
 			.xauth_method = {
 				.initiate = _initiate_peer,
 				.process = _process_peer,
+				.get_identity = _get_identity,
 				.destroy = _destroy,
 			},
 		},
@@ -201,6 +204,7 @@ xauth_generic_t *xauth_generic_create_server(identification_t *server,
 			.xauth_method = {
 				.initiate = _initiate_server,
 				.process = _process_server,
+				.get_identity = _get_identity,
 				.destroy = _destroy,
 			},
 		},
