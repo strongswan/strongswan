@@ -180,6 +180,11 @@ static void flush_queue(private_task_manager_t *this, linked_list_t *list)
 {
 	task_t *task;
 
+	if (this->queued)
+	{
+		this->queued->destroy(this->queued);
+		this->queued = NULL;
+	}
 	while (list->remove_last(list, (void**)&task) == SUCCESS)
 	{
 		task->destroy(task);
@@ -305,15 +310,23 @@ METHOD(task_manager_t, initiate, status_t,
 				}
 				break;
 			case IKE_CONNECTING:
+				if (activate_task(this, TASK_ISAKMP_DELETE))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
 				if (activate_task(this, TASK_XAUTH))
 				{
 					exchange = TRANSACTION;
 					new_mid = TRUE;
+					break;
 				}
 				if (activate_task(this, TASK_INFORMATIONAL))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
+					break;
 				}
 				break;
 			case IKE_ESTABLISHED:
@@ -333,16 +346,19 @@ METHOD(task_manager_t, initiate, status_t,
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
+					break;
 				}
 				if (activate_task(this, TASK_ISAKMP_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
+					break;
 				}
 				if (activate_task(this, TASK_QUICK_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
+					break;
 				}
 				break;
 			default:

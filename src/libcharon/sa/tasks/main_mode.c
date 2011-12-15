@@ -31,6 +31,7 @@
 #include <sa/tasks/xauth.h>
 #include <sa/tasks/mode_config.h>
 #include <sa/tasks/informational.h>
+#include <sa/tasks/isakmp_delete.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -492,6 +493,17 @@ static status_t send_notify(private_main_mode_t *this, notify_type_t type)
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
 	/* cancel all active/passive tasks in favour of informational */
+	return ALREADY_DONE;
+}
+
+/**
+ * Queue a delete task if authentication failed as initiator
+ */
+static status_t send_delete(private_main_mode_t *this)
+{
+	this->ike_sa->queue_task(this->ike_sa,
+						(task_t*)isakmp_delete_create(this->ike_sa, TRUE));
+	/* cancel all active tasks in favour of informational */
 	return ALREADY_DONE;
 }
 
@@ -1034,7 +1046,7 @@ METHOD(task_t, process_i, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDir payload missing");
-				return send_notify(this, INVALID_PAYLOAD_TYPE);
+				return send_delete(this);
 			}
 			id = id_payload->get_identification(id_payload);
 			if (!id->matches(id, this->other_auth->get(this->other_auth,
@@ -1042,7 +1054,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "IDir does not match");
 				id->destroy(id);
-				return send_notify(this, INVALID_ID_INFORMATION);
+				return send_delete(this);
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
@@ -1051,12 +1063,12 @@ METHOD(task_t, process_i, status_t,
 														 message) != SUCCESS)
 			{
 				DESTROY_IF(authenticator);
-				return send_notify(this, AUTHENTICATION_FAILED);
+				return send_delete(this);
 			}
 			authenticator->destroy(authenticator);
 			if (!check_constraints(this))
 			{
-				return send_notify(this, AUTHENTICATION_FAILED);
+				return send_delete(this);
 			}
 			save_auth_cfg(this, FALSE);
 
