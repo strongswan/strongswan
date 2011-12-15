@@ -332,7 +332,28 @@ static auth_method_t get_auth_method(private_main_mode_t *this,
 	{
 		return AUTH_HYBRID_INIT_RSA;
 	}
-	return AUTH_NONE;;
+	return AUTH_NONE;
+}
+
+/**
+ * Save authentication information after authentication succeeded
+ */
+static void save_auth_cfg(private_main_mode_t *this, bool local)
+{
+	auth_cfg_t *auth;
+	bool initiator;
+
+	initiator = local == this->initiator;
+	if ((initiator && this->auth_method == AUTH_HYBRID_INIT_RSA) ||
+		(!initiator && this->auth_method == AUTH_HYBRID_RESP_RSA))
+	{	/* peer not authenticated in main mode with hybrid methods */
+		return;
+	}
+	auth = auth_cfg_create();
+	/* for local config, we _copy_ entires from the config, as it contains
+	 * certificates we must send later. */
+	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), local);
+	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);
 }
 
 /**
@@ -560,6 +581,7 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 			authenticator->destroy(authenticator);
+			save_auth_cfg(this, TRUE);
 
 			this->state = MM_AUTH;
 			return NEED_MORE;
@@ -678,6 +700,7 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
 			}
 			authenticator->destroy(authenticator);
+			save_auth_cfg(this, FALSE);
 
 			this->state = MM_AUTH;
 			if (has_notify_errors(this, message))
@@ -877,6 +900,7 @@ METHOD(task_t, build_r, status_t,
 				return FAILED;
 			}
 			authenticator->destroy(authenticator);
+			save_auth_cfg(this, TRUE);
 
 			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
 			{
@@ -994,6 +1018,7 @@ METHOD(task_t, process_i, status_t,
 				return FAILED;
 			}
 			authenticator->destroy(authenticator);
+			save_auth_cfg(this, FALSE);
 
 			switch (this->auth_method)
 			{
