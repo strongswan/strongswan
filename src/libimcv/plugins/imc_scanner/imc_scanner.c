@@ -268,7 +268,6 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 								  TNC_UInt32 dst_imc_id)
 {
 	pa_tnc_msg_t *pa_tnc_msg;
-	pa_tnc_attr_t *attr;
 	imc_state_t *state;
 	TNC_Result result;
 	bool fatal_error;
