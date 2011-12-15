@@ -84,7 +84,10 @@ METHOD(task_t, process_r, status_t,
 				{
 					DBG1(DBG_IKE, "received %N error notify",
 						 notify_type_names, notify->get_notify_type(notify));
-					status = FAILED;
+					if (this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+					{	/* only critical during main mode */
+						status = FAILED;
+					}
 					break;
 				}
 				else
