@@ -1354,7 +1354,7 @@ METHOD(ike_sa_t, delete_child_sa, status_t,
 
 	if (this->version == IKEV1)
 	{
-		task = (task_t*)quick_delete_create(&this->public, protocol, spi);
+		task = (task_t*)quick_delete_create(&this->public, protocol, spi, FALSE);
 	}
 	else
 	{

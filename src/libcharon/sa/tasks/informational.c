@@ -105,7 +105,7 @@ METHOD(task_t, process_r, status_t,
 					else
 					{
 						this->del = (task_t*)quick_delete_create(this->ike_sa,
-																 PROTO_NONE, 0);
+														PROTO_NONE, 0, FALSE);
 					}
 				}
 				break;
