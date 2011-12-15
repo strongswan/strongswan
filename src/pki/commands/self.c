@@ -212,6 +212,10 @@ static int self()
 				{
 					flags |= X509_CLIENT_AUTH;
 				}
+				else if (streq(arg, "ikeIntermediate"))
+				{
+					flags |= X509_IKE_INTERMEDIATE;
+				}
 				else if (streq(arg, "crlSign"))
 				{
 					flags |= X509_CRL_SIGN;
