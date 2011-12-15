@@ -319,11 +319,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 				auth->get(auth, AUTH_RULE_IDENTITY));
 
 		auth_class = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
-		if (auth_class != AUTH_CLASS_EAP)
-		{
-			fprintf(out, "%N authentication\n", auth_class_names, auth_class);
-		}
-		else
+		if (auth_class == AUTH_CLASS_EAP)
 		{
 			if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE) == EAP_NAK)
 			{
@@ -349,6 +345,21 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 				fprintf(out, " with EAP identity '%Y'", id);
 			}
 			fprintf(out, "\n");
+		}
+		else if (auth_class == AUTH_CLASS_XAUTH)
+		{
+			fprintf(out, "%N authentication: %s", auth_class_names, auth_class,
+					auth->get(auth, AUTH_RULE_XAUTH_BACKEND) ?: "any");
+			id = auth->get(auth, AUTH_RULE_XAUTH_IDENTITY);
+			if (id)
+			{
+				fprintf(out, " with XAuth identity '%Y'", id);
+			}
+			fprintf(out, "\n");
+		}
+		else
+		{
+			fprintf(out, "%N authentication\n", auth_class_names, auth_class);
 		}
 
 		cert = auth->get(auth, AUTH_RULE_CA_CERT);
