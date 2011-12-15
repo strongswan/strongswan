@@ -645,6 +645,7 @@ static bool has_notify_errors(private_quick_mode_t *this, message_t *message)
 			type = notify->get_notify_type(notify);
 			if (type < 16384)
 			{
+
 				DBG1(DBG_IKE, "received %N error notify",
 					 notify_type_names, type);
 				err = TRUE;
@@ -703,7 +704,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->config)
 			{
 				DBG1(DBG_IKE, "no child config found");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
@@ -711,7 +712,7 @@ METHOD(task_t, process_r, status_t,
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "sa payload missing");
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->config->select_proposal(this->config,
@@ -731,7 +732,7 @@ METHOD(task_t, process_r, status_t,
 
 			if (!get_nonce(this, &this->nonce_i, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
 			if (this->proposal->get_algorithm(this->proposal,
@@ -743,11 +744,11 @@ METHOD(task_t, process_r, status_t,
 				{
 					DBG1(DBG_IKE, "negotiated DH group %N not supported",
 						 diffie_hellman_group_names, group);
-					return FAILED;
+					return send_notify(this, INVALID_KEY_INFORMATION);
 				}
 				if (!get_ke(this, message))
 				{
-					return FAILED;
+					return send_notify(this, INVALID_PAYLOAD_TYPE);
 				}
 			}
 
@@ -761,7 +762,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			if (has_notify_errors(this, message))
 			{
-				return FAILED;
+				return SUCCESS;
 			}
 			if (!install(this))
 			{
@@ -793,7 +794,7 @@ METHOD(task_t, build_r, status_t,
 			if (!this->spi_r)
 			{
 				DBG1(DBG_IKE, "allocating SPI from kernel failed");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
@@ -843,7 +844,7 @@ METHOD(task_t, process_i, status_t,
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "sa payload missing");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->config->select_proposal(this->config,
@@ -852,7 +853,7 @@ METHOD(task_t, process_i, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no matching proposal found");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->spi_r = this->proposal->get_spi(this->proposal);
 
@@ -860,19 +861,19 @@ METHOD(task_t, process_i, status_t,
 
 			if (!get_nonce(this, &this->nonce_r, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			if (this->dh && !get_ke(this, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!get_ts(this, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			if (!install(this))
 			{
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->state = QM_NEGOTIATED;
 			return NEED_MORE;
