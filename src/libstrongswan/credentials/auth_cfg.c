@@ -537,6 +537,7 @@ METHOD(auth_cfg_t, complies, bool,
 									 "public keys, but %d bit key used",
 									 (uintptr_t)value, strength);
 							}
+							break;
 						}
 					}
 					else if (t2 == AUTH_RULE_RSA_STRENGTH)
@@ -547,6 +548,7 @@ METHOD(auth_cfg_t, complies, bool,
 							DBG1(DBG_CFG, "constraint requires %d bit ECDSA, "
 								 "but RSA used", (uintptr_t)value);
 						}
+						break;
 					}
 					else if (t2 == AUTH_RULE_ECDSA_STRENGTH)
 					{
@@ -556,6 +558,7 @@ METHOD(auth_cfg_t, complies, bool,
 							DBG1(DBG_CFG, "constraint requires %d bit RSA, "
 								 "but ECDSA used", (uintptr_t)value);
 						}
+						break;
 					}
 				}
 				e2->destroy(e2);
