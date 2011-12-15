@@ -474,8 +474,7 @@ static bool has_notify_errors(private_main_mode_t *this, message_t *message)
 /**
  * Queue a task sending a notify in an INFORMATIONAL exchange
  */
-static status_t send_notify(private_main_mode_t *this,
-							notify_type_t type, chunk_t data)
+static status_t send_notify(private_main_mode_t *this, notify_type_t type)
 {
 	notify_payload_t *notify;
 	ike_sa_id_t *ike_sa_id;
@@ -484,7 +483,6 @@ static status_t send_notify(private_main_mode_t *this,
 
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
 														  PROTO_IKE, type);
-	notify->set_notification_data(notify, data);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
 	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
@@ -568,24 +566,24 @@ METHOD(task_t, build_i, status_t,
 
 			if (!this->keymat->create_hasher(this->keymat, this->proposal))
 			{
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 													  group);
 			if (!this->dh)
 			{
 				DBG1(DBG_IKE, "negotiated DH group not supported");
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!add_nonce_ke(this, &this->nonce_i, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			this->state = MM_KE;
 			return NEED_MORE;
@@ -600,7 +598,7 @@ METHOD(task_t, build_i, status_t,
 			if (!id)
 			{
 				DBG1(DBG_CFG, "own identity not known");
-				return FAILED;
+				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
@@ -613,7 +611,7 @@ METHOD(task_t, build_i, status_t,
 													   message) != SUCCESS)
 			{
 				DESTROY_IF(authenticator);
-				return FAILED;
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			authenticator->destroy(authenticator);
 			save_auth_cfg(this, TRUE);
@@ -650,7 +648,7 @@ METHOD(task_t, process_r, status_t,
 			if (!sa_payload || !save_sa_payload(this, message))
 			{
 				DBG1(DBG_IKE, "SA payload missing or invalid");
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
 			list = sa_payload->get_proposals(sa_payload);
@@ -660,7 +658,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
-				return send_notify(this, NO_PROPOSAL_CHOSEN, chunk_empty);
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 
 			this->auth_method = sa_payload->get_auth_method(sa_payload);
@@ -675,23 +673,23 @@ METHOD(task_t, process_r, status_t,
 
 			if (!this->keymat->create_hasher(this->keymat, this->proposal))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			this->dh = lib->crypto->create_dh(lib->crypto, group);
 			if (!this->dh)
 			{
 				DBG1(DBG_IKE, "negotiated DH group not supported");
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!get_nonce_ke(this, &this->nonce_i, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			this->state = MM_KE;
 			return NEED_MORE;
@@ -706,7 +704,7 @@ METHOD(task_t, process_r, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDii payload missing");
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
 			id = id_payload->get_identification(id_payload);
@@ -715,7 +713,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->peer_cfg)
 			{
 				DBG1(DBG_IKE, "no peer config found");
-				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 
@@ -724,7 +722,7 @@ METHOD(task_t, process_r, status_t,
 			if (!this->my_auth || !this->other_auth)
 			{
 				DBG1(DBG_IKE, "auth config missing");
-				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 
 			authenticator = create_authenticator(this, id_payload);
@@ -732,12 +730,12 @@ METHOD(task_t, process_r, status_t,
 														 message) != SUCCESS)
 			{
 				DESTROY_IF(authenticator);
-				return send_notify(this, AUTHENTICATION_FAILED, chunk_empty);
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			authenticator->destroy(authenticator);
 			if (!check_constraints(this))
 			{
-				return FAILED;
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			save_auth_cfg(this, FALSE);
 
@@ -905,11 +903,11 @@ METHOD(task_t, build_r, status_t,
 		{
 			if (!add_nonce_ke(this, &this->nonce_r, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!derive_keys(this, this->nonce_i, this->nonce_r))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			return NEED_MORE;
 		}
@@ -923,9 +921,8 @@ METHOD(task_t, build_r, status_t,
 			if (!id)
 			{
 				DBG1(DBG_CFG, "own identity not known");
-				return FAILED;
+				return send_notify(this, INVALID_ID_INFORMATION);
 			}
-
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 			id_payload = id_payload_create_from_identification(ID_V1, id);
@@ -936,7 +933,7 @@ METHOD(task_t, build_r, status_t,
 													   message) != SUCCESS)
 			{
 				DESTROY_IF(authenticator);
-				return FAILED;
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			authenticator->destroy(authenticator);
 			save_auth_cfg(this, TRUE);
@@ -987,7 +984,7 @@ METHOD(task_t, process_i, status_t,
 			if (!sa_payload)
 			{
 				DBG1(DBG_IKE, "SA payload missing");
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			list = sa_payload->get_proposals(sa_payload);
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
@@ -996,7 +993,7 @@ METHOD(task_t, process_i, status_t,
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no proposal found");
-				return FAILED;
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 
 			lifetime = sa_payload->get_lifetime(sa_payload);
@@ -1019,11 +1016,11 @@ METHOD(task_t, process_i, status_t,
 		{
 			if (!get_nonce_ke(this, &this->nonce_r, message))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			if (!derive_keys(this, this->nonce_i, this->nonce_r))
 			{
-				return FAILED;
+				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			return NEED_MORE;
 		}
@@ -1037,7 +1034,7 @@ METHOD(task_t, process_i, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDir payload missing");
-				return FAILED;
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			id = id_payload->get_identification(id_payload);
 			if (!id->matches(id, this->other_auth->get(this->other_auth,
@@ -1045,7 +1042,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "IDir does not match");
 				id->destroy(id);
-				return FAILED;
+				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
 
@@ -1054,12 +1051,12 @@ METHOD(task_t, process_i, status_t,
 														 message) != SUCCESS)
 			{
 				DESTROY_IF(authenticator);
-				return FAILED;
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			authenticator->destroy(authenticator);
 			if (!check_constraints(this))
 			{
-				return FAILED;
+				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			save_auth_cfg(this, FALSE);
 
