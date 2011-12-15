@@ -55,6 +55,11 @@ struct private_xauth_t {
 	xauth_method_t *xauth;
 
 	/**
+	 * XAuth username
+	 */
+	identification_t *user;
+
+	/**
 	 * Generated configuration payload
 	 */
 	cp_payload_t *cp;
@@ -68,7 +73,7 @@ struct private_xauth_t {
 /**
  * Load XAuth backend
  */
-static xauth_method_t *load_method(ike_sa_t *ike_sa, bool initiator)
+static xauth_method_t *load_method(private_xauth_t* this)
 {
 	identification_t *server, *peer;
 	enumerator_t *enumerator;
@@ -78,20 +83,20 @@ static xauth_method_t *load_method(ike_sa_t *ike_sa, bool initiator)
 	auth_cfg_t *auth;
 	char *name;
 
-	if (initiator)
+	if (this->initiator)
 	{
-		server = ike_sa->get_my_id(ike_sa);
-		peer = ike_sa->get_other_id(ike_sa);
+		server = this->ike_sa->get_my_id(this->ike_sa);
+		peer = this->ike_sa->get_other_id(this->ike_sa);
 		role = XAUTH_SERVER;
 	}
 	else
 	{
-		peer = ike_sa->get_my_id(ike_sa);
-		server = ike_sa->get_other_id(ike_sa);
+		peer = this->ike_sa->get_my_id(this->ike_sa);
+		server = this->ike_sa->get_other_id(this->ike_sa);
 		role = XAUTH_PEER;
 	}
-	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, !initiator);
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, !this->initiator);
 	if (!enumerator->enumerate(enumerator, &auth) ||
 		(uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS) != AUTH_CLASS_XAUTH)
 	{
@@ -104,8 +109,12 @@ static xauth_method_t *load_method(ike_sa_t *ike_sa, bool initiator)
 		}
 	}
 	name = auth->get(auth, AUTH_RULE_XAUTH_BACKEND);
+	this->user = auth->get(auth, AUTH_RULE_XAUTH_IDENTITY);
+	if (!this->initiator && this->user)
+	{	/* use XAUTH username, if configured */
+		peer = this->user;
+	}
 	enumerator->destroy(enumerator);
-
 	xauth = charon->xauth->create_instance(charon->xauth, name, role,
 										   server, peer);
 	if (!xauth)
@@ -160,7 +169,7 @@ METHOD(task_t, build_i, status_t,
 	{
 		cp_payload_t *cp;
 
-		this->xauth = load_method(this->ike_sa, this->initiator);
+		this->xauth = load_method(this);
 		if (!this->xauth)
 		{
 			return FAILED;
@@ -209,7 +218,7 @@ METHOD(task_t, process_r, status_t,
 
 	if (!this->xauth)
 	{
-		this->xauth = load_method(this->ike_sa, this->initiator);
+		this->xauth = load_method(this);
 		if (!this->xauth)
 		{	/* send empty reply */
 			return NEED_MORE;
@@ -228,12 +237,8 @@ METHOD(task_t, process_r, status_t,
 			case NEED_MORE:
 				return NEED_MORE;
 			case SUCCESS:
-				DBG1(DBG_IKE, "XAuth authentication successful");
-				establish(this);
-				break;
 			case FAILED:
 			default:
-				DBG1(DBG_IKE, "XAuth authentication failed");
 				break;
 		}
 		this->cp = NULL;
@@ -253,6 +258,17 @@ METHOD(task_t, process_r, status_t,
 			}
 		}
 		enumerator->destroy(enumerator);
+		if (this->status == XAUTH_OK)
+		{
+			DBG1(DBG_IKE, "XAuth authentication of '%Y' (myself) successful",
+				 this->xauth->get_identity(this->xauth));
+			establish(this);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "XAuth authentication of '%Y' (myself) failed",
+				 this->xauth->get_identity(this->xauth));
+		}
 	}
 	this->public.task.build = _build_r_ack;
 	return NEED_MORE;
@@ -293,6 +309,7 @@ METHOD(task_t, process_i_status, status_t,
 METHOD(task_t, process_i, status_t,
 	private_xauth_t *this, message_t *message)
 {
+	identification_t *id;
 	cp_payload_t *cp;
 
 	cp = (cp_payload_t*)message->get_payload(message, CONFIGURATION_V1);
@@ -306,11 +323,19 @@ METHOD(task_t, process_i, status_t,
 		case NEED_MORE:
 			return NEED_MORE;
 		case SUCCESS:
-			DBG1(DBG_IKE, "XAuth authentication successful");
+			id = this->xauth->get_identity(this->xauth);
+			if (this->user && !id->matches(id, this->user))
+			{
+				DBG1(DBG_IKE, "XAuth username '%Y' does not match to "
+					 "configured username '%Y'", id, this->user);
+				break;
+			}
+			DBG1(DBG_IKE, "XAuth authentication of '%Y' successful", id);
 			this->status = XAUTH_OK;
 			break;
 		case FAILED:
-			DBG1(DBG_IKE, "XAuth authentication failed");
+			DBG1(DBG_IKE, "XAuth authentication of '%Y' failed",
+				 this->xauth->get_identity(this->xauth));
 			break;
 		default:
 			return FAILED;
