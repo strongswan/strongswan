@@ -752,6 +752,9 @@ static void parse_extendedKeyUsage(chunk_t blob, int level0,
 				case OID_CLIENT_AUTH:
 					this->flags |= X509_CLIENT_AUTH;
 					break;
+				case OID_IKE_INTERMEDIATE:
+					this->flags |= X509_IKE_INTERMEDIATE;
+					break;
 				case OID_OCSP_SIGNING:
 					this->flags |= X509_OCSP_SIGNER;
 					break;
@@ -1994,6 +1997,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty, inhibitAnyPolicy = chunk_empty;
+	chunk_t ikeIntermediate = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -2107,7 +2111,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 							asn1_wrap(ASN1_BIT_STRING, "c", keyUsageBits)));
 	}
 
-	/* add serverAuth extendedKeyUsage flag */
+	/* add extendedKeyUsage flags */
 	if (cert->flags & X509_SERVER_AUTH)
 	{
 		serverAuth = asn1_build_known_oid(OID_SERVER_AUTH);
@@ -2116,20 +2120,24 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		clientAuth = asn1_build_known_oid(OID_CLIENT_AUTH);
 	}
-
-	/* add ocspSigning extendedKeyUsage flag */
+	if (cert->flags & X509_IKE_INTERMEDIATE)
+	{
+		ikeIntermediate = asn1_build_known_oid(OID_IKE_INTERMEDIATE);
+	}
 	if (cert->flags & X509_OCSP_SIGNER)
 	{
 		ocspSigning = asn1_build_known_oid(OID_OCSP_SIGNING);
 	}
 
-	if (serverAuth.ptr || clientAuth.ptr || ocspSigning.ptr)
+	if (serverAuth.ptr || clientAuth.ptr || ikeIntermediate.ptr ||
+		ocspSigning.ptr)
 	{
 		extendedKeyUsage = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EXTENDED_KEY_USAGE),
 								asn1_wrap(ASN1_OCTET_STRING, "m",
-									asn1_wrap(ASN1_SEQUENCE, "mmm",
-										serverAuth, clientAuth, ocspSigning)));
+									asn1_wrap(ASN1_SEQUENCE, "mmmm",
+										serverAuth, clientAuth, ikeIntermediate,
+										ocspSigning)));
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */
