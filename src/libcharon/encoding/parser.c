@@ -137,7 +137,7 @@ static bool parse_uint4(private_parser_t *this, int rule_number,
 	}
 	if (output_pos)
 	{
-		DBG3(DBG_ENC, "   => %d", *output_pos);
+		DBG3(DBG_ENC, "   => %hhu", *output_pos);
 	}
 	return TRUE;
 }
@@ -159,7 +159,7 @@ static bool parse_uint8(private_parser_t *this, int rule_number,
 	if (output_pos)
 	{
 		*output_pos = *(this->byte_pos);
-		DBG3(DBG_ENC, "   => %d", *output_pos);
+		DBG3(DBG_ENC, "   => %hhu", *output_pos);
 	}
 	this->byte_pos++;
 	return TRUE;
@@ -183,7 +183,7 @@ static bool parse_uint15(private_parser_t *this, int rule_number,
 	{
 		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
 		*output_pos = ntohs(*output_pos) & ~0x8000;
-		DBG3(DBG_ENC, "   => %d", *output_pos);
+		DBG3(DBG_ENC, "   => %hu", *output_pos);
 	}
 	this->byte_pos += sizeof(u_int16_t);
 	this->bit_pos = 0;
@@ -208,7 +208,7 @@ static bool parse_uint16(private_parser_t *this, int rule_number,
 	{
 		memcpy(output_pos, this->byte_pos, sizeof(u_int16_t));
 		*output_pos = ntohs(*output_pos);
-		DBG3(DBG_ENC, "   => %d", *output_pos);
+		DBG3(DBG_ENC, "   => %hu", *output_pos);
 	}
 	this->byte_pos += sizeof(u_int16_t);
 	return TRUE;
@@ -231,7 +231,7 @@ static bool parse_uint32(private_parser_t *this, int rule_number,
 	{
 		memcpy(output_pos, this->byte_pos, sizeof(u_int32_t));
 		*output_pos = ntohl(*output_pos);
-		DBG3(DBG_ENC, "   => %d", *output_pos);
+		DBG3(DBG_ENC, "   => %u", *output_pos);
 	}
 	this->byte_pos += sizeof(u_int32_t);
 	return TRUE;
