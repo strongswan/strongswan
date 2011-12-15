@@ -257,6 +257,11 @@ struct private_ike_sa_t {
 	 * remote host address to be used for IKE, set via MIGRATE kernel message
 	 */
 	host_t *remote_host;
+
+	/**
+	 * Flush auth configs once established?
+	 */
+	bool flush_auth_cfg;
 };
 
 /**
@@ -419,6 +424,9 @@ METHOD(ike_sa_t, create_auth_cfg_enumerator, enumerator_t*,
 static void flush_auth_cfgs(private_ike_sa_t *this)
 {
 	auth_cfg_t *cfg;
+
+	this->my_auth->purge(this->my_auth, FALSE);
+	this->other_auth->purge(this->other_auth, FALSE);
 
 	while (this->my_auths->remove_last(this->my_auths,
 									   (void**)&cfg) == SUCCESS)
@@ -1203,16 +1211,16 @@ METHOD(ike_sa_t, process_message, status_t,
 	private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
+
 	if (this->state == IKE_PASSIVE)
 	{	/* do not handle messages in passive state */
 		return FAILED;
 	}
 	status = this->task_manager->process_message(this->task_manager, message);
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		this->state == IKE_ESTABLISHED &&
-		lib->settings->get_bool(lib->settings,
-								"charon.flush_auth_cfg", FALSE))
-	{	/* authentication completed */
+	if (this->flush_auth_cfg && this->state == IKE_ESTABLISHED)
+	{
+		/* authentication completed */
+		this->flush_auth_cfg = FALSE;
 		flush_auth_cfgs(this);
 	}
 	return status;
@@ -2137,6 +2145,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL),
+		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
+									"charon.flush_auth_cfg", FALSE),
 	);
 
 	this->task_manager = task_manager_create(&this->public);
