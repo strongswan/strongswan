@@ -362,14 +362,14 @@ static bool check_constraints(private_main_mode_t *this)
 	identification_t *id;
 	auth_cfg_t *auth;
 
-	if (skipped_auth(this, FALSE))
-	{
-		return TRUE;
-	}
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	/* auth identity to comply */
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+	if (skipped_auth(this, FALSE))
+	{
+		return TRUE;
+	}
 	return auth->complies(auth, this->other_auth, TRUE);
 }
 
