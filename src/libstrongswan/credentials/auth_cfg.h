@@ -80,6 +80,8 @@ enum auth_rule_t {
 	AUTH_RULE_EAP_VENDOR,
 	/** XAUTH backend name to use, char* */
 	AUTH_RULE_XAUTH_BACKEND,
+	/** XAuth identity to use or require, identification_t* */
+	AUTH_RULE_XAUTH_IDENTITY,
 	/** certificate authority, certificate_t* */
 	AUTH_RULE_CA_CERT,
 	/** intermediate certificate in trustchain, certificate_t* */

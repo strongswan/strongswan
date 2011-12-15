@@ -39,6 +39,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
 	"RULE_EAP_TYPE",
 	"RULE_EAP_VENDOR",
 	"RULE_XAUTH_BACKEND",
+	"RULE_XAUTH_IDENTITY",
 	"RULE_CA_CERT",
 	"RULE_IM_CERT",
 	"RULE_SUBJECT_CERT",
@@ -144,6 +145,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_EAP_IDENTITY:
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
+		case AUTH_RULE_XAUTH_IDENTITY:
 		{
 			identification_t *id = (identification_t*)entry->value;
 			id->destroy(id);
@@ -209,6 +211,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_EAP_IDENTITY:
 			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_XAUTH_BACKEND:
+			case AUTH_RULE_XAUTH_IDENTITY:
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
@@ -278,6 +281,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_EAP_IDENTITY:
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_XAUTH_BACKEND:
+		case AUTH_RULE_XAUTH_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
@@ -319,6 +323,7 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_EAP_IDENTITY:
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_XAUTH_BACKEND:
+		case AUTH_RULE_XAUTH_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
@@ -440,6 +445,7 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
 			case AUTH_RULE_AAA_IDENTITY:
+			case AUTH_RULE_XAUTH_IDENTITY:
 			{
 				identification_t *id1, *id2;
 
@@ -661,6 +667,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_EAP_IDENTITY:
 				case AUTH_RULE_AAA_IDENTITY:
 				case AUTH_RULE_GROUP:
+				case AUTH_RULE_XAUTH_IDENTITY:
 				{
 					identification_t *id = (identification_t*)value;
 
@@ -754,6 +761,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_EAP_IDENTITY:
 					case AUTH_RULE_AAA_IDENTITY:
 					case AUTH_RULE_GROUP:
+					case AUTH_RULE_XAUTH_IDENTITY:
 					{
 						identification_t *id1, *id2;
 
@@ -837,6 +845,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_EAP_IDENTITY:
 			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
+			case AUTH_RULE_XAUTH_IDENTITY:
 			{
 				identification_t *id = (identification_t*)entry->value;
 				clone->add(clone, entry->type, id->clone(id));
