@@ -25,6 +25,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/payload.h>
 #include <sa/tasks/informational.h>
+#include <sa/tasks/quick_delete.h>
 
 typedef struct private_quick_mode_t private_quick_mode_t;
 
@@ -764,7 +765,11 @@ METHOD(task_t, process_r, status_t,
 			}
 			if (!install(this))
 			{
-				return FAILED;
+				this->ike_sa->queue_task(this->ike_sa,
+					(task_t*)quick_delete_create(this->ike_sa,
+								this->proposal->get_protocol(this->proposal),
+								this->spi_i, TRUE));
+				return ALREADY_DONE;
 			}
 			return SUCCESS;
 		}
