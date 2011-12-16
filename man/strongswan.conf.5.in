@@ -833,6 +833,9 @@ IPsec/Networking kernel interface
 .B net
 IKE network communication
 .TP
+.B asn
+Low-level encoding/decoding (ASN.1, X.509 etc.)
+.TP
 .B enc
 Packet encoding/decoding encryption/decryption operations
 .TP

@@ -48,6 +48,8 @@ enum debug_t {
 	DBG_KNL,
 	/** networking/sockets */
 	DBG_NET,
+	/** low-level encoding/decoding (ASN.1, X.509 etc.) */
+	DBG_ASN,
 	/** message encoding/decoding */
 	DBG_ENC,
 	/** trusted network connect */
