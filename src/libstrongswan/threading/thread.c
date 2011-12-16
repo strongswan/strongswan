@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2011 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,6 +17,10 @@
 #include <pthread.h>
 #include <signal.h>
 #include <semaphore.h>
+#ifdef HAVE_GETTID
+#include <unistd.h>
+#include <sys/syscall.h>
+#endif
 
 #include <library.h>
 #include <debug.h>
@@ -278,6 +282,17 @@ static void *thread_main(private_thread_t *this)
 	sem_wait(&this->created);
 	current_thread->set(current_thread, this);
 	pthread_cleanup_push((thread_cleanup_t)thread_cleanup, this);
+
+	/* TODO: this is not 100% portable as pthread_t is an opaque type (i.e.
+	 * could be of any size, or even a struct) */
+#ifdef HAVE_GETTID
+	DBG2(DBG_LIB, "created thread %.2d [%u]",
+		 this->id, syscall(SYS_gettid));
+#else
+	DBG2(DBG_LIB, "created thread %.2d [%lx]",
+		 this->id, (u_long)this->thread_id);
+#endif
+
 	res = this->main(this->arg);
 	pthread_cleanup_pop(TRUE);
 
