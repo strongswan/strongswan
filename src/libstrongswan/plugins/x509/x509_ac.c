@@ -192,7 +192,7 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 			}
 			else
 			{
-				DBG1(DBG_LIB, "more than one directory name - first selected");
+				DBG1(DBG_ASN, "more than one directory name - first selected");
 				directoryName->destroy(directoryName);
 			}
 		}
@@ -200,7 +200,7 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 	}
 	else
 	{
-		DBG1(DBG_LIB, "no directoryName found");
+		DBG1(DBG_ASN, "no directoryName found");
 	}
 
 	list->destroy(list);
@@ -359,10 +359,10 @@ static bool parse_certificate(private_x509_ac_t *this)
 				break;
 			case AC_OBJ_VERSION:
 				this->version = (object.len) ? (1 + (u_int)*object.ptr) : 1;
-				DBG2(DBG_LIB, "  v%d", this->version);
+				DBG2(DBG_ASN, "  v%d", this->version);
 				if (this->version != 2)
 				{
-					DBG1(DBG_LIB, "v%d attribute certificates are not "
+					DBG1(DBG_ASN, "v%d attribute certificates are not "
 						 "supported", this->version);
 					goto end;
 				}
@@ -408,20 +408,20 @@ static bool parse_certificate(private_x509_ac_t *this)
 				switch (type)
 				{
 					case OID_AUTHENTICATION_INFO:
-						DBG2(DBG_LIB, "  need to parse authenticationInfo");
+						DBG2(DBG_ASN, "  need to parse authenticationInfo");
 						break;
 					case OID_ACCESS_IDENTITY:
-						DBG2(DBG_LIB, "  need to parse accessIdentity");
+						DBG2(DBG_ASN, "  need to parse accessIdentity");
 						break;
 					case OID_CHARGING_IDENTITY:
-						DBG2(DBG_LIB, "-- > --");
+						DBG2(DBG_ASN, "-- > --");
 						this->charging = ietf_attributes_create_from_encoding(object);
-						DBG2(DBG_LIB, "-- < --");
+						DBG2(DBG_ASN, "-- < --");
 						break;
 					case OID_GROUP:
-						DBG2(DBG_LIB, "-- > --");
+						DBG2(DBG_ASN, "-- > --");
 						this->groups = ietf_attributes_create_from_encoding(object);
-						DBG2(DBG_LIB, "-- < --");
+						DBG2(DBG_ASN, "-- < --");
 						break;
 					case OID_ROLE:
 						parse_roleSyntax(object, level);
@@ -436,21 +436,21 @@ static bool parse_certificate(private_x509_ac_t *this)
 				break;
 			case AC_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG2(DBG_LIB, "  %s",(critical)?"TRUE":"FALSE");
+				DBG2(DBG_ASN, "  %s",(critical)?"TRUE":"FALSE");
 				break;
 			case AC_OBJ_EXTN_VALUE:
 			{
 				switch (extn_oid)
 				{
 					case OID_CRL_DISTRIBUTION_POINTS:
-						DBG2(DBG_LIB, "  need to parse crlDistributionPoints");
+						DBG2(DBG_ASN, "  need to parse crlDistributionPoints");
 						break;
 					case OID_AUTHORITY_KEY_ID:
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
 													level, &this->authKeySerialNumber);
 						break;
 					case OID_TARGET_INFORMATION:
-						DBG2(DBG_LIB, "  need to parse targetInformation");
+						DBG2(DBG_ASN, "  need to parse targetInformation");
 						break;
 					case OID_NO_REV_AVAIL:
 						this->noRevAvail = TRUE;
@@ -465,7 +465,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 																 NULL);
 				if (this->algorithm != sig_alg)
 				{
-					DBG1(DBG_LIB, "  signature algorithms do not agree");
+					DBG1(DBG_ASN, "  signature algorithms do not agree");
 					success = FALSE;
 					goto end;
 				}

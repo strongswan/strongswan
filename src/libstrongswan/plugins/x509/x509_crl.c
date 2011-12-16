@@ -242,14 +242,14 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_VERSION:
 				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2(DBG_LIB, "  v%d", this->version);
+				DBG2(DBG_ASN, "  v%d", this->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
 				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2(DBG_LIB, "  '%Y'", this->issuer);
+				DBG2(DBG_ASN, "  '%Y'", this->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
 				this->thisUpdate = asn1_parse_time(object, level);
@@ -274,7 +274,7 @@ static bool parse(private_x509_crl_t *this)
 			case CRL_OBJ_CRL_ENTRY_CRITICAL:
 			case CRL_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG2(DBG_LIB, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 			case CRL_OBJ_EXTN_VALUE:
@@ -291,7 +291,7 @@ static bool parse(private_x509_crl_t *this)
 							{
 								revoked->reason = *object.ptr;
 							}
-							DBG2(DBG_LIB, "  '%N'", crl_reason_names,
+							DBG2(DBG_ASN, "  '%N'", crl_reason_names,
 								 revoked->reason);
 						}
 						break;
@@ -324,7 +324,7 @@ static bool parse(private_x509_crl_t *this)
 						if (critical && lib->settings->get_bool(lib->settings,
 							"libstrongswan.x509.enforce_critical", TRUE))
 						{
-							DBG1(DBG_LIB, "critical '%s' extension not supported",
+							DBG1(DBG_ASN, "critical '%s' extension not supported",
 								 (extn_oid == OID_UNKNOWN) ? "unknown" :
 								 (char*)oid_names[extn_oid].name);
 							goto end;
@@ -338,7 +338,7 @@ static bool parse(private_x509_crl_t *this)
 				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
 				if (this->algorithm != sig_alg)
 				{
-					DBG1(DBG_LIB, "  signature algorithms do not agree");
+					DBG1(DBG_ASN, "  signature algorithms do not agree");
 					goto end;
 				}
 				break;

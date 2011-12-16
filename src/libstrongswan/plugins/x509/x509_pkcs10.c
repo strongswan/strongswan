@@ -276,7 +276,7 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 				break;
 			case PKCS10_EXTN_CRITICAL:
 				critical = object.len && *object.ptr;
-				DBG2(DBG_LIB, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case PKCS10_EXTN_VALUE:
 			{
@@ -309,25 +309,25 @@ static bool parse_challengePassword(private_x509_pkcs10_t *this, chunk_t blob, i
 
 	if (blob.len < 2)
 	{
-		DBG1(DBG_LIB, "L%d - challengePassword:  ASN.1 object smaller "
+		DBG1(DBG_ASN, "L%d - challengePassword:  ASN.1 object smaller "
 			 "than 2 octets", level);
 		return FALSE;
 	}
 	tag = *blob.ptr;
 	if (tag < ASN1_UTF8STRING || tag > ASN1_IA5STRING)
 	{
-		DBG1(DBG_LIB, "L%d - challengePassword:  ASN.1 object is not "
+		DBG1(DBG_ASN, "L%d - challengePassword:  ASN.1 object is not "
 			 "a character string", level);
 		return FALSE;
 	}
 	if (asn1_length(&blob) == ASN1_INVALID_LENGTH)
 	{
-		DBG1(DBG_LIB, "L%d - challengePassword:  ASN.1 object has an "
+		DBG1(DBG_ASN, "L%d - challengePassword:  ASN.1 object has an "
 			 "invalid length", level);
 		return FALSE;
 	}
-	DBG2(DBG_LIB, "L%d - challengePassword:", level);
-	DBG4(DBG_LIB, "  '%.*s'", blob.len, blob.ptr);
+	DBG2(DBG_ASN, "L%d - challengePassword:", level);
+	DBG4(DBG_ASN, "  '%.*s'", blob.len, blob.ptr);
 	return TRUE;
 }
 
@@ -385,14 +385,14 @@ static bool parse_certificate_request(private_x509_pkcs10_t *this)
 			case PKCS10_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
-					DBG1(DBG_LIB, "PKCS#10 certificate request format is "
+					DBG1(DBG_ASN, "PKCS#10 certificate request format is "
 						 "not version 1");
 					goto end;
 				}
 				break;
 			case PKCS10_SUBJECT:
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2(DBG_LIB, "  '%Y'", this->subject);
+				DBG2(DBG_ASN, "  '%Y'", this->subject);
 				break;
 			case PKCS10_SUBJECT_PUBLIC_KEY_INFO:
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
