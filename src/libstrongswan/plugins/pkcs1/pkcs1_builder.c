@@ -81,10 +81,10 @@ static public_key_t *parse_public_key(chunk_t blob)
 					/* skip initial bit string octet defining 0 unused bits */
 					object = chunk_skip(object, 1);
 				}
-				DBG2(DBG_LIB, "-- > --");
+				DBG2(DBG_ASN, "-- > --");
 				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
 										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
-				DBG2(DBG_LIB, "-- < --");
+				DBG2(DBG_ASN, "-- < --");
 				break;
 		}
 	}
@@ -197,7 +197,7 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 			case PRIV_KEY_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
-					DBG1(DBG_LIB, "PKCS#1 private key format is not version 1");
+					DBG1(DBG_ASN, "PKCS#1 private key format is not version 1");
 					goto end;
 				}
 				break;

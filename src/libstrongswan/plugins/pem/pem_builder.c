@@ -73,7 +73,7 @@ static bool find_boundary(char* tag, chunk_t *line)
 	{
 		if (present("-----", line))
 		{
-			DBG2(DBG_LIB, "  -----%s %.*s-----", tag, (int)name.len, name.ptr);
+			DBG2(DBG_ASN, "  -----%s %.*s-----", tag, (int)name.len, name.ptr);
 			return TRUE;
 		}
 		line->ptr++;  line->len--;  name.len++;
@@ -99,7 +99,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
 	if (hasher == NULL)
 	{
-		DBG1(DBG_LIB, "  MD5 hash algorithm not available");
+		DBG1(DBG_ASN, "  MD5 hash algorithm not available");
 		return NOT_SUPPORTED;
 	}
 	hash.len = hasher->get_hash_size(hasher);
@@ -121,7 +121,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size);
 	if (crypter == NULL)
 	{
-		DBG1(DBG_LIB, "  %N encryption algorithm not available",
+		DBG1(DBG_ASN, "  %N encryption algorithm not available",
 			 encryption_algorithm_names, alg);
 		return NOT_SUPPORTED;
 	}
@@ -131,7 +131,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		blob->len % crypter->get_block_size(crypter))
 	{
 		crypter->destroy(crypter);
-		DBG1(DBG_LIB, "  data size is not multiple of block size");
+		DBG1(DBG_ASN, "  data size is not multiple of block size");
 		return PARSE_ERROR;
 	}
 	crypter->decrypt(crypter, *blob, iv, &decrypted);
@@ -155,7 +155,7 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	{
 		if (*last_padding_pos != padding)
 		{
-			DBG1(DBG_LIB, "  invalid passphrase");
+			DBG1(DBG_ASN, "  invalid passphrase");
 			return INVALID_ARG;
 		}
 	}
@@ -234,7 +234,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 				}
 
 				/* we are looking for a parameter: value pair */
-				DBG2(DBG_LIB, "  %.*s", (int)line.len, line.ptr);
+				DBG2(DBG_ASN, "  %.*s", (int)line.len, line.ptr);
 				ugh = extract_parameter_value(&name, &value, &line);
 				if (ugh != NULL)
 				{
@@ -274,7 +274,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 					}
 					else
 					{
-						DBG1(DBG_LIB, "  encryption algorithm '%.*s'"
+						DBG1(DBG_ASN, "  encryption algorithm '%.*s'"
 							 " not supported", dek.len, dek.ptr);
 						return NOT_SUPPORTED;
 					}
@@ -298,7 +298,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 					*pgp = TRUE;
 					data.ptr++;
 					data.len--;
-					DBG2(DBG_LIB, "  armor checksum: %.*s", (int)data.len,
+					DBG2(DBG_ASN, "  armor checksum: %.*s", (int)data.len,
 						 data.ptr);
 					continue;
 				}
