@@ -73,7 +73,6 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	imc_state_t *state;
 	imc_test_state_t *test_state;
 	TNC_Result result;
-	TNC_UInt32 new_imc_id;
 	char *command;
 	bool retry;
 	int additional_ids;
@@ -92,7 +91,6 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 			retry = lib->settings->get_bool(lib->settings,
 								"libimcv.plugins.imc-test.retry", FALSE);
 			state = imc_test_state_create(connection_id, command, retry);
-			test_state = (imc_test_state_t*)state;
 
 			result = imc_test->create_state(imc_test, state);
 			if (result != TNC_RESULT_SUCCESS)
@@ -100,35 +98,12 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 				return result;
 			}
 
-			/* Do we want to reserve additional IMC IDs? */
+			/* Optionally reserve additional IMC IDs */
 			additional_ids = lib->settings->get_int(lib->settings,
-						 		"libimcv.plugins.imc-test.additional_ids", 0);
-			if (additional_ids < 1)
-			{
-				return TNC_RESULT_SUCCESS;
-			}
+								"libimcv.plugins.imc-test.additional_ids", 0);
+			imc_test->reserve_additional_ids(imc_test, additional_ids -
+								imc_test->count_additional_ids(imc_test));
 
-			if (!state->has_long(state))
-			{
-				DBG1(DBG_IMC, "IMC %u \"%s\" did not detect support of "
-							   "multiple IMC IDs", imc_id, imc_name);
-				return TNC_RESULT_SUCCESS;
-			}
-
-			while (additional_ids-- > 0)
-			{
-				if (imc_test->reserve_additional_id(imc_test, &new_imc_id) !=
-					TNC_RESULT_SUCCESS)
-				{
-					DBG1(DBG_IMC, "IMC %u \"%s\" failed to reserve "
-								  "%d additional IMC IDs",
-								   imc_id, imc_name, additional_ids);
-					break;
-				}
-				DBG2(DBG_IMC, "IMC %u \"%s\" reserved additional ID %u",
-							   imc_id, imc_name, new_imc_id);
-				test_state->add_id(test_state, new_imc_id);
-			}
 			return TNC_RESULT_SUCCESS;
 
 		case TNC_CONNECTION_STATE_HANDSHAKE:
@@ -211,7 +186,6 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
 	imc_state_t *state;
-	imc_test_state_t *test_state;
 	enumerator_t *enumerator;
 	void *pointer;
 	TNC_UInt32 additional_id;
@@ -228,13 +202,26 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	test_state = (imc_test_state_t*)state;
 
 	/* send PA message for primary IMC ID */
 	result = send_message(state, imc_id, TNC_IMVID_ANY);
-	
+
+	/* Exit if there are no additional IMC IDs */
+	if (!imc_test->count_additional_ids(imc_test))
+	{
+		return result;
+	}
+
+	/* Do we have support for transporting multiple IMC IDs? */
+	if (!state->has_long(state))
+	{
+		DBG1(DBG_IMC, "IMC %u \"%s\" did not detect support for transporting "
+					  "multiple IMC IDs", imc_id, imc_name);
+		return result;
+	}
+
 	/* send PA messages for additional IMC IDs */
-	enumerator = test_state->create_id_enumerator(test_state);
+	enumerator = imc_test->create_id_enumerator(imc_test);
 	while (result == TNC_RESULT_SUCCESS &&
 		   enumerator->enumerate(enumerator, &pointer))
 	{

@@ -54,6 +54,11 @@ struct private_imv_agent_t {
 	TNC_IMVID id;
 
 	/**
+	 * List of additional IMV IDs assigned by TNCS
+	 */
+	linked_list_t *additional_ids;
+
+	/**
 	 * list of TNCS connection entries
 	 */
 	linked_list_t *connections;
@@ -679,20 +684,56 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
-METHOD(imv_agent_t, reserve_additional_id, TNC_Result,
-	private_imv_agent_t *this, TNC_UInt32 *id)
+METHOD(imv_agent_t, reserve_additional_ids, TNC_Result,
+	private_imv_agent_t *this, int count)
 {
+	TNC_Result result;
+	TNC_UInt32 id;
+	void *pointer;
+
 	if (!this->reserve_additional_id)
 	{
+		DBG1(DBG_IMV, "IMV %u \"%s\" did not detect the capability to reserve "
+					  "additional IMV IDs from the TNCS", this->id, this->name);
 		return TNC_RESULT_ILLEGAL_OPERATION;
 	}
-	return this->reserve_additional_id(this->id, id);
+	while (count > 0)
+	{
+		result = this->reserve_additional_id(this->id, &id);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IMV, "IMV %u \"%s\" failed to reserve %d additional IMV IDs",
+						  this->id, this->name, count);
+			return result;
+		}
+		count--;
+
+		/* store the scalar value in the pointer */
+		pointer = (void*)id;
+		this->additional_ids->insert_last(this->additional_ids, pointer);
+		DBG2(DBG_IMV, "IMV %u \"%s\" reserved additional ID %u",
+					  this->id, this->name, id);
+	}
+	return TNC_RESULT_SUCCESS;
+}
+
+METHOD(imv_agent_t, count_additional_ids, int,
+	private_imv_agent_t *this)
+{
+	return	this->additional_ids->get_count(this->additional_ids);
+}
+
+METHOD(imv_agent_t, create_id_enumerator, enumerator_t*,
+	private_imv_agent_t *this)
+{
+	return this->additional_ids->create_enumerator(this->additional_ids);
 }
 
 METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
 	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
+	this->additional_ids->destroy(this->additional_ids);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
 	this->connection_lock->destroy(this->connection_lock);
@@ -728,13 +769,16 @@ imv_agent_t *imv_agent_create(const char *name,
 			.receive_message = _receive_message,
 			.set_recommendation = _set_recommendation,
 			.provide_recommendation = _provide_recommendation,
-			.reserve_additional_id = _reserve_additional_id,
+			.reserve_additional_ids = _reserve_additional_ids,
+			.count_additional_ids = _count_additional_ids,
+			.create_id_enumerator = _create_id_enumerator,
 			.destroy = _destroy,
 		},
 		.name = name,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
 		.id = id,
+		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);

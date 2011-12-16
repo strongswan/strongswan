@@ -133,12 +133,24 @@ struct imc_agent_t {
 								  pa_tnc_msg_t **pa_tnc_msg);
 
 	/**
-	 * Reserve an additional IMC ID
+	 * Reserve additional IMC IDs from TNCC
 	 *
-	 * @param id				additional IMC ID assigned by TNCC
+	 * @param count				number of additional IMC IDs to be assigned
 	 * @return					TNC result code
 	 */
-	TNC_Result (*reserve_additional_id)(imc_agent_t *this, TNC_UInt32 *id);
+	TNC_Result (*reserve_additional_ids)(imc_agent_t *this, int count);
+
+	/**
+	 * Return the number of additional IMC IDs assigned by the TNCC
+	 *
+	 * @return					number of additional IMC IDs
+	 */
+	int (*count_additional_ids)(imc_agent_t *this);
+
+	/**
+	 * Create an enumerator for the additional IMC IDs
+	 */
+	enumerator_t* (*create_id_enumerator)(imc_agent_t *this);
 
 	/**
 	 * Destroys an imc_agent_t object

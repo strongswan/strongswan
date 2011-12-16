@@ -155,12 +155,24 @@ struct imv_agent_t {
 										 TNC_ConnectionID connection_id);
 
 	/**
-	 * Reserve an additional IMV ID
+	 * Reserve additional IMV IDs from TNCS
 	 *
-	 * @param id				additional IMV ID assigned by TNCS
+	 * @param count				number of additional IMV IDs to be assigned
 	 * @return					TNC result code
 	 */
-	TNC_Result (*reserve_additional_id)(imv_agent_t *this, TNC_UInt32 *id);
+	TNC_Result (*reserve_additional_ids)(imv_agent_t *this, int count);
+
+	/**
+	 * Return the number of additional IMV IDs assigned by the TNCS
+	 *
+	 * @return					number of additional IMV IDs
+	 */
+	int (*count_additional_ids)(imv_agent_t *this);
+
+	/**
+	 * Create an enumerator for the additional IMV IDs
+	 */
+	enumerator_t* (*create_id_enumerator)(imv_agent_t *this);
 
 	/**
 	 * Destroys an imv_agent_t object

@@ -63,11 +63,6 @@ struct private_imc_test_state_t {
 	 * Do a handshake retry
 	 */
 	bool handshake_retry;
-
-	/**
-	 * List of additional IMC IDs
-	 */
-	linked_list_t *additional_ids;
 	
 };
 
@@ -105,7 +100,6 @@ METHOD(imc_state_t, change_state, void,
 METHOD(imc_state_t, destroy, void,
 	private_imc_test_state_t *this)
 {
-	this->additional_ids->destroy(this->additional_ids);
 	free(this->command);
 	free(this);
 }
@@ -148,22 +142,6 @@ METHOD(imc_test_state_t, do_handshake_retry, bool,
 	return retry;
 }
 
-METHOD(imc_test_state_t, add_id, void,
-	private_imc_test_state_t *this, TNC_IMCID id)
-{
-	void *pointer;
-
-	/* store the scalar value in the pointer */
-	pointer = (void*)id;
-	this->additional_ids->insert_last(this->additional_ids, pointer);
-}
-
-METHOD(imc_test_state_t, create_id_enumerator, enumerator_t*,
-	private_imc_test_state_t *this)
-{
-	return this->additional_ids->create_enumerator(this->additional_ids);
-}
-
 /**
  * Described in header.
  */
@@ -186,15 +164,12 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 			.set_command = _set_command,
 			.is_first_handshake = _is_first_handshake,
 			.do_handshake_retry = _do_handshake_retry,
-			.add_id = _add_id,
-			.create_id_enumerator = _create_id_enumerator,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.connection_id = connection_id,
 		.command = strdup(command),
 		.first_handshake = TRUE,
 		.handshake_retry = retry,
-		.additional_ids = linked_list_create(),
 	);
 	
 	return &this->public.interface;

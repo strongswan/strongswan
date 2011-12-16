@@ -54,6 +54,11 @@ struct private_imc_agent_t {
 	TNC_IMCID id;
 
 	/**
+	 * List of additional IMC IDs assigned by TNCC
+	 */
+	linked_list_t *additional_ids;
+
+	/**
 	 * list of TNCC connection entries
 	 */
 	linked_list_t *connections;
@@ -584,20 +589,56 @@ METHOD(imc_agent_t, receive_message, TNC_Result,
 	return TNC_RESULT_SUCCESS;
 }
 
-METHOD(imc_agent_t, reserve_additional_id, TNC_Result,
-	private_imc_agent_t *this, TNC_UInt32 *id)
+METHOD(imc_agent_t, reserve_additional_ids, TNC_Result,
+	private_imc_agent_t *this, int count)
 {
+	TNC_Result result;
+	TNC_UInt32 id;
+	void *pointer;
+
 	if (!this->reserve_additional_id)
 	{
+		DBG1(DBG_IMC, "IMC %u \"%s\" did not detect the capability to reserve "
+					  "additional IMC IDs from the TNCC", this->id, this->name);
 		return TNC_RESULT_ILLEGAL_OPERATION;
 	}
-	return this->reserve_additional_id(this->id, id);
+	while (count > 0)
+	{
+		result = this->reserve_additional_id(this->id, &id);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			DBG1(DBG_IMC, "IMC %u \"%s\" failed to reserve %d additional IMC IDs",
+						  this->id, this->name, count);
+			return result;
+		}
+		count--;
+
+		/* store the scalar value in the pointer */
+		pointer = (void*)id;
+		this->additional_ids->insert_last(this->additional_ids, pointer);
+		DBG2(DBG_IMC, "IMC %u \"%s\" reserved additional ID %u",
+					  this->id, this->name, id);
+	}
+	return TNC_RESULT_SUCCESS;
+}
+
+METHOD(imc_agent_t, count_additional_ids, int,
+	private_imc_agent_t *this)
+{
+	return	this->additional_ids->get_count(this->additional_ids);
+}
+
+METHOD(imc_agent_t, create_id_enumerator, enumerator_t*,
+	private_imc_agent_t *this)
+{
+	return this->additional_ids->create_enumerator(this->additional_ids);
 }
 
 METHOD(imc_agent_t, destroy, void,
 	private_imc_agent_t *this)
 {
 	DBG1(DBG_IMC, "IMC %u \"%s\" terminated", this->id, this->name);
+	this->additional_ids->destroy(this->additional_ids);
 	this->connections->destroy_function(this->connections, free);
 	this->connection_lock->destroy(this->connection_lock);
 	free(this);
@@ -630,13 +671,16 @@ imc_agent_t *imc_agent_create(const char *name,
 			.get_state = _get_state,
 			.send_message = _send_message,
 			.receive_message = _receive_message,
-			.reserve_additional_id = _reserve_additional_id,
+			.reserve_additional_ids = _reserve_additional_ids,
+			.count_additional_ids = _count_additional_ids,
+			.create_id_enumerator = _create_id_enumerator,
 			.destroy = _destroy,
 		},
 		.name = name,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
 		.id = id,
+		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);

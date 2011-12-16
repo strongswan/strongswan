@@ -65,17 +65,6 @@ struct imc_test_state_t {
 	 */
 	bool (*do_handshake_retry)(imc_test_state_t *this);
 
-	/**
-	 * Add and additional IMC ID
-	 *
-	 * @param id			Additional IMC ID
-	 */
-	void (*add_id)(imc_test_state_t *this, TNC_IMCID id);
-
-	/**
-	 * Create an enumerator for additional IMC IDs
-	 */
-	enumerator_t* (*create_id_enumerator)(imc_test_state_t *this);
 };
 
 /**
