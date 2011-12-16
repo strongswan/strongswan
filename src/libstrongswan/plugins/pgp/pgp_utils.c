@@ -79,7 +79,7 @@ bool pgp_read_scalar(chunk_t *blob, size_t bytes, u_int32_t *scalar)
 
 	if (bytes > blob->len)
 	{
-		DBG1(DBG_LIB, "PGP data too short to read %d byte scalar", bytes);
+		DBG1(DBG_ASN, "PGP data too short to read %d byte scalar", bytes);
 		return FALSE;
 	}
 	while (bytes-- > 0)
@@ -100,13 +100,13 @@ bool pgp_read_mpi(chunk_t *blob, chunk_t *mpi)
 
 	if (!pgp_read_scalar(blob, 2, &bits))
 	{
-		DBG1(DBG_LIB, "PGP data too short to read MPI length");
+		DBG1(DBG_ASN, "PGP data too short to read MPI length");
 		return FALSE;
 	}
 	bytes = (bits + 7) / 8;
 	if (bytes > blob->len)
 	{
-		DBG1(DBG_LIB, "PGP data too short to read %d byte MPI", bytes);
+		DBG1(DBG_ASN, "PGP data too short to read %d byte MPI", bytes);
 		return FALSE;
 	}
 	*mpi = chunk_create(blob->ptr, bytes);
@@ -146,7 +146,7 @@ bool pgp_read_packet(chunk_t *blob, chunk_t *data, pgp_packet_tag_t *tag)
 
 	if (!blob->len)
 	{
-		DBG1(DBG_LIB, "missing input");
+		DBG1(DBG_ASN, "missing input");
 		return FALSE;
 	}
 	t = blob->ptr[0];
@@ -154,27 +154,27 @@ bool pgp_read_packet(chunk_t *blob, chunk_t *data, pgp_packet_tag_t *tag)
 	/* bit 7 must be set */
 	if (!(t & 0x80))
 	{
-		DBG1(DBG_LIB, "invalid packet tag");
+		DBG1(DBG_ASN, "invalid packet tag");
 		return FALSE;
 	}
 	/* bit 6 set defines new packet format */
 	if (t & 0x40)
 	{
-		DBG1(DBG_LIB, "new PGP packet format not supported");
+		DBG1(DBG_ASN, "new PGP packet format not supported");
 		return FALSE;
 	}
 
 	t = (t & 0x3C) >> 2;
 	if (!pgp_old_packet_length(blob, &len) || len > blob->len)
 	{
-		DBG1(DBG_LIB, "invalid packet length");
+		DBG1(DBG_ASN, "invalid packet length");
 		return FALSE;
 	}
 	*data = chunk_create(blob->ptr, len);
 	*blob = chunk_skip(*blob, len);
 	*tag = t;
-	DBG2(DBG_LIB, "L1 - PGP %N (%u bytes)", pgp_packet_tag_names, t, len);
-	DBG3(DBG_LIB, "%B", data);
+	DBG2(DBG_ASN, "L1 - PGP %N (%u bytes)", pgp_packet_tag_names, t, len);
+	DBG3(DBG_ASN, "%B", data);
 	return TRUE;
 }
 
