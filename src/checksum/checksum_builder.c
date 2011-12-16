@@ -151,8 +151,7 @@ int main(int argc, char* argv[])
 	printf("\n");
 	printf("integrity_checksum_t checksums[] = {\n");
 	fprintf(stderr, "integrity test data:\n");
-	fprintf(stderr, "module name,            file size / checksum   "
-					 "segment size / checksum\n");
+	fprintf(stderr, "module name,       file size / checksum   segment size / checksum\n");
 	for (i = 1; i < argc; i++)
 	{
 		build_binary_checksum(argv[i]);

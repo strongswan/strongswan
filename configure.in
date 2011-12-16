@@ -135,7 +135,6 @@ ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
-ARG_ENABL_SET([imv-logger],     [enable IMV logger module.])
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
 ARG_ENABL_SET([imv-test],       [enable IMV test module.])
 ARG_ENABL_SET([imc-scanner],    [enable IMC port scanner module.])
@@ -256,7 +255,7 @@ if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_
 	tnc_tnccs=true;
 fi
 
-if test x$imv_logger = xtrue -o x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
 	imcv=true;
 fi
 
@@ -970,7 +969,6 @@ AM_CONDITIONAL(USE_TNC_TNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
-AM_CONDITIONAL(USE_IMV_LOGGER, test x$imv_logger = xtrue)
 AM_CONDITIONAL(USE_IMC_TEST, test x$imc_test = xtrue)
 AM_CONDITIONAL(USE_IMV_TEST, test x$imv_test = xtrue)
 AM_CONDITIONAL(USE_IMC_SCANNER, test x$imc_scanner = xtrue)
@@ -1113,7 +1111,6 @@ AC_OUTPUT(
 	src/libpts/plugins/imc_attestation/Makefile
 	src/libpts/plugins/imv_attestation/Makefile
 	src/libimcv/Makefile
-	src/libimcv/plugins/imv_logger/Makefile
 	src/libimcv/plugins/imc_test/Makefile
 	src/libimcv/plugins/imv_test/Makefile
 	src/libimcv/plugins/imc_scanner/Makefile

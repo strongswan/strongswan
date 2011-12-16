@@ -21,10 +21,6 @@ libimcv_la_SOURCES = \
 
 SUBDIRS = .
 
-if USE_IMV_LOGGER
-  SUBDIRS += plugins/imv_logger
-endif
-
 if USE_IMC_TEST
   SUBDIRS += plugins/imc_test
 endif
