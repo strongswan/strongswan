@@ -46,7 +46,7 @@ METHOD(job_t, execute, void,
 	char *name;
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+											NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		children = peer_cfg->create_child_cfg_enumerator(peer_cfg);

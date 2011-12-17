@@ -25,7 +25,8 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-ENUM(ike_version_names, IKEV1, IKEV2,
+ENUM(ike_version_names, IKE_ANY, IKEV2,
+	"IKEv1/2"
 	"IKEv1",
 	"IKEv2",
 );

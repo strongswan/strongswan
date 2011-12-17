@@ -406,7 +406,7 @@ static peer_cfg_t *select_config(private_main_mode_t *this, identification_t *id
 	DBG1(DBG_CFG, "looking for %N peer configs matching %H...%H[%Y]",
 		 auth_method_names, this->auth_method, me, other, id);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-														me, other, NULL, id);
+													me, other, NULL, id, IKEV1);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (get_auth_method(this, current) == this->auth_method)
@@ -811,7 +811,7 @@ static shared_key_t *lookup_shared_key(private_main_mode_t *this)
 		peer_cfg_t *peer_cfg = NULL;
 
 		enumerator = charon->backends->create_peer_cfg_enumerator(
-									charon->backends, me, other, NULL, NULL);
+								charon->backends, me, other, NULL, NULL, IKEV1);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
 			my_auth = get_auth_cfg(peer_cfg, TRUE);

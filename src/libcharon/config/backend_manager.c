@@ -146,10 +146,11 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 	ike_cfg_match_t match, best = MATCH_ANY;
 	ike_data_t *data;
 
-	data = malloc_thing(ike_data_t);
-	data->this = this;
-	data->me = me;
-	data->other = other;
+	INIT(data,
+		.this = this,
+		.me = me,
+		.other = other,
+	);
 
 	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
 
@@ -230,6 +231,22 @@ static id_match_t get_peer_match(identification_t *id,
 	DBG3(DBG_CFG, "peer config match %s: %d (%N -> %#B)",
 		 where, match, id_type_names, id->get_type(id), &data);
 	return match;
+}
+
+/**
+ * Get match quality of IKE version
+ */
+static int get_version_match(ike_version_t cfg, ike_version_t req)
+{
+	if (req == IKE_ANY || cfg == IKE_ANY)
+	{
+		return 1;
+	}
+	if (req == cfg)
+	{
+		return 2;
+	}
+	return 0;
 }
 
 /**
@@ -325,17 +342,18 @@ static void insert_sorted(match_entry_t *entry, linked_list_t *list,
 
 METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	private_backend_manager_t *this, host_t *me, host_t *other,
-	identification_t *my_id, identification_t *other_id)
+	identification_t *my_id, identification_t *other_id, ike_version_t version)
 {
 	enumerator_t *enumerator;
 	peer_data_t *data;
 	peer_cfg_t *cfg;
 	linked_list_t *configs, *helper;
 
-	data = malloc_thing(peer_data_t);
-	data->lock = this->lock;
-	data->me = my_id;
-	data->other = other_id;
+	INIT(data,
+		.lock = this->lock,
+		.me = my_id,
+		.other = other_id,
+	);
 
 	/* create a sorted list with all matches */
 	this->lock->read_lock(this->lock);
@@ -355,22 +373,26 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	{
 		id_match_t match_peer_me, match_peer_other;
 		ike_cfg_match_t match_ike;
+		int match_version;
 		match_entry_t *entry;
 
 		match_peer_me = get_peer_match(my_id, cfg, TRUE);
 		match_peer_other = get_peer_match(other_id, cfg, FALSE);
 		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other);
+		match_version = get_version_match(cfg->get_ike_version(cfg), version);
 		DBG3(DBG_CFG, "ike config match: %d (%H %H)", match_ike, me, other);
 
-		if (match_peer_me && match_peer_other && match_ike)
+		if (match_peer_me && match_peer_other && match_ike && match_version)
 		{
-			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d (me/other/ike)",
-				 cfg->get_name(cfg), match_peer_me, match_peer_other, match_ike);
+			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d/%d "
+				 "(me/other/ike/version)", cfg->get_name(cfg),
+				 match_peer_me, match_peer_other, match_ike, match_version);
 
-			entry = malloc_thing(match_entry_t);
-			entry->match_peer = match_peer_me + match_peer_other;
-			entry->match_ike = match_ike;
-			entry->cfg = cfg->get_ref(cfg);
+			INIT(entry,
+				.match_peer = match_peer_me + match_peer_other,
+				.match_ike = match_ike,
+				.cfg = cfg->get_ref(cfg),
+			);
 			insert_sorted(entry, configs, helper);
 		}
 	}

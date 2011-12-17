@@ -149,8 +149,8 @@ METHOD(stroke_control_t, initiate, void,
 	}
 	else
 	{
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
 			child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
@@ -579,8 +579,8 @@ METHOD(stroke_control_t, route, void,
 	}
 	else
 	{
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
 			child_cfg = get_child_from_peer(peer_cfg, msg->route.name);

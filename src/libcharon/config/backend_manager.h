@@ -56,6 +56,7 @@ struct backend_manager_t {
 	 *
 	 * @param my_host			address of own host
 	 * @param other_host		address of remote host
+	 * @param version			IKE version to get a config for
 	 * @return					matching ike_config, or NULL if none found
 	 */
 	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this,
@@ -79,11 +80,12 @@ struct backend_manager_t {
 	 * @param other				remote address
 	 * @param my_id				IDr in first authentication round
 	 * @param other_id			IDi in first authentication round
+	 * @param version			IKE version to get a config for
 	 * @return 					enumerator over peer_cfg_t
 	 */
 	enumerator_t* (*create_peer_cfg_enumerator)(backend_manager_t *this,
 							host_t *me, host_t *other, identification_t *my_id,
-							identification_t *other_id);
+							identification_t *other_id, ike_version_t version);
 	/**
 	 * Register a backend on the manager.
 	 *

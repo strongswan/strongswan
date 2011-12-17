@@ -294,7 +294,7 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 	xmlTextWriterStartElement(writer, "configlist");
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-														NULL, NULL, NULL, NULL);
+											NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		enumerator_t *children;

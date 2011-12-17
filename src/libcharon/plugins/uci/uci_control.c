@@ -84,7 +84,7 @@ static void status(private_uci_control_t *this, char *name)
 	FILE *out = NULL;
 
 	configs = charon->backends->create_peer_cfg_enumerator(charon->backends,
-														NULL, NULL, NULL, NULL);
+											NULL, NULL, NULL, NULL, IKE_ANY);
 	while (configs->enumerate(configs, &peer_cfg))
 	{
 		if (name && !streq(name, peer_cfg->get_name(peer_cfg)))

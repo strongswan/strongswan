@@ -497,7 +497,7 @@ METHOD(stroke_list_t, status, void,
 
 		fprintf(out, "Connections:\n");
 		enumerator = charon->backends->create_peer_cfg_enumerator(
-									charon->backends, NULL, NULL, NULL, NULL);
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
 			if (name && !streq(name, peer_cfg->get_name(peer_cfg)))
@@ -506,8 +506,9 @@ METHOD(stroke_list_t, status, void,
 			}
 
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			fprintf(out, "%12s:  %s...%s", peer_cfg->get_name(peer_cfg),
-				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg));
+			fprintf(out, "%12s:  %s...%s (%N)", peer_cfg->get_name(peer_cfg),
+				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg),
+				ike_version_names, peer_cfg->get_ike_version(peer_cfg));
 
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)

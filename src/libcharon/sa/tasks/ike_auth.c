@@ -272,7 +272,7 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
 		 me, my_id, other, other_id);
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													me, other, my_id, other_id);
+											me, other, my_id, other_id, IKEV2);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		peer_cfg->get_ref(peer_cfg);
