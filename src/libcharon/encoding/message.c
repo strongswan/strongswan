@@ -1825,8 +1825,9 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{	/* instead of associated data we provide the IV, we also update
 				 * the IV with the last encrypted block */
 				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-				chunk_t last_block = chunk_create(chunk.ptr + chunk.len - bs,
-												  bs);
+				chunk_t last_block;
+
+				last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
 				chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
 				keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
 			}
@@ -1978,15 +1979,17 @@ METHOD(message_t, parse_body, status_t,
 	{
 		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
 		chunk_t hash;
+
 		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
 		if (hash.ptr)
 		{
 			hash_payload_t *hash_payload;
 			chunk_t other_hash;
+
 			if (this->first_payload != HASH_V1)
 			{
 				if (this->exchange_type == INFORMATIONAL_V1)
-				{	/* TODO-IKEv1: Parse and log contents? */
+				{
 					DBG1(DBG_ENC, "ignoring unprotected INFORMATIONAL from %H",
 						 this->packet->get_source(this->packet));
 				}
