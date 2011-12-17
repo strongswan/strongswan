@@ -43,6 +43,8 @@ typedef struct peer_cfg_t peer_cfg_t;
  * IKE version.
  */
 enum ike_version_t {
+	/** any version */
+	IKE_ANY = 0,
 	/** IKE version 1 */
 	IKEV1 = 1,
 	/** IKE version 2 */

@@ -239,7 +239,7 @@ struct stroke_msg_t {
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
-			int ikev2;
+			int version;
 			/* next three are deprecated, use stroke_end_t.auth instead */
 			int auth_method;
 			u_int32_t eap_type;

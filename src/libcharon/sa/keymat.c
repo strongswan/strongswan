@@ -28,8 +28,9 @@ keymat_t *keymat_create(ike_version_t version, bool initiator)
 			return &keymat_v1_create(initiator)->keymat;
 		case IKEV2:
 			return &keymat_v2_create(initiator)->keymat;
+		default:
+			return NULL;
 	}
-	return NULL;
 }
 
 /**

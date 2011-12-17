@@ -28,6 +28,8 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 			return &task_manager_v1_create(ike_sa)->task_manager;
 		case IKEV2:
 			return &task_manager_v2_create(ike_sa)->task_manager;
+		default:
+			return NULL;
 	}
-	return NULL;
 }
+

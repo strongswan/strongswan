@@ -39,9 +39,10 @@ typedef enum {
 } starter_state_t;
 
 typedef enum {
-		KEY_EXCHANGE_IKE,
-		KEY_EXCHANGE_IKEV1,
-		KEY_EXCHANGE_IKEV2
+		/* shared with ike_version_t */
+		KEY_EXCHANGE_IKE = 0,
+		KEY_EXCHANGE_IKEV1 = 1,
+		KEY_EXCHANGE_IKEV2 = 2,
 } keyexchange_t;
 
 typedef enum {

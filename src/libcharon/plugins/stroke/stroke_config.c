@@ -686,7 +686,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
 	peer_cfg = peer_cfg_create(msg->add_conn.name,
-		msg->add_conn.ikev2 ? IKEV2 : IKEV1, ike_cfg,
+		msg->add_conn.version, ike_cfg,
 		msg->add_conn.me.sendcert, unique,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,

@@ -196,7 +196,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	memset(&msg, 0, sizeof(msg));
 	msg.type = STR_ADD_CONN;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.add_conn.ikev2 = conn->keyexchange != KEY_EXCHANGE_IKEV1;
+	msg.add_conn.version = conn->keyexchange;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 
 	/* PUBKEY is preferred to PSK and EAP */
