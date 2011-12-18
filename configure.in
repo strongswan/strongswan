@@ -577,6 +577,11 @@ if test x$axis2c = xtrue; then
 	AC_SUBST(axis2c_LIBS)
 fi
 
+if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+	AC_HAVE_LIBRARY([tspi],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])])
+	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
+fi
+
 if test x$dumm = xtrue; then
 	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
 	AC_SUBST(gtk_CFLAGS)
