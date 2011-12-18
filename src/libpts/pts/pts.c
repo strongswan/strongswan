@@ -1303,14 +1303,17 @@ METHOD(pts_t, destroy, void,
 	free(this);
 }
 
+#define RELEASE_LSB		0
+#define RELEASE_DEBIAN	1
+
 /**
  * Determine Linux distribution and hardware platform
  */
 static char* extract_platform_info(void)
 {
 	FILE *file;
-	char buf[BUF_LEN], *pos, *value = NULL;
-	int i, len;
+	char buf[BUF_LEN], *pos = buf, *value = NULL;
+	int i, len = BUF_LEN - 1;
 	struct utsname uninfo;
 
 	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
@@ -1336,6 +1339,7 @@ static char* extract_platform_info(void)
 	};
 
 	const char description[] = "DISTRIB_DESCRIPTION=\"";
+	const char str_debian[] = "Debian ";
 
 	for (i = 0; i < countof(releases); i++)
 	{
@@ -1344,11 +1348,19 @@ static char* extract_platform_info(void)
 		{
 			continue;
 		}
+
+		if (i == RELEASE_DEBIAN)
+		{
+			strcpy(buf, str_debian);
+			pos += strlen(str_debian);
+			len -= strlen(str_debian); 
+		}
+
 		fseek(file, 0, SEEK_END);
-		len = min(ftell(file), sizeof(buf)-1);
+		len = min(ftell(file), len);
 		rewind(file);
-		buf[len] = '\0';
-		if (fread(buf, 1, len, file) != len)
+		pos[len] = '\0';
+		if (fread(pos, 1, len, file) != len)
 		{
 			DBG1(DBG_PTS, "failed to read file '%s'", releases[i]);
 			fclose(file);
@@ -1356,7 +1368,7 @@ static char* extract_platform_info(void)
 		}
 		fclose(file);
 
-		if (i == 0) /* LSB release */
+		if (i == RELEASE_LSB)
 		{
 			pos = strstr(buf, description);
 			if (!pos)
@@ -1377,7 +1389,7 @@ static char* extract_platform_info(void)
 		else
 		{
 			value = buf;
-			pos = strchr(value, '\n');
+			pos = strchr(pos, '\n');
 			if (!pos)
 			{
 				DBG1(DBG_PTS, "failed to find end of release string");
