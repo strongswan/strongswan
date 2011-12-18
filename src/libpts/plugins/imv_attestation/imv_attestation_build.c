@@ -43,36 +43,43 @@ bool imv_attestation_build(pa_tnc_msg_t *msg,
 	handshake_state = attestation_state->get_handshake_state(attestation_state);
 	pts = attestation_state->get_pts(attestation_state);
 
-	/* D-H attributes are redundant */
-	/*  when D-H Nonce Exchange is not selected on IMC side */
+	/**
+	 * Skip DH Nonce Parameters Request attribute when
+	 *   DH Nonce Exchange is not selected by PTS-IMC side
+	 */
 	if (handshake_state == IMV_ATTESTATION_STATE_NONCE_REQ &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
 	{
-		DBG1(DBG_IMV, "PTS-IMC is not using Diffie-Hellman Nonce negotiation,"
-					  "advancing to TPM Initialization phase");
+		DBG2(DBG_IMV, "PTS-IMC does not support DH Nonce negotiation - "
+					  "advancing to TPM Initialization");
 		handshake_state = IMV_ATTESTATION_STATE_TPM_INIT;
 	}
-	/* TPM Version Info, AIK attributes are redundant */
-	/*  when TPM is not available on IMC side */
+
+	/**
+	 * Skip TPM Version Info and AIK attributes when
+	 *   no TPM is available on the PTS-IMC side
+	 */
 	if (handshake_state == IMV_ATTESTATION_STATE_TPM_INIT &&
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T))
 	{
-		DBG1(DBG_IMV, "PTS-IMC has not got TPM available,"
-					  "advancing to File Measurement phase");
+		DBG2(DBG_IMV, "PTS-IMC made no TPM available - "
+					  "advancing to File Measurements");
 		handshake_state = IMV_ATTESTATION_STATE_MEAS;
 	}
-	/* Component Measurement cannot be done without D-H Nonce Exchange */
-	/*  or TPM on IMC side */
+
+	/**
+	 * Skip Component Measurements when
+	 *   neither DH Nonce Exchange nor a TPM are available on the PTS-IMC side
+	 */
 	if (handshake_state == IMV_ATTESTATION_STATE_COMP_EVID &&
 		(!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T) ||
 		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D)) )
 	{
-		DBG1(DBG_IMV, "PTS-IMC has not got TPM available,"
-					  "skipping Component Measurement phase");
+		DBG2(DBG_IMV, "PTS-IMC made no TPM available - "
+					  "skipping Component Measurements");
 		handshake_state = IMV_ATTESTATION_STATE_END;
 	}
 
-	/* Switch on the attribute type IMV has received */
 	switch (handshake_state)
 	{
 		case IMV_ATTESTATION_STATE_INIT:
