@@ -1155,7 +1155,11 @@ METHOD(pts_t, get_quote_info, bool,
 		return FALSE;
 	}
 	
-	size_of_select = 1 + this->pcr_max / 8;	
+	/**
+	 * A TPM v1.2 has 24 PCR Registers
+	 * so the bitmask field length used by TrouSerS is at least 3 bytes
+	 */
+	size_of_select = max(PCR_MAX_NUM / 8, 1 + this->pcr_max / 8);
 	pcr_comp_len = 2 + size_of_select + 4 + this->pcr_count * this->pcr_len;
 	
 	writer = bio_writer_create(pcr_comp_len);
