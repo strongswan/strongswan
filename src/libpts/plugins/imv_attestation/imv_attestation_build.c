@@ -284,10 +284,8 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			}
 			break;
 		}
-		default:
-			DBG1(DBG_IMV, "Attestation IMV is in unknown state: \"%s\"",
-				 handshake_state);
-			return FALSE;
+		case IMV_ATTESTATION_STATE_END:
+			break;
 	}
 	return TRUE;
 }
