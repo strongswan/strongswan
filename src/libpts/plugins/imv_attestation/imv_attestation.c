@@ -298,7 +298,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 	if (result != TNC_RESULT_SUCCESS)
 	{
-		attr_list->destroy(attr_list);
+		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
