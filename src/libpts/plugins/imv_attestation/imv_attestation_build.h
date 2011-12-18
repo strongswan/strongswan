@@ -34,14 +34,14 @@
 /**
  * Process a TCG PTS attribute
  *
- * @param msg					PA-TNC message to be built
+ * @param attr_list				list of PA-TNC attriubutes to be built
  * @param attestation_state		attestation state of a given connection
  * @param supported_algorithms	supported PTS measurement algorithms
  * @param supported_dh_groups	supported DH groups
  * @param pts_db				PTS configuration database
  * @return						TRUE if successful
  */
-bool imv_attestation_build(pa_tnc_msg_t *msg,
+bool imv_attestation_build(linked_list_t *attr_list,
 						   imv_attestation_state_t *attestation_state,
 						   pts_meas_algorithms_t supported_algorithms,
 						   pts_dh_group_t supported_dh_groups,

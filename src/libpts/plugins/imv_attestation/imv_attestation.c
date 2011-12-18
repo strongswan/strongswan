@@ -169,30 +169,52 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
 	pa_tnc_msg_t *msg;
+	pa_tnc_attr_t *attr;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	TNC_Result result;
+	linked_list_t *attr_list;
+	enumerator_t *enumerator;
 
 	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
 	attestation_state = (imv_attestation_state_t*)state;
-	msg = pa_tnc_msg_create();
+	attr_list = linked_list_create();
 
-	if (imv_attestation_build(msg, attestation_state, supported_algorithms,
+	if (imv_attestation_build(attr_list, attestation_state, supported_algorithms,
 							  supported_dh_groups, pts_db))
 	{
-		msg->build(msg);
-		result = imv_attestation->send_message(imv_attestation, connection_id,
-											   FALSE, 0, TNC_IMCID_ANY,
-											   msg->get_encoding(msg));
+		if (attr_list->get_count(attr_list))
+		{
+			msg = pa_tnc_msg_create();
+
+			/* move PA-TNC attributes to PA-TNC message */
+			enumerator = attr_list->create_enumerator(attr_list);
+			while (enumerator->enumerate(enumerator, &attr))
+			{
+				msg->add_attribute(msg, attr);
+			}
+			enumerator->destroy(enumerator);
+
+			msg->build(msg);
+			result = imv_attestation->send_message(imv_attestation,
+							connection_id, FALSE, 0, TNC_IMCID_ANY,
+							msg->get_encoding(msg));
+			msg->destroy(msg);
+		}
+		else
+		{
+			result = TNC_RESULT_SUCCESS;
+		}
+		attr_list->destroy(attr_list);
 	}
 	else
 	{
+		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
 		result = TNC_RESULT_FATAL;
 	}
-	msg->destroy(msg);
 
 	return result;
 }
@@ -310,6 +332,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	{
 		pa_tnc_msg = pa_tnc_msg_create();
 
+		/* move PA-TNC attributes to PA-TNC message */
 		enumerator = attr_list->create_enumerator(attr_list);
 		while (enumerator->enumerate(enumerator, &attr))
 		{
