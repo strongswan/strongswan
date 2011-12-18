@@ -81,6 +81,11 @@ struct private_ietf_attr_port_filter_t {
 	 * List of Port Filter entries
 	 */
 	linked_list_t *ports;
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -166,12 +171,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;	
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_ietf_attr_port_filter_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_ietf_attr_port_filter_t *this)
 {
-	this->ports->destroy_function(this->ports, free);
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		this->ports->destroy_function(this->ports, free);
+		free(this->value.ptr);
+		free(this);
+	}
 }
 
 METHOD(ietf_attr_port_filter_t, add_port, void,
@@ -224,6 +239,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create(void)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.add_port = _add_port,
@@ -232,6 +248,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create(void)
 		.vendor_id = PEN_IETF,
 		.type = IETF_ATTR_PORT_FILTER,
 		.ports = linked_list_create(),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -252,6 +269,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create_from_data(chunk_t data)
 				.get_value = _get_value,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.add_port = _add_port,
@@ -261,6 +279,7 @@ pa_tnc_attr_t *ietf_attr_port_filter_create_from_data(chunk_t data)
 		.type = IETF_ATTR_PORT_FILTER,
 		.value = chunk_clone(data),
 		.ports = linked_list_create(),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

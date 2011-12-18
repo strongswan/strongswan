@@ -78,6 +78,10 @@ struct private_tcg_pts_attr_dh_nonce_params_req_t {
 	 */
 	pts_dh_group_t dh_groups;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -147,11 +151,21 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_dh_nonce_params_req_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_dh_nonce_params_req_t *this)
 {
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_dh_nonce_params_req_t, get_min_nonce_len, u_int8_t,
@@ -184,6 +198,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create(u_int8_t min_nonce_len,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_min_nonce_len = _get_min_nonce_len,
@@ -193,6 +208,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create(u_int8_t min_nonce_len,
 		.type = TCG_PTS_DH_NONCE_PARAMS_REQ,
 		.min_nonce_len = min_nonce_len,
 		.dh_groups = dh_groups,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -215,6 +231,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create_from_data(chunk_t value)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_min_nonce_len = _get_min_nonce_len,
@@ -223,6 +240,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_req_create_from_data(chunk_t value)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_PARAMS_REQ,
 		.value = chunk_clone(value),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

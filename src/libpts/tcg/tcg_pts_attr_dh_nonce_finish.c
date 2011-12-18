@@ -86,6 +86,11 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	 * DH Initiator Nonce
 	 */
 	chunk_t initiator_nonce;
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -162,13 +167,23 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_dh_nonce_finish_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_dh_nonce_finish_t *this)
 {
-	free(this->value.ptr);
-	free(this->initiator_value.ptr);
-	free(this->initiator_nonce.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this->initiator_value.ptr);
+		free(this->initiator_nonce.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_dh_nonce_finish_t, get_hash_algo, pts_meas_algorithms_t,
@@ -209,6 +224,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_hash_algo = _get_hash_algo,
@@ -220,6 +236,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create(
 		.hash_algo = hash_algo,
 		.initiator_value = initiator_value,
 		.initiator_nonce = chunk_clone(initiator_nonce),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -242,6 +259,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(chunk_t value)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_hash_algo = _get_hash_algo,
@@ -251,6 +269,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_finish_create_from_data(chunk_t value)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_FINISH,
 		.value = chunk_clone(value),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

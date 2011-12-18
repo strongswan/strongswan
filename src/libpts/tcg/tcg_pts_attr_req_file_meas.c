@@ -93,6 +93,10 @@ struct private_tcg_pts_attr_req_file_meas_t {
 	 */
 	char *pathname;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -181,12 +185,22 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_req_file_meas_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_req_file_meas_t *this)
 {
-	free(this->pathname);
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->pathname);
+		free(this->value.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_req_file_meas_t, get_directory_flag, bool,
@@ -233,6 +247,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create(bool directory_flag,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_directory_flag = _get_directory_flag,
@@ -246,6 +261,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create(bool directory_flag,
 		.request_id = request_id,
 		.delimiter = delimiter,
 		.pathname = strdup(pathname),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -269,6 +285,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create_from_data(chunk_t data)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_directory_flag = _get_directory_flag,
@@ -279,6 +296,7 @@ pa_tnc_attr_t *tcg_pts_attr_req_file_meas_create_from_data(chunk_t data)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_REQ_FILE_MEAS,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

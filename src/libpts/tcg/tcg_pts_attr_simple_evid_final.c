@@ -107,6 +107,10 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	 */
 	chunk_t evid_sig;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -139,14 +143,24 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 	this->noskip_flag = noskip;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_simple_evid_final_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_simple_evid_final_t *this)
 {
-	free(this->value.ptr);
-	free(this->pcr_comp.ptr);
-	free(this->tpm_quote_sig.ptr);
-	free(this->evid_sig.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this->pcr_comp.ptr);
+		free(this->tpm_quote_sig.ptr);
+		free(this->evid_sig.ptr);
+		free(this);
+	}
 }
 
 METHOD(pa_tnc_attr_t, build, void,
@@ -326,6 +340,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(u_int8_t flags,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_quote_info = _get_quote_info,
@@ -338,6 +353,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create(u_int8_t flags,
 		.comp_hash_algorithm = comp_hash_algorithm,
 		.pcr_comp = pcr_comp,
 		.tpm_quote_sig = tpm_quote_sig,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -361,6 +377,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create_from_data(chunk_t data)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_quote_info = _get_quote_info,
@@ -370,6 +387,7 @@ pa_tnc_attr_t *tcg_pts_attr_simple_evid_final_create_from_data(chunk_t data)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_SIMPLE_EVID_FINAL,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

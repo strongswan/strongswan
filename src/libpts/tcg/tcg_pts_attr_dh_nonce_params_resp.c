@@ -93,7 +93,11 @@ struct private_tcg_pts_attr_dh_nonce_params_resp_t {
 	 * DH Responder Public Value
 	 */
 	chunk_t responder_value;
-	
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -173,13 +177,23 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	return SUCCESS;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_dh_nonce_params_resp_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_dh_nonce_params_resp_t *this)
 {
-	free(this->value.ptr);
-	free(this->responder_nonce.ptr);
-	free(this->responder_value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this->responder_nonce.ptr);
+		free(this->responder_value.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_dh_nonce_params_resp_t, get_dh_group, pts_dh_group_t,
@@ -226,6 +240,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(pts_dh_group_t dh_group,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_dh_group = _get_dh_group,
@@ -239,6 +254,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create(pts_dh_group_t dh_group,
 		.hash_algo_set = hash_algo_set,
 		.responder_nonce = chunk_clone(responder_nonce),
 		.responder_value = responder_value,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -261,6 +277,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create_from_data(chunk_t value)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_dh_group = _get_dh_group,
@@ -271,6 +288,7 @@ pa_tnc_attr_t *tcg_pts_attr_dh_nonce_params_resp_create_from_data(chunk_t value)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_DH_NONCE_PARAMS_RESP,
 		.value = chunk_clone(value),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

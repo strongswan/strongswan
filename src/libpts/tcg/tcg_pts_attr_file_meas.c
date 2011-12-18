@@ -88,6 +88,10 @@ struct private_tcg_pts_attr_file_meas_t {
 	 */
 	pts_file_meas_t *measurements;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -217,12 +221,21 @@ end:
 	return status;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_file_meas_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_file_meas_t *this)
 {
-	this->measurements->destroy(this->measurements);
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		this->measurements->destroy(this->measurements);
+		free(this->value.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_file_meas_t, get_measurements, pts_file_meas_t*,
@@ -248,6 +261,7 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_measurements = _get_measurements,
@@ -255,6 +269,7 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_FILE_MEAS,
 		.measurements = measurements,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -278,6 +293,7 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(chunk_t data)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_measurements = _get_measurements,
@@ -285,6 +301,7 @@ pa_tnc_attr_t *tcg_pts_attr_file_meas_create_from_data(chunk_t data)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_FILE_MEAS,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

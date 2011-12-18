@@ -104,6 +104,10 @@ struct private_tcg_pts_attr_file_meta_t {
 	 */
 	pts_file_meta_t *metadata;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -268,12 +272,22 @@ end:
 	return status;
 }
 
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_file_meta_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
+}
+
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_file_meta_t *this)
 {
-	this->metadata->destroy(this->metadata);
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		this->metadata->destroy(this->metadata);
+		free(this->value.ptr);
+		free(this);
+	}
 }
 
 METHOD(tcg_pts_attr_file_meta_t, get_metadata, pts_file_meta_t*,
@@ -299,6 +313,7 @@ pa_tnc_attr_t *tcg_pts_attr_unix_file_meta_create(pts_file_meta_t *metadata)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_metadata = _get_metadata,
@@ -306,6 +321,7 @@ pa_tnc_attr_t *tcg_pts_attr_unix_file_meta_create(pts_file_meta_t *metadata)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_UNIX_FILE_META,
 		.metadata = metadata,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -329,6 +345,7 @@ pa_tnc_attr_t *tcg_pts_attr_unix_file_meta_create_from_data(chunk_t data)
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_metadata = _get_metadata,
@@ -336,6 +353,7 @@ pa_tnc_attr_t *tcg_pts_attr_unix_file_meta_create_from_data(chunk_t data)
 		.vendor_id = PEN_TCG,
 		.type = TCG_PTS_UNIX_FILE_META,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;

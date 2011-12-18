@@ -72,6 +72,10 @@ struct private_tcg_pts_attr_meas_algo_t {
 	 */
 	pts_meas_algorithms_t algorithms;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
 };
 
 METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
@@ -140,8 +144,18 @@ METHOD(pa_tnc_attr_t, process, status_t,
 METHOD(pa_tnc_attr_t, destroy, void,
 	private_tcg_pts_attr_meas_algo_t *this)
 {
-	free(this->value.ptr);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		free(this->value.ptr);
+		free(this);
+	}
+}
+
+METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
+	private_tcg_pts_attr_meas_algo_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(tcg_pts_attr_meas_algo_t, get_algorithms, pts_meas_algorithms_t,
@@ -168,6 +182,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_algorithms = _get_algorithms,
@@ -175,6 +190,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 		.vendor_id = PEN_TCG,
 		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
 		.algorithms = algorithms,
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
@@ -199,6 +215,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
 				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
+				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
 			.get_algorithms = _get_algorithms,
@@ -206,6 +223,7 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
 		.vendor_id = PEN_TCG,
 		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
 		.value = chunk_clone(data),
+		.ref = 1,
 	);
 
 	return &this->public.pa_tnc_attribute;
