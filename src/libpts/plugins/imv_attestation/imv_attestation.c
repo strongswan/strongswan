@@ -352,6 +352,9 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	}
 	attr_list->destroy(attr_list);
 
+	/* check the IMV state for the next PA-TNC attributes to send */
+	result = send_message(connection_id);
+
 	if (attestation_state->get_handshake_state(attestation_state) ==
 		IMV_ATTESTATION_STATE_END)
 	{
@@ -383,7 +386,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 													   connection_id);
 	}
 
-	return send_message(connection_id);
+	return result;
 }
 
 /**

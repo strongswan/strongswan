@@ -356,7 +356,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))
 			{
 				/** TODO: What to do with Evidence Signature */
-				DBG1(DBG_IMV, "This version of the Attestation IMV can not "
+				DBG1(DBG_IMV, "this version of the Attestation IMV can not "
 							  "handle Evidence Signatures");
 			}
 			break;

@@ -1525,7 +1525,7 @@ pts_t *pts_create(bool is_imc)
 		{
 			this->has_tpm = TRUE;
 			this->pcr_len = PCR_LEN;
-			/* this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D; */
+			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			load_aik(this);
 			load_aik_blob(this);
 		}

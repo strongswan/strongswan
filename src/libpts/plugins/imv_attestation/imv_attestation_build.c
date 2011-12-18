@@ -67,19 +67,6 @@ bool imv_attestation_build(linked_list_t *attr_list,
 		handshake_state = IMV_ATTESTATION_STATE_MEAS;
 	}
 
-	/**
-	 * Skip Component Measurements when
-	 *   neither DH Nonce Exchange nor a TPM are available on the PTS-IMC side
-	 */
-	if (handshake_state == IMV_ATTESTATION_STATE_COMP_EVID &&
-		(!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T) ||
-		!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D)) )
-	{
-		DBG2(DBG_IMV, "PTS-IMC made no TPM available - "
-					  "skipping Component Measurements");
-		handshake_state = IMV_ATTESTATION_STATE_END;
-	}
-
 	switch (handshake_state)
 	{
 		case IMV_ATTESTATION_STATE_INIT:
@@ -223,11 +210,18 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			int vid, name, qualifier;
 			u_int8_t flags;
 			u_int32_t depth;
-			bool first = TRUE;
+			bool first = TRUE, first_component = TRUE;
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
 
+			if (!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_T) ||
+				!(pts->get_proto_caps(pts) & PTS_PROTO_CAPS_D))
+			{
+				DBG2(DBG_IMV, "PTS-IMC made no TPM available - "
+							  "skipping Component Measurements");
+				break;
+			}
 			if (!pts->get_aik_keyid(pts, &keyid))
 			{
 				break;
@@ -243,10 +237,14 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			{
 				break;
 			}
-			DBG2(DBG_IMV, "evidence request by");
 			while (enumerator->enumerate(enumerator, &vid, &name,
 				&qualifier, &depth))
 			{
+				if (first)
+				{
+					DBG2(DBG_IMV, "evidence request by");
+					first = FALSE;
+				}
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
 				comp_name->log(comp_name, "  ");
 
@@ -259,11 +257,11 @@ bool imv_attestation_build(linked_list_t *attr_list,
 					continue;
 				}
 				attestation_state->add_component(attestation_state, comp);
-				if (first)
+				if (first_component)
 				{
 					attr = tcg_pts_attr_req_func_comp_evid_create();
 					attr->set_noskip_flag(attr, TRUE);
-					first = FALSE;
+					first_component = FALSE;
 				}
 				flags = comp->get_evidence_flags(comp);
 				/* TODO check flags against negotiated_caps */
