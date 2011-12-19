@@ -135,6 +135,11 @@ struct task_manager_t {
 	void (*queue_ike_rekey)(task_manager_t *this);
 
 	/**
+	 * Queue IKE_SA reauth tasks.
+	 */
+	void (*queue_ike_reauth)(task_manager_t *this);
+
+	/**
 	 * Queue IKE_SA delete tasks.
 	 */
 	void (*queue_ike_delete)(task_manager_t *this);

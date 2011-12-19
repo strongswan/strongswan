@@ -27,6 +27,7 @@
 #include <sa/ikev2/tasks/ike_cert_pre.h>
 #include <sa/ikev2/tasks/ike_cert_post.h>
 #include <sa/ikev2/tasks/ike_rekey.h>
+#include <sa/ikev2/tasks/ike_reauth.h>
 #include <sa/ikev2/tasks/ike_delete.h>
 #include <sa/ikev2/tasks/ike_config.h>
 #include <sa/ikev2/tasks/ike_dpd.h>
@@ -1206,6 +1207,12 @@ METHOD(task_manager_t, queue_ike_rekey, void,
 	queue_task(this, (task_t*)ike_rekey_create(this->ike_sa, TRUE));
 }
 
+METHOD(task_manager_t, queue_ike_reauth, void,
+	private_task_manager_t *this)
+{
+	queue_task(this, (task_t*)ike_reauth_create(this->ike_sa));
+}
+
 METHOD(task_manager_t, queue_ike_delete, void,
 	private_task_manager_t *this)
 {
@@ -1364,6 +1371,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.queue_task = _queue_task,
 				.queue_ike = _queue_ike,
 				.queue_ike_rekey = _queue_ike_rekey,
+				.queue_ike_reauth = _queue_ike_reauth,
 				.queue_ike_delete = _queue_ike_delete,
 				.queue_child = _queue_child,
 				.queue_child_rekey = _queue_child_rekey,

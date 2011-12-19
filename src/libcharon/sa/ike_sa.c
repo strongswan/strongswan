@@ -1332,8 +1332,6 @@ METHOD(ike_sa_t, rekey, status_t,
 METHOD(ike_sa_t, reauth, status_t,
 	private_ike_sa_t *this)
 {
-	task_t *task;
-
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
@@ -1359,9 +1357,7 @@ METHOD(ike_sa_t, reauth, status_t,
 			DBG1(DBG_IKE, "reauthenticating actively");
 		}
 	}
-	task = (task_t*)ike_reauth_create(&this->public);
-	this->task_manager->queue_task(this->task_manager, task);
-
+	this->task_manager->queue_ike_reauth(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
 }
 
