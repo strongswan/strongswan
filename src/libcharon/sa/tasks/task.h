@@ -86,7 +86,7 @@ enum task_type_t {
 	/** IKEv1 vendor ID payload handling */
 	TASK_VENDOR_V1,
 	/** IKEv1 NAT detection */
-	TASK_IKE_NATD_V1,
+	TASK_ISAKMP_NATD,
 	/** IKEv1 pre-authentication certificate handling */
 	TASK_ISAKMP_CERT_PRE,
 	/** IKEv1 post-authentication certificate handling */

@@ -47,9 +47,9 @@
 #include <sa/tasks/main_mode.h>
 #include <sa/tasks/isakmp_cert_pre.h>
 #include <sa/tasks/isakmp_cert_post.h>
+#include <sa/tasks/isakmp_natd.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/quick_delete.h>
-#include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/isakmp_delete.h>
 #include <processing/jobs/retransmit_job.h>
@@ -1127,7 +1127,7 @@ METHOD(ike_sa_t, initiate, status_t,
 			this->task_manager->queue_task(this->task_manager, task);
 			task = (task_t*)isakmp_cert_post_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_natd_v1_create(&this->public, TRUE);
+			task = (task_t*)isakmp_natd_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 		}
 		else

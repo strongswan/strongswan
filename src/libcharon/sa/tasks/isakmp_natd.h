@@ -14,23 +14,23 @@
  */
 
 /**
- * @defgroup ike_natd_v1 ike_natd_v1
+ * @defgroup isakmp_natd isakmp_natd
  * @{ @ingroup tasks
  */
 
-#ifndef IKE_NATD_V1_H_
-#define IKE_NATD_V1_H_
+#ifndef ISAKMP_NATD_H_
+#define ISAKMP_NATD_H_
 
-typedef struct ike_natd_v1_t ike_natd_v1_t;
+typedef struct isakmp_natd_t isakmp_natd_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
 
 /**
- * Task of type ike_natd_v1, detects NAT situation in IKEv1 Phase 1.
+ * Task of type ISAKMP_NATD, detects NAT situation in IKEv1 Phase 1.
  */
-struct ike_natd_v1_t {
+struct isakmp_natd_t {
 
 	/**
 	 * Implements the task_t interface
@@ -39,12 +39,12 @@ struct ike_natd_v1_t {
 };
 
 /**
- * Create a new ike_natd_v1 task.
+ * Create a new ISAKMP_NATD task.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if task is the original initiator
- * @return				ike_natd_v1 task to handle by the task_manager
+ * @return				isakmp_natd task to handle by the task_manager
  */
-ike_natd_v1_t *ike_natd_v1_create(ike_sa_t *ike_sa, bool initiator);
+isakmp_natd_t *isakmp_natd_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /** IKE_NATD_V1_H_ @}*/
+#endif /** ISAKMP_NATD_H_ @}*/

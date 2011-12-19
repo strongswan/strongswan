@@ -15,7 +15,7 @@
  * for more details.
  */
 
-#include "ike_natd_v1.h"
+#include "isakmp_natd.h"
 
 #include <string.h>
 
@@ -26,17 +26,17 @@
 #include <crypto/hashers/hasher.h>
 #include <encoding/payloads/hash_payload.h>
 
-typedef struct private_ike_natd_v1_t private_ike_natd_v1_t;
+typedef struct private_isakmp_natd_t private_isakmp_natd_t;
 
 /**
  * Private members of a ike_natt_t task.
  */
-struct private_ike_natd_v1_t {
+struct private_isakmp_natd_t {
 
 	/**
 	 * Public interface.
 	 */
-	ike_natd_v1_t public;
+	isakmp_natd_t public;
 
 	/**
 	 * Assigned IKE_SA.
@@ -77,7 +77,7 @@ struct private_ike_natd_v1_t {
 /**
  * Build NAT detection hash for a host.
  */
-static chunk_t generate_natd_hash(private_ike_natd_v1_t *this,
+static chunk_t generate_natd_hash(private_isakmp_natd_t *this,
 								  ike_sa_id_t *ike_sa_id, host_t *host)
 {
 	hasher_t *hasher;
@@ -110,7 +110,7 @@ static chunk_t generate_natd_hash(private_ike_natd_v1_t *this,
 /**
  * Build a faked NAT-D payload to enforce UDP encapsulation.
  */
-static chunk_t generate_natd_hash_faked(private_ike_natd_v1_t *this)
+static chunk_t generate_natd_hash_faked(private_isakmp_natd_t *this)
 {
 	hasher_t *hasher;
 	chunk_t chunk;
@@ -136,7 +136,7 @@ static chunk_t generate_natd_hash_faked(private_ike_natd_v1_t *this)
 /**
  * Build a NAT-D payload.
  */
-static hash_payload_t *build_natd_payload(private_ike_natd_v1_t *this, bool src,
+static hash_payload_t *build_natd_payload(private_isakmp_natd_t *this, bool src,
 										  host_t *host)
 {
 	hash_payload_t *payload;
@@ -162,7 +162,7 @@ static hash_payload_t *build_natd_payload(private_ike_natd_v1_t *this, bool src,
 /**
  * Add NAT-D payloads to the message.
  */
-static void add_natd_payloads(private_ike_natd_v1_t *this, message_t *message)
+static void add_natd_payloads(private_isakmp_natd_t *this, message_t *message)
 {
 	hash_payload_t *payload;
 	host_t *host;
@@ -183,7 +183,7 @@ static void add_natd_payloads(private_ike_natd_v1_t *this, message_t *message)
 /**
  * Read NAT-D payloads from message and evaluate them.
  */
-static void process_payloads(private_ike_natd_v1_t *this, message_t *message)
+static void process_payloads(private_isakmp_natd_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -255,7 +255,7 @@ static void process_payloads(private_ike_natd_v1_t *this, message_t *message)
 }
 
 METHOD(task_t, build_i, status_t,
-	private_ike_natd_v1_t *this, message_t *message)
+	private_isakmp_natd_t *this, message_t *message)
 {
 	status_t result = NEED_MORE;
 
@@ -284,7 +284,7 @@ METHOD(task_t, build_i, status_t,
 }
 
 METHOD(task_t, process_i, status_t,
-	private_ike_natd_v1_t *this, message_t *message)
+	private_isakmp_natd_t *this, message_t *message)
 {
 	status_t result = NEED_MORE;
 
@@ -323,7 +323,7 @@ METHOD(task_t, process_i, status_t,
 }
 
 METHOD(task_t, process_r, status_t,
-	private_ike_natd_v1_t *this, message_t *message)
+	private_isakmp_natd_t *this, message_t *message)
 {
 	status_t result = NEED_MORE;
 
@@ -357,7 +357,7 @@ METHOD(task_t, process_r, status_t,
 }
 
 METHOD(task_t, build_r, status_t,
-	private_ike_natd_v1_t *this, message_t *message)
+	private_isakmp_natd_t *this, message_t *message)
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -384,13 +384,13 @@ METHOD(task_t, build_r, status_t,
 }
 
 METHOD(task_t, get_type, task_type_t,
-	private_ike_natd_v1_t *this)
+	private_isakmp_natd_t *this)
 {
-	return TASK_IKE_NATD_V1;
+	return TASK_ISAKMP_NATD;
 }
 
 METHOD(task_t, migrate, void,
-	private_ike_natd_v1_t *this, ike_sa_t *ike_sa)
+	private_isakmp_natd_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 	this->src_seen = FALSE;
@@ -400,7 +400,7 @@ METHOD(task_t, migrate, void,
 }
 
 METHOD(task_t, destroy, void,
-	private_ike_natd_v1_t *this)
+	private_isakmp_natd_t *this)
 {
 	free(this);
 }
@@ -408,9 +408,9 @@ METHOD(task_t, destroy, void,
 /*
  * Described in header.
  */
-ike_natd_v1_t *ike_natd_v1_create(ike_sa_t *ike_sa, bool initiator)
+isakmp_natd_t *isakmp_natd_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_natd_v1_t *this;
+	private_isakmp_natd_t *this;
 
 	INIT(this,
 		.public = {

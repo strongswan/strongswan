@@ -24,7 +24,7 @@
 #include <sa/tasks/xauth.h>
 #include <sa/tasks/mode_config.h>
 #include <sa/tasks/informational.h>
-#include <sa/tasks/ike_natd_v1.h>
+#include <sa/tasks/isakmp_natd.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/isakmp_cert_pre.h>
 #include <sa/tasks/isakmp_cert_post.h>
@@ -305,7 +305,7 @@ METHOD(task_manager_t, initiate, status_t,
 				{
 					exchange = ID_PROT;
 					activate_task(this, TASK_ISAKMP_CERT_POST);
-					activate_task(this, TASK_IKE_NATD_V1);
+					activate_task(this, TASK_ISAKMP_NATD);
 				}
 				break;
 			case IKE_CONNECTING:
@@ -666,7 +666,7 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)isakmp_cert_post_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t *)ike_natd_v1_create(this->ike_sa, FALSE);
+				task = (task_t *)isakmp_natd_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
