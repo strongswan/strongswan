@@ -603,26 +603,9 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		if (!delay || diff >= delay)
 		{
 			/* to long ago, initiate dead peer detection */
-			task_t *task;
-			ike_mobike_t *mobike;
-
-			if (supports_extension(this, EXT_MOBIKE) &&
-				has_condition(this, COND_NAT_HERE))
-			{
-				/* use mobike enabled DPD to detect NAT mapping changes */
-				mobike = ike_mobike_create(&this->public, TRUE);
-				mobike->dpd(mobike);
-				task = &mobike->task;
-			}
-			else
-			{
-				task = (task_t*)ike_dpd_create(TRUE);
-			}
-			diff = 0;
 			DBG1(DBG_IKE, "sending DPD request");
-
-			this->task_manager->queue_task(this->task_manager, task);
-			this->task_manager->initiate(this->task_manager);
+			this->task_manager->queue_dpd(this->task_manager);
+			diff = 0;
 		}
 	}
 	/* recheck in "interval" seconds */
@@ -631,7 +614,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		job = (job_t*)send_dpd_job_create(this->ike_sa_id);
 		lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
 	}
-	return SUCCESS;
+	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, get_state, ike_sa_state_t,

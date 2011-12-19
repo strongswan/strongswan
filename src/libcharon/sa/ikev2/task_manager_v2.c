@@ -1176,6 +1176,26 @@ METHOD(task_manager_t, queue_task, void,
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
+METHOD(task_manager_t, queue_dpd, void,
+	private_task_manager_t *this)
+{
+	ike_mobike_t *mobike;
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
+		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
+	{
+		/* use mobike enabled DPD to detect NAT mapping changes */
+		mobike = ike_mobike_create(this->ike_sa, TRUE);
+		mobike->dpd(mobike);
+		queue_task(this, &mobike->task);
+	}
+	else
+	{
+		queue_task(this, (task_t*)ike_dpd_create(TRUE));
+	}
+}
+
+
 METHOD(task_manager_t, adopt_tasks, void,
 	private_task_manager_t *this, task_manager_t *other_public)
 {
@@ -1280,6 +1300,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 			.task_manager = {
 				.process_message = _process_message,
 				.queue_task = _queue_task,
+				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,
 				.incr_mid = _incr_mid,

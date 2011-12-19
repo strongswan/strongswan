@@ -125,6 +125,11 @@ struct task_manager_t {
 	void (*queue_task) (task_manager_t *this, task_t *task);
 
 	/**
+	 * Queue liveness checking tasks.
+	 */
+	void (*queue_dpd)(task_manager_t *this);
+
+	/**
 	 * Retransmit a request if it hasn't been acknowledged yet.
 	 *
 	 * A return value of INVALID_STATE means that the message was already
