@@ -40,6 +40,7 @@ struct pubkey_v1_authenticator_t {
  * Create an authenticator to build and verify public key signatures.
  *
  * @param ike_sa			associated IKE_SA
+ * @param initiator			TRUE if we are IKE_SA initiator
  * @param dh				diffie hellman key exchange
  * @param dh_value			others public diffie hellman value
  * @param sa_payload		generated SA payload data, without payload header

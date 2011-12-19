@@ -41,6 +41,7 @@ struct quick_mode_t {
 /**
  * Create a new quick_mode task.
  *
+ * @param ike_sa		IKE_SA this task works for
  * @param config		child_cfg if task initiator, NULL if responder
  * @param tsi			source of triggering packet, or NULL
  * @param tsr			destination of triggering packet, or NULL

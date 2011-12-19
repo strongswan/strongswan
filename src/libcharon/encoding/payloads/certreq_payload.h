@@ -92,7 +92,7 @@ certreq_payload_t *certreq_payload_create_type(certificate_type_t type);
 /**
  * Creates a IKEv1 certreq_payload_t for a given distinguished name.
  *
- * @param dn			distinguished name, does not get owned
+ * @param id			distinguished name, does not get owned
  * @return 				certreq payload
  */
 certreq_payload_t *certreq_payload_create_dn(identification_t *id);

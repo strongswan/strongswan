@@ -42,6 +42,7 @@ struct informational_t {
 /**
  * Create a new informational task.
  *
+ * @param ike_sa		IKE_SA this task works for
  * @param notify		notify to send as initiator, NULL if responder
  * @return				task to handle by the task_manager
  */

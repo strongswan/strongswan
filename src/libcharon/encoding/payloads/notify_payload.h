@@ -272,7 +272,7 @@ notify_payload_t *notify_payload_create(payload_type_t type);
  *
  * @param type					payload type, NOTIFY or NOTIFY_V1
  * @param protocol				protocol id (IKE, AH or ESP)
- * @param type					notify type (see notify_type_t)
+ * @param notify				type of notify
  * @return						notify_payload_t object
  */
 notify_payload_t *notify_payload_create_from_protocol_and_type(

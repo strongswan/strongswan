@@ -41,6 +41,7 @@ struct main_mode_t {
 /**
  * Create a new main_mode task.
  *
+ * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if task initiated locally
  * @return				task to handle by the task_manager
  */

@@ -96,7 +96,6 @@ struct cert_payload_t {
 	 */
 	char *(*get_url)(cert_payload_t *this);
 
-
 	/**
 	 * Destroys the cert_payload object.
 	 */
@@ -107,7 +106,6 @@ struct cert_payload_t {
  * Creates an empty certificate payload.
  *
  * @param type				payload type (for IKEv1 or IKEv2)
- * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create(payload_type_t type);
@@ -126,6 +124,7 @@ cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
  * Creates an IKEv2 certificate payload with hash and URL encoding.
  *
  * @param hash				hash of the DER encoded certificate (get's cloned)
+ * @param url				URL to the certificate
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
