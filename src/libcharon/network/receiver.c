@@ -376,8 +376,10 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	/* check IKE major version */
 	switch (message->get_major_version(message))
 	{
+#ifdef USE_IKEV2
 		case IKEV2_MAJOR_VERSION:
 			break;
+#endif /* USE_IKEV2 */
 #ifdef USE_IKEV1
 		case IKEV1_MAJOR_VERSION:
 			break;
