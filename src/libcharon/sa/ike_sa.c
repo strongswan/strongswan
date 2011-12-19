@@ -1871,11 +1871,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 	private_ike_sa_t *this;
 	static u_int32_t unique_id = 0;
 
-	if (version != IKEV1)
-	{
-		version = IKEV2;
-	}
-
 	INIT(this,
 		.public = {
 			.get_version = _get_version,
@@ -1985,6 +1980,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 
 	this->task_manager = task_manager_create(&this->public);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
+
+	/* TODO-IKEv1: check if keymat and task manager created successfully.
+	 * Return NULL otherwise? */
 
 	return &this->public;
 }
