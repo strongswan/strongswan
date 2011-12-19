@@ -1182,23 +1182,52 @@ METHOD(task_manager_t, queue_ike, void,
 {
 	peer_cfg_t *peer_cfg;
 
-	queue_task(this, (task_t*)ike_vendor_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_init_create(this->ike_sa, TRUE, NULL));
-	queue_task(this, (task_t*)ike_natd_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_cert_pre_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_auth_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_cert_post_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_config_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)ike_auth_lifetime_create(this->ike_sa, TRUE));
+	enumerator_t *enumerator;
+	bool has_init = FALSE, has_auth = FALSE;
+	task_t *task;
 
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg->use_mobike(peer_cfg))
+	/* when initiating with a non-first keying try, IKE_AUTH is still queued,
+	 * but IKE_INIT is not */
+	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, &task))
 	{
-		queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
+		switch (task->get_type(task))
+		{
+			case TASK_IKE_INIT:
+				has_init = TRUE;
+				break;
+			case TASK_IKE_AUTH:
+				has_auth = TRUE;
+				break;
+			default:
+				break;
+		}
 	}
+	enumerator->destroy(enumerator);
+
+	if (!has_init)
+	{
+		queue_task(this, (task_t*)ike_vendor_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_init_create(this->ike_sa, TRUE, NULL));
+		queue_task(this, (task_t*)ike_natd_create(this->ike_sa, TRUE));
+	}
+	if (!has_auth)
+	{
+		queue_task(this, (task_t*)ike_cert_pre_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_auth_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_cert_post_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_config_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_auth_lifetime_create(this->ike_sa, TRUE));
+
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (peer_cfg->use_mobike(peer_cfg))
+		{
+			queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
+		}
 #ifdef ME
-	queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
+		queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
 #endif /* ME */
+	}
 }
 
 METHOD(task_manager_t, queue_ike_rekey, void,
