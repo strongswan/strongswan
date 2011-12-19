@@ -57,6 +57,10 @@ processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
+sa/eap/eap_method.c sa/eap/eap_method.h \
+sa/eap/eap_manager.c sa/eap/eap_manager.h \
+sa/xauth/xauth_method.c sa/xauth/xauth_method.h \
+sa/xauth/xauth_manager.c sa/xauth/xauth_manager.h \
 sa/authenticator.c sa/authenticator.h \
 sa/child_sa.c sa/child_sa.h \
 sa/ike_sa.c sa/ike_sa.h \
@@ -70,8 +74,6 @@ sa/task.c sa/task.h \
 sa/ikev2/keymat_v2.c sa/ikev2/keymat_v2.h \
 sa/ikev2/task_manager_v2.c sa/ikev2/task_manager_v2.h \
 sa/ikev2/authenticators/eap_authenticator.c sa/ikev2/authenticators/eap_authenticator.h \
-sa/ikev2/authenticators/eap/eap_method.c sa/ikev2/authenticators/eap/eap_method.h \
-sa/ikev2/authenticators/eap/eap_manager.c sa/ikev2/authenticators/eap/eap_manager.h \
 sa/ikev2/authenticators/psk_authenticator.c sa/ikev2/authenticators/psk_authenticator.h \
 sa/ikev2/authenticators/pubkey_authenticator.c sa/ikev2/authenticators/pubkey_authenticator.h \
 sa/ikev2/tasks/child_create.c sa/ikev2/tasks/child_create.h \
@@ -95,8 +97,6 @@ sa/ikev1/task_manager_v1.c sa/ikev1/task_manager_v1.h \
 sa/ikev1/authenticators/psk_v1_authenticator.c sa/ikev1/authenticators/psk_v1_authenticator.h \
 sa/ikev1/authenticators/pubkey_v1_authenticator.c sa/ikev1/authenticators/pubkey_v1_authenticator.h \
 sa/ikev1/authenticators/hybrid_authenticator.c sa/ikev1/authenticators/hybrid_authenticator.h \
-sa/ikev1/authenticators/xauth/xauth_method.c sa/ikev1/authenticators/xauth/xauth_method.h \
-sa/ikev1/authenticators/xauth/xauth_manager.c sa/ikev1/authenticators/xauth/xauth_manager.h \
 sa/ikev1/tasks/main_mode.c sa/ikev1/tasks/main_mode.h \
 sa/ikev1/tasks/informational.c sa/ikev1/tasks/informational.h \
 sa/ikev1/tasks/isakmp_cert_pre.c sa/ikev1/tasks/isakmp_cert_pre.h \

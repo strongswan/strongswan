@@ -23,7 +23,7 @@
 
 typedef struct eap_tnc_t eap_tnc_t;
 
-#include <sa/ikev2/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * Implementation of the eap_method_t interface using EAP-TNC.

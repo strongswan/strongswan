@@ -17,7 +17,7 @@
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
-#include <sa/ikev2/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/eap_payload.h>
 

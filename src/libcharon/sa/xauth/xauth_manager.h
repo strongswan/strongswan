@@ -21,7 +21,7 @@
 #ifndef XAUTH_MANAGER_H_
 #define XAUTH_MANAGER_H_
 
-#include <sa/ikev1/authenticators/xauth/xauth_method.h>
+#include <sa/xauth/xauth_method.h>
 
 typedef struct xauth_manager_t xauth_manager_t;
 

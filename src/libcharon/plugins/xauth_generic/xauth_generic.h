@@ -23,7 +23,7 @@
 
 typedef struct xauth_generic_t xauth_generic_t;
 
-#include <sa/ikev1/authenticators/xauth/xauth_method.h>
+#include <sa/xauth/xauth_method.h>
 
 /**
  * Implementation of the xauth_method_t interface using cleartext secrets

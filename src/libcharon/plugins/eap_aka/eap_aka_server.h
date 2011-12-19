@@ -23,7 +23,7 @@
 
 typedef struct eap_aka_server_t eap_aka_server_t;
 
-#include <sa/ikev2/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * EAP-AKA server implementation.

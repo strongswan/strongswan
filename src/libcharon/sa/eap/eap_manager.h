@@ -21,7 +21,7 @@
 #ifndef EAP_MANAGER_H_
 #define EAP_MANAGER_H_
 
-#include <sa/ikev2/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 typedef struct eap_manager_t eap_manager_t;
 
