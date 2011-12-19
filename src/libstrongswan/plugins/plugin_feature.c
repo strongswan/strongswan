@@ -98,7 +98,7 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return streq(a->arg.custom, b->arg.custom);
 			case FEATURE_XAUTH_SERVER:
 			case FEATURE_XAUTH_PEER:
-				return a->arg.xauth == b->arg.xauth;
+				return streq(a->arg.xauth == b->arg.xauth);
 		}
 	}
 	return FALSE;
