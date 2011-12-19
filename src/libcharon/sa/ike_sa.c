@@ -1080,8 +1080,6 @@ METHOD(ike_sa_t, initiate, status_t,
 	private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
-	task_t *task;
-
 	if (this->state == IKE_CREATED)
 	{
 		resolve_hosts(this);
@@ -1118,23 +1116,8 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
-		if (this->version == IKEV2)
-		{
-			task = (task_t*)child_create_create(&this->public, child_cfg, FALSE,
-												tsi, tsr);
-			if (reqid)
-			{
-				child_create_t *child_create = (child_create_t*)task;
-				child_create->use_reqid(child_create, reqid);
-			}
-		}
-		else
-		{
-			task = (task_t*)quick_mode_create(&this->public, child_cfg,
-											  tsi, tsr);
-		}
-		this->task_manager->queue_task(this->task_manager, task);
-
+		this->task_manager->queue_child(this->task_manager, child_cfg, reqid,
+										tsi, tsr);
 #ifdef ME
 		if (this->peer_cfg->get_mediated_by(this->peer_cfg))
 		{

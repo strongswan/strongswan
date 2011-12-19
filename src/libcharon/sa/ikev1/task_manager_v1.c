@@ -1021,6 +1021,13 @@ METHOD(task_manager_t, queue_ike, void,
 	queue_task(this, (task_t*)isakmp_natd_create(this->ike_sa, TRUE));
 }
 
+METHOD(task_manager_t, queue_child, void,
+	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
+	traffic_selector_t *tsi, traffic_selector_t *tsr)
+{
+	queue_task(this, (task_t*)quick_mode_create(this->ike_sa, cfg, tsi, tsr));
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
@@ -1104,6 +1111,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.process_message = _process_message,
 				.queue_task = _queue_task,
 				.queue_ike = _queue_ike,
+				.queue_child = _queue_child,
 				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,
