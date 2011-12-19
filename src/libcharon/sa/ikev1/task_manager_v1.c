@@ -1011,6 +1011,16 @@ METHOD(task_manager_t, queue_task, void,
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
+METHOD(task_manager_t, queue_ike, void,
+	private_task_manager_t *this)
+{
+	queue_task(this, (task_t*)isakmp_vendor_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)isakmp_cert_pre_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)main_mode_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)isakmp_cert_post_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)isakmp_natd_create(this->ike_sa, TRUE));
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
@@ -1093,6 +1103,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.task_manager = {
 				.process_message = _process_message,
 				.queue_task = _queue_task,
+				.queue_ike = _queue_ike,
 				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,

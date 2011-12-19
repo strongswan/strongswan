@@ -1176,6 +1176,30 @@ METHOD(task_manager_t, queue_task, void,
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
+METHOD(task_manager_t, queue_ike, void,
+	private_task_manager_t *this)
+{
+	peer_cfg_t *peer_cfg;
+
+	queue_task(this, (task_t*)ike_vendor_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_init_create(this->ike_sa, TRUE, NULL));
+	queue_task(this, (task_t*)ike_natd_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_cert_pre_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_auth_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_cert_post_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_config_create(this->ike_sa, TRUE));
+	queue_task(this, (task_t*)ike_auth_lifetime_create(this->ike_sa, TRUE));
+
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg->use_mobike(peer_cfg))
+	{
+		queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
+	}
+#ifdef ME
+	queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
+#endif /* ME */
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
@@ -1300,6 +1324,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 			.task_manager = {
 				.process_message = _process_message,
 				.queue_task = _queue_task,
+				.queue_ike = _queue_ike,
 				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,

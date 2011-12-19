@@ -1099,48 +1099,7 @@ METHOD(ike_sa_t, initiate, status_t,
 		}
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
-
-		if (this->version == IKEV1)
-		{
-			task = (task_t*)isakmp_vendor_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)isakmp_cert_pre_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)main_mode_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)isakmp_cert_post_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)isakmp_natd_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-		}
-		else
-		{
-			task = (task_t*)ike_vendor_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_natd_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_auth_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_cert_post_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_config_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-			if (this->peer_cfg->use_mobike(this->peer_cfg))
-			{
-				task = (task_t*)ike_mobike_create(&this->public, TRUE);
-				this->task_manager->queue_task(this->task_manager, task);
-			}
-#ifdef ME
-			task = (task_t*)ike_me_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-#endif /* ME */
-		}
+		this->task_manager->queue_ike(this->task_manager);
 	}
 
 #ifdef ME

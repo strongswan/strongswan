@@ -125,6 +125,11 @@ struct task_manager_t {
 	void (*queue_task) (task_manager_t *this, task_t *task);
 
 	/**
+	 * Queue IKE_SA establishing tasks.
+	 */
+	void (*queue_ike)(task_manager_t *this);
+
+	/**
 	 * Queue liveness checking tasks.
 	 */
 	void (*queue_dpd)(task_manager_t *this);
