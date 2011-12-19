@@ -70,7 +70,10 @@ sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/task_manager.h sa/task_manager.c \
 sa/shunt_manager.c sa/shunt_manager.h \
 sa/trap_manager.c sa/trap_manager.h \
-sa/task.c sa/task.h \
+sa/task.c sa/task.h
+
+if USE_IKEV2
+libcharon_la_SOURCES += \
 sa/ikev2/keymat_v2.c sa/ikev2/keymat_v2.h \
 sa/ikev2/task_manager_v2.c sa/ikev2/task_manager_v2.h \
 sa/ikev2/authenticators/eap_authenticator.c sa/ikev2/authenticators/eap_authenticator.h \
@@ -91,7 +94,11 @@ sa/ikev2/tasks/ike_mobike.c sa/ikev2/tasks/ike_mobike.h \
 sa/ikev2/tasks/ike_rekey.c sa/ikev2/tasks/ike_rekey.h \
 sa/ikev2/tasks/ike_reauth.c sa/ikev2/tasks/ike_reauth.h \
 sa/ikev2/tasks/ike_auth_lifetime.c sa/ikev2/tasks/ike_auth_lifetime.h \
-sa/ikev2/tasks/ike_vendor.c sa/ikev2/tasks/ike_vendor.h \
+sa/ikev2/tasks/ike_vendor.c sa/ikev2/tasks/ike_vendor.h
+endif
+
+if USE_IKEV1
+libcharon_la_SOURCES += \
 sa/ikev1/keymat_v1.c sa/ikev1/keymat_v1.h \
 sa/ikev1/task_manager_v1.c sa/ikev1/task_manager_v1.h \
 sa/ikev1/authenticators/psk_v1_authenticator.c sa/ikev1/authenticators/psk_v1_authenticator.h \
@@ -108,6 +115,7 @@ sa/ikev1/tasks/xauth.c sa/ikev1/tasks/xauth.h \
 sa/ikev1/tasks/quick_mode.c sa/ikev1/tasks/quick_mode.h \
 sa/ikev1/tasks/quick_delete.c sa/ikev1/tasks/quick_delete.h \
 sa/ikev1/tasks/mode_config.c sa/ikev1/tasks/mode_config.h
+endif
 
 
 daemon.lo :		$(top_builddir)/config.status
