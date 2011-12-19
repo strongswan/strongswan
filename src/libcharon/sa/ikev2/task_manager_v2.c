@@ -1214,6 +1214,12 @@ METHOD(task_manager_t, queue_child, void,
 	queue_task(this, &task->task);
 }
 
+METHOD(task_manager_t, queue_child_rekey, void,
+	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+{
+	queue_task(this, (task_t*)child_rekey_create(this->ike_sa, protocol, spi));
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
@@ -1340,6 +1346,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.queue_task = _queue_task,
 				.queue_ike = _queue_ike,
 				.queue_child = _queue_child,
+				.queue_child_rekey = _queue_child_rekey,
 				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,

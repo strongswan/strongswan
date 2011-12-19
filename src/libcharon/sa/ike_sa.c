@@ -1265,10 +1265,7 @@ METHOD(ike_sa_t, remove_child_sa, void,
 METHOD(ike_sa_t, rekey_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	child_rekey_t *child_rekey;
-
-	child_rekey = child_rekey_create(&this->public, protocol, spi);
-	this->task_manager->queue_task(this->task_manager, &child_rekey->task);
+	this->task_manager->queue_child_rekey(this->task_manager, protocol, spi);
 	return this->task_manager->initiate(this->task_manager);
 }
 
