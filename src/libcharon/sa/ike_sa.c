@@ -1325,11 +1325,7 @@ METHOD(ike_sa_t, delete_, status_t,
 METHOD(ike_sa_t, rekey, status_t,
 	private_ike_sa_t *this)
 {
-	ike_rekey_t *ike_rekey;
-
-	ike_rekey = ike_rekey_create(&this->public, TRUE);
-
-	this->task_manager->queue_task(this->task_manager, &ike_rekey->task);
+	this->task_manager->queue_ike_rekey(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
 }
 
