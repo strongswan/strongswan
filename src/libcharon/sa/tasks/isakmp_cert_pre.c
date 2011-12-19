@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "ike_cert_pre_v1.h"
+#include "isakmp_cert_pre.h"
 
 #include <daemon.h>
 #include <sa/ike_sa.h>
@@ -23,17 +23,17 @@
 #include <credentials/certificates/x509.h>
 
 
-typedef struct private_ike_cert_pre_v1_t private_ike_cert_pre_v1_t;
+typedef struct private_isakmp_cert_pre_t private_isakmp_cert_pre_t;
 
 /**
- * Private members of a ike_cert_pre_v1_t task.
+ * Private members of a isakmp_cert_pre_t task.
  */
-struct private_ike_cert_pre_v1_t {
+struct private_isakmp_cert_pre_t {
 
 	/**
 	 * Public methods and task_t interface.
 	 */
-	ike_cert_pre_v1_t public;
+	isakmp_cert_pre_t public;
 
 	/**
 	 * Assigned IKE_SA.
@@ -61,7 +61,7 @@ struct private_ike_cert_pre_v1_t {
 /**
  * Find the CA certificate for a given certreq payload
  */
-static certificate_t* find_certificate(private_ike_cert_pre_v1_t *this,
+static certificate_t* find_certificate(private_isakmp_cert_pre_t *this,
 									   certreq_payload_t *certreq)
 {
 	identification_t *id;
@@ -98,7 +98,7 @@ static certificate_t* find_certificate(private_ike_cert_pre_v1_t *this,
 /**
  * read certificate requests
  */
-static void process_certreqs(private_ike_cert_pre_v1_t *this, message_t *message)
+static void process_certreqs(private_isakmp_cert_pre_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -134,7 +134,7 @@ static void process_certreqs(private_ike_cert_pre_v1_t *this, message_t *message
 /**
  * Import receuved certificates
  */
-static void process_certs(private_ike_cert_pre_v1_t *this, message_t *message)
+static void process_certs(private_isakmp_cert_pre_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -209,7 +209,7 @@ static void process_certs(private_ike_cert_pre_v1_t *this, message_t *message)
 /**
  * Add the subject of a CA certificate a message
  */
-static void add_certreq(private_ike_cert_pre_v1_t *this, message_t *message,
+static void add_certreq(private_isakmp_cert_pre_t *this, message_t *message,
 						certificate_t *cert)
 {
 	if (cert->get_type(cert) == CERT_X509)
@@ -229,7 +229,7 @@ static void add_certreq(private_ike_cert_pre_v1_t *this, message_t *message,
 /**
  * Add auth_cfg's CA certificates to the certificate request
  */
-static void add_certreqs(private_ike_cert_pre_v1_t *this,
+static void add_certreqs(private_isakmp_cert_pre_t *this,
 						 auth_cfg_t *auth, message_t *message)
 {
 	enumerator_t *enumerator;
@@ -254,7 +254,7 @@ static void add_certreqs(private_ike_cert_pre_v1_t *this,
 /**
  * Build certificate requests
  */
-static void build_certreqs(private_ike_cert_pre_v1_t *this, message_t *message)
+static void build_certreqs(private_isakmp_cert_pre_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	ike_cfg_t *ike_cfg;
@@ -294,7 +294,7 @@ static void build_certreqs(private_ike_cert_pre_v1_t *this, message_t *message)
 /**
  * Check if we actually use certificates for authentication
  */
-static bool use_certs(private_ike_cert_pre_v1_t *this, message_t *message)
+static bool use_certs(private_isakmp_cert_pre_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -333,7 +333,7 @@ static bool use_certs(private_ike_cert_pre_v1_t *this, message_t *message)
 }
 
 METHOD(task_t, build_i, status_t,
-	private_ike_cert_pre_v1_t *this, message_t *message)
+	private_isakmp_cert_pre_t *this, message_t *message)
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -355,7 +355,7 @@ METHOD(task_t, build_i, status_t,
 }
 
 METHOD(task_t, process_r, status_t,
-	private_ike_cert_pre_v1_t *this, message_t *message)
+	private_isakmp_cert_pre_t *this, message_t *message)
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -402,7 +402,7 @@ METHOD(task_t, process_r, status_t,
 }
 
 METHOD(task_t, build_r, status_t,
-	private_ike_cert_pre_v1_t *this, message_t *message)
+	private_isakmp_cert_pre_t *this, message_t *message)
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -439,7 +439,7 @@ METHOD(task_t, build_r, status_t,
 }
 
 METHOD(task_t, process_i, status_t,
-	private_ike_cert_pre_v1_t *this, message_t *message)
+	private_isakmp_cert_pre_t *this, message_t *message)
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -482,19 +482,19 @@ METHOD(task_t, process_i, status_t,
 }
 
 METHOD(task_t, get_type, task_type_t,
-	private_ike_cert_pre_v1_t *this)
+	private_isakmp_cert_pre_t *this)
 {
-	return TASK_IKE_CERT_PRE_V1;
+	return TASK_ISAKMP_CERT_PRE;
 }
 
 METHOD(task_t, migrate, void,
-	private_ike_cert_pre_v1_t *this, ike_sa_t *ike_sa)
+	private_isakmp_cert_pre_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
 METHOD(task_t, destroy, void,
-	private_ike_cert_pre_v1_t *this)
+	private_isakmp_cert_pre_t *this)
 {
 	free(this);
 }
@@ -502,9 +502,9 @@ METHOD(task_t, destroy, void,
 /*
  * Described in header.
  */
-ike_cert_pre_v1_t *ike_cert_pre_v1_create(ike_sa_t *ike_sa, bool initiator)
+isakmp_cert_pre_t *isakmp_cert_pre_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_cert_pre_v1_t *this;
+	private_isakmp_cert_pre_t *this;
 
 	INIT(this,
 		.public = {

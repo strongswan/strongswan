@@ -88,7 +88,7 @@ enum task_type_t {
 	/** IKEv1 NAT detection */
 	TASK_IKE_NATD_V1,
 	/** IKEv1 pre-authentication certificate handling */
-	TASK_IKE_CERT_PRE_V1,
+	TASK_ISAKMP_CERT_PRE,
 	/** IKEv1 post-authentication certificate handling */
 	TASK_ISAKMP_CERT_POST,
 };
