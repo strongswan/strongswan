@@ -161,10 +161,11 @@ ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and p
 ARG_DISBL_SET([load-warning],   [disable the charon/pluto plugin load option warning in starter.])
 ARG_ENABL_SET([pluto],          [enable the IKEv1 keying daemon pluto.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
+ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
 ARG_DISBL_SET([xauth],          [disable xauth plugin.])
 ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
 ARG_DISBL_SET([adns],           [disable the use of adns in pluto (disables opportunistic encryption).])
-ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
+ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
@@ -1014,6 +1015,7 @@ AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_IKEV1, test x$ikev1 = xtrue)
+AM_CONDITIONAL(USE_IKEV2, test x$ikev2 = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_ADNS, test x$adns = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
@@ -1050,6 +1052,9 @@ if test x$monolithic = xtrue; then
 fi
 if test x$ikev1 = xtrue; then
 	AC_DEFINE(USE_IKEV1)
+fi
+if test x$ikev2 = xtrue; then
+	AC_DEFINE(USE_IKEV2)
 fi
 
 dnl ==============================
