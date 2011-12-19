@@ -14,14 +14,14 @@
  */
 
 /**
- * @defgroup ike_vendor_v1 ike_vendor_v1
+ * @defgroup isakmp_vendor isakmp_vendor
  * @{ @ingroup tasks
  */
 
-#ifndef IKE_VENDOR_V1_H_
-#define IKE_VENDOR_V1_H_
+#ifndef ISAKMP_VENDOR_H_
+#define ISAKMP_VENDOR_H_
 
-typedef struct ike_vendor_v1_t ike_vendor_v1_t;
+typedef struct isakmp_vendor_t isakmp_vendor_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
@@ -30,7 +30,7 @@ typedef struct ike_vendor_v1_t ike_vendor_v1_t;
 /**
  * Vendor ID processing task for IKEv1.
  */
-struct ike_vendor_v1_t {
+struct isakmp_vendor_t {
 
 	/**
 	 * Implements task interface.
@@ -39,11 +39,11 @@ struct ike_vendor_v1_t {
 };
 
 /**
- * Create a ike_vendor_v1 instance.
+ * Create a isakmp_vendor instance.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if task is the original initiator
  */
-ike_vendor_v1_t *ike_vendor_v1_create(ike_sa_t *ike_sa, bool initiator);
+isakmp_vendor_t *isakmp_vendor_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /** ike_vendor_v1_H_ @}*/
+#endif /** ISAKMP_VENDOR_H_ @}*/

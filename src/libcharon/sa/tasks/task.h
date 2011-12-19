@@ -84,7 +84,7 @@ enum task_type_t {
 	/** IKEv1 delete of a quick mode SA */
 	TASK_QUICK_DELETE,
 	/** IKEv1 vendor ID payload handling */
-	TASK_VENDOR_V1,
+	TASK_ISAKMP_VENDOR,
 	/** IKEv1 NAT detection */
 	TASK_ISAKMP_NATD,
 	/** IKEv1 pre-authentication certificate handling */

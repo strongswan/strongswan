@@ -50,7 +50,7 @@
 #include <sa/tasks/isakmp_natd.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/quick_delete.h>
-#include <sa/tasks/ike_vendor_v1.h>
+#include <sa/tasks/isakmp_vendor.h>
 #include <sa/tasks/isakmp_delete.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -1119,7 +1119,7 @@ METHOD(ike_sa_t, initiate, status_t,
 
 		if (this->version == IKEV1)
 		{
-			task = (task_t*)ike_vendor_v1_create(&this->public, TRUE);
+			task = (task_t*)isakmp_vendor_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 			task = (task_t*)isakmp_cert_pre_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);

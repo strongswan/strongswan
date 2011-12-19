@@ -13,22 +13,22 @@
  * for more details.
  */
 
-#include "ike_vendor_v1.h"
+#include "isakmp_vendor.h"
 
 #include <daemon.h>
 #include <encoding/payloads/vendor_id_payload.h>
 
-typedef struct private_ike_vendor_v1_t private_ike_vendor_v1_t;
+typedef struct private_isakmp_vendor_t private_isakmp_vendor_t;
 
 /**
- * Private data of an ike_vendor_v1_t object.
+ * Private data of an isakmp_vendor_t object.
  */
-struct private_ike_vendor_v1_t {
+struct private_isakmp_vendor_t {
 
 	/**
-	 * Public ike_vendor_v1_t interface.
+	 * Public isakmp_vendor_t interface.
 	 */
-	ike_vendor_v1_t public;
+	isakmp_vendor_t public;
 
 	/**
 	 * Associated IKE_SA
@@ -96,7 +96,7 @@ static struct {
 };
 
 METHOD(task_t, build, status_t,
-	private_ike_vendor_v1_t *this, message_t *message)
+	private_isakmp_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid_payload;
 	bool strongswan;
@@ -118,7 +118,7 @@ METHOD(task_t, build, status_t,
 }
 
 METHOD(task_t, process, status_t,
-	private_ike_vendor_v1_t *this, message_t *message)
+	private_isakmp_vendor_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -162,19 +162,19 @@ METHOD(task_t, process, status_t,
 }
 
 METHOD(task_t, migrate, void,
-	private_ike_vendor_v1_t *this, ike_sa_t *ike_sa)
+	private_isakmp_vendor_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
 }
 
 METHOD(task_t, get_type, task_type_t,
-	private_ike_vendor_v1_t *this)
+	private_isakmp_vendor_t *this)
 {
-	return TASK_VENDOR_V1;
+	return TASK_ISAKMP_VENDOR;
 }
 
 METHOD(task_t, destroy, void,
-	private_ike_vendor_v1_t *this)
+	private_isakmp_vendor_t *this)
 {
 	free(this);
 }
@@ -182,9 +182,9 @@ METHOD(task_t, destroy, void,
 /**
  * See header
  */
-ike_vendor_v1_t *ike_vendor_v1_create(ike_sa_t *ike_sa, bool initiator)
+isakmp_vendor_t *isakmp_vendor_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_vendor_v1_t *this;
+	private_isakmp_vendor_t *this;
 
 	INIT(this,
 		.public = {

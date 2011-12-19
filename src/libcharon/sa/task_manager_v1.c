@@ -25,7 +25,7 @@
 #include <sa/tasks/mode_config.h>
 #include <sa/tasks/informational.h>
 #include <sa/tasks/isakmp_natd.h>
-#include <sa/tasks/ike_vendor_v1.h>
+#include <sa/tasks/isakmp_vendor.h>
 #include <sa/tasks/isakmp_cert_pre.h>
 #include <sa/tasks/isakmp_cert_post.h>
 #include <processing/jobs/retransmit_job.h>
@@ -299,7 +299,7 @@ METHOD(task_manager_t, initiate, status_t,
 		switch (this->ike_sa->get_state(this->ike_sa))
 		{
 			case IKE_CREATED:
-				activate_task(this, TASK_VENDOR_V1);
+				activate_task(this, TASK_ISAKMP_VENDOR);
 				activate_task(this, TASK_ISAKMP_CERT_PRE);
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
@@ -658,7 +658,7 @@ static status_t process_request(private_task_manager_t *this,
 		switch (message->get_exchange_type(message))
 		{
 			case ID_PROT:
-				task = (task_t *)ike_vendor_v1_create(this->ike_sa, FALSE);
+				task = (task_t *)isakmp_vendor_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)isakmp_cert_pre_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
