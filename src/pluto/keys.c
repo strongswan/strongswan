@@ -621,7 +621,7 @@ static private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 		callback_cred_t *cb;
 
 		cb = callback_cred_create_shared((void*)whack_pass_cb, pass);
-		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 								 BUILD_FROM_FILE, path, BUILD_END);
@@ -638,7 +638,7 @@ static private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 		shared_key_t *shared;
 
 		mem = mem_cred_create();
-		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
 				chunk_clone(chunk_create(pass->secret, strlen(pass->secret))));
 		mem->add_shared(mem, shared, NULL);

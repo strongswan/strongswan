@@ -230,10 +230,14 @@ struct credential_manager_t {
 	 * operation, sets may be added for the calling thread only. This
 	 * does not require a write lock and is therefore a much less expensive
 	 * operation.
+	 * The exclusive option allows to disable all other credential sets
+	 * until the set is deregistered.
 	 *
 	 * @param set		set to register
+	 * @param exclusive	TRUE to disable all other sets for this thread
 	 */
-	void (*add_local_set)(credential_manager_t *this, credential_set_t *set);
+	void (*add_local_set)(credential_manager_t *this, credential_set_t *set,
+						  bool exclusive);
 
 	/**
 	 * Unregister a thread local credential set from the manager.
