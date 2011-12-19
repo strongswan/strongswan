@@ -1200,6 +1200,12 @@ METHOD(task_manager_t, queue_ike, void,
 #endif /* ME */
 }
 
+METHOD(task_manager_t, queue_ike_delete, void,
+	private_task_manager_t *this)
+{
+	queue_task(this, (task_t*)ike_delete_create(this->ike_sa, TRUE));
+}
+
 METHOD(task_manager_t, queue_child, void,
 	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
@@ -1351,6 +1357,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.process_message = _process_message,
 				.queue_task = _queue_task,
 				.queue_ike = _queue_ike,
+				.queue_ike_delete = _queue_ike_delete,
 				.queue_child = _queue_child,
 				.queue_child_rekey = _queue_child_rekey,
 				.queue_child_delete = _queue_child_delete,

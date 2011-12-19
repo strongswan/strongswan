@@ -1302,21 +1302,11 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 METHOD(ike_sa_t, delete_, status_t,
 	private_ike_sa_t *this)
 {
-	task_t *task;
-
 	switch (this->state)
 	{
 		case IKE_ESTABLISHED:
 		case IKE_REKEYING:
-			if (this->version == IKEV1)
-			{
-				task = (task_t*)isakmp_delete_create(&this->public, TRUE);
-			}
-			else
-			{
-				task = (task_t*)ike_delete_create(&this->public, TRUE);
-			}
-			this->task_manager->queue_task(this->task_manager, task);
+			this->task_manager->queue_ike_delete(this->task_manager);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
 			DBG1(DBG_IKE, "deleting unestablished IKE_SA");
