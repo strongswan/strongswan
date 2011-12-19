@@ -1621,8 +1621,6 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 METHOD(ike_sa_t, roam, status_t,
 	private_ike_sa_t *this, bool address)
 {
-	ike_mobike_t *mobike;
-
 	switch (this->state)
 	{
 		case IKE_CREATED:
@@ -1644,10 +1642,7 @@ METHOD(ike_sa_t, roam, status_t,
 		if (supports_extension(this, EXT_MOBIKE) && address)
 		{	/* if any addresses changed, send an updated list */
 			DBG1(DBG_IKE, "sending address list update using MOBIKE");
-			mobike = ike_mobike_create(&this->public, TRUE);
-			mobike->addresses(mobike);
-			this->task_manager->queue_task(this->task_manager,
-										   (task_t*)mobike);
+			this->task_manager->queue_mobike(this->task_manager, FALSE, TRUE);
 			return this->task_manager->initiate(this->task_manager);
 		}
 		return SUCCESS;
@@ -1675,9 +1670,7 @@ METHOD(ike_sa_t, roam, status_t,
 		{
 			DBG1(DBG_IKE, "requesting address change using MOBIKE");
 		}
-		mobike = ike_mobike_create(&this->public, TRUE);
-		mobike->roam(mobike, address);
-		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+		this->task_manager->queue_mobike(this->task_manager, TRUE, address);
 		return this->task_manager->initiate(this->task_manager);
 	}
 

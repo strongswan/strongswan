@@ -1248,6 +1248,23 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	queue_task(this, (task_t*)ike_delete_create(this->ike_sa, TRUE));
 }
 
+METHOD(task_manager_t, queue_mobike, void,
+	private_task_manager_t *this, bool roam, bool address)
+{
+	ike_mobike_t *mobike;
+
+	mobike = ike_mobike_create(this->ike_sa, TRUE);
+	if (roam)
+	{
+		mobike->roam(mobike, address);
+	}
+	else
+	{
+		mobike->addresses(mobike);
+	}
+	queue_task(this, &mobike->task);
+}
+
 METHOD(task_manager_t, queue_child, void,
 	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
@@ -1292,7 +1309,6 @@ METHOD(task_manager_t, queue_dpd, void,
 		queue_task(this, (task_t*)ike_dpd_create(TRUE));
 	}
 }
-
 
 METHOD(task_manager_t, adopt_tasks, void,
 	private_task_manager_t *this, task_manager_t *other_public)
@@ -1402,6 +1418,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.queue_ike_rekey = _queue_ike_rekey,
 				.queue_ike_reauth = _queue_ike_reauth,
 				.queue_ike_delete = _queue_ike_delete,
+				.queue_mobike = _queue_mobike,
 				.queue_child = _queue_child,
 				.queue_child_rekey = _queue_child_rekey,
 				.queue_child_delete = _queue_child_delete,

@@ -140,6 +140,14 @@ struct task_manager_t {
 	void (*queue_ike_reauth)(task_manager_t *this);
 
 	/**
+	 * Queue MOBIKE task
+	 *
+	 * @param roam			TRUE to switch to new address
+	 * @param address		TRUE to include address list update
+	 */
+	void (*queue_mobike)(task_manager_t *this, bool roam, bool address);
+
+	/**
 	 * Queue IKE_SA delete tasks.
 	 */
 	void (*queue_ike_delete)(task_manager_t *this);

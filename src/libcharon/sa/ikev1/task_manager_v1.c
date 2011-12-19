@@ -1041,6 +1041,12 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	queue_task(this, (task_t*)isakmp_delete_create(this->ike_sa, TRUE));
 }
 
+METHOD(task_manager_t, queue_mobike, void,
+	private_task_manager_t *this, bool roam, bool address)
+{
+	/* Not supported in IKEv1 */
+}
+
 METHOD(task_manager_t, queue_child, void,
 	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
@@ -1147,6 +1153,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.queue_ike_rekey = _queue_ike_rekey,
 				.queue_ike_reauth = _queue_ike_reauth,
 				.queue_ike_delete = _queue_ike_delete,
+				.queue_mobike = _queue_mobike,
 				.queue_child = _queue_child,
 				.queue_child_rekey = _queue_child_rekey,
 				.queue_child_delete = _queue_child_delete,
