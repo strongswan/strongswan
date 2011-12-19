@@ -1351,8 +1351,7 @@ static void order_payloads(private_message_t *this)
 /**
  * Wrap payloads in an encryption payload
  */
-static encryption_payload_t* wrap_payloads(private_message_t *this,
-										   payload_type_t encryption_type)
+static encryption_payload_t* wrap_payloads(private_message_t *this)
 {
 	encryption_payload_t *encryption;
 	linked_list_t *payloads;
@@ -1366,7 +1365,14 @@ static encryption_payload_t* wrap_payloads(private_message_t *this,
 		payloads->insert_last(payloads, current);
 	}
 
-	encryption = encryption_payload_create(encryption_type);
+	if (this->is_encrypted)
+	{
+		encryption = encryption_payload_create(ENCRYPTED_V1);
+	}
+	else
+	{
+		encryption = encryption_payload_create(ENCRYPTED);
+	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
 		payload_rule_t *rule;
@@ -1455,34 +1461,30 @@ METHOD(message_t, generate, status_t,
 		chunk_t hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
 		if (hash.ptr)
 		{	/* insert a HASH payload as first payload */
-			hash_payload_t *hash_payload = hash_payload_create(HASH_V1);
-			hash_payload->set_hash(hash_payload, hash);
-			this->payloads->insert_first(this->payloads,
-										 (payload_t*)hash_payload);
+			hash_payload_t *hash_payload;
 
+			hash_payload = hash_payload_create(HASH_V1);
+			hash_payload->set_hash(hash_payload, hash);
+			this->payloads->insert_first(this->payloads, hash_payload);
 			if (this->exchange_type == INFORMATIONAL_V1)
 			{
-				DBG3(DBG_ENC, "encrypting IKEv1 INFORMATIONAL exchange message");
-				this->is_encrypted = TRUE;
-				encrypted = TRUE;
+				this->is_encrypted = encrypted = TRUE;
 			}
-
 			chunk_free(&hash);
 		}
-
 		if (!encrypted)
 		{
-			/* if at least one payload requires encryption, encrypt the message.
-			 * if we have no key material available, the flag will be reset below */
+			/* If at least one payload requires encryption, encrypt the message.
+			 * If no key material is available, the flag will be reset below. */
 			enumerator = this->payloads->create_enumerator(this->payloads);
 			while (enumerator->enumerate(enumerator, (void**)&payload))
 			{
 				payload_rule_t *rule;
+
 				rule = get_payload_rule(this, payload->get_type(payload));
 				if (rule && rule->encrypted)
 				{
-					this->is_encrypted = TRUE;
-					encrypted = TRUE;
+					this->is_encrypted = encrypted = TRUE;
 					break;
 				}
 			}
@@ -1495,8 +1497,7 @@ METHOD(message_t, generate, status_t,
 	aead = keymat->get_aead(keymat, FALSE);
 	if (aead && encrypted)
 	{
-		encryption = wrap_payloads(this, this->is_encrypted ? ENCRYPTED_V1
-															: ENCRYPTED);
+		encryption = wrap_payloads(this);
 	}
 	else
 	{
