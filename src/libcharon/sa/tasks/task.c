@@ -16,7 +16,7 @@
 
 #include "task.h"
 
-ENUM(task_type_names, TASK_IKE_INIT, TASK_IKE_CERT_POST_V1,
+ENUM(task_type_names, TASK_IKE_INIT, TASK_ISAKMP_CERT_POST,
 	"IKE_INIT",
 	"IKE_NATD",
 	"IKE_MOBIKE",
@@ -46,5 +46,5 @@ ENUM(task_type_names, TASK_IKE_INIT, TASK_IKE_CERT_POST_V1,
 	"VENDOR_V1",
 	"IKE_NATD_V1",
 	"IKE_CERT_PRE_V1",
-	"IKE_CERT_POST_V1",
+	"ISAKMP_CERT_POST",
 );

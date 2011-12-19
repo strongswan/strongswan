@@ -37,7 +37,6 @@
 #include <sa/tasks/ike_cert_pre.h>
 #include <sa/tasks/ike_cert_pre_v1.h>
 #include <sa/tasks/ike_cert_post.h>
-#include <sa/tasks/ike_cert_post_v1.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_reauth.h>
 #include <sa/tasks/ike_delete.h>
@@ -47,6 +46,7 @@
 #include <sa/tasks/child_delete.h>
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/main_mode.h>
+#include <sa/tasks/isakmp_cert_post.h>
 #include <sa/tasks/quick_mode.h>
 #include <sa/tasks/quick_delete.h>
 #include <sa/tasks/ike_natd_v1.h>
@@ -1125,7 +1125,7 @@ METHOD(ike_sa_t, initiate, status_t,
 			this->task_manager->queue_task(this->task_manager, task);
 			task = (task_t*)main_mode_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
-			task = (task_t*)ike_cert_post_v1_create(&this->public, TRUE);
+			task = (task_t*)isakmp_cert_post_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 			task = (task_t*)ike_natd_v1_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);

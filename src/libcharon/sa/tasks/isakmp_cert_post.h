@@ -14,23 +14,23 @@
  */
 
 /**
- * @defgroup ike_cert_post_v1 ike_cert_post_v1
+ * @defgroup isakmp_cert_post isakmp_cert_post
  * @{ @ingroup tasks
  */
 
-#ifndef IKE_CERT_POST_V1_H_
-#define IKE_CERT_POST_V1_H_
+#ifndef ISAKMP_CERT_POST_H_
+#define ISAKMP_CERT_POST_H_
 
-typedef struct ike_cert_post_v1_t ike_cert_post_v1_t;
+typedef struct isakmp_cert_post_t isakmp_cert_post_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/tasks/task.h>
 
 /**
- * IKE_CERT_POST_V1, IKEv1 certificate processing after authentication.
+ * ISAKMP_CERT_POST, IKEv1 certificate processing after authentication.
  */
-struct ike_cert_post_v1_t {
+struct isakmp_cert_post_t {
 
 	/**
 	 * Implements the task_t interface
@@ -39,15 +39,15 @@ struct ike_cert_post_v1_t {
 };
 
 /**
- * Create a new ike_cert_post_v1 task.
+ * Create a new isakmp_cert_post task.
  *
  * The initiator parameter means the original initiator, not the initiator
  * of the certificate request.
  *
  * @param ike_sa		IKE_SA this task works for
  * @param initiator		TRUE if task is the original initiator
- * @return				ike_cert_post_v1 task to handle by the task_manager
+ * @return				isakmp_cert_post task to handle by the task_manager
  */
-ike_cert_post_v1_t *ike_cert_post_v1_create(ike_sa_t *ike_sa, bool initiator);
+isakmp_cert_post_t *isakmp_cert_post_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /** IKE_CERT_POST_V1_H_ @}*/
+#endif /** ISAKMP_CERT_POST_H_ @}*/

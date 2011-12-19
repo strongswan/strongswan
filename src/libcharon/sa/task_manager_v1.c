@@ -27,7 +27,7 @@
 #include <sa/tasks/ike_natd_v1.h>
 #include <sa/tasks/ike_vendor_v1.h>
 #include <sa/tasks/ike_cert_pre_v1.h>
-#include <sa/tasks/ike_cert_post_v1.h>
+#include <sa/tasks/isakmp_cert_post.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -304,7 +304,7 @@ METHOD(task_manager_t, initiate, status_t,
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
-					activate_task(this, TASK_IKE_CERT_POST_V1);
+					activate_task(this, TASK_ISAKMP_CERT_POST);
 					activate_task(this, TASK_IKE_NATD_V1);
 				}
 				break;
@@ -664,7 +664,7 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)main_mode_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-				task = (task_t*)ike_cert_post_v1_create(this->ike_sa, FALSE);
+				task = (task_t*)isakmp_cert_post_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)ike_natd_v1_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);

@@ -85,7 +85,6 @@ sa/tasks/ike_auth.c sa/tasks/ike_auth.h \
 sa/tasks/ike_cert_pre.c sa/tasks/ike_cert_pre.h \
 sa/tasks/ike_cert_post.c sa/tasks/ike_cert_post.h \
 sa/tasks/ike_cert_pre_v1.c sa/tasks/ike_cert_pre_v1.h \
-sa/tasks/ike_cert_post_v1.c sa/tasks/ike_cert_post_v1.h \
 sa/tasks/ike_config.c sa/tasks/ike_config.h \
 sa/tasks/ike_delete.c sa/tasks/ike_delete.h \
 sa/tasks/ike_dpd.c sa/tasks/ike_dpd.h \
@@ -100,6 +99,7 @@ sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/ike_vendor_v1.c sa/tasks/ike_vendor_v1.h \
 sa/tasks/main_mode.c sa/tasks/main_mode.h \
 sa/tasks/informational.c sa/tasks/informational.h \
+sa/tasks/isakmp_cert_post.c sa/tasks/isakmp_cert_post.h \
 sa/tasks/isakmp_delete.c sa/tasks/isakmp_delete.h \
 sa/tasks/xauth.c sa/tasks/xauth.h \
 sa/tasks/quick_mode.c sa/tasks/quick_mode.h \
