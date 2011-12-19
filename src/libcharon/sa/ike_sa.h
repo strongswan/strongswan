@@ -37,7 +37,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
-#include <sa/tasks/task.h>
+#include <sa/task.h>
 #include <sa/task_manager.h>
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>

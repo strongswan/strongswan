@@ -25,8 +25,8 @@
 typedef struct eap_payload_t eap_payload_t;
 
 #include <library.h>
+#include <eap/eap.h>
 #include <encoding/payloads/payload.h>
-#include <sa/authenticators/eap/eap_method.h>
 
 /**
  * Class representing an IKEv2 EAP payload.

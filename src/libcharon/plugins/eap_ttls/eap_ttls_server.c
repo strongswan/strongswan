@@ -19,7 +19,7 @@
 #include <debug.h>
 #include <daemon.h>
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/ikev2/authenticators/eap/eap_method.h>
 
 typedef struct private_eap_ttls_server_t private_eap_ttls_server_t;
 

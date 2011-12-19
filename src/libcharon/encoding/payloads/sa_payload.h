@@ -29,7 +29,7 @@ typedef struct sa_payload_t sa_payload_t;
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
 #include <kernel/kernel_ipsec.h>
-#include <sa/authenticators/authenticator.h>
+#include <sa/authenticator.h>
 
 /**
  * Class representing an IKEv1 or IKEv2 SA Payload.

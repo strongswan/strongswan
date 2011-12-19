@@ -29,7 +29,7 @@ typedef enum task_queue_t task_queue_t;
 #include <library.h>
 #include <encoding/message.h>
 #include <sa/ike_sa.h>
-#include <sa/tasks/task.h>
+#include <sa/task.h>
 
 /**
  * First retransmit timeout in seconds.

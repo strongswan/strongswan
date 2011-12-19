@@ -26,7 +26,7 @@ typedef struct auth_payload_t auth_payload_t;
 
 #include <library.h>
 #include <encoding/payloads/payload.h>
-#include <sa/authenticators/authenticator.h>
+#include <sa/authenticator.h>
 
 /**
  * Class representing an IKEv2 AUTH payload.

@@ -15,7 +15,7 @@
 
 #include "hook.h"
 
-#include <sa/keymat_v2.h>
+#include <sa/ikev2/keymat_v2.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/auth_payload.h>

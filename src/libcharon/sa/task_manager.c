@@ -14,8 +14,9 @@
  */
 
 #include "task_manager.h"
-#include "task_manager_v1.h"
-#include "task_manager_v2.h"
+
+#include <sa/ikev1/task_manager_v1.h>
+#include <sa/ikev2/task_manager_v2.h>
 
 /**
  * See header

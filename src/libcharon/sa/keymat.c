@@ -14,8 +14,9 @@
  */
 
 #include "keymat.h"
-#include "keymat_v1.h"
-#include "keymat_v2.h"
+
+#include <sa/ikev1/keymat_v1.h>
+#include <sa/ikev2/keymat_v2.h>
 
 /**
  * See header

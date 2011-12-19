@@ -24,7 +24,7 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <sa/keymat_v1.h>
+#include <sa/ikev1/keymat_v1.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <encoding/payloads/encodings.h>

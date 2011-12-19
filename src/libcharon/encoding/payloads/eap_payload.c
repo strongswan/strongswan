@@ -19,6 +19,7 @@
 #include "eap_payload.h"
 
 #include <daemon.h>
+#include <eap/eap.h>
 
 typedef struct private_eap_payload_t private_eap_payload_t;
 

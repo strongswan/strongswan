@@ -30,7 +30,7 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #include <config/proposal.h>
 #include <utils/linked_list.h>
 #include <kernel/kernel_ipsec.h>
-#include <sa/authenticators/authenticator.h>
+#include <sa/authenticator.h>
 
 /**
  * Class representing an IKEv1/IKEv2 proposal substructure.

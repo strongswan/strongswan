@@ -35,8 +35,6 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <config/proposal.h>
 #include <config/ike_cfg.h>
 #include <config/child_cfg.h>
-#include <sa/authenticators/authenticator.h>
-#include <sa/authenticators/eap/eap_method.h>
 #include <credentials/auth_cfg.h>
 
 /**

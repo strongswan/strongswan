@@ -28,7 +28,7 @@ typedef struct keymat_t keymat_t;
 #include <crypto/prfs/prf.h>
 #include <crypto/aead.h>
 #include <config/proposal.h>
-#include <config/peer_cfg.h> /* for ike_version_t */
+#include <config/peer_cfg.h>
 #include <sa/ike_sa_id.h>
 
 /**

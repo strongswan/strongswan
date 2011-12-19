@@ -148,12 +148,12 @@ typedef struct daemon_t daemon_t;
 #include <sa/trap_manager.h>
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
-#include <sa/authenticators/eap/eap_manager.h>
-#include <sa/authenticators/xauth/xauth_manager.h>
+#include <sa/ikev2/authenticators/eap/eap_manager.h>
+#include <sa/ikev1/authenticators/xauth/xauth_manager.h>
 
 #ifdef ME
-#include <sa/connect_manager.h>
-#include <sa/mediation_manager.h>
+#include <sa/ikev2/connect_manager.h>
+#include <sa/ikev2/mediation_manager.h>
 #endif /* ME */
 
 /**
