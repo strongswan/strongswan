@@ -524,3 +524,9 @@ if MONOLITHIC
 endif
 endif
 
+if USE_XAUTH_EAP
+  SUBDIRS += plugins/xauth_eap
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/xauth_eap/libstrongswan-xauth-eap.la
+endif
+endif
