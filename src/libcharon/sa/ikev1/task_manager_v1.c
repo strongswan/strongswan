@@ -21,6 +21,7 @@
 #include <daemon.h>
 #include <sa/ikev1/tasks/main_mode.h>
 #include <sa/ikev1/tasks/quick_mode.h>
+#include <sa/ikev1/tasks/quick_delete.h>
 #include <sa/ikev1/tasks/xauth.h>
 #include <sa/ikev1/tasks/mode_config.h>
 #include <sa/ikev1/tasks/informational.h>
@@ -1034,6 +1035,13 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	/* TODO-IKEv1: CHILD rekeying */
 }
 
+METHOD(task_manager_t, queue_child_delete, void,
+	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+{
+	queue_task(this, (task_t*)quick_delete_create(this->ike_sa, protocol,
+												  spi, FALSE));
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
@@ -1119,6 +1127,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.queue_ike = _queue_ike,
 				.queue_child = _queue_child,
 				.queue_child_rekey = _queue_child_rekey,
+				.queue_child_delete = _queue_child_delete,
 				.queue_dpd = _queue_dpd,
 				.initiate = _initiate,
 				.retransmit = _retransmit,

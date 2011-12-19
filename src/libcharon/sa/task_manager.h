@@ -150,6 +150,15 @@ struct task_manager_t {
 							  u_int32_t spi);
 
 	/**
+	 * Queue CHILD_SA delete tasks.
+	 *
+	 * @param protocol		CHILD_SA protocol, AH|ESP
+	 * @param spi			CHILD_SA SPI to rekey
+	 */
+	void (*queue_child_delete)(task_manager_t *this, protocol_id_t protocol,
+							   u_int32_t spi);
+
+	/**
 	 * Queue liveness checking tasks.
 	 */
 	void (*queue_dpd)(task_manager_t *this);

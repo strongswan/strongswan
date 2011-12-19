@@ -1272,17 +1272,7 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 METHOD(ike_sa_t, delete_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	task_t *task;
-
-	if (this->version == IKEV1)
-	{
-		task = (task_t*)quick_delete_create(&this->public, protocol, spi, FALSE);
-	}
-	else
-	{
-		task = (task_t*)child_delete_create(&this->public, protocol, spi);
-	}
-	this->task_manager->queue_task(this->task_manager, task);
+	this->task_manager->queue_child_delete(this->task_manager, protocol, spi);
 	return this->task_manager->initiate(this->task_manager);
 }
 
