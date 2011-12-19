@@ -129,16 +129,16 @@ struct plugin_feature_t {
 		FEATURE_EAP_SERVER,
 		/** EAP peer implementation */
 		FEATURE_EAP_PEER,
+		/** XAuth server implementation */
+		FEATURE_XAUTH_SERVER,
+		/** XAuth peer implementation */
+		FEATURE_XAUTH_PEER,
 		/** database_t */
 		FEATURE_DATABASE,
 		/** fetcher_t */
 		FEATURE_FETCHER,
 		/** custom feature, described with a string */
 		FEATURE_CUSTOM,
-		/** XAuth server implementation */
-		FEATURE_XAUTH_SERVER,
-		/** XAuth peer implementation */
-		FEATURE_XAUTH_PEER,
 	} type;
 	/** More specific data for each type */
 	union {
