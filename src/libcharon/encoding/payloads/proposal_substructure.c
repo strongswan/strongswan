@@ -1243,7 +1243,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * See header.
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
-			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
+			proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, bool udp)
 {
 	private_proposal_substructure_t *this;
@@ -1253,11 +1253,11 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 	switch (proposal->get_protocol(proposal))
 	{
 		case PROTO_IKE:
-			set_from_proposal_v1_ike(this, proposal, lifetime, auth, 0);
+			set_from_proposal_v1_ike(this, proposal, lifetime, auth, 1);
 			break;
 		case PROTO_ESP:
 			set_from_proposal_v1_esp(this, proposal, lifetime,
-									 lifebytes, mode, udp, proposal->get_number(proposal));
+									 lifebytes, mode, udp, 1);
 			break;
 		default:
 			break;
