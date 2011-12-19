@@ -26,11 +26,18 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	switch (ike_sa->get_version(ike_sa))
 	{
 		case IKEV1:
+#ifdef USE_IKEV1
 			return &task_manager_v1_create(ike_sa)->task_manager;
+#endif
+			break;
 		case IKEV2:
+#ifdef USE_IKEV2
 			return &task_manager_v2_create(ike_sa)->task_manager;
+#endif
+			break;
 		default:
-			return NULL;
+			break;
 	}
+	return NULL;
 }
 

@@ -26,12 +26,19 @@ keymat_t *keymat_create(ike_version_t version, bool initiator)
 	switch (version)
 	{
 		case IKEV1:
+#ifdef USE_IKEV1
 			return &keymat_v1_create(initiator)->keymat;
+#endif
+			break;
 		case IKEV2:
+#ifdef USE_IKEV2
 			return &keymat_v2_create(initiator)->keymat;
+#endif
+			break;
 		default:
-			return NULL;
+			break;
 	}
+	return NULL;
 }
 
 /**

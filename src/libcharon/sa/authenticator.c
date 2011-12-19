@@ -45,6 +45,8 @@ ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_ECD
 );
 ENUM_END(auth_method_names, AUTH_HYBRID_RESP_RSA);
 
+#ifdef USE_IKEV2
+
 /**
  * Described in header.
  */
@@ -106,6 +108,10 @@ authenticator_t *authenticator_create_verifier(
 	}
 }
 
+#endif /* USE_IKEV2 */
+
+#ifdef USE_IKEV1
+
 /**
  * Described in header.
  */
@@ -137,3 +143,5 @@ authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 			return NULL;
 	}
 }
+
+#endif /* USE_IKEV1 */
