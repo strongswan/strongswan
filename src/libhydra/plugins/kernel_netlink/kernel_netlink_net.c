@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2011 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -116,6 +116,77 @@ static void iface_entry_destroy(iface_entry_t *this)
 	free(this);
 }
 
+typedef struct route_entry_t route_entry_t;
+
+/**
+ * Installed routing entry
+ */
+struct route_entry_t {
+	/** Name of the interface the route is bound to */
+	char *if_name;
+
+	/** Source ip of the route */
+	host_t *src_ip;
+
+	/** Gateway for this route */
+	host_t *gateway;
+
+	/** Destination net */
+	chunk_t dst_net;
+
+	/** Destination net prefixlen */
+	u_int8_t prefixlen;
+};
+
+/**
+ * Clone a route_entry_t object.
+ */
+static route_entry_t *route_entry_clone(route_entry_t *this)
+{
+	route_entry_t *route;
+
+	INIT(route,
+		.if_name = strdup(this->if_name),
+		.src_ip = this->src_ip->clone(this->src_ip),
+		.gateway = this->gateway->clone(this->gateway),
+		.dst_net = chunk_clone(this->dst_net),
+		.prefixlen = this->prefixlen,
+	);
+	return route;
+}
+
+/**
+ * Destroy a route_entry_t object
+ */
+static void route_entry_destroy(route_entry_t *this)
+{
+	free(this->if_name);
+	DESTROY_IF(this->src_ip);
+	DESTROY_IF(this->gateway);
+	chunk_free(&this->dst_net);
+	free(this);
+}
+
+/**
+ * Hash a route_entry_t object
+ */
+static u_int route_entry_hash(route_entry_t *this)
+{
+	return chunk_hash_inc(chunk_from_thing(this->prefixlen),
+						  chunk_hash(this->dst_net));
+}
+
+/**
+ * Compare two route_entry_t objects
+ */
+static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
+{
+	return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
+		   a->src_ip->equals(a->src_ip, b->src_ip) &&
+		   a->gateway->equals(a->gateway, b->gateway) &&
+		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
+}
+
 typedef struct private_kernel_netlink_net_t private_kernel_netlink_net_t;
 
 /**
@@ -171,6 +242,11 @@ struct private_kernel_netlink_net_t {
 	 * priority of used routing table
 	 */
 	int routing_table_prio;
+
+	/**
+	 * installed routes
+	 */
+	hashtable_t *routes;
 
 	/**
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
@@ -1240,9 +1316,10 @@ METHOD(kernel_net_t, del_ip, status_t,
  * Manages source routes in the routing table.
  * By setting the appropriate nlmsg_type, the route gets added or removed.
  */
-static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_type,
-								int flags, chunk_t dst_net, u_int8_t prefixlen,
-								host_t *gateway, host_t *src_ip, char *if_name)
+static status_t manage_srcroute(private_kernel_netlink_net_t *this,
+								int nlmsg_type, int flags, chunk_t dst_net,
+								u_int8_t prefixlen, host_t *gateway,
+								host_t *src_ip, char *if_name)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1306,16 +1383,56 @@ METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
-				dst_net, prefixlen, gateway, src_ip, if_name);
+	status_t status;
+	route_entry_t *found, route = {
+		.dst_net = dst_net,
+		.prefixlen = prefixlen,
+		.gateway = gateway,
+		.src_ip = src_ip,
+		.if_name = if_name,
+	};
+
+	this->mutex->lock(this->mutex);
+	found = this->routes->get(this->routes, &route);
+	if (found)
+	{
+		this->mutex->unlock(this->mutex);
+		return ALREADY_DONE;
+	}
+	found = route_entry_clone(&route);
+	this->routes->put(this->routes, found, found);
+	status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
+							 dst_net, prefixlen, gateway, src_ip, if_name);
+	this->mutex->unlock(this->mutex);
+	return status;
 }
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_netlink_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
-				gateway, src_ip, if_name);
+	status_t status;
+	route_entry_t *found, route = {
+		.dst_net = dst_net,
+		.prefixlen = prefixlen,
+		.gateway = gateway,
+		.src_ip = src_ip,
+		.if_name = if_name,
+	};
+
+	this->mutex->lock(this->mutex);
+	found = this->routes->get(this->routes, &route);
+	if (!found)
+	{
+		this->mutex->unlock(this->mutex);
+		return NOT_FOUND;
+	}
+	this->routes->remove(this->routes, found);
+	route_entry_destroy(found);
+	status = manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
+							 gateway, src_ip, if_name);
+	this->mutex->unlock(this->mutex);
+	return status;
 }
 
 /**
@@ -1446,6 +1563,9 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_netlink_net_t *this)
 {
+	enumerator_t *enumerator;
+	route_entry_t *route;
+
 	if (this->routing_table)
 	{
 		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
@@ -1462,6 +1582,17 @@ METHOD(kernel_net_t, destroy, void,
 		close(this->socket_events);
 	}
 	DESTROY_IF(this->socket);
+
+	enumerator = this->routes->create_enumerator(this->routes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+	{
+		manage_srcroute(this, RTM_DELROUTE, 0, route->dst_net, route->prefixlen,
+						route->gateway, route->src_ip, route->if_name);
+		route_entry_destroy(route);
+	}
+	enumerator->destroy(enumerator);
+	this->routes->destroy(this->routes);
+
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->rt_exclude->destroy(this->rt_exclude);
 	this->condvar->destroy(this->condvar);
@@ -1495,6 +1626,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		},
 		.socket = netlink_socket_create(NETLINK_ROUTE),
 		.rt_exclude = linked_list_create(),
+		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
+								   (hashtable_equals_t)route_entry_equals, 16),
 		.ifaces = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
