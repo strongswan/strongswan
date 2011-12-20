@@ -307,6 +307,7 @@ METHOD(task_t, migrate, void,
 	private_isakmp_cert_post_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
+	this->state = CR_SA;
 }
 
 METHOD(task_t, destroy, void,
