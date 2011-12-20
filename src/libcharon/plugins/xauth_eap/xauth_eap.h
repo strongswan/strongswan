@@ -26,7 +26,13 @@ typedef struct xauth_eap_t xauth_eap_t;
 #include <sa/xauth/xauth_method.h>
 
 /**
- * XAuth methods that verifies XAuth credentials using EAP methods.
+ * XAuth method that verifies XAuth credentials using EAP methods.
+ *
+ * To reuse existing authentication infrastructure, this XAuth method uses
+ * EAP to verify XAuth Username/Passwords. It is primarily designed to work
+ * with the EAP-RADIUS backend and can use any password-based EAP method
+ * over it. The credentials are fed locally on the IKE responder to a EAP
+ * client which talks to the backend instance, usually a RADIUS server.
  */
 struct xauth_eap_t {
 
@@ -46,4 +52,4 @@ struct xauth_eap_t {
 xauth_eap_t *xauth_eap_create_server(identification_t *server,
 									 identification_t *peer);
 
-#endif /** xauth_eap_H_ @}*/
+#endif /** XAUTH_EAP_H_ @}*/
