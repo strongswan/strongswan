@@ -697,8 +697,11 @@ METHOD(task_t, process_r, status_t,
 			this->tsi = this->tsr = NULL;
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
 													  me, other);
-			this->tsi = select_ts(this, FALSE, tsi);
-			this->tsr = select_ts(this, TRUE, tsr);
+			if (this->config)
+			{
+				this->tsi = select_ts(this, FALSE, tsi);
+				this->tsr = select_ts(this, TRUE, tsr);
+			}
 			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
 			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 			if (!this->config)
