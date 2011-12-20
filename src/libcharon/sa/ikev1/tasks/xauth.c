@@ -354,7 +354,25 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(task_t, migrate, void,
 	private_xauth_t *this, ike_sa_t *ike_sa)
 {
+	DESTROY_IF(this->xauth);
+	DESTROY_IF(this->cp);
+
 	this->ike_sa = ike_sa;
+	this->xauth = NULL;
+	this->cp = NULL;
+	this->user = NULL;
+	this->status = XAUTH_FAILED;
+
+	if (this->initiator)
+	{
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
+	}
+	else
+	{
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
+	}
 }
 
 METHOD(task_t, destroy, void,
