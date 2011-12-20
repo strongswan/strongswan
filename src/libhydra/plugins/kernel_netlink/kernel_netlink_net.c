@@ -52,11 +52,15 @@
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
+#include <utils/hashtable.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
+
+/** delay before reinstalling routes (ms) */
+#define ROUTE_DELAY 100
 
 typedef struct addr_entry_t addr_entry_t;
 
@@ -187,6 +191,52 @@ static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
 }
 
+typedef struct net_change_t net_change_t;
+
+/**
+ * Queued network changes
+ */
+struct net_change_t {
+	/** Name of the interface that got activated (or an IP appeared on) */
+	char *if_name;
+
+	/** IP that appeared, if any */
+	host_t *ip;
+};
+
+/**
+ * Destroy a net_change_t object
+ */
+static void net_change_destroy(net_change_t *this)
+{
+	DESTROY_IF(this->ip);
+	free(this->if_name);
+	free(this);
+}
+
+/**
+ * Hash a net_change_t object
+ */
+static u_int net_change_hash(net_change_t *this)
+{
+	if (this->ip)
+	{
+		return chunk_hash_inc(this->ip->get_address(this->ip),
+							  chunk_hash(chunk_create(this->if_name,
+													  strlen(this->if_name))));
+	}
+	return chunk_hash(chunk_create(this->if_name, strlen(this->if_name)));
+}
+
+/**
+ * Compare two net_change_t objects
+ */
+static bool net_change_equals(net_change_t *a, net_change_t *b)
+{
+	return streq(a->if_name, b->if_name) && ((!a->ip && !b->ip) ||
+		   (a->ip && b->ip && a->ip->equals(a->ip, b->ip)));
+}
+
 typedef struct private_kernel_netlink_net_t private_kernel_netlink_net_t;
 
 /**
@@ -249,6 +299,21 @@ struct private_kernel_netlink_net_t {
 	hashtable_t *routes;
 
 	/**
+	 * interface and IP address changes which may trigger route reinstallation
+	 */
+	hashtable_t *net_changes;
+
+	/**
+	 * mutex for route reinstallation triggers
+	 */
+	mutex_t *net_changes_lock;
+
+	/**
+	 * time of last route reinstallation
+	 */
+	timeval_t last_route_reinstall;
+
+	/**
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
 	bool process_route;
@@ -263,6 +328,118 @@ struct private_kernel_netlink_net_t {
 	 */
 	linked_list_t *rt_exclude;
 };
+
+/**
+ * Forward declaration
+ */
+static status_t manage_srcroute(private_kernel_netlink_net_t *this,
+								int nlmsg_type, int flags, chunk_t dst_net,
+								u_int8_t prefixlen, host_t *gateway,
+								host_t *src_ip, char *if_name);
+
+/**
+ * Clear the queued network changes.
+ */
+static void net_changes_clear(private_kernel_netlink_net_t *this)
+{
+	enumerator_t *enumerator;
+	net_change_t *change;
+
+	enumerator = this->net_changes->create_enumerator(this->net_changes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&change))
+	{
+		this->net_changes->remove_at(this->net_changes, enumerator);
+		net_change_destroy(change);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Act upon queued network changes.
+ */
+static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
+{
+	enumerator_t *enumerator;
+	route_entry_t *route;
+
+	this->net_changes_lock->lock(this->net_changes_lock);
+	this->mutex->lock(this->mutex);
+
+	enumerator = this->routes->create_enumerator(this->routes);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+	{
+		net_change_t *change, lookup = {
+			.if_name = route->if_name,
+		};
+		/* check if a generic change for this interface is queued */
+		change = this->net_changes->get(this->net_changes, &lookup);
+		if (!change)
+		{	/* check if a specific update for this IP is queued */
+			lookup.ip = route->src_ip;
+			change = this->net_changes->get(this->net_changes, &lookup);
+		}
+		if (change)
+		{
+			manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
+							route->dst_net, route->prefixlen, route->gateway,
+							route->src_ip, route->if_name);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	net_changes_clear(this);
+	this->net_changes_lock->unlock(this->net_changes_lock);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Queue route reinstallation caused by network changes for a given interface.
+ * Provide the IP address if the update is caused by an IP address change.
+ *
+ * The route reinstallation is delayed for a while and only done once for
+ * several calls during this delay, in order to avoid doing it too often.
+ * The interface name and IP address are freed.
+ */
+static void queue_route_reinstall(private_kernel_netlink_net_t *this,
+								  char *if_name, host_t *ip)
+{
+	net_change_t *update, *found;
+	timeval_t now;
+	job_t *job;
+
+	INIT(update,
+		.if_name = if_name,
+		.ip = ip
+	);
+
+	this->net_changes_lock->lock(this->net_changes_lock);
+	found = this->net_changes->get(this->net_changes, update);
+	if (found)
+	{
+		net_change_destroy(update);
+	}
+	else
+	{
+		this->net_changes->put(this->net_changes, update, update);
+	}
+	time_monotonic(&now);
+	if (timercmp(&now, &this->last_route_reinstall, >))
+	{
+		now.tv_usec += ROUTE_DELAY * 1000;
+		while (now.tv_usec > 1000000)
+		{
+			now.tv_sec++;
+			now.tv_usec -= 1000000;
+		}
+		this->last_route_reinstall = now;
+
+		job = (job_t*)callback_job_create((callback_job_cb_t)reinstall_routes,
+										  this, NULL, NULL);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, ROUTE_DELAY);
+	}
+	this->net_changes_lock->unlock(this->net_changes_lock);
+}
 
 /**
  * get the refcount of a virtual ip
@@ -382,9 +559,9 @@ static void process_link(private_kernel_netlink_net_t *this,
 	enumerator_t *enumerator;
 	iface_entry_t *current, *entry = NULL;
 	char *name = NULL;
-	bool update = FALSE;
+	bool update = FALSE, update_routes = FALSE;
 
-	while(RTA_OK(rta, rtasize))
+	while (RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
 		{
@@ -432,7 +609,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 			{
 				if (!(entry->flags & IFF_UP) && (msg->ifi_flags & IFF_UP))
 				{
-					update = TRUE;
+					update = update_routes = TRUE;
 					DBG1(DBG_KNL, "interface %s activated", name);
 				}
 				if ((entry->flags & IFF_UP) && !(msg->ifi_flags & IFF_UP))
@@ -467,6 +644,11 @@ static void process_link(private_kernel_netlink_net_t *this,
 	}
 	this->mutex->unlock(this->mutex);
 
+	if (update_routes && event)
+	{
+		queue_route_reinstall(this, strdup(name), NULL);
+	}
+
 	/* send an update to all IKE_SAs */
 	if (update && event)
 	{
@@ -488,9 +670,10 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	chunk_t local = chunk_empty, address = chunk_empty;
+	char *route_ifname = NULL;
 	bool update = FALSE, found = FALSE, changed = FALSE;
 
-	while(RTA_OK(rta, rtasize))
+	while (RTA_OK(rta, rtasize))
 	{
 		switch (rta->rta_type)
 		{
@@ -560,6 +743,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				{
 					found = TRUE;
 					changed = TRUE;
+					route_ifname = strdup(iface->ifname);
 					addr = malloc_thing(addr_entry_t);
 					addr->ip = host->clone(host);
 					addr->virtual = FALSE;
@@ -582,6 +766,15 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	}
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
+
+	if (update && event && route_ifname)
+	{
+		queue_route_reinstall(this, route_ifname, host->clone(host));
+	}
+	else
+	{
+		free(route_ifname);
+	}
 	host->destroy(host);
 
 	/* send an update to all IKE_SAs */
@@ -1593,6 +1786,10 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->routes->destroy(this->routes);
 
+	net_changes_clear(this);
+	this->net_changes->destroy(this->net_changes);
+	this->net_changes_lock->destroy(this->net_changes_lock);
+
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->rt_exclude->destroy(this->rt_exclude);
 	this->condvar->destroy(this->condvar);
@@ -1628,6 +1825,10 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.rt_exclude = linked_list_create(),
 		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
 								   (hashtable_equals_t)route_entry_equals, 16),
+		.net_changes = hashtable_create(
+								   (hashtable_hash_t)net_change_hash,
+								   (hashtable_equals_t)net_change_equals, 16),
+		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
@@ -1640,6 +1841,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
 				"%s.install_virtual_ip", TRUE, hydra->daemon),
 	);
+	timerclear(&this->last_route_reinstall);
 	timerclear(&this->last_roam);
 
 	exclude = lib->settings->get_str(lib->settings,
