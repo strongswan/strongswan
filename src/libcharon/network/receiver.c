@@ -136,35 +136,34 @@ struct private_receiver_t {
 /**
  * send a notify back to the sender
  */
-static void send_notify(message_t *request, notify_type_t type, chunk_t data)
+static void send_notify(message_t *request, int major, exchange_type_t exchange,
+						notify_type_t type, chunk_t data)
 {
-	if (request->get_request(request) &&
-		request->get_exchange_type(request) == IKE_SA_INIT)
-	{
-		message_t *response;
-		host_t *src, *dst;
-		packet_t *packet;
-		ike_sa_id_t *ike_sa_id;
+	ike_sa_id_t *ike_sa_id;
+	message_t *response;
+	host_t *src, *dst;
+	packet_t *packet;
 
-		response = message_create(IKEV2_MAJOR_VERSION, IKEV2_MINOR_VERSION);
-		dst = request->get_source(request);
-		src = request->get_destination(request);
-		response->set_source(response, src->clone(src));
-		response->set_destination(response, dst->clone(dst));
-		response->set_exchange_type(response, request->get_exchange_type(request));
+	response = message_create(major, 0);
+	response->set_exchange_type(response, exchange);
+	response->add_notify(response, FALSE, type, data);
+	dst = request->get_source(request);
+	src = request->get_destination(request);
+	response->set_source(response, src->clone(src));
+	response->set_destination(response, dst->clone(dst));
+	if (major == IKEV2_MAJOR_VERSION)
+	{
 		response->set_request(response, FALSE);
-		response->set_message_id(response, 0);
-		ike_sa_id = request->get_ike_sa_id(request);
-		ike_sa_id->switch_initiator(ike_sa_id);
-		response->set_ike_sa_id(response, ike_sa_id);
-		response->add_notify(response, FALSE, type, data);
-		if (response->generate(response, NULL, &packet) == SUCCESS)
-		{
-			charon->sender->send(charon->sender, packet);
-			response->destroy(response);
-		}
 	}
-	/* TODO-IKEv1: send IKEv1 specific notifies */
+	response->set_message_id(response, 0);
+	ike_sa_id = request->get_ike_sa_id(request);
+	ike_sa_id->switch_initiator(ike_sa_id);
+	response->set_ike_sa_id(response, ike_sa_id);
+	if (response->generate(response, NULL, &packet) == SUCCESS)
+	{
+		charon->sender->send(charon->sender, packet);
+	}
+	response->destroy(response);
 }
 
 /**
@@ -286,7 +285,7 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 			 message->get_destination(message));
 		DBG2(DBG_NET, "sending COOKIE notify to %H",
 			 message->get_source(message));
-		send_notify(message, COOKIE, cookie);
+		send_notify(message, IKEV2_MAJOR_VERSION, IKE_SA_INIT, COOKIE, cookie);
 		chunk_free(&cookie);
 		if (++this->secret_used > COOKIE_REUSE)
 		{
@@ -350,6 +349,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	packet_t *packet;
 	message_t *message;
 	status_t status;
+	bool supported = TRUE;
 
 	/* read in a packet */
 	status = charon->socket->receive(charon->socket, &packet);
@@ -378,25 +378,48 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	/* check IKE major version */
 	switch (message->get_major_version(message))
 	{
-#ifdef USE_IKEV2
 		case IKEV2_MAJOR_VERSION:
+#ifndef USE_IKEV2
+			if (message->get_exchange_type(message) == IKE_SA_INIT &&
+				message->get_request(message))
+			{
+				send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
+							INVALID_MAJOR_VERSION, chunk_empty);
+				supported = FALSE;
+			}
+#endif /* USE_IKEV2 */
 			break;
+		case IKEV1_MAJOR_VERSION:
+#ifndef USE_IKEV1
+			if (message->get_exchange_type(message) == ID_PROT ||
+				message->get_exchange_type(message) == AGGRESSIVE)
+			{
+				send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
+							INVALID_MAJOR_VERSION, chunk_empty);
+				supported = FALSE;
+			}
+#endif /* USE_IKEV1 */
+			break;
+		default:
+#ifdef USE_IKEV2
+			send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
+						INVALID_MAJOR_VERSION, chunk_empty);
 #endif /* USE_IKEV2 */
 #ifdef USE_IKEV1
-		case IKEV1_MAJOR_VERSION:
-			break;
+			send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
+						INVALID_MAJOR_VERSION, chunk_empty);
 #endif /* USE_IKEV1 */
-		default:
-			DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, "
-				 "sending INVALID_MAJOR_VERSION",
-				 message->get_major_version(message),
-				 message->get_minor_version(message),
-				 packet->get_source(packet));
-			send_notify(message, INVALID_MAJOR_VERSION, chunk_empty);
-			message->destroy(message);
-			return JOB_REQUEUE_DIRECT;
+			supported = FALSE;
+			break;
 	}
-
+	if (!supported)
+	{
+		DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, sending "
+			 "INVALID_MAJOR_VERSION", message->get_major_version(message),
+			 message->get_minor_version(message), packet->get_source(packet));
+		message->destroy(message);
+		return JOB_REQUEUE_DIRECT;
+	}
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
