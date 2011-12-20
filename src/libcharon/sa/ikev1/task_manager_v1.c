@@ -1103,6 +1103,34 @@ METHOD(task_manager_t, incr_mid, void,
 METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
+	enumerator_t *enumerator;
+	task_t *task;
+
+	/* reset message counters and retransmit packets */
+	DESTROY_IF(this->responding.packet);
+	DESTROY_IF(this->initiating.packet);
+	this->responding.packet = NULL;
+	this->initiating.packet = NULL;
+	this->initiating.mid = 0;
+	this->initiating.seqnr = 0;
+	this->initiating.retransmitted = 0;
+	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+
+	/* reset queued tasks */
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		task->migrate(task, this->ike_sa);
+	}
+	enumerator->destroy(enumerator);
+
+	/* reset active tasks */
+	while (this->active_tasks->remove_last(this->active_tasks,
+										   (void**)&task) == SUCCESS)
+	{
+		task->migrate(task, this->ike_sa);
+		this->queued_tasks->insert_first(this->queued_tasks, task);
+	}
 }
 
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,

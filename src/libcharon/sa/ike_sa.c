@@ -1488,7 +1488,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 		{
 			case IKE_CONNECTING:
 			{
-				/* retry IKE_SA_INIT if we have multiple keyingtries */
+				/* retry IKE_SA_INIT/Main Mode if we have multiple keyingtries */
 				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
 				this->keyingtry++;
 				if (tries == 0 || tries > this->keyingtry)
