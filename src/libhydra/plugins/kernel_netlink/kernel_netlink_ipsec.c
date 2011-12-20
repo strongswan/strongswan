@@ -2158,12 +2158,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			{
 				route_entry_t *old = policy->route;
 				if (route_entry_equals(old, route))
-				{	/* keep previously installed route. since it might have
-					 * still been removed by an address change, we install it
-					 * again but ignore the result */
-					hydra->kernel_interface->add_route(hydra->kernel_interface,
-							route->dst_net, route->prefixlen, route->gateway,
-							route->src_ip, route->if_name);
+				{
 					this->mutex->unlock(this->mutex);
 					route_entry_destroy(route);
 					return SUCCESS;
