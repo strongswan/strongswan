@@ -114,11 +114,6 @@ struct private_quick_mode_t {
 	 */
 	u_int64_t lifebytes;
 
-	/**
-	 * Notify type in case of error
-	 */
-	notify_type_t notify_type;
-
 	/** states of quick mode */
 	enum {
 		QM_INIT,
@@ -895,7 +890,30 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(task_t, migrate, void,
 	private_quick_mode_t *this, ike_sa_t *ike_sa)
 {
+	chunk_free(&this->nonce_i);
+	chunk_free(&this->nonce_r);
+	DESTROY_IF(this->tsi);
+	DESTROY_IF(this->tsr);
+	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->child_sa);
+	DESTROY_IF(this->dh);
+
 	this->ike_sa = ike_sa;
+	this->keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+	this->state = QM_INIT;
+	this->tsi = NULL;
+	this->tsr = NULL;
+	this->proposal = NULL;
+	this->child_sa = NULL;
+	this->dh = NULL;
+	this->spi_i = 0;
+	this->spi_r = 0;
+
+	if (!this->initiator)
+	{
+		DESTROY_IF(this->config);
+		this->config = NULL;
+	}
 }
 
 METHOD(task_t, destroy, void,
