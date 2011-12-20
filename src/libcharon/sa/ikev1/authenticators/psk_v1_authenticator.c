@@ -60,6 +60,11 @@ struct private_psk_v1_authenticator_t {
 	 * Encoded ID payload, without fixed header
 	 */
 	chunk_t id_payload;
+
+	/**
+	 * Used for Hybrid authentication to build hash without PSK?
+	 */
+	bool hybrid;
 };
 
 METHOD(authenticator_t, build, status_t,
@@ -90,6 +95,7 @@ METHOD(authenticator_t, process, status_t,
 	hash_payload_t *hash_payload;
 	keymat_v1_t *keymat;
 	chunk_t hash, dh;
+	auth_cfg_t *auth;
 
 	hash_payload = (hash_payload_t*)message->get_payload(message, HASH_V1);
 	if (!hash_payload)
@@ -107,6 +113,11 @@ METHOD(authenticator_t, process, status_t,
 	if (chunk_equals(hash, hash_payload->get_hash(hash_payload)))
 	{
 		free(hash.ptr);
+		if (!this->hybrid)
+		{
+			auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+		}
 		return SUCCESS;
 	}
 	free(hash.ptr);
@@ -127,7 +138,7 @@ METHOD(authenticator_t, destroy, void,
 psk_v1_authenticator_t *psk_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
 										chunk_t dh_value, chunk_t sa_payload,
-										chunk_t id_payload)
+										chunk_t id_payload, bool hybrid)
 {
 	private_psk_v1_authenticator_t *this;
 
@@ -146,6 +157,7 @@ psk_v1_authenticator_t *psk_v1_authenticator_create(ike_sa_t *ike_sa,
 		.dh_value = dh_value,
 		.sa_payload = sa_payload,
 		.id_payload = id_payload,
+		.hybrid = hybrid,
 	);
 
 	return &this->public;

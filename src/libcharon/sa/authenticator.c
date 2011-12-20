@@ -127,7 +127,7 @@ authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 		case AUTH_XAUTH_RESP_PSK:
 			return (authenticator_t*)psk_v1_authenticator_create(ike_sa,
 										initiator, dh, dh_value, sa_payload,
-										id_payload);
+										id_payload, FALSE);
 		case AUTH_RSA:
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:

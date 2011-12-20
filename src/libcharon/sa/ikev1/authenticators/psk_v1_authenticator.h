@@ -46,11 +46,12 @@ struct psk_v1_authenticator_t {
  * @param sa_payload		generated SA payload data, without payload header
  * @param id_payload		encoded ID payload of peer to authenticate or verify
  *							without payload header (gets owned)
+ * @param hybrid			TRUE if used for hybrid authentication without PSK
  * @return					PSK authenticator
  */
 psk_v1_authenticator_t *psk_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
 										chunk_t dh_value, chunk_t sa_payload,
-										chunk_t id_payload);
+										chunk_t id_payload, bool hybrid);
 
 #endif /** PSK_V1_AUTHENTICATOR_H_ @}*/

@@ -16,6 +16,7 @@
 #include "hybrid_authenticator.h"
 
 #include <daemon.h>
+#include <sa/ikev1/authenticators/psk_v1_authenticator.h>
 
 typedef struct private_hybrid_authenticator_t private_hybrid_authenticator_t;
 
@@ -89,10 +90,10 @@ hybrid_authenticator_t *hybrid_authenticator_create(ike_sa_t *ike_sa,
 				.destroy = _destroy,
 			},
 		},
+		.hash = (authenticator_t*)psk_v1_authenticator_create(ike_sa, initiator,
+						dh, dh_value, sa_payload, id_payload, TRUE),
 		.sig = authenticator_create_v1(ike_sa, initiator, AUTH_RSA, dh,
-							dh_value, sa_payload, id_payload),
-		.hash = authenticator_create_v1(ike_sa, initiator, AUTH_PSK,
-							dh, dh_value, sa_payload, chunk_clone(id_payload)),
+						dh_value, sa_payload, chunk_clone(id_payload)),
 	);
 	if (!this->sig || !this->hash)
 	{
