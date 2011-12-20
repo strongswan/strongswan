@@ -279,9 +279,16 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				attr = tcg_pts_attr_gen_attest_evid_create();
 				attr->set_noskip_flag(attr, TRUE);
 				attr_list->insert_last(attr_list, attr);
+
+				attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_EVID_FINAL);
 			}
 			break;
 		}
+		case IMV_ATTESTATION_STATE_EVID_FINAL:
+			attestation_state->set_handshake_state(attestation_state,
+										IMV_ATTESTATION_STATE_END);
+			break;
 		case IMV_ATTESTATION_STATE_END:
 			break;
 	}
