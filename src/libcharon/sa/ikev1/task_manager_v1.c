@@ -1013,14 +1013,51 @@ METHOD(task_manager_t, queue_task, void,
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
+/**
+ * Check if a given task has been queued already
+ */
+static bool has_queued(private_task_manager_t *this, task_type_t type)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	task_t *task;
+
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == type)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
 METHOD(task_manager_t, queue_ike, void,
 	private_task_manager_t *this)
 {
-	queue_task(this, (task_t*)isakmp_vendor_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)isakmp_cert_pre_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)main_mode_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)isakmp_cert_post_create(this->ike_sa, TRUE));
-	queue_task(this, (task_t*)isakmp_natd_create(this->ike_sa, TRUE));
+	if (!has_queued(this, TASK_ISAKMP_VENDOR))
+	{
+		queue_task(this, (task_t*)isakmp_vendor_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_ISAKMP_CERT_PRE))
+	{
+		queue_task(this, (task_t*)isakmp_cert_pre_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_MAIN_MODE))
+	{
+		queue_task(this, (task_t*)main_mode_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_ISAKMP_CERT_POST))
+	{
+		queue_task(this, (task_t*)isakmp_cert_post_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_ISAKMP_NATD))
+	{
+		queue_task(this, (task_t*)isakmp_natd_create(this->ike_sa, TRUE));
+	}
 }
 
 METHOD(task_manager_t, queue_ike_rekey, void,
