@@ -26,7 +26,7 @@
 #include <utils/identification.h>
 
 ENUM(ike_version_names, IKE_ANY, IKEV2,
-	"IKEv1/2"
+	"IKEv1/2",
 	"IKEv1",
 	"IKEv2",
 );
