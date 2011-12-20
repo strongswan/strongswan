@@ -357,6 +357,7 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 		},
 		.next_payload = NO_PAYLOAD,
 		.protocol_id = protocol_id,
+		.doi = IKEV1_DOI_IPSEC,
 		.type = type,
 	);
 	this->payload_length = get_header_length(this);
@@ -370,7 +371,6 @@ delete_payload_t *delete_payload_create(payload_type_t type,
 	}
 	else
 	{
-		this->doi = IKEV1_DOI_IPSEC,
 		this->spi_size = 4;
 	}
 	return &this->public;
