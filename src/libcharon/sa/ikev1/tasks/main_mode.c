@@ -1103,7 +1103,20 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(task_t, migrate, void,
 	private_main_mode_t *this, ike_sa_t *ike_sa)
 {
+	DESTROY_IF(this->peer_cfg);
+	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->dh);
+	chunk_free(&this->dh_value);
+	chunk_free(&this->nonce_i);
+	chunk_free(&this->nonce_r);
+	chunk_free(&this->sa_payload);
+
 	this->ike_sa = ike_sa;
+	this->keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+	this->state = MM_INIT;
+	this->peer_cfg = NULL;
+	this->proposal = NULL;
+	this->dh = NULL;
 }
 
 METHOD(task_t, destroy, void,
