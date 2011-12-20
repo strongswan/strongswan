@@ -1419,8 +1419,8 @@ METHOD(message_t, generate, status_t,
 	encryption_payload_t *encryption = NULL;
 	payload_type_t next_type;
 	enumerator_t *enumerator;
-	aead_t *aead;
-	chunk_t chunk;
+	aead_t *aead = NULL;
+	chunk_t chunk, hash = chunk_empty;
 	char str[BUF_LEN];
 	u_int32_t *lenpos;
 	bool encrypted = FALSE, *reserved;
@@ -1458,7 +1458,10 @@ METHOD(message_t, generate, status_t,
 	else
 	{
 		/* get a hash for this message, if any is required */
-		chunk_t hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		if (keymat_v1)
+		{
+			hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		}
 		if (hash.ptr)
 		{	/* insert a HASH payload as first payload */
 			hash_payload_t *hash_payload;
@@ -1494,7 +1497,10 @@ METHOD(message_t, generate, status_t,
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
-	aead = keymat->get_aead(keymat, FALSE);
+	if (keymat)
+	{
+		aead = keymat->get_aead(keymat, FALSE);
+	}
 	if (aead && encrypted)
 	{
 		encryption = wrap_payloads(this);
