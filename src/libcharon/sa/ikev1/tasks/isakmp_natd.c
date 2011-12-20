@@ -393,6 +393,7 @@ METHOD(task_t, migrate, void,
 	private_isakmp_natd_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
+	this->keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
 	this->src_seen = FALSE;
 	this->dst_seen = FALSE;
 	this->src_matched = FALSE;
