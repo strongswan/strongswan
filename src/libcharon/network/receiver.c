@@ -272,8 +272,9 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 	half_open = charon->ike_sa_manager->get_half_open_count(
 										charon->ike_sa_manager, NULL);
 
-	/* check for cookies */
-	if (this->cookie_threshold && half_open >= this->cookie_threshold &&
+	/* check for cookies in IKEv2 */
+	if (message->get_major_version(message) == IKEV2_MAJOR_VERSION &&
+		this->cookie_threshold && half_open >= this->cookie_threshold &&
 		!check_cookie(this, message))
 	{
 		u_int32_t now = time_monotonic(NULL);
@@ -293,7 +294,7 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 			DBG1(DBG_NET, "generating new cookie secret after %d uses",
 				 this->secret_used);
 			memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-			this->rng->get_bytes(this->rng,	SECRET_LENGTH, this->secret);
+			this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 			this->secret_switch = now;
 			this->secret_used = 0;
 		}
@@ -345,6 +346,7 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
  */
 static job_requeue_t receive_packets(private_receiver_t *this)
 {
+	ike_sa_id_t *id;
 	packet_t *packet;
 	message_t *message;
 	status_t status;
@@ -395,7 +397,6 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			return JOB_REQUEUE_DIRECT;
 	}
 
-	/* TODO-IKEv1: drop too agressive mainmodes */
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
@@ -405,6 +406,18 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			return JOB_REQUEUE_DIRECT;
 		}
 	}
+	if (message->get_exchange_type(message) == ID_PROT ||
+		message->get_exchange_type(message) == AGGRESSIVE)
+	{
+		id = message->get_ike_sa_id(message);
+		if (id->get_responder_spi(id) == 0 &&
+			drop_ike_sa_init(this, message))
+		{
+			message->destroy(message);
+			return JOB_REQUEUE_DIRECT;
+		}
+	}
+
 	if (this->receive_delay)
 	{
 		if (this->receive_delay_type == 0 ||
