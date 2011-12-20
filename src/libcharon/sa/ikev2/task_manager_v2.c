@@ -1177,57 +1177,79 @@ METHOD(task_manager_t, queue_task, void,
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }
 
-METHOD(task_manager_t, queue_ike, void,
-	private_task_manager_t *this)
+/**
+ * Check if a given task has been queued already
+ */
+static bool has_queued(private_task_manager_t *this, task_type_t type)
 {
-	peer_cfg_t *peer_cfg;
-
 	enumerator_t *enumerator;
-	bool has_init = FALSE, has_auth = FALSE;
+	bool found = FALSE;
 	task_t *task;
 
-	/* when initiating with a non-first keying try, IKE_AUTH is still queued,
-	 * but IKE_INIT is not */
-	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
+	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
-		switch (task->get_type(task))
+		if (task->get_type(task) == type)
 		{
-			case TASK_IKE_INIT:
-				has_init = TRUE;
-				break;
-			case TASK_IKE_AUTH:
-				has_auth = TRUE;
-				break;
-			default:
-				break;
+			found = TRUE;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	return found;
+}
 
-	if (!has_init)
+METHOD(task_manager_t, queue_ike, void,
+	private_task_manager_t *this)
+{
+	if (!has_queued(this, TASK_IKE_VENDOR))
 	{
 		queue_task(this, (task_t*)ike_vendor_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_INIT))
+	{
 		queue_task(this, (task_t*)ike_init_create(this->ike_sa, TRUE, NULL));
+	}
+	if (!has_queued(this, TASK_IKE_NATD))
+	{
 		queue_task(this, (task_t*)ike_natd_create(this->ike_sa, TRUE));
 	}
-	if (!has_auth)
+	if (!has_queued(this, TASK_IKE_CERT_PRE))
 	{
 		queue_task(this, (task_t*)ike_cert_pre_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_AUTH))
+	{
 		queue_task(this, (task_t*)ike_auth_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_CERT_POST))
+	{
 		queue_task(this, (task_t*)ike_cert_post_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_CONFIG))
+	{
 		queue_task(this, (task_t*)ike_config_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_AUTH_LIFETIME))
+	{
 		queue_task(this, (task_t*)ike_auth_lifetime_create(this->ike_sa, TRUE));
+	}
+	if (!has_queued(this, TASK_IKE_MOBIKE))
+	{
+		peer_cfg_t *peer_cfg;
 
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		if (peer_cfg->use_mobike(peer_cfg))
 		{
 			queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
 		}
-#ifdef ME
-		queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
-#endif /* ME */
 	}
+#ifdef ME
+	if (!has_queued(this, TASK_IKE_ME))
+	{
+		queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
+	}
+#endif /* ME */
 }
 
 METHOD(task_manager_t, queue_ike_rekey, void,
