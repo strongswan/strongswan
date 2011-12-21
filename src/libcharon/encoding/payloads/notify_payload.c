@@ -405,7 +405,7 @@ METHOD(payload_t, verify, status_t,
 	{
 		case INVALID_KE_PAYLOAD:
 		{
-			if (this->notify_data.len != 2)
+			if (this->type == NOTIFY && this->notify_data.len != 2)
 			{
 				bad_length = TRUE;
 			}
@@ -425,7 +425,7 @@ METHOD(payload_t, verify, status_t,
 		case INVALID_MAJOR_VERSION:
 		case NO_PROPOSAL_CHOSEN:
 		{
-			if ((this->notify_data.len != 0) && (this->type == NOTIFY))
+			if (this->type == NOTIFY && this->notify_data.len != 0)
 			{
 				bad_length = TRUE;
 			}
