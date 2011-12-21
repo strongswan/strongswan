@@ -432,6 +432,13 @@ static status_t parse(private_encryption_payload_t *this, chunk_t plain)
 	{
 		payload_t *payload;
 
+		if (plain.len < 4 || untoh16(plain.ptr + 2) > plain.len)
+		{
+			DBG1(DBG_ENC, "invalid %N payload length, decryption failed?",
+				 payload_type_names, type);
+			parser->destroy(parser);
+			return PARSE_ERROR;
+		}
 		if (parser->parse_payload(parser, type, &payload) != SUCCESS)
 		{
 			parser->destroy(parser);
