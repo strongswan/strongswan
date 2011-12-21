@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
@@ -23,7 +24,9 @@
 
 #include <daemon.h>
 #include <library.h>
-
+#include <threading/mutex.h>
+#include <threading/condvar.h>
+#include <threading/thread.h>
 
 typedef struct private_controller_t private_controller_t;
 typedef struct interface_listener_t interface_listener_t;
@@ -88,6 +91,21 @@ struct interface_listener_t {
 	 * unique ID, used for various methods
 	 */
 	u_int32_t id;
+
+	/**
+	 * mutex to implement wait_for_listener()
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * condvar to wake a thread waiting in wait_for_listener()
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * flag to indicate whether a listener is done
+	 */
+	bool done;
 };
 
 
@@ -109,6 +127,89 @@ struct interface_job_t {
 	interface_listener_t listener;
 };
 
+/**
+ * This function properly unregisters a listener that is used
+ * with wait_for_listener()
+ */
+static inline bool listener_done(interface_listener_t *listener)
+{
+	if (listener->mutex)
+	{
+		listener->mutex->lock(listener->mutex);
+		listener->condvar->signal(listener->condvar);
+		listener->done = TRUE;
+		listener->mutex->unlock(listener->mutex);
+	}
+	return FALSE;
+}
+
+/**
+ * thread_cleanup_t handler to unregister and cleanup a listener
+ */
+static void listener_cleanup(interface_listener_t *listener)
+{
+	charon->bus->remove_listener(charon->bus, &listener->public);
+	listener->condvar->destroy(listener->condvar);
+	listener->mutex->destroy(listener->mutex);
+}
+
+/**
+ * Registers the listener, executes the job and then waits synchronously until
+ * the listener is done or the timeout occured.
+ *
+ * @note Use 'return listener_done(listener)' to properly unregister a listener
+ *
+ * @returns TRUE in case of a timeout
+ */
+static bool wait_for_listener(interface_listener_t *listener, job_t *job,
+							  u_int timeout)
+{
+	bool old, timed_out = FALSE;
+	timeval_t tv, add;
+
+	if (timeout)
+	{
+		add.tv_sec = timeout / 1000;
+		add.tv_usec = (timeout - (add.tv_sec * 1000)) * 1000;
+		time_monotonic(&tv);
+		timeradd(&tv, &add, &tv);
+	}
+
+	listener->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	listener->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+
+	charon->bus->add_listener(charon->bus, &listener->public);
+	lib->processor->queue_job(lib->processor, job);
+
+	listener->mutex->lock(listener->mutex);
+	thread_cleanup_push((thread_cleanup_t)listener_cleanup, listener);
+	thread_cleanup_push((thread_cleanup_t)listener->mutex->unlock,
+						listener->mutex);
+	old = thread_cancelability(TRUE);
+	while (!listener->done)
+	{
+		if (timeout)
+		{
+			if (listener->condvar->timed_wait_abs(listener->condvar,
+												  listener->mutex, tv))
+			{
+
+				timed_out = TRUE;
+				break;
+			}
+		}
+		else
+		{
+			listener->condvar->wait(listener->condvar, listener->mutex);
+		}
+	}
+	thread_cancelability(old);
+	/* unlock mutex */
+	thread_cleanup_pop(TRUE);
+	thread_cleanup_pop(TRUE);
+	return timed_out;
+}
+
 METHOD(listener_t, listener_log, bool,
 	interface_listener_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t *ike_sa, char* format, va_list args)
@@ -117,7 +218,7 @@ METHOD(listener_t, listener_log, bool,
 	{
 		if (!this->callback(this->param, group, level, ike_sa, format, args))
 		{
-			return FALSE;
+			return listener_done(this);
 		}
 	}
 	return TRUE;
@@ -144,7 +245,7 @@ METHOD(listener_t, ike_state_change, bool,
 				if (peer_cfg->is_mediation(peer_cfg))
 				{
 					this->status = SUCCESS;
-					return FALSE;
+					return listener_done(this);
 				}
 				break;
 			}
@@ -154,7 +255,7 @@ METHOD(listener_t, ike_state_change, bool,
 				{	/* proper termination */
 					this->status = SUCCESS;
 				}
-				return FALSE;
+				return listener_done(this);
 			default:
 				break;
 		}
@@ -172,7 +273,7 @@ METHOD(listener_t, child_state_change, bool,
 		{
 			case CHILD_INSTALLED:
 				this->status = SUCCESS;
-				return FALSE;
+				return listener_done(this);
 			case CHILD_DESTROYING:
 				switch (child_sa->get_state(child_sa))
 				{
@@ -183,7 +284,7 @@ METHOD(listener_t, child_state_change, bool,
 					default:
 						break;
 				}
-				return FALSE;
+				return listener_done(this);
 			default:
 				break;
 		}
@@ -278,8 +379,7 @@ METHOD(controller_t, initiate, status_t,
 	}
 	else
 	{
-		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
-								timeout))
+		if (wait_for_listener(&job.listener, &job.public, timeout))
 		{
 			job.listener.status = OUT_OF_RES;
 		}
@@ -348,8 +448,7 @@ METHOD(controller_t, terminate_ike, status_t,
 	}
 	else
 	{
-		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
-								timeout))
+		if (wait_for_listener(&job.listener, &job.public, timeout))
 		{
 			job.listener.status = OUT_OF_RES;
 		}
@@ -444,8 +543,7 @@ METHOD(controller_t, terminate_child, status_t,
 	}
 	else
 	{
-		if (charon->bus->listen(charon->bus, &job.listener.public, &job.public,
-								timeout))
+		if (wait_for_listener(&job.listener, &job.public, timeout))
 		{
 			job.listener.status = OUT_OF_RES;
 		}
