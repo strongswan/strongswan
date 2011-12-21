@@ -355,12 +355,16 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 											 0, "255.255.255.255", 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
-	/* get an additional reference because initiate consumes one */
-	child_cfg->get_ref(child_cfg);
 
 	/* get us an IKE_SA */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	if (!ike_sa)
+	{
+		peer_cfg->destroy(peer_cfg);
+		this->status = VPN_STATUS_CONNECTION_FAILED;
+		return FALSE;
+	}
 	if (!ike_sa->get_peer_cfg(ike_sa))
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
@@ -374,6 +378,8 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	this->public.listener.ike_state_change = _ike_state_change;
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 
+	/* get an additional reference because initiate consumes one */
+	child_cfg->get_ref(child_cfg);
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");

@@ -955,9 +955,11 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	ike_sa = ike_sa_create(ike_sa_id, initiator, version);
 	ike_sa_id->destroy(ike_sa_id);
 
-	DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
-			ike_sa->get_unique_id(ike_sa));
-
+	if (ike_sa)
+	{
+		DBG2(DBG_MGR, "created IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
+			 ike_sa->get_unique_id(ike_sa));
+	}
 	return ike_sa;
 }
 
@@ -1033,23 +1035,26 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		{
 			/* no IKE_SA found, create a new one */
 			id->set_responder_spi(id, get_spi(this));
-			entry = entry_create();
-			/* a new SA checked out by message is a responder SA */
-			entry->ike_sa = ike_sa_create(id, FALSE, ike_version);
-			entry->ike_sa_id = id->clone(id);
+			ike_sa = ike_sa_create(id, FALSE, ike_version);
+			if (ike_sa)
+			{
+				entry = entry_create();
+				/* a new SA checked out by message is a responder SA */
+				entry->ike_sa = ike_sa;
+				entry->ike_sa_id = id->clone(id);
 
-			segment = put_entry(this, entry);
-			entry->checked_out = TRUE;
-			unlock_single_segment(this, segment);
+				segment = put_entry(this, entry);
+				entry->checked_out = TRUE;
+				unlock_single_segment(this, segment);
 
-			entry->message_id = message->get_message_id(message);
-			entry->init_hash = hash;
-			ike_sa = entry->ike_sa;
+				entry->message_id = message->get_message_id(message);
+				entry->init_hash = hash;
 
-			DBG2(DBG_MGR, "created IKE_SA %s[%u]",
-					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+				DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+					 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+			}
 		}
-		else
+		if (ike_sa == NULL)
 		{
 			chunk_free(&hash);
 			DBG1(DBG_MGR, "ignoring message, no such IKE_SA");

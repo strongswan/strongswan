@@ -1412,6 +1412,10 @@ METHOD(ike_sa_t, reestablish, status_t,
 
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 											   this->version, TRUE);
+	if (!new)
+	{
+		return FAILED;
+	}
 	new->set_peer_cfg(new, this->peer_cfg);
 	host = this->other_host;
 	new->set_other_host(new, host->clone(host));
@@ -1802,7 +1806,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
-	this->task_manager->destroy(this->task_manager);
+	DESTROY_IF(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (this->attributes->remove_last(this->attributes,
@@ -1820,7 +1824,7 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->keymat->destroy(this->keymat);
+	DESTROY_IF(this->keymat);
 
 	if (this->my_virtual_ip)
 	{
@@ -1880,6 +1884,15 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 {
 	private_ike_sa_t *this;
 	static u_int32_t unique_id = 0;
+
+	if (version == IKE_ANY)
+	{	/* prefer IKEv2 if protocol not specified */
+#ifdef USE_IKEV2
+		version = IKEV2;
+#else
+		version = IKEV1;
+#endif
+	}
 
 	INIT(this,
 		.public = {
@@ -1991,8 +2004,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 	this->task_manager = task_manager_create(&this->public);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 
-	/* TODO-IKEv1: check if keymat and task manager created successfully.
-	 * Return NULL otherwise? */
-
+	if (!this->task_manager || !this->keymat)
+	{
+		DBG1(DBG_IKE, "IKE version %d not supported", this->version);
+		destroy(this);
+		return NULL;
+	}
 	return &this->public;
 }

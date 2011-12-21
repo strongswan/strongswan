@@ -274,21 +274,24 @@ METHOD(trap_manager_t, acquire, void,
 		peer = found->peer_cfg;
 		ike_sa = charon->ike_sa_manager->checkout_by_config(
 												charon->ike_sa_manager, peer);
-		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+		if (ike_sa)
 		{
-			ike_sa->set_peer_cfg(ike_sa, peer);
-		}
-		child->get_ref(child);
-		reqid = found->child_sa->get_reqid(found->child_sa);
-		if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
-		{
-			found->pending = ike_sa;
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		}
-		else
-		{
-			charon->ike_sa_manager->checkin_and_destroy(
+			if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+			{
+				ike_sa->set_peer_cfg(ike_sa, peer);
+			}
+			child->get_ref(child);
+			reqid = found->child_sa->get_reqid(found->child_sa);
+			if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
+			{
+				found->pending = ike_sa;
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			}
+			else
+			{
+				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, ike_sa);
+			}
 		}
 	}
 	this->lock->unlock(this->lock);

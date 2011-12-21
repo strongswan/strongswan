@@ -217,6 +217,17 @@ METHOD(job_t, initiate_execute, void,
 
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	if (!ike_sa)
+	{
+		listener->child_cfg->destroy(listener->child_cfg);
+		peer_cfg->destroy(peer_cfg);
+		/* trigger down event to release listener */
+		listener->ike_sa = charon->ike_sa_manager->checkout_new(
+										charon->ike_sa_manager, IKE_ANY, TRUE);
+		DESTROY_IF(listener->ike_sa);
+		listener->status = FAILED;
+		return;
+	}
 	listener->ike_sa = ike_sa;
 
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
