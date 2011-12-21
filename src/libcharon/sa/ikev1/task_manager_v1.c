@@ -655,7 +655,8 @@ static status_t process_request(private_task_manager_t *this,
 	task_t *task = NULL;
 	bool send_response = FALSE;
 
-	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
+	if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
+		this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
 		switch (message->get_exchange_type(message))
 		{
