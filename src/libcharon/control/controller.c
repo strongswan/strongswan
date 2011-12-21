@@ -24,9 +24,8 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <threading/mutex.h>
-#include <threading/condvar.h>
 #include <threading/thread.h>
+#include <threading/semaphore.h>
 
 typedef struct private_controller_t private_controller_t;
 typedef struct interface_listener_t interface_listener_t;
@@ -93,19 +92,9 @@ struct interface_listener_t {
 	u_int32_t id;
 
 	/**
-	 * mutex to implement wait_for_listener()
+	 * semaphore to implement wait_for_listener()
 	 */
-	mutex_t *mutex;
-
-	/**
-	 * condvar to wake a thread waiting in wait_for_listener()
-	 */
-	condvar_t *condvar;
-
-	/**
-	 * flag to indicate whether a listener is done
-	 */
-	bool done;
+	semaphore_t *done;
 };
 
 
@@ -133,12 +122,9 @@ struct interface_job_t {
  */
 static inline bool listener_done(interface_listener_t *listener)
 {
-	if (listener->mutex)
+	if (listener->done)
 	{
-		listener->mutex->lock(listener->mutex);
-		listener->condvar->signal(listener->condvar);
-		listener->done = TRUE;
-		listener->mutex->unlock(listener->mutex);
+		listener->done->post(listener->done);
 	}
 	return FALSE;
 }
@@ -149,8 +135,7 @@ static inline bool listener_done(interface_listener_t *listener)
 static void listener_cleanup(interface_listener_t *listener)
 {
 	charon->bus->remove_listener(charon->bus, &listener->public);
-	listener->condvar->destroy(listener->condvar);
-	listener->mutex->destroy(listener->mutex);
+	listener->done->destroy(listener->done);
 }
 
 /**
@@ -159,53 +144,32 @@ static void listener_cleanup(interface_listener_t *listener)
  *
  * @note Use 'return listener_done(listener)' to properly unregister a listener
  *
- * @returns TRUE in case of a timeout
+ * @param listener  listener to register
+ * @param job       job to execute asynchronously when registered, or NULL
+ * @param timeout   max timeout in ms to listen for events, 0 to disable
+ * @return          TRUE if timed out
  */
 static bool wait_for_listener(interface_listener_t *listener, job_t *job,
 							  u_int timeout)
 {
 	bool old, timed_out = FALSE;
-	timeval_t tv, add;
 
-	if (timeout)
-	{
-		add.tv_sec = timeout / 1000;
-		add.tv_usec = (timeout - (add.tv_sec * 1000)) * 1000;
-		time_monotonic(&tv);
-		timeradd(&tv, &add, &tv);
-	}
-
-	listener->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	listener->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	listener->done = semaphore_create(0);
 
 	charon->bus->add_listener(charon->bus, &listener->public);
 	lib->processor->queue_job(lib->processor, job);
 
-	listener->mutex->lock(listener->mutex);
 	thread_cleanup_push((thread_cleanup_t)listener_cleanup, listener);
-	thread_cleanup_push((thread_cleanup_t)listener->mutex->unlock,
-						listener->mutex);
 	old = thread_cancelability(TRUE);
-	while (!listener->done)
+	if (timeout)
 	{
-		if (timeout)
-		{
-			if (listener->condvar->timed_wait_abs(listener->condvar,
-												  listener->mutex, tv))
-			{
-
-				timed_out = TRUE;
-				break;
-			}
-		}
-		else
-		{
-			listener->condvar->wait(listener->condvar, listener->mutex);
-		}
+		timed_out = listener->done->timed_wait(listener->done, timeout);
+	}
+	else
+	{
+		listener->done->wait(listener->done);
 	}
 	thread_cancelability(old);
-	/* unlock mutex */
-	thread_cleanup_pop(TRUE);
 	thread_cleanup_pop(TRUE);
 	return timed_out;
 }
