@@ -758,7 +758,8 @@ METHOD(task_t, process_r, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
-			if (has_notify_errors(this, message))
+			if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
+				has_notify_errors(this, message))
 			{
 				return SUCCESS;
 			}
