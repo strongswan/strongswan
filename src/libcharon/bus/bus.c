@@ -142,64 +142,6 @@ struct cleanup_data_t {
 	entry_t *entry;
 };
 
-/**
- * thread_cleanup_t handler to remove a listener
- */
-static void listener_cleanup(cleanup_data_t *data)
-{
-	data->this->listeners->remove(data->this->listeners, data->entry, NULL);
-	entry_destroy(data->entry);
-}
-
-METHOD(bus_t, listen_, bool,
-	private_bus_t *this, listener_t *listener, job_t *job, u_int timeout)
-{
-	bool old, timed_out = FALSE;
-	cleanup_data_t data;
-	timeval_t tv, add;
-
-	if (timeout)
-	{
-		add.tv_sec = timeout / 1000;
-		add.tv_usec = (timeout - (add.tv_sec * 1000)) * 1000;
-		time_monotonic(&tv);
-		timeradd(&tv, &add, &tv);
-	}
-
-	data.this = this;
-	data.entry = entry_create(listener, TRUE);
-
-	this->mutex->lock(this->mutex);
-	this->listeners->insert_last(this->listeners, data.entry);
-	lib->processor->queue_job(lib->processor, job);
-	thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
-	thread_cleanup_push((thread_cleanup_t)listener_cleanup, &data);
-	old = thread_cancelability(TRUE);
-	while (data.entry->blocker)
-	{
-		if (timeout)
-		{
-			if (data.entry->condvar->timed_wait_abs(data.entry->condvar,
-												    this->mutex, tv))
-			{
-				this->listeners->remove(this->listeners, data.entry, NULL);
-				timed_out = TRUE;
-				break;
-			}
-		}
-		else
-		{
-			data.entry->condvar->wait(data.entry->condvar, this->mutex);
-		}
-	}
-	thread_cancelability(old);
-	thread_cleanup_pop(FALSE);
-	/* unlock mutex */
-	thread_cleanup_pop(TRUE);
-	entry_destroy(data.entry);
-	return timed_out;
-}
-
 METHOD(bus_t, set_sa, void,
 	private_bus_t *this, ike_sa_t *ike_sa)
 {
@@ -715,7 +657,6 @@ bus_t *bus_create()
 		.public = {
 			.add_listener = _add_listener,
 			.remove_listener = _remove_listener,
-			.listen = _listen_,
 			.set_sa = _set_sa,
 			.get_sa = _get_sa,
 			.log = _log_,

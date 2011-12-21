@@ -142,26 +142,10 @@ struct bus_t {
 	void (*remove_listener) (bus_t *this, listener_t *listener);
 
 	/**
-	 * Register a listener and block the calling thread.
-	 *
-	 * This call registers a listener and blocks the calling thread until
-	 * its listeners function returns FALSE. This allows to wait for certain
-	 * events. The associated job is executed after the listener has been
-	 * registered: This allows to listen on events we initiate with the job,
-	 * without missing any events to job may fire.
-	 *
-	 * @param listener	listener to register
-	 * @param job		job to execute asynchronously when registered, or NULL
-	 * @param timeout	max timeout in ms to listen for events, 0 to disable
-	 * @return			TRUE if timed out
-	 */
-	bool (*listen)(bus_t *this, listener_t *listener, job_t *job, u_int timeout);
-
-	/**
 	 * Set the IKE_SA the calling thread is using.
 	 *
-	 * To associate an received log message to an IKE_SA without passing it as
-	 * parameter each time, the thread registers the currenlty used IKE_SA
+	 * To associate a received log message with an IKE_SA without passing it as
+	 * parameter each time, the thread registers the currently used IKE_SA
 	 * during check-out. Before check-in, the thread unregisters the IKE_SA.
 	 * This IKE_SA is stored per-thread, so each thread has its own IKE_SA
 	 * registered.
@@ -183,9 +167,8 @@ struct bus_t {
 	/**
 	 * Send a log message to the bus.
 	 *
-	 * The signal specifies the type of the event occurred. The format string
-	 * specifies an additional informational or error message with a
-	 * printf() like variable argument list.
+	 * The format string specifies an additional informational or error
+	 * message with a printf() like variable argument list.
 	 * Use the DBG() macros.
 	 *
 	 * @param group		debugging group
@@ -198,7 +181,7 @@ struct bus_t {
 	/**
 	 * Send a log message to the bus using va_list arguments.
 	 *
-	 * Same as bus_t.signal(), but uses va_list argument list.
+	 * Same as bus_t.log(), but uses va_list argument list.
 	 *
 	 * @param group		kind of the signal (up, down, rekeyed, ...)
 	 * @param level		verbosity level of the signal
@@ -212,7 +195,7 @@ struct bus_t {
 	 * Raise an alert over the bus.
 	 *
 	 * @param alert		kind of alert
-	 * @param ...		alert specific attributes
+	 * @param ...		alert specific arguments
 	 */
 	void (*alert)(bus_t *this, alert_t alert, ...);
 
@@ -278,6 +261,7 @@ struct bus_t {
 	void (*ike_keys)(bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
 					 chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
 					 ike_sa_t *rekey, shared_key_t *shared);
+
 	/**
 	 * CHILD_SA keymat hook.
 	 *
