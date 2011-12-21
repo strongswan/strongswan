@@ -1450,18 +1450,10 @@ METHOD(message_t, generate, status_t,
 	{
 		order_payloads(this);
 	}
-
-	if (this->major_version == IKEV2_MAJOR_VERSION)
-	{
-		encrypted = this->rule->encrypted;
-	}
-	else
+	if (keymat && keymat->get_version(keymat) == IKEV1)
 	{
 		/* get a hash for this message, if any is required */
-		if (keymat_v1)
-		{
-			hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
-		}
+		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
 		if (hash.ptr)
 		{	/* insert a HASH payload as first payload */
 			hash_payload_t *hash_payload;
@@ -1475,24 +1467,28 @@ METHOD(message_t, generate, status_t,
 			}
 			chunk_free(&hash);
 		}
-		if (!encrypted)
+	}
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		encrypted = this->rule->encrypted;
+	}
+	else if (!encrypted)
+	{
+		/* If at least one payload requires encryption, encrypt the message.
+		 * If no key material is available, the flag will be reset below. */
+		enumerator = this->payloads->create_enumerator(this->payloads);
+		while (enumerator->enumerate(enumerator, (void**)&payload))
 		{
-			/* If at least one payload requires encryption, encrypt the message.
-			 * If no key material is available, the flag will be reset below. */
-			enumerator = this->payloads->create_enumerator(this->payloads);
-			while (enumerator->enumerate(enumerator, (void**)&payload))
-			{
-				payload_rule_t *rule;
+			payload_rule_t *rule;
 
-				rule = get_payload_rule(this, payload->get_type(payload));
-				if (rule && rule->encrypted)
-				{
-					this->is_encrypted = encrypted = TRUE;
-					break;
-				}
+			rule = get_payload_rule(this, payload->get_type(payload));
+			if (rule && rule->encrypted)
+			{
+				this->is_encrypted = encrypted = TRUE;
+				break;
 			}
-			enumerator->destroy(enumerator);
 		}
+		enumerator->destroy(enumerator);
 	}
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
@@ -1591,9 +1587,12 @@ METHOD(message_t, generate, status_t,
 	htoun32(lenpos, chunk.len);
 	this->packet->set_data(this->packet, chunk_clone(chunk));
 	if (this->is_encrypted)
-	{	/* update the IV for the next IKEv1 message */
+	{
+		/* update the IV for the next IKEv1 message */
 		chunk_t last_block;
-		size_t bs = aead->get_block_size(aead);
+		size_t bs;
+
+		bs = aead->get_block_size(aead);
 		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
 		keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
 		keymat_v1->confirm_iv(keymat_v1, this->message_id);
@@ -1727,6 +1726,7 @@ static status_t parse_payloads(private_message_t *this)
 	{	/* wrap the whole encrypted IKEv1 message in a special encryption
 		 * payload which is then handled just like a regular payload */
 		encryption_payload_t *encryption;
+
 		status = this->parser->parse_payload(this->parser, ENCRYPTED_V1,
 											 (payload_t**)&encryption);
 		if (status != SUCCESS)
@@ -1817,7 +1817,19 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 				status = VERIFY_ERROR;
 				break;
 			}
+			if (!keymat)
+			{
+				DBG1(DBG_ENC, "found encryption payload, but no keymat");
+				status = INVALID_ARG;
+				break;
+			}
 			aead = keymat->get_aead(keymat, TRUE);
+			if (!aead)
+			{
+				DBG1(DBG_ENC, "found encryption payload, but no transform set");
+				status = INVALID_ARG;
+				break;
+			}
 			bs = aead->get_block_size(aead);
 			encryption->set_transform(encryption, aead);
 			chunk = this->packet->get_data(this->packet);
@@ -1828,7 +1840,7 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 				status = VERIFY_ERROR;
 				break;
 			}
-			if (type == ENCRYPTED_V1)
+			if (keymat->get_version(keymat) == IKEV1)
 			{	/* instead of associated data we provide the IV, we also update
 				 * the IV with the last encrypted block */
 				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
@@ -1982,7 +1994,7 @@ METHOD(message_t, parse_body, status_t,
 
 	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
 
-	if (this->major_version == IKEV1_MAJOR_VERSION)
+	if (keymat && keymat->get_version(keymat) == IKEV1)
 	{
 		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
 		chunk_t hash;
@@ -2019,15 +2031,11 @@ METHOD(message_t, parse_body, status_t,
 			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
 			chunk_free(&hash);
 		}
+		if (this->is_encrypted)
+		{	/* message verified, confirm IV */
+			keymat_v1->confirm_iv(keymat_v1, this->message_id);
+		}
 	}
-
-	if (this->is_encrypted)
-	{	/* TODO-IKEv1: this should be done later when we know this is no
-		 * retransmit */
-		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-		keymat_v1->confirm_iv(keymat_v1, this->message_id);
-	}
-
 	return SUCCESS;
 }
 
