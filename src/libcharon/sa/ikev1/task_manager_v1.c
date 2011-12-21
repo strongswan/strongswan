@@ -349,13 +349,13 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_DELETE))
+				if (activate_task(this, TASK_QUICK_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_QUICK_DELETE))
+				if (activate_task(this, TASK_ISAKMP_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -499,7 +499,7 @@ METHOD(task_manager_t, initiate, status_t,
 				break;
 		}
 	}
-	return SUCCESS;
+	return initiate(this);
 }
 
 /**
@@ -1075,6 +1075,18 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 METHOD(task_manager_t, queue_ike_delete, void,
 	private_task_manager_t *this)
 {
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		queue_task(this, (task_t*)
+			quick_delete_create(this->ike_sa, child_sa->get_protocol(child_sa),
+								child_sa->get_spi(child_sa, TRUE), FALSE));
+	}
+	enumerator->destroy(enumerator);
+
 	queue_task(this, (task_t*)isakmp_delete_create(this->ike_sa, TRUE));
 }
 
