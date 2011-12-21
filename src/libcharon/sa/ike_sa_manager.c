@@ -1027,6 +1027,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 				ike_sa = entry->ike_sa;
 				DBG2(DBG_MGR, "IKE_SA %s[%u] checked out by hash",
 						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+				chunk_free(&hash);
 			}
 			unlock_single_segment(this, segment);
 		}
