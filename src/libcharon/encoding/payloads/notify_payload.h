@@ -47,6 +47,9 @@ enum notify_type_t {
 	INVALID_EXCHANGE_TYPE = 7,
 	INVALID_MESSAGE_ID = 9,
 	INVALID_SPI = 11,
+	/* IKEv1 only */
+	ATTRIBUTES_NOT_SUPPORTED = 13,
+	/* IKEv1 alias */
 	NO_PROPOSAL_CHOSEN = 14,
 	/* IKEv1 only */
 	PAYLOAD_MALFORMED = 16,
