@@ -688,7 +688,7 @@ static status_t process_request(private_task_manager_t *this,
 				break;
 			case INFORMATIONAL_V1:
 				task = (task_t *)informational_create(this->ike_sa, NULL);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
+				this->passive_tasks->insert_first(this->passive_tasks, task);
 				break;
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -904,7 +904,7 @@ METHOD(task_manager_t, process_message, status_t,
 	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
 		 msg->get_exchange_type(msg) == this->initiating.type &&
-		this->active_tasks->get_count(this->active_tasks)))
+		 this->active_tasks->get_count(this->active_tasks)))
 	{
 		msg->set_request(msg, FALSE);
 		status = parse_message(this, msg);
