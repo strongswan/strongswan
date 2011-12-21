@@ -1071,7 +1071,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		if (message->get_request(message) &&
 			message->get_message_id(message) == entry->message_id)
 		{
-			DBG1(DBG_MGR, "ignoring request with ID %d, already processing",
+			DBG1(DBG_MGR, "ignoring request with ID %u, already processing",
 				 entry->message_id);
 		}
 		else if (wait_for_entry(this, entry, segment))

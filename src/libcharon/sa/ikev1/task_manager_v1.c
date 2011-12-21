@@ -42,6 +42,14 @@
  */
 #define MAX_OLD_HASHES 2
 
+/**
+ * First sequence number of responding packets.
+ *
+ * To distinguish retransmission jobs for initiating and responding packets,
+ * we split up the sequence counter and use the upper half for responding.
+ */
+#define RESPONDING_SEQ INT_MAX
+
 typedef struct exchange_t exchange_t;
 
 /**
@@ -87,6 +95,11 @@ struct private_task_manager_t {
 	 */
 	struct {
 		/**
+		 * Message ID of the last response
+		 */
+		u_int32_t mid;
+
+		/**
 		 * Hash of a previously received message
 		 */
 		u_int32_t hash;
@@ -95,6 +108,16 @@ struct private_task_manager_t {
 		 * packet for retransmission
 		 */
 		packet_t *packet;
+
+		/**
+		 * Sequence number of the last sent message
+		 */
+		u_int32_t seqnr;
+
+		/**
+		 * how many times we have retransmitted so far
+		 */
+		u_int retransmitted;
 
 	} responding;
 
@@ -228,46 +251,63 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	return found;
 }
 
-METHOD(task_manager_t, retransmit, status_t,
-	private_task_manager_t *this, u_int32_t message_seqnr)
+/**
+ * Retransmit a packet, either as initiator or as responder
+ */
+static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
+							u_int mid, u_int retransmitted, packet_t *packet)
 {
-	/* this.initiating packet used as marker for received response */
-	if (message_seqnr == this->initiating.seqnr && this->initiating.packet )
+	u_int32_t t;
+
+	if (retransmitted > this->retransmit_tries)
 	{
-		u_int32_t timeout;
-		packet_t *packet;
-		job_t *job;
-
-		if (this->initiating.retransmitted <= this->retransmit_tries)
+		DBG1(DBG_IKE, "giving up after %u retransmits", retransmitted - 1);
+		if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
 		{
-			timeout = (u_int32_t)(this->retransmit_timeout * 1000.0 *
-				pow(this->retransmit_base, this->initiating.retransmitted));
+			charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		}
-		else
-		{
-			DBG1(DBG_IKE, "giving up after %d retransmits",
-				 this->initiating.retransmitted - 1);
-			if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
-			{
-				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
-			}
-			return DESTROY_ME;
-		}
-
-		if (this->initiating.retransmitted)
-		{
-			DBG1(DBG_IKE, "retransmit %d of request with message ID %u seqnr (%d)",
-				 this->initiating.retransmitted, this->initiating.mid, message_seqnr);
-		}
-		packet = this->initiating.packet->clone(this->initiating.packet);
-		charon->sender->send(charon->sender, packet);
-
-		this->initiating.retransmitted++;
-		job = (job_t*)retransmit_job_create(this->initiating.seqnr,
-											this->ike_sa->get_id(this->ike_sa));
-		lib->scheduler->schedule_job_ms(lib->scheduler, job, timeout);
+		return DESTROY_ME;
 	}
-	return SUCCESS;
+	t = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+					pow(this->retransmit_base, retransmitted));
+	if (retransmitted)
+	{
+		DBG1(DBG_IKE, "sending retransmit %u of %s message ID %u, seq %u",
+			 retransmitted, seqnr < RESPONDING_SEQ ? "request" : "response",
+			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
+	}
+	charon->sender->send(charon->sender, packet->clone(packet));
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
+			retransmit_job_create(seqnr, this->ike_sa->get_id(this->ike_sa)), t);
+	return NEED_MORE;
+}
+
+METHOD(task_manager_t, retransmit, status_t,
+	private_task_manager_t *this, u_int32_t seqnr)
+{
+	status_t status = SUCCESS;
+
+	if (seqnr == this->initiating.seqnr && this->initiating.packet)
+	{
+		status = retransmit_packet(this, seqnr, this->initiating.mid,
+					this->initiating.retransmitted, this->initiating.packet);
+		if (status == NEED_MORE)
+		{
+			this->initiating.retransmitted++;
+			status = SUCCESS;
+		}
+	}
+	if (seqnr == this->responding.seqnr && this->responding.packet)
+	{
+		status = retransmit_packet(this, seqnr, this->responding.mid,
+					this->responding.retransmitted, this->responding.packet);
+		if (status == NEED_MORE)
+		{
+			this->responding.retransmitted++;
+			status = SUCCESS;
+		}
+	}
+	return status;
 }
 
 METHOD(task_manager_t, initiate, status_t,
@@ -461,8 +501,8 @@ METHOD(task_manager_t, initiate, status_t,
 		message->destroy(message);
 		return initiate(this);
 	}
-	this->initiating.seqnr++;
 
+	DESTROY_IF(this->initiating.packet);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -474,16 +514,25 @@ METHOD(task_manager_t, initiate, status_t,
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
-	message->destroy(message);
 
+	this->initiating.seqnr++;
 	if (expect_response)
 	{
+		message->destroy(message);
 		return retransmit(this, this->initiating.seqnr);
 	}
-	charon->sender->send(charon->sender,
-				this->initiating.packet->clone(this->initiating.packet));
-	this->initiating.packet->destroy(this->initiating.packet);
-	this->initiating.packet = NULL;
+	if (message->get_exchange_type(message) == QUICK_MODE)
+	{	/* keep the packet for retransmission in quick mode. The responder
+		 * might request a retransmission */
+		charon->sender->send(charon->sender,
+					this->initiating.packet->clone(this->initiating.packet));
+	}
+	else
+	{
+		charon->sender->send(charon->sender, this->initiating.packet);
+		this->initiating.packet = NULL;
+	}
+	message->destroy(message);
 
 	if (exchange == INFORMATIONAL_V1)
 	{
@@ -503,14 +552,6 @@ METHOD(task_manager_t, initiate, status_t,
 }
 
 /**
- * handle exchange collisions
- */
-static bool handle_collisions(private_task_manager_t *this, task_t *task)
-{
-	return FALSE;
-}
-
-/**
  * build a response depending on the "passive" task list
  */
 static status_t build_response(private_task_manager_t *this, message_t *request)
@@ -519,7 +560,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE, flushed = FALSE;
+	bool delete = FALSE, flushed = FALSE, expect_request = FALSE;
 	status_t status;
 
 	me = request->get_destination(request);
@@ -533,6 +574,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->set_message_id(message, request->get_message_id(request));
 	message->set_request(message, FALSE);
 
+	this->responding.mid = request->get_message_id(request);
+	this->responding.retransmitted = 0;
+	this->responding.seqnr++;
+
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, (void*)&task))
 	{
@@ -541,17 +586,14 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 			case SUCCESS:
 				/* task completed, remove it */
 				this->passive_tasks->remove_at(this->passive_tasks, enumerator);
-				if (!handle_collisions(this, task))
-				{
-					task->destroy(task);
-				}
+				task->destroy(task);
 				continue;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
-				if (handle_collisions(this, task))
-				{
-					this->passive_tasks->remove_at(this->passive_tasks,
-												   enumerator);
+				if (task->get_type(task) == TASK_QUICK_MODE)
+				{	/* we rely on initiator retransmission, except for
+					 * three-message exchanges */
+					expect_request = TRUE;
 				}
 				continue;
 			case ALREADY_DONE:
@@ -587,8 +629,12 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 		return DESTROY_ME;
 	}
 
+	if (expect_request && !delete)
+	{
+		return retransmit(this, this->responding.seqnr);
+	}
 	charon->sender->send(charon->sender,
-						 this->responding.packet->clone(this->responding.packet));
+					this->responding.packet->clone(this->responding.packet));
 	if (delete)
 	{
 		return DESTROY_ME;
@@ -895,6 +941,16 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (this->initiating.old_hashes[i] == hash)
 		{
+			if (this->initiating.packet &&
+				i == (this->initiating.old_hash_pos % MAX_OLD_HASHES) &&
+				msg->get_exchange_type(msg) == QUICK_MODE)
+			{
+				DBG1(DBG_IKE, "received retransmit of response with ID %u, "
+					 "resending last request", mid);
+				charon->sender->send(charon->sender,
+						this->initiating.packet->clone(this->initiating.packet));
+				return SUCCESS;
+			}
 			DBG1(DBG_IKE, "received retransmit of response with ID %u, "
 				 "but next request already sent", mid);
 			return SUCCESS;
@@ -921,7 +977,7 @@ METHOD(task_manager_t, process_message, status_t,
 			flush(this);
 			return DESTROY_ME;
 		}
-		this->initiating.old_hashes[(this->initiating.old_hash_pos++) %
+		this->initiating.old_hashes[(++this->initiating.old_hash_pos) %
 									MAX_OLD_HASHES] = hash;
 	}
 	else
@@ -975,6 +1031,7 @@ METHOD(task_manager_t, process_message, status_t,
 			ike_sa_id_t *ike_sa_id;
 			ike_cfg_t *ike_cfg;
 			job_t *job;
+
 			ike_cfg = charon->backends->get_ike_cfg(charon->backends, me, other);
 			if (ike_cfg == NULL)
 			{
@@ -1160,6 +1217,8 @@ METHOD(task_manager_t, reset, void,
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
 	this->responding.packet = NULL;
+	this->responding.seqnr = RESPONDING_SEQ;
+	this->responding.retransmitted = 0;
 	this->initiating.packet = NULL;
 	this->initiating.mid = 0;
 	this->initiating.seqnr = 0;
@@ -1248,6 +1307,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
+		.responding.seqnr = RESPONDING_SEQ,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.queued_tasks = linked_list_create(),
 		.active_tasks = linked_list_create(),
