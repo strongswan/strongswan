@@ -37,6 +37,13 @@ typedef struct keymat_t keymat_t;
 struct keymat_t {
 
 	/**
+	 * Get IKE version of this keymat.
+	 *
+	 * @return			IKEV1 for keymat_v1_t, IKEV2 for keymat_v2_t
+	 */
+	ike_version_t (*get_version)(keymat_t *this);
+
+	/**
 	 * Create a diffie hellman object for key agreement.
 	 *
 	 * The diffie hellman is either for IKE negotiation/rekeying or

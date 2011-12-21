@@ -946,6 +946,12 @@ METHOD(keymat_v1_t, confirm_iv, void,
 	}
 }
 
+METHOD(keymat_t, get_version, ike_version_t,
+	private_keymat_v1_t *this)
+{
+	return IKEV1;
+}
+
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	private_keymat_v1_t *this, diffie_hellman_group_t group)
 {
@@ -984,6 +990,7 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 	INIT(this,
 		.public = {
 			.keymat = {
+				.get_version = _get_version,
 				.create_dh = _create_dh,
 				.get_aead = _get_aead,
 				.destroy = _destroy,

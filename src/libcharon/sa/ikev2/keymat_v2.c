@@ -71,6 +71,12 @@ struct private_keymat_v2_t {
 	chunk_t skp_verify;
 };
 
+METHOD(keymat_t, get_version, ike_version_t,
+	private_keymat_v2_t *this)
+{
+	return IKEV2;
+}
+
 METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	private_keymat_v2_t *this, diffie_hellman_group_t group)
 {
@@ -563,6 +569,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 	INIT(this,
 		.public = {
 			.keymat = {
+				.get_version = _get_version,
 				.create_dh = _create_dh,
 				.get_aead = _get_aead,
 				.destroy = _destroy,
