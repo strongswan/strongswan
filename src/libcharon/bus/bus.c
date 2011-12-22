@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,7 +20,6 @@
 
 #include <threading/thread.h>
 #include <threading/thread_value.h>
-#include <threading/condvar.h>
 #include <threading/mutex.h>
 
 typedef struct private_bus_t private_bus_t;
@@ -62,33 +62,21 @@ struct entry_t {
 	listener_t *listener;
 
 	/**
-	 * is this a active listen() call with a blocking thread
-	 */
-	bool blocker;
-
-	/**
 	 * are we currently calling this listener
 	 */
 	int calling;
-
-	/**
-	 * condvar where active listeners wait
-	 */
-	condvar_t *condvar;
 };
 
 /**
  * create a listener entry
  */
-static entry_t *entry_create(listener_t *listener, bool blocker)
+static entry_t *entry_create(listener_t *listener)
 {
-	entry_t *this = malloc_thing(entry_t);
+	entry_t *this;
 
-	this->listener = listener;
-	this->blocker = blocker;
-	this->calling = 0;
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-
+	INIT(this,
+		.listener = listener,
+	);
 	return this;
 }
 
@@ -97,7 +85,6 @@ static entry_t *entry_create(listener_t *listener, bool blocker)
  */
 static void entry_destroy(entry_t *entry)
 {
-	entry->condvar->destroy(entry->condvar);
 	free(entry);
 }
 
@@ -105,7 +92,7 @@ METHOD(bus_t, add_listener, void,
 	private_bus_t *this, listener_t *listener)
 {
 	this->mutex->lock(this->mutex);
-	this->listeners->insert_last(this->listeners, entry_create(listener, FALSE));
+	this->listeners->insert_last(this->listeners, entry_create(listener));
 	this->mutex->unlock(this->mutex);
 }
 
@@ -188,16 +175,7 @@ static bool log_cb(entry_t *entry, log_data_t *data)
 	if (!entry->listener->log(entry->listener, data->group, data->level,
 							  data->thread, data->ike_sa, data->format, args))
 	{
-		if (entry->blocker)
-		{
-			entry->blocker = FALSE;
-			entry->condvar->signal(entry->condvar);
-			entry->calling--;
-		}
-		else
-		{
-			entry_destroy(entry);
-		}
+		entry_destroy(entry);
 		va_end(args);
 		return TRUE;
 	}
@@ -244,16 +222,8 @@ METHOD(bus_t, log_, void,
 static void unregister_listener(private_bus_t *this, entry_t *entry,
 								enumerator_t *enumerator)
 {
-	if (entry->blocker)
-	{
-		entry->blocker = FALSE;
-		entry->condvar->signal(entry->condvar);
-	}
-	else
-	{
-		entry_destroy(entry);
-	}
 	this->listeners->remove_at(this->listeners, enumerator);
+	entry_destroy(entry);
 }
 
 METHOD(bus_t, alert, void,
