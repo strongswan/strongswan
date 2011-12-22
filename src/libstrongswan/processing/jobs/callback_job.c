@@ -17,10 +17,9 @@
 
 #include "callback_job.h"
 
-#include <semaphore.h>
-
 #include <threading/thread.h>
 #include <threading/condvar.h>
+#include <threading/semaphore.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 
@@ -84,10 +83,10 @@ struct private_callback_job_t {
 	/**
 	 * semaphore to synchronize the termination of the assigned thread.
 	 *
-	 * separately allocated during cancellation, so that we can wait on it
-	 * without risking that it gets freed too early during destruction.
+	 * separately created during cancellation, so that we can wait on it
+	 * without risking that it gets destroyed too early during destruction.
 	 */
-	sem_t *terminated;
+	semaphore_t *terminated;
 
 	/**
 	 * Priority of this job
@@ -129,7 +128,7 @@ METHOD(job_t, destroy, void,
 	}
 	if (this->terminated)
 	{
-		sem_post(this->terminated);
+		this->terminated->post(this->terminated);
 	}
 	this->children->destroy(this->children);
 	this->destroyable->destroy(this->destroyable);
@@ -142,7 +141,7 @@ METHOD(callback_job_t, cancel, void,
 	private_callback_job_t *this)
 {
 	callback_job_t *child;
-	sem_t *terminated = NULL;
+	semaphore_t *terminated = NULL;
 
 	this->mutex->lock(this->mutex);
 	this->cancelled = TRUE;
@@ -158,8 +157,7 @@ METHOD(callback_job_t, cancel, void,
 		/* terminate the thread, if there is currently one executing the job.
 		 * we wait for its termination using a semaphore */
 		this->thread->cancel(this->thread);
-		terminated = this->terminated = malloc_thing(sem_t);
-		sem_init(terminated, 0, 0);
+		terminated = this->terminated = semaphore_create(0);
 	}
 	else
 	{
@@ -174,9 +172,8 @@ METHOD(callback_job_t, cancel, void,
 
 	if (terminated)
 	{
-		sem_wait(terminated);
-		sem_destroy(terminated);
-		free(terminated);
+		terminated->wait(terminated);
+		terminated->destroy(terminated);
 	}
 }
 
