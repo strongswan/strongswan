@@ -699,10 +699,10 @@ METHOD(task_t, process_r, status_t,
 			}
 			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
 			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
-			if (!this->config)
+			if (!this->config || !this->tsi || !this->tsr)
 			{
-				DBG1(DBG_IKE, "no child config found");
-				return send_notify(this, NO_PROPOSAL_CHOSEN);
+				DBG1(DBG_IKE, "no matching CHILD_SA config found");
+				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
