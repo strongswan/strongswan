@@ -182,6 +182,7 @@ METHOD(listener_t, listener_log, bool,
 	{
 		if (!this->callback(this->param, group, level, ike_sa, format, args))
 		{
+			this->status = NEED_MORE;
 			return listener_done(this);
 		}
 	}
