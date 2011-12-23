@@ -565,6 +565,11 @@ typedef volatile u_int refcount_t;
 #define ref_get(ref) {__sync_fetch_and_add(ref, 1); }
 #define ref_put(ref) (!__sync_sub_and_fetch(ref, 1))
 
+#define cas_bool(ptr, oldval, newval) \
+					(__sync_bool_compare_and_swap(ptr, oldval, newval))
+#define cas_ptr(ptr, oldval, newval) \
+					(__sync_bool_compare_and_swap(ptr, oldval, newval))
+
 #else /* !HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
@@ -586,6 +591,27 @@ void ref_get(refcount_t *ref);
  * @return		TRUE if no more references counted
  */
 bool ref_put(refcount_t *ref);
+
+/**
+ * Atomically replace value of ptr with newval if it currently equals oldval.
+ *
+ * @param ptr		pointer to variable
+ * @param oldval	old value of the variable
+ * @param newval	new value set if possible
+ * @return			TRUE if value equaled oldval and newval was written
+ */
+bool cas_bool(bool *ptr, bool oldval, bool newval);
+
+/**
+ * Atomically replace value of ptr with newval if it currently equals oldval.
+ *
+ * @param ptr		pointer to variable
+ * @param oldval	old value of the variable
+ * @param newval	new value set if possible
+ * @return			TRUE if value equaled oldval and newval was written
+ */
+bool cas_ptr(void **ptr, void *oldval, void *newval);
+
 
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 

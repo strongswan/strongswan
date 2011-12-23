@@ -344,6 +344,28 @@ bool ref_put(refcount_t *ref)
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
 }
+
+/**
+ * Single mutex for all compare and swap operations.
+ */
+static pthread_mutex_t cas_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Compare and swap if equal to old value
+ */
+#define _cas_impl(name, type) \
+bool cas_##name(type *ptr, type oldval, type newval) \
+{ \
+	bool swapped; \
+	pthread_mutex_lock(&cas_mutex); \
+	if ((swapped = (*ptr == oldval))) { *ptr = newval; } \
+	pthread_mutex_unlock(&cas_mutex); \
+	return swapped; \
+}
+
+_cas_impl(bool, bool)
+_cas_impl(ptr, void*)
+
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
