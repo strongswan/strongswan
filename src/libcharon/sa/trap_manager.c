@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -74,8 +75,10 @@ typedef struct {
 	peer_cfg_t *peer_cfg;
 	/** ref to instanciated CHILD_SA */
 	child_sa_t *child_sa;
+	/** TRUE if an acquire is pending */
+	bool pending;
 	/** pending IKE_SA connecting upon acquire */
-	ike_sa_t *pending;
+	ike_sa_t *ike_sa;
 } entry_t;
 
 /**
@@ -170,10 +173,10 @@ METHOD(trap_manager_t, install, u_int32_t,
 	}
 
 	reqid = child_sa->get_reqid(child_sa);
-	entry = malloc_thing(entry_t);
-	entry->child_sa = child_sa;
-	entry->peer_cfg = peer->get_ref(peer);
-	entry->pending = NULL;
+	INIT(entry,
+		.child_sa = child_sa,
+		.peer_cfg = peer->get_ref(peer),
+	);
 
 	this->lock->write_lock(this->lock);
 	this->traps->insert_last(this->traps, entry);
@@ -263,35 +266,46 @@ METHOD(trap_manager_t, acquire, void,
 	if (!found)
 	{
 		DBG1(DBG_CFG, "trap not found, unable to acquire reqid %d",reqid);
+		this->lock->unlock(this->lock);
+		return;
 	}
-	else if (found->pending)
+	if (!cas_bool(&found->pending, FALSE, TRUE))
 	{
 		DBG1(DBG_CFG, "ignoring acquire, connection attempt pending");
+		this->lock->unlock(this->lock);
+		return;
+	}
+	peer = found->peer_cfg->get_ref(found->peer_cfg);
+	child = found->child_sa->get_config(found->child_sa);
+	child = child->get_ref(child);
+	reqid = found->child_sa->get_reqid(found->child_sa);
+	/* don't hold the lock while checking out the IKE_SA */
+	this->lock->unlock(this->lock);
+
+	ike_sa = charon->ike_sa_manager->checkout_by_config(
+											charon->ike_sa_manager, peer);
+	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	{
+		ike_sa->set_peer_cfg(ike_sa, peer);
+	}
+	if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
+	{
+		/* make sure the entry is still there */
+		this->lock->read_lock(this->lock);
+		if (this->traps->find_first(this->traps, NULL,
+									(void**)&found) == SUCCESS)
+		{
+			found->ike_sa = ike_sa;
+		}
+		this->lock->unlock(this->lock);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
-		child = found->child_sa->get_config(found->child_sa);
-		peer = found->peer_cfg;
-		ike_sa = charon->ike_sa_manager->checkout_by_config(
-												charon->ike_sa_manager, peer);
-		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-		{
-			ike_sa->set_peer_cfg(ike_sa, peer);
-		}
-		child->get_ref(child);
-		reqid = found->child_sa->get_reqid(found->child_sa);
-		if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
-		{
-			found->pending = ike_sa;
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		}
-		else
-		{
-			charon->ike_sa_manager->checkin_and_destroy(
-												charon->ike_sa_manager, ike_sa);
-		}
+		charon->ike_sa_manager->checkin_and_destroy(
+											charon->ike_sa_manager, ike_sa);
 	}
-	this->lock->unlock(this->lock);
+	peer->destroy(peer);
 }
 
 /**
@@ -307,7 +321,7 @@ static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->pending != ike_sa)
+		if (entry->ike_sa != ike_sa)
 		{
 			continue;
 		}
@@ -316,7 +330,8 @@ static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
 		{
 			continue;
 		}
-		entry->pending = NULL;
+		entry->ike_sa = NULL;
+		entry->pending = FALSE;
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
