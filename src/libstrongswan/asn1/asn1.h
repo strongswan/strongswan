@@ -191,12 +191,13 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type);
 /**
  * Converts time_t to an ASN.1 UTCTIME or GENERALIZEDTIME string
  *
- * The type is automatically chosen based on the encoded year.
+ * @note The type is automatically changed to GENERALIZEDTIME if needed
  *
  * @param time		time_t in UTC
+ * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
  * @return			body of an ASN.1 code time object
  */
-chunk_t asn1_from_time(const time_t *time);
+chunk_t asn1_from_time(const time_t *time, asn1_t type);
 
 /**
  * Parse an ASN.1 UTCTIME or GENERALIZEDTIME object

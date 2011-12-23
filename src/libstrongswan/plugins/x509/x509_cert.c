@@ -2316,8 +2316,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		asn1_algorithmIdentifier(cert->algorithm),
 		issuer->get_encoding(issuer),
 		asn1_wrap(ASN1_SEQUENCE, "mm",
-			asn1_from_time(&cert->notBefore),
-			asn1_from_time(&cert->notAfter)),
+			asn1_from_time(&cert->notBefore, ASN1_UTCTIME),
+			asn1_from_time(&cert->notAfter, ASN1_UTCTIME)),
 		subject->get_encoding(subject),
 		key_info, extensions);
 

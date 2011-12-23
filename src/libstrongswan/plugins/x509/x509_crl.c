@@ -736,7 +736,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 		}
 		revoked = asn1_wrap(ASN1_SEQUENCE, "mmm",
 							asn1_integer("c", serial),
-							asn1_from_time(&date),
+							asn1_from_time(&date, ASN1_UTCTIME),
 							entry_ext);
 		certList = chunk_cat("mm", certList, revoked);
 	}
@@ -773,8 +773,8 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 							ASN1_INTEGER_1,
 							asn1_algorithmIdentifier(this->algorithm),
 							this->issuer->get_encoding(this->issuer),
-							asn1_from_time(&this->thisUpdate),
-							asn1_from_time(&this->nextUpdate),
+							asn1_from_time(&this->thisUpdate, ASN1_UTCTIME),
+							asn1_from_time(&this->nextUpdate, ASN1_UTCTIME),
 							asn1_wrap(ASN1_SEQUENCE, "m", certList),
 							extensions);
 
