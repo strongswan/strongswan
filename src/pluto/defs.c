@@ -91,8 +91,7 @@ mv_chunk(u_char **pos, chunk_t content)
 const char*
 check_expiry(time_t expiration_date, int warning_interval, bool strict)
 {
-	time_t now;
-	int time_left;
+	time_t now, time_left;
 
 	if (expiration_date == UNDEFINED_TIME)
 	  return "ok (expires never)";
