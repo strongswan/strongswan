@@ -124,7 +124,7 @@ static int sign_crl()
 	int serial_len = 0;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
-	int lifetime = 15;
+	time_t lifetime = 15;
 	linked_list_t *list, *cdps;
 	enumerator_t *enumerator, *lastenum = NULL;
 	x509_cdp_t *cdp;

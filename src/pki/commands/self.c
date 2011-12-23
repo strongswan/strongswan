@@ -55,11 +55,11 @@ static int self()
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san, *ocsp, *permitted, *excluded, *policies, *mappings;
-	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
 	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
+	time_t lifetime = 1095;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
 	x509_cert_policy_t *policy = NULL;
