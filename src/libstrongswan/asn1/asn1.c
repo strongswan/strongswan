@@ -326,10 +326,10 @@ static const int tm_leap_1970 = 477;
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
-	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec;
+	int tm_year, tm_mon, tm_day, tm_hour, tm_min, tm_sec;
 	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
 	int tz_hour, tz_min, tz_offset;
-	time_t tm_secs;
+	time_t tm_days, tm_secs;
 	u_char *eot = NULL;
 
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
