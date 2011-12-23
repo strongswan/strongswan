@@ -353,15 +353,21 @@ METHOD(listener_t, child_state_change, bool,
 METHOD(trap_manager_t, flush, void,
 	private_trap_manager_t *this)
 {
-	this->traps->invoke_function(this->traps, (void*)destroy_entry);
+	linked_list_t *traps;
+	/* since destroying the CHILD_SA results in events which require a read
+	 * lock we cannot destroy the list while holding the write lock */
+	this->lock->write_lock(this->lock);
+	traps = this->traps;
+	this->traps = linked_list_create();
+	this->lock->unlock(this->lock);
+	traps->destroy_function(traps, (void*)destroy_entry);
 }
 
 METHOD(trap_manager_t, destroy, void,
 	private_trap_manager_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->listener.listener);
-	this->traps->invoke_function(this->traps, (void*)destroy_entry);
-	this->traps->destroy(this->traps);
+	this->traps->destroy_function(this->traps, (void*)destroy_entry);
 	this->lock->destroy(this->lock);
 	free(this);
 }
