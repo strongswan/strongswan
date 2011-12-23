@@ -426,8 +426,9 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 /**
  *  Convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
  */
-chunk_t asn1_from_time(const time_t *time, asn1_t type)
+chunk_t asn1_from_time(const time_t *time)
 {
+	asn1_t type;
 	int offset;
 	const char *format;
 	char buf[BUF_LEN];
@@ -435,6 +436,9 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	struct tm t;
 
 	gmtime_r(time, &t);
+	/* RFC 5280 says that dates through the year 2049 MUST be encoded as UTCTIME
+	 * and dates in 2050 or later MUST be encoded as GENERALIZEDTIME */
+	type = (t.tm_year < 150) ? ASN1_UTCTIME : ASN1_GENERALIZEDTIME;
 	if (type == ASN1_GENERALIZEDTIME)
 	{
 		format = "%04d%02d%02d%02d%02d%02dZ";
@@ -443,7 +447,7 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	else /* ASN1_UTCTIME */
 	{
 		format = "%02d%02d%02d%02d%02d%02dZ";
-		offset = (t.tm_year < 100)? 0 : -100;
+		offset = (t.tm_year < 100) ? 0 : -100;
 	}
 	snprintf(buf, BUF_LEN, format, t.tm_year + offset,
 			 t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);

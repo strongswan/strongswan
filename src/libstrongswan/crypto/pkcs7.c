@@ -825,7 +825,7 @@ METHOD(pkcs7_t, build_signedData, bool,
 
 			/* take the current time as signingTime */
 			time_t now = time(NULL);
-			chunk_t	signingTime = asn1_from_time(&now, ASN1_UTCTIME);
+			chunk_t signingTime = asn1_from_time(&now);
 
 			chunk_t messageDigest, attributes;
 

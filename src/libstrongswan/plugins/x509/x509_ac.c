@@ -527,8 +527,8 @@ static chunk_t build_v2_form(private_x509_ac_t *this)
 static chunk_t build_attr_cert_validity(private_x509_ac_t *this)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "mm",
-				asn1_from_time(&this->notBefore, ASN1_GENERALIZEDTIME),
-				asn1_from_time(&this->notAfter,  ASN1_GENERALIZEDTIME));
+				asn1_from_time(&this->notBefore),
+				asn1_from_time(&this->notAfter));
 }
 
 

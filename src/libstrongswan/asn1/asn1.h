@@ -35,8 +35,8 @@ typedef enum {
 	ASN1_BOOLEAN =			0x01,
 	ASN1_INTEGER =			0x02,
 	ASN1_BIT_STRING =		0x03,
-	ASN1_OCTET_STRING = 	0x04,
-	ASN1_NULL = 			0x05,
+	ASN1_OCTET_STRING =		0x04,
+	ASN1_NULL =				0x05,
 	ASN1_OID =				0x06,
 	ASN1_ENUMERATED =		0x0A,
 	ASN1_UTF8STRING =		0x0C,
@@ -48,7 +48,7 @@ typedef enum {
 	ASN1_UTCTIME =			0x17,
 	ASN1_GENERALIZEDTIME =	0x18,
 	ASN1_GRAPHICSTRING =	0x19,
-	ASN1_VISIBLESTRING = 	0x1A,
+	ASN1_VISIBLESTRING =	0x1A,
 	ASN1_GENERALSTRING =	0x1B,
 	ASN1_UNIVERSALSTRING =	0x1C,
 	ASN1_BMPSTRING =		0x1E,
@@ -75,7 +75,7 @@ typedef enum {
 	ASN1_CONTEXT_C_4 =		0xA4,
 	ASN1_CONTEXT_C_5 =		0xA5,
 
-	ASN1_INVALID = 			0x100,
+	ASN1_INVALID =			0x100,
 } asn1_t;
 
 #define ASN1_INVALID_LENGTH	0xffffffff
@@ -191,11 +191,12 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type);
 /**
  * Converts time_t to an ASN.1 UTCTIME or GENERALIZEDTIME string
  *
+ * The type is automatically chosen based on the encoded year.
+ *
  * @param time		time_t in UTC
- * @param type		ASN1_UTCTIME or ASN1_GENERALIZEDTIME
  * @return			body of an ASN.1 code time object
  */
-chunk_t asn1_from_time(const time_t *time, asn1_t type);
+chunk_t asn1_from_time(const time_t *time);
 
 /**
  * Parse an ASN.1 UTCTIME or GENERALIZEDTIME object
