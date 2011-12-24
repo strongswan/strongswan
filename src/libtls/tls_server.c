@@ -228,7 +228,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 				extensions->destroy(extensions);
 				return NEED_MORE;
 			}
-			DBG1(DBG_TLS, "received TLS '%N' extension",
+			DBG2(DBG_TLS, "received TLS '%N' extension",
 				 tls_extension_names, extension);
 			DBG3(DBG_TLS, "%B", &ext);
 			switch (extension)
