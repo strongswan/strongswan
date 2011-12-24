@@ -55,6 +55,13 @@ struct tls_socket_t {
 	bool (*write)(tls_socket_t *this, chunk_t data);
 
 	/**
+	 * Get the underlying file descriptor passed to the constructor.
+	 *
+	 * @return			file descriptor
+	 */
+	int (*get_fd)(tls_socket_t *this);
+
+	/**
 	 * Destroy a tls_socket_t.
 	 */
 	void (*destroy)(tls_socket_t *this);

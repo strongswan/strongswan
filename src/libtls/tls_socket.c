@@ -175,6 +175,12 @@ METHOD(tls_socket_t, write_, bool,
 	return FALSE;
 }
 
+METHOD(tls_socket_t, get_fd, int,
+	private_tls_socket_t *this)
+{
+	return this->fd;
+}
+
 METHOD(tls_socket_t, destroy, void,
 	private_tls_socket_t *this)
 {
@@ -195,6 +201,7 @@ tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
 		.public = {
 			.read = _read_,
 			.write = _write_,
+			.get_fd = _get_fd,
 			.destroy = _destroy,
 		},
 		.app = {
