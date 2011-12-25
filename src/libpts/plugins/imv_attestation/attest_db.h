@@ -91,7 +91,7 @@ struct attest_db_t {
 	 * @param create		if TRUE create database entry if it doesn't exist
 	 * @return				TRUE if successful
 	 */
-	bool (*set_key)(attest_db_t *this, char *key, bool create);
+	bool (*set_key)(attest_db_t *this, chunk_t key, bool create);
 
 	/**
 	 * Set primary key of the AIK to be queried

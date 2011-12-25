@@ -402,7 +402,7 @@ METHOD(attest_db_t, set_fid, bool,
 }
 
 METHOD(attest_db_t, set_key, bool,
-	private_attest_db_t *this, char *key, bool create)
+	private_attest_db_t *this, chunk_t key, bool create)
 {
 	enumerator_t *e;
 	char *owner;
@@ -412,7 +412,7 @@ METHOD(attest_db_t, set_key, bool,
 		printf("key has already been set\n");
 		return FALSE;
 	}
-	this->key = chunk_from_hex(chunk_create(key, strlen(key)), NULL);
+	this->key = key;
 
 	e = this->db->query(this->db, "SELECT id, owner FROM keys WHERE keyid= ?",
 						DB_BLOB, this->key, DB_INT, DB_TEXT);
@@ -420,6 +420,7 @@ METHOD(attest_db_t, set_key, bool,
 	{
 		if (e->enumerate(e, &this->kid, &owner))
 		{
+			free(this->owner);
 			this->owner = strdup(owner);
 			this->key_set = TRUE;
 		}

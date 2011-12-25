@@ -56,7 +56,7 @@ Usage:\n\
     Show a list of component measurements for a given component or\n\
     its primary key as an optional selector.\n\
   \n\
-  ipsec attest --measurements [--sha1|--sha256|--sha384] [--key <digest>|--kid <id>]\n\
+  ipsec attest --measurements [--sha1|--sha256|--sha384] [--key <digest>|--kid <id>|--aik <path>]\n\
     Show a list of component measurements for a given AIK or\n\
     its primary key as an optional selector.\n\
   \n\
@@ -64,7 +64,7 @@ Usage:\n\
     Add a file, directory, product or component entry\n\
     Component <cfn> entries must be of the form <vendor_id>/<name>-<qualifier>\n\
   \n\
-  ipsec attest --add [--owner <name>] --key <digest>\n\
+  ipsec attest --add [--owner <name>] --key <digest>|--aik <path>\n\
     Add an AIK public key digest entry preceded by an optional owner name\n\
   \n\
   ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>\n\
@@ -73,7 +73,7 @@ Usage:\n\
   ipsec attest --del --product <name>|--pid <id>|--component <cfn>|--cid <id>\n\
     Delete a product or component entry referenced either by value or primary key\n\
   \n\
-  ipsec attest --del --key <digest>|--kid <id>\n\
+  ipsec attest --del --key <digest>|--kid <id>|--aik <path>\n\
     Delete an AIK entry referenced either by value or primary key\n\
   \n");
 }

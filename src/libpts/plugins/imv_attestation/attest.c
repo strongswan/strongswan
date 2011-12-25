@@ -34,7 +34,7 @@
 /**
  * global debug output variables
  */
-static int debug_level = 0;
+static int debug_level = 2;
 static bool stderr_quiet = TRUE;
 
 /**
@@ -121,10 +121,11 @@ static void do_args(int argc, char *argv[])
 			{ "keys", no_argument, NULL, 'k' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
-			{ "measurements", no_argument, NULL, 'M' },
+			{ "measurements", no_argument, NULL, 'm' },
 			{ "add", no_argument, NULL, 'a' },
 			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
+			{ "aik", required_argument, NULL, 'A' },
 			{ "component", required_argument, NULL, 'C' },
 			{ "comp", required_argument, NULL, 'C' },
 			{ "directory", required_argument, NULL, 'D' },
@@ -167,7 +168,7 @@ static void do_args(int argc, char *argv[])
 			case 'H':
 				op = OP_HASHES;
 				continue;
-			case 'M':
+			case 'm':
 				op = OP_MEASUREMENTS;
 				continue;
 			case 'a':
@@ -176,6 +177,43 @@ static void do_args(int argc, char *argv[])
 			case 'd':
 				op = OP_DEL;
 				continue;
+			case 'A':
+			{
+				certificate_t *aik_cert;
+				public_key_t *aik_key;
+				chunk_t aik;
+
+				aik_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_FROM_FILE, optarg, BUILD_END);
+				if (!aik_cert)
+				{
+					printf("AIK certificate '%s' could not be loaded\n", optarg);
+					exit(EXIT_FAILURE);
+				}
+				aik_key = aik_cert->get_public_key(aik_cert);
+				aik_cert->destroy(aik_cert);
+
+				if (!aik_key)
+				{
+					printf("AIK public key could not be retrieved\n");
+					exit(EXIT_FAILURE);
+				}
+				if (!aik_key->get_fingerprint(aik_key, KEYID_PUBKEY_INFO_SHA1,
+											  &aik))
+				{
+					printf("AIK fingerprint could not be computed\n");
+					aik_key->destroy(aik_key);
+					exit(EXIT_FAILURE);
+				}
+				aik = chunk_clone(aik);
+				aik_key->destroy(aik_key);
+
+				if (!attest->set_key(attest, aik, op == OP_ADD))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			}
 			case 'C':
 				if (!attest->set_component(attest, optarg, op == OP_ADD))
 				{
@@ -195,11 +233,16 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 'K':
-				if (!attest->set_key(attest, optarg, op == OP_ADD))
+			{
+				chunk_t aik;
+
+				aik = chunk_from_hex(chunk_create(optarg, strlen(optarg)), NULL);
+				if (!attest->set_key(attest, aik, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			}
 			case 'O':
 				attest->set_owner(attest, optarg);
 				continue;
