@@ -65,6 +65,11 @@ struct private_xauth_t {
 	cp_payload_t *cp;
 
 	/**
+	 * received identifier
+	 */
+	u_int16_t identifier;
+
+	/**
 	 * status of Xauth exchange
 	 */
 	xauth_status_t status;
@@ -197,6 +202,7 @@ METHOD(task_t, build_r_ack, status_t,
 	cp_payload_t *cp;
 
 	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_ACK);
+	cp->set_identifier(cp, this->identifier);
 	cp->add_attribute(cp,
 			configuration_attribute_create_chunk(
 					CONFIGURATION_ATTRIBUTE_V1, XAUTH_STATUS, chunk_empty));
@@ -270,6 +276,7 @@ METHOD(task_t, process_r, status_t,
 				 this->xauth->get_identity(this->xauth));
 		}
 	}
+	this->identifier = cp->get_identifier(cp);
 	this->public.task.build = _build_r_ack;
 	return NEED_MORE;
 }
