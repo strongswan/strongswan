@@ -78,6 +78,20 @@ struct cp_payload_t {
 	config_type_t (*get_type) (cp_payload_t *this);
 
 	/**
+	 * Set the configuration payload identifier (IKEv1 only).
+	 *
+	 @param identifier	identifier to set
+	 */
+	void (*set_identifier) (cp_payload_t *this, u_int16_t identifier);
+
+	/**
+	 * Get the configuration payload identifier (IKEv1 only).
+	 *
+	 * @return			identifier
+	 */
+	u_int16_t (*get_identifier) (cp_payload_t *this);
+
+	/**
 	 * Destroys an cp_payload_t object.
 	 */
 	void (*destroy) (cp_payload_t *this);

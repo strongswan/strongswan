@@ -269,6 +269,17 @@ METHOD(cp_payload_t, get_config_type, config_type_t,
 	return this->cfg_type;
 }
 
+METHOD(cp_payload_t, get_identifier, u_int16_t,
+			 private_cp_payload_t *this)
+{
+	return this->identifier;
+}
+METHOD(cp_payload_t, set_identifier, void,
+			 private_cp_payload_t *this, u_int16_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD2(payload_t, cp_payload_t, destroy, void,
 	private_cp_payload_t *this)
 {
@@ -299,6 +310,8 @@ cp_payload_t *cp_payload_create_type(payload_type_t type, config_type_t cfg_type
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.add_attribute = _add_attribute,
 			.get_type = _get_config_type,
+			.get_identifier = _get_identifier,
+			.set_identifier = _set_identifier,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
