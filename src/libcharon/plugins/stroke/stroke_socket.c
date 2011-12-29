@@ -43,7 +43,7 @@
  * To avoid clogging the thread pool with (blocking) jobs, we limit the number
  * of concurrently handled stroke commands.
  */
-#define MAX_CONCURRENT 4
+#define MAX_CONCURRENT_DEFAULT 4
 
 typedef struct stroke_job_context_t stroke_job_context_t;
 typedef struct private_stroke_socket_t private_stroke_socket_t;
@@ -92,6 +92,11 @@ struct private_stroke_socket_t {
 	 * the number of currently handled commands
 	 */
 	u_int handling;
+
+	/**
+	 * the maximum number of concurrently handled commands
+	 */
+	u_int max_concurrent;
 
 	/**
 	 * configuration backend
@@ -662,7 +667,7 @@ static job_requeue_t handle(private_stroke_socket_t *this)
 	thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
 	oldstate = thread_cancelability(TRUE);
 	while (this->commands->get_count(this->commands) == 0 ||
-		   this->handling >= MAX_CONCURRENT)
+		   this->handling >= this->max_concurrent)
 	{
 		this->condvar->wait(this->condvar, this->mutex);
 	}
@@ -803,6 +808,8 @@ stroke_socket_t *stroke_socket_create()
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->commands = linked_list_create();
+	this->max_concurrent = lib->settings->get_int(lib->settings,
+				"charon.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT);
 
 	lib->credmgr->add_set(lib->credmgr, &this->ca->set);
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);

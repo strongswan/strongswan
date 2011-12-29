@@ -466,6 +466,9 @@ Database URI for charons SQL plugin
 .BR charon.plugins.sql.loglevel " [-1]"
 Loglevel for logging to SQL database
 .TP
+.BR charon.plugins.stroke.max_concurrent " [4]"
+Maximum number of stroke messages handled concurrently
+.TP
 .BR charon.plugins.tnc-ifmap.device_name
 Unique name of strongSwan as a PEP and/or PDP device
 .TP
