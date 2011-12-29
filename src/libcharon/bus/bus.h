@@ -118,8 +118,12 @@ enum narrow_hook_t {
 /**
  * The bus receives events and sends them to all registered listeners.
  *
- * Any events sent to are delivered to all registered listeners. Threads
- * may wait actively to events using the blocking listen() call.
+ * Calls to bus_t.log() are handled seperately from calls to other event
+ * functions.  This means that listeners have to be aware that calls to
+ * listener_t.log() can happen concurrently with calls to one of the other
+ * callbacks.  Due to this unregistering from the log() callback is not fully
+ * in sync with the other callbacks, thus, one of these might be called before
+ * the listener is finally unregistered.
  */
 struct bus_t {
 
