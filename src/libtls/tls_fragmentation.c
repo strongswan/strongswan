@@ -251,8 +251,9 @@ METHOD(tls_fragmentation_t, process, status_t,
 	switch (type)
 	{
 		case TLS_CHANGE_CIPHER_SPEC:
-			if (this->handshake->change_cipherspec(this->handshake))
+			if (this->handshake->cipherspec_changed(this->handshake, TRUE))
 			{
+				this->handshake->change_cipherspec(this->handshake, TRUE);
 				status = NEED_MORE;
 				break;
 			}
@@ -397,8 +398,9 @@ METHOD(tls_fragmentation_t, build, status_t,
 	}
 	if (!this->output.len)
 	{
-		if (this->handshake->cipherspec_changed(this->handshake))
+		if (this->handshake->cipherspec_changed(this->handshake, FALSE))
 		{
+			this->handshake->change_cipherspec(this->handshake, FALSE);
 			*type = TLS_CHANGE_CIPHER_SPEC;
 			*data = chunk_clone(chunk_from_chars(0x01));
 			return NEED_MORE;

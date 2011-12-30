@@ -62,18 +62,19 @@ struct tls_handshake_t {
 					  tls_handshake_type_t *type, bio_writer_t *writer);
 
 	/**
-	 * Check if the cipher spec for outgoing messages has changed.
+	 * Check if the cipher spec should be changed for outgoing messages.
 	 *
-	 * @return			TRUE if cipher spec changed
+	 * @param inbound	TRUE to check for inbound cipherspec change
+	 * @return			TRUE if cipher spec should be changed
 	 */
-	bool (*cipherspec_changed)(tls_handshake_t *this);
+	bool (*cipherspec_changed)(tls_handshake_t *this, bool inbound);
 
 	/**
-	 * Change the cipher spec for incoming messages.
+	 * Change the cipher for a direction.
 	 *
-	 * @return			TRUE if cipher spec changed
+	 * @param inbound	TRUE to change inbound cipherspec, FALSE for outbound
 	 */
-	bool (*change_cipherspec)(tls_handshake_t *this);
+	void (*change_cipherspec)(tls_handshake_t *this, bool inbound);
 
 	/**
 	 * Check if the finished message was decoded successfully.

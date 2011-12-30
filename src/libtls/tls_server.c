@@ -956,28 +956,35 @@ METHOD(tls_handshake_t, build, status_t,
 }
 
 METHOD(tls_handshake_t, cipherspec_changed, bool,
-	private_tls_server_t *this)
+	private_tls_server_t *this, bool inbound)
 {
-	if (this->state == STATE_FINISHED_RECEIVED)
+	if (inbound)
 	{
-		this->crypto->change_cipher(this->crypto, FALSE);
-		this->state = STATE_CIPHERSPEC_CHANGED_OUT;
-		return TRUE;
+		if (this->peer)
+		{
+			return this->state == STATE_CERT_VERIFY_RECEIVED;
+		}
+		return this->state == STATE_KEY_EXCHANGE_RECEIVED;
+	}
+	else
+	{
+		return this->state == STATE_FINISHED_RECEIVED;
 	}
 	return FALSE;
 }
 
-METHOD(tls_handshake_t, change_cipherspec, bool,
-	private_tls_server_t *this)
+METHOD(tls_handshake_t, change_cipherspec, void,
+	private_tls_server_t *this, bool inbound)
 {
-	if ((this->peer && this->state == STATE_CERT_VERIFY_RECEIVED) ||
-	   (!this->peer && this->state == STATE_KEY_EXCHANGE_RECEIVED))
+	this->crypto->change_cipher(this->crypto, inbound);
+	if (inbound)
 	{
-		this->crypto->change_cipher(this->crypto, TRUE);
 		this->state = STATE_CIPHERSPEC_CHANGED_IN;
-		return TRUE;
 	}
-	return FALSE;
+	else
+	{
+		this->state = STATE_CIPHERSPEC_CHANGED_OUT;
+	}
 }
 
 METHOD(tls_handshake_t, finished, bool,
