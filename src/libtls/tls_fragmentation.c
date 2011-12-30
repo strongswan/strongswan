@@ -325,8 +325,12 @@ static status_t build_handshake(private_tls_fragmentation_t *this)
 				msg->write_data24(msg, hs->get_buf(hs));
 				DBG2(DBG_TLS, "sending TLS %N handshake (%u bytes)",
 					 tls_handshake_type_names, type, hs->get_buf(hs).len);
-				hs->destroy(hs);
-				continue;
+				if (!this->handshake->cipherspec_changed(this->handshake, FALSE))
+				{
+					hs->destroy(hs);
+					continue;
+				}
+				/* FALL */
 			case INVALID_STATE:
 				this->output_type = TLS_HANDSHAKE;
 				this->output = chunk_clone(msg->get_buf(msg));
