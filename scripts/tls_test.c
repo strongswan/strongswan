@@ -18,6 +18,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <getopt.h>
+#include <errno.h>
+#include <string.h>
 
 #include <library.h>
 #include <debug.h>
@@ -31,8 +33,8 @@
 static void usage(FILE *out, char *cmd)
 {
 	fprintf(out, "usage:\n");
-	fprintf(out, "  %s --connect <address> --port <port> [--cert <file>]+\n", cmd);
-	fprintf(out, "  %s --listen <address> --port <port> --key <key> [--cert <file>]+ --oneshot\n", cmd);
+	fprintf(out, "  %s --connect <address> --port <port> [--cert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "  %s --listen <address> --port <port> --key <key> [--cert <file>]+ [--times <n>]\n", cmd);
 }
 
 /**
@@ -57,8 +59,7 @@ static int stream(int fd, tls_socket_t *tls)
 		{
 			if (!tls->read(tls, &data))
 			{
-				DBG1(DBG_TLS, "TLS read error/end\n");
-				return 1;
+				return 0;
 			}
 			if (data.len)
 			{
@@ -80,7 +81,7 @@ static int stream(int fd, tls_socket_t *tls)
 			{
 				if (!tls->write(tls, chunk_create(buf, len)))
 				{
-					DBG1(DBG_TLS, "TLS write error\n");
+					DBG1(DBG_TLS, "TLS write error");
 					return 1;
 				}
 			}
@@ -91,67 +92,95 @@ static int stream(int fd, tls_socket_t *tls)
 /**
  * Client routine
  */
-static int client(int fd, host_t *host, identification_t *server)
+static int client(host_t *host, identification_t *server,
+				  int times, tls_cache_t *cache)
 {
 	tls_socket_t *tls;
-	int res;
+	int fd, res;
 
-	if (connect(fd, host->get_sockaddr(host),
-				*host->get_sockaddr_len(host)) == -1)
+	while (times == -1 || times-- > 0)
 	{
-		DBG1(DBG_TLS, "connecting to %#H failed: %m\n", host);
-		return 1;
+		fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (fd == -1)
+		{
+			DBG1(DBG_TLS, "opening socket failed: %s", strerror(errno));
+			return 1;
+		}
+		if (connect(fd, host->get_sockaddr(host),
+					*host->get_sockaddr_len(host)) == -1)
+		{
+			DBG1(DBG_TLS, "connecting to %#H failed: %s", host, strerror(errno));
+			close(fd);
+			return 1;
+		}
+		tls = tls_socket_create(FALSE, server, NULL, fd, cache);
+		if (!tls)
+		{
+			close(fd);
+			return 1;
+		}
+		res = stream(fd, tls);
+		tls->destroy(tls);
+		close(fd);
+		if (res)
+		{
+			break;
+		}
 	}
-	tls = tls_socket_create(FALSE, server, NULL, fd);
-	if (!tls)
-	{
-		return 1;
-	}
-	res = stream(fd, tls);
-	tls->destroy(tls);
 	return res;
 }
 
 /**
  * Server routine
  */
-static int serve(int fd, host_t *host, identification_t *server, bool oneshot)
+static int serve(host_t *host, identification_t *server,
+				 int times, tls_cache_t *cache)
 {
 	tls_socket_t *tls;
-	int cfd;
+	int fd, cfd;
 
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd == -1)
+	{
+		DBG1(DBG_TLS, "opening socket failed: %s", strerror(errno));
+		return 1;
+	}
 	if (bind(fd, host->get_sockaddr(host),
 			 *host->get_sockaddr_len(host)) == -1)
 	{
-		DBG1(DBG_TLS, "binding to %#H failed: %m\n", host);
+		DBG1(DBG_TLS, "binding to %#H failed: %s", host, strerror(errno));
+		close(fd);
 		return 1;
 	}
 	if (listen(fd, 1) == -1)
 	{
-		DBG1(DBG_TLS, "listen to %#H failed: %m\n", host);
+		DBG1(DBG_TLS, "listen to %#H failed: %m", host, strerror(errno));
+		close(fd);
 		return 1;
 	}
 
-	do
+	while (times == -1 || times-- > 0)
 	{
 		cfd = accept(fd, host->get_sockaddr(host), host->get_sockaddr_len(host));
 		if (cfd == -1)
 		{
-			DBG1(DBG_TLS, "accept failed: %m\n");
+			DBG1(DBG_TLS, "accept failed: %s", strerror(errno));
+			close(fd);
 			return 1;
 		}
-		DBG1(DBG_TLS, "%#H connected\n", host);
+		DBG1(DBG_TLS, "%#H connected", host);
 
-		tls = tls_socket_create(TRUE, server, NULL, cfd);
+		tls = tls_socket_create(TRUE, server, NULL, cfd, cache);
 		if (!tls)
 		{
+			close(fd);
 			return 1;
 		}
 		stream(cfd, tls);
-		DBG1(DBG_TLS, "%#H disconnected\n", host);
+		DBG1(DBG_TLS, "%#H disconnected", host);
 		tls->destroy(tls);
 	}
-	while (!oneshot);
+	close(fd);
 
 	return 0;
 }
@@ -172,7 +201,7 @@ static bool load_certificate(char *filename)
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (!cert)
 	{
-		DBG1(DBG_TLS, "loading certificate from '%s' failed\n", filename);
+		DBG1(DBG_TLS, "loading certificate from '%s' failed", filename);
 		return FALSE;
 	}
 	creds->add_cert(creds, TRUE, cert);
@@ -190,7 +219,7 @@ static bool load_key(char *filename)
 							  BUILD_FROM_FILE, filename, BUILD_END);
 	if (!key)
 	{
-		DBG1(DBG_TLS, "loading key from '%s' failed\n", filename);
+		DBG1(DBG_TLS, "loading key from '%s' failed", filename);
 		return FALSE;
 	}
 	creds->add_key(creds, key);
@@ -245,9 +274,10 @@ static void init()
 int main(int argc, char *argv[])
 {
 	char *address = NULL;
-	bool listen = FALSE, oneshot = FALSE;
-	int port = 0, fd, res;
+	bool listen = FALSE;
+	int port = 0, times = -1, res;
 	identification_t *server;
+	tls_cache_t *cache;
 	host_t *host;
 
 	init();
@@ -261,7 +291,7 @@ int main(int argc, char *argv[])
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
-			{"oneshot",		no_argument,			NULL,		'o' },
+			{"times",		required_argument,		NULL,		't' },
 			{"debug",		required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
@@ -298,8 +328,8 @@ int main(int argc, char *argv[])
 			case 'p':
 				port = atoi(optarg);
 				continue;
-			case 'o':
-				oneshot = TRUE;
+			case 't':
+				times = atoi(optarg);
 				continue;
 			case 'd':
 				tls_level = atoi(optarg);
@@ -315,35 +345,23 @@ int main(int argc, char *argv[])
 		usage(stderr, argv[0]);
 		return 1;
 	}
-	if (oneshot && !listen)
-	{
-		usage(stderr, argv[0]);
-		return 1;
-	}
-
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-	{
-		DBG1(DBG_TLS, "opening socket failed: %m\n");
-		return 1;
-	}
 	host = host_create_from_dns(address, 0, port);
 	if (!host)
 	{
-		DBG1(DBG_TLS, "resolving hostname %s failed\n", address);
-		close(fd);
+		DBG1(DBG_TLS, "resolving hostname %s failed", address);
 		return 1;
 	}
 	server = identification_create_from_string(address);
+	cache = tls_cache_create(100, 30);
 	if (listen)
 	{
-		res = serve(fd, host, server, oneshot);
+		res = serve(host, server, times, cache);
 	}
 	else
 	{
-		res = client(fd, host, server);
+		res = client(host, server, times, cache);
 	}
-	close(fd);
+	cache->destroy(cache);
 	host->destroy(host);
 	server->destroy(server);
 	return res;

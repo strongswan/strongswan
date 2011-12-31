@@ -370,6 +370,11 @@ struct private_tls_crypto_t {
 	tls_t *tls;
 
 	/**
+	 * TLS session cache
+	 */
+	tls_cache_t *cache;
+
+	/**
 	 * All handshake data concatentated
 	 */
 	chunk_t handshake;
@@ -1462,13 +1467,15 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 	return TRUE;
 }
 
-METHOD(tls_crypto_t, derive_secrets, void,
-	private_tls_crypto_t *this, chunk_t premaster,
-	chunk_t client_random, chunk_t server_random)
+/**
+ * Derive master secret from premaster, optionally save session
+ */
+static void derive_master(private_tls_crypto_t *this, chunk_t premaster,
+						  chunk_t session, identification_t *id,
+						  chunk_t client_random, chunk_t server_random)
 {
 	char master[48];
-	chunk_t seed, block, client_write, server_write;
-	int mks, eks = 0, ivs = 0;
+	chunk_t seed;
 
 	/* derive master secret */
 	seed = chunk_cata("cc", client_random, server_random);
@@ -1477,7 +1484,22 @@ METHOD(tls_crypto_t, derive_secrets, void,
 						 sizeof(master), master);
 
 	this->prf->set_key(this->prf, chunk_from_thing(master));
-	memset(master, 0, sizeof(master));
+	if (this->cache && session.len)
+	{
+		this->cache->create(this->cache, session, id, chunk_from_thing(master),
+							this->suite);
+	}
+	memwipe(master, sizeof(master));
+}
+
+/**
+ * Expand key material from master secret
+ */
+static void expand_keys(private_tls_crypto_t *this,
+						chunk_t client_random, chunk_t server_random)
+{
+	chunk_t seed, block, client_write, server_write;
+	int mks, eks = 0, ivs = 0;
 
 	/* derive key block for key expansion */
 	mks = this->signer_out->get_key_size(this->signer_out);
@@ -1546,6 +1568,55 @@ METHOD(tls_crypto_t, derive_secrets, void,
 			}
 		}
 	}
+
+	/* EAP-MSK */
+	if (this->msk_label)
+	{
+		this->msk = chunk_alloc(64);
+		this->prf->get_bytes(this->prf, this->msk_label, seed,
+							 this->msk.len, this->msk.ptr);
+	}
+}
+
+METHOD(tls_crypto_t, derive_secrets, void,
+	private_tls_crypto_t *this, chunk_t premaster, chunk_t session,
+	identification_t *id, chunk_t client_random, chunk_t server_random)
+{
+	derive_master(this, premaster, session, id, client_random, server_random);
+	expand_keys(this, client_random, server_random);
+}
+
+METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
+	private_tls_crypto_t *this, chunk_t session, identification_t *id,
+	chunk_t client_random, chunk_t server_random)
+{
+	chunk_t master;
+
+	if (this->cache && session.len)
+	{
+		this->suite = this->cache->lookup(this->cache, session, id, &master);
+		if (this->suite)
+		{
+			select_cipher_suite(this, &this->suite, 1, KEY_ANY);
+			if (this->suite)
+			{
+				this->prf->set_key(this->prf, master);
+				expand_keys(this, client_random, server_random);
+			}
+			chunk_clear(&master);
+		}
+	}
+	return this->suite;
+}
+
+METHOD(tls_crypto_t, get_session, chunk_t,
+	private_tls_crypto_t *this, identification_t *server)
+{
+	if (this->cache)
+	{
+		return this->cache->check(this->cache, server);
+	}
+	return chunk_empty;
 }
 
 METHOD(tls_crypto_t, change_cipher, void,
@@ -1563,21 +1634,6 @@ METHOD(tls_crypto_t, change_cipher, void,
 			this->protection->set_cipher(this->protection, FALSE,
 							this->signer_out, this->crypter_out, this->iv_out);
 		}
-	}
-}
-
-METHOD(tls_crypto_t, derive_eap_msk, void,
-	private_tls_crypto_t *this, chunk_t client_random, chunk_t server_random)
-{
-	if (this->msk_label)
-	{
-		chunk_t seed;
-
-		seed = chunk_cata("cc", client_random, server_random);
-		free(this->msk.ptr);
-		this->msk = chunk_alloc(64);
-		this->prf->get_bytes(this->prf, this->msk_label, seed,
-							 this->msk.len, this->msk.ptr);
 	}
 }
 
@@ -1606,7 +1662,7 @@ METHOD(tls_crypto_t, destroy, void,
 /**
  * See header
  */
-tls_crypto_t *tls_crypto_create(tls_t *tls)
+tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 {
 	private_tls_crypto_t *this;
 	enumerator_t *enumerator;
@@ -1628,12 +1684,14 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 			.verify_handshake = _verify_handshake,
 			.calculate_finished = _calculate_finished,
 			.derive_secrets = _derive_secrets,
+			.resume_session = _resume_session,
+			.get_session = _get_session,
 			.change_cipher = _change_cipher,
-			.derive_eap_msk = _derive_eap_msk,
 			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},
 		.tls = tls,
+		.cache = cache,
 	);
 
 	enumerator = lib->creds->create_builder_enumerator(lib->creds);

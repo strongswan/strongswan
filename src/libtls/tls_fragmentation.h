@@ -23,11 +23,11 @@
 
 #include <library.h>
 
+typedef struct tls_fragmentation_t tls_fragmentation_t;
+
 #include "tls.h"
 #include "tls_alert.h"
 #include "tls_handshake.h"
-
-typedef struct tls_fragmentation_t tls_fragmentation_t;
 
 /**
  * TLS record protocol fragmentation layer.

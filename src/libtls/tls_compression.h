@@ -23,11 +23,11 @@
 
 #include <library.h>
 
+typedef struct tls_compression_t tls_compression_t;
+
 #include "tls.h"
 #include "tls_alert.h"
 #include "tls_fragmentation.h"
-
-typedef struct tls_compression_t tls_compression_t;
 
 /**
  * TLS record protocol compression layer.

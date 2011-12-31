@@ -511,11 +511,36 @@ struct tls_crypto_t {
 	 * Derive the master secret, MAC and encryption keys.
 	 *
 	 * @param premaster		premaster secret
+	 * @param session		session identifier to cache master secret
+	 * @param id			identity the session is bound to
 	 * @param client_random	random data from client hello
 	 * @param server_random	random data from server hello
 	 */
 	void (*derive_secrets)(tls_crypto_t *this, chunk_t premaster,
+						   chunk_t session, identification_t *id,
 						   chunk_t client_random, chunk_t server_random);
+
+	/**
+	 * Try to resume a TLS session, derive key material.
+	 *
+	 * @param session		session identifier
+	 * @param id			identity the session is bound to
+	 * @param client_random	random data from client hello
+	 * @param server_random	random data from server hello
+	 * @param
+	 */
+	tls_cipher_suite_t (*resume_session)(tls_crypto_t *this, chunk_t session,
+										 identification_t *id,
+										 chunk_t client_random,
+										 chunk_t server_random);
+
+	/**
+	 * Check if we have a session to resume as a client.
+	 *
+	 * @param id		server identity to get a session for
+	 * @return				allocated session identifier, or chunk_empty
+	 */
+	chunk_t (*get_session)(tls_crypto_t *this, identification_t *id);
 
 	/**
 	 * Change the cipher used at protection layer.
@@ -523,15 +548,6 @@ struct tls_crypto_t {
 	 * @param inbound		TRUE to change inbound cipher, FALSE for outbound
 	 */
 	void (*change_cipher)(tls_crypto_t *this, bool inbound);
-
-	/**
-	 * Derive the EAP-TLS MSK.
-	 *
-	 * @param client_random	random data from client hello
-	 * @param server_random	random data from server hello
-	 */
-	void (*derive_eap_msk)(tls_crypto_t *this,
-						   chunk_t client_random, chunk_t server_random);
 
 	/**
 	 * Get the MSK to use in EAP-TLS.
@@ -548,7 +564,11 @@ struct tls_crypto_t {
 
 /**
  * Create a tls_crypto instance.
+ *
+ * @param tls			TLS stack
+ * @param tls_cache		TLS session cache
+ * @return				TLS crypto helper
  */
-tls_crypto_t *tls_crypto_create(tls_t *tls);
+tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache);
 
 #endif /** TLS_CRYPTO_H_ @}*/

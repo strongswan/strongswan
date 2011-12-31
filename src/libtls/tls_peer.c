@@ -36,7 +36,7 @@ typedef enum {
 	STATE_CIPHERSPEC_CHANGED_OUT,
 	STATE_FINISHED_SENT,
 	STATE_CIPHERSPEC_CHANGED_IN,
-	STATE_COMPLETE,
+	STATE_FINISHED_RECEIVED,
 } peer_state_t;
 
 /**
@@ -110,6 +110,16 @@ struct private_tls_peer_t {
 	diffie_hellman_t *dh;
 
 	/**
+	 * Resuming a session?
+	 */
+	bool resume;
+
+	/**
+	 * TLS session identifier
+	 */
+	chunk_t session;
+
+	/**
 	 * List of server-supported hashsig algorithms
 	 */
 	chunk_t hashsig;
@@ -129,7 +139,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	u_int8_t compression;
 	u_int16_t version, cipher;
 	chunk_t random, session, ext = chunk_empty;
-	tls_cipher_suite_t suite;
+	tls_cipher_suite_t suite = 0;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_SERVER_HELLO, reader->peek(reader));
@@ -155,16 +165,34 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_PROTOCOL_VERSION);
 		return NEED_MORE;
 	}
-	suite = cipher;
-	if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1, KEY_ANY))
+
+	if (chunk_equals(this->session, session))
 	{
-		DBG1(DBG_TLS, "received TLS cipher suite %N inacceptable",
-			 tls_cipher_suite_names, suite);
-		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-		return NEED_MORE;
+		suite = this->crypto->resume_session(this->crypto, session, this->server,
+										chunk_from_thing(this->client_random),
+										chunk_from_thing(this->server_random));
+		if (suite)
+		{
+			DBG1(DBG_TLS, "resumed %N using suite %N",
+				 tls_version_names, version, tls_cipher_suite_names, suite);
+			this->resume = TRUE;
+		}
 	}
-	DBG1(DBG_TLS, "negotiated TLS version %N with suite %N",
-		 tls_version_names, version, tls_cipher_suite_names, suite);
+	if (!suite)
+	{
+		suite = cipher;
+		if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1, KEY_ANY))
+		{
+			DBG1(DBG_TLS, "received TLS cipher suite %N inacceptable",
+				 tls_cipher_suite_names, suite);
+			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			return NEED_MORE;
+		}
+		DBG1(DBG_TLS, "negotiated %N using suite %N",
+			 tls_version_names, version, tls_cipher_suite_names, suite);
+		free(this->session.ptr);
+		this->session = chunk_clone(session);
+	}
 	this->state = STATE_HELLO_RECEIVED;
 	return NEED_MORE;
 }
@@ -599,10 +627,9 @@ static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
 		return NEED_MORE;
 	}
-	this->state = STATE_COMPLETE;
-	this->crypto->derive_eap_msk(this->crypto,
-								 chunk_from_thing(this->client_random),
-								 chunk_from_thing(this->server_random));
+	this->state = STATE_FINISHED_RECEIVED;
+	this->crypto->append_handshake(this->crypto, TLS_FINISHED, received);
+
 	return NEED_MORE;
 }
 
@@ -696,8 +723,9 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	writer->write_uint16(writer, version);
 	writer->write_data(writer, chunk_from_thing(this->client_random));
 
-	/* session identifier => none */
-	writer->write_data8(writer, chunk_empty);
+	/* session identifier */
+	this->session = this->crypto->get_session(this->crypto, this->server);
+	writer->write_data8(writer, this->session);
 
 	/* add TLS cipher suites */
 	count = this->crypto->get_cipher_suites(this->crypto, &suites);
@@ -886,6 +914,7 @@ static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
 	htoun16(premaster, TLS_1_2);
 
 	this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
+								 this->session, this->server,
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
 
@@ -930,6 +959,7 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 	this->crypto->derive_secrets(this->crypto, premaster,
+								 this->session, this->server,
 								 chunk_from_thing(this->client_random),
 								 chunk_from_thing(this->server_random));
 	chunk_clear(&premaster);
@@ -1046,10 +1076,18 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 {
 	if (inbound)
 	{
+		if (this->resume)
+		{
+			return this->state == STATE_HELLO_RECEIVED;
+		}
 		return this->state == STATE_FINISHED_SENT;
 	}
 	else
 	{
+		if (this->resume)
+		{
+			return this->state == STATE_FINISHED_RECEIVED;
+		}
 		if (this->peer)
 		{
 			return this->state == STATE_VERIFY_SENT;
@@ -1075,7 +1113,11 @@ METHOD(tls_handshake_t, change_cipherspec, void,
 METHOD(tls_handshake_t, finished, bool,
 	private_tls_peer_t *this)
 {
-	return this->state == STATE_COMPLETE;
+	if (this->resume)
+	{
+		return this->state == STATE_FINISHED_SENT;
+	}
+	return this->state == STATE_FINISHED_RECEIVED;
 }
 
 METHOD(tls_handshake_t, destroy, void,
@@ -1087,6 +1129,7 @@ METHOD(tls_handshake_t, destroy, void,
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
 	free(this->cert_types.ptr);
+	free(this->session.ptr);
 	free(this);
 }
 

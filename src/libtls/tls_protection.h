@@ -23,11 +23,11 @@
 
 #include <library.h>
 
+typedef struct tls_protection_t tls_protection_t;
+
 #include "tls.h"
 #include "tls_alert.h"
 #include "tls_compression.h"
-
-typedef struct tls_protection_t tls_protection_t;
 
 /**
  * TLS record protocol protection layer.

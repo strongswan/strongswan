@@ -437,7 +437,7 @@ METHOD(tls_t, destroy, void,
  */
 tls_t *tls_create(bool is_server, identification_t *server,
 				  identification_t *peer, tls_purpose_t purpose,
-				  tls_application_t *application)
+				  tls_application_t *application, tls_cache_t *cache)
 {
 	private_tls_t *this;
 
@@ -472,7 +472,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.purpose = purpose,
 	);
 
-	this->crypto = tls_crypto_create(&this->public);
+	this->crypto = tls_crypto_create(&this->public, cache);
 	this->alert = tls_alert_create();
 	if (is_server)
 	{

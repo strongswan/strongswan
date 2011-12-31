@@ -74,9 +74,10 @@ struct tls_socket_t {
  * @param server			server identity
  * @param peer				client identity, NULL for no client authentication
  * @param fd				socket to read/write from
+ * @param cache				session cache to use, or NULL
  * @return					TLS socket wrapper
  */
 tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
-								identification_t *peer, int fd);
+							identification_t *peer, int fd, tls_cache_t *cache);
 
 #endif /** TLS_SOCKET_H_ @}*/
