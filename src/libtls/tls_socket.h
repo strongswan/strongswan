@@ -55,6 +55,18 @@ struct tls_socket_t {
 	bool (*write)(tls_socket_t *this, chunk_t data);
 
 	/**
+	 * Read/write plain data from file descriptor.
+	 *
+	 * This call is blocking, but a thread cancellation point. Data is
+	 * exchanged until one of the sockets gets closed or an error occurs.
+	 *
+	 * @param rfd		file descriptor to read plain data from
+	 * @param wfd		file descriptor to write plain data to
+	 * @return			TRUE if data exchanged successfully
+	 */
+	bool (*splice)(tls_socket_t *this, int rfd, int wfd);
+
+	/**
 	 * Get the underlying file descriptor passed to the constructor.
 	 *
 	 * @return			file descriptor
