@@ -38,58 +38,6 @@ static void usage(FILE *out, char *cmd)
 }
 
 /**
- * Stream between stdio and TLS socket
- */
-static int stream(int fd, tls_socket_t *tls)
-{
-	while (TRUE)
-	{
-		fd_set set;
-		chunk_t data;
-
-		FD_ZERO(&set);
-		FD_SET(fd, &set);
-		FD_SET(0, &set);
-
-		if (select(fd + 1, &set, NULL, NULL, NULL) == -1)
-		{
-			return 1;
-		}
-		if (FD_ISSET(fd, &set))
-		{
-			if (!tls->read(tls, &data))
-			{
-				return 0;
-			}
-			if (data.len)
-			{
-				ignore_result(write(1, data.ptr, data.len));
-				free(data.ptr);
-			}
-		}
-		if (FD_ISSET(0, &set))
-		{
-			char buf[1024];
-			ssize_t len;
-
-			len = read(0, buf, sizeof(buf));
-			if (len == 0)
-			{
-				return 0;
-			}
-			if (len > 0)
-			{
-				if (!tls->write(tls, chunk_create(buf, len)))
-				{
-					DBG1(DBG_TLS, "TLS write error");
-					return 1;
-				}
-			}
-		}
-	}
-}
-
-/**
  * Client routine
  */
 static int client(host_t *host, identification_t *server,
@@ -119,7 +67,7 @@ static int client(host_t *host, identification_t *server,
 			close(fd);
 			return 1;
 		}
-		res = stream(fd, tls);
+		res = tls->splice(tls, 0, 1) ? 0 : 1;
 		tls->destroy(tls);
 		close(fd);
 		if (res)
@@ -176,7 +124,7 @@ static int serve(host_t *host, identification_t *server,
 			close(fd);
 			return 1;
 		}
-		stream(cfd, tls);
+		tls->splice(tls, 0, 1);
 		DBG1(DBG_TLS, "%#H disconnected", host);
 		tls->destroy(tls);
 	}
