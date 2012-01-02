@@ -89,7 +89,7 @@ struct credential_manager_t {
 	 * @param type		kind of requested shared key
 	 * @param first		first subject between key is shared
 	 * @param second	second subject between key is shared
-	 * @return			enumerator over shared keys
+	 * @return			enumerator over (shared_key_t*,id_match_t,id_match_t)
 	 */
 	enumerator_t *(*create_shared_enumerator)(credential_manager_t *this,
 								shared_key_type_t type,
