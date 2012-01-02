@@ -1169,7 +1169,24 @@ METHOD(task_manager_t, queue_child, void,
 METHOD(task_manager_t, queue_child_rekey, void,
 	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-	/* TODO-IKEv1: CHILD rekeying */
+	child_sa_t *child_sa;
+	child_cfg_t *cfg;
+	quick_mode_t *task;
+
+	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
+	if (!child_sa)
+	{
+		child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, FALSE);
+	}
+	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
+	{
+		child_sa->set_state(child_sa, CHILD_REKEYING);
+		cfg = child_sa->get_config(child_sa);
+		task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg), NULL, NULL);
+		task->use_reqid(task, child_sa->get_reqid(child_sa));
+
+		queue_task(this, &task->task);
+	}
 }
 
 METHOD(task_manager_t, queue_child_delete, void,
