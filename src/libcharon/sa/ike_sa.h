@@ -845,11 +845,13 @@ struct ike_sa_t {
 	 *
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
+	 * @param expired		TRUE if CHILD_SA is expired
 	 * @return
 	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
 	 *						- SUCCESS, if delete message sent
 	 */
-	status_t (*delete_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+	status_t (*delete_child_sa)(ike_sa_t *this, protocol_id_t protocol,
+								u_int32_t spi, bool expired);
 
 	/**
 	 * Destroy a CHILD SA with the specified protocol/SPI.

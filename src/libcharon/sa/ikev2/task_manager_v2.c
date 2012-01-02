@@ -825,7 +825,7 @@ static status_t process_request(private_task_manager_t *this,
 							else
 							{
 								task = (task_t*)child_delete_create(this->ike_sa,
-																PROTO_NONE, 0);
+														PROTO_NONE, 0, FALSE);
 							}
 							break;
 						}
@@ -1308,9 +1308,11 @@ METHOD(task_manager_t, queue_child_rekey, void,
 }
 
 METHOD(task_manager_t, queue_child_delete, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi,
+	bool expired)
 {
-	queue_task(this, (task_t*)child_delete_create(this->ike_sa, protocol, spi));
+	queue_task(this, (task_t*)child_delete_create(this->ike_sa,
+												  protocol, spi, expired));
 }
 
 METHOD(task_manager_t, queue_dpd, void,

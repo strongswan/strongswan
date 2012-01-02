@@ -44,6 +44,11 @@ struct private_delete_child_sa_job_t {
 	 * inbound SPI of the CHILD_SA
 	 */
 	u_int32_t spi;
+
+	/**
+	 * Delete for an expired CHILD_SA
+	 */
+	bool expired;
 };
 
 METHOD(job_t, destroy, void,
@@ -66,7 +71,7 @@ METHOD(job_t, execute, void,
 	}
 	else
 	{
-		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
+		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi, this->expired);
 
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
@@ -83,8 +88,7 @@ METHOD(job_t, get_priority, job_priority_t,
  * Described in header
  */
 delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
-												  protocol_id_t protocol,
-												  u_int32_t spi)
+							protocol_id_t protocol, u_int32_t spi, bool expired)
 {
 	private_delete_child_sa_job_t *this;
 
@@ -99,6 +103,7 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 		.reqid = reqid,
 		.protocol = protocol,
 		.spi = spi,
+		.expired = expired,
 	);
 
 	return &this->public;

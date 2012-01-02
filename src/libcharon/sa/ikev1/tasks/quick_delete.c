@@ -54,6 +54,11 @@ struct private_quick_delete_t {
 	 * Send delete even if SA does not exist
 	 */
 	bool force;
+
+	/**
+	 * SA already expired?
+	 */
+	bool expired;
 };
 
 /**
@@ -78,16 +83,29 @@ static bool delete_child(private_quick_delete_t *this,
 
 	child_sa->set_state(child_sa, CHILD_DELETING);
 
-	child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
-	child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
+	if (this->expired)
+	{
+		DBG0(DBG_IKE, "closing expired CHILD_SA %s{%d} "
+			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			 ntohl(child_sa->get_spi(child_sa, TRUE)),
+			 ntohl(child_sa->get_spi(child_sa, FALSE)),
+			 child_sa->get_traffic_selectors(child_sa, TRUE),
+			 child_sa->get_traffic_selectors(child_sa, FALSE));
+	}
+	else
+	{
+		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
+		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
 
-	DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
-		 "with SPIs %.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
-		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-		 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
-		 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
-		 child_sa->get_traffic_selectors(child_sa, TRUE),
-		 child_sa->get_traffic_selectors(child_sa, FALSE));
+		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} with SPIs "
+			 "%.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
+			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
+			 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
+			 child_sa->get_traffic_selectors(child_sa, TRUE),
+			 child_sa->get_traffic_selectors(child_sa, FALSE));
+	}
 
 	charon->bus->child_updown(charon->bus, child_sa, FALSE);
 
@@ -190,7 +208,7 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 quick_delete_t *quick_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi, bool force)
+									u_int32_t spi, bool force, bool expired)
 {
 	private_quick_delete_t *this;
 
@@ -206,6 +224,7 @@ quick_delete_t *quick_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		.protocol = protocol,
 		.spi = spi,
 		.force = force,
+		.expired = expired,
 	);
 
 	if (protocol != PROTO_NONE)

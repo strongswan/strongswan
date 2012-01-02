@@ -352,7 +352,7 @@ METHOD(task_t, process_i, status_t,
 	protocol = to_delete->get_protocol(to_delete);
 
 	/* rekeying done, delete the obsolete CHILD_SA using a subtask */
-	this->child_delete = child_delete_create(this->ike_sa, protocol, spi);
+	this->child_delete = child_delete_create(this->ike_sa, protocol, spi, FALSE);
 	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
 	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
 

@@ -1141,7 +1141,7 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	{
 		queue_task(this, (task_t*)
 			quick_delete_create(this->ike_sa, child_sa->get_protocol(child_sa),
-								child_sa->get_spi(child_sa, TRUE), FALSE));
+								child_sa->get_spi(child_sa, TRUE), FALSE, FALSE));
 	}
 	enumerator->destroy(enumerator);
 
@@ -1190,10 +1190,11 @@ METHOD(task_manager_t, queue_child_rekey, void,
 }
 
 METHOD(task_manager_t, queue_child_delete, void,
-	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi,
+	bool expired)
 {
 	queue_task(this, (task_t*)quick_delete_create(this->ike_sa, protocol,
-												  spi, FALSE));
+												  spi, FALSE, expired));
 }
 
 METHOD(task_manager_t, queue_dpd, void,

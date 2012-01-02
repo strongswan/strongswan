@@ -212,7 +212,8 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 			DBG1(DBG_CFG, "resyncing CHILD_SA using a delete");
 			status = ike_sa->delete_child_sa(ike_sa,
 											 child_sa->get_protocol(child_sa),
-											 child_sa->get_spi(child_sa, TRUE));
+											 child_sa->get_spi(child_sa, TRUE),
+											 FALSE);
 		}
 		else
 		{

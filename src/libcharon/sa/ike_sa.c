@@ -1256,9 +1256,10 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 }
 
 METHOD(ike_sa_t, delete_child_sa, status_t,
-	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool expired)
 {
-	this->task_manager->queue_child_delete(this->task_manager, protocol, spi);
+	this->task_manager->queue_child_delete(this->task_manager,
+										   protocol, spi, expired);
 	return this->task_manager->initiate(this->task_manager);
 }
 

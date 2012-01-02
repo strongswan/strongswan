@@ -773,7 +773,7 @@ METHOD(task_t, process_r, status_t,
 				this->ike_sa->queue_task(this->ike_sa,
 					(task_t*)quick_delete_create(this->ike_sa,
 								this->proposal->get_protocol(this->proposal),
-								this->spi_i, TRUE));
+								this->spi_i, TRUE, TRUE));
 				return ALREADY_DONE;
 			}
 			return SUCCESS;

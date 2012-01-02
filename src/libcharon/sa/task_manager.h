@@ -177,9 +177,10 @@ struct task_manager_t {
 	 *
 	 * @param protocol		CHILD_SA protocol, AH|ESP
 	 * @param spi			CHILD_SA SPI to rekey
+	 * @param expired		TRUE if SA already expired
 	 */
 	void (*queue_child_delete)(task_manager_t *this, protocol_id_t protocol,
-							   u_int32_t spi);
+							   u_int32_t spi, bool expired);
 
 	/**
 	 * Queue liveness checking tasks.

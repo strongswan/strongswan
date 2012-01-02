@@ -52,9 +52,10 @@ struct child_delete_t {
  * @param ike_sa		IKE_SA this task works for
  * @param protocol		protocol of CHILD_SA to delete, PROTO_NONE as responder
  * @param spi			inbound SPI of CHILD_SA to delete
+ * @param expired		TRUE if CHILD_SA already expired
  * @return				child_delete task to handle by the task_manager
  */
 child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi);
+									u_int32_t spi, bool expired);
 
 #endif /** CHILD_DELETE_H_ @}*/

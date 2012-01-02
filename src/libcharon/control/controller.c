@@ -368,7 +368,7 @@ METHOD(job_t, terminate_child_execute, void,
 
 	charon->bus->set_sa(charon->bus, ike_sa);
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-								child_sa->get_spi(child_sa, TRUE)) != DESTROY_ME)
+					child_sa->get_spi(child_sa, TRUE), FALSE) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		listener->status = SUCCESS;

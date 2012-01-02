@@ -62,6 +62,11 @@ struct private_child_delete_t {
 	bool rekeyed;
 
 	/**
+	 * CHILD_SA already expired?
+	 */
+	bool expired;
+
+	/**
 	 * CHILD_SAs which get deleted
 	 */
 	linked_list_t *child_sas;
@@ -247,16 +252,29 @@ static void log_children(private_child_delete_t *this)
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
-		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
-		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
+		if (this->expired)
+		{
+			DBG0(DBG_IKE, "closing expired CHILD_SA %s{%d} "
+				 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+				 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+				 ntohl(child_sa->get_spi(child_sa, TRUE)),
+				 ntohl(child_sa->get_spi(child_sa, FALSE)),
+				 child_sa->get_traffic_selectors(child_sa, TRUE),
+				 child_sa->get_traffic_selectors(child_sa, FALSE));
+		}
+		else
+		{
+			child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
+			child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
 
-		DBG0(DBG_IKE, "closing CHILD_SA %s{%d} "
-			 "with SPIs %.8x_i (%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
-			 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
-			 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
-			 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
-			 child_sa->get_traffic_selectors(child_sa, TRUE),
-			 child_sa->get_traffic_selectors(child_sa, FALSE));
+			DBG0(DBG_IKE, "closing CHILD_SA %s{%d} with SPIs %.8x_i "
+				 "(%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",
+				 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
+				 ntohl(child_sa->get_spi(child_sa, TRUE)), bytes_in,
+				 ntohl(child_sa->get_spi(child_sa, FALSE)), bytes_out,
+				 child_sa->get_traffic_selectors(child_sa, TRUE),
+				 child_sa->get_traffic_selectors(child_sa, FALSE));
+		}
 	}
 	enumerator->destroy(enumerator);
 }
@@ -356,7 +374,7 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi)
+									u_int32_t spi, bool expired)
 {
 	private_child_delete_t *this;
 
@@ -373,6 +391,7 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		.child_sas = linked_list_create(),
 		.protocol = protocol,
 		.spi = spi,
+		.expired = expired,
 	);
 
 	if (protocol != PROTO_NONE)

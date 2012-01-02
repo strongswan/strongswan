@@ -46,9 +46,10 @@ struct quick_delete_t {
  * @param protocol		protocol of CHILD_SA to delete, PROTO_NONE as responder
  * @param spi			inbound SPI of CHILD_SA to delete
  * @param force			send delete even if SA does not exist
+ * @param expired		TRUE if SA already expired
  * @return				quick_delete task to handle by the task_manager
  */
 quick_delete_t *quick_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
-									u_int32_t spi, bool force);
+									u_int32_t spi, bool force, bool expired);
 
 #endif /** QUICK_DELETE_H_ @}*/
