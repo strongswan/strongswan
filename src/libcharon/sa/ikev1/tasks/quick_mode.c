@@ -661,6 +661,42 @@ static bool has_notify_errors(private_quick_mode_t *this, message_t *message)
 	return err;
 }
 
+/**
+ * Check if this is a rekey for an existing CHILD_SA, reuse reqid if so
+ */
+static void check_for_rekeyed_child(private_quick_mode_t *this)
+{
+	enumerator_t *enumerator, *policies;
+	traffic_selector_t *local, *remote;
+	child_sa_t *child_sa;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (this->reqid == 0 && enumerator->enumerate(enumerator, &child_sa))
+	{
+		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
+			streq(child_sa->get_name(child_sa),
+				  this->config->get_name(this->config)))
+		{
+			policies = child_sa->create_policy_enumerator(child_sa);
+			if (policies->enumerate(policies, &local, &remote))
+			{
+				if (local->equals(local, this->tsr) &&
+					remote->equals(remote, this->tsi) &&
+					this->proposal->equals(this->proposal,
+										   child_sa->get_proposal(child_sa)))
+				{
+					this->reqid = child_sa->get_reqid(child_sa);
+					child_sa->set_state(child_sa, CHILD_REKEYING);
+					DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
+						 child_sa->get_name(child_sa), this->reqid);
+				}
+			}
+			policies->destroy(policies);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(task_t, process_r, status_t,
 	private_quick_mode_t *this, message_t *message)
 {
@@ -754,6 +790,8 @@ METHOD(task_t, process_r, status_t,
 					return send_notify(this, INVALID_PAYLOAD_TYPE);
 				}
 			}
+
+			check_for_rekeyed_child(this);
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
