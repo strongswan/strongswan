@@ -114,7 +114,7 @@ METHOD(task_t, build_i, status_t,
 
 		return SUCCESS;
 	}
-	return FAILED;
+	return ALREADY_DONE;
 }
 
 METHOD(task_t, process_i, status_t,
