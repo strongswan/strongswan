@@ -510,15 +510,15 @@ static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload
 	lifebytes = sa_payload->get_lifebytes(sa_payload);
 	if (this->lifetime != lifetime)
 	{
-		DBG1(DBG_IKE, "received %us lifetime, configured %us, using lower",
+		DBG1(DBG_IKE, "received %us lifetime, configured %us",
 			 lifetime, this->lifetime);
-		this->lifetime = min(this->lifetime, lifetime);
+		this->lifetime = lifetime;
 	}
 	if (this->lifebytes != lifebytes)
 	{
-		DBG1(DBG_IKE, "received %llu lifebytes, configured %llu, using lower",
+		DBG1(DBG_IKE, "received %llu lifebytes, configured %llu",
 			 lifebytes, this->lifebytes);
-		this->lifebytes = min(this->lifebytes, lifebytes);
+		this->lifebytes = lifebytes;
 	}
 }
 
