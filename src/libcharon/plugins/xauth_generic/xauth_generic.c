@@ -100,7 +100,8 @@ METHOD(xauth_method_t, process_server, status_t,
 	shared_key_t *shared;
 	identification_t *id;
 	chunk_t user = chunk_empty, pass = chunk_empty;
-	status_t status = SUCCESS;
+	status_t status = FAILED;
+	int tried = 0;
 
 	enumerator = in->create_attribute_enumerator(in);
 	while (enumerator->enumerate(enumerator, &attr))
@@ -136,20 +137,31 @@ METHOD(xauth_method_t, process_server, status_t,
 		this->peer = id;
 	}
 
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
-									  this->server, this->peer);
-	if (!shared)
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+										SHARED_EAP, this->server, this->peer);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
-		DBG1(DBG_IKE, "no XAuth secret found for '%Y' - '%Y'",
-			 this->server, this->peer);
-		status = FAILED;
+		if (chunk_equals(shared->get_key(shared), pass))
+		{
+			status = SUCCESS;
+			break;
+		}
+		tried++;
 	}
-	else if (!chunk_equals(shared->get_key(shared), pass))
+	enumerator->destroy(enumerator);
+	if (status != SUCCESS)
 	{
-		DBG1(DBG_IKE, "failed to authenticate '%Y' with XAuth", this->peer);
-		status = FAILED;
+		if (!tried)
+		{
+			DBG1(DBG_IKE, "no XAuth secret found for '%Y' - '%Y'",
+				 this->server, this->peer);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "none of %d found XAuth secrets for '%Y' - '%Y' "
+				 "matched", tried, this->server, this->peer);
+		}
 	}
-	DESTROY_IF(shared);
 	return status;
 }
 
