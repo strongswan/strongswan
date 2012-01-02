@@ -114,6 +114,11 @@ struct private_quick_mode_t {
 	 */
 	u_int64_t lifebytes;
 
+	/**
+	 * Reqid to use, 0 for auto-allocate
+	 */
+	u_int32_t reqid;
+
 	/** states of quick mode */
 	enum {
 		QM_INIT,
@@ -552,7 +557,7 @@ METHOD(task_t, build_i, status_t,
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, 0, udp);
+									this->config, this->reqid, udp);
 
 			list = this->config->get_proposals(this->config, FALSE);
 
@@ -753,7 +758,7 @@ METHOD(task_t, process_r, status_t,
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, 0, udp);
+									this->config, this->reqid, udp);
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:
@@ -888,6 +893,12 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_QUICK_MODE;
 }
 
+METHOD(quick_mode_t, use_reqid, void,
+	private_quick_mode_t *this, u_int32_t reqid)
+{
+	this->reqid = reqid;
+}
+
 METHOD(task_t, migrate, void,
 	private_quick_mode_t *this, ike_sa_t *ike_sa)
 {
@@ -946,6 +957,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.use_reqid = _use_reqid,
 		},
 		.ike_sa = ike_sa,
 		.initiator = config != NULL,

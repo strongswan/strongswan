@@ -1158,7 +1158,12 @@ METHOD(task_manager_t, queue_child, void,
 	private_task_manager_t *this, child_cfg_t *cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
-	queue_task(this, (task_t*)quick_mode_create(this->ike_sa, cfg, tsi, tsr));
+	quick_mode_t *task;
+
+	task = quick_mode_create(this->ike_sa, cfg, tsi, tsr);
+	task->use_reqid(task, reqid);
+
+	queue_task(this, &task->task);
 }
 
 METHOD(task_manager_t, queue_child_rekey, void,

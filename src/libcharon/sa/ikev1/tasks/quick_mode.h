@@ -36,6 +36,13 @@ struct quick_mode_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+
+	/**
+	 * Use a specific reqid to install this CHILD_SA.
+	 *
+	 * @param reqid			reqid to use
+	 */
+	void (*use_reqid)(quick_mode_t *this, u_int32_t reqid);
 };
 
 /**
