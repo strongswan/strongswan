@@ -268,7 +268,6 @@ METHOD(task_t, process_r, status_t,
 		{
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' (myself) successful",
 				 this->xauth->get_identity(this->xauth));
-			establish(this);
 		}
 		else
 		{
