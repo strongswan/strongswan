@@ -950,12 +950,6 @@ METHOD(task_t, build_r, status_t,
 			authenticator->destroy(authenticator);
 			save_auth_cfg(this, TRUE);
 
-			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
-			{
-				this->ike_sa->queue_task(this->ike_sa,
-							(task_t*)mode_config_create(this->ike_sa, TRUE));
-			}
-
 			switch (this->auth_method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
@@ -1071,6 +1065,12 @@ METHOD(task_t, process_i, status_t,
 				return send_delete(this);
 			}
 			save_auth_cfg(this, FALSE);
+
+			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			{
+				this->ike_sa->queue_task(this->ike_sa,
+							(task_t*)mode_config_create(this->ike_sa, TRUE));
+			}
 
 			switch (this->auth_method)
 			{
