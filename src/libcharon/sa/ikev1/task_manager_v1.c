@@ -1155,6 +1155,7 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
 	else
 	{
