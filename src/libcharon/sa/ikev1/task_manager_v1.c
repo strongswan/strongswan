@@ -1118,16 +1118,56 @@ METHOD(task_manager_t, queue_ike, void,
 	}
 }
 
-METHOD(task_manager_t, queue_ike_rekey, void,
-	private_task_manager_t *this)
-{
-	/* TODO-IKEv1: IKE_SA rekeying */
-}
-
 METHOD(task_manager_t, queue_ike_reauth, void,
 	private_task_manager_t *this)
 {
-	/* TODO-IKEv1: IKE_SA reauth */
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	ike_sa_t *new;
+	host_t *host;
+
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+								this->ike_sa->get_version(this->ike_sa), TRUE);
+	if (!new)
+	{	/* shouldn't happen */
+		return;
+	}
+
+	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
+	host = this->ike_sa->get_other_host(this->ike_sa);
+	new->set_other_host(new, host->clone(host));
+	host = this->ike_sa->get_my_host(this->ike_sa);
+	new->set_my_host(new, host->clone(host));
+	host = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+	if (host)
+	{
+		new->set_virtual_ip(new, TRUE, host);
+	}
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		this->ike_sa->remove_child_sa(this->ike_sa, enumerator);
+		new->add_child_sa(new, child_sa);
+	}
+	enumerator->destroy(enumerator);
+
+	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
+	}
+	charon->bus->set_sa(charon->bus, this->ike_sa);
+}
+
+METHOD(task_manager_t, queue_ike_rekey, void,
+	private_task_manager_t *this)
+{
+	queue_ike_reauth(this);
 }
 
 METHOD(task_manager_t, queue_ike_delete, void,
