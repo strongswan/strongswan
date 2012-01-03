@@ -266,7 +266,7 @@ static bool connected_peers_match(connected_peers_t *connected_peers,
 {
 	return my_id->equals(my_id, connected_peers->my_id) &&
 		   other_id->equals(other_id, connected_peers->other_id) &&
-		   family == connected_peers->family;
+		   (!family || family == connected_peers->family);
 }
 
 typedef struct segment_t segment_t;
@@ -1444,28 +1444,22 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 	charon->bus->set_sa(charon->bus, NULL);
 }
 
-METHOD(ike_sa_manager_t, check_uniqueness, bool,
-	private_ike_sa_manager_t *this, ike_sa_t *ike_sa, bool force_replace)
+/**
+ * Cleanup function for create_id_enumerator
+ */
+static void id_enumerator_cleanup(linked_list_t *ids)
 {
-	bool cancel = FALSE;
-	peer_cfg_t *peer_cfg;
-	unique_policy_t policy;
-	linked_list_t *list, *duplicate_ids = NULL;
-	enumerator_t *enumerator;
-	ike_sa_id_t *duplicate_id = NULL;
-	identification_t *me, *other;
+	ids->destroy_offset(ids, offsetof(ike_sa_id_t, destroy));
+}
+
+METHOD(ike_sa_manager_t, create_id_enumerator, enumerator_t*,
+	private_ike_sa_manager_t *this, identification_t *me,
+	identification_t *other, int family)
+{
+	linked_list_t *list, *ids = NULL;
+	connected_peers_t *current;
 	u_int row, segment;
 	rwlock_t *lock;
-
-	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	policy = peer_cfg->get_unique_policy(peer_cfg);
-	if (policy == UNIQUE_NO && !force_replace)
-	{
-		return FALSE;
-	}
-
-	me = ike_sa->get_my_id(ike_sa);
-	other = ike_sa->get_other_id(ike_sa);
 
 	row = chunk_hash_inc(other->get_encoding(other),
 						 chunk_hash(me->get_encoding(me))) & this->table_mask;
@@ -1476,33 +1470,52 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 	list = this->connected_peers_table[row];
 	if (list)
 	{
-		connected_peers_t *current;
-		host_t *other_host;
-
-		other_host = ike_sa->get_other_host(ike_sa);
 		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-					(void**)&current, me, other,
-					(uintptr_t)other_host->get_family(other_host)) == SUCCESS)
+					(void**)&current, me, other, (uintptr_t)family) == SUCCESS)
 		{
-			/* clone the list, so we can release the lock */
-			duplicate_ids = current->sas->clone_offset(current->sas,
-												offsetof(ike_sa_id_t, clone));
+			ids = current->sas->clone_offset(current->sas,
+											 offsetof(ike_sa_id_t, clone));
 		}
 	}
 	lock->unlock(lock);
 
-	if (!duplicate_ids)
+	if (!ids)
+	{
+		return enumerator_create_empty();
+	}
+	return enumerator_create_cleaner(ids->create_enumerator(ids),
+									 (void*)id_enumerator_cleanup, ids);
+}
+
+METHOD(ike_sa_manager_t, check_uniqueness, bool,
+	private_ike_sa_manager_t *this, ike_sa_t *ike_sa, bool force_replace)
+{
+	bool cancel = FALSE;
+	peer_cfg_t *peer_cfg;
+	unique_policy_t policy;
+	enumerator_t *enumerator;
+	ike_sa_id_t *id = NULL;
+	identification_t *me, *other;
+	host_t *other_host;
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	policy = peer_cfg->get_unique_policy(peer_cfg);
+	if (policy == UNIQUE_NO && !force_replace)
 	{
 		return FALSE;
 	}
+	me = ike_sa->get_my_id(ike_sa);
+	other = ike_sa->get_other_id(ike_sa);
+	other_host = ike_sa->get_other_host(ike_sa);
 
-	enumerator = duplicate_ids->create_enumerator(duplicate_ids);
-	while (enumerator->enumerate(enumerator, &duplicate_id))
+	enumerator = create_id_enumerator(this, me, other,
+									  other_host->get_family(other_host));
+	while (enumerator->enumerate(enumerator, &id))
 	{
 		status_t status = SUCCESS;
 		ike_sa_t *duplicate;
 
-		duplicate = checkout(this, duplicate_id);
+		duplicate = checkout(this, id);
 		if (!duplicate)
 		{
 			continue;
@@ -1552,7 +1565,6 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
-	duplicate_ids->destroy_offset(duplicate_ids, offsetof(ike_sa_id_t, destroy));
 	/* reset thread's current IKE_SA after checkin */
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return cancel;
@@ -1789,6 +1801,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 			.check_uniqueness = _check_uniqueness,
 			.has_contact = _has_contact,
 			.create_enumerator = _create_enumerator,
+			.create_id_enumerator = _create_id_enumerator,
 			.checkin = _checkin,
 			.checkin_and_destroy = _checkin_and_destroy,
 			.get_count = _get_count,
