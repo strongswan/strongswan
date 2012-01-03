@@ -1066,7 +1066,7 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			child_cfg->destroy(child_cfg);
+			DESTROY_IF(child_cfg);
 			DBG1(DBG_IKE, "unable to initiate to %%any");
 			charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
 			return DESTROY_ME;
@@ -1090,6 +1090,7 @@ METHOD(ike_sa_t, initiate, status_t,
 	}
 	else
 #endif /* ME */
+	if (child_cfg)
 	{
 		/* normal IKE_SA with CHILD_SA */
 		this->task_manager->queue_child(this->task_manager, child_cfg, reqid,
