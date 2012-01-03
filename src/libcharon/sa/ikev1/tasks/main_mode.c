@@ -548,6 +548,7 @@ METHOD(task_t, build_i, status_t,
 				this->lifetime = this->peer_cfg->get_rekey_time(this->peer_cfg,
 																 FALSE);
 			}
+			this->lifetime += this->peer_cfg->get_over_time(this->peer_cfg);
 			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
 			sa_payload = sa_payload_create_from_proposals_v1(proposals,
 						this->lifetime, 0, this->auth_method, MODE_NONE, FALSE);
@@ -1006,9 +1007,9 @@ METHOD(task_t, process_i, status_t,
 			if (lifetime != this->lifetime)
 			{
 				DBG1(DBG_IKE, "received lifetime %us does not match configured "
-					 "%us, using lower value", lifetime, this->lifetime);
+					 "lifetime %us", lifetime, this->lifetime);
 			}
-			this->lifetime = min(this->lifetime, lifetime);
+			this->lifetime = lifetime;
 			auth_method = sa_payload->get_auth_method(sa_payload);
 			if (auth_method != this->auth_method)
 			{
