@@ -1326,6 +1326,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
 		if (this->other_virtual_ip != NULL ||
+			has_condition(this, COND_XAUTH_AUTHENTICATED) ||
 			has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
 			/* as mediation server we too cannot reauth the IKE_SA */
