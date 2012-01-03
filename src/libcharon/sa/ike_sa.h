@@ -159,6 +159,11 @@ enum ike_condition_t {
 	 * Initial contact received
 	 */
 	COND_INIT_CONTACT_SEEN = (1<<8),
+
+	/**
+	 * Peer has been authenticated using XAuth
+	 */
+	COND_XAUTH_AUTHENTICATED = (1<<9),
 };
 
 /**

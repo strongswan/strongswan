@@ -310,6 +310,7 @@ METHOD(task_t, process_i_status, status_t,
 		return FAILED;
 	}
 	establish(this);
+	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
 	return SUCCESS;
 }
 
