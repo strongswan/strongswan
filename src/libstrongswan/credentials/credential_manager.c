@@ -866,7 +866,7 @@ METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
 }
 
 /**
- * Check if an helper contains a certificate as trust anchor
+ * Check if a helper contains a certificate as trust anchor
  */
 static bool auth_contains_cacert(auth_cfg_t *auth, certificate_t *cert)
 {
@@ -949,7 +949,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 }
 
 /**
- * find a private key of a give certificate
+ * find a private key of a given certificate
  */
 static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 										  certificate_t *cert, key_type_t type)

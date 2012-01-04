@@ -28,8 +28,8 @@ typedef enum builder_part_t builder_part_t;
 /**
  * Constructor function to build credentials.
  *
- * Any added parts are cloned/refcounted by the builder implementation, a
- * caller may need to free the passed ressources themself.
+ * Any added parts are cloned/refcounted by the builder implementation.
+ * Callers may need to free the passed ressources themselves.
  *
  * @param subtype	constructor specific subtype, e.g. a certificate_type_t
  * @param args		list of builder part types, followed by parts, BUILD_END

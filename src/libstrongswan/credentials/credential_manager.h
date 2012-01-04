@@ -36,11 +36,11 @@ typedef struct credential_manager_t credential_manager_t;
  * Manages credentials using credential_sets.
  *
  * The credential manager is the entry point of the credential framework. It
- * uses so called "sets" to access credentials in a modular fashion, these
+ * uses so called "sets" to access credentials in a modular fashion. These
  * are implemented through the credential_set_t interface.
  * The manager additionally does trust chain verification and trust status
- * chaching. A set may call the managers methods if it needs credentials itself,
- * the manager uses recursive locking.
+ * caching. A set may call the managers methods if it needs credentials itself.
+ * The manager uses recursive locking.
  *
  * @verbatim
 
@@ -62,8 +62,8 @@ typedef struct credential_manager_t credential_manager_t;
 
    @endverbatim
  *
- * The credential manager uses rwlocks for performance reasons, credential
- * sets must be fully thread save.
+ * The credential manager uses rwlocks for performance reasons. Credential
+ * sets must be fully thread-safe.
  */
 struct credential_manager_t {
 
@@ -84,7 +84,7 @@ struct credential_manager_t {
 	 *
 	 * The enumerator enumerates over:
 	 *  shared_key_t*, id_match_t me, id_match_t other
-	 * But must accepts values for the id_matches.
+	 * But must accept values for the id_matches.
 	 *
 	 * @param type		kind of requested shared key
 	 * @param first		first subject between key is shared
@@ -120,7 +120,7 @@ struct credential_manager_t {
 	 *
 	 * @param type		kind of requested shared key
 	 * @param me		own identity
-	 * @param other		peers identity
+	 * @param other		peer identity
 	 * @return			shared_key_t, NULL if none found
 	 */
 	shared_key_t *(*get_shared)(credential_manager_t *this, shared_key_type_t type,
@@ -130,7 +130,7 @@ struct credential_manager_t {
 	 *
 	 * The get_private() method gets a secret private key identified by either
 	 * the keyid itself or an id the key belongs to.
-	 * The auth parameter contains additional information, such as receipients
+	 * The auth parameter contains additional information, such as recipients
 	 * trusted CA certs. Auth gets filled with subject and CA certificates
 	 * needed to validate a created signature.
 	 *
@@ -163,7 +163,7 @@ struct credential_manager_t {
 	/**
 	 * Create an enumerator over trusted public keys.
 	 *
-	 * This method gets a an enumerator over trusted public keys to verify a
+	 * This method creates an enumerator over trusted public keys to verify a
 	 * signature created by id. The auth parameter contains additional
 	 * authentication infos, e.g. peer and intermediate certificates.
 	 * The resulting enumerator enumerates over public_key_t *, auth_cfg_t *,
@@ -180,7 +180,7 @@ struct credential_manager_t {
 					key_type_t type, identification_t *id, auth_cfg_t *auth);
 
 	/**
-	 * Cache a certificate by invoking cache_cert() on all registerd sets.
+	 * Cache a certificate by invoking cache_cert() on all registered sets.
 	 *
 	 * @param cert		certificate to cache
 	 */
@@ -199,8 +199,8 @@ struct credential_manager_t {
 	/**
 	 * Check if a given subject certificate is issued by an issuer certificate.
 	 *
-	 * This operation does signature verification, but uses the credential
-	 * managers cache for to speed up the operation.
+	 * This operation does signature verification using the credential
+	 * manager's cache to speed up the operation.
 	 *
 	 * @param subject	subject certificate to check
 	 * @param issuer	issuer certificate that potentially has signed subject
@@ -228,7 +228,7 @@ struct credential_manager_t {
 	 *
 	 * To add a credential set for the current trustchain verification
 	 * operation, sets may be added for the calling thread only. This
-	 * does not require a write lock and is therefore a much less expensive
+	 * does not require a write lock and is therefore a much cheaper
 	 * operation.
 	 *
 	 * @param set		set to register

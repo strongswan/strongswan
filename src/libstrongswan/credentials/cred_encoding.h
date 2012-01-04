@@ -59,7 +59,7 @@ bool cred_encoding_args(va_list args, ...);
 /**
  * Encoding type of a fingerprint/credential.
  *
- * Fingerprints have have the KEYID_*, public keys the PUBKEY_* and
+ * Fingerprints have the KEYID_*, public keys the PUBKEY_* and
  * private keys the PRIVKEY_* prefix.
  */
 enum cred_encoding_type_t {

@@ -39,7 +39,7 @@ struct cert_validator_t {
 	 *
 	 * @param subject		subject certificate to check
 	 * @param issuer		issuer of subject
-	 * @param online		wheter to do online revocation checking
+	 * @param online		whether to do online revocation checking
 	 * @param pathlen		the current length of the path bottom-up
 	 * @param anchor		is issuer trusted root anchor
 	 * @param auth			container for resulting authentication info

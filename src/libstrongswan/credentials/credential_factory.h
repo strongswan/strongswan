@@ -54,7 +54,7 @@ struct credential_factory_t {
 	 * The variable argument list takes builder_part_t types followed
 	 * by the type specific value. The list must be terminated using BUILD_END.
 	 * All passed parts get cloned/refcounted by the builder functions,
-	 * so free up allocated ressources after successful and unsuccessful
+	 * so free up allocated resources after successful and unsuccessful
 	 * invocations.
 	 *
 	 * @param type			credential type to build

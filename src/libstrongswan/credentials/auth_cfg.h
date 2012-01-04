@@ -63,7 +63,6 @@ extern enum_name_t *auth_class_names;
  * to transport credentials during the authentication process.
  */
 enum auth_rule_t {
-
 	/** identity to use for IKEv2 authentication exchange, identification_t* */
 	AUTH_RULE_IDENTITY,
 	/** authentication class, auth_class_t */
@@ -119,8 +118,8 @@ extern enum_name_t *auth_rule_names;
  *
  * RFC4739 defines multiple authentication rounds. This class defines such
  * a round from a configuration perspective, either for the local or the remote
- * peer. Local config are called "rulesets", as they define how we authenticate.
- * Remote peer configs are called "constraits", they define what is needed to
+ * peer. Local configs are called "rulesets". They define how we authenticate.
+ * Remote peer configs are called "constraits". They define what is needed to
  * complete the authentication round successfully.
  *
  * @verbatim
@@ -144,7 +143,7 @@ extern enum_name_t *auth_rule_names;
 
    @endverbatim
  *
- * Values for each items are either pointers (casted to void*) or short
+ * Values for each item are either pointers (casted to void*) or short
  * integers (use uintptr_t cast).
  */
 struct auth_cfg_t {
@@ -158,7 +157,7 @@ struct auth_cfg_t {
 	void (*add)(auth_cfg_t *this, auth_rule_t rule, ...);
 
 	/**
-	 * Get an rule value.
+	 * Get a rule value.
 	 *
 	 * @param rule		rule type
 	 * @return			bool if item has been found
@@ -173,9 +172,9 @@ struct auth_cfg_t {
 	enumerator_t* (*create_enumerator)(auth_cfg_t *this);
 
 	/**
-	 * Replace an rule at enumerator position.
+	 * Replace a rule at enumerator position.
 	 *
-	 * @param pos		enumerator position position
+	 * @param pos		enumerator position
 	 * @param rule		rule type
 	 * @param ...		associated value to rule
 	 */
@@ -186,7 +185,7 @@ struct auth_cfg_t {
 	 * Check if a used config fulfills a set of configured constraints.
 	 *
 	 * @param constraints	required authorization rules
-	 * @param log_error		wheter to log compliance errors
+	 * @param log_error		whether to log compliance errors
 	 * @return				TRUE if this complies with constraints
 	 */
 	bool (*complies)(auth_cfg_t *this, auth_cfg_t *constraints, bool log_error);
@@ -202,20 +201,20 @@ struct auth_cfg_t {
 	/**
 	 * Purge all rules in a config.
 	 *
-	 * @param keep_ca	wheter to keep AUTH_RULE_CA_CERT entries
+	 * @param keep_ca	whether to keep AUTH_RULE_CA_CERT entries
 	 */
 	void (*purge)(auth_cfg_t *this, bool keep_ca);
 
 	/**
 	 * Check two configs for equality.
 	 *
-	 * @param other		other config to compaire against this
+	 * @param other		other config to compare against this
 	 * @return			TRUE if auth infos identical
 	 */
 	bool (*equals)(auth_cfg_t *this, auth_cfg_t *other);
 
 	/**
-	 * Clone a authentication config, including all rules.
+	 * Clone an authentication config, including all rules.
 	 *
 	 * @return			cloned configuration
 	 */

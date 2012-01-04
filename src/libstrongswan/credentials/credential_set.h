@@ -38,7 +38,7 @@ typedef struct credential_set_t credential_set_t;
  * A credential set enumerator may not block the credential set, i.e. multiple
  * threads must be able to hold multiple enumerators, as the credential manager
  * is higly parallelized. The best way to achieve this is by using shared
- * read locks for the enumerators only. Otherwiese deadlocks will occur.
+ * read locks for the enumerators only. Otherwise deadlocks will occur.
  * The writing cache_cert() routine is called by the manager only if no
  * enumerator is alive, so it is save to use a write lock there.
  */
@@ -97,7 +97,7 @@ struct credential_set_t {
 	/**
 	 * Cache a certificate in the credential set.
 	 *
-	 * The caching policy is implementation dependent, the sets may cache the
+	 * The caching policy is implementation dependent. The sets may cache the
 	 * certificate in-memory, persistent on disk or not at all.
 	 *
 	 * @param cert		certificate to cache
