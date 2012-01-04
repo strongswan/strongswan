@@ -770,121 +770,112 @@ METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
 }
 
 /**
- * Get an attribute from a selected transform
- */
-static u_int64_t get_attr_tfrm(transform_substructure_t *transform,
-							   transform_attribute_type_t type)
-{
-	enumerator_t *enumerator;
-	transform_attribute_t *attr;
-	u_int64_t value = 0;
-
-	enumerator = transform->create_attribute_enumerator(transform);
-	while (enumerator->enumerate(enumerator, &attr))
-	{
-		if (attr->get_attribute_type(attr) == type)
-		{
-			value = attr->get_value(attr);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return value;
-}
-
-
-/**
  * Get an attribute from any transform, 0 if not found
  */
 static u_int64_t get_attr(private_proposal_substructure_t *this,
-				transform_attribute_type_t type, transform_substructure_t **sel)
+						  transform_attribute_type_t type)
 {
+	enumerator_t *transforms, *attributes;
 	transform_substructure_t *transform;
-	enumerator_t *enumerator;
-	u_int64_t value = 0;
+	transform_attribute_t *attr;
 
-	enumerator = this->transforms->create_enumerator(this->transforms);
-	while (enumerator->enumerate(enumerator, &transform))
+	transforms = this->transforms->create_enumerator(this->transforms);
+	while (transforms->enumerate(transforms, &transform))
 	{
-		value = get_attr_tfrm(transform, type);
-		if (value)
+		attributes = transform->create_attribute_enumerator(transform);
+		while (attributes->enumerate(attributes, &attr))
 		{
-			if (sel)
+			if (attr->get_attribute_type(attr) == type)
 			{
-				*sel = transform;
+				attributes->destroy(attributes);
+				transforms->destroy(transforms);
+				return attr->get_value(attr);
 			}
-			break;
 		}
+		attributes->destroy(attributes);
 	}
-	enumerator->destroy(enumerator);
-	return value;
+	transforms->destroy(transforms);
+	return 0;
+}
+
+/**
+ * Look up a lifetime duration of a given kind in all transforms
+ */
+static u_int64_t get_life_duration(private_proposal_substructure_t *this,
+				transform_attribute_type_t type_attr, ikev1_life_type_t type,
+				transform_attribute_type_t dur_attr)
+{
+	enumerator_t *transforms, *attributes;
+	transform_substructure_t *transform;
+	transform_attribute_t *attr;
+
+	transforms = this->transforms->create_enumerator(this->transforms);
+	while (transforms->enumerate(transforms, &transform))
+	{
+		attributes = transform->create_attribute_enumerator(transform);
+		while (attributes->enumerate(attributes, &attr))
+		{
+			if (attr->get_attribute_type(attr) == type_attr &&
+				attr->get_value(attr) == type)
+			{	/* got type attribute, look for duration following next */
+				while (attributes->enumerate(attributes, &attr))
+				{
+					if (attr->get_attribute_type(attr) == dur_attr)
+					{
+						attributes->destroy(attributes);
+						transforms->destroy(transforms);
+						return attr->get_value(attr);
+					}
+				}
+			}
+		}
+		attributes->destroy(attributes);
+	}
+	transforms->destroy(transforms);
+	return 0;
 }
 
 METHOD(proposal_substructure_t, get_lifetime, u_int32_t,
 	private_proposal_substructure_t *this)
 {
-	transform_substructure_t *transform;
-	ikev1_life_type_t type;
+	u_int32_t duration;
 
 	switch (this->protocol_id)
 	{
 		case PROTO_IKE:
-			type = get_attr(this, TATTR_PH1_LIFE_TYPE, &transform);
-			if (type == IKEV1_LIFE_TYPE_SECONDS)
-			{
-				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
-			}
-			break;
+			return get_life_duration(this, TATTR_PH1_LIFE_TYPE,
+						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH1_LIFE_DURATION);
 		case PROTO_ESP:
-			type = get_attr(this, TATTR_PH2_SA_LIFE_TYPE, &transform);
-			if (type == IKEV1_LIFE_TYPE_SECONDS)
-			{
-				return get_attr_tfrm(transform, TATTR_PH2_SA_LIFE_DURATION);
-			}
-			else if (type != IKEV1_LIFE_TYPE_KILOBYTES)
+			duration = get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
+						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH2_SA_LIFE_DURATION);
+			if (!duration)
 			{	/* default to 8 hours, RFC 2407 */
 				return 28800;
 			}
-			break;
+			return duration;
 		default:
-			break;
+			return 0;
 	}
-	return 0;
 }
 
 METHOD(proposal_substructure_t, get_lifebytes, u_int64_t,
 	private_proposal_substructure_t *this)
 {
-	transform_substructure_t *transform;
-	ikev1_life_type_t type;
-
 	switch (this->protocol_id)
 	{
-		case PROTO_IKE:
-			type = get_attr(this, TATTR_PH1_LIFE_TYPE, &transform);
-			if (type == IKEV1_LIFE_TYPE_KILOBYTES)
-			{
-				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
-			}
-			break;
 		case PROTO_ESP:
-			type = get_attr(this, TATTR_PH2_SA_LIFE_TYPE, &transform);
-			if (type == IKEV1_LIFE_TYPE_KILOBYTES)
-			{
-				return get_attr_tfrm(transform, TATTR_PH1_LIFE_DURATION);
-			}
-			break;
+			return 1000 * get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
+					IKEV1_LIFE_TYPE_KILOBYTES, TATTR_PH2_SA_LIFE_DURATION);
+		case PROTO_IKE:
 		default:
-			break;
+			return 0;
 	}
-	return 0;
-
 }
 
 METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
 	private_proposal_substructure_t *this)
 {
-	switch (get_attr(this, TATTR_PH1_AUTH_METHOD, NULL))
+	switch (get_attr(this, TATTR_PH1_AUTH_METHOD))
 	{
 		case IKEV1_AUTH_PSK:
 			return AUTH_PSK;
@@ -908,7 +899,7 @@ METHOD(proposal_substructure_t, get_encap_mode, ipsec_mode_t,
 	private_proposal_substructure_t *this, bool *udp)
 {
 	*udp = FALSE;
-	switch (get_attr(this, TATTR_PH2_ENCAP_MODE, NULL))
+	switch (get_attr(this, TATTR_PH2_ENCAP_MODE))
 	{
 		case IKEV1_ENCAP_TRANSPORT:
 			return MODE_TRANSPORT;
@@ -1110,7 +1101,7 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
 							TATTR_PH2_SA_LIFE_DURATION, lifetime));
 	}
-	else if (lifebytes)
+	if (lifebytes)
 	{
 		transform->add_transform_attribute(transform,
 			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
