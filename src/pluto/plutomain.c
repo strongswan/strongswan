@@ -675,6 +675,9 @@ int main(int argc, char **argv)
 		close(fd);
 	}
 
+	/* for uncritical pseudo random numbers */
+	srand(time(NULL) + getpid());
+
 	init_constants();
 	init_log("pluto");
 
