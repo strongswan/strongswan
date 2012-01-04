@@ -1296,8 +1296,13 @@ METHOD(ike_sa_t, delete_, status_t,
 {
 	switch (this->state)
 	{
-		case IKE_ESTABLISHED:
 		case IKE_REKEYING:
+			if (this->version == IKEV1)
+			{	/* SA has been reauthenticated, delete */
+				break;
+			}
+			/* FALL */
+		case IKE_ESTABLISHED:
 			this->task_manager->queue_ike_delete(this->task_manager);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
