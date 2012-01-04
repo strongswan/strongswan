@@ -32,6 +32,7 @@
 #include <sa/ikev1/tasks/mode_config.h>
 #include <sa/ikev1/tasks/informational.h>
 #include <sa/ikev1/tasks/isakmp_delete.h>
+#include <processing/jobs/adopt_children_job.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -966,6 +967,9 @@ METHOD(task_t, build_r, status_t,
 					return FAILED;
 				default:
 					establish(this);
+					lib->processor->queue_job(lib->processor, (job_t*)
+									adopt_children_job_create(
+										this->ike_sa->get_id(this->ike_sa)));
 					return SUCCESS;
 			}
 		}

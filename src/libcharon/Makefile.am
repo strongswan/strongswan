@@ -114,7 +114,8 @@ sa/ikev1/tasks/isakmp_delete.c sa/ikev1/tasks/isakmp_delete.h \
 sa/ikev1/tasks/xauth.c sa/ikev1/tasks/xauth.h \
 sa/ikev1/tasks/quick_mode.c sa/ikev1/tasks/quick_mode.h \
 sa/ikev1/tasks/quick_delete.c sa/ikev1/tasks/quick_delete.h \
-sa/ikev1/tasks/mode_config.c sa/ikev1/tasks/mode_config.h
+sa/ikev1/tasks/mode_config.c sa/ikev1/tasks/mode_config.h \
+processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
 endif
 
 
