@@ -1183,6 +1183,10 @@ METHOD(ike_sa_t, get_other_eap_id, identification_t*,
 		current = cfg->get(cfg, AUTH_RULE_EAP_IDENTITY);
 		if (!current || current->get_type(current) == ID_ANY)
 		{
+			current = cfg->get(cfg, AUTH_RULE_XAUTH_IDENTITY);
+		}
+		if (!current || current->get_type(current) == ID_ANY)
+		{
 			current = cfg->get(cfg, AUTH_RULE_IDENTITY);
 		}
 		if (current && current->get_type(current) != ID_ANY)
