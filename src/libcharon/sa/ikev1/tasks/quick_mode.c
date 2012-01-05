@@ -119,6 +119,11 @@ struct private_quick_mode_t {
 	 */
 	u_int32_t reqid;
 
+	/**
+	 * Negotiated mode, tunnel or transport
+	 */
+	ipsec_mode_t mode;
+
 	/** states of quick mode */
 	enum {
 		QM_INIT,
@@ -137,7 +142,7 @@ static bool install(private_quick_mode_t *this)
 
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
-	this->child_sa->set_mode(this->child_sa, MODE_TUNNEL);
+	this->child_sa->set_mode(this->child_sa, this->mode);
 	this->child_sa->set_protocol(this->child_sa,
 								 this->proposal->get_protocol(this->proposal));
 
@@ -550,10 +555,10 @@ METHOD(task_t, build_i, status_t,
 			sa_payload_t *sa_payload;
 			linked_list_t *list;
 			proposal_t *proposal;
-			ipsec_mode_t mode;
 			diffie_hellman_group_t group;
-			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+			bool udp;
 
+			udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
@@ -574,8 +579,8 @@ METHOD(task_t, build_i, status_t,
 			}
 			enumerator->destroy(enumerator);
 
-			mode = this->config->get_mode(this->config);
-			if (udp && mode == MODE_TRANSPORT)
+			this->mode = this->config->get_mode(this->config);
+			if (udp && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
 				add_nat_oa_payloads(this, message);
@@ -584,7 +589,7 @@ METHOD(task_t, build_i, status_t,
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								mode, udp);
+								this->mode, udp);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -709,7 +714,7 @@ METHOD(task_t, process_r, status_t,
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
 			u_int16_t group;
-			bool udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+			bool udp;
 
 			if (!get_ts(this, message))
 			{
@@ -760,6 +765,7 @@ METHOD(task_t, process_r, status_t,
 
 			get_lifetimes(this);
 			apply_lifetimes(this, sa_payload);
+			this->mode = sa_payload->get_encap_mode(sa_payload, &udp);
 
 			if (!this->proposal)
 			{
@@ -829,8 +835,7 @@ METHOD(task_t, build_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			ipsec_mode_t mode;
-			bool udp = this->child_sa->has_encap(this->child_sa);
+			bool udp;
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_r)
@@ -840,8 +845,8 @@ METHOD(task_t, build_r, status_t,
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
-			mode = this->config->get_mode(this->config);
-			if (udp && mode == MODE_TRANSPORT)
+			udp = this->child_sa->has_encap(this->child_sa);
+			if (udp && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
 				add_nat_oa_payloads(this, message);
@@ -849,7 +854,7 @@ METHOD(task_t, build_r, status_t,
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								mode, udp);
+								this->mode, udp);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
