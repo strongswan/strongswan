@@ -27,7 +27,7 @@ strongswan-4.6.1
 -  Therefore our approach of computing  integrity checksums for plugins had to be
    changed radically by moving the hash generation from the compilation to the
    post-installation phase.
- 
+
 
 strongswan-4.6.0
 ----------------

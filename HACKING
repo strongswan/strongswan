@@ -5,8 +5,8 @@
 Git repository
 ---------------------
 
-For interested developers, we have a public repository. To check out and 
-compile the code, you need the following tools:
+For interested developers, we have a public repository. To check out and compile
+the code, you need the following tools:
 
     - Git
     - a recent GNU C compiler (>= 3.x)
@@ -43,7 +43,7 @@ Then you're in, start the build as usual:
 API documentation
 -----------------
 
-Charon and libstrongswan contain inline code documentation. These comments can 
+Charon and libstrongswan contain inline code documentation. These comments can
 be extracted using doxygen. It is built using 'make apidoc', which creates an
 'apidoc' folder containing the HTML files.
 

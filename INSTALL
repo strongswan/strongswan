@@ -18,7 +18,7 @@ Contents
     --------
 
     The strongSwan 4.x branch introduces a new build environment featuring
-    GNU autotools. This should simplify the build process and package 
+    GNU autotools. This should simplify the build process and package
     maintenance.
     First check for the availability of required packages on your system
     (section 2.). You may want to include support for additional features, which
@@ -42,9 +42,9 @@ Contents
 
     To check if your kernel fullfills the requirements, see section 4.
 
-    Next add your connections to "/etc/ipsec.conf" and your secrets to 
+    Next add your connections to "/etc/ipsec.conf" and your secrets to
     "/etc/ipsec.secrets". Connections that are to be negotiated by the new
-    IKEv2 charon keying daemon should be designated by "keyexchange=ikev2" and 
+    IKEv2 charon keying daemon should be designated by "keyexchange=ikev2" and
     those by the IKEv1 pluto keying daemon either by "keyexchange=ikev1" or
     the default "keyexchange=ike".
 
@@ -118,7 +118,7 @@ Contents
     ---------------------------------
 
     If you want to securely store your X.509 certificates and private RSA keys
-    on a smart card or a USB crypto token then you will need a PKCS #11 library 
+    on a smart card or a USB crypto token then you will need a PKCS #11 library
     for the smart card of your choice. The OpenSC PKCS#11 library (use
     versions >= 0.9.4) available from http://www.opensc.org/ supports quite a
     selection of cards and tokens (e.g. Aladdin eToken Pro32k, Schlumberger
