@@ -765,7 +765,6 @@ METHOD(task_t, process_r, status_t,
 
 			get_lifetimes(this);
 			apply_lifetimes(this, sa_payload);
-			this->mode = sa_payload->get_encap_mode(sa_payload, &udp);
 
 			if (!this->proposal)
 			{
@@ -799,6 +798,7 @@ METHOD(task_t, process_r, status_t,
 
 			check_for_rekeyed_child(this);
 
+			udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
@@ -846,6 +846,7 @@ METHOD(task_t, build_r, status_t,
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
 			udp = this->child_sa->has_encap(this->child_sa);
+			this->mode = this->config->get_mode(this->config);
 			if (udp && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
