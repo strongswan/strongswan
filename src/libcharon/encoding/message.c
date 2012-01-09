@@ -510,9 +510,9 @@ static payload_rule_t aggressive_i_rules[] = {
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						FALSE,	FALSE},
-	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
-	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
-	{HASH_V1,					0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
 };
 
 /**
