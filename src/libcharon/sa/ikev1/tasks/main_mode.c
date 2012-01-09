@@ -799,11 +799,11 @@ static shared_key_t *lookup_shared_key(private_main_mode_t *this)
 		{
 			shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
 												  my_id, other_id);
-		}
-		else
-		{
-			DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
-				 my_id, me, other_id, other);
+			if (!shared_key)
+			{
+				DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
+					 my_id, me, other_id, other);
+			}
 		}
 	}
 	else
@@ -862,6 +862,10 @@ static bool derive_keys(private_main_mode_t *this, chunk_t nonce_i,
 		case AUTH_XAUTH_INIT_PSK:
 		case AUTH_XAUTH_RESP_PSK:
 			shared_key = lookup_shared_key(this);
+			if (!shared_key)
+			{
+				return FALSE;
+			}
 			break;
 		default:
 			break;
