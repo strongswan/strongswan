@@ -257,6 +257,13 @@ struct peer_cfg_t {
 	bool (*use_mobike) (peer_cfg_t *this);
 
 	/**
+	 * Use/Accept aggressive mode with IKEv1?.
+	 *
+	 * @return			TRUE to use aggressive mode
+	 */
+	bool (*use_aggressive)(peer_cfg_t *this);
+
+	/**
 	 * Get the DPD check interval.
 	 *
 	 * @return			dpd_delay in seconds
@@ -357,6 +364,7 @@ struct peer_cfg_t {
  * @param jitter_time		timerange to randomly subtract from rekey/reauth time
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
+ * @param aggressive		use/accept aggressive mode with IKEv1
  * @param dpd				DPD check interval, 0 to disable
  * @param virtual_ip		virtual IP for local host, or NULL
  * @param pool				pool name to get configuration attributes from, or NULL
@@ -370,8 +378,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							unique_policy_t unique, u_int32_t keyingtries,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
-							bool mobike, u_int32_t dpd, host_t *virtual_ip,
-							char *pool, bool mediation, peer_cfg_t *mediated_by,
-							identification_t *peer_id);
+							bool mobike, bool aggressive, u_int32_t dpd,
+							host_t *virtual_ip, char *pool, bool mediation,
+							peer_cfg_t *mediated_by, identification_t *peer_id);
 
 #endif /** PEER_CFG_H_ @}*/

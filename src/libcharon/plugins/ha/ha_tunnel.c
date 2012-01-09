@@ -207,7 +207,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							 remote, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create("ha", IKEV2, ike_cfg, CERT_NEVER_SEND,
-						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, 30,
+						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, FALSE, 30,
 						NULL, NULL, FALSE, NULL, NULL);
 
 	auth_cfg = auth_cfg_create();

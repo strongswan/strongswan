@@ -92,7 +92,7 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3,	/* jitter, overtime */
-				TRUE, this->dpd,				/* mobike, dpddelay */
+				TRUE, FALSE, this->dpd,			/* mobike, aggr., dpddelay */
 				NULL, NULL,						/* vip, pool */
 				TRUE, NULL, NULL);				/* mediation, med by, peer id */
 			e->destroy(e);

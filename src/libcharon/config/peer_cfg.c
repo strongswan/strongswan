@@ -106,6 +106,11 @@ struct private_peer_cfg_t {
 	bool use_mobike;
 
 	/**
+	 * Use aggressive mode?
+	 */
+	bool aggressive;
+
+	/**
 	 * Time before starting rekeying
 	 */
 	u_int32_t rekey_time;
@@ -381,6 +386,12 @@ METHOD(peer_cfg_t, use_mobike, bool,
 	return this->use_mobike;
 }
 
+METHOD(peer_cfg_t, use_aggressive, bool,
+	private_peer_cfg_t *this)
+{
+	return this->aggressive;
+}
+
 METHOD(peer_cfg_t, get_dpd, u_int32_t,
 	private_peer_cfg_t *this)
 {
@@ -574,9 +585,9 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							unique_policy_t unique, u_int32_t keyingtries,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
-							bool mobike, u_int32_t dpd, host_t *virtual_ip,
-							char *pool, bool mediation, peer_cfg_t *mediated_by,
-							identification_t *peer_id)
+							bool mobike, bool aggressive, u_int32_t dpd,
+							host_t *virtual_ip, char *pool, bool mediation,
+							peer_cfg_t *mediated_by, identification_t *peer_id)
 {
 	private_peer_cfg_t *this;
 
@@ -605,6 +616,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 			.get_reauth_time = _get_reauth_time,
 			.get_over_time = _get_over_time,
 			.use_mobike = _use_mobike,
+			.use_aggressive = _use_aggressive,
 			.get_dpd = _get_dpd,
 			.get_virtual_ip = _get_virtual_ip,
 			.get_pool = _get_pool,
@@ -632,6 +644,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 		.jitter_time = jitter_time,
 		.over_time = over_time,
 		.use_mobike = mobike,
+		.aggressive = aggressive,
 		.dpd = dpd,
 		.virtual_ip = virtual_ip,
 		.pool = strdupnull(pool),

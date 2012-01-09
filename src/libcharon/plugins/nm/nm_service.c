@@ -503,7 +503,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
-					TRUE, 0, /* mobike, DPD */
+					TRUE, FALSE, 0, /* mobike, aggressive, DPD */
 					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
 	auth = auth_cfg_create();
