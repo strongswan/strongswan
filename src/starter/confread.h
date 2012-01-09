@@ -132,6 +132,7 @@ struct starter_conn {
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
+		bool            aggressive;
 		starter_end_t   left, right;
 
 		unsigned long   id;

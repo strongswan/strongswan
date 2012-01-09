@@ -61,6 +61,7 @@ type,              KW_TYPE
 pfs,               KW_PFS
 compress,          KW_COMPRESS
 installpolicy,     KW_INSTALLPOLICY
+aggressive,        KW_AGGRESSIVE
 auth,              KW_AUTH
 authby,            KW_AUTHBY
 keylife,           KW_KEYLIFE
