@@ -416,7 +416,8 @@ METHOD(phase1_t, get_auth_method, auth_method_t,
 }
 
 METHOD(phase1_t, select_config, peer_cfg_t*,
-	private_phase1_t *this, auth_method_t method, identification_t *id)
+	private_phase1_t *this, auth_method_t method, bool aggressive,
+	identification_t *id)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *current, *found = NULL;
@@ -430,7 +431,8 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 													me, other, NULL, id, IKEV1);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (get_auth_method(this, current) == method)
+		if (get_auth_method(this, current) == method &&
+			current->use_aggressive(current) == aggressive)
 		{
 			found = current->get_ref(current);
 			break;

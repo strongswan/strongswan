@@ -393,7 +393,7 @@ METHOD(task_t, process_r, status_t,
 			id = id_payload->get_identification(id_payload);
 			this->ike_sa->set_other_id(this->ike_sa, id);
 			this->peer_cfg = this->ph1->select_config(this->ph1,
-													  this->method, id);
+													  this->method, FALSE, id);
 			if (!this->peer_cfg)
 			{
 				DBG1(DBG_IKE, "no peer config found");

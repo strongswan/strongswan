@@ -91,11 +91,12 @@ struct phase1_t {
 	 * Select a peer config as responder.
 	 *
 	 * @param method		used authentication method
+	 * @param aggressive	TRUE to get an aggressive mode config
 	 * @param id			initiator identity
 	 * @return				selected peer config, NULL if none found
 	 */
 	peer_cfg_t* (*select_config)(phase1_t *this, auth_method_t method,
-								 identification_t *id);
+								 bool aggressive, identification_t *id);
 
 	/**
 	 * Get configured identity from peer config.
