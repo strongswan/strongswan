@@ -286,9 +286,14 @@ METHOD(task_t, process_i, status_t,
 		}
 		case AGGRESSIVE:
 		{
-			if (!use_certs(this, message))
+			if (this->state == CR_SA)
 			{
-				return SUCCESS;
+				if (!use_certs(this, message))
+				{
+					return SUCCESS;
+				}
+				this->state = CR_AUTH;
+				return NEED_MORE;
 			}
 			return SUCCESS;
 		}

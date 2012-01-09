@@ -426,6 +426,10 @@ METHOD(task_t, build_r, status_t,
 			switch (this->state)
 			{
 				case CR_SA:
+					if (this->send_req)
+					{
+						build_certreqs(this, message);
+					}
 					this->state = CR_AUTH;
 					return NEED_MORE;
 				case CR_AUTH:
@@ -474,6 +478,7 @@ METHOD(task_t, process_i, status_t,
 			}
 			process_certreqs(this, message);
 			process_certs(this, message);
+			this->state = CR_AUTH;
 			return SUCCESS;
 		}
 		default:
