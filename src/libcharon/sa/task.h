@@ -71,6 +71,8 @@ enum task_type_t {
 	TASK_CHILD_REKEY,
 	/** IKEv1 main mode */
 	TASK_MAIN_MODE,
+	/** IKEv1 aggressive mode */
+	TASK_AGGRESSIVE_MODE,
 	/** IKEv1 informational exchange */
 	TASK_INFORMATIONAL,
 	/** IKEv1 delete using an informational */
