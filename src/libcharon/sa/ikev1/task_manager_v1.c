@@ -20,6 +20,7 @@
 
 #include <daemon.h>
 #include <sa/ikev1/tasks/main_mode.h>
+#include <sa/ikev1/tasks/aggressive_mode.h>
 #include <sa/ikev1/tasks/quick_mode.h>
 #include <sa/ikev1/tasks/quick_delete.h>
 #include <sa/ikev1/tasks/xauth.h>
@@ -346,9 +347,13 @@ METHOD(task_manager_t, initiate, status_t,
 				if (activate_task(this, TASK_MAIN_MODE))
 				{
 					exchange = ID_PROT;
-					activate_task(this, TASK_ISAKMP_CERT_POST);
-					activate_task(this, TASK_ISAKMP_NATD);
 				}
+				else if (activate_task(this, TASK_AGGRESSIVE_MODE))
+				{
+					exchange = AGGRESSIVE;
+				}
+				activate_task(this, TASK_ISAKMP_CERT_POST);
+				activate_task(this, TASK_ISAKMP_NATD);
 				break;
 			case IKE_CONNECTING:
 				if (activate_task(this, TASK_ISAKMP_DELETE))
@@ -417,6 +422,9 @@ METHOD(task_manager_t, initiate, status_t,
 			{
 				case TASK_MAIN_MODE:
 					exchange = ID_PROT;
+					break;
+				case TASK_AGGRESSIVE_MODE:
+					exchange = AGGRESSIVE;
 					break;
 				case TASK_QUICK_MODE:
 					exchange = QUICK_MODE;
@@ -719,8 +727,17 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case AGGRESSIVE:
-				/* TODO-IKEv1: agressive mode */
-				return FAILED;
+				task = (task_t *)isakmp_vendor_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)isakmp_cert_pre_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t *)aggressive_mode_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)isakmp_cert_post_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t *)isakmp_natd_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
+				break;
 			case QUICK_MODE:
 				if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 				{
@@ -1096,6 +1113,8 @@ static bool has_queued(private_task_manager_t *this, task_type_t type)
 METHOD(task_manager_t, queue_ike, void,
 	private_task_manager_t *this)
 {
+	peer_cfg_t *peer_cfg;
+
 	if (!has_queued(this, TASK_ISAKMP_VENDOR))
 	{
 		queue_task(this, (task_t*)isakmp_vendor_create(this->ike_sa, TRUE));
@@ -1104,9 +1123,20 @@ METHOD(task_manager_t, queue_ike, void,
 	{
 		queue_task(this, (task_t*)isakmp_cert_pre_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_MAIN_MODE))
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg->use_aggressive(peer_cfg))
 	{
-		queue_task(this, (task_t*)main_mode_create(this->ike_sa, TRUE));
+		if (!has_queued(this, TASK_AGGRESSIVE_MODE))
+		{
+			queue_task(this, (task_t*)aggressive_mode_create(this->ike_sa, TRUE));
+		}
+	}
+	else
+	{
+		if (!has_queued(this, TASK_MAIN_MODE))
+		{
+			queue_task(this, (task_t*)main_mode_create(this->ike_sa, TRUE));
+		}
 	}
 	if (!has_queued(this, TASK_ISAKMP_CERT_POST))
 	{
