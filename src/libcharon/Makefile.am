@@ -104,6 +104,7 @@ sa/ikev1/task_manager_v1.c sa/ikev1/task_manager_v1.h \
 sa/ikev1/authenticators/psk_v1_authenticator.c sa/ikev1/authenticators/psk_v1_authenticator.h \
 sa/ikev1/authenticators/pubkey_v1_authenticator.c sa/ikev1/authenticators/pubkey_v1_authenticator.h \
 sa/ikev1/authenticators/hybrid_authenticator.c sa/ikev1/authenticators/hybrid_authenticator.h \
+sa/ikev1/phase1.c sa/ikev1/phase1.h \
 sa/ikev1/tasks/main_mode.c sa/ikev1/tasks/main_mode.h \
 sa/ikev1/tasks/informational.c sa/ikev1/tasks/informational.h \
 sa/ikev1/tasks/isakmp_cert_pre.c sa/ikev1/tasks/isakmp_cert_pre.h \
