@@ -70,7 +70,7 @@ static struct {
 	  "\x4a\x13\x1c\x81\x07\x03\x58\x45\x5c\x57\x28\xf2\x0e\x95\x45\x2f"},
 
 	/* draft-ietf-ipsec-dpd-00 */
-	{ "DPD", 0, FALSE, 16,
+	{ "DPD", 0, TRUE, 16,
 	  "\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00"},
 
 	{ "draft-stenberg-ipsec-nat-traversal-01", 0, FALSE, 16,
