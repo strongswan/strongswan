@@ -1,5 +1,25 @@
+/*
+ * Copyright (C) 2012 Martin Willi
+ * Copyright (C) 2012 revosec AG
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+/**
+ * @defgroup isakmp_dpd isakmp_dpd
+ * @{ @ingroup tasks
+ */
+
 #ifndef ISAKMP_DPD_H_
-#define ISAPMP_DPD_H_
+#define ISAKMP_DPD_H_
 
 typedef struct isakmp_dpd_t isakmp_dpd_t;
 
@@ -8,9 +28,7 @@ typedef struct isakmp_dpd_t isakmp_dpd_t;
 #include <sa/task.h>
 
 /**
- * Task of type isakmp_dpd, detects dead peers.
- *
- *
+ * IKEv1 dead peer detection task.
  */
 struct isakmp_dpd_t {
 
@@ -18,21 +36,17 @@ struct isakmp_dpd_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
-
-	/**
-	 * Get the received dpd seqnr.
-	 *
-	 * @return				protocol ID
-	 */
-	u_int32_t (*get_dpd_seqnr) (isakmp_dpd_t *dpd_task);
 };
 
 /**
- * Create a new isakmp_dpd task.
+ * Create a new ISAKMP_DPD task.
  *
- * @param initiator		TRUE if task is the original initiator
- * @return				isakmp_dpd task to handle by the task_manager
+ * @param ike_sa		associated IKE_SA
+ * @param initiator		TRUE if DPD initiator
+ * @param seqnr			DPD sequence number to use/expect
+ * @return				ISAKMP_DPD task to handle by the task_manager
  */
-isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_int32_t seqnr);
+isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, bool initiator,
+								u_int32_t seqnr);
 
 #endif /** ISAKMP_DPD_H_ @}*/

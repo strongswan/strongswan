@@ -19,7 +19,7 @@
  */
 
 #ifndef INFORMATIONAL_H_
-#define informational_H_
+#define INFORMATIONAL_H_
 
 typedef struct informational_t informational_t;
 
@@ -44,9 +44,8 @@ struct informational_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param notify		notify to send as initiator, NULL if responder
- * @param dpd_seqnr	DPD sequence number, incoming or outgoing
  * @return				task to handle by the task_manager
  */
-informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_int32_t dpd_seqnr);
+informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify);
 
 #endif /** INFORMATIONAL_H_ @}*/

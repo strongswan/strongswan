@@ -1,14 +1,22 @@
+/*
+ * Copyright (C) 2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
 #include "isakmp_dpd.h"
 
-#include <encoding/payloads/notify_payload.h>
-#include <sa/ikev1/tasks/informational.h>
-
 #include <daemon.h>
-
-#ifdef SLIPSTREAM
-/* Should be the last include */
-#include <ikev2_mem.h>
-#endif /* SLIPSTREAM */
+#include <encoding/payloads/notify_payload.h>
 
 typedef struct private_isakmp_dpd_t private_isakmp_dpd_t;
 
@@ -28,9 +36,9 @@ struct private_isakmp_dpd_t {
 	u_int32_t seqnr;
 
 	/**
-	 * Notify payload, only provided for requests.
+	 * DPD initiator?
 	 */
-	notify_payload_t *notify;
+	bool initiator;
 
 	/**
 	 * IKE SA we are serving.
@@ -38,42 +46,19 @@ struct private_isakmp_dpd_t {
 	ike_sa_t *ike_sa;
 };
 
-/**
- * Get DPD sequence number from notify payload.
- */
-static bool get_seqnr(notify_payload_t *notify, u_int32_t *seqnr)
-{
-	chunk_t chunk = notify->get_notification_data(notify);
-
-	if( chunk.ptr && chunk.len == 4)
-	{
-		u_int32_t seqnr_read = *((u_int32_t*)chunk.ptr);
-
-		*seqnr = ntohl(seqnr_read);
-
-		return TRUE;
-	}
-
-	DBG1(DBG_IKE, "no DPD seqnr received");
-
-	return FALSE;
-}
-
-/**
- * Add notify payload to message.
- */
-static void add_notify(private_isakmp_dpd_t *this, message_t *message, notify_type_t type)
+METHOD(task_t, build, status_t,
+	private_isakmp_dpd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-
+	notify_type_t type;
 	ike_sa_id_t *ike_sa_id;
 	u_int64_t spi_i, spi_r;
 	u_int32_t seqnr;
 	chunk_t spi;
 
+	type = this->initiator ? DPD_R_U_THERE : DPD_R_U_THERE_ACK;
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-		PROTO_IKE, type);
-
+														  PROTO_IKE, type);
 	seqnr = htonl(this->seqnr);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
@@ -84,142 +69,42 @@ static void add_notify(private_isakmp_dpd_t *this, message_t *message, notify_ty
 	notify->set_notification_data(notify, chunk_from_thing(seqnr));
 
 	message->add_payload(message, (payload_t*)notify);
-}
-
-METHOD(isakmp_dpd_t, get_dpd_seqnr, u_int32_t,
-	private_isakmp_dpd_t *this)
-{
-	return this->seqnr;
-}
-
-METHOD(task_t, build_i, status_t,
-	private_isakmp_dpd_t *this, message_t *message)
-{
-	add_notify(this, message, DPD_R_U_THERE);
-
-	return NEED_MORE;
-}
-
-METHOD(task_t, build_r, status_t,
-			 private_isakmp_dpd_t *this, message_t *message)
-{
-	add_notify(this, message, DPD_R_U_THERE_ACK);
 
 	return SUCCESS;
 }
 
-METHOD(task_t, process_i, status_t,
+METHOD(task_t, process, status_t,
 	private_isakmp_dpd_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
 	notify_payload_t *notify;
 	notify_type_t type;
-	payload_t *payload;
-	task_t *info_task = NULL;
+	u_int32_t seqnr = 0;
+	chunk_t chunk;
 
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	type = this->initiator ? DPD_R_U_THERE_ACK : DPD_R_U_THERE;
+	notify = message->get_notify(message, type);
+	if (notify)
 	{
-		switch (payload->get_type(payload))
+		chunk = notify->get_notification_data(notify);
+		if (chunk.len == 4)
 		{
-			case NOTIFY_V1:
-				notify = (notify_payload_t*)payload;
-				type = notify->get_notify_type(notify);
-
-				if (type == DPD_R_U_THERE_ACK)
-				{
-					u_int32_t seqnr;
-
-					if (!get_seqnr(notify, &seqnr))
-					{
-						return FAILED;
-					}
-
-					if (this->seqnr != seqnr)
-					{
-						DBG1(DBG_IKE, "received DPD Ack with unexpected seqnr (%u) expect (%u)",seqnr,this->seqnr);
-						return SUCCESS;
-					}
-
-					DBG4(DBG_IKE, "received DPD Ack with seqnr (%u)",seqnr);
-
-					return SUCCESS;
-
+			seqnr = untoh32(chunk.ptr);
+			if (seqnr == this->seqnr)
+			{
+				if (!this->initiator)
+				{	/* queue DPD_ACK */
+					this->ike_sa->queue_task(this->ike_sa,
+								&isakmp_dpd_create(this->ike_sa, FALSE,
+												   this->seqnr)->task);
 				}
-				else if (type == DPD_R_U_THERE)
-				{
-					u_int32_t expected = this->seqnr + 1;
-
-					if (!get_seqnr(notify, &this->seqnr))
-					{
-						return FAILED;
-					}
-
-					if (expected != 1 && this->seqnr != expected)
-					{
-						DBG1(DBG_IKE, "received DPD request with unexpected seqnr (%u) expect (%u)",
-							this->seqnr,expected);
-						return SUCCESS;
-					}
-
-					DBG4(DBG_IKE, "received DPD request with seqnr %u",this->seqnr);
-
-					this->public.task.build = _build_r;
-					return NEED_MORE;
-				}
-				else
-				{
-					info_task = (task_t*)informational_create(this->ike_sa, NULL, 0);
-				}
-				continue;
-
-			default:
-				continue;
+				return SUCCESS;
+			}
 		}
-		break;
 	}
-	enumerator->destroy(enumerator);
-
-	if (info_task)
-	{
-		status_t status = info_task->process(info_task, message);
-		/* Assuming that the informational task will not need to send other replies than dpd */
-		info_task->destroy(info_task);
-		return status;
-	}
-
+	DBG1(DBG_IKE, "received invalid DPD sequence number %u (expected %u), "
+		 "ignored", seqnr, this->seqnr);
 	return SUCCESS;
 }
-
-METHOD(task_t, process_r, status_t,
-			 private_isakmp_dpd_t *this, message_t *message)
-{
-	u_int32_t expected = this->seqnr + 1;
-
-	if (this->notify)
-	{
-		if (!get_seqnr(this->notify, &this->seqnr))
-		{
-			return FAILED;
-		}
-
-		if (expected != 1 && this->seqnr != expected)
-		{
-			DBG1(DBG_IKE, "received DPD request with unexpected seqnr (%u) expect (%u)",
-				this->seqnr,expected);
-			return SUCCESS;
-		}
-
-		DBG4(DBG_IKE, "DPD request received with seqnr %u",this->seqnr);
-	}
-	else
-	{
-		DBG1(DBG_IKE, "no notify provided");
-		return FAILED;
-	}
-	return NEED_MORE;
-}
-
 
 METHOD(task_t, get_type, task_type_t,
 	private_isakmp_dpd_t *this)
@@ -227,13 +112,10 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_ISAKMP_DPD;
 }
 
-
 METHOD(task_t, migrate, void,
 	private_isakmp_dpd_t *this, ike_sa_t *ike_sa)
 {
 	this->ike_sa = ike_sa;
-	this->seqnr = 0;
-
 }
 
 METHOD(task_t, destroy, void,
@@ -245,7 +127,8 @@ METHOD(task_t, destroy, void,
 /*
  * Described in header.
  */
-isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_int32_t seqnr)
+isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, bool initiator,
+								u_int32_t seqnr)
 {
 	private_isakmp_dpd_t *this;
 
@@ -253,26 +136,16 @@ isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_in
 		.public = {
 			.task = {
 				.get_type = _get_type,
+				.build = _build,
+				.process = _process,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
-			.get_dpd_seqnr = _get_dpd_seqnr,
 		},
-		.notify = notify,
 		.ike_sa = ike_sa,
 		.seqnr = seqnr,
+		.initiator = initiator,
 	);
-
-	if (!notify)
-	{
-		this->public.task.build = _build_i;
-		this->public.task.process = _process_i;
-	}
-	else
-	{
-		this->public.task.build = _build_r;
-		this->public.task.process = _process_r;
-	}
 
 	return &this->public;
 }

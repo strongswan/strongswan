@@ -18,7 +18,6 @@
 #include <daemon.h>
 #include <sa/ikev1/tasks/isakmp_delete.h>
 #include <sa/ikev1/tasks/quick_delete.h>
-#include <sa/ikev1/tasks/isakmp_dpd.h>
 
 #include <encoding/payloads/delete_payload.h>
 
@@ -48,16 +47,6 @@ struct private_informational_t {
 	 * Delete subtask
 	 */
 	task_t *del;
-
-	/**
-	 * DPD subtask
-	 */
-	task_t *dpd;
-
-	/**
-	 * DPD sequence number
-	 */
-	u_int32_t dpd_seqnr;
 };
 
 METHOD(task_t, build_i, status_t,
@@ -91,15 +80,6 @@ METHOD(task_t, process_r, status_t,
 				{
 					this->ike_sa->set_condition(this->ike_sa,
 												COND_INIT_CONTACT_SEEN, TRUE);
-				}
-				else if (type == DPD_R_U_THERE)
-				{
-					DBG3(DBG_IKE, "received DPD request");
-					this->dpd = (task_t*)isakmp_dpd_create(this->ike_sa, notify, this->dpd_seqnr);
-				}
-				else if (type == DPD_R_U_THERE_ACK)
-				{
-					DBG3(DBG_IKE, "received DPD request ack");
 				}
 				else if (type < 16384)
 				{
@@ -144,11 +124,6 @@ METHOD(task_t, process_r, status_t,
 	{
 		return this->del->process(this->del, message);
 	}
-
-	if (this->dpd && status == SUCCESS)
-	{
-		return this->dpd->process(this->dpd, message);
-	}
 	return status;
 }
 
@@ -158,13 +133,6 @@ METHOD(task_t, build_r, status_t,
 	if (this->del)
 	{
 		return this->del->build(this->del, message);
-	}
-
-	if (this->dpd)
-	{
-		status_t status = this->dpd->build(this->dpd, message);
-		this->dpd->destroy(this->dpd);
-		return status;
 	}
 	return FAILED;
 }
@@ -198,7 +166,7 @@ METHOD(task_t, destroy, void,
 /*
  * Described in header.
  */
-informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_int32_t dpd_seqnr)
+informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify)
 {
 	private_informational_t *this;
 
@@ -212,7 +180,6 @@ informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify
 		},
 		.ike_sa = ike_sa,
 		.notify = notify,
-		.dpd_seqnr = dpd_seqnr,
 	);
 
 	if (notify)

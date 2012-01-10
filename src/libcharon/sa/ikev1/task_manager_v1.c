@@ -203,12 +203,12 @@ struct private_task_manager_t {
 	/**
 	 * Sequence number for sending DPD requests
 	 */
-	u_int32_t dpd_send_seqnr;
+	u_int32_t dpd_send;
 
 	/**
 	 * Sequence number for received DPD requests
 	 */
-	u_int32_t dpd_rec_seqnr;
+	u_int32_t dpd_recv;
 };
 
 /**
@@ -736,7 +736,8 @@ static status_t process_request(private_task_manager_t *this,
 	enumerator_t *enumerator;
 	task_t *task = NULL;
 	bool send_response = FALSE;
-	bool informational = FALSE;
+	notify_payload_t *notify;
+	chunk_t data;
 
 	if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
 		this->passive_tasks->get_count(this->passive_tasks) == 0)
@@ -779,9 +780,27 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case INFORMATIONAL_V1:
-				task = (task_t *)informational_create(this->ike_sa, NULL, this->dpd_rec_seqnr);
+				notify = message->get_notify(message, DPD_R_U_THERE);
+				if (notify)
+				{
+					data = notify->get_notification_data(notify);
+					if (this->dpd_recv == 0 && data.len == 4)
+					{	/* first DPD request, initialize counter */
+						this->dpd_recv = untoh32(data.ptr);
+					}
+					task = (task_t *)isakmp_dpd_create(this->ike_sa, FALSE,
+													   this->dpd_recv++);
+				}
+				else if (message->get_notify(message, DPD_R_U_THERE_ACK))
+				{
+					task = (task_t *)isakmp_dpd_create(this->ike_sa, TRUE,
+													   this->dpd_send - 1);
+				}
+				else
+				{
+					task = (task_t *)informational_create(this->ike_sa, NULL);
+				}
 				this->passive_tasks->insert_first(this->passive_tasks, task);
-				informational = TRUE;
 				break;
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -812,15 +831,6 @@ static status_t process_request(private_task_manager_t *this,
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */
 				send_response = TRUE;
-				if (informational && !this->dpd_rec_seqnr)
-				{
-					/* Update the received DPD sequence number if it the first received one */
-					if (task->get_type(task) == TASK_ISAKMP_DPD)
-					{
-						isakmp_dpd_t *isakmp_dpd = (isakmp_dpd_t *)task;
-						this->dpd_rec_seqnr = isakmp_dpd->get_dpd_seqnr(isakmp_dpd);
-					}
-				}
 				continue;
 			case ALREADY_DONE:
 				send_response = FALSE;
@@ -987,7 +997,6 @@ METHOD(task_manager_t, process_message, status_t,
 	u_int32_t hash, mid, i;
 	host_t *me, *other;
 	status_t status;
-	bool dpd_response = FALSE;
 
 	/* TODO-IKEv1: update hosts more selectively */
 	me = msg->get_destination(msg);
@@ -1015,27 +1024,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 	}
 
-	/* DPD Acks are not sent with a same message ID as the request.*/
-	if (msg->get_exchange_type(msg) == INFORMATIONAL_V1 &&
-		this->active_tasks->get_count(this->active_tasks))
-	{
-		enumerator_t *enumerator;
-		task_t *task;
-		/* In case of ongoing DPD request, let the DPD task handle all information exchanges. */
-		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-		while (enumerator->enumerate(enumerator, (void**)&task))
-		{
-			if (task->get_type(task) == TASK_ISAKMP_DPD)
-			{
-				dpd_response = TRUE;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-
-
-	if ((mid && mid == this->initiating.mid) || dpd_response ||
+	if ((mid && mid == this->initiating.mid) ||
 		(this->initiating.mid == 0 &&
 		 msg->get_exchange_type(msg) == this->initiating.type &&
 		 this->active_tasks->get_count(this->active_tasks)))
@@ -1332,8 +1321,8 @@ METHOD(task_manager_t, queue_child_delete, void,
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
-	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, NULL,
-												this->dpd_send_seqnr++));
+	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, TRUE,
+												this->dpd_send++));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,
@@ -1483,9 +1472,9 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 		return NULL;
 	}
 
-	this->rng->get_bytes(this->rng, sizeof(this->dpd_send_seqnr),
-						 (void*)&this->dpd_send_seqnr);
-	this->dpd_send_seqnr &= 0x7FFFFFFF;
+	this->rng->get_bytes(this->rng, sizeof(this->dpd_send),
+						 (void*)&this->dpd_send);
+	this->dpd_send &= 0x7FFFFFFF;
 
 	return &this->public;
 }
