@@ -1142,7 +1142,8 @@ METHOD(message_t, get_notify, notify_payload_t*,
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == NOTIFY ||
+			payload->get_type(payload) == NOTIFY_V1)
 		{
 			notify = (notify_payload_t*)payload;
 			if (notify->get_notify_type(notify) == type)
