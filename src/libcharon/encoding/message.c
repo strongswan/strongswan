@@ -1192,7 +1192,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		}
 		pos += written;
 		len -= written;
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == NOTIFY ||
+			payload->get_type(payload) == NOTIFY_V1)
 		{
 			notify_payload_t *notify;
 			notify_type_t type;
