@@ -203,7 +203,7 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *proposals;
 			packet_t *packet;
 
-			DBG0(DBG_IKE, "initiating main mode IKE_SA %s[%d] to %H",
+			DBG0(DBG_IKE, "initiating Main Mode IKE_SA %s[%d] to %H",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa));

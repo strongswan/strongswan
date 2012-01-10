@@ -194,7 +194,7 @@ METHOD(task_t, build_i, status_t,
 			packet_t *packet;
 			u_int16_t group;
 
-			DBG0(DBG_IKE, "initiating aggressive mode IKE_SA %s[%d] to %H",
+			DBG0(DBG_IKE, "initiating Aggressive Mode IKE_SA %s[%d] to %H",
 				 this->ike_sa->get_name(this->ike_sa),
 				 this->ike_sa->get_unique_id(this->ike_sa),
 				 this->ike_sa->get_other_host(this->ike_sa));
