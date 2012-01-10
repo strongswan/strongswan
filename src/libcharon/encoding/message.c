@@ -1882,7 +1882,8 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			encryption->destroy(encryption);
 		}
 		if (payload_is_known(type) && !was_encrypted &&
-			!is_connectivity_check(this, payload))
+			!is_connectivity_check(this, payload) &&
+			this->exchange_type != AGGRESSIVE)
 		{
 			rule = get_payload_rule(this, type);
 			if (!rule || rule->encrypted)
