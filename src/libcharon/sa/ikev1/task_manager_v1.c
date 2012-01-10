@@ -735,7 +735,7 @@ static status_t process_request(private_task_manager_t *this,
 {
 	enumerator_t *enumerator;
 	task_t *task = NULL;
-	bool send_response = FALSE;
+	bool send_response = FALSE, dpd = FALSE;
 	notify_payload_t *notify;
 	chunk_t data;
 
@@ -790,11 +790,13 @@ static status_t process_request(private_task_manager_t *this,
 					}
 					task = (task_t *)isakmp_dpd_create(this->ike_sa, FALSE,
 													   this->dpd_recv++);
+					dpd = TRUE;
 				}
 				else if (message->get_notify(message, DPD_R_U_THERE_ACK))
 				{
 					task = (task_t *)isakmp_dpd_create(this->ike_sa, TRUE,
 													   this->dpd_send - 1);
+					dpd = TRUE;
 				}
 				else
 				{
@@ -816,6 +818,11 @@ static status_t process_request(private_task_manager_t *this,
 			default:
 				return FAILED;
 		}
+	}
+	if (!dpd)
+	{
+		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+									time_monotonic(NULL));
 	}
 	/* let the tasks process the message */
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
@@ -1117,8 +1124,6 @@ METHOD(task_manager_t, process_message, status_t,
 					lib->settings->get_int(lib->settings,
 						"charon.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT));
 		}
-		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
-									time_monotonic(NULL));
 		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
 		charon->bus->message(charon->bus, msg, TRUE);
 		if (process_request(this, msg) != SUCCESS)

@@ -91,6 +91,8 @@ METHOD(task_t, process, status_t,
 			seqnr = untoh32(chunk.ptr);
 			if (seqnr == this->seqnr)
 			{
+				this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+											time_monotonic(NULL));
 				if (!this->initiator)
 				{	/* queue DPD_ACK */
 					this->ike_sa->queue_task(this->ike_sa,
