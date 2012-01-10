@@ -44,8 +44,9 @@ struct informational_t {
  *
  * @param ike_sa		IKE_SA this task works for
  * @param notify		notify to send as initiator, NULL if responder
+ * @param dpd_seqnr	DPD sequence number, incoming or outgoing
  * @return				task to handle by the task_manager
  */
-informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify);
+informational_t *informational_create(ike_sa_t *ike_sa, notify_payload_t *notify, u_int32_t dpd_seqnr);
 
 #endif /** INFORMATIONAL_H_ @}*/

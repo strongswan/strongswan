@@ -31,6 +31,8 @@
 #include <sa/ikev1/tasks/isakmp_cert_pre.h>
 #include <sa/ikev1/tasks/isakmp_cert_post.h>
 #include <sa/ikev1/tasks/isakmp_delete.h>
+#include <sa/ikev1/tasks/isakmp_dpd.h>
+
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 
@@ -197,6 +199,16 @@ struct private_task_manager_t {
 	 * Base to calculate retransmission timeout
 	 */
 	double retransmit_base;
+
+	/**
+	 * Sequence number for sending DPD requests
+	 */
+	u_int32_t dpd_send_seqnr;
+
+	/**
+	 * Sequence number for received DPD requests
+	 */
+	u_int32_t dpd_rec_seqnr;
 };
 
 /**
@@ -406,6 +418,13 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
+
+				if (activate_task(this, TASK_ISAKMP_DPD))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
 				break;
 			default:
 				break;
@@ -580,7 +599,20 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* send response along the path the request came in */
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
-	message->set_message_id(message, request->get_message_id(request));
+
+	/* Create new message id for informational exchanges*/
+	if (request->get_exchange_type(request) == INFORMATIONAL_V1)
+	{
+		u_int32_t message_id;
+
+		this->rng->get_bytes(this->rng, sizeof(message_id),
+							 (void*)&message_id);
+		message->set_message_id(message, message_id);
+	}
+	else
+	{
+		message->set_message_id(message, request->get_message_id(request));
+	}
 	message->set_request(message, FALSE);
 
 	this->responding.mid = request->get_message_id(request);
@@ -710,6 +742,7 @@ static status_t process_request(private_task_manager_t *this,
 	enumerator_t *enumerator;
 	task_t *task = NULL;
 	bool send_response = FALSE;
+	bool informational = FALSE;
 
 	if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
 		this->passive_tasks->get_count(this->passive_tasks) == 0)
@@ -752,8 +785,9 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case INFORMATIONAL_V1:
-				task = (task_t *)informational_create(this->ike_sa, NULL);
+				task = (task_t *)informational_create(this->ike_sa, NULL, this->dpd_rec_seqnr);
 				this->passive_tasks->insert_first(this->passive_tasks, task);
+				informational = TRUE;
 				break;
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -784,6 +818,15 @@ static status_t process_request(private_task_manager_t *this,
 			case NEED_MORE:
 				/* processed, but task needs at least another call to build() */
 				send_response = TRUE;
+				if (informational && !this->dpd_rec_seqnr)
+				{
+					/* Update the received DPD sequence number if it the first received one */
+					if (task->get_type(task) == TASK_ISAKMP_DPD)
+					{
+						isakmp_dpd_t *isakmp_dpd = (isakmp_dpd_t *)task;
+						this->dpd_rec_seqnr = isakmp_dpd->get_dpd_seqnr(isakmp_dpd);
+					}
+				}
 				continue;
 			case ALREADY_DONE:
 				send_response = FALSE;
@@ -950,6 +993,7 @@ METHOD(task_manager_t, process_message, status_t,
 	u_int32_t hash, mid, i;
 	host_t *me, *other;
 	status_t status;
+	bool dpd_response = FALSE;
 
 	/* TODO-IKEv1: update hosts more selectively */
 	me = msg->get_destination(msg);
@@ -977,7 +1021,27 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 	}
 
-	if ((mid && mid == this->initiating.mid) ||
+	/* DPD Acks are not sent with a same message ID as the request.*/
+	if (msg->get_exchange_type(msg) == INFORMATIONAL_V1 &&
+		this->active_tasks->get_count(this->active_tasks))
+	{
+		enumerator_t *enumerator;
+		task_t *task;
+		/* In case of ongoing DPD request, let the DPD task handle all information exchanges. */
+		enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, (void**)&task))
+		{
+			if (task->get_type(task) == TASK_ISAKMP_DPD)
+			{
+				dpd_response = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+
+	if ((mid && mid == this->initiating.mid) || dpd_response ||
 		(this->initiating.mid == 0 &&
 		 msg->get_exchange_type(msg) == this->initiating.type &&
 		 this->active_tasks->get_count(this->active_tasks)))
@@ -1271,10 +1335,16 @@ METHOD(task_manager_t, queue_child_delete, void,
 												  spi, FALSE, expired));
 }
 
+METHOD(task_manager_v1_t, get_dpd_seqnr, u_int32_t,
+	private_task_manager_t *this)
+{
+	return this->dpd_send_seqnr++;
+}
+
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
-	/* TODO-IKEv1: DPD checking */
+	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, NULL, _get_dpd_seqnr(&this->public)));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,
@@ -1401,6 +1471,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.create_task_enumerator = _create_task_enumerator,
 				.destroy = _destroy,
 			},
+			.get_dpd_seqnr = _get_dpd_seqnr,
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
@@ -1417,5 +1488,11 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 								"charon.retransmit_base", RETRANSMIT_BASE),
 	);
 
+	this->rng->get_bytes(this->rng, sizeof(this->dpd_send_seqnr),
+							 (void*)&this->dpd_send_seqnr);
+
+	this->dpd_send_seqnr &= 0x7FFFFFFF;
+
 	return &this->public;
 }
+

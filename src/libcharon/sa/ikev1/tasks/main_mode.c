@@ -176,7 +176,7 @@ static status_t send_notify(private_main_mode_t *this, notify_type_t type)
 	notify->set_spi_data(notify, spi);
 
 	this->ike_sa->queue_task(this->ike_sa,
-						(task_t*)informational_create(this->ike_sa, notify));
+						(task_t*)informational_create(this->ike_sa, notify, 0));
 	/* cancel all active/passive tasks in favour of informational */
 	return ALREADY_DONE;
 }

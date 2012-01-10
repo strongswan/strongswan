@@ -113,6 +113,7 @@ sa/ikev1/tasks/isakmp_cert_post.c sa/ikev1/tasks/isakmp_cert_post.h \
 sa/ikev1/tasks/isakmp_natd.c sa/ikev1/tasks/isakmp_natd.h \
 sa/ikev1/tasks/isakmp_vendor.c sa/ikev1/tasks/isakmp_vendor.h \
 sa/ikev1/tasks/isakmp_delete.c sa/ikev1/tasks/isakmp_delete.h \
+sa/ikev1/tasks/isakmp_dpd.c sa/ikev1/tasks/isakmp_dpd.h \
 sa/ikev1/tasks/xauth.c sa/ikev1/tasks/xauth.h \
 sa/ikev1/tasks/quick_mode.c sa/ikev1/tasks/quick_mode.h \
 sa/ikev1/tasks/quick_delete.c sa/ikev1/tasks/quick_delete.h \

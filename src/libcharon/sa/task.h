@@ -93,6 +93,9 @@ enum task_type_t {
 	TASK_ISAKMP_CERT_PRE,
 	/** IKEv1 post-authentication certificate handling */
 	TASK_ISAKMP_CERT_POST,
+	/** IKEv1 DPD */
+	TASK_ISAKMP_DPD,
+
 };
 
 /**
