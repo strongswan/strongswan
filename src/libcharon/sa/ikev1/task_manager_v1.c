@@ -529,9 +529,10 @@ METHOD(task_manager_t, initiate, status_t,
 		message->destroy(message);
 		return retransmit(this, this->initiating.seqnr);
 	}
-	if (message->get_exchange_type(message) == QUICK_MODE)
-	{	/* keep the packet for retransmission in quick mode. The responder
-		 * might request a retransmission */
+	if (message->get_exchange_type(message) == QUICK_MODE ||
+		message->get_exchange_type(message) == AGGRESSIVE)
+	{	/* keep the packet for retransmission in quick/aggressive mode.
+		 * The responder might request a retransmission */
 		charon->sender->send(charon->sender,
 					this->initiating.packet->clone(this->initiating.packet));
 	}
@@ -598,7 +599,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				continue;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
-				if (task->get_type(task) == TASK_QUICK_MODE)
+				if (task->get_type(task) == TASK_QUICK_MODE ||
+					task->get_type(task) == TASK_AGGRESSIVE_MODE)
 				{	/* we rely on initiator retransmission, except for
 					 * three-message exchanges */
 					expect_request = TRUE;
@@ -960,7 +962,8 @@ METHOD(task_manager_t, process_message, status_t,
 		{
 			if (this->initiating.packet &&
 				i == (this->initiating.old_hash_pos % MAX_OLD_HASHES) &&
-				msg->get_exchange_type(msg) == QUICK_MODE)
+				(msg->get_exchange_type(msg) == QUICK_MODE ||
+				 msg->get_exchange_type(msg) == AGGRESSIVE))
 			{
 				DBG1(DBG_IKE, "received retransmit of response with ID %u, "
 					 "resending last request", mid);
