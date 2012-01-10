@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Tobias Brunner
+ * Copyright (C) 2009-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,10 +17,18 @@
 #include <pthread.h>
 #include <signal.h>
 #include <semaphore.h>
+
 #ifdef HAVE_GETTID
+#include <sys/types.h>
+#elif defined(HAVE_SYS_GETTID)
 #include <unistd.h>
 #include <sys/syscall.h>
-#endif
+static inline pid_t gettid()
+{
+	return syscall(SYS_gettid);
+}
+#define HAVE_GETTID
+#endif /* HAVE_SYS_GETTID */
 
 #include <library.h>
 #include <debug.h>
@@ -287,7 +295,7 @@ static void *thread_main(private_thread_t *this)
 	 * could be of any size, or even a struct) */
 #ifdef HAVE_GETTID
 	DBG2(DBG_LIB, "created thread %.2d [%u]",
-		 this->id, syscall(SYS_gettid));
+		 this->id, gettid());
 #else
 	DBG2(DBG_LIB, "created thread %.2d [%lx]",
 		 this->id, (u_long)this->thread_id);

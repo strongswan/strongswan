@@ -380,15 +380,19 @@ dnl check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
 LIBS=$saved_LIBS
 
-AC_MSG_CHECKING([for gettid])
-AC_TRY_COMPILE(
-	[#define _GNU_SOURCE
-	#include <unistd.h>
-	#include <sys/syscall.h>],
-	[int main() {
-		return syscall(SYS_gettid);}],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GETTID])],
-	[AC_MSG_RESULT([no])]
+AC_CHECK_FUNC(
+	[gettid],
+	[AC_DEFINE(HAVE_GETTID)],
+	[AC_MSG_CHECKING([for SYS_gettid])
+	 AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <unistd.h>
+		 #include <sys/syscall.h>],
+		[int main() {
+			return syscall(SYS_gettid);}],
+		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_SYS_GETTID])],
+		[AC_MSG_RESULT([no])]
+	)]
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom)
