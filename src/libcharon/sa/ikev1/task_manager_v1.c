@@ -334,12 +334,6 @@ METHOD(task_manager_t, initiate, status_t,
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
 	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE;
 
-	if (!this->rng)
-	{
-		DBG1(DBG_IKE, "no RNG supported");
-		return FAILED;
-	}
-
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
 		DBG2(DBG_IKE, "delaying task initiation, %N exchange in progress",
@@ -1132,7 +1126,7 @@ METHOD(task_manager_t, process_message, status_t,
 			job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
 			lib->scheduler->schedule_job(lib->scheduler, job,
 					lib->settings->get_int(lib->settings,
-						"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
+						"charon.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT));
 		}
 		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 									time_monotonic(NULL));
@@ -1482,9 +1476,15 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 								"charon.retransmit_base", RETRANSMIT_BASE),
 	);
 
-	this->rng->get_bytes(this->rng, sizeof(this->dpd_send_seqnr),
-							 (void*)&this->dpd_send_seqnr);
+	if (!this->rng)
+	{
+		DBG1(DBG_IKE, "no RNG found, unable to create IKE_SA");
+		destroy(this);
+		return NULL;
+	}
 
+	this->rng->get_bytes(this->rng, sizeof(this->dpd_send_seqnr),
+						 (void*)&this->dpd_send_seqnr);
 	this->dpd_send_seqnr &= 0x7FFFFFFF;
 
 	return &this->public;
