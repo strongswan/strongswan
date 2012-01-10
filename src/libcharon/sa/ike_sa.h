@@ -108,6 +108,11 @@ enum ike_extension_t {
 	 * peer supports XAuth authentication, draft-ietf-ipsec-isakmp-xauth-06
 	 */
 	EXT_XAUTH = (1<<7),
+
+	/**
+	 * peer supports DPD detection, RFC 3706 (or IKEv2)
+	 */
+	EXT_DPD = (1<<8),
 };
 
 /**

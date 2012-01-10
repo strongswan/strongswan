@@ -670,7 +670,14 @@ METHOD(ike_sa_t, set_state, void,
 				/* start DPD checks */
 				if (this->peer_cfg->get_dpd(this->peer_cfg))
 				{
-					send_dpd(this);
+					if (supports_extension(this, EXT_DPD))
+					{
+						send_dpd(this);
+					}
+					else
+					{
+						DBG1(DBG_IKE, "DPD not supported by peer, disabled");
+					}
 				}
 			}
 			break;
@@ -2036,6 +2043,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
 									"charon.flush_auth_cfg", FALSE),
 	);
+
+	if (version == IKEV2)
+	{	/* always supported with IKEv2 */
+		enable_extension(this, EXT_DPD);
+	}
 
 	this->task_manager = task_manager_create(&this->public);
 	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
