@@ -108,7 +108,10 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, IPSEC_REPLAY_COUNTER_SYNC, MS_NOTI
 	"IPSEC_REPLAY_COUNTER_SYNC");
 ENUM_NEXT(notify_type_names, INITIAL_CONTACT_IKEV1, INITIAL_CONTACT_IKEV1, IPSEC_REPLAY_COUNTER_SYNC,
 	"INITIAL_CONTACT");
-ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, INITIAL_CONTACT_IKEV1,
+ENUM_NEXT(notify_type_names, DPD_R_U_THERE, DPD_R_U_THERE_ACK, INITIAL_CONTACT_IKEV1,
+	"DPD_R_U_THERE",
+	"DPD_R_U_THERE_ACK");
+ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, DPD_R_U_THERE_ACK,
 	"USE_BEET_MODE");
 ENUM_NEXT(notify_type_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
 	"ME_MEDIATION",
@@ -481,6 +484,13 @@ METHOD(payload_t, verify, status_t,
 		case ME_CONNECTKEY:
 			if (this->notify_data.len < 16 ||
 				this->notify_data.len > 32)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		case DPD_R_U_THERE:
+		case DPD_R_U_THERE_ACK:
+			if (this->notify_data.len != 4)
 			{
 				bad_length = TRUE;
 			}

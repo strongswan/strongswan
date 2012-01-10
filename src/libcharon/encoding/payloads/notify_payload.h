@@ -140,6 +140,9 @@ enum notify_type_t {
 	IPSEC_REPLAY_COUNTER_SYNC = 16423,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
+	/* IKEv1 DPD */
+	DPD_R_U_THERE = 36136,
+	DPD_R_U_THERE_ACK = 36137,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
 	/* IKE-ME, private use */
