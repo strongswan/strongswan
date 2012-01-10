@@ -34,11 +34,6 @@ struct task_manager_v1_t {
 	 * Implements task_manager_t.
 	 */
 	task_manager_t task_manager;
-
-	/**
-	 * Get new sequence number to use for sending DPD request.
-	 */
-	u_int32_t (*get_dpd_seqnr) (task_manager_v1_t *this);
 };
 
 /**

@@ -1335,16 +1335,11 @@ METHOD(task_manager_t, queue_child_delete, void,
 												  spi, FALSE, expired));
 }
 
-METHOD(task_manager_v1_t, get_dpd_seqnr, u_int32_t,
-	private_task_manager_t *this)
-{
-	return this->dpd_send_seqnr++;
-}
-
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
-	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, NULL, _get_dpd_seqnr(&this->public)));
+	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, NULL,
+												this->dpd_send_seqnr++));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,
@@ -1471,7 +1466,6 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.create_task_enumerator = _create_task_enumerator,
 				.destroy = _destroy,
 			},
-			.get_dpd_seqnr = _get_dpd_seqnr,
 		},
 		.ike_sa = ike_sa,
 		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
