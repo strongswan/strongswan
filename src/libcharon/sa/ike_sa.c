@@ -563,6 +563,10 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	job_t *job;
 	time_t diff, delay;
 
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
 	if (this->task_manager->busy(this->task_manager))
 	{
@@ -1256,6 +1260,10 @@ METHOD(ike_sa_t, remove_child_sa, void,
 METHOD(ike_sa_t, rekey_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	this->task_manager->queue_child_rekey(this->task_manager, protocol, spi);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -1263,6 +1271,10 @@ METHOD(ike_sa_t, rekey_child_sa, status_t,
 METHOD(ike_sa_t, delete_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi, bool expired)
 {
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	this->task_manager->queue_child_delete(this->task_manager,
 										   protocol, spi, expired);
 	return this->task_manager->initiate(this->task_manager);
@@ -1322,6 +1334,10 @@ METHOD(ike_sa_t, delete_, status_t,
 METHOD(ike_sa_t, rekey, status_t,
 	private_ike_sa_t *this)
 {
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	this->task_manager->queue_ike_rekey(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -1329,6 +1345,10 @@ METHOD(ike_sa_t, rekey, status_t,
 METHOD(ike_sa_t, reauth, status_t,
 	private_ike_sa_t *this)
 {
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
@@ -1496,6 +1516,10 @@ METHOD(ike_sa_t, reestablish, status_t,
 METHOD(ike_sa_t, retransmit, status_t,
 	private_ike_sa_t *this, u_int32_t message_id)
 {
+	if (this->state == IKE_PASSIVE)
+	{
+		return INVALID_STATE;
+	}
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
 	{
