@@ -332,7 +332,7 @@ METHOD(task_manager_t, initiate, status_t,
 	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
-	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE;
+	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE, keep = FALSE;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -412,7 +412,6 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-
 				if (activate_task(this, TASK_ISAKMP_DPD))
 				{
 					exchange = INFORMATIONAL_V1;
@@ -485,6 +484,11 @@ METHOD(task_manager_t, initiate, status_t,
 			case SUCCESS:
 				/* task completed, remove it */
 				this->active_tasks->remove_at(this->active_tasks, enumerator);
+				if (task->get_type(task) == AGGRESSIVE ||
+					task->get_type(task) == QUICK_MODE)
+				{	/* last message of three message exchange */
+					keep = TRUE;
+				}
 				task->destroy(task);
 				continue;
 			case NEED_MORE:
@@ -513,9 +517,21 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->active_tasks->get_count(this->active_tasks) == 0)
+	if (this->active_tasks->get_count(this->active_tasks) == 0 &&
+		(exchange == QUICK_MODE || exchange == AGGRESSIVE))
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	}
+	if (exchange == INFORMATIONAL_V1)
+	{
+		if (message->get_notify(message, DPD_R_U_THERE))
+		{
+			expect_response = TRUE;
+		}
+		if (message->get_notify(message, DPD_R_U_THERE_ACK))
+		{
+			keep = TRUE;
+		}
 	}
 	if (flushed)
 	{
@@ -537,15 +553,13 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 
 	this->initiating.seqnr++;
-	if (expect_response)
+	if (expect_response )
 	{
 		message->destroy(message);
 		return retransmit(this, this->initiating.seqnr);
 	}
-	if (message->get_exchange_type(message) == QUICK_MODE ||
-		message->get_exchange_type(message) == AGGRESSIVE)
-	{	/* keep the packet for retransmission in quick/aggressive mode.
-		 * The responder might request a retransmission */
+	if (keep)
+	{	/* keep the packet for retransmission, the responder might request it */
 		charon->sender->send(charon->sender,
 					this->initiating.packet->clone(this->initiating.packet));
 	}
@@ -593,20 +607,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* send response along the path the request came in */
 	message->set_source(message, me->clone(me));
 	message->set_destination(message, other->clone(other));
-
-	/* Create new message id for informational exchanges*/
-	if (request->get_exchange_type(request) == INFORMATIONAL_V1)
-	{
-		u_int32_t message_id;
-
-		this->rng->get_bytes(this->rng, sizeof(message_id),
-							 (void*)&message_id);
-		message->set_message_id(message, message_id);
-	}
-	else
-	{
-		message->set_message_id(message, request->get_message_id(request));
-	}
+	message->set_message_id(message, request->get_message_id(request));
 	message->set_request(message, FALSE);
 
 	this->responding.mid = request->get_message_id(request);
@@ -858,6 +859,12 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (dpd && this->initiating.type == INFORMATIONAL_V1)
+	{	/* got a DPD reply, cancel any retransmission */
+		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+		DESTROY_IF(this->initiating.packet);
+		this->initiating.packet = NULL;
+	}
 	if (send_response)
 	{
 		if (build_response(this, message) != SUCCESS)
@@ -1064,6 +1071,14 @@ METHOD(task_manager_t, process_message, status_t,
 					 "retransmitting response", mid);
 				charon->sender->send(charon->sender,
 						this->responding.packet->clone(this->responding.packet));
+			}
+			else if (this->initiating.packet &&
+					 this->initiating.type == INFORMATIONAL_V1)
+			{
+				DBG1(DBG_IKE, "received retransmit of DPD request, "
+					 "retransmitting response");
+				charon->sender->send(charon->sender,
+						this->initiating.packet->clone(this->initiating.packet));
 			}
 			else
 			{
