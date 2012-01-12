@@ -20,15 +20,16 @@
 
 #ifdef HAVE_GETTID
 #include <sys/types.h>
-#elif defined(HAVE_SYS_GETTID)
 #include <unistd.h>
+#endif
+
+#ifdef HAVE_SYS_GETTID
 #include <sys/syscall.h>
 static inline pid_t gettid()
 {
 	return syscall(SYS_gettid);
 }
-#define HAVE_GETTID
-#endif /* HAVE_SYS_GETTID */
+#endif
 
 #include <library.h>
 #include <debug.h>

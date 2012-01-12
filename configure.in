@@ -390,7 +390,8 @@ AC_CHECK_FUNC(
 		 #include <sys/syscall.h>],
 		[int main() {
 			return syscall(SYS_gettid);}],
-		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_SYS_GETTID])],
+		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GETTID])
+		 AC_DEFINE([HAVE_SYS_GETTID])],
 		[AC_MSG_RESULT([no])]
 	)]
 )
