@@ -36,6 +36,11 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
+LOCAL_REQUIRED_MODULES := stroke
+ifneq ($(strongswan_BUILD_PLUTO),)
+LOCAL_REQUIRED_MODULES += whack
+endif
+
 LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libfreeswan
 
 include $(BUILD_EXECUTABLE)
