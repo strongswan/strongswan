@@ -51,7 +51,7 @@ struct private_ike_cert_pre_t {
 	bool do_http_lookup;
 
 	/**
-	 * wheter this is the final authentication round
+	 * whether this is the final authentication round
 	 */
 	bool final;
 };

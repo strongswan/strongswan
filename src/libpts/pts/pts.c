@@ -557,7 +557,7 @@ METHOD(pts_t, is_path_valid, bool,
 	}
 	else
 	{
-		DBG1(DBG_PTS, "error: %s occured while validating path: %s",
+		DBG1(DBG_PTS, "error: %s occurred while validating path: %s",
 			 		   strerror(errno), path);
 		return FALSE;
 	}

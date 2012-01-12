@@ -357,7 +357,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		if (!reader->read_uint16(reader, &len))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS Simple Component Evidence "
-						  "Verification Policy URI Lenght");
+						  "Verification Policy URI Length");
 			goto end;
 		}
 		if (!reader->read_data(reader, len, &policy_uri))

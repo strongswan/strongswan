@@ -69,7 +69,7 @@ typedef struct pts_t pts_t;
 #define ASSESSMENT_SECRET_LEN	20
 
 /**
- * Lenght of the TPM_QUOTE_INFO structure, TPM Spec 1.2
+ * Length of the TPM_QUOTE_INFO structure, TPM Spec 1.2
  */
 #define TPM_QUOTE_INFO_LEN		48
 
@@ -225,7 +225,7 @@ struct pts_t {
 	 * @param error_code		Output variable for PTS error code
 	 * @return					TRUE if path is valid or file/directory
 	 *							doesn't exist or path is invalid
-	 * 						FALSE if local error occured within stat function
+	 * 						FALSE if local error occurred within stat function
 	 */
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
@@ -285,7 +285,7 @@ struct pts_t {
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param use_quote2		Version of the Quote funtion to be used
+	 * @param use_quote2		Version of the Quote function to be used
 	 * @param pcr_comp			Chunk to save PCR composite structure
 	 * @param quote_sig			Chunk to save quote operation output
 	 *							without external data (anti-replay protection)

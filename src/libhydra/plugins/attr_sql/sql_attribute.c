@@ -38,7 +38,7 @@ struct private_sql_attribute_t {
 	database_t *db;
 
 	/**
-	 * wheter to record lease history in lease table
+	 * whether to record lease history in lease table
 	 */
 	bool history;
 };

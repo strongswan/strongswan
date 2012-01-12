@@ -87,7 +87,7 @@ METHOD(pts_component_t, measure, status_t,
 		
 	if (!pts->read_pcr(pts, extended_pcr, &pcr_after))
 	{
-		DBG1(DBG_PTS, "error occured while reading PCR: %d", extended_pcr);
+		DBG1(DBG_PTS, "error occurred while reading PCR: %d", extended_pcr);
 		return FAILED;
 	}
 

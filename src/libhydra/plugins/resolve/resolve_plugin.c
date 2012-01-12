@@ -31,7 +31,7 @@ struct private_resolve_plugin_t {
 	resolve_plugin_t public;
 
 	/**
-	 * The registerd DNS attribute handler
+	 * The registered DNS attribute handler
 	 */
 	resolve_handler_t *handler;
 };

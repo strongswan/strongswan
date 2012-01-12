@@ -55,7 +55,7 @@ struct ha_segments_t {
 	 * Activate a set of IKE_SAs identified by a segment.
 	 *
 	 * @param segment	numerical segment to takeover, 0 for all
-	 * @param notify	wheter to notify other nodes about activation
+	 * @param notify	whether to notify other nodes about activation
 	 */
 	void (*activate)(ha_segments_t *this, u_int segment, bool notify);
 
@@ -63,7 +63,7 @@ struct ha_segments_t {
 	 * Deactivate a set of IKE_SAs identified by a segment.
 	 *
 	 * @param segment	numerical segment to takeover, 0 for all
-	 * @param notify	wheter to notify other nodes about deactivation
+	 * @param notify	whether to notify other nodes about deactivation
 	 */
 	void (*deactivate)(ha_segments_t *this, u_int segment, bool notify);
 

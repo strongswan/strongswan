@@ -34,7 +34,7 @@ struct smtp_t {
 	 * Send an e-mail message.
 	 *
 	 * @param from		sender address
-	 * @param to		receipient address
+	 * @param to		recipient address
 	 * @param subject	mail subject
 	 * @param fmt		mail body format string
 	 * @param ...		arguments for body format string

@@ -113,7 +113,7 @@ struct simaka_manager_t {
 							   identification_t *pseudonym);
 
 	/**
-	 * Get a stored pseudonym from one of the registerd SIM cards.
+	 * Get a stored pseudonym from one of the registered SIM cards.
 	 *
 	 * @param id		permanent identity of the peer
 	 * @return			associated pseudonym identity, NULL if none found
@@ -134,7 +134,7 @@ struct simaka_manager_t {
 							u_int16_t counter);
 
 	/**
-	 * Retrieve fast reauthentication parameters from one of the registerd cards.
+	 * Retrieve fast reauthentication parameters from one of the registered cards.
 	 *
 	 * @param id		permanent identity of the peer
 	 * @param mk		buffer receiving master key MK

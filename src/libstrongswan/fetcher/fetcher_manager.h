@@ -26,7 +26,7 @@ typedef struct fetcher_manager_t fetcher_manager_t;
 #include <fetcher/fetcher.h>
 
 /**
- * Fetches from URIs using registerd fetcher_t instances.
+ * Fetches from URIs using registered fetcher_t instances.
  */
 struct fetcher_manager_t {
 

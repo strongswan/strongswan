@@ -243,7 +243,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		if (!reader->read_uint32(reader, &pcr_comp_len))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
-						  "PCR Composite Lenght");
+						  "PCR Composite Length");
 			goto end;
 		}
 		if (!reader->read_data(reader, pcr_comp_len, &this->pcr_comp))
@@ -257,7 +257,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		if (!reader->read_uint32(reader, &tpm_quote_sig_len))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
-						  "TPM Quote Singature Lenght");
+						  "TPM Quote Singature Length");
 			goto end;
 		}
 		if (!reader->read_data(reader, tpm_quote_sig_len, &this->tpm_quote_sig))
