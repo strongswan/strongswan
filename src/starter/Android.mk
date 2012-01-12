@@ -30,6 +30,8 @@ endif
 
 LOCAL_MODULE := starter
 
+LOCAL_MODULE_TAGS := optional
+
 LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false

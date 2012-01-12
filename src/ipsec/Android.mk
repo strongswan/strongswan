@@ -5,6 +5,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := ipsec
 
+LOCAL_MODULE_TAGS := optional
+
 LOCAL_MODULE_CLASS := EXECUTABLES
 
 GEN := $(local-intermediates-dir)/ipsec

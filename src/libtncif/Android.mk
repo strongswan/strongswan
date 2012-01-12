@@ -16,6 +16,8 @@ LOCAL_CFLAGS := $(strongswan_CFLAGS)
 
 LOCAL_MODULE := libtncif
 
+LOCAL_MODULE_TAGS := optional
+
 LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false

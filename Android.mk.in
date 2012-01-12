@@ -1,10 +1,16 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-# whether starter is built.  allows to control the daemons from the command line
-# strongswan_BUILD_STARTER := true
+# the executables that should be installed on the final system have to be added
+# to PRODUCT_PACKAGES in
+#   build/target/product/core.mk
+# possible executables are
+#   starter - allows to control and configure the daemons from the command line
+#   charon - the IKEv2 daemon
+#   pluto - the IKEv1 daemon
 
-# whether pluto (IKEv1 daemon) is built.  charon (IKEv2) is always enabled
+# if you enable starter and/or pluto (see above) uncomment the proper lines here
+# strongswan_BUILD_STARTER := true
 # strongswan_BUILD_PLUTO := true
 
 # this is the list of plugins that are built into libstrongswan and charon
