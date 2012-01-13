@@ -334,7 +334,8 @@ METHOD(task_manager_t, initiate, status_t,
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
 	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE, keep = FALSE;
 
-	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
+	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED &&
+		this->initiating.type != INFORMATIONAL_V1)
 	{
 		DBG2(DBG_IKE, "delaying task initiation, %N exchange in progress",
 				exchange_type_names, this->initiating.type);
