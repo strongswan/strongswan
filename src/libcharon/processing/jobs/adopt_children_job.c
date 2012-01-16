@@ -104,6 +104,7 @@ METHOD(job_t, execute, void,
 					DBG1(DBG_IKE, "detected reauth of existing IKE_SA, "
 						 "adopting %d children", children->get_count(children));
 					ike_sa->set_state(ike_sa, IKE_DELETING);
+					charon->bus->ike_updown(charon->bus, ike_sa, FALSE);
 					charon->ike_sa_manager->checkin_and_destroy(
 											charon->ike_sa_manager, ike_sa);
 				}

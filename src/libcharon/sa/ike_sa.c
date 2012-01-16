@@ -1318,6 +1318,7 @@ METHOD(ike_sa_t, delete_, status_t,
 		case IKE_REKEYING:
 			if (this->version == IKEV1)
 			{	/* SA has been reauthenticated, delete */
+				charon->bus->ike_updown(charon->bus, &this->public, FALSE);
 				break;
 			}
 			/* FALL */
