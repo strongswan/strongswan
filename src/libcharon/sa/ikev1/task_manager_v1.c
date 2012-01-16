@@ -1053,7 +1053,7 @@ METHOD(task_manager_t, process_message, status_t,
 		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 									time_monotonic(NULL));
 		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
-		charon->bus->message(charon->bus, msg, FALSE);
+		charon->bus->message(charon->bus, msg, TRUE);
 		if (process_response(this, msg) != SUCCESS)
 		{
 			flush(this);
