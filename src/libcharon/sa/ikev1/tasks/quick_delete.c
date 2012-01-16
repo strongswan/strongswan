@@ -69,6 +69,7 @@ static bool delete_child(private_quick_delete_t *this,
 {
 	u_int64_t bytes_in, bytes_out;
 	child_sa_t *child_sa;
+	bool rekeyed;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
 	if (!child_sa)
@@ -81,6 +82,7 @@ static bool delete_child(private_quick_delete_t *this,
 		this->spi = spi = child_sa->get_spi(child_sa, TRUE);
 	}
 
+	rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYING;
 	child_sa->set_state(child_sa, CHILD_DELETING);
 
 	if (this->expired)
@@ -107,7 +109,10 @@ static bool delete_child(private_quick_delete_t *this,
 			 child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
 
-	charon->bus->child_updown(charon->bus, child_sa, FALSE);
+	if (!rekeyed)
+	{
+		charon->bus->child_updown(charon->bus, child_sa, FALSE);
+	}
 
 	this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
 
