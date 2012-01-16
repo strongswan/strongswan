@@ -1326,6 +1326,7 @@ METHOD(task_manager_t, queue_child_rekey, void,
 		cfg = child_sa->get_config(child_sa);
 		task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg), NULL, NULL);
 		task->use_reqid(task, child_sa->get_reqid(child_sa));
+		task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
 		queue_task(this, &task->task);
 	}

@@ -43,6 +43,13 @@ struct quick_mode_t {
 	 * @param reqid			reqid to use
 	 */
 	void (*use_reqid)(quick_mode_t *this, u_int32_t reqid);
+
+	/**
+	 * Set the SPI of the old SA, if rekeying.
+	 *
+	 * @param spi			spi of SA to rekey
+	 */
+	void (*rekey)(quick_mode_t *this, u_int32_t spi);
 };
 
 /**

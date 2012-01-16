@@ -120,6 +120,11 @@ struct private_quick_mode_t {
 	u_int32_t reqid;
 
 	/**
+	 * SPI of SA we rekey
+	 */
+	u_int32_t rekey;
+
+	/**
 	 * Negotiated mode, tunnel or transport
 	 */
 	ipsec_mode_t mode;
@@ -139,6 +144,7 @@ static bool install(private_quick_mode_t *this)
 	status_t status, status_i, status_o;
 	chunk_t encr_i, encr_r, integ_i, integ_r;
 	linked_list_t *tsi, *tsr;
+	child_sa_t *old = NULL;
 
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
@@ -219,8 +225,20 @@ static bool install(private_quick_mode_t *this)
 		 this->child_sa->get_traffic_selectors(this->child_sa, TRUE),
 		 this->child_sa->get_traffic_selectors(this->child_sa, FALSE));
 
-	charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
-
+	if (this->rekey)
+	{
+		old = this->ike_sa->get_child_sa(this->ike_sa,
+								this->proposal->get_protocol(this->proposal),
+								this->rekey, TRUE);
+	}
+	if (old)
+	{
+		charon->bus->child_rekey(charon->bus, old, this->child_sa);
+	}
+	else
+	{
+		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
+	}
 	this->child_sa = NULL;
 
 	return TRUE;
@@ -691,6 +709,7 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 										   child_sa->get_proposal(child_sa)))
 				{
 					this->reqid = child_sa->get_reqid(child_sa);
+					this->rekey = child_sa->get_spi(child_sa, TRUE);
 					child_sa->set_state(child_sa, CHILD_REKEYING);
 					DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
 						 child_sa->get_name(child_sa), this->reqid);
@@ -943,6 +962,12 @@ METHOD(quick_mode_t, use_reqid, void,
 	this->reqid = reqid;
 }
 
+METHOD(quick_mode_t, rekey, void,
+	private_quick_mode_t *this, u_int32_t spi)
+{
+	this->rekey = spi;
+}
+
 METHOD(task_t, migrate, void,
 	private_quick_mode_t *this, ike_sa_t *ike_sa)
 {
@@ -1002,6 +1027,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 				.destroy = _destroy,
 			},
 			.use_reqid = _use_reqid,
+			.rekey = _rekey,
 		},
 		.ike_sa = ike_sa,
 		.initiator = config != NULL,
