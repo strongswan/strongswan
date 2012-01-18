@@ -161,8 +161,8 @@ METHOD(task_t, build_i, status_t,
 	/* ... our CHILD_CREATE task does the hard work for us. */
 	if (!this->child_create)
 	{
-		this->child_create = child_create_create(this->ike_sa, config, TRUE,
-												 NULL, NULL);
+		this->child_create = child_create_create(this->ike_sa,
+									config->get_ref(config), TRUE, NULL, NULL);
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
