@@ -25,9 +25,9 @@
 #include <credentials/keys/private_key.h>
 
 /**
- * Load an RSA private key from PKCS#8 data.
+ * Load an RSA or ECDSA private key from PKCS#8 data.
  *
- * @param type		type of the key, KEY_RSA
+ * @param type		type of the key, KEY_RSA or KEY_ECDSA
  * @param args		builder_part_t argument list
  * @return			private key, NULL on failure
  */

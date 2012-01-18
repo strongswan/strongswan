@@ -42,7 +42,7 @@ static const asn1Object_t pkinfoObjects[] = {
 static private_key_t *parse_private_key(chunk_t blob)
 {
 	asn1_parser_t *parser;
-	chunk_t object;
+	chunk_t object, params = chunk_empty;
 	int objectID;
 	private_key_t *key = NULL;
 	key_type_t type = KEY_ANY;
@@ -57,23 +57,38 @@ static private_key_t *parse_private_key(chunk_t blob)
 			case PKINFO_PRIVATE_KEY_ALGORITHM:
 			{
 				int oid = asn1_parse_algorithmIdentifier(object,
-										parser->get_level(parser) + 1, NULL);
+									parser->get_level(parser) + 1, &params);
 
-				if (oid == OID_RSA_ENCRYPTION)
+				switch (oid)
 				{
-					type = KEY_RSA;
-				}
-				else
-				{	/* key type not supported */
-					goto end;
+					case OID_RSA_ENCRYPTION:
+						type = KEY_RSA;
+						break;
+					case OID_EC_PUBLICKEY:
+						type = KEY_ECDSA;
+						break;
+					default:
+						/* key type not supported */
+						goto end;
 				}
 				break;
 			}
 			case PKINFO_PRIVATE_KEY:
 			{
 				DBG2(DBG_ASN, "-- > --");
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
+				if (params.ptr)
+				{
+					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											 type, BUILD_BLOB_ALGID_PARAMS,
+											 params, BUILD_BLOB_ASN1_DER,
+											 object, BUILD_END);
+				}
+				else
+				{
+					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											 type, BUILD_BLOB_ASN1_DER, object,
+											 BUILD_END);
+				}
 				DBG2(DBG_ASN, "-- < --");
 				break;
 			}
