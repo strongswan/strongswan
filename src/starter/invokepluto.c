@@ -184,7 +184,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		static char buf1[15];
 
 		arg[argc++] = "--crlcheckinterval";
-		snprintf(buf1, sizeof(buf1), "%u", cfg->setup.crlcheckinterval);
+		snprintf(buf1, sizeof(buf1), "%d", (int)cfg->setup.crlcheckinterval);
 		arg[argc++] = buf1;
 	}
 	if (cfg->setup.cachecrls)
@@ -212,7 +212,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		static char buf2[15];
 
 		arg[argc++] = "--keep_alive";
-		snprintf(buf2, sizeof(buf2), "%u", cfg->setup.keep_alive);
+		snprintf(buf2, sizeof(buf2), "%d", (int)cfg->setup.keep_alive);
 		arg[argc++] = buf2;
 	}
 	if (cfg->setup.virtual_private)

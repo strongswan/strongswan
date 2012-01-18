@@ -198,12 +198,12 @@ struct starter_config {
 				char     *plutostderrlog;
 				bool     uniqueids;
 				u_int    overridemtu;
-				u_int    crlcheckinterval;
+				time_t   crlcheckinterval;
 				bool     cachecrls;
 				strict_t strictcrlpolicy;
 				bool     nocrsend;
 				bool     nat_traversal;
-				u_int    keep_alive;
+				time_t   keep_alive;
 				u_int    force_keepalive;
 				char     *virtual_private;
 				char     *pkcs11module;
