@@ -16,6 +16,7 @@
 #include "ha_dispatcher.h"
 
 #include <daemon.h>
+#include <sa/ikev2/keymat_v2.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
@@ -82,6 +83,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
+	bool ok = FALSE;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -132,13 +134,11 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	if (ike_sa)
 	{
 		proposal_t *proposal;
-		keymat_t *keymat;
 		/* quick and dirty hack of a DH implementation ;-) */
 		diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
 								.destroy = (void*)&secret };
 
 		proposal = proposal_create(PROTO_IKE, 0);
-		keymat = ike_sa->get_keymat(ike_sa);
 		if (integ)
 		{
 			proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, integ, 0);
@@ -152,8 +152,14 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
-		if (keymat->derive_ike_keys(keymat, proposal, &dh, nonce_i, nonce_r,
-									 ike_sa->get_id(ike_sa), old_prf, old_skd))
+		if (ike_sa->get_version(ike_sa) == IKEV2)
+		{
+			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+
+			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, &dh, nonce_i,
+							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+		}
+		if (ok)
 		{
 			if (old_sa)
 			{
@@ -462,8 +468,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	child_cfg_t *config = NULL;
 	child_sa_t *child_sa;
 	proposal_t *proposal;
-	keymat_t *keymat;
-	bool initiator = FALSE, failed = FALSE;
+	bool initiator = FALSE, failed = FALSE, ok = FALSE;
 	u_int32_t inbound_spi = 0, outbound_spi = 0;
 	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
 	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
@@ -569,10 +574,15 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
-	keymat = ike_sa->get_keymat(ike_sa);
+	if (ike_sa->get_version(ike_sa) == IKEV2)
+	{
+		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
-	if (!keymat->derive_child_keys(keymat, proposal, secret.ptr ? &dh : NULL,
-					nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
+		ok = keymat_v2->derive_child_keys(keymat_v2,
+						proposal, secret.ptr ? &dh : NULL, nonce_i, nonce_r,
+						&encr_i, &integ_i, &encr_r, &integ_r);
+	}
+	if (!ok)
 	{
 		DBG1(DBG_CHD, "HA CHILD_SA key derivation failed");
 		child_sa->destroy(child_sa);

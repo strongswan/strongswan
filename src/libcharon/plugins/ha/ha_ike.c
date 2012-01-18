@@ -15,6 +15,8 @@
 
 #include "ha_ike.h"
 
+#include <sa/ikev2/keymat_v2.h>
+
 typedef struct private_ha_ike_t private_ha_ike_t;
 
 /**
@@ -88,12 +90,12 @@ METHOD(listener_t, ike_keys, bool,
 	m = ha_message_create(HA_IKE_ADD);
 	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 
-	if (rekey)
+	if (rekey && rekey->get_version(rekey) == IKEV2)
 	{
 		chunk_t skd;
-		keymat_t *keymat;
+		keymat_v2_t *keymat;
 
-		keymat = rekey->get_keymat(rekey);
+		keymat = (keymat_v2_t*)rekey->get_keymat(rekey);
 		m->add_attribute(m, HA_IKE_REKEY_ID, rekey->get_id(rekey));
 		m->add_attribute(m, HA_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
 		m->add_attribute(m, HA_OLD_SKD, skd);
