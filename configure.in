@@ -92,6 +92,7 @@ ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.]
 ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
 ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
+ARG_DISBL_SET([pkcs8],          [disable PKCS8 private key decoding plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
@@ -814,6 +815,7 @@ ADD_PLUGIN([revocation],           [s libcharon])
 ADD_PLUGIN([constraints],          [s libcharon])
 ADD_PLUGIN([pubkey],               [s libcharon])
 ADD_PLUGIN([pkcs1],                [s libcharon pluto openac scepclient pki scripts manager medsrv attest])
+ADD_PLUGIN([pkcs8],                [s libcharon pluto openac scepclient pki scripts manager medsrv attest])
 ADD_PLUGIN([pgp],                  [s libcharon pluto])
 ADD_PLUGIN([dnskey],               [s pluto])
 ADD_PLUGIN([pem],                  [s libcharon pluto openac scepclient pki scripts manager medsrv attest])
@@ -928,6 +930,7 @@ AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
 AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
+AM_CONDITIONAL(USE_PKCS8, test x$pkcs8 = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
 AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
 AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
@@ -1097,6 +1100,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/constraints/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/pkcs1/Makefile
+	src/libstrongswan/plugins/pkcs8/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/pem/Makefile

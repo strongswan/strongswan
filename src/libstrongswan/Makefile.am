@@ -257,6 +257,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_PKCS8
+  SUBDIRS += plugins/pkcs8
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs8/libstrongswan-pkcs8.la
+endif
+endif
+
 if USE_PGP
   SUBDIRS += plugins/pgp
 if MONOLITHIC
