@@ -140,8 +140,19 @@ static xauth_method_t *load_method(private_xauth_t* this)
 /**
  * Set IKE_SA to established state
  */
-static void establish(private_xauth_t *this)
+static bool establish(private_xauth_t *this)
 {
+	if (!charon->bus->authorize(charon->bus, FALSE))
+	{
+		DBG1(DBG_IKE, "XAuth authorization hook forbids IKE_SA, cancelling");
+		return FALSE;
+	}
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
+		return FALSE;
+	}
+
 	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
@@ -152,6 +163,8 @@ static void establish(private_xauth_t *this)
 
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	return TRUE;
 }
 
 METHOD(task_t, build_i_status, status_t,
@@ -210,9 +223,8 @@ METHOD(task_t, build_r_ack, status_t,
 
 	message->add_payload(message, (payload_t *)cp);
 
-	if (this->status == XAUTH_OK)
+	if (this->status == XAUTH_OK && establish(this))
 	{
-		establish(this);
 		lib->processor->queue_job(lib->processor, (job_t*)
 				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
 		return SUCCESS;
@@ -311,7 +323,10 @@ METHOD(task_t, process_i_status, status_t,
 		DBG1(DBG_IKE, "destroying IKE_SA after failed XAuth authentication");
 		return FAILED;
 	}
-	establish(this);
+	if (!establish(this))
+	{
+		return FAILED;
+	}
 	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
 	return SUCCESS;
 }

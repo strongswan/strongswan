@@ -95,8 +95,14 @@ struct private_main_mode_t {
 /**
  * Set IKE_SA to established state
  */
-static void establish(private_main_mode_t *this)
+static bool establish(private_main_mode_t *this)
 {
+	if (!charon->bus->authorize(charon->bus, TRUE))
+	{
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
+		return FALSE;
+	}
+
 	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
@@ -107,6 +113,8 @@ static void establish(private_main_mode_t *this)
 
 	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	return TRUE;
 }
 
 /**
@@ -406,6 +414,13 @@ METHOD(task_t, process_r, status_t,
 			{
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
+			if (!charon->bus->authorize(charon->bus, FALSE))
+			{
+				DBG1(DBG_IKE, "Main Mode authorization hook forbids IKE_SA, "
+					 "cancelling");
+				return send_notify(this, AUTHENTICATION_FAILED);
+			}
+
 			this->state = MM_AUTH;
 			if (has_notify_errors(this, message))
 			{
@@ -467,6 +482,7 @@ METHOD(task_t, build_r, status_t,
 			{
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
+
 			switch (this->method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
@@ -481,7 +497,10 @@ METHOD(task_t, build_r, status_t,
 					/* TODO-IKEv1: not yet supported */
 					return FAILED;
 				default:
-					establish(this);
+					if (!establish(this))
+					{
+						return send_notify(this, AUTHENTICATION_FAILED);
+					}
 					lib->processor->queue_job(lib->processor, (job_t*)
 									adopt_children_job_create(
 										this->ike_sa->get_id(this->ike_sa)));
@@ -577,29 +596,37 @@ METHOD(task_t, process_i, status_t,
 			{
 				return send_delete(this);
 			}
-
-			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			if (!charon->bus->authorize(charon->bus, FALSE))
 			{
-				this->ike_sa->queue_task(this->ike_sa,
-							(task_t*)mode_config_create(this->ike_sa, TRUE));
+				DBG1(DBG_IKE, "Main Mode authorization hook forbids IKE_SA, "
+					 "cancelling");
+				return send_delete(this);
 			}
-
 			switch (this->method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_HYBRID_INIT_RSA:
 					/* wait for XAUTH request */
-					return SUCCESS;
+					break;
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
 					/* TODO-IKEv1: not yet */
 					return FAILED;
 				default:
-					establish(this);
-					return SUCCESS;
+					if (!establish(this))
+					{
+						return send_delete(this);
+					}
+					break;
 			}
+			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			{
+				this->ike_sa->queue_task(this->ike_sa,
+							(task_t*)mode_config_create(this->ike_sa, TRUE));
+			}
+			return SUCCESS;
 		}
 		default:
 			return FAILED;
