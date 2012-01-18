@@ -156,8 +156,26 @@ static bool install(private_quick_mode_t *this)
 	encr_i = encr_r = integ_i = integ_r = chunk_empty;
 	tsi = linked_list_create();
 	tsr = linked_list_create();
-	tsi->insert_last(tsi, this->tsi);
-	tsr->insert_last(tsr, this->tsr);
+	tsi->insert_last(tsi, this->tsi->clone(this->tsi));
+	tsr->insert_last(tsr, this->tsr->clone(this->tsr));
+	if (this->initiator)
+	{
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_INITIATOR_POST_AUTH, tsi, tsr);
+	}
+	else
+	{
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_RESPONDER, tsr, tsi);
+	}
+	if (tsi->get_count(tsi) == 0 || tsr->get_count(tsr) == 0)
+	{
+		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+		DBG1(DBG_IKE, "no acceptable traffic selectors found");
+		return FALSE;
+	}
+
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal, this->dh,
 						this->spi_i, this->spi_r, this->nonce_i, this->nonce_r,
 						&encr_i, &integ_i, &encr_r, &integ_r))
@@ -188,8 +206,8 @@ static bool install(private_quick_mode_t *this)
 			(status_i != SUCCESS) ? "inbound " : "",
 			(status_i != SUCCESS && status_o != SUCCESS) ? "and ": "",
 			(status_o != SUCCESS) ? "outbound " : "");
-		tsi->destroy(tsi);
-		tsr->destroy(tsr);
+		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 		return FALSE;
 	}
 
@@ -201,8 +219,8 @@ static bool install(private_quick_mode_t *this)
 	{
 		status = this->child_sa->add_policies(this->child_sa, tsr, tsi);
 	}
-	tsi->destroy(tsi);
-	tsr->destroy(tsr);
+	tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+	tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
@@ -571,7 +589,7 @@ METHOD(task_t, build_i, status_t,
 		{
 			enumerator_t *enumerator;
 			sa_payload_t *sa_payload;
-			linked_list_t *list;
+			linked_list_t *list, *tsi, *tsr;
 			proposal_t *proposal;
 			diffie_hellman_group_t group;
 			bool udp;
@@ -631,6 +649,17 @@ METHOD(task_t, build_i, status_t,
 			}
 			this->tsi = select_ts(this, TRUE, NULL);
 			this->tsr = select_ts(this, FALSE, NULL);
+			tsi = linked_list_create();
+			tsr = linked_list_create();
+			tsi->insert_last(tsi, this->tsi);
+			tsr->insert_last(tsr, this->tsr);
+			this->tsi = this->tsr = NULL;
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_INITIATOR_PRE_AUTH, tsi, tsr);
+			tsi->remove_first(tsi, (void**)&this->tsi);
+			tsr->remove_first(tsr, (void**)&this->tsr);
+			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 			if (!this->tsi || !this->tsr)
 			{
 				return FAILED;
