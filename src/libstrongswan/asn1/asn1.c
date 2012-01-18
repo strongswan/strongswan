@@ -554,7 +554,7 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 static const asn1Object_t algorithmIdentifierObjects[] = {
 	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE			}, /* 0 */
 	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY			}, /* 1 */
-	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW|ASN1_OPT	}, /* 2 */
+	{ 1,   "parameters",		ASN1_OID,		ASN1_RAW|ASN1_OPT	}, /* 2 */
 	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /* 3 */
 	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT			}
 };
