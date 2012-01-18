@@ -215,9 +215,9 @@ METHOD(phase1_t, derive_keys, bool,
 		DBG1(DBG_IKE, "key derivation for %N failed", auth_method_names, method);
 		return FALSE;
 	}
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, this->dh_value,
+						  this->nonce_i, this->nonce_r, NULL, shared_key);
 	DESTROY_IF(shared_key);
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
-						  this->nonce_i, this->nonce_r, NULL);
 	return TRUE;
 }
 

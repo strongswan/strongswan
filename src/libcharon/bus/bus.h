@@ -264,12 +264,15 @@ struct bus_t {
 	 *
 	 * @param ike_sa	IKE_SA this keymat belongs to
 	 * @param dh		diffie hellman shared secret
+	 * @param dh_other	others DH public value (IKEv1 only)
 	 * @param nonce_i	initiators nonce
 	 * @param nonce_r	responders nonce
-	 * @param rekey		IKE_SA we are rekeying, if any
+	 * @param rekey		IKE_SA we are rekeying, if any (IKEv2 only)
+	 * @param shared	shared key used for key derivation (IKEv1-PSK only)
 	 */
 	void (*ike_keys)(bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
+					 chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
+					 ike_sa_t *rekey, shared_key_t *shared);
 	/**
 	 * CHILD_SA keymat hook.
 	 *

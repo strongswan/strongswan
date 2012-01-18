@@ -71,7 +71,8 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 
 METHOD(listener_t, ike_keys, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-	chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
+	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey,
+	shared_key_t *shared)
 {
 	ha_message_t *m;
 	chunk_t secret;

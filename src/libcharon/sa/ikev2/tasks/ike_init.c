@@ -354,8 +354,8 @@ static bool derive_keys(private_ike_init_t *this,
 	{
 		return FALSE;
 	}
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
-						  nonce_i, nonce_r, this->old_sa);
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
+						  nonce_i, nonce_r, this->old_sa, NULL);
 	return TRUE;
 }
 
