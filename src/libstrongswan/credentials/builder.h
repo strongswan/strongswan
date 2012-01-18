@@ -53,10 +53,12 @@ enum builder_part_t {
 	BUILD_BLOB_ASN1_DER,
 	/** PEM encoded ASN.1/PGP blob, chunk_t */
 	BUILD_BLOB_PEM,
-	/**  OpenPGP key blob, chunk_t */
+	/** OpenPGP key blob, chunk_t */
 	BUILD_BLOB_PGP,
 	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
+	/** parameters from algorithmIdentifier (ASN.1 blob), chunk_t */
+	BUILD_BLOB_ALGID_PARAMS,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */
