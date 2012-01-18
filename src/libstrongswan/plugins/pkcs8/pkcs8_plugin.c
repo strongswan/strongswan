@@ -42,6 +42,8 @@ METHOD(plugin_t, get_features, int,
 	private_pkcs8_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRIVKEY, pkcs8_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
 	};
 	*features = f;
 	return countof(f);

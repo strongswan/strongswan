@@ -10,6 +10,7 @@ plugin_LTLIBRARIES = libstrongswan-pkcs8.la
 endif
 
 libstrongswan_pkcs8_la_SOURCES = \
-	pkcs8_plugin.h pkcs8_plugin.c
+	pkcs8_plugin.h pkcs8_plugin.c \
+	pkcs8_builder.h pkcs8_builder.c
 
 libstrongswan_pkcs8_la_LDFLAGS = -module -avoid-version
