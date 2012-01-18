@@ -20,6 +20,7 @@
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
+typedef struct ha_diffie_hellman_t ha_diffie_hellman_t;
 
 /**
  * Private data of an ha_dispatcher_t object.
@@ -63,12 +64,50 @@ struct private_ha_dispatcher_t {
 };
 
 /**
- * Quick and dirty hack implementation of diffie_hellman_t.get_shared_secret
+ * DH implementation for HA synced DH values
  */
-static status_t get_shared_secret(diffie_hellman_t *this, chunk_t *secret)
+struct ha_diffie_hellman_t {
+
+	/**
+	 * Implements diffie_hellman_t
+	 */
+	diffie_hellman_t dh;
+
+	/**
+	 * Shared secret
+	 */
+	chunk_t secret;
+};
+
+METHOD(diffie_hellman_t, dh_get_shared_secret, status_t,
+	ha_diffie_hellman_t *this, chunk_t *secret)
 {
-	*secret = chunk_clone((*(chunk_t*)this->destroy));
+	*secret = chunk_clone(this->secret);
 	return SUCCESS;
+}
+
+METHOD(diffie_hellman_t, dh_destroy, void,
+	ha_diffie_hellman_t *this)
+{
+	free(this);
+}
+
+/**
+ * Create a HA synced DH implementation
+ */
+static diffie_hellman_t *ha_diffie_hellman_create(chunk_t secret)
+{
+	ha_diffie_hellman_t *this;
+
+	INIT(this,
+		.dh = {
+			.get_shared_secret = _dh_get_shared_secret,
+			.destroy = _dh_destroy,
+		},
+		.secret = secret,
+	);
+
+	return &this->dh;
 }
 
 /**
@@ -134,9 +173,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	if (ike_sa)
 	{
 		proposal_t *proposal;
-		/* quick and dirty hack of a DH implementation ;-) */
-		diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
-								.destroy = (void*)&secret };
+		diffie_hellman_t *dh;
 
 		proposal = proposal_create(PROTO_IKE, 0);
 		if (integ)
@@ -152,13 +189,15 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
+		dh = ha_diffie_hellman_create(secret);
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
-			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, &dh, nonce_i,
+			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, nonce_i,
 							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
 		}
+		dh->destroy(dh);
 		if (ok)
 		{
 			if (old_sa)
@@ -479,9 +518,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
-	/* quick and dirty hack of a DH implementation */
-	diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
-							.destroy = (void*)&secret };
+	diffie_hellman_t *dh;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -575,14 +612,16 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
+	dh = ha_diffie_hellman_create(secret);
 	if (ike_sa->get_version(ike_sa) == IKEV2)
 	{
 		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
 		ok = keymat_v2->derive_child_keys(keymat_v2,
-						proposal, secret.ptr ? &dh : NULL, nonce_i, nonce_r,
+						proposal, secret.ptr ? dh : NULL, nonce_i, nonce_r,
 						&encr_i, &integ_i, &encr_r, &integ_r);
 	}
+	dh->destroy(dh);
 	if (!ok)
 	{
 		DBG1(DBG_CHD, "HA CHILD_SA key derivation failed");
