@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -371,14 +371,17 @@ openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
 													  va_list args)
 {
 	private_openssl_ec_private_key_t *this;
-	chunk_t blob = chunk_empty;
+	chunk_t par = chunk_empty, key = chunk_empty;
 
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
+			case BUILD_BLOB_ALGID_PARAMS:
+				par = va_arg(args, chunk_t);
+				continue;
 			case BUILD_BLOB_ASN1_DER:
-				blob = va_arg(args, chunk_t);
+				key = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -389,18 +392,36 @@ openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
 	}
 
 	this = create_empty();
-	this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-	if (!this->ec)
+
+	if (par.ptr)
 	{
-		destroy(this);
-		return NULL;
+		this->ec = d2i_ECParameters(NULL, (const u_char**)&par.ptr, par.len);
+		if (!this->ec)
+		{
+			goto error;
+		}
+		if (!d2i_ECPrivateKey(&this->ec, (const u_char**)&key.ptr, key.len))
+		{
+			goto error;
+		}
+	}
+	else
+	{
+		this->ec = d2i_ECPrivateKey(NULL, (const u_char**)&key.ptr, key.len);
+		if (!this->ec)
+		{
+			goto error;
+		}
 	}
 	if (!EC_KEY_check_key(this->ec))
 	{
-		destroy(this);
-		return NULL;
+		goto error;
 	}
 	return &this->public;
+
+error:
+	destroy(this);
+	return NULL;
 }
 #endif /* OPENSSL_NO_EC */
 
