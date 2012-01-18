@@ -175,6 +175,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				old_sa = NULL;
 			}
 			ike_sa->set_state(ike_sa, IKE_CONNECTING);
+			ike_sa->set_proposal(ike_sa, proposal);
 			this->cache->cache(this->cache, ike_sa, message);
 			message = NULL;
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
