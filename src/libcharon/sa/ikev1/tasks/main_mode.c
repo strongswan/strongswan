@@ -262,7 +262,7 @@ METHOD(task_t, build_i, status_t,
 		{
 			u_int16_t group;
 
-			if (!this->ph1->create_hasher(this->ph1, this->proposal))
+			if (!this->ph1->create_hasher(this->ph1))
 			{
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
@@ -353,6 +353,7 @@ METHOD(task_t, process_r, status_t,
 				DBG1(DBG_IKE, "no proposal found");
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
+			this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 			this->method = sa_payload->get_auth_method(sa_payload);
 			this->lifetime = sa_payload->get_lifetime(sa_payload);
@@ -364,7 +365,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			u_int16_t group;
 
-			if (!this->ph1->create_hasher(this->ph1, this->proposal))
+			if (!this->ph1->create_hasher(this->ph1))
 			{
 				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
@@ -454,8 +455,7 @@ METHOD(task_t, build_r, status_t,
 			{
 				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
-			if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method,
-										this->proposal))
+			if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method))
 			{
 				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
@@ -540,6 +540,7 @@ METHOD(task_t, process_i, status_t,
 				DBG1(DBG_IKE, "no proposal found");
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
+			this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 			lifetime = sa_payload->get_lifetime(sa_payload);
 			if (lifetime != this->lifetime)
@@ -563,8 +564,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
-			if (!this->ph1->derive_keys(this->ph1, this->peer_cfg,
-										this->method, this->proposal))
+			if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method))
 			{
 				return send_notify(this, INVALID_KEY_INFORMATION);
 			}

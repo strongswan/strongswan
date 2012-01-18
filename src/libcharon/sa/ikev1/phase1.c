@@ -173,9 +173,10 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 }
 
 METHOD(phase1_t, create_hasher, bool,
-	private_phase1_t *this, proposal_t *proposal)
+	private_phase1_t *this)
 {
-	return this->keymat->create_hasher(this->keymat, proposal);
+	return this->keymat->create_hasher(this->keymat,
+							this->ike_sa->get_proposal(this->ike_sa));
 }
 
 METHOD(phase1_t, create_dh, bool,
@@ -186,8 +187,7 @@ METHOD(phase1_t, create_dh, bool,
 }
 
 METHOD(phase1_t, derive_keys, bool,
-	private_phase1_t *this, peer_cfg_t *peer_cfg, auth_method_t method,
-	proposal_t *proposal)
+	private_phase1_t *this, peer_cfg_t *peer_cfg, auth_method_t method)
 {
 	shared_key_t *shared_key = NULL;
 
@@ -206,7 +206,8 @@ METHOD(phase1_t, derive_keys, bool,
 			break;
 	}
 
-	if (!this->keymat->derive_ike_keys(this->keymat, proposal,
+	if (!this->keymat->derive_ike_keys(this->keymat,
+						this->ike_sa->get_proposal(this->ike_sa),
 						this->dh, this->dh_value, this->nonce_i, this->nonce_r,
 						this->ike_sa->get_id(this->ike_sa), method, shared_key))
 	{

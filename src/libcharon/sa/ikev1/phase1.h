@@ -34,10 +34,9 @@ struct phase1_t {
 	/**
 	 * Create keymat hasher.
 	 *
-	 * @param proposal		negotiated proposal
 	 * @return				TRUE if hasher created
 	 */
-	bool (*create_hasher)(phase1_t *this, proposal_t *proposal);
+	bool (*create_hasher)(phase1_t *this);
 
 	/**
 	 * Create DH object using SA keymat.
@@ -52,11 +51,10 @@ struct phase1_t {
 	 *
 	 * @param peer_cfg		peer config to look up shared key for, or NULL
 	 * @param method		negotiated authenticated method
-	 * @param proposal		selected IKE proposal
 	 * @return				TRUE if successful
 	 */
 	bool (*derive_keys)(phase1_t *this, peer_cfg_t *peer_cfg,
-						auth_method_t method, proposal_t *proposal);
+						auth_method_t method);
 	/**
 	 * Verify a HASH or SIG payload in message.
 	 *
