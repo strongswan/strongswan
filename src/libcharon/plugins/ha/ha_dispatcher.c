@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
+#include <sa/ikev1/keymat_v1.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
@@ -77,6 +78,11 @@ struct ha_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t secret;
+
+	/**
+	 * Own public value
+	 */
+	chunk_t pub;
 };
 
 METHOD(diffie_hellman_t, dh_get_shared_secret, status_t,
@@ -84,6 +90,12 @@ METHOD(diffie_hellman_t, dh_get_shared_secret, status_t,
 {
 	*secret = chunk_clone(this->secret);
 	return SUCCESS;
+}
+
+METHOD(diffie_hellman_t, dh_get_my_public_value, void,
+	ha_diffie_hellman_t *this, chunk_t *value)
+{
+	*value = chunk_clone(this->pub);
 }
 
 METHOD(diffie_hellman_t, dh_destroy, void,
@@ -95,16 +107,18 @@ METHOD(diffie_hellman_t, dh_destroy, void,
 /**
  * Create a HA synced DH implementation
  */
-static diffie_hellman_t *ha_diffie_hellman_create(chunk_t secret)
+static diffie_hellman_t *ha_diffie_hellman_create(chunk_t secret, chunk_t pub)
 {
 	ha_diffie_hellman_t *this;
 
 	INIT(this,
 		.dh = {
 			.get_shared_secret = _dh_get_shared_secret,
+			.get_my_public_value = _dh_get_my_public_value,
 			.destroy = _dh_destroy,
 		},
 		.secret = secret,
+		.pub = pub,
 	);
 
 	return &this->dh;
@@ -119,9 +133,11 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	ha_message_value_t value;
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa = NULL, *old_sa = NULL;
+	ike_version_t version = IKEV2;
 	u_int16_t encr = 0, len = 0, integ = 0, prf = 0, old_prf = PRF_UNDEFINED;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty;
 	chunk_t secret = chunk_empty, old_skd = chunk_empty;
+	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
 	bool ok = FALSE;
 
 	enumerator = message->create_attribute_enumerator(message);
@@ -131,11 +147,14 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			case HA_IKE_ID:
 				ike_sa = ike_sa_create(value.ike_sa_id,
-						value.ike_sa_id->is_initiator(value.ike_sa_id), IKEV2);
+						value.ike_sa_id->is_initiator(value.ike_sa_id), version);
 				break;
 			case HA_IKE_REKEY_ID:
 				old_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 														  value.ike_sa_id);
+				break;
+			case HA_IKE_VERSION:
+				version = value.u8;
 				break;
 			case HA_NONCE_I:
 				nonce_i = value.chunk;
@@ -145,6 +164,15 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				break;
 			case HA_SECRET:
 				secret = value.chunk;
+				break;
+			case HA_LOCAL_DH:
+				dh_local = value.chunk;
+				break;
+			case HA_REMOTE_DH:
+				dh_remote = value.chunk;
+				break;
+			case HA_PSK:
+				psk = value.chunk;
 				break;
 			case HA_OLD_SKD:
 				old_skd = value.chunk;
@@ -189,13 +217,29 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
 		charon->bus->set_sa(charon->bus, ike_sa);
-		dh = ha_diffie_hellman_create(secret);
+		dh = ha_diffie_hellman_create(secret, dh_local);
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
 			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, nonce_i,
 							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+		}
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{
+			keymat_v1_t *keymat_v1 = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+			shared_key_t *shared = NULL;
+			auth_method_t method = AUTH_RSA;
+
+			if (psk.len)
+			{
+				method = AUTH_PSK;
+				shared = shared_key_create(SHARED_IKE, chunk_clone(psk));
+			}
+			ok = keymat_v1->derive_ike_keys(keymat_v1, proposal,
+							dh, dh_remote, nonce_i, nonce_r,
+							ike_sa->get_id(ike_sa), method, shared);
+			DESTROY_IF(shared);
 		}
 		dh->destroy(dh);
 		if (ok)
@@ -518,7 +562,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
-	diffie_hellman_t *dh;
+	diffie_hellman_t *dh = NULL;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -612,16 +656,29 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
-	dh = ha_diffie_hellman_create(secret);
+	if (secret.len)
+	{
+		dh = ha_diffie_hellman_create(secret, chunk_empty);
+	}
 	if (ike_sa->get_version(ike_sa) == IKEV2)
 	{
 		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
-		ok = keymat_v2->derive_child_keys(keymat_v2,
-						proposal, secret.ptr ? dh : NULL, nonce_i, nonce_r,
-						&encr_i, &integ_i, &encr_r, &integ_r);
+		ok = keymat_v2->derive_child_keys(keymat_v2, proposal, dh,
+						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
-	dh->destroy(dh);
+	if (ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		keymat_v1_t *keymat_v1 = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+		u_int32_t spi_i, spi_r;
+
+		spi_i = initiator ? inbound_spi : outbound_spi;
+		spi_r = initiator ? outbound_spi : inbound_spi;
+
+		ok = keymat_v1->derive_child_keys(keymat_v1, proposal, dh, spi_i, spi_r,
+						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
+	}
+	DESTROY_IF(dh);
 	if (!ok)
 	{
 		DBG1(DBG_CHD, "HA CHILD_SA key derivation failed");

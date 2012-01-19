@@ -89,6 +89,7 @@ METHOD(listener_t, ike_keys, bool,
 	}
 
 	m = ha_message_create(HA_IKE_ADD);
+	m->add_attribute(m, HA_IKE_VERSION, ike_sa->get_version(ike_sa));
 	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 
 	if (rekey && rekey->get_version(rekey) == IKEV2)
@@ -123,6 +124,17 @@ METHOD(listener_t, ike_keys, bool,
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	m->add_attribute(m, HA_SECRET, secret);
 	chunk_clear(&secret);
+	if (ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		dh->get_my_public_value(dh, &secret);
+		m->add_attribute(m, HA_LOCAL_DH, secret);
+		chunk_free(&secret);
+		m->add_attribute(m, HA_REMOTE_DH, dh_other);
+		if (shared)
+		{
+			m->add_attribute(m, HA_PSK, shared->get_key(shared));
+		}
+	}
 
 	this->socket->push(this->socket, m);
 	this->cache->cache(this->cache, ike_sa, m);

@@ -213,6 +213,7 @@ METHOD(ha_message_t, add_attribute, void,
 			break;
 		}
 		/* u_int8_t */
+		case HA_IKE_VERSION:
 		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
@@ -263,6 +264,9 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_NONCE_I:
 		case HA_NONCE_R:
 		case HA_SECRET:
+		case HA_LOCAL_DH:
+		case HA_REMOTE_DH:
+		case HA_PSK:
 		case HA_OLD_SKD:
 		{
 			chunk_t chunk;
@@ -426,6 +430,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			return TRUE;
 		}
 		/* u_int8_t */
+		case HA_IKE_VERSION:
 		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
@@ -479,6 +484,9 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_NONCE_I:
 		case HA_NONCE_R:
 		case HA_SECRET:
+		case HA_LOCAL_DH:
+		case HA_REMOTE_DH:
+		case HA_PSK:
 		case HA_OLD_SKD:
 		{
 			size_t len;
