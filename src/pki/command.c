@@ -179,9 +179,8 @@ int command_usage(char *error)
 
 	if (active == help_idx)
 	{
-		char *plugins = lib->plugins->loaded_plugins(lib->plugins);
-		fprintf(out, "loaded plugins: %s\n", plugins);
-		free(plugins);
+		fprintf(out, "loaded plugins: %s\n",
+				lib->plugins->loaded_plugins(lib->plugins));
 	}
 
 	fprintf(out, "usage:\n");

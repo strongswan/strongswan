@@ -201,18 +201,6 @@ METHOD(daemon_t, start, void,
 											   DEFAULT_THREADS));
 }
 
-/**
- * Log loaded plugins
- */
-static void print_plugins()
-{
-	char *plugins;
-
-	plugins = lib->plugins->loaded_plugins(lib->plugins);
-	DBG1(DBG_DMN, "loaded plugins: %s", plugins);
-	free(plugins);
-}
-
 METHOD(daemon_t, initialize, bool,
 	private_daemon_t *this)
 {
@@ -233,8 +221,8 @@ METHOD(daemon_t, initialize, bool,
 	{
 		return FALSE;
 	}
-
-	print_plugins();
+	DBG1(DBG_DMN, "loaded plugins: %s",
+		 lib->plugins->loaded_plugins(lib->plugins));
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)

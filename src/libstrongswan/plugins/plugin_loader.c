@@ -45,6 +45,11 @@ struct private_plugin_loader_t {
 	 * List of plugins, as plugin_entry_t
 	 */
 	linked_list_t *plugins;
+
+	/**
+	 * List of names of loaded plugins
+	 */
+	char *loaded_plugins;
 };
 
 /**
@@ -202,6 +207,38 @@ METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 							this->plugins->create_enumerator(this->plugins),
 							(void*)plugin_filter, NULL, NULL);
 }
+
+/**
+ * Create a list of the names of all loaded plugins
+ */
+static char* loaded_plugins_list(private_plugin_loader_t *this)
+{
+	int buf_len = 128, len = 0;
+	char *buf, *name;
+	enumerator_t *enumerator;
+	plugin_t *plugin;
+
+	buf = malloc(buf_len);
+	buf[0] = '\0';
+	enumerator = create_plugin_enumerator(this);
+	while (enumerator->enumerate(enumerator, &plugin, NULL))
+	{
+		name = plugin->get_name(plugin);
+		if (len + (strlen(name) + 1) >= buf_len)
+		{
+			buf_len <<= 1;
+			buf = realloc(buf, buf_len);
+		}
+		len += snprintf(&buf[len], buf_len - len, "%s ", name);
+	}
+	enumerator->destroy(enumerator);
+	if (len > 0 && buf[len - 1] == ' ')
+	{
+		buf[len - 1] = '\0';
+	}
+	return buf;
+}
+
 
 /**
  * Check if a plugin is already loaded
@@ -516,6 +553,11 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		/* unload plugins that we were not able to load any features for */
 		purge_plugins(this);
 	}
+	if (!critical_failed)
+	{
+		free(this->loaded_plugins);
+		this->loaded_plugins = loaded_plugins_list(this);
+	}
 	return !critical_failed;
 }
 
@@ -558,6 +600,8 @@ METHOD(plugin_loader_t, unload, void,
 		}
 		enumerator->destroy(enumerator);
 	}
+	free(this->loaded_plugins);
+	this->loaded_plugins = NULL;
 }
 
 /**
@@ -609,25 +653,7 @@ METHOD(plugin_loader_t, reload, u_int,
 METHOD(plugin_loader_t, loaded_plugins, char*,
 	private_plugin_loader_t *this)
 {
-#define BUF_LEN 512
-	char *buf = malloc(BUF_LEN);
-	int len = 0;
-	enumerator_t *enumerator;
-	plugin_t *plugin;
-
-	buf[0] = '\0';
-	enumerator = create_plugin_enumerator(this);
-	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin, NULL))
-	{
-		len += snprintf(&buf[len], BUF_LEN - len, "%s ",
-						plugin->get_name(plugin));
-	}
-	enumerator->destroy(enumerator);
-	if (len > 0 && buf[len - 1] == ' ')
-	{
-		buf[len - 1] = '\0';
-	}
-	return buf;
+	return this->loaded_plugins ?: "";
 }
 
 METHOD(plugin_loader_t, destroy, void,
@@ -635,6 +661,7 @@ METHOD(plugin_loader_t, destroy, void,
 {
 	unload(this);
 	this->plugins->destroy(this->plugins);
+	free(this->loaded_plugins);
 	free(this);
 }
 

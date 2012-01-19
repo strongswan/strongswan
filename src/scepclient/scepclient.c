@@ -276,18 +276,6 @@ usage(const char *message)
 }
 
 /**
- * Log loaded plugins
- */
-static void print_plugins()
-{
-	char *plugins;
-
-	plugins = lib->plugins->loaded_plugins(lib->plugins);
-	DBG1(DBG_LIB, "  loaded plugins: %s", plugins);
-	free(plugins);
-}
-
-/**
  * @brief main of scepclient
  *
  * @param argc number of arguments
@@ -752,7 +740,8 @@ int main(int argc, char **argv)
 	{
 		exit_scepclient("plugin loading failed");
 	}
-	print_plugins();
+	DBG1(DBG_LIB, "  loaded plugins: %s",
+		 lib->plugins->loaded_plugins(lib->plugins));
 
 	if ((filetype_out == 0) && (!request_ca_certificate))
 	{

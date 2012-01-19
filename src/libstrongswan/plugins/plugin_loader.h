@@ -71,7 +71,9 @@ struct plugin_loader_t {
 	/**
 	 * Get a simple list the names of all loaded plugins.
 	 *
-	 * @return				list of the names of all loaded plugins (allocated)
+	 * The function returns internal data, do not free.
+	 *
+	 * @return				list of the names of all loaded plugins
 	 */
 	char* (*loaded_plugins)(plugin_loader_t *this);
 

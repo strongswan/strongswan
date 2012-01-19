@@ -264,18 +264,6 @@ static const char *pkcs11_init_args = NULL;
 /* options read by optionsfrom */
 options_t *options;
 
-/**
- * Log loaded plugins
- */
-static void print_plugins()
-{
-	char *plugins;
-
-	plugins = lib->plugins->loaded_plugins(lib->plugins);
-	DBG1(DBG_DMN, "loaded plugins: %s", plugins);
-	free(plugins);
-}
-
 int main(int argc, char **argv)
 {
 	bool fork_desired = TRUE;
@@ -693,7 +681,8 @@ int main(int argc, char **argv)
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	print_plugins();
+	DBG1(DBG_DMN, "loaded plugins: %s",
+		 lib->plugins->loaded_plugins(lib->plugins));
 
 	init_builder();
 	if (!init_secret() || !init_crypto())

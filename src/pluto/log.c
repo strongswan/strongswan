@@ -868,11 +868,8 @@ DBG_dump(const char *label, const void *p, size_t len)
 
 static void show_loaded_plugins()
 {
-	char *plugins;
-
-	plugins = lib->plugins->loaded_plugins(lib->plugins);
-	whack_log(RC_COMMENT, "loaded plugins: %s", plugins);
-	free(plugins);
+	whack_log(RC_COMMENT, "loaded plugins: %s",
+			  lib->plugins->loaded_plugins(lib->plugins));
 }
 
 void show_status(bool all, const char *name)
