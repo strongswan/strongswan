@@ -868,19 +868,11 @@ DBG_dump(const char *label, const void *p, size_t len)
 
 static void show_loaded_plugins()
 {
-	char buf[BUF_LEN];
-	plugin_t *plugin;
-	int len = 0;
-	enumerator_t *enumerator;
+	char *plugins;
 
-	buf[0] = '\0';
-	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
-	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin, NULL))
-	{
-		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin->get_name(plugin));
-	}
-	enumerator->destroy(enumerator);
-	whack_log(RC_COMMENT, "loaded plugins: %s", buf);
+	plugins = lib->plugins->loaded_plugins(lib->plugins);
+	whack_log(RC_COMMENT, "loaded plugins: %s", plugins);
+	free(plugins);
 }
 
 void show_status(bool all, const char *name)

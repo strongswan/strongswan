@@ -415,7 +415,7 @@ METHOD(stroke_list_t, status, void,
 	{
 		peer_cfg_t *peer_cfg;
 		plugin_t *plugin;
-		char *pool;
+		char *pool, *plugins;
 		host_t *host;
 		u_int32_t dpd;
 		time_t since, now;
@@ -449,14 +449,9 @@ METHOD(stroke_list_t, status, void,
 		}
 		fprintf(out, ", scheduled: %d\n",
 				lib->scheduler->get_job_load(lib->scheduler));
-		fprintf(out, "  loaded plugins: ");
-		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
-		while (enumerator->enumerate(enumerator, &plugin, NULL))
-		{
-			fprintf(out, "%s ", plugin->get_name(plugin));
-		}
-		enumerator->destroy(enumerator);
-		fprintf(out, "\n");
+		plugins = lib->plugins->loaded_plugins(lib->plugins);
+		fprintf(out, "  loaded plugins: %s\n", plugins);
+		free(plugins);
 
 		first = TRUE;
 		enumerator = this->attribute->create_pool_enumerator(this->attribute);

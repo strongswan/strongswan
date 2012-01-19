@@ -206,20 +206,11 @@ METHOD(daemon_t, start, void,
  */
 static void print_plugins()
 {
-	char buf[512];
-	int len = 0;
-	enumerator_t *enumerator;
-	plugin_t *plugin;
+	char *plugins;
 
-	buf[0] = '\0';
-	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
-	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin, NULL))
-	{
-		len += snprintf(&buf[len], sizeof(buf)-len, "%s ",
-						plugin->get_name(plugin));
-	}
-	enumerator->destroy(enumerator);
-	DBG1(DBG_DMN, "loaded plugins: %s", buf);
+	plugins = lib->plugins->loaded_plugins(lib->plugins);
+	DBG1(DBG_DMN, "loaded plugins: %s", plugins);
+	free(plugins);
 }
 
 METHOD(daemon_t, initialize, bool,
