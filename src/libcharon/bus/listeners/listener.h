@@ -84,13 +84,17 @@ struct listener_t {
 	/**
 	 * Hook called for received/sent messages of an IKE_SA.
 	 *
+	 * The hook is invoked twice for each message: Once with plain, parsed data
+	 * and once encoded and encrypted.
+	 *
 	 * @param ike_sa	IKE_SA sending/receiving a message
 	 * @param message	message object
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
+	 * @param plain		TRUE if message is parsed and decrypted, FALSE it not
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*message)(listener_t *this, ike_sa_t *ike_sa, message_t *message,
-					bool incoming);
+					bool incoming, bool plain);
 
 	/**
 	 * Hook called with IKE_SA key material.

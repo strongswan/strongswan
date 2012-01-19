@@ -235,10 +235,15 @@ struct bus_t {
 	/**
 	 * Message send/receive hook.
 	 *
+	 * The hook is invoked twice for each message: Once with plain, parsed data
+	 * and once encoded and encrypted.
+	 *
 	 * @param message	message to send/receive
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
+	 * @param plain		TRUE if message is parsed and decrypted, FALSE it not
+	 * @param
 	 */
-	void (*message)(bus_t *this, message_t *message, bool incoming);
+	void (*message)(bus_t *this, message_t *message, bool incoming, bool plain);
 
 	/**
 	 * IKE_SA authorization hook.

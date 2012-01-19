@@ -32,9 +32,9 @@ struct private_force_cookie_t {
 
 METHOD(listener_t, message, bool,
 	private_force_cookie_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (incoming && message->get_request(message) &&
+	if (incoming && plain && message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
 		enumerator_t *enumerator;

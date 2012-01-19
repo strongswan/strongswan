@@ -904,6 +904,8 @@ METHOD(ike_sa_t, update_hosts, void,
 METHOD(ike_sa_t, generate_message, status_t,
 	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
+	status_t status;
+
 	if (message->is_encoded(message))
 	{	/* already done */
 		*packet = message->get_packet(message);
@@ -911,8 +913,13 @@ METHOD(ike_sa_t, generate_message, status_t,
 	}
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
-	charon->bus->message(charon->bus, message, FALSE);
-	return message->generate(message, this->keymat, packet);
+	charon->bus->message(charon->bus, message, FALSE, TRUE);
+	status = message->generate(message, this->keymat, packet);
+	if (status == SUCCESS)
+	{
+		charon->bus->message(charon->bus, message, FALSE, FALSE);
+	}
+	return status;
 }
 
 METHOD(ike_sa_t, set_kmaddress, void,

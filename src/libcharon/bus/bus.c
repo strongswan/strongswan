@@ -406,7 +406,7 @@ METHOD(bus_t, child_state_change, void,
 }
 
 METHOD(bus_t, message, void,
-	private_bus_t *this, message_t *message, bool incoming)
+	private_bus_t *this, message_t *message, bool incoming, bool plain)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -425,7 +425,7 @@ METHOD(bus_t, message, void,
 		}
 		entry->calling++;
 		keep = entry->listener->message(entry->listener, ike_sa,
-										message, incoming);
+										message, incoming, plain);
 		entry->calling--;
 		if (!keep)
 		{

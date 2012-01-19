@@ -92,9 +92,9 @@ static size_t calculate_wire_size(message_t *message, ike_sa_t *ike_sa)
 
 METHOD(listener_t, message, bool,
 	private_ike_auth_fill_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{

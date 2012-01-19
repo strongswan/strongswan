@@ -311,35 +311,38 @@ static void process_auth_response(private_pretend_auth_t *this,
 
 METHOD(listener_t, message, bool,
 	private_pretend_auth_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (incoming)
+	if (plain)
 	{
-		if (!message->get_request(message))
+		if (incoming)
 		{
-			if (message->get_exchange_type(message) == IKE_SA_INIT)
+			if (!message->get_request(message))
 			{
-				process_init_response(this, ike_sa, message);
-			}
-			if (message->get_exchange_type(message) == IKE_AUTH &&
-				message->get_message_id(message) == 1)
-			{
-				process_auth_response(this, ike_sa, message);
+				if (message->get_exchange_type(message) == IKE_SA_INIT)
+				{
+					process_init_response(this, ike_sa, message);
+				}
+				if (message->get_exchange_type(message) == IKE_AUTH &&
+					message->get_message_id(message) == 1)
+				{
+					process_auth_response(this, ike_sa, message);
+				}
 			}
 		}
-	}
-	else
-	{
-		if (message->get_request(message))
+		else
 		{
-			if (message->get_exchange_type(message) == IKE_SA_INIT)
+			if (message->get_request(message))
 			{
-				process_init_request(this, ike_sa, message);
-			}
-			if (message->get_exchange_type(message) == IKE_AUTH &&
-				message->get_message_id(message) == 1)
-			{
-				process_auth_request(this, ike_sa, message);
+				if (message->get_exchange_type(message) == IKE_SA_INIT)
+				{
+					process_init_request(this, ike_sa, message);
+				}
+				if (message->get_exchange_type(message) == IKE_AUTH &&
+					message->get_message_id(message) == 1)
+				{
+					process_auth_request(this, ike_sa, message);
+				}
 			}
 		}
 	}

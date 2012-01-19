@@ -1036,6 +1036,7 @@ METHOD(task_manager_t, process_message, status_t,
 	status_t status;
 	u_int32_t mid;
 
+	charon->bus->message(charon->bus, msg, TRUE, FALSE);
 	status = parse_message(this, msg);
 	if (status != SUCCESS)
 	{
@@ -1087,7 +1088,7 @@ METHOD(task_manager_t, process_message, status_t,
 					this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 				}
 			}
-			charon->bus->message(charon->bus, msg, TRUE);
+			charon->bus->message(charon->bus, msg, TRUE, TRUE);
 			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
 				return SUCCESS;
@@ -1132,7 +1133,7 @@ METHOD(task_manager_t, process_message, status_t,
 					this->ike_sa->update_hosts(this->ike_sa, me, other, FALSE);
 				}
 			}
-			charon->bus->message(charon->bus, msg, TRUE);
+			charon->bus->message(charon->bus, msg, TRUE, TRUE);
 			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
 				return SUCCESS;

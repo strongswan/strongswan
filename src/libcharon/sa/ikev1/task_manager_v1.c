@@ -1045,6 +1045,7 @@ METHOD(task_manager_t, process_message, status_t,
 		 this->active_tasks->get_count(this->active_tasks)))
 	{
 		msg->set_request(msg, FALSE);
+		charon->bus->message(charon->bus, msg, TRUE, FALSE);
 		status = parse_message(this, msg);
 		if (status != SUCCESS)
 		{
@@ -1053,7 +1054,7 @@ METHOD(task_manager_t, process_message, status_t,
 		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 									time_monotonic(NULL));
 		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
-		charon->bus->message(charon->bus, msg, TRUE);
+		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_response(this, msg) != SUCCESS)
 		{
 			flush(this);
@@ -1110,6 +1111,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 
 		msg->set_request(msg, TRUE);
+		charon->bus->message(charon->bus, msg, TRUE, FALSE);
 		status = parse_message(this, msg);
 		if (status != SUCCESS)
 		{
@@ -1141,7 +1143,7 @@ METHOD(task_manager_t, process_message, status_t,
 						"charon.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT));
 		}
 		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
-		charon->bus->message(charon->bus, msg, TRUE);
+		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_request(this, msg) != SUCCESS)
 		{
 			flush(this);

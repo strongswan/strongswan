@@ -175,34 +175,37 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 
 METHOD(listener_t, message, bool,
 	private_rebuild_auth_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming && message->get_message_id(message) == 1)
+	if (plain)
 	{
-		rebuild_auth(this, ike_sa, message);
-	}
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
-		if (incoming)
+		if (!incoming && message->get_message_id(message) == 1)
 		{
-			nonce_payload_t *nonce;
-
-			nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
-			if (nonce)
-			{
-				free(this->nonce.ptr);
-				this->nonce = nonce->get_nonce(nonce);
-			}
+			rebuild_auth(this, ike_sa, message);
 		}
-		else
+		if (message->get_exchange_type(message) == IKE_SA_INIT)
 		{
-			packet_t *packet;
-
-			if (message->generate(message, NULL, &packet) == SUCCESS)
+			if (incoming)
 			{
-				free(this->ike_init.ptr);
-				this->ike_init = chunk_clone(packet->get_data(packet));
-				packet->destroy(packet);
+				nonce_payload_t *nonce;
+
+				nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+				if (nonce)
+				{
+					free(this->nonce.ptr);
+					this->nonce = nonce->get_nonce(nonce);
+				}
+			}
+			else
+			{
+				packet_t *packet;
+
+				if (message->generate(message, NULL, &packet) == SUCCESS)
+				{
+					free(this->ike_init.ptr);
+					this->ike_init = chunk_clone(packet->get_data(packet));
+					packet->destroy(packet);
+				}
 			}
 		}
 	}

@@ -111,9 +111,9 @@ static linked_list_t* load_proposals(private_custom_proposal_t *this,
 
 METHOD(listener_t, message, bool,
 	private_custom_proposal_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
