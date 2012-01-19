@@ -16,6 +16,7 @@
 #include "ha_ike.h"
 
 #include <sa/ikev2/keymat_v2.h>
+#include <sa/ikev1/keymat_v1.h>
 
 typedef struct private_ha_ike_t private_ha_ike_t;
 
@@ -245,39 +246,62 @@ METHOD(listener_t, message_hook, bool,
 		return TRUE;
 	}
 
-	if (message->get_exchange_type(message) != IKE_SA_INIT &&
-		message->get_request(message))
-	{	/* we sync on requests, but skip it on IKE_SA_INIT */
-		ha_message_t *m;
+	if (plain && ike_sa->get_version(ike_sa) == IKEV2)
+	{
+		if (message->get_exchange_type(message) != IKE_SA_INIT &&
+			message->get_request(message))
+		{	/* we sync on requests, but skip it on IKE_SA_INIT */
+			ha_message_t *m;
 
-		if (incoming)
-		{
-			m = ha_message_create(HA_IKE_MID_RESPONDER);
-		}
-		else
-		{
-			m = ha_message_create(HA_IKE_MID_INITIATOR);
-		}
-		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-		m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
-		this->socket->push(this->socket, m);
-		this->cache->cache(this->cache, ike_sa, m);
-	}
-	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-		message->get_exchange_type(message) == IKE_AUTH &&
-		!message->get_request(message))
-	{	/* After IKE_SA has been established, sync peers virtual IP.
-		 * We cannot sync it in the state_change hook, it is installed later.
-		 * TODO: where to sync local VIP? */
-		ha_message_t *m;
-		host_t *vip;
-
-		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-		if (vip)
-		{
-			m = ha_message_create(HA_IKE_UPDATE);
+			if (incoming)
+			{
+				m = ha_message_create(HA_IKE_MID_RESPONDER);
+			}
+			else
+			{
+				m = ha_message_create(HA_IKE_MID_INITIATOR);
+			}
 			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-			m->add_attribute(m, HA_REMOTE_VIP, vip);
+			m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
+			this->socket->push(this->socket, m);
+			this->cache->cache(this->cache, ike_sa, m);
+		}
+		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+			message->get_exchange_type(message) == IKE_AUTH &&
+			!message->get_request(message))
+		{	/* After IKE_SA has been established, sync peers virtual IP.
+			 * We cannot sync it in the state_change hook, it is installed later.
+			 * TODO: where to sync local VIP? */
+			ha_message_t *m;
+			host_t *vip;
+
+			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+			if (vip)
+			{
+				m = ha_message_create(HA_IKE_UPDATE);
+				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+				m->add_attribute(m, HA_REMOTE_VIP, vip);
+				this->socket->push(this->socket, m);
+				this->cache->cache(this->cache, ike_sa, m);
+			}
+		}
+	}
+	if (!plain && ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		ha_message_t *m;
+		keymat_v1_t *keymat;
+		u_int32_t mid;
+		chunk_t iv;
+
+		mid = message->get_message_id(message);
+		if (mid == 0)
+		{
+			keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+			iv = keymat->get_iv(keymat, mid);
+			m = ha_message_create(HA_IKE_IV);
+			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+			m->add_attribute(m, HA_IV, iv);
+			free(iv.ptr);
 			this->socket->push(this->socket, m);
 			this->cache->cache(this->cache, ike_sa, m);
 		}

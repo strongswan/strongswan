@@ -46,7 +46,7 @@ struct private_ha_message_t {
 	chunk_t buf;
 };
 
-ENUM(ha_message_type_names, HA_IKE_ADD, HA_RESYNC,
+ENUM(ha_message_type_names, HA_IKE_ADD, HA_IKE_IV,
 	"IKE_ADD",
 	"IKE_UPDATE",
 	"IKE_MID_INITIATOR",
@@ -58,6 +58,7 @@ ENUM(ha_message_type_names, HA_IKE_ADD, HA_RESYNC,
 	"SEGMENT_TAKE",
 	"STATUS",
 	"RESYNC",
+	"IKE_IV",
 );
 
 typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
@@ -267,6 +268,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_LOCAL_DH:
 		case HA_REMOTE_DH:
 		case HA_PSK:
+		case HA_IV:
 		case HA_OLD_SKD:
 		{
 			chunk_t chunk;
@@ -487,6 +489,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_LOCAL_DH:
 		case HA_REMOTE_DH:
 		case HA_PSK:
+		case HA_IV:
 		case HA_OLD_SKD:
 		{
 			size_t len;

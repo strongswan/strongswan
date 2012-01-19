@@ -63,6 +63,8 @@ enum ha_message_type_t {
 	HA_STATUS,
 	/** segments the receiving node is requested to resync */
 	HA_RESYNC,
+	/** IV synchronization for IKEv1 Main/Aggressive mode */
+	HA_IKE_IV,
 };
 
 /**
@@ -150,6 +152,8 @@ enum ha_message_attribute_t {
 	HA_REMOTE_DH,
 	/** chunk_t, shared secret for IKEv1 key derivation */
 	HA_PSK,
+	/** chunk_t, IV for next IKEv1 message */
+	HA_IV,
 };
 
 /**

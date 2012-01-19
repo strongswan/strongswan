@@ -479,6 +479,57 @@ static void process_ike_mid(private_ha_dispatcher_t *this,
 }
 
 /**
+ * Process messages of type IKE_IV
+ */
+static void process_ike_iv(private_ha_dispatcher_t *this, ha_message_t *message)
+{
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa = NULL;
+	chunk_t iv = chunk_empty;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		switch (attribute)
+		{
+			case HA_IKE_ID:
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
+				break;
+			case HA_IV:
+				iv = value.chunk;
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (ike_sa)
+	{
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{
+			if (iv.len)
+			{
+				keymat_v1_t *keymat;
+
+				keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
+				keymat->update_iv(keymat, 0, iv);
+				keymat->confirm_iv(keymat, 0);
+			}
+		}
+		this->cache->cache(this->cache, ike_sa, message);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		message->destroy(message);
+	}
+}
+
+/**
  * Process messages of type IKE_DELETE
  */
 static void process_ike_delete(private_ha_dispatcher_t *this,
@@ -931,6 +982,9 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 			break;
 		case HA_IKE_MID_RESPONDER:
 			process_ike_mid(this, message, FALSE);
+			break;
+		case HA_IKE_IV:
+			process_ike_iv(this, message);
 			break;
 		case HA_IKE_DELETE:
 			process_ike_delete(this, message);
