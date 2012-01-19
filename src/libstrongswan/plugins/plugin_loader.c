@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2012 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -606,6 +606,30 @@ METHOD(plugin_loader_t, reload, u_int,
 	return reloaded;
 }
 
+METHOD(plugin_loader_t, loaded_plugins, char*,
+	private_plugin_loader_t *this)
+{
+#define BUF_LEN 512
+	char *buf = malloc(BUF_LEN);
+	int len = 0;
+	enumerator_t *enumerator;
+	plugin_t *plugin;
+
+	buf[0] = '\0';
+	enumerator = create_plugin_enumerator(this);
+	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin, NULL))
+	{
+		len += snprintf(&buf[len], BUF_LEN - len, "%s ",
+						plugin->get_name(plugin));
+	}
+	enumerator->destroy(enumerator);
+	if (len > 0 && buf[len - 1] == ' ')
+	{
+		buf[len - 1] = '\0';
+	}
+	return buf;
+}
+
 METHOD(plugin_loader_t, destroy, void,
 	private_plugin_loader_t *this)
 {
@@ -627,6 +651,7 @@ plugin_loader_t *plugin_loader_create()
 			.reload = _reload,
 			.unload = _unload,
 			.create_plugin_enumerator = _create_plugin_enumerator,
+			.loaded_plugins = _loaded_plugins,
 			.destroy = _destroy,
 		},
 		.plugins = linked_list_create(),

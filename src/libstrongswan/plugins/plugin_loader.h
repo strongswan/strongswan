@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -66,6 +67,13 @@ struct plugin_loader_t {
 	 * @return				enumerator over plugin_t*, linked_list_t*
 	 */
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
+
+	/**
+	 * Get a simple list the names of all loaded plugins.
+	 *
+	 * @return				list of the names of all loaded plugins (allocated)
+	 */
+	char* (*loaded_plugins)(plugin_loader_t *this);
 
 	/**
 	 * Unload loaded plugins, destroy plugin_loader instance.
