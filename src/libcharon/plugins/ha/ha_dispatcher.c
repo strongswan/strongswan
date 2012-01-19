@@ -236,9 +236,12 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				method = AUTH_PSK;
 				shared = shared_key_create(SHARED_IKE, chunk_clone(psk));
 			}
-			ok = keymat_v1->derive_ike_keys(keymat_v1, proposal,
-							dh, dh_remote, nonce_i, nonce_r,
-							ike_sa->get_id(ike_sa), method, shared);
+			if (keymat_v1->create_hasher(keymat_v1, proposal))
+			{
+				ok = keymat_v1->derive_ike_keys(keymat_v1, proposal,
+								dh, dh_remote, nonce_i, nonce_r,
+								ike_sa->get_id(ike_sa), method, shared);
+			}
 			DESTROY_IF(shared);
 		}
 		dh->destroy(dh);
