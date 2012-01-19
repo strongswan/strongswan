@@ -997,6 +997,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			{
 				ike_version = IKEV1;
 				is_init = TRUE;
+				if (id->is_initiator(id))
+				{	/* not set in IKEv1, switch back before applying to new SA */
+					id->switch_initiator(id);
+				}
 			}
 		}
 	}
