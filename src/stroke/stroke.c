@@ -139,7 +139,6 @@ static int add_connection(char *name,
 
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.version = 2;
-	msg.add_conn.auth_method = 2;
 	msg.add_conn.mode = 1;
 	msg.add_conn.mobike = 1;
 	msg.add_conn.dpd.action = 1;

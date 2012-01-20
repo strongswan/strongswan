@@ -247,7 +247,7 @@ acceptable values are
 .br
 The IKEv2 daemon currently supports ESP only.
 .TP
-.BR authby " = " pubkey " | rsasig | ecdsasig | psk | eap | never | xauth..."
+.BR authby " = " pubkey " | rsasig | ecdsasig | psk | never | xauthpsk | xauthrsasig"
 how the two security gateways should authenticate each other;
 acceptable values are
 .B psk
@@ -269,12 +269,7 @@ IKEv1 additionally supports the values
 and
 .B xauthrsasig
 that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
-based on shared secrets  or digital RSA signatures, respectively.
-IKEv2 additionally supports the value
-.BR eap ,
-which indicates an initiator to request EAP authentication. The EAP method
-to use is selected by the server (see
-.BR eap ).
+based on shared secrets or digital RSA signatures, respectively.
 This parameter is deprecated for IKEv2 connections, as two peers do not need
 to agree on an authentication method. Use the
 .B leftauth
@@ -376,31 +371,6 @@ might trigger a closeaction when not desired.
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
 not send or receive any traffic. Currently supported in IKEv2 connections only.
-.TP
-.BR eap " = md5 | mschapv2 | radius | ... | <type> | <type>-<vendor>
-defines the EAP type to propose as server if the client requests EAP
-authentication. Currently supported values are
-.B aka
-for EAP-AKA,
-.B gtc
-for EAP-GTC,
-.B md5
-for EAP-MD5,
-.B mschapv2
-for EAP-MS-CHAPv2,
-.B radius
-for the EAP-RADIUS proxy and
-.B sim
-for EAP-SIM. Additionally, IANA assigned EAP method numbers are accepted, or a
-definition in the form
-.B eap=type-vendor
-(e.g. eap=7-12345) can be used to specify vendor specific EAP types.
-This parameter is deprecated in the favour of
-.B leftauth.
-
-To forward EAP authentication to a RADIUS server using the EAP-RADIUS plugin,
-set
-.BR eap=radius .
 .TP
 .BR eap_identity " = <id>"
 defines the identity the client uses to reply to a EAP Identity request.
@@ -598,12 +568,13 @@ For
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
+.BR eap-sim ,
 .BR eap-gtc ,
 .BR eap-md5 ,
 .BR eap-tls ,
 .B eap-mschapv2
 and
-.BR eap-sim .
+.BR eap-radius .
 Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific
 EAP methods are defined in the form
 .B eap-type-vendor

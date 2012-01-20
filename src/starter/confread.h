@@ -110,8 +110,6 @@ struct starter_conn {
 		starter_state_t state;
 
 		keyexchange_t   keyexchange;
-		u_int32_t       eap_type;
-		u_int32_t       eap_vendor;
 		char            *eap_identity;
 		char            *aaa_identity;
 		char            *xauth_identity;

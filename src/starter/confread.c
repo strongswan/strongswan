@@ -22,8 +22,6 @@
 
 #include <freeswan.h>
 
-#include <eap/eap.h>
-
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
@@ -668,7 +666,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 					{
 						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
 					}
-					else if (streq(value, "xauthpsk") || streq(value, "eap"))
+					else if (streq(value, "xauthpsk"))
 					{
 						conn->policy |= POLICY_XAUTH_PSK | POLICY_ENCRYPT;
 					}
@@ -687,36 +685,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				}
 			}
 			break;
-		case KW_EAP:
-		{
-			char *sep;
-
-			/* check for vendor-type format */
-			sep = strchr(kw->value, '-');
-			if (sep)
-			{
-				*(sep++) = '\0';
-				conn->eap_type = atoi(kw->value);
-				conn->eap_vendor = atoi(sep);
-				if (conn->eap_type == 0 || conn->eap_vendor == 0)
-				{
-					plog("# invalid EAP type: %s=%s", kw->entry->name, kw->value);
-					cfg->err++;
-				}
-				break;
-			}
-			conn->eap_type = eap_type_from_string(kw->value);
-			if (conn->eap_type == 0)
-			{
-				conn->eap_type = atoi(kw->value);
-				if (conn->eap_type == 0)
-				{
-					plog("# unknown EAP type: %s=%s", kw->entry->name, kw->value);
-					cfg->err++;
-				}
-			}
-			break;
-		}
 		case KW_MARK:
 			if (!handle_mark(kw->value, &conn->mark_in))
 			{
