@@ -1269,6 +1269,7 @@ static bool enumerator_filter_wait(private_ike_sa_manager_t *this,
 	if (wait_for_entry(this, *in, *segment))
 	{
 		*out = (*in)->ike_sa;
+		charon->bus->set_sa(charon->bus, *out);
 		return TRUE;
 	}
 	return FALSE;
@@ -1285,9 +1286,18 @@ static bool enumerator_filter_skip(private_ike_sa_manager_t *this,
 		!(*in)->checked_out)
 	{
 		*out = (*in)->ike_sa;
+		charon->bus->set_sa(charon->bus, *out);
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Reset threads SA after enumeration
+ */
+static void reset_sa(void *data)
+{
+	charon->bus->set_sa(charon->bus, NULL);
 }
 
 METHOD(ike_sa_manager_t, create_enumerator, enumerator_t*,
@@ -1295,7 +1305,7 @@ METHOD(ike_sa_manager_t, create_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(create_table_enumerator(this),
 			wait ? (void*)enumerator_filter_wait : (void*)enumerator_filter_skip,
-			this, NULL);
+			this, reset_sa);
 }
 
 METHOD(ike_sa_manager_t, checkin, void,
