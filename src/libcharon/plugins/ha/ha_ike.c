@@ -323,6 +323,36 @@ METHOD(listener_t, message_hook, bool,
 			}
 		}
 	}
+	if (plain && ike_sa->get_version(ike_sa) == IKEV1 &&
+		message->get_exchange_type(message) == INFORMATIONAL_V1)
+	{
+		ha_message_t *m;
+		notify_payload_t *notify;
+		chunk_t data;
+		u_int32_t seq;
+
+		notify = message->get_notify(message, DPD_R_U_THERE);
+		if (notify)
+		{
+			data = notify->get_notification_data(notify);
+			if (data.len == 4)
+			{
+				seq = untoh32(data.ptr);
+				if (incoming)
+				{
+					m = ha_message_create(HA_IKE_MID_RESPONDER);
+				}
+				else
+				{
+					m = ha_message_create(HA_IKE_MID_INITIATOR);
+				}
+				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+				m->add_attribute(m, HA_MID, seq + 1);
+				this->socket->push(this->socket, m);
+				this->cache->cache(this->cache, ike_sa, m);
+			}
+		}
+	}
 	return TRUE;
 }
 
