@@ -379,6 +379,8 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				set_extension(ike_sa, value.u32, EXT_STRONGSWAN);
 				set_extension(ike_sa, value.u32, EXT_EAP_ONLY_AUTHENTICATION);
 				set_extension(ike_sa, value.u32, EXT_MS_WINDOWS);
+				set_extension(ike_sa, value.u32, EXT_XAUTH);
+				set_extension(ike_sa, value.u32, EXT_DPD);
 				break;
 			case HA_CONDITIONS:
 				set_condition(ike_sa, value.u32, COND_NAT_ANY);
@@ -389,6 +391,8 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				set_condition(ike_sa, value.u32, COND_CERTREQ_SEEN);
 				set_condition(ike_sa, value.u32, COND_ORIGINAL_INITIATOR);
 				set_condition(ike_sa, value.u32, COND_STALE);
+				set_condition(ike_sa, value.u32, COND_INIT_CONTACT_SEEN);
+				set_condition(ike_sa, value.u32, COND_XAUTH_AUTHENTICATED);
 				break;
 			default:
 				break;

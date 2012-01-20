@@ -175,7 +175,9 @@ METHOD(listener_t, ike_updown, bool,
 				  | copy_condition(ike_sa, COND_EAP_AUTHENTICATED)
 				  | copy_condition(ike_sa, COND_CERTREQ_SEEN)
 				  | copy_condition(ike_sa, COND_ORIGINAL_INITIATOR)
-				  | copy_condition(ike_sa, COND_STALE);
+				  | copy_condition(ike_sa, COND_STALE)
+				  | copy_condition(ike_sa, COND_INIT_CONTACT_SEEN)
+				  | copy_condition(ike_sa, COND_XAUTH_AUTHENTICATED);
 
 		extension = copy_extension(ike_sa, EXT_NATT)
 				  | copy_extension(ike_sa, EXT_MOBIKE)
@@ -183,7 +185,9 @@ METHOD(listener_t, ike_updown, bool,
 				  | copy_extension(ike_sa, EXT_MULTIPLE_AUTH)
 				  | copy_extension(ike_sa, EXT_STRONGSWAN)
 				  | copy_extension(ike_sa, EXT_EAP_ONLY_AUTHENTICATION)
-				  | copy_extension(ike_sa, EXT_MS_WINDOWS);
+				  | copy_extension(ike_sa, EXT_MS_WINDOWS)
+				  | copy_extension(ike_sa, EXT_XAUTH)
+				  | copy_extension(ike_sa, EXT_DPD);
 
 		id = ike_sa->get_id(ike_sa);
 
