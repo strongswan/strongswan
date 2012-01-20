@@ -229,9 +229,11 @@ struct task_manager_t {
 	 * resets the message IDs and resets all active tasks using the migrate()
 	 * method.
 	 * Use a value of UINT_MAX to keep the current message ID.
+	 * For IKEv1, the arguments do not set the message ID, but the DPD sequence
+	 * number counters.
 	 *
-	 * @param initiate		message ID to initiate exchanges (send)
-	 * @param respond		message ID to respond to exchanges (expect)
+	 * @param initiate		message ID / DPD seq to initiate exchanges (send)
+	 * @param respond		message ID / DPD seq to respond to exchanges (expect)
 	 */
 	void (*reset) (task_manager_t *this, u_int32_t initiate, u_int32_t respond);
 

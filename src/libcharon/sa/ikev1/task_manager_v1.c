@@ -1393,6 +1393,14 @@ METHOD(task_manager_t, reset, void,
 	this->initiating.seqnr = 0;
 	this->initiating.retransmitted = 0;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	if (initiate != UINT_MAX)
+	{
+		this->dpd_send = initiate;
+	}
+	if (respond != UINT_MAX)
+	{
+		this->dpd_recv = respond;
+	}
 
 	/* reset queued tasks */
 	enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
