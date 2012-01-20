@@ -1077,7 +1077,11 @@ METHOD(ike_sa_t, initiate, status_t,
 {
 	if (this->state == IKE_CREATED)
 	{
-		resolve_hosts(this);
+		if (this->my_host->is_anyaddr(this->my_host) ||
+			this->other_host->is_anyaddr(this->other_host))
+		{
+			resolve_hosts(this);
+		}
 
 		if (this->other_host->is_anyaddr(this->other_host)
 #ifdef ME
