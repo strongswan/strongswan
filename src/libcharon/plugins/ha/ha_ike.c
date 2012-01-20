@@ -296,6 +296,7 @@ METHOD(listener_t, message_hook, bool,
 		keymat_v1_t *keymat;
 		u_int32_t mid;
 		chunk_t iv;
+		host_t *vip;
 
 		mid = message->get_message_id(message);
 		if (mid == 0)
@@ -308,6 +309,18 @@ METHOD(listener_t, message_hook, bool,
 			free(iv.ptr);
 			this->socket->push(this->socket, m);
 			this->cache->cache(this->cache, ike_sa, m);
+		}
+		if (!incoming && message->get_exchange_type(message) == TRANSACTION)
+		{
+			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
+			if (vip)
+			{
+				m = ha_message_create(HA_IKE_UPDATE);
+				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+				m->add_attribute(m, HA_REMOTE_VIP, vip);
+				this->socket->push(this->socket, m);
+				this->cache->cache(this->cache, ike_sa, m);
+			}
 		}
 	}
 	return TRUE;
