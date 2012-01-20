@@ -19,6 +19,7 @@
 #include <sa/ikev2/keymat_v2.h>
 #include <sa/ikev1/keymat_v1.h>
 #include <processing/jobs/callback_job.h>
+#include <processing/jobs/adopt_children_job.h>
 
 typedef struct private_ha_dispatcher_t private_ha_dispatcher_t;
 typedef struct ha_diffie_hellman_t ha_diffie_hellman_t;
@@ -426,6 +427,11 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 					this->attr->reserve(this->attr, pool, vip);
 				}
 			}
+		}
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{
+			lib->processor->queue_job(lib->processor, (job_t*)
+							adopt_children_job_create(ike_sa->get_id(ike_sa)));
 		}
 		this->cache->cache(this->cache, ike_sa, message);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);

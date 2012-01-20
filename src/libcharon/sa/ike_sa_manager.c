@@ -1375,7 +1375,8 @@ METHOD(ike_sa_manager_t, checkin, void,
 	}
 
 	/* apply identities for duplicate test */
-	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+	if ((ike_sa->get_state(ike_sa) == IKE_ESTABLISHED ||
+		 ike_sa->get_state(ike_sa) == IKE_PASSIVE) &&
 		entry->my_id == NULL && entry->other_id == NULL)
 	{
 		if (ike_sa->get_version(ike_sa) == IKEV1)

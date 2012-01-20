@@ -88,7 +88,8 @@ METHOD(job_t, execute, void,
 			ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
 			if (ike_sa)
 			{
-				if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+				if ((ike_sa->get_state(ike_sa) == IKE_ESTABLISHED ||
+					 ike_sa->get_state(ike_sa) == IKE_PASSIVE) &&
 					me->equals(me, ike_sa->get_my_host(ike_sa)) &&
 					other->equals(other, ike_sa->get_other_host(ike_sa)) &&
 					xauth->equals(xauth, ike_sa->get_other_eap_id(ike_sa)) &&
