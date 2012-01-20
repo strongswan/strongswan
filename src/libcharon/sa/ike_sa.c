@@ -672,6 +672,7 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					if (supports_extension(this, EXT_DPD))
 					{
+						this->state = state;
 						send_dpd(this);
 					}
 					else
