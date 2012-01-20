@@ -266,7 +266,6 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	char *auth, *id, *cert, *ca;
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
-	char eap_buf[32];
 
 	/* select strings */
 	if (local)
@@ -314,47 +313,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		if (primary)
 		{
-			if (local)
-			{	/* "leftauth" not defined, fall back to deprecated "authby" */
-				switch (msg->add_conn.auth_method)
-				{
-					default:
-					case AUTH_CLASS_PUBKEY:
-						auth = "pubkey";
-						break;
-					case AUTH_CLASS_PSK:
-						auth = "psk";
-						break;
-					case AUTH_CLASS_EAP:
-						auth = "eap";
-						break;
-					case AUTH_CLASS_ANY:
-						auth = "any";
-						break;
-				}
-			}
-			else
-			{	/* "rightauth" not defined, fall back to deprecated "eap" */
-				if (msg->add_conn.eap_type)
-				{
-					if (msg->add_conn.eap_vendor)
-					{
-						snprintf(eap_buf, sizeof(eap_buf), "eap-%d-%d",
-								 msg->add_conn.eap_type,
-								 msg->add_conn.eap_vendor);
-					}
-					else
-					{
-						snprintf(eap_buf, sizeof(eap_buf), "eap-%d",
-								 msg->add_conn.eap_type);
-					}
-					auth = eap_buf;
-				}
-				else
-				{	/* not EAP => no constraints for this peer */
-					auth = "any";
-				}
-			}
+			auth = "pubkey";
 		}
 		else
 		{	/* no second authentication round, fine. But load certificates
