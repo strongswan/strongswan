@@ -214,7 +214,7 @@ static void generate_u_int_type(private_generator_t *this,
 			break;
 		case U_INT_16:
 		case PAYLOAD_LENGTH:
-		case CONFIGURATION_ATTRIBUTE_LENGTH:
+		case ATTRIBUTE_LENGTH:
 			number_of_bits = 16;
 			break;
 		case U_INT_32:
@@ -329,7 +329,7 @@ static void generate_u_int_type(private_generator_t *this,
 		}
 		case U_INT_16:
 		case PAYLOAD_LENGTH:
-		case CONFIGURATION_ATTRIBUTE_LENGTH:
+		case ATTRIBUTE_LENGTH:
 		{
 			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
 			if (this->debug)
@@ -481,7 +481,7 @@ METHOD(generator_t, generate_payload, void,
 			case SPI_SIZE:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
-			case CONFIGURATION_ATTRIBUTE_LENGTH:
+			case ATTRIBUTE_LENGTH:
 				generate_u_int_type(this, rules[i].type, rules[i].offset);
 				break;
 			case RESERVED_BIT:

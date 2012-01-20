@@ -241,7 +241,7 @@ enum encoding_type_t {
 	 * The value is written to the associated data struct.
 	 * The current read pointer is moved 16 bit forward afterwards.
 	 */
-	CONFIGURATION_ATTRIBUTE_LENGTH,
+	ATTRIBUTE_LENGTH,
 
 	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT

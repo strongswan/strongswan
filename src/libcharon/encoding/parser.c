@@ -546,7 +546,7 @@ METHOD(parser_t, parse_payload, status_t,
 				}
 				break;
 			}
-			case CONFIGURATION_ATTRIBUTE_LENGTH:
+			case ATTRIBUTE_LENGTH:
 			{
 				if (!parse_uint16(this, rule_number, output + rule->offset))
 				{

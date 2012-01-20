@@ -71,13 +71,13 @@ struct private_configuration_attribute_t {
  */
 static encoding_rule_t encodings_v2[] = {
 	/* 1 reserved bit */
-	{ RESERVED_BIT,						offsetof(private_configuration_attribute_t, reserved)		},
+	{ RESERVED_BIT,					offsetof(private_configuration_attribute_t, reserved)		},
 	/* type of the attribute as 15 bit unsigned integer */
-	{ ATTRIBUTE_TYPE,					offsetof(private_configuration_attribute_t, attr_type)		},
+	{ ATTRIBUTE_TYPE,				offsetof(private_configuration_attribute_t, attr_type)		},
 	/* Length of attribute value */
-	{ CONFIGURATION_ATTRIBUTE_LENGTH,	offsetof(private_configuration_attribute_t, length_or_value)},
+	{ ATTRIBUTE_LENGTH,				offsetof(private_configuration_attribute_t, length_or_value)},
 	/* Value of attribute if attribute format flag is zero */
-	{ ATTRIBUTE_VALUE,			offsetof(private_configuration_attribute_t, value)			},
+	{ ATTRIBUTE_VALUE,				offsetof(private_configuration_attribute_t, value)			},
 };
 
 /*
