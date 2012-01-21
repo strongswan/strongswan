@@ -32,9 +32,9 @@ typedef struct sql_logger_t sql_logger_t;
 struct sql_logger_t {
 
 	/**
-	 * Implements bus_listener_t interface
+	 * Implements logger_t interface
 	 */
-	listener_t listener;
+	logger_t logger;
 
 	/**
 	 * Destry the backend.

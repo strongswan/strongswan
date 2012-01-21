@@ -31,9 +31,9 @@ typedef struct android_logger_t android_logger_t;
 struct android_logger_t {
 
 	/**
-	 * Implements bus_listener_t interface
+	 * Implements logger_t interface
 	 */
-	listener_t listener;
+	logger_t logger;
 
 	/**
 	 * Destroy the logger.

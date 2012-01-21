@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2012 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,6 +21,7 @@
 #include <threading/thread.h>
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
+#include <threading/rwlock.h>
 
 typedef struct private_bus_t private_bus_t;
 
@@ -34,24 +35,24 @@ struct private_bus_t {
 	bus_t public;
 
 	/**
-	 * List of registered listeners as entry_t's
+	 * List of registered listeners as entry_t.
 	 */
 	linked_list_t *listeners;
 
 	/**
-	 * List of registered listeners implementing listener_t.log() as entry_t
+	 * List of registered loggers.
 	 */
 	linked_list_t *loggers;
 
 	/**
-	 * mutex for the list of listeners, recursively
+	 * Mutex for the list of listeners, recursively.
 	 */
 	mutex_t *mutex;
 
 	/**
-	 * mutex for the list of loggers
+	 * Read-write lock for the list of loggers.
 	 */
-	mutex_t *log_mutex;
+	rwlock_t *log_lock;
 
 	/**
 	 * Thread local storage the threads IKE_SA
@@ -76,61 +77,27 @@ struct entry_t {
 	 */
 	int calling;
 
-	/**
-	 * are we currently logging on this listener
-	 */
-	int logging;
-
-	/**
-	 * TRUE if this listener is active (we use this for the loggers)
-	 */
-	bool enabled;
 };
-
-/**
- * create a listener entry
- */
-static entry_t *entry_create(listener_t *listener)
-{
-	entry_t *this;
-
-	INIT(this,
-		.listener = listener,
-		.enabled = TRUE,
-	);
-	return this;
-}
-
-/**
- * destroy an entry_t
- */
-static void entry_destroy(entry_t *entry)
-{
-	free(entry);
-}
 
 METHOD(bus_t, add_listener, void,
 	private_bus_t *this, listener_t *listener)
 {
-	entry_t *entry = entry_create(listener);
+	entry_t *entry;
+
+	INIT(entry,
+		.listener = listener,
+	);
 
 	this->mutex->lock(this->mutex);
 	this->listeners->insert_last(this->listeners, entry);
 	this->mutex->unlock(this->mutex);
-
-	if (listener->log)
-	{
-		this->log_mutex->lock(this->log_mutex);
-		this->loggers->insert_last(this->loggers, entry);
-		this->log_mutex->unlock(this->log_mutex);
-	}
 }
 
 METHOD(bus_t, remove_listener, void,
 	private_bus_t *this, listener_t *listener)
 {
 	enumerator_t *enumerator;
-	entry_t *entry, *found = NULL;
+	entry_t *entry;
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->listeners->create_enumerator(this->listeners);
@@ -139,33 +106,29 @@ METHOD(bus_t, remove_listener, void,
 		if (entry->listener == listener)
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
-			found = entry;
+			free(entry);
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
-
-	if (found)
-	{
-		this->log_mutex->lock(this->log_mutex);
-		this->loggers->remove(this->loggers, found, NULL);
-		this->log_mutex->unlock(this->log_mutex);
-		entry_destroy(found);
-	}
 }
 
-typedef struct cleanup_data_t cleanup_data_t;
+METHOD(bus_t, add_logger, void,
+	private_bus_t *this, logger_t *logger)
+{
+	this->log_lock->write_lock(this->log_lock);
+	this->loggers->insert_last(this->loggers, logger);
+	this->log_lock->unlock(this->log_lock);
+}
 
-/**
- * data to remove a listener using thread_cleanup_t handler
- */
-struct cleanup_data_t {
-	/** bus instance */
-	private_bus_t *this;
-	/** listener entry */
-	entry_t *entry;
-};
+METHOD(bus_t, remove_logger, void,
+	private_bus_t *this, logger_t *logger)
+{
+	this->log_lock->write_lock(this->log_lock);
+	this->loggers->remove(this->loggers, logger, NULL);
+	this->log_lock->unlock(this->log_lock);
+}
 
 METHOD(bus_t, set_sa, void,
 	private_bus_t *this, ike_sa_t *ike_sa)
@@ -198,29 +161,16 @@ typedef struct {
 } log_data_t;
 
 /**
- * listener->log() invocation as a list remove callback
+ * logger->log() invocation as a invoke_function callback
  */
-static bool log_cb(entry_t *entry, log_data_t *data)
+static void log_cb(logger_t *logger, log_data_t *data)
 {
 	va_list args;
 
-	if (entry->logging)
-	{	/* avoid recursive calls */
-		return FALSE;
-	}
-	entry->logging = TRUE;
-
 	va_copy(args, data->args);
-	if (!entry->listener->log(entry->listener, data->group, data->level,
-							  data->thread, data->ike_sa, data->format, args))
-	{
-		entry->enabled = FALSE;
-		va_end(args);
-		return TRUE;
-	}
+	logger->log(logger, data->group, data->level, data->thread, data->ike_sa,
+				data->format, args);
 	va_end(args);
-	entry->logging = FALSE;
-	return FALSE;
 }
 
 METHOD(bus_t, vlog, void,
@@ -236,11 +186,9 @@ METHOD(bus_t, vlog, void,
 	data.format = format;
 	va_copy(data.args, args);
 
-	this->log_mutex->lock(this->log_mutex);
-	/* We use the remove() method to invoke all listeners. This is cheap and
-	 * does not require an allocation for this performance critical function. */
-	this->loggers->remove(this->loggers, &data, (void*)log_cb);
-	this->log_mutex->unlock(this->log_mutex);
+	this->log_lock->read_lock(this->log_lock);
+	this->loggers->invoke_function(this->loggers, (void*)log_cb, &data);
+	this->log_lock->unlock(this->log_lock);
 
 	va_end(data.args);
 }
@@ -258,14 +206,11 @@ METHOD(bus_t, log_, void,
 /**
  * unregister a listener
  */
-static void unregister_listener(private_bus_t *this, entry_t *entry,
-								enumerator_t *enumerator)
+static inline void unregister_listener(private_bus_t *this, entry_t *entry,
+									   enumerator_t *enumerator)
 {
 	this->listeners->remove_at(this->listeners, enumerator);
-	this->log_mutex->lock(this->log_mutex);
-	this->loggers->remove(this->loggers, entry, NULL);
-	this->log_mutex->unlock(this->log_mutex);
-	entry_destroy(entry);
+	free(entry);
 }
 
 METHOD(bus_t, alert, void,
@@ -287,15 +232,12 @@ METHOD(bus_t, alert, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			va_start(args, alert);
-			keep = entry->listener->alert(entry->listener, ike_sa, alert, args);
-			va_end(args);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		va_start(args, alert);
+		keep = entry->listener->alert(entry->listener, ike_sa, alert, args);
+		va_end(args);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -319,13 +261,10 @@ METHOD(bus_t, ike_state_change, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->ike_state_change(entry->listener, ike_sa, state);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->ike_state_change(entry->listener, ike_sa, state);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -352,14 +291,11 @@ METHOD(bus_t, child_state_change, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->child_state_change(entry->listener, ike_sa,
-													   child_sa, state);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->child_state_change(entry->listener, ike_sa,
+												   child_sa, state);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -386,14 +322,11 @@ METHOD(bus_t, message, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->message(entry->listener, ike_sa,
-											message, incoming, plain);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->message(entry->listener, ike_sa,
+										message, incoming, plain);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -419,14 +352,11 @@ METHOD(bus_t, ike_keys, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->ike_keys(entry->listener, ike_sa, dh, dh_other,
-											 nonce_i, nonce_r, rekey, shared);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->ike_keys(entry->listener, ike_sa, dh, dh_other,
+										 nonce_i, nonce_r, rekey, shared);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -454,14 +384,11 @@ METHOD(bus_t, child_keys, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->child_keys(entry->listener, ike_sa,
-									child_sa, initiator, dh, nonce_i, nonce_r);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->child_keys(entry->listener, ike_sa,
+								child_sa, initiator, dh, nonce_i, nonce_r);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -488,14 +415,11 @@ METHOD(bus_t, child_updown, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->child_updown(entry->listener,
-												 ike_sa, child_sa, up);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->child_updown(entry->listener,
+											 ike_sa, child_sa, up);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -522,14 +446,11 @@ METHOD(bus_t, child_rekey, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->child_rekey(entry->listener, ike_sa,
-												old, new);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->child_rekey(entry->listener, ike_sa,
+											old, new);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -553,13 +474,10 @@ METHOD(bus_t, ike_updown, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -597,13 +515,10 @@ METHOD(bus_t, ike_rekey, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->ike_rekey(entry->listener, old, new);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->ike_rekey(entry->listener, old, new);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -630,14 +545,11 @@ METHOD(bus_t, authorize, bool,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->authorize(entry->listener, ike_sa,
-											  final, &success);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->authorize(entry->listener, ike_sa,
+										  final, &success);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -670,14 +582,11 @@ METHOD(bus_t, narrow, void,
 		{
 			continue;
 		}
-		if (entry->enabled)
-		{
-			entry->calling++;
-			keep = entry->listener->narrow(entry->listener, ike_sa, child_sa,
-										   type, local, remote);
-			entry->calling--;
-		}
-		if (!entry->enabled || !keep)
+		entry->calling++;
+		keep = entry->listener->narrow(entry->listener, ike_sa, child_sa,
+									   type, local, remote);
+		entry->calling--;
+		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
 		}
@@ -689,11 +598,11 @@ METHOD(bus_t, narrow, void,
 METHOD(bus_t, destroy, void,
 	private_bus_t *this)
 {
-	this->thread_sa->destroy(this->thread_sa);
-	this->log_mutex->destroy(this->log_mutex);
-	this->mutex->destroy(this->mutex);
-	this->listeners->destroy_function(this->listeners, (void*)entry_destroy);
+	this->listeners->destroy_function(this->listeners, (void*)free);
 	this->loggers->destroy(this->loggers);
+	this->thread_sa->destroy(this->thread_sa);
+	this->log_lock->destroy(this->log_lock);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -708,6 +617,8 @@ bus_t *bus_create()
 		.public = {
 			.add_listener = _add_listener,
 			.remove_listener = _remove_listener,
+			.add_logger = _add_logger,
+			.remove_logger = _remove_logger,
 			.set_sa = _set_sa,
 			.get_sa = _get_sa,
 			.log = _log_,
@@ -729,7 +640,7 @@ bus_t *bus_create()
 		.listeners = linked_list_create(),
 		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
-		.log_mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.log_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.thread_sa = thread_value_create(NULL),
 	);
 

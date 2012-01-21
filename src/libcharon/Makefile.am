@@ -3,6 +3,7 @@ ipseclib_LTLIBRARIES = libcharon.la
 libcharon_la_SOURCES = \
 bus/bus.c bus/bus.h \
 bus/listeners/listener.h \
+bus/listeners/logger.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backend_manager.c config/backend_manager.h config/backend.h \

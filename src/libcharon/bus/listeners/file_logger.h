@@ -21,7 +21,7 @@
 #ifndef FILE_LOGGER_H_
 #define FILE_LOGGER_H_
 
-#include <bus/listeners/listener.h>
+#include <bus/listeners/logger.h>
 
 typedef struct file_logger_t file_logger_t;
 
@@ -31,9 +31,9 @@ typedef struct file_logger_t file_logger_t;
 struct file_logger_t {
 
 	/**
-	 * Implements the listener_t interface.
+	 * Implements the logger_t interface.
 	 */
-	listener_t listener;
+	logger_t logger;
 
 	/**
 	 * Set the loglevel for a debug group.

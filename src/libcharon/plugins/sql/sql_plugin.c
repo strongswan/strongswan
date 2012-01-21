@@ -64,7 +64,7 @@ METHOD(plugin_t, destroy, void,
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
-	charon->bus->remove_listener(charon->bus, &this->logger->listener);
+	charon->bus->remove_logger(charon->bus, &this->logger->logger);
 	this->config->destroy(this->config);
 	this->cred->destroy(this->cred);
 	this->logger->destroy(this->logger);
@@ -110,7 +110,7 @@ plugin_t *sql_plugin_create()
 
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
-	charon->bus->add_listener(charon->bus, &this->logger->listener);
+	charon->bus->add_logger(charon->bus, &this->logger->logger);
 
 	return &this->public.plugin;
 }

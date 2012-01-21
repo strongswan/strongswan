@@ -31,33 +31,6 @@ typedef struct listener_t listener_t;
 struct listener_t {
 
 	/**
-	 * Log a debugging message.
-	 *
-	 * The implementing signal function returns TRUE to stay registered
-	 * to the bus, or FALSE to unregister itself.
-	 *
-	 * Calling bus_t.log() inside of a registered listener is possible
-	 * from all listener_t callbacks, but recursive calls from log() itself
-	 * are ignored.
-	 *
-	 * Note that calls to bus_t.log() are handled seperately from calls to
-	 * other functions, thus this callback may be called concurrently with
-	 * some of the others. Because of this unregistering from this callback
-	 * does not happen in sync with the other callbacks, thus, one of the other
-	 * callbacks might be called before the listener is finally unregistered.
-	 *
-	 * @param group		kind of the signal (up, down, rekeyed, ...)
-	 * @param level		verbosity level of the signal
-	 * @param thread	ID of the thread raised this signal
-	 * @param ike_sa	IKE_SA associated to the event
-	 * @param format	printf() style format string
-	 * @param args		vprintf() style va_list argument list
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*log)(listener_t *this, debug_t group, level_t level, int thread,
-				ike_sa_t *ike_sa, char* format, va_list args);
-
-	/**
 	 * Hook called if a critical alert is risen.
 	 *
 	 * @param ike_sa	IKE_SA associated to the alert, if any

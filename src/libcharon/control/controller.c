@@ -29,6 +29,7 @@
 
 typedef struct private_controller_t private_controller_t;
 typedef struct interface_listener_t interface_listener_t;
+typedef struct interface_logger_t interface_logger_t;
 
 /**
  * Private data of an stroke_t object.
@@ -42,19 +43,18 @@ struct private_controller_t {
 };
 
 /**
- * helper struct to map listener callbacks to interface callbacks
+ * helper struct for the logger interface
  */
-struct interface_listener_t {
+struct interface_logger_t {
+	/**
+	 * public logger interface
+	 */
+	logger_t public;
 
 	/**
-	 * public bus listener interface
+	 * reference to the listener
 	 */
-	listener_t public;
-
-	/**
-	 * status of the operation, return to method callers
-	 */
-	status_t status;
+	interface_listener_t *listener;
 
 	/**
 	 *  interface callback (listener gets redirected to here)
@@ -65,6 +65,27 @@ struct interface_listener_t {
 	 * user parameter to pass to callback
 	 */
 	void *param;
+};
+
+/**
+ * helper struct to map listener callbacks to interface callbacks
+ */
+struct interface_listener_t {
+
+	/**
+	 * public bus listener interface
+	 */
+	listener_t public;
+
+	/**
+	 * logger interface
+	 */
+	interface_logger_t logger;
+
+	/**
+	 * status of the operation, return to method callers
+	 */
+	status_t status;
 
 	/**
 	 * child configuration, used for initiate
@@ -135,6 +156,7 @@ static inline bool listener_done(interface_listener_t *listener)
 static void listener_cleanup(interface_listener_t *listener)
 {
 	charon->bus->remove_listener(charon->bus, &listener->public);
+	charon->bus->remove_logger(charon->bus, &listener->logger.public);
 	listener->done->destroy(listener->done);
 }
 
@@ -156,6 +178,7 @@ static bool wait_for_listener(interface_listener_t *listener, job_t *job,
 
 	listener->done = semaphore_create(0);
 
+	charon->bus->add_logger(charon->bus, &listener->logger.public);
 	charon->bus->add_listener(charon->bus, &listener->public);
 	lib->processor->queue_job(lib->processor, job);
 
@@ -174,19 +197,18 @@ static bool wait_for_listener(interface_listener_t *listener, job_t *job,
 	return timed_out;
 }
 
-METHOD(listener_t, listener_log, bool,
-	interface_listener_t *this, debug_t group, level_t level, int thread,
+METHOD(logger_t, listener_log, void,
+	interface_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t *ike_sa, char* format, va_list args)
 {
-	if (this->ike_sa == ike_sa)
+	if (this->listener->ike_sa == ike_sa)
 	{
 		if (!this->callback(this->param, group, level, ike_sa, format, args))
 		{
-			this->status = NEED_MORE;
-			return listener_done(this);
+			this->listener->status = NEED_MORE;
+			listener_done(this->listener);
 		}
 	}
-	return TRUE;
 }
 
 METHOD(job_t, get_priority_medium, job_priority_t,
@@ -322,12 +344,16 @@ METHOD(controller_t, initiate, status_t,
 	interface_job_t job = {
 		.listener = {
 			.public = {
-				.log = _listener_log,
 				.ike_state_change = _ike_state_change,
 				.child_state_change = _child_state_change,
 			},
-			.callback = callback,
-			.param = param,
+			.logger = {
+				.public = {
+					.log = _listener_log,
+				},
+				.callback = callback,
+				.param = param,
+			},
 			.status = FAILED,
 			.child_cfg = child_cfg,
 			.peer_cfg = peer_cfg,
@@ -338,6 +364,8 @@ METHOD(controller_t, initiate, status_t,
 			.destroy = _recheckin,
 		},
 	};
+	job.listener.logger.listener = &job.listener;
+
 	if (callback == NULL)
 	{
 		initiate_execute(&job);
@@ -382,12 +410,16 @@ METHOD(controller_t, terminate_ike, status_t,
 	interface_job_t job = {
 		.listener = {
 			.public = {
-				.log = _listener_log,
 				.ike_state_change = _ike_state_change,
 				.child_state_change = _child_state_change,
 			},
-			.callback = callback,
-			.param = param,
+			.logger = {
+				.public = {
+					.log = _listener_log,
+				},
+				.callback = callback,
+				.param = param,
+			},
 			.status = FAILED,
 			.id = unique_id,
 		},
@@ -397,6 +429,7 @@ METHOD(controller_t, terminate_ike, status_t,
 			.destroy = _recheckin,
 		},
 	};
+	job.listener.logger.listener = &job.listener;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													unique_id, FALSE);
@@ -455,12 +488,16 @@ METHOD(controller_t, terminate_child, status_t,
 	interface_job_t job = {
 		.listener = {
 			.public = {
-				.log = _listener_log,
 				.ike_state_change = _ike_state_change,
 				.child_state_change = _child_state_change,
 			},
-			.callback = callback,
-			.param = param,
+			.logger = {
+				.public = {
+					.log = _listener_log,
+				},
+				.callback = callback,
+				.param = param,
+			},
 			.status = FAILED,
 			.id = reqid,
 		},
@@ -470,6 +507,7 @@ METHOD(controller_t, terminate_child, status_t,
 			.destroy = _recheckin,
 		},
 	};
+	job.listener.logger.listener = &job.listener;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													reqid, TRUE);

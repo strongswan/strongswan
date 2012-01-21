@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -31,6 +32,7 @@ typedef struct bus_t bus_t;
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 #include <processing/jobs/job.h>
+#include <bus/listeners/logger.h>
 #include <bus/listeners/listener.h>
 
 /* undefine the definitions from libstrongswan */
@@ -118,12 +120,7 @@ enum narrow_hook_t {
 /**
  * The bus receives events and sends them to all registered listeners.
  *
- * Calls to bus_t.log() are handled seperately from calls to other event
- * functions.  This means that listeners have to be aware that calls to
- * listener_t.log() can happen concurrently with calls to one of the other
- * callbacks.  Due to this unregistering from the log() callback is not fully
- * in sync with the other callbacks, thus, one of these might be called before
- * the listener is finally unregistered.
+ * Loggers are handled separately.
  */
 struct bus_t {
 
@@ -144,6 +141,25 @@ struct bus_t {
 	 * @param listener	listener to unregister.
 	 */
 	void (*remove_listener) (bus_t *this, listener_t *listener);
+
+	/**
+	 * Register a logger with the bus.
+	 *
+	 * The logger is passive; the thread which emitted the event
+	 * processes the logger routine.  This routine may be called concurrently
+	 * by multiple threads.  Recursive calls are not prevented, so logger that
+	 * may cause recursive calls are responsible to avoid infinite loops.
+	 *
+	 * @param logger	logger to register.
+	 */
+	void (*add_logger) (bus_t *this, logger_t *logger);
+
+	/**
+	 * Unregister a logger from the bus.
+	 *
+	 * @param logger	logger to unregister.
+	 */
+	void (*remove_logger) (bus_t *this, logger_t *logger);
 
 	/**
 	 * Set the IKE_SA the calling thread is using.

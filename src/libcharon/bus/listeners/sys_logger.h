@@ -21,7 +21,7 @@
 #ifndef SYS_LOGGER_H_
 #define SYS_LOGGER_H_
 
-#include <bus/listeners/listener.h>
+#include <bus/listeners/logger.h>
 
 typedef struct sys_logger_t sys_logger_t;
 
@@ -31,9 +31,9 @@ typedef struct sys_logger_t sys_logger_t;
 struct sys_logger_t {
 
 	/**
-	 * Implements the listener_t interface.
+	 * Implements the logger_t interface.
 	 */
-	listener_t listener;
+	logger_t logger;
 
 	/**
 	 * Set the loglevel for a debug group.

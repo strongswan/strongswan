@@ -18,6 +18,7 @@
 #include "sql_logger.h"
 
 #include <daemon.h>
+#include <threading/thread_value.h>
 
 typedef struct private_sql_logger_t private_sql_logger_t;
 
@@ -42,20 +43,20 @@ struct private_sql_logger_t {
 	int level;
 
 	/**
-	 * avoid recursive logging
+	 * avoid recursive calls by the same thread
 	 */
-	bool recursive;
+	thread_value_t *recursive;
 };
 
-METHOD(listener_t, log_, bool,
+METHOD(logger_t, log_, void,
 	private_sql_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t* ike_sa, char *format, va_list args)
 {
-	if (this->recursive)
+	if (this->recursive->get(this->recursive))
 	{
-		return TRUE;
+		return;
 	}
-	this->recursive = TRUE;
+	this->recursive->set(this->recursive, this->recursive);
 
 	if (ike_sa && level <= this->level)
 	{
@@ -108,9 +109,7 @@ METHOD(listener_t, log_, bool,
 						  DB_BLOB, local_spi, DB_INT, group, DB_INT, level,
 						  DB_TEXT, buffer);
 	}
-	this->recursive = FALSE;
-	/* always stay registered */
-	return TRUE;
+	this->recursive->set(this->recursive, NULL);
 }
 
 METHOD(sql_logger_t, destroy, void,
@@ -128,12 +127,13 @@ sql_logger_t *sql_logger_create(database_t *db)
 
 	INIT(this,
 		.public = {
-			.listener = {
+			.logger = {
 				.log = _log_,
 			},
 			.destroy = _destroy,
 		},
 		.db = db,
+		.recursive = thread_value_create(NULL),
 		.level = lib->settings->get_int(lib->settings,
 										"charon.plugins.sql.loglevel", -1),
 	);

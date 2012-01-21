@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -48,9 +49,9 @@ struct private_sys_logger_t {
 	bool ike_name;
 };
 
-METHOD(listener_t, log_, bool,
-	   private_sys_logger_t *this, debug_t group, level_t level, int thread,
-	   ike_sa_t* ike_sa, char *format, va_list args)
+METHOD(logger_t, log_, void,
+	private_sys_logger_t *this, debug_t group, level_t level, int thread,
+	ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (level <= this->levels[group])
 	{
@@ -59,7 +60,7 @@ METHOD(listener_t, log_, bool,
 
 		/* write in memory buffer first */
 		vsnprintf(buffer, sizeof(buffer), format, args);
-		/* cache group name */
+		/* cache group name and optional name string */
 		snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
 
 		if (this->ike_name && ike_sa)
@@ -76,7 +77,7 @@ METHOD(listener_t, log_, bool,
 			}
 		}
 
-		/* do a syslog with every line */
+		/* do a syslog for every line */
 		while (current)
 		{
 			next = strchr(current, '\n');
@@ -89,12 +90,10 @@ METHOD(listener_t, log_, bool,
 			current = next;
 		}
 	}
-	/* always stay registered */
-	return TRUE;
 }
 
 METHOD(sys_logger_t, set_level, void,
-	   private_sys_logger_t *this, debug_t group, level_t level)
+	private_sys_logger_t *this, debug_t group, level_t level)
 {
 	if (group < DBG_ANY)
 	{
@@ -110,7 +109,7 @@ METHOD(sys_logger_t, set_level, void,
 }
 
 METHOD(sys_logger_t, destroy, void,
-	   private_sys_logger_t *this)
+	private_sys_logger_t *this)
 {
 	closelog();
 	free(this);
@@ -125,7 +124,7 @@ sys_logger_t *sys_logger_create(int facility, bool ike_name)
 
 	INIT(this,
 		.public = {
-			.listener = {
+			.logger = {
 				.log = _log_,
 			},
 			.set_level = _set_level,

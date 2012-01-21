@@ -335,7 +335,7 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 									   facility, debug_lower_names, group));
 		}
 		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
-		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+		charon->bus->add_logger(charon->bus, &sys_logger->logger);
 	}
 	enumerator->destroy(enumerator);
 
@@ -385,7 +385,7 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 									   filename, debug_lower_names, group));
 		}
 		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
-		charon->bus->add_listener(charon->bus, &file_logger->listener);
+		charon->bus->add_logger(charon->bus, &file_logger->logger);
 
 	}
 	enumerator->destroy(enumerator);
@@ -395,11 +395,11 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 	{
 		/* set up default stdout file_logger */
 		file_logger = file_logger_create(stdout, NULL, FALSE);
-		charon->bus->add_listener(charon->bus, &file_logger->listener);
+		charon->bus->add_logger(charon->bus, &file_logger->logger);
 		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
 		/* set up default daemon sys_logger */
 		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
-		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+		charon->bus->add_logger(charon->bus, &sys_logger->logger);
 		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
 		for (group = 0; group < DBG_MAX; group++)
 		{
@@ -412,7 +412,7 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 
 		/* set up default auth sys_logger */
 		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
-		charon->bus->add_listener(charon->bus, &sys_logger->listener);
+		charon->bus->add_logger(charon->bus, &sys_logger->logger);
 		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
 		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
 	}

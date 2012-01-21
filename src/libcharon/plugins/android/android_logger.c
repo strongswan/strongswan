@@ -41,7 +41,7 @@ struct private_android_logger_t {
 };
 
 
-METHOD(listener_t, log_, bool,
+METHOD(logger_t, log_, void,
 	   private_android_logger_t *this, debug_t group, level_t level,
 	   int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
@@ -64,8 +64,6 @@ METHOD(listener_t, log_, bool,
 			current = next;
 		}
 	}
-	/* always stay registered */
-	return TRUE;
 }
 
 METHOD(android_logger_t, destroy, void,
@@ -83,7 +81,7 @@ android_logger_t *android_logger_create()
 
 	INIT(this,
 		.public = {
-			.listener = {
+			.logger = {
 				.log = _log_,
 			},
 			.destroy = _destroy,
