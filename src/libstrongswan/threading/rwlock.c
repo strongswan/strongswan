@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,6 +23,7 @@
 #include "rwlock.h"
 #include "condvar.h"
 #include "mutex.h"
+#include "thread_value.h"
 #include "lock_profiler.h"
 
 typedef struct private_rwlock_t private_rwlock_t;
@@ -60,6 +61,11 @@ struct private_rwlock_t {
 	 * condvar to handle readers
 	 */
 	condvar_t *readers;
+
+	/**
+	 * thread local value to keep track whether the current thread is a reader
+	 */
+	thread_value_t *is_reading;
 
 	/**
 	 * number of waiting writers
@@ -189,14 +195,24 @@ rwlock_t *rwlock_create(rwlock_type_t type)
  * of incoming readers. Reader starvation is not prevented (this could happen
  * if there are more writers than readers).
  *
- * The implementation does not support recursive locking and readers must not
- * acquire the lock exclusively at the same time and vice-versa (this is not
- * checked or enforced so behave yourself to prevent deadlocks).
+ * The implementation supports recursive locking of the read lock but not of
+ * the write lock.  Readers must not acquire the lock exclusively at the same
+ * time and vice-versa (this is not checked or enforced so behave yourself to
+ * prevent deadlocks).
  */
 
 METHOD(rwlock_t, read_lock, void,
 	private_rwlock_t *this)
 {
+	uintptr_t reading;
+
+	reading = (uintptr_t)this->is_reading->get(this->is_reading);
+	if (reading > 0)
+	{	/* we allow readers to acquire the lock recursively */
+		this->is_reading->set(this->is_reading, (void*)(reading + 1));
+		return;
+	}
+
 	profiler_start(&this->profile);
 	this->mutex->lock(this->mutex);
 	while (this->writer || this->waiting_writers)
@@ -206,6 +222,8 @@ METHOD(rwlock_t, read_lock, void,
 	this->reader_count++;
 	profiler_end(&this->profile);
 	this->mutex->unlock(this->mutex);
+
+	this->is_reading->set(this->is_reading, (void*)1);
 }
 
 METHOD(rwlock_t, write_lock, void,
@@ -241,6 +259,15 @@ METHOD(rwlock_t, try_write_lock, bool,
 METHOD(rwlock_t, unlock, void,
 	private_rwlock_t *this)
 {
+	uintptr_t reading;
+
+	reading = (uintptr_t)this->is_reading->get(this->is_reading);
+	if (reading > 1)
+	{	/* readers have to unlock an equal number of times */
+		this->is_reading->set(this->is_reading, (void*)(reading - 1));
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 	if (this->writer == pthread_self())
 	{
@@ -263,6 +290,8 @@ METHOD(rwlock_t, unlock, void,
 		}
 	}
 	this->mutex->unlock(this->mutex);
+
+	this->is_reading->set(this->is_reading, NULL);
 }
 
 METHOD(rwlock_t, destroy, void,
@@ -271,6 +300,7 @@ METHOD(rwlock_t, destroy, void,
 	this->mutex->destroy(this->mutex);
 	this->writers->destroy(this->writers);
 	this->readers->destroy(this->readers);
+	this->is_reading->destroy(this->is_reading);
 	profiler_cleanup(&this->profile);
 	free(this);
 }
@@ -298,6 +328,7 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 				.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 				.writers = condvar_create(CONDVAR_TYPE_DEFAULT),
 				.readers = condvar_create(CONDVAR_TYPE_DEFAULT),
+				.is_reading = thread_value_create(NULL),
 			);
 
 			profiler_init(&this->profile);
