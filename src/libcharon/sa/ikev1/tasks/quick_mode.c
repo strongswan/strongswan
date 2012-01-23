@@ -26,6 +26,7 @@
 #include <encoding/payloads/payload.h>
 #include <sa/ikev1/tasks/informational.h>
 #include <sa/ikev1/tasks/quick_delete.h>
+#include <processing/jobs/inactivity_job.h>
 
 typedef struct private_quick_mode_t private_quick_mode_t;
 
@@ -135,6 +136,25 @@ struct private_quick_mode_t {
 		QM_NEGOTIATED,
 	} state;
 };
+
+/**
+ * Schedule inactivity timeout for CHILD_SA with reqid, if enabled
+ */
+static void schedule_inactivity_timeout(private_quick_mode_t *this)
+{
+	u_int32_t timeout;
+	bool close_ike;
+
+	timeout = this->config->get_inactivity(this->config);
+	if (timeout)
+	{
+		close_ike = lib->settings->get_bool(lib->settings,
+										"charon.inactivity_close_ike", FALSE);
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
+				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
+									  timeout, close_ike), timeout);
+	}
+}
 
 /**
  * Install negotiated CHILD_SA
@@ -257,8 +277,11 @@ static bool install(private_quick_mode_t *this)
 	{
 		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
 	}
+	if (!this->rekey)
+	{
+		schedule_inactivity_timeout(this);
+	}
 	this->child_sa = NULL;
-
 	return TRUE;
 }
 
