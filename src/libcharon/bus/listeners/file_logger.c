@@ -62,65 +62,65 @@ struct private_file_logger_t {
 
 METHOD(logger_t, log_, void,
 	private_file_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t* ike_sa, char *format, va_list args)
+	ike_sa_t* ike_sa, char *message)
 {
-	if (level <= this->levels[group])
-	{
-		char buffer[8192], timestr[128], namestr[128] = "";
-		char *current = buffer, *next;
-		struct tm tm;
-		time_t t;
+	char timestr[128], namestr[128] = "";
+	char *current = message, *next;
+	struct tm tm;
+	time_t t;
 
-		if (this->time_format)
+	if (this->time_format)
+	{
+		t = time(NULL);
+		localtime_r(&t, &tm);
+		strftime(timestr, sizeof(timestr), this->time_format, &tm);
+	}
+	if (this->ike_name && ike_sa)
+	{
+		if (ike_sa->get_peer_cfg(ike_sa))
 		{
-			t = time(NULL);
-			localtime_r(&t, &tm);
-			strftime(timestr, sizeof(timestr), this->time_format, &tm);
-		}
-		if (this->ike_name && ike_sa)
-		{
-			if (ike_sa->get_peer_cfg(ike_sa))
-			{
-				snprintf(namestr, sizeof(namestr), " <%s|%d>",
-					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
-			}
-			else
-			{
-				snprintf(namestr, sizeof(namestr), " <%d>",
-					ike_sa->get_unique_id(ike_sa));
-			}
+			snprintf(namestr, sizeof(namestr), " <%s|%d>",
+				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
 		else
 		{
-			namestr[0] = '\0';
+			snprintf(namestr, sizeof(namestr), " <%d>",
+				ike_sa->get_unique_id(ike_sa));
 		}
-
-		/* write in memory buffer first */
-		vsnprintf(buffer, sizeof(buffer), format, args);
-
-		/* prepend a prefix in front of every line */
-		this->mutex->lock(this->mutex);
-		while (current)
-		{
-			next = strchr(current, '\n');
-			if (next)
-			{
-				*(next++) = '\0';
-			}
-			if (this->time_format)
-			{
-				fprintf(this->out, "%s %.2d[%N]%s %s\n",
-						timestr, thread, debug_names, group, namestr, current);
-			}
-			else
-			{
-				fprintf(this->out, "%.2d[%N]%s %s\n",
-						thread, debug_names, group, namestr, current);
-			}
-			current = next;
-		}
-		this->mutex->unlock(this->mutex);
 	}
+	else
+	{
+		namestr[0] = '\0';
+	}
+
+	/* prepend a prefix in front of every line */
+	this->mutex->lock(this->mutex);
+	while (current)
+	{
+		next = strchr(current, '\n');
+		if (next)
+		{
+			*(next++) = '\0';
+		}
+		if (this->time_format)
+		{
+			fprintf(this->out, "%s %.2d[%N]%s %s\n",
+					timestr, thread, debug_names, group, namestr, current);
+		}
+		else
+		{
+			fprintf(this->out, "%.2d[%N]%s %s\n",
+					thread, debug_names, group, namestr, current);
+		}
+		current = next;
+	}
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(logger_t, get_level, level_t,
+	private_file_logger_t *this, debug_t group)
+{
+	return this->levels[group];
 }
 
 METHOD(file_logger_t, set_level, void,
@@ -161,6 +161,7 @@ file_logger_t *file_logger_create(FILE *out, char *time_format, bool ike_name)
 		.public = {
 			.logger = {
 				.log = _log_,
+				.get_level = _get_level,
 			},
 			.set_level = _set_level,
 			.destroy = _destroy,

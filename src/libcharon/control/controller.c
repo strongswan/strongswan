@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2012 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
@@ -199,16 +199,24 @@ static bool wait_for_listener(interface_listener_t *listener, job_t *job,
 
 METHOD(logger_t, listener_log, void,
 	interface_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t *ike_sa, char* format, va_list args)
+	ike_sa_t *ike_sa, char* message)
 {
 	if (this->listener->ike_sa == ike_sa)
 	{
-		if (!this->callback(this->param, group, level, ike_sa, format, args))
+		if (!this->callback(this->param, group, level, ike_sa, message))
 		{
 			this->listener->status = NEED_MORE;
 			listener_done(this->listener);
 		}
 	}
+}
+
+METHOD(logger_t, listener_get_level, level_t,
+	interface_logger_t *this, debug_t group)
+{
+	/* in order to allow callback listeners to decide what they want to log
+	 * we request any log message, but only if we actually want logging */
+	return this->callback == controller_cb_empty ? LEVEL_SILENT : LEVEL_PRIVATE;
 }
 
 METHOD(job_t, get_priority_medium, job_priority_t,
@@ -350,6 +358,7 @@ METHOD(controller_t, initiate, status_t,
 			.logger = {
 				.public = {
 					.log = _listener_log,
+					.get_level = _listener_get_level,
 				},
 				.callback = callback,
 				.param = param,
@@ -416,6 +425,7 @@ METHOD(controller_t, terminate_ike, status_t,
 			.logger = {
 				.public = {
 					.log = _listener_log,
+					.get_level = _listener_get_level,
 				},
 				.callback = callback,
 				.param = param,
@@ -494,6 +504,7 @@ METHOD(controller_t, terminate_child, status_t,
 			.logger = {
 				.public = {
 					.log = _listener_log,
+					.get_level = _listener_get_level,
 				},
 				.callback = callback,
 				.param = param,
@@ -560,7 +571,7 @@ METHOD(controller_t, terminate_child, status_t,
  * See header
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
-						 ike_sa_t *ike_sa, char *format, va_list args)
+						 ike_sa_t *ike_sa, char *message)
 {
 	return TRUE;
 }

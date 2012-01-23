@@ -58,11 +58,11 @@ struct stroke_log_info_t {
  * logging to the stroke interface
  */
 static bool stroke_log(stroke_log_info_t *info, debug_t group, level_t level,
-					   ike_sa_t *ike_sa, char *format, va_list args)
+					   ike_sa_t *ike_sa, char *message)
 {
 	if (level <= info->level)
 	{
-		if (vfprintf(info->out, format, args) < 0 ||
+		if (fprintf(info->out, message) < 0 ||
 			fprintf(info->out, "\n") < 0 ||
 			fflush(info->out) != 0)
 		{

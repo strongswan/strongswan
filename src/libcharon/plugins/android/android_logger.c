@@ -47,34 +47,36 @@ struct private_android_logger_t {
 
 
 METHOD(logger_t, log_, void,
-	   private_android_logger_t *this, debug_t group, level_t level,
-	   int thread, ike_sa_t* ike_sa, char *format, va_list args)
+	private_android_logger_t *this, debug_t group, level_t level,
+	int thread, ike_sa_t* ike_sa, char *message)
 {
-	if (level <= this->level)
-	{
-		int prio = level > 1 ? ANDROID_LOG_DEBUG : ANDROID_LOG_INFO;
-		char sgroup[16], buffer[8192];
-		char *current = buffer, *next;
-		snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
-		vsnprintf(buffer, sizeof(buffer), format, args);
-		this->mutex->lock(this->mutex);
-		while (current)
-		{	/* log each line separately */
-			next = strchr(current, '\n');
-			if (next)
-			{
-				*(next++) = '\0';
-			}
-			__android_log_print(prio, "charon", "%.2d[%s] %s\n",
-								thread, sgroup, current);
-			current = next;
+	int prio = level > 1 ? ANDROID_LOG_DEBUG : ANDROID_LOG_INFO;
+	char sgroup[16];
+	char *current = message, *next;
+	snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
+	this->mutex->lock(this->mutex);
+	while (current)
+	{	/* log each line separately */
+		next = strchr(current, '\n');
+		if (next)
+		{
+			*(next++) = '\0';
 		}
-		this->mutex->unlock(this->mutex);
+		__android_log_print(prio, "charon", "%.2d[%s] %s\n",
+							thread, sgroup, current);
+		current = next;
 	}
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(logger_t, get_level, level_t,
+	private_android_logger_t *this, debug_t group)
+{
+	return this->level;
 }
 
 METHOD(android_logger_t, destroy, void,
-	   private_android_logger_t *this)
+	private_android_logger_t *this)
 {
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -91,6 +93,7 @@ android_logger_t *android_logger_create()
 		.public = {
 			.logger = {
 				.log = _log_,
+				.get_level = _get_level,
 			},
 			.destroy = _destroy,
 		},

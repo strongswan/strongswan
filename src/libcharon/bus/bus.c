@@ -40,9 +40,17 @@ struct private_bus_t {
 	linked_list_t *listeners;
 
 	/**
-	 * List of registered loggers.
+	 * List of registered loggers for each log group as log_entry_t.
+	 * Loggers are ordered by descending log level.
+	 * The extra list stores all loggers so we can properly unregister them.
 	 */
-	linked_list_t *loggers;
+	linked_list_t *loggers[DBG_MAX + 1];
+
+	/**
+	 * Maximum log level of any registered logger for each log group.
+	 * This allows to check quickly if a log message has to be logged at all.
+	 */
+	level_t max_level[DBG_MAX + 1];
 
 	/**
 	 * Mutex for the list of listeners, recursively.
@@ -76,6 +84,25 @@ struct entry_t {
 	 * are we currently calling this listener
 	 */
 	int calling;
+
+};
+
+typedef struct log_entry_t log_entry_t;
+
+/**
+ * a logger entry
+ */
+struct log_entry_t {
+
+	/**
+	 * registered logger interface
+	 */
+	logger_t *logger;
+
+	/**
+	 * registered log levels per group
+	 */
+	level_t levels[DBG_MAX];
 
 };
 
@@ -114,11 +141,98 @@ METHOD(bus_t, remove_listener, void,
 	this->mutex->unlock(this->mutex);
 }
 
+/**
+ * Register a logger on the given log group according to the requested level
+ */
+static inline void register_logger(private_bus_t *this, debug_t group,
+								   log_entry_t *entry)
+{
+	enumerator_t *enumerator;
+	linked_list_t *loggers;
+	log_entry_t *current;
+	level_t level;
+
+	loggers = this->loggers[group];
+	level = entry->levels[group];
+
+	enumerator = loggers->create_enumerator(loggers);
+	while (enumerator->enumerate(enumerator, (void**)&current))
+	{
+		if (current->levels[group] <= level)
+		{
+			break;
+		}
+	}
+	loggers->insert_before(loggers, enumerator, entry);
+	enumerator->destroy(enumerator);
+
+	this->max_level[group] = max(this->max_level[group], level);
+}
+
+/**
+ * Unregister a logger from all log groups (destroys the log_entry_t)
+ */
+static inline void unregister_logger(private_bus_t *this, logger_t *logger)
+{
+	enumerator_t *enumerator;
+	linked_list_t *loggers;
+	log_entry_t *entry, *found = NULL;
+
+	loggers = this->loggers[DBG_MAX];
+	enumerator = loggers->create_enumerator(loggers);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->logger == logger)
+		{
+			loggers->remove_at(loggers, enumerator);
+			found = entry;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found)
+	{
+		debug_t group;
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			if (found->levels[group] > LEVEL_SILENT)
+			{
+				loggers = this->loggers[group];
+				loggers->remove(loggers, found, NULL);
+
+				this->max_level[group] = LEVEL_SILENT;
+				if (loggers->get_first(loggers, (void**)&entry) == SUCCESS)
+				{
+					this->max_level[group] = entry->levels[group];
+				}
+			}
+		}
+		free(found);
+	}
+}
+
 METHOD(bus_t, add_logger, void,
 	private_bus_t *this, logger_t *logger)
 {
+	log_entry_t *entry;
+	debug_t group;
+
+	INIT(entry,
+		.logger = logger,
+	);
+
 	this->log_lock->write_lock(this->log_lock);
-	this->loggers->insert_last(this->loggers, logger);
+	unregister_logger(this, logger);
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		entry->levels[group] = logger->get_level(logger, group);
+		if (entry->levels[group] > LEVEL_SILENT)
+		{
+			register_logger(this, group, entry);
+		}
+	}
+	this->loggers[DBG_MAX]->insert_last(this->loggers[DBG_MAX], entry);
 	this->log_lock->unlock(this->log_lock);
 }
 
@@ -126,7 +240,7 @@ METHOD(bus_t, remove_logger, void,
 	private_bus_t *this, logger_t *logger)
 {
 	this->log_lock->write_lock(this->log_lock);
-	this->loggers->remove(this->loggers, logger, NULL);
+	unregister_logger(this, logger);
 	this->log_lock->unlock(this->log_lock);
 }
 
@@ -154,43 +268,41 @@ typedef struct {
 	debug_t group;
 	/** debug level */
 	level_t level;
-	/** format string */
-	char *format;
-	/** argument list */
-	va_list args;
+	/** message */
+	char message[8192];
 } log_data_t;
 
 /**
  * logger->log() invocation as a invoke_function callback
  */
-static void log_cb(logger_t *logger, log_data_t *data)
+static void log_cb(log_entry_t *entry, log_data_t *data)
 {
-	va_list args;
-
-	va_copy(args, data->args);
-	logger->log(logger, data->group, data->level, data->thread, data->ike_sa,
-				data->format, args);
-	va_end(args);
+	if (entry->levels[data->group] < data->level)
+	{
+		return;
+	}
+	entry->logger->log(entry->logger, data->group, data->level,
+					   data->thread, data->ike_sa, data->message);
 }
 
 METHOD(bus_t, vlog, void,
 	private_bus_t *this, debug_t group, level_t level,
 	char* format, va_list args)
 {
-	log_data_t data;
-
-	data.ike_sa = this->thread_sa->get(this->thread_sa);
-	data.thread = thread_current_id();
-	data.group = group;
-	data.level = level;
-	data.format = format;
-	va_copy(data.args, args);
-
 	this->log_lock->read_lock(this->log_lock);
-	this->loggers->invoke_function(this->loggers, (void*)log_cb, &data);
-	this->log_lock->unlock(this->log_lock);
+	if (this->max_level[group] >= level)
+	{
+		linked_list_t *loggers = this->loggers[group];
+		log_data_t data;
 
-	va_end(data.args);
+		data.ike_sa = this->thread_sa->get(this->thread_sa);
+		data.thread = thread_current_id();
+		data.group = group;
+		data.level = level;
+		vsnprintf(data.message, sizeof(data.message), format, args);
+		loggers->invoke_function(loggers, (linked_list_invoke_t)log_cb, &data);
+	}
+	this->log_lock->unlock(this->log_lock);
 }
 
 METHOD(bus_t, log_, void,
@@ -598,8 +710,14 @@ METHOD(bus_t, narrow, void,
 METHOD(bus_t, destroy, void,
 	private_bus_t *this)
 {
+	debug_t group;
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		this->loggers[group]->destroy(this->loggers[group]);
+	}
+	this->loggers[DBG_MAX]->destroy_function(this->loggers[DBG_MAX],
+											 (void*)free);
 	this->listeners->destroy_function(this->listeners, (void*)free);
-	this->loggers->destroy(this->loggers);
 	this->thread_sa->destroy(this->thread_sa);
 	this->log_lock->destroy(this->log_lock);
 	this->mutex->destroy(this->mutex);
@@ -612,6 +730,7 @@ METHOD(bus_t, destroy, void,
 bus_t *bus_create()
 {
 	private_bus_t *this;
+	debug_t group;
 
 	INIT(this,
 		.public = {
@@ -638,11 +757,16 @@ bus_t *bus_create()
 			.destroy = _destroy,
 		},
 		.listeners = linked_list_create(),
-		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.log_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.thread_sa = thread_value_create(NULL),
 	);
+
+	for (group = 0; group <= DBG_MAX; group++)
+	{
+		this->loggers[group] = linked_list_create();
+		this->max_level[group] = LEVEL_SILENT;
+	}
 
 	return &this->public;
 }

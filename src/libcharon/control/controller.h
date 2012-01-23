@@ -24,27 +24,26 @@
 #include <bus/bus.h>
 
 /**
- * callback to log things triggered by controller.
+ * Callback to log things triggered by controller.
  *
- * @param param			echoed parameter supplied when function invoked
+ * @param param			parameter supplied when controller method was called
  * @param group			debugging group
- * @param level			verbosity level if log
+ * @param level			verbosity level
  * @param ike_sa		associated IKE_SA, if any
- * @param format		printf like format string
- * @param args			list of arguments to use for format
- * @return				FALSE to return from invoked function
+ * @param message		log message
+ * @return				FALSE to return from called controller method
  */
 typedef bool (*controller_cb_t)(void* param, debug_t group, level_t level,
-								ike_sa_t* ike_sa, char* format, va_list args);
+								ike_sa_t* ike_sa, char* message);
 
 /**
- * Empty callback function for controller_t functions.
+ * Empty callback function for controller_t methods.
  *
  * If you want to do a synchronous call, but don't need a callback, pass
- * this function to the controllers methods.
+ * this function to the controller methods.
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
-						 ike_sa_t *ike_sa, char *format, va_list args);
+						 ike_sa_t *ike_sa, char *message);
 
 typedef struct controller_t controller_t;
 

@@ -57,47 +57,48 @@ struct private_sys_logger_t {
 
 METHOD(logger_t, log_, void,
 	private_sys_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t* ike_sa, char *format, va_list args)
+	ike_sa_t* ike_sa, char *message)
 {
-	if (level <= this->levels[group])
+	char groupstr[4], namestr[128] = "";
+	char *current = message, *next;
+
+	/* cache group name and optional name string */
+	snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
+
+	if (this->ike_name && ike_sa)
 	{
-		char buffer[8192], groupstr[4], namestr[128] = "";
-		char *current = buffer, *next;
-
-		/* write in memory buffer first */
-		vsnprintf(buffer, sizeof(buffer), format, args);
-		/* cache group name and optional name string */
-		snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
-
-		if (this->ike_name && ike_sa)
+		if (ike_sa->get_peer_cfg(ike_sa))
 		{
-			if (ike_sa->get_peer_cfg(ike_sa))
-			{
-				snprintf(namestr, sizeof(namestr), " <%s|%d>",
-					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
-			}
-			else
-			{
-				snprintf(namestr, sizeof(namestr), " <%d>",
-					ike_sa->get_unique_id(ike_sa));
-			}
+			snprintf(namestr, sizeof(namestr), " <%s|%d>",
+				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
-
-		/* do a syslog for every line */
-		this->mutex->lock(this->mutex);
-		while (current)
+		else
 		{
-			next = strchr(current, '\n');
-			if (next)
-			{
-				*(next++) = '\0';
-			}
-			syslog(this->facility|LOG_INFO, "%.2d[%s]%s %s\n",
-				   thread, groupstr, namestr, current);
-			current = next;
+			snprintf(namestr, sizeof(namestr), " <%d>",
+				ike_sa->get_unique_id(ike_sa));
 		}
-		this->mutex->unlock(this->mutex);
 	}
+
+	/* do a syslog for every line */
+	this->mutex->lock(this->mutex);
+	while (current)
+	{
+		next = strchr(current, '\n');
+		if (next)
+		{
+			*(next++) = '\0';
+		}
+		syslog(this->facility|LOG_INFO, "%.2d[%s]%s %s\n",
+			   thread, groupstr, namestr, current);
+		current = next;
+	}
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(logger_t, get_level, level_t,
+	private_sys_logger_t *this, debug_t group)
+{
+	return this->levels[group];
 }
 
 METHOD(sys_logger_t, set_level, void,
@@ -135,6 +136,7 @@ sys_logger_t *sys_logger_create(int facility, bool ike_name)
 		.public = {
 			.logger = {
 				.log = _log_,
+				.get_level = _get_level,
 			},
 			.set_level = _set_level,
 			.destroy = _destroy,

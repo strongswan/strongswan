@@ -54,7 +54,7 @@ METHOD(job_t, destroy, void,
  */
 static bool initiate_callback(private_initiate_mediation_job_t *this,
 			debug_t group, level_t level, ike_sa_t *ike_sa,
-			char *format, va_list args)
+			char *message)
 {
 	if (ike_sa && !this->mediation_sa_id)
 	{

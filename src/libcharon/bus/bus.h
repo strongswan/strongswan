@@ -150,6 +150,14 @@ struct bus_t {
 	 * by multiple threads.  Recursive calls are not prevented, so logger that
 	 * may cause recursive calls are responsible to avoid infinite loops.
 	 *
+	 * During registration get_level() is called for all log groups and the
+	 * logger is registered to receive log messages for groups for which
+	 * the requested log level is > LEVEL_SILENT and whose level is lower
+	 * or equal than the requested level.
+	 *
+	 * To update the registered log levels call add_logger again with the
+	 * same logger and return the new levels from get_level().
+	 *
 	 * @param logger	logger to register.
 	 */
 	void (*add_logger) (bus_t *this, logger_t *logger);

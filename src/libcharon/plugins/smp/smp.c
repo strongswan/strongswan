@@ -349,7 +349,7 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
  * callback which logs to a XML writer
  */
 static bool xml_callback(xmlTextWriterPtr writer, debug_t group, level_t level,
-						 ike_sa_t* ike_sa, char* format, va_list args)
+						 ike_sa_t* ike_sa, char* message)
 {
 	if (level <= 1)
 	{
@@ -358,7 +358,7 @@ static bool xml_callback(xmlTextWriterPtr writer, debug_t group, level_t level,
 		xmlTextWriterWriteFormatAttribute(writer, "level", "%d", level);
 		xmlTextWriterWriteFormatAttribute(writer, "source", "%N", debug_names, group);
 		xmlTextWriterWriteFormatAttribute(writer, "thread", "%u", thread_current_id());
-		xmlTextWriterWriteVFormatString(writer, format, args);
+		xmlTextWriterWriteString(writer, message);
 		xmlTextWriterEndElement(writer);
 		/* </item> */
 	}

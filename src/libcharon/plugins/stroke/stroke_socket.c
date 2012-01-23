@@ -517,12 +517,14 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	while (enumerator->enumerate(enumerator, &sys_logger))
 	{
 		sys_logger->set_level(sys_logger, group, msg->loglevel.level);
+		charon->bus->add_logger(charon->bus, &sys_logger->logger);
 	}
 	enumerator->destroy(enumerator);
 	enumerator = charon->file_loggers->create_enumerator(charon->file_loggers);
 	while (enumerator->enumerate(enumerator, &file_logger))
 	{
 		file_logger->set_level(file_logger, group, msg->loglevel.level);
+		charon->bus->add_logger(charon->bus, &file_logger->logger);
 	}
 	enumerator->destroy(enumerator);
 }
