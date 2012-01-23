@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,7 @@
 
 #include <library.h>
 #include <daemon.h>
+#include <threading/mutex.h>
 
 typedef struct private_android_logger_t private_android_logger_t;
 
@@ -38,6 +39,10 @@ struct private_android_logger_t {
 	 */
 	int level;
 
+	/**
+	 * Mutex to ensure multi-line log messages are not torn apart
+	 */
+	mutex_t *mutex;
 };
 
 
@@ -52,6 +57,7 @@ METHOD(logger_t, log_, void,
 		char *current = buffer, *next;
 		snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
 		vsnprintf(buffer, sizeof(buffer), format, args);
+		this->mutex->lock(this->mutex);
 		while (current)
 		{	/* log each line separately */
 			next = strchr(current, '\n');
@@ -63,12 +69,14 @@ METHOD(logger_t, log_, void,
 								thread, sgroup, current);
 			current = next;
 		}
+		this->mutex->unlock(this->mutex);
 	}
 }
 
 METHOD(android_logger_t, destroy, void,
 	   private_android_logger_t *this)
 {
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -86,6 +94,7 @@ android_logger_t *android_logger_create()
 			},
 			.destroy = _destroy,
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.level = lib->settings->get_int(lib->settings,
 										"charon.plugins.android.loglevel", 1),
 	);

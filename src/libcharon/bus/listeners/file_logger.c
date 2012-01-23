@@ -20,6 +20,7 @@
 
 #include "file_logger.h"
 
+#include <threading/mutex.h>
 
 typedef struct private_file_logger_t private_file_logger_t;
 
@@ -52,6 +53,11 @@ struct private_file_logger_t {
 	 * Print the name/# of the IKE_SA?
 	 */
 	bool ike_name;
+
+	/**
+	 * Mutex to ensure multi-line log messages are not torn apart
+	 */
+	mutex_t *mutex;
 };
 
 METHOD(logger_t, log_, void,
@@ -93,6 +99,7 @@ METHOD(logger_t, log_, void,
 		vsnprintf(buffer, sizeof(buffer), format, args);
 
 		/* prepend a prefix in front of every line */
+		this->mutex->lock(this->mutex);
 		while (current)
 		{
 			next = strchr(current, '\n');
@@ -112,6 +119,7 @@ METHOD(logger_t, log_, void,
 			}
 			current = next;
 		}
+		this->mutex->unlock(this->mutex);
 	}
 }
 
@@ -138,6 +146,7 @@ METHOD(file_logger_t, destroy, void,
 	{
 		fclose(this->out);
 	}
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -159,6 +168,7 @@ file_logger_t *file_logger_create(FILE *out, char *time_format, bool ike_name)
 		.out = out,
 		.time_format = time_format,
 		.ike_name = ike_name,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	set_level(this, DBG_ANY, LEVEL_SILENT);
