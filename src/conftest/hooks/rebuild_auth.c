@@ -58,7 +58,6 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	enumerator_t *enumerator;
 	chunk_t octets, auth_data;
 	private_key_t *private;
-	auth_cfg_t *auth;
 	payload_t *payload;
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
@@ -91,10 +90,8 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	id = identification_create_from_encoding(data.ptr[4], chunk_skip(data, 8));
 	generator->destroy(generator);
 
-	auth = auth_cfg_create();
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY,
-										this->id ?: id, auth);
-	auth->destroy(auth);
+										this->id ?: id, NULL);
 	if (private == NULL)
 	{
 		DBG1(DBG_CFG, "no private key found for '%Y' to rebuild AUTH",

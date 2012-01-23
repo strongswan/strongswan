@@ -1047,42 +1047,45 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 		}
 	}
 
-	/* if a specific certificate is preferred, check for a matching key */
-	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
-	if (cert)
+	if (auth)
 	{
-		private = get_private_by_cert(this, cert, type);
-		if (private)
+		/* if a specific certificate is preferred, check for a matching key */
+		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
 		{
-			trustchain = build_trustchain(this, cert, auth);
-			if (trustchain)
+			private = get_private_by_cert(this, cert, type);
+			if (private)
 			{
-				auth->merge(auth, trustchain, FALSE);
-				trustchain->destroy(trustchain);
+				trustchain = build_trustchain(this, cert, auth);
+				if (trustchain)
+				{
+					auth->merge(auth, trustchain, FALSE);
+					trustchain->destroy(trustchain);
+				}
+				return private;
 			}
-			return private;
 		}
-	}
 
-	/* try to build a trust chain for each certificate found */
-	enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
-	while (enumerator->enumerate(enumerator, &cert))
-	{
-		private = get_private_by_cert(this, cert, type);
-		if (private)
+		/* try to build a trust chain for each certificate found */
+		enumerator = create_cert_enumerator(this, CERT_ANY, type, id, FALSE);
+		while (enumerator->enumerate(enumerator, &cert))
 		{
-			trustchain = build_trustchain(this, cert, auth);
-			if (trustchain)
+			private = get_private_by_cert(this, cert, type);
+			if (private)
 			{
-				auth->merge(auth, trustchain, FALSE);
-				trustchain->destroy(trustchain);
-				break;
+				trustchain = build_trustchain(this, cert, auth);
+				if (trustchain)
+				{
+					auth->merge(auth, trustchain, FALSE);
+					trustchain->destroy(trustchain);
+					break;
+				}
+				private->destroy(private);
+				private = NULL;
 			}
-			private->destroy(private);
-			private = NULL;
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 
 	/* if no valid trustchain was found, fall back to the first usable cert */
 	if (!private)
@@ -1093,7 +1096,10 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 			private = get_private_by_cert(this, cert, type);
 			if (private)
 			{
-				auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert->get_ref(cert));
+				if (auth)
+				{
+					auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert->get_ref(cert));
+				}
 				break;
 			}
 		}
