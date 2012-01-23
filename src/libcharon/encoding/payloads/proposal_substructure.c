@@ -237,6 +237,9 @@ typedef enum {
 	IKEV1_AUTH_RSA_SIG = 3,
 	IKEV1_AUTH_RSA_ENC = 4,
 	IKEV1_AUTH_RSA_ENC_REV = 5,
+	IKEV1_AUTH_ECDSA_256 = 9,
+	IKEV1_AUTH_ECDSA_384 = 10,
+	IKEV1_AUTH_ECDSA_521 = 11,
 	IKEV1_AUTH_XAUTH_INIT_PSK = 65001,
 	IKEV1_AUTH_XAUTH_RESP_PSK = 65002,
 	IKEV1_AUTH_XAUTH_INIT_DSS = 65003,
@@ -594,10 +597,14 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 			return IKEV1_AUTH_XAUTH_INIT_RSA;
 		case AUTH_HYBRID_INIT_RSA:
 			return IKEV1_AUTH_HYBRID_INIT_RSA;
-		default:
-			/* TODO-IKEv1: Handle other XAUTH methods */
-			/* TODO-IKEv1: Handle ECDSA methods */
+		case AUTH_ECDSA_256:
+			return IKEV1_AUTH_ECDSA_256;
+		case AUTH_ECDSA_384:
+			return IKEV1_AUTH_ECDSA_384;
+		case AUTH_ECDSA_521:
+			return IKEV1_AUTH_ECDSA_521;
 		case AUTH_PSK:
+		default:
 			return IKEV1_AUTH_PSK;
 	}
 }
@@ -654,7 +661,6 @@ static void add_to_proposal_v1_ike(proposal_t *proposal,
 						value, 0);
 				break;
 			default:
-				/* TODO-IKEv1: lifetimes, authentication and other attributes */
 				break;
 		}
 	}
@@ -696,7 +702,6 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 						value, 0);
 				break;
 			default:
-				/* TODO-IKEv1: lifetimes other attributes */
 				break;
 		}
 	}
@@ -889,8 +894,13 @@ METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
 			return AUTH_XAUTH_INIT_RSA;
 		case IKEV1_AUTH_HYBRID_INIT_RSA:
 			return AUTH_HYBRID_INIT_RSA;
+		case IKEV1_AUTH_ECDSA_256:
+			return AUTH_ECDSA_256;
+		case IKEV1_AUTH_ECDSA_384:
+			return AUTH_ECDSA_384;
+		case IKEV1_AUTH_ECDSA_521:
+			return AUTH_ECDSA_521;
 		default:
-			/* TODO-IKEv1: other XAUTH, ECDSA sigs */
 			return AUTH_NONE;
 	}
 }
