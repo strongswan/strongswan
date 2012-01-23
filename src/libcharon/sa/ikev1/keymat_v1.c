@@ -65,9 +65,9 @@ struct private_keymat_v1_t {
 	prf_t *prf;
 
 	/**
-	 * Negotiated PRF algorithm
+	 * PRF to create Phase 1 HASH payloads
 	 */
-	pseudo_random_function_t prf_alg;
+	prf_t *prf_auth;
 
 	/**
 	 * Crypter wrapped in an aead_t interface
@@ -366,6 +366,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	auth_method_t auth, shared_key_t *shared_key)
 {
 	chunk_t g_xy, g_xi, g_xr, dh_me, spi_i, spi_r, nonces, data, skeyid_e;
+	chunk_t skeyid;
 	u_int16_t alg;
 
 	spi_i = chunk_alloca(sizeof(u_int64_t));
@@ -381,7 +382,6 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			return FALSE;
 		}
 	}
-	this->prf_alg = alg;
 	this->prf = lib->crypto->create_prf(lib->crypto, alg);
 	if (!this->prf)
 	{
@@ -423,7 +423,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			psk = shared_key->get_key(shared_key);
 			adjust_keylen(alg, &psk);
 			this->prf->set_key(this->prf, psk);
-			this->prf->allocate_bytes(this->prf, nonces, &this->skeyid);
+			this->prf->allocate_bytes(this->prf, nonces, &skeyid);
 			break;
 		}
 		case AUTH_RSA:
@@ -436,7 +436,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		case AUTH_HYBRID_RESP_RSA:
 		{
 			this->prf->set_key(this->prf, nonces);
-			this->prf->allocate_bytes(this->prf, g_xy, &this->skeyid);
+			this->prf->allocate_bytes(this->prf, g_xy, &skeyid);
 			break;
 		}
 		default:
@@ -445,31 +445,56 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			chunk_clear(&g_xy);
 			return FALSE;
 	}
-	adjust_keylen(alg, &this->skeyid);
-	DBG4(DBG_IKE, "SKEYID %B", &this->skeyid);
+	adjust_keylen(alg, &skeyid);
+	DBG4(DBG_IKE, "SKEYID %B", &skeyid);
+	this->prf->set_key(this->prf, skeyid);
 
 	/* SKEYID_d = prf(SKEYID, g^xy | CKY-I | CKY-R | 0) */
 	data = chunk_cat("cccc", g_xy, spi_i, spi_r, octet_0);
-	this->prf->set_key(this->prf, this->skeyid);
 	this->prf->allocate_bytes(this->prf, data, &this->skeyid_d);
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_d %B", &this->skeyid_d);
 
 	/* SKEYID_a = prf(SKEYID, SKEYID_d | g^xy | CKY-I | CKY-R | 1) */
 	data = chunk_cat("ccccc", this->skeyid_d, g_xy, spi_i, spi_r, octet_1);
-	this->prf->set_key(this->prf, this->skeyid);
 	this->prf->allocate_bytes(this->prf, data, &this->skeyid_a);
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_a %B", &this->skeyid_a);
 
 	/* SKEYID_e = prf(SKEYID, SKEYID_a | g^xy | CKY-I | CKY-R | 2) */
 	data = chunk_cat("ccccc", this->skeyid_a, g_xy, spi_i, spi_r, octet_2);
-	this->prf->set_key(this->prf, this->skeyid);
 	this->prf->allocate_bytes(this->prf, data, &skeyid_e);
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_e %B", &skeyid_e);
 
 	chunk_clear(&g_xy);
+
+	switch (auth)
+	{
+		case AUTH_ECDSA_256:
+			alg = PRF_HMAC_SHA2_256;
+			break;
+		case AUTH_ECDSA_384:
+			alg =  PRF_HMAC_SHA2_384;
+			break;
+		case AUTH_ECDSA_521:
+			alg = PRF_HMAC_SHA2_512;
+			break;
+		default:
+			/* use proposal algorithm */
+			break;
+	}
+	this->prf_auth = lib->crypto->create_prf(lib->crypto, alg);
+	if (!this->prf_auth)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
+			 pseudo_random_function_names, alg);
+		chunk_clear(&skeyid);
+		return FALSE;
+	}
+	this->prf_auth->set_key(this->prf_auth, skeyid);
+	chunk_clear(&skeyid);
 
 	this->aead = create_aead(proposal, this->prf, skeyid_e);
 	if (!this->aead)
@@ -667,8 +692,7 @@ METHOD(keymat_v1_t, get_hash, chunk_t,
 
 	DBG3(DBG_IKE, "HASH_%c data %B", initiator ? 'I' : 'R', &data);
 
-	this->prf->set_key(this->prf, this->skeyid);
-	this->prf->allocate_bytes(this->prf, data, &hash);
+	this->prf_auth->allocate_bytes(this->prf_auth, data, &hash);
 
 	DBG3(DBG_IKE, "HASH_%c %B", initiator ? 'I' : 'R', &hash);
 
@@ -971,9 +995,9 @@ METHOD(keymat_t, destroy, void,
 	private_keymat_v1_t *this)
 {
 	DESTROY_IF(this->prf);
+	DESTROY_IF(this->prf_auth);
 	DESTROY_IF(this->aead);
 	DESTROY_IF(this->hasher);
-	chunk_clear(&this->skeyid);
 	chunk_clear(&this->skeyid_d);
 	chunk_clear(&this->skeyid_a);
 	chunk_free(&this->phase1_iv.iv);
@@ -1011,7 +1035,6 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 		.ivs = linked_list_create(),
 		.qms = linked_list_create(),
 		.initiator = initiator,
-		.prf_alg = PRF_UNDEFINED,
 	);
 
 	return &this->public;
