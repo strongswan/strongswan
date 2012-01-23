@@ -427,6 +427,9 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			break;
 		}
 		case AUTH_RSA:
+		case AUTH_ECDSA_256:
+		case AUTH_ECDSA_384:
+		case AUTH_ECDSA_521:
 		case AUTH_XAUTH_INIT_RSA:
 		case AUTH_XAUTH_RESP_RSA:
 		case AUTH_HYBRID_INIT_RSA:

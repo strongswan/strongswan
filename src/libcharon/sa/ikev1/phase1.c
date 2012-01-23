@@ -369,8 +369,67 @@ static void get_auth_class(peer_cfg_t *peer_cfg, bool local,
 	enumerator->destroy(enumerator);
 }
 
-METHOD(phase1_t, get_auth_method, auth_method_t,
-	private_phase1_t *this, peer_cfg_t *peer_cfg)
+/**
+ * Select an auth method to use by checking what key we have
+ */
+static auth_method_t get_pubkey_method(private_phase1_t *this, auth_cfg_t *auth)
+{
+	auth_method_t method = AUTH_NONE;
+	identification_t *id;
+	private_key_t *private;
+
+	if (auth)
+	{
+		id = (identification_t*)auth->get(auth, AUTH_RULE_IDENTITY);
+		if (id)
+		{
+			private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, NULL);
+			if (private)
+			{
+				switch (private->get_type(private))
+				{
+					case KEY_RSA:
+						method = AUTH_RSA;
+						break;
+					case KEY_ECDSA:
+						switch (private->get_keysize(private))
+						{
+							case 256:
+								method = AUTH_ECDSA_256;
+								break;
+							case 384:
+								method = AUTH_ECDSA_384;
+								break;
+							case 521:
+								method = AUTH_ECDSA_521;
+								break;
+							default:
+								DBG1(DBG_IKE, "%d bit ECDSA private key size not "
+									 "supported", private->get_keysize(private));
+								break;
+						}
+						break;
+					default:
+						DBG1(DBG_IKE, "private key of type %N not supported",
+							 key_type_names, private->get_type(private));
+						break;
+				}
+				private->destroy(private);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "no private key found for '%Y'", id);
+			}
+		}
+	}
+	return method;
+}
+
+/**
+ * Calculate authentication method from a peer config
+ */
+static auth_method_t calc_auth_method(private_phase1_t *this,
+									  peer_cfg_t *peer_cfg)
 {
 	auth_class_t i1, i2, r1, r2;
 
@@ -381,7 +440,7 @@ METHOD(phase1_t, get_auth_method, auth_method_t,
 	{
 		if (i2 == AUTH_CLASS_ANY && r2 == AUTH_CLASS_ANY)
 		{
-			/* TODO-IKEv1: ECDSA? */
+			/* for any pubkey method, return RSA */
 			return AUTH_RSA;
 		}
 		if (i2 == AUTH_CLASS_XAUTH)
@@ -416,6 +475,39 @@ METHOD(phase1_t, get_auth_method, auth_method_t,
 	return AUTH_NONE;
 }
 
+METHOD(phase1_t, get_auth_method, auth_method_t,
+	private_phase1_t *this, peer_cfg_t *peer_cfg)
+{
+	auth_method_t method;
+
+	method = calc_auth_method(this, peer_cfg);
+	if (method == AUTH_RSA)
+	{
+		return get_pubkey_method(this, get_auth_cfg(peer_cfg, TRUE));
+	}
+	return method;
+}
+
+/**
+ * Check if a peer config can be used with a given auth method
+ */
+static bool check_auth_method(private_phase1_t *this, peer_cfg_t *peer_cfg,
+							  auth_method_t given)
+{
+	auth_method_t method;
+
+	method = calc_auth_method(this, peer_cfg);
+	switch (given)
+	{
+		case AUTH_ECDSA_256:
+		case AUTH_ECDSA_384:
+		case AUTH_ECDSA_521:
+			return method == AUTH_RSA;
+		default:
+			return method == given;
+	}
+}
+
 METHOD(phase1_t, select_config, peer_cfg_t*,
 	private_phase1_t *this, auth_method_t method, bool aggressive,
 	identification_t *id)
@@ -432,7 +524,7 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 													me, other, NULL, id, IKEV1);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (get_auth_method(this, current) == method &&
+		if (check_auth_method(this, current, method) &&
 			current->use_aggressive(current) == aggressive)
 		{
 			found = current->get_ref(current);
