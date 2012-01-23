@@ -133,7 +133,13 @@ authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 		case AUTH_XAUTH_RESP_RSA:
 			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
 										initiator, dh, dh_value, sa_payload,
-										id_payload);
+										id_payload, KEY_RSA);
+		case AUTH_ECDSA_256:
+		case AUTH_ECDSA_384:
+		case AUTH_ECDSA_521:
+			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
+										initiator, dh, dh_value, sa_payload,
+										id_payload, KEY_ECDSA);
 		case AUTH_HYBRID_INIT_RSA:
 		case AUTH_HYBRID_RESP_RSA:
 			return (authenticator_t*)hybrid_authenticator_create(ike_sa,

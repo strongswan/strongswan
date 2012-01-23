@@ -46,11 +46,12 @@ struct pubkey_v1_authenticator_t {
  * @param sa_payload		generated SA payload data, without payload header
  * @param id_payload		encoded ID payload of peer to authenticate or verify
  *							without payload header (gets owned)
+ * @param type				key type to use, KEY_RSA or KEY_ECDSA
  * @return					pubkey authenticator
  */
 pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
 										chunk_t dh_value, chunk_t sa_payload,
-										chunk_t id_payload);
+										chunk_t id_payload, key_type_t type);
 
 #endif /** PUBKEY_V1_AUTHENTICATOR_H_ @}*/

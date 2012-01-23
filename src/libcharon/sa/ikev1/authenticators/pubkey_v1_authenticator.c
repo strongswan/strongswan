@@ -60,6 +60,11 @@ struct private_pubkey_v1_authenticator_t {
 	 * Encoded ID payload, without fixed header
 	 */
 	chunk_t id_payload;
+
+	/**
+	 * Key type to use
+	 */
+	key_type_t type;
 };
 
 METHOD(authenticator_t, build, status_t,
@@ -72,19 +77,20 @@ METHOD(authenticator_t, build, status_t,
 	private_key_t *private;
 	identification_t *id;
 	auth_cfg_t *auth;
-	key_type_t type;
-	signature_scheme_t scheme;
+	signature_scheme_t scheme = SIGN_RSA_EMSA_PKCS1_NULL;
 
-	/* TODO-IKEv1: other key types */
-	type = KEY_RSA;
-	scheme = SIGN_RSA_EMSA_PKCS1_NULL;
+	if (this->type == KEY_ECDSA)
+	{
+		scheme = SIGN_ECDSA_WITH_NULL;
+	}
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
-	private = lib->credmgr->get_private(lib->credmgr, type, id, auth);
+	private = lib->credmgr->get_private(lib->credmgr, this->type, id, auth);
 	if (!private)
 	{
-		DBG1(DBG_IKE, "no private key found for '%Y'", id);
+		DBG1(DBG_IKE, "no %N private key found for '%Y'",
+			 key_type_names, this->type, id);
 		return NOT_FOUND;
 	}
 
@@ -125,13 +131,13 @@ METHOD(authenticator_t, process, status_t,
 	auth_cfg_t *auth, *current_auth;
 	enumerator_t *enumerator;
 	status_t status = NOT_FOUND;
-	key_type_t type;
-	signature_scheme_t scheme;
 	identification_t *id;
+	signature_scheme_t scheme = SIGN_RSA_EMSA_PKCS1_NULL;
 
-	/* TODO-IKEv1: currently RSA only */
-	type = KEY_RSA;
-	scheme = SIGN_RSA_EMSA_PKCS1_NULL;
+	if (this->type == KEY_ECDSA)
+	{
+		scheme = SIGN_ECDSA_WITH_NULL;
+	}
 
 	sig_payload = (hash_payload_t*)message->get_payload(message, SIGNATURE_V1);
 	if (!sig_payload)
@@ -150,14 +156,14 @@ METHOD(authenticator_t, process, status_t,
 
 	sig = sig_payload->get_hash(sig_payload);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr, type,
+	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr, this->type,
 														id, auth);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, scheme, hash, sig))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
-				 id, key_type_names, type);
+				 id, key_type_names, this->type);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -174,7 +180,7 @@ METHOD(authenticator_t, process, status_t,
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_IKE, "no trusted %N public key found for '%Y'",
-			 key_type_names, type, id);
+			 key_type_names, this->type, id);
 	}
 	return status;
 }
@@ -192,7 +198,7 @@ METHOD(authenticator_t, destroy, void,
 pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
 										bool initiator, diffie_hellman_t *dh,
 										chunk_t dh_value, chunk_t sa_payload,
-										chunk_t id_payload)
+										chunk_t id_payload, key_type_t type)
 {
 	private_pubkey_v1_authenticator_t *this;
 
@@ -211,6 +217,7 @@ pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
 		.dh_value = dh_value,
 		.sa_payload = sa_payload,
 		.id_payload = id_payload,
+		.type = type,
 	);
 
 	return &this->public;
