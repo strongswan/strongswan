@@ -75,6 +75,9 @@ static bool use_certs(private_isakmp_cert_post_t *this, message_t *message)
 			switch (sa_payload->get_auth_method(sa_payload))
 			{
 				case AUTH_RSA:
+				case AUTH_ECDSA_256:
+				case AUTH_ECDSA_384:
+				case AUTH_ECDSA_521:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_INIT_RSA:

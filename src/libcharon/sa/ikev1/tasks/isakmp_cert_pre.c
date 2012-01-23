@@ -317,6 +317,9 @@ static bool use_certs(private_isakmp_cert_pre_t *this, message_t *message)
 					}
 					/* FALL */
 				case AUTH_RSA:
+				case AUTH_ECDSA_256:
+				case AUTH_ECDSA_384:
+				case AUTH_ECDSA_521:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_XAUTH_RESP_RSA:
 					use = TRUE;
