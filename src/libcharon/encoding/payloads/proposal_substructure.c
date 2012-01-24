@@ -914,7 +914,7 @@ METHOD(proposal_substructure_t, get_encap_mode, ipsec_mode_t,
 		case IKEV1_ENCAP_TRANSPORT:
 			return MODE_TRANSPORT;
 		case IKEV1_ENCAP_TUNNEL:
-			return MODE_TRANSPORT;
+			return MODE_TUNNEL;
 		case IKEV1_ENCAP_UDP_TRANSPORT:
 			*udp = TRUE;
 			return MODE_TRANSPORT;
