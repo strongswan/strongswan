@@ -1,6 +1,9 @@
 strongswan-4.6.2
 ----------------
 
+- Added support for PKCS#8 encoded private keys.  This is the default format
+  used by some OpenSSL tools since 1.0.0.
+
 - Upgraded the TCG IF-IMC and IF-IMV C API to the upcoming version 1.3
   which supports IF-TNCCS 2.0 long message types, the exclusive flags
   and multiple IMC/IMV IDs. Both the TNC Client and Server as well as
