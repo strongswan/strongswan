@@ -16,6 +16,7 @@
 #include "eap_radius_plugin.h"
 
 #include "eap_radius.h"
+#include "eap_radius_accounting.h"
 #include "radius_client.h"
 #include "radius_server.h"
 
@@ -53,6 +54,11 @@ struct private_eap_radius_plugin_t {
 	 * Lock for server list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * RADIUS sessions for accounting
+	 */
+	eap_radius_accounting_t *accounting;
 };
 
 /**
@@ -185,6 +191,8 @@ METHOD(plugin_t, destroy, void,
 	this->servers->destroy_offset(this->servers,
 								  offsetof(radius_server_t, destroy));
 	this->lock->destroy(this->lock);
+	charon->bus->remove_listener(charon->bus, &this->accounting->listener);
+	this->accounting->destroy(this->accounting);
 	free(this);
 	instance = NULL;
 }
@@ -207,11 +215,17 @@ plugin_t *eap_radius_plugin_create()
 		},
 		.servers = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.accounting = eap_radius_accounting_create(),
 	);
 
 	load_servers(this);
 	instance = this;
 
+	if (lib->settings->get_bool(lib->settings,
+						"charon.plugins.eap-radius.accounting", FALSE))
+	{
+		charon->bus->add_listener(charon->bus, &this->accounting->listener);
+	}
 	return &this->public.plugin;
 }
 
