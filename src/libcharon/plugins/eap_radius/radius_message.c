@@ -423,12 +423,12 @@ static private_radius_message_t *radius_message_create()
 /**
  * See header
  */
-radius_message_t *radius_message_create_request()
+radius_message_t *radius_message_create_request(radius_message_code_t code)
 {
 	private_radius_message_t *this = radius_message_create();
 
 	INIT(this->msg,
-		.code = RMC_ACCESS_REQUEST,
+		.code = code,
 		.identifier = 0,
 		.length = htons(sizeof(rmsg_t)),
 	);

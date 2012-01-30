@@ -162,7 +162,7 @@ METHOD(eap_method_t, initiate, status_t,
 	status_t status = FAILED;
 	chunk_t username;
 
-	request = radius_message_create_request();
+	request = radius_message_create_request(RMC_ACCESS_REQUEST);
 	username = chunk_create(this->id_prefix, strlen(this->id_prefix));
 	username = chunk_cata("cc", username, this->peer->get_encoding(this->peer));
 	request->add(request, RAT_USER_NAME, username);
@@ -289,11 +289,11 @@ METHOD(eap_method_t, process, status_t,
 	status_t status = FAILED;
 	chunk_t data;
 
-	request = radius_message_create_request();
+	request = radius_message_create_request(RMC_ACCESS_REQUEST);
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
 	data = in->get_data(in);
 	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
- 
+
 	/* fragment data suitable for RADIUS (not more than 253 bytes) */
 	while (data.len > 253)
 	{
