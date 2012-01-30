@@ -85,13 +85,16 @@ struct radius_server_t {
  *
  * @param name				server name
  * @param address			server address
- * @param port				server port
+ * @param auth_port			server port for authentication
+ * @param acct_port			server port for accounting
  * @param nas_identifier	NAS-Identifier to use with this server
  * @param secret			secret to use with this server
  * @param sockets			number of sockets to create in pool
  * @param preference		preference boost for this server
  */
-radius_server_t *radius_server_create(char *name, char *address, u_int16_t port,
-			char *nas_identifier, char *secret, int sockets, int preference);
+radius_server_t *radius_server_create(char *name, char *address,
+									  u_int16_t auth_port, u_int16_t acct_port,
+									  char *nas_identifier, char *secret,
+									  int sockets, int preference);
 
 #endif /** RADIUS_SERVER_H_ @}*/

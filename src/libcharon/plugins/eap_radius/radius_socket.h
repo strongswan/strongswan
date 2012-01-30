@@ -67,10 +67,11 @@ struct radius_socket_t {
  * Create a radius_socket instance.
  *
  * @param address	server name
- * @param port		server port
+ * @param auth_port	server port for authentication
+ * @param acct_port	server port for accounting
  * @param secret	RADIUS secret
  */
-radius_socket_t *radius_socket_create(char *address, u_int16_t port,
-									  chunk_t secret);
+radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
+									  u_int16_t acct_port, chunk_t secret);
 
 #endif /** RADIUS_SOCKET_H_ @}*/

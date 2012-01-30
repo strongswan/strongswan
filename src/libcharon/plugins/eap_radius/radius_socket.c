@@ -44,19 +44,29 @@ struct private_radius_socket_t {
 	radius_socket_t public;
 
 	/**
-	 * socket file descriptor
+	 * Server port for authentication
 	 */
-	int fd;
+	u_int16_t auth_port;
+
+	/**
+	 * socket file descriptor for authentication
+	 */
+	int auth_fd;
+
+	/**
+	 * Server port for accounting
+	 */
+	u_int16_t acct_port;
+
+	/**
+	 * socket file descriptor for accounting
+	 */
+	int acct_fd;
 
 	/**
 	 * Server address
 	 */
 	char *address;
-
-	/**
-	 * Server port
-	 */
-	u_int16_t port;
 
 	/**
 	 * current RADIUS identifier
@@ -87,35 +97,36 @@ struct private_radius_socket_t {
 /**
  * Check or establish RADIUS connection
  */
-static bool check_connection(private_radius_socket_t *this)
+static bool check_connection(private_radius_socket_t *this,
+							 int *fd, u_int16_t port)
 {
-	if (this->fd == -1)
+	if (*fd == -1)
 	{
 		host_t *server;
 
-		server = host_create_from_dns(this->address, AF_UNSPEC, this->port);
+		server = host_create_from_dns(this->address, AF_UNSPEC, port);
 		if (!server)
 		{
 			DBG1(DBG_CFG, "resolving RADIUS server address '%s' failed",
 				 this->address);
 			return FALSE;
 		}
-		this->fd = socket(server->get_family(server), SOCK_DGRAM, IPPROTO_UDP);
-		if (this->fd == -1)
+		*fd = socket(server->get_family(server), SOCK_DGRAM, IPPROTO_UDP);
+		if (*fd == -1)
 		{
 			DBG1(DBG_CFG, "opening RADIUS socket for %#H failed: %s",
 				 server, strerror(errno));
 			server->destroy(server);
 			return FALSE;
 		}
-		if (connect(this->fd, server->get_sockaddr(server),
+		if (connect(*fd, server->get_sockaddr(server),
 					*server->get_sockaddr_len(server)) < 0)
 		{
 			DBG1(DBG_CFG, "connecting RADIUS socket to %#H failed: %s",
 				 server, strerror(errno));
 			server->destroy(server);
-			close(this->fd);
-			this->fd = -1;
+			close(*fd);
+			*fd = -1;
 			return FALSE;
 		}
 		server->destroy(server);
@@ -127,14 +138,25 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	private_radius_socket_t *this, radius_message_t *request)
 {
 	chunk_t data;
-	int i;
+	int i, *fd;
+	u_int16_t port;
 
 	/* set Message Identifier */
 	request->set_identifier(request, this->identifier++);
 	/* sign the request */
 	request->sign(request, this->rng, this->signer, this->hasher, this->secret);
 
-	if (!check_connection(this))
+	if (request->get_code(request) == RMC_ACCOUNTING_REQUEST)
+	{
+		fd = &this->acct_fd;
+		port = this->acct_port;
+	}
+	else
+	{
+		fd = &this->auth_fd;
+		port = this->auth_port;
+	}
+	if (!check_connection(this, fd, port))
 	{
 		return NULL;
 	}
@@ -150,7 +172,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 		fd_set fds;
 		int res;
 
-		if (send(this->fd, data.ptr, data.len, 0) != data.len)
+		if (send(*fd, data.ptr, data.len, 0) != data.len)
 		{
 			DBG1(DBG_CFG, "sending RADIUS message failed: %s", strerror(errno));
 			return NULL;
@@ -161,8 +183,8 @@ METHOD(radius_socket_t, request, radius_message_t*,
 		while (TRUE)
 		{
 			FD_ZERO(&fds);
-			FD_SET(this->fd, &fds);
-			res = select(this->fd + 1, &fds, NULL, NULL, &tv);
+			FD_SET(*fd, &fds);
+			res = select((*fd) + 1, &fds, NULL, NULL, &tv);
 			/* TODO: updated tv to time not waited. Linux does this for us. */
 			if (res < 0)
 			{	/* failed */
@@ -176,7 +198,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 				retransmit = TRUE;
 				break;
 			}
-			res = recv(this->fd, buf, sizeof(buf), MSG_DONTWAIT);
+			res = recv(*fd, buf, sizeof(buf), MSG_DONTWAIT);
 			if (res <= 0)
 			{
 				DBG1(DBG_CFG, "receiving RADIUS message failed: %s",
@@ -311,9 +333,13 @@ METHOD(radius_socket_t, destroy, void,
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->rng);
-	if (this->fd != -1)
+	if (this->auth_fd != -1)
 	{
-		close(this->fd);
+		close(this->auth_fd);
+	};
+	if (this->acct_fd != -1)
+	{
+		close(this->acct_fd);
 	}
 	free(this);
 }
@@ -321,8 +347,8 @@ METHOD(radius_socket_t, destroy, void,
 /**
  * See header
  */
-radius_socket_t *radius_socket_create(char *address, u_int16_t port,
-									  chunk_t secret)
+radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
+									  u_int16_t acct_port, chunk_t secret)
 {
 	private_radius_socket_t *this;
 
@@ -333,8 +359,10 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t port,
 			.destroy = _destroy,
 		},
 		.address = address,
-		.port = port,
-		.fd = -1,
+		.auth_port = auth_port,
+		.auth_fd = -1,
+		.acct_port = acct_port,
+		.acct_fd = -1,
 	);
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);

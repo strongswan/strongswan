@@ -177,8 +177,10 @@ METHOD(radius_server_t, destroy, void,
 /**
  * See header
  */
-radius_server_t *radius_server_create(char *name, char *address, u_int16_t port,
-				char *nas_identifier, char *secret, int sockets, int preference)
+radius_server_t *radius_server_create(char *name, char *address,
+									  u_int16_t auth_port, u_int16_t acct_port,
+									  char *nas_identifier, char *secret,
+									  int sockets, int preference)
 {
 	private_radius_server_t *this;
 	radius_socket_t *socket;
@@ -206,7 +208,7 @@ radius_server_t *radius_server_create(char *name, char *address, u_int16_t port,
 
 	while (sockets--)
 	{
-		socket = radius_socket_create(address, port,
+		socket = radius_socket_create(address, auth_port, acct_port,
 									  chunk_create(secret, strlen(secret)));
 		if (!socket)
 		{

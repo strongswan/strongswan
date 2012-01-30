@@ -23,9 +23,14 @@
 #include <threading/rwlock.h>
 
 /**
- * Default RADIUS server port, when not configured
+ * Default RADIUS server port for authentication
  */
-#define RADIUS_PORT 1812
+#define AUTH_PORT 1812
+
+/**
+ * Default RADIUS server port for accounting
+ */
+#define ACCT_PORT 1813
 
 typedef struct private_eap_radius_plugin_t private_eap_radius_plugin_t;
 
@@ -63,7 +68,7 @@ static void load_servers(private_eap_radius_plugin_t *this)
 	enumerator_t *enumerator;
 	radius_server_t *server;
 	char *nas_identifier, *secret, *address, *section;
-	int port, sockets, preference;
+	int auth_port, acct_port, sockets, preference;
 
 	address = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-radius.server", NULL);
@@ -78,12 +83,12 @@ static void load_servers(private_eap_radius_plugin_t *this)
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-radius.nas_identifier", "strongSwan");
-		port = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-radius.port", RADIUS_PORT);
+		auth_port = lib->settings->get_int(lib->settings,
+					"charon.plugins.eap-radius.port", AUTH_PORT);
 		sockets = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-radius.sockets", 1);
-		server = radius_server_create(address, address, port, nas_identifier,
-									  secret, sockets, 0);
+		server = radius_server_create(address, address, auth_port, ACCT_PORT,
+									  nas_identifier, secret, sockets, 0);
 		if (!server)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
@@ -114,14 +119,20 @@ static void load_servers(private_eap_radius_plugin_t *this)
 		nas_identifier = lib->settings->get_str(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.nas_identifier",
 			"strongSwan", section);
-		port = lib->settings->get_int(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.port", RADIUS_PORT, section);
+		auth_port = lib->settings->get_int(lib->settings,
+			"charon.plugins.eap-radius.servers.%s.auth_port",
+				lib->settings->get_int(lib->settings,
+					"charon.plugins.eap-radius.servers.%s.port",
+					AUTH_PORT, section),
+			section);
+		acct_port = lib->settings->get_int(lib->settings,
+			"charon.plugins.eap-radius.servers.%s.acct_port", ACCT_PORT, section);
 		sockets = lib->settings->get_int(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.sockets", 1, section);
 		preference = lib->settings->get_int(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.preference", 0, section);
-		server = radius_server_create(section, address, port, nas_identifier,
-									  secret, sockets, preference);
+		server = radius_server_create(section, address, auth_port, acct_port,
+								nas_identifier, secret, sockets, preference);
 		if (!server)
 		{
 			DBG1(DBG_CFG, "loading RADIUS server '%s' failed, skipped", section);
