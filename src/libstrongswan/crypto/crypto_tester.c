@@ -102,6 +102,8 @@ static const char* get_name(void *sym)
 	return "unknown";
 }
 
+#ifdef CLOCK_THREAD_CPUTIME_ID
+
 /**
  * Start a benchmark timer
  */
@@ -121,6 +123,14 @@ static u_int end_timing(struct timespec *start)
 	return (end.tv_nsec - start->tv_nsec) / 1000000 +
 			(end.tv_sec - start->tv_sec) * 1000;
 }
+
+#else /* CLOCK_THREAD_CPUTIME_ID */
+
+/* Make benchmarking a no-op if CLOCK_THREAD_CPUTIME_ID is not available */
+#define start_timing(start) ((start)->tv_sec = 0, (start)->tv_nsec = 0)
+#define end_timing(...) (this->bench_time)
+
+#endif /* CLOCK_THREAD_CPUTIME_ID */
 
 /**
  * Benchmark a crypter
