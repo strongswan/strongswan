@@ -97,6 +97,9 @@
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
                 0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
                 0x0E         "sha224WithRSAEncryption"	OID_SHA224_WITH_RSA
+              0x05           "PKCS-5"
+                0x03         "pbeWithMD5AndDES-CBC"		OID_PBE_MD5_DES_CBC
+                0x0A         "pbeWithSHA1AndDES-CBC"	OID_PBE_SHA1_DES_CBC
               0x07           "PKCS-7"
                 0x01         "data"						OID_PKCS7_DATA
                 0x02         "signedData"				OID_PKCS7_SIGNED_DATA

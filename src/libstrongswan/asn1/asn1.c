@@ -556,10 +556,13 @@ static const asn1Object_t algorithmIdentifierObjects[] = {
 	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY			}, /* 1 */
 	{ 1,   "parameters",		ASN1_OID,		ASN1_RAW|ASN1_OPT	}, /* 2 */
 	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /* 3 */
+	{ 1,   "parameters",		ASN1_SEQUENCE,	ASN1_RAW|ASN1_OPT	}, /* 4 */
+	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /* 5 */
 	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT			}
 };
-#define ALGORITHM_ID_ALG			1
-#define ALGORITHM_ID_PARAMETERS		2
+#define ALGORITHM_ID_ALG				1
+#define ALGORITHM_ID_PARAMETERS_OID		2
+#define ALGORITHM_ID_PARAMETERS_SEQ		4
 
 /*
  * Defined in header
@@ -581,7 +584,8 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 			case ALGORITHM_ID_ALG:
 				alg = asn1_known_oid(object);
 				break;
-			case ALGORITHM_ID_PARAMETERS:
+			case ALGORITHM_ID_PARAMETERS_OID:
+			case ALGORITHM_ID_PARAMETERS_SEQ:
 				if (parameters != NULL)
 				{
 					*parameters = object;
