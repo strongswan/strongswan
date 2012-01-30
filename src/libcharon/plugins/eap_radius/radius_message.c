@@ -272,19 +272,32 @@ METHOD(radius_message_t, add, void,
 }
 
 METHOD(radius_message_t, sign, void,
-	private_radius_message_t *this, rng_t *rng, signer_t *signer)
+	private_radius_message_t *this, rng_t *rng, signer_t *signer,
+	hasher_t *hasher, chunk_t secret)
 {
-	char buf[HASH_SIZE_MD5];
+	if (this->msg->code == RMC_ACCOUNTING_REQUEST)
+	{
+		chunk_t msg;
 
-	/* build Request-Authenticator */
-	rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
+		memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
+		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
+		hasher->get_hash(hasher, msg, NULL);
+		hasher->get_hash(hasher, secret, this->msg->authenticator);
+	}
+	else
+	{
+		char buf[HASH_SIZE_MD5];
 
-	/* build Message-Authenticator attribute, using 16 null bytes */
-	memset(buf, 0, sizeof(buf));
-	add(this, RAT_MESSAGE_AUTHENTICATOR, chunk_create(buf, sizeof(buf)));
-	signer->get_signature(signer,
+		/* build Request-Authenticator */
+		rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
+
+		/* build Message-Authenticator attribute, using 16 null bytes */
+		memset(buf, 0, sizeof(buf));
+		add(this, RAT_MESSAGE_AUTHENTICATOR, chunk_create(buf, sizeof(buf)));
+		signer->get_signature(signer,
 				chunk_create((u_char*)this->msg, ntohs(this->msg->length)),
 				((u_char*)this->msg) + ntohs(this->msg->length) - HASH_SIZE_MD5);
+	}
 }
 
 METHOD(radius_message_t, verify, bool,

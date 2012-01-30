@@ -132,7 +132,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	/* set Message Identifier */
 	request->set_identifier(request, this->identifier++);
 	/* sign the request */
-	request->sign(request, this->rng, this->signer);
+	request->sign(request, this->rng, this->signer, this->hasher, this->secret);
 
 	if (!check_connection(this))
 	{

@@ -238,8 +238,11 @@ struct radius_message_t {
 	 *
 	 * @param rng			RNG to create Request-Authenticator
 	 * @param signer		HMAC-MD5 signer with secret set
+	 * @param hasher		MD5 hasher
+	 * @param secret		shared RADIUS secret
 	 */
-	void (*sign)(radius_message_t *this, rng_t *rng, signer_t *signer);
+	void (*sign)(radius_message_t *this, rng_t *rng, signer_t *signer,
+				 hasher_t *hasher, chunk_t secret);
 
 	/**
 	 * Verify the integrity of a received RADIUS response.
