@@ -552,17 +552,20 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
  * ASN.1 definition of an algorithmIdentifier
  */
 static const asn1Object_t algorithmIdentifierObjects[] = {
-	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE			}, /* 0 */
-	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY			}, /* 1 */
-	{ 1,   "parameters",		ASN1_OID,		ASN1_RAW|ASN1_OPT	}, /* 2 */
-	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /* 3 */
-	{ 1,   "parameters",		ASN1_SEQUENCE,	ASN1_RAW|ASN1_OPT	}, /* 4 */
-	{ 1,   "end opt",			ASN1_EOC,		ASN1_END			}, /* 5 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT			}
+	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,		ASN1_NONE			}, /* 0 */
+	{ 1,   "algorithm",			ASN1_OID,			ASN1_BODY			}, /* 1 */
+	{ 1,   "parameters",		ASN1_OID,			ASN1_RAW|ASN1_OPT	}, /* 2 */
+	{ 1,   "end opt",			ASN1_EOC,			ASN1_END			}, /* 3 */
+	{ 1,   "parameters",		ASN1_SEQUENCE,		ASN1_RAW|ASN1_OPT	}, /* 4 */
+	{ 1,   "end opt",			ASN1_EOC,			ASN1_END			}, /* 5 */
+	{ 1,   "parameters",		ASN1_OCTET_STRING,	ASN1_RAW|ASN1_OPT	}, /* 6 */
+	{ 1,   "end opt",			ASN1_EOC,			ASN1_END			}, /* 7 */
+	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT			}
 };
 #define ALGORITHM_ID_ALG				1
 #define ALGORITHM_ID_PARAMETERS_OID		2
 #define ALGORITHM_ID_PARAMETERS_SEQ		4
+#define ALGORITHM_ID_PARAMETERS_OCT		6
 
 /*
  * Defined in header
@@ -586,6 +589,7 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 				break;
 			case ALGORITHM_ID_PARAMETERS_OID:
 			case ALGORITHM_ID_PARAMETERS_SEQ:
+			case ALGORITHM_ID_PARAMETERS_OCT:
 				if (parameters != NULL)
 				{
 					*parameters = object;

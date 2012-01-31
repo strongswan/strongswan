@@ -100,6 +100,8 @@
               0x05           "PKCS-5"
                 0x03         "pbeWithMD5AndDES-CBC"		OID_PBE_MD5_DES_CBC
                 0x0A         "pbeWithSHA1AndDES-CBC"	OID_PBE_SHA1_DES_CBC
+                0x0C         "id-PBKDF2"				OID_PBKDF2
+                0x0D         "id-PBES2"					OID_PBES2
               0x07           "PKCS-7"
                 0x01         "data"						OID_PKCS7_DATA
                 0x02         "signedData"				OID_PKCS7_SIGNED_DATA
