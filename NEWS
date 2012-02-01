@@ -1,3 +1,18 @@
+strongswan-5.0.0
+----------------
+
+- Charon's bus_t has been refactored so that loggers and other listeners are
+  now handled separately.  The single lock was previously cause for deadlocks
+  if extensive listeners, such as the one provided by the updown plugin, wanted
+  to acquire locks that were held by other threads which in turn tried to log
+  messages, and thus were waiting to acquire the same lock currently held by
+  the thread calling the listener.
+  The implemented changes also allow the use of a read/write-lock for the
+  loggers which increases performance if multiple loggers are registered.
+  Besides several interface changes this last bit also changes the semantics
+  for loggers as these may now be called by multiple threads at the same time.
+
+
 strongswan-4.6.3
 ----------------
 
