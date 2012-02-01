@@ -12,6 +12,9 @@ strongswan-5.0.0
   Besides several interface changes this last bit also changes the semantics
   for loggers as these may now be called by multiple threads at the same time.
 
+- Source routes are reinstalled if interfaces are reactivated or IP addresses
+  reappear.
+
 
 strongswan-4.6.3
 ----------------
