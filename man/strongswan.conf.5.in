@@ -306,6 +306,9 @@ Start phase2 EAP TNC protocol after successful client authentication
 Request peer authentication based on a client certificate
 
 .TP
+.BR charon.plugins.eap-radius.accounting " [no]"
+Send RADIUS accounting information to RADIUS servers.
+.TP
 .BR charon.plugins.eap-radius.class_group " [no]"
 Use the
 .I class
