@@ -71,6 +71,12 @@ struct private_stroke_cred_t {
 	mem_cred_t *creds;
 
 	/**
+	 * ignore missing CA basic constraint (i.e. treat all certificates in
+	 * ipsec.conf ca sections and ipsec.d/cacert as CA certificates)
+	 */
+	bool force_ca_cert;
+
+	/**
 	 * cache CRLs to disk?
 	 */
 	bool cachecrl;
@@ -91,10 +97,21 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
 	}
 
-	cert = lib->creds->create(lib->creds,
+	if (this->force_ca_cert)
+	{	/* we treat this certificate as a CA certificate even if it has no
+		 * CA basic constraint */
+		cert = lib->creds->create(lib->creds,
+							  CRED_CERTIFICATE, CERT_X509,
+							  BUILD_FROM_FILE, path, BUILD_X509_FLAG, X509_CA,
+							  BUILD_END);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds,
 							  CRED_CERTIFICATE, CERT_X509,
 							  BUILD_FROM_FILE, path,
 							  BUILD_END);
+	}
 	if (cert)
 	{
 		x509_t *x509 = (x509_t*)cert;
@@ -171,11 +188,21 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 		{
 			case CERT_X509:
 				if (flag & X509_CA)
-				{	/* for CA certificates, we strictly require
-					 * the CA basic constraint to be set */
-					cert = lib->creds->create(lib->creds,
+				{
+					if (this->force_ca_cert)
+					{	/* treat this certificate as CA cert even it has no
+						 * CA basic constraint */
+						cert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, file, BUILD_X509_FLAG,
+										X509_CA, BUILD_END);
+					}
+					else
+					{
+						cert = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, file, BUILD_END);
+					}
 					if (cert)
 					{
 						x509_t *x509 = (x509_t*)cert;
@@ -1072,6 +1099,9 @@ stroke_cred_t *stroke_cred_create()
 	);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+
+	this->force_ca_cert = lib->settings->get_bool(lib->settings,
+			"charon.plugins.stroke.ignore_missing_ca_basic_constraint", FALSE);
 
 	load_certs(this);
 	load_secrets(this, SECRETS_FILE, 0, NULL);

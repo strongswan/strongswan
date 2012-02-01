@@ -469,6 +469,10 @@ Database URI for charons SQL plugin
 .BR charon.plugins.sql.loglevel " [-1]"
 Loglevel for logging to SQL database
 .TP
+.BR charon.plugins.stroke.ignore_missing_ca_basic_constraint " [no]"
+Treat certificates in ipsec.d/cacerts and ipsec.conf ca sections as CA
+certificates even if they don't contain a CA basic constraint.
+.TP
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
