@@ -178,7 +178,7 @@ METHOD(asn1_parser_t, iterate, bool,
 
 	if (*start_ptr != obj.type && !(this->implicit && this->line == 0))
 	{
-		DBG1(DBG_ASN, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
+		DBG2(DBG_ASN, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
 					level, obj.name, obj.type, *start_ptr);
 		DBG3(DBG_ASN, "%b", start_ptr, (u_int)(blob->ptr - start_ptr));
 		this->success = FALSE;
