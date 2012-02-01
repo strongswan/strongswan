@@ -11,6 +11,9 @@ strongswan-4.6.2
   Linux IMA possible. Measurement reference values are automatically stored
   in an SQLite database.
 
+- The EAP-RADIUS authentication backend supports RADIUS accounting. It sends
+  start/stop messages containing Username, Framed-IP and Input/Output-Octets
+  attributes and has been tested against FreeRADIUS and Microsoft NPS.
 
 strongswan-4.6.1
 ----------------
