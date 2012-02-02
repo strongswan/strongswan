@@ -606,6 +606,8 @@ METHOD(ike_sa_t, get_state, ike_sa_state_t,
 METHOD(ike_sa_t, set_state, void,
 	private_ike_sa_t *this, ike_sa_state_t state)
 {
+	bool trigger_dpd = FALSE;
+
 	DBG2(DBG_IKE, "IKE_SA %s[%d] state change: %N => %N",
 		 get_name(this), this->unique_id,
 		 ike_sa_state_names, this->state,
@@ -667,19 +669,7 @@ METHOD(ike_sa_t, set_state, void,
 					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
 
-				/* start DPD checks */
-				if (this->peer_cfg->get_dpd(this->peer_cfg))
-				{
-					if (supports_extension(this, EXT_DPD))
-					{
-						this->state = state;
-						send_dpd(this);
-					}
-					else
-					{
-						DBG1(DBG_IKE, "DPD not supported by peer, disabled");
-					}
-				}
+				trigger_dpd = this->peer_cfg->get_dpd(this->peer_cfg);
 			}
 			break;
 		}
@@ -696,6 +686,18 @@ METHOD(ike_sa_t, set_state, void,
 	}
 	charon->bus->ike_state_change(charon->bus, &this->public, state);
 	this->state = state;
+
+	if (trigger_dpd)
+	{
+		if (supports_extension(this, EXT_DPD))
+		{
+			send_dpd(this);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "DPD not supported by peer, disabled");
+		}
+	}
 }
 
 METHOD(ike_sa_t, reset, void,
