@@ -485,8 +485,8 @@ METHOD(task_manager_t, initiate, status_t,
 			case SUCCESS:
 				/* task completed, remove it */
 				this->active_tasks->remove_at(this->active_tasks, enumerator);
-				if (task->get_type(task) == AGGRESSIVE ||
-					task->get_type(task) == QUICK_MODE)
+				if (task->get_type(task) == TASK_AGGRESSIVE_MODE ||
+					task->get_type(task) == TASK_QUICK_MODE)
 				{	/* last message of three message exchange */
 					keep = TRUE;
 				}
