@@ -1482,9 +1482,13 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.destroy = _destroy,
 			},
 		},
+		.initiating = {
+			.type = EXCHANGE_TYPE_UNDEFINED,
+		},
+		.responding = {
+			.seqnr = RESPONDING_SEQ,
+		},
 		.ike_sa = ike_sa,
-		.initiating.type = EXCHANGE_TYPE_UNDEFINED,
-		.responding.seqnr = RESPONDING_SEQ,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.queued_tasks = linked_list_create(),
 		.active_tasks = linked_list_create(),
