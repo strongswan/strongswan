@@ -8,17 +8,19 @@ strongswan-4.6.2
 
 - Fully implemented the "TCG Attestation PTS Protocol: Binding to IF-M"
   standard (TLV-based messages only). TPM-based remote attestation of
-  Linux IMA possible. Measurement reference values are automatically stored
-  in an SQLite database.
+  Linux IMA (Integrity Measurement Architecture) possible. Measurement
+  reference values are automatically stored in an SQLite database.
 
 - The EAP-RADIUS authentication backend supports RADIUS accounting. It sends
   start/stop messages containing Username, Framed-IP and Input/Output-Octets
   attributes and has been tested against FreeRADIUS and Microsoft NPS.
 
-- Added support for PKCS#8 encoded private keys.  This is the default format
-  used by some OpenSSL tools since 1.0.0 (e.g. openssl req with -keyout).
+- Added support for PKCS#8 encoded private keys via the libstrongswan
+  pkcs8 plugin.  This is the default format used by some OpenSSL tools since
+  version 1.0.0 (e.g. openssl req with -keyout).
 
 - Added session resumption support to the strongSwan TLS stack.
+
 
 strongswan-4.6.1
 ----------------
