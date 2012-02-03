@@ -143,6 +143,8 @@ enum notify_type_t {
 	/* IKEv1 DPD */
 	DPD_R_U_THERE = 36136,
 	DPD_R_U_THERE_ACK = 36137,
+	/* IKEv1 Cisco High Availability */
+	UNITY_LOAD_BALANCE = 40501,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
 	/* IKE-ME, private use */

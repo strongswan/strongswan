@@ -81,10 +81,27 @@ METHOD(task_t, process_r, status_t,
 					this->ike_sa->set_condition(this->ike_sa,
 												COND_INIT_CONTACT_SEEN, TRUE);
 				}
+				else if (type == UNITY_LOAD_BALANCE)
+				{
+					host_t *redirect;
+					chunk_t data;
+
+					data = notify->get_notification_data(notify);
+					redirect = host_create_from_chunk(AF_INET, data, 0);
+					if (redirect)
+					{
+						DBG1(DBG_IKE, "received %N notify. redirected to %H",
+							 notify_type_names, type, redirect);
+					}
+					else
+					{
+						DBG1(DBG_IKE, "received %N notify, invalid address");
+					}
+				}
 				else if (type < 16384)
 				{
 					DBG1(DBG_IKE, "received %N error notify",
-						 notify_type_names, notify->get_notify_type(notify));
+						 notify_type_names, type);
 					if (this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
 					{	/* only critical during main mode */
 						status = FAILED;
@@ -94,7 +111,7 @@ METHOD(task_t, process_r, status_t,
 				else
 				{
 					DBG1(DBG_IKE, "received %N notify",
-						 notify_type_names, notify->get_notify_type(notify));
+						 notify_type_names, type);
 				}
 				continue;
 			case DELETE_V1:
