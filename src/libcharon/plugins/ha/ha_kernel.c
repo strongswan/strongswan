@@ -274,11 +274,14 @@ METHOD(ha_kernel_t, activate, void,
 	char *file;
 
 	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
-	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+	if (enumerator)
 	{
-		enable_disable(this, segment, file, TRUE);
+		while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+		{
+			enable_disable(this, segment, file, TRUE);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 }
 
 METHOD(ha_kernel_t, deactivate, void,
@@ -288,11 +291,14 @@ METHOD(ha_kernel_t, deactivate, void,
 	char *file;
 
 	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
-	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+	if (enumerator)
 	{
-		enable_disable(this, segment, file, FALSE);
+		while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+		{
+			enable_disable(this, segment, file, FALSE);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**
@@ -306,23 +312,26 @@ static void disable_all(private_ha_kernel_t *this)
 	int i;
 
 	enumerator = enumerator_create_directory(CLUSTERIP_DIR);
-	while (enumerator->enumerate(enumerator, NULL, &file, NULL))
+	if (enumerator)
 	{
-		if (chown(file, charon->uid, charon->gid) != 0)
+		while (enumerator->enumerate(enumerator, NULL, &file, NULL))
 		{
-			DBG1(DBG_CFG, "changing ClusterIP permissions failed: %s",
-				 strerror(errno));
-		}
-		active = get_active(this, file);
-		for (i = 1; i <= this->count; i++)
-		{
-			if (active & SEGMENTS_BIT(i))
+			if (chown(file, charon->uid, charon->gid) != 0)
 			{
-				enable_disable(this, i, file, FALSE);
+				DBG1(DBG_CFG, "changing ClusterIP permissions failed: %s",
+					 strerror(errno));
+			}
+			active = get_active(this, file);
+			for (i = 1; i <= this->count; i++)
+			{
+				if (active & SEGMENTS_BIT(i))
+				{
+					enable_disable(this, i, file, FALSE);
+				}
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 }
 
 METHOD(ha_kernel_t, destroy, void,
