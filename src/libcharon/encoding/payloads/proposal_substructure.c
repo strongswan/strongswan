@@ -1288,6 +1288,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 			this = (private_proposal_substructure_t*)
 						proposal_substructure_create_from_proposal_v1(
 								proposal, lifetime, lifebytes, auth, mode, udp);
+			++number;
 		}
 		else
 		{
