@@ -178,6 +178,10 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				e->destroy(e);
 				DBG1(DBG_IMV, "AIK certificate is %strusted",
 							   trusted ? "" : "not ");
+				if (!trusted)
+				{
+					return FALSE;
+				}
 			}
 			pts->set_aik(pts, aik);
 			break;

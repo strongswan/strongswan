@@ -65,13 +65,21 @@ struct pts_database_t {
 								int id, bool is_dir);
 
 	/**
+	* Check if an AIK given by its keyid is registered in the database
+	*
+	* @param keyid			AIK keyid (SHA-1 hash of the AIK public key info)
+	* @param kid			Primary key of AIK entry in keys table
+	* @return				SUCCESS if AIK is present, FAILED otherwise
+	*/
+	status_t (*check_aik_keyid)(pts_database_t *this, chunk_t keyid, int *kid);
+
+	/**
 	* Get functional components to request evidence of
 	*
-	* @param keyid			SHA-1 hash of AIK public key info
+	* @param kid			Primary key of AIK entry in keys table
 	* @return				Enumerator over all matching components
 	*/
-	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this,
-												 chunk_t keyid);
+	enumerator_t* (*create_comp_evid_enumerator)(pts_database_t *this, int kid);
 
 	/**
 	* Check a functional component measurement against value stored in database

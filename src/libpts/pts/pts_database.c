@@ -97,19 +97,42 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
-	private_pts_database_t *this, chunk_t keyid)
+METHOD(pts_database_t, check_aik_keyid, status_t,
+	private_pts_database_t *this, chunk_t keyid, int *kid)
 {
 	enumerator_t *e;
 
-	/* look for all entries belonging to a product in the components table */
+	/* If the AIK is registered get the primary key */
+	e = this->db->query(this->db,
+				"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
+	if (!e)
+	{
+		DBG1(DBG_PTS, "no database query enumerator returned");
+		return FAILED;
+	}
+	if (!e->enumerate(e, kid))
+	{
+		DBG1(DBG_PTS, "AIK %#B is not registered in database", &keyid);
+		e->destroy(e);
+		return FAILED;
+	}
+	e->destroy(e);
+
+	return SUCCESS;
+}
+
+METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
+	private_pts_database_t *this, int kid)
+{
+	enumerator_t *e;
+
+	/* look for all entries belonging to an AIK in the components table */
 	e = this->db->query(this->db,
 				"SELECT c.vendor_id, c.name, c.qualifier, kc.depth "
  				"FROM components AS c "
 				"JOIN key_component AS kc ON c.id = kc.component "
-				"JOIN keys AS k ON k.id = kc.key "
-				"WHERE k.keyid = ? ORDER BY kc.seq_no",
-				DB_BLOB, keyid, DB_INT, DB_INT, DB_INT, DB_INT);
+				"WHERE kc.key = ? ORDER BY kc.seq_no",
+				DB_INT, kid, DB_INT, DB_INT, DB_INT, DB_INT);
 	return e;
 }
 
@@ -200,21 +223,10 @@ METHOD(pts_database_t, get_comp_measurement_count, status_t,
 	/* Initialize count */
 	*count = 0;
 
-	/* If the AIK is registered get the primary key */
-	e = this->db->query(this->db,
-				"SELECT id FROM keys WHERE keyid = ?", DB_BLOB, keyid, DB_INT);
-	if (!e)
+	if (_check_aik_keyid(this, keyid, kid) != SUCCESS)
 	{
-		DBG1(DBG_PTS, "no database query enumerator returned");
 		return FAILED;
 	}
-	if (!e->enumerate(e, kid))
-	{
-		DBG1(DBG_PTS, "AIK %#B is not registered in database", &keyid);
-		e->destroy(e);
-		return FAILED;
-	}
-	e->destroy(e);
 
 	/* Get the primary key of the Component Functional Name */
 	e = this->db->query(this->db,
@@ -277,6 +289,7 @@ pts_database_t *pts_database_create(char *uri)
 			.create_file_meta_enumerator = _create_file_meta_enumerator,
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
+			.check_aik_keyid = _check_aik_keyid,
 			.check_comp_measurement = _check_comp_measurement,
 			.insert_comp_measurement = _insert_comp_measurement,
 			.delete_comp_measurements = _delete_comp_measurements,

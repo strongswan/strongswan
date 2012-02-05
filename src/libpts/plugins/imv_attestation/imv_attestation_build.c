@@ -207,7 +207,7 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			pts_component_t *comp;
 			pts_comp_func_name_t *comp_name;
 			chunk_t keyid;
-			int vid, name, qualifier;
+			int kid, vid, name, qualifier;
 			u_int8_t flags;
 			u_int32_t depth;
 			bool first = TRUE, first_component = TRUE;
@@ -224,15 +224,19 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			}
 			if (!pts->get_aik_keyid(pts, &keyid))
 			{
-				break;
+				DBG1(DBG_IMV, "retrieval of AIK keyid failed");
+				return FALSE;
 			}
 			if (!pts_db)
 			{
-				DBG1(DBG_PTS, "pts database not available");
+				DBG1(DBG_IMV, "pts database not available");
 				break;
 			}
-			
-			enumerator = pts_db->create_comp_evid_enumerator(pts_db, keyid);
+			if (pts_db->check_aik_keyid(pts_db, keyid, &kid) != SUCCESS)
+			{
+				return FALSE;
+			}
+			enumerator = pts_db->create_comp_evid_enumerator(pts_db, kid);
 			if (!enumerator)
 			{
 				break;

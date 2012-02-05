@@ -354,6 +354,14 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 	/* check the IMV state for the next PA-TNC attributes to send */
 	result = send_message(connection_id);
+	if (result != TNC_RESULT_SUCCESS)
+	{
+		state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);
+		return imv_attestation->provide_recommendation(imv_attestation,
+													   connection_id);
+	}
 
 	if (attestation_state->get_handshake_state(attestation_state) ==
 		IMV_ATTESTATION_STATE_END)
