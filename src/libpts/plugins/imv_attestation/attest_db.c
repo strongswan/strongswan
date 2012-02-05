@@ -1045,7 +1045,18 @@ METHOD(attest_db_t, list_measurements, void,
 METHOD(attest_db_t, add, bool,
 	private_attest_db_t *this)
 {
-	return FALSE;
+	bool success = FALSE;
+
+	if (this->kid && this->cid)
+	{
+		success = this->db->execute(this->db, NULL,
+					"INSERT INTO key_component (key, component) VALUES (?, ?)",
+					DB_UINT, this->kid, DB_UINT, this->cid) == 1;
+
+		printf("key/component pair (%d/%d) %sinserted into database\n",
+				this->kid, this->cid, success ? "" : "could not be ");
+	}
+	return success;
 }
 
 METHOD(attest_db_t, delete, bool,
@@ -1059,10 +1070,16 @@ METHOD(attest_db_t, delete, bool,
 		return FALSE;
 	}
 
-	if (this->kid && this->did)
+	if (this->kid && this->cid)
 	{
-		printf("deletion of key/component entries not supported yet\n");
-		return FALSE;
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM key_component "
+								"WHERE key = ? AND component = ?",
+								DB_UINT, this->kid, DB_UINT, this->cid) > 0;
+
+		printf("key/component pair (%d/%d) %sdeleted from database\n",
+				this->kid, this->cid, success ? "" : "could not be ");
+		return success;
 	}
 
 	if (this->cid)
