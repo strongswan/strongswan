@@ -237,6 +237,17 @@ METHOD(listener_t, ike_updown, bool,
 {
 	if (!up)
 	{
+		enumerator_t *enumerator;
+		child_sa_t *child_sa;
+
+		/* update usage for all children just before sending stop */
+		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, &child_sa))
+		{
+			update_usage(this, ike_sa, child_sa);
+		}
+		enumerator->destroy(enumerator);
+
 		send_stop(this, ike_sa);
 	}
 	return TRUE;
@@ -269,7 +280,7 @@ METHOD(listener_t, child_updown, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
 	child_sa_t *child_sa, bool up)
 {
-	if (!up)
+	if (!up && ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
 		update_usage(this, ike_sa, child_sa);
 	}
