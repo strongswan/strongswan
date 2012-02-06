@@ -40,6 +40,10 @@ start() {
 	iptables -A INPUT  -i eth1 -p udp --sport 1812 -s PH_IP_ALICE -j ACCEPT
 	iptables -A OUTPUT -o eth1 -p udp --dport 1812 -d PH_IP_ALICE -j ACCEPT
 
+	# allow RADIUS accounting protocol with alice
+	iptables -A INPUT  -i eth1 -p udp --sport 1813 -s PH_IP_ALICE -j ACCEPT
+	iptables -A OUTPUT -o eth1 -p udp --dport 1813 -d PH_IP_ALICE -j ACCEPT
+
 	# allow ssh
 	iptables -A INPUT  -p tcp --dport 22 -j ACCEPT
 	iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
