@@ -839,25 +839,25 @@ static void filter_mac_config_suites(private_tls_crypto_t *this,
 			while (enumerator->enumerate(enumerator, &token))
 			{
 				if (strcaseeq(token, "md5") &&
-					suites[i].hash == HASH_MD5)
+					suites[i].mac == AUTH_HMAC_MD5_128)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "sha1") &&
-					suites[i].hash == HASH_SHA1)
+					suites[i].mac == AUTH_HMAC_SHA1_160)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "sha256") &&
-					suites[i].hash == HASH_SHA256)
+					suites[i].mac == AUTH_HMAC_SHA2_256_256)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "sha384") &&
-					suites[i].hash == HASH_SHA384)
+					suites[i].mac == AUTH_HMAC_SHA2_384_384)
 				{
 					suites[remaining++] = suites[i];
 					break;
