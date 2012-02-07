@@ -126,6 +126,13 @@ will return
 The following keys are currently defined (using dot notation). The default
 value (if any) is listed in brackets after the key.
 
+.SS attest section
+.TP
+.BR attest.database
+Path to database with file measurement information
+.TP
+.BR attest.load
+Plugins to load in ipsec attest tool
 .SS charon section
 .TP
 .BR charon.block_threshold " [5]"
@@ -599,14 +606,26 @@ AIK certificate file
 .BR libimcv.plugins.imc-attestation.aik_key
 AIK public key file
 .TP
+.BR libimcv.plugins.imv-attestation.nonce_len " [20]"
+DH nonce length
+.TP
+.BR libimcv.plugins.imv-attestation.use_quote2 " [yes]"
+Use Quote2 AIK signature instead of Quote signature
+.TP
 .BR libimcv.plugins.imv-attestation.cadir
 Path to directory with AIK cacerts
 .TP
 .BR libimcv.plugins.imv-attestation.database
 Path to database with file measurement information
 .TP
-.BR libimcv.plugins.imv-attestation.hash_algorithm " [sha1]"
+.BR libimcv.plugins.imv-attestation.dh_group " [ecp256]"
+Preferred Diffie-Hellman group
+.TP
+.BR libimcv.plugins.imv-attestation.hash_algorithm " [sha256]"
 Preferred measurement hash algorithm
+.TP
+.BR libimcv.plugins.imv-attestation.min_nonce_len " [0]"
+DH minimum nonce length
 .TP
 .BR libimcv.plugins.imv-attestation.platform_info
 Information on operating system and hardware platform
