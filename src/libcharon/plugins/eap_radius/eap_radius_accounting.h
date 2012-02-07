@@ -15,7 +15,7 @@
 
 /**
  * @defgroup eap_radius_accounting eap_radius_accounting
- * @{ @ingroup
+ * @{ @ingroup eap_radius
  */
 
 #ifndef EAP_RADIUS_ACCOUNTING_H_

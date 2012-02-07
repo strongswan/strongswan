@@ -264,7 +264,7 @@ struct radius_message_t {
 /**
  * Create an empty RADIUS request message.
  *
- * @code				request type
+ * @param code			request type
  * @return				radius_message_t object
  */
 radius_message_t *radius_message_create_request(radius_message_code_t code);

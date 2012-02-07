@@ -54,13 +54,13 @@ enum tls_cipher_suite_t {
 	TLS_RSA_EXPORT_WITH_DES40_CBC_SHA =			0x0008,
 	TLS_RSA_WITH_DES_CBC_SHA =					0x0009,
 	TLS_RSA_WITH_3DES_EDE_CBC_SHA =				0x000A,
-	TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA = 		0x000B,
+	TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA =		0x000B,
 	TLS_DH_DSS_WITH_DES_CBC_SHA =				0x000C,
 	TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA =			0x000D,
 	TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA =		0x000E,
-	TLS_DH_RSA_WITH_DES_CBC_SHA = 				0x000F,
+	TLS_DH_RSA_WITH_DES_CBC_SHA =				0x000F,
 	TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA =			0x0010,
-	TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = 	0x0011,
+	TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA =		0x0011,
 	TLS_DHE_DSS_WITH_DES_CBC_SHA =				0x0012,
 	TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA =			0x0013,
 	TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA =		0x0014,
@@ -110,7 +110,7 @@ enum tls_cipher_suite_t {
 	TLS_RSA_WITH_CAMELLIA_128_CBC_SHA =			0x0041,
 	TLS_DH_DSS_WITH_CAMELLIA_128_CBC_SHA =		0x0042,
 	TLS_DH_RSA_WITH_CAMELLIA_128_CBC_SHA =		0x0043,
-	TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA = 	0x0044,
+	TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA =		0x0044,
 	TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA =		0x0045,
 	TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA =		0x0046,
 
@@ -126,8 +126,8 @@ enum tls_cipher_suite_t {
 	TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA =		0x0085,
 	TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA =		0x0086,
 	TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA =		0x0087,
-	TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA = 	0x0088,
-	TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA = 	0x0089,
+	TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA =		0x0088,
+	TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA =		0x0089,
 	TLS_PSK_WITH_RC4_128_SHA =					0x008A,
 	TLS_PSK_WITH_3DES_EDE_CBC_SHA =				0x008B,
 	TLS_PSK_WITH_AES_128_CBC_SHA =				0x008C,
@@ -527,7 +527,7 @@ struct tls_crypto_t {
 	 * @param id			identity the session is bound to
 	 * @param client_random	random data from client hello
 	 * @param server_random	random data from server hello
-	 * @param
+	 * @return				selected suite
 	 */
 	tls_cipher_suite_t (*resume_session)(tls_crypto_t *this, chunk_t session,
 										 identification_t *id,
@@ -537,7 +537,7 @@ struct tls_crypto_t {
 	/**
 	 * Check if we have a session to resume as a client.
 	 *
-	 * @param id		server identity to get a session for
+	 * @param id			server identity to get a session for
 	 * @return				allocated session identifier, or chunk_empty
 	 */
 	chunk_t (*get_session)(tls_crypto_t *this, identification_t *id);
@@ -566,7 +566,7 @@ struct tls_crypto_t {
  * Create a tls_crypto instance.
  *
  * @param tls			TLS stack
- * @param tls_cache		TLS session cache
+ * @param cache			TLS session cache
  * @return				TLS crypto helper
  */
 tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache);
