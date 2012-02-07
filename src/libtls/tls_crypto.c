@@ -1598,7 +1598,7 @@ METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
 		this->suite = this->cache->lookup(this->cache, session, id, &master);
 		if (this->suite)
 		{
-			select_cipher_suite(this, &this->suite, 1, KEY_ANY);
+			this->suite = select_cipher_suite(this, &this->suite, 1, KEY_ANY);
 			if (this->suite)
 			{
 				this->prf->set_key(this->prf, master);
@@ -1606,8 +1606,9 @@ METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
 			}
 			chunk_clear(&master);
 		}
+		return this->suite;
 	}
-	return this->suite;
+	return 0;
 }
 
 METHOD(tls_crypto_t, get_session, chunk_t,
