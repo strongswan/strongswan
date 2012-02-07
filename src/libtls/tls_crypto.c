@@ -1572,6 +1572,7 @@ static void expand_keys(private_tls_crypto_t *this,
 	/* EAP-MSK */
 	if (this->msk_label)
 	{
+		seed = chunk_cata("cc", client_random, server_random);
 		this->msk = chunk_alloc(64);
 		this->prf->get_bytes(this->prf, this->msk_label, seed,
 							 this->msk.len, this->msk.ptr);
