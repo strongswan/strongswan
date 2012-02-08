@@ -835,14 +835,7 @@ static void process_secret(secret_t *s, int whackfd)
 	err_t ugh = NULL;
 
 	s->kind = SECRET_PSK;  /* default */
-	if (*tok == '"' || *tok == '\'')
-	{
-		log_psk("PSK", s);
-
-		/* old PSK format: just a string */
-		ugh = process_psk_secret(&s->u.preshared_secret);
-	}
-	else if (tokeqword("psk"))
+	if (tokeqword("psk"))
 	{
 		log_psk("PSK", s);
 
@@ -989,13 +982,7 @@ static void process_secret_records(int whackfd)
 
 			for (;;)
 			{
-				if (tok[0] == '"' || tok[0] == '\'')
-				{
-					/* found key part */
-					process_secret(s, whackfd);
-					break;
-				}
-				else if (tokeq(":"))
+				if (tokeq(":"))
 				{
 					/* found key part */
 					shift();    /* discard explicit separator */
