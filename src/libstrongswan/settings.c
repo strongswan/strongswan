@@ -1117,13 +1117,20 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 								char *pattern, bool merge)
 {
 	char *text;
-	linked_list_t *contents = linked_list_create();
-	section_t *section = section_create(NULL);
+	linked_list_t *contents;
+	section_t *section;
 
 	if (pattern == NULL)
 	{
+#ifdef STRONGSWAN_CONF
 		pattern = STRONGSWAN_CONF;
+#else
+		return FALSE;
+#endif
 	}
+
+	contents = linked_list_create();
+	section = section_create(NULL);
 
 	if (!parse_files(contents, NULL, 0, pattern, section))
 	{
