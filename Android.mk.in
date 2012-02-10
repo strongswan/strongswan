@@ -50,6 +50,7 @@ strongswan_PATH := $(LOCAL_PATH)
 libvstr_PATH := external/strongswan-support/vstr/include
 libcurl_PATH := external/strongswan-support/libcurl/include
 libgmp_PATH := external/strongswan-support/gmp
+openssl_PATH := external/openssl/include
 
 # some definitions
 strongswan_VERSION := "@PACKAGE_VERSION@"
