@@ -15,7 +15,7 @@
 
 #include "farp_listener.h"
 
-#include <utils/hashtable.h>
+#include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_farp_listener_t private_farp_listener_t;
@@ -31,9 +31,9 @@ struct private_farp_listener_t {
 	farp_listener_t public;
 
 	/**
-	 * Hashtable with active virtual IPs
+	 * List with entry_t
 	 */
-	hashtable_t *ips;
+	linked_list_t *entries;
 
 	/**
 	 * RWlock for IP list
@@ -42,88 +42,99 @@ struct private_farp_listener_t {
 };
 
 /**
- * Hashtable hash function
+ * Traffic selector cache entry
  */
-static u_int hash(host_t *key)
-{
-	return chunk_hash(key->get_address(key));
-}
+typedef struct {
+	/** list of local selectors */
+	linked_list_t *local;
+	/** list of remote selectors */
+	linked_list_t *remote;
+	/** reqid of CHILD_SA */
+	u_int32_t reqid;
+} entry_t;
 
-/**
- * Hashtable equals function
- */
-static bool equals(host_t *a, host_t *b)
+METHOD(listener_t, child_updown, bool,
+	private_farp_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	bool up)
 {
-	return a->ip_equals(a, b);
-}
+	enumerator_t *enumerator;
+	entry_t *entry;
 
-METHOD(listener_t, ike_updown, bool,
-	private_farp_listener_t *this, ike_sa_t *ike_sa, bool up)
-{
-	if (!up)
+	if (up)
 	{
-		host_t *ip;
+		INIT(entry,
+			.local = child_sa->get_traffic_selectors(child_sa, TRUE),
+			.remote = child_sa->get_traffic_selectors(child_sa, FALSE),
+			.reqid = child_sa->get_reqid(child_sa),
+		);
+		entry->local = entry->local->clone_offset(entry->local,
+										offsetof(traffic_selector_t, clone));
+		entry->remote = entry->remote->clone_offset(entry->remote,
+										offsetof(traffic_selector_t, clone));
 
-		ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-		if (ip)
+		this->lock->write_lock(this->lock);
+		this->entries->insert_last(this->entries, entry);
+		this->lock->unlock(this->lock);
+	}
+	else
+	{
+		this->lock->write_lock(this->lock);
+		enumerator = this->entries->create_enumerator(this->entries);
+		while (enumerator->enumerate(enumerator, &entry))
 		{
-			this->lock->write_lock(this->lock);
-			ip = this->ips->remove(this->ips, ip);
-			this->lock->unlock(this->lock);
-			DESTROY_IF(ip);
+			if (entry->reqid == child_sa->get_reqid(child_sa))
+			{
+				this->entries->remove_at(this->entries, enumerator);
+				entry->local->destroy_offset(entry->local,
+										offsetof(traffic_selector_t, destroy));
+				entry->remote->destroy_offset(entry->remote,
+										offsetof(traffic_selector_t, destroy));
+				free(entry);
+			}
 		}
+		enumerator->destroy(enumerator);
+		this->lock->unlock(this->lock);
 	}
 	return TRUE;
 }
 
-METHOD(listener_t, message_hook, bool,
-	private_farp_listener_t *this, ike_sa_t *ike_sa,
-	message_t *message, bool incoming)
+METHOD(farp_listener_t, has_tunnel, bool,
+	private_farp_listener_t *this, host_t *local, host_t *remote)
 {
-	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-		message->get_exchange_type(message) == IKE_AUTH &&
-		!message->get_request(message))
-	{
-		host_t *ip;
-
-		ip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-		if (ip)
-		{
-			ip = ip->clone(ip);
-			this->lock->write_lock(this->lock);
-			ip = this->ips->put(this->ips, ip, ip);
-			this->lock->unlock(this->lock);
-			DESTROY_IF(ip);
-		}
-	}
-	return TRUE;
-}
-
-METHOD(farp_listener_t, is_active, bool,
-	private_farp_listener_t *this, host_t *ip)
-{
-	bool active;
+	enumerator_t *entries, *locals, *remotes;
+	traffic_selector_t *ts;
+	bool found = FALSE;
+	entry_t *entry;
 
 	this->lock->read_lock(this->lock);
-	active = this->ips->get(this->ips, ip) != NULL;
+	entries = this->entries->create_enumerator(this->entries);
+	while (!found && entries->enumerate(entries, &entry))
+	{
+		remotes = entry->remote->create_enumerator(entry->remote);
+		while (!found && remotes->enumerate(remotes, &ts))
+		{
+			if (ts->includes(ts, remote))
+			{
+				locals = entry->local->create_enumerator(entry->local);
+				while (!found && locals->enumerate(locals, &ts))
+				{
+					found = ts->includes(ts, local);
+				}
+				locals->destroy(locals);
+			}
+		}
+		remotes->destroy(remotes);
+	}
+	entries->destroy(entries);
 	this->lock->unlock(this->lock);
-	return active;
+
+	return found;
 }
 
 METHOD(farp_listener_t, destroy, void,
 	private_farp_listener_t *this)
 {
-	enumerator_t *enumerator;
-	host_t *key, *value;
-
-	enumerator = this->ips->create_enumerator(this->ips);
-	while (enumerator->enumerate(enumerator, &key, &value))
-	{
-		value->destroy(value);
-	}
-	enumerator->destroy(enumerator);
-	this->ips->destroy(this->ips);
-
+	this->entries->destroy(this->entries);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -138,14 +149,12 @@ farp_listener_t *farp_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
-				.ike_updown = _ike_updown,
-				.message = _message_hook,
+				.child_updown = _child_updown,
 			},
-			.is_active = _is_active,
+			.has_tunnel = _has_tunnel,
 			.destroy = _destroy,
 		},
-		.ips = hashtable_create((hashtable_hash_t)hash,
-								(hashtable_equals_t)equals, 8),
+		.entries = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

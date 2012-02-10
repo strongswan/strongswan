@@ -37,12 +37,13 @@ struct farp_listener_t {
 	listener_t listener;
 
 	/**
-	 * Check if a given IP is currently used as virtual IP by a peer.
+	 * Check if we have a tunnel between two IP addresses.
 	 *
-	 * @param ip		IP to check
-	 * @return			TRUE if IP is an active virtual IP
+	 * @param local		local IP
+	 * @param remote	remote IP
+	 * @return			TRUE if a tunnel is active
 	 */
-	bool (*is_active)(farp_listener_t *this, host_t *ip);
+	bool (*has_tunnel)(farp_listener_t *this, host_t *local, host_t *remote);
 
 	/**
 	 * Destroy a farp_listener_t.

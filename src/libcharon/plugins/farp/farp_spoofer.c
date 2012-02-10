@@ -108,7 +108,7 @@ static job_requeue_t receive_arp(private_farp_spoofer_t *this)
 	arp_t arp;
 	int oldstate;
 	ssize_t len;
-	host_t *ip;
+	host_t *local, *remote;
 
 	oldstate = thread_cancelability(TRUE);
 	len = recvfrom(this->skt, &arp, sizeof(arp), 0,
@@ -117,16 +117,16 @@ static job_requeue_t receive_arp(private_farp_spoofer_t *this)
 
 	if (len == sizeof(arp))
 	{
-		ip = host_create_from_chunk(AF_INET,
+		local = host_create_from_chunk(AF_INET,
+									chunk_create((char*)&arp.sender_ip, 4), 0);
+		remote = host_create_from_chunk(AF_INET,
 									chunk_create((char*)&arp.target_ip, 4), 0);
-		if (ip)
+		if (this->listener->has_tunnel(this->listener, local, remote))
 		{
-			if (this->listener->is_active(this->listener, ip))
-			{
-				send_arp(this, &arp, &addr);
-			}
-			ip->destroy(ip);
+			send_arp(this, &arp, &addr);
 		}
+		local->destroy(local);
+		remote->destroy(remote);
 	}
 
 	return JOB_REQUEUE_DIRECT;
