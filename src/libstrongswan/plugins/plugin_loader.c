@@ -250,8 +250,11 @@ static bool load_plugin(private_plugin_loader_t *this, char *name, char *file,
 			this->plugins->insert_last(this->plugins, entry);
 			return TRUE;
 		case NOT_FOUND:
-			/* try to load the plugin from a file */
-			break;
+			if (file)
+			{	/* try to load the plugin from a file */
+				break;
+			}
+			/* fall-through */
 		default:
 			return FALSE;
 	}
@@ -651,16 +654,18 @@ METHOD(plugin_loader_t, load_plugins, bool,
 	char *token;
 	bool critical_failed = FALSE;
 
+#ifdef PLUGINDIR
 	if (path == NULL)
 	{
 		path = PLUGINDIR;
 	}
+#endif /* PLUGINDIR */
 
 	enumerator = enumerator_create_token(list, " ", " ");
 	while (!critical_failed && enumerator->enumerate(enumerator, &token))
 	{
 		bool critical = FALSE;
-		char file[PATH_MAX];
+		char buf[PATH_MAX], *file = NULL;
 		int len;
 
 		token = strdup(token);
@@ -675,10 +680,14 @@ METHOD(plugin_loader_t, load_plugins, bool,
 			free(token);
 			continue;
 		}
-		if (snprintf(file, sizeof(file), "%s/libstrongswan-%s.so",
-					 path, token) >= sizeof(file))
+		if (path)
 		{
-			return FALSE;
+			if (snprintf(buf, sizeof(buf), "%s/libstrongswan-%s.so",
+						 path, token) >= sizeof(buf))
+			{
+				return FALSE;
+			}
+			file = buf;
 		}
 		if (!load_plugin(this, token, file, critical) && critical)
 		{
