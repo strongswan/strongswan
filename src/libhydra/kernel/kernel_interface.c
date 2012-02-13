@@ -340,7 +340,7 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 
 	if (!found)
 	{
-		DBG1(DBG_KNL, "no local address found in traffic selector %R", ts);
+		DBG2(DBG_KNL, "no local address found in traffic selector %R", ts);
 		return FAILED;
 	}
 
