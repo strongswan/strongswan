@@ -171,22 +171,22 @@ METHOD(socket_t, receiver, status_t,
 
 	if (FD_ISSET(this->ipv4, &rfds))
 	{
-		port = IKEV2_UDP_PORT;
+		port = CHARON_UDP_PORT;
 		selected = this->ipv4;
 	}
 	if (FD_ISSET(this->ipv4_natt, &rfds))
 	{
-		port = IKEV2_NATT_PORT;
+		port = CHARON_NATT_PORT;
 		selected = this->ipv4_natt;
 	}
 	if (FD_ISSET(this->ipv6, &rfds))
 	{
-		port = IKEV2_UDP_PORT;
+		port = CHARON_UDP_PORT;
 		selected = this->ipv6;
 	}
 	if (FD_ISSET(this->ipv6_natt, &rfds))
 	{
-		port = IKEV2_NATT_PORT;
+		port = CHARON_NATT_PORT;
 		selected = this->ipv6_natt;
 	}
 	if (selected)
@@ -299,7 +299,7 @@ METHOD(socket_t, receiver, status_t,
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = 0;
 		/* remove non esp marker */
-		if (dest->get_port(dest) == IKEV2_NATT_PORT)
+		if (dest->get_port(dest) == CHARON_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
 		}
@@ -339,7 +339,7 @@ METHOD(socket_t, sender, status_t,
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
-	if (sport == IKEV2_UDP_PORT)
+	if (sport == CHARON_UDP_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -350,7 +350,7 @@ METHOD(socket_t, sender, status_t,
 			skt = this->ipv6;
 		}
 	}
-	else if (sport == IKEV2_NATT_PORT)
+	else if (sport == CHARON_NATT_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -537,7 +537,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	{
 		/* enable UDP decapsulation globally, only for one socket needed */
 		int type = UDP_ENCAP_ESPINUDP;
-		if (family == AF_INET && port == IKEV2_NATT_PORT &&
+		if (family == AF_INET && port == CHARON_NATT_PORT &&
 			setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
 			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
@@ -590,7 +590,7 @@ socket_default_socket_t *socket_default_socket_create()
 
 #ifdef __APPLE__
 	{
-		int natt_port = IKEV2_NATT_PORT;
+		int natt_port = CHARON_NATT_PORT;
 		if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &natt_port,
 						 sizeof(natt_port)) != 0)
 		{
@@ -600,28 +600,28 @@ socket_default_socket_t *socket_default_socket_create()
 	}
 #endif
 
-	this->ipv4 = open_socket(this, AF_INET, IKEV2_UDP_PORT);
+	this->ipv4 = open_socket(this, AF_INET, CHARON_UDP_PORT);
 	if (this->ipv4 == 0)
 	{
 		DBG1(DBG_NET, "could not open IPv4 socket, IPv4 disabled");
 	}
 	else
 	{
-		this->ipv4_natt = open_socket(this, AF_INET, IKEV2_NATT_PORT);
+		this->ipv4_natt = open_socket(this, AF_INET, CHARON_NATT_PORT);
 		if (this->ipv4_natt == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
 
-	this->ipv6 = open_socket(this, AF_INET6, IKEV2_UDP_PORT);
+	this->ipv6 = open_socket(this, AF_INET6, CHARON_UDP_PORT);
 	if (this->ipv6 == 0)
 	{
 		DBG1(DBG_NET, "could not open IPv6 socket, IPv6 disabled");
 	}
 	else
 	{
-		this->ipv6_natt = open_socket(this, AF_INET6, IKEV2_NATT_PORT);
+		this->ipv6_natt = open_socket(this, AF_INET6, CHARON_NATT_PORT);
 		if (this->ipv6_natt == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv6 NAT-T socket");

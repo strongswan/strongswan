@@ -204,7 +204,7 @@ METHOD(socket_t, receiver, status_t,
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
 		/* remove non esp marker */
-		if (dest->get_port(dest) == IKEV2_NATT_PORT)
+		if (dest->get_port(dest) == CHARON_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
 		}
@@ -291,7 +291,7 @@ METHOD(socket_t, receiver, status_t,
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
 		/* remove non esp marker */
-		if (dest->get_port(dest) == IKEV2_NATT_PORT)
+		if (dest->get_port(dest) == CHARON_NATT_PORT)
 		{
 			data_offset += MARKER_LEN;
 		}
@@ -332,7 +332,7 @@ METHOD(socket_t, sender, status_t,
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
-	if (sport == IKEV2_UDP_PORT)
+	if (sport == CHARON_UDP_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -343,7 +343,7 @@ METHOD(socket_t, sender, status_t,
 			skt = this->send6;
 		}
 	}
-	else if (sport == IKEV2_NATT_PORT)
+	else if (sport == CHARON_NATT_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -541,8 +541,8 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 	{
 		/* Destination Port must be either port or natt_port */
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, udp_header + 2),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_UDP_PORT, 1, 0),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_NATT_PORT, 6, 14),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, CHARON_UDP_PORT, 1, 0),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, CHARON_NATT_PORT, 6, 14),
 		/* port */
 			/* IKE version must be 2.x */
 			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, ike_header + IKE_VERSION_OFFSET),
@@ -667,7 +667,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 	}
 	else
 	{
-		this->send4 = open_send_socket(this, AF_INET, IKEV2_UDP_PORT);
+		this->send4 = open_send_socket(this, AF_INET, CHARON_UDP_PORT);
 		if (this->send4 == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv4 send socket, IPv4 disabled");
@@ -675,7 +675,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 		}
 		else
 		{
-			this->send4_natt = open_send_socket(this, AF_INET, IKEV2_NATT_PORT);
+			this->send4_natt = open_send_socket(this, AF_INET, CHARON_NATT_PORT);
 			if (this->send4_natt == 0)
 			{
 				DBG1(DBG_NET, "could not open IPv4 NAT-T send socket");
@@ -690,7 +690,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 	}
 	else
 	{
-		this->send6 = open_send_socket(this, AF_INET6, IKEV2_UDP_PORT);
+		this->send6 = open_send_socket(this, AF_INET6, CHARON_UDP_PORT);
 		if (this->send6 == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv6 send socket, IPv6 disabled");
@@ -698,7 +698,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 		}
 		else
 		{
-			this->send6_natt = open_send_socket(this, AF_INET6, IKEV2_NATT_PORT);
+			this->send6_natt = open_send_socket(this, AF_INET6, CHARON_NATT_PORT);
 			if (this->send6_natt == 0)
 			{
 				DBG1(DBG_NET, "could not open IPv6 NAT-T send socket");

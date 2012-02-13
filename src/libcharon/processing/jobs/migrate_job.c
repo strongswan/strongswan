@@ -97,7 +97,7 @@ METHOD(job_t, execute, job_requeue_t,
 		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
 
 		host = this->local->clone(this->local);
-		host->set_port(host, IKEV2_UDP_PORT);
+		host->set_port(host, CHARON_UDP_PORT);
 		ike_sa->set_my_host(ike_sa, host);
 
 		host = this->remote->clone(this->remote);

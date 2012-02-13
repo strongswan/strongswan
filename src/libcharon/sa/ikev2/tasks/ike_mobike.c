@@ -271,15 +271,15 @@ static void update_children(private_ike_mobike_t *this)
 /**
  * Apply the port of the old host, if its ip equals the new, use port otherwise.
  */
-static void apply_port(host_t *host, host_t *old, u_int16_t port)
+static void apply_port(host_t *host, host_t *old, u_int16_t port, bool local)
 {
 	if (host->ip_equals(host, old))
 	{
 		port = old->get_port(old);
 	}
-	else if (port == IKEV2_UDP_PORT)
+	else if (port == (local ? CHARON_UDP_PORT : IKEV2_UDP_PORT))
 	{
-		port = IKEV2_NATT_PORT;
+		port = (local ? CHARON_NATT_PORT : IKEV2_NATT_PORT);
 	}
 	host->set_port(host, port);
 }
@@ -314,9 +314,9 @@ METHOD(ike_mobike_t, transmit, void,
 				continue;
 			}
 			/* reuse port for an active address, 4500 otherwise */
-			apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg));
+			apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg), TRUE);
 			other = other->clone(other);
-			apply_port(other, other_old, ike_cfg->get_other_port(ike_cfg));
+			apply_port(other, other_old, ike_cfg->get_other_port(ike_cfg), FALSE);
 			DBG1(DBG_IKE, "checking path %#H - %#H", me, other);
 			copy = packet->clone(packet);
 			copy->set_source(copy, me);

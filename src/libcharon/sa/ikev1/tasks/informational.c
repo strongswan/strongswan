@@ -116,7 +116,7 @@ METHOD(task_t, process_r, status_t,
 							 notify_type_names, type, redirect);
 						/* Cisco boxes reject the first message from 4500 */
 						me = this->ike_sa->get_my_host(this->ike_sa);
-						me->set_port(me, IKEV2_UDP_PORT);
+						me->set_port(me, CHARON_UDP_PORT);
 						this->ike_sa->set_other_host(this->ike_sa, redirect);
 						this->ike_sa->reauth(this->ike_sa);
 						enumerator->destroy(enumerator);

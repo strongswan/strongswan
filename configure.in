@@ -71,6 +71,29 @@ AC_ARG_WITH(
 	[AC_SUBST(ipsecgroup, "root")]
 )
 
+AC_ARG_WITH(
+	[charon-udp-port],
+	AS_HELP_STRING([--with-charon-udp-port=port],[UDP port used by charon locally (default 500).]),
+	[AC_DEFINE_UNQUOTED(CHARON_UDP_PORT, [$withval], [UDP port used by charon locally])
+	 AC_SUBST(charon_udp_port, [$withval])],
+	[AC_SUBST(charon_udp_port, 500)]
+)
+
+AC_ARG_WITH(
+	[charon-natt-port],
+	AS_HELP_STRING([--with-charon-natt-port=port],[UDP port used by charon locally in case a NAT is detected (must be different from charon-udp-port, default 4500)]),
+	[AC_DEFINE_UNQUOTED(CHARON_NATT_PORT, [$withval], [UDP post used by charon locally in case a NAT is detected])
+	 AC_SUBST(charon_natt_port, [$withval])],
+	[AC_SUBST(charon_natt_port, 4500)]
+)
+
+AC_MSG_CHECKING([configured UDP ports ($charon_udp_port, $charon_natt_port)])
+if test x$charon_udp_port == x$charon_natt_port; then
+	AC_MSG_ERROR(the ports have to be different)
+else
+	AC_MSG_RESULT(ok)
+fi
+
 # convert script name to uppercase
 AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 

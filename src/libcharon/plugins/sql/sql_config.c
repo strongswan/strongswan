@@ -259,7 +259,7 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 		ike_cfg_t *ike_cfg;
 
 		ike_cfg = ike_cfg_create(certreq, force_encap,
-								 local, FALSE, IKEV2_UDP_PORT,
+								 local, FALSE, CHARON_UDP_PORT,
 								 remote, FALSE, IKEV2_UDP_PORT);
 		add_ike_proposals(this, ike_cfg, id);
 		return ike_cfg;
