@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <dirent.h>
+#include <inttypes.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -124,8 +125,8 @@ check_expiry(time_t expiration_date, int warning_interval, bool strict)
 			time_left /= 60;
 			unit = "minute";
 		}
-		snprintf(buf, 35, "warning (expires in %d %s%s)", time_left,
-				 unit, (time_left == 1)?"":"s");
+		snprintf(buf, 35, "warning (expires in %" PRIu64 " %s%s)",
+				 (u_int64_t)time_left, unit, (time_left == 1) ? "" : "s");
 		return buf;
 	}
 }
