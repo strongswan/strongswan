@@ -536,7 +536,7 @@ static private_key_t *parse_encrypted_private_key(chunk_t blob)
 {
 	asn1_parser_t *parser;
 	chunk_t object, params, salt, iv;
-	u_int64_t iterations;
+	u_int64_t iterations = 0;
 	int objectID;
 	encryption_algorithm_t encr = ENCR_UNDEFINED;
 	hash_algorithm_t hash = HASH_UNKNOWN;

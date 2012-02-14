@@ -726,7 +726,7 @@ pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args)
 {
 	private_pkcs11_public_key_t *this;
 	chunk_t n, e, blob;
-	size_t keylen;
+	size_t keylen = 0;
 
 	n = e = blob = chunk_empty;
 	while (TRUE)
