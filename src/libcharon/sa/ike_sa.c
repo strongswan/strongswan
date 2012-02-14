@@ -1760,6 +1760,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
 					reset(this);
+					resolve_hosts(this);
 					requeue_init_tasks(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
