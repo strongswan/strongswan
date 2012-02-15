@@ -1017,7 +1017,7 @@ METHOD(attest_db_t, list_measurements, void,
 				"WHERE ch.algo = ? AND ch.key = ? "
 				"ORDER BY vendor_id, name, qualifier, seq_no",
 				DB_INT, this->algo, DB_INT, this->kid, DB_INT, DB_INT, DB_BLOB,
-				DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT);
+				DB_INT, DB_INT, DB_INT, DB_INT);
 		if (e)
 		{
 			while (e->enumerate(e, &seq_no, &pcr, &hash, &cid, &vid, &name,
