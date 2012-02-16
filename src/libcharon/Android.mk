@@ -127,8 +127,12 @@ processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
 LOCAL_SRC_FILES += $(call add_plugin, android)
 ifneq ($(call plugin_enabled, android),)
 LOCAL_C_INCLUDES += frameworks/base/cmds/keystore
-LOCAL_LDLIBS += -llog
 LOCAL_SHARED_LIBRARIES += libcutils
+endif
+
+LOCAL_SRC_FILES += $(call add_plugin, android-log)
+ifneq ($(call plugin_enabled, android-log),)
+LOCAL_LDLIBS += -llog
 endif
 
 LOCAL_SRC_FILES += $(call add_plugin, attr)

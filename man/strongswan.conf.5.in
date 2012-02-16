@@ -272,7 +272,7 @@ Section to define syslog loggers, see LOGGER CONFIGURATION
 Number of worker threads in charon
 .SS charon.plugins subsection
 .TP
-.BR charon.plugins.android.loglevel " [1]"
+.BR charon.plugins.android_log.loglevel " [1]"
 Loglevel for logging to Android specific logger
 .TP
 .BR charon.plugins.attr

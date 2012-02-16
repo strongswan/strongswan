@@ -206,6 +206,7 @@ ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
+ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
 ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
@@ -935,6 +936,7 @@ ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([android],              [c charon])
+ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
 ADD_PLUGIN([whitelist],            [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
@@ -1016,6 +1018,7 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
+AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
@@ -1253,6 +1256,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/android_log/Makefile
 	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
