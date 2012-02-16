@@ -34,7 +34,7 @@ strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
 
 # helper macros to only add source files for plugins included in the list above
 # source files are relative to the android.mk that called the macro
-plugin_enabled = $(findstring $(1), $(strongswan_PLUGINS))
+plugin_enabled = $(filter $(1), $(strongswan_PLUGINS))
 add_plugin = $(if $(call plugin_enabled,$(1)), \
                $(patsubst $(LOCAL_PATH)/%,%, \
                  $(wildcard \
