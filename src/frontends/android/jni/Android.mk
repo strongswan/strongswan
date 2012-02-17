@@ -56,6 +56,7 @@ strongswan_CFLAGS += \
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
 		vstr \
 		openssl \
+		libandroidbridge \
 		strongswan/src/libcharon \
 		strongswan/src/libhydra \
 		strongswan/src/libstrongswan \
