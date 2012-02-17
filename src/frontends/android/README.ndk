@@ -1,0 +1,19 @@
+To build this within the NDK several things have to be added in the jni
+folder:
+
+ - strongswan: The strongSwan sources.  This can either be an extracted tarball,
+   or a symlink to the Git repository.  To build from the repository the sources
+   have to be prepared first: ./autogen && ./configure && make && make distclean
+
+ - openssl: The OpenSSL sources.  Since the sources need to be changed to be
+   built on Android (and especially in the NDK), we provide a modified mirror
+   of the official Android OpenSSL version on git.strongswan.org.
+
+ - vstr: The Vstr string library.  Since cross-compiling this library is not
+   that easy with the configure script and Makefiles included in the tarball,
+   the easiest way to build it is still to use droid-gcc (as described on
+   wiki.strongswan.org).  The build script provided on the wiki builds the
+   library and copies the required header files to the configured installation
+   directory.  Please note that the Android.mk provided on the wiki (vstr.mk)
+   does not work in the NDK.  A replacement is already in place in jni/vstr.
+
