@@ -32,18 +32,7 @@ strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
 			     $(strongswan_STARTER_PLUGINS) \
 			     $(strongswan_SCEPCLIENT_PLUGINS))
 
-# helper macros to only add source files for plugins included in the list above
-# source files are relative to the android.mk that called the macro
-plugin_enabled = $(filter $(1), $(strongswan_PLUGINS))
-add_plugin = $(if $(call plugin_enabled,$(1)), \
-               $(patsubst $(LOCAL_PATH)/%,%, \
-                 $(wildcard \
-                   $(subst %,$(subst -,_,$(strip $(1))), \
-                     $(LOCAL_PATH)/plugins/%/%*.c \
-                    ) \
-                  ) \
-                ) \
-              )
+include $(LOCAL_PATH)/Android.common.mk
 
 # includes
 strongswan_PATH := $(LOCAL_PATH)
@@ -53,7 +42,6 @@ libgmp_PATH := external/strongswan-support/gmp
 openssl_PATH := external/openssl/include
 
 # some definitions
-strongswan_VERSION := "@PACKAGE_VERSION@"
 strongswan_DIR := "/system/bin"
 strongswan_SBINDIR := "/system/bin"
 strongswan_PIDDIR := "/data/misc/vpn"

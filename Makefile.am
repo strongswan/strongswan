@@ -6,17 +6,17 @@ endif
 
 ACLOCAL_AMFLAGS = -I m4/config
 
-EXTRA_DIST = Doxyfile.in LICENSE Android.mk.in Android.mk
+EXTRA_DIST = Doxyfile.in LICENSE Android.common.mk.in Android.common.mk Android.mk
 CLEANFILES = Doxyfile
-BUILT_SOURCES = Android.mk
-MAINTAINERCLEANFILES = Android.mk
+BUILT_SOURCES = Android.common.mk
+MAINTAINERCLEANFILES = Android.common.mk
 
 if USE_DEV_HEADERS
 config_includedir = $(ipseclibdir)/include
 nodist_config_include_HEADERS = config.h
 endif
 
-Android.mk :	Android.mk.in configure.in
+Android.common.mk :	Android.common.mk.in configure.in
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
 		$(srcdir)/$@.in > $@

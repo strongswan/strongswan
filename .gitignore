@@ -1,4 +1,4 @@
-/Android.mk
+/Android.common.mk
 Makefile
 Makefile.in
 aclocal.m4
