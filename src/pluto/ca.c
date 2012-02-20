@@ -219,7 +219,8 @@ cert_t* get_authcert(identification_t *subject, chunk_t keyid,
 		}
 
 		/* compare the subjectDistinguishedNames */
-		if (!certificate->has_subject(certificate, subject))
+		if (!(subject && certificate->has_subject(certificate, subject)) &&
+			 (subject || !keyid.ptr))
 		{
 			continue;
 		}
