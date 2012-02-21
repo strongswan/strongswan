@@ -1549,10 +1549,11 @@ METHOD(ike_sa_t, reauth, status_t,
 #endif /* ME */
 			)
 		{
-			time_t now = time_monotonic(NULL);
+			time_t del, now;
 
-			DBG1(DBG_IKE, "IKE_SA will timeout in %V",
-				 &now, &this->stats[STAT_DELETE]);
+			del = this->stats[STAT_DELETE];
+			now = time_monotonic(NULL);
+			DBG1(DBG_IKE, "IKE_SA will timeout in %V", &now, &del);
 			return FAILED;
 		}
 		else
