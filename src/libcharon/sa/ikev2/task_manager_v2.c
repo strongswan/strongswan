@@ -201,7 +201,7 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 METHOD(task_manager_t, retransmit, status_t,
 	private_task_manager_t *this, u_int32_t message_id)
 {
-	if (message_id == this->initiating.mid)
+	if (this->initiating.packet && message_id == this->initiating.mid)
 	{
 		u_int32_t timeout;
 		job_t *job;
