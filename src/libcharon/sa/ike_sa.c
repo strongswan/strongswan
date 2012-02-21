@@ -1777,25 +1777,30 @@ METHOD(ike_sa_t, retransmit, status_t,
 METHOD(ike_sa_t, set_auth_lifetime, void,
 	private_ike_sa_t *this, u_int32_t lifetime)
 {
-	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
-	u_int32_t reauth_time = time_monotonic(NULL) + lifetime - reduction;
+	u_int32_t diff, hard, soft, now;
 
-	if (lifetime < reduction)
+	diff = this->peer_cfg->get_over_time(this->peer_cfg);
+	now = time_monotonic(NULL);
+	hard = now + lifetime;
+	soft = hard - diff;
+
+	if (lifetime < diff)
 	{
+		this->stats[STAT_REAUTH] = now;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
 		lib->processor->queue_job(lib->processor,
 					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||
-			 this->stats[STAT_REAUTH] > reauth_time)
+			 this->stats[STAT_REAUTH] > soft)
 	{
-		this->stats[STAT_REAUTH] = reauth_time;
+		this->stats[STAT_REAUTH] = soft;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
-			 " in %ds", lifetime, lifetime - reduction);
+			 " in %ds", lifetime, lifetime - diff);
 		lib->scheduler->schedule_job(lib->scheduler,
 						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
-						lifetime - reduction);
+						lifetime - diff);
 	}
 	else
 	{
@@ -1803,6 +1808,8 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 			 "reauthentication already scheduled in %ds", lifetime,
 			 this->stats[STAT_REAUTH] - time_monotonic(NULL));
 	}
+	/* give at least some seconds to reauthenticate */
+	this->stats[STAT_DELETE] = max(hard, now + 10);
 }
 
 /**
