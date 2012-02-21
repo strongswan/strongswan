@@ -282,6 +282,31 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 	}
 }
 
+/**
+ * Handle Session-Timeout attribte
+ */
+static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	chunk_t data;
+	int type;
+
+	enumerator = msg->create_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		if (type == RAT_SESSION_TIMEOUT && data.len == 4)
+		{
+			ike_sa = charon->bus->get_sa(charon->bus);
+			if (ike_sa)
+			{
+				ike_sa->set_auth_lifetime(ike_sa, untoh32(data.ptr));
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(eap_method_t, process, status_t,
 	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
@@ -324,6 +349,7 @@ METHOD(eap_method_t, process, status_t,
 				{
 					process_filter_id(this, response);
 				}
+				process_timeout(this, response);
 				DBG1(DBG_IKE, "RADIUS authentication of '%Y' successful",
 					 this->peer);
 				status = SUCCESS;
