@@ -279,14 +279,21 @@ METHOD(radius_message_t, add, void,
 }
 
 METHOD(radius_message_t, sign, void,
-	private_radius_message_t *this, rng_t *rng, signer_t *signer,
-	hasher_t *hasher, chunk_t secret)
+	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
+	hasher_t *hasher, signer_t *signer, rng_t *rng)
 {
-	if (this->msg->code == RMC_ACCOUNTING_REQUEST)
+	if (rng == NULL)
 	{
 		chunk_t msg;
 
-		memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
+		if (req_auth)
+		{
+			memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
+		}
+		else
+		{
+			memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
+		}
 		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
 		hasher->get_hash(hasher, msg, NULL);
 		hasher->get_hash(hasher, secret, this->msg->authenticator);

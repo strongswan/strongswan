@@ -140,11 +140,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	chunk_t data;
 	int i, *fd;
 	u_int16_t port;
-
-	/* set Message Identifier */
-	request->set_identifier(request, this->identifier++);
-	/* sign the request */
-	request->sign(request, this->rng, this->signer, this->hasher, this->secret);
+	rng_t *rng = NULL;
 
 	if (request->get_code(request) == RMC_ACCOUNTING_REQUEST)
 	{
@@ -155,7 +151,14 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	{
 		fd = &this->auth_fd;
 		port = this->auth_port;
+		rng = this->rng;
 	}
+
+	/* set Message Identifier */
+	request->set_identifier(request, this->identifier++);
+	/* sign the request */
+	request->sign(request, NULL, this->secret, this->hasher, this->signer, rng);
+
 	if (!check_connection(this, fd, port))
 	{
 		return NULL;
