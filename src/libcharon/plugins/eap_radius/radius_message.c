@@ -74,7 +74,14 @@ ENUM_BEGIN(radius_message_code_names, RMC_ACCESS_REQUEST, RMC_ACCOUNTING_RESPONS
 	"Accounting-Response");
 ENUM_NEXT(radius_message_code_names, RMC_ACCESS_CHALLENGE, RMC_ACCESS_CHALLENGE, RMC_ACCOUNTING_RESPONSE,
 	"Access-Challenge");
-ENUM_END(radius_message_code_names, RMC_ACCESS_CHALLENGE);
+ENUM_NEXT(radius_message_code_names, RMC_DISCONNECT_REQUEST, RMC_COA_NAK, RMC_ACCESS_CHALLENGE,
+	"Disconnect-Request",
+	"Disconnect-ACK",
+	"Disconnect-NAK",
+	"CoA-Request",
+	"CoA-ACK",
+	"CoA-NAK");
+ENUM_END(radius_message_code_names, RMC_COA_NAK);
 
 ENUM(radius_attribute_type_names, RAT_USER_NAME, RAT_MIP6_HOME_LINK_PREFIX,
 	"User-Name",
