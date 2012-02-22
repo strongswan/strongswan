@@ -71,7 +71,112 @@ struct private_eap_radius_dae_t {
 	 * HMAC MD5 signer, with secret set
 	 */
 	signer_t *signer;
+
+	/**
+	 * List of responses for retransmission, as entry_t
+	 */
+	linked_list_t *responses;
 };
+
+/**
+ * Entry to store responses for retransmit
+ */
+typedef struct {
+	/** stored response */
+	radius_message_t *response;
+	/** client that sent the request */
+	host_t *client;
+} entry_t;
+
+/**
+ * Clean up an entry
+ */
+static void entry_destroy(entry_t *entry)
+{
+	entry->response->destroy(entry->response);
+	entry->client->destroy(entry->client);
+	free(entry);
+}
+
+/**
+ * Save/Replace response for retransmission
+ */
+static void save_retransmit(private_eap_radius_dae_t *this,
+							radius_message_t *response, host_t *client)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = this->responses->create_enumerator(this->responses);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (client->equals(client, entry->client))
+		{
+			entry->response->destroy(entry->response);
+			entry->response = response;
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		INIT(entry,
+			.response = response,
+			.client = client->clone(client),
+		);
+		this->responses->insert_first(this->responses, entry);
+	}
+}
+
+/**
+ * Send a RADIUS message to client
+ */
+static void send_message(private_eap_radius_dae_t *this,
+						 radius_message_t *message, host_t *client)
+{
+	chunk_t data;
+
+	data = message->get_encoding(message);
+	if (sendto(this->fd, data.ptr, data.len, 0, client->get_sockaddr(client),
+			   *client->get_sockaddr_len(client)) != data.len)
+	{
+		DBG1(DBG_CFG, "sending RADIUS DAE response failed: %s", strerror(errno));
+	}
+}
+
+/**
+ * Check if we request is a retransmit, retransmit stored response
+ */
+static bool send_retransmit(private_eap_radius_dae_t *this,
+							radius_message_t *request, host_t *client)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = this->responses->create_enumerator(this->responses);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (client->equals(client, entry->client) &&
+			request->get_identifier(request) ==
+							entry->response->get_identifier(entry->response))
+		{
+			DBG1(DBG_CFG, "received retransmit of RADIUS %N, retransmitting %N "
+				 "to %H", radius_message_code_names, request->get_code(request),
+				 radius_message_code_names,
+				 entry->response->get_code(entry->response), client);
+			send_message(this, entry->response, client);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
+}
 
 /**
  * Send an ACK/NAK response for a request
@@ -81,20 +186,14 @@ static void send_response(private_eap_radius_dae_t *this,
 						  host_t *client)
 {
 	radius_message_t *response;
-	chunk_t data;
 
 	response = radius_message_create(code);
 	response->set_identifier(response, request->get_identifier(request));
 	response->sign(response, request->get_authenticator(request),
 				   this->secret, this->hasher, this->signer, NULL);
 
-	data = response->get_encoding(response);
-	if (sendto(this->fd, data.ptr, data.len, 0, client->get_sockaddr(client),
-			   *client->get_sockaddr_len(client)) != data.len)
-	{
-		DBG1(DBG_CFG, "sending RADIUS DAE response failed: %s", strerror(errno));
-	}
-	response->destroy(response);
+	send_message(this, response, client);
+	save_retransmit(this, response, client);
 }
 
 /**
@@ -303,22 +402,26 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 			client = host_create_from_sockaddr((struct sockaddr*)&addr);
 			if (client)
 			{
-				if (request->verify(request, NULL, this->secret,
-									this->hasher, this->signer))
+				if (!send_retransmit(this, request, client))
 				{
-					switch (request->get_code(request))
+					if (request->verify(request, NULL, this->secret,
+										this->hasher, this->signer))
 					{
-						case RMC_DISCONNECT_REQUEST:
-							process_disconnect(this, request, client);
+						switch (request->get_code(request))
+						{
+							case RMC_DISCONNECT_REQUEST:
+								process_disconnect(this, request, client);
+								break;
+							case RMC_COA_REQUEST:
+								process_coa(this, request, client);
+								break;
+							default:
+								DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE "
+									 "%N message from %H",
+									 radius_message_code_names,
+									 request->get_code(request), client);
 							break;
-						case RMC_COA_REQUEST:
-							process_coa(this, request, client);
-							break;
-						default:
-							DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N "
-								 "message from %H", radius_message_code_names,
-								 request->get_code(request), client);
-						break;
+						}
 					}
 				}
 				client->destroy(client);
@@ -386,6 +489,7 @@ METHOD(eap_radius_dae_t, destroy, void,
 	}
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
+	this->responses->destroy_function(this->responses, (void*)entry_destroy);
 	free(this);
 }
 
@@ -408,6 +512,7 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		},
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
+		.responses = linked_list_create(),
 	);
 
 	if (!this->hasher || !this->signer)
