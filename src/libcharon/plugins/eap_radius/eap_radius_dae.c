@@ -97,16 +97,35 @@ static void send_response(private_eap_radius_dae_t *this,
 }
 
 /**
- * Process a DAE disconnect request, send response
+ * Add all IKE_SAs matching to user to a list
  */
-static void process_disconnect(private_eap_radius_dae_t *this,
-							   radius_message_t *request, host_t *client)
+static void add_matching_ike_sas(linked_list_t *list, identification_t *user)
 {
-	enumerator_t *enumerator, *sa_enum;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+
+	enumerator = charon->ike_sa_manager->create_enumerator(
+												charon->ike_sa_manager, FALSE);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		if (user->matches(user, ike_sa->get_other_eap_id(ike_sa)))
+		{
+			list->insert_last(list,
+					(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Get list of IKE_SAs matching a Disconnect/CoA request
+ */
+static linked_list_t *get_matching_ike_sas(private_eap_radius_dae_t *this,
+									radius_message_t *request, host_t *client)
+{
+	enumerator_t *enumerator;
 	identification_t *user;
 	linked_list_t *ids;
-	uintptr_t id;
-	ike_sa_t *ike_sa;
 	chunk_t data;
 	int type;
 
@@ -120,21 +139,26 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 			user = identification_create_from_data(data);
 			DBG1(DBG_CFG, "received RADIUS DAE %N for %Y from %H",
 				 radius_message_code_names, RMC_DISCONNECT_REQUEST, user, client);
-			sa_enum = charon->ike_sa_manager->create_enumerator(
-											charon->ike_sa_manager, FALSE);
-			while (sa_enum->enumerate(sa_enum, &ike_sa))
-			{
-				if (user->matches(user, ike_sa->get_other_eap_id(ike_sa)))
-				{
-					id = ike_sa->get_unique_id(ike_sa);
-					ids->insert_last(ids, (void*)id);
-				}
-			}
-			sa_enum->destroy(sa_enum);
+			add_matching_ike_sas(ids, user);
 			user->destroy(user);
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	return ids;
+}
+
+/**
+ * Process a DAE disconnect request, send response
+ */
+static void process_disconnect(private_eap_radius_dae_t *this,
+							   radius_message_t *request, host_t *client)
+{
+	enumerator_t *enumerator;
+	linked_list_t *ids;
+	uintptr_t id;
+
+	ids = get_matching_ike_sas(this, request, client);
 
 	if (ids->get_count(ids))
 	{
