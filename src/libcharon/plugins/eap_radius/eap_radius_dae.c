@@ -55,6 +55,21 @@ struct private_eap_radius_dae_t {
 	 * Listen job
 	 */
 	callback_job_t *job;
+
+	/**
+	 * RADIUS shared secret for DAE exchanges
+	 */
+	chunk_t secret;
+
+	/**
+	 * MD5 hasher
+	 */
+	hasher_t *hasher;
+
+	/**
+	 * HMAC MD5 signer, with secret set
+	 */
+	signer_t *signer;
 };
 
 /**
@@ -79,16 +94,21 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 		request = radius_message_parse(chunk_create(buf, len));
 		if (request)
 		{
-			switch (request->get_code(request))
+			if (request->verify(request, NULL, this->secret,
+								this->hasher, this->signer))
 			{
-				case RMC_DISCONNECT_REQUEST:
-					/* TODO */
-				case RMC_COA_REQUEST:
-					/* TODO */
-				default:
-					DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N message",
-						 radius_message_code_names, request->get_code(request));
-				break;
+				switch (request->get_code(request))
+				{
+					case RMC_DISCONNECT_REQUEST:
+						/* TODO */
+					case RMC_COA_REQUEST:
+						/* TODO */
+					default:
+						DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N "
+							 "message", radius_message_code_names,
+							 request->get_code(request));
+					break;
+				}
 			}
 			request->destroy(request);
 		}
@@ -151,6 +171,8 @@ METHOD(eap_radius_dae_t, destroy, void,
 	{
 		close(this->fd);
 	}
+	DESTROY_IF(this->signer);
+	DESTROY_IF(this->hasher);
 	free(this);
 }
 
@@ -167,7 +189,27 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		},
 		.accounting = accounting,
 		.fd = -1,
+		.secret = {
+			.ptr = lib->settings->get_str(lib->settings,
+							"charon.plugins.eap-radius.dae.secret", NULL),
+		},
+		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
+		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 	);
+
+	if (!this->hasher || !this->signer)
+	{
+		destroy(this);
+		return NULL;
+	}
+	if (!this->secret.ptr)
+	{
+		DBG1(DBG_CFG, "missing RADIUS DAE secret, disabled");
+		destroy(this);
+		return NULL;
+	}
+	this->secret.len = strlen(this->secret.ptr);
+	this->signer->set_key(this->signer, this->secret);
 
 	if (!open_socket(this))
 	{
