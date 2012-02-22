@@ -174,6 +174,7 @@ ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
@@ -1104,6 +1105,7 @@ AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue)
+AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
@@ -1195,6 +1197,7 @@ AC_OUTPUT(
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/plugins/resolve/Makefile
+	src/libipsec/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libradius/Makefile
