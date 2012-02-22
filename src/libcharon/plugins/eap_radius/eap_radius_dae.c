@@ -73,6 +73,29 @@ struct private_eap_radius_dae_t {
 };
 
 /**
+ * Send an ACK/NAK response for a request
+ */
+static void send_response(private_eap_radius_dae_t *this,
+						  radius_message_t *request, radius_message_code_t code,
+						  struct sockaddr* addr, socklen_t addr_len)
+{
+	radius_message_t *response;
+	chunk_t data;
+
+	response = radius_message_create(code);
+	response->set_identifier(response, request->get_identifier(request));
+	response->sign(response, request->get_authenticator(request),
+				   this->secret, this->hasher, this->signer, NULL);
+
+	data = response->get_encoding(response);
+	if (sendto(this->fd, data.ptr, data.len, 0, addr, addr_len) != data.len)
+	{
+		DBG1(DBG_CFG, "sending RADIUS DAE response failed: %s", strerror(errno));
+	}
+	response->destroy(response);
+}
+
+/**
  * Process a DAE disconnect request, send response
  */
 static void process_disconnect(private_eap_radius_dae_t *this,
@@ -115,13 +138,30 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 	enumerator->destroy(enumerator);
 	DESTROY_IF(host);
 
-	enumerator = ids->create_enumerator(ids);
-	while (enumerator->enumerate(enumerator, &id))
+	if (ids->get_count(ids))
 	{
-		charon->controller->terminate_ike(charon->controller, id, NULL, NULL, 0);
-	}
-	enumerator->destroy(enumerator);
+		DBG1(DBG_CFG, "closing %d IKE_SA%s matching %N, sending %N",
+			 ids->get_count(ids), ids->get_count(ids) > 1 ? "s" : "",
+			 radius_message_code_names, RMC_DISCONNECT_REQUEST,
+			 radius_message_code_names, RMC_DISCONNECT_ACK);
 
+		enumerator = ids->create_enumerator(ids);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			charon->controller->terminate_ike(charon->controller,
+											  id, NULL, NULL, 0);
+		}
+		enumerator->destroy(enumerator);
+
+		send_response(this, request, RMC_DISCONNECT_ACK, addr, addr_len);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "no IKE_SA matches %N, sending %N",
+			 radius_message_code_names, RMC_DISCONNECT_REQUEST,
+			 radius_message_code_names, RMC_DISCONNECT_NAK);
+		send_response(this, request, RMC_DISCONNECT_NAK, addr, addr_len);
+	}
 	ids->destroy(ids);
 }
 
