@@ -26,6 +26,7 @@
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 #define RADIUS_DAE_PORT 3799
 
@@ -103,6 +104,7 @@ static void add_matching_ike_sas(linked_list_t *list, identification_t *user)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
+	ike_sa_id_t *id;
 
 	enumerator = charon->ike_sa_manager->create_enumerator(
 												charon->ike_sa_manager, FALSE);
@@ -110,8 +112,8 @@ static void add_matching_ike_sas(linked_list_t *list, identification_t *user)
 	{
 		if (user->matches(user, ike_sa->get_other_eap_id(ike_sa)))
 		{
-			list->insert_last(list,
-					(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+			id = ike_sa->get_id(ike_sa);
+			list->insert_last(list, id->clone(id));
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -156,7 +158,7 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 {
 	enumerator_t *enumerator;
 	linked_list_t *ids;
-	uintptr_t id;
+	ike_sa_id_t *id;
 
 	ids = get_matching_ike_sas(this, request, client);
 
@@ -170,8 +172,8 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 		enumerator = ids->create_enumerator(ids);
 		while (enumerator->enumerate(enumerator, &id))
 		{
-			charon->controller->terminate_ike(charon->controller,
-											  id, NULL, NULL, 0);
+			lib->processor->queue_job(lib->processor, (job_t*)
+									  delete_ike_sa_job_create(id, TRUE));
 		}
 		enumerator->destroy(enumerator);
 
@@ -184,7 +186,7 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 			 radius_message_code_names, RMC_DISCONNECT_NAK);
 		send_response(this, request, RMC_DISCONNECT_NAK, client);
 	}
-	ids->destroy(ids);
+	ids->destroy_offset(ids, offsetof(ike_sa_id_t, destroy));
 }
 
 /**
