@@ -77,7 +77,7 @@ struct private_eap_radius_dae_t {
  */
 static void send_response(private_eap_radius_dae_t *this,
 						  radius_message_t *request, radius_message_code_t code,
-						  struct sockaddr* addr, socklen_t addr_len)
+						  host_t *client)
 {
 	radius_message_t *response;
 	chunk_t data;
@@ -88,7 +88,8 @@ static void send_response(private_eap_radius_dae_t *this,
 				   this->secret, this->hasher, this->signer, NULL);
 
 	data = response->get_encoding(response);
-	if (sendto(this->fd, data.ptr, data.len, 0, addr, addr_len) != data.len)
+	if (sendto(this->fd, data.ptr, data.len, 0, client->get_sockaddr(client),
+			   *client->get_sockaddr_len(client)) != data.len)
 	{
 		DBG1(DBG_CFG, "sending RADIUS DAE response failed: %s", strerror(errno));
 	}
@@ -99,7 +100,7 @@ static void send_response(private_eap_radius_dae_t *this,
  * Process a DAE disconnect request, send response
  */
 static void process_disconnect(private_eap_radius_dae_t *this,
-		radius_message_t *request, struct sockaddr* addr, socklen_t addr_len)
+							   radius_message_t *request, host_t *client)
 {
 	enumerator_t *enumerator, *sa_enum;
 	identification_t *user;
@@ -107,12 +108,10 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 	uintptr_t id;
 	ike_sa_t *ike_sa;
 	chunk_t data;
-	host_t *host;
 	int type;
 
 	ids = linked_list_create();
 
-	host = host_create_from_sockaddr(addr);
 	enumerator = request->create_enumerator(request);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
@@ -120,7 +119,7 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 		{
 			user = identification_create_from_data(data);
 			DBG1(DBG_CFG, "received RADIUS DAE %N for %Y from %H",
-				 radius_message_code_names, RMC_DISCONNECT_REQUEST, user, host);
+				 radius_message_code_names, RMC_DISCONNECT_REQUEST, user, client);
 			sa_enum = charon->ike_sa_manager->create_enumerator(
 											charon->ike_sa_manager, FALSE);
 			while (sa_enum->enumerate(sa_enum, &ike_sa))
@@ -136,7 +135,6 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	DESTROY_IF(host);
 
 	if (ids->get_count(ids))
 	{
@@ -153,14 +151,14 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 		}
 		enumerator->destroy(enumerator);
 
-		send_response(this, request, RMC_DISCONNECT_ACK, addr, addr_len);
+		send_response(this, request, RMC_DISCONNECT_ACK, client);
 	}
 	else
 	{
 		DBG1(DBG_CFG, "no IKE_SA matches %N, sending %N",
 			 radius_message_code_names, RMC_DISCONNECT_REQUEST,
 			 radius_message_code_names, RMC_DISCONNECT_NAK);
-		send_response(this, request, RMC_DISCONNECT_NAK, addr, addr_len);
+		send_response(this, request, RMC_DISCONNECT_NAK, client);
 	}
 	ids->destroy(ids);
 }
@@ -176,6 +174,7 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 	char buf[2048];
 	ssize_t len;
 	bool oldstate;
+	host_t *client;
 
 	oldstate = thread_cancelability(TRUE);
 	len = recvfrom(this->fd, buf, sizeof(buf), 0,
@@ -187,23 +186,27 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 		request = radius_message_parse(chunk_create(buf, len));
 		if (request)
 		{
-			if (request->verify(request, NULL, this->secret,
-								this->hasher, this->signer))
+			client = host_create_from_sockaddr((struct sockaddr*)&addr);
+			if (client)
 			{
-				switch (request->get_code(request))
+				if (request->verify(request, NULL, this->secret,
+									this->hasher, this->signer))
 				{
-					case RMC_DISCONNECT_REQUEST:
-						process_disconnect(this, request,
-										   (struct sockaddr*)&addr, addr_len);
+					switch (request->get_code(request))
+					{
+						case RMC_DISCONNECT_REQUEST:
+							process_disconnect(this, request, client);
+							break;
+						case RMC_COA_REQUEST:
+							/* TODO */
+						default:
+							DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N "
+								 "message from %H", radius_message_code_names,
+								 request->get_code(request), client);
 						break;
-					case RMC_COA_REQUEST:
-						/* TODO */
-					default:
-						DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N "
-							 "message", radius_message_code_names,
-							 request->get_code(request));
-					break;
+					}
 				}
+				client->destroy(client);
 			}
 			request->destroy(request);
 		}
