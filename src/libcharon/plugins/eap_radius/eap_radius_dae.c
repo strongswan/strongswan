@@ -140,7 +140,8 @@ static linked_list_t *get_matching_ike_sas(private_eap_radius_dae_t *this,
 		{
 			user = identification_create_from_data(data);
 			DBG1(DBG_CFG, "received RADIUS DAE %N for %Y from %H",
-				 radius_message_code_names, RMC_DISCONNECT_REQUEST, user, client);
+				 radius_message_code_names, request->get_code(request),
+				 user, client);
 			add_matching_ike_sas(ids, user);
 			user->destroy(user);
 		}
@@ -190,6 +191,93 @@ static void process_disconnect(private_eap_radius_dae_t *this,
 }
 
 /**
+ * Apply a new lifetime to an IKE_SA
+ */
+static void apply_lifetime(private_eap_radius_dae_t *this, ike_sa_id_t *id,
+						   u_int32_t lifetime)
+{
+	ike_sa_t *ike_sa;
+
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
+	if (ike_sa)
+	{
+		if (ike_sa->set_auth_lifetime(ike_sa, lifetime) == DESTROY_ME)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+	}
+}
+
+/**
+ * Process a DAE CoA request, send response
+ */
+static void process_coa(private_eap_radius_dae_t *this,
+						radius_message_t *request, host_t *client)
+{
+	enumerator_t *enumerator;
+	linked_list_t *ids;
+	ike_sa_id_t *id;
+	chunk_t data;
+	int type;
+	u_int32_t lifetime = 0;
+	bool lifetime_seen = FALSE;
+
+	ids = get_matching_ike_sas(this, request, client);
+
+	if (ids->get_count(ids))
+	{
+		enumerator = request->create_enumerator(request);
+		while (enumerator->enumerate(enumerator, &type, &data))
+		{
+			if (type == RAT_SESSION_TIMEOUT && data.len == 4)
+			{
+				lifetime = untoh32(data.ptr);
+				lifetime_seen = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (lifetime_seen)
+		{
+			DBG1(DBG_CFG, "applying %us lifetime to %d IKE_SA%s matching %N, "
+				 "sending %N", lifetime, ids->get_count(ids),
+				 ids->get_count(ids) > 1 ? "s" : "",
+				 radius_message_code_names, RMC_COA_REQUEST,
+				 radius_message_code_names, RMC_COA_ACK);
+
+			enumerator = ids->create_enumerator(ids);
+			while (enumerator->enumerate(enumerator, &id))
+			{
+				apply_lifetime(this, id, lifetime);
+			}
+			enumerator->destroy(enumerator);
+			send_response(this, request, RMC_COA_ACK, client);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "no Session-Timeout attribute found in %N, sending %N",
+				 radius_message_code_names, RMC_COA_REQUEST,
+				 radius_message_code_names, RMC_COA_NAK);
+			send_response(this, request, RMC_COA_NAK, client);
+		}
+	}
+	else
+	{
+		DBG1(DBG_CFG, "no IKE_SA matches %N, sending %N",
+			 radius_message_code_names, RMC_COA_REQUEST,
+			 radius_message_code_names, RMC_COA_NAK);
+		send_response(this, request, RMC_COA_NAK, client);
+	}
+	ids->destroy_offset(ids, offsetof(ike_sa_id_t, destroy));
+}
+
+/**
  * Receive RADIUS DAE requests
  */
 static job_requeue_t receive(private_eap_radius_dae_t *this)
@@ -224,7 +312,8 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 							process_disconnect(this, request, client);
 							break;
 						case RMC_COA_REQUEST:
-							/* TODO */
+							process_coa(this, request, client);
+							break;
 						default:
 							DBG1(DBG_CFG, "ignoring unsupported RADIUS DAE %N "
 								 "message from %H", radius_message_code_names,
