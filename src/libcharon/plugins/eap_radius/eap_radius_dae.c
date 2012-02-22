@@ -76,7 +76,7 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 
 	if (len > 0)
 	{
-		request = radius_message_parse_response(chunk_create(buf, len));
+		request = radius_message_parse(chunk_create(buf, len));
 		if (request)
 		{
 			switch (request->get_code(request))

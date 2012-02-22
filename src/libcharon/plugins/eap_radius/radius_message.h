@@ -268,19 +268,19 @@ struct radius_message_t {
 };
 
 /**
- * Create an empty RADIUS request message.
+ * Create an empty RADIUS message.
  *
  * @param code			request type
  * @return				radius_message_t object
  */
-radius_message_t *radius_message_create_request(radius_message_code_t code);
+radius_message_t *radius_message_create(radius_message_code_t code);
 
 /**
- * Parse and verify a recevied RADIUS response.
+ * Parse and verify a recevied RADIUS message.
  *
  * @param data			received message data
  * @return				radius_message_t object, NULL if length invalid
  */
-radius_message_t *radius_message_parse_response(chunk_t data);
+radius_message_t *radius_message_parse(chunk_t data);
 
 #endif /** RADIUS_MESSAGE_H_ @}*/

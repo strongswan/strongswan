@@ -181,7 +181,7 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	);
 	snprintf(entry->sid, sizeof(entry->sid), "%u-%u", this->prefix, id);
 
-	message = radius_message_create_request(RMC_ACCOUNTING_REQUEST);
+	message = radius_message_create(RMC_ACCOUNTING_REQUEST);
 	value = htonl(ACCT_STATUS_START);
 	message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 	message->add(message, RAT_ACCT_SESSION_ID,
@@ -212,7 +212,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	this->mutex->unlock(this->mutex);
 	if (entry)
 	{
-		message = radius_message_create_request(RMC_ACCOUNTING_REQUEST);
+		message = radius_message_create(RMC_ACCOUNTING_REQUEST);
 		value = htonl(ACCT_STATUS_STOP);
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,

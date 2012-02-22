@@ -205,7 +205,7 @@ METHOD(radius_socket_t, request, radius_message_t*,
 					 strerror(errno));
 				break;
 			}
-			response = radius_message_parse_response(chunk_create(buf, res));
+			response = radius_message_parse(chunk_create(buf, res));
 			if (response)
 			{
 				if (response->verify(response,

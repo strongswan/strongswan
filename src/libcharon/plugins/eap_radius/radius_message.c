@@ -418,7 +418,7 @@ METHOD(radius_message_t, destroy, void,
 /**
  * Generic constructor
  */
-static private_radius_message_t *radius_message_create()
+static private_radius_message_t *radius_message_create_empty()
 {
 	private_radius_message_t *this;
 
@@ -443,9 +443,9 @@ static private_radius_message_t *radius_message_create()
 /**
  * See header
  */
-radius_message_t *radius_message_create_request(radius_message_code_t code)
+radius_message_t *radius_message_create(radius_message_code_t code)
 {
-	private_radius_message_t *this = radius_message_create();
+	private_radius_message_t *this = radius_message_create_empty();
 
 	INIT(this->msg,
 		.code = code,
@@ -459,9 +459,9 @@ radius_message_t *radius_message_create_request(radius_message_code_t code)
 /**
  * See header
  */
-radius_message_t *radius_message_parse_response(chunk_t data)
+radius_message_t *radius_message_parse(chunk_t data)
 {
-	private_radius_message_t *this = radius_message_create();
+	private_radius_message_t *this = radius_message_create_empty();
 
 	this->msg = malloc(data.len);
 	memcpy(this->msg, data.ptr, data.len);
