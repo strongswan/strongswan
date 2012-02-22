@@ -251,9 +251,9 @@ struct radius_message_t {
 				 hasher_t *hasher, chunk_t secret);
 
 	/**
-	 * Verify the integrity of a received RADIUS response.
+	 * Verify the integrity of a received RADIUS message.
 	 *
-	 * @param req_auth		16 byte Authenticator of the corresponding request
+	 * @param req_auth		16 byte Authenticator of request, or NULL
 	 * @param secret		shared RADIUS secret
 	 * @param hasher		hasher to verify Response-Authenticator
 	 * @param signer		signer to verify Message-Authenticator attribute

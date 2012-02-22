@@ -319,7 +319,14 @@ METHOD(radius_message_t, verify, bool,
 
 	/* replace Response by Request Authenticator for verification */
 	memcpy(res_auth, this->msg->authenticator, HASH_SIZE_MD5);
-	memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
+	if (req_auth)
+	{
+		memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
+	}
+	else
+	{
+		memset(this->msg->authenticator, 0, HASH_SIZE_MD5);
+	}
 	msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
 
 	/* verify Response-Authenticator */
