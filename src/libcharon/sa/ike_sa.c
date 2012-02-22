@@ -1553,13 +1553,20 @@ METHOD(ike_sa_t, reauth, status_t,
 
 			del = this->stats[STAT_DELETE];
 			now = time_monotonic(NULL);
-			DBG1(DBG_IKE, "IKE_SA will timeout in %V", &now, &del);
+			DBG1(DBG_IKE, "IKE_SA %s[%d] will timeout in %V",
+				 get_name(this), this->unique_id, &now, &del);
 			return FAILED;
 		}
 		else
 		{
-			DBG1(DBG_IKE, "reauthenticating actively");
+			DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d] actively",
+				 get_name(this), this->unique_id);
 		}
+	}
+	else
+	{
+		DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
+			 get_name(this), this->unique_id);
 	}
 	task = (task_t*)ike_reauth_create(&this->public);
 	this->task_manager->queue_task(this->task_manager, task);
