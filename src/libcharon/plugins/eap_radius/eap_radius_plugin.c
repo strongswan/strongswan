@@ -17,6 +17,7 @@
 
 #include "eap_radius.h"
 #include "eap_radius_accounting.h"
+#include "eap_radius_dae.h"
 #include "radius_client.h"
 #include "radius_server.h"
 
@@ -59,6 +60,11 @@ struct private_eap_radius_plugin_t {
 	 * RADIUS sessions for accounting
 	 */
 	eap_radius_accounting_t *accounting;
+
+	/**
+	 * Dynamic authorization extensions
+	 */
+	eap_radius_dae_t *dae;
 };
 
 /**
@@ -188,6 +194,7 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
+	DESTROY_IF(this->dae);
 	this->servers->destroy_offset(this->servers,
 								  offsetof(radius_server_t, destroy));
 	this->lock->destroy(this->lock);
@@ -226,6 +233,12 @@ plugin_t *eap_radius_plugin_create()
 	{
 		charon->bus->add_listener(charon->bus, &this->accounting->listener);
 	}
+	if (lib->settings->get_bool(lib->settings,
+						"charon.plugins.eap-radius.dae.enable", FALSE))
+	{
+		this->dae = eap_radius_dae_create(this->accounting);
+	}
+
 	return &this->public.plugin;
 }
 
