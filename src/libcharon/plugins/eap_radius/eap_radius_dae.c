@@ -73,6 +73,59 @@ struct private_eap_radius_dae_t {
 };
 
 /**
+ * Process a DAE disconnect request, send response
+ */
+static void process_disconnect(private_eap_radius_dae_t *this,
+		radius_message_t *request, struct sockaddr* addr, socklen_t addr_len)
+{
+	enumerator_t *enumerator, *sa_enum;
+	identification_t *user;
+	linked_list_t *ids;
+	uintptr_t id;
+	ike_sa_t *ike_sa;
+	chunk_t data;
+	host_t *host;
+	int type;
+
+	ids = linked_list_create();
+
+	host = host_create_from_sockaddr(addr);
+	enumerator = request->create_enumerator(request);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		if (type == RAT_USER_NAME && data.len)
+		{
+			user = identification_create_from_data(data);
+			DBG1(DBG_CFG, "received RADIUS DAE %N for %Y from %H",
+				 radius_message_code_names, RMC_DISCONNECT_REQUEST, user, host);
+			sa_enum = charon->ike_sa_manager->create_enumerator(
+											charon->ike_sa_manager, FALSE);
+			while (sa_enum->enumerate(sa_enum, &ike_sa))
+			{
+				if (user->matches(user, ike_sa->get_other_eap_id(ike_sa)))
+				{
+					id = ike_sa->get_unique_id(ike_sa);
+					ids->insert_last(ids, (void*)id);
+				}
+			}
+			sa_enum->destroy(sa_enum);
+			user->destroy(user);
+		}
+	}
+	enumerator->destroy(enumerator);
+	DESTROY_IF(host);
+
+	enumerator = ids->create_enumerator(ids);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		charon->controller->terminate_ike(charon->controller, id, NULL, NULL, 0);
+	}
+	enumerator->destroy(enumerator);
+
+	ids->destroy(ids);
+}
+
+/**
  * Receive RADIUS DAE requests
  */
 static job_requeue_t receive(private_eap_radius_dae_t *this)
@@ -100,7 +153,9 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 				switch (request->get_code(request))
 				{
 					case RMC_DISCONNECT_REQUEST:
-						/* TODO */
+						process_disconnect(this, request,
+										   (struct sockaddr*)&addr, addr_len);
+						break;
 					case RMC_COA_REQUEST:
 						/* TODO */
 					default:
