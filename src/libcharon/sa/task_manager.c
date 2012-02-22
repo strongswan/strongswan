@@ -366,6 +366,11 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = INFORMATIONAL;
 					break;
 				}
+				if (activate_task(this, IKE_AUTH_LIFETIME))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
 #ifdef ME
 				if (activate_task(this, IKE_ME))
 				{

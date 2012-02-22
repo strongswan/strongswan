@@ -869,11 +869,15 @@ struct ike_sa_t {
 	status_t (*reestablish) (ike_sa_t *this);
 
 	/**
-	 * Set the lifetime limit received from a AUTH_LIFETIME notify.
+	 * Set the lifetime limit received/to send in a AUTH_LIFETIME notify.
+	 *
+	 * If the IKE_SA is already ESTABLISHED, an INFORMATIONAL is sent with
+	 * an AUTH_LIFETIME notify. The call never fails on unestablished SAs.
 	 *
 	 * @param lifetime		lifetime in seconds
+	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
-	void (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
+	status_t (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
 
 	/**
 	 * Set the virtual IP to use for this IKE_SA and its children.
