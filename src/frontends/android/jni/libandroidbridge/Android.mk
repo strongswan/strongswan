@@ -9,6 +9,7 @@ charonservice.c
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
+	$(strongswan_PATH)/src/libipsec \
 	$(strongswan_PATH)/src/libhydra \
 	$(strongswan_PATH)/src/libcharon \
 	$(strongswan_PATH)/src/libstrongswan
@@ -26,7 +27,7 @@ LOCAL_PRELINK_MODULE := false
 
 LOCAL_LDLIBS := -llog
 
-LOCAL_SHARED_LIBRARIES := libstrongswan libhydra libcharon
+LOCAL_SHARED_LIBRARIES := libstrongswan libhydra libipsec libcharon
 
 include $(BUILD_SHARED_LIBRARY)
 

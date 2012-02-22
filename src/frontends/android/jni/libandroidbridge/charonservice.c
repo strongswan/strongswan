@@ -18,6 +18,7 @@
 #include <jni.h>
 
 #include <hydra.h>
+#include <ipsec.h>
 #include <daemon.h>
 #include <library.h>
 
@@ -88,10 +89,19 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 		return;
 	}
 
+	if (!libipsec_init())
+	{
+		libipsec_deinit();
+		libhydra_deinit();
+		library_deinit();
+		return;
+	}
+
 	if (!libcharon_init("charon") ||
 		!charon->initialize(charon, PLUGINS))
 	{
 		libcharon_deinit();
+		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
 		return;
@@ -107,6 +117,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 {
 	libcharon_deinit();
+	libipsec_deinit();
 	libhydra_deinit();
 	library_deinit();
 }

@@ -45,6 +45,7 @@ public class CharonVpnService extends VpnService {
 		System.loadLibrary("strongswan");
 		System.loadLibrary("hydra");
 		System.loadLibrary("charon");
+		System.loadLibrary("ipsec");
 		System.loadLibrary("androidbridge");
 	}
 }

@@ -57,6 +57,7 @@ include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
 		vstr \
 		openssl \
 		libandroidbridge \
+		strongswan/src/libipsec \
 		strongswan/src/libcharon \
 		strongswan/src/libhydra \
 		strongswan/src/libstrongswan \
