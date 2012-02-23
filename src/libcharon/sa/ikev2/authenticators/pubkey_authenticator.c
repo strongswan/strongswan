@@ -509,6 +509,39 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 	return status;
 }
 
+/**
+ * Check if we should enforce a specific certificate, return ID of it
+ */
+static identification_t *get_cert_id(ike_sa_t *ike_sa, bool local)
+{
+	identification_t *id;
+	auth_cfg_t *auth;
+	certificate_t *cert = NULL;
+
+	id = local ? ike_sa->get_my_id(ike_sa) : ike_sa->get_other_id(ike_sa);
+
+	if (lib->settings->get_bool(lib->settings, "charon.cert_id_binding", TRUE))
+	{	/* disabled by config, use IKE identity */
+		return id;
+	}
+	auth = ike_sa->get_auth_cfg(ike_sa, local);
+	if (local)
+	{	/* apply certificate from config */
+		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	}
+	else
+	{	/* get certificate received in CERT payload */
+		cert = auth->get(auth, AUTH_HELPER_SUBJECT_CERT);
+	}
+	if (cert && !cert->has_subject(cert, id))
+	{	/* not as subjectAltName, use subject */
+		DBG1(DBG_CFG, "enforcing %s cert '%Y' mismatching IKE identity '%Y'",
+			 local ? "local" : "remote", cert->get_subject(cert), id);
+		id = cert->get_subject(cert);
+	}
+	return id;
+}
+
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
 {
@@ -517,7 +550,7 @@ METHOD(authenticator_t, build, status_t,
 	auth_cfg_t *auth;
 	status_t status;
 
-	id = this->ike_sa->get_my_id(this->ike_sa);
+	id = get_cert_id(this->ike_sa, TRUE);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, id, auth);
 	if (!private)
@@ -626,7 +659,7 @@ METHOD(authenticator_t, process, status_t,
 			signature_params_destroy(params);
 			return INVALID_ARG;
 	}
-	id = this->ike_sa->get_other_id(this->ike_sa);
+	id = get_cert_id(this->ike_sa, FALSE);
 	if (!get_auth_octets_scheme(this, TRUE, id, this->ppk, &octets, &params))
 	{
 		return FAILED;

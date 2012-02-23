@@ -440,7 +440,9 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 		enumerator->destroy(enumerator);
 
-		if (first && !has_subject)
+		if (first && !has_subject &&
+			lib->settings->get_bool(lib->settings,
+									"charon.cert_id_binding", TRUE))
 		{
 			DBG1(DBG_CFG, "  id '%Y' not confirmed by certificate, "
 				 "defaulting to '%Y'", identity, first->get_subject(first));
