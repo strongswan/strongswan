@@ -477,7 +477,7 @@ METHOD(socket_t, sender, status_t,
 	host_t *src, *dst;
 	int port, family;
 	ssize_t len;
-	chunk_t data, marked;
+	chunk_t data;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	struct iovec iov;
@@ -494,19 +494,6 @@ METHOD(socket_t, sender, status_t,
 
 	data = packet->get_data(packet);
 	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
-
-	/* use non-ESP marker if none of the ports is 500, not for keep alives */
-	if (port != IKEV2_UDP_PORT && dst->get_port(dst) != IKEV2_UDP_PORT &&
-		!(data.len == 1 && data.ptr[0] == 0xFF))
-	{
-		/* add non esp marker to packet */
-		marked = chunk_alloc(data.len + MARKER_LEN);
-		memset(marked.ptr, 0, MARKER_LEN);
-		memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
-		/* let the packet do the clean up for us */
-		packet->set_data(packet, marked);
-		data = marked;
-	}
 
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_name = dst->get_sockaddr(dst);;

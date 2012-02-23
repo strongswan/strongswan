@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -121,6 +122,7 @@ METHOD(sender_t, send_, void,
 static job_requeue_t send_packets(private_sender_t * this)
 {
 	packet_t *packet;
+	host_t *src, *dst;
 	bool oldstate;
 
 	this->mutex->lock(this->mutex);
@@ -138,6 +140,23 @@ static job_requeue_t send_packets(private_sender_t * this)
 	this->list->remove_first(this->list, (void**)&packet);
 	this->sent->signal(this->sent);
 	this->mutex->unlock(this->mutex);
+
+	/* if neither source nor destination port is 500 we add a Non-ESP marker */
+	dst = packet->get_destination(packet);
+	src = packet->get_source(packet);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{
+		chunk_t marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00), data;
+
+		data = packet->get_data(packet);
+		/* NAT keepalives have no marker prepended */
+		if (data.len != 1 || data.ptr[0] != 0xFF)
+		{
+			data = chunk_cat("cm", marker, data);
+			packet->set_data(packet, data);
+		}
+	}
 
 	charon->socket->send(charon->socket, packet);
 	packet->destroy(packet);

@@ -28,7 +28,7 @@ typedef struct sender_t sender_t;
 #include <network/packet.h>
 
 /**
- * Thread responsible for sending packets over the socket.
+ * Callback job responsible for sending IKE packets over the socket.
  */
 struct sender_t {
 

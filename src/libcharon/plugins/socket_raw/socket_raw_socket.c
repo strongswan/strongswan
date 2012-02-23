@@ -303,7 +303,7 @@ METHOD(socket_t, sender, status_t,
 {
 	int sport, skt, family;
 	ssize_t bytes_sent;
-	chunk_t data, marked;
+	chunk_t data;
 	host_t *src, *dst;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -338,17 +338,6 @@ METHOD(socket_t, sender, status_t,
 		else
 		{
 			skt = this->send6_natt;
-		}
-		/* NAT keepalives without marker */
-		if (data.len != 1 || data.ptr[0] != 0xFF)
-		{
-			/* add non esp marker to packet */
-			marked = chunk_alloc(data.len + MARKER_LEN);
-			memset(marked.ptr, 0, MARKER_LEN);
-			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
-			/* let the packet do the clean up for us */
-			packet->set_data(packet, marked);
-			data = marked;
 		}
 	}
 	else
