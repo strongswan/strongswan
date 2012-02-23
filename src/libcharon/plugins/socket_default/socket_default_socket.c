@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -133,7 +133,7 @@ METHOD(socket_t, receiver, status_t,
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
-	int bytes_read = 0, data_offset;
+	int bytes_read = 0;
 	bool oldstate;
 
 	fd_set rfds;
@@ -297,17 +297,8 @@ METHOD(socket_t, receiver, status_t,
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
-		data_offset = 0;
-		/* remove non esp marker */
-		if (dest->get_port(dest) == CHARON_NATT_PORT)
-		{
-			data_offset += MARKER_LEN;
-		}
-		/* fill in packet */
-		data.len = bytes_read - data_offset;
-		data.ptr = malloc(data.len);
-		memcpy(data.ptr, buffer + data_offset, data.len);
-		pkt->set_data(pkt, data);
+		data = chunk_create(buffer, bytes_read);
+		pkt->set_data(pkt, chunk_clone(data));
 	}
 	else
 	{

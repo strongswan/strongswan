@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -400,6 +400,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	ike_sa_id_t *id;
 	packet_t *packet;
 	message_t *message;
+	host_t *src, *dst;
 	status_t status;
 	bool supported = TRUE;
 
@@ -413,6 +414,28 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	{
 		DBG2(DBG_NET, "receiving from socket failed!");
 		return JOB_REQUEUE_FAIR;
+	}
+
+	/* if neither source nor destination port is 500 we assume an IKE packet
+	 * with Non-ESP marker or an ESP packet */
+	dst = packet->get_destination(packet);
+	src = packet->get_source(packet);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{
+		chunk_t marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00), data;
+
+		data = packet->get_data(packet);
+		if (memeq(data.ptr, marker.ptr, marker.len))
+		{	/* remove Non-ESP marker */
+			data = chunk_skip(data, marker.len);
+			packet->set_data(packet, chunk_clone(data));
+		}
+		else
+		{	/* this seems to be an ESP packet */
+			packet->destroy(packet);
+			return JOB_REQUEUE_DIRECT;
+		}
 	}
 
 	/* parse message header */

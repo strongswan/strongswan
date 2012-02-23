@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -297,12 +297,6 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	packet = packet_create();
 	packet->set_source(packet, source);
 	packet->set_destination(packet, dest);
-	/* we assume a non-ESP marker if none of the ports is on 500 */
-	if (dest->get_port(dest) != IKEV2_UDP_PORT &&
-		source->get_port(source) != IKEV2_UDP_PORT)
-	{
-		data = chunk_skip(data, MARKER_LEN);
-	}
 	packet->set_data(packet, chunk_clone(data));
 	return packet;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -203,16 +203,9 @@ METHOD(socket_t, receiver, status_t,
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
-		/* remove non esp marker */
-		if (dest->get_port(dest) == CHARON_NATT_PORT)
-		{
-			data_offset += MARKER_LEN;
-		}
-		/* fill in packet */
 		data.len = bytes_read - data_offset;
-		data.ptr = malloc(data.len);
-		memcpy(data.ptr, buffer + data_offset, data.len);
-		pkt->set_data(pkt, data);
+		data.ptr = buffer + data_offset;
+		pkt->set_data(pkt, chunk_clone(data));
 	}
 	else if (this->recv6 && FD_ISSET(this->recv6, &rfds))
 	{
@@ -290,16 +283,9 @@ METHOD(socket_t, receiver, status_t,
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
-		/* remove non esp marker */
-		if (dest->get_port(dest) == CHARON_NATT_PORT)
-		{
-			data_offset += MARKER_LEN;
-		}
-		/* fill in packet */
 		data.len = bytes_read - data_offset;
-		data.ptr = malloc(data.len);
-		memcpy(data.ptr, buffer + data_offset, data.len);
-		pkt->set_data(pkt, data);
+		data.ptr = buffer + data_offset;
+		pkt->set_data(pkt, chunk_clone(data));
 	}
 	else
 	{
