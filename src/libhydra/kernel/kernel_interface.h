@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -361,9 +361,21 @@ struct kernel_interface_t {
 	 *
 	 * @param fd			socket file descriptor to setup policy for
 	 * @param family		protocol family of the socket
-	 * @return				TRUE of policy set up successfully
+	 * @return				TRUE if policy set up successfully
 	 */
 	bool (*bypass_socket)(kernel_interface_t *this, int fd, int family);
+
+	/**
+	 * Enable decapsulation of ESP-in-UDP packets for the given port/socket.
+	 *
+	 * @param fd			socket file descriptor
+	 * @param family		protocol family of the socket
+	 * @param port			the UDP port
+	 * @return				TRUE if UDP decapsulation was enabled successfully
+	 */
+	bool (*enable_udp_decap)(kernel_interface_t *this, int fd, int family,
+							 u_int16_t port);
+
 
 	/**
 	 * manager methods

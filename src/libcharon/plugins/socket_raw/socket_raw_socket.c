@@ -55,15 +55,6 @@
 #define IKE_VERSION_OFFSET 17
 #define IKE_LENGTH_OFFSET 24
 
-/* from linux/udp.h */
-#ifndef UDP_ENCAP
-#define UDP_ENCAP 100
-#endif /*UDP_ENCAP*/
-
-#ifndef UDP_ENCAP_ESPINUDP
-#define UDP_ENCAP_ESPINUDP 2
-#endif /*UDP_ENCAP_ESPINUDP*/
-
 /* needed for older kernel headers */
 #ifndef IPV6_2292PKTINFO
 #define IPV6_2292PKTINFO 2
@@ -412,7 +403,6 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 							int family, u_int16_t port)
 {
 	int on = TRUE;
-	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
 	int skt;
 
@@ -463,20 +453,18 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		return 0;
 	}
 
-	if (family == AF_INET)
-	{
-		/* enable UDP decapsulation globally, only for one socket needed */
-		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
-		{
-			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s; NAT-T may fail",
-				 strerror(errno));
-		}
-	}
-
 	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
 												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on send socket failed");
+	}
+
+	/* enable UDP decapsulation globally, only for one socket needed */
+	if (family == AF_INET && port == CHARON_NATT_PORT &&
+		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   skt, family, port))
+	{
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
 	}
 
 	return skt;

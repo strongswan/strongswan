@@ -2537,13 +2537,6 @@ static status_t register_pfkey_socket(private_kernel_klips_ipsec_t *this, u_int8
 	return SUCCESS;
 }
 
-METHOD(kernel_ipsec_t, bypass_socket, bool,
-	private_kernel_klips_ipsec_t *this, int fd, int family)
-{
-	/* KLIPS does not need a bypass policy for IKE */
-	return TRUE;
-}
-
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_klips_ipsec_t *this)
 {
@@ -2585,7 +2578,10 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 				.query_policy = _query_policy,
 				.del_policy = _del_policy,
 				.flush_policies = (void*)return_failed,
-				.bypass_socket = _bypass_socket,
+				/* KLIPS does not need a bypass policy for IKE */
+				.bypass_socket = (void*)return_true,
+				/* KLIPS does not need enabling UDP decap explicitly */
+				.enable_udp_decap = (void*)return_true,
 				.destroy = _destroy,
 			},
 		},

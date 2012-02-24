@@ -40,9 +40,6 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <net/if.h>
-#ifdef __APPLE__
-#include <sys/sysctl.h>
-#endif
 
 #include <hydra.h>
 #include <daemon.h>
@@ -54,24 +51,12 @@
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
 
-/* from linux/udp.h */
-#ifndef UDP_ENCAP
-#define UDP_ENCAP 100
-#endif /*UDP_ENCAP*/
-
-#ifndef UDP_ENCAP_ESPINUDP
-#define UDP_ENCAP_ESPINUDP 2
-#endif /*UDP_ENCAP_ESPINUDP*/
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
 #endif
 #ifndef SOL_IPV6
 #define SOL_IPV6 IPPROTO_IPV6
-#endif
-#ifndef SOL_UDP
-#define SOL_UDP IPPROTO_UDP
 #endif
 
 /* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
@@ -513,17 +498,14 @@ static int open_socket(private_socket_default_socket_t *this,
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
 
-#ifndef __APPLE__
+	/* enable UDP decapsulation globally, only for one socket needed */
+	if (family == AF_INET && port == CHARON_NATT_PORT &&
+		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   skt, family, port))
 	{
-		/* enable UDP decapsulation globally, only for one socket needed */
-		int type = UDP_ENCAP_ESPINUDP;
-		if (family == AF_INET && port == CHARON_NATT_PORT &&
-			setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
-		{
-			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
-		}
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
 	}
-#endif
+
 	return skt;
 }
 
@@ -567,18 +549,6 @@ socket_default_socket_t *socket_default_socket_create()
 		.max_packet = lib->settings->get_int(lib->settings,
 									"%s.max_packet", MAX_PACKET, charon->name),
 	);
-
-#ifdef __APPLE__
-	{
-		int natt_port = CHARON_NATT_PORT;
-		if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &natt_port,
-						 sizeof(natt_port)) != 0)
-		{
-			DBG1(DBG_NET, "could not set net.inet.ipsec.esp_port to %d: %s",
-				 natt_port, strerror(errno));
-		}
-	}
-#endif
 
 	this->ipv4 = open_socket(this, AF_INET, CHARON_UDP_PORT);
 	if (this->ipv4 == 0)

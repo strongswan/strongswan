@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -401,6 +401,17 @@ struct kernel_ipsec_t {
 	 * @return				TRUE of policy set up successfully
 	 */
 	bool (*bypass_socket)(kernel_ipsec_t *this, int fd, int family);
+
+	/**
+	 * Enable decapsulation of ESP-in-UDP packets for the given port/socket.
+	 *
+	 * @param fd			socket file descriptor
+	 * @param family		protocol family of the socket
+	 * @param port			the UDP port
+	 * @return				TRUE if UDP decapsulation was enabled successfully
+	 */
+	bool (*enable_udp_decap)(kernel_ipsec_t *this, int fd, int family,
+							 u_int16_t port);
 
 	/**
 	 * Destroy the implementation.

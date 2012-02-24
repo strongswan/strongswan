@@ -48,24 +48,12 @@
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
 
-/* from linux/udp.h */
-#ifndef UDP_ENCAP
-#define UDP_ENCAP 100
-#endif /*UDP_ENCAP*/
-
-#ifndef UDP_ENCAP_ESPINUDP
-#define UDP_ENCAP_ESPINUDP 2
-#endif /*UDP_ENCAP_ESPINUDP*/
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
 #endif
 #ifndef SOL_IPV6
 #define SOL_IPV6 IPPROTO_IPV6
-#endif
-#ifndef SOL_UDP
-#define SOL_UDP IPPROTO_UDP
 #endif
 
 /* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
@@ -352,7 +340,7 @@ METHOD(socket_t, receiver, status_t,
 static int open_socket(private_socket_dynamic_socket_t *this,
 					   int family, u_int16_t port)
 {
-	int on = TRUE, type = UDP_ENCAP_ESPINUDP;
+	int on = TRUE;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
@@ -424,10 +412,12 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 	}
 
 	/* enable UDP decapsulation on each socket */
-	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   fd, family, port))
 	{
-		DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
 	}
+
 	return fd;
 }
 

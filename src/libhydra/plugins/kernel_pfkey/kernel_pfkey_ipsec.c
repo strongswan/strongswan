@@ -51,6 +51,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
 
 #include "kernel_pfkey_ipsec.h"
 
@@ -97,6 +100,20 @@
 /** missing on uclibc */
 #ifndef IPV6_IPSEC_POLICY
 #define IPV6_IPSEC_POLICY 34
+#endif
+
+/* from linux/udp.h */
+#ifndef UDP_ENCAP
+#define UDP_ENCAP 100
+#endif
+
+#ifndef UDP_ENCAP_ESPINUDP
+#define UDP_ENCAP_ESPINUDP 2
+#endif
+
+/* this is not defined on some platforms */
+#ifndef SOL_UDP
+#define SOL_UDP IPPROTO_UDP
 #endif
 
 /** default priority of installed policies */
@@ -2488,6 +2505,30 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	return TRUE;
 }
 
+METHOD(kernel_ipsec_t, enable_udp_decap, bool,
+	private_kernel_pfkey_ipsec_t *this, int fd, int family, u_int16_t port)
+{
+#ifndef __APPLE__
+	int type = UDP_ENCAP_ESPINUDP;
+
+	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set UDP_ENCAP: %s", strerror(errno));
+		return FALSE;
+	}
+#else /* __APPLE__ */
+	if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &port,
+					 sizeof(port)) != 0)
+	{
+		DBG1(DBG_KNL, "could not set net.inet.ipsec.esp_port to %d: %s",
+			 port, strerror(errno));
+		return FALSE;
+	}
+#endif /* __APPLE__ */
+
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_pfkey_ipsec_t *this)
 {
@@ -2532,6 +2573,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 				.del_policy = _del_policy,
 				.flush_policies = _flush_policies,
 				.bypass_socket = _bypass_socket,
+				.enable_udp_decap = _enable_udp_decap,
 				.destroy = _destroy,
 			},
 		},
