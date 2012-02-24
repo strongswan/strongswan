@@ -136,7 +136,9 @@ enum notify_type_t {
 	ME_CONNECTID = 40965,
 	ME_CONNECTKEY = 40966,
 	ME_CONNECTAUTH = 40967,
-	ME_RESPONSE = 40968
+	ME_RESPONSE = 40968,
+	/* RADIUS attribute received/to send to a AAA backend */
+	RADIUS_ATTRIBUTE = 40969,
 };
 
 /**
