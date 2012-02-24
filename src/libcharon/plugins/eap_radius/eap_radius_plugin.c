@@ -18,6 +18,7 @@
 #include "eap_radius.h"
 #include "eap_radius_accounting.h"
 #include "eap_radius_dae.h"
+#include "eap_radius_forward.h"
 #include "radius_client.h"
 #include "radius_server.h"
 
@@ -65,6 +66,11 @@ struct private_eap_radius_plugin_t {
 	 * Dynamic authorization extensions
 	 */
 	eap_radius_dae_t *dae;
+
+	/**
+	 * RADIUS <-> IKE attribute forwarding
+	 */
+	eap_radius_forward_t *forward;
 };
 
 /**
@@ -194,6 +200,11 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
+	if (this->forward)
+	{
+		charon->bus->remove_listener(charon->bus, &this->forward->listener);
+		this->forward->destroy(this->forward);
+	}
 	DESTROY_IF(this->dae);
 	this->servers->destroy_offset(this->servers,
 								  offsetof(radius_server_t, destroy));
@@ -223,6 +234,7 @@ plugin_t *eap_radius_plugin_create()
 		.servers = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.accounting = eap_radius_accounting_create(),
+		.forward = eap_radius_forward_create(),
 	);
 
 	load_servers(this);
@@ -237,6 +249,10 @@ plugin_t *eap_radius_plugin_create()
 						"charon.plugins.eap-radius.dae.enable", FALSE))
 	{
 		this->dae = eap_radius_dae_create(this->accounting);
+	}
+	if (this->forward)
+	{
+		charon->bus->add_listener(charon->bus, &this->forward->listener);
 	}
 
 	return &this->public.plugin;

@@ -14,6 +14,7 @@
  */
 
 #include "eap_radius.h"
+#include "eap_radius_forward.h"
 
 #include "radius_message.h"
 #include "radius_client.h"
@@ -175,10 +176,12 @@ METHOD(eap_method_t, initiate, status_t,
 	{
 		add_eap_identity(this, request);
 	}
+	eap_radius_forward_from_ike(request);
 
 	response = this->client->request(this->client, request);
 	if (response)
 	{
+		eap_radius_forward_to_ike(response);
 		if (radius2ike(this, response, out))
 		{
 			status = NEED_MORE;
@@ -327,9 +330,11 @@ METHOD(eap_method_t, process, status_t,
 	}
 	request->add(request, RAT_EAP_MESSAGE, data);
 
+	eap_radius_forward_from_ike(request);
 	response = this->client->request(this->client, request);
 	if (response)
 	{
+		eap_radius_forward_to_ike(response);
 		switch (response->get_code(response))
 		{
 			case RMC_ACCESS_CHALLENGE:
