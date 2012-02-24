@@ -144,7 +144,7 @@ static bool send_message(private_eap_radius_accounting_t *this,
  */
 static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 {
-	char buf[32];
+	char buf[64];
 	radius_message_t *message;
 	host_t *vip;
 	entry_t *entry;
@@ -189,7 +189,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	entry_t *entry;
 	u_int32_t id, value;
 	host_t *vip;
-	char buf[32];
+	char buf[64];
 
 	id = ike_sa->get_unique_id(ike_sa);
 	this->mutex->lock(this->mutex);
