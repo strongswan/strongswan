@@ -133,7 +133,7 @@ METHOD(sender_t, send_, void,
 		/* NAT keepalives have no marker prepended */
 		if (data.len != 1 || data.ptr[0] != 0xFF)
 		{
-			data = chunk_cat("cm", marker, data);
+			data = chunk_cat("cc", marker, data);
 			packet->set_data(packet, data);
 		}
 	}
