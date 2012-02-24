@@ -163,7 +163,7 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 				 chunk_create(entry->sid, strlen(entry->sid)));
 	snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
 	message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
-	snprintf(buf, sizeof(buf), "%H", ike_sa->get_other_host(ike_sa));
+	snprintf(buf, sizeof(buf), "%#H", ike_sa->get_other_host(ike_sa));
 	message->add(message, RAT_CALLING_STATION_ID, chunk_create(buf, strlen(buf)));
 	vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 	if (vip)
@@ -204,7 +204,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
 		message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
-		snprintf(buf, sizeof(buf), "%H", ike_sa->get_other_host(ike_sa));
+		snprintf(buf, sizeof(buf), "%#H", ike_sa->get_other_host(ike_sa));
 		message->add(message, RAT_CALLING_STATION_ID,
 					 chunk_create(buf, strlen(buf)));
 		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
