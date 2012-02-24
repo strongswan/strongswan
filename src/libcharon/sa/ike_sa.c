@@ -489,7 +489,7 @@ METHOD(ike_sa_t, send_keepalive, void,
 		data.len = 1;
 		packet->set_data(packet, data);
 		DBG1(DBG_IKE, "sending keep alive");
-		charon->sender->send(charon->sender, packet);
+		charon->sender->send_no_marker(charon->sender, packet);
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);

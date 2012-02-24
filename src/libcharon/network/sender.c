@@ -127,15 +127,10 @@ METHOD(sender_t, send_, void,
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
 	{
-		chunk_t marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00), data;
+		chunk_t data, marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00);
 
-		data = packet->get_data(packet);
-		/* NAT keepalives have no marker prepended */
-		if (data.len != 1 || data.ptr[0] != 0xFF)
-		{
-			data = chunk_cat("cc", marker, data);
-			packet->set_data(packet, data);
-		}
+		data = chunk_cat("cc", marker, packet->get_data(packet));
+		packet->set_data(packet, data);
 	}
 
 	send_no_marker(this, packet);
