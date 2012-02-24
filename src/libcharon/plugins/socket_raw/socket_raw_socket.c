@@ -172,7 +172,7 @@ METHOD(socket_t, receiver, status_t,
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
 
 		/* read source/dest from raw IP/UDP header */
-		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
+		if (bytes_read < IP_LEN + UDP_LEN)
 		{
 			DBG1(DBG_NET, "received IPv4 packet too short (%d bytes)",
 				 bytes_read);
@@ -226,7 +226,7 @@ METHOD(socket_t, receiver, status_t,
 		}
 		DBG3(DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
 
-		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
+		if (bytes_read < IP_LEN + UDP_LEN)
 		{
 			DBG3(DBG_NET, "received IPv6 packet too short (%d bytes)",
 				 bytes_read);

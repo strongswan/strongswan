@@ -417,6 +417,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	host_t *src, *dst;
 	status_t status;
 	bool supported = TRUE;
+	chunk_t data, marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00);
 
 	/* read in a packet */
 	status = charon->socket->receive(charon->socket, &packet);
@@ -430,6 +431,19 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		return JOB_REQUEUE_FAIR;
 	}
 
+	data = packet->get_data(packet);
+	if (data.len == 1 && data.ptr[0] == 0xFF)
+	{	/* silently drop NAT-T keepalives */
+		packet->destroy(packet);
+		return JOB_REQUEUE_DIRECT;
+	}
+	else if (data.len < marker.len)
+	{	/* drop packets that are too small */
+		DBG3(DBG_NET, "received packet is too short (%d bytes)", data.len);
+		packet->destroy(packet);
+		return JOB_REQUEUE_DIRECT;
+	}
+
 	/* if neither source nor destination port is 500 we assume an IKE packet
 	 * with Non-ESP marker or an ESP packet */
 	dst = packet->get_destination(packet);
@@ -437,9 +451,6 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
 	{
-		chunk_t marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00), data;
-
-		data = packet->get_data(packet);
 		if (memeq(data.ptr, marker.ptr, marker.len))
 		{	/* remove Non-ESP marker */
 			data = chunk_skip(data, marker.len);

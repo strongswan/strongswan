@@ -48,9 +48,6 @@
 /* Maximum size of a packet */
 #define MAX_PACKET 10000
 
-/* length of non-esp marker */
-#define MARKER_LEN sizeof(u_int32_t)
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
@@ -206,13 +203,6 @@ METHOD(socket_t, receiver, status_t,
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received packet %b", buffer, bytes_read);
-
-		if (bytes_read < MARKER_LEN)
-		{
-			DBG3(DBG_NET, "received packet too short (%d bytes)",
-				 bytes_read);
-			return FAILED;
-		}
 
 		/* read ancillary data to get destination address */
 		for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL;
