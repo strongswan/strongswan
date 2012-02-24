@@ -144,7 +144,7 @@ static bool send_message(private_eap_radius_accounting_t *this,
  */
 static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 {
-	char user[32];
+	char buf[32];
 	radius_message_t *message;
 	host_t *vip;
 	entry_t *entry;
@@ -161,8 +161,10 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 	message->add(message, RAT_ACCT_SESSION_ID,
 				 chunk_create(entry->sid, strlen(entry->sid)));
-	snprintf(user, sizeof(user), "%Y", ike_sa->get_other_eap_id(ike_sa));
-	message->add(message, RAT_USER_NAME, chunk_create(user, strlen(user)));
+	snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
+	message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
+	snprintf(buf, sizeof(buf), "%H", ike_sa->get_other_host(ike_sa));
+	message->add(message, RAT_CALLING_STATION_ID, chunk_create(buf, strlen(buf)));
 	vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 	if (vip)
 	{
@@ -187,7 +189,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	entry_t *entry;
 	u_int32_t id, value;
 	host_t *vip;
-	char user[32];
+	char buf[32];
 
 	id = ike_sa->get_unique_id(ike_sa);
 	this->mutex->lock(this->mutex);
@@ -200,8 +202,11 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
-		snprintf(user, sizeof(user), "%Y", ike_sa->get_other_eap_id(ike_sa));
-		message->add(message, RAT_USER_NAME, chunk_create(user, strlen(user)));
+		snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
+		message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
+		snprintf(buf, sizeof(buf), "%H", ike_sa->get_other_host(ike_sa));
+		message->add(message, RAT_CALLING_STATION_ID,
+					 chunk_create(buf, strlen(buf)));
 		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
 		if (vip)
 		{
