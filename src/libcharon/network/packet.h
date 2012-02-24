@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -91,6 +92,15 @@ struct packet_t {
 	 * @param data		chunk with data to set
 	 */
 	void (*set_data) (packet_t *packet, chunk_t data);
+
+	/**
+	 * Increase the offset where the actual packet data starts.
+	 *
+	 * @note The offset is reset to 0 when set_data() is called.
+	 *
+	 * @param bytes		the number of additional bytes to skip
+	 */
+	void (*skip_bytes) (packet_t *packet, size_t bytes);
 
 	/**
 	 * Clones a packet_t object.
