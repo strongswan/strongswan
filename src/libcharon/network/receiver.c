@@ -453,8 +453,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	{
 		if (memeq(data.ptr, marker.ptr, marker.len))
 		{	/* remove Non-ESP marker */
-			data = chunk_skip(data, marker.len);
-			packet->set_data(packet, chunk_clone(data));
+			packet->skip_bytes(packet, marker.len);
 		}
 		else
 		{	/* this seems to be an ESP packet */
