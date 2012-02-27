@@ -202,7 +202,9 @@ static kernel_algorithm_t encryption_algs[] = {
  */
 static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_MD5_96,			"md5"				},
+	{AUTH_HMAC_MD5_128,			"hmac(md5)"			},
 	{AUTH_HMAC_SHA1_96,			"sha1"				},
+	{AUTH_HMAC_SHA1_160,		"hmac(sha1)"		},
 	{AUTH_HMAC_SHA2_256_96,		"sha256"			},
 	{AUTH_HMAC_SHA2_256_128,	"hmac(sha256)"		},
 	{AUTH_HMAC_SHA2_384_192,	"hmac(sha384)"		},
@@ -1279,6 +1281,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	if (int_alg != AUTH_UNDEFINED)
 	{
+		u_int trunc_len = 0;
+
 		alg_name = lookup_algorithm(integrity_algs, int_alg);
 		if (alg_name == NULL)
 		{
@@ -1289,12 +1293,26 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg, int_key.len * 8);
 
-		if (int_alg == AUTH_HMAC_SHA2_256_128)
+		switch (int_alg)
+		{
+			case AUTH_HMAC_MD5_128:
+			case AUTH_HMAC_SHA2_256_128:
+				trunc_len = 128;
+				break;
+			case AUTH_HMAC_SHA1_160:
+				trunc_len = 160;
+				break;
+			default:
+				break;
+		}
+
+		if (trunc_len)
 		{
 			struct xfrm_algo_auth* algo;
 
 			/* the kernel uses SHA256 with 96 bit truncation by default,
-			 * use specified truncation size supported by newer kernels */
+			 * use specified truncation size supported by newer kernels.
+			 * also use this for untruncated MD5 and SHA1. */
 			rthdr->rta_type = XFRMA_ALG_AUTH_TRUNC;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_auth) +
 										int_key.len);
@@ -1307,7 +1325,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
 			algo->alg_key_len = int_key.len * 8;
-			algo->alg_trunc_len = 128;
+			algo->alg_trunc_len = trunc_len;
 			strcpy(algo->alg_name, alg_name);
 			memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		}

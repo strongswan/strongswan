@@ -99,7 +99,9 @@ keylen_entry_t keylen_enc[] = {
  */
 keylen_entry_t keylen_int[] = {
 	{AUTH_HMAC_MD5_96,			128},
+	{AUTH_HMAC_MD5_128,			128},
 	{AUTH_HMAC_SHA1_96,			160},
+	{AUTH_HMAC_SHA1_160,		160},
 	{AUTH_HMAC_SHA2_256_96,		256},
 	{AUTH_HMAC_SHA2_256_128,	256},
 	{AUTH_HMAC_SHA2_384_192,	384},
