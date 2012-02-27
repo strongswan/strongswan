@@ -253,7 +253,7 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 	tls=true;
 fi
 
-if test x$eap_radius = xtrue; then
+if test x$eap_radius = xtrue -o x$radattr = xtrue; then
 	radius=true;
 fi
 
