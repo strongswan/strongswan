@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <daemon.h>
+#include <debug.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
 #include <threading/condvar.h>
@@ -116,7 +116,6 @@ METHOD(radius_client_t, request, radius_message_t*,
 		return res;
 	}
 	this->server->put_socket(this->server, socket, FALSE);
-	charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
 	return NULL;
 }
 

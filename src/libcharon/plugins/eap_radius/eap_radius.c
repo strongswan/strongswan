@@ -188,6 +188,10 @@ METHOD(eap_method_t, initiate, status_t,
 		}
 		response->destroy(response);
 	}
+	else
+	{
+		charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
+	}
 	request->destroy(request);
 	return status;
 }

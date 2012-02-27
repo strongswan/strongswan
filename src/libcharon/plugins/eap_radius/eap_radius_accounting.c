@@ -134,6 +134,10 @@ static bool send_message(private_eap_radius_accounting_t *this,
 			ack = response->get_code(response) == RMC_ACCOUNTING_RESPONSE;
 			response->destroy(response);
 		}
+		else
+		{
+			charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
+		}
 		client->destroy(client);
 	}
 	return ack;
