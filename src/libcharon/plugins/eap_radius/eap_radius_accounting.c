@@ -14,11 +14,12 @@
  */
 
 #include "eap_radius_accounting.h"
+#include "eap_radius_plugin.h"
 
 #include <time.h>
 
-#include "radius_message.h"
-#include "radius_client.h"
+#include <radius_message.h>
+#include <radius_client.h>
 #include <daemon.h>
 #include <utils/hashtable.h>
 #include <threading/mutex.h>
@@ -125,7 +126,7 @@ static bool send_message(private_eap_radius_accounting_t *this,
 	radius_client_t *client;
 	bool ack = FALSE;
 
-	client = radius_client_create();
+	client = eap_radius_create_client();
 	if (client)
 	{
 		response = client->request(client, request);

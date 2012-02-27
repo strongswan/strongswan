@@ -14,8 +14,13 @@
  */
 
 /**
+ * @defgroup libradius libradius
+ *
+ * @addtogroup libradius
+ * RADIUS protocol support library.
+ *
  * @defgroup radius_message radius_message
- * @{ @ingroup eap_radius
+ * @{ @ingroup libradius
  */
 
 #ifndef RADIUS_MESSAGE_H_

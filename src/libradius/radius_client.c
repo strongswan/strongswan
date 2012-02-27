@@ -14,8 +14,6 @@
  */
 
 #include "radius_client.h"
-
-#include "eap_radius_plugin.h"
 #include "radius_server.h"
 
 #include <unistd.h>
@@ -137,12 +135,9 @@ METHOD(radius_client_t, destroy, void,
 /**
  * See header
  */
-radius_client_t *radius_client_create()
+radius_client_t *radius_client_create(radius_server_t *server)
 {
 	private_radius_client_t *this;
-	enumerator_t *enumerator;
-	radius_server_t *server;
-	int current, best = -1;
 
 	INIT(this,
 		.public = {
@@ -150,36 +145,8 @@ radius_client_t *radius_client_create()
 			.get_msk = _get_msk,
 			.destroy = _destroy,
 		},
+		.server = server,
 	);
-
-	enumerator = eap_radius_create_server_enumerator();
-	while (enumerator->enumerate(enumerator, &server))
-	{
-		current = server->get_preference(server);
-		if (current > best ||
-			/* for two with equal preference, 50-50 chance */
-			(current == best && random() % 2 == 0))
-		{
-			DBG2(DBG_CFG, "RADIUS server '%s' is candidate: %d",
-				 server->get_name(server), current);
-			best = current;
-			DESTROY_IF(this->server);
-			this->server = server->get_ref(server);
-		}
-		else
-		{
-			DBG2(DBG_CFG, "RADIUS server '%s' skipped: %d",
-				 server->get_name(server), current);
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (!this->server)
-	{
-		free(this);
-		return NULL;
-	}
 
 	return &this->public;
 }
-

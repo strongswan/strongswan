@@ -15,7 +15,7 @@
 
 #include "eap_radius_dae.h"
 
-#include "radius_message.h"
+#include <radius_message.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>

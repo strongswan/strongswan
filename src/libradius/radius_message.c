@@ -488,4 +488,3 @@ radius_message_t *radius_message_parse(chunk_t data)
 	}
 	return &this->public;
 }
-

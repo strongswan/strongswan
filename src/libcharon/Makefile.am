@@ -326,6 +326,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_RADIUS
+if MONOLITHIC
+  # otherwise this library is linked to eap_radius
+  libcharon_la_LIBADD += $(top_builddir)/src/libradius/libradius.la
+endif
+endif
+
 if USE_TNC_IFMAP
   SUBDIRS += plugins/tnc_ifmap
 if MONOLITHIC

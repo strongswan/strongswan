@@ -15,13 +15,14 @@
 
 /**
  * @defgroup radius_client radius_client
- * @{ @ingroup eap_radius
+ * @{ @ingroup libradius
  */
 
 #ifndef RADIUS_CLIENT_H_
 #define RADIUS_CLIENT_H_
 
 #include "radius_message.h"
+#include "radius_server.h"
 
 typedef struct radius_client_t radius_client_t;
 
@@ -59,8 +60,9 @@ struct radius_client_t {
 /**
  * Create a RADIUS client.
  *
+ * @param server	reference to a server configuration, gets owned
  * @return			radius_client_t object
  */
-radius_client_t *radius_client_create();
+radius_client_t *radius_client_create(radius_server_t *server);
 
 #endif /** RADIUS_CLIENT_H_ @}*/

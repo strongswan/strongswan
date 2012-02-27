@@ -15,13 +15,13 @@
 
 /**
  * @defgroup eap_radius_forward eap_radius_forward
- * @{ @ingroup
+ * @{ @ingroup eap_radius
  */
 
 #ifndef EAP_RADIUS_FORWARD_H_
 #define EAP_RADIUS_FORWARD_H_
 
-#include "radius_message.h"
+#include <radius_message.h>
 
 #include <bus/listeners/listener.h>
 

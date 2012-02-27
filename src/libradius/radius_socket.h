@@ -15,7 +15,7 @@
 
 /**
  * @defgroup radius_socket radius_socket
- * @{ @ingroup eap_radius
+ * @{ @ingroup libradius
  */
 
 #ifndef RADIUS_SOCKET_H_

@@ -16,6 +16,10 @@ if USE_TLS
   SUBDIRS += libtls
 endif
 
+if USE_RADIUS
+  SUBDIRS += libradius
+endif
+
 if USE_LIBTNCIF
   SUBDIRS += libtncif
 endif

@@ -19,8 +19,9 @@
 #include "eap_radius_accounting.h"
 #include "eap_radius_dae.h"
 #include "eap_radius_forward.h"
-#include "radius_client.h"
-#include "radius_server.h"
+
+#include <radius_client.h>
+#include <radius_server.h>
 
 #include <daemon.h>
 #include <threading/rwlock.h>
@@ -261,15 +262,43 @@ plugin_t *eap_radius_plugin_create()
 /**
  * See header
  */
-enumerator_t *eap_radius_create_server_enumerator()
+radius_client_t *eap_radius_create_client()
 {
 	if (instance)
 	{
+		enumerator_t *enumerator;
+		radius_server_t *server, *selected = NULL;
+		int current, best = -1;
+
 		instance->lock->read_lock(instance->lock);
-		return enumerator_create_cleaner(
-					instance->servers->create_enumerator(instance->servers),
-					(void*)instance->lock->unlock, instance->lock);
+		enumerator = instance->servers->create_enumerator(instance->servers);
+		while (enumerator->enumerate(enumerator, &server))
+		{
+			current = server->get_preference(server);
+			if (current > best ||
+				/* for two with equal preference, 50-50 chance */
+				(current == best && random() % 2 == 0))
+			{
+				DBG2(DBG_CFG, "RADIUS server '%s' is candidate: %d",
+					 server->get_name(server), current);
+				best = current;
+				DESTROY_IF(selected);
+				selected = server->get_ref(server);
+			}
+			else
+			{
+				DBG2(DBG_CFG, "RADIUS server '%s' skipped: %d",
+					 server->get_name(server), current);
+			}
+		}
+		enumerator->destroy(enumerator);
+		instance->lock->unlock(instance->lock);
+
+		if (selected)
+		{
+			return radius_client_create(selected);
+		}
 	}
-	return enumerator_create_empty();
+	return NULL;
 }
 

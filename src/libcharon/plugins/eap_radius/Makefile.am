@@ -1,12 +1,13 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libradius
 
 AM_CFLAGS = -rdynamic
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-eap-radius.la
 else
+libstrongswan_eap_radius_la_LIBADD = $(top_builddir)/src/libradius/libradius.la
 plugin_LTLIBRARIES = libstrongswan-eap-radius.la
 endif
 
@@ -15,10 +16,6 @@ libstrongswan_eap_radius_la_SOURCES = \
 	eap_radius.h eap_radius.c \
 	eap_radius_accounting.h eap_radius_accounting.c \
 	eap_radius_dae.h eap_radius_dae.c \
-	eap_radius_forward.h eap_radius_forward.c \
-	radius_server.h radius_server.c \
-	radius_socket.h radius_socket.c \
-	radius_client.h radius_client.c \
-	radius_message.h radius_message.c
+	eap_radius_forward.h eap_radius_forward.c
 
 libstrongswan_eap_radius_la_LDFLAGS = -module -avoid-version

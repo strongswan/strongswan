@@ -15,7 +15,7 @@
 
 /**
  * @defgroup radius_server radius_server
- * @{ @ingroup eap_radius
+ * @{ @ingroup libradius
  */
 
 #ifndef RADIUS_SERVER_H_

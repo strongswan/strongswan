@@ -252,6 +252,10 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue; then
 	tls=true;
 fi
 
+if test x$eap_radius = xtrue; then
+	radius=true;
+fi
+
 if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
 	tnc_tnccs=true;
 fi
@@ -1052,6 +1056,7 @@ AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
 AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
+AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
@@ -1130,6 +1135,7 @@ AC_OUTPUT(
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
+	src/libradius/Makefile
 	src/libtncif/Makefile
 	src/libtnccs/Makefile
 	src/libpts/Makefile

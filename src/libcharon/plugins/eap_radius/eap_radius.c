@@ -14,10 +14,11 @@
  */
 
 #include "eap_radius.h"
+#include "eap_radius_plugin.h"
 #include "eap_radius_forward.h"
 
-#include "radius_message.h"
-#include "radius_client.h"
+#include <radius_message.h>
+#include <radius_client.h>
 
 #include <daemon.h>
 
@@ -462,7 +463,7 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 								"charon.plugins.eap-radius.filter_id", FALSE),
 
 	);
-	this->client = radius_client_create();
+	this->client = eap_radius_create_client();
 	if (!this->client)
 	{
 		free(this);

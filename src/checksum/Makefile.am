@@ -45,6 +45,11 @@ if USE_TLS
   libs += $(DESTDIR)$(ipseclibdir)/libtls.so
 endif
 
+if USE_RADIUS
+  deps += $(top_builddir)/src/libradius/libradius.la
+  libs += $(DESTDIR)$(ipseclibdir)/libradius.so
+endif
+
 if USE_LIBTNCCS
   deps += $(top_builddir)/src/libtnccs/libtnccs.la
   libs += $(DESTDIR)$(ipseclibdir)/libtnccs.so
