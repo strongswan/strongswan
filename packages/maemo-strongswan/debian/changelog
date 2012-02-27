@@ -1,3 +1,9 @@
+strongswan (4.6.2-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Tobias Brunner <tobias@strongswan.org>  Mon, 27 Feb 2012 17:29:05 +0100
+
 strongswan (4.6.0-1) unstable; urgency=low
 
   * New upstream release
