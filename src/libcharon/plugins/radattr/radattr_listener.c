@@ -15,9 +15,21 @@
 
 #include "radattr_listener.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <errno.h>
+
 #include <daemon.h>
 
 #include <radius_message.h>
+
+/**
+ * Maximum size of an attribute to add
+ */
+#define MAX_ATTR_SIZE 1024
 
 typedef struct private_radattr_listener_t private_radattr_listener_t;
 
@@ -30,6 +42,16 @@ struct private_radattr_listener_t {
 	 * Public radattr_listener_t interface.
 	 */
 	radattr_listener_t public;
+
+	/**
+	 * Directory to look for attribute files
+	 */
+	char *dir;
+
+	/**
+	 * IKE_AUTH message ID to attribute
+	 */
+	int mid;
 };
 
 /**
@@ -76,6 +98,68 @@ static void print_radius_attributes(private_radattr_listener_t *this,
 	enumerator->destroy(enumerator);
 }
 
+/**
+ * Add a RADIUS attribute from a client-ID specific file to an IKE message
+ */
+static void add_radius_attribute(private_radattr_listener_t *this,
+								 identification_t *id, message_t *message)
+{
+	if (this->dir && message->get_message_id(message) == this->mid)
+	{
+		char path[PATH_MAX];
+		chunk_t data;
+		struct stat sb;
+		void *addr;
+		int fd;
+
+		snprintf(path, sizeof(path), "%s/%Y", this->dir, id);
+		fd = open(path, O_RDONLY);
+		if (fd != -1)
+		{
+			if (fstat(fd, &sb) != -1)
+			{
+				if (sb.st_size <= MAX_ATTR_SIZE)
+				{
+					addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+					if (addr != MAP_FAILED)
+					{
+						data = chunk_create(addr, sb.st_size);
+						if (data.len >= 2)
+						{
+							DBG1(DBG_CFG, "adding RADIUS %N attribute",
+								 radius_attribute_type_names, data.ptr[0]);
+							message->add_notify(message, FALSE,
+												RADIUS_ATTRIBUTE, data);
+						}
+						munmap(addr, sb.st_size);
+					}
+					else
+					{
+						DBG1(DBG_CFG, "mapping RADIUS attribute '%s' failed: %s",
+							 path, strerror(errno));
+					}
+				}
+				else
+				{
+					DBG1(DBG_CFG, "RADIUS attribute '%s' exceeds size limit",
+						 path);
+				}
+			}
+			else
+			{
+				DBG1(DBG_CFG, "fstat RADIUS attribute '%s' failed: %s",
+					 path, strerror(errno));
+			}
+			close(fd);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "reading RADIUS attribute '%s' failed: %s",
+				 path, strerror(errno));
+		}
+	}
+}
+
 METHOD(listener_t, message, bool,
 	private_radattr_listener_t *this,
 	ike_sa_t *ike_sa, message_t *message, bool incoming)
@@ -86,6 +170,10 @@ METHOD(listener_t, message, bool,
 		if (incoming)
 		{
 			print_radius_attributes(this, message);
+		}
+		else
+		{
+			add_radius_attribute(this, ike_sa->get_my_id(ike_sa), message);
 		}
 	}
 	return TRUE;
@@ -112,6 +200,10 @@ radattr_listener_t *radattr_listener_create()
 			},
 			.destroy = _destroy,
 		},
+		.dir = lib->settings->get_str(lib->settings,
+									  "charon.plugins.radattr.dir", NULL),
+		.mid = lib->settings->get_int(lib->settings,
+									  "charon.plugins.radattr.message_id", 2),
 	);
 
 	return &this->public;
