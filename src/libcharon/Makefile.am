@@ -473,6 +473,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_RADATTR
+  SUBDIRS += plugins/radattr
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/radattr/libstrongswan-radattr.la
+endif
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
 if MONOLITHIC
