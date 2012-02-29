@@ -361,7 +361,8 @@ static bool dependency_required(private_plugin_loader_t *this,
 		count = entry->plugin->get_features(entry->plugin, &features);
 		for (i = 0; i < count; i++)
 		{
-			if (feature_loaded(this, entry, &features[i]))
+			if (&features[i] != dep &&
+				feature_loaded(this, entry, &features[i]))
 			{
 				while (++i < count && (features[i].kind == FEATURE_DEPENDS ||
 									   features[i].kind == FEATURE_SDEPEND))
