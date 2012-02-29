@@ -641,11 +641,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 												   enumerator);
 				}
 				break;
+			case DESTROY_ME:
 			case FAILED:
 			default:
-				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
-				/* FALL */
-			case DESTROY_ME:
 				/* destroy IKE_SA, but SEND response first */
 				delete = TRUE;
 				break;
@@ -680,6 +678,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 						 this->responding.packet->clone(this->responding.packet));
 	if (delete)
 	{
+		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
 	return SUCCESS;
