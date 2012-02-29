@@ -157,17 +157,6 @@ static entry_t *entry_create()
 }
 
 /**
- * Function that matches entry_t objects by initiator SPI and the hash of the
- * IKE_SA_INIT message.
- */
-static bool entry_match_by_hash(entry_t *entry, ike_sa_id_t *id, chunk_t *hash)
-{
-	return id->get_responder_spi(id) == 0 &&
-		id->get_initiator_spi(id) == entry->ike_sa_id->get_initiator_spi(entry->ike_sa_id) &&
-		chunk_equals(*hash, entry->init_hash);
-}
-
-/**
  * Function that matches entry_t objects by ike_sa_id_t.
  */
 static bool entry_match_by_id(entry_t *entry, ike_sa_id_t *id)
@@ -356,6 +345,16 @@ struct private_ike_sa_manager_t {
 	 * Segments of the "connected peers" hash table.
 	 */
 	shareable_segment_t *connected_peers_segments;
+
+	/**
+	 * Hash table with chunk_t objects.
+	 */
+	linked_list_t **init_hashes_table;
+
+	/**
+	  * Segments of the "hashes" hash table.
+	 */
+	segment_t *init_hashes_segments;
 
 	/**
 	 * RNG to get random SPIs for our side
@@ -649,17 +648,6 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this,
 }
 
 /**
- * Find an entry by initiator SPI and IKE_SA_INIT hash.
- * Note: On SUCCESS, the caller has to unlock the segment.
- */
-static status_t get_entry_by_hash(private_ike_sa_manager_t *this,
-			ike_sa_id_t *ike_sa_id, chunk_t hash, entry_t **entry, u_int *segment)
-{
-	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
-				(linked_list_match_t)entry_match_by_hash, ike_sa_id, &hash);
-}
-
-/**
  * Find an entry by IKE_SA pointer.
  * Note: On SUCCESS, the caller has to unlock the segment.
  */
@@ -901,6 +889,87 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 }
 
 /**
+ * Check if we already have created an IKE_SA based on the initial IKE message
+ * with the given hash.  If not the hash is stored.
+ *
+ * @returns TRUE if the message with the given hash was seen before
+ */
+static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
+									chunk_t init_hash)
+{
+	chunk_t *clone;
+	linked_list_t *list;
+	u_int row, segment;
+	mutex_t *mutex;
+
+	row = chunk_hash(init_hash) & this->table_mask;
+	segment = row & this->segment_mask;
+	mutex = this->init_hashes_segments[segment].mutex;
+	mutex->lock(mutex);
+	list = this->init_hashes_table[row];
+	if (list)
+	{
+		chunk_t *current;
+
+		if (list->find_first(list, (linked_list_match_t)chunk_equals_ptr,
+				(void**)&current, &init_hash) == SUCCESS)
+		{
+			mutex->unlock(mutex);
+			return TRUE;
+		}
+	}
+	else
+	{
+		list = this->init_hashes_table[row] = linked_list_create();
+	}
+
+	INIT(clone,
+		.len = init_hash.len,
+		.ptr = malloc(init_hash.len),
+	);
+	memcpy(clone->ptr, init_hash.ptr, clone->len);
+	list->insert_last(list, clone);
+
+	mutex->unlock(mutex);
+	return FALSE;
+}
+
+/**
+ * Remove the hash of an initial IKE message from the cache.
+ */
+static void remove_init_hash(private_ike_sa_manager_t *this, chunk_t init_hash)
+{
+	linked_list_t *list;
+	u_int row, segment;
+	mutex_t *mutex;
+
+	row = chunk_hash(init_hash) & this->table_mask;
+	segment = row & this->segment_mask;
+	mutex = this->init_hashes_segments[segment].mutex;
+	mutex->lock(mutex);
+	list = this->init_hashes_table[row];
+	if (list)
+	{
+		enumerator_t *enumerator;
+		chunk_t *current;
+
+		enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (chunk_equals_ptr(current, &init_hash))
+			{
+				list->remove_at(list, enumerator);
+				chunk_free(current);
+				free(current);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	mutex->unlock(mutex);
+}
+
+/**
  * Get a random SPI for new IKE_SAs
  */
 static u_int64_t get_spi(private_ike_sa_manager_t *this)
@@ -977,6 +1046,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	bool is_init = FALSE;
 
 	id = message->get_ike_sa_id(message);
+	/* clone the IKE_SA ID so we can modify the initiator flag */
 	id = id->clone(id);
 	id->switch_initiator(id);
 
@@ -1009,61 +1079,45 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	}
 
 	if (is_init && this->hasher)
-	{
-		/* First request. Check for an IKE_SA with such a message hash. */
+	{	/* initial request. checking for the hasher prevents crashes once
+		 * flush() has been called */
 		chunk_t hash;
 
 		this->hasher->allocate_hash(this->hasher,
 									message->get_packet_data(message), &hash);
 
-		if (get_entry_by_hash(this, id, hash, &entry, &segment) == SUCCESS)
+		/* ensure this is not a retransmit of an already handled init message */
+		if (check_and_put_init_hash(this, hash))
 		{
-			if (message->get_exchange_type(message) == IKE_SA_INIT &&
-				entry->message_id == 0)
-			{
-				unlock_single_segment(this, segment);
-				chunk_free(&hash);
-				id->destroy(id);
-				DBG1(DBG_MGR, "ignoring IKE_SA_INIT, already processing");
-				return NULL;
-			}
-			else if (wait_for_entry(this, entry, segment))
-			{
-				entry->checked_out = TRUE;
-				entry->message_id = message->get_message_id(message);
-				ike_sa = entry->ike_sa;
-				DBG2(DBG_MGR, "IKE_SA %s[%u] checked out by hash",
-						ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
-				chunk_free(&hash);
-			}
+			chunk_free(&hash);
+			id->destroy(id);
+			DBG1(DBG_MGR, "ignoring %s, already processing",
+				 ike_version == IKEV2 ? "IKE_SA_INIT" : "initial IKE message");
+			return NULL;
+		}
+
+		/* no IKE_SA yet, create a new one */
+		id->set_responder_spi(id, get_spi(this));
+		ike_sa = ike_sa_create(id, FALSE, ike_version);
+		if (ike_sa)
+		{
+			entry = entry_create();
+			entry->ike_sa = ike_sa;
+			entry->ike_sa_id = id->clone(id);
+
+			segment = put_entry(this, entry);
+			entry->checked_out = TRUE;
 			unlock_single_segment(this, segment);
+
+			entry->message_id = message->get_message_id(message);
+			entry->init_hash = hash;
+
+			DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+				 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
 		}
-
-		if (ike_sa == NULL)
+		else
 		{
-			/* no IKE_SA found, create a new one */
-			id->set_responder_spi(id, get_spi(this));
-			ike_sa = ike_sa_create(id, FALSE, ike_version);
-			if (ike_sa)
-			{
-				entry = entry_create();
-				/* a new SA checked out by message is a responder SA */
-				entry->ike_sa = ike_sa;
-				entry->ike_sa_id = id->clone(id);
-
-				segment = put_entry(this, entry);
-				entry->checked_out = TRUE;
-				unlock_single_segment(this, segment);
-
-				entry->message_id = message->get_message_id(message);
-				entry->init_hash = hash;
-
-				DBG2(DBG_MGR, "created IKE_SA %s[%u]",
-					 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
-			}
-		}
-		if (ike_sa == NULL)
-		{
+			remove_init_hash(this, hash);
 			chunk_free(&hash);
 			DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
 		}
@@ -1449,6 +1503,10 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 		{
 			remove_connected_peers(this, entry);
 		}
+		if (entry->init_hash.ptr)
+		{
+			remove_init_hash(this, entry->init_hash);
+		}
 
 		entry_destroy(entry);
 
@@ -1744,6 +1802,10 @@ METHOD(ike_sa_manager_t, flush, void,
 		{
 			remove_connected_peers(this, entry);
 		}
+		if (entry->init_hash.ptr)
+		{
+			remove_init_hash(this, entry->init_hash);
+		}
 		remove_entry_at((private_enumerator_t*)enumerator);
 		entry_destroy(entry);
 	}
@@ -1767,19 +1829,23 @@ METHOD(ike_sa_manager_t, destroy, void,
 		DESTROY_IF(this->ike_sa_table[i]);
 		DESTROY_IF(this->half_open_table[i]);
 		DESTROY_IF(this->connected_peers_table[i]);
+		DESTROY_IF(this->init_hashes_table[i]);
 	}
 	free(this->ike_sa_table);
 	free(this->half_open_table);
 	free(this->connected_peers_table);
+	free(this->init_hashes_table);
 	for (i = 0; i < this->segment_count; i++)
 	{
 		this->segments[i].mutex->destroy(this->segments[i].mutex);
 		this->half_open_segments[i].lock->destroy(this->half_open_segments[i].lock);
 		this->connected_peers_segments[i].lock->destroy(this->connected_peers_segments[i].lock);
+		this->init_hashes_segments[i].mutex->destroy(this->init_hashes_segments[i].mutex);
 	}
 	free(this->segments);
 	free(this->half_open_segments);
 	free(this->connected_peers_segments);
+	free(this->init_hashes_segments);
 
 	free(this);
 }
@@ -1856,8 +1922,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 						"charon.ikesa_table_segments", DEFAULT_SEGMENT_COUNT));
 	this->segment_count = max(1, min(this->segment_count, this->table_size));
 	this->segment_mask = this->segment_count - 1;
-	this->ike_sa_table = calloc(this->table_size, sizeof(linked_list_t*));
 
+	this->ike_sa_table = calloc(this->table_size, sizeof(linked_list_t*));
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; i++)
 	{
@@ -1881,6 +1947,15 @@ ike_sa_manager_t *ike_sa_manager_create()
 	{
 		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->connected_peers_segments[i].count = 0;
+	}
+
+	/* and again for the table of hashes of seen initial IKE messages */
+	this->init_hashes_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->init_hashes_segments = calloc(this->segment_count, sizeof(segment_t));
+	for (i = 0; i < this->segment_count; i++)
+	{
+		this->init_hashes_segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
+		this->init_hashes_segments[i].count = 0;
 	}
 
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
