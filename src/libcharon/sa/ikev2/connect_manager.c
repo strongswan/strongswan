@@ -1035,7 +1035,8 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	message->set_destination(message, check->dst->clone(check->dst));
 	message->set_source(message, check->src->clone(check->src));
 
-	ike_sa_id_t *ike_sa_id = ike_sa_id_create(0, 0, request);
+	ike_sa_id_t *ike_sa_id = ike_sa_id_create(IKEV2_MAJOR_VERSION, 0, 0,
+											  request);
 	message->set_ike_sa_id(message, ike_sa_id);
 	ike_sa_id->destroy(ike_sa_id);
 

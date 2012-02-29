@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -29,11 +30,18 @@ typedef struct ike_sa_id_t ike_sa_id_t;
 /**
  * An object of type ike_sa_id_t is used to identify an IKE_SA.
  *
- * An IKE_SA is identified by its initiator and responder spi's.
- * Additionally it contains the role of the actual running IKEv2 daemon
- * for the specific IKE_SA (original initiator or responder).
+ * An IKE_SA is identified by its initiator and responder SPIs.
+ * Additionally, it contains the major IKE version of the IKE_SA and, for IKEv2,
+ * the role of the daemon (original initiator or responder).
  */
 struct ike_sa_id_t {
+
+	/**
+	 * Get the major IKE version of this IKE_SA.
+	 *
+	 * @return					IKE version
+	 */
+	u_int8_t (*get_ike_version) (ike_sa_id_t *this);
 
 	/**
 	 * Set the SPI of the responder.
@@ -68,10 +76,12 @@ struct ike_sa_id_t {
 	/**
 	 * Check if two ike_sa_id_t objects are equal.
 	 *
-	 * Two ike_sa_id_t objects are equal if both SPI values and the role matches.
+	 * Two ike_sa_id_t objects are equal if version and both SPI values match.
+	 * The role is not compared.
 	 *
 	 * @param other				ike_sa_id_t object to check if equal
-	 * @return					TRUE if given ike_sa_id_t are equal, FALSE otherwise
+	 * @return					TRUE if given ike_sa_id_t are equal,
+	 *							FALSE otherwise
 	 */
 	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
@@ -93,9 +103,9 @@ struct ike_sa_id_t {
 	bool (*is_initiator) (ike_sa_id_t *this);
 
 	/**
-	 * Switche the original initiator flag.
+	 * Switch the original initiator flag.
 	 *
-	 * @return					TRUE if we are the original initiator after switch, FALSE otherwise
+	 * @return					new value if initiator flag.
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);
 
@@ -113,14 +123,15 @@ struct ike_sa_id_t {
 };
 
 /**
- * Creates an ike_sa_id_t object with specific SPI's and defined role.
+ * Creates an ike_sa_id_t object.
  *
+ * @param ike_version			major IKE version
  * @param initiator_spi			initiators SPI
  * @param responder_spi			responders SPI
  * @param is_initiaor			TRUE if we are the original initiator
  * @return						ike_sa_id_t object
  */
-ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
-							   bool is_initiaor);
+ike_sa_id_t * ike_sa_id_create(u_int8_t ike_version, u_int64_t initiator_spi,
+							   u_int64_t responder_spi, bool is_initiaor);
 
 #endif /** IKE_SA_ID_H_ @}*/

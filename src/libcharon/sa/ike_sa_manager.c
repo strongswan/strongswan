@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -943,14 +943,17 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 {
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
+	u_int8_t ike_version;
+
+	ike_version = version == IKEV1 ? IKEV1_MAJOR_VERSION : IKEV2_MAJOR_VERSION;
 
 	if (initiator)
 	{
-		ike_sa_id = ike_sa_id_create(get_spi(this), 0, TRUE);
+		ike_sa_id = ike_sa_id_create(ike_version, get_spi(this), 0, TRUE);
 	}
 	else
 	{
-		ike_sa_id = ike_sa_id_create(0, get_spi(this), FALSE);
+		ike_sa_id = ike_sa_id_create(ike_version, 0, get_spi(this), FALSE);
 	}
 	ike_sa = ike_sa_create(ike_sa_id, initiator, version);
 	ike_sa_id->destroy(ike_sa_id);

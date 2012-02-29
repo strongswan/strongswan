@@ -1655,6 +1655,7 @@ METHOD(message_t, parse_header, status_t,
 
 	DESTROY_IF(this->ike_sa_id);
 	this->ike_sa_id = ike_sa_id_create(
+									ike_header->get_maj_version(ike_header),
 									ike_header->get_initiator_spi(ike_header),
 									ike_header->get_responder_spi(ike_header),
 									ike_header->get_initiator_flag(ike_header));

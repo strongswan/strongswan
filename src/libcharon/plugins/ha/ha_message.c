@@ -67,6 +67,7 @@ typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
  * Encoding if an ike_sa_id_t
  */
 struct ike_sa_id_encoding_t {
+	u_int8_t ike_version;
 	u_int64_t initiator_spi;
 	u_int64_t responder_spi;
 	u_int8_t initiator;
@@ -157,6 +158,7 @@ METHOD(ha_message_t, add_attribute, void,
 			enc = (ike_sa_id_encoding_t*)(this->buf.ptr + this->buf.len);
 			this->buf.len += sizeof(ike_sa_id_encoding_t);
 			enc->initiator = id->is_initiator(id);
+			enc->ike_version = id->get_ike_version(id);
 			enc->initiator_spi = id->get_initiator_spi(id);
 			enc->responder_spi = id->get_responder_spi(id);
 			break;
@@ -357,8 +359,9 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 				return FALSE;
 			}
 			enc = (ike_sa_id_encoding_t*)(this->buf.ptr);
-			value->ike_sa_id = ike_sa_id_create(enc->initiator_spi,
-											enc->responder_spi, enc->initiator);
+			value->ike_sa_id = ike_sa_id_create(enc->ike_version,
+										enc->initiator_spi, enc->responder_spi,
+										enc->initiator);
 			*attr_out = attr;
 			this->cleanup = (void*)value->ike_sa_id->destroy;
 			this->cleanup_data = value->ike_sa_id;
