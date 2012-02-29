@@ -188,8 +188,19 @@ static bool entry_match_by_sa(entry_t *entry, ike_sa_t *ike_sa)
  */
 static u_int ike_sa_id_hash(ike_sa_id_t *ike_sa_id)
 {
-	/* we always use initiator spi as key */
-	return ike_sa_id->get_initiator_spi(ike_sa_id);
+	/* IKEv2 does not mandate random SPIs (RFC 5996, 2.6), they just have to be
+	 * locally unique, so we use our randomly allocated SPI whether we are
+	 * initiator or responder to ensure a good distribution.  The latter is not
+	 * possible for IKEv1 as we don't know whether we are original initiator or
+	 * not (based on the IKE header).  But as RFC 2408, section 2.5.3 proposes
+	 * SPIs (Cookies) to be allocated near random (we allocate them randomly
+	 * anyway) it seems safe to always use the initiator SPI. */
+	if (ike_sa_id->get_ike_version(ike_sa_id) == IKEV1_MAJOR_VERSION ||
+		ike_sa_id->is_initiator(ike_sa_id))
+	{
+		return ike_sa_id->get_initiator_spi(ike_sa_id);
+	}
+	return ike_sa_id->get_responder_spi(ike_sa_id);
 }
 
 typedef struct half_open_t half_open_t;
