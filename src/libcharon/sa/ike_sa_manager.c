@@ -296,6 +296,20 @@ struct shareable_segment_t {
 	u_int count;
 };
 
+typedef struct table_item_t table_item_t;
+
+/**
+ * Instead of using linked_list_t for each bucket we store the data in our own
+ * list to save memory.
+ */
+struct table_item_t {
+	/** data of this item */
+	void *value;
+
+	/** next item in the overflow list */
+	table_item_t *next;
+};
+
 typedef struct private_ike_sa_manager_t private_ike_sa_manager_t;
 
 /**
@@ -310,7 +324,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * Hash table with entries for the ike_sa_t objects.
 	 */
-	linked_list_t **ike_sa_table;
+	table_item_t **ike_sa_table;
 
 	/**
 	 * The size of the hash table.
@@ -387,10 +401,10 @@ struct private_ike_sa_manager_t {
  * Acquire a lock to access the segment of the table row with the given index.
  * It also works with the segment index directly.
  */
-static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
+static inline void lock_single_segment(private_ike_sa_manager_t *this,
+									   u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-
 	lock->lock(lock);
 }
 
@@ -398,10 +412,10 @@ static void lock_single_segment(private_ike_sa_manager_t *this, u_int index)
  * Release the lock required to access the segment of the table row with the given index.
  * It also works with the segment index directly.
  */
-static void unlock_single_segment(private_ike_sa_manager_t *this, u_int index)
+static inline void unlock_single_segment(private_ike_sa_manager_t *this,
+										 u_int index)
 {
 	mutex_t *lock = this->segments[index & this->segment_mask].mutex;
-
 	lock->unlock(lock);
 }
 
@@ -464,9 +478,14 @@ struct private_enumerator_t {
 	u_int row;
 
 	/**
-	 * enumerator for the current table row
+	 * current table item
 	 */
-	enumerator_t *current;
+	table_item_t *current;
+
+	/**
+	 * previous table item
+	 */
+	table_item_t *prev;
 };
 
 METHOD(enumerator_t, enumerate, bool,
@@ -481,33 +500,23 @@ METHOD(enumerator_t, enumerate, bool,
 	{
 		while (this->row < this->manager->table_size)
 		{
+			this->prev = this->current;
 			if (this->current)
 			{
-				entry_t *item;
-
-				if (this->current->enumerate(this->current, &item))
-				{
-					*entry = this->entry = item;
-					*segment = this->segment;
-					return TRUE;
-				}
-				this->current->destroy(this->current);
-				this->current = NULL;
-				unlock_single_segment(this->manager, this->segment);
+				this->current = this->current->next;
 			}
 			else
 			{
-				linked_list_t *list;
-
 				lock_single_segment(this->manager, this->segment);
-				if ((list = this->manager->ike_sa_table[this->row]) != NULL &&
-					 list->get_count(list))
-				{
-					this->current = list->create_enumerator(list);
-					continue;
-				}
-				unlock_single_segment(this->manager, this->segment);
+				this->current = this->manager->ike_sa_table[this->row];
 			}
+			if (this->current)
+			{
+				*entry = this->entry = this->current->value;
+				*segment = this->segment;
+				return TRUE;
+			}
+			unlock_single_segment(this->manager, this->segment);
 			this->row += this->manager->segment_count;
 		}
 		this->segment++;
@@ -525,7 +534,6 @@ METHOD(enumerator_t, enumerator_destroy, void,
 	}
 	if (this->current)
 	{
-		this->current->destroy(this->current);
 		unlock_single_segment(this->manager, this->segment);
 	}
 	free(this);
@@ -554,19 +562,23 @@ static enumerator_t* create_table_enumerator(private_ike_sa_manager_t *this)
  */
 static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	linked_list_t *list;
+	table_item_t *current, *item;
 	u_int row, segment;
+
+	INIT(item,
+		.value = entry,
+	);
 
 	row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
 	segment = row & this->segment_mask;
 
 	lock_single_segment(this, segment);
-	list = this->ike_sa_table[row];
-	if (!list)
-	{
-		list = this->ike_sa_table[row] = linked_list_create();
+	current = this->ike_sa_table[row];
+	if (current)
+	{	/* insert at the front of current bucket */
+		item->next = current;
 	}
-	list->insert_last(list, entry);
+	this->ike_sa_table[row] = item;
 	this->segments[segment].count++;
 	return segment;
 }
@@ -577,28 +589,30 @@ static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
  */
 static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	linked_list_t *list;
+	table_item_t *item, *prev = NULL;
 	u_int row, segment;
 
 	row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
 	segment = row & this->segment_mask;
-	list = this->ike_sa_table[row];
-	if (list)
+	item = this->ike_sa_table[row];
+	while (item)
 	{
-		entry_t *current;
-		enumerator_t *enumerator;
-
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &current))
+		if (item->value == entry)
 		{
-			if (current == entry)
+			if (prev)
 			{
-				list->remove_at(list, enumerator);
-				this->segments[segment].count--;
-				break;
+				prev->next = item->next;
 			}
+			else
+			{
+				this->ike_sa_table[row] = item->next;
+			}
+			this->segments[segment].count--;
+			free(item);
+			break;
 		}
-		enumerator->destroy(enumerator);
+		prev = item;
+		item = item->next;
 	}
 }
 
@@ -610,9 +624,21 @@ static void remove_entry_at(private_enumerator_t *this)
 	this->entry = NULL;
 	if (this->current)
 	{
-		linked_list_t *list = this->manager->ike_sa_table[this->row];
-		list->remove_at(list, this->current);
+		table_item_t *current = this->current;
+
 		this->manager->segments[this->segment].count--;
+		this->current = this->prev;
+
+		if (this->prev)
+		{
+			this->prev->next = current->next;
+		}
+		else
+		{
+			this->manager->ike_sa_table[this->row] = current->next;
+			unlock_single_segment(this->manager, this->segment);
+		}
+		free(current);
 	}
 }
 
@@ -624,24 +650,24 @@ static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
 					ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment,
 					linked_list_match_t match, void *p1, void *p2)
 {
-	entry_t *current;
-	linked_list_t *list;
+	table_item_t *item;
 	u_int row, seg;
 
 	row = ike_sa_id_hash(ike_sa_id) & this->table_mask;
 	seg = row & this->segment_mask;
 
 	lock_single_segment(this, seg);
-	list = this->ike_sa_table[row];
-	if (list)
+	item = this->ike_sa_table[row];
+	while (item)
 	{
-		if (list->find_first(list, match, (void**)&current, p1, p2) == SUCCESS)
+		if (match(item->value, p1, p2))
 		{
-			*entry = current;
+			*entry = item->value;
 			*segment = seg;
 			/* the locked segment has to be unlocked by the caller */
 			return SUCCESS;
 		}
+		item = item->next;
 	}
 	unlock_single_segment(this, seg);
 	return NOT_FOUND;
@@ -1846,7 +1872,6 @@ METHOD(ike_sa_manager_t, destroy, void,
 
 	for (i = 0; i < this->table_size; i++)
 	{
-		DESTROY_IF(this->ike_sa_table[i]);
 		DESTROY_IF(this->half_open_table[i]);
 		DESTROY_IF(this->connected_peers_table[i]);
 		DESTROY_IF(this->init_hashes_table[i]);
@@ -1943,7 +1968,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->segment_count = max(1, min(this->segment_count, this->table_size));
 	this->segment_mask = this->segment_count - 1;
 
-	this->ike_sa_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->ike_sa_table = calloc(this->table_size, sizeof(table_item_t*));
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; i++)
 	{
