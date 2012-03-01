@@ -225,14 +225,6 @@ static void half_open_destroy(half_open_t *this)
 	free(this);
 }
 
-/**
- * Function that matches half_open_t objects by the given IP address chunk.
- */
-static bool half_open_match(half_open_t *half_open, chunk_t *addr)
-{
-	return chunk_equals(*addr, half_open->other);
-}
-
 typedef struct connected_peers_t connected_peers_t;
 
 struct connected_peers_t {
@@ -354,7 +346,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * Hash table with half_open_t objects.
 	 */
-	linked_list_t **half_open_table;
+	table_item_t **half_open_table;
 
 	/**
 	  * Segments of the "half-open" hash table.
@@ -730,44 +722,43 @@ static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry,
  */
 static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	half_open_t *half_open = NULL;
-	linked_list_t *list;
-	chunk_t addr;
+	table_item_t *item;
 	u_int row, segment;
 	rwlock_t *lock;
+	half_open_t *half_open;
+	chunk_t addr;
 
 	addr = entry->other->get_address(entry->other);
 	row = chunk_hash(addr) & this->table_mask;
 	segment = row & this->segment_mask;
 	lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
-	list = this->half_open_table[row];
-	if (list)
+	item = this->half_open_table[row];
+	while (item)
 	{
-		half_open_t *current;
+		half_open = item->value;
 
-		if (list->find_first(list, (linked_list_match_t)half_open_match,
-							 (void**)&current, &addr) == SUCCESS)
+		if (chunk_equals(addr, half_open->other))
 		{
-			half_open = current;
 			half_open->count++;
-			this->half_open_segments[segment].count++;
+			break;
 		}
-	}
-	else
-	{
-		list = this->half_open_table[row] = linked_list_create();
+		item = item->next;
 	}
 
-	if (!half_open)
+	if (!item)
 	{
 		INIT(half_open,
 			.other = chunk_clone(addr),
 			.count = 1,
 		);
-		list->insert_last(list, half_open);
-		this->half_open_segments[segment].count++;
+		INIT(item,
+			.value = half_open,
+			.next = this->half_open_table[row],
+		);
+		this->half_open_table[row] = item;
 	}
+	this->half_open_segments[segment].count++;
 	lock->unlock(lock);
 }
 
@@ -776,37 +767,41 @@ static void put_half_open(private_ike_sa_manager_t *this, entry_t *entry)
  */
 static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	linked_list_t *list;
-	chunk_t addr;
+	table_item_t *item, *prev = NULL;
 	u_int row, segment;
 	rwlock_t *lock;
+	chunk_t addr;
 
 	addr = entry->other->get_address(entry->other);
 	row = chunk_hash(addr) & this->table_mask;
 	segment = row & this->segment_mask;
 	lock = this->half_open_segments[segment].lock;
 	lock->write_lock(lock);
-	list = this->half_open_table[row];
-	if (list)
+	item = this->half_open_table[row];
+	while (item)
 	{
-		half_open_t *current;
-		enumerator_t *enumerator;
+		half_open_t *half_open = item->value;
 
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &current))
+		if (chunk_equals(addr, half_open->other))
 		{
-			if (half_open_match(current, &addr))
+			if (--half_open->count == 0)
 			{
-				if (--current->count == 0)
+				if (prev)
 				{
-					list->remove_at(list, enumerator);
-					half_open_destroy(current);
+					prev->next = item->next;
 				}
-				this->half_open_segments[segment].count--;
-				break;
+				else
+				{
+					this->half_open_table[row] = item->next;
+				}
+				half_open_destroy(half_open);
+				free(item);
 			}
+			this->half_open_segments[segment].count--;
+			break;
 		}
-		enumerator->destroy(enumerator);
+		prev = item;
+		item = item->next;
 	}
 	lock->unlock(lock);
 }
@@ -1739,8 +1734,8 @@ METHOD(ike_sa_manager_t, get_count, u_int,
 METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 	private_ike_sa_manager_t *this, host_t *ip)
 {
-	linked_list_t *list;
-	u_int segment, row;
+	table_item_t *item;
+	u_int row, segment;
 	rwlock_t *lock;
 	chunk_t addr;
 	u_int count = 0;
@@ -1750,16 +1745,17 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 		addr = ip->get_address(ip);
 		row = chunk_hash(addr) & this->table_mask;
 		segment = row & this->segment_mask;
-		lock = this->half_open_segments[segment & this->segment_mask].lock;
+		lock = this->half_open_segments[segment].lock;
 		lock->read_lock(lock);
-		if ((list = this->half_open_table[row]) != NULL)
+		item = this->half_open_table[row];
+		while (item)
 		{
-			half_open_t *current;
+			half_open_t *half_open = item->value;
 
-			if (list->find_first(list, (linked_list_match_t)half_open_match,
-								 (void**)&current, &addr) == SUCCESS)
+			if (chunk_equals(addr, half_open->other))
 			{
-				count = current->count;
+				count = half_open->count;
+				break;
 			}
 		}
 		lock->unlock(lock);
@@ -1768,7 +1764,7 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 	{
 		for (segment = 0; segment < this->segment_count; segment++)
 		{
-			lock = this->half_open_segments[segment & this->segment_mask].lock;
+			lock = this->half_open_segments[segment].lock;
 			lock->read_lock(lock);
 			count += this->half_open_segments[segment].count;
 			lock->unlock(lock);
@@ -1872,7 +1868,6 @@ METHOD(ike_sa_manager_t, destroy, void,
 
 	for (i = 0; i < this->table_size; i++)
 	{
-		DESTROY_IF(this->half_open_table[i]);
 		DESTROY_IF(this->connected_peers_table[i]);
 		DESTROY_IF(this->init_hashes_table[i]);
 	}
@@ -1977,7 +1972,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 
 	/* we use the same table parameters for the table to track half-open SAs */
-	this->half_open_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->half_open_table = calloc(this->table_size, sizeof(table_item_t*));
 	this->half_open_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; i++)
 	{
