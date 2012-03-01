@@ -366,7 +366,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * Hash table with chunk_t objects.
 	 */
-	linked_list_t **init_hashes_table;
+	table_item_t **init_hashes_table;
 
 	/**
 	  * Segments of the "hashes" hash table.
@@ -939,8 +939,7 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 									chunk_t init_hash)
 {
-	chunk_t *clone;
-	linked_list_t *list;
+	table_item_t *item;
 	u_int row, segment;
 	mutex_t *mutex;
 	chunk_t *chunk;
@@ -949,28 +948,28 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 	segment = row & this->segment_mask;
 	mutex = this->init_hashes_segments[segment].mutex;
 	mutex->lock(mutex);
-	list = this->init_hashes_table[row];
-	if (list)
+	item = this->init_hashes_table[row];
+	while (item)
 	{
-		chunk_t *current;
+		chunk_t *current = item->value;
 
-		if (list->find_first(list, (linked_list_match_t)chunk_equals_ptr,
-				(void**)&current, &init_hash) == SUCCESS)
+		if (chunk_equals(init_hash, *current))
 		{
 			mutex->unlock(mutex);
 			return TRUE;
 		}
-	}
-	else
-	{
-		list = this->init_hashes_table[row] = linked_list_create();
+		item = item->next;
 	}
 
 	INIT(chunk,
 		.len = init_hash.len,
 		.ptr = init_hash.ptr,
 	);
-	list->insert_last(list, chunk);
+	INIT(item,
+		.value = chunk,
+		.next = this->init_hashes_table[row],
+	);
+	this->init_hashes_table[row] = item;
 	mutex->unlock(mutex);
 	return FALSE;
 }
@@ -980,7 +979,7 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
  */
 static void remove_init_hash(private_ike_sa_manager_t *this, chunk_t init_hash)
 {
-	linked_list_t *list;
+	table_item_t *item, *prev = NULL;
 	u_int row, segment;
 	mutex_t *mutex;
 
@@ -988,23 +987,27 @@ static void remove_init_hash(private_ike_sa_manager_t *this, chunk_t init_hash)
 	segment = row & this->segment_mask;
 	mutex = this->init_hashes_segments[segment].mutex;
 	mutex->lock(mutex);
-	list = this->init_hashes_table[row];
-	if (list)
+	item = this->init_hashes_table[row];
+	while (item)
 	{
-		enumerator_t *enumerator;
-		chunk_t *current;
+		chunk_t *current = item->value;
 
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &current))
+		if (chunk_equals(init_hash, *current))
 		{
-			if (chunk_equals_ptr(current, &init_hash))
+			if (prev)
 			{
-				list->remove_at(list, enumerator);
-				free(current);
-				break;
+				prev->next = item->next;
 			}
+			else
+			{
+				this->init_hashes_table[row] = item->next;
+			}
+			free(current);
+			free(item);
+			break;
 		}
-		enumerator->destroy(enumerator);
+		prev = item;
+		item = item->next;
 	}
 	mutex->unlock(mutex);
 }
@@ -1879,10 +1882,7 @@ METHOD(ike_sa_manager_t, destroy, void,
 {
 	u_int i;
 
-	for (i = 0; i < this->table_size; i++)
-	{
-		DESTROY_IF(this->init_hashes_table[i]);
-	}
+	/* these are already cleared in flush() above */
 	free(this->ike_sa_table);
 	free(this->half_open_table);
 	free(this->connected_peers_table);
@@ -2002,7 +2002,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 
 	/* and again for the table of hashes of seen initial IKE messages */
-	this->init_hashes_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->init_hashes_table = calloc(this->table_size, sizeof(table_item_t*));
 	this->init_hashes_segments = calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; i++)
 	{
