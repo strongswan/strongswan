@@ -252,9 +252,9 @@ static void connected_peers_destroy(connected_peers_t *this)
 /**
  * Function that matches connected_peers_t objects by the given ids.
  */
-static bool connected_peers_match(connected_peers_t *connected_peers,
+static inline bool connected_peers_match(connected_peers_t *connected_peers,
 							identification_t *my_id, identification_t *other_id,
-							uintptr_t family)
+							int family)
 {
 	return my_id->equals(my_id, connected_peers->my_id) &&
 		   other_id->equals(other_id, connected_peers->other_id) &&
@@ -356,7 +356,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * Hash table with connected_peers_t objects.
 	 */
-	linked_list_t **connected_peers_table;
+	table_item_t **connected_peers_table;
 
 	/**
 	 * Segments of the "connected peers" hash table.
@@ -811,28 +811,28 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
  */
 static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	connected_peers_t *connected_peers = NULL;
-	chunk_t my_id, other_id;
-	linked_list_t *list;
+	table_item_t *item;
 	u_int row, segment;
 	rwlock_t *lock;
+	connected_peers_t *connected_peers;
+	chunk_t my_id, other_id;
+	int family;
 
 	my_id = entry->my_id->get_encoding(entry->my_id);
 	other_id = entry->other_id->get_encoding(entry->other_id);
+	family = entry->other->get_family(entry->other);
 	row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
 	segment = row & this->segment_mask;
 	lock = this->connected_peers_segments[segment].lock;
 	lock->write_lock(lock);
-	list = this->connected_peers_table[row];
-	if (list)
+	item = this->connected_peers_table[row];
+	while (item)
 	{
-		connected_peers_t *current;
+		connected_peers = item->value;
 
-		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-				(void**)&current, entry->my_id, entry->other_id,
-				(uintptr_t)entry->other->get_family(entry->other)) == SUCCESS)
+		if (connected_peers_match(connected_peers, entry->my_id,
+								  entry->other_id, family))
 		{
-			connected_peers = current;
 			if (connected_peers->sas->find_first(connected_peers->sas,
 					(linked_list_match_t)entry->ike_sa_id->equals,
 					NULL, entry->ike_sa_id) == SUCCESS)
@@ -840,22 +840,24 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 				lock->unlock(lock);
 				return;
 			}
+			break;
 		}
-	}
-	else
-	{
-		list = this->connected_peers_table[row] = linked_list_create();
+		item = item->next;
 	}
 
-	if (!connected_peers)
+	if (!item)
 	{
 		INIT(connected_peers,
 			.my_id = entry->my_id->clone(entry->my_id),
 			.other_id = entry->other_id->clone(entry->other_id),
-			.family = entry->other->get_family(entry->other),
+			.family = family,
 			.sas = linked_list_create(),
 		);
-		list->insert_last(list, connected_peers);
+		INIT(item,
+			.value = connected_peers,
+			.next = this->connected_peers_table[row],
+		);
+		this->connected_peers_table[row] = item;
 	}
 	connected_peers->sas->insert_last(connected_peers->sas,
 									  entry->ike_sa_id->clone(entry->ike_sa_id));
@@ -868,54 +870,61 @@ static void put_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
  */
 static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entry)
 {
-	chunk_t my_id, other_id;
-	linked_list_t *list;
+	table_item_t *item, *prev = NULL;
 	u_int row, segment;
 	rwlock_t *lock;
+	chunk_t my_id, other_id;
+	int family;
 
 	my_id = entry->my_id->get_encoding(entry->my_id);
 	other_id = entry->other_id->get_encoding(entry->other_id);
+	family = entry->other->get_family(entry->other);
+
 	row = chunk_hash_inc(other_id, chunk_hash(my_id)) & this->table_mask;
 	segment = row & this->segment_mask;
 
 	lock = this->connected_peers_segments[segment].lock;
 	lock->write_lock(lock);
-	list = this->connected_peers_table[row];
-	if (list)
+	item = this->connected_peers_table[row];
+	while (item)
 	{
-		connected_peers_t *current;
-		enumerator_t *enumerator;
+		connected_peers_t *current = item->value;
 
-		enumerator = list->create_enumerator(list);
-		while (enumerator->enumerate(enumerator, &current))
+		if (connected_peers_match(current, entry->my_id, entry->other_id,
+								  family))
 		{
-			if (connected_peers_match(current, entry->my_id, entry->other_id,
-						(uintptr_t)entry->other->get_family(entry->other)))
-			{
-				ike_sa_id_t *ike_sa_id;
-				enumerator_t *inner;
+			enumerator_t *enumerator;
+			ike_sa_id_t *ike_sa_id;
 
-				inner = current->sas->create_enumerator(current->sas);
-				while (inner->enumerate(inner, &ike_sa_id))
+			enumerator = current->sas->create_enumerator(current->sas);
+			while (enumerator->enumerate(enumerator, &ike_sa_id))
+			{
+				if (ike_sa_id->equals(ike_sa_id, entry->ike_sa_id))
 				{
-					if (ike_sa_id->equals(ike_sa_id, entry->ike_sa_id))
-					{
-						current->sas->remove_at(current->sas, inner);
-						ike_sa_id->destroy(ike_sa_id);
-						this->connected_peers_segments[segment].count--;
-						break;
-					}
+					current->sas->remove_at(current->sas, enumerator);
+					ike_sa_id->destroy(ike_sa_id);
+					this->connected_peers_segments[segment].count--;
+					break;
 				}
-				inner->destroy(inner);
-				if (current->sas->get_count(current->sas) == 0)
-				{
-					list->remove_at(list, enumerator);
-					connected_peers_destroy(current);
-				}
-				break;
 			}
+			enumerator->destroy(enumerator);
+			if (current->sas->get_count(current->sas) == 0)
+			{
+				if (prev)
+				{
+					prev->next = item->next;
+				}
+				else
+				{
+					this->connected_peers_table[row] = item->next;
+				}
+				connected_peers_destroy(current);
+				free(item);
+			}
+			break;
 		}
-		enumerator->destroy(enumerator);
+		prev = item;
+		item = item->next;
 	}
 	lock->unlock(lock);
 }
@@ -1573,26 +1582,29 @@ METHOD(ike_sa_manager_t, create_id_enumerator, enumerator_t*,
 	private_ike_sa_manager_t *this, identification_t *me,
 	identification_t *other, int family)
 {
-	linked_list_t *list, *ids = NULL;
-	connected_peers_t *current;
+	table_item_t *item;
 	u_int row, segment;
 	rwlock_t *lock;
+	linked_list_t *ids = NULL;
 
 	row = chunk_hash_inc(other->get_encoding(other),
 						 chunk_hash(me->get_encoding(me))) & this->table_mask;
 	segment = row & this->segment_mask;
 
-	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
+	lock = this->connected_peers_segments[segment].lock;
 	lock->read_lock(lock);
-	list = this->connected_peers_table[row];
-	if (list)
+	item = this->connected_peers_table[row];
+	while (item)
 	{
-		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-					(void**)&current, me, other, (uintptr_t)family) == SUCCESS)
+		connected_peers_t *current = item->value;
+
+		if (connected_peers_match(current, me, other, family))
 		{
 			ids = current->sas->clone_offset(current->sas,
 											 offsetof(ike_sa_id_t, clone));
+			break;
 		}
+		item = item->next;
 	}
 	lock->unlock(lock);
 
@@ -1691,7 +1703,7 @@ METHOD(ike_sa_manager_t, has_contact, bool,
 	private_ike_sa_manager_t *this, identification_t *me,
 	identification_t *other, int family)
 {
-	linked_list_t *list;
+	table_item_t *item;
 	u_int row, segment;
 	rwlock_t *lock;
 	bool found = FALSE;
@@ -1699,16 +1711,17 @@ METHOD(ike_sa_manager_t, has_contact, bool,
 	row = chunk_hash_inc(other->get_encoding(other),
 						 chunk_hash(me->get_encoding(me))) & this->table_mask;
 	segment = row & this->segment_mask;
-	lock = this->connected_peers_segments[segment & this->segment_mask].lock;
+	lock = this->connected_peers_segments[segment].lock;
 	lock->read_lock(lock);
-	list = this->connected_peers_table[row];
-	if (list)
+	item = this->connected_peers_table[row];
+	while (item)
 	{
-		if (list->find_first(list, (linked_list_match_t)connected_peers_match,
-							 NULL, me, other, family) == SUCCESS)
+		if (connected_peers_match(item->value, me, other, family))
 		{
 			found = TRUE;
+			break;
 		}
+		item = item->next;
 	}
 	lock->unlock(lock);
 
@@ -1868,7 +1881,6 @@ METHOD(ike_sa_manager_t, destroy, void,
 
 	for (i = 0; i < this->table_size; i++)
 	{
-		DESTROY_IF(this->connected_peers_table[i]);
 		DESTROY_IF(this->init_hashes_table[i]);
 	}
 	free(this->ike_sa_table);
@@ -1981,7 +1993,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 
 	/* also for the hash table used for duplicate tests */
-	this->connected_peers_table = calloc(this->table_size, sizeof(linked_list_t*));
+	this->connected_peers_table = calloc(this->table_size, sizeof(table_item_t*));
 	this->connected_peers_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; i++)
 	{
