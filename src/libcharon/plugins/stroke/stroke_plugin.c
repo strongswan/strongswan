@@ -42,10 +42,42 @@ METHOD(plugin_t, get_name, char*,
 	return "stroke";
 }
 
+/**
+ * Register stroke plugin features
+ */
+static bool register_stroke(private_stroke_plugin_t *this,
+							plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		this->socket = stroke_socket_create();
+	}
+	else
+	{
+		DESTROY_IF(this->socket);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_stroke_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)register_stroke, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "stroke"),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_ECDSA),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_DSA),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509_CRL),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_stroke_plugin_t *this)
 {
-	this->socket->destroy(this->socket);
 	free(this);
 }
 
@@ -61,17 +93,12 @@ plugin_t *stroke_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.reload = (void*)return_false,
+				.get_features = _get_features,
 				.destroy = _destroy,
 			},
 		},
-		.socket = stroke_socket_create(),
 	);
 
-	if (this->socket == NULL)
-	{
-		free(this);
-		return NULL;
-	}
 	return &this->public.plugin;
 }
 
