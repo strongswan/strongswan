@@ -1490,6 +1490,16 @@ METHOD(ike_sa_manager_t, checkin_and_destroy, void,
 
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
 	{
+		if (entry->driveout_waiting_threads && entry->driveout_new_threads)
+		{	/* it looks like flush() has been called and the SA is being deleted
+			 * anyway, just check it in */
+			DBG2(DBG_MGR, "ignored check-in and destroy of IKE_SA during shutdown");
+			entry->checked_out = FALSE;
+			entry->condvar->broadcast(entry->condvar);
+			unlock_single_segment(this, segment);
+			return;
+		}
+
 		/* drive out waiting threads, as we are in hurry */
 		entry->driveout_waiting_threads = TRUE;
 		/* mark it, so no new threads can get this entry */
