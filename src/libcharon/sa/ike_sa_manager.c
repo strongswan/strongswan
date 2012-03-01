@@ -901,7 +901,8 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
 
 /**
  * Check if we already have created an IKE_SA based on the initial IKE message
- * with the given hash.  If not the hash is stored.
+ * with the given hash.
+ * If not the hash is stored, the hash data is not(!) cloned.
  *
  * @returns TRUE if the message with the given hash was seen before
  */
@@ -912,6 +913,7 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 	linked_list_t *list;
 	u_int row, segment;
 	mutex_t *mutex;
+	chunk_t *chunk;
 
 	row = chunk_hash(init_hash) & this->table_mask;
 	segment = row & this->segment_mask;
@@ -934,13 +936,11 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 		list = this->init_hashes_table[row] = linked_list_create();
 	}
 
-	INIT(clone,
+	INIT(chunk,
 		.len = init_hash.len,
-		.ptr = malloc(init_hash.len),
+		.ptr = init_hash.ptr,
 	);
-	memcpy(clone->ptr, init_hash.ptr, clone->len);
-	list->insert_last(list, clone);
-
+	list->insert_last(list, chunk);
 	mutex->unlock(mutex);
 	return FALSE;
 }
@@ -970,7 +970,6 @@ static void remove_init_hash(private_ike_sa_manager_t *this, chunk_t init_hash)
 			if (chunk_equals_ptr(current, &init_hash))
 			{
 				list->remove_at(list, enumerator);
-				chunk_free(current);
 				free(current);
 				break;
 			}
