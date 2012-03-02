@@ -1255,6 +1255,23 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	}
 	enumerator->destroy(enumerator);
 
+	if (!new->get_child_count(new))
+	{	/* check if a Quick Mode task is queued (UNITY_LOAD_BALANCE case) */
+		task_t *task;
+
+		enumerator = this->queued_tasks->create_enumerator(this->queued_tasks);
+		while (enumerator->enumerate(enumerator, &task))
+		{
+			if (task->get_type(task) == TASK_QUICK_MODE)
+			{
+				this->queued_tasks->remove_at(this->queued_tasks, enumerator);
+				task->migrate(task, new);
+				new->queue_task(new, task);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
 	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);

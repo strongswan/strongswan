@@ -83,15 +83,23 @@ METHOD(task_t, process_r, status_t,
 				}
 				else if (type == UNITY_LOAD_BALANCE)
 				{
-					host_t *redirect;
+					host_t *redirect, *me;
 					chunk_t data;
 
 					data = notify->get_notification_data(notify);
-					redirect = host_create_from_chunk(AF_INET, data, 0);
+					redirect = host_create_from_chunk(AF_INET, data,
+													  IKEV2_UDP_PORT);
 					if (redirect)
-					{
+					{	/* treat the redirect as reauthentication */
 						DBG1(DBG_IKE, "received %N notify. redirected to %H",
 							 notify_type_names, type, redirect);
+						/* Cisco boxes reject the first message from 4500 */
+						me = this->ike_sa->get_my_host(this->ike_sa);
+						me->set_port(me, IKEV2_UDP_PORT);
+						this->ike_sa->set_other_host(this->ike_sa, redirect);
+						this->ike_sa->reauth(this->ike_sa);
+						enumerator->destroy(enumerator);
+						return DESTROY_ME;
 					}
 					else
 					{
