@@ -102,15 +102,24 @@ static void print_radius_attributes(private_radattr_listener_t *this,
  * Add a RADIUS attribute from a client-ID specific file to an IKE message
  */
 static void add_radius_attribute(private_radattr_listener_t *this,
-								 identification_t *id, message_t *message)
+								 ike_sa_t *ike_sa, message_t *message)
 {
 	if (this->dir && message->get_message_id(message) == this->mid)
 	{
+		identification_t *id;
+		auth_cfg_t *auth;
 		char path[PATH_MAX];
 		chunk_t data;
 		struct stat sb;
 		void *addr;
 		int fd;
+
+		auth = ike_sa->get_auth_cfg(ike_sa, TRUE);
+		id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
+		if (!id)
+		{
+			id = ike_sa->get_my_id(ike_sa);
+		}
 
 		snprintf(path, sizeof(path), "%s/%Y", this->dir, id);
 		fd = open(path, O_RDONLY);
@@ -173,7 +182,7 @@ METHOD(listener_t, message, bool,
 		}
 		else
 		{
-			add_radius_attribute(this, ike_sa->get_my_id(ike_sa), message);
+			add_radius_attribute(this, ike_sa, message);
 		}
 	}
 	return TRUE;
