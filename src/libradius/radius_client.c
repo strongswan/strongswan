@@ -14,7 +14,7 @@
  */
 
 #include "radius_client.h"
-#include "radius_server.h"
+#include "radius_config.h"
 
 #include <unistd.h>
 #include <errno.h>
@@ -38,9 +38,9 @@ struct private_radius_client_t {
 	radius_client_t public;
 
 	/**
-	 * Selected RADIUS server
+	 * Selected RADIUS server configuration
 	 */
-	radius_server_t *server;
+	radius_config_t *config;
 
 	/**
 	 * RADIUS servers State attribute
@@ -89,31 +89,31 @@ METHOD(radius_client_t, request, radius_message_t*,
 	req->add(req, RAT_NAS_PORT_TYPE, chunk_create(virtual, sizeof(virtual)));
 	/* add our NAS-Identifier */
 	req->add(req, RAT_NAS_IDENTIFIER,
-			 this->server->get_nas_identifier(this->server));
+			 this->config->get_nas_identifier(this->config));
 	/* add State attribute, if server sent one */
 	if (this->state.ptr)
 	{
 		req->add(req, RAT_STATE, this->state);
 	}
-	socket = this->server->get_socket(this->server);
+	socket = this->config->get_socket(this->config);
 	DBG1(DBG_CFG, "sending RADIUS %N to server '%s'", radius_message_code_names,
-		 req->get_code(req), this->server->get_name(this->server));
+		 req->get_code(req), this->config->get_name(this->config));
 	res = socket->request(socket, req);
 	if (res)
 	{
 		DBG1(DBG_CFG, "received RADIUS %N from server '%s'",
 			 radius_message_code_names, res->get_code(res),
-			 this->server->get_name(this->server));
+			 this->config->get_name(this->config));
 		save_state(this, res);
 		if (res->get_code(res) == RMC_ACCESS_ACCEPT)
 		{
 			chunk_clear(&this->msk);
 			this->msk = socket->decrypt_msk(socket, req, res);
 		}
-		this->server->put_socket(this->server, socket, TRUE);
+		this->config->put_socket(this->config, socket, TRUE);
 		return res;
 	}
-	this->server->put_socket(this->server, socket, FALSE);
+	this->config->put_socket(this->config, socket, FALSE);
 	return NULL;
 }
 
@@ -126,7 +126,7 @@ METHOD(radius_client_t, get_msk, chunk_t,
 METHOD(radius_client_t, destroy, void,
 	private_radius_client_t *this)
 {
-	this->server->destroy(this->server);
+	this->config->destroy(this->config);
 	chunk_clear(&this->msk);
 	free(this->state.ptr);
 	free(this);
@@ -135,7 +135,7 @@ METHOD(radius_client_t, destroy, void,
 /**
  * See header
  */
-radius_client_t *radius_client_create(radius_server_t *server)
+radius_client_t *radius_client_create(radius_config_t *config)
 {
 	private_radius_client_t *this;
 
@@ -145,7 +145,7 @@ radius_client_t *radius_client_create(radius_server_t *server)
 			.get_msk = _get_msk,
 			.destroy = _destroy,
 		},
-		.server = server,
+		.config = config,
 	);
 
 	return &this->public;

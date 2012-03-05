@@ -14,28 +14,28 @@
  */
 
 /**
- * @defgroup radius_server radius_server
+ * @defgroup radius_config radius_config
  * @{ @ingroup libradius
  */
 
-#ifndef RADIUS_SERVER_H_
-#define RADIUS_SERVER_H_
+#ifndef RADIUS_CONFIG_H_
+#define RADIUS_CONFIG_H_
 
-typedef struct radius_server_t radius_server_t;
+typedef struct radius_config_t radius_config_t;
 
 #include "radius_socket.h"
 
 /**
  * RADIUS server configuration.
  */
-struct radius_server_t {
+struct radius_config_t {
 
 	/**
-	 * Get a RADIUS socket from the pool to communicate with this server.
+	 * Get a RADIUS socket from the pool to communicate with this config.
 	 *
 	 * @return			RADIUS socket
 	 */
-	radius_socket_t* (*get_socket)(radius_server_t *this);
+	radius_socket_t* (*get_socket)(radius_config_t *this);
 
 	/**
 	 * Release a socket to the pool after use.
@@ -43,14 +43,14 @@ struct radius_server_t {
 	 * @param skt		RADIUS socket to release
 	 * @param result	result of the socket use, TRUE for success
 	 */
-	void (*put_socket)(radius_server_t *this, radius_socket_t *skt, bool result);
+	void (*put_socket)(radius_config_t *this, radius_socket_t *skt, bool result);
 
 	/**
 	 * Get the NAS-Identifier to use with this server.
 	 *
 	 * @return			NAS-Identifier, internal data
 	 */
-	chunk_t (*get_nas_identifier)(radius_server_t *this);
+	chunk_t (*get_nas_identifier)(radius_config_t *this);
 
 	/**
 	 * Get the preference of this server.
@@ -58,30 +58,30 @@ struct radius_server_t {
 	 * Based on the available sockets and the server reachability a preference
 	 * value is calculated: better servers return a higher value.
 	 */
-	int (*get_preference)(radius_server_t *this);
+	int (*get_preference)(radius_config_t *this);
 
 	/**
 	 * Get the name of the RADIUS server.
 	 *
 	 * @return			server name
 	 */
-	char* (*get_name)(radius_server_t *this);
+	char* (*get_name)(radius_config_t *this);
 
 	/**
-	 * Increase reference count of this server.
+	 * Increase reference count of this server configuration.
 	 *
 	 * @return			this
 	 */
-	radius_server_t* (*get_ref)(radius_server_t *this);
+	radius_config_t* (*get_ref)(radius_config_t *this);
 
 	/**
-	 * Destroy a radius_server_t.
+	 * Destroy a radius_config_t.
 	 */
-	void (*destroy)(radius_server_t *this);
+	void (*destroy)(radius_config_t *this);
 };
 
 /**
- * Create a radius_server instance.
+ * Create a radius_config_t instance.
  *
  * @param name				server name
  * @param address			server address
@@ -92,9 +92,9 @@ struct radius_server_t {
  * @param sockets			number of sockets to create in pool
  * @param preference		preference boost for this server
  */
-radius_server_t *radius_server_create(char *name, char *address,
+radius_config_t *radius_config_create(char *name, char *address,
 									  u_int16_t auth_port, u_int16_t acct_port,
 									  char *nas_identifier, char *secret,
 									  int sockets, int preference);
 
-#endif /** RADIUS_SERVER_H_ @}*/
+#endif /** RADIUS_CONFIG_H_ @}*/

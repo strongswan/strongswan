@@ -21,7 +21,7 @@
 #include "eap_radius_forward.h"
 
 #include <radius_client.h>
-#include <radius_server.h>
+#include <radius_config.h>
 
 #include <daemon.h>
 #include <threading/rwlock.h>
@@ -49,12 +49,12 @@ struct private_eap_radius_plugin_t {
 	eap_radius_plugin_t public;
 
 	/**
-	 * List of RADIUS servers
+	 * List of RADIUS server configurations
 	 */
-	linked_list_t *servers;
+	linked_list_t *configs;
 
 	/**
-	 * Lock for server list
+	 * Lock for configs list
 	 */
 	rwlock_t *lock;
 
@@ -82,10 +82,10 @@ static private_eap_radius_plugin_t *instance = NULL;
 /**
  * Load RADIUS servers from configuration
  */
-static void load_servers(private_eap_radius_plugin_t *this)
+static void load_configs(private_eap_radius_plugin_t *this)
 {
 	enumerator_t *enumerator;
-	radius_server_t *server;
+	radius_config_t *config;
 	char *nas_identifier, *secret, *address, *section;
 	int auth_port, acct_port, sockets, preference;
 
@@ -106,14 +106,14 @@ static void load_servers(private_eap_radius_plugin_t *this)
 					"charon.plugins.eap-radius.port", AUTH_PORT);
 		sockets = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-radius.sockets", 1);
-		server = radius_server_create(address, address, auth_port, ACCT_PORT,
+		config = radius_config_create(address, address, auth_port, ACCT_PORT,
 									  nas_identifier, secret, sockets, 0);
-		if (!server)
+		if (!config)
 		{
 			DBG1(DBG_CFG, "no RADUIS server defined");
 			return;
 		}
-		this->servers->insert_last(this->servers, server);
+		this->configs->insert_last(this->configs, config);
 		return;
 	}
 
@@ -150,20 +150,20 @@ static void load_servers(private_eap_radius_plugin_t *this)
 			"charon.plugins.eap-radius.servers.%s.sockets", 1, section);
 		preference = lib->settings->get_int(lib->settings,
 			"charon.plugins.eap-radius.servers.%s.preference", 0, section);
-		server = radius_server_create(section, address, auth_port, acct_port,
+		config = radius_config_create(section, address, auth_port, acct_port,
 								nas_identifier, secret, sockets, preference);
-		if (!server)
+		if (!config)
 		{
 			DBG1(DBG_CFG, "loading RADIUS server '%s' failed, skipped", section);
 			continue;
 		}
-		this->servers->insert_last(this->servers, server);
+		this->configs->insert_last(this->configs, config);
 	}
 	enumerator->destroy(enumerator);
 
 	DBG1(DBG_CFG, "loaded %d RADIUS server configuration%s",
-		 this->servers->get_count(this->servers),
-		 this->servers->get_count(this->servers) == 1 ? "" : "s");
+		 this->configs->get_count(this->configs),
+		 this->configs->get_count(this->configs) == 1 ? "" : "s");
 }
 
 METHOD(plugin_t, get_name, char*,
@@ -190,10 +190,10 @@ METHOD(plugin_t, reload, bool,
 	private_eap_radius_plugin_t *this)
 {
 	this->lock->write_lock(this->lock);
-	this->servers->destroy_offset(this->servers,
-								  offsetof(radius_server_t, destroy));
-	this->servers = linked_list_create();
-	load_servers(this);
+	this->configs->destroy_offset(this->configs,
+								  offsetof(radius_config_t, destroy));
+	this->configs = linked_list_create();
+	load_configs(this);
 	this->lock->unlock(this->lock);
 	return TRUE;
 }
@@ -207,8 +207,8 @@ METHOD(plugin_t, destroy, void,
 		this->forward->destroy(this->forward);
 	}
 	DESTROY_IF(this->dae);
-	this->servers->destroy_offset(this->servers,
-								  offsetof(radius_server_t, destroy));
+	this->configs->destroy_offset(this->configs,
+								  offsetof(radius_config_t, destroy));
 	this->lock->destroy(this->lock);
 	charon->bus->remove_listener(charon->bus, &this->accounting->listener);
 	this->accounting->destroy(this->accounting);
@@ -232,13 +232,13 @@ plugin_t *eap_radius_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.servers = linked_list_create(),
+		.configs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.accounting = eap_radius_accounting_create(),
 		.forward = eap_radius_forward_create(),
 	);
 
-	load_servers(this);
+	load_configs(this);
 	instance = this;
 
 	if (lib->settings->get_bool(lib->settings,
@@ -267,28 +267,28 @@ radius_client_t *eap_radius_create_client()
 	if (instance)
 	{
 		enumerator_t *enumerator;
-		radius_server_t *server, *selected = NULL;
+		radius_config_t *config, *selected = NULL;
 		int current, best = -1;
 
 		instance->lock->read_lock(instance->lock);
-		enumerator = instance->servers->create_enumerator(instance->servers);
-		while (enumerator->enumerate(enumerator, &server))
+		enumerator = instance->configs->create_enumerator(instance->configs);
+		while (enumerator->enumerate(enumerator, &config))
 		{
-			current = server->get_preference(server);
+			current = config->get_preference(config);
 			if (current > best ||
 				/* for two with equal preference, 50-50 chance */
 				(current == best && random() % 2 == 0))
 			{
 				DBG2(DBG_CFG, "RADIUS server '%s' is candidate: %d",
-					 server->get_name(server), current);
+					 config->get_name(config), current);
 				best = current;
 				DESTROY_IF(selected);
-				selected = server->get_ref(server);
+				selected = config->get_ref(config);
 			}
 			else
 			{
 				DBG2(DBG_CFG, "RADIUS server '%s' skipped: %d",
-					 server->get_name(server), current);
+					 config->get_name(config), current);
 			}
 		}
 		enumerator->destroy(enumerator);

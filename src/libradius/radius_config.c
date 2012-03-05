@@ -13,23 +13,23 @@
  * for more details.
  */
 
-#include "radius_server.h"
+#include "radius_config.h"
 
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <utils/linked_list.h>
 
-typedef struct private_radius_server_t private_radius_server_t;
+typedef struct private_radius_config_t private_radius_config_t;
 
 /**
- * Private data of an radius_server_t object.
+ * Private data of an radius_config_t object.
  */
-struct private_radius_server_t {
+struct private_radius_config_t {
 
 	/**
-	 * Public radius_server_t interface.
+	 * Public radius_config_t interface.
 	 */
-	radius_server_t public;
+	radius_config_t public;
 
 	/**
 	 * list of radius sockets, as radius_socket_t
@@ -82,8 +82,8 @@ struct private_radius_server_t {
 	refcount_t ref;
 };
 
-METHOD(radius_server_t, get_socket, radius_socket_t*,
-	private_radius_server_t *this)
+METHOD(radius_config_t, get_socket, radius_socket_t*,
+	private_radius_config_t *this)
 {
 	radius_socket_t *skt;
 
@@ -96,8 +96,8 @@ METHOD(radius_server_t, get_socket, radius_socket_t*,
 	return skt;
 }
 
-METHOD(radius_server_t, put_socket, void,
-	private_radius_server_t *this, radius_socket_t *skt, bool result)
+METHOD(radius_config_t, put_socket, void,
+	private_radius_config_t *this, radius_socket_t *skt, bool result)
 {
 	this->mutex->lock(this->mutex);
 	this->sockets->insert_last(this->sockets, skt);
@@ -106,14 +106,14 @@ METHOD(radius_server_t, put_socket, void,
 	this->reachable = result;
 }
 
-METHOD(radius_server_t, get_nas_identifier, chunk_t,
-	private_radius_server_t *this)
+METHOD(radius_config_t, get_nas_identifier, chunk_t,
+	private_radius_config_t *this)
 {
 	return this->nas_identifier;
 }
 
-METHOD(radius_server_t, get_preference, int,
-	private_radius_server_t *this)
+METHOD(radius_config_t, get_preference, int,
+	private_radius_config_t *this)
 {
 	int pref;
 
@@ -147,22 +147,22 @@ METHOD(radius_server_t, get_preference, int,
 	return pref;
 }
 
-METHOD(radius_server_t, get_name, char*,
-	private_radius_server_t *this)
+METHOD(radius_config_t, get_name, char*,
+	private_radius_config_t *this)
 {
 	return this->name;
 }
 
-METHOD(radius_server_t, get_ref, radius_server_t*,
-	private_radius_server_t *this)
+METHOD(radius_config_t, get_ref, radius_config_t*,
+	private_radius_config_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public;
 }
 
 
-METHOD(radius_server_t, destroy, void,
-	private_radius_server_t *this)
+METHOD(radius_config_t, destroy, void,
+	private_radius_config_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -177,12 +177,12 @@ METHOD(radius_server_t, destroy, void,
 /**
  * See header
  */
-radius_server_t *radius_server_create(char *name, char *address,
+radius_config_t *radius_config_create(char *name, char *address,
 									  u_int16_t auth_port, u_int16_t acct_port,
 									  char *nas_identifier, char *secret,
 									  int sockets, int preference)
 {
-	private_radius_server_t *this;
+	private_radius_config_t *this;
 	radius_socket_t *socket;
 
 	INIT(this,

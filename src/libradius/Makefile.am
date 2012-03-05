@@ -6,4 +6,4 @@ libradius_la_SOURCES = \
 	radius_message.h radius_message.c \
 	radius_socket.h radius_socket.c \
 	radius_client.h radius_client.c \
-	radius_server.h radius_server.c
+	radius_config.h radius_config.c

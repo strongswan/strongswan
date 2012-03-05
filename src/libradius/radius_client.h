@@ -22,7 +22,7 @@
 #define RADIUS_CLIENT_H_
 
 #include "radius_message.h"
-#include "radius_server.h"
+#include "radius_config.h"
 
 typedef struct radius_client_t radius_client_t;
 
@@ -60,9 +60,9 @@ struct radius_client_t {
 /**
  * Create a RADIUS client.
  *
- * @param server	reference to a server configuration, gets owned
+ * @param config	reference to a server configuration, gets owned
  * @return			radius_client_t object
  */
-radius_client_t *radius_client_create(radius_server_t *server);
+radius_client_t *radius_client_create(radius_config_t *config);
 
 #endif /** RADIUS_CLIENT_H_ @}*/
