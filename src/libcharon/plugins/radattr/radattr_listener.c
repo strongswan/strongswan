@@ -175,7 +175,8 @@ METHOD(listener_t, message, bool,
 	ike_sa_t *ike_sa, message_t *message, bool incoming)
 {
 	if (ike_sa->supports_extension(ike_sa, EXT_STRONGSWAN) &&
-		message->get_exchange_type(message) == IKE_AUTH)
+		message->get_exchange_type(message) == IKE_AUTH &&
+		message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
 	{
 		if (incoming)
 		{
