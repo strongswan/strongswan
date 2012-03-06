@@ -104,7 +104,8 @@ static void print_radius_attributes(private_radattr_listener_t *this,
 static void add_radius_attribute(private_radattr_listener_t *this,
 								 ike_sa_t *ike_sa, message_t *message)
 {
-	if (this->dir && message->get_message_id(message) == this->mid)
+	if (this->dir &&
+		(this->mid == -1 || message->get_message_id(message) == this->mid))
 	{
 		identification_t *id;
 		auth_cfg_t *auth;
@@ -212,7 +213,7 @@ radattr_listener_t *radattr_listener_create()
 		.dir = lib->settings->get_str(lib->settings,
 									  "charon.plugins.radattr.dir", NULL),
 		.mid = lib->settings->get_int(lib->settings,
-									  "charon.plugins.radattr.message_id", 2),
+									  "charon.plugins.radattr.message_id", -1),
 	);
 
 	return &this->public;
