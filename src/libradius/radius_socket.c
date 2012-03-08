@@ -165,6 +165,8 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	}
 
 	data = request->get_encoding(request);
+	DBG3(DBG_CFG, "%B", &data);
+
 	/* timeout after 2, 3, 4, 5 seconds */
 	for (i = 2; i <= 5; i++)
 	{

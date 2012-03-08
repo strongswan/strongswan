@@ -84,6 +84,7 @@ METHOD(radius_client_t, request, radius_message_t*,
 	char virtual[] = {0x00,0x00,0x00,0x05};
 	radius_socket_t *socket;
 	radius_message_t *res;
+	chunk_t data;
 
 	/* we add the "Virtual" NAS-Port-Type, as we SHOULD include one */
 	req->add(req, RAT_NAS_PORT_TYPE, chunk_create(virtual, sizeof(virtual)));
@@ -98,12 +99,16 @@ METHOD(radius_client_t, request, radius_message_t*,
 	socket = this->config->get_socket(this->config);
 	DBG1(DBG_CFG, "sending RADIUS %N to server '%s'", radius_message_code_names,
 		 req->get_code(req), this->config->get_name(this->config));
+
 	res = socket->request(socket, req);
 	if (res)
 	{
 		DBG1(DBG_CFG, "received RADIUS %N from server '%s'",
 			 radius_message_code_names, res->get_code(res),
 			 this->config->get_name(this->config));
+		data = res->get_encoding(res);
+		DBG3(DBG_CFG, "%B", &data);
+
 		save_state(this, res);
 		if (res->get_code(res) == RMC_ACCESS_ACCEPT)
 		{
