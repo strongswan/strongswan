@@ -227,9 +227,16 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 		if (eap_type == EAP_IDENTITY)
 		{
 			identification_t *server, *peer;
+			chunk_t eap_identity;
 
-			peer = identification_create_from_string("carol@strongswan.org");
-			server = identification_create_from_string("server");
+			if (message.len < 5)
+			{
+				return;
+			}
+			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
+			peer = identification_create_from_data(eap_identity);
+			server = identification_create_from_string("%any");
+
 			this->method = charon->eap->create_instance(charon->eap, EAP_MD5, 0,
 												EAP_SERVER, server, peer); 
 			if (!this->method)
