@@ -250,17 +250,22 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 					break;
 				case SUCCESS:
 					code = RMC_ACCESS_ACCEPT;
+					DESTROY_IF(out);
+					out = eap_payload_create_code(EAP_SUCCESS,
+												  in->get_identifier(in));
 					break;
 				case FAILED:
 				default:
 					code = RMC_ACCESS_REJECT;
+					DESTROY_IF(out);
+					out = eap_payload_create_code(EAP_FAILURE,
+												  in->get_identifier(in));
 			}
 		}
 
 		send_response(this, request, code, out, source);
-
 		in->destroy(in);
-		DESTROY_IF(out);
+		out->destroy(out);
 	}
 }
 
