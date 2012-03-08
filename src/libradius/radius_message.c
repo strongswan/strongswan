@@ -280,7 +280,7 @@ METHOD(radius_message_t, add, void,
 
 METHOD(radius_message_t, sign, void,
 	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
-	hasher_t *hasher, signer_t *signer, rng_t *rng)
+	hasher_t *hasher, signer_t *signer, rng_t *rng, bool msg_auth)
 {
 	if (rng)
 	{
@@ -289,7 +289,7 @@ METHOD(radius_message_t, sign, void,
 	}
 	else
 	{
-		/* build Response-Authenticator */
+		/* prepare build of Response-Authenticator */
 		if (req_auth)
 		{
 			memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
@@ -300,9 +300,7 @@ METHOD(radius_message_t, sign, void,
 		}
 	}
 
-	if (rng || this->msg->code == RMC_ACCESS_CHALLENGE
-			|| this->msg->code == RMC_ACCESS_ACCEPT
-			|| this->msg->code == RMC_ACCESS_REJECT)
+	if (msg_auth)
 	{
 		char buf[HASH_SIZE_MD5];
 
@@ -318,6 +316,7 @@ METHOD(radius_message_t, sign, void,
 	{
 		chunk_t msg;
 
+		/* build Response-Authenticator */
 		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
 		hasher->get_hash(hasher, msg, NULL);
 		hasher->get_hash(hasher, secret, this->msg->authenticator);

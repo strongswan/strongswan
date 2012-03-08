@@ -190,7 +190,7 @@ static void send_response(private_eap_radius_dae_t *this,
 	response = radius_message_create(code);
 	response->set_identifier(response, request->get_identifier(request));
 	response->sign(response, request->get_authenticator(request),
-				   this->secret, this->hasher, this->signer, NULL);
+				   this->secret, this->hasher, this->signer, NULL, FALSE);
 
 	send_message(this, response, client);
 	save_retransmit(this, response, client);
