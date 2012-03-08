@@ -282,10 +282,14 @@ METHOD(radius_message_t, sign, void,
 	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
 	hasher_t *hasher, signer_t *signer, rng_t *rng)
 {
-	if (rng == NULL)
+	if (rng)
 	{
-		chunk_t msg;
-
+		/* build Request-Authenticator */
+		rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
+	}
+	else
+	{
+		/* build Response-Authenticator */
 		if (req_auth)
 		{
 			memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
@@ -294,16 +298,13 @@ METHOD(radius_message_t, sign, void,
 		{
 			memset(this->msg->authenticator, 0, sizeof(this->msg->authenticator));
 		}
-		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
-		hasher->get_hash(hasher, msg, NULL);
-		hasher->get_hash(hasher, secret, this->msg->authenticator);
 	}
-	else
+
+	if (rng || this->msg->code == RMC_ACCESS_CHALLENGE
+			|| this->msg->code == RMC_ACCESS_ACCEPT
+			|| this->msg->code == RMC_ACCESS_REJECT)
 	{
 		char buf[HASH_SIZE_MD5];
-
-		/* build Request-Authenticator */
-		rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
 
 		/* build Message-Authenticator attribute, using 16 null bytes */
 		memset(buf, 0, sizeof(buf));
@@ -311,6 +312,15 @@ METHOD(radius_message_t, sign, void,
 		signer->get_signature(signer,
 				chunk_create((u_char*)this->msg, ntohs(this->msg->length)),
 				((u_char*)this->msg) + ntohs(this->msg->length) - HASH_SIZE_MD5);
+	}
+
+	if (!rng)
+	{
+		chunk_t msg;
+
+		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
+		hasher->get_hash(hasher, msg, NULL);
+		hasher->get_hash(hasher, secret, this->msg->authenticator);
 	}
 }
 
@@ -324,25 +334,29 @@ METHOD(radius_message_t, verify, bool,
 	chunk_t data, msg;
 	bool has_eap = FALSE, has_auth = FALSE;
 
-	/* replace Response by Request Authenticator for verification */
-	memcpy(res_auth, this->msg->authenticator, HASH_SIZE_MD5);
-	if (req_auth)
-	{
-		memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
-	}
-	else
-	{
-		memset(this->msg->authenticator, 0, HASH_SIZE_MD5);
-	}
 	msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
 
-	/* verify Response-Authenticator */
-	hasher->get_hash(hasher, msg, NULL);
-	hasher->get_hash(hasher, secret, buf);
-	if (!memeq(buf, res_auth, HASH_SIZE_MD5))
+	if (this->msg->code != RMC_ACCESS_REQUEST)
 	{
-		DBG1(DBG_CFG, "RADIUS Response-Authenticator verification failed");
-		return FALSE;
+		/* replace Response by Request Authenticator for verification */
+		memcpy(res_auth, this->msg->authenticator, HASH_SIZE_MD5);
+		if (req_auth)
+		{
+			memcpy(this->msg->authenticator, req_auth, HASH_SIZE_MD5);
+		}
+		else
+		{
+			memset(this->msg->authenticator, 0, HASH_SIZE_MD5);
+		}
+
+		/* verify Response-Authenticator */
+		hasher->get_hash(hasher, msg, NULL);
+		hasher->get_hash(hasher, secret, buf);
+		if (!memeq(buf, res_auth, HASH_SIZE_MD5))
+		{
+			DBG1(DBG_CFG, "RADIUS Response-Authenticator verification failed");
+			return FALSE;
+		}
 	}
 
 	/* verify Message-Authenticator attribute */
@@ -380,8 +394,12 @@ METHOD(radius_message_t, verify, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
-	/* restore Response-Authenticator */
-	memcpy(this->msg->authenticator, res_auth, HASH_SIZE_MD5);
+
+	if (this->msg->code != RMC_ACCESS_REQUEST)
+	{
+		/* restore Response-Authenticator */
+		memcpy(this->msg->authenticator, res_auth, HASH_SIZE_MD5);
+	}
 
 	if (has_eap && !has_auth)
 	{	/* Message-Authenticator is required if we have an EAP-Message */
