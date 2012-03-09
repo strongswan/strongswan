@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010-2012 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -134,17 +135,17 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			{
 				if (first)
 				{	/* an ADDITIONAL_*_ADDRESS means replace, so flush once */
-					this->ike_sa->remove_additional_addresses(this->ike_sa);
+					this->ike_sa->clear_peer_addresses(this->ike_sa);
 					first = FALSE;
 					/* add the peer's current address to the list */
 					host = this->ike_sa->get_other_host(this->ike_sa);
-					this->ike_sa->add_additional_address(this->ike_sa,
-														 host->clone(host));
+					this->ike_sa->add_peer_address(this->ike_sa,
+												   host->clone(host));
 				}
 				data = notify->get_notification_data(notify);
 				host = host_create_from_chunk(family, data, 0);
 				DBG2(DBG_IKE, "got additional MOBIKE peer address: %H", host);
-				this->ike_sa->add_additional_address(this->ike_sa, host);
+				this->ike_sa->add_peer_address(this->ike_sa, host);
 				this->addresses_updated = TRUE;
 				break;
 			}
@@ -155,11 +156,10 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			}
 			case NO_ADDITIONAL_ADDRESSES:
 			{
-				this->ike_sa->remove_additional_addresses(this->ike_sa);
+				this->ike_sa->clear_peer_addresses(this->ike_sa);
 				/* add the peer's current address to the list */
 				host = this->ike_sa->get_other_host(this->ike_sa);
-				this->ike_sa->add_additional_address(this->ike_sa,
-													 host->clone(host));
+				this->ike_sa->add_peer_address(this->ike_sa, host->clone(host));
 				this->addresses_updated = TRUE;
 				break;
 			}
@@ -310,7 +310,7 @@ METHOD(ike_mobike_t, transmit, void,
 		charon->sender->send(charon->sender, copy);
 	}
 
-	enumerator = this->ike_sa->create_additional_address_enumerator(this->ike_sa);
+	enumerator = this->ike_sa->create_peer_address_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&other))
 	{
 		me = hydra->kernel_interface->get_source_addr(

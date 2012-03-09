@@ -184,7 +184,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_REMOTE_ADDR:
 		case HA_LOCAL_VIP:
 		case HA_REMOTE_VIP:
-		case HA_ADDITIONAL_ADDR:
+		case HA_PEER_ADDR:
 		{
 			host_encoding_t *enc;
 			host_t *host;
@@ -386,7 +386,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_REMOTE_ADDR:
 		case HA_LOCAL_VIP:
 		case HA_REMOTE_VIP:
-		case HA_ADDITIONAL_ADDR:
+		case HA_PEER_ADDR:
 		{
 			host_encoding_t *enc;
 

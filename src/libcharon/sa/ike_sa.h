@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -474,19 +474,19 @@ struct ike_sa_t {
 	 *
 	 * @param host			host to add to list
 	 */
-	void (*add_additional_address)(ike_sa_t *this, host_t *host);
+	void (*add_peer_address)(ike_sa_t *this, host_t *host);
 
 	/**
-	 * Create an enumerator over all additional addresses of the peer.
+	 * Create an enumerator over all known addresses of the peer.
 	 *
 	 * @return				enumerator over addresses
 	 */
-	enumerator_t* (*create_additional_address_enumerator)(ike_sa_t *this);
+	enumerator_t* (*create_peer_address_enumerator)(ike_sa_t *this);
 
 	/**
-	 * Remove all additional addresses of the peer.
+	 * Remove all known addresses of the peer.
 	 */
-	void (*remove_additional_addresses)(ike_sa_t *this);
+	void (*clear_peer_addresses)(ike_sa_t *this);
 
 	/**
 	 * Check if mappings have changed on a NAT for our source address.

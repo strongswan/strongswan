@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -208,9 +208,9 @@ struct private_ike_sa_t {
 	linked_list_t *attributes;
 
 	/**
-	 * list of peers additional addresses, transmitted via MOBIKE
+	 * list of peer's addresses, additional ones transmitted via MOBIKE
 	 */
-	linked_list_t *additional_addresses;
+	linked_list_t *peer_addresses;
 
 	/**
 	 * previously value of received DESTINATION_IP hash
@@ -774,28 +774,28 @@ METHOD(ike_sa_t, get_virtual_ip, host_t*,
 	}
 }
 
-METHOD(ike_sa_t, add_additional_address, void,
+METHOD(ike_sa_t, add_peer_address, void,
 	private_ike_sa_t *this, host_t *host)
 {
-	this->additional_addresses->insert_last(this->additional_addresses, host);
+	this->peer_addresses->insert_last(this->peer_addresses, host);
 }
 
-METHOD(ike_sa_t, create_additional_address_enumerator, enumerator_t*,
+METHOD(ike_sa_t, create_peer_address_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	return this->additional_addresses->create_enumerator(
-												this->additional_addresses);
+	return this->peer_addresses->create_enumerator(this->peer_addresses);
 }
 
-METHOD(ike_sa_t, remove_additional_addresses, void,
+METHOD(ike_sa_t, clear_peer_addresses, void,
 	private_ike_sa_t *this)
 {
-	enumerator_t *enumerator = create_additional_address_enumerator(this);
+	enumerator_t *enumerator = create_peer_address_enumerator(this);
 	host_t *host;
+
 	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
-		this->additional_addresses->remove_at(this->additional_addresses,
-											  enumerator);
+		this->peer_addresses->remove_at(this->peer_addresses,
+										enumerator);
 		host->destroy(host);
 	}
 	enumerator->destroy(enumerator);
@@ -1879,8 +1879,8 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 												   this->other_host, NULL);
 	if (!src)
 	{
-		enumerator = this->additional_addresses->create_enumerator(
-												this->additional_addresses);
+		enumerator = this->peer_addresses->create_enumerator(
+														this->peer_addresses);
 		while (enumerator->enumerate(enumerator, &addr))
 		{
 			DBG1(DBG_IKE, "looking for a route to %H ...", addr);
@@ -2136,8 +2136,8 @@ METHOD(ike_sa_t, destroy, void,
 		}
 		this->other_virtual_ip->destroy(this->other_virtual_ip);
 	}
-	this->additional_addresses->destroy_offset(this->additional_addresses,
-													offsetof(host_t, destroy));
+	this->peer_addresses->destroy_offset(this->peer_addresses,
+										 offsetof(host_t, destroy));
 #ifdef ME
 	if (this->is_mediation_server)
 	{
@@ -2214,9 +2214,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 			.has_condition = _has_condition,
 			.set_pending_updates = _set_pending_updates,
 			.get_pending_updates = _get_pending_updates,
-			.create_additional_address_enumerator = _create_additional_address_enumerator,
-			.add_additional_address = _add_additional_address,
-			.remove_additional_addresses = _remove_additional_addresses,
+			.create_peer_address_enumerator = _create_peer_address_enumerator,
+			.add_peer_address = _add_peer_address,
+			.clear_peer_addresses = _clear_peer_addresses,
 			.has_mapping_changed = _has_mapping_changed,
 			.retransmit = _retransmit,
 			.delete = _delete_,
@@ -2273,7 +2273,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		.my_auths = linked_list_create(),
 		.other_auths = linked_list_create(),
 		.unique_id = ++unique_id,
-		.additional_addresses = linked_list_create(),
+		.peer_addresses = linked_list_create(),
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 									"charon.keep_alive", KEEPALIVE_INTERVAL),

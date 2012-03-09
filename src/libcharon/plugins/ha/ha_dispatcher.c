@@ -260,9 +260,8 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
 				received_vip = TRUE;
 				break;
-			case HA_ADDITIONAL_ADDR:
-				ike_sa->add_additional_address(ike_sa,
-											   value.host->clone(value.host));
+			case HA_PEER_ADDR:
+				ike_sa->add_peer_address(ike_sa, value.host->clone(value.host));
 				break;
 			case HA_CONFIG_NAME:
 				peer_cfg = charon->backends->get_peer_cfg_by_name(

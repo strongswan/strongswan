@@ -185,10 +185,10 @@ METHOD(listener_t, ike_updown, bool,
 		m->add_attribute(m, HA_CONDITIONS, condition);
 		m->add_attribute(m, HA_EXTENSIONS, extension);
 		m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
-		enumerator = ike_sa->create_additional_address_enumerator(ike_sa);
+		enumerator = ike_sa->create_peer_address_enumerator(ike_sa);
 		while (enumerator->enumerate(enumerator, (void**)&addr))
 		{
-			m->add_attribute(m, HA_ADDITIONAL_ADDR, addr);
+			m->add_attribute(m, HA_PEER_ADDR, addr);
 		}
 		enumerator->destroy(enumerator);
 	}
