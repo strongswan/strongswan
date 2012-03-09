@@ -220,7 +220,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *peer_cfg = NULL;
 	auth_cfg_t *auth;
-	bool received_vip = FALSE;
+	bool received_vip = FALSE, first_peer_addr = TRUE;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -261,6 +261,11 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				received_vip = TRUE;
 				break;
 			case HA_PEER_ADDR:
+				if (first_peer_addr)
+				{
+					ike_sa->clear_peer_addresses(ike_sa);
+					first_peer_addr = FALSE;
+				}
 				ike_sa->add_peer_address(ike_sa, value.host->clone(value.host));
 				break;
 			case HA_CONFIG_NAME:
