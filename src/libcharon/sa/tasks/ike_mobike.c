@@ -136,6 +136,10 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				{	/* an ADDITIONAL_*_ADDRESS means replace, so flush once */
 					this->ike_sa->remove_additional_addresses(this->ike_sa);
 					first = FALSE;
+					/* add the peer's current address to the list */
+					host = this->ike_sa->get_other_host(this->ike_sa);
+					this->ike_sa->add_additional_address(this->ike_sa,
+														 host->clone(host));
 				}
 				data = notify->get_notification_data(notify);
 				host = host_create_from_chunk(family, data, 0);
@@ -152,6 +156,10 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			case NO_ADDITIONAL_ADDRESSES:
 			{
 				this->ike_sa->remove_additional_addresses(this->ike_sa);
+				/* add the peer's current address to the list */
+				host = this->ike_sa->get_other_host(this->ike_sa);
+				this->ike_sa->add_additional_address(this->ike_sa,
+													 host->clone(host));
 				this->addresses_updated = TRUE;
 				break;
 			}
