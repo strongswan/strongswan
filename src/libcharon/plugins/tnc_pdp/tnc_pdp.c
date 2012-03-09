@@ -44,6 +44,16 @@ struct private_tnc_pdp_t {
 	tnc_pdp_t public;
 
 	/**
+	 * ID of the server
+	 */
+	identification_t *server;
+
+	/**
+	 * EAP method type to be used
+	 */
+	eap_type_t type;
+
+	/**
 	 * IPv4 RADIUS socket
 	 */
 	int ipv4;
@@ -226,7 +236,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 
 		if (eap_type == EAP_IDENTITY)
 		{
-			identification_t *server, *peer;
+			identification_t *peer;
 			chunk_t eap_identity;
 
 			if (message.len < 5)
@@ -235,14 +245,12 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			}
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
-			server = identification_create_from_string("%any");
 
-			this->method = charon->eap->create_instance(charon->eap, EAP_MD5, 0,
-												EAP_SERVER, server, peer); 
+			this->method = charon->eap->create_instance(charon->eap, this->type,
+												0, EAP_SERVER, this->server, peer); 
+			peer->destroy(peer);
 			if (!this->method)
 			{
-				peer->destroy(peer);
-				server->destroy(server);
 				in->destroy(in);
 				return;
 			}
@@ -392,6 +400,7 @@ METHOD(tnc_pdp_t, destroy, void,
 	{
 		close(this->ipv6);
 	}
+	DESTROY_IF(this->server);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->method);
@@ -404,12 +413,13 @@ METHOD(tnc_pdp_t, destroy, void,
 tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 {
 	private_tnc_pdp_t *this;
-	char *secret;
+	char *secret, *server;
 
 	INIT(this,
 		.public = {
 			.destroy = _destroy,
 		},
+		.type = EAP_TTLS,
 		.ipv4 = open_socket(this, AF_INET,  port),
 		.ipv6 = open_socket(this, AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
@@ -435,6 +445,17 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		destroy(this);
 		return NULL;
 	}
+
+	server = lib->settings->get_str(lib->settings,
+						"charon.plugins.tnc-pdp.server", NULL);
+	if (!server)
+	{
+		DBG1(DBG_CFG, "missing PDP server name, PDP disabled");
+		destroy(this);
+		return NULL;
+	}
+	this->server = identification_create_from_string(server);
+
 	secret = lib->settings->get_str(lib->settings,
 						"charon.plugins.tnc-pdp.secret", NULL);
 	if (!secret)
@@ -445,6 +466,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	}
 	this->secret = chunk_create(secret, strlen(secret));
 	this->signer->set_key(this->signer, this->secret);
+
 
 	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
 										this, NULL, NULL, JOB_PRIO_CRITICAL);
