@@ -189,6 +189,15 @@ static void send_response(private_tnc_pdp_t *this,
 	if (eap)
 	{
 		data = eap->get_data(eap);
+		DBG3(DBG_CFG, "%N payload %B", eap_type_names, this->type, &data);
+
+		/* fragment data suitable for RADIUS */
+		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
+		{
+			response->add(response, RAT_EAP_MESSAGE,
+						  chunk_create(data.ptr,MAX_RADIUS_ATTRIBUTE_SIZE));
+			data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
+		}
 		response->add(response, RAT_EAP_MESSAGE, data);
 	}
 	response->set_identifier(response, request->get_identifier(request));
