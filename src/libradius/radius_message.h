@@ -28,6 +28,8 @@
 
 #include <library.h>
 
+#define MAX_RADIUS_ATTRIBUTE_SIZE	253
+
 typedef struct radius_message_t radius_message_t;
 typedef enum radius_message_code_t radius_message_code_t;
 typedef enum radius_attribute_type_t radius_attribute_type_t;

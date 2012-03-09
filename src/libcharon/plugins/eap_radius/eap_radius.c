@@ -327,11 +327,12 @@ METHOD(eap_method_t, process, status_t,
 	data = in->get_data(in);
 	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
 
-	/* fragment data suitable for RADIUS (not more than 253 bytes) */
-	while (data.len > 253)
+	/* fragment data suitable for RADIUS */
+	while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
 	{
-		request->add(request, RAT_EAP_MESSAGE, chunk_create(data.ptr, 253));
-		data = chunk_skip(data, 253);
+		request->add(request, RAT_EAP_MESSAGE,
+					 chunk_create(data.ptr,MAX_RADIUS_ATTRIBUTE_SIZE));
+		data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
 	}
 	request->add(request, RAT_EAP_MESSAGE, data);
 
