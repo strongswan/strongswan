@@ -299,17 +299,6 @@ METHOD(ike_mobike_t, transmit, void,
 	other_old = this->ike_sa->get_other_host(this->ike_sa);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
-	me = hydra->kernel_interface->get_source_addr(
-									hydra->kernel_interface, other_old, NULL);
-	if (me)
-	{
-		apply_port(me, me_old, ike_cfg->get_my_port(ike_cfg));
-		DBG1(DBG_IKE, "checking original path %#H - %#H", me, other_old);
-		copy = packet->clone(packet);
-		copy->set_source(copy, me);
-		charon->sender->send(charon->sender, copy);
-	}
-
 	enumerator = this->ike_sa->create_peer_address_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&other))
 	{

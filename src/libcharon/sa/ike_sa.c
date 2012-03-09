@@ -1874,25 +1874,20 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 	bool valid = FALSE;
 	enumerator_t *enumerator;
 	host_t *src, *addr;
+
 	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
-	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
-												   this->other_host, NULL);
-	if (!src)
+	enumerator = this->peer_addresses->create_enumerator(this->peer_addresses);
+	while (enumerator->enumerate(enumerator, &addr))
 	{
-		enumerator = this->peer_addresses->create_enumerator(
-														this->peer_addresses);
-		while (enumerator->enumerate(enumerator, &addr))
+		DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+		src = hydra->kernel_interface->get_source_addr(
+										hydra->kernel_interface, addr, NULL);
+		if (src)
 		{
-			DBG1(DBG_IKE, "looking for a route to %H ...", addr);
-			src = hydra->kernel_interface->get_source_addr(
-									hydra->kernel_interface, addr, NULL);
-			if (src)
-			{
-				break;
-			}
+			break;
 		}
-		enumerator->destroy(enumerator);
 	}
+	enumerator->destroy(enumerator);
 	if (src)
 	{
 		valid = TRUE;
