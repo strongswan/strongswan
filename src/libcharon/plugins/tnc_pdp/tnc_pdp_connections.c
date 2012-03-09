@@ -113,7 +113,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 		{
 			found = TRUE;
 			entry->method->destroy(entry->method);
-			DBG1(DBG_CFG, "removed stale TNC PEP RADIUS connection");
+			DBG1(DBG_CFG, "removed stale RADIUS connection");
 			entry->method = method;
 			break;
 		}
