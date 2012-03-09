@@ -14,6 +14,7 @@
  */
 
 #include "tnc_pdp.h"
+#include "tnc_pdp_connections.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -84,9 +85,9 @@ struct private_tnc_pdp_t {
 	signer_t *signer;
 
 	/**
-	 * EAP method
+	 * List of registered TNC-PDP connections
 	 */
-	eap_method_t *method;
+	tnc_pdp_connections_t *connections;
 };
 
 
@@ -195,7 +196,7 @@ static void send_response(private_tnc_pdp_t *this,
 		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
 		{
 			response->add(response, RAT_EAP_MESSAGE,
-						  chunk_create(data.ptr,MAX_RADIUS_ATTRIBUTE_SIZE));
+						  chunk_create(data.ptr, MAX_RADIUS_ATTRIBUTE_SIZE));
 			data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
 		}
 		response->add(response, RAT_EAP_MESSAGE, data);
@@ -207,6 +208,7 @@ static void send_response(private_tnc_pdp_t *this,
 	DBG1(DBG_CFG, "sending RADIUS %N to client '%H'", radius_message_code_names,
 		 code, client);
 	send_message(this, response, client);
+	response->destroy(response);
 }
 
 /**
@@ -217,8 +219,10 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 {
 	enumerator_t *enumerator;
 	eap_payload_t *in, *out = NULL;
+	eap_method_t *method;
 	eap_type_t eap_type;
 	chunk_t data, message = chunk_empty;
+	chunk_t user_name = chunk_empty, nas_id = chunk_empty;
 	radius_message_code_t code = RMC_ACCESS_CHALLENGE;
 	u_int32_t eap_vendor;
 	int type;
@@ -226,9 +230,22 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 	enumerator = request->create_enumerator(request);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
-		if (type == RAT_EAP_MESSAGE && data.len)
+		switch (type)
 		{
-			message = chunk_cat("mc", message, data);
+			case RAT_USER_NAME:
+				user_name = data;
+				break;
+			case RAT_NAS_IDENTIFIER:
+				nas_id = data;
+				break;
+			case RAT_EAP_MESSAGE:
+				if (data.len)
+				{
+					message = chunk_cat("mc", message, data);
+				}
+				break;
+			default:
+				break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -255,19 +272,27 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
 
-			this->method = charon->eap->create_instance(charon->eap, this->type,
-												0, EAP_SERVER, this->server, peer); 
+			method = charon->eap->create_instance(charon->eap, this->type,
+										0, EAP_SERVER, this->server, peer); 
 			peer->destroy(peer);
-			if (!this->method)
+			if (!method)
 			{
 				in->destroy(in);
 				return;
 			}
-			this->method->initiate(this->method, &out);
+			this->connections->add(this->connections, nas_id, user_name, method);
+			method->initiate(method, &out);
 		}
 		else
 		{
-			switch (this->method->process(this->method, in, &out))
+			method = this->connections->get_method(this->connections, nas_id,
+												   user_name);
+			if (!method)
+			{
+				return;
+			}
+
+			switch (method->process(method, in, &out))
 			{
 				case NEED_MORE:
 					code = RMC_ACCESS_CHALLENGE;
@@ -285,6 +310,11 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 					out = eap_payload_create_code(EAP_FAILURE,
 												  in->get_identifier(in));
 			}
+		}
+
+		if (code == RMC_ACCESS_ACCEPT || code == RMC_ACCESS_REJECT)
+		{
+			this->connections->remove(this->connections, nas_id, user_name);
 		}
 
 		send_response(this, request, code, out, source);
@@ -412,7 +442,7 @@ METHOD(tnc_pdp_t, destroy, void,
 	DESTROY_IF(this->server);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
-	DESTROY_IF(this->method);
+	DESTROY_IF(this->connections);
 	free(this);
 }
 
@@ -433,6 +463,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		.ipv6 = open_socket(this, AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
+		.connections = tnc_pdp_connections_create(),
 	);
 
 	if (!this->ipv4 && !this->ipv6)

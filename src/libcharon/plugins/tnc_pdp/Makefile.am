@@ -18,6 +18,7 @@ libstrongswan_tnc_pdp_la_LIBADD = \
 endif
 
 libstrongswan_tnc_pdp_la_SOURCES = \
-	tnc_pdp_plugin.h tnc_pdp_plugin.c tnc_pdp.h tnc_pdp.c
+	tnc_pdp_plugin.h tnc_pdp_plugin.c \
+	tnc_pdp.h tnc_pdp.c tnc_pdp_connections.h tnc_pdp_connections.c 
 
 libstrongswan_tnc_pdp_la_LDFLAGS = -module -avoid-version
