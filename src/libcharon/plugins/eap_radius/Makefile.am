@@ -9,8 +9,6 @@ noinst_LTLIBRARIES = libstrongswan-eap-radius.la
 else
 libstrongswan_eap_radius_la_LIBADD = $(top_builddir)/src/libradius/libradius.la
 plugin_LTLIBRARIES = libstrongswan-eap-radius.la
-libstrongswan_eap_radius_la_LIBADD = \
-	$(top_builddir)/src/libradius/libradius.la
 endif
 
 libstrongswan_eap_radius_la_SOURCES = \
