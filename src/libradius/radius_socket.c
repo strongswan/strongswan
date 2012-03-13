@@ -18,12 +18,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <pen/pen.h>
 #include <debug.h>
-
-/**
- * Vendor-Id of Microsoft specific attributes
- */
-#define VENDOR_ID_MICROSOFT 311
 
 /**
  * Microsoft specific vendor attributes
@@ -308,7 +304,7 @@ METHOD(radius_socket_t, decrypt_msk, chunk_t,
 			data.len > sizeof(*mppe_key))
 		{
 			mppe_key = (void*)data.ptr;
-			if (ntohl(mppe_key->id) == VENDOR_ID_MICROSOFT &&
+			if (ntohl(mppe_key->id) == PEN_MICROSOFT &&
 				mppe_key->length == data.len - sizeof(mppe_key->id))
 			{
 				data = chunk_create(mppe_key->key, data.len - sizeof(*mppe_key));
