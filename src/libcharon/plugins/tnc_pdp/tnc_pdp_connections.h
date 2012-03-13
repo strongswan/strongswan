@@ -24,6 +24,7 @@
 typedef struct tnc_pdp_connections_t tnc_pdp_connections_t;
 
 #include <library.h>
+#include <sa/ike_sa.h>
 #include <sa/authenticators/eap/eap_method.h>
 
 /**
@@ -36,10 +37,11 @@ struct tnc_pdp_connections_t {
 	 *
 	 * @param nas_id		NAS identifier of Policy Enforcement Point
 	 * @param user_name		User name of TNC Client
+	 * @param peer			Peer identity
 	 * @param method		EAP method state for this TNC PEP Connection
 	 */
 	void (*add)(tnc_pdp_connections_t *this, chunk_t nas_id, chunk_t user_name,
-				eap_method_t *method);
+				identification_t *peer, eap_method_t *method);
 
 	/**
 	 * Remove a TNC PEP RADIUS Connection
@@ -51,14 +53,15 @@ struct tnc_pdp_connections_t {
 				   chunk_t user_name);
 
 	/**
-	 * Get the EAP method of a registered TNC PEP RADIUS Connection
+	 * Get the EAP method and IKE_SA of a registered TNC PEP RADIUS Connection
 	 *
 	 * @param nas_id		NAS identifier of Policy Enforcement Point
 	 * @param user_name		User name of TNC Client
+	 * @param ike_sa		IKE_SA used for bus communication only
 	 * @return				EAP method for this connection or NULL if not found
 	 */
-	eap_method_t* (*get_method)(tnc_pdp_connections_t *this, chunk_t nas_id,
-								chunk_t user_name);
+	eap_method_t* (*get_state)(tnc_pdp_connections_t *this, chunk_t nas_id,
+							   chunk_t user_name, ike_sa_t **ike_sa);
 
 	/**
 	 * Destroys a tnc_pdp_connections_t object.

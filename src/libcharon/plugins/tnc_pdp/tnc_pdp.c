@@ -181,10 +181,12 @@ static void send_message(private_tnc_pdp_t *this, radius_message_t *message,
  */
 static void send_response(private_tnc_pdp_t *this,
 						  radius_message_t *request, radius_message_code_t code,
-						  eap_payload_t *eap, host_t *client)
+						  eap_payload_t *eap, identification_t *group,
+						  host_t *client)
 {
 	radius_message_t *response;
 	chunk_t data;
+	u_int32_t tunnel_type;
 
 	response = radius_message_create(code);
 	if (eap)
@@ -200,6 +202,14 @@ static void send_response(private_tnc_pdp_t *this,
 			data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
 		}
 		response->add(response, RAT_EAP_MESSAGE, data);
+	}
+	if (group)
+	{
+		tunnel_type = RADIUS_TUNNEL_TYPE_ESP;
+		htoun32(data.ptr, tunnel_type);
+		data.len = sizeof(tunnel_type);
+		response->add(response, RAT_TUNNEL_TYPE, data);
+		response->add(response, RAT_FILTER_ID, group->get_encoding(group));
 	}
 	response->set_identifier(response, request->get_identifier(request));
 	response->sign(response, request->get_authenticator(request),
@@ -221,10 +231,11 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 	eap_payload_t *in, *out = NULL;
 	eap_method_t *method;
 	eap_type_t eap_type;
+	u_int32_t eap_vendor;
 	chunk_t data, message = chunk_empty;
 	chunk_t user_name = chunk_empty, nas_id = chunk_empty;
+	identification_t *group = NULL;
 	radius_message_code_t code = RMC_ACCESS_CHALLENGE;
-	u_int32_t eap_vendor;
 	int type;
 
 	enumerator = request->create_enumerator(request);
@@ -258,7 +269,6 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 		eap_type = in->get_type(in, &eap_vendor);
 
 		DBG3(DBG_CFG, "%N payload %B", eap_type_names, eap_type, &message);
-		free(message.ptr);
 
 		if (eap_type == EAP_IDENTITY)
 		{
@@ -267,30 +277,36 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 
 			if (message.len < 5)
 			{
-				return;
+				goto end;
 			}
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
-
 			method = charon->eap->create_instance(charon->eap, this->type,
 										0, EAP_SERVER, this->server, peer); 
-			peer->destroy(peer);
 			if (!method)
 			{
-				in->destroy(in);
-				return;
+				peer->destroy(peer);
+				goto end;
 			}
-			this->connections->add(this->connections, nas_id, user_name, method);
+			this->connections->add(this->connections, nas_id, user_name, peer,
+								   method);
 			method->initiate(method, &out);
 		}
 		else
 		{
-			method = this->connections->get_method(this->connections, nas_id,
-												   user_name);
+			ike_sa_t *ike_sa;
+			auth_cfg_t *auth;
+			auth_rule_t type;
+			identification_t *data;
+			enumerator_t *e;
+
+			method = this->connections->get_state(this->connections, nas_id,
+												  user_name, &ike_sa);
 			if (!method)
 			{
-				return;
+				goto end;
 			}
+			charon->bus->set_sa(charon->bus, ike_sa);
 
 			switch (method->process(method, in, &out))
 			{
@@ -299,6 +315,19 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 					break;
 				case SUCCESS:
 					code = RMC_ACCESS_ACCEPT;
+
+					auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+					e = auth->create_enumerator(auth);
+					while (e->enumerate(e, &type, &data))
+					{
+						/* look for group memberships */
+						if (type == AUTH_RULE_GROUP)
+						{
+							group = data;
+						}
+					}
+					e->destroy(e);
+
 					DESTROY_IF(out);
 					out = eap_payload_create_code(EAP_SUCCESS,
 												  in->get_identifier(in));
@@ -310,16 +339,20 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 					out = eap_payload_create_code(EAP_FAILURE,
 												  in->get_identifier(in));
 			}
+			charon->bus->set_sa(charon->bus, NULL);
 		}
+
+		send_response(this, request, code, out, group, source);
+		out->destroy(out);
 
 		if (code == RMC_ACCESS_ACCEPT || code == RMC_ACCESS_REJECT)
 		{
 			this->connections->remove(this->connections, nas_id, user_name);
 		}
 
-		send_response(this, request, code, out, source);
+end:
+		free(message.ptr);
 		in->destroy(in);
-		out->destroy(out);
 	}
 }
 
@@ -452,13 +485,12 @@ METHOD(tnc_pdp_t, destroy, void,
 tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 {
 	private_tnc_pdp_t *this;
-	char *secret, *server;
+	char *secret, *server, *eap_type_str;
 
 	INIT(this,
 		.public = {
 			.destroy = _destroy,
 		},
-		.type = EAP_TTLS,
 		.ipv4 = open_socket(this, AF_INET,  port),
 		.ipv6 = open_socket(this, AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
@@ -507,6 +539,16 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	this->secret = chunk_create(secret, strlen(secret));
 	this->signer->set_key(this->signer, this->secret);
 
+	eap_type_str = lib->settings->get_str(lib->settings,
+						"charon.plugins.tnc-pdp.method", "ttls");
+	this->type = eap_type_from_string(eap_type_str);
+	if (this->type == 0)
+	{
+		DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);
+		destroy(this);
+		return NULL;
+	}
+	DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
 
 	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
 										this, NULL, NULL, JOB_PRIO_CRITICAL);

@@ -56,6 +56,11 @@ struct entry_t {
 	 * EAP method state
 	 */
 	eap_method_t *method;
+
+	/**
+	 * IKE SA used for bus communication
+	 */
+	ike_sa_t *ike_sa;
 };
 
 /**
@@ -64,6 +69,7 @@ struct entry_t {
 static void free_entry(entry_t *this)
 {
 	this->method->destroy(this->method);
+	this->ike_sa->destroy(this->ike_sa);
 	free(this->nas_id.ptr);
 	free(this->user_name.ptr);
 	free(this);
@@ -100,11 +106,18 @@ static void dbg_nas_user(chunk_t nas_id, chunk_t user_name, bool not, char *op)
 
 METHOD(tnc_pdp_connections_t, add, void,
 	private_tnc_pdp_connections_t *this, chunk_t nas_id, chunk_t user_name,
-	eap_method_t *method)
+	identification_t *peer, eap_method_t *method)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	ike_sa_id_t *ike_sa_id;
+	ike_sa_t *ike_sa;
 	bool found = FALSE;
+
+	ike_sa_id = ike_sa_id_create(0, 0, FALSE);
+	ike_sa = ike_sa_create(ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
+	ike_sa->set_other_id(ike_sa, peer);
 
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -113,8 +126,10 @@ METHOD(tnc_pdp_connections_t, add, void,
 		{
 			found = TRUE;
 			entry->method->destroy(entry->method);
+			entry->ike_sa->destroy(entry->ike_sa);
 			DBG1(DBG_CFG, "removed stale RADIUS connection");
 			entry->method = method;
+			entry->ike_sa = ike_sa;
 			break;
 		}
 	}
@@ -126,6 +141,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 		entry->nas_id = chunk_clone(nas_id);
 		entry->user_name = chunk_clone(user_name);
 		entry->method = method;
+		entry->ike_sa = ike_sa;
 		this->list->insert_last(this->list, entry);
 	}
 	dbg_nas_user(nas_id, user_name, FALSE, "created");
@@ -151,8 +167,9 @@ METHOD(tnc_pdp_connections_t, remove_, void,
 	enumerator->destroy(enumerator);
 }
 
-METHOD(tnc_pdp_connections_t, get_method, eap_method_t*,
-	private_tnc_pdp_connections_t *this, chunk_t nas_id, chunk_t user_name)
+METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
+	private_tnc_pdp_connections_t *this, chunk_t nas_id, chunk_t user_name,
+	ike_sa_t **ike_sa)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -164,6 +181,7 @@ METHOD(tnc_pdp_connections_t, get_method, eap_method_t*,
 		if (equals_entry(entry, nas_id, user_name))
 		{
 			found = entry->method;
+			*ike_sa = entry->ike_sa;
 			break;
 		}
 	}
@@ -191,7 +209,7 @@ tnc_pdp_connections_t *tnc_pdp_connections_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_,
-			.get_method = _get_method,
+			.get_state = _get_state,
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),
