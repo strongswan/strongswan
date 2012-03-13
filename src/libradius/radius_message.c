@@ -268,7 +268,7 @@ METHOD(radius_message_t, add, void,
 {
 	rattr_t *attribute;
 
-	data.len = min(data.len, 253);
+	data.len = min(data.len, MAX_RADIUS_ATTRIBUTE_SIZE);
 	this->msg = realloc(this->msg,
 						ntohs(this->msg->length) + sizeof(rattr_t) + data.len);
 	attribute = ((void*)this->msg) + ntohs(this->msg->length);
