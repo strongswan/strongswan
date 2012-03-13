@@ -20,9 +20,11 @@
 #include <unistd.h>
 
 #include <radius_message.h>
+#include <radius_mppe.h>
 
 #include <daemon.h>
 #include <debug.h>
+#include <pen/pen.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 #include <sa/authenticators/eap/eap_method.h>
@@ -83,6 +85,11 @@ struct private_tnc_pdp_t {
 	 * HMAC MD5 signer, with secret set
 	 */
 	signer_t *signer;
+
+	/**
+	 * Random number generator for MS-MPPE salt values
+	 */
+	rng_t *rng;
 
 	/**
 	 * List of registered TNC-PDP connections
@@ -177,15 +184,72 @@ static void send_message(private_tnc_pdp_t *this, radius_message_t *message,
 }
 
 /**
+ * Encrypt a MS-MPPE-Send/Recv-Key
+ */
+static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
+								chunk_t key, radius_message_t *request)
+{
+	chunk_t a, r, seed, data;
+	u_char b[HASH_SIZE_MD5], *c;
+	mppe_key_t *mppe_key;
+
+	/**
+	 * From RFC2548 (encryption):
+	 * b(1) = MD5(S + R + A)    c(1) = p(1) xor b(1)   C = c(1)
+	 * b(2) = MD5(S + c(1))     c(2) = p(2) xor b(2)   C = C + c(2)
+	 *      . . .
+	 * b(i) = MD5(S + c(i-1))   c(i) = p(i) xor b(i)   C = C + c(i)
+	 */
+
+	data = chunk_alloc(sizeof(mppe_key_t) +
+					   HASH_SIZE_MD5 * (1 + key.len / HASH_SIZE_MD5));
+	memset(data.ptr, 0x00, data.len);
+
+	mppe_key = (mppe_key_t*)data.ptr;
+	mppe_key->id = htonl(PEN_MICROSOFT);
+	mppe_key->type = type;
+	mppe_key->length = data.len - sizeof(mppe_key->id);
+	mppe_key->key[0] = key.len;
+
+	memcpy(&mppe_key->key[1], key.ptr, key.len);
+
+	/* generate a 16 bit random salt value */
+	a = chunk_create((u_char*)&(mppe_key->salt), sizeof(mppe_key->salt));
+	this->rng->get_bytes(this->rng, a.len, a.ptr);
+
+	/* the MSB of the salt MUST be set to 1 */
+	*a.ptr |= 0x80;
+
+	r = chunk_create(request->get_authenticator(request), HASH_SIZE_MD5);
+	seed = chunk_cata("cc", r, a);
+	c = mppe_key->key;
+
+	while (c < data.ptr + data.len)
+	{
+		/* b(i) = MD5(S + c(i-1)) */
+		this->hasher->get_hash(this->hasher, this->secret, NULL);
+		this->hasher->get_hash(this->hasher, seed, b);
+
+		/* c(i) = b(i) xor p(1) */
+		memxor(c, b, HASH_SIZE_MD5);
+
+		/* prepare next round */
+		seed = chunk_create(c, HASH_SIZE_MD5);
+		c += HASH_SIZE_MD5;
+	}
+
+	return data;
+}
+
+/**
  * Send a RADIUS response for a request
  */
-static void send_response(private_tnc_pdp_t *this,
-						  radius_message_t *request, radius_message_code_t code,
-						  eap_payload_t *eap, identification_t *group,
-						  host_t *client)
+static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
+						  radius_message_code_t code, eap_payload_t *eap,
+						  identification_t *group, chunk_t msk, host_t *client)
 {
 	radius_message_t *response;
-	chunk_t data;
+	chunk_t data, recv, send;
 	u_int32_t tunnel_type;
 
 	response = radius_message_create(code);
@@ -211,6 +275,18 @@ static void send_response(private_tnc_pdp_t *this,
 		response->add(response, RAT_TUNNEL_TYPE, data);
 		response->add(response, RAT_FILTER_ID, group->get_encoding(group));
 	}
+	if (msk.len)
+	{
+		recv = chunk_create(msk.ptr, msk.len / 2);
+		data = encrypt_mppe_key(this, MS_MPPE_RECV_KEY, recv, request);
+		response->add(response, RAT_VENDOR_SPECIFIC, data);
+		chunk_free(&data);
+		
+		send = chunk_create(msk.ptr + recv.len, msk.len - recv.len);
+		data = encrypt_mppe_key(this, MS_MPPE_SEND_KEY, send, request);
+		response->add(response, RAT_VENDOR_SPECIFIC, data);
+		chunk_free(&data);
+	}
 	response->set_identifier(response, request->get_identifier(request));
 	response->sign(response, request->get_authenticator(request),
 				   this->secret, this->hasher, this->signer, NULL, TRUE);
@@ -232,7 +308,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 	eap_method_t *method;
 	eap_type_t eap_type;
 	u_int32_t eap_vendor;
-	chunk_t data, message = chunk_empty;
+	chunk_t data, message = chunk_empty, msk = chunk_empty;
 	chunk_t user_name = chunk_empty, nas_id = chunk_empty;
 	identification_t *group = NULL;
 	radius_message_code_t code = RMC_ACCESS_CHALLENGE;
@@ -315,7 +391,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 					break;
 				case SUCCESS:
 					code = RMC_ACCESS_ACCEPT;
-
+					method->get_msk(method, &msk);
 					auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 					e = auth->create_enumerator(auth);
 					while (e->enumerate(e, &type, &data))
@@ -342,7 +418,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			charon->bus->set_sa(charon->bus, NULL);
 		}
 
-		send_response(this, request, code, out, group, source);
+		send_response(this, request, code, out, group, msk, source);
 		out->destroy(out);
 
 		if (code == RMC_ACCESS_ACCEPT || code == RMC_ACCESS_REJECT)
@@ -475,6 +551,7 @@ METHOD(tnc_pdp_t, destroy, void,
 	DESTROY_IF(this->server);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
+	DESTROY_IF(this->rng);
 	DESTROY_IF(this->connections);
 	free(this);
 }
@@ -495,12 +572,19 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		.ipv6 = open_socket(this, AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
+		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.connections = tnc_pdp_connections_create(),
 	);
 
+	if (!this->hasher || !this->signer || !this->rng)
+	{
+		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/RNG required");
+		destroy(this);
+		return NULL;
+	}
 	if (!this->ipv4 && !this->ipv6)
 	{
-		DBG1(DBG_NET, "couldd not create any RADIUS sockets");
+		DBG1(DBG_NET, "could not create any RADIUS sockets");
 		destroy(this);
 		return NULL;
 	}
@@ -511,11 +595,6 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	if (!this->ipv6)
 	{
 		DBG1(DBG_NET, "could not open IPv6 RADIUS socket, IPv6 disabled");
-	}
-	if (!this->hasher || !this->signer)
-	{
-		destroy(this);
-		return NULL;
 	}
 
 	server = lib->settings->get_str(lib->settings,

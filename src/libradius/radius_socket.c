@@ -14,18 +14,13 @@
  */
 
 #include "radius_socket.h"
+#include "radius_mppe.h"
 
 #include <errno.h>
 #include <unistd.h>
 
 #include <pen/pen.h>
 #include <debug.h>
-
-/**
- * Microsoft specific vendor attributes
- */
-#define MS_MPPE_SEND_KEY 16
-#define MS_MPPE_RECV_KEY 17
 
 typedef struct private_radius_socket_t private_radius_socket_t;
 
@@ -286,13 +281,7 @@ METHOD(radius_socket_t, decrypt_msk, chunk_t,
 	private_radius_socket_t *this, radius_message_t *request,
 	radius_message_t *response)
 {
-	struct {
-		u_int32_t id;
-		u_int8_t type;
-		u_int8_t length;
-		u_int16_t salt;
-		u_int8_t key[];
-	} __attribute__((packed)) *mppe_key;
+	mppe_key_t *mppe_key;
 	enumerator_t *enumerator;
 	chunk_t data, send = chunk_empty, recv = chunk_empty;
 	int type;
@@ -300,14 +289,13 @@ METHOD(radius_socket_t, decrypt_msk, chunk_t,
 	enumerator = response->create_enumerator(response);
 	while (enumerator->enumerate(enumerator, &type, &data))
 	{
-		if (type == RAT_VENDOR_SPECIFIC &&
-			data.len > sizeof(*mppe_key))
+		if (type == RAT_VENDOR_SPECIFIC && data.len > sizeof(mppe_key_t))
 		{
-			mppe_key = (void*)data.ptr;
+			mppe_key = (mppe_key_t*)data.ptr;
 			if (ntohl(mppe_key->id) == PEN_MICROSOFT &&
 				mppe_key->length == data.len - sizeof(mppe_key->id))
 			{
-				data = chunk_create(mppe_key->key, data.len - sizeof(*mppe_key));
+				data = chunk_create(mppe_key->key, data.len - sizeof(mppe_key_t));
 				if (mppe_key->type == MS_MPPE_SEND_KEY)
 				{
 					send = decrypt_mppe_key(this, mppe_key->salt, data, request);
@@ -365,11 +353,11 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 		.auth_fd = -1,
 		.acct_port = acct_port,
 		.acct_fd = -1,
+		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
+		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
+		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 	);
 
-	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	this->signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128);
-	this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!this->hasher || !this->signer || !this->rng)
 	{
 		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/RNG required");
