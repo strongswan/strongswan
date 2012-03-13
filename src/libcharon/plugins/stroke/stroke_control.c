@@ -633,8 +633,7 @@ METHOD(stroke_control_t, unroute, void,
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
-	u_int32_t id;
-	bool found = FALSE;
+	u_int32_t id = 0;
 
 	if (charon->shunts->uninstall(charon->shunts, msg->unroute.name))
 	{
@@ -648,15 +647,17 @@ METHOD(stroke_control_t, unroute, void,
 		if (streq(msg->unroute.name, child_sa->get_name(child_sa)))
 		{
 			id = child_sa->get_reqid(child_sa);
-			enumerator->destroy(enumerator);
-			charon->traps->uninstall(charon->traps, id);
-			fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
-			found = TRUE;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (!found)
+	if (id)
+	{
+		charon->traps->uninstall(charon->traps, id);
+		fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
+	}
+	else
 	{
 		fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 	}
