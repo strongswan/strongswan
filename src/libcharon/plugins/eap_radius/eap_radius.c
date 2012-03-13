@@ -22,8 +22,6 @@
 
 #include <daemon.h>
 
-#define TUNNEL_TYPE_ESP		9
-
 typedef struct private_eap_radius_t private_eap_radius_t;
 
 /**
@@ -261,7 +259,7 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 				tunnel_type = untoh32(data.ptr);
 				DBG1(DBG_IKE, "received RADIUS attribute Tunnel-Type: "
 							  "tag = %u, value = %u", tunnel_tag, tunnel_type);
-				is_esp_tunnel = (tunnel_type == TUNNEL_TYPE_ESP);
+				is_esp_tunnel = (tunnel_type == RADIUS_TUNNEL_TYPE_ESP);
 				break;
 			case RAT_FILTER_ID:
 				filter_id = data;
