@@ -101,7 +101,7 @@ struct private_tnc_pdp_t {
 /**
  * Open IPv4 or IPv6 UDP RADIUS socket
  */
-static int open_socket(private_tnc_pdp_t *this, int family, u_int16_t port)
+static int open_socket(int family, u_int16_t port)
 {
 	int on = TRUE;
 	struct sockaddr_storage addr;
@@ -578,8 +578,8 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		.public = {
 			.destroy = _destroy,
 		},
-		.ipv4 = open_socket(this, AF_INET,  port),
-		.ipv6 = open_socket(this, AF_INET6, port),
+		.ipv4 = open_socket(AF_INET,  port),
+		.ipv6 = open_socket(AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
