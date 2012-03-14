@@ -7,7 +7,7 @@ At the outset the gateway authenticates itself to the clients by sending an IKEv
 The strong EAP-TTLS tunnel protects the ensuing weak client authentication based on <b>EAP-MD5</b>.
 In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
 health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
-The IMC and IMV communicate are using the <b>IF-M</b> protocol defined by <b>RFC 5792 PA-TNC</b>.
+The communication between IMCs and IMVs is based on the  <b>IF-M</b> protocol defined by <b>RFC 5792 PA-TNC</b>.
 <p>
 <b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements the clients
 are connected by gateway <b>moon</b> to the "rw-allow" and "rw-isolate" subnets, respectively.
