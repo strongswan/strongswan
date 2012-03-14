@@ -14,17 +14,12 @@
  */
 
 /**
- * @defgroup libradius libradius
- *
- * @addtogroup libradius
- * RADIUS protocol support library.
- *
- * @defgroup radius_msse radius_msse
+ * @defgroup radius_mppe radius_mppe
  * @{ @ingroup libradius
  */
 
-#ifndef RADIUS_MSSE_H_
-#define RADIUS_MSSE_H_
+#ifndef RADIUS_MPPE_H_
+#define RADIUS_MPPE_H_
 
 /**
  * Microsoft specific vendor attributes
@@ -42,4 +37,4 @@ struct mppe_key_t {
 	u_int8_t key[];
 } __attribute__((packed));
 
-#endif /** RADIUS_MSSE_H_ @}*/
+#endif /** RADIUS_MPPE_H_ @}*/
