@@ -18,7 +18,7 @@
 
 #include <debug.h>
 #include <daemon.h>
-
+#include <radius_message.h>
 #include <sa/authenticators/eap/eap_method.h>
 
 typedef struct private_eap_ttls_peer_t private_eap_ttls_peer_t;
@@ -63,8 +63,6 @@ struct private_eap_ttls_peer_t {
 	 */
 	eap_ttls_avp_t *avp;
 };
-
-#define MAX_RADIUS_ATTRIBUTE_SIZE	253
 
 METHOD(tls_application_t, process, status_t,
 	private_eap_ttls_peer_t *this, bio_reader_t *reader)
