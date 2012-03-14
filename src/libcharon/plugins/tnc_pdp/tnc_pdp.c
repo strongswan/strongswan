@@ -187,7 +187,8 @@ static void send_message(private_tnc_pdp_t *this, radius_message_t *message,
  * Encrypt a MS-MPPE-Send/Recv-Key
  */
 static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
-								chunk_t key, radius_message_t *request)
+								chunk_t key, u_int16_t *salt,
+								radius_message_t *request)
 {
 	chunk_t a, r, seed, data;
 	u_char b[HASH_SIZE_MD5], *c;
@@ -213,17 +214,25 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 
 	memcpy(&mppe_key->key[1], key.ptr, key.len);
 
-	/* generate a 16 bit random salt value */
+	/**
+	 * generate a 16 bit unique random salt value for the MPPE stream cipher
+	 * the MSB of the salt MUST be set to 1
+	 */
 	a = chunk_create((u_char*)&(mppe_key->salt), sizeof(mppe_key->salt));
-	this->rng->get_bytes(this->rng, a.len, a.ptr);
+	do
+	{
+		this->rng->get_bytes(this->rng, a.len, a.ptr);
+		*a.ptr |= 0x80;
+	}
+	while (mppe_key->salt == *salt);
 
-	/* the MSB of the salt MUST be set to 1 */
-	*a.ptr |= 0x80;
+	/* update the salt value */
+	*salt = mppe_key->salt;
 
 	r = chunk_create(request->get_authenticator(request), HASH_SIZE_MD5);
 	seed = chunk_cata("cc", r, a);
-	c = mppe_key->key;
 
+	c = mppe_key->key;
 	while (c < data.ptr + data.len)
 	{
 		/* b(i) = MD5(S + c(i-1)) */
@@ -251,6 +260,7 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	radius_message_t *response;
 	chunk_t data, recv, send;
 	u_int32_t tunnel_type;
+	u_int16_t salt = 0;
 
 	response = radius_message_create(code);
 	if (eap)
@@ -278,12 +288,12 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	if (msk.len)
 	{
 		recv = chunk_create(msk.ptr, msk.len / 2);
-		data = encrypt_mppe_key(this, MS_MPPE_RECV_KEY, recv, request);
+		data = encrypt_mppe_key(this, MS_MPPE_RECV_KEY, recv, &salt, request);
 		response->add(response, RAT_VENDOR_SPECIFIC, data);
 		chunk_free(&data);
 		
 		send = chunk_create(msk.ptr + recv.len, msk.len - recv.len);
-		data = encrypt_mppe_key(this, MS_MPPE_SEND_KEY, send, request);
+		data = encrypt_mppe_key(this, MS_MPPE_SEND_KEY, send, &salt, request);
 		response->add(response, RAT_VENDOR_SPECIFIC, data);
 		chunk_free(&data);
 	}
