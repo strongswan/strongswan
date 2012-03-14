@@ -1,3 +1,16 @@
+strongswan-4.6.3
+----------------
+
+- The tnc-pdp plugin implements a RADIUS server interface allowing
+  a strongSwan TNC server to act as a Policy Decision Point.
+
+- Added infrastructure to listen to RADIUS Dynamic Authorization
+  Extension requests.
+
+- Added support for untruncated MD5 and SHA1 HMACs in ESP as used in
+  RFC 4595.
+
+
 strongswan-4.6.2
 ----------------
 
