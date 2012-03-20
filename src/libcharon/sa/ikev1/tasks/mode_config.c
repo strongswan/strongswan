@@ -50,6 +50,11 @@ struct private_mode_config_t {
 	 * list of attributes requested and its handler, entry_t
 	 */
 	linked_list_t *requested;
+
+	/**
+	 * Identifier to include in response
+	 */
+	u_int16_t identifier;
 };
 
 /**
@@ -203,6 +208,8 @@ static void process_payloads(private_mode_config_t *this, message_t *message)
 			switch (cp->get_type(cp))
 			{
 				case CFG_REQUEST:
+					this->identifier = cp->get_identifier(cp);
+					/* FALL */
 				case CFG_REPLY:
 					attributes = cp->create_attribute_enumerator(cp);
 					while (attributes->enumerate(attributes, &ca))
@@ -339,6 +346,7 @@ METHOD(task_t, build_r, status_t,
 
 	if (cp)
 	{
+		cp->set_identifier(cp, this->identifier);
 		message->add_payload(message, (payload_t*)cp);
 	}
 	DESTROY_IF(vip);
