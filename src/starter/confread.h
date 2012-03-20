@@ -39,9 +39,10 @@ typedef enum {
 } starter_state_t;
 
 typedef enum {
-		KEY_EXCHANGE_IKE,
-		KEY_EXCHANGE_IKEV1,
-		KEY_EXCHANGE_IKEV2
+		/* shared with ike_version_t */
+		KEY_EXCHANGE_IKE = 0,
+		KEY_EXCHANGE_IKEV1 = 1,
+		KEY_EXCHANGE_IKEV2 = 2,
 } keyexchange_t;
 
 typedef enum {
@@ -109,8 +110,6 @@ struct starter_conn {
 		starter_state_t state;
 
 		keyexchange_t   keyexchange;
-		u_int32_t       eap_type;
-		u_int32_t       eap_vendor;
 		char            *eap_identity;
 		char            *aaa_identity;
 		char            *xauth_identity;
@@ -131,6 +130,7 @@ struct starter_conn {
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
+		bool            aggressive;
 		starter_end_t   left, right;
 
 		unsigned long   id;

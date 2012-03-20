@@ -50,10 +50,10 @@ struct delete_child_sa_job_t {
  * @param reqid		reqid of the CHILD_SA, as used in kernel
  * @param protocol	protocol of the CHILD_SA
  * @param spi		security parameter index of the CHILD_SA
+ * @param expired	TRUE if CHILD_SA already expired
  * @return			delete_child_sa_job_t object
  */
 delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
-												  protocol_id_t protocol,
-												  u_int32_t spi);
+							protocol_id_t protocol, u_int32_t spi, bool expired);
 
 #endif /** DELETE_CHILD_SA_JOB_H_ @}*/

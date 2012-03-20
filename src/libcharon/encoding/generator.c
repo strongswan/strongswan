@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2011 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -108,6 +109,11 @@ struct private_generator_t {
 	 * to hold the length of the transform attribute in bytes.
 	 */
 	u_int16_t attribute_length;
+
+	/**
+	 * TRUE, if debug messages should be logged during generation.
+	 */
+	bool debug;
 };
 
 /**
@@ -155,8 +161,11 @@ static void make_space_available(private_generator_t *this, int bits)
 		new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		out_position_offset = this->out_position - this->buffer;
 
-		DBG2(DBG_ENC, "increasing gen buffer from %d to %d byte",
-			 old_buffer_size, new_buffer_size);
+		if (this->debug)
+		{
+			DBG2(DBG_ENC, "increasing gen buffer from %d to %d byte",
+				 old_buffer_size, new_buffer_size);
+		}
 
 		this->buffer = realloc(this->buffer,new_buffer_size);
 		this->out_position = (this->buffer + out_position_offset);
@@ -205,7 +214,7 @@ static void generate_u_int_type(private_generator_t *this,
 			break;
 		case U_INT_16:
 		case PAYLOAD_LENGTH:
-		case CONFIGURATION_ATTRIBUTE_LENGTH:
+		case ATTRIBUTE_LENGTH:
 			number_of_bits = 16;
 			break;
 		case U_INT_32:
@@ -244,7 +253,10 @@ static void generate_u_int_type(private_generator_t *this,
 				low = *(this->out_position) & 0x0F;
 				/* high is set, low_val is not changed */
 				*(this->out_position) = high | low;
-				DBG3(DBG_ENC, "   => %d", *(this->out_position));
+				if (this->debug)
+				{
+					DBG3(DBG_ENC, "   => %d", *(this->out_position));
+				}
 				/* write position is not changed, just bit position is moved */
 				this->current_bit = 4;
 			}
@@ -255,7 +267,10 @@ static void generate_u_int_type(private_generator_t *this,
 				/* low of current byte in buffer has to be set to the new value*/
 				low = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 				*(this->out_position) = high | low;
-				DBG3(DBG_ENC, "   => %d", *(this->out_position));
+				if (this->debug)
+				{
+					DBG3(DBG_ENC, "   => %d", *(this->out_position));
+				}
 				this->out_position++;
 				this->current_bit = 0;
 			}
@@ -274,7 +289,10 @@ static void generate_u_int_type(private_generator_t *this,
 		{
 			/* 8 bit values are written as they are */
 			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
-			DBG3(DBG_ENC, "   => %d", *(this->out_position));
+			if (this->debug)
+			{
+				DBG3(DBG_ENC, "   => %d", *(this->out_position));
+			}
 			this->out_position++;
 			break;
 		}
@@ -299,7 +317,10 @@ static void generate_u_int_type(private_generator_t *this,
 				val |= 0x8000;
 			}
 			val = htons(val);
-			DBG3(DBG_ENC, "   => %d", val);
+			if (this->debug)
+			{
+				DBG3(DBG_ENC, "   => %d", val);
+			}
 			/* write bytes to buffer (set bit is overwritten) */
 			write_bytes_to_buffer(this, &val, sizeof(u_int16_t));
 			this->current_bit = 0;
@@ -308,17 +329,23 @@ static void generate_u_int_type(private_generator_t *this,
 		}
 		case U_INT_16:
 		case PAYLOAD_LENGTH:
-		case CONFIGURATION_ATTRIBUTE_LENGTH:
+		case ATTRIBUTE_LENGTH:
 		{
 			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
-			DBG3(DBG_ENC, "   => %b", &val, sizeof(u_int16_t));
+			if (this->debug)
+			{
+				DBG3(DBG_ENC, "   %b", &val, sizeof(u_int16_t));
+			}
 			write_bytes_to_buffer(this, &val, sizeof(u_int16_t));
 			break;
 		}
 		case U_INT_32:
 		{
 			u_int32_t val = htonl(*((u_int32_t*)(this->data_struct + offset)));
-			DBG3(DBG_ENC, "   => %b", &val, sizeof(u_int32_t));
+			if (this->debug)
+			{
+				DBG3(DBG_ENC, "   %b", &val, sizeof(u_int32_t));
+			}
 			write_bytes_to_buffer(this, &val, sizeof(u_int32_t));
 			break;
 		}
@@ -327,8 +354,11 @@ static void generate_u_int_type(private_generator_t *this,
 			/* 64 bit are written as-is, no host order conversion */
 			write_bytes_to_buffer(this, this->data_struct + offset,
 								  sizeof(u_int64_t));
-			DBG3(DBG_ENC, "   => %b", this->data_struct + offset,
-				 sizeof(u_int64_t));
+			if (this->debug)
+			{
+				DBG3(DBG_ENC, "   %b", this->data_struct + offset,
+					 sizeof(u_int64_t));
+			}
 			break;
 		}
 		default:
@@ -361,7 +391,10 @@ static void generate_flag(private_generator_t *this, u_int32_t offset)
 	}
 
 	*(this->out_position) = *(this->out_position) | flag;
-	DBG3(DBG_ENC, "   => %d", *this->out_position);
+	if (this->debug)
+	{
+		DBG3(DBG_ENC, "   => %d", *this->out_position);
+	}
 
 	this->current_bit++;
 	if (this->current_bit >= 8)
@@ -380,12 +413,16 @@ static void generate_from_chunk(private_generator_t *this, u_int32_t offset)
 
 	if (this->current_bit != 0)
 	{
-		DBG1(DBG_ENC, "can not generate a chunk at Bitpos %d", this->current_bit);
+		DBG1(DBG_ENC, "can not generate a chunk at bitpos %d",
+			 this->current_bit);
 		return ;
 	}
 
 	value = (chunk_t *)(this->data_struct + offset);
-	DBG3(DBG_ENC, "   => %B", value);
+	if (this->debug)
+	{
+		DBG3(DBG_ENC, "   %B", value);
+	}
 
 	write_bytes_to_buffer(this, value->ptr, value->len);
 }
@@ -397,15 +434,17 @@ METHOD(generator_t, get_chunk, chunk_t,
 
 	*lenpos = (u_int32_t*)(this->buffer + this->header_length_offset);
 	data = chunk_create(this->buffer, get_length(this));
-	DBG3(DBG_ENC, "generated data of this generator %B", &data);
+	if (this->debug)
+	{
+		DBG3(DBG_ENC, "generated data of this generator %B", &data);
+	}
 	return data;
 }
 
 METHOD(generator_t, generate_payload, void,
 	private_generator_t *this,payload_t *payload)
 {
-	int i, offset_start;
-	size_t rule_count;
+	int i, offset_start, rule_count;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
 
@@ -414,17 +453,23 @@ METHOD(generator_t, generate_payload, void,
 
 	offset_start = this->out_position - this->buffer;
 
-	DBG2(DBG_ENC, "generating payload of type %N",
-		 payload_type_names, payload_type);
+	if (this->debug)
+	{
+		DBG2(DBG_ENC, "generating payload of type %N",
+			 payload_type_names, payload_type);
+	}
 
 	/* each payload has its own encoding rules */
-	payload->get_encoding_rules(payload, &rules, &rule_count);
+	rule_count = payload->get_encoding_rules(payload, &rules);
 
 	for (i = 0; i < rule_count;i++)
 	{
-		DBG2(DBG_ENC, "  generating rule %d %N",
-			 i, encoding_type_names, rules[i].type);
-		switch (rules[i].type)
+		if (this->debug)
+		{
+			DBG2(DBG_ENC, "  generating rule %d %N",
+				 i, encoding_type_names, rules[i].type);
+		}
+		switch ((int)rules[i].type)
 		{
 			case U_INT_4:
 			case U_INT_8:
@@ -436,7 +481,7 @@ METHOD(generator_t, generate_payload, void,
 			case SPI_SIZE:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
-			case CONFIGURATION_ATTRIBUTE_LENGTH:
+			case ATTRIBUTE_LENGTH:
 				generate_u_int_type(this, rules[i].type, rules[i].offset);
 				break;
 			case RESERVED_BIT:
@@ -449,26 +494,19 @@ METHOD(generator_t, generate_payload, void,
 				break;
 			case ADDRESS:
 			case SPI:
-			case KEY_EXCHANGE_DATA:
-			case NOTIFICATION_DATA:
-			case NONCE_DATA:
-			case ID_DATA:
-			case AUTH_DATA:
-			case CERT_DATA:
-			case CERTREQ_DATA:
-			case SPIS:
-			case CONFIGURATION_ATTRIBUTE_VALUE:
-			case VID_DATA:
-			case EAP_DATA:
+			case CHUNK_DATA:
 			case ENCRYPTED_DATA:
-			case UNKNOWN_DATA:
 				generate_from_chunk(this, rules[i].offset);
 				break;
-			case PROPOSALS:
-			case TRANSFORMS:
-			case TRANSFORM_ATTRIBUTES:
-			case CONFIGURATION_ATTRIBUTES:
-			case TRAFFIC_SELECTORS:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE:
+			case PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE:
+			case PAYLOAD_LIST + TRANSFORM_SUBSTRUCTURE_V1:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE:
+			case PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1:
+			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE:
+			case PAYLOAD_LIST + CONFIGURATION_ATTRIBUTE_V1:
+			case PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			{
 				linked_list_t *proposals;
 				enumerator_t *enumerator;
@@ -507,7 +545,10 @@ METHOD(generator_t, generate_payload, void,
 			{
 				if (!this->attribute_format)
 				{
-					DBG2(DBG_ENC, "attribute value has not fixed size");
+					if (this->debug)
+					{
+						DBG2(DBG_ENC, "attribute value has not fixed size");
+					}
 					/* the attribute value is generated */
 					generate_from_chunk(this, rules[i].offset);
 				}
@@ -519,11 +560,14 @@ METHOD(generator_t, generate_payload, void,
 				return;
 		}
 	}
-	DBG2(DBG_ENC, "generating %N payload finished",
-		 payload_type_names, payload_type);
-	DBG3(DBG_ENC, "generated data for this payload %b",
-		 this->buffer + offset_start,
-		 this->out_position - this->buffer - offset_start);
+	if (this->debug)
+	{
+		DBG2(DBG_ENC, "generating %N payload finished",
+			 payload_type_names, payload_type);
+		DBG3(DBG_ENC, "generated data for this payload %b",
+			 this->buffer + offset_start,
+			 this->out_position - this->buffer - offset_start);
+	}
 }
 
 METHOD(generator_t, destroy, void,
@@ -547,6 +591,7 @@ generator_t *generator_create()
 			.destroy = _destroy,
 		},
 		.buffer = malloc(GENERATOR_DATA_BUFFER_SIZE),
+		.debug = TRUE,
 	);
 
 	this->out_position = this->buffer;
@@ -555,3 +600,14 @@ generator_t *generator_create()
 	return &this->public;
 }
 
+/*
+ * Described in header
+ */
+generator_t *generator_create_no_dbg()
+{
+	private_generator_t *this = (private_generator_t*)generator_create();
+
+	this->debug = FALSE;
+
+	return &this->public;
+}

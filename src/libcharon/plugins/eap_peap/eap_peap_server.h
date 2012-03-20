@@ -26,7 +26,7 @@ typedef struct eap_peap_server_t eap_peap_server_t;
 #include "tls_application.h"
 
 #include <library.h>
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * TLS application data handler as server.

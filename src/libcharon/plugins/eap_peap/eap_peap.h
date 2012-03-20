@@ -23,7 +23,7 @@
 
 typedef struct eap_peap_t eap_peap_t;
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * Implementation of eap_method_t using EAP-PEAP.

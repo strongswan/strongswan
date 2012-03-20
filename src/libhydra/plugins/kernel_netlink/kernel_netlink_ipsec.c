@@ -1755,30 +1755,27 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 		mrk->m = mark.mask;
 	}
 
-	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	switch (this->socket_xfrm->send_ack(this->socket_xfrm, hdr))
 	{
-		if (mark.value)
-		{
-			DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x  "
-						  "(mark %u/0x%8x)", ntohl(spi), mark.value, mark.mask);
-		}
-		else
-		{
-			DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x",
-						   ntohl(spi));
-		}
-		return FAILED;
+		case SUCCESS:
+			DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x (mark %u/0x%08x)",
+				 ntohl(spi), mark.value, mark.mask);
+			return SUCCESS;
+		case NOT_FOUND:
+			return NOT_FOUND;
+		default:
+			if (mark.value)
+			{
+				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x "
+					 "(mark %u/0x%8x)", ntohl(spi), mark.value, mark.mask);
+			}
+			else
+			{
+				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x",
+					 ntohl(spi));
+			}
+			return FAILED;
 	}
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x  (mark %u/0x%8x)",
-					   ntohl(spi), mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "deleted SAD entry with SPI %.8x", ntohl(spi));
-	}
-	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,

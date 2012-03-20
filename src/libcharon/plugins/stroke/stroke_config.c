@@ -266,7 +266,6 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	char *auth, *id, *cert, *ca;
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
-	char eap_buf[32];
 
 	/* select strings */
 	if (local)
@@ -314,47 +313,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		if (primary)
 		{
-			if (local)
-			{	/* "leftauth" not defined, fall back to deprecated "authby" */
-				switch (msg->add_conn.auth_method)
-				{
-					default:
-					case AUTH_CLASS_PUBKEY:
-						auth = "pubkey";
-						break;
-					case AUTH_CLASS_PSK:
-						auth = "psk";
-						break;
-					case AUTH_CLASS_EAP:
-						auth = "eap";
-						break;
-					case AUTH_CLASS_ANY:
-						auth = "any";
-						break;
-				}
-			}
-			else
-			{	/* "rightauth" not defined, fall back to deprecated "eap" */
-				if (msg->add_conn.eap_type)
-				{
-					if (msg->add_conn.eap_vendor)
-					{
-						snprintf(eap_buf, sizeof(eap_buf), "eap-%d-%d",
-								 msg->add_conn.eap_type,
-								 msg->add_conn.eap_vendor);
-					}
-					else
-					{
-						snprintf(eap_buf, sizeof(eap_buf), "eap-%d",
-								 msg->add_conn.eap_type);
-					}
-					auth = eap_buf;
-				}
-				else
-				{	/* not EAP => no constraints for this peer */
-					auth = "any";
-				}
-			}
+			auth = "pubkey";
 		}
 		else
 		{	/* no second authentication round, fine. But load certificates
@@ -468,6 +427,22 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	else if (streq(auth, "psk") || streq(auth, "secret"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	}
+	else if (strneq(auth, "xauth", 5))
+	{
+		char *pos;
+
+		pos = strchr(auth, '-');
+		if (pos)
+		{
+			cfg->add(cfg, AUTH_RULE_XAUTH_BACKEND, strdup(++pos));
+		}
+		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
+		if (msg->add_conn.xauth_identity)
+		{
+			cfg->add(cfg, AUTH_RULE_XAUTH_IDENTITY,
+				identification_create_from_string(msg->add_conn.xauth_identity));
+		}
 	}
 	else if (strneq(auth, "eap", 3))
 	{
@@ -670,10 +645,10 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * the pool name as the connection name, which the attribute provider
 	 * uses to serve pool addresses. */
 	peer_cfg = peer_cfg_create(msg->add_conn.name,
-		msg->add_conn.ikev2 ? 2 : 1, ike_cfg,
+		msg->add_conn.version, ike_cfg,
 		msg->add_conn.me.sendcert, unique,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
-		msg->add_conn.mobike, msg->add_conn.dpd.delay,
+		msg->add_conn.mobike, msg->add_conn.aggressive, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip_mask ?
 							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);

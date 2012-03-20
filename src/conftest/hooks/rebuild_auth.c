@@ -15,6 +15,7 @@
 
 #include "hook.h"
 
+#include <sa/ikev2/keymat_v2.h>
 #include <encoding/generator.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/auth_payload.h>
@@ -57,12 +58,11 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	enumerator_t *enumerator;
 	chunk_t octets, auth_data;
 	private_key_t *private;
-	auth_cfg_t *auth;
 	payload_t *payload;
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 	identification_t *id;
 	char reserved[3];
 	generator_t *generator;
@@ -90,10 +90,8 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 	id = identification_create_from_encoding(data.ptr[4], chunk_skip(data, 8));
 	generator->destroy(generator);
 
-	auth = auth_cfg_create();
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY,
-										this->id ?: id, auth);
-	auth->destroy(auth);
+										this->id ?: id, NULL);
 	if (private == NULL)
 	{
 		DBG1(DBG_CFG, "no private key found for '%Y' to rebuild AUTH",
@@ -137,7 +135,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 			id->destroy(id);
 			return FALSE;
 	}
-	keymat = ike_sa->get_keymat(ike_sa);
+	keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_init,
 									 this->nonce, id, reserved);
 	if (!private->sign(private, scheme, octets, &auth_data))
@@ -174,34 +172,37 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 
 METHOD(listener_t, message, bool,
 	private_rebuild_auth_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming && message->get_message_id(message) == 1)
+	if (plain)
 	{
-		rebuild_auth(this, ike_sa, message);
-	}
-	if (message->get_exchange_type(message) == IKE_SA_INIT)
-	{
-		if (incoming)
+		if (!incoming && message->get_message_id(message) == 1)
 		{
-			nonce_payload_t *nonce;
-
-			nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
-			if (nonce)
-			{
-				free(this->nonce.ptr);
-				this->nonce = nonce->get_nonce(nonce);
-			}
+			rebuild_auth(this, ike_sa, message);
 		}
-		else
+		if (message->get_exchange_type(message) == IKE_SA_INIT)
 		{
-			packet_t *packet;
-
-			if (message->generate(message, NULL, &packet) == SUCCESS)
+			if (incoming)
 			{
-				free(this->ike_init.ptr);
-				this->ike_init = chunk_clone(packet->get_data(packet));
-				packet->destroy(packet);
+				nonce_payload_t *nonce;
+
+				nonce = (nonce_payload_t*)message->get_payload(message, NONCE);
+				if (nonce)
+				{
+					free(this->nonce.ptr);
+					this->nonce = nonce->get_nonce(nonce);
+				}
+			}
+			else
+			{
+				packet_t *packet;
+
+				if (message->generate(message, NULL, &packet) == SUCCESS)
+				{
+					free(this->ike_init.ptr);
+					this->ike_init = chunk_clone(packet->get_data(packet));
+					packet->destroy(packet);
+				}
 			}
 		}
 	}

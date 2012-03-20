@@ -196,30 +196,11 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	memset(&msg, 0, sizeof(msg));
 	msg.type = STR_ADD_CONN;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.add_conn.ikev2 = conn->keyexchange != KEY_EXCHANGE_IKEV1;
+	msg.add_conn.version = conn->keyexchange;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
-
-	/* PUBKEY is preferred to PSK and EAP */
-	if (conn->policy & POLICY_PUBKEY)
-	{
-		msg.add_conn.auth_method = AUTH_CLASS_PUBKEY;
-	}
-	else if (conn->policy & POLICY_PSK)
-	{
-		msg.add_conn.auth_method = AUTH_CLASS_PSK;
-	}
-	else if (conn->policy & POLICY_XAUTH_PSK)
-	{
-		msg.add_conn.auth_method = AUTH_CLASS_EAP;
-	}
-	else
-	{
-		msg.add_conn.auth_method = AUTH_CLASS_ANY;
-	}
-	msg.add_conn.eap_type = conn->eap_type;
-	msg.add_conn.eap_vendor = conn->eap_vendor;
 	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
 	msg.add_conn.aaa_identity = push_string(&msg, conn->aaa_identity);
+	msg.add_conn.xauth_identity = push_string(&msg, conn->xauth_identity);
 
 	if (conn->policy & POLICY_TUNNEL)
 	{
@@ -264,6 +245,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.force_encap = (conn->policy & POLICY_FORCE_ENCAP) != 0;
 	msg.add_conn.ipcomp = (conn->policy & POLICY_COMPRESS) != 0;
 	msg.add_conn.install_policy = conn->install_policy;
+	msg.add_conn.aggressive = conn->aggressive;
 	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
 	msg.add_conn.unique = cfg->setup.uniqueids;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
@@ -285,6 +267,45 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
 
+	if (!msg.add_conn.me.auth && !msg.add_conn.other.auth)
+	{	/* leftauth/rightauth not set, use legacy options */
+		if (conn->policy & POLICY_PUBKEY)
+		{
+			msg.add_conn.me.auth = push_string(&msg, "pubkey");
+			msg.add_conn.other.auth = push_string(&msg, "pubkey");
+		}
+		else if (conn->policy & POLICY_PSK)
+		{
+			msg.add_conn.me.auth = push_string(&msg, "psk");
+			msg.add_conn.other.auth = push_string(&msg, "psk");
+		}
+		else if (conn->policy & POLICY_XAUTH_RSASIG)
+		{
+			msg.add_conn.me.auth = push_string(&msg, "pubkey");
+			msg.add_conn.other.auth = push_string(&msg, "pubkey");
+			if (conn->policy & POLICY_XAUTH_SERVER)
+			{
+				msg.add_conn.other.auth2 = push_string(&msg, "xauth");
+			}
+			else
+			{
+				msg.add_conn.me.auth2 = push_string(&msg, "xauth");
+			}
+		}
+		else if (conn->policy & POLICY_XAUTH_PSK)
+		{
+			msg.add_conn.me.auth = push_string(&msg, "psk");
+			msg.add_conn.other.auth = push_string(&msg, "psk");
+			if (conn->policy & POLICY_XAUTH_SERVER)
+			{
+				msg.add_conn.other.auth2 = push_string(&msg, "xauth");
+			}
+			else
+			{
+				msg.add_conn.me.auth2 = push_string(&msg, "xauth");
+			}
+		}
+	}
 	return send_stroke_msg(&msg);
 }
 

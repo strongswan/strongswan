@@ -88,6 +88,8 @@ typedef struct {
 	ha_message_t *midi;
 	/* last responder mid */
 	ha_message_t *midr;
+	/* last IV update */
+	ha_message_t *iv;
 } entry_t;
 
 /**
@@ -114,6 +116,7 @@ static void entry_destroy(entry_t *entry)
 	entry->add->destroy(entry->add);
 	DESTROY_IF(entry->midi);
 	DESTROY_IF(entry->midr);
+	DESTROY_IF(entry->iv);
 	free(entry);
 }
 
@@ -160,6 +163,16 @@ METHOD(ha_cache_t, cache, void,
 			{
 				DESTROY_IF(entry->midr);
 				entry->midr = message;
+				break;
+			}
+			message->destroy(message);
+			break;
+		case HA_IKE_IV:
+			entry = this->cache->get(this->cache, ike_sa);
+			if (entry)
+			{
+				DESTROY_IF(entry->iv);
+				entry->iv = message;
 				break;
 			}
 			message->destroy(message);
@@ -212,7 +225,8 @@ static status_t rekey_children(ike_sa_t *ike_sa)
 			DBG1(DBG_CFG, "resyncing CHILD_SA using a delete");
 			status = ike_sa->delete_child_sa(ike_sa,
 											 child_sa->get_protocol(child_sa),
-											 child_sa->get_spi(child_sa, TRUE));
+											 child_sa->get_spi(child_sa, TRUE),
+											 FALSE);
 		}
 		else
 		{
@@ -307,6 +321,10 @@ METHOD(ha_cache_t, resync, void,
 			if (entry->midr)
 			{
 				this->socket->push(this->socket, entry->midr);
+			}
+			if (entry->iv)
+			{
+				this->socket->push(this->socket, entry->iv);
 			}
 		}
 	}

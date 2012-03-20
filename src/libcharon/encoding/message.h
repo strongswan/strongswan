@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -27,15 +27,15 @@
 typedef struct message_t message_t;
 
 #include <library.h>
-#include <sa/ike_sa_id.h>
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/notify_payload.h>
+#include <sa/keymat.h>
+#include <sa/ike_sa_id.h>
 #include <utils/linked_list.h>
-#include <crypto/aead.h>
 
 /**
- * This class is used to represent an IKEv2-Message.
+ * This class is used to represent an IKE-Message.
  *
  * The message handles parsing and generation of payloads
  * via parser_t/generator_t. Encryption is done transparently
@@ -182,7 +182,7 @@ struct message_t {
 	 * all payloads to encrypt are added to the encryption payload, which is
 	 * always the last one.
 	 *
-	 * @param payload 		payload to append
+	 * @param payload		payload to append
 	 */
 	void (*add_payload) (message_t *this, payload_t *payload);
 
@@ -208,14 +208,14 @@ struct message_t {
 	/**
 	 * Parses header of message.
 	 *
-	 * Begins parisng of a message created via message_create_from_packet().
+	 * Begins parsing of a message created via message_create_from_packet().
 	 * The parsing context is stored, so a subsequent call to parse_body()
 	 * will continue the parsing process.
 	 *
 	 * @return
-	 * 					- SUCCESS if header could be parsed
+	 *					- SUCCESS if header could be parsed
 	 *					- PARSE_ERROR if corrupted/invalid data found
-	 * 					- FAILED if consistence check of header failed
+	 *					- FAILED if consistency check of header failed
 	 */
 	status_t (*parse_header) (message_t *this);
 
@@ -228,15 +228,15 @@ struct message_t {
 	 * If there are encrypted payloads, they get decrypted and verified using
 	 * the given aead transform (if given).
 	 *
-	 * @param aead		aead transform to verify/decrypt message
+	 * @param keymat	keymat to verify/decrypt message
 	 * @return
-	 * 					- SUCCESS if parsing successful
+	 *					- SUCCESS if parsing successful
 	 *					- PARSE_ERROR if message parsing failed
-	 * 					- VERIFY_ERROR if message verification failed (bad syntax)
-	 * 					- FAILED if integrity check failed
-	 * 					- INVALID_STATE if aead not supplied, but needed
+	 *					- VERIFY_ERROR if message verification failed (bad syntax)
+	 *					- FAILED if integrity check failed
+	 *					- INVALID_STATE if aead not supplied, but needed
 	 */
-	status_t (*parse_body) (message_t *this, aead_t *aead);
+	status_t (*parse_body) (message_t *this, keymat_t *keymat);
 
 	/**
 	 * Generates the UDP packet of specific message.
@@ -247,15 +247,15 @@ struct message_t {
 	 * Generation is only done once, multiple calls will just return a copy
 	 * of the packet.
 	 *
-	 * @param aead		aead transform to encrypt/sign message
+	 * @param keymat	keymat to encrypt/sign message
 	 * @param packet	copy of generated packet
 	 * @return
-	 * 					- SUCCESS if packet could be generated
-	 * 					- INVALID_STATE if exchange type is currently not set
-	 * 					- NOT_FOUND if no rules found for message generation
-	 * 					- INVALID_STATE if aead not supplied but needed.
+	 *					- SUCCESS if packet could be generated
+	 *					- INVALID_STATE if exchange type is currently not set
+	 *					- NOT_FOUND if no rules found for message generation
+	 *					- INVALID_STATE if aead not supplied but needed.
 	 */
-	status_t (*generate) (message_t *this, aead_t *aead, packet_t **packet);
+	status_t (*generate) (message_t *this, keymat_t *keymat, packet_t **packet);
 
 	/**
 	 * Check if the message has already been encoded using generate().
@@ -278,7 +278,7 @@ struct message_t {
 	 * Sets the source host informations.
 	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
-	 * 			message_t.destroy or next call of message_t.set_source.
+	 *			message_t.destroy or next call of message_t.set_source.
 	 *
 	 * @param host		host_t object representing source host
 	 */
@@ -298,7 +298,7 @@ struct message_t {
 	 * Sets the destination host informations.
 	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
-	 * 			message_t.destroy or next call of message_t.set_destination.
+	 *			message_t.destroy or next call of message_t.set_destination.
 	 *
 	 * @param host		host_t object representing destination host
 	 */
@@ -344,9 +344,9 @@ struct message_t {
 	packet_t * (*get_packet) (message_t *this);
 
 	/**
-	 * Returns a clone of the internal stored packet_t data.
+	 * Returns a chunk pointing to internal packet_t data.
 	 *
-	 * @return			clone of the internal stored packet_t data.
+	 * @return			packet data.
 	 */
 	chunk_t (*get_packet_data) (message_t *this);
 
@@ -357,26 +357,27 @@ struct message_t {
 };
 
 /**
- * Creates an message_t object from a incoming UDP Packet.
+ * Creates a message_t object from an incoming UDP packet.
  *
  * The given packet gets owned by the message. The message is uninitialized,
  * call parse_header() to populate header fields.
  *
  * @param packet		packet_t object which is assigned to message
- * @return 				message_t object
+ * @return				message_t object
  */
-message_t * message_create_from_packet(packet_t *packet);
-
+message_t *message_create_from_packet(packet_t *packet);
 
 /**
- * Creates an empty message_t object.
+ * Creates an empty message_t object for a specific major/minor version.
  *
  * - exchange_type is set to NOT_SET
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
  *
- * @return message_t object
+ * @param major			major IKE version of this message
+ * @param minor			minor IKE version of this message
+ * @return				message_t object
  */
-message_t * message_create(void);
+message_t *message_create(int major, int minor);
 
 #endif /** MESSAGE_H_ @}*/

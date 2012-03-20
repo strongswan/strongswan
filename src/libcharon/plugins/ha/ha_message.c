@@ -46,7 +46,7 @@ struct private_ha_message_t {
 	chunk_t buf;
 };
 
-ENUM(ha_message_type_names, HA_IKE_ADD, HA_RESYNC,
+ENUM(ha_message_type_names, HA_IKE_ADD, HA_IKE_IV,
 	"IKE_ADD",
 	"IKE_UPDATE",
 	"IKE_MID_INITIATOR",
@@ -58,6 +58,7 @@ ENUM(ha_message_type_names, HA_IKE_ADD, HA_RESYNC,
 	"SEGMENT_TAKE",
 	"STATUS",
 	"RESYNC",
+	"IKE_IV",
 );
 
 typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
@@ -66,6 +67,7 @@ typedef struct ike_sa_id_encoding_t ike_sa_id_encoding_t;
  * Encoding if an ike_sa_id_t
  */
 struct ike_sa_id_encoding_t {
+	u_int8_t ike_version;
 	u_int64_t initiator_spi;
 	u_int64_t responder_spi;
 	u_int8_t initiator;
@@ -156,6 +158,7 @@ METHOD(ha_message_t, add_attribute, void,
 			enc = (ike_sa_id_encoding_t*)(this->buf.ptr + this->buf.len);
 			this->buf.len += sizeof(ike_sa_id_encoding_t);
 			enc->initiator = id->is_initiator(id);
+			enc->ike_version = id->get_ike_version(id);
 			enc->initiator_spi = id->get_initiator_spi(id);
 			enc->responder_spi = id->get_responder_spi(id);
 			break;
@@ -213,6 +216,7 @@ METHOD(ha_message_t, add_attribute, void,
 			break;
 		}
 		/* u_int8_t */
+		case HA_IKE_VERSION:
 		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
@@ -263,6 +267,10 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_NONCE_I:
 		case HA_NONCE_R:
 		case HA_SECRET:
+		case HA_LOCAL_DH:
+		case HA_REMOTE_DH:
+		case HA_PSK:
+		case HA_IV:
 		case HA_OLD_SKD:
 		{
 			chunk_t chunk;
@@ -351,8 +359,9 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 				return FALSE;
 			}
 			enc = (ike_sa_id_encoding_t*)(this->buf.ptr);
-			value->ike_sa_id = ike_sa_id_create(enc->initiator_spi,
-											enc->responder_spi, enc->initiator);
+			value->ike_sa_id = ike_sa_id_create(enc->ike_version,
+										enc->initiator_spi, enc->responder_spi,
+										enc->initiator);
 			*attr_out = attr;
 			this->cleanup = (void*)value->ike_sa_id->destroy;
 			this->cleanup_data = value->ike_sa_id;
@@ -426,6 +435,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			return TRUE;
 		}
 		/* u_int8_t */
+		case HA_IKE_VERSION:
 		case HA_INITIATOR:
 		case HA_IPSEC_MODE:
 		case HA_IPCOMP:
@@ -479,6 +489,10 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_NONCE_I:
 		case HA_NONCE_R:
 		case HA_SECRET:
+		case HA_LOCAL_DH:
+		case HA_REMOTE_DH:
+		case HA_PSK:
+		case HA_IV:
 		case HA_OLD_SKD:
 		{
 			size_t len;

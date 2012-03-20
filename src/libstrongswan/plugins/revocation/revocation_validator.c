@@ -103,7 +103,7 @@ static bool verify_ocsp(ocsp_response_t *response, auth_cfg_t *auth)
 	bool verified = FALSE;
 
 	wrapper = ocsp_response_wrapper_create((ocsp_response_t*)response);
-	lib->credmgr->add_local_set(lib->credmgr, &wrapper->set);
+	lib->credmgr->add_local_set(lib->credmgr, &wrapper->set, FALSE);
 
 	subject = &response->certificate;
 	responder = subject->get_issuer(subject);

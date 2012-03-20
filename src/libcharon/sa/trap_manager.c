@@ -284,26 +284,29 @@ METHOD(trap_manager_t, acquire, void,
 
 	ike_sa = charon->ike_sa_manager->checkout_by_config(
 											charon->ike_sa_manager, peer);
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
+	if (ike_sa)
 	{
-		ike_sa->set_peer_cfg(ike_sa, peer);
-	}
-	if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
-	{
-		/* make sure the entry is still there */
-		this->lock->read_lock(this->lock);
-		if (this->traps->find_first(this->traps, NULL,
-									(void**)&found) == SUCCESS)
+		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
 		{
-			found->ike_sa = ike_sa;
+			ike_sa->set_peer_cfg(ike_sa, peer);
 		}
-		this->lock->unlock(this->lock);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	}
-	else
-	{
-		charon->ike_sa_manager->checkin_and_destroy(
-											charon->ike_sa_manager, ike_sa);
+		if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
+		{
+			/* make sure the entry is still there */
+			this->lock->read_lock(this->lock);
+			if (this->traps->find_first(this->traps, NULL,
+										(void**)&found) == SUCCESS)
+			{
+				found->ike_sa = ike_sa;
+			}
+			this->lock->unlock(this->lock);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+		else
+		{
+			charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
+		}
 	}
 	peer->destroy(peer);
 }

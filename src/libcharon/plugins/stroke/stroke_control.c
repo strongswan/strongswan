@@ -126,14 +126,6 @@ METHOD(stroke_control_t, initiate, void,
 													  msg->initiate.name);
 	if (peer_cfg)
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
-		{
-			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-				 peer_cfg->get_ike_version(peer_cfg));
-			peer_cfg->destroy(peer_cfg);
-			return;
-		}
-
 		child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 		if (child_cfg == NULL)
 		{
@@ -157,14 +149,10 @@ METHOD(stroke_control_t, initiate, void,
 	}
 	else
 	{
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != 2)
-			{
-				continue;
-			}
 			child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
 			if (child_cfg)
 			{
@@ -568,14 +556,6 @@ METHOD(stroke_control_t, route, void,
 													  msg->route.name);
 	if (peer_cfg)
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
-		{
-			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-				 peer_cfg->get_ike_version(peer_cfg));
-			peer_cfg->destroy(peer_cfg);
-			return;
-		}
-
 		child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
 		if (child_cfg == NULL)
 		{
@@ -599,14 +579,10 @@ METHOD(stroke_control_t, route, void,
 	}
 	else
 	{
-		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != 2)
-			{
-				continue;
-			}
 			child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
 			if (child_cfg)
 			{

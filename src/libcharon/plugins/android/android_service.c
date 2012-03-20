@@ -273,11 +273,11 @@ static job_requeue_t initiate(private_android_service_t *this)
 							 hostname, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create("android", 2, ike_cfg, CERT_SEND_IF_ASKED,
+	peer_cfg = peer_cfg_create("android", IKEV2, ike_cfg, CERT_SEND_IF_ASKED,
 							   UNIQUE_REPLACE, 1, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */
-							   TRUE, 0, /* mobike, DPD */
+							   TRUE, FALSE, 0, /* mobike, aggressive, DPD */
 							   host_create_from_string("0.0.0.0", 0) /* virt */,
 							   NULL, FALSE, NULL, NULL); /* pool, mediation */
 
@@ -300,12 +300,17 @@ static job_requeue_t initiate(private_android_service_t *this)
 											 0, "255.255.255.255", 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
-	/* get an additional reference because initiate consumes one */
-	child_cfg->get_ref(child_cfg);
 
 	/* get us an IKE_SA */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	if (!ike_sa)
+	{
+		peer_cfg->destroy(peer_cfg);
+		send_status(this, VPN_ERROR_CONNECTION_FAILED);
+		return JOB_REQUEUE_NONE;
+	}
+
 	if (!ike_sa->get_peer_cfg(ike_sa))
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
@@ -318,6 +323,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* confirm that we received the request */
 	send_status(this, i);
 
+	/* get an additional reference because initiate consumes one */
+	child_cfg->get_ref(child_cfg);
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");

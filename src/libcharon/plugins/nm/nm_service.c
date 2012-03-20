@@ -499,11 +499,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg = ike_cfg_create(TRUE, encap,
 					"0.0.0.0", IKEV2_UDP_PORT, (char*)address, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	peer_cfg = peer_cfg_create(priv->name, 2, ike_cfg,
+	peer_cfg = peer_cfg_create(priv->name, IKEV2, ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */
 					36000, 0, /* rekey 10h, reauth none */
 					600, 600, /* jitter, over 10min */
-					TRUE, 0, /* mobike, DPD */
+					TRUE, FALSE, 0, /* mobike, aggressive, DPD */
 					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
 	auth = auth_cfg_create();
@@ -533,6 +533,13 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	 */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	if (!ike_sa)
+	{
+		peer_cfg->destroy(peer_cfg);
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+					"IKE version not supported.");
+		return FALSE;
+	}
 	if (!ike_sa->get_peer_cfg(ike_sa))
 	{
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
@@ -550,6 +557,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	/**
 	 * Initiate
 	 */
+	child_cfg->get_ref(child_cfg);
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
 		charon->bus->remove_listener(charon->bus, &priv->listener);

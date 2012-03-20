@@ -271,10 +271,10 @@ METHOD(listener_t, ike_updown, bool,
 
 METHOD(listener_t, message_hook, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
-	message_t *message, bool incoming)
+	message_t *message, bool incoming, bool plain)
 {
 	/* start accounting here, virtual IP now is set */
-	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
+	if (plain && ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		message->get_exchange_type(message) == IKE_AUTH &&
 		!incoming && !message->get_request(message))
 	{

@@ -27,25 +27,20 @@ typedef struct certreq_payload_t certreq_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <utils/identification.h>
 
 /**
- * Length of a CERTREQ payload without the CERTREQ data in bytes.
- */
-#define CERTREQ_PAYLOAD_HEADER_LENGTH 5
-
-/**
- * Class representing an IKEv2 CERTREQ payload.
- *
- * The CERTREQ payload format is described in RFC section 3.7.
+ * Class representing an IKEv1/IKEv2 CERTREQ payload.
  */
 struct certreq_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Create an enumerator over contained keyids.
+	 * Create an enumerator over contained keyids (IKEv2 only).
 	 *
 	 * @return			enumerator over chunk_t's.
 	 */
@@ -59,12 +54,19 @@ struct certreq_payload_t {
 	certificate_type_t (*get_cert_type)(certreq_payload_t *this);
 
 	/**
-	 * Add a certificates keyid to the payload.
+	 * Add a certificates keyid to the payload (IKEv2 only).
 	 *
 	 * @param keyid		keyid of the trusted certifcate
 	 * @return
 	 */
 	void (*add_keyid)(certreq_payload_t *this, chunk_t keyid);
+
+	/**
+	 * Get the distinguished name of the payload (IKEv1 only).
+	 *
+	 * @return			DN as identity, must be destroyed
+	 */
+	identification_t* (*get_dn)(certreq_payload_t *this);
 
 	/**
 	 * Destroys an certreq_payload_t object.
@@ -77,14 +79,22 @@ struct certreq_payload_t {
  *
  * @return 				certreq payload
  */
-certreq_payload_t *certreq_payload_create(void);
+certreq_payload_t *certreq_payload_create(payload_type_t payload_type);
 
 /**
- * Creates an empty certreq_payload_t for a kind of certificates.
+ * Creates an empty IKEv2 certreq_payload_t for a kind of certificates.
  *
  * @param type			type of the added keyids
  * @return 				certreq payload
  */
 certreq_payload_t *certreq_payload_create_type(certificate_type_t type);
+
+/**
+ * Creates a IKEv1 certreq_payload_t for a given distinguished name.
+ *
+ * @param id			distinguished name, does not get owned
+ * @return 				certreq payload
+ */
+certreq_payload_t *certreq_payload_create_dn(identification_t *id);
 
 #endif /** CERTREQ_PAYLOAD_H_ @}*/

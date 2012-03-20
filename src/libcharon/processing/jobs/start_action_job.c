@@ -46,14 +46,9 @@ METHOD(job_t, execute, void,
 	char *name;
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-													NULL, NULL, NULL, NULL);
+											NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
-		{
-			continue;
-		}
-
 		children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 		while (children->enumerate(children, &child_cfg))
 		{

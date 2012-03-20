@@ -21,7 +21,7 @@
 #ifndef EAP_SIM_SERVER_H_
 #define EAP_SIM_SERVER_H_
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 typedef struct eap_sim_server_t eap_sim_server_t;
 

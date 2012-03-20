@@ -52,10 +52,12 @@ struct ike_sa_manager_t {
 	/**
 	 * Create and check out a new IKE_SA.
 	 *
+	 * @param version			IKE version of this SA
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
 	 */
-	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, bool initiator);
+	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, ike_version_t version,
+							   bool initiator);
 
 	/**
 	 * Checkout an IKE_SA by a message.
@@ -166,6 +168,18 @@ struct ike_sa_manager_t {
 	 * @return					enumerator over all IKE_SAs.
 	 */
 	enumerator_t *(*create_enumerator) (ike_sa_manager_t* this, bool wait);
+
+	/**
+	 * Create an enumerator over ike_sa_id_t*, matching peer identities.
+	 *
+	 * @param me				local peer identity to match
+	 * @param other				remote peer identity to match
+	 * @param family			address family to match, 0 for any
+	 * @return					enumerator over ike_sa_id_t*
+	 */
+	enumerator_t* (*create_id_enumerator)(ike_sa_manager_t *this,
+								identification_t *me, identification_t *other,
+								int family);
 
 	/**
 	 * Checkin the SA after usage.

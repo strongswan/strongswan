@@ -68,7 +68,7 @@ struct private_unknown_payload_t {
  * private_unknown_payload_t.
  *
  */
-encoding_rule_t unknown_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_unknown_payload_t, next_payload)	},
 	/* the critical bit */
@@ -84,7 +84,7 @@ encoding_rule_t unknown_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_unknown_payload_t, payload_length)	},
 	/* some unknown data bytes, length is defined in PAYLOAD_LENGTH */
-	{ UNKNOWN_DATA,		offsetof(private_unknown_payload_t, data)			},
+	{ CHUNK_DATA,		offsetof(private_unknown_payload_t, data)			},
 };
 
 /*
@@ -102,18 +102,20 @@ encoding_rule_t unknown_payload_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_unknown_payload_t *this)
 {
-	if (this->payload_length != UNKNOWN_PAYLOAD_HEADER_LENGTH + this->data.len)
-	{
-		return FAILED;
-	}
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_unknown_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_unknown_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = unknown_payload_encodings;
-	*rule_count = sizeof(unknown_payload_encodings) / sizeof(encoding_rule_t);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_unknown_payload_t *this)
+{
+	return 4;
 }
 
 METHOD(payload_t, get_payload_type, payload_type_t,
@@ -171,6 +173,7 @@ unknown_payload_t *unknown_payload_create(payload_type_t type)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -182,7 +185,7 @@ unknown_payload_t *unknown_payload_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		.type = type,
 	);
 
@@ -201,7 +204,7 @@ unknown_payload_t *unknown_payload_create_data(payload_type_t type,
 	this = (private_unknown_payload_t*)unknown_payload_create(type);
 	this->data = data;
 	this->critical = critical;
-	this->payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH + data.len;
+	this->payload_length = get_header_length(this) + data.len;
 
 	return &this->public;
 }

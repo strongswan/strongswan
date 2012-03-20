@@ -30,11 +30,6 @@ typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a TRAFFIC SELECTOR SUBSTRUCTURE without start and end address.
- */
-#define TRAFFIC_SELECTOR_HEADER_LENGTH 8
-
-/**
  * Class representing an IKEv2 TRAFFIC SELECTOR.
  *
  * The TRAFFIC SELECTOR format is described in RFC section 3.13.1.

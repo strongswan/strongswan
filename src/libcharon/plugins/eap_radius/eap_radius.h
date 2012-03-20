@@ -23,7 +23,7 @@
 
 typedef struct eap_radius_t eap_radius_t;
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * Implementation of the eap_method_t interface using a RADIUS server.

@@ -31,11 +31,6 @@ typedef struct cp_payload_t cp_payload_t;
 #include <utils/enumerator.h>
 
 /**
- * CP_PAYLOAD length in bytes without any proposal substructure.
- */
-#define CP_PAYLOAD_HEADER_LENGTH 8
-
-/**
  * Config Type of an Configuration Payload.
  */
 enum config_type_t {
@@ -51,9 +46,7 @@ enum config_type_t {
 extern enum_name_t *config_type_names;
 
 /**
- * Class representing an IKEv2-CP Payload.
- *
- * The CP Payload format is described in RFC section 3.15.
+ * Class representing an IKEv2 configuration / IKEv1 attribute payload.
  */
 struct cp_payload_t {
 
@@ -85,6 +78,20 @@ struct cp_payload_t {
 	config_type_t (*get_type) (cp_payload_t *this);
 
 	/**
+	 * Set the configuration payload identifier (IKEv1 only).
+	 *
+	 @param identifier	identifier to set
+	 */
+	void (*set_identifier) (cp_payload_t *this, u_int16_t identifier);
+
+	/**
+	 * Get the configuration payload identifier (IKEv1 only).
+	 *
+	 * @return			identifier
+	 */
+	u_int16_t (*get_identifier) (cp_payload_t *this);
+
+	/**
 	 * Destroys an cp_payload_t object.
 	 */
 	void (*destroy) (cp_payload_t *this);
@@ -93,16 +100,18 @@ struct cp_payload_t {
 /**
  * Creates an empty configuration payload
  *
- * @return		empty configuration payload
+ * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @return			empty configuration payload
  */
-cp_payload_t *cp_payload_create();
+cp_payload_t *cp_payload_create(payload_type_t type);
 
 /**
  * Creates an cp_payload_t with type and value
  *
- * @param config_type	type of configuration payload to create
- * @return				created configuration payload
+ * @param type		payload type, CONFIGURATION or CONFIGURATION_V1
+ * @param cfg_type	type of configuration payload to create
+ * @return			created configuration payload
  */
-cp_payload_t *cp_payload_create_type(config_type_t config_type);
+cp_payload_t *cp_payload_create_type(payload_type_t type, config_type_t cfg_type);
 
 #endif /** CP_PAYLOAD_H_ @}*/

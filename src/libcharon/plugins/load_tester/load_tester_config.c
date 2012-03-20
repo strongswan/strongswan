@@ -249,11 +249,12 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 				"0.0.0.0", IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
-	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
+	peer_cfg = peer_cfg_create("load-test", IKEV2, ike_cfg,
 							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
 							   this->ike_rekey, 0, /* rekey, reauth */
 							   0, this->ike_rekey, /* jitter, overtime */
-							   FALSE, this->dpd_delay, /* mobike, dpddelay */
+							   FALSE, FALSE, /* mobike, aggressive mode */
+							   this->dpd_delay, /* dpddelay */
 							   this->vip ? this->vip->clone(this->vip) : NULL,
 							   this->pool, FALSE, NULL, NULL);
 	if (num)

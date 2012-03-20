@@ -26,12 +26,7 @@ typedef struct auth_payload_t auth_payload_t;
 
 #include <library.h>
 #include <encoding/payloads/payload.h>
-#include <sa/authenticators/authenticator.h>
-
-/**
- * Length of a auth payload without the auth data in bytes.
- */
-#define AUTH_PAYLOAD_HEADER_LENGTH 8
+#include <sa/authenticator.h>
 
 /**
  * Class representing an IKEv2 AUTH payload.

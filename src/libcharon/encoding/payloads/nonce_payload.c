@@ -19,6 +19,7 @@
 
 #include "nonce_payload.h"
 
+#include <daemon.h>
 #include <encoding/payloads/encodings.h>
 
 typedef struct private_nonce_payload_t private_nonce_payload_t;
@@ -57,6 +58,11 @@ struct private_nonce_payload_t {
 	 * The contained nonce value.
 	 */
 	chunk_t nonce;
+
+	/**
+	 * Payload type, NONCE or NONCE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
@@ -65,7 +71,7 @@ struct private_nonce_payload_t {
  * The defined offsets are the positions in a object of type
  * private_nonce_payload_t.
  */
-encoding_rule_t nonce_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_nonce_payload_t, next_payload)		},
 	/* the critical bit */
@@ -81,7 +87,7 @@ encoding_rule_t nonce_payload_encodings[] = {
 	/* Length of the whole nonce payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length)	},
 	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
-	{ NONCE_DATA,		offsetof(private_nonce_payload_t, nonce)			},
+	{ CHUNK_DATA,		offsetof(private_nonce_payload_t, nonce)			},
 };
 
 /*                           1                   2                   3
@@ -98,24 +104,48 @@ encoding_rule_t nonce_payload_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_nonce_payload_t *this)
 {
-	if (this->nonce.len < 16 || this->nonce.len > 256)
+	bool bad_length = FALSE;
+
+	if (this->nonce.len > 256)
 	{
+		bad_length = TRUE;
+	}
+	if (this->type == NONCE &&
+		this->nonce.len < 16)
+	{
+		bad_length = TRUE;
+	}
+	if (this->type == NONCE_V1 &&
+		this->nonce.len < 8)
+	{
+		bad_length = TRUE;
+	}
+	if (bad_length)
+	{
+		DBG1(DBG_ENC, "%N payload has invalid length (%d bytes)",
+			 payload_type_names, this->type, this->nonce.len);
 		return FAILED;
 	}
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_nonce_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_nonce_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = nonce_payload_encodings;
-	*rule_count = countof(nonce_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_nonce_payload_t *this)
+{
+	return 4;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_nonce_payload_t *this)
 {
-	return NONCE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -140,7 +170,7 @@ METHOD(nonce_payload_t, set_nonce, void,
 	 private_nonce_payload_t *this, chunk_t nonce)
 {
 	this->nonce = chunk_clone(nonce);
-	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
+	this->payload_length = get_header_length(this) + nonce.len;
 }
 
 METHOD(nonce_payload_t, get_nonce, chunk_t,
@@ -159,7 +189,7 @@ METHOD2(payload_t, nonce_payload_t, destroy, void,
 /*
  * Described in header
  */
-nonce_payload_t *nonce_payload_create()
+nonce_payload_t *nonce_payload_create(payload_type_t type)
 {
 	private_nonce_payload_t *this;
 
@@ -168,6 +198,7 @@ nonce_payload_t *nonce_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -179,7 +210,8 @@ nonce_payload_t *nonce_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = NONCE_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
+		.type = type,
 	);
 	return &this->public;
 }

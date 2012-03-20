@@ -187,87 +187,6 @@ enum encoding_type_t {
 	SPI,
 
 	/**
-	 * Representating a Key Exchange Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
-	 */
-	KEY_EXCHANGE_DATA,
-
-	/**
-	 * Representating a Notification field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - spi size - 8) bytes are read and written into the chunk pointing to.
-	 */
-	NOTIFICATION_DATA,
-
-	/**
-	 * Representating one or more proposal substructures.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the proposal_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed proposal_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	PROPOSALS,
-
-	/**
-	 * Representating one or more transform substructures.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the transform_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed transform_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRANSFORMS,
-
-	/**
-	 * Representating one or more Attributes of a transform substructure.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the transform_attribute_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed transform_attribute_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRANSFORM_ATTRIBUTES,
-
-	/**
-	 * Representating one or more Attributes of a configuration payload.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the configuration_attribute_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed configuration_attribute_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	CONFIGURATION_ATTRIBUTES,
-
-	/**
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
-	 */
-	CONFIGURATION_ATTRIBUTE_VALUE,
-
-	/**
 	 * Representing a 1 Bit flag specifying the format of a transform attribute.
 	 *
 	 * When generation, the next bit is set to 1 if the associated value
@@ -279,6 +198,7 @@ enum encoding_type_t {
 	 * is moved 1 bit forward afterwards.
 	 */
 	ATTRIBUTE_FORMAT,
+
 	/**
 	 * Representing a 15 Bit unsigned int value used as attribute type
 	 * in an attribute transform.
@@ -321,7 +241,7 @@ enum encoding_type_t {
 	 * The value is written to the associated data struct.
 	 * The current read pointer is moved 16 bit forward afterwards.
 	 */
-	CONFIGURATION_ATTRIBUTE_LENGTH,
+	ATTRIBUTE_LENGTH,
 
 	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT
@@ -334,19 +254,6 @@ enum encoding_type_t {
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
 	 */
 	ATTRIBUTE_VALUE,
-
-	/**
-	 * Representating one or more Traffic selectors of a TS payload.
-	 *
-	 * The offset points to a linked_list_t pointer.
-	 *
-	 * When generating the traffic_selector_substructure_t objects are stored
-	 * in the pointed linked_list.
-	 *
-	 * When parsing the parsed traffic_selector_substructure_t objects have
-	 * to be stored in the pointed linked_list.
-	 */
-	TRAFFIC_SELECTORS,
 
 	/**
 	 * Representating a Traffic selector type field.
@@ -375,94 +282,9 @@ enum encoding_type_t {
 	ADDRESS,
 
 	/**
-	 * Representating a Nonce Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 * Representing a variable length byte field.
 	 */
-	NONCE_DATA,
-
-	/**
-	 * Representating a ID Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
-	 */
-	ID_DATA,
-
-	/**
-	 * Representating a AUTH Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
-	 */
-	AUTH_DATA,
-
-	/**
-	 * Representating a CERT Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
-	 */
-	CERT_DATA,
-
-	/**
-	 * Representating a CERTREQ Data field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
-	 */
-	CERTREQ_DATA,
-
-	/**
-	 * Representating an EAP message field.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
-	 */
-	EAP_DATA,
-
-	/**
-	 * Representating the SPIS field in a DELETE payload.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
-	 */
-	SPIS,
-
-	/**
-	 * Representating the VID DATA field in a VENDOR ID payload.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
-	 */
-	VID_DATA,
-
-	/**
-	 * Representating the DATA of an unknown payload.
-	 *
-	 * When generating the content of the chunkt pointing to
-	 * is written.
-	 *
-	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
-	 */
-	UNKNOWN_DATA,
+	CHUNK_DATA,
 
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
@@ -475,9 +297,20 @@ enum encoding_type_t {
 	IKE_SPI,
 
 	/**
-	 * Representing the encrypted data body of a encryption payload.
+	 * Representating an encrypted IKEv1 message.
 	 */
 	ENCRYPTED_DATA,
+
+	/**
+	 * Reprensenting a field containing a set of wrapped payloads.
+	 *
+	 * This type is not used directly, but as an offset to the wrapped payloads.
+	 * The type of the wrapped payload is added to this encoding type.
+	 *
+	 * @note As payload types are added to this encoding type, it has
+	 * to be the last in encoding_type_t.
+	 */
+	PAYLOAD_LIST = 1000 /* no comma, read above! */
 };
 
 /**

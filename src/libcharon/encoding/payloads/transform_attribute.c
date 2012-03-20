@@ -23,6 +23,44 @@
 #include <encoding/payloads/encodings.h>
 #include <library.h>
 
+ENUM(tattr_ph1_names, TATTR_PH1_ENCRYPTION_ALGORITHM, TATTR_PH1_GROUP_ORDER,
+	"ENCRYPTION_ALGORITHM",
+	"HASH_ALGORITHM",
+	"AUTH_METHOD",
+	"GROUP",
+	"GROUP_TYPE",
+	"GROUP_PRIME",
+	"GROUP_GENONE",
+	"GROUP_GENTWO",
+	"GROUP_CURVE_A",
+	"GROUP_CURVE_B",
+	"LIFE_TYPE",
+	"LIFE_DURATION",
+	"PRF",
+	"KEY_LENGTH",
+	"FIELD_SIZE",
+	"GROUP_ORDER",
+);
+
+ENUM(tattr_ph2_names, TATTR_PH2_SA_LIFE_TYPE, TATTR_PH2_EXT_SEQ_NUMBER,
+	"SA_LIFE_TYPE",
+	"SA_LIFE_DURATION",
+	"GROUP",
+	"ENCAP_MODE",
+	"AUTH_ALGORITHM",
+	"KEY_LENGTH",
+	"KEY_ROUNDS",
+	"COMP_DICT_SIZE",
+	"COMP_PRIV_ALGORITHM",
+	"ECN_TUNNEL",
+	"EXT_SEQ_NUMBER",
+);
+
+ENUM(tattr_ikev2_names, TATTR_IKEV2_KEY_LENGTH, TATTR_IKEV2_KEY_LENGTH,
+	"KEY_LENGTH",
+);
+
+
 typedef struct private_transform_attribute_t private_transform_attribute_t;
 
 /**
@@ -57,22 +95,17 @@ struct private_transform_attribute_t {
 	 * Attribute value as chunk if attribute_format is 0 (FALSE).
 	 */
 	chunk_t attribute_value;
+
+	/**
+	 * Payload type, TRANSFORM_ATTRIBUTE or TRANSFORM_ATTRIBUTE_V1
+	 */
+	payload_type_t type;
 };
 
-
-ENUM_BEGIN(transform_attribute_type_name, ATTRIBUTE_UNDEFINED, ATTRIBUTE_UNDEFINED,
-	"ATTRIBUTE_UNDEFINED");
-ENUM_NEXT(transform_attribute_type_name, KEY_LENGTH, KEY_LENGTH, ATTRIBUTE_UNDEFINED,
-	"KEY_LENGTH");
-ENUM_END(transform_attribute_type_name, KEY_LENGTH);
-
 /**
- * Encoding rules to parse or generate a Transform attribute.
- *
- * The defined offsets are the positions in a object of type
- * private_transform_attribute_t.
+ * Encoding rules for IKEv1/IKEv2 transform attributes
  */
-encoding_rule_t transform_attribute_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* Flag defining the format of this payload */
 	{ ATTRIBUTE_FORMAT,			offsetof(private_transform_attribute_t, attribute_format) 			},
 	/* type of the attribute as 15 bit unsigned integer */
@@ -101,18 +134,23 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_transform_attribute_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_transform_attribute_t *this, encoding_rule_t **rules)
 {
-	*rules = transform_attribute_encodings;
-	*rule_count = countof(transform_attribute_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_transform_attribute_t *this)
+{
+	return 0;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_transform_attribute_t *this)
 {
-	return TRANSFORM_ATTRIBUTE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -136,31 +174,6 @@ METHOD(payload_t, get_length, size_t,
 	return this->attribute_length_or_value + 4;
 }
 
-METHOD(transform_attribute_t, set_value_chunk, void,
-	private_transform_attribute_t *this, chunk_t value)
-{
-	chunk_free(&this->attribute_value);
-
-	if (value.len != 2)
-	{
-		this->attribute_value = chunk_clone(value);
-		this->attribute_length_or_value = value.len;
-		this->attribute_format = FALSE;
-	}
-	else
-	{
-		memcpy(&this->attribute_length_or_value, value.ptr, value.len);
-	}
-}
-
-METHOD(transform_attribute_t, set_value, void,
-	private_transform_attribute_t *this, u_int16_t value)
-{
-	chunk_free(&this->attribute_value);
-	this->attribute_length_or_value = value;
-	this->attribute_format = TRUE;
-}
-
 METHOD(transform_attribute_t, get_value_chunk, chunk_t,
 	private_transform_attribute_t *this)
 {
@@ -171,40 +184,28 @@ METHOD(transform_attribute_t, get_value_chunk, chunk_t,
 	return this->attribute_value;
 }
 
-METHOD(transform_attribute_t, get_value, u_int16_t,
+METHOD(transform_attribute_t, get_value, u_int64_t,
 	private_transform_attribute_t *this)
 {
-	return this->attribute_length_or_value;
-}
+	u_int64_t value = 0;
 
-METHOD(transform_attribute_t, set_attribute_type, void,
-	private_transform_attribute_t *this, u_int16_t type)
-{
-	this->attribute_type = type & 0x7FFF;
+	if (this->attribute_format)
+	{
+		return this->attribute_length_or_value;
+	}
+	if (this->attribute_value.len > sizeof(value))
+	{
+		return UINT64_MAX;
+	}
+	memcpy(((char*)&value) + sizeof(value) - this->attribute_value.len,
+		   this->attribute_value.ptr, this->attribute_value.len);
+	return untoh64((char*)&value);
 }
 
 METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
 	private_transform_attribute_t *this)
 {
 	return this->attribute_type;
-}
-
-METHOD(transform_attribute_t, clone_, transform_attribute_t*,
-	private_transform_attribute_t *this)
-{
-	private_transform_attribute_t *new_clone;
-
-	new_clone = (private_transform_attribute_t *)transform_attribute_create();
-
-	new_clone->attribute_format = this->attribute_format;
-	new_clone->attribute_type = this->attribute_type;
-	new_clone->attribute_length_or_value = this->attribute_length_or_value;
-
-	if (!new_clone->attribute_format)
-	{
-		new_clone->attribute_value = chunk_clone(this->attribute_value);
-	}
-	return &new_clone->public;
 }
 
 METHOD2(payload_t, transform_attribute_t, destroy, void,
@@ -217,7 +218,7 @@ METHOD2(payload_t, transform_attribute_t, destroy, void,
 /*
  * Described in header.
  */
-transform_attribute_t *transform_attribute_create()
+transform_attribute_t *transform_attribute_create(payload_type_t type)
 {
 	private_transform_attribute_t *this;
 
@@ -226,22 +227,20 @@ transform_attribute_t *transform_attribute_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
-			.set_value_chunk = _set_value_chunk,
-			.set_value = _set_value,
 			.get_value_chunk = _get_value_chunk,
 			.get_value = _get_value,
-			.set_attribute_type = _set_attribute_type,
 			.get_attribute_type = _get_attribute_type,
-			.clone = _clone_,
 			.destroy = _destroy,
 		},
-		.attribute_format = TRUE,
+		.attribute_format = FALSE,
+		.type = type,
 	);
 	return &this->public;
 }
@@ -249,10 +248,33 @@ transform_attribute_t *transform_attribute_create()
 /*
  * Described in header.
  */
-transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length)
+transform_attribute_t *transform_attribute_create_value(payload_type_t type,
+							transform_attribute_type_t kind, u_int64_t value)
 {
-	transform_attribute_t *attribute = transform_attribute_create();
-	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, key_length);
-	return attribute;
+	private_transform_attribute_t *this;
+
+	this = (private_transform_attribute_t*)transform_attribute_create(type);
+
+	this->attribute_type = kind & 0x7FFF;
+
+	if (value <= UINT16_MAX)
+	{
+		this->attribute_length_or_value = value;
+		this->attribute_format = TRUE;
+	}
+	else if (value <= UINT32_MAX)
+	{
+		u_int32_t val32;
+
+		val32 = htonl(value);
+		this->attribute_value = chunk_clone(chunk_from_thing(val32));
+		this->attribute_length_or_value = sizeof(val32);
+	}
+	else
+	{
+		htoun64(&value, value);
+		this->attribute_value = chunk_clone(chunk_from_thing(value));
+		this->attribute_length_or_value = sizeof(value);
+	}
+	return &this->public;
 }

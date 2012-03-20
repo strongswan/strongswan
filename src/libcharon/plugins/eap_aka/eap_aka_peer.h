@@ -23,7 +23,7 @@
 
 typedef struct eap_aka_peer_t eap_aka_peer_t;
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * EAP-AKA peer implementation.

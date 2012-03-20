@@ -30,11 +30,6 @@ typedef struct encryption_payload_t encryption_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Encrpytion payload length in bytes without IV and following data.
- */
-#define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * The encryption payload as described in RFC section 3.14.
  */
 struct encryption_payload_t {
@@ -102,8 +97,9 @@ struct encryption_payload_t {
 /**
  * Creates an empty encryption_payload_t object.
  *
+ * @param type		ENCRYPTED or ENCRYPTED_V1
  * @return			encryption_payload_t object
  */
-encryption_payload_t *encryption_payload_create(void);
+encryption_payload_t *encryption_payload_create(payload_type_t type);
 
 #endif /** ENCRYPTION_PAYLOAD_H_ @}*/

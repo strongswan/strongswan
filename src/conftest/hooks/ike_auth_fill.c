@@ -51,7 +51,10 @@ struct private_ike_auth_fill_t {
 
 /** size of non ESP-Marker */
 #define NON_ESP_MARKER_LEN 4
-
+/** length of fixed encryption payload header */
+#define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
+/** length of fixed cert payload header */
+#define CERT_PAYLOAD_HEADER_LENGTH 5
 /**
  * Calculate packet size on wire (without ethernet/IP header)
  */
@@ -89,9 +92,9 @@ static size_t calculate_wire_size(message_t *message, ike_sa_t *ike_sa)
 
 METHOD(listener_t, message, bool,
 	private_ike_auth_fill_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
@@ -105,7 +108,7 @@ METHOD(listener_t, message, bool,
 			diff = this->bytes - size - CERT_PAYLOAD_HEADER_LENGTH;
 			data = chunk_alloc(diff);
 			memset(data.ptr, 0x12, data.len);
-			pld = cert_payload_create_custom(201, data);
+			pld = cert_payload_create_custom(CERTIFICATE, 201, data);
 			message->add_payload(message, &pld->payload_interface);
 			DBG1(DBG_CFG, "inserting %d dummy bytes certificate payload", diff);
 		}

@@ -81,12 +81,27 @@ struct private_ike_header_t {
 		 * TRUE, if this is a response, FALSE if its a Request.
 		 */
 		bool response;
+
+		/**
+		 * TRUE, if the packet is encrypted (IKEv1).
+		 */
+		bool encryption;
+
+		/**
+		 * TRUE, if the commit flag is set (IKEv1).
+		 */
+		bool commit;
+
+		/**
+		 * TRUE, if the auth only flag is set (IKEv1).
+		 */
+		bool authonly;
 	} flags;
 
 	/**
 	 * Reserved bits of IKE header
 	 */
-	bool reserved[5];
+	bool reserved[2];
 
 	/**
 	 * Associated Message-ID.
@@ -99,9 +114,15 @@ struct private_ike_header_t {
 	u_int32_t length;
 };
 
-ENUM_BEGIN(exchange_type_names, EXCHANGE_TYPE_UNDEFINED, EXCHANGE_TYPE_UNDEFINED,
-	"EXCHANGE_TYPE_UNDEFINED");
-ENUM_NEXT(exchange_type_names, IKE_SA_INIT, IKE_SESSION_RESUME, EXCHANGE_TYPE_UNDEFINED,
+ENUM_BEGIN(exchange_type_names, ID_PROT, TRANSACTION,
+	"ID_PROT",
+	"AUTH_ONLY",
+	"AGGRESSIVE",
+	"INFORMATIONAL_V1",
+	"TRANSACTION");
+ENUM_NEXT(exchange_type_names, QUICK_MODE, IKE_SESSION_RESUME, TRANSACTION,
+	"QUICK_MODE",
+	"NEW_GROUP_MODE",
 	"IKE_SA_INIT",
 	"IKE_AUTH",
 	"CREATE_CHILD_SA",
@@ -110,18 +131,23 @@ ENUM_NEXT(exchange_type_names, IKE_SA_INIT, IKE_SESSION_RESUME, EXCHANGE_TYPE_UN
 #ifdef ME
 ENUM_NEXT(exchange_type_names, ME_CONNECT, ME_CONNECT, IKE_SESSION_RESUME,
 	"ME_CONNECT");
-ENUM_END(exchange_type_names, ME_CONNECT);
+ENUM_NEXT(exchange_type_names, EXCHANGE_TYPE_UNDEFINED,
+							   EXCHANGE_TYPE_UNDEFINED, ME_CONNECT,
+	"EXCHANGE_TYPE_UNDEFINED");
 #else
-ENUM_END(exchange_type_names, IKE_SESSION_RESUME);
+ENUM_NEXT(exchange_type_names, EXCHANGE_TYPE_UNDEFINED,
+							   EXCHANGE_TYPE_UNDEFINED, IKE_SESSION_RESUME,
+	"EXCHANGE_TYPE_UNDEFINED");
 #endif /* ME */
+ENUM_END(exchange_type_names, EXCHANGE_TYPE_UNDEFINED);
 
 /**
- * Encoding rules to parse or generate a IKEv2-Header.
+ * Encoding rules to parse or generate a IKE-Header.
  *
  * The defined offsets are the positions in a object of type
  * ike_header_t.
  */
-encoding_rule_t ike_header_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 8 Byte SPI, stored in the field initiator_spi */
 	{ IKE_SPI,		offsetof(private_ike_header_t, initiator_spi)	},
 	/* 8 Byte SPI, stored in the field responder_spi */
@@ -137,22 +163,20 @@ encoding_rule_t ike_header_encodings[] = {
 	/* 2 Bit reserved bits */
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[0])		},
 	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[1])		},
-	/* 3 Bit flags, stored in the fields response, version and initiator */
+	/* 6 flags  */
 	{ FLAG,			offsetof(private_ike_header_t, flags.response)	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.version)	},
 	{ FLAG,			offsetof(private_ike_header_t, flags.initiator)	},
-	/* 3 Bit reserved bits */
-	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[2])		},
-	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[3])		},
-	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[4])		},
+	{ FLAG,			offsetof(private_ike_header_t, flags.authonly)	},
+	{ FLAG,			offsetof(private_ike_header_t, flags.commit)	},
+	{ FLAG,			offsetof(private_ike_header_t, flags.encryption)},
 	/* 4 Byte message id, stored in the field message_id */
 	{ U_INT_32,		offsetof(private_ike_header_t, message_id)		},
 	/* 4 Byte length fied, stored in the field length */
-	{ HEADER_LENGTH,offsetof(private_ike_header_t, length)			},
+	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length)			}
 };
 
-
-/*                           1                   2                   3
+/*                         1                   2                   3
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !                       IKE_SA Initiator's SPI                  !
@@ -172,35 +196,67 @@ encoding_rule_t ike_header_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_ike_header_t *this)
 {
-	if ((this->exchange_type < IKE_SA_INIT) ||
-		((this->exchange_type > INFORMATIONAL)
-#ifdef ME
-			&& (this->exchange_type != ME_CONNECT)
-#endif /* ME */
-		))
+	switch (this->exchange_type)
 	{
-		/* unsupported exchange type */
-		return FAILED;
+		case ID_PROT:
+		case AGGRESSIVE:
+			if (this->message_id != 0)
+			{
+				return FAILED;
+			}
+			/* fall */
+		case AUTH_ONLY:
+		case INFORMATIONAL_V1:
+		case TRANSACTION:
+		case QUICK_MODE:
+		case NEW_GROUP_MODE:
+			if (this->maj_version != IKEV1_MAJOR_VERSION)
+			{
+				return FAILED;
+			}
+			break;
+		case IKE_SA_INIT:
+		case IKE_AUTH:
+		case CREATE_CHILD_SA:
+		case INFORMATIONAL:
+		case IKE_SESSION_RESUME:
+#ifdef ME
+		case ME_CONNECT:
+#endif /* ME */
+			if (this->maj_version != IKEV2_MAJOR_VERSION)
+			{
+				return FAILED;
+			}
+			break;
+		default:
+			/* unsupported exchange type */
+			return FAILED;
 	}
-	if (this->initiator_spi == 0
-#ifdef ME
-		/* we allow zero spi for INFORMATIONAL exchanges,
-		 * to allow connectivity checks */
-		&& this->exchange_type != INFORMATIONAL
-#endif /* ME */
-		)
+	if (this->initiator_spi == 0)
 	{
-		/* initiator spi not set */
-		return FAILED;
+#ifdef ME
+		if (this->exchange_type != INFORMATIONAL)
+			/* we allow zero spi for INFORMATIONAL exchanges,
+			 * to allow connectivity checks */
+#endif /* ME */
+		{
+			return FAILED;
+		}
 	}
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_ike_header_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_ike_header_t *this, encoding_rule_t **rules)
 {
-	*rules = ike_header_encodings;
-	*rule_count = sizeof(ike_header_encodings) / sizeof(encoding_rule_t);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_ike_header_t *this)
+{
+	return IKE_HEADER_LENGTH;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
@@ -311,6 +367,43 @@ METHOD(ike_header_t, set_initiator_flag, void,
 	this->flags.initiator = initiator;
 }
 
+METHOD(ike_header_t, get_encryption_flag, bool,
+	private_ike_header_t *this)
+{
+	return this->flags.encryption;
+}
+
+METHOD(ike_header_t, set_encryption_flag, void,
+	private_ike_header_t *this, bool encryption)
+{
+	this->flags.encryption = encryption;
+}
+
+
+METHOD(ike_header_t, get_commit_flag, bool,
+	private_ike_header_t *this)
+{
+	return this->flags.commit;
+}
+
+METHOD(ike_header_t, set_commit_flag, void,
+	private_ike_header_t *this, bool commit)
+{
+	this->flags.commit = commit;
+}
+
+METHOD(ike_header_t, get_authonly_flag, bool,
+	private_ike_header_t *this)
+{
+	return this->flags.authonly;
+}
+
+METHOD(ike_header_t, set_authonly_flag, void,
+	private_ike_header_t *this, bool authonly)
+{
+	this->flags.authonly = authonly;
+}
+
 METHOD(ike_header_t, get_exchange_type, u_int8_t,
 	private_ike_header_t *this)
 {
@@ -353,6 +446,7 @@ ike_header_t *ike_header_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -373,21 +467,38 @@ ike_header_t *ike_header_create()
 			.set_version_flag = _set_version_flag,
 			.get_initiator_flag = _get_initiator_flag,
 			.set_initiator_flag = _set_initiator_flag,
+			.get_encryption_flag = _get_encryption_flag,
+			.set_encryption_flag = _set_encryption_flag,
+			.get_commit_flag = _get_commit_flag,
+			.set_commit_flag = _set_commit_flag,
+			.get_authonly_flag = _get_authonly_flag,
+			.set_authonly_flag = _set_authonly_flag,
 			.get_exchange_type = _get_exchange_type,
 			.set_exchange_type = _set_exchange_type,
 			.get_message_id = _get_message_id,
 			.set_message_id = _set_message_id,
 			.destroy = _destroy,
 		},
-		.maj_version = IKE_MAJOR_VERSION,
-		.min_version = IKE_MINOR_VERSION,
-		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
-		.flags = {
-			.initiator = TRUE,
-			.version = HIGHER_VERSION_SUPPORTED_FLAG,
-		},
 		.length = IKE_HEADER_LENGTH,
+		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 	);
 
 	return &this->public;
 }
+
+/*
+ * Described in header.
+ */
+ike_header_t *ike_header_create_version(int major, int minor)
+{
+	ike_header_t *this = ike_header_create();
+
+	this->set_maj_version(this, major);
+	this->set_min_version(this, minor);
+	if (major == IKEV2_MAJOR_VERSION)
+	{
+		this->set_initiator_flag(this, TRUE);
+	}
+	return this;
+}
+

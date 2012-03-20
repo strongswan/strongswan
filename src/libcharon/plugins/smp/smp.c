@@ -294,18 +294,13 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 	xmlTextWriterStartElement(writer, "configlist");
 
 	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-														NULL, NULL, NULL, NULL);
+											NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		enumerator_t *children;
 		child_cfg_t *child_cfg;
 		ike_cfg_t *ike_cfg;
 		linked_list_t *list;
-
-		if (peer_cfg->get_ike_version(peer_cfg) != 2)
-		{	/* only IKEv2 connections yet */
-			continue;
-		}
 
 		/* <peerconfig> */
 		xmlTextWriterStartElement(writer, "peerconfig");

@@ -55,6 +55,11 @@ struct private_vendor_id_payload_t {
 	 * The contained data.
 	 */
 	chunk_t data;
+
+	/**
+	 * Either a IKEv1 or a IKEv2 vendor ID payload
+	 */
+	payload_type_t type;
 };
 
 /**
@@ -63,7 +68,7 @@ struct private_vendor_id_payload_t {
  * The defined offsets are the positions in a object of type
  * private_vendor_id_payload_t.
  */
-encoding_rule_t vendor_id_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_vendor_id_payload_t, next_payload)	},
 	/* the critical bit */
@@ -79,7 +84,7 @@ encoding_rule_t vendor_id_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_vendor_id_payload_t, payload_length)},
 	/* some vendor_id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ VID_DATA,			offsetof(private_vendor_id_payload_t, data)			}
+	{ CHUNK_DATA,		offsetof(private_vendor_id_payload_t, data)			}
 };
 
 /*
@@ -100,18 +105,23 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_vendor_id_payload_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_vendor_id_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = vendor_id_payload_encodings;
-	*rule_count = countof(vendor_id_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_vendor_id_payload_t *this)
+{
+	return 4;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_vendor_id_payload_t *this)
 {
-	return VENDOR_ID;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -148,7 +158,8 @@ METHOD2(payload_t, vendor_id_payload_t, destroy, void,
 /*
  * Described in header
  */
-vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data)
+vendor_id_payload_t *vendor_id_payload_create_data(payload_type_t type,
+												   chunk_t data)
 {
 	private_vendor_id_payload_t *this;
 
@@ -157,6 +168,7 @@ vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -167,8 +179,9 @@ vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH + data.len,
+		.payload_length = get_header_length(this) + data.len,
 		.data = data,
+		.type = type,
 	);
 	return &this->public;
 }
@@ -176,7 +189,7 @@ vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data)
 /*
  * Described in header
  */
-vendor_id_payload_t *vendor_id_payload_create()
+vendor_id_payload_t *vendor_id_payload_create(payload_type_t type)
 {
-	return vendor_id_payload_create_data(chunk_empty);
+	return vendor_id_payload_create_data(type, chunk_empty);
 }

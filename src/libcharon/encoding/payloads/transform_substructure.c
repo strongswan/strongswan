@@ -41,10 +41,11 @@ struct private_transform_substructure_t {
 	 * Next payload type.
 	 */
 	u_int8_t  next_payload;
+
 	/**
-	 * Reserved bytes
+	 * Reserved byte
 	 */
-	u_int8_t reserved[2];
+	u_int8_t reserved[3];
 
 	/**
 	 * Length of this payload.
@@ -52,43 +53,72 @@ struct private_transform_substructure_t {
 	u_int16_t transform_length;
 
 	/**
-	 * Type of the transform.
+	 * Type or number, Type of the transform in IKEv2, number in IKEv2.
 	 */
-	u_int8_t transform_type;
+	u_int8_t transform_ton;
 
 	/**
-	 * Transform ID.
+	 * Transform ID, as encoded in IKEv1.
 	 */
-	u_int16_t transform_id;
+	u_int8_t transform_id_v1;
+
+	/**
+	 * Transform ID, as encoded in IKEv2.
+	 */
+	u_int16_t transform_id_v2;
 
 	/**
 	 * Transforms Attributes are stored in a linked_list_t.
 	 */
 	linked_list_t *attributes;
+
+	/**
+	 * Payload type, TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a Transform substructure.
- *
- * The defined offsets are the positions in a object of type
- * private_transform_substructure_t.
+ * Encoding rules for TRANSFORM_SUBSTRUCTURE
  */
-encoding_rule_t transform_substructure_encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,				offsetof(private_transform_substructure_t, next_payload)	},
+	{ U_INT_8,			offsetof(private_transform_substructure_t, next_payload)	},
 	/* 1 Reserved Byte */
-	{ RESERVED_BYTE,		offsetof(private_transform_substructure_t, reserved[0])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[0])		},
 	/* Length of the whole transform substructure*/
-	{ PAYLOAD_LENGTH,		offsetof(private_transform_substructure_t, transform_length)},
-	/* transform type is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_transform_substructure_t, transform_type)	},
+	{ PAYLOAD_LENGTH,	offsetof(private_transform_substructure_t, transform_length)},
+	/* transform type */
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_ton)	},
+	/* transform identifier, as used by IKEv1 */
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[1])		},
+	/* transform identifier, as used by IKEv2 */
+	{ U_INT_16,			offsetof(private_transform_substructure_t, transform_id_v2)	},
+	/* Attributes in a transform attribute list */
+	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE,
+						offsetof(private_transform_substructure_t, attributes)		}
+};
+
+/**
+ * Encoding rules for TRANSFORM_SUBSTRUCTURE_V1
+ */
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_transform_substructure_t, next_payload)	},
 	/* 1 Reserved Byte */
-	{ RESERVED_BYTE,		offsetof(private_transform_substructure_t, reserved[1])		},
-	/* transform ID is a number of 8 bit */
-	{ U_INT_16,				offsetof(private_transform_substructure_t, transform_id)	},
-	/* Attributes are stored in a transform attribute,
-	   offset points to a linked_list_t pointer */
-	{ TRANSFORM_ATTRIBUTES,	offsetof(private_transform_substructure_t, attributes)		}
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[0])		},
+	/* Length of the whole transform substructure*/
+	{ PAYLOAD_LENGTH,	offsetof(private_transform_substructure_t, transform_length)},
+	/* transform number */
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_ton)},
+	/* transform identifier, as used by IKEv1 */
+	{ U_INT_8,			offsetof(private_transform_substructure_t, transform_id_v1)	},
+	/* transform identifier, as used by IKEv2 */
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[1])		},
+	{ RESERVED_BYTE,	offsetof(private_transform_substructure_t, reserved[2])		},
+	/* Attributes in a transform attribute list */
+	{ PAYLOAD_LIST + TRANSFORM_ATTRIBUTE_V1,
+						offsetof(private_transform_substructure_t, attributes)		}
 };
 
 /*
@@ -97,7 +127,7 @@ encoding_rule_t transform_substructure_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ! 0 (last) or 3 !   RESERVED    !        Transform Length       !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      !Transform Type !   RESERVED    !          Transform ID         !
+      ! Tfrm Typ or # ! Tfrm ID IKEv1 !        Transform ID IKEv2     !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       !                                                               !
       ~                      Transform Attributes                     ~
@@ -118,23 +148,6 @@ METHOD(payload_t, verify, status_t,
 		return FAILED;
 	}
 
-	switch (this->transform_type)
-	{
-		case ENCRYPTION_ALGORITHM:
-		case PSEUDO_RANDOM_FUNCTION:
-		case INTEGRITY_ALGORITHM:
-		case DIFFIE_HELLMAN_GROUP:
-		case EXTENDED_SEQUENCE_NUMBERS:
-			/* we don't check transform ID, we want to reply
-			 * cleanly with NO_PROPOSAL_CHOSEN or so if we don't support it */
-			break;
-		default:
-		{
-			DBG1(DBG_ENC, "invalid transform type: %d", this->transform_type);
-			return FAILED;
-		}
-	}
-
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attribute))
 	{
@@ -151,18 +164,28 @@ METHOD(payload_t, verify, status_t,
 	return status;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_transform_substructure_t *this, encoding_rule_t **rules,
-	size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_transform_substructure_t *this, encoding_rule_t **rules)
 {
-	*rules = transform_substructure_encodings;
-	*rule_count = countof(transform_substructure_encodings);
+	if (this->type == TRANSFORM_SUBSTRUCTURE)
+	{
+		*rules = encodings_v2;
+		return countof(encodings_v2);
+	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_transform_substructure_t *this)
+{
+	return 8;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_transform_substructure_t *this)
 {
-	return TRANSFORM_SUBSTRUCTURE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -174,12 +197,12 @@ METHOD(payload_t, get_next_type, payload_type_t,
 /**
  * recompute the length of the payload.
  */
-static void compute_length (private_transform_substructure_t *this)
+static void compute_length(private_transform_substructure_t *this)
 {
 	enumerator_t *enumerator;
 	payload_t *attribute;
 
-	this->transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	this->transform_length = get_header_length(this);
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attribute))
 	{
@@ -194,6 +217,13 @@ METHOD(payload_t, get_length, size_t,
 	return this->transform_length;
 }
 
+METHOD(transform_substructure_t, add_transform_attribute, void,
+	private_transform_substructure_t *this, transform_attribute_t *attribute)
+{
+	this->attributes->insert_last(this->attributes, attribute);
+	compute_length(this);
+}
+
 METHOD(transform_substructure_t, set_is_last_transform, void,
 	private_transform_substructure_t *this, bool is_last)
 {
@@ -205,50 +235,40 @@ METHOD(payload_t, set_next_type, void,
 {
 }
 
-METHOD(transform_substructure_t, get_transform_type, u_int8_t,
+METHOD(transform_substructure_t, get_transform_type_or_number, u_int8_t,
 	private_transform_substructure_t *this)
 {
-	return this->transform_type;
+	return this->transform_ton;
 }
 
 METHOD(transform_substructure_t, get_transform_id, u_int16_t,
 	private_transform_substructure_t *this)
 {
-	return this->transform_id;
+	if (this->type == TRANSFORM_SUBSTRUCTURE)
+	{
+		return this->transform_id_v2;
+	}
+	return this->transform_id_v1;
 }
 
-METHOD(transform_substructure_t, get_key_length, status_t,
-	private_transform_substructure_t *this, u_int16_t *key_length)
+METHOD(transform_substructure_t, create_attribute_enumerator, enumerator_t*,
+	private_transform_substructure_t *this)
 {
-	enumerator_t *enumerator;
-	transform_attribute_t *attribute;
-
-	enumerator = this->attributes->create_enumerator(this->attributes);
-	while (enumerator->enumerate(enumerator, &attribute))
-	{
-		if (attribute->get_attribute_type(attribute) == KEY_LENGTH)
-		{
-			*key_length = attribute->get_value(attribute);
-			enumerator->destroy(enumerator);
-			return SUCCESS;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return FAILED;
+	return this->attributes->create_enumerator(this->attributes);
 }
 
 METHOD2(payload_t, transform_substructure_t, destroy, void,
 	private_transform_substructure_t *this)
 {
 	this->attributes->destroy_offset(this->attributes,
-									 offsetof(transform_attribute_t, destroy));
+									 offsetof(payload_t, destroy));
 	free(this);
 }
 
 /*
  * Described in header.
  */
-transform_substructure_t *transform_substructure_create()
+transform_substructure_t *transform_substructure_create(payload_type_t type)
 {
 	private_transform_substructure_t *this;
 
@@ -257,21 +277,24 @@ transform_substructure_t *transform_substructure_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
+			.add_transform_attribute = _add_transform_attribute,
 			.set_is_last_transform = _set_is_last_transform,
-			.get_transform_type = _get_transform_type,
+			.get_transform_type_or_number = _get_transform_type_or_number,
 			.get_transform_id = _get_transform_id,
-			.get_key_length = _get_key_length,
+			.create_attribute_enumerator = _create_attribute_enumerator,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH,
+		.transform_length = get_header_length(this),
 		.attributes = linked_list_create(),
+		.type = type,
 	);
 	return &this->public;
 }
@@ -279,20 +302,21 @@ transform_substructure_t *transform_substructure_create()
 /*
  * Described in header
  */
-transform_substructure_t *transform_substructure_create_type(
-					transform_type_t type, u_int16_t id, u_int16_t key_length)
+transform_substructure_t *transform_substructure_create_type(payload_type_t type,
+				u_int8_t type_or_number, u_int16_t id)
 {
 	private_transform_substructure_t *this;
 
-	this = (private_transform_substructure_t*)transform_substructure_create();
+	this = (private_transform_substructure_t*)transform_substructure_create(type);
 
-	this->transform_type = type;
-	this->transform_id = id;
-	if (key_length)
+	this->transform_ton = type_or_number;
+	if (type == TRANSFORM_SUBSTRUCTURE)
 	{
-		this->attributes->insert_last(this->attributes,
-					(void*)transform_attribute_create_key_length(key_length));
-		compute_length(this);
+		this->transform_id_v2 = id;
+	}
+	else
+	{
+		this->transform_id_v1 = id;
 	}
 	return &this->public;
 }

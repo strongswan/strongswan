@@ -108,7 +108,7 @@ METHOD(job_t, execute, void,
 			{
 				DBG1(DBG_JOB, "deleting CHILD_SA after %d seconds "
 					 "of inactivity", this->timeout);
-				status = ike_sa->delete_child_sa(ike_sa, proto, delete);
+				status = ike_sa->delete_child_sa(ike_sa, proto, delete, FALSE);
 			}
 		}
 		if (status == DESTROY_ME)

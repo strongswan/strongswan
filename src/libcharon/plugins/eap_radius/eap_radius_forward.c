@@ -319,11 +319,11 @@ void eap_radius_forward_to_ike(radius_message_t *response)
 
 METHOD(listener_t, message, bool,
 	private_eap_radius_forward_t *this,
-	ike_sa_t *ike_sa, message_t *message, bool incoming)
+	ike_sa_t *ike_sa, message_t *message, bool incoming, bool plain)
 {
 	linked_list_t *queue;
 
-	if (message->get_exchange_type(message) == IKE_AUTH)
+	if (plain && message->get_exchange_type(message) == IKE_AUTH)
 	{
 		if (incoming)
 		{

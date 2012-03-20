@@ -189,9 +189,9 @@ METHOD(listener_t, ike_state_change, bool,
 
 METHOD(listener_t, message_hook, bool,
 	private_led_listener_t *this, ike_sa_t *ike_sa,
-	message_t *message, bool incoming)
+	message_t *message, bool incoming, bool plain)
 {
-	if (incoming || message->get_request(message))
+	if (plain && (incoming || message->get_request(message)))
 	{
 		blink_activity(this);
 	}

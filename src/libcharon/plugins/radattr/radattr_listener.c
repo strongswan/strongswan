@@ -172,9 +172,9 @@ static void add_radius_attribute(private_radattr_listener_t *this,
 
 METHOD(listener_t, message, bool,
 	private_radattr_listener_t *this,
-	ike_sa_t *ike_sa, message_t *message, bool incoming)
+	ike_sa_t *ike_sa, message_t *message, bool incoming, bool plain)
 {
-	if (ike_sa->supports_extension(ike_sa, EXT_STRONGSWAN) &&
+	if (plain && ike_sa->supports_extension(ike_sa, EXT_STRONGSWAN) &&
 		message->get_exchange_type(message) == IKE_AUTH &&
 		message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
 	{

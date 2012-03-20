@@ -72,4 +72,12 @@ struct generator_t {
  */
 generator_t *generator_create(void);
 
+/**
+ * Constructor to create a generator that does not log any debug messages > 1.
+ *
+ * @return generator_t object.
+ */
+generator_t *generator_create_no_dbg(void);
+
+
 #endif /** GENERATOR_H_ @}*/

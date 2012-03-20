@@ -23,6 +23,7 @@
 #ifndef PEER_CFG_H_
 #define PEER_CFG_H_
 
+typedef enum ike_version_t ike_version_t;
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
@@ -34,9 +35,24 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <config/proposal.h>
 #include <config/ike_cfg.h>
 #include <config/child_cfg.h>
-#include <sa/authenticators/authenticator.h>
-#include <sa/authenticators/eap/eap_method.h>
 #include <credentials/auth_cfg.h>
+
+/**
+ * IKE version.
+ */
+enum ike_version_t {
+	/** any version */
+	IKE_ANY = 0,
+	/** IKE version 1 */
+	IKEV1 = 1,
+	/** IKE version 2 */
+	IKEV2 = 2,
+};
+
+/**
+ * enum strings fro ike_version_t
+ */
+extern enum_name_t *ike_version_names;
 
 /**
  * Certificate sending policy. This is also used for certificate
@@ -130,7 +146,7 @@ struct peer_cfg_t {
 	 *
 	 * @return				IKE major version
 	 */
-	u_int (*get_ike_version)(peer_cfg_t *this);
+	ike_version_t (*get_ike_version)(peer_cfg_t *this);
 
 	/**
 	 * Get the IKE config to use for initiaton.
@@ -211,18 +227,20 @@ struct peer_cfg_t {
 	u_int32_t (*get_keyingtries) (peer_cfg_t *this);
 
 	/**
-	 * Get a time to start rekeying (is randomized with jitter).
+	 * Get a time to start rekeying.
 	 *
+	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start rekeying, 0 disables rekeying
 	 */
-	u_int32_t (*get_rekey_time)(peer_cfg_t *this);
+	u_int32_t (*get_rekey_time)(peer_cfg_t *this, bool jitter);
 
 	/**
-	 * Get a time to start reauthentication (is randomized with jitter).
+	 * Get a time to start reauthentication.
 	 *
+	 * @param jitter	remove a jitter value to randomize time
 	 * @return			time in s when to start reauthentication, 0 disables it
 	 */
-	u_int32_t (*get_reauth_time)(peer_cfg_t *this);
+	u_int32_t (*get_reauth_time)(peer_cfg_t *this, bool jitter);
 
 	/**
 	 * Get the timeout of a rekeying/reauthenticating SA.
@@ -237,6 +255,13 @@ struct peer_cfg_t {
 	 * @return			TRUE to enable MOBIKE support
 	 */
 	bool (*use_mobike) (peer_cfg_t *this);
+
+	/**
+	 * Use/Accept aggressive mode with IKEv1?.
+	 *
+	 * @return			TRUE to use aggressive mode
+	 */
+	bool (*use_aggressive)(peer_cfg_t *this);
 
 	/**
 	 * Get the DPD check interval.
@@ -339,6 +364,7 @@ struct peer_cfg_t {
  * @param jitter_time		timerange to randomly subtract from rekey/reauth time
  * @param over_time			maximum overtime before closing a rekeying/reauth SA
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
+ * @param aggressive		use/accept aggressive mode with IKEv1
  * @param dpd				DPD check interval, 0 to disable
  * @param virtual_ip		virtual IP for local host, or NULL
  * @param pool				pool name to get configuration attributes from, or NULL
@@ -347,13 +373,13 @@ struct peer_cfg_t {
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return					peer_cfg_t object
  */
-peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
-							cert_policy_t cert_policy, unique_policy_t unique,
-							u_int32_t keyingtries, u_int32_t rekey_time,
-							u_int32_t reauth_time, u_int32_t jitter_time,
-							u_int32_t over_time, bool mobike, u_int32_t dpd,
-							host_t *virtual_ip, char *pool,
-							bool mediation, peer_cfg_t *mediated_by,
-							identification_t *peer_id);
+peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
+							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
+							unique_policy_t unique, u_int32_t keyingtries,
+							u_int32_t rekey_time, u_int32_t reauth_time,
+							u_int32_t jitter_time, u_int32_t over_time,
+							bool mobike, bool aggressive, u_int32_t dpd,
+							host_t *virtual_ip, char *pool, bool mediation,
+							peer_cfg_t *mediated_by, identification_t *peer_id);
 
 #endif /** PEER_CFG_H_ @}*/
