@@ -49,6 +49,9 @@
  * @defgroup fetcher fetcher
  * @ingroup libstrongswan
  *
+ * @defgroup resolver resolver
+ * @ingroup libstrongswan
+ *
  * @defgroup ipsec ipsec
  * @ingroup libstrongswan
  *

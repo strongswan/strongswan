@@ -63,6 +63,8 @@ database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h \
+resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
+resolver/rr.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h selectors/traffic_selector.h \
