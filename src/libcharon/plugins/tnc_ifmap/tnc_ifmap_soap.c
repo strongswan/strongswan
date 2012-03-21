@@ -70,15 +70,14 @@ struct private_tnc_ifmap_soap_t {
 /**
  * Send request and receive result via SOAP
  */
-static bool send_receive(private_tnc_ifmap_soap_t *this,
-						 char *request_qname, axiom_node_t *request,
-						 char *receipt_qname, axiom_node_t **result)
+static axiom_element_t* send_receive(private_tnc_ifmap_soap_t *this,
+									 char *request_qname, axiom_node_t *request,
+									 char *receipt_qname, axiom_node_t **result)
 
 {
     axiom_node_t *parent, *node;
-    axiom_element_t *el;
+    axiom_element_t *parent_el, *el;
 	axutil_qname_t *qname;
-	bool success = FALSE;
 
 	/* send request and receive result */
 	DBG2(DBG_TNC, "sending  ifmap %s", request_qname);
@@ -87,45 +86,44 @@ static bool send_receive(private_tnc_ifmap_soap_t *this,
 	if (!parent)
 	{
 		DBG1(DBG_TNC, "no ifmap %s received from MAP server", receipt_qname);
-		return FALSE;
+		return NULL;
 	}
+	DBG2(DBG_TNC, "received ifmap %s", receipt_qname);
 
-	/* pre-process result */
-	node = axiom_node_get_first_child(parent, this->env);
-	if (node && axiom_node_get_node_type(node, this->env) == AXIOM_ELEMENT)
+	/* extract the parent element */
+	parent_el = (axiom_element_t*)axiom_node_get_data_element(parent, this->env);
+
+	/* look for a child node with the given receipt qname */
+	qname = axutil_qname_create_from_string(this->env, strdup(receipt_qname));
+	el = axiom_element_get_first_child_with_qname(parent_el, this->env, qname,
+												  parent, &node);
+	axutil_qname_free(qname, this->env);
+
+	if (el)
 	{
-		el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
-
-		qname = axiom_element_get_qname(el, this->env, node);
-		success = streq(receipt_qname, axutil_qname_to_string(qname, this->env));
-		if (success)
- 		{
-			DBG2(DBG_TNC, "received ifmap %s", receipt_qname);
-			if (result)
-			{
-				*result = parent;
-			}
-			else
-			{
-				/* no further processing requested */
-				axiom_node_free_tree(parent, this->env);
-			}
-			return TRUE;
+		if (result)
+		{
+			*result = parent;
 		}
-		/* TODO proper error handling */
-		DBG1(DBG_TNC, "%s", axiom_element_to_string(el, this->env, node));
+		else
+		{
+			/* no further processing requested */
+			axiom_node_free_tree(parent, this->env);
+		}
+		return el;
 	}
+	DBG1(DBG_TNC, "child node with qname '%s' not found", receipt_qname);
 
 	/* free parent in the error case */
 	axiom_node_free_tree(parent, this->env);
 
-	return FALSE;
+	return NULL;
 }
 
 METHOD(tnc_ifmap_soap_t, newSession, bool,
 	private_tnc_ifmap_soap_t *this)
 {
-    axiom_node_t *request, *result, *node;
+    axiom_node_t *request, *result;
     axiom_element_t *el;
 	axiom_namespace_t *ns;
 	axis2_char_t *value;
@@ -136,14 +134,11 @@ METHOD(tnc_ifmap_soap_t, newSession, bool,
     el = axiom_element_create(this->env, NULL, "newSession", ns, &request);
 
 	/* send newSession request and receive newSessionResult */
-	if (!send_receive(this, "newSession", request, "newSessionResult", &result))
+	el = send_receive(this, "newSession", request, "newSessionResult", &result);
+	if (!el)
 	{
 		return FALSE;
 	}
-
-	/* process newSessionResult */
-	node = axiom_node_get_first_child(result, this->env);
-	el = (axiom_element_t *)axiom_node_get_data_element(node, this->env);
 
 	/* get session-id */
 	value = axiom_element_get_attribute_value_by_name(el, this->env,
