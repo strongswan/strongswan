@@ -1079,6 +1079,15 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		this->reqid = rekey ? rekey : ++reqid;
 	}
 
+	if (this->mark_in.value == MARK_REQID)
+	{
+		this->mark_in.value = this->reqid;
+	}
+	if (this->mark_out.value == MARK_REQID)
+	{
+		this->mark_out.value = this->reqid;
+	}
+
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
 		config->use_proxy_mode(config))

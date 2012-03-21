@@ -172,6 +172,11 @@ struct mark_t {
 };
 
 /**
+ * Special mark value that uses the reqid of the CHILD_SA as mark
+ */
+#define MARK_REQID (0xFFFFFFFF)
+
+/**
  * Interface to the ipsec subsystem of the kernel.
  *
  * The kernel ipsec interface handles the communication with the kernel
