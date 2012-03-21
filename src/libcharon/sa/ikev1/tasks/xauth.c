@@ -167,6 +167,20 @@ static bool establish(private_xauth_t *this)
 	return TRUE;
 }
 
+/**
+ * Create auth config after successful authentication
+ */
+static void add_auth_cfg(private_xauth_t *this, identification_t *id, bool local)
+{
+	auth_cfg_t *auth;
+
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
+	auth->add(auth, AUTH_RULE_XAUTH_IDENTITY, id->clone(id));
+
+	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);
+}
+
 METHOD(task_t, build_i_status, status_t,
 	private_xauth_t *this, message_t *message)
 {
@@ -283,6 +297,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' (myself) successful",
 				 this->xauth->get_identity(this->xauth));
+			add_auth_cfg(this, this->xauth->get_identity(this->xauth), TRUE);
 		}
 		else
 		{
@@ -356,6 +371,7 @@ METHOD(task_t, process_i, status_t,
 				break;
 			}
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' successful", id);
+			add_auth_cfg(this, id, FALSE);
 			this->status = XAUTH_OK;
 			break;
 		case FAILED:
