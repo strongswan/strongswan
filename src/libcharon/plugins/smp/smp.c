@@ -627,7 +627,7 @@ static job_requeue_t process(int *fdp)
 	int fd = *fdp;
 	bool oldstate;
 	char buffer[4096];
-	size_t len;
+	ssize_t len;
 	xmlTextReaderPtr reader;
 	char *id = NULL, *type = NULL;
 
