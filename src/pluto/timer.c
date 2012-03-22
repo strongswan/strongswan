@@ -46,18 +46,7 @@
  */
 time_t now(void)
 {
-	static time_t delta = 0
-		, last_time = 0;
-	time_t n = time(NULL);
-
-	passert(n != (time_t)-1);
-	if (last_time > n)
-	{
-		plog("time moved backwards %ld seconds", (long)(last_time - n));
-		delta += last_time - n;
-	}
-	last_time = n;
-	return n + delta;
+	return time_monotonic(NULL);
 }
 
 /* This file has the event handling routines. Events are
