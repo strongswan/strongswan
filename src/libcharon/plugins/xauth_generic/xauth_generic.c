@@ -136,6 +136,10 @@ METHOD(xauth_method_t, process_server, status_t,
 		this->peer->destroy(this->peer);
 		this->peer = id;
 	}
+	if (pass.len && pass.ptr[pass.len - 1] == 0)
+	{	/* fix null-terminated passwords (Android etc.) */
+		pass.len -= 1;
+	}
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
 										SHARED_EAP, this->server, this->peer);

@@ -217,6 +217,10 @@ METHOD(xauth_method_t, process, status_t,
 		this->peer->destroy(this->peer);
 		this->peer = id;
 	}
+	if (pass.len && pass.ptr[pass.len - 1] == 0)
+	{	/* fix null-terminated passwords (Android etc.) */
+		pass.len -= 1;
+	}
 
 	name = lib->settings->get_str(lib->settings,
 								  "charon.plugins.xauth-eap.backend", "radius");
