@@ -207,7 +207,8 @@ METHOD(simaka_card_t, get_triplet, bool,
 		if (dwRecvLength < APDU_STATUS_LEN ||
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
-			DBG1(DBG_IKE, "Select MF failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Select MF failed: %b", pbRecvBuffer,
+				 (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -223,7 +224,8 @@ METHOD(simaka_card_t, get_triplet, bool,
 		if (dwRecvLength < APDU_STATUS_LEN ||
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
-			DBG1(DBG_IKE, "Select DF GSM failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Select DF GSM failed: %b", pbRecvBuffer,
+				 (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -239,7 +241,8 @@ METHOD(simaka_card_t, get_triplet, bool,
 		if (dwRecvLength < APDU_STATUS_LEN ||
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
-			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer,
+				 (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -255,14 +258,15 @@ METHOD(simaka_card_t, get_triplet, bool,
 		if (dwRecvLength < APDU_STATUS_LEN ||
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS)
 		{
-			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Select IMSI failed: %b", pbRecvBuffer,
+				 (u_int)dwRecvLength);
 			continue;
 		}
 
 		if (!decode_imsi_ef(pbRecvBuffer, dwRecvLength-APDU_STATUS_LEN, imsi))
 		{
 			DBG1(DBG_IKE, "Couldn't decode IMSI EF: %b",
-				 pbRecvBuffer, dwRecvLength);
+				 pbRecvBuffer, (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -288,7 +292,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_RESPONSE_DATA)
 		{
 			DBG1(DBG_IKE, "Run GSM Algorithm failed: %b",
-				 pbRecvBuffer, dwRecvLength);
+				 pbRecvBuffer, (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -305,7 +309,8 @@ METHOD(simaka_card_t, get_triplet, bool,
 		if (dwRecvLength < APDU_STATUS_LEN ||
 			pbRecvBuffer[dwRecvLength-APDU_STATUS_LEN] != APDU_SW1_SUCCESS)
 		{
-			DBG1(DBG_IKE, "Get Response failed: %b", pbRecvBuffer, dwRecvLength);
+			DBG1(DBG_IKE, "Get Response failed: %b", pbRecvBuffer,
+				 (u_int)dwRecvLength);
 			continue;
 		}
 
@@ -320,7 +325,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 		else
 		{
 			DBG1(DBG_IKE, "Get Response incorrect length: %b",
-				 pbRecvBuffer, dwRecvLength);
+				 pbRecvBuffer, (u_int)dwRecvLength);
 			continue;
 		}
 

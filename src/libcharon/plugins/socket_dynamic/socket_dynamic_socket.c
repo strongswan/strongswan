@@ -235,7 +235,7 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 		DBG1(DBG_NET, "receive buffer too small, packet discarded");
 		return NULL;
 	}
-	DBG3(DBG_NET, "received packet %b", buffer, len);
+	DBG3(DBG_NET, "received packet %b", buffer, (u_int)len);
 
 	if (len < MARKER_LEN)
 	{

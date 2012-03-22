@@ -523,7 +523,7 @@ METHOD(generator_t, generate_payload, void,
 		 payload_type_names, payload_type);
 	DBG3(DBG_ENC, "generated data for this payload %b",
 		 this->buffer + offset_start,
-		 this->out_position - this->buffer - offset_start);
+		 (u_int)(this->out_position - this->buffer - offset_start));
 }
 
 METHOD(generator_t, destroy, void,

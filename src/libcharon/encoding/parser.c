@@ -377,7 +377,7 @@ METHOD(parser_t, parse_payload, status_t,
 		 payload_type_names, payload_type, this->input_roof - this->byte_pos);
 
 	DBG3(DBG_ENC, "parsing payload from %b",
-		 this->byte_pos, this->input_roof - this->byte_pos);
+		 this->byte_pos, (u_int)(this->input_roof - this->byte_pos));
 
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;

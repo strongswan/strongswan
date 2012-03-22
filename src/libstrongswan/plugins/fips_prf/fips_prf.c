@@ -127,14 +127,14 @@ METHOD(prf_t, get_bytes, void,
 	{
 		/* a. XVAL = (XKEY + XSEED j) mod 2^b */
 		add_mod(this->b, xkey, xseed, xval);
-		DBG3(DBG_LIB, "XVAL %b", xval, this->b);
+		DBG3(DBG_LIB, "XVAL %b", xval, (u_int)this->b);
 		/* b. wi = G(t, XVAL ) */
 		this->g(this, chunk_create(xval, this->b), &w[i * this->b]);
-		DBG3(DBG_LIB, "w[%d] %b", i, &w[i * this->b], this->b);
+		DBG3(DBG_LIB, "w[%d] %b", i, &w[i * this->b], (u_int)this->b);
 		/* c. XKEY = (1 + XKEY + wi) mod 2b */
 		add_mod(this->b, xkey, &w[i * this->b], sum);
 		add_mod(this->b, sum, one, xkey);
-		DBG3(DBG_LIB, "XKEY %b", xkey, this->b);
+		DBG3(DBG_LIB, "XKEY %b", xkey, (u_int)this->b);
 	}
 
 	/* 3.3 done already, mod q not used */

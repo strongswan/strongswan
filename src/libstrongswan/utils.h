@@ -637,7 +637,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  * printf hook for memory areas.
  *
  * Arguments are:
- *	u_char *ptr, int len
+ *	u_char *ptr, u_int len
  */
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					const void *const *args);

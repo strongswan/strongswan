@@ -668,7 +668,8 @@ int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 
 	if (!spec->hash)
 	{
-		const void *new_args[] = {&chunk->ptr, &chunk->len};
+		u_int chunk_len = chunk->len;
+		const void *new_args[] = {&chunk->ptr, &chunk_len};
 		return mem_printf_hook(dst, len, spec, new_args);
 	}
 

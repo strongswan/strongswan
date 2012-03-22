@@ -444,7 +444,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 					printf_hook_spec_t *spec, const void *const *args)
 {
 	char *bytes = *((void**)(args[0]));
-	int len = *((size_t*)(args[1]));
+	u_int len = *((int*)(args[1]));
 
 	char buffer[BYTES_PER_LINE * 3];
 	char ascii_buffer[BYTES_PER_LINE + 1];
@@ -455,7 +455,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 	int i = 0;
 	int written = 0;
 
-	written += print_in_hook(dst, dstlen, "=> %d bytes @ %p", len, bytes);
+	written += print_in_hook(dst, dstlen, "=> %u bytes @ %p", len, bytes);
 
 	while (bytes_pos < bytes_roof)
 	{
