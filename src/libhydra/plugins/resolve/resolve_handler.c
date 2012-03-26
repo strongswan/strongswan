@@ -27,7 +27,7 @@
 /* path to resolvconf executable */
 #define RESOLVCONF_EXEC "/sbin/resolvconf"
 
-/* prefix used for resolvconf interfaces */
+/* default prefix used for resolvconf interfaces (should have high prio) */
 #define RESOLVCONF_PREFIX "lo.inet.ipsec."
 
 typedef struct private_resolve_handler_t private_resolve_handler_t;
@@ -51,6 +51,11 @@ struct private_resolve_handler_t {
 	 * use resolvconf instead of writing directly to resolv.conf
 	 */
 	bool use_resolvconf;
+
+	/**
+	 * prefix to be used for interface names sent to resolvconf
+	 */
+	char *iface_prefix;
 
 	/**
 	 * Mutex to access file exclusively
@@ -149,7 +154,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this,
 	/* we use the nameserver's IP address as part of the interface name to
 	 * make them unique */
 	if (snprintf(cmd, sizeof(cmd), "%s %s %s%H", RESOLVCONF_EXEC,
-				 install ? "-a" : "-d", RESOLVCONF_PREFIX, addr) >= sizeof(cmd))
+				install ? "-a" : "-d", this->iface_prefix, addr) >= sizeof(cmd))
 	{
 		return FALSE;
 	}
@@ -336,6 +341,9 @@ resolve_handler_t *resolve_handler_create()
 	if (stat(RESOLVCONF_EXEC, &st) == 0)
 	{
 		this->use_resolvconf = TRUE;
+		this->iface_prefix = lib->settings->get_str(lib->settings,
+								"%s.plugins.resolve.resolvconf.iface_prefix",
+								RESOLVCONF_PREFIX, hydra->daemon);
 	}
 
 	return &this->public;

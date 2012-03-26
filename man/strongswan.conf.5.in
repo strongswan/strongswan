@@ -470,6 +470,12 @@ Section to configure the load-tester plugin, see LOAD TESTS
 .BR charon.plugins.resolve.file " [/etc/resolv.conf]"
 File where to add DNS server entries
 .TP
+.BR charon.plugins.resolve.resolvconf.iface_prefix " [lo.inet.ipsec.]"
+Prefix used for interface names sent to resolvconf(8). The nameserver address
+is appended to this prefix to make it unique.  The result has to be a valid
+interface name according to the rules defined by resolvconf.  Also, it should
+have a high priority according to the order defined in interface-order(5).
+.TP
 .BR charon.plugins.sql.database
 Database URI for charons SQL plugin
 .TP
