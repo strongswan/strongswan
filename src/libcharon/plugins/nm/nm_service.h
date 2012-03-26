@@ -21,7 +21,7 @@
 #ifndef NM_SERVICE_H_
 #define NM_SERVICE_H_
 
-#include <glib/gtypes.h>
+#include <glib.h>
 #include <glib-object.h>
 #include <nm-vpn-plugin.h>
 
