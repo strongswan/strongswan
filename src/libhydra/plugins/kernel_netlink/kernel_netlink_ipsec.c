@@ -1147,16 +1147,9 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}  (mark "
-					  "%u/0x%8x)", ntohl(spi), reqid, mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}",
-					   ntohl(spi), reqid);
-	}
+	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}  (mark "
+				  "%u/0x%8x)", ntohl(spi), reqid, mark.value, mark.mask);
+
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = inbound ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -1608,15 +1601,9 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%8x)",
-					   ntohl(spi), mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
-	}
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%8x)",
+				   ntohl(spi), mark.value, mark.mask);
+
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
@@ -1717,15 +1704,9 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%8x)",
-					   ntohl(spi), mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x", ntohl(spi));
-	}
+	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%8x)",
+				   ntohl(spi), mark.value, mark.mask);
+
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_DELSA;
@@ -2255,19 +2236,10 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (current)
 	{
 		/* use existing policy */
-		if (mark.value)
-		{
-			DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%8x) "
-						  "already exists, increasing refcount",
-						   src_ts, dst_ts, policy_dir_names, direction,
-						   mark.value, mark.mask);
-		}
-		else
-		{
-			DBG2(DBG_KNL, "policy %R === %R %N "
-						  "already exists, increasing refcount",
-						   src_ts, dst_ts, policy_dir_names, direction);
-		}
+		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%8x) "
+					  "already exists, increasing refcount",
+					   src_ts, dst_ts, policy_dir_names, direction,
+					   mark.value, mark.mask);
 		policy_entry_destroy(this, policy);
 		policy = current;
 		found = TRUE;
@@ -2311,18 +2283,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		return SUCCESS;
 	}
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "%s policy %R === %R %N  (mark %u/0x%8x)",
-					   found ? "updating" : "adding", src_ts, dst_ts,
-					   policy_dir_names, direction, mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "%s policy %R === %R %N",
-					   found ? "updating" : "adding", src_ts, dst_ts,
-					   policy_dir_names, direction);
-	}
+	DBG2(DBG_KNL, "%s policy %R === %R %N  (mark %u/0x%8x)",
+				   found ? "updating" : "adding", src_ts, dst_ts,
+				   policy_dir_names, direction, mark.value, mark.mask);
 
 	if (add_policy_internal(this, policy, assigned_sa, found) != SUCCESS)
 	{
@@ -2347,17 +2310,10 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "querying policy %R === %R %N  (mark %u/0x%8x)",
-					   src_ts, dst_ts, policy_dir_names, direction,
-					   mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "querying policy %R === %R %N", src_ts, dst_ts,
-					   policy_dir_names, direction);
-	}
+	DBG2(DBG_KNL, "querying policy %R === %R %N  (mark %u/0x%8x)",
+				   src_ts, dst_ts, policy_dir_names, direction,
+				   mark.value, mark.mask);
+
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
@@ -2451,17 +2407,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	bool is_installed = TRUE;
 	u_int32_t priority;
 
-	if (mark.value)
-	{
-		DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%8x)",
-					   src_ts, dst_ts, policy_dir_names, direction,
-					   mark.value, mark.mask);
-	}
-	else
-	{
-		DBG2(DBG_KNL, "deleting policy %R === %R %N",
-					   src_ts, dst_ts, policy_dir_names, direction);
-	}
+	DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%8x)",
+				   src_ts, dst_ts, policy_dir_names, direction,
+				   mark.value, mark.mask);
 
 	/* create a policy */
 	memset(&policy, 0, sizeof(policy_entry_t));
@@ -2522,17 +2470,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			return SUCCESS;
 		}
 
-		if (mark.value)
-		{
-			DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%8x)",
-						   src_ts, dst_ts, policy_dir_names, direction,
-						   mark.value, mark.mask);
-		}
-		else
-		{
-			DBG2(DBG_KNL, "updating policy %R === %R %N",
-						   src_ts, dst_ts, policy_dir_names, direction);
-		}
+		DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%8x)",
+					   src_ts, dst_ts, policy_dir_names, direction,
+					   mark.value, mark.mask);
 
 		current->used_by->get_first(current->used_by, (void**)&mapping);
 		if (add_policy_internal(this, current, mapping, TRUE) != SUCCESS)
