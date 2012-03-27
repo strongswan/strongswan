@@ -104,6 +104,7 @@ AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 m4_include(m4/macros/enable-disable.m4)
 
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
 ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
 ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
@@ -643,6 +644,13 @@ if test x$curl = xtrue; then
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
+if test x$unbound = xtrue; then
+	AC_HAVE_LIBRARY([ldns],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])])
+	AC_CHECK_HEADER([ldns/ldns.h],,[AC_MSG_ERROR([UNBOUND header ldns/ldns.h not found!])])
+	AC_HAVE_LIBRARY([unbound],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library libunbound not found])])
+	AC_CHECK_HEADER([unbound.h],,[AC_MSG_ERROR([UNBOUND header unbound.h not found!])])
+fi
+
 if test x$soup = xtrue; then
 	PKG_CHECK_MODULES(soup, [libsoup-2.4])
 	AC_SUBST(soup_CFLAGS)
@@ -911,6 +919,7 @@ s_plugins=
 ADD_PLUGIN([test-vectors],         [s charon openac scepclient pki])
 ADD_PLUGIN([curl],                 [s charon scepclient scripts nm])
 ADD_PLUGIN([soup],                 [s charon scripts nm])
+ADD_PLUGIN([unbound],              [s charon scripts])
 ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
 ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
@@ -1036,6 +1045,7 @@ AC_SUBST(s_plugins)
 # -----------------------
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
+AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
 AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
@@ -1248,6 +1258,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
+	src/libstrongswan/plugins/unbound/Makefile
 	src/libstrongswan/plugins/soup/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile

@@ -326,6 +326,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_UNBOUND
+  SUBDIRS += plugins/unbound
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/unbound/libstrongswan-unbound.la
+endif
+endif
+
 if USE_SOUP
   SUBDIRS += plugins/soup
 if MONOLITHIC
