@@ -10,6 +10,8 @@ strongswan-4.6.3
 - Added support for untruncated MD5 and SHA1 HMACs in ESP as used in
   RFC 4595.
 
+- The resolve plugin automatically installs nameservers via resolveconf(8),
+  if it is installed, instead of modifying /etc/resolv.conf directly.
 
 strongswan-4.6.2
 ----------------
