@@ -920,6 +920,9 @@ Packet encoding/decoding encryption/decryption operations
 .B tls
 libtls library messages
 .TP
+.B esp
+libipsec library messages
+.TP
 .B lib
 libstrongwan library messages
 .TP
