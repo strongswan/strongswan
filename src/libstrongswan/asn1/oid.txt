@@ -33,6 +33,7 @@
     0x2A                     "G"						OID_GIVEN_NAME
     0x2B                     "I"						OID_INITIALS
     0x2D                     "ID"						OID_UNIQUE_IDENTIFIER
+    0x2E                     "dnQualifier"				OID_DN_QUALIFIER
     0x48                     "role"						OID_ROLE
   0x1D                       "id-ce"
     0x09                     "subjectDirectoryAttrs"

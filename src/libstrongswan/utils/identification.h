@@ -171,6 +171,8 @@ enum id_part_t {
 	ID_PART_RDN_G,
 	/** Initials RDN of a DN */
 	ID_PART_RDN_I,
+	/** DN Qualifier RDN of a DN */
+	ID_PART_RDN_DNQ,
 	/** UniqueIdentifier RDN of a DN */
 	ID_PART_RDN_ID,
 	/** Locality RDN of a DN */
@@ -298,7 +300,7 @@ struct identification_t {
  *
  * A distinguished name may contain one or more of the following RDNs:
  * ND, UID, DC, CN, S, SN, serialNumber, C, L, ST, O, OU, T, D,
- * N, G, I, ID, EN, EmployeeNumber, E, Email, emailAddress, UN,
+ * N, G, I, dnQualifier, ID, EN, EmployeeNumber, E, Email, emailAddress, UN,
  * unstructuredName, TCGID.
  *
  * This constructor never returns NULL. If it does not find a suitable
