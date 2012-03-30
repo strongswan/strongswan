@@ -815,6 +815,55 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 }
 
 /**
+ * Parse the given address range in the form '<ip> - <ip>'.
+ * @return traffic selector or NULL if the range is invalid
+ */
+static traffic_selector_t *parse_address_range(char *range, stroke_end_t *end)
+{
+	enumerator_t *enumerator;
+	host_t *from = NULL, *to = NULL, **host = &from;
+	u_int16_t from_port, to_port;
+	chunk_t from_addr, to_addr;
+	traffic_selector_t *ts;
+	ts_type_t type;
+	char *addr;
+
+	enumerator = enumerator_create_token(range, "-", " ");
+	while (!to && enumerator->enumerate(enumerator, &addr))
+	{
+		*host = host_create_from_string(addr, 0);
+		host = &to;
+	}
+	enumerator->destroy(enumerator);
+
+	if (!from || !to || from->get_family(from) != to->get_family(to))
+	{
+		DESTROY_IF(from);
+		DESTROY_IF(to);
+		return NULL;
+	}
+
+	from_addr = from->get_address(from);
+	to_addr = to->get_address(to);
+
+	if (chunk_compare(from_addr, to_addr) > 0)
+	{
+		chunk_t tmp = from_addr;
+		from_addr = to_addr;
+		to_addr = tmp;
+	}
+	type = (from->get_family(from) == AF_INET) ? TS_IPV4_ADDR_RANGE
+											   : TS_IPV6_ADDR_RANGE;
+	from_port = end->port ?: 0;
+	to_port = from_port ?: 0xFFFF;
+	ts = traffic_selector_create_from_bytes(end->protocol, type, from_addr,
+											from_port, to_addr, to_port);
+	from->destroy(from);
+	to->destroy(to);
+	return ts;
+}
+
+/**
  * build a traffic selector from a stroke_end
  */
 static void add_ts(private_stroke_config_t *this,
@@ -844,26 +893,37 @@ static void add_ts(private_stroke_config_t *this,
 		}
 		else
 		{
-			char *del, *start, *bits;
+			enumerator_t *subnets;
+			char *subnet;
 
-			start = end->subnets;
-			do
+			subnets = enumerator_create_token(end->subnets, ",", " ");
+			while (subnets->enumerate(subnets, &subnet))
 			{
 				int intbits = 0;
+				char *bits;
 
-				del = strchr(start, ',');
-				if (del)
-				{
-					*del = '\0';
-				}
-				bits = strchr(start, '/');
+				bits = strchr(subnet, '/');
 				if (bits)
 				{
 					*bits = '\0';
 					intbits = atoi(bits + 1);
 				}
+				else if (strchr(subnet, '-'))
+				{
+					ts = parse_address_range(subnet, end);
+					if (ts)
+					{
+						child_cfg->add_traffic_selector(child_cfg, local, ts);
+					}
+					else
+					{
+						DBG1(DBG_CFG, "invalid address range: %s, skipped",
+							 subnet);
+					}
+					continue;
+				}
 
-				net = host_create_from_string(start, 0);
+				net = host_create_from_string(subnet, 0);
 				if (net)
 				{
 					ts = traffic_selector_create_from_subnet(net, intbits,
@@ -872,11 +932,10 @@ static void add_ts(private_stroke_config_t *this,
 				}
 				else
 				{
-					DBG1(DBG_CFG, "invalid subnet: %s, skipped", start);
+					DBG1(DBG_CFG, "invalid subnet: %s, skipped", subnet);
 				}
-				start = del + 1;
 			}
-			while (del);
+			subnets->destroy(subnets);
 		}
 	}
 }
