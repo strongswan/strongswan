@@ -377,7 +377,7 @@ might trigger a closeaction when not desired.
 defines the timeout interval, after which a CHILD_SA is closed if it did
 not send or receive any traffic. Currently supported in IKEv2 connections only.
 .TP
-.BR eap " = md5 | mschapv2 | radius | ... | <type> | <type>-<vendor>
+.BR eap " = aka | ... | radius | ... | <type> | <type>-<vendor>
 defines the EAP type to propose as server if the client requests EAP
 authentication. Currently supported values are
 .B aka
@@ -388,10 +388,17 @@ for EAP-GTC,
 for EAP-MD5,
 .B mschapv2
 for EAP-MS-CHAPv2,
+.B peap
+for EAP-PEAPv0,
 .B radius
-for the EAP-RADIUS proxy and
+for the EAP-RADIUS proxy,
 .B sim
-for EAP-SIM. Additionally, IANA assigned EAP method numbers are accepted, or a
+for EAP-SIM,
+.B tls
+for EAP-TLS, and
+.B ttls
+for EAP-TTLSv0.
+Additionally, IANA assigned EAP method numbers are accepted, or a
 definition in the form
 .B eap=type-vendor
 (e.g. eap=7-12345) can be used to specify vendor specific EAP types.
@@ -600,10 +607,12 @@ an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
 .BR eap-gtc ,
 .BR eap-md5 ,
+.BR eap-mschapv2 ,
+.BR eap-peap ,
+.BR eap-sim ,
 .BR eap-tls ,
-.B eap-mschapv2
 and
-.BR eap-sim .
+.BR eap-ttls .
 Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific
 EAP methods are defined in the form
 .B eap-type-vendor
