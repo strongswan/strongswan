@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -196,8 +196,10 @@ struct traffic_selector_t {
 	bool (*includes) (traffic_selector_t *this, host_t *host);
 
 	/**
-	 * Convert a traffic selector address range to a subnet
-	 * and its net mask.
+	 * Convert a traffic selector address range to a subnet and its net mask.
+	 * This subnet contains at least all addresses in the range but may contain
+	 * more if the range can not properly be mapped to a single subnet.
+	 *
 	 * If from and to ports of this traffic selector are equal,
 	 * the port of the returned host_t is set to that port.
 	 *
@@ -206,6 +208,23 @@ struct traffic_selector_t {
 	 * @return			TRUE if traffic selector matches exactly to the subnet
 	 */
 	bool (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
+
+	/**
+	 * Create an enumerator over all subnets derived from the address range of
+	 * this traffic selector.
+	 *
+	 * The enumerator returned here splits the range into multiple subnets
+	 * which together cover only the addresses in the range (as compared to
+	 * to_subnet() which may contain more addresses).
+	 *
+	 * If from and to ports of this traffic selector are equal, the port of the
+	 * returned host_t is set to that port.
+	 *
+	 * The returned host_t objects point to internal data, do not free.
+	 *
+	 * @return			enumerator over host_t*, u_int8_t
+	 */
+	enumerator_t *(*create_subnet_enumerator) (traffic_selector_t *this);
 
 	/**
 	 * Destroys the ts object

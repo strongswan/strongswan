@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2009 Tobias Brunner
+ * Copyright (C) 2007-2012 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -99,7 +99,31 @@ struct private_traffic_selector_t {
 	 * end of port range
 	 */
 	u_int16_t to_port;
+
+	/**
+	 * list of subnets this address range consists of (subnet_t*)
+	 */
+	linked_list_t *subnets;
 };
+
+/**
+ * Used to cache splitted subnets.
+ */
+typedef struct {
+	/** network address */
+	host_t *net;
+	/** network bits */
+	int netmask;
+} subnet_t;
+
+/**
+ * Destroy a subnet.
+ */
+static void subnet_destroy(subnet_t *this)
+{
+	this->net->destroy(this->net);
+	free(this);
+}
 
 /**
  * calculate the "to"-address for the "from" address and a subnet size
@@ -308,7 +332,8 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 /**
  * Implements traffic_selector_t.get_subset
  */
-static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
+static traffic_selector_t *get_subset(private_traffic_selector_t *this,
+									  private_traffic_selector_t *other)
 {
 	if (this->type == other->type && (this->protocol == other->protocol ||
 								this->protocol == 0 || other->protocol == 0))
@@ -528,6 +553,8 @@ METHOD(traffic_selector_t, set_address, void,
 			memcpy(this->to, from.ptr, from.len);
 			this->netbits = from.len * 8;
 		}
+		DESTROY_FUNCTION_IF(this->subnets, (void*)subnet_destroy);
+		this->subnets = NULL;
 	}
 }
 
@@ -620,6 +647,186 @@ METHOD(traffic_selector_t, to_subnet, bool,
 	return this->netbits != NON_SUBNET_ADDRESS_RANGE;
 }
 
+/**
+ * Insert a subnet into the list of subnets sorted by increasing address.
+ * The address is not masked, i.e. host bits are expected to be 0.
+ */
+static void add_subnet(private_traffic_selector_t *this, chunk_t addr,
+					   int netmask)
+{
+	enumerator_t *enumerator;
+	subnet_t *subnet, *current;
+	u_int16_t port = 0;
+	int family;
+
+	family = (this->type == TS_IPV4_ADDR_RANGE) ? AF_INET : AF_INET6;
+
+	if (this->to_port == this->from_port)
+	{
+		port = this->to_port;
+	}
+
+	INIT(subnet,
+		.net = host_create_from_chunk(family, addr, port),
+		.netmask = netmask,
+	);
+
+	enumerator = this->subnets->create_enumerator(this->subnets);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		int cmp = chunk_compare(current->net->get_address(current->net), addr);
+		if (cmp > 0 || (cmp == 0 && current->netmask > subnet->netmask))
+		{
+			break;
+		}
+	}
+	this->subnets->insert_before(this->subnets, enumerator, subnet);
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Split the address range of this traffic selector into a list of subnets.
+ *
+ * This list is sorted by increasing net address and cached.
+ */
+static void split_range(private_traffic_selector_t *this)
+{
+	static const u_char bitmask[] = { 0x80, 0x40, 0x20, 0x10,
+									  0x08, 0x04, 0x02, 0x01 };
+	int len, byte = 0, bit = 0, prefix, netmask, common_byte, common_bit,
+		from_cur, from_prev, to_cur, to_prev;
+	bool from_full = TRUE, to_full = TRUE;
+	chunk_t from, to;
+
+	/* clone addresses as host bits get modified */
+	len = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	from = chunk_clonea(chunk_create(this->from, len));
+	to = chunk_clonea(chunk_create(this->to, len));
+
+	/* find a common prefix */
+	while ((from.ptr[byte] & bitmask[bit]) == (to.ptr[byte] & bitmask[bit]) &&
+			byte < from.len)
+	{
+		if (++bit == 8)
+		{
+			bit = 0;
+			byte++;
+		}
+	}
+	prefix = byte * 8 + bit;
+
+	/* at this point we know that the addresses are either equal, or that the
+	 * current bits in the 'from' and 'to' addresses are 0 and 1, respectively.
+	 * we now look at the rest of the bits as two binary trees (0=left, 1=right)
+	 * where 'from' and 'to' are both leaf nodes.  all leaf nodes between these
+	 * nodes are addresses contained in the range.  to collect them as subnets
+	 * we follow the trees from both leaf nodes to their root node and record
+	 * all complete subtrees (right for from, left for to) we come across as
+	 * subnets.  in that process host bits are zeroed out.  if both addresses
+	 * are equal we won't enter the loop below.
+	 *      0_____|_____1       for the 'from' address we assume we start on a
+	 *   0__|__ 1    0__|__1    left subtree (0) and follow the left edges until
+	 *  _|_   _|_   _|_   _|_   we reach the root of this subtree, which is
+	 * |   | |   | |   | |   |  either the root of this whole 'from'-subtree
+	 * 0   1 0   1 0   1 0   1  (causing us to leave the loop) or the root node
+	 * of the right subtree (1) of another node (which actually could be the
+	 * leaf node we start from).  that whole subtree gets recorded as subnet.
+	 * next we follow the right edges to the root of that subtree which again is
+	 * either the 'from'-root or the root node in the left subtree (0) of
+	 * another node.  the complete right subtree of that node is the next subnet
+	 * we record.  from there we assume that we are in that right subtree and
+	 * recursively follow right edges to its root.  for the 'to' address the
+	 * procedure is exactly the same but with left and right reversed.
+	 */
+	if (++bit == 8)
+	{
+		bit = 0;
+		byte++;
+	}
+	common_byte = byte;
+	common_bit = bit;
+	netmask = from.len * 8;
+	from_prev = 0, to_prev = 1;
+	for (byte = from.len - 1; byte >= common_byte; byte--)
+	{
+		int bit_min = (byte == common_byte) ? common_bit : 0;
+		for (bit = 7; bit >= bit_min; bit--)
+		{
+			u_char mask = bitmask[bit];
+
+			from_cur = from.ptr[byte] & mask;
+			if (!from_prev && from_cur)
+			{	/* 0 -> 1: subnet is the whole current (right) subtree */
+				add_subnet(this, from, netmask);
+				from_full = FALSE;
+			}
+			else if (from_prev && !from_cur)
+			{	/* 1 -> 0: invert bit to switch to right subtree and add it */
+				from.ptr[byte] ^= mask;
+				add_subnet(this, from, netmask);
+				from_cur = 1;
+			}
+			/* clear the current bit */
+			from.ptr[byte] &= ~mask;
+			from_prev = from_cur;
+
+			to_cur = to.ptr[byte] & mask;
+			if (to_prev && !to_cur)
+			{	/* 1 -> 0: subnet is the whole current (left) subtree */
+				add_subnet(this, to, netmask);
+				to_full = FALSE;
+			}
+			else if (!to_prev && to_cur)
+			{	/* 0 -> 1: invert bit to switch to left subtree and add it */
+				to.ptr[byte] ^= mask;
+				add_subnet(this, to, netmask);
+				to_cur = 0;
+			}
+			/* clear the current bit */
+			to.ptr[byte] &= ~mask;
+			to_prev = to_cur;
+			netmask--;
+		}
+	}
+
+	if (from_full && to_full)
+	{	/* full subnet (from=to or from=0.. and to=1.. after common prefix) */
+		add_subnet(this, from, prefix);
+	}
+	else if (from_full)
+	{	/* full from subnet (from=0.. after prefix) */
+		add_subnet(this, from, prefix + 1);
+	}
+	else if (to_full)
+	{	/* full to subnet (to=1.. after prefix) */
+		add_subnet(this, to, prefix + 1);
+	}
+}
+
+/**
+ * filter function for subnets
+ */
+static bool subnet_filter(void *data, subnet_t **in, host_t **net,
+					   void **in2, u_int8_t *mask)
+{
+	*net = (*in)->net;
+	*mask = (*in)->netmask;
+	return TRUE;
+}
+
+METHOD(traffic_selector_t, create_subnet_enumerator, enumerator_t*,
+	private_traffic_selector_t *this)
+{
+	if (!this->subnets)
+	{
+		this->subnets = linked_list_create();
+		split_range(this);
+	}
+	return enumerator_create_filter(
+							this->subnets->create_enumerator(this->subnets),
+							(void*)subnet_filter, NULL, NULL);
+}
+
 METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 	private_traffic_selector_t *this)
 {
@@ -649,6 +856,7 @@ METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 METHOD(traffic_selector_t, destroy, void,
 	private_traffic_selector_t *this)
 {
+	DESTROY_FUNCTION_IF(this->subnets, (void*)subnet_destroy);
 	free(this);
 }
 
@@ -852,6 +1060,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 			.includes = _includes,
 			.set_address = _set_address,
 			.to_subnet = _to_subnet,
+			.create_subnet_enumerator = _create_subnet_enumerator,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
