@@ -4,8 +4,15 @@ strongswan-4.6.3
 - The tnc-pdp plugin implements a RADIUS server interface allowing
   a strongSwan TNC server to act as a Policy Decision Point.
 
-- Added infrastructure to listen to RADIUS Dynamic Authorization
-  Extension requests.
+- The eap-radius authentication backend enforces Session-Timeout attributes
+  using RFC4478 repeated authentication and acts upon RADIUS Dynamic
+  Authorization extensions, RFC 5176. Currently supported are disconnect
+  requests and CoA messages containing a Session-Timeout.
+
+- The eap-radius plugin can forward arbitrary RADIUS attributes from and to
+  clients using custom IKEv2 notify payloads. The new radattr plugin reads
+  attributes to include from files and prints received attributes to the
+  console.
 
 - Added support for untruncated MD5 and SHA1 HMACs in ESP as used in
   RFC 4595.
