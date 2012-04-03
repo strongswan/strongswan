@@ -25,6 +25,7 @@ typedef struct rr_set_t rr_set_t;
 
 #include <library.h>
 #include <collections/enumerator.h>
+#include <collections/linked_list.h>
 
 /**
  * A set of DNS Resource Records.
@@ -63,5 +64,16 @@ struct rr_set_t {
 	 */
 	void (*destroy) (rr_set_t *this);
 };
+
+/**
+ * Create an rr_set instance.
+ *
+ * @param list_of_rr		list of Resource Records which form this RRset
+ * @param list_of_rrsig		list of the signatures (RRSIGs) of the
+ * 							Resource Records of this set
+ * @return					Resource Record set, NULL on failure
+ */
+rr_set_t *rr_set_create(linked_list_t *list_of_rr,
+						linked_list_t *list_of_rrsig);
 
 #endif /** RR_SET_H_ @}*/
