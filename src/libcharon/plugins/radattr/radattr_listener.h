@@ -15,7 +15,7 @@
 
 /**
  * @defgroup radattr_listener radattr_listener
- * @{ @ingroup
+ * @{ @ingroup radattr
  */
 
 #ifndef RADATTR_LISTENER_H_

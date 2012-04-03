@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup tnc_pdp tnc_pdp
+ * @defgroup tnc_pdp_t tnc_pdp
  * @{ @ingroup tnc_pdp
  */
 
