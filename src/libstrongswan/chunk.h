@@ -235,6 +235,24 @@ static inline chunk_t chunk_skip(chunk_t chunk, size_t bytes)
 }
 
 /**
+ * Skip a leading zero-valued byte
+ */
+static inline chunk_t chunk_skip_zero(chunk_t chunk)
+{
+	if (chunk.len && *chunk.ptr == 0x00)
+	{
+		if (chunk.len == 1)
+		{
+			return chunk_empty;
+		}
+		chunk.ptr++;
+		chunk.len--;
+	}
+	return chunk;
+}
+
+
+/**
  *  Compare two chunks, returns zero if a equals b
  *  or negative/positive if a is small/greater than b
  */

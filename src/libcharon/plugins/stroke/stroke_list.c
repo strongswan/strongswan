@@ -833,7 +833,7 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 
 			fprintf(out, "  subject:  \"%Y\"\n", cert->get_subject(cert));
 			fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
-			serial = x509->get_serial(x509);
+			serial = chunk_skip_zero(x509->get_serial(x509));
 			fprintf(out, "  serial:    %#B\n", &serial);
 
 			/* list validity */
@@ -1015,13 +1015,14 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
 
 		/* list optional crlNumber */
-		chunk = crl->get_serial(crl);
+		chunk = chunk_skip_zero(crl->get_serial(crl));
 		if (chunk.ptr)
 		{
 			fprintf(out, "  serial:    %#B\n", &chunk);
 		}
 		if (crl->is_delta_crl(crl, &chunk))
 		{
+			chunk = chunk_skip_zero(chunk);		
 			fprintf(out, "  delta for: %#B\n", &chunk);
 		}
 

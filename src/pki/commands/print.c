@@ -24,23 +24,6 @@
 #include <time.h>
 
 /**
- * Print a chunk without leading zero byte
- */
-static chunk_t chunk_skip_zero(chunk_t chunk)
-{
-	if (chunk.len && *chunk.ptr == 0x00)
-	{
-		if (chunk.len == 1)
-		{
-			return chunk_empty;
-		}
-		chunk.ptr++;
-		chunk.len--;
-	}
-	return chunk;
-}
-
-/**
  * Print public key information
  */
 static void print_pubkey(public_key_t *key)
