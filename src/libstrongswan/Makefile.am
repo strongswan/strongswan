@@ -215,6 +215,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CMAC
+  SUBDIRS += plugins/cmac
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/cmac/libstrongswan-cmac.la
+endif
+endif
+
 if USE_XCBC
   SUBDIRS += plugins/xcbc
 if MONOLITHIC

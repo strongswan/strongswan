@@ -97,6 +97,7 @@ ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
+ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
 ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
@@ -833,6 +834,7 @@ ADD_PLUGIN([fips-prf],             [s libcharon])
 ADD_PLUGIN([gmp],                  [s libcharon pluto openac scepclient pki scripts manager medsrv attest])
 ADD_PLUGIN([agent],                [s libcharon])
 ADD_PLUGIN([xcbc],                 [s libcharon])
+ADD_PLUGIN([cmac],                 [s libcharon])
 ADD_PLUGIN([hmac],                 [s libcharon pluto scripts])
 ADD_PLUGIN([ctr],                  [s libcharon scripts])
 ADD_PLUGIN([ccm],                  [s libcharon scripts])
@@ -943,6 +945,7 @@ AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
 AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
 AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
+AM_CONDITIONAL(USE_CMAC, test x$cmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
@@ -1095,6 +1098,7 @@ AC_OUTPUT(
 	src/include/Makefile
 	src/libstrongswan/Makefile
 	src/libstrongswan/plugins/aes/Makefile
+	src/libstrongswan/plugins/cmac/Makefile
 	src/libstrongswan/plugins/des/Makefile
 	src/libstrongswan/plugins/blowfish/Makefile
 	src/libstrongswan/plugins/md4/Makefile
