@@ -111,8 +111,7 @@ METHOD(payload_t, verify, status_t,
 {
 	if (this->encoding == ENC_X509_SIGNATURE)
 	{
-		if (this->data.len < HASH_SIZE_SHA1 ||
-			this->data.len % HASH_SIZE_SHA1)
+		if (this->data.len % HASH_SIZE_SHA1)
 		{
 			DBG1(DBG_ENC, "invalid X509 hash length (%d) in certreq",
 				 this->data.len);
