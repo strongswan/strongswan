@@ -67,6 +67,12 @@ enum auth_method_t {
 	 * ECDSA with SHA-512 on the P-521 curve as specified in RFC 4754
 	 */
 	AUTH_ECDSA_521 = 11,
+
+	/**
+	 * Generic Secure Password Authentication Method as specified in RFC 6467
+	 */
+	AUTH_GSPM = 12,
+
 };
 
 /**

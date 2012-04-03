@@ -28,11 +28,12 @@ ENUM_BEGIN(auth_method_names, AUTH_RSA, AUTH_DSS,
 	"RSA signature",
 	"pre-shared key",
 	"DSS signature");
-ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_ECDSA_521, AUTH_DSS,
+ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_GSPM, AUTH_DSS,
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
-	"ECDSA-521 signature");
-ENUM_END(auth_method_names, AUTH_ECDSA_521);
+	"ECDSA-521 signature",
+	"secure password method");
+ENUM_END(auth_method_names, AUTH_GSPM);
 
 /**
  * Described in header.
