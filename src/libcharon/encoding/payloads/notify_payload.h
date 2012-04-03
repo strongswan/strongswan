@@ -127,6 +127,11 @@ enum notify_type_t {
 	IKEV2_REPLAY_COUNTER_SYNC_SUPPORTED = 16421,
 	IKEV2_MESSAGE_ID_SYNC = 16422,
 	IPSEC_REPLAY_COUNTER_SYNC = 16423,
+	/* Secure password methods, RFC 6467 */
+	SECURE_PASSWORD_METHOD = 16424,
+	/* PACE - draft-kuegler-ipsecme-pace-ikev2 */
+	PSK_PERSIST = 16425,
+	PSK_CONFIRM = 16426,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
 	/* IKE-ME, private use */
