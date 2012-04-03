@@ -239,12 +239,8 @@ static inline chunk_t chunk_skip(chunk_t chunk, size_t bytes)
  */
 static inline chunk_t chunk_skip_zero(chunk_t chunk)
 {
-	if (chunk.len && *chunk.ptr == 0x00)
+	if (chunk.len > 1 && *chunk.ptr == 0x00)
 	{
-		if (chunk.len == 1)
-		{
-			return chunk_empty;
-		}
 		chunk.ptr++;
 		chunk.len--;
 	}
