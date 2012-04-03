@@ -123,6 +123,11 @@ enum payload_type_t{
 	 */
 	EXTENSIBLE_AUTHENTICATION = 48,
 
+	/**
+	 * Generic Secure Password Method (GSPM).
+	 */
+	GENERIC_SECURE_PASSWORD_METHOD = 49,
+
 #ifdef ME
 	/**
 	 * Identification payload for peers has a value from
