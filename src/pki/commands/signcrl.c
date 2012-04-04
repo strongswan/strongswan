@@ -120,7 +120,7 @@ static int sign_crl()
 	hash_algorithm_t digest = HASH_SHA1;
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
 	char *basecrl = NULL;
-	char serial[512], crl_serial[8], *keyid = NULL;
+	char serial[512], *keyid = NULL;
 	int serial_len = 0;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
@@ -128,12 +128,11 @@ static int sign_crl()
 	linked_list_t *list, *cdps;
 	enumerator_t *enumerator, *lastenum = NULL;
 	x509_cdp_t *cdp;
-	chunk_t encoding = chunk_empty, baseCrlNumber = chunk_empty;
+	chunk_t crl_serial = chunk_empty, baseCrlNumber = chunk_empty;
+	chunk_t encoding = chunk_empty;
 
 	list = linked_list_create();
 	cdps = linked_list_create();
-
-	memset(crl_serial, 0, sizeof(crl_serial));
 
 	while (TRUE)
 	{
@@ -334,9 +333,8 @@ static int sign_crl()
 			error = "loading base CRL failed";
 			goto error;
 		}
-		memcpy(crl_serial, lastcrl->get_serial(lastcrl).ptr,
-			   min(lastcrl->get_serial(lastcrl).len, sizeof(crl_serial)));
 		baseCrlNumber = chunk_clone(lastcrl->get_serial(lastcrl));
+		crl_serial = baseCrlNumber;
 		DESTROY_IF((certificate_t*)lastcrl);
 		lastcrl = NULL;
 	}
@@ -350,22 +348,31 @@ static int sign_crl()
 			error = "loading lastUpdate CRL failed";
 			goto error;
 		}
-		memcpy(crl_serial, lastcrl->get_serial(lastcrl).ptr,
-			   min(lastcrl->get_serial(lastcrl).len, sizeof(crl_serial)));
+		crl_serial = lastcrl->get_serial(lastcrl);
 		lastenum = lastcrl->create_enumerator(lastcrl);
 	}
 	else
 	{
+		crl_serial = chunk_from_chars(0x00);
 		lastenum = enumerator_create_empty();
 	}
 
-	chunk_increment(chunk_create(crl_serial, sizeof(crl_serial)));
+	/* remove superfluous leading zeros */
+	while (crl_serial.len > 1 && crl_serial.ptr[0] == 0x00 &&
+		  (crl_serial.ptr[1] & 0x80) == 0x00)
+	{
+		crl_serial = chunk_skip_zero(crl_serial);
+	}
+	crl_serial = chunk_clone(crl_serial);
+
+	/* increment the serial number by one */
+	chunk_increment(crl_serial);
 
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
 										  (void*)filter, NULL, NULL);
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
 			BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
-			BUILD_SERIAL, chunk_create(crl_serial, sizeof(crl_serial)),
+			BUILD_SERIAL, crl_serial,
 			BUILD_NOT_BEFORE_TIME, thisUpdate, BUILD_NOT_AFTER_TIME, nextUpdate,
 			BUILD_REVOKED_ENUMERATOR, enumerator,
 			BUILD_REVOKED_ENUMERATOR, lastenum, BUILD_DIGEST_ALG, digest,
@@ -374,6 +381,7 @@ static int sign_crl()
 	enumerator->destroy(enumerator);
 	lastenum->destroy(lastenum);
 	DESTROY_IF((certificate_t*)lastcrl);
+	free(crl_serial.ptr);
 
 	if (!crl)
 	{
