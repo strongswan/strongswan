@@ -598,6 +598,9 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			case AUTH_CAMELLIA_XCBC_96:
 				prf = PRF_CAMELLIA128_XCBC;
 				break;
+			case AUTH_AES_CMAC_96:
+				prf = PRF_AES128_CMAC;
+				break;
 			default:
 				prf = PRF_UNDEFINED;
 		}
@@ -794,6 +797,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 			case AUTH_HMAC_SHA2_512_256:
 			case AUTH_HMAC_MD5_96:
 			case AUTH_AES_XCBC_96:
+			case AUTH_AES_CMAC_96:
 				add_algorithm(this, INTEGRITY_ALGORITHM, integrity, 0);
 				break;
 			default:
@@ -813,6 +817,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 			case PRF_HMAC_SHA2_512:
 			case PRF_HMAC_MD5:
 			case PRF_AES128_XCBC:
+			case PRF_AES128_CMAC:
 				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
 				break;
 			default:
