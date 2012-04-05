@@ -607,23 +607,23 @@ void list_ocsp_locations(ocsp_location_t *location, bool requests,
 			}
 			while (certinfo)
 			{
+				chunk_t serial = chunk_skip_zero(certinfo->serialNumber);
+
 				if (requests)
 				{
 					whack_log(RC_COMMENT, "  serial:    %#B, %d trials",
-						 &certinfo->serialNumber, certinfo->trials);
+						 &serial, certinfo->trials);
 				}
 				else if (certinfo->once)
 				{
 					whack_log(RC_COMMENT, "  serial:    %#B, %s, once%s",
-						&certinfo->serialNumber,
-						cert_status_names[certinfo->status],
+						&serial, cert_status_names[certinfo->status],
 						(certinfo->nextUpdate < time(NULL))? " (expired)": "");
 				}
 				else
 				{
 					whack_log(RC_COMMENT, "  serial:    %#B, %s, until %T %s",
-						&certinfo->serialNumber,
-						cert_status_names[certinfo->status],
+						&serial, cert_status_names[certinfo->status],
 						&certinfo->nextUpdate, utc,
 						check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
 				}

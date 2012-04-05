@@ -946,7 +946,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 		{
 			fprintf(out, "  hissuer:  \"%Y\"\n", id);
 		}
-		chunk = ac->get_holderSerial(ac);
+		chunk = chunk_skip_zero(ac->get_holderSerial(ac));
 		if (chunk.ptr)
 		{
 			fprintf(out, "  hserial:   %#B\n", &chunk);
@@ -958,7 +958,7 @@ static void stroke_list_acerts(linked_list_t *list, bool utc, FILE *out)
 			groups->destroy(groups);
 		}
 		fprintf(out, "  issuer:   \"%Y\"\n", cert->get_issuer(cert));
-		chunk  = ac->get_serial(ac);
+		chunk  = chunk_skip_zero(ac->get_serial(ac));
 		fprintf(out, "  serial:    %#B\n", &chunk);
 
 		/* list validity */

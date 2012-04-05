@@ -410,7 +410,7 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
 				certificate->get_subject(certificate));
 			whack_log(RC_COMMENT, "  issuer:   \"%Y\"",
 				certificate->get_issuer(certificate));
-				serial = x509->get_serial(x509);
+				serial = chunk_skip_zero(x509->get_serial(x509));
 			whack_log(RC_COMMENT, "  serial:    %#B", &serial);
 
 			/* list validity */

@@ -1435,6 +1435,7 @@ void remove_x509_public_key(const cert_t *cert)
 void list_public_keys(bool utc)
 {
 	pubkey_list_t *p = pubkeys;
+	chunk_t serial;
 
 	if (p != NULL)
 	{
@@ -1465,7 +1466,8 @@ void list_public_keys(bool utc)
 		}
 		if (key->serial.len)
 		{
-			whack_log(RC_COMMENT,"  serial:    %#B", &key->serial);
+			serial = chunk_skip_zero(key->serial);
+			whack_log(RC_COMMENT,"  serial:    %#B", &serial);
 		}
 		p = p->next;
 	}

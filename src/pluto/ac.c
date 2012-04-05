@@ -261,7 +261,7 @@ void ac_list_certs(bool utc)
 			whack_log(RC_COMMENT, "  hissuer:  \"%Y\"", holderIssuer);
 		}
 
-		holderSerial = ac->get_holderSerial(ac);
+		holderSerial = chunk_skip_zero(ac->get_holderSerial(ac));
 		if (holderSerial.ptr)
 		{
 			whack_log(RC_COMMENT, "  hserial:   %#B", &holderSerial);
@@ -277,7 +277,7 @@ void ac_list_certs(bool utc)
 		issuer = cert->get_issuer(cert);
 		whack_log(RC_COMMENT, "  issuer:   \"%Y\"", issuer);
 
-		serial = ac->get_serial(ac);
+		serial = chunk_skip_zero(ac->get_serial(ac));
 		whack_log(RC_COMMENT, "  serial:    %#B", &serial);
 
 		cert->get_validity(cert, &now, &notBefore, &notAfter);

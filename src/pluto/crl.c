@@ -507,7 +507,7 @@ void list_crls(bool utc, bool strict)
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "  issuer:   \"%Y\"",
 				cert_crl->get_issuer(cert_crl));
-		serial = crl->get_serial(crl);
+		serial = chunk_skip_zero(crl->get_serial(crl));
 		if (serial.ptr)
 		{
 			whack_log(RC_COMMENT, "  serial:    %#B", &serial);
