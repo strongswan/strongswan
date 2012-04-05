@@ -279,6 +279,11 @@ struct radius_message_t {
 };
 
 /**
+ * Dummy libradius initialization function needed for integrity test
+ */
+void libradius_init(void);
+
+/**
  * Create an empty RADIUS message.
  *
  * @param code			request type

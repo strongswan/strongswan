@@ -66,6 +66,14 @@ struct private_radius_message_t {
 	rmsg_t *msg;
 };
 
+/**
+ * Described in header.
+ */
+void libradius_init(void)
+{
+	/* empty */
+}
+
 ENUM_BEGIN(radius_message_code_names, RMC_ACCESS_REQUEST, RMC_ACCOUNTING_RESPONSE,
 	"Access-Request",
 	"Access-Accept",
