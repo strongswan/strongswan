@@ -1873,7 +1873,7 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 {
 	bool valid = FALSE;
 	enumerator_t *enumerator;
-	host_t *src, *addr;
+	host_t *src = NULL, *addr;
 
 	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
 	enumerator = this->peer_addresses->create_enumerator(this->peer_addresses);
