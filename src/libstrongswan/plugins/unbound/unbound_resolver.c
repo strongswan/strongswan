@@ -13,12 +13,16 @@
  * for more details.
  */
 
+#include <unbound.h>
+#include <errno.h>
+#include <ldns/ldns.h>
 #include <string.h>
 
 #include <library.h>
 #include <utils/debug.h>
 
 #include "unbound_resolver.h"
+#include "unbound_response.h"
 
 typedef struct private_resolver_t private_resolver_t;
 
@@ -31,6 +35,11 @@ struct private_resolver_t {
 	 * Public data
 	 */
 	resolver_t public;
+
+	/**
+	 * private unbound resolver handle (unbound context)
+	 */
+	struct ub_ctx *ctx;
 };
 
 /**
@@ -40,8 +49,27 @@ METHOD(resolver_t, query, resolver_response_t*,
 	private_resolver_t *this, char *domain, rr_class_t rr_class,
 	rr_type_t rr_type)
 {
-	/* TODO: Implement */
-	return NULL;
+	unbound_response_t *response = NULL;
+	struct ub_result *result = NULL;
+	int ub_retval;
+
+	ub_retval = ub_resolve(this->ctx, domain, rr_type, rr_class, &result);
+	if (ub_retval)
+	{
+		DBG1(DBG_LIB, "unbound resolver error: %s", ub_strerror(ub_retval));
+		ub_resolve_free(result);
+		return NULL;
+	}
+
+	response = unbound_response_create_frm_libub_response(result);
+	if (!response)
+	{
+		DBG1(DBG_LIB, "unbound_resolver: Could not create response.");
+		ub_resolve_free(result);
+		return NULL;
+	}
+	ub_resolve_free(result);
+	return (resolver_response_t*)response;
 }
 
 /**
@@ -50,15 +78,17 @@ METHOD(resolver_t, query, resolver_response_t*,
 METHOD(resolver_t, destroy, void,
 	private_resolver_t *this)
 {
+	ub_ctx_delete(this->ctx);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-resolver_t *unbound_resolver_create()
+resolver_t *unbound_resolver_create(char *resolv_conf, char *ta_file)
 {
 	private_resolver_t *this;
+	int ub_retval = 0;
 
 	INIT(this,
 		.public = {
@@ -67,8 +97,35 @@ resolver_t *unbound_resolver_create()
 		},
 	);
 
-	/* TODO: Implement */
-	destroy(this);
-	return NULL;
+	DBG1(DBG_LIB, "creating an unbound_resolver instance");
+
+	this->ctx = ub_ctx_create();
+	if (!this->ctx)
+	{
+		DBG1(DBG_LIB, "failed to create an unbound resolver context");
+		_destroy(this);
+		return NULL;
+	}
+
+	ub_retval = ub_ctx_resolvconf(this->ctx, resolv_conf);
+	if (ub_retval)
+	{
+		DBG1(DBG_LIB, "failed to read the resolver configuration file. "
+			 "Unbound error: %s. errno says: %s", ub_strerror(ub_retval),
+			 strerror(errno));
+		_destroy(this);
+		return NULL;
+	}
+
+	ub_retval = ub_ctx_add_ta_file(this->ctx, ta_file);
+	if (ub_retval)
+	{
+		DBG1(DBG_LIB, "failed to load trusted anchors from file %s. "
+				"Unbound error: %s. errno says: %s",
+				ta_file, ub_strerror(ub_retval), strerror(errno));
+	}
+
+	DBG1(DBG_LIB, "unbound resolver instance created");
+	return &this->public;
 }
 

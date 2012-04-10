@@ -24,6 +24,6 @@
 /**
  * Create a resolver_t instance.
  */
-resolver_t *unbound_resolver_create();
+resolver_t *unbound_resolver_create(char *resolv_conf, char *ta_file);
 
 #endif /** LIBunbound_RESOLVER_H_ @}*/
