@@ -606,7 +606,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE;
+	bool delete = FALSE, hook = FALSE;
 	status_t status;
 
 	me = request->get_destination(request);
@@ -641,9 +641,11 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 												   enumerator);
 				}
 				break;
-			case DESTROY_ME:
 			case FAILED:
 			default:
+				hook = TRUE;
+				/* FALL */
+			case DESTROY_ME:
 				/* destroy IKE_SA, but SEND response first */
 				delete = TRUE;
 				break;
@@ -678,7 +680,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 						 this->responding.packet->clone(this->responding.packet));
 	if (delete)
 	{
-		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+		if (hook)
+		{
+			charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+		}
 		return DESTROY_ME;
 	}
 	return SUCCESS;
