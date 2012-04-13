@@ -424,24 +424,11 @@ METHOD(task_t, build_i, status_t,
 		}
 		else if (idi->get_type(idi) == ID_ANY)
 		{	/* ID_ANY is invalid as IDi, use local IP address instead */
-			enumerator_t *enumerator;
-			auth_rule_t rule;
 			host_t *me;
-			void *data;
 
 			me = this->ike_sa->get_my_host(this->ike_sa);
 			idi = identification_create_from_sockaddr(me->get_sockaddr(me));
-			enumerator = cfg->create_enumerator(cfg);
-			while (enumerator->enumerate(enumerator, &rule, &data))
-			{
-				if (rule == AUTH_RULE_IDENTITY)
-				{
-					cfg->replace(cfg, enumerator, AUTH_RULE_IDENTITY,
-								 idi);
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
+			cfg->replace_value(cfg, AUTH_RULE_IDENTITY, idi);
 		}
 		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
 		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);

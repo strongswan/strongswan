@@ -218,23 +218,15 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
  */
 static void replace_eap_identity(private_eap_authenticator_t *this)
 {
-	enumerator_t *enumerator;
-	auth_rule_t rule;
+	identification_t *eap_identity;
 	auth_cfg_t *cfg;
-	void *ptr;
 
+	eap_identity = this->eap_identity->clone(this->eap_identity);
 	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	enumerator = cfg->create_enumerator(cfg);
-	while (enumerator->enumerate(enumerator, &rule, &ptr))
+	if (!cfg->replace_value(cfg, AUTH_RULE_EAP_IDENTITY, eap_identity))
 	{
-		if (rule == AUTH_RULE_EAP_IDENTITY)
-		{
-			cfg->replace(cfg, enumerator, AUTH_RULE_EAP_IDENTITY,
-						 this->eap_identity->clone(this->eap_identity));
-			break;
-		}
+		eap_identity->destroy(eap_identity);
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**
