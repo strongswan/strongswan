@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -177,6 +177,44 @@ static void destroy_entry_value(entry_t *entry)
 }
 
 /**
+ * Replace the type and value of the given entry.
+ */
+static void replace_entry(entry_t *entry, auth_rule_t type, va_list args)
+{
+	destroy_entry_value(entry);
+	entry->type = type;
+	switch (type)
+	{
+		case AUTH_RULE_AUTH_CLASS:
+		case AUTH_RULE_EAP_TYPE:
+		case AUTH_RULE_EAP_VENDOR:
+		case AUTH_RULE_CRL_VALIDATION:
+		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
+			/* integer type */
+			entry->value = (void*)(uintptr_t)va_arg(args, u_int);
+			break;
+		case AUTH_RULE_IDENTITY:
+		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
+		case AUTH_RULE_GROUP:
+		case AUTH_RULE_CA_CERT:
+		case AUTH_RULE_IM_CERT:
+		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_RULE_CERT_POLICY:
+		case AUTH_HELPER_IM_CERT:
+		case AUTH_HELPER_SUBJECT_CERT:
+		case AUTH_HELPER_IM_HASH_URL:
+		case AUTH_HELPER_SUBJECT_HASH_URL:
+		case AUTH_HELPER_REVOCATION_CERT:
+			/* pointer type */
+			entry->value = va_arg(args, void*);
+			break;
+	}
+}
+
+/**
  * Implementation of auth_cfg_t.replace.
  */
 static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
@@ -187,40 +225,34 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 		va_list args;
 
 		va_start(args, type);
-
-		destroy_entry_value(enumerator->current);
-		enumerator->current->type = type;
-		switch (type)
-		{
-			case AUTH_RULE_AUTH_CLASS:
-			case AUTH_RULE_EAP_TYPE:
-			case AUTH_RULE_EAP_VENDOR:
-			case AUTH_RULE_CRL_VALIDATION:
-			case AUTH_RULE_OCSP_VALIDATION:
-			case AUTH_RULE_RSA_STRENGTH:
-			case AUTH_RULE_ECDSA_STRENGTH:
-				/* integer type */
-				enumerator->current->value = (void*)(uintptr_t)va_arg(args, u_int);
-				break;
-			case AUTH_RULE_IDENTITY:
-			case AUTH_RULE_EAP_IDENTITY:
-			case AUTH_RULE_AAA_IDENTITY:
-			case AUTH_RULE_GROUP:
-			case AUTH_RULE_CA_CERT:
-			case AUTH_RULE_IM_CERT:
-			case AUTH_RULE_SUBJECT_CERT:
-			case AUTH_RULE_CERT_POLICY:
-			case AUTH_HELPER_IM_CERT:
-			case AUTH_HELPER_SUBJECT_CERT:
-			case AUTH_HELPER_IM_HASH_URL:
-			case AUTH_HELPER_SUBJECT_HASH_URL:
-			case AUTH_HELPER_REVOCATION_CERT:
-				/* pointer type */
-				enumerator->current->value = va_arg(args, void*);
-				break;
-		}
+		replace_entry(enumerator->current, type, args);
 		va_end(args);
 	}
+}
+
+METHOD(auth_cfg_t, replace_value, bool,
+	private_auth_cfg_t *this, auth_rule_t type, ...)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = this->entries->create_enumerator(this->entries);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (type == entry->type)
+		{
+			va_list args;
+
+			va_start(args, type);
+			replace_entry(entry, type, args);
+			va_end(args);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 METHOD(auth_cfg_t, get, void*,
@@ -883,6 +915,7 @@ auth_cfg_t *auth_cfg_create()
 			.get = _get,
 			.create_enumerator = _create_enumerator,
 			.replace = (void(*)(auth_cfg_t*,enumerator_t*,auth_rule_t,...))replace,
+			.replace_value = _replace_value,
 			.complies = _complies,
 			.merge = (void(*)(auth_cfg_t*,auth_cfg_t*,bool))merge,
 			.purge = _purge,

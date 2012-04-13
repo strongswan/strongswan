@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -180,6 +180,15 @@ struct auth_cfg_t {
 	 */
 	void (*replace)(auth_cfg_t *this, enumerator_t *pos,
 					auth_rule_t rule, ...);
+
+	/**
+	 * Replace the value of the first rule with the given type.
+	 *
+	 * @param rule		rule type
+	 * @param ...		associated value to rule
+	 * @return			TRUE if the rule was found and the value replaced
+	 */
+	bool (*replace_value)(auth_cfg_t *this, auth_rule_t rule, ...);
 
 	/**
 	 * Check if a used config fulfills a set of configured constraints.
