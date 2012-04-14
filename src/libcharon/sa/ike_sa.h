@@ -1026,9 +1026,8 @@ struct ike_sa_t {
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
 	 * outstanding tasks are moved from other to this.
-	 * As this call may initiate inherited tasks, a status is returned.
 	 *
-	 * @param other			other task to inherit from
+	 * @param other			other IKE SA to inherit from
 	 */
 	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
 
