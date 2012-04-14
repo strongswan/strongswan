@@ -20,7 +20,7 @@ strongswan-4.6.3
 - The cmac plugin implements the AES-CMAC-96 and AES-CMAC-PRF-128 algorithms
   as defined in RFC 4494 and RFC 4615, respectively.
 
-- The resolve plugin automatically installs nameservers via resolveconf(8),
+- The resolve plugin automatically installs nameservers via resolvconf(8),
   if it is installed, instead of modifying /etc/resolv.conf directly.
 
 strongswan-4.6.2
