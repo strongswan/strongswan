@@ -67,7 +67,7 @@ static linked_list_t* get_port_list(char *label)
 {
 	char key[40], *value;
 	linked_list_t *list;
-	chunk_t port_list, port_item, port_stop;
+	chunk_t port_list, port_item, port_start;
 	port_range_t *port_range;
 
 	list = linked_list_create();
@@ -92,11 +92,11 @@ static linked_list_t* get_port_list(char *label)
 			port_list = chunk_empty;
 		}
 		port_range = malloc_thing(port_range_t);
-		port_range->start = atoi(port_item.ptr);;
+		port_range->start = atoi(port_item.ptr);
 
-		if (extract_token(&port_stop, '-', &port_item))
+		if (extract_token(&port_start, '-', &port_item) && port_item.len)
 		{
-			port_range->stop = atoi(port_stop.ptr);
+			port_range->stop = atoi(port_item.ptr);
 		}
 		else
 		{
