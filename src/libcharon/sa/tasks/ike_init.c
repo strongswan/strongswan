@@ -517,8 +517,11 @@ METHOD(task_t, migrate, void,
 	this->ike_sa = ike_sa;
 	this->keymat = ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
-	DESTROY_IF(this->dh);
-	this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+	if (this->dh && this->dh->get_dh_group(this->dh) != this->dh_group)
+	{	/* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
+		this->dh->destroy(this->dh);
+		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+	}
 }
 
 METHOD(task_t, destroy, void,
