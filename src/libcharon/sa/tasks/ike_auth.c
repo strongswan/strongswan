@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -417,18 +418,17 @@ METHOD(task_t, build_i, status_t,
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		cfg->merge(cfg, get_auth_cfg(this, TRUE), TRUE);
 		idi = cfg->get(cfg, AUTH_RULE_IDENTITY);
-		if (!idi)
-		{
-			DBG1(DBG_CFG, "configuration misses IDi");
-			return FAILED;
-		}
-		else if (idi->get_type(idi) == ID_ANY)
+		if (!idi || idi->get_type(idi) == ID_ANY)
 		{	/* ID_ANY is invalid as IDi, use local IP address instead */
 			host_t *me;
 
+			DBG1(DBG_CFG, "no IDi configured, fall back on IP address");
 			me = this->ike_sa->get_my_host(this->ike_sa);
 			idi = identification_create_from_sockaddr(me->get_sockaddr(me));
-			cfg->replace_value(cfg, AUTH_RULE_IDENTITY, idi);
+			if (!cfg->replace_value(cfg, AUTH_RULE_IDENTITY, idi))
+			{
+				cfg->add(cfg, AUTH_RULE_IDENTITY, idi);
+			}
 		}
 		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
 		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);
