@@ -1789,6 +1789,7 @@ METHOD(ike_sa_manager_t, get_half_open_count, u_int,
 				count = half_open->count;
 				break;
 			}
+			item = item->next;
 		}
 		lock->unlock(lock);
 	}
