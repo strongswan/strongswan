@@ -695,9 +695,17 @@ METHOD(task_t, build_r, status_t,
 		if (id->get_type(id) == ID_ANY)
 		{	/* no IDr received, apply configured ID */
 			if (!id_cfg || id_cfg->contains_wildcards(id_cfg))
-			{
-				DBG1(DBG_CFG, "IDr not configured and negotiation failed");
-				goto peer_auth_failed;
+			{	/* no ID configured, use local IP address */
+				host_t *me;
+
+				DBG1(DBG_CFG, "no IDr configured, fall back on IP address");
+				me = this->ike_sa->get_my_host(this->ike_sa);
+				id_cfg = identification_create_from_sockaddr(
+														me->get_sockaddr(me));
+				if (!cfg->replace_value(cfg, AUTH_RULE_IDENTITY, id_cfg))
+				{
+					cfg->add(cfg, AUTH_RULE_IDENTITY, id_cfg);
+				}
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id_cfg->clone(id_cfg));
 			id = id_cfg;
