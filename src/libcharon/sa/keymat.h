@@ -40,7 +40,12 @@ struct keymat_t {
 	 *
 	 * The diffie hellman is either for IKE negotiation/rekeying or
 	 * CHILD_SA rekeying (using PFS). The resulting DH object must be passed
-	 * to derive_keys or to derive_child_keys and destroyed after use
+	 * to derive_keys or to derive_child_keys and destroyed after use.
+	 *
+	 * Only DH objects allocated through this method are passed to other
+	 * keymat_t methods, allowing private DH implementations. In some cases
+	 * (such as retrying with a COOKIE), a DH object allocated from a different
+	 * keymat_t instance may be passed to other methods.
 	 *
 	 * @param group			diffie hellman group
 	 * @return				DH object, NULL if group not supported
