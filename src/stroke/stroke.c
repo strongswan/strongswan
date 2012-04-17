@@ -1,5 +1,5 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2012 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -352,6 +352,19 @@ static int memusage()
 	return send_stroke_msg(&msg);
 }
 
+static int user_credentials(char *name, char *user, char *pass)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_USER_CREDS;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.user_creds.name = push_string(&msg, name);
+	msg.user_creds.username = push_string(&msg, user);
+	msg.user_creds.password = push_string(&msg, pass);
+	return send_stroke_msg(&msg);
+}
+
+
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
@@ -427,6 +440,11 @@ static void exit_usage(char *error)
 	printf("    stroke memusage\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
+	printf("  Set username and password for a connection:\n");
+	printf("    stroke user-creds NAME USERNAME [PASSWORD]\n");
+	printf("    where: NAME is a connection name added with \"stroke add\"\n");
+	printf("           USERNAME is the username\n");
+	printf("           PASSWORD is the optional password, you'll be asked to enter it if not given\n");
 	exit_error(error);
 }
 
@@ -566,6 +584,14 @@ int main(int argc, char *argv[])
 			break;
 		case STROKE_MEMUSAGE:
 			res = memusage();
+			break;
+		case STROKE_USER_CREDS:
+			if (argc < 4)
+			{
+				exit_usage("\"user-creds\" needs a connection name, "
+						   "username and optionally a password");
+			}
+			res = user_credentials(argv[2], argv[3], argc > 4 ? argv[4] : NULL);
 			break;
 		default:
 			exit_usage(NULL);

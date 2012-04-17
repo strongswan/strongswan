@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -51,6 +52,15 @@ struct stroke_config_t {
 	 * @param msg		received stroke message containing config name
 	 */
 	void (*del)(stroke_config_t *this, stroke_msg_t *msg);
+
+	/**
+	 * Set the username and password for a connection in this backend.
+	 *
+	 * @param msg		received stroke message
+	 * @param prompt	I/O channel to prompt for the password
+	 */
+	void (*set_user_credentials)(stroke_config_t *this, stroke_msg_t *msg,
+								 FILE *prompt);
 
 	/**
 	 * Destroy a stroke_config instance.

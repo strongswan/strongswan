@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -472,6 +472,21 @@ static void stroke_memusage(private_stroke_socket_t *this,
 }
 
 /**
+ * Set username and password for a connection
+ */
+static void stroke_user_creds(private_stroke_socket_t *this,
+							  stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->user_creds.name);
+	pop_string(msg, &msg->user_creds.username);
+	pop_string(msg, &msg->user_creds.password);
+
+	DBG1(DBG_CFG, "received stroke: user-creds '%s'", msg->user_creds.name);
+
+	this->config->set_user_credentials(this->config, msg, out);
+}
+
+/**
  * set the verbosity debug output
  */
 static void stroke_loglevel(private_stroke_socket_t *this,
@@ -643,6 +658,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_MEMUSAGE:
 			stroke_memusage(this, msg, out);
+			break;
+		case STR_USER_CREDS:
+			stroke_user_creds(this, msg, out);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");

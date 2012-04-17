@@ -218,6 +218,8 @@ struct stroke_msg_t {
 		STR_EXPORT,
 		/* print memory usage details */
 		STR_MEMUSAGE,
+		/* set username and password for a connection */
+		STR_USER_CREDS,
 		/* more to come */
 	} type;
 
@@ -340,6 +342,13 @@ struct stroke_msg_t {
 			char *pool;
 			char *address;
 		} leases;
+
+		/* data for STR_USER_CREDS */
+		struct {
+			char *name;
+			char *username;
+			char *password;
+		} user_creds;
 	};
 	char buffer[STROKE_BUF_LEN];
 };

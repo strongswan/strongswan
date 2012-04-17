@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -956,6 +957,141 @@ METHOD(stroke_config_t, del, void,
 	}
 }
 
+METHOD(stroke_config_t, set_user_credentials, void,
+	private_stroke_config_t *this, stroke_msg_t *msg, FILE *prompt)
+{
+	enumerator_t *enumerator, *children;
+	peer_cfg_t *peer, *found = NULL;
+	auth_class_t auth_class;
+	auth_cfg_t *auth_cfg;
+	child_cfg_t *child;
+	identification_t *id;
+	shared_key_type_t type = SHARED_ANY;
+	chunk_t password = chunk_empty;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, (void**)&peer))
+	{	/* find the peer (or child) config with the given name */
+		if (streq(peer->get_name(peer), msg->user_creds.name))
+		{
+			found = peer;
+		}
+		else
+		{
+			children = peer->create_child_cfg_enumerator(peer);
+			while (children->enumerate(children, &child))
+			{
+				if (streq(child->get_name(child), msg->user_creds.name))
+				{
+					found = peer;
+					break;
+				}
+			}
+			children->destroy(children);
+		}
+
+		if (found)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		DBG1(DBG_CFG, "  no config named '%s'", msg->user_creds.name);
+		fprintf(prompt, "no config named '%s'\n", msg->user_creds.name);
+		this->mutex->unlock(this->mutex);
+		return;
+	}
+
+	id = identification_create_from_string(msg->user_creds.username);
+	if (strlen(msg->user_creds.username) == 0 ||
+		!id || id->get_type(id) == ID_ANY)
+	{
+		DBG1(DBG_CFG, "  invalid username '%s'", msg->user_creds.username);
+		fprintf(prompt, "invalid username '%s'\n", msg->user_creds.username);
+		this->mutex->unlock(this->mutex);
+		DESTROY_IF(id);
+		return;
+	}
+
+	/* replace/set the username in the first suitable auth_cfg */
+	enumerator = found->create_auth_cfg_enumerator(found, TRUE);
+	while (enumerator->enumerate(enumerator, (void**)&auth_cfg))
+	{
+		auth_class = (uintptr_t)auth_cfg->get(auth_cfg, AUTH_RULE_AUTH_CLASS);
+		if (auth_class == AUTH_CLASS_EAP)
+		{
+			DBG1(DBG_CFG, "  configured EAP-Identity %Y", id);
+			if (!auth_cfg->replace_value(auth_cfg, AUTH_RULE_EAP_IDENTITY, id))
+			{
+				auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, id);
+			}
+			type = SHARED_EAP;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (type == SHARED_ANY)
+	{
+		DBG1(DBG_CFG, "  config '%s' unsuitable for user credentials",
+			 msg->user_creds.name);
+		fprintf(prompt, "config '%s' unsuitable for user credentials\n",
+				msg->user_creds.name);
+		this->mutex->unlock(this->mutex);
+		id->destroy(id);
+		return;
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (msg->user_creds.password)
+	{
+		char *pass;
+
+		pass = msg->user_creds.password;
+		password = chunk_clone(chunk_create(pass, strlen(pass)));
+		memwipe(pass, strlen(pass));
+	}
+	else
+	{	/* prompt the user for the password */
+		char buf[256];
+
+		fprintf(prompt, "Password:\n");
+		if (fgets(buf, sizeof(buf), prompt))
+		{
+			password = chunk_clone(chunk_create(buf, strlen(buf)));
+			if (password.len > 0)
+			{	/* trim trailing \n */
+				password.len--;
+			}
+			memwipe(buf, sizeof(buf));
+		}
+	}
+
+	if (password.len)
+	{
+		shared_key_t *shared;
+		linked_list_t *owners;
+
+		shared = shared_key_create(type, password);
+
+		owners = linked_list_create();
+		owners->insert_last(owners, id->clone(id));
+		this->cred->add_shared(this->cred, shared, owners);
+
+		DBG1(DBG_CFG, "  added %N secret for %Y", shared_key_type_names,
+			 type, id);
+		DBG4(DBG_CFG, "  secret: %#B", &password);
+	}
+	else
+	{	/* in case a user answers the password prompt by just pressing enter */
+		chunk_clear(&password);
+	}
+}
+
 METHOD(stroke_config_t, destroy, void,
 	private_stroke_config_t *this)
 {
@@ -980,6 +1116,7 @@ stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 			},
 			.add = _add,
 			.del = _del,
+			.set_user_credentials = _set_user_credentials,
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),
