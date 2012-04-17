@@ -106,6 +106,9 @@ enum auth_rule_t {
 	AUTH_HELPER_SUBJECT_HASH_URL,
 	/** revocation certificate (CRL, OCSP), certificate_t* */
 	AUTH_HELPER_REVOCATION_CERT,
+
+	/** helper to determine the number of elements in this enum */
+	AUTH_RULE_MAX,
 };
 
 /**
@@ -149,7 +152,14 @@ extern enum_name_t *auth_rule_names;
 struct auth_cfg_t {
 
 	/**
-	 * Add an rule to the set.
+	 * Add a rule to the set.
+	 *
+	 * Rules we expect only once (e.g. identities) implicitly replace previous
+	 * rules of the same type (but pointers to previous values will remain
+	 * valid until the auth_cfg_t object is destroyed).
+	 * Rules that may occur multiple times (e.g. CA certificates) are inserted
+	 * so that they can be enumerated in the order in which they were added.
+	 * For these get() will return the value added first.
 	 *
 	 * @param rule		rule type
 	 * @param ...		associated value to rule
@@ -159,6 +169,8 @@ struct auth_cfg_t {
 	/**
 	 * Get a rule value.
 	 *
+	 * For rules we expect only once the latest value is returned.
+	 *
 	 * @param rule		rule type
 	 * @return			bool if item has been found
 	 */
@@ -166,6 +178,9 @@ struct auth_cfg_t {
 
 	/**
 	 * Create an enumerator over added rules.
+	 *
+	 * Refer to add() regarding the order in which rules are enumerated.
+	 * For rules we expect only once the latest value is enumerated only.
 	 *
 	 * @return			enumerator over (auth_rule_t, union{void*,uintpr_t})
 	 */
@@ -216,6 +231,8 @@ struct auth_cfg_t {
 
 	/**
 	 * Check two configs for equality.
+	 *
+	 * For rules we expect only once the latest value is compared only.
 	 *
 	 * @param other		other config to compare against this
 	 * @return			TRUE if auth infos identical
