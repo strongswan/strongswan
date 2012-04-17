@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -1065,6 +1065,12 @@ METHOD(stroke_cred_t, reread, void,
 	}
 }
 
+METHOD(stroke_cred_t, add_shared, void,
+	private_stroke_cred_t *this, shared_key_t *shared, linked_list_t *owners)
+{
+	this->creds->add_shared_list(this->creds, shared, owners);
+}
+
 METHOD(stroke_cred_t, destroy, void,
 	private_stroke_cred_t *this)
 {
@@ -1092,6 +1098,7 @@ stroke_cred_t *stroke_cred_create()
 			.reread = _reread,
 			.load_ca = _load_ca,
 			.load_peer = _load_peer,
+			.add_shared = _add_shared,
 			.cachecrl = _cachecrl,
 			.destroy = _destroy,
 		},

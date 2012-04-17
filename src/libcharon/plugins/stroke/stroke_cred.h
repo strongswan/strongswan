@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -26,6 +27,7 @@
 #include <stroke_msg.h>
 #include <credentials/credential_set.h>
 #include <credentials/certificates/certificate.h>
+#include <utils/linked_list.h>
 
 typedef struct stroke_cred_t stroke_cred_t;
 
@@ -56,12 +58,21 @@ struct stroke_cred_t {
 	certificate_t* (*load_ca)(stroke_cred_t *this, char *filename);
 
 	/**
-	 * Load a peer certificate and serve it rhrough the credential_set.
+	 * Load a peer certificate and serve it through the credential_set.
 	 *
 	 * @param filename		file to load peer cert from
 	 * @return				reference to loaded certificate, or NULL
 	 */
 	certificate_t* (*load_peer)(stroke_cred_t *this, char *filename);
+
+	/**
+	 * Add a shared secret to serve through the credential_set.
+	 *
+	 * @param shared		shared key to add, gets owned
+	 * @param owners		list of owners (identification_t*), gets owned
+	 */
+	void (*add_shared)(stroke_cred_t *this, shared_key_t *shared,
+					   linked_list_t *owners);
 
 	/**
 	 * Enable/Disable CRL caching to disk.
