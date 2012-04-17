@@ -197,15 +197,6 @@ struct auth_cfg_t {
 					auth_rule_t rule, ...);
 
 	/**
-	 * Replace the value of the first rule with the given type.
-	 *
-	 * @param rule		rule type
-	 * @param ...		associated value to rule
-	 * @return			TRUE if the rule was found and the value replaced
-	 */
-	bool (*replace_value)(auth_cfg_t *this, auth_rule_t rule, ...);
-
-	/**
 	 * Check if a used config fulfills a set of configured constraints.
 	 *
 	 * @param constraints	required authorization rules

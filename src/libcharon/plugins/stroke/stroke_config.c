@@ -1039,11 +1039,7 @@ METHOD(stroke_config_t, set_user_credentials, void,
 		auth_class = (uintptr_t)auth_cfg->get(auth_cfg, AUTH_RULE_AUTH_CLASS);
 		if (auth_class == AUTH_CLASS_EAP)
 		{
-			identity = id->clone(id);
-			if (!auth_cfg->replace_value(auth_cfg, AUTH_RULE_EAP_IDENTITY, identity))
-			{
-				auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, identity);
-			}
+			auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
 			/* if aaa_identity is specified use that as remote ID */
 			identity = auth_cfg->get(auth_cfg, AUTH_RULE_AAA_IDENTITY);
 			if (identity && identity->get_type(identity) != ID_ANY)

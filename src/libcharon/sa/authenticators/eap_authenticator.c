@@ -223,10 +223,7 @@ static void replace_eap_identity(private_eap_authenticator_t *this)
 
 	eap_identity = this->eap_identity->clone(this->eap_identity);
 	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	if (!cfg->replace_value(cfg, AUTH_RULE_EAP_IDENTITY, eap_identity))
-	{
-		eap_identity->destroy(eap_identity);
-	}
+	cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, eap_identity);
 }
 
 /**

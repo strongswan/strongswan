@@ -425,10 +425,7 @@ METHOD(task_t, build_i, status_t,
 			DBG1(DBG_CFG, "no IDi configured, fall back on IP address");
 			me = this->ike_sa->get_my_host(this->ike_sa);
 			idi = identification_create_from_sockaddr(me->get_sockaddr(me));
-			if (!cfg->replace_value(cfg, AUTH_RULE_IDENTITY, idi))
-			{
-				cfg->add(cfg, AUTH_RULE_IDENTITY, idi);
-			}
+			cfg->add(cfg, AUTH_RULE_IDENTITY, idi);
 		}
 		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
 		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);
@@ -702,10 +699,7 @@ METHOD(task_t, build_r, status_t,
 				me = this->ike_sa->get_my_host(this->ike_sa);
 				id_cfg = identification_create_from_sockaddr(
 														me->get_sockaddr(me));
-				if (!cfg->replace_value(cfg, AUTH_RULE_IDENTITY, id_cfg))
-				{
-					cfg->add(cfg, AUTH_RULE_IDENTITY, id_cfg);
-				}
+				cfg->add(cfg, AUTH_RULE_IDENTITY, id_cfg);
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id_cfg->clone(id_cfg));
 			id = id_cfg;
