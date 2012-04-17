@@ -424,7 +424,7 @@ static void stroke_export(private_stroke_socket_t *this,
 {
 	pop_string(msg, &msg->export.selector);
 
-	if (msg->purge.flags & EXPORT_X509)
+	if (msg->export.flags & EXPORT_X509)
 	{
 		enumerator_t *enumerator;
 		identification_t *id;
