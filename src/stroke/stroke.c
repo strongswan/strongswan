@@ -89,9 +89,11 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	{
 		buffer[byte_count] = '\0';
 
-		/* we prompt if we receive the "Passphrase:"/"PIN:" magic keyword */
+		/* we prompt if we receive a magic keyword */
 		if ((byte_count >= 12 &&
 			 strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0) ||
+			(byte_count >= 10 &&
+			 strcmp(buffer + byte_count - 10, "Password:\n") == 0) ||
 			(byte_count >= 5 &&
 			 strcmp(buffer + byte_count - 5, "PIN:\n") == 0))
 		{
