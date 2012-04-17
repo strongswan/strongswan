@@ -960,12 +960,12 @@ METHOD(stroke_config_t, del, void,
 METHOD(stroke_config_t, set_user_credentials, void,
 	private_stroke_config_t *this, stroke_msg_t *msg, FILE *prompt)
 {
-	enumerator_t *enumerator, *children;
+	enumerator_t *enumerator, *children, *remote_auth;
 	peer_cfg_t *peer, *found = NULL;
+	auth_cfg_t *auth_cfg, *remote_cfg;
 	auth_class_t auth_class;
-	auth_cfg_t *auth_cfg;
 	child_cfg_t *child;
-	identification_t *id;
+	identification_t *id, *identity, *gw = NULL;
 	shared_key_type_t type = SHARED_ANY;
 	chunk_t password = chunk_empty;
 
@@ -1017,23 +1017,52 @@ METHOD(stroke_config_t, set_user_credentials, void,
 		return;
 	}
 
-	/* replace/set the username in the first suitable auth_cfg */
+	/* replace/set the username in the first EAP auth_cfg, also look for a
+	 * suitable remote ID.
+	 * note that adding the identity here is not fully thread-safe as the
+	 * peer_cfg and in turn the auth_cfg could be in use. for the default use
+	 * case (setting user credentials before upping the connection) this will
+	 * not be a problem, though. */
 	enumerator = found->create_auth_cfg_enumerator(found, TRUE);
+	remote_auth = found->create_auth_cfg_enumerator(found, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&auth_cfg))
 	{
+		if (remote_auth->enumerate(remote_auth, (void**)&remote_cfg))
+		{	/* fall back on rightid, in case aaa_identity is not specified */
+			identity = remote_cfg->get(remote_cfg, AUTH_RULE_IDENTITY);
+			if (identity && identity->get_type(identity) != ID_ANY)
+			{
+				gw = identity;
+			}
+		}
+
 		auth_class = (uintptr_t)auth_cfg->get(auth_cfg, AUTH_RULE_AUTH_CLASS);
 		if (auth_class == AUTH_CLASS_EAP)
 		{
-			DBG1(DBG_CFG, "  configured EAP-Identity %Y", id);
-			if (!auth_cfg->replace_value(auth_cfg, AUTH_RULE_EAP_IDENTITY, id))
+			identity = id->clone(id);
+			if (!auth_cfg->replace_value(auth_cfg, AUTH_RULE_EAP_IDENTITY, identity))
 			{
-				auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, id);
+				auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, identity);
 			}
+			/* if aaa_identity is specified use that as remote ID */
+			identity = auth_cfg->get(auth_cfg, AUTH_RULE_AAA_IDENTITY);
+			if (identity && identity->get_type(identity) != ID_ANY)
+			{
+				gw = identity;
+			}
+			DBG1(DBG_CFG, "  configured EAP-Identity %Y", id);
 			type = SHARED_EAP;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+	remote_auth->destroy(remote_auth);
+	/* clone the gw ID before unlocking the mutex */
+	if (gw)
+	{
+		gw = gw->clone(gw);
+	}
+	this->mutex->unlock(this->mutex);
 
 	if (type == SHARED_ANY)
 	{
@@ -1041,11 +1070,10 @@ METHOD(stroke_config_t, set_user_credentials, void,
 			 msg->user_creds.name);
 		fprintf(prompt, "config '%s' unsuitable for user credentials\n",
 				msg->user_creds.name);
-		this->mutex->unlock(this->mutex);
 		id->destroy(id);
+		DESTROY_IF(gw);
 		return;
 	}
-	this->mutex->unlock(this->mutex);
 
 	if (msg->user_creds.password)
 	{
@@ -1080,16 +1108,26 @@ METHOD(stroke_config_t, set_user_credentials, void,
 
 		owners = linked_list_create();
 		owners->insert_last(owners, id->clone(id));
+		if (gw && gw->get_type(gw) != ID_ANY)
+		{
+			owners->insert_last(owners, gw->clone(gw));
+			DBG1(DBG_CFG, "  added %N secret for %Y %Y", shared_key_type_names,
+				 type, id, gw);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  added %N secret for %Y", shared_key_type_names,
+				 type, id);
+		}
 		this->cred->add_shared(this->cred, shared, owners);
-
-		DBG1(DBG_CFG, "  added %N secret for %Y", shared_key_type_names,
-			 type, id);
 		DBG4(DBG_CFG, "  secret: %#B", &password);
 	}
 	else
 	{	/* in case a user answers the password prompt by just pressing enter */
 		chunk_clear(&password);
 	}
+	id->destroy(id);
+	DESTROY_IF(gw);
 }
 
 METHOD(stroke_config_t, destroy, void,
