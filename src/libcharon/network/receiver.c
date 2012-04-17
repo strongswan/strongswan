@@ -30,6 +30,8 @@
 
 /** lifetime of a cookie, in seconds */
 #define COOKIE_LIFETIME 10
+/** time we wait before disabling cookies */
+#define COOKIE_CALMDOWN_DELAY 10
 /** how many times to reuse the secret */
 #define COOKIE_REUSE 10000
 /** default value for private_receiver_t.cookie_threshold */
@@ -94,6 +96,11 @@ struct private_receiver_t {
 	 * require cookies after this many half open IKE_SAs
 	 */
 	u_int32_t cookie_threshold;
+
+	/**
+	 * timestamp of last cookie requested
+	 */
+	time_t last_cookie;
 
 	/**
 	 * how many half open IKE_SAs per peer before blocking
@@ -260,23 +267,54 @@ static bool check_cookie(private_receiver_t *this, message_t *message)
 }
 
 /**
+ * Check if we currently require cookies
+ */
+static bool cookie_required(private_receiver_t *this,
+							u_int half_open, u_int32_t now)
+{
+	if (this->cookie_threshold && half_open >= this->cookie_threshold)
+	{
+		this->last_cookie = now;
+		return TRUE;
+	}
+	if (now < this->last_cookie + COOKIE_CALMDOWN_DELAY)
+	{
+		/* We don't disable cookies unless we haven't seen IKE_SA_INITs
+		 * for COOKIE_CALMDOWN_DELAY seconds. This avoids jittering between
+		 * cookie on / cookie off states, which is problematic. Consider the
+		 * following: A legitimiate initiator sends a IKE_SA_INIT while we
+		 * are under a DoS attack. If we toggle our cookie behavior,
+		 * multiple retransmits of this IKE_SA_INIT might get answered with
+		 * and without cookies. The initiator goes on and retries with
+		 * a cookie, but it can't know if the completing IKE_SA_INIT response
+		 * is to its IKE_SA_INIT request with or without cookies. This is
+		 * problematic, as the cookie is part of AUTH payload data.
+		 */
+		this->last_cookie = now;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Check if we should drop IKE_SA_INIT because of cookie/overload checking
  */
 static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 {
 	u_int half_open;
+	u_int32_t now;
 
+	now = time_monotonic(NULL);
 	half_open = charon->ike_sa_manager->get_half_open_count(
 										charon->ike_sa_manager, NULL);
 
 	/* check for cookies */
-	if (this->cookie_threshold && half_open >= this->cookie_threshold &&
-		!check_cookie(this, message))
+	if (cookie_required(this, half_open, now) && !check_cookie(this, message))
 	{
-		u_int32_t now = time_monotonic(NULL);
-		chunk_t cookie = cookie_build(this, message, now - this->secret_offset,
-									  chunk_from_thing(this->secret));
+		chunk_t cookie;
 
+		cookie = cookie_build(this, message, now - this->secret_offset,
+							  chunk_from_thing(this->secret));
 		DBG2(DBG_NET, "received packet from: %#H to %#H",
 			 message->get_source(message),
 			 message->get_destination(message));
