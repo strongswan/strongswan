@@ -56,6 +56,10 @@ if USE_CHARON
   SUBDIRS += charon
 endif
 
+if USE_NM
+  SUBDIRS += charon-nm
+endif
+
 if USE_STROKE
   SUBDIRS += stroke
 endif
