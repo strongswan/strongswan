@@ -31,6 +31,8 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 
+#include <nm/nm_backend.h>
+
 /**
  * Hook in library for debugging messages
  */
@@ -270,10 +272,17 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	/* load NM backend */
+	if (!nm_backend_init())
+	{
+		DBG1(DBG_DMN, "failed to initialize NetworkManager backend - aborting charon-nm");
+		goto deinit_nm;
+	}
+
 	if (!drop_capabilities())
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon-nm");
-		goto deinit;
+		goto deinit_nm;
 	}
 
 	/* add handler for SEGV and ILL,
@@ -299,6 +308,8 @@ int main(int argc, char *argv[])
 
 	status = 0;
 
+deinit_nm:
+	nm_backend_deinit();
 deinit:
 	libcharon_deinit();
 	libhydra_deinit();

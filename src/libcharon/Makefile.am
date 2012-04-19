@@ -444,13 +444,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_NM
-  SUBDIRS += plugins/nm
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/nm/libstrongswan-nm.la
-endif
-endif
-
 if USE_DHCP
   SUBDIRS += plugins/dhcp
 if MONOLITHIC

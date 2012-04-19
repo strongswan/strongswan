@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,29 +14,28 @@
  */
 
 /**
- * @defgroup nm nm
- * @ingroup cplugins
+ * @defgroup charon-nm charon-nm
  *
- * @defgroup nm_plugin nm_plugin
+ * @defgroup nm nm
+ * @ingroup charon-nm
+ *
+ * @defgroup nm_backend nm_backend
  * @{ @ingroup nm
  */
 
-#ifndef NM_PLUGIN_H_
-#define NM_PLUGIN_H_
-
-#include <plugins/plugin.h>
-
-typedef struct nm_plugin_t nm_plugin_t;
+#ifndef NM_BACKEND_H_
+#define NM_BACKEND_H_
 
 /**
- * NetworkManager integration plugin.
+ * Initialize the NetworkManager backend.
+ *
+ * @return		TRUE, if initialization was successful
  */
-struct nm_plugin_t {
+bool nm_backend_init();
 
-	/**
-	 * implements plugin interface
-	 */
-	plugin_t plugin;
-};
+/**
+ * Deinitialize the NetworkManager backend.
+ */
+void nm_backend_deinit();
 
-#endif /** NM_PLUGIN_H_ @}*/
+#endif /** NM_BACKEND_H_ @}*/

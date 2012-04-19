@@ -668,7 +668,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 
 	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	priv->plugin = NM_VPN_PLUGIN(plugin);
-	memset(&priv->listener.log, 0, sizeof(listener_t));
+	memset(&priv->listener, 0, sizeof(listener_t));
 	priv->listener.child_updown = child_updown;
 	priv->listener.ike_rekey = ike_rekey;
 }

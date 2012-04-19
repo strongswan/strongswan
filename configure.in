@@ -37,7 +37,7 @@ ARG_WITH_SUBST([ipsecdir],           [${libexecdir%/}/ipsec], [set installation 
 ARG_WITH_SUBST([ipseclibdir],        [${libdir%/}/ipsec], [set installation path for ipsec libraries])
 ARG_WITH_SUBST([plugindir],          [${ipseclibdir%/}/plugins], [set the installation path of plugins])
 ARG_WITH_SUBST([imcvdir],            [${ipseclibdir%/}/imcvs], [set the installation path of IMC and IMV dynamic librariers])
-ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory the NM plugin uses to look up trusted root certificates])
+ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory the NM backend uses to look up trusted root certificates])
 ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
@@ -890,7 +890,6 @@ ADD_PLUGIN([tnccs-11],             [c charon])
 ADD_PLUGIN([tnccs-dynamic],        [c charon])
 ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
-ADD_PLUGIN([nm],                   [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([android],              [c charon])
 ADD_PLUGIN([ha],                   [c charon])
@@ -972,7 +971,6 @@ dnl ==============
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
-AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
@@ -1215,7 +1213,6 @@ AC_OUTPUT(
 	src/libcharon/plugins/sql/Makefile
 	src/libcharon/plugins/medsrv/Makefile
 	src/libcharon/plugins/medcli/Makefile
-	src/libcharon/plugins/nm/Makefile
 	src/libcharon/plugins/addrblock/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
