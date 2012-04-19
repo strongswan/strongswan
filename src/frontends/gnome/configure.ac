@@ -71,9 +71,9 @@ AC_SUBST(NM_UTILS_LIBS)
 
 AC_ARG_WITH(
 	[charon],
-	AS_HELP_STRING([--with-charon=file],[path to the strongSwan IKEv2 daemon charon"]),
+	AS_HELP_STRING([--with-charon=file],[path to the strongSwan charon NetworkManager backend"]),
 	[AC_SUBST(charon, "$withval")],
-	[AC_SUBST(charon, "${libexecdir}/ipsec/charon")]
+	[AC_SUBST(charon, "${libexecdir}/ipsec/charon-nm")]
 )
 
 NM_COMPILER_WARNINGS
