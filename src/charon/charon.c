@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -550,8 +550,19 @@ int main(int argc, char *argv[])
 
 	initialize_loggers(!use_syslog, levels);
 
+	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
+	if (lib->integrity)
+	{
+		DBG1(DBG_DMN, "integrity tests enabled:");
+		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "lib    'libhydra': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "lib    'libcharon': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
+	}
+
 	/* initialize daemon */
-	if (!charon->initialize(charon))
+	if (!charon->initialize(charon,
+				lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		goto deinit;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -279,14 +279,17 @@ struct daemon_t {
 	 * This should be called after the initialization of the daemon because
 	 * some plugins require the process to keep additional capabilities.
 	 *
-	 * @return		TRUE if successful, FALSE otherwise
+	 * @return			TRUE, if successful
 	 */
 	bool (*drop_capabilities)(daemon_t *this);
 
 	/**
 	 * Initialize the daemon.
+	 *
+	 * @param plugins	list of plugins to load
+	 * @return			TRUE, if successful
 	 */
-	bool (*initialize)(daemon_t *this);
+	bool (*initialize)(daemon_t *this, char *plugins);
 
 	/**
 	 * Starts the daemon, i.e. spawns the threads of the thread pool.

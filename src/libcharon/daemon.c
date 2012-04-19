@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -207,22 +207,10 @@ METHOD(daemon_t, start, void,
 }
 
 METHOD(daemon_t, initialize, bool,
-	private_daemon_t *this)
+	private_daemon_t *this, char *plugins)
 {
-	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
-
-	if (lib->integrity)
-	{
-		DBG1(DBG_DMN, "integrity tests enabled:");
-		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
-		DBG1(DBG_DMN, "lib    'libhydra': passed file and segment integrity tests");
-		DBG1(DBG_DMN, "lib    'libcharon': passed file and segment integrity tests");
-		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
-	}
-
 	/* load plugins, further infrastructure may need it */
-	if (!lib->plugins->load(lib->plugins, NULL,
-			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
+	if (!lib->plugins->load(lib->plugins, NULL, plugins))
 	{
 		return FALSE;
 	}

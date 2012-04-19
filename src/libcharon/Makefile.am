@@ -133,8 +133,7 @@ INCLUDES = \
 
 AM_CFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PIDDIR=\"${piddir}\" \
-	-DPLUGINS=\""${libcharon_plugins}\""
+	-DIPSEC_PIDDIR=\"${piddir}\"
 
 libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
