@@ -210,6 +210,15 @@ Enable multiple authentication exchanges (RFC 4739)
 .BR charon.nbns2
 WINS servers assigned to peer via configuration payload (CP)
 .TP
+.BR charon.port " [500]"
+UDP port used locally. If set to 0 a random port will be allocated.
+.TP
+.BR charon.port_nat_t " [4500]"
+UDP port used locally in case of NAT-T. If set to 0 a random port will be
+allocated.  Has to be different from
+.BR charon.port ,
+otherwise a random port will be allocated.
+.TP
 .BR charon.process_route " [yes]"
 Process RTM_NEWROUTE and RTM_DELROUTE events
 .TP

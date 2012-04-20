@@ -83,22 +83,32 @@ struct private_socket_default_socket_t {
 	socket_default_socket_t public;
 
 	/**
-	 * IPv4 socket (500)
+	 * Configured port (or random, if initially 0)
+	 */
+	u_int16_t port;
+
+	/**
+	 * Configured port for NAT-T (or random, if initially 0)
+	 */
+	u_int16_t natt;
+
+	/**
+	 * IPv4 socket (500 or port)
 	 */
 	int ipv4;
 
 	/**
-	 * IPv4 socket for NATT (4500)
+	 * IPv4 socket for NAT-T (4500 or natt)
 	 */
 	int ipv4_natt;
 
 	/**
-	 * IPv6 socket (500)
+	 * IPv6 socket (500 or port)
 	 */
 	int ipv6;
 
 	/**
-	 * IPv6 socket for NATT (4500)
+	 * IPv6 socket for NAT-T (4500 or natt)
 	 */
 	int ipv6_natt;
 
@@ -153,22 +163,22 @@ METHOD(socket_t, receiver, status_t,
 
 	if (FD_ISSET(this->ipv4, &rfds))
 	{
-		port = CHARON_UDP_PORT;
+		port = this->port;
 		selected = this->ipv4;
 	}
 	if (FD_ISSET(this->ipv4_natt, &rfds))
 	{
-		port = CHARON_NATT_PORT;
+		port = this->natt;
 		selected = this->ipv4_natt;
 	}
 	if (FD_ISSET(this->ipv6, &rfds))
 	{
-		port = CHARON_UDP_PORT;
+		port = this->port;
 		selected = this->ipv6;
 	}
 	if (FD_ISSET(this->ipv6_natt, &rfds))
 	{
-		port = CHARON_NATT_PORT;
+		port = this->natt;
 		selected = this->ipv6_natt;
 	}
 	if (selected)
@@ -305,7 +315,7 @@ METHOD(socket_t, sender, status_t,
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
-	if (sport == 0 || sport == CHARON_UDP_PORT)
+	if (sport == 0 || sport == this->port)
 	{
 		if (family == AF_INET)
 		{
@@ -316,7 +326,7 @@ METHOD(socket_t, sender, status_t,
 			skt = this->ipv6;
 		}
 	}
-	else if (sport == CHARON_NATT_PORT)
+	else if (sport == this->natt)
 	{
 		if (family == AF_INET)
 		{
@@ -408,14 +418,14 @@ METHOD(socket_t, sender, status_t,
 METHOD(socket_t, get_port, u_int16_t,
 	private_socket_default_socket_t *this, bool nat_t)
 {
-	return nat_t ? CHARON_NATT_PORT : CHARON_UDP_PORT;
+	return nat_t ? this->natt : this->port;
 }
 
 /**
  * open a socket to send and receive packets
  */
 static int open_socket(private_socket_default_socket_t *this,
-					   int family, u_int16_t port)
+					   int family, u_int16_t *port)
 {
 	int on = TRUE;
 	struct sockaddr_storage addr;
@@ -432,7 +442,7 @@ static int open_socket(private_socket_default_socket_t *this,
 		{
 			struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
 			htoun32(&sin->sin_addr.s_addr, INADDR_ANY);
-			htoun16(&sin->sin_port, port);
+			htoun16(&sin->sin_port, *port);
 			addrlen = sizeof(struct sockaddr_in);
 			sol = SOL_IP;
 #ifdef IP_PKTINFO
@@ -446,7 +456,7 @@ static int open_socket(private_socket_default_socket_t *this,
 		{
 			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
-			htoun16(&sin6->sin6_port, port);
+			htoun16(&sin6->sin6_port, *port);
 			addrlen = sizeof(struct sockaddr_in6);
 			sol = SOL_IPV6;
 			pktinfo = IPV6_RECVPKTINFO;
@@ -477,6 +487,32 @@ static int open_socket(private_socket_default_socket_t *this,
 		return 0;
 	}
 
+	/* retrieve randomly allocated port if needed */
+	if (*port == 0)
+	{
+		if (getsockname(skt, (struct sockaddr *)&addr, &addrlen) < 0)
+		{
+			DBG1(DBG_NET, "unable to determine port: %s", strerror(errno));
+			close(skt);
+			return 0;
+		}
+		switch (family)
+		{
+			case AF_INET:
+			{
+				struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
+				*port = untoh16(&sin->sin_port);
+				break;
+			}
+			case AF_INET6:
+			{
+				struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
+				*port = untoh16(&sin6->sin6_port);
+				break;
+			}
+		}
+	}
+
 	/* get additional packet info on receive */
 	if (pktinfo > 0)
 	{
@@ -493,15 +529,6 @@ static int open_socket(private_socket_default_socket_t *this,
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
-
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (family == AF_INET && port == CHARON_NATT_PORT &&
-		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
-												   skt, family, port))
-	{
-		DBG1(DBG_NET, "enabling UDP decapsulation failed");
-	}
-
 	return skt;
 }
 
@@ -543,35 +570,48 @@ socket_default_socket_t *socket_default_socket_create()
 				.destroy = _destroy,
 			},
 		},
+		.port = lib->settings->get_int(lib->settings,
+							"%s.port", CHARON_UDP_PORT, charon->name),
+		.natt = lib->settings->get_int(lib->settings,
+							"%s.port_nat_t", CHARON_NATT_PORT, charon->name),
 		.max_packet = lib->settings->get_int(lib->settings,
-									"%s.max_packet", MAX_PACKET, charon->name),
+							"%s.max_packet", MAX_PACKET, charon->name),
 	);
 
-	this->ipv4 = open_socket(this, AF_INET, CHARON_UDP_PORT);
-	if (this->ipv4 == 0)
+	if (this->port && this->port == this->natt)
 	{
-		DBG1(DBG_NET, "could not open IPv4 socket, IPv4 disabled");
-	}
-	else
-	{
-		this->ipv4_natt = open_socket(this, AF_INET, CHARON_NATT_PORT);
-		if (this->ipv4_natt == 0)
-		{
-			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
-		}
+		DBG1(DBG_NET, "IKE ports can't be equal, will allocate NAT-T "
+			 "port randomly");
+		this->natt = 0;
 	}
 
-	this->ipv6 = open_socket(this, AF_INET6, CHARON_UDP_PORT);
+	/* we allocate IPv6 sockets first as that will reserve randomly allocated
+	 * ports also for IPv4 */
+	this->ipv6 = open_socket(this, AF_INET6, &this->port);
 	if (this->ipv6 == 0)
 	{
 		DBG1(DBG_NET, "could not open IPv6 socket, IPv6 disabled");
 	}
 	else
 	{
-		this->ipv6_natt = open_socket(this, AF_INET6, CHARON_NATT_PORT);
+		this->ipv6_natt = open_socket(this, AF_INET6, &this->natt);
 		if (this->ipv6_natt == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv6 NAT-T socket");
+		}
+	}
+
+	this->ipv4 = open_socket(this, AF_INET, &this->port);
+	if (this->ipv4 == 0)
+	{
+		DBG1(DBG_NET, "could not open IPv4 socket, IPv4 disabled");
+	}
+	else
+	{
+		this->ipv4_natt = open_socket(this, AF_INET, &this->natt);
+		if (this->ipv4_natt == 0)
+		{
+			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
 
@@ -580,6 +620,14 @@ socket_default_socket_t *socket_default_socket_create()
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
 		return NULL;
+	}
+
+	/* enable UDP decapsulation globally, only for one socket needed */
+	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+							this->ipv6_natt ?: this->ipv4_natt,
+							this->ipv6_natt ? AF_INET6 : AF_INET, this->natt))
+	{
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
 	}
 	return &this->public;
 }
