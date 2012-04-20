@@ -44,7 +44,8 @@ strongswan_CFLAGS := \
 	-DUSE_IKEV2 \
 	-DUSE_VSTR \
 	-DDEBUG \
-	-DCHARON_UDP_PORT=4000 \
+	-DCHARON_UDP_PORT=0 \
+	-DCHARON_NATT_PORT=0 \
 	-DVERSION=\"$(strongswan_VERSION)\" \
 	-DDEV_RANDOM=\"/dev/random\" \
 	-DDEV_URANDOM=\"/dev/urandom\"
