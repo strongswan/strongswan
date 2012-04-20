@@ -277,9 +277,13 @@ static void apply_port(host_t *host, host_t *old, u_int16_t port, bool local)
 	{
 		port = old->get_port(old);
 	}
-	else if (port == (local ? CHARON_UDP_PORT : IKEV2_UDP_PORT))
+	else if (local && port == charon->socket->get_port(charon->socket, FALSE))
 	{
-		port = (local ? CHARON_NATT_PORT : IKEV2_NATT_PORT);
+		port = charon->socket->get_port(charon->socket, TRUE);
+	}
+	else if (!local && port == IKEV2_UDP_PORT)
+	{
+		port = IKEV2_NATT_PORT;
 	}
 	host->set_port(host, port);
 }

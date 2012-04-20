@@ -323,7 +323,8 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 								NULL);
 	}
 
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", FALSE, CHARON_UDP_PORT,
+	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", FALSE,
+							 charon->socket->get_port(charon->socket, FALSE),
 							 hostname, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 

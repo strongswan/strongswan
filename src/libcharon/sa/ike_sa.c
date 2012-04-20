@@ -845,9 +845,11 @@ METHOD(ike_sa_t, float_ports, void,
 	   private_ike_sa_t *this)
 {
 	/* do not switch if we have a custom port from MOBIKE/NAT */
-	if (this->my_host->get_port(this->my_host) == CHARON_UDP_PORT)
+	if (this->my_host->get_port(this->my_host) ==
+			charon->socket->get_port(charon->socket, FALSE))
 	{
-		this->my_host->set_port(this->my_host, CHARON_NATT_PORT);
+		this->my_host->set_port(this->my_host,
+								charon->socket->get_port(charon->socket, TRUE));
 	}
 	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT)
 	{
@@ -1054,7 +1056,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	if (this->local_host)
 	{
 		host = this->local_host->clone(this->local_host);
-		host->set_port(host, CHARON_UDP_PORT);
+		host->set_port(host, charon->socket->get_port(charon->socket, FALSE));
 	}
 	else
 	{
@@ -2239,7 +2241,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 	}
 
 	this->task_manager = task_manager_create(&this->public);
-	this->my_host->set_port(this->my_host, CHARON_UDP_PORT);
+	this->my_host->set_port(this->my_host,
+							charon->socket->get_port(charon->socket, FALSE));
 
 	if (!this->task_manager || !this->keymat)
 	{
