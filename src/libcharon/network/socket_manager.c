@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -89,6 +89,19 @@ METHOD(socket_manager_t, sender, status_t,
 	return status;
 }
 
+METHOD(socket_manager_t, get_port, u_int16_t,
+	private_socket_manager_t *this, bool nat_t)
+{
+	u_int16_t port = 0;
+	this->lock->read_lock(this->lock);
+	if (this->socket)
+	{
+		port = this->socket->get_port(this->socket, nat_t);
+	}
+	this->lock->unlock(this->lock);
+	return port;
+}
+
 static void create_socket(private_socket_manager_t *this)
 {
 	socket_constructor_t create;
@@ -153,6 +166,7 @@ socket_manager_t *socket_manager_create()
 		.public = {
 			.send = _sender,
 			.receive = _receiver,
+			.get_port = _get_port,
 			.add_socket = _add_socket,
 			.remove_socket = _remove_socket,
 			.destroy = _destroy,

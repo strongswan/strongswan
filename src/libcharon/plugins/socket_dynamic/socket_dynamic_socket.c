@@ -467,6 +467,7 @@ METHOD(socket_t, sender, status_t,
 	dst = packet->get_destination(packet);
 	family = src->get_family(src);
 	port = src->get_port(src);
+	port = port ?: CHARON_UDP_PORT;
 	skt = find_socket(this, family, port);
 	if (!skt)
 	{
@@ -534,6 +535,14 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
+METHOD(socket_t, get_port, u_int16_t,
+	private_socket_dynamic_socket_t *this, bool nat_t)
+{
+	/* we return 0 here for users that have no explicit port configured, the
+	 * sender will default to the default port in this case */
+	return 0;
+}
+
 METHOD(socket_t, destroy, void,
 	private_socket_dynamic_socket_t *this)
 {
@@ -567,6 +576,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.get_port = _get_port,
 				.destroy = _destroy,
 			},
 		},

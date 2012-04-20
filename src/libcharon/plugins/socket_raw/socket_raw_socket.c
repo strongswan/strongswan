@@ -309,7 +309,7 @@ METHOD(socket_t, sender, status_t,
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
-	if (sport == CHARON_UDP_PORT)
+	if (sport == 0 || sport == CHARON_UDP_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -470,6 +470,12 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 	return skt;
 }
 
+METHOD(socket_t, get_port, u_int16_t,
+	private_socket_raw_socket_t *this, bool nat_t)
+{
+	return nat_t ? CHARON_NATT_PORT : CHARON_UDP_PORT;
+}
+
 /**
  * open a socket to receive packets
  */
@@ -616,6 +622,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.get_port = _get_port,
 				.destroy = _destroy,
 			},
 		},
