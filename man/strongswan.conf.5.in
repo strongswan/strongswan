@@ -853,6 +853,14 @@ identifier for each IKE_SA.
 Prefix each log entry with a timestamp. The option accepts a format string as
 passed to
 .BR strftime (3).
+.TP
+.BR charon.syslog.identifier
+Global identifier used for an
+.BR openlog (3)
+call, prepended to each log message by syslog.  If not configured,
+.BR openlog (3)
+is not called, so the value will depend on system defaults (often the program
+name).
 
 .SS Subsystems
 .TP

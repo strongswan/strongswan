@@ -291,7 +291,7 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 	sys_logger_t *sys_logger;
 	file_logger_t *file_logger;
 	enumerator_t *enumerator;
-	char *facility, *filename;
+	char *identifier, *facility, *filename;
 	int loggers_defined = 0;
 	debug_t group;
 	level_t  def;
@@ -299,6 +299,12 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 	FILE *file;
 
 	/* setup sysloggers */
+	identifier = lib->settings->get_str(lib->settings,
+										"charon.syslog.identifier", NULL);
+	if (identifier)
+	{	/* set identifier, which is prepended to each log line */
+		openlog(identifier, 0, 0);
+	}
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
 														  "charon.syslog");
 	while (enumerator->enumerate(enumerator, &facility))
