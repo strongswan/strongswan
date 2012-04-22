@@ -144,6 +144,11 @@ METHOD(pts_component_t, measure, status_t,
 			return FAILED;
 	}
 
+	if (meas_hex == NULL || pcr_before_hex == NULL || pcr_after_hex == NULL)
+	{
+		return FAILED;
+	}
+
 	hash_algo = pts->get_meas_algorithm(pts);
 	hash_size = pts_meas_algo_hash_size(hash_algo);
 	pcr_len = pts->get_pcr_len(pts);
