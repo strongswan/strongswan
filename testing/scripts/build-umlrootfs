@@ -342,6 +342,11 @@ then
     echo -n " --enable-gcm" >> $INSTALLSHELL
 fi
 
+if [ "$USE_CMAC" = "yes" ]
+then
+    echo -n " --enable-cmac" >> $INSTALLSHELL
+fi
+
 if [ "$USE_HA" = "yes" ]
 then
     echo -n " --enable-ha" >> $INSTALLSHELL
