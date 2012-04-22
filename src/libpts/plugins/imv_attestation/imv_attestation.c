@@ -322,7 +322,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	{
 		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
 		state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
 													   connection_id);
