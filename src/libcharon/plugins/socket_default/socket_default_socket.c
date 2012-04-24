@@ -583,7 +583,7 @@ socket_default_socket_t *socket_default_socket_create()
 			},
 		},
 		.max_packet = lib->settings->get_int(lib->settings,
-										"charon.max_packet", MAX_PACKET),
+									"%s.max_packet", MAX_PACKET, charon->name),
 	);
 
 #ifdef __APPLE__

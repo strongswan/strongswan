@@ -53,7 +53,7 @@ METHOD(task_t, build, status_t,
 	private_ike_vendor_t *this, message_t *message)
 {
 	if (lib->settings->get_bool(lib->settings,
-								"charon.send_vendor_id", FALSE))
+								"%s.send_vendor_id", FALSE, charon->name))
 	{
 		vendor_id_payload_t *vid;
 

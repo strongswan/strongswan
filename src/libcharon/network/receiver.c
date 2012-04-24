@@ -529,25 +529,26 @@ receiver_t *receiver_create()
 		.secret_offset = random() % now,
 	);
 
-	if (lib->settings->get_bool(lib->settings, "charon.dos_protection", TRUE))
+	if (lib->settings->get_bool(lib->settings,
+				"%s.dos_protection", TRUE, charon->name))
 	{
 		this->cookie_threshold = lib->settings->get_int(lib->settings,
-						"charon.cookie_threshold", COOKIE_THRESHOLD_DEFAULT);
+				"%s.cookie_threshold", COOKIE_THRESHOLD_DEFAULT, charon->name);
 		this->block_threshold = lib->settings->get_int(lib->settings,
-						"charon.block_threshold", BLOCK_THRESHOLD_DEFAULT);
+				"%s.block_threshold", BLOCK_THRESHOLD_DEFAULT, charon->name);
 	}
 	this->init_limit_job_load = lib->settings->get_int(lib->settings,
-						"charon.init_limit_job_load", 0);
+				"%s.init_limit_job_load", 0, charon->name);
 	this->init_limit_half_open = lib->settings->get_int(lib->settings,
-						"charon.init_limit_half_open", 0);
+				"%s.init_limit_half_open", 0, charon->name);
 	this->receive_delay = lib->settings->get_int(lib->settings,
-						"charon.receive_delay", 0);
+				"%s.receive_delay", 0, charon->name);
 	this->receive_delay_type = lib->settings->get_int(lib->settings,
-						"charon.receive_delay_type", 0),
+				"%s.receive_delay_type", 0, charon->name),
 	this->receive_delay_request = lib->settings->get_bool(lib->settings,
-						"charon.receive_delay_request", TRUE),
+				"%s.receive_delay_request", TRUE, charon->name),
 	this->receive_delay_response = lib->settings->get_int(lib->settings,
-						"charon.receive_delay_response", TRUE),
+				"%s.receive_delay_response", TRUE, charon->name),
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (this->hasher == NULL)

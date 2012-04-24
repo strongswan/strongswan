@@ -704,10 +704,11 @@ dhcp_socket_t *dhcp_socket_create()
 		return NULL;
 	}
 	this->identity_lease = lib->settings->get_bool(lib->settings,
-							"charon.plugins.dhcp.identity_lease", FALSE);
+								"%s.plugins.dhcp.identity_lease", FALSE,
+								charon->name);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
-							"charon.plugins.dhcp.server", "255.255.255.255"),
-							DHCP_SERVER_PORT);
+								"%s.plugins.dhcp.server", "255.255.255.255",
+								charon->name), DHCP_SERVER_PORT);
 	if (!this->dst)
 	{
 		DBG1(DBG_CFG, "configured DHCP server address invalid");

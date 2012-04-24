@@ -1078,7 +1078,8 @@ METHOD(task_manager_t, process_message, status_t,
 		job = (job_t*)delete_ike_sa_job_create(ike_sa_id, FALSE);
 		lib->scheduler->schedule_job(lib->scheduler, job,
 				lib->settings->get_int(lib->settings,
-					"charon.half_open_timeout",  HALF_OPEN_IKE_SA_TIMEOUT));
+						"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
+						charon->name));
 	}
 	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 								time_monotonic(NULL));
@@ -1473,11 +1474,11 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 		.active_tasks = linked_list_create(),
 		.passive_tasks = linked_list_create(),
 		.retransmit_tries = lib->settings->get_int(lib->settings,
-								"charon.retransmit_tries", RETRANSMIT_TRIES),
+					"%s.retransmit_tries", RETRANSMIT_TRIES, charon->name),
 		.retransmit_timeout = lib->settings->get_double(lib->settings,
-								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT),
+					"%s.retransmit_timeout", RETRANSMIT_TIMEOUT, charon->name),
 		.retransmit_base = lib->settings->get_double(lib->settings,
-								"charon.retransmit_base", RETRANSMIT_BASE),
+					"%s.retransmit_base", RETRANSMIT_BASE, charon->name),
 	);
 
 	return &this->public;

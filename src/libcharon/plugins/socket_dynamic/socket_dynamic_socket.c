@@ -610,7 +610,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.max_packet = lib->settings->get_int(lib->settings,
-										"charon.max_packet", MAX_PACKET),
+									"%s.max_packet", MAX_PACKET, charon->name),
 	);
 
 	if (pipe(this->notify) != 0)

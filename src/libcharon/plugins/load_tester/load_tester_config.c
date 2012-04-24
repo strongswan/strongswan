@@ -336,41 +336,42 @@ load_tester_config_t *load_tester_config_create()
 	);
 
 	if (lib->settings->get_bool(lib->settings,
-				"charon.plugins.load-tester.request_virtual_ip", FALSE))
+			"%s.plugins.load-tester.request_virtual_ip", FALSE, charon->name))
 	{
 		this->vip = host_create_from_string("0.0.0.0", 0);
 	}
 	this->pool = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.pool", NULL);
+			"%s.plugins.load-tester.pool", NULL, charon->name);
 	this->remote = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.remote", "127.0.0.1");
+			"%s.plugins.load-tester.remote", "127.0.0.1", charon->name);
 
 	this->proposal = proposal_create_from_string(PROTO_IKE,
-			lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.proposal", "aes128-sha1-modp768"));
+				lib->settings->get_str(lib->settings,
+					"%s.plugins.load-tester.proposal", "aes128-sha1-modp768",
+					charon->name));
 	if (!this->proposal)
 	{	/* fallback */
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
 	this->ike_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load-tester.ike_rekey", 0);
+			"%s.plugins.load-tester.ike_rekey", 0, charon->name);
 	this->child_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load-tester.child_rekey", 600);
+			"%s.plugins.load-tester.child_rekey", 600, charon->name);
 	this->dpd_delay = lib->settings->get_int(lib->settings,
-				"charon.plugins.load-tester.dpd_delay", 0);
+			"%s.plugins.load-tester.dpd_delay", 0, charon->name);
 
 	this->initiator_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.initiator_auth", "pubkey");
+			"%s.plugins.load-tester.initiator_auth", "pubkey", charon->name);
 	this->responder_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.responder_auth", "pubkey");
+			"%s.plugins.load-tester.responder_auth", "pubkey", charon->name);
 	this->initiator_id = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.initiator_id", NULL);
+			"%s.plugins.load-tester.initiator_id", NULL, charon->name);
 	this->responder_id = lib->settings->get_str(lib->settings,
-				"charon.plugins.load-tester.responder_id", NULL);
+			"%s.plugins.load-tester.responder_id", NULL, charon->name);
 
 	this->port = lib->settings->get_int(lib->settings,
-				"charon.plugins.load-tester.dynamic_port", 0);
+			"%s.plugins.load-tester.dynamic_port", 0, charon->name);
 
 	this->peer_cfg = generate_config(this, 0);
 

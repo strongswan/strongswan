@@ -1181,7 +1181,8 @@ stroke_cred_t *stroke_cred_create()
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	this->force_ca_cert = lib->settings->get_bool(lib->settings,
-			"charon.plugins.stroke.ignore_missing_ca_basic_constraint", FALSE);
+						"%s.plugins.stroke.ignore_missing_ca_basic_constraint",
+						FALSE, charon->name);
 
 	load_certs(this);
 	load_secrets(this, SECRETS_FILE, 0, NULL);

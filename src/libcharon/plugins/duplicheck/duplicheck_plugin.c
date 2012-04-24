@@ -66,7 +66,7 @@ plugin_t *duplicheck_plugin_create()
 	private_duplicheck_plugin_t *this;
 
 	if (!lib->settings->get_bool(lib->settings,
-								 "charon.plugins.duplicheck.enable", TRUE))
+							"%s.plugins.duplicheck.enable", TRUE, charon->name))
 	{
 		return NULL;
 	}

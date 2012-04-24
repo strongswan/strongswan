@@ -281,7 +281,7 @@ static void load_pools(private_ha_attribute_t *this)
 	pool_t *pool;
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-													"charon.plugins.ha.pools");
+										"%s.plugins.ha.pools", charon->name);
 	while (enumerator->enumerate(enumerator, &name, &net))
 	{
 		net = strdup(net);

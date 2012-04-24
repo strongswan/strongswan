@@ -2090,9 +2090,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.peer_addresses = linked_list_create(),
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
-									"charon.keep_alive", KEEPALIVE_INTERVAL),
+							"%s.keep_alive", KEEPALIVE_INTERVAL, charon->name),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
-									"charon.flush_auth_cfg", FALSE),
+							"%s.flush_auth_cfg", FALSE, charon->name),
 	);
 
 	if (version == IKEV2)

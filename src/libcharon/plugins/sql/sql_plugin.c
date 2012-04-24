@@ -80,7 +80,8 @@ plugin_t *sql_plugin_create()
 	char *uri;
 	private_sql_plugin_t *this;
 
-	uri = lib->settings->get_str(lib->settings, "charon.plugins.sql.database", NULL);
+	uri = lib->settings->get_str(lib->settings, "%s.plugins.sql.database",
+								 NULL, charon->name);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "sql plugin: database URI not set");

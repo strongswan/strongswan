@@ -230,11 +230,12 @@ led_listener_t *led_listener_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.blink_time = lib->settings->get_int(lib->settings,
-				"charon.plugins.led.blink_time", 50),
+							"%s.plugins.led.blink_time", 50, charon->name),
 	);
 
 	this->activity = open_led(lib->settings->get_str(lib->settings,
-				"charon.plugins.led.activity_led", NULL), &this->activity_max);
+							"%s.plugins.led.activity_led", NULL, charon->name),
+							&this->activity_max);
 	set_led(this->activity, 0);
 
 	return &this->public;

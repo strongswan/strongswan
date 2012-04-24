@@ -1982,13 +1982,15 @@ ike_sa_manager_t *ike_sa_manager_create()
 		return NULL;
 	}
 
-	this->table_size = get_nearest_powerof2(lib->settings->get_int(lib->settings,
-						"charon.ikesa_table_size", DEFAULT_HASHTABLE_SIZE));
+	this->table_size = get_nearest_powerof2(lib->settings->get_int(
+									lib->settings, "%s.ikesa_table_size",
+									DEFAULT_HASHTABLE_SIZE, charon->name));
 	this->table_size = max(1, min(this->table_size, MAX_HASHTABLE_SIZE));
 	this->table_mask = this->table_size - 1;
 
-	this->segment_count = get_nearest_powerof2(lib->settings->get_int(lib->settings,
-						"charon.ikesa_table_segments", DEFAULT_SEGMENT_COUNT));
+	this->segment_count = get_nearest_powerof2(lib->settings->get_int(
+									lib->settings, "%s.ikesa_table_segments",
+									DEFAULT_SEGMENT_COUNT, charon->name));
 	this->segment_count = max(1, min(this->segment_count, this->table_size));
 	this->segment_mask = this->segment_count - 1;
 
@@ -2028,6 +2030,6 @@ ike_sa_manager_t *ike_sa_manager_create()
 	}
 
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
-												"charon.reuse_ikesa", TRUE);
+										"%s.reuse_ikesa", TRUE, charon->name);
 	return &this->public;
 }

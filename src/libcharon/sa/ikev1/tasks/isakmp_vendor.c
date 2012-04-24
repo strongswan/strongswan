@@ -121,7 +121,7 @@ METHOD(task_t, build, status_t,
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
-										 "charon.send_vendor_id", FALSE);
+									"%s.send_vendor_id", FALSE, charon->name);
 	for (i = 0; i < countof(vendor_ids); i++)
 	{
 		if (vendor_ids[i].send ||

@@ -453,14 +453,17 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 		/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
 		.type = EAP_RADIUS,
 		.eap_start = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.eap_start", FALSE),
+									"%s.plugins.eap-radius.eap_start", FALSE,
+									charon->name),
 		.id_prefix = lib->settings->get_str(lib->settings,
-								"charon.plugins.eap-radius.id_prefix", ""),
+									"%s.plugins.eap-radius.id_prefix", "",
+									charon->name),
 		.class_group = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.class_group", FALSE),
+									"%s.plugins.eap-radius.class_group", FALSE,
+									charon->name),
 		.filter_id = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.filter_id", FALSE),
-
+									"%s.plugins.eap-radius.filter_id", FALSE,
+									charon->name),
 	);
 	this->client = eap_radius_create_client();
 	if (!this->client)

@@ -223,7 +223,8 @@ METHOD(xauth_method_t, process, status_t,
 	}
 
 	name = lib->settings->get_str(lib->settings,
-								  "charon.plugins.xauth-eap.backend", "radius");
+								  "%s.plugins.xauth-eap.backend", "radius",
+								  charon->name);
 	type = eap_type_from_string(name);
 	if (!type)
 	{

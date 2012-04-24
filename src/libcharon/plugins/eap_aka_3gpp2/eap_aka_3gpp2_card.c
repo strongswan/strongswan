@@ -160,12 +160,13 @@ eap_aka_3gpp2_card_t *eap_aka_3gpp2_card_create(eap_aka_3gpp2_functions_t *f)
 		},
 		.f = f,
 		.seq_check = lib->settings->get_bool(lib->settings,
-									"charon.plugins.eap-aka-3gpp2.seq_check",
+									"%s.plugins.eap-aka-3gpp2.seq_check",
 #ifdef SEQ_CHECK /* handle legacy compile time configuration as default */
-									TRUE),
+									TRUE,
 #else /* !SEQ_CHECK */
-									FALSE),
+									FALSE,
 #endif /* SEQ_CHECK */
+									charon->name),
 	);
 
 	eap_aka_3gpp2_get_sqn(this->sqn, 0);

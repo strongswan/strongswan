@@ -834,7 +834,8 @@ stroke_socket_t *stroke_socket_create()
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->commands = linked_list_create();
 	this->max_concurrent = lib->settings->get_int(lib->settings,
-				"charon.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT);
+					"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,
+					charon->name);
 
 	lib->credmgr->add_set(lib->credmgr, &this->ca->set);
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);

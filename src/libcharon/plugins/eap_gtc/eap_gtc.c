@@ -218,7 +218,8 @@ METHOD(eap_method_t, process_server, status_t,
 	password[data.len] = '\0';
 
 	service = lib->settings->get_str(lib->settings,
-						"charon.plugins.eap-gtc.pam_service", GTC_PAM_SERVICE);
+							"%s.plugins.eap-gtc.pam_service", GTC_PAM_SERVICE,
+							charon->name);
 
 	if (!authenticate(service, user, password))
 	{

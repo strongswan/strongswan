@@ -321,9 +321,9 @@ load_tester_creds_t *load_tester_creds_create()
 	char *pwd, *psk;
 
 	psk = lib->settings->get_str(lib->settings,
-					"charon.plugins.load-tester.preshared_key", default_psk);
+			"%s.plugins.load-tester.preshared_key", default_psk, charon->name);
 	pwd = lib->settings->get_str(lib->settings,
-					"charon.plugins.load-tester.eap_password", default_pwd);
+			"%s.plugins.load-tester.eap_password", default_pwd, charon->name);
 
 	INIT(this,
 		.public = {

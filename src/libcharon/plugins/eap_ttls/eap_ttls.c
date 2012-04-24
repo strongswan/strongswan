@@ -146,16 +146,19 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 		},
 	);
 	if (is_server && !lib->settings->get_bool(lib->settings,
-							"charon.plugins.eap-ttls.request_peer_auth", FALSE))
+								"%s.plugins.eap-ttls.request_peer_auth", FALSE,
+								charon->name))
 	{
 		peer = NULL;
 	}
 	frag_size = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN);
+					"%s.plugins.eap-ttls.fragment_size", MAX_FRAGMENT_LEN,
+					charon->name);
 	max_msg_count = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-ttls.max_message_count", MAX_MESSAGE_COUNT);
+					"%s.plugins.eap-ttls.max_message_count", MAX_MESSAGE_COUNT,
+					charon->name);
 	include_length = lib->settings->get_bool(lib->settings,
-					"charon.plugins.eap-ttls.include_length", TRUE);
+					"%s.plugins.eap-ttls.include_length", TRUE, charon->name);
 	tls = tls_create(is_server, server, peer, TLS_PURPOSE_EAP_TTLS,
 					 application, NULL);
 	this->tls_eap = tls_eap_create(EAP_TTLS, tls, frag_size, max_msg_count,
@@ -170,7 +173,7 @@ static eap_ttls_t *eap_ttls_create(identification_t *server,
 }
 
 eap_ttls_t *eap_ttls_create_server(identification_t *server,
-						  		   identification_t *peer)
+								   identification_t *peer)
 {
 	return eap_ttls_create(server, peer, TRUE,
 						   &eap_ttls_server_create(server, peer)->application);

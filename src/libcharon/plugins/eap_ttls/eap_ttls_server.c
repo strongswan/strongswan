@@ -78,7 +78,8 @@ static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 	eap_type_t type;
 
 	eap_type_str = lib->settings->get_str(lib->settings,
-					 	"charon.plugins.eap-ttls.phase2_method", "md5");
+									"%s.plugins.eap-ttls.phase2_method", "md5",
+									charon->name);
 	type = eap_type_from_string(eap_type_str);
 	if (type == 0)
 	{
@@ -110,7 +111,7 @@ static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 static status_t start_phase2_tnc(private_eap_ttls_server_t *this)
 {
 	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
-					 	"charon.plugins.eap-ttls.phase2_tnc", FALSE))
+						"%s.plugins.eap-ttls.phase2_tnc", FALSE, charon->name))
 	{
 		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
 		this->method = charon->eap->create_instance(charon->eap, EAP_TNC,
@@ -168,7 +169,7 @@ METHOD(tls_application_t, process, status_t,
 	code = in->get_code(in);
 	received_type = in->get_type(in, &received_vendor);
 	DBG1(DBG_IKE, "received tunneled EAP-TTLS AVP [EAP/%N/%N]",
-					   		eap_code_short_names, code,
+							eap_code_short_names, code,
 							eap_type_short_names, received_type);
 	if (code != EAP_RESPONSE)
 	{
@@ -234,7 +235,7 @@ METHOD(tls_application_t, process, status_t,
 
 		/* Start Phase 2 of EAP-TTLS authentication */
 		if (lib->settings->get_bool(lib->settings,
-					 	"charon.plugins.eap-ttls.request_peer_auth", FALSE))
+				"%s.plugins.eap-ttls.request_peer_auth", FALSE, charon->name))
 		{
 			return start_phase2_tnc(this);
 		}
@@ -279,7 +280,7 @@ METHOD(tls_application_t, process, status_t,
 				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
 			}
 			return FAILED;
- 	}
+	}
 	return status;
 }
 
@@ -293,7 +294,7 @@ METHOD(tls_application_t, build, status_t,
 
 	if (this->method == NULL && this->start_phase2 &&
 		lib->settings->get_bool(lib->settings,
-			 	"charon.plugins.eap-ttls.phase2_piggyback", FALSE))
+				"%s.plugins.eap-ttls.phase2_piggyback", FALSE, charon->name))
 	{
 		/* generate an EAP Identity request which will be piggybacked right
 		 * onto the TLS Finished message thus initiating EAP-TTLS phase2

@@ -65,7 +65,8 @@ static bool load_db(private_eap_simaka_sql_t *this,
 		char *uri;
 
 		uri = lib->settings->get_str(lib->settings,
-							"charon.plugins.eap-simaka-sql.database", NULL);
+									 "%s.plugins.eap-simaka-sql.database", NULL,
+									 charon->name);
 		if (!uri)
 		{
 			DBG1(DBG_CFG, "eap-simaka-sql database URI missing");
@@ -78,7 +79,8 @@ static bool load_db(private_eap_simaka_sql_t *this,
 			return FALSE;
 		}
 		remove_used = lib->settings->get_bool(lib->settings,
-							"charon.plugins.eap-simaka-sql.remove_used", FALSE);
+								"%s.plugins.eap-simaka-sql.remove_used", FALSE,
+								charon->name);
 
 		this->provider = eap_simaka_sql_provider_create(this->db, remove_used);
 		this->card = eap_simaka_sql_card_create(this->db, remove_used);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen 
+ * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@
 #define IFMAP_META_NS "http://www.trustedcomputinggroup.org/2010/IFMAP-METADATA/2"
 #define IFMAP_LOGFILE "strongswan_ifmap.log"
 #define IFMAP_SERVER  "https://localhost:8443/"
-	
+
 typedef struct private_tnc_ifmap_soap_t private_tnc_ifmap_soap_t;
 
 /**
@@ -41,7 +41,7 @@ struct private_tnc_ifmap_soap_t {
 	tnc_ifmap_soap_t public;
 
 	/**
-	 * Axis2/C environment 
+	 * Axis2/C environment
 	 */
 	axutil_env_t *env;
 
@@ -155,8 +155,8 @@ METHOD(tnc_ifmap_soap_t, newSession, bool,
 
 	/* set PEP and PDP device name (defaults to IF-MAP Publisher ID) */
 	this->device_name = lib->settings->get_str(lib->settings,
-								"charon.plugins.tnc-ifmap.device_name",
-								 this->ifmap_publisher_id);
+									"%s.plugins.tnc-ifmap.device_name",
+									 this->ifmap_publisher_id, charon->name);
 	this->device_name = strdup(this->device_name);
 
 	/* free result */
@@ -174,13 +174,13 @@ METHOD(tnc_ifmap_soap_t, purgePublisher, bool,
 	axiom_attribute_t *attr;
 
 	/* build purgePublisher request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
+	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
 	el = axiom_element_create(this->env, NULL, "purgePublisher", ns, &request);
 	attr = axiom_attribute_create(this->env, "session-id",
-								  this->session_id, NULL);	
+								  this->session_id, NULL);
 	axiom_element_add_attribute(el, this->env, attr, request);
 	attr = axiom_attribute_create(this->env, "ifmap-publisher-id",
-								  this->ifmap_publisher_id, NULL);	
+								  this->ifmap_publisher_id, NULL);
 	axiom_element_add_attribute(el, this->env, attr, request);
 
 	/* send purgePublisher request and receive purgePublisherReceived */
@@ -202,7 +202,7 @@ static axiom_node_t* create_access_request(private_tnc_ifmap_soap_t *this,
 	el = axiom_element_create(this->env, NULL, "access-request", NULL, &node);
 
 	snprintf(buf, BUF_LEN, "%s:%d", this->device_name, id);
-	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	return node;
@@ -222,7 +222,7 @@ static axiom_node_t* create_identity(private_tnc_ifmap_soap_t *this,
 	el = axiom_element_create(this->env, NULL, "identity", NULL, &node);
 
 	snprintf(buf, BUF_LEN, "%Y", id);
-	attr = axiom_attribute_create(this->env, "name", buf, NULL);	
+	attr = axiom_attribute_create(this->env, "name", buf, NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	switch (id->get_type(id))
@@ -260,7 +260,7 @@ static axiom_node_t* create_identity(private_tnc_ifmap_soap_t *this,
 										  "36906:other", NULL);
 			axiom_element_add_attribute(el, this->env, attr, node);
 	}
-	attr = axiom_attribute_create(this->env, "type", id_type, NULL);	
+	attr = axiom_attribute_create(this->env, "type", id_type, NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	return node;
@@ -308,11 +308,11 @@ static axiom_node_t* create_ip_address(private_tnc_ifmap_soap_t *this,
 	{
 		snprintf(buf, BUF_LEN, "%H", host);
 	}
-	attr = axiom_attribute_create(this->env, "value", buf, NULL);	
+	attr = axiom_attribute_create(this->env, "value", buf, NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	attr = axiom_attribute_create(this->env, "type",
-				 host->get_family(host) == AF_INET ? "IPv4" : "IPv6", NULL);	
+				 host->get_family(host) == AF_INET ? "IPv4" : "IPv6", NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	return node;
@@ -352,7 +352,7 @@ static axiom_node_t* create_metadata(private_tnc_ifmap_soap_t *this,
 	el = axiom_element_create(this->env, NULL, metadata, ns_meta, &node2);
 	axiom_node_add_child(node, this->env, node2);
 	attr = axiom_attribute_create(this->env, "ifmap-cardinality", "singleValue",
-								  NULL);	
+								  NULL);
 	axiom_element_add_attribute(el, this->env, attr, node2);
 
 	return node;
@@ -374,7 +374,7 @@ static axiom_node_t* create_capability(private_tnc_ifmap_soap_t *this,
 	ns_meta = axiom_namespace_create(this->env, IFMAP_META_NS, "meta");
 	el = axiom_element_create(this->env, NULL, "capability", ns_meta, &node);
 	attr = axiom_attribute_create(this->env, "ifmap-cardinality", "multiValue",
-								  NULL);	
+								  NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	el = axiom_element_create(this->env, NULL, "name", NULL, &node2);
@@ -385,7 +385,7 @@ static axiom_node_t* create_capability(private_tnc_ifmap_soap_t *this,
 	el = axiom_element_create(this->env, NULL, "administrative-domain", NULL, &node2);
 	axiom_node_add_child(node, this->env, node2);
 	text = axiom_text_create(this->env, node2, "strongswan", &node3);
-	
+
 	return node;
 }
 
@@ -439,7 +439,7 @@ static axiom_node_t* create_delete_filter(private_tnc_ifmap_soap_t *this,
 
 	snprintf(buf, BUF_LEN, "meta:%s[@ifmap-publisher-id='%s']",
 			 metadata, this->ifmap_publisher_id);
-	attr = axiom_attribute_create(this->env, "filter", buf, NULL);	
+	attr = axiom_attribute_create(this->env, "filter", buf, NULL);
 	axiom_element_add_attribute(el, this->env, attr, node);
 
 	return node;
@@ -506,11 +506,11 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 		axiom_node_add_child(node, this->env,
 							 create_device(this));
 	}
-	
+
 	/**
 	 * update or delete authenticated-as metadata
 	 */
- 	if (up)
+	if (up)
 	{
 		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
 	}
@@ -534,7 +534,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	/**
 	 * update or delete access-request-ip metadata
 	 */
- 	if (up)
+	if (up)
 	{
 		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
 	}
@@ -558,7 +558,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	/**
 	 * update or delete authenticated-by metadata
 	 */
- 	if (up)
+	if (up)
 	{
 		el = axiom_element_create(this->env, NULL, "update", NULL, &node);
 	}
@@ -605,7 +605,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 						node = create_delete_filter(this, "capability");
 					}
 					axiom_node_add_child(request, this->env, node);
- 
+
 					/* add access-request */
 					axiom_node_add_child(node, this->env,
 									 create_access_request(this, ike_sa_id));
@@ -688,9 +688,9 @@ METHOD(tnc_ifmap_soap_t, endSession, bool,
 	axiom_attribute_t *attr;
 
 	/* build endSession request */
- 	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
+	ns = axiom_namespace_create(this->env, IFMAP_NS, "ifmap");
 	el = axiom_element_create(this->env, NULL, "endSession", ns, &request);
-	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);	
+	attr = axiom_attribute_create(this->env, "session-id", this->session_id, NULL);
 	axiom_element_add_attribute(el, this->env, attr, request);
 
 	/* send endSession request and receive end SessionResult */
@@ -705,7 +705,7 @@ METHOD(tnc_ifmap_soap_t, destroy, void,
 		endSession(this);
 		free(this->session_id);
 		free(this->ifmap_publisher_id);
-		free(this->device_name);	
+		free(this->device_name);
 	}
 	if (this->svc_client)
 	{
@@ -731,20 +731,20 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 
 	/* Getting configuration parameters from strongswan.conf */
 	client_home = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.client_home",
-					AXIS2_GETENV("AXIS2C_HOME"));
+					"%s.plugins.tnc-ifmap.client_home",
+					AXIS2_GETENV("AXIS2C_HOME"), charon->name);
 	server = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.server", IFMAP_SERVER);
+					"%s.plugins.tnc-ifmap.server", IFMAP_SERVER, charon->name);
 	server_cert = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.server_cert", NULL);
+					"%s.plugins.tnc-ifmap.server_cert", NULL, charon->name);
 	key_file = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.key_file", NULL);
+					"%s.plugins.tnc-ifmap.key_file", NULL, charon->name);
 	ssl_passphrase = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.ssl_passphrase", NULL);
+					"%s.plugins.tnc-ifmap.ssl_passphrase", NULL, charon->name);
 	username = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.username", NULL);
+					"%s.plugins.tnc-ifmap.username", NULL, charon->name);
 	password = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-ifmap.password", NULL);
+					"%s.plugins.tnc-ifmap.password", NULL, charon->name);
 
 	if (!server_cert)
 	{
@@ -785,9 +785,9 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
                                                    ssl_passphrase);
 			axis2_options_set_property(options, this->env,
 									   AXIS2_SSL_PASSPHRASE, property);
-		} 
+		}
 	}
-	else 
+	else
 	{
 		/* Set up HTTP Basic MAP client authentication */
 		axis2_options_set_http_auth_info(options, this->env,
@@ -800,14 +800,14 @@ static bool axis2c_init(private_tnc_ifmap_soap_t *this)
 
 	/* Set up https transport */
 	transport_in = axis2_transport_in_desc_create(this->env,
-												  AXIS2_TRANSPORT_ENUM_HTTPS); 
+												  AXIS2_TRANSPORT_ENUM_HTTPS);
 	transport_out = axis2_transport_out_desc_create(this->env,
 												  AXIS2_TRANSPORT_ENUM_HTTPS);
 	transport_sender = axis2_http_transport_sender_create(this->env);
 	axis2_transport_out_desc_set_sender(transport_out, this->env,
 										transport_sender);
 	axis2_options_set_transport_in(options, this->env, transport_in);
-	axis2_options_set_transport_out(options, this->env, transport_out); 
+	axis2_options_set_transport_out(options, this->env, transport_out);
 
 	/* Create the axis2 service client */
 	this->svc_client = axis2_svc_client_create(this->env, client_home);

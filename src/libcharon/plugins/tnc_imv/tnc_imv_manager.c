@@ -241,7 +241,7 @@ METHOD(imv_manager_t, enforce_recommendation, bool,
 		return FALSE;
 	}
 	else
-	{	
+	{
 		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 		id = identification_create_from_string(group);
 		auth->add(auth, AUTH_RULE_GROUP, id);
@@ -452,7 +452,8 @@ imv_manager_t* tnc_imv_manager_create(void)
 
 	policy = enum_from_name(recommendation_policy_names,
 				lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imv.recommendation_policy", "default"));
+					"%s.plugins.tnc-imv.recommendation_policy", "default",
+					charon->name));
 	this->policy = (policy != -1) ? policy : RECOMMENDATION_POLICY_DEFAULT;
 	DBG1(DBG_TNC, "TNC recommendation policy is '%N'",
 				   recommendation_policy_names, this->policy);

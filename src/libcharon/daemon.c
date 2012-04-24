@@ -202,8 +202,8 @@ METHOD(daemon_t, start, void,
 {
 	/* start the engine, go multithreaded */
 	lib->processor->set_threads(lib->processor,
-						lib->settings->get_int(lib->settings, "charon.threads",
-											   DEFAULT_THREADS));
+						lib->settings->get_int(lib->settings, "%s.threads",
+											   DEFAULT_THREADS, charon->name));
 }
 
 METHOD(daemon_t, initialize, bool,

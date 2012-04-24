@@ -91,7 +91,8 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	eap_type_t type;
 
 	eap_type_str = lib->settings->get_str(lib->settings,
-					 	"charon.plugins.eap-peap.phase2_method", "mschapv2");
+							"%s.plugins.eap-peap.phase2_method", "mschapv2",
+							charon->name);
 	type = eap_type_from_string(eap_type_str);
 	if (type == 0)
 	{
@@ -128,7 +129,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 static status_t start_phase2_tnc(private_eap_peap_server_t *this)
 {
 	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
-					 	"charon.plugins.eap-peap.phase2_tnc", FALSE))
+						"%s.plugins.eap-peap.phase2_tnc", FALSE, charon->name))
 	{
 		DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, EAP_TNC);
 		this->ph2_method = charon->eap->create_instance(charon->eap, EAP_TNC,
@@ -197,7 +198,7 @@ METHOD(tls_application_t, process, status_t,
 	{
 		received_type = in->get_type(in, &received_vendor);
 		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N/%N]",
-						   		eap_code_short_names, code,
+								eap_code_short_names, code,
 								eap_type_short_names, received_type);
 		if (code != EAP_RESPONSE)
 		{
@@ -209,7 +210,7 @@ METHOD(tls_application_t, process, status_t,
 	else
 	{
 		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N]",
-						   		eap_code_short_names, code);
+								eap_code_short_names, code);
 
 		/* if EAP_SUCCESS check if to continue phase2 with EAP-TNC */
 		return (this->phase2_result == EAP_SUCCESS && code == EAP_SUCCESS) ?
@@ -273,7 +274,7 @@ METHOD(tls_application_t, process, status_t,
 
 		/* Start Phase 2 of EAP-PEAP authentication */
 		if (lib->settings->get_bool(lib->settings,
-					 	"charon.plugins.eap-peap.request_peer_auth", FALSE))
+				"%s.plugins.eap-peap.request_peer_auth", FALSE, charon->name))
 		{
 			return start_phase2_tnc(this);
 		}
@@ -302,10 +303,10 @@ METHOD(tls_application_t, process, status_t,
 			this->ph2_method->destroy(this->ph2_method);
 			this->ph2_method = NULL;
 
-			/* EAP-PEAP requires the sending of an inner EAP_SUCCESS message */	
-			this->phase2_result = EAP_SUCCESS;		
+			/* EAP-PEAP requires the sending of an inner EAP_SUCCESS message */
+			this->phase2_result = EAP_SUCCESS;
 			this->out = eap_payload_create_code(this->phase2_result, 1 +
-				 			this->ph1_method->get_identifier(this->ph1_method));
+							this->ph1_method->get_identifier(this->ph1_method));
 			return NEED_MORE;
 		case NEED_MORE:
 			break;
@@ -321,9 +322,9 @@ METHOD(tls_application_t, process, status_t,
 				DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
 			}
 			/* EAP-PEAP requires the sending of an inner EAP_FAILURE message */
-			this->phase2_result = EAP_FAILURE;			
+			this->phase2_result = EAP_FAILURE;
 			this->out = eap_payload_create_code(this->phase2_result, 1 +
-				 			this->ph1_method->get_identifier(this->ph1_method));
+							this->ph1_method->get_identifier(this->ph1_method));
 			return NEED_MORE;
 	}
 	return status;
@@ -360,7 +361,7 @@ METHOD(tls_application_t, build, status_t,
 		this->ph2_method->initiate(this->ph2_method, &this->out);
 		this->start_phase2 = FALSE;
 	}
-	
+
 	this->start_phase2_id = TRUE;
 
 	if (this->out)
@@ -423,7 +424,8 @@ eap_peap_server_t *eap_peap_server_create(identification_t *server,
 		.start_phase2 = TRUE,
 		.start_phase2_tnc = TRUE,
 		.start_phase2_id = lib->settings->get_bool(lib->settings,
-			 				"charon.plugins.eap-peap.phase2_piggyback", FALSE),
+										"%s.plugins.eap-peap.phase2_piggyback",
+										FALSE, charon->name),
 		.phase2_result = EAP_FAILURE,
 		.avp = eap_peap_avp_create(TRUE),
 	);

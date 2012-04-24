@@ -266,7 +266,7 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 	if (timeout)
 	{
 		close_ike = lib->settings->get_bool(lib->settings,
-										"charon.inactivity_close_ike", FALSE);
+								"%s.inactivity_close_ike", FALSE, charon->name);
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 				inactivity_job_create(this->child_sa->get_reqid(this->child_sa),
 									  timeout, close_ike), timeout);
@@ -881,7 +881,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		lib->settings->get_bool(lib->settings,
-								"charon.close_ike_on_child_failure", FALSE))
+								"%s.close_ike_on_child_failure", FALSE, charon->name))
 	{
 		/* we delay the delete for 100ms, as the IKE_AUTH response must arrive
 		 * first */

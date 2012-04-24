@@ -108,7 +108,8 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 			.destroy = _destroy,
 		},
 		.delete_after_established = lib->settings->get_bool(lib->settings,
-				"charon.plugins.load-tester.delete_after_established", FALSE),
+					"%s.plugins.load-tester.delete_after_established", FALSE,
+					charon->name),
 		.shutdown_on = shutdown_on,
 	);
 

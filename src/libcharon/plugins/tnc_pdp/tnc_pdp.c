@@ -291,7 +291,7 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 		data = encrypt_mppe_key(this, MS_MPPE_RECV_KEY, recv, &salt, request);
 		response->add(response, RAT_VENDOR_SPECIFIC, data);
 		chunk_free(&data);
-		
+
 		send = chunk_create(msk.ptr + recv.len, msk.len - recv.len);
 		data = encrypt_mppe_key(this, MS_MPPE_SEND_KEY, send, &salt, request);
 		response->add(response, RAT_VENDOR_SPECIFIC, data);
@@ -368,7 +368,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
 			method = charon->eap->create_instance(charon->eap, this->type,
-										0, EAP_SERVER, this->server, peer); 
+										0, EAP_SERVER, this->server, peer);
 			if (!method)
 			{
 				peer->destroy(peer);
@@ -524,7 +524,7 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 		if (request)
 		{
 			DBG1(DBG_CFG, "received RADIUS %N from client '%H'",
-			 	 radius_message_code_names, request->get_code(request), source);
+				 radius_message_code_names, request->get_code(request), source);
 
 			if (request->verify(request, NULL, this->secret, this->hasher,
 											   this->signer))
@@ -532,7 +532,7 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 				process_eap(this, request, source);
 			}
 			request->destroy(request);
-			
+
 		}
 		else
 		{
@@ -608,7 +608,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	}
 
 	server = lib->settings->get_str(lib->settings,
-						"charon.plugins.tnc-pdp.server", NULL);
+						"%s.plugins.tnc-pdp.server", NULL, charon->name);
 	if (!server)
 	{
 		DBG1(DBG_CFG, "missing PDP server name, PDP disabled");
@@ -618,7 +618,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	this->server = identification_create_from_string(server);
 
 	secret = lib->settings->get_str(lib->settings,
-						"charon.plugins.tnc-pdp.secret", NULL);
+						"%s.plugins.tnc-pdp.secret", NULL, charon->name);
 	if (!secret)
 	{
 		DBG1(DBG_CFG, "missing RADIUS secret, PDP disabled");
@@ -629,7 +629,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	this->signer->set_key(this->signer, this->secret);
 
 	eap_type_str = lib->settings->get_str(lib->settings,
-						"charon.plugins.tnc-pdp.method", "ttls");
+						"%s.plugins.tnc-pdp.method", "ttls", charon->name);
 	this->type = eap_type_from_string(eap_type_str);
 	if (this->type == 0)
 	{

@@ -364,21 +364,28 @@ certexpire_export_t *certexpire_export_create()
 								   (hashtable_equals_t)equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.local_path = lib->settings->get_str(lib->settings,
-							"charon.plugins.certexpire.csv.local", NULL),
+								"%s.plugins.certexpire.csv.local",
+								NULL, charon->name),
 		.remote_path = lib->settings->get_str(lib->settings,
-							"charon.plugins.certexpire.csv.remote", NULL),
+								"%s.plugins.certexpire.csv.remote",
+								NULL, charon->name),
 		.separator = lib->settings->get_str(lib->settings,
-							"charon.plugins.certexpire.csv.separator", ","),
+								"%s.plugins.certexpire.csv.separator",
+								",", charon->name),
 		.format = lib->settings->get_str(lib->settings,
-							"charon.plugins.certexpire.csv.format", "%d:%m:%Y"),
+								"%s.plugins.certexpire.csv.format",
+								"%d:%m:%Y", charon->name),
 		.fixed_fields = lib->settings->get_bool(lib->settings,
-							"charon.plugins.certexpire.csv.fixed_fields", TRUE),
+								"%s.plugins.certexpire.csv.fixed_fields",
+								TRUE, charon->name),
 		.empty_string = lib->settings->get_str(lib->settings,
-							"charon.plugins.certexpire.csv.empty_string", ""),
+								"%s.plugins.certexpire.csv.empty_string",
+								"", charon->name),
 	);
 
 	cron = lib->settings->get_str(lib->settings,
-								  "charon.plugins.certexpire.csv.cron", NULL);
+								  "%s.plugins.certexpire.csv.cron",
+								  NULL, charon->name);
 	if (cron)
 	{
 		this->cron = certexpire_cron_create(cron,

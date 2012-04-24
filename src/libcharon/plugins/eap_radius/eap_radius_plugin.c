@@ -90,22 +90,23 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	int auth_port, acct_port, sockets, preference;
 
 	address = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap-radius.server", NULL);
+					"%s.plugins.eap-radius.server", NULL, charon->name);
 	if (address)
 	{	/* legacy configuration */
 		secret = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap-radius.secret", NULL);
+					"%s.plugins.eap-radius.secret", NULL, charon->name);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "no RADUIS secret defined");
 			return;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
-					"charon.plugins.eap-radius.nas_identifier", "strongSwan");
+					"%s.plugins.eap-radius.nas_identifier", "strongSwan",
+					charon->name);
 		auth_port = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-radius.port", AUTH_PORT);
+					"%s.plugins.eap-radius.port", AUTH_PORT, charon->name);
 		sockets = lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-radius.sockets", 1);
+					"%s.plugins.eap-radius.sockets", 1, charon->name);
 		config = radius_config_create(address, address, auth_port, ACCT_PORT,
 									  nas_identifier, secret, sockets, 0);
 		if (!config)
@@ -118,38 +119,43 @@ static void load_configs(private_eap_radius_plugin_t *this)
 	}
 
 	enumerator = lib->settings->create_section_enumerator(lib->settings,
-										"charon.plugins.eap-radius.servers");
+								"%s.plugins.eap-radius.servers", charon->name);
 	while (enumerator->enumerate(enumerator, &section))
 	{
 		address = lib->settings->get_str(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.address", NULL, section);
+							"%s.plugins.eap-radius.servers.%s.address", NULL,
+							charon->name, section);
 		if (!address)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses address, skipped", section);
 			continue;
 		}
 		secret = lib->settings->get_str(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.secret", NULL, section);
+							"%s.plugins.eap-radius.servers.%s.secret", NULL,
+							charon->name, section);
 		if (!secret)
 		{
 			DBG1(DBG_CFG, "RADIUS server '%s' misses secret, skipped", section);
 			continue;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.nas_identifier",
-			"strongSwan", section);
+				"%s.plugins.eap-radius.servers.%s.nas_identifier", "strongSwan",
+				charon->name, section);
 		auth_port = lib->settings->get_int(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.auth_port",
+			"%s.plugins.eap-radius.servers.%s.auth_port",
 				lib->settings->get_int(lib->settings,
-					"charon.plugins.eap-radius.servers.%s.port",
-					AUTH_PORT, section),
-			section);
+					"%s.plugins.eap-radius.servers.%s.port",
+					AUTH_PORT, charon->name, section),
+			charon->name, section);
 		acct_port = lib->settings->get_int(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.acct_port", ACCT_PORT, section);
+				"%s.plugins.eap-radius.servers.%s.acct_port", ACCT_PORT,
+				charon->name, section);
 		sockets = lib->settings->get_int(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.sockets", 1, section);
+				"%s.plugins.eap-radius.servers.%s.sockets", 1,
+				charon->name, section);
 		preference = lib->settings->get_int(lib->settings,
-			"charon.plugins.eap-radius.servers.%s.preference", 0, section);
+				"%s.plugins.eap-radius.servers.%s.preference", 0,
+				charon->name, section);
 		config = radius_config_create(section, address, auth_port, acct_port,
 								nas_identifier, secret, sockets, preference);
 		if (!config)
@@ -242,12 +248,12 @@ plugin_t *eap_radius_plugin_create()
 	instance = this;
 
 	if (lib->settings->get_bool(lib->settings,
-						"charon.plugins.eap-radius.accounting", FALSE))
+					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
 	{
 		charon->bus->add_listener(charon->bus, &this->accounting->listener);
 	}
 	if (lib->settings->get_bool(lib->settings,
-						"charon.plugins.eap-radius.dae.enable", FALSE))
+					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
 	{
 		this->dae = eap_radius_dae_create(this->accounting);
 	}

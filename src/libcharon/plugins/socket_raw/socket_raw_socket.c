@@ -657,7 +657,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 			},
 		},
 		.max_packet = lib->settings->get_int(lib->settings,
-										"charon.max_packet", MAX_PACKET),
+									"%s.max_packet", MAX_PACKET, charon->name),
 	);
 
 	this->recv4 = open_recv_socket(this, AF_INET);

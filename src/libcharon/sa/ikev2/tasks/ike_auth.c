@@ -120,7 +120,7 @@ struct private_ike_auth_t {
 static bool multiple_auth_enabled()
 {
 	return lib->settings->get_bool(lib->settings,
-								   "charon.multiple_authentication", TRUE);
+							"%s.multiple_authentication", TRUE, charon->name);
 }
 
 /**

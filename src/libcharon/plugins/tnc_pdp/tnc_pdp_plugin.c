@@ -73,7 +73,7 @@ plugin_t *tnc_pdp_plugin_create()
 	int port;
 
 	port = lib->settings->get_int(lib->settings,
-						"charon.plugins.tnc_pdp.port", RADIUS_PORT);
+						"%s.plugins.tnc_pdp.port", RADIUS_PORT, charon->name);
 
 	INIT(this,
 		.public = {

@@ -205,7 +205,7 @@ plugin_t *load_tester_plugin_create()
 	u_int i, shutdown_on = 0;
 
 	if (!lib->settings->get_bool(lib->settings,
-								 "charon.plugins.load-tester.enable", FALSE))
+						"%s.plugins.load-tester.enable", FALSE, charon->name))
 	{
 		DBG1(DBG_CFG, "disabling load-tester plugin, not configured");
 		return NULL;
@@ -220,13 +220,13 @@ plugin_t *load_tester_plugin_create()
 			},
 		},
 		.delay = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.delay", 0),
+						"%s.plugins.load-tester.delay", 0, charon->name),
 		.iterations = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.iterations", 1),
+						"%s.plugins.load-tester.iterations", 1, charon->name),
 		.initiators = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.initiators", 0),
+						"%s.plugins.load-tester.initiators", 0, charon->name),
 		.init_limit = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.init_limit", 0),
+						"%s.plugins.load-tester.init_limit", 0, charon->name),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.config = load_tester_config_create(),
@@ -239,7 +239,7 @@ plugin_t *load_tester_plugin_create()
 	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
 
 	if (lib->settings->get_bool(lib->settings,
-					"charon.plugins.load-tester.shutdown_when_complete", 0))
+			"%s.plugins.load-tester.shutdown_when_complete", 0, charon->name))
 	{
 		shutdown_on = this->iterations * this->initiators;
 	}
@@ -247,7 +247,7 @@ plugin_t *load_tester_plugin_create()
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	if (lib->settings->get_bool(lib->settings,
-					"charon.plugins.load-tester.fake_kernel", FALSE))
+			"%s.plugins.load-tester.fake_kernel", FALSE, charon->name))
 	{
 		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);

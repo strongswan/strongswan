@@ -192,13 +192,13 @@ sender_t * sender_create()
 		.job = callback_job_create_with_prio((callback_job_cb_t)send_packets,
 										this, NULL, NULL, JOB_PRIO_CRITICAL),
 		.send_delay = lib->settings->get_int(lib->settings,
-											"charon.send_delay", 0),
+								"%s.send_delay", 0, charon->name),
 		.send_delay_type = lib->settings->get_int(lib->settings,
-											"charon.send_delay_type", 0),
+								"%s.send_delay_type", 0, charon->name),
 		.send_delay_request = lib->settings->get_bool(lib->settings,
-											"charon.send_delay_request", TRUE),
+								"%s.send_delay_request", TRUE, charon->name),
 		.send_delay_response = lib->settings->get_int(lib->settings,
-											"charon.send_delay_response", TRUE),
+								"%s.send_delay_response", TRUE, charon->name),
 	);
 
 	lib->processor->queue_job(lib->processor, (job_t*)this->job);

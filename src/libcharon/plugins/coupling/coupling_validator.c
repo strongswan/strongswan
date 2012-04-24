@@ -216,11 +216,13 @@ coupling_validator_t *coupling_validator_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_couplings = lib->settings->get_int(lib->settings,
-									  "charon.plugins.coupling.max", 1),
+												"%s.plugins.coupling.max", 1,
+												charon->name),
 	);
 
 	hash = lib->settings->get_str(lib->settings,
-								  "charon.plugins.coupling.hash", "sha1");
+								  "%s.plugins.coupling.hash", "sha1",
+								  charon->name);
 	for (i = 0; i < countof(hash_types); i++)
 	{
 		if (strcaseeq(hash_types[i].name, hash))
@@ -238,7 +240,8 @@ coupling_validator_t *coupling_validator_create()
 	}
 
 	path = lib->settings->get_str(lib->settings,
-								  "charon.plugins.coupling.file", NULL);
+								  "%s.plugins.coupling.file", NULL,
+								  charon->name);
 	if (!path)
 	{
 		DBG1(DBG_CFG, "coupling file path unspecified");

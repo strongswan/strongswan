@@ -99,7 +99,7 @@ android_logger_t *android_logger_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.level = lib->settings->get_int(lib->settings,
-										"charon.plugins.android.loglevel", 1),
+								"%s.plugins.android.loglevel", 1, charon->name),
 	);
 
 	return &this->public;
