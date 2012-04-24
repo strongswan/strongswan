@@ -43,6 +43,13 @@ METHOD(xauth_verifier_t, verify_secret, bool,
 	if (get_xauth_secret(user, server, &xauth_secret))
 	{
 		success = chunk_equals(secret, xauth_secret);
+
+		if (!success && secret.len && secret.ptr[secret.len - 1] == 0)
+		{	/* fix for null-terminated passwords (e.g. from Android 4) */
+			secret.len--;
+			success = chunk_equals(secret, xauth_secret);
+		}
+
 		chunk_clear(&xauth_secret);
 	}
 	return success;
