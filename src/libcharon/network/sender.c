@@ -197,7 +197,7 @@ sender_t * sender_create()
 								"%s.send_delay_type", 0, charon->name),
 		.send_delay_request = lib->settings->get_bool(lib->settings,
 								"%s.send_delay_request", TRUE, charon->name),
-		.send_delay_response = lib->settings->get_int(lib->settings,
+		.send_delay_response = lib->settings->get_bool(lib->settings,
 								"%s.send_delay_response", TRUE, charon->name),
 	);
 

@@ -547,7 +547,7 @@ receiver_t *receiver_create()
 				"%s.receive_delay_type", 0, charon->name),
 	this->receive_delay_request = lib->settings->get_bool(lib->settings,
 				"%s.receive_delay_request", TRUE, charon->name),
-	this->receive_delay_response = lib->settings->get_int(lib->settings,
+	this->receive_delay_response = lib->settings->get_bool(lib->settings,
 				"%s.receive_delay_response", TRUE, charon->name),
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
