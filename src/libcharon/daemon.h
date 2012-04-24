@@ -264,6 +264,11 @@ struct daemon_t {
 	gid_t gid;
 
 	/**
+	 * Name of the binary that uses the library (used for settings etc.)
+	 */
+	const char *name;
+
+	/**
 	 * Do not drop a given capability after initialization.
 	 *
 	 * Some plugins might need additional capabilites. They tell the daemon
@@ -311,9 +316,10 @@ extern daemon_t *charon;
  * This function initializes the bus, listeners can be registered before
  * calling initialize().
  *
+ * @param name	name of the binary that uses the library
  * @return		FALSE if integrity check failed
  */
-bool libcharon_init();
+bool libcharon_init(const char *name);
 
 /**
  * Deinitialize libcharon and destroy the "charon" instance of daemon_t.

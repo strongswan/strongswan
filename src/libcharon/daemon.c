@@ -247,7 +247,7 @@ METHOD(daemon_t, initialize, bool,
 /**
  * Create the daemon.
  */
-private_daemon_t *daemon_create()
+private_daemon_t *daemon_create(const char *name)
 {
 	private_daemon_t *this;
 
@@ -260,6 +260,7 @@ private_daemon_t *daemon_create()
 			.bus = bus_create(),
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
+			.name = strdup(name ?: "libcharon"),
 		},
 	);
 	charon = &this->public;
@@ -298,9 +299,9 @@ void libcharon_deinit()
 /**
  * Described in header.
  */
-bool libcharon_init()
+bool libcharon_init(const char *name)
 {
-	daemon_create();
+	daemon_create(name);
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());

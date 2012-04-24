@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
-	if (!libcharon_init())
+	if (!libcharon_init("charon-nm"))
 	{
 		dbg_syslog(DBG_DMN, 1, "initialization failed - aborting charon-nm");
 		goto deinit;
