@@ -15,6 +15,8 @@
 
 #include "pubkey_cert.h"
 
+#include <time.h>
+
 #include <debug.h>
 
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
@@ -44,6 +46,15 @@ struct private_pubkey_cert_t {
 	 */
 	identification_t *subject;
 
+	/**
+	 * key inception time
+	 */
+	time_t notBefore;
+
+	/**
+	 * key expiration time
+	 */
+	time_t notAfter;
 	/**
 	 * reference count
 	 */
@@ -85,7 +96,8 @@ METHOD(certificate_t, has_subject, id_match_t,
 			}
 		}
 	}
-	return ID_MATCH_NONE;
+
+	return this->subject->matches(this->subject, subject);
 }
 
 METHOD(certificate_t, has_issuer, id_match_t,
@@ -129,15 +141,18 @@ METHOD(certificate_t, get_validity, bool,
 	private_pubkey_cert_t *this, time_t *when, time_t *not_before,
 	time_t *not_after)
 {
+	time_t t = when ? *when : time(NULL);
+
 	if (not_before)
 	{
-		*not_before = 0;
+		*not_before = this->notBefore;
 	}
 	if (not_after)
 	{
-		*not_after = ~0;
+		*not_after = this->notAfter;
 	}
-	return TRUE;
+	return ((this->notBefore == UNDEFINED_TIME || t >= this->notBefore) &&
+			(this->notAfter  == UNDEFINED_TIME || t <= this->notAfter));
 }
 
 METHOD(certificate_t, get_encoding, bool,
@@ -168,7 +183,9 @@ METHOD(certificate_t, destroy, void,
 /*
  * see header file
  */
-static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
+static pubkey_cert_t *pubkey_cert_create(public_key_t *key,
+										 time_t notBefore, time_t notAfter,
+										 identification_t *subject)
 {
 	private_pubkey_cert_t *this;
 	chunk_t fingerprint;
@@ -192,10 +209,16 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 		},
 		.ref = 1,
 		.key = key,
+		.notBefore = notBefore,
+		.notAfter = notAfter,
 		.issuer = identification_create_from_encoding(ID_ANY, chunk_empty),
 	);
 
-	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &fingerprint))
+	if (subject)
+	{
+		this->subject = subject->clone(subject);
+	}
+	else if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &fingerprint))
 	{
 		this->subject = identification_create_from_encoding(ID_KEY_ID, fingerprint);
 	}
@@ -214,6 +237,8 @@ pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 {
 	public_key_t *key = NULL;
 	chunk_t blob = chunk_empty;
+	identification_t *subject = NULL;
+	time_t notBefore = UNDEFINED_TIME, notAfter = UNDEFINED_TIME;
 
 	while (TRUE)
 	{
@@ -224,6 +249,15 @@ pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 				continue;
 			case BUILD_PUBLIC_KEY:
 				key = va_arg(args, public_key_t*);
+				continue;
+			case BUILD_NOT_BEFORE_TIME:
+				notBefore = va_arg(args, time_t);
+				continue;
+			case BUILD_NOT_AFTER_TIME:
+				notAfter = va_arg(args, time_t);
+				continue;
+			case BUILD_SUBJECT:
+				subject = va_arg(args, identification_t*);
 				continue;
 			case BUILD_END:
 				break;
@@ -243,7 +277,7 @@ pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 	}
 	if (key)
 	{
-		return pubkey_cert_create(key);
+		return pubkey_cert_create(key, notBefore, notAfter, subject);
 	}
 	return NULL;
 }
