@@ -461,17 +461,21 @@ static void request_control_initiate(xmlTextReaderPtr reader,
 
 		/* <log> */
 		xmlTextWriterStartElement(writer, "log");
-		peer = charon->backends->get_peer_cfg_by_name(charon->backends, (char*)str);
+		peer = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  (char*)str);
 		if (peer)
 		{
 			enumerator = peer->create_child_cfg_enumerator(peer);
 			if (ike)
 			{
-				if (!enumerator->enumerate(enumerator, &child))
+				if (enumerator->enumerate(enumerator, &child))
+				{
+					child->get_ref(child);
+				}
+				else
 				{
 					child = NULL;
 				}
-				child->get_ref(child);
 			}
 			else
 			{
