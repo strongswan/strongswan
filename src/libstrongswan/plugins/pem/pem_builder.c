@@ -355,7 +355,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
  * load the credential from a blob
  */
 static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
-							x509_flag_t flags)
+							identification_t *subject, x509_flag_t flags)
 {
 	void *cred = NULL;
 	bool pgp = FALSE;
@@ -381,10 +381,19 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
 	{
 		subtype = pgp ? CERT_GPG : CERT_X509;
 	}
-	cred = lib->creds->create(lib->creds, type, subtype,
+	if (type == CRED_CERTIFICATE && subtype == CERT_TRUSTED_PUBKEY && subject)
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
+							  BUILD_BLOB_ASN1_DER, blob, BUILD_SUBJECT, subject,
+							  BUILD_END);
+	}
+	else
+	{
+		cred = lib->creds->create(lib->creds, type, subtype,
 							  pgp ? BUILD_BLOB_PGP : BUILD_BLOB_ASN1_DER, blob,
 							  flags ? BUILD_X509_FLAG : BUILD_END,
 							  flags, BUILD_END);
+	}
 	chunk_clear(&blob);
 	return cred;
 }
@@ -393,7 +402,7 @@ static void *load_from_blob(chunk_t blob, credential_type_t type, int subtype,
  * load the credential from a file
  */
 static void *load_from_file(char *file, credential_type_t type, int subtype,
-							x509_flag_t flags)
+							identification_t *subject, x509_flag_t flags)
 {
 	void *cred = NULL;
 	struct stat sb;
@@ -423,7 +432,8 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 		return NULL;
 	}
 
-	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype, flags);
+	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype,
+									   subject,flags);
 
 	munmap(addr, sb.st_size);
 	close(fd);
@@ -434,7 +444,7 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
  * load the credential from a file descriptor
  */
 static void *load_from_fd(int fd, credential_type_t type, int subtype,
-						  x509_flag_t flags)
+						  identification_t *subject, x509_flag_t flags)
 {
 	char buf[8096];
 	char *pos = buf;
@@ -460,7 +470,8 @@ static void *load_from_fd(int fd, credential_type_t type, int subtype,
 			return NULL;
 		}
 	}
-	return load_from_blob(chunk_create(buf, total), type, subtype, flags);
+	return load_from_blob(chunk_create(buf, total), type, subtype,
+						  subject, flags);
 }
 
 /**
@@ -471,6 +482,7 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 	char *file = NULL;
 	int fd = -1;
 	chunk_t pem = chunk_empty;
+	identification_t *subject;
 	int flags = 0;
 
 	while (TRUE)
@@ -486,6 +498,9 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 			case BUILD_BLOB_PEM:
 				pem = va_arg(args, chunk_t);
 				continue;
+			case BUILD_SUBJECT:
+				subject = va_arg(args, identification_t*);
+				continue;
 			case BUILD_X509_FLAG:
 				flags = va_arg(args, int);
 				continue;
@@ -499,15 +514,15 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 
 	if (pem.len)
 	{
-		return load_from_blob(pem, type, subtype, flags);
+		return load_from_blob(pem, type, subtype, subject, flags);
 	}
 	if (file)
 	{
-		return load_from_file(file, type, subtype, flags);
+		return load_from_file(file, type, subtype, subject, flags);
 	}
 	if (fd != -1)
 	{
-		return load_from_fd(fd, type, subtype, flags);
+		return load_from_fd(fd, type, subtype, subject, flags);
 	}
 	return NULL;
 }

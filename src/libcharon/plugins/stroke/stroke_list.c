@@ -705,6 +705,7 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
+		identification_t *subject = cert->get_subject(cert);
 		public_key_t *public = cert->get_public_key(cert);
 
 		if (public)
@@ -717,6 +718,10 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, "\n");
 
+			if (subject->get_type(subject) != ID_KEY_ID)
+			{
+				fprintf(out, "  subject:   %#Y\n", subject);
+			}
 			list_public_key(public, out);
 			public->destroy(public);
 		}

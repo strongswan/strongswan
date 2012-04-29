@@ -146,6 +146,7 @@ struct stroke_end_t {
 	char *id;
 	char *id2;
 	char *eap_id;
+	char *rsakey;
 	char *cert;
 	char *cert2;
 	char *ca;

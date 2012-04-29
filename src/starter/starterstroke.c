@@ -162,6 +162,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
 	msg_end->id2 = push_string(msg, conn_end->id2);
+	msg_end->rsakey = push_string(msg, conn_end->rsakey);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->cert2 = push_string(msg, conn_end->cert2);
 	msg_end->cert_policy = push_string(msg, conn_end->cert_policy);

@@ -264,7 +264,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 {
 	identification_t *identity;
 	certificate_t *certificate;
-	char *auth, *id, *cert, *ca;
+	char *auth, *id, *pubkey, *cert, *ca;
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
 	char eap_buf[32];
@@ -399,6 +399,14 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 	}
 	cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
+
+	/* add raw RSA public key */
+	pubkey = end->rsakey;
+	if (pubkey && !streq(pubkey, "") && !streq(pubkey, "%cert"))
+	{
+		certificate = this->cred->load_pubkey(this->cred, KEY_RSA, pubkey,
+											  identity);
+	}
 
 	/* CA constraint */
 	if (ca)

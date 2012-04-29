@@ -158,6 +158,78 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 	return NULL;
 }
 
+METHOD(stroke_cred_t, load_pubkey, certificate_t*,
+	private_stroke_cred_t *this, key_type_t type, char *filename,
+	identification_t *identity)
+{
+	certificate_t *cert;
+	char path[PATH_MAX];
+
+	if (streq(filename, "%dns"))
+	{
+
+	}
+	else if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
+	{
+		chunk_t printable_key, rfc3110_key;
+		public_key_t *key;
+
+		printable_key = chunk_create(filename + 2, strlen(filename) - 2);
+		rfc3110_key = strncaseeq(filename, "0x", 2) ?
+								 chunk_from_hex(printable_key, NULL) :
+								 chunk_from_base64(printable_key, NULL);
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+								 BUILD_BLOB_DNSKEY, rfc3110_key,
+								 BUILD_END);
+		free(rfc3110_key.ptr);
+		if (key)
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+									  CERT_TRUSTED_PUBKEY,
+									  BUILD_PUBLIC_KEY, key,
+									  BUILD_SUBJECT, identity,
+									  BUILD_END);
+			key->destroy(key);
+			if (cert)
+			{
+				cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+				DBG1(DBG_CFG, "  loaded %N public key for \"%Y\"",
+					 key_type_names, type, identity);
+				return cert;
+			}
+		}
+		DBG1(DBG_CFG, "  loading %N public key for \"%Y\" failed",
+			 key_type_names, type, identity);
+	}
+	else
+	{
+		if (*filename == '/')
+		{
+			snprintf(path, sizeof(path), "%s", filename);
+		}
+		else
+		{
+			snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
+		}
+
+		cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
+								  BUILD_FROM_FILE, path,
+								  BUILD_SUBJECT, identity,
+								  BUILD_END);
+		if (cert)
+		{
+			cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+			DBG1(DBG_CFG, "  loaded %N public key for \"%Y\" from '%s'",
+				 key_type_names, type, identity, filename);
+			return cert;
+		}
+		DBG1(DBG_CFG, "  loading %N public key for \"%Y\" from '%s' failed",
+			 key_type_names, type, identity, filename);
+	}
+	return NULL;
+}
+
 /**
  * load trusted certificates from a directory
  */
@@ -1098,6 +1170,7 @@ stroke_cred_t *stroke_cred_create()
 			.reread = _reread,
 			.load_ca = _load_ca,
 			.load_peer = _load_peer,
+			.load_pubkey = _load_pubkey,
 			.add_shared = _add_shared,
 			.cachecrl = _cachecrl,
 			.destroy = _destroy,

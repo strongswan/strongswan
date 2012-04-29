@@ -185,6 +185,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->auth2);
 	pop_string(msg, &end->id);
 	pop_string(msg, &end->id2);
+	pop_string(msg, &end->rsakey);
 	pop_string(msg, &end->cert);
 	pop_string(msg, &end->cert2);
 	pop_string(msg, &end->ca);
@@ -200,6 +201,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	DBG2(DBG_CFG, "  %sauth2=%s", label, end->auth2);
 	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
 	DBG2(DBG_CFG, "  %sid2=%s", label, end->id2);
+	DBG2(DBG_CFG, "  %srsakey=%s", label, end->rsakey);
 	DBG2(DBG_CFG, "  %scert=%s", label, end->cert);
 	DBG2(DBG_CFG, "  %scert2=%s", label, end->cert2);
 	DBG2(DBG_CFG, "  %sca=%s", label, end->ca);

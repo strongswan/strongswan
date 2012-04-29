@@ -23,6 +23,10 @@ strongswan-4.6.3
 - The resolve plugin automatically installs nameservers via resolvconf(8),
   if it is installed, instead of modifying /etc/resolv.conf directly.
 
+- The IKEv2 charon daemon supports now raw RSA public keys in RFC 3110
+  DNSKEY and PKCS#1 file format.
+
+
 strongswan-4.6.2
 ----------------
 

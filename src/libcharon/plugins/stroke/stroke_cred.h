@@ -66,6 +66,17 @@ struct stroke_cred_t {
 	certificate_t* (*load_peer)(stroke_cred_t *this, char *filename);
 
 	/**
+	 * Load a raw public key and serve it through the credential_set.
+	 *
+	 * @param type			type of the raw public key (RSA or ECDSA)
+	 * @param filename		file to load raw public key from
+	 * @param identity		identity of the raw public key owner
+	 * @return				reference to loaded raw public key, or NULL
+	 */
+	certificate_t* (*load_pubkey)(stroke_cred_t *this, key_type_t type,
+								  char *filename, identification_t *identity);
+
+	/**
 	 * Add a shared secret to serve through the credential_set.
 	 *
 	 * @param shared		shared key to add, gets owned
