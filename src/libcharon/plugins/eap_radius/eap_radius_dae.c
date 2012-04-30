@@ -435,7 +435,7 @@ static job_requeue_t receive(private_eap_radius_dae_t *this)
 	}
 	else
 	{
-		DBG1(DBG_NET, "receving RADIUS DAE request failed: %s", strerror(errno));
+		DBG1(DBG_NET, "receiving RADIUS DAE request failed: %s", strerror(errno));
 	}
 	return JOB_REQUEUE_DIRECT;
 }
