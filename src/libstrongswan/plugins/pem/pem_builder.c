@@ -482,7 +482,7 @@ static void *pem_load(credential_type_t type, int subtype, va_list args)
 	char *file = NULL;
 	int fd = -1;
 	chunk_t pem = chunk_empty;
-	identification_t *subject;
+	identification_t *subject = NULL;
 	int flags = 0;
 
 	while (TRUE)
