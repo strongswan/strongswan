@@ -406,6 +406,10 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	{
 		certificate = this->cred->load_pubkey(this->cred, KEY_RSA, pubkey,
 											  identity);
+		if (certificate)
+		{
+			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
+		}
 	}
 
 	/* CA constraint */
