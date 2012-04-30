@@ -699,10 +699,11 @@ static void list_public_key(public_key_t *public, FILE *out)
 static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 {
 	bool first = TRUE;
-
-	enumerator_t *enumerator = list->create_enumerator(list);
+	time_t now = time(NULL), notBefore, notAfter;
+	enumerator_t *enumerator;
 	certificate_t *cert;
 
+	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
 		identification_t *subject = cert->get_subject(cert);
@@ -718,10 +719,41 @@ static void stroke_list_pubkeys(linked_list_t *list, bool utc, FILE *out)
 			}
 			fprintf(out, "\n");
 
+			/* list subject if available */
 			if (subject->get_type(subject) != ID_KEY_ID)
 			{
 				fprintf(out, "  subject:   %#Y\n", subject);
 			}
+
+			/* list validity if available*/
+			cert->get_validity(cert, &now, &notBefore, &notAfter);
+			if (notBefore != UNDEFINED_TIME && notAfter != UNDEFINED_TIME)
+			{
+				fprintf(out, "  validity:  not before %T, ", &notBefore, utc);
+				if (now < notBefore)
+				{
+					fprintf(out, "not valid yet (valid in %V)\n", &now, &notBefore);
+				}
+				else
+				{
+					fprintf(out, "ok\n");
+				}
+				fprintf(out, "             not after  %T, ", &notAfter, utc);
+				if (now > notAfter)
+				{
+					fprintf(out, "expired (%V ago)\n", &now, &notAfter);
+				}
+				else
+				{
+					fprintf(out, "ok");
+					if (now > notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
+					{
+						fprintf(out, " (expires in %V)", &now, &notAfter);
+					}
+					fprintf(out, " \n");
+				}
+			}
+
 			list_public_key(public, out);
 			public->destroy(public);
 		}
