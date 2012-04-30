@@ -433,7 +433,7 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 	}
 
 	cred = load_from_blob(chunk_create(addr, sb.st_size), type, subtype,
-									   subject,flags);
+									   subject, flags);
 
 	munmap(addr, sb.st_size);
 	close(fd);

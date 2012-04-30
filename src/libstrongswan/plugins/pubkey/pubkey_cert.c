@@ -55,6 +55,7 @@ struct private_pubkey_cert_t {
 	 * key expiration time
 	 */
 	time_t notAfter;
+
 	/**
 	 * reference count
 	 */
