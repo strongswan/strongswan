@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2011-07-26" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2012-05-01" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -466,6 +466,13 @@ Set MTU of ipsecN device
 .TP
 .BR charon.plugins.load-tester
 Section to configure the load-tester plugin, see LOAD TESTS
+.TP
+.BR charon.plugins.radattr.dir
+Directory where RADIUS attributes are stored in client-ID specific files.
+.TP
+.BR charon.plugins.radattr.message_id " [-1]"
+Attributes are added to all IKE_AUTH messages by default (-1), or only to the
+IKE_AUTH message with the given IKEv2 message ID.
 .TP
 .BR charon.plugins.resolve.file " [/etc/resolv.conf]"
 File where to add DNS server entries
