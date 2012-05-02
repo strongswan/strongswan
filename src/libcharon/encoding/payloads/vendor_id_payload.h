@@ -28,12 +28,7 @@ typedef struct vendor_id_payload_t vendor_id_payload_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a VENDOR ID payload without the VID data in bytes.
- */
-#define VENDOR_ID_PAYLOAD_HEADER_LENGTH 4
-
-/**
- * Class representing an IKEv2 VENDOR ID payload.
+ * Class representing an IKEv1/IKEv2 VENDOR ID payload.
  *
  * The VENDOR ID payload format is described in RFC section 3.12.
  */
@@ -58,18 +53,21 @@ struct vendor_id_payload_t {
 };
 
 /**
- * Creates an empty Vendor ID payload.
+ * Creates an empty Vendor ID payload for IKEv1 or IKEv2.
  *
+ * @@param type		VENDOR_ID or VENDOR_ID_V1
  * @return			vendor ID payload
  */
-vendor_id_payload_t *vendor_id_payload_create();
+vendor_id_payload_t *vendor_id_payload_create(payload_type_t type);
 
 /**
  * Creates a vendor ID payload using a chunk of data
  *
+ * @param type		VENDOR_ID or VENDOR_ID_V1
  * @param data		data to use in vendor ID payload, gets owned by payload
  * @return			vendor ID payload
  */
-vendor_id_payload_t *vendor_id_payload_create_data(chunk_t data);
+vendor_id_payload_t *vendor_id_payload_create_data(payload_type_t type,
+												   chunk_t data);
 
 #endif /** VENDOR_ID_PAYLOAD_H_ @}*/

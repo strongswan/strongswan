@@ -29,14 +29,7 @@ typedef struct delete_payload_t delete_payload_t;
 #include <encoding/payloads/proposal_substructure.h>
 
 /**
- * Length of a delete payload without the SPI in bytes.
- */
-#define DELETE_PAYLOAD_HEADER_LENGTH 8
-
-/**
- * Class representing an IKEv2 DELETE payload.
- *
- * The DELETE payload format is described in RFC section 3.11.
+ * Class representing an IKEv1 or a IKEv2 DELETE payload.
  */
 struct delete_payload_t {
 
@@ -60,6 +53,14 @@ struct delete_payload_t {
 	void (*add_spi) (delete_payload_t *this, u_int32_t spi);
 
 	/**
+	 * Set the IKE SPIs for an IKEv1 delete.
+	 *
+	 * @param spi_i			initiator SPI
+	 * @param spi_r			responder SPI
+	 */
+	void (*set_ike_spi)(delete_payload_t *this, u_int64_t spi_i, u_int64_t spi_r);
+
+	/**
 	 * Get an enumerator over the SPIs in network order.
 	 *
 	 * @return				enumerator over SPIs, u_int32_t
@@ -75,9 +76,11 @@ struct delete_payload_t {
 /**
  * Creates an empty delete_payload_t object.
  *
+ * @param type			DELETE or DELETE_V1
  * @param protocol_id	protocol, such as AH|ESP
  * @return 				delete_payload_t object
  */
-delete_payload_t *delete_payload_create(protocol_id_t protocol_id);
+delete_payload_t *delete_payload_create(payload_type_t type,
+										protocol_id_t protocol_id);
 
 #endif /** DELETE_PAYLOAD_H_ @}*/

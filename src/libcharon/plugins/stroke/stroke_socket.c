@@ -223,12 +223,14 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	pop_end(msg, "right", &msg->add_conn.other);
 	pop_string(msg, &msg->add_conn.eap_identity);
 	pop_string(msg, &msg->add_conn.aaa_identity);
+	pop_string(msg, &msg->add_conn.xauth_identity);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
 	DBG2(DBG_CFG, "  eap_identity=%s", msg->add_conn.eap_identity);
 	DBG2(DBG_CFG, "  aaa_identity=%s", msg->add_conn.aaa_identity);
+	DBG2(DBG_CFG, "  xauth_identity=%s", msg->add_conn.xauth_identity);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  dpddelay=%d", msg->add_conn.dpd.delay);
@@ -237,6 +239,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
 	DBG2(DBG_CFG, "  mediated_by=%s", msg->add_conn.ikeme.mediated_by);
 	DBG2(DBG_CFG, "  me_peerid=%s", msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  keyexchange=ikev%u", msg->add_conn.version);
 
 	this->config->add(this->config, msg);
 	this->attribute->add_pool(this->attribute, msg);

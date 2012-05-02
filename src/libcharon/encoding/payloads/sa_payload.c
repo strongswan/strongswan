@@ -22,6 +22,8 @@
 #include <utils/linked_list.h>
 #include <daemon.h>
 
+/* IKEv1 situation */
+#define SIT_IDENTITY_ONLY 1
 
 typedef struct private_sa_payload_t private_sa_payload_t;
 
@@ -48,7 +50,7 @@ struct private_sa_payload_t {
 	/**
 	 * Reserved bits
 	 */
-	bool reserved[7];
+	bool reserved[8];
 
 	/**
 	 * Length of this payload.
@@ -58,21 +60,75 @@ struct private_sa_payload_t {
 	/**
 	 * Proposals in this payload are stored in a linked_list_t.
 	 */
-	linked_list_t * proposals;
+	linked_list_t *proposals;
+
+	/**
+	 * Type of this payload, V1 or V2
+	 */
+	payload_type_t type;
+
+	/**
+	 * IKEv1 DOI
+	 */
+	u_int32_t doi;
+
+	/**
+	 * IKEv1 situation
+	 */
+	u_int32_t situation;
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-SA Payload
- *
- * The defined offsets are the positions in a object of type
- * private_sa_payload_t.
+ * Encoding rules for IKEv1 SA payload
  */
-encoding_rule_t sa_payload_encodings[] = {
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_sa_payload_t, next_payload)	},
+	/* 8 reserved bits */
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[0])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[1])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[2])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[3])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[4])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[5])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[6])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[7])			},
+	/* Length of the whole SA payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)	},
+	/* DOI*/
+	{ U_INT_32,			offsetof(private_sa_payload_t, doi)				},
+	/* Situation*/
+	{ U_INT_32,			offsetof(private_sa_payload_t, situation)		},
+	/* Proposals are stored in a proposal substructure list */
+	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE_V1,
+						offsetof(private_sa_payload_t, proposals)		},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !    RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                           DOI                                 !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                           Situation                           !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                          <Proposals>                          ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Encoding rules for IKEv2 SA payload
+ */
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_sa_payload_t, next_payload)		},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_sa_payload_t, critical)			},
-	/* 7 Bit reserved bits, nowhere stored */
+	/* 7 Bit reserved bits */
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[0])			},
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[1])			},
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[2])			},
@@ -82,9 +138,9 @@ encoding_rule_t sa_payload_encodings[] = {
 	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[6])			},
 	/* Length of the whole SA payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)		},
-	/* Proposals are stored in a proposal substructure,
-	   offset points to a linked_list_t pointer */
-	{ PROPOSALS,		offsetof(private_sa_payload_t, proposals)			},
+	/* Proposals are stored in a proposal substructure list */
+	{ PAYLOAD_LIST + PROPOSAL_SUBSTRUCTURE,
+						offsetof(private_sa_payload_t, proposals)			},
 };
 
 /*
@@ -102,10 +158,15 @@ encoding_rule_t sa_payload_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_sa_payload_t *this)
 {
-	int expected_number = 1, current_number;
+	int expected_number = 0, current_number;
 	status_t status = SUCCESS;
 	enumerator_t *enumerator;
 	proposal_substructure_t *substruct;
+
+	if (this->type == SECURITY_ASSOCIATION)
+	{
+		expected_number = 1;
+	}
 
 	/* check proposal numbering */
 	enumerator = this->proposals->create_enumerator(this->proposals);
@@ -131,17 +192,32 @@ METHOD(payload_t, verify, status_t,
 	return status;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_sa_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_sa_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = sa_payload_encodings;
-	*rule_count = countof(sa_payload_encodings);
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		*rules = encodings_v1;
+		return countof(encodings_v1);
+	}
+	*rules = encodings_v2;
+	return countof(encodings_v2);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_sa_payload_t *this)
+{
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{
+		return 12;
+	}
+	return 4;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_sa_payload_t *this)
 {
-	return SECURITY_ASSOCIATION;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -163,16 +239,15 @@ static void compute_length(private_sa_payload_t *this)
 {
 	enumerator_t *enumerator;
 	payload_t *current;
-	size_t length = SA_PAYLOAD_HEADER_LENGTH;
+
+	this->payload_length = get_header_length(this);
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, (void **)&current))
 	{
-		length += current->get_length(current);
+		this->payload_length += current->get_length(current);
 	}
 	enumerator->destroy(enumerator);
-
-	this->payload_length = length;
 }
 
 METHOD(payload_t, get_length, size_t,
@@ -181,14 +256,16 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
-METHOD(sa_payload_t, add_proposal, void,
-	private_sa_payload_t *this, proposal_t *proposal)
+/**
+ * Create a transform substructure from a proposal, add to payload
+ */
+static void add_proposal_v2(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substruct, *last;
 	u_int count;
 
+	substruct = proposal_substructure_create_from_proposal_v2(proposal);
 	count = this->proposals->get_count(this->proposals);
-	substruct = proposal_substructure_create_from_proposal(proposal);
 	if (count > 0)
 	{
 		this->proposals->get_last(this->proposals, (void**)&last);
@@ -215,8 +292,13 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	int ignore_struct_number = 0;
 	enumerator_t *enumerator;
 	proposal_substructure_t *substruct;
-	linked_list_t *list;
 	proposal_t *proposal;
+	linked_list_t *list;
+
+	if (this->type == SECURITY_ASSOCIATION_V1)
+	{	/* IKEv1 proposals start with 0 */
+		struct_number = ignore_struct_number = -1;
+	}
 
 	list = linked_list_create();
 	/* we do not support proposals split up to two proposal substructures, as
@@ -233,18 +315,16 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 			if (ignore_struct_number < struct_number)
 			{
 				/* remove an already added, if first of series */
-				list->remove_last(list, (void**)&proposal);
-				proposal->destroy(proposal);
+				if (list->remove_last(list, (void**)&proposal) == SUCCESS)
+				{
+					proposal->destroy(proposal);
+				}
 				ignore_struct_number = struct_number;
 			}
 			continue;
 		}
 		struct_number++;
-		proposal = substruct->get_proposal(substruct);
-		if (proposal)
-		{
-			list->insert_last(list, proposal);
-		}
+		substruct->get_proposals(substruct, list);
 	}
 	enumerator->destroy(enumerator);
 	return list;
@@ -256,18 +336,86 @@ METHOD(sa_payload_t, create_substructure_enumerator, enumerator_t*,
 	return this->proposals->create_enumerator(this->proposals);
 }
 
+METHOD(sa_payload_t, get_lifetime, u_int32_t,
+	private_sa_payload_t *this)
+{
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	u_int32_t lifetime = 0;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		lifetime = substruct->get_lifetime(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return lifetime;
+}
+
+METHOD(sa_payload_t, get_lifebytes, u_int64_t,
+	private_sa_payload_t *this)
+{
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	u_int64_t lifebytes = 0;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		lifebytes = substruct->get_lifebytes(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return lifebytes;
+}
+
+METHOD(sa_payload_t, get_auth_method, auth_method_t,
+	private_sa_payload_t *this)
+{
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	auth_method_t method = AUTH_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		method = substruct->get_auth_method(substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	return method;
+}
+
+METHOD(sa_payload_t, get_encap_mode, ipsec_mode_t,
+	private_sa_payload_t *this, bool *udp)
+{
+	proposal_substructure_t *substruct;
+	enumerator_t *enumerator;
+	ipsec_mode_t mode = MODE_NONE;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	if (enumerator->enumerate(enumerator, &substruct))
+	{
+		mode = substruct->get_encap_mode(substruct, udp);
+	}
+	enumerator->destroy(enumerator);
+
+	return mode;
+}
+
 METHOD2(payload_t, sa_payload_t, destroy, void,
 	private_sa_payload_t *this)
 {
 	this->proposals->destroy_offset(this->proposals,
-									offsetof(proposal_substructure_t, destroy));
+									offsetof(payload_t, destroy));
 	free(this);
 }
 
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create()
+sa_payload_t *sa_payload_create(payload_type_t type)
 {
 	private_sa_payload_t *this;
 
@@ -276,38 +424,48 @@ sa_payload_t *sa_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
-			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
 			.create_substructure_enumerator = _create_substructure_enumerator,
+			.get_lifetime = _get_lifetime,
+			.get_lifebytes = _get_lifebytes,
+			.get_auth_method = _get_auth_method,
+			.get_encap_mode = _get_encap_mode,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = SA_PAYLOAD_HEADER_LENGTH,
 		.proposals = linked_list_create(),
+		.type = type,
+		/* for IKEv1 only */
+		.doi = IKEV1_DOI_IPSEC,
+		.situation = SIT_IDENTITY_ONLY,
 	);
+
+	compute_length(this);
+
 	return &this->public;
 }
 
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
+sa_payload_t *sa_payload_create_from_proposals_v2(linked_list_t *proposals)
 {
 	private_sa_payload_t *this;
 	enumerator_t *enumerator;
 	proposal_t *proposal;
 
-	this = (private_sa_payload_t*)sa_payload_create();
+	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		add_proposal(this, proposal);
+		add_proposal_v2(this, proposal);
 	}
 	enumerator->destroy(enumerator);
 
@@ -317,12 +475,57 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal)
+sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal)
 {
 	private_sa_payload_t *this;
 
-	this = (private_sa_payload_t*)sa_payload_create();
-	add_proposal(this, proposal);
+	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION);
+	add_proposal_v2(this, proposal);
+
+	return &this->public;
+
+}
+
+/*
+ * Described in header.
+ */
+sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
+								u_int32_t lifetime, u_int64_t lifebytes,
+								auth_method_t auth, ipsec_mode_t mode, bool udp)
+{
+	proposal_substructure_t *substruct;
+	private_sa_payload_t *this;
+
+	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
+
+	/* IKEv1 encodes multiple proposals in a single substructure
+	 * TODO-IKEv1: Encode ESP+AH proposals in two different substructs */
+	substruct = proposal_substructure_create_from_proposals_v1(proposals,
+										lifetime, lifebytes, auth, mode, udp);
+	substruct->set_is_last_proposal(substruct, TRUE);
+	this->proposals->insert_last(this->proposals, substruct);
+	compute_length(this);
+
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
+								u_int32_t lifetime, u_int64_t lifebytes,
+								auth_method_t auth, ipsec_mode_t mode, bool udp)
+{
+	proposal_substructure_t *substruct;
+	private_sa_payload_t *this;
+
+	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
+
+	substruct = proposal_substructure_create_from_proposal_v1(proposal,
+										lifetime, lifebytes, auth, mode, udp);
+	substruct->set_is_last_proposal(substruct, TRUE);
+	this->proposals->insert_last(this->proposals, substruct);
+	compute_length(this);
 
 	return &this->public;
 }

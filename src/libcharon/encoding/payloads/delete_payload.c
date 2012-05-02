@@ -24,9 +24,9 @@ typedef struct private_delete_payload_t private_delete_payload_t;
 
 /**
  * Private data of an delete_payload_t object.
- *
  */
 struct private_delete_payload_t {
+
 	/**
 	 * Public delete_payload_t interface.
 	 */
@@ -45,12 +45,17 @@ struct private_delete_payload_t {
 	/**
 	 * reserved bits
 	 */
-	bool reserved[7];
+	bool reserved[8];
 
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
+
+	/**
+	 * IKEv1 Domain of Interpretation
+	 */
+	u_int32_t doi;
 
 	/**
 	 * Protocol ID.
@@ -71,19 +76,21 @@ struct private_delete_payload_t {
 	 * The contained SPI's.
 	 */
 	chunk_t spis;
+
+	/**
+	 * Payload type, DELETE or DELETE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a DELETE payload
- *
- * The defined offsets are the positions in a object of type
- * private_delete_payload_t.
+ * Encoding rules for an IKEv2 delete payload.
  */
-encoding_rule_t delete_payload_encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_delete_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_delete_payload_t, next_payload)	},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_delete_payload_t, critical) 		},
+	{ FLAG,				offsetof(private_delete_payload_t, critical)		},
 	/* 7 Bit reserved bits */
 	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[0])		},
 	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[1])		},
@@ -98,7 +105,7 @@ encoding_rule_t delete_payload_encodings[] = {
 	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
 	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
 	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
-	{ SPIS,				offsetof(private_delete_payload_t, spis) 			}
+	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis)			},
 };
 
 /*
@@ -106,6 +113,48 @@ encoding_rule_t delete_payload_encodings[] = {
        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ! Next Payload  !C!  RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Protocol ID   !   SPI Size    !           # of SPIs           !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~               Security Parameter Index(es) (SPI)              ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Encoding rules for an IKEv1 delete payload.
+ */
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_delete_payload_t, next_payload)	},
+	/* 8 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[0])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[1])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[2])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[3])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[4])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[5])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[6])		},
+	{ RESERVED_BIT,		offsetof(private_delete_payload_t, reserved[7])		},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_delete_payload_t, payload_length)	},
+	/* Domain of interpretation */
+	{ U_INT_32,			offsetof(private_delete_payload_t, doi)				},
+	{ U_INT_8,			offsetof(private_delete_payload_t, protocol_id)		},
+	{ U_INT_8,			offsetof(private_delete_payload_t, spi_size)		},
+	{ U_INT_16,			offsetof(private_delete_payload_t, spi_count)		},
+	/* some delete data bytes, length is defined in PAYLOAD_LENGTH */
+	{ CHUNK_DATA,		offsetof(private_delete_payload_t, spis)			},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !C!  RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                          DOI                                  !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ! Protocol ID   !   SPI Size    !           # of SPIs           !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -129,10 +178,19 @@ METHOD(payload_t, verify, status_t,
 			break;
 		case PROTO_IKE:
 		case 0:
-			/* IKE deletion has no spi assigned! */
-			if (this->spi_size != 0)
-			{
-				return FAILED;
+			if (this->type == DELETE)
+			{	/* IKEv2 deletion has no spi assigned! */
+				if (this->spi_size != 0)
+				{
+					return FAILED;
+				}
+			}
+			else
+			{	/* IKEv1 uses the two concatenated ISAKMP cookies as SPI */
+				if (this->spi_size != 16)
+				{
+					return FAILED;
+				}
 			}
 			break;
 		default:
@@ -145,17 +203,32 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_delete_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_delete_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = delete_payload_encodings;
-	*rule_count = countof(delete_payload_encodings);
+	if (this->type == DELETE)
+	{
+		*rules = encodings_v2;
+		return countof(encodings_v2);
+	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_delete_payload_t *this)
+{
+	if (this->type == DELETE)
+	{
+		return 8;
+	}
+	return 12;
 }
 
 METHOD(payload_t, get_payload_type, payload_type_t,
 	private_delete_payload_t *this)
 {
-	return DELETE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -196,6 +269,16 @@ METHOD(delete_payload_t, add_spi, void,
 		default:
 			break;
 	}
+}
+
+METHOD(delete_payload_t, set_ike_spi, void,
+	private_delete_payload_t *this, u_int64_t spi_i, u_int64_t spi_r)
+{
+	free(this->spis.ptr);
+	this->spis = chunk_cat("cc", chunk_from_thing(spi_i),
+								 chunk_from_thing(spi_r));
+	this->spi_count = 1;
+	this->payload_length = get_header_length(this) + this->spi_size;
 }
 
 /**
@@ -249,7 +332,8 @@ METHOD2(payload_t, delete_payload_t, destroy, void,
 /*
  * Described in header
  */
-delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
+delete_payload_t *delete_payload_create(payload_type_t type,
+										protocol_id_t protocol_id)
 {
 	private_delete_payload_t *this;
 
@@ -258,6 +342,7 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -266,13 +351,27 @@ delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 			},
 			.get_protocol_id = _get_protocol_id,
 			.add_spi = _add_spi,
+			.set_ike_spi = _set_ike_spi,
 			.create_spi_enumerator = _create_spi_enumerator,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = DELETE_PAYLOAD_HEADER_LENGTH,
 		.protocol_id = protocol_id,
-		.spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0,
+		.doi = IKEV1_DOI_IPSEC,
+		.type = type,
 	);
+	this->payload_length = get_header_length(this);
+
+	if (protocol_id == PROTO_IKE)
+	{
+		if (type == DELETE_V1)
+		{
+			this->spi_size = 16;
+		}
+	}
+	else
+	{
+		this->spi_size = 4;
+	}
 	return &this->public;
 }

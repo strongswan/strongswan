@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2011 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -24,35 +24,45 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <sa/ike_sa_id.h>
+#include <sa/ikev1/keymat_v1.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
-#include <utils/linked_list.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
+#include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 #include <encoding/payloads/cp_payload.h>
 
 /**
- * Max number of notify payloads per IKEv2 Message
+ * Max number of notify payloads per IKEv2 message
  */
 #define MAX_NOTIFY_PAYLOADS 20
 
 /**
- * Max number of delete payloads per IKEv2 Message
+ * Max number of delete payloads per IKEv2 message
  */
 #define MAX_DELETE_PAYLOADS 20
 
 /**
- * Max number of certificate payloads per IKEv2 Message
+ * Max number of certificate payloads per IKEv2 message
  */
 #define MAX_CERT_PAYLOADS 8
 
 /**
- * Max number of Vendor ID payloads per IKEv2 Message
+ * Max number of vendor ID payloads per IKEv2 message
  */
 #define MAX_VID_PAYLOADS 20
+
+/**
+ * Max number of certificate request payloads per IKEv1 message
+ */
+#define MAX_CERTREQ_PAYLOADS 5
+
+/**
+ * Max number of NAT-D payloads per IKEv1 message
+ */
+#define MAX_NAT_D_PAYLOADS 5
 
 /**
  * A payload rule defines the rules for a payload
@@ -414,6 +424,273 @@ static payload_order_t me_connect_r_order[] = {
 };
 #endif /* ME */
 
+#ifdef USE_IKEV1
+/**
+ * Message rule for ID_PROT from initiator.
+ */
+static payload_rule_t id_prot_i_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						TRUE,	FALSE},
+	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for ID_PROT from initiator.
+ */
+static payload_order_t id_prot_i_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{NAT_D_V1,					0},
+};
+
+/**
+ * Message rule for ID_PROT from responder.
+ */
+static payload_rule_t id_prot_r_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						TRUE,	FALSE},
+	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for ID_PROT from responder.
+ */
+static payload_order_t id_prot_r_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{NAT_D_V1,					0},
+};
+
+/**
+ * Message rule for AGGRESSIVE from initiator.
+ */
+static payload_rule_t aggressive_i_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for AGGRESSIVE from initiator.
+ */
+static payload_order_t aggressive_i_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{NAT_D_V1,					0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
+ * Message rule for AGGRESSIVE from responder.
+ */
+static payload_rule_t aggressive_r_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	1,						FALSE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						FALSE,	FALSE},
+	{NONCE_V1,					0,	1,						FALSE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
+	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
+	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{ID_V1,						0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
+	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
+	{HASH_V1,					0,	1,						FALSE,	FALSE},
+};
+
+/**
+ * payload order for AGGRESSIVE from responder.
+ */
+static payload_order_t aggressive_r_order[] = {
+/*	payload type				notify type */
+	{SECURITY_ASSOCIATION_V1,	0},
+	{KEY_EXCHANGE_V1,			0},
+	{NONCE_V1,					0},
+	{ID_V1,						0},
+	{CERTIFICATE_V1,			0},
+	{NAT_D_V1,					0},
+	{SIGNATURE_V1,				0},
+	{HASH_V1,					0},
+	{CERTIFICATE_REQUEST_V1,	0},
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
+ * Message rule for INFORMATIONAL_V1 from initiator.
+ */
+static payload_rule_t informational_i_rules_v1[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL_V1 from initiator.
+ */
+static payload_order_t informational_i_order_v1[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{DELETE_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
+ * Message rule for INFORMATIONAL_V1 from responder.
+ */
+static payload_rule_t informational_r_rules_v1[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	FALSE,	FALSE},
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{DELETE_V1,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+};
+
+/**
+ * payload order for INFORMATIONAL_V1 from responder.
+ */
+static payload_order_t informational_r_order_v1[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{DELETE_V1,					0},
+	{VENDOR_ID_V1,				0},
+};
+
+/**
+ * Message rule for QUICK_MODE from initiator.
+ */
+static payload_rule_t quick_mode_i_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
+	{NONCE_V1,					0,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
+	{ID_V1,						0,	2,						TRUE,	FALSE},
+	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for QUICK_MODE from initiator.
+ */
+static payload_order_t quick_mode_i_order[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{HASH_V1,					0},
+	{SECURITY_ASSOCIATION_V1,	0},
+	{NONCE_V1,					0},
+	{KEY_EXCHANGE_V1,			0},
+	{ID_V1,						0},
+	{NAT_OA_V1,					0},
+};
+
+/**
+ * Message rule for QUICK_MODE from responder.
+ */
+static payload_rule_t quick_mode_r_rules[] = {
+/*	payload type				min	max						encr	suff */
+	{NOTIFY_V1,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		TRUE,	FALSE},
+	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{SECURITY_ASSOCIATION_V1,	0,	2,						TRUE,	FALSE},
+	{NONCE_V1,					0,	1,						TRUE,	FALSE},
+	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
+	{ID_V1,						0,	2,						TRUE,	FALSE},
+	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for QUICK_MODE from responder.
+ */
+static payload_order_t quick_mode_r_order[] = {
+/*	payload type				notify type */
+	{NOTIFY_V1,					0},
+	{VENDOR_ID_V1,				0},
+	{HASH_V1,					0},
+	{SECURITY_ASSOCIATION_V1,	0},
+	{NONCE_V1,					0},
+	{KEY_EXCHANGE_V1,			0},
+	{ID_V1,						0},
+	{NAT_OA_V1,					0},
+};
+
+/**
+ * Message rule for TRANSACTION.
+ */
+static payload_rule_t transaction_payload_rules_v1[] = {
+/*	payload type				min	max	encr	suff */
+	{HASH_V1,					0,	1,	TRUE,	FALSE},
+	{CONFIGURATION_V1,			1,	1,	FALSE,	FALSE},
+};
+
+/**
+ * Payload order for TRANSACTION.
+ */
+static payload_order_t transaction_payload_order_v1[] = {
+/*	payload type			notify type */
+	{HASH_V1,					0},
+	{CONFIGURATION_V1,			0},
+};
+
+#endif /* USE_IKEV1 */
+
 /**
  * Message rules, defines allowed payloads.
  */
@@ -460,6 +737,49 @@ static message_rule_t message_rules[] = {
 		countof(me_connect_r_order), me_connect_r_order,
 	},
 #endif /* ME */
+#ifdef USE_IKEV1
+	{ID_PROT,			TRUE,	FALSE,
+		countof(id_prot_i_rules), id_prot_i_rules,
+		countof(id_prot_i_order), id_prot_i_order,
+	},
+	{ID_PROT,			FALSE,	FALSE,
+		countof(id_prot_r_rules), id_prot_r_rules,
+		countof(id_prot_r_order), id_prot_r_order,
+	},
+	{AGGRESSIVE,		TRUE,	FALSE,
+		countof(aggressive_i_rules), aggressive_i_rules,
+		countof(aggressive_i_order), aggressive_i_order,
+	},
+	{AGGRESSIVE,		FALSE,	FALSE,
+		countof(aggressive_r_rules), aggressive_r_rules,
+		countof(aggressive_r_order), aggressive_r_order,
+	},
+	{INFORMATIONAL_V1,	TRUE,	TRUE,
+		countof(informational_i_rules_v1), informational_i_rules_v1,
+		countof(informational_i_order_v1), informational_i_order_v1,
+	},
+	{INFORMATIONAL_V1,	FALSE,	TRUE,
+		countof(informational_r_rules_v1), informational_r_rules_v1,
+		countof(informational_r_order_v1), informational_r_order_v1,
+	},
+	{QUICK_MODE,		TRUE,	TRUE,
+		countof(quick_mode_i_rules), quick_mode_i_rules,
+		countof(quick_mode_i_order), quick_mode_i_order,
+	},
+	{QUICK_MODE,		FALSE,	TRUE,
+		countof(quick_mode_r_rules), quick_mode_r_rules,
+		countof(quick_mode_r_order), quick_mode_r_order,
+	},
+	{TRANSACTION,		TRUE,	TRUE,
+		countof(transaction_payload_rules_v1), transaction_payload_rules_v1,
+		countof(transaction_payload_order_v1), transaction_payload_order_v1,
+	},
+	{TRANSACTION,		FALSE,	TRUE,
+		countof(transaction_payload_rules_v1), transaction_payload_rules_v1,
+		countof(transaction_payload_order_v1), transaction_payload_order_v1,
+	},
+	/* TODO-IKEv1: define rules for other exchanges */
+#endif /* USE_IKEV1 */
 };
 
 
@@ -501,6 +821,11 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+	 * The message is encrypted (IKEv1)
+	 */
+	bool is_encrypted;
+
+	/**
 	 * Higher version supported?
 	 */
 	bool version_flag;
@@ -508,7 +833,7 @@ struct private_message_t {
 	/**
 	 * Reserved bits in IKE header
 	 */
-	bool reserved[5];
+	bool reserved[2];
 
 	/**
 	 * Sorting of message disabled?
@@ -739,7 +1064,14 @@ METHOD(message_t, add_notify, void,
 			payload->destroy(payload);
 		}
 	}
-	notify = notify_payload_create();
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		notify = notify_payload_create(NOTIFY);
+	}
+	else
+	{
+		notify = notify_payload_create(NOTIFY_V1);
+	}
 	notify->set_notify_type(notify, type);
 	notify->set_notification_data(notify, data);
 	add_payload(this, (payload_t*)notify);
@@ -810,7 +1142,8 @@ METHOD(message_t, get_notify, notify_payload_t*,
 	enumerator = create_payload_enumerator(this);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == NOTIFY ||
+			payload->get_type(payload) == NOTIFY_V1)
 		{
 			notify = (notify_payload_t*)payload;
 			if (notify->get_notify_type(notify) == type)
@@ -837,7 +1170,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 	memset(buf, 0, len);
 	len--;
 
-	written = snprintf(pos, len, "%N %s %d [",
+	written = snprintf(pos, len, "%N %s %u [",
 					   exchange_type_names, this->exchange_type,
 					   this->is_request ? "request" : "response",
 					   this->message_id);
@@ -859,7 +1192,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		}
 		pos += written;
 		len -= written;
-		if (payload->get_type(payload) == NOTIFY)
+		if (payload->get_type(payload) == NOTIFY ||
+			payload->get_type(payload) == NOTIFY_V1)
 		{
 			notify_payload_t *notify;
 			notify_type_t type;
@@ -1017,7 +1351,7 @@ static void order_payloads(private_message_t *this)
 }
 
 /**
- * Wrap payloads in a encryption payload
+ * Wrap payloads in an encryption payload
  */
 static encryption_payload_t* wrap_payloads(private_message_t *this)
 {
@@ -1033,7 +1367,14 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 		payloads->insert_last(payloads, current);
 	}
 
-	encryption = encryption_payload_create();
+	if (this->is_encrypted)
+	{
+		encryption = encryption_payload_create(ENCRYPTED_V1);
+	}
+	else
+	{
+		encryption = encryption_payload_create(ENCRYPTED);
+	}
 	while (payloads->remove_first(payloads, (void**)&current) == SUCCESS)
 	{
 		payload_rule_t *rule;
@@ -1046,8 +1387,8 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 		{
 			encrypt = rule->encrypted;
 		}
-		if (encrypt)
-		{
+		if (encrypt || this->is_encrypted)
+		{	/* encryption is forced for IKEv1 */
 			DBG2(DBG_ENC, "insert payload %N to encryption payload",
 				 payload_type_names, type);
 			encryption->add_payload(encryption, current);
@@ -1071,17 +1412,20 @@ METHOD(message_t, disable_sort, void,
 }
 
 METHOD(message_t, generate, status_t,
-	private_message_t *this, aead_t *aead, packet_t **packet)
+	private_message_t *this, keymat_t *keymat, packet_t **packet)
 {
+	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next;
 	encryption_payload_t *encryption = NULL;
+	payload_type_t next_type;
 	enumerator_t *enumerator;
-	chunk_t chunk;
+	aead_t *aead = NULL;
+	chunk_t chunk, hash = chunk_empty;
 	char str[BUF_LEN];
 	u_int32_t *lenpos;
-	bool *reserved;
+	bool encrypted = FALSE, *reserved;
 	int i;
 
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
@@ -1108,27 +1452,78 @@ METHOD(message_t, generate, status_t,
 	{
 		order_payloads(this);
 	}
+	if (keymat && keymat->get_version(keymat) == IKEV1)
+	{
+		/* get a hash for this message, if any is required */
+		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		if (hash.ptr)
+		{	/* insert a HASH payload as first payload */
+			hash_payload_t *hash_payload;
+
+			hash_payload = hash_payload_create(HASH_V1);
+			hash_payload->set_hash(hash_payload, hash);
+			this->payloads->insert_first(this->payloads, hash_payload);
+			if (this->exchange_type == INFORMATIONAL_V1)
+			{
+				this->is_encrypted = encrypted = TRUE;
+			}
+			chunk_free(&hash);
+		}
+	}
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		encrypted = this->rule->encrypted;
+	}
+	else if (!encrypted)
+	{
+		/* If at least one payload requires encryption, encrypt the message.
+		 * If no key material is available, the flag will be reset below. */
+		enumerator = this->payloads->create_enumerator(this->payloads);
+		while (enumerator->enumerate(enumerator, (void**)&payload))
+		{
+			payload_rule_t *rule;
+
+			rule = get_payload_rule(this, payload->get_type(payload));
+			if (rule && rule->encrypted)
+			{
+				this->is_encrypted = encrypted = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
-	if (aead && this->rule->encrypted)
+	if (keymat)
+	{
+		aead = keymat->get_aead(keymat, FALSE);
+	}
+	if (aead && encrypted)
 	{
 		encryption = wrap_payloads(this);
 	}
 	else
 	{
 		DBG2(DBG_ENC, "not encrypting payloads");
+		this->is_encrypted = FALSE;
 	}
 
-	ike_header = ike_header_create();
-	ike_header->set_maj_version(ike_header, this->major_version);
-	ike_header->set_min_version(ike_header, this->minor_version);
+	ike_header = ike_header_create_version(this->major_version,
+										   this->minor_version);
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
-	ike_header->set_response_flag(ike_header, !this->is_request);
-	ike_header->set_version_flag(ike_header, this->version_flag);
-	ike_header->set_initiator_flag(ike_header,
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		ike_header->set_response_flag(ike_header, !this->is_request);
+		ike_header->set_version_flag(ike_header, this->version_flag);
+		ike_header->set_initiator_flag(ike_header,
 						this->ike_sa_id->is_initiator(this->ike_sa_id));
+	}
+	else
+	{
+		ike_header->set_encryption_flag(ike_header, this->is_encrypted);
+	}
 	ike_header->set_initiator_spi(ike_header,
 						this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header,
@@ -1156,20 +1551,32 @@ METHOD(message_t, generate, status_t,
 		payload = next;
 	}
 	enumerator->destroy(enumerator);
-	payload->set_next_type(payload, encryption ? ENCRYPTED : NO_PAYLOAD);
+	if (this->is_encrypted)
+	{	/* for encrypted IKEv1 messages */
+		next_type = encryption->payload_interface.get_next_type(
+														(payload_t*)encryption);
+	}
+	else
+	{
+		next_type = encryption ? ENCRYPTED : NO_PAYLOAD;
+	}
+	payload->set_next_type(payload, next_type);
 	generator->generate_payload(generator, payload);
 	ike_header->destroy(ike_header);
 
 	if (encryption)
-	{
-		u_int32_t *lenpos;
-
-		/* build associated data (without header of encryption payload) */
-		chunk = generator->get_chunk(generator, &lenpos);
+	{	/* set_transform() has to be called before get_length() */
 		encryption->set_transform(encryption, aead);
-		/* fill in length, including encryption payload */
-		htoun32(lenpos, chunk.len + encryption->get_length(encryption));
-
+		if (this->is_encrypted)
+		{	/* for IKEv1 instead of associated data we provide the IV */
+			chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
+		}
+		else
+		{	/* build associated data (without header of encryption payload) */
+			chunk = generator->get_chunk(generator, &lenpos);
+			/* fill in length, including encryption payload */
+			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
+		}
 		this->payloads->insert_last(this->payloads, encryption);
 		if (!encryption->encrypt(encryption, chunk))
 		{
@@ -1181,8 +1588,18 @@ METHOD(message_t, generate, status_t,
 	chunk = generator->get_chunk(generator, &lenpos);
 	htoun32(lenpos, chunk.len);
 	this->packet->set_data(this->packet, chunk_clone(chunk));
-	generator->destroy(generator);
+	if (this->is_encrypted)
+	{
+		/* update the IV for the next IKEv1 message */
+		chunk_t last_block;
+		size_t bs;
 
+		bs = aead->get_block_size(aead);
+		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
+		keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
+		keymat_v1->confirm_iv(keymat_v1, this->message_id);
+	}
+	generator->destroy(generator);
 	*packet = this->packet->clone(this->packet);
 	return SUCCESS;
 }
@@ -1204,7 +1621,7 @@ METHOD(message_t, get_packet_data, chunk_t,
 	{
 		return chunk_empty;
 	}
-	return chunk_clone(this->packet->get_data(this->packet));
+	return this->packet->get_data(this->packet);
 }
 
 METHOD(message_t, parse_header, status_t,
@@ -1237,15 +1654,24 @@ METHOD(message_t, parse_header, status_t,
 	}
 
 	DESTROY_IF(this->ike_sa_id);
-	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),
+	this->ike_sa_id = ike_sa_id_create(
+									ike_header->get_maj_version(ike_header),
+									ike_header->get_initiator_spi(ike_header),
 									ike_header->get_responder_spi(ike_header),
 									ike_header->get_initiator_flag(ike_header));
 
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
-	this->is_request = !ike_header->get_response_flag(ike_header);
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
+	if (this->major_version == IKEV2_MAJOR_VERSION)
+	{
+		this->is_request = !ike_header->get_response_flag(ike_header);
+	}
+	else
+	{
+		this->is_encrypted = ike_header->get_encryption_flag(ike_header);
+	}
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
 	for (i = 0; i < countof(this->reserved); i++)
@@ -1257,19 +1683,12 @@ METHOD(message_t, parse_header, status_t,
 			this->reserved[i] = *reserved;
 		}
 	}
-	DBG2(DBG_ENC, "parsed a %N %s", exchange_type_names, this->exchange_type,
-		 this->is_request ? "request" : "response");
-
 	ike_header->destroy(ike_header);
 
-	this->rule = get_message_rule(this);
-	if (!this->rule)
-	{
-		DBG1(DBG_ENC, "no message rules specified for a %N %s",
-			 exchange_type_names, this->exchange_type,
-			 this->is_request ? "request" : "response");
-	}
-	return status;
+	DBG2(DBG_ENC, "parsed a %N %s header", exchange_type_names,
+		 this->exchange_type, this->major_version == IKEV1_MAJOR_VERSION ?
+		 "message" : (this->is_request ? "request" : "response"));
+	return SUCCESS;
 }
 
 /**
@@ -1298,15 +1717,83 @@ static bool is_connectivity_check(private_message_t *this, payload_t *payload)
 }
 
 /**
+ * Parses and verifies the unencrypted payloads contained in the message
+ */
+static status_t parse_payloads(private_message_t *this)
+{
+	payload_type_t type = this->first_payload;
+	payload_t *payload;
+	status_t status;
+
+	if (this->is_encrypted)
+	{	/* wrap the whole encrypted IKEv1 message in a special encryption
+		 * payload which is then handled just like a regular payload */
+		encryption_payload_t *encryption;
+
+		status = this->parser->parse_payload(this->parser, ENCRYPTED_V1,
+											 (payload_t**)&encryption);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "failed to wrap encrypted IKEv1 message");
+			return PARSE_ERROR;
+		}
+		encryption->payload_interface.set_next_type((payload_t*)encryption,
+													this->first_payload);
+		this->payloads->insert_last(this->payloads, encryption);
+		return SUCCESS;
+	}
+
+	while (type != NO_PAYLOAD)
+	{
+		DBG2(DBG_ENC, "starting parsing a %N payload",
+			 payload_type_names, type);
+
+		status = this->parser->parse_payload(this->parser, type, &payload);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "payload type %N could not be parsed",
+				 payload_type_names, type);
+			return PARSE_ERROR;
+		}
+
+		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
+		status = payload->verify(payload);
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_ENC, "%N payload verification failed",
+				 payload_type_names, type);
+			payload->destroy(payload);
+			return VERIFY_ERROR;
+		}
+
+		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
+			 payload_type_names, type);
+		this->payloads->insert_last(this->payloads, payload);
+
+		/* an encryption payload is the last one, so STOP here. decryption is
+		 * done later */
+		if (type == ENCRYPTED)
+		{
+			DBG2(DBG_ENC, "%N payload found. Stop parsing",
+				 payload_type_names, type);
+			break;
+		}
+		type = payload->get_next_type(payload);
+	}
+	return SUCCESS;
+}
+
+/**
  * Decrypt payload from the encryption payload
  */
-static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
+static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 {
 	bool was_encrypted = FALSE;
 	payload_t *payload, *previous = NULL;
 	enumerator_t *enumerator;
 	payload_rule_t *rule;
 	payload_type_t type;
+	aead_t *aead;
 	status_t status = SUCCESS;
 
 	enumerator = this->payloads->create_enumerator(this->payloads);
@@ -1316,11 +1803,12 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 
 		DBG2(DBG_ENC, "process payload of type %N", payload_type_names, type);
 
-		if (type == ENCRYPTED)
+		if (type == ENCRYPTED || type == ENCRYPTED_V1)
 		{
 			encryption_payload_t *encryption;
 			payload_t *encrypted;
 			chunk_t chunk;
+			size_t bs;
 
 			encryption = (encryption_payload_t*)payload;
 
@@ -1332,15 +1820,43 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 				status = VERIFY_ERROR;
 				break;
 			}
+			if (!keymat)
+			{
+				DBG1(DBG_ENC, "found encryption payload, but no keymat");
+				status = INVALID_ARG;
+				break;
+			}
+			aead = keymat->get_aead(keymat, TRUE);
+			if (!aead)
+			{
+				DBG1(DBG_ENC, "found encryption payload, but no transform set");
+				status = INVALID_ARG;
+				break;
+			}
+			bs = aead->get_block_size(aead);
 			encryption->set_transform(encryption, aead);
 			chunk = this->packet->get_data(this->packet);
-			if (chunk.len < encryption->get_length(encryption))
+			if (chunk.len < encryption->get_length(encryption) ||
+				chunk.len < bs)
 			{
 				DBG1(DBG_ENC, "invalid payload length");
 				status = VERIFY_ERROR;
 				break;
 			}
-			chunk.len -= encryption->get_length(encryption);
+			if (keymat->get_version(keymat) == IKEV1)
+			{	/* instead of associated data we provide the IV, we also update
+				 * the IV with the last encrypted block */
+				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+				chunk_t last_block;
+
+				last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
+				chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
+				keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
+			}
+			else
+			{
+				chunk.len -= encryption->get_length(encryption);
+			}
 			status = encryption->decrypt(encryption, chunk);
 			if (status != SUCCESS)
 			{
@@ -1369,7 +1885,8 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 			encryption->destroy(encryption);
 		}
 		if (payload_is_known(type) && !was_encrypted &&
-			!is_connectivity_check(this, payload))
+			!is_connectivity_check(this, payload) &&
+			this->exchange_type != AGGRESSIVE)
 		{
 			rule = get_payload_rule(this, type);
 			if (!rule || rule->encrypted)
@@ -1396,7 +1913,7 @@ static status_t verify(private_message_t *this)
 
 	DBG2(DBG_ENC, "verifying message structure");
 
-	/* check for payloads with wrong count*/
+	/* check for payloads with wrong count */
 	for (i = 0; i < this->rule->rule_count; i++)
 	{
 		enumerator_t *enumerator;
@@ -1443,57 +1960,30 @@ static status_t verify(private_message_t *this)
 }
 
 METHOD(message_t, parse_body, status_t,
-	private_message_t *this, aead_t *aead)
+	private_message_t *this, keymat_t *keymat)
 {
 	status_t status = SUCCESS;
-	payload_t *payload;
-	payload_type_t type;
 	char str[BUF_LEN];
 
-	type = this->first_payload;
-
 	DBG2(DBG_ENC, "parsing body of message, first payload is %N",
-		 payload_type_names, type);
+		 payload_type_names, this->first_payload);
 
-	while (type != NO_PAYLOAD)
+	this->rule = get_message_rule(this);
+	if (!this->rule)
 	{
-		DBG2(DBG_ENC, "starting parsing a %N payload",
-			 payload_type_names, type);
-
-		status = this->parser->parse_payload(this->parser, type, &payload);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_ENC, "payload type %N could not be parsed",
-				 payload_type_names, type);
-			return this->exchange_type == IKE_SA_INIT ? PARSE_ERROR : FAILED;
-		}
-
-		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
-		status = payload->verify(payload);
-		if (status != SUCCESS)
-		{
-			DBG1(DBG_ENC, "%N payload verification failed",
-				 payload_type_names, type);
-			payload->destroy(payload);
-			return this->exchange_type == IKE_SA_INIT ? VERIFY_ERROR : FAILED;
-		}
-
-		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
-			 payload_type_names, type);
-		this->payloads->insert_last(this->payloads, payload);
-
-		/* an encryption payload is the last one, so STOP here. decryption is
-		 * done later */
-		if (type == ENCRYPTED)
-		{
-			DBG2(DBG_ENC, "%N payload found. Stop parsing",
-				 payload_type_names, type);
-			break;
-		}
-		type = payload->get_next_type(payload);
+		DBG1(DBG_ENC, "no message rules specified for a %N %s",
+			 exchange_type_names, this->exchange_type,
+			 this->is_request ? "request" : "response");
+		return NOT_SUPPORTED;
 	}
 
-	status = decrypt_payloads(this, aead);
+	status = parse_payloads(this);
+	if (status != SUCCESS)
+	{	/* error is already logged */
+		return status;
+	}
+
+	status = decrypt_payloads(this, keymat);
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_ENC, "could not decrypt payloads");
@@ -1508,6 +1998,48 @@ METHOD(message_t, parse_body, status_t,
 
 	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
 
+	if (keymat && keymat->get_version(keymat) == IKEV1)
+	{
+		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+		chunk_t hash;
+
+		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
+		if (hash.ptr)
+		{
+			hash_payload_t *hash_payload;
+			chunk_t other_hash;
+
+			if (this->first_payload != HASH_V1)
+			{
+				if (this->exchange_type == INFORMATIONAL_V1)
+				{
+					DBG1(DBG_ENC, "ignoring unprotected INFORMATIONAL from %H",
+						 this->packet->get_source(this->packet));
+				}
+				else
+				{
+					DBG1(DBG_ENC, "expected HASH payload as first payload");
+				}
+				chunk_free(&hash);
+				return VERIFY_ERROR;
+			}
+			hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
+			other_hash = hash_payload->get_hash(hash_payload);
+			if (!chunk_equals(hash, other_hash))
+			{
+				DBG1(DBG_ENC, "our hash does not match received %B",
+					 &other_hash);
+				chunk_free(&hash);
+				return FAILED;
+			}
+			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
+			chunk_free(&hash);
+		}
+		if (this->is_encrypted)
+		{	/* message verified, confirm IV */
+			keymat_v1->confirm_iv(keymat_v1, this->message_id);
+		}
+	}
 	return SUCCESS;
 }
 
@@ -1522,7 +2054,7 @@ METHOD(message_t, destroy, void,
 }
 
 /*
- * Described in Header-File
+ * Described in header.
  */
 message_t *message_create_from_packet(packet_t *packet)
 {
@@ -1567,8 +2099,6 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet_data = _get_packet_data,
 			.destroy = _destroy,
 		},
-		.major_version = IKE_MAJOR_VERSION,
-		.minor_version = IKE_MINOR_VERSION,
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 		.is_request = TRUE,
 		.first_payload = NO_PAYLOAD,
@@ -1577,14 +2107,18 @@ message_t *message_create_from_packet(packet_t *packet)
 		.parser = parser_create(packet->get_data(packet)),
 	);
 
-	return (&this->public);
+	return &this->public;
 }
 
 /*
- * Described in Header.
+ * Described in header.
  */
-message_t *message_create()
+message_t *message_create(int major, int minor)
 {
-	return message_create_from_packet(packet_create());
-}
+	message_t *this = message_create_from_packet(packet_create());
 
+	this->set_major_version(this, major);
+	this->set_minor_version(this, minor);
+
+	return this;
+}

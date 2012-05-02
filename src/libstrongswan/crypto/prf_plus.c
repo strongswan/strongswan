@@ -25,6 +25,7 @@ typedef struct private_prf_plus_t private_prf_plus_t;
  *
  */
 struct private_prf_plus_t {
+
 	/**
 	 * Public interface of prf_plus_t.
 	 */
@@ -41,49 +42,50 @@ struct private_prf_plus_t {
 	chunk_t seed;
 
 	/**
-	 * Buffer to store current PRF result.
+	 * Octet which will be appended to the seed, 0 if not used
 	 */
-	chunk_t buffer;
+	u_int8_t counter;
 
 	/**
 	 * Already given out bytes in current buffer.
 	 */
-	size_t given_out;
+	size_t used;
 
 	/**
-	 * Octet which will be appended to the seed.
+	 * Buffer to store current PRF result.
 	 */
-	u_int8_t appending_octet;
+	chunk_t buffer;
 };
 
 METHOD(prf_plus_t, get_bytes, void,
 	private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 {
-	chunk_t appending_chunk;
-	size_t bytes_in_round;
-	size_t total_bytes_written = 0;
-
-	appending_chunk.ptr = &(this->appending_octet);
-	appending_chunk.len = 1;
+	size_t round, written = 0;
 
 	while (length > 0)
-	{	/* still more to do... */
-		if (this->buffer.len == this->given_out)
-		{	/* no bytes left in buffer, get next*/
+	{
+		if (this->buffer.len == this->used)
+		{	/* buffer used, get next round */
 			this->prf->get_bytes(this->prf, this->buffer, NULL);
-			this->prf->get_bytes(this->prf, this->seed, NULL);
-			this->prf->get_bytes(this->prf, appending_chunk, this->buffer.ptr);
-			this->given_out = 0;
-			this->appending_octet++;
+			if (this->counter)
+			{
+				this->prf->get_bytes(this->prf, this->seed, NULL);
+				this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
+									 this->buffer.ptr);
+				this->counter++;
+			}
+			else
+			{
+				this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
+			}
+			this->used = 0;
 		}
-		/* how many bytes can we write in this round ? */
-		bytes_in_round = min(length, this->buffer.len - this->given_out);
-		/* copy bytes from buffer with offset */
-		memcpy(buffer + total_bytes_written, this->buffer.ptr + this->given_out, bytes_in_round);
+		round = min(length, this->buffer.len - this->used);
+		memcpy(buffer + written, this->buffer.ptr + this->used, round);
 
-		length -= bytes_in_round;
-		this->given_out += bytes_in_round;
-		total_bytes_written += bytes_in_round;
+		length -= round;
+		this->used += round;
+		written += round;
 	}
 }
 
@@ -92,8 +94,7 @@ METHOD(prf_plus_t, allocate_bytes, void,
 {
 	if (length)
 	{
-		chunk->ptr = malloc(length);
-		chunk->len = length;
+		*chunk = chunk_alloc(length);
 		get_bytes(this, length, chunk->ptr);
 	}
 	else
@@ -113,10 +114,9 @@ METHOD(prf_plus_t, destroy, void,
 /*
  * Description in header.
  */
-prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
+prf_plus_t *prf_plus_create(prf_t *prf, bool counter, chunk_t seed)
 {
 	private_prf_plus_t *this;
-	chunk_t appending_chunk;
 
 	INIT(this,
 		.public = {
@@ -125,25 +125,22 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 			.destroy = _destroy,
 		},
 		.prf = prf,
+		.seed = chunk_clone(seed),
+		.buffer = chunk_alloc(prf->get_block_size(prf)),
 	);
 
-	/* allocate buffer for prf output */
-	this->buffer.len = prf->get_block_size(prf);
-	this->buffer.ptr = malloc(this->buffer.len);
+	if (counter)
+	{
+		this->counter = 0x01;
+		this->prf->get_bytes(this->prf, this->seed, NULL);
+		this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
+							 this->buffer.ptr);
+		this->counter++;
+	}
+	else
+	{
+		this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
+	}
 
-	this->appending_octet = 0x01;
-
-	/* clone seed */
-	this->seed.ptr = clalloc(seed.ptr, seed.len);
-	this->seed.len = seed.len;
-
-	/* do the first run */
-	appending_chunk.ptr = &(this->appending_octet);
-	appending_chunk.len = 1;
-	this->prf->get_bytes(this->prf, this->seed, NULL);
-	this->prf->get_bytes(this->prf, appending_chunk, this->buffer.ptr);
-	this->given_out = 0;
-	this->appending_octet++;
-
-	return &(this->public);
+	return &this->public;
 }

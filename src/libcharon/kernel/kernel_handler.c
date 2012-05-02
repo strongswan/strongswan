@@ -84,7 +84,7 @@ METHOD(kernel_listener_t, expire, bool,
 				  protocol_id_names, proto, ntohl(spi), reqid);
 	if (hard)
 	{
-		job = (job_t*)delete_child_sa_job_create(reqid, proto, spi);
+		job = (job_t*)delete_child_sa_job_create(reqid, proto, spi, hard);
 	}
 	else
 	{

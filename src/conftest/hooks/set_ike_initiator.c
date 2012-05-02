@@ -42,9 +42,9 @@ struct private_set_ike_initiator_t {
 
 METHOD(listener_t, message, bool,
 	private_set_ike_initiator_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{

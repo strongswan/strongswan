@@ -129,6 +129,10 @@ struct plugin_feature_t {
 		FEATURE_EAP_SERVER,
 		/** EAP peer implementation */
 		FEATURE_EAP_PEER,
+		/** XAuth server implementation */
+		FEATURE_XAUTH_SERVER,
+		/** XAuth peer implementation */
+		FEATURE_XAUTH_PEER,
 		/** database_t */
 		FEATURE_DATABASE,
 		/** fetcher_t */
@@ -182,6 +186,8 @@ struct plugin_feature_t {
 		char *fetcher;
 		/** FEATURE_CUSTOM */
 		char *custom;
+		/** FEATURE_XAUTH_SERVER/CLIENT */
+		char *xauth;
 
 		/** FEATURE_REGISTER */
 		struct {
@@ -266,6 +272,8 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
 #define _PLUGIN_FEATURE_CUSTOM(kind, name)					__PLUGIN_FEATURE(kind, CUSTOM, .custom = name)
+#define _PLUGIN_FEATURE_XAUTH_SERVER(kind, name)			__PLUGIN_FEATURE(kind, XAUTH_SERVER, .xauth = name)
+#define _PLUGIN_FEATURE_XAUTH_PEER(kind, name)				__PLUGIN_FEATURE(kind, XAUTH_PEER, .xauth = name)
 
 #define __PLUGIN_FEATURE_REGISTER(type, _f)					(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .arg.reg.f = _f }
 #define __PLUGIN_FEATURE_REGISTER_BUILDER(type, _f, _final)	(plugin_feature_t){ FEATURE_REGISTER, FEATURE_##type, .arg.reg = {.f = _f, .final = _final, }}

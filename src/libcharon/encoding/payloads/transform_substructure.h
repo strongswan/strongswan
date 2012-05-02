@@ -40,14 +40,7 @@ typedef struct transform_substructure_t transform_substructure_t;
 #define TRANSFORM_TYPE_VALUE 3
 
 /**
- * Length of the transform substructure header in bytes.
- */
-#define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
-
-/**
- * Class representing an IKEv2- TRANSFORM SUBSTRUCTURE.
- *
- * The TRANSFORM SUBSTRUCTURE format is described in RFC section 3.3.2.
+ * Class representing an IKEv1/IKEv2 transform substructure.
  */
 struct transform_substructure_t {
 
@@ -75,11 +68,11 @@ struct transform_substructure_t {
 	void (*set_is_last_transform) (transform_substructure_t *this, bool is_last);
 
 	/**
-	 * get transform type of the current transform.
+	 * Get transform type (IKEv2) or the transform number (IKEv1).
 	 *
 	 * @return 			Transform type of current transform substructure.
 	 */
-	u_int8_t (*get_transform_type) (transform_substructure_t *this);
+	u_int8_t (*get_transform_type_or_number) (transform_substructure_t *this);
 
 	/**
 	 * Get transform id of the current transform.
@@ -89,16 +82,11 @@ struct transform_substructure_t {
 	u_int16_t (*get_transform_id) (transform_substructure_t *this);
 
 	/**
-	 * Get transform id of the current transform.
+	 * Create an enumerator over transform attributes.
 	 *
-	 * @param key_length	The key length is written to this location
-	 * @return
-	 * 						- SUCCESS if a key length attribute is contained
-	 * 						- FAILED if no key length attribute is part of this
-	 * 						  transform or key length uses more then 16 bit!
+	 * @return			enumerator over transform_attribute_t*
 	 */
-	status_t (*get_key_length) (transform_substructure_t *this,
-								u_int16_t *key_length);
+	enumerator_t* (*create_attribute_enumerator)(transform_substructure_t *this);
 
 	/**
 	 * Destroys an transform_substructure_t object.
@@ -109,19 +97,20 @@ struct transform_substructure_t {
 /**
  * Creates an empty transform_substructure_t object.
  *
+ * @param type			TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
  * @return				created transform_substructure_t object
  */
-transform_substructure_t *transform_substructure_create(void);
+transform_substructure_t *transform_substructure_create(payload_type_t type);
 
 /**
  * Creates an empty transform_substructure_t object.
  *
- * @param type			type of transform to create
- * @param id			transform id specifc for the transform type
- * @param key_length	key length for key length attribute, 0 to omit
- * @return				transform_substructure_t object
+ * @param type				TRANSFORM_SUBSTRUCTURE or TRANSFORM_SUBSTRUCTURE_V1
+ * @param type_or_number	Type (IKEv2) or number (IKEv1) of transform
+ * @param id				transform id specifc for the transform type
+ * @return					transform_substructure_t object
  */
-transform_substructure_t *transform_substructure_create_type(
-					transform_type_t type, u_int16_t id, u_int16_t key_length);
+transform_substructure_t *transform_substructure_create_type(payload_type_t type,
+										u_int8_t type_or_number, u_int16_t id);
 
 #endif /** TRANSFORM_SUBSTRUCTURE_H_ @}*/

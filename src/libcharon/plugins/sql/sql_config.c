@@ -368,9 +368,9 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		if (ike)
 		{
 			peer_cfg = peer_cfg_create(
-					name, 2, ike, cert_policy, uniqueid,
+					name, IKEV2, ike, cert_policy, uniqueid,
 					keyingtries, rekeytime, reauthtime, jitter, overtime,
-					mobike,	dpd_delay, vip, pool,
+					mobike, FALSE, dpd_delay, vip, pool,
 					mediation, mediated_cfg, peer_id);
 			auth = auth_cfg_create();
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_method);

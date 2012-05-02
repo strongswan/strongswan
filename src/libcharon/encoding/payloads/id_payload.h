@@ -28,16 +28,10 @@ typedef struct id_payload_t id_payload_t;
 #include <library.h>
 #include <utils/identification.h>
 #include <encoding/payloads/payload.h>
+#include <selectors/traffic_selector.h>
 
 /**
- * Length of a id payload without the data in bytes.
- */
-#define ID_PAYLOAD_HEADER_LENGTH 8
-
-/**
- * Object representing an IKEv2 ID payload.
- *
- * The ID payload format is described in RFC section 3.5.
+ * Object representing an IKEv1 or an IKEv2 ID payload.
  */
 struct id_payload_t {
 
@@ -54,6 +48,20 @@ struct id_payload_t {
 	identification_t *(*get_identification) (id_payload_t *this);
 
 	/**
+	 * Creates a traffic selector form a ID_ADDR_SUBNET/RANGE identity.
+	 *
+	 * @return				traffic selector, NULL on failure
+	 */
+	traffic_selector_t* (*get_ts)(id_payload_t *this);
+
+	/**
+	 * Get encoded payload without fixed payload header (used for IKEv1).
+	 *
+	 * @return				encoded payload (gets allocated)
+	 */
+	chunk_t (*get_encoded)(id_payload_t *this);
+
+	/**
 	 * Destroys an id_payload_t object.
 	 */
 	void (*destroy) (id_payload_t *this);
@@ -62,19 +70,27 @@ struct id_payload_t {
 /**
  * Creates an empty id_payload_t object.
  *
- * @param payload_type	one of ID_INITIATOR, ID_RESPONDER
- * @return				id_payload_t object
+ * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
+ * @return			id_payload_t object
  */
-id_payload_t *id_payload_create(payload_type_t payload_type);
+id_payload_t *id_payload_create(payload_type_t type);
 
 /**
  * Creates an id_payload_t from an existing identification_t object.
  *
- * @param payload_type		one of ID_INITIATOR, ID_RESPONDER
- * @param identification	identification_t object
- * @return					id_payload_t object
+ * @param type		one of ID_INITIATOR, ID_RESPONDER, ID_V1 and NAT_OA_V1
+ * @param id		identification_t object
+ * @return			id_payload_t object
  */
-id_payload_t *id_payload_create_from_identification(payload_type_t payload_type,
-											identification_t *identification);
+id_payload_t *id_payload_create_from_identification(payload_type_t type,
+													identification_t *id);
+
+/**
+ * Create an IKEv1 ID_ADDR_SUBNET/RANGE identity from a traffic selector.
+ *
+ * @param ts		traffic selector
+ * @return			ID_V1 id_paylad_t object.
+ */
+id_payload_t *id_payload_create_from_ts(traffic_selector_t *ts);
 
 #endif /** ID_PAYLOAD_H_ @}*/

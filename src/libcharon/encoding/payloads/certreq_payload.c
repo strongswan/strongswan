@@ -64,15 +64,17 @@ struct private_certreq_payload_t {
 	 * The contained certreq data value.
 	 */
 	chunk_t data;
+
+	/**
+	 * Payload type CERTIFICATE_REQUEST or CERTIFICATE_REQUEST_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a CERTREQ payload
- *
- * The defined offsets are the positions in a object of type
- * private_certreq_payload_t.
+ * Encoding rules for CERTREQ payload.
  */
-encoding_rule_t certreq_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_certreq_payload_t, next_payload)	},
 	/* the critical bit */
@@ -90,7 +92,7 @@ encoding_rule_t certreq_payload_encodings[] = {
 	/* 1 Byte CERTREQ type*/
 	{ U_INT_8,			offsetof(private_certreq_payload_t, encoding)		},
 	/* some certreq data bytes, length is defined in PAYLOAD_LENGTH */
-	{ CERTREQ_DATA,		offsetof(private_certreq_payload_t, data)			}
+	{ CHUNK_DATA,		offsetof(private_certreq_payload_t, data)			}
 };
 
 /*
@@ -109,7 +111,8 @@ encoding_rule_t certreq_payload_encodings[] = {
 METHOD(payload_t, verify, status_t,
 	private_certreq_payload_t *this)
 {
-	if (this->encoding == ENC_X509_SIGNATURE)
+	if (this->type == CERTIFICATE_REQUEST &&
+		this->encoding == ENC_X509_SIGNATURE)
 	{
 		if (this->data.len % HASH_SIZE_SHA1)
 		{
@@ -121,17 +124,23 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_certreq_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_certreq_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = certreq_payload_encodings;
-	*rule_count = countof(certreq_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_certreq_payload_t *this)
+{
+	return 5;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_certreq_payload_t *this)
 {
-	return CERTIFICATE_REQUEST;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -150,6 +159,16 @@ METHOD(payload_t, get_length, size_t,
 	private_certreq_payload_t *this)
 {
 	return this->payload_length;
+}
+
+METHOD(certreq_payload_t, get_dn, identification_t*,
+	private_certreq_payload_t *this)
+{
+	if (this->data.len)
+	{
+		return identification_create_from_encoding(ID_DER_ASN1_DN, this->data);
+	}
+	return NULL;
 }
 
 METHOD(certreq_payload_t, add_keyid, void,
@@ -199,6 +218,10 @@ METHOD(certreq_payload_t, create_keyid_enumerator, enumerator_t*,
 {
 	keyid_enumerator_t *enumerator;
 
+	if (this->type == CERTIFICATE_REQUEST_V1)
+	{
+		return enumerator_create_empty();
+	}
 	INIT(enumerator,
 		.public = {
 			.enumerate = (void*)_keyid_enumerate,
@@ -231,7 +254,7 @@ METHOD2(payload_t, certreq_payload_t, destroy, void,
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create()
+certreq_payload_t *certreq_payload_create(payload_type_t type)
 {
 	private_certreq_payload_t *this;
 
@@ -240,6 +263,7 @@ certreq_payload_t *certreq_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -250,9 +274,11 @@ certreq_payload_t *certreq_payload_create()
 			.get_cert_type = _get_cert_type,
 			.add_keyid = _add_keyid,
 			.destroy = _destroy,
+			.get_dn = _get_dn,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = CERTREQ_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
+		.type = type,
 	);
 	return &this->public;
 }
@@ -262,8 +288,10 @@ certreq_payload_t *certreq_payload_create()
  */
 certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 {
-	private_certreq_payload_t *this = (private_certreq_payload_t*)certreq_payload_create();
+	private_certreq_payload_t *this;
 
+	this = (private_certreq_payload_t*)
+					certreq_payload_create(CERTIFICATE_REQUEST);
 	switch (type)
 	{
 		case CERT_X509:
@@ -278,3 +306,19 @@ certreq_payload_t *certreq_payload_create_type(certificate_type_t type)
 	return &this->public;
 }
 
+/*
+ * Described in header
+ */
+certreq_payload_t *certreq_payload_create_dn(identification_t *id)
+{
+	private_certreq_payload_t *this;
+
+	this = (private_certreq_payload_t*)
+					certreq_payload_create(CERTIFICATE_REQUEST_V1);
+
+	this->encoding = ENC_X509_SIGNATURE;
+	this->data = chunk_clone(id->get_encoding(id));
+	this->payload_length = get_header_length(this) + this->data.len;
+
+	return &this->public;
+}

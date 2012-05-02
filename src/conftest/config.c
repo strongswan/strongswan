@@ -251,8 +251,8 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	uintptr_t strength;
 
 	ike_cfg = load_ike_config(this, settings, config);
-	peer_cfg = peer_cfg_create(config, 2, ike_cfg, CERT_ALWAYS_SEND,
-							   UNIQUE_NO, 1, 0, 0, 0, 0, FALSE, 0,
+	peer_cfg = peer_cfg_create(config, IKEV2, ike_cfg, CERT_ALWAYS_SEND,
+							   UNIQUE_NO, 1, 0, 0, 0, 0, FALSE, FALSE, 0,
 							   NULL, NULL, FALSE, NULL, NULL);
 
 	auth = auth_cfg_create();

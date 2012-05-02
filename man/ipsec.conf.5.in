@@ -172,9 +172,9 @@ keying, rekeying, and general control.
 The path to control the connection is called 'ISAKMP SA' in IKEv1
 and 'IKE SA' in the IKEv2 protocol. That what is being negotiated, the kernel
 level data path, is called 'IPsec SA' or 'Child SA'.
-strongSwan currently uses two separate keying daemons. \fIpluto\fP handles
-all IKEv1 connections, \fIcharon\fP is the daemon handling the IKEv2
-protocol.
+strongSwan previously used two separate keying daemons, \fIpluto\fP and
+\fIcharon\fP. This manual does not discuss \fIpluto\fP options anymore, but
+only \fIcharon\fP that since strongSwan 5.0 supports both IKEv1 and IKEv2.
 .PP
 To avoid trivial editing of the configuration file to suit it to each system
 involved in a connection,
@@ -237,17 +237,7 @@ identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 includes conn section
 .BR <name> .
 .TP
-.BR auth " = " esp " | ah"
-whether authentication should be done as part of
-ESP encryption, or separately using the AH protocol;
-acceptable values are
-.B esp
-(the default) and
-.BR ah .
-.br
-The IKEv2 daemon currently supports ESP only.
-.TP
-.BR authby " = " pubkey " | rsasig | ecdsasig | psk | eap | never | xauth..."
+.BR authby " = " pubkey " | rsasig | ecdsasig | psk | never | xauthpsk | xauthrsasig"
 how the two security gateways should authenticate each other;
 acceptable values are
 .B psk
@@ -268,17 +258,12 @@ IKEv1 additionally supports the values
 .B xauthpsk
 and
 .B xauthrsasig
-that will enable eXtended Authentication (XAuth) in addition to IKEv1 main mode
-based on shared secrets  or digital RSA signatures, respectively.
-IKEv2 additionally supports the value
-.BR eap ,
-which indicates an initiator to request EAP authentication. The EAP method
-to use is selected by the server (see
-.BR eap ).
-This parameter is deprecated for IKEv2 connections, as two peers do not need
-to agree on an authentication method. Use the
+that will enable eXtended AUTHentication (XAUTH) in addition to IKEv1 main mode
+based on shared secrets or digital RSA signatures, respectively.
+This parameter is deprecated, as two peers do not need to agree on an
+authentication method in IKEv2. Use the
 .B leftauth
-parameter instead to define authentication methods in IKEv2.
+parameter instead to define authentication methods.
 .TP
 .BR auto " = " ignore " | add | route | start"
 what operation, if any, should be done automatically at IPsec startup;
@@ -323,7 +308,8 @@ and prefer compressed.
 A value of
 .B no
 prevents IPsec from proposing compression;
-a proposal to compress will still be accepted.
+a proposal to compress will still be accepted. IPComp is currently not supported
+with IKEv1.
 .TP
 .BR dpdaction " = " none " | clear | hold | restart"
 controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
@@ -341,16 +327,9 @@ put in the hold state
 .RB ( hold )
 or restarted
 .RB ( restart ).
-For IKEv1, the default is
+The default is
 .B none
-which disables the active sending of R_U_THERE notifications.
-Nevertheless pluto will always send the DPD Vendor ID during connection set up
-in order to signal the readiness to act passively as a responder if the peer
-wants to use DPD. For IKEv2,
-.B none
-does't make sense, since all messages are used to detect dead peers. If specified,
-it has the same meaning as the default
-.RB ( clear ).
+which disables the active sending of DPD messages.
 .TP
 .BR dpddelay " = " 30s " | <time>"
 defines the period time interval with which R_U_THERE messages/INFORMATIONAL
@@ -359,55 +338,16 @@ received. In IKEv2, a value of 0 sends no additional INFORMATIONAL
 messages and uses only standard messages (such as those to rekey) to detect
 dead peers.
 .TP
-.BR dpdtimeout " = " 150s " | <time>"
-defines the timeout interval, after which all connections to a peer are deleted
-in case of inactivity. This only applies to IKEv1, in IKEv2 the default
-retransmission timeout applies, as every exchange is used to detect dead peers.
-See
-.IR strongswan.conf (5)
-for a description of the IKEv2 retransmission timeout.
-.TP
 .BR closeaction " = " none " | clear | hold | restart"
-defines the action to take if the remote peer unexpectedly closes a CHILD_SA
-(IKEv2 only, see dpdaction for meaning of values). A closeaction should not be
+defines the action to take if the remote peer unexpectedly closes a CHILD_SA.
+A closeaction should not be
 used if the peer uses reauthentication or uniquids checking, as these events
-might trigger a closeaction when not desired.
+might trigger a closeaction when not desired. Closeactions are currently
+not supported with IKEv1.
 .TP
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
-not send or receive any traffic. Currently supported in IKEv2 connections only.
-.TP
-.BR eap " = aka | ... | radius | ... | <type> | <type>-<vendor>
-defines the EAP type to propose as server if the client requests EAP
-authentication. Currently supported values are
-.B aka
-for EAP-AKA,
-.B gtc
-for EAP-GTC,
-.B md5
-for EAP-MD5,
-.B mschapv2
-for EAP-MS-CHAPv2,
-.B peap
-for EAP-PEAPv0,
-.B radius
-for the EAP-RADIUS proxy,
-.B sim
-for EAP-SIM,
-.B tls
-for EAP-TLS, and
-.B ttls
-for EAP-TTLSv0.
-Additionally, IANA assigned EAP method numbers are accepted, or a
-definition in the form
-.B eap=type-vendor
-(e.g. eap=7-12345) can be used to specify vendor specific EAP types.
-This parameter is deprecated in the favour of
-.B leftauth.
-
-To forward EAP authentication to a RADIUS server using the EAP-RADIUS plugin,
-set
-.BR eap=radius .
+not send or receive any traffic.
 .TP
 .BR eap_identity " = <id>"
 defines the identity the client uses to reply to a EAP Identity request.
@@ -425,15 +365,15 @@ The notation is
 .BR encryption-integrity[-dhgroup][-esnmode] .
 .br
 Defaults to
-.BR aes128-sha1,3des-sha1
-for IKEv1.  The IKEv2 daemon adds its extensive default proposal to this default
+.BR aes128-sha1,3des-sha1 .
+The daemon adds its extensive default proposal to this default
 or the configured value.  To restrict it to the configured proposal an
 exclamation mark
 .RB ( ! )
 can be added at the end.
 .br
 .BR Note :
-As a responder both daemons accept the first supported proposal received from
+As a responder the daemon accepts the first supported proposal received from
 the peer. In order to restrict a responder to only accept specific cipher
 suites, the strict flag
 .RB ( ! ,
@@ -441,8 +381,8 @@ exclamation mark) can be used, e.g: aes256-sha512-modp4096!
 .br
 If
 .B dh-group
-is specified, CHILD_SA setup and rekeying include a separate Diffie-Hellman
-exchange (IKEv2 only).  Valid values for
+is specified, CHILD_SA/Quick Mode setup and rekeying include a separate
+Diffie-Hellman exchange.  Valid values for
 .B esnmode
 (IKEv2 only) are
 .B esn
@@ -455,7 +395,7 @@ the default is
 .BR forceencaps " = yes | " no
 force UDP encapsulation for ESP packets even if no NAT situation is detected.
 This may help to surmount restrictive firewalls. In order to force the peer to
-encapsulate packets, NAT detection payloads are faked (IKEv2 only).
+encapsulate packets, NAT detection payloads are faked.
 .TP
 .BR ike " = <cipher suites>"
 comma-separated list of IKE/ISAKMP SA encryption/authentication algorithms
@@ -467,15 +407,15 @@ In IKEv2, multiple algorithms and proposals may be included, such as
 aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
 .br
 Defaults to
-.B aes128-sha1-modp2048,3des-sha1-modp1536
-for IKEv1.  The IKEv2 daemon adds its extensive default proposal to this
+.B aes128-sha1-modp2048,3des-sha1-modp1536 .
+The daemon adds its extensive default proposal to this
 default or the configured value.  To restrict it to the configured proposal an
 exclamation mark
 .RB ( ! )
 can be added at the end.
 .br
 .BR Note :
-As a responder both daemons accept the first supported proposal received from
+As a responder the daemon accepts the first supported proposal received from
 the peer.  In order to restrict a responder to only accept specific cipher
 suites, the strict flag
 .BR ( ! ,
@@ -486,8 +426,8 @@ how long the keying channel of a connection (ISAKMP or IKE SA)
 should last before being renegotiated. Also see EXPIRY/REKEY below.
 .TP
 .BR installpolicy " = " yes " | no"
-decides whether IPsec policies are installed in the kernel by the IKEv2
-charon daemon for a given connection. Allows peaceful cooperation e.g. with
+decides whether IPsec policies are installed in the kernel by the charon daemon
+for a given connection. Allows peaceful cooperation e.g. with
 the Mobile IPv6 daemon mip6d who wants to control the kernel policies.
 Acceptable values are
 .B yes
@@ -497,19 +437,8 @@ Acceptable values are
 .BR keyexchange " = " ike " | ikev1 | ikev2"
 method of key exchange;
 which protocol should be used to initialize the connection. Connections marked with
-.B ikev1
-are initiated with pluto, those marked with
-.B ikev2
-with charon. An incoming request from the remote peer is handled by the correct
-daemon, unaffected from the
-.B keyexchange
-setting. Starting with strongSwan 4.5 the default value
 .B ike
-is a synonym for
-.BR ikev2 ,
-whereas in older strongSwan releases
-.B ikev1
-was assumed.
+use IKEv2 when initiating, but accept any protocol version when responding.
 .TP
 .BR keyingtries " = " 3 " | <number> | %forever"
 how many attempts (a whole number or \fB%forever\fP) should be made to
@@ -541,18 +470,8 @@ or
 may be
 .BR %defaultroute ,
 but not both.
-The prefix
-.B  %
-in front of a fully-qualified domain name or an IP address will implicitly set
-.B leftallowany=yes.
-If the domain name cannot be resolved into an IP address at IPsec startup or
-update time then
-.B left=%any
-and
-.B leftallowany=no
-will be assumed.
 
-In case of an IKEv2 connection, the value
+The value
 .B %any
 for the local endpoint signifies an address to be filled in (by automatic
 keying) during negotiation. If the local peer initiates the connection setup
@@ -560,9 +479,6 @@ the routing table will be queried to determine the correct local IP address.
 In case the local peer is responding to a connection setup then any IP address
 that is assigned to a local interface will be accepted.
 .br
-Note that specifying
-.B %any
-for the local endpoint is not supported by the IKEv1 pluto daemon.
 
 If
 .B %any
@@ -572,30 +488,18 @@ Please note that with the usage of wildcards multiple connection descriptions
 might match a given incoming connection attempt. The most specific description
 is used in that case.
 .TP
-.BR leftallowany " = yes | " no
-a modifier for
-.B left
-, making it behave as
-.B %any
-although a concrete IP address has been assigned.
-Recommended for dynamic IP addresses that can be resolved by DynDNS at IPsec
-startup or update time.
-Acceptable values are
-.B yes
-and
-.B no
-(the default).
-.TP
 .BR leftauth " = <auth method>"
 Authentication method to use locally (left) or require from the remote (right)
 side.
-This parameter is supported in IKEv2 only. Acceptable values are
+Acceptable values are
 .B pubkey
 for public key authentication (RSA/ECDSA),
 .B psk
-for pre-shared key authentication and
+for pre-shared key authentication,
 .B eap
-to (require the) use of the Extensible Authentication Protocol.
+to (require the) use of the Extensible Authentication Protocol in IKEv2, and
+.B xauth
+for IKEv1 eXtended Authentication.
 To require a trustchain public key strength for the remote side, specify the
 key type followed by the strength in bits (for example
 .BR rsa-2048
@@ -605,26 +509,40 @@ For
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
+.BR eap-sim ,
 .BR eap-gtc ,
 .BR eap-md5 ,
 .BR eap-mschapv2 ,
 .BR eap-peap ,
 .BR eap-sim ,
 .BR eap-tls ,
+.BR eap-ttls ,
 and
-.BR eap-ttls .
+.BR eap-radius .
 Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific
 EAP methods are defined in the form
 .B eap-type-vendor
 .RB "(e.g. " eap-7-12345 ).
+For
+.B xauth,
+a XAuth authentication backend can be specified, such as
+.B xauth-generic
+or
+.B xauth-eap .
+If XAuth is used in
+.BR leftauth ,
+Hybrid authentication is used. For traditional XAuth authentication, define
+XAuth in
+.BR lefauth2 .
 .TP
 .BR leftauth2 " = <auth method>"
 Same as
 .BR leftauth ,
-but defines an additional authentication exchange. IKEv2 supports multiple
+but defines an additional authentication exchange. In IKEv1, only XAuth can be
+used in the second authentication round. IKEv2 supports multiple complete
 authentication rounds using "Multiple Authentication Exchanges" defined
 in RFC4739. This allows, for example, separated authentication
-of host and user (IKEv2 only).
+of host and user.
 .TP
 .BR leftca " = <issuer dn> | %same"
 the distinguished name of a certificate authority which is required to
@@ -683,8 +601,7 @@ tunnels established with IPsec are exempted from it
 so that packets can flow unchanged through the tunnels.
 (This means that all subnets connected in this manner must have
 distinct, non-overlapping subnet address blocks.)
-This is done by the default \fBipsec _updown\fR script (see
-.IR pluto (8)).
+This is done by the default \fBipsec _updown\fR script.
 
 In situations calling for more control,
 it may be preferable for the user to supply his own
@@ -696,12 +613,7 @@ which makes the appropriate adjustments for his system.
 a comma separated list of group names. If the
 .B leftgroups
 parameter is present then the peer must be a member of at least one
-of the groups defined by the parameter. Group membership must be certified
-by a valid attribute certificate stored in \fI/etc/ipsec.d/acerts/\fP thas has
-been issued to the peer by a trusted Authorization Authority stored in
-\fI/etc/ipsec.d/aacerts/\fP.
-.br
-Attribute certificates are not supported in IKEv2 yet.
+of the groups defined by the parameter.
 .TP
 .BR lefthostaccess " = yes | " no
 inserts a pair of INPUT and OUTPUT iptables rules using the default
@@ -728,8 +640,8 @@ identity to use for a second authentication for the left participant
 .BR leftid .
 .TP
 .BR leftikeport " = <port>"
-UDP port the left participant uses for IKE communication. Currently supported in
-IKEv2 connections only. If unspecified, port 500 is used with the port floating
+UDP port the left participant uses for IKE communication.
+If unspecified, port 500 is used with the port floating
 to 4500 if a NAT is detected or MOBIKE is enabled. Specifying a local IKE port
 different from the default additionally requires a socket implementation that
 listens to this port.
@@ -750,29 +662,6 @@ or
 .B leftprotoport=6/80
 or
 .B leftprotoport=udp
-.TP
-.BR leftrsasigkey " = " %cert " | <raw rsa public key>"
-the left participant's
-public key for RSA signature authentication,
-in RFC 2537 format using
-.IR ttodata (3)
-encoding.
-The magic value
-.B %none
-means the same as not specifying a value (useful to override a default).
-The value
-.B %cert
-(the default)
-means that the key is extracted from a certificate.
-The identity used for the left participant
-must be a specific host, not
-.B %any
-or another magic value.
-.B Caution:
-if two connection descriptions
-specify different public keys for the same
-.BR leftid ,
-confusion and madness will ensue.
 .TP
 .BR leftsendcert " = never | no | " ifasked " | always | yes"
 Accepted values are
@@ -795,8 +684,7 @@ value is one of the synonyms
 .BR %modeconfig ,
 or
 .BR %modecfg ,
-an address is requested from the peer. In IKEv2, a statically defined address
-is also requested, since the server may change it.
+an address is requested from the peer.
 .TP
 .BR rightsourceip " = %config | <network>/<netmask> | %poolname"
 The internal source IP to use in a tunnel for the remote peer. If the
@@ -813,16 +701,11 @@ private subnet behind the left participant, expressed as
 \fInetwork\fB/\fInetmask\fR;
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
 signifying that the left end of the connection goes to the left participant
-only. When using IKEv2, the configured subnet of the peers may differ, the
-protocol narrows it to the greatest common subnet. Further, IKEv2 supports
-multiple subnets separated by commas. IKEv1 only interprets the first subnet
-of such a definition.
-.TP
-.BR leftsubnetwithin " = <ip subnet>"
-the peer can propose any subnet or single IP address that fits within the
-range defined by
-.BR leftsubnetwithin.
-Not relevant for IKEv2, as subnets are narrowed.
+only. Configured subnet of the peers may differ, the protocol narrows it to
+the greatest common subnet. In IKEv1, this may lead to problems with other
+implementations, make sure to configure identical subnets in such
+configurations. IKEv2 supports multiple subnets separated by commas, IKEv1 only
+interprets the first subnet of such a definition.
 .TP
 .BR leftupdown " = <path>"
 what ``updown'' script to run to adjust routing and/or firewalling
@@ -832,20 +715,15 @@ changes (default
 May include positional parameters separated by white space
 (although this requires enclosing the whole string in quotes);
 including shell metacharacters is unwise.
-See
-.IR pluto (8)
-for details.
-Relevant only locally, other end need not agree on it. IKEv2 uses the updown
+Relevant only locally, other end need not agree on it. Charon uses the updown
 script to insert firewall rules only, since routing has been implemented
-directly into charon.
+directly into the daemon.
 .TP
 .BR lifebytes " = <number>"
-the number of bytes transmitted over an IPsec SA before it expires (IKEv2
-only).
+the number of bytes transmitted over an IPsec SA before it expires.
 .TP
 .BR lifepackets " = <number>"
-the number of packets transmitted over an IPsec SA before it expires (IKEv2
-only).
+the number of packets transmitted over an IPsec SA before it expires.
 .TP
 .BR lifetime " = " 1h " | <time>"
 how long a particular instance of a connection
@@ -877,12 +755,12 @@ which thinks the lifetime is longer. Also see EXPIRY/REKEY below.
 .BR marginbytes " = <number>"
 how many bytes before IPsec SA expiry (see
 .BR lifebytes )
-should attempts to negotiate a replacement begin (IKEv2 only).
+should attempts to negotiate a replacement begin.
 .TP
 .BR marginpackets " = <number>"
 how many packets before IPsec SA expiry (see
 .BR lifepackets )
-should attempts to negotiate a replacement begin (IKEv2 only).
+should attempts to negotiate a replacement begin.
 .TP
 .BR margintime " = " 9m " | <time>"
 how long before connection expiry or keying-channel expiry
@@ -921,7 +799,7 @@ enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
 .BR no .
 If set to
 .BR no ,
-the IKEv2 charon daemon will not actively propose MOBIKE as initiator and
+the charon daemon will not actively propose MOBIKE as initiator and
 ignore the MOBIKE_SUPPORTED notify as responder.
 .TP
 .BR modeconfig " = push | " pull
@@ -931,29 +809,8 @@ Accepted values are
 and
 .B pull
 (the default).
-Currently relevant for IKEv1 only since IKEv2 always uses the configuration
-payload in pull mode. Cisco VPN gateways usually operate in
-.B push
-mode.
-.TP
-.BR pfs " = " yes " | no"
-whether Perfect Forward Secrecy of keys is desired on the connection's
-keying channel
-(with PFS, penetration of the key-exchange protocol
-does not compromise keys negotiated earlier);
-acceptable values are
-.B yes
-(the default)
-and
-.BR no.
-IKEv2 always uses PFS for IKE_SA rekeying whereas for CHILD_SA rekeying
-PFS is enforced by defining a Diffie-Hellman modp group in the
-.B esp
-parameter.
-.TP
-.BR pfsgroup " = <modp group>"
-defines a Diffie-Hellman group for perfect forward secrecy in IKEv1 Quick Mode
-differing from the DH group used for IKEv1 Main Mode (IKEv1 only).
+Push mode is currently not supported in charon, hence this parameter has no
+effect.
 .TP
 .BR reauth " = " yes " | no"
 whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,
@@ -973,7 +830,7 @@ and
 .BR no .
 The two ends need not agree, but while a value of
 .B no
-prevents pluto/charon from requesting renegotiation,
+prevents charon from requesting renegotiation,
 it does not prevent responding to renegotiation requested from the other end,
 so
 .B no
@@ -1035,11 +892,7 @@ signifying the special Mobile IPv6 transport proxy mode;
 .BR passthrough ,
 signifying that no IPsec processing should be done at all;
 .BR drop ,
-signifying that packets should be discarded; and
-.BR reject ,
-signifying that packets should be discarded and a diagnostic ICMP returned
-.RB ( reject
-is currently not supported by the NETKEY stack of the Linux 2.6 kernel).
+signifying that packets should be discarded.
 .TP
 .BR xauth " = " client " | server"
 specifies the role in the XAuth protocol if activated by
@@ -1116,8 +969,6 @@ synonym for
 .BR crluri2 " = <uri>"
 defines an alternative CRL distribution point (ldap, http, or file URI)
 .TP
-.BR ldaphost " = <hostname>"
-defines an ldap host. Currently used by IKEv1 only.
 .TP
 .BR ocspuri " = <uri>"
 defines an OCSP URI.
@@ -1127,7 +978,7 @@ synonym for
 .B ocspuri.
 .TP
 .BR ocspuri2 " = <uri>"
-defines an alternative OCSP URI. Currently used by IKEv2 only.
+defines an alternative OCSP URI.
 .TP
 .BR certuribase " = <uri>"
 defines the base URI for the Hash and URL feature supported by IKEv2.
@@ -1140,48 +991,12 @@ At present, the only
 section known to the IPsec software is the one named
 .BR setup ,
 which contains information used when the software is being started.
-Here's an example:
-.PP
-.ne 8
-.nf
-.ft B
-.ta 1c
-config setup
-	plutodebug=all
-	crlcheckinterval=10m
-	strictcrlpolicy=yes
-.ft
-.fi
-.PP
-Parameters are optional unless marked ``(required)''.
 The currently-accepted
 .I parameter
 names in a
 .B config
 .B setup
-section affecting both daemons are:
-.TP
-.BR cachecrls " = yes | " no
-certificate revocation lists (CRLs) fetched via http or ldap will be cached in
-\fI/etc/ipsec.d/crls/\fR under a unique file name derived from the certification
-authority's public key.
-Accepted values are
-.B yes
-and
-.B no
-(the default). Only relevant for IKEv1, as CRLs are always cached in IKEv2.
-.TP
-.BR charonstart " = " yes " | no"
-whether to start the IKEv2 charon daemon or not.
-The default is
-.B yes
-if starter was compiled with IKEv2 support.
-.TP
-.BR plutostart " = " yes " | no"
-whether to start the IKEv1 pluto daemon or not.
-The default is
-.B yes
-if starter was compiled with IKEv1 support.
+section are:
 .TP
 .BR strictcrlpolicy " = yes | ifuri | " no
 defines if a fresh CRL must be available in order for the peer authentication
@@ -1207,116 +1022,13 @@ and
 Participant IDs normally \fIare\fR unique,
 so a new (automatically-keyed) connection using the same ID is
 almost invariably intended to replace an old one.
-The IKEv2 daemon also accepts the value
+The daemon also accepts the value
 .B replace
 which is identical to
 .B yes
 and the value
 .B keep
 to reject new IKE_SA setups and keep the duplicate established earlier.
-.PP
-The following
-.B config section
-parameters are used by the IKEv1 Pluto daemon only:
-.TP
-.BR crlcheckinterval " = " 0s " | <time>"
-interval in seconds. CRL fetching is enabled if the value is greater than zero.
-Asynchronous, periodic checking for fresh CRLs is currently done by the
-IKEv1 Pluto daemon only.
-.TP
-.BR keep_alive " = " 20s " | <time>"
-interval in seconds between NAT keep alive packets, the default being 20 seconds.
-.TP
-.BR nat_traversal " = yes | " no
-activates NAT traversal by accepting source ISAKMP ports different from udp/500 and
-being able of floating to udp/4500 if a NAT situation is detected.
-Accepted values are
-.B yes
-and
-.B no
-(the default).
-Used by IKEv1 only, NAT traversal is always being active in IKEv2.
-.TP
-.BR nocrsend " = yes | " no
-no certificate request payloads will be sent.
-.TP
-.BR pkcs11initargs " = <args>"
-non-standard argument string for PKCS#11 C_Initialize() function;
-required by NSS softoken.
-.TP
-.BR pkcs11module " = <args>"
-defines the path to a dynamically loadable PKCS #11 library.
-.TP
-.BR pkcs11keepstate " = yes | " no
-PKCS #11 login sessions will be kept during the whole lifetime of the keying
-daemon. Useful with pin-pad smart card readers.
-Accepted values are
-.B yes
-and
-.B no
-(the default).
-.TP
-.BR pkcs11proxy " = yes | " no
-Pluto will act as a PKCS #11 proxy accessible via the whack interface.
-Accepted values are
-.B yes
-and
-.B no
-(the default).
-.TP
-.BR plutodebug " = " none " | <debug list> | all"
-how much pluto debugging output should be logged.
-An empty value,
-or the magic value
-.BR none ,
-means no debugging output (the default).
-The magic value
-.B all
-means full output.
-Otherwise only the specified types of output
-(a quoted list, names without the
-.B \-\-debug\-
-prefix,
-separated by white space) are enabled;
-for details on available debugging types, see
-.IR pluto (8).
-.TP
-.BR plutostderrlog " = <file>"
-Pluto will not use syslog, but rather log to stderr, and redirect stderr
-to <file>.
-.TP
-.BR postpluto " = <command>"
-shell command to run after starting pluto
-(e.g., to remove a decrypted copy of the
-.I ipsec.secrets
-file).
-It's run in a very simple way;
-complexities like I/O redirection are best hidden within a script.
-Any output is redirected for logging,
-so running interactive commands is difficult unless they use
-.I /dev/tty
-or equivalent for their interaction.
-Default is none.
-.TP
-.BR prepluto " = <command>"
-shell command to run before starting pluto
-(e.g., to decrypt an encrypted copy of the
-.I ipsec.secrets
-file).
-It's run in a very simple way;
-complexities like I/O redirection are best hidden within a script.
-Any output is redirected for logging,
-so running interactive commands is difficult unless they use
-.I /dev/tty
-or equivalent for their interaction.
-Default is none.
-.TP
-.BR virtual_private " = <networks>"
-defines private networks using a wildcard notation.
-.PP
-The following
-.B config section
-parameters are used by the IKEv2 charon daemon only:
 .TP
 .BR charondebug " = <debug list>"
 how much charon debugging output should be logged.
@@ -1333,7 +1045,7 @@ is set to
 for all types.  For more flexibility see LOGGER CONFIGURATION in
 .IR strongswan.conf (5).
 
-.SH IKEv2 EXPIRY/REKEY
+.SH SA EXPIRY/REKEY
 The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
 after a specific amount of time. For IPsec SAs this can also happen after a
 specified number of transmitted packets or transmitted bytes. The following
@@ -1419,7 +1131,7 @@ time equals zero and, thus, rekeying gets disabled.
 /etc/ipsec.d/crls
 
 .SH SEE ALSO
-strongswan.conf(5), ipsec.secrets(5), ipsec(8), pluto(8)
+strongswan.conf(5), ipsec.secrets(5), ipsec(8)
 .SH HISTORY
 Originally written for the FreeS/WAN project by Henry Spencer.
 Updated and extended for the strongSwan project <http://www.strongswan.org> by

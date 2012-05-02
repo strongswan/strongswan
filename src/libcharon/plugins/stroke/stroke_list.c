@@ -118,8 +118,9 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 		ike_proposal = ike_sa->get_proposal(ike_sa);
 
-		fprintf(out, "%12s[%d]: IKE SPIs: %.16"PRIx64"_i%s %.16"PRIx64"_r%s",
+		fprintf(out, "%12s[%d]: %N SPIs: %.16"PRIx64"_i%s %.16"PRIx64"_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+				ike_version_names, ike_sa->get_version(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
 
@@ -319,11 +320,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 				auth->get(auth, AUTH_RULE_IDENTITY));
 
 		auth_class = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
-		if (auth_class != AUTH_CLASS_EAP)
-		{
-			fprintf(out, "%N authentication\n", auth_class_names, auth_class);
-		}
-		else
+		if (auth_class == AUTH_CLASS_EAP)
 		{
 			if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE) == EAP_NAK)
 			{
@@ -349,6 +346,21 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 				fprintf(out, " with EAP identity '%Y'", id);
 			}
 			fprintf(out, "\n");
+		}
+		else if (auth_class == AUTH_CLASS_XAUTH)
+		{
+			fprintf(out, "%N authentication: %s", auth_class_names, auth_class,
+					auth->get(auth, AUTH_RULE_XAUTH_BACKEND) ?: "any");
+			id = auth->get(auth, AUTH_RULE_XAUTH_IDENTITY);
+			if (id)
+			{
+				fprintf(out, " with XAuth identity '%Y'", id);
+			}
+			fprintf(out, "\n");
+		}
+		else
+		{
+			fprintf(out, "%N authentication\n", auth_class_names, auth_class);
 		}
 
 		cert = auth->get(auth, AUTH_RULE_CA_CERT);
@@ -479,18 +491,18 @@ METHOD(stroke_list_t, status, void,
 
 		fprintf(out, "Connections:\n");
 		enumerator = charon->backends->create_peer_cfg_enumerator(
-									charon->backends, NULL, NULL, NULL, NULL);
+							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			if (peer_cfg->get_ike_version(peer_cfg) != 2 ||
-				(name && !streq(name, peer_cfg->get_name(peer_cfg))))
+			if (name && !streq(name, peer_cfg->get_name(peer_cfg)))
 			{
 				continue;
 			}
 
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			fprintf(out, "%12s:  %s...%s", peer_cfg->get_name(peer_cfg),
-				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg));
+			fprintf(out, "%12s:  %s...%s (%N)", peer_cfg->get_name(peer_cfg),
+				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg),
+				ike_version_names, peer_cfg->get_ike_version(peer_cfg));
 
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
@@ -666,15 +678,12 @@ static void list_public_key(public_key_t *public, FILE *out)
 	private_key_t *private = NULL;
 	chunk_t keyid;
 	identification_t *id;
-	auth_cfg_t *auth;
 
 	if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
-		auth = auth_cfg_create();
 		private = lib->credmgr->get_private(lib->credmgr,
-									public->get_type(public), id, auth);
-		auth->destroy(auth);
+									public->get_type(public), id, NULL);
 		id->destroy(id);
 	}
 
@@ -819,8 +828,8 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 	x509_flag_t flag_mask;
 
 	/* mask all auxiliary flags */
-	flag_mask = ~(X509_SERVER_AUTH | X509_CLIENT_AUTH |
-				  X509_SELF_SIGNED | X509_IP_ADDR_BLOCKS );
+	flag_mask = ~(X509_SERVER_AUTH | X509_CLIENT_AUTH | X509_IKE_INTERMEDIATE |
+				  X509_SELF_SIGNED | X509_IP_ADDR_BLOCKS);
 
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, (void**)&cert))

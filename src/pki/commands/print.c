@@ -133,6 +133,10 @@ static void print_x509(x509_t *x509)
 	{
 		printf("clientAuth ");
 	}
+	if (flags & X509_IKE_INTERMEDIATE)
+	{
+		printf("iKEIntermediate ");
+	}
 	if (flags & X509_SELF_SIGNED)
 	{
 		printf("self-signed ");

@@ -74,7 +74,7 @@ struct private_auth_payload_t {
  * The defined offsets are the positions in a object of type
  * private_auth_payload_t.
  */
-encoding_rule_t auth_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload)		},
 	/* the critical bit */
@@ -96,7 +96,7 @@ encoding_rule_t auth_payload_encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[1])	},
 	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[2])	},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
-	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data)	}
+	{ CHUNK_DATA,		offsetof(private_auth_payload_t, auth_data)	}
 };
 
 /*
@@ -119,11 +119,17 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_auth_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_auth_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = auth_payload_encodings;
-	*rule_count = countof(auth_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_auth_payload_t *this)
+{
+	return 8;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
@@ -167,7 +173,7 @@ METHOD(auth_payload_t, set_data, void,
 {
 	free(this->auth_data.ptr);
 	this->auth_data = chunk_clone(data);
-	this->payload_length = AUTH_PAYLOAD_HEADER_LENGTH + this->auth_data.len;
+	this->payload_length = get_header_length(this) + this->auth_data.len;
 }
 
 METHOD(auth_payload_t, get_data, chunk_t,
@@ -195,6 +201,7 @@ auth_payload_t *auth_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -208,7 +215,7 @@ auth_payload_t *auth_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = AUTH_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 	);
 	return &this->public;
 }

@@ -60,9 +60,9 @@ struct private_add_notify_t {
 
 METHOD(listener_t, message, bool,
 	private_add_notify_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
@@ -89,7 +89,7 @@ METHOD(listener_t, message, bool,
 		{
 			data = chunk_clone(chunk_create(this->data, strlen(this->data)));
 		}
-		notify = notify_payload_create_from_protocol_and_type(
+		notify = notify_payload_create_from_protocol_and_type(NOTIFY,
 									this->esp ? PROTO_ESP : PROTO_IKE, type);
 		notify->set_spi(notify, this->spi);
 		if (data.len)

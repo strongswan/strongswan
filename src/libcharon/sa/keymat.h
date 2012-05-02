@@ -21,19 +21,27 @@
 #ifndef KEYMAT_H_
 #define KEYMAT_H_
 
+typedef struct keymat_t keymat_t;
+
 #include <library.h>
 #include <utils/identification.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/aead.h>
 #include <config/proposal.h>
+#include <config/peer_cfg.h>
 #include <sa/ike_sa_id.h>
-
-typedef struct keymat_t keymat_t;
 
 /**
  * Derivation an management of sensitive keying material.
  */
 struct keymat_t {
+
+	/**
+	 * Get IKE version of this keymat.
+	 *
+	 * @return			IKEV1 for keymat_v1_t, IKEV2 for keymat_v2_t
+	 */
+	ike_version_t (*get_version)(keymat_t *this);
 
 	/**
 	 * Create a diffie hellman object for key agreement.
@@ -50,58 +58,8 @@ struct keymat_t {
 	 * @param group			diffie hellman group
 	 * @return				DH object, NULL if group not supported
 	 */
-	diffie_hellman_t* (*create_dh)(keymat_t *this, diffie_hellman_group_t group);
-
-	/**
-	 * Derive keys for the IKE_SA.
-	 *
-	 * These keys are not handed out, but are used by the associated signers,
-	 * crypters and authentication functions.
-	 *
-	 * @param proposal	selected algorithms
-	 * @param dh		diffie hellman key allocated by create_dh()
-	 * @param nonce_i	initiators nonce value
-	 * @param nonce_r	responders nonce value
-	 * @param id		IKE_SA identifier
-	 * @param rekey_prf	PRF of old SA if rekeying, PRF_UNDEFINED otherwise
-	 * @param rekey_sdk	SKd of old SA if rekeying
-	 * @return			TRUE on success
-	 */
-	bool (*derive_ike_keys)(keymat_t *this, proposal_t *proposal,
-							diffie_hellman_t *dh, chunk_t nonce_i,
-							chunk_t nonce_r, ike_sa_id_t *id,
-							pseudo_random_function_t rekey_function,
-							chunk_t rekey_skd);
-	/**
-	 * Derive keys for a CHILD_SA.
-	 *
-	 * The keys for the CHILD_SA are allocated in the integ and encr chunks.
-	 * An implementation might hand out encrypted keys only, which are
-	 * decrypted in the kernel before use.
-	 * If no PFS is used for the CHILD_SA, dh can be NULL.
-	 *
-	 * @param proposal	selected algorithms
-	 * @param dh		diffie hellman key allocated by create_dh(), or NULL
-	 * @param nonce_i	initiators nonce value
-	 * @param nonce_r	responders nonce value
-	 * @param encr_i	chunk to write initiators encryption key to
-	 * @param integ_i	chunk to write initiators integrity key to
-	 * @param encr_r	chunk to write responders encryption key to
-	 * @param integ_r	chunk to write responders integrity key to
-	 * @return			TRUE on success
-	 */
-	bool (*derive_child_keys)(keymat_t *this,
-							  proposal_t *proposal, diffie_hellman_t *dh,
-							  chunk_t nonce_i, chunk_t nonce_r,
-							  chunk_t *encr_i, chunk_t *integ_i,
-							  chunk_t *encr_r, chunk_t *integ_r);
-	/**
-	 * Get SKd to pass to derive_ikey_keys() during rekeying.
-	 *
-	 * @param skd		chunk to write SKd to (internal data)
-	 * @return			PRF function to derive keymat
-	 */
-	pseudo_random_function_t (*get_skd)(keymat_t *this, chunk_t *skd);
+	diffie_hellman_t* (*create_dh)(keymat_t *this,
+								   diffie_hellman_group_t group);
 
 	/*
 	 * Get a AEAD transform to en-/decrypt and sign/verify IKE messages.
@@ -112,52 +70,34 @@ struct keymat_t {
 	aead_t* (*get_aead)(keymat_t *this, bool in);
 
 	/**
-	 * Generate octets to use for authentication procedure (RFC4306 2.15).
-	 *
-	 * This method creates the plain octets and is usually signed by a private
-	 * key. PSK and EAP authentication include a secret into the data, use
-	 * the get_psk_sig() method instead.
-	 *
-	 * @param verify		TRUE to create for verfification, FALSE to sign
-	 * @param ike_sa_init	encoded ike_sa_init message
-	 * @param nonce			nonce value
-	 * @param id			identity
-	 * @param reserved		reserved bytes of id_payload
-	 * @return				authentication octets
-	 */
-	chunk_t (*get_auth_octets)(keymat_t *this, bool verify, chunk_t ike_sa_init,
-							   chunk_t nonce, identification_t *id,
-							   char reserved[3]);
-	/**
-	 * Build the shared secret signature used for PSK and EAP authentication.
-	 *
-	 * This method wraps the get_auth_octets() method and additionally
-	 * includes the secret into the signature. If no secret is given, SK_p is
-	 * used as secret (used for EAP methods without MSK).
-	 *
-	 * @param verify		TRUE to create for verfification, FALSE to sign
-	 * @param ike_sa_init	encoded ike_sa_init message
-	 * @param nonce			nonce value
-	 * @param secret		optional secret to include into signature
-	 * @param id			identity
-	 * @param reserved		reserved bytes of id_payload
-	 * @return				signature octets
-	 */
-	chunk_t (*get_psk_sig)(keymat_t *this, bool verify, chunk_t ike_sa_init,
-						   chunk_t nonce, chunk_t secret,
-						   identification_t *id, char reserved[3]);
-	/**
 	 * Destroy a keymat_t.
 	 */
 	void (*destroy)(keymat_t *this);
 };
 
 /**
- * Create a keymat instance.
+ * Create the appropriate keymat_t implementation based on the IKE version.
  *
- * @param initiator		TRUE if we are the initiator
- * @return				keymat instance
+ * @param version			requested IKE version
+ * @param initiator			TRUE if we are initiator
+ * @return					keymat_t implmenetation
  */
-keymat_t *keymat_create(bool initiator);
+keymat_t *keymat_create(ike_version_t version, bool initiator);
+
+/**
+ * Look up the key length of an encryption algorithm.
+ *
+ * @param alg				algorithm to get key length for
+ * @return					key length in bits
+ */
+int keymat_get_keylen_encr(encryption_algorithm_t alg);
+
+/**
+ * Look up the key length of an integrity algorithm.
+ *
+ * @param alg				algorithm to get key length for
+ * @return					key length in bits
+ */
+int keymat_get_keylen_integ(integrity_algorithm_t alg);
 
 #endif /** KEYMAT_H_ @}*/

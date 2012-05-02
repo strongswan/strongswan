@@ -32,9 +32,9 @@ struct private_log_id_t {
 
 METHOD(listener_t, message, bool,
 	private_log_id_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (incoming)
+	if (incoming && plain)
 	{
 		enumerator_t *enumerator;
 		payload_t *payload;

@@ -30,7 +30,7 @@
 /**
  * Protocol version of this implementation
  */
-#define HA_MESSAGE_VERSION 2
+#define HA_MESSAGE_VERSION 3
 
 typedef struct ha_message_t ha_message_t;
 typedef enum ha_message_type_t ha_message_type_t;
@@ -63,6 +63,8 @@ enum ha_message_type_t {
 	HA_STATUS,
 	/** segments the receiving node is requested to resync */
 	HA_RESYNC,
+	/** IV synchronization for IKEv1 Main/Aggressive mode */
+	HA_IKE_IV,
 };
 
 /**
@@ -76,7 +78,7 @@ extern enum_name_t *ha_message_type_names;
 enum ha_message_attribute_t {
 	/** ike_sa_id_t*, to identify IKE_SA */
 	HA_IKE_ID = 1,
-	/** ike_Sa_id_t*, identifies IKE_SA which gets rekeyed */
+	/** ike_sa_id_t*, identifies IKE_SA which gets rekeyed */
 	HA_IKE_REKEY_ID,
 	/** identification_t*, local identity */
 	HA_LOCAL_ID,
@@ -142,6 +144,16 @@ enum ha_message_attribute_t {
 	HA_SEGMENT,
 	/** u_int16_t, Extended Sequence numbers */
 	HA_ESN,
+	/** u_int8_t, IKE version */
+	HA_IKE_VERSION,
+	/** chunk_t, own DH public value */
+	HA_LOCAL_DH,
+	/** chunk_t, remote DH public value */
+	HA_REMOTE_DH,
+	/** chunk_t, shared secret for IKEv1 key derivation */
+	HA_PSK,
+	/** chunk_t, IV for next IKEv1 message */
+	HA_IV,
 };
 
 /**

@@ -764,14 +764,11 @@ int main (int argc, char **argv)
 
 					if (conn->startup == STARTUP_START)
 					{
-						if (conn->keyexchange != KEY_EXCHANGE_IKEV1)
+						if (starter_charon_pid())
 						{
-							if (starter_charon_pid())
-							{
-								starter_stroke_initiate_conn(conn);
-							}
+							starter_stroke_initiate_conn(conn);
 						}
-						else
+						if (conn->keyexchange == KEY_EXCHANGE_IKEV1)
 						{
 							if (starter_pluto_pid())
 							{
@@ -781,14 +778,11 @@ int main (int argc, char **argv)
 					}
 					else if (conn->startup == STARTUP_ROUTE)
 					{
-						if (conn->keyexchange != KEY_EXCHANGE_IKEV1)
+						if (starter_charon_pid())
 						{
-							if (starter_charon_pid())
-							{
-								starter_stroke_route_conn(conn);
-							}
+							starter_stroke_route_conn(conn);
 						}
-						else
+						if (conn->keyexchange == KEY_EXCHANGE_IKEV1)
 						{
 							if (starter_pluto_pid())
 							{

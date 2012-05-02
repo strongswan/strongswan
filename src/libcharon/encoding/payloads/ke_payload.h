@@ -31,16 +31,10 @@ typedef struct ke_payload_t ke_payload_t;
 #include <crypto/diffie_hellman.h>
 
 /**
- * KE payload length in bytes without any key exchange data.
- */
-#define KE_PAYLOAD_HEADER_LENGTH 8
-
-/**
- * Class representing an IKEv2-KE Payload.
- *
- * The KE Payload format is described in RFC section 3.4.
+ * Class representing an IKEv1 or IKEv2 key exchange payload.
  */
 struct ke_payload_t {
+
 	/**
 	 * The payload_t interface.
 	 */
@@ -54,32 +48,34 @@ struct ke_payload_t {
 	chunk_t (*get_key_exchange_data) (ke_payload_t *this);
 
 	/**
-	 * Gets the Diffie-Hellman Group Number of this KE payload.
+	 * Gets the Diffie-Hellman Group Number of this KE payload (IKEv2 only).
 	 *
 	 * @return 					DH Group Number of this payload
 	 */
 	diffie_hellman_group_t (*get_dh_group_number) (ke_payload_t *this);
 
 	/**
-	 * Destroys an ke_payload_t object.
+	 * Destroys a ke_payload_t object.
 	 */
 	void (*destroy) (ke_payload_t *this);
 };
 
 /**
- * Creates an empty ke_payload_t object
+ * Creates an empty ke_payload_t object.
  *
- * @return ke_payload_t object
+ * @param type		KEY_EXCHANGE or KEY_EXCHANGE_V1
+ * @return			ke_payload_t object
  */
-ke_payload_t *ke_payload_create(void);
+ke_payload_t *ke_payload_create(payload_type_t type);
 
 /**
- * Creates a ke_payload_t from a diffie_hellman_t
+ * Creates a ke_payload_t from a diffie_hellman_t.
  *
- * @param diffie_hellman	diffie hellman object containing group and key
- * @return 					ke_payload_t object
+ * @param type		KEY_EXCHANGE or KEY_EXCHANGE_V1
+ * @param dh		diffie hellman object containing group and key
+ * @return 			ke_payload_t object
  */
-ke_payload_t *ke_payload_create_from_diffie_hellman(
-											diffie_hellman_t *diffie_hellman);
+ke_payload_t *ke_payload_create_from_diffie_hellman(payload_type_t type,
+													diffie_hellman_t *dh);
 
 #endif /** KE_PAYLOAD_H_ @}*/

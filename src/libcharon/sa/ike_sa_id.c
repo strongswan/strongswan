@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -30,13 +31,18 @@ struct private_ike_sa_id_t {
 	 */
 	ike_sa_id_t public;
 
+	/**
+	 * Major IKE version of IKE_SA.
+	 */
+	u_int8_t ike_version;
+
 	 /**
-	  * SPI of Initiator.
+	  * SPI of initiator.
 	  */
 	u_int64_t initiator_spi;
 
 	 /**
-	  * SPI of Responder.
+	  * SPI of responder.
 	  */
 	u_int64_t responder_spi;
 
@@ -45,6 +51,12 @@ struct private_ike_sa_id_t {
 	 */
 	bool is_initiator_flag;
 };
+
+METHOD(ike_sa_id_t, get_ike_version, u_int8_t,
+	private_ike_sa_id_t *this)
+{
+	return this->ike_version;
+}
 
 METHOD(ike_sa_id_t, set_responder_spi, void,
 	private_ike_sa_id_t *this, u_int64_t responder_spi)
@@ -77,23 +89,15 @@ METHOD(ike_sa_id_t, equals, bool,
 	{
 		return FALSE;
 	}
-	if ((this->is_initiator_flag == other->is_initiator_flag) &&
-		(this->initiator_spi == other->initiator_spi) &&
-		(this->responder_spi == other->responder_spi))
-	{
-		/* private_ike_sa_id's are equal */
-		return TRUE;
-	}
-	else
-	{
-		/* private_ike_sa_id's are not equal */
-		return FALSE;
-	}
+	return this->ike_version == other->ike_version &&
+		   this->initiator_spi == other->initiator_spi &&
+		   this->responder_spi == other->responder_spi;
 }
 
 METHOD(ike_sa_id_t, replace_values, void,
 	private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 {
+	this->ike_version = other->ike_version;
 	this->initiator_spi = other->initiator_spi;
 	this->responder_spi = other->responder_spi;
 	this->is_initiator_flag = other->is_initiator_flag;
@@ -108,22 +112,15 @@ METHOD(ike_sa_id_t, is_initiator, bool,
 METHOD(ike_sa_id_t, switch_initiator, bool,
 	private_ike_sa_id_t *this)
 {
-	if (this->is_initiator_flag)
-	{
-		this->is_initiator_flag = FALSE;
-	}
-	else
-	{
-		this->is_initiator_flag = TRUE;
-	}
+	this->is_initiator_flag = !this->is_initiator_flag;
 	return this->is_initiator_flag;
 }
 
 METHOD(ike_sa_id_t, clone_, ike_sa_id_t*,
 	private_ike_sa_id_t *this)
 {
-	return ike_sa_id_create(this->initiator_spi, this->responder_spi,
-							this->is_initiator_flag);
+	return ike_sa_id_create(this->ike_version, this->initiator_spi,
+							this->responder_spi, this->is_initiator_flag);
 }
 
 METHOD(ike_sa_id_t, destroy, void,
@@ -135,13 +132,14 @@ METHOD(ike_sa_id_t, destroy, void,
 /*
  * Described in header.
  */
-ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
-							   bool is_initiator_flag)
+ike_sa_id_t * ike_sa_id_create(u_int8_t ike_version, u_int64_t initiator_spi,
+							   u_int64_t responder_spi, bool is_initiator_flag)
 {
 	private_ike_sa_id_t *this;
 
 	INIT(this,
 		.public = {
+			.get_ike_version = _get_ike_version,
 			.set_responder_spi = _set_responder_spi,
 			.set_initiator_spi = _set_initiator_spi,
 			.get_responder_spi = _get_responder_spi,
@@ -153,6 +151,7 @@ ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
+		.ike_version = ike_version,
 		.initiator_spi = initiator_spi,
 		.responder_spi = responder_spi,
 		.is_initiator_flag = is_initiator_flag,

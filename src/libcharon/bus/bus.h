@@ -235,10 +235,15 @@ struct bus_t {
 	/**
 	 * Message send/receive hook.
 	 *
+	 * The hook is invoked twice for each message: Once with plain, parsed data
+	 * and once encoded and encrypted.
+	 *
 	 * @param message	message to send/receive
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
+	 * @param plain		TRUE if message is parsed and decrypted, FALSE it not
+	 * @param
 	 */
-	void (*message)(bus_t *this, message_t *message, bool incoming);
+	void (*message)(bus_t *this, message_t *message, bool incoming, bool plain);
 
 	/**
 	 * IKE_SA authorization hook.
@@ -264,12 +269,15 @@ struct bus_t {
 	 *
 	 * @param ike_sa	IKE_SA this keymat belongs to
 	 * @param dh		diffie hellman shared secret
+	 * @param dh_other	others DH public value (IKEv1 only)
 	 * @param nonce_i	initiators nonce
 	 * @param nonce_r	responders nonce
-	 * @param rekey		IKE_SA we are rekeying, if any
+	 * @param rekey		IKE_SA we are rekeying, if any (IKEv2 only)
+	 * @param shared	shared key used for key derivation (IKEv1-PSK only)
 	 */
 	void (*ike_keys)(bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
+					 chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
+					 ike_sa_t *rekey, shared_key_t *shared);
 	/**
 	 * CHILD_SA keymat hook.
 	 *

@@ -45,9 +45,9 @@ struct private_ignore_message_t {
 
 METHOD(listener_t, message, bool,
 	private_ignore_message_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (incoming == this->in &&
+	if (incoming == this->in && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{

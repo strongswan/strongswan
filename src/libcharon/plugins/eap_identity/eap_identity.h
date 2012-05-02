@@ -23,7 +23,7 @@
 
 typedef struct eap_identity_t eap_identity_t;
 
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * Implementation of the eap_method_t interface using EAP Identity.

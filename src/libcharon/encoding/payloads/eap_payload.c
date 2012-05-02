@@ -19,6 +19,7 @@
 #include "eap_payload.h"
 
 #include <daemon.h>
+#include <eap/eap.h>
 
 typedef struct private_eap_payload_t private_eap_payload_t;
 
@@ -65,7 +66,7 @@ struct private_eap_payload_t {
  * private_eap_payload_t.
  *
  */
-static encoding_rule_t eap_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_eap_payload_t, next_payload) 	},
 	/* the critical bit */
@@ -81,7 +82,7 @@ static encoding_rule_t eap_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_eap_payload_t, payload_length)	},
 	/* chunt to data, starting at "code" */
-	{ EAP_DATA,			offsetof(private_eap_payload_t, data)			},
+	{ CHUNK_DATA,		offsetof(private_eap_payload_t, data)			},
 };
 
 /*
@@ -143,11 +144,17 @@ METHOD(payload_t, verify, status_t,
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_eap_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_eap_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = eap_payload_encodings;
-	*rule_count = sizeof(eap_payload_encodings) / sizeof(encoding_rule_t);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_eap_payload_t *this)
+{
+	return 4;
 }
 
 METHOD(payload_t, get_payload_type, payload_type_t,
@@ -251,6 +258,7 @@ eap_payload_t *eap_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -265,7 +273,7 @@ eap_payload_t *eap_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = EAP_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 	);
 	return &this->public;
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,19 +30,24 @@ typedef struct ike_header_t ike_header_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Major Version of IKEv2.
+ * Major Version of IKEv1 we implement.
  */
-#define IKE_MAJOR_VERSION 2
+#define IKEV1_MAJOR_VERSION 1
 
 /**
- * Minor Version of IKEv2.
+ * Minor Version of IKEv1 we implement.
  */
-#define IKE_MINOR_VERSION 0
+#define IKEV1_MINOR_VERSION 0
 
 /**
- * Flag in IKEv2-Header. Always 0.
+ * Major Version of IKEv2 we implement.
  */
-#define HIGHER_VERSION_SUPPORTED_FLAG 0
+#define IKEV2_MAJOR_VERSION 2
+
+/**
+ * Minor Version of IKEv2 we implement.
+ */
+#define IKEV2_MINOR_VERSION 0
 
 /**
  * Length of IKE Header in Bytes.
@@ -57,9 +62,39 @@ typedef struct ike_header_t ike_header_t;
 enum exchange_type_t{
 
 	/**
-	 * EXCHANGE_TYPE_UNDEFINED. In private space, since not a official message type.
+	 * Identity Protection (Main mode).
 	 */
-	EXCHANGE_TYPE_UNDEFINED = 255,
+	ID_PROT = 2,
+
+	/**
+	 * Authentication Only.
+	 */
+	AUTH_ONLY = 3,
+
+	/**
+	 * Aggresive (Aggressive mode)
+	 */
+	AGGRESSIVE = 4,
+
+	/**
+	 * Informational in IKEv1
+	 */
+	INFORMATIONAL_V1 = 5,
+
+	/**
+	 * Transaction (ISAKMP Cfg Mode "draft-ietf-ipsec-isakmp-mode-cfg-05")
+	 */
+	TRANSACTION = 6,
+
+	/**
+	 * Quick Mode
+	 */
+	QUICK_MODE = 32,
+
+	/**
+	 * New Group Mode
+	 */
+	NEW_GROUP_MODE = 33,
 
 	/**
 	 * IKE_SA_INIT.
@@ -77,7 +112,7 @@ enum exchange_type_t{
 	CREATE_CHILD_SA = 36,
 
 	/**
-	 * INFORMATIONAL.
+	 * INFORMATIONAL in IKEv2.
 	 */
 	INFORMATIONAL = 37,
 
@@ -85,12 +120,18 @@ enum exchange_type_t{
 	 * IKE_SESSION_RESUME (RFC 5723).
 	 */
 	IKE_SESSION_RESUME = 38,
+
 #ifdef ME
 	/**
 	 * ME_CONNECT
 	 */
-	ME_CONNECT = 240
+	ME_CONNECT = 240,
 #endif /* ME */
+
+	/**
+	 * Undefined exchange type, in private space.
+	 */
+	EXCHANGE_TYPE_UNDEFINED = 255,
 };
 
 /**
@@ -99,12 +140,7 @@ enum exchange_type_t{
 extern enum_name_t *exchange_type_names;
 
 /**
- * An object of this type represents an IKEv2 header and is used to
- * generate and parse IKEv2 headers.
- *
- * The header format of an IKEv2-Message is compatible to the
- * ISAKMP-Header format to allow implementations supporting
- * both versions of the IKE-protocol.
+ * An object of this type represents an IKE header of either IKEv1 or IKEv2.
  */
 struct ike_header_t {
 	/**
@@ -115,7 +151,7 @@ struct ike_header_t {
 	/**
 	 * Get the initiator spi.
 	 *
-	 * @return 				initiator_spi
+	 * @return				initiator_spi
 	 */
 	u_int64_t (*get_initiator_spi) (ike_header_t *this);
 
@@ -129,7 +165,7 @@ struct ike_header_t {
 	/**
 	 * Get the responder spi.
 	 *
-	 * @return 				responder_spi
+	 * @return				responder_spi
 	 */
 	u_int64_t (*get_responder_spi) (ike_header_t *this);
 
@@ -143,7 +179,7 @@ struct ike_header_t {
 	/**
 	 * Get the major version.
 	 *
-	 * @return 				major version
+	 * @return				major version
 	 */
 	u_int8_t (*get_maj_version) (ike_header_t *this);
 
@@ -157,7 +193,7 @@ struct ike_header_t {
 	/**
 	 * Get the minor version.
 	 *
-	 * @return 				minor version
+	 * @return				minor version
 	 */
 	u_int8_t (*get_min_version) (ike_header_t *this);
 
@@ -171,7 +207,7 @@ struct ike_header_t {
 	/**
 	 * Get the response flag.
 	 *
-	 * @return 				response flag
+	 * @return				response flag
 	 */
 	bool (*get_response_flag) (ike_header_t *this);
 
@@ -185,7 +221,7 @@ struct ike_header_t {
 	/**
 	 * Get "higher version supported"-flag.
 	 *
-	 * @return 				version flag
+	 * @return				version flag
 	 */
 	bool (*get_version_flag) (ike_header_t *this);
 
@@ -199,7 +235,7 @@ struct ike_header_t {
 	/**
 	 * Get the initiator flag.
 	 *
-	 * @return 				initiator flag
+	 * @return				initiator flag
 	 */
 	bool (*get_initiator_flag) (ike_header_t *this);
 
@@ -211,9 +247,51 @@ struct ike_header_t {
 	void (*set_initiator_flag) (ike_header_t *this, bool initiator);
 
 	/**
+	 * Get the encryption flag.
+	 *
+	 * @return				encryption flag
+	 */
+	bool (*get_encryption_flag) (ike_header_t *this);
+
+	/**
+	 * Set the encryption flag.
+	 *
+	 * @param encryption		encryption flag
+	 */
+	void (*set_encryption_flag) (ike_header_t *this, bool encryption);
+
+	/**
+	 * Get the commit flag.
+	 *
+	 * @return				commit flag
+	 */
+	bool (*get_commit_flag) (ike_header_t *this);
+
+	/**
+	 * Set the commit flag.
+	 *
+	 * @param commit		commit flag
+	 */
+	void (*set_commit_flag) (ike_header_t *this, bool commit);
+
+	/**
+	 * Get the authentication only flag.
+	 *
+	 * @return				authonly flag
+	 */
+	bool (*get_authonly_flag) (ike_header_t *this);
+
+	/**
+	 * Set the authentication only flag.
+	 *
+	 * @param authonly		authonly flag
+	 */
+	void (*set_authonly_flag) (ike_header_t *this, bool authonly);
+
+	/**
 	 * Get the exchange type.
 	 *
-	 * @return 				exchange type
+	 * @return				exchange type
 	 */
 	u_int8_t (*get_exchange_type) (ike_header_t *this);
 
@@ -227,7 +305,7 @@ struct ike_header_t {
 	/**
 	 * Get the message id.
 	 *
-	 * @return 				message id
+	 * @return				message id
 	 */
 	u_int32_t (*get_message_id) (ike_header_t *this);
 
@@ -245,10 +323,17 @@ struct ike_header_t {
 };
 
 /**
- * Create an ike_header_t object
+ * Create an empty ike_header_t object.
  *
  * @return ike_header_t object
  */
 ike_header_t *ike_header_create(void);
+
+/**
+ * Create an ike_header_t object for a specific major/minor version
+ *
+ * @return ike_header_t object
+ */
+ike_header_t *ike_header_create_version(int major, int minor);
 
 #endif /** IKE_HEADER_H_ @}*/

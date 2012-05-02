@@ -42,6 +42,8 @@ enum auth_class_t {
 	AUTH_CLASS_PSK = 2,
 	/** authentication using EAP */
 	AUTH_CLASS_EAP = 3,
+	/** authentication using IKEv1 XAUTH */
+	AUTH_CLASS_XAUTH = 4,
 };
 
 /**
@@ -75,6 +77,10 @@ enum auth_rule_t {
 	AUTH_RULE_EAP_TYPE,
 	/** EAP vendor for vendor specific type, u_int32_t */
 	AUTH_RULE_EAP_VENDOR,
+	/** XAUTH backend name to use, char* */
+	AUTH_RULE_XAUTH_BACKEND,
+	/** XAuth identity to use or require, identification_t* */
+	AUTH_RULE_XAUTH_IDENTITY,
 	/** certificate authority, certificate_t* */
 	AUTH_RULE_CA_CERT,
 	/** intermediate certificate in trustchain, certificate_t* */

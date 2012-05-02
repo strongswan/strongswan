@@ -15,22 +15,12 @@
  */
 
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <debug.h>
 
 #include "random_rng.h"
-
-#ifndef DEV_RANDOM
-# define DEV_RANDOM "/dev/random"
-#endif
-
-#ifndef DEV_URANDOM
-# define DEV_URANDOM "/dev/urandom"
-#endif
+#include "random_plugin.h"
 
 typedef struct private_random_rng_t private_random_rng_t;
 
@@ -47,12 +37,7 @@ struct private_random_rng_t {
 	/**
 	 * random device, depends on quality
 	 */
-	int dev;
-
-	/**
-	 * file we read random bytes from
-	 */
-	char *file;
+	int fd;
 };
 
 METHOD(rng_t, get_bytes, void,
@@ -65,14 +50,12 @@ METHOD(rng_t, get_bytes, void,
 
 	while (done < bytes)
 	{
-		got = read(this->dev, buffer + done, bytes - done);
+		got = read(this->fd, buffer + done, bytes - done);
 		if (got <= 0)
 		{
-			DBG1(DBG_LIB, "reading from \"%s\" failed: %s, retrying...",
-				 this->file, strerror(errno));
-			close(this->dev);
+			DBG1(DBG_LIB, "reading from random FD %d failed: %s, retrying...",
+				 this->fd, strerror(errno));
 			sleep(1);
-			this->dev = open(this->file, 0);
 		}
 		done += got;
 	}
@@ -88,7 +71,6 @@ METHOD(rng_t, allocate_bytes, void,
 METHOD(rng_t, destroy, void,
 	private_random_rng_t *this)
 {
-	close(this->dev);
 	free(this);
 }
 
@@ -109,22 +91,18 @@ random_rng_t *random_rng_create(rng_quality_t quality)
 		},
 	);
 
-	if (quality == RNG_TRUE)
+	switch (quality)
 	{
-		this->file = DEV_RANDOM;
-	}
-	else
-	{
-		this->file = DEV_URANDOM;
+		case RNG_TRUE:
+			this->fd = random_plugin_get_dev_random();
+			break;
+		case RNG_STRONG:
+		case RNG_WEAK:
+		default:
+			this->fd = random_plugin_get_dev_urandom();
+			break;
 	}
 
-	this->dev = open(this->file, 0);
-	if (this->dev < 0)
-	{
-		DBG1(DBG_LIB, "opening \"%s\" failed: %s", this->file, strerror(errno));
-		free(this);
-		return NULL;
-	}
 	return &this->public;
 }
 

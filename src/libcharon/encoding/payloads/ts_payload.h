@@ -31,11 +31,6 @@ typedef struct ts_payload_t ts_payload_t;
 #include <encoding/payloads/traffic_selector_substructure.h>
 
 /**
- * Length of a TS payload without the Traffic selectors.
- */
-#define TS_PAYLOAD_HEADER_LENGTH 8
-
-/**
  * Class representing an IKEv2 TS payload.
  *
  * The TS payload format is described in RFC section 3.13.

@@ -31,11 +31,6 @@ typedef enum cert_encoding_t cert_encoding_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a cert payload without the cert data in bytes.
- */
-#define CERT_PAYLOAD_HEADER_LENGTH 5
-
-/**
  * Certifcate encodings, as in RFC4306
  */
 enum cert_encoding_t {
@@ -60,9 +55,7 @@ enum cert_encoding_t {
 extern enum_name_t *cert_encoding_names;
 
 /**
- * Class representing an IKEv2 CERT payload.
- *
- * The CERT payload format is described in RFC section 3.6.
+ * Class representing an IKEv1/IKEv2 CERT payload.
  */
 struct cert_payload_t {
 
@@ -103,7 +96,6 @@ struct cert_payload_t {
 	 */
 	char *(*get_url)(cert_payload_t *this);
 
-
 	/**
 	 * Destroys the cert_payload object.
 	 */
@@ -113,23 +105,26 @@ struct cert_payload_t {
 /**
  * Creates an empty certificate payload.
  *
+ * @param type				payload type (for IKEv1 or IKEv2)
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create(void);
+cert_payload_t *cert_payload_create(payload_type_t type);
 
 /**
  * Creates a certificate payload with an embedded certificate.
  *
+ * @param type				payload type (for IKEv1 or IKEv2)
  * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
+cert_payload_t *cert_payload_create_from_cert(payload_type_t type,
+											  certificate_t *cert);
 
 /**
- * Creates a certificate payload with hash and URL encoding of a certificate.
+ * Creates an IKEv2 certificate payload with hash and URL encoding.
  *
  * @param hash				hash of the DER encoded certificate (get's cloned)
- * @param url				the URL to locate the certificate (get's cloned)
+ * @param url				URL to the certificate
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
@@ -137,10 +132,12 @@ cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
 /**
  * Creates a custom certificate payload using type and associated data.
  *
- * @param type				encoding type of certificate
+ * @param type				payload type (for IKEv1 or IKEv2)
+ * @param encoding			encoding type of certificate
  * @param data				associated data (gets owned)
  * @return					cert_payload_t object
  */
-cert_payload_t *cert_payload_create_custom(cert_encoding_t type, chunk_t data);
+cert_payload_t *cert_payload_create_custom(payload_type_t type,
+										cert_encoding_t encoding, chunk_t data);
 
 #endif /** CERT_PAYLOAD_H_ @}*/

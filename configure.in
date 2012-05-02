@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.6.3)
+AC_INIT(strongSwan,5.0.0dr1)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
@@ -131,6 +131,8 @@ ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
 ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
+ARG_ENABL_SET([xauth-generic],  [enable generic XAuth backend.])
+ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
@@ -161,11 +163,13 @@ ARG_ENABL_SET([manager],        [enable web management console (proof of concept
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
 ARG_DISBL_SET([load-warning],   [disable the charon/pluto plugin load option warning in starter.])
-ARG_DISBL_SET([pluto],          [disable the IKEv1 keying daemon pluto.])
+ARG_ENABL_SET([pluto],          [enable the IKEv1 keying daemon pluto.])
+ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
+ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
 ARG_DISBL_SET([xauth],          [disable xauth plugin.])
 ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
 ARG_DISBL_SET([adns],           [disable the use of adns in pluto (disables opportunistic encryption).])
-ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
+ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
@@ -873,6 +877,8 @@ ADD_PLUGIN([eap-tls],              [c libcharon])
 ADD_PLUGIN([eap-ttls],             [c libcharon])
 ADD_PLUGIN([eap-peap],             [c libcharon])
 ADD_PLUGIN([eap-tnc],              [c libcharon])
+ADD_PLUGIN([xauth-generic],        [c libcharon])
+ADD_PLUGIN([xauth-eap],            [c libcharon])
 ADD_PLUGIN([tnc-ifmap],            [c libcharon])
 ADD_PLUGIN([tnc-pdp],              [c libcharon])
 ADD_PLUGIN([tnc-imc],              [c libcharon])
@@ -998,6 +1004,8 @@ AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
 AM_CONDITIONAL(USE_EAP_PEAP, test x$eap_peap = xtrue)
 AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
+AM_CONDITIONAL(USE_XAUTH_GENERIC, test x$xauth_generic = xtrue)
+AM_CONDITIONAL(USE_XAUTH_EAP, test x$xauth_eap = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
@@ -1048,6 +1056,8 @@ AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
+AM_CONDITIONAL(USE_IKEV1, test x$ikev1 = xtrue)
+AM_CONDITIONAL(USE_IKEV2, test x$ikev2 = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_ADNS, test x$adns = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
@@ -1083,7 +1093,12 @@ fi
 if test x$monolithic = xtrue; then
 	AC_DEFINE(MONOLITHIC)
 fi
-
+if test x$ikev1 = xtrue; then
+	AC_DEFINE(USE_IKEV1)
+fi
+if test x$ikev2 = xtrue; then
+	AC_DEFINE(USE_IKEV2)
+fi
 
 dnl ==============================
 dnl  build Makefiles
@@ -1178,6 +1193,8 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_peap/Makefile
 	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
+	src/libcharon/plugins/xauth_generic/Makefile
+	src/libcharon/plugins/xauth_eap/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile

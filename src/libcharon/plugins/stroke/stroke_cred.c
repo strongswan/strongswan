@@ -675,7 +675,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		pin_data.keyid = chunk;
 		pin_data.try = 1;
 		cb = callback_cred_create_shared((void*)pin_cb, &pin_data);
-		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 	}
 	else
 	{
@@ -684,7 +684,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
 		mem = mem_cred_create();
 		mem->add_shared(mem, shared, id, NULL);
-		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 	}
 
 	/* unlock: smartcard needs the pin and potentially calls public set */
@@ -792,7 +792,7 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		pp_data.path = path;
 		pp_data.try = 1;
 		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
-		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 								 BUILD_FROM_FILE, path, BUILD_END);
@@ -809,7 +809,7 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS, secret);
 		mem = mem_cred_create();
 		mem->add_shared(mem, shared, NULL);
-		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 								 BUILD_FROM_FILE, path, BUILD_END);

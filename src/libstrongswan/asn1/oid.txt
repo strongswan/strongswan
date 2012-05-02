@@ -232,6 +232,9 @@
               0x02           "caIssuers"				OID_CA_ISSUERS
               0x03           "timeStamping"
               0x05           "caRepository"
+          0x08               "ipsec"
+            0x02             "certificate"
+              0x02           "iKEIntermediate"				OID_IKE_INTERMEDIATE
   0x0E                       "oiw"
     0x03                     "secsig"
       0x02                   "algorithms"

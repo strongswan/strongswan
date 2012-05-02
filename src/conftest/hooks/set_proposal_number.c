@@ -69,9 +69,9 @@ static void copy_proposal_algs(proposal_t *from, proposal_t *to,
 
 METHOD(listener_t, message, bool,
 	private_set_proposal_number_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (!incoming &&
+	if (!incoming && plain &&
 		message->get_request(message) == this->req &&
 		message->get_message_id(message) == this->id)
 	{
@@ -121,7 +121,7 @@ METHOD(listener_t, message, bool,
 			}
 			enumerator->destroy(enumerator);
 		}
-		sa = sa_payload_create_from_proposal_list(updated);
+		sa = sa_payload_create_from_proposals_v2(updated);
 		list->destroy_offset(list, offsetof(proposal_t, destroy));
 		updated->destroy_offset(updated, offsetof(proposal_t, destroy));
 		message->add_payload(message, (payload_t*)sa);

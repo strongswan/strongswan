@@ -29,14 +29,7 @@ typedef struct configuration_attribute_t configuration_attribute_t;
 #include <encoding/payloads/payload.h>
 
 /**
- * Configuration attribute header length in bytes.
- */
-#define CONFIGURATION_ATTRIBUTE_HEADER_LENGTH 4
-
-/**
- * Class representing an IKEv2-CONFIGURATION Attribute.
- *
- * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
+ * Class representing an IKEv2 configuration attribute / IKEv1 data attribute.
  */
 struct configuration_attribute_t {
 
@@ -53,11 +46,18 @@ struct configuration_attribute_t {
 	configuration_attribute_type_t (*get_type)(configuration_attribute_t *this);
 
 	/**
-	 * Returns the value of the attribute.
+	 * Returns the value of the attribute as chunk.
 	 *
 	 * @return 		chunk_t pointing to the internal value
 	 */
-	chunk_t (*get_value) (configuration_attribute_t *this);
+	chunk_t (*get_chunk) (configuration_attribute_t *this);
+
+	/**
+	 * Returns the 2 byte value of the attribute as u_int16.
+	 *
+	 * @return 		attribute value
+	 */
+	u_int16_t (*get_value) (configuration_attribute_t *this);
 
 	/**
 	 * Destroys an configuration_attribute_t object.
@@ -68,18 +68,30 @@ struct configuration_attribute_t {
 /**
  * Creates an empty configuration attribute.
  *
- * @return		created configuration attribute
+ * @param type		CONFIGURATION_ATTRIBUTE or CONFIGURATION_ATTRIBUTE_V1
+ * @return			created configuration attribute
  */
-configuration_attribute_t *configuration_attribute_create();
+configuration_attribute_t *configuration_attribute_create(payload_type_t type);
 
 /**
  * Creates a configuration attribute with type and value.
  *
- * @param type	type of configuration attribute
- * @param value	value, gets cloned
- * @return		created configuration attribute
+ * @param type		CONFIGURATION_ATTRIBUTE or CONFIGURATION_ATTRIBUTE_V1
+ * @param attr_type	type of configuration attribute
+ * @param chunk		attribute value, gets cloned
+ * @return			created configuration attribute
+ */
+configuration_attribute_t *configuration_attribute_create_chunk(
+	payload_type_t type, configuration_attribute_type_t attr_type, chunk_t chunk);
+
+/**
+ * Creates a IKEv1 configuration attribute with 2 bytes value (IKEv1 only).
+ *
+ * @param attr_type	type of configuration attribute
+ * @param value		attribute value, gets cloned
+ * @return			created CONFIGURATION_ATTRIBUTE_V1 configuration attribute
  */
 configuration_attribute_t *configuration_attribute_create_value(
-							configuration_attribute_type_t type, chunk_t value);
+					configuration_attribute_type_t attr_type, u_int16_t value);
 
 #endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

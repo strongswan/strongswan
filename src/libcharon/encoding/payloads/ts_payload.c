@@ -81,7 +81,7 @@ struct private_ts_payload_t {
  * The defined offsets are the positions in a object of type
  * private_ts_payload_t.
  */
-encoding_rule_t ts_payload_encodings[] = {
+static encoding_rule_t encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_ts_payload_t, next_payload)	},
 	/* the critical bit */
@@ -102,8 +102,9 @@ encoding_rule_t ts_payload_encodings[] = {
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[0])},
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[1])},
 	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[2])},
-	/* some ts data bytes, length is defined in PAYLOAD_LENGTH */
-	{ TRAFFIC_SELECTORS,offsetof(private_ts_payload_t, substrs)			}
+	/* wrapped list of traffic selectors substructures */
+	{ PAYLOAD_LIST + TRAFFIC_SELECTOR_SUBSTRUCTURE,
+						offsetof(private_ts_payload_t, substrs)			},
 };
 
 /*
@@ -145,11 +146,17 @@ METHOD(payload_t, verify, status_t,
 	return status;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_ts_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_ts_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = ts_payload_encodings;
-	*rule_count = countof(ts_payload_encodings);
+	*rules = encodings;
+	return countof(encodings);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_ts_payload_t *this)
+{
+	return 8;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
@@ -182,7 +189,7 @@ static void compute_length(private_ts_payload_t *this)
 	enumerator_t *enumerator;
 	payload_t *subst;
 
-	this->payload_length = TS_PAYLOAD_HEADER_LENGTH;
+	this->payload_length = get_header_length(this);
 	this->ts_num = 0;
 	enumerator = this->substrs->create_enumerator(this->substrs);
 	while (enumerator->enumerate(enumerator, &subst))
@@ -250,6 +257,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -262,7 +270,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = TS_PAYLOAD_HEADER_LENGTH,
+		.payload_length = get_header_length(this),
 		.is_initiator = is_initiator,
 		.substrs = linked_list_create(),
 	);

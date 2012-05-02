@@ -1,0 +1,425 @@
+/*
+ * Copyright (C) 2011 Martin Willi
+ * Copyright (C) 2011 revosec AG
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#include "mode_config.h"
+
+#include <daemon.h>
+#include <hydra.h>
+#include <encoding/payloads/cp_payload.h>
+
+typedef struct private_mode_config_t private_mode_config_t;
+
+/**
+ * Private members of a mode_config_t task.
+ */
+struct private_mode_config_t {
+
+	/**
+	 * Public methods and task_t interface.
+	 */
+	mode_config_t public;
+
+	/**
+	 * Assigned IKE_SA.
+	 */
+	ike_sa_t *ike_sa;
+
+	/**
+	 * Are we the initiator?
+	 */
+	bool initiator;
+
+	/**
+	 * virtual ip
+	 */
+	host_t *virtual_ip;
+
+	/**
+	 * list of attributes requested and its handler, entry_t
+	 */
+	linked_list_t *requested;
+
+	/**
+	 * Identifier to include in response
+	 */
+	u_int16_t identifier;
+};
+
+/**
+ * Entry for a requested attribute and the requesting handler
+ */
+typedef struct {
+	/** attribute requested */
+	configuration_attribute_type_t type;
+	/** handler requesting this attribute */
+	attribute_handler_t *handler;
+} entry_t;
+
+/**
+ * build INTERNAL_IPV4/6_ADDRESS attribute from virtual ip
+ */
+static configuration_attribute_t *build_vip(host_t *vip)
+{
+	configuration_attribute_type_t type;
+	chunk_t chunk, prefix;
+
+	if (vip->get_family(vip) == AF_INET)
+	{
+		type = INTERNAL_IP4_ADDRESS;
+		if (vip->is_anyaddr(vip))
+		{
+			chunk = chunk_empty;
+		}
+		else
+		{
+			chunk = vip->get_address(vip);
+		}
+	}
+	else
+	{
+		type = INTERNAL_IP6_ADDRESS;
+		if (vip->is_anyaddr(vip))
+		{
+			chunk = chunk_empty;
+		}
+		else
+		{
+			prefix = chunk_alloca(1);
+			*prefix.ptr = 64;
+			chunk = vip->get_address(vip);
+			chunk = chunk_cata("cc", chunk, prefix);
+		}
+	}
+	return configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE_V1,
+												type, chunk);
+}
+
+/**
+ * Handle a received attribute as initiator
+ */
+static void handle_attribute(private_mode_config_t *this,
+							 configuration_attribute_t *ca)
+{
+	attribute_handler_t *handler = NULL;
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	/* find the handler which requested this attribute */
+	enumerator = this->requested->create_enumerator(this->requested);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == ca->get_type(ca))
+		{
+			handler = entry->handler;
+			this->requested->remove_at(this->requested, enumerator);
+			free(entry);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* and pass it to the handle function */
+	handler = hydra->attributes->handle(hydra->attributes,
+							this->ike_sa->get_other_id(this->ike_sa), handler,
+							ca->get_type(ca), ca->get_chunk(ca));
+	if (handler)
+	{
+		this->ike_sa->add_configuration_attribute(this->ike_sa,
+				handler, ca->get_type(ca), ca->get_chunk(ca));
+	}
+}
+
+/**
+ * process a single configuration attribute
+ */
+static void process_attribute(private_mode_config_t *this,
+							  configuration_attribute_t *ca)
+{
+	host_t *ip;
+	chunk_t addr;
+	int family = AF_INET6;
+
+	switch (ca->get_type(ca))
+	{
+		case INTERNAL_IP4_ADDRESS:
+			family = AF_INET;
+			/* fall */
+		case INTERNAL_IP6_ADDRESS:
+		{
+			addr = ca->get_chunk(ca);
+			if (addr.len == 0)
+			{
+				ip = host_create_any(family);
+			}
+			else
+			{
+				/* skip prefix byte in IPv6 payload*/
+				if (family == AF_INET6)
+				{
+					addr.len--;
+				}
+				ip = host_create_from_chunk(family, addr, 0);
+			}
+			if (ip)
+			{
+				DESTROY_IF(this->virtual_ip);
+				this->virtual_ip = ip;
+			}
+			break;
+		}
+		default:
+		{
+			if (this->initiator)
+			{
+				handle_attribute(this, ca);
+			}
+		}
+	}
+}
+
+/**
+ * Scan for configuration payloads and attributes
+ */
+static void process_payloads(private_mode_config_t *this, message_t *message)
+{
+	enumerator_t *enumerator, *attributes;
+	payload_t *payload;
+
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == CONFIGURATION_V1)
+		{
+			cp_payload_t *cp = (cp_payload_t*)payload;
+			configuration_attribute_t *ca;
+
+			switch (cp->get_type(cp))
+			{
+				case CFG_REQUEST:
+					this->identifier = cp->get_identifier(cp);
+					/* FALL */
+				case CFG_REPLY:
+					attributes = cp->create_attribute_enumerator(cp);
+					while (attributes->enumerate(attributes, &ca))
+					{
+						DBG2(DBG_IKE, "processing %N attribute",
+							 configuration_attribute_type_names, ca->get_type(ca));
+						process_attribute(this, ca);
+					}
+					attributes->destroy(attributes);
+					break;
+				default:
+					DBG1(DBG_IKE, "ignoring %N config payload",
+						 config_type_names, cp->get_type(cp));
+					break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(task_t, build_i, status_t,
+	private_mode_config_t *this, message_t *message)
+{
+	cp_payload_t *cp = NULL;
+	enumerator_t *enumerator;
+	attribute_handler_t *handler;
+	peer_cfg_t *config;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	host_t *vip;
+
+	/* reuse virtual IP if we already have one */
+	vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+	if (!vip)
+	{
+		config = this->ike_sa->get_peer_cfg(this->ike_sa);
+		vip = config->get_virtual_ip(config);
+	}
+	if (vip)
+	{
+		cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+		cp->add_attribute(cp, build_vip(vip));
+	}
+
+	enumerator = hydra->attributes->create_initiator_enumerator(hydra->attributes,
+							this->ike_sa->get_other_id(this->ike_sa), vip);
+	while (enumerator->enumerate(enumerator, &handler, &type, &data))
+	{
+		configuration_attribute_t *ca;
+		entry_t *entry;
+
+		DBG2(DBG_IKE, "building %N attribute",
+			 configuration_attribute_type_names, type);
+		ca = configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE_V1,
+												  type, data);
+		if (!cp)
+		{
+			cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
+		}
+		cp->add_attribute(cp, ca);
+
+		INIT(entry,
+			.type = type,
+			.handler = handler,
+		);
+		this->requested->insert_last(this->requested, entry);
+	}
+	enumerator->destroy(enumerator);
+
+	if (cp)
+	{
+		message->add_payload(message, (payload_t*)cp);
+	}
+	return NEED_MORE;
+}
+
+METHOD(task_t, process_r, status_t,
+	private_mode_config_t *this, message_t *message)
+{
+	process_payloads(this, message);
+	return NEED_MORE;
+}
+
+METHOD(task_t, build_r, status_t,
+	private_mode_config_t *this, message_t *message)
+{
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t value;
+	host_t *vip = NULL;
+	cp_payload_t *cp = NULL;
+	peer_cfg_t *config;
+	identification_t *id;
+
+	id = this->ike_sa->get_other_eap_id(this->ike_sa);
+
+	config = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (this->virtual_ip)
+	{
+		DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
+		if (config->get_pool(config))
+		{
+			vip = hydra->attributes->acquire_address(hydra->attributes,
+						config->get_pool(config), id, this->virtual_ip);
+		}
+		cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
+		if (vip)
+		{
+			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", vip, id);
+			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
+			cp->add_attribute(cp, build_vip(vip));
+		}
+		else
+		{
+			DBG1(DBG_IKE, "no virtual IP found, sending empty config payload");
+		}
+	}
+	/* query registered providers for additional attributes to include */
+	enumerator = hydra->attributes->create_responder_enumerator(
+						hydra->attributes, config->get_pool(config), id, vip);
+	while (enumerator->enumerate(enumerator, &type, &value))
+	{
+		if (!cp)
+		{
+			cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
+		}
+		DBG2(DBG_IKE, "building %N attribute",
+			 configuration_attribute_type_names, type);
+		cp->add_attribute(cp,
+			configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE_V1,
+												 type, value));
+	}
+	enumerator->destroy(enumerator);
+
+	if (cp)
+	{
+		cp->set_identifier(cp, this->identifier);
+		message->add_payload(message, (payload_t*)cp);
+	}
+	DESTROY_IF(vip);
+	return SUCCESS;
+}
+
+METHOD(task_t, process_i, status_t,
+	private_mode_config_t *this, message_t *message)
+{
+	process_payloads(this, message);
+
+	if (this->virtual_ip)
+	{
+		this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
+	}
+	return SUCCESS;
+}
+
+METHOD(task_t, get_type, task_type_t,
+	private_mode_config_t *this)
+{
+	return TASK_MODE_CONFIG;
+}
+
+METHOD(task_t, migrate, void,
+	private_mode_config_t *this, ike_sa_t *ike_sa)
+{
+	DESTROY_IF(this->virtual_ip);
+
+	this->ike_sa = ike_sa;
+	this->virtual_ip = NULL;
+	this->requested->destroy_function(this->requested, free);
+	this->requested = linked_list_create();
+}
+
+METHOD(task_t, destroy, void,
+	private_mode_config_t *this)
+{
+	DESTROY_IF(this->virtual_ip);
+	this->requested->destroy_function(this->requested, free);
+	free(this);
+}
+
+/*
+ * Described in header.
+ */
+mode_config_t *mode_config_create(ike_sa_t *ike_sa, bool initiator)
+{
+	private_mode_config_t *this;
+
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+		},
+		.initiator = initiator,
+		.ike_sa = ike_sa,
+		.requested = linked_list_create(),
+	);
+
+	if (initiator)
+	{
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
+	}
+	else
+	{
+		this->public.task.build = _build_r;
+		this->public.task.process = _process_r;
+	}
+
+	return &this->public;
+}

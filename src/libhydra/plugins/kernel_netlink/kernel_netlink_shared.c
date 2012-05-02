@@ -206,6 +206,11 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 						free(out);
 						return ALREADY_DONE;
 					}
+					if (-err->error == ESRCH)
+					{	/* do not report missing entries */
+						free(out);
+						return NOT_FOUND;
+					}
 					DBG1(DBG_KNL, "received netlink error: %s (%d)",
 						 strerror(-err->error), -err->error);
 					free(out);

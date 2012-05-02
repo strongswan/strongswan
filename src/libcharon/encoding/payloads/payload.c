@@ -20,6 +20,7 @@
 
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/sa_payload.h>
+
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -34,13 +35,30 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+#include <encoding/payloads/hash_payload.h>
 #include <encoding/payloads/unknown_payload.h>
-
 
 ENUM_BEGIN(payload_type_names, NO_PAYLOAD, NO_PAYLOAD,
 	"NO_PAYLOAD");
-ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION,
-							  GENERIC_SECURE_PASSWORD_METHOD, NO_PAYLOAD,
+ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
+	"SECURITY_ASSOCIATION_V1",
+	"PROPOSAL_V1",
+	"TRANSFORM_V1",
+	"KEY_EXCHANGE_V1",
+	"ID_V1",
+	"CERTIFICATE_V1",
+	"CERTIFICATE_REQUEST_V1",
+	"HASH_V1",
+	"SIGNATURE_V1",
+	"NONCE_V1",
+	"NOTIFY_V1",
+	"DELETE_V1",
+	"VENDOR_ID_V1",
+	"CONFIGURATION_V1");
+ENUM_NEXT(payload_type_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+	"NAT_D_V1",
+	"NAT_OA_V1");
+ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METHOD, NAT_OA_V1,
 	"SECURITY_ASSOCIATION",
 	"KEY_EXCHANGE",
 	"ID_INITIATOR",
@@ -61,30 +79,56 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION,
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, ID_PEER,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
+	"PROPOSAL_SUBSTRUCTURE_V1",
 	"TRANSFORM_SUBSTRUCTURE",
+	"TRANSFORM_SUBSTRUCTURE_V1",
 	"TRANSFORM_ATTRIBUTE",
+	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-	"CONFIGURATION_ATTRIBUTE");
+	"CONFIGURATION_ATTRIBUTE",
+	"CONFIGURATION_ATTRIBUTE_V1",
+	"ENCRYPTED_V1");
 #else
-ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE,
-							  GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWORD_METHOD,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
+	"PROPOSAL_SUBSTRUCTURE_V1",
 	"TRANSFORM_SUBSTRUCTURE",
+	"TRANSFORM_SUBSTRUCTURE_V1",
 	"TRANSFORM_ATTRIBUTE",
+	"TRANSFORM_ATTRIBUTE_V1",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-	"CONFIGURATION_ATTRIBUTE");
+	"CONFIGURATION_ATTRIBUTE",
+	"CONFIGURATION_ATTRIBUTE_V1",
+	"ENCRYPTED_V1");
 #endif /* ME */
-ENUM_END(payload_type_names, CONFIGURATION_ATTRIBUTE);
+ENUM_END(payload_type_names, ENCRYPTED_V1);
 
 /* short forms of payload names */
 ENUM_BEGIN(payload_type_short_names, NO_PAYLOAD, NO_PAYLOAD,
 	"--");
-ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION,
-									GENERIC_SECURE_PASSWORD_METHOD, NO_PAYLOAD,
+ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION_V1, CONFIGURATION_V1, NO_PAYLOAD,
+	"SA",
+	"PROP",
+	"TRANS",
+	"KE",
+	"ID",
+	"CERT",
+	"CERTREQ",
+	"HASH",
+	"SIG",
+	"No",
+	"N",
+	"D",
+	"V",
+	"CP");
+ENUM_NEXT(payload_type_short_names, NAT_D_V1, NAT_OA_V1, CONFIGURATION_V1,
+	"NAT-D",
+	"NAT-OA");
+ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METHOD, NAT_OA_V1,
 	"SA",
 	"KE",
 	"IDi",
@@ -106,24 +150,33 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION,
 ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER,
 									GENERIC_SECURE_PASSWORD_METHOD,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, ID_PEER,
 	"HDR",
 	"PROP",
+	"PROP",
+	"TRANS",
 	"TRANS",
 	"TRANSATTR",
+	"TRANSATTR",
 	"TSSUB",
-	"CPATTR");
+	"CATTR",
+	"CATTR",
+	"E");
 #else
-ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE,
-									GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWORD_METHOD,
 	"HDR",
 	"PROP",
+	"PROP",
+	"TRANS",
 	"TRANS",
 	"TRANSATTR",
+	"TRANSATTR",
 	"TSSUB",
-	"CPATTR");
+	"CATTR",
+	"CATTR",
+	"E");
 #endif /* ME */
-ENUM_END(payload_type_short_names, CONFIGURATION_ATTRIBUTE);
+ENUM_END(payload_type_short_names, ENCRYPTED_V1);
 
 /*
  * see header
@@ -135,29 +188,36 @@ payload_t *payload_create(payload_type_t type)
 		case HEADER:
 			return (payload_t*)ike_header_create();
 		case SECURITY_ASSOCIATION:
-			return (payload_t*)sa_payload_create();
+		case SECURITY_ASSOCIATION_V1:
+			return (payload_t*)sa_payload_create(type);
 		case PROPOSAL_SUBSTRUCTURE:
-			return (payload_t*)proposal_substructure_create();
+		case PROPOSAL_SUBSTRUCTURE_V1:
+			return (payload_t*)proposal_substructure_create(type);
 		case TRANSFORM_SUBSTRUCTURE:
-			return (payload_t*)transform_substructure_create();
+		case TRANSFORM_SUBSTRUCTURE_V1:
+			return (payload_t*)transform_substructure_create(type);
 		case TRANSFORM_ATTRIBUTE:
-			return (payload_t*)transform_attribute_create();
+		case TRANSFORM_ATTRIBUTE_V1:
+			return (payload_t*)transform_attribute_create(type);
 		case NONCE:
-			return (payload_t*)nonce_payload_create();
+		case NONCE_V1:
+			return (payload_t*)nonce_payload_create(type);
 		case ID_INITIATOR:
-			return (payload_t*)id_payload_create(ID_INITIATOR);
 		case ID_RESPONDER:
-			return (payload_t*)id_payload_create(ID_RESPONDER);
+		case ID_V1:
+		case NAT_OA_V1:
 #ifdef ME
 		case ID_PEER:
-			return (payload_t*)id_payload_create(ID_PEER);
 #endif /* ME */
+			return (payload_t*)id_payload_create(type);
 		case AUTHENTICATION:
 			return (payload_t*)auth_payload_create();
 		case CERTIFICATE:
-			return (payload_t*)cert_payload_create();
+		case CERTIFICATE_V1:
+			return (payload_t*)cert_payload_create(type);
 		case CERTIFICATE_REQUEST:
-			return (payload_t*)certreq_payload_create();
+		case CERTIFICATE_REQUEST_V1:
+			return (payload_t*)certreq_payload_create(type);
 		case TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			return (payload_t*)traffic_selector_substructure_create();
 		case TRAFFIC_SELECTOR_INITIATOR:
@@ -165,21 +225,32 @@ payload_t *payload_create(payload_type_t type)
 		case TRAFFIC_SELECTOR_RESPONDER:
 			return (payload_t*)ts_payload_create(FALSE);
 		case KEY_EXCHANGE:
-			return (payload_t*)ke_payload_create();
+		case KEY_EXCHANGE_V1:
+			return (payload_t*)ke_payload_create(type);
 		case NOTIFY:
-			return (payload_t*)notify_payload_create();
+		case NOTIFY_V1:
+			return (payload_t*)notify_payload_create(type);
 		case DELETE:
-			return (payload_t*)delete_payload_create(0);
+		case DELETE_V1:
+			return (payload_t*)delete_payload_create(type, 0);
 		case VENDOR_ID:
-			return (payload_t*)vendor_id_payload_create();
+		case VENDOR_ID_V1:
+			return (payload_t*)vendor_id_payload_create(type);
+		case HASH_V1:
+		case SIGNATURE_V1:
+		case NAT_D_V1:
+			return (payload_t*)hash_payload_create(type);
 		case CONFIGURATION:
-			return (payload_t*)cp_payload_create();
+		case CONFIGURATION_V1:
+			return (payload_t*)cp_payload_create(type);
 		case CONFIGURATION_ATTRIBUTE:
-			return (payload_t*)configuration_attribute_create();
+		case CONFIGURATION_ATTRIBUTE_V1:
+			return (payload_t*)configuration_attribute_create(type);
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
 		case ENCRYPTED:
-			return (payload_t*)encryption_payload_create();
+		case ENCRYPTED_V1:
+			return (payload_t*)encryption_payload_create(type);
 		default:
 			return (payload_t*)unknown_payload_create(type);
 	}
@@ -190,8 +261,19 @@ payload_t *payload_create(payload_type_t type)
  */
 bool payload_is_known(payload_type_t type)
 {
-	if (type == HEADER ||
-		(type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION))
+	if (type == HEADER)
+	{
+		return TRUE;
+	}
+	if (type >= SECURITY_ASSOCIATION && type <= EXTENSIBLE_AUTHENTICATION)
+	{
+		return TRUE;
+	}
+	if (type >= SECURITY_ASSOCIATION_V1 && type <= CONFIGURATION_V1)
+	{
+		return TRUE;
+	}
+	if (type >= NAT_D_V1 && type <= NAT_OA_V1)
 	{
 		return TRUE;
 	}
@@ -210,10 +292,9 @@ bool payload_is_known(payload_type_t type)
 void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip)
 {
 	encoding_rule_t *rule;
-	size_t count;
-	int i;
+	int i, count;
 
-	payload->get_encoding_rules(payload, &rule, &count);
+	count = payload->get_encoding_rules(payload, &rule);
 	for (i = 0; i < count; i++)
 	{
 		if (rule[i].type == type && skip-- == 0)

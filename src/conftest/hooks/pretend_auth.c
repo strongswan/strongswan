@@ -15,6 +15,7 @@
 
 #include "hook.h"
 
+#include <sa/ikev2/keymat_v2.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/auth_payload.h>
@@ -135,7 +136,7 @@ static void process_auth_request(private_pretend_auth_t *this,
 static void process_init_response(private_pretend_auth_t *this,
 								  ike_sa_t *ike_sa, message_t *message)
 {
-	this->ike_init = message->get_packet_data(message);
+	this->ike_init = chunk_clone(message->get_packet_data(message));
 }
 
 /**
@@ -153,7 +154,7 @@ static void build_certs(private_pretend_auth_t *this,
 	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 	if (cert)
 	{
-		payload = cert_payload_create_from_cert(cert);
+		payload = cert_payload_create_from_cert(CERTIFICATE, cert);
 		if (payload)
 		{
 			DBG1(DBG_IKE, "pretending end entity cert \"%Y\"",
@@ -166,7 +167,7 @@ static void build_certs(private_pretend_auth_t *this,
 	{
 		if (type == AUTH_RULE_IM_CERT)
 		{
-			payload = cert_payload_create_from_cert(cert);
+			payload = cert_payload_create_from_cert(CERTIFICATE, cert);
 			if (payload)
 			{
 				DBG1(DBG_IKE, "pretending issuer cert \"%Y\"",
@@ -190,7 +191,7 @@ static bool build_auth(private_pretend_auth_t *this,
 	auth_payload_t *auth_payload;
 	auth_method_t auth_method;
 	signature_scheme_t scheme;
-	keymat_t *keymat;
+	keymat_v2_t *keymat;
 
 	auth = auth_cfg_create();
 	private = lib->credmgr->get_private(lib->credmgr, KEY_ANY, this->id, auth);
@@ -235,7 +236,7 @@ static bool build_auth(private_pretend_auth_t *this,
 					key_type_names, private->get_type(private));
 			return FALSE;
 	}
-	keymat = ike_sa->get_keymat(ike_sa);
+	keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_init,
 									 this->nonce, this->id, this->reserved);
 	if (!private->sign(private, scheme, octets, &auth_data))
@@ -294,7 +295,7 @@ static void process_auth_response(private_pretend_auth_t *this,
 	if (this->proposal)
 	{
 		message->add_payload(message, (payload_t*)
-					sa_payload_create_from_proposal(this->proposal));
+					sa_payload_create_from_proposal_v2(this->proposal));
 	}
 	if (this->tsi)
 	{
@@ -310,35 +311,38 @@ static void process_auth_response(private_pretend_auth_t *this,
 
 METHOD(listener_t, message, bool,
 	private_pretend_auth_t *this, ike_sa_t *ike_sa, message_t *message,
-	bool incoming)
+	bool incoming, bool plain)
 {
-	if (incoming)
+	if (plain)
 	{
-		if (!message->get_request(message))
+		if (incoming)
 		{
-			if (message->get_exchange_type(message) == IKE_SA_INIT)
+			if (!message->get_request(message))
 			{
-				process_init_response(this, ike_sa, message);
-			}
-			if (message->get_exchange_type(message) == IKE_AUTH &&
-				message->get_message_id(message) == 1)
-			{
-				process_auth_response(this, ike_sa, message);
+				if (message->get_exchange_type(message) == IKE_SA_INIT)
+				{
+					process_init_response(this, ike_sa, message);
+				}
+				if (message->get_exchange_type(message) == IKE_AUTH &&
+					message->get_message_id(message) == 1)
+				{
+					process_auth_response(this, ike_sa, message);
+				}
 			}
 		}
-	}
-	else
-	{
-		if (message->get_request(message))
+		else
 		{
-			if (message->get_exchange_type(message) == IKE_SA_INIT)
+			if (message->get_request(message))
 			{
-				process_init_request(this, ike_sa, message);
-			}
-			if (message->get_exchange_type(message) == IKE_AUTH &&
-				message->get_message_id(message) == 1)
-			{
-				process_auth_request(this, ike_sa, message);
+				if (message->get_exchange_type(message) == IKE_SA_INIT)
+				{
+					process_init_request(this, ike_sa, message);
+				}
+				if (message->get_exchange_type(message) == IKE_AUTH &&
+					message->get_message_id(message) == 1)
+				{
+					process_auth_request(this, ike_sa, message);
+				}
 			}
 		}
 	}

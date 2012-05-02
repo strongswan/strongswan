@@ -43,6 +43,8 @@ typedef struct mark_t mark_t;
  * Mode of an IPsec SA.
  */
 enum ipsec_mode_t {
+	/** not using any encapsulation */
+	MODE_NONE = 0,
 	/** transport mode, no inner address */
 	MODE_TRANSPORT = 1,
 	/** tunnel mode, inner and outer addresses */
@@ -168,6 +170,11 @@ struct mark_t {
 	/** Mark mask */
 	u_int32_t mask;
 };
+
+/**
+ * Special mark value that uses the reqid of the CHILD_SA as mark
+ */
+#define MARK_REQID (0xFFFFFFFF)
 
 /**
  * Interface to the ipsec subsystem of the kernel.

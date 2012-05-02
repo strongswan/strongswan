@@ -406,7 +406,7 @@ METHOD(bus_t, child_state_change, void,
 }
 
 METHOD(bus_t, message, void,
-	private_bus_t *this, message_t *message, bool incoming)
+	private_bus_t *this, message_t *message, bool incoming, bool plain)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -425,7 +425,7 @@ METHOD(bus_t, message, void,
 		}
 		entry->calling++;
 		keep = entry->listener->message(entry->listener, ike_sa,
-										message, incoming);
+										message, incoming, plain);
 		entry->calling--;
 		if (!keep)
 		{
@@ -438,7 +438,8 @@ METHOD(bus_t, message, void,
 
 METHOD(bus_t, ike_keys, void,
 	private_bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-	chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
+	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
+	ike_sa_t *rekey, shared_key_t *shared)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -453,8 +454,8 @@ METHOD(bus_t, ike_keys, void,
 			continue;
 		}
 		entry->calling++;
-		keep = entry->listener->ike_keys(entry->listener, ike_sa, dh,
-										 nonce_i, nonce_r, rekey);
+		keep = entry->listener->ike_keys(entry->listener, ike_sa, dh, dh_other,
+										 nonce_i, nonce_r, rekey, shared);
 		entry->calling--;
 		if (!keep)
 		{

@@ -242,15 +242,13 @@ struct stroke_msg_t {
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
-			int ikev2;
-			/* next three are deprecated, use stroke_end_t.auth instead */
-			int auth_method;
-			u_int32_t eap_type;
-			u_int32_t eap_vendor;
+			int version;
 			char *eap_identity;
 			char *aaa_identity;
+			char *xauth_identity;
 			int mode;
 			int mobike;
+			int aggressive;
 			int force_encap;
 			int ipcomp;
 			time_t inactivity;

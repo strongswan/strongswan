@@ -148,11 +148,12 @@ typedef struct daemon_t daemon_t;
 #include <sa/trap_manager.h>
 #include <sa/shunt_manager.h>
 #include <config/backend_manager.h>
-#include <sa/authenticators/eap/eap_manager.h>
+#include <sa/eap/eap_manager.h>
+#include <sa/xauth/xauth_manager.h>
 
 #ifdef ME
-#include <sa/connect_manager.h>
-#include <sa/mediation_manager.h>
+#include <sa/ikev2/connect_manager.h>
+#include <sa/ikev2/mediation_manager.h>
 #endif /* ME */
 
 /**
@@ -234,6 +235,11 @@ struct daemon_t {
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
+
+	/**
+	 * XAuth manager to maintain registered XAuth methods
+	 */
+	xauth_manager_t *xauth;
 
 #ifdef ME
 	/**

@@ -29,19 +29,103 @@ typedef struct payload_t payload_t;
 #include <library.h>
 #include <encoding/payloads/encodings.h>
 
+/**
+ * Domain of interpretation used by IPsec/IKEv1
+ */
+#define IKEV1_DOI_IPSEC 1
 
 /**
- * Payload-Types of a IKEv2-Message.
+ * Payload-Types of an IKE message.
  *
  * Header and substructures are also defined as
  * payload types with values from PRIVATE USE space.
  */
-enum payload_type_t{
+enum payload_type_t {
 
 	/**
 	 * End of payload list in next_payload
 	 */
 	NO_PAYLOAD = 0,
+
+	/**
+	 * The security association (SA) payload containing proposals.
+	 */
+	SECURITY_ASSOCIATION_V1 = 1,
+
+	/**
+	 * The proposal payload, containing transforms.
+	 */
+	PROPOSAL_V1 = 2,
+
+	/**
+	 * The transform payload.
+	 */
+	TRANSFORM_V1 = 3,
+
+	/**
+	 * The key exchange (KE) payload containing diffie-hellman values.
+	 */
+	KEY_EXCHANGE_V1 = 4,
+
+	/**
+	 * ID payload.
+	 */
+	ID_V1 = 5,
+
+	/**
+	 * Certificate payload with certificates (CERT).
+	 */
+	CERTIFICATE_V1 = 6,
+
+	/**
+	 * Certificate request payload.
+	 */
+	CERTIFICATE_REQUEST_V1 = 7,
+
+	/**
+	 * Hash payload.
+	 */
+	HASH_V1 = 8,
+
+	/**
+	 * Signature payload
+	 */
+	SIGNATURE_V1 = 9,
+
+	/**
+	 * Nonce payload.
+	 */
+	NONCE_V1 = 10,
+
+	/**
+	 * Notification payload.
+	 */
+	NOTIFY_V1 = 11,
+
+	/**
+	 * Delete payload.
+	 */
+	DELETE_V1 = 12,
+
+	/**
+	 * Vendor id payload.
+	 */
+	VENDOR_ID_V1 = 13,
+
+	/**
+	 * Attribute payload (ISAKMP Mode Config, aka configuration payload.
+	 */
+	CONFIGURATION_V1 = 14,
+
+	/**
+	 * NAT discovery payload (NAT-D).
+	 */
+	NAT_D_V1 = 20,
+
+	/**
+	 * NAT original address payload (NAT-OA)
+	 */
+	NAT_OA_V1 = 21,
 
 	/**
 	 * The security association (SA) payload containing proposals.
@@ -139,50 +223,60 @@ enum payload_type_t{
 	/**
 	 * Header has a value of PRIVATE USE space.
 	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle IKEv2-Header like a payload.
+	 * This type and all the following are never sent over wire and are
+	 * used internally only.
 	 */
 	HEADER = 256,
 
 	/**
-	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a proposal substructure like a payload.
+	 * PROPOSAL_SUBSTRUCTURE, IKEv2 proposals in a SA payload.
 	 */
-	PROPOSAL_SUBSTRUCTURE = 257,
+	PROPOSAL_SUBSTRUCTURE,
 
 	/**
-	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform substructure like a payload.
+	 * PROPOSAL_SUBSTRUCTURE_V1, IKEv1 proposals in a SA payload.
 	 */
-	TRANSFORM_SUBSTRUCTURE = 258,
+	PROPOSAL_SUBSTRUCTURE_V1,
 
 	/**
-	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform attribute like a payload.
+	 * TRANSFORM_SUBSTRUCTURE, IKEv2 transforms in a proposal substructure.
 	 */
-	TRANSFORM_ATTRIBUTE = 259,
+	TRANSFORM_SUBSTRUCTURE,
 
 	/**
-	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform selector like a payload.
+	 * TRANSFORM_SUBSTRUCTURE_V1, IKEv1 transforms in a proposal substructure.
 	 */
-	TRAFFIC_SELECTOR_SUBSTRUCTURE = 260,
+	TRANSFORM_SUBSTRUCTURE_V1,
 
 	/**
-	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
-	 *
-	 * This payload type is not sent over wire and just
-	 * used internally to handle a transform attribute like a payload.
+	 * TRANSFORM_ATTRIBUTE, IKEv2 attribute in a transform.
 	 */
-	CONFIGURATION_ATTRIBUTE = 261,
+	TRANSFORM_ATTRIBUTE,
+
+	/**
+	 * TRANSFORM_ATTRIBUTE_V1, IKEv1 attribute in a transform.
+	 */
+	TRANSFORM_ATTRIBUTE_V1,
+
+	/**
+	 * TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic selector in a TS payload.
+	 */
+	TRAFFIC_SELECTOR_SUBSTRUCTURE,
+
+	/**
+	 * CONFIGURATION_ATTRIBUTE, IKEv2 attribute in a configuration payload.
+	 */
+	CONFIGURATION_ATTRIBUTE,
+
+	/**
+	 * CONFIGURATION_ATTRIBUTE_V1, IKEv1 attribute in a configuration payload.
+	 */
+	CONFIGURATION_ATTRIBUTE_V1,
+
+	/**
+	 * This is not really a payload, but rather the complete IKEv1 message.
+	 */
+	ENCRYPTED_V1,
 };
 
 /**
@@ -207,43 +301,50 @@ struct payload_t {
 	/**
 	 * Get encoding rules for this payload.
 	 *
-	 * @param rules			location to store pointer of first rule
-	 * @param rule_count	location to store number of rules
+	 * @param rules			location to store pointer to rules
+	 * @return				number of rules
 	 */
-	void (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules, size_t *rule_count);
+	int (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules);
+
+	/**
+	 * Get non-variable header length for a variable length payload.
+	 *
+	 * @return				fixed length of the payload
+	 */
+	int (*get_header_length)(payload_t *this);
 
 	/**
 	 * Get type of payload.
 	 *
-	 * @return 				type of this payload
+	 * @return				type of this payload
 	 */
 	payload_type_t (*get_type) (payload_t *this);
 
 	/**
 	 * Get type of next payload or NO_PAYLOAD (0) if this is the last one.
 	 *
-	 * @return 				type of next payload
+	 * @return				type of next payload
 	 */
 	payload_type_t (*get_next_type) (payload_t *this);
 
 	/**
 	 * Set type of next payload.
 	 *
-	 * @param type 			type of next payload
+	 * @param type			type of next payload
 	 */
 	void (*set_next_type) (payload_t *this,payload_type_t type);
 
 	/**
 	 * Get length of payload.
 	 *
-	 * @return 				length of this payload
+	 * @return				length of this payload
 	 */
 	size_t (*get_length) (payload_t *this);
 
 	/**
 	 * Verifies payload structure and makes consistence check.
 	 *
-	 * @return 				SUCCESS,  FAILED if consistence not given
+	 * @return				SUCCESS,  FAILED if consistence not given
 	 */
 	status_t (*verify) (payload_t *this);
 

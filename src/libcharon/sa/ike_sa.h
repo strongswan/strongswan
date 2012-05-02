@@ -37,6 +37,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
+#include <sa/task.h>
 #include <sa/task_manager.h>
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
@@ -69,7 +70,7 @@ typedef struct ike_sa_t ike_sa_t;
 enum ike_extension_t {
 
 	/**
-	 * peer supports NAT traversal as specified in RFC4306
+	 * peer supports NAT traversal as specified in RFC4306 or RFC3947
 	 */
 	EXT_NATT = (1<<0),
 
@@ -102,6 +103,16 @@ enum ike_extension_t {
 	 * peer is probably a Windows 7 RAS client
 	 */
 	EXT_MS_WINDOWS = (1<<6),
+
+	/**
+	 * peer supports XAuth authentication, draft-ietf-ipsec-isakmp-xauth-06
+	 */
+	EXT_XAUTH = (1<<7),
+
+	/**
+	 * peer supports DPD detection, RFC 3706 (or IKEv2)
+	 */
+	EXT_DPD = (1<<8),
 };
 
 /**
@@ -148,6 +159,16 @@ enum ike_condition_t {
 	 * IKE_SA is stale, the peer is currently unreachable (MOBIKE)
 	 */
 	COND_STALE = (1<<7),
+
+	/**
+	 * Initial contact received
+	 */
+	COND_INIT_CONTACT_SEEN = (1<<8),
+
+	/**
+	 * Peer has been authenticated using XAuth
+	 */
+	COND_XAUTH_AUTHENTICATED = (1<<9),
 };
 
 /**
@@ -270,6 +291,11 @@ struct ike_sa_t {
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
+	 * Gets the IKE version of the SA
+	 */
+	ike_version_t (*get_version)(ike_sa_t *this);
+
+	/**
 	 * Get the numerical ID uniquely defining this IKE_SA.
 	 *
 	 * @return				unique ID
@@ -288,7 +314,7 @@ struct ike_sa_t {
 	 *
 	 * @param state			state to set for the IKE_SA
 	 */
-	void (*set_state) (ike_sa_t *this, ike_sa_state_t ike_sa);
+	void (*set_state) (ike_sa_t *this, ike_sa_state_t state);
 
 	/**
 	 * Get the name of the connection this IKE_SA uses.
@@ -304,6 +330,14 @@ struct ike_sa_t {
 	 * @return				value as integer
 	 */
 	u_int32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
+
+	/**
+	 * Set statistic value of the IKE_SA.
+	 *
+	 * @param kind			kind of value to update
+	 * @param value			value as integer
+	 */
+	void (*set_statistic)(ike_sa_t *this, statistic_t kind, u_int32_t value);
 
 	/**
 	 * Get the own host address.
@@ -821,11 +855,13 @@ struct ike_sa_t {
 	 *
 	 * @param protocol		protocol of the SA
 	 * @param spi			inbound SPI of the CHILD_SA
+	 * @param expired		TRUE if CHILD_SA is expired
 	 * @return
 	 *						- NOT_FOUND, if IKE_SA has no such CHILD_SA
 	 *						- SUCCESS, if delete message sent
 	 */
-	status_t (*delete_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+	status_t (*delete_child_sa)(ike_sa_t *this, protocol_id_t protocol,
+								u_int32_t spi, bool expired);
 
 	/**
 	 * Destroy a CHILD SA with the specified protocol/SPI.
@@ -933,6 +969,13 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Queue a task for initiaton to the task manager.
+	 *
+	 * @param task			task to queue
+	 */
+	void (*queue_task)(ike_sa_t *this, task_t *task);
+
+	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *
 	 * When rekeying is completed, all CHILD_SAs, the virtual IP and all
@@ -955,11 +998,14 @@ struct ike_sa_t {
 };
 
 /**
- * Creates an ike_sa_t object with a specific ID.
+ * Creates an ike_sa_t object with a specific ID and IKE version.
  *
- * @param ike_sa_id		ike_sa_id_t object to associate with new IKE_SA
+ * @param ike_sa_id		ike_sa_id_t to associate with new IKE_SA/ISAKMP_SA
+ * @param initiator		TRUE to create this IKE_SA as initiator
+ * @param version		IKE version of this SA
  * @return				ike_sa_t object
  */
-ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
+ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
+						ike_version_t version);
 
 #endif /** IKE_SA_H_ @}*/

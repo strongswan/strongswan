@@ -571,7 +571,7 @@ METHOD(traffic_selector_t, includes, bool,
 	return FALSE;
 }
 
-METHOD(traffic_selector_t, to_subnet, void,
+METHOD(traffic_selector_t, to_subnet, bool,
 	private_traffic_selector_t *this, host_t **net, u_int8_t *mask)
 {
 	/* there is no way to do this cleanly, as the address range may
@@ -597,7 +597,7 @@ METHOD(traffic_selector_t, to_subnet, void,
 			break;
 		default:
 			/* unreachable */
-			return;
+			return FALSE;
 	}
 
 	net_chunk.ptr = malloc(net_chunk.len);
@@ -616,6 +616,8 @@ METHOD(traffic_selector_t, to_subnet, void,
 
 	*net = host_create_from_chunk(family, net_chunk, port);
 	chunk_free(&net_chunk);
+
+	return this->netbits != NON_SUBNET_ADDRESS_RANGE;
 }
 
 METHOD(traffic_selector_t, clone_, traffic_selector_t*,

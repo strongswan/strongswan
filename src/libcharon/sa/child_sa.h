@@ -275,6 +275,14 @@ struct child_sa_t {
 						 u_int64_t *bytes);
 
 	/**
+	 * Get the mark used with this CHILD_SA.
+	 *
+	 * @param inbound		TRUE to get inbound mark, FALSE for outbound
+	 * @return				mark used with this CHILD_SA
+	 */
+	mark_t (*get_mark)(child_sa_t *this, bool inbound);
+
+	/**
 	 * Get the traffic selectors list added for one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote

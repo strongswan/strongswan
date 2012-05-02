@@ -526,6 +526,16 @@ METHOD(child_sa_t, get_usestats, void,
 	}
 }
 
+METHOD(child_sa_t, get_mark, mark_t,
+	private_child_sa_t *this, bool inbound)
+{
+	if (inbound)
+	{
+		return this->mark_in;
+	}
+	return this->mark_out;
+}
+
 METHOD(child_sa_t, get_lifetime, time_t,
 	   private_child_sa_t *this, bool hard)
 {
@@ -1038,6 +1048,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.set_proposal = _set_proposal,
 			.get_lifetime = _get_lifetime,
 			.get_usestats = _get_usestats,
+			.get_mark = _get_mark,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
@@ -1077,6 +1088,15 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA */
 		this->reqid = rekey ? rekey : ++reqid;
+	}
+
+	if (this->mark_in.value == MARK_REQID)
+	{
+		this->mark_in.value = this->reqid;
+	}
+	if (this->mark_out.value == MARK_REQID)
+	{
+		this->mark_out.value = this->reqid;
 	}
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */

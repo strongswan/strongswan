@@ -67,15 +67,17 @@ struct private_ke_payload_t {
 	 * Key Exchange Data of this KE payload.
 	 */
 	chunk_t key_exchange_data;
+
+	/**
+	 * Payload type, KEY_EXCHANGE or KEY_EXCHANGE_V1
+	 */
+	payload_type_t type;
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-KE Payload.
- *
- * The defined offsets are the positions in a object of type
- * private_ke_payload_t.
+ * Encoding rules for IKEv2 key exchange payload.
  */
-encoding_rule_t ke_payload_encodings[] = {
+static encoding_rule_t encodings_v2[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,				offsetof(private_ke_payload_t, next_payload)	},
 	/* the critical bit */
@@ -96,7 +98,7 @@ encoding_rule_t ke_payload_encodings[] = {
 	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[0])},
 	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[1])},
 	/* Key Exchange Data is from variable size */
-	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data)}
+	{ CHUNK_DATA,			offsetof(private_ke_payload_t, key_exchange_data)},
 };
 
 /*
@@ -113,23 +115,62 @@ encoding_rule_t ke_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+static encoding_rule_t encodings_v1[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,				offsetof(private_ke_payload_t, next_payload) 	},
+	/* Reserved Byte */
+	{ RESERVED_BYTE,		offsetof(private_ke_payload_t, reserved_byte[0])},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,		offsetof(private_ke_payload_t, payload_length)	},
+	/* Key Exchange Data is from variable size */
+	{ CHUNK_DATA,			offsetof(private_ke_payload_t, key_exchange_data)},
+};
+
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !    RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                       Key Exchange Data                       ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+
 METHOD(payload_t, verify, status_t,
 	private_ke_payload_t *this)
 {
 	return SUCCESS;
 }
 
-METHOD(payload_t, get_encoding_rules, void,
-	private_ke_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, int,
+	private_ke_payload_t *this, encoding_rule_t **rules)
 {
-	*rules = ke_payload_encodings;
-	*rule_count = countof(ke_payload_encodings);
+	if (this->type == KEY_EXCHANGE)
+	{
+		*rules = encodings_v2;
+		return countof(encodings_v2);
+	}
+	*rules = encodings_v1;
+	return countof(encodings_v1);
+}
+
+METHOD(payload_t, get_header_length, int,
+	private_ke_payload_t *this)
+{
+	if (this->type == KEY_EXCHANGE)
+	{
+		return 8;
+	}
+	return 4;
 }
 
 METHOD(payload_t, get_type, payload_type_t,
 	private_ke_payload_t *this)
 {
-	return KEY_EXCHANGE;
+	return this->type;
 }
 
 METHOD(payload_t, get_next_type, payload_type_t,
@@ -172,7 +213,7 @@ METHOD2(payload_t, ke_payload_t, destroy, void,
 /*
  * Described in header
  */
-ke_payload_t *ke_payload_create()
+ke_payload_t *ke_payload_create(payload_type_t type)
 {
 	private_ke_payload_t *this;
 
@@ -181,6 +222,7 @@ ke_payload_t *ke_payload_create()
 			.payload_interface = {
 				.verify = _verify,
 				.get_encoding_rules = _get_encoding_rules,
+				.get_header_length = _get_header_length,
 				.get_length = _get_length,
 				.get_next_type = _get_next_type,
 				.set_next_type = _set_next_type,
@@ -192,22 +234,24 @@ ke_payload_t *ke_payload_create()
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = KE_PAYLOAD_HEADER_LENGTH,
 		.dh_group_number = MODP_NONE,
+		.type = type,
 	);
+	this->payload_length = get_header_length(this);
 	return &this->public;
 }
 
 /*
  * Described in header
  */
-ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *dh)
+ke_payload_t *ke_payload_create_from_diffie_hellman(payload_type_t type,
+													diffie_hellman_t *dh)
 {
-	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create();
+	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create(type);
 
 	dh->get_my_public_value(dh, &this->key_exchange_data);
 	this->dh_group_number = dh->get_dh_group(dh);
-	this->payload_length = this->key_exchange_data.len + KE_PAYLOAD_HEADER_LENGTH;
+	this->payload_length += this->key_exchange_data.len;
 
 	return &this->public;
 }
