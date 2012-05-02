@@ -114,8 +114,8 @@ METHOD(tnc_pdp_connections_t, add, void,
 	ike_sa_t *ike_sa;
 	bool found = FALSE;
 
-	ike_sa_id = ike_sa_id_create(0, 0, FALSE);
-	ike_sa = ike_sa_create(ike_sa_id);
+	ike_sa_id = ike_sa_id_create(IKEV2_MAJOR_VERSION, 0, 0, FALSE);
+	ike_sa = ike_sa_create(ike_sa_id, FALSE, IKEV2);
 	ike_sa_id->destroy(ike_sa_id);
 	ike_sa->set_other_id(ike_sa, peer);
 

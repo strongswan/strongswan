@@ -25,7 +25,7 @@ typedef struct tnc_pdp_connections_t tnc_pdp_connections_t;
 
 #include <library.h>
 #include <sa/ike_sa.h>
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 /**
  * Public interface of a tnc_pdp_connections object

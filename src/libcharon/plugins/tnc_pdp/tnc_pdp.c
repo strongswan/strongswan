@@ -27,7 +27,7 @@
 #include <pen/pen.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
-#include <sa/authenticators/eap/eap_method.h>
+#include <sa/eap/eap_method.h>
 
 typedef struct private_tnc_pdp_t private_tnc_pdp_t;
 
