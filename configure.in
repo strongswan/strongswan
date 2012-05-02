@@ -87,6 +87,7 @@ ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implement
 ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
 ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
+ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
 ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
@@ -822,6 +823,7 @@ ADD_PLUGIN([sha2],                 [s charon pluto openac scepclient pki scripts
 ADD_PLUGIN([md4],                  [s charon openac manager scepclient pki nm])
 ADD_PLUGIN([md5],                  [s charon pluto openac scepclient pki scripts attest nm])
 ADD_PLUGIN([random],               [s charon pluto openac scepclient pki scripts medsrv attest nm])
+ADD_PLUGIN([nonce],                [s charon nm])
 ADD_PLUGIN([x509],                 [s charon pluto openac scepclient pki scripts attest nm])
 ADD_PLUGIN([revocation],           [s charon nm])
 ADD_PLUGIN([constraints],          [s charon nm])
@@ -942,6 +944,7 @@ AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
 AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
+AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
 AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
@@ -1124,6 +1127,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/random/Makefile
+	src/libstrongswan/plugins/nonce/Makefile
 	src/libstrongswan/plugins/hmac/Makefile
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile

@@ -210,6 +210,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NONCE
+  SUBDIRS += plugins/nonce
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/nonce/libstrongswan-nonce.la
+endif
+endif
+
 if USE_HMAC
   SUBDIRS += plugins/hmac
 if MONOLITHIC
