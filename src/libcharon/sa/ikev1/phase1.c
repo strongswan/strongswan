@@ -595,20 +595,20 @@ METHOD(phase1_t, add_nonce_ke, bool,
 {
 	nonce_payload_t *nonce_payload;
 	ke_payload_t *ke_payload;
+	nonce_gen_t *nonceg;
 	chunk_t nonce;
-	rng_t *rng;
 
 	ke_payload = ke_payload_create_from_diffie_hellman(KEY_EXCHANGE_V1, this->dh);
 	message->add_payload(message, &ke_payload->payload_interface);
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!nonceg)
 	{
-		DBG1(DBG_IKE, "no RNG found to create nonce");
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FALSE;
 	}
-	rng->allocate_bytes(rng, NONCE_SIZE, &nonce);
-	rng->destroy(rng);
+	nonceg->allocate_nonce(nonceg, NONCE_SIZE, &nonce);
+	nonceg->destroy(nonceg);
 
 	nonce_payload = nonce_payload_create(NONCE_V1);
 	nonce_payload->set_nonce(nonce_payload, nonce);

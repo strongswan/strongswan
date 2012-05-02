@@ -297,16 +297,16 @@ static bool add_nonce(private_quick_mode_t *this, chunk_t *nonce,
 					  message_t *message)
 {
 	nonce_payload_t *nonce_payload;
-	rng_t *rng;
+	nonce_gen_t *nonceg;
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!nonceg)
 	{
-		DBG1(DBG_IKE, "no RNG found to create nonce");
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FALSE;
 	}
-	rng->allocate_bytes(rng, NONCE_SIZE, nonce);
-	rng->destroy(rng);
+	nonceg->allocate_nonce(nonceg, NONCE_SIZE, nonce);
+	nonceg->destroy(nonceg);
 
 	nonce_payload = nonce_payload_create(NONCE_V1);
 	nonce_payload->set_nonce(nonce_payload, *nonce);

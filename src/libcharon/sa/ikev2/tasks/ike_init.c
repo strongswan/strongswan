@@ -225,8 +225,6 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	rng_t *rng;
-
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
 		 this->ike_sa->get_name(this->ike_sa),
@@ -257,14 +255,16 @@ METHOD(task_t, build_i, status_t,
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
-		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-		if (!rng)
+		nonce_gen_t *nonceg;
+
+		nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+		if (!nonceg)
 		{
-			DBG1(DBG_IKE, "error generating nonce");
+			DBG1(DBG_IKE, "no nonce generator found to create nonce");
 			return FAILED;
 		}
-		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
-		rng->destroy(rng);
+		nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+		nonceg->destroy(nonceg);
 	}
 
 	if (this->cookie.ptr)
@@ -290,20 +290,20 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r,  status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	rng_t *rng;
+	nonce_gen_t *nonceg;
 
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!nonceg)
 	{
-		DBG1(DBG_IKE, "error generating nonce");
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FAILED;
 	}
-	rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
-	rng->destroy(rng);
+	nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+	nonceg->destroy(nonceg);
 
 #ifdef ME
 	{

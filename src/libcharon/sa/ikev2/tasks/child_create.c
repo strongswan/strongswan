@@ -192,18 +192,18 @@ static status_t get_nonce(message_t *message, chunk_t *nonce)
 /**
  * generate a new nonce to include in a CREATE_CHILD_SA message
  */
-static status_t generate_nonce(chunk_t *nonce)
+static status_t generate_nonce(private_child_create_t *this)
 {
-	rng_t *rng;
+	nonce_gen_t *nonceg;
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	nonceg = this->keymat->keymat.create_nonce_gen(&this->keymat->keymat);
+	if (!nonceg)
 	{
-		DBG1(DBG_IKE, "error generating nonce value, no RNG found");
+		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FAILED;
 	}
-	rng->allocate_bytes(rng, NONCE_SIZE, nonce);
-	rng->destroy(rng);
+	nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+	nonceg->destroy(nonceg);
 	return SUCCESS;
 }
 
@@ -720,7 +720,7 @@ METHOD(task_t, build_i, status_t,
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
 		case CREATE_CHILD_SA:
-			if (generate_nonce(&this->my_nonce) != SUCCESS)
+			if (generate_nonce(this) != SUCCESS)
 			{
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
@@ -909,7 +909,7 @@ METHOD(task_t, build_r, status_t,
 		case IKE_SA_INIT:
 			return get_nonce(message, &this->my_nonce);
 		case CREATE_CHILD_SA:
-			if (generate_nonce(&this->my_nonce) != SUCCESS)
+			if (generate_nonce(this) != SUCCESS)
 			{
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
 									chunk_empty);
