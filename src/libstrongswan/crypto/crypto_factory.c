@@ -50,6 +50,7 @@ struct entry_t {
 		hasher_constructor_t create_hasher;
 		prf_constructor_t create_prf;
 		rng_constructor_t create_rng;
+		nonce_gen_constructor_t create_nonce_gen;
 		dh_constructor_t create_dh;
 		void *create;
 	};
@@ -96,6 +97,11 @@ struct private_crypto_factory_t {
 	 * registered rngs, as entry_t
 	 */
 	linked_list_t *rngs;
+
+	/**
+	 * registered nonce generators, as entry_t
+	 */
+	linked_list_t *nonce_gens;
 
 	/**
 	 * registered diffie hellman, as entry_t
@@ -327,6 +333,25 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 		return constr(quality);
 	}
 	return NULL;
+}
+
+METHOD(crypto_factory_t, create_nonce_gen, nonce_gen_t*,
+	private_crypto_factory_t *this)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	nonce_gen_t *nonce_gen = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->nonce_gens->create_enumerator(this->nonce_gens);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		nonce_gen = entry->create_nonce_gen();
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	return nonce_gen;
 }
 
 METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
@@ -618,6 +643,33 @@ METHOD(crypto_factory_t, remove_rng, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(crypto_factory_t, add_nonce_gen, void,
+	private_crypto_factory_t *this, const char *plugin_name,
+	nonce_gen_constructor_t create)
+{
+	add_entry(this, this->nonce_gens, 0, plugin_name, 0, create);
+}
+
+METHOD(crypto_factory_t, remove_nonce_gen, void,
+	private_crypto_factory_t *this, nonce_gen_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->nonce_gens->create_enumerator(this->rngs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_nonce_gen == create)
+		{
+			this->nonce_gens->remove_at(this->nonce_gens, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(crypto_factory_t, add_dh, void,
 	private_crypto_factory_t *this,	diffie_hellman_group_t group,
 	 const char *plugin_name, dh_constructor_t create)
@@ -820,6 +872,7 @@ METHOD(crypto_factory_t, destroy, void,
 	this->hashers->destroy(this->hashers);
 	this->prfs->destroy(this->prfs);
 	this->rngs->destroy(this->rngs);
+	this->nonce_gens->destroy(this->nonce_gens);
 	this->dhs->destroy(this->dhs);
 	this->tester->destroy(this->tester);
 	this->lock->destroy(this->lock);
@@ -841,6 +894,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher = _create_hasher,
 			.create_prf = _create_prf,
 			.create_rng = _create_rng,
+			.create_nonce_gen = _create_nonce_gen,
 			.create_dh = _create_dh,
 			.add_crypter = _add_crypter,
 			.remove_crypter = _remove_crypter,
@@ -854,6 +908,8 @@ crypto_factory_t *crypto_factory_create()
 			.remove_prf = _remove_prf,
 			.add_rng = _add_rng,
 			.remove_rng = _remove_rng,
+			.add_nonce_gen = _add_nonce_gen,
+			.remove_nonce_gen = _remove_nonce_gen,
 			.add_dh = _add_dh,
 			.remove_dh = _remove_dh,
 			.create_crypter_enumerator = _create_crypter_enumerator,
@@ -872,6 +928,7 @@ crypto_factory_t *crypto_factory_create()
 		.hashers = linked_list_create(),
 		.prfs = linked_list_create(),
 		.rngs = linked_list_create(),
+		.nonce_gens = linked_list_create(),
 		.dhs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.tester = crypto_tester_create(),

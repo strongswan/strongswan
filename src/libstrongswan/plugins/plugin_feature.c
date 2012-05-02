@@ -29,6 +29,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"PRF",
 	"DH",
 	"RNG",
+	"NONCE_GEN",
 	"PRIVKEY",
 	"PRIVKEY_GEN",
 	"PRIVKEY_SIGN",
@@ -74,6 +75,8 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->arg.dh_group == b->arg.dh_group;
 			case FEATURE_RNG:
 				return a->arg.rng_quality <= b->arg.rng_quality;
+			case FEATURE_NONCE_GEN:
+				return TRUE;
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
 			case FEATURE_PUBKEY:
@@ -168,6 +171,12 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_RNG:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
 					rng_quality_names, feature->arg.rng_quality) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_NONCE_GEN:
+			if (asprintf(&str, "%N", plugin_feature_names, feature->type) > 0)
 			{
 				return str;
 			}
@@ -301,6 +310,10 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 			lib->crypto->add_rng(lib->crypto, feature->arg.rng_quality,
 								name, reg->arg.reg.f);
 			break;
+		case FEATURE_NONCE_GEN:
+			lib->crypto->add_nonce_gen(lib->crypto,
+								name, reg->arg.reg.f);
+			break;
 		case FEATURE_PRIVKEY:
 		case FEATURE_PRIVKEY_GEN:
 			lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY,
@@ -371,6 +384,9 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RNG:
 			lib->crypto->remove_rng(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_NONCE_GEN:
+			lib->crypto->remove_nonce_gen(lib->crypto, reg->arg.reg.f);
 			break;
 		case FEATURE_PRIVKEY:
 		case FEATURE_PRIVKEY_GEN:

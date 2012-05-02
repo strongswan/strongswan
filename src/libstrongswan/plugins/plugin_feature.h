@@ -107,6 +107,8 @@ struct plugin_feature_t {
 		FEATURE_DH,
 		/** rng_t */
 		FEATURE_RNG,
+		/** nonce_gen_t */
+		FEATURE_NONCE_GEN,
 		/** generic private key support */
 		FEATURE_PRIVKEY,
 		/** generating new private keys */
@@ -258,6 +260,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_PRF(kind, alg)						__PLUGIN_FEATURE(kind, PRF, .prf = alg)
 #define _PLUGIN_FEATURE_DH(kind, group)						__PLUGIN_FEATURE(kind, DH, .dh_group = group)
 #define _PLUGIN_FEATURE_RNG(kind, quality)					__PLUGIN_FEATURE(kind, RNG, .rng_quality = quality)
+#define _PLUGIN_FEATURE_NONCE_GEN(kind, ...)				__PLUGIN_FEATURE(kind, NONCE_GEN, .custom = NULL)
 #define _PLUGIN_FEATURE_PRIVKEY(kind, type)					__PLUGIN_FEATURE(kind, PRIVKEY, .privkey = type)
 #define _PLUGIN_FEATURE_PRIVKEY_GEN(kind, type)				__PLUGIN_FEATURE(kind, PRIVKEY_GEN, .privkey_gen = type)
 #define _PLUGIN_FEATURE_PRIVKEY_SIGN(kind, scheme)			__PLUGIN_FEATURE(kind, PRIVKEY_SIGN, .privkey_sign = scheme)
@@ -284,6 +287,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_PRF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_DH(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_RNG(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_NONCE_GEN(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_PRIVKEY(type, f, final)	__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_PRIVKEY_GEN(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_PUBKEY(type, f, final)		__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
