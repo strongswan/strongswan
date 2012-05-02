@@ -352,6 +352,11 @@ then
     echo -n " --enable-ha" >> $INSTALLSHELL
 fi
 
+if [ "$USE_PLUTO" = "yes" ]
+then
+    echo -n " --enable-pluto" >> $INSTALLSHELL
+fi
+
 if [ "$USE_AF_ALG" = "yes" ]
 then
     echo -n " --enable-af-alg" >> $INSTALLSHELL
@@ -360,6 +365,11 @@ fi
 if [ "$USE_WHITELIST" = "yes" ]
 then
     echo -n " --enable-whitelist" >> $INSTALLSHELL
+fi
+
+if [ "$USE_XAUTH_GENERIC" = "yes" ]
+then
+    echo -n " --enable-xauth-generic" >> $INSTALLSHELL
 fi
 
 if [ "$USE_PKCS8" = "yes" ]
