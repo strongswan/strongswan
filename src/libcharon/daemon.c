@@ -109,8 +109,11 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.traps->flush(this->public.traps);
 	}
+	if (this->public.sender)
+	{
+		this->public.sender->flush(this->public.sender);
+	}
 	DESTROY_IF(this->public.receiver);
-	DESTROY_IF(this->public.sender);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -129,6 +132,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.backends);
+	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.socket);
 
 	/* rehook library logging, shutdown logging */

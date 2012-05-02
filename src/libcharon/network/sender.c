@@ -149,7 +149,7 @@ static job_requeue_t send_packets(private_sender_t * this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-METHOD(sender_t, destroy, void,
+METHOD(sender_t, flush, void,
 	private_sender_t *this)
 {
 	/* send all packets in the queue */
@@ -159,8 +159,13 @@ METHOD(sender_t, destroy, void,
 		this->sent->wait(this->sent, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
+}
+
+METHOD(sender_t, destroy, void,
+	private_sender_t *this)
+{
 	this->job->cancel(this->job);
-	this->list->destroy(this->list);
+	this->list->destroy_offset(this->list, offsetof(packet_t, destroy));
 	this->got->destroy(this->got);
 	this->sent->destroy(this->sent);
 	this->mutex->destroy(this->mutex);
@@ -177,6 +182,7 @@ sender_t * sender_create()
 	INIT(this,
 		.public = {
 			.send = _send_,
+			.flush = _flush,
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),

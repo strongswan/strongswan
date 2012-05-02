@@ -44,6 +44,13 @@ struct sender_t {
 	void (*send) (sender_t *this, packet_t *packet);
 
 	/**
+	 * Enforce a flush of the send queue.
+	 *
+	 * This function blocks until all queued packets have been sent.
+	 */
+	void (*flush)(sender_t *this);
+
+	/**
 	 * Destroys a sender object.
 	 */
 	void (*destroy) (sender_t *this);
