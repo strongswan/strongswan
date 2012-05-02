@@ -61,6 +61,16 @@ struct keymat_t {
 	diffie_hellman_t* (*create_dh)(keymat_t *this,
 								   diffie_hellman_group_t group);
 
+	/**
+	 * Create a nonce generator object.
+	 *
+	 * The nonce generator can be used to create nonces needed during IKE/CHILD
+	 * SA establishment or rekeying.
+	 *
+	 * @return				nonce generator object
+	 */
+	nonce_gen_t* (*create_nonce_gen)(keymat_t *this);
+
 	/*
 	 * Get a AEAD transform to en-/decrypt and sign/verify IKE messages.
 	 *

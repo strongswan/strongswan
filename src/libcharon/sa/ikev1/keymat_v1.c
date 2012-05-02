@@ -985,6 +985,12 @@ METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	return lib->crypto->create_dh(lib->crypto, group);
 }
 
+METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
+	private_keymat_v1_t *this)
+{
+	return lib->crypto->create_nonce_gen(lib->crypto);
+}
+
 METHOD(keymat_t, get_aead, aead_t*,
 	private_keymat_v1_t *this, bool in)
 {
@@ -1019,6 +1025,7 @@ keymat_v1_t *keymat_v1_create(bool initiator)
 			.keymat = {
 				.get_version = _get_version,
 				.create_dh = _create_dh,
+				.create_nonce_gen = _create_nonce_gen,
 				.get_aead = _get_aead,
 				.destroy = _destroy,
 			},

@@ -83,6 +83,12 @@ METHOD(keymat_t, create_dh, diffie_hellman_t*,
 	return lib->crypto->create_dh(lib->crypto, group);
 }
 
+METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
+	private_keymat_v2_t *this)
+{
+	return lib->crypto->create_nonce_gen(lib->crypto);
+}
+
 /**
  * Derive IKE keys for a combined AEAD algorithm
  */
@@ -571,6 +577,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 			.keymat = {
 				.get_version = _get_version,
 				.create_dh = _create_dh,
+				.create_nonce_gen = _create_nonce_gen,
 				.get_aead = _get_aead,
 				.destroy = _destroy,
 			},
