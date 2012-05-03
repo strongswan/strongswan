@@ -429,6 +429,10 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 			}
 			feature++;
 		}
+		if (loaded && !report)
+		{	/* got new feature, restart from beginning of list */
+			break;
+		}
 	}
 	enumerator->destroy(enumerator);
 	return loaded;
