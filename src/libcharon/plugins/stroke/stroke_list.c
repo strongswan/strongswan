@@ -1286,7 +1286,7 @@ static void list_plugins(FILE *out)
 						fprintf(out, "        %s\n", str);
 						break;
 					case FEATURE_SDEPEND:
-						fprintf(out, "        %s(soft)\n", str);
+						fprintf(out, "        %s (soft)\n", str);
 						break;
 					default:
 						break;

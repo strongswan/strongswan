@@ -59,7 +59,7 @@ void plugin_list(void)
 						whack_log(RC_COMMENT, "        %s", str);
 						break;
 					case FEATURE_SDEPEND:
-						whack_log(RC_COMMENT, "        %s(soft)", str);
+						whack_log(RC_COMMENT, "        %s (soft)", str);
 						break;
 					default:
 						break;
