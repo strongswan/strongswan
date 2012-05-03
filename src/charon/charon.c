@@ -550,7 +550,7 @@ int main(int argc, char *argv[])
 
 	initialize_loggers(!use_syslog, levels);
 
-	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
+	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION")");
 	if (lib->integrity)
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
