@@ -434,7 +434,7 @@ METHOD(stroke_list_t, status, void,
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
-		fprintf(out, "Status of IKEv2 charon daemon (strongSwan "VERSION"):\n");
+		fprintf(out, "Status of IKE charon daemon (strongSwan "VERSION"):\n");
 		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
 #ifdef HAVE_MALLINFO
 		{
