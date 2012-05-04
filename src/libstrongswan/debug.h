@@ -62,6 +62,8 @@ enum debug_t {
 	DBG_PTS,
 	/** libtls */
 	DBG_TLS,
+	/** applications other than daemons */
+	DBG_APP,
 	/** libstrongswan */
 	DBG_LIB,
 	/** number of groups */
