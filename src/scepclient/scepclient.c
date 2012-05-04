@@ -13,17 +13,6 @@
  * for more details.
  */
 
-/**
- * @file main.c
- * @brief scepclient main program
- */
-
-/**
- * @mainpage SCEP for Linux strongSwan
- *
- * Documentation of SCEP for Linux StrongSwan
- */
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -153,8 +142,7 @@ certificate_t *pkcs10_req      = NULL;
  *
  * @param status 0 = OK, 1 = general discomfort
  */
-static void
-exit_scepclient(err_t message, ...)
+static void exit_scepclient(err_t message, ...)
 {
 	int status = 0;
 
@@ -201,8 +189,7 @@ exit_scepclient(err_t message, ...)
  * @brief prints the program version and exits
  *
  */
-static void
-version(void)
+static void version(void)
 {
 	printf("scepclient %s\n", scepclient_version);
 	exit_scepclient(NULL);
@@ -214,8 +201,7 @@ version(void)
  * If message is set, program is exitet with 1 (error)
  * @param message message in case of an error
  */
-static void
-usage(const char *message)
+static void usage(const char *message)
 {
 	fprintf(stderr,
 		"Usage: scepclient\n"
@@ -429,20 +415,20 @@ int main(int argc, char **argv)
 
 		switch (c)
 		{
-		case EOF:       /* end of flags */
-			break;
+			case EOF:       /* end of flags */
+				break;
 
-		case 'h':       /* --help */
-			usage(NULL);
+			case 'h':       /* --help */
+				usage(NULL);
 
-		case 'v':       /* --version */
-			version();
+			case 'v':       /* --version */
+				version();
 
-		case 'q':       /* --quiet */
-			log_to_stderr = FALSE;
-			continue;
+			case 'q':       /* --quiet */
+				log_to_stderr = FALSE;
+				continue;
 
-		case 'i':       /* --in <type> [= <filename>] */
+			case 'i':       /* --in <type> [= <filename>] */
 			{
 				char *filename = strstr(optarg, "=");
 
@@ -478,7 +464,7 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-		case 'o':       /* --out <type> [= <filename>] */
+			case 'o':       /* --out <type> [= <filename>] */
 			{
 				char *filename = strstr(optarg, "=");
 
@@ -532,18 +518,18 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-		case 'f':       /* --force */
-			force = TRUE;
-			continue;
+			case 'f':       /* --force */
+				force = TRUE;
+				continue;
 
-		case '+':       /* --optionsfrom <filename> */
-			if (!options->from(options, optarg, &argc, &argv, optind))
-			{
-				exit_scepclient("optionsfrom failed");
-			}
-			continue;
+			case '+':       /* --optionsfrom <filename> */
+				if (!options->from(options, optarg, &argc, &argv, optind))
+				{
+					exit_scepclient("optionsfrom failed");
+				}
+				continue;
 
-		case 'k':        /* --keylength <length> */
+			case 'k':        /* --keylength <length> */
 			{
 				div_t q;
 
@@ -561,45 +547,56 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-		case 'D':       /* --days */
-			if (optarg == NULL || !isdigit(optarg[0]))
-				usage("missing number of days");
-			{
-				char *endptr;
-				long days = strtol(optarg, &endptr, 0);
+			case 'D':       /* --days */
+				if (optarg == NULL || !isdigit(optarg[0]))
+				{
+					usage("missing number of days");
+				}
+				else
+				{
+					char *endptr;
+					long days = strtol(optarg, &endptr, 0);
 
-				if (*endptr != '\0' || endptr == optarg
-				|| days <= 0)
-					usage("<days> must be a positive number");
-				validity = 24*3600*days;
-			}
-			continue;
+					if (*endptr != '\0' || endptr == optarg
+					|| days <= 0)
+						usage("<days> must be a positive number");
+					validity = 24*3600*days;
+				}
+				continue;
 
-		case 'S':       /* --startdate */
-			if (optarg == NULL || strlen(optarg) != 13 || optarg[12] != 'Z')
-				usage("date format must be YYMMDDHHMMSSZ");
-			{
-				chunk_t date = { optarg, 13 };
-				notBefore = asn1_to_time(&date, ASN1_UTCTIME);
-			}
-			continue;
+			case 'S':       /* --startdate */
+				if (optarg == NULL || strlen(optarg) != 13 || optarg[12] != 'Z')
+				{
+					usage("date format must be YYMMDDHHMMSSZ");
+				}
+				else
+				{
+					chunk_t date = { optarg, 13 };
+					notBefore = asn1_to_time(&date, ASN1_UTCTIME);
+				}
+				continue;
 
-		case 'E':       /* --enddate */
-			if (optarg == NULL || strlen(optarg) != 13 || optarg[12] != 'Z')
-				usage("date format must be YYMMDDHHMMSSZ");
-			{
-				chunk_t date = { optarg, 13 };
-				notAfter = asn1_to_time(&date, ASN1_UTCTIME);
-			}
-			continue;
+			case 'E':       /* --enddate */
+				if (optarg == NULL || strlen(optarg) != 13 || optarg[12] != 'Z')
+				{
+					usage("date format must be YYMMDDHHMMSSZ");
+				}
+				else
+				{
+					chunk_t date = { optarg, 13 };
+					notAfter = asn1_to_time(&date, ASN1_UTCTIME);
+				}
+				continue;
 
-		case 'd':       /* --dn */
-			if (distinguishedName)
-				usage("only one distinguished name allowed");
-			distinguishedName = optarg;
-			continue;
+			case 'd':       /* --dn */
+				if (distinguishedName)
+				{
+					usage("only one distinguished name allowed");
+				}
+				distinguishedName = optarg;
+				continue;
 
-		case 's':       /* --subjectAltName */
+			case 's':       /* --subjectAltName */
 			{
 				char *value = strstr(optarg, "=");
 
@@ -612,7 +609,7 @@ int main(int argc, char **argv)
 				}
 
 				if (strcaseeq("email", optarg) ||
-					strcaseeq("dns", optarg)   ||
+					strcaseeq("dns", optarg) ||
 					strcaseeq("ip", optarg))
 				{
 					subjectAltNames->insert_last(subjectAltNames,
@@ -626,106 +623,107 @@ int main(int argc, char **argv)
 				}
 			}
 
-		case 'p':       /* --password */
-			if (challengePassword.len > 0)
-			{
-				usage("only one challenge password allowed");
-			}
-			if (strcaseeq("%prompt", optarg))
-			{
-				printf("Challenge password: ");
-				if (fgets(challenge_password_buffer, sizeof(challenge_password_buffer)-1, stdin))
+			case 'p':       /* --password */
+				if (challengePassword.len > 0)
 				{
-					challengePassword.ptr = challenge_password_buffer;
-					/* discard the terminating '\n' from the input */
-					challengePassword.len = strlen(challenge_password_buffer) - 1;
+					usage("only one challenge password allowed");
+				}
+				if (strcaseeq("%prompt", optarg))
+				{
+					printf("Challenge password: ");
+					if (fgets(challenge_password_buffer,
+							sizeof(challenge_password_buffer) - 1, stdin))
+					{
+						challengePassword.ptr = challenge_password_buffer;
+						/* discard the terminating '\n' from the input */
+						challengePassword.len = strlen(challenge_password_buffer) - 1;
+					}
+					else
+					{
+						usage("challenge password could not be read");
+					}
 				}
 				else
 				{
-					usage("challenge password could not be read");
+					challengePassword.ptr = optarg;
+					challengePassword.len = strlen(optarg);
 				}
-			}
-			else
-			{
-				challengePassword.ptr = optarg;
-				challengePassword.len = strlen(optarg);
-			}
-			continue;
+				continue;
 
-		case 'u':       /* -- url */
-			if (scep_url)
-			{
-				usage("only one URL argument allowed");
-			}
-			scep_url = optarg;
-			continue;
+			case 'u':       /* -- url */
+				if (scep_url)
+				{
+					usage("only one URL argument allowed");
+				}
+				scep_url = optarg;
+				continue;
 
-		case 'm':       /* --method */
-			if (strcaseeq("get", optarg))
-			{
-				http_get_request = TRUE;
-			}
-			else if (strcaseeq("post", optarg))
-			{
-				http_get_request = FALSE;
-			}
-			else
-			{
-				usage("invalid http request method specified");
-			}
-			continue;
+			case 'm':       /* --method */
+				if (strcaseeq("get", optarg))
+				{
+					http_get_request = TRUE;
+				}
+				else if (strcaseeq("post", optarg))
+				{
+					http_get_request = FALSE;
+				}
+				else
+				{
+					usage("invalid http request method specified");
+				}
+				continue;
 
-		case 't':       /* --interval */
-			poll_interval = atoi(optarg);
-			if (poll_interval <= 0)
-			{
-				usage("invalid interval specified");
-			}
-			continue;
+			case 't':       /* --interval */
+				poll_interval = atoi(optarg);
+				if (poll_interval <= 0)
+				{
+					usage("invalid interval specified");
+				}
+				continue;
 
-		case 'x':       /* --maxpolltime */
-			max_poll_time = atoi(optarg);
-			continue;
+			case 'x':       /* --maxpolltime */
+				max_poll_time = atoi(optarg);
+				continue;
 
-		case 'a':       /*--algorithm */
-		{
-			const proposal_token_t *token;
+			case 'a':       /*--algorithm */
+			{
+				const proposal_token_t *token;
 
-			token = proposal_get_token(optarg, strlen(optarg));
-			if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
-			{
-				usage("invalid algorithm specified");
+				token = proposal_get_token(optarg, strlen(optarg));
+				if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
+				{
+					usage("invalid algorithm specified");
+				}
+				pkcs7_symmetric_cipher = encryption_algorithm_to_oid(
+											token->algorithm, token->keysize);
+				if (pkcs7_symmetric_cipher == OID_UNKNOWN)
+				{
+					usage("unsupported encryption algorithm specified");
+				}
+				continue;
 			}
-			pkcs7_symmetric_cipher = encryption_algorithm_to_oid(
-										token->algorithm, token->keysize);
-			if (pkcs7_symmetric_cipher == OID_UNKNOWN)
-			{
-				usage("unsupported encryption algorithm specified");
-			}
-			continue;
-		}
 #ifdef DEBUG
-		case 'A':       /* --debug-all */
-			base_debugging |= DBG_ALL;
-			continue;
-		case 'P':       /* debug parsing */
-			base_debugging |= DBG_PARSING;
-			continue;
-		case 'R':       /* debug raw */
-			base_debugging |= DBG_RAW;
-			continue;
-		case 'C':       /* debug control */
-			base_debugging |= DBG_CONTROL;
-			continue;
-		case 'M':       /* debug control more */
-			base_debugging |= DBG_CONTROLMORE;
-			continue;
-		case 'X':       /* debug private */
-			base_debugging |= DBG_PRIVATE;
-			continue;
+			case 'A':       /* --debug-all */
+				base_debugging |= DBG_ALL;
+				continue;
+			case 'P':       /* debug parsing */
+				base_debugging |= DBG_PARSING;
+				continue;
+			case 'R':       /* debug raw */
+				base_debugging |= DBG_RAW;
+				continue;
+			case 'C':       /* debug control */
+				base_debugging |= DBG_CONTROL;
+				continue;
+			case 'M':       /* debug control more */
+				base_debugging |= DBG_CONTROLMORE;
+				continue;
+			case 'X':       /* debug private */
+				base_debugging |= DBG_PRIVATE;
+				continue;
 #endif
-		default:
-			usage("unknown option");
+			default:
+				usage("unknown option");
 		}
 		/* break from loop */
 		break;
@@ -807,8 +805,8 @@ int main(int argc, char **argv)
 	/* check for minimum key length */
 	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS / BITS_PER_BYTE)
 	{
-		exit_scepclient("length of RSA key has to be at least %d bits"
-			,RSA_MIN_OCTETS * BITS_PER_BYTE);
+		exit_scepclient("length of RSA key has to be at least %d bits",
+						RSA_MIN_OCTETS * BITS_PER_BYTE);
 	}
 
 	/*
@@ -853,13 +851,13 @@ int main(int argc, char **argv)
 			DBG_log("building pkcs10 object:")
 		)
 		pkcs10_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-						CERT_PKCS10_REQUEST,
-						BUILD_SIGNING_KEY, private_key,
-						BUILD_SUBJECT, subject,
-						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
-						BUILD_CHALLENGE_PWD, challengePassword,
-						BUILD_DIGEST_ALG, pkcs10_signature_alg,
-						BUILD_END);
+										CERT_PKCS10_REQUEST,
+										BUILD_SIGNING_KEY, private_key,
+										BUILD_SUBJECT, subject,
+										BUILD_SUBJECT_ALTNAMES, subjectAltNames,
+										BUILD_CHALLENGE_PWD, challengePassword,
+										BUILD_DIGEST_ALG, pkcs10_signature_alg,
+										BUILD_END);
 		if (!pkcs10_req)
 		{
 			exit_scepclient("generating pkcs10 request failed");
@@ -919,14 +917,14 @@ int main(int argc, char **argv)
 
 	/* generate a self-signed X.509 certificate */
 	x509_signer = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-						BUILD_SIGNING_KEY, private_key,
-						BUILD_PUBLIC_KEY, public_key,
-						BUILD_SUBJECT, subject,
-						BUILD_NOT_BEFORE_TIME, notBefore,
-						BUILD_NOT_AFTER_TIME, notAfter,
-						BUILD_SERIAL, serialNumber,
-						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
-						BUILD_END);
+									 BUILD_SIGNING_KEY, private_key,
+									 BUILD_PUBLIC_KEY, public_key,
+									 BUILD_SUBJECT, subject,
+									 BUILD_NOT_BEFORE_TIME, notBefore,
+									 BUILD_NOT_AFTER_TIME, notAfter,
+									 BUILD_SERIAL, serialNumber,
+									 BUILD_SUBJECT_ALTNAMES, subjectAltNames,
+									 BUILD_END);
 	if (!x509_signer)
 	{
 		exit_scepclient("generating certificate failed");
@@ -989,9 +987,9 @@ int main(int argc, char **argv)
 			DBG_log("building pkcs7 request")
 		)
 		pkcs7 = scep_build_request(pkcs10_encoding,
-						transID, SCEP_PKCSReq_MSG,
-						x509_ca_enc, pkcs7_symmetric_cipher,
-						x509_signer, pkcs7_digest_alg, private_key);
+								   transID, SCEP_PKCSReq_MSG,
+								   x509_ca_enc, pkcs7_symmetric_cipher,
+								   x509_signer, pkcs7_digest_alg, private_key);
 	}
 
 	/*
@@ -1002,8 +1000,9 @@ int main(int argc, char **argv)
 		char *path = concatenate_paths(REQ_PATH, file_out_pkcs7);
 
 		if (!chunk_write(pkcs7, path, "pkcs7 encrypted request", 0022, force))
+		{
 			exit_scepclient("could not write pkcs7 file '%s'", path);
-;
+		}
 		filetype_out &= ~PKCS7;   /* delete PKCS7 flag */
 	}
 
@@ -1037,12 +1036,12 @@ int main(int argc, char **argv)
 		}
 
 		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION,
-			http_get_request, &scep_response))
+				http_get_request, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
-		ugh = scep_parse_response(scep_response, transID, &data, &attrs
-								 , x509_ca_sig);
+		ugh = scep_parse_response(scep_response, transID, &data, &attrs,
+								  x509_ca_sig);
 		if (ugh != NULL)
 		{
 			exit_scepclient(ugh);
@@ -1053,8 +1052,8 @@ int main(int argc, char **argv)
 		{
 			identification_t *issuer = x509_ca_sig->get_subject(x509_ca_sig);
 
-			plog("  scep request pending, polling every %d seconds"
-				, poll_interval);
+			plog("  scep request pending, polling every %d seconds",
+				 poll_interval);
 			poll_start = time_monotonic(NULL);
 			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc",
 									issuer->get_encoding(issuer),
@@ -1062,8 +1061,8 @@ int main(int argc, char **argv)
 		}
 		while (attrs.pkiStatus == SCEP_PENDING)
 		{
-			if (max_poll_time > 0
-			&& (time_monotonic(NULL) - poll_start >= max_poll_time))
+			if (max_poll_time > 0 &&
+				(time_monotonic(NULL) - poll_start >= max_poll_time))
 			{
 				exit_scepclient("maximum poll time reached: %d seconds"
 							   , max_poll_time);
@@ -1080,18 +1079,18 @@ int main(int argc, char **argv)
 			)
 
 			chunk_free(&getCertInitial);
-			getCertInitial = scep_build_request(issuerAndSubject
-								, transID, SCEP_GetCertInitial_MSG
-								, x509_ca_enc, pkcs7_symmetric_cipher
-								, x509_signer, pkcs7_digest_alg, private_key);
+			getCertInitial = scep_build_request(issuerAndSubject,
+									transID, SCEP_GetCertInitial_MSG,
+									x509_ca_enc, pkcs7_symmetric_cipher,
+									x509_signer, pkcs7_digest_alg, private_key);
 
 			if (!scep_http_request(scep_url, getCertInitial, SCEP_PKI_OPERATION,
 				http_get_request, &scep_response))
 			{
 				exit_scepclient("did not receive a valid scep response");
 			}
-			ugh = scep_parse_response(scep_response, transID, &data, &attrs
-									 , x509_ca_sig);
+			ugh = scep_parse_response(scep_response, transID, &data, &attrs,
+									  x509_ca_sig);
 			if (ugh != NULL)
 			{
 				exit_scepclient(ugh);
@@ -1105,13 +1104,13 @@ int main(int argc, char **argv)
 
 		envelopedData = data.content;
 
-		if (data.type != OID_PKCS7_DATA
-		|| !asn1_parse_simple_object(&envelopedData, ASN1_OCTET_STRING, 0, "data"))
+		if (data.type != OID_PKCS7_DATA ||
+			!asn1_parse_simple_object(&envelopedData, ASN1_OCTET_STRING, 0, "data"))
 		{
 			exit_scepclient("contentInfo is not of type 'data'");
 		}
-		if (!pkcs7_parse_envelopedData(envelopedData, &certData
-			, serialNumber, private_key))
+		if (!pkcs7_parse_envelopedData(envelopedData, &certData,
+				serialNumber, private_key))
 		{
 			exit_scepclient("could not decrypt envelopedData");
 		}

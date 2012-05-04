@@ -1,10 +1,3 @@
-/**
- * @file scep.c
- * @brief SCEP specific functions
- *
- * Contains functions to build SCEP request's and to parse SCEP reply's.
- */
-
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -38,16 +31,6 @@
 #include "../pluto/log.h"
 
 #include "scep.h"
-
-static const chunk_t ASN1_messageType_oid = chunk_from_chars(
-	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-);
-static const chunk_t ASN1_senderNonce_oid = chunk_from_chars(
-	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-);
-static const chunk_t ASN1_transId_oid = chunk_from_chars(
-	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-);
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
@@ -112,61 +95,65 @@ static bool extract_attribute(int oid, chunk_t object, u_int level,
 
 	switch (oid)
 	{
-	case OID_PKCS9_CONTENT_TYPE:
-		type = ASN1_OID;
-		name = "contentType";
-		break;
-	case OID_PKCS9_SIGNING_TIME:
-		type = ASN1_UTCTIME;
-		name = "signingTime";
-		break;
-	case OID_PKCS9_MESSAGE_DIGEST:
-		type = ASN1_OCTET_STRING;
-		name = "messageDigest";
-		break;
-	case OID_PKI_MESSAGE_TYPE:
-		type = ASN1_PRINTABLESTRING;
-		name = "messageType";
-		break;
-	case OID_PKI_STATUS:
-		type = ASN1_PRINTABLESTRING;
-		name = "pkiStatus";
-		break;
-	case OID_PKI_FAIL_INFO:
-		type = ASN1_PRINTABLESTRING;
-		name = "failInfo";
-		break;
-	case OID_PKI_SENDER_NONCE:
-		type = ASN1_OCTET_STRING;
-		name = "senderNonce";
-		 break;
-	case OID_PKI_RECIPIENT_NONCE:
-		type = ASN1_OCTET_STRING;
-		name = "recipientNonce";
-		break;
-	case OID_PKI_TRANS_ID:
-		type = ASN1_PRINTABLESTRING;
-		name = "transID";
-		break;
-	default:
-		break;
+		case OID_PKCS9_CONTENT_TYPE:
+			type = ASN1_OID;
+			name = "contentType";
+			break;
+		case OID_PKCS9_SIGNING_TIME:
+			type = ASN1_UTCTIME;
+			name = "signingTime";
+			break;
+		case OID_PKCS9_MESSAGE_DIGEST:
+			type = ASN1_OCTET_STRING;
+			name = "messageDigest";
+			break;
+		case OID_PKI_MESSAGE_TYPE:
+			type = ASN1_PRINTABLESTRING;
+			name = "messageType";
+			break;
+		case OID_PKI_STATUS:
+			type = ASN1_PRINTABLESTRING;
+			name = "pkiStatus";
+			break;
+		case OID_PKI_FAIL_INFO:
+			type = ASN1_PRINTABLESTRING;
+			name = "failInfo";
+			break;
+		case OID_PKI_SENDER_NONCE:
+			type = ASN1_OCTET_STRING;
+			name = "senderNonce";
+			 break;
+		case OID_PKI_RECIPIENT_NONCE:
+			type = ASN1_OCTET_STRING;
+			name = "recipientNonce";
+			break;
+		case OID_PKI_TRANS_ID:
+			type = ASN1_PRINTABLESTRING;
+			name = "transID";
+			break;
+		default:
+			break;
 	}
 
 	if (type == ASN1_EOC)
+	{
 		return TRUE;
+	}
 
 	if (!asn1_parse_simple_object(&object, type, level+1, name))
+	{
 		return FALSE;
+	}
 
 	switch (oid)
 	{
-	case OID_PKCS9_CONTENT_TYPE:
-		break;
-	case OID_PKCS9_SIGNING_TIME:
-		break;
-	case OID_PKCS9_MESSAGE_DIGEST:
-		break;
-	case OID_PKI_MESSAGE_TYPE:
+		case OID_PKCS9_CONTENT_TYPE:
+			break;
+		case OID_PKCS9_SIGNING_TIME:
+			break;
+		case OID_PKCS9_MESSAGE_DIGEST:
+			break;
+		case OID_PKI_MESSAGE_TYPE:
 		{
 			scep_msg_t m;
 
@@ -178,39 +165,46 @@ static bool extract_attribute(int oid, chunk_t object, u_int level,
 			DBG(DBG_CONTROL,
 				DBG_log("messageType:  %s", msgType_names[attrs->msgType])
 			)
+			break;
 		}
-		break;
-	case OID_PKI_STATUS:
+		case OID_PKI_STATUS:
 		{
 			pkiStatus_t s;
 
 			for (s = SCEP_SUCCESS; s < SCEP_UNKNOWN; s++)
 			{
 				if (strncmp(pkiStatus_values[s], object.ptr, object.len) == 0)
+				{
 					attrs->pkiStatus = s;
+				}
 			}
 			DBG(DBG_CONTROL,
 				DBG_log("pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus])
 			)
+			break;
 		}
-		break;
-	case OID_PKI_FAIL_INFO:
-		if (object.len == 1
-		&& *object.ptr >= '0' && *object.ptr <= '4')
+		case OID_PKI_FAIL_INFO:
 		{
-			attrs->failInfo = (failInfo_t)(*object.ptr - '0');
+			if (object.len == 1 &&
+				*object.ptr >= '0' && *object.ptr <= '4')
+			{
+				attrs->failInfo = (failInfo_t)(*object.ptr - '0');
+			}
+			if (attrs->failInfo != SCEP_unknown_REASON)
+			{
+				plog("failInfo:     %s", failInfo_reasons[attrs->failInfo]);
+			}
+			break;
 		}
-		if (attrs->failInfo != SCEP_unknown_REASON)
-			plog("failInfo:     %s", failInfo_reasons[attrs->failInfo]);
-		break;
-	case OID_PKI_SENDER_NONCE:
-		attrs->senderNonce = object;
-		break;
-	case OID_PKI_RECIPIENT_NONCE:
-		attrs->recipientNonce = object;
-		break;
-	case OID_PKI_TRANS_ID:
-		attrs->transID = object;
+		case OID_PKI_SENDER_NONCE:
+			attrs->senderNonce = object;
+			break;
+		case OID_PKI_RECIPIENT_NONCE:
+			attrs->recipientNonce = object;
+			break;
+		case OID_PKI_TRANS_ID:
+			attrs->transID = object;
+			break;
 	}
 	return TRUE;
 }
@@ -235,13 +229,16 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 	{
 		switch (objectID)
 		{
-		case ATTRIBUTE_OBJ_TYPE:
-			oid = asn1_known_oid(object);
-			break;
-		case ATTRIBUTE_OBJ_VALUE:
-			if (!extract_attribute(oid, object, parser->get_level(parser), attrs))
+			case ATTRIBUTE_OBJ_TYPE:
+				oid = asn1_known_oid(object);
+				break;
+			case ATTRIBUTE_OBJ_VALUE:
 			{
-				goto end;
+				if (!extract_attribute(oid, object, parser->get_level(parser), attrs))
+				{
+					goto end;
+				}
+				break;
 			}
 		}
 	}
@@ -318,12 +315,10 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
  */
 chunk_t scep_transId_attribute(chunk_t transID)
 {
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_transId_oid
-				, asn1_wrap(ASN1_SET, "m"
-					, asn1_simple_object(ASN1_PRINTABLESTRING, transID)
-				  )
-			  );
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+				asn1_build_known_oid(OID_PKI_TRANS_ID),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_simple_object(ASN1_PRINTABLESTRING, transID)));
 }
 
 /**
@@ -336,12 +331,10 @@ chunk_t scep_messageType_attribute(scep_msg_t m)
 		strlen(msgType_values[m])
 	};
 
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_messageType_oid
-				, asn1_wrap(ASN1_SET, "m"
-					, asn1_simple_object(ASN1_PRINTABLESTRING, msgType)
-				  )
-			  );
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_PKI_MESSAGE_TYPE),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_simple_object(ASN1_PRINTABLESTRING, msgType)));
 }
 
 /**
@@ -358,12 +351,10 @@ chunk_t scep_senderNonce_attribute(void)
 	rng->get_bytes(rng, nonce_len, nonce_buf);
 	rng->destroy(rng);
 
-	return asn1_wrap(ASN1_SEQUENCE, "cm"
-				, ASN1_senderNonce_oid
-				, asn1_wrap(ASN1_SET, "m"
-					, asn1_simple_object(ASN1_OCTET_STRING, senderNonce)
-				  )
-			  );
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+				asn1_build_known_oid(OID_PKI_SENDER_NONCE),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_simple_object(ASN1_OCTET_STRING, senderNonce)));
 }
 
 /**
@@ -378,16 +369,15 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 
 	envelopedData = pkcs7_build_envelopedData(data, enc_cert, enc_alg);
 
-	attributes = asn1_wrap(ASN1_SET, "mmmmm"
-					, pkcs7_contentType_attribute()
-					, pkcs7_messageDigest_attribute(envelopedData
-						, digest_alg)
-					, scep_transId_attribute(transID)
-					, scep_messageType_attribute(msg)
-					, scep_senderNonce_attribute());
+	attributes = asn1_wrap(ASN1_SET, "mmmmm",
+					pkcs7_contentType_attribute(),
+					pkcs7_messageDigest_attribute(envelopedData, digest_alg),
+					scep_transId_attribute(transID),
+					scep_messageType_attribute(msg),
+					scep_senderNonce_attribute());
 
-	request = pkcs7_build_signedData(envelopedData, attributes
-					, signer_cert, digest_alg, private_key);
+	request = pkcs7_build_signedData(envelopedData, attributes,
+									 signer_cert, digest_alg, private_key);
 	free(envelopedData.ptr);
 	free(attributes.ptr);
 	return request;
@@ -420,7 +410,9 @@ static char* escape_http_request(chunk_t req)
 	while (*p1 != '\0')
 	{
 		if (*p1++ == '+')
+		{
 			plus++;
+		}
 	}
 
 	escaped_req = malloc(len + 3*(lines + plus));
@@ -513,8 +505,8 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 		/* form complete url */
 		len = strlen(url) + 32 + strlen(operation) + 1;
 		complete_url = malloc(len);
-		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier"
-				, url, operation);
+		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier",
+				 url, operation);
 
 		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_END);

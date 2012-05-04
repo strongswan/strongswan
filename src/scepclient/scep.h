@@ -1,10 +1,3 @@
-/**
- * @file scep.h
- * @brief SCEP specific functions
- *
- * Contains functions to build and parse SCEP requests and replies
- */
-
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -74,22 +67,22 @@ typedef struct {
 
 extern const scep_attributes_t empty_scep_attributes;
 
-extern bool parse_attributes(chunk_t blob, scep_attributes_t *attrs);
-extern void scep_generate_transaction_id(public_key_t *key,
-										 chunk_t *transID,
-										 chunk_t *serialNumber);
-extern chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10);
-extern chunk_t scep_transId_attribute(chunk_t transaction_id);
-extern chunk_t scep_messageType_attribute(scep_msg_t m);
-extern chunk_t scep_senderNonce_attribute(void);
-extern chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
-								  certificate_t *enc_cert, int enc_alg,
-								  certificate_t *signer_cert, int digest_alg,
-								  private_key_t *private_key);
-extern bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
+bool parse_attributes(chunk_t blob, scep_attributes_t *attrs);
+void scep_generate_transaction_id(public_key_t *key,
+								  chunk_t *transID,
+								  chunk_t *serialNumber);
+chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10);
+chunk_t scep_transId_attribute(chunk_t transaction_id);
+chunk_t scep_messageType_attribute(scep_msg_t m);
+chunk_t scep_senderNonce_attribute(void);
+chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
+						   certificate_t *enc_cert, int enc_alg,
+						   certificate_t *signer_cert, int digest_alg,
+						   private_key_t *private_key);
+bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 							  bool http_get_request, chunk_t *response);
-extern err_t scep_parse_response(chunk_t response, chunk_t transID,
-								 contentInfo_t *data, scep_attributes_t *attrs,
-								 certificate_t *signer_cert);
+err_t scep_parse_response(chunk_t response, chunk_t transID,
+						  contentInfo_t *data, scep_attributes_t *attrs,
+						  certificate_t *signer_cert);
 
 #endif /* _SCEP_H */
