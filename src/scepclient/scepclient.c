@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
+#include <limits.h>
 #include <syslog.h>
 
 #include <freeswan.h>
@@ -53,6 +54,12 @@
 /*
  * definition of some defaults
  */
+
+/* some paths */
+#define REQ_PATH                        IPSEC_CONFDIR "/ipsec.d/reqs"
+#define HOST_CERT_PATH                  IPSEC_CONFDIR "/ipsec.d/certs"
+#define CA_CERT_PATH                    IPSEC_CONFDIR "/ipsec.d/cacerts"
+#define PRIVATE_KEY_PATH                IPSEC_CONFDIR "/ipsec.d/private"
 
 /* default name of DER-encoded PKCS#1 private key file */
 #define DEFAULT_FILENAME_PKCS1          "myKey.der"
@@ -115,7 +122,6 @@ options_t *options;
 /*
  * Global variables
  */
-
 chunk_t pkcs1;
 chunk_t pkcs7;
 chunk_t challengePassword;
@@ -197,6 +203,22 @@ static void init_log(const char *program)
 	if (log_to_syslog)
 	{
 		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	}
+}
+
+/**
+ * join two paths if filename is not absolute
+ */
+static void join_paths(char *target, size_t target_size, char *parent,
+					   char *filename)
+{
+	if (*filename == '/' || *filename == '.')
+	{
+		snprintf(target, target_size, "%s", filename);
+	}
+	else
+	{
+		snprintf(target, target_size, "%s/%s", parent, filename);
 	}
 }
 
@@ -795,7 +817,9 @@ int main(int argc, char **argv)
 	/* get CA cert */
 	if (request_ca_certificate)
 	{
-		char *path = concatenate_paths(CA_CERT_PATH, file_out_ca_cert);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), CA_CERT_PATH, file_out_ca_cert);
 
 		if (!scep_http_request(scep_url, chunk_empty, SCEP_GET_CA_CERT,
 							   http_get_request, &scep_response))
@@ -815,7 +839,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_in & PKCS1)    /* load an RSA key pair from file */
 	{
-		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), PRIVATE_KEY_PATH, file_in_pkcs1);
 
 		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 										 BUILD_FROM_FILE, path, BUILD_END);
@@ -898,7 +924,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS10)
 	{
-		char *path = concatenate_paths(REQ_PATH, file_out_pkcs10);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), REQ_PATH, file_out_pkcs10);
 
 		if (!chunk_write(pkcs10_encoding, path, "pkcs10",  0022, force))
 		{
@@ -917,7 +945,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS1)
 	{
-		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_out_pkcs1);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), PRIVATE_KEY_PATH, file_out_pkcs1);
 
 		DBG2(DBG_APP, "building pkcs1 object:");
 		if (!private_key->get_encoding(private_key, PRIVKEY_ASN1_DER, &pkcs1) ||
@@ -959,7 +989,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT_SELF)
 	{
-		char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), HOST_CERT_PATH, file_out_cert_self);
 
 		if (!x509_signer->get_encoding(x509_signer, CERT_ASN1_DER, &encoding))
 		{
@@ -982,7 +1014,9 @@ int main(int argc, char **argv)
 	 * load ca encryption certificate
 	 */
 	{
-		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_enc);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), CA_CERT_PATH, file_in_cacert_enc);
 
 		x509_ca_enc = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 										 BUILD_FROM_FILE, path, BUILD_END);
@@ -1019,7 +1053,9 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & PKCS7)
 	{
-		char *path = concatenate_paths(REQ_PATH, file_out_pkcs7);
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), REQ_PATH, file_out_pkcs7);
 
 		if (!chunk_write(pkcs7, path, "pkcs7 encrypted request", 0022, force))
 		{
@@ -1041,7 +1077,7 @@ int main(int argc, char **argv)
 		bool stored = FALSE;
 		certificate_t *cert;
 		enumerator_t  *enumerator;
-		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
+		char path[PATH_MAX];
 		time_t poll_start = 0;
 
 		linked_list_t    *certs         = linked_list_create();
@@ -1049,6 +1085,8 @@ int main(int argc, char **argv)
 		chunk_t           certData      = chunk_empty;
 		contentInfo_t     data          = empty_contentInfo;
 		scep_attributes_t attrs         = empty_scep_attributes;
+
+		join_paths(path, sizeof(path), CA_CERT_PATH, file_in_cacert_sig);
 
 		x509_ca_sig = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 										 BUILD_FROM_FILE, path, BUILD_END);
@@ -1141,7 +1179,7 @@ int main(int argc, char **argv)
 		chunk_free(&certData);
 
 		/* store the end entity certificate */
-		path = concatenate_paths(HOST_CERT_PATH, file_out_cert);
+		join_paths(path, sizeof(path), HOST_CERT_PATH, file_out_cert);
 
 		enumerator = certs->create_enumerator(certs);
 		while (enumerator->enumerate(enumerator, &cert))
