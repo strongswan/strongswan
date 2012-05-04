@@ -681,6 +681,12 @@ METHOD(pkcs7_t, set_attributes, void,
 	this->attributes = attributes;
 }
 
+METHOD(pkcs7_t, get_attributes, pkcs9_t*,
+	private_pkcs7_t *this)
+{
+	return this->attributes;
+}
+
 /**
  * build a DER-encoded issuerAndSerialNumber object
  */
@@ -990,6 +996,7 @@ static private_pkcs7_t *pkcs7_create_empty(void)
 			.create_certificate_enumerator = _create_certificate_enumerator,
 			.set_certificate = _set_certificate,
 			.set_attributes = _set_attributes,
+			.get_attributes = _get_attributes,
 			.build_envelopedData = _build_envelopedData,
 			.build_signedData = _build_signedData,
 			.destroy = _destroy,

@@ -112,9 +112,16 @@ struct pkcs7_t {
 	/**
 	 * Add authenticated attributes.
 	 *
-	 * @param attributes	attributes to be included
+	 * @param attributes	attributes to be included (gets adopted)
 	 */
 	void (*set_attributes) (pkcs7_t *this, pkcs9_t *attributes);
+
+	/**
+	 * Get attributes.
+	 *
+	 * @reutrn				attributes (internal data)
+	 */
+	pkcs9_t *(*get_attributes) (pkcs7_t *this);
 
 	/**
 	 * Build a data object
