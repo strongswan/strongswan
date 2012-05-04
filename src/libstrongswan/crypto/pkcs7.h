@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Copyright (C) 2002-2008 Andreas Steffen
- *
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,7 +25,6 @@
 typedef struct pkcs7_t pkcs7_t;
 
 #include <library.h>
-#include <credentials/certificates/x509.h>
 #include <credentials/keys/private_key.h>
 #include <crypto/pkcs9.h>
 #include <crypto/crypters/crypter.h>
@@ -36,6 +34,7 @@ typedef struct pkcs7_t pkcs7_t;
  * PKCS#7 contentInfo object.
  */
 struct pkcs7_t {
+
 	/**
 	 * Check if the PKCS#7 contentType is data
 	 *
@@ -70,7 +69,7 @@ struct pkcs7_t {
 	 * @param cacert		cacert used to verify the signature
 	 * @return				TRUE if parsing was successful
 	 */
-	bool (*parse_signedData) (pkcs7_t *this, x509_t *cacert);
+	bool (*parse_signedData) (pkcs7_t *this, certificate_t *cacert);
 
 	/**
 	 * Parse a PKCS#7 envelopedData content.
@@ -79,7 +78,8 @@ struct pkcs7_t {
 	 * @param key			private key used to decrypt the symmetric key
 	 * @return				TRUE if parsing was successful
 	 */
-	bool (*parse_envelopedData) (pkcs7_t *this, chunk_t serialNumber, private_key_t *key);
+	bool (*parse_envelopedData) (pkcs7_t *this, chunk_t serialNumber,
+								 private_key_t *key);
 
 	/**
 	 * Returns the parsed data object
@@ -105,9 +105,9 @@ struct pkcs7_t {
 	/**
 	 * Add a certificate.
 	 *
-	 * @param cert			certificate to be included
+	 * @param cert			certificate to be included (gets adopted)
 	 */
-	void (*set_certificate) (pkcs7_t *this, x509_t *cert);
+	void (*set_certificate) (pkcs7_t *this, certificate_t *cert);
 
 	/**
 	 * Add authenticated attributes.
@@ -128,10 +128,11 @@ struct pkcs7_t {
 	 *
 	 * @param cert			receivers's certificate
 	 * @param alg			encryption algorithm
+	 * @param key_size		key size to use
 	 * @return				TRUE if build was successful
 	 */
-	bool (*build_envelopedData) (pkcs7_t *this, x509_t *cert,
-								 encryption_algorithm_t alg);
+	bool (*build_envelopedData) (pkcs7_t *this, certificate_t *cert,
+								 encryption_algorithm_t alg, size_t key_size);
 
 	/**
 	 * Build an signedData object
@@ -154,7 +155,7 @@ struct pkcs7_t {
  *
  * @param chunk		chunk containing DER encoded data
  * @param level		ASN.1 parsing start level
- * @return 			created pkcs7_contentInfo object, or NULL if invalid.
+ * @return			created pkcs7_contentInfo object, or NULL if invalid.
  */
 pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
 
@@ -162,7 +163,7 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level);
  * Create a PKCS#7 contentInfo object
  *
  * @param data			chunk containing data
- * @return 				created pkcs7_contentInfo object.
+ * @return				created pkcs7_contentInfo object.
  */
 pkcs7_t *pkcs7_create_from_data(chunk_t data);
 

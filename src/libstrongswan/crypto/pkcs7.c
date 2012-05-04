@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2002-2008 Andreas Steffen
- *
+ * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,9 +17,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <library.h>
-#include "debug.h"
+#include <debug.h>
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
@@ -29,7 +30,6 @@
 #include <crypto/pkcs9.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
-
 #include <utils/linked_list.h>
 
 #include "pkcs7.h"
@@ -81,46 +81,6 @@ struct private_pkcs7_t {
 	linked_list_t *certs;
 };
 
-/**
- * PKCS7 contentInfo OIDs
- */
-static chunk_t ASN1_pkcs7_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x01
-);
-static chunk_t ASN1_pkcs7_signed_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x02
-);
-static chunk_t ASN1_pkcs7_enveloped_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x03
-);
-static chunk_t ASN1_pkcs7_signed_enveloped_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x04
-);
-static chunk_t ASN1_pkcs7_digested_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x05
-);
-static chunk_t ASN1_pkcs7_encrypted_data_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x06
-);
-
-/**
- * 3DES and DES encryption OIDs
- */
-static const chunk_t ASN1_3des_ede_cbc_oid = chunk_from_chars(
-	0x06, 0x08,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x03, 0x07
-);
-static const chunk_t ASN1_des_cbc_oid = chunk_from_chars(
-	0x06, 0x05,
-		  0x2B, 0x0E, 0x03, 0x02, 0x07
-);
-
 METHOD(pkcs7_t, is_data, bool,
 	private_pkcs7_t *this)
 {
@@ -147,7 +107,7 @@ static bool abort_parsing(private_pkcs7_t *this, int type)
 	if (this->type != type)
 	{
 		DBG1(DBG_LIB, "pkcs7 content to be parsed is not of type '%s'",
-			 oid_names[type]);
+			 oid_names[type].name);
 		return TRUE;
 	}
 	if (this->parsed)
@@ -178,10 +138,7 @@ METHOD(pkcs7_t, parse_data, bool,
 		this->data = chunk_clone(data);
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 
 /**
@@ -219,10 +176,12 @@ static const asn1Object_t signedDataObjects[] = {
 	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 25 */
 	{ 0, "exit",							ASN1_EOC,			ASN1_EXIT }
 };
+#define PKCS7_SIGNED_VERSION		 1
 #define PKCS7_DIGEST_ALG			 3
 #define PKCS7_SIGNED_CONTENT_INFO	 5
 #define PKCS7_SIGNED_CERT			 7
 #define PKCS7_SIGNER_INFO			13
+#define PKCS7_SIGNER_INFO_VERSION	14
 #define PKCS7_SIGNED_ISSUER			16
 #define PKCS7_SIGNED_SERIAL_NUMBER	17
 #define PKCS7_DIGEST_ALGORITHM		18
@@ -231,11 +190,11 @@ static const asn1Object_t signedDataObjects[] = {
 #define PKCS7_ENCRYPTED_DIGEST		22
 
 METHOD(pkcs7_t, parse_signedData, bool,
-	private_pkcs7_t *this, x509_t *cacert)
+	private_pkcs7_t *this, certificate_t *cacert)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID;
+	int objectID, version;
 	int digest_alg = OID_UNKNOWN;
 	int enc_alg    = OID_UNKNOWN;
 	int signerInfos = 0;
@@ -257,6 +216,10 @@ METHOD(pkcs7_t, parse_signedData, bool,
 
 		switch (objectID)
 		{
+			case PKCS7_SIGNED_VERSION:
+				version = object.len ? (int)*object.ptr : 0;
+				DBG2(DBG_LIB, "  v%d", version);
+				break;
 			case PKCS7_DIGEST_ALG:
 				digest_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
@@ -275,23 +238,32 @@ METHOD(pkcs7_t, parse_signedData, bool,
 					goto end;
 				}
 				pureData = data->get_data(data);
-				this->data = (pureData.len)? chunk_clone(pureData) : chunk_empty;
+				this->data = (pureData.len) ? chunk_clone(pureData) : chunk_empty;
 				data->destroy(data);
 				break;
 			}
 			case PKCS7_SIGNED_CERT:
 			{
-				x509_t *cert = x509_create_from_chunk(chunk_clone(object), level+1);
+				certificate_t *cert;
 
+				DBG2(DBG_LIB, "  parsing pkcs7-wrapped certificate");
+				cert = lib->creds->create(lib->creds,
+										  CRED_CERTIFICATE, CERT_X509,
+										  BUILD_BLOB_ASN1_DER, object,
+										  BUILD_END);
 				if (cert)
 				{
-					this->certs->insert_last(this->certs, (void*)cert);
+					this->certs->insert_last(this->certs, cert);
 				}
 				break;
 			}
 			case PKCS7_SIGNER_INFO:
 				signerInfos++;
 				DBG2(DBG_LIB, "  signer #%d", signerInfos);
+				break;
+			case PKCS7_SIGNER_INFO_VERSION:
+				version = object.len ? (int)*object.ptr : 0;
+				DBG2(DBG_LIB, "  v%d", version);
 				break;
 			case PKCS7_SIGNED_ISSUER:
 			{
@@ -308,10 +280,10 @@ METHOD(pkcs7_t, parse_signedData, bool,
 				*object.ptr = ASN1_CONTEXT_C_0;
 				break;
 			case PKCS7_DIGEST_ALGORITHM:
-				digest_alg = parse_algorithmIdentifier(object, level, NULL);
+				digest_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case PKCS7_DIGEST_ENC_ALGORITHM:
-				enc_alg = parse_algorithmIdentifier(object, level, NULL);
+				enc_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case PKCS7_ENCRYPTED_DIGEST:
 				encrypted_digest = object;
@@ -329,9 +301,15 @@ end:
 	/* check the signature only if a cacert is available */
 	if (cacert != NULL)
 	{
-		hash_algorithm_t algorithm = hasher_algorithm_from_oid(digest_alg);
-		rsa_public_key_t *signer = cacert->get_public_key(cacert);
+		signature_scheme_t scheme;
+		public_key_t *key;
 
+		scheme = signature_scheme_from_oid(digest_alg);
+		if (scheme == SIGN_UNKNOWN)
+		{
+			DBG1(DBG_LIB, "unsupported signature scheme");
+			return FALSE;
+		}
 		if (signerInfos == 0)
 		{
 			DBG1(DBG_LIB, "no signerInfo object found");
@@ -352,20 +330,32 @@ end:
 			DBG1(DBG_LIB, "only RSA digest encryption supported");
 			return FALSE;
 		}
-		if (signer->verify_emsa_pkcs1_signature(signer, algorithm,
-				this->attributes->get_encoding(this->attributes), encrypted_digest) != SUCCESS)
+
+		/* verify the signature */
+		key = cacert->get_public_key(cacert);
+		if (key == NULL)
 		{
-			DBG1(DBG_LIB, "invalid digest signature");
+			DBG1(DBG_LIB, "no public key found in CA certificate");
 			return FALSE;
+		}
+		if (key->verify(key, scheme,
+			this->attributes->get_encoding(this->attributes), encrypted_digest))
+		{
+			DBG2(DBG_LIB, "signature is valid");
 		}
 		else
 		{
-			DBG2(DBG_LIB, "digest signature is valid");
+			DBG1(DBG_LIB, "invalid signature");
+			key->destroy(key);
+			return FALSE;
 		}
+		key->destroy(key);
+
 		if (this->data.ptr != NULL)
 		{
-			chunk_t messageDigest = this->attributes->get_messageDigest(this->attributes);
+			chunk_t messageDigest;
 
+			messageDigest = this->attributes->get_messageDigest(this->attributes);
 			if (messageDigest.ptr == NULL)
 			{
 				DBG1(DBG_LIB, "messageDigest attribute not found");
@@ -373,11 +363,13 @@ end:
 			}
 			else
 			{
+				hash_algorithm_t algorithm;
 				hasher_t *hasher;
 				chunk_t hash;
 				bool valid;
 
-				hasher = lib->crypto->create_hasher(lib->crypto, algorithm)
+				algorithm = hasher_algorithm_from_oid(digest_alg);
+				hasher = lib->crypto->create_hasher(lib->crypto, algorithm);
 				if (hasher == NULL)
 				{
 					DBG1(DBG_LIB, "hash algorithm %N not supported",
@@ -438,12 +430,12 @@ static const asn1Object_t envelopedDataObjects[] = {
 #define PKCS7_CONTENT_ENC_ALGORITHM		13
 #define PKCS7_ENCRYPTED_CONTENT			14
 
-METHOD(parse_envelopedData, bool,
-	private_pkcs7_t *this, chunk_t serialNumber, rsa_private_key_t *key)
+METHOD(pkcs7_t, parse_envelopedData, bool,
+	private_pkcs7_t *this, chunk_t serialNumber, private_key_t *key)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID;
+	int objectID, version;
 	bool success = FALSE;
 
 	chunk_t iv                = chunk_empty;
@@ -462,100 +454,127 @@ METHOD(parse_envelopedData, bool,
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
+		u_int level = parser->get_level(parser);
+
 		switch (objectID)
 		{
 			case PKCS7_ENVELOPED_VERSION:
-				if (*object.ptr != 0)
+			{
+				version = object.len ? (int)*object.ptr : 0;
+				DBG2(DBG_LIB, "  v%d", version);
+				if (version != 0)
 				{
 					DBG1(DBG_LIB, "envelopedData version is not 0");
 					goto end;
 				}
 				break;
+			}
 			case PKCS7_RECIPIENT_INFO_VERSION:
-				if (*object.ptr != 0)
+			{
+				version = object.len ? (int)*object.ptr : 0;
+				DBG2(DBG_LIB, "  v%d", version);
+				if (version != 0)
 				{
 					DBG1(DBG_LIB, "recipient info version is not 0");
 					goto end;
 				}
 				break;
+			}
 			case PKCS7_ISSUER:
-				{
-					identification_t *issuer;
+			{
+				identification_t *issuer;
 
-					issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-					DBG2(DBG_LIB, "  '%Y'", issuer);
-					issuer->destroy(issuer);
-				}
+				issuer = identification_create_from_encoding(ID_DER_ASN1_DN,
+															 object);
+				DBG2(DBG_LIB, "  '%Y'", issuer);
+				issuer->destroy(issuer);
 				break;
+			}
 			case PKCS7_SERIAL_NUMBER:
+			{
 				if (!chunk_equals(serialNumber, object))
 				{
 					DBG1(DBG_LIB, "serial numbers do not match");
 					goto end;
 				}
 				break;
+			}
 			case PKCS7_ENCRYPTION_ALG:
-				{
-					int alg = parse_algorithmIdentifier(object, level, NULL);
+			{
+				int alg;
 
-					if (alg != OID_RSA_ENCRYPTION)
-					{
-						DBG1(DBG_LIB, "only rsa encryption supported");
-						goto end;
-					}
+				alg = asn1_parse_algorithmIdentifier(object, level, NULL);
+				if (alg != OID_RSA_ENCRYPTION)
+				{
+					DBG1(DBG_LIB, "only rsa encryption supported");
+					goto end;
 				}
 				break;
+			}
 			case PKCS7_ENCRYPTED_KEY:
-				if (key->pkcs1_decrypt(key, object, &symmetric_key) != SUCCESS)
+			{
+				if (!key->decrypt(key, ENCRYPT_RSA_PKCS1, object, &symmetric_key))
 				{
 					DBG1(DBG_LIB, "symmetric key could not be decrypted with rsa");
 					goto end;
 				}
-				DBG4(DBG_LIB, "symmetric key : %B", &symmetric_key);
+				DBG4(DBG_LIB, "symmetric key %B", &symmetric_key);
 				break;
+			}
 			case PKCS7_CONTENT_TYPE:
-				if (known_oid(object) != OID_PKCS7_DATA)
+			{
+				if (asn1_known_oid(object) != OID_PKCS7_DATA)
 				{
 					DBG1(DBG_LIB, "encrypted content not of type pkcs7 data");
 					goto end;
 				}
 				break;
+			}
 			case PKCS7_CONTENT_ENC_ALGORITHM:
-				{
-					int alg = parse_algorithmIdentifier(object, level, &iv);
+			{
+				encryption_algorithm_t enc_alg;
+				size_t key_size;
+				int alg;
 
-					switch (alg)
-					{
-						case OID_DES_CBC:
-							crypter = crypter_create(ENCR_DES, 0);
-							break;
-						case OID_3DES_EDE_CBC:
-							crypter = crypter_create(ENCR_3DES, 0);
-							break;
-						default:
-							DBG1(DBG_LIB, "Only DES and 3DES supported for symmetric encryption");
-							goto end;
-					}
-					if (symmetric_key.len != crypter->get_key_size(crypter))
-					{
-						DBG1(DBG_LIB, "symmetric key has wrong length");
-						goto end;
-					}
-					if (!parse_asn1_simple_object(&iv, ASN1_OCTET_STRING, level+1, "IV"))
-					{
-						DBG1(DBG_LIB, "IV could not be parsed");
-						goto end;
-					}
-					if (iv.len != crypter->get_iv_size(crypter))
-					{
-						DBG1(DBG_LIB, "IV has wrong length");
-						goto end;
-					}
+				alg = asn1_parse_algorithmIdentifier(object, level, &iv);
+				enc_alg = encryption_algorithm_from_oid(alg, &key_size);
+				if (enc_alg == ENCR_UNDEFINED)
+				{
+					DBG1(DBG_LIB, "unsupported content encryption algorithm");
+					goto end;
+				}
+				crypter = lib->crypto->create_crypter(lib->crypto, enc_alg,
+													  key_size);
+				if (crypter == NULL)
+				{
+					DBG1(DBG_LIB, "crypter %N not available",
+						 encryption_algorithm_names, enc_alg);
+					goto end;
+				}
+				if (symmetric_key.len != crypter->get_key_size(crypter))
+				{
+					DBG1(DBG_LIB, "symmetric key length %d is wrong",
+						 symmetric_key.len);
+					goto end;
+				}
+				if (!asn1_parse_simple_object(&iv, ASN1_OCTET_STRING,
+											  level + 1, "IV"))
+				{
+					DBG1(DBG_LIB, "IV could not be parsed");
+					goto end;
+				}
+				if (iv.len != crypter->get_iv_size(crypter))
+				{
+					DBG1(DBG_LIB, "IV length %d is wrong", iv.len);
+					goto end;
 				}
 				break;
+			}
 			case PKCS7_ENCRYPTED_CONTENT:
+			{
 				encrypted_content = object;
 				break;
+			}
 		}
 	}
 	success = parser->success(parser);
@@ -566,11 +585,12 @@ end:
 	{
 		goto failed;
 	}
+	success = FALSE;
 
 	/* decrypt the content */
 	crypter->set_key(crypter, symmetric_key);
 	crypter->decrypt(crypter, encrypted_content, iv, &this->data);
-	DBG3(DBG_LIB, "decrypted content with padding: %B", &this->data);
+	DBG4(DBG_LIB, "decrypted content with padding: %B", &this->data);
 
 	/* remove the padding */
 	{
@@ -594,15 +614,16 @@ end:
 			}
 		}
 	}
-	crypter->destroy(crypter);
-	free(symmetric_key.ptr);
-	return TRUE;
+	success = TRUE;
 
 failed:
 	DESTROY_IF(crypter);
-	free(symmetric_key.ptr);
-	chunk_free(&this->data);
-	return FALSE;
+	chunk_clear(&symmetric_key);
+	if (!success)
+	{
+		chunk_free(&this->data);
+	}
+	return success;
 }
 
 METHOD(pkcs7_t, get_data, chunk_t,
@@ -616,26 +637,16 @@ METHOD(pkcs7_t, get_contentInfo, chunk_t,
 {
 	chunk_t content_type;
 
-	/* select DER-encoded OID for pkcs7_contentInfo type */
+	/* create DER-encoded OID for pkcs7_contentInfo type */
 	switch(this->type)
 	{
 		case OID_PKCS7_DATA:
-			content_type = ASN1_pkcs7_data_oid;
-			break;
 		case OID_PKCS7_SIGNED_DATA:
-			content_type = ASN1_pkcs7_signed_data_oid;
-			break;
 		case OID_PKCS7_ENVELOPED_DATA:
-			content_type = ASN1_pkcs7_enveloped_data_oid;
-			break;
 		case OID_PKCS7_SIGNED_ENVELOPED_DATA:
-			content_type = ASN1_pkcs7_signed_enveloped_data_oid;
-			break;
 		case OID_PKCS7_DIGESTED_DATA:
-			content_type = ASN1_pkcs7_digested_data_oid;
-			break;
 		case OID_PKCS7_ENCRYPTED_DATA:
-			content_type = ASN1_pkcs7_encrypted_data_oid;
+			content_type = asn1_build_known_oid(this->type);
 			break;
 		case OID_UNKNOWN:
 		default:
@@ -643,12 +654,10 @@ METHOD(pkcs7_t, get_contentInfo, chunk_t,
 			return chunk_empty;
 	}
 
-	return (this->content.ptr == NULL)
-			? asn1_simple_object(ASN1_SEQUENCE, content_type)
-			: asn1_wrap(ASN1_SEQUENCE, "cm",
-					content_type,
-					asn1_simple_object(ASN1_CONTEXT_C_0, this->content)
-			  );
+	return this->content.ptr == NULL
+				? asn1_wrap(ASN1_SEQUENCE, "m", content_type)
+				: asn1_wrap(ASN1_SEQUENCE, "mm", content_type,
+					asn1_simple_object(ASN1_CONTEXT_C_0, this->content));
 }
 
 METHOD(pkcs7_t, create_certificate_enumerator, enumerator_t*,
@@ -658,11 +667,10 @@ METHOD(pkcs7_t, create_certificate_enumerator, enumerator_t*,
 }
 
 METHOD(pkcs7_t, set_certificate, void,
-	private_pkcs7_t *this, x509_t *cert)
+	private_pkcs7_t *this, certificate_t *cert)
 {
 	if (cert)
 	{
-		/* TODO the certificate is currently not cloned */
 		this->certs->insert_last(this->certs, cert);
 	}
 }
@@ -676,37 +684,39 @@ METHOD(pkcs7_t, set_attributes, void,
 /**
  * build a DER-encoded issuerAndSerialNumber object
  */
-chunk_t pkcs7_build_issuerAndSerialNumber(x509_t *cert)
+chunk_t pkcs7_build_issuerAndSerialNumber(certificate_t *cert)
 {
 	identification_t *issuer = cert->get_issuer(cert);
+	chunk_t serial = chunk_empty;
+
+	if (cert->get_type(cert) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)cert;
+		serial = x509->get_serial(x509);
+	}
 
 	return asn1_wrap(ASN1_SEQUENCE, "cm",
-			issuer->get_encoding(issuer),
-			asn1_simple_object(ASN1_INTEGER, cert->get_serialNumber(cert)));
+					 issuer->get_encoding(issuer),
+					 asn1_integer("c", serial));
 }
 
 METHOD(pkcs7_t, build_envelopedData, bool,
-	private_pkcs7_t *this, x509_t *cert, encryption_algorithm_t alg)
+	private_pkcs7_t *this, certificate_t *cert, encryption_algorithm_t alg,
+	size_t key_size)
 {
-	chunk_t iv, symmetricKey, in, out, alg_oid;
+	chunk_t iv, symmetricKey, protectedKey, in, out;
 	crypter_t *crypter;
+	int alg_oid;
 
 	/* select OID of symmetric encryption algorithm */
-	switch (alg)
+	alg_oid = encryption_algorithm_to_oid(alg, key_size);
+	if (alg_oid == OID_UNKNOWN)
 	{
-		case ENCR_DES:
-			alg_oid = ASN1_des_cbc_oid;
-			break;
-		case ENCR_3DES:
-			alg_oid = ASN1_3des_ede_cbc_oid;
-			break;
-		default:
-			DBG1(DBG_LIB, "  encryption algorithm %N not supported",
-				  encryption_algorithm_names, alg);
-			return FALSE;
+		DBG1(DBG_LIB, "  encryption algorithm %N not supported",
+			 encryption_algorithm_names, alg);
+		return FALSE;
 	}
-
-	crypter = crypter_create(alg, 0);
+	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
 	if (crypter == NULL)
 	{
 		DBG1(DBG_LIB, "  could not create crypter for algorithm %N",
@@ -758,27 +768,37 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 	chunk_clear(&in);
 	DBG3(DBG_LIB, "  encrypted data: %B", &out);
 
+	/* protect symmetric key by public key encryption */
+	{
+		public_key_t *key = cert->get_public_key(cert);
+
+		if (key == NULL)
+		{
+			DBG1(DBG_LIB, "  public key not found in encryption certificate");
+			chunk_clear(&symmetricKey);
+			chunk_free(&iv);
+			chunk_free(&out);
+			return FALSE;
+		}
+		key->encrypt(key, ENCRYPT_RSA_PKCS1, symmetricKey, &protectedKey);
+		key->destroy(key);
+		chunk_clear(&symmetricKey);
+	}
+
 	/* build pkcs7 enveloped data object */
 	{
-		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "cm",
-					alg_oid,
+		chunk_t contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_build_known_oid(alg_oid),
 					asn1_wrap(ASN1_OCTET_STRING, "m", iv));
 
-		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "cmm",
-					ASN1_pkcs7_data_oid,
+		chunk_t encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "mmm",
+					asn1_build_known_oid(OID_PKCS7_DATA),
 					contentEncryptionAlgorithm,
 					asn1_wrap(ASN1_CONTEXT_S_0, "m", out));
 
-		chunk_t wrappedKey, encryptedKey, recipientInfo;
+		chunk_t encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m", protectedKey);
 
-		rsa_public_key_t *public_key = cert->get_public_key(cert);
-
-		public_key->pkcs1_encrypt(public_key, symmetricKey, &wrappedKey);
-		chunk_clear(&symmetricKey);
-
-		encryptedKey = asn1_wrap(ASN1_OCTET_STRING, "m", wrappedKey);
-
-		recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmmm",
+		chunk_t recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmmm",
 					ASN1_INTEGER_0,
 					pkcs7_build_issuerAndSerialNumber(cert),
 					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
@@ -794,24 +814,26 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 }
 
 METHOD(pkcs7_t, build_signedData, bool,
-	private_pkcs7_t *this, rsa_private_key_t *private_key, hash_algorithm_t alg)
+	private_pkcs7_t *this, private_key_t *private_key, hash_algorithm_t alg)
 {
-	int signature_oid = hasher_signature_algorithm_to_oid(alg,
-							private_key->get_type(private_key));
 	chunk_t authenticatedAttributes = chunk_empty;
 	chunk_t encryptedDigest = chunk_empty;
-	chunk_t signerInfo;
-	x509_t *cert;
+	chunk_t signerInfo, encoding = chunk_empty;
+	signature_scheme_t scheme;
+	int digest_oid;
+	certificate_t *cert;
 
 	if (this->certs->get_first(this->certs, (void**)&cert) != SUCCESS)
 	{
 		DBG1(DBG_LIB, "  no pkcs7 signer certificate found");
 		return FALSE;
 	}
+	digest_oid = hasher_algorithm_to_oid(alg);
+	scheme = signature_scheme_from_oid(digest_oid);
 
 	if (this->attributes != NULL)
 	{
-		if(this->data.ptr != NULL)
+		if (this->data.ptr != NULL)
 		{
 			hasher_t *hasher;
 
@@ -832,42 +854,41 @@ METHOD(pkcs7_t, build_signedData, bool,
 			hasher->allocate_hash(hasher, this->data, &messageDigest);
 			hasher->destroy(hasher);
 			this->attributes->set_attribute(this->attributes,
-								OID_PKCS9_CONTENT_TYPE, ASN1_pkcs7_data_oid);
+									OID_PKCS9_CONTENT_TYPE,
+									asn1_build_known_oid(OID_PKCS7_DATA));
 			this->attributes->set_messageDigest(this->attributes,
-								messageDigest);
+									messageDigest);
 			this->attributes->set_attribute(this->attributes,
-								OID_PKCS9_SIGNING_TIME, signingTime);
+									OID_PKCS9_SIGNING_TIME, signingTime);
 			attributes = this->attributes->get_encoding(this->attributes);
 
 			free(messageDigest.ptr);
 			free(signingTime.ptr);
 
-			private_key->build_emsa_pkcs1_signature(private_key, alg,
-							attributes, &encryptedDigest);
+			private_key->sign(private_key, scheme, attributes, &encryptedDigest);
 			authenticatedAttributes = chunk_clone(attributes);
 			*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
 		}
 	}
 	else if (this->data.ptr != NULL)
 	{
-		private_key->build_emsa_pkcs1_signature(private_key, alg,
-						this->data, &encryptedDigest);
+		private_key->sign(private_key, scheme, this->data, &encryptedDigest);
 	}
 	if (encryptedDigest.ptr)
 	{
 		encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", encryptedDigest);
 	}
-
 	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm",
 					ASN1_INTEGER_1,
 					pkcs7_build_issuerAndSerialNumber(cert),
-					asn1_algorithmIdentifier(signature_oid),
+					asn1_algorithmIdentifier(digest_oid),
 					authenticatedAttributes,
 					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
 					encryptedDigest);
 
 	if (this->data.ptr != NULL)
 	{
+		chunk_free(&this->content);
 		this->content = asn1_simple_object(ASN1_OCTET_STRING, this->data);
 		chunk_free(&this->data);
 	}
@@ -876,12 +897,13 @@ METHOD(pkcs7_t, build_signedData, bool,
 	chunk_free(&this->content);
 
 	this->type = OID_PKCS7_SIGNED_DATA;
+	cert->get_encoding(cert, CERT_ASN1_DER, &encoding);
 
 	this->content = asn1_wrap(ASN1_SEQUENCE, "cmcmm",
 			ASN1_INTEGER_1,
-			asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(signature_oid)),
+			asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_oid)),
 			this->data,
-			asn1_simple_object(ASN1_CONTEXT_C_0, cert->get_certificate(cert)),
+			asn1_wrap(ASN1_CONTEXT_C_0, "m", encoding),
 			asn1_wrap(ASN1_SET, "m", signerInfo));
 
 	return TRUE;
@@ -891,7 +913,7 @@ METHOD(pkcs7_t, destroy, void,
 	private_pkcs7_t *this)
 {
 	DESTROY_IF(this->attributes);
-	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
+	this->certs->destroy_offset(this->certs, offsetof(certificate_t, destroy));
 	free(this->content.ptr);
 	free(this->data.ptr);
 	free(this);
@@ -928,7 +950,7 @@ static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo
 	{
 		if (objectID == PKCS7_INFO_TYPE)
 		{
-			cInfo->type = known_oid(object);
+			cInfo->type = asn1_known_oid(object);
 			if (cInfo->type < OID_PKCS7_DATA
 			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
 			{
