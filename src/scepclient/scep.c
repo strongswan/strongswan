@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -299,9 +300,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	memcpy(pos, digest.ptr, digest.len);
 
 	/* the transaction id is the serial number in hex format */
-	transID->len = 2*digest.len;
-	transID->ptr = malloc(transID->len + 1);
-	datatot(digest.ptr, digest.len, 16, transID->ptr, transID->len + 1);
+	*transID = chunk_to_hex(digest, NULL, FALSE);
 }
 
 /**
@@ -390,11 +389,12 @@ static char* escape_http_request(chunk_t req)
 	int n     = 0;
 
 	/* compute and allocate the size of the base64-encoded request */
-	int len = 1 + 4*((req.len + 2)/3);
+	int len = 1 + 4 * ((req.len + 2) / 3);
 	char *encoded_req = malloc(len);
 
 	/* do the base64 conversion */
-	len = datatot(req.ptr, req.len, 64, encoded_req, len);
+	chunk_t base64 = chunk_to_base64(req, encoded_req);
+	len = base64.len + 1;
 
 	/* compute newline characters to be inserted every 64 characters */
 	lines = (len - 2) / 64;
@@ -409,7 +409,7 @@ static char* escape_http_request(chunk_t req)
 		}
 	}
 
-	escaped_req = malloc(len + 3*(lines + plus));
+	escaped_req = malloc(len + 3 * (lines + plus));
 
 	/* escape special characters in the request */
 	p1 = encoded_req;
