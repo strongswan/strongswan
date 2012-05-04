@@ -19,6 +19,7 @@
 #include <freeswan.h>
 
 #include <library.h>
+#include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
@@ -28,7 +29,6 @@
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/fetch.h"
-#include "../pluto/log.h"
 
 #include "scep.h"
 
@@ -162,9 +162,7 @@ static bool extract_attribute(int oid, chunk_t object, u_int level,
 				if (strncmp(msgType_values[m], object.ptr, object.len) == 0)
 					attrs->msgType = m;
 			}
-			DBG(DBG_CONTROL,
-				DBG_log("messageType:  %s", msgType_names[attrs->msgType])
-			)
+			DBG2(DBG_APP, "messageType:  %s", msgType_names[attrs->msgType]);
 			break;
 		}
 		case OID_PKI_STATUS:
@@ -178,9 +176,7 @@ static bool extract_attribute(int oid, chunk_t object, u_int level,
 					attrs->pkiStatus = s;
 				}
 			}
-			DBG(DBG_CONTROL,
-				DBG_log("pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus])
-			)
+			DBG2(DBG_APP, "pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus]);
 			break;
 		}
 		case OID_PKI_FAIL_INFO:
@@ -192,7 +188,7 @@ static bool extract_attribute(int oid, chunk_t object, u_int level,
 			}
 			if (attrs->failInfo != SCEP_unknown_REASON)
 			{
-				plog("failInfo:     %s", failInfo_reasons[attrs->failInfo]);
+				DBG1(DBG_APP, "failInfo:     %s", failInfo_reasons[attrs->failInfo]);
 			}
 			break;
 		}
@@ -221,9 +217,7 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 	bool success = FALSE;
 
 	parser = asn1_parser_create(attributesObjects, blob);
-	DBG(DBG_CONTROL | DBG_PARSING,
-		DBG_log("parsing attributes")
-	)
+	DBG3(DBG_APP, "parsing attributes");
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
@@ -458,9 +452,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 	/* initialize response */
 	*response = chunk_empty;
 
-	DBG(DBG_CONTROL,
-		DBG_log("sending scep request to '%s'", url)
-	)
+	DBG2(DBG_APP, "sending scep request to '%s'", url);
 
 	if (op == SCEP_PKI_OPERATION)
 	{

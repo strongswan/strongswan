@@ -1,5 +1,5 @@
 ipsec_PROGRAMS = scepclient
-scepclient_SOURCES = scepclient.c scep.c scep.h loglite.c
+scepclient_SOURCES = scepclient.c scep.c scep.h
 
 scepclient.o :	$(top_builddir)/config.status
 
@@ -22,13 +22,13 @@ INCLUDES = \
 AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DPLUGINS=\""${scepclient_plugins}\"" \
--DDEBUG -DNO_PLUTO
+-DNO_PLUTO
 
 LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
 
 scepclient_LDADD = \
-constants.o defs.o lex.o pkcs7.o \
+constants.o defs.o pkcs7.o \
 $(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
 $(LIBFREESWANBUILDDIR)/libfreeswan.a
 
@@ -44,9 +44,6 @@ constants.o :	$(PLUTODIR)/constants.c $(PLUTODIR)/constants.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 defs.o : 	$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-lex.o :		$(PLUTODIR)/lex.c $(PLUTODIR)/lex.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pkcs7.o :	$(PLUTODIR)/pkcs7.c $(PLUTODIR)/pkcs7.h

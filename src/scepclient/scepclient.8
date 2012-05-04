@@ -1,5 +1,5 @@
-.\" 
-.TH "IPSEC_SCEPCLIENT" "8" "29 September 2005" "Jan Hutter, Martin Willi" ""
+.\"
+.TH "IPSEC_SCEPCLIENT" "8" "2012-05-11" "strongSwan" ""
 .SH "NAME"
 ipsec scepclient \- Client for the SCEP protocol
 .SH "SYNOPSIS"
@@ -7,7 +7,7 @@ ipsec scepclient \- Client for the SCEP protocol
 .sp
 .B ipsec scepclient
 .B \-\-help
-.br 
+.br
 .B ipsec scepclient
 .B \-\-version
 .SH "DESCRIPTION"
@@ -19,7 +19,7 @@ is designed to be used for certificate enrollment on machines using the OpenSour
 .SH "FEATURES"
 .BR scepclient
 implements the following features of SCEP:
-.br 
+.br
 .IP "\-" 4
 Automatic enrollment of client certificate using a preshared secret
 .IP "\-" 4
@@ -31,7 +31,7 @@ Acquisition of CA certificate(s)
 .B \-v, \-\-version
 .RS 4
 Display the version of ipsec scepclient.
-.PP 
+.PP
 .RE
 .B \-h, \-\-help
 .RS 4
@@ -43,17 +43,17 @@ Display usage of ipsec scepclient.
 .RS 4
 Full HTTP URL of the SCEP server to be used for certificate enrollment and CA certificate acquisition.
 .RE
-.PP 
+.PP
 .B \-+, \-\-optionsfrom \fIfilename\fP
 .RS 4
 Reads additional options from \fIfilename\fP.
 .RE
-.PP 
+.PP
 .B \-f, \-\-force
 .RS 4
 Overwrite existing output file[s].
 .RE
-.PP 
+.PP
 .B \-q, \-\-quiet
 .RS 4
 Do not write log output to stderr.
@@ -70,41 +70,41 @@ The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 .SS Options For Certificate Enrollment
 .B \-i, \-\-in \fItype\fP[=\fIfilename\fP]
 .RS 4
-Input file for certificate enrollment. This option can be specified multiple times to specify input files for every \fItype\fP. 
+Input file for certificate enrollment. This option can be specified multiple times to specify input files for every \fItype\fP.
 Input files can bei either DER or PEM encoded.
-.PP 
+.PP
 Supported values for \fItype\fP:
 .IP "\fBpkcs1\fP" 12
 RSA private key in PKCS#1 file format. If no input of this type is specified, a RSA key gets generated.
 .br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/private/myKey.der.
 .IP "\fBcacert\-enc\fP" 12
-CA certificate to encrypt the SCEP request. Has to be specified for certificate enrollment. 
-.br 
+CA certificate to encrypt the SCEP request. Has to be specified for certificate enrollment.
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 .IP "\fBcacert\-sig\fP" 12
-CA certificate to check signature of SCEP reply. Has to be specified for certificate enrollment. 
-.br 
+CA certificate to check signature of SCEP reply. Has to be specified for certificate enrollment.
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 .RE
-.PP 
+.PP
 .B \-k, \-\-keylength \fIbits\fP
 .RS 4
 sets the key length for RSA key generation. The default length for a generated rsa key is set to 2048 bit.
 .RE
-.PP 
+.PP
 .B \-D, \-\-days \fIdays\fP
 .RS 4
 Validity of the self-signed X.509 certificate in days. The default is 1825 days (5 years).
 .RE
-.PP 
+.PP
 .B \-S, \-\-startdate \fIYYMMDDHHMMSS\fPZ
 .RS 4
-defines the \fBnotBefore\fP date when the X.509 certificate  becomes  valid. 
+defines the \fBnotBefore\fP date when the X.509 certificate  becomes  valid.
 The  date has the format \fIYYMMDDHHMMSS\fP and  must be specified in UTC (Zulu time).
 If the \fB--startdate\fP option is not specified then the current date is taken as a default.
 .RE
-.PP 
+.PP
 .B \-E, \-\-enddate \fIYYMMDDHHMMSS\fPZ
 .RS 4
 defines the \fBnotAfter\fP date when the X.509 certificate will expire.
@@ -118,12 +118,12 @@ adding the validity interval specified by the \fB--days\fP option to the \fBnotB
 Distinguished name as comma separated list of relative distinguished names. Use quotation marks for a distinguished name containing spaces. If the \fB\-\-dn\fP parameter is missing then the default "C=CH, O=Linux strongSwan, CN=\fIhostname\fP"
 is used with \fIhostname\fP being the return value of the \fIgethostname\fP() function.
 .RE
-.PP 
+.PP
 .B \-s, \-\-subjectAltName \fItype\fP=\fIvalue\fP
 .RS 4
 Include subjectAltName in certificate request. This option can be specified multiple times to specify a subjectAltName
 for every \fItype\fP.
-.PP 
+.PP
 Supported values for \fItype\fP:
 .IP "\fBemail\fP" 12
 subjectAltName is a email address.
@@ -132,22 +132,22 @@ subjectAltName is a hostname.
 .IP "\fBip\fP" 12
 subjectAltName is a IP address.
 .RE
-.PP 
+.PP
 .B \-p, \-\-password \fIpw\fP
 .RS 4
 Password to be included as a \fIchallenge password\fP in SCEP request.
 If \fIpw\fP is \fB%prompt\fP', the password gets prompted for on the command line.
 .IP
 \- In automatic mode, this password corresponds to the preshared secret for the given enrollment.
-.IP 
+.IP
 \- In manual mode, this password can be used to later revoke the corresponding certificate.
 .RE
-.PP 
+.PP
 .B \-a, \-\-algorithm \fIalgo\fP
 .RS 4
 Change symmetric algorithm to use for encryption of certificate Request.
 The default is \fB3des\-cbc\fP.
-.PP 
+.PP
 Supported values for \fIalgo\fP:
 .IP "\fBdes\fP" 12
 DES-CBC encryption (key size = 56 bit).
@@ -166,55 +166,55 @@ Camelllia-CBC encryption (key size = 192 bit).
 .IP "\fBcamellia256\fP" 12
 Camellia-CBC encryption (key size = 256 bit).
 .RE
-.PP 
+.PP
 .B \-o, \-\-out \fItype\fP[=\fIfilename\fP]
 .RS 4
 Output file for certificate enrollment. This option can be specified multiple times to specify output files for every \fItype\fP.
-.PP 
+.PP
 Supported values for \fItype\fP:
 .IP "\fBpkcs1\fP" 12
 RSA private key in PKCS#1 file format. If specified, the RSA key used for enrollment is stored in file \fIfilename\fP.
 If none of the \fItypes\fP listed below are specified, \fBscepclient\fP will stop after outputting this file.
-.br 
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/private/myKey.der.
 .IP "\fBpkcs10\fP" 12
 PKCS#10 certificate request. If specified, the PKCS#10 request used or certificate enrollment is stored in file \fIfilename\fP.
-If none of the \fItypes\fP listed below are specified, \fBscepclient\fP will stop after outputting this file. 
-.br 
+If none of the \fItypes\fP listed below are specified, \fBscepclient\fP will stop after outputting this file.
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/req/myReq.der.
 .IP "\fBpkcs7\fP" 12
 PKCS#7 SCEP request as it is sent using HTTP to the SCEP server. If specified, this SCEP request is stored in file \fIfilename\fP.
 If none of \fItypes\fP listed below is not specified, \fBscepclient\fP will stop after outputting this file.
-.br 
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/req/pkcs7.der.
 .IP "\fBcert-self\fP" 12
 Self-signed certificate. If specified the self-signed certificate is stored in file \fIfilename\fP.
-.br 
+.br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/certs/selfCert.der.
 .IP "\fBcert\fP" 12
 Enrolled certificate. This \fItype\fP must be specified for certificate enrollment.
 The enrolled certificate is stored in file \fIfilename\fP.
-.br 
+.br
 The default \fIfilename\fP is set to $CONFDIR/ipsec.d/certs/myCert.der.
 .RE
-.PP 
+.PP
 .B \-m, \-\-method \fImethod\fP
 .RS 4
 Change HTTP request method for certificate enrollment. Default is \fBget\fP.
-.PP 
+.PP
 Supported values for \fImethod\fP:
 .IP "\fBpost\fP" 12
 Certificate enrollment using HTTP POST. Must be supported by the given SCEP server.
 .IP "\fBget\fP" 12
 Certificate enrollment using HTTP GET.
 .RE
-.PP 
+.PP
 .B \-t, \-\-interval \fIseconds\fP
 .RS 4
 Set interval time in seconds when polling in manual mode.
 The default interval is set to 5 seconds.
 .RE
-.PP 
+.PP
 .B \-x, \-\-maxpolltime \fIseconds\fP
 .RS 4
 Set max time in seconds to poll in manual mode.
@@ -222,64 +222,39 @@ The default max time is set to unlimited.
 .RE
 
 .SS Debugging Output Options:
-.B \-A, \-\-debug\-all
+.B \-l, \-\-debug \fIlevel\fP
 .RS 4
-Log everything except private data.
-.RE
-.PP 
-.B \-P, \-\-debug\-parsing
-.RS 4
-Log parsing relevant stuff.
-.RE
-.PP 
-.B \-R, \-\-debug\-raw
-.RS 4
-Log raw hex dumps.
-.RE
-.PP 
-.B \-C, \-\-debug\-control
-.RS 4
-Log information about control flow.
-.RE
-.PP 
-.B \-M, \-\-debug\-controlmore
-.RS 4
-Log more detailed information about control flow.
-.RE
-.PP 
-.B \-X, \-\-debug\-private
-.RS 4
-Log sensitive data (e.g. private keys).
+Changes the log level (-1..4, default: 1)
 .RE
 .SH "EXAMPLES"
 .B  ipsec scepclient \-\-out caCert \-\-url http://scepserver/cgi\-bin/pkiclient.exe \-f
 .RS 4
 Acquire CA certificate from SCEP server and store it in the default file $CONFDIR/ipsec.d/cacerts/caCert.der.
-If more then one CA certificate is returned, store them in files named caCert.der\-1', caCert.der\-2', etc. 
-.br 
+If more then one CA certificate is returned, store them in files named caCert.der\-1', caCert.der\-2', etc.
+.br
 Existing files are overwritten.
 .RE
-.PP 
+.PP
 .B  ipsec scepclient \-\-out pkcs1=joeKey.der \-k 1024
 .RS 4
 Generate RSA private key with key length of 1024 bit and store it in file joeKey.der.
 .RE
-.PP 
+.PP
 .B  ipsec scepclient \-\-in pkcs1=joeKey.der \-\-out pkcs10=joeReq.der \e
-.br 
+.br
 .B \-\-dn \*(rqC=AT, CN=John Doe\*(rq \-s email=john@doe.com \-p mypassword
 .RS 4
 Generate a PKCS#10 request and store it in file joeReq.der. Use the RSA private key joeKey.der
-created earlier to sign the PKCS#10\-Request. In addition to the distinguished name include a 
+created earlier to sign the PKCS#10\-Request. In addition to the distinguished name include a
 email\-subjectAltName and a challenge password in the request.
 .RE
-.PP 
+.PP
 .B  ipsec scepclient \-\-out pkcs1=joeKey.der \-\-out cert==joeCert.der \e
-.br 
+.br
 .B \-\-dn \*(rqC=CH, CN=John Doe\*(rq \-k 512 \-p 5xH2pnT7wq \e
-.br 
+.br
 .B \-\-url http://scep.hsr.ch/cgi\-bin/pkiclient.exe \e
-.br 
+.br
 .B \-\-in cacert\-enc=caCert.der \-\-in cacert\-sig=caCert.der
 .RS 4
 Generate a new RSA key for the request and store it in joeKey.der. Then enroll a certificate and store as joeCert.der.
@@ -292,9 +267,9 @@ caCert.der.
 \fB\-\-optionsfrom\fP seems to have parsing problems reading option files containing strings in quotation marks.
 .SH "COPYRIGHT"
 Copyright (C) 2005 Jan Hutter, Martin Willi
-.br 
+.br
 Hochschule fuer Technik Rapperswil
-.PP 
+.PP
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-.PP 
+.PP
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,6 +22,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
+#include <syslog.h>
 
 #include <freeswan.h>
 
@@ -43,7 +45,6 @@
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/log.h"
 #include "../pluto/certs.h"
 #include "../pluto/pkcs7.h"
 
@@ -137,6 +138,68 @@ certificate_t *x509_ca_enc     = NULL;
 certificate_t *x509_ca_sig     = NULL;
 certificate_t *pkcs10_req      = NULL;
 
+/* logging */
+static bool log_to_stderr = TRUE;
+static bool log_to_syslog = TRUE;
+static level_t default_loglevel = 1;
+
+/**
+ * logging function for scepclient
+ */
+static void scepclient_dbg(debug_t group, level_t level, char *fmt, ...)
+{
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
+
+	if (level <= default_loglevel)
+	{
+		if (log_to_stderr)
+		{
+			va_start(args, fmt);
+			vfprintf(stderr, fmt, args);
+			va_end(args);
+			fprintf(stderr, "\n");
+		}
+		if (log_to_syslog)
+		{
+			/* write in memory buffer first */
+			va_start(args, fmt);
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+			va_end(args);
+
+			/* do a syslog with every line */
+			while (current)
+			{
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(LOG_INFO, "%s\n", current);
+				current = next;
+			}
+		}
+	}
+}
+
+/**
+ * Initialize logging to stderr/syslog
+ */
+static void init_log(const char *program)
+{
+	dbg = scepclient_dbg;
+
+	if (log_to_stderr)
+	{
+		setbuf(stderr, NULL);
+	}
+	if (log_to_syslog)
+	{
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	}
+}
+
 /**
  * @brief exit scepclient
  *
@@ -171,7 +234,7 @@ static void exit_scepclient(err_t message, ...)
 	if (message != NULL && *message != '\0')
 	{
 		va_list args;
-		char m[LOG_WIDTH];      /* longer messages will be truncated */
+		char m[8192];
 
 		va_start(args, message);
 		vsnprintf(m, sizeof(m), message, args);
@@ -181,7 +244,6 @@ static void exit_scepclient(err_t message, ...)
 		status = -1;
 	}
 	library_deinit();
-	close_log();
 	exit(status);
 }
 
@@ -224,7 +286,7 @@ static void usage(const char *message)
 		"\n"
 		"Options for key generation (pkcs1):\n"
 		" --keylength (-k) <bits>           key length for RSA key generation\n"
-											"(default: 2048 bits)\n"
+		"                                   (default: 2048 bits)\n"
 		"\n"
 		"Options for validity:\n"
 		" --days (-D) <days>                validity in days\n"
@@ -247,16 +309,9 @@ static void usage(const char *message)
 		" --interval (-t) <seconds>         manual mode poll interval in seconds (default 20s)\n"
 		" --maxpolltime (-x) <seconds>      max poll time in seconds when in manual mode\n"
 		"                                   (default: unlimited)\n"
-#ifdef DEBUG
 		"\n"
 		"Debugging output:\n"
-		" --debug-all (-A)                  show everything except private\n"
-		" --debug-parsing (-P)              show parsing relevant stuff\n"
-		" --debug-raw (-R)                  show raw hex dumps\n"
-		" --debug-control (-C)              show control flow output\n"
-		" --debug-controlmore (-M)          show more control flow\n"
-		" --debug-private (-X)              show sensitive data (private keys, etc.)\n"
-#endif
+		" --debug (-l) <level>              changes the log level (-1..4, default: 1)\n"
 		);
 	exit_scepclient(message);
 }
@@ -374,7 +429,6 @@ int main(int argc, char **argv)
 	scep_response     = chunk_empty;
 	subjectAltNames   = linked_list_create();
 	options           = options_create();
-	log_to_stderr     = TRUE;
 
 	for (;;)
 	{
@@ -384,6 +438,7 @@ int main(int argc, char **argv)
 			{ "version", no_argument, NULL, 'v' },
 			{ "optionsfrom", required_argument, NULL, '+' },
 			{ "quiet", no_argument, NULL, 'q' },
+			{ "debug", required_argument, NULL, 'l' },
 			{ "in", required_argument, NULL, 'i' },
 			{ "out", required_argument, NULL, 'o' },
 			{ "force", no_argument, NULL, 'f' },
@@ -399,14 +454,6 @@ int main(int argc, char **argv)
 			{ "method", required_argument, NULL, 'm' },
 			{ "interval", required_argument, NULL, 't' },
 			{ "maxpolltime", required_argument, NULL, 'x' },
-#ifdef DEBUG
-			{ "debug-all", no_argument, NULL, 'A' },
-			{ "debug-parsing", no_argument, NULL, 'P'},
-			{ "debug-raw", no_argument, NULL, 'R'},
-			{ "debug-control", no_argument, NULL, 'C'},
-			{ "debug-controlmore", no_argument, NULL, 'M'},
-			{ "debug-private", no_argument, NULL, 'X'},
-#endif
 			{ 0,0,0,0 }
 		};
 
@@ -426,6 +473,10 @@ int main(int argc, char **argv)
 
 			case 'q':       /* --quiet */
 				log_to_stderr = FALSE;
+				continue;
+
+			case 'l':		/* --debug <level> */
+				default_loglevel = atoi(optarg);
 				continue;
 
 			case 'i':       /* --in <type> [= <filename>] */
@@ -702,33 +753,12 @@ int main(int argc, char **argv)
 				}
 				continue;
 			}
-#ifdef DEBUG
-			case 'A':       /* --debug-all */
-				base_debugging |= DBG_ALL;
-				continue;
-			case 'P':       /* debug parsing */
-				base_debugging |= DBG_PARSING;
-				continue;
-			case 'R':       /* debug raw */
-				base_debugging |= DBG_RAW;
-				continue;
-			case 'C':       /* debug control */
-				base_debugging |= DBG_CONTROL;
-				continue;
-			case 'M':       /* debug control more */
-				base_debugging |= DBG_CONTROLMORE;
-				continue;
-			case 'X':       /* debug private */
-				base_debugging |= DBG_PRIVATE;
-				continue;
-#endif
 			default:
 				usage("unknown option");
 		}
 		/* break from loop */
 		break;
 	}
-	cur_debugging = base_debugging;
 
 	init_log("scepclient");
 
@@ -738,12 +768,12 @@ int main(int argc, char **argv)
 	{
 		exit_scepclient("plugin loading failed");
 	}
-	DBG1(DBG_LIB, "  loaded plugins: %s",
+	DBG1(DBG_APP, "  loaded plugins: %s",
 		 lib->plugins->loaded_plugins(lib->plugins));
 
 	if ((filetype_out == 0) && (!request_ca_certificate))
 	{
-		usage ("--out filetype required");
+		usage("--out filetype required");
 	}
 	if (request_ca_certificate && (filetype_out > 0 || filetype_in > 0))
 	{
@@ -838,18 +868,14 @@ int main(int argc, char **argv)
 			distinguishedName = buf;
 		}
 
-		DBG(DBG_CONTROL,
-			DBG_log("dn: '%s'", distinguishedName);
-		)
+		DBG2(DBG_APP, "dn: '%s'", distinguishedName);
 		subject = identification_create_from_string(distinguishedName);
 		if (subject->get_type(subject) != ID_DER_ASN1_DN)
 		{
 			exit_scepclient("parsing of distinguished name failed");
 		}
 
-		DBG(DBG_CONTROL,
-			DBG_log("building pkcs10 object:")
-		)
+		DBG2(DBG_APP, "building pkcs10 object:");
 		pkcs10_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										CERT_PKCS10_REQUEST,
 										BUILD_SIGNING_KEY, private_key,
@@ -864,7 +890,7 @@ int main(int argc, char **argv)
 		}
 		pkcs10_req->get_encoding(pkcs10_req, CERT_ASN1_DER, &pkcs10_encoding);
 		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10_encoding);
-		plog("  fingerprint:    %s", fingerprint.ptr);
+		DBG1(DBG_APP, "  fingerprint:    %s", fingerprint.ptr);
 	}
 
 	/*
@@ -893,9 +919,7 @@ int main(int argc, char **argv)
 	{
 		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_out_pkcs1);
 
-		DBG(DBG_CONTROL,
-			DBG_log("building pkcs1 object:")
-		)
+		DBG2(DBG_APP, "building pkcs1 object:");
 		if (!private_key->get_encoding(private_key, PRIVKEY_ASN1_DER, &pkcs1) ||
 			!chunk_write(pkcs1, path, "pkcs1", 0066, force))
 		{
@@ -910,7 +934,7 @@ int main(int argc, char **argv)
 	}
 
 	scep_generate_transaction_id(public_key, &transID, &serialNumber);
-	plog("  transaction ID: %.*s", (int)transID.len, transID.ptr);
+	DBG1(DBG_APP, "  transaction ID: %.*s", (int)transID.len, transID.ptr);
 
 	notBefore = notBefore ? notBefore : time(NULL);
 	notAfter  = notAfter  ? notAfter  : (notBefore + validity);
@@ -983,9 +1007,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		DBG(DBG_CONTROL,
-			DBG_log("building pkcs7 request")
-		)
+		DBG2(DBG_APP, "building pkcs7 request");
 		pkcs7 = scep_build_request(pkcs10_encoding,
 								   transID, SCEP_PKCSReq_MSG,
 								   x509_ca_enc, pkcs7_symmetric_cipher,
@@ -1052,7 +1074,7 @@ int main(int argc, char **argv)
 		{
 			identification_t *issuer = x509_ca_sig->get_subject(x509_ca_sig);
 
-			plog("  scep request pending, polling every %d seconds",
+			DBG1(DBG_APP, "  scep request pending, polling every %d seconds",
 				 poll_interval);
 			poll_start = time_monotonic(NULL);
 			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc",
@@ -1067,16 +1089,14 @@ int main(int argc, char **argv)
 				exit_scepclient("maximum poll time reached: %d seconds"
 							   , max_poll_time);
 			}
-			DBG(DBG_CONTROL,
-				DBG_log("going to sleep for %d seconds", poll_interval)
-			)
+			DBG2(DBG_APP, "going to sleep for %d seconds", poll_interval);
 			sleep(poll_interval);
 			free(scep_response.ptr);
 
-			DBG(DBG_CONTROL,
-				DBG_log("fingerprint:    %.*s", (int)fingerprint.len, fingerprint.ptr);
-				DBG_log("transaction ID: %.*s", (int)transID.len, transID.ptr)
-			)
+			DBG2(DBG_APP, "fingerprint:    %.*s",
+				 (int)fingerprint.len, fingerprint.ptr);
+			DBG2(DBG_APP, "transaction ID: %.*s",
+				 (int)transID.len, transID.ptr);
 
 			chunk_free(&getCertInitial);
 			getCertInitial = scep_build_request(issuerAndSubject,
