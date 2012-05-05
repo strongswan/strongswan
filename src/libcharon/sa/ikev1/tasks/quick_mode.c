@@ -789,6 +789,7 @@ METHOD(task_t, process_r, status_t,
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
 			u_int16_t group;
+			bool private;
 
 			if (!get_ts(this, message))
 			{
@@ -833,8 +834,10 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			list = sa_payload->get_proposals(sa_payload);
+			private = this->ike_sa->supports_extension(this->ike_sa,
+													   EXT_STRONGSWAN);
 			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, FALSE);
+														   list, FALSE, private);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			this->mode = sa_payload->get_encap_mode(sa_payload, &this->udp);
@@ -958,6 +961,7 @@ METHOD(task_t, process_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *list;
+			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													SECURITY_ASSOCIATION_V1);
@@ -967,8 +971,10 @@ METHOD(task_t, process_i, status_t,
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			list = sa_payload->get_proposals(sa_payload);
+			private = this->ike_sa->supports_extension(this->ike_sa,
+													   EXT_STRONGSWAN);
 			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, FALSE);
+														   list, FALSE, private);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
