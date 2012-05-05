@@ -442,7 +442,7 @@ METHOD(generator_t, get_chunk, chunk_t,
 }
 
 METHOD(generator_t, generate_payload, void,
-	private_generator_t *this,payload_t *payload)
+	private_generator_t *this, payload_t *payload)
 {
 	int i, offset_start, rule_count;
 	encoding_rule_t *rules;
