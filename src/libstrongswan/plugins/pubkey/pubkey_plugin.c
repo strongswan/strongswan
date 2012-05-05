@@ -43,6 +43,11 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_REGISTER(CERT_ENCODE, pubkey_cert_wrap, FALSE),
 			PLUGIN_PROVIDE(CERT_ENCODE, CERT_TRUSTED_PUBKEY),
+		PLUGIN_REGISTER(CERT_DECODE, pubkey_cert_wrap, TRUE),
+			PLUGIN_PROVIDE(CERT_DECODE, CERT_TRUSTED_PUBKEY),
+				PLUGIN_SDEPEND(PUBKEY, KEY_RSA),
+				PLUGIN_SDEPEND(PUBKEY, KEY_ECDSA),
+				PLUGIN_SDEPEND(PUBKEY, KEY_DSA),
 	};
 	*features = f;
 	return countof(f);
