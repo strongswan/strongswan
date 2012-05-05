@@ -170,7 +170,9 @@ typedef enum {
 	IKEV1_ENCR_CAST_CBC = 6,
 	IKEV1_ENCR_AES_CBC = 7,
 	IKEV1_ENCR_CAMELLIA_CBC = 8,
-	IKEV1_ENCR_LAST = 9,
+	/* FreeS/WAN proprietary */
+	IKEV1_ENCR_SERPENT_CBC = 65004,
+	IKEV1_ENCR_TWOFISH_CBC = 65005,
 } ikev1_encryption_t;
 
 /**
@@ -193,22 +195,54 @@ typedef enum {
 } ikev1_ike_transid_t;
 
 /**
- * IKEv1 Transform ID ESP.
+ * IKEv1 Transform ID ESP encryption algorithm.
  */
 typedef enum {
-	IKEV1_TRANSID_ESP_DES_IV64 = 1,
-	IKEV1_TRANSID_ESP_DES = 2,
-	IKEV1_TRANSID_ESP_3DES = 3,
-	IKEV1_TRANSID_ESP_RC5 = 4,
-	IKEV1_TRANSID_ESP_IDEA = 5,
-	IKEV1_TRANSID_ESP_CAST = 6,
-	IKEV1_TRANSID_ESP_BLOWFISH = 7,
-	IKEV1_TRANSID_ESP_3IDEA = 8,
-	IKEV1_TRANSID_ESP_DES_IV32 = 9,
-	IKEV1_TRANSID_ESP_RC4 = 10,
-	IKEV1_TRANSID_ESP_NULL = 11,
-	IKEV1_TRANSID_ESP_AES_CBC = 12,
-} ikev1_esp_transid_t;
+	IKEV1_ESP_ENCR_DES_IV64 = 1,
+	IKEV1_ESP_ENCR_DES = 2,
+	IKEV1_ESP_ENCR_3DES = 3,
+	IKEV1_ESP_ENCR_RC5 = 4,
+	IKEV1_ESP_ENCR_IDEA = 5,
+	IKEV1_ESP_ENCR_CAST = 6,
+	IKEV1_ESP_ENCR_BLOWFISH = 7,
+	IKEV1_ESP_ENCR_3IDEA = 8,
+	IKEV1_ESP_ENCR_DES_IV32 = 9,
+	IKEV1_ESP_ENCR_RC4 = 10,
+	IKEV1_ESP_ENCR_NULL = 11,
+	IKEV1_ESP_ENCR_AES_CBC = 12,
+	IKEV1_ESP_ENCR_AES_CTR = 13,
+	IKEV1_ESP_ENCR_AES_CCM_8 = 14,
+	IKEV1_ESP_ENCR_AES_CCM_12 = 15,
+	IKEV1_ESP_ENCR_AES_CCM_16 = 16,
+	IKEV1_ESP_ENCR_AES_GCM_8 = 18,
+	IKEV1_ESP_ENCR_AES_GCM_12 = 19,
+	IKEV1_ESP_ENCR_AES_GCM_16 = 20,
+	IKEV1_ESP_ENCR_SEED_CBC = 21,
+	IKEV1_ESP_ENCR_CAMELLIA = 22,
+	IKEV1_ESP_ENCR_NULL_AUTH_AES_GMAC = 23,
+	/* FreeS/WAN proprietary */
+	IKEV1_ESP_ENCR_SERPENT = 252,
+	IKEV1_ESP_ENCR_TWOFISH = 253,
+} ikev1_esp_encr_transid_t;
+
+/**
+ * IKEv1 Transform ID ESP authentication algorithm.
+ */
+typedef enum {
+	IKEV1_ESP_AUTH_HMAC_MD5 = 1,
+	IKEV1_ESP_AUTH_HMAC_SHA = 2,
+	IKEV1_ESP_AUTH_DES_MAC = 3,
+	IKEV1_ESP_AUTH_KPDK = 4,
+	IKEV1_ESP_AUTH_HMAC_SHA2_256 = 5,
+	IKEV1_ESP_AUTH_HMAC_SHA2_384 = 6,
+	IKEV1_ESP_AUTH_HMAC_SHA2_512 = 7,
+	IKEV1_ESP_AUTH_HMAC_RIPEMD = 8,
+	IKEV1_ESP_AUTH_AES_XCBC_MAC = 9,
+	IKEV1_ESP_AUTH_SIG_RSA = 10,
+	IKEV1_ESP_AUTH_AES_128_GMAC = 11,
+	IKEV1_ESP_AUTH_AES_192_GMAC = 12,
+	IKEV1_ESP_AUTH_AES_256_GMAC = 13,
+} ikev1_esp_auth_transid_it;
 
 /**
  * IKEv1 ESP Encapsulation mode.
@@ -229,7 +263,7 @@ typedef enum {
 } ikev1_life_type_t;
 
 /**
- * IKEv1 authenticaiton methods
+ * IKEv1 authentication methods
  */
 typedef enum {
 	IKEV1_AUTH_PSK = 1,
@@ -240,6 +274,7 @@ typedef enum {
 	IKEV1_AUTH_ECDSA_256 = 9,
 	IKEV1_AUTH_ECDSA_384 = 10,
 	IKEV1_AUTH_ECDSA_521 = 11,
+	/* XAuth Modes */
 	IKEV1_AUTH_XAUTH_INIT_PSK = 65001,
 	IKEV1_AUTH_XAUTH_RESP_PSK = 65002,
 	IKEV1_AUTH_XAUTH_INIT_DSS = 65003,
@@ -250,11 +285,11 @@ typedef enum {
 	IKEV1_AUTH_XAUTH_RESP_RSA_ENC = 65008,
 	IKEV1_AUTH_XAUTH_INIT_RSA_ENC_REV = 65009,
 	IKEV1_AUTH_XAUTH_RESP_RSA_ENC_REV = 65010,
+	/* Hybrid Modes */
 	IKEV1_AUTH_HYBRID_INIT_RSA = 64221,
 	IKEV1_AUTH_HYBRID_RESP_RSA = 64222,
 	IKEV1_AUTH_HYBRID_INIT_DSS = 64223,
 	IKEV1_AUTH_HYBRID_RESP_DSS = 64224,
-
 } ikev1_auth_method_t;
 
 METHOD(payload_t, verify, status_t,
@@ -482,6 +517,8 @@ static algo_map_t map_encr[] = {
 	{ IKEV1_ENCR_CAST_CBC,		ENCR_CAST },
 	{ IKEV1_ENCR_AES_CBC,		ENCR_AES_CBC },
 	{ IKEV1_ENCR_CAMELLIA_CBC,	ENCR_CAMELLIA_CBC },
+	{ IKEV1_ENCR_SERPENT_CBC,	ENCR_SERPENT_CBC },
+	{ IKEV1_ENCR_TWOFISH_CBC,	ENCR_TWOFISH_CBC },
 };
 
 /**
@@ -504,6 +541,51 @@ static algo_map_t map_prf[] = {
 	{ IKEV1_HASH_SHA2_256,		PRF_HMAC_SHA2_256 },
 	{ IKEV1_HASH_SHA2_384,		PRF_HMAC_SHA2_384 },
 	{ IKEV1_HASH_SHA2_512,		PRF_HMAC_SHA2_512 },
+};
+
+/**
+ * ESP encryption algorithm mapping
+ */
+static algo_map_t map_esp_encr[] = {
+	{ IKEV1_ESP_ENCR_DES_IV64,				ENCR_DES_IV64 },
+	{ IKEV1_ESP_ENCR_DES,					ENCR_DES },
+	{ IKEV1_ESP_ENCR_3DES,					ENCR_3DES },
+	{ IKEV1_ESP_ENCR_RC5,					ENCR_RC5 },
+	{ IKEV1_ESP_ENCR_IDEA,					ENCR_IDEA },
+	{ IKEV1_ESP_ENCR_CAST,					ENCR_CAST },
+	{ IKEV1_ESP_ENCR_BLOWFISH,				ENCR_BLOWFISH },
+	{ IKEV1_ESP_ENCR_3IDEA,					ENCR_3IDEA },
+	{ IKEV1_ESP_ENCR_DES_IV32,				ENCR_DES_IV32 },
+	{ IKEV1_ESP_ENCR_NULL,					ENCR_NULL },
+	{ IKEV1_ESP_ENCR_AES_CBC,				ENCR_AES_CBC },
+	{ IKEV1_ESP_ENCR_AES_CTR,				ENCR_AES_CTR },
+	{ IKEV1_ESP_ENCR_AES_CCM_8,				ENCR_AES_CCM_ICV8 },
+	{ IKEV1_ESP_ENCR_AES_CCM_12,			ENCR_AES_CCM_ICV12 },
+	{ IKEV1_ESP_ENCR_AES_CCM_16,			ENCR_AES_CCM_ICV16 },
+	{ IKEV1_ESP_ENCR_AES_GCM_8,				ENCR_AES_GCM_ICV8 },
+	{ IKEV1_ESP_ENCR_AES_GCM_12,			ENCR_AES_GCM_ICV12 },
+	{ IKEV1_ESP_ENCR_AES_GCM_16,			ENCR_AES_GCM_ICV16 },
+	{ IKEV1_ESP_ENCR_CAMELLIA,				ENCR_CAMELLIA_CBC },
+	{ IKEV1_ESP_ENCR_NULL_AUTH_AES_GMAC,	ENCR_NULL_AUTH_AES_GMAC },
+	{ IKEV1_ESP_ENCR_SERPENT,				ENCR_SERPENT_CBC },
+	{ IKEV1_ESP_ENCR_TWOFISH,				ENCR_TWOFISH_CBC },
+};
+
+/**
+ * ESP authentication algorithm mapping
+ */
+static algo_map_t map_esp_auth[] = {
+	{ IKEV1_ESP_AUTH_HMAC_MD5,			AUTH_HMAC_MD5_96 },
+	{ IKEV1_ESP_AUTH_HMAC_SHA,			AUTH_HMAC_SHA1_96 },
+	{ IKEV1_ESP_AUTH_DES_MAC,			AUTH_DES_MAC },
+	{ IKEV1_ESP_AUTH_KPDK,				AUTH_KPDK_MD5 },
+	{ IKEV1_ESP_AUTH_HMAC_SHA2_256,		AUTH_HMAC_SHA2_256_128 },
+	{ IKEV1_ESP_AUTH_HMAC_SHA2_384,		AUTH_HMAC_SHA2_384_192 },
+	{ IKEV1_ESP_AUTH_HMAC_SHA2_512,		AUTH_HMAC_SHA2_512_256 },
+	{ IKEV1_ESP_AUTH_AES_XCBC_MAC,		AUTH_AES_XCBC_96 },
+	{ IKEV1_ESP_AUTH_AES_128_GMAC,		AUTH_AES_128_GMAC },
+	{ IKEV1_ESP_AUTH_AES_192_GMAC,		AUTH_AES_192_GMAC },
+	{ IKEV1_ESP_AUTH_AES_256_GMAC,		AUTH_AES_256_GMAC },
 };
 
 /**
@@ -580,6 +662,70 @@ static u_int16_t get_ikev1_from_alg(transform_type_t type, u_int16_t value)
 	return 0;
 }
 
+/**
+ * Get IKEv2 algorithm from IKEv1 ESP transaction ID
+ */
+static u_int16_t get_alg_from_ikev1_transid(transform_type_t type, u_int16_t value)
+{
+	algo_map_t *map;
+	u_int16_t def;
+	int i, count;
+
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			map = map_esp_encr;
+			count = countof(map_esp_encr);
+			def = ENCR_UNDEFINED;
+			break;
+		case INTEGRITY_ALGORITHM:
+			map = map_esp_auth;
+			count = countof(map_esp_auth);
+			def = AUTH_UNDEFINED;
+			break;
+		default:
+			return 0;
+	}
+	for (i = 0; i < count; i++)
+	{
+		if (map[i].ikev1 == value)
+		{
+			return map[i].ikev2;
+		}
+	}
+	return def;
+}
+
+/**
+ * Get IKEv1 ESP transaction ID from IKEv2 identifier
+ */
+static u_int16_t get_ikev1_transid_from_alg(transform_type_t type, u_int16_t value)
+{
+	algo_map_t *map;
+	int i, count;
+
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			map = map_esp_encr;
+			count = countof(map_esp_encr);
+			break;
+		case INTEGRITY_ALGORITHM:
+			map = map_esp_auth;
+			count = countof(map_esp_auth);
+			break;
+		default:
+			return 0;
+	}
+	for (i = 0; i < count; i++)
+	{
+		if (map[i].ikev2 == value)
+		{
+			return map[i].ikev1;
+		}
+	}
+	return 0;
+}
 /**
  * Get IKEv1 authentication attribute from auth_method_t
  */
@@ -681,7 +827,7 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 	transform_attribute_type_t type;
 	transform_attribute_t *tattr;
 	enumerator_t *enumerator;
-	u_int16_t value, key_length = 0;
+	u_int16_t encr, value, key_length = 0;
 
 	enumerator = transform->create_attribute_enumerator(transform);
 	while (enumerator->enumerate(enumerator, &tattr))
@@ -695,7 +841,8 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 				break;
 			case TATTR_PH2_AUTH_ALGORITHM:
 				proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM,
-						get_alg_from_ikev1(INTEGRITY_ALGORITHM, value), 0);
+						get_alg_from_ikev1_transid(INTEGRITY_ALGORITHM,
+												   value), 0);
 				break;
 			case TATTR_PH2_GROUP:
 				proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
@@ -710,9 +857,13 @@ static void add_to_proposal_v1_esp(proposal_t *proposal,
 	/* TODO-IKEv1: handle ESN attribute */
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
 							NO_EXT_SEQ_NUMBERS, 0);
-
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM,
-							transform->get_transform_id(transform), key_length);
+	encr = get_alg_from_ikev1_transid(ENCRYPTION_ALGORITHM,
+									  transform->get_transform_id(transform));
+	if (encr)
+	{
+		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr,
+								key_length);
+	}
 }
 
 METHOD(proposal_substructure_t, get_proposals, void,
@@ -1062,13 +1213,17 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
-												   number, alg);
-		if (key_size)
+		alg = get_ikev1_transid_from_alg(ENCRYPTION_ALGORITHM, alg);
+		if (alg)
 		{
-			transform->add_transform_attribute(transform,
-				transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
-									TATTR_PH2_KEY_LENGTH, key_size));
+			transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
+														   number, alg);
+			if (key_size)
+			{
+				transform->add_transform_attribute(transform,
+					transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+											TATTR_PH2_KEY_LENGTH, key_size));
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1080,7 +1235,7 @@ static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
 	if (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
-		alg = get_ikev1_from_alg(INTEGRITY_ALGORITHM, alg);
+		alg = get_ikev1_transid_from_alg(INTEGRITY_ALGORITHM, alg);
 		if (alg)
 		{
 			transform->add_transform_attribute(transform,
