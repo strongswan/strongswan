@@ -159,7 +159,7 @@ METHOD(task_t, process, status_t,
 				if (chunk_equals(data, chunk_create(vendor_ids[i].id,
 													vendor_ids[i].len)))
 				{
-					DBG1(DBG_IKE, "received %s vendor id", vendor_ids[i].desc);
+					DBG1(DBG_IKE, "received %s vendor ID", vendor_ids[i].desc);
 					if (vendor_ids[i].extension)
 					{
 						this->ike_sa->enable_extension(this->ike_sa,
@@ -170,7 +170,7 @@ METHOD(task_t, process, status_t,
 			}
 			if (!found)
 			{
-				DBG1(DBG_ENC, "received unknown vendor id: %#B", &data);
+				DBG1(DBG_ENC, "received unknown vendor ID: %#B", &data);
 			}
 		}
 	}

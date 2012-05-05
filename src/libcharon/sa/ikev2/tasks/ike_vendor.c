@@ -84,12 +84,12 @@ METHOD(task_t, process, status_t,
 
 			if (chunk_equals(data, strongswan_vid))
 			{
-				DBG1(DBG_IKE, "received strongSwan vendor id");
+				DBG1(DBG_IKE, "received strongSwan vendor ID");
 				this->ike_sa->enable_extension(this->ike_sa, EXT_STRONGSWAN);
 			}
 			else
 			{
-				DBG1(DBG_ENC, "received unknown vendor id: %#B", &data);
+				DBG1(DBG_ENC, "received unknown vendor ID: %#B", &data);
 			}
 		}
 	}
