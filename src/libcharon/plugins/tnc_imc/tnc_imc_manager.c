@@ -21,6 +21,7 @@
 
 #include <utils/linked_list.h>
 #include <debug.h>
+#include <daemon.h>
 
 typedef struct private_tnc_imc_manager_t private_tnc_imc_manager_t;
 

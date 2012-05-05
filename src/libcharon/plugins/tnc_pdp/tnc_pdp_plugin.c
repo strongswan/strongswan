@@ -16,6 +16,8 @@
 #include "tnc_pdp_plugin.h"
 #include "tnc_pdp.h"
 
+#include <daemon.h>
+
 typedef struct private_tnc_pdp_plugin_t private_tnc_pdp_plugin_t;
 
 /**
