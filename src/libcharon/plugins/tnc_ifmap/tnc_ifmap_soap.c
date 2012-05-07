@@ -16,6 +16,7 @@
 #include "tnc_ifmap_soap.h"
 
 #include <debug.h>
+#include <daemon.h>
 
 #include <axis2_util.h>
 #include <axis2_client.h>
