@@ -199,9 +199,6 @@ typedef struct net_change_t net_change_t;
 struct net_change_t {
 	/** Name of the interface that got activated (or an IP appeared on) */
 	char *if_name;
-
-	/** IP that appeared, if any */
-	host_t *ip;
 };
 
 /**
@@ -209,7 +206,6 @@ struct net_change_t {
  */
 static void net_change_destroy(net_change_t *this)
 {
-	DESTROY_IF(this->ip);
 	free(this->if_name);
 	free(this);
 }
@@ -219,12 +215,6 @@ static void net_change_destroy(net_change_t *this)
  */
 static u_int net_change_hash(net_change_t *this)
 {
-	if (this->ip)
-	{
-		return chunk_hash_inc(this->ip->get_address(this->ip),
-							  chunk_hash(chunk_create(this->if_name,
-													  strlen(this->if_name))));
-	}
 	return chunk_hash(chunk_create(this->if_name, strlen(this->if_name)));
 }
 
@@ -233,8 +223,7 @@ static u_int net_change_hash(net_change_t *this)
  */
 static bool net_change_equals(net_change_t *a, net_change_t *b)
 {
-	return streq(a->if_name, b->if_name) && ((!a->ip && !b->ip) ||
-		   (a->ip && b->ip && a->ip->equals(a->ip, b->ip)));
+	return streq(a->if_name, b->if_name);
 }
 
 typedef struct private_kernel_netlink_net_t private_kernel_netlink_net_t;
@@ -299,7 +288,7 @@ struct private_kernel_netlink_net_t {
 	hashtable_t *routes;
 
 	/**
-	 * interface and IP address changes which may trigger route reinstallation
+	 * interface changes which may trigger route reinstallation
 	 */
 	hashtable_t *net_changes;
 
@@ -371,12 +360,17 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
 		net_change_t *change, lookup = {
 			.if_name = route->if_name,
 		};
-		/* check if a generic change for this interface is queued */
+		/* check if a change for the outgoing interface is queued */
 		change = this->net_changes->get(this->net_changes, &lookup);
 		if (!change)
-		{	/* check if a specific update for this IP is queued */
-			lookup.ip = route->src_ip;
-			change = this->net_changes->get(this->net_changes, &lookup);
+		{	/* in case src_ip is not on the outgoing interface */
+			lookup.if_name = this->public.interface.get_interface(
+										&this->public.interface, route->src_ip);
+			if (lookup.if_name && !streq(lookup.if_name, route->if_name))
+			{
+				change = this->net_changes->get(this->net_changes, &lookup);
+			}
+			free(lookup.if_name);
 		}
 		if (change)
 		{
@@ -395,33 +389,27 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
 
 /**
  * Queue route reinstallation caused by network changes for a given interface.
- * Provide the IP address if the update is caused by an IP address change.
  *
  * The route reinstallation is delayed for a while and only done once for
  * several calls during this delay, in order to avoid doing it too often.
- * The interface name and IP address are freed.
+ * The interface name is freed.
  */
 static void queue_route_reinstall(private_kernel_netlink_net_t *this,
-								  char *if_name, host_t *ip)
+								  char *if_name)
 {
 	net_change_t *update, *found;
 	timeval_t now;
 	job_t *job;
 
 	INIT(update,
-		.if_name = if_name,
-		.ip = ip
+		.if_name = if_name
 	);
 
 	this->net_changes_lock->lock(this->net_changes_lock);
-	found = this->net_changes->get(this->net_changes, update);
+	found = this->net_changes->put(this->net_changes, update, update);
 	if (found)
 	{
-		net_change_destroy(update);
-	}
-	else
-	{
-		this->net_changes->put(this->net_changes, update, update);
+		net_change_destroy(found);
 	}
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_route_reinstall, >))
@@ -646,7 +634,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 
 	if (update_routes && event)
 	{
-		queue_route_reinstall(this, strdup(name), NULL);
+		queue_route_reinstall(this, strdup(name));
 	}
 
 	/* send an update to all IKE_SAs */
@@ -769,7 +757,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 
 	if (update && event && route_ifname)
 	{
-		queue_route_reinstall(this, route_ifname, host->clone(host));
+		queue_route_reinstall(this, route_ifname);
 	}
 	else
 	{
