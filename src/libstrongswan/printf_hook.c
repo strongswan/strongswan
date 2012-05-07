@@ -173,7 +173,7 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 	{
 		vstr_add_buf(base, pos, buf, written);
 	}
-	return TRUE;
+	return 1;
 }
 
 /**

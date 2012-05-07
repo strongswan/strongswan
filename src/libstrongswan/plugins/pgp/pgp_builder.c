@@ -152,7 +152,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 	}
 	if (!pgp_read_scalar(&packet, 1, &version))
 	{
-		return FALSE;
+		return NULL;
 	}
 	switch (version)
 	{
@@ -166,7 +166,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 			break;
 		default:
 			DBG1(DBG_LIB, "PGP packet version V%d not supported", version);
-			return FALSE;
+			return NULL;
 	}
 	if (!pgp_read_scalar(&packet, 4, &created))
 	{

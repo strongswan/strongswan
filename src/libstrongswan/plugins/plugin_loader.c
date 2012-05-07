@@ -525,7 +525,7 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		if (snprintf(file, sizeof(file), "%s/libstrongswan-%s.so",
 					 path, token) >= sizeof(file))
 		{
-			return NULL;
+			return FALSE;
 		}
 		if (!load_plugin(this, token, file) && critical)
 		{
