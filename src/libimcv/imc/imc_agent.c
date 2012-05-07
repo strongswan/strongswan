@@ -313,7 +313,7 @@ static bool get_bool_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
 	return this->get_attribute  &&
 		   this->get_attribute(this->id, id, attribute_id, 4, buf, &len) ==
 							   TNC_RESULT_SUCCESS && len == 1 && *buf == 0x01;
- }
+}
 
 /**
  * Read a string attribute

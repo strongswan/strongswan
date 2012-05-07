@@ -441,14 +441,14 @@ pgp_cert_t *pgp_cert_load(certificate_type_t type, va_list args)
 				if (!parse_signature(this, packet))
 				{
 					destroy(this);
-					return FALSE;
+					return NULL;
 				}
 				break;
 			case PGP_PKT_USER_ID:
 				if (!parse_user_id(this, packet))
 				{
 					destroy(this);
-					return FALSE;
+					return NULL;
 				}
 				break;
 			default:

@@ -1492,7 +1492,7 @@ end:
 		if (hasher == NULL)
 		{
 			DBG1(DBG_ASN, "  unable to create hash of certificate, SHA1 not supported");
-			return NULL;
+			return FALSE;
 		}
 		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
 		hasher->destroy(hasher);

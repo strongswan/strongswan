@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 				chunk_create(iv, aead->get_iv_size(aead)), NULL))
 			{
 				fprintf(stderr, "aead integrity check failed!\n");
-				return FALSE;
+				return 1;
 			}
 			if (limit && ++i == limit)
 			{

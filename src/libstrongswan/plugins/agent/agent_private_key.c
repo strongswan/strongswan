@@ -398,7 +398,7 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 	}
 	if (!path)
 	{
-		return FALSE;
+		return NULL;
 	}
 
 	INIT(this,
