@@ -137,7 +137,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 
 	if (signature.len == 0 || signature.len > this->k)
 	{
-		return INVALID_ARG;
+		return FALSE;
 	}
 
 	/* unpack signature */
