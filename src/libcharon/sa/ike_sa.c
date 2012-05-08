@@ -779,15 +779,21 @@ METHOD(ike_sa_t, add_peer_address, void,
 METHOD(ike_sa_t, create_peer_address_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
-	return this->peer_addresses->create_enumerator(this->peer_addresses);
+	if (this->peer_addresses->get_count(this->peer_addresses))
+	{
+		return this->peer_addresses->create_enumerator(this->peer_addresses);
+	}
+	/* in case we don't have MOBIKE */
+	return enumerator_create_single(this->other_host, NULL);
 }
 
 METHOD(ike_sa_t, clear_peer_addresses, void,
 	private_ike_sa_t *this)
 {
-	enumerator_t *enumerator = create_peer_address_enumerator(this);
+	enumerator_t *enumerator;
 	host_t *host;
 
+	enumerator = this->peer_addresses->create_enumerator(this->peer_addresses);
 	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
 		this->peer_addresses->remove_at(this->peer_addresses,
@@ -1682,7 +1688,7 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 	host_t *src = NULL, *addr;
 
 	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
-	enumerator = this->peer_addresses->create_enumerator(this->peer_addresses);
+	enumerator = create_peer_address_enumerator(this);
 	while (enumerator->enumerate(enumerator, &addr))
 	{
 		DBG1(DBG_IKE, "looking for a route to %H ...", addr);
