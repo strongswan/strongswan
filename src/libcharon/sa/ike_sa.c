@@ -2016,6 +2016,8 @@ METHOD(ike_sa_t, roam, status_t,
 		return SUCCESS;
 	}
 	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
+	/* since our previous path is not valid anymore, try and find a new one */
+	resolve_hosts(this);
 	return reauth(this);
 }
 
