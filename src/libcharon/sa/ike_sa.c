@@ -1821,6 +1821,12 @@ METHOD(ike_sa_t, retransmit, status_t,
 			}
 			case IKE_DELETING:
 				DBG1(DBG_IKE, "proper IKE_SA delete failed, peer not responding");
+				if (this->is_reauthenticating)
+				{
+					DBG1(DBG_IKE, "delete during reauthentication failed, "
+						 "trying to reestablish IKE_SA anyway");
+					reestablish(this);
+				}
 				break;
 			case IKE_REKEYING:
 				DBG1(DBG_IKE, "rekeying IKE_SA failed, peer not responding");
