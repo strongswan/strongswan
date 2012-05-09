@@ -138,7 +138,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 					this->ike_sa->clear_peer_addresses(this->ike_sa);
 					first = FALSE;
 					/* add the peer's current address to the list */
-					host = this->ike_sa->get_other_host(this->ike_sa);
+					host = message->get_source(message);
 					this->ike_sa->add_peer_address(this->ike_sa,
 												   host->clone(host));
 				}
@@ -158,7 +158,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			{
 				this->ike_sa->clear_peer_addresses(this->ike_sa);
 				/* add the peer's current address to the list */
-				host = this->ike_sa->get_other_host(this->ike_sa);
+				host = message->get_source(message);
 				this->ike_sa->add_peer_address(this->ike_sa, host->clone(host));
 				this->addresses_updated = TRUE;
 				break;
