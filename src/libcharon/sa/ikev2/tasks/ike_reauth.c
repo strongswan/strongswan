@@ -51,99 +51,15 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_i, status_t,
 	private_ike_reauth_t *this, message_t *message)
 {
-	ike_sa_t *new;
-	host_t *host;
-	enumerator_t *enumerator;
-	child_sa_t *child_sa;
-	peer_cfg_t *peer_cfg;
-
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
 
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-
-	/* reauthenticate only if we have children */
-	if (this->ike_sa->get_child_count(this->ike_sa) == 0
-#ifdef ME
-		/* we allow peers to reauth mediation connections (without children) */
-		&& !peer_cfg->is_mediation(peer_cfg)
-#endif /* ME */
-		)
+	/* reestablish the IKE_SA with all children */
+	if (this->ike_sa->reestablish(this->ike_sa) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA to recreate");
+		DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 		return FAILED;
 	}
-
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-								this->ike_sa->get_version(this->ike_sa), TRUE);
-	if (!new)
-	{	/* shouldn't happen */
-		return FAILED;
-	}
-
-	new->set_peer_cfg(new, peer_cfg);
-	host = this->ike_sa->get_other_host(this->ike_sa);
-	new->set_other_host(new, host->clone(host));
-	host = this->ike_sa->get_my_host(this->ike_sa);
-	new->set_my_host(new, host->clone(host));
-	/* if we already have a virtual IP, we reuse it */
-	host = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	if (host)
-	{
-		new->set_virtual_ip(new, TRUE, host);
-	}
-
-#ifdef ME
-	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
-	if (peer_cfg->is_mediation(peer_cfg))
-	{
-		if (new->initiate(new, NULL, 0, NULL, NULL) == DESTROY_ME)
-		{
-			charon->ike_sa_manager->checkin_and_destroy(
-								charon->ike_sa_manager, new);
-			/* set threads active IKE_SA after checkin */
-			charon->bus->set_sa(charon->bus, this->ike_sa);
-			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
-			return FAILED;
-		}
-	}
-#endif /* ME */
-
-	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
-	{
-		switch (child_sa->get_state(child_sa))
-		{
-			case CHILD_ROUTED:
-			{
-				/* move routed child directly */
-				this->ike_sa->remove_child_sa(this->ike_sa, enumerator);
-				new->add_child_sa(new, child_sa);
-				break;
-			}
-			default:
-			{
-				/* initiate/queue all child SAs */
-				child_cfg_t *child_cfg = child_sa->get_config(child_sa);
-				child_cfg->get_ref(child_cfg);
-				if (new->initiate(new, child_cfg, 0, NULL, NULL) == DESTROY_ME)
-				{
-					enumerator->destroy(enumerator);
-					charon->ike_sa_manager->checkin_and_destroy(
-										charon->ike_sa_manager, new);
-					/* set threads active IKE_SA after checkin */
-					charon->bus->set_sa(charon->bus, this->ike_sa);
-					DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
-					return FAILED;
-				}
-				break;
-			}
-		}
-	}
-	enumerator->destroy(enumerator);
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
-	/* set threads active IKE_SA after checkin */
-	charon->bus->set_sa(charon->bus, this->ike_sa);
 
 	/* we always destroy the obsolete IKE_SA */
 	return DESTROY_ME;
