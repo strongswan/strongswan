@@ -246,6 +246,11 @@ struct private_ike_sa_t {
 	 * remote host address to be used for IKE, set via MIGRATE kernel message
 	 */
 	host_t *remote_host;
+
+	/**
+	 * TRUE if we are currently reauthenticating this IKE_SA
+	 */
+	bool is_reauthenticating;
 };
 
 /**
@@ -1574,6 +1579,7 @@ METHOD(ike_sa_t, reauth, status_t,
 		DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
 			 get_name(this), this->unique_id);
 	}
+	this->is_reauthenticating = TRUE;
 	task = (task_t*)ike_reauth_create(&this->public);
 	this->task_manager->queue_task(this->task_manager, task);
 
@@ -1592,39 +1598,58 @@ METHOD(ike_sa_t, reestablish, status_t,
 	bool restart = FALSE;
 	status_t status = FAILED;
 
-	/* check if we have children to keep up at all */
-	enumerator = this->child_sas->create_enumerator(this->child_sas);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
-	{
-		if (this->state == IKE_DELETING)
+	if (this->is_reauthenticating)
+	{	/* only reauthenticate if we have children */
+		if (this->child_sas->get_count(this->child_sas) == 0
+#ifdef ME
+			/* allow reauth of mediation connections without CHILD_SAs */
+			&& !this->peer_cfg->is_mediation(this->peer_cfg)
+#endif /* ME */
+			)
 		{
-			action = child_sa->get_close_action(child_sa);
+			DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA "
+				 "to recreate");
 		}
 		else
 		{
-			action = child_sa->get_dpd_action(child_sa);
+			restart = TRUE;
 		}
-		switch (action)
+	}
+	else
+	{	/* check if we have children to keep up at all */
+		enumerator = this->child_sas->create_enumerator(this->child_sas);
+		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
-			case ACTION_RESTART:
-				restart = TRUE;
-				break;
-			case ACTION_ROUTE:
-				charon->traps->install(charon->traps, this->peer_cfg,
-									   child_sa->get_config(child_sa));
-				break;
-			default:
-				break;
+			if (this->state == IKE_DELETING)
+			{
+				action = child_sa->get_close_action(child_sa);
+			}
+			else
+			{
+				action = child_sa->get_dpd_action(child_sa);
+			}
+			switch (action)
+			{
+				case ACTION_RESTART:
+					restart = TRUE;
+					break;
+				case ACTION_ROUTE:
+					charon->traps->install(charon->traps, this->peer_cfg,
+										   child_sa->get_config(child_sa));
+					break;
+				default:
+					break;
+			}
 		}
-	}
-	enumerator->destroy(enumerator);
+		enumerator->destroy(enumerator);
 #ifdef ME
-	/* mediation connections have no children, keep them up anyway */
-	if (this->peer_cfg->is_mediation(this->peer_cfg))
-	{
-		restart = TRUE;
-	}
+		/* mediation connections have no children, keep them up anyway */
+		if (this->peer_cfg->is_mediation(this->peer_cfg))
+		{
+			restart = TRUE;
+		}
 #endif /* ME */
+	}
 	if (!restart)
 	{
 		return FAILED;
@@ -1667,13 +1692,34 @@ METHOD(ike_sa_t, reestablish, status_t,
 		enumerator = this->child_sas->create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
-			if (this->state == IKE_DELETING)
+			if (this->is_reauthenticating)
 			{
-				action = child_sa->get_close_action(child_sa);
+				switch (child_sa->get_state(child_sa))
+				{
+					case CHILD_ROUTED:
+					{	/* move routed child directly */
+						this->child_sas->remove_at(this->child_sas, enumerator);
+						new->add_child_sa(new, child_sa);
+						action = ACTION_NONE;
+						break;
+					}
+					default:
+					{	/* initiate/queue all other CHILD_SAs */
+						action = ACTION_RESTART;
+						break;
+					}
+				}
 			}
 			else
-			{
-				action = child_sa->get_dpd_action(child_sa);
+			{	/* only restart CHILD_SAs that are configured accordingly */
+				if (this->state == IKE_DELETING)
+				{
+					action = child_sa->get_close_action(child_sa);
+				}
+				else
+				{
+					action = child_sa->get_dpd_action(child_sa);
+				}
 			}
 			switch (action)
 			{
