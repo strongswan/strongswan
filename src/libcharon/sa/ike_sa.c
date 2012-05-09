@@ -690,14 +690,6 @@ METHOD(ike_sa_t, set_state, void,
 			}
 			break;
 		}
-		case IKE_DELETING:
-		{
-			/* delete may fail if a packet gets lost, so set a timeout */
-			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			lib->scheduler->schedule_job(lib->scheduler, job,
-										 HALF_OPEN_IKE_SA_TIMEOUT);
-			break;
-		}
 		default:
 			break;
 	}
