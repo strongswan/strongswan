@@ -135,7 +135,7 @@ METHOD(task_t, build_r, status_t,
 
 	if (this->simultaneous)
 	{
-		/* wait for peer's response for our delete request, but set a timeout */
+		/* wait for peer's response for our delete request */
 		return SUCCESS;
 	}
 	if (!this->rekeyed)
