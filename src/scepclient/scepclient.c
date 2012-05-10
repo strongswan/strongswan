@@ -219,6 +219,29 @@ static void join_paths(char *target, size_t target_size, char *parent,
 }
 
 /**
+ * add a suffix to a given filename, properly handling extensions like '.der'
+ */
+static void add_path_suffix(char *target, size_t target_size, char *filename,
+							char *suffix)
+{
+	char *start, *dot;
+
+	start = strrchr(filename, '/');
+	start = start ?: filename;
+	dot = strrchr(start, '.');
+
+	if (!dot || dot == start || dot[1] == '\0')
+	{	/* no extension add suffix at the end */
+		snprintf(target, target_size, "%s%s", filename, suffix);
+	}
+	else
+	{	/* add the suffix between the filename and the extension */
+		snprintf(target, target_size, "%.*s%s%s", (int)(dot - filename),
+				 filename, suffix, dot);
+	}
+}
+
+/**
  * @brief exit scepclient
  *
  * @param status 0 = OK, 1 = general discomfort
@@ -815,9 +838,8 @@ int main(int argc, char **argv)
 	/* get CA cert */
 	if (request_ca_certificate)
 	{
-		char path[PATH_MAX];
-
-		join_paths(path, sizeof(path), CA_CERT_PATH, file_out_ca_cert);
+		char ca_path[PATH_MAX];
+		pkcs7_t *pkcs7;
 
 		if (!scep_http_request(scep_url, chunk_empty, SCEP_GET_CA_CERT,
 							   http_get_request, &scep_response))
@@ -825,9 +847,49 @@ int main(int argc, char **argv)
 			exit_scepclient("did not receive a valid scep response");
 		}
 
-		if (!chunk_write(scep_response, path, "ca cert",  0022, force))
+		join_paths(ca_path, sizeof(ca_path), CA_CERT_PATH, file_out_ca_cert);
+
+		pkcs7 = pkcs7_create_from_chunk(scep_response, 0);
+		if (!pkcs7 || !pkcs7->parse_signedData(pkcs7, NULL))
+		{	/* no PKCS#7 encoded CA+RA certificates, assume simple CA cert */
+			DESTROY_IF(pkcs7);
+			if (!chunk_write(scep_response, ca_path, "ca cert",  0022, force))
+			{
+				exit_scepclient("could not write ca cert file '%s'", ca_path);
+			}
+		}
+		else
 		{
-			exit_scepclient("could not write ca cert file '%s'", path);
+			enumerator_t *enumerator;
+			certificate_t *cert;
+			int i = 1;
+
+			enumerator = pkcs7->create_certificate_enumerator(pkcs7);
+			while (enumerator->enumerate(enumerator, &cert))
+			{
+				x509_t *x509 = (x509_t*)cert;
+				bool ca_cert = x509->get_flags(x509) & X509_CA;
+				char *path = ca_path;
+
+				if (!ca_cert)
+				{	/* use CA name as base for RA certs */
+					char suffix[6], ra_path[PATH_MAX];
+
+					snprintf(suffix, sizeof(suffix), "-ra%0.2d", i++);
+					add_path_suffix(ra_path, sizeof(ra_path), ca_path, suffix);
+					path = ra_path;
+				}
+
+				if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding) ||
+					!chunk_write(encoding, path,
+								 ca_cert ? "ca cert" : "ra cert", 0022, force))
+				{
+					exit_scepclient("could not write cert file '%s'", path);
+				}
+				chunk_free(&encoding);
+			}
+			enumerator->destroy(enumerator);
+			pkcs7->destroy(pkcs7);
 		}
 		exit_scepclient(NULL); /* no further output required */
 	}
