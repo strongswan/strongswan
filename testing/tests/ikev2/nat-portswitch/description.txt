@@ -1,6 +1,0 @@
-The roadwarrior <b>alice</b> sitting behind the NAT router <b>moon</b> sets up a connection 
-to gateway <b>sun</b> using IKEv2. UDP encapsulation is used to traverse the NAT router.
-The authentication is based on locally loaded <b>X.509 certificates</b>.
-After the IPsec Setup NAT router moon "crashes" (i.e. flushes its conntrack
-table) and with the next dpd sent from <b>alice</b> a dynamical address update
-should occur in gateway <b>sun</b>.

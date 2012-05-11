@@ -1,6 +1,0 @@
-The roadwarriors <b>alice</b> and <b>venus</b> sitting behind the NAT router <b>moon</b> 
-set up a connection to gateway <b>sun</b>. <b>alice</b> uses the IKEv2 key exchange protocol 
-whereas <b>venus</b> negotiates the connection via the IKEv1 protocol.
-UDP encapsulation is used to traverse the NAT router.
-In order to test the tunnel the NAT-ed hosts <b>alice</b> and <b>venus</b> ping the client
-<b>bob</b> behind the gateway <b>sun</b>.

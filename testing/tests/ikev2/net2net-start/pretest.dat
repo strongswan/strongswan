@@ -3,4 +3,4 @@ sun::/etc/init.d/iptables start 2> /dev/null
 sun::ipsec start
 sun::sleep 2
 moon::ipsec start
-alice::sleep 3 
+moon::sleep 3 

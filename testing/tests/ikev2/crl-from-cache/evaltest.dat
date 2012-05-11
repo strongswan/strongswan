@@ -1,10 +1,12 @@
-moon::cat /var/log/daemon.log::loaded crl from::YES
-moon::cat /var/log/daemon.log::crl is valid::YES
-moon::cat /var/log/daemon.log::certificate status is good::YES
-moon::ipsec listcrls:: ok::YES
+moon:: ipsec status 2> /dev/null::rw.*ESTABLISHED.*moon.strongswan.org.*carol@strongswan.org::YES
+carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*carol@strongswan.org.*moon.strongswan.org::YES
+moon:: cat /var/log/daemon.log::loaded crl from::YES
+moon:: cat /var/log/daemon.log::crl is valid::YES
+moon:: cat /var/log/daemon.log::certificate status is good::YES
+moon:: cat /var/log/daemon.log::using cached crl::YES
+moon:: ipsec listcrls 2> /dev/null:: ok::YES
 carol::cat /var/log/daemon.log::loaded crl from::YES
 carol::cat /var/log/daemon.log::crl is valid::YES
 carol::cat /var/log/daemon.log::certificate status is good::YES
-carol::ipsec listcrls:: ok::YES
-moon::ipsec status::rw.*ESTABLISHED::YES
-carol::ipsec status::home.*ESTABLISHED::YES
+carol::cat /var/log/daemon.log::using cached crl::YES
+carol::ipsec listcrls 2> /dev/null:: ok::YES

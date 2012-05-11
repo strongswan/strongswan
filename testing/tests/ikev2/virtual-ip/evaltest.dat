@@ -1,21 +1,25 @@
-moon::ipsec statusall::rw.*ESTABLISHED.*carol@strongswan.org::YES
-moon::ipsec statusall::rw.*ESTABLISHED.*dave@strongswan.org::YES
-carol::ipsec statusall::home.*INSTALLED::YES
-dave::ipsec statusall::home.*INSTALLED::YES
-moon::cat /var/log/daemon.log::peer requested virtual IP PH_IP_CAROL1::YES
-moon::cat /var/log/daemon.log::peer requested virtual IP PH_IP_DAVE1::YES
-moon::cat /var/log/daemon.log::assigning virtual IP PH_IP_CAROL1 to peer::YES
-moon::cat /var/log/daemon.log::assigning virtual IP PH_IP_DAVE1 to peer::YES
+carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*carol@strongswan.org.*moon.strongswan.org::YES
+dave:: ipsec status 2> /dev/null::home.*ESTABLISHED.*dave@strongswan.org.*moon.strongswan.org::YES
+moon:: ipsec status 2> /dev/null::rw\[1]: ESTABLISHED.*moon.strongswan.org.*carol@strongswan.org::YES
+moon:: ipsec status 2> /dev/null::rw\[2]: ESTABLISHED.*moon.strongswan.org.*dave@strongswan.org::YES
+carol::ipsec status 2> /dev/null::home.*INSTALLED, TUNNEL::YES
+dave:: ipsec status 2> /dev/null::home.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::rw[{]1}.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::rw[{]2}.*INSTALLED, TUNNEL::YES
+moon:: cat /var/log/daemon.log::peer requested virtual IP PH_IP_CAROL1::YES
+moon:: cat /var/log/daemon.log::peer requested virtual IP PH_IP_DAVE1::YES
+moon:: cat /var/log/daemon.log::assigning virtual IP PH_IP_CAROL1 to peer::YES
+moon:: cat /var/log/daemon.log::assigning virtual IP PH_IP_DAVE1 to peer::YES
 carol::ip addr list dev eth0::PH_IP_CAROL1::YES
 carol::ip route list table 220::src PH_IP_CAROL1::YES
-dave::ip addr list dev eth0::PH_IP_DAVE1::YES
-dave::ip route list table 220::src PH_IP_DAVE1::YES
+dave:: ip addr list dev eth0::PH_IP_DAVE1::YES
+dave:: ip route list table 220::src PH_IP_DAVE1::YES
 carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 carol::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
-dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
-dave::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
-moon::ping -c 1 PH_IP_CAROL1::64 bytes from PH_IP_CAROL1: icmp_seq=1::YES
-moon::ping -c 1 PH_IP_DAVE1::64 bytes from PH_IP_DAVE1: icmp_seq=1::YES
+dave:: ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+dave:: ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
+moon:: ping -c 1 PH_IP_CAROL1::64 bytes from PH_IP_CAROL1: icmp_seq=1::YES
+moon:: ping -c 1 PH_IP_DAVE1::64 bytes from PH_IP_DAVE1: icmp_seq=1::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
 moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
