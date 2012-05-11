@@ -25,8 +25,6 @@
 #include <limits.h>
 #include <syslog.h>
 
-#include <freeswan.h>
-
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
@@ -43,11 +41,6 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/pkcs10.h>
 #include <plugins/plugin.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/certs.h"
-#include "../pluto/pkcs7.h"
 
 #include "scep.h"
 
@@ -96,6 +89,9 @@
 
 /* default distinguished name */
 #define DEFAULT_DN "C=CH, O=Linux strongSwan, CN="
+
+/* minimum RSA key size */
+#define RSA_MIN_OCTETS (512 / BITS_PER_BYTE)
 
 /* challenge password buffer size */
 #define MAX_PASSWORD_LENGTH 256
@@ -401,10 +397,11 @@ int main(int argc, char **argv)
 	char challenge_password_buffer[MAX_PASSWORD_LENGTH];
 
 	/* symmetric encryption algorithm used by pkcs7, default is 3DES */
-	int pkcs7_symmetric_cipher = OID_3DES_EDE_CBC;
+	encryption_algorithm_t pkcs7_symmetric_cipher = ENCR_3DES;
+	size_t pkcs7_key_size = 0;
 
 	/* digest algorithm used by pkcs7, default is SHA-1 */
-	int pkcs7_digest_alg = OID_SHA1;
+	hash_algorithm_t pkcs7_digest_alg = HASH_SHA1;
 
 	/* signature algorithm used by pkcs10, default is SHA-1 */
 	hash_algorithm_t pkcs10_signature_alg = HASH_SHA1;
@@ -767,9 +764,10 @@ int main(int argc, char **argv)
 				{
 					usage("invalid algorithm specified");
 				}
-				pkcs7_symmetric_cipher = encryption_algorithm_to_oid(
-											token->algorithm, token->keysize);
-				if (pkcs7_symmetric_cipher == OID_UNKNOWN)
+				pkcs7_symmetric_cipher = token->algorithm;
+				pkcs7_key_size = token->keysize;
+				if (encryption_algorithm_to_oid(token->algorithm,
+												token->keysize) == OID_UNKNOWN)
 				{
 					usage("unsupported encryption algorithm specified");
 				}
@@ -1043,9 +1041,13 @@ int main(int argc, char **argv)
 	{
 		DBG2(DBG_APP, "building pkcs7 request");
 		pkcs7 = scep_build_request(pkcs10_encoding,
-								   transID, SCEP_PKCSReq_MSG,
-								   x509_ca_enc, pkcs7_symmetric_cipher,
+								   transID, SCEP_PKCSReq_MSG, x509_ca_enc,
+								   pkcs7_symmetric_cipher, pkcs7_key_size,
 								   x509_signer, pkcs7_digest_alg, private_key);
+		if (!pkcs7.ptr)
+		{
+			exit_scepclient("failed to build pkcs7 request");
+		}
 	}
 
 	/*
@@ -1079,12 +1081,8 @@ int main(int argc, char **argv)
 		enumerator_t  *enumerator;
 		char path[PATH_MAX];
 		time_t poll_start = 0;
-
-		linked_list_t    *certs         = linked_list_create();
-		chunk_t           envelopedData = chunk_empty;
-		chunk_t           certData      = chunk_empty;
-		contentInfo_t     data          = empty_contentInfo;
-		scep_attributes_t attrs         = empty_scep_attributes;
+		pkcs7_t *data = NULL;
+		scep_attributes_t attrs = empty_scep_attributes;
 
 		join_paths(path, sizeof(path), CA_CERT_PATH, file_in_cacert_sig);
 
@@ -1130,6 +1128,7 @@ int main(int argc, char **argv)
 			DBG2(DBG_APP, "going to sleep for %d seconds", poll_interval);
 			sleep(poll_interval);
 			free(scep_response.ptr);
+			data->destroy(data);
 
 			DBG2(DBG_APP, "fingerprint:    %.*s",
 				 (int)fingerprint.len, fingerprint.ptr);
@@ -1138,10 +1137,13 @@ int main(int argc, char **argv)
 
 			chunk_free(&getCertInitial);
 			getCertInitial = scep_build_request(issuerAndSubject,
-									transID, SCEP_GetCertInitial_MSG,
-									x509_ca_enc, pkcs7_symmetric_cipher,
-									x509_signer, pkcs7_digest_alg, private_key);
-
+								transID, SCEP_GetCertInitial_MSG, x509_ca_enc,
+								pkcs7_symmetric_cipher, pkcs7_key_size,
+								x509_signer, pkcs7_digest_alg, private_key);
+			if (!getCertInitial.ptr)
+			{
+				exit_scepclient("failed to build scep request");
+			}
 			if (!scep_http_request(scep_url, getCertInitial, SCEP_PKI_OPERATION,
 				http_get_request, &scep_response))
 			{
@@ -1157,31 +1159,25 @@ int main(int argc, char **argv)
 
 		if (attrs.pkiStatus != SCEP_SUCCESS)
 		{
+			data->destroy(data);
 			exit_scepclient("reply status is not 'SUCCESS'");
 		}
 
-		envelopedData = data.content;
-
-		if (data.type != OID_PKCS7_DATA ||
-			!asn1_parse_simple_object(&envelopedData, ASN1_OCTET_STRING, 0, "data"))
+		if (!data->parse_envelopedData(data, serialNumber, private_key))
 		{
-			exit_scepclient("contentInfo is not of type 'data'");
-		}
-		if (!pkcs7_parse_envelopedData(envelopedData, &certData,
-				serialNumber, private_key))
-		{
+			data->destroy(data);
 			exit_scepclient("could not decrypt envelopedData");
 		}
-		if (!pkcs7_parse_signedData(certData, NULL, certs, NULL, NULL))
+		if (!data->parse_signedData(data, NULL))
 		{
+			data->destroy(data);
 			exit_scepclient("error parsing the scep response");
 		}
-		chunk_free(&certData);
 
 		/* store the end entity certificate */
 		join_paths(path, sizeof(path), HOST_CERT_PATH, file_out_cert);
 
-		enumerator = certs->create_enumerator(certs);
+		enumerator = data->create_certificate_enumerator(data);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			x509_t *x509 = (x509_t*)cert;
@@ -1201,7 +1197,8 @@ int main(int argc, char **argv)
 				stored = TRUE;
 			}
 		}
-		certs->destroy_offset(certs, offsetof(certificate_t, destroy));
+		enumerator->destroy(enumerator);
+		data->destroy(data);
 		filetype_out &= ~CERT;   /* delete CERT flag */
 	}
 
