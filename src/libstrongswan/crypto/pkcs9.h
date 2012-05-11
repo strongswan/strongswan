@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -46,7 +47,7 @@ struct pkcs9_t {
 	 * Gets a PKCS#9 attribute
 	 *
 	 * @param oid			OID of the attribute
-	 * @return				ASN.1 encoded value of the attribute
+	 * @return				value of the attribute (internal data)
 	 */
 	chunk_t (*get_attribute) (pkcs9_t *this, int oid);
 
@@ -54,23 +55,17 @@ struct pkcs9_t {
 	 * Adds a PKCS#9 attribute
 	 *
 	 * @param oid			OID of the attribute
-	 * @param value			ASN.1 encoded value of the attribute
+	 * @param value			value of the attribute (gets cloned)
 	 */
 	void (*set_attribute) (pkcs9_t *this, int oid, chunk_t value);
 
 	/**
-	 * Gets a PKCS#9 messageDigest attribute
+	 * Adds a ASN.1 encoded PKCS#9 attribute
 	 *
-	 * @return				messageDigest
+	 * @param oid			OID of the attribute
+	 * @param value			ASN.1 encoded value of the attribute (gets adopted)
 	 */
-	chunk_t (*get_messageDigest) (pkcs9_t *this);
-
-	/**
-	 * Add a PKCS#9 messageDigest attribute
-	 *
-	 * @param value			messageDigest
-	 */
-	void (*set_messageDigest) (pkcs9_t *this, chunk_t value);
+	void (*set_attribute_raw) (pkcs9_t *this, int oid, chunk_t value);
 
 	/**
 	 * Destroys the PKCS#9 attribute list.

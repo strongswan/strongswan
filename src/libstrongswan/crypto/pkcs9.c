@@ -1,5 +1,6 @@
 /*
- * Copyright (C)2008 Andreas Steffen
+ * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -74,58 +75,6 @@ struct attribute_t {
 };
 
 /**
- * PKCS#9 attribute type OIDs
- */
-static chunk_t ASN1_contentType_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-);
-static chunk_t ASN1_messageDigest_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-);
-static chunk_t ASN1_signingTime_oid = chunk_from_chars(
-	0x06, 0x09,
-		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x05
-);
-static chunk_t ASN1_messageType_oid = chunk_from_chars(
-	0x06, 0x0A,
-		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-);
-static chunk_t ASN1_senderNonce_oid = chunk_from_chars(
-	0x06, 0x0A,
-		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-);
-static chunk_t ASN1_transId_oid = chunk_from_chars(
-	0x06, 0x0A,
-		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-);
-
-/**
- * return the ASN.1 encoded OID of a PKCS#9 attribute
- */
-static chunk_t asn1_attributeIdentifier(int oid)
-{
-	switch (oid)
-	{
-		case OID_PKCS9_CONTENT_TYPE:
-			return ASN1_contentType_oid;
-		case OID_PKCS9_MESSAGE_DIGEST:
-			return ASN1_messageDigest_oid;
-		case OID_PKCS9_SIGNING_TIME:
-			return ASN1_signingTime_oid;
-		case OID_PKI_MESSAGE_TYPE:
-			return ASN1_messageType_oid;
-		case OID_PKI_SENDER_NONCE:
-			return ASN1_senderNonce_oid;
-		case OID_PKI_TRANS_ID:
-			return ASN1_transId_oid;;
-		default:
-			return chunk_empty;
-	}
-}
-
-/**
  * return the ASN.1 encoding of a PKCS#9 attribute
  */
 static asn1_t asn1_attributeType(int oid)
@@ -188,8 +137,8 @@ static attribute_t *attribute_create(int oid, chunk_t value)
 		.destroy = attribute_destroy,
 		.oid = oid,
 		.value = chunk_clone(value),
-		.encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
-							asn1_attributeIdentifier(oid),
+		.encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(oid),
 							asn1_simple_object(ASN1_SET, value)),
 	);
 
@@ -263,43 +212,30 @@ METHOD(pkcs9_t, get_attribute, chunk_t,
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (value.ptr &&
+		!asn1_parse_simple_object(&value, asn1_attributeType(oid), 0,
+								  oid_names[oid].name))
+	{
+		return chunk_empty;
+	}
 	return value;
+}
+
+METHOD(pkcs9_t, set_attribute_raw, void,
+	private_pkcs9_t *this, int oid, chunk_t value)
+{
+	attribute_t *attribute = attribute_create(oid, value);
+
+	this->attributes->insert_last(this->attributes, attribute);
+	chunk_free(&value);
 }
 
 METHOD(pkcs9_t, set_attribute, void,
 	private_pkcs9_t *this, int oid, chunk_t value)
 {
-	attribute_t *attribute = attribute_create(oid, value);
+	chunk_t attr = asn1_simple_object(asn1_attributeType(oid), value);
 
-	this->attributes->insert_last(this->attributes, (void*)attribute);
-}
-
-METHOD(pkcs9_t, get_messageDigest, chunk_t,
-	private_pkcs9_t *this)
-{
-	const int oid = OID_PKCS9_MESSAGE_DIGEST;
-	chunk_t value = get_attribute(this, oid);
-
-	if (value.ptr == NULL)
-	{
-		return chunk_empty;
-	}
-	if (!asn1_parse_simple_object(&value, asn1_attributeType(oid), 0,
-								  oid_names[oid].name))
-	{
-		return chunk_empty;
-	}
-	return chunk_clone(value);
-}
-
-METHOD(pkcs9_t, set_messageDigest, void,
-	private_pkcs9_t *this, chunk_t value)
-{
-	const int oid = OID_PKCS9_MESSAGE_DIGEST;
-	chunk_t messageDigest = asn1_simple_object(asn1_attributeType(oid), value);
-
-	set_attribute(this, oid, messageDigest);
-	free(messageDigest.ptr);
+	set_attribute_raw(this, oid, attr);
 }
 
 METHOD(pkcs9_t, destroy, void,
@@ -323,8 +259,7 @@ static private_pkcs9_t *pkcs9_create_empty(void)
 			.get_encoding = _get_encoding,
 			.get_attribute = _get_attribute,
 			.set_attribute = _set_attribute,
-			.get_messageDigest = _get_messageDigest,
-			.set_messageDigest = _set_messageDigest,
+			.set_attribute_raw = _set_attribute_raw,
 			.destroy = _destroy,
 		},
 		.attributes = linked_list_create(),

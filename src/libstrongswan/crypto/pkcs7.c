@@ -355,7 +355,8 @@ end:
 		{
 			chunk_t messageDigest;
 
-			messageDigest = this->attributes->get_messageDigest(this->attributes);
+			messageDigest = this->attributes->get_attribute(this->attributes,
+													OID_PKCS9_MESSAGE_DIGEST);
 			if (messageDigest.ptr == NULL)
 			{
 				DBG1(DBG_LIB, "messageDigest attribute not found");
@@ -374,7 +375,6 @@ end:
 				{
 					DBG1(DBG_LIB, "hash algorithm %N not supported",
 						 hash_algorithm_names, algorithm);
-					free(messageDigest.ptr);
 					return FALSE;
 				}
 				hasher->allocate_hash(hasher, this->data, &hash);
@@ -382,7 +382,6 @@ end:
 				DBG3(DBG_LIB, "hash: %B", &hash);
 
 				valid = chunk_equals(messageDigest, hash);
-				free(messageDigest.ptr);
 				free(hash.ptr);
 				if (valid)
 				{
@@ -841,7 +840,9 @@ METHOD(pkcs7_t, build_signedData, bool,
 	{
 		if (this->data.ptr != NULL)
 		{
+			chunk_t messageDigest, signingTime, attributes;
 			hasher_t *hasher;
+			time_t now;
 
 			hasher = lib->crypto->create_hasher(lib->crypto, alg);
 			if (hasher == NULL)
@@ -850,26 +851,23 @@ METHOD(pkcs7_t, build_signedData, bool,
 					 hash_algorithm_names, alg);
 				return FALSE;
 			}
-
-			/* take the current time as signingTime */
-			time_t now = time(NULL);
-			chunk_t signingTime = asn1_from_time(&now, ASN1_UTCTIME);
-
-			chunk_t messageDigest, attributes;
-
 			hasher->allocate_hash(hasher, this->data, &messageDigest);
 			hasher->destroy(hasher);
 			this->attributes->set_attribute(this->attributes,
+									OID_PKCS9_MESSAGE_DIGEST,
+									messageDigest);
+			free(messageDigest.ptr);
+
+			/* take the current time as signingTime */
+			now = time(NULL);
+			signingTime = asn1_from_time(&now, ASN1_UTCTIME);
+			this->attributes->set_attribute_raw(this->attributes,
+									OID_PKCS9_SIGNING_TIME, signingTime);
+			this->attributes->set_attribute_raw(this->attributes,
 									OID_PKCS9_CONTENT_TYPE,
 									asn1_build_known_oid(OID_PKCS7_DATA));
-			this->attributes->set_messageDigest(this->attributes,
-									messageDigest);
-			this->attributes->set_attribute(this->attributes,
-									OID_PKCS9_SIGNING_TIME, signingTime);
-			attributes = this->attributes->get_encoding(this->attributes);
 
-			free(messageDigest.ptr);
-			free(signingTime.ptr);
+			attributes = this->attributes->get_encoding(this->attributes);
 
 			private_key->sign(private_key, scheme, attributes, &encryptedDigest);
 			authenticatedAttributes = chunk_clone(attributes);
