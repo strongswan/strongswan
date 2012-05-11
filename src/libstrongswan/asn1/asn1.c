@@ -228,7 +228,8 @@ size_t asn1_length(chunk_t *blob)
 
 	/* read length field, skip tag and length */
 	n = blob->ptr[1];
-	*blob = chunk_skip(*blob, 2);
+	blob->ptr += 2;
+	blob->len -= 2;
 
 	if ((n & 0x80) == 0)
 	{	/* single length octet */
