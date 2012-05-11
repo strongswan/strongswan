@@ -62,7 +62,9 @@ Do not write log output to stderr.
 .SS Options for CA Certificate Acquisition
 .B \-o, \-\-out cacert[=\fIfilename\fP]
 .RS 4
-Output file of acquired CA certificate. If more then one CA certificate is available, \fIfilename\fP is used as prefix for the resulting files.
+Output file of acquired CA certificate. If more then one CA certificate is
+available, \fIfilename\fP is used as prefix for the resulting files (refer to
+EXAMPLES below for details).
 .br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 .RE
@@ -230,9 +232,11 @@ Changes the log level (-1..4, default: 1)
 .B  ipsec scepclient \-\-out caCert \-\-url http://scepserver/cgi\-bin/pkiclient.exe \-f
 .RS 4
 Acquire CA certificate from SCEP server and store it in the default file $CONFDIR/ipsec.d/cacerts/caCert.der.
-If more then one CA certificate is returned, store them in files named caCert.der\-1', caCert.der\-2', etc.
-.br
-Existing files are overwritten.
+If more then one CA certificate is returned, store them in files named
+\'caCert\-1.der\', \'caCert\-2.der\', etc.
+If an RA certificate is returned, store it in a file named \'caCert\-ra.der\'.
+If more than one RA certificate is returned, store them in files named
+\'caCert\-ra\-1.der\', \'caCert\-ra\-2.der\', etc.
 .RE
 .PP
 .B  ipsec scepclient \-\-out pkcs1=joeKey.der \-k 1024

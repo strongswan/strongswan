@@ -222,9 +222,14 @@ static void join_paths(char *target, size_t target_size, char *parent,
  * add a suffix to a given filename, properly handling extensions like '.der'
  */
 static void add_path_suffix(char *target, size_t target_size, char *filename,
-							char *suffix)
+							char *suffix_fmt, ...)
 {
-	char *start, *dot;
+	char suffix[PATH_MAX], *start, *dot;
+	va_list args;
+
+	va_start(args, suffix_fmt);
+	vsnprintf(suffix, sizeof(suffix), suffix_fmt, args);
+	va_end(args);
 
 	start = strrchr(filename, '/');
 	start = start ?: filename;
@@ -862,22 +867,50 @@ int main(int argc, char **argv)
 		{
 			enumerator_t *enumerator;
 			certificate_t *cert;
-			int i = 1;
+			int ra_certs = 0, ca_certs = 0;
+			int ra_index = 1, ca_index = 1;
+
+			enumerator = pkcs7->create_certificate_enumerator(pkcs7);
+			while (enumerator->enumerate(enumerator, &cert))
+			{
+				x509_t *x509 = (x509_t*)cert;
+				if (x509->get_flags(x509) & X509_CA)
+				{
+					ca_certs++;
+				}
+				else
+				{
+					ra_certs++;
+				}
+			}
+			enumerator->destroy(enumerator);
 
 			enumerator = pkcs7->create_certificate_enumerator(pkcs7);
 			while (enumerator->enumerate(enumerator, &cert))
 			{
 				x509_t *x509 = (x509_t*)cert;
 				bool ca_cert = x509->get_flags(x509) & X509_CA;
-				char *path = ca_path;
+				char cert_path[PATH_MAX], *path = ca_path;
 
-				if (!ca_cert)
+				if (ca_cert && ca_certs > 1)
+				{
+					add_path_suffix(cert_path, sizeof(cert_path), ca_path,
+									"-%.1d", ca_index++);
+					path = cert_path;
+				}
+				else if (!ca_cert)
 				{	/* use CA name as base for RA certs */
-					char suffix[6], ra_path[PATH_MAX];
-
-					snprintf(suffix, sizeof(suffix), "-ra%0.2d", i++);
-					add_path_suffix(ra_path, sizeof(ra_path), ca_path, suffix);
-					path = ra_path;
+					if (ra_certs > 1)
+					{
+						add_path_suffix(cert_path, sizeof(cert_path), ca_path,
+										"-ra-%.1d", ra_index++);
+					}
+					else
+					{
+						add_path_suffix(cert_path, sizeof(cert_path), ca_path,
+										"-ra");
+					}
+					path = cert_path;
 				}
 
 				if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding) ||
