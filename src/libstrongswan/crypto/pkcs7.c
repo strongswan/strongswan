@@ -56,11 +56,6 @@ struct private_pkcs7_t {
 	chunk_t content;
 
 	/**
-	 * Has the content already been parsed?
-	 */
-	bool parsed;
-
-	/**
 	 * ASN.1 parsing start level
 	 */
 	u_int level;
@@ -100,6 +95,69 @@ METHOD(pkcs7_t, is_envelopedData, bool,
 }
 
 /**
+ * ASN.1 definition of the PKCS#7 ContentInfo type
+ */
+static const asn1Object_t contentInfoObjects[] = {
+	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
+	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /* 1 */
+	{ 1,   "content",		ASN1_CONTEXT_C_0,	ASN1_OPT |
+												ASN1_BODY }, /* 2 */
+	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }, /* 3 */
+	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT }
+};
+#define PKCS7_INFO_TYPE		1
+#define PKCS7_INFO_CONTENT	2
+
+/**
+ * Parse PKCS#7 contentInfo object
+ */
+static bool parse_contentInfo(private_pkcs7_t *this)
+{
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+	bool success = FALSE;
+
+	if (!this->data.ptr)
+	{
+		return FALSE;
+	}
+
+	parser = asn1_parser_create(contentInfoObjects, this->data);
+	parser->set_top_level(parser, this->level);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		if (objectID == PKCS7_INFO_TYPE)
+		{
+			this->type = asn1_known_oid(object);
+			if (this->type < OID_PKCS7_DATA ||
+				this->type > OID_PKCS7_ENCRYPTED_DATA)
+			{
+				DBG1(DBG_LIB, "unknown pkcs7 content type");
+				goto end;
+			}
+		}
+		else if (objectID == PKCS7_INFO_CONTENT && object.len > 0)
+		{
+			chunk_free(&this->content);
+			this->content = chunk_clone(object);
+		}
+	}
+	success = parser->success(parser);
+
+	if (success)
+	{
+		this->level += 2;
+		chunk_free(&this->data);
+	}
+
+end:
+	parser->destroy(parser);
+	return success;
+}
+
+/**
  * Check whether to abort the requested parsing
  */
 static bool abort_parsing(private_pkcs7_t *this, int type)
@@ -110,30 +168,27 @@ static bool abort_parsing(private_pkcs7_t *this, int type)
 			 oid_names[type].name);
 		return TRUE;
 	}
-	if (this->parsed)
-	{
-		DBG1(DBG_LIB, "pkcs7 content has already been parsed");
-		return TRUE;
-	}
-	this->parsed = TRUE;
 	return FALSE;
 }
 
 METHOD(pkcs7_t, parse_data, bool,
 	private_pkcs7_t *this)
 {
-	chunk_t data = this->content;
+	chunk_t data;
 
-	if (abort_parsing(this, OID_PKCS7_DATA))
+	if (!parse_contentInfo(this) ||
+		 abort_parsing(this, OID_PKCS7_DATA))
 	{
 		return FALSE;
 	}
+	data = this->content;
 	if (data.len == 0)
 	{
 		this->data = chunk_empty;
 		return TRUE;
 	}
-	if (asn1_parse_simple_object(&data, ASN1_OCTET_STRING, this->level, "data"))
+	if (asn1_parse_simple_object(&data, ASN1_OCTET_STRING,
+								 this->level, "data"))
 	{
 		this->data = chunk_clone(data);
 		return TRUE;
@@ -202,7 +257,8 @@ METHOD(pkcs7_t, parse_signedData, bool,
 
 	chunk_t encrypted_digest = chunk_empty;
 
-	if (abort_parsing(this, OID_PKCS7_SIGNED_DATA))
+	if (!parse_contentInfo(this) ||
+		 abort_parsing(this, OID_PKCS7_SIGNED_DATA))
 	{
 		return FALSE;
 	}
@@ -225,20 +281,14 @@ METHOD(pkcs7_t, parse_signedData, bool,
 				break;
 			case PKCS7_SIGNED_CONTENT_INFO:
 			{
-				chunk_t pureData;
 				pkcs7_t *data = pkcs7_create_from_chunk(object, level+1);
 
-				if (data == NULL)
+				if (!data || !data->parse_data(data))
 				{
+					DESTROY_IF(data);
 					goto end;
 				}
-				if (!data->parse_data(data))
-				{
-					data->destroy(data);
-					goto end;
-				}
-				pureData = data->get_data(data);
-				this->data = (pureData.len) ? chunk_clone(pureData) : chunk_empty;
+				this->data = chunk_clone(data->get_data(data));
 				data->destroy(data);
 				break;
 			}
@@ -443,7 +493,8 @@ METHOD(pkcs7_t, parse_envelopedData, bool,
 
 	crypter_t *crypter = NULL;
 
-	if (abort_parsing(this, OID_PKCS7_ENVELOPED_DATA))
+	if (!parse_contentInfo(this) ||
+		 abort_parsing(this, OID_PKCS7_ENVELOPED_DATA))
 	{
 		return FALSE;
 	}
@@ -813,7 +864,9 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 					ASN1_INTEGER_0,
 					asn1_wrap(ASN1_SET, "m", recipientInfo),
 					encryptedContentInfo);
+		chunk_free(&this->data);
 		this->type = OID_PKCS7_ENVELOPED_DATA;
+		this->data = get_contentInfo(this);
 	}
 	return TRUE;
 }
@@ -900,7 +953,6 @@ METHOD(pkcs7_t, build_signedData, bool,
 	this->data = get_contentInfo(this);
 	chunk_free(&this->content);
 
-	this->type = OID_PKCS7_SIGNED_DATA;
 	cert->get_encoding(cert, CERT_ASN1_DER, &encoding);
 
 	this->content = asn1_wrap(ASN1_SEQUENCE, "cmcmm",
@@ -909,6 +961,9 @@ METHOD(pkcs7_t, build_signedData, bool,
 			this->data,
 			asn1_wrap(ASN1_CONTEXT_C_0, "m", encoding),
 			asn1_wrap(ASN1_SET, "m", signerInfo));
+	chunk_free(&this->data);
+	this->type = OID_PKCS7_SIGNED_DATA;
+	this->data = get_contentInfo(this);
 
 	return TRUE;
 }
@@ -921,57 +976,6 @@ METHOD(pkcs7_t, destroy, void,
 	free(this->content.ptr);
 	free(this->data.ptr);
 	free(this);
-}
-
-/**
- * ASN.1 definition of the PKCS#7 ContentInfo type
- */
-static const asn1Object_t contentInfoObjects[] = {
-	{ 0, "contentInfo",		ASN1_SEQUENCE,		ASN1_NONE }, /* 0 */
-	{ 1,   "contentType",	ASN1_OID,			ASN1_BODY }, /* 1 */
-	{ 1,   "content",		ASN1_CONTEXT_C_0,	ASN1_OPT |
-												ASN1_BODY }, /* 2 */
-	{ 1,   "end opt",		ASN1_EOC,			ASN1_END  }, /* 3 */
-	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT }
-};
-#define PKCS7_INFO_TYPE		1
-#define PKCS7_INFO_CONTENT	2
-
-/**
- * Parse PKCS#7 contentInfo object
- */
-static bool parse_contentInfo(chunk_t blob, u_int level0, private_pkcs7_t *cInfo)
-{
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	bool success = FALSE;
-
-	parser = asn1_parser_create(contentInfoObjects, blob);
-	parser->set_top_level(parser, level0);
-
-	while (parser->iterate(parser, &objectID, &object))
-	{
-		if (objectID == PKCS7_INFO_TYPE)
-		{
-			cInfo->type = asn1_known_oid(object);
-			if (cInfo->type < OID_PKCS7_DATA
-			||  cInfo->type > OID_PKCS7_ENCRYPTED_DATA)
-			{
-				DBG1(DBG_LIB, "unknown pkcs7 content type");
-				goto end;
-			}
-		}
-		else if (objectID == PKCS7_INFO_CONTENT && object.len > 0)
-		{
-			cInfo->content = chunk_clone(object);
-		}
-	}
-	success = parser->success(parser);
-
-end:
-	parser->destroy(parser);
-	return success;
 }
 
 /**
@@ -1013,12 +1017,9 @@ pkcs7_t *pkcs7_create_from_chunk(chunk_t chunk, u_int level)
 {
 	private_pkcs7_t *this = pkcs7_create_empty();
 
-	this->level = level + 2;
-	if (!parse_contentInfo(chunk, level, this))
-	{
-		destroy(this);
-		return NULL;
-	}
+	this->level = level;
+	this->data = chunk_clone(chunk);
+
 	return &this->public;
 }
 
@@ -1030,7 +1031,6 @@ pkcs7_t *pkcs7_create_from_data(chunk_t data)
 	private_pkcs7_t *this = pkcs7_create_empty();
 
 	this->data = chunk_clone(data);
-	this->parsed = TRUE;
 
 	return &this->public;
 }

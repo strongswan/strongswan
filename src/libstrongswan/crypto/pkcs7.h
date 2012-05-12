@@ -64,7 +64,8 @@ struct pkcs7_t {
 	bool (*parse_data) (pkcs7_t *this);
 
 	/**
-	 * Parse a PKCS#7 signedData content.
+	 * Parse a PKCS#7 signedData content.  The contained PKCS#7 data is parsed
+	 * and verified.
 	 *
 	 * @param cacert		cacert used to verify the signature
 	 * @return				TRUE if parsing was successful
