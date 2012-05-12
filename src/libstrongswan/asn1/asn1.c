@@ -28,7 +28,7 @@
 /**
  * Commonly used ASN1 values.
  */
-const chunk_t ASN1_INTEGER_0 = chunk_from_chars(0x02, 0x00);
+const chunk_t ASN1_INTEGER_0 = chunk_from_chars(0x02, 0x01, 0x00);
 const chunk_t ASN1_INTEGER_1 = chunk_from_chars(0x02, 0x01, 0x01);
 const chunk_t ASN1_INTEGER_2 = chunk_from_chars(0x02, 0x01, 0x02);
 
@@ -761,16 +761,13 @@ chunk_t asn1_integer(const char *mode, chunk_t content)
 	size_t len;
 	u_char *pos;
 
-	if (content.len == 0 || (content.len == 1 && *content.ptr == 0x00))
-	{
-		/* a zero ASN.1 integer does not have a value field */
-		len = 0;
+	if (content.len == 0)
+	{	/* make sure 0 is encoded properly */
+		content = chunk_from_chars(0x00);
 	}
-	else
-	{
-		/* ASN.1 integers must be positive numbers in two's complement */
-		len = content.len + ((*content.ptr & 0x80) ? 1 : 0);
-	}
+
+	/* ASN.1 integers must be positive numbers in two's complement */
+	len = content.len + ((*content.ptr & 0x80) ? 1 : 0);
 	pos = asn1_build_object(&object, ASN1_INTEGER, len);
 	if (len > content.len)
 	{
