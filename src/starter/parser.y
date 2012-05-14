@@ -81,7 +81,7 @@ section_or_include:
 	{
 		section_list_t *section = malloc_thing(section_list_t);
 
-		section->name = clone_str($2);
+		section->name = strdupnull($2);
 		section->kw = NULL;
 		section->next = NULL;
 		_parser_kw = &(section->kw);
@@ -96,7 +96,7 @@ section_or_include:
 	| CA STRING EOL
 	{
 		section_list_t *section = malloc_thing(section_list_t);
-		section->name = clone_str($2);
+		section->name = strdupnull($2);
 		section->kw = NULL;
 		section->next = NULL;
 		_parser_kw = &(section->kw);
@@ -137,7 +137,7 @@ statement_kw:
 		{
 			new = (kw_list_t *)malloc_thing(kw_list_t);
 			new->entry = entry;
-			new->value = clone_str($3);
+			new->value = strdupnull($3);
 			new->next = NULL;
 			if (_parser_kw_last)
 				_parser_kw_last->next = new;

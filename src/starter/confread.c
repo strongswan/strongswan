@@ -86,8 +86,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_PUBKEY |
 								POLICY_PFS | POLICY_MOBIKE;
 
-	cfg->conn_default.ike                   = clone_str(ike_defaults);
-	cfg->conn_default.esp                   = clone_str(esp_defaults);
+	cfg->conn_default.ike                   = strdupnull(ike_defaults);
+	cfg->conn_default.esp                   = strdupnull(esp_defaults);
 	cfg->conn_default.sa_ike_life_seconds   = OAKLEY_ISAKMP_SA_LIFETIME_DEFAULT;
 	cfg->conn_default.sa_ipsec_life_seconds = PLUTO_SA_LIFE_DURATION_DEFAULT;
 	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
@@ -224,7 +224,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					goto err;
 				}
 			}
-			end->host = clone_str(value);
+			end->host = strdupnull(value);
 		}
 		break;
 	case KW_SUBNET:
@@ -275,7 +275,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			else
 			{	/* %poolname, strip %, serve ip requests */
 				free(end->sourceip);
-				end->sourceip = clone_str(value+1);
+				end->sourceip = strdupnull(value+1);
 				end->sourceip_mask = 0;
 			}
 			end->modecfg = TRUE;
@@ -299,7 +299,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				 }
 				*pos = '\0';
 				free(end->sourceip);
-				end->sourceip = clone_str(value);
+				end->sourceip = strdupnull(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
 			else
@@ -366,7 +366,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
 			goto err;
 		}
-		end->subnet = clone_str(value);
+		end->subnet = strdupnull(value);
 		break;
 	}
 	case KW_PROTOPORT:
@@ -388,7 +388,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
 			goto err;
 		}
-		end->sourceip = clone_str(value);
+		end->sourceip = strdupnull(value);
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
 		break;
@@ -440,7 +440,7 @@ static void handle_firewall(const char *label, starter_end_t *end,
 		}
 		else
 		{
-			end->updown = clone_str(firewall_defaults);
+			end->updown = strdupnull(firewall_defaults);
 			end->firewall = FALSE;
 		}
 	}
@@ -517,7 +517,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			{
 				also_t *also = malloc_thing(also_t);
 
-				also->name = clone_str(kw->value);
+				also->name = strdupnull(kw->value);
 				also->next = conn->also;
 				conn->also = also;
 
@@ -679,7 +679,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 static void conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
 {
 	memcpy(conn, def, sizeof(starter_conn_t));
-	conn->name = clone_str(name);
+	conn->name = strdupnull(name);
 
 	clone_args(KW_CONN_FIRST, KW_CONN_LAST, (char *)conn, (char *)def);
 	clone_args(KW_END_FIRST, KW_END_LAST, (char *)&conn->left, (char *)&def->left);
@@ -709,7 +709,7 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 			{
 				also_t *also = malloc_thing(also_t);
 
-				also->name = clone_str(kw->value);
+				also->name = strdupnull(kw->value);
 				also->next = ca->also;
 				ca->also = also;
 
@@ -744,7 +744,7 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 static void ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
 {
 	memcpy(ca, def, sizeof(starter_ca_t));
-	ca->name = clone_str(name);
+	ca->name = strdupnull(name);
 
 	clone_args(KW_CA_FIRST, KW_CA_LAST, (char *)ca, (char *)def);
 }

@@ -312,7 +312,7 @@ char** new_list(char *value)
 	char *val, *b, *e, *end, **ret;
 	int count;
 
-	val = value ? clone_str(value) : NULL;
+	val = strdupnull(value);
 	if (!val)
 	{
 		return NULL;
@@ -340,7 +340,7 @@ char** new_list(char *value)
 		for (e = b; (*e != '\0'); e++);
 		if (e != b)
 		{
-			ret[count++] = clone_str(b);
+			ret[count++] = strdupnull(b);
 		}
 		b = e + 1;
 	}
@@ -522,7 +522,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			free(*cp);
 
 			/* assign the new string */
-			*cp = clone_str(kw->value);
+			*cp = strdupnull(kw->value);
 		}
 		break;
 	case ARG_LST:
@@ -622,7 +622,7 @@ void clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 			char **cp1 = (char **)(base1 + token_info[token].offset);
 			char **cp2 = (char **)(base2 + token_info[token].offset);
 
-			*cp1 = clone_str(*cp2);
+			*cp1 = strdupnull(*cp2);
 		}
 	}
 }
