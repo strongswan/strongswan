@@ -74,7 +74,10 @@
 /**
  * NULL-safe strdup variant
  */
-#define strdupnull(x) ({ char *_x = x; _x ? strdup(_x) : NULL; })
+static inline char *strdupnull(const char *s)
+{
+	return s ? strdup(s) : NULL;
+}
 
 /**
  * Macro compares two binary blobs for equality
