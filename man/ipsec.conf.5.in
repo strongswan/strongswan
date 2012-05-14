@@ -451,24 +451,10 @@ Relevant only locally, other end need not agree on it.
 synonym for
 .BR lifetime .
 .TP
-.BR left " = <ip address> | <fqdn> | %defaultroute | " %any
+.BR left " = <ip address> | <fqdn> | " %any
 (required)
 the IP address of the left participant's public-network interface
 or one of several magic values.
-If it is
-.BR %defaultroute ,
-.B left
-will be filled in automatically with the local address
-of the default-route interface (as determined at IPsec startup time and
-during configuration update).
-Either
-.B left
-or
-.B right
-may be
-.BR %defaultroute ,
-but not both.
-
 The value
 .B %any
 for the local endpoint signifies an address to be filled in (by automatic
@@ -644,7 +630,7 @@ to 4500 if a NAT is detected or MOBIKE is enabled. Specifying a local IKE port
 different from the default additionally requires a socket implementation that
 listens to this port.
 .TP
-.BR leftnexthop " = %direct | %defaultroute | <ip address> | <fqdn>"
+.BR leftnexthop " = %direct | <ip address> | <fqdn>"
 this parameter is usually not needed any more because the NETKEY IPsec stack
 does not require explicit routing entries for the traffic to be tunneled. If
 .B leftsourceip

@@ -21,7 +21,6 @@
 
 #include "confread.h"
 #include "args.h"
-#include "interfaces.h"
 #include "cmp.h"
 
 #define VARCMP(obj) if (c1->obj != c2->obj) return FALSE
@@ -104,12 +103,4 @@ starter_cmp_pluto(starter_config_t *c1, starter_config_t *c2)
 		return FALSE;
 
 	return cmp_args(KW_PLUTO_FIRST, KW_PLUTO_LAST, (char *)c1, (char *)c2);
-}
-
-bool
-starter_cmp_defaultroute(defaultroute_t *d1, defaultroute_t *d2)
-{
-	if ((d1 == NULL) || (d2 == NULL))
-		return FALSE;
-	return memcmp(d1, d2, sizeof(defaultroute_t)) == 0;
 }

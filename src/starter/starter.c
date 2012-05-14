@@ -49,7 +49,6 @@
 #include "netkey.h"
 #include "klips.h"
 #include "cmp.h"
-#include "interfaces.h"
 
 #ifndef LOG_AUTHPRIV
 #define LOG_AUTHPRIV LOG_AUTH
@@ -662,12 +661,6 @@ int main (int argc, char **argv)
 			if (new_cfg && (new_cfg->err + new_cfg->non_fatal_err == 0))
 			{
 				/* Switch to new config. New conn will be loaded below */
-				if (!starter_cmp_defaultroute(&new_cfg->defaultroute
-								   , &cfg->defaultroute))
-				{
-					_action_ |= FLAG_ACTION_LISTEN;
-				}
-
 				if (!starter_cmp_pluto(cfg, new_cfg))
 				{
 					DBG1(DBG_APP, "Pluto has changed");

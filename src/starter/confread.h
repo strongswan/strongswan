@@ -16,12 +16,10 @@
 #ifndef _IPSEC_CONFREAD_H_
 #define _IPSEC_CONFREAD_H_
 
-#ifndef _FREESWAN_H
 #include <freeswan.h>
-#endif
+#include "../pluto/constants.h"
 
 #include "ipsec-parser.h"
-#include "interfaces.h"
 
 typedef enum {
 		STARTUP_NO,
@@ -217,9 +215,6 @@ struct starter_config {
 				char    *packetdefault;
 				bool    hidetos;
 		} setup;
-
-		/* information about the default route */
-		defaultroute_t defaultroute;
 
 		/* number of encountered parsing errors */
 		u_int err;

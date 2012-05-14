@@ -30,7 +30,6 @@
 #include "confread.h"
 #include "args.h"
 #include "files.h"
-#include "interfaces.h"
 
 /* strings containing a colon are interpreted as an IPv6 address */
 #define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
@@ -184,24 +183,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	case KW_HOST:
 		free(end->host);
 		end->host = NULL;
-		if (streq(value, "%defaultroute"))
-		{
-			if (cfg->defaultroute.defined)
-			{
-				end->addr    = cfg->defaultroute.addr;
-				end->nexthop = cfg->defaultroute.nexthop;
-			}
-			else if (!cfg->defaultroute.supported)
-			{
-				DBG1(DBG_APP, "%%defaultroute not supported, fallback to %%any");
-			}
-			else
-			{
-				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
-				goto err;
-			}
-		}
-		else if (streq(value, "%any") || streq(value, "%any4"))
+		if (streq(value, "%any") || streq(value, "%any4"))
 		{
 			anyaddr(conn->addr_family, &end->addr);
 		}
@@ -355,19 +337,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	switch (token)
 	{
 	case KW_NEXTHOP:
-		if (streq(value, "%defaultroute"))
-		{
-			if (cfg->defaultroute.defined)
-			{
-				end->nexthop = cfg->defaultroute.nexthop;
-			}
-			else
-			{
-				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
-				goto err;
-			}
-		}
-		else if (streq(value, "%direct"))
+		if (streq(value, "%direct"))
 		{
 			ugh = anyaddr(conn->addr_family, &end->nexthop);
 		}
@@ -404,42 +374,25 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		end->has_port_wildcard = has_port_wildcard;
 		break;
 	case KW_NATIP:
+	{
+		ip_address addr;
 		if (end->sourceip)
 		{
 			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
-		if (streq(value, "%defaultroute"))
+		conn->tunnel_addr_family = ip_version(value);
+		ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
+		if (ugh != NULL)
 		{
-			char buf[64];
-
-			if (cfg->defaultroute.defined)
-			{
-				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
-				end->sourceip = clone_str(buf);
-			}
-			else
-			{
-				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
-				goto err;
-			}
+			DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
+			goto err;
 		}
-		else
-		{
-			ip_address addr;
-
-			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-			end->sourceip = clone_str(value);
-		}
+		end->sourceip = clone_str(value);
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
 		break;
+	}
 	default:
 		break;
 	}
@@ -1052,9 +1005,6 @@ starter_config_t* confread_load(const char *file)
 
 	/* set default values */
 	default_values(cfg);
-
-	/* determine default route */
-	get_defaultroute(&cfg->defaultroute);
 
 	/* load config setup section */
 	load_setup(cfg, cfgp);

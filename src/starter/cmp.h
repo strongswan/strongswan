@@ -15,13 +15,10 @@
 #ifndef _STARTER_CMP_H_
 #define _STARTER_CMP_H_
 
-#include "interfaces.h"
-
 extern bool starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2);
 extern bool starter_cmp_ca(starter_ca_t *c1, starter_ca_t *c2);
 extern bool starter_cmp_klips(starter_config_t *c1, starter_config_t *c2);
 extern bool starter_cmp_pluto(starter_config_t *c1, starter_config_t *c2);
-extern bool starter_cmp_defaultroute(defaultroute_t *d1, defaultroute_t *d2);
 
 #endif
 
