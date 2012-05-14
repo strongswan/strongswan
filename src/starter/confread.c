@@ -106,9 +106,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.right.sendcert = CERT_SEND_IF_ASKED;
 
 	anyaddr(AF_INET, &cfg->conn_default.left.addr);
-	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
 	anyaddr(AF_INET, &cfg->conn_default.right.addr);
-	anyaddr(AF_INET, &cfg->conn_default.right.nexthop);
 	cfg->conn_default.left.ikeport = 500;
 	cfg->conn_default.right.ikeport = 500;
 
@@ -336,22 +334,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	/* individual processing of keywords that were not assigned automatically */
 	switch (token)
 	{
-	case KW_NEXTHOP:
-		if (streq(value, "%direct"))
-		{
-			ugh = anyaddr(conn->addr_family, &end->nexthop);
-		}
-		else
-		{
-			conn->addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->addr_family, &end->nexthop);
-		}
-		if (ugh != NULL)
-		{
-			DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
-			goto err;
-		}
-		break;
 	case KW_SUBNETWITHIN:
 	{
 		ip_subnet net;

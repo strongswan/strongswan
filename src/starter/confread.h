@@ -68,7 +68,6 @@ struct starter_end {
 		char            *host;
 		ip_address      addr;
 		u_int           ikeport;
-		ip_address      nexthop;
 		char            *subnet;
 		bool            has_client;
 		bool            has_client_wildcard;

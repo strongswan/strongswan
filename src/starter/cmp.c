@@ -43,7 +43,6 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 		ADDCMP(addr);
 	}
 	VARCMP(ikeport);
-	ADDCMP(nexthop);
 	VARCMP(has_client);
 	VARCMP(has_client_wildcard);
 	VARCMP(has_port_wildcard);
