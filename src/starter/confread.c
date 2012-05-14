@@ -20,11 +20,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include <freeswan.h>
+#include <library.h>
+#include <debug.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/log.h"
 
 #include "keywords.h"
 #include "confread.h"
@@ -45,7 +45,7 @@ static bool daemon_exists(char *daemon, char *path)
 	struct stat st;
 	if (stat(path, &st) != 0)
 	{
-		plog("Disabling %sstart option, '%s' not found", daemon, path);
+		DBG1(DBG_APP, "Disabling %sstart option, '%s' not found", daemon, path);
 		return FALSE;
 	}
 	return TRUE;
@@ -119,15 +119,13 @@ static void default_values(starter_config_t *cfg)
 #define KW_POLICY_FLAG(sy, sn, fl) \
 		if (streq(kw->value, sy)) { conn->policy |= fl; } \
 		else if (streq(kw->value, sn)) { conn->policy &= ~fl; } \
-		else { plog("# bad policy value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
+		else { DBG1(DBG_APP, "# bad policy value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
 
 static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 {
 	kw_list_t *kw;
 
-	DBG(DBG_CONTROL,
-		DBG_log("Loading config setup")
-    )
+	DBG2(DBG_APP, "Loading config setup");
 
 	for (kw = cfgp->config_setup; kw; kw = kw->next)
 	{
@@ -137,14 +135,15 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 
 		if ((int)token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
 		{
-			plog("# unsupported keyword '%s' in config setup", kw->entry->name);
+			DBG1(DBG_APP, "# unsupported keyword '%s' in config setup",
+				 kw->entry->name);
 			cfg->err++;
 			continue;
 		}
 
 		if (!assign_arg(token, KW_SETUP_FIRST, kw, (char *)cfg, &assigned))
 		{
-			plog("  bad argument value in config setup");
+			DBG1(DBG_APP, "  bad argument value in config setup");
 			cfg->err++;
 			continue;
 		}
@@ -194,11 +193,11 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			}
 			else if (!cfg->defaultroute.supported)
 			{
-				plog("%%defaultroute not supported, fallback to %%any");
+				DBG1(DBG_APP, "%%defaultroute not supported, fallback to %%any");
 			}
 			else
 			{
-				plog("# default route not known: %s=%s", name, value);
+				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
 				goto err;
 			}
 		}
@@ -232,7 +231,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			ugh = ttoaddr(value, 0, conn->addr_family, &end->addr);
 			if (ugh != NULL)
 			{
-				plog("# bad addr: %s=%s [%s]", name, value, ugh);
+				DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
 				if (streq(ugh, "does not look numeric and name lookup failed"))
 				{
 					end->dns_failed = TRUE;
@@ -270,7 +269,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			ugh = ttosubnet(value, len, ip_version(value), &net);
 			if (ugh != NULL)
 			{
-				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+				DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
 		}
@@ -278,7 +277,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	case KW_SOURCEIP:
 		if (end->has_natip)
 		{
-			plog("# natip and sourceip cannot be defined at the same time");
+			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
 		if (value[0] == '%')
@@ -313,7 +312,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
 				if (ugh != NULL)
 				{
-					plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+					DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
 					goto err;
 				 }
 				*pos = '\0';
@@ -326,7 +325,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 				if (ugh != NULL)
 				{
-					plog("# bad addr: %s=%s [%s]", name, value, ugh);
+					DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
 					goto err;
 				}
 				end->sourceip_mask = (conn->tunnel_addr_family == AF_INET) ?
@@ -364,7 +363,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			}
 			else
 			{
-				plog("# default route not known: %s=%s", name, value);
+				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
 				goto err;
 			}
 		}
@@ -379,7 +378,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		if (ugh != NULL)
 		{
-			plog("# bad addr: %s=%s [%s]", name, value, ugh);
+			DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
 			goto err;
 		}
 		break;
@@ -394,7 +393,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		ugh = ttosubnet(value, 0, ip_version(value), &net);
 		if (ugh != NULL)
 		{
-			plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+			DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
 			goto err;
 		}
 		end->subnet = clone_str(value);
@@ -407,7 +406,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	case KW_NATIP:
 		if (end->sourceip)
 		{
-			plog("# natip and sourceip cannot be defined at the same time");
+			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
 		if (streq(value, "%defaultroute"))
@@ -421,7 +420,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			}
 			else
 			{
-				plog("# default route not known: %s=%s", name, value);
+				DBG1(DBG_APP, "# default route not known: %s=%s", name, value);
 				goto err;
 			}
 		}
@@ -433,7 +432,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 			if (ugh != NULL)
 			{
-				plog("# bad addr: %s=%s [%s]", name, value, ugh);
+				DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
 			end->sourceip = clone_str(value);
@@ -447,7 +446,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	return;
 
 err:
-	plog("  bad argument value in conn '%s'", conn_name);
+	DBG1(DBG_APP, "  bad argument value in conn '%s'", conn_name);
 	cfg->err++;
 }
 
@@ -461,8 +460,8 @@ static void handle_dns_failure(const char *label, starter_end_t *end,
 	{
 		if (end->allow_any)
 		{
-			plog("# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
-				label, label);
+			DBG1(DBG_APP, "# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
+				 label, label);
 		}
 		else if (!end->host)
 		{
@@ -482,7 +481,8 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	{
 		if (end->updown != NULL)
 		{
-			plog("# cannot have both %sfirewall and %supdown", label, label);
+			DBG1(DBG_APP, "# cannot have both %sfirewall and %supdown", label,
+				 label);
 			cfg->err++;
 		}
 		else
@@ -504,7 +504,7 @@ static bool handle_mark(char *value, mark_t *mark)
 		mark->mask = strtoul(pos+1, &endptr, 0);
 		if (*endptr != '\0')
 		{
-			plog("# invalid mark mask: %s", pos+1);
+			DBG1(DBG_APP, "# invalid mark mask: %s", pos+1);
 			return FALSE;
 		}
 	}
@@ -521,7 +521,7 @@ static bool handle_mark(char *value, mark_t *mark)
 		mark->value = strtoul(value, &endptr, 0);
 		if (*endptr != '\0')
 		{
-			plog("# invalid mark value: %s", value);
+			DBG1(DBG_APP, "# invalid mark value: %s", value);
 			return FALSE;
 		}
 	}
@@ -568,24 +568,22 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				also->next = conn->also;
 				conn->also = also;
 
-				DBG(DBG_CONTROL,
-					DBG_log("  also=%s", kw->value)
-				)
+				DBG2(DBG_APP, "  also=%s", kw->value);
 			}
 			continue;
 		}
 
 		if (token < KW_CONN_FIRST || token > KW_CONN_LAST)
 		{
-			plog("# unsupported keyword '%s' in conn '%s'"
-				, kw->entry->name, conn_name);
+			DBG1(DBG_APP, "# unsupported keyword '%s' in conn '%s'",
+				 kw->entry->name, conn_name);
 			cfg->err++;
 			continue;
 		}
 
 		if (!assign_arg(token, KW_CONN_FIRST, kw, (char *)conn, &assigned))
 		{
-			plog("  bad argument value in conn '%s'", conn_name);
+			DBG1(DBG_APP, "  bad argument value in conn '%s'", conn_name);
 			cfg->err++;
 			continue;
 		}
@@ -623,7 +621,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			}
 			else if (strcmp(kw->value, "transport") != 0)
 			{
-				plog("# bad policy value: %s=%s", kw->entry->name, kw->value);
+				DBG1(DBG_APP, "# bad policy value: %s=%s", kw->entry->name,
+					 kw->value);
 				cfg->err++;
 			}
 			break;
@@ -672,7 +671,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 					}
 					else
 					{
-						plog("# bad policy value: %s=%s", kw->entry->name, kw->value);
+						DBG1(DBG_APP, "# bad policy value: %s=%s",
+							 kw->entry->name, kw->value);
 						cfg->err++;
 						break;
 					}
@@ -717,7 +717,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				conn->tfc = strtoul(kw->value, &endptr, 10);
 				if (*endptr != '\0')
 				{
-					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+						 kw->value);
 					cfg->err++;
 				}
 			}
@@ -734,7 +735,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				conn->sa_keying_tries = strtoul(kw->value, &endptr, 10);
 				if (*endptr != '\0')
 				{
-					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+						 kw->value);
 					cfg->err++;
 				}
 			}
@@ -808,23 +810,22 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 				also->next = ca->also;
 				ca->also = also;
 
-				DBG(DBG_CONTROL,
-					DBG_log("  also=%s", kw->value)
-				)
+				DBG2(DBG_APP, "  also=%s", kw->value);
 			}
 			continue;
 		}
 
 		if (token < KW_CA_FIRST || token > KW_CA_LAST)
 		{
-			plog("# unsupported keyword '%s' in ca '%s'", kw->entry->name, ca_name);
+			DBG1(DBG_APP, "# unsupported keyword '%s' in ca '%s'",
+				 kw->entry->name, ca_name);
 			cfg->err++;
 			continue;
 		}
 
 		if (!assign_arg(token, KW_CA_FIRST, kw, (char *)ca, &assigned))
 		{
-			plog("  bad argument value in ca '%s'", ca_name);
+			DBG1(DBG_APP, "  bad argument value in ca '%s'", ca_name);
 			cfg->err++;
 		}
 	}
@@ -857,13 +858,12 @@ static void load_also_conns(starter_conn_t *conn, also_t *also,
 
 		if (kw == NULL)
 		{
-			plog("  conn '%s' cannot include '%s'", conn->name, also->name);
+			DBG1(DBG_APP, "  conn '%s' cannot include '%s'", conn->name,
+				 also->name);
 		}
 		else
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("conn '%s' includes '%s'", conn->name, also->name)
-			)
+			DBG2(DBG_APP, "conn '%s' includes '%s'", conn->name, also->name);
 			/* only load if no error occurred in the first round */
 			if (cfg->err == 0)
 				load_conn(conn, kw, cfg);
@@ -886,7 +886,7 @@ static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
 		{
 			if (conn->visit == c->visit)
 			{
-				plog("# detected also loop");
+				DBG1(DBG_APP, "# detected also loop");
 				cfg->err++;
 				return NULL;
 			}
@@ -897,7 +897,7 @@ static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
 		c = c->next;
 	}
 
-	plog("# also '%s' not found", name);
+	DBG1(DBG_APP, "# also '%s' not found", name);
 	cfg->err++;
 	return NULL;
 }
@@ -913,13 +913,12 @@ static void load_also_cas(starter_ca_t *ca, also_t *also, starter_config_t *cfg)
 
 		if (kw == NULL)
 		{
-			plog("  ca '%s' cannot include '%s'", ca->name, also->name);
+			DBG1(DBG_APP, "  ca '%s' cannot include '%s'", ca->name,
+				 also->name);
 		}
 		else
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("ca '%s' includes '%s'", ca->name, also->name)
-			)
+			DBG2(DBG_APP, "ca '%s' includes '%s'", ca->name, also->name);
 			/* only load if no error occurred in the first round */
 			if (cfg->err == 0)
 			load_ca(ca, kw, cfg);
@@ -942,7 +941,7 @@ static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
 		{
 			if (ca->visit == c->visit)
 			{
-				plog("# detected also loop");
+				DBG1(DBG_APP, "# detected also loop");
 				cfg->err++;
 				return NULL;
 			}
@@ -953,7 +952,7 @@ static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
 		c = c->next;
 	}
 
-	plog("# also '%s' not found", name);
+	DBG1(DBG_APP, "# also '%s' not found", name);
 	cfg->err++;
 	return NULL;
 }
@@ -1068,9 +1067,7 @@ starter_config_t* confread_load(const char *file)
 	{
 		if (streq(sca->name, "%default"))
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("Loading ca %%default")
-			)
+			DBG2(DBG_APP, "Loading ca %%default");
 			load_ca(&cfg->ca_default, sca->kw, cfg);
 		}
 	}
@@ -1087,9 +1084,7 @@ starter_config_t* confread_load(const char *file)
 		if (streq(sca->name, "%default"))
 			continue;
 
-		DBG(DBG_CONTROL,
-			DBG_log("Loading ca '%s'", sca->name)
-		)
+		DBG2(DBG_APP, "Loading ca '%s'", sca->name);
 		ca = malloc_thing(starter_ca_t);
 
 		ca_default(sca->name, ca, &cfg->ca_default);
@@ -1137,9 +1132,7 @@ starter_config_t* confread_load(const char *file)
 	{
 		if (streq(sconn->name, "%default"))
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("Loading conn %%default")
-			)
+			DBG2(DBG_APP, "Loading conn %%default");
 			load_conn(&cfg->conn_default, sconn->kw, cfg);
 		}
 	}
@@ -1158,9 +1151,7 @@ starter_config_t* confread_load(const char *file)
 		if (streq(sconn->name, "%default"))
 			continue;
 
-		DBG(DBG_CONTROL,
-			DBG_log("Loading conn '%s'", sconn->name)
-		)
+		DBG2(DBG_APP, "Loading conn '%s'", sconn->name);
 		conn = malloc_thing(starter_conn_t);
 
 		conn_default(sconn->name, conn, &cfg->conn_default);
@@ -1213,8 +1204,8 @@ starter_config_t* confread_load(const char *file)
 	total_err = cfg->err + cfg->non_fatal_err;
 	if (total_err > 0)
 	{
-		plog("### %d parsing error%s (%d fatal) ###"
-			, total_err, (total_err > 1)?"s":"", cfg->err);
+		DBG1(DBG_APP, "### %d parsing error%s (%d fatal) ###",
+			 total_err, (total_err > 1)?"s":"", cfg->err);
 	}
 
 	return cfg;

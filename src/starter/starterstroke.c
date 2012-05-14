@@ -26,11 +26,11 @@
 
 #include <credentials/auth_cfg.h>
 
-#include <freeswan.h>
+#include <library.h>
+#include <debug.h>
 
 #include <constants.h>
 #include <defs.h>
-#include <log.h>
 
 #include <stroke_msg.h>
 
@@ -73,12 +73,12 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 	if (sock < 0)
 	{
-		plog("socket() failed: %s", strerror(errno));
+		DBG1(DBG_APP, "socket() failed: %s", strerror(errno));
 		return -1;
 	}
 	if (connect(sock, (struct sockaddr *)&ctl_addr, offsetof(struct sockaddr_un, sun_path) + strlen(ctl_addr.sun_path)) < 0)
 	{
-		plog("connect(charon_ctl) failed: %s", strerror(errno));
+		DBG1(DBG_APP, "connect(charon_ctl) failed: %s", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -86,18 +86,18 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	/* send message */
 	if (write(sock, msg, msg->length) != msg->length)
 	{
-		plog("write(charon_ctl) failed: %s", strerror(errno));
+		DBG1(DBG_APP, "write(charon_ctl) failed: %s", strerror(errno));
 		close(sock);
 		return -1;
 	}
 	while ((byte_count = read(sock, buffer, sizeof(buffer)-1)) > 0)
 	{
 		buffer[byte_count] = '\0';
-		plog("%s", buffer);
+		DBG1(DBG_APP, "%s", buffer);
 	}
 	if (byte_count < 0)
 	{
-		plog("read() failed: %s", strerror(errno));
+		DBG1(DBG_APP, "read() failed: %s", strerror(errno));
 	}
 
 	close(sock);

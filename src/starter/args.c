@@ -17,11 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <freeswan.h>
+#include <library.h>
+#include <debug.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/log.h"
 
 #include "keywords.h"
 #include "confread.h"
@@ -352,13 +352,11 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 	*assigned = FALSE;
 
-	DBG(DBG_CONTROLMORE,
-		DBG_log("  %s=%s", kw->entry->name, kw->value)
-	)
+	DBG3(DBG_APP, "  %s=%s", kw->entry->name, kw->value);
 
 	if (*seen & f)
 	{
-		plog("# duplicate '%s' option", kw->entry->name);
+		DBG1(DBG_APP, "# duplicate '%s' option", kw->entry->name);
 		return FALSE;
 	}
 
@@ -377,7 +375,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 		}
 		if (!match)
 		{
-			plog("# bad value: %s=%s", kw->entry->name, kw->value);
+			DBG1(DBG_APP, "# bad value: %s=%s", kw->entry->name, kw->value);
 			return FALSE;
 		}
 	}
@@ -385,14 +383,14 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 	switch (token_info[token].type)
 	{
 	case ARG_NONE:
-		plog("# option '%s' not supported yet", kw->entry->name);
+		DBG1(DBG_APP, "# option '%s' not supported yet", kw->entry->name);
 		return FALSE;
 	case ARG_ENUM:
 		{
 			if (index < 0)
 			{
-				plog("# bad enumeration value: %s=%s (%d)"
-					, kw->entry->name, kw->value, index);
+				DBG1(DBG_APP, "# bad enumeration value: %s=%s (%d)",
+					 kw->entry->name, kw->value, index);
 				return FALSE;
 			}
 
@@ -418,7 +416,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 			if (*endptr != '\0')
 			{
-				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+					 kw->value);
 				return FALSE;
 			}
 		}
@@ -435,7 +434,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			{
 				if (*endptr != '\0')
 				{
-					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+						 kw->value);
 					return FALSE;
 				}
 			}
@@ -443,7 +443,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			{
 				if ((*endptr != '%') || (endptr[1] != '\0') || endptr == kw->value)
 				{
-					plog("# bad percent value: %s=%s", kw->entry->name, kw->value);
+					DBG1(DBG_APP, "# bad percent value: %s=%s", kw->entry->name,
+						 kw->value);
 					return FALSE;
 				}
 			}
@@ -459,7 +460,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 			if (*endptr != '\0')
 			{
-				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+					 kw->value);
 				return FALSE;
 			}
 		}
@@ -494,7 +496,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 					break;
 				}
 			}
-			plog("# bad duration value: %s=%s", kw->entry->name, kw->value);
+			DBG1(DBG_APP, "# bad duration value: %s=%s", kw->entry->name,
+				 kw->value);
 			return FALSE;
 		}
 	case ARG_STR:
@@ -537,7 +540,8 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 					}
 					if (!match)
 					{
-						plog("# bad value: %s=%s", kw->entry->name, *lst);
+						DBG1(DBG_APP, "# bad value: %s=%s",
+							 kw->entry->name, *lst);
 						return FALSE;
 					}
 				}

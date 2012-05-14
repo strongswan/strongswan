@@ -21,17 +21,14 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <freeswan.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
+#include <library.h>
+#include <debug.h>
 
 #include "confread.h"
 #include "invokepluto.h"
 #include "files.h"
 #include "starterwhack.h"
-#
+
 static int _pluto_pid = 0;
 static int _stop_requested;
 
@@ -50,19 +47,19 @@ starter_pluto_sigchild(pid_t pid, int status)
 		if (status == SS_RC_LIBSTRONGSWAN_INTEGRITY ||
 			status == SS_RC_DAEMON_INTEGRITY)
 		{
-			plog("pluto has quit: integrity test of %s failed",
-				  (status == 64) ? "libstrongswan" : "pluto");
+			DBG1(DBG_APP, "pluto has quit: integrity test of %s failed",
+				 (status == 64) ? "libstrongswan" : "pluto");
 			_stop_requested = 1;
 		}
 		else if (status == SS_RC_INITIALIZATION_FAILED)
 		{
-			plog("pluto has quit: initialization failed");
+			DBG1(DBG_APP, "pluto has quit: initialization failed");
 			_stop_requested = 1;
 		}
 		if (!_stop_requested)
 		{
-			plog("pluto has died -- restart scheduled (%dsec)"
-				, PLUTO_RESTART_DELAY);
+			DBG1(DBG_APP, "pluto has died -- restart scheduled (%dsec)",
+				 PLUTO_RESTART_DELAY);
 			alarm(PLUTO_RESTART_DELAY);   // restart in 5 sec
 		}
 		unlink(PLUTO_PID_FILE);
@@ -86,7 +83,7 @@ starter_stop_pluto (void)
 				usleep(20000); /* sleep for 20 ms */
 				if (_pluto_pid == 0)
 				{
-					plog("pluto stopped after %d ms", 20*(i+1));
+					DBG1(DBG_APP, "pluto stopped after %d ms", 20*(i+1));
 					return 0;
 				}
 			}
@@ -102,7 +99,7 @@ starter_stop_pluto (void)
 			if (i == 10)
 			{
 				kill(pid, SIGKILL);
-				plog("starter_stop_pluto(): pluto does not respond, sending KILL");
+				DBG1(DBG_APP, "starter_stop_pluto(): pluto does not respond, sending KILL");
 			}
 			else
 			{
@@ -112,15 +109,15 @@ starter_stop_pluto (void)
 		}
 		if (_pluto_pid == 0)
 		{
-			plog("pluto stopped after %d ms", 8000 + 100*i);
+			DBG1(DBG_APP, "pluto stopped after %d ms", 8000 + 100*i);
 			return 0;
 		}
-		plog("starter_stop_pluto(): can't stop pluto !!!");
+		DBG1(DBG_APP, "starter_stop_pluto(): can't stop pluto !!!");
 		return -1;
 	}
 	else
 	{
-		plog("stater_stop_pluto(): pluto is not started...");
+		DBG1(DBG_APP, "stater_stop_pluto(): pluto is not started...");
 	}
 	return -1;
 }
@@ -241,7 +238,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 
 	if (_pluto_pid)
 	{
-		plog("starter_start_pluto(): pluto already started...");
+		DBG1(DBG_APP, "starter_start_pluto(): pluto already started...");
 		return -1;
 	}
 	else
@@ -256,7 +253,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		switch (pid)
 		{
 		case -1:
-			plog("can't fork(): %s", strerror(errno));
+			DBG1(DBG_APP, "can't fork(): %s", strerror(errno));
 			return -1;
 		case 0:
 			/* child */
@@ -267,8 +264,8 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 				/* redirect stderr to file */
 				if (f < 0)
 				{
-					plog("couldn't open stderr redirection file '%s'",
-						  cfg->setup.plutostderrlog);
+					DBG1(DBG_APP, "couldn't open stderr redirection file '%s'",
+						 cfg->setup.plutostderrlog);
 				}
 				else
 				{
@@ -281,7 +278,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			/* disable glibc's malloc checker, conflicts with leak detective */
 			setenv("MALLOC_CHECK_", "0", 1);
 			execv(arg[0], arg);
-			plog("can't execv(%s,...): %s", arg[0], strerror(errno));
+			DBG1(DBG_APP, "can't execv(%s,...): %s", arg[0], strerror(errno));
 			exit(1);
 		default:
 			/* father */
@@ -292,7 +289,8 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 				usleep(20000);
 				if (stat(PLUTO_CTL_FILE, &stb) == 0)
 				{
-					plog("pluto (%d) started after %d ms", _pluto_pid, 20*(i+1));
+					DBG1(DBG_APP, "pluto (%d) started after %d ms",
+						 _pluto_pid, 20*(i+1));
 					if (cfg->setup.postpluto)
 					{
 						ignore_result(system(cfg->setup.postpluto));
@@ -303,7 +301,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			if (_pluto_pid)
 			{
 				/* If pluto is started but with no ctl file, stop it */
-				plog("pluto too long to start... - kill kill");
+				DBG1(DBG_APP, "pluto too long to start... - kill kill");
 				for (i = 0; i < 20 && (pid = _pluto_pid) != 0; i++)
 				{
 					if (i < 10)
@@ -319,7 +317,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			}
 			else
 			{
-				plog("pluto refused to be started");
+				DBG1(DBG_APP, "pluto refused to be started");
 			}
 			return -1;
 		}

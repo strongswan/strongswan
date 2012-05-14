@@ -20,9 +20,9 @@
 
 #include <freeswan.h>
 
+#include <debug.h>
 #include <constants.h>
 #include <defs.h>
-#include <log.h>
 
 #include "interfaces.h"
 #include "files.h"
@@ -67,13 +67,13 @@ get_defaultroute(defaultroute_t *defaultroute)
 	fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE);
 	if (fd == -1)
 	{
-		plog("could not create rtnetlink socket");
+		DBG1(DBG_APP, "could not create rtnetlink socket");
 		return;
 	}
 
 	if (send(fd, &rtu, rtu.m.nh.nlmsg_len, 0) == -1)
 	{
-		plog("could not write to rtnetlink socket");
+		DBG1(DBG_APP, "could not write to rtnetlink socket");
 		close(fd);
 		return;
 	}
@@ -81,7 +81,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 	msglen = recv(fd, &rtu, sizeof(rtu), MSG_WAITALL);
 	if (msglen == -1)
 	{
-		plog("could not read from rtnetlink socket");
+		DBG1(DBG_APP, "could not read from rtnetlink socket");
 		close(fd);
 		return;
 	}
@@ -98,7 +98,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 
 		if (nh->nlmsg_type == NLMSG_ERROR)
 		{
-			plog("error from rtnetlink");
+			DBG1(DBG_APP, "error from rtnetlink");
 			return;
 		}
 
@@ -138,7 +138,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 			fd = socket(AF_INET, SOCK_DGRAM, 0);
 			if (fd < 0)
 			{
-				plog("could not open AF_INET socket");
+				DBG1(DBG_APP, "could not open AF_INET socket");
 				break;
 			}
 			memset(&req, 0, sizeof(req));
@@ -146,7 +146,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 			if (ioctl(fd, SIOCGIFNAME, &req) < 0 ||
 				ioctl(fd, SIOCGIFADDR, &req) < 0)
 			{
-				plog("could not read interface data, ignoring route");
+				DBG1(DBG_APP, "could not read interface data, ignoring route");
 				close(fd);
 				break;
 			}
@@ -161,8 +161,8 @@ get_defaultroute(defaultroute_t *defaultroute)
 				if (ioctl(fd, SIOCGIFDSTADDR, &req) < 0 ||
 					((struct sockaddr_in*) &req.ifr_dstaddr)->sin_addr.s_addr == INADDR_ANY)
 				{
-					DBG_log("Ignoring default route to device %s because we can't get it's destination",
-							req.ifr_name);
+					DBG2(DBG_APP, "Ignoring default route to device %s because we can't get it's destination",
+						 req.ifr_name);
 					close(fd);
 					break;
 				}
@@ -174,19 +174,19 @@ get_defaultroute(defaultroute_t *defaultroute)
 
 			close(fd);
 
-			DBG(DBG_CONTROL,
+			{
 				char addr[20];
 				char nexthop[20];
 				addrtot(&defaultroute->addr, 0, addr, sizeof(addr));
 				addrtot(&defaultroute->nexthop, 0, nexthop, sizeof(nexthop));
 
-				DBG_log(
+				DBG2(DBG_APP,
 					( !defaultroute->defined
 					? "Default route found: iface=%s, addr=%s, nexthop=%s"
 					: "Better default route: iface=%s, addr=%s, nexthop=%s"
 					), defaultroute->iface, addr, nexthop
-				)
-			);
+				);
+			}
 
 			best_metric = metric;
 			defaultroute->defined = TRUE;
@@ -195,7 +195,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 	defaultroute->supported = TRUE;
 
 	if (!defaultroute->defined)
-		plog("no default route - cannot cope with %%defaultroute!!!");
+		DBG1(DBG_APP, "no default route - cannot cope with %%defaultroute!!!");
 }
 
 #else /* !START_PLUTO */

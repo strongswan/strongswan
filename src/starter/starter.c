@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
+ #include <syslog.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -34,10 +35,10 @@
 #include <hydra.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
+#include <debug.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
-#include "../pluto/log.h"
 
 #include "confread.h"
 #include "files.h"
@@ -49,6 +50,83 @@
 #include "klips.h"
 #include "cmp.h"
 #include "interfaces.h"
+
+#ifndef LOG_AUTHPRIV
+#define LOG_AUTHPRIV LOG_AUTH
+#endif
+
+/* logging */
+static bool log_to_stderr = TRUE;
+static bool log_to_syslog = TRUE;
+static level_t current_loglevel = 1;
+
+/**
+ * logging function for scepclient
+ */
+static void starter_dbg(debug_t group, level_t level, char *fmt, ...)
+{
+	char buffer[8192];
+	char *current = buffer, *next;
+	va_list args;
+
+	if (level <= current_loglevel)
+	{
+		if (log_to_stderr)
+		{
+			va_start(args, fmt);
+			vfprintf(stderr, fmt, args);
+			va_end(args);
+			fprintf(stderr, "\n");
+		}
+		if (log_to_syslog)
+		{
+			/* write in memory buffer first */
+			va_start(args, fmt);
+			vsnprintf(buffer, sizeof(buffer), fmt, args);
+			va_end(args);
+
+			/* do a syslog with every line */
+			while (current)
+			{
+				next = strchr(current, '\n');
+				if (next)
+				{
+					*(next++) = '\0';
+				}
+				syslog(LOG_INFO, "%s\n", current);
+				current = next;
+			}
+		}
+	}
+}
+
+/**
+ * Initialize logging to stderr/syslog
+ */
+static void init_log(const char *program)
+{
+	dbg = starter_dbg;
+
+	if (log_to_stderr)
+	{
+		setbuf(stderr, NULL);
+	}
+	if (log_to_syslog)
+	{
+		openlog(program, LOG_CONS | LOG_NDELAY | LOG_PID, LOG_AUTHPRIV);
+	}
+}
+
+/**
+ * Deinitialize logging to syslog
+ */
+static void close_log()
+{
+	if (log_to_syslog)
+	{
+		closelog();
+	}
+}
 
 /**
  * Return codes defined by Linux Standard Base Core Specification 3.1
@@ -97,17 +175,13 @@ static void signal_handler(int signal)
 				}
 				if (WIFSIGNALED(status))
 				{
-					DBG(DBG_CONTROL,
-						DBG_log("child %d%s has been killed by sig %d\n",
-								pid, name?name:"", WTERMSIG(status))
-					   )
+					DBG2(DBG_APP, "child %d%s has been killed by sig %d\n",
+						 pid, name?name:"", WTERMSIG(status));
 				}
 				else if (WIFSTOPPED(status))
 				{
-					DBG(DBG_CONTROL,
-						DBG_log("child %d%s has been stopped by sig %d\n",
-								pid, name?name:"", WSTOPSIG(status))
-					   )
+					DBG2(DBG_APP, "child %d%s has been stopped by sig %d\n",
+						 pid, name?name:"", WSTOPSIG(status));
 				}
 				else if (WIFEXITED(status))
 				{
@@ -116,16 +190,12 @@ static void signal_handler(int signal)
 					{
 						_action_ =  FLAG_ACTION_QUIT;
 					}
-					DBG(DBG_CONTROL,
-						DBG_log("child %d%s has quit (exit code %d)\n",
-								pid, name?name:"", exit_status)
-					   )
+					DBG2(DBG_APP, "child %d%s has quit (exit code %d)\n",
+						 pid, name?name:"", exit_status);
 				}
 				else
 				{
-					DBG(DBG_CONTROL,
-						DBG_log("child %d%s has quit", pid, name?name:"")
-					   )
+					DBG2(DBG_APP, "child %d%s has quit", pid, name?name:"");
 				}
 				if (pid == starter_pluto_pid())
 				{
@@ -160,7 +230,7 @@ static void signal_handler(int signal)
 			break;
 
 		default:
-			plog("fsig(): unknown signal %d -- investigate", signal);
+			DBG1(DBG_APP, "fsig(): unknown signal %d -- investigate", signal);
 			break;
 	}
 }
@@ -172,12 +242,12 @@ static void fatal_signal_handler(int signal)
 {
 	backtrace_t *backtrace;
 
-	plog("thread %u received %d", thread_current_id(), signal);
+	DBG1(DBG_APP, "thread %u received %d", thread_current_id(), signal);
 	backtrace = backtrace_create(2);
 	backtrace->log(backtrace, stderr, TRUE);
 	backtrace->destroy(backtrace);
 
-	plog("killing ourself, received critical signal");
+	DBG1(DBG_APP, "killing ourself, received critical signal");
 	abort();
 }
 
@@ -263,7 +333,7 @@ static bool check_pid(char *pid_file)
 				return TRUE;
 			}
 		}
-		plog("removing pidfile '%s', process not running", pid_file);
+		DBG1(DBG_APP, "removing pidfile '%s', process not running", pid_file);
 		unlink(pid_file);
 	}
 	return FALSE;
@@ -295,10 +365,6 @@ int main (int argc, char **argv)
 	bool attach_gdb = FALSE;
 	bool load_warning = FALSE;
 
-	/* global variables defined in log.h */
-	log_to_stderr = TRUE;
-	base_debugging = DBG_NONE;
-
 	library_init(NULL);
 	atexit(library_deinit);
 
@@ -310,15 +376,15 @@ int main (int argc, char **argv)
 	{
 		if (streq(argv[i], "--debug"))
 		{
-			base_debugging |= DBG_CONTROL;
+			current_loglevel = 2;
 		}
 		else if (streq(argv[i], "--debug-more"))
 		{
-			base_debugging |= DBG_CONTROLMORE;
+			current_loglevel = 3;
 		}
 		else if (streq(argv[i], "--debug-all"))
 		{
-			base_debugging |= DBG_ALL;
+			current_loglevel = 4;
 		}
 		else if (streq(argv[i], "--nofork"))
 		{
@@ -341,11 +407,9 @@ int main (int argc, char **argv)
 		}
 	}
 
-	/* Init */
 	init_log("ipsec_starter");
-	cur_debugging = base_debugging;
 
-	plog("Starting strongSwan "VERSION" IPsec [starter]...");
+	DBG1(DBG_APP, "Starting strongSwan "VERSION" IPsec [starter]...");
 
 #ifdef LOAD_WARNING
 	load_warning = TRUE;
@@ -356,22 +420,22 @@ int main (int argc, char **argv)
 		if (lib->settings->get_str(lib->settings, "charon.load", NULL) ||
 			lib->settings->get_str(lib->settings, "pluto.load", NULL))
 		{
-			plog("!! Your strongswan.conf contains manual plugin load options for");
-			plog("!! pluto and/or charon. This is recommended for experts only, see");
-			plog("!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
+			DBG1(DBG_APP, "!! Your strongswan.conf contains manual plugin load options for");
+			DBG1(DBG_APP, "!! pluto and/or charon. This is recommended for experts only, see");
+			DBG1(DBG_APP, "!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
 		}
 	}
 
 	/* verify that we can start */
 	if (getuid() != 0)
 	{
-		plog("permission denied (must be superuser)");
+		DBG1(DBG_APP, "permission denied (must be superuser)");
 		exit(LSB_RC_NOT_ALLOWED);
 	}
 
 	if (check_pid(PLUTO_PID_FILE))
 	{
-		plog("pluto is already running (%s exists) -- skipping pluto start",
+		DBG1(DBG_APP, "pluto is already running (%s exists) -- skipping pluto start",
 			 PLUTO_PID_FILE);
 	}
 	else
@@ -380,7 +444,7 @@ int main (int argc, char **argv)
 	}
 	if (check_pid(CHARON_PID_FILE))
 	{
-		plog("charon is already running (%s exists) -- skipping charon start",
+		DBG1(DBG_APP, "charon is already running (%s exists) -- skipping charon start",
 			 CHARON_PID_FILE);
 	}
 	else
@@ -389,20 +453,20 @@ int main (int argc, char **argv)
 	}
 	if (stat(DEV_RANDOM, &stb) != 0)
 	{
-		plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
+		DBG1(DBG_APP, "unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
 		exit(LSB_RC_FAILURE);
 	}
 
 	if (stat(DEV_URANDOM, &stb)!= 0)
 	{
-		plog("unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
+		DBG1(DBG_APP, "unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
 		exit(LSB_RC_FAILURE);
 	}
 
 	cfg = confread_load(CONFIG_FILE);
 	if (cfg == NULL || cfg->err > 0)
 	{
-		plog("unable to start strongSwan -- fatal errors in config");
+		DBG1(DBG_APP, "unable to start strongSwan -- fatal errors in config");
 		if (cfg)
 		{
 			confread_free(cfg);
@@ -413,11 +477,11 @@ int main (int argc, char **argv)
 	/* determine if we have a native netkey IPsec stack */
 	if (!starter_netkey_init())
 	{
-		plog("no netkey IPsec stack detected");
+		DBG1(DBG_APP, "no netkey IPsec stack detected");
 		if (!starter_klips_init())
 		{
-			plog("no KLIPS IPsec stack detected");
-			plog("no known IPsec stack detected, ignoring!");
+			DBG1(DBG_APP, "no KLIPS IPsec stack detected");
+			DBG1(DBG_APP, "no known IPsec stack detected, ignoring!");
 		}
 	}
 
@@ -425,7 +489,7 @@ int main (int argc, char **argv)
 
 	if (check_pid(STARTER_PID_FILE))
 	{
-		plog("starter is already running (%s exists) -- no fork done",
+		DBG1(DBG_APP, "starter is already running (%s exists) -- no fork done",
 			 STARTER_PID_FILE);
 		confread_free(cfg);
 		exit(LSB_RC_SUCCESS);
@@ -463,7 +527,7 @@ int main (int argc, char **argv)
 			}
 			break;
 			case -1:
-				plog("can't fork: %s", strerror(errno));
+				DBG1(DBG_APP, "can't fork: %s", strerror(errno));
 				break;
 			default:
 				confread_free(cfg);
@@ -540,7 +604,7 @@ int main (int argc, char **argv)
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
-			plog("ipsec starter stopped");
+			DBG1(DBG_APP, "ipsec starter stopped");
 			lib->plugins->unload(lib->plugins);
 			close_log();
 			exit(LSB_RC_SUCCESS);
@@ -592,9 +656,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_UPDATE)
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("Reloading config...")
-			   );
+			DBG2(DBG_APP, "Reloading config...");
 			new_cfg = confread_load(CONFIG_FILE);
 
 			if (new_cfg && (new_cfg->err + new_cfg->non_fatal_err == 0))
@@ -608,7 +670,7 @@ int main (int argc, char **argv)
 
 				if (!starter_cmp_pluto(cfg, new_cfg))
 				{
-					plog("Pluto has changed");
+					DBG1(DBG_APP, "Pluto has changed");
 					if (starter_pluto_pid())
 						starter_stop_pluto();
 					_action_ &= ~FLAG_ACTION_LISTEN;
@@ -690,7 +752,7 @@ int main (int argc, char **argv)
 			}
 			else
 			{
-				plog("can't reload config file due to errors -- keeping old one");
+				DBG1(DBG_APP, "can't reload config file due to errors -- keeping old one");
 				if (new_cfg)
 				{
 					confread_free(new_cfg);
@@ -707,9 +769,7 @@ int main (int argc, char **argv)
 		{
 			if (cfg->setup.plutostart && !starter_pluto_pid())
 			{
-				DBG(DBG_CONTROL,
-					DBG_log("Attempting to start pluto...")
-				   );
+				DBG2(DBG_APP, "Attempting to start pluto...");
 
 				if (starter_start_pluto(cfg, no_fork, attach_gdb) == 0)
 				{
@@ -743,9 +803,7 @@ int main (int argc, char **argv)
 		{
 			if (cfg->setup.charonstart && !starter_charon_pid())
 			{
-				DBG(DBG_CONTROL,
-					DBG_log("Attempting to start charon...")
-				   );
+				DBG2(DBG_APP, "Attempting to start charon...");
 				if (starter_start_charon(cfg, no_fork, attach_gdb))
 				{
 					/* schedule next try */

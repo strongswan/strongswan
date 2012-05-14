@@ -20,11 +20,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include <freeswan.h>
+#include <library.h>
+#include <debug.h>
 
 #include <constants.h>
 #include <defs.h>
-#include <log.h>
 #include <whack.h>
 
 #include "starterwhack.h"
@@ -96,7 +96,7 @@ static int send_whack_msg (whack_message_t *msg)
 	||  !pack_str(&msg->xauth_identity, &str_next, &str_roof)
 	||  (str_roof - str_next < msg->keyval.len))
 	{
-		plog("send_wack_msg(): can't pack strings");
+		DBG1(DBG_APP, "send_wack_msg(): can't pack strings");
 		return -1;
 	}
 	if (msg->keyval.ptr)
@@ -111,13 +111,13 @@ static int send_whack_msg (whack_message_t *msg)
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
 	{
-		plog("socket() failed: %s", strerror(errno));
+		DBG1(DBG_APP, "socket() failed: %s", strerror(errno));
 		return -1;
 	}
 	if (connect(sock, (struct sockaddr *)&ctl_addr,
 		offsetof(struct sockaddr_un, sun_path) + strlen(ctl_addr.sun_path)) < 0)
 	{
-		plog("connect(pluto_ctl) failed: %s", strerror(errno));
+		DBG1(DBG_APP, "connect(pluto_ctl) failed: %s", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -125,7 +125,7 @@ static int send_whack_msg (whack_message_t *msg)
 	/* send message */
 	if (write(sock, msg, len) != len)
 	{
-		plog("write(pluto_ctl) failed: %s", strerror(errno));
+		DBG1(DBG_APP, "write(pluto_ctl) failed: %s", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -248,7 +248,7 @@ starter_whack_add_pubkey (starter_conn_t *conn, starter_end_t *end
 		err = atobytes(end->rsakey, 0, keyspace, sizeof(keyspace), &msg.keyval.len);
 		if (err)
 		{
-			plog("conn %s/%s: rsakey malformed [%s]", name, lr, err);
+			DBG1(DBG_APP, "conn %s/%s: rsakey malformed [%s]", name, lr, err);
 			return 1;
 		}
 		if (end->id)
@@ -316,9 +316,7 @@ int starter_whack_add_conn(starter_conn_t *conn)
 				   , msg.pfsgroup ? msg.pfsgroup : "");
 		msg.esp = esp_buf;
 
-		DBG(DBG_CONTROL,
-			DBG_log("Setting --esp=%s", msg.esp)
-		)
+		DBG2(DBG_APP, "Setting --esp=%s", msg.esp);
 	}
 	msg.dpd_delay   = conn->dpd_delay;
 	msg.dpd_timeout = conn->dpd_timeout;

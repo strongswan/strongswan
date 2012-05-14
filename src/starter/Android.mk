@@ -7,7 +7,7 @@ parser.c lexer.c ipsec-parser.h netkey.c args.h netkey.h \
 starterwhack.c starterwhack.h starterstroke.c invokepluto.c confread.c \
 starterstroke.h interfaces.c invokepluto.h confread.h interfaces.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h invokecharon.c \
-invokecharon.h loglite.c klips.c klips.h
+invokecharon.h klips.c klips.h
 
 # build starter ----------------------------------------------------------------
 

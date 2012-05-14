@@ -16,16 +16,12 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 
-#include <freeswan.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
+#include <library.h>
+#include <debug.h>
 
 #include "files.h"
 
-bool
-starter_klips_init(void)
+bool starter_klips_init(void)
 {
 	struct stat stb;
 
@@ -40,9 +36,7 @@ starter_klips_init(void)
 		/* now test again */
 		if (stat(PROC_KLIPS, &stb) != 0)
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("kernel appears to lack the KLIPS IPsec stack")
-			)
+			DBG2(DBG_APP, "kernel appears to lack the KLIPS IPsec stack");
 			return FALSE;
 		}
 	}
@@ -52,29 +46,25 @@ starter_klips_init(void)
 	ignore_result(system("modprobe -qv ipsec_blowfish"));
 	ignore_result(system("modprobe -qv ipsec_sha2"));
 
-	DBG(DBG_CONTROL,
-		DBG_log("Found KLIPS IPsec stack")
-	)
-
+	DBG2(DBG_APP, "found KLIPS IPsec stack");
 	return TRUE;
 }
 
-void
-starter_klips_cleanup(void)
+void starter_klips_cleanup(void)
 {
 	if (system("type eroute > /dev/null 2>&1") == 0)
 	{
 		ignore_result(system("spi --clear"));
 		ignore_result(system("eroute --clear"));
 	}
-		else if (system("type setkey > /dev/null 2>&1") == 0)
+	else if (system("type setkey > /dev/null 2>&1") == 0)
 	{
 		ignore_result(system("setkey -F"));
 		ignore_result(system("setkey -FP"));
 	}
 	else
 	{
-		plog("WARNING: cannot flush IPsec state/policy database");
+		DBG1(DBG_APP, "WARNING: cannot flush IPsec state/policy database");
 	}
 }
 
