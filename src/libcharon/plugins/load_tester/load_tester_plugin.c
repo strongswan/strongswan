@@ -28,8 +28,6 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 
-static const char *plugin_name = "load_tester";
-
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;
 
 /**
@@ -171,26 +169,84 @@ METHOD(plugin_t, get_name, char*,
 	return "load-tester";
 }
 
+/**
+ * Register load_tester plugin features
+ */
+static bool register_load_tester(private_load_tester_plugin_t *this,
+								 plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		u_int i, shutdown_on = 0;
+
+		this->config = load_tester_config_create();
+		this->creds = load_tester_creds_create();
+
+		charon->backends->add_backend(charon->backends, &this->config->backend);
+		lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
+
+		if (lib->settings->get_bool(lib->settings,
+				"%s.plugins.load-tester.shutdown_when_complete", 0, charon->name))
+		{
+			shutdown_on = this->iterations * this->initiators;
+		}
+		this->listener = load_tester_listener_create(shutdown_on);
+		charon->bus->add_listener(charon->bus, &this->listener->listener);
+
+		if (lib->settings->get_bool(lib->settings,
+				"%s.plugins.load-tester.fake_kernel", FALSE, charon->name))
+		{
+			hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
+							(kernel_ipsec_constructor_t)load_tester_ipsec_create);
+		}
+		for (i = 0; i < this->initiators; i++)
+		{
+			lib->processor->queue_job(lib->processor, (job_t*)
+				callback_job_create_with_prio((callback_job_cb_t)do_load_test,
+										this, NULL, NULL, JOB_PRIO_CRITICAL));
+		}
+	}
+	else
+	{
+		this->iterations = -1;
+		this->mutex->lock(this->mutex);
+		while (this->running)
+		{
+			this->condvar->wait(this->condvar, this->mutex);
+		}
+		this->mutex->unlock(this->mutex);
+		hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
+							(kernel_ipsec_constructor_t)load_tester_ipsec_create);
+		charon->backends->remove_backend(charon->backends, &this->config->backend);
+		lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
+		charon->bus->remove_listener(charon->bus, &this->listener->listener);
+		this->config->destroy(this->config);
+		this->creds->destroy(this->creds);
+		this->listener->destroy(this->listener);
+	}
+	return TRUE;
+}
+
+METHOD(plugin_t, get_features, int,
+	private_load_tester_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(DH, load_tester_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, MODP_NULL),
+				PLUGIN_DEPENDS(CUSTOM, "load-tester"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)register_load_tester, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "load-tester"),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_ANY),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_load_tester_plugin_t *this)
 {
-	this->iterations = -1;
-	this->mutex->lock(this->mutex);
-	while (this->running)
-	{
-		this->condvar->wait(this->condvar, this->mutex);
-	}
-	this->mutex->unlock(this->mutex);
-	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
-						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
-	charon->backends->remove_backend(charon->backends, &this->config->backend);
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
-	charon->bus->remove_listener(charon->bus, &this->listener->listener);
-	this->config->destroy(this->config);
-	this->creds->destroy(this->creds);
-	this->listener->destroy(this->listener);
-	lib->crypto->remove_dh(lib->crypto,
-						(dh_constructor_t)load_tester_diffie_hellman_create);
 	this->mutex->destroy(this->mutex);
 	this->condvar->destroy(this->condvar);
 	free(this);
@@ -202,7 +258,6 @@ METHOD(plugin_t, destroy, void,
 plugin_t *load_tester_plugin_create()
 {
 	private_load_tester_plugin_t *this;
-	u_int i, shutdown_on = 0;
 
 	if (!lib->settings->get_bool(lib->settings,
 						"%s.plugins.load-tester.enable", FALSE, charon->name))
@@ -215,6 +270,7 @@ plugin_t *load_tester_plugin_create()
 		.public = {
 			.plugin = {
 				.get_name = _get_name,
+				.get_features = _get_features,
 				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
@@ -229,35 +285,7 @@ plugin_t *load_tester_plugin_create()
 						"%s.plugins.load-tester.init_limit", 0, charon->name),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.config = load_tester_config_create(),
-		.creds = load_tester_creds_create(),
 	);
-
-	lib->crypto->add_dh(lib->crypto, MODP_NULL, plugin_name,
-						(dh_constructor_t)load_tester_diffie_hellman_create);
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
-
-	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.load-tester.shutdown_when_complete", 0, charon->name))
-	{
-		shutdown_on = this->iterations * this->initiators;
-	}
-	this->listener = load_tester_listener_create(shutdown_on);
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
-
-	if (lib->settings->get_bool(lib->settings,
-			"%s.plugins.load-tester.fake_kernel", FALSE, charon->name))
-	{
-		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
-						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
-	}
-	for (i = 0; i < this->initiators; i++)
-	{
-		lib->processor->queue_job(lib->processor, (job_t*)
-				callback_job_create_with_prio((callback_job_cb_t)do_load_test,
-										this, NULL, NULL, JOB_PRIO_CRITICAL));
-	}
 	return &this->public.plugin;
 }
 
