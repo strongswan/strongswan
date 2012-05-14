@@ -155,6 +155,20 @@ static const char *LST_klipsdebug[] = {
 	 NULL
 };
 
+static const char *LST_authby[] = {
+	"psk",
+	"secret",
+	"pubkey",
+	"rsa",
+	"rsasig",
+	"ecdsa",
+	"ecdsasig",
+	"xauthpsk",
+	"xauthrsasig",
+	"never",
+	 NULL
+};
+
 typedef struct {
 	arg_t       type;
 	size_t      offset;
@@ -206,7 +220,7 @@ static const token_info_t token_info[] =
 	{ ARG_ENUM, offsetof(starter_conn_t, install_policy), LST_bool                 },
 	{ ARG_ENUM, offsetof(starter_conn_t, aggressive), LST_bool                     },
 	{ ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
-	{ ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
+	{ ARG_STR,  offsetof(starter_conn_t, authby), LST_authby                       },
 	{ ARG_STR,  offsetof(starter_conn_t, eap_identity), NULL                       },
 	{ ARG_STR,  offsetof(starter_conn_t, aaa_identity), NULL                       },
 	{ ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },

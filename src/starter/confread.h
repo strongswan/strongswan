@@ -111,14 +111,15 @@ struct starter_conn {
 		char            *eap_identity;
 		char            *aaa_identity;
 		char            *xauth_identity;
+		char            *authby;
 		lset_t          policy;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
 		time_t          sa_rekey_margin;
-		u_int64_t	sa_ipsec_life_bytes;
-		u_int64_t	sa_ipsec_margin_bytes;
-		u_int64_t	sa_ipsec_life_packets;
-		u_int64_t	sa_ipsec_margin_packets;
+		u_int64_t       sa_ipsec_life_bytes;
+		u_int64_t       sa_ipsec_margin_bytes;
+		u_int64_t       sa_ipsec_life_packets;
+		u_int64_t       sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
 		u_int32_t       reqid;
@@ -171,7 +172,7 @@ struct starter_ca {
 		char            *crluri2;
 		char            *ocspuri;
 		char            *ocspuri2;
-		char        *certuribase;
+		char            *certuribase;
 
 		bool            strict;
 

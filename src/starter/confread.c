@@ -588,56 +588,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		case KW_AUTH:
 			KW_POLICY_FLAG("ah", "esp", POLICY_AUTHENTICATE)
 			break;
-		case KW_AUTHBY:
-			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
-
-			if (!streq(kw->value, "never"))
-			{
-				char *value = kw->value;
-				char *second = strchr(kw->value, '|');
-
-				if (second != NULL)
-				{
-					*second = '\0';
-				}
-
-				/* also handles the cases secret|rsasig and rsasig|secret */
-				for (;;)
-				{
-					if (streq(value, "rsa")   || streq(value, "rsasig")   ||
-						streq(value, "ecdsa") || streq(value, "ecdsasig") ||
-						streq(value, "pubkey"))
-					{
-						conn->policy |= POLICY_PUBKEY | POLICY_ENCRYPT;
-					}
-					else if (streq(value, "secret") || streq(value, "psk"))
-					{
-						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
-					}
-					else if (streq(value, "xauthrsasig"))
-					{
-						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
-					}
-					else if (streq(value, "xauthpsk"))
-					{
-						conn->policy |= POLICY_XAUTH_PSK | POLICY_ENCRYPT;
-					}
-					else
-					{
-						DBG1(DBG_APP, "# bad policy value: %s=%s",
-							 kw->entry->name, kw->value);
-						cfg->err++;
-						break;
-					}
-					if (second == NULL)
-					{
-						break;
-					}
-					value = second;
-					second = NULL; /* traverse the loop no more than twice */
-				}
-			}
-			break;
 		case KW_MARK:
 			if (!handle_mark(kw->value, &conn->mark_in))
 			{

@@ -270,19 +270,22 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
 
-	if (!msg.add_conn.me.auth && !msg.add_conn.other.auth)
+	if (!msg.add_conn.me.auth && !msg.add_conn.other.auth &&
+		 conn->authby)
 	{	/* leftauth/rightauth not set, use legacy options */
-		if (conn->policy & POLICY_PUBKEY)
+		if (streq(conn->authby, "rsa")   || streq(conn->authby, "rsasig")   ||
+			streq(conn->authby, "ecdsa") || streq(conn->authby, "ecdsasig") ||
+			streq(conn->authby, "pubkey"))
 		{
 			msg.add_conn.me.auth = push_string(&msg, "pubkey");
 			msg.add_conn.other.auth = push_string(&msg, "pubkey");
 		}
-		else if (conn->policy & POLICY_PSK)
+		else if (streq(conn->authby, "secret") || streq(conn->authby, "psk"))
 		{
 			msg.add_conn.me.auth = push_string(&msg, "psk");
 			msg.add_conn.other.auth = push_string(&msg, "psk");
 		}
-		else if (conn->policy & POLICY_XAUTH_RSASIG)
+		else if (streq(conn->authby, "xauthrsasig"))
 		{
 			msg.add_conn.me.auth = push_string(&msg, "pubkey");
 			msg.add_conn.other.auth = push_string(&msg, "pubkey");
@@ -295,7 +298,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 				msg.add_conn.me.auth2 = push_string(&msg, "xauth");
 			}
 		}
-		else if (conn->policy & POLICY_XAUTH_PSK)
+		else if (streq(conn->authby, "xauthpsk"))
 		{
 			msg.add_conn.me.auth = push_string(&msg, "psk");
 			msg.add_conn.other.auth = push_string(&msg, "psk");
