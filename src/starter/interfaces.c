@@ -25,7 +25,6 @@
 #include <log.h>
 
 #include "interfaces.h"
-#include "exec.h"
 #include "files.h"
 
 #ifdef START_PLUTO
