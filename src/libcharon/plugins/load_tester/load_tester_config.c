@@ -45,6 +45,11 @@ struct private_load_tester_config_t {
 	char *remote;
 
 	/**
+	 * Local address
+	 */
+	char *local;
+
+	/**
 	 * IP address pool
 	 */
 	char *pool;
@@ -241,12 +246,12 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	if (this->port && num)
 	{
 		ike_cfg = ike_cfg_create(FALSE, FALSE,
-				"0.0.0.0", this->port + num - 1, this->remote, IKEV2_NATT_PORT);
+			this->local, this->port + num - 1, this->remote, IKEV2_NATT_PORT);
 	}
 	else
 	{
 		ike_cfg = ike_cfg_create(FALSE, FALSE,
-				"0.0.0.0", IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
+			this->local, IKEV2_UDP_PORT, this->remote, IKEV2_UDP_PORT);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", IKEV2, ike_cfg,
@@ -344,6 +349,8 @@ load_tester_config_t *load_tester_config_create()
 			"%s.plugins.load-tester.pool", NULL, charon->name);
 	this->remote = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.remote", "127.0.0.1", charon->name);
+	this->local = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.local", "0.0.0.0", charon->name);
 
 	this->proposal = proposal_create_from_string(PROTO_IKE,
 				lib->settings->get_str(lib->settings,
