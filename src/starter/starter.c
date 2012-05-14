@@ -42,9 +42,7 @@
 
 #include "confread.h"
 #include "files.h"
-#include "starterwhack.h"
 #include "starterstroke.h"
-#include "invokepluto.h"
 #include "invokecharon.h"
 #include "netkey.h"
 #include "klips.h"
@@ -53,6 +51,8 @@
 #ifndef LOG_AUTHPRIV
 #define LOG_AUTHPRIV LOG_AUTH
 #endif
+
+#define CHARON_RESTART_DELAY 5
 
 /* logging */
 static bool log_to_stderr = TRUE;
@@ -164,10 +164,6 @@ static void signal_handler(int signal)
 
 			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 			{
-				if (pid == starter_pluto_pid())
-				{
-					name = " (Pluto)";
-				}
 				if (pid == starter_charon_pid())
 				{
 					name = " (Charon)";
@@ -196,10 +192,6 @@ static void signal_handler(int signal)
 				{
 					DBG2(DBG_APP, "child %d%s has quit", pid, name?name:"");
 				}
-				if (pid == starter_pluto_pid())
-				{
-					starter_pluto_sigchild(pid, exit_status);
-				}
 				if (pid == starter_charon_pid())
 				{
 					starter_charon_sigchild(pid, exit_status);
@@ -209,7 +201,6 @@ static void signal_handler(int signal)
 		break;
 
 		case SIGALRM:
-			_action_ |= FLAG_ACTION_START_PLUTO;
 			_action_ |= FLAG_ACTION_START_CHARON;
 			break;
 
@@ -416,11 +407,10 @@ int main (int argc, char **argv)
 
 	if (lib->settings->get_bool(lib->settings, "starter.load_warning", load_warning))
 	{
-		if (lib->settings->get_str(lib->settings, "charon.load", NULL) ||
-			lib->settings->get_str(lib->settings, "pluto.load", NULL))
+		if (lib->settings->get_str(lib->settings, "charon.load", NULL))
 		{
-			DBG1(DBG_APP, "!! Your strongswan.conf contains manual plugin load options for");
-			DBG1(DBG_APP, "!! pluto and/or charon. This is recommended for experts only, see");
+			DBG1(DBG_APP, "!! Your strongswan.conf contains manual plugin load options for charon.");
+			DBG1(DBG_APP, "!! This is recommended for experts only, see");
 			DBG1(DBG_APP, "!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
 		}
 	}
@@ -432,15 +422,6 @@ int main (int argc, char **argv)
 		exit(LSB_RC_NOT_ALLOWED);
 	}
 
-	if (check_pid(PLUTO_PID_FILE))
-	{
-		DBG1(DBG_APP, "pluto is already running (%s exists) -- skipping pluto start",
-			 PLUTO_PID_FILE);
-	}
-	else
-	{
-		_action_ |= FLAG_ACTION_START_PLUTO;
-	}
 	if (check_pid(CHARON_PID_FILE))
 	{
 		DBG1(DBG_APP, "charon is already running (%s exists) -- skipping charon start",
@@ -588,14 +569,10 @@ int main (int argc, char **argv)
 	for (;;)
 	{
 		/*
-		 * Stop pluto/charon (if started) and exit
+		 * Stop charon (if started) and exit
 		 */
 		if (_action_ & FLAG_ACTION_QUIT)
 		{
-			if (starter_pluto_pid())
-			{
-				starter_stop_pluto();
-			}
 			if (starter_charon_pid())
 			{
 				starter_stop_charon();
@@ -614,7 +591,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_RELOAD)
 		{
-			if (starter_pluto_pid() || starter_charon_pid())
+			if (starter_charon_pid())
 			{
 				for (conn = cfg->conn_first; conn; conn = conn->next)
 				{
@@ -623,10 +600,6 @@ int main (int argc, char **argv)
 						if (starter_charon_pid())
 						{
 							starter_stroke_del_conn(conn);
-						}
-						if (starter_pluto_pid())
-						{
-							starter_whack_del_conn(conn);
 						}
 						conn->state = STATE_TO_ADD;
 					}
@@ -638,10 +611,6 @@ int main (int argc, char **argv)
 						if (starter_charon_pid())
 						{
 							starter_stroke_del_ca(ca);
-						}
-						if (starter_pluto_pid())
-						{
-							starter_whack_del_ca(ca);
 						}
 						ca->state = STATE_TO_ADD;
 					}
@@ -661,82 +630,62 @@ int main (int argc, char **argv)
 			if (new_cfg && (new_cfg->err + new_cfg->non_fatal_err == 0))
 			{
 				/* Switch to new config. New conn will be loaded below */
-				if (!starter_cmp_pluto(cfg, new_cfg))
+
+				/* Look for new connections that are already loaded */
+				for (conn = cfg->conn_first; conn; conn = conn->next)
 				{
-					DBG1(DBG_APP, "Pluto has changed");
-					if (starter_pluto_pid())
-						starter_stop_pluto();
-					_action_ &= ~FLAG_ACTION_LISTEN;
-					_action_ |= FLAG_ACTION_START_PLUTO;
+					if (conn->state == STATE_ADDED)
+					{
+						for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
+						{
+							if (conn2->state == STATE_TO_ADD && starter_cmp_conn(conn, conn2))
+							{
+								conn->state = STATE_REPLACED;
+								conn2->state = STATE_ADDED;
+								conn2->id = conn->id;
+								break;
+							}
+						}
+					}
 				}
-				else
+
+				/* Remove conn sections that have become unused */
+				for (conn = cfg->conn_first; conn; conn = conn->next)
 				{
-					/* Only reload conn and ca sections if pluto is not killed */
-
-					/* Look for new connections that are already loaded */
-					for (conn = cfg->conn_first; conn; conn = conn->next)
+					if (conn->state == STATE_ADDED)
 					{
-						if (conn->state == STATE_ADDED)
+						if (starter_charon_pid())
 						{
-							for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
+							starter_stroke_del_conn(conn);
+						}
+					}
+				}
+
+				/* Look for new ca sections that are already loaded */
+				for (ca = cfg->ca_first; ca; ca = ca->next)
+				{
+					if (ca->state == STATE_ADDED)
+					{
+						for (ca2 = new_cfg->ca_first; ca2; ca2 = ca2->next)
+						{
+							if (ca2->state == STATE_TO_ADD && starter_cmp_ca(ca, ca2))
 							{
-								if (conn2->state == STATE_TO_ADD && starter_cmp_conn(conn, conn2))
-								{
-									conn->state = STATE_REPLACED;
-									conn2->state = STATE_ADDED;
-									conn2->id = conn->id;
-									break;
-								}
+								ca->state = STATE_REPLACED;
+								ca2->state = STATE_ADDED;
+								break;
 							}
 						}
 					}
+				}
 
-					/* Remove conn sections that have become unused */
-					for (conn = cfg->conn_first; conn; conn = conn->next)
+				/* Remove ca sections that have become unused */
+				for (ca = cfg->ca_first; ca; ca = ca->next)
+				{
+					if (ca->state == STATE_ADDED)
 					{
-						if (conn->state == STATE_ADDED)
+						if (starter_charon_pid())
 						{
-							if (starter_charon_pid())
-							{
-								starter_stroke_del_conn(conn);
-							}
-							if (starter_pluto_pid())
-							{
-								starter_whack_del_conn(conn);
-							}
-						}
-					}
-
-					/* Look for new ca sections that are already loaded */
-					for (ca = cfg->ca_first; ca; ca = ca->next)
-					{
-						if (ca->state == STATE_ADDED)
-						{
-							for (ca2 = new_cfg->ca_first; ca2; ca2 = ca2->next)
-							{
-								if (ca2->state == STATE_TO_ADD && starter_cmp_ca(ca, ca2))
-								{
-									ca->state = STATE_REPLACED;
-									ca2->state = STATE_ADDED;
-									break;
-								}
-							}
-						}
-					}
-
-					/* Remove ca sections that have become unused */
-					for (ca = cfg->ca_first; ca; ca = ca->next)
-					{
-						if (ca->state == STATE_ADDED)
-						{
-							if (starter_charon_pid())
-							{
-								starter_stroke_del_ca(ca);
-							}
-							if (starter_pluto_pid())
-							{
-								starter_whack_del_ca(ca);
-							}
+							starter_stroke_del_ca(ca);
 						}
 					}
 				}
@@ -756,40 +705,6 @@ int main (int argc, char **argv)
 		}
 
 		/*
-		 * Start pluto
-		 */
-		if (_action_ & FLAG_ACTION_START_PLUTO)
-		{
-			if (cfg->setup.plutostart && !starter_pluto_pid())
-			{
-				DBG2(DBG_APP, "Attempting to start pluto...");
-
-				if (starter_start_pluto(cfg, no_fork, attach_gdb) == 0)
-				{
-					starter_whack_listen();
-				}
-				else
-				{
-					/* schedule next try */
-					alarm(PLUTO_RESTART_DELAY);
-				}
-			}
-			_action_ &= ~FLAG_ACTION_START_PLUTO;
-
-			for (ca = cfg->ca_first; ca; ca = ca->next)
-			{
-				if (ca->state == STATE_ADDED)
-					ca->state = STATE_TO_ADD;
-			}
-
-			for (conn = cfg->conn_first; conn; conn = conn->next)
-			{
-				if (conn->state == STATE_ADDED)
-					conn->state = STATE_TO_ADD;
-			}
-		}
-
-		/*
 		 * Start charon
 		 */
 		if (_action_ & FLAG_ACTION_START_CHARON)
@@ -800,7 +715,7 @@ int main (int argc, char **argv)
 				if (starter_start_charon(cfg, no_fork, attach_gdb))
 				{
 					/* schedule next try */
-					alarm(PLUTO_RESTART_DELAY);
+					alarm(CHARON_RESTART_DELAY);
 				}
 				starter_stroke_configure(cfg);
 			}
@@ -808,21 +723,9 @@ int main (int argc, char **argv)
 		}
 
 		/*
-		 * Tell pluto to reread its interfaces
-		 */
-		if (_action_ & FLAG_ACTION_LISTEN)
-		{
-			if (starter_pluto_pid())
-			{
-				starter_whack_listen();
-				_action_ &= ~FLAG_ACTION_LISTEN;
-			}
-		}
-
-		/*
 		 * Add stale conn and ca sections
 		 */
-		if (starter_pluto_pid() || starter_charon_pid())
+		if (starter_charon_pid())
 		{
 			for (ca = cfg->ca_first; ca; ca = ca->next)
 			{
@@ -831,10 +734,6 @@ int main (int argc, char **argv)
 					if (starter_charon_pid())
 					{
 						starter_stroke_add_ca(ca);
-					}
-					if (starter_pluto_pid())
-					{
-						starter_whack_add_ca(ca);
 					}
 					ca->state = STATE_ADDED;
 				}
@@ -853,10 +752,6 @@ int main (int argc, char **argv)
 					{
 						starter_stroke_add_conn(cfg, conn);
 					}
-					if (starter_pluto_pid())
-					{
-						starter_whack_add_conn(conn);
-					}
 					conn->state = STATE_ADDED;
 
 					if (conn->startup == STARTUP_START)
@@ -865,26 +760,12 @@ int main (int argc, char **argv)
 						{
 							starter_stroke_initiate_conn(conn);
 						}
-						if (conn->keyexchange == KEY_EXCHANGE_IKEV1)
-						{
-							if (starter_pluto_pid())
-							{
-								starter_whack_initiate_conn(conn);
-							}
-						}
 					}
 					else if (conn->startup == STARTUP_ROUTE)
 					{
 						if (starter_charon_pid())
 						{
 							starter_stroke_route_conn(conn);
-						}
-						if (conn->keyexchange == KEY_EXCHANGE_IKEV1)
-						{
-							if (starter_pluto_pid())
-							{
-								starter_whack_route_conn(conn);
-							}
 						}
 					}
 				}

@@ -4,8 +4,8 @@ include $(CLEAR_VARS)
 # copy-n-paste from Makefile.am (update for LEX/YACC)
 LOCAL_SRC_FILES := \
 parser.c lexer.c ipsec-parser.h netkey.c args.h netkey.h \
-starterwhack.c starterwhack.h starterstroke.c invokepluto.c confread.c \
-starterstroke.h invokepluto.h confread.h args.c \
+starterstroke.c confread.c \
+starterstroke.h confread.h args.c \
 keywords.c files.h keywords.h cmp.c starter.c cmp.h invokecharon.c \
 invokecharon.h klips.c klips.h
 
