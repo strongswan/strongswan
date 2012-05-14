@@ -458,7 +458,7 @@ METHOD(crypto_tester_t, test_aead, bool,
  * Benchmark a signer
  */
 static u_int bench_signer(private_crypto_tester_t *this,
-	encryption_algorithm_t alg, signer_constructor_t create)
+	integrity_algorithm_t alg, signer_constructor_t create)
 {
 	signer_t *signer;
 
