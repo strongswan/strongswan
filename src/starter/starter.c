@@ -47,6 +47,11 @@
 #include "interfaces.h"
 
 /**
+ * Number of threads in the thread pool, if not specified in config.
+ */
+#define DEFAULT_THREADS 4
+
+/**
  * Return codes defined by Linux Standard Base Core Specification 3.1
  * in section 20.2. Init Script Actions
  */
@@ -475,6 +480,10 @@ int main (int argc, char **argv)
 	{
 		exit(LSB_RC_FAILURE);
 	}
+	/* we need threads to read events from the kernel */
+	lib->processor->set_threads(lib->processor,
+			lib->settings->get_int(lib->settings, "starter.threads",
+								   DEFAULT_THREADS));
 
 	for (;;)
 	{
