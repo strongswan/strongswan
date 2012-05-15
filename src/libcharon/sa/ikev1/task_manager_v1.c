@@ -783,8 +783,14 @@ static status_t process_request(private_task_manager_t *this,
 													   this->dpd_recv++);
 					dpd = TRUE;
 				}
-				else if (message->get_notify(message, DPD_R_U_THERE_ACK))
+				else if ((notify = message->get_notify(message,
+													   DPD_R_U_THERE_ACK)))
 				{
+					data = notify->get_notification_data(notify);
+					if (data.len == 4 && untoh32(data.ptr) == this->dpd_send)
+					{
+						this->dpd_send++;
+					}
 					task = (task_t *)isakmp_dpd_create(this->ike_sa, TRUE,
 													   this->dpd_send - 1);
 					dpd = TRUE;
