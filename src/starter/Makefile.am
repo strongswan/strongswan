@@ -29,10 +29,6 @@ EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = parser.h
 
-if USE_PLUTO
-  AM_CFLAGS += -DSTART_PLUTO
-endif
-
 if USE_CHARON
   AM_CFLAGS += -DSTART_CHARON
 endif

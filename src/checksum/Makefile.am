@@ -79,11 +79,6 @@ if !MONOLITHIC
 endif
 endif
 
-if USE_PLUTO
-  exes += $(top_builddir)/src/pluto/.libs/pluto
-  AM_CFLAGS += -DP_PLUGINS=\""${p_plugins}\""
-endif
-
 if USE_TOOLS
   exes += $(top_builddir)/src/openac/.libs/openac
   exes += $(top_builddir)/src/pki/.libs/pki

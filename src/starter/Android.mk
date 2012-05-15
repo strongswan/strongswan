@@ -20,10 +20,6 @@ LOCAL_C_INCLUDES += \
 LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON \
 	-DPLUGINS='"$(strongswan_STARTER_PLUGINS)"'
 
-ifneq ($(strongswan_BUILD_PLUTO),)
-LOCAL_CFLAGS += -DSTART_PLUTO
-endif
-
 LOCAL_MODULE := starter
 
 LOCAL_MODULE_TAGS := optional

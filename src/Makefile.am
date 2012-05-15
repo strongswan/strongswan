@@ -41,15 +41,11 @@ if USE_LIBCHARON
 endif
 
 if USE_FILE_CONFIG
-  SUBDIRS += libfreeswan starter
+  SUBDIRS += starter
 endif
 
 if USE_IPSEC_SCRIPT
   SUBDIRS += ipsec _copyright
-endif
-
-if USE_PLUTO
-  SUBDIRS += pluto whack
 endif
 
 if USE_CHARON
@@ -69,7 +65,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += libfreeswan openac scepclient pki
+  SUBDIRS += openac scepclient pki
 endif
 
 if USE_CONFTEST

@@ -77,9 +77,6 @@ static void default_values(starter_config_t *cfg)
 #ifdef START_CHARON
 	cfg->setup.charonstart = TRUE;
 #endif
-#ifdef START_PLUTO
-	cfg->setup.plutostart  = TRUE;
-#endif
 
 	cfg->conn_default.seen    = SEEN_NONE;
 	cfg->conn_default.startup = STARTUP_NO;
@@ -143,19 +140,12 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 		}
 	}
 
-	/* verify the executables are actually available (some distros split
-	 * packages but enabled both) */
+	/* verify the executables are actually available */
 #ifdef START_CHARON
 	cfg->setup.charonstart = cfg->setup.charonstart &&
 							 daemon_exists("charon", CHARON_CMD);
 #else
 	cfg->setup.charonstart = FALSE;
-#endif
-#ifdef START_PLUTO
-	cfg->setup.plutostart = cfg->setup.plutostart &&
-							daemon_exists("pluto", PLUTO_CMD);
-#else
-	cfg->setup.plutostart = FALSE;
 #endif
 }
 

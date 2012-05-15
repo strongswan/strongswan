@@ -164,12 +164,9 @@ ARG_ENABL_SET([manager],        [enable web management console (proof of concept
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
 ARG_DISBL_SET([load-warning],   [disable the charon/pluto plugin load option warning in starter.])
-ARG_ENABL_SET([pluto],          [enable the IKEv1 keying daemon pluto.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
 ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
 ARG_DISBL_SET([xauth],          [disable xauth plugin.])
-ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
-ARG_DISBL_SET([adns],           [disable the use of adns in pluto (disables opportunistic encryption).])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
@@ -301,16 +298,6 @@ fi
 
 if test x$medcli = xtrue; then
 	mediation=true
-fi
-
-if test x$pluto = xtrue; then
-	if test x$socket_raw = xfalse; then
-		AC_MSG_NOTICE([Enforcing --enable-socket-raw, as pluto is enabled])
-		socket_raw=true
-		if test x$socket_default_given = xfalse; then
-			socket_default=false
-		fi
-	fi
 fi
 
 dnl ===========================================
@@ -789,7 +776,6 @@ m4_include(m4/macros/add-plugin.m4)
 
 # plugin lists for all components
 charon_plugins=
-pluto_plugins=
 starter_plugins=
 pool_plugins=
 attest_plugins=
@@ -802,59 +788,57 @@ medsrv_plugins=
 nm_plugins=
 
 # location specific lists for checksumming,
-# for src/libcharon, src/pluto, src/libhydra and src/libstrongswan
+# for src/libcharon, src/libhydra and src/libstrongswan
 c_plugins=
-p_plugins=
 h_plugins=
 s_plugins=
 
-ADD_PLUGIN([test-vectors],         [s charon pluto openac scepclient pki])
-ADD_PLUGIN([curl],                 [s charon pluto scepclient scripts nm])
-ADD_PLUGIN([soup],                 [s charon pluto scripts nm])
-ADD_PLUGIN([ldap],                 [s charon pluto scepclient scripts nm])
-ADD_PLUGIN([mysql],                [s charon pluto pool manager medsrv attest])
-ADD_PLUGIN([sqlite],               [s charon pluto pool manager medsrv attest])
+ADD_PLUGIN([test-vectors],         [s charon openac scepclient pki])
+ADD_PLUGIN([curl],                 [s charon scepclient scripts nm])
+ADD_PLUGIN([soup],                 [s charon scripts nm])
+ADD_PLUGIN([ldap],                 [s charon scepclient scripts nm])
+ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
+ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
 ADD_PLUGIN([pkcs11],               [s charon pki nm])
-ADD_PLUGIN([aes],                  [s charon pluto openac scepclient pki scripts nm])
-ADD_PLUGIN([des],                  [s charon pluto openac scepclient pki scripts nm])
-ADD_PLUGIN([blowfish],             [s charon pluto openac scepclient pki scripts nm])
-ADD_PLUGIN([sha1],                 [s charon pluto openac scepclient pki scripts medsrv attest nm])
-ADD_PLUGIN([sha2],                 [s charon pluto openac scepclient pki scripts medsrv attest nm])
+ADD_PLUGIN([aes],                  [s charon openac scepclient pki scripts nm])
+ADD_PLUGIN([des],                  [s charon openac scepclient pki scripts nm])
+ADD_PLUGIN([blowfish],             [s charon openac scepclient pki scripts nm])
+ADD_PLUGIN([sha1],                 [s charon openac scepclient pki scripts medsrv attest nm])
+ADD_PLUGIN([sha2],                 [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([md4],                  [s charon openac manager scepclient pki nm])
-ADD_PLUGIN([md5],                  [s charon pluto openac scepclient pki scripts attest nm])
-ADD_PLUGIN([random],               [s charon pluto openac scepclient pki scripts medsrv attest nm])
+ADD_PLUGIN([md5],                  [s charon openac scepclient pki scripts attest nm])
+ADD_PLUGIN([random],               [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([nonce],                [s charon nm])
-ADD_PLUGIN([x509],                 [s charon pluto openac scepclient pki scripts attest nm])
+ADD_PLUGIN([x509],                 [s charon openac scepclient pki scripts attest nm])
 ADD_PLUGIN([revocation],           [s charon nm])
 ADD_PLUGIN([constraints],          [s charon nm])
 ADD_PLUGIN([pubkey],               [s charon])
-ADD_PLUGIN([pkcs1],                [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
-ADD_PLUGIN([pkcs8],                [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
-ADD_PLUGIN([pgp],                  [s charon pluto])
-ADD_PLUGIN([dnskey],               [s pluto])
-ADD_PLUGIN([pem],                  [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([pkcs1],                [s charon openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([pkcs8],                [s charon openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([pgp],                  [s charon])
+ADD_PLUGIN([dnskey],               [s charon])
+ADD_PLUGIN([pem],                  [s charon openac scepclient pki scripts manager medsrv attest nm])
 ADD_PLUGIN([padlock],              [s charon])
-ADD_PLUGIN([openssl],              [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
-ADD_PLUGIN([gcrypt],               [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
-ADD_PLUGIN([af-alg],               [s charon pluto openac scepclient pki scripts medsrv attest nm])
+ADD_PLUGIN([openssl],              [s charon openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([gcrypt],               [s charon openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([af-alg],               [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([fips-prf],             [s charon nm])
-ADD_PLUGIN([gmp],                  [s charon pluto openac scepclient pki scripts manager medsrv attest nm])
+ADD_PLUGIN([gmp],                  [s charon openac scepclient pki scripts manager medsrv attest nm])
 ADD_PLUGIN([agent],                [s charon nm])
 ADD_PLUGIN([xcbc],                 [s charon nm])
 ADD_PLUGIN([cmac],                 [s charon nm])
-ADD_PLUGIN([hmac],                 [s charon pluto scripts nm])
+ADD_PLUGIN([hmac],                 [s charon scripts nm])
 ADD_PLUGIN([ctr],                  [s charon scripts nm])
 ADD_PLUGIN([ccm],                  [s charon scripts nm])
 ADD_PLUGIN([gcm],                  [s charon scripts nm])
-ADD_PLUGIN([xauth],                [p pluto])
-ADD_PLUGIN([attr],                 [h charon pluto])
-ADD_PLUGIN([attr-sql],             [h charon pluto])
+ADD_PLUGIN([attr],                 [h charon])
+ADD_PLUGIN([attr-sql],             [h charon])
 ADD_PLUGIN([load-tester],          [c charon])
-ADD_PLUGIN([kernel-pfkey],         [h charon pluto starter nm])
-ADD_PLUGIN([kernel-pfroute],       [h charon pluto starter nm])
-ADD_PLUGIN([kernel-klips],         [h charon pluto starter])
-ADD_PLUGIN([kernel-netlink],       [h charon pluto starter nm])
-ADD_PLUGIN([resolve],              [h charon pluto])
+ADD_PLUGIN([kernel-pfkey],         [h charon starter nm])
+ADD_PLUGIN([kernel-pfroute],       [h charon starter nm])
+ADD_PLUGIN([kernel-klips],         [h charon starter])
+ADD_PLUGIN([kernel-netlink],       [h charon starter nm])
+ADD_PLUGIN([resolve],              [h charon])
 ADD_PLUGIN([socket-default],       [c charon nm])
 ADD_PLUGIN([socket-raw],           [c charon nm])
 ADD_PLUGIN([socket-dynamic],       [c charon])
@@ -907,7 +891,6 @@ ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unit-tester],          [c charon])
 
 AC_SUBST(charon_plugins)
-AC_SUBST(pluto_plugins)
 AC_SUBST(starter_plugins)
 AC_SUBST(pool_plugins)
 AC_SUBST(attest_plugins)
@@ -1039,10 +1022,6 @@ AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
-dnl pluto plugins
-dnl =============
-AM_CONDITIONAL(USE_XAUTH, test x$xauth = xtrue)
-
 dnl other options
 dnl =============
 AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
@@ -1058,7 +1037,6 @@ AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
-AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_IKEV1, test x$ikev1 = xtrue)
 AM_CONDITIONAL(USE_IKEV2, test x$ikev2 = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
@@ -1068,13 +1046,13 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue -o x$nm = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
-AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
-AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$pluto = xtrue -o x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
+AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
+AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
@@ -1162,7 +1140,6 @@ AC_OUTPUT(
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/plugins/resolve/Makefile
-	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libradius/Makefile
@@ -1176,9 +1153,6 @@ AC_OUTPUT(
 	src/libimcv/plugins/imv_test/Makefile
 	src/libimcv/plugins/imc_scanner/Makefile
 	src/libimcv/plugins/imv_scanner/Makefile
-	src/pluto/Makefile
-	src/pluto/plugins/xauth/Makefile
-	src/whack/Makefile
 	src/charon/Makefile
 	src/charon-nm/Makefile
 	src/libcharon/Makefile
