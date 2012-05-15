@@ -143,6 +143,7 @@ static void destroy(private_daemon_t *this)
 											offsetof(file_logger_t, destroy));
 	this->public.sys_loggers->destroy_offset(this->public.sys_loggers,
 											offsetof(sys_logger_t, destroy));
+	free((void*)this->public.name);
 	free(this);
 }
 
