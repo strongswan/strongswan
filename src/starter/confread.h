@@ -70,9 +70,7 @@ struct starter_end {
 		char            *ca2;
 		char            *groups;
 		char            *cert_policy;
-		char            *iface;
 		char            *host;
-		ip_address      addr;
 		u_int           ikeport;
 		char            *subnet;
 		bool            has_client;
@@ -85,7 +83,6 @@ struct starter_end {
 		bool            firewall;
 		bool            hostaccess;
 		bool            allow_any;
-		bool            dns_failed;
 		char            *updown;
 		u_int16_t       port;
 		u_int8_t        protocol;
@@ -133,7 +130,6 @@ struct starter_conn {
 		mark_t          mark_in;
 		mark_t          mark_out;
 		u_int32_t       tfc;
-		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
 		bool            aggressive;

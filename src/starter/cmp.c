@@ -34,14 +34,6 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	if ((c1 == NULL) || (c2 == NULL))
 		return FALSE;
 
-	if (c2->dns_failed)
-	{
-		c2->addr = c1->addr;
-	}
-	else
-	{
-		ADDCMP(addr);
-	}
 	VARCMP(ikeport);
 	VARCMP(has_client);
 	VARCMP(has_client_wildcard);
@@ -53,7 +45,7 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	VARCMP(protocol);
 
 	return cmp_args(KW_END_FIRST, KW_END_LAST, (char *)c1, (char *)c2);
- }
+}
 
 bool
 starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
@@ -62,7 +54,6 @@ starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 		return FALSE;
 
 	VARCMP(policy);
-	VARCMP(addr_family);
 	VARCMP(tunnel_addr_family);
 	VARCMP(mark_in.value);
 	VARCMP(mark_in.mask);

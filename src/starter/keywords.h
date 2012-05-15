@@ -145,10 +145,9 @@ typedef enum {
 	KW_CA,
 	KW_CA2,
 	KW_GROUPS,
-	KW_IFACE,
 
 #define KW_END_FIRST    KW_HOST
-#define KW_END_LAST     KW_IFACE
+#define KW_END_LAST     KW_GROUPS
 
    /* left end keywords */
 	KW_LEFT,

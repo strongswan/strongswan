@@ -93,7 +93,6 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
 	cfg->conn_default.sa_rekey_fuzz         = SA_REPLACEMENT_FUZZ_DEFAULT;
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
-	cfg->conn_default.addr_family           = AF_INET;
 	cfg->conn_default.tunnel_addr_family    = AF_INET;
 	cfg->conn_default.install_policy        = TRUE;
 	cfg->conn_default.dpd_delay             =  30; /* seconds */
@@ -105,8 +104,6 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.left.sendcert  = CERT_SEND_IF_ASKED;
 	cfg->conn_default.right.sendcert = CERT_SEND_IF_ASKED;
 
-	anyaddr(AF_INET, &cfg->conn_default.left.addr);
-	anyaddr(AF_INET, &cfg->conn_default.right.addr);
 	cfg->conn_default.left.ikeport = 500;
 	cfg->conn_default.right.ikeport = 500;
 
@@ -179,51 +176,13 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	switch (token)
 	{
 	case KW_HOST:
+		if (value && strlen(value) > 0 && value[0] == '%')
+		{	/* allow_any prefix */
+			end->allow_any = TRUE;
+			value++;
+		}
 		free(end->host);
-		end->host = NULL;
-		if (streq(value, "%any") || streq(value, "%any4"))
-		{
-			anyaddr(conn->addr_family, &end->addr);
-		}
-		else if (streq(value, "%any6"))
-		{
-			conn->addr_family = AF_INET6;
-			anyaddr(conn->addr_family, &end->addr);
-		}
-		else if (streq(value, "%group"))
-		{
-			ip_address any;
-
-			conn->policy |= POLICY_GROUP | POLICY_TUNNEL;
-			anyaddr(conn->addr_family, &end->addr);
-			anyaddr(conn->tunnel_addr_family, &any);
-			end->has_client = TRUE;
-		}
-		else
-		{
-			/* check for allow_any prefix */
-			if (value[0] == '%')
-			{
-				end->allow_any = TRUE;
-				value++;
-			}
-			conn->addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->addr_family, &end->addr);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
-				if (streq(ugh, "does not look numeric and name lookup failed"))
-				{
-					end->dns_failed = TRUE;
-					anyaddr(conn->addr_family, &end->addr);
-				}
-				else
-				{
-					goto err;
-				}
-			}
-			end->host = strdupnull(value);
-		}
+		end->host = strdupnull(value);
 		break;
 	case KW_SUBNET:
 		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
@@ -385,27 +344,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 err:
 	DBG1(DBG_APP, "  bad argument value in conn '%s'", conn_name);
 	cfg->err++;
-}
-
-/*
- * handles left|right=<FQDN> DNS resolution failure
- */
-static void handle_dns_failure(const char *label, starter_end_t *end,
-							   starter_config_t *cfg, starter_conn_t *conn)
-{
-	if (end->dns_failed)
-	{
-		if (end->allow_any)
-		{
-			DBG1(DBG_APP, "# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
-				 label, label);
-		}
-		else if (!end->host)
-		{
-			/* declare an error */
-			cfg->err++;
-		}
-	}
 }
 
 /*
@@ -646,8 +584,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		}
 	}
 
-	handle_dns_failure("left", &conn->left, cfg, conn);
-	handle_dns_failure("right", &conn->right, cfg, conn);
 	handle_firewall("left", &conn->left, cfg);
 	handle_firewall("right", &conn->right, cfg);
 }

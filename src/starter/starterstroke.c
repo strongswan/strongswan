@@ -117,47 +117,8 @@ static char* connection_name(starter_conn_t *conn)
 	return conn->name;
 }
 
-static void ip_address2string(ip_address *addr, char *buffer, size_t len)
-{
-	switch (((struct sockaddr*)addr)->sa_family)
-	{
-		case AF_INET6:
-		{
-			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)addr;
-			u_int8_t zeroes[IPV6_LEN];
-
-			memset(zeroes, 0, IPV6_LEN);
-			if (memcmp(zeroes, &(sin6->sin6_addr.s6_addr), IPV6_LEN) &&
-				inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
-			{
-				return;
-			}
-			snprintf(buffer, len, "%%any6");
-			break;
-		}
-		case AF_INET:
-		{
-			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
-			u_int8_t zeroes[IPV4_LEN];
-
-			memset(zeroes, 0, IPV4_LEN);
-			if (memcmp(zeroes, &(sin->sin_addr.s_addr), IPV4_LEN) &&
-				inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
-			{
-				return;
-			}
-			/* fall through to default */
-		}
-		default:
-			snprintf(buffer, len, "%%any");
-			break;
-	}
-}
-
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {
-	char buffer[INET6_ADDRSTRLEN];
-
 	msg_end->auth = push_string(msg, conn_end->auth);
 	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
@@ -176,8 +137,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	}
 	else
 	{
-		ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
-		msg_end->address = push_string(msg, buffer);
+		msg_end->address = push_string(msg, "%any");
 	}
 	msg_end->ikeport = conn_end->ikeport;
 	msg_end->subnets = push_string(msg, conn_end->subnet);
