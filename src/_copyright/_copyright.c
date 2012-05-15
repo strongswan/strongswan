@@ -21,8 +21,39 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include <freeswan.h>
 #include <library.h>
+
+static const char *copyright[] = {
+	"Copyright (C) 1999-2012  Henry Spencer, Richard Guy Briggs,",
+	"    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
+	"    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
+	"",
+	"    Ken Bantoft, Stephen J. Bevan, JuanJo Ciarlante, Mathieu Lafon,",
+	"    Stephane Laroche, Kai Martius, Stephan Scholz, Tuomo Soini, Herbert Xu,",
+	"",
+	"    Martin Berner, Marco Bertossa, David Buechi, Ueli Galizzi,",
+	"    Christoph Gysin, Andreas Hess, Patric Lichtsteiner, Michael Meier,",
+	"    Andreas Schleiss, Ariane Seiler, Mario Strasser, Lukas Suter,",
+	"    Roger Wegmann, Simon Zwahlen,",
+	"    ZHW Zuercher Hochschule Winterthur (Switzerland).",
+	"",
+	"    Philip Boetschi, Tobias Brunner, Sansar Choinyambuu, Adrian Doerig,",
+	"    Andreas Eigenmann, Fabian Hartmann, Noah Heusser, Jan Hutter,",
+	"    Thomas Kallenberg, Daniel Roethlisberger, Joel Stillhart, Martin Willi,",
+	"    Daniel Wydler, Andreas Steffen,",
+	"    HSR Hochschule fuer Technik Rapperswil (Switzerland).",
+	"",
+	"This program is free software; you can redistribute it and/or modify it",
+	"under the terms of the GNU General Public License as published by the",
+	"Free Software Foundation; either version 2 of the License, or (at your",
+	"option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.",
+	"",
+	"This program is distributed in the hope that it will be useful, but",
+	"WITHOUT ANY WARRANTY; without even the implied warranty of",
+	"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General",
+	"Public License (file COPYING in the distribution) for more details.",
+	NULL,
+};
 
 char usage[] = "Usage: ipsec _copyright";
 struct option opts[] = {
@@ -39,7 +70,7 @@ main(int argc, char *argv[])
 	int opt;
 	extern int optind;
 	int errflg = 0;
-	const char **notice = ipsec_copyright_notice();
+	const char **notice = copyright;
 	const char **co;
 
 	library_init(NULL);
