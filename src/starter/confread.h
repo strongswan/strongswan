@@ -21,6 +21,11 @@
 
 #include "ipsec-parser.h"
 
+/** to mark seen keywords */
+typedef u_int64_t seen_t;
+#define SEEN_NONE 0;
+#define SEEN_KW(kw, base) ((seen_t)1 << ((kw) - (base)))
+
 typedef enum {
 		STARTUP_NO,
 		STARTUP_ADD,
@@ -52,7 +57,7 @@ typedef enum {
 typedef struct starter_end starter_end_t;
 
 struct starter_end {
-		lset_t          seen;
+		seen_t          seen;
 		char            *auth;
 		char            *auth2;
 		char            *id;
@@ -98,7 +103,7 @@ struct also {
 typedef struct starter_conn starter_conn_t;
 
 struct starter_conn {
-		lset_t          seen;
+		seen_t          seen;
 		char            *name;
 		also_t          *also;
 		kw_list_t       *kw;
@@ -156,7 +161,7 @@ struct starter_conn {
 typedef struct starter_ca starter_ca_t;
 
 struct starter_ca {
-		lset_t          seen;
+		seen_t          seen;
 		char            *name;
 		also_t          *also;
 		kw_list_t       *kw;
@@ -182,7 +187,7 @@ typedef struct starter_config starter_config_t;
 
 struct starter_config {
 		struct {
-				lset_t  seen;
+				seen_t  seen;
 				char    **interfaces;
 				char    *dumpdir;
 				bool    charonstart;

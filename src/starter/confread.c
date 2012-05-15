@@ -57,7 +57,7 @@ static void default_values(starter_config_t *cfg)
 
 	memset(cfg, 0, sizeof(struct starter_config));
 
-    /* is there enough space for all seen flags? */
+	/* is there enough space for all seen flags? */
 	assert(KW_SETUP_LAST - KW_SETUP_FIRST <
 		sizeof(cfg->setup.seen) * BITS_PER_BYTE);
 	assert(KW_CONN_LAST  - KW_CONN_FIRST <
@@ -67,7 +67,7 @@ static void default_values(starter_config_t *cfg)
 	assert(KW_CA_LAST - KW_CA_FIRST <
 		sizeof(cfg->ca_default.seen) * BITS_PER_BYTE);
 
-	cfg->setup.seen        = LEMPTY;
+	cfg->setup.seen        = SEEN_NONE;
 	cfg->setup.fragicmp    = TRUE;
 	cfg->setup.hidetos     = TRUE;
 	cfg->setup.uniqueids   = TRUE;
@@ -80,7 +80,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->setup.plutostart  = TRUE;
 #endif
 
-	cfg->conn_default.seen    = LEMPTY;
+	cfg->conn_default.seen    = SEEN_NONE;
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
 	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_PUBKEY |
@@ -95,12 +95,12 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
 	cfg->conn_default.addr_family           = AF_INET;
 	cfg->conn_default.tunnel_addr_family    = AF_INET;
-	cfg->conn_default.install_policy	= TRUE;
-	cfg->conn_default.dpd_delay			=  30; /* seconds */
-	cfg->conn_default.dpd_timeout		= 150; /* seconds */
+	cfg->conn_default.install_policy        = TRUE;
+	cfg->conn_default.dpd_delay             =  30; /* seconds */
+	cfg->conn_default.dpd_timeout           = 150; /* seconds */
 
-	cfg->conn_default.left.seen  = LEMPTY;
-	cfg->conn_default.right.seen = LEMPTY;
+	cfg->conn_default.left.seen  = SEEN_NONE;
+	cfg->conn_default.right.seen = SEEN_NONE;
 
 	cfg->conn_default.left.sendcert  = CERT_SEND_IF_ASKED;
 	cfg->conn_default.right.sendcert = CERT_SEND_IF_ASKED;
@@ -110,7 +110,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.left.ikeport = 500;
 	cfg->conn_default.right.ikeport = 500;
 
-	cfg->ca_default.seen = LEMPTY;
+	cfg->ca_default.seen = SEEN_NONE;
 }
 
 #define KW_POLICY_FLAG(sy, sn, fl) \
@@ -412,7 +412,7 @@ static void handle_dns_failure(const char *label, starter_end_t *end,
 static void handle_firewall(const char *label, starter_end_t *end,
 							starter_config_t *cfg)
 {
-	if (end->firewall && (end->seen & LELEM(KW_FIREWALL - KW_END_FIRST)))
+	if (end->firewall && (end->seen & SEEN_KW(KW_FIREWALL, KW_END_FIRST)))
 	{
 		if (end->updown != NULL)
 		{
@@ -955,7 +955,7 @@ starter_config_t* confread_load(const char *file)
 	}
 
 	/* parameters defined in ca %default sections can be overloads */
-	cfg->ca_default.seen = LEMPTY;
+	cfg->ca_default.seen = SEEN_NONE;
 
 	/* load other ca sections */
 	for (sca = cfgp->ca_first; sca; sca = sca->next)
@@ -1019,10 +1019,10 @@ starter_config_t* confread_load(const char *file)
 		}
 	}
 
-	/* parameter defined in conn %default sections can be overloaded */
-	cfg->conn_default.seen       = LEMPTY;
-	cfg->conn_default.right.seen = LEMPTY;
-	cfg->conn_default.left.seen  = LEMPTY;
+	/* parameters defined in conn %default sections can be overloaded */
+	cfg->conn_default.seen       = SEEN_NONE;
+	cfg->conn_default.right.seen = SEEN_NONE;
+	cfg->conn_default.left.seen  = SEEN_NONE;
 
 	/* load other conn sections */
 	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)

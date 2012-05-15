@@ -360,21 +360,20 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 
 	int index = -1;  /* used for enumeration arguments */
 
-	lset_t *seen = (lset_t *)base;    /* seen flags are at the top of the struct */
-	lset_t f = LELEM(token - first);  /* compute flag position of argument */
+	seen_t *seen = (seen_t*)base; /* seen flags are at the top of the struct */
 
 	*assigned = FALSE;
 
 	DBG3(DBG_APP, "  %s=%s", kw->entry->name, kw->value);
 
-	if (*seen & f)
+	if (*seen & SEEN_KW(token, first))
 	{
 		DBG1(DBG_APP, "# duplicate '%s' option", kw->entry->name);
 		return FALSE;
 	}
 
 	/* set flag that this argument has been seen */
-	*seen |= f;
+	*seen |= SEEN_KW(token, first);
 
 	/* is there a keyword list? */
 	if (list != NULL && token_info[token].type != ARG_LST)
