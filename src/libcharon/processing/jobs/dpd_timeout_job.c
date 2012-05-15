@@ -41,7 +41,7 @@ struct private_dpd_timeout_job_t {
 	/**
 	 * Timestamp of first DPD check
 	 */
-	u_int32_t check;
+	time_t check;
 };
 
 METHOD(job_t, destroy, void,
@@ -54,14 +54,27 @@ METHOD(job_t, destroy, void,
 METHOD(job_t, execute, void,
 	private_dpd_timeout_job_t *this)
 {
+	time_t use_time, current;
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
 
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
 											  this->ike_sa_id);
 	if (ike_sa)
 	{
+		use_time = ike_sa->get_statistic(ike_sa, STAT_INBOUND);
+
+		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, &child_sa))
+		{
+			child_sa->get_usestats(child_sa, TRUE, &current, NULL);
+			use_time = max(use_time, current);
+		}
+		enumerator->destroy(enumerator);
+
 		/* check if no incoming packet during timeout, reestalish SA */
-		if (ike_sa->get_statistic(ike_sa, STAT_INBOUND) < this->check)
+		if (use_time < this->check)
 		{
 			DBG1(DBG_JOB, "DPD check timed out, enforcing DPD action");
 			if (ike_sa->reestablish(ike_sa) == SUCCESS)
