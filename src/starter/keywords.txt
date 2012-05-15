@@ -106,7 +106,6 @@ certuribase,       KW_CERTURIBASE
 left,              KW_LEFT
 leftikeport,       KW_LEFTIKEPORT
 leftsubnet,        KW_LEFTSUBNET
-leftsubnetwithin,  KW_LEFTSUBNETWITHIN
 leftprotoport,     KW_LEFTPROTOPORT
 leftsourceip,      KW_LEFTSOURCEIP
 leftnatip,         KW_LEFTNATIP
@@ -129,7 +128,6 @@ leftgroups,        KW_LEFTGROUPS
 right,             KW_RIGHT
 rightikeport,      KW_RIGHTIKEPORT
 rightsubnet,       KW_RIGHTSUBNET
-rightsubnetwithin, KW_RIGHTSUBNETWITHIN
 rightprotoport,    KW_RIGHTPROTOPORT
 rightsourceip,     KW_RIGHTSOURCEIP
 rightnatip,        KW_RIGHTNATIP

@@ -254,7 +254,6 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_end_t, host), NULL                                },
 	{ ARG_UINT, offsetof(starter_end_t, ikeport), NULL                             },
 	{ ARG_STR,  offsetof(starter_end_t, subnet), NULL                              },
-	{ ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
 	{ ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
 	{ ARG_STR,  offsetof(starter_end_t, sourceip), NULL                            },
 	{ ARG_MISC, 0, NULL  /* KW_NATIP */                                            },

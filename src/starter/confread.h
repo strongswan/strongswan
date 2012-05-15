@@ -74,7 +74,6 @@ struct starter_end {
 		u_int           ikeport;
 		char            *subnet;
 		bool            has_client;
-		bool            has_client_wildcard;
 		bool            has_port_wildcard;
 		bool            has_natip;
 		bool            has_virt;

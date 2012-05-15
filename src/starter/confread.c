@@ -294,23 +294,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	/* individual processing of keywords that were not assigned automatically */
 	switch (token)
 	{
-	case KW_SUBNETWITHIN:
-	{
-		ip_subnet net;
-
-		end->has_client = TRUE;
-		end->has_client_wildcard = TRUE;
-		conn->tunnel_addr_family = ip_version(value);
-
-		ugh = ttosubnet(value, 0, ip_version(value), &net);
-		if (ugh != NULL)
-		{
-			DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
-			goto err;
-		}
-		end->subnet = strdupnull(value);
-		break;
-	}
 	case KW_PROTOPORT:
 		ugh = ttoprotoport(value, 0, &end->protocol, &end->port, &has_port_wildcard);
 		end->has_port_wildcard = has_port_wildcard;
