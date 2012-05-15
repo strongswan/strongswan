@@ -35,6 +35,7 @@
 
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/dpd_timeout_job.h>
 
 /**
  * Number of old messages hashes we keep for retransmission.
@@ -1358,8 +1359,20 @@ METHOD(task_manager_t, queue_child_delete, void,
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
+	u_int32_t t = 0, retransmit;
+
 	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, TRUE,
 												this->dpd_send++));
+
+	/* schedule DPD timeout job using the same timeout as a retransmitting
+	 * IKE message would have. */
+	for (retransmit = 0; retransmit <= this->retransmit_tries; retransmit++)
+	{
+		t += (u_int32_t)(this->retransmit_timeout * 1000.0 *
+						pow(this->retransmit_base, retransmit));
+	}
+	lib->scheduler->schedule_job_ms(lib->scheduler,
+		(job_t*)dpd_timeout_job_create(this->ike_sa->get_id(this->ike_sa)), t);
 }
 
 METHOD(task_manager_t, adopt_tasks, void,
