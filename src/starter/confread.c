@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <netdb.h>
 
 #include <library.h>
 #include <debug.h>
@@ -159,9 +160,7 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				   kw_list_t *kw, char *conn_name, starter_config_t *cfg)
 {
-	err_t ugh = NULL;
 	bool assigned = FALSE;
-	bool has_port_wildcard;        /* set if port is %any */
 
 	char *name  = kw->entry->name;
 	char *value = kw->value;
@@ -262,9 +261,59 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	switch (token)
 	{
 	case KW_PROTOPORT:
-		ugh = ttoprotoport(value, 0, &end->protocol, &end->port, &has_port_wildcard);
-		end->has_port_wildcard = has_port_wildcard;
+	{
+		struct protoent *proto;
+		struct servent *svc;
+		char *pos, *port = "";
+		long int p;
+
+		pos = strchr(value, '/');
+		if (pos)
+		{	/* protocol/port */
+			*pos = '\0';
+			port = pos + 1;
+		}
+
+		proto = getprotobyname(value);
+		if (proto)
+		{
+			end->protocol = proto->p_proto;
+		}
+		else
+		{
+			p = strtol(value, &pos, 0);
+			if ((*value && *pos) || p < 0 || p > 0xff)
+			{
+				DBG1(DBG_APP, "# bad protocol: %s=%s", name, value);
+				goto err;
+			}
+			end->protocol = (u_int8_t)p;
+		}
+
+		if (streq(port, "%any"))
+		{
+			end->port = 0;
+		}
+		else
+		{
+			svc = getservbyname(port, NULL);
+			if (svc)
+			{
+				end->port = ntohs(svc->s_port);
+			}
+			else
+			{
+				p = strtol(port, &pos, 0);
+				if ((*port && *pos) || p < 0 || p > 0xffff)
+				{
+					DBG1(DBG_APP, "# bad port: %s=%s", name, value);
+					goto err;
+				}
+				end->port = (u_int16_t)p;
+			}
+		}
 		break;
+	}
 	case KW_NATIP:
 	{
 		host_t *host;

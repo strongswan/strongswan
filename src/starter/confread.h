@@ -73,7 +73,6 @@ struct starter_end {
 		char            *host;
 		u_int           ikeport;
 		char            *subnet;
-		bool            has_port_wildcard;
 		bool            has_natip;
 		bool            modecfg;
 		certpolicy_t    sendcert;

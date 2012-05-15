@@ -35,7 +35,6 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 		return FALSE;
 
 	VARCMP(ikeport);
-	VARCMP(has_port_wildcard);
 	VARCMP(has_natip);
 	VARCMP(modecfg);
 	VARCMP(port);
