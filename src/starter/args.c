@@ -103,22 +103,6 @@ static const char *LST_keyexchange[] = {
 	 NULL
 };
 
-static const char *LST_pfsgroup[] = {
-	"modp1024",
-	"modp1536",
-	"modp2048",
-	"modp3072",
-	"modp4096",
-	"modp6144",
-	"modp8192",
-	"ecp192",
-	"ecp224",
-	"ecp256",
-	"ecp384",
-	"ecp521",
-	 NULL
-};
-
 static const char *LST_plutodebug[] = {
 	"none",
 	"all",
@@ -215,7 +199,6 @@ static const token_info_t token_info[] =
 	{ ARG_ENUM, offsetof(starter_conn_t, startup), LST_startup                     },
 	{ ARG_ENUM, offsetof(starter_conn_t, keyexchange), LST_keyexchange             },
 	{ ARG_MISC, 0, NULL  /* KW_TYPE */                                             },
-	{ ARG_MISC, 0, NULL  /* KW_PFS */                                              },
 	{ ARG_MISC, 0, NULL  /* KW_COMPRESS */                                         },
 	{ ARG_ENUM, offsetof(starter_conn_t, install_policy), LST_bool                 },
 	{ ARG_ENUM, offsetof(starter_conn_t, aggressive), LST_bool                     },
@@ -238,7 +221,6 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_REAUTH */                                           },
 	{ ARG_STR,  offsetof(starter_conn_t, ike), NULL                                },
 	{ ARG_STR,  offsetof(starter_conn_t, esp), NULL                                },
-	{ ARG_STR,  offsetof(starter_conn_t, pfsgroup), LST_pfsgroup                   },
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
 	{ ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },

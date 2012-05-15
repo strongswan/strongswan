@@ -35,7 +35,7 @@
 #define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
 static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
-static const char esp_defaults[] = "aes128-sha1,3des-sha1";
+static const char esp_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 
 static const char firewall_defaults[] = "ipsec _updown iptables";
 
@@ -84,7 +84,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
 	cfg->conn_default.mode    = MODE_TUNNEL;
-	cfg->conn_default.policy  = POLICY_PFS | POLICY_MOBIKE;
+	cfg->conn_default.policy  = POLICY_MOBIKE;
 
 	cfg->conn_default.ike                   = strdupnull(ike_defaults);
 	cfg->conn_default.esp                   = strdupnull(esp_defaults);
@@ -560,9 +560,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 					 kw->value);
 				cfg->err++;
 			}
-			break;
-		case KW_PFS:
-			KW_POLICY_FLAG("yes", "no", POLICY_PFS)
 			break;
 		case KW_COMPRESS:
 			KW_POLICY_FLAG("yes", "no", POLICY_COMPRESS)

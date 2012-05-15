@@ -143,7 +143,6 @@ struct starter_conn {
 
 		char            *esp;
 		char            *ike;
-		char            *pfsgroup;
 
 		time_t          dpd_delay;
 		time_t          dpd_timeout;

@@ -57,7 +57,6 @@ pkcs11keepstate,   KW_PKCS11KEEPSTATE
 pkcs11proxy,       KW_PKCS11PROXY
 keyexchange,       KW_KEYEXCHANGE
 type,              KW_TYPE
-pfs,               KW_PFS
 compress,          KW_COMPRESS
 installpolicy,     KW_INSTALLPOLICY
 aggressive,        KW_AGGRESSIVE
@@ -78,7 +77,6 @@ rekey,             KW_REKEY
 reauth,            KW_REAUTH
 esp,               KW_ESP
 ike,               KW_IKE
-pfsgroup,          KW_PFSGROUP
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
