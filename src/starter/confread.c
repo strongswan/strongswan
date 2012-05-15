@@ -24,14 +24,16 @@
 #include <library.h>
 #include <debug.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-
 #include "keywords.h"
 #include "confread.h"
 #include "args.h"
 #include "files.h"
 
+#define IKE_LIFETIME_DEFAULT         10800 /* 3 hours */
+#define IPSEC_LIFETIME_DEFAULT        3600 /* 1 hour */
+#define SA_REPLACEMENT_MARGIN_DEFAULT  540 /* 9 minutes */
+#define SA_REPLACEMENT_FUZZ_DEFAULT    100 /* 100% of margin */
+#define SA_REPLACEMENT_RETRIES_DEFAULT   3
 
 static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 static const char esp_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
@@ -87,8 +89,8 @@ static void default_values(starter_config_t *cfg)
 
 	cfg->conn_default.ike                   = strdupnull(ike_defaults);
 	cfg->conn_default.esp                   = strdupnull(esp_defaults);
-	cfg->conn_default.sa_ike_life_seconds   = OAKLEY_ISAKMP_SA_LIFETIME_DEFAULT;
-	cfg->conn_default.sa_ipsec_life_seconds = PLUTO_SA_LIFE_DURATION_DEFAULT;
+	cfg->conn_default.sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
+	cfg->conn_default.sa_ipsec_life_seconds = IPSEC_LIFETIME_DEFAULT;
 	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
 	cfg->conn_default.sa_rekey_fuzz         = SA_REPLACEMENT_FUZZ_DEFAULT;
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;

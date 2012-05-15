@@ -29,9 +29,6 @@
 #include <library.h>
 #include <debug.h>
 
-#include <constants.h>
-#include <defs.h>
-
 #include <stroke_msg.h>
 
 #include "starterstroke.h"

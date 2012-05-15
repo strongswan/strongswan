@@ -9,10 +9,7 @@ invokecharon.h klips.c klips.h
 INCLUDES = \
 -I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
--I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/libhydra \
--I$(top_srcdir)/src/pluto \
--I$(top_srcdir)/src/whack \
 -I$(top_srcdir)/src/stroke
 
 AM_CFLAGS = \
@@ -27,13 +24,10 @@ AM_CFLAGS = \
 
 AM_YFLAGS = -v -d
 
-starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libhydra/libhydra.la $(SOCKLIB) $(PTHREADLIB)
+starter_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libhydra/libhydra.la $(SOCKLIB) $(PTHREADLIB)
 EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = parser.h
-
-PLUTODIR=$(top_srcdir)/src/pluto
-SCEPCLIENTDIR=$(top_srcdir)/src/scepclient
 
 if USE_PLUTO
   AM_CFLAGS += -DSTART_PLUTO
@@ -53,9 +47,6 @@ endif
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
-
-defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
-		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true

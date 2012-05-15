@@ -16,8 +16,6 @@
 #ifndef _IPSEC_CONFREAD_H_
 #define _IPSEC_CONFREAD_H_
 
-#include <freeswan.h>
-#include "../pluto/constants.h"
 #include <kernel/kernel_ipsec.h>
 
 #include "ipsec-parser.h"
@@ -54,6 +52,22 @@ typedef enum {
 		STRICT_YES,
 		STRICT_IFURI
 } strict_t;
+
+typedef enum {
+		CERT_ALWAYS_SEND,
+		CERT_SEND_IF_ASKED,
+		CERT_NEVER_SEND,
+		CERT_YES_SEND,		/* synonym for CERT_ALWAYS_SEND */
+		CERT_NO_SEND,		/* synonym for CERT_NEVER_SEND */
+} certpolicy_t;
+
+typedef enum {
+		DPD_ACTION_NONE,
+		DPD_ACTION_CLEAR,
+		DPD_ACTION_HOLD,
+		DPD_ACTION_RESTART,
+		DPD_ACTION_UNKNOW,
+} dpd_action_t;
 
 typedef enum {
 		/* IPsec options */

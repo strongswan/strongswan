@@ -30,15 +30,11 @@
 #include <grp.h>
 #include <pthread.h>
 
-#include <freeswan.h>
 #include <library.h>
 #include <hydra.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 #include <debug.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
 
 #include "confread.h"
 #include "files.h"

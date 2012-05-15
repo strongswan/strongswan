@@ -14,11 +14,6 @@
 
 #include <string.h>
 
-#include <freeswan.h>
-
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-
 #include "confread.h"
 #include "args.h"
 #include "cmp.h"

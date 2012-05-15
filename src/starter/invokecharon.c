@@ -26,9 +26,6 @@
 #include <library.h>
 #include <debug.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-
 #include "confread.h"
 #include "invokecharon.h"
 #include "files.h"

@@ -20,9 +20,6 @@
 #include <library.h>
 #include <debug.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-
 #include "ipsec-parser.h"
 
 #define YYERROR_VERBOSE

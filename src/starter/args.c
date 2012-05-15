@@ -20,9 +20,6 @@
 #include <library.h>
 #include <debug.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-
 #include "keywords.h"
 #include "confread.h"
 #include "args.h"

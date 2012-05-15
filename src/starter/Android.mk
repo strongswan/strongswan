@@ -14,11 +14,7 @@ invokecharon.h klips.c klips.h
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
 	$(strongswan_PATH)/src/libhydra \
-	$(strongswan_PATH)/src/libfreeswan \
 	$(strongswan_PATH)/src/libstrongswan \
-	$(strongswan_PATH)/src/libfreeswan \
-	$(strongswan_PATH)/src/pluto \
-	$(strongswan_PATH)/src/whack \
 	$(strongswan_PATH)/src/stroke
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS) -DSTART_CHARON \
@@ -37,11 +33,8 @@ LOCAL_ARM_MODE := arm
 LOCAL_PRELINK_MODULE := false
 
 LOCAL_REQUIRED_MODULES := stroke
-ifneq ($(strongswan_BUILD_PLUTO),)
-LOCAL_REQUIRED_MODULES += whack
-endif
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libhydra libfreeswan
+LOCAL_SHARED_LIBRARIES += libstrongswan libhydra
 
 include $(BUILD_EXECUTABLE)
 
