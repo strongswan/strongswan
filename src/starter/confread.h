@@ -73,10 +73,8 @@ struct starter_end {
 		char            *host;
 		u_int           ikeport;
 		char            *subnet;
-		bool            has_client;
 		bool            has_port_wildcard;
 		bool            has_natip;
-		bool            has_virt;
 		bool            modecfg;
 		certpolicy_t    sendcert;
 		bool            firewall;
@@ -129,7 +127,6 @@ struct starter_conn {
 		mark_t          mark_in;
 		mark_t          mark_out;
 		u_int32_t       tfc;
-		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
 		bool            aggressive;
 		starter_end_t   left, right;

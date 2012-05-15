@@ -35,10 +35,8 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 		return FALSE;
 
 	VARCMP(ikeport);
-	VARCMP(has_client);
 	VARCMP(has_port_wildcard);
 	VARCMP(has_natip);
-	VARCMP(has_virt);
 	VARCMP(modecfg);
 	VARCMP(port);
 	VARCMP(protocol);
@@ -53,7 +51,6 @@ starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 		return FALSE;
 
 	VARCMP(policy);
-	VARCMP(tunnel_addr_family);
 	VARCMP(mark_in.value);
 	VARCMP(mark_in.mask);
 	VARCMP(mark_out.value);

@@ -31,8 +31,6 @@
 #include "args.h"
 #include "files.h"
 
-/* strings containing a colon are interpreted as an IPv6 address */
-#define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
 static const char ike_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
 static const char esp_defaults[] = "aes128-sha1-modp2048,3des-sha1-modp1536";
@@ -93,7 +91,6 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.sa_rekey_margin       = SA_REPLACEMENT_MARGIN_DEFAULT;
 	cfg->conn_default.sa_rekey_fuzz         = SA_REPLACEMENT_FUZZ_DEFAULT;
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
-	cfg->conn_default.tunnel_addr_family    = AF_INET;
 	cfg->conn_default.install_policy        = TRUE;
 	cfg->conn_default.dpd_delay             =  30; /* seconds */
 	cfg->conn_default.dpd_timeout           = 150; /* seconds */
@@ -183,35 +180,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		free(end->host);
 		end->host = strdupnull(value);
-		break;
-	case KW_SUBNET:
-		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
-		||  (strlen(value) >= 5 && strncmp(value,"vnet:",5) == 0))
-		{
-			/* used by pluto only */
-			end->has_virt = TRUE;
-		}
-		else
-		{
-			ip_subnet net;
-			char *pos;
-			int len = 0;
-
-			end->has_client = TRUE;
-			conn->tunnel_addr_family = ip_version(value);
-
-			pos = strchr(value, ',');
-			if (pos)
-			{
-				len = pos - value;
-			}
-			ugh = ttosubnet(value, len, ip_version(value), &net);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-		}
 		break;
 	case KW_SOURCEIP:
 		if (end->has_natip)

@@ -145,7 +145,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->sourceip_mask = conn_end->sourceip_mask;
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
-	msg_end->tohost = !conn_end->has_client;
+	msg_end->tohost = !conn_end->subnet;
 	msg_end->allow_any = conn_end->allow_any;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
