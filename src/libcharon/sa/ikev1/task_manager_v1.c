@@ -523,17 +523,6 @@ METHOD(task_manager_t, initiate, status_t,
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	}
-	if (exchange == INFORMATIONAL_V1)
-	{
-		if (message->get_notify(message, DPD_R_U_THERE))
-		{
-			expect_response = TRUE;
-		}
-		if (message->get_notify(message, DPD_R_U_THERE_ACK))
-		{
-			keep = TRUE;
-		}
-	}
 	if (flushed)
 	{
 		message->destroy(message);
