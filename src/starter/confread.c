@@ -239,36 +239,35 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		else
 		{
+			host_t *host;
 			char *pos;
-			ip_address addr;
-			ip_subnet net;
 
-			conn->tunnel_addr_family = ip_version(value);
 			pos = strchr(value, '/');
-
 			if (pos)
 			{	/* CIDR notation, address pool */
-				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
-				if (ugh != NULL)
-				{
-					DBG1(DBG_APP, "# bad subnet: %s=%s [%s]", name, value, ugh);
-					goto err;
-				 }
 				*pos = '\0';
+				host = host_create_from_string(value, 0);
+				if (!host)
+				{
+					DBG1(DBG_APP, "# bad subnet: %s=%s", name, value);
+					goto err;
+				}
+				host->destroy(host);
 				free(end->sourceip);
 				end->sourceip = strdupnull(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
 			else
 			{	/* fixed srcip */
-				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
-				if (ugh != NULL)
+				host = host_create_from_string(value, 0);
+				if (!host)
 				{
-					DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
+					DBG1(DBG_APP, "# bad addr: %s=%s", name, value);
 					goto err;
 				}
-				end->sourceip_mask = (conn->tunnel_addr_family == AF_INET) ?
+				end->sourceip_mask = (host->get_family(host) == AF_INET) ?
 									  32 : 128;
+				host->destroy(host);
 			}
 		}
 		conn->mode = MODE_TUNNEL;
@@ -300,19 +299,19 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		break;
 	case KW_NATIP:
 	{
-		ip_address addr;
+		host_t *host;
 		if (end->sourceip)
 		{
 			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
-		conn->tunnel_addr_family = ip_version(value);
-		ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
-		if (ugh != NULL)
+		host = host_create_from_string(value, 0);
+		if (!host)
 		{
-			DBG1(DBG_APP, "# bad addr: %s=%s [%s]", name, value, ugh);
+			DBG1(DBG_APP, "# bad addr: %s=%s", name, value);
 			goto err;
 		}
+		host->destroy(host);
 		end->sourceip = strdupnull(value);
 		end->has_natip = TRUE;
 		conn->mode = MODE_TUNNEL;
