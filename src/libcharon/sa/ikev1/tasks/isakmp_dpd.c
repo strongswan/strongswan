@@ -36,9 +36,9 @@ struct private_isakmp_dpd_t {
 	u_int32_t seqnr;
 
 	/**
-	 * DPD initiator?
+	 * DPD notify type
 	 */
-	bool initiator;
+	notify_type_t type;
 
 	/**
 	 * IKE SA we are serving.
@@ -50,15 +50,13 @@ METHOD(task_t, build, status_t,
 	private_isakmp_dpd_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-	notify_type_t type;
 	ike_sa_id_t *ike_sa_id;
 	u_int64_t spi_i, spi_r;
 	u_int32_t seqnr;
 	chunk_t spi;
 
-	type = this->initiator ? DPD_R_U_THERE : DPD_R_U_THERE_ACK;
 	notify = notify_payload_create_from_protocol_and_type(NOTIFY_V1,
-														  PROTO_IKE, type);
+														  PROTO_IKE, this->type);
 	seqnr = htonl(this->seqnr);
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
@@ -76,36 +74,8 @@ METHOD(task_t, build, status_t,
 METHOD(task_t, process, status_t,
 	private_isakmp_dpd_t *this, message_t *message)
 {
-	notify_payload_t *notify;
-	notify_type_t type;
-	u_int32_t seqnr = 0;
-	chunk_t chunk;
-
-	type = this->initiator ? DPD_R_U_THERE_ACK : DPD_R_U_THERE;
-	notify = message->get_notify(message, type);
-	if (notify)
-	{
-		chunk = notify->get_notification_data(notify);
-		if (chunk.len == 4)
-		{
-			seqnr = untoh32(chunk.ptr);
-			if (seqnr == this->seqnr)
-			{
-				this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
-											time_monotonic(NULL));
-				if (!this->initiator)
-				{	/* queue DPD_ACK */
-					this->ike_sa->queue_task(this->ike_sa,
-								&isakmp_dpd_create(this->ike_sa, FALSE,
-												   this->seqnr)->task);
-				}
-				return SUCCESS;
-			}
-		}
-	}
-	DBG1(DBG_IKE, "received invalid DPD sequence number %u (expected %u), "
-		 "ignored", seqnr, this->seqnr);
-	return SUCCESS;
+	/* done in task manager */
+	return FAILED;
 }
 
 METHOD(task_t, get_type, task_type_t,
@@ -129,7 +99,7 @@ METHOD(task_t, destroy, void,
 /*
  * Described in header.
  */
-isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, bool initiator,
+isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_type_t type,
 								u_int32_t seqnr)
 {
 	private_isakmp_dpd_t *this;
@@ -146,7 +116,7 @@ isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, bool initiator,
 		},
 		.ike_sa = ike_sa,
 		.seqnr = seqnr,
-		.initiator = initiator,
+		.type = type,
 	);
 
 	return &this->public;

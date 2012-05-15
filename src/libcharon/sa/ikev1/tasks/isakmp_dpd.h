@@ -42,11 +42,11 @@ struct isakmp_dpd_t {
  * Create a new ISAKMP_DPD task.
  *
  * @param ike_sa		associated IKE_SA
- * @param initiator		TRUE if DPD initiator
+ * @param type			DPD notify to use, DPD_R_U_THERE | DPD_R_U_THERE_ACK
  * @param seqnr			DPD sequence number to use/expect
  * @return				ISAKMP_DPD task to handle by the task_manager
  */
-isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, bool initiator,
+isakmp_dpd_t *isakmp_dpd_create(ike_sa_t *ike_sa, notify_type_t type,
 								u_int32_t seqnr);
 
 #endif /** ISAKMP_DPD_H_ @}*/

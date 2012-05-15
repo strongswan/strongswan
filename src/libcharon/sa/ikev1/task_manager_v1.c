@@ -720,6 +720,62 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 }
 
 /**
+ * Process a DPD request/response
+ */
+static bool process_dpd(private_task_manager_t *this, message_t *message)
+{
+	notify_payload_t *notify;
+	notify_type_t type;
+	u_int32_t seq;
+	chunk_t data;
+
+	type = DPD_R_U_THERE;
+	notify = message->get_notify(message, type);
+	if (!notify)
+	{
+		type = DPD_R_U_THERE_ACK;
+		notify = message->get_notify(message, type);
+	}
+	if (!notify)
+	{
+		return FALSE;
+	}
+	data = notify->get_notification_data(notify);
+	if (data.len != 4)
+	{
+		return FALSE;
+	}
+	seq = untoh32(data.ptr);
+
+	if (type == DPD_R_U_THERE)
+	{
+		if (this->dpd_recv == 0 || seq == this->dpd_recv)
+		{	/* check sequence validity */
+			this->dpd_recv = seq + 1;
+			this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+										time_monotonic(NULL));
+		}
+		/* but respond anyway */
+		this->ike_sa->queue_task(this->ike_sa,
+				&isakmp_dpd_create(this->ike_sa, DPD_R_U_THERE_ACK, seq)->task);
+	}
+	else /* DPD_R_U_THERE_ACK */
+	{
+		if (seq == this->dpd_send - 1)
+		{
+			this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+										time_monotonic(NULL));
+		}
+		else
+		{
+			DBG1(DBG_IKE, "received invalid DPD sequence number %u "
+				 "(expected %u), ignored", seq, this->dpd_send - 1);
+		}
+	}
+	return TRUE;
+}
+
+/**
  * handle an incoming request message
  */
 static status_t process_request(private_task_manager_t *this,
@@ -728,8 +784,6 @@ static status_t process_request(private_task_manager_t *this,
 	enumerator_t *enumerator;
 	task_t *task = NULL;
 	bool send_response = FALSE, dpd = FALSE;
-	notify_payload_t *notify;
-	chunk_t data;
 
 	if (message->get_exchange_type(message) == INFORMATIONAL_V1 ||
 		this->passive_tasks->get_count(this->passive_tasks) == 0)
@@ -772,35 +826,15 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				break;
 			case INFORMATIONAL_V1:
-				notify = message->get_notify(message, DPD_R_U_THERE);
-				if (notify)
+				if (process_dpd(this, message))
 				{
-					data = notify->get_notification_data(notify);
-					if (this->dpd_recv == 0 && data.len == 4)
-					{	/* first DPD request, initialize counter */
-						this->dpd_recv = untoh32(data.ptr);
-					}
-					task = (task_t *)isakmp_dpd_create(this->ike_sa, FALSE,
-													   this->dpd_recv++);
-					dpd = TRUE;
-				}
-				else if ((notify = message->get_notify(message,
-													   DPD_R_U_THERE_ACK)))
-				{
-					data = notify->get_notification_data(notify);
-					if (data.len == 4 && untoh32(data.ptr) == this->dpd_send)
-					{
-						this->dpd_send++;
-					}
-					task = (task_t *)isakmp_dpd_create(this->ike_sa, TRUE,
-													   this->dpd_send - 1);
 					dpd = TRUE;
 				}
 				else
 				{
 					task = (task_t *)informational_create(this->ike_sa, NULL);
+					this->passive_tasks->insert_first(this->passive_tasks, task);
 				}
-				this->passive_tasks->insert_first(this->passive_tasks, task);
 				break;
 			case TRANSACTION:
 				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
@@ -817,11 +851,12 @@ static status_t process_request(private_task_manager_t *this,
 				return FAILED;
 		}
 	}
-	if (!dpd)
+	if (dpd)
 	{
-		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
-									time_monotonic(NULL));
+		return initiate(this);
 	}
+	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND, time_monotonic(NULL));
+
 	/* let the tasks process the message */
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, (void*)&task))
@@ -856,12 +891,6 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (dpd && this->initiating.type == INFORMATIONAL_V1)
-	{	/* got a DPD reply, cancel any retransmission */
-		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-		DESTROY_IF(this->initiating.packet);
-		this->initiating.packet = NULL;
-	}
 	if (send_response)
 	{
 		if (build_response(this, message) != SUCCESS)
@@ -1361,7 +1390,7 @@ METHOD(task_manager_t, queue_dpd, void,
 {
 	u_int32_t t = 0, retransmit;
 
-	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, TRUE,
+	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, DPD_R_U_THERE,
 												this->dpd_send++));
 
 	/* schedule DPD timeout job using the same timeout as a retransmitting
