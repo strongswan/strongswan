@@ -167,9 +167,9 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.mode = conn->mode;
 	msg.add_conn.proxy_mode = conn->proxy_mode;
 
-	if (!(conn->policy & POLICY_DONT_REKEY))
+	if (!(conn->options & SA_OPTION_DONT_REKEY))
 	{
-		msg.add_conn.rekey.reauth = (conn->policy & POLICY_DONT_REAUTH) == LEMPTY;
+		msg.add_conn.rekey.reauth = !(conn->options & SA_OPTION_DONT_REAUTH);
 		msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
 		msg.add_conn.rekey.ike_lifetime = conn->sa_ike_life_seconds;
 		msg.add_conn.rekey.margin = conn->sa_rekey_margin;
@@ -180,9 +180,9 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
-	msg.add_conn.mobike = (conn->policy & POLICY_MOBIKE) != 0;
-	msg.add_conn.force_encap = (conn->policy & POLICY_FORCE_ENCAP) != 0;
-	msg.add_conn.ipcomp = (conn->policy & POLICY_COMPRESS) != 0;
+	msg.add_conn.mobike = conn->options & SA_OPTION_MOBIKE;
+	msg.add_conn.force_encap = conn->options & SA_OPTION_FORCE_ENCAP;
+	msg.add_conn.ipcomp = conn->options & SA_OPTION_COMPRESS;
 	msg.add_conn.install_policy = conn->install_policy;
 	msg.add_conn.aggressive = conn->aggressive;
 	msg.add_conn.crl_policy = (crl_policy_t)cfg->setup.strictcrlpolicy;
@@ -226,7 +226,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		{
 			msg.add_conn.me.auth = push_string(&msg, "pubkey");
 			msg.add_conn.other.auth = push_string(&msg, "pubkey");
-			if (conn->policy & POLICY_XAUTH_SERVER)
+			if (conn->options & SA_OPTION_XAUTH_SERVER)
 			{
 				msg.add_conn.other.auth2 = push_string(&msg, "xauth");
 			}
@@ -239,7 +239,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		{
 			msg.add_conn.me.auth = push_string(&msg, "psk");
 			msg.add_conn.other.auth = push_string(&msg, "psk");
-			if (conn->policy & POLICY_XAUTH_SERVER)
+			if (conn->options & SA_OPTION_XAUTH_SERVER)
 			{
 				msg.add_conn.other.auth2 = push_string(&msg, "xauth");
 			}

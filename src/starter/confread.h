@@ -55,6 +55,20 @@ typedef enum {
 		STRICT_IFURI
 } strict_t;
 
+typedef enum {
+		/* IPsec options */
+		SA_OPTION_AUTHENTICATE	= 1 << 0, /* use AH instead of ESP? */
+		SA_OPTION_COMPRESS      = 1 << 1, /* use IPComp */
+
+		/* IKE and other other options */
+		SA_OPTION_DONT_REKEY	= 1 << 2, /* don't rekey state either Phase */
+		SA_OPTION_DONT_REAUTH	= 1 << 3, /* don't reauthenticate on rekeying, IKEv2 only */
+		SA_OPTION_MODECFG_PUSH	= 1 << 4, /* is modecfg pushed by server? */
+		SA_OPTION_XAUTH_SERVER  = 1 << 5, /* are we an XAUTH server? */
+		SA_OPTION_MOBIKE		= 1 << 6, /* enable MOBIKE for IKEv2  */
+		SA_OPTION_FORCE_ENCAP   = 1 << 7, /* force UDP encapsulation */
+} sa_option_t;
+
 typedef struct starter_end starter_end_t;
 
 struct starter_end {
@@ -112,7 +126,7 @@ struct starter_conn {
 		char            *authby;
 		ipsec_mode_t    mode;
 		bool            proxy_mode;
-		lset_t          policy;
+		sa_option_t     options;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
 		time_t          sa_rekey_margin;

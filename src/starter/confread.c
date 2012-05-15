@@ -83,7 +83,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
 	cfg->conn_default.mode    = MODE_TUNNEL;
-	cfg->conn_default.policy  = POLICY_MOBIKE;
+	cfg->conn_default.options = SA_OPTION_MOBIKE;
 
 	cfg->conn_default.ike                   = strdupnull(ike_defaults);
 	cfg->conn_default.esp                   = strdupnull(esp_defaults);
@@ -108,10 +108,10 @@ static void default_values(starter_config_t *cfg)
 	cfg->ca_default.seen = SEEN_NONE;
 }
 
-#define KW_POLICY_FLAG(sy, sn, fl) \
-		if (streq(kw->value, sy)) { conn->policy |= fl; } \
-		else if (streq(kw->value, sn)) { conn->policy &= ~fl; } \
-		else { DBG1(DBG_APP, "# bad policy value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
+#define KW_SA_OPTION_FLAG(sy, sn, fl) \
+		if (streq(kw->value, sy)) { conn->options |= fl; } \
+		else if (streq(kw->value, sn)) { conn->options &= ~fl; } \
+		else { DBG1(DBG_APP, "# bad option value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
 
 static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 {
@@ -499,10 +499,10 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			}
 			break;
 		case KW_COMPRESS:
-			KW_POLICY_FLAG("yes", "no", POLICY_COMPRESS)
+			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_COMPRESS)
 			break;
 		case KW_AUTH:
-			KW_POLICY_FLAG("ah", "esp", POLICY_AUTHENTICATE)
+			KW_SA_OPTION_FLAG("ah", "esp", SA_OPTION_AUTHENTICATE)
 			break;
 		case KW_MARK:
 			if (!handle_mark(kw->value, &conn->mark_in))
@@ -561,22 +561,22 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			}
 			break;
 		case KW_REKEY:
-			KW_POLICY_FLAG("no", "yes", POLICY_DONT_REKEY)
+			KW_SA_OPTION_FLAG("no", "yes", SA_OPTION_DONT_REKEY)
 			break;
 		case KW_REAUTH:
-			KW_POLICY_FLAG("no", "yes", POLICY_DONT_REAUTH)
+			KW_SA_OPTION_FLAG("no", "yes", SA_OPTION_DONT_REAUTH)
 			break;
 		case KW_MOBIKE:
-			KW_POLICY_FLAG("yes", "no", POLICY_MOBIKE)
+			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_MOBIKE)
 			break;
 		case KW_FORCEENCAPS:
-			KW_POLICY_FLAG("yes", "no", POLICY_FORCE_ENCAP)
+			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_FORCE_ENCAP)
 			break;
 		case KW_MODECONFIG:
-			KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)
+			KW_SA_OPTION_FLAG("push", "pull", SA_OPTION_MODECFG_PUSH)
 			break;
 		case KW_XAUTH:
-			KW_POLICY_FLAG("server", "client", POLICY_XAUTH_SERVER)
+			KW_SA_OPTION_FLAG("server", "client", SA_OPTION_XAUTH_SERVER)
 			break;
 		default:
 			break;

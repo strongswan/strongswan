@@ -49,7 +49,7 @@ starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 	if ((c1 == NULL) || (c2 == NULL))
 		return FALSE;
 
-	VARCMP(policy);
+	VARCMP(options);
 	VARCMP(mark_in.value);
 	VARCMP(mark_in.mask);
 	VARCMP(mark_out.value);
