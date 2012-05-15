@@ -1,4 +1,4 @@
-/* Stroke for charon is the counterpart to whack from pluto
+/*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -204,31 +204,8 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.aaa_identity = push_string(&msg, conn->aaa_identity);
 	msg.add_conn.xauth_identity = push_string(&msg, conn->xauth_identity);
 
-	if (conn->policy & POLICY_TUNNEL)
-	{
-		msg.add_conn.mode = MODE_TUNNEL;
-	}
-	else if (conn->policy & POLICY_BEET)
-	{
-		msg.add_conn.mode = MODE_BEET;
-	}
-	else if (conn->policy & POLICY_PROXY)
-	{
-		msg.add_conn.mode = MODE_TRANSPORT;
-		msg.add_conn.proxy_mode = TRUE;
-	}
-	else if (conn->policy & POLICY_SHUNT_PASS)
-	{
-		msg.add_conn.mode = MODE_PASS;
-	}
-	else if (conn->policy & (POLICY_SHUNT_DROP | POLICY_SHUNT_REJECT))
-	{
-		msg.add_conn.mode = MODE_DROP;
-	}
-	else
-	{
-		msg.add_conn.mode = MODE_TRANSPORT;
-	}
+	msg.add_conn.mode = conn->mode;
+	msg.add_conn.proxy_mode = conn->proxy_mode;
 
 	if (!(conn->policy & POLICY_DONT_REKEY))
 	{

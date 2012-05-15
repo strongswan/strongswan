@@ -83,8 +83,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.seen    = SEEN_NONE;
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
-	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_PUBKEY |
-								POLICY_PFS | POLICY_MOBIKE;
+	cfg->conn_default.mode    = MODE_TUNNEL;
+	cfg->conn_default.policy  = POLICY_PFS | POLICY_MOBIKE;
 
 	cfg->conn_default.ike                   = strdupnull(ike_defaults);
 	cfg->conn_default.esp                   = strdupnull(esp_defaults);
@@ -312,7 +312,8 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 									  32 : 128;
 			}
 		}
-		conn->policy |= POLICY_TUNNEL;
+		conn->mode = MODE_TUNNEL;
+		conn->proxy_mode = FALSE;
 		break;
 	case KW_SENDCERT:
 		if (end->sendcert == CERT_YES_SEND)
@@ -372,7 +373,8 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		end->sourceip = strdupnull(value);
 		end->has_natip = TRUE;
-		conn->policy |= POLICY_TUNNEL;
+		conn->mode = MODE_TUNNEL;
+		conn->proxy_mode = FALSE;
 		break;
 	}
 	default:
@@ -529,32 +531,30 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		switch (token)
 		{
 		case KW_TYPE:
-			conn->policy &= ~(POLICY_TUNNEL | POLICY_SHUNT_MASK);
+			conn->mode = MODE_TRANSPORT;
+			conn->proxy_mode = FALSE;
 			if (streq(kw->value, "tunnel"))
 			{
-				conn->policy |= POLICY_TUNNEL;
+				conn->mode = MODE_TUNNEL;
 			}
 			else if (streq(kw->value, "beet"))
 			{
-				conn->policy |= POLICY_BEET;
+				conn->mode = MODE_BEET;
 			}
 			else if (streq(kw->value, "transport_proxy"))
 			{
-				conn->policy |= POLICY_PROXY;
+				conn->mode = MODE_TRANSPORT;
+				conn->proxy_mode = TRUE;
 			}
 			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
 			{
-				conn->policy |= POLICY_SHUNT_PASS;
+				conn->mode = MODE_PASS;
 			}
-			else if (streq(kw->value, "drop"))
+			else if (streq(kw->value, "drop") || streq(kw->value, "reject"))
 			{
-				conn->policy |= POLICY_SHUNT_DROP;
+				conn->mode = MODE_DROP;
 			}
-			else if (streq(kw->value, "reject"))
-			{
-				conn->policy |= POLICY_SHUNT_REJECT;
-			}
-			else if (strcmp(kw->value, "transport") != 0)
+			else if (!streq(kw->value, "transport"))
 			{
 				DBG1(DBG_APP, "# bad policy value: %s=%s", kw->entry->name,
 					 kw->value);

@@ -1,5 +1,6 @@
-/* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
+/*
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,12 +18,12 @@
 
 #include "confread.h"
 
-extern int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn);
-extern int starter_stroke_del_conn(starter_conn_t *conn);
-extern int starter_stroke_route_conn(starter_conn_t *conn);
-extern int starter_stroke_initiate_conn(starter_conn_t *conn);
-extern int starter_stroke_add_ca(starter_ca_t *ca);
-extern int starter_stroke_del_ca(starter_ca_t *ca);
-extern int starter_stroke_configure(starter_config_t *cfg);
+int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn);
+int starter_stroke_del_conn(starter_conn_t *conn);
+int starter_stroke_route_conn(starter_conn_t *conn);
+int starter_stroke_initiate_conn(starter_conn_t *conn);
+int starter_stroke_add_ca(starter_ca_t *ca);
+int starter_stroke_del_ca(starter_ca_t *ca);
+int starter_stroke_configure(starter_config_t *cfg);
 
 #endif /* _STARTER_STROKE_H_ */

@@ -18,6 +18,7 @@
 
 #include <freeswan.h>
 #include "../pluto/constants.h"
+#include <kernel/kernel_ipsec.h>
 
 #include "ipsec-parser.h"
 
@@ -116,6 +117,8 @@ struct starter_conn {
 		char            *aaa_identity;
 		char            *xauth_identity;
 		char            *authby;
+		ipsec_mode_t    mode;
+		bool            proxy_mode;
 		lset_t          policy;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
