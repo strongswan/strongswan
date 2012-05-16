@@ -19,8 +19,6 @@
 #include "cmp.h"
 
 #define VARCMP(obj) if (c1->obj != c2->obj) return FALSE
-#define ADDCMP(obj) if (!sameaddr(&c1->obj,&c2->obj)) return FALSE
-#define SUBCMP(obj) if (!samesubnet(&c1->obj,&c2->obj)) return FALSE
 #define STRCMP(obj) if (strcmp(c1->obj,c2->obj)) return FALSE
 
 static bool starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
@@ -28,7 +26,6 @@ static bool starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	if ((c1 == NULL) || (c2 == NULL))
 		return FALSE;
 
-	VARCMP(ikeport);
 	VARCMP(has_natip);
 	VARCMP(modecfg);
 	VARCMP(port);
@@ -42,11 +39,15 @@ bool starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 	if ((c1 == NULL) || (c2 == NULL))
 		return FALSE;
 
+	VARCMP(mode);
+	VARCMP(proxy_mode);
 	VARCMP(options);
 	VARCMP(mark_in.value);
 	VARCMP(mark_in.mask);
 	VARCMP(mark_out.value);
 	VARCMP(mark_in.mask);
+	VARCMP(tfc);
+	VARCMP(sa_keying_tries);
 
 	if (!starter_cmp_end(&c1->left, &c2->left))
 		return FALSE;
