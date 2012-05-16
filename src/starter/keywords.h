@@ -1,4 +1,4 @@
-/* strongSwan keywords
+/*
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -18,46 +18,13 @@
 
 typedef enum {
 	/* config setup keywords */
-	KW_INTERFACES,
-	KW_DUMPDIR,
-	KW_CHARONSTART,
-	KW_PLUTOSTART,
-
-	/* pluto/charon keywords */
-	KW_PLUTODEBUG,
 	KW_CHARONDEBUG,
-	KW_PREPLUTO,
-	KW_POSTPLUTO,
-	KW_PLUTOSTDERRLOG,
 	KW_UNIQUEIDS,
-	KW_OVERRIDEMTU,
-	KW_CRLCHECKINTERVAL,
 	KW_CACHECRLS,
 	KW_STRICTCRLPOLICY,
-	KW_NOCRSEND,
-	KW_NAT_TRAVERSAL,
-	KW_KEEP_ALIVE,
-	KW_FORCE_KEEPALIVE,
-	KW_VIRTUAL_PRIVATE,
-	KW_PKCS11MODULE,
-	KW_PKCS11INITARGS,
-	KW_PKCS11KEEPSTATE,
-	KW_PKCS11PROXY,
 
-#define KW_PLUTO_FIRST  KW_PLUTODEBUG
-#define KW_PLUTO_LAST   KW_PKCS11PROXY
-
-	/* KLIPS keywords */
-	KW_KLIPSDEBUG,
-	KW_FRAGICMP,
-	KW_PACKETDEFAULT,
-	KW_HIDETOS,
-
-#define KW_KLIPS_FIRST  KW_KLIPSDEBUG
-#define KW_KLIPS_LAST   KW_HIDETOS
-
-#define KW_SETUP_FIRST  KW_INTERFACES
-#define KW_SETUP_LAST   KW_HIDETOS
+#define KW_SETUP_FIRST  KW_CHARONDEBUG
+#define KW_SETUP_LAST   KW_STRICTCRLPOLICY
 
 	/* conn section keywords */
 	KW_CONN_NAME,
@@ -106,7 +73,7 @@ typedef enum {
 #define KW_CONN_FIRST   KW_CONN_SETUP
 #define KW_CONN_LAST    KW_TFC
 
-   /* ca section keywords */
+	/* ca section keywords */
 	KW_CA_NAME,
 	KW_CA_SETUP,
 	KW_CACERT,
@@ -121,7 +88,7 @@ typedef enum {
 #define KW_CA_FIRST     KW_CA_SETUP
 #define KW_CA_LAST      KW_CERTURIBASE
 
-   /* end keywords */
+	/* end keywords */
 	KW_HOST,
 	KW_IKEPORT,
 	KW_SUBNET,
@@ -148,7 +115,7 @@ typedef enum {
 #define KW_END_FIRST    KW_HOST
 #define KW_END_LAST     KW_GROUPS
 
-   /* left end keywords */
+	/* left end keywords */
 	KW_LEFT,
 	KW_LEFTIKEPORT,
 	KW_LEFTSUBNET,
@@ -175,7 +142,7 @@ typedef enum {
 #define KW_LEFT_FIRST   KW_LEFT
 #define KW_LEFT_LAST    KW_LEFTGROUPS
 
-   /* right end keywords */
+	/* right end keywords */
 	KW_RIGHT,
 	KW_RIGHTIKEPORT,
 	KW_RIGHTSUBNET,

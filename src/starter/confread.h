@@ -209,37 +209,11 @@ typedef struct starter_config starter_config_t;
 struct starter_config {
 		struct {
 				seen_t  seen;
-				char    **interfaces;
-				char    *dumpdir;
-				bool    charonstart;
-				bool    plutostart;
-
-				/* pluto/charon keywords */
-				char     **plutodebug;
+				bool     charonstart;
 				char     *charondebug;
-				char     *prepluto;
-				char     *postpluto;
-				char     *plutostderrlog;
 				bool     uniqueids;
-				u_int    overridemtu;
-				time_t   crlcheckinterval;
 				bool     cachecrls;
 				strict_t strictcrlpolicy;
-				bool     nocrsend;
-				bool     nat_traversal;
-				time_t   keep_alive;
-				u_int    force_keepalive;
-				char     *virtual_private;
-				char     *pkcs11module;
-				char     *pkcs11initargs;
-				bool     pkcs11keepstate;
-				bool     pkcs11proxy;
-
-				/* KLIPS keywords */
-				char    **klipsdebug;
-				bool    fragicmp;
-				char    *packetdefault;
-				bool    hidetos;
 		} setup;
 
 		/* number of encountered parsing errors */

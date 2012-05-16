@@ -69,10 +69,7 @@ static void default_values(starter_config_t *cfg)
 		sizeof(cfg->ca_default.seen) * BITS_PER_BYTE);
 
 	cfg->setup.seen        = SEEN_NONE;
-	cfg->setup.fragicmp    = TRUE;
-	cfg->setup.hidetos     = TRUE;
 	cfg->setup.uniqueids   = TRUE;
-	cfg->setup.interfaces  = new_list("%defaultroute");
 
 #ifdef START_CHARON
 	cfg->setup.charonstart = TRUE;

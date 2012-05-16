@@ -1,5 +1,5 @@
 %{
-/* strongSwan keywords
+/*
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -24,37 +24,10 @@ struct kw_entry {
     kw_token_t token;
 };
 %%
-interfaces,        KW_INTERFACES
-dumpdir,           KW_DUMPDIR
-charonstart,       KW_CHARONSTART
-plutostart,        KW_PLUTOSTART
-klipsdebug,        KW_KLIPSDEBUG
-plutodebug,        KW_PLUTODEBUG
 charondebug,       KW_CHARONDEBUG
-prepluto,          KW_PREPLUTO
-postpluto,         KW_POSTPLUTO
-plutostderrlog,    KW_PLUTOSTDERRLOG
-fragicmp,          KW_FRAGICMP
-packetdefault,     KW_PACKETDEFAULT
-hidetos,           KW_HIDETOS
 uniqueids,         KW_UNIQUEIDS
-overridemtu,       KW_OVERRIDEMTU
-crlcheckinterval,  KW_CRLCHECKINTERVAL
 cachecrls,         KW_CACHECRLS
 strictcrlpolicy,   KW_STRICTCRLPOLICY
-nocrsend,          KW_NOCRSEND
-nat_traversal,     KW_NAT_TRAVERSAL
-keep_alive,        KW_KEEP_ALIVE
-force_keepalive,   KW_FORCE_KEEPALIVE
-virtual_private,   KW_VIRTUAL_PRIVATE
-eap_identity,      KW_EAP_IDENTITY
-aaa_identity,      KW_AAA_IDENTITY
-mobike,	           KW_MOBIKE
-forceencaps,       KW_FORCEENCAPS
-pkcs11module,      KW_PKCS11MODULE
-pkcs11initargs,    KW_PKCS11INITARGS
-pkcs11keepstate,   KW_PKCS11KEEPSTATE
-pkcs11proxy,       KW_PKCS11PROXY
 keyexchange,       KW_KEYEXCHANGE
 type,              KW_TYPE
 compress,          KW_COMPRESS
@@ -62,21 +35,25 @@ installpolicy,     KW_INSTALLPOLICY
 aggressive,        KW_AGGRESSIVE
 auth,              KW_AUTH
 authby,            KW_AUTHBY
+eap_identity,      KW_EAP_IDENTITY
+aaa_identity,      KW_AAA_IDENTITY
+mobike,	           KW_MOBIKE
+forceencaps,       KW_FORCEENCAPS
+ikelifetime,       KW_IKELIFETIME
+lifetime,          KW_KEYLIFE
 keylife,           KW_KEYLIFE
 rekeymargin,       KW_REKEYMARGIN
-lifetime,          KW_KEYLIFE
 margintime,        KW_REKEYMARGIN
 lifebytes,         KW_LIFEBYTES
 marginbytes,       KW_MARGINBYTES
 lifepackets,       KW_LIFEPACKETS
 marginpackets,     KW_MARGINPACKETS
-ikelifetime,       KW_IKELIFETIME
 keyingtries,       KW_KEYINGTRIES
 rekeyfuzz,         KW_REKEYFUZZ
 rekey,             KW_REKEY
 reauth,            KW_REAUTH
-esp,               KW_ESP
 ike,               KW_IKE
+esp,               KW_ESP
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
@@ -113,10 +90,10 @@ leftfirewall,      KW_LEFTFIREWALL
 lefthostaccess,    KW_LEFTHOSTACCESS
 leftallowany,      KW_LEFTALLOWANY
 leftupdown,        KW_LEFTUPDOWN
-leftid,            KW_LEFTID
-leftid2,           KW_LEFTID2
 leftauth,          KW_LEFTAUTH
 leftauth2,         KW_LEFTAUTH2
+leftid,            KW_LEFTID
+leftid2,           KW_LEFTID2
 leftrsasigkey,     KW_LEFTRSASIGKEY
 leftcert,          KW_LEFTCERT
 leftcert2,         KW_LEFTCERT2
@@ -135,10 +112,10 @@ rightfirewall,     KW_RIGHTFIREWALL
 righthostaccess,   KW_RIGHTHOSTACCESS
 rightallowany,     KW_RIGHTALLOWANY
 rightupdown,       KW_RIGHTUPDOWN
-rightid,           KW_RIGHTID
-rightid2,          KW_RIGHTID2
 rightauth,         KW_RIGHTAUTH
 rightauth2,        KW_RIGHTAUTH2
+rightid,           KW_RIGHTID
+rightid2,          KW_RIGHTID2
 rightrsasigkey,    KW_RIGHTRSASIGKEY
 rightcert,         KW_RIGHTCERT
 rightcert2,        KW_RIGHTCERT2

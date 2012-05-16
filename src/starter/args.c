@@ -86,53 +86,10 @@ static const char *LST_startup[] = {
 	 NULL
 };
 
-static const char *LST_packetdefault[] = {
-	"drop",
-	"reject",
-	"pass",
-	 NULL
-};
-
 static const char *LST_keyexchange[] = {
 	"ike",
 	"ikev1",
 	"ikev2",
-	 NULL
-};
-
-static const char *LST_plutodebug[] = {
-	"none",
-	"all",
-	"raw",
-	"crypt",
-	"parsing",
-	"emitting",
-	"control",
-	"lifecycle",
-	"klips",
-	"kernel",
-	"dns",
-	"natt",
-	"oppo",
-	"controlmore",
-	"private",
-	 NULL
-};
-
-static const char *LST_klipsdebug[] = {
-	"tunnel",
-	"tunnel-xmit",
-	"pfkey",
-	"xform",
-	"eroute",
-	"spi",
-	"radij",
-	"esp",
-	"ah",
-	"ipcomp",
-	"verbose",
-	"all",
-	"none",
 	 NULL
 };
 
@@ -159,37 +116,10 @@ typedef struct {
 static const token_info_t token_info[] =
 {
 	/* config setup keywords */
-	{ ARG_LST,  offsetof(starter_config_t, setup.interfaces), NULL                 },
-	{ ARG_STR,  offsetof(starter_config_t, setup.dumpdir), NULL                    },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.charonstart), LST_bool            },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.plutostart), LST_bool             },
-
-	/* pluto/charon keywords */
-	{ ARG_LST,  offsetof(starter_config_t, setup.plutodebug), LST_plutodebug       },
 	{ ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
-	{ ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
-	{ ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
-	{ ARG_STR,  offsetof(starter_config_t, setup.plutostderrlog), NULL             },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
-	{ ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
-	{ ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
-	{ ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.force_keepalive), LST_bool        },
-	{ ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
-	{ ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
-	{ ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.pkcs11keepstate), LST_bool        },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.pkcs11proxy), LST_bool            },
-
-	/* KLIPS keywords */
-	{ ARG_LST,  offsetof(starter_config_t, setup.klipsdebug), LST_klipsdebug       },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.fragicmp), LST_bool               },
-	{ ARG_STR,  offsetof(starter_config_t, setup.packetdefault), LST_packetdefault },
-	{ ARG_ENUM, offsetof(starter_config_t, setup.hidetos), LST_bool                },
 
 	/* conn section keywords */
 	{ ARG_STR,  offsetof(starter_conn_t, name), NULL                               },
