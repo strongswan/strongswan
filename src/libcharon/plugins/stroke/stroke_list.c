@@ -1068,7 +1068,7 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		}
 		if (crl->is_delta_crl(crl, &chunk))
 		{
-			chunk = chunk_skip_zero(chunk);		
+			chunk = chunk_skip_zero(chunk);
 			fprintf(out, "  delta for: %#B\n", &chunk);
 		}
 
@@ -1160,7 +1160,15 @@ static void print_alg(FILE *out, int *len, enum_name_t *alg_names, int alg_type,
 	char alg_name[BUF_LEN];
 	int alg_name_len;
 
-	alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type, plugin_name);
+	if (alg_names)
+	{
+		alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type,
+							   plugin_name);
+	}
+	else
+	{
+		alg_name_len = sprintf(alg_name, " [%s]", plugin_name);
+	}
 	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
 	{
 		fprintf(out, "\n             ");
@@ -1241,6 +1249,14 @@ static void list_algs(FILE *out)
 	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
 	{
 		print_alg(out, &len, rng_quality_names, quality, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  nonce-gen: ");
+	len = 13;
+	enumerator = lib->crypto->create_nonce_gen_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &plugin_name))
+	{
+		print_alg(out, &len, NULL, 0, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n");
