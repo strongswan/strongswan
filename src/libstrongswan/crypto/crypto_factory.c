@@ -808,7 +808,7 @@ METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
 }
 
 /**
- * Filter function to enumerate algorithm, not entry
+ * Filter function to enumerate group, not entry
  */
 static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group,
 					  void *i2, const char **plugin_name)
@@ -825,7 +825,7 @@ METHOD(crypto_factory_t, create_dh_enumerator, enumerator_t*,
 }
 
 /**
- * Filter function to enumerate algorithm, not entry
+ * Filter function to enumerate strength, not entry
  */
 static bool rng_filter(void *n, entry_t **entry, rng_quality_t *quality,
 					   void *i2, const char **plugin_name)
@@ -840,6 +840,22 @@ METHOD(crypto_factory_t, create_rng_enumerator, enumerator_t*,
 {
 	return create_enumerator(this, this->rngs, rng_filter);
 }
+
+/**
+ * Filter function to enumerate plugin name, not entry
+ */
+static bool nonce_gen_filter(void *n, entry_t **entry, const char **plugin_name)
+{
+	*plugin_name = (*entry)->plugin_name;
+	return TRUE;
+}
+
+METHOD(crypto_factory_t, create_nonce_gen_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
+{
+	return create_enumerator(this, this->nonce_gens, nonce_gen_filter);
+}
+
 METHOD(crypto_factory_t, add_test_vector, void,
 	private_crypto_factory_t *this, transform_type_t type, void *vector)
 {
@@ -919,6 +935,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_prf_enumerator = _create_prf_enumerator,
 			.create_dh_enumerator = _create_dh_enumerator,
 			.create_rng_enumerator = _create_rng_enumerator,
+			.create_nonce_gen_enumerator = _create_nonce_gen_enumerator,
 			.add_test_vector = _add_test_vector,
 			.destroy = _destroy,
 		},
