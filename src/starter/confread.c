@@ -128,7 +128,7 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 		{
 			DBG1(DBG_APP, "# unsupported keyword '%s' in config setup",
 				 kw->entry->name);
-			cfg->err++;
+			cfg->non_fatal_err++;
 			continue;
 		}
 
@@ -443,7 +443,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		{
 			DBG1(DBG_APP, "# unsupported keyword '%s' in conn '%s'",
 				 kw->entry->name, conn_name);
-			cfg->err++;
+			cfg->non_fatal_err++;
 			continue;
 		}
 
@@ -628,7 +628,7 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 		{
 			DBG1(DBG_APP, "# unsupported keyword '%s' in ca '%s'",
 				 kw->entry->name, ca_name);
-			cfg->err++;
+			cfg->non_fatal_err++;
 			continue;
 		}
 
