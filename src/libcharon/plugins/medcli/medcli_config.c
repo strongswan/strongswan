@@ -126,7 +126,8 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3,	/* jitter, overtime */
-		TRUE, FALSE, this->dpd,			/* mobike, aggressive, dpddelay */
+		TRUE, FALSE,					/* mobike, aggressive */
+		this->dpd, 0,					/* DPD delay, timeout */
 		NULL, NULL,						/* vip, pool */
 		TRUE, NULL, NULL);				/* mediation, med by, peer id */
 	e->destroy(e);
@@ -163,7 +164,8 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
 		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 		this->rekey*5, this->rekey*3,	/* jitter, overtime */
-		TRUE, FALSE, this->dpd,			/* mobike, aggressive, dpddelay */
+		TRUE, FALSE,					/* mobike, aggressive */
+		this->dpd, 0,					/* DPD delay, timeout */
 		NULL, NULL,						/* vip, pool */
 		FALSE, med_cfg,					/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
@@ -238,7 +240,8 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
 				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
 				this->rekey*5, this->rekey*3,	/* jitter, overtime */
-				TRUE, FALSE, this->dpd,			/* mobike, aggr., dpddelay */
+				TRUE, FALSE,					/* mobike, aggressive */
+				this->dpd, 0,					/* DPD delay, timeout */
 				NULL, NULL,						/* vip, pool */
 				FALSE, NULL, NULL);				/* mediation, med by, peer id */
 

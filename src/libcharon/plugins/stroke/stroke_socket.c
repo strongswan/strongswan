@@ -234,6 +234,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  dpddelay=%d", msg->add_conn.dpd.delay);
+	DBG2(DBG_CFG, "  dpdtimeout=%d", msg->add_conn.dpd.timeout);
 	DBG2(DBG_CFG, "  dpdaction=%d", msg->add_conn.dpd.action);
 	DBG2(DBG_CFG, "  closeaction=%d", msg->add_conn.close_action);
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");

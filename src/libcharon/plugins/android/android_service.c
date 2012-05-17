@@ -277,7 +277,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 							   UNIQUE_REPLACE, 1, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */
-							   TRUE, FALSE, 0, /* mobike, aggressive, DPD */
+							   TRUE, FALSE, /* mobike, aggressive */
+							   0, 0, /* DPD delay, timeout */
 							   host_create_from_string("0.0.0.0", 0) /* virt */,
 							   NULL, FALSE, NULL, NULL); /* pool, mediation */
 

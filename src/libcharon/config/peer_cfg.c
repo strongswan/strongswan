@@ -136,6 +136,11 @@ struct private_peer_cfg_t {
 	u_int32_t dpd;
 
 	/**
+	 * DPD timeout intervall (used for IKEv1 only)
+	 */
+	u_int32_t dpd_timeout;
+
+	/**
 	 * virtual IP to use locally
 	 */
 	host_t *virtual_ip;
@@ -398,6 +403,12 @@ METHOD(peer_cfg_t, get_dpd, u_int32_t,
 	return this->dpd;
 }
 
+METHOD(peer_cfg_t, get_dpd_timeout, u_int32_t,
+	private_peer_cfg_t *this)
+{
+	return this->dpd_timeout;
+}
+
 METHOD(peer_cfg_t, get_virtual_ip, host_t*,
 	private_peer_cfg_t *this)
 {
@@ -586,8 +597,9 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
 							bool mobike, bool aggressive, u_int32_t dpd,
-							host_t *virtual_ip, char *pool, bool mediation,
-							peer_cfg_t *mediated_by, identification_t *peer_id)
+							u_int32_t dpd_timeout, host_t *virtual_ip,
+							char *pool, bool mediation, peer_cfg_t *mediated_by,
+							identification_t *peer_id)
 {
 	private_peer_cfg_t *this;
 
@@ -618,6 +630,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 			.use_mobike = _use_mobike,
 			.use_aggressive = _use_aggressive,
 			.get_dpd = _get_dpd,
+			.get_dpd_timeout = _get_dpd_timeout,
 			.get_virtual_ip = _get_virtual_ip,
 			.get_pool = _get_pool,
 			.add_auth_cfg = _add_auth_cfg,
@@ -646,6 +659,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 		.use_mobike = mobike,
 		.aggressive = aggressive,
 		.dpd = dpd,
+		.dpd_timeout = dpd_timeout,
 		.virtual_ip = virtual_ip,
 		.pool = strdupnull(pool),
 		.local_auth = linked_list_create(),

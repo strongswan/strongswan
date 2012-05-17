@@ -278,6 +278,7 @@ struct stroke_msg_t {
 			} rekey;
 			struct {
 				time_t delay;
+				time_t timeout;
 				int action;
 			} dpd;
 			struct {

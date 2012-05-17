@@ -95,6 +95,11 @@ struct private_load_tester_config_t {
 	u_int dpd_delay;
 
 	/**
+	 * DPD timeout (IKEv1 only)
+	 */
+	u_int dpd_timeout;
+
+	/**
 	 * incremental numbering of generated configs
 	 */
 	u_int num;
@@ -259,7 +264,8 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 							   this->ike_rekey, 0, /* rekey, reauth */
 							   0, this->ike_rekey, /* jitter, overtime */
 							   FALSE, FALSE, /* mobike, aggressive mode */
-							   this->dpd_delay, /* dpddelay */
+							   this->dpd_delay,   /* dpd_delay */
+							   this->dpd_timeout, /* dpd_timeout */
 							   this->vip ? this->vip->clone(this->vip) : NULL,
 							   this->pool, FALSE, NULL, NULL);
 	if (num)
@@ -367,6 +373,8 @@ load_tester_config_t *load_tester_config_create()
 			"%s.plugins.load-tester.child_rekey", 600, charon->name);
 	this->dpd_delay = lib->settings->get_int(lib->settings,
 			"%s.plugins.load-tester.dpd_delay", 0, charon->name);
+	this->dpd_timeout = lib->settings->get_int(lib->settings,
+			"%s.plugins.load-tester.dpd_timeout", 0, charon->name);
 
 	this->initiator_auth = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.initiator_auth", "pubkey", charon->name);

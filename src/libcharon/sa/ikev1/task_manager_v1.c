@@ -1388,18 +1388,26 @@ METHOD(task_manager_t, queue_child_delete, void,
 METHOD(task_manager_t, queue_dpd, void,
 	private_task_manager_t *this)
 {
-	u_int32_t t = 0, retransmit;
+	peer_cfg_t *peer_cfg;
+	u_int32_t t, retransmit;
 
 	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, DPD_R_U_THERE,
 												this->dpd_send++));
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
-	/* schedule DPD timeout job using the same timeout as a retransmitting
-	 * IKE message would have. */
-	for (retransmit = 0; retransmit <= this->retransmit_tries; retransmit++)
+	/* compute timeout in milliseconds */
+	t = 1000 * peer_cfg->get_dpd_timeout(peer_cfg);
+	if (t == 0)
 	{
-		t += (u_int32_t)(this->retransmit_timeout * 1000.0 *
-						pow(this->retransmit_base, retransmit));
+		/* use the same timeout as a retransmitting IKE message would have */
+		for (retransmit = 0; retransmit <= this->retransmit_tries; retransmit++)
+		{
+			t += (u_int32_t)(this->retransmit_timeout * 1000.0 *
+							pow(this->retransmit_base, retransmit));
+		}
 	}
+
+	/* schedule DPD timeout job */
 	lib->scheduler->schedule_job_ms(lib->scheduler,
 		(job_t*)dpd_timeout_job_create(this->ike_sa->get_id(this->ike_sa)), t);
 }

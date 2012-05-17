@@ -271,6 +271,13 @@ struct peer_cfg_t {
 	u_int32_t (*get_dpd) (peer_cfg_t *this);
 
 	/**
+	 * Get the DPD timeout interval (IKEv1 only)
+	 *
+	 * @return			dpd_timeout in seconds
+	 */
+	u_int32_t (*get_dpd_timeout) (peer_cfg_t *this);
+
+	/**
 	 * Get a virtual IP for the local peer.
 	 *
 	 * If no virtual IP should be used, NULL is returned. %any means to request
@@ -366,6 +373,7 @@ struct peer_cfg_t {
  * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param aggressive		use/accept aggressive mode with IKEv1
  * @param dpd				DPD check interval, 0 to disable
+ * @param dpd_timeout		DPD timeout interval (IKEv1 only), if 0 default applies
  * @param virtual_ip		virtual IP for local host, or NULL
  * @param pool				pool name to get configuration attributes from, or NULL
  * @param mediation			TRUE if this is a mediation connection
@@ -379,7 +387,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
 							bool mobike, bool aggressive, u_int32_t dpd,
-							host_t *virtual_ip, char *pool, bool mediation,
-							peer_cfg_t *mediated_by, identification_t *peer_id);
+							u_int32_t dpd_timeout, host_t *virtual_ip,
+							char *pool, bool mediation, peer_cfg_t *mediated_by,
+							identification_t *peer_id);
 
 #endif /** PEER_CFG_H_ @}*/

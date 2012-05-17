@@ -73,7 +73,7 @@ METHOD(job_t, execute, void,
 		}
 		enumerator->destroy(enumerator);
 
-		/* check if no incoming packet during timeout, reestalish SA */
+		/* check if no incoming packet during timeout, reestablish SA */
 		if (use_time < this->check)
 		{
 			DBG1(DBG_JOB, "DPD check timed out, enforcing DPD action");

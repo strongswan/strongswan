@@ -175,7 +175,8 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 					name, IKEV2, ike_cfg, CERT_SEND_IF_ASKED, UNIQUE_NO,
 					1, create_rekey(ike_rekey), 0,  /* keytries, rekey, reauth */
 					1800, 900,						/* jitter, overtime */
-					TRUE, FALSE, 60,			/* mobike, aggr., dpddelay */
+					TRUE, FALSE,				/* mobike, aggressive */
+					60, 0,						/* DPD delay, timeout */
 					NULL, NULL,					/* vip, pool */
 					FALSE, NULL, NULL);			/* mediation, med by, peer id */
 		auth = auth_cfg_create();

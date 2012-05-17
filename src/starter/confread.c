@@ -97,7 +97,7 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.addr_family           = AF_INET;
 	cfg->conn_default.tunnel_addr_family    = AF_INET;
 	cfg->conn_default.install_policy	= TRUE;
-	cfg->conn_default.dpd_delay		=  30; /* seconds */
+	cfg->conn_default.dpd_delay			=  30; /* seconds */
 	cfg->conn_default.dpd_timeout		= 150; /* seconds */
 
 	cfg->conn_default.left.seen  = LEMPTY;
