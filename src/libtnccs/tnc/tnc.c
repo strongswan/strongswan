@@ -57,7 +57,7 @@ void libtnccs_init(void)
 	INIT(this,
 		.public = {
 		},
-	);	
+	);
 
 	tnc = &this->public;
 }
@@ -75,6 +75,7 @@ void libtnccs_deinit(void)
 
 static bool load_imcvs_from_config(char *filename, bool is_imc)
 {
+	bool success = FALSE;
 	int fd, line_nr = 0;
 	chunk_t src, line;
 	struct stat sb;
@@ -110,7 +111,6 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 	while (fetchline(&src, &line))
 	{
 		char *name, *path;
-		bool success;
 		chunk_t token;
 
 		line_nr++;
@@ -126,7 +126,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		{
 			DBG1(DBG_TNC, "line %d: keyword must be followed by a space",
 						   line_nr);
-			return FALSE;
+			break;
 		}
 
 		/* only interested in IMCs or IMVs depending on label */
@@ -141,7 +141,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		{
 			DBG1(DBG_TNC, "line %d: %s name must be set in double quotes",
 						   line_nr, label);
-			return FALSE;
+			break;
 		}
 
 		/* copy the IMC/IMV name */
@@ -154,7 +154,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		{
 			DBG1(DBG_TNC, "line %d: %s path is missing", line_nr, label);
 			free(name);
-			return FALSE;
+			break;
 		}
 		if (!extract_token(&token, ' ', &line))
 		{
@@ -177,12 +177,12 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		}
 		if (!success)
 		{
-			return FALSE;
+			break;
 		}
 	}
 	munmap(addr, sb.st_size);
 	close(fd);
-	return TRUE;
+	return success;
 }
 
 /**
