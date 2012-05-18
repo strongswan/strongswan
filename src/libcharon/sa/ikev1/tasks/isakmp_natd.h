@@ -15,7 +15,7 @@
 
 /**
  * @defgroup isakmp_natd isakmp_natd
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef ISAKMP_NATD_H_

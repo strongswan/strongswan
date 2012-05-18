@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_rekey ike_rekey
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_REKEY_H_

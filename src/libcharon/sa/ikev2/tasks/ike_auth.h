@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_auth ike_auth
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_AUTH_H_

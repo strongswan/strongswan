@@ -15,7 +15,7 @@
 
 /**
  * @defgroup isakmp_vendor isakmp_vendor
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef ISAKMP_VENDOR_H_

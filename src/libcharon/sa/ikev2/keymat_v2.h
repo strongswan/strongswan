@@ -15,7 +15,7 @@
 
 /**
  * @defgroup keymat_v2 keymat_v2
- * @{ @ingroup sa
+ * @{ @ingroup ikev2
  */
 
 #ifndef KEYMAT_V2_H_

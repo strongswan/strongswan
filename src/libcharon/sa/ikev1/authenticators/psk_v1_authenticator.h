@@ -15,7 +15,7 @@
 
 /**
  * @defgroup psk_v1_authenticator psk_v1_authenticator
- * @{ @ingroup authenticators
+ * @{ @ingroup authenticators_v1
  */
 
 #ifndef PSK_V1_AUTHENTICATOR_H_

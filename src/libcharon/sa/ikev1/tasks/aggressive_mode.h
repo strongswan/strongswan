@@ -15,7 +15,7 @@
 
 /**
  * @defgroup aggressive_mode aggressive_mode
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef AGGRESSIVE_MODE_H_

@@ -16,7 +16,7 @@
 
 /**
  * @defgroup task task
- * @{ @ingroup tasks
+ * @{ @ingroup sa
  */
 
 #ifndef TASK_H_

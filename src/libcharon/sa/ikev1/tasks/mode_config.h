@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mode_config mode_config
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef MODE_CONFIG_H_

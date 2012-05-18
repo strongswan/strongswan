@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_auth_lifetime ike_auth_lifetime
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_AUTH_LIFETIME_H_

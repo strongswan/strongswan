@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hybrid_authenticator hybrid_authenticator
- * @{ @ingroup authenticators
+ * @{ @ingroup authenticators_v1
  */
 
 #ifndef HYBRID_AUTHENTICATOR_H_

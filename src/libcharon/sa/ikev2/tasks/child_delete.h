@@ -15,7 +15,7 @@
 
 /**
  * @defgroup child_delete child_delete
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef CHILD_DELETE_H_

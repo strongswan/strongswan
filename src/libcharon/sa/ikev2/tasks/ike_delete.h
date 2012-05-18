@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_delete ike_delete
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_DELETE_H_

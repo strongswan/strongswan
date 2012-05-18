@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_dpd ike_dpd
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_DPD_H_

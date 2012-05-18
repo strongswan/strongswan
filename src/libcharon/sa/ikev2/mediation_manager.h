@@ -15,7 +15,7 @@
 
 /**
  * @defgroup mediation_manager mediation_manager
- * @{ @ingroup sa
+ * @{ @ingroup ikev2
  */
 
 #ifndef MEDIATION_MANAGER_H_

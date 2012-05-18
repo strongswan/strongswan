@@ -55,14 +55,29 @@
  * @defgroup sa sa
  * @ingroup libcharon
  *
- * @defgroup authenticators authenticators
+ * @defgroup ikev1 ikev1
  * @ingroup sa
+ *
+ * @defgroup ikev2 ikev2
+ * @ingroup sa
+ *
+ * @defgroup authenticators_v1 authenticators
+ * @ingroup ikev1
+ *
+ * @defgroup authenticators_v2 authenticators
+ * @ingroup ikev2
  *
  * @defgroup eap eap
- * @ingroup authenticators
- *
- * @defgroup tasks tasks
  * @ingroup sa
+ *
+ * @defgroup xauth xauth
+ * @ingroup sa
+ *
+ * @defgroup tasks_v1 tasks
+ * @ingroup ikev1
+ *
+ * @defgroup tasks_v2 tasks
+ * @ingroup ikev2
  *
  * @addtogroup libcharon
  * @{

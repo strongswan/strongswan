@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pubkey_v1_authenticator pubkey_v1_authenticator
- * @{ @ingroup authenticators
+ * @{ @ingroup authenticators_v1
  */
 
 #ifndef PUBKEY_V1_AUTHENTICATOR_H_

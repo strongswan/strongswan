@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_vendor ike_vendor
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_VENDOR_H_

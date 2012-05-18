@@ -15,7 +15,7 @@
 
 /**
  * @defgroup quick_mode quick_mode
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef QUICK_MODE_H_

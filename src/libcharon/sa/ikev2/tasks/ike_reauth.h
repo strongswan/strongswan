@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_reauth ike_reauth
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_REAUTH_H_

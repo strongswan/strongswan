@@ -15,7 +15,7 @@
 
 /**
  * @defgroup child_rekey child_rekey
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef CHILD_REKEY_H_

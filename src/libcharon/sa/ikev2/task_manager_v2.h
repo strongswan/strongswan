@@ -15,7 +15,7 @@
 
 /**
  * @defgroup task_manager_v2 task_manager_v2
- * @{ @ingroup sa
+ * @{ @ingroup ikev2
  */
 
 #ifndef TASK_MANAGER_V2_H_

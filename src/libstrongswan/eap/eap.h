@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup eap eap
+ * @defgroup leap eap
  * @{ @ingroup libstrongswan
  */
 
@@ -62,7 +62,7 @@ enum eap_type_t {
 	EAP_AKA = 23,
 	EAP_PEAP = 25,
 	EAP_MSCHAPV2 = 26,
-	EAP_MSTLV = 33, 
+	EAP_MSTLV = 33,
 	EAP_TNC = 38,
 	/** select EAP method dynamically based on i.e. EAP-Identity */
 	EAP_DYNAMIC = 252,

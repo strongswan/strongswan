@@ -15,7 +15,7 @@
 
 /**
  * @defgroup informational informational
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef INFORMATIONAL_H_

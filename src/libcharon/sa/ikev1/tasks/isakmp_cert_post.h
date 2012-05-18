@@ -15,7 +15,7 @@
 
 /**
  * @defgroup isakmp_cert_post isakmp_cert_post
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef ISAKMP_CERT_POST_H_

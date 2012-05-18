@@ -15,7 +15,7 @@
 
 /**
  * @defgroup isakmp_delete isakmp_delete
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef ISAKMP_DELETE_H_

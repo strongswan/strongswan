@@ -15,7 +15,7 @@
 
 /**
  * @defgroup quick_delete quick_delete
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef QUICK_DELETE_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_config ike_config
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_CONFIG_H_

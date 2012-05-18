@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_natd ike_natd
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_NATD_H_
@@ -42,7 +42,7 @@ struct ike_natd_t {
 	 *
 	 * MOBIKE uses NAT payloads in DPD to detect changes in the NAT mappings.
 	 *
-	 * @return 	TRUE if mappings have changed
+	 * @return	TRUE if mappings have changed
 	 */
 	bool (*has_mapping_changed)(ike_natd_t *this);
 };

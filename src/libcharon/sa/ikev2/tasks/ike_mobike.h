@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_mobike ike_mobike
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_MOBIKE_H_

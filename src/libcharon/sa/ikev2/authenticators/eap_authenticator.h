@@ -15,7 +15,7 @@
 
 /**
  * @defgroup eap_authenticator eap_authenticator
- * @{ @ingroup authenticators
+ * @{ @ingroup authenticators_v2
  */
 
 #ifndef EAP_AUTHENTICATOR_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ike_cert_post ike_cert_post
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef IKE_CERT_POST_H_

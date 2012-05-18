@@ -15,7 +15,7 @@
 
 /**
  * @defgroup isakmp_dpd isakmp_dpd
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef ISAKMP_DPD_H_

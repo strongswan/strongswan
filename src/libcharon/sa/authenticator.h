@@ -17,7 +17,7 @@
 
 /**
  * @defgroup authenticator authenticator
- * @{ @ingroup authenticators
+ * @{ @ingroup sa
  */
 
 #ifndef AUTHENTICATOR_H_

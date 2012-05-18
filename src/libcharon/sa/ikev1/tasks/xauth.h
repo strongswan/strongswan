@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup xauth xauth
- * @{ @ingroup tasks
+ * @defgroup xauth_t xauth
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef XAUTH_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup child_create child_create
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v2
  */
 
 #ifndef CHILD_CREATE_H_

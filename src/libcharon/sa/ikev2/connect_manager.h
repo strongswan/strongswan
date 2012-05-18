@@ -15,7 +15,7 @@
 
 /**
  * @defgroup connect_manager connect_manager
- * @{ @ingroup sa
+ * @{ @ingroup ikev2
  */
 
 #ifndef CONNECT_MANAGER_H_

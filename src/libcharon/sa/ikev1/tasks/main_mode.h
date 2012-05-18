@@ -15,7 +15,7 @@
 
 /**
  * @defgroup main_mode main_mode
- * @{ @ingroup tasks
+ * @{ @ingroup tasks_v1
  */
 
 #ifndef MAIN_MODE_H_
