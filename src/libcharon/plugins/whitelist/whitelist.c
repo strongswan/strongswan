@@ -80,6 +80,7 @@ static int send_msg(int type, char *id)
 			{
 				break;
 			}
+			msg.id[sizeof(msg.id) - 1] = '\0';
 			printf("%s\n", msg.id);
 		}
 	}
