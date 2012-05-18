@@ -18,6 +18,7 @@ the code, you need the following tools:
     - lex/flex
     - yacc/bison
     - gperf
+    - check
     - optionally Doxygen
 
 To check out the master branch, use:
