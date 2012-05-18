@@ -1,0 +1,10 @@
+with "tkmrpc_client";
+
+project Build_Common is
+
+   for Source_Dirs use ();
+
+   Obj_Dir           := "obj";
+   Compiler_Switches := ("-W", "-Wall", "-Wno-unused-parameter");
+
+end Build_Common;
