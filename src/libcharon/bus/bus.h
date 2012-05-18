@@ -252,7 +252,6 @@ struct bus_t {
 	 * @param message	message to send/receive
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
 	 * @param plain		TRUE if message is parsed and decrypted, FALSE it not
-	 * @param
 	 */
 	void (*message)(bus_t *this, message_t *message, bool incoming, bool plain);
 
