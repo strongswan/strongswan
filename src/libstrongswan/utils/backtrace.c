@@ -248,3 +248,20 @@ backtrace_t *backtrace_create(int skip)
 	return &this->public;
 }
 
+/**
+ * See header
+ */
+void backtrace_dump(char *label, FILE *file, bool detailed)
+{
+	backtrace_t *backtrace;
+
+	backtrace = backtrace_create(2);
+
+	if (label)
+	{
+		fprintf(file, "Debug backtrace: %s\n", label);
+	}
+	backtrace->log(backtrace, file, detailed);
+	backtrace->destroy(backtrace);
+}
+
