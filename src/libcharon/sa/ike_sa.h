@@ -969,6 +969,13 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Flush a task queue, cancelling all tasks in it.
+	 *
+	 * @param queue			queue type to flush
+	 */
+	void (*flush_queue)(ike_sa_t *this, task_queue_t queue);
+
+	/**
 	 * Queue a task for initiaton to the task manager.
 	 *
 	 * @param task			task to queue

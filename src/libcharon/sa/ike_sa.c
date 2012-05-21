@@ -1787,6 +1787,12 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
+METHOD(ike_sa_t, flush_queue, void,
+	private_ike_sa_t *this, task_queue_t queue)
+{
+	this->task_manager->flush_queue(this->task_manager, queue);
+}
+
 METHOD(ike_sa_t, queue_task, void,
 	private_ike_sa_t *this, task_t *task)
 {
@@ -2058,6 +2064,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
+			.flush_queue = _flush_queue,
 			.queue_task = _queue_task,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
