@@ -212,17 +212,30 @@ struct private_task_manager_t {
 	u_int32_t dpd_recv;
 };
 
-/**
- * Flush a single task queue
- */
-static void flush_queue(private_task_manager_t *this, linked_list_t *list)
+METHOD(task_manager_t, flush_queue, void,
+	private_task_manager_t *this, task_queue_t queue)
 {
+	linked_list_t *list;
 	task_t *task;
 
 	if (this->queued)
 	{
 		this->queued->destroy(this->queued);
 		this->queued = NULL;
+	}
+	switch (queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			list = this->active_tasks;
+			break;
+		case TASK_QUEUE_PASSIVE:
+			list = this->passive_tasks;
+			break;
+		case TASK_QUEUE_QUEUED:
+			list = this->queued_tasks;
+			break;
+		default:
+			return;
 	}
 	while (list->remove_last(list, (void**)&task) == SUCCESS)
 	{
@@ -235,9 +248,9 @@ static void flush_queue(private_task_manager_t *this, linked_list_t *list)
  */
 static void flush(private_task_manager_t *this)
 {
-	flush_queue(this, this->queued_tasks);
-	flush_queue(this, this->passive_tasks);
-	flush_queue(this, this->active_tasks);
+	flush_queue(this, TASK_QUEUE_QUEUED);
+	flush_queue(this, TASK_QUEUE_PASSIVE);
+	flush_queue(this, TASK_QUEUE_ACTIVE);
 }
 
 /**
@@ -498,7 +511,7 @@ METHOD(task_manager_t, initiate, status_t,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, this->active_tasks);
+				flush_queue(this, TASK_QUEUE_ACTIVE);
 				flushed = TRUE;
 				break;
 			case FAILED:
@@ -625,7 +638,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				}
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, this->passive_tasks);
+				flush_queue(this, TASK_QUEUE_PASSIVE);
 				flushed = TRUE;
 				break;
 			case FAILED:
@@ -874,7 +887,7 @@ static status_t process_request(private_task_manager_t *this,
 				continue;
 			case ALREADY_DONE:
 				send_response = FALSE;
-				flush_queue(this, this->passive_tasks);
+				flush_queue(this, TASK_QUEUE_PASSIVE);
 				break;
 			case FAILED:
 			default:
@@ -947,7 +960,7 @@ static status_t process_response(private_task_manager_t *this,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, this->active_tasks);
+				flush_queue(this, TASK_QUEUE_ACTIVE);
 				break;
 			case FAILED:
 			default:
@@ -1542,6 +1555,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.adopt_tasks = _adopt_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.flush_queue = _flush_queue,
 				.destroy = _destroy,
 			},
 		},

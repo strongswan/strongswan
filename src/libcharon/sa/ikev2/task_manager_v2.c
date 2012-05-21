@@ -157,20 +157,40 @@ struct private_task_manager_t {
 	double retransmit_base;
 };
 
+METHOD(task_manager_t, flush_queue, void,
+	private_task_manager_t *this, task_queue_t queue)
+{
+	linked_list_t *list;
+	task_t *task;
+
+	switch (queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			list = this->active_tasks;
+			break;
+		case TASK_QUEUE_PASSIVE:
+			list = this->passive_tasks;
+			break;
+		case TASK_QUEUE_QUEUED:
+			list = this->queued_tasks;
+			break;
+		default:
+			return;
+	}
+	while (list->remove_last(list, (void**)&task) == SUCCESS)
+	{
+		task->destroy(task);
+	}
+}
+
 /**
  * flush all tasks in the task manager
  */
 static void flush(private_task_manager_t *this)
 {
-	this->passive_tasks->destroy_offset(this->passive_tasks,
-										offsetof(task_t, destroy));
-	this->passive_tasks = linked_list_create();
-	this->active_tasks->destroy_offset(this->active_tasks,
-										offsetof(task_t, destroy));
-	this->active_tasks = linked_list_create();
-	this->queued_tasks->destroy_offset(this->queued_tasks,
-										offsetof(task_t, destroy));
-	this->queued_tasks = linked_list_create();
+	flush_queue(this, TASK_QUEUE_QUEUED);
+	flush_queue(this, TASK_QUEUE_PASSIVE);
+	flush_queue(this, TASK_QUEUE_ACTIVE);
 }
 
 /**
@@ -1465,6 +1485,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.adopt_tasks = _adopt_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.flush_queue = _flush_queue,
 				.destroy = _destroy,
 			},
 		},
