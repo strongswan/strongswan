@@ -227,6 +227,10 @@ METHOD(task_manager_t, flush_queue, void,
 	{
 		case TASK_QUEUE_ACTIVE:
 			list = this->active_tasks;
+			/* cancel pending retransmits */
+			this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+			DESTROY_IF(this->initiating.packet);
+			this->initiating.packet = NULL;
 			break;
 		case TASK_QUEUE_PASSIVE:
 			list = this->passive_tasks;
