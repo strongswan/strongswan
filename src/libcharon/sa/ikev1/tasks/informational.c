@@ -49,6 +49,27 @@ struct private_informational_t {
 	task_t *del;
 };
 
+/**
+ * Cancel active quick mode after receiving an error
+ */
+static void cancel_quick_mode(private_informational_t *this)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	enumerator = this->ike_sa->create_task_enumerator(this->ike_sa,
+													  TASK_QUEUE_ACTIVE);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_QUICK_MODE)
+		{
+			this->ike_sa->flush_queue(this->ike_sa, TASK_QUEUE_ACTIVE);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(task_t, build_i, status_t,
 	private_informational_t *this, message_t *message)
 {
@@ -113,6 +134,15 @@ METHOD(task_t, process_r, status_t,
 					if (this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
 					{	/* only critical during main mode */
 						status = FAILED;
+					}
+					switch (type)
+					{
+						case INVALID_ID_INFORMATION:
+						case NO_PROPOSAL_CHOSEN:
+							cancel_quick_mode(this);
+							break;
+						default:
+							break;
 					}
 					break;
 				}
