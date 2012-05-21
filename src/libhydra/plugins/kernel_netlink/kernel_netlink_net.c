@@ -1762,8 +1762,6 @@ METHOD(kernel_net_t, destroy, void,
 	{
 		close(this->socket_events);
 	}
-	DESTROY_IF(this->socket);
-
 	enumerator = this->routes->create_enumerator(this->routes);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
 	{
@@ -1773,6 +1771,7 @@ METHOD(kernel_net_t, destroy, void,
 	}
 	enumerator->destroy(enumerator);
 	this->routes->destroy(this->routes);
+	DESTROY_IF(this->socket);
 
 	net_changes_clear(this);
 	this->net_changes->destroy(this->net_changes);
