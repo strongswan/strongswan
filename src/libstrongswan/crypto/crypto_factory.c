@@ -657,7 +657,7 @@ METHOD(crypto_factory_t, remove_nonce_gen, void,
 	enumerator_t *enumerator;
 
 	this->lock->write_lock(this->lock);
-	enumerator = this->nonce_gens->create_enumerator(this->rngs);
+	enumerator = this->nonce_gens->create_enumerator(this->nonce_gens);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		if (entry->create_nonce_gen == create)
