@@ -137,6 +137,7 @@ METHOD(task_t, build_i, status_t,
 
 		return SUCCESS;
 	}
+	this->ike_sa->flush_queue(this->ike_sa, TASK_QUEUE_ACTIVE);
 	return ALREADY_DONE;
 }
 

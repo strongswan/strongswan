@@ -346,7 +346,7 @@ METHOD(task_manager_t, initiate, status_t,
 	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
-	bool new_mid = FALSE, expect_response = FALSE, flushed = FALSE, keep = FALSE;
+	bool new_mid = FALSE, expect_response = FALSE, cancelled = FALSE, keep = FALSE;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED &&
 		this->initiating.type != INFORMATIONAL_V1)
@@ -511,8 +511,7 @@ METHOD(task_manager_t, initiate, status_t,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, TASK_QUEUE_ACTIVE);
-				flushed = TRUE;
+				cancelled = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -537,7 +536,7 @@ METHOD(task_manager_t, initiate, status_t,
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	}
-	if (flushed)
+	if (cancelled)
 	{
 		message->destroy(message);
 		return initiate(this);
@@ -600,7 +599,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE, flushed = FALSE, expect_request = FALSE;
+	bool delete = FALSE, cancelled = FALSE, expect_request = FALSE;
 	status_t status;
 
 	me = request->get_destination(request);
@@ -638,8 +637,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				}
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, TASK_QUEUE_PASSIVE);
-				flushed = TRUE;
+				cancelled = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -656,7 +654,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
-	if (flushed)
+	if (cancelled)
 	{
 		message->destroy(message);
 		return initiate(this);
@@ -887,7 +885,6 @@ static status_t process_request(private_task_manager_t *this,
 				continue;
 			case ALREADY_DONE:
 				send_response = FALSE;
-				flush_queue(this, TASK_QUEUE_PASSIVE);
 				break;
 			case FAILED:
 			default:
@@ -960,7 +957,6 @@ static status_t process_response(private_task_manager_t *this,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				flush_queue(this, TASK_QUEUE_ACTIVE);
 				break;
 			case FAILED:
 			default:

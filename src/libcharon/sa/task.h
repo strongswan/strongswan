@@ -131,7 +131,7 @@ struct task_t {
 	 *						- FAILED if a critical error occurred
 	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
-	 *						- ALREADY_DONE to cancel all active or passive tasks
+	 *						- ALREADY_DONE to cancel task processing
 	 *						- SUCCESS if task completed
 	 */
 	status_t (*build) (task_t *this, message_t *message);
@@ -144,7 +144,7 @@ struct task_t {
 	 *						- FAILED if a critical error occurred
 	 *						- DESTROY_ME if IKE_SA has been properly deleted
 	 *						- NEED_MORE if another call to build/process needed
-	 *						- ALREADY_DONE to cancel all active or passive tasks
+	 *						- ALREADY_DONE to cancel task processing
 	 *						- SUCCESS if task completed
 	 */
 	status_t (*process) (task_t *this, message_t *message);

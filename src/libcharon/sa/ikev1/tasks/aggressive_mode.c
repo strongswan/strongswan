@@ -174,6 +174,8 @@ static status_t send_notify(private_aggressive_mode_t *this, notify_type_t type)
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
 	/* cancel all active/passive tasks in favour of informational */
+	this->ike_sa->flush_queue(this->ike_sa,
+					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
 }
 
@@ -185,6 +187,8 @@ static status_t send_delete(private_aggressive_mode_t *this)
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)isakmp_delete_create(this->ike_sa, TRUE));
 	/* cancel all active tasks in favour of informational */
+	this->ike_sa->flush_queue(this->ike_sa,
+					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
 }
 

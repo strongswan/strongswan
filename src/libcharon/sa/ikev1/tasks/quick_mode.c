@@ -605,6 +605,8 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
 	/* cancel all active/passive tasks in favour of informational */
+	this->ike_sa->flush_queue(this->ike_sa,
+					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
 }
 
@@ -892,6 +894,7 @@ METHOD(task_t, process_r, status_t,
 			}
 			if (!install(this))
 			{
+				this->ike_sa->flush_queue(this->ike_sa, TASK_QUEUE_PASSIVE);
 				this->ike_sa->queue_task(this->ike_sa,
 					(task_t*)quick_delete_create(this->ike_sa,
 								this->proposal->get_protocol(this->proposal),
