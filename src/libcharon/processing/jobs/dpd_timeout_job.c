@@ -77,15 +77,9 @@ METHOD(job_t, execute, void,
 		if (use_time < this->check)
 		{
 			DBG1(DBG_JOB, "DPD check timed out, enforcing DPD action");
-			if (ike_sa->reestablish(ike_sa) == SUCCESS)
-			{
-				charon->ike_sa_manager->checkin_and_destroy(
-											charon->ike_sa_manager, ike_sa);
-			}
-			else
-			{
-				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-			}
+			ike_sa->reestablish(ike_sa);
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
 		}
 		else
 		{
