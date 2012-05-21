@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -399,7 +402,6 @@ METHOD(task_t, process_r, status_t,
 													  this->method, TRUE, id);
 			if (!this->peer_cfg)
 			{
-				DBG1(DBG_IKE, "no peer config found");
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
@@ -413,11 +415,22 @@ METHOD(task_t, process_r, status_t,
 		}
 		case AM_AUTH:
 		{
-			if (!this->ph1->verify_auth(this->ph1, this->method, message,
-										this->id_data))
+			while (TRUE)
 			{
-				this->id_data = chunk_empty;
-				return send_delete(this);
+				if (this->ph1->verify_auth(this->ph1, this->method, message,
+										   this->id_data))
+				{
+					break;
+				}
+				this->peer_cfg->destroy(this->peer_cfg);
+				this->peer_cfg = this->ph1->select_config(this->ph1,
+													this->method, TRUE, NULL);
+				if (!this->peer_cfg)
+				{
+					this->id_data = chunk_empty;
+					return send_delete(this);
+				}
+				this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 			}
 			this->id_data = chunk_empty;
 

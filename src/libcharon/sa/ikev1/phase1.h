@@ -88,6 +88,9 @@ struct phase1_t {
 	/**
 	 * Select a peer config as responder.
 	 *
+	 * If called after the first successful call the next alternative config
+	 * is returned, if any.
+	 *
 	 * @param method		used authentication method
 	 * @param aggressive	TRUE to get an aggressive mode config
 	 * @param id			initiator identity

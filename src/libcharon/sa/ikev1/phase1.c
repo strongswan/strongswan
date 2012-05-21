@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -19,6 +22,7 @@
 #include <sa/ikev1/keymat_v1.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <utils/linked_list.h>
 
 typedef struct private_phase1_t private_phase1_t;
 
@@ -36,6 +40,16 @@ struct private_phase1_t {
 	 * IKE_SA we negotiate
 	 */
 	ike_sa_t *ike_sa;
+
+	/**
+	 * Currently selected peer config
+	 */
+	peer_cfg_t *peer_cfg;
+
+	/**
+	 * Other possible peer config candidates
+	 */
+	linked_list_t *candidates;
 
 	/**
 	 * Acting as initiator
@@ -513,8 +527,21 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 	identification_t *id)
 {
 	enumerator_t *enumerator;
-	peer_cfg_t *current, *found = NULL;
+	peer_cfg_t *current;
 	host_t *me, *other;
+
+	if (this->peer_cfg)
+	{	/* try to find an alternative config */
+		if (this->candidates->remove_first(this->candidates,
+										  (void**)&current) != SUCCESS)
+		{
+			DBG1(DBG_CFG, "no alternative config found");
+			return NULL;
+		}
+		DBG1(DBG_CFG, "switching to peer config '%s'",
+			 current->get_name(current));
+		return current;
+	}
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
@@ -527,17 +554,27 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 		if (check_auth_method(this, current, method) &&
 			current->use_aggressive(current) == aggressive)
 		{
-			found = current->get_ref(current);
-			break;
+			current->get_ref(current);
+			if (!this->peer_cfg)
+			{
+				this->peer_cfg = current;
+			}
+			else
+			{
+				this->candidates->insert_last(this->candidates, current);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (found)
+	if (this->peer_cfg)
 	{
-		DBG2(DBG_CFG, "selected peer config \"%s\"", found->get_name(found));
+		DBG1(DBG_CFG, "selected peer config \"%s\"",
+			 this->peer_cfg->get_name(this->peer_cfg));
+		return this->peer_cfg->get_ref(this->peer_cfg);
 	}
-	return found;
+	DBG1(DBG_IKE, "no peer config found");
+	return NULL;
 }
 
 METHOD(phase1_t, get_id, identification_t*,
@@ -661,6 +698,9 @@ METHOD(phase1_t, get_nonce_ke, bool,
 METHOD(phase1_t, destroy, void,
 	private_phase1_t *this)
 {
+	DESTROY_IF(this->peer_cfg);
+	this->candidates->destroy_offset(this->candidates,
+									 offsetof(peer_cfg_t, destroy));
 	chunk_free(&this->sa_payload);
 	DESTROY_IF(this->dh);
 	free(this->dh_value.ptr);
@@ -691,6 +731,7 @@ phase1_t *phase1_create(ike_sa_t *ike_sa, bool initiator)
 			.get_nonce_ke = _get_nonce_ke,
 			.destroy = _destroy,
 		},
+		.candidates = linked_list_create(),
 		.ike_sa = ike_sa,
 		.initiator = initiator,
 		.keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa),

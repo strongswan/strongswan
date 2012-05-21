@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -405,23 +405,27 @@ METHOD(task_t, process_r, status_t,
 				DBG1(DBG_IKE, "IDii payload missing");
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
-
 			id = id_payload->get_identification(id_payload);
 			this->ike_sa->set_other_id(this->ike_sa, id);
-			this->peer_cfg = this->ph1->select_config(this->ph1,
-													  this->method, FALSE, id);
-			if (!this->peer_cfg)
-			{
-				DBG1(DBG_IKE, "no peer config found");
-				return send_notify(this, AUTHENTICATION_FAILED);
-			}
-			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 
-			if (!this->ph1->verify_auth(this->ph1, this->method, message,
-										id_payload->get_encoded(id_payload)))
+			while (TRUE)
 			{
-				return send_notify(this, AUTHENTICATION_FAILED);
+				DESTROY_IF(this->peer_cfg);
+				this->peer_cfg = this->ph1->select_config(this->ph1,
+													this->method, FALSE, id);
+				if (!this->peer_cfg)
+				{
+					return send_notify(this, AUTHENTICATION_FAILED);
+				}
+				this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
+
+				if (this->ph1->verify_auth(this->ph1, this->method, message,
+										   id_payload->get_encoded(id_payload)))
+				{
+					break;
+				}
 			}
+
 			if (!charon->bus->authorize(charon->bus, FALSE))
 			{
 				DBG1(DBG_IKE, "Main Mode authorization hook forbids IKE_SA, "
