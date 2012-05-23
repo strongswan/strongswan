@@ -1,7 +1,0 @@
-moon::ipsec stop
-carol::ipsec stop
-winnetou::/etc/init.d/slapd stop
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-moon::rm /etc/ipsec.d/crls/*
-carol::rm /etc/ipsec.d/crls/*

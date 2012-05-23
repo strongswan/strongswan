@@ -1,7 +1,0 @@
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-dave::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::cat /var/log/auth.log::peer requests PSK authentication::YES
-moon::ipsec status::rw-psk.*PH_IP_CAROL STATE_QUICK_R2.*IPsec SA established::YES
-moon::cat /var/log/auth.log::peer requests PUBKEY authentication::YES
-moon::ipsec status::rw-rsasig.*PH_IP_DAVE STATE_QUICK_R2.*IPsec SA established::YES
-

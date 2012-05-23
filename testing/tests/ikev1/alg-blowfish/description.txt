@@ -1,4 +1,6 @@
-Roadwarrior <b>carol</b> proposes  to gateway <b>moon</b> the strong cipher suite
-<b>BLOWFISH_CBC_256 / HMAC_SHA2_512 / MODP_4096</b> for the IKE protocol and 
-<b>BLOWFISH_CBC_256 / HMAC_SHA2_512</b> for ESP packets. A ping from <b>carol</b> to
-<b>alice</b> successfully checks the established tunnel.
+The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each 
+to gateway <b>moon</b> using <b>Blowfish</b> for both IKE and ESP
+encryption.  Upon the successful establishment of the IPsec tunnels, <b>leftfirewall=yes</b>
+automatically inserts iptables-based firewall rules that let pass the tunneled traffic.
+In order to test both tunnel and firewall, both <b>carol</b> and <b>dave</b> ping
+the client <b>alice</b> behind the gateway <b>moon</b>.

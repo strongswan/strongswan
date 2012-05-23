@@ -1,9 +1,0 @@
-alice::ipsec status::nat-t.*STATE_QUICK_I2.*IPsec SA established::YES
-venus::ipsec status::nat-t.*STATE_QUICK_I2.*IPsec SA established::YES
-sun::ipsec status::nat-t.*STATE_QUICK_R2.*IPsec SA established::YES
-sun::ipsec status::nat-t.*alice@strongswan.org::YES
-sun::ipsec status::nat-t.*venus.strongswan.org::YES
-alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-venus::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-moon::tcpdump::IP moon.strongswan.org.* > sun.strongswan.org.ipsec-nat-t: UDP::YES
-moon::tcpdump::IP sun.strongswan.org.ipsec-nat-t > moon.strongswan.org.*: UDP::YES

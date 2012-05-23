@@ -1,6 +1,0 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-sun::/etc/init.d/iptables start 2> /dev/null
-moon::ipsec start
-sun::ipsec start
-moon::sleep 2
-moon::ipsec up host-net

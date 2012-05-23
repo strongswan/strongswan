@@ -1,6 +1,0 @@
-By setting <b>strictcrlpolicy=yes</b> a <b>strict CRL policy</b> is enforced on
-both roadwarrior <b>carol</b> and gateway <b>moon</b>. Thus when <b>carol</b> initiates
-the connection and no current CRL is available, the Main Mode negotiation fails
-but a http fetch to get the CRL from the web server <b>winnetou</b> is triggered.
-When the second Main Mode trial comes around, the fetched CRL will be available
-and the IKE negotiation completes.

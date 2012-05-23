@@ -1,5 +1,0 @@
-moon::ipsec stop
-carol::ipsec stop
-carol::ip route del 10.1.0.0/16 via PH_IP_MOON
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null

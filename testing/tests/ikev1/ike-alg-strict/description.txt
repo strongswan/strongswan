@@ -1,5 +1,0 @@
-The roadwarrior <b>carol</b> proposes <b>3DES_CBC</b> encryption with <b>HMAC_SHA1</b> authentication in the first place
-and <b>AES_CBC_128</b> encryption with <b>HMAC_SHA1</b> authentication in the second place for both the ISAKMP and IPsec SA.
-The gateway <b>moon</b> enforces <b>ike=aes128-sha!</b> for Phase 1 by using the strict flag '!', 
-but will accept any other supported algorithm proposed by the peer for Phase 2 , even though <b>moon</b>
-defines itself <b>esp=aes128-sha1</b> only.

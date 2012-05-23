@@ -1,4 +1,0 @@
-moon::cat /var/log/auth.log::path length of 2 violates constraint of 1::YES
-carol::cat /var/log/auth.log::ignoring informational payload, type INVALID_KEY_INFORMATION::YES
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::NO
-moon::ipsec status::duck.*STATE_QUICK_R2.*IPsec SA established::NO

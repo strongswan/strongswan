@@ -1,6 +1,0 @@
-This test is based on the <a href="../mode-config">mode-config</a>
-scenario and demonstrates the multiple use of the <b>include</b>
-parameter in IPsec configuration files. At the top level <b>/etc/ipsec.conf</b>
-defines the config setup section and includes <b>/etc/ipsec.connections</b>
-which in turn includes <b>/etc/ipsec.host</b> and <b>/etc/ipsec.peers/*</b>
-thereby showing the use of wildcards in path definitions.

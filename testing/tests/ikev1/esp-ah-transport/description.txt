@@ -1,5 +1,0 @@
-In IKE phase 2 the roadwarrior <b>carol</b> proposes to gateway <b>moon</b>
-the ESP AES 128 bit encryption algorithm combined with AH HMAC_SHA1 authentication.
-In order to accept the AH and ESP encapsulated plaintext packets, the iptables firewall
-marks all incoming AH packets with the ESP mark. The transport mode connection is
-tested by <b>carol</b> sending a ping to gateway <b>moon</b>.

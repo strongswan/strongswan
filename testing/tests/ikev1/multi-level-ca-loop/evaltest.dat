@@ -1,3 +1,0 @@
-moon::cat /var/log/auth.log::maximum path length of 7 exceeded::YES
-carol::ipsec status::alice.*STATE_QUICK_I2.*IPsec SA established::NO
-moon::ipsec status::alice.*PH_IP_CAROL.*STATE_QUICK_R2.*IPsec SA established::NO

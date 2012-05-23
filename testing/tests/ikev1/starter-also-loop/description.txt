@@ -1,4 +1,0 @@
-This scenario is the same as test <b><a href="../rw-cert">rw-cert</a></b> but
-uses the <b>also</b> parameter in <b>moon</b>'s ipsec.conf in order to define
-the connections in a modular form. A closed also loop created by including
-<b>conn host-host</b> in <b>conn moon</b> is successfully detected.

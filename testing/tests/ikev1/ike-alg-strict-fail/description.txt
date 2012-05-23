@@ -1,5 +1,0 @@
-The roadwarrior <b>carol</b> proposes <b>3DES_CBC</b> encryption with HMAC_SHA1 authentication
-as the only cipher suite for both the ISAKMP and IPsec SA. The gateway <b>moon</b> defines
-<b>ike=aes128-sha1</b> only, but will accept any other support algorithm proposed by the peer,
-leading to a successful negotiation of Phase 1. Because for Phase 2 <b>moon</b> enforces
-<b>esp=aes128-sha1!</b> by using the strict flag '!', the ISAKMP SA will fail.

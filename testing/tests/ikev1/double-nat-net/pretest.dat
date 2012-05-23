@@ -12,4 +12,4 @@ alice::ipsec start
 bob::ipsec start
 alice::sleep 2
 alice::ipsec up nat-t
-
+alice::sleep 1

@@ -1,4 +1,0 @@
-moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::cat /var/log/auth.log::written crl file.*/etc/ipsec.d/crls/5da7dd700651327ee7b66db3b5e5e060ea2e4def.crl::YES
-carol::cat /var/log/auth.log::written crl file.*/etc/ipsec.d/crls/5da7dd700651327ee7b66db3b5e5e060ea2e4def.crl::YES

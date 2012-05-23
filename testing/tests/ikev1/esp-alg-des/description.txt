@@ -1,5 +1,0 @@
-In IKE phase 2 the roadwarrior <b>carol</b> proposes to gateway <b>moon</b>
-the ESP 1DES encryption algorithm with MD5 authentication. <b>moon</b> must
-explicitly accept the choice of this insecure algorithm by setting the strict
-flag '!' in <b>esp=des-md5!</b>. The tunnel is tested by <b>carol</b> 
-sending a ping to client <b>alice</b> behind gateway <b>moon</b>.

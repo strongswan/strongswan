@@ -1,9 +1,0 @@
-moon::ipsec status::net-net.*STATE_QUICK_I2.*IPsec SA established::YES
-sun::ipsec status::net-net.*STATE_QUICK_R2.*IPsec SA established::YES
-alice::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-alice::ping -c 1 PH_IP_MOON1::64 bytes from PH_IP_MOON1: icmp_seq=1::YES
-alice::ping -c 1 PH_IP_MOON::64 bytes from PH_IP_MOON: icmp_seq=1::YES
-moon::ping -c 1 PH_IP_BOB::64 bytes from PH_IP_BOB: icmp_seq=1::YES
-moon::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
-sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
-sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES

@@ -1,6 +1,0 @@
-An IPsec tunnel connecting the gateway <b>moon</b> with the subnet behind
-gateway <b>sun</b> is set up. This host-to-net connection can also be
-used by the clients <b>alice</b> and <b>venus</b> via the trick of NAT-ing
-them to the outer IP address of gateway <b>moon</b> prior to tunnelling.
-The IPsec tunnel is first tested by <b>moon</b> pinging <b>bob</b> and vice versa,
-followed by the NAT-ed clients <b>alice</b> and <b>venus</b> pinging <b>bob</b>.

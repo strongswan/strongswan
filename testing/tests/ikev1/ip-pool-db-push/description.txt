@@ -1,4 +1,0 @@
-The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
-Using Mode Config push mode (<b>modeconfig=push</b>) the gateway <b>moon</b> assigns virtual
-IP addresses from a pool named <b>bigpool</b> that was created in an SQL database by the command
-<b>ipsec pool --name bigpool --start 10.3.0.1 --end 10.3.3.232 --timeout 0</b>.

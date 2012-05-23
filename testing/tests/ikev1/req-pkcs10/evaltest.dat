@@ -1,5 +1,0 @@
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
-moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
-moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES

@@ -1,5 +1,0 @@
-carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::NO
-moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::NO
-carol::cat /var/log/auth.log::NO_PROPOSAL_CHOSEN::YES
-moon::cat /var/log/auth.log::Oakley Transform.*3DES_CBC (192), HMAC_SHA1.*refused due to strict flag::YES
-moon::cat /var/log/auth.log::no acceptable Oakley Transform::YES

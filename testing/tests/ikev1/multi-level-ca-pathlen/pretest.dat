@@ -1,5 +1,0 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-carol::ipsec start
-moon::ipsec start
-carol::sleep 2
-carol::ipsec up home 

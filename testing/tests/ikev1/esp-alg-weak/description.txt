@@ -1,5 +1,0 @@
-The roadwarrior <b>carol</b> proposes <b>DES_CBC</b> encryption with HMAC_MD5 authentication
-as the only cipher suite for the IPsec SA. Because gateway <b>moon</b> does
-not use an explicit <b>esp</b> statement any strong encryption algorithm will be
-accepted but any weak key length will be rejected by default and thus the ISAKMP SA
-is bound to fail.

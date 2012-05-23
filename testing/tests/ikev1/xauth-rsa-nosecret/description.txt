@@ -1,6 +1,0 @@
-The roadwarrior <b>carol</b> sets up a connection to gateway <b>moon</b>.
-The authentication is based on RSA signatures (<b>RSASIG</b>) using X.509
-certificates followed by extended authentication (<b>XAUTH</b>) based
-on user name and password. Because user <b>carol</b> cannot find her 
-XAUTH credentials in ipsec.secrets, the IKE negotiation is aborted and the
-ISAKMP SA is deleted.

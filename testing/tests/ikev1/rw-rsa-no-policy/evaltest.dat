@@ -1,5 +1,0 @@
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::NO
-moon::cat /var/log/auth.log::peer requests PUBKEY authentication::YES
-moon::cat /var/log/auth.log::but no connection has been authorized with policy=PUBKEY::YES
-moon::ipsec status::*PH_IP_CAROL STATE_QUICK_R2.*IPsec SA established::NO
-

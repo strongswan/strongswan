@@ -1,12 +1,18 @@
-carol::cat /var/log/auth.log::alice.*we have a cert and are sending it upon request::YES
-moon::cat /var/log/auth.log::alice.*we have a cert and are sending it upon request::YES
-dave::cat /var/log/auth.log::venus.*we have a cert and are sending it upon request::YES
-moon::cat /var/log/auth.log::venus.*we have a cert and are sending it upon request::YES
-carol::ipsec status::alice.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::ipsec status::alice.*PH_IP_CAROL.*STATE_QUICK_R2.*IPsec SA established::YES
-carol::ipsec status::venus.*STATE_QUICK_I2.*IPsec SA established::NO
-moon::ipsec status::venus.*PH_IP_CAROL.*STATE_QUICK_R2.*IPsec SA established::NO
-dave::ipsec status::venus.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::ipsec status::venus.*PH_IP_DAVE.*STATE_QUICK_R2.*IPsec SA established::YES
-dave::ipsec status::alice.*STATE_QUICK_I2.*IPsec SA established::NO
-moon::ipsec status::alice.*PH_IP_DAVE.*STATE_QUICK_R2.*IPsec SA established::NO
+moon:: cat /var/log/daemon.log::fetching crl from.*http.*research.crl::YES
+moon:: cat /var/log/daemon.log::crl correctly signed by.*Research CA::YES
+moon:: cat /var/log/daemon.log::fetching crl from.*http.*sales.crl::YES
+moon:: cat /var/log/daemon.log::crl correctly signed by.*Sales CA::YES
+moon:: cat /var/log/daemon.log::fetching crl from.*http.*strongswan.crl::YES
+moon:: cat /var/log/daemon.log::crl correctly signed by.*strongSwan Root CA::YES
+carol::ipsec status 2> /dev/null::alice.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::alice.*ESTABLISHED.*carol@strongswan.org::YES
+carol::cat /var/log/daemon.log::received INVALID_ID_INFORMATION error notify::YES
+carol::ipsec status 2> /dev/null::venus.*INSTALLED::NO
+moon:: ipsec status 2> /dev/null::venus.*ESTABLISHED.*carol@strongswan.org::NO
+moon:: cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Research CA::YES
+moon:: cat /var/log/daemon.log::switching to peer config.*venus::YES
+dave:: ipsec status 2> /dev/null::venus.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::venus.*ESTABLISHED.*dave@strongswan.org::YES
+dave:: cat /var/log/daemon.log::received INVALID_ID_INFORMATION error notify::YES
+dave:: ipsec status 2> /dev/null::alice.*INSTALLED::NO
+moon:: ipsec status 2> /dev/null::alice.*ESTABLISHED.*dave@strongswan.org::NO

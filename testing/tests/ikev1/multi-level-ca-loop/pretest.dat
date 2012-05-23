@@ -1,6 +1,0 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-moon::rm /etc/ipsec.d/cacerts/strongswanCert.pem
-carol::ipsec start
-moon::ipsec start
-carol::sleep 2
-carol::ipsec up alice

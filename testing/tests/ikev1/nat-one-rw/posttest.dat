@@ -1,6 +1,0 @@
-alice::ipsec stop
-sun::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null
-moon::iptables -t nat -F
-moon::conntrack -F

@@ -1,5 +1,7 @@
-alice::ipsec status::nat-t.*STATE_QUICK_I2.*IPsec SA established::YES
-bob::ipsec status::nat-t.*STATE_QUICK_R2.*IPsec SA established::YES
+alice::ipsec status 2> /dev/null::nat-t.*ESTABLISHED.*alice@strongswan.org.*bob@strongswan.org::YES
+bob::  ipsec status 2> /dev/null::nat-t.*ESTABLISHED.*bob@strongswan.org.*alice@strongswan.org::YES
+alice::ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL, ESP in UDP::YES
+bob::  ipsec status 2> /dev/null::nat-t.*INSTALLED, TUNNEL, ESP in UDP::YES
 alice::ping -c 1 PH_IP_SUN1::64 bytes from PH_IP_SUN1: icmp_seq=1::YES
 moon::tcpdump::IP moon.strongswan.org.* > sun.strongswan.org.ipsec-nat-t: UDP::YES
 moon::tcpdump::IP sun.strongswan.org.ipsec-nat-t > moon.strongswan.org.*: UDP::YES

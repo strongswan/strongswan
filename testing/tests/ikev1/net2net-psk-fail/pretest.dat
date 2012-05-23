@@ -1,5 +1,7 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-sun::echo 1 > /proc/sys/net/ipv4/ip_forward
+moon::/etc/init.d/iptables start 2> /dev/null
+sun::/etc/init.d/iptables start 2> /dev/null
+moon::rm /etc/ipsec.d/cacerts/*
+sun::rm /etc/ipsec.d/cacerts/*
 moon::ipsec start
 sun::ipsec start
 moon::sleep 2

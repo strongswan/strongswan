@@ -1,6 +1,0 @@
-All IP traffic from the subnet behind the gateway <b>moon</b> is tunneled
-to the gateway  <b>sun</b> using the 0.0.0.0/0 network mask. In order
-to prevent local subnet traffic from escaping through the tunnel, a
-passthrough policy for the 10.1.0.0/16 network is inserted on <b>moon</b>.
-A series of internal and external pings verifies the correct
-functioning of the setup.

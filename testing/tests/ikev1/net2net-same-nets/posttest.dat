@@ -1,7 +1,0 @@
-sun::iptables -t mangle -n -v -L PREROUTING
-sun::iptables -t nat -n -v -L
-moon::ipsec stop
-sun::ipsec stop
-moon::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null
-sun::conntrack -F

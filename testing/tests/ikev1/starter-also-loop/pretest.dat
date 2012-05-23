@@ -1,2 +1,0 @@
-moon::ipsec start --debug-all
-moon::sleep 1

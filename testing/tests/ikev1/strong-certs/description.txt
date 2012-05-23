@@ -1,6 +1,0 @@
-This is a remote-access scenario with two roadwarriors <b>carol</b> and <b>dave</b>
-setting up a connection each to the VPN gateway <b>moon</b>. Authentication is
-based on strong X.509 certificates with SHA-2 signatures.
-The X.509 certificate of the gateway <b>moon</b> uses a <b>SHA-224</b> hash in
-its signature whereas the certificates of the roadwarriors <b>carol</b>
-and <b>dave</b> use <b>SHA-384</b> and <b>SHA-512</b>, respectively.

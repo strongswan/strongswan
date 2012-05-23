@@ -1,7 +1,0 @@
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-moon::cat /var/log/auth.log::IPSec Transform.*3DES_CBC (192), HMAC_SHA1.*refused due to strict flag::YES
-moon::ipsec statusall::IKE proposal: 3DES_CBC/HMAC_SHA1::YES
-moon::ipsec statusall::ESP proposal: AES_CBC_128/HMAC_SHA1::YES
-carol::ipsec statusall::IKE proposal: 3DES_CBC/HMAC_SHA1::YES
-carol::ipsec statusall::ESP proposal: AES_CBC_128/HMAC_SHA1::YES

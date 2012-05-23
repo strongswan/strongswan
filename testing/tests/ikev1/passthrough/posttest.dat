@@ -1,6 +1,0 @@
-moon::ipsec stop
-sun::ipsec stop
-moon::ip route flush table 50 
-moon::ip rule del table 50
-moon::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null

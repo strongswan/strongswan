@@ -1,5 +1,0 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-sun::/etc/init.d/iptables start 2> /dev/null
-moon::ipsec start
-sun::ipsec start
-alice::sleep 20 

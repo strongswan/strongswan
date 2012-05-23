@@ -1,10 +1,13 @@
-moon::ipsec status::STATE_MAIN_I4 (ISAKMP SA established)::YES
-carol::iptables -I INPUT 1 -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
-carol::sleep 35::no output expected::NO
+carol::ipsec status 2> /dev/null::home.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::rw.*INSTALLED, TUNNEL::YES
+moon:: iptables -A INPUT -i eth0 -s PH_IP_CAROL -j DROP::no output expected::NO
+carol::iptables -A INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
+carol::sleep 60::no output expected::NO
+carol::cat /var/log/daemon.log::sending DPD request::YES
+carol::cat /var/log/daemon.log::DPD check timed out, enforcing DPD action::YES
+carol::cat /var/log/daemon.log::restarting CHILD_SA home::YES
 carol::iptables -D INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
-moon::cat /var/log/auth.log::inserting event EVENT_DPD::YES
-moon::cat /var/log/auth.log::DPD: No response from peer - declaring peer dead::YES
-moon::cat /var/log/auth.log::DPD: Terminating all SAs using this connection::YES
-moon::cat /var/log/auth.log::DPD: Restarting connection::YES
-moon::sleep 10::no output expected::NO
-moon::ipsec status::STATE_MAIN_I4 (ISAKMP SA established)::YES
+moon:: iptables -D INPUT -i eth0 -s PH_IP_CAROL -j DROP::no output expected::NO
+carol::sleep 10::no output expected::NO
+carol::ipsec status 2> /dev/null::home.*INSTALLED, TUNNEL::YES
+moon:: ipsec status 2> /dev/null::rw.*INSTALLED, TUNNEL::YES

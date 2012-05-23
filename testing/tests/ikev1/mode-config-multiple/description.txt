@@ -1,6 +1,0 @@
-The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
-Both <b>carol</b> and <b>dave</b> request a <b>virtual IP</b> via the IKE Mode Config protocol
-by using the <b>leftsourceip=%modeconfig</b> parameter. After setting up an IPsec SA to reach
-the hosts <b>alice</b> and <b>venus</b>, respectively, both roadwarriors set up a second 
-IPsec SA to <b>venus</b> and <b>alice</b>, respectively, inheriting the virtual IP address
-from the previous Mode Config negotiation.

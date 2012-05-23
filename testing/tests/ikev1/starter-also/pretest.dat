@@ -1,6 +1,0 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-carol::ipsec start
-moon::ipsec start --debug-all
-carol::sleep 2
-carol::ipsec up home

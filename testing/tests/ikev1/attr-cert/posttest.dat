@@ -1,6 +1,0 @@
-moon::ipsec stop
-carol::ipsec stop
-dave::ipsec stop
-moon::rm /etc/openac/*
-moon::rm /etc/ipsec.d/aacerts/aaCert.pem
-moon::rm /etc/ipsec.d/acerts/*

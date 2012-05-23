@@ -1,9 +1,0 @@
-carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::YES
-carol::ipsec statusall::IKE proposal: 3DES_CBC/HMAC_SHA1::YES
-moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::YES
-moon::ipsec statusall::IKE proposal: 3DES_CBC/HMAC_SHA1::YES
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::NO
-carol::cat /var/log/auth.log::NO_PROPOSAL_CHOSEN::YES
-moon::ipsec status::rw.*STATE_QUICK_R2.*ISAKMP SA established::NO
-moon::cat /var/log/auth.log::IPSec Transform.*3DES_CBC (192), HMAC_SHA1.*refused due to strict flag::YES
-moon::cat /var/log/auth.log::no acceptable Proposal in IPsec SA::YES
