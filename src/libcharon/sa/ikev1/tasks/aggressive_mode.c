@@ -569,10 +569,6 @@ METHOD(task_t, process_i, status_t,
 		{
 			return send_notify(this, NO_PROPOSAL_CHOSEN);
 		}
-		if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method))
-		{
-			return send_notify(this, INVALID_KEY_INFORMATION);
-		}
 
 		id_payload = (id_payload_t*)message->get_payload(message, ID_V1);
 		if (!id_payload)
@@ -590,6 +586,10 @@ METHOD(task_t, process_i, status_t,
 		}
 		this->ike_sa->set_other_id(this->ike_sa, id);
 
+		if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method))
+		{
+			return send_notify(this, INVALID_KEY_INFORMATION);
+		}
 		if (!this->ph1->verify_auth(this->ph1, this->method, message,
 									id_payload->get_encoded(id_payload)))
 		{
