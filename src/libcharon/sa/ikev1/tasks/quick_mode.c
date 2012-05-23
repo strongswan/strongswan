@@ -629,7 +629,12 @@ METHOD(task_t, build_i, status_t,
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp);
 
-			list = this->config->get_proposals(this->config, FALSE);
+			this->mode = this->config->get_mode(this->config);
+			if (this->udp && this->mode == MODE_TRANSPORT)
+			{
+				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
+				add_nat_oa_payloads(this, message);
+			}
 
 			this->spi_i = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_i)
@@ -637,19 +642,14 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_IKE, "allocating SPI from kernel failed");
 				return FAILED;
 			}
+
+			list = this->config->get_proposals(this->config, FALSE);
 			enumerator = list->create_enumerator(list);
 			while (enumerator->enumerate(enumerator, &proposal))
 			{
 				proposal->set_spi(proposal, this->spi_i);
 			}
 			enumerator->destroy(enumerator);
-
-			this->mode = this->config->get_mode(this->config);
-			if (this->udp && this->mode == MODE_TRANSPORT)
-			{
-				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
-				add_nat_oa_payloads(this, message);
-			}
 
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
