@@ -1,0 +1,26 @@
+carol::ipsec status 2> /dev/null::home.*STATE_MODE_CFG_I2.*received ModeCfg reply, established::YES
+dave:: ipsec status 2> /dev/null::home.*STATE_MODE_CFG_I2.*received ModeCfg reply, established::YES
+moon:: ipsec status 2> /dev/null::rw.*STATE_MODE_CFG_R1.*sent ModeCfg reply, established::YES
+moon:: ipsec status 2> /dev/null::rw.*moon.strongswan.org.*\[192.168.0.100]::YES
+moon:: ipsec status 2> /dev/null::rw.*moon.strongswan.org.*\[192.168.0.200]::YES
+carol::ipsec status 2> /dev/null::home.*STATE_QUICK_I2.*IPsec SA established::YES
+dave:: ipsec status 2> /dev/null::home.*STATE_QUICK_I2.*IPsec SA established::YES
+moon:: ipsec status 2> /dev/null::rw.*STATE_QUICK_R2.*IPsec SA established::YES
+carol::cat /var/log/auth.log::extended authentication was successful::YES
+dave:: cat /var/log/auth.log::extended authentication was successful::YES
+moon:: cat /var/log/auth.log::xauth user name is.*carol::YES
+moon:: cat /var/log/auth.log::xauth user name is.*dave::YES
+moon:: cat /var/log/auth.log::assigning virtual IP 10.3.0.1 to peer::YES
+moon:: cat /var/log/auth.log::assigning virtual IP 10.3.0.2 to peer::YES
+carol::cat /var/log/auth.log::setting virtual IP source address to 10.3.0.1::YES
+dave:: cat /var/log/auth.log::setting virtual IP source address to 10.3.0.2::YES
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+dave:: ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
+moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
+alice::tcpdump::IP carol1.strongswan.org > alice.strongswan.org: ICMP echo request::YES
+alice::tcpdump::IP alice.strongswan.org > carol1.strongswan.org: ICMP echo reply::YES
+alice::tcpdump::IP dave1.strongswan.org > alice.strongswan.org: ICMP echo request::YES
+alice::tcpdump::IP alice.strongswan.org > dave1.strongswan.org: ICMP echo reply::YES

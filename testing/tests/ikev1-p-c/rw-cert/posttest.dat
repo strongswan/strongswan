@@ -1,0 +1,6 @@
+carol::ipsec stop
+dave::ipsec stop
+moon::ipsec stop
+carol::/etc/init.d/iptables stop 2> /dev/null
+dave::/etc/init.d/iptables stop 2> /dev/null
+moon::/etc/init.d/iptables stop 2> /dev/null
