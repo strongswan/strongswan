@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -47,6 +50,56 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"FETCHER",
 	"CUSTOM",
 );
+
+/**
+ * See header.
+ */
+u_int32_t plugin_feature_hash(plugin_feature_t *feature)
+{
+	chunk_t data;
+
+	switch (feature->type)
+	{
+		case FEATURE_NONE:
+		case FEATURE_RNG:
+		case FEATURE_NONCE_GEN:
+		case FEATURE_DATABASE:
+		case FEATURE_FETCHER:
+			/* put these special cases in their (type-specific) buckets */
+			data = chunk_empty;
+			break;
+		case FEATURE_CRYPTER:
+		case FEATURE_AEAD:
+		case FEATURE_SIGNER:
+		case FEATURE_HASHER:
+		case FEATURE_PRF:
+		case FEATURE_DH:
+		case FEATURE_PRIVKEY:
+		case FEATURE_PRIVKEY_GEN:
+		case FEATURE_PUBKEY:
+		case FEATURE_PRIVKEY_SIGN:
+		case FEATURE_PUBKEY_VERIFY:
+		case FEATURE_PRIVKEY_DECRYPT:
+		case FEATURE_PUBKEY_ENCRYPT:
+		case FEATURE_CERT_DECODE:
+		case FEATURE_CERT_ENCODE:
+		case FEATURE_EAP_SERVER:
+		case FEATURE_EAP_PEER:
+			data = chunk_from_thing(feature->arg);
+			break;
+		case FEATURE_CUSTOM:
+			data = chunk_create(feature->arg.custom,
+								strlen(feature->arg.custom));
+			break;
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+			data = chunk_create(feature->arg.xauth,
+								strlen(feature->arg.xauth));
+			break;
+	}
+	return chunk_hash_inc(chunk_from_thing(feature->type),
+						  chunk_hash(data));
+}
 
 /**
  * See header.

@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -302,6 +305,18 @@ struct plugin_feature_t {
  * Names for plugin_feature_t types.
  */
 extern enum_name_t *plugin_feature_names;
+
+/**
+ * Calculates a hash value for the given feature.
+ *
+ * Since this is intended to be used with the plugin_features_matches function
+ * the hash is not really unique for all types of features (e.g. RNGs are all
+ * mapped to the same value because they are loosely matched by said function).
+ *
+ * @param feature	feature to hash
+ * @return			hash value of the feature
+ */
+u_int32_t plugin_feature_hash(plugin_feature_t *feature);
 
 /**
  * Check if feature a matches to feature b.
