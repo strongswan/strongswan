@@ -978,7 +978,7 @@ static status_t process_response(private_task_manager_t *this,
 	enumerator->destroy(enumerator);
 
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	this->initiating.packet->destroy(this->initiating.packet);
+	DESTROY_IF(this->initiating.packet);
 	this->initiating.packet = NULL;
 
 	if (this->queued && this->active_tasks->get_count(this->active_tasks) == 0)
