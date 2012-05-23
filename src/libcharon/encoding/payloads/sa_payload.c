@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -292,20 +293,19 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	int ignore_struct_number = 0;
 	enumerator_t *enumerator;
 	proposal_substructure_t *substruct;
-	proposal_t *proposal;
-	linked_list_t *list;
+	linked_list_t *substructs, *list;
 
 	if (this->type == SECURITY_ASSOCIATION_V1)
 	{	/* IKEv1 proposals start with 0 */
 		struct_number = ignore_struct_number = -1;
 	}
 
-	list = linked_list_create();
 	/* we do not support proposals split up to two proposal substructures, as
 	 * AH+ESP bundles are not supported in RFC4301 anymore.
 	 * To handle such structures safely, we just skip proposals with multiple
 	 * protocols.
 	 */
+	substructs = linked_list_create();
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &substruct))
 	{
@@ -313,20 +313,26 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 		if (substruct->get_proposal_number(substruct) == struct_number)
 		{
 			if (ignore_struct_number < struct_number)
-			{
-				/* remove an already added, if first of series */
-				if (list->remove_last(list, (void**)&proposal) == SUCCESS)
-				{
-					proposal->destroy(proposal);
-				}
+			{	/* remove an already added, if first of series */
+				substructs->remove_last(substructs, (void**)&substruct);
 				ignore_struct_number = struct_number;
 			}
 			continue;
 		}
 		struct_number++;
+		substructs->insert_last(substructs, substruct);
+	}
+	enumerator->destroy(enumerator);
+
+	/* generate proposals from substructs */
+	list = linked_list_create();
+	enumerator = substructs->create_enumerator(substructs);
+	while (enumerator->enumerate(enumerator, &substruct))
+	{
 		substruct->get_proposals(substruct, list);
 	}
 	enumerator->destroy(enumerator);
+	substructs->destroy(substructs);
 	return list;
 }
 
