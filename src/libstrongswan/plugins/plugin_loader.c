@@ -25,6 +25,7 @@
 #include <debug.h>
 #include <library.h>
 #include <integrity_checker.h>
+#include <utils/hashtable.h>
 #include <utils/linked_list.h>
 #include <plugins/plugin.h>
 
@@ -45,6 +46,11 @@ struct private_plugin_loader_t {
 	 * List of plugins, as plugin_entry_t
 	 */
 	linked_list_t *plugins;
+
+	/**
+	 * Hashtable for loaded features, as plugin_feature_t
+	 */
+	hashtable_t *loaded_features;
 
 	/**
 	 * List of names of loaded plugins
@@ -294,32 +300,14 @@ static bool dependencies_satisfied(private_plugin_loader_t *this,
 	/* first entry is provided feature, followed by dependencies */
 	for (i = 1; i < count; i++)
 	{
-		enumerator_t *entries, *loaded;
-		plugin_feature_t *feature;
-		plugin_entry_t *current;
-		bool found = FALSE;
+		plugin_feature_t *found;
 
 		if (features[i].kind != FEATURE_DEPENDS &&
 			features[i].kind != FEATURE_SDEPEND)
 		{	/* end of dependencies */
 			break;
 		}
-		entries = this->plugins->create_enumerator(this->plugins);
-		while (entries->enumerate(entries, &current))
-		{
-			loaded = current->loaded->create_enumerator(current->loaded);
-			while (loaded->enumerate(loaded, &feature))
-			{
-				if (plugin_feature_matches(&features[i], feature))
-				{
-					found = TRUE;
-					break;
-				}
-			}
-			loaded->destroy(loaded);
-		}
-		entries->destroy(entries);
-
+		found = this->loaded_features->get(this->loaded_features, &features[i]);
 		if (!found && (features[i].kind != FEATURE_SDEPEND || soft))
 		{
 			if (report)
@@ -411,6 +399,8 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 					{
 						if (plugin_feature_load(entry->plugin, feature, reg))
 						{
+							this->loaded_features->put(this->loaded_features,
+													   feature, feature);
 							entry->loaded->insert_last(entry->loaded, feature);
 							loaded++;
 						}
@@ -439,6 +429,28 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 }
 
 /**
+ * Since plugin_feature_t objectss are loosely matched we can't use remove() to
+ * remove them from the hashtable.
+ */
+static void unregister_loaded_feature(private_plugin_loader_t *this,
+									  plugin_feature_t *feature)
+{
+	plugin_feature_t *current;
+	enumerator_t *enumerator;
+
+	enumerator = this->loaded_features->create_enumerator(this->loaded_features);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+		if (current == feature)
+		{
+			this->loaded_features->remove_at(this->loaded_features, enumerator);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Try to unload plugin features on which is not depended anymore
  */
 static int unload_features(private_plugin_loader_t *this, plugin_entry_t *entry)
@@ -456,6 +468,7 @@ static int unload_features(private_plugin_loader_t *this, plugin_entry_t *entry)
 					!dependency_required(this, feature) &&
 					plugin_feature_unload(entry->plugin, feature, reg))
 				{
+					unregister_loaded_feature(this, feature);
 					entry->loaded->remove(entry->loaded, feature, NULL);
 					unloaded++;
 				}
@@ -665,6 +678,7 @@ METHOD(plugin_loader_t, destroy, void,
 	private_plugin_loader_t *this)
 {
 	unload(this);
+	this->loaded_features->destroy(this->loaded_features);
 	this->plugins->destroy(this->plugins);
 	free(this->loaded_plugins);
 	free(this);
@@ -687,6 +701,9 @@ plugin_loader_t *plugin_loader_create()
 			.destroy = _destroy,
 		},
 		.plugins = linked_list_create(),
+		.loaded_features = hashtable_create(
+								(hashtable_hash_t)plugin_feature_hash,
+								(hashtable_equals_t)plugin_feature_matches, 64),
 	);
 
 	return &this->public;
