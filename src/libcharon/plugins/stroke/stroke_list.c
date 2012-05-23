@@ -426,6 +426,7 @@ METHOD(stroke_list_t, status, void,
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
+		ike_version_t ike_version;
 		char *pool;
 		host_t *host;
 		u_int32_t dpd;
@@ -500,9 +501,15 @@ METHOD(stroke_list_t, status, void,
 			}
 
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-			fprintf(out, "%12s:  %s...%s (%N)", peer_cfg->get_name(peer_cfg),
+			ike_version = peer_cfg->get_ike_version(peer_cfg);
+			fprintf(out, "%12s:  %s...%s  %N", peer_cfg->get_name(peer_cfg),
 				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg),
-				ike_version_names, peer_cfg->get_ike_version(peer_cfg));
+				ike_version_names, ike_version);
+
+			if (ike_version == IKEV1 && peer_cfg->use_aggressive(peer_cfg))
+			{
+				fprintf(out, " Aggressive");
+			}
 
 			dpd = peer_cfg->get_dpd(peer_cfg);
 			if (dpd)
