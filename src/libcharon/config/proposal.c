@@ -28,11 +28,12 @@
 #include <crypto/signers/signer.h>
 #include <crypto/proposal/proposal_keywords.h>
 
-ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
+ENUM(protocol_id_names, PROTO_NONE, PROTO_IPCOMP,
 	"PROTO_NONE",
 	"IKE",
 	"AH",
 	"ESP",
+	"IPCOMP",
 );
 
 typedef struct private_proposal_t private_proposal_t;

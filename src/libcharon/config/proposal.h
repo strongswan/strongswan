@@ -43,6 +43,7 @@ enum protocol_id_t {
 	PROTO_IKE = 1,
 	PROTO_AH = 2,
 	PROTO_ESP = 3,
+	PROTO_IPCOMP = 4, /* IKEv1 only */
 };
 
 /**

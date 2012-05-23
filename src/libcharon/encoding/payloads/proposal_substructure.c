@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -292,6 +293,15 @@ typedef enum {
 	IKEV1_AUTH_HYBRID_RESP_DSS = 64224,
 } ikev1_auth_method_t;
 
+/**
+ * IKEv1 IPComp transform IDs
+ */
+typedef enum {
+	IKEV1_IPCOMP_OUI = 1,
+	IKEV1_IPCOMP_DEFLATE = 2,
+	IKEV1_IPCOMP_LZS = 3,
+} ikev1_ipcomp_transform_t;
+
 METHOD(payload_t, verify, status_t,
 	private_proposal_substructure_t *this)
 {
@@ -314,12 +324,19 @@ METHOD(payload_t, verify, status_t,
 
 	switch (this->protocol_id)
 	{
+		case PROTO_IPCOMP:
+			if (this->spi.len != 2)
+			{
+				DBG1(DBG_ENC, "invalid CPI length in IPCOMP proposal");
+				return FAILED;
+			}
+			break;
 		case PROTO_AH:
 		case PROTO_ESP:
 			if (this->spi.len != 4)
 			{
 				DBG1(DBG_ENC, "invalid SPI length in %N proposal",
-								  protocol_id_names, this->protocol_id);
+					 protocol_id_names, this->protocol_id);
 				return FAILED;
 			}
 			break;
@@ -470,6 +487,35 @@ METHOD(proposal_substructure_t, get_spi, chunk_t,
 	private_proposal_substructure_t *this)
 {
 	return this->spi;
+}
+
+METHOD(proposal_substructure_t, get_cpi, bool,
+	private_proposal_substructure_t *this, u_int16_t *cpi)
+{
+
+	transform_substructure_t *transform;
+	enumerator_t *enumerator;
+
+	if (this->protocol_id != PROTO_IPCOMP)
+	{
+		return FALSE;
+	}
+
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &transform))
+	{
+		if (transform->get_transform_id(transform) == IKEV1_IPCOMP_DEFLATE)
+		{
+			if (cpi)
+			{
+				*cpi = *((u_int16_t*)this->spi.ptr);
+			}
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
 }
 
 /**
@@ -1115,6 +1161,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type)
 			.create_substructure_enumerator = _create_substructure_enumerator,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
+			.get_cpi = _get_cpi,
 			.get_lifetime = _get_lifetime,
 			.get_lifebytes = _get_lifebytes,
 			.get_auth_method = _get_auth_method,
@@ -1463,6 +1510,55 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	return &this->public;
+}
+
+/**
+ * See header.
+ */
+proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
+			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
+			u_int8_t proposal_number)
+{
+	private_proposal_substructure_t *this;
+	transform_substructure_t *transform;
+
+
+	this = (private_proposal_substructure_t*)
+						proposal_substructure_create(PROPOSAL_SUBSTRUCTURE_V1);
+
+	/* we currently support DEFLATE only */
+	transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
+												   1, IKEV1_IPCOMP_DEFLATE);
+
+	if (lifetime)
+	{
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS));
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_DURATION, lifetime));
+	}
+	if (lifebytes)
+	{
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_KILOBYTES));
+		transform->add_transform_attribute(transform,
+			transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_SA_LIFE_DURATION, lifebytes / 1000));
+	}
+
+	add_transform_substructure(this, transform);
+
+	this->spi = chunk_clone(chunk_from_thing(cpi));
+	this->spi_size = this->spi.len;
+	this->protocol_id = PROTO_IPCOMP;
+	this->proposal_number = proposal_number;
+
+	compute_length(this);
 
 	return &this->public;
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -52,7 +53,7 @@ struct proposal_substructure_t {
 	/**
 	 * get proposal number of current proposal.
 	 *
-	 * @return 			proposal number of current proposal substructure.
+	 * @return			proposal number of current proposal substructure.
 	 */
 	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
 
@@ -67,7 +68,7 @@ struct proposal_substructure_t {
 	/**
 	 * get protocol id of current proposal.
 	 *
-	 * @return 			protocol id of current proposal substructure.
+	 * @return			protocol id of current proposal substructure.
 	 */
 	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
 
@@ -84,7 +85,7 @@ struct proposal_substructure_t {
 	/**
 	 * Returns the currently set SPI of this proposal.
 	 *
-	 * @return 			chunk_t pointing to the value
+	 * @return			chunk_t pointing to the value
 	 */
 	chunk_t (*get_spi) (proposal_substructure_t *this);
 
@@ -96,6 +97,14 @@ struct proposal_substructure_t {
 	 * @param spi		chunk_t pointing to the value to set
 	 */
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
+
+	/**
+	 * Gets the CPI of the current proposal (IKEv1 only).
+	 *
+	 * @param cpi		the CPI if a supported algorithm is proposed
+	 * @return			TRUE if a supported algorithm is proposed
+	 */
+	bool (*get_cpi) (proposal_substructure_t *this, u_int16_t *cpi);
 
 	/**
 	 * Get proposals contained in a propsal_substructure_t.
@@ -158,7 +167,7 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type);
  * Creates an IKEv2 proposal_substructure_t from a proposal_t.
  *
  * @param proposal	proposal to build a substruct out of it
- * @return 			proposal_substructure_t PROPOSAL_SUBSTRUCTURE
+ * @return			proposal_substructure_t PROPOSAL_SUBSTRUCTURE
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 														proposal_t *proposal);
@@ -171,9 +180,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp		TRUE to use UDP encapsulation
- *
- *
- * @return 			proposal_substructure_t object PROPOSAL_SUBSTRUCTURE_V1
+ * @return			proposal_substructure_t object PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
@@ -188,10 +195,24 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp		TRUE to use UDP encapsulation
- * @return 			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
+ * @return			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
 			auth_method_t auth, ipsec_mode_t mode, bool udp);
+
+/**
+ * Creates an IKEv1 proposal_substructure_t for IPComp with the given
+ * proposal_number (e.g. of a ESP proposal to bundle them).
+ *
+ * @param lifetime	lifetime in seconds
+ * @param lifebytes	lifebytes, in bytes
+ * @param cpi				the CPI to be used
+ * @param proposal_number	the proposal number of the proposal to be linked
+ * @return					IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
+ */
+proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
+			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
+			u_int8_t proposal_number);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/
