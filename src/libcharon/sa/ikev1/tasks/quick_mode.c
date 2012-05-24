@@ -887,12 +887,17 @@ METHOD(task_t, process_r, status_t,
 				{
 					list = sa_payload->get_ipcomp_proposals(sa_payload,
 															&this->cpi_i);
+					if (!list->get_count(list))
+					{
+						DBG1(DBG_IKE, "expected IPComp proposal but peer did "
+							 "not send one, IPComp disabled");
+						this->cpi_i = 0;
+					}
 				}
 			}
 			if (!list || !list->get_count(list))
 			{
 				DESTROY_IF(list);
-				this->cpi_i = 0;
 				list = sa_payload->get_proposals(sa_payload);
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
@@ -1047,11 +1052,16 @@ METHOD(task_t, process_i, status_t,
 			{
 				list = sa_payload->get_ipcomp_proposals(sa_payload,
 														&this->cpi_r);
+				if (!list->get_count(list))
+				{
+					DBG1(DBG_IKE, "peer did not acccept our IPComp proposal, "
+						 "IPComp disabled");
+					this->cpi_i = 0;
+				}
 			}
 			if (!list || !list->get_count(list))
 			{
 				DESTROY_IF(list);
-				this->cpi_i = 0;
 				list = sa_payload->get_proposals(sa_payload);
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
