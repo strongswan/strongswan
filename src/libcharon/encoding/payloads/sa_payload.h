@@ -46,9 +46,18 @@ struct sa_payload_t {
 	/**
 	 * Gets the proposals in this payload as a list.
 	 *
-	 * @return					a list containing proposal_t s
+	 * @return				a list containing proposal_ts
 	 */
 	linked_list_t *(*get_proposals) (sa_payload_t *this);
+
+	/**
+	 * Gets the proposals from the first proposal in this payload with IPComp
+	 * enabled (IKEv1 only).
+	 *
+	 * @param cpi			the CPI of the first IPComp (sub)proposal
+	 * @return				a list containing proposal_ts
+	 */
+	linked_list_t *(*get_ipcomp_proposals) (sa_payload_t *this, u_int16_t *cpi);
 
 	/**
 	 * Get the (shortest) lifetime of a proposal (IKEv1 only).
@@ -125,11 +134,13 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal);
  * @param auth				authentication method to use, or AUTH_NONE
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp				TRUE to use UDP encapsulation
+ * @param cpi				CPI in case IPComp should be used
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 							u_int32_t lifetime, u_int64_t lifebytes,
-							auth_method_t auth, ipsec_mode_t mode, bool udp);
+							auth_method_t auth, ipsec_mode_t mode, bool udp,
+							u_int16_t cpi);
 
 /**
  * Creates an IKEv1 sa_payload_t object from a single proposal.
@@ -140,10 +151,12 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
  * @param auth				authentication method to use, or AUTH_NONE
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
  * @param udp				TRUE to use UDP encapsulation
+ * @param cpi				CPI in case IPComp should be used
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
 							u_int32_t lifetime, u_int64_t lifebytes,
-							auth_method_t auth, ipsec_mode_t mode, bool udp);
+							auth_method_t auth, ipsec_mode_t mode, bool udp,
+							u_int16_t cpi);
 
 #endif /** SA_PAYLOAD_H_ @}*/

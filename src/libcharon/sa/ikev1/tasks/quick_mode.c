@@ -654,7 +654,7 @@ METHOD(task_t, build_i, status_t,
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp);
+								this->mode, this->udp, 0);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -933,7 +933,7 @@ METHOD(task_t, build_r, status_t,
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp);
+								this->mode, this->udp, 0);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
