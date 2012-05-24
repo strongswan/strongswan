@@ -568,8 +568,16 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 	substruct->set_is_last_proposal(substruct, FALSE);
 	if (cpi)
 	{
+		u_int8_t proposal_number = substruct->get_proposal_number(substruct);
+
 		substruct = proposal_substructure_create_for_ipcomp_v1(lifetime,
-					lifebytes, cpi, substruct->get_proposal_number(substruct));
+					lifebytes, cpi, proposal_number);
+		this->proposals->insert_last(this->proposals, substruct);
+		substruct->set_is_last_proposal(substruct, FALSE);
+		/* add the proposals again without IPComp */
+		substruct = proposal_substructure_create_from_proposals_v1(proposals,
+										lifetime, lifebytes, auth, mode, udp);
+		substruct->set_proposal_number(substruct, proposal_number + 1);
 		this->proposals->insert_last(this->proposals, substruct);
 	}
 	substruct->set_is_last_proposal(substruct, TRUE);
@@ -586,23 +594,13 @@ sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
 								auth_method_t auth, ipsec_mode_t mode, bool udp,
 								u_int16_t cpi)
 {
-	proposal_substructure_t *substruct;
 	private_sa_payload_t *this;
+	linked_list_t *proposals;
 
-	this = (private_sa_payload_t*)sa_payload_create(SECURITY_ASSOCIATION_V1);
-
-	substruct = proposal_substructure_create_from_proposal_v1(proposal,
-										lifetime, lifebytes, auth, mode, udp);
-	this->proposals->insert_last(this->proposals, substruct);
-	substruct->set_is_last_proposal(substruct, FALSE);
-	if (cpi)
-	{
-		substruct = proposal_substructure_create_for_ipcomp_v1(lifetime,
-					lifebytes, cpi, substruct->get_proposal_number(substruct));
-		this->proposals->insert_last(this->proposals, substruct);
-	}
-	substruct->set_is_last_proposal(substruct, TRUE);
-	compute_length(this);
-
+	proposals = linked_list_create();
+	proposals->insert_last(proposals, proposal);
+	this = (private_sa_payload_t*)sa_payload_create_from_proposals_v1(proposals,
+									lifetime, lifebytes, auth, mode, udp, cpi);
+	proposals->destroy(proposals);
 	return &this->public;
 }
