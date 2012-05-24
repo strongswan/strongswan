@@ -303,13 +303,11 @@ and
 .B no
 (the default). A value of
 .B yes
-causes IPsec to propose both compressed and uncompressed,
+causes the daemon to propose both compressed and uncompressed,
 and prefer compressed.
 A value of
 .B no
-prevents IPsec from proposing compression;
-a proposal to compress will still be accepted. IPComp is currently not supported
-with IKEv1.
+prevents the daemon from proposing or accepting compression.
 .TP
 .BR dpdaction " = " none " | clear | hold | restart"
 controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
