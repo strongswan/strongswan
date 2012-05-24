@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -76,6 +76,22 @@ struct hashtable_t {
 	 * @return			the value, NULL if not found
 	 */
 	void *(*get) (hashtable_t *this, void *key);
+
+	/**
+	 * Returns the value with a matching key, if the hash table contains such an
+	 * entry, otherwise NULL is returned.
+	 *
+	 * Compared to get() the given match function is used to compare the keys
+	 * for equality.  The hash function does have to be deviced properly in
+	 * order to make this work if the match function compares keys differently
+	 * than the equals function provided to the constructor.  This basically
+	 * allows to enumerate all entries with the same hash value.
+	 *
+	 * @param key		the key to match against
+	 * @param match		match function to be used when comparing keys
+	 * @return			the value, NULL if not found
+	 */
+	void *(*get_match) (hashtable_t *this, void *key, hashtable_equals_t match);
 
 	/**
 	 * Removes the value with the given key from the hash table and returns the

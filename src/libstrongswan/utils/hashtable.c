@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -251,8 +251,8 @@ METHOD(hashtable_t, put, void*,
 	return old_value;
 }
 
-METHOD(hashtable_t, get, void*,
-	   private_hashtable_t *this, void *key)
+static void *get_internal(private_hashtable_t *this, void *key,
+						  hashtable_equals_t equals)
 {
 	void *value = NULL;
 	pair_t *pair;
@@ -260,7 +260,7 @@ METHOD(hashtable_t, get, void*,
 	pair = this->table[this->hash(key) & this->mask];
 	while (pair)
 	{
-		if (this->equals(key, pair->key))
+		if (equals(key, pair->key))
 		{
 			value = pair->value;
 			break;
@@ -268,6 +268,18 @@ METHOD(hashtable_t, get, void*,
 		pair = pair->next;
 	}
 	return value;
+}
+
+METHOD(hashtable_t, get, void*,
+	   private_hashtable_t *this, void *key)
+{
+	return get_internal(this, key, this->equals);
+}
+
+METHOD(hashtable_t, get_match, void*,
+	   private_hashtable_t *this, void *key, hashtable_equals_t match)
+{
+	return get_internal(this, key, match);
 }
 
 METHOD(hashtable_t, remove_, void*,
@@ -409,6 +421,7 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 		.public = {
 			.put = _put,
 			.get = _get,
+			.get_match = _get_match,
 			.remove = _remove_,
 			.remove_at = (void*)_remove_at,
 			.get_count = _get_count,
