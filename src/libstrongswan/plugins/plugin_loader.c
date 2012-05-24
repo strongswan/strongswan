@@ -100,6 +100,14 @@ static void plugin_entry_destroy(plugin_entry_t *entry)
 }
 
 /**
+ * Compare function for hashtable of loaded features.
+ */
+static bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
+{
+	return a == b;
+}
+
+/**
  * create a plugin
  * returns: NOT_FOUND, if the constructor was not found
  *          FAILED, if the plugin could not be constructed
@@ -307,7 +315,8 @@ static bool dependencies_satisfied(private_plugin_loader_t *this,
 		{	/* end of dependencies */
 			break;
 		}
-		found = this->loaded_features->get(this->loaded_features, &features[i]);
+		found = this->loaded_features->get_match(this->loaded_features,
+					&features[i], (hashtable_equals_t)plugin_feature_matches);
 		if (!found && (features[i].kind != FEATURE_SDEPEND || soft))
 		{
 			if (report)
@@ -429,28 +438,6 @@ static int load_features(private_plugin_loader_t *this, bool soft, bool report)
 }
 
 /**
- * Since plugin_feature_t objectss are loosely matched we can't use remove() to
- * remove them from the hashtable.
- */
-static void unregister_loaded_feature(private_plugin_loader_t *this,
-									  plugin_feature_t *feature)
-{
-	plugin_feature_t *current;
-	enumerator_t *enumerator;
-
-	enumerator = this->loaded_features->create_enumerator(this->loaded_features);
-	while (enumerator->enumerate(enumerator, &current, NULL))
-	{
-		if (current == feature)
-		{
-			this->loaded_features->remove_at(this->loaded_features, enumerator);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-/**
  * Try to unload plugin features on which is not depended anymore
  */
 static int unload_features(private_plugin_loader_t *this, plugin_entry_t *entry)
@@ -468,7 +455,8 @@ static int unload_features(private_plugin_loader_t *this, plugin_entry_t *entry)
 					!dependency_required(this, feature) &&
 					plugin_feature_unload(entry->plugin, feature, reg))
 				{
-					unregister_loaded_feature(this, feature);
+					this->loaded_features->remove(this->loaded_features,
+												  feature);
 					entry->loaded->remove(entry->loaded, feature, NULL);
 					unloaded++;
 				}
@@ -703,7 +691,7 @@ plugin_loader_t *plugin_loader_create()
 		.plugins = linked_list_create(),
 		.loaded_features = hashtable_create(
 								(hashtable_hash_t)plugin_feature_hash,
-								(hashtable_equals_t)plugin_feature_matches, 64),
+								(hashtable_equals_t)plugin_feature_equals, 64),
 	);
 
 	return &this->public;
