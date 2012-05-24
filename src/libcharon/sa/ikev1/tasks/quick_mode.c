@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
@@ -79,6 +82,16 @@ struct private_quick_mode_t {
 	 * Responder ESP SPI
 	 */
 	u_int32_t spi_r;
+
+	/**
+	 * Initiators IPComp CPI
+	 */
+	u_int16_t cpi_i;
+
+	/**
+	 * Responders IPComp CPI
+	 */
+	u_int16_t cpi_r;
 
 	/**
 	 * selected CHILD_SA proposal
@@ -174,6 +187,16 @@ static bool install(private_quick_mode_t *this)
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 	this->child_sa->set_mode(this->child_sa, this->mode);
+
+	if (this->cpi_i && this->cpi_r)
+	{	/* DEFLATE is the only transform we currently support */
+		this->child_sa->set_ipcomp(this->child_sa, IPCOMP_DEFLATE);
+	}
+	else
+	{
+		this->cpi_i = this->cpi_r = 0;
+	}
+
 	this->child_sa->set_protocol(this->child_sa,
 								 this->proposal->get_protocol(this->proposal));
 
@@ -208,16 +231,16 @@ static bool install(private_quick_mode_t *this)
 		if (this->initiator)
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
-							this->spi_i, 0, TRUE, FALSE, tsi, tsr);
+							this->spi_i, this->cpi_i, TRUE, FALSE, tsi, tsr);
 			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->spi_r, 0, FALSE, FALSE, tsi, tsr);
+							this->spi_r, this->cpi_r, FALSE, FALSE, tsi, tsr);
 		}
 		else
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->spi_r, 0, TRUE, FALSE, tsr, tsi);
+							this->spi_r, this->cpi_r, TRUE, FALSE, tsr, tsi);
 			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
-							this->spi_i, 0, FALSE, FALSE, tsr, tsi);
+							this->spi_i, this->cpi_i, FALSE, FALSE, tsr, tsi);
 		}
 	}
 	chunk_clear(&integ_i);
@@ -624,16 +647,34 @@ METHOD(task_t, build_i, status_t,
 			diffie_hellman_group_t group;
 
 			this->udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+			this->mode = this->config->get_mode(this->config);
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp);
 
-			this->mode = this->config->get_mode(this->config);
 			if (this->udp && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
 				add_nat_oa_payloads(this, message);
+			}
+
+			if (this->config->use_ipcomp(this->config))
+			{
+				if (this->udp)
+				{
+					DBG1(DBG_IKE, "IPComp is not supported if either peer is "
+						 "natted, IPComp disabled");
+				}
+				else
+				{
+					this->cpi_i = this->child_sa->alloc_cpi(this->child_sa);
+					if (!this->cpi_i)
+					{
+						DBG1(DBG_IKE, "unable to allocate a CPI from kernel, "
+							 "IPComp disabled");
+					}
+				}
 			}
 
 			this->spi_i = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
@@ -654,7 +695,7 @@ METHOD(task_t, build_i, status_t,
 			get_lifetimes(this);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp, 0);
+								this->mode, this->udp, this->cpi_i);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -787,7 +828,7 @@ METHOD(task_t, process_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			linked_list_t *tsi, *tsr, *list;
+			linked_list_t *tsi, *tsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
 			host_t *me, *other;
 			u_int16_t group;
@@ -835,7 +876,25 @@ METHOD(task_t, process_r, status_t,
 				DBG1(DBG_IKE, "sa payload missing");
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
-			list = sa_payload->get_proposals(sa_payload);
+			if (this->config->use_ipcomp(this->config))
+			{
+				if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
+				{
+					DBG1(DBG_IKE, "IPComp is not supported if either peer is "
+						 "natted, IPComp disabled");
+				}
+				else
+				{
+					list = sa_payload->get_ipcomp_proposals(sa_payload,
+															&this->cpi_i);
+				}
+			}
+			if (!list || !list->get_count(list))
+			{
+				DESTROY_IF(list);
+				this->cpi_i = 0;
+				list = sa_payload->get_proposals(sa_payload);
+			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
 			this->proposal = this->config->select_proposal(this->config,
@@ -925,6 +984,17 @@ METHOD(task_t, build_r, status_t,
 			}
 			this->proposal->set_spi(this->proposal, this->spi_r);
 
+			if (this->cpi_i)
+			{
+				this->cpi_r = this->child_sa->alloc_cpi(this->child_sa);
+				if (!this->cpi_r)
+				{
+					DBG1(DBG_IKE, "unable to allocate a CPI from "
+						 "kernel, IPComp disabled");
+					return send_notify(this, NO_PROPOSAL_CHOSEN);
+				}
+			}
+
 			if (this->udp && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
@@ -933,7 +1003,7 @@ METHOD(task_t, build_r, status_t,
 
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp, 0);
+								this->mode, this->udp, this->cpi_r);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))
@@ -963,7 +1033,7 @@ METHOD(task_t, process_i, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			linked_list_t *list;
+			linked_list_t *list = NULL;
 			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
@@ -973,7 +1043,17 @@ METHOD(task_t, process_i, status_t,
 				DBG1(DBG_IKE, "sa payload missing");
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
-			list = sa_payload->get_proposals(sa_payload);
+			if (this->cpi_i)
+			{
+				list = sa_payload->get_ipcomp_proposals(sa_payload,
+														&this->cpi_r);
+			}
+			if (!list || !list->get_count(list))
+			{
+				DESTROY_IF(list);
+				this->cpi_i = 0;
+				list = sa_payload->get_proposals(sa_payload);
+			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
 			this->proposal = this->config->select_proposal(this->config,
