@@ -223,6 +223,11 @@ struct private_ike_sa_t {
 	u_int32_t retry_initiate_interval;
 
 	/**
+	 * TRUE if a retry_initiate_job has been queued
+	 */
+	bool retry_initiate_queued;
+
+	/**
 	 * Timestamps for this IKE_SA
 	 */
 	u_int32_t stats[STAT_MAX];
@@ -1162,12 +1167,28 @@ METHOD(ike_sa_t, initiate, status_t,
 
 	if (defer_initiate)
 	{
-		job_t *job = (job_t*)retry_initiate_job_create(this->ike_sa_id);
-		lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
-									 this->retry_initiate_interval);
+		if (!this->retry_initiate_queued)
+		{
+			job_t *job = (job_t*)retry_initiate_job_create(this->ike_sa_id);
+			lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
+										 this->retry_initiate_interval);
+			this->retry_initiate_queued = TRUE;
+		}
 		return SUCCESS;
 	}
+	this->retry_initiate_queued = FALSE;
 	return this->task_manager->initiate(this->task_manager);
+}
+
+METHOD(ike_sa_t, retry_initiate, status_t,
+	private_ike_sa_t *this)
+{
+	if (this->retry_initiate_queued)
+	{
+		this->retry_initiate_queued = FALSE;
+		return initiate(this, NULL, 0, NULL, NULL);
+	}
+	return SUCCESS;
 }
 
 METHOD(ike_sa_t, process_message, status_t,
@@ -2089,6 +2110,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.set_statistic = _set_statistic,
 			.process_message = _process_message,
 			.initiate = _initiate,
+			.retry_initiate = _retry_initiate,
 			.get_ike_cfg = _get_ike_cfg,
 			.set_ike_cfg = _set_ike_cfg,
 			.get_peer_cfg = _get_peer_cfg,

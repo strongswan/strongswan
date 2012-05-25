@@ -695,6 +695,15 @@ struct ike_sa_t {
 						  traffic_selector_t *tsr);
 
 	/**
+	 * Retry initiation of this IKE_SA after it got deferred previously.
+	 *
+	 * @return
+	 *						- SUCCESS if initiation deferred or started
+	 *						- DESTROY_ME if initiation failed
+	 */
+	status_t (*retry_initiate) (ike_sa_t *this);
+
+	/**
 	 * Initiates the deletion of an IKE_SA.
 	 *
 	 * Sends a delete message to the remote peer and waits for
