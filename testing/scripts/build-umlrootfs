@@ -372,6 +372,11 @@ then
     echo -n " --enable-xauth-generic" >> $INSTALLSHELL
 fi
 
+if [ "$USE_XAUTH_EAP" = "yes" ]
+then
+    echo -n " --enable-xauth-eap" >> $INSTALLSHELL
+fi
+
 if [ "$USE_PKCS8" = "yes" ]
 then
     echo -n " --enable-pkcs8" >> $INSTALLSHELL
