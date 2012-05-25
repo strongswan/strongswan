@@ -1519,7 +1519,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			u_int8_t proposal_number)
+			ipsec_mode_t mode, bool udp, u_int8_t proposal_number)
 {
 	private_proposal_substructure_t *this;
 	transform_substructure_t *transform;
@@ -1532,6 +1532,9 @@ proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 	transform = transform_substructure_create_type(TRANSFORM_SUBSTRUCTURE_V1,
 												   1, IKEV1_IPCOMP_DEFLATE);
 
+	transform->add_transform_attribute(transform,
+		transform_attribute_create_value(TRANSFORM_ATTRIBUTE_V1,
+							TATTR_PH2_ENCAP_MODE, get_ikev1_mode(mode, udp)));
 	if (lifetime)
 	{
 		transform->add_transform_attribute(transform,

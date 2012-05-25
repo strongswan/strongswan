@@ -205,14 +205,16 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  * Creates an IKEv1 proposal_substructure_t for IPComp with the given
  * proposal_number (e.g. of a ESP proposal to bundle them).
  *
- * @param lifetime	lifetime in seconds
- * @param lifebytes	lifebytes, in bytes
+ * @param lifetime			lifetime in seconds
+ * @param lifebytes			lifebytes, in bytes
  * @param cpi				the CPI to be used
+ * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
+ * @param udp				TRUE to use UDP encapsulation
  * @param proposal_number	the proposal number of the proposal to be linked
  * @return					IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			u_int8_t proposal_number);
+			ipsec_mode_t mode, bool udp, u_int8_t proposal_number);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

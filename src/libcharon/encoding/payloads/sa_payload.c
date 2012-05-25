@@ -571,7 +571,7 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 		u_int8_t proposal_number = substruct->get_proposal_number(substruct);
 
 		substruct = proposal_substructure_create_for_ipcomp_v1(lifetime,
-					lifebytes, cpi, proposal_number);
+					lifebytes, cpi, mode, udp, proposal_number);
 		this->proposals->insert_last(this->proposals, substruct);
 		substruct->set_is_last_proposal(substruct, FALSE);
 		/* add the proposals again without IPComp */
