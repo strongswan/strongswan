@@ -33,6 +33,7 @@
 #include <processing/jobs/send_dpd_job.h>
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/retry_initiate_job.h>
 #include <sa/ikev2/tasks/ike_auth_lifetime.h>
 
 #ifdef ME
@@ -214,6 +215,12 @@ struct private_ike_sa_t {
 	 * NAT keep alive interval
 	 */
 	u_int32_t keepalive_interval;
+
+	/**
+	 * interval for retries during initiation (e.g. if DNS resolution failed),
+	 * 0 to disable (default)
+	 */
+	u_int32_t retry_initiate_interval;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -1080,6 +1087,8 @@ METHOD(ike_sa_t, initiate, status_t,
 	private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid,
 	traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
+	bool defer_initiate = FALSE;
+
 	if (this->state == IKE_CREATED)
 	{
 		if (this->my_host->is_anyaddr(this->my_host) ||
@@ -1094,10 +1103,27 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			DESTROY_IF(child_cfg);
-			DBG1(DBG_IKE, "unable to initiate to %%any");
-			charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
-			return DESTROY_ME;
+			char *addr = this->ike_cfg->get_other_addr(this->ike_cfg);
+			bool is_anyaddr = streq(addr, "%any") || streq(addr, "%any6");
+
+			if (is_anyaddr || !this->retry_initiate_interval)
+			{
+				if (is_anyaddr)
+				{
+					DBG1(DBG_IKE, "unable to initiate to %s", addr);
+				}
+				else
+				{
+					DBG1(DBG_IKE, "unable to resolve %s, initiate aborted",
+						 addr);
+				}
+				DESTROY_IF(child_cfg);
+				charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
+				return DESTROY_ME;
+			}
+			DBG1(DBG_IKE, "unable to resolve %s, retrying in %ds",
+				 addr, this->retry_initiate_interval);
+			defer_initiate = TRUE;
 		}
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
@@ -1134,6 +1160,13 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 	}
 
+	if (defer_initiate)
+	{
+		job_t *job = (job_t*)retry_initiate_job_create(this->ike_sa_id);
+		lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
+									 this->retry_initiate_interval);
+		return SUCCESS;
+	}
 	return this->task_manager->initiate(this->task_manager);
 }
 
@@ -2150,6 +2183,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 							"%s.keep_alive", KEEPALIVE_INTERVAL, charon->name),
+		.retry_initiate_interval = lib->settings->get_time(lib->settings,
+							"%s.retry_initiate_interval", 0, charon->name),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
 							"%s.flush_auth_cfg", FALSE, charon->name),
 	);
