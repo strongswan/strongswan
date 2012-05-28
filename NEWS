@@ -16,6 +16,16 @@ strongswan-5.0.0
   reappear.
 
 
+strongswan-4.6.4
+----------------
+
+- Fixed a security vulnerability in the gmp plugin.  If this plugin was used
+  for RSA signature verification an empty or zeroed signature was handled as
+  a legitimate one.
+
+- Fixed several issues with reauthentication and address updates.
+
+
 strongswan-4.6.3
 ----------------
 
