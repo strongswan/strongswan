@@ -45,13 +45,21 @@ start() {
 	ip6tables -A INPUT  -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
 	ip6tables -A OUTPUT -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
 
-	# allow crl fetch from winnetou
-	iptables -A INPUT  -i eth0 -p tcp --sport 80 -s PH_IP_WINNETOU -j ACCEPT
-	iptables -A OUTPUT -o eth0 -p tcp --dport 80 -d PH_IP_WINNETOU -j ACCEPT
+	# allow crl and certficate fetch from winnetou
+	ip6tables -A INPUT  -i eth0 -p tcp --sport 80 -s PH_IP6_WINNETOU -j ACCEPT
+	ip6tables -A OUTPUT -o eth0 -p tcp --dport 80 -d PH_IP6_WINNETOU -j ACCEPT
+
+	# allow last IPv6 UDP fragments
+	ip6tables -A INPUT  -p udp -m frag --fraglast -j ACCEPT
+	ip6tables -A OUTPUT -p udp -m frag --fraglast -j ACCEPT
 
 	# allow ssh
 	iptables -A INPUT  -p tcp --dport 22 -j ACCEPT
 	iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
+
+	# log dropped packets
+	ip6tables -A INPUT  -j LOG --log-prefix " IN: "
+	ip6tables -A OUTPUT -j LOG --log-prefix " OUT: "
 
 	eend $?
 }

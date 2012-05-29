@@ -1,8 +1,13 @@
 moon::/etc/init.d/iptables start 2> /dev/null
 carol::/etc/init.d/iptables start 2> /dev/null
+dave::/etc/init.d/iptables start 2> /dev/null
 alice::"ip route add fec0:\:/16 via fec1:\:1"
 carol::"ip route add fec1:\:/16 via fec0:\:1"
-carol::ipsec start
+dave::"ip route add fec1:\:/16 via fec0:\:1"
 moon::ipsec start
-carol::sleep 2
+carol::ipsec start
+dave::ipsec start
+carol::sleep 1
 carol::ipsec up home
+dave::ipsec up home
+dave::sleep 2 

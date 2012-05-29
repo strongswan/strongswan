@@ -4,3 +4,4 @@ moon::ipsec start
 sun::ipsec start
 moon::sleep 2 
 moon::ipsec up host-host
+moon::sleep 1
