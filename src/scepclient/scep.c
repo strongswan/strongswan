@@ -177,7 +177,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	memcpy(pos, digest.ptr, digest.len);
 
 	/* the transaction id is the serial number in hex format */
-	*transID = chunk_to_hex(digest, NULL, FALSE);
+	*transID = chunk_to_hex(digest, NULL, TRUE);
 }
 
 /**
