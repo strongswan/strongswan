@@ -344,6 +344,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+										 FETCH_HTTP_VERSION_1_0,
 										 FETCH_REQUEST_DATA, pkcs7,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
@@ -361,6 +362,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 				 url, operation);
 
 		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+									 FETCH_HTTP_VERSION_1_0,
 									 FETCH_END);
 	}
 
