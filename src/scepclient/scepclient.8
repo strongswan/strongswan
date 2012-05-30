@@ -145,14 +145,24 @@ If \fIpw\fP is \fB%prompt\fP', the password gets prompted for on the command lin
 \- In manual mode, this password can be used to later revoke the corresponding certificate.
 .RE
 .PP
-.B \-a, \-\-algorithm \fIalgo\fP
+.B \-a, \-\-algorithm [\fItype\fP=]\fIalgo\fP
 .RS 4
-Change symmetric algorithm to use for encryption of certificate Request.
-The default is \fB3des\-cbc\fP.
+Change the algorithms to be used when generating and transporting (PKCS#7)
+certificate requests (PKCS#10).
 .PP
-Supported values for \fIalgo\fP:
+Supported values for \fItype\fP:
+.IP "\fBenc\fP" 12
+symmetric encryption algorithm in PKCS#7
+.IP "\fBdgst\fP" 12
+hash algorithm for message digest in PKCS#7
+.IP "\fBsig\fP" 12
+hash algorithm for the signature in PKCS#10
+.PP
+If \fItype\fP is not specified \fBenc\fP is assumed.
+.PP
+Supported values for \fIalgo\fP (\fBenc\fP):
 .IP "\fBdes\fP" 12
-DES-CBC encryption (key size = 56 bit).
+DES-CBC encryption (key size = 56 bit). Default.
 .IP "\fB3des\fP" 12
 Triple DES-EDE-CBC encryption (key size = 168 bit).
 .IP "\fBaes128\fP" 12
@@ -167,6 +177,10 @@ Camellia-CBC encryption (key size = 128 bit).
 Camelllia-CBC encryption (key size = 192 bit).
 .IP "\fBcamellia256\fP" 12
 Camellia-CBC encryption (key size = 256 bit).
+.PP
+Supported values for \fIalgo\fP (\fBdgst\fP or \fBsig\fP):
+.PP
+\fBmd5\fP (default), \fBsha1\fP, \fBsha256\fP, \fBsha384\fP, \fBsha512\fP
 .RE
 .PP
 .B \-o, \-\-out \fItype\fP[=\fIfilename\fP]

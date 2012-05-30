@@ -317,13 +317,14 @@ static void usage(const char *message)
 		" --version (-v)                    show version and exit\n"
 		" --quiet (-q)                      do not write log output to stderr\n"
 		" --in (-i) <type>[=<filename>]     use <filename> of <type> for input \n"
-		"                                   <type> = pkcs1 | cacert-enc |  cacert-sig\n"
+		"                                   <type> = pkcs1 | cacert-enc | cacert-sig\n"
 		"                                   - if no pkcs1 input is defined, a \n"
 		"                                     RSA key will be generated\n"
 		"                                   - if no filename is given, default is used\n"
 		" --out (-o) <type>[=<filename>]    write output of <type> to <filename>\n"
 		"                                   multiple outputs are allowed\n"
-		"                                   <type> = pkcs1 | pkcs10 | pkcs7 | cert-self | cert | cacert\n"
+		"                                   <type> = pkcs1 | pkcs10 | pkcs7 | cert-self |\n"
+		"                                            cert | cacert\n"
 		"                                   - type cacert defines filename prefix of\n"
 		"                                     received CA certificate(s)\n"
 		"                                   - if no filename is given, default is used\n"
@@ -344,15 +345,21 @@ static void usage(const char *message)
 		" --subjectAltName (-s) <t>=<v>     include subjectAltName in certificate request\n"
 		"                                   <t> =  email | dns | ip \n"
 		" --password (-p) <pw>              challenge password\n"
-		"                                   - if pw is '%%prompt', password gets prompted for\n"
-		" --algorithm (-a) <algo>           use specified algorithm for PKCS#7 encryption\n"
-		"                                   <algo> = des | 3des (default) | aes128| aes192 | \n"
-		"                                   aes256 | camellia128 | camellia192 | camellia256\n"
+		"                                   - use '%%prompt' as pw for a password prompt\n"
+		" --algorithm (-a) [<type>=]<algo>  algorithm to be used for PKCS#7 encryption,\n"
+		"                                   PKCS#7 digest or PKCS#10 signature\n"
+		"                                   <type> = enc | dgst | sig\n"
+		"                                   - if no type is given enc is assumed\n"
+		"                                   <algo> = des (default) | 3des | aes128 |\n"
+		"                                            aes192 | aes256 | camellia128 |\n"
+		"                                            camellia192 | camellia256\n"
+		"                                   <algo> = md5 (default) | sha1 | sha256 |\n"
+		"                                            sha384 | sha512\n"
 		"\n"
 		"Options for enrollment (cert):\n"
 		" --url (-u) <url>                  url of the SCEP server\n"
 		" --method (-m) post | get          http request type\n"
-		" --interval (-t) <seconds>         manual mode poll interval in seconds (default 20s)\n"
+		" --interval (-t) <seconds>         poll interval in seconds (default 20s)\n"
 		" --maxpolltime (-x) <seconds>      max poll time in seconds when in manual mode\n"
 		"                                   (default: unlimited)\n"
 		"\n"
@@ -424,15 +431,15 @@ int main(int argc, char **argv)
 	/* challenge password */
 	char challenge_password_buffer[MAX_PASSWORD_LENGTH];
 
-	/* symmetric encryption algorithm used by pkcs7, default is 3DES */
-	encryption_algorithm_t pkcs7_symmetric_cipher = ENCR_3DES;
+	/* symmetric encryption algorithm used by pkcs7, default is DES */
+	encryption_algorithm_t pkcs7_symmetric_cipher = ENCR_DES;
 	size_t pkcs7_key_size = 0;
 
-	/* digest algorithm used by pkcs7, default is SHA-1 */
-	hash_algorithm_t pkcs7_digest_alg = HASH_SHA1;
+	/* digest algorithm used by pkcs7, default is MD5 */
+	hash_algorithm_t pkcs7_digest_alg = HASH_MD5;
 
-	/* signature algorithm used by pkcs10, default is SHA-1 */
-	hash_algorithm_t pkcs10_signature_alg = HASH_SHA1;
+	/* signature algorithm used by pkcs10, default is MD5 */
+	hash_algorithm_t pkcs10_signature_alg = HASH_MD5;
 
 	/* URL of the SCEP-Server */
 	char *scep_url = NULL;
@@ -783,21 +790,65 @@ int main(int argc, char **argv)
 				max_poll_time = atoi(optarg);
 				continue;
 
-			case 'a':       /*--algorithm */
+			case 'a':       /*--algorithm [<type>=]algo */
 			{
 				const proposal_token_t *token;
+				char *type = optarg;
+				char *algo = strstr(optarg, "=");
 
-				token = proposal_get_token(optarg, strlen(optarg));
-				if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
+				if (algo)
 				{
-					usage("invalid algorithm specified");
+					*algo = '\0';
+					algo++;
 				}
-				pkcs7_symmetric_cipher = token->algorithm;
-				pkcs7_key_size = token->keysize;
-				if (encryption_algorithm_to_oid(token->algorithm,
-												token->keysize) == OID_UNKNOWN)
+				else
 				{
-					usage("unsupported encryption algorithm specified");
+					type = "enc";
+					algo = optarg;
+				}
+
+				if (strcaseeq("enc", type))
+				{
+					token = proposal_get_token(algo, strlen(algo));
+					if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
+					{
+						usage("invalid algorithm specified");
+					}
+					pkcs7_symmetric_cipher = token->algorithm;
+					pkcs7_key_size = token->keysize;
+					if (encryption_algorithm_to_oid(token->algorithm,
+								token->keysize) == OID_UNKNOWN)
+					{
+						usage("unsupported encryption algorithm specified");
+					}
+				}
+				else if (strcaseeq("dgst", type) ||
+						 strcaseeq("sig", type))
+				{
+					hash_algorithm_t hash;
+
+					token = proposal_get_token(algo, strlen(algo));
+					if (token == NULL || token->type != INTEGRITY_ALGORITHM)
+					{
+						usage("invalid algorithm specified");
+					}
+					hash = hasher_algorithm_from_integrity(token->algorithm);
+					if (hash == OID_UNKNOWN)
+					{
+						usage("invalid algorithm specified");
+					}
+					if (strcaseeq("dgst", type))
+					{
+						pkcs7_digest_alg = hash;
+					}
+					else
+					{
+						pkcs10_signature_alg = hash;
+					}
+				}
+				else
+				{
+					usage("invalid --algorithm type");
 				}
 				continue;
 			}
