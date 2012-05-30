@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
- *
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -63,6 +63,43 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		default:
 			return HASH_UNKNOWN;
 	}
+}
+
+/*
+ * Described in header.
+ */
+hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t integrity)
+{
+	switch (integrity)
+	{
+		case AUTH_HMAC_MD5_96:
+		case AUTH_HMAC_MD5_128:
+		case AUTH_KPDK_MD5:
+			return HASH_MD5;
+		case AUTH_HMAC_SHA1_96:
+		case AUTH_HMAC_SHA1_128:
+		case AUTH_HMAC_SHA1_160:
+			return HASH_SHA1;
+		case AUTH_HMAC_SHA2_256_96:
+		case AUTH_HMAC_SHA2_256_128:
+		case AUTH_HMAC_SHA2_256_256:
+			return HASH_SHA256;
+		case AUTH_HMAC_SHA2_384_192:
+		case AUTH_HMAC_SHA2_384_384:
+			return HASH_SHA384;
+		case AUTH_HMAC_SHA2_512_256:
+			return HASH_SHA512;
+		case AUTH_AES_CMAC_96:
+		case AUTH_AES_128_GMAC:
+		case AUTH_AES_192_GMAC:
+		case AUTH_AES_256_GMAC:
+		case AUTH_AES_XCBC_96:
+		case AUTH_DES_MAC:
+		case AUTH_CAMELLIA_XCBC_96:
+		case AUTH_UNDEFINED:
+			break;
+	}
+	return HASH_UNKNOWN;
 }
 
 /*

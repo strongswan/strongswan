@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
- *
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
 #include <library.h>
+#include <crypto/signers/signer.h>
 #include <credentials/keys/public_key.h>
 
 /**
@@ -117,6 +118,14 @@ struct hasher_t {
  * @return				hash algorithm, HASH_UNKNOWN if OID unsuported
  */
 hash_algorithm_t hasher_algorithm_from_oid(int oid);
+
+/**
+ * Conversion of integrity algorithm to hash algorithm (if based on one).
+ *
+ * @param integrity		integrity algorithm
+ * @return				hash algorithm, HASH_UNKNOWN if not based on a hash
+ */
+hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t integrity);
 
 /**
  * Conversion of hash algorithm into ASN.1 OID.
