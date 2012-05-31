@@ -27,7 +27,7 @@ AM_CFLAGS = \
 
 AM_YFLAGS = -v -d
 
-starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libhydra/libhydra.la $(SOCKLIB)
+starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libhydra/libhydra.la $(SOCKLIB) $(PTHREADLIB)
 EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = parser.h

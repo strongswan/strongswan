@@ -26,10 +26,13 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
+#include <pthread.h>
 
 #include <freeswan.h>
 #include <library.h>
 #include <hydra.h>
+#include <utils/backtrace.h>
+#include <threading/thread.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -73,7 +76,10 @@
 
 static unsigned int _action_ = 0;
 
-static void fsig(int signal)
+/**
+ * Handle signals in the main thread
+ */
+static void signal_handler(int signal)
 {
 	switch (signal)
 	{
@@ -137,10 +143,6 @@ static void fsig(int signal)
 		}
 		break;
 
-		case SIGPIPE:
-			/** ignore **/
-			break;
-
 		case SIGALRM:
 			_action_ |= FLAG_ACTION_START_PLUTO;
 			_action_ |= FLAG_ACTION_START_CHARON;
@@ -165,6 +167,22 @@ static void fsig(int signal)
 			plog("fsig(): unknown signal %d -- investigate", signal);
 			break;
 	}
+}
+
+/**
+ * Handle fatal signals raised by threads
+ */
+static void fatal_signal_handler(int signal)
+{
+	backtrace_t *backtrace;
+
+	plog("thread %u received %d", thread_current_id(), signal);
+	backtrace = backtrace_create(2);
+	backtrace->log(backtrace, stderr, TRUE);
+	backtrace->destroy(backtrace);
+
+	plog("killing ourself, received critical signal");
+	abort();
 }
 
 #ifdef GENERATE_SELFCERT
@@ -269,6 +287,7 @@ int main (int argc, char **argv)
 	starter_conn_t *conn, *conn2;
 	starter_ca_t *ca, *ca2;
 
+	struct sigaction action;
 	struct stat stb;
 
 	int i;
@@ -329,15 +348,6 @@ int main (int argc, char **argv)
 	/* Init */
 	init_log("ipsec_starter");
 	cur_debugging = base_debugging;
-
-	signal(SIGHUP,  fsig);
-	signal(SIGCHLD, fsig);
-	signal(SIGPIPE, fsig);
-	signal(SIGINT,  fsig);
-	signal(SIGTERM, fsig);
-	signal(SIGQUIT, fsig);
-	signal(SIGALRM, fsig);
-	signal(SIGUSR1, fsig);
 
 	plog("Starting strongSwan "VERSION" IPsec [starter]...");
 
@@ -480,10 +490,42 @@ int main (int argc, char **argv)
 	{
 		exit(LSB_RC_FAILURE);
 	}
+
+	/* we handle these signals in the main thread, so we don't want any
+	 * of the others to catch them. install a handler for fatal signals. */
+	memset(&action, 0, sizeof(action));
+	sigemptyset(&action.sa_mask);
+	sigaddset(&action.sa_mask, SIGHUP);
+	sigaddset(&action.sa_mask, SIGINT);
+	sigaddset(&action.sa_mask, SIGTERM);
+	sigaddset(&action.sa_mask, SIGQUIT);
+	sigaddset(&action.sa_mask, SIGALRM);
+	sigaddset(&action.sa_mask, SIGCHLD);
+	sigaddset(&action.sa_mask, SIGUSR1);
+	pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
+
+	action.sa_handler = fatal_signal_handler;
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
+	action.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &action, NULL);
+
 	/* we need threads to read events from the kernel */
 	lib->processor->set_threads(lib->processor,
 			lib->settings->get_int(lib->settings, "starter.threads",
 								   DEFAULT_THREADS));
+
+	/* enable signals for main thread and install signal handler */
+	pthread_sigmask(SIG_UNBLOCK, &action.sa_mask, NULL);
+	action.sa_handler = signal_handler;
+	sigaction(SIGHUP, &action, NULL);
+	sigaction(SIGINT, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
+	sigaction(SIGQUIT, &action, NULL);
+	sigaction(SIGALRM, &action, NULL);
+	sigaction(SIGCHLD, &action, NULL);
+	sigaction(SIGUSR1, &action, NULL);
 
 	for (;;)
 	{
