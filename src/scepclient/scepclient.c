@@ -316,11 +316,13 @@ static void usage(const char *message)
 		" --help (-h)                       show usage and exit\n"
 		" --version (-v)                    show version and exit\n"
 		" --quiet (-q)                      do not write log output to stderr\n"
-		" --in (-i) <type>[=<filename>]     use <filename> of <type> for input \n"
-		"                                   <type> = pkcs1 | cacert-enc | cacert-sig |\n"
-		"                                            cert-self\n"
+		" --in (-i) <type>[=<filename>]     use <filename> of <type> for input\n"
+		"                                   <type> = pkcs1 | pkcs10 | cert-self\n"
+		"                                            cacert-enc | cacert-sig\n"
 		"                                   - if no pkcs1 input is defined, an RSA\n"
 		"                                     key will be generated\n"
+		"                                   - if no pkcs10 input is defined, a\n"
+		"                                     PKCS#10 request will be generated\n"
 		"                                   - if no cert-self input is defined, a\n"
 		"                                     self-signed certificate will be generated\n"
 		"                                   - if no filename is given, default is used\n"
@@ -403,6 +405,7 @@ int main(int argc, char **argv)
 
 	/* input files */
 	char *file_in_pkcs1      = DEFAULT_FILENAME_PKCS1;
+	char *file_in_pkcs10     = DEFAULT_FILENAME_PKCS10;
 	char *file_in_cert_self  = DEFAULT_FILENAME_CERT_SELF;
 	char *file_in_cacert_enc = DEFAULT_FILENAME_CACERT_ENC;
 	char *file_in_cacert_sig = DEFAULT_FILENAME_CACERT_SIG;
@@ -553,6 +556,12 @@ int main(int argc, char **argv)
 					filetype_in |= PKCS1;
 					if (filename)
 						file_in_pkcs1 = filename;
+				}
+				else if (strcaseeq("pkcs10", optarg))
+				{
+					filetype_in |= PKCS10;
+					if (filename)
+						file_in_pkcs10 = filename;
 				}
 				else if (strcaseeq("cacert-enc", optarg))
 				{
@@ -1024,13 +1033,19 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_in & PKCS10)
 	{
-		/* user wants to load a pkcs10 request
-		 * operation is not yet supported
-		 * would require a PKCS#10 parsing function
+		char path[PATH_MAX];
 
-		pkcs10 = pkcs10_read_from_file(file_in_pkcs10);
+		join_paths(path, sizeof(path), REQ_PATH, file_in_pkcs10);
 
-		 */
+		pkcs10_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_PKCS10_REQUEST, BUILD_FROM_FILE,
+										path, BUILD_END);
+		if (!pkcs10_req)
+		{
+			exit_scepclient("could not read certificate request '%s'", path);
+		}
+		subject = pkcs10_req->get_subject(pkcs10_req);
+		subject = subject->clone(subject);
 	}
 	else
 	{
@@ -1068,10 +1083,10 @@ int main(int argc, char **argv)
 		{
 			exit_scepclient("generating pkcs10 request failed");
 		}
-		pkcs10_req->get_encoding(pkcs10_req, CERT_ASN1_DER, &pkcs10_encoding);
-		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10_encoding);
-		DBG1(DBG_APP, "  fingerprint:    %s", fingerprint.ptr);
 	}
+	pkcs10_req->get_encoding(pkcs10_req, CERT_ASN1_DER, &pkcs10_encoding);
+	fingerprint = scep_generate_pkcs10_fingerprint(pkcs10_encoding);
+	DBG1(DBG_APP, "  fingerprint:    %s", fingerprint.ptr);
 
 	/*
 	 * output of PKCS#10 file

@@ -80,6 +80,10 @@ Supported values for \fItype\fP:
 RSA private key in PKCS#1 file format. If no input of this type is specified, a RSA key gets generated.
 .br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/private/myKey.der.
+.IP "\fBpkcs10\fP" 12
+PKCS#10 certificate request to be used in the SCEP request. If no input of this type is specified, a request is generated.
+.br
+The default \fIfilename\fP is $CONFDIR/ipsec.d/req/myReq.der.
 .IP "\fBcacert\-enc\fP" 12
 CA certificate to encrypt the SCEP request. Has to be specified for certificate enrollment.
 .br
