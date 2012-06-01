@@ -73,7 +73,7 @@ The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 .B \-i, \-\-in \fItype\fP[=\fIfilename\fP]
 .RS 4
 Input file for certificate enrollment. This option can be specified multiple times to specify input files for every \fItype\fP.
-Input files can bei either DER or PEM encoded.
+Input files can be either DER or PEM encoded.
 .PP
 Supported values for \fItype\fP:
 .IP "\fBpkcs1\fP" 12
@@ -88,6 +88,11 @@ The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
 CA certificate to check signature of SCEP reply. Has to be specified for certificate enrollment.
 .br
 The default \fIfilename\fP is $CONFDIR/ipsec.d/cacerts/caCert.der.
+.IP "\fBcert-self\fP" 12
+Certificate to be used in the SCEP request.  If it is not specified a
+self-signed certificate is generated automatically.
+.br
+The default \fIfilename\fP is $CONFDIR/ipsec.d/certs/selfCert.der.
 .RE
 .PP
 .B \-k, \-\-keylength \fIbits\fP

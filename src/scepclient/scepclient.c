@@ -317,9 +317,12 @@ static void usage(const char *message)
 		" --version (-v)                    show version and exit\n"
 		" --quiet (-q)                      do not write log output to stderr\n"
 		" --in (-i) <type>[=<filename>]     use <filename> of <type> for input \n"
-		"                                   <type> = pkcs1 | cacert-enc | cacert-sig\n"
-		"                                   - if no pkcs1 input is defined, a \n"
-		"                                     RSA key will be generated\n"
+		"                                   <type> = pkcs1 | cacert-enc | cacert-sig |\n"
+		"                                            cert-self\n"
+		"                                   - if no pkcs1 input is defined, an RSA\n"
+		"                                     key will be generated\n"
+		"                                   - if no cert-self input is defined, a\n"
+		"                                     self-signed certificate will be generated\n"
 		"                                   - if no filename is given, default is used\n"
 		" --out (-o) <type>[=<filename>]    write output of <type> to <filename>\n"
 		"                                   multiple outputs are allowed\n"
@@ -389,7 +392,7 @@ int main(int argc, char **argv)
 		CERT_SELF  =  0x08,
 		CERT       =  0x10,
 		CACERT_ENC =  0x20,
-		CACERT_SIG =  0x40
+		CACERT_SIG =  0x40,
 	} scep_filetype_t;
 
 	/* filetype to read from, defaults to "generate a key" */
@@ -400,6 +403,7 @@ int main(int argc, char **argv)
 
 	/* input files */
 	char *file_in_pkcs1      = DEFAULT_FILENAME_PKCS1;
+	char *file_in_cert_self  = DEFAULT_FILENAME_CERT_SELF;
 	char *file_in_cacert_enc = DEFAULT_FILENAME_CACERT_ENC;
 	char *file_in_cacert_sig = DEFAULT_FILENAME_CACERT_SIG;
 
@@ -560,7 +564,13 @@ int main(int argc, char **argv)
 				{
 					filetype_in |= CACERT_SIG;
 					if (filename)
-						 file_in_cacert_sig = filename;
+						file_in_cacert_sig = filename;
+				}
+				else if (strcaseeq("cert-self", optarg))
+				{
+					filetype_in |= CERT_SELF;
+					if (filename)
+						file_in_cert_self = filename;
 				}
 				else
 				{
@@ -1110,22 +1120,39 @@ int main(int argc, char **argv)
 	scep_generate_transaction_id(public_key, &transID, &serialNumber);
 	DBG1(DBG_APP, "  transaction ID: %.*s", (int)transID.len, transID.ptr);
 
-	notBefore = notBefore ? notBefore : time(NULL);
-	notAfter  = notAfter  ? notAfter  : (notBefore + validity);
-
-	/* generate a self-signed X.509 certificate */
-	x509_signer = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									 BUILD_SIGNING_KEY, private_key,
-									 BUILD_PUBLIC_KEY, public_key,
-									 BUILD_SUBJECT, subject,
-									 BUILD_NOT_BEFORE_TIME, notBefore,
-									 BUILD_NOT_AFTER_TIME, notAfter,
-									 BUILD_SERIAL, serialNumber,
-									 BUILD_SUBJECT_ALTNAMES, subjectAltNames,
-									 BUILD_END);
-	if (!x509_signer)
+	/*
+	 * read or generate self-signed X.509 certificate
+	 */
+	if (filetype_in & CERT_SELF)
 	{
-		exit_scepclient("generating certificate failed");
+		char path[PATH_MAX];
+
+		join_paths(path, sizeof(path), HOST_CERT_PATH, file_in_cert_self);
+
+		x509_signer = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										 BUILD_FROM_FILE, path, BUILD_END);
+		if (!x509_signer)
+		{
+			exit_scepclient("could not read certificate file '%s'", path);
+		}
+	}
+	else
+	{
+		notBefore = notBefore ? notBefore : time(NULL);
+		notAfter  = notAfter  ? notAfter  : (notBefore + validity);
+		x509_signer = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										 BUILD_SIGNING_KEY, private_key,
+										 BUILD_PUBLIC_KEY, public_key,
+										 BUILD_SUBJECT, subject,
+										 BUILD_NOT_BEFORE_TIME, notBefore,
+										 BUILD_NOT_AFTER_TIME, notAfter,
+										 BUILD_SERIAL, serialNumber,
+										 BUILD_SUBJECT_ALTNAMES, subjectAltNames,
+										 BUILD_END);
+		if (!x509_signer)
+		{
+			exit_scepclient("generating certificate failed");
+		}
 	}
 
 	/*
