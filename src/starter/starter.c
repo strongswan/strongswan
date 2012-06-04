@@ -450,6 +450,7 @@ int main (int argc, char **argv)
 			{
 				int fnull;
 
+				close_log();
 				closefrom(3);
 
 				fnull = open("/dev/null", O_RDWR);
@@ -462,6 +463,7 @@ int main (int argc, char **argv)
 				}
 
 				setsid();
+				init_log("ipsec_starter");
 			}
 			break;
 			case -1:
