@@ -124,6 +124,11 @@ struct private_child_sa_t {
 	child_sa_state_t state;
 
 	/**
+	 * TRUE if this CHILD_SA is used to install trap policies
+	 */
+	bool trap;
+
+	/**
 	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
 	bool encap;
@@ -767,8 +772,11 @@ METHOD(child_sa_t, add_policies, status_t,
 			other_sa.ah.spi = this->other_spi;
 		}
 
-		priority = this->state == CHILD_CREATED ? POLICY_PRIORITY_ROUTED
-												: POLICY_PRIORITY_DEFAULT;
+		/* if we're not in state CHILD_INSTALLING (i.e. if there is no SAD
+		 * entry) we install a trap policy */
+		this->trap = this->state == CHILD_CREATED;
+		priority = this->trap ? POLICY_PRIORITY_ROUTED
+							  : POLICY_PRIORITY_DEFAULT;
 
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
@@ -797,8 +805,8 @@ METHOD(child_sa_t, add_policies, status_t,
 		enumerator->destroy(enumerator);
 	}
 
-	if (status == SUCCESS && this->state == CHILD_CREATED)
-	{	/* switch to routed state if no SAD entry set up */
+	if (status == SUCCESS && this->trap)
+	{
 		set_state(this, CHILD_ROUTED);
 	}
 	return status;
@@ -970,8 +978,7 @@ METHOD(child_sa_t, destroy, void,
 	traffic_selector_t *my_ts, *other_ts;
 	policy_priority_t priority;
 
-	priority = this->state == CHILD_ROUTED ? POLICY_PRIORITY_ROUTED
-										   : POLICY_PRIORITY_DEFAULT;
+	priority = this->trap ? POLICY_PRIORITY_ROUTED : POLICY_PRIORITY_DEFAULT;
 
 	set_state(this, CHILD_DESTROYING);
 
