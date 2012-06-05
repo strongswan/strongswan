@@ -717,8 +717,14 @@ METHOD(task_t, build_i, status_t,
 				}
 				add_ke(this, message);
 			}
-			this->tsi = select_ts(this, TRUE, NULL);
-			this->tsr = select_ts(this, FALSE, NULL);
+			if (!this->tsi)
+			{
+				this->tsi = select_ts(this, TRUE, NULL);
+			}
+			if (!this->tsr)
+			{
+				this->tsr = select_ts(this, FALSE, NULL);
+			}
 			tsi = linked_list_create();
 			tsr = linked_list_create();
 			tsi->insert_last(tsi, this->tsi);
@@ -1186,6 +1192,8 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 		.config = config,
 		.keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa),
 		.state = QM_INIT,
+		.tsi = tsi ? tsi->clone(tsi) : NULL,
+		.tsr = tsr ? tsr->clone(tsr) : NULL,
 	);
 
 	if (config)
