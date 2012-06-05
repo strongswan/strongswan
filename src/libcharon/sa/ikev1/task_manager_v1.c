@@ -1394,6 +1394,22 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 	return redundant;
 }
 
+/**
+ * Get the first traffic selector of a CHILD_SA, local or remote
+ */
+static traffic_selector_t* get_first_ts(child_sa_t *child_sa, bool local)
+{
+	traffic_selector_t *ts = NULL;
+	linked_list_t *list;
+
+	list = child_sa->get_traffic_selectors(child_sa, local);
+	if (list->get_first(list, (void**)&ts) == SUCCESS)
+	{
+		return ts;
+	}
+	return NULL;
+}
+
 METHOD(task_manager_t, queue_child_rekey, void,
 	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
 {
@@ -1417,7 +1433,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 		{
 			child_sa->set_state(child_sa, CHILD_REKEYING);
 			cfg = child_sa->get_config(child_sa);
-			task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg), NULL, NULL);
+			task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg),
+				get_first_ts(child_sa, TRUE), get_first_ts(child_sa, FALSE));
 			task->use_reqid(task, child_sa->get_reqid(child_sa));
 			task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
