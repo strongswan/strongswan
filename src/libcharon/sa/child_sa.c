@@ -632,7 +632,14 @@ METHOD(child_sa_t, install, status_t,
 	now = time_monotonic(NULL);
 	if (lifetime->time.rekey)
 	{
-		this->rekey_time = now + lifetime->time.rekey;
+		if (this->rekey_time)
+		{
+			this->rekey_time = min(this->rekey_time, now + lifetime->time.rekey);
+		}
+		else
+		{
+			this->rekey_time = now + lifetime->time.rekey;
+		}
 	}
 	if (lifetime->time.life)
 	{
