@@ -1366,6 +1366,34 @@ METHOD(task_manager_t, queue_child, void,
 	queue_task(this, &task->task);
 }
 
+/**
+ * Check if a CHILD_SA is redundant and we should delete instead of rekey
+ */
+static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
+{
+	enumerator_t *enumerator;
+	child_sa_t *current;
+	bool redundant = FALSE;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->get_state(current) == CHILD_INSTALLED &&
+			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
+			current->get_lifetime(current, FALSE) >
+				child_sa->get_lifetime(child_sa, FALSE))
+		{
+			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
+				 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+			redundant = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return redundant;
+}
+
 METHOD(task_manager_t, queue_child_rekey, void,
 	private_task_manager_t *this, protocol_id_t protocol, u_int32_t spi)
 {
@@ -1380,13 +1408,21 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	}
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		child_sa->set_state(child_sa, CHILD_REKEYING);
-		cfg = child_sa->get_config(child_sa);
-		task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg), NULL, NULL);
-		task->use_reqid(task, child_sa->get_reqid(child_sa));
-		task->rekey(task, child_sa->get_spi(child_sa, TRUE));
+		if (is_redundant(this, child_sa))
+		{
+			queue_task(this, (task_t*)quick_delete_create(this->ike_sa,
+												protocol, spi, FALSE, FALSE));
+		}
+		else
+		{
+			child_sa->set_state(child_sa, CHILD_REKEYING);
+			cfg = child_sa->get_config(child_sa);
+			task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg), NULL, NULL);
+			task->use_reqid(task, child_sa->get_reqid(child_sa));
+			task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
-		queue_task(this, &task->task);
+			queue_task(this, &task->task);
+		}
 	}
 }
 
