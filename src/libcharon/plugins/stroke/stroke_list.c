@@ -192,6 +192,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	proposal_t *proposal;
 	child_cfg_t *config = child_sa->get_config(child_sa);
 
+	now = time_monotonic(NULL);
 
 	fprintf(out, "%12s{%d}:  %N, %N%s",
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
@@ -255,7 +256,6 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				}
 			}
 
-			now = time_monotonic(NULL);
 			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
 			fprintf(out, ", %" PRIu64 " bytes_i", bytes_in);
 			if (use_in)
@@ -289,6 +289,11 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			}
 
 		}
+	}
+	else if (child_sa->get_state(child_sa) == CHILD_REKEYING)
+	{
+		rekey = child_sa->get_lifetime(child_sa, TRUE);
+		fprintf(out, ", expires in %V", &now, &rekey);
 	}
 
 	fprintf(out, "\n%12s{%d}:   %#R=== %#R\n",
