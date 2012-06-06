@@ -935,7 +935,7 @@ METHOD(task_t, build_r, status_t,
 	}
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && this->tsi && this->tsr)
+	if (!this->config && peer_cfg && this->tsi && this->tsr)
 	{
 		host_t *me, *other;
 
@@ -1196,6 +1196,13 @@ METHOD(child_create_t, get_child, child_sa_t*,
 	return this->child_sa;
 }
 
+METHOD(child_create_t, set_config, void,
+	private_child_create_t *this, child_cfg_t *cfg)
+{
+	DESTROY_IF(this->config);
+	this->config = cfg;
+}
+
 METHOD(child_create_t, get_lower_nonce, chunk_t,
 	private_child_create_t *this)
 {
@@ -1295,6 +1302,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 	INIT(this,
 		.public = {
 			.get_child = _get_child,
+			.set_config = _set_config,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.task = {

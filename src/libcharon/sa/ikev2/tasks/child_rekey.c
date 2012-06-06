@@ -187,6 +187,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
+	child_cfg_t *config;
 	u_int32_t reqid;
 
 	if (this->child_sa == NULL ||
@@ -200,6 +201,8 @@ METHOD(task_t, build_r, status_t,
 	/* let the CHILD_CREATE task build the response */
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
+	config = this->child_sa->get_config(this->child_sa);
+	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
 
 	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)

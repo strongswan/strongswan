@@ -64,6 +64,13 @@ struct child_create_t {
 	 * @return			child_sa
 	 */
 	child_sa_t* (*get_child) (child_create_t *this);
+
+	/**
+	 * Enforce a specific CHILD_SA config as responder.
+	 *
+	 * @param cfg		configuration to enforce, reference gets owned
+	 */
+	void (*set_config)(child_create_t *this, child_cfg_t *cfg);
 };
 
 /**
