@@ -12,6 +12,7 @@
  * for more details.
  */
 
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -292,7 +293,7 @@ int main (int argc, char **argv)
 
 	int i;
 	int id = 1;
-	struct timeval tv;
+	struct timespec ts;
 	unsigned long auto_update = 0;
 	time_t last_reload;
 	bool no_fork = FALSE;
@@ -494,7 +495,7 @@ int main (int argc, char **argv)
 	}
 
 	/* we handle these signals in the main thread, so we don't want any
-	 * of the others to catch them. install a handler for fatal signals. */
+	 * of the others to catch them */
 	memset(&action, 0, sizeof(action));
 	sigemptyset(&action.sa_mask);
 	sigaddset(&action.sa_mask, SIGHUP);
@@ -506,6 +507,7 @@ int main (int argc, char **argv)
 	sigaddset(&action.sa_mask, SIGUSR1);
 	pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
 
+	/* install a handler for fatal signals */
 	action.sa_handler = fatal_signal_handler;
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
@@ -518,8 +520,7 @@ int main (int argc, char **argv)
 			lib->settings->get_int(lib->settings, "starter.threads",
 								   DEFAULT_THREADS));
 
-	/* enable signals for main thread and install signal handler */
-	pthread_sigmask(SIG_UNBLOCK, &action.sa_mask, NULL);
+	/* install signal handler for main thread */
 	action.sa_handler = signal_handler;
 	sigaction(SIGHUP, &action, NULL);
 	sigaction(SIGINT, &action, NULL);
@@ -528,6 +529,13 @@ int main (int argc, char **argv)
 	sigaction(SIGALRM, &action, NULL);
 	sigaction(SIGCHLD, &action, NULL);
 	sigaction(SIGUSR1, &action, NULL);
+
+	/* the only signal we want to receive asynchronously is SIGCHLD */
+	sigemptyset(&action.sa_mask);
+	sigaddset(&action.sa_mask, SIGCHLD);
+	pthread_sigmask(SIG_UNBLOCK, &action.sa_mask, NULL);
+	/* the rest is unblocked in pselect() below */
+	sigemptyset(&action.sa_mask);
 
 	for (;;)
 	{
@@ -854,15 +862,16 @@ int main (int argc, char **argv)
 		{
 			time_t now = time_monotonic(NULL);
 
-			tv.tv_sec = (now < last_reload + auto_update)
-					? (last_reload + auto_update-now) : 0;
-			tv.tv_usec = 0;
+			ts.tv_sec = (now < last_reload + auto_update) ?
+						(last_reload + auto_update - now) : 0;
+			ts.tv_nsec = 0;
 		}
 
 		/*
 		 * Wait for something to happen
 		 */
-		if (select(0, NULL, NULL, NULL, auto_update ? &tv : NULL) == 0)
+		if (pselect(0, NULL, NULL, NULL, auto_update ? &ts : NULL,
+					&action.sa_mask) == 0)
 		{
 			/* timeout -> auto_update */
 			_action_ |= FLAG_ACTION_UPDATE;
