@@ -32,7 +32,7 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 
-#include <tkm/client.h>
+#include "tkm.h"
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -294,8 +294,12 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	/* initialize TKM client lib */
-	tkmlib_init();
+	/* initialize TKM client */
+	if (!tkm_init())
+	{
+		DBG1(DBG_DMN, "init of TKM client failed - aborting %s", dmn_name);
+		goto deinit;
+	}
 
 	/* add handler for SEGV and ILL,
 	 * INT and TERM are handled by sigwait() in run() */
@@ -320,11 +324,11 @@ int main(int argc, char *argv[])
 
 	unlink_pidfile();
 	status = 0;
-	tkmlib_final();
 
 deinit:
 	libcharon_deinit();
 	libhydra_deinit();
 	library_deinit();
+	tkm_deinit();
 	return status;
 }

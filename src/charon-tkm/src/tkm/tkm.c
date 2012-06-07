@@ -14,7 +14,12 @@
  * for more details.
  */
 
+#include <tkm/client.h>
+#include <tkm/constants.h>
+
 #include "tkm.h"
+
+#define IKE_SOCKET "/tmp/tkm.rpc.ike"
 
 typedef struct private_tkm_t private_tkm_t;
 
@@ -41,6 +46,20 @@ bool tkm_init()
 {
 	private_tkm_t *this;
 
+	/* initialize TKM client library */
+	tkmlib_init();
+	if (ike_init(IKE_SOCKET) != TKM_OK)
+	{
+		tkmlib_final();
+		return FALSE;
+	}
+
+	if (ike_tkm_reset() != TKM_OK)
+	{
+		tkmlib_final();
+		return FALSE;
+	}
+
 	INIT(this,
 		.public = {
 			.idmgr = tkm_id_manager_create(),
@@ -62,6 +81,8 @@ void tkm_deinit()
 	}
 	private_tkm_t *this = (private_tkm_t*)tkm;
 	this->public.idmgr->destroy(this->public.idmgr);
+
+	tkmlib_final();
 	free(this);
 	tkm = NULL;
 }

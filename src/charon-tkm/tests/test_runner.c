@@ -14,12 +14,17 @@
  * for more details.
  */
 
-#include <stdlib.h>
-
+#include "tkm.h"
 #include "test_runner.h"
 
 int main(void)
 {
+	if (!tkm_init())
+	{
+		fprintf(stderr, "Could not connect to TKM, aborting tests\n");
+		return EXIT_FAILURE;
+	}
+
 	int number_failed;
 	Suite *s = suite_create("TKM tests");
 	suite_add_tcase(s, make_id_manager_tests());
@@ -30,6 +35,7 @@ int main(void)
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 
+	tkm_deinit();
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
