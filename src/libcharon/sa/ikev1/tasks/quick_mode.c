@@ -964,11 +964,15 @@ METHOD(task_t, process_r, status_t,
 			}
 			if (!install(this))
 			{
-				this->ike_sa->flush_queue(this->ike_sa, TASK_QUEUE_PASSIVE);
-				this->ike_sa->queue_task(this->ike_sa,
-					(task_t*)quick_delete_create(this->ike_sa,
+				ike_sa_t *ike_sa = this->ike_sa;
+				task_t *task;
+
+				task = (task_t*)quick_delete_create(this->ike_sa,
 								this->proposal->get_protocol(this->proposal),
-								this->spi_i, TRUE, TRUE));
+								this->spi_i, TRUE, TRUE);
+				/* flush_queue() destroys the current task */
+				ike_sa->flush_queue(ike_sa, TASK_QUEUE_PASSIVE);
+				ike_sa->queue_task(ike_sa, task);
 				return ALREADY_DONE;
 			}
 			return SUCCESS;
