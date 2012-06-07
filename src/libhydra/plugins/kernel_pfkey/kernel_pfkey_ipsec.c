@@ -2524,6 +2524,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 {
 	private_kernel_pfkey_ipsec_t *this;
+	bool register_for_events = TRUE;
 
 	INIT(this,
 		.public = {
@@ -2557,6 +2558,10 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	{	/* no routes for pluto, they are installed via updown script */
 		this->install_routes = FALSE;
 	}
+	else if (streq(hydra->daemon, "starter"))
+	{	/* starter has no threads, so we do not register for kernel events */
+		register_for_events = FALSE;
+	}
 
 	/* create a PF_KEY socket to communicate with the kernel */
 	this->socket = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
@@ -2567,27 +2572,30 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 		return NULL;
 	}
 
-	/* create a PF_KEY socket for ACQUIRE & EXPIRE */
-	this->socket_events = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
-	if (this->socket_events <= 0)
+	if (register_for_events)
 	{
-		DBG1(DBG_KNL, "unable to create PF_KEY event socket");
-		destroy(this);
-		return NULL;
-	}
+		/* create a PF_KEY socket for ACQUIRE & EXPIRE */
+		this->socket_events = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
+		if (this->socket_events <= 0)
+		{
+			DBG1(DBG_KNL, "unable to create PF_KEY event socket");
+			destroy(this);
+			return NULL;
+		}
 
-	/* register the event socket */
-	if (register_pfkey_socket(this, SADB_SATYPE_ESP) != SUCCESS ||
-		register_pfkey_socket(this, SADB_SATYPE_AH) != SUCCESS)
-	{
-		DBG1(DBG_KNL, "unable to register PF_KEY event socket");
-		destroy(this);
-		return NULL;
-	}
+		/* register the event socket */
+		if (register_pfkey_socket(this, SADB_SATYPE_ESP) != SUCCESS ||
+			register_pfkey_socket(this, SADB_SATYPE_AH) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "unable to register PF_KEY event socket");
+			destroy(this);
+			return NULL;
+		}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
+											this, NULL, NULL, JOB_PRIO_CRITICAL);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	}
 
 	return &this->public;
 }

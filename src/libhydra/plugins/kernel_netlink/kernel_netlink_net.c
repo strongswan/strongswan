@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -1790,8 +1790,8 @@ METHOD(kernel_net_t, destroy, void,
 kernel_netlink_net_t *kernel_netlink_net_create()
 {
 	private_kernel_netlink_net_t *this;
-	struct sockaddr_nl addr;
 	enumerator_t *enumerator;
+	bool register_for_events = TRUE;
 	char *exclude;
 
 	INIT(this,
@@ -1831,6 +1831,11 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->last_roam);
 
+	if (streq(hydra->daemon, "starter"))
+	{	/* starter has no threads, so we do not register for kernel events */
+		register_for_events = FALSE;
+	}
+
 	exclude = lib->settings->get_str(lib->settings,
 					"%s.ignore_routing_tables", NULL, hydra->daemon);
 	if (exclude)
@@ -1852,29 +1857,34 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		enumerator->destroy(enumerator);
 	}
 
-	memset(&addr, 0, sizeof(addr));
-	addr.nl_family = AF_NETLINK;
-
-	/* create and bind RT socket for events (address/interface/route changes) */
-	this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (this->socket_events < 0)
+	if (register_for_events)
 	{
-		DBG1(DBG_KNL, "unable to create RT event socket");
-		destroy(this);
-		return NULL;
-	}
-	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
-					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
-	if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
-	{
-		DBG1(DBG_KNL, "unable to bind RT event socket");
-		destroy(this);
-		return NULL;
-	}
+		struct sockaddr_nl addr;
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+		memset(&addr, 0, sizeof(addr));
+		addr.nl_family = AF_NETLINK;
+
+		/* create and bind RT socket for events (address/interface/route changes) */
+		this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+		if (this->socket_events < 0)
+		{
+			DBG1(DBG_KNL, "unable to create RT event socket");
+			destroy(this);
+			return NULL;
+		}
+		addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
+						 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
+		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
+		{
+			DBG1(DBG_KNL, "unable to bind RT event socket");
+			destroy(this);
+			return NULL;
+		}
+
+		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
+											this, NULL, NULL, JOB_PRIO_CRITICAL);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	}
 
 	if (init_address_list(this) != SUCCESS)
 	{

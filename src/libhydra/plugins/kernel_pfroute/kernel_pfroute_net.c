@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -672,6 +672,7 @@ METHOD(kernel_net_t, destroy, void,
 kernel_pfroute_net_t *kernel_pfroute_net_create()
 {
 	private_kernel_pfroute_net_t *this;
+	bool register_for_events = TRUE;
 
 	INIT(this,
 		.public = {
@@ -692,6 +693,11 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
+	if (streq(hydra->daemon, "starter"))
+	{   /* starter has no threads, so we do not register for kernel events */
+		register_for_events = FALSE;
+	}
+
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
 	if (this->socket < 0)
@@ -701,18 +707,21 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		return NULL;
 	}
 
-	/* create a PF_ROUTE socket to receive events */
-	this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-	if (this->socket_events < 0)
+	if (register_for_events)
 	{
-		DBG1(DBG_KNL, "unable to create PF_ROUTE event socket");
-		destroy(this);
-		return NULL;
-	}
+		/* create a PF_ROUTE socket to receive events */
+		this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
+		if (this->socket_events < 0)
+		{
+			DBG1(DBG_KNL, "unable to create PF_ROUTE event socket");
+			destroy(this);
+			return NULL;
+		}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
+											this, NULL, NULL, JOB_PRIO_CRITICAL);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	}
 
 	if (init_address_list(this) != SUCCESS)
 	{

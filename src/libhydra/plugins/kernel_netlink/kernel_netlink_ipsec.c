@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -2645,7 +2645,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 {
 	private_kernel_netlink_ipsec_t *this;
-	struct sockaddr_nl addr;
+	bool register_for_events = TRUE;
 	int fd;
 
 	INIT(this,
@@ -2687,6 +2687,10 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		/* no policy history for pluto */
 		this->policy_history = FALSE;
 	}
+	else if (streq(hydra->daemon, "starter"))
+	{	/* starter has no threads, so we do not register for kernel events */
+		register_for_events = FALSE;
+	}
 
 	/* disable lifetimes for allocated SPIs in kernel */
 	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
@@ -2703,28 +2707,33 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		return NULL;
 	}
 
-	memset(&addr, 0, sizeof(addr));
-	addr.nl_family = AF_NETLINK;
+	if (register_for_events)
+	{
+		struct sockaddr_nl addr;
 
-	/* create and bind XFRM socket for ACQUIRE, EXPIRE, MIGRATE & MAPPING */
-	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
-	if (this->socket_xfrm_events <= 0)
-	{
-		DBG1(DBG_KNL, "unable to create XFRM event socket");
-		destroy(this);
-		return NULL;
+		memset(&addr, 0, sizeof(addr));
+		addr.nl_family = AF_NETLINK;
+
+		/* create and bind XFRM socket for ACQUIRE, EXPIRE, MIGRATE & MAPPING */
+		this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
+		if (this->socket_xfrm_events <= 0)
+		{
+			DBG1(DBG_KNL, "unable to create XFRM event socket");
+			destroy(this);
+			return NULL;
+		}
+		addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
+						 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
+		if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
+		{
+			DBG1(DBG_KNL, "unable to bind XFRM event socket");
+			destroy(this);
+			return NULL;
+		}
+		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
+											this, NULL, NULL, JOB_PRIO_CRITICAL);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
 	}
-	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
-					 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
-	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
-	{
-		DBG1(DBG_KNL, "unable to bind XFRM event socket");
-		destroy(this);
-		return NULL;
-	}
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }
