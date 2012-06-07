@@ -51,11 +51,6 @@
 #include "interfaces.h"
 
 /**
- * Number of threads in the thread pool, if not specified in config.
- */
-#define DEFAULT_THREADS 4
-
-/**
  * Return codes defined by Linux Standard Base Core Specification 3.1
  * in section 20.2. Init Script Actions
  */
@@ -494,8 +489,7 @@ int main (int argc, char **argv)
 		exit(LSB_RC_FAILURE);
 	}
 
-	/* we handle these signals in the main thread, so we don't want any
-	 * of the others to catch them */
+	/* we handle these signals only in pselect() */
 	memset(&action, 0, sizeof(action));
 	sigemptyset(&action.sa_mask);
 	sigaddset(&action.sa_mask, SIGHUP);
@@ -503,7 +497,6 @@ int main (int argc, char **argv)
 	sigaddset(&action.sa_mask, SIGTERM);
 	sigaddset(&action.sa_mask, SIGQUIT);
 	sigaddset(&action.sa_mask, SIGALRM);
-	sigaddset(&action.sa_mask, SIGCHLD);
 	sigaddset(&action.sa_mask, SIGUSR1);
 	pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
 
@@ -515,26 +508,18 @@ int main (int argc, char **argv)
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 
-	/* we need threads to read events from the kernel */
-	lib->processor->set_threads(lib->processor,
-			lib->settings->get_int(lib->settings, "starter.threads",
-								   DEFAULT_THREADS));
-
-	/* install signal handler for main thread */
+	/* install main signal handler */
 	action.sa_handler = signal_handler;
 	sigaction(SIGHUP, &action, NULL);
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
 	sigaction(SIGQUIT, &action, NULL);
 	sigaction(SIGALRM, &action, NULL);
-	sigaction(SIGCHLD, &action, NULL);
 	sigaction(SIGUSR1, &action, NULL);
+	/* this is not blocked above as we want to receive it asynchronously */
+	sigaction(SIGCHLD, &action, NULL);
 
-	/* the only signal we want to receive asynchronously is SIGCHLD */
-	sigemptyset(&action.sa_mask);
-	sigaddset(&action.sa_mask, SIGCHLD);
-	pthread_sigmask(SIG_UNBLOCK, &action.sa_mask, NULL);
-	/* the rest is unblocked in pselect() below */
+	/* empty mask for pselect() call below */
 	sigemptyset(&action.sa_mask);
 
 	for (;;)

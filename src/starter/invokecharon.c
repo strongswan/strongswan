@@ -201,8 +201,8 @@ int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			exit(1);
 		default:
 			/* father */
-				_charon_pid = pid;
-				for (i = 0; i < 500 && _charon_pid; i++)
+			_charon_pid = pid;
+			for (i = 0; i < 500 && _charon_pid; i++)
 			{
 				/* wait for charon for a maximum of 500 x 20 ms = 10 s */
 				usleep(20000);
