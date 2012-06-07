@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2012 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -414,14 +414,22 @@ static status_t atodn(char *src, chunk_t *dn)
 				}
 				break;
 			case SEARCH_NAME:
-				if (*src != ' ' && *src != '=')
+				if (*src == ' ' || *src == '=')
+				{
+					break;
+				}
+				else if (*src != ',' && *src != '/')
 				{
 					name.ptr = src;
 					name.len = 1;
 					whitespace = 0;
 					state = READ_NAME;
+					break;
 				}
-				break;
+				name = chunk_empty;
+				whitespace = 0;
+				state = READ_NAME;
+				/* fall-through */
 			case READ_NAME:
 				if (*src != ',' && *src != '/' && *src != '\0')
 				{
