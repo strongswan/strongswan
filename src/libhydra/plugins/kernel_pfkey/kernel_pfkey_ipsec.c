@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -809,14 +809,15 @@ static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 }
 
 /**
- * Copy a host_t as sockaddr_t to the given memory location. Ports are
- * reset to zero as per RFC 2367.
+ * Copy a host_t as sockaddr_t to the given memory location.
  * @return		the number of bytes copied
  */
-static size_t hostcpy(void *dest, host_t *host)
+static size_t hostcpy(void *dest, host_t *host, bool include_port)
 {
 	sockaddr_t *addr = host->get_sockaddr(host), *dest_addr = dest;
 	socklen_t *len = host->get_sockaddr_len(host);
+	u_int16_t port = htons(host->get_port(host));
+
 	memcpy(dest, addr, *len);
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 	dest_addr->sa_len = *len;
@@ -826,13 +827,13 @@ static size_t hostcpy(void *dest, host_t *host)
 		case AF_INET:
 		{
 			struct sockaddr_in *sin = dest;
-			sin->sin_port = 0;
+			sin->sin_port = include_port ? port : 0;
 			break;
 		}
 		case AF_INET6:
 		{
 			struct sockaddr_in6 *sin6 = dest;
-			sin6->sin6_port = 0;
+			sin6->sin6_port = include_port ? port : 0;
 			break;
 		}
 	}
@@ -842,9 +843,9 @@ static size_t hostcpy(void *dest, host_t *host)
 /**
  * add a host behind an sadb_address extension
  */
-static void host2ext(host_t *host, struct sadb_address *ext)
+static void host2ext(host_t *host, struct sadb_address *ext, bool include_port)
 {
-	size_t len = hostcpy(ext + 1, host);
+	size_t len = hostcpy(ext + 1, host, include_port);
 	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + len);
 }
 
@@ -852,13 +853,13 @@ static void host2ext(host_t *host, struct sadb_address *ext)
  * add a host to the given sadb_msg
  */
 static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type,
-						 u_int8_t proto, u_int8_t prefixlen)
+						 u_int8_t proto, u_int8_t prefixlen, bool include_port)
 {
 	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
 	addr->sadb_address_exttype = type;
 	addr->sadb_address_proto = proto;
 	addr->sadb_address_prefixlen = prefixlen;
-	host2ext(host, addr);
+	host2ext(host, addr, include_port);
 	PFKEY_EXT_ADD(msg, addr);
 }
 
@@ -1410,8 +1411,8 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	sa2->sadb_x_sa2_reqid = reqid;
 	PFKEY_EXT_ADD(msg, sa2);
 
-	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
-	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	range = (struct sadb_spirange*)PFKEY_EXT_ADD_NEXT(msg);
 	range->sadb_spirange_exttype = SADB_EXT_SPIRANGE;
@@ -1508,8 +1509,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa2->sadb_x_sa2_reqid = reqid;
 	PFKEY_EXT_ADD(msg, sa2);
 
-	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
-	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
 	lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_SOFT;
@@ -1639,7 +1640,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	/* the kernel wants a SADB_EXT_ADDRESS_SRC to be present even though
 	 * it is not used for anything. */
 	add_anyaddr_ext(msg, dst->get_family(dst), SADB_EXT_ADDRESS_SRC);
-	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1762,8 +1763,8 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	/* the Linux Kernel doesn't care for the src address, but other systems do
 	 * (e.g. FreeBSD)
 	 */
-	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
-	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1818,8 +1819,8 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	/* the Linux Kernel doesn't care for the src address, but other systems do
 	 * (e.g. FreeBSD)
 	 */
-	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
-	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
@@ -1919,9 +1920,9 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
 	if (ipsec->cfg.mode == MODE_TUNNEL)
 	{
-		len = hostcpy(req + 1, ipsec->src);
+		len = hostcpy(req + 1, ipsec->src, FALSE);
 		req->sadb_x_ipsecrequest_len += len;
-		len = hostcpy((char*)(req + 1) + len, ipsec->dst);
+		len = hostcpy((char*)(req + 1) + len, ipsec->dst, FALSE);
 		req->sadb_x_ipsecrequest_len += len;
 	}
 
@@ -1929,9 +1930,9 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
-				 policy->src.mask);
+				 policy->src.mask, TRUE);
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
-				 policy->dst.mask);
+				 policy->dst.mask, TRUE);
 
 #ifdef __FreeBSD__
 	{	/* on FreeBSD a lifetime has to be defined to be able to later query
@@ -2195,9 +2196,9 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
-				 policy->src.mask);
+				 policy->src.mask, TRUE);
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
-				 policy->dst.mask);
+				 policy->dst.mask, TRUE);
 
 	this->mutex->unlock(this->mutex);
 
@@ -2339,9 +2340,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
-				 policy->src.mask);
+				 policy->src.mask, TRUE);
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
-				 policy->dst.mask);
+				 policy->dst.mask, TRUE);
 
 	if (policy->route)
 	{
