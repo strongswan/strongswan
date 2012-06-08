@@ -569,6 +569,9 @@ Request peer authentication based on a client certificate
 .BR charon.plugins.ha.segment_count " [1]"
 
 .TP
+.BR charon.plugins.ipseckey.enable " [no]"
+Enable the fetching of IPSECKEY RRs from the DNS
+.TP
 .BR charon.plugins.led.activity_led
 
 .TP

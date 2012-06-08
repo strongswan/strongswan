@@ -40,6 +40,11 @@ struct private_ipseckey_plugin_t {
 	 * credential set
 	 */
 	ipseckey_cred_t *cred;
+
+	/**
+	 * IPSECKEY based authentication enabled
+	 */
+	bool enabled;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -51,7 +56,10 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_ipseckey_plugin_t *this)
 {
-	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
+	if (this->enabled)
+	{
+		lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
+	}
 	this->res->destroy(this->res);
 	DESTROY_IF(this->cred);
 	free(this);
@@ -73,6 +81,8 @@ plugin_t *ipseckey_plugin_create()
 			},
 		},
 		.res = lib->resolver->create(lib->resolver),
+		.enabled = lib->settings->get_bool(lib->settings,
+								"charon.plugins.ipseckey.enable", FALSE),
 	);
 
 	if (!this->res)
@@ -83,8 +93,11 @@ plugin_t *ipseckey_plugin_create()
 		return NULL;
 	}
 
-	this->cred = ipseckey_cred_create(this->res);
-	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
+	if (this->enabled)
+	{
+		this->cred = ipseckey_cred_create(this->res);
+		lib->credmgr->add_set(lib->credmgr, &this->cred->set);
+	}
 
 	return &this->public.plugin;
 }
