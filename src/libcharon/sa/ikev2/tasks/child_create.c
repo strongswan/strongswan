@@ -171,6 +171,11 @@ struct private_child_create_t {
 	 * whether the CHILD_SA rekeys an existing one
 	 */
 	bool rekey;
+
+	/**
+	 * whether we are retrying with another DH group
+	 */
+	bool retry;
 };
 
 /**
@@ -725,7 +730,7 @@ METHOD(task_t, build_i, status_t,
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
 			}
-			if (this->dh_group == MODP_NONE)
+			if (!this->retry)
 			{
 				this->dh_group = this->config->get_dh_group(this->config);
 			}
@@ -1112,6 +1117,7 @@ METHOD(task_t, process_i, status_t,
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
 						 this->dh_group, diffie_hellman_group_names, group);
+					this->retry = TRUE;
 					this->dh_group = group;
 					this->public.task.migrate(&this->public.task, this->ike_sa);
 					enumerator->destroy(enumerator);
@@ -1322,6 +1328,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.ipcomp = IPCOMP_NONE,
 		.ipcomp_received = IPCOMP_NONE,
 		.rekey = rekey,
+		.retry = FALSE,
 	);
 
 	if (config)
