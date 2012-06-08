@@ -1039,8 +1039,12 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	else
 	{
-		host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
-								0, this->ike_cfg->get_other_port(this->ike_cfg));
+		char *other_addr;
+		u_int16_t other_port;
+
+		other_addr = this->ike_cfg->get_other_addr(this->ike_cfg, NULL);
+		other_port = this->ike_cfg->get_other_port(this->ike_cfg);
+		host = host_create_from_dns(other_addr, 0, other_port);
 	}
 	if (host)
 	{
@@ -1054,6 +1058,8 @@ static void resolve_hosts(private_ike_sa_t *this)
 	}
 	else
 	{
+		char *my_addr;
+		u_int16_t my_port;
 		int family = 0;
 
 		/* use same address family as for other */
@@ -1061,8 +1067,9 @@ static void resolve_hosts(private_ike_sa_t *this)
 		{
 			family = this->other_host->get_family(this->other_host);
 		}
-		host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
-							family, this->ike_cfg->get_my_port(this->ike_cfg));
+		my_addr = this->ike_cfg->get_my_addr(this->ike_cfg, NULL);
+		my_port = this->ike_cfg->get_my_port(this->ike_cfg);
+		host = host_create_from_dns(my_addr, family, my_port);
 
 		if (host && host->is_anyaddr(host) &&
 			!this->other_host->is_anyaddr(this->other_host))
@@ -1076,9 +1083,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 			}
 			else
 			{	/* fallback to address family specific %any(6), if configured */
-				host = host_create_from_dns(
-								this->ike_cfg->get_my_addr(this->ike_cfg),
-								0, this->ike_cfg->get_my_port(this->ike_cfg));
+				host = host_create_from_dns(my_addr, 0, my_port);
 			}
 		}
 	}
@@ -1108,7 +1113,7 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			char *addr = this->ike_cfg->get_other_addr(this->ike_cfg);
+			char *addr = this->ike_cfg->get_other_addr(this->ike_cfg, NULL);
 			bool is_anyaddr = streq(addr, "%any") || streq(addr, "%any6");
 
 			if (is_anyaddr || !this->retry_initiate_interval)

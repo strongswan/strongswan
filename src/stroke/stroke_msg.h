@@ -162,6 +162,7 @@ struct stroke_end_t {
 	int sendcert;
 	int hostaccess;
 	int tohost;
+	int allow_any;
 	u_int8_t protocol;
 	u_int16_t port;
 };

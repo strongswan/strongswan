@@ -269,8 +269,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 		this->creds->set_username_password(this->creds, user, password);
 	}
 
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", IKEV2_UDP_PORT,
-							 hostname, IKEV2_UDP_PORT);
+	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", FALSE, IKEV2_UDP_PORT,
+							 hostname, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create("android", IKEV2, ike_cfg, CERT_SEND_IF_ASKED,

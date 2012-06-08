@@ -49,6 +49,16 @@ struct private_ike_cfg_t {
 	char *other;
 
 	/**
+	 * Allow override of local address
+	 */
+	bool my_allow_any;
+
+	/**
+	 * Allow override of remote address
+	 */
+	bool other_allow_any;
+
+	/**
 	 * our source port
 	 */
 	u_int16_t my_port;
@@ -87,14 +97,22 @@ METHOD(ike_cfg_t, force_encap_, bool,
 }
 
 METHOD(ike_cfg_t, get_my_addr, char*,
-	private_ike_cfg_t *this)
+	private_ike_cfg_t *this, bool *allow_any)
 {
+	if (allow_any)
+	{
+		*allow_any = this->my_allow_any;
+	}
 	return this->me;
 }
 
 METHOD(ike_cfg_t, get_other_addr, char*,
-	private_ike_cfg_t *this)
+	private_ike_cfg_t *this, bool *allow_any)
 {
+	if (allow_any)
+	{
+		*allow_any = this->other_allow_any;
+	}
 	return this->other;
 }
 
@@ -260,7 +278,8 @@ METHOD(ike_cfg_t, destroy, void,
  * Described in header.
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
-				char *me, u_int16_t my_port, char *other, u_int16_t other_port)
+						  char *me, bool my_allow_any, u_int16_t my_port,
+						  char *other, bool other_allow_any, u_int16_t other_port)
 {
 	private_ike_cfg_t *this;
 
@@ -285,6 +304,8 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 		.force_encap = force_encap,
 		.me = strdup(me),
 		.other = strdup(other),
+		.my_allow_any = my_allow_any,
+		.other_allow_any = other_allow_any,
 		.my_port = my_port,
 		.other_port = other_port,
 		.proposals = linked_list_create(),

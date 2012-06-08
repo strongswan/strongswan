@@ -500,6 +500,9 @@ METHOD(stroke_list_t, status, void,
 							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
+			char *my_addr, *other_addr;
+			bool my_allow_any, other_allow_any;
+
 			if (name && !streq(name, peer_cfg->get_name(peer_cfg)))
 			{
 				continue;
@@ -507,9 +510,12 @@ METHOD(stroke_list_t, status, void,
 
 			ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 			ike_version = peer_cfg->get_ike_version(peer_cfg);
-			fprintf(out, "%12s:  %s...%s  %N", peer_cfg->get_name(peer_cfg),
-				ike_cfg->get_my_addr(ike_cfg), ike_cfg->get_other_addr(ike_cfg),
-				ike_version_names, ike_version);
+			my_addr = ike_cfg->get_my_addr(ike_cfg, &my_allow_any);
+			other_addr = ike_cfg->get_other_addr(ike_cfg, &other_allow_any);
+			fprintf(out, "%12s:  %s%s...%s%s  %N", peer_cfg->get_name(peer_cfg),
+					my_allow_any ? "%":"", my_addr,
+					other_allow_any ? "%":"", other_addr,
+					ike_version_names, ike_version);
 
 			if (ike_version == IKEV1 && peer_cfg->use_aggressive(peer_cfg))
 			{

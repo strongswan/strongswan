@@ -323,8 +323,8 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 								NULL);
 	}
 
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", IKEV2_UDP_PORT,
-							 hostname, IKEV2_UDP_PORT);
+	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", FALSE, IKEV2_UDP_PORT,
+							 hostname, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create(this->current, IKEV2, ike_cfg,

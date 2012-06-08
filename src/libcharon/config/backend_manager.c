@@ -78,12 +78,14 @@ static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
 static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 {
 	host_t *me_cand, *other_cand;
+	char *my_addr, *other_addr;
+	bool my_allow_any, other_allow_any;
 	ike_cfg_match_t match = MATCH_NONE;
 
 	if (me)
 	{
-		me_cand = host_create_from_dns(cand->get_my_addr(cand),
-									   me->get_family(me), 0);
+		my_addr = cand->get_my_addr(cand, &my_allow_any);
+		me_cand = host_create_from_dns(my_addr, me->get_family(me), 0);
 		if (!me_cand)
 		{
 			return MATCH_NONE;
@@ -92,7 +94,7 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		{
 			match += MATCH_ME;
 		}
-		else if (me_cand->is_anyaddr(me_cand))
+		else if (my_allow_any || me_cand->is_anyaddr(me_cand))
 		{
 			match += MATCH_ANY;
 		}
@@ -110,8 +112,8 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 
 	if (other)
 	{
-		other_cand = host_create_from_dns(cand->get_other_addr(cand),
-										  other->get_family(other), 0);
+		other_addr = cand->get_other_addr(cand, &other_allow_any);
+		other_cand = host_create_from_dns(other_addr, other->get_family(other), 0);
 		if (!other_cand)
 		{
 			return MATCH_NONE;
@@ -120,7 +122,7 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		{
 			match += MATCH_OTHER;
 		}
-		else if (other_cand->is_anyaddr(other_cand))
+		else if (other_allow_any || other_cand->is_anyaddr(other_cand))
 		{
 			match += MATCH_ANY;
 		}
@@ -142,6 +144,8 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 	private_backend_manager_t *this, host_t *me, host_t *other)
 {
 	ike_cfg_t *current, *found = NULL;
+	char *my_addr, *other_addr;
+	bool my_allow_any, other_allow_any;
 	enumerator_t *enumerator;
 	ike_cfg_match_t match, best = MATCH_ANY;
 	ike_data_t *data;
@@ -164,9 +168,11 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 		DBG3(DBG_CFG, "ike config match: %d (%H %H)", match, me, other);
 		if (match)
 		{
-			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d",
-				 current->get_my_addr(current),
-				 current->get_other_addr(current), match);
+			my_addr = current->get_my_addr(current, &my_allow_any);
+			other_addr = current->get_other_addr(current, &other_allow_any);
+			DBG2(DBG_CFG, "  candidate: %s%s...%s%s, prio %d",
+						  my_allow_any ? "%":"", my_addr,
+						  other_allow_any ? "%":"", other_addr, match);
 			if (match > best)
 			{
 				DESTROY_IF(found);
@@ -180,8 +186,11 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 	this->lock->unlock(this->lock);
 	if (found)
 	{
-		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d",
-			 found->get_my_addr(found), found->get_other_addr(found), best);
+		my_addr = found->get_my_addr(found, &my_allow_any);
+		other_addr = found->get_other_addr(found, &other_allow_any);
+		DBG2(DBG_CFG, "found matching ike config: %s%s...%s%s with prio %d",
+					  my_allow_any ? "%":"", my_addr,
+					  other_allow_any ? "%":"", other_addr, best);
 	}
 	return found;
 }
