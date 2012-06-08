@@ -48,6 +48,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_REVOCATION_CERT,
 	"RULE_GROUP",
 	"RULE_RSA_STRENGTH",
 	"RULE_ECDSA_STRENGTH",
+	"RULE_SIGNATURE_SCHEME",
 	"RULE_CERT_POLICY",
 	"HELPER_IM_CERT",
 	"HELPER_SUBJECT_CERT",
@@ -84,6 +85,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
@@ -202,6 +204,7 @@ static entry_t *entry_create(auth_rule_t type, va_list args)
 		case AUTH_RULE_OCSP_VALIDATION:
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_SIGNATURE_SCHEME:
 			/* integer type */
 			this->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
@@ -248,6 +251,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_RULE_OCSP_VALIDATION:
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_SIGNATURE_SCHEME:
 		{
 			return e1->value == e2->value;
 		}
@@ -334,6 +338,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_OCSP_VALIDATION:
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_MAX:
 			break;
 	}
@@ -363,6 +368,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_OCSP_VALIDATION:
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
+			case AUTH_RULE_SIGNATURE_SCHEME:
 				/* integer type */
 				entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
@@ -436,6 +442,8 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
 			return (void*)0;
+		case AUTH_RULE_SIGNATURE_SCHEME:
+			return HASH_UNKNOWN;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
 			return (void*)VALIDATION_FAILED;
@@ -488,6 +496,7 @@ METHOD(auth_cfg_t, complies, bool,
 {
 	enumerator_t *e1, *e2;
 	bool success = TRUE, has_group = FALSE, group_match = FALSE;
+	signature_scheme_t scheme = SIGN_UNKNOWN;
 	auth_rule_t t1, t2;
 	void *value;
 
@@ -711,6 +720,11 @@ METHOD(auth_cfg_t, complies, bool,
 				e2->destroy(e2);
 				break;
 			}
+			case AUTH_RULE_SIGNATURE_SCHEME:
+			{
+				scheme = (uintptr_t)value;
+				break;
+			}
 			case AUTH_RULE_CERT_POLICY:
 			{
 				char *oid1, *oid2;
@@ -750,6 +764,41 @@ METHOD(auth_cfg_t, complies, bool,
 		}
 	}
 	e1->destroy(e1);
+
+	/* Check if we have a matching constraint (or none at all) for used
+	 * signature schemes. */
+	if (success && scheme != SIGN_UNKNOWN)
+	{
+		e2 = create_enumerator(this);
+		while (e2->enumerate(e2, &t2, &scheme))
+		{
+			if (t2 == AUTH_RULE_SIGNATURE_SCHEME)
+			{
+				success = FALSE;
+				e1 = constraints->create_enumerator(constraints);
+				while (e1->enumerate(e1, &t1, &value))
+				{
+					if (t1 == AUTH_RULE_SIGNATURE_SCHEME &&
+						(uintptr_t)value == scheme)
+					{
+						success = TRUE;
+						break;
+					}
+				}
+				e1->destroy(e1);
+				if (!success)
+				{
+					if (log_error)
+					{
+						DBG1(DBG_CFG, "signature scheme %N not acceptable",
+							 signature_scheme_names, (int)scheme);
+					}
+					break;
+				}
+			}
+		}
+		e2->destroy(e2);
+	}
 
 	if (has_group && !group_match)
 	{
@@ -802,6 +851,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_EAP_VENDOR:
 				case AUTH_RULE_RSA_STRENGTH:
 				case AUTH_RULE_ECDSA_STRENGTH:
+				case AUTH_RULE_SIGNATURE_SCHEME:
 				{
 					add(this, type, (uintptr_t)value);
 					break;
@@ -959,6 +1009,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_OCSP_VALIDATION:
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
+			case AUTH_RULE_SIGNATURE_SCHEME:
 				clone->add(clone, entry->type, (uintptr_t)entry->value);
 				break;
 			case AUTH_RULE_MAX:
