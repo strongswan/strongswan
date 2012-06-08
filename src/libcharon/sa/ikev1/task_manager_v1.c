@@ -1367,6 +1367,26 @@ METHOD(task_manager_t, queue_child, void,
 }
 
 /**
+ * Check if two CHILD_SAs have the same traffic selector
+ */
+static bool have_equal_ts(child_sa_t *a, child_sa_t *b, bool local)
+{
+	linked_list_t *list;
+	traffic_selector_t *ts_a, *ts_b;
+
+	list = a->get_traffic_selectors(a, local);
+	if (list->get_first(list, (void**)&ts_a) == SUCCESS)
+	{
+		list = b->get_traffic_selectors(b, local);
+		if (list->get_first(list, (void**)&ts_b) == SUCCESS)
+		{
+			return ts_a->equals(ts_a, ts_b);
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Check if a CHILD_SA is redundant and we should delete instead of rekey
  */
 static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
@@ -1380,6 +1400,8 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 	{
 		if (current->get_state(current) == CHILD_INSTALLED &&
 			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
+			have_equal_ts(current, child_sa, TRUE) &&
+			have_equal_ts(current, child_sa, FALSE) &&
 			current->get_lifetime(current, FALSE) >
 				child_sa->get_lifetime(child_sa, FALSE))
 		{
