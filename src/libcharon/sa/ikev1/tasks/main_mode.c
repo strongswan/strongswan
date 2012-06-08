@@ -493,6 +493,12 @@ METHOD(task_t, build_r, status_t,
 			{
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
+			if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+														 this->ike_sa, FALSE))
+			{
+				DBG1(DBG_IKE, "cancelling Main Mode due to uniqueness policy");
+				return send_notify(this, AUTHENTICATION_FAILED);
+			}
 
 			switch (this->method)
 			{
@@ -616,6 +622,13 @@ METHOD(task_t, process_i, status_t,
 					 "cancelling");
 				return send_delete(this);
 			}
+			if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+														 this->ike_sa, FALSE))
+			{
+				DBG1(DBG_IKE, "cancelling Main Mode due to uniqueness policy");
+				return send_delete(this);
+			}
+
 			switch (this->method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
