@@ -79,10 +79,12 @@ METHOD(authenticator_t, build, status_t,
 	switch (private->get_type(private))
 	{
 		case KEY_RSA:
-			/* we currently use always SHA1 for signatures,
-			 * TODO: support other hashes depending on configuration/auth */
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			auth_method = AUTH_RSA;
+			scheme = (uintptr_t)auth->get(auth, AUTH_RULE_SIGNATURE_SCHEME);
+			if (scheme == SIGN_UNKNOWN)
+			{
+				scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			}
 			break;
 		case KEY_ECDSA:
 			/* we try to deduct the signature scheme from the keysize */
@@ -156,10 +158,9 @@ METHOD(authenticator_t, process, status_t,
 	switch (auth_method)
 	{
 		case AUTH_RSA:
-			/* We currently accept SHA1 signatures only
-			 * TODO: allow other hash algorithms and note it in "auth" */
 			key_type = KEY_RSA;
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			/* try to detect scheme automatically */
+			scheme = SIGN_UNKNOWN;
 			break;
 		case AUTH_ECDSA_256:
 			scheme = SIGN_ECDSA_256;
@@ -190,6 +191,7 @@ METHOD(authenticator_t, process, status_t,
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme);
 			break;
 		}
 		else
