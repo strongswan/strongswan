@@ -26,6 +26,8 @@ bool test_rsa_gen()
 	private_key_t *private;
 	public_key_t *public;
 	u_int key_size;
+	signature_scheme_t sigscheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+	encryption_scheme_t encscheme = ENCRYPT_RSA_PKCS1;
 
 	for (key_size = 512; key_size <= 2048; key_size *= 2)
 	{
@@ -42,29 +44,29 @@ bool test_rsa_gen()
 			DBG1(DBG_CFG, "generating public from private key failed");
 			return FALSE;
 		}
-		if (!private->sign(private, SIGN_RSA_EMSA_PKCS1_SHA1, data, &sig))
+		if (!private->sign(private, sigscheme, data, &sig))
 		{
 			DBG1(DBG_CFG, "creating RSA signature failed");
 			return FALSE;
 		}
-		if (!public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, data, sig))
+		if (!public->verify(public, &sigscheme, data, sig))
 		{
 			DBG1(DBG_CFG, "verifying RSA signature failed");
 			return FALSE;
 		}
 		sig.ptr[sig.len-1]++;
-		if (public->verify(public, SIGN_RSA_EMSA_PKCS1_SHA1, data, sig))
+		if (public->verify(public, &sigscheme, data, sig))
 		{
 			DBG1(DBG_CFG, "verifying faked RSA signature succeeded!");
 			return FALSE;
 		}
 		free(sig.ptr);
-		if (!public->encrypt(public, ENCRYPT_RSA_PKCS1, data, &crypt))
+		if (!public->encrypt(public, encscheme, data, &crypt))
 		{
 			DBG1(DBG_CFG, "encrypting data with RSA failed");
 			return FALSE;
 		}
-		if (!private->decrypt(private, ENCRYPT_RSA_PKCS1, crypt, &plain))
+		if (!private->decrypt(private, &encscheme, crypt, &plain))
 		{
 			DBG1(DBG_CFG, "decrypting data with RSA failed");
 			return FALSE;

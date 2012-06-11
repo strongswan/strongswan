@@ -137,12 +137,16 @@ struct public_key_t {
 	/**
 	 * Verifies a signature against a chunk of data.
 	 *
-	 * @param scheme	signature scheme to use for verification, may be default
+	 * If a signature scheme is given, only a signature with such a scheme is
+	 * valid. If scheme is SIGN_UNKNOWN, the signature is detected and
+	 * returned to the scheme pointer.
+	 *
+	 * @param scheme	signature scheme to use/used for verification
 	 * @param data		data to check signature against
 	 * @param signature	signature to check
 	 * @return			TRUE if signature matches
 	 */
-	bool (*verify)(public_key_t *this, signature_scheme_t scheme,
+	bool (*verify)(public_key_t *this, signature_scheme_t *scheme,
 				   chunk_t data, chunk_t signature);
 
 	/**

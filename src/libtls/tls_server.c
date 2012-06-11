@@ -390,6 +390,7 @@ static status_t process_certificate(private_tls_server_t *this,
 static status_t process_key_exchange_encrypted(private_tls_server_t *this,
 											   bio_reader_t *reader)
 {
+	encryption_scheme_t scheme = ENCRYPT_RSA_PKCS1;
 	chunk_t encrypted, decrypted;
 	char premaster[48];
 	rng_t *rng;
@@ -417,8 +418,7 @@ static status_t process_key_exchange_encrypted(private_tls_server_t *this,
 	rng->destroy(rng);
 
 	if (this->private &&
-		this->private->decrypt(this->private,
-							   ENCRYPT_RSA_PKCS1, encrypted, &decrypted))
+		this->private->decrypt(this->private, &scheme, encrypted, &decrypted))
 	{
 		if (decrypted.len == sizeof(premaster) &&
 			untoh16(decrypted.ptr) == this->client_version)

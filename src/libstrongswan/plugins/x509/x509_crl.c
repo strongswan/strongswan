@@ -488,7 +488,7 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
-	valid = key->verify(key, scheme, this->tbsCertList, this->signature);
+	valid = key->verify(key, &scheme, this->tbsCertList, this->signature);
 	key->destroy(key);
 	if (valid && schemep)
 	{

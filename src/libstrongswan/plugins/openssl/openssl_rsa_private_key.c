@@ -166,13 +166,13 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_openssl_rsa_private_key_t *this, encryption_scheme_t scheme,
+	private_openssl_rsa_private_key_t *this, encryption_scheme_t *scheme,
 	chunk_t crypto, chunk_t *plain)
 {
 	int padding, len;
 	char *decrypted;
 
-	switch (scheme)
+	switch (*scheme)
 	{
 		case ENCRYPT_RSA_PKCS1:
 			padding = RSA_PKCS1_PADDING;
@@ -182,7 +182,7 @@ METHOD(private_key_t, decrypt, bool,
 			break;
 		default:
 			DBG1(DBG_LIB, "encryption scheme %N not supported via openssl",
-				 encryption_scheme_names, scheme);
+				 encryption_scheme_names, *scheme);
 			return FALSE;
 	}
 	decrypted = malloc(RSA_size(this->rsa));

@@ -183,7 +183,7 @@ METHOD(authenticator_t, process, status_t,
 														key_type, id, auth);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, octets, auth_data))
+		if (public->verify(public, &scheme, octets, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 						   id, auth_method_names, auth_method);

@@ -296,7 +296,7 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_pkcs11_private_key_t *this, encryption_scheme_t scheme,
+	private_pkcs11_private_key_t *this, encryption_scheme_t *scheme,
 	chunk_t crypt, chunk_t *plain)
 {
 	CK_MECHANISM_PTR mechanism;
@@ -305,11 +305,11 @@ METHOD(private_key_t, decrypt, bool,
 	CK_ULONG len;
 	CK_RV rv;
 
-	mechanism = pkcs11_encryption_scheme_to_mech(scheme);
+	mechanism = pkcs11_encryption_scheme_to_mech(*scheme);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "encryption scheme %N not supported",
-			 encryption_scheme_names, scheme);
+			 encryption_scheme_names, *scheme);
 		return FALSE;
 	}
 	rv = this->lib->f->C_OpenSession(this->slot, CKF_SERIAL_SESSION, NULL, NULL,

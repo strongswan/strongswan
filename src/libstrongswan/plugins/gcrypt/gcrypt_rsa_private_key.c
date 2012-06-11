@@ -226,7 +226,7 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_gcrypt_rsa_private_key_t *this, encryption_scheme_t scheme,
+	private_gcrypt_rsa_private_key_t *this, encryption_scheme_t *scheme,
 	chunk_t encrypted, chunk_t *plain)
 {
 	gcry_error_t err;
@@ -234,10 +234,10 @@ METHOD(private_key_t, decrypt, bool,
 	chunk_t padded;
 	u_char *pos = NULL;;
 
-	if (scheme != ENCRYPT_RSA_PKCS1)
+	if (*scheme != ENCRYPT_RSA_PKCS1)
 	{
 		DBG1(DBG_LIB, "encryption scheme %N not supported",
-			 encryption_scheme_names, scheme);
+			 encryption_scheme_names, *scheme);
 		return FALSE;
 	}
 	err = gcry_sexp_build(&in, NULL, "(enc-val(flags)(rsa(a %b)))",

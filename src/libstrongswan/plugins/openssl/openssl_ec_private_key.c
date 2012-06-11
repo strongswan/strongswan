@@ -171,7 +171,7 @@ METHOD(private_key_t, sign, bool,
 }
 
 METHOD(private_key_t, decrypt, bool,
-	private_openssl_ec_private_key_t *this, encryption_scheme_t scheme,
+	private_openssl_ec_private_key_t *this, encryption_scheme_t *scheme,
 	chunk_t crypto, chunk_t *plain)
 {
 	DBG1(DBG_LIB, "EC private key decryption not implemented");

@@ -390,7 +390,7 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 	tbs = openssl_i2chunk(X509_CINF, this->x509->cert_info);
-	valid = key->verify(key, this->scheme, tbs,
+	valid = key->verify(key, &this->scheme, tbs,
 						openssl_asn1_str2chunk(this->x509->signature));
 	free(tbs.ptr);
 	key->destroy(key);

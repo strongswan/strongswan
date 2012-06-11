@@ -267,7 +267,7 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 	tbs = openssl_i2chunk(X509_CRL_INFO, this->crl->crl);
-	valid = key->verify(key, this->scheme, tbs,
+	valid = key->verify(key, &this->scheme, tbs,
 						openssl_asn1_str2chunk(this->crl->signature));
 	free(tbs.ptr);
 	key->destroy(key);

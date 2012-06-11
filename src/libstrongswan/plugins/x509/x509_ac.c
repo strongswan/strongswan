@@ -748,7 +748,7 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
-	valid = key->verify(key, scheme, this->certificateInfo, this->signature);
+	valid = key->verify(key, &scheme, this->certificateInfo, this->signature);
 	key->destroy(key);
 	if (valid && schemep)
 	{

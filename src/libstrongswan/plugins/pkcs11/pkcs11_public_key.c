@@ -198,7 +198,7 @@ METHOD(public_key_t, get_keysize, int,
 }
 
 METHOD(public_key_t, verify, bool,
-	private_pkcs11_public_key_t *this, signature_scheme_t scheme,
+	private_pkcs11_public_key_t *this, signature_scheme_t *scheme,
 	chunk_t data, chunk_t sig)
 {
 	CK_MECHANISM_PTR mechanism;
@@ -207,12 +207,12 @@ METHOD(public_key_t, verify, bool,
 	hash_algorithm_t hash_alg;
 	chunk_t hash = chunk_empty;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k,
+	mechanism = pkcs11_signature_scheme_to_mech(*scheme, this->type, this->k,
 												&hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
-			 signature_scheme_names, scheme);
+			 signature_scheme_names, *scheme);
 		return FALSE;
 	}
 	if (sig.len && sig.ptr[0] == 0)

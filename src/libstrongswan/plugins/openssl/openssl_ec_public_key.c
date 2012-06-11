@@ -137,10 +137,10 @@ METHOD(public_key_t, get_type, key_type_t,
 }
 
 METHOD(public_key_t, verify, bool,
-	private_openssl_ec_public_key_t *this, signature_scheme_t scheme,
+	private_openssl_ec_public_key_t *this, signature_scheme_t *scheme,
 	chunk_t data, chunk_t signature)
 {
-	switch (scheme)
+	switch (*scheme)
 	{
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			return verify_der_signature(this, NID_sha1, data, signature);
@@ -153,17 +153,17 @@ METHOD(public_key_t, verify, bool,
 		case SIGN_ECDSA_WITH_NULL:
 			return verify_signature(this, data, signature);
 		case SIGN_ECDSA_256:
-			return verify_curve_signature(this, scheme, NID_sha256,
+			return verify_curve_signature(this, *scheme, NID_sha256,
 										  NID_X9_62_prime256v1, data, signature);
 		case SIGN_ECDSA_384:
-			return verify_curve_signature(this, scheme, NID_sha384,
+			return verify_curve_signature(this, *scheme, NID_sha384,
 										  NID_secp384r1, data, signature);
 		case SIGN_ECDSA_521:
-			return verify_curve_signature(this, scheme, NID_sha512,
+			return verify_curve_signature(this, *scheme, NID_sha512,
 										  NID_secp521r1, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in EC",
-				 signature_scheme_names, scheme);
+				 signature_scheme_names, *scheme);
 			return FALSE;
 	}
 }

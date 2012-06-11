@@ -388,7 +388,7 @@ end:
 			DBG1(DBG_LIB, "no public key found in CA certificate");
 			return FALSE;
 		}
-		if (key->verify(key, scheme,
+		if (key->verify(key, &scheme,
 			this->attributes->get_encoding(this->attributes), encrypted_digest))
 		{
 			DBG2(DBG_LIB, "signature is valid");
@@ -487,6 +487,8 @@ METHOD(pkcs7_t, parse_envelopedData, bool,
 	int objectID, version;
 	bool success = FALSE;
 
+	encryption_scheme_t scheme = ENCRYPT_RSA_PKCS1;
+
 	chunk_t iv                = chunk_empty;
 	chunk_t symmetric_key     = chunk_empty;
 	chunk_t encrypted_content = chunk_empty;
@@ -563,7 +565,7 @@ METHOD(pkcs7_t, parse_envelopedData, bool,
 			}
 			case PKCS7_ENCRYPTED_KEY:
 			{
-				if (!key->decrypt(key, ENCRYPT_RSA_PKCS1, object, &symmetric_key))
+				if (!key->decrypt(key, &scheme, object, &symmetric_key))
 				{
 					DBG1(DBG_LIB, "symmetric key could not be decrypted with rsa");
 					goto end;

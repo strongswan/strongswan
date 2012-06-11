@@ -166,10 +166,10 @@ METHOD(public_key_t, get_type, key_type_t,
 }
 
 METHOD(public_key_t, verify, bool,
-	private_gcrypt_rsa_public_key_t *this, signature_scheme_t scheme,
+	private_gcrypt_rsa_public_key_t *this, signature_scheme_t *scheme,
 	chunk_t data, chunk_t signature)
 {
-	switch (scheme)
+	switch (*scheme)
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_raw(this, data, signature);
@@ -187,7 +187,7 @@ METHOD(public_key_t, verify, bool,
 			return verify_pkcs1(this, HASH_SHA512, "sha512", data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
-				 signature_scheme_names, scheme);
+				 signature_scheme_names, *scheme);
 			return FALSE;
 	}
 }

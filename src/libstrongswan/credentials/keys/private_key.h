@@ -51,12 +51,16 @@ struct private_key_t {
 	/**
 	 * Decrypt a chunk of data.
 	 *
-	 * @param scheme	expected encryption scheme used
+	 * If an encryption scheme is given, only data with such a scheme is
+	 * valid. If scheme is ENCRYPT_UNKNOWN, the scheme is detected and
+	 * returned to the scheme pointer.
+	 *
+	 * @param scheme	encryption scheme to use/used
 	 * @param crypto	chunk containing encrypted data
 	 * @param plain		where to allocate decrypted data
 	 * @return			TRUE if data decrypted and plaintext allocated
 	 */
-	bool (*decrypt)(private_key_t *this, encryption_scheme_t scheme,
+	bool (*decrypt)(private_key_t *this, encryption_scheme_t *scheme,
 					chunk_t crypto, chunk_t *plain);
 
 	/**
