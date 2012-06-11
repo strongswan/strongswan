@@ -225,7 +225,8 @@ METHOD(certificate_t, has_subject_or_issuer, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_openssl_crl_t *this, certificate_t *issuer)
+	private_openssl_crl_t *this, certificate_t *issuer,
+	signature_scheme_t *scheme)
 {
 	chunk_t fingerprint, tbs;
 	public_key_t *key;
@@ -270,6 +271,10 @@ METHOD(certificate_t, issued_by, bool,
 						openssl_asn1_str2chunk(this->crl->signature));
 	free(tbs.ptr);
 	key->destroy(key);
+	if (valid && scheme)
+	{
+		*scheme = this->scheme;
+	}
 	return valid;
 }
 

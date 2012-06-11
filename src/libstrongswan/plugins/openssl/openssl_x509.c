@@ -350,7 +350,8 @@ METHOD(certificate_t, has_issuer, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_openssl_x509_t *this, certificate_t *issuer)
+	private_openssl_x509_t *this, certificate_t *issuer,
+	signature_scheme_t *scheme)
 {
 	public_key_t *key;
 	bool valid;
@@ -393,6 +394,10 @@ METHOD(certificate_t, issued_by, bool,
 						openssl_asn1_str2chunk(this->x509->signature));
 	free(tbs.ptr);
 	key->destroy(key);
+	if (valid && scheme)
+	{
+		*scheme = this->scheme;
+	}
 	return valid;
 }
 
@@ -975,7 +980,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	hasher->allocate_hash(hasher, this->encoding, &this->hash);
 	hasher->destroy(hasher);
 
-	if (issued_by(this, &this->public.x509.interface))
+	if (issued_by(this, &this->public.x509.interface, NULL))
 	{
 		this->flags |= X509_SELF_SIGNED;
 	}

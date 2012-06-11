@@ -44,7 +44,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 	pts_t *pts;
 
 	pts = attestation_state->get_pts(attestation_state);
- 
+
 	switch (attr->get_type(attr))
 	{
 		case TCG_PTS_PROTO_CAPS:
@@ -169,7 +169,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							KEY_ANY, aik->get_issuer(aik), FALSE);
 				while (e->enumerate(e, &issuer))
 				{
-					if (aik->issued_by(aik, issuer))
+					if (aik->issued_by(aik, issuer, NULL))
 					{
 						trusted = TRUE;
 						break;
@@ -289,7 +289,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				break;
 			}
 			status = comp->verify(comp, pts, evidence);
-			
+
 			switch (status)
 			{
 				default:

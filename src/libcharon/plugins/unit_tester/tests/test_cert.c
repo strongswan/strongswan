@@ -60,7 +60,7 @@ bool test_cert_x509()
 	{
 		return FALSE;
 	}
-	if (!parsed->issued_by(parsed, ca_cert))
+	if (!parsed->issued_by(parsed, ca_cert, NULL))
 	{
 		return FALSE;
 	}
@@ -90,7 +90,7 @@ bool test_cert_x509()
 	{
 		return FALSE;
 	}
-	if (!parsed->issued_by(parsed, ca_cert))
+	if (!parsed->issued_by(parsed, ca_cert, NULL))
 	{
 		return FALSE;
 	}

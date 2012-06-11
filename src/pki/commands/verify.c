@@ -77,7 +77,7 @@ static int verify()
 	{
 		ca = cert;
 	}
-	if (cert->issued_by(cert, ca))
+	if (cert->issued_by(cert, ca, NULL))
 	{
 		if (cert->get_validity(cert, NULL, NULL, NULL))
 		{

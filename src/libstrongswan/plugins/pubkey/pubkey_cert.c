@@ -126,8 +126,13 @@ METHOD(certificate_t, equals, bool,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_pubkey_cert_t *this, certificate_t *issuer)
+	private_pubkey_cert_t *this, certificate_t *issuer,
+	signature_scheme_t *scheme)
 {
+	if (scheme)
+	{
+		*scheme = SIGN_UNKNOWN;
+	}
 	return equals(this, issuer);
 }
 

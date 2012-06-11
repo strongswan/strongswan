@@ -364,7 +364,8 @@ METHOD(certificate_t, has_issuer, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_x509_ocsp_request_t *this, certificate_t *issuer)
+	private_x509_ocsp_request_t *this, certificate_t *issuer,
+	signature_scheme_t *scheme)
 {
 	DBG1(DBG_LIB, "OCSP request validation not implemented!");
 	return FALSE;

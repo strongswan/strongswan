@@ -165,7 +165,7 @@ METHOD(cert_cache_t, issued_by, bool,
 		}
 	}
 	/* no cache hit, check and cache signature */
-	if (subject->issued_by(subject, issuer))
+	if (subject->issued_by(subject, issuer, NULL))
 	{
 		cache(this, subject, issuer);
 		return TRUE;

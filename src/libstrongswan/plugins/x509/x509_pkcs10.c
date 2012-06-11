@@ -123,10 +123,12 @@ METHOD(certificate_t, has_subject, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_x509_pkcs10_t *this, certificate_t *issuer)
+	private_x509_pkcs10_t *this, certificate_t *issuer,
+	signature_scheme_t *schemep)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
+	bool valid;
 
 	if (&this->public.interface.interface != issuer)
 	{
@@ -150,8 +152,13 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
-	return key->verify(key, scheme, this->certificationRequestInfo,
-									this->signature);
+	valid = key->verify(key, scheme, this->certificationRequestInfo,
+						this->signature);
+	if (valid && schemep)
+	{
+		*schemep = scheme;
+	}
+	return valid;
 }
 
 METHOD(certificate_t, get_public_key, public_key_t*,
@@ -441,7 +448,7 @@ end:
 	if (success)
 	{
 		/* check if the certificate request is self-signed */
-		if (issued_by(this, &this->public.interface.interface))
+		if (issued_by(this, &this->public.interface.interface, NULL))
 		{
 			this->self_signed = TRUE;
 		}

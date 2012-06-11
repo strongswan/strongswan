@@ -143,9 +143,11 @@ struct certificate_t {
 	 * Check if this certificate is issued and signed by a specific issuer.
 	 *
 	 * @param issuer	issuer's certificate
+	 * @param scheme	receives signature scheme used during verification
 	 * @return			TRUE if certificate issued by issuer and trusted
 	 */
-	bool (*issued_by)(certificate_t *this, certificate_t *issuer);
+	bool (*issued_by)(certificate_t *this, certificate_t *issuer,
+					  signature_scheme_t *scheme);
 
 	/**
 	 * Get the public key associated to this certificate.

@@ -348,7 +348,7 @@ METHOD(stroke_ca_t, check_for_hash_and_url, void,
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
-		if (section->certuribase && cert->issued_by(cert, section->cert))
+		if (section->certuribase && cert->issued_by(cert, section->cert, NULL))
 		{
 			chunk_t hash, encoded;
 
