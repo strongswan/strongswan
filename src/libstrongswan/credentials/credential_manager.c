@@ -569,7 +569,8 @@ static certificate_t *get_pretrusted_cert(private_credential_manager_t *this,
  * Get the issuing certificate of a subject certificate
  */
 static certificate_t *get_issuer_cert(private_credential_manager_t *this,
-									  certificate_t *subject, bool trusted)
+									  certificate_t *subject, bool trusted,
+									  signature_scheme_t *scheme)
 {
 	enumerator_t *enumerator;
 	certificate_t *issuer = NULL, *candidate;
@@ -578,7 +579,7 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 										subject->get_issuer(subject), trusted);
 	while (enumerator->enumerate(enumerator, &candidate))
 	{
-		if (this->cache->issued_by(this->cache, subject, candidate))
+		if (this->cache->issued_by(this->cache, subject, candidate, scheme))
 		{
 			issuer = candidate->get_ref(candidate);
 			break;
@@ -628,6 +629,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 {
 	certificate_t *current, *issuer;
 	auth_cfg_t *auth;
+	signature_scheme_t scheme;
 	int pathlen;
 
 	auth = auth_cfg_create();
@@ -637,11 +639,11 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 
 	for (pathlen = 0; pathlen <= MAX_TRUST_PATH_LEN; pathlen++)
 	{
-		issuer = get_issuer_cert(this, current, TRUE);
+		issuer = get_issuer_cert(this, current, TRUE, &scheme);
 		if (issuer)
 		{
 			/* accept only self-signed CAs as trust anchor */
-			if (this->cache->issued_by(this->cache, issuer, issuer))
+			if (this->cache->issued_by(this->cache, issuer, issuer, NULL))
 			{
 				auth->add(auth, AUTH_RULE_CA_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
@@ -654,10 +656,11 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				DBG1(DBG_CFG, "  using trusted intermediate ca certificate "
 					 "\"%Y\"", issuer->get_subject(issuer));
 			}
+			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme);
 		}
 		else
 		{
-			issuer = get_issuer_cert(this, current, FALSE);
+			issuer = get_issuer_cert(this, current, FALSE, &scheme);
 			if (issuer)
 			{
 				if (current->equals(current, issuer))
@@ -670,6 +673,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				auth->add(auth, AUTH_RULE_IM_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using untrusted intermediate certificate "
 					 "\"%Y\"", issuer->get_subject(issuer));
+				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme);
 			}
 			else
 			{
@@ -764,7 +768,7 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			 * However, in order to fulfill authorization rules, we try to build
 			 * the trust chain if it is not self signed */
 			if (this->this->cache->issued_by(this->this->cache,
-								   this->pretrusted, this->pretrusted) ||
+								   this->pretrusted, this->pretrusted, NULL) ||
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->online))
 			{
@@ -972,7 +976,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		else
 		{
 			if (!has_anchor &&
-				this->cache->issued_by(this->cache, current, current))
+				this->cache->issued_by(this->cache, current, current, NULL))
 			{	/* If no trust anchor specified, accept any CA */
 				trustchain->add(trustchain, AUTH_RULE_CA_CERT, current);
 				return trustchain;
@@ -983,7 +987,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		{
 			break;
 		}
-		issuer = get_issuer_cert(this, current, FALSE);
+		issuer = get_issuer_cert(this, current, FALSE, NULL);
 		if (!issuer)
 		{
 			if (!has_anchor)
@@ -1116,9 +1120,9 @@ METHOD(credential_manager_t, flush_cache, void,
 
 METHOD(credential_manager_t, issued_by, bool,
 	private_credential_manager_t *this, certificate_t *subject,
-	certificate_t *issuer)
+	certificate_t *issuer, signature_scheme_t *scheme)
 {
-	return this->cache->issued_by(this->cache, subject, issuer);
+	return this->cache->issued_by(this->cache, subject, issuer, scheme);
 }
 
 METHOD(credential_manager_t, add_set, void,

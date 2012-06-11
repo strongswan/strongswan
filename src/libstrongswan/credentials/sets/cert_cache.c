@@ -47,6 +47,11 @@ struct relation_t {
 	certificate_t *issuer;
 
 	/**
+	 * Signature scheme used to sign this relation
+	 */
+	signature_scheme_t scheme;
+
+	/**
 	 * Cache hits
 	 */
 	u_int hits;
@@ -77,7 +82,8 @@ struct private_cert_cache_t {
  * Cache relation in a free slot/replace an other
  */
 static void cache(private_cert_cache_t *this,
-				  certificate_t *subject, certificate_t *issuer)
+				  certificate_t *subject, certificate_t *issuer,
+				  signature_scheme_t scheme)
 {
 	relation_t *rel;
 	int i, offset, try;
@@ -95,6 +101,7 @@ static void cache(private_cert_cache_t *this,
 			{
 				rel->subject = subject->get_ref(subject);
 				rel->issuer = issuer->get_ref(issuer);
+				rel->scheme = scheme;
 				return rel->lock->unlock(rel->lock);
 			}
 			rel->lock->unlock(rel->lock);
@@ -123,6 +130,7 @@ static void cache(private_cert_cache_t *this,
 				}
 				rel->subject = subject->get_ref(subject);
 				rel->issuer = issuer->get_ref(issuer);
+				rel->scheme = scheme;
 				rel->hits = 0;
 				return rel->lock->unlock(rel->lock);
 			}
@@ -133,9 +141,11 @@ static void cache(private_cert_cache_t *this,
 }
 
 METHOD(cert_cache_t, issued_by, bool,
-	private_cert_cache_t *this, certificate_t *subject, certificate_t *issuer)
+	private_cert_cache_t *this, certificate_t *subject, certificate_t *issuer,
+	signature_scheme_t *schemep)
 {
 	relation_t *found = NULL, *current;
+	signature_scheme_t scheme;
 	int i;
 
 	for (i = 0; i < CACHE_SIZE; i++)
@@ -154,7 +164,11 @@ METHOD(cert_cache_t, issued_by, bool,
 				{
 					/* write hit counter is not locked, but not critical */
 					current->hits++;
-					found = current;
+					found = current;;
+					if (schemep)
+					{
+						*schemep = current->scheme;
+					}
 				}
 			}
 		}
@@ -165,9 +179,13 @@ METHOD(cert_cache_t, issued_by, bool,
 		}
 	}
 	/* no cache hit, check and cache signature */
-	if (subject->issued_by(subject, issuer, NULL))
+	if (subject->issued_by(subject, issuer, &scheme))
 	{
-		cache(this, subject, issuer);
+		cache(this, subject, issuer, scheme);
+		if (schemep)
+		{
+			*schemep = scheme;
+		}
 		return TRUE;
 	}
 	return FALSE;

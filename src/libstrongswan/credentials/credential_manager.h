@@ -204,10 +204,12 @@ struct credential_manager_t {
 	 *
 	 * @param subject	subject certificate to check
 	 * @param issuer	issuer certificate that potentially has signed subject
+	 * @param scheme	receives used signature scheme, if given
 	 * @return			TRUE if issuer signed subject
 	 */
 	bool (*issued_by)(credential_manager_t *this,
-					  certificate_t *subject, certificate_t *issuer);
+					  certificate_t *subject, certificate_t *issuer,
+					  signature_scheme_t *scheme);
 
 	/**
 	 * Register a credential set to the manager.
