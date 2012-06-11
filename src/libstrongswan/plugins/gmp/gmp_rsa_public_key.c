@@ -123,8 +123,8 @@ static const asn1Object_t digestInfoObjects[] = {
  * Verification of an EMPSA PKCS1 signature described in PKCS#1
  */
 static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
-										hash_algorithm_t algorithm,
-										chunk_t data, chunk_t signature)
+						signature_scheme_t *scheme, hash_algorithm_t algorithm,
+						chunk_t data, chunk_t signature)
 {
 	chunk_t em_ori, em;
 	bool success = FALSE;
@@ -179,8 +179,8 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		goto end;
 	}
 
-	if (algorithm == HASH_UNKNOWN)
-	{   /* IKEv1 signatures without digestInfo */
+	if (*scheme == SIGN_RSA_EMSA_PKCS1_NULL)
+	{	/* IKEv1 signatures without digestInfo */
 		if (em.len != data.len)
 		{
 			DBG1(DBG_LIB, "hash size in signature is %u bytes instead of"
@@ -190,11 +190,11 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		success = memeq(em.ptr, data.ptr, data.len);
 	}
 	else
-	{   /* IKEv2 and X.509 certificate signatures */
+	{	/* IKEv2 and X.509 certificate signatures */
 		asn1_parser_t *parser;
 		chunk_t object;
-		int objectID;
-		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
+		int objectID, hash_oid = 0;
+		hash_algorithm_t detected = HASH_UNKNOWN;
 
 		DBG2(DBG_LIB, "signature verification:");
 		parser = asn1_parser_create(digestInfoObjects, em);
@@ -216,15 +216,15 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 				}
 				case DIGEST_INFO_ALGORITHM:
 				{
-					int hash_oid = asn1_parse_algorithmIdentifier(object,
-										 parser->get_level(parser)+1, NULL);
-
-					hash_algorithm = hasher_algorithm_from_oid(hash_oid);
-					if (hash_algorithm == HASH_UNKNOWN || hash_algorithm != algorithm)
+					hash_oid = asn1_parse_algorithmIdentifier(object,
+											parser->get_level(parser)+1, NULL);
+					detected = hasher_algorithm_from_oid(hash_oid);
+					if (detected == HASH_UNKNOWN ||
+						(algorithm != HASH_UNKNOWN && detected != algorithm))
 					{
 						DBG1(DBG_LIB, "expected hash algorithm %N, but found"
 							 " %N (OID: %#B)", hash_algorithm_names, algorithm,
-							 hash_algorithm_names, hash_algorithm,  &object);
+							 hash_algorithm_names, detected,  &object);
 						goto end_parser;
 					}
 					break;
@@ -234,11 +234,11 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					chunk_t hash;
 					hasher_t *hasher;
 
-					hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
+					hasher = lib->crypto->create_hasher(lib->crypto, detected);
 					if (hasher == NULL)
 					{
 						DBG1(DBG_LIB, "hash algorithm %N not supported",
-							 hash_algorithm_names, hash_algorithm);
+							 hash_algorithm_names, detected);
 						goto end_parser;
 					}
 
@@ -266,6 +266,11 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 end_parser:
 		success &= parser->success(parser);
 		parser->destroy(parser);
+
+		if (success && *scheme == SIGN_UNKNOWN)
+		{
+			*scheme = signature_scheme_from_oid(hash_oid);
+		}
 	}
 
 end:
@@ -286,19 +291,27 @@ METHOD(public_key_t, verify, bool,
 	switch (*scheme)
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
-			return verify_emsa_pkcs1_signature(this, HASH_UNKNOWN, data, signature);
+		case SIGN_UNKNOWN:
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_UNKNOWN,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
-			return verify_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_MD5,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_SHA1,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA224, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_SHA224,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA256, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_SHA256,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA384, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_SHA384,
+											   data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA512, data, signature);
+			return verify_emsa_pkcs1_signature(this, scheme, HASH_SHA512,
+											   data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, *scheme);
