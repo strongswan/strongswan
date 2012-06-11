@@ -485,12 +485,19 @@ to (require the) use of the Extensible Authentication Protocol in IKEv2, and
 .B xauth
 for IKEv1 eXtended Authentication.
 To require a trustchain public key strength for the remote side, specify the
-key type followed by the strength in bits (for example
-.BR rsa-2048
+key type followed by the minimum strength in bits (for example
+.BR ecdsa-384
 or
-.BR ecdsa-256 ).
+.BR rsa-2048-ecdsa-256 ).
+To limit the acceptable set of hashing algorithms for trustchain validation,
+append hash algorithms to
+.BR pubkey
+or a key strength definition (for example
+.BR pubkey-sha1-sha256
+or
+.BR rsa-2048-ecdsa-256-sha256-sha384-sha512 ).
 For
-.B eap,
+.B eap ,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
 .BR eap-sim ,
