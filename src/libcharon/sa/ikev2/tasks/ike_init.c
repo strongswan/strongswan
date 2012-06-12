@@ -263,7 +263,12 @@ METHOD(task_t, build_i, status_t,
 			DBG1(DBG_IKE, "no nonce generator found to create nonce");
 			return FAILED;
 		}
-		nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+		if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+		{
+			DBG1(DBG_IKE, "nonce allocation failed");
+			nonceg->destroy(nonceg);
+			return FAILED;
+		}
 		nonceg->destroy(nonceg);
 	}
 
@@ -302,7 +307,12 @@ METHOD(task_t, process_r,  status_t,
 		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FAILED;
 	}
-	nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+	if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+	{
+		DBG1(DBG_IKE, "nonce allocation failed");
+		nonceg->destroy(nonceg);
+		return FAILED;
+	}
 	nonceg->destroy(nonceg);
 
 #ifdef ME

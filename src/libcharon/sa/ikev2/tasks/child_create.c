@@ -207,8 +207,14 @@ static status_t generate_nonce(private_child_create_t *this)
 		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FAILED;
 	}
-	nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce);
+	if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, &this->my_nonce))
+	{
+		DBG1(DBG_IKE, "nonce allocation failed");
+		nonceg->destroy(nonceg);
+		return FAILED;
+	}
 	nonceg->destroy(nonceg);
+
 	return SUCCESS;
 }
 

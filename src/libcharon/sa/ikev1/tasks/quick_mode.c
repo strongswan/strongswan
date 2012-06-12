@@ -328,7 +328,12 @@ static bool add_nonce(private_quick_mode_t *this, chunk_t *nonce,
 		DBG1(DBG_IKE, "no nonce generator found to create nonce");
 		return FALSE;
 	}
-	nonceg->allocate_nonce(nonceg, NONCE_SIZE, nonce);
+	if (!nonceg->allocate_nonce(nonceg, NONCE_SIZE, nonce))
+	{
+		DBG1(DBG_IKE, "nonce allocation failed");
+		nonceg->destroy(nonceg);
+		return FALSE;
+	}
 	nonceg->destroy(nonceg);
 
 	nonce_payload = nonce_payload_create(NONCE_V1);
