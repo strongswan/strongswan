@@ -15,6 +15,13 @@ strongswan-5.0.0
 - Source routes are reinstalled if interfaces are reactivated or IP addresses
   reappear.
 
+- In addition to trustchain key strength definitions for different public key
+  systems, the rightauth option now takes a list of signature hash algorithms
+  considered save for trustchain validation. For example, the setting
+  rightauth=rsa-2048-ecdsa-256-sha256-sha384-sha512 requires a trustchain
+  that uses at least RSA-2048 or ECDSA-256 keys and certificate signatures
+  using SHA-256 or better.
+
 
 strongswan-4.6.4
 ----------------
