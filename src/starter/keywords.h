@@ -22,9 +22,10 @@ typedef enum {
 	KW_UNIQUEIDS,
 	KW_CACHECRLS,
 	KW_STRICTCRLPOLICY,
+	KW_SETUP_DEPRECATED,
 
 #define KW_SETUP_FIRST  KW_CHARONDEBUG
-#define KW_SETUP_LAST   KW_STRICTCRLPOLICY
+#define KW_SETUP_LAST   KW_SETUP_DEPRECATED
 
 	/* conn section keywords */
 	KW_CONN_NAME,
@@ -69,9 +70,10 @@ typedef enum {
 	KW_MARK_IN,
 	KW_MARK_OUT,
 	KW_TFC,
+	KW_CONN_DEPRECATED,
 
 #define KW_CONN_FIRST   KW_CONN_SETUP
-#define KW_CONN_LAST    KW_TFC
+#define KW_CONN_LAST    KW_CONN_DEPRECATED
 
 	/* ca section keywords */
 	KW_CA_NAME,
@@ -84,9 +86,10 @@ typedef enum {
 	KW_OCSPURI,
 	KW_OCSPURI2,
 	KW_CERTURIBASE,
+	KW_CA_DEPRECATED,
 
 #define KW_CA_FIRST     KW_CA_SETUP
-#define KW_CA_LAST      KW_CERTURIBASE
+#define KW_CA_LAST      KW_CA_DEPRECATED
 
 	/* end keywords */
 	KW_HOST,
@@ -111,9 +114,10 @@ typedef enum {
 	KW_CA,
 	KW_CA2,
 	KW_GROUPS,
+	KW_END_DEPRECATED,
 
 #define KW_END_FIRST    KW_HOST
-#define KW_END_LAST     KW_GROUPS
+#define KW_END_LAST     KW_END_DEPRECATED
 
 	/* left end keywords */
 	KW_LEFT,
@@ -138,9 +142,10 @@ typedef enum {
 	KW_LEFTCA,
 	KW_LEFTCA2,
 	KW_LEFTGROUPS,
+	KW_LEFT_DEPRECATED,
 
 #define KW_LEFT_FIRST   KW_LEFT
-#define KW_LEFT_LAST    KW_LEFTGROUPS
+#define KW_LEFT_LAST    KW_LEFT_DEPRECATED
 
 	/* right end keywords */
 	KW_RIGHT,
@@ -165,13 +170,14 @@ typedef enum {
 	KW_RIGHTCA,
 	KW_RIGHTCA2,
 	KW_RIGHTGROUPS,
+	KW_RIGHT_DEPRECATED,
 
 #define KW_RIGHT_FIRST  KW_RIGHT
-#define KW_RIGHT_LAST   KW_RIGHTGROUPS
+#define KW_RIGHT_LAST   KW_RIGHT_DEPRECATED
 
 	/* general section keywords */
 	KW_ALSO,
-	KW_AUTO
+	KW_AUTO,
 
 } kw_token_t;
 

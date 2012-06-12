@@ -120,6 +120,7 @@ static const token_info_t token_info[] =
 	{ ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
+	{ ARG_MISC, 0, NULL  /* KW_SETUP_DEPRECATED */                                 },
 
 	/* conn section keywords */
 	{ ARG_STR,  offsetof(starter_conn_t, name), NULL                               },
@@ -164,6 +165,7 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
 	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
 	{ ARG_MISC, 0, NULL  /* KW_TFC */                                              },
+	{ ARG_MISC, 0, NULL  /* KW_CONN_DEPRECATED */                                  },
 
 	/* ca section keywords */
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
@@ -176,6 +178,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
 	{ ARG_STR,  offsetof(starter_ca_t, ocspuri2), NULL                             },
 	{ ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
+	{ ARG_MISC, 0, NULL  /* KW_CA_DEPRECATED */                                    },
 
 	/* end keywords */
 	{ ARG_STR,  offsetof(starter_end_t, host), NULL                                },
@@ -200,6 +203,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_end_t, ca), NULL                                  },
 	{ ARG_STR,  offsetof(starter_end_t, ca2), NULL                                 },
 	{ ARG_STR,  offsetof(starter_end_t, groups), NULL                              },
+	{ ARG_MISC, 0, NULL  /* KW_END_DEPRECATED */                                   },
 };
 
 static void free_list(char **list)

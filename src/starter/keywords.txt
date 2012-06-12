@@ -24,6 +24,7 @@ struct kw_entry {
     kw_token_t token;
 };
 %%
+# regular keywords
 charondebug,       KW_CHARONDEBUG
 uniqueids,         KW_UNIQUEIDS
 cachecrls,         KW_CACHECRLS
@@ -126,3 +127,34 @@ rightca2,          KW_RIGHTCA2
 rightgroups,       KW_RIGHTGROUPS
 also,              KW_ALSO
 auto,              KW_AUTO
+# deprecated/removed keywords
+interfaces,        KW_SETUP_DEPRECATED
+dumpdir,           KW_SETUP_DEPRECATED
+charonstart,       KW_SETUP_DEPRECATED
+plutostart,        KW_SETUP_DEPRECATED
+klipsdebug,        KW_SETUP_DEPRECATED
+plutodebug,        KW_SETUP_DEPRECATED
+prepluto,          KW_SETUP_DEPRECATED
+postpluto,         KW_SETUP_DEPRECATED
+plutostderrlog,    KW_SETUP_DEPRECATED
+fragicmp,          KW_SETUP_DEPRECATED
+packetdefault,     KW_SETUP_DEPRECATED
+hidetos,           KW_SETUP_DEPRECATED
+overridemtu,       KW_SETUP_DEPRECATED
+crlcheckinterval,  KW_SETUP_DEPRECATED
+nocrsend,          KW_SETUP_DEPRECATED
+nat_traversal,     KW_SETUP_DEPRECATED
+keep_alive,        KW_SETUP_DEPRECATED
+force_keepalive,   KW_SETUP_DEPRECATED
+virtual_private,   KW_SETUP_DEPRECATED
+pkcs11module,      KW_SETUP_DEPRECATED
+pkcs11initargs,    KW_SETUP_DEPRECATED
+pkcs11keepstate,   KW_SETUP_DEPRECATED
+pkcs11proxy,       KW_SETUP_DEPRECATED
+pfs,               KW_CONN_DEPRECATED
+pfsgroup,          KW_CONN_DEPRECATED
+eap,               KW_CONN_DEPRECATED
+leftnexthop,       KW_LEFT_DEPRECATED
+leftsubnetwithin,  KW_LEFT_DEPRECATED
+rightnexthop,      KW_RIGHT_DEPRECATED
+rightsubnetwithin, KW_RIGHT_DEPRECATED
