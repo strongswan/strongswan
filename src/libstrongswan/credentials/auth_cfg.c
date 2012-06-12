@@ -497,6 +497,7 @@ METHOD(auth_cfg_t, complies, bool,
 	enumerator_t *e1, *e2;
 	bool success = TRUE, has_group = FALSE, group_match = FALSE;
 	signature_scheme_t scheme = SIGN_UNKNOWN;
+	u_int strength = 0;
 	auth_rule_t t1, t2;
 	void *value;
 
@@ -677,47 +678,7 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			{
-				uintptr_t strength;
-
-				e2 = create_enumerator(this);
-				while (e2->enumerate(e2, &t2, &strength))
-				{
-					if (t2 == t1)
-					{
-						if ((uintptr_t)value > strength)
-						{
-							success = FALSE;
-							if (log_error)
-							{
-								DBG1(DBG_CFG, "constraint requires %d bit "
-									 "public keys, but %d bit key used",
-									 (uintptr_t)value, strength);
-							}
-							break;
-						}
-					}
-					else if (t2 == AUTH_RULE_RSA_STRENGTH)
-					{
-						success = FALSE;
-						if (log_error)
-						{
-							DBG1(DBG_CFG, "constraint requires %d bit ECDSA, "
-								 "but RSA used", (uintptr_t)value);
-						}
-						break;
-					}
-					else if (t2 == AUTH_RULE_ECDSA_STRENGTH)
-					{
-						success = FALSE;
-						if (log_error)
-						{
-							DBG1(DBG_CFG, "constraint requires %d bit RSA, "
-								 "but ECDSA used", (uintptr_t)value);
-						}
-						break;
-					}
-				}
-				e2->destroy(e2);
+				strength = (uintptr_t)value;
 				break;
 			}
 			case AUTH_RULE_SIGNATURE_SCHEME:
@@ -792,6 +753,42 @@ METHOD(auth_cfg_t, complies, bool,
 					{
 						DBG1(DBG_CFG, "signature scheme %N not acceptable",
 							 signature_scheme_names, (int)scheme);
+					}
+					break;
+				}
+			}
+		}
+		e2->destroy(e2);
+	}
+
+	/* Check if we have a matching constraint (or none at all) for used
+	 * public key strength */
+	if (success && strength)
+	{
+		e2 = create_enumerator(this);
+		while (e2->enumerate(e2, &t2, &strength))
+		{
+			if (t2 == AUTH_RULE_RSA_STRENGTH ||
+				t2 == AUTH_RULE_ECDSA_STRENGTH)
+			{
+				success = FALSE;
+				e1 = constraints->create_enumerator(constraints);
+				while (e1->enumerate(e1, &t1, &value))
+				{
+					if (t1 == t2 && (uintptr_t)value <= strength)
+					{
+						success = TRUE;
+						break;
+					}
+				}
+				e1->destroy(e1);
+				if (!success)
+				{
+					if (log_error)
+					{
+						DBG1(DBG_CFG, "%s-%d signatures not acceptable",
+							 t2 == AUTH_RULE_RSA_STRENGTH ? "RSA" : "ECDSA",
+							 strength);
 					}
 					break;
 				}
