@@ -1,8 +1,0 @@
-sun:: cat /var/log/auth.log::probable authentication failure::YES
-sun:: cat /var/log/auth.log::sending encrypted notification PAYLOAD_MALFORMED::YES
-moon::cat /var/log/auth.log::next payload type of ISAKMP Hash Payload has an unknown value::YES
-moon::cat /var/log/auth.log::malformed payload in packet::YES
-moon::ipsec status 2> /dev/null::net-net.*STATE_MAIN_I4.*ISAKMP SA established::NO
-sun:: ipsec status 2> /dev/null::net-net.*STATE_MAIN_R3.*sent MR3, ISAKMP SA established::NO
-moon::ipsec status 2> /dev/null::net-net.*STATE_QUICK_I2.*IPsec SA established::NO
-sun:: ipsec status 2> /dev/null::net-net.*STATE_QUICK_R2.*IPsec SA established::NO
