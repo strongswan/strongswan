@@ -120,6 +120,7 @@ static const token_info_t token_info[] =
 	{ ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.strictcrlpolicy), LST_strict      },
+	{ ARG_MISC, 0, NULL  /* KW_PKCS11_DEPRECATED */                                },
 	{ ARG_MISC, 0, NULL  /* KW_SETUP_DEPRECATED */                                 },
 
 	/* conn section keywords */
@@ -165,6 +166,7 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
 	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
 	{ ARG_MISC, 0, NULL  /* KW_TFC */                                              },
+	{ ARG_MISC, 0, NULL  /* KW_PFS_DEPRECATED */                                   },
 	{ ARG_MISC, 0, NULL  /* KW_CONN_DEPRECATED */                                  },
 
 	/* ca section keywords */

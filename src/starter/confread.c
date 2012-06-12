@@ -59,11 +59,13 @@ static bool is_deprecated(kw_token_t token, kw_list_t *kw, char *name)
 	switch (token)
 	{
 		case KW_SETUP_DEPRECATED:
+		case KW_PKCS11_DEPRECATED:
 			DBG1(DBG_APP, "# deprecated keyword '%s' in config setup",
 				 kw->entry->name);
 			break;
 		case KW_CONN_DEPRECATED:
 		case KW_END_DEPRECATED:
+		case KW_PFS_DEPRECATED:
 			DBG1(DBG_APP, "# deprecated keyword '%s' in conn '%s'",
 				 kw->entry->name, name);
 			break;
@@ -73,6 +75,19 @@ static bool is_deprecated(kw_token_t token, kw_list_t *kw, char *name)
 			break;
 		default:
 			return FALSE;
+	}
+	/* additional messages for some */
+	switch (token)
+	{
+		case KW_PKCS11_DEPRECATED:
+			DBG1(DBG_APP, "  use the 'pkcs11' plugin instead", kw->entry->name);
+			break;
+		case KW_PFS_DEPRECATED:
+			DBG1(DBG_APP, "  PFS is enabled by specifying a DH group in the "
+				 "'esp' cipher suite", kw->entry->name);
+			break;
+		default:
+			break;
 	}
 	return TRUE;
 }
