@@ -16,6 +16,9 @@
 
 #include "tkm_nonceg.h"
 
+#include <tkm/client.h>
+#include <tkm/constants.h>
+
 typedef struct private_tkm_nonceg_t private_tkm_nonceg_t;
 
 /**
@@ -33,7 +36,16 @@ struct private_tkm_nonceg_t {
 METHOD(nonce_gen_t, get_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, u_int8_t *buffer)
 {
-	// TODO: Request nonce from TKM and fill it into buffer.
+	nonce_type nonce;
+
+	/* request nonce from TKM, the context is not yet used */
+	const result_type result = ike_nc_create(1, size, &nonce);
+	if (result != TKM_OK)
+	{
+		return FALSE;
+	}
+
+	memcpy(buffer, &nonce.data, size);
 	return TRUE;
 }
 
