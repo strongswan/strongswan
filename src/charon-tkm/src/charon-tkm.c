@@ -33,6 +33,7 @@
 #include <threading/thread.h>
 
 #include "tkm.h"
+#include "tkm_nonceg.h"
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -266,6 +267,14 @@ int main(int argc, char *argv[])
 	charon->load_loggers(charon, NULL, FALSE);
 
 	DBG1(DBG_DMN, "Starting charon with TKM backend (strongSwan "VERSION")");
+
+	/* register TKM specific plugins */
+	static plugin_feature_t features[] = {
+		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
+		PLUGIN_PROVIDE(NONCE_GEN)
+	};
+	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
+			countof(features), TRUE);
 
 	/* initialize daemon */
 	if (!charon->initialize(charon, PLUGINS))

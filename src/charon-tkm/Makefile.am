@@ -27,7 +27,6 @@ PLUGINS = \
 	gmp \
 	hmac \
 	kernel-netlink \
-	nonce \
 	pem \
 	pkcs1 \
 	pkcs8 \
