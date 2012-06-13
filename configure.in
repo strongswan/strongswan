@@ -27,7 +27,6 @@ dnl =================================
 
 m4_include(m4/macros/with.m4)
 
-ARG_WITH_SUBST([default-pkcs11],     [/usr/lib/opensc-pkcs11.so], [set the default PKCS11 library])
 ARG_WITH_SUBST([random-device],      [/dev/random], [set the device to read real random data from])
 ARG_WITH_SUBST([urandom-device],     [/dev/urandom], [set the device to read pseudo random data from])
 ARG_WITH_SUBST([strongswan-conf],    [${sysconfdir}/strongswan.conf], [set the strongswan.conf file location])
@@ -51,12 +50,6 @@ fi
 ARG_WITH_SET([systemdsystemunitdir], [$systemdsystemunitdir_default], [directory for systemd service files])
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno])
 AC_SUBST(systemdsystemunitdir)
-
-AC_ARG_WITH(
-	[xauth-module],
-	AS_HELP_STRING([--with-xauth-module=lib],[set the path to the XAUTH module]),
-	[AC_DEFINE_UNQUOTED(XAUTH_DEFAULT_LIB, "$withval")],
-)
 
 AC_ARG_WITH(
 	[user],
@@ -104,13 +97,11 @@ ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto 
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
 ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
-ARG_DISBL_SET([stroke],         [disable charons stroke (pluto compatibility) configuration backend.])
+ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
 ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
 ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
 ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
-ARG_ENABL_SET([smartcard],      [enable smartcard support.])
-ARG_ENABL_SET([cisco-quirks],   [enable support of Cisco VPN client.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([unit-tester],    [enable unit tests on IKEv2 daemon startup.])
@@ -152,21 +143,17 @@ ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
-ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon, enforced if pluto is enabled])
+ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
-ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
-ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
-ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
 ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
 ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
-ARG_DISBL_SET([load-warning],   [disable the charon/pluto plugin load option warning in starter.])
+ARG_DISBL_SET([load-warning],   [disable the charon plugin load option warning in starter.])
 ARG_DISBL_SET([ikev1],          [disable IKEv1 protocol support in charon.])
 ARG_DISBL_SET([ikev2],          [disable IKEv2 protocol support in charon.])
-ARG_DISBL_SET([xauth],          [disable xauth plugin.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
@@ -1024,13 +1011,8 @@ AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 dnl other options
 dnl =============
-AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
-AM_CONDITIONAL(USE_CISCO_QUIRKS, test x$cisco_quirks = xtrue)
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
-AM_CONDITIONAL(USE_NAT_TRANSPORT, test x$nat_transport = xtrue)
-AM_CONDITIONAL(USE_VENDORID, test x$vendor_id = xtrue)
-AM_CONDITIONAL(USE_XAUTH_VID, test x$xauth_vid = xtrue)
 AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
