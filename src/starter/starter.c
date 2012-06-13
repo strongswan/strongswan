@@ -395,7 +395,10 @@ int main (int argc, char **argv)
 
 	init_log("ipsec_starter");
 
-	DBG1(DBG_APP, "Starting strongSwan "VERSION" IPsec [starter]...");
+	DBG1(DBG_APP, "Starting %sSwan "VERSION" IPsec [starter]...",
+		lib->settings->get_bool(lib->settings,
+			"charon.i_dont_care_about_security_and_use_aggressive_mode_psk",
+				FALSE) ? "weak" : "strong");
 
 #ifdef LOAD_WARNING
 	load_warning = TRUE;
