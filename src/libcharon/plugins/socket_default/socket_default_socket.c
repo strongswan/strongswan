@@ -22,6 +22,8 @@
 #define _XPG4_2
 #define __EXTENSIONS__
 #endif
+/* make sure to use the proper defs on Mac OS X */
+#define __APPLE_USE_RFC_3542
 
 #include "socket_default_socket.h"
 
