@@ -51,6 +51,11 @@ struct private_stroke_list_t {
 	stroke_list_t public;
 
 	/**
+	 * Kind of *swan we run
+	 */
+	char *swan;
+
+	/**
 	 * timestamp of daemon start
 	 */
 	time_t uptime;
@@ -440,8 +445,10 @@ METHOD(stroke_list_t, status, void,
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
-		fprintf(out, "Status of IKE charon daemon (strongSwan "VERSION"):\n");
-		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
+		fprintf(out, "Status of IKE charon daemon (%sSwan "VERSION"):\n",
+				this->swan);
+		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since,
+				FALSE);
 #ifdef HAVE_MALLINFO
 		{
 			struct mallinfo mi = mallinfo();
@@ -1493,15 +1500,21 @@ stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 
 	INIT(this,
 		.public = {
-
 			.list = _list,
 			.status = _status,
 			.leases = _leases,
 			.destroy = _destroy,
 		},
 		.uptime = time_monotonic(NULL),
+		.swan = "strong",
 		.attribute = attribute,
 	);
+
+	if (lib->settings->get_bool(lib->settings,
+		"charon.i_dont_care_about_security_and_use_aggressive_mode_psk", FALSE))
+	{
+		this->swan = "weak";
+	}
 
 	return &this->public;
 }
