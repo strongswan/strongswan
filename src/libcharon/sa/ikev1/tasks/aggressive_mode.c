@@ -380,6 +380,23 @@ METHOD(task_t, process_r, status_t,
 			this->method = sa_payload->get_auth_method(sa_payload);
 			this->lifetime = sa_payload->get_lifetime(sa_payload);
 
+			switch (this->method)
+			{
+				case AUTH_XAUTH_INIT_PSK:
+				case AUTH_XAUTH_RESP_PSK:
+				case AUTH_PSK:
+					if (!lib->settings->get_bool(lib->settings, "charon.i_dont_"
+						"care_about_security_and_use_aggressive_mode_psk", FALSE))
+					{
+						DBG1(DBG_IKE, "Aggressive Mode PSK disabled for "
+							 "security reasons");
+						return send_notify(this, AUTHENTICATION_FAILED);
+					}
+					break;
+				default:
+					break;
+			}
+
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
