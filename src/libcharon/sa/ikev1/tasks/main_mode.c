@@ -505,8 +505,8 @@ METHOD(task_t, build_r, status_t,
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
-					/* TODO-IKEv1: not yet supported */
-					return FAILED;
+					/* wait for XAUTH request */
+					return SUCCESS;
 				default:
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
@@ -634,8 +634,9 @@ METHOD(task_t, process_i, status_t,
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
-					/* TODO-IKEv1: not yet */
-					return FAILED;
+					this->ike_sa->queue_task(this->ike_sa,
+									(task_t*)xauth_create(this->ike_sa, TRUE));
+					return SUCCESS;
 				default:
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
