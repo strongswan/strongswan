@@ -115,7 +115,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 	fprintf(out, ", %H[%Y]...%H[%Y]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
-			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
+			ike_sa->get_other_host(ike_sa), ike_sa->get_other_eap_id(ike_sa));
 
 	if (all)
 	{
