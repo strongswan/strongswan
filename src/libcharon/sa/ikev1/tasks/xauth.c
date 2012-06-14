@@ -138,9 +138,9 @@ static xauth_method_t *load_method(private_xauth_t* this)
 }
 
 /**
- * Set IKE_SA to established state
+ * Check if XAuth connection is allowed to succeed
  */
-static bool establish(private_xauth_t *this)
+static bool allowed(private_xauth_t *this)
 {
 	if (!charon->bus->authorize(charon->bus, FALSE))
 	{
@@ -152,7 +152,14 @@ static bool establish(private_xauth_t *this)
 		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
 		return FALSE;
 	}
+	return TRUE;
+}
 
+/**
+ * Set IKE_SA to established state
+ */
+static bool establish(private_xauth_t *this)
+{
 	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
@@ -237,7 +244,7 @@ METHOD(task_t, build_r_ack, status_t,
 
 	message->add_payload(message, (payload_t *)cp);
 
-	if (this->status == XAUTH_OK && establish(this))
+	if (this->status == XAUTH_OK && allowed(this) && establish(this))
 	{
 		return SUCCESS;
 	}
@@ -372,7 +379,10 @@ METHOD(task_t, process_i, status_t,
 			}
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' successful", id);
 			add_auth_cfg(this, id, FALSE);
-			this->status = XAUTH_OK;
+			if (allowed(this))
+			{
+				this->status = XAUTH_OK;
+			}
 			break;
 		case FAILED:
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' failed",
