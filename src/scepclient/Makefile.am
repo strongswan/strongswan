@@ -1,5 +1,6 @@
 ipsec_PROGRAMS = scepclient
-scepclient_SOURCES = scepclient.c scep.c scep.h
+scepclient_SOURCES = \
+scepclient.c scep.c scep.h
 
 scepclient.o :	$(top_builddir)/config.status
 
