@@ -293,14 +293,6 @@ METHOD(task_t, build_i, status_t,
 			}
 			this->id_data = chunk_empty;
 
-			if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-														 this->ike_sa, FALSE))
-			{
-				DBG1(DBG_IKE, "cancelling Aggressive Mode due to uniqueness "
-					 "policy");
-				return send_notify(this, AUTHENTICATION_FAILED);
-			}
-
 			switch (this->method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
@@ -314,6 +306,13 @@ METHOD(task_t, build_i, status_t,
 					/* TODO-IKEv1: not yet */
 					return FAILED;
 				default:
+					if (charon->ike_sa_manager->check_uniqueness(
+								charon->ike_sa_manager, this->ike_sa, FALSE))
+					{
+						DBG1(DBG_IKE, "cancelling Aggressive Mode due to "
+							 "uniqueness policy");
+						return send_notify(this, AUTHENTICATION_FAILED);
+					}
 					if (!establish(this))
 					{
 						return send_notify(this, AUTHENTICATION_FAILED);
@@ -466,14 +465,6 @@ METHOD(task_t, process_r, status_t,
 				return send_delete(this);
 			}
 
-			if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-														 this->ike_sa, FALSE))
-			{
-				DBG1(DBG_IKE, "cancelling Aggressive Mode due to uniqueness "
-					 "policy");
-				return send_delete(this);
-			}
-
 			switch (this->method)
 			{
 				case AUTH_XAUTH_INIT_PSK:
@@ -488,6 +479,13 @@ METHOD(task_t, process_r, status_t,
 					/* TODO-IKEv1: not yet supported */
 					return FAILED;
 				default:
+					if (charon->ike_sa_manager->check_uniqueness(
+								charon->ike_sa_manager, this->ike_sa, FALSE))
+					{
+						DBG1(DBG_IKE, "cancelling Aggressive Mode due to "
+							 "uniqueness policy");
+						return send_delete(this);
+					}
 					if (!establish(this))
 					{
 						return send_delete(this);
