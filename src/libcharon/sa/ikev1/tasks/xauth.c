@@ -239,8 +239,6 @@ METHOD(task_t, build_r_ack, status_t,
 
 	if (this->status == XAUTH_OK && establish(this))
 	{
-		lib->processor->queue_job(lib->processor, (job_t*)
-				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
 		return SUCCESS;
 	}
 	return FAILED;
@@ -343,6 +341,8 @@ METHOD(task_t, process_i_status, status_t,
 		return FAILED;
 	}
 	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
+	lib->processor->queue_job(lib->processor, (job_t*)
+				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
 	return SUCCESS;
 }
 
