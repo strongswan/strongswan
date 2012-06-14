@@ -142,6 +142,12 @@ static xauth_method_t *load_method(private_xauth_t* this)
  */
 static bool allowed(private_xauth_t *this)
 {
+	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+												 this->ike_sa, FALSE))
+	{
+		DBG1(DBG_IKE, "cancelling XAuth due to uniqueness policy");
+		return FALSE;
+	}
 	if (!charon->bus->authorize(charon->bus, FALSE))
 	{
 		DBG1(DBG_IKE, "XAuth authorization hook forbids IKE_SA, cancelling");
