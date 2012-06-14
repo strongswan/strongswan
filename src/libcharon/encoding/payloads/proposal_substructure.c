@@ -785,10 +785,16 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 			return IKEV1_AUTH_DSS_SIG;
 		case AUTH_XAUTH_INIT_PSK:
 			return IKEV1_AUTH_XAUTH_INIT_PSK;
+		case AUTH_XAUTH_RESP_PSK:
+			return IKEV1_AUTH_XAUTH_RESP_PSK;
 		case AUTH_XAUTH_INIT_RSA:
 			return IKEV1_AUTH_XAUTH_INIT_RSA;
+		case AUTH_XAUTH_RESP_RSA:
+			return IKEV1_AUTH_XAUTH_RESP_RSA;
 		case AUTH_HYBRID_INIT_RSA:
 			return IKEV1_AUTH_HYBRID_INIT_RSA;
+		case AUTH_HYBRID_RESP_RSA:
+			return IKEV1_AUTH_HYBRID_RESP_RSA;
 		case AUTH_ECDSA_256:
 			return IKEV1_AUTH_ECDSA_256;
 		case AUTH_ECDSA_384:
@@ -1087,10 +1093,16 @@ METHOD(proposal_substructure_t, get_auth_method, auth_method_t,
 			return AUTH_DSS;
 		case IKEV1_AUTH_XAUTH_INIT_PSK:
 			return AUTH_XAUTH_INIT_PSK;
+		case IKEV1_AUTH_XAUTH_RESP_PSK:
+			return AUTH_XAUTH_RESP_PSK;
 		case IKEV1_AUTH_XAUTH_INIT_RSA:
 			return AUTH_XAUTH_INIT_RSA;
+		case IKEV1_AUTH_XAUTH_RESP_RSA:
+			return AUTH_XAUTH_RESP_RSA;
 		case IKEV1_AUTH_HYBRID_INIT_RSA:
 			return AUTH_HYBRID_INIT_RSA;
+		case IKEV1_AUTH_HYBRID_RESP_RSA:
+			return AUTH_HYBRID_RESP_RSA;
 		case IKEV1_AUTH_ECDSA_256:
 			return AUTH_ECDSA_256;
 		case IKEV1_AUTH_ECDSA_384:
