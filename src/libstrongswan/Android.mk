@@ -80,6 +80,12 @@ utils/backtrace.c utils/backtrace.h
 
 LOCAL_SRC_FILES += $(call add_plugin, aes)
 
+LOCAL_SRC_FILES += $(call add_plugin, curl)
+ifneq ($(call plugin_enabled, curl),)
+LOCAL_C_INCLUDES += $(libcurl_PATH)
+LOCAL_SHARED_LIBRARIES += libcurl
+endif
+
 LOCAL_SRC_FILES += $(call add_plugin, des)
 
 LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
