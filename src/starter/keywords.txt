@@ -84,6 +84,7 @@ certuribase,       KW_CERTURIBASE
 left,              KW_LEFT
 leftikeport,       KW_LEFTIKEPORT
 leftsubnet,        KW_LEFTSUBNET
+leftsubnetwithin,  KW_LEFTSUBNET
 leftprotoport,     KW_LEFTPROTOPORT
 leftsourceip,      KW_LEFTSOURCEIP
 leftnatip,         KW_LEFTNATIP
@@ -106,6 +107,7 @@ leftgroups,        KW_LEFTGROUPS
 right,             KW_RIGHT
 rightikeport,      KW_RIGHTIKEPORT
 rightsubnet,       KW_RIGHTSUBNET
+rightsubnetwithin, KW_RIGHTSUBNET
 rightprotoport,    KW_RIGHTPROTOPORT
 rightsourceip,     KW_RIGHTSOURCEIP
 rightnatip,        KW_RIGHTNATIP
@@ -155,6 +157,4 @@ pfs,               KW_PFS_DEPRECATED
 pfsgroup,          KW_PFS_DEPRECATED
 eap,               KW_CONN_DEPRECATED
 leftnexthop,       KW_LEFT_DEPRECATED
-leftsubnetwithin,  KW_LEFT_DEPRECATED
 rightnexthop,      KW_RIGHT_DEPRECATED
-rightsubnetwithin, KW_RIGHT_DEPRECATED
