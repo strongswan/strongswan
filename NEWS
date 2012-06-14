@@ -1,6 +1,15 @@
 strongswan-5.0.0
 ----------------
 
+- The charon IKE daemon gained experimental support for the IKEv1 protocol.
+  Pluto has been removed from the 5.x series, and unless strongSwan is
+  configured with --disable-ikev1 or --disable-ikev2, charon handles both
+  keying protocols. The feature-set of IKEv1 in charon is almost on par with
+  pluto, but currently does not support AH or bundled AH+ESP SAs. Beside
+  RSA/ECDSA, PSK and XAuth, charon also supports the Hybrid authentication
+  mode. Informations for interoperability and migration is available at
+  http://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1.
+
 - Charon's bus_t has been refactored so that loggers and other listeners are
   now handled separately.  The single lock was previously cause for deadlocks
   if extensive listeners, such as the one provided by the updown plugin, wanted
