@@ -77,7 +77,7 @@ METHOD(job_t, execute, void,
 		/* find old SA to adopt children from */
 		children = linked_list_create();
 		enumerator = charon->ike_sa_manager->create_id_enumerator(
-									charon->ike_sa_manager, my_id, other_id,
+									charon->ike_sa_manager, my_id, xauth,
 									other->get_family(other));
 		while (enumerator->enumerate(enumerator, &id))
 		{
@@ -92,7 +92,7 @@ METHOD(job_t, execute, void,
 					 ike_sa->get_state(ike_sa) == IKE_PASSIVE) &&
 					me->equals(me, ike_sa->get_my_host(ike_sa)) &&
 					other->equals(other, ike_sa->get_other_host(ike_sa)) &&
-					xauth->equals(xauth, ike_sa->get_other_eap_id(ike_sa)) &&
+					other_id->equals(other_id, ike_sa->get_other_id(ike_sa)) &&
 					cfg->equals(cfg, ike_sa->get_peer_cfg(ike_sa)))
 				{
 					childenum = ike_sa->create_child_sa_enumerator(ike_sa);

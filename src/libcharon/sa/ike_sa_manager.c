@@ -1441,7 +1441,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	my_id = ike_sa->get_my_id(ike_sa);
-	other_id = ike_sa->get_other_id(ike_sa);
+	other_id = ike_sa->get_other_eap_id(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
 
 	DBG2(DBG_MGR, "checkin IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
@@ -1653,7 +1653,7 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 		return FALSE;
 	}
 	me = ike_sa->get_my_id(ike_sa);
-	other = ike_sa->get_other_id(ike_sa);
+	other = ike_sa->get_other_eap_id(ike_sa);
 	other_host = ike_sa->get_other_host(ike_sa);
 
 	enumerator = create_id_enumerator(this, me, other,

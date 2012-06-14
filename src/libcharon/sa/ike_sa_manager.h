@@ -172,6 +172,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Create an enumerator over ike_sa_id_t*, matching peer identities.
 	 *
+	 * The remote peer is identified by its XAuth or EAP identity, if available.
+	 *
 	 * @param me				local peer identity to match
 	 * @param other				remote peer identity to match
 	 * @param family			address family to match, 0 for any
