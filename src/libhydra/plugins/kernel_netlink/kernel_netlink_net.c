@@ -1135,7 +1135,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		/* We dump all addresses for IPv4, as we want to ignore IPsec specific
 		 * routes installed by us. But the kernel does not return source
 		 * addresses in a IPv6 dump, so fall back to get() for v6 routes. */
-		hdr->nlmsg_flags |= NLM_F_ROOT | NLM_F_DUMP;
+		hdr->nlmsg_flags |= NLM_F_DUMP;
 	}
 	hdr->nlmsg_type = RTM_GETROUTE;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
