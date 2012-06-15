@@ -214,12 +214,18 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	switch (token)
 	{
 	case KW_HOST:
-		if (value && strlen(value) > 0 && value[0] == '%' &&
-			!streq(value, "%any") && !streq(value, "%any4") &&
-			!streq(value, "%any6"))
-		{	/* allow_any prefix */
-			end->allow_any = TRUE;
-			value++;
+		if (value && strlen(value) > 0 && value[0] == '%')
+		{
+			if (streq(value, "%defaultroute"))
+			{
+				value = "%any";
+			}
+			if (!streq(value, "%any") && !streq(value, "%any4") &&
+				!streq(value, "%any6"))
+			{	/* allow_any prefix */
+				end->allow_any = TRUE;
+				value++;
+			}
 		}
 		free(end->host);
 		end->host = strdupnull(value);
