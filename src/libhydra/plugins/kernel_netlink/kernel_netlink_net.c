@@ -186,8 +186,8 @@ static u_int route_entry_hash(route_entry_t *this)
 static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 {
 	return a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
-		   a->src_ip->equals(a->src_ip, b->src_ip) &&
-		   a->gateway->equals(a->gateway, b->gateway) &&
+		   a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
+		   a->gateway->ip_equals(a->gateway, b->gateway) &&
 		   chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen;
 }
 
