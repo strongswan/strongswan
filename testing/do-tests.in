@@ -268,15 +268,21 @@ do
 
 	if [ $SUBDIR = "ipv6" -o $name = "rw-psk-ipv6" ]
 	then
+	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP=$IPROUTE_CMD
 	    IPTABLES_CMD="ip6tables -v -n -L"
 	    IPTABLES_DSP="ip6tables -L"
 	else
+	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP=$IPROUTE_CMD
 	    IPTABLES_CMD="iptables -v -n -L"
 	    IPTABLES_DSP="iptables -L"
 	fi
 
 	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
 	then
+	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE; echo; ip -6 route list table $SOURCEIP_ROUTING_TABLE"
+	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
 	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
 	    IPTABLES_DSP="iptables -L ; ip6tables -L"
 	fi
@@ -507,7 +513,7 @@ do
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
 	    ssh $SSHCONF $HOSTLOGIN ip -s xfrm state \
 		    > $TESTRESULTDIR/${host}.ip.state 2>/dev/null
-	    ssh $SSHCONF $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
+	    ssh $SSHCONF $HOSTLOGIN $IPROUTE_CMD \
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
 	    ssh $SSHCONF $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
@@ -536,7 +542,7 @@ do
 	  <ul>
 	    <li><a href="$host.ip.policy">ip -s xfrm policy</a></li>
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
-	    <li><a href="$host.ip.route">ip route list table $SOURCEIP_ROUTING_TABLE</a></li>
+	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
 	  </ul>
       </td>
