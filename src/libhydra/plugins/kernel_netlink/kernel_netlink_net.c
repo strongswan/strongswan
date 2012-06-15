@@ -789,6 +789,10 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	{
 		return;
 	}
+	else if (msg->rtm_flags & RTM_F_CLONED)
+	{	/* ignore cached routes, seem to be created a lot for IPv6 */
+		return;
+	}
 
 	while (RTA_OK(rta, rtasize))
 	{
