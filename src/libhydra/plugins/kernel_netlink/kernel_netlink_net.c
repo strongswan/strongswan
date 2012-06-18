@@ -38,6 +38,7 @@
  */
 
 #include <sys/socket.h>
+#include <sys/utsname.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <unistd.h>
@@ -311,6 +312,11 @@ struct private_kernel_netlink_net_t {
 	 * whether to actually install virtual IPs
 	 */
 	bool install_virtual_ip;
+
+	/**
+	 * whether preferred source addresses can be specified for IPv6 routes
+	 */
+	bool rta_prefsrc_for_ipv6;
 
 	/**
 	 * list with routing tables to be excluded from route lookup
@@ -1130,11 +1136,11 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
-	if (dest->get_family(dest) == AF_INET)
-	{
-		/* We dump all addresses for IPv4, as we want to ignore IPsec specific
-		 * routes installed by us. But the kernel does not return source
-		 * addresses in a IPv6 dump, so fall back to get() for v6 routes. */
+	if (dest->get_family(dest) == AF_INET || this->rta_prefsrc_for_ipv6 ||
+		this->routing_table)
+	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
+		 * as we want to ignore routes with virtual IPs we cannot use DUMP
+		 * if these routes are not installed in a separate table */
 		hdr->nlmsg_flags |= NLM_F_DUMP;
 	}
 	hdr->nlmsg_type = RTM_GETROUTE;
@@ -1745,6 +1751,36 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	return this->socket->send_ack(this->socket, hdr);
 }
 
+/**
+ * check for kernel features (currently only via version number)
+ */
+static void check_kernel_features(private_kernel_netlink_net_t *this)
+{
+	struct utsname utsname;
+	int a, b, c;
+
+	if (uname(&utsname) == 0)
+	{
+		switch(sscanf(utsname.release, "%d.%d.%d", &a, &b, &c))
+		{
+			case 3:
+				if (a == 2)
+				{
+					DBG2(DBG_KNL, "detected Linux %d.%d.%d, no support for "
+						 "RTA_PREFSRC for IPv6 routes", a, b, c);
+					break;
+				}
+				/* fall-through */
+			case 2:
+				/* only 3.x+ uses two part version numbers */
+				this->rta_prefsrc_for_ipv6 = TRUE;
+				break;
+			default:
+				break;
+		}
+	}
+}
+
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_netlink_net_t *this)
 {
@@ -1834,6 +1870,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->last_roam);
+
+	check_kernel_features(this);
 
 	if (streq(hydra->daemon, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
