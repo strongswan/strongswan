@@ -237,7 +237,7 @@ identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 includes conn section
 .BR <name> .
 .TP
-.BR authby " = " pubkey " | rsasig | ecdsasig | psk | never | xauthpsk | xauthrsasig"
+.BR authby " = " pubkey " | rsasig | ecdsasig | psk | secret | never | xauthpsk | xauthrsasig"
 how the two security gateways should authenticate each other;
 acceptable values are
 .B psk
