@@ -1,13 +1,13 @@
-.TH IPSEC 8 "2010-05-30" "@IPSEC_VERSION@" "strongSwan"
+.TH @IPSEC_SCRIPT_UPPER@ 8 "2012-06-19" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
-ipsec \- invoke IPsec utilities
+@IPSEC_SCRIPT@ \- invoke IPsec utilities
 .SH SYNOPSIS
-.B ipsec
+.B @IPSEC_SCRIPT@
 \fIcommand\fP [ \fIarguments\fP ] [ \fIoptions\fP ]
 .PP
 .SH DESCRIPTION
 The
-.B ipsec
+.B @IPSEC_SCRIPT@
 utility invokes any of several utilities involved in controlling and monitoring
 the IPsec encryption/authentication system, running the specified \fIcommand\fP
 with the specified \fIarguments\fP and \fIoptions\fP as if it had been invoked
@@ -18,7 +18,7 @@ All the commands described in this manual page are built-in and are used to
 control and monitor IPsec connections as well as the IKE daemons.
 .PP
 For other commands
-.I ipsec
+.I @IPSEC_SCRIPT@
 supplies the invoked
 .I command
 with a suitable PATH environment variable,
@@ -226,7 +226,9 @@ purges all cached OCSP information records.
 .SS INFO COMMANDS
 .TP
 .B "\-\-help"
-returns the usage information for the ipsec command.
+returns the usage information for the
+.B @IPSEC_SCRIPT@
+command.
 .PP
 .TP
 .B "\-\-version"
@@ -260,19 +262,20 @@ returns the \fISYSCONFDIR\fP directory as defined by the configure options.
 The following environment variables control where strongSwan finds its
 components.
 The
-.B ipsec
+.B @IPSEC_SCRIPT@
 command sets them if they are not already set.
 .nf
 .na
 
-IPSEC_DIR 		directory containing ipsec programs and utilities
-IPSEC_SBINDIR		directory containing \fBipsec\fP command
-IPSEC_CONFDIR 		directory containing configuration files
-IPSEC_PIDDIR		directory containing PID files
-IPSEC_NAME 		name of ipsec distribution
-IPSEC_VERSION 		version numer of ipsec userland and kernel
-IPSEC_STARTER_PID 	PID file for ipsec starter
-IPSEC_CHARON_PID	PID file for IKE keying daemon
+IPSEC_DIR               directory containing ipsec programs and utilities
+IPSEC_SBINDIR           directory containing \fBipsec\fP command
+IPSEC_CONFDIR           directory containing configuration files
+IPSEC_PIDDIR            directory containing PID files
+IPSEC_SCRIPT            name of the ipsec script
+IPSEC_NAME              name of ipsec distribution
+IPSEC_VERSION           version numer of ipsec userland and kernel
+IPSEC_STARTER_PID       PID file for ipsec starter
+IPSEC_CHARON_PID        PID file for IKE keying daemon
 .ad
 .fi
 .SH SEE ALSO

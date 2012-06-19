@@ -3,7 +3,7 @@ Description=strongSwan IPsec
 After=syslog.target
 
 [Service]
-ExecStart=@SBINDIR@/ipsec start --nofork
+ExecStart=@SBINDIR@/@IPSEC_SCRIPT@ start --nofork
 StandardOutput=syslog
 
 [Install]

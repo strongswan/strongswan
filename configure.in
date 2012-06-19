@@ -40,6 +40,7 @@ ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory th
 ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
 ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec routes])
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
+ARG_WITH_SUBST([ipsec-script],       [ipsec], [change the name of the ipsec script])
 
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
@@ -64,6 +65,9 @@ AC_ARG_WITH(
 	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
 )
+
+# convert script name to uppercase
+AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 
 m4_include(m4/macros/enable-disable.m4)
 

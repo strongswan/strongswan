@@ -28,6 +28,7 @@ IPSEC_DIR="@IPSEC_DIR@"
 IPSEC_SBINDIR="@IPSEC_SBINDIR@"
 IPSEC_CONFDIR="@IPSEC_CONFDIR@"
 IPSEC_PIDDIR="@IPSEC_PIDDIR@"
+IPSEC_SCRIPT="@IPSEC_SCRIPT@"
 
 IPSEC_STARTER_PID="${IPSEC_PIDDIR}/starter.pid"
 IPSEC_CHARON_PID="${IPSEC_PIDDIR}/charon.pid"
@@ -35,21 +36,21 @@ IPSEC_CHARON_PID="${IPSEC_PIDDIR}/charon.pid"
 IPSEC_STROKE="${IPSEC_DIR}/stroke"
 IPSEC_STARTER="${IPSEC_DIR}/starter"
 
-export IPSEC_DIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_CHARON_PID
+export IPSEC_DIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_SCRIPT IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_CHARON_PID
 
 IPSEC_DISTRO="Institute for Internet Technologies and Applications\nUniversity of Applied Sciences Rapperswil, Switzerland"
 
 case "$1" in
 '')
-	echo "Usage: ipsec command argument ..."
-	echo "Use --help for list of commands, or see ipsec(8) manual page"
-	echo "or the $IPSEC_NAME documentation for names of the common ones."
-	echo "Most have their own manual pages, e.g. ipsec_auto(8)."
+	echo "Usage: $IPSEC_SCRIPT command argument ..."
+	echo "Use --help for list of commands, or see $IPSEC_SCRIPT(8) manual "
+	echo "page or the $IPSEC_NAME documentation for names of the common "
+	echo "ones."
 	echo "See <http://www.strongswan.org> for more general info."
 	exit 0
 	;;
 --help)
-	echo "Usage: ipsec command argument ..."
+	echo "Usage: $IPSEC_SCRIPT command argument ..."
 	echo "where command is one of:"
 	echo "	start|restart  arguments..."
 	echo "	update|reload|stop"
@@ -94,7 +95,7 @@ down)
 	shift
 	if [ "$#" -ne 1 ]
 	then
-	    echo "Usage: ipsec down <connection name>"
+	    echo "Usage: $IPSEC_SCRIPT down <connection name>"
 	    exit 2
 	fi
 	rc=7
@@ -109,7 +110,7 @@ down-srcip)
 	shift
 	if [ "$#" -lt 1 ]
 	then
-	    echo "Usage: ipsec down-srcip <start> [<end>]"
+	    echo "Usage: $IPSEC_SCRIPT down-srcip <start> [<end>]"
 	    exit 2
 	fi
 	rc=7
@@ -183,10 +184,10 @@ reload)
 	exit "$rc"
 	;;
 restart)
-	$IPSEC_SBINDIR/ipsec stop
+	$IPSEC_SBINDIR/$IPSEC_SCRIPT stop
 	sleep 2
 	shift
-	exec $IPSEC_SBINDIR/ipsec start "$@"
+	exec $IPSEC_SBINDIR/$IPSEC_SCRIPT start "$@"
 	;;
 route|unroute)
 	op="$1"
@@ -194,7 +195,7 @@ route|unroute)
 	shift
 	if [ "$#" -ne 1 ]
 	then
-		echo "Usage: ipsec $op <connection name>"
+		echo "Usage: $IPSEC_SCRIPT $op <connection name>"
 		exit 2
 	fi
 	if [ -e $IPSEC_CHARON_PID ]
@@ -282,7 +283,7 @@ up)
 	shift
 	if [ "$#" -ne 1 ]
 	then
-	    echo "Usage: ipsec up <connection name>"
+	    echo "Usage: $IPSEC_SCRIPT up <connection name>"
 	    exit 2
 	fi
 	rc=7
@@ -307,7 +308,7 @@ update)
 version|--version)
 	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"
 	printf "$IPSEC_DISTRO\n"
-	printf "See 'ipsec --copyright' for copyright information.\n"
+	printf "See '$IPSEC_SCRIPT --copyright' for copyright information.\n"
 	exit 0
 	;;
 --*)
@@ -326,7 +327,7 @@ then
     path="$IPSEC_DIR/$cmd"
     if [ ! -x "$path" ]
     then
-	echo "$0: unknown IPsec command \`$cmd' (\`ipsec --help' for list)" >&2
+	echo "$0: unknown IPsec command \`$cmd' (\`$IPSEC_SCRIPT --help' for list)" >&2
 	exit 2
     fi
 fi
