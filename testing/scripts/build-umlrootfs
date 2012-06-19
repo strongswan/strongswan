@@ -312,6 +312,11 @@ then
     echo -n " --enable-socket-dynamic" >> $INSTALLSHELL
 fi
 
+if [ "$USE_SOCKET_RAW" = "yes" ]
+then
+    echo -n " --enable-socket-raw" >> $INSTALLSHELL
+fi
+
 if [ "$USE_DHCP" = "yes" ]
 then
     echo -n " --enable-dhcp" >> $INSTALLSHELL
@@ -350,11 +355,6 @@ fi
 if [ "$USE_HA" = "yes" ]
 then
     echo -n " --enable-ha" >> $INSTALLSHELL
-fi
-
-if [ "$USE_PLUTO" = "yes" ]
-then
-    echo -n " --enable-pluto" >> $INSTALLSHELL
 fi
 
 if [ "$USE_AF_ALG" = "yes" ]
