@@ -67,7 +67,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_migrate_job_t *this)
 {
 	ike_sa_t *ike_sa = NULL;
@@ -117,7 +117,7 @@ METHOD(job_t, execute, void,
 	{
 		DBG1(DBG_JOB, "no CHILD_SA found with reqid {%d}", this->reqid);
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

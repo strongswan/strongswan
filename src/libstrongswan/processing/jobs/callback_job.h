@@ -27,33 +27,6 @@ typedef struct callback_job_t callback_job_t;
 #include <library.h>
 #include <processing/jobs/job.h>
 
-
-typedef enum job_requeue_t job_requeue_t;
-
-/**
- * Job requeueing policy.
- *
- * The job requeueing policy defines how a job is handled when the callback
- * function returns.
- */
-enum job_requeue_t {
-
-	/**
-	 * Do not requeue job, destroy it
-	 */
-	JOB_REQUEUE_NONE,
-
-	/**
-	 * Reque the job fairly, meaning it has to requeue as any other job
-	 */
-	JOB_REQUEUE_FAIR,
-
-	/**
-	 * Reexecute the job directly, without the need of requeueing it
-	 */
-	JOB_REQUEUE_DIRECT,
-};
-
 /**
  * The callback function to use for the callback job.
  *

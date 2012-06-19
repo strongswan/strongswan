@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2012 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
@@ -56,7 +56,7 @@ struct private_callback_job_t {
 	thread_t *thread;
 
 	/**
-	 * mutex to access jobs interna
+	 * mutex to access private job data
 	 */
 	mutex_t *mutex;
 
@@ -71,9 +71,9 @@ struct private_callback_job_t {
 	private_callback_job_t *parent;
 
 	/**
-	 * TRUE if the job got cancelled
+	 * TRUE if the job got canceled
 	 */
-	bool cancelled;
+	bool canceled;
 
 	/**
 	 * condvar to synchronize the cancellation/destruction of the job
@@ -103,10 +103,10 @@ static void unregister(private_callback_job_t *this)
 	if (this->parent)
 	{
 		this->parent->mutex->lock(this->parent->mutex);
-		if (this->parent->cancelled && !this->cancelled)
+		if (this->parent->canceled && !this->canceled)
 		{
-			/* if the parent has been cancelled but we have not yet, we do not
-			 * unregister until we got cancelled by the parent. */
+			/* if the parent has been canceled but we have not yet, we do not
+			 * unregister until we got canceled by the parent. */
 			this->parent->mutex->unlock(this->parent->mutex);
 			this->destroyable->wait(this->destroyable, this->mutex);
 			this->parent->mutex->lock(this->parent->mutex);
@@ -144,7 +144,7 @@ METHOD(callback_job_t, cancel, void,
 	semaphore_t *terminated = NULL;
 
 	this->mutex->lock(this->mutex);
-	this->cancelled = TRUE;
+	this->canceled = TRUE;
 	/* terminate children */
 	while (this->children->get_first(this->children, (void**)&child) == SUCCESS)
 	{
@@ -177,12 +177,10 @@ METHOD(callback_job_t, cancel, void,
 	}
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_callback_job_t *this)
 {
-	bool cleanup = FALSE, requeue = FALSE;
-
-	thread_cleanup_push((thread_cleanup_t)destroy, this);
+	bool requeue = FALSE;
 
 	this->mutex->lock(this->mutex);
 	this->thread = thread_current();
@@ -191,10 +189,9 @@ METHOD(job_t, execute, void,
 	while (TRUE)
 	{
 		this->mutex->lock(this->mutex);
-		if (this->cancelled)
+		if (this->canceled)
 		{
 			this->mutex->unlock(this->mutex);
-			cleanup = TRUE;
 			break;
 		}
 		this->mutex->unlock(this->mutex);
@@ -210,7 +207,6 @@ METHOD(job_t, execute, void,
 			case JOB_REQUEUE_NONE:
 			default:
 			{
-				cleanup = TRUE;
 				break;
 			}
 		}
@@ -219,14 +215,10 @@ METHOD(job_t, execute, void,
 	this->mutex->lock(this->mutex);
 	this->thread = NULL;
 	this->mutex->unlock(this->mutex);
-	/* manually create a cancellation point to avoid that a cancelled thread
-	 * goes back into the thread pool */
+	/* manually create a cancellation point to avoid that a canceled thread
+	 * goes back into the thread pool at all */
 	thread_cancellation_point();
-	if (requeue)
-	{
-		lib->processor->queue_job(lib->processor, &this->public.job);
-	}
-	thread_cleanup_pop(cleanup);
+	return requeue ? JOB_REQUEUE_FAIR : JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

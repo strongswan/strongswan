@@ -250,6 +250,7 @@ METHOD(scheduler_t, schedule_job_tv, void,
 
 	event = malloc_thing(event_t);
 	event->job = job;
+	event->job->status = JOB_STATUS_QUEUED;
 	event->time = tv;
 
 	this->mutex->lock(this->mutex);

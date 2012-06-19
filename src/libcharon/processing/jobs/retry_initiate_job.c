@@ -41,7 +41,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_retry_initiate_job_t *this)
 {
 	ike_sa_t *ike_sa;
@@ -64,7 +64,7 @@ METHOD(job_t, execute, void,
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

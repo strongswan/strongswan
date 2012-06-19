@@ -42,7 +42,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_process_message_job_t *this)
 {
 	ike_sa_t *ike_sa;
@@ -59,8 +59,7 @@ METHOD(job_t, execute, void,
 			 this->message->get_source(this->message),
 			 this->message->get_destination(this->message));
 		charon->connect_manager->process_check(charon->connect_manager, this->message);
-		destroy(this);
-		return;
+		return JOB_REQUEUE_NONE;
 	}
 #endif /* ME */
 
@@ -81,7 +80,7 @@ METHOD(job_t, execute, void,
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

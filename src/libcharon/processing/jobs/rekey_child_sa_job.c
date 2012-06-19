@@ -51,7 +51,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_rekey_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
@@ -68,7 +68,7 @@ METHOD(job_t, execute, void,
 		ike_sa->rekey_child_sa(ike_sa, this->protocol, this->spi);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

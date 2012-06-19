@@ -64,7 +64,7 @@ static bool initiate_callback(private_initiate_mediation_job_t *this,
 	return TRUE;
 }
 
-METHOD(job_t, initiate, void,
+METHOD(job_t, initiate, job_requeue_t,
 	private_initiate_mediation_job_t *this)
 {
 	ike_sa_t *mediated_sa, *mediation_sa;
@@ -93,8 +93,7 @@ METHOD(job_t, initiate, void,
 			mediated_cfg->destroy(mediated_cfg);
 			mediation_cfg->destroy(mediation_cfg);
 			enumerator->destroy(enumerator);
-			destroy(this);
-			return;
+			return JOB_REQUEUE_NONE;
 		}
 		enumerator->destroy(enumerator);
 
@@ -115,8 +114,7 @@ METHOD(job_t, initiate, void,
 				charon->ike_sa_manager->checkin(
 								charon->ike_sa_manager, mediated_sa);
 			}
-			destroy(this);
-			return;
+			return JOB_REQUEUE_NONE;
 		}
 		/* we need an additional reference because initiate consumes one */
 		mediation_cfg->get_ref(mediation_cfg);
@@ -134,8 +132,7 @@ METHOD(job_t, initiate, void,
 				charon->ike_sa_manager->checkin_and_destroy(
 									charon->ike_sa_manager, mediated_sa);
 			}
-			destroy(this);
-			return;
+			return JOB_REQUEUE_NONE;
 		}
 		mediation_cfg->destroy(mediation_cfg);
 
@@ -157,18 +154,17 @@ METHOD(job_t, initiate, void,
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, mediated_sa);
 				}
-				destroy(this);
-				return;
+				return JOB_REQUEUE_NONE;
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager,
 											mediation_sa);
 		}
 		mediated_cfg->destroy(mediated_cfg);
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
-METHOD(job_t, reinitiate, void,
+METHOD(job_t, reinitiate, job_requeue_t,
 	private_initiate_mediation_job_t *this)
 {
 	ike_sa_t *mediated_sa, *mediation_sa;
@@ -205,8 +201,7 @@ METHOD(job_t, reinitiate, void,
 										charon->ike_sa_manager,
 										mediated_sa);
 				}
-				destroy(this);
-				return;
+				return JOB_REQUEUE_NONE;
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager,
 											mediation_sa);
@@ -214,7 +209,7 @@ METHOD(job_t, reinitiate, void,
 
 		mediated_cfg->destroy(mediated_cfg);
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

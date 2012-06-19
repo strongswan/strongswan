@@ -43,7 +43,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_adopt_children_job_t *this)
 {
 	identification_t *my_id, *other_id, *xauth;
@@ -146,7 +146,7 @@ METHOD(job_t, execute, void,
 		}
 		children->destroy_offset(children, offsetof(child_sa_t, destroy));
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

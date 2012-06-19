@@ -290,7 +290,8 @@ METHOD(listener_t, child_state_change, bool,
 METHOD(job_t, recheckin, void,
 	interface_job_t *job)
 {
-	if (job->listener.ike_sa)
+	if (job->public.status == JOB_STATUS_QUEUED &&
+		job->listener.ike_sa)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager,
 										job->listener.ike_sa);
@@ -304,7 +305,7 @@ METHOD(controller_t, create_ike_sa_enumerator, enumerator_t*,
 													 wait);
 }
 
-METHOD(job_t, initiate_execute, void,
+METHOD(job_t, initiate_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	ike_sa_t *ike_sa;
@@ -322,7 +323,7 @@ METHOD(job_t, initiate_execute, void,
 										charon->ike_sa_manager, IKE_ANY, TRUE);
 		DESTROY_IF(listener->ike_sa);
 		listener->status = FAILED;
-		return;
+		return JOB_REQUEUE_NONE;
 	}
 	listener->ike_sa = ike_sa;
 
@@ -343,6 +344,7 @@ METHOD(job_t, initiate_execute, void,
 													ike_sa);
 		listener->status = FAILED;
 	}
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(controller_t, initiate, status_t,
@@ -389,7 +391,7 @@ METHOD(controller_t, initiate, status_t,
 	return job.listener.status;
 }
 
-METHOD(job_t, terminate_ike_execute, void,
+METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
@@ -409,6 +411,7 @@ METHOD(job_t, terminate_ike_execute, void,
 													ike_sa);
 		listener->status = SUCCESS;
 	}
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(controller_t, terminate_ike, status_t,
@@ -466,7 +469,7 @@ METHOD(controller_t, terminate_ike, status_t,
 	return job.listener.status;
 }
 
-METHOD(job_t, terminate_child_execute, void,
+METHOD(job_t, terminate_child_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
@@ -486,6 +489,7 @@ METHOD(job_t, terminate_child_execute, void,
 													ike_sa);
 		listener->status = FAILED;
 	}
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(controller_t, terminate_child, status_t,

@@ -77,7 +77,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_mediation_job_t *this)
 {
 	ike_sa_id_t *target_sa_id;
@@ -98,8 +98,7 @@ METHOD(job_t, execute, void,
 					DBG1(DBG_JOB, "callback for '%Y' to '%Y' failed",
 							this->source, this->target);
 					charon->ike_sa_manager->checkin(charon->ike_sa_manager, target_sa);
-					destroy(this);
-					return;
+					return JOB_REQUEUE_NONE;
 				}
 			}
 			else
@@ -112,8 +111,7 @@ METHOD(job_t, execute, void,
 							this->source, this->target);
 					charon->ike_sa_manager->checkin(charon->ike_sa_manager, target_sa);
 					/* FIXME: notify the initiator */
-					destroy(this);
-					return;
+					return JOB_REQUEUE_NONE;
 				}
 			}
 
@@ -130,7 +128,7 @@ METHOD(job_t, execute, void,
 		DBG1(DBG_JOB, "mediation between '%Y' and '%Y' failed: "
 				"peer is not online anymore", this->source, this->target);
 	}
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

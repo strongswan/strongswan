@@ -36,7 +36,7 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_start_action_job_t *this)
 {
 	enumerator_t *enumerator, *children;
@@ -83,7 +83,7 @@ METHOD(job_t, execute, void,
 		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

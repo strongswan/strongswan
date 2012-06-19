@@ -53,12 +53,12 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-METHOD(job_t, execute, void,
+METHOD(job_t, execute, job_requeue_t,
 	private_acquire_job_t *this)
 {
 	charon->traps->acquire(charon->traps, this->reqid,
 						   this->src_ts, this->dst_ts);
-	destroy(this);
+	return JOB_REQUEUE_NONE;
 }
 
 METHOD(job_t, get_priority, job_priority_t,

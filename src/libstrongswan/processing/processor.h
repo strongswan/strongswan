@@ -51,7 +51,7 @@ struct processor_t {
 	/**
 	 * Get the number of threads currently working, per priority class.
 	 *
-	 * @param				prioritiy to check
+	 * @param				priority to check
 	 * @return				number of threads in priority working
 	 */
 	u_int (*get_working_threads)(processor_t *this, job_priority_t prio);
