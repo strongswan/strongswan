@@ -31,240 +31,227 @@ and the IPsec version number.
 .PP
 .SS CONTROL COMMANDS
 .TP
-.B "ipsec start [ starter options ]"
+.B "start [ starter options ]"
 calls
-.BR "ipsec starter"
-which in turn parses \fIipsec.conf\fR and starts the IKEv1 \fIpluto\fR and
-IKEv2 \fIcharon\fR daemons.
+.BR "starter"
+which in turn parses \fIipsec.conf\fR and starts the IKEv1/IKEv2 daemon
+\fIcharon\fR.
 .PP
 .TP
-.B "ipsec update"
+.B "update"
 sends a \fIHUP\fR signal to
-.BR "ipsec starter"
+.BR "starter"
 which in turn determines any changes in \fIipsec.conf\fR
-and updates the configuration on the running IKEv1 \fIpluto\fR and IKEv2
-\fIcharon\fR daemons, correspondingly.
+and updates the configuration on the running IKE daemon \fIcharon\fR.
 .PP
 .TP
-.B "ipsec reload"
+.B "reload"
 sends a \fIUSR1\fR signal to
-.BR "ipsec starter"
-which in turn reloads the whole configuration on the running IKEv1 \fIpluto\fR
-and IKEv2 \fIcharon\fR daemons based on the actual \fIipsec.conf\fR.
+.BR "starter"
+which in turn reloads the whole configuration on the running IKE daemon
+\fIcharon\fR based on the actual \fIipsec.conf\fR.
 .PP
 .TP
-.B "ipsec restart"
+.B "restart"
 is equivalent to
-.B "ipsec stop"
+.B "stop"
 followed by
-.B "ipsec start"
+.B "start"
 after a guard of 2 seconds.
 .PP
 .TP
-.B "ipsec stop"
-terminates all IPsec connections and stops the IKEv1 \fIpluto\fR and IKEv2
-\fIcharon\fR daemons by sending a \fITERM\fR signal to
-.BR "ipsec starter".
+.B "stop"
+terminates all IPsec connections and stops the IKE daemon \fIcharon\fR
+by sending a \fITERM\fR signal to
+.BR "starter".
 .PP
 .TP
-.B "ipsec up \fIname\fP"
-tells the responsible IKE daemon to start up connection \fIname\fP.
+.B "up \fIname\fP"
+tells the IKE daemon to start up connection \fIname\fP.
 .PP
 .TP
-.B "ipsec down \fIname\fP"
-tells the responsible IKE daemon to terminate connection \fIname\fP.
+.B "down \fIname\fP"
+tells the IKE daemon to terminate connection \fIname\fP.
 .PP
 .TP
-.B "ipsec down \fIname{n}\fP"
-terminates IKEv2 CHILD SA instance \fIn\fP of connection \fIname\fP.
+.B "down \fIname{n}\fP"
+terminates IKEv1 Quick Mode and IKEv2 CHILD SA instance \fIn\fP of
+connection \fIname\fP.
 .PP
 .TP
-.B "ipsec down \fIname{*}\fP"
-terminates all IKEv2 CHILD SA instances of connection \fIname\fP.
+.B "down \fIname{*}\fP"
+terminates all IKEv1 Quick Mode and  IKEv2 CHILD SA instances of connection
+\fIname\fP.
 .PP
 .TP
-.B "ipsec down \fIname[n]\fP"
-terminates all IKEv2 IKE SA instance \fIn\fP of connection \fIname\fP.
+.B "down \fIname[n]\fP"
+terminates IKE SA instance \fIn\fP of connection \fIname\fP.
 .PP
 .TP
-.B "ipsec down \fIname[*]\fP"
-terminates all IKEv2 IKE SA instances of connection \fIname\fP.
+.B "down \fIname[*]\fP"
+terminates all IKE SA instances of connection \fIname\fP.
 .PP
 .TP
-.B "ipsec route \fIname\fP"
-tells the responsible IKE daemon to insert an IPsec policy in the kernel
+.B "route \fIname\fP"
+tells the IKE daemon to insert an IPsec policy in the kernel
 for connection \fIname\fP. The first payload packet matching the IPsec policy
 will automatically trigger an IKE connection setup.
 .PP
 .TP
-.B "ipsec unroute \fIname\fP"
+.B "unroute \fIname\fP"
 remove the IPsec policy in the kernel for connection \fIname\fP.
 .PP
 .TP
-.B "ipsec status [ \fIname\fP ]"
+.B "status [ \fIname\fP ]"
 returns concise status information either on connection
 \fIname\fP or if the argument is lacking, on all connections.
 .PP
 .TP
-.B "ipsec statusall [ \fIname\fP ]"
+.B "statusall [ \fIname\fP ]"
 returns detailed status information either on connection
 \fIname\fP or if the argument is lacking, on all connections.
 .PP
 .SS LIST COMMANDS
 .TP
-.B "ipsec listalgs"
-returns a list all supported IKE encryption and hash algorithms, the available
-Diffie-Hellman groups, as well as all supported ESP encryption and
-authentication algorithms registered via the Linux kernel's Crypto API.
-.br
-Supported by the IKEv1 \fIpluto\fP daemon only.
+.B "listalgs"
+returns a list supported cryptographic algorithms usable for IKE, and their
+corresponding plugin.
 .PP
 .TP
-.B "ipsec listpubkeys [ --utc ]"
+.B "listpubkeys [ --utc ]"
 returns a list of RSA public keys that were either loaded in raw key format
 or extracted from X.509 and|or OpenPGP certificates.
-.br
-Supported by the IKEv1 \fIpluto\fP daemon only.
 .PP
 .TP
-.B "ipsec listcerts [ --utc ]"
+.B "listcerts [ --utc ]"
 returns a list of X.509 and|or OpenPGP certificates that were either loaded
-locally by the IKE daemon or received via the IKEv2 protocol.
+locally by the IKE daemon or received via the IKE protocol.
 .PP
 .TP
-.B "ipsec listcacerts [ --utc ]"
+.B "listcacerts [ --utc ]"
 returns a list of X.509 Certification Authority (CA) certificates that were
 loaded locally by the IKE daemon from the \fI/etc/ipsec.d/cacerts/\fP
-directory or received in PKCS#7-wrapped certificate payloads via the IKE
-protocol.
+directory or received via the IKE protocol.
 .PP
 .TP
-.B "ipsec listaacerts [ --utc ]"
+.B "listaacerts [ --utc ]"
 returns a list of X.509 Authorization Authority (AA) certificates that were
 loaded locally by the IKE daemon from the \fI/etc/ipsec.d/aacerts/\fP
 directory.
 .PP
 .TP
-.B "ipsec listocspcerts [ --utc ]"
+.B "listocspcerts [ --utc ]"
 returns a list of X.509 OCSP Signer certificates that were either loaded
 locally by the IKE daemon from the \fI/etc/ipsec.d/ocspcerts/\fP
 directory or were sent by an OCSP server.
 .PP
 .TP
-.B "ipsec listacerts [ --utc ]"
+.B "listacerts [ --utc ]"
 returns a list of X.509 Attribute certificates that were loaded locally by
 the IKE daemon from the \fI/etc/ipsec.d/acerts/\fP directory.
 .PP
 .TP
-.B "ipsec listgroups [ --utc ]"
+.B "listgroups [ --utc ]"
 returns a list of groups that are used to define user authorization profiles.
-.br
-Supported by the IKEv1 \fIpluto\fP daemon only.
 .PP
 .TP
-.B "ipsec listcainfos [ --utc ]"
+.B "listcainfos [ --utc ]"
 returns certification authority information (CRL distribution points, OCSP URIs,
 LDAP servers) that were defined by
 .BR ca
 sections in \fIipsec.conf\fP.
 .PP
 .TP
-.B "ipsec listcrls [ --utc ]"
+.B "listcrls [ --utc ]"
 returns a list of Certificate Revocation Lists (CRLs) that were either loaded
 by the IKE daemon from the \fI/etc/ipsec.d/crls\fP directory or fetched from
 an HTTP- or LDAP-based CRL distribution point.
 .PP
 .TP
-.B "ipsec listocsp [ --utc ]"
+.B "listocsp [ --utc ]"
 returns revocation information fetched from OCSP servers.
 .PP
 .TP
-.B "ipsec listcards [ --utc ]"
-list all certificates found on attached smart cards.
-.br
-Supported by the IKEv1 \fIpluto\fP daemon only.
-.PP
-.TP
-.B "ipsec listall [ --utc ]"
-returns all information generated by the list commands above. Each list command 
+.B "listall [ --utc ]"
+returns all information generated by the list commands above. Each list command
 can be called with the
 \fB\-\-utc\fP
 option which displays all dates in UTC instead of local time.
 .PP
 .SS REREAD COMMANDS
 .TP
-.B "ipsec rereadsecrets"
+.B "rereadsecrets"
 flushes and rereads all secrets defined in \fIipsec.secrets\fP.
 .PP
 .TP
-.B "ipsec rereadcacerts"
+.B "rereadcacerts"
 reads all certificate files contained in the \fI/etc/ipsec.d/cacerts\fP
 directory and adds them to the list of Certification Authority (CA)
 certificates.
 .PP
 .TP
-.B "ipsec rereadaacerts"
+.B "rereadaacerts"
 reads all certificate files contained in the \fI/etc/ipsec.d/aacerts\fP
 directory and adds them to the list of Authorization Authority (AA)
 certificates.
 .PP
 .TP
-.B "ipsec rereadocspcerts" 
+.B "rereadocspcerts"
 reads all certificate files contained in the \fI/etc/ipsec.d/ocspcerts/\fP
 directory and adds them to the list of OCSP signer certificates.
 .PP
 .TP
-.B "ipsec rereadacerts"
+.B "rereadacerts"
 reads all certificate files contained in the  \fI/etc/ipsec.d/acerts/\fP
 directory and adds them to the list of attribute certificates.
 .PP
 .TP
-.B "ipsec rereadcrls"
+.B "rereadcrls"
 reads  all Certificate  Revocation Lists (CRLs) contained in the
 \fI/etc/ipsec.d/crls/\fP directory and adds them to the list of CRLs.
 .PP
 .TP
-.B "ipsec rereadall"
+.B "rereadall"
 executes all reread commands listed above.
 .PP
 .SS PURGE COMMANDS
 .TP
-.B "ipsec purgeike"
-purges IKEv2 SAs that don't have a CHILD SA.
+.B "purgeike"
+purges IKE SAs that don't have a Quick Mode or CHILD SA.
 .PP
 .TP
-.B "ipsec purgeocsp"
+.B "purgeocsp"
 purges all cached OCSP information records.
 .PP
 .SS INFO COMMANDS
 .TP
-.B "ipsec \-\-help"
+.B "\-\-help"
 returns the usage information for the ipsec command.
 .PP
 .TP
-.B "ipsec \-\-version"
+.B "\-\-version"
 returns the version in the form of
 .B Linux strongSwan U<strongSwan userland version>/K<Linux kernel version>
 if strongSwan uses the native NETKEY IPsec stack of the Linux kernel it is
 running on.
 .PP
 .TP
-.B "ipsec \-\-versioncode"
+.B "\-\-versioncode"
 returns the version number in the form of
 .B U<strongSwan userland version>/K<Linux kernel version>
 if strongSwan uses the native NETKEY IPsec stack of the Linux kernel it is
 running on.
 .PP
 .TP
-.B "ipsec \-\-copyright"
+.B "\-\-copyright"
 returns the copyright information.
 .PP
 .TP
-.B "ipsec \-\-directory"
+.B "\-\-directory"
 returns the \fILIBEXECDIR\fP directory as defined by the configure options.
 .PP
 .TP
-.B "ipsec \-\-confdir"
+.B "\-\-confdir"
 returns the \fISYSCONFDIR\fP directory as defined by the configure options.
 .SH FILES
 /usr/local/lib/ipsec	usual utilities directory
@@ -285,8 +272,7 @@ IPSEC_PIDDIR		directory containing PID files
 IPSEC_NAME 		name of ipsec distribution
 IPSEC_VERSION 		version numer of ipsec userland and kernel
 IPSEC_STARTER_PID 	PID file for ipsec starter
-IPSEC_PLUTO_PID 	PID file for IKEv1 keying daemon
-IPSEC_CHARON_PID	PID file for IKEv2 keying daemon
+IPSEC_CHARON_PID	PID file for IKE keying daemon
 .ad
 .fi
 .SH SEE ALSO
