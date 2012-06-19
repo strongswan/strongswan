@@ -120,7 +120,7 @@ struct pkcs7_t {
 	/**
 	 * Get attributes.
 	 *
-	 * @reutrn				attributes (internal data)
+	 * @return				attributes (internal data)
 	 */
 	pkcs9_t *(*get_attributes) (pkcs7_t *this);
 
