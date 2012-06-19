@@ -62,11 +62,6 @@ struct private_ha_segments_t {
 	condvar_t *condvar;
 
 	/**
-	 * Job checking for heartbeats
-	 */
-	callback_job_t *job;
-
-	/**
 	 * Total number of ClusterIP segments
 	 */
 	u_int count;
@@ -80,6 +75,11 @@ struct private_ha_segments_t {
 	 * Node number
 	 */
 	u_int node;
+
+	/**
+	 * Are we checking for heartbeats?
+	 */
+	bool heartbeat_active;
 
 	/**
 	 * Interval we send hearbeats
@@ -237,7 +237,7 @@ METHOD(listener_t, alert_hook, bool,
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
 	{
-		if (this->job)
+		if (this->heartbeat_active)
 		{
 			DBG1(DBG_CFG, "HA heartbeat active, dropping all segments");
 			deactivate(this, 0, TRUE);
@@ -269,7 +269,7 @@ static job_requeue_t watchdog(private_ha_segments_t *this)
 		DBG1(DBG_CFG, "no heartbeat received, taking all segments");
 		activate(this, 0, TRUE);
 		/* disable heartbeat detection util we get one */
-		this->job = NULL;
+		this->heartbeat_active = FALSE;
 		return JOB_REQUEUE_NONE;
 	}
 	return JOB_REQUEUE_DIRECT;
@@ -280,9 +280,10 @@ static job_requeue_t watchdog(private_ha_segments_t *this)
  */
 static void start_watchdog(private_ha_segments_t *this)
 {
-	this->job = callback_job_create_with_prio((callback_job_cb_t)watchdog,
-									this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	this->heartbeat_active = TRUE;
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)watchdog, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 }
 
 METHOD(ha_segments_t, handle_status, void,
@@ -312,10 +313,10 @@ METHOD(ha_segments_t, handle_status, void,
 		}
 	}
 
-	this->mutex->unlock(this->mutex);
 	this->condvar->signal(this->condvar);
+	this->mutex->unlock(this->mutex);
 
-	if (!this->job)
+	if (!this->heartbeat_active)
 	{
 		DBG1(DBG_CFG, "received heartbeat, reenabling watchdog");
 		start_watchdog(this);
@@ -361,10 +362,6 @@ METHOD(ha_segments_t, is_active, bool,
 METHOD(ha_segments_t, destroy, void,
 	private_ha_segments_t *this)
 {
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	this->mutex->destroy(this->mutex);
 	this->condvar->destroy(this->condvar);
 	free(this);

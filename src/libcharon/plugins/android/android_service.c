@@ -42,11 +42,6 @@ struct private_android_service_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * job that handles requests from the Android control socket
-	 */
-	callback_job_t *job;
-
-	/**
 	 * android credentials
 	 */
 	android_creds_t *creds;
@@ -384,9 +379,9 @@ android_service_t *android_service_create(android_creds_t *creds)
 	}
 
 	charon->bus->add_listener(charon->bus, &this->public.listener);
-	this->job = callback_job_create((callback_job_cb_t)initiate, this,
-									NULL, NULL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create((callback_job_cb_t)initiate, this,
+									NULL, NULL));
 
 	return &this->public;
 }

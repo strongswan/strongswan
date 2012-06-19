@@ -53,11 +53,6 @@ struct private_eap_radius_dae_t {
 	int fd;
 
 	/**
-	 * Listen job
-	 */
-	callback_job_t *job;
-
-	/**
 	 * RADIUS shared secret for DAE exchanges
 	 */
 	chunk_t secret;
@@ -481,10 +476,6 @@ static bool open_socket(private_eap_radius_dae_t *this)
 METHOD(eap_radius_dae_t, destroy, void,
 	private_eap_radius_dae_t *this)
 {
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	if (this->fd != -1)
 	{
 		close(this->fd);
@@ -538,9 +529,9 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		return NULL;
 	}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive,
+			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

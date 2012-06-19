@@ -919,8 +919,10 @@ static void update_checklist_state(private_connect_manager_t *this,
 			 &checklist->connect_id);
 
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
-		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-		lib->scheduler->schedule_job_ms(lib->scheduler, job, ME_WAIT_TO_FINISH);
+		lib->scheduler->schedule_job_ms(lib->scheduler,
+				(job_t*)callback_job_create((callback_job_cb_t)initiator_finish,
+					data, (callback_job_cleanup_t)callback_data_destroy, NULL),
+				ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
 
@@ -1007,8 +1009,12 @@ retransmit_end:
  */
 static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair)
 {
-	callback_data_t *data = retransmit_data_create(this, checklist->connect_id, pair->id);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+	callback_data_t *data;
+	job_t *job;
+
+	data = retransmit_data_create(this, checklist->connect_id, pair->id);
+	job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data,
+						(callback_job_cleanup_t)callback_data_destroy, NULL);
 
 	u_int32_t retransmission = pair->retransmitted + 1;
 	u_int32_t rto = ME_INTERVAL;
@@ -1155,10 +1161,12 @@ static job_requeue_t sender(callback_data_t *data)
 /**
  * Schedules checks for a checklist (time in ms)
  */
-static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time)
+static void schedule_checks(private_connect_manager_t *this,
+							check_list_t *checklist, u_int32_t time)
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
-	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender,
+					data, (callback_job_cleanup_t)callback_data_destroy, NULL);
 	lib->scheduler->schedule_job_ms(lib->scheduler, checklist->sender, time);
 }
 
@@ -1210,12 +1218,15 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 		if (get_initiated_by_ids(this, checklist->initiator.id,
 				checklist->responder.id, &initiated) == SUCCESS)
 		{
+			callback_job_t *job;
+
 			remove_checklist(this, checklist);
 			remove_initiated(this, initiated);
 
 			initiate_data_t *data = initiate_data_create(checklist, initiated);
-			job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiate_mediated, data, (callback_job_cleanup_t)initiate_data_destroy, NULL);
-			lib->processor->queue_job(lib->processor, job);
+			job = callback_job_create((callback_job_cb_t)initiate_mediated,
+					data, (callback_job_cleanup_t)initiate_data_destroy, NULL);
+			lib->processor->queue_job(lib->processor, (job_t*)job);
 			return;
 		}
 		else

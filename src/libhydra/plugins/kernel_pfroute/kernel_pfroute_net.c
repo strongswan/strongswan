@@ -120,11 +120,6 @@ struct private_kernel_pfroute_net_t
 	linked_list_t *ifaces;
 
 	/**
-	 * job receiving PF_ROUTE events
-	 */
-	callback_job_t *job;
-
-	/**
 	 * mutex to lock access to the PF_ROUTE socket
 	 */
 	mutex_t *mutex_pfroute;
@@ -648,10 +643,6 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_pfroute_net_t *this)
 {
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	if (this->socket > 0)
 	{
 		close(this->socket);
@@ -718,9 +709,10 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 			return NULL;
 		}
 
-		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-											this, NULL, NULL, JOB_PRIO_CRITICAL);
-		lib->processor->queue_job(lib->processor, (job_t*)this->job);
+		lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create_with_prio(
+					(callback_job_cb_t)receive_events, this, NULL,
+					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
 
 	if (init_address_list(this) != SUCCESS)

@@ -67,11 +67,6 @@ struct private_tnc_pdp_t {
 	int ipv6;
 
 	/**
-	 * Callback job dispatching commands
-	 */
-	callback_job_t *job;
-
-	/**
 	 * RADIUS shared secret
 	 */
 	chunk_t secret;
@@ -546,10 +541,6 @@ static job_requeue_t receive(private_tnc_pdp_t *this)
 METHOD(tnc_pdp_t, destroy, void,
 	private_tnc_pdp_t *this)
 {
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	if (this->ipv4)
 	{
 		close(this->ipv4);
@@ -639,9 +630,9 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 	}
 	DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

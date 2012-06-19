@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  * Hochschule fuer Technik Rapperswil
@@ -46,9 +47,20 @@ typedef job_requeue_t (*callback_job_cb_t)(void *data);
  * to supply to the constructor.
  *
  * @param data			param supplied to job
- * @return				requeing policy how to requeue the job
  */
 typedef void (*callback_job_cleanup_t)(void *data);
+
+/**
+ * Cancellation function to use for the callback job.
+ *
+ * Optional function to be called when a job has to be canceled.
+ *
+ * See job_t.cancel() for details on the return value.
+ *
+ * @param data			param supplied to job
+ * @return				TRUE if canceled, FALSE to explicitly cancel the thread
+ */
+typedef bool (*callback_job_cancel_t)(void *data);
 
 /**
  * Class representing an callback Job.
@@ -64,14 +76,6 @@ struct callback_job_t {
 	 */
 	job_t job;
 
-	/**
-	 * Cancel the job's thread and wait for its termination.
-	 *
-	 * This only works reliably for jobs that always use JOB_REQUEUE_FAIR or
-	 * JOB_REQUEUE_DIRECT, otherwise the job may already be destroyed when
-	 * cancel is called.
-	 */
-	void (*cancel)(callback_job_t *this);
 };
 
 /**
@@ -79,19 +83,20 @@ struct callback_job_t {
  *
  * The cleanup function is called when the job gets destroyed to destroy
  * the associated data.
- * If parent is not NULL, the specified job gets an association. Whenever
- * the parent gets cancelled (or runs out), all of its children are cancelled,
- * too.
+ *
+ * The cancel function is optional and should only be provided if the callback
+ * function calls potentially blocking functions and/or always returns
+ * JOB_REQUEUE_DIRECT.
  *
  * @param cb				callback to call from the processor
  * @param data				user data to supply to callback
  * @param cleanup			destructor for data on destruction, or NULL
- * @param parent			parent of this job
+ * @param cancel			function to cancel the job, or NULL
  * @return					callback_job_t object
  */
 callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
-									callback_job_t *parent);
+									callback_job_cancel_t cancel);
 
 /**
  * Creates a callback job, with priority.
@@ -101,12 +106,12 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
  * @param cb				callback to call from the processor
  * @param data				user data to supply to callback
  * @param cleanup			destructor for data on destruction, or NULL
- * @param parent			parent of this job
+ * @param cancel			function to cancel the job, or NULL
  * @param prio				job priority
  * @return					callback_job_t object
  */
 callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
-					callback_job_cleanup_t cleanup, callback_job_t *parent,
-					job_priority_t prio);
+				callback_job_cleanup_t cleanup, callback_job_cancel_t cancel,
+				job_priority_t prio);
 
 #endif /** CALLBACK_JOB_H_ @}*/

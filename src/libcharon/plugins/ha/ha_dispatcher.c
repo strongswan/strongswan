@@ -58,11 +58,6 @@ struct private_ha_dispatcher_t {
 	 * HA enabled pool
 	 */
 	ha_attribute_t *attr;
-
-	/**
-	 * Dispatcher job
-	 */
-	callback_job_t *job;
 };
 
 /**
@@ -1032,7 +1027,6 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 METHOD(ha_dispatcher_t, destroy, void,
 	private_ha_dispatcher_t *this)
 {
-	this->job->cancel(this->job);
 	free(this);
 }
 
@@ -1056,9 +1050,9 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 		.kernel = kernel,
 		.attr = attr,
 	);
-	this->job = callback_job_create_with_prio((callback_job_cb_t)dispatch,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)dispatch, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

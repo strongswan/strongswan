@@ -113,6 +113,10 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.sender->flush(this->public.sender);
 	}
+
+	/* cancel all threads and wait for their termination */
+	lib->processor->cancel(lib->processor);
+
 	DESTROY_IF(this->public.receiver);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
@@ -120,7 +124,6 @@ static void destroy(private_daemon_t *this)
 #endif /* ME */
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
-	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
 #ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);

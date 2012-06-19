@@ -49,11 +49,6 @@ struct private_whitelist_control_t {
 	 * Whitelist unix socket file descriptor
 	 */
 	int socket;
-
-	/**
-	 * Callback job dispatching commands
-	 */
-	callback_job_t *job;
 };
 
 /**
@@ -200,7 +195,6 @@ static job_requeue_t receive(private_whitelist_control_t *this)
 METHOD(whitelist_control_t, destroy, void,
 	private_whitelist_control_t *this)
 {
-	this->job->cancel(this->job);
 	close(this->socket);
 	free(this);
 }
@@ -225,9 +219,9 @@ whitelist_control_t *whitelist_control_create(whitelist_listener_t *listener)
 		return NULL;
 	}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

@@ -51,42 +51,9 @@ struct private_callback_job_t {
 	callback_job_cleanup_t cleanup;
 
 	/**
-	 * thread of the job, if running
+	 * cancel function
 	 */
-	thread_t *thread;
-
-	/**
-	 * mutex to access private job data
-	 */
-	mutex_t *mutex;
-
-	/**
-	 * list of associated child jobs
-	 */
-	linked_list_t *children;
-
-	/**
-	 * parent of this job, or NULL
-	 */
-	private_callback_job_t *parent;
-
-	/**
-	 * TRUE if the job got canceled
-	 */
-	bool canceled;
-
-	/**
-	 * condvar to synchronize the cancellation/destruction of the job
-	 */
-	condvar_t *destroyable;
-
-	/**
-	 * semaphore to synchronize the termination of the assigned thread.
-	 *
-	 * separately created during cancellation, so that we can wait on it
-	 * without risking that it gets destroyed too early during destruction.
-	 */
-	semaphore_t *terminated;
+	callback_job_cancel_t cancel;
 
 	/**
 	 * Priority of this job
@@ -94,131 +61,26 @@ struct private_callback_job_t {
 	job_priority_t prio;
 };
 
-/**
- * unregister a child from its parent, if any.
- * note: this->mutex has to be locked
- */
-static void unregister(private_callback_job_t *this)
-{
-	if (this->parent)
-	{
-		this->parent->mutex->lock(this->parent->mutex);
-		if (this->parent->canceled && !this->canceled)
-		{
-			/* if the parent has been canceled but we have not yet, we do not
-			 * unregister until we got canceled by the parent. */
-			this->parent->mutex->unlock(this->parent->mutex);
-			this->destroyable->wait(this->destroyable, this->mutex);
-			this->parent->mutex->lock(this->parent->mutex);
-		}
-		this->parent->children->remove(this->parent->children, this, NULL);
-		this->parent->mutex->unlock(this->parent->mutex);
-		this->parent = NULL;
-	}
-}
-
 METHOD(job_t, destroy, void,
 	private_callback_job_t *this)
 {
-	this->mutex->lock(this->mutex);
-	unregister(this);
 	if (this->cleanup)
 	{
 		this->cleanup(this->data);
 	}
-	if (this->terminated)
-	{
-		this->terminated->post(this->terminated);
-	}
-	this->children->destroy(this->children);
-	this->destroyable->destroy(this->destroyable);
-	this->mutex->unlock(this->mutex);
-	this->mutex->destroy(this->mutex);
 	free(this);
-}
-
-METHOD(callback_job_t, cancel, void,
-	private_callback_job_t *this)
-{
-	callback_job_t *child;
-	semaphore_t *terminated = NULL;
-
-	this->mutex->lock(this->mutex);
-	this->canceled = TRUE;
-	/* terminate children */
-	while (this->children->get_first(this->children, (void**)&child) == SUCCESS)
-	{
-		this->mutex->unlock(this->mutex);
-		child->cancel(child);
-		this->mutex->lock(this->mutex);
-	}
-	if (this->thread)
-	{
-		/* terminate the thread, if there is currently one executing the job.
-		 * we wait for its termination using a semaphore */
-		this->thread->cancel(this->thread);
-		terminated = this->terminated = semaphore_create(0);
-	}
-	else
-	{
-		/* if the job is currently queued, it gets terminated later.
-		 * we can't wait, because it might not get executed at all.
-		 * we also unregister the queued job manually from its parent (the
-		 * others get unregistered during destruction) */
-		unregister(this);
-	}
-	this->destroyable->signal(this->destroyable);
-	this->mutex->unlock(this->mutex);
-
-	if (terminated)
-	{
-		terminated->wait(terminated);
-		terminated->destroy(terminated);
-	}
 }
 
 METHOD(job_t, execute, job_requeue_t,
 	private_callback_job_t *this)
 {
-	bool requeue = FALSE;
+	return this->callback(this->data);
+}
 
-	this->mutex->lock(this->mutex);
-	this->thread = thread_current();
-	this->mutex->unlock(this->mutex);
-
-	while (TRUE)
-	{
-		this->mutex->lock(this->mutex);
-		if (this->canceled)
-		{
-			this->mutex->unlock(this->mutex);
-			break;
-		}
-		this->mutex->unlock(this->mutex);
-		switch (this->callback(this->data))
-		{
-			case JOB_REQUEUE_DIRECT:
-				continue;
-			case JOB_REQUEUE_FAIR:
-			{
-				requeue = TRUE;
-				break;
-			}
-			case JOB_REQUEUE_NONE:
-			default:
-			{
-				break;
-			}
-		}
-		break;
-	}
-	this->mutex->lock(this->mutex);
-	this->thread = NULL;
-	this->mutex->unlock(this->mutex);
-	/* manually create a cancellation point to avoid that a canceled thread
-	 * goes back into the thread pool at all */
-	thread_cancellation_point();
-	return requeue ? JOB_REQUEUE_FAIR : JOB_REQUEUE_NONE;
+METHOD(job_t, cancel, bool,
+	private_callback_job_t *this)
+{
+	return this->cancel(this->data);
 }
 
 METHOD(job_t, get_priority, job_priority_t,
@@ -231,8 +93,8 @@ METHOD(job_t, get_priority, job_priority_t,
  * Described in header.
  */
 callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
-					callback_job_cleanup_t cleanup, callback_job_t *parent,
-					job_priority_t prio)
+				callback_job_cleanup_t cleanup, callback_job_cancel_t cancel,
+				job_priority_t prio)
 {
 	private_callback_job_t *this;
 
@@ -243,24 +105,17 @@ callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
 				.get_priority = _get_priority,
 				.destroy = _destroy,
 			},
-			.cancel = _cancel,
 		},
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.callback = cb,
 		.data = data,
 		.cleanup = cleanup,
-		.children = linked_list_create(),
-		.parent = (private_callback_job_t*)parent,
-		.destroyable = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.cancel = cancel,
 		.prio = prio,
 	);
 
-	/* register us at parent */
-	if (parent)
+	if (cancel)
 	{
-		this->parent->mutex->lock(this->parent->mutex);
-		this->parent->children->insert_last(this->parent->children, this);
-		this->parent->mutex->unlock(this->parent->mutex);
+		this->public.job.cancel = _cancel;
 	}
 
 	return &this->public;
@@ -271,8 +126,8 @@ callback_job_t *callback_job_create_with_prio(callback_job_cb_t cb, void *data,
  */
 callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
-									callback_job_t *parent)
+									callback_job_cancel_t cancel)
 {
-	return callback_job_create_with_prio(cb, data, cleanup, parent,
+	return callback_job_create_with_prio(cb, data, cleanup, cancel,
 										 JOB_PRIO_MEDIUM);
 }

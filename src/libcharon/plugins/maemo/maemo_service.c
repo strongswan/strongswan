@@ -431,8 +431,10 @@ static job_requeue_t run(private_maemo_service_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
-METHOD(maemo_service_t, destroy, void,
-	   private_maemo_service_t *this)
+/**
+ * Cancel the GLib Main Event Loop
+ */
+static bool cancel(private_maemo_service_t *this)
 {
 	if (this->loop)
 	{
@@ -442,6 +444,12 @@ METHOD(maemo_service_t, destroy, void,
 		}
 		g_main_loop_unref(this->loop);
 	}
+	return TRUE;
+}
+
+METHOD(maemo_service_t, destroy, void,
+	   private_maemo_service_t *this)
+{
 	if (this->context)
 	{
 		osso_rpc_unset_cb_f(this->context,
@@ -510,8 +518,8 @@ maemo_service_t *maemo_service_create()
 	}
 
 	lib->processor->queue_job(lib->processor,
-				(job_t*)callback_job_create_with_prio((callback_job_cb_t)run,
-										this, NULL, NULL, JOB_PRIO_CRITICAL));
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)run, this,
+				NULL, (callback_job_cancel_t)cancel, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

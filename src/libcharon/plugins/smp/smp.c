@@ -49,11 +49,6 @@ struct private_smp_t {
 	 * XML unix socket fd
 	 */
 	int socket;
-
-	/**
-	 * job accepting stroke messages
-	 */
-	callback_job_t *job;
 };
 
 ENUM(ike_sa_state_lower_names, IKE_CREATED, IKE_DELETING,
@@ -704,7 +699,8 @@ static job_requeue_t dispatch(private_smp_t *this)
 
 	fdp = malloc_thing(int);
 	*fdp = fd;
-	job = callback_job_create((callback_job_cb_t)process, fdp, free, this->job);
+	job = callback_job_create((callback_job_cb_t)process, fdp, free,
+							  (callback_job_cancel_t)return_false);
 	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_DIRECT;
@@ -719,7 +715,6 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_smp_t *this)
 {
-	this->job->cancel(this->job);
 	close(this->socket);
 	free(this);
 }
@@ -775,9 +770,9 @@ plugin_t *smp_plugin_create()
 		return NULL;
 	}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)dispatch,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)dispatch, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public.plugin;
 }

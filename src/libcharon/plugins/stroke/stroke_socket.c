@@ -64,16 +64,6 @@ struct private_stroke_socket_t {
 	int socket;
 
 	/**
-	 * job accepting stroke messages
-	 */
-	callback_job_t *receiver;
-
-	/**
-	 * job handling stroke messages
-	 */
-	callback_job_t *handler;
-
-	/**
 	 * queued stroke commands
 	 */
 	linked_list_t *commands;
@@ -702,7 +692,7 @@ static job_requeue_t handle(private_stroke_socket_t *this)
 	this->handling++;
 	thread_cleanup_pop(TRUE);
 	job = callback_job_create_with_prio((callback_job_cb_t)process, ctx,
-			(void*)stroke_job_context_destroy, this->handler, JOB_PRIO_HIGH);
+			(void*)stroke_job_context_destroy, NULL, JOB_PRIO_HIGH);
 	lib->processor->queue_job(lib->processor, (job_t*)job);
 	return JOB_REQUEUE_DIRECT;
 }
@@ -787,8 +777,6 @@ static bool open_socket(private_stroke_socket_t *this)
 METHOD(stroke_socket_t, destroy, void,
 	private_stroke_socket_t *this)
 {
-	this->handler->cancel(this->handler);
-	this->receiver->cancel(this->receiver);
 	this->commands->destroy_function(this->commands, (void*)stroke_job_context_destroy);
 	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
@@ -843,13 +831,13 @@ stroke_socket_t *stroke_socket_create()
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 
-	this->receiver = callback_job_create_with_prio((callback_job_cb_t)receive,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->receiver);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
-	this->handler = callback_job_create_with_prio((callback_job_cb_t)handle,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->handler);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)handle, this,
+				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

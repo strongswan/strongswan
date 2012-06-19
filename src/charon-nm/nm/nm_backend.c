@@ -67,6 +67,22 @@ static job_requeue_t run(nm_backend_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+/**
+ * Cancel the GLib Main Event Loop
+ */
+static bool cancel(nm_backend_t *this)
+{
+	if (this->loop)
+	{
+		if (g_main_loop_is_running(this->loop))
+		{
+			g_main_loop_quit(this->loop);
+		}
+		g_main_loop_unref(this->loop);
+	}
+	return TRUE;
+}
+
 /*
  * see header file
  */
@@ -77,14 +93,6 @@ void nm_backend_deinit()
 	if (!this)
 	{
 		return;
-	}
-	if (this->loop)
-	{
-		if (g_main_loop_is_running(this->loop))
-		{
-			g_main_loop_quit(this->loop);
-		}
-		g_main_loop_unref(this->loop);
 	}
 	if (this->plugin)
 	{
@@ -132,8 +140,8 @@ bool nm_backend_init()
 	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
 
 	lib->processor->queue_job(lib->processor,
-				(job_t*)callback_job_create_with_prio((callback_job_cb_t)run,
-										this, NULL, NULL, JOB_PRIO_CRITICAL));
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)run, this,
+				NULL, (callback_job_cancel_t)cancel, JOB_PRIO_CRITICAL));
 	return TRUE;
 }
 

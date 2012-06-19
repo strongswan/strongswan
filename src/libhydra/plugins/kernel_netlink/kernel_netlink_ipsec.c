@@ -269,11 +269,6 @@ struct private_kernel_netlink_ipsec_t {
 	hashtable_t *sas;
 
 	/**
-	 * Job receiving netlink events
-	 */
-	callback_job_t *job;
-
-	/**
 	 * Netlink xfrm socket (IPsec)
 	 */
 	netlink_socket_t *socket_xfrm;
@@ -2618,10 +2613,6 @@ METHOD(kernel_ipsec_t, destroy, void,
 	enumerator_t *enumerator;
 	policy_entry_t *policy;
 
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	if (this->socket_xfrm_events > 0)
 	{
 		close(this->socket_xfrm_events);
@@ -2730,9 +2721,10 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 			destroy(this);
 			return NULL;
 		}
-		this->job = callback_job_create_with_prio((callback_job_cb_t)receive_events,
-											this, NULL, NULL, JOB_PRIO_CRITICAL);
-		lib->processor->queue_job(lib->processor, (job_t*)this->job);
+		lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create_with_prio(
+					(callback_job_cb_t)receive_events, this, NULL,
+					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
 
 	return &this->public;

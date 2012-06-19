@@ -45,11 +45,6 @@ struct private_farp_spoofer_t {
 	farp_listener_t *listener;
 
 	/**
-	 * Callback job to read ARP requests
-	 */
-	callback_job_t *job;
-
-	/**
 	 * RAW socket for ARP requests
 	 */
 	int skt;
@@ -135,7 +130,6 @@ static job_requeue_t receive_arp(private_farp_spoofer_t *this)
 METHOD(farp_spoofer_t, destroy, void,
 	private_farp_spoofer_t *this)
 {
-	this->job->cancel(this->job);
 	close(this->skt);
 	free(this);
 }
@@ -189,9 +183,9 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 		return NULL;
 	}
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_arp,
-									this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive_arp,
+			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

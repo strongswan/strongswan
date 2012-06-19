@@ -103,6 +103,26 @@ struct job_t {
 	job_requeue_t (*execute) (job_t *this);
 
 	/**
+	 * Cancel a job.
+	 *
+	 * Implementing this method is optional.  It allows potentially blocking
+	 * jobs to be canceled during shutdown.
+	 *
+	 * If no special action is to be taken simply return FALSE then the thread
+	 * executing the job will be canceled.  If TRUE is returned the job is
+	 * expected to return from execute() itself (i.e. the thread won't be
+	 * canceled explicitly and can still be joined later).
+	 * Jobs that return FALSE have to make sure they provide the appropriate
+	 * cancellation points.
+	 *
+	 * @note Regular jobs that do not block MUST NOT implement this method.
+	 * @note This method could be called even before execute() has been called.
+	 *
+	 * @return			FALSE to cancel the thread, TRUE if canceled otherwise
+	 */
+	bool (*cancel)(job_t *this);
+
+	/**
 	 * Get the priority of a job.
 	 *
 	 * @return			job priority
@@ -117,7 +137,7 @@ struct job_t {
 	 *
 	 * Use the status of a job to decide what to do during destruction.
 	 */
-	void (*destroy) (job_t *this);
+	void (*destroy)(job_t *this);
 };
 
 #endif /** JOB_H_ @}*/

@@ -55,11 +55,6 @@ struct private_receiver_t {
 	receiver_t public;
 
 	/**
-	 * Threads job receiving packets
-	 */
-	callback_job_t *job;
-
-	/**
 	 * current secret to use for cookie calculation
 	 */
 	char secret[SECRET_LENGTH];
@@ -393,8 +388,6 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	status = charon->socket->receive(charon->socket, &packet);
 	if (status == NOT_SUPPORTED)
 	{
-		/* the processor destroys this job  */
-		this->job = NULL;
 		return JOB_REQUEUE_NONE;
 	}
 	else if (status != SUCCESS)
@@ -504,10 +497,6 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 METHOD(receiver_t, destroy, void,
 	private_receiver_t *this)
 {
-	if (this->job)
-	{
-		this->job->cancel(this->job);
-	}
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	free(this);
@@ -568,9 +557,9 @@ receiver_t *receiver_create()
 	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
 
-	this->job = callback_job_create_with_prio((callback_job_cb_t)receive_packets,
-										this, NULL, NULL, JOB_PRIO_CRITICAL);
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive_packets,
+			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

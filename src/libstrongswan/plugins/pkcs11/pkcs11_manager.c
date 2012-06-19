@@ -61,8 +61,6 @@ typedef struct {
 	char *path;
 	/* loaded library */
 	pkcs11_library_t *lib;
-	/* event dispatcher job */
-	callback_job_t *job;
 } lib_entry_t;
 
 /**
@@ -70,10 +68,6 @@ typedef struct {
  */
 static void lib_entry_destroy(lib_entry_t *entry)
 {
-	if (entry->job)
-	{
-		entry->job->cancel(entry->job);
-	}
 	entry->lib->destroy(entry->lib);
 	free(entry);
 }
@@ -199,14 +193,6 @@ static job_requeue_t dispatch_slot_events(lib_entry_t *entry)
 	handle_slot(entry, slot, TRUE);
 
 	return JOB_REQUEUE_DIRECT;
-}
-
-/**
- * End dispatching, unset job
- */
-static void end_dispatch(lib_entry_t *entry)
-{
-	entry->job = NULL;
 }
 
 /**
@@ -384,9 +370,9 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 	while (enumerator->enumerate(enumerator, &entry))
 	{
 		query_slots(entry);
-		entry->job = callback_job_create_with_prio((void*)dispatch_slot_events,
-						 entry, (void*)end_dispatch, NULL, JOB_PRIO_CRITICAL);
-		lib->processor->queue_job(lib->processor, (job_t*)entry->job);
+		lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create_with_prio((void*)dispatch_slot_events,
+						entry, NULL, (void*)return_false, JOB_PRIO_CRITICAL));
 	}
 	enumerator->destroy(enumerator);
 

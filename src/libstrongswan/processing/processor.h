@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -78,12 +79,19 @@ struct processor_t {
 	 *
 	 * If the number of threads is smaller than number of currently running
 	 * threads, thread count is decreased. Use 0 to disable the processor.
-	 * This call blocks if it decreases thread count until threads have
-	 * terminated, so make sure there are not too many blocking jobs.
+	 *
+	 * This call does not block and wait for threads to terminate if the number
+	 * of threads is reduced.  Instead use cancel() for that during shutdown.
 	 *
 	 * @param count			number of threads to allocate
 	 */
 	void (*set_threads)(processor_t *this, u_int count);
+
+	/**
+	 * Sets the number of threads to 0 and cancels all blocking jobs, then waits
+	 * for all threads to be terminated.
+	 */
+	void (*cancel)(processor_t *this);
 
 	/**
 	 * Destroy a processor object.

@@ -39,11 +39,6 @@ struct private_sender_t {
 	sender_t public;
 
 	/**
-	 * Sender threads job.
-	 */
-	callback_job_t *job;
-
-	/**
 	 * The packets are stored in a linked list
 	 */
 	linked_list_t *list;
@@ -164,7 +159,6 @@ METHOD(sender_t, flush, void,
 METHOD(sender_t, destroy, void,
 	private_sender_t *this)
 {
-	this->job->cancel(this->job);
 	this->list->destroy_offset(this->list, offsetof(packet_t, destroy));
 	this->got->destroy(this->got);
 	this->sent->destroy(this->sent);
@@ -189,8 +183,6 @@ sender_t * sender_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.got = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.sent = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.job = callback_job_create_with_prio((callback_job_cb_t)send_packets,
-										this, NULL, NULL, JOB_PRIO_CRITICAL),
 		.send_delay = lib->settings->get_int(lib->settings,
 								"%s.send_delay", 0, charon->name),
 		.send_delay_type = lib->settings->get_int(lib->settings,
@@ -201,7 +193,9 @@ sender_t * sender_create()
 								"%s.send_delay_response", TRUE, charon->name),
 	);
 
-	lib->processor->queue_job(lib->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)send_packets,
+			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }
