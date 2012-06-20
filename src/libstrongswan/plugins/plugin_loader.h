@@ -26,10 +26,34 @@ typedef struct plugin_loader_t plugin_loader_t;
 
 #include <utils/enumerator.h>
 
+/* to avoid circular references we can't include plugin_feature.h */
+struct plugin_feature_t;
+
 /**
  * The plugin_loader loads plugins from a directory and initializes them
  */
 struct plugin_loader_t {
+
+	/**
+	 * Add static plugin features, not loaded via plugins.
+	 *
+	 * Similar to features provided by plugins they are evaluated during load(),
+	 * and unloaded when unload() is called.
+	 *
+	 * If critical is TRUE load() will fail if any of the added features could
+	 * not be loaded.
+	 *
+	 * @note The name should be unique otherwise a plugin with the same name is
+	 * not loaded.
+	 *
+	 * @param name			name of the component adding the features
+	 * @param features		array of plugin features
+	 * @param count			number of features in the array
+	 * @param critical		TRUE if the features are critical
+	 */
+	void (*add_static_features) (plugin_loader_t *this, const char *name,
+								 struct plugin_feature_t *features, int count,
+								 bool critical);
 
 	/**
 	 * Load a list of plugins from a directory.

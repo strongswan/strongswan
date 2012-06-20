@@ -105,6 +105,78 @@ static void plugin_entry_destroy(plugin_entry_t *entry)
 }
 
 /**
+ * Wrapper for static plugin features
+ */
+typedef struct {
+
+	/**
+	 * Implements plugin_t interface
+	 */
+	plugin_t public;
+
+	/**
+	 * Name of the module registering these features
+	 */
+	char *name;
+
+	/**
+	 * Static plugin features
+	 */
+	plugin_feature_t *features;
+
+	/**
+	 * Number of plugin features
+	 */
+	int count;
+
+} static_features_t;
+
+METHOD(plugin_t, get_static_name, char*,
+	static_features_t *this)
+{
+	return this->name;
+}
+
+METHOD(plugin_t, get_static_features, int,
+	static_features_t *this, plugin_feature_t *features[])
+{
+	*features = this->features;
+	return this->count;
+}
+
+METHOD(plugin_t, static_destroy, void,
+	static_features_t *this)
+{
+	free(this->features);
+	free(this->name);
+	free(this);
+}
+
+/**
+ * Create a wrapper around static plugin features.
+ */
+static plugin_t *static_features_create(const char *name,
+										plugin_feature_t features[], int count)
+{
+	static_features_t *this;
+
+	INIT(this,
+		.public = {
+			.get_name = _get_static_name,
+			.get_features = _get_static_features,
+			.destroy = _static_destroy,
+		},
+		.name = strdup(name),
+		.features = calloc(count, sizeof(plugin_feature_t)),
+		.count = count,
+	);
+
+	memcpy(this->features, features, sizeof(plugin_feature_t) * count);
+
+	return &this->public;
+}
+
+/**
  * Compare function for hashtable of loaded features.
  */
 static bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
@@ -554,6 +626,24 @@ static void purge_plugins(private_plugin_loader_t *this)
 	enumerator->destroy(enumerator);
 }
 
+METHOD(plugin_loader_t, add_static_features, void,
+	private_plugin_loader_t *this, const char *name,
+	plugin_feature_t features[], int count, bool critical)
+{
+	plugin_entry_t *entry;
+	plugin_t *plugin;
+
+	plugin = static_features_create(name, features, count);
+
+	INIT(entry,
+		.plugin = plugin,
+		.critical = critical,
+		.loaded = linked_list_create(),
+		.failed = linked_list_create(),
+	);
+	this->plugins->insert_last(this->plugins, entry);
+}
+
 METHOD(plugin_loader_t, load_plugins, bool,
 	private_plugin_loader_t *this, char *path, char *list)
 {
@@ -740,6 +830,7 @@ plugin_loader_t *plugin_loader_create()
 
 	INIT(this,
 		.public = {
+			.add_static_features = _add_static_features,
 			.load = _load_plugins,
 			.reload = _reload,
 			.unload = _unload,
