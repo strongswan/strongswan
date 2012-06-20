@@ -705,8 +705,19 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		if (!vip)
 		{	/* if it is set to something like %poolname, request an address */
 			if (msg->add_conn.me.subnets)
-			{	/* use the same address as in subnet, if any */
+			{	/* use the same family as in local subnet, if any */
 				if (strchr(msg->add_conn.me.subnets, '.'))
+				{
+					vip = host_create_any(AF_INET);
+				}
+				else
+				{
+					vip = host_create_any(AF_INET6);
+				}
+			}
+			else if (msg->add_conn.other.subnets)
+			{	/* use the same family as in remote subnet, if any */
+				if (strchr(msg->add_conn.other.subnets, '.'))
 				{
 					vip = host_create_any(AF_INET);
 				}
