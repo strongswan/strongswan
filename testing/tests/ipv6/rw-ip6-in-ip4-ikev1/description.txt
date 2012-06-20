@@ -1,7 +1,7 @@
 The roadwarriors <b>carol</b> and <b>dave</b> set up an IPv6-in-IPv4 tunnel connection each 
 to gateway <b>moon</b>. The authentication is based on <b>X.509 certificates</b>.
 Both <b>carol</b> and <b>dave</b> request a virtual IPv6 address from <b>moon</b> via
-the IKEvi1 mode config payload.
+the IKEv1 mode config payload.
 <p/>
 Upon the successful establishment of the ESP tunnels, <b>leftfirewall=yes</b>
 automatically inserts ip6tables-based firewall rules that let pass the tunneled traffic.
