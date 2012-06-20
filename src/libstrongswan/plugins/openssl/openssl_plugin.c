@@ -40,6 +40,9 @@
 #include "openssl_ec_public_key.h"
 #include "openssl_x509.h"
 #include "openssl_crl.h"
+#include "openssl_rng.h"
+#include "openssl_hmac_prf.h"
+#include "openssl_hmac_signer.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -363,6 +366,44 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+#ifndef OPENSSL_NO_HMAC
+		PLUGIN_REGISTER(PRF, openssl_hmac_prf_create),
+#ifndef OPENSSL_NO_MD5
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_MD5),
+#endif
+#ifndef OPENSSL_NO_SHA1
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA1),
+#endif
+#ifndef OPENSSL_NO_SHA256
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_256),
+#endif
+#ifndef OPENSSL_NO_SHA512
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_384),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_512),
+#endif
+		PLUGIN_REGISTER(SIGNER, openssl_hmac_signer_create),
+#ifndef OPENSSL_NO_MD5
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_MD5_96),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_MD5_128),
+#endif
+#ifndef OPENSSL_NO_SHA1
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_96),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_128),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_160),
+#endif
+#ifndef OPENSSL_NO_SHA256
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_256_128),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_256_256),
+#endif
+#ifndef OPENSSL_NO_SHA512
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_192),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_384),
+			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
+#endif
+#endif /* OPENSSL_NO_HMAC */
+		PLUGIN_REGISTER(RNG, openssl_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_WEAK),
 	};
 	*features = f;
 	return countof(f);
