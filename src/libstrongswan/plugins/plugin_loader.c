@@ -69,6 +69,11 @@ struct plugin_entry_t {
 	plugin_t *plugin;
 
 	/**
+	 * TRUE, if the plugin is marked as critical
+	 */
+	bool critical;
+
+	/**
 	 * dlopen handle, if in separate lib
 	 */
 	void *handle;
@@ -113,7 +118,8 @@ static bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
  *          FAILED, if the plugin could not be constructed
  */
 static status_t create_plugin(private_plugin_loader_t *this, void *handle,
-						char *name, bool integrity, plugin_entry_t **entry)
+							  char *name, bool integrity, bool critical,
+							  plugin_entry_t **entry)
 {
 	char create[128];
 	plugin_t *plugin;
@@ -149,6 +155,7 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	}
 	INIT(*entry,
 		.plugin = plugin,
+		.critical = critical,
 		.loaded = linked_list_create(),
 		.failed = linked_list_create(),
 	);
@@ -159,12 +166,13 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 /**
  * load a single plugin
  */
-static bool load_plugin(private_plugin_loader_t *this, char *name, char *file)
+static bool load_plugin(private_plugin_loader_t *this, char *name, char *file,
+						bool critical)
 {
 	plugin_entry_t *entry;
 	void *handle;
 
-	switch (create_plugin(this, RTLD_DEFAULT, name, FALSE, &entry))
+	switch (create_plugin(this, RTLD_DEFAULT, name, FALSE, critical, &entry))
 	{
 		case SUCCESS:
 			this->plugins->insert_last(this->plugins, entry);
@@ -190,7 +198,7 @@ static bool load_plugin(private_plugin_loader_t *this, char *name, char *file)
 		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
 		return FALSE;
 	}
-	if (create_plugin(this, handle, name, TRUE, &entry) != SUCCESS)
+	if (create_plugin(this, handle, name, TRUE, critical, &entry) != SUCCESS)
 	{
 		dlclose(handle);
 		return FALSE;
@@ -474,6 +482,55 @@ static int unload_features(private_plugin_loader_t *this, plugin_entry_t *entry)
 }
 
 /**
+ * Check that we have all features loaded for critical plugins
+ */
+static bool missing_critical_features(private_plugin_loader_t *this)
+{
+	enumerator_t *enumerator;
+	plugin_entry_t *entry;
+	bool critical_failed = FALSE;
+
+	enumerator = this->plugins->create_enumerator(this->plugins);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (!entry->plugin->get_features)
+		{	/* feature interface not supported */
+			continue;
+		}
+		if (entry->critical)
+		{
+			plugin_feature_t *feature;
+			char *name, *provide;
+			int count, i, failed = 0;
+
+			name = entry->plugin->get_name(entry->plugin);
+			count = entry->plugin->get_features(entry->plugin, &feature);
+			for (i = 0; i < count; i++, feature++)
+			{
+				if (feature->kind == FEATURE_PROVIDE &&
+					!feature_loaded(this, entry, feature))
+				{
+					provide = plugin_feature_get_string(feature);
+					DBG2(DBG_LIB, "  failed to load %s in critical plugin '%s'",
+						 provide, name);
+					free(provide);
+					failed++;
+				}
+			}
+			if (failed)
+			{
+				DBG1(DBG_LIB, "failed to load %d feature%s in critical plugin "
+					 "'%s'", failed, failed > 1 ? "s" : "", name);
+				critical_failed = TRUE;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return critical_failed;
+}
+
+/**
  * Remove plugins that we were not able to load any features from.
  */
 static void purge_plugins(private_plugin_loader_t *this)
@@ -533,7 +590,7 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		{
 			return FALSE;
 		}
-		if (!load_plugin(this, token, file) && critical)
+		if (!load_plugin(this, token, file, critical) && critical)
 		{
 			critical_failed = TRUE;
 			DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
@@ -556,6 +613,8 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		}
 		/* report missing dependencies */
 		load_features(this, FALSE, TRUE);
+		/* check for unloaded features provided by critical plugins */
+		critical_failed = missing_critical_features(this);
 		/* unload plugins that we were not able to load any features for */
 		purge_plugins(this);
 	}
