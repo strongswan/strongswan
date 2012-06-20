@@ -24,7 +24,8 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_x509.c openssl_x509.h \
 	openssl_crl.c openssl_crl.h \
 	openssl_rng.c openssl_rng.h \
-	openssl_hmac_prf.c openssl_hmac_prf.h
+	openssl_hmac_prf.c openssl_hmac_prf.h \
+	openssl_hmac_signer.c openssl_hmac_signer.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = -lcrypto
