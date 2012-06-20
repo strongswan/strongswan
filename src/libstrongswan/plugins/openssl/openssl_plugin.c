@@ -41,6 +41,7 @@
 #include "openssl_x509.h"
 #include "openssl_crl.h"
 #include "openssl_rng.h"
+#include "openssl_hmac_prf.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -364,6 +365,22 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+#ifndef OPENSSL_NO_HMAC
+		PLUGIN_REGISTER(PRF, openssl_hmac_prf_create),
+#ifndef OPENSSL_NO_MD5
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_MD5),
+#endif
+#ifndef OPENSSL_NO_SHA1
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA1),
+#endif
+#ifndef OPENSSL_NO_SHA256
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_256),
+#endif
+#ifndef OPENSSL_NO_SHA512
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_384),
+			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_512),
+#endif
+#endif /* OPENSSL_NO_HMAC */
 		PLUGIN_REGISTER(RNG, openssl_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
