@@ -40,6 +40,7 @@
 #include "openssl_ec_public_key.h"
 #include "openssl_x509.h"
 #include "openssl_crl.h"
+#include "openssl_rng.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -363,6 +364,9 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+		PLUGIN_REGISTER(RNG, openssl_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_WEAK),
 	};
 	*features = f;
 	return countof(f);
