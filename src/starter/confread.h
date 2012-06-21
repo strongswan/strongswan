@@ -191,8 +191,6 @@ struct starter_ca {
 		starter_state_t state;
 
 		char            *cacert;
-		char            *ldaphost;
-		char            *ldapbase;
 		char            *crluri;
 		char            *crluri2;
 		char            *ocspuri;

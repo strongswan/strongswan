@@ -72,8 +72,6 @@ mark_in,           KW_MARK_IN
 mark_out,          KW_MARK_OUT
 tfc,               KW_TFC
 cacert,            KW_CACERT
-ldaphost,          KW_LDAPHOST
-ldapbase,          KW_LDAPBASE
 crluri,            KW_CRLURI
 crluri1,           KW_CRLURI
 crluri2,           KW_CRLURI2
@@ -153,6 +151,8 @@ pkcs11module,      KW_PKCS11_DEPRECATED
 pkcs11initargs,    KW_PKCS11_DEPRECATED
 pkcs11keepstate,   KW_PKCS11_DEPRECATED
 pkcs11proxy,       KW_PKCS11_DEPRECATED
+ldaphost,          KW_CA_DEPRECATED
+ldapbase,          KW_CA_DEPRECATED
 pfs,               KW_PFS_DEPRECATED
 pfsgroup,          KW_PFS_DEPRECATED
 eap,               KW_CONN_DEPRECATED

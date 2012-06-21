@@ -173,8 +173,6 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
 	{ ARG_ENUM, offsetof(starter_ca_t, startup), LST_startup                       },
 	{ ARG_STR,  offsetof(starter_ca_t, cacert), NULL                               },
-	{ ARG_STR,  offsetof(starter_ca_t, ldaphost), NULL                             },
-	{ ARG_STR,  offsetof(starter_ca_t, ldapbase), NULL                             },
 	{ ARG_STR,  offsetof(starter_ca_t, crluri), NULL                               },
 	{ ARG_STR,  offsetof(starter_ca_t, crluri2), NULL                              },
 	{ ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
