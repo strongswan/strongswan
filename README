@@ -8,140 +8,62 @@ Contents
 
    1. Overview
    2. Quickstart
-	2.1 Site-to-Site case
-	2.2 Host-to-Host case
-	2.3 Four Tunnel case
-	2.4 Four Tunnel case the elegant way with source routing
-	2.5 Roadwarrior case
-	2.6 Roadwarrior case with virtual IP
-   3. Generating X.509 certificates and CRLs with OpenSSL
-	3.1 Generating a CA certificate
-	3.2 Generating a host or user certificate
-	3.3 Generating a CRL
-	3.4 Revoking a certificate
+    2.1 Site-to-Site case
+    2.2 Host-to-Host case
+    2.3 Roadwarrior case
+    2.4 Roadwarrior case with virtual IP
+   3. Generating X.509 certificates and CRLs
+    3.1 Generating a CA certificate
+    3.2 Generating a host or user certificate
+    3.3 Generating a CRL
+    3.4 Revoking a certificate
    4. Configuring the connections - ipsec.conf
-	4.1 Configuring my side
-	4.2 Multiple certificates
-	4.3 Configuring the peer side using CA certificates
-	4.4 Handling Virtual IPs and wildcard subnets
-	4.5 Protocol and port selectors
-	4.6 IPsec policies based on wildcards
-	4.7 IPsec policies based on CA certificates
-	4.8 Sending certificate requests
-	4.9 IPsec policies based on group attributes
+    4.1 Configuring my side
+    4.2 Multiple certificates
+    4.3 Configuring the peer side using CA certificates
+    4.4 Handling Virtual IPs and wildcard subnets
+    4.5 Protocol and port selectors
+    4.6 IPsec policies based on wildcards
+    4.7 IPsec policies based on CA certificates
    5. Configuring certificates and CRLs
-	5.1 Installing CA certificates
-	5.2 Installing optional Certificate Revocation Lists (CRLs)
-	5.3 Dynamic update of certificates and CRLs
-	5.4 Local caching of CRLs
-	5.5 Online Certificate Status Protocol (OCSP)
-	5.6 CRL policy
-	5.7 Configuring the peer side using locally stored certificates
+    5.1 Installing CA certificates
+    5.2 Installing optional Certificate Revocation Lists (CRLs)
+    5.3 Dynamic update of certificates and CRLs
+    5.4 Local caching of CRLs
+    5.5 Online Certificate Status Protocol (OCSP)
+    5.6 CRL policy
+    5.7 Configuring the peer side using locally stored certificates
    6. Configuring the private keys - ipsec.secrets
-	6.1 Loading private key files in PKCS#1 format
-	6.2 Entering passphrases interactively
-	6.3 Multiple private keys
+    6.1 Loading private key files in PKCS#1 format
+    6.2 Entering passphrases interactively
+    6.3 Multiple private keys
    7. Configuring CA properties - ipsec.conf
-   8. Smartcard support
-	8.1 Configuring a smartcard-based connection
-	8.2 Entering the PIN code
-	8.3 PIN-pad equipped smartcard readers
-	8.4 Configuring a smartcard using pkcs15-init
-        8.5 PKCS#1 proxy functions
-   9. Configuring the clients
-	9.1 strongSwan
-	9.2 PGPnet
-	9.3 Safenet/Soft-Remote
-	9.4 SSH Sentinel
-	9.5 Windows 2000/XP
-  10. Monitoring functions
-  11. Firewall support functions
-       11.1 Environment variables in the updown script
-       11.2 Automatic insertion and deletion of iptables firewall rules
-       11.3 Sample Linux 2.6 _updown_espmark script for iptables < 1.3.5
-  12. Authentication with raw RSA public keys
-  13. Authentication with OpenPGP certificates
-       13.1 OpenPGP certificates
-       13.2 OpenPGP private keys
-       13.3 Monitoring functions
-       13.4 Suppression of certificate request messages
-  14. Additional features
-       14.1 Authentication and encryption algorithms
-       14.2 NAT traversal
-       14.3 Dead peer detection
-       14.4 IKE Mode Config Pull Mode
-       14.5 IKE Mode Config Push Mode
-       14.6 XAUTH - Extended Authentication  (NEW)
-  15. Copyright statement and acknowledgements
+   8. Monitoring functions
+   9. Firewall support functions
+       9.1 Environment variables in the updown script
+       9.2 Automatic insertion and deletion of iptables firewall rules
 
 
 1. Overview
    --------
 
-strongSwan is an OpenSource IPsec solution for the Linux operating system
-and currently supports the following features:
+strongSwan is an OpenSource IPsec solution for Unix based operating systems.
 
-  * runs on Linux 2.6 (native IPsec) kernels.
+This document is just a short introduction, for more detailed information
+consult the manual pages and our wiki:
 
-  * strong 3DES, AES, Serpent, Twofish, or Blowfish encryption.
-
-  * Authentication based on X.509 certificates or preshared secrets.
-
-  * IPsec policies based on wildcards or intermediate CAs.
-
-  * Powerful and flexible IPsec policies based on group attributes.
-
-  * Retrieval of Certificate Revocation Lists (CRLs) via HTTP or LDAP.
-
-  * Local caching of fetched CRLs
-
-  * Full support of the Online Certificate Status Protocol (OCSP, RFC 2560).
-
-  * CA management functions including OCSP and CRL URIs and default LDAP server.
-
-  * Optional storage of RSA private keys on smartcards or USB crypto tokens
-
-  * Standardized PKCS#11 interface with optional proxy functions serving 
-    external applications (disc encryption, etc.).
- 
-  * NAT-Traversal (RFC 3947)
-
-  * Support of Virtual IPs via static configuration and IKE Mode Config
-
-  * XAUTH client and server functionality in conjunction with either PSK
-    or RSA IKE Main Mode authentication.
-
-  * Support of Delete SA and informational Notification messages.
-
-  * Dead Peer Detection (DPD, RFC 3706)
-
-Compatibility has successfully been tested with peers running the following
-IPsec clients:
-
-  FreeS/WAN, Openswan, SafeNet/SoftRemote, NCP Secure Entry Client,
-  SonicWALL Global VPN Client, The GreenBow, Microsoft Windows 2000/XP, etc.
-
-Furthermore, interoperability with the following VPN gateways
-has been demonstrated during the IPsec 2001 Conference in Paris:
-
-  Cisco IOS Routers, Cisco PIX firewall, Cisco VPN3000,
-  Nortel Contivity VPN Switch, NetScreen (FreeS/WAN as responder only),
-  OpenBSD with isakmpd, Netasq, Netcelo, and 6WIND.
-
-Potentially any IPsec implementation with X.509 certificate support can
-be made to cooperate with strongSwan. The latest addition has been the successful
-interoperability with the Check Point VPN-1 NG gateway.
+    http://wiki.strongswan.org
 
 
 2. Quickstart
    ----------
-   
+
 In the following examples we assume for reasons of clarity that left designates
-the local host and that right is the remote host. Certificates for users, hosts
-and gateways are issued by a fictitious strongSwan CA. How to generate private keys
-and certificates using OpenSSL will be explained in section 3. The CA certificate
-"strongswanCert.pem" must be present on all VPN end points in order to be able to
-authenticate the peers.
+the local host and that right is the remote host.  Certificates for users,
+hosts and gateways are issued by a fictitious strongSwan CA.  How to generate
+private keys and certificates using OpenSSL or the strongSwan PKI tool will be
+explained in section 3.  The CA certificate "strongswanCert.pem" must be present
+on all VPN end points in order to be able to authenticate the peers.
 
 
 2.1 Site-to-site case
@@ -156,52 +78,50 @@ set up between the two gateways:
 
 Configuration on gateway moon:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/moonCert.pem
+    /etc/ipsec.d/certs/moonCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA moonKey.pem "<optional passphrase>"
+        : RSA moonKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn net-net
-	  left=%defaultroute
-	  leftsubnet=10.1.0.0/16
-	  leftcert=moonCert.pem
-	  right=192.168.0.2
-	  rightsubnet=10.2.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=sun.strongswan.org"
-	  auto=start
+        conn net-net
+            leftsubnet=10.1.0.0/16
+            leftcert=moonCert.pem
+            right=192.168.0.2
+            rightsubnet=10.2.0.0/16
+            rightid="C=CH, O=strongSwan, CN=sun.strongswan.org"
+            auto=start
 
 Configuration on gateway sun:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/sunCert.pem
+    /etc/ipsec.d/certs/sunCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA sunKey.pem "<optional passphrase>"
+        : RSA sunKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn net-net
-	  left=%defaultroute
-	  leftsubnet=10.2.0.0/16
-	  leftcert=sunCert.pem
-	  right=192.168.0.1
-	  rightsubnet=10.1.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
+        conn net-net
+            leftsubnet=10.2.0.0/16
+            leftcert=sunCert.pem
+            right=192.168.0.1
+            rightsubnet=10.1.0.0/16
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
 2.2 Host-to-host case
     -----------------
 
 This is a setup between two single hosts which don't have a subnet behind
-them. Although IPsec transport mode would be sufficient for host-to-host
+them.  Although IPsec transport mode would be sufficient for host-to-host
 connections we will use the default IPsec tunnel mode.
 
     | 192.168.0.1 | === | 192.168.0.2 |
@@ -209,321 +129,156 @@ connections we will use the default IPsec tunnel mode.
 
 Configuration on host moon:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/moonCert.pem
+    /etc/ipsec.d/certs/moonCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA moonKey.pem "<optional passphrase>"
+        : RSA moonKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn host-host
-	  left=%defaultroute
-	  leftcert=moonCert.pem
-	  right=192.168.0.2
-	  rightid="C=CH, O=Linux strongSwan, CN=sun.strongswan.org"
-	  auto=start
+        conn host-host
+            leftcert=moonCert.pem
+            right=192.168.0.2
+            rightid="C=CH, O=strongSwan, CN=sun.strongswan.org"
+            auto=start
 
 Configuration on host sun:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/sunCert.pem
+    /etc/ipsec.d/certs/sunCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA sunKey.pem "<optional passphrase>"
+        : RSA sunKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn host-host
-	  left=%defaultroute
-	  leftcert=sunCert.pem
-	  right=192.168.0.1
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
+        conn host-host
+            leftcert=sunCert.pem
+            right=192.168.0.1
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
-2.3 Four Tunnel case
+2.3 Roadwarrior case
     ----------------
 
-In a site-to-site setup a system administrator logged into the local gateway
-often would like to access the peer gateway or a server in the subnet behind
-the peer gateway over a secure IPsec tunnel.Since IP packets leaving a gateway
-via the outer network interface carry the IP address of this NIC, four IPsec
-Security Associations (SAs) must be set up to achieve full connectivity. The
-example below shows how this can be done without much additional typing work ,
-using the "also" macro which includes connection definitions defined farther
-down in the ipsec.conf file.
-
-   10.1.0.0/16 -- | 192.168.0.1 | === | 192.168.0.2 | -- 10.2.0.0/16
-    moon-net           moon                 sun           sun-net
-
-Configuration on gateway moon:
-
-   /etc/ipsec.d/cacerts/strongswanCert.pem
-
-   /etc/ipsec.d/certs/moonCert.pem
-
-   /etc/ipsec.secrets:
-
-     : RSA moonKey.pem "<optional passphrase>"
-
-   /etc/ipsec.conf:
-
-     conn net-net
-	  leftsubnet=10.1.0.0/16
-	  rightsubnet=10.2.0.0/16
-	  also host-host
-
-     conn net-host
-	  leftsubnet=10.1.0.0/16
-	  also host-host
-
-     conn host-net
-	  rightsubnet=10.2.0.0/16
-	  also host-host
-
-     conn host-host
-	  left=%defaultroute
-	  leftcert=moonCert.pem
-	  right=192.168.0.2
-	  rightid="C=CH, O=Linux strongSwan, CN=sun.strongswan.org"
-	  auto=start
-
-Configuration on gateway sun:
-
-   /etc/ipsec.d/cacerts/strongswanCert.pem
-
-   /etc/ipsec.d/certs/sunCert.pem
-
-   /etc/ipsec.secrets:
-
-     : RSA sunKey.pem "<optional passphrase>"
-
-   /etc/ipsec.conf:
-
-     conn net-net
-	  leftsubnet=10.2.0.0/16
-	  rightsubnet=10.1.0.0/16
-	  also=host-host
-
-     conn net-host
-	  leftsubnet=10.2.0.0/16
-	  also=host-host
-
-     conn host-net
-	  rightsubnet=10.1.0.0/16
-	  also=host-host
-
-     conn host-host
-	  left=%defaultroute
-	  leftcert=sunCert.pem
-	  right=192.168.0.1
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
-
-
-2.4 The four tunnel case the elegant way with source routing
-    --------------------------------------------------------
-
-As you certainly agree, the full four tunnel case described in the previous
-section becomes quite complex. If we could force the source address of the
-IP packets leaving the gateway through the outer interface to take on the
-IP address of the inner interface then we could use the single subnet-to-subnet
-tunnel from section 2.1. Such a setup becomes possible if we use the
-source routing capabilites of the ip route command that is already used
-by strongSwan's updown scripts.
-
-    10.1.0.0/16 -- | 192.168.0.1 | === | 192.168.0.2 | -- 10.2.0.0/16
-      moon-net          moon                sun            sun-net
-
-If we assume that the inner IP address of gateway moon is 10.1.0.1
-and the inner IP address of gateway sun is 10.2.0.1 then the
-insertion of the parameter
-
-    leftsourceip=10.1.0.1
-   
-in the connection definition of moon and
-
-      leftsourceip=10.2.0.1
-  
-on sun, respectively, will install source routing on both gateways.
-As a result the command
-
-      ping 10.2.0.1
-  
-executed on moon will leave the gateway with a source address of
-10.1.0.1 and will therefore take the net-net IPsec tunnel.
-
-Configuration on gateway moon:
-
-   /etc/ipsec.d/cacerts/strongswanCert.pem
-
-   /etc/ipsec.d/certs/moonCert.pem
-
-   /etc/ipsec.secrets:
-
-     : RSA moonKey.pem "<optional passphrase>"
-
-   /etc/ipsec.conf:
-
-     conn net-net
-	  left=%defaultroute
-	  leftsourceip=10.1.0.1
-	  leftsubnet=10.1.0.0/16
-	  leftcert=moonCert.pem
-	  right=192.168.0.2
-	  rightsubnet=10.2.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=sun.strongswan.org"
-	  auto=start
-
-Configuration on gateway sun:
-
-   /etc/ipsec.d/cacerts/strongswanCert.pem
-
-   /etc/ipsec.d/certs/sunCert.pem
-
-   /etc/ipsec.secrets:
-
-     : RSA sunKey.pem "<optional passphrase>"
-
-   /etc/ipsec.conf:
-
-     conn net-net
-	  left=%defaultroute
-	  leftsubnet=10.2.0.0/16
-	  leftsourceip=10.2.0.1
-	  leftcert=sunCert.pem
-	  right=192.168.0.1
-	  rightsubnet=10.1.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
-
-
-2.5 Roadwarrior case
-    ----------------
-
-This is a very common case where a strongSwan gateway serves an arbitrary number
-of remote VPN clients usually having dynamic IP addresses.
+This is a very common case where a strongSwan gateway serves an arbitrary
+number of remote VPN clients usually having dynamic IP addresses.
 
     10.1.0.0/16 -- | 192.168.0.1 | === | x.x.x.x |
       moon-net          moon              carol
 
 Configuration on gateway moon:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/moonCert.pem
+    /etc/ipsec.d/certs/moonCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA moonKey.pem "<optional passphrase>"
+        : RSA moonKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn rw
-	  left=%defaultroute
-	  leftsubnet=10.1.0.0/16
-	  leftcert=moonCert.pem
-          right=%any
-	  auto=add
+        conn rw
+            leftsubnet=10.1.0.0/16
+            leftcert=moonCert.pem
+            right=%any
+            auto=add
 
 Configuration on roadwarrior carol:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/carolCert.pem
+    /etc/ipsec.d/certs/carolCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA carolKey.pem "<optional passphrase>"
+        : RSA carolKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn home
-	  left=%defaultroute
-	  leftcert=carolCert.pem
-	  right=192.168.0.1
-	  rightsubnet=10.1.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
+        conn home
+            leftcert=carolCert.pem
+            right=192.168.0.1
+            rightsubnet=10.1.0.0/16
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
 2.6 Roadwarrior case with virtual IP
     --------------------------------
 
 Roadwarriors usually have dynamic IP addresses assigned by the ISP they are
-currently attached to. In order to simplify the routing from moon-net back
+currently attached to.  In order to simplify the routing from moon-net back
 to the remote access client carol it would be desirable if the roadwarrior had
 an inner IP address chosen from a pre-assigned pool.
- 
+
     10.1.0.0/16 -- | 192.168.0.1 | === | x.x.x.x | -- 10.3.0.1
       moon-net          moon              carol       virtual IP
 
-This virtual IP address can be assigned to a strongSwan roadwarrior by adding 
-the parameter
+In our example the virtual IP address is chosen from the address pool
+10.3.0.0/16 which can be configured by adding the parameter
 
-    leftsourceip=10.3.0.1
-    
-to the roadwarrior's ipsec.conf. Of course the virtual IP of each roadwarrior
-must be distinct. In our example it is chosen from the address pool
+    rightsourceip=10.3.0.0/16
 
-    rightsubnetwithin=10.3.0.0/16
-    
-which can be added to the gateway's ipsec.conf so that a single connection
-definition can handle multiple roadwarriors.
+to the gateway's ipsec.conf.  To request an IP address from this pool a
+roadwarrior can use IKEv1 mode config or IKEv2 configuration payloads.
+The configuration for both is the same
+
+    leftsourceip=%config
 
 Configuration on gateway moon:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/moonCert.pem
+    /etc/ipsec.d/certs/moonCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA moonKey.pem "<optional passphrase>"
+        : RSA moonKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn rw
-	  left=%defaultroute
-	  leftsubnet=10.1.0.0/16
-	  leftcert=moonCert.pem
-	  right=%any
-	  rightsubnetwithin=10.3.0.0/16
-	  auto=add
+        conn rw
+            leftsubnet=10.1.0.0/16
+            leftcert=moonCert.pem
+            right=%any
+            rightsourceip=10.3.0.0/16
+            auto=add
 
 Configuration on roadwarrior carol:
 
-   /etc/ipsec.d/cacerts/strongswanCert.pem
+    /etc/ipsec.d/cacerts/strongswanCert.pem
 
-   /etc/ipsec.d/certs/carolCert.pem
+    /etc/ipsec.d/certs/carolCert.pem
 
-   /etc/ipsec.secrets:
+    /etc/ipsec.secrets:
 
-     : RSA carolKey.pem "<optional passphrase>"
+        : RSA carolKey.pem "<optional passphrase>"
 
-   /etc/ipsec.conf:
+    /etc/ipsec.conf:
 
-     conn home
-	  left=%defaultroute
-	  leftsourceip=10.3.0.1
-	  leftcert=carolCert.pem
-	  right=192.168.0.1
-	  rightsubnet=10.1.0.0/16
-	  rightid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
-	  auto=start
+        conn home
+            leftsourceip=%config
+            leftcert=carolCert.pem
+            right=192.168.0.1
+            rightsubnet=10.1.0.0/16
+            rightid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+            auto=start
 
 
-3. Generating certificates and CRLs with OpenSSL
-   ---------------------------------------------
+3. Generating certificates and CRLs
+   --------------------------------
 
-This section is not a full-blown tutorial on how to use OpenSSL. It just lists
-a few points that are relevant if you want to generate your own certificates
-and CRLs for use with strongSwan.
+This section is not a full-blown tutorial on how to use OpenSSL or the
+strongSwan PKI tool.  It just lists a few points that are relevant if you want
+to generate your own certificates and CRLs for use with strongSwan.
 
 
 3.1 Generating a CA certificate
@@ -531,13 +286,13 @@ and CRLs for use with strongSwan.
 
 The OpenSSL statement
 
-     openssl req -x509 -days 1460 -newkey rsa:2048 \
-                 -keyout strongswanKey.pem -out strongswanCert.pem
+    openssl req -x509 -days 1460 -newkey rsa:4096 \
+                -keyout strongswanKey.pem -out strongswanCert.pem
 
-creates a 2048 bit RSA private key strongswanKey.pem and a self-signed CA
+creates a 4096 bit RSA private key strongswanKey.pem and a self-signed CA
 certificate strongswanCert.pem with a validity of 4 years (1460 days).
 
-     openssl x509 -in cert.pem -noout -text
+    openssl x509 -in cert.pem -noout -text
 
 lists the properties of  a X.509 certificate cert.pem. It allows you to verify
 whether the configuration defaults in openssl.cnf have been inserted correctly.
@@ -547,9 +302,21 @@ command achieves this transformation:
 
      openssl x509 -in strongswanCert.pem -outform DER -out strongswanCert.der
 
+The statements
+
+    ipsec pki --gen -s 4096 > strongswanKey.der
+    ipsec pki --self --ca --lifetime 1460 --in strongswanKey.der \
+              --dn "C=CH, O=strongSwan, CN=strongSwan Root CA" \
+              > strongswanCert.der
+    ipsec pki --print --in strongswanCert.der
+
+achieve about the same with the strongSwan PKI tool.  Unlike OpenSSL the tool
+stores keys and certificates in the binary DER format by default.  The --outform
+option may be used to write PEM encoded files.
+
 The directory /etc/ipsec.d/cacerts contains all required CA certificates either
-in binary DER or in base64 PEM format. Irrespective of the file suffix, Pluto
-"automagically" determines the correct format.
+in binary DER or in base64 PEM format, irrespective of the file suffix the
+correct format will be determined.
 
 
 3.2 Generating a host or user certificate
@@ -557,10 +324,10 @@ in binary DER or in base64 PEM format. Irrespective of the file suffix, Pluto
 
 The OpenSSL statement
 
-     openssl req -newkey rsa:1024 -keyout hostKey.pem \
+     openssl req -newkey rsa:2048 -keyout hostKey.pem \
                  -out hostReq.pem
 
-generates a 1024 bit RSA private key hostKey.pem and a certificate request
+generates a 2048 bit RSA private key hostKey.pem and a certificate request
 hostReq.pem which has to be signed by the CA.
 
 If you want to add a subjectAltName field to the host certificate you must edit
@@ -569,7 +336,7 @@ the OpenSSL configuration file openssl.cnf and add the following line in the
 
      subjectAltName=DNS:moon.strongswan.org
 
-if you want to identify the host by its Fully Qualified Domain Name (FQDN ), or
+if you want to identify the host by its Fully Qualified Domain Name (FQDN), or
 
      subjectAltName=IP:192.168.0.1
 
@@ -581,7 +348,7 @@ ID types with
 but the use of an IP address for the identification of a host should be
 discouraged anyway.
 
-For user certificates the appropriate ID type is USER_FQDN which can be
+For user certificates the appropriate ID type is RFC822_ADDR which can be
 specified as
 
      subjectAltName=email:carol@strongswan.org
@@ -595,32 +362,43 @@ Now the certificate request can be signed by the CA with the command
      openssl ca -in hostReq.pem -days 730 -out hostCert.pem -notext
 
 If you omit the -days option then the default_days value (365 days) specified
-in openssl.cnf is used. The -notext option avoids that a human readable
+in openssl.cnf is used.  The -notext option avoids that a human readable
 listing of the certificate is prepended to the base64 encoded certificate
 body.
 
 If you want to use the dynamic CRL fetching feature described in section 4.7
 then you may include one or several crlDistributionPoints in your end
-certificates. This can be done in the [ usr_cert ] section of the openssl.cnf
+certificates.  This can be done in the [ usr_cert ] section of the openssl.cnf
 configuration file:
 
-    crlDistributionPoints= @crl_dp
+    crlDistributionPoints=@crl_dp
 
     [ crl_dp ]
 
     URI.1="http://crl.strongswan.org/strongswan.crl"
-    URI.2="ldap://ldap.strongswan.org/cn=strongSwan Root CA, o=Linux strongSwan
-      , c=CH?certificateRevocationList"
+    URI.2="ldap://ldap.strongswan.org/cn=strongSwan Root CA, o=strongSwan,
+           c=CH?certificateRevocationList"
 
-If you have only a single http distribution point then the short form
+If you have only a single HTTP distribution point then the short form
 
     crlDistributionPoints="URI:http://crl.strongswan.org/strongswan.crl"
 
-also works. Due to a known bug in OpenSSL this notation fails with ldap URIs.
+also works.
 
-Usually a Windows-based VPN client needs its private key, its host or
-user certificate, and the CA certificate. The most convenient way to load
-this information is to put everything into a  PKCS#12 file:
+Again the statements
+
+    ipsec pki --gen > moonKey.der
+    ipsec pki --pub --in moonKey.der | ipsec pki --issue --lifetime 730 \
+              --cacert strongswanCert.der --cakey strongswanKey.der \
+              --dn "C=CH, O=strongSwan, CN=moon.strongswan.org" \
+              --san moon.strongswan.org --san 192.168.0.1 \
+              --crl http://crl.strongswan.org/strongswan.crl > moonCert.der
+
+do something thing similar using the strongSwan PKI tool.
+
+Usually, a Windows or Mac OS X (or iOS) based VPN client needs its private key,
+its host or user certificate, and the CA certificate. The most convenient way
+to load this information is to put everything into a PKCS#12 file:
 
      openssl pkcs12 -export -inkey carolKey.pem \
                     -in carolCert.pem -name "carol" \
@@ -643,9 +421,11 @@ can be achieved with
 
      openssl crl -in crl.pem -outform DER -out cert.crl
 
+The strongSwan PKI tool provides the ipsec pki --signcrl command to sign CRLs.
+
 The directory /etc/ipsec.d/crls contains all CRLs either in binary DER
-or in base64 PEM format. Irrespective of the file suffix, Pluto
-"automagically" determines the correct format.
+or in base64 PEM format, irrespective of the file suffix the correct format
+will be determined.
 
 
 3.4 Revoking a certificate
@@ -668,6 +448,8 @@ in the case of a base64 CRL, or alternatively for a CRL in DER format
 
      openssl crl -inform DER -in cert.crl -noout -text
 
+Again the ipsec pki --signcrl command may be used to create new CRLs containing
+additional certificates.
 
 
 4. Configuring the connections - ipsec.conf
@@ -676,15 +458,13 @@ in the case of a base64 CRL, or alternatively for a CRL in DER format
 4.1 Configuring my side
     -------------------
 
-Usually the local side is the same for all connections. Therefore it makes
+Usually the local side is the same for all connections.  Therefore it makes
 sense to put the definitions characterizing the strongSwan security gateway into
-the conn %default section of the configuration file /etc/ipsec.conf. If we
+the conn %default section of the configuration file /etc/ipsec.conf.  If we
 assume throughout this document that the strongSwan security gateway is left and
 the peer is right then we can write
 
 conn %default
-     # my side is left - the freeswan security gateway
-     left=%defaultroute
      leftcert=moonCert.pem
      # load connection definitions automatically
      auto=add
@@ -696,8 +476,8 @@ Exchange (IKE) is specified in the line
      leftcert=moonCert.pem
 
 The certificate can either be stored in base64 PEM-format or in the binary
-DER-format. Irrespective of the file suffix, Pluto "automagically" determines
-the correct format. Therefore
+DER-format. Irrespective of the file suffix the correct format will be
+determined.  Therefore
 
      leftcert=moonCert.der
 
@@ -708,7 +488,7 @@ or
 would also be valid alternatives.
 
 When using relative pathnames as in the examples above, the certificate files
-must be stored in in the directory /etc/ipsec.d/certs. In order to distinguish
+must be stored in in the directory /etc/ipsec.d/certs.  In order to distinguish
 strongSwan's own certificates from locally stored trusted peer certificates
 (see section 5.5 for details), they could also be stored in a subdirectory
 below /etc/ipsec.d/certs as e.g. in
@@ -726,10 +506,10 @@ conn rw
      right=%any
      leftid=@moon.strongswan.org
 
-Important: When an FQDN identifier is used it must be explicitly included as a
+Important: When a FQDN identifier is used it must be explicitly included as a
 so called subjectAltName of type dnsName (DNS:) in the certificate indicated
-by leftcert. For details on how to generate certificates with subjectAltNames,
-please refer to section 7.2.
+by leftcert.  For details on how to generate certificates with subjectAltNames,
+please refer to section 3.2.
 
 If you don't want to mess with subjectAltNames, you can use the certificate's
 Distinguished Name (DN) instead, which is an identifier of type DER_ASN1_DN
@@ -737,7 +517,7 @@ and which can be written e.g. in the LDAP-type format
 
 conn rw
      right=%any
-     leftid="C=CH, O=Linux strongSwan, CN=moon.strongswan.org"
+     leftid="C=CH, O=strongSwan, CN=moon.strongswan.org"
 
 Since the subject's DN is part of the certificate, the leftid does not have to
 be declared explicitly. Thus the entry
@@ -774,40 +554,40 @@ myCert2 and myKey2 will be used in a connection setup started from peer2.
 4.3 Configuring the peer side using CA certificates
     -----------------------------------------------
 
-Now we can proceed to define our connections. In many applications we might
-have dozens of mostly Windows-based road warriors connecting to a central
-strongSwan security gateway. The following most simple statement:
+Now we can proceed to define our connections.  In many applications we might
+have dozens of road warriors connecting to a central strongSwan security
+gateway. The following most simple statement:
 
 conn rw
      right=%any
 
-defines the general roadwarrior case. The line right=%any literally means that
-any IPSec peer is accepted, regardless of its current IP source address and its
+defines the general roadwarrior case.  The line right=%any literally means that
+any IPsec peer is accepted, regardless of its current IP source address and its
 ID, as long as the peer presents a valid X.509 certificate signed by a CA the
-strongSwan security gateway puts explicit trust in. Additionally the signature
-during IKE main mode gives proof that the peer is in possession of the private
-RSA key matching the public key contained in the transmitted certificate.
+strongSwan security gateway puts explicit trust in.  Additionally, the signature
+during IKE gives proof that the peer is in possession of the private RSA key
+matching the public key contained in the transmitted certificate.
 
-The ID by which a peer is identifying itself during IKE main mode can by any of
-the ID types IPV4_ADDR, FQDN, USER_FQDN or DER_ASN1_DN. If one of the first
+The ID by which a peer is identifying itself during IKE can by any of the ID
+types IPV[46]_ADDR, FQDN, RFC822_ADDR or DER_ASN1_DN.  If one of the first
 three ID types is used, then the accompanying X.509 certificate of the peer
 must contain a matching subjectAltName field of the type ipAddress (IP:),
-dnsName (DNS:) or rfc822Name (email:), respectively. With the fourth type
+dnsName (DNS:) or rfc822Name (email:), respectively.  With the fourth type
 DER_ASN1_DN the identifier must completely match the subject field of the
-peer's certificate. One of the two possible representations of a
+peer's certificate.  One of the two possible representations of a
 Distinguished Name (DN) is the LDAP-type format
 
-     rightid="C=CH, O=Linux strongSwan, CN=sun.strongswan.org"
+     rightid="C=CH, O=strongSwan IPsec, CN=sun.strongswan.org"
 
 Additional whitespace can be added everywhere as desired since it will be
-automatically eliminated by the X.509 parser. An exception is the single
-whitespace between individual words , like e.g. in Linux strongSwan, which is
+automatically eliminated by the X.509 parser.  An exception is the single
+whitespace between individual words, like e.g. in strongSwan IPsec, which is
 preserved by the parser.
 
 The Relative Distinguished Names (RDNs) can alternatively be separated by a
 slash '/' instead of a comma ','
 
-     rightid="/C=CH/O=Linux strongSwan/CN=sun.strongswan.org"
+     rightid="/C=CH/O=strongSwan IPsec/CN=sun.strongswan.org"
 
 This is the representation extracted from the certificate by the OpenSSL
 command line option
@@ -816,59 +596,65 @@ command line option
 
 The following RDNs are supported by strongSwan
 
-+---------------------------------------------------+
-| DC               Domain Component                 |
-|---------------------------------------------------|
-| C                Country                          |
-|---------------------------------------------------|
-| ST               State or province                |
-|---------------------------------------------------|
-| L                Locality or town                 |
-|---------------------------------------------------|
-| O                Organisation                     |
-|---------------------------------------------------|
-| OU               Organisational Unit              |
-|---------------------------------------------------|
-| CN               Common Name                      |
-|---------------------------------------------------|
-| ND               NameDistinguisher, used with CN  |
-|---------------------------------------------------|
-| N                Name                             |
-|---------------------------------------------------|
-| G                Given name                       |
-|---------------------------------------------------|
-| S                Surname                          |
-|---------------------------------------------------|
-| I                Initials                         |
-|---------------------------------------------------|
-| T                Personal title                   |
-|---------------------------------------------------|
-| E                E-mail                           |
-|---------------------------------------------------|
-| Email            E-mail                           |
-|---------------------------------------------------|
-| emailAddress     E-mail                           |
-|---------------------------------------------------|
-| SN               Serial number                    |
-|---------------------------------------------------|
-| serialNumber     Serial number                    |
-|---------------------------------------------------|
-| D                Description                      |
-|---------------------------------------------------|
-| ID               X.500 Unique Identifier          |
-|---------------------------------------------------|
-| UID              User ID                          |
-|---------------------------------------------------|
-| TCGID            [Siemens] Trust Center Global ID |
-|---------------------------------------------------|
-| unstructuredName Unstructured Name                |
-|---------------------------------------------------|
-| UN               Unstructured Name                |
-|---------------------------------------------------|
-| employeeNumber   Employee Number                  |
-|---------------------------------------------------|
-| EN               Employee Number                  |
-+---------------------------------------------------+
++-------------------------------------------------------+
+| DC                   Domain Component                 |
+|-------------------------------------------------------|
+| C                    Country                          |
+|-------------------------------------------------------|
+| ST                   State or province                |
+|-------------------------------------------------------|
+| L                    Locality or town                 |
+|-------------------------------------------------------|
+| O                    Organization                     |
+|-------------------------------------------------------|
+| OU                   Organizational Unit              |
+|-------------------------------------------------------|
+| CN                   Common Name                      |
+|-------------------------------------------------------|
+| ND                   NameDistinguisher, used with CN  |
+|-------------------------------------------------------|
+| N                    Name                             |
+|-------------------------------------------------------|
+| G                    Given name                       |
+|-------------------------------------------------------|
+| S                    Surname                          |
+|-------------------------------------------------------|
+| I                    Initials                         |
+|-------------------------------------------------------|
+| T                    Personal title                   |
+|-------------------------------------------------------|
+| E                    E-mail                           |
+|-------------------------------------------------------|
+| Email                E-mail                           |
+|-------------------------------------------------------|
+| emailAddress         E-mail                           |
+|-------------------------------------------------------|
+| SN                   Serial number                    |
+|-------------------------------------------------------|
+| serialNumber         Serial number                    |
+|-------------------------------------------------------|
+| D                    Description                      |
+|-------------------------------------------------------|
+| ID                   X.500 Unique Identifier          |
+|-------------------------------------------------------|
+| UID                  User ID                          |
+|-------------------------------------------------------|
+| TCGID                [Siemens] Trust Center Global ID |
+|-------------------------------------------------------|
+| UN                   Unstructured Name                |
+|-------------------------------------------------------|
+| unstructuredName     Unstructured Name                |
+|-------------------------------------------------------|
+| UA                   Unstructured Address             |
+|-------------------------------------------------------|
+| unstructuredAddress  Unstructured Address             |
+|-------------------------------------------------------|
+| EN                   Employee Number                  |
+|-------------------------------------------------------|
+| employeeNumber       Employee Number                  |
+|-------------------------------------------------------|
+| dnQualifier          DN Qualifier                     |
++-------------------------------------------------------+
 
 With the roadwarrior connection definition listed above, an IPsec SA for
 the strongSwan security gateway moon.strongswan.org itself can be established.
@@ -883,6 +669,10 @@ conn rw1
 conn rw3
      right=%any
      leftsubnet=10.1.3.0/24
+
+For IKEv2 connections this can even be simplified by using
+
+    leftsubnet=10.1.0.0/24,10.1.3.0/24
 
 If not all peers in possession of a X.509 certificate signed by a specific
 certificate authority shall be given access to the Linux security gateway,
@@ -901,11 +691,11 @@ conn carol
 
 conn dave
      right=%any
-     rightid="C=CH, O=Linux strongSwan, CN=dave@strongswan.org"
+     rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
 
 When the IP address of a peer is known to be stable, it can be specified as
-well. This entry is mandatory when the strongSwan host wants to act as the
-initiator of an IPSec connection.
+well.  This entry is mandatory when the strongSwan host wants to act as the
+initiator of an IPsec connection.
 
 conn sun
      right=192.168.0.2
@@ -917,19 +707,19 @@ conn carol
 
 conn dave
      right=192.168.0.200
-     rightid="C=CH, O=Linux strongSwan, CN=dave@strongswan.org"
+     rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
 
 conn venus
      right=192.168.0.50
 
-In the last example the ID types FQDN, USER_FQDN, DER_ASN1_DN and IPV4_ADDR,
-respectively, were used. Of course all connection definitions presented so far
+In the last example the ID types FQDN, RFC822_ADDR, DER_ASN1_DN and IPV4_ADDR,
+respectively, were used.  Of course all connection definitions presented so far
 have included the lines in the conn %defaults section, comprising among other
-a left and leftcert entry.
+a leftcert entry.
 
 
-4.4 Handling Virtual IPs and wildcard subnets
-    -----------------------------------------
+4.4 Handling Virtual IPs and narrowing
+    ----------------------------------
 
 Often roadwarriors are behind NAT-boxes with IPsec passthrough, which causes
 the inner IP source address of an IPsec tunnel to be different from the
@@ -952,19 +742,17 @@ conn rw3
      right=%any
      rightsubnet=10.4.0.128/28
 
-With the wildcard parameter rightsubnetwithin these three entries can be
-reduced to the single connection definition
+Because the charon daemon uses narrowing (even for IKEv1) these three entries
+can be reduced to the single connection definition
 
 conn rw
      right=%any
-     rightsubnetwithin=10.4.0.0/24
+     rightsubnet=10.4.0.0/24
 
 Any host will be accepted (of course after successful authentication based on
 the peer's X.509 certificate only) if it declares a client subnet lying totally
-within the brackets defined by the wildcard subnet definition (in our example
-10.4.0.0/24). For each roadwarrior a connection instance tailored to the
-subnet of the particular client will be created,based on the generic
-rightsubnetwithin template.
+within the brackets defined by the subnet definition (in our example
+10.4.0.0/24).
 
 This strongSwan feature can also be helpful with VPN clients getting a
 dynamically assigned inner IP from a DHCP server located on the NAT router box.
@@ -981,28 +769,24 @@ Some examples:
 conn icmp
      right=%any
      rightprotoport=icmp
-     left=%defaultroute
      leftid=@moon.strongswan.org
      leftprotoport=icmp
 
 conn http
      right=%any
      rightprotoport=6
-     left=%defaultroute
      leftid=@moon.strongswan.org
      leftprotoport=6/80
 
 conn l2tp       # with port wildcard for Mac OS X Panther interoperability
      right=%any
      rightprotoport=17/%any
-     left=%defaultroute
      leftid=@moon.strongswan.org
      leftprotoport=17/1701
 
 conn dhcp
      right=%any
      rightprotoport=udp/bootpc
-     left=%defaultroute
      leftid=@moon.strongswan.org
      leftsubnet=0.0.0.0/0  #allows DHCP discovery broadcast
      leftprotoport=udp/bootps
@@ -1023,7 +807,7 @@ shows the following connection definitions:
 "l2tp": 192.168.0.1[@moon.strongswan.org]:17/1701...%any:17/%any
 "dhcp": 0.0.0.0/0===192.168.0.1[@moon.strongswan.org]:17/67...%any:17/68
 
-Based on the protocol and port selectors appropriate eroutes will be set
+Based on the protocol and port selectors appropriate policies will be set
 up, so that only the specified payload types will pass through the IPsec
 tunnel.
 
@@ -1033,20 +817,20 @@ tunnel.
 
 In large VPN-based remote access networks there is often a requirement that
 access to the various parts of an internal network must be granted selectively,
-e.g. depending on the group membership of the remote access user. strongSwan
-makes this possible by applying wildcard filtering on the VPN user's 
+e.g. depending on the group membership of the remote access user.  strongSwan
+makes this possible by applying wildcard filtering on the VPN user's
 distinguished name (ID_DER_ASN1_DN).
 
 Let's make a practical example:
- 
+
 An organization has a sales department (OU=Sales) and a research group
-(OU=Research). In the company intranet there are separate subnets for Sales
+(OU=Research).  In the company intranet there are separate subnets for Sales
 (10.0.0.0/24) and Research (10.0.1.0/24) but both groups share a common web
-server (10.0.2.100). The VPN clients use Virtual IP addresses that are either
-assigned statically or via DHCP-over-IPsec. The sales and research departments
-use IP addresses from separate DHCP address pools (10.1.0.0/24) and (10.1.1.0/24),
-respectively. An X.509 certificate is issued to each employee, containing in its
-subject distinguished name the country (C=CH), the company (O=ACME),
+server (10.0.2.100).  The VPN clients use Virtual IP addresses that are either
+assigned statically or from a dynamic pool.  The sales and research departments
+use IP addresses from separate address pools (10.1.0.0/24) and (10.1.1.0/24),
+respectively.  An X.509 certificate is issued to each employee, containing in
+its subject distinguished name the country (C=CH), the company (O=ACME),
 the group membership(OU=Sales or OU=Research) and the common name (e.g.
 CN=Bart Simpson).
 
@@ -1056,27 +840,22 @@ IPsec security associations:
 conn sales
      right=%any
      rightid="C=CH, O=ACME, OU=Sales, CN=*"
-     rightsubnetwithin=10.1.0.0/24  # Sales DHCP range
-     leftsubnet=10.0.0.0/24         # Sales subnet
+     rightsubnet=10.1.0.0/24         # Sales IP range
+     leftsubnet=10.0.0.0/24          # Sales subnet
 
 conn research
      right=%any
      rightid="C=CH, O=ACME, OU=Research, CN=*"
-     rightsubnetwithin=10.1.1.0/24   # Research DHCP range
+     rightsubnet=10.1.1.0/24         # Research IP range
      leftsubnet=10.0.1.0/24          # Research subnet
 
 conn web
      right=%any
      rightid="C=CH, O=ACME, OU=*, CN=*"
-     rightsubnetwithin=10.1.0.0/23   # Remote access DHCP range
+     rightsubnet=10.1.0.0/23         # Remote access IP range
      leftsubnet=10.0.2.100/32        # Web server
      rightprotoport=tcp              # TCP protocol only
      leftprotoport=tcp/http          # TCP port 80 only
-
-Of course group specific tunneling could be implemented on the
-basis of the Virtual IP range specified by the rightsubnetwithin
-parameter alone, but the wildcard matching mechanism guarantees that
-only authorized user can access the corresponding subnets.
 
 The '*' character is used as a wildcard in relative distinguished names (RDNs).
 In order to match a wildcard template, the ID_DER_ASN1_DN of a peer must contain
@@ -1104,42 +883,42 @@ which doesn't have the same number of RDNs.
     ---------------------------------------
 
 As an alternative to the wildcard based IPsec policies described in section 4.6,
-access to specific client host and subnets can abe controlled on the basis of
+access to specific client host and subnets can be controlled on the basis of
 the CA that issued the peer certificate
 
 
 conn sales
      right=%any
      rightca="C=CH, O=ACME, OU=Sales, CN=Sales CA"
-     rightsubnetwithin=10.1.0.0/24  # Sales DHCP range
-     leftsubnet=10.0.0.0/24         # Sales subnet
+     rightsubnet=10.1.0.0/24         # Sales IP range
+     leftsubnet=10.0.0.0/24          # Sales subnet
 
 conn research
      right=%any
      rightca="C=CH, O=ACME, OU=Research, CN=Research CA"
-     rightsubnetwithin=10.1.1.0/24   # Research DHCP range
+     rightsubnet=10.1.1.0/24         # Research IP range
      leftsubnet=10.0.1.0/24          # Research subnet
 
 conn web
      right=%any
      rightca="C=CH, O=ACME, CN=ACME Root CA"
-     rightsubnetwithin=10.1.0.0/23   # Remote access DHCP range
+     rightsubnet=10.1.0.0/23         # Remote access IP range
      leftsubnet=10.0.2.100/32        # Web server
      rightprotoport=tcp              # TCP protocol only
      leftprotoport=tcp/http          # TCP port 80 only
 
 In the example above, the connection "sales" can be used by peers
-presenting certificates issued by the Sales CA, only. In the same way,
+presenting certificates issued by the Sales CA, only.  In the same way,
 the use of the connection "research" is restricted to owners of certificates
-issued by the Research CA. The connection "web" is open to both "Sales" and
+issued by the Research CA.  The connection "web" is open to both "Sales" and
 "Research" peers because the required "ACME Root CA" is the issuer of the
-Research and Sales intermediate CAs. If no rightca parameter is present
+Research and Sales intermediate CAs.  If no rightca parameter is present
 then any valid certificate issued by one of the trusted CAs in
 /etc/ipsec.d/cacerts can be used by the peer.
 
 The leftca parameter usually doesn't have to be set explicitly because
 by default it is set to the issuer field of the certificate loaded via
-leftcert. The statement
+leftcert.  The statement
 
      rightca=%same
 
@@ -1152,54 +931,6 @@ conn sales
      leftcert=mySalesCert.pem
 
 
-4.8 Sending certificate requests
-    ----------------------------
-
-The presence of a rightca parameter also causes the CA to be sent as
-part of the certificate request message when strongSwan is the initiator.
-A special case occurs when strongSwan responds to a roadwarrior. If several
-roadwarrior connections based on different CAs are defined then all eligible
-CAs will be listed in Pluto�s certificate request message.
-
-
-4.9 IPsec policies based on group attributes
-    ----------------------------------------
-
-X.509 attribute certificates are the most powerful mechanism for implementing
-IPsec security policies. The rightgroups parameter in a connection definition
-restricts the access to members of the listed groups only. An IPsec peer must
-have a valid attribute certificate issued by a trusted Authorization Authority
-and listing one of the requirede group attributes in order to get admitted.
-
-conn sales
-     right=%any
-     rightgroups="Sales"
-     rightsubnetwithin=10.1.0.0/24  # Sales DHCP range
-     leftsubnet=10.0.0.0/24         # Sales subnet
-
-conn research
-     right=%any
-     rightgroups="Research"
-     rightsubnetwithin=10.1.1.0/24   # Research DHCP range
-     leftsubnet=10.0.1.0/24          # Research subnet
-
-conn web
-     right=%any
-     rightgroups="Sales, Research"
-     rightsubnetwithin=10.1.0.0/23   # Remote access DHCP range
-     leftsubnet=10.0.2.100/32        # Web server
-     rightprotoport=tcp              # TCP protocol only
-     leftprotoport=tcp/http          # TCP port 80 only
-
-In the examples above membership of the group "Sales" is required for
-connection sales and membership of "Research" for connection research
-whereas connection web is accessible for both groups.
-
-Currently the attribute certificates of the peers must be loaded statically
-via the /etc/ipsec.d/acerts/ directory. In future releases of strongSwan it
-will be possible to fetch them from an LDAP directory server.
-
-
 5. Configuring certificates and CRLs
    ---------------------------------
 
@@ -1209,9 +940,9 @@ will be possible to fetch them from an LDAP directory server.
 
 X.509 certificates received by strongSwan during the IKE protocol are
 automatically authenticated by going up the trust chain until a self-signed
-root CA certificate is reached. Usually host certificates are directly signed
+root CA certificate is reached.  Usually host certificates are directly signed
 by a root CA, but strongSwan also supports multi-level hierarchies with
-intermediate CAs in between. All CA certificates belonging to a trust chain
+intermediate CAs in between.  All CA certificates belonging to a trust chain
 must be copied in either binary DER or base64 PEM format into the directory
 
      /etc/ipsec.d/cacerts/
@@ -1221,38 +952,36 @@ must be copied in either binary DER or base64 PEM format into the directory
     -------------------------------------------------------
 
 By copying a CA certificate into /etc/ipsec.d/cacerts/, automatically all user
-or host certificates issued by this CA are declared valid. Unfortunately
+or host certificates issued by this CA are declared valid.  Unfortunately,
 private keys might get compromised inadvertently or intentionally, personal
 certificates of users leaving a company have to be blocked immediately, etc.
-To this purpose certificate revocation lists (CRLs) have been created. CRLs
+To this purpose certificate revocation lists (CRLs) have been created.  CRLs
 contain the serial numbers of all user or host certificates that have been
 revoked due to various reasons.
 
-After successful verification of the X.509 trust chain, Pluto searches its
+After successful verification of the X.509 trust chain, strongSwan searches its
 list of CRLs either obtained by loading them from the /etc/ipsec.d/crls/
 directory or fetching them dynamically from a HTTP or LDAP server for the
 presence of a CRL issued by the CA that has signed the certificate.
 
 If the serial number of the certificate is found in the CRL then the public key
-contained in the certificate is declared invalid and the IPSec SA will not be
-established. If no CRL is found or if the deadline defined in the nextUpdate
+contained in the certificate is declared invalid and the IPsec SA will not be
+established.  If no CRL is found or if the deadline defined in the nextUpdate
 field of the CRL has been reached, a warning is issued but the public key will
-nevertheless be accepted. CRLs must be stored either in binary DER or base64 PEM
-format in the crls directory. Section 7.3 will explain in detail how CRLs can
-be created using OpenSSL.
+nevertheless be accepted.  CRLs must be stored either in binary DER or base64
+PEM format in the crls directory.
 
 
 5.3 Dynamic update of certificates and CRLs
     ---------------------------------------
 
-Pluto reads certificates and CRLs from their respective files during system
-startup and keeps them in memory in the form of chained lists. X.509
-certificates have a finite life span defined by their validity field. Therefore
-it must be possible to replace CA or OCSP certificates kept in system memory
-without disturbing established ISAKMP SAs. Certificate revocation lists should
-also be updated in the regular intervals indicated by the nextUpdate field in
-the CRL body. The following interactive commands allow the manual replacement
-of the various files:
+strongSwan reads certificates and CRLs from their respective files during system
+startup and keeps them in memory.  X.509 certificates have a finite life span
+defined by their validity field.  Therefore it must be possible to replace CA or
+OCSP certificates kept in system memory without disturbing established IKE SAs.
+Certificate revocation lists should also be updated in the regular intervals
+indicated by the nextUpdate field in the CRL body.  The following interactive
+commands allow the manual replacement of the various files:
 
 +---------------------------------------------------------------------------+
 | ipsec rereadsecrets       reload file /etc/ipsec.secrets                  |
@@ -1278,50 +1007,7 @@ of the various files:
 +---------------------------------------------------------------------------+
 
 CRLs can also be automatically fetched from an HTTP or LDAP server by using
-the CRL distribution points contained in X.509 certificates. The command
-
-    ipsec listcrls
-    
-shows any pending fetch requests:
-
-  Oct 31 00:29:53 2002, trials: 2
-         issuer:  'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         distPts: 'http://crl.strongswan.org/strongswan.crl'
-	          'ldap://ldap.strongswan.org/o=Linux strongSwan, c=CH
-		     ?certificateRevocationList?base
-		     ?(objectClass=certificationAuthority)'
-
-In the example above, an http and an ldap URL were extracted from a received
-end certificate. An independent thread then tries to fetch a CRL from the
-designated distribution points. The same thread also periodically checks
-if any loaded CRLs are about to expire. The check interval can be defined in
-the "config setup" section of the ipsec.conf file:
-
-   config setup
-       crlcheckinterval=600
-
-In our example the thread wakes up every 600 seconds or 10 minutes in order
-to check the validity of the CRLs or to retry any pending fetch requests:
-
-  List of X.509 CRLs:
-  
-  Dec 19 09:35:31 2002, revoked certs: 40
-         issuer:  'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         distPts: 'http://crl.strongswan.org/strongswan.crl'
-         updates:  this Dec 19 09:35:00 2002
-                   next Dec 19 10:35:00 2002 warning (expires in 19 minutes)
-
-  List of fetch requests:
-
-  Dec 19 10:15:31 2002, trials: 1
-        issuer:  'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-        distPts: 'http://crl.strongwan.org/strongswan.crl'
-
-The first trial to update a CRL is started 2*crlcheckinterval before the
-nextUpdate time, i.e. when less than 20 minutes are left in our practical
-example. When crlcheckinterval is set to 0 (this is also the default value
-when the parameter is not set in ipsec.conf) then the CRL checking and updating 
-thread is not started and dynamic CRL fetching is disabled.
+the CRL distribution points contained in X.509 certificates.
 
 
 5.4 Local caching of CRLs
@@ -1333,49 +1019,39 @@ The the ipsec.conf option
         cachecrls=yes
 
 activates the local caching of CRLs that were dynamically fetched from an
-HTTP or LDAP server. Cached copies are stored in /etc/ipsec.d/crls under a
-unique filename formed from the issuer's SubjectKeyIdentifier and the suffix .crl.
+HTTP or LDAP server.  Cached copies are stored in /etc/ipsec.d/crls using a
+unique filename formed from the issuer's SubjectKeyIdentifier and the
+suffix .crl.
 
-With the cached copy the CRL is immediately available after pluto's startup.
-When the local copy is about to expire it is automatically replaced with an
-updated CRL fetched from one of the defined CRL distribution points.
+With the cached copy the CRL is immediately available after startup.  When the
+local copy is about to expire it is automatically replaced with an updated CRL
+fetched from one of the defined CRL distribution points.
 
 
 5.5 Online Certificate Status Protocol (OCSP)
     -----------------------------------------
 
-The Online Certificate Status Protocol is defined by RFC 2560. It can be
+The Online Certificate Status Protocol is defined by RFC 2560.  It can be
 used to query an OCSP server about the current status of an X.509 certificate
 and is often used as a more dynamic alternative to a static Certificate
-Revocation List (CRL). Both the OCSP request sent by the client and the OCSP
+Revocation List (CRL).  Both the OCSP request sent by the client and the OCSP
 response messages returned by the server are transported via a standard
-TCP/HTTP connection. Therefore cURL support must be enabled in pluto/Makefile:
-
-  # Uncomment this line to enable OCSP fetching using HTTP
-  LIBCURL=1
+TCP/HTTP connection.  Therefore cURL support must be enabled during
+configuration.
 
 In the simplest OCSP setup, a default URI under which the OCSP server for a
 given CA can be accessed is defined in ipsec.conf:
 
-   config setup
-        crlcheckinterval=600
-	
    ca strongswan
         cacert=strongswanCert.pem
         ocspuri=http://ocsp.strongswan.org:8880
         auto=add
 
-The HTTP port can be freely chosen. In our example we have assumed TCP port 8880.
-The crlcheckinterval must be set to a value different from zero. Otherwise the
-OCSP fetching thread will not be started.
+The HTTP port can be freely chosen.
 
-The well-known openssl-0.9.7 package from http://www.openssl.org implements
-an OCSP server that can be used in conjunction with an openssl-based Public
-Key Infrastructure. The OCSP client integrated into Pluto does not contain
-any OpenSSL code though, but is based on the existing ASN.1 functionality of
-strongSwan.
-
-The OpenSSL-based OCSP server is started with the following command:
+OpenSSL implements an OCSP server that can be used in conjunction with an
+openssl-based Public Key Infrastructure.  The OCSP server is started with the
+following command:
 
     openssl ocsp -index index.txt -CA strongswanCert.pem -port 8880 \
                  -rkey ocspKey.pem -rsigner ocspCert.pem \
@@ -1383,57 +1059,44 @@ The OpenSSL-based OCSP server is started with the following command:
 
 The command consists of the parameters
 
- -index  index.txt is a copy of the OpenSSL index file containing the list of
-         all issued certificates. The certificate status in indext.txt
-         is designated either by V for valid or R for revoked. If
-         a new certificate is added or if a certificate is revoked
-         using the openssl ca command, the OCSP server must be restarted
-         in order for the changes in index.txt to take effect.
+ -index    index.txt is a copy of the OpenSSL index file containing the list of
+           all issued certificates.  The certificate status in index.txt
+           is designated either by V for valid or R for revoked.  If a new
+           certificate is added or if a certificate is revoked using the
+           openssl ca command, the OCSP server must be restarted in order for
+           the changes in index.txt to take effect.
 
- -CA     the CA certificate
+ -CA       the CA certificate
 
- -port   the HTTP port the OCSP server is listening on.
- 
--rkey    the private key used to sign the OCSP response. The use of the
-         sensitive CA private key is not recommended since this could
-         jeopardize the security of your production PKI if the OCSP
-         server is hacked. It is much better to generate a special
-         RSA private key just for OCSP signing use instead.
+ -port     the HTTP port the OCSP server is listening on.
 
--rsigner the certificate of the OCSP server containing a public key which
-         matches the private key defined by -rkey and which can be used by
-         the client to check the trustworthiness of the signed OCSP response.
+ -rkey     the private key used to sign the OCSP response.  The use of the
+           sensitive CA private key is not recommended since this could
+           jeopardize the security of your production PKI if the OCSP
+           server is hacked.  It is much better to generate a special
+           RSA private key just for OCSP signing use instead.
 
--resp_no_certs  With this option the OCSP signer certificate defined by
-                -rsigner is not included in the OCSP response.
+ -rsigner  the certificate of the OCSP server containing a public key which
+           matches the private key defined by -rkey and which can be used by
+           the client to check the trustworthiness of the signed OCSP response.
 
--nmin    the validity interval of an OCSP response given in minutes.
-         2*crlcheckinterval before the expiration of the OCSP responses,
-         a new query will by pro-actively started by the Pluto fetching thread.
+ -resp_no_certs  With this option the OCSP signer certificate defined by
+                 -rsigner is not included in the OCSP response.
 
-         If nmin is missing or set to zero then the default validity interval
-         compiled into Pluto will be 2 minutes, leading to a quasi one-time
-         use of the OCSP status response which will not be periodically 
-         refreshed by the fetching thread. In conjunction with the parameter
-        setting "strictcrlpolicy=yes" a real-time certificate status query
-        can be implemented in this way.
+ -nmin     the validity interval of an OCSP response given in minutes.
 
--text   This option activates a verbose logging output, showing the contents
-        of both the received OCSP request and sent OCSP response.
+ -text     this option activates a verbose logging output, showing the contents
+           of both the received OCSP request and sent OCSP response.
 
-How does Pluto get hold of the OCSP signer certificate? There are two
-possibilities:
- 
-Either you put the OCSP certificate into the default directory
+
+The OCSP signer certificate can either be put into the default directory
 
     /etc/ipsec.d/ocspcerts
-    
-or alternatively Pluto can receive it as part of the OCSP response from the
-remote OCSP server. In the latter case, how can Pluto make sure that
-the server has indeed been authorized by the CA to deal out certificate status
-information? In order to ascertain the OCSP signer capability, an extended
-key usage attribute can be included in the OCSP server certificate. Just
-insert the parameter
+
+or alternatively strongSwan can receive it as part of the OCSP response from the
+remote OCSP server.  In order to verify that the server is indeed authorized by
+a CA to deal out certificate status information an extended key usage attribute
+must be included in the OCSP server certificate.  Just insert the parameter
 
     extendedKeyUsage=OCSPSigner
 
@@ -1441,7 +1104,7 @@ in the [ usr_cert ] section of your openssl.cnf configuration file before
 the CA signs the OCSP server certificate.
 
 For a given CA the corresponding ca section in ipsec.conf (see section 7) allows
-to define the URI of a single OCSP server. As an alternative an OCSP URI can be
+to define the URI of a single OCSP server.  As an alternative an OCSP URI can be
 embedded into each host and user certificate by putting the line
 
     authorityInfoAccess = OCSP;URI:http://ocsp.strongswan.org:8880
@@ -1454,14 +1117,14 @@ record overrides the default URI defined by the ca section.
 5.6 CRL Policy
     ----------
 
-By default Pluto is quite tolerant concerning the handling of CRLs. It is not
-mandatory for a CRL to be present in /etc/ipsec.d/crls and if the expiration
+By default strongSwan is quite tolerant concerning the handling of CRLs. It is
+not mandatory for a CRL to be present in /etc/ipsec.d/crls and if the expiration
 date defined by the nextUpdate field of a CRL has been reached just a warning
 is issued but a peer certificate will always be accepted if it has not been
 revoked.
 
 If you want to enforce a stricter CRL policy then you can do this by setting
-the "strictcrlpolicy" option. This is done in the "config setup" section
+the "strictcrlpolicy" option.  This is done in the "config setup" section
 of the ipsec.conf file:
 
     config setup
@@ -1469,12 +1132,12 @@ of the ipsec.conf file:
           ...
 
 A certificate received from a peer will not be accepted if no corresponding
-CRL or OCSP response is available. And if an ISAKMP SA re-negotiation takes
+CRL or OCSP response is available.  And if an ISAKMP SA re-negotiation takes
 place after the nextUpdate deadline has been reached, the peer certificate
 will be declared invalid and the cached RSA public key will be deleted, causing
-the connection in question to fail. Therefore if you are going to use the
+the connection in question to fail.  Therefore if you are going to use the
 "strictcrlpolicy=yes" option, make sure that the CRLs will always be updated
-in time. Otherwise a total standstill would ensue.
+in time.  Otherwise a total standstill would ensue.
 
 As mentioned earlier the default setting is "strictcrlpolicy=no"
 
@@ -1483,9 +1146,9 @@ As mentioned earlier the default setting is "strictcrlpolicy=no"
     -----------------------------------------------------------
 
 If you don't want to use trust chains based on CA certificates as proposed in
-section 4.3 you can alternatively import trusted peer certificates directly
-into Pluto. Thus you do not have to rely on the certificate to be transmitted
-by the peer as part of the IKE protocol.
+section 4.3 you can alternatively import trusted peer certificates directly.
+Thus you do not have to rely on the certificate to be transmitted by the peer
+as part of the IKE protocol.
 
 With the conn %default section defined in section 4.1 and the use of the
 rightcert keyword for the peer side, the connection definitions in section 4.3
@@ -1501,14 +1164,14 @@ can alternatively be written as
           rightcert=carolCert.der
 
 If the peer certificates are loaded locally then there is no sense in sending
-any certificates to the other end via the IKE Main Mode protocol. Especially
-if self-signed certificates are used which wouldn't be accepted any way by
-the other side. In these cases it is recommended to add
+any certificates to the other end via the IKE protocol.  Especially if
+self-signed certificates are used which wouldn't be accepted anyway by
+the other side.  In these cases it is recommended to add
 
     leftsendcert=never
 
 to the connection definition[s] in order to avoid the sending of the host's
-own certificate. The default value is
+own certificate.  The default value is
 
     leftsendcert=ifasked
 
@@ -1517,7 +1180,7 @@ If a peer does not send a certificate request then use the setting
     leftsendcert=always
 
 If a peer certificate contains a subjectAltName extension, then an alternative
-rightid type can be used, as the example "conn sun" shows. If no rightid
+rightid type can be used, as the example "conn sun" shows.  If no rightid
 entry is present then the subject distinguished name contained in the
 certificate is taken as the ID.
 
@@ -1532,27 +1195,26 @@ or
     rightcert=/usr/ssl/certs/carolCert.der
 
 
-6. Installing the private key - ipsec.secrets
-   ------------------------------------------
+6. Configuring the private keys - ipsec.secrets
+   --------------------------------------------
 
-6.1 Loading private key files in PKCS#1 format
-    ------------------------------------------
+6.1 Loading private key files in PKCS#1 or PKCS#8 format
+    ----------------------------------------------------
 
 Besides strongSwan's raw private key format strongSwan has been enabled to
-load RSA private keys in the PKCS#1 file format. The key files can be
-optionally secured with a passphrase.
+load RSA (or ECDSA) private keys in the PKCS#1 or PKCS#8 file format.
+The key files can be optionally secured with a passphrase.
 
 RSA private key files are declared in /etc/ipsec.secrets using the syntax
 
     : RSA <my keyfile> "<optional passphrase>"
 
-The key file can be either in base64 PEM-format or binary DER-format. The
-actual coding is detected "automagically" by Pluto. The example
+The key file can be either in base64 PEM-format or binary DER-format.  The
+actual coding is detected automatically.  The example
 
     : RSA moonKey.pem
 
-uses a relative pathname. In this case Pluto will look for the key file
-in the directory
+uses a pathname relative to the default directory
 
     /etc/ipsec.d/private
 
@@ -1564,14 +1226,9 @@ In both cases make sure that the key files are root readable only.
 
 Often a private key must be transported from the Certification Authority
 where it was generated to the target security gateway where it is going
-to be used. In order to protect the key it can be encrypted with 3DES
-using a symmetric transport key derived from a cryptographically strong
+to be used.  In order to protect the key it can be encrypted with a symmetric
+cipher using a transport key derived from a cryptographically strong
 passphrase.
-
-    openssl genrsa -des3 -out moonKey.pem 1024
-
-Because of the weak security, key files protected by single DES will not
-be accepted by Pluto!!!
 
 Once on the security gateway the private key can either be permanently
 unlocked so that it can be used by Pluto without having to know a
@@ -1579,14 +1236,14 @@ passphrase
 
     openssl rsa -in moonKey.pem -out moonKey.pem
 
-or as an option the key file can remain secured. In this case the passphrase
+or as an option the key file can remain secured.  In this case the passphrase
 unlocking the private key must be added after the pathname in
 /etc/ipsec.secrets
 
     : RSA moonKey.pem "This is my passphrase"
 
-Some CAs distribute private keys embedded in a PKCS#12 file. Since Pluto
-is not able yet to read this format directly, the private key part must
+Some CAs distribute private keys embedded in a PKCS#12 file. Since strongSwan
+is not yet able to read this format directly, the private key part must
 first be extracted using the command
 
      openssl pkcs12 -nocerts -in moonCert.p12 -out moonKey.pem
@@ -1600,49 +1257,34 @@ if the private key is to be stored unlocked.
 
 6.2 Entering passphrases interactively
     ----------------------------------
-    
+
 On a VPN gateway you would want to put the passphrase protecting the private
 key file right into /etc/ipsec.secrets as described in the previous paragraph,
-so that the gateway can be booted in unattended mode. The risk of keeping
+so that the gateway can be booted in unattended mode.  The risk of keeping
 unencrypted secrets on a server can be minimized by putting the box into a
-locked room. As long as no one can get root access on the machine the private
+locked room.  As long as no one can get root access on the machine the private
 keys are safe.
-    
-On a mobile laptop computer the situation is quite different. The computer can
+
+On a mobile laptop computer the situation is quite different.  The computer can
 be stolen or the user is leaving it unattended so that unauthorized persons
-can get access to it. In theses cases it would be preferable not to keep any
+can get access to it.  In theses cases it would be preferable not to keep any
 passphrases openly in /etc/ipsec.secrets but to prompt for them interactively
-instead. This is easily done by defining
+instead.  This is easily done by defining
 
     : RSA moonKey.pem %prompt
-    
+
 Since strongSwan is usually started during the boot process, usually no
-interactive console windows is available which can be used by Pluto to
-prompt for the passphrase. This must be initiated by the user by typing
+interactive console windows is available which can be used to prompt for
+the passphrase.  This must be initiated by the user by typing
 
     ipsec secrets
-    
+
 which actually is an alias for the existing command
 
     ipsec rereadsecrets
 
-and which causes the prompt
-
-    need passphrase for '/etc/ipsec.d/private/moonKey.pem'
-    Enter:
-
-to appear. If the passphrase was correct and the private key file could be
-successfully decrypted then
-
-    valid passphrase
-    
-results. Otherwise the prompt
-
-   invalid passphrase, please try again
-   Enter:
-
-will give you another try. Entering a carriage return will abort the
-the passphrase prompting.
+and which causes a passphrase prompt to appear.  To abort entering a passphrase
+enter just a carriage return.
 
 
 6.3 Multiple private keys
@@ -1663,22 +1305,21 @@ definitions without specific IDs can be used
 
 Besides the definition of IPsec connections the ipsec.conf file can also
 be used to configure a few properties of the certification authorities
-needed to establish the X.509 trust chains. The following example shows
-the parameters that are currently available:
+needed to establish the X.509 trust chains.  The following example shows
+some of the parameters that are currently available:
 
     ca strongswan
        cacert=strongswanCert.pem
        ocspuri=http://ocsp.strongswan.org:8880
        crluri=http://crl.strongswan.org/strongswan.crl'
-       crluri2="ldap:///O=Linux strongSwan, C=CH?certificateRevocationList"
-       ldaphost=ldap.strongswan.org
+       crluri2="ldap://ldap.strongswan.org/O=strongSwan, C=CH?certificateRevocationList"
        auto=add
 
 In a similar way as conn sections are used for connection definitions, an
 arbitrary number of optional ca sections define the basic properties of CAs.
 
 Each ca section is named with a unique label
- 
+
        ca strongswan
 
 The only mandatory parameter is
@@ -1687,550 +1328,42 @@ The only mandatory parameter is
 
 which points to the CA certificate which usually resides in the default
 directory /etc/ipsec.d/cacerts/ but could also be retrieved via an absolute
-path name. If the CA certificate is stored on a smartcard then the
-notation
-
-       cacert=%smartcard#<n>
-
-or alternatively
-
-       cacert=%smartcard<optional slot nr>:<key id>
-
-can be used. The selection of smartcard slots is described in more detail
-in section 8.1.
-
-From the certificate the CA's distinguished name and the serial number
-is extracted. If an optional subjectKeyAuthentifier is present then it can
-be used to uniquely identify consecutive generations of CA certificates
-carrying the same distinguished name.
+path name.
 
 The OCSP URI
 
        ocspuri=http://ocsp.strongswan.org:8880
 
-allows to define an individual OCSP server per CA. Also up to two additional
+allows to define an individual OCSP server per CA.  Also up to two additional
 CRL distribution points (CDPs) can be defined
 
        crluri=http://crl.strongswan.org/strongswan.crl'
-       crluri2="ldap:///O=Linux strongSwan, C=CH?certificateRevocationList"
+       crluri2="ldap://ldap.strongswan.org/O=strongSwan, C=CH?certificateRevocationList"
 
 which are added to any CDPs already present in the received certificates
-themselves. The last parameter
+themselves.
 
-       ldaphost=ldap.strongswan.org
+With the auto=add statement the ca definition is automatically loaded during
+startup.  Setting auto=ignore will ignore the ca section.
 
-can be used to fill in the actual server name in LDAP CDPs where the host is missing
-as e.g. in the crluri2 above. In future releases this ldaphost parameter might be used
-to retrieve user, host and attribute certificates.
-
-
-With the auto=add statement the ca definition is automatically loaded into Pluto during
-system startup. Setting auto=ignore will ignore the ca section. Additional ca definitions
-can be loaded from ipsec.conf during runtime with the command
-
-      ipsec auto --type ca --add strongswan-sales
-
-and
-
-      ipsec auto --type ca --delete strongswan-sales
-
-deletes the labeled ca entry. And finally the command
-
-    ipsec auto --type ca --replace strongswan
-
-first deletes the old definition in Pluto's memory and then loads the updated version
-from ipsec.conf. Any parameters which appear in several ca definitions can be put in
+Any parameters which appear in several ca definitions can be put in
 a common ca %default section
 
     ca %default
-       ldaphost=ldap.strongswan.org
+       crluri=http://crl.strongswan.org/strongswan.crl'
 
 
-8. Smartcard support
-   -----------------
-
-8.1 Configuring a smartcard-based connection
-    ----------------------------------------
-
-Defining a smartcard-based connection in ipsec.conf is easy:
-
-    conn sun
-         right=192.168.0.2
-	 rightid=@sun.strongswan.org
-	 left=%defaultroute
-	 leftcert=%smartcard
-	 auto=add
-
-In most cases there is a single smartcard reader or cryptotoken and only one
-RSA private key safely stored on the crypto device. Thus usually the entry
-
-    leftcert=%smartcard
-
-which stands for the full notation
-
-    leftcert=%smartcard#1
-
-is sufficient where the first certificate/private key object enumerated by
-the PKCS#11 module is used. If several certificate/private key objects are
-present then the nth object can be selected using
-
-    leftcert=%smartcard#<n>
-
-The command
-
-    ipsec listcards
-
-gives an overview over all certificate objects made available by the PKCS#11
-module.CA certificates are automatically available as trust anchors.
-
-As an alternative the certificate ID and/or the slot number defined by
-the PKCS#11 standard can be specified using the notation
-
-   leftcert=%smartcard<optional slot nr>:<key id in hex format>
-
-Thus
-
-    leftcert=%smartcard:50
-
-will look in all available slots for ID 0x50 starting with the first slot
-(usually slot 0) whereas
-
-    leftcert=%smartcard4:50
-
-will directly check slot 4 (which is usually the first slot on the second
-reader/token when using the OpenSC library) for a key with ID 0x50.
-
-
-8.2 Entering the PIN code
-    ---------------------
-
-Since the smartcard signing operation needed to sign the hash with the
-RSA private key during IKE Main Mode is protected by a PIN code,
-the secret PIN must be made available to Pluto.
-
-For gateways that must be able to start IPsec tunnels automatically in
-unattended mode after a reboot, the secret PIN  can be stored statically
-in ipsec.secrets
-
-   : PIN %smartcard "12345678"
-  
-or with the general notation
-
-   : PIN %smartcard#<n> "<PIN code>"
-
-or alternatively
-
-   : PIN %smartcard<optional slot nr>:<key id> "<PIN code>"
-  
-On personal notebooks that could get stolen, you wouldn't want to store
-your PIN in ipsec.secrets. Thus the alternative form
-
-   : PIN %smartcard %prompt
-  
-will prompt you for the PIN when you start up the first IPsec connection
-using the command
-
-   ipsec up sun
-  
-The auto command calls the whack function which in turn communicates with
-Pluto over a socket. Since the whack function call is executed from a command
-window, Pluto can prompt you for the PIN over this socket connection.
-Unfortunately roadwarrior connections which just wait passively for peers
-cannot be initiated via the command window:
-
-   conn rw
-         right=%any
-	 left=%defaultroute
-	 leftcert=%smartcard4:50
-	 auto=add
-
-But if there is a corresponding entry
-
-   : PIN %smartcard4:50 %prompt
-  
-in ipsec.secrets, then the standard command
-
-   ipsec rereadsecrets
-  
-or the alias
-
-   ipsec secrets
-   
-can be used to enter the PIN code for this connection interactively.
-
-The command
-
-   ipsec listcards
-
-can be executed at any time to check the current status of the PIN code[s].
-
-
-8.3 PIN-pad equipped smartcard readers
-    ----------------------------------
-
-Smartcard readers with an integrated PIN-pad offer an increased security
-level because the PIN entry cannot be sniffed on the host computer e.g.
-by a surrepticiously installed key logger. In order to tell pluto not to
-prompt for the PIN on the host itself, the entry
-
-   : PIN %smartcard:50 %pinpad
-
-can be used in ipsec.secrets. Because the key pad does not cache the PIN in
-the smartcard reader, it must be entered for every PKCS #11 session login.
-By default pluto does a session logout after every RSA signature. In order
-to avoid the repeated entry of the PIN code during the periodic IKE main
-mode rekeyings, the following parameter can be set in the config setup
-section of ipsec.conf:
-
-   config setup
-        pkcs11keepstate=yes
-
-The default setting is pkcs11keepstate=no. 
-
-
-8.4 Configuring a smartcard with pkcsc15-init
-    -----------------------------------------
-
-strongSwan's smartcard solution is based on the PKCS#15 "Cryptographic Token
-Information Format Standard" fully supported by OpenSC library functions.
-Using the command
-
-    pkcs15-init --erase-card --create-pkcs15
-
-a fresh PKCS#15 file structure is created on a smartcard or cryptotoken.
-With the next command
-
-    pkcs15-init --auth-id 1 --store-pin --pin "12345678" --puk "87654321"
-                --label "my PIN"
-
-a secret PIN code with auth-id 1 is stored in an unretrievable location on
-the smart card. The PIN will protect the RSA signing operation. If the PIN
-is entered incorrectly more than three times the smartcard will be locked
-and the PUK code can be used to unlock the card again.
-
-Next the RSA private key is transferred to the smartcard
-
-    pkcs15-init --auth-id 1 --store-private-key myKey.pem [--id 45]
-
-By default the PKCS#15 smartcard record will be assigned the id 45.
-Using the --id option multiple key records can be stored on a smartcard.
-
-At last we load the matching X.509 certificate onto the smartcard
-
-    pkcs15-init --auth-id 1 --store-certificate myCert.pem [--id 45]
-
-The pkcs15-tool can now be used to verify the contents of the smartcard.
-
-   pkcs15-tool --list-pins --list-keys --list-certificates
-
-If everything is ok then you are ready to use the generated PKCS#15
-structure with strongSwan.
-
-8.5 PKCS#11 proxy functions
-    -----------------------
-
-   With the setting pkcs11keepstate=yes some PKCS#11 implementations
-   (e.g. OpenSC) will lock the access to the smartcard as soon as pluto has
-   opened a session and will thus prevent other application from sharing the
-   smartcard resource. In order to solve this locking problem, strongSwan
-   offers a PKCS#11 proxy service making use of the whack socket communication
-   channel. The setting
-
-   config setup
-      pkcs11proxy=yes
-
-will enable the proxy mode that is disabled by default. 
-
-Currently two smartcard operations are supported: RSA encryption and
-RSA decryption. The notation is as follows:
-
-   ipsec scdecrypt <encrypted data>
-                   [--inbase  16|hex|64|base64|256|text|ascii]
-                   [--outbase 16|hex|64|base64|256|text|ascii]
-                   [--keyid <id>]
-
-The default settings for inbase and outbase is hexadecimal.
-Thus the simplest call has the form
-
-   ipsec scdecrypt bb952b71920094ce0696ef9b8b26...12e6
-
-and the returned result might be a decrypted 128 bit AES key
-
-   000 8836362e030e6707c32ffaa0bdad5540
-
-The leading three characters represent the return code of the whack channel
-with 000 signifying that no error has occurred. Here is another example showing
-the use of the inbase and outbase attributes
-
-   ipsec scdecrypt m/ewDnTs0k...woE= --inbase base64 --outbase text
-
-where the result has the form
-
-   000 This is a secret
-
-By default the first RSA private key found by the PKCS#11 enumeration is
-used. If a different key should be selected then the notation introduced
-in sections 8.1 and 8.2 can be used:
-
-  --keyid %smartcard:50
-  --keyid %smartcard4:50
-  --keyid %smartcard#3
-
-with --keyid %smartcard#1 being the default. If supported by the smartcard
-and PKCS#11 library RSA encryption can be used with the notation
-
-   ipsec scencrypt <plaintext data>
-                   [--inbase  16|hex|64|base64|256|text|ascii]
-                   [--outbase 16|hex|64|base64|256|text|ascii]
-                   [--keyid <id>]
-
-with the example
-
-   ipsec scencrypt "This is a secret" --inbase ascii --outbase 64
-
-returning the expected output
-
-   000 m/ewDnTs0k...woE=
-
-
-9. Configuring the clients
-   -----------------------
-
-9.1 strongSwan
-    ----------
-
-A strongSwan to strongSwan connection is symmetrical. Any of the four defined
-ID types can be used, even different types on either end of the connection,
-although this wouldn't make much sense.
-
-+--------------------------------------------------------------+
-| Connection Definition        ID type          subjectAltName |
-|--------------------------------------------------------------|
-| rightid  (strongSwan)        DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-|--------------------------------------------------------------|
-| leftid   (strongSwan)        DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-+--------------------------------------------------------------+
-
-
-9.2 PGPnet
-    ------
-
-Use the file peerCert.p12 to import PGPnet's X.509 certificate, the CA
-certificate, plus the encrypted private key in binary PKCS#12 format into the
-PGPkey tool. You will be prompted for the passphrase securing the private key.
-
-Use the file myCert.pem to import the X.509 certificate of the strongSwan
-security gateway into the PGPkey tool. The PGPkeyTool does not accept X.509
-certificates in binary DER format, so it must be imported in base64 format:
-
-     -----BEGIN CERTIFICATE-----
-     M...
-
-     ...
-     -----END CERTIFICATE-----
-
-Make sure that there is no human-readable listing of the X.509 certificate in
-front of the line
-
-     -----BEGIN CERTIFICATE-----
-
-otherwise PGPnet will refuse to load the *.PEM file. Any surplus lines can
-either be deleted by loading the certificate into a text editor or you can
-apply the command
-
-     openssl x509 -in myCert.pem -out myCert.pem
-
-to achieve the same effect.
-
-With authentication based on X.509 certificates, PGPnet always sends the ID
-type DER_ASN1_DN, therefore rightid in the connection definition of the
-strongSwan security gateway must be an ASN.1 distinguished name.
-
-In the receiving direction PGPnet accepts all four ID types from strongSwan.
-
-+--------------------------------------------------------------+
-| Connection Definition        ID type          subjectAltName |
-|--------------------------------------------------------------|
-| rightid  (PGPnet)            DER_ASN1_DN      -              |
-|--------------------------------------------------------------|
-| leftid   (strongSwan)        DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-+--------------------------------------------------------------+
-
-
-9.3 SafeNet/Soft-PK/Soft-Remote
-    ---------------------------
-
-SafeNet/Soft-PK and SafeNet/Soft-Remote can be configured to send their
-identity either as DER_ASN1_DN, IPV4_ADDR, FQDN, or USER_FQDN.
-In the receiving direction SafeNet/Soft-PK and SafeNet/Soft-Remote
-accept all four ID types coming from strongSwan.
-
-+--------------------------------------------------------------+
-| Connection Definition        ID type          subjectAltName |
-|--------------------------------------------------------------|
-| rightid  (SafeNet/Soft-PK)   DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-|--------------------------------------------------------------|
-| leftid  (strongSwan)         DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-+--------------------------------------------------------------+
-
-
-9.4 SSH Sentinel
-    ------------
-
-SSH Sentinel sends its identity as DER_ASN1_DN if the subjectAltName field of
-its certificate is empty. If a subjectAltName field is present, then the
-corresponding type IPV4_ADDR, FQDN, or USER_FQDN is automatically chosen.
-With several subjectAltName entries, the precedence of the different ID types
-is not quite clear. In the receiving direction SSH Sentinel accepts all four
-ID types from strongSwan.
-
-+--------------------------------------------------------------+
-| Connection Definition        ID type          subjectAltName |
-|--------------------------------------------------------------|
-| rightid  (SSH Sentinel)      DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-|--------------------------------------------------------------|
-| leftid  (strongSwan)         DER_ASN1_DN      -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-+--------------------------------------------------------------+
-
-
-9.5 Windows 2000/XP
-    ---------------
-
-Windows 2000 and Windows XP always send the ID type DER_ASN1_DN,
-therefore rightid in the connection definition of the strongSwan
-security gateway must be an ASN.1 distinguished name.In the
-receiving direction Windows 2000/XP accepts all four ID types
-from strongSwan.
-
-+--------------------------------------------------------------+
-| Connection Definition        ID type          subjectAltName |
-|--------------------------------------------------------------|
-| rightid  (Windows 2000/XP)   DER_ASN1_DN      -              |
-|--------------------------------------------------------------|
-| leftid   (strongSwan)        DER_ASN1_D       -              |
-|                              FQDN             DNS:           |
-|                              USER_FQDN        email:         |
-|                              IPV4_ADDR        IP:            |
-+--------------------------------------------------------------+
-
-
-10. Monitoring functions
-    --------------------
+8. Monitoring functions
+   --------------------
 
 strongSwan offers the following monitoring functions:
 
+The command
 
     ipsec listalgs
 
-lists all IKE and ESP cryptographic algorithms that are currently
+lists all IKE cryptographic algorithms that are currently
 registered with strongSwan.
-
-The a listing has the following form:
-
-  List of registered IKE Encryption Algorithms:
-
-  #3     OAKLEY_BLOWFISH_CBC, blocksize: 64, keylen: 128-128-256
-  #5     OAKLEY_3DES_CBC, blocksize: 64, keylen: 192-192-192
-  #7     OAKLEY_AES_CBC, blocksize: 128, keylen: 128-128-256
-  #65004 OAKLEY_SERPENT_CBC, blocksize: 128, keylen: 128-128-256
-  #65005 OAKLEY_TWOFISH_CBC, blocksize: 128, keylen: 128-128-256
-  #65289 OAKLEY_TWOFISH_CBC_SSH, blocksize: 128, keylen: 128-128-256
-
-  List of registered IKE Hash Algorithms:
-
-  #1     OAKLEY_MD5, hashsize: 128
-  #2     OAKLEY_SHA, hashsize: 160
-  #4     OAKLEY_SHA2_256, hashsize: 256
-  #6     OAKLEY_SHA2_512, hashsize: 512
-
-  List of registered IKE DH Groups:
-
-  #2     OAKLEY_GROUP_MODP1024, groupsize: 1024
-  #5     OAKLEY_GROUP_MODP1536, groupsize: 1536
-  #14    OAKLEY_GROUP_MODP2048, groupsize: 2048
-  #15    OAKLEY_GROUP_MODP3072, groupsize: 3072
-  #16    OAKLEY_GROUP_MODP4096, groupsize: 4096
-  #17    OAKLEY_GROUP_MODP6144, groupsize: 6144
-  #18    OAKLEY_GROUP_MODP8192, groupsize: 8192
-
-  List of registered ESP Encryption Algorithms:
-
-  #3     ESP_3DES, blocksize: 64, keylen: 168-168
-  #7     ESP_BLOWFISH, blocksize: 64, keylen: 96-128
-  #12    ESP_AES, blocksize: 128, keylen: 128-256
-  #252   ESP_SERPENT, blocksize: 128, keylen: 128-256
-  #253   ESP_TWOFISH, blocksize: 128, keylen: 128-256
-
-  List of registered ESP Authentication Algorithms:
-
-  #1     AUTH_ALGORITHM_HMAC_MD5, keylen: 128-128
-  #2     AUTH_ALGORITHM_HMAC_SHA1, keylen: 160-160
-  #5     AUTH_ALGORITHM_HMAC_SHA2_256, keylen: 256-256
-  #7     AUTH_ALGORITHM_HMAC_SHA2_512, keylen: 512-512
-
-
-The command
-
-    ipsec listpubkeys [--utc]
-
-lists all public keys currently installed in the chained list of public
-keys. These keys were statically loaded from ipsec.conf or acquired either
-from received certificates or retrieved from secure DNS servers using
-opportunistic mode.
-
-The public key listing has the following form:
-
-  Feb 11 14:40:18 2005, 2048 RSA Key AwEAAa+uL,
-         until Sep 09 13:17:25 2009 ok
-         ID_FQDN '@moon.strongswan.org'
-         issuer: 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial: '03'
-  Feb 11 14:40:18 2005, 2048 RSA Key AwEAAa+uL,
-         until Sep 09 13:17:25 2009 ok
-         ID_DER_ASN1_DN 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org'
-         issuer: 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial: '03'
-  Feb 11 13:36:53 2005, 2048 RSA Key AwEAAbgbh,
-         until Dec 31 22:43:18 2009 ok
-         ID_USER_FQDN 'carol@strongswan.org'
-         issuer: 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial: '0a'
-
-It consists of
-
- - the date the public key was installed either in local time or UTC (--utc)
- - the modulus size of the RSA key in bits
- - a keyID consisting of 9 base64 symbols representing the public exponent
-   and the most significant bits of the modulus
- - the expiration date of the public key (extracted from the certificate)
- - the type and value of the ID associated with the public key.
- - the issuer of the certificate the public key was extracted from.
- - the serial number of the certificate the public key was extracted from.
-
-A public key can be associated with several IDs, e.g. using subjectAltNames
-in certificates and an ID can possess several public keys, e.g. retrieved
-from a secure DNS server.
 
 
 The command
@@ -2240,78 +1373,13 @@ The command
 lists all local certificates, both strongSwan's own and those of
 trusted peer loaded via leftcert and rightcert, respectively.
 
-The output has the form
-
-  Feb 11 13:36:47 2005, count: 4
-         subject:  'C=CH, O=Linux strongSwan, CN=moon.strongswan.org'
-         issuer:   'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial:    03
-         pubkey:    2048 RSA Key AwEAAa+uL, has private key
-         validity:  not before Sep 10 13:17:25 2004 ok
-                    not after  Sep 09 13:17:25 2009 ok
-         subjkey:   e5:e4:10:87:6c:2a:c4:be:ad:85:49:42:a6:de:76:58:30:3a:9f:c1
-         authkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         aserial:   00
-
-and shows
-
- - the date the certificate was installed either in local time or UTC (--utc)
- - the count shows how many connections refer to this certificate
- - the subject of the certificate
- - the issuer of the certificate
- - the serial number of the certificate
- - the size and keyid of the RSA public key contained in the certificate.
-   the label "has private key" indicates that a matching RSA private key
-   has been found, defined or loaded in ipsec.secrets.
- - the label "on smartcard" indicates that the certificate was loaded from
-   a smartcard or cryptotoken and that most probably a matching RSA private
-   key also resides on-card.
- - the validity of the CA certificate expressed either in local time or
-   UTC (--utc). The validity is checked automatically resulting either
-   in an "ok" message or a "fatal" error message.
- - the optional subjectKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the certificate's public key.
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the issuer who signed the certificate.
- - the serial number of the issuer's certificate.
-
 
 The command
 
     ipsec listcacerts [--utc]
 
 lists all CA certificates that have been either been loaded from the directory
-/etc/ipsec.d/cacerts/ or received via the IKE protocol. The output has the form
-
-  Feb 11 13:36:52 2005, count: 1
-         subject:  'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         issuer:   'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial:    00
-         pubkey:    2048 RSA Key AwEAAb/yX
-         validity:  not before Sep 10 13:01:45 2004 ok
-                    not after  Sep 08 13:01:45 2014 ok
-         subjkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         authkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         aserial:   00
-
-and shows
-
- - the date the CA certificate was installed either in local time or UTC (--utc)
- - the count is always set to 1
- - the subject of the CA certificate
- - the issuer of the CA certificate
- - the serial number of the CA certificate
- - the size and keyid of the RSA public key contained in the certificate.
- - the validity of the CA certificate expressed either in local time or
-   UTC (--utc). The validity is checked automatically resulting either
-   in an "ok" message or a "fatal" error message.
- - the optional subjectKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the CA certificate's public key.
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash 
-   over the public key of the issuer who signed the CA certificate.
-   For Root CA certificates the authorityKeyIdentifier and subjectKeyIdentifier
-   fields must be equal.
- - the serial number of the issuer's certificate.
+/etc/ipsec.d/cacerts/ or received via the IKE protocol.
 
 
 The command
@@ -2320,35 +1388,6 @@ The command
 
 lists all Authorization Authority certificates that have been loaded from
 the directory /etc/ipsec.d/aacerts/.
-The output has the form
-
-  Dec 20 13:29:55 2004, count: 1
-         subject:  'C=CH, O=strongSec GmbH, CN=strongSec Authorization Authority'
-         issuer:   'C=CH, O=strongSec GmbH, CN=strongSec Root CA'
-         serial:    0f
-         pubkey:    2048 RSA Key AwEAAfazH
-         validity:  not before Aug 24 13:41:56 2003 ok
-                    not after  Aug 23 13:41:56 2005 ok
-         subjkey:   56:89:b9:28:c9:1b:a0:00:7f:50:9d:ec:28:75:23:c1:1e:d1:dd:90
-         authkey:   af:80:d5:c6:02:1c:96:78:b3:85:a5:65:a2:23:fd:ad:cf:e2:55:b2
-         aserial:   00
-
-and shows
-
- - the date the AA certificate was installed either in local time or UTC (--utc)
- - the count is always set to 1
- - the subject of the AA certificate
- - the issuer of the AA certificate
- - the serial number of the AA certificate
- - the size and keyid of the RSA public key contained in the certificate.
- - the validity of the AA certificate expressed either in local time or
-   UTC (--utc). The validity is checked automatically resulting either
-   in an "ok" message or a "fatal" error message.
- - the optional subjectKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the AA certificate's public key.
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the issuer who signed the AA certificate.
- - the serial number of the issuer's certificate.
 
 
 The command
@@ -2357,36 +1396,7 @@ The command
 
 lists all OCSO signer certificates that have been either loaded from
 /etc/ipsec.d/ocspcerts/ or have been received included in the OCSP server
-response. The output has the form
-
-  Feb 09 22:56:17 2005, count: 1
-         subject:  'C=CH, O=Linux strongSwan, OU=OCSP, CN=ocsp.strongswan.org'
-         issuer:   'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         serial:    09
-         pubkey:    2048 RSA Key AwEAAaonT
-         validity:  not before Nov 19 17:29:28 2004 ok
-                    not after  Nov 18 17:29:28 2009 ok
-         subjkey:   88:07:0a:b8:ae:c7:c1:07:5c:be:68:6a:c4:a5:7f:81:1f:37:b5:56
-         authkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         aserial:   00
-
-and shows
-
- - the date the OCSP signer certificate was installed either in local time
-   or UTC (--utc)
- - the count is always set to 1
- - the subject of the OCSP signer certificate
- - the issuer of the OCSP signer certificate
- - the serial number of the OCSP signer certificate
- - the size and keyid of the RSA public key contained in the certificate.
- - the validity of the OCSP signer certificate expressed either in local time
-   or UTC (--utc). The validity is checked automatically resulting either
-   in an "ok" message or a "fatal" error message.
- - the optional subjectKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the OCSP signer certificate's public key.
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the issuer who signed the OCSP certificate.
- - the serial number of the issuer's certificate.
+response.
 
 
 The command
@@ -2395,59 +1405,6 @@ The command
 
 lists all X.509 attribute certificates that have been loaded from the directory
 /etc/ipsec.d/acerts/.
-The output has the form
-
-  Dec 20 13:29:56 2004
-         holder:   'C=CH, O=strongSec GmbH, CN=Andreas Steffen'
-         hissuer:  'C=CH, O=strongSec GmbH, CN=strongSec Root CA'
-         hserial:   1e
-         groups:    Research, Sales
-         issuer:   'C=CH, O=strongSec GmbH, CN=strongSec Authorization Authority'
-         serial:    2c
-         validity:  not before Dec 19 14:51:38 2004 ok
-                    not after  Dec 20 14:51:38 2004 fatal (expired)
-         authkey:   56:89:b9:28:c9:1b:a0:00:7f:50:9d:ec:28:75:23:c1:1e:d1:dd:90
-         aserial:   0f
-
-and shows
-
- - the date the attribute certificate was installed either in local time
-   or UTC (--utc)
- - the holder of the attribute certificate
- - the issuer of holder's certificate
- - the serial number of the holder's certificate
- - the group attributes
- - the issuing Authorization Authority of the attribute certificate
- - the serial number of the attribute certificate
- - the validity of the attribute certificate expressed either in local time or
-   UTC (--utc). The validity is checked automatically resulting either
-   in an "ok" message or a "fatal" error message.
- - an authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the issuing Authorization Authority
- - the serial number of the AA certificate.
-
-
-The command
-
-    ipsec listgroups [--utc]
-
-lists all group attributes either defined in right|leftgroups statements
-in ipsec.conf or contained in loaded X.509 attribute certificates.
-The output has the form
-
-  Dec 20 13:29:55 2004, count: 4
-         Research
-  Dec 20 13:30:04 2004, count: 1
-         Research New York
-  Dec 20 13:29:55 2004, count: 3
-         Sales
-
-and shows
-
- - the date the group attribute was first installed either in local time
-   or UTC (--utc)
- - the count shows how many times the attribute is used
- - the group name
 
 
 The command
@@ -2455,28 +1412,6 @@ The command
     ipsec listcainfos [--utc]
 
 lists the properties defined by the ca definition sections in ipsec.conf.
-The output has the form
-
-  Jun 08 22:31:37 2004, "strongswan"
-         authname: 'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         ldaphost: 'ldap.strongswan.org'
-         ocspuri:  'http://ocsp.strongswan.org:8880'
-         distPts:  'http://crl.strongswan.org/strongswan.crl'
-                   'ldap:///O=Linux strongSwan, C=CH?certificateRevocationList'
-         authkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         aserial:   00
-
-and shows
-
- - the date the CA definition was loaded either in local time or UTC (--utc)
- - the name of the ca section
- - the distinguished name of the CA
- - an optional default ldap host for the CA
- - an optional OCSP URI
- - a maximum of two optional CRL distribution points
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the CA.
- - the serial number of the CA.
 
 
 The command
@@ -2484,32 +1419,6 @@ The command
     ipsec listcrls [--utc]
 
 lists all CRLs that have been loaded from /etc/ipsec.d/crls/.
-The output has the form
-
-  Feb 11 13:37:00 2005, revoked certs: 1
-         issuer:   'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         distPts:  'http://crl.strongswan.org/strongswan.crl'
-         updates:   this Feb 08 07:46:29 2005
-                    next Mar 10 07:46:29 2005 ok
-         authkey:   5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef 
-         aserial:   00
-
-and shows
-
- - the date the CRL was installed either in local time or UTC (--utc)
- - the number revoked certificates
- - the issuer of the CRL
- - the URLs of the distribution points where the CRL can be fetched from.
- - the dates when the CRL was issued and when the next update
-   is expected, respectively, expressed either in local time or
-   UTC (--utc). It is automatically checked if the next update
-   deadline has passed, resulting either in an "ok" message, a
-   a "warning" message when strictcrlpolicy=no or a "fatal" message when
-   strictcrlpolicy=yes.
- - the optional authorityKeyIdentifier extension which is a 20 byte SHA-1 hash
-   over the public key of the issuer who signed the CRL. This extension is 
-   present in version 2 CRLs, only.
- - the serial number of the issuer's certificate.
 
 
 The command
@@ -2517,114 +1426,43 @@ The command
 
     ipsec listocsp [--utc]
 
-lists the contents of the OCSP response cache. The output has the form
-
-         issuer:  'C=CH, O=Linux strongSwan, CN=strongSwan Root CA'
-         uri:     'http://ocsp.strongswan.org:8880'
-         authname: 13:9d:a0:9e:f4:32:ab:8f:e2:89:56:67:fa:d0:d4:e3:35:86:71:b9
-         authkey:  5d:a7:dd:70:06:51:32:7e:e7:b6:6d:b3:b5:e5:e0:60:ea:2e:4d:ef
-         aserial:  00
-  Feb 09 22:56:17 2005, until Feb 09 23:01:17 2005 warning (expires in 4 minutes)
-         serial:   0a, good
-
-and shows
-
- - the distinguished name of the CA handled by the OCSP server
- - the http URI of the OCSP server.
- - the 20 byte SHA-1 hash of the CA's distinguished name
- - the 20 byte SHA-1 hash of the CA's public key
- - the serial number of the CA's certificate
- - a certificate status list showing
-    - the time the OCSP status was received
-    - an optional nextUpdate deadline (if missing the OCSP status will be
-      onetime with a lifetime of 2 minutes only).
-    - the serial number of the certificate
-    - the status of the certificate (good, revoked, unknown)
+lists the contents of the OCSP response cache.
 
 
 The command
 
-    ipsec listcards [--utc]
+    ipsec listall [--utc]
 
-lists all smartcard records that are currently in use by Pluto.
-The output has the form
-
-  Aug 17 16:47:59 2005, #1, count: 6
-         slot:     0, session closed, logged out, has valid pin
-         id:       45
-         label:   'strongSwan'
-         subject: 'C=CH, O=Linux strongSwan, CN=carol@strongswan.org'
-
-with pkcs11keepstate=no and
-
-  Aug 17 16:47:59 2005, #1, count: 6
-         slot:     0, session opened, logged in, has pin pad
-         id:       45
-         label:   'strongSwan'
-         subject: 'C=CH, O=Linux strongSwan, CN=carol@strongswan.org'
-
-with pkcs11keepstate=yes and shows
-
-- the date the certificate was read from the smartcard record
-- the certificate objects are numbered starting from #1
-- the count shows how many connections and secret pin entries point
-  to the smartcard record
-- the PKCS #11 slot number
-- the PKCS #11 session state: closed | opened
-- the PKCS #11 session login state: logged out | logged in
-- the status of the PIN: no pin | valid pin | invalid pin | pin pad
-- the ID of the certificate object
-- the label of the certificate object
-- the subject distinguished name of the certificate
+is equivalent to using all of the above commands.
 
 
-The command
-
-    ipsec auto --listall [--utc]
-
-is equivalent to
-
-    ipsec listalgs
-    ipsec listpubkeys [--utc]
-    ipsec listcerts [--utc]
-    ipsec listcacerts [--utc]
-    ipsec listaacerts [--utc]
-    ipsec listocspcerts [--utc]
-    ipsec listacerts [--utc]
-    ipsec listgroups [--utc]
-    ipsec listcainfos [--utc]
-    ipsec listcrls [--utc]
-    ipsec listocsp [--utc]
-    ipsec listcards [--utc]
+9. Firewall support functions
+   --------------------------
 
 
-11. Firewall support functions
-    --------------------------
-
-
-11.1 Environment variables in the updown script
-     ------------------------------------------
+9.1 Environment variables in the updown script
+    ------------------------------------------
 
 strongSwan makes the following environment variables available
 in the updown script indicated by the leftupdown option:
 
-+------------------------------------------------------------------+
-| Variable               Example                    Comment        |
-|------------------------------------------------------------------|
-| $PLUTO_PEER_ID         carol@strongswan.org       USER_FQDN  (1) |
-|------------------------------------------------------------------|
-| $PLUTO_PEER_PROTOCOL   17                         udp        (2) |
-|------------------------------------------------------------------|
-| $PLUTO_PEER_PORT       68                         bootpc     (3) |
-|------------------------------------------------------------------|
-| $PLUTO_PEER_CA         C=CH, O=ACME, CN=Sales CA             (4) |
-|------------------------------------------------------------------|
-| $PLUTO_MY_ID           @moon.strongswan.org       FQDN       (1) |
-|------------------------------------------------------------------|
-| $PLUTO_MY_PROTOCOL     17                         udp        (2) |
-|------------------------------------------------------------------|
-| $PLUTO_MY_PORT         67                         bootps     (3) |
-+------------------------------------------------------------------+
++-------------------------------------------------------------------+
+| Variable               Example                    Comment         |
+|-------------------------------------------------------------------|
+| $PLUTO_PEER_ID         carol@strongswan.org       RFC822_ADDR (1) |
+|-------------------------------------------------------------------|
+| $PLUTO_PEER_PROTOCOL   17                         udp         (2) |
+|-------------------------------------------------------------------|
+| $PLUTO_PEER_PORT       68                         bootpc      (3) |
+|-------------------------------------------------------------------|
+| $PLUTO_PEER_CA         C=CH, O=ACME, CN=Sales CA              (4) |
+|-------------------------------------------------------------------|
+| $PLUTO_MY_ID           @moon.strongswan.org       FQDN        (1) |
+|-------------------------------------------------------------------|
+| $PLUTO_MY_PROTOCOL     17                         udp         (2) |
+|-------------------------------------------------------------------|
+| $PLUTO_MY_PORT         67                         bootps      (3) |
++-------------------------------------------------------------------+
 
 (1) $PLUTO_PEER_ID/$PLUTO_MY_ID contain the IDs of the two ends
     of an established connection. In our examples these
@@ -2643,27 +1481,23 @@ in the updown script indicated by the leftupdown option:
 (4) $PLUTO_PEER_CA contains the distinguished name of the CA that
     issued the peer's certificate.
 
+There are several more, refer to the provided default script for a documentation
+of these.
 
-11.2 Automatic insertion and deletion of iptables firewall rules
-     -----------------------------------------------------------
 
-Starting with strongswan-2.7.0, the default _updown script automatically inserts
-and deletes dynamic iptables firewall rules upon the establishment or teardown,
-respectively, of an IPsec security association. This new feature is activated
-with the line
+9.2 Automatic insertion and deletion of iptables firewall rules
+    -----------------------------------------------------------
+
+The default _updown script automatically inserts and deletes dynamic iptables
+firewall rules upon the establishment or teardown, respectively, of an IPsec
+security association.  This feature is activated with the line
 
    leftfirewall=yes
-
-and can be used when the following prerequisites are fulfilled:
-
-  - Linux 2.6.16 kernel or newer, native NETKEY IPsec stack, and
-    iptables-1.3.5 or newer. Filtering of tunneled traffic is based on
-    IPsec policy matching rules.
 
 If you define a local client subnet with a netmask larger than /32 behind
 the gateway then the automatically inserted FORWARD iptables rules will
 not allow to access the internal IP address of the host although it is
-part of the client subnet definition. If you want additional INPUT and
+part of the client subnet definition.  If you want additional INPUT and
 OUTPUT iptables rules to be inserted, so that the host itself can be accessed
 then add the following line:
 
@@ -2678,473 +1512,3 @@ Jul 19 18:58:38 moon vpn:
     + @carol.strongswan.org  192.168.0.100 -- 192.168.0.1 == 10.1.0.0/16
 Jul 19 22:15:17 moon vpn:
     - @carol.strongswan.org  192.168.0.100 -- 192.168.0.1 == 10.1.0.0/16
-
-
-11.3 Sample Linux 2.6 updown script for iptables < 1.3.5
-     ---------------------------------------------------
-
-If you are using a Linux 2.6 kernel older than 2.6.16 or an iptables version
-older than 1.3.5 then the IPsec policy matching rules will not be available.
-In order to make sure that only tunneled packets are accepted, a mark can be
-set on incoming ESP packets. This "ESP" mark will be retained on the
-decapsulated packet so that iptables rules inserted by the updown script can
-check on the presence of this mark. For this purpose the template located in
-
-   programs/_updown_espmark
-
-can be used. Store a copy of _updown_espmark e.g. in /etc/ipsec.updown and load
-the script with the line
-
-  leftupdown=/etc/updown.ipsec.
-
-In addition for the dynamic updown script to work the following static iptables rules
-must be applied:
-
-   iptables -t mangle -A INPUT -p 50 -j MARK --set-mark 50
-
-
-12. Authentication with raw RSA public keys
-    ---------------------------------------
-
-FreeS/WAN, as it is available from www.freeswan.org does public key 
-authentication with raw RSA public keys that are directly defined in
-/etc/ipsec.conf
-
-    rightrsasigkey=0sAq4c....
-
-When version 1.x of standard FreeS/WAN receives a certificate request (CR),
-it immediately drops the negotiation because it does not know how to answer
-the request. As a workaround strongSwan does not send a CR if the RSA
-key has been statically loaded using [right/left]rsasigkey. A problem
-remains with roadwarriors initiating a connection. Since strongSwan
-does not know the identity of the initiating peer in advance, it will always
-send a CR, causing the rupture of the IKE negotiation if the peer is a
-version 1.x  FreeS/WAN host. To circumvent this problem the configuration
-parameter 'nocrsend' can be set in the config setup section of /etc/ipsec.conf:
-
-    config setup:
-        nocrsend=yes
-
-With this entry no certificate request is sent in any connection.
-The default setting is nocrsend=no.
-
-
-13. Authentication with OpenPGP certificates
-    ----------------------------------------
-
-strongSwan also supports RSA based authentication using OpenPGP
-certificates and OpenPGP V3 fingerprints used as an KEY_ID identifier.
-
-
-13.1 OpenPGP certificates
-     --------------------
-     
-OpenPGP certificates containing RSA public keys can now directly be loaded
-in ASCII armored PGP format using the leftcert and rightcert parameters
-in /etc/ipsec.conf:
-
-  conn pgp
-       right=%any
-       righcert=peerCert.asc
-       left=%defaultroute
-       leftcert=gatewayCert.asc
-
-The peer certificate must be stored locally (the default directory is
-/etc/ipsec.d/certs) since currently no trust can be established for
-PGP certificates received from a peer via the IKE protocol.
-
-
-13.2 OpenPGP private keys
-     --------------------
-     
-PGP private keys in unencrypted form can now directly be loaded in ASCII
-armored PGP format via an entry in /etc/ipsec.secrets:
-
-  : RSA gatewayKey.asc
-
-Existing IDEA-encrypted RSA private keys can be unlocked with GnuPG and
-the IDEA extension (see http://www.gnupg.org/gph/en/pgp2x.html) using
-the commands
-
-  gpg --import gatewayCert.asc
-
-  gpg --allow-secret-key-import --import gatewayKey.asc
-
-  gpg --edit-key <gateway ID>
-  > passwd                    #change to empty password
-  > save
-
-  gpg -a --export-secret-key <gateway ID> gatewayKey.asc
-
-
-13.3 Monitoring functions
-     --------------------
-
-The command ipsec listcerts shows all loaded PGP certificates
-in the following format:
-
-  Aug 28 09:51:55 2002, count: 1
-         fingerprint:  0x1ccfca12d93467ffa9d5093d87a465dc
-         pubkey:   1024 RSA Key ARHso6uKQ
-         created:  Aug 27 08:51:39 2002
-         until:    --- -- --:--:-- ---- ok (expires never)
-
-The entries are
-
- - the date the certificate was loaded either in local time or UTC (--utc)
- - the V3 fingerprint consisting of the 16 byte MD5 hash of the public key
-   which is used as an ID of type KEY_ID
- - the modulus size of the RSA key in bits
- - a keyID consisting of 9 base64 symbols representing the public exponent
-   and the most significant bits of the modulus
- - the creation date of the public key (extracted from the certificate)
- - the optional expiration date of the public key (extracted from the
-   certificate)
-
-
-13.4 Suppression of certificate request messages
-     -------------------------------------------
-
-PGPnet configured to work with OpenPGP certificates aborts the IKE
-negotiation when it receives a X.509 certificate. Therefore it is recommended
-(mandatory for roadwarrior connections) to set
-
-    config setup:
-        nocrsend=yes
-
-in /etc/ipsec.conf.
-
-
-14. Additional Features
-    -------------------
-
-
-14.1 Authentication and encryption algorithms
-     ----------------------------------------
-
-strongSwan supports the following suite of encryption and authentication
-algorithms for both IKE and ESP payloads.
-
-+------------------------------------------------------------------+
-| IKE algorithms (negotiated in Phase 1 Main Mode)                 |
-+------------------------------------------------------------------+
-| Encryption algorithms:  3des, aes, serpent, twofish, blowfish    |
-|------------------------------------------------------------------|
-| Hash algorithms:        md5, sha, sha2                           |
-|------------------------------------------------------------------|
-| DH groups:              1024, 1536, 2048, 3072, 4096, 6144, 8192 |
-+------------------------------------------------------------------+
-
-NOTE: For IKE the SHA-1 algorithm is denoted by "sha"
-
-The cryptographic IKE algorithms listed above are a fixed part of the
-strongSwan distribution. Particular algorithms can be added or removed
-in the "programs/pluto/alg" directory.
-  
-+------------------------------------------------------------------+
-| ESP algorithms (negotiated in Phase 2 Quick Mode)                |
-+------------------------------------------------------------------+
-| Encryption algorithms:  3des, aes, serpent, twofish, blowfish    |
-|------------------------------------------------------------------|
-| Hash algorithms:        md5, sha1, sha2                          |
-|------------------------------------------------------------------|
-| PFS groups:             1024, 1536, 2048, 3072, 4096, 6144, 8192 |
-+------------------------------------------------------------------+
-
-The cryptographic ESP algorithms listed above are a fixed part of the
-strongSwan distribution. If your Linux 2.4 or 2.6 kernel includes the
-CryptoAPI then additional ESP algorithms can be added or deleted as
-kernel modules.
-
-The IKE and ESP cryptographic algorithms to be proposed to the peer
-as an initiator can be specified on a per connection basis in the form
-
-conn normal
-     ...
-     ike=aes128-sha-modp1536,3des-sha-modp1536
-     esp=aes128-sha1,3des-sha1
-     ...
-
-or if you are more paranoid
-
-conn paranoid
-     ...
-     ike=aes256-sha2_512-modp2048
-     esp=aes256-sha2_512
-     ...
-
-If the the "ike" and "esp" configuration parameters are missing in
-ipsec.conf, then the default settings
-   
-    ike=3des-md5-modp1536,3des-sha-modp1536,\
-        3des-md5-modp1024,3des-sha-modp1024
-    esp=3des-md5,3des-sha1
-
-arre implicitly assumed. The 3DES encryption algorithm and the MD5 and
-SHA-1 hash algorithms are hardcoded into strongSwan and cannot be removed.
-
-If Perfect Forward Secrecy (PFS is desired), then a PFS group can be
-optionally specified:
-
-conn make_sure
-     ...
-     pfs=yes
-     pfsgroup=modp2048,modp1536
-     ...
-
-If the "pfs" parameter is missing then "pfs=yes" is assumed by default.
-This means that PFS must be disabled explicitly by setting "pfs=no".
-
-If the "pfsgroup" parameter is missing then the default is
-
-    pfsgroup=<Phase1 DH group>
-    
-The "ike" and "esp" parameters are used to formulate one or several
-transform proposals to the peer if the strongSwan VPN host is the initiator.
-Attention! As a responder the first proposal from the peer is accepted that
-is supported the by one of the registered algorithms listed by the command
-
-    ipsec listalgs
-    
-If the responder wants to restrict the allowed cipher suites the '!' flag
-can be used to do so. The configuration
-
-conn normal_but_strict
-     ...
-     ike=aes128-sha-modp1536,3des-sha-modp1536!
-     esp=aes128-sha1,3des-sha1!
-     ...
-
-will only permit the listed algorithms defined above but no other methods
-even if they might be supported by the responder.
-
-
-14.2 NAT traversal
-     -------------
-
-Currently please refer to README.NAT-Traversal document in the strongSwan
-distribution.
-
-
-14.3 Dead peer detection
-    --------------------
-
-strongSwan implements the RFC 3706 Dead Peer Detection (DPD) keep-alive
-scheme. If an established IPsec SA has been idle (i.e. without any traffic)
-for N seconds (dpddelay=N) then strongSwan side sends a "hello" message
-(R_U_THERE) and the peer replies with an acknowledge message (R_U_THERE_ACK).
-If no response is received, the R_U_THERE messages are repeated until a DPD
-timeout of M seconds (dpdtimeout=M) has elapsed. If still no traffic or 
-R_U_THERE_ACK packets were received, the peer is declared to be dead and all
-SAs belonging to a common Phase 1 SA are deleted.
-
-DPD support is tuneable on a per connection basis by using the dpdaction,
-dpddelay and dpdtimeout directives:
-
-   conn roadwarrior
-	right=%any
-	left=%defaultroute
-	leftsubnet=10.1.0.0/16
-	dpdaction=clear
-
-   conn net-to-net
-	right=192.168.0.2
-	rightsubnet=10.2.0.0/16
-	left=%defaultroute
-	leftsubnet=10.1.0.0/16
-	dpdaction=hold
-	dpddelay=60
-	dpdtimeout=500
-
-In the first example dpdaction=clear activates the DPD mechanism under the
-condition that the peer supports RFC 3706. The values dpddelay=30s and
-dpdtimeout=120s are assumed by default in the absence of these parameters, so
-that during idle periods an R_U_THERE packet is sent every 30 seconds. If no
-traffic or a no R_U_THERE_ACK packet is received from the peer within a
-120 second time span, the peer will be declared dead and all SAs and associated
-eroutes will be cleared.
-
-In the second example R_U_THERE packets are sent every 60 seconds and the
-parameter setting dpdaction=hold will put the eroute of the ruptured connection
-into a %trap state, so that when new outgoing traffic will occur, the
-correspondig connection will be automatically renegotiated as soon as the
-peer is up again.
-
-It is recommended to use dpdaction=hold for statically defined connections and
-dpdaction=clear for dynamic roadwarrior connections. The default value is
-dpdaction=none, which disables DPD.
-
-
-14.4 IKE Mode Config Pull Mode
-     -------------------------
-
-The IKE Mode Config protocol <draft-ietf-ipsec-isakmp-mode-cfg-04.txt> allows
-the dynamic assignment of virtual IP addresses and optional DNS and WINS server
-information to IPsec clients. As a default the "Mode Config Pull Mode" is
-used where the client actively sends a Mode Config request to the server
-in order to obtain a virtual IP. The server answers with a Mode Config reply
-message containing the requested information.
-
-Client side configuration (carol):
-
-  conn home
-       right=192.168.0.1
-       rightsubnet=10.1.0.0/16
-       rightid=@moon.strongswan.org
-       left=%defaultroute
-       leftsourceip=%modeconfig
-       leftcert=carolCert.pem
-       leftid=carol@strongswan.org
-       auto=start
-
-Server side configuration (moon):
-
-  conn roadwarrior
-       right=%any
-       rightid=carol@strongswan.org
-       rightsourceip=10.3.0.1
-       left=%defaultroute
-       leftsubnet=10.1.0.0/16
-       leftcert=moonCert.pem
-       leftid=@moon.strongswan.org
-       auto=add
-
-The wildcard %modeconfig or %modecfg used in the leftsourceip parameter of the
-client will trigger a Mode Config request. Currently the server will return
-the virtual IP address defined by the rightsourceip parameter. In the future
-an LDAP-based lookup mechanism will be supported.
-
-
-14.5 IKE Mode Config Push Mode
-     -------------------------
-
-Cisco VPN equipment uses the alternative "Mode Config Push Mode" where the
-initiating clients waits for the server to push down a virtual address via
-a Mode Config set message. The receipt is acknowledged by the client with a
-Mode Config ack message.
-
-Mode Config Push Mode is activated by the parameter
-
-  modeconfig=push
-
-as part of the connection definition in ipsec.conf. The default value is 
-modeconfig=pull.
-
-
-14.6 XAUTH - Extended Authentication
-     -------------------------------
-
-The XAUTH protocol <draft-beaulieu-ike-xauth-02.txt> allows an extended
-client authentication using e.g. a username/password paradigm in addition
-to the IKE Main Mode authentication. Thus XAUTH can be used in conjunction
-with Pre-Shared Keys (PSK) by defining
-
-  authby=xauthpsk
-
-or with RSA signatures
-
-  authby=xauthrsasig
-
-in the connection definition, correspondingly. strongSwan can act either as
-an XAUTH client with
-
-  xauth=client
-
-or as an XAUTH server with
-
-  xauth=server
-
-with xauth=client being the default value. strongSwan integrates a default
-implementation where the XAUTH user credentials are stored on both the
-server and the client in the /etc/ipsec.secrets file, using the syntax
-
-  : XAUTH john "rT6q!V2p"
-
-The client must not have more than one XAUTH entry whereas the server can
-contain an unlimited number of user credentials in ipsec.secrets.
-
-Either the prompting on the client side or the verification of the user
-credentials on the server side can be implemented as a customized XAUTH
-dynamic library module. The corresponding library interface is defined
-by the pluto/xauth.h header file.
-
-
-15. Copyright statement and acknowledgements
-    ----------------------------------------
-
-
-		     FreeS/WAN version base system:
-
-			Copyright (c) 1999-2004
-		     Henry Spencer, Richard Guy Briggs,
-	    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,
-	 Michael Richardson, Angelos D. Keromytis, John Ioannidis,
-
-     NAT-Traversal, ipsec starter, Delete SA and Notification messages:
-
-		 Copyright (c) 2002-2003, Mathieu Lafon
-
-		 Additional cryptoalgorithms (AES, etc):
-
-		Copyright (c) 2002-2003, JuanJo Ciarlante
-		
-		         Dead Peer Detection:
-
-			 Copyright (c) 2002-2004
-		Ken Bantoft, JuanJo Ciarlante, Philip Craig,
-		  Pawel Krawczyk, Srinvasan Venkataraman
-
-		      Porting to Linux 2.6 kernel:
-
-		     Copyright (c) 2003, Herbert Xu
-
-			  Dynamic CRL fetching:
-
-		   Copyright (c) 2002, Stephane Laroche
-
-		        IKE Mode Config and XAUTH protocol:
-
-		   Copyright (c) 2001-2002, Colubris Networks
-
-		        Virtual IP and source routing: 
-
-		     Copyright (c) 2003, Tuomo Soini
-
-	      Port and protocol selectors for outbound traffic:
-
-		   Copyright (c) 2002, Stephen J. Bevan
-
-			  PGPnet-RSA parts of patch:
-
-	               Copyright (c) 2000, Kai Martius
-
-		   X.509, OCSP and smartcard functionality:
-
-  Copyright (c) 2000, Andreas Hess, Patric Lichtsteiner, Roger Wegmann
-  Copyright (c) 2001, Marco Bertossa, Andreas Schleiss
-  Copyright (c) 2002, Uli Galizzi, Ariane Seiler, Mario Strasser
-  Copyright (c) 2002, Martin Berner, Lukas Suter
-  Copyright (c) 2003, Christoph Gysin, Simon Zwahlen
-  Copyright (c) 2004, David Buechi, Michael Meier
-  Copyright (c) 2000-2005, Andreas Steffen
-
-      Zurich University of Applied Sciences in Winterthur, Switzerland
-
-				scepclient:
-
-               Copyright (c) 2005, Jan Hutter, Martin Willi
-               Copyright (c) 2005-2007, Andreas Steffen
-
-        University of Applied Sciences in Rapperswil, Switzerland
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version. See http://www.fsf.org/copyleft/gpl.txt.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-  for more details.
------------------------------------------------------------------------------
-
