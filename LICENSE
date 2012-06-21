@@ -1,26 +1,13 @@
-Except for the DES library, MD2 and MD5 code, the PKCS#11 headers, and
-the FIPS_canister code this software is under the GNU Public License,
-see the file COPYING.
+Except for the DES, MD4 and MD5 code this software is under the GNU Public
+License, see the file COPYING.
 
 See the file CREDITS for details on origins of more of the code. 
 
-The DES library is under a BSD style license, see
-src/libcrypto/libdes/COPYRIGHT.
-Note that this software has a advertising clause in it. 
+The DES implementation is under a BSD style license, see
+src/libstrongswan/plugins/des/des_crypter.c.
+Note that this software has an advertising clause in it.
 
-The MD2 implementation is from RSA Data Security Inc., so this package must
-include the following phrase: "RSA Data Security, Inc. MD2 Message Digest
-Algorithm"  It is not under the GPL; see details in src/pluto/md2.c.
+The MD4 and MD5 implementations are from RSA Data Security Inc., so this
+package must include the following phrase:
+"derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm".
 
-The MD5 implementation is from RSA Data Security Inc., so this package must
-include the following phrase: "derived from the RSA Data Security, Inc.
-MD5 Message-Digest Algorithm".  It is not under the GPL; see details in
-src/pluto/md5.c
-
-The PKCS#11 header files in src/pluto/rsaref/ are from RSA Security Inc.,
-so they must include the following phrase: "RSA Security Inc. PKCS#11
-Cryptographic Token Interface (Cryptoki)". The headers are not under the GPL;
-see details in src/pluto/rsaref/pkcs11.h.
-
-In addition to the terms set out under the GPL, permission is granted to
-link the software against the libdes, MD2, and MD5 libraries just mentioned.  
