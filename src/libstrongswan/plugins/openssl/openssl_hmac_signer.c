@@ -1,4 +1,19 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+/*
  * Copyright (C) 2012 Aleksandr Grinberg
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,9 +35,7 @@
  * THE SOFTWARE.
  */
 
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
-
+#include "openssl_hmac.h"
 #include "openssl_hmac_signer.h"
 
 typedef struct private_openssl_hmac_signer_t private_openssl_hmac_signer_t;
@@ -38,19 +51,9 @@ struct private_openssl_hmac_signer_t {
 	openssl_hmac_signer_t public;
 
 	/**
-	 * Hasher to use
+	 * OpenSSL based HMAC implementation
 	 */
-	const EVP_MD *hasher;
-
-	/**
-	 * Current HMAC context
-	 */
-	HMAC_CTX hmac;
-
-	/**
-	 * Key stored for reuse
-	 */
-	chunk_t key;
+	openssl_hmac_t *hmac;
 
 	/**
 	 * Signature truncation length
@@ -67,60 +70,38 @@ METHOD(signer_t, get_block_size, size_t,
 METHOD(signer_t, get_key_size, size_t,
 	private_openssl_hmac_signer_t *this)
 {
-	return this->key.len;
-}
-
-/**
- * Resets HMAC context
- */
-static void reset(private_openssl_hmac_signer_t *this)
-{
-	HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len, this->hasher, NULL);
-}
-
-static void get_bytes(private_openssl_hmac_signer_t *this, chunk_t seed,
-					  u_int8_t *out)
-{
-	if (out == NULL)
-	{
-		HMAC_Update(&this->hmac, seed.ptr, seed.len);
-	}
-	else
-	{
-		HMAC_Update(&this->hmac, seed.ptr, seed.len);
-		HMAC_Final(&this->hmac, out, NULL);
-		reset(this);
-	}
+	return this->hmac->get_block_size(this->hmac);
 }
 
 METHOD(signer_t, get_signature, void,
-	private_openssl_hmac_signer_t *this, chunk_t seed, u_int8_t *out)
+	private_openssl_hmac_signer_t *this, chunk_t data, u_int8_t *out)
 {
 	if (out == NULL)
 	{
-		get_bytes(this, seed, NULL);
+		this->hmac->get_mac(this->hmac, data, NULL);
 	}
 	else
 	{
-		u_int8_t mac[this->key.len];
+		u_int8_t mac[this->hmac->get_block_size(this->hmac)];
 
-		get_bytes(this, seed, mac);
+		this->hmac->get_mac(this->hmac, data, mac);
 		memcpy(out, mac, this->trunc);
 	}
 }
 
 METHOD(signer_t, allocate_signature,void,
-	private_openssl_hmac_signer_t *this, chunk_t seed, chunk_t *out)
+	private_openssl_hmac_signer_t *this, chunk_t data, chunk_t *out)
 {
 	if (out == NULL)
 	{
-		get_bytes(this, seed, NULL);
+		this->hmac->get_mac(this->hmac, data, NULL);
 	}
 	else
 	{
-		u_int8_t mac[this->key.len];
+		u_int8_t mac[this->hmac->get_block_size(this->hmac)];
 
-		get_bytes(this, seed, mac);
+		this->hmac->get_mac(this->hmac, data, mac);
+
 		*out = chunk_alloc(this->trunc);
 		memcpy(out->ptr, mac, this->trunc);
 	}
@@ -129,9 +110,9 @@ METHOD(signer_t, allocate_signature,void,
 METHOD(signer_t, verify_signature, bool,
 	private_openssl_hmac_signer_t *this, chunk_t seed, chunk_t signature)
 {
-	u_int8_t mac[this->key.len];
+	u_int8_t mac[this->hmac->get_block_size(this->hmac)];
 
-	get_bytes(this, seed, mac);
+	this->hmac->get_mac(this->hmac, seed, mac);
 
 	if (signature.len != this->trunc)
 	{
@@ -143,16 +124,13 @@ METHOD(signer_t, verify_signature, bool,
 METHOD(signer_t, set_key, void,
 	private_openssl_hmac_signer_t *this, chunk_t key)
 {
-	chunk_clear(&this->key);
-	this->key = chunk_clone(key);
-	reset(this);
+	this->hmac->set_key(this->hmac, key);
 }
 
 METHOD(signer_t, destroy, void,
 	private_openssl_hmac_signer_t *this)
 {
-	HMAC_CTX_cleanup(&this->hmac);
-	chunk_clear(&this->key);
+	this->hmac->destroy(this->hmac);
 	free(this);
 }
 
@@ -162,6 +140,58 @@ METHOD(signer_t, destroy, void,
 openssl_hmac_signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
 {
 	private_openssl_hmac_signer_t *this;
+	openssl_hmac_t *hmac = NULL;
+	size_t trunc = 0;
+
+	switch (algo)
+	{
+		case AUTH_HMAC_MD5_96:
+			hmac = openssl_hmac_create(HASH_MD5);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_MD5_128:
+			hmac = openssl_hmac_create(HASH_MD5);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_96:
+			hmac = openssl_hmac_create(HASH_SHA1);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_SHA1_128:
+			hmac = openssl_hmac_create(HASH_SHA1);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_160:
+			hmac = openssl_hmac_create(HASH_SHA1);
+			trunc = 20;
+			break;
+		case AUTH_HMAC_SHA2_256_128:
+			hmac = openssl_hmac_create(HASH_SHA256);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA2_256_256:
+			hmac = openssl_hmac_create(HASH_SHA256);
+			trunc = 32;
+			break;
+		case AUTH_HMAC_SHA2_384_192:
+			hmac = openssl_hmac_create(HASH_SHA384);
+			trunc = 24;
+			break;
+		case AUTH_HMAC_SHA2_384_384:
+			hmac = openssl_hmac_create(HASH_SHA384);
+			trunc = 48;
+			break;
+		case AUTH_HMAC_SHA2_512_256:
+			hmac = openssl_hmac_create(HASH_SHA512);
+			trunc = 32;
+			break;
+		default:
+			break;
+	}
+	if (!hmac)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -175,72 +205,9 @@ openssl_hmac_signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
 				.destroy = _destroy,
 			},
 		},
+		.hmac = hmac,
+		.trunc = trunc,
 	);
-
-	switch (algo)
-	{
-		case AUTH_HMAC_MD5_96:
-			this->hasher = EVP_get_digestbyname("md5");
-			this->key.len = 16;
-			this->trunc = 12;
-			break;
-		case AUTH_HMAC_MD5_128:
-			this->hasher = EVP_get_digestbyname("md5");
-			this->key.len = 16;
-			this->trunc = 16;
-			break;
-		case AUTH_HMAC_SHA1_96:
-			this->hasher = EVP_get_digestbyname("sha1");
-			this->key.len = 20;
-			this->trunc = 12;
-			break;
-		case AUTH_HMAC_SHA1_128:
-			this->hasher = EVP_get_digestbyname("sha1");
-			this->key.len = 20;
-			this->trunc = 16;
-			break;
-		case AUTH_HMAC_SHA1_160:
-			this->hasher = EVP_get_digestbyname("sha1");
-			this->key.len = 20;
-			this->trunc = 20;
-			break;
-		case AUTH_HMAC_SHA2_256_128:
-			this->hasher = EVP_get_digestbyname("sha256");
-			this->key.len = 32;
-			this->trunc = 16;
-			break;
-		case AUTH_HMAC_SHA2_256_256:
-			this->hasher = EVP_get_digestbyname("sha256");
-			this->key.len = 32;
-			this->trunc = 32;
-			break;
-		case AUTH_HMAC_SHA2_384_192:
-			this->hasher = EVP_get_digestbyname("sha384");
-			this->key.len = 48;
-			this->trunc = 24;
-			break;
-		case AUTH_HMAC_SHA2_384_384:
-			this->hasher = EVP_get_digestbyname("sha384");
-			this->key.len = 48;
-			this->trunc = 48;
-			break;
-		case AUTH_HMAC_SHA2_512_256:
-			this->hasher = EVP_get_digestbyname("sha512");
-			this->key.len = 64;
-			this->trunc = 32;
-			break;
-		default:
-			break;
-	}
-
-	if (!this->hasher)
-	{
-		/* hash is not available */
-		free(this);
-		return NULL;
-	}
-
-	HMAC_CTX_init(&this->hmac);
 
 	return &this->public;
 }
