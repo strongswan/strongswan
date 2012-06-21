@@ -345,12 +345,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	message->destroy(message);
 
 	/* schedule next invocation */
-	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
-									callback_job_create((callback_job_cb_t)
-										send_status, this, NULL, NULL),
-									this->heartbeat_delay);
-
-	return JOB_REQUEUE_NONE;
+	return JOB_RESCHEDULE_MS(this->heartbeat_delay);
 }
 
 METHOD(ha_segments_t, is_active, bool,

@@ -55,7 +55,7 @@ METHOD(job_t, execute, job_requeue_t,
 	private_inactivity_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	bool rescheduled = FALSE;
+	u_int32_t reschedule = 0;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													this->reqid, TRUE);
@@ -87,9 +87,7 @@ METHOD(job_t, execute, job_requeue_t,
 				}
 				else
 				{
-					lib->scheduler->schedule_job(lib->scheduler,
-							&this->public.job_interface, this->timeout - diff);
-					rescheduled = TRUE;
+					reschedule = this->timeout - diff;
 				}
 			}
 			children++;
@@ -121,9 +119,9 @@ METHOD(job_t, execute, job_requeue_t,
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
 	}
-	if (rescheduled)
+	if (reschedule)
 	{
-		return JOB_REQUEUE_SCHEDULED;
+		return JOB_RESCHEDULE(reschedule);
 	}
 	return JOB_REQUEUE_NONE;
 }

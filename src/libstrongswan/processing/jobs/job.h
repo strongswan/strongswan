@@ -25,8 +25,9 @@
 
 typedef struct job_t job_t;
 typedef enum job_priority_t job_priority_t;
-typedef enum job_requeue_t job_requeue_t;
 typedef enum job_status_t job_status_t;
+typedef enum job_requeue_type_t job_requeue_type_t;
+typedef struct job_requeue_t job_requeue_t;
 
 #include <library.h>
 
@@ -51,23 +52,6 @@ enum job_priority_t {
 extern enum_name_t *job_priority_names;
 
 /**
- * Job requeueing policy.
- *
- * The job requeueing policy defines how a job is handled after it has been
- * executed.
- */
-enum job_requeue_t {
-	/** Do not requeue job, destroy it */
-	JOB_REQUEUE_NONE = 0,
-	/** Requeue the job fairly, i.e. it is inserted at the end of the queue */
-	JOB_REQUEUE_FAIR,
-	/** Reexecute the job directly, without the need of requeueing it */
-	JOB_REQUEUE_DIRECT,
-	/** For jobs that rescheduled themselves via scheduler_t */
-	JOB_REQUEUE_SCHEDULED,
-};
-
-/**
  * Job status
  */
 enum job_status_t {
@@ -80,6 +64,54 @@ enum job_status_t {
 	/** The job was executed successfully */
 	JOB_STATUS_DONE,
 };
+
+/**
+ * How a job is handled after is has been executed.
+ */
+enum job_requeue_type_t {
+	/** Do not requeue job, destroy it */
+	JOB_REQUEUE_TYPE_NONE = 0,
+	/** Requeue the job fairly, i.e. it is inserted at the end of the queue */
+	JOB_REQUEUE_TYPE_FAIR,
+	/** Reexecute the job directly, without the need of requeueing it */
+	JOB_REQUEUE_TYPE_DIRECT,
+	/** Rescheduled the job via scheduler_t */
+	JOB_REQUEUE_TYPE_SCHEDULE,
+};
+
+/**
+ * Job requeueing policy.
+ *
+ * The job requeueing policy defines how a job is handled after it has been
+ * executed.
+ */
+struct job_requeue_t {
+	/** How to handle the job after executing it */
+	job_requeue_type_t type;
+	/** How to reschedule the job, if so */
+	enum {
+		JOB_SCHEDULE,
+		JOB_SCHEDULE_MS,
+		JOB_SCHEDULE_TV,
+	} schedule;
+	/** Time to reschedule the job */
+	union {
+		u_int32_t rel;
+		timeval_t abs;
+	} time;
+};
+
+/**
+ * Helper macros to easily define requeueing policies.
+ */
+#define __JOB_REQUEUE(t)			(job_requeue_t){ .type = t }
+#define JOB_REQUEUE_NONE			__JOB_REQUEUE(JOB_REQUEUE_TYPE_NONE)
+#define JOB_REQUEUE_FAIR			__JOB_REQUEUE(JOB_REQUEUE_TYPE_FAIR)
+#define JOB_REQUEUE_DIRECT			__JOB_REQUEUE(JOB_REQUEUE_TYPE_DIRECT)
+#define __JOB_RESCHEDULE(t, ...)	(job_requeue_t){ .type = JOB_REQUEUE_TYPE_SCHEDULE, .schedule = t, { __VA_ARGS__ } }
+#define JOB_RESCHEDULE(s)			__JOB_RESCHEDULE(JOB_SCHEDULE, .rel = s)
+#define JOB_RESCHEDULE_MS(ms)		__JOB_RESCHEDULE(JOB_SCHEDULE_MS, .rel = ms)
+#define JOB_RESCHEDULE_TV(tv)		__JOB_RESCHEDULE(JOB_SCHEDULE_TV, .abs = tv)
 
 /**
  * Job interface as it is stored in the job queue.

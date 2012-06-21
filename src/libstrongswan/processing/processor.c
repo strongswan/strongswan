@@ -217,13 +217,13 @@ static void process_jobs(worker_thread_t *worker)
 				while (TRUE)
 				{
 					requeue = worker->job->execute(worker->job);
-					if (requeue != JOB_REQUEUE_DIRECT)
+					if (requeue.type != JOB_REQUEUE_TYPE_DIRECT)
 					{
 						break;
 					}
 					else if (!worker->job->cancel)
 					{	/* only allow cancelable jobs to requeue directly */
-						requeue = JOB_REQUEUE_FAIR;
+						requeue.type = JOB_REQUEUE_TYPE_FAIR;
 						break;
 					}
 				}
@@ -234,25 +234,41 @@ static void process_jobs(worker_thread_t *worker)
 				{	/* job was canceled via a custom cancel() method or did not
 					 * use JOB_REQUEUE_TYPE_DIRECT */
 					worker->job->destroy(worker->job);
+					break;
 				}
-				else
+				switch (requeue.type)
 				{
-					switch (requeue)
-					{
-						case JOB_REQUEUE_NONE:
-							worker->job->status = JOB_STATUS_DONE;
-							worker->job->destroy(worker->job);
-							break;
-						case JOB_REQUEUE_FAIR:
-							worker->job->status = JOB_STATUS_QUEUED;
-							this->jobs[i]->insert_last(this->jobs[i],
-													   worker->job);
-							this->job_added->signal(this->job_added);
-							break;
-						case JOB_REQUEUE_SCHEDULED:
-						default:
-							break;
-					}
+					case JOB_REQUEUE_TYPE_NONE:
+						worker->job->status = JOB_STATUS_DONE;
+						worker->job->destroy(worker->job);
+						break;
+					case JOB_REQUEUE_TYPE_FAIR:
+						worker->job->status = JOB_STATUS_QUEUED;
+						this->jobs[i]->insert_last(this->jobs[i],
+												   worker->job);
+						this->job_added->signal(this->job_added);
+						break;
+					case JOB_REQUEUE_TYPE_SCHEDULE:
+						/* scheduler_t does not hold its lock when queeuing jobs
+						 * so this should be safe without unlocking our mutex */
+						switch (requeue.schedule)
+						{
+							case JOB_SCHEDULE:
+								lib->scheduler->schedule_job(lib->scheduler,
+											worker->job, requeue.time.rel);
+								break;
+							case JOB_SCHEDULE_MS:
+								lib->scheduler->schedule_job_ms(lib->scheduler,
+											worker->job, requeue.time.rel);
+								break;
+							case JOB_SCHEDULE_TV:
+								lib->scheduler->schedule_job_tv(lib->scheduler,
+											worker->job, requeue.time.abs);
+								break;
+						}
+						break;
+					default:
+						break;
 				}
 				break;
 			}
