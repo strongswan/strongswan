@@ -54,6 +54,7 @@ processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \
 processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
+processing/jobs/retry_initiate_job.c processing/jobs/retry_initiate_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
