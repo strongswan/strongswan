@@ -27,6 +27,7 @@ typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
 #include <library.h>
+#include <crypto/prfs/prf.h>
 #include <crypto/signers/signer.h>
 #include <credentials/keys/public_key.h>
 
@@ -118,6 +119,14 @@ struct hasher_t {
  * @return				hash algorithm, HASH_UNKNOWN if OID unsupported
  */
 hash_algorithm_t hasher_algorithm_from_oid(int oid);
+
+/**
+ * Conversion of PRF algorithm to hash algorithm (if based on one).
+ *
+ * @param alg			prf algorithm
+ * @return				hash algorithm, HASH_UNKNOWN if not based on a hash
+ */
+hash_algorithm_t hasher_algorithm_from_prf(pseudo_random_function_t alg);
 
 /**
  * Conversion of integrity algorithm to hash algorithm (if based on one).
