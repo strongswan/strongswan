@@ -99,6 +99,29 @@ sa/ikev2/tasks/ike_reauth.c sa/ikev2/tasks/ike_reauth.h \
 sa/ikev2/tasks/ike_auth_lifetime.c sa/ikev2/tasks/ike_auth_lifetime.h \
 sa/ikev2/tasks/ike_vendor.c sa/ikev2/tasks/ike_vendor.h
 
+LOCAL_SRC_FILES += \
+sa/ikev1/keymat_v1.c sa/ikev1/keymat_v1.h \
+sa/ikev1/task_manager_v1.c sa/ikev1/task_manager_v1.h \
+sa/ikev1/authenticators/psk_v1_authenticator.c sa/ikev1/authenticators/psk_v1_authenticator.h \
+sa/ikev1/authenticators/pubkey_v1_authenticator.c sa/ikev1/authenticators/pubkey_v1_authenticator.h \
+sa/ikev1/authenticators/hybrid_authenticator.c sa/ikev1/authenticators/hybrid_authenticator.h \
+sa/ikev1/phase1.c sa/ikev1/phase1.h \
+sa/ikev1/tasks/main_mode.c sa/ikev1/tasks/main_mode.h \
+sa/ikev1/tasks/aggressive_mode.c sa/ikev1/tasks/aggressive_mode.h \
+sa/ikev1/tasks/informational.c sa/ikev1/tasks/informational.h \
+sa/ikev1/tasks/isakmp_cert_pre.c sa/ikev1/tasks/isakmp_cert_pre.h \
+sa/ikev1/tasks/isakmp_cert_post.c sa/ikev1/tasks/isakmp_cert_post.h \
+sa/ikev1/tasks/isakmp_natd.c sa/ikev1/tasks/isakmp_natd.h \
+sa/ikev1/tasks/isakmp_vendor.c sa/ikev1/tasks/isakmp_vendor.h \
+sa/ikev1/tasks/isakmp_delete.c sa/ikev1/tasks/isakmp_delete.h \
+sa/ikev1/tasks/isakmp_dpd.c sa/ikev1/tasks/isakmp_dpd.h \
+sa/ikev1/tasks/xauth.c sa/ikev1/tasks/xauth.h \
+sa/ikev1/tasks/quick_mode.c sa/ikev1/tasks/quick_mode.h \
+sa/ikev1/tasks/quick_delete.c sa/ikev1/tasks/quick_delete.h \
+sa/ikev1/tasks/mode_config.c sa/ikev1/tasks/mode_config.h \
+processing/jobs/dpd_timeout_job.c processing/jobs/dpd_timeout_job.h \
+processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
+
 # adding the plugin source files
 
 LOCAL_SRC_FILES += $(call add_plugin, android)
