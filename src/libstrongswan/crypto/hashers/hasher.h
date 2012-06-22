@@ -101,7 +101,7 @@ struct hasher_t {
 	size_t (*get_hash_size) (hasher_t *this);
 
 	/**
-	 * Resets the hashers state.
+	 * Resets the hasher's state.
 	 */
 	void (*reset) (hasher_t *this);
 
@@ -115,17 +115,22 @@ struct hasher_t {
  * Conversion of ASN.1 OID to hash algorithm.
  *
  * @param oid			ASN.1 OID
- * @return				hash algorithm, HASH_UNKNOWN if OID unsuported
+ * @return				hash algorithm, HASH_UNKNOWN if OID unsupported
  */
 hash_algorithm_t hasher_algorithm_from_oid(int oid);
 
 /**
  * Conversion of integrity algorithm to hash algorithm (if based on one).
  *
- * @param integrity		integrity algorithm
+ * If length is not NULL the length of the resulting signature is returned,
+ * which might be smaller than the output size of the underlying hash.
+ *
+ * @param alg			integrity algorithm
+ * @param length		returns signature length, if not NULL
  * @return				hash algorithm, HASH_UNKNOWN if not based on a hash
  */
-hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t integrity);
+hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
+												 size_t *length);
 
 /**
  * Conversion of hash algorithm into ASN.1 OID.

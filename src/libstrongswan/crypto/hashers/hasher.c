@@ -68,9 +68,41 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 /*
  * Described in header.
  */
-hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t integrity)
+hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
+												 size_t *length)
 {
-	switch (integrity)
+	if (length)
+	{
+		switch (alg)
+		{
+			case AUTH_HMAC_MD5_96:
+			case AUTH_HMAC_SHA1_96:
+			case AUTH_HMAC_SHA2_256_96:
+				*length = 12;
+				break;
+			case AUTH_HMAC_MD5_128:
+			case AUTH_HMAC_SHA1_128:
+			case AUTH_HMAC_SHA2_256_128:
+				*length = 16;
+				break;
+			case AUTH_HMAC_SHA1_160:
+				*length = 20;
+				break;
+			case AUTH_HMAC_SHA2_384_192:
+				*length = 24;
+				break;
+			case AUTH_HMAC_SHA2_256_256:
+			case AUTH_HMAC_SHA2_512_256:
+				*length = 32;
+				break;
+			case AUTH_HMAC_SHA2_384_384:
+				*length = 48;
+				break;
+			default:
+				break;
+		}
+	}
+	switch (alg)
 	{
 		case AUTH_HMAC_MD5_96:
 		case AUTH_HMAC_MD5_128:
