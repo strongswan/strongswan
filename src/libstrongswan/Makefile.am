@@ -13,6 +13,9 @@ asn1/oid.c asn1/oid.h \
 bio/bio_reader.h bio/bio_reader.c bio/bio_writer.h bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
+crypto/hmacs/hmac.h \
+crypto/hmacs/hmac_prf.h crypto/hmacs/hmac_prf.c \
+crypto/hmacs/hmac_signer.h crypto/hmacs/hmac_signer.c \
 crypto/pkcs7.c crypto/pkcs7.h \
 crypto/pkcs9.c crypto/pkcs9.h \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords.h \
