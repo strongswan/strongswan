@@ -41,8 +41,7 @@
 #include "openssl_x509.h"
 #include "openssl_crl.h"
 #include "openssl_rng.h"
-#include "openssl_hmac_prf.h"
-#include "openssl_hmac_signer.h"
+#include "openssl_hmac.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 

@@ -40,17 +40,21 @@
 
 #include "openssl_hmac.h"
 
-typedef struct private_openssl_hmac_t private_openssl_hmac_t;
+#include <crypto/hmacs/hmac.h>
+#include <crypto/hmacs/hmac_prf.h>
+#include <crypto/hmacs/hmac_signer.h>
+
+typedef struct private_hmac_t private_hmac_t;
 
 /**
- * Private data of a openssl_hmac_t object.
+ * Private data of a hmac_t object.
  */
-struct private_openssl_hmac_t {
+struct private_hmac_t {
 
 	/**
 	 * Public interface
 	 */
-	openssl_hmac_t public;
+	hmac_t public;
 
 	/**
 	 * Hasher to use
@@ -71,13 +75,13 @@ struct private_openssl_hmac_t {
 /**
  * Resets HMAC context
  */
-static void reset(private_openssl_hmac_t *this)
+static void reset(private_hmac_t *this)
 {
 	HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len, this->hasher, NULL);
 }
 
-METHOD(openssl_hmac_t, get_mac, void,
-	private_openssl_hmac_t *this, chunk_t data, u_int8_t *out)
+METHOD(hmac_t, get_mac, void,
+	private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
 	if (out == NULL)
 	{
@@ -91,36 +95,22 @@ METHOD(openssl_hmac_t, get_mac, void,
 	}
 }
 
-METHOD(openssl_hmac_t, allocate_mac, void,
-	private_openssl_hmac_t *this, chunk_t data, chunk_t *out)
-{
-	if (out == NULL)
-	{
-		get_mac(this, data, NULL);
-	}
-	else
-	{
-		*out = chunk_alloc(EVP_MD_size(this->hasher));
-		get_mac(this, data, out->ptr);
-	}
-}
-
-METHOD(openssl_hmac_t, get_block_size, size_t,
-	private_openssl_hmac_t *this)
+METHOD(hmac_t, get_mac_size, size_t,
+	private_hmac_t *this)
 {
 	return EVP_MD_size(this->hasher);
 }
 
-METHOD(openssl_hmac_t, set_key, void,
-	private_openssl_hmac_t *this, chunk_t key)
+METHOD(hmac_t, set_key, void,
+	private_hmac_t *this, chunk_t key)
 {
 	chunk_clear(&this->key);
 	this->key = chunk_clone(key);
 	reset(this);
 }
 
-METHOD(openssl_hmac_t, destroy, void,
-	private_openssl_hmac_t *this)
+METHOD(hmac_t, destroy, void,
+	private_hmac_t *this)
 {
 	HMAC_CTX_cleanup(&this->hmac);
 	chunk_clear(&this->key);
@@ -128,17 +118,16 @@ METHOD(openssl_hmac_t, destroy, void,
 }
 
 /*
- * Described in header
+ * Create an OpenSSL-backed implementation of the hmac_t interface
  */
-openssl_hmac_t *openssl_hmac_create(hash_algorithm_t algo)
+static hmac_t *hmac_create(hash_algorithm_t algo)
 {
-	private_openssl_hmac_t *this;
+	private_hmac_t *this;
 
 	INIT(this,
 		.public = {
 			.get_mac = _get_mac,
-			.allocate_mac = _allocate_mac,
-			.get_block_size = _get_block_size,
+			.get_mac_size = _get_mac_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
@@ -175,3 +164,99 @@ openssl_hmac_t *openssl_hmac_create(hash_algorithm_t algo)
 
 	return &this->public;
 }
+
+/*
+ * Described in header
+ */
+prf_t *openssl_hmac_prf_create(pseudo_random_function_t algo)
+{
+	hmac_t *hmac = NULL;
+
+	switch (algo)
+	{
+		case PRF_HMAC_SHA1:
+			hmac = hmac_create(HASH_SHA1);
+			break;
+		case PRF_HMAC_MD5:
+			hmac = hmac_create(HASH_MD5);
+			break;
+		case PRF_HMAC_SHA2_256:
+			hmac = hmac_create(HASH_SHA256);
+			break;
+		case PRF_HMAC_SHA2_384:
+			hmac = hmac_create(HASH_SHA384);
+			break;
+		case PRF_HMAC_SHA2_512:
+			hmac = hmac_create(HASH_SHA512);
+			break;
+		default:
+			break;
+	}
+	if (hmac)
+	{
+		return hmac_prf_create(hmac);
+	}
+	return NULL;
+}
+
+/*
+ * Described in header
+ */
+signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
+{
+	hmac_t *hmac = NULL;
+	size_t trunc = 0;
+
+	switch (algo)
+	{
+		case AUTH_HMAC_MD5_96:
+			hmac = hmac_create(HASH_MD5);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_MD5_128:
+			hmac = hmac_create(HASH_MD5);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_96:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_SHA1_128:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_160:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 20;
+			break;
+		case AUTH_HMAC_SHA2_256_128:
+			hmac = hmac_create(HASH_SHA256);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA2_256_256:
+			hmac = hmac_create(HASH_SHA256);
+			trunc = 32;
+			break;
+		case AUTH_HMAC_SHA2_384_192:
+			hmac = hmac_create(HASH_SHA384);
+			trunc = 24;
+			break;
+		case AUTH_HMAC_SHA2_384_384:
+			hmac = hmac_create(HASH_SHA384);
+			trunc = 48;
+			break;
+		case AUTH_HMAC_SHA2_512_256:
+			hmac = hmac_create(HASH_SHA512);
+			trunc = 32;
+			break;
+		default:
+			break;
+	}
+	if (hmac)
+	{
+		return hmac_signer_create(hmac, trunc);
+	}
+	return NULL;
+}
+
+
