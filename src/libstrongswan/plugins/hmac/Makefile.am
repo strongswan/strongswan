@@ -10,7 +10,6 @@ plugin_LTLIBRARIES = libstrongswan-hmac.la
 endif
 
 libstrongswan_hmac_la_SOURCES = \
-	hmac_plugin.h hmac_plugin.c hmac.h hmac.c \
-	hmac_prf.h hmac_prf.c hmac_signer.h hmac_signer.c
+	hmac_plugin.h hmac_plugin.c hmac_hmac.h hmac_hmac.c
 
 libstrongswan_hmac_la_LDFLAGS = -module -avoid-version

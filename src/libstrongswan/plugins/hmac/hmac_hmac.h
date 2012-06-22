@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,37 +14,34 @@
  */
 
 /**
- * @defgroup hmac_prf hmac_prf
+ * Implements the message authentication algorithm described in RFC2104.
+ *
+ * It uses a hash function, which must be implemented as a hasher_t class.
+ *
+ * @defgroup hmac_hmac hmac
  * @{ @ingroup hmac_p
  */
 
-#ifndef PRF_HMAC_H_
-#define PRF_HMAC_H_
-
-typedef struct hmac_prf_t hmac_prf_t;
+#ifndef HMAC_HMAC_H_
+#define HMAC_HMAC_H_
 
 #include <crypto/prfs/prf.h>
+#include <crypto/signers/signer.h>
 
 /**
- * Implementation of prf_t interface using the HMAC algorithm.
- *
- * This simply wraps a hmac_t in a prf_t. More a question of
- * interface matching.
- */
-struct hmac_prf_t {
-
-	/**
-	 * Implements prf_t interface.
-	 */
-	prf_t prf;
-};
-
-/**
- * Creates a new hmac_prf_t object.
+ * Creates a new prf_t object based on an HMAC.
  *
  * @param algo		algorithm to implement
- * @return			hmac_prf_t object, NULL if hash not supported
+ * @return			prf_t object, NULL if not supported
  */
-hmac_prf_t *hmac_prf_create(pseudo_random_function_t algo);
+prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo);
 
-#endif /** PRF_HMAC_SHA1_H_ @}*/
+/**
+ * Creates a new signer_t object based on an HMAC.
+ *
+ * @param algo		algorithm to implement
+ * @return			signer_t, NULL if not supported
+ */
+signer_t *hmac_hmac_signer_create(integrity_algorithm_t algo);
+
+#endif /** HMAC_HMAC_H_ @}*/

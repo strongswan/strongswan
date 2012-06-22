@@ -16,8 +16,7 @@
 #include "hmac_plugin.h"
 
 #include <library.h>
-#include "hmac_signer.h"
-#include "hmac_prf.h"
+#include "hmac_hmac.h"
 
 typedef struct private_hmac_plugin_t private_hmac_plugin_t;
 
@@ -42,7 +41,7 @@ METHOD(plugin_t, get_features, int,
 	private_hmac_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(PRF, hmac_prf_create),
+		PLUGIN_REGISTER(PRF, hmac_hmac_prf_create),
 			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA1),
 				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
 			PLUGIN_PROVIDE(PRF, PRF_HMAC_MD5),
@@ -53,7 +52,7 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_DEPENDS(HASHER,  HASH_SHA384),
 			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_512),
 				PLUGIN_DEPENDS(HASHER,  HASH_SHA512),
-		PLUGIN_REGISTER(SIGNER, hmac_signer_create),
+		PLUGIN_REGISTER(SIGNER, hmac_hmac_signer_create),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_96),
 				PLUGIN_DEPENDS(HASHER,  HASH_SHA1),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA1_128),

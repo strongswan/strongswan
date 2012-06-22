@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -14,21 +15,23 @@
  * for more details.
  */
 
-#include <string.h>
+#include "hmac_hmac.h"
 
-#include "hmac.h"
-
+#include <crypto/hmacs/hmac.h>
+#include <crypto/hmacs/hmac_prf.h>
+#include <crypto/hmacs/hmac_signer.h>
 
 typedef struct private_hmac_t private_hmac_t;
 
 /**
- * Private data of a hmac_t object.
+ * Private data of a hmac_hmac_t object.
  *
  * The variable names are the same as in the RFC.
  */
 struct private_hmac_t {
+
 	/**
-	 * Public hmac_t interface.
+	 * Implements hmac_t interface
 	 */
 	hmac_t public;
 
@@ -89,24 +92,7 @@ METHOD(hmac_t, get_mac, void,
 	}
 }
 
-METHOD(hmac_t, allocate_mac, void,
-	private_hmac_t *this, chunk_t data, chunk_t *out)
-{
-	/* allocate space and use get_mac */
-	if (out == NULL)
-	{
-		/* append mode */
-		get_mac(this, data, NULL);
-	}
-	else
-	{
-		out->len = this->h->get_hash_size(this->h);
-		out->ptr = malloc(out->len);
-		get_mac(this, data, out->ptr);
-	}
-}
-
-METHOD(hmac_t, get_block_size, size_t,
+METHOD(hmac_t, get_mac_size, size_t,
 	private_hmac_t *this)
 {
 	return this->h->get_hash_size(this->h);
@@ -153,17 +139,16 @@ METHOD(hmac_t, destroy, void,
 }
 
 /*
- * Described in header
+ * Creates an hmac_t object
  */
-hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
+static hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 {
 	private_hmac_t *this;
 
 	INIT(this,
 		.public = {
 			.get_mac = _get_mac,
-			.allocate_mac = _allocate_mac,
-			.get_block_size = _get_block_size,
+			.get_mac_size = _get_mac_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
@@ -201,4 +186,98 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	this->ipaded_key.len = this->b;
 
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo)
+{
+	hmac_t *hmac = NULL;
+
+	switch (algo)
+	{
+		case PRF_HMAC_SHA1:
+			hmac = hmac_create(HASH_SHA1);
+			break;
+		case PRF_HMAC_MD5:
+			hmac = hmac_create(HASH_MD5);
+			break;
+		case PRF_HMAC_SHA2_256:
+			hmac = hmac_create(HASH_SHA256);
+			break;
+		case PRF_HMAC_SHA2_384:
+			hmac = hmac_create(HASH_SHA384);
+			break;
+		case PRF_HMAC_SHA2_512:
+			hmac = hmac_create(HASH_SHA512);
+			break;
+		default:
+			break;
+	}
+	if (hmac)
+	{
+		return hmac_prf_create(hmac);
+	}
+	return NULL;
+}
+
+/*
+ * Described in header
+ */
+signer_t *hmac_hmac_signer_create(integrity_algorithm_t algo)
+{
+	hmac_t *hmac = NULL;
+	size_t trunc = 0;
+
+	switch (algo)
+	{
+		case AUTH_HMAC_MD5_96:
+			hmac = hmac_create(HASH_MD5);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_MD5_128:
+			hmac = hmac_create(HASH_MD5);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_96:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 12;
+			break;
+		case AUTH_HMAC_SHA1_128:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_160:
+			hmac = hmac_create(HASH_SHA1);
+			trunc = 20;
+			break;
+		case AUTH_HMAC_SHA2_256_128:
+			hmac = hmac_create(HASH_SHA256);
+			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA2_256_256:
+			hmac = hmac_create(HASH_SHA256);
+			trunc = 32;
+			break;
+		case AUTH_HMAC_SHA2_384_192:
+			hmac = hmac_create(HASH_SHA384);
+			trunc = 24;
+			break;
+		case AUTH_HMAC_SHA2_384_384:
+			hmac = hmac_create(HASH_SHA384);
+			trunc = 48;
+			break;
+		case AUTH_HMAC_SHA2_512_256:
+			hmac = hmac_create(HASH_SHA512);
+			trunc = 32;
+			break;
+		default:
+			break;
+	}
+	if (hmac)
+	{
+		return hmac_signer_create(hmac, trunc);
+	}
+	return NULL;
 }
