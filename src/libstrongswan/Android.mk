@@ -20,6 +20,7 @@ crypto/pkcs9.c crypto/pkcs9.h \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
 crypto/rngs/rng.c crypto/rngs/rng.h \
+crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/signers/signer.c crypto/signers/signer.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
@@ -101,6 +102,8 @@ LOCAL_SRC_FILES += $(call add_plugin, hmac)
 LOCAL_SRC_FILES += $(call add_plugin, md4)
 
 LOCAL_SRC_FILES += $(call add_plugin, md5)
+
+LOCAL_SRC_FILES += $(call add_plugin, nonce)
 
 LOCAL_SRC_FILES += $(call add_plugin, openssl)
 ifneq ($(call plugin_enabled, openssl),)

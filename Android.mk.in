@@ -16,7 +16,7 @@ include $(CLEAR_VARS)
 
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
-strongswan_CHARON_PLUGINS := openssl fips-prf random pubkey pkcs1 \
+strongswan_CHARON_PLUGINS := openssl fips-prf random nonce pubkey pkcs1 \
 	pem xcbc hmac kernel-netlink socket-default android \
 	stroke eap-identity eap-mschapv2 eap-md5
 
