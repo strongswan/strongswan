@@ -193,28 +193,9 @@ static hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
  */
 prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo)
 {
-	hmac_t *hmac = NULL;
+	hmac_t *hmac;
 
-	switch (algo)
-	{
-		case PRF_HMAC_SHA1:
-			hmac = hmac_create(HASH_SHA1);
-			break;
-		case PRF_HMAC_MD5:
-			hmac = hmac_create(HASH_MD5);
-			break;
-		case PRF_HMAC_SHA2_256:
-			hmac = hmac_create(HASH_SHA256);
-			break;
-		case PRF_HMAC_SHA2_384:
-			hmac = hmac_create(HASH_SHA384);
-			break;
-		case PRF_HMAC_SHA2_512:
-			hmac = hmac_create(HASH_SHA512);
-			break;
-		default:
-			break;
-	}
+	hmac = hmac_create(hasher_algorithm_from_prf(algo));
 	if (hmac)
 	{
 		return hmac_prf_create(hmac);
@@ -227,54 +208,10 @@ prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo)
  */
 signer_t *hmac_hmac_signer_create(integrity_algorithm_t algo)
 {
-	hmac_t *hmac = NULL;
-	size_t trunc = 0;
+	hmac_t *hmac;
+	size_t trunc;
 
-	switch (algo)
-	{
-		case AUTH_HMAC_MD5_96:
-			hmac = hmac_create(HASH_MD5);
-			trunc = 12;
-			break;
-		case AUTH_HMAC_MD5_128:
-			hmac = hmac_create(HASH_MD5);
-			trunc = 16;
-			break;
-		case AUTH_HMAC_SHA1_96:
-			hmac = hmac_create(HASH_SHA1);
-			trunc = 12;
-			break;
-		case AUTH_HMAC_SHA1_128:
-			hmac = hmac_create(HASH_SHA1);
-			trunc = 16;
-			break;
-		case AUTH_HMAC_SHA1_160:
-			hmac = hmac_create(HASH_SHA1);
-			trunc = 20;
-			break;
-		case AUTH_HMAC_SHA2_256_128:
-			hmac = hmac_create(HASH_SHA256);
-			trunc = 16;
-			break;
-		case AUTH_HMAC_SHA2_256_256:
-			hmac = hmac_create(HASH_SHA256);
-			trunc = 32;
-			break;
-		case AUTH_HMAC_SHA2_384_192:
-			hmac = hmac_create(HASH_SHA384);
-			trunc = 24;
-			break;
-		case AUTH_HMAC_SHA2_384_384:
-			hmac = hmac_create(HASH_SHA384);
-			trunc = 48;
-			break;
-		case AUTH_HMAC_SHA2_512_256:
-			hmac = hmac_create(HASH_SHA512);
-			trunc = 32;
-			break;
-		default:
-			break;
-	}
+	hmac = hmac_create(hasher_algorithm_from_integrity(algo, &trunc));
 	if (hmac)
 	{
 		return hmac_signer_create(hmac, trunc);
