@@ -24,12 +24,10 @@
 #include <library.h>
 
 static const char *copyright[] = {
-	"Copyright (C) 1999-2012  Henry Spencer, Richard Guy Briggs,",
-	"    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
-	"    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
-	"",
-	"    Ken Bantoft, Stephen J. Bevan, JuanJo Ciarlante, Mathieu Lafon,",
-	"    Stephane Laroche, Kai Martius, Stephan Scholz, Tuomo Soini, Herbert Xu,",
+	"Copyright (C) 1999-2012",
+	"    Henry Spencer, D. Hugh Redelmeier, Michael Richardson, Ken Bantoft,",
+	"    Stephen J. Bevan, JuanJo Ciarlante, Mathieu Lafon, Stephane Laroche,",
+	"    Kai Martius, Stephan Scholz, Tuomo Soini, Herbert Xu, Clavister.",
 	"",
 	"    Martin Berner, Marco Bertossa, David Buechi, Ueli Galizzi,",
 	"    Christoph Gysin, Andreas Hess, Patric Lichtsteiner, Michael Meier,",
