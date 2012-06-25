@@ -366,7 +366,11 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	u_int32_t id;
 	int try;
 
-	this->rng->get_bytes(this->rng, sizeof(id), (u_int8_t*)&id);
+	if (!this->rng->get_bytes(this->rng, sizeof(id), (u_int8_t*)&id))
+	{
+		DBG1(DBG_CFG, "DHCP DISCOVER failed, no transaction ID");
+		return NULL;
+	}
 	transaction = dhcp_transaction_create(id, identity);
 
 	this->mutex->lock(this->mutex);
