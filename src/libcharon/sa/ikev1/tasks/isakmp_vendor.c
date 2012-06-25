@@ -109,7 +109,7 @@ static struct {
 	{ "draft-ietf-ipsec-nat-t-ike-08", 0, FALSE, 16,
 	  "\x8f\x8d\x83\x82\x6d\x24\x6b\x6f\xc7\xa8\xa6\xa4\x28\xc1\x1d\xe8"},
 
-	{ "Cisco Unity", 0, FALSE, 16,
+	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, 16,
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 };
 
@@ -117,15 +117,18 @@ METHOD(task_t, build, status_t,
 	private_isakmp_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid_payload;
-	bool strongswan;
+	bool strongswan, cisco_unity;
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
 									"%s.send_vendor_id", FALSE, charon->name);
+	cisco_unity = lib->settings->get_bool(lib->settings,
+									"%s.cisco_unity", FALSE, charon->name);
 	for (i = 0; i < countof(vendor_ids); i++)
 	{
 		if (vendor_ids[i].send ||
-			(vendor_ids[i].extension == EXT_STRONGSWAN && strongswan))
+		   (vendor_ids[i].extension == EXT_STRONGSWAN && strongswan) ||
+		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity))
 		{
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
 				chunk_clone(chunk_create(vendor_ids[i].id, vendor_ids[i].len)));

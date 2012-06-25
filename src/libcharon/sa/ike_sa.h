@@ -113,6 +113,11 @@ enum ike_extension_t {
 	 * peer supports DPD detection, RFC 3706 (or IKEv2)
 	 */
 	EXT_DPD = (1<<8),
+
+	/**
+	 * peer supports Cisco Unity configuration attributes
+	 */
+	EXT_CISCO_UNITY = (1<<9),
 };
 
 /**
