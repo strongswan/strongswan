@@ -230,8 +230,13 @@ static gmp_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 		destroy(this);
 		return NULL;
 	}
-
-	rng->allocate_bytes(rng, exp_len, &random);
+	if (!rng->allocate_bytes(rng, exp_len, &random))
+	{
+		DBG1(DBG_LIB, "failed to allocate DH secret");
+		rng->destroy(rng);
+		destroy(this);
+		return NULL;
+	}
 	rng->destroy(rng);
 
 	if (exp_len == this->p_len)
