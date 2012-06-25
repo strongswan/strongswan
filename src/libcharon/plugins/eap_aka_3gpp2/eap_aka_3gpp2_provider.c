@@ -90,12 +90,12 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 
 	/* generate RAND: we use a registered RNG, not f0() proposed in S.S0055 */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->get_bytes(rng, AKA_RAND_LEN, rand))
 	{
 		DBG1(DBG_IKE, "generating RAND for AKA failed");
+		DESTROY_IF(rng);
 		return FALSE;
 	}
-	rng->get_bytes(rng, AKA_RAND_LEN, rand);
 	rng->destroy(rng);
 
 	if (!eap_aka_3gpp2_get_k(id, k))
