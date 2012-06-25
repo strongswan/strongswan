@@ -174,7 +174,11 @@ static bool seed_rng()
 				return FALSE;
 			}
 		}
-		rng->get_bytes(rng, sizeof(buf), buf);
+		if (!rng->get_bytes(rng, sizeof(buf), buf))
+		{
+			rng->destroy(rng);
+			return FALSE;
+		}
 		RAND_seed(buf, sizeof(buf));
 	}
 	DESTROY_IF(rng);
