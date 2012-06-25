@@ -1520,12 +1520,12 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	u_int32_t spi_gen;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->get_bytes(rng, sizeof(spi_gen), (void*)&spi_gen))
 	{
-		DBG1(DBG_KNL, "allocating SPI failed: no RNG");
+		DBG1(DBG_KNL, "allocating SPI failed");
+		DESTROY_IF(rng);
 		return FAILED;
 	}
-	rng->get_bytes(rng, sizeof(spi_gen), (void*)&spi_gen);
 	rng->destroy(rng);
 
 	/* allocated SPIs lie within the range from 0xc0000000 to 0xcFFFFFFF */
