@@ -123,12 +123,13 @@ static chunk_t generate_natd_hash_faked(private_isakmp_natd_t *this)
 		return chunk_empty;
 	}
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng ||
+		!rng->allocate_bytes(rng, hasher->get_hash_size(hasher), &chunk))
 	{
 		DBG1(DBG_IKE, "unable to get random bytes for NAT-D fake");
+		DESTROY_IF(rng);
 		return chunk_empty;
 	}
-	rng->allocate_bytes(rng, hasher->get_hash_size(hasher), &chunk);
 	rng->destroy(rng);
 	return chunk;
 }

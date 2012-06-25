@@ -121,12 +121,12 @@ static chunk_t generate_natd_hash_faked(private_ike_natd_t *this)
 	chunk_t chunk;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->allocate_bytes(rng, HASH_SIZE_SHA1, &chunk))
 	{
 		DBG1(DBG_IKE, "unable to get random bytes for NATD fake");
+		DESTROY_IF(rng);
 		return chunk_empty;
 	}
-	rng->allocate_bytes(rng, HASH_SIZE_SHA1, &chunk);
 	rng->destroy(rng);
 	return chunk;
 }
