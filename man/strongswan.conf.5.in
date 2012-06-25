@@ -138,6 +138,9 @@ Plugins to load in ipsec attest tool
 .BR charon.block_threshold " [5]"
 Maximum number of half-open IKE_SAs for a single peer IP
 .TP
+.BR charon.cisco_unity " [no]
+Send Cisco Unity vendor ID payload (IKEv1 only)
+.TP
 .BR charon.close_ike_on_child_failure " [no]"
 Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed
 .TP
