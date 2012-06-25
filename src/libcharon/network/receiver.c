@@ -322,13 +322,22 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 		chunk_free(&cookie);
 		if (++this->secret_used > COOKIE_REUSE)
 		{
-			/* create new cookie */
+			char secret[SECRET_LENGTH];
+
 			DBG1(DBG_NET, "generating new cookie secret after %d uses",
 				 this->secret_used);
-			memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-			this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
-			this->secret_switch = now;
-			this->secret_used = 0;
+			if (this->rng->get_bytes(this->rng, SECRET_LENGTH, secret))
+			{
+				memcpy(this->secret_old, this->secret, SECRET_LENGTH);
+				memcpy(this->secret, secret, SECRET_LENGTH);
+				memwipe(secret, SECRET_LENGTH);
+				this->secret_switch = now;
+				this->secret_used = 0;
+			}
+			else
+			{
+				DBG1(DBG_NET, "failed to allocated cookie secret, keeping old");
+			}
 		}
 		return TRUE;
 	}
@@ -540,21 +549,26 @@ receiver_t *receiver_create()
 				"%s.receive_delay_response", TRUE, charon->name),
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
-	if (this->hasher == NULL)
+	if (!this->hasher)
 	{
 		DBG1(DBG_NET, "creating cookie hasher failed, no hashers supported");
 		free(this);
 		return NULL;
 	}
 	this->rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (this->rng == NULL)
+	if (!this->rng)
 	{
 		DBG1(DBG_NET, "creating cookie RNG failed, no RNG supported");
 		this->hasher->destroy(this->hasher);
 		free(this);
 		return NULL;
 	}
-	this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret);
+	if (!this->rng->get_bytes(this->rng, SECRET_LENGTH, this->secret))
+	{
+		DBG1(DBG_NET, "creating cookie secret failed");
+		destroy(this);
+		return NULL;
+	}
 	memcpy(this->secret_old, this->secret, SECRET_LENGTH);
 
 	lib->processor->queue_job(lib->processor,
