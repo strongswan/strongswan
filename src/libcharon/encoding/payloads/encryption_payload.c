@@ -356,8 +356,14 @@ METHOD(encryption_payload_t, encrypt, bool,
 	crypt = chunk_create(plain.ptr, plain.len + padding.len);
 	generator->destroy(generator);
 
-	rng->get_bytes(rng, iv.len, iv.ptr);
-	rng->get_bytes(rng, padding.len - 1, padding.ptr);
+	if (!rng->get_bytes(rng, iv.len, iv.ptr) ||
+		!rng->get_bytes(rng, padding.len - 1, padding.ptr))
+	{
+		DBG1(DBG_ENC, "encrypting encryption payload failed, no IV or padding");
+		rng->destroy(rng);
+		free(assoc.ptr);
+		return FALSE;
+	}
 	padding.ptr[padding.len - 1] = padding.len - 1;
 	rng->destroy(rng);
 
