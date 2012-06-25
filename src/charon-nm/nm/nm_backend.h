@@ -31,11 +31,6 @@
  *
  * @return		TRUE, if initialization was successful
  */
-bool nm_backend_init();
-
-/**
- * Deinitialize the NetworkManager backend.
- */
-void nm_backend_deinit();
+void nm_backend_register();
 
 #endif /** NM_BACKEND_H_ @}*/

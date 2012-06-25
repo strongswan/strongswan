@@ -264,6 +264,9 @@ int main(int argc, char *argv[])
 		DBG1(DBG_DMN, "daemon 'charon-nm': passed file integrity test");
 	}
 
+	/* register NM backend to be loaded with plugins */
+	nm_backend_register();
+
 	/* initialize daemon */
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-nm.load", PLUGINS)))
@@ -272,17 +275,10 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	/* load NM backend */
-	if (!nm_backend_init())
-	{
-		DBG1(DBG_DMN, "failed to initialize NetworkManager backend - aborting charon-nm");
-		goto deinit_nm;
-	}
-
 	if (!drop_capabilities())
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon-nm");
-		goto deinit_nm;
+		goto deinit;
 	}
 
 	/* add handler for SEGV and ILL,
@@ -308,8 +304,6 @@ int main(int argc, char *argv[])
 
 	status = 0;
 
-deinit_nm:
-	nm_backend_deinit();
 deinit:
 	libcharon_deinit();
 	libhydra_deinit();

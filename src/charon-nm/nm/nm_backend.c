@@ -83,10 +83,10 @@ static bool cancel(nm_backend_t *this)
 	return TRUE;
 }
 
-/*
- * see header file
+/**
+ * Deinitialize NetworkManager backend
  */
-void nm_backend_deinit()
+static void nm_backend_deinit()
 {
 	nm_backend_t *this = nm_backend;
 
@@ -107,10 +107,10 @@ void nm_backend_deinit()
 	nm_backend = NULL;
 }
 
-/*
- * see header file
+/**
+ * Initialize NetworkManager backend
  */
-bool nm_backend_init()
+static bool nm_backend_init()
 {
 	nm_backend_t *this;
 
@@ -145,3 +145,29 @@ bool nm_backend_init()
 	return TRUE;
 }
 
+/**
+ * Initialize/deinitialize NetworkManager backend
+ */
+static bool nm_backend_cb(void *plugin,
+						  plugin_feature_t *feature, bool reg, void *data)
+{
+	if (reg)
+	{
+		return nm_backend_init();
+	}
+	nm_backend_deinit();
+	return TRUE;
+}
+
+/*
+ * see header file
+ */
+void nm_backend_register()
+{
+	static plugin_feature_t features[] = {
+		PLUGIN_CALLBACK((plugin_feature_callback_t)nm_backend_cb, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "NetworkManager backend"),
+	};
+	lib->plugins->add_static_features(lib->plugins, "nm-backend", features,
+									  countof(features), TRUE);
+}
