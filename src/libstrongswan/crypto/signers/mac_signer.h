@@ -14,28 +14,28 @@
  */
 
 /**
- * @defgroup hmac_signer hmac_signer
- * @{ @ingroup hmac
+ * @defgroup mac_signer mac_signer
+ * @{ @ingroup crypto
  */
 
-#ifndef HMAC_SIGNER_H_
-#define HMAC_SIGNER_H_
+#ifndef MAC_SIGNER_H_
+#define MAC_SIGNER_H_
 
-typedef struct hmac_signer_t hmac_signer_t;
+typedef struct mac_signer_t mac_signer_t;
 
-#include <crypto/hmacs/hmac.h>
+#include <crypto/mac.h>
 #include <crypto/signers/signer.h>
 
 /**
- * Creates an implementation of the signer_t interface using the provided hmac_t
+ * Creates an implementation of the signer_t interface using the provided mac_t
  * implementation and truncation length.
  *
- * @note len will be set to hmac_t.get_mac_size() if it is greater than that.
+ * @note len will be set to mac_t.get_mac_size() if it is greater than that.
  *
- * @param hmac		hmac_t implementation
+ * @param mac		mac_t implementation
  * @param len		length of resulting signature
- * @return			hmac_signer_t
+ * @return			mac_signer_t
  */
-signer_t *hmac_signer_create(hmac_t *hmac, size_t len);
+signer_t *mac_signer_create(mac_t *mac, size_t len);
 
-#endif /** HMAC_SIGNER_H_ @}*/
+#endif /** MAC_SIGNER_H_ @}*/

@@ -14,23 +14,23 @@
  */
 
 /**
- * @defgroup hmac_prf hmac_prf
- * @{ @ingroup hmac
+ * @defgroup mac_prf mac_prf
+ * @{ @ingroup crypto
  */
 
-#ifndef HMAC_PRF_H_
-#define HMAC_PRF_H_
+#ifndef MAC_PRF_H_
+#define MAC_PRF_H_
 
+#include <crypto/mac.h>
 #include <crypto/prfs/prf.h>
-#include <crypto/hmacs/hmac.h>
 
 /**
- * Creates an implementation of the prf_t interface using the provided hmac_t
+ * Creates an implementation of the prf_t interface using the provided mac_t
  * implementation.  Basically a simple wrapper to map the interface.
  *
- * @param hmac		hmac_t implementation
+ * @param mac		mac_t implementation
  * @return			prf_t object
  */
-prf_t *hmac_prf_create(hmac_t *hmac);
+prf_t *mac_prf_create(mac_t *mac);
 
-#endif /** HMAC_PRF_H_ @}*/
+#endif /** MAC_PRF_H_ @}*/

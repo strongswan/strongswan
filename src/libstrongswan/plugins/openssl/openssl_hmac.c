@@ -40,21 +40,21 @@
 
 #include "openssl_hmac.h"
 
-#include <crypto/hmacs/hmac.h>
-#include <crypto/hmacs/hmac_prf.h>
-#include <crypto/hmacs/hmac_signer.h>
+#include <crypto/mac.h>
+#include <crypto/prfs/mac_prf.h>
+#include <crypto/signers/mac_signer.h>
 
-typedef struct private_hmac_t private_hmac_t;
+typedef struct private_mac_t private_mac_t;
 
 /**
- * Private data of a hmac_t object.
+ * Private data of a mac_t object.
  */
-struct private_hmac_t {
+struct private_mac_t {
 
 	/**
 	 * Public interface
 	 */
-	hmac_t public;
+	mac_t public;
 
 	/**
 	 * Hasher to use
@@ -75,13 +75,13 @@ struct private_hmac_t {
 /**
  * Resets HMAC context
  */
-static void reset(private_hmac_t *this)
+static void reset(private_mac_t *this)
 {
 	HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len, this->hasher, NULL);
 }
 
-METHOD(hmac_t, get_mac, void,
-	private_hmac_t *this, chunk_t data, u_int8_t *out)
+METHOD(mac_t, get_mac, void,
+	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	if (out == NULL)
 	{
@@ -95,22 +95,22 @@ METHOD(hmac_t, get_mac, void,
 	}
 }
 
-METHOD(hmac_t, get_mac_size, size_t,
-	private_hmac_t *this)
+METHOD(mac_t, get_mac_size, size_t,
+	private_mac_t *this)
 {
 	return EVP_MD_size(this->hasher);
 }
 
-METHOD(hmac_t, set_key, void,
-	private_hmac_t *this, chunk_t key)
+METHOD(mac_t, set_key, void,
+	private_mac_t *this, chunk_t key)
 {
 	chunk_clear(&this->key);
 	this->key = chunk_clone(key);
 	reset(this);
 }
 
-METHOD(hmac_t, destroy, void,
-	private_hmac_t *this)
+METHOD(mac_t, destroy, void,
+	private_mac_t *this)
 {
 	HMAC_CTX_cleanup(&this->hmac);
 	chunk_clear(&this->key);
@@ -118,11 +118,11 @@ METHOD(hmac_t, destroy, void,
 }
 
 /*
- * Create an OpenSSL-backed implementation of the hmac_t interface
+ * Create an OpenSSL-backed implementation of the mac_t interface
  */
-static hmac_t *hmac_create(hash_algorithm_t algo)
+static mac_t *hmac_create(hash_algorithm_t algo)
 {
-	private_hmac_t *this;
+	private_mac_t *this;
 
 	INIT(this,
 		.public = {
@@ -170,12 +170,12 @@ static hmac_t *hmac_create(hash_algorithm_t algo)
  */
 prf_t *openssl_hmac_prf_create(pseudo_random_function_t algo)
 {
-	hmac_t *hmac;
+	mac_t *hmac;
 
 	hmac = hmac_create(hasher_algorithm_from_prf(algo));
 	if (hmac)
 	{
-		return hmac_prf_create(hmac);
+		return mac_prf_create(hmac);
 	}
 	return NULL;
 }
@@ -185,13 +185,13 @@ prf_t *openssl_hmac_prf_create(pseudo_random_function_t algo)
  */
 signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
 {
-	hmac_t *hmac;
+	mac_t *hmac;
 	size_t trunc;
 
 	hmac = hmac_create(hasher_algorithm_from_integrity(algo, &trunc));
 	if (hmac)
 	{
-		return hmac_signer_create(hmac, trunc);
+		return mac_signer_create(hmac, trunc);
 	}
 	return NULL;
 }

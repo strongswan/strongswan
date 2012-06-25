@@ -15,12 +15,12 @@
  * for more details.
  */
 
-#include "hmac_signer.h"
+#include "mac_signer.h"
 
 typedef struct private_signer_t private_signer_t;
 
 /**
- * Private data of a hmac_signer_t object.
+ * Private data of a mac_signer_t object.
  */
 struct private_signer_t {
 
@@ -30,12 +30,12 @@ struct private_signer_t {
 	signer_t public;
 
 	/**
-	 * HMAC to use
+	 * MAC to use
 	 */
-	hmac_t *hmac;
+	mac_t *mac;
 
 	/**
-	 * Truncation of HMAC output
+	 * Truncation of MAC output
 	 */
 	size_t truncation;
 };
@@ -45,13 +45,13 @@ METHOD(signer_t, get_signature, void,
 {
 	if (buffer == NULL)
 	{
-		this->hmac->get_mac(this->hmac, data, NULL);
+		this->mac->get_mac(this->mac, data, NULL);
 	}
 	else
 	{
-		u_int8_t mac[this->hmac->get_mac_size(this->hmac)];
+		u_int8_t mac[this->mac->get_mac_size(this->mac)];
 
-		this->hmac->get_mac(this->hmac, data, mac);
+		this->mac->get_mac(this->mac, data, mac);
 		memcpy(buffer, mac, this->truncation);
 	}
 }
@@ -61,13 +61,13 @@ METHOD(signer_t, allocate_signature, void,
 {
 	if (chunk == NULL)
 	{
-		this->hmac->get_mac(this->hmac, data, NULL);
+		this->mac->get_mac(this->mac, data, NULL);
 	}
 	else
 	{
-		u_int8_t mac[this->hmac->get_mac_size(this->hmac)];
+		u_int8_t mac[this->mac->get_mac_size(this->mac)];
 
-		this->hmac->get_mac(this->hmac, data, mac);
+		this->mac->get_mac(this->mac, data, mac);
 
 		*chunk = chunk_alloc(this->truncation);
 		memcpy(chunk->ptr, mac, this->truncation);
@@ -77,20 +77,20 @@ METHOD(signer_t, allocate_signature, void,
 METHOD(signer_t, verify_signature, bool,
 	private_signer_t *this, chunk_t data, chunk_t signature)
 {
-	u_int8_t mac[this->hmac->get_mac_size(this->hmac)];
+	u_int8_t mac[this->mac->get_mac_size(this->mac)];
 
 	if (signature.len != this->truncation)
 	{
 		return FALSE;
 	}
-	this->hmac->get_mac(this->hmac, data, mac);
+	this->mac->get_mac(this->mac, data, mac);
 	return memeq(signature.ptr, mac, this->truncation);
 }
 
 METHOD(signer_t, get_key_size, size_t,
 	private_signer_t *this)
 {
-	return this->hmac->get_mac_size(this->hmac);
+	return this->mac->get_mac_size(this->mac);
 }
 
 METHOD(signer_t, get_block_size, size_t,
@@ -102,20 +102,20 @@ METHOD(signer_t, get_block_size, size_t,
 METHOD(signer_t, set_key, void,
 	private_signer_t *this, chunk_t key)
 {
-	this->hmac->set_key(this->hmac, key);
+	this->mac->set_key(this->mac, key);
 }
 
 METHOD(signer_t, destroy, void,
 	private_signer_t *this)
 {
-	this->hmac->destroy(this->hmac);
+	this->mac->destroy(this->mac);
 	free(this);
 }
 
 /*
  * Described in header
  */
-signer_t *hmac_signer_create(hmac_t *hmac, size_t len)
+signer_t *mac_signer_create(mac_t *mac, size_t len)
 {
 	private_signer_t *this;
 
@@ -129,8 +129,8 @@ signer_t *hmac_signer_create(hmac_t *hmac, size_t len)
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
-		.truncation = min(len, hmac->get_mac_size(hmac)),
-		.hmac = hmac,
+		.truncation = min(len, mac->get_mac_size(mac)),
+		.mac = mac,
 	);
 
 	return &this->public;

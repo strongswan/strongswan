@@ -15,12 +15,12 @@
  * for more details.
  */
 
-#include "hmac_prf.h"
+#include "mac_prf.h"
 
 typedef struct private_prf_t private_prf_t;
 
 /**
- * Private data of a hmac_prf_t object.
+ * Private data of a mac_prf_t object.
  */
 struct private_prf_t {
 
@@ -30,15 +30,15 @@ struct private_prf_t {
 	prf_t public;
 
 	/**
-	 * HMAC to use
+	 * MAC to use
 	 */
-	hmac_t *hmac;
+	mac_t *mac;
 };
 
 METHOD(prf_t, get_bytes, void,
 	private_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
-	this->hmac->get_mac(this->hmac, seed, buffer);
+	this->mac->get_mac(this->mac, seed, buffer);
 }
 
 METHOD(prf_t, allocate_bytes, void,
@@ -46,45 +46,45 @@ METHOD(prf_t, allocate_bytes, void,
 {
 	if (!chunk)
 	{
-		this->hmac->get_mac(this->hmac, seed, NULL);
+		this->mac->get_mac(this->mac, seed, NULL);
 	}
 	else
 	{
-		*chunk = chunk_alloc(this->hmac->get_mac_size(this->hmac));
-		this->hmac->get_mac(this->hmac, seed, chunk->ptr);
+		*chunk = chunk_alloc(this->mac->get_mac_size(this->mac));
+		this->mac->get_mac(this->mac, seed, chunk->ptr);
 	}
 }
 
 METHOD(prf_t, get_block_size, size_t,
 	private_prf_t *this)
 {
-	return this->hmac->get_mac_size(this->hmac);
+	return this->mac->get_mac_size(this->mac);
 }
 
 METHOD(prf_t, get_key_size, size_t,
 	private_prf_t *this)
 {
-	/* for HMAC PRFs, IKEv2 uses MAC size as key size */
-	return this->hmac->get_mac_size(this->hmac);
+	/* IKEv2 uses MAC size as key size */
+	return this->mac->get_mac_size(this->mac);
 }
 
 METHOD(prf_t, set_key, void,
 	private_prf_t *this, chunk_t key)
 {
-	this->hmac->set_key(this->hmac, key);
+	this->mac->set_key(this->mac, key);
 }
 
 METHOD(prf_t, destroy, void,
 	private_prf_t *this)
 {
-	this->hmac->destroy(this->hmac);
+	this->mac->destroy(this->mac);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-prf_t *hmac_prf_create(hmac_t *hmac)
+prf_t *mac_prf_create(mac_t *mac)
 {
 	private_prf_t *this;
 
@@ -97,7 +97,7 @@ prf_t *hmac_prf_create(hmac_t *hmac)
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
-		.hmac = hmac,
+		.mac = mac,
 	);
 
 	return &this->public;

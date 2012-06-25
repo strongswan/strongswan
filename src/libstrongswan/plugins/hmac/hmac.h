@@ -18,12 +18,12 @@
  *
  * It uses a hash function, which must be implemented as a hasher_t class.
  *
- * @defgroup hmac_hmac hmac
+ * @defgroup hmac_mac mac
  * @{ @ingroup hmac_p
  */
 
-#ifndef HMAC_HMAC_H_
-#define HMAC_HMAC_H_
+#ifndef HMAC_H_
+#define HMAC_H_
 
 #include <crypto/prfs/prf.h>
 #include <crypto/signers/signer.h>
@@ -34,7 +34,7 @@
  * @param algo		algorithm to implement
  * @return			prf_t object, NULL if not supported
  */
-prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo);
+prf_t *hmac_prf_create(pseudo_random_function_t algo);
 
 /**
  * Creates a new signer_t object based on an HMAC.
@@ -42,6 +42,6 @@ prf_t *hmac_hmac_prf_create(pseudo_random_function_t algo);
  * @param algo		algorithm to implement
  * @return			signer_t, NULL if not supported
  */
-signer_t *hmac_hmac_signer_create(integrity_algorithm_t algo);
+signer_t *hmac_signer_create(integrity_algorithm_t algo);
 
-#endif /** HMAC_HMAC_H_ @}*/
+#endif /** HMAC_H_ @}*/
