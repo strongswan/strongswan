@@ -24,6 +24,13 @@ strongswan-5.0.0
 - Source routes are reinstalled if interfaces are reactivated or IP addresses
   reappear.
 
+- The thread pool (processor_t) now has more control over the lifecycle of
+  a job (see job.h for details).  In particular, it now controls the destruction
+  of jobs after execution and the cancellation of jobs during shutdown.  Due to
+  these changes the requeueing feature, previously available to callback_job_t
+  only, is now available to all jobs (in addition to a new rescheduling
+  feature).
+
 - In addition to trustchain key strength definitions for different public key
   systems, the rightauth option now takes a list of signature hash algorithms
   considered save for trustchain validation. For example, the setting
