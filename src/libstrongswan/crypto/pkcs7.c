@@ -787,12 +787,24 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 		rng_t *rng;
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
-		rng->allocate_bytes(rng, crypter->get_key_size(crypter), &symmetricKey);
+		if (!rng || !rng->allocate_bytes(rng, crypter->get_key_size(crypter),
+										 &symmetricKey))
+		{
+			DBG1(DBG_LIB, "  failed to allocate symmetric encryption key");
+			DESTROY_IF(rng);
+			return FALSE;
+		}
 		DBG4(DBG_LIB, "  symmetric encryption key: %B", &symmetricKey);
 		rng->destroy(rng);
 
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-		rng->allocate_bytes(rng, crypter->get_iv_size(crypter), &iv);
+		if (!rng || !rng->allocate_bytes(rng, crypter->get_iv_size(crypter),
+										 &iv))
+		{
+			DBG1(DBG_LIB, "  failed to allocate initialization vector");
+			DESTROY_IF(rng);
+			return FALSE;
+		}
 		DBG4(DBG_LIB, "  initialization vector: %B", &iv);
 		rng->destroy(rng);
 	}
