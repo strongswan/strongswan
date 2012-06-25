@@ -362,7 +362,7 @@ METHOD(kernel_interface_t, add_ipsec_interface, void,
 METHOD(kernel_interface_t, remove_ipsec_interface, void,
 	private_kernel_interface_t *this, kernel_ipsec_constructor_t constructor)
 {
-	if (constructor == this->ipsec_constructor)
+	if (constructor == this->ipsec_constructor && this->ipsec)
 	{
 		this->ipsec->destroy(this->ipsec);
 		this->ipsec = NULL;
@@ -382,7 +382,7 @@ METHOD(kernel_interface_t, add_net_interface, void,
 METHOD(kernel_interface_t, remove_net_interface, void,
 	private_kernel_interface_t *this, kernel_net_constructor_t constructor)
 {
-	if (constructor == this->net_constructor)
+	if (constructor == this->net_constructor && this->net)
 	{
 		this->net->destroy(this->net);
 		this->net = NULL;
