@@ -291,9 +291,21 @@ METHOD(task_t, build_i, status_t,
 			{
 				/* only the initiator creates a connect ID. the responder
 				 * returns the connect ID that it received from the initiator */
-				rng->allocate_bytes(rng, ME_CONNECTID_LEN, &this->connect_id);
+				if (!rng->allocate_bytes(rng, ME_CONNECTID_LEN,
+										 &this->connect_id))
+				{
+					DBG1(DBG_IKE, "unable to generate ID for ME_CONNECT");
+					rng->destroy(rng);
+					return FAILED;
+				}
 			}
-			rng->allocate_bytes(rng, ME_CONNECTKEY_LEN, &this->connect_key);
+			if (!rng->allocate_bytes(rng, ME_CONNECTKEY_LEN,
+									 &this->connect_key))
+			{
+				DBG1(DBG_IKE, "unable to generate connect key for ME_CONNECT");
+				rng->destroy(rng);
+				return FAILED;
+			}
 			rng->destroy(rng);
 
 			message->add_notify(message, FALSE, ME_CONNECTID, this->connect_id);
