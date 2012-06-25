@@ -18,20 +18,23 @@
 #include "cmac.h"
 
 #include <debug.h>
+#include <crypto/mac.h>
+#include <crypto/prfs/mac_prf.h>
+#include <crypto/signers/mac_signer.h>
 
-typedef struct private_cmac_t private_cmac_t;
+typedef struct private_mac_t private_mac_t;
 
 /**
- * Private data of a cmac_t object.
+ * Private data of a mac_t object.
  *
  * The variable names are the same as in the RFC.
  */
-struct private_cmac_t {
+struct private_mac_t {
 
 	/**
 	 * Public interface.
 	 */
-	cmac_t public;
+	mac_t public;
 
 	/**
 	 * Block size, in bytes
@@ -72,7 +75,7 @@ struct private_cmac_t {
 /**
  * process supplied data, but do not run final operation
  */
-static void update(private_cmac_t *this, chunk_t data)
+static void update(private_mac_t *this, chunk_t data)
 {
 	chunk_t iv;
 
@@ -116,7 +119,7 @@ static void update(private_cmac_t *this, chunk_t data)
 /**
  * process last block M_last
  */
-static void final(private_cmac_t *this, u_int8_t *out)
+static void final(private_mac_t *this, u_int8_t *out)
 {
 	chunk_t iv;
 
@@ -162,8 +165,8 @@ static void final(private_cmac_t *this, u_int8_t *out)
 	this->remaining_bytes = 0;
 }
 
-METHOD(cmac_t, get_mac, void,
-	private_cmac_t *this, chunk_t data, u_int8_t *out)
+METHOD(mac_t, get_mac, void,
+	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update T, do not process last block */
 	update(this, data);
@@ -174,8 +177,8 @@ METHOD(cmac_t, get_mac, void,
 	}
 }
 
-METHOD(cmac_t, get_block_size, size_t,
-	private_cmac_t *this)
+METHOD(mac_t, get_mac_size, size_t,
+	private_mac_t *this)
 {
 	return this->b;
 }
@@ -222,8 +225,8 @@ static void derive_key(chunk_t chunk)
 	}
 }
 
-METHOD(cmac_t, set_key, void,
-	private_cmac_t *this, chunk_t key)
+METHOD(mac_t, set_key, void,
+	private_mac_t *this, chunk_t key)
 {
 	chunk_t resized, iv, l;
 
@@ -265,8 +268,8 @@ METHOD(cmac_t, set_key, void,
 	memwipe(l.ptr, l.len);
 }
 
-METHOD(cmac_t, destroy, void,
-	private_cmac_t *this)
+METHOD(mac_t, destroy, void,
+	private_mac_t *this)
 {
 	this->k->destroy(this->k);
 	memwipe(this->k1, this->b);
@@ -281,9 +284,9 @@ METHOD(cmac_t, destroy, void,
 /*
  * Described in header
  */
-cmac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
+mac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
 {
-	private_cmac_t *this;
+	private_mac_t *this;
 	crypter_t *crypter;
 	u_int8_t b;
 
@@ -303,7 +306,7 @@ cmac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
 	INIT(this,
 		.public = {
 			.get_mac = _get_mac,
-			.get_block_size = _get_block_size,
+			.get_mac_size = _get_mac_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
@@ -319,3 +322,48 @@ cmac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
+prf_t *cmac_prf_create(pseudo_random_function_t algo)
+{
+	mac_t *cmac;
+
+	switch (algo)
+	{
+		case PRF_AES128_CMAC:
+			cmac = cmac_create(ENCR_AES_CBC, 16);
+			break;
+		default:
+			return NULL;
+	}
+	if (cmac)
+	{
+		return mac_prf_create(cmac);
+	}
+	return NULL;
+}
+
+/*
+ * Described in header
+ */
+signer_t *cmac_signer_create(integrity_algorithm_t algo)
+{
+	size_t truncation;
+	mac_t *cmac;
+
+	switch (algo)
+	{
+		case AUTH_AES_CMAC_96:
+			cmac = cmac_create(ENCR_AES_CBC, 16);
+			truncation = 12;
+			break;
+		default:
+			return NULL;
+	}
+	if (cmac)
+	{
+		return mac_signer_create(cmac, truncation);
+	}
+	return NULL;
+}

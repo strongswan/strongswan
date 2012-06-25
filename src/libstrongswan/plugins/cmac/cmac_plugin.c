@@ -16,8 +16,7 @@
 #include "cmac_plugin.h"
 
 #include <library.h>
-#include "cmac_prf.h"
-#include "cmac_signer.h"
+#include "cmac.h"
 
 typedef struct private_cmac_plugin_t private_cmac_plugin_t;
 
