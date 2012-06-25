@@ -226,9 +226,13 @@ METHOD(pts_t, create_dh_nonce, bool,
 	DBG2(DBG_PTS, "nonce length is %d", nonce_len);
 	nonce = this->is_imc ? &this->responder_nonce : &this->initiator_nonce;
 	chunk_free(nonce);
-	rng->allocate_bytes(rng, nonce_len, nonce);
+	if (!rng->allocate_bytes(rng, nonce_len, nonce))
+	{
+		DBG1(DBG_PTS, "failed to allocate nonce");
+		rng->destroy(rng);
+		return FALSE;
+	}
 	rng->destroy(rng);
-
 	return TRUE;
 }
 
@@ -719,7 +723,7 @@ METHOD(pts_t, extend_pcr, bool,
 
 	DBG3(DBG_PTS, "PCR %d extended with:      %B", pcr_num, &input);
 	DBG3(DBG_PTS, "PCR %d value after extend: %B", pcr_num, output);
-	
+
 	chunk_clear(&pcr_value);
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
@@ -728,11 +732,11 @@ METHOD(pts_t, extend_pcr, bool,
 
 err:
 	DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
-	
+
 	chunk_clear(&pcr_value);
 	Tspi_Context_FreeMemory(hContext, NULL);
 	Tspi_Context_Close(hContext);
-	
+
 	return FALSE;
 }
 
@@ -833,7 +837,7 @@ METHOD(pts_t, quote_tpm, bool,
 		{
 			i++;
 			f = 1;
-		}		
+		}
 		if (this->pcr_select[i] & f)
 		{
 			result = use_quote2 ?
@@ -1031,14 +1035,14 @@ METHOD(pts_t, get_quote_info, bool,
 					  "unable to construct TPM Quote Info2");
 		return FALSE;
 	}
-	
+
 	/**
 	 * A TPM v1.2 has 24 PCR Registers
 	 * so the bitmask field length used by TrouSerS is at least 3 bytes
 	 */
 	size_of_select = max(PCR_MAX_NUM / 8, 1 + this->pcr_max / 8);
 	pcr_comp_len = 2 + size_of_select + 4 + this->pcr_count * this->pcr_len;
-	
+
 	writer = bio_writer_create(pcr_comp_len);
 
 	writer->write_uint16(writer, size_of_select);
@@ -1105,7 +1109,7 @@ METHOD(pts_t, get_quote_info, bool,
 		{
 			writer->write_uint8(writer, this->pcr_select[i]);
 		}
-		
+
 		/* TPM Locality Selection */
 		writer->write_uint8(writer, TPM_LOC_ZERO);
 
@@ -1234,7 +1238,7 @@ static char* extract_platform_info(void)
 		{
 			strcpy(buf, str_debian);
 			pos += strlen(str_debian);
-			len -= strlen(str_debian); 
+			len -= strlen(str_debian);
 		}
 
 		fseek(file, 0, SEEK_END);
