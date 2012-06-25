@@ -208,9 +208,8 @@ gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 	}
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (rng)
+	if (rng && rng->allocate_bytes(rng, exp_len, &random))
 	{	/* prefer external randomizer */
-		rng->allocate_bytes(rng, exp_len, &random);
 		rng->destroy(rng);
 		err = gcry_mpi_scan(&this->xa, GCRYMPI_FMT_USG,
 							random.ptr, random.len, NULL);
@@ -226,6 +225,7 @@ gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 	}
 	else
 	{	/* fallback to gcrypt internal randomizer, shouldn't ever happen */
+		DESTROY_IF(rng);
 		this->xa = gcry_mpi_new(exp_len * 8);
 		gcry_mpi_randomize(this->xa, exp_len * 8, GCRY_STRONG_RANDOM);
 	}
