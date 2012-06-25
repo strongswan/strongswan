@@ -69,7 +69,7 @@ static void rng(char *buf, int len, int quality)
 	}
 }
 
-METHOD(rng_t, allocate_bytes, void,
+METHOD(rng_t, allocate_bytes, bool,
 	private_padlock_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	chunk->len = bytes;
@@ -77,9 +77,10 @@ METHOD(rng_t, allocate_bytes, void,
 	chunk->ptr = malloc(bytes + 7);
 
 	rng(chunk->ptr, chunk->len, this->quality);
+	return TRUE;
 }
 
-METHOD(rng_t, get_bytes, void,
+METHOD(rng_t, get_bytes, bool,
 	private_padlock_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	chunk_t chunk;
@@ -88,6 +89,7 @@ METHOD(rng_t, get_bytes, void,
 	allocate_bytes(this, bytes, &chunk);
 	memcpy(buffer, chunk.ptr, bytes);
 	chunk_clear(&chunk);
+	return TRUE;
 }
 
 METHOD(rng_t, destroy, void,

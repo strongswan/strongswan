@@ -40,7 +40,7 @@ struct private_random_rng_t {
 	int fd;
 };
 
-METHOD(rng_t, get_bytes, void,
+METHOD(rng_t, get_bytes, bool,
 	private_random_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	size_t done;
@@ -59,13 +59,15 @@ METHOD(rng_t, get_bytes, void,
 		}
 		done += got;
 	}
+	return TRUE;
 }
 
-METHOD(rng_t, allocate_bytes, void,
+METHOD(rng_t, allocate_bytes, bool,
 	private_random_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
 	get_bytes(this, chunk->len, chunk->ptr);
+	return TRUE;
 }
 
 METHOD(rng_t, destroy, void,

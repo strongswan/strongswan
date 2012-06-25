@@ -43,7 +43,7 @@ struct private_pkcs11_rng_t {
 
 };
 
-METHOD(rng_t, get_bytes, void,
+METHOD(rng_t, get_bytes, bool,
 	private_pkcs11_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	CK_RV rv;
@@ -51,15 +51,21 @@ METHOD(rng_t, get_bytes, void,
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_GenerateRandom() failed: %N", ck_rv_names, rv);
-		abort();
+		return FALSE;
 	}
+	return TRUE;
 }
 
-METHOD(rng_t, allocate_bytes, void,
+METHOD(rng_t, allocate_bytes, bool,
 	private_pkcs11_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
-	get_bytes(this, chunk->len, chunk->ptr);
+	if (!get_bytes(this, chunk->len, chunk->ptr))
+	{
+		chunk_clear(chunk);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(rng_t, destroy, void,

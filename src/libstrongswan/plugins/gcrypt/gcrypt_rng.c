@@ -35,7 +35,7 @@ struct private_gcrypt_rng_t {
 	rng_quality_t quality;
 };
 
-METHOD(rng_t, get_bytes, void,
+METHOD(rng_t, get_bytes, bool,
 	private_gcrypt_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	switch (this->quality)
@@ -50,13 +50,15 @@ METHOD(rng_t, get_bytes, void,
 			gcry_randomize(buffer, bytes, GCRY_VERY_STRONG_RANDOM);
 			break;
 	}
+	return TRUE;
 }
 
-METHOD(rng_t, allocate_bytes, void,
+METHOD(rng_t, allocate_bytes, bool,
 	private_gcrypt_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
 	get_bytes(this, chunk->len, chunk->ptr);
+	return TRUE;
 }
 
 METHOD(rng_t, destroy, void,

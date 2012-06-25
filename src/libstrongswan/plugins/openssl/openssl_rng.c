@@ -44,10 +44,10 @@ struct private_openssl_rng_t {
 	rng_quality_t quality;
 };
 
-METHOD(rng_t, get_bytes, void,
+METHOD(rng_t, get_bytes, bool,
 	private_openssl_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
-	u_int32_t ret=0;
+	u_int32_t ret;
 
 	if (this->quality == RNG_STRONG)
 	{
@@ -57,18 +57,19 @@ METHOD(rng_t, get_bytes, void,
 	{
 		ret = RAND_pseudo_bytes((char*)buffer, bytes);
 	}
-
-	if (ret == 0)
-	{
-		DBG1(DBG_LIB, "getting randomness from openssl failed.");
-	}
+	return ret != 0;
 }
 
-METHOD(rng_t, allocate_bytes, void,
+METHOD(rng_t, allocate_bytes, bool,
 	private_openssl_rng_t *this, size_t bytes, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(bytes);
-	get_bytes(this, chunk->len, chunk->ptr);
+	if (!get_bytes(this, chunk->len, chunk->ptr))
+	{
+		chunk_free(chunk);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(rng_t, destroy, void,
