@@ -16,8 +16,7 @@
 #include "xcbc_plugin.h"
 
 #include <library.h>
-#include "xcbc_signer.h"
-#include "xcbc_prf.h"
+#include "xcbc.h"
 
 typedef struct private_xcbc_plugin_t private_xcbc_plugin_t;
 

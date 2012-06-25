@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,20 +19,23 @@
 #include "xcbc.h"
 
 #include <debug.h>
+#include <crypto/mac.h>
+#include <crypto/prfs/mac_prf.h>
+#include <crypto/signers/mac_signer.h>
 
-typedef struct private_xcbc_t private_xcbc_t;
+typedef struct private_mac_t private_mac_t;
 
 /**
- * Private data of a xcbc_t object.
+ * Private data of a mac_t object.
  *
  * The variable names are the same as in the RFC.
  */
-struct private_xcbc_t {
+struct private_mac_t {
 
 	/**
-	 * Public xcbc_t interface.
+	 * Public mac_t interface.
 	 */
-	xcbc_t public;
+	mac_t public;
 
 	/**
 	 * Block size, in bytes
@@ -77,7 +81,7 @@ struct private_xcbc_t {
 /**
  * xcbc supplied data, but do not run final operation
  */
-static void update(private_xcbc_t *this, chunk_t data)
+static void update(private_mac_t *this, chunk_t data)
 {
 	chunk_t iv;
 
@@ -125,7 +129,7 @@ static void update(private_xcbc_t *this, chunk_t data)
 /**
  * run last round, data is in this->e
  */
-static void final(private_xcbc_t *this, u_int8_t *out)
+static void final(private_mac_t *this, u_int8_t *out)
 {
 	chunk_t iv;
 
@@ -175,8 +179,8 @@ static void final(private_xcbc_t *this, u_int8_t *out)
 	this->zero = TRUE;
 }
 
-METHOD(xcbc_t, get_mac, void,
-	private_xcbc_t *this, chunk_t data, u_int8_t *out)
+METHOD(mac_t, get_mac, void,
+	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update E, do not process last block */
 	update(this, data);
@@ -187,14 +191,14 @@ METHOD(xcbc_t, get_mac, void,
 	}
 }
 
-METHOD(xcbc_t, get_block_size, size_t,
-	private_xcbc_t *this)
+METHOD(mac_t, get_mac_size, size_t,
+	private_mac_t *this)
 {
 	return this->b;
 }
 
-METHOD(xcbc_t, set_key, void,
-	private_xcbc_t *this, chunk_t key)
+METHOD(mac_t, set_key, void,
+	private_mac_t *this, chunk_t key)
 {
 	chunk_t iv, k1, lengthened;
 
@@ -240,8 +244,8 @@ METHOD(xcbc_t, set_key, void,
 	memwipe(k1.ptr, k1.len);
 }
 
-METHOD(xcbc_t, destroy, void,
-	private_xcbc_t *this)
+METHOD(mac_t, destroy, void,
+	private_mac_t *this)
 {
 	this->k1->destroy(this->k1);
 	memwipe(this->k2, this->b);
@@ -256,9 +260,9 @@ METHOD(xcbc_t, destroy, void,
 /*
  * Described in header
  */
-xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
+static mac_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 {
-	private_xcbc_t *this;
+	private_mac_t *this;
 	crypter_t *crypter;
 	u_int8_t b;
 
@@ -278,7 +282,7 @@ xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 	INIT(this,
 		.public = {
 			.get_mac = _get_mac,
-			.get_block_size = _get_block_size,
+			.get_mac_size = _get_mac_size,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
@@ -295,3 +299,55 @@ xcbc_t *xcbc_create(encryption_algorithm_t algo, size_t key_size)
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
+prf_t *xcbc_prf_create(pseudo_random_function_t algo)
+{
+	mac_t *xcbc;
+
+	switch (algo)
+	{
+		case PRF_AES128_XCBC:
+			xcbc = xcbc_create(ENCR_AES_CBC, 16);
+			break;
+		case PRF_CAMELLIA128_XCBC:
+			xcbc = xcbc_create(ENCR_CAMELLIA_CBC, 16);
+			break;
+		default:
+			return NULL;
+	}
+	if (xcbc)
+	{
+		return mac_prf_create(xcbc);
+	}
+	return NULL;
+}
+
+/*
+ * Described in header
+ */
+signer_t *xcbc_signer_create(integrity_algorithm_t algo)
+{
+	size_t trunc;
+	mac_t *xcbc;
+
+	switch (algo)
+	{
+		case AUTH_AES_XCBC_96:
+			xcbc = xcbc_create(ENCR_AES_CBC, 16);
+			trunc = 12;
+			break;
+		case AUTH_CAMELLIA_XCBC_96:
+			xcbc = xcbc_create(ENCR_CAMELLIA_CBC, 16);
+			trunc = 12;
+			break;
+		default:
+			return NULL;
+	}
+	if (xcbc)
+	{
+		return mac_signer_create(xcbc, trunc);
+	}
+	return NULL;
+}
