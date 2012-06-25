@@ -956,7 +956,11 @@ static u_int bench_rng(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			rng->get_bytes(rng, buf.len, buf.ptr);
+			if (!rng->get_bytes(rng, buf.len, buf.ptr))
+			{
+				runs = 0;
+				break;
+			}
 			runs++;
 		}
 		free(buf.ptr);
@@ -986,8 +990,8 @@ METHOD(crypto_tester_t, test_rng, bool,
 	enumerator = this->rng->create_enumerator(this->rng);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
+		chunk_t data = chunk_empty;
 		rng_t *rng;
-		chunk_t data;
 
 		if (vector->quality != quality)
 		{
@@ -1007,24 +1011,22 @@ METHOD(crypto_tester_t, test_rng, bool,
 		failed = FALSE;
 
 		/* allocated bytes */
-		rng->allocate_bytes(rng, vector->len, &data);
-		if (data.len != vector->len)
+		if (!rng->allocate_bytes(rng, vector->len, &data) ||
+			data.len != vector->len ||
+			!vector->test(vector->user, data))
 		{
 			failed = TRUE;
 		}
-		if (!vector->test(vector->user, data))
-		{
-			failed = TRUE;
-		}
-		/* bytes to existing buffer */
-		memset(data.ptr, 0, data.len);
-		rng->get_bytes(rng, vector->len, data.ptr);
-		if (!vector->test(vector->user, data))
-		{
-			failed = TRUE;
+		if (!failed)
+		{	/* write bytes into existing buffer */
+			memset(data.ptr, 0, data.len);
+			if (!rng->get_bytes(rng, vector->len, data.ptr) ||
+				!vector->test(vector->user, data))
+			{
+				failed = TRUE;
+			}
 		}
 		free(data.ptr);
-
 		rng->destroy(rng);
 		if (failed)
 		{
