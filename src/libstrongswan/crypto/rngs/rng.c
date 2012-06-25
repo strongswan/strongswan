@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,3 +21,43 @@ ENUM(rng_quality_names, RNG_WEAK, RNG_TRUE,
 	"RNG_STRONG",
 	"RNG_TRUE",
 );
+
+/*
+ * Described in header.
+ */
+bool rng_get_bytes_not_zero(rng_t *rng, size_t len, u_int8_t *buffer, bool all)
+{
+	u_int8_t *pos = buffer, *check = buffer + (all ? len : min(1, len));
+
+	if (!rng->get_bytes(rng, len, pos))
+	{
+		return FALSE;
+	}
+
+	for (; pos < check; pos++)
+	{
+		while (*pos == 0)
+		{
+			if (!rng->get_bytes(rng, 1, pos))
+			{
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header.
+ */
+bool rng_allocate_bytes_not_zero(rng_t *rng, size_t len, chunk_t *chunk,
+								 bool all)
+{
+	*chunk = chunk_alloc(len);
+	if (!rng_get_bytes_not_zero(rng, len, chunk->ptr, all))
+	{
+		chunk_clear(chunk);
+		return FALSE;
+	}
+	return TRUE;
+}
