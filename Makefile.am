@@ -6,7 +6,7 @@ endif
 
 ACLOCAL_AMFLAGS = -I m4/config
 
-EXTRA_DIST = Doxyfile.in CREDITS Android.mk.in Android.mk
+EXTRA_DIST = Doxyfile.in Android.mk.in Android.mk
 CLEANFILES = Doxyfile
 BUILT_SOURCES = Android.mk
 MAINTAINERCLEANFILES = Android.mk
