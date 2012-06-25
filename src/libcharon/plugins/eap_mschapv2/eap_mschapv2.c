@@ -577,12 +577,12 @@ METHOD(eap_method_t, initiate_server, status_t,
 	u_int16_t len = CHALLENGE_PAYLOAD_LEN + sizeof(MSCHAPV2_HOST_NAME) - 1;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge))
 	{
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, no RNG");
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, no challenge");
+		DESTROY_IF(rng);
 		return FAILED;
 	}
-	rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge);
 	rng->destroy(rng);
 
 	eap = alloca(len);
@@ -670,14 +670,14 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	this->mschapv2id = eap->ms_chapv2_id;
 	this->challenge = chunk_clone(chunk_create(cha->challenge, CHALLENGE_LEN));
 
+	peer_challenge = chunk_alloca(CHALLENGE_LEN);
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->get_bytes(rng, CHALLENGE_LEN, peer_challenge.ptr))
 	{
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, no RNG");
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, allocating challenge failed");
+		DESTROY_IF(rng);
 		return FAILED;
 	}
-	peer_challenge = chunk_alloca(CHALLENGE_LEN);
-	rng->get_bytes(rng, CHALLENGE_LEN, peer_challenge.ptr);
 	rng->destroy(rng);
 
 	if (!get_nt_hash(this, this->peer, this->server, &nt_hash))
@@ -964,12 +964,12 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed, retry (%d)", this->retries);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->get_bytes(rng, CHALLENGE_LEN, this->challenge.ptr))
 	{
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, no RNG");
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed, allocating challenge failed");
+		DESTROY_IF(rng);
 		return FAILED;
 	}
-	rng->get_bytes(rng, CHALLENGE_LEN, this->challenge.ptr);
 	rng->destroy(rng);
 
 	chunk_free(&this->nt_response);

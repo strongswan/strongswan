@@ -119,11 +119,11 @@ METHOD(eap_method_t, initiate_server, status_t,
 	eap_md5_header_t *req;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge))
 	{
+		DESTROY_IF(rng);
 		return FAILED;
 	}
-	rng->allocate_bytes(rng, CHALLENGE_LEN, &this->challenge);
 	rng->destroy(rng);
 
 	req = alloca(PAYLOAD_LEN);
