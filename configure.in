@@ -123,7 +123,7 @@ ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
 ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
-ARG_ENABL_SET([xauth-generic],  [enable generic XAuth backend.])
+ARG_DISBL_SET([xauth-generic],  [enable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
@@ -225,6 +225,10 @@ fi
 dnl =========================
 dnl  dependency calculation
 dnl =========================
+
+if test x$xauth_generic_given = xfalse -a x$ikev1 = xfalse; then
+	xauth_generic=false;
+fi
 
 if test x$eap_aka_3gpp2 = xtrue; then
 	gmp=true;
