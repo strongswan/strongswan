@@ -127,7 +127,7 @@ static xauth_method_t *load_method(private_xauth_t* this)
 	{
 		if (name)
 		{
-			DBG1(DBG_CFG, "no XAuth method found named '%s'");
+			DBG1(DBG_CFG, "no XAuth method found named '%s'", name);
 		}
 		else
 		{
