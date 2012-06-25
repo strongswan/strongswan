@@ -243,14 +243,14 @@ METHOD(tls_protection_t, build, status_t,
 				}
 				else
 				{	/* TLSv1.1 uses random IVs, prepended to record */
-					if (!this->rng)
+					iv.len = this->crypter_out->get_iv_size(this->crypter_out);
+					if (!this->rng ||
+						!this->rng->allocate_bytes(this->rng, iv.len, &iv))
 					{
-						DBG1(DBG_TLS, "no RNG supported to generate TLS IV");
+						DBG1(DBG_TLS, "failed to generate TLS IV");
 						free(data->ptr);
 						return FAILED;
 					}
-					iv.len = this->crypter_out->get_iv_size(this->crypter_out);
-					this->rng->allocate_bytes(this->rng, iv.len, &iv);
 				}
 
 				*data = chunk_cat("mmcc", *data, mac, padding,

@@ -266,13 +266,15 @@ static status_t process_client_hello(private_tls_server_t *this,
 
 	htoun32(&this->server_random, time(NULL));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng ||
+		!rng->get_bytes(rng, sizeof(this->server_random) - 4,
+						this->server_random + 4))
 	{
-		DBG1(DBG_TLS, "no suitable RNG found to generate server random");
+		DBG1(DBG_TLS, "failed to generate server random");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		DESTROY_IF(rng);
 		return NEED_MORE;
 	}
-	rng->get_bytes(rng, sizeof(this->server_random) - 4, this->server_random + 4);
 	rng->destroy(rng);
 
 	if (!this->tls->set_version(this->tls, version))
@@ -407,13 +409,13 @@ static status_t process_key_exchange_encrypted(private_tls_server_t *this,
 	htoun16(premaster, this->client_version);
 	/* pre-randomize premaster for failure cases */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng)
+	if (!rng || !rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2))
 	{
-		DBG1(DBG_TLS, "creating RNG failed");
+		DBG1(DBG_TLS, "failed to generate premaster secret");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		DESTROY_IF(rng);
 		return NEED_MORE;
 	}
-	rng->get_bytes(rng, sizeof(premaster) - 2, premaster + 2);
 	rng->destroy(rng);
 
 	if (this->private &&
