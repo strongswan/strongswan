@@ -506,7 +506,7 @@ METHOD(task_t, build_r, status_t,
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
 					/* wait for XAUTH request */
-					return SUCCESS;
+					break;
 				default:
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
@@ -522,8 +522,14 @@ METHOD(task_t, build_r, status_t,
 					lib->processor->queue_job(lib->processor, (job_t*)
 									adopt_children_job_create(
 										this->ike_sa->get_id(this->ike_sa)));
-					return SUCCESS;
+					break;
 			}
+			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			{
+				this->ike_sa->queue_task(this->ike_sa,
+							(task_t*)mode_config_create(this->ike_sa, TRUE));
+			}
+			return SUCCESS;
 		}
 		default:
 			return FAILED;
