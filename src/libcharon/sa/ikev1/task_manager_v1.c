@@ -341,6 +341,24 @@ METHOD(task_manager_t, retransmit, status_t,
 	return status;
 }
 
+/**
+ * Check if we have to wait for a mode config before starting a quick mode
+ */
+static bool mode_config_expected(private_task_manager_t *this)
+{
+	peer_cfg_t *peer_cfg;
+
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg && peer_cfg->get_pool(peer_cfg))
+	{
+		if (!this->ike_sa->get_virtual_ip(this->ike_sa, FALSE))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 METHOD(task_manager_t, initiate, status_t,
 	private_task_manager_t *this)
 {
@@ -407,7 +425,8 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_QUICK_MODE))
+				if (!mode_config_expected(this) &&
+					activate_task(this, TASK_QUICK_MODE))
 				{
 					exchange = QUICK_MODE;
 					new_mid = TRUE;
