@@ -15,14 +15,17 @@ asn1/oid.c asn1/oid.h \
 bio/bio_reader.h bio/bio_reader.c bio/bio_writer.h bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
+crypto/mac.h \
 crypto/pkcs7.c crypto/pkcs7.h \
 crypto/pkcs9.c crypto/pkcs9.h \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
+crypto/prfs/mac_prf.h crypto/prfs/mac_prf.c \
 crypto/rngs/rng.c crypto/rngs/rng.h \
 crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/signers/signer.c crypto/signers/signer.h \
+crypto/signers/mac_signer.h crypto/signers/mac_signer.c \
 crypto/crypto_factory.c crypto/crypto_factory.h \
 crypto/crypto_tester.c crypto/crypto_tester.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
