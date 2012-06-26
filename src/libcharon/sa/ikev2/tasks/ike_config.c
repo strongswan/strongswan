@@ -376,7 +376,8 @@ METHOD(task_t, process_i, status_t,
 
 		process_payloads(this, message);
 
-		if (this->virtual_ip)
+		if (this->virtual_ip &&
+			!this->virtual_ip->is_anyaddr(this->virtual_ip))
 		{
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
 		}
