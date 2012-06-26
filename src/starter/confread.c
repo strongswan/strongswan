@@ -449,6 +449,8 @@ static bool handle_mark(char *value, mark_t *mark)
 			return FALSE;
 		}
 	}
+	/* apply the mask to ensure the value is in range */
+	mark->value &= mark->mask;
 	return TRUE;
 }
 
