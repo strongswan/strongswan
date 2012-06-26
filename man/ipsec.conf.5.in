@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "2011-12-14" "@IPSEC_VERSION@" "strongSwan"
+.TH IPSEC.CONF 5 "2012-06-26" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -287,11 +287,18 @@ loads a connection and brings it up immediately.
 .B ignore
 ignores the connection. This is equal to delete a connection from the config
 file.
-Relevant only locally, other end need not agree on it
-(but in general, for an intended-to-be-permanent connection,
-both ends should use
-.B auto=start
-to ensure that any reboot causes immediate renegotiation).
+Relevant only locally, other end need not agree on it.
+.TP
+.BR closeaction " = " none " | clear | hold | restart"
+defines the action to take if the remote peer unexpectedly closes a CHILD_SA
+(see
+.B dpdaction
+for meaning of values).
+A
+.B closeaction should not be
+used if the peer uses reauthentication or uniquids checking, as these events
+might trigger the defined action when not desired. Currently not supported with
+IKEv1.
 .TP
 .BR compress " = yes | " no
 whether IPComp compression of content is proposed on the connection
@@ -336,12 +343,10 @@ received. In IKEv2, a value of 0 sends no additional INFORMATIONAL
 messages and uses only standard messages (such as those to rekey) to detect
 dead peers.
 .TP
-.BR closeaction " = " none " | clear | hold | restart"
-defines the action to take if the remote peer unexpectedly closes a CHILD_SA.
-A closeaction should not be
-used if the peer uses reauthentication or uniquids checking, as these events
-might trigger a closeaction when not desired. Closeactions are currently
-not supported with IKEv1.
+.BR dpdtimeout " = " 150s " | <time>
+defines the timeout interval, after which all connections to a peer are deleted
+in case of inactivity. This only applies to IKEv1, in IKEv2 the default
+retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
 .BR inactivity " = <time>"
 defines the timeout interval, after which a CHILD_SA is closed if it did
@@ -462,7 +467,11 @@ keying) during negotiation. If the local peer initiates the connection setup
 the routing table will be queried to determine the correct local IP address.
 In case the local peer is responding to a connection setup then any IP address
 that is assigned to a local interface will be accepted.
-.br
+
+The prefix
+.B %
+in front of a fully-qualified domain name or an IP address will implicitly set
+.BR leftallowany =yes.
 
 If
 .B %any
@@ -471,6 +480,13 @@ is used for the remote endpoint it literally means any IP address.
 Please note that with the usage of wildcards multiple connection descriptions
 might match a given incoming connection attempt. The most specific description
 is used in that case.
+.TP
+.BR leftallowany " = yes | " no
+a modifier for
+.BR left ,
+making it behave as
+.B %any
+although a concrete IP address or domain name has been assigned.
 .TP
 .BR leftauth " = <auth method>"
 Authentication method to use locally (left) or require from the remote (right)
@@ -500,7 +516,6 @@ For
 .B eap ,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
-.BR eap-sim ,
 .BR eap-gtc ,
 .BR eap-md5 ,
 .BR eap-mschapv2 ,
@@ -516,10 +531,10 @@ EAP methods are defined in the form
 .RB "(e.g. " eap-7-12345 ).
 For
 .B xauth,
-a XAuth authentication backend can be specified, such as
+an XAuth authentication backend can be specified, such as
 .B xauth-generic
 or
-.B xauth-eap .
+.BR xauth-eap .
 If XAuth is used in
 .BR leftauth ,
 Hybrid authentication is used. For traditional XAuth authentication, define
@@ -566,8 +581,9 @@ Same as
 but for the second authentication round (IKEv2 only).
 .TP
 .BR leftcertpolicy " = <OIDs>"
-Comma separated list of certificate policy OIDs the peers certificate must have.
-OIDs are specified using the numerical dotted representation (IKEv2 only).
+Comma separated list of certificate policy OIDs the peer's certificate must
+have.
+OIDs are specified using the numerical dotted representation.
 .TP
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
@@ -620,10 +636,11 @@ and
 .BR leftid " = <id>"
 how the left participant should be identified for authentication;
 defaults to
-.BR left .
-Can be an IP address or a fully-qualified domain name preceded by
-.B @
-(which is used as a literal string and not resolved).
+.B left
+or the subject of the certificate configured with
+.BR leftcert .
+Can be an IP address, a fully-qualified domain name, an email address, or
+a keyid.
 .TP
 .BR leftid2 " = <id>"
 identity to use for a second authentication for the left participant
@@ -637,14 +654,6 @@ to 4500 if a NAT is detected or MOBIKE is enabled. Specifying a local IKE port
 different from the default additionally requires a socket implementation that
 listens to this port.
 .TP
-.BR leftnexthop " = %direct | <ip address> | <fqdn>"
-this parameter is usually not needed any more because the NETKEY IPsec stack
-does not require explicit routing entries for the traffic to be tunneled. If
-.B leftsourceip
-is used with IKEv1 then
-.B leftnexthop
-must still be set in order for the source routes to work properly.
-.TP
 .BR leftprotoport " = <protocol>/<port>"
 restrict the traffic selector to a single protocol and/or port.
 Examples:
@@ -653,6 +662,14 @@ or
 .B leftprotoport=6/80
 or
 .B leftprotoport=udp
+.TP
+.BR leftrsasigkey " = " %cert " | <raw rsa public key> | <path to public key>"
+the left participant's public key for RSA signature authentication, in RFC 2537
+format using hex (0x prefix) or base64 (0s prefix) encoding. Also accepted is
+the path to a file containing the public key in PEM or DER encoding.
+The default value
+.B %cert
+means that the key is extracted from a certificate.
 .TP
 .BR leftsendcert " = never | no | " ifasked " | always | yes"
 Accepted values are
@@ -692,7 +709,7 @@ private subnet behind the left participant, expressed as
 \fInetwork\fB/\fInetmask\fR;
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
 signifying that the left end of the connection goes to the left participant
-only. Configured subnet of the peers may differ, the protocol narrows it to
+only. Configured subnets of the peers may differ, the protocol narrows it to
 the greatest common subnet. In IKEv1, this may lead to problems with other
 implementations, make sure to configure identical subnets in such
 configurations. IKEv2 supports multiple subnets separated by commas, IKEv1 only
@@ -825,7 +842,8 @@ prevents charon from requesting renegotiation,
 it does not prevent responding to renegotiation requested from the other end,
 so
 .B no
-will be largely ineffective unless both ends agree on it.
+will be largely ineffective unless both ends agree on it. Also see
+.BR reauth .
 .TP
 .BR rekeyfuzz " = " 100% " | <percentage>"
 maximum percentage by which
@@ -1127,7 +1145,3 @@ strongswan.conf(5), ipsec.secrets(5), ipsec(8)
 Originally written for the FreeS/WAN project by Henry Spencer.
 Updated and extended for the strongSwan project <http://www.strongswan.org> by
 Tobias Brunner, Andreas Steffen and Martin Willi.
-.SH BUGS
-.PP
-If conns are to be added before DNS is available, \fBleft=\fP\fIFQDN\fP
-will fail.
