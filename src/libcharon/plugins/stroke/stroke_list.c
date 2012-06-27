@@ -115,11 +115,22 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 
 	fprintf(out, ", %H[%Y]...%H[%Y]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
-			ike_sa->get_other_host(ike_sa), ike_sa->get_other_eap_id(ike_sa));
+			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 
 	if (all)
 	{
 		proposal_t *ike_proposal;
+		identification_t *eap_id;
+
+		eap_id = ike_sa->get_other_eap_id(ike_sa);
+
+		if (!eap_id->equals(eap_id, ike_sa->get_other_id(ike_sa)))
+		{
+			fprintf(out, "%12s[%d]: Remote %s identity: %Y\n",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+					ike_sa->get_version(ike_sa) == IKEV1 ? "XAuth" : "EAP",
+					eap_id);
+		}
 
 		ike_proposal = ike_sa->get_proposal(ike_sa);
 
