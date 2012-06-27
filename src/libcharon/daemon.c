@@ -218,6 +218,9 @@ METHOD(daemon_t, initialize, bool,
 			PLUGIN_DEPENDS(HASHER, HASH_SHA1),
 			PLUGIN_DEPENDS(RNG, RNG_STRONG),
 			PLUGIN_DEPENDS(NONCE_GEN),
+			PLUGIN_DEPENDS(CUSTOM, "kernel-ipsec"),
+			PLUGIN_DEPENDS(CUSTOM, "kernel-net"),
+			PLUGIN_DEPENDS(CUSTOM, "socket"),
 	};
 	lib->plugins->add_static_features(lib->plugins, charon->name, features,
 									  countof(features), TRUE);
