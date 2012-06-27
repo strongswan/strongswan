@@ -32,7 +32,7 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <plugins/plugin.h>
+#include <plugins/plugin_feature.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
 #include <processing/jobs/start_action_job.h>
@@ -213,6 +213,15 @@ METHOD(daemon_t, start, void,
 METHOD(daemon_t, initialize, bool,
 	private_daemon_t *this, char *plugins)
 {
+	static plugin_feature_t features[] = {
+		PLUGIN_PROVIDE(CUSTOM, "libcharon"),
+			PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+			PLUGIN_DEPENDS(RNG, RNG_STRONG),
+			PLUGIN_DEPENDS(NONCE_GEN),
+	};
+	lib->plugins->add_static_features(lib->plugins, charon->name, features,
+									  countof(features), TRUE);
+
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL, plugins))
 	{

@@ -167,6 +167,7 @@ void nm_backend_register()
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)nm_backend_cb, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "NetworkManager backend"),
+				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
 	};
 	lib->plugins->add_static_features(lib->plugins, "nm-backend", features,
 									  countof(features), TRUE);
