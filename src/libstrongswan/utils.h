@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -410,6 +410,18 @@ char *translate(char *str, const char *from, const char *to);
  */
 bool mkdir_p(const char *path, mode_t mode);
 
+/**
+ * Thread-safe wrapper around strerror and strerror_r.
+ *
+ * This is required because the first is not thread-safe (on some platforms)
+ * and the second uses two different signatures (POSIX/GNU) and is impractical
+ * to use anyway.
+ *
+ * @param errnum	error code (i.e. errno)
+ * @return			error message
+ */
+const char *safe_strerror(int errnum);
+
 #ifndef HAVE_CLOSEFROM
 /**
  * Close open file descriptors greater than or equal to lowfd.
@@ -627,7 +639,6 @@ bool cas_bool(bool *ptr, bool oldval, bool newval);
  * @return			TRUE if value equaled oldval and newval was written
  */
 bool cas_ptr(void **ptr, void *oldval, void *newval);
-
 
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 

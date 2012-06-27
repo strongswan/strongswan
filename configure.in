@@ -301,6 +301,7 @@ dnl ===========================================
 
 AC_HEADER_STDBOOL
 AC_FUNC_ALLOCA
+AC_FUNC_STRERROR_R
 
 dnl libraries needed on some platforms but not on others
 dnl ====================================================
