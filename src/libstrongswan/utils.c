@@ -254,6 +254,8 @@ const char *safe_strerror(int errnum)
 	return msg;
 }
 #else /* HAVE_STRERROR_R */
+/* we actually wan't to call strerror(3) below */
+#undef strerror
 /*
  * Described in header.
  */

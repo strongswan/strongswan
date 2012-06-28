@@ -422,6 +422,11 @@ bool mkdir_p(const char *path, mode_t mode);
  */
 const char *safe_strerror(int errnum);
 
+/**
+ * Replace usages of strerror(3) with thread-safe variant.
+ */
+#define strerror(errnum) safe_strerror(errnum)
+
 #ifndef HAVE_CLOSEFROM
 /**
  * Close open file descriptors greater than or equal to lowfd.
