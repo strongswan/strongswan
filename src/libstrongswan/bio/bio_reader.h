@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -27,6 +30,8 @@ typedef struct bio_reader_t bio_reader_t;
 
 /**
  * Buffered input parser.
+ *
+ * @note Integers are returned in host byte order.
  */
 struct bio_reader_t {
 
@@ -92,6 +97,55 @@ struct bio_reader_t {
 	 * @return			TRUE if data read successfully
 	 */
 	bool (*read_data)(bio_reader_t *this, u_int32_t len, chunk_t *res);
+
+	/**
+	 * Read a 8-bit integer from the end of the buffer, reduce remaining.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint8_end)(bio_reader_t *this, u_int8_t *res);
+
+	/**
+	 * Read a 16-bit integer from the end of the buffer, reduce remaining.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint16_end)(bio_reader_t *this, u_int16_t *res);
+
+	/**
+	 * Read a 24-bit integer from the end of the buffer, reduce remaining.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint24_end)(bio_reader_t *this, u_int32_t *res);
+
+	/**
+	 * Read a 32-bit integer from the end of the buffer, reduce remaining.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint32_end)(bio_reader_t *this, u_int32_t *res);
+
+	/**
+	 * Read a 64-bit integer from the end of the buffer, reduce remaining.
+	 *
+	 * @param res		pointer to result
+	 * @return			TRUE if integer read successfully
+	 */
+	bool (*read_uint64_end)(bio_reader_t *this, u_int64_t *res);
+
+	/**
+	 * Read a chunk of len bytes from the end of the buffer, reduce remaining.
+	 *
+	 * @param len		number of bytes to read
+	 * @param res		ponter to result, not cloned
+	 * @return			TRUE if data read successfully
+	 */
+	bool (*read_data_end)(bio_reader_t *this, u_int32_t len, chunk_t *res);
 
 	/**
 	 * Read a chunk of bytes with a 8-bit length header, advance.
