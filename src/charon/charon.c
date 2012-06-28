@@ -26,6 +26,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <syslog.h>
 #include <errno.h>
 #include <unistd.h>
@@ -448,6 +449,7 @@ int main(int argc, char *argv[])
 	bool use_syslog = FALSE;
 	level_t levels[DBG_MAX];
 	int group, status = SS_RC_INITIALIZATION_FAILED;
+	struct utsname utsname;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -550,7 +552,12 @@ int main(int argc, char *argv[])
 
 	initialize_loggers(!use_syslog, levels);
 
-	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION")");
+	if (uname(&utsname) != 0)
+	{
+		memset(&utsname, 0, sizeof(utsname));
+	}
+	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
+		  utsname.sysname, utsname.release, utsname.machine);
 	if (lib->integrity)
 	{
 		DBG1(DBG_DMN, "integrity tests enabled:");
