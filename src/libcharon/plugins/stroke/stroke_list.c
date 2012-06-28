@@ -17,6 +17,7 @@
 
 #include <inttypes.h>
 #include <time.h>
+#include <sys/utsname.h>
 
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
@@ -453,12 +454,18 @@ METHOD(stroke_list_t, status, void,
 		u_int32_t dpd;
 		time_t since, now;
 		u_int size, online, offline, i;
+		struct utsname utsname;
+
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
-		fprintf(out, "Status of IKE charon daemon (%sSwan "VERSION"):\n",
-				this->swan);
-		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since,
+		fprintf(out, "Status of IKE charon daemon (%sSwan "VERSION, this->swan);
+		if (uname(&utsname) == 0)
+		{
+			fprintf(out, ", %s %s, %s",
+					utsname.sysname, utsname.release, utsname.machine);
+		}
+		fprintf(out, "):\n  uptime: %V, since %T\n", &now, &this->uptime, &since,
 				FALSE);
 #ifdef HAVE_MALLINFO
 		{
