@@ -47,6 +47,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_CALLBACK(tnc_manager_register, tnc_imv_manager_create),
 			PLUGIN_PROVIDE(CUSTOM, "imv-manager"),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_TRUSTED_PUBKEY),
 	};
 	*features = f;
 	return countof(f);
