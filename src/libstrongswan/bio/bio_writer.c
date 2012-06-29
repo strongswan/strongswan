@@ -202,6 +202,20 @@ METHOD(bio_writer_t, wrap32, void,
 	this->used += 4;
 }
 
+METHOD(bio_writer_t, skip, chunk_t,
+	private_bio_writer_t *this, size_t len)
+{
+	chunk_t skipped;
+
+	while (this->used + len > this->buf.len)
+	{
+		increase(this);
+	}
+	skipped = chunk_create(this->buf.ptr + this->used, len);
+	this->used += len;
+	return skipped;
+}
+
 METHOD(bio_writer_t, get_buf, chunk_t,
 	private_bio_writer_t *this)
 {
@@ -247,6 +261,7 @@ bio_writer_t *bio_writer_create(u_int32_t bufsize)
 			.wrap16 = _wrap16,
 			.wrap24 = _wrap24,
 			.wrap32 = _wrap32,
+			.skip = _skip,
 			.get_buf = _get_buf,
 			.extract_buf = _extract_buf,
 			.destroy = _destroy,

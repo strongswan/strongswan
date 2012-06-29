@@ -126,6 +126,15 @@ struct bio_writer_t {
 	void (*wrap32)(bio_writer_t *this);
 
 	/**
+	 * Skips len bytes in the buffer before the next data is written, returns
+	 * a chunk covering the skipped bytes.
+	 *
+	 * @param len		number of bytes to skip
+	 * @return			chunk pointing to skipped bytes in the internal buffer
+	 */
+	chunk_t (*skip)(bio_writer_t *this, size_t len);
+
+	/**
 	 * Get the encoded data buffer.
 	 *
 	 * @return			chunk to internal buffer
