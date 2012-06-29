@@ -51,8 +51,6 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_md5_plugin_t *this)
 {
-	lib->crypto->remove_hasher(lib->crypto,
-							   (hasher_constructor_t)md5_hasher_create);
 	free(this);
 }
 
