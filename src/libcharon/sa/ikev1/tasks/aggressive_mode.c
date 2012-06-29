@@ -496,7 +496,8 @@ METHOD(task_t, process_r, status_t,
 										this->ike_sa->get_id(this->ike_sa)));
 					break;
 			}
-			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			if (this->peer_cfg->get_pool(this->peer_cfg) == NULL &&
+				this->peer_cfg->get_virtual_ip(this->peer_cfg))
 			{
 				this->ike_sa->queue_task(this->ike_sa,
 							(task_t*)mode_config_create(this->ike_sa, TRUE));
