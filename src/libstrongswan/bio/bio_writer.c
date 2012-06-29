@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -205,6 +208,15 @@ METHOD(bio_writer_t, get_buf, chunk_t,
 	return chunk_create(this->buf.ptr, this->used);
 }
 
+METHOD(bio_writer_t, extract_buf, chunk_t,
+	private_bio_writer_t *this)
+{
+	chunk_t buf = get_buf(this);
+	this->buf = chunk_empty;
+	this->used = 0;
+	return buf;
+}
+
 METHOD(bio_writer_t, destroy, void,
 	private_bio_writer_t *this)
 {
@@ -236,6 +248,7 @@ bio_writer_t *bio_writer_create(u_int32_t bufsize)
 			.wrap24 = _wrap24,
 			.wrap32 = _wrap32,
 			.get_buf = _get_buf,
+			.extract_buf = _extract_buf,
 			.destroy = _destroy,
 		},
 		.increase = bufsize ? max(bufsize, 4) : 32,
