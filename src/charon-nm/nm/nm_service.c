@@ -89,11 +89,12 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	me = ike_sa->get_my_host(ike_sa);
 	handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
 
-	/* NM requires a tundev, but netkey does not use one. Passing an invalid
-	 * iface makes NM complain, but it accepts it without fiddling on eth0. */
+	/* NM requires a tundev, but netkey does not use one. Passing the physical
+	 * interface does not work, as NM fiddles around with it. Passing the
+	 * loopback seems to work, though... */
 	val = g_slice_new0 (GValue);
 	g_value_init (val, G_TYPE_STRING);
-	g_value_set_string (val, "none");
+	g_value_set_string (val, "lo");
 	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
 
 	val = g_slice_new0(GValue);
