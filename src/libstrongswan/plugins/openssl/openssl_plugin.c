@@ -129,7 +129,9 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
  */
 static unsigned long id_function(void)
 {
-	return (unsigned long)thread_current_id();
+	/* ensure the thread ID is never zero, otherwise OpenSSL might try to
+	 * acquire locks recursively */
+	return 1 + (unsigned long)thread_current_id();
 }
 
 /**
