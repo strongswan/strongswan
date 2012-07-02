@@ -1,15 +1,16 @@
 #!/usr/bin/make -f
-  
+
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/autotools.mk
 
-DEB_CONFIGURE_EXTRA_FLAGS := --with-charon=/usr/lib/strongswan/charon
+DEB_CONFIGURE_EXTRA_FLAGS := --with-charon=/usr/lib/ipsec/charon
 
-makebuilddir/network-manager-vpnc:: debian/stamp-bootstrap
+DEB_CONFIGURE_LIBEXECDIR := "\$$(prefix)/lib/NetworkManager"
 
-debian/stamp-bootstrap:
-	NOCONFIGURE=1 ./autogen.sh
-	touch debian/stamp-bootstrap
+DEB_DH_MAKESHLIBS_ARGS_ALL := -X/usr/lib/NetworkManager/
 
-clean::
-	[ ! -f Makefile ] || $(MAKE) clean
+DEB_DH_INSTALL_SOURCEDIR := debian/tmp
+
+
+install/network-manager-strongswan::
+	rm debian/network-manager-strongswan/usr/lib/NetworkManager/libnm-strongswan-properties.*a

@@ -4,22 +4,19 @@ Priority: extra
 Maintainer: Martin Willi <martin@strongswan.org>
 Build-Depends: cdbs,
 	debhelper (>= 7),
-	network-manager-dev (>= 0.7.1~rc1),
-	libnm-glib-dev (>= 0.7.1~rc1),
+	network-manager-dev (>= 0.9),
+	libnm-util-dev (>= 0.9),
+	libnm-glib-dev (>= 0.9),
+	libnm-glib-vpn-dev (>= 0.9),
 	libdbus-glib-1-dev,
-	libgtk2.0-dev,
-	libglade2-dev,
 	libgnomeui-dev,
-	libgconf2-dev,
-	libgnome-keyring-dev,
-	automake1.9,
+	automake,
 	gnome-common,
-	intltool,
-Standards-Version: 3.8.0
+Standards-Version: 3.9.1
 
 Package: network-manager-strongswan
 Architecture: any
-Depends: strongswan-nm, strongswan-eap-gtc, strongswan-eap-md5, strongswan-eap-mschapv2, strongswan-eap-identity, strongswan-agent, strongswan-openssl|strongswan-crypto-plugins
+Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan-nm, network-manager (>= 0.9)
 Description: network management framework (strongSwan plugin)
  NetworkManager attempts to keep an active network connection available at
  all times.  It is intended primarily for laptops where it allows easy

@@ -1,6 +1,6 @@
 
 SOURCE:=../../src/frontends/gnome
-VERSION:=1.1.0rc1
+VERSION:=1.3.0
 
 source:	prepare
 	cd build/NetworkManager-strongswan-$(VERSION) && debuild -S
