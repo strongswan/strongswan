@@ -737,66 +737,35 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
 traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 							u_int8_t netbits, u_int8_t protocol, u_int16_t port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, 0, 0, 65535);
+	private_traffic_selector_t *this;
+	chunk_t from;
+
+	this = traffic_selector_create(protocol, 0, 0, 65535);
 
 	switch (net->get_family(net))
 	{
 		case AF_INET:
-		{
-			chunk_t from;
-
 			this->type = TS_IPV4_ADDR_RANGE;
-			from = net->get_address(net);
-			memcpy(this->from, from.ptr, from.len);
-			if (this->from4[0] == 0)
-			{
-				/* use /0 for 0.0.0.0 */
-				this->to4[0] = ~0;
-				this->netbits = 0;
-			}
-			else
-			{
-				calc_range(this, netbits);
-			}
 			break;
-		}
 		case AF_INET6:
-		{
-			chunk_t from;
-
 			this->type = TS_IPV6_ADDR_RANGE;
-			from = net->get_address(net);
-			memcpy(this->from, from.ptr, from.len);
-			if (this->from6[0] == 0 && this->from6[1] == 0 &&
-				this->from6[2] == 0 && this->from6[3] == 0)
-			{
-				/* use /0 for ::0 */
-				this->to6[0] = ~0;
-				this->to6[1] = ~0;
-				this->to6[2] = ~0;
-				this->to6[3] = ~0;
-				this->netbits = 0;
-			}
-			else
-			{
-				calc_range(this, netbits);
-			}
 			break;
-		}
 		default:
-		{
 			net->destroy(net);
 			free(this);
 			return NULL;
-		}
 	}
+	from = net->get_address(net);
+	memcpy(this->from, from.ptr, from.len);
+	calc_range(this, netbits);
 	if (port)
 	{
 		this->from_port = port;
 		this->to_port = port;
 	}
 	net->destroy(net);
-	return (&this->public);
+
+	return &this->public;
 }
 
 /*
