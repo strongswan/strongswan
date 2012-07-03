@@ -55,14 +55,16 @@ AC_SUBST(systemdsystemunitdir)
 AC_ARG_WITH(
 	[user],
 	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is "root").]),
-	[AC_DEFINE_UNQUOTED(IPSEC_USER, "$withval") AC_SUBST(ipsecuser, "$withval")],
+	[AC_DEFINE_UNQUOTED([IPSEC_USER], "$withval", [username to run daemon with])
+	 AC_SUBST(ipsecuser, "$withval")],
 	[AC_SUBST(ipsecuser, "root")]
 )
 
 AC_ARG_WITH(
 	[group],
 	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is "root").]),
-	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
+	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval", [groupname to run daemon with])
+	 AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
 )
 
@@ -345,7 +347,7 @@ AC_TRY_COMPILE(
 	 #include <dlfcn.h>],
 	[Dl_info* info = 0;
 	 dladdr(0, info);],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_DLADDR])],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_DLADDR], [], [have dladdr()])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -358,12 +360,15 @@ AC_TRY_RUN(
 	 int main() { pthread_condattr_t attr;
 		pthread_condattr_init(&attr);
 		return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
+			   [pthread_condattr_setclock supports CLOCK_MONOTONIC])],
 	[AC_MSG_RESULT([no])],
 	dnl Check existence of pthread_condattr_setclock if cross-compiling
 	[AC_MSG_RESULT([unknown]);
 	 AC_CHECK_FUNCS(pthread_condattr_setclock,
-		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])]
+		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
+				   [have pthread_condattr_setclock()])]
 	)]
 )
 dnl check if we actually are able to configure attributes on cond vars
@@ -378,7 +383,7 @@ LIBS=$saved_LIBS
 
 AC_CHECK_FUNC(
 	[gettid],
-	[AC_DEFINE(HAVE_GETTID)],
+	[AC_DEFINE([HAVE_GETTID], [], [have gettid()])],
 	[AC_MSG_CHECKING([for SYS_gettid])
 	 AC_TRY_COMPILE(
 		[#define _GNU_SOURCE
@@ -386,8 +391,9 @@ AC_CHECK_FUNC(
 		 #include <sys/syscall.h>],
 		[int main() {
 			return syscall(SYS_gettid);}],
-		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GETTID])
-		 AC_DEFINE([HAVE_SYS_GETTID])],
+		[AC_MSG_RESULT([yes]);
+		 AC_DEFINE([HAVE_GETTID], [], [have gettid()])
+		 AC_DEFINE([HAVE_SYS_GETTID], [], [have syscall(SYS_gettid)])],
 		[AC_MSG_RESULT([no])]
 	)]
 )
@@ -421,7 +427,8 @@ AC_TRY_COMPILE(
 	#include <netinet/in.h>],
 	[struct in6_addr in6;
 	in6 = in6addr_any;],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6ADDR_ANY])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_IN6ADDR_ANY], [], [have struct in6_addr in6addr_any])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -436,7 +443,8 @@ AC_TRY_COMPILE(
 	{
 		return 0;
 	}],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6_PKTINFO])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_IN6_PKTINFO], [], [have struct in6_pktinfo.ipi6_ifindex])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -453,7 +461,8 @@ AC_TRY_COMPILE(
 	#endif],
 	[int mode = IPSEC_MODE_BEET;
 	 return mode;],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_MODE_BEET])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_IPSEC_MODE_BEET], [], [have IPSEC_MODE_BEET defined])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -470,7 +479,8 @@ AC_TRY_COMPILE(
 	#endif],
 	[int dir = IPSEC_DIR_FWD;
 	 return dir;],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_DIR_FWD])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_IPSEC_DIR_FWD], [], [have IPSEC_DIR_FWD defined])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -481,7 +491,8 @@ AC_TRY_COMPILE(
 	#include <linux/rtnetlink.h>],
 	[int rta_type = RTA_TABLE;
 	 return rta_type;],
-	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_RTA_TABLE])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_RTA_TABLE], [], [have netlink RTA_TABLE defined])],
 	[AC_MSG_RESULT([no])]
 )
 
@@ -497,7 +508,9 @@ AC_TRY_RUN(
 		return ref;
 	}
 ],
-[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_GCC_ATOMIC_OPERATIONS)],
+[AC_MSG_RESULT([yes]);
+ AC_DEFINE([HAVE_GCC_ATOMIC_OPERATIONS], [],
+		   [have GCC __sync_* atomic operations])],
 [AC_MSG_RESULT([no])],
 [AC_MSG_RESULT([no])])
 
@@ -505,10 +518,10 @@ dnl check for the new register_printf_specifier function with len argument,
 dnl or the deprecated register_printf_function without
 AC_CHECK_FUNC(
 	[register_printf_specifier],
-	[AC_DEFINE(HAVE_PRINTF_SPECIFIER)],
+	[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
 	[AC_CHECK_FUNC(
 		[register_printf_function],
-		[AC_DEFINE(HAVE_PRINTF_FUNCTION)],
+		[AC_DEFINE([HAVE_PRINTF_FUNCTION], [], [have register_printf_function()])],
 		[
 			AC_MSG_NOTICE([printf does not support custom format specifiers!])
 			vstr=true
@@ -518,7 +531,7 @@ AC_CHECK_FUNC(
 
 if test x$vstr = xtrue; then
 	AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])])
-	AC_DEFINE(USE_VSTR)
+	AC_DEFINE([USE_VSTR], [], [use vstring library for printf hooks])
 fi
 
 if test x$gmp = xtrue; then
@@ -531,7 +544,9 @@ if test x$gmp = xtrue; then
 			[
 				void *x = mpz_powm_sec;
 			],
-			[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_MPZ_POWM_SEC)], [AC_MSG_RESULT([no])]
+			[AC_MSG_RESULT([yes]);
+			 AC_DEFINE([HAVE_MPZ_POWM_SEC], [], [have mpz_mown_sec()])],
+			[AC_MSG_RESULT([no])]
 		)
 	else
 		AC_MSG_RESULT([disabled])
@@ -657,7 +672,9 @@ if test x$sqlite = xtrue; then
 		[
 			void *test = sqlite3_prepare_v2;
 		],
-		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
+		[AC_MSG_RESULT([yes])];
+		 AC_DEFINE([HAVE_SQLITE3_PREPARE_V2], [], [have sqlite3_prepare_v2()]),
+		[AC_MSG_RESULT([no])])
 	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
 	AC_TRY_COMPILE(
 		[#include <sqlite3.h>],
@@ -681,7 +698,8 @@ if test x$gcrypt = xtrue; then
 	AC_TRY_COMPILE(
 		[#include <gcrypt.h>],
 		[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;],
-		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA])],
+		[AC_MSG_RESULT([yes]);
+		 AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA], [], [have GCRY_CIPHER_CAMELLIA128])],
 		[AC_MSG_RESULT([no])]
 	)
 fi
@@ -734,15 +752,15 @@ if test x$capabilities = xnative; then
 	dnl but defines capset() in unistd.h instead.
 	AC_CHECK_HEADERS([sys/capability.h])
 	AC_CHECK_FUNC(capset,,[AC_MSG_ERROR([capset() not found!])])
-	AC_DEFINE(CAPABILITIES_NATIVE)
+	AC_DEFINE([CAPABILITIES_NATIVE], [], [have native linux capset()])
 fi
 
 if test x$capabilities = xlibcap; then
 	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
 	AC_CHECK_HEADER([sys/capability.h],
-		[AC_DEFINE(HAVE_SYS_CAPABILITY_H)],
+		[AC_DEFINE([HAVE_SYS_CAPABILITY_H], [], [have sys/capability.h])],
 		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
-	AC_DEFINE(CAPABILITIES_LIBCAP)
+	AC_DEFINE([CAPABILITIES_LIBCAP], [], [have libpcap library])
 fi
 
 if test x$integrity_test = xtrue; then
@@ -1058,19 +1076,19 @@ dnl  set global definitions
 dnl ==============================
 
 if test x$mediation = xtrue; then
-	AC_DEFINE(ME)
+	AC_DEFINE([ME], [], [mediation extension support])
 fi
 if test x$capabilities = xlibcap -o x$capabilities = xnative; then
-	AC_DEFINE(CAPABILITIES)
+	AC_DEFINE([CAPABILITIES], [], [capability dropping support])
 fi
 if test x$monolithic = xtrue; then
-	AC_DEFINE(MONOLITHIC)
+	AC_DEFINE([MONOLITHIC], [], [monolithic build embedding plugins])
 fi
 if test x$ikev1 = xtrue; then
-	AC_DEFINE(USE_IKEV1)
+	AC_DEFINE([USE_IKEV1], [], [support for IKEv1 protocol])
 fi
 if test x$ikev2 = xtrue; then
-	AC_DEFINE(USE_IKEV2)
+	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
 fi
 
 dnl ==============================
