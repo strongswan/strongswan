@@ -3,12 +3,17 @@
 #export DH_VERBOSE=1
 
 CC = gcc
-CFLAGS = -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g
+CFLAGS = -Wall -Wno-format -Wno-pointer-sign -g
 CONFIGURE_ARGS = \
-	--disable-fips-prf --enable-openssl --enable-md4 --enable-nm \
-	--enable-agent --enable-eap-gtc --enable-eap-md5 --enable-eap-mschapv2 \
-	--enable-eap-identity --enable-ldap --enable-curl --sysconfdir=/etc \
-	--prefix=/usr --libexecdir=/usr/lib --with-ipsecdir=/usr/lib/strongswan
+	--prefix=/usr --libexecdir=/usr/lib --sysconfdir=/etc --enable-curl \
+	--enable-ldap --disable-aes --disable-des --disable-md5 --disable-sha1 \
+	--disable-sha2 --disable-fips-prf --disable-gmp --disable-pgp --disable-dnskey \
+	--enable-mysql --enable-sqlite --enable-eap-identity --enable-eap-md5 \
+	--enable-eap-mschapv2 --enable-eap-tls --enable-eap-radius --enable-xauth-eap \
+	--enable-farp --enable-attr-sql --enable-dhcp --enable-openssl --enable-agent \
+	--enable-pkcs11 --enable-ctr --enable-ccm --enable-gcm --enable-addrblock \
+	--enable-nm  --disable-hmac --with-capabilities=libcap \
+	--with-ipsecdir=/usr/lib/strongswan --with-ipseclibdir=/usr/lib/strongswan
 
 ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O2

@@ -1,2 +1,1 @@
-usr/lib/strongswan/plugins/libstrongswan-nm.so*	usr/lib/strongswan/plugins/
-
+usr/lib/strongswan/charon-nm	usr/lib/strongswan/

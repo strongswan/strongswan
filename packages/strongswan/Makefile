@@ -1,6 +1,6 @@
 
-SOURCE:=../../build/nm
-VERSION:=4.2.13rc1
+SOURCE=../..
+VERSION:=5.0.1dr1
 
 source:	prepare
 	cd build/strongswan-$(VERSION) && debuild -S
