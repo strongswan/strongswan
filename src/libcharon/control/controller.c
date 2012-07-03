@@ -103,11 +103,6 @@ struct interface_listener_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * CHILD_SA to handle
-	 */
-	child_sa_t *child_sa;
-
-	/**
 	 * unique ID, used for various methods
 	 */
 	u_int32_t id;
@@ -135,11 +130,18 @@ struct interface_job_t {
 	 * associated listener
 	 */
 	interface_listener_t listener;
+
+	/**
+	 * the job is reference counted as the thread executing a job as well as
+	 * the thread waiting in wait_for_listener() require it but either of them
+	 * could be done first
+	 */
+	refcount_t refcount;
 };
 
 /**
- * This function properly unregisters a listener that is used
- * with wait_for_listener()
+ * This function wakes a thread that is waiting in wait_for_listener(),
+ * either from a listener or from a job.
  */
 static inline bool listener_done(interface_listener_t *listener)
 {
@@ -151,18 +153,17 @@ static inline bool listener_done(interface_listener_t *listener)
 }
 
 /**
- * thread_cleanup_t handler to unregister and cleanup a listener
+ * thread_cleanup_t handler to unregister a listener.
  */
-static void listener_cleanup(interface_listener_t *listener)
+static void listener_unregister(interface_listener_t *listener)
 {
 	charon->bus->remove_listener(charon->bus, &listener->public);
 	charon->bus->remove_logger(charon->bus, &listener->logger.public);
-	listener->done->destroy(listener->done);
 }
 
 /**
  * Registers the listener, executes the job and then waits synchronously until
- * the listener is done or the timeout occured.
+ * the listener is done or the timeout occurred.
  *
  * @note Use 'return listener_done(listener)' to properly unregister a listener
  *
@@ -171,18 +172,21 @@ static void listener_cleanup(interface_listener_t *listener)
  * @param timeout   max timeout in ms to listen for events, 0 to disable
  * @return          TRUE if timed out
  */
-static bool wait_for_listener(interface_listener_t *listener, job_t *job,
-							  u_int timeout)
+static bool wait_for_listener(interface_job_t *job, u_int timeout)
 {
+	interface_listener_t *listener = &job->listener;
 	bool old, timed_out = FALSE;
+
+	/* avoid that the job is destroyed too early */
+	ref_get(&job->refcount);
 
 	listener->done = semaphore_create(0);
 
 	charon->bus->add_logger(charon->bus, &listener->logger.public);
 	charon->bus->add_listener(charon->bus, &listener->public);
-	lib->processor->queue_job(lib->processor, job);
+	lib->processor->queue_job(lib->processor, &job->public);
 
-	thread_cleanup_push((thread_cleanup_t)listener_cleanup, listener);
+	thread_cleanup_push((thread_cleanup_t)listener_unregister, listener);
 	old = thread_cancelability(TRUE);
 	if (timeout)
 	{
@@ -287,14 +291,13 @@ METHOD(listener_t, child_state_change, bool,
 	return TRUE;
 }
 
-METHOD(job_t, recheckin, void,
-	interface_job_t *job)
+METHOD(job_t, destroy_job, void,
+	interface_job_t *this)
 {
-	if (job->public.status == JOB_STATUS_QUEUED &&
-		job->listener.ike_sa)
+	if (ref_put(&this->refcount))
 	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager,
-										job->listener.ike_sa);
+		DESTROY_IF(this->listener.done);
+		free(this);
 	}
 }
 
@@ -318,11 +321,9 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 	{
 		listener->child_cfg->destroy(listener->child_cfg);
 		peer_cfg->destroy(peer_cfg);
-		/* trigger down event to release listener */
-		listener->ike_sa = charon->ike_sa_manager->checkout_new(
-										charon->ike_sa_manager, IKE_ANY, TRUE);
-		DESTROY_IF(listener->ike_sa);
 		listener->status = FAILED;
+		/* release listener */
+		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
 	listener->ike_sa = ike_sa;
@@ -335,14 +336,14 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, 0, NULL, NULL) == SUCCESS)
 	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		listener->status = SUCCESS;
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
+		listener->status = FAILED;
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 													ike_sa);
-		listener->status = FAILED;
 	}
 	return JOB_REQUEUE_NONE;
 }
@@ -351,7 +352,10 @@ METHOD(controller_t, initiate, status_t,
 	private_controller_t *this, peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	controller_cb_t callback, void *param, u_int timeout)
 {
-	interface_job_t job = {
+	interface_job_t *job;
+	status_t status;
+
+	INIT(job,
 		.listener = {
 			.public = {
 				.ike_state_change = _ike_state_change,
@@ -372,44 +376,57 @@ METHOD(controller_t, initiate, status_t,
 		.public = {
 			.execute = _initiate_execute,
 			.get_priority = _get_priority_medium,
-			.destroy = _recheckin,
+			.destroy = _destroy_job,
 		},
-	};
-	job.listener.logger.listener = &job.listener;
+		.refcount = 1,
+	);
+	job->listener.logger.listener = &job->listener;
 
 	if (callback == NULL)
 	{
-		initiate_execute(&job);
+		initiate_execute(job);
 	}
 	else
 	{
-		if (wait_for_listener(&job.listener, &job.public, timeout))
+		if (wait_for_listener(job, timeout))
 		{
-			job.listener.status = OUT_OF_RES;
+			job->listener.status = OUT_OF_RES;
 		}
 	}
-	return job.listener.status;
+	status = job->listener.status;
+	destroy_job(job);
+	return status;
 }
 
 METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
-	ike_sa_t *ike_sa = listener->ike_sa;
+	u_int32_t unique_id = listener->id;
+	ike_sa_t *ike_sa;
 
-	charon->bus->set_sa(charon->bus, ike_sa);
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													unique_id, FALSE);
+	if (!ike_sa)
+	{
+		DBG1(DBG_IKE, "unable to terminate IKE_SA: ID %d not found", unique_id);
+		listener->status = NOT_FOUND;
+		/* release listener */
+		listener_done(listener);
+		return JOB_REQUEUE_NONE;
+	}
+	listener->ike_sa = ike_sa;
 
 	if (ike_sa->delete(ike_sa) != DESTROY_ME)
-	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		/* delete failed */
+	{	/* delete failed */
 		listener->status = FAILED;
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
+		listener->status = SUCCESS;
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 													ike_sa);
-		listener->status = SUCCESS;
 	}
 	return JOB_REQUEUE_NONE;
 }
@@ -418,8 +435,10 @@ METHOD(controller_t, terminate_ike, status_t,
 	controller_t *this, u_int32_t unique_id,
 	controller_cb_t callback, void *param, u_int timeout)
 {
-	ike_sa_t *ike_sa;
-	interface_job_t job = {
+	interface_job_t *job;
+	status_t status;
+
+	INIT(job,
 		.listener = {
 			.public = {
 				.ike_state_change = _ike_state_change,
@@ -439,55 +458,84 @@ METHOD(controller_t, terminate_ike, status_t,
 		.public = {
 			.execute = _terminate_ike_execute,
 			.get_priority = _get_priority_medium,
-			.destroy = _recheckin,
+			.destroy = _destroy_job,
 		},
-	};
-	job.listener.logger.listener = &job.listener;
-
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													unique_id, FALSE);
-	if (ike_sa == NULL)
-	{
-		DBG1(DBG_IKE, "unable to terminate IKE_SA: ID %d not found", unique_id);
-		return NOT_FOUND;
-	}
-	job.listener.ike_sa = ike_sa;
+		.refcount = 1,
+	);
+	job->listener.logger.listener = &job->listener;
 
 	if (callback == NULL)
 	{
-		terminate_ike_execute(&job);
+		terminate_ike_execute(job);
 	}
 	else
 	{
-		if (wait_for_listener(&job.listener, &job.public, timeout))
+		if (wait_for_listener(job, timeout))
 		{
-			job.listener.status = OUT_OF_RES;
+			job->listener.status = OUT_OF_RES;
 		}
-		/* checkin of the ike_sa happened in the thread that executed the job */
-		charon->bus->set_sa(charon->bus, NULL);
 	}
-	return job.listener.status;
+	status = job->listener.status;
+	destroy_job(job);
+	return status;
 }
 
 METHOD(job_t, terminate_child_execute, job_requeue_t,
 	interface_job_t *job)
 {
 	interface_listener_t *listener = &job->listener;
-	ike_sa_t *ike_sa = listener->ike_sa;
-	child_sa_t *child_sa = listener->child_sa;
+	u_int32_t reqid = listener->id;
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
 
-	charon->bus->set_sa(charon->bus, ike_sa);
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+													reqid, TRUE);
+	if (!ike_sa)
+	{
+		DBG1(DBG_IKE, "unable to terminate, CHILD_SA with ID %d not found",
+			 reqid);
+		listener->status = NOT_FOUND;
+		/* release listener */
+		listener_done(listener);
+		return JOB_REQUEUE_NONE;
+	}
+	job->listener.ike_sa = ike_sa;
+
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
+			child_sa->get_reqid(child_sa) == reqid)
+		{
+			break;
+		}
+		child_sa = NULL;
+	}
+	enumerator->destroy(enumerator);
+
+	if (!child_sa)
+	{
+		DBG1(DBG_IKE, "unable to terminate, established "
+			 "CHILD_SA with ID %d not found", reqid);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		listener->status = NOT_FOUND;
+		/* release listener */
+		listener_done(listener);
+		return JOB_REQUEUE_NONE;
+	}
+
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 					child_sa->get_spi(child_sa, TRUE), FALSE) != DESTROY_ME)
 	{
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		listener->status = SUCCESS;
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
+		listener->status = FAILED;
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 													ike_sa);
-		listener->status = FAILED;
 	}
 	return JOB_REQUEUE_NONE;
 }
@@ -496,10 +544,10 @@ METHOD(controller_t, terminate_child, status_t,
 	controller_t *this, u_int32_t reqid,
 	controller_cb_t callback, void *param, u_int timeout)
 {
-	ike_sa_t *ike_sa;
-	child_sa_t *child_sa;
-	enumerator_t *enumerator;
-	interface_job_t job = {
+	interface_job_t *job;
+	status_t status;
+
+	INIT(job,
 		.listener = {
 			.public = {
 				.ike_state_change = _ike_state_change,
@@ -519,56 +567,26 @@ METHOD(controller_t, terminate_child, status_t,
 		.public = {
 			.execute = _terminate_child_execute,
 			.get_priority = _get_priority_medium,
-			.destroy = _recheckin,
+			.destroy = _destroy_job,
 		},
-	};
-	job.listener.logger.listener = &job.listener;
-
-	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
-													reqid, TRUE);
-	if (ike_sa == NULL)
-	{
-		DBG1(DBG_IKE, "unable to terminate, CHILD_SA with ID %d not found",
-			 reqid);
-		return NOT_FOUND;
-	}
-	job.listener.ike_sa = ike_sa;
-
-	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
-	{
-		if (child_sa->get_state(child_sa) != CHILD_ROUTED &&
-			child_sa->get_reqid(child_sa) == reqid)
-		{
-			break;
-		}
-		child_sa = NULL;
-	}
-	enumerator->destroy(enumerator);
-
-	if (child_sa == NULL)
-	{
-		DBG1(DBG_IKE, "unable to terminate, established "
-			 "CHILD_SA with ID %d not found", reqid);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		return NOT_FOUND;
-	}
-	job.listener.child_sa = child_sa;
+		.refcount = 1,
+	);
+	job->listener.logger.listener = &job->listener;
 
 	if (callback == NULL)
 	{
-		terminate_child_execute(&job);
+		terminate_child_execute(job);
 	}
 	else
 	{
-		if (wait_for_listener(&job.listener, &job.public, timeout))
+		if (wait_for_listener(job, timeout))
 		{
-			job.listener.status = OUT_OF_RES;
+			job->listener.status = OUT_OF_RES;
 		}
-		/* checkin of the ike_sa happened in the thread that executed the job */
-		charon->bus->set_sa(charon->bus, NULL);
 	}
-	return job.listener.status;
+	status = job->listener.status;
+	destroy_job(job);
+	return status;
 }
 
 /**
