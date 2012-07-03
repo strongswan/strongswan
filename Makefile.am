@@ -11,6 +11,9 @@ CLEANFILES = Doxyfile
 BUILT_SOURCES = Android.mk
 MAINTAINERCLEANFILES = Android.mk
 
+config_includedir = $(ipseclibdir)/include
+nodist_config_include_HEADERS = config.h
+
 Android.mk :	Android.mk.in configure.in
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \

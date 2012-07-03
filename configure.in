@@ -19,6 +19,7 @@ dnl ===========================
 AC_INIT(strongSwan,5.0.0)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
+AC_CONFIG_HEADERS([config.h])
 PKG_PROG_PKG_CONFIG
 
 dnl =================================
@@ -781,6 +782,8 @@ if test x$integrity_test = xtrue; then
 		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
 	)
 fi
+
+CFLAGS="$CFLAGS -include `pwd`/config.h"
 
 dnl ==============================================
 dnl  collect plugin list for strongSwan components

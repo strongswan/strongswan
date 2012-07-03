@@ -6,6 +6,9 @@ autom4te.cache
 config.guess
 config.sub
 configure
+config.h.in
+config.h
+stamp-h1
 depcomp
 install-sh
 ltmain.sh

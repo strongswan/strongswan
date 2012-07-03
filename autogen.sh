@@ -12,6 +12,7 @@ case "$LIBTOOLIZE" in
 		;;
 esac
 
+autoheader &&
 $LIBTOOLIZE --force &&
 aclocal &&
 automake -a &&
