@@ -153,10 +153,6 @@ if USE_ME
     sa/ikev2/tasks/ike_me.c sa/ikev2/tasks/ike_me.h
 endif
 
-if USE_LIBCAP
-  libcharon_la_LIBADD += -lcap
-endif
-
 # build optional plugins
 ########################
 

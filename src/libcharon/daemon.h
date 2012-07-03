@@ -165,6 +165,7 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/eap/eap_manager.h>
 #include <sa/xauth/xauth_manager.h>
+#include <utils/capabilities.h>
 
 #ifdef ME
 #include <sa/ikev2/connect_manager.h>
@@ -269,39 +270,14 @@ struct daemon_t {
 #endif /* ME */
 
 	/**
-	 * User ID the daemon will user after initialization
+	 * POSIX capability dropping
 	 */
-	uid_t uid;
-
-	/**
-	 * Group ID the daemon will use after initialization
-	 */
-	gid_t gid;
+	capabilities_t *caps;
 
 	/**
 	 * Name of the binary that uses the library (used for settings etc.)
 	 */
 	const char *name;
-
-	/**
-	 * Do not drop a given capability after initialization.
-	 *
-	 * Some plugins might need additional capabilites. They tell the daemon
-	 * during plugin initialization which one they need, the daemon won't
-	 * drop these.
-	 */
-	void (*keep_cap)(daemon_t *this, u_int cap);
-
-	/**
-	 * Drop all capabilities of the current process.
-	 *
-	 * Drops all capabalities, excect those exlcuded using keep_cap().
-	 * This should be called after the initialization of the daemon because
-	 * some plugins require the process to keep additional capabilities.
-	 *
-	 * @return			TRUE, if successful
-	 */
-	bool (*drop_capabilities)(daemon_t *this);
 
 	/**
 	 * Initialize the daemon.

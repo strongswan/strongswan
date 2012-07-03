@@ -129,7 +129,8 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 		}
 		umask(old);
 	}
-	if (chown(HA_FIFO, charon->uid, charon->gid) != 0)
+	if (chown(HA_FIFO, charon->caps->get_uid(charon->caps),
+			  charon->caps->get_gid(charon->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
 			 strerror(errno));

@@ -77,6 +77,7 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
+utils/capabilities.c utils/capabilities.h \
 utils/backtrace.c utils/backtrace.h
 
 
@@ -109,6 +110,10 @@ endif
 
 if USE_VSTR
   libstrongswan_la_LIBADD += -lvstr
+endif
+
+if USE_LIBCAP
+  libstrongswan_la_LIBADD += -lcap
 endif
 
 EXTRA_DIST = \

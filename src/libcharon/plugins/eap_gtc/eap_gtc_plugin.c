@@ -63,7 +63,7 @@ plugin_t *eap_gtc_plugin_create()
 	);
 
 	/* required for PAM authentication */
-	charon->keep_cap(charon, CAP_AUDIT_WRITE);
+	charon->caps->keep(charon->caps, CAP_AUDIT_WRITE);
 
 	charon->eap->add_method(charon->eap, EAP_GTC, 0, EAP_SERVER,
 							(eap_constructor_t)eap_gtc_create_server);

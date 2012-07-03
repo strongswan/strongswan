@@ -316,7 +316,8 @@ static void disable_all(private_ha_kernel_t *this)
 	{
 		while (enumerator->enumerate(enumerator, NULL, &file, NULL))
 		{
-			if (chown(file, charon->uid, charon->gid) != 0)
+			if (chown(file, charon->caps->get_uid(charon->caps),
+					  charon->caps->get_gid(charon->caps)) != 0)
 			{
 				DBG1(DBG_CFG, "changing ClusterIP permissions failed: %s",
 					 strerror(errno));

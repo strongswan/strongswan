@@ -758,7 +758,8 @@ static bool open_socket(private_stroke_socket_t *this)
 		return FALSE;
 	}
 	umask(old);
-	if (chown(socket_addr.sun_path, charon->uid, charon->gid) != 0)
+	if (chown(socket_addr.sun_path, charon->caps->get_uid(charon->caps),
+			  charon->caps->get_gid(charon->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing stroke socket permissions failed: %s",
 			 strerror(errno));

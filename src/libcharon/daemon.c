@@ -21,14 +21,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifdef CAPABILITIES
-# ifdef HAVE_SYS_CAPABILITY_H
-#  include <sys/capability.h>
-# elif defined(CAPABILITIES_NATIVE)
-#  include <linux/capability.h>
-# endif /* CAPABILITIES_NATIVE */
-#endif /* CAPABILITIES */
-
 #include "daemon.h"
 
 #include <library.h>
@@ -52,17 +44,6 @@ struct private_daemon_t {
 	 * Handler for kernel events
 	 */
 	kernel_handler_t *kernel_handler;
-
-	/**
-	 * capabilities to keep
-	 */
-#ifdef CAPABILITIES_LIBCAP
-	cap_t caps;
-#endif /* CAPABILITIES_LIBCAP */
-#ifdef CAPABILITIES_NATIVE
-	struct __user_cap_data_struct caps[2];
-#endif /* CAPABILITIES_NATIVE */
-
 };
 
 /**
@@ -125,9 +106,6 @@ static void destroy(private_daemon_t *this)
 	/* make sure the cache is clear before unloading plugins */
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 	lib->plugins->unload(lib->plugins);
-#ifdef CAPABILITIES_LIBCAP
-	cap_free(this->caps);
-#endif /* CAPABILITIES_LIBCAP */
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.shunts);
@@ -138,6 +116,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.socket);
+	DESTROY_IF(this->public.caps);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -148,57 +127,6 @@ static void destroy(private_daemon_t *this)
 											offsetof(sys_logger_t, destroy));
 	free((void*)this->public.name);
 	free(this);
-}
-
-METHOD(daemon_t, keep_cap, void,
-	   private_daemon_t *this, u_int cap)
-{
-#ifdef CAPABILITIES_LIBCAP
-	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
-	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
-	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
-#endif /* CAPABILITIES_LIBCAP */
-#ifdef CAPABILITIES_NATIVE
-	int i = 0;
-
-	if (cap >= 32)
-	{
-		i++;
-		cap -= 32;
-	}
-	this->caps[i].effective |= 1 << cap;
-	this->caps[i].permitted |= 1 << cap;
-	this->caps[i].inheritable |= 1 << cap;
-#endif /* CAPABILITIES_NATIVE */
-}
-
-METHOD(daemon_t, drop_capabilities, bool,
-	   private_daemon_t *this)
-{
-#ifdef CAPABILITIES_LIBCAP
-	if (cap_set_proc(this->caps) != 0)
-	{
-		return FALSE;
-	}
-#endif /* CAPABILITIES_LIBCAP */
-#ifdef CAPABILITIES_NATIVE
-	struct __user_cap_header_struct header = {
-#if defined(_LINUX_CAPABILITY_VERSION_3)
-		.version = _LINUX_CAPABILITY_VERSION_3,
-#elif defined(_LINUX_CAPABILITY_VERSION_2)
-		.version = _LINUX_CAPABILITY_VERSION_2,
-#elif defined(_LINUX_CAPABILITY_VERSION_1)
-		.version = _LINUX_CAPABILITY_VERSION_1,
-#else
-		.version = _LINUX_CAPABILITY_VERSION,
-#endif
-	};
-	if (capset(&header, this->caps) != 0)
-	{
-		return FALSE;
-	}
-#endif /* CAPABILITIES_NATIVE */
-	return TRUE;
 }
 
 METHOD(daemon_t, start, void,
@@ -269,8 +197,6 @@ private_daemon_t *daemon_create(const char *name)
 
 	INIT(this,
 		.public = {
-			.keep_cap = _keep_cap,
-			.drop_capabilities = _drop_capabilities,
 			.initialize = _initialize,
 			.start = _start,
 			.bus = bus_create(),
@@ -280,6 +206,7 @@ private_daemon_t *daemon_create(const char *name)
 		},
 	);
 	charon = &this->public;
+	this->public.caps = capabilities_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.xauth = xauth_manager_create();
@@ -289,16 +216,7 @@ private_daemon_t *daemon_create(const char *name)
 	this->public.shunts = shunt_manager_create();
 	this->kernel_handler = kernel_handler_create();
 
-#ifdef CAPABILITIES
-#ifdef CAPABILITIES_LIBCAP
-	this->caps = cap_init();
-#endif /* CAPABILITIES_LIBCAP */
-	keep_cap(this, CAP_NET_ADMIN);
-	if (lib->leak_detective)
-	{
-		keep_cap(this, CAP_SYS_NICE);
-	}
-#endif /* CAPABILITIES */
+	this->public.caps->keep(this->public.caps, CAP_NET_ADMIN);
 
 	return this;
 }

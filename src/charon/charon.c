@@ -17,9 +17,6 @@
  */
 
 #include <stdio.h>
-#ifdef HAVE_PRCTL
-#include <sys/prctl.h>
-#endif
 #define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
 #undef _POSIX_PTHREAD_SEMANTICS
@@ -31,8 +28,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <pwd.h>
-#include <grp.h>
 
 #include <hydra.h>
 #include <daemon.h>
@@ -144,67 +139,24 @@ static void run()
 }
 
 /**
- * drop daemon capabilities
- */
-static bool drop_capabilities()
-{
-#ifdef HAVE_PRCTL
-	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
-#endif
-
-	if (setgid(charon->gid) != 0)
-	{
-		DBG1(DBG_DMN, "change to unprivileged group failed");
-		return FALSE;
-	}
-	if (setuid(charon->uid) != 0)
-	{
-		DBG1(DBG_DMN, "change to unprivileged user failed");
-		return FALSE;
-	}
-	if (!charon->drop_capabilities(charon))
-	{
-		DBG1(DBG_DMN, "unable to drop daemon capabilities");
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * lookup UID and GID
  */
 static bool lookup_uid_gid()
 {
 #ifdef IPSEC_USER
+	if (!charon->caps->resolve_uid(charon->caps, IPSEC_USER))
 	{
-		char buf[1024];
-		struct passwd passwd, *pwp;
-
-		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
-			pwp == NULL)
-		{
-			DBG1(DBG_DMN, "resolving user '"IPSEC_USER"' failed");
-			return FALSE;
-		}
-		charon->uid = pwp->pw_uid;
+		return FALSE;
 	}
 #endif
 #ifdef IPSEC_GROUP
+	if (!charon->caps->resolve_gid(charon->caps, IPSEC_GROUP))
 	{
-		char buf[1024];
-		struct group group, *grp;
-
-		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
-			grp == NULL)
-		{
-			DBG1(DBG_DMN, "resolving group '"IPSEC_GROUP"' failed");
-			return FALSE;
-		}
-		charon->gid = grp->gr_gid;
+		return FALSE;
 	}
 #endif
 #ifdef ANDROID
-	charon->uid = AID_VPN;
+	charon->caps->set_uid(charon->caps, AID_VPN);
 #endif
 	return TRUE;
 }
@@ -260,7 +212,9 @@ static bool check_pidfile()
 	pidfile = fopen(PID_FILE, "w");
 	if (pidfile)
 	{
-		ignore_result(fchown(fileno(pidfile), charon->uid, charon->gid));
+		ignore_result(fchown(fileno(pidfile),
+							 charon->caps->get_uid(charon->caps),
+							 charon->caps->get_gid(charon->caps)));
 		fprintf(pidfile, "%d\n", getpid());
 		fflush(pidfile);
 	}
@@ -582,7 +536,7 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	if (!drop_capabilities())
+	if (!charon->caps->drop(charon->caps))
 	{
 		DBG1(DBG_DMN, "capability dropping failed - aborting charon");
 		goto deinit;

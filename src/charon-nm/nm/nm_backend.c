@@ -137,7 +137,7 @@ static bool nm_backend_init()
 	}
 
 	/* bypass file permissions to read from users ssh-agent */
-	charon->keep_cap(charon, CAP_DAC_OVERRIDE);
+	charon->caps->keep(charon->caps, CAP_DAC_OVERRIDE);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)run, this,

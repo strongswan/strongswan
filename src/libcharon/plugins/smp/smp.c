@@ -757,7 +757,8 @@ plugin_t *smp_plugin_create()
 		return NULL;
 	}
 	umask(old);
-	if (chown(unix_addr.sun_path, charon->uid, charon->gid) != 0)
+	if (chown(unix_addr.sun_path, charon->caps->get_uid(charon->caps),
+			  charon->caps->get_gid(charon->caps)) != 0)
 	{
 		DBG1(DBG_CFG, "changing XML socket permissions failed: %s", strerror(errno));
 	}
