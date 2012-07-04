@@ -25,6 +25,7 @@
 #include <daemon.h>
 #include <library.h>
 #include <threading/thread.h>
+#include <threading/spinlock.h>
 #include <threading/semaphore.h>
 
 typedef struct private_controller_t private_controller_t;
@@ -111,6 +112,11 @@ struct interface_listener_t {
 	 * semaphore to implement wait_for_listener()
 	 */
 	semaphore_t *done;
+
+	/**
+	 * spinlock to update the IKE_SA handle properly
+	 */
+	spinlock_t *lock;
 };
 
 
@@ -205,7 +211,13 @@ METHOD(logger_t, listener_log, void,
 	interface_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t *ike_sa, char* message)
 {
-	if (this->listener->ike_sa == ike_sa)
+	ike_sa_t *target;
+
+	this->listener->lock->lock(this->listener->lock);
+	target = this->listener->ike_sa;
+	this->listener->lock->unlock(this->listener->lock);
+
+	if (target == ike_sa)
 	{
 		if (!this->callback(this->param, group, level, ike_sa, message))
 		{
@@ -232,7 +244,13 @@ METHOD(job_t, get_priority_medium, job_priority_t,
 METHOD(listener_t, ike_state_change, bool,
 	interface_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
-	if (this->ike_sa == ike_sa)
+	ike_sa_t *target;
+
+	this->lock->lock(this->lock);
+	target = this->ike_sa;
+	this->lock->unlock(this->lock);
+
+	if (target == ike_sa)
 	{
 		switch (state)
 		{
@@ -266,7 +284,13 @@ METHOD(listener_t, child_state_change, bool,
 	interface_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	child_sa_state_t state)
 {
-	if (this->ike_sa == ike_sa)
+	ike_sa_t *target;
+
+	this->lock->lock(this->lock);
+	target = this->ike_sa;
+	this->lock->unlock(this->lock);
+
+	if (target == ike_sa)
 	{
 		switch (state)
 		{
@@ -296,6 +320,7 @@ METHOD(job_t, destroy_job, void,
 {
 	if (ref_put(&this->refcount))
 	{
+		this->listener.lock->destroy(this->listener.lock);
 		DESTROY_IF(this->listener.done);
 		free(this);
 	}
@@ -326,7 +351,9 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
+	listener->lock->lock(listener->lock);
 	listener->ike_sa = ike_sa;
+	listener->lock->unlock(listener->lock);
 
 	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
 	{
@@ -372,6 +399,7 @@ METHOD(controller_t, initiate, status_t,
 			.status = FAILED,
 			.child_cfg = child_cfg,
 			.peer_cfg = peer_cfg,
+			.lock = spinlock_create(),
 		},
 		.public = {
 			.execute = _initiate_execute,
@@ -415,7 +443,9 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
+	listener->lock->lock(listener->lock);
 	listener->ike_sa = ike_sa;
+	listener->lock->unlock(listener->lock);
 
 	if (ike_sa->delete(ike_sa) != DESTROY_ME)
 	{	/* delete failed */
@@ -454,6 +484,7 @@ METHOD(controller_t, terminate_ike, status_t,
 			},
 			.status = FAILED,
 			.id = unique_id,
+			.lock = spinlock_create(),
 		},
 		.public = {
 			.execute = _terminate_ike_execute,
@@ -500,7 +531,9 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
-	job->listener.ike_sa = ike_sa;
+	listener->lock->lock(listener->lock);
+	listener->ike_sa = ike_sa;
+	listener->lock->unlock(listener->lock);
 
 	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
@@ -563,6 +596,7 @@ METHOD(controller_t, terminate_child, status_t,
 			},
 			.status = FAILED,
 			.id = reqid,
+			.lock = spinlock_create(),
 		},
 		.public = {
 			.execute = _terminate_child_execute,
