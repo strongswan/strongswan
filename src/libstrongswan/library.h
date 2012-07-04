@@ -67,6 +67,10 @@
 #ifndef LIBRARY_H_
 #define LIBRARY_H_
 
+#ifndef CONFIG_H_INCLUDED
+# error config.h not included, pass "-include [...]/config.h" to gcc
+#endif
+
 #include "printf_hook.h"
 #include "utils.h"
 #include "chunk.h"

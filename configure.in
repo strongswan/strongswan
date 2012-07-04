@@ -20,6 +20,7 @@ AC_INIT(strongSwan,5.0.0)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
+AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
 PKG_PROG_PKG_CONFIG
 
 dnl =================================
