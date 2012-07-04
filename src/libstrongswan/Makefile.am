@@ -66,6 +66,7 @@ threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \
 threading/mutex.h threading/mutex.c threading/condvar.h  \
 threading/semaphore.h threading/semaphore.c \
+threading/spinlock.h threading/spinlock.c \
 threading/rwlock.h threading/rwlock.c \
 threading/lock_profiler.h \
 utils.h utils.c \
