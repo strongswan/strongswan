@@ -315,9 +315,12 @@ METHOD(radius_message_t, sign, bool,
 		/* build Message-Authenticator attribute, using 16 null bytes */
 		memset(buf, 0, sizeof(buf));
 		add(this, RAT_MESSAGE_AUTHENTICATOR, chunk_create(buf, sizeof(buf)));
-		signer->get_signature(signer,
+		if (!signer->get_signature(signer,
 				chunk_create((u_char*)this->msg, ntohs(this->msg->length)),
-				((u_char*)this->msg) + ntohs(this->msg->length) - HASH_SIZE_MD5);
+				((u_char*)this->msg) + ntohs(this->msg->length) - HASH_SIZE_MD5))
+		{
+			return FALSE;
+		}
 	}
 
 	if (!rng)

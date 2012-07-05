@@ -822,7 +822,10 @@ METHOD(simaka_message_t, generate, bool,
 	if (mac.len)
 	{
 		data = chunk_cata("cc", out, sigdata);
-		signer->get_signature(signer, data, mac.ptr);
+		if (!signer->get_signature(signer, data, mac.ptr))
+		{
+			return FALSE;
+		}
 	}
 
 	call_hook(this, FALSE, FALSE);

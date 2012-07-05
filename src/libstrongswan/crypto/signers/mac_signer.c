@@ -40,7 +40,7 @@ struct private_signer_t {
 	size_t truncation;
 };
 
-METHOD(signer_t, get_signature, void,
+METHOD(signer_t, get_signature, bool,
 	private_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
 	if (buffer == NULL)
@@ -54,6 +54,7 @@ METHOD(signer_t, get_signature, void,
 		this->mac->get_mac(this->mac, data, mac);
 		memcpy(buffer, mac, this->truncation);
 	}
+	return TRUE;
 }
 
 METHOD(signer_t, allocate_signature, bool,

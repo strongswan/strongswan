@@ -497,10 +497,14 @@ static u_int bench_signer(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			signer->get_signature(signer, buf, mac);
-			runs++;
-			signer->verify_signature(signer, buf, chunk_from_thing(mac));
-			runs++;
+			if (signer->get_signature(signer, buf, mac))
+			{
+				runs++;
+			}
+			if (signer->verify_signature(signer, buf, chunk_from_thing(mac)))
+			{
+				runs++;
+			}
 		}
 		free(buf.ptr);
 		signer->destroy(signer);
@@ -561,7 +565,10 @@ METHOD(crypto_tester_t, test_signer, bool,
 		}
 		/* signature to existing buffer */
 		memset(mac.ptr, 0, mac.len);
-		signer->get_signature(signer, data, mac.ptr);
+		if (!signer->get_signature(signer, data, mac.ptr))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->mac, mac.ptr, mac.len))
 		{
 			failed = TRUE;
@@ -585,7 +592,11 @@ METHOD(crypto_tester_t, test_signer, bool,
 			{
 				failed = TRUE;
 			}
-			signer->get_signature(signer, chunk_create(data.ptr + 1, 1), NULL);
+			if (!signer->get_signature(signer,
+									   chunk_create(data.ptr + 1, 1), NULL))
+			{
+				failed = TRUE;
+			}
 			if (!signer->verify_signature(signer, chunk_skip(data, 2),
 										  chunk_create(vector->mac, mac.len)))
 			{

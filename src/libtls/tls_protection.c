@@ -93,7 +93,7 @@ struct private_tls_protection_t {
 /**
  * Create the header and feed it into a signer for MAC verification
  */
-static void sigheader(signer_t *signer, u_int32_t seq, u_int8_t type,
+static bool sigheader(signer_t *signer, u_int32_t seq, u_int8_t type,
 					  u_int16_t version, u_int16_t length)
 {
 	/* we only support 32 bit sequence numbers, but TLS uses 64 bit */
@@ -110,7 +110,7 @@ static void sigheader(signer_t *signer, u_int32_t seq, u_int8_t type,
 	htoun16(&header.version, version);
 	htoun16(&header.length, length);
 
-	signer->get_signature(signer, chunk_from_thing(header), NULL);
+	return signer->get_signature(signer, chunk_from_thing(header), NULL);
 }
 
 METHOD(tls_protection_t, process, status_t,
@@ -180,8 +180,9 @@ METHOD(tls_protection_t, process, status_t,
 		mac = chunk_skip(data, data.len - bs);
 		data.len -= bs;
 
-		sigheader(this->signer_in, this->seq_in, type, this->version, data.len);
-		if (!this->signer_in->verify_signature(this->signer_in, data, mac))
+		if (!sigheader(this->signer_in, this->seq_in, type,
+					   this->version, data.len) ||
+			!this->signer_in->verify_signature(this->signer_in, data, mac))
 		{
 			DBG1(DBG_TLS, "TLS record MAC verification failed");
 			this->alert->add(this->alert, TLS_FATAL, TLS_BAD_RECORD_MAC);
@@ -218,10 +219,10 @@ METHOD(tls_protection_t, build, status_t,
 		{
 			chunk_t mac;
 
-			sigheader(this->signer_out, this->seq_out, *type,
-					  this->version, data->len);
-			if (!this->signer_out->allocate_signature(this->signer_out,
-													  *data, &mac))
+			if (!sigheader(this->signer_out, this->seq_out, *type,
+						   this->version, data->len) ||
+				!this->signer_out->allocate_signature(this->signer_out,
+						   *data, &mac))
 			{
 				return FAILED;
 			}

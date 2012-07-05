@@ -46,8 +46,11 @@ METHOD(aead_t, encrypt, bool,
 {
 	chunk_t encr, sig;
 
-	this->signer->get_signature(this->signer, assoc, NULL);
-	this->signer->get_signature(this->signer, iv, NULL);
+	if (!this->signer->get_signature(this->signer, assoc, NULL) ||
+		!this->signer->get_signature(this->signer, iv, NULL))
+	{
+		return FALSE;
+	}
 
 	if (encrypted)
 	{
@@ -61,7 +64,11 @@ METHOD(aead_t, encrypt, bool,
 	else
 	{
 		this->crypter->encrypt(this->crypter, plain, iv, NULL);
-		this->signer->get_signature(this->signer, plain, plain.ptr + plain.len);
+		if (!this->signer->get_signature(this->signer,
+										 plain, plain.ptr + plain.len))
+		{
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
@@ -84,8 +91,11 @@ METHOD(aead_t, decrypt, bool,
 	chunk_split(encrypted, "mm", encrypted.len - sig.len,
 				&encrypted, sig.len, &sig);
 
-	this->signer->get_signature(this->signer, assoc, NULL);
-	this->signer->get_signature(this->signer, iv, NULL);
+	if (!this->signer->get_signature(this->signer, assoc, NULL) ||
+		!this->signer->get_signature(this->signer, iv, NULL))
+	{
+		return FALSE;
+	}
 	if (!this->signer->verify_signature(this->signer, encrypted, sig))
 	{
 		DBG1(DBG_LIB, "MAC verification failed");
