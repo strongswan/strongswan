@@ -32,6 +32,7 @@
 #define SECURITY_DIR				"/sys/kernel/security/"
 #define IMA_BIOS_MEASUREMENTS		SECURITY_DIR "tpm0/binary_bios_measurements"
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
+#define IMA_EVENT_NAME_LEN_MAX		255
 #define IMA_PCR						10
 #define IMA_PCR_MAX					16
 #define IMA_TYPE_LEN				3
@@ -44,7 +45,7 @@ typedef enum ima_state_t ima_state_t;
 enum ima_state_t {
 	IMA_STATE_INIT,
 	IMA_STATE_BIOS,
-	IMA_STATE_BIOS_AGGREGATE,
+	IMA_STATE_BOOT_AGGREGATE,
 	IMA_STATE_RUNTIME,
 	IMA_STATE_END
 };
@@ -355,14 +356,16 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
  * Extend measurement into PCR an create evidence
  */
 pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
-								size_t pcr_len, chunk_t measurement)
+								chunk_t measurement)
 {
+	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evidence;
 	chunk_t pcr_before, pcr_after;
 
 	hash_algo = PTS_MEAS_ALGO_SHA1;
+	pcr_len = HASH_SIZE_SHA1;
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 	pcr_before = chunk_clone(this->pcrs[pcr]);
 	this->hasher->get_hash(this->hasher, pcr_before, NULL);
@@ -375,6 +378,35 @@ pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
 	evidence->set_pcr_info(evidence, pcr_before, pcr_after);
 
 	return evidence;
+}
+
+/**
+ * Compute and check boot aggregate value by hashing PCR0 to PCR7
+ */
+void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
+{
+	u_int32_t pcr;
+	u_char pcr_buffer[HASH_SIZE_SHA1];
+	u_char boot_aggregate_name[] = "boot_aggregate";
+	u_char filename_buffer[IMA_EVENT_NAME_LEN_MAX + 1];
+	chunk_t boot_aggregate, file_name;
+
+	/* See Linux kernel header: security/integrity/ima/ima.h */
+	boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
+	memset(filename_buffer, 0, sizeof(filename_buffer));
+	strcpy(filename_buffer, boot_aggregate_name);
+	file_name = chunk_create(filename_buffer, sizeof(filename_buffer));
+
+	for (pcr = 0; pcr < 8; pcr++)
+	{
+		this->hasher->get_hash(this->hasher, this->pcrs[pcr], NULL);
+	}
+	this->hasher->get_hash(this->hasher, chunk_empty, pcr_buffer);
+	this->hasher->get_hash(this->hasher, boot_aggregate, NULL);
+	this->hasher->get_hash(this->hasher, file_name, pcr_buffer);
+
+	DBG1(DBG_PTS, "boot aggregate value is %scorrect",
+		 chunk_equals(boot_aggregate, measurement) ? "":"in");
 }
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -420,8 +452,8 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve bios measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, bios_entry->pcr, pts->get_pcr_len(pts),
-								   bios_entry->measurement);
+			*evidence = extend_pcr(this, bios_entry->pcr,
+										 bios_entry->measurement);
 			free(bios_entry);
 	
 			/* break if still some BIOS measurements are left */
@@ -438,9 +470,9 @@ METHOD(pts_component_t, measure, status_t,
 			}
 
 			this->state = this->ima_list->get_count(this->ima_list) ?
-									IMA_STATE_BIOS_AGGREGATE : IMA_STATE_END;
+									IMA_STATE_BOOT_AGGREGATE : IMA_STATE_END;
 			break;
-		case IMA_STATE_BIOS_AGGREGATE:
+		case IMA_STATE_BOOT_AGGREGATE:
 		case IMA_STATE_RUNTIME:
 			status = this->ima_list->remove_first(this->ima_list,
 												 (void**)&ima_entry);
@@ -449,18 +481,18 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve ima measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, IMA_PCR, pts->get_pcr_len(pts),
-								   ima_entry->measurement);
+			*evidence = extend_pcr(this, IMA_PCR, ima_entry->measurement);
+
+			if (this->state == IMA_STATE_BOOT_AGGREGATE)
+			{
+				check_boot_aggregate(this, ima_entry->measurement);
+			}
 
 			/* TODO optionally send file measurements */
 			chunk_free(&ima_entry->file_measurement);
 			chunk_free(&ima_entry->filename);
 			free(ima_entry);
 
-			if (this->state == IMA_STATE_BIOS_AGGREGATE)
-			{
-				/* TODO check BIOS aggregate value */
-			}
 			this->state = this->ima_list->get_count(this->ima_list) ?
 									IMA_STATE_RUNTIME : IMA_STATE_END;
 			break;
@@ -487,66 +519,81 @@ METHOD(pts_component_t, verify, status_t,
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
 
-	if (!this->keyid.ptr)
+	switch (this->state)
 	{
-		if (!pts->get_aik_keyid(pts, &this->keyid))
-		{
-			return FAILED;
-		}
-		this->keyid = chunk_clone(this->keyid);
+		case IMA_STATE_INIT:
+			if (!pts->get_aik_keyid(pts, &this->keyid))
+			{
+				return FAILED;
+			}
+			this->keyid = chunk_clone(this->keyid);
 
-		if (!this->pts_db)
-		{
-			DBG1(DBG_PTS, "pts database not available");
-			return FAILED;
-		}
-		status = this->pts_db->get_comp_measurement_count(this->pts_db,
-								this->name, this->keyid, algo,
-								&this->cid, &this->kid, &this->count);
-		if (status != SUCCESS)
-		{
-			return status;
-		}
-		vid = this->name->get_vendor_id(this->name);
-		name = this->name->get_name(this->name);
-		names = pts_components->get_comp_func_names(pts_components, vid);
-
-		if (this->count)
-		{
-			DBG1(DBG_PTS, "checking %d %N '%N' functional component evidence "
-				 "measurements", this->count, pen_names, vid, names, name);
-		}
-		else
-		{
-			DBG1(DBG_PTS, "registering %N '%N' functional component evidence "
-				 "measurements", pen_names, vid, names, name);
-			this->is_registering = TRUE;
-		}
-	}
-
-	if (extended_pcr != IMA_PCR)
-	{
-		if (this->is_registering)
-		{
-			status = this->pts_db->insert_comp_measurement(this->pts_db,
-									measurement, this->cid, this->kid,
-									++this->seq_no,	extended_pcr, algo);
+			if (!this->pts_db)
+			{
+				DBG1(DBG_PTS, "pts database not available");
+				return FAILED;
+			}
+			status = this->pts_db->get_comp_measurement_count(this->pts_db,
+									this->name, this->keyid, algo,
+									&this->cid, &this->kid, &this->count);
 			if (status != SUCCESS)
 			{
 				return status;
 			}
-			this->count = this->seq_no + 1;
-		}
-		else
-		{
-			status = this->pts_db->check_comp_measurement(this->pts_db,
-									measurement, this->cid, this->kid,
-									++this->seq_no,	extended_pcr, algo);
-			if (status != SUCCESS)
+			vid = this->name->get_vendor_id(this->name);
+			name = this->name->get_name(this->name);
+			names = pts_components->get_comp_func_names(pts_components, vid);
+
+			if (this->count)
 			{
-				return status;
+				DBG1(DBG_PTS, "checking %d %N '%N' functional component "
+							  "evidence measurements", this->count, pen_names,
+							   vid, names, name);
 			}
-		}
+			else
+			{
+				DBG1(DBG_PTS, "registering %N '%N' functional component "
+							  "evidence measurements", pen_names, vid, names,
+							   name);
+				this->is_registering = TRUE;
+			}
+			this->state = IMA_STATE_BIOS;
+			/* fall through to next state */
+		case IMA_STATE_BIOS:
+			if (extended_pcr != IMA_PCR)
+			{
+				if (this->is_registering)
+				{
+					status = this->pts_db->insert_comp_measurement(this->pts_db,
+											measurement, this->cid, this->kid,
+											++this->seq_no,	extended_pcr, algo);
+					if (status != SUCCESS)
+					{
+						return status;
+					}
+					this->count = this->seq_no + 1;
+				}
+				else
+				{
+					status = this->pts_db->check_comp_measurement(this->pts_db,
+											measurement, this->cid, this->kid,
+											++this->seq_no,	extended_pcr, algo);
+					if (status != SUCCESS)
+					{
+						return status;
+					}
+				}
+				break;
+			}
+			this->state = IMA_STATE_BOOT_AGGREGATE;
+			/* fall through to next state */
+		case IMA_STATE_BOOT_AGGREGATE:
+			this->state = IMA_STATE_RUNTIME;
+			break;
+		case IMA_STATE_RUNTIME:
+			break;
+		case IMA_STATE_END:
+			break;
 	}
 
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
