@@ -172,8 +172,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		}
 
 		if (!response->has_data(response) ||
-			!response->query_name_exist(response) ||
-			!(response->get_security_state(response) == SECURE) )
+			!response->query_name_exist(response))
 		{
 			DBG1(DBG_CFG, "ipseckey_cred: Unable to retrieve IPSECKEY RRs "
 						  "for the domain %s from the DNS", fqdn);
@@ -181,6 +180,17 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 			free(fqdn);
 			return enumerator_create_empty();
 		}
+
+		if (!(response->get_security_state(response) == SECURE))
+		{
+			DBG1(DBG_CFG, "ipseckey_cred: DNSSEC security state of the "
+						  "IPSECKEY RRs of the domain %s is not SECURE "
+						  "as required", fqdn);
+			response->destroy(response);
+			free(fqdn);
+			return enumerator_create_empty();
+		}
+
 		free(fqdn);
 
 		/** Determine the validity period of the retrieved IPSECKEYs
