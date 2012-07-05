@@ -117,7 +117,7 @@ METHOD(aead_t, get_key_size, size_t,
 			this->signer->get_key_size(this->signer);
 }
 
-METHOD(aead_t, set_key, void,
+METHOD(aead_t, set_key, bool,
 	private_aead_t *this, chunk_t key)
 {
 	chunk_t sig, enc;
@@ -127,6 +127,8 @@ METHOD(aead_t, set_key, void,
 
 	this->signer->set_key(this->signer, sig);
 	this->crypter->set_key(this->crypter, enc);
+
+	return TRUE;
 }
 
 METHOD(aead_t, destroy, void,

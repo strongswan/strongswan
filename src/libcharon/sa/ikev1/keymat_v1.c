@@ -204,10 +204,11 @@ METHOD(aead_t, get_key_size, size_t,
 	return this->crypter->get_key_size(this->crypter);
 }
 
-METHOD(aead_t, set_key, void,
+METHOD(aead_t, set_key, bool,
 	private_aead_t *this, chunk_t key)
 {
 	this->crypter->set_key(this->crypter, key);
+	return TRUE;
 }
 
 METHOD(aead_t, aead_destroy, void,

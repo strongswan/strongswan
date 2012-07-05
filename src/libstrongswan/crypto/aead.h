@@ -100,8 +100,10 @@ struct aead_t {
 	 * Set the key for encryption and authentication.
 	 *
 	 * @param key			encryption and authentication key
+	 * @return				TRUE if key set successfully
 	 */
-	void (*set_key)(aead_t *this, chunk_t key);
+	__attribute__((warn_unused_result))
+	bool (*set_key)(aead_t *this, chunk_t key);
 
 	/**
 	 * Destroy a aead_t.

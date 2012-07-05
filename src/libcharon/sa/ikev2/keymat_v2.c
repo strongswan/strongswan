@@ -112,12 +112,20 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	aead_i->set_key(aead_i, key);
+	if (!aead_i->set_key(aead_i, key))
+	{
+		chunk_clear(&key);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	aead_r->set_key(aead_r, key);
+	if (!aead_r->set_key(aead_r, key))
+	{
+		chunk_clear(&key);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	if (this->initiator)

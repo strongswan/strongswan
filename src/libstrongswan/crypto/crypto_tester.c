@@ -306,7 +306,10 @@ static u_int bench_aead(private_crypto_tester_t *this,
 		memset(iv, 0x56, sizeof(iv));
 		memset(key, 0x12, sizeof(key));
 		memset(assoc, 0x78, sizeof(assoc));
-		aead->set_key(aead, chunk_from_thing(key));
+		if (!aead->set_key(aead, chunk_from_thing(key)))
+		{
+			return 0;
+		}
 		icv = aead->get_icv_size(aead);
 
 		buf = chunk_alloc(this->bench_size + icv);
@@ -374,7 +377,10 @@ METHOD(crypto_tester_t, test_aead, bool,
 		tested++;
 
 		key = chunk_create(vector->key, aead->get_key_size(aead));
-		aead->set_key(aead, key);
+		if (!aead->set_key(aead, key))
+		{
+			failed = TRUE;
+		}
 		iv = chunk_create(vector->iv, aead->get_iv_size(aead));
 		assoc = chunk_create(vector->adata, vector->alen);
 		icv = aead->get_icv_size(aead);

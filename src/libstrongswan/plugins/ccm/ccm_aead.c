@@ -306,12 +306,13 @@ METHOD(aead_t, get_key_size, size_t,
 	return this->crypter->get_key_size(this->crypter) + SALT_SIZE;
 }
 
-METHOD(aead_t, set_key, void,
+METHOD(aead_t, set_key, bool,
 	private_ccm_aead_t *this, chunk_t key)
 {
 	memcpy(this->salt, key.ptr + key.len - SALT_SIZE, SALT_SIZE);
 	key.len -= SALT_SIZE;
 	this->crypter->set_key(this->crypter, key);
+	return TRUE;
 }
 
 METHOD(aead_t, destroy, void,
