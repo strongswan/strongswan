@@ -286,7 +286,7 @@ METHOD(radius_message_t, add, void,
 	this->msg->length = htons(ntohs(this->msg->length) + attribute->length);
 }
 
-METHOD(radius_message_t, sign, void,
+METHOD(radius_message_t, sign, bool,
 	private_radius_message_t *this, u_int8_t *req_auth, chunk_t secret,
 	hasher_t *hasher, signer_t *signer, rng_t *rng, bool msg_auth)
 {
@@ -329,6 +329,7 @@ METHOD(radius_message_t, sign, void,
 		hasher->get_hash(hasher, msg, NULL);
 		hasher->get_hash(hasher, secret, this->msg->authenticator);
 	}
+	return TRUE;
 }
 
 METHOD(radius_message_t, verify, bool,

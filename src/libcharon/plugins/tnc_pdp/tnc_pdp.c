@@ -293,12 +293,13 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 		chunk_free(&data);
 	}
 	response->set_identifier(response, request->get_identifier(request));
-	response->sign(response, request->get_authenticator(request),
-				   this->secret, this->hasher, this->signer, NULL, TRUE);
-
-	DBG1(DBG_CFG, "sending RADIUS %N to client '%H'", radius_message_code_names,
-		 code, client);
-	send_message(this, response, client);
+	if (response->sign(response, request->get_authenticator(request),
+					   this->secret, this->hasher, this->signer, NULL, TRUE))
+	{
+		DBG1(DBG_CFG, "sending RADIUS %N to client '%H'",
+			 radius_message_code_names, code, client);
+		send_message(this, response, client);
+	}
 	response->destroy(response);
 }
 

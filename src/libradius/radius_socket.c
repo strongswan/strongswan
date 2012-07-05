@@ -148,8 +148,11 @@ METHOD(radius_socket_t, request, radius_message_t*,
 	/* set Message Identifier */
 	request->set_identifier(request, this->identifier++);
 	/* sign the request */
-	request->sign(request, NULL, this->secret, this->hasher, this->signer,
-						   rng, rng != NULL);
+	if (!request->sign(request, NULL, this->secret, this->hasher, this->signer,
+					   rng, rng != NULL))
+	{
+		return NULL;
+	}
 
 	if (!check_connection(this, fd, port))
 	{
