@@ -3,7 +3,8 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-ipsec.c ipsec.h
+ipsec.c ipsec.h \
+esp_context.c esp_context.h
 
 # build libipsec ---------------------------------------------------------------
 
