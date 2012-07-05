@@ -547,7 +547,10 @@ METHOD(crypto_tester_t, test_signer, bool,
 
 		/* allocated signature */
 		data = chunk_create(vector->data, vector->len);
-		signer->allocate_signature(signer, data, &mac);
+		if (!signer->allocate_signature(signer, data, &mac))
+		{
+			failed = TRUE;
+		}
 		if (mac.len != signer->get_block_size(signer))
 		{
 			failed = TRUE;
@@ -577,7 +580,11 @@ METHOD(crypto_tester_t, test_signer, bool,
 		/* signature to existing buffer, using append mode */
 		if (data.len > 2)
 		{
-			signer->allocate_signature(signer, chunk_create(data.ptr, 1), NULL);
+			if (!signer->allocate_signature(signer,
+											chunk_create(data.ptr, 1), NULL))
+			{
+				failed = TRUE;
+			}
 			signer->get_signature(signer, chunk_create(data.ptr + 1, 1), NULL);
 			if (!signer->verify_signature(signer, chunk_skip(data, 2),
 										  chunk_create(vector->mac, mac.len)))

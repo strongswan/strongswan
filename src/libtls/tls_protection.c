@@ -220,7 +220,11 @@ METHOD(tls_protection_t, build, status_t,
 
 			sigheader(this->signer_out, this->seq_out, *type,
 					  this->version, data->len);
-			this->signer_out->allocate_signature(this->signer_out, *data, &mac);
+			if (!this->signer_out->allocate_signature(this->signer_out,
+													  *data, &mac))
+			{
+				return FAILED;
+			}
 			if (this->crypter_out)
 			{
 				chunk_t padding, iv;

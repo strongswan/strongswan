@@ -113,7 +113,7 @@ METHOD(signer_t, get_signature, void,
 	this->ops->hash(this->ops, data, buffer, this->block_size);
 }
 
-METHOD(signer_t, allocate_signature, void,
+METHOD(signer_t, allocate_signature, bool,
 	private_af_alg_signer_t *this, chunk_t data, chunk_t *chunk)
 {
 	if (chunk)
@@ -125,6 +125,7 @@ METHOD(signer_t, allocate_signature, void,
 	{
 		get_signature(this, data, NULL);
 	}
+	return TRUE;
 }
 
 METHOD(signer_t, verify_signature, bool,

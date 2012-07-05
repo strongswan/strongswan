@@ -102,8 +102,10 @@ struct signer_t {
 	 *
 	 * @param data		a chunk containing the data to sign
 	 * @param chunk		chunk which will hold the allocated signature
+	 * @return			TRUE if signature allocated successfully
 	 */
-	void (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
+	__attribute__((warn_unused_result))
+	bool (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
 
 	/**
 	 * Verify a signature.

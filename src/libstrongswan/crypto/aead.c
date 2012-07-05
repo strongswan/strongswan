@@ -52,7 +52,10 @@ METHOD(aead_t, encrypt, bool,
 	if (encrypted)
 	{
 		this->crypter->encrypt(this->crypter, plain, iv, &encr);
-		this->signer->allocate_signature(this->signer, encr, &sig);
+		if (!this->signer->allocate_signature(this->signer, encr, &sig))
+		{
+			return FALSE;
+		}
 		*encrypted = chunk_cat("cmm", iv, encr, sig);
 	}
 	else

@@ -56,7 +56,7 @@ METHOD(signer_t, get_signature, void,
 	}
 }
 
-METHOD(signer_t, allocate_signature, void,
+METHOD(signer_t, allocate_signature, bool,
 	private_signer_t *this, chunk_t data, chunk_t *chunk)
 {
 	if (chunk == NULL)
@@ -72,6 +72,7 @@ METHOD(signer_t, allocate_signature, void,
 		*chunk = chunk_alloc(this->truncation);
 		memcpy(chunk->ptr, mac, this->truncation);
 	}
+	return TRUE;
 }
 
 METHOD(signer_t, verify_signature, bool,
