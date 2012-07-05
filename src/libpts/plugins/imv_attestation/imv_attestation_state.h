@@ -112,25 +112,19 @@ struct imv_attestation_state_t {
 	void (*add_component)(imv_attestation_state_t *this, pts_component_t *entry);
 
 	/**
-	 * Returns the number of Functional Component waiting for evidence
-	 *
-	 * @return					Number of waiting Functional Components
-	 */
-	int (*get_component_count)(imv_attestation_state_t *this);
-
-	/**
-	 * Check for presence of Functional Component and remove and return it
+	 * Get a Functional Component with a given name
 	 *
 	 * @param name			 	Name of the requested Functional Component
 	 * @return					Functional Component if found, NULL otherwise
 	 */
-	pts_component_t* (*check_off_component)(imv_attestation_state_t *this,
-											pts_comp_func_name_t *name);
+	pts_component_t* (*get_component)(imv_attestation_state_t *this,
+									  pts_comp_func_name_t *name);
 
 	/**
 	 * Tell the Functional Components to finalize any measurement registrations
+	 * and to check if all expected measurements were received
 	 */
-	void (*check_off_registrations)(imv_attestation_state_t *this);
+	void (*finalize_components)(imv_attestation_state_t *this);
 
 	/**
 	 * Indicates if a file measurement error occurred

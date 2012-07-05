@@ -169,7 +169,7 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 						  "found in database", pcr, seq_no);
 			DBG1(DBG_PTS, "  expected: %#B", &hash);
 			DBG1(DBG_PTS, "  received: %#B", &measurement);
-			status = FAILED;
+			status = VERIFY_ERROR;
 			break;
 		}
 	}

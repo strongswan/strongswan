@@ -372,12 +372,6 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 				attestation_state->get_file_meas_request_count(attestation_state));
 			attestation_state->set_measurement_error(attestation_state);
 		}
-		if (attestation_state->get_component_count(attestation_state))
-		{
-			DBG1(DBG_IMV, "failure due to %d components waiting for evidence",
-				 attestation_state->get_component_count(attestation_state));
-			attestation_state->set_measurement_error(attestation_state);
-		}
 		if (attestation_state->get_measurement_error(attestation_state))
 		{
 			state->set_recommendation(state,

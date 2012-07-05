@@ -296,7 +296,7 @@ METHOD(imv_attestation_state_t, add_component, void,
 	this->components->insert_last(this->components, entry);
 }
 
-METHOD(imv_attestation_state_t, check_off_component, pts_component_t*,
+METHOD(imv_attestation_state_t, get_component, pts_component_t*,
 	private_imv_attestation_state_t *this, pts_comp_func_name_t *name)
 {
 	enumerator_t *enumerator;
@@ -308,36 +308,11 @@ METHOD(imv_attestation_state_t, check_off_component, pts_component_t*,
 		if (name->equals(name, entry->get_comp_func_name(entry)))
 		{
 			found = entry;
-			this->components->remove_at(this->components, enumerator);
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	return found;
-}
-
-METHOD(imv_attestation_state_t, check_off_registrations, void,
-	private_imv_attestation_state_t *this)
-{
-	enumerator_t *enumerator;
-	pts_component_t *entry;
-
-	enumerator = this->components->create_enumerator(this->components);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->check_off_registrations(entry))
-		{
-			this->components->remove_at(this->components, enumerator);
-			entry->destroy(entry);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-METHOD(imv_attestation_state_t, get_component_count, int,
-	private_imv_attestation_state_t *this)
-{
-	return this->components->get_count(this->components);
 }
 
 METHOD(imv_attestation_state_t, get_measurement_error, bool,
@@ -350,6 +325,22 @@ METHOD(imv_attestation_state_t, set_measurement_error, void,
 	private_imv_attestation_state_t *this)
 {
 	this->measurement_error = TRUE;
+}
+
+METHOD(imv_attestation_state_t, finalize_components, void,
+	private_imv_attestation_state_t *this)
+{
+	pts_component_t *entry;
+
+	while (this->components->remove_last(this->components,
+										(void**)&entry) == SUCCESS)
+	{
+		if (!entry->finalize(entry))
+		{
+			_set_measurement_error(this);
+		}
+		entry->destroy(entry);
+	}
 }
 
 /**
@@ -380,9 +371,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.check_off_file_meas_request = _check_off_file_meas_request,
 			.get_file_meas_request_count = _get_file_meas_request_count,
 			.add_component = _add_component,
-			.check_off_component = _check_off_component,
-			.check_off_registrations = _check_off_registrations,
-			.get_component_count = _get_component_count,
+			.get_component = _get_component,
+			.finalize_components = _finalize_components,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,
 		},

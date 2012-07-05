@@ -79,10 +79,11 @@ struct pts_component_t {
 
 	/**
 	 * Tell the PTS Functional Component to finalize pending registrations
+	 * and check for missing measurements
 	 *
-	 * @return				TRUE if there are pending registrations
+	 * @return				TRUE if finalization successful
 	 */
-	bool (*check_off_registrations)(pts_component_t *this);
+	bool (*finalize)(pts_component_t *this);
 
 	/**
 	 * Destroys a pts_component_t object.

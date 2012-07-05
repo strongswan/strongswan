@@ -276,34 +276,21 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pts_comp_evidence_t *evidence;
 			pts_component_t *comp;
 			u_int32_t depth;
-			status_t status;
 
 			attr_cast = (tcg_pts_attr_simple_comp_evid_t*)attr;
 			evidence = attr_cast->get_comp_evidence(attr_cast);
 			name = evidence->get_comp_func_name(evidence, &depth);
 
-			comp = attestation_state->check_off_component(attestation_state, name);
+			comp = attestation_state->get_component(attestation_state, name);
 			if (!comp)
 			{
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
-			status = comp->verify(comp, pts, evidence);
-
-			switch (status)
+			if (comp->verify(comp, pts, evidence) != SUCCESS)
 			{
-				default:
-				case FAILED:
-					attestation_state->set_measurement_error(attestation_state);
-					comp->destroy(comp);
-					break;
-				case SUCCESS:
-					name->log(name, "  successfully measured ");
-					comp->destroy(comp);
-					break;
-				case NEED_MORE:
-					/* re-enter component into list */
-					attestation_state->add_component(attestation_state, comp);
+				attestation_state->set_measurement_error(attestation_state);
+				name->log(name, "  measurement mismatch for ");
 			}
 			break;
 		}
@@ -353,8 +340,11 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DBG2(DBG_IMV, "TPM Quote Info signature verification successful");
 				free(quote_info.ptr);
 
-				/* Finalize any pending measurement registrations */
-				attestation_state->check_off_registrations(attestation_state);
+				/**
+				 * Finalize any pending measurement registrations and check
+				 * if all expected component measurements were received
+				 */
+				attestation_state->finalize_components(attestation_state);
 			}
 
 			if (attr_cast->get_evid_sig(attr_cast, &evid_sig))
