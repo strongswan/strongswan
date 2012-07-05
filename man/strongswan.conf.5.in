@@ -323,6 +323,14 @@ Hashing algorithm to fingerprint coupled certificates
 .BR charon.plugins.coupling.max " [1]"
 Maximum number of coupling entries to create
 .TP
+.BR charon.plugins.dhcp.force_server_address " [no]"
+Always use the configured server address. This might be helpful if the DHCP
+server runs on the same host as strongSwan, and the DHCP daemon does not listen
+on the loopback interface.  In that case the server cannot be reached via
+unicast (or even 255.255.255.255) as that would be routed via loopback.
+Setting this option to yes and configuring the local broadcast address (e.g.
+192.168.0.255) as server address might work.
+.TP
 .BR charon.plugins.dhcp.identity_lease " [no]"
 Derive user-defined MAC address from hash of IKEv2 identity
 .TP

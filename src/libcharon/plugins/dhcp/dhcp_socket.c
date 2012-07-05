@@ -105,6 +105,11 @@ struct private_dhcp_socket_t {
 	 * DHCP server address, or broadcast
 	 */
 	host_t *dst;
+
+	/**
+	 * Force configured destination address
+	 */
+	bool force_dst;
 };
 
 /**
@@ -266,7 +271,7 @@ static bool send_dhcp(private_dhcp_socket_t *this,
 	ssize_t len;
 
 	dst = transaction->get_server(transaction);
-	if (!dst)
+	if (!dst || this->force_dst)
 	{
 		dst = this->dst;
 	}
@@ -700,6 +705,9 @@ dhcp_socket_t *dhcp_socket_create()
 	}
 	this->identity_lease = lib->settings->get_bool(lib->settings,
 								"%s.plugins.dhcp.identity_lease", FALSE,
+								charon->name);
+	this->force_dst = lib->settings->get_str(lib->settings,
+								"%s.plugins.dhcp.force_server_address", FALSE,
 								charon->name);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.server", "255.255.255.255",
