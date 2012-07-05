@@ -367,7 +367,11 @@ METHOD(encryption_payload_t, encrypt, bool,
 	DBG3(DBG_ENC, "padding %B", &padding);
 	DBG3(DBG_ENC, "assoc %B", &assoc);
 
-	this->aead->encrypt(this->aead, crypt, assoc, iv, NULL);
+	if (!this->aead->encrypt(this->aead, crypt, assoc, iv, NULL))
+	{
+		free(assoc.ptr);
+		return FALSE;
+	}
 
 	DBG3(DBG_ENC, "encrypted %B", &crypt);
 	DBG3(DBG_ENC, "ICV %B", &icv);
@@ -410,7 +414,11 @@ METHOD(encryption_payload_t, encrypt_v1, bool,
 	DBG3(DBG_ENC, "plain %B", &plain);
 	DBG3(DBG_ENC, "padding %B", &padding);
 
-	this->aead->encrypt(this->aead, this->encrypted, chunk_empty, iv, NULL);
+	if (!this->aead->encrypt(this->aead, this->encrypted, chunk_empty, iv, NULL))
+	{
+		chunk_free(&iv);
+		return FALSE;
+	}
 	chunk_free(&iv);
 
 	DBG3(DBG_ENC, "encrypted %B", &this->encrypted);

@@ -240,7 +240,7 @@ static bool verify_icv(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
 	return memeq(buf, icv, this->icv_size);
 }
 
-METHOD(aead_t, encrypt, void,
+METHOD(aead_t, encrypt, bool,
 	private_ccm_aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
 	chunk_t *encrypted)
 {
@@ -255,6 +255,7 @@ METHOD(aead_t, encrypt, void,
 		create_icv(this, plain, assoc, iv, plain.ptr + plain.len);
 		crypt_data(this, iv, plain, plain);
 	}
+	return TRUE;
 }
 
 METHOD(aead_t, decrypt, bool,

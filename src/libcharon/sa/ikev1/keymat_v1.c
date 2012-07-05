@@ -163,11 +163,12 @@ typedef struct {
 } private_aead_t;
 
 
-METHOD(aead_t, encrypt, void,
+METHOD(aead_t, encrypt, bool,
 	private_aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
 	chunk_t *encrypted)
 {
 	this->crypter->encrypt(this->crypter, plain, iv, encrypted);
+	return TRUE;
 }
 
 METHOD(aead_t, decrypt, bool,

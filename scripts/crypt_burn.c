@@ -70,10 +70,14 @@ int main(int argc, char *argv[])
 		}
 		while (TRUE)
 		{
-			aead->encrypt(aead,
+			if (!aead->encrypt(aead,
 				chunk_create(buffer, sizeof(buffer) - aead->get_icv_size(aead)),
 				chunk_from_thing(assoc),
-				chunk_create(iv, aead->get_iv_size(aead)), NULL);
+				chunk_create(iv, aead->get_iv_size(aead)), NULL))
+			{
+				fprintf(stderr, "aead encryption failed!\n");
+				return 1;
+			}
 			if (!aead->decrypt(aead, chunk_create(buffer, sizeof(buffer)),
 				chunk_from_thing(assoc),
 				chunk_create(iv, aead->get_iv_size(aead)), NULL))

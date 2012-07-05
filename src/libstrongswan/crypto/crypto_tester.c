@@ -317,12 +317,16 @@ static u_int bench_aead(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			aead->encrypt(aead, buf, chunk_from_thing(assoc),
-						  chunk_from_thing(iv), NULL);
-			runs += 2;
-			aead->decrypt(aead, chunk_create(buf.ptr, buf.len + icv),
-						  chunk_from_thing(assoc), chunk_from_thing(iv), NULL);
-			runs += 2;
+			if (aead->encrypt(aead, buf, chunk_from_thing(assoc),
+						chunk_from_thing(iv), NULL))
+			{
+				runs += 2;
+			}
+			if (aead->decrypt(aead, chunk_create(buf.ptr, buf.len + icv),
+						chunk_from_thing(assoc), chunk_from_thing(iv), NULL))
+			{
+				runs += 2;
+			}
 		}
 		free(buf.ptr);
 		aead->destroy(aead);
@@ -377,7 +381,10 @@ METHOD(crypto_tester_t, test_aead, bool,
 
 		/* allocated encryption */
 		plain = chunk_create(vector->plain, vector->len);
-		aead->encrypt(aead, plain, assoc, iv, &cipher);
+		if (!aead->encrypt(aead, plain, assoc, iv, &cipher))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->cipher, cipher.ptr, cipher.len))
 		{
 			failed = TRUE;
@@ -405,7 +412,10 @@ METHOD(crypto_tester_t, test_aead, bool,
 		}
 		plain.ptr = realloc(plain.ptr, plain.len + icv);
 		/* inline encryption */
-		aead->encrypt(aead, plain, assoc, iv, NULL);
+		if (!aead->encrypt(aead, plain, assoc, iv, NULL))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->cipher, plain.ptr, plain.len + icv))
 		{
 			failed = TRUE;

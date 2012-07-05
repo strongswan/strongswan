@@ -40,7 +40,7 @@ struct private_aead_t {
 	signer_t *signer;
 };
 
-METHOD(aead_t, encrypt, void,
+METHOD(aead_t, encrypt, bool,
 	private_aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
 	chunk_t *encrypted)
 {
@@ -60,6 +60,7 @@ METHOD(aead_t, encrypt, void,
 		this->crypter->encrypt(this->crypter, plain, iv, NULL);
 		this->signer->get_signature(this->signer, plain, plain.ptr + plain.len);
 	}
+	return TRUE;
 }
 
 METHOD(aead_t, decrypt, bool,
