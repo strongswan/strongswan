@@ -119,6 +119,24 @@ struct private_eap_aka_server_t {
 };
 
 /**
+ * Generate a payload from a message, destroy message
+ */
+static bool generate_payload(simaka_message_t *message, chunk_t data,
+							 eap_payload_t **out)
+{
+	chunk_t chunk;
+	bool ok;
+
+	ok = message->generate(message, data, &chunk);
+	if (ok)
+	{
+		*out = eap_payload_create_data_own(chunk);
+	}
+	message->destroy(message);
+	return ok;
+}
+
+/**
  * Create EAP-AKA/Request/Identity message
  */
 static status_t identity(private_eap_aka_server_t *this, eap_payload_t **out)
@@ -139,9 +157,10 @@ static status_t identity(private_eap_aka_server_t *this, eap_payload_t **out)
 	{
 		message->add_attribute(message, AT_PERMANENT_ID_REQ, chunk_empty);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
-	message->destroy(message);
-
+	if (!generate_payload(message, chunk_empty, out))
+	{
+		return FAILED;
+	}
 	this->pending = AKA_IDENTITY;
 	return NEED_MORE;
 }
@@ -190,6 +209,7 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 	message->add_attribute(message, AT_RAND, this->rand);
 	message->add_attribute(message, AT_AUTN, chunk_create(autn, AKA_AUTN_LEN));
 	id = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk.ptr);
+	free(mk.ptr);
 	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -203,10 +223,10 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 							   id->get_encoding(id));
 		id->destroy(id);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
-	message->destroy(message);
-
-	free(mk.ptr);
+	if (!generate_payload(message, chunk_empty, out))
+	{
+		return FAILED;
+	}
 	this->pending = AKA_CHALLENGE;
 	return NEED_MORE;
 }
@@ -247,9 +267,10 @@ static status_t reauthenticate(private_eap_aka_server_t *this,
 							   next->get_encoding(next));
 		next->destroy(next);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
-	message->destroy(message);
-
+	if (!generate_payload(message, chunk_empty, out))
+	{
+		return FAILED;
+	}
 	this->pending = SIM_REAUTHENTICATION;
 	return NEED_MORE;
 }

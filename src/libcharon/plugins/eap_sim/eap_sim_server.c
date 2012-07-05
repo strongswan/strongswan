@@ -113,6 +113,24 @@ struct private_eap_sim_server_t {
 /* version of SIM protocol we speak */
 static chunk_t version = chunk_from_chars(0x00,0x01);
 
+/**
+ * Generate a payload from a message, destroy message
+ */
+static bool generate_payload(simaka_message_t *message, chunk_t data,
+							 eap_payload_t **out)
+{
+	chunk_t chunk;
+	bool ok;
+
+	ok = message->generate(message, data, &chunk);
+	if (ok)
+	{
+		*out = eap_payload_create_data_own(chunk);
+	}
+	message->destroy(message);
+	return ok;
+}
+
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_sim_server_t *this, eap_payload_t **out)
 {
@@ -133,9 +151,10 @@ METHOD(eap_method_t, initiate, status_t,
 	{
 		message->add_attribute(message, AT_PERMANENT_ID_REQ, chunk_empty);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
-	message->destroy(message);
-
+	if (!generate_payload(message, chunk_empty, out))
+	{
+		return FAILED;
+	}
 	this->pending = SIM_START;
 	return NEED_MORE;
 }
@@ -176,9 +195,10 @@ static status_t reauthenticate(private_eap_sim_server_t *this,
 							   next->get_encoding(next));
 		next->destroy(next);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, chunk_empty));
-	message->destroy(message);
-
+	if (!generate_payload(message, chunk_empty, out))
+	{
+		return FAILED;
+	}
 	this->pending = SIM_REAUTHENTICATION;
 	return NEED_MORE;
 }
@@ -393,6 +413,7 @@ static status_t process_start(private_eap_sim_server_t *this,
 									SIM_CHALLENGE, this->crypto);
 	message->add_attribute(message, AT_RAND, rands);
 	id = this->mgr->provider_gen_reauth(this->mgr, this->permanent, mk.ptr);
+	free(mk.ptr);
 	if (id)
 	{
 		message->add_attribute(message, AT_NEXT_REAUTH_ID,
@@ -406,10 +427,10 @@ static status_t process_start(private_eap_sim_server_t *this,
 							   id->get_encoding(id));
 		id->destroy(id);
 	}
-	*out = eap_payload_create_data_own(message->generate(message, nonce));
-	message->destroy(message);
-
-	free(mk.ptr);
+	if (!generate_payload(message, nonce, out))
+	{
+		return FAILED;
+	}
 	this->pending = SIM_CHALLENGE;
 	return NEED_MORE;
 }

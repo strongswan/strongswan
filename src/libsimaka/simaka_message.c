@@ -599,8 +599,8 @@ METHOD(simaka_message_t, verify, bool,
 	return TRUE;
 }
 
-METHOD(simaka_message_t, generate, chunk_t,
-	private_simaka_message_t *this, chunk_t sigdata)
+METHOD(simaka_message_t, generate, bool,
+	private_simaka_message_t *this, chunk_t sigdata, chunk_t *gen)
 {
 	/* buffers large enough for messages we generate */
 	char out_buf[1024], encr_buf[512];
@@ -827,7 +827,8 @@ METHOD(simaka_message_t, generate, chunk_t,
 
 	call_hook(this, FALSE, FALSE);
 
-	return chunk_clone(out);
+	*gen = chunk_clone(out);
+	return TRUE;
 }
 
 METHOD(simaka_message_t, destroy, void,

@@ -236,9 +236,10 @@ struct simaka_message_t {
 	 * Generate a message, optionally encrypt attributes and create a MAC.
 	 *
 	 * @param sigdata	additional data to include in signature, if any
-	 * @return			allocated data of generated message
+	 * @param gen		allocated generated data, if successful
+	 * @return			TRUE if successful
 	 */
-	chunk_t (*generate)(simaka_message_t *this, chunk_t sigdata);
+	bool (*generate)(simaka_message_t *this, chunk_t sigdata, chunk_t *gen);
 
 	/**
 	 * Destroy a simaka_message_t.
