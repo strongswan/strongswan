@@ -436,10 +436,14 @@ static status_t process_key_exchange_encrypted(private_tls_server_t *this,
 		DBG1(DBG_TLS, "decrypting Client Key Exchange failed");
 	}
 
-	this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
-								 this->session, this->peer,
-								 chunk_from_thing(this->client_random),
-								 chunk_from_thing(this->server_random));
+	if (!this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
+									  this->session, this->peer,
+									  chunk_from_thing(this->client_random),
+									  chunk_from_thing(this->server_random)))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	return NEED_MORE;
@@ -485,10 +489,15 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
-	this->crypto->derive_secrets(this->crypto, premaster,
-								 this->session, this->peer,
-								 chunk_from_thing(this->client_random),
-								 chunk_from_thing(this->server_random));
+	if (!this->crypto->derive_secrets(this->crypto, premaster,
+									  this->session, this->peer,
+									  chunk_from_thing(this->client_random),
+									  chunk_from_thing(this->server_random)))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		chunk_clear(&premaster);
+		return NEED_MORE;
+	}
 	chunk_clear(&premaster);
 
 	this->state = STATE_KEY_EXCHANGE_RECEIVED;

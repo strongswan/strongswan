@@ -1495,7 +1495,7 @@ static void derive_master(private_tls_crypto_t *this, chunk_t premaster,
 /**
  * Expand key material from master secret
  */
-static void expand_keys(private_tls_crypto_t *this,
+static bool expand_keys(private_tls_crypto_t *this,
 						chunk_t client_random, chunk_t server_random)
 {
 	chunk_t seed, block, client_write, server_write;
@@ -1577,14 +1577,15 @@ static void expand_keys(private_tls_crypto_t *this,
 		this->prf->get_bytes(this->prf, this->msk_label, seed,
 							 this->msk.len, this->msk.ptr);
 	}
+	return TRUE;
 }
 
-METHOD(tls_crypto_t, derive_secrets, void,
+METHOD(tls_crypto_t, derive_secrets, bool,
 	private_tls_crypto_t *this, chunk_t premaster, chunk_t session,
 	identification_t *id, chunk_t client_random, chunk_t server_random)
 {
 	derive_master(this, premaster, session, id, client_random, server_random);
-	expand_keys(this, client_random, server_random);
+	return expand_keys(this, client_random, server_random);
 }
 
 METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
@@ -1602,7 +1603,10 @@ METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
 			if (this->suite)
 			{
 				this->prf->set_key(this->prf, master);
-				expand_keys(this, client_random, server_random);
+				if (!expand_keys(this, client_random, server_random))
+				{
+					this->suite = 0;
+				}
 			}
 			chunk_clear(&master);
 		}

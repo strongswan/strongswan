@@ -913,10 +913,14 @@ static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
 	rng->destroy(rng);
 	htoun16(premaster, TLS_1_2);
 
-	this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
-								 this->session, this->server,
-								 chunk_from_thing(this->client_random),
-								 chunk_from_thing(this->server_random));
+	if (!this->crypto->derive_secrets(this->crypto, chunk_from_thing(premaster),
+									  this->session, this->server,
+									  chunk_from_thing(this->client_random),
+									  chunk_from_thing(this->server_random)))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 
 	public = find_public_key(this);
 	if (!public)
@@ -958,10 +962,15 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	this->crypto->derive_secrets(this->crypto, premaster,
-								 this->session, this->server,
-								 chunk_from_thing(this->client_random),
-								 chunk_from_thing(this->server_random));
+	if (!this->crypto->derive_secrets(this->crypto, premaster,
+									  this->session, this->server,
+									  chunk_from_thing(this->client_random),
+									  chunk_from_thing(this->server_random)))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		chunk_clear(&premaster);
+		return NEED_MORE;
+	}
 	chunk_clear(&premaster);
 
 	this->dh->get_my_public_value(this->dh, &pub);

@@ -515,8 +515,9 @@ struct tls_crypto_t {
 	 * @param id			identity the session is bound to
 	 * @param client_random	random data from client hello
 	 * @param server_random	random data from server hello
+	 * @return				TRUE if secrets derived successfully
 	 */
-	void (*derive_secrets)(tls_crypto_t *this, chunk_t premaster,
+	bool (*derive_secrets)(tls_crypto_t *this, chunk_t premaster,
 						   chunk_t session, identification_t *id,
 						   chunk_t client_random, chunk_t server_random);
 
