@@ -33,10 +33,11 @@ struct private_tls_prf12_t {
 	prf_t *prf;
 };
 
-METHOD(tls_prf_t, set_key12, void,
+METHOD(tls_prf_t, set_key12, bool,
 	private_tls_prf12_t *this, chunk_t key)
 {
 	this->prf->set_key(this->prf, key);
+	return TRUE;
 }
 
 /**
@@ -136,13 +137,14 @@ struct private_tls_prf10_t {
 	prf_t *sha1;
 };
 
-METHOD(tls_prf_t, set_key10, void,
+METHOD(tls_prf_t, set_key10, bool,
 	private_tls_prf10_t *this, chunk_t key)
 {
 	size_t len = key.len / 2 + key.len % 2;
 
 	this->md5->set_key(this->md5, chunk_create(key.ptr, len));
 	this->sha1->set_key(this->sha1, chunk_create(key.ptr + key.len - len, len));
+	return TRUE;
 }
 
 METHOD(tls_prf_t, get_bytes10, bool,

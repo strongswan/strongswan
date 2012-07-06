@@ -1483,13 +1483,14 @@ static bool derive_master(private_tls_crypto_t *this, chunk_t premaster,
 
 	/* derive master secret */
 	seed = chunk_cata("cc", client_random, server_random);
-	this->prf->set_key(this->prf, premaster);
-	if (!this->prf->get_bytes(this->prf, "master secret", seed,
-						 sizeof(master), master))
+
+	if (!this->prf->set_key(this->prf, premaster) ||
+		!this->prf->get_bytes(this->prf, "master secret", seed,
+							  sizeof(master), master) ||
+		!this->prf->set_key(this->prf, chunk_from_thing(master)))
 	{
 		return FALSE;
 	}
-	this->prf->set_key(this->prf, chunk_from_thing(master));
 
 	if (this->cache && session.len)
 	{
@@ -1624,8 +1625,8 @@ METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
 			this->suite = select_cipher_suite(this, &this->suite, 1, KEY_ANY);
 			if (this->suite)
 			{
-				this->prf->set_key(this->prf, master);
-				if (!expand_keys(this, client_random, server_random))
+				if (!this->prf->set_key(this->prf, master) ||
+					!expand_keys(this, client_random, server_random))
 				{
 					this->suite = 0;
 				}

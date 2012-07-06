@@ -34,8 +34,9 @@ struct tls_prf_t {
 	 * Set the key of the PRF function.
 	 *
 	 * @param key		key to set
+	 * @return			TRUE if key set successfully
 	 */
-	void (*set_key)(tls_prf_t *this, chunk_t key);
+	bool (*set_key)(tls_prf_t *this, chunk_t key);
 
 	/**
 	 * Generate a series of bytes using a label and a seed.
