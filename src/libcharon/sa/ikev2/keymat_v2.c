@@ -110,7 +110,10 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 	}
 	key_size = aead_i->get_key_size(aead_i);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	if (!aead_i->set_key(aead_i, key))
 	{
@@ -119,7 +122,10 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 	}
 	chunk_clear(&key);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	if (!aead_r->set_key(aead_r, key))
 	{
@@ -164,7 +170,12 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 	}
 	key_size = signer_i->get_key_size(signer_i);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
 	if (!signer_i->set_key(signer_i, key))
 	{
@@ -175,7 +186,12 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 	}
 	chunk_clear(&key);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
 	if (!signer_r->set_key(signer_r, key))
 	{
@@ -200,12 +216,26 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 	}
 	key_size = crypter_i->get_key_size(crypter_i);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		crypter_i->destroy(crypter_i);
+		crypter_r->destroy(crypter_r);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	crypter_i->set_key(crypter_i, key);
 	chunk_clear(&key);
 
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		crypter_i->destroy(crypter_i);
+		crypter_r->destroy(crypter_r);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	crypter_r->set_key(crypter_r, key);
 	chunk_clear(&key);
@@ -329,7 +359,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	/* SK_d is used for generating CHILD_SA key mat => store for later use */
 	key_size = this->prf->get_key_size(this->prf);
-	prf_plus->allocate_bytes(prf_plus, key_size, &this->skd);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &this->skd))
+	{
+		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_d secret %B", &this->skd);
 
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
@@ -371,7 +406,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	/* SK_pi/SK_pr used for authentication => stored for later */
 	key_size = this->prf->get_key_size(this->prf);
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
 	if (this->initiator)
 	{
@@ -381,7 +421,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		this->skp_verify = key;
 	}
-	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		prf_plus->destroy(prf_plus);
+		DESTROY_IF(rekey_prf);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
 	if (this->initiator)
 	{
@@ -484,10 +529,14 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	this->prf->set_key(this->prf, this->skd);
 	prf_plus = prf_plus_create(this->prf, TRUE, seed);
 
-	prf_plus->allocate_bytes(prf_plus, enc_size, encr_i);
-	prf_plus->allocate_bytes(prf_plus, int_size, integ_i);
-	prf_plus->allocate_bytes(prf_plus, enc_size, encr_r);
-	prf_plus->allocate_bytes(prf_plus, int_size, integ_r);
+	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
+		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i) ||
+		!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
+		!prf_plus->allocate_bytes(prf_plus, int_size, integ_r))
+	{
+		prf_plus->destroy(prf_plus);
+		return FALSE;
+	}
 
 	prf_plus->destroy(prf_plus);
 

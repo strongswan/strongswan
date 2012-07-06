@@ -89,7 +89,7 @@ METHOD(prf_plus_t, get_bytes, void,
 	}
 }
 
-METHOD(prf_plus_t, allocate_bytes, void,
+METHOD(prf_plus_t, allocate_bytes, bool,
 	private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
 	if (length)
@@ -101,6 +101,7 @@ METHOD(prf_plus_t, allocate_bytes, void,
 	{
 		*chunk = chunk_empty;
 	}
+	return TRUE;
 }
 
 METHOD(prf_plus_t, destroy, void,
