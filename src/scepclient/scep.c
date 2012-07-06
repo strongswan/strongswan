@@ -183,7 +183,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 /**
  * Adds a senderNonce attribute to the given pkcs9 attribute list
  */
-static void add_senderNonce_attribute(pkcs9_t *pkcs9)
+static bool add_senderNonce_attribute(pkcs9_t *pkcs9)
 {
 	const size_t nonce_len = 16;
 	u_char nonce_buf[nonce_len];
@@ -191,10 +191,15 @@ static void add_senderNonce_attribute(pkcs9_t *pkcs9)
 	rng_t *rng;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	rng->get_bytes(rng, nonce_len, nonce_buf);
+	if (!rng || !rng->get_bytes(rng, nonce_len, nonce_buf))
+	{
+		DESTROY_IF(rng);
+		return FALSE;
+	}
 	rng->destroy(rng);
 
 	pkcs9->set_attribute(pkcs9, OID_PKI_SENDER_NONCE, senderNonce);
+	return TRUE;
 }
 
 /**
@@ -222,7 +227,12 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 	pkcs9 = pkcs9_create();
 	pkcs9->set_attribute(pkcs9, OID_PKI_TRANS_ID, transID);
 	pkcs9->set_attribute(pkcs9, OID_PKI_MESSAGE_TYPE, msgType);
-	add_senderNonce_attribute(pkcs9);
+	if (!add_senderNonce_attribute(pkcs9))
+	{
+		pkcs9->destroy(pkcs9);
+		pkcs7->destroy(pkcs7);
+		return chunk_empty;
+	}
 
 	pkcs7->set_attributes(pkcs7, pkcs9);
 	pkcs7->set_certificate(pkcs7, signer_cert->get_ref(signer_cert));
