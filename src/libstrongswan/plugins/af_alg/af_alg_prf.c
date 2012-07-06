@@ -105,10 +105,11 @@ static size_t lookup_alg(pseudo_random_function_t algo, char **name, bool *xcbc)
 	return 0;
 }
 
-METHOD(prf_t, get_bytes, void,
+METHOD(prf_t, get_bytes, bool,
 	private_af_alg_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
 	this->ops->hash(this->ops, seed, buffer, this->block_size);
+	return TRUE;
 }
 
 METHOD(prf_t, allocate_bytes, void,

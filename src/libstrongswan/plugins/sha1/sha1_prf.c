@@ -59,7 +59,7 @@ struct private_sha1_prf_t {
  */
 extern void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len);
 
-METHOD(prf_t, get_bytes, void,
+METHOD(prf_t, get_bytes, bool,
 	private_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
 {
 	u_int32_t *hash = (u_int32_t*)bytes;
@@ -71,6 +71,8 @@ METHOD(prf_t, get_bytes, void,
 	hash[2] = htonl(this->hasher->state[2]);
 	hash[3] = htonl(this->hasher->state[3]);
 	hash[4] = htonl(this->hasher->state[4]);
+
+	return TRUE;
 }
 
 METHOD(prf_t, get_block_size, size_t,

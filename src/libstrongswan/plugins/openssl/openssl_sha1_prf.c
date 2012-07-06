@@ -35,7 +35,7 @@ struct private_openssl_sha1_prf_t {
 	SHA_CTX ctx;
 };
 
-METHOD(prf_t, get_bytes, void,
+METHOD(prf_t, get_bytes, bool,
 	private_openssl_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
 {
 	SHA1_Update(&this->ctx, seed.ptr, seed.len);
@@ -50,6 +50,8 @@ METHOD(prf_t, get_bytes, void,
 		hash[3] = htonl(this->ctx.h3);
 		hash[4] = htonl(this->ctx.h4);
 	}
+
+	return TRUE;
 }
 
 METHOD(prf_t, get_block_size, size_t,

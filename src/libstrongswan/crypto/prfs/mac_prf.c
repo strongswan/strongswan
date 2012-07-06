@@ -35,10 +35,11 @@ struct private_prf_t {
 	mac_t *mac;
 };
 
-METHOD(prf_t, get_bytes, void,
+METHOD(prf_t, get_bytes, bool,
 	private_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
 	this->mac->get_mac(this->mac, seed, buffer);
+	return TRUE;
 }
 
 METHOD(prf_t, allocate_bytes, void,

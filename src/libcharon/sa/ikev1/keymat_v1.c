@@ -222,31 +222,38 @@ METHOD(aead_t, aead_destroy, void,
  * Expand SKEYID_e according to Appendix B in RFC 2409.
  * TODO-IKEv1: verify keys (e.g. for weak keys, see Appendix B)
  */
-static chunk_t expand_skeyid_e(chunk_t skeyid_e, size_t key_size, prf_t *prf)
+static bool expand_skeyid_e(chunk_t skeyid_e, size_t key_size, prf_t *prf,
+							chunk_t *ka)
 {
 	size_t block_size;
-	chunk_t seed, ka;
+	chunk_t seed;
 	int i;
 
 	if (skeyid_e.len >= key_size)
 	{	/* no expansion required, reduce to key_size */
 		skeyid_e.len = key_size;
-		return skeyid_e;
+		*ka = skeyid_e;
+		return TRUE;
 	}
 	block_size = prf->get_block_size(prf);
-	ka = chunk_alloc((key_size / block_size + 1) * block_size);
-	ka.len = key_size;
+	*ka = chunk_alloc((key_size / block_size + 1) * block_size);
+	ka->len = key_size;
 
 	/* Ka = K1 | K2 | ..., K1 = prf(SKEYID_e, 0), K2 = prf(SKEYID_e, K1) ... */
 	prf->set_key(prf, skeyid_e);
 	seed = octet_0;
 	for (i = 0; i < key_size; i += block_size)
 	{
-		prf->get_bytes(prf, seed, ka.ptr + i);
-		seed = chunk_create(ka.ptr + i, block_size);
+		if (!prf->get_bytes(prf, seed, ka->ptr + i))
+		{
+			chunk_clear(ka);
+			chunk_clear(&skeyid_e);
+			return FALSE;
+		}
+		seed = chunk_create(ka->ptr + i, block_size);
 	}
 	chunk_clear(&skeyid_e);
-	return ka;
+	return TRUE;
 }
 
 /**
@@ -276,7 +283,10 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 		return NULL;
 	}
 	key_size = crypter->get_key_size(crypter);
-	ka = expand_skeyid_e(skeyid_e, crypter->get_key_size(crypter), prf);
+	if (!expand_skeyid_e(skeyid_e, crypter->get_key_size(crypter), prf, &ka))
+	{
+		return NULL;
+	}
 	DBG4(DBG_IKE, "encryption key Ka %B", &ka);
 	crypter->set_key(crypter, ka);
 	chunk_clear(&ka);

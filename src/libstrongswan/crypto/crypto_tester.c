@@ -797,8 +797,10 @@ static u_int bench_prf(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			prf->get_bytes(prf, buf, bytes);
-			runs++;
+			if (prf->get_bytes(prf, buf, bytes))
+			{
+				runs++;
+			}
 		}
 		free(buf.ptr);
 		prf->destroy(prf);
@@ -860,7 +862,10 @@ METHOD(crypto_tester_t, test_prf, bool,
 		{
 			prf->set_key(prf, key);
 		}
-		prf->get_bytes(prf, seed, out.ptr);
+		if (!prf->get_bytes(prf, seed, out.ptr))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->out, out.ptr, out.len))
 		{
 			failed = TRUE;
@@ -874,8 +879,11 @@ METHOD(crypto_tester_t, test_prf, bool,
 				prf->set_key(prf, key);
 			}
 			prf->allocate_bytes(prf, chunk_create(seed.ptr, 1), NULL);
-			prf->get_bytes(prf, chunk_create(seed.ptr + 1, 1), NULL);
-			prf->get_bytes(prf, chunk_skip(seed, 2), out.ptr);
+			if (!prf->get_bytes(prf, chunk_create(seed.ptr + 1, 1), NULL) ||
+				!prf->get_bytes(prf, chunk_skip(seed, 2), out.ptr))
+			{
+				failed = TRUE;
+			}
 			if (!memeq(vector->out, out.ptr, out.len))
 			{
 				failed = TRUE;

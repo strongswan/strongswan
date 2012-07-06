@@ -126,7 +126,7 @@ static bool verify_padding(chunk_t *blob)
 /**
  * Prototype for key derivation functions.
  */
-typedef void (*kdf_t)(void *generator, chunk_t password, chunk_t salt,
+typedef bool (*kdf_t)(void *generator, chunk_t password, chunk_t salt,
 					  u_int64_t iterations, chunk_t key);
 
 /**
@@ -164,7 +164,10 @@ static private_key_t *decrypt_private_key(chunk_t blob,
 	{
 		chunk_t decrypted;
 
-		kdf(generator, shared->get_key(shared), salt, iterations, keymat);
+		if (!kdf(generator, shared->get_key(shared), salt, iterations, keymat))
+		{
+			continue;
+		}
 
 		crypter->set_key(crypter, key);
 		crypter->decrypt(crypter, blob, iv, &decrypted);
@@ -188,27 +191,34 @@ static private_key_t *decrypt_private_key(chunk_t blob,
 /**
  * Function F of PBKDF2
  */
-static void pbkdf2_f(chunk_t block, prf_t *prf, chunk_t seed,
+static bool pbkdf2_f(chunk_t block, prf_t *prf, chunk_t seed,
 					 u_int64_t iterations)
 {
 	chunk_t u;
 	u_int64_t i;
 
 	u = chunk_alloca(prf->get_block_size(prf));
-	prf->get_bytes(prf, seed, u.ptr);
+	if (!prf->get_bytes(prf, seed, u.ptr))
+	{
+		return FALSE;
+	}
 	memcpy(block.ptr, u.ptr, block.len);
 
 	for (i = 1; i < iterations; i++)
 	{
-		prf->get_bytes(prf, u, u.ptr);
+		if (!prf->get_bytes(prf, u, u.ptr))
+		{
+			return FALSE;
+		}
 		memxor(block.ptr, u.ptr, block.len);
 	}
+	return TRUE;
 }
 
 /**
  * PBKDF2 key derivation function
  */
-static void pbkdf2(prf_t *prf, chunk_t password, chunk_t salt,
+static bool pbkdf2(prf_t *prf, chunk_t password, chunk_t salt,
 				   u_int64_t iterations, chunk_t key)
 {
 	chunk_t keymat, block, seed;
@@ -228,10 +238,15 @@ static void pbkdf2(prf_t *prf, chunk_t password, chunk_t salt,
 	{
 		*ni = htonl(i + 1);
 		block.ptr = keymat.ptr + (i * block.len);
-		pbkdf2_f(block, prf, seed, iterations);
+		if (!pbkdf2_f(block, prf, seed, iterations))
+		{
+			return FALSE;
+		}
 	}
 
 	memcpy(key.ptr, keymat.ptr, key.len);
+
+	return TRUE;
 }
 
 /**
@@ -266,7 +281,7 @@ static private_key_t *decrypt_private_key_pbes2(chunk_t blob,
 /**
  * PBKDF1 key derivation function
  */
-static void pbkdf1(hasher_t *hasher, chunk_t password, chunk_t salt,
+static bool pbkdf1(hasher_t *hasher, chunk_t password, chunk_t salt,
 				   u_int64_t iterations, chunk_t key)
 {
 	chunk_t hash;
@@ -282,6 +297,8 @@ static void pbkdf1(hasher_t *hasher, chunk_t password, chunk_t salt,
 	}
 
 	memcpy(key.ptr, hash.ptr, key.len);
+
+	return TRUE;
 }
 
 /**

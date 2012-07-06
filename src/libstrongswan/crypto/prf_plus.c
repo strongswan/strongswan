@@ -66,17 +66,27 @@ METHOD(prf_plus_t, get_bytes, bool,
 	{
 		if (this->buffer.len == this->used)
 		{	/* buffer used, get next round */
-			this->prf->get_bytes(this->prf, this->buffer, NULL);
+			if (!this->prf->get_bytes(this->prf, this->buffer, NULL))
+			{
+				return FALSE;
+			}
 			if (this->counter)
 			{
-				this->prf->get_bytes(this->prf, this->seed, NULL);
-				this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
-									 this->buffer.ptr);
+				if (!this->prf->get_bytes(this->prf, this->seed, NULL) ||
+					!this->prf->get_bytes(this->prf,
+							chunk_from_thing(this->counter), this->buffer.ptr))
+				{
+					return FALSE;
+				}
 				this->counter++;
 			}
 			else
 			{
-				this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
+				if (!this->prf->get_bytes(this->prf, this->seed,
+										  this->buffer.ptr))
+				{
+					return FALSE;
+				}
 			}
 			this->used = 0;
 		}
@@ -131,14 +141,22 @@ prf_plus_t *prf_plus_create(prf_t *prf, bool counter, chunk_t seed)
 	if (counter)
 	{
 		this->counter = 0x01;
-		this->prf->get_bytes(this->prf, this->seed, NULL);
-		this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
-							 this->buffer.ptr);
+		if (!this->prf->get_bytes(this->prf, this->seed, NULL) ||
+			!this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
+								  this->buffer.ptr))
+		{
+			destroy(this);
+			return NULL;
+		}
 		this->counter++;
 	}
 	else
 	{
-		this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
+		if (!this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr))
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	return &this->public;
