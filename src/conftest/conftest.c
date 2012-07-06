@@ -488,7 +488,7 @@ int main(int argc, char *argv[])
 	{
 		return 1;
 	}
-	if (!charon->initialize(charon))
+	if (!charon->initialize(charon, PLUGINS))
 	{
 		return 1;
 	}

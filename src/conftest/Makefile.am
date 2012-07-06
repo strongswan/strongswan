@@ -1,6 +1,7 @@
 ipsec_PROGRAMS = conftest
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+	-DPLUGINS=\""${charon_plugins}\""
 
 conftest_SOURCES = conftest.c conftest.h config.c config.h actions.c actions.h \
 	hooks/hook.h hooks/ike_auth_fill.c hooks/unsort_message.c \
