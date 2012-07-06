@@ -76,9 +76,13 @@ METHOD(authenticator_t, build, status_t,
 
 	this->dh->get_my_public_value(this->dh, &dh);
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
-	hash = keymat->get_hash(keymat, this->initiator, dh, this->dh_value,
+	if (!keymat->get_hash(keymat, this->initiator, dh, this->dh_value,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->id_payload);
+					this->id_payload, &hash))
+	{
+		free(dh.ptr);
+		return FAILED;
+	}
 	free(dh.ptr);
 
 	hash_payload = hash_payload_create(HASH_V1);
@@ -106,9 +110,13 @@ METHOD(authenticator_t, process, status_t,
 
 	this->dh->get_my_public_value(this->dh, &dh);
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
-	hash = keymat->get_hash(keymat, !this->initiator, this->dh_value, dh,
+	if (!keymat->get_hash(keymat, !this->initiator, this->dh_value, dh,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->id_payload);
+					this->id_payload, &hash))
+	{
+		free(dh.ptr);
+		return FAILED;
+	}
 	free(dh.ptr);
 	if (chunk_equals(hash, hash_payload->get_hash(hash_payload)))
 	{

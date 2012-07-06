@@ -698,11 +698,11 @@ METHOD(keymat_v1_t, get_hasher, hasher_t*,
 	return this->hasher;
 }
 
-METHOD(keymat_v1_t, get_hash, chunk_t,
+METHOD(keymat_v1_t, get_hash, bool,
 	private_keymat_v1_t *this, bool initiator, chunk_t dh, chunk_t dh_other,
-	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id)
+	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id, chunk_t *hash)
 {
-	chunk_t hash, data;
+	chunk_t data;
 	u_int64_t spi, spi_other;
 
 	/* HASH_I = prf(SKEYID, g^xi | g^xr | CKY-I | CKY-R | SAi_b | IDii_b )
@@ -724,12 +724,12 @@ METHOD(keymat_v1_t, get_hash, chunk_t,
 
 	DBG3(DBG_IKE, "HASH_%c data %B", initiator ? 'I' : 'R', &data);
 
-	this->prf_auth->allocate_bytes(this->prf_auth, data, &hash);
+	this->prf_auth->allocate_bytes(this->prf_auth, data, hash);
 
-	DBG3(DBG_IKE, "HASH_%c %B", initiator ? 'I' : 'R', &hash);
+	DBG3(DBG_IKE, "HASH_%c %B", initiator ? 'I' : 'R', hash);
 
 	free(data.ptr);
-	return hash;
+	return TRUE;
 }
 
 /**
