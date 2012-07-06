@@ -771,7 +771,10 @@ METHOD(simaka_message_t, generate, bool,
 		out = chunk_skip(out, 4);
 
 		rng = this->crypto->get_rng(this->crypto);
-		rng->get_bytes(rng, iv.len, out.ptr);
+		if (!rng->get_bytes(rng, iv.len, out.ptr))
+		{
+			return FALSE;
+		}
 
 		iv = chunk_clonea(chunk_create(out.ptr, iv.len));
 		out = chunk_skip(out, iv.len);
