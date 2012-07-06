@@ -57,7 +57,7 @@ struct private_prf_plus_t {
 	chunk_t buffer;
 };
 
-METHOD(prf_plus_t, get_bytes, void,
+METHOD(prf_plus_t, get_bytes, bool,
 	private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 {
 	size_t round, written = 0;
@@ -87,6 +87,7 @@ METHOD(prf_plus_t, get_bytes, void,
 		this->used += round;
 		written += round;
 	}
+	return TRUE;
 }
 
 METHOD(prf_plus_t, allocate_bytes, bool,
@@ -95,12 +96,9 @@ METHOD(prf_plus_t, allocate_bytes, bool,
 	if (length)
 	{
 		*chunk = chunk_alloc(length);
-		get_bytes(this, length, chunk->ptr);
+		return get_bytes(this, length, chunk->ptr);
 	}
-	else
-	{
-		*chunk = chunk_empty;
-	}
+	*chunk = chunk_empty;
 	return TRUE;
 }
 
