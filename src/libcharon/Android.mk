@@ -44,7 +44,7 @@ encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 encoding/payloads/hash_payload.c encoding/payloads/hash_payload.h \
 kernel/kernel_handler.c kernel/kernel_handler.h \
 network/receiver.c network/receiver.h network/sender.c network/sender.h \
-network/packet.c network/packet.h network/socket.c network/socket.h \
+network/socket.c network/socket.h \
 network/socket_manager.c network/socket_manager.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \

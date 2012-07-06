@@ -22,12 +22,12 @@
 
 #include <daemon.h>
 #include <network/socket.h>
-#include <network/packet.h>
 #include <processing/jobs/job.h>
 #include <processing/jobs/process_message_job.h>
 #include <processing/jobs/callback_job.h>
 #include <crypto/hashers/hasher.h>
 #include <threading/mutex.h>
+#include <utils/packet.h>
 
 /** lifetime of a cookie, in seconds */
 #define COOKIE_LIFETIME 10

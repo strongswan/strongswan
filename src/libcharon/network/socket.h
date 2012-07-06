@@ -27,7 +27,7 @@
 typedef struct socket_t socket_t;
 
 #include <library.h>
-#include <network/packet.h>
+#include <utils/packet.h>
 #include <utils/enumerator.h>
 #include <plugins/plugin.h>
 

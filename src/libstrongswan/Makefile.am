@@ -22,7 +22,7 @@ pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
-utils.c utils/host.c utils/identification.c utils/lexparser.c \
+utils.c utils/host.c utils/packet.c utils/identification.c utils/lexparser.c \
 utils/linked_list.c utils/hashtable.c utils/enumerator.c utils/optionsfrom.c \
 utils/capabilities.c utils/backtrace.c
 
@@ -57,8 +57,9 @@ processing/jobs/callback_job.h processing/processor.h processing/scheduler.h \
 selectors/traffic_selector.h threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/lock_profiler.h utils.h utils/host.h \
-utils/identification.h utils/lexparser.h utils/linked_list.h utils/hashtable.h \
-utils/enumerator.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h
+utils/packet.h utils/identification.h utils/lexparser.h utils/linked_list.h \
+utils/hashtable.h utils/enumerator.h utils/optionsfrom.h utils/capabilities.h \
+utils/backtrace.h
 endif
 
 library.lo :	$(top_builddir)/config.status

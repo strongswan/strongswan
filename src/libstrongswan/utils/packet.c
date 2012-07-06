@@ -110,15 +110,16 @@ METHOD(packet_t, clone_, packet_t*,
 	packet_t *other;
 
 	other = packet_create();
-	if (this->destination != NULL)
+	if (this->destination)
 	{
-		other->set_destination(other, this->destination->clone(this->destination));
+		other->set_destination(other,
+							   this->destination->clone(this->destination));
 	}
-	if (this->source != NULL)
+	if (this->source)
 	{
 		other->set_source(other, this->source->clone(this->source));
 	}
-	if (this->data.ptr != NULL)
+	if (this->data.ptr)
 	{
 		other->set_data(other, chunk_clone(this->adjusted_data));
 	}
@@ -128,7 +129,7 @@ METHOD(packet_t, clone_, packet_t*,
 /*
  * Documented in header
  */
-packet_t *packet_create(void)
+packet_t *packet_create()
 {
 	private_packet_t *this;
 
