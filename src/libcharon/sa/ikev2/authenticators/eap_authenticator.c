@@ -420,8 +420,11 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	}
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	auth_data = keymat->get_psk_sig(keymat, TRUE, init, nonce,
-									this->msk, other_id, this->reserved);
+	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce,
+							 this->msk, other_id, this->reserved, &auth_data))
+	{
+		return FALSE;
+	}
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
@@ -443,7 +446,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 /**
  * Build AUTH payload
  */
-static void build_auth(private_eap_authenticator_t *this, message_t *message,
+static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 					   chunk_t nonce, chunk_t init)
 {
 	auth_payload_t *auth_payload;
@@ -457,13 +460,17 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
-	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce,
-									this->msk, my_id, this->reserved);
+	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce,
+							this->msk, my_id, this->reserved, &auth_data))
+	{
+		return FALSE;
+	}
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
 	auth_payload->set_data(auth_payload, auth_data);
 	message->add_payload(message, (payload_t*)auth_payload);
 	chunk_free(&auth_data);
+	return TRUE;
 }
 
 METHOD(authenticator_t, process_server, status_t,
@@ -513,9 +520,9 @@ METHOD(authenticator_t, build_server, status_t,
 		}
 		return NEED_MORE;
 	}
-	if (this->eap_complete && this->auth_complete)
+	if (this->eap_complete && this->auth_complete &&
+		build_auth(this, message, this->received_nonce, this->sent_init))
 	{
-		build_auth(this, message, this->received_nonce, this->sent_init);
 		return SUCCESS;
 	}
 	return FAILED;
@@ -611,9 +618,9 @@ METHOD(authenticator_t, build_client, status_t,
 		this->eap_payload = NULL;
 		return NEED_MORE;
 	}
-	if (this->eap_complete)
+	if (this->eap_complete &&
+		build_auth(this, message, this->received_nonce, this->sent_init))
 	{
-		build_auth(this, message, this->received_nonce, this->sent_init);
 		return NEED_MORE;
 	}
 	return NEED_MORE;

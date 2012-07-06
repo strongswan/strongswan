@@ -606,11 +606,11 @@ METHOD(keymat_v2_t, get_auth_octets, chunk_t,
 #define IKEV2_KEY_PAD "Key Pad for IKEv2"
 #define IKEV2_KEY_PAD_LENGTH 17
 
-METHOD(keymat_v2_t, get_psk_sig, chunk_t,
-	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, chunk_t secret, identification_t *id, char reserved[3])
+METHOD(keymat_v2_t, get_psk_sig, bool,
+	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
+	chunk_t secret, identification_t *id, char reserved[3], chunk_t *sig)
 {
-	chunk_t key_pad, key, sig, octets;
+	chunk_t key_pad, key, octets;
 
 	if (!secret.len)
 	{	/* EAP uses SK_p if no MSK has been established */
@@ -622,14 +622,14 @@ METHOD(keymat_v2_t, get_psk_sig, chunk_t,
 	this->prf->set_key(this->prf, secret);
 	this->prf->allocate_bytes(this->prf, key_pad, &key);
 	this->prf->set_key(this->prf, key);
-	this->prf->allocate_bytes(this->prf, octets, &sig);
+	this->prf->allocate_bytes(this->prf, octets, sig);
 	DBG4(DBG_IKE, "secret %B", &secret);
 	DBG4(DBG_IKE, "prf(secret, keypad) %B", &key);
-	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", &sig);
+	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", sig);
 	chunk_free(&octets);
 	chunk_free(&key);
 
-	return sig;
+	return TRUE;
 }
 
 METHOD(keymat_t, destroy, void,

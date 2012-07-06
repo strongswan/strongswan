@@ -117,11 +117,12 @@ struct keymat_v2_t {
 	 * @param secret		optional secret to include into signature
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
-	 * @return				signature octets
+	 * @param sign			chunk receiving allocated signature octets
+	 * @return				TRUE if signature created successfully
 	 */
-	chunk_t (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-						   chunk_t nonce, chunk_t secret,
-						   identification_t *id, char reserved[3]);
+	bool (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
+						chunk_t nonce, chunk_t secret,
+						identification_t *id, char reserved[3], chunk_t *sig);
 };
 
 /**

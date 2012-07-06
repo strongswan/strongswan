@@ -73,8 +73,12 @@ METHOD(authenticator_t, build, status_t,
 		DBG1(DBG_IKE, "no shared key found for '%Y' - '%Y'", my_id, other_id);
 		return NOT_FOUND;
 	}
-	auth_data = keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init,
-						this->nonce, key->get_key(key), my_id, this->reserved);
+	if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
+						key->get_key(key), my_id, this->reserved, &auth_data))
+	{
+		key->destroy(key);
+		return FAILED;
+	}
 	key->destroy(key);
 	DBG2(DBG_IKE, "successfully created shared key MAC");
 	auth_payload = auth_payload_create();
@@ -114,8 +118,11 @@ METHOD(authenticator_t, process, status_t,
 	{
 		keys_found++;
 
-		auth_data = keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init,
-				this->nonce, key->get_key(key), other_id, this->reserved);
+		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
+					key->get_key(key), other_id, this->reserved, &auth_data))
+		{
+			continue;
+		}
 		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
