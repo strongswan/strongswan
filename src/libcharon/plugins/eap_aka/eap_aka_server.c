@@ -249,7 +249,10 @@ static status_t reauthenticate(private_eap_aka_server_t *this,
 	DBG1(DBG_IKE, "initiating EAP-AKA reauthentication");
 
 	rng = this->crypto->get_rng(this->crypto);
-	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
+	if (!rng->allocate_bytes(rng, NONCE_LEN, &this->nonce))
+	{
+		return FAILED;
+	}
 
 	mkc = chunk_create(mk, HASH_SIZE_SHA1);
 	counter = htons(counter);
