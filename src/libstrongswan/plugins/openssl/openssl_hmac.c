@@ -75,24 +75,22 @@ struct private_mac_t {
 /**
  * Resets HMAC context
  */
-static void reset(private_mac_t *this)
+static bool reset(private_mac_t *this)
 {
-	HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len, this->hasher, NULL);
+	return HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len,
+						this->hasher, NULL);
 }
 
-METHOD(mac_t, get_mac, void,
+METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	if (out == NULL)
 	{
-		HMAC_Update(&this->hmac, data.ptr, data.len);
+		return HMAC_Update(&this->hmac, data.ptr, data.len);
 	}
-	else
-	{
-		HMAC_Update(&this->hmac, data.ptr, data.len);
-		HMAC_Final(&this->hmac, out, NULL);
-		reset(this);
-	}
+	return HMAC_Update(&this->hmac, data.ptr, data.len) &&
+		   HMAC_Final(&this->hmac, out, NULL) &&
+		   reset(this);
 }
 
 METHOD(mac_t, get_mac_size, size_t,

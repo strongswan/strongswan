@@ -179,7 +179,7 @@ static void final(private_mac_t *this, u_int8_t *out)
 	this->zero = TRUE;
 }
 
-METHOD(mac_t, get_mac, void,
+METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update E, do not process last block */
@@ -189,6 +189,7 @@ METHOD(mac_t, get_mac, void,
 	{	/* if not in append mode, process last block and output result */
 		final(this, out);
 	}
+	return TRUE;
 }
 
 METHOD(mac_t, get_mac_size, size_t,

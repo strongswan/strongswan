@@ -38,23 +38,18 @@ struct private_prf_t {
 METHOD(prf_t, get_bytes, bool,
 	private_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
-	this->mac->get_mac(this->mac, seed, buffer);
-	return TRUE;
+	return this->mac->get_mac(this->mac, seed, buffer);
 }
 
 METHOD(prf_t, allocate_bytes, bool,
 	private_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
-	if (!chunk)
-	{
-		this->mac->get_mac(this->mac, seed, NULL);
-	}
-	else
+	if (chunk)
 	{
 		*chunk = chunk_alloc(this->mac->get_mac_size(this->mac));
-		this->mac->get_mac(this->mac, seed, chunk->ptr);
+		return this->mac->get_mac(this->mac, seed, chunk->ptr);
 	}
-	return TRUE;
+	return this->mac->get_mac(this->mac, seed, NULL);
 }
 
 METHOD(prf_t, get_block_size, size_t,

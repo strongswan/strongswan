@@ -56,7 +56,7 @@ struct private_mac_t {
 	chunk_t ipaded_key;
 };
 
-METHOD(mac_t, get_mac, void,
+METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* H(K XOR opad, H(K XOR ipad, text))
@@ -90,6 +90,7 @@ METHOD(mac_t, get_mac, void,
 		/* reinit for next call */
 		this->h->get_hash(this->h, this->ipaded_key, NULL);
 	}
+	return TRUE;
 }
 
 METHOD(mac_t, get_mac_size, size_t,

@@ -43,37 +43,36 @@ struct private_signer_t {
 METHOD(signer_t, get_signature, bool,
 	private_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
-	if (buffer == NULL)
-	{
-		this->mac->get_mac(this->mac, data, NULL);
-	}
-	else
+	if (buffer)
 	{
 		u_int8_t mac[this->mac->get_mac_size(this->mac)];
 
-		this->mac->get_mac(this->mac, data, mac);
+		if (!this->mac->get_mac(this->mac, data, mac))
+		{
+			return FALSE;
+		}
 		memcpy(buffer, mac, this->truncation);
+		return TRUE;
 	}
-	return TRUE;
+	return this->mac->get_mac(this->mac, data, NULL);
 }
 
 METHOD(signer_t, allocate_signature, bool,
 	private_signer_t *this, chunk_t data, chunk_t *chunk)
 {
-	if (chunk == NULL)
-	{
-		this->mac->get_mac(this->mac, data, NULL);
-	}
-	else
+	if (chunk)
 	{
 		u_int8_t mac[this->mac->get_mac_size(this->mac)];
 
-		this->mac->get_mac(this->mac, data, mac);
-
+		if (!this->mac->get_mac(this->mac, data, mac))
+		{
+			return FALSE;
+		}
 		*chunk = chunk_alloc(this->truncation);
 		memcpy(chunk->ptr, mac, this->truncation);
+		return TRUE;
 	}
-	return TRUE;
+	return this->mac->get_mac(this->mac, data, NULL);
 }
 
 METHOD(signer_t, verify_signature, bool,
@@ -85,8 +84,8 @@ METHOD(signer_t, verify_signature, bool,
 	{
 		return FALSE;
 	}
-	this->mac->get_mac(this->mac, data, mac);
-	return memeq(signature.ptr, mac, this->truncation);
+	return this->mac->get_mac(this->mac, data, mac) &&
+		   memeq(signature.ptr, mac, this->truncation);
 }
 
 METHOD(signer_t, get_key_size, size_t,
