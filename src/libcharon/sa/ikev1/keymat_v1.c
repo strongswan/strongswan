@@ -614,6 +614,11 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 	DBG4(DBG_CHD, "initiator SA seed %B", &seed);
 
 	prf_plus = prf_plus_create(this->prf, FALSE, seed);
+	if (!prf_plus)
+	{
+		chunk_clear(&secret);
+		return FALSE;
+	}
 	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i))
 	{
@@ -627,6 +632,11 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 					  chunk_from_thing(spi_i), nonce_i, nonce_r);
 	DBG4(DBG_CHD, "responder SA seed %B", &seed);
 	prf_plus = prf_plus_create(this->prf, FALSE, seed);
+	if (!prf_plus)
+	{
+		chunk_clear(&secret);
+		return FALSE;
+	}
 	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_r))
 	{

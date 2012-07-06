@@ -355,6 +355,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_free(&fixed_nonce);
 	chunk_clear(&prf_plus_seed);
 
+	if (!prf_plus)
+	{
+		DESTROY_IF(rekey_prf);
+		return FALSE;
+	}
+
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
 
 	/* SK_d is used for generating CHILD_SA key mat => store for later use */
@@ -528,6 +534,10 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 	this->prf->set_key(this->prf, this->skd);
 	prf_plus = prf_plus_create(this->prf, TRUE, seed);
+	if (!prf_plus)
+	{
+		return FALSE;
+	}
 
 	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i) ||

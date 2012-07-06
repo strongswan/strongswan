@@ -63,7 +63,7 @@ struct prf_plus_t {
  * @param prf				prf object to use, must be destroyd after prf+.
  * @param counter			use an appending counter byte (for IKEv2 variant)
  * @param seed				input seed for prf
- * @return					prf_plus_t object
+ * @return					prf_plus_t object, NULL on failure
  */
 prf_plus_t *prf_plus_create(prf_t *prf, bool counter, chunk_t seed);
 
