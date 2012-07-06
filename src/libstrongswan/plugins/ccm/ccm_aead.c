@@ -126,7 +126,7 @@ static void build_ctr(private_ccm_aead_t *this, u_int32_t i, chunk_t iv,
 /**
  * En-/Decrypt data
  */
-static void crypt_data(private_ccm_aead_t *this, chunk_t iv,
+static bool crypt_data(private_ccm_aead_t *this, chunk_t iv,
 					   chunk_t in, chunk_t out)
 {
 	char ctr[BLOCK_SIZE];
@@ -139,8 +139,11 @@ static void crypt_data(private_ccm_aead_t *this, chunk_t iv,
 	while (in.len > 0)
 	{
 		memcpy(block, ctr, BLOCK_SIZE);
-		this->crypter->encrypt(this->crypter, chunk_from_thing(block),
-							   chunk_from_thing(zero), NULL);
+		if (!this->crypter->encrypt(this->crypter, chunk_from_thing(block),
+									chunk_from_thing(zero), NULL))
+		{
+			return FALSE;
+		}
 		chunk_increment(chunk_from_thing(ctr));
 
 		if (in.ptr != out.ptr)
@@ -151,12 +154,13 @@ static void crypt_data(private_ccm_aead_t *this, chunk_t iv,
 		in = chunk_skip(in, BLOCK_SIZE);
 		out = chunk_skip(out, BLOCK_SIZE);
 	}
+	return TRUE;
 }
 
 /**
  * En-/Decrypt the ICV
  */
-static void crypt_icv(private_ccm_aead_t *this, chunk_t iv, char *icv)
+static bool crypt_icv(private_ccm_aead_t *this, chunk_t iv, char *icv)
 {
 	char ctr[BLOCK_SIZE];
 	char zero[BLOCK_SIZE];
@@ -164,15 +168,19 @@ static void crypt_icv(private_ccm_aead_t *this, chunk_t iv, char *icv)
 	build_ctr(this, 0, iv, ctr);
 	memset(zero, 0, BLOCK_SIZE);
 
-	this->crypter->encrypt(this->crypter, chunk_from_thing(ctr),
-						   chunk_from_thing(zero), NULL);
+	if (!this->crypter->encrypt(this->crypter, chunk_from_thing(ctr),
+								chunk_from_thing(zero), NULL))
+	{
+		return FALSE;
+	}
 	memxor(icv, ctr, this->icv_size);
+	return TRUE;
 }
 
 /**
  * Create the ICV
  */
-static void create_icv(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
+static bool create_icv(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
 					   chunk_t iv, char *icv)
 {
 	char zero[BLOCK_SIZE];
@@ -217,14 +225,19 @@ static void create_icv(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
 	memset(pos, 0, len);
 
 	/* encrypt inline with CBC, zero IV */
-	this->crypter->encrypt(this->crypter, chunk, chunk_from_thing(zero), NULL);
+	if (!this->crypter->encrypt(this->crypter, chunk,
+								chunk_from_thing(zero), NULL))
+	{
+		free(chunk.ptr);
+		return FALSE;
+	}
 	/* copy last icv_size bytes as ICV to output */
 	memcpy(icv, chunk.ptr + chunk.len - BLOCK_SIZE, this->icv_size);
 
-	/* encrypt the ICV value */
-	crypt_icv(this, iv, icv);
-
 	free(chunk.ptr);
+
+	/* encrypt the ICV value */
+	return crypt_icv(this, iv, icv);
 }
 
 /**
@@ -235,9 +248,8 @@ static bool verify_icv(private_ccm_aead_t *this, chunk_t plain, chunk_t assoc,
 {
 	char buf[this->icv_size];
 
-	create_icv(this, plain, assoc, iv, buf);
-
-	return memeq(buf, icv, this->icv_size);
+	return create_icv(this, plain, assoc, iv, buf) &&
+		   memeq(buf, icv, this->icv_size);
 }
 
 METHOD(aead_t, encrypt, bool,
@@ -247,15 +259,11 @@ METHOD(aead_t, encrypt, bool,
 	if (encrypted)
 	{
 		*encrypted = chunk_alloc(plain.len + this->icv_size);
-		create_icv(this, plain, assoc, iv, encrypted->ptr + plain.len);
-		crypt_data(this, iv, plain, *encrypted);
+		return create_icv(this, plain, assoc, iv, encrypted->ptr + plain.len) &&
+			   crypt_data(this, iv, plain, *encrypted);
 	}
-	else
-	{
-		create_icv(this, plain, assoc, iv, plain.ptr + plain.len);
-		crypt_data(this, iv, plain, plain);
-	}
-	return TRUE;
+	return create_icv(this, plain, assoc, iv, plain.ptr + plain.len) &&
+		   crypt_data(this, iv, plain, plain);
 }
 
 METHOD(aead_t, decrypt, bool,
@@ -270,16 +278,13 @@ METHOD(aead_t, decrypt, bool,
 	if (plain)
 	{
 		*plain = chunk_alloc(encrypted.len);
-		crypt_data(this, iv, encrypted, *plain);
-		return verify_icv(this, *plain, assoc, iv,
+		return crypt_data(this, iv, encrypted, *plain) &&
+			   verify_icv(this, *plain, assoc, iv,
 						  encrypted.ptr + encrypted.len);
 	}
-	else
-	{
-		crypt_data(this, iv, encrypted, encrypted);
-		return verify_icv(this, encrypted, assoc, iv,
-						  encrypted.ptr + encrypted.len);
-	}
+	return crypt_data(this, iv, encrypted, encrypted) &&
+		   verify_icv(this, encrypted, assoc, iv,
+					  encrypted.ptr + encrypted.len);
 }
 
 METHOD(aead_t, get_block_size, size_t,

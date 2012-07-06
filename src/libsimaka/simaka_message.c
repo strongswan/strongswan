@@ -780,7 +780,10 @@ METHOD(simaka_message_t, generate, bool,
 		out = chunk_skip(out, iv.len);
 
 		/* inline encryption */
-		crypter->encrypt(crypter, encr, iv, NULL);
+		if (!crypter->encrypt(crypter, encr, iv, NULL))
+		{
+			return FALSE;
+		}
 
 		/* add ENCR_DATA attribute */
 		hdr = (attr_hdr_t*)out.ptr;

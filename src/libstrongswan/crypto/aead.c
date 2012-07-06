@@ -54,17 +54,21 @@ METHOD(aead_t, encrypt, bool,
 
 	if (encrypted)
 	{
-		this->crypter->encrypt(this->crypter, plain, iv, &encr);
+		if (!this->crypter->encrypt(this->crypter, plain, iv, &encr))
+		{
+			return FALSE;
+		}
 		if (!this->signer->allocate_signature(this->signer, encr, &sig))
 		{
+			free(encr.ptr);
 			return FALSE;
 		}
 		*encrypted = chunk_cat("cmm", iv, encr, sig);
 	}
 	else
 	{
-		this->crypter->encrypt(this->crypter, plain, iv, NULL);
-		if (!this->signer->get_signature(this->signer,
+		if (!this->crypter->encrypt(this->crypter, plain, iv, NULL) ||
+			!this->signer->get_signature(this->signer,
 										 plain, plain.ptr + plain.len))
 		{
 			return FALSE;

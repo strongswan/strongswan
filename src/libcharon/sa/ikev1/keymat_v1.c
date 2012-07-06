@@ -167,8 +167,7 @@ METHOD(aead_t, encrypt, bool,
 	private_aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
 	chunk_t *encrypted)
 {
-	this->crypter->encrypt(this->crypter, plain, iv, encrypted);
-	return TRUE;
+	return this->crypter->encrypt(this->crypter, plain, iv, encrypted);
 }
 
 METHOD(aead_t, decrypt, bool,

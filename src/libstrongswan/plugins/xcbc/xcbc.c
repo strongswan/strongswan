@@ -81,7 +81,7 @@ struct private_mac_t {
 /**
  * xcbc supplied data, but do not run final operation
  */
-static void update(private_mac_t *this, chunk_t data)
+static bool update(private_mac_t *this, chunk_t data)
 {
 	chunk_t iv;
 
@@ -94,7 +94,7 @@ static void update(private_mac_t *this, chunk_t data)
 	{	/* no complete block, just copy into remaining */
 		memcpy(this->remaining + this->remaining_bytes, data.ptr, data.len);
 		this->remaining_bytes += data.len;
-		return;
+		return TRUE;
 	}
 
 	iv = chunk_alloca(this->b);
@@ -110,7 +110,10 @@ static void update(private_mac_t *this, chunk_t data)
 		   this->b - this->remaining_bytes);
 	data = chunk_skip(data, this->b - this->remaining_bytes);
 	memxor(this->e, this->remaining, this->b);
-	this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
+	if (!this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL))
+	{
+		return FALSE;
+	}
 
 	/* process blocks M[2] ... M[n-1] */
 	while (data.len > this->b)
@@ -118,18 +121,24 @@ static void update(private_mac_t *this, chunk_t data)
 		memcpy(this->remaining, data.ptr, this->b);
 		data = chunk_skip(data, this->b);
 		memxor(this->e, this->remaining, this->b);
-		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
+		if (!this->k1->encrypt(this->k1, chunk_create(this->e, this->b),
+							   iv, NULL))
+		{
+			return FALSE;
+		}
 	}
 
 	/* store remaining bytes of block M[n] */
 	memcpy(this->remaining, data.ptr, data.len);
 	this->remaining_bytes = data.len;
+
+	return TRUE;
 }
 
 /**
  * run last round, data is in this->e
  */
-static void final(private_mac_t *this, u_int8_t *out)
+static bool final(private_mac_t *this, u_int8_t *out)
 {
 	chunk_t iv;
 
@@ -145,7 +154,6 @@ static void final(private_mac_t *this, u_int8_t *out)
 		 */
 		memxor(this->e, this->remaining, this->b);
 		memxor(this->e, this->k2, this->b);
-		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
 	}
 	else
 	{
@@ -168,7 +176,10 @@ static void final(private_mac_t *this, u_int8_t *out)
 		 */
 		memxor(this->e, this->remaining, this->b);
 		memxor(this->e, this->k3, this->b);
-		this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL);
+	}
+	if (!this->k1->encrypt(this->k1, chunk_create(this->e, this->b), iv, NULL))
+	{
+		return FALSE;
 	}
 
 	memcpy(out, this->e, this->b);
@@ -177,17 +188,22 @@ static void final(private_mac_t *this, u_int8_t *out)
 	memset(this->e, 0, this->b);
 	this->remaining_bytes = 0;
 	this->zero = TRUE;
+
+	return TRUE;
 }
 
 METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update E, do not process last block */
-	update(this, data);
+	if (!update(this, data))
+	{
+		return FALSE;
+	}
 
 	if (out)
 	{	/* if not in append mode, process last block and output result */
-		final(this, out);
+		return final(this, out);
 	}
 	return TRUE;
 }
@@ -236,13 +252,18 @@ METHOD(mac_t, set_key, bool,
 	 *     K2 = 0x02020202020202020202020202020202 encrypted with Key K
 	 *     K3 = 0x03030303030303030303030303030303 encrypted with Key K
 	 */
-	this->k1->set_key(this->k1, lengthened);
-	memset(this->k2, 0x02, this->b);
-	this->k1->encrypt(this->k1, chunk_create(this->k2, this->b), iv, NULL);
-	memset(this->k3, 0x03, this->b);
-	this->k1->encrypt(this->k1, chunk_create(this->k3, this->b), iv, NULL);
+
 	memset(k1.ptr, 0x01, this->b);
-	this->k1->encrypt(this->k1, k1, iv, NULL);
+	memset(this->k2, 0x02, this->b);
+	memset(this->k3, 0x03, this->b);
+
+	this->k1->set_key(this->k1, lengthened);
+	if (!this->k1->encrypt(this->k1, chunk_create(this->k2, this->b), iv, NULL) ||
+		!this->k1->encrypt(this->k1, chunk_create(this->k3, this->b), iv, NULL) ||
+		!this->k1->encrypt(this->k1, k1, iv, NULL))
+	{
+		return FALSE;
+	}
 	this->k1->set_key(this->k1, k1);
 
 	memwipe(k1.ptr, k1.len);

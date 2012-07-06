@@ -1434,7 +1434,7 @@ METHOD(crypter_t, decrypt, void,
 }
 
 
-METHOD(crypter_t, encrypt, void,
+METHOD(crypter_t, encrypt, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
@@ -1449,6 +1449,7 @@ METHOD(crypter_t, encrypt, void,
 	memcpy(&ivb, iv.ptr, sizeof(des_cblock));
 	des_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 					 data.len, this->ks, &ivb, DES_ENCRYPT);
+	return TRUE;
 }
 
 METHOD(crypter_t, decrypt_ecb, void,
@@ -1466,7 +1467,7 @@ METHOD(crypter_t, decrypt_ecb, void,
 					 data.len, this->ks, DES_DECRYPT);
 }
 
-METHOD(crypter_t, encrypt_ecb, void,
+METHOD(crypter_t, encrypt_ecb, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	u_int8_t *out;
@@ -1479,6 +1480,7 @@ METHOD(crypter_t, encrypt_ecb, void,
 	}
 	des_ecb_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 					 data.len, this->ks, DES_ENCRYPT);
+	return TRUE;
 }
 
 METHOD(crypter_t, decrypt3, void,
@@ -1499,7 +1501,7 @@ METHOD(crypter_t, decrypt3, void,
 						 &ivb, DES_DECRYPT);
 }
 
-METHOD(crypter_t, encrypt3, void,
+METHOD(crypter_t, encrypt3, bool,
 	private_des_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	des_cblock ivb;
@@ -1515,6 +1517,7 @@ METHOD(crypter_t, encrypt3, void,
 	des_ede3_cbc_encrypt((des_cblock*)(data.ptr), (des_cblock*)out,
 						  data.len, this->ks3[0], this->ks3[1], this->ks3[2],
 						  &ivb, DES_ENCRYPT);
+	return TRUE;
 }
 
 METHOD(crypter_t, get_block_size, size_t,

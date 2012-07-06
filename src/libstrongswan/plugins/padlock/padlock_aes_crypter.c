@@ -115,10 +115,11 @@ METHOD(crypter_t, decrypt, void,
 	crypt(this, iv.ptr, data, dst, TRUE);
 }
 
-METHOD(crypter_t, encrypt, void,
+METHOD(crypter_t, encrypt, bool,
 	private_padlock_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, FALSE);
+	return TRUE;
 }
 
 METHOD(crypter_t, get_block_size, size_t,

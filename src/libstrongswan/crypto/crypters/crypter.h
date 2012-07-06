@@ -90,8 +90,10 @@ struct crypter_t {
 	 * @param data			data to encrypt
 	 * @param iv			initializing vector
 	 * @param encrypted		chunk to allocate encrypted data, or NULL
+	 * @return				TRUE if encryption successful
 	 */
-	void (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
+	__attribute__((warn_unused_result))
+	bool (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
 					 chunk_t *encrypted);
 
 	/**

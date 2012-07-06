@@ -149,7 +149,7 @@ static void ghash(private_gcm_aead_t *this, chunk_t x, char *res)
 /**
  * GCTR function, en-/decrypts x inline
  */
-static void gctr(private_gcm_aead_t *this, char *icb, chunk_t x)
+static bool gctr(private_gcm_aead_t *this, char *icb, chunk_t x)
 {
 	char cb[BLOCK_SIZE], iv[BLOCK_SIZE], tmp[BLOCK_SIZE];
 
@@ -159,12 +159,16 @@ static void gctr(private_gcm_aead_t *this, char *icb, chunk_t x)
 	while (x.len)
 	{
 		memcpy(tmp, cb, BLOCK_SIZE);
-		this->crypter->encrypt(this->crypter, chunk_from_thing(tmp),
-							   chunk_from_thing(iv), NULL);
+		if (!this->crypter->encrypt(this->crypter, chunk_from_thing(tmp),
+									chunk_from_thing(iv), NULL))
+		{
+			return FALSE;
+		}
 		memxor(x.ptr, tmp, min(BLOCK_SIZE, x.len));
 		chunk_increment(chunk_from_thing(cb));
 		x = chunk_skip(x, BLOCK_SIZE);
 	}
+	return TRUE;
 }
 
 /**
@@ -180,21 +184,21 @@ static void create_j(private_gcm_aead_t *this, char *iv, char *j)
 /**
  * Create GHASH subkey H
  */
-static void create_h(private_gcm_aead_t *this, char *h)
+static bool create_h(private_gcm_aead_t *this, char *h)
 {
 	char zero[BLOCK_SIZE];
 
 	memset(zero, 0, BLOCK_SIZE);
 	memset(h, 0, BLOCK_SIZE);
 
-	this->crypter->encrypt(this->crypter, chunk_create(h, BLOCK_SIZE),
-						   chunk_from_thing(zero), NULL);
+	return this->crypter->encrypt(this->crypter, chunk_create(h, BLOCK_SIZE),
+								  chunk_from_thing(zero), NULL);
 }
 
 /**
  * Encrypt/decrypt
  */
-static void crypt(private_gcm_aead_t *this, char *j, chunk_t in, chunk_t out)
+static bool crypt(private_gcm_aead_t *this, char *j, chunk_t in, chunk_t out)
 {
 	char icb[BLOCK_SIZE];
 
@@ -206,13 +210,13 @@ static void crypt(private_gcm_aead_t *this, char *j, chunk_t in, chunk_t out)
 	{
 		memcpy(out.ptr, in.ptr, in.len);
 	}
-	gctr(this, icb, out);
+	return gctr(this, icb, out);
 }
 
 /**
  * Create ICV
  */
-static void create_icv(private_gcm_aead_t *this, chunk_t assoc, chunk_t crypt,
+static bool create_icv(private_gcm_aead_t *this, chunk_t assoc, chunk_t crypt,
 					   char *j, char *icv)
 {
 	size_t assoc_pad, crypt_pad;
@@ -249,9 +253,12 @@ static void create_icv(private_gcm_aead_t *this, chunk_t assoc, chunk_t crypt,
 
 	ghash(this, chunk, s);
 	free(chunk.ptr);
-	gctr(this, j, chunk_from_thing(s));
-
+	if (!gctr(this, j, chunk_from_thing(s)))
+	{
+		return FALSE;
+	}
 	memcpy(icv, s, this->icv_size);
+	return TRUE;
 }
 
 /**
@@ -262,9 +269,8 @@ static bool verify_icv(private_gcm_aead_t *this, chunk_t assoc, chunk_t crypt,
 {
 	char tmp[this->icv_size];
 
-	create_icv(this, assoc, crypt, j, tmp);
-
-	return memeq(tmp, icv, this->icv_size);
+	return create_icv(this, assoc, crypt, j, tmp) &&
+		   memeq(tmp, icv, this->icv_size);
 }
 
 METHOD(aead_t, encrypt, bool,
@@ -278,17 +284,13 @@ METHOD(aead_t, encrypt, bool,
 	if (encrypted)
 	{
 		*encrypted = chunk_alloc(plain.len + this->icv_size);
-		crypt(this, j, plain, *encrypted);
-		create_icv(this, assoc,
-				   chunk_create(encrypted->ptr, encrypted->len - this->icv_size),
-				   j, encrypted->ptr + encrypted->len - this->icv_size);
+		return crypt(this, j, plain, *encrypted) &&
+			   create_icv(this, assoc,
+					chunk_create(encrypted->ptr, encrypted->len - this->icv_size),
+					j, encrypted->ptr + encrypted->len - this->icv_size);
 	}
-	else
-	{
-		crypt(this, j, plain, plain);
-		create_icv(this, assoc, plain, j, plain.ptr + plain.len);
-	}
-	return TRUE;
+	return crypt(this, j, plain, plain) &&
+		   create_icv(this, assoc, plain, j, plain.ptr + plain.len);
 }
 
 METHOD(aead_t, decrypt, bool,
@@ -312,13 +314,9 @@ METHOD(aead_t, decrypt, bool,
 	if (plain)
 	{
 		*plain = chunk_alloc(encrypted.len);
-		crypt(this, j, encrypted, *plain);
+		return crypt(this, j, encrypted, *plain);
 	}
-	else
-	{
-		crypt(this, j, encrypted, encrypted);
-	}
-	return TRUE;
+	return crypt(this, j, encrypted, encrypted);
 }
 
 METHOD(aead_t, get_block_size, size_t,
@@ -351,8 +349,7 @@ METHOD(aead_t, set_key, bool,
 	memcpy(this->salt, key.ptr + key.len - SALT_SIZE, SALT_SIZE);
 	key.len -= SALT_SIZE;
 	this->crypter->set_key(this->crypter, key);
-	create_h(this, this->h);
-	return TRUE;
+	return create_h(this, this->h);
 }
 
 METHOD(aead_t, destroy, void,

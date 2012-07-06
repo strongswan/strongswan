@@ -256,7 +256,16 @@ METHOD(tls_protection_t, build, status_t,
 				*data = chunk_cat("mmcc", *data, mac, padding,
 								  chunk_from_thing(padding_length));
 				/* encrypt inline */
-				this->crypter_out->encrypt(this->crypter_out, *data, iv, NULL);
+				if (!this->crypter_out->encrypt(this->crypter_out, *data,
+												iv, NULL))
+				{
+					if (!this->iv_out.len)
+					{
+						free(iv.ptr);
+					}
+					free(data->ptr);
+					return FAILED;
+				}
 
 				if (this->iv_out.len)
 				{	/* next record IV is last ciphertext block of this record */

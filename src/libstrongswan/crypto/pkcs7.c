@@ -831,7 +831,14 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 
 	/* symmetric encryption of data object */
 	crypter->set_key(crypter, symmetricKey);
-	crypter->encrypt(crypter, in, iv, &out);
+	if (!crypter->encrypt(crypter, in, iv, &out))
+	{
+		crypter->destroy(crypter);
+		chunk_clear(&in);
+		chunk_clear(&symmetricKey);
+		chunk_free(&iv);
+		return FALSE;
+	}
 	crypter->destroy(crypter);
 	chunk_clear(&in);
 	DBG3(DBG_LIB, "  encrypted data: %B", &out);

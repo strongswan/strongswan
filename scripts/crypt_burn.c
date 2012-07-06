@@ -104,9 +104,12 @@ int main(int argc, char *argv[])
 
 		while (i--)
 		{
-			crypter->encrypt(crypter,
-				chunk_create(buffer, sizeof(buffer) / bs * bs),
-				chunk_create(iv, crypter->get_iv_size(crypter)), NULL);
+			if (!crypter->encrypt(crypter,
+					chunk_create(buffer, sizeof(buffer) / bs * bs),
+					chunk_create(iv, crypter->get_iv_size(crypter)), NULL))
+			{
+				continue;
+			}
 			crypter->decrypt(crypter,
 				chunk_create(buffer, sizeof(buffer) / bs * bs),
 				chunk_create(iv, crypter->get_iv_size(crypter)), NULL);

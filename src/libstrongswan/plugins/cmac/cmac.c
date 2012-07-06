@@ -75,7 +75,7 @@ struct private_mac_t {
 /**
  * process supplied data, but do not run final operation
  */
-static void update(private_mac_t *this, chunk_t data)
+static bool update(private_mac_t *this, chunk_t data)
 {
 	chunk_t iv;
 
@@ -83,7 +83,7 @@ static void update(private_mac_t *this, chunk_t data)
 	{	/* no complete block (or last block), just copy into remaining */
 		memcpy(this->remaining + this->remaining_bytes, data.ptr, data.len);
 		this->remaining_bytes += data.len;
-		return;
+		return TRUE;
 	}
 
 	iv = chunk_alloca(this->b);
@@ -100,7 +100,10 @@ static void update(private_mac_t *this, chunk_t data)
 		   this->b - this->remaining_bytes);
 	data = chunk_skip(data, this->b - this->remaining_bytes);
 	memxor(this->t, this->remaining, this->b);
-	this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL);
+	if (!this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL))
+	{
+		return FALSE;
+	}
 
 	/* process blocks M_2 ... M_n-1 */
 	while (data.len > this->b)
@@ -108,18 +111,23 @@ static void update(private_mac_t *this, chunk_t data)
 		memcpy(this->remaining, data.ptr, this->b);
 		data = chunk_skip(data, this->b);
 		memxor(this->t, this->remaining, this->b);
-		this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL);
+		if (!this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL))
+		{
+			return FALSE;
+		}
 	}
 
 	/* store remaining bytes of block M_n */
 	memcpy(this->remaining, data.ptr, data.len);
 	this->remaining_bytes = data.len;
+
+	return TRUE;
 }
 
 /**
  * process last block M_last
  */
-static void final(private_mac_t *this, u_int8_t *out)
+static bool final(private_mac_t *this, u_int8_t *out)
 {
 	chunk_t iv;
 
@@ -156,24 +164,32 @@ static void final(private_mac_t *this, u_int8_t *out)
 	 * T := AES-128(K,T);
 	 */
 	memxor(this->t, this->remaining, this->b);
-	this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL);
+	if (!this->k->encrypt(this->k, chunk_create(this->t, this->b), iv, NULL))
+	{
+		return FALSE;
+	}
 
 	memcpy(out, this->t, this->b);
 
 	/* reset state */
 	memset(this->t, 0, this->b);
 	this->remaining_bytes = 0;
+
+	return TRUE;
 }
 
 METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* update T, do not process last block */
-	update(this, data);
+	if (!update(this, data))
+	{
+		return FALSE;
+	}
 
 	if (out)
 	{	/* if not in append mode, process last block and output result */
-		final(this, out);
+		return final(this, out);
 	}
 	return TRUE;
 }
@@ -264,7 +280,10 @@ METHOD(mac_t, set_key, bool,
 	l = chunk_alloca(this->b);
 	memset(l.ptr, 0, l.len);
 	this->k->set_key(this->k, resized);
-	this->k->encrypt(this->k, l, iv, NULL);
+	if (!this->k->encrypt(this->k, l, iv, NULL))
+	{
+		return FALSE;
+	}
 	derive_key(l);
 	memcpy(this->k1, l.ptr, l.len);
 	derive_key(l);

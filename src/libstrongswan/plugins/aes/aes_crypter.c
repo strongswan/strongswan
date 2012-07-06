@@ -1373,7 +1373,7 @@ METHOD(crypter_t, decrypt, void,
 	}
 }
 
-METHOD(crypter_t, encrypt, void,
+METHOD(crypter_t, encrypt, bool,
 	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	int pos;
@@ -1408,6 +1408,7 @@ METHOD(crypter_t, encrypt, void,
 		out+=16;
 		pos+=16;
 	}
+	return TRUE;
 }
 
 METHOD(crypter_t, get_block_size, size_t,

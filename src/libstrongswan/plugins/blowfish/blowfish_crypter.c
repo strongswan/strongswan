@@ -110,7 +110,7 @@ METHOD(crypter_t, decrypt, void,
 	free(iv.ptr);
 }
 
-METHOD(crypter_t, encrypt, void,
+METHOD(crypter_t, encrypt, bool,
 	private_blowfish_crypter_t *this, chunk_t data, chunk_t iv,
 	chunk_t *encrypted)
 {
@@ -131,6 +131,8 @@ METHOD(crypter_t, encrypt, void,
 	BF_cbc_encrypt(in, out, data.len, &this->schedule, iv.ptr, 1);
 
 	free(iv.ptr);
+
+	return TRUE;
 }
 
 METHOD(crypter_t, get_block_size, size_t,

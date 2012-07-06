@@ -337,9 +337,15 @@ static status_t ChallengeResponse(chunk_t challenge_hash, chunk_t password_hash,
 	for (i = 0; i < 3; i++)
 	{
 		chunk_t expanded, encrypted;
+
 		expanded = ExpandDESKey(keys[i]);
 		crypter->set_key(crypter, expanded);
-		crypter->encrypt(crypter, challenge_hash, chunk_empty, &encrypted);
+		if (!crypter->encrypt(crypter, challenge_hash, chunk_empty, &encrypted))
+		{
+			chunk_clear(&expanded);
+			crypter->destroy(crypter);
+			return FAILED;
+		}
 		memcpy(&response->ptr[i * 8], encrypted.ptr, encrypted.len);
 		chunk_clear(&encrypted);
 		chunk_clear(&expanded);

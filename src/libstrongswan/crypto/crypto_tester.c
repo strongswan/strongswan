@@ -160,8 +160,10 @@ static u_int bench_crypter(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			crypter->encrypt(crypter, buf, chunk_from_thing(iv), NULL);
-			runs++;
+			if (crypter->encrypt(crypter, buf, chunk_from_thing(iv), NULL))
+			{
+				runs++;
+			}
 			crypter->decrypt(crypter, buf, chunk_from_thing(iv), NULL);
 			runs++;
 		}
@@ -215,7 +217,10 @@ METHOD(crypto_tester_t, test_crypter, bool,
 
 		/* allocated encryption */
 		plain = chunk_create(vector->plain, vector->len);
-		crypter->encrypt(crypter, plain, iv, &cipher);
+		if (!crypter->encrypt(crypter, plain, iv, &cipher))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->cipher, cipher.ptr, cipher.len))
 		{
 			failed = TRUE;
@@ -235,7 +240,10 @@ METHOD(crypto_tester_t, test_crypter, bool,
 			failed = TRUE;
 		}
 		/* inline encryption */
-		crypter->encrypt(crypter, plain, iv, NULL);
+		if (!crypter->encrypt(crypter, plain, iv, NULL))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->cipher, plain.ptr, plain.len))
 		{
 			failed = TRUE;

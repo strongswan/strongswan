@@ -145,7 +145,7 @@ METHOD(crypter_t, decrypt, void,
 	}
 }
 
-METHOD(crypter_t, encrypt, void,
+METHOD(crypter_t, encrypt, bool,
 	private_af_alg_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	if (dst)
@@ -157,6 +157,7 @@ METHOD(crypter_t, encrypt, void,
 	{
 		this->ops->crypt(this->ops, ALG_OP_ENCRYPT, iv, data, data.ptr);
 	}
+	return TRUE;
 }
 
 METHOD(crypter_t, get_block_size, size_t,

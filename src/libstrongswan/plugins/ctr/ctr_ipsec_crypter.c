@@ -45,7 +45,7 @@ struct private_ctr_ipsec_crypter_t {
 /**
  * Do the CTR crypto operation
  */
-static void crypt_ctr(private_ctr_ipsec_crypter_t *this,
+static bool crypt_ctr(private_ctr_ipsec_crypter_t *this,
 					  chunk_t in, chunk_t out)
 {
 	size_t is, bs;
@@ -63,8 +63,11 @@ static void crypt_ctr(private_ctr_ipsec_crypter_t *this,
 
 		memset(iv, 0, is);
 		memcpy(block, state.ptr, bs);
-		this->crypter->encrypt(this->crypter,
-						chunk_create(block, bs), chunk_create(iv, is), NULL);
+		if (!this->crypter->encrypt(this->crypter, chunk_create(block, bs),
+									chunk_create(iv, is), NULL))
+		{
+			return FALSE;
+		}
 		chunk_increment(state);
 
 		if (in.ptr != out.ptr)
@@ -75,9 +78,10 @@ static void crypt_ctr(private_ctr_ipsec_crypter_t *this,
 		in = chunk_skip(in, bs);
 		out = chunk_skip(out, bs);
 	}
+	return TRUE;
 }
 
-METHOD(crypter_t, crypt, void,
+METHOD(crypter_t, crypt, bool,
 	private_ctr_ipsec_crypter_t *this, chunk_t in, chunk_t iv, chunk_t *out)
 {
 	memcpy(this->state.iv, iv.ptr, sizeof(this->state.iv));
@@ -85,12 +89,9 @@ METHOD(crypter_t, crypt, void,
 	if (out)
 	{
 		*out = chunk_alloc(in.len);
-		crypt_ctr(this, in, *out);
+		return crypt_ctr(this, in, *out);
 	}
-	else
-	{
-		crypt_ctr(this, in, in);
-	}
+	return crypt_ctr(this, in, in);
 }
 
 METHOD(crypter_t, get_block_size, size_t,
