@@ -313,11 +313,11 @@ static status_t process_client_hello(private_tls_server_t *this,
 			return NEED_MORE;
 		}
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-		if (rng)
+		if (!rng || !rng->allocate_bytes(rng, SESSION_ID_SIZE, &this->session))
 		{
-			rng->allocate_bytes(rng, SESSION_ID_SIZE, &this->session);
-			rng->destroy(rng);
+			DBG1(DBG_TLS, "generating TLS session identifier failed, skipped");
 		}
+		DESTROY_IF(rng);
 		DBG1(DBG_TLS, "negotiated %N using suite %N",
 			 tls_version_names, this->tls->get_version(this->tls),
 			 tls_cipher_suite_names, this->suite);
