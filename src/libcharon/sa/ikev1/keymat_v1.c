@@ -827,18 +827,21 @@ static qm_data_t *lookup_quick_mode(private_keymat_v1_t *this, u_int32_t mid)
 	return found;
 }
 
-METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
-	private_keymat_v1_t *this, message_t *message)
+METHOD(keymat_v1_t, get_hash_phase2, bool,
+	private_keymat_v1_t *this, message_t *message, chunk_t *hash)
 {
-	u_int32_t mid = message->get_message_id(message), mid_n = htonl(mid);
-	chunk_t data = chunk_empty, hash = chunk_empty;
+	u_int32_t mid, mid_n;
+	chunk_t data = chunk_empty;
 	bool add_message = TRUE;
 	char *name = "Hash";
 
 	if (!this->prf)
 	{	/* no keys derived yet */
-		return hash;
+		return FALSE;
 	}
+
+	mid = message->get_message_id(message);
+	mid_n = htonl(mid);
 
 	/* Hashes are simple for most exchanges in Phase 2:
 	 *   Hash = prf(SKEYID_a, M-ID | Complete message after HASH payload)
@@ -858,7 +861,7 @@ METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
 				name = "Hash(1)";
 				if (!get_nonce(message, &qm->n_i))
 				{
-					return hash;
+					return FALSE;
 				}
 				data = chunk_from_thing(mid_n);
 			}
@@ -867,7 +870,7 @@ METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
 				name = "Hash(2)";
 				if (!get_nonce(message, &qm->n_r))
 				{
-					return hash;
+					return FALSE;
 				}
 				data = chunk_cata("cc", chunk_from_thing(mid_n), qm->n_i);
 			}
@@ -889,26 +892,23 @@ METHOD(keymat_v1_t, get_hash_phase2, chunk_t,
 			data = chunk_from_thing(mid_n);
 			break;
 		default:
-			break;
+			return FALSE;
 	}
-	if (data.ptr)
+	this->prf->set_key(this->prf, this->skeyid_a);
+	if (add_message)
 	{
-		this->prf->set_key(this->prf, this->skeyid_a);
-		if (add_message)
-		{
-			generator_t *generator = generator_create_no_dbg();
-			chunk_t msg = get_message_data(message, generator);
-			this->prf->allocate_bytes(this->prf, data, NULL);
-			this->prf->allocate_bytes(this->prf, msg, &hash);
-			generator->destroy(generator);
-		}
-		else
-		{
-			this->prf->allocate_bytes(this->prf, data, &hash);
-		}
-		DBG3(DBG_IKE, "%s %B", name, &hash);
+		generator_t *generator = generator_create_no_dbg();
+		chunk_t msg = get_message_data(message, generator);
+		this->prf->allocate_bytes(this->prf, data, NULL);
+		this->prf->allocate_bytes(this->prf, msg, hash);
+		generator->destroy(generator);
 	}
-	return hash;
+	else
+	{
+		this->prf->allocate_bytes(this->prf, data, hash);
+	}
+	DBG3(DBG_IKE, "%s %B", name, hash);
+	return TRUE;
 }
 
 /**

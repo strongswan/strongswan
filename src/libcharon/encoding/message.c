@@ -1455,8 +1455,7 @@ METHOD(message_t, generate, status_t,
 	if (keymat && keymat->get_version(keymat) == IKEV1)
 	{
 		/* get a hash for this message, if any is required */
-		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
-		if (hash.ptr)
+		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
 		{	/* insert a HASH payload as first payload */
 			hash_payload_t *hash_payload;
 
@@ -2003,8 +2002,7 @@ METHOD(message_t, parse_body, status_t,
 		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
 		chunk_t hash;
 
-		hash = keymat_v1->get_hash_phase2(keymat_v1, &this->public);
-		if (hash.ptr)
+		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
 		{
 			hash_payload_t *hash_payload;
 			chunk_t other_hash;

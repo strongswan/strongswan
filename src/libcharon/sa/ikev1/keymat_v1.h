@@ -112,10 +112,10 @@ struct keymat_v1_t {
 	 * Get HASH data for integrity/authentication in Phase 2 exchanges.
 	 *
 	 * @param message		message to generate the HASH data for
-	 * @return				allocated HASH data
+	 * @param hash			chunk receiving allocated hash data
+	 * @return				TRUE if hash allocated successfully
 	 */
-	chunk_t (*get_hash_phase2)(keymat_v1_t *this, message_t *message);
-
+	bool (*get_hash_phase2)(keymat_v1_t *this, message_t *message, chunk_t *hash);
 
 	/**
 	 * Returns the IV for a message with the given message ID.
