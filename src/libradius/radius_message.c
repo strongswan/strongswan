@@ -293,7 +293,10 @@ METHOD(radius_message_t, sign, bool,
 	if (rng)
 	{
 		/* build Request-Authenticator */
-		rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator);
+		if (!rng->get_bytes(rng, HASH_SIZE_MD5, this->msg->authenticator))
+		{
+			return FALSE;
+		}
 	}
 	else
 	{
