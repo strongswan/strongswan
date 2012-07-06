@@ -78,20 +78,24 @@ METHOD(session_t, add_filter, void,
 /**
  * Create a session ID and a cookie
  */
-static void create_sid(private_session_t *this)
+static bool create_sid(private_session_t *this)
 {
 	char buf[COOKIE_LEN];
 	rng_t *rng;
 
-	memset(buf, 0, sizeof(buf));
-	memset(this->sid, 0, sizeof(this->sid));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng)
 	{
-		rng->get_bytes(rng, sizeof(buf), buf);
-		rng->destroy(rng);
+		return FALSE;
 	}
+	if (!rng->get_bytes(rng, sizeof(buf), buf))
+	{
+		rng->destroy(rng);
+		return FALSE;
+	}
+	rng->destroy(rng);
 	chunk_to_hex(chunk_create(buf, sizeof(buf)), this->sid, FALSE);
+	return TRUE;
 }
 
 /**
@@ -212,7 +216,11 @@ session_t *session_create(context_t *context)
 		.filters = linked_list_create(),
 		.context = context,
 	);
-	create_sid(this);
+	if (!create_sid(this))
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }

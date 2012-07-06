@@ -70,6 +70,7 @@ struct session_t {
  * Create a session new session.
  *
  * @param context		user defined session context instance
+ * @return				client session, NULL on error
  */
 session_t *session_create(context_t *context);
 

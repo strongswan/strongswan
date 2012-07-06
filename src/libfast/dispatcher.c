@@ -179,10 +179,16 @@ static session_entry_t *session_entry_create(private_dispatcher_t *this,
 											 char *host)
 {
 	session_entry_t *entry;
+	session_t *session;
 
+	session = load_session(this);
+	if (!session)
+	{
+		return NULL;
+	}
 	INIT(entry,
 		.cond = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.session = load_session(this),
+		.session = session,
 		.host = strdup(host),
 		.used = time_monotonic(NULL),
 	);
@@ -324,6 +330,12 @@ static void dispatch(private_dispatcher_t *this)
 		else
 		{	/* create a new session if not found */
 			found = session_entry_create(this, request->get_host(request));
+			if (!found)
+			{
+				request->destroy(request);
+				this->mutex->unlock(this->mutex);
+				continue;
+			}
 			sid = found->session->get_sid(found->session);
 			this->sessions->put(this->sessions, sid, found);
 		}
