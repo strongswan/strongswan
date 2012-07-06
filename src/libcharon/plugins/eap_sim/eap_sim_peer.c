@@ -242,7 +242,10 @@ static status_t process_start(private_eap_sim_peer_t *this,
 	/* generate AT_NONCE_MT value */
 	rng = this->crypto->get_rng(this->crypto);
 	free(this->nonce.ptr);
-	rng->allocate_bytes(rng, NONCE_LEN, &this->nonce);
+	if (!rng->allocate_bytes(rng, NONCE_LEN, &this->nonce))
+	{
+		return FAILED;
+	}
 
 	message = simaka_message_create(FALSE, this->identifier, EAP_SIM,
 									SIM_START, this->crypto);
