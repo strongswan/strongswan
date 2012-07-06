@@ -179,10 +179,11 @@ METHOD(crypter_t, get_key_size, size_t,
 	return this->keymat_size;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_af_alg_crypter_t *this, chunk_t key)
 {
 	this->ops->set_key(this->ops, key);
+	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,

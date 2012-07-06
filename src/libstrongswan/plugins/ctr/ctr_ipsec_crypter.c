@@ -113,13 +113,13 @@ METHOD(crypter_t, get_key_size, size_t,
 			+ sizeof(this->state.nonce);
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_ctr_ipsec_crypter_t *this, chunk_t key)
 {
 	memcpy(this->state.nonce, key.ptr + key.len - sizeof(this->state.nonce),
 		   sizeof(this->state.nonce));
 	key.len -= sizeof(this->state.nonce);
-	this->crypter->set_key(this->crypter, key);
+	return this->crypter->set_key(this->crypter, key);
 }
 
 METHOD(crypter_t, destroy, void,

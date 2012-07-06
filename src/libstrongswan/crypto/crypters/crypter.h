@@ -147,8 +147,10 @@ struct crypter_t {
 	 * The length of the key must match get_key_size().
 	 *
 	 * @param key			key to set
+	 * @return				TRUE if key set successfully
 	 */
-	void (*set_key) (crypter_t *this, chunk_t key);
+	__attribute__((warn_unused_result))
+	bool (*set_key) (crypter_t *this, chunk_t key);
 
 	/**
 	 * Destroys a crypter_t object.

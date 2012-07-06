@@ -257,17 +257,16 @@ METHOD(mac_t, set_key, bool,
 	memset(this->k2, 0x02, this->b);
 	memset(this->k3, 0x03, this->b);
 
-	this->k1->set_key(this->k1, lengthened);
-	if (!this->k1->encrypt(this->k1, chunk_create(this->k2, this->b), iv, NULL) ||
+	if (!this->k1->set_key(this->k1, lengthened) ||
+		!this->k1->encrypt(this->k1, chunk_create(this->k2, this->b), iv, NULL) ||
 		!this->k1->encrypt(this->k1, chunk_create(this->k3, this->b), iv, NULL) ||
-		!this->k1->encrypt(this->k1, k1, iv, NULL))
+		!this->k1->encrypt(this->k1, k1, iv, NULL) ||
+		!this->k1->set_key(this->k1, k1))
 	{
+		memwipe(k1.ptr, k1.len);
 		return FALSE;
 	}
-	this->k1->set_key(this->k1, k1);
-
 	memwipe(k1.ptr, k1.len);
-
 	return TRUE;
 }
 

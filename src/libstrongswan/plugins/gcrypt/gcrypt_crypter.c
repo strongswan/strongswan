@@ -141,7 +141,7 @@ METHOD(crypter_t, get_key_size, size_t,
 	return len;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_gcrypt_crypter_t *this, chunk_t key)
 {
 	if (this->ctr_mode)
@@ -151,7 +151,7 @@ METHOD(crypter_t, set_key, void,
 			   sizeof(this->ctr.nonce));
 		key.len -= sizeof(this->ctr.nonce);
 	}
-	gcry_cipher_setkey(this->h, key.ptr, key.len);
+	return gcry_cipher_setkey(this->h, key.ptr, key.len) == 0;
 }
 
 METHOD(crypter_t, destroy, void,

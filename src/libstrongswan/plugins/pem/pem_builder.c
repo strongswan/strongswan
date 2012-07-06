@@ -125,7 +125,6 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 			 encryption_algorithm_names, alg);
 		return NOT_SUPPORTED;
 	}
-	crypter->set_key(crypter, key);
 
 	if (iv.len != crypter->get_iv_size(crypter) ||
 		blob->len % crypter->get_block_size(crypter))
@@ -134,7 +133,8 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		DBG1(DBG_ASN, "  data size is not multiple of block size");
 		return PARSE_ERROR;
 	}
-	if (!crypter->decrypt(crypter, *blob, iv, &decrypted))
+	if (!crypter->set_key(crypter, key) ||
+		!crypter->decrypt(crypter, *blob, iv, &decrypted))
 	{
 		crypter->destroy(crypter);
 		return FAILED;

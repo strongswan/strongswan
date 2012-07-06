@@ -638,8 +638,8 @@ end:
 	success = FALSE;
 
 	/* decrypt the content */
-	crypter->set_key(crypter, symmetric_key);
-	if (!crypter->decrypt(crypter, encrypted_content, iv, &this->data))
+	if (!crypter->set_key(crypter, symmetric_key) ||
+		!crypter->decrypt(crypter, encrypted_content, iv, &this->data))
 	{
 		success = FALSE;
 		goto failed;
@@ -834,8 +834,8 @@ METHOD(pkcs7_t, build_envelopedData, bool,
 	DBG3(DBG_LIB, "  padded unencrypted data: %B", &in);
 
 	/* symmetric encryption of data object */
-	crypter->set_key(crypter, symmetricKey);
-	if (!crypter->encrypt(crypter, in, iv, &out))
+	if (!crypter->set_key(crypter, symmetricKey) ||
+		!crypter->encrypt(crypter, in, iv, &out))
 	{
 		crypter->destroy(crypter);
 		chunk_clear(&in);

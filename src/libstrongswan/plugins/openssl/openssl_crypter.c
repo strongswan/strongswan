@@ -144,10 +144,11 @@ METHOD(crypter_t, get_key_size, size_t,
 	return this->key.len;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_openssl_crypter_t *this, chunk_t key)
 {
 	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
+	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,

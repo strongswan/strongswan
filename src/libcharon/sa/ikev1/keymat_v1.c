@@ -205,8 +205,7 @@ METHOD(aead_t, get_key_size, size_t,
 METHOD(aead_t, set_key, bool,
 	private_aead_t *this, chunk_t key)
 {
-	this->crypter->set_key(this->crypter, key);
-	return TRUE;
+	return this->crypter->set_key(this->crypter, key);
 }
 
 METHOD(aead_t, aead_destroy, void,
@@ -291,7 +290,11 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 		return NULL;
 	}
 	DBG4(DBG_IKE, "encryption key Ka %B", &ka);
-	crypter->set_key(crypter, ka);
+	if (!crypter->set_key(crypter, ka))
+	{
+		chunk_clear(&ka);
+		return NULL;
+	}
 	chunk_clear(&ka);
 
 	INIT(this,

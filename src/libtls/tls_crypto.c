@@ -1560,13 +1560,19 @@ static bool expand_keys(private_tls_crypto_t *this,
 
 		if (this->tls->is_server(this->tls))
 		{
-			this->crypter_in->set_key(this->crypter_in, client_write);
-			this->crypter_out->set_key(this->crypter_out, server_write);
+			if (!this->crypter_in->set_key(this->crypter_in, client_write) ||
+				!this->crypter_out->set_key(this->crypter_out, server_write))
+			{
+				return FALSE;
+			}
 		}
 		else
 		{
-			this->crypter_out->set_key(this->crypter_out, client_write);
-			this->crypter_in->set_key(this->crypter_in, server_write);
+			if (!this->crypter_out->set_key(this->crypter_out, client_write) ||
+				!this->crypter_in->set_key(this->crypter_in, server_write))
+			{
+				return FALSE;
+			}
 		}
 		if (ivs)
 		{

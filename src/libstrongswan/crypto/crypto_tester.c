@@ -151,7 +151,10 @@ static u_int bench_crypter(private_crypto_tester_t *this,
 
 		memset(iv, 0x56, sizeof(iv));
 		memset(key, 0x12, sizeof(key));
-		crypter->set_key(crypter, chunk_from_thing(key));
+		if (!crypter->set_key(crypter, chunk_from_thing(key)))
+		{
+			return 0;
+		}
 
 		buf = chunk_alloc(this->bench_size);
 		memset(buf.ptr, 0x34, buf.len);
@@ -214,7 +217,10 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		tested++;
 
 		key = chunk_create(vector->key, crypter->get_key_size(crypter));
-		crypter->set_key(crypter, key);
+		if (!crypter->set_key(crypter, key))
+		{
+			failed = TRUE;
+		}
 		iv = chunk_create(vector->iv, crypter->get_iv_size(crypter));
 
 		/* allocated encryption */

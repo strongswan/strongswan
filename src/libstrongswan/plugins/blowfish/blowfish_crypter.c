@@ -155,10 +155,11 @@ METHOD(crypter_t, get_key_size, size_t,
 	return this->key_size;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_blowfish_crypter_t *this, chunk_t key)
 {
 	BF_set_key(&this->schedule, key.len , key.ptr);
+	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,

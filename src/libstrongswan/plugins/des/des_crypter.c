@@ -1541,18 +1541,20 @@ METHOD(crypter_t, get_key_size, size_t,
 	return this->key_size;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_des_crypter_t *this, chunk_t key)
 {
 	des_set_key((des_cblock*)(key.ptr), &this->ks);
+	return TRUE;
 }
 
-METHOD(crypter_t, set_key3, void,
+METHOD(crypter_t, set_key3, bool,
 	private_des_crypter_t *this, chunk_t key)
 {
 	des_set_key((des_cblock*)(key.ptr) + 0, &this->ks3[0]);
 	des_set_key((des_cblock*)(key.ptr) + 1, &this->ks3[1]);
 	des_set_key((des_cblock*)(key.ptr) + 2, &this->ks3[2]);
+	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,

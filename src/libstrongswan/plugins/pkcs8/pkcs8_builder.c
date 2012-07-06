@@ -168,9 +168,8 @@ static private_key_t *decrypt_private_key(chunk_t blob,
 		{
 			continue;
 		}
-
-		crypter->set_key(crypter, key);
-		if (!crypter->decrypt(crypter, blob, iv, &decrypted))
+		if (!crypter->set_key(crypter, key) ||
+			!crypter->decrypt(crypter, blob, iv, &decrypted))
 		{
 			continue;
 		}

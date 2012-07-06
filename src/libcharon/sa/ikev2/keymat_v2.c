@@ -225,7 +225,14 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 		return FALSE;
 	}
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	crypter_i->set_key(crypter_i, key);
+	if (!crypter_i->set_key(crypter_i, key))
+	{
+		crypter_i->destroy(crypter_i);
+		crypter_r->destroy(crypter_r);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
@@ -237,7 +244,14 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 		return FALSE;
 	}
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	crypter_r->set_key(crypter_r, key);
+	if (!crypter_r->set_key(crypter_r, key))
+	{
+		crypter_i->destroy(crypter_i);
+		crypter_r->destroy(crypter_r);
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	if (this->initiator)

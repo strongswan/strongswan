@@ -1430,7 +1430,7 @@ METHOD(crypter_t, get_key_size, size_t,
 	return this->key_size;
 }
 
-METHOD(crypter_t, set_key, void,
+METHOD(crypter_t, set_key, bool,
 	private_aes_crypter_t *this, chunk_t key)
 {
 	u_int32_t    *kf, *kt, rci, f = 0;
@@ -1515,6 +1515,7 @@ METHOD(crypter_t, set_key, void,
 		}
 		cpy(kt, kf);
 	}
+	return TRUE;
 }
 
 METHOD(crypter_t, destroy, void,

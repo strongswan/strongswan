@@ -279,8 +279,8 @@ METHOD(mac_t, set_key, bool,
 	memset(iv.ptr, 0, iv.len);
 	l = chunk_alloca(this->b);
 	memset(l.ptr, 0, l.len);
-	this->k->set_key(this->k, resized);
-	if (!this->k->encrypt(this->k, l, iv, NULL))
+	if (!this->k->set_key(this->k, resized) ||
+		!this->k->encrypt(this->k, l, iv, NULL))
 	{
 		return FALSE;
 	}

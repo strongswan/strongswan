@@ -348,8 +348,8 @@ METHOD(aead_t, set_key, bool,
 {
 	memcpy(this->salt, key.ptr + key.len - SALT_SIZE, SALT_SIZE);
 	key.len -= SALT_SIZE;
-	this->crypter->set_key(this->crypter, key);
-	return create_h(this, this->h);
+	return this->crypter->set_key(this->crypter, key) &&
+		   create_h(this, this->h);
 }
 
 METHOD(aead_t, destroy, void,
