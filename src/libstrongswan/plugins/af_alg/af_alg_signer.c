@@ -153,10 +153,11 @@ METHOD(signer_t, get_block_size, size_t,
 	return this->block_size;
 }
 
-METHOD(signer_t, set_key, void,
+METHOD(signer_t, set_key, bool,
 	private_af_alg_signer_t *this, chunk_t key)
 {
 	this->ops->set_key(this->ops, key);
+	return TRUE;
 }
 
 METHOD(signer_t, destroy, void,

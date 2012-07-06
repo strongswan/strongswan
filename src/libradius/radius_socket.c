@@ -361,14 +361,14 @@ radius_socket_t *radius_socket_create(char *address, u_int16_t auth_port,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 	);
 
-	if (!this->hasher || !this->signer || !this->rng)
+	if (!this->hasher || !this->signer || !this->rng ||
+		!this->signer->set_key(this->signer, secret))
 	{
 		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/RNG required");
 		destroy(this);
 		return NULL;
 	}
 	this->secret = secret;
-	this->signer->set_key(this->signer, secret);
 	/* we use a random identifier, helps if we restart often */
 	this->identifier = random();
 

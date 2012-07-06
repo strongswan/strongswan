@@ -1522,13 +1522,19 @@ static bool expand_keys(private_tls_crypto_t *this,
 	block = chunk_skip(block, mks);
 	if (this->tls->is_server(this->tls))
 	{
-		this->signer_in->set_key(this->signer_in, client_write);
-		this->signer_out->set_key(this->signer_out, server_write);
+		if (!this->signer_in->set_key(this->signer_in, client_write) ||
+			!this->signer_out->set_key(this->signer_out, server_write))
+		{
+			return FALSE;
+		}
 	}
 	else
 	{
-		this->signer_out->set_key(this->signer_out, client_write);
-		this->signer_in->set_key(this->signer_in, server_write);
+		if (!this->signer_out->set_key(this->signer_out, client_write) ||
+			!this->signer_in->set_key(this->signer_in, server_write))
+		{
+			return FALSE;
+		}
 	}
 
 	/* crypter keys, and IVs if < TLSv1.2 */

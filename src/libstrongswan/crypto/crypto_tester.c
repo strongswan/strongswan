@@ -488,7 +488,10 @@ static u_int bench_signer(private_crypto_tester_t *this,
 		u_int runs;
 
 		memset(key, 0x12, sizeof(key));
-		signer->set_key(signer, chunk_from_thing(key));
+		if (!signer->set_key(signer, chunk_from_thing(key)))
+		{
+			return 0;
+		}
 
 		buf = chunk_alloc(this->bench_size);
 		memset(buf.ptr, 0x34, buf.len);
@@ -547,8 +550,10 @@ METHOD(crypto_tester_t, test_signer, bool,
 		failed = FALSE;
 
 		key = chunk_create(vector->key, signer->get_key_size(signer));
-		signer->set_key(signer, key);
-
+		if (!signer->set_key(signer, key))
+		{
+			failed = TRUE;
+		}
 		/* allocated signature */
 		data = chunk_create(vector->data, vector->len);
 		if (!signer->allocate_signature(signer, data, &mac))

@@ -101,10 +101,11 @@ METHOD(signer_t, get_block_size, size_t,
 	return this->truncation;
 }
 
-METHOD(signer_t, set_key, void,
+METHOD(signer_t, set_key, bool,
 	private_signer_t *this, chunk_t key)
 {
 	this->mac->set_key(this->mac, key);
+	return TRUE;
 }
 
 METHOD(signer_t, destroy, void,

@@ -166,12 +166,24 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
-	signer_i->set_key(signer_i, key);
+	if (!signer_i->set_key(signer_i, key))
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		chunk_clear(&key);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
-	signer_r->set_key(signer_r, key);
+	if (!signer_r->set_key(signer_r, key))
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		chunk_clear(&key);
+		return FALSE;
+	}
 	chunk_clear(&key);
 
 	/* SK_ei/SK_er used for encryption */

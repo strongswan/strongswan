@@ -140,8 +140,10 @@ struct signer_t {
 	 * Set the key for this object.
 	 *
 	 * @param key		key to set
+	 * @return			TRUE if key set
 	 */
-	void (*set_key) (signer_t *this, chunk_t key);
+	__attribute__((warn_unused_result))
+	bool (*set_key) (signer_t *this, chunk_t key);
 
 	/**
 	 * Destroys a signer_t object.

@@ -526,9 +526,8 @@ eap_radius_dae_t *eap_radius_dae_create(eap_radius_accounting_t *accounting)
 		return NULL;
 	}
 	this->secret.len = strlen(this->secret.ptr);
-	this->signer->set_key(this->signer, this->secret);
-
-	if (!open_socket(this))
+	if (!this->signer->set_key(this->signer, this->secret) ||
+		!open_socket(this))
 	{
 		destroy(this);
 		return NULL;

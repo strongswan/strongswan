@@ -138,7 +138,10 @@ METHOD(aead_t, set_key, bool,
 	chunk_split(key, "mm", this->signer->get_key_size(this->signer), &sig,
 				this->crypter->get_key_size(this->crypter), &enc);
 
-	this->signer->set_key(this->signer, sig);
+	if (!this->signer->set_key(this->signer, sig))
+	{
+		return FALSE;
+	}
 	this->crypter->set_key(this->crypter, enc);
 
 	return TRUE;
