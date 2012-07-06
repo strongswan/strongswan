@@ -147,11 +147,11 @@ METHOD(prf_t, get_block_size, size_t,
 {
 	return 2 * this->b;
 }
-METHOD(prf_t, allocate_bytes, void,
+METHOD(prf_t, allocate_bytes, bool,
 	private_fips_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(get_block_size(this));
-	get_bytes(this, seed, chunk->ptr);
+	return get_bytes(this, seed, chunk->ptr);
 }
 
 METHOD(prf_t, get_key_size, size_t,

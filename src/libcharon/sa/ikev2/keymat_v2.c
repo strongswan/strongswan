@@ -260,7 +260,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 {
 	chunk_t skeyseed, key, secret, full_nonce, fixed_nonce, prf_plus_seed;
 	chunk_t spi_i, spi_r;
-	prf_plus_t *prf_plus;
+	prf_plus_t *prf_plus = NULL;
 	u_int16_t alg, key_size, int_alg;
 	prf_t *rekey_prf = NULL;
 
@@ -323,9 +323,11 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, fixed_nonce);
-		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-		this->prf->set_key(this->prf, skeyseed);
-		prf_plus = prf_plus_create(this->prf, TRUE, prf_plus_seed);
+		if (this->prf->allocate_bytes(this->prf, secret, &skeyseed))
+		{
+			this->prf->set_key(this->prf, skeyseed);
+			prf_plus = prf_plus_create(this->prf, TRUE, prf_plus_seed);
+		}
 	}
 	else
 	{
@@ -343,9 +345,11 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		}
 		secret = chunk_cat("mc", secret, full_nonce);
 		rekey_prf->set_key(rekey_prf, rekey_skd);
-		rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed);
-		rekey_prf->set_key(rekey_prf, skeyseed);
-		prf_plus = prf_plus_create(rekey_prf, TRUE, prf_plus_seed);
+		if (rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed))
+		{
+			rekey_prf->set_key(rekey_prf, skeyseed);
+			prf_plus = prf_plus_create(rekey_prf, TRUE, prf_plus_seed);
+		}
 	}
 	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 
@@ -593,8 +597,10 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	DBG3(DBG_IKE, "IDx' %B", &idx);
 	DBG3(DBG_IKE, "SK_p %B", &skp);
 	this->prf->set_key(this->prf, skp);
-	this->prf->allocate_bytes(this->prf, idx, &chunk);
-
+	if (!this->prf->allocate_bytes(this->prf, idx, &chunk))
+	{
+		return FALSE;
+	}
 	*octets = chunk_cat("ccm", ike_sa_init, nonce, chunk);
 	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", octets);
 	return TRUE;
@@ -623,9 +629,18 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad = chunk_create(IKEV2_KEY_PAD, IKEV2_KEY_PAD_LENGTH);
 	this->prf->set_key(this->prf, secret);
-	this->prf->allocate_bytes(this->prf, key_pad, &key);
+	if (!this->prf->allocate_bytes(this->prf, key_pad, &key))
+	{
+		chunk_free(&octets);
+		return FALSE;
+	}
 	this->prf->set_key(this->prf, key);
-	this->prf->allocate_bytes(this->prf, octets, sig);
+	if (!this->prf->allocate_bytes(this->prf, octets, sig))
+	{
+		chunk_free(&key);
+		chunk_free(&octets);
+		return FALSE;
+	}
 	DBG4(DBG_IKE, "secret %B", &secret);
 	DBG4(DBG_IKE, "prf(secret, keypad) %B", &key);
 	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", sig);

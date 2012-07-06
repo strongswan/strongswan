@@ -435,7 +435,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			psk = shared_key->get_key(shared_key);
 			adjust_keylen(alg, &psk);
 			this->prf->set_key(this->prf, psk);
-			this->prf->allocate_bytes(this->prf, nonces, &skeyid);
+			if (!this->prf->allocate_bytes(this->prf, nonces, &skeyid))
+			{
+				chunk_clear(&g_xy);
+				return FALSE;
+			}
 			break;
 		}
 		case AUTH_RSA:
@@ -448,7 +452,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		case AUTH_HYBRID_RESP_RSA:
 		{
 			this->prf->set_key(this->prf, nonces);
-			this->prf->allocate_bytes(this->prf, g_xy, &skeyid);
+			if (!this->prf->allocate_bytes(this->prf, g_xy, &skeyid))
+			{
+				chunk_clear(&g_xy);
+				return FALSE;
+			}
 			break;
 		}
 		default:
@@ -463,19 +471,31 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 	/* SKEYID_d = prf(SKEYID, g^xy | CKY-I | CKY-R | 0) */
 	data = chunk_cat("cccc", g_xy, spi_i, spi_r, octet_0);
-	this->prf->allocate_bytes(this->prf, data, &this->skeyid_d);
+	if (!this->prf->allocate_bytes(this->prf, data, &this->skeyid_d))
+	{
+		chunk_clear(&g_xy);
+		chunk_clear(&data);
+	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_d %B", &this->skeyid_d);
 
 	/* SKEYID_a = prf(SKEYID, SKEYID_d | g^xy | CKY-I | CKY-R | 1) */
 	data = chunk_cat("ccccc", this->skeyid_d, g_xy, spi_i, spi_r, octet_1);
-	this->prf->allocate_bytes(this->prf, data, &this->skeyid_a);
+	if (!this->prf->allocate_bytes(this->prf, data, &this->skeyid_a))
+	{
+		chunk_clear(&g_xy);
+		chunk_clear(&data);
+	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_a %B", &this->skeyid_a);
 
 	/* SKEYID_e = prf(SKEYID, SKEYID_a | g^xy | CKY-I | CKY-R | 2) */
 	data = chunk_cat("ccccc", this->skeyid_a, g_xy, spi_i, spi_r, octet_2);
-	this->prf->allocate_bytes(this->prf, data, &skeyid_e);
+	if (!this->prf->allocate_bytes(this->prf, data, &skeyid_e))
+	{
+		chunk_clear(&g_xy);
+		chunk_clear(&data);
+	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_e %B", &skeyid_e);
 
@@ -724,7 +744,11 @@ METHOD(keymat_v1_t, get_hash, bool,
 
 	DBG3(DBG_IKE, "HASH_%c data %B", initiator ? 'I' : 'R', &data);
 
-	this->prf_auth->allocate_bytes(this->prf_auth, data, hash);
+	if (!this->prf_auth->allocate_bytes(this->prf_auth, data, hash))
+	{
+		free(data.ptr);
+		return FALSE;
+	}
 
 	DBG3(DBG_IKE, "HASH_%c %B", initiator ? 'I' : 'R', hash);
 
@@ -897,15 +921,25 @@ METHOD(keymat_v1_t, get_hash_phase2, bool,
 	this->prf->set_key(this->prf, this->skeyid_a);
 	if (add_message)
 	{
-		generator_t *generator = generator_create_no_dbg();
-		chunk_t msg = get_message_data(message, generator);
-		this->prf->allocate_bytes(this->prf, data, NULL);
-		this->prf->allocate_bytes(this->prf, msg, hash);
+		generator_t *generator;
+		chunk_t msg;
+
+		generator = generator_create_no_dbg();
+		msg = get_message_data(message, generator);
+		if (!this->prf->allocate_bytes(this->prf, data, NULL) ||
+			!this->prf->allocate_bytes(this->prf, msg, hash))
+		{
+			generator->destroy(generator);
+			return FALSE;
+		}
 		generator->destroy(generator);
 	}
 	else
 	{
-		this->prf->allocate_bytes(this->prf, data, hash);
+		if (!this->prf->allocate_bytes(this->prf, data, hash))
+		{
+			return FALSE;
+		}
 	}
 	DBG3(DBG_IKE, "%s %B", name, hash);
 	return TRUE;

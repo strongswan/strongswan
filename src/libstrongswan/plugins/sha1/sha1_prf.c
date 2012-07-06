@@ -81,11 +81,11 @@ METHOD(prf_t, get_block_size, size_t,
 	return HASH_SIZE_SHA1;
 }
 
-METHOD(prf_t, allocate_bytes, void,
+METHOD(prf_t, allocate_bytes, bool,
 	private_sha1_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(HASH_SIZE_SHA1);
-	get_bytes(this, seed, chunk->ptr);
+	return get_bytes(this, seed, chunk->ptr);
 }
 
 METHOD(prf_t, get_key_size, size_t,

@@ -42,7 +42,7 @@ METHOD(prf_t, get_bytes, bool,
 	return TRUE;
 }
 
-METHOD(prf_t, allocate_bytes, void,
+METHOD(prf_t, allocate_bytes, bool,
 	private_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	if (!chunk)
@@ -54,6 +54,7 @@ METHOD(prf_t, allocate_bytes, void,
 		*chunk = chunk_alloc(this->mac->get_mac_size(this->mac));
 		this->mac->get_mac(this->mac, seed, chunk->ptr);
 	}
+	return TRUE;
 }
 
 METHOD(prf_t, get_block_size, size_t,

@@ -112,18 +112,15 @@ METHOD(prf_t, get_bytes, bool,
 	return TRUE;
 }
 
-METHOD(prf_t, allocate_bytes, void,
+METHOD(prf_t, allocate_bytes, bool,
 	private_af_alg_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	if (chunk)
 	{
 		*chunk = chunk_alloc(this->block_size);
-		get_bytes(this, seed, chunk->ptr);
+		return get_bytes(this, seed, chunk->ptr);
 	}
-	else
-	{
-		get_bytes(this, seed, NULL);
-	}
+	return get_bytes(this, seed, NULL);
 }
 
 METHOD(prf_t, get_block_size, size_t,
