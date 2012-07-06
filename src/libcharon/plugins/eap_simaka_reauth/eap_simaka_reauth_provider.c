@@ -81,7 +81,10 @@ static identification_t *gen_identity(private_eap_simaka_reauth_provider_t *this
 {
 	char buf[8], hex[sizeof(buf) * 2 + 1];
 
-	this->rng->get_bytes(this->rng, sizeof(buf), buf);
+	if (!this->rng->get_bytes(this->rng, sizeof(buf), buf))
+	{
+		return NULL;
+	}
 	chunk_to_hex(chunk_create(buf, sizeof(buf)), hex, FALSE);
 
 	return identification_create_from_string(hex);
@@ -116,7 +119,14 @@ METHOD(simaka_provider_t, gen_reauth, identification_t*,
 	char mk[HASH_SIZE_SHA1])
 {
 	reauth_data_t *data;
-	identification_t *permanent;
+	identification_t *permanent, *new_id;
+
+	new_id = gen_identity(this);
+	if (!new_id)
+	{
+		DBG1(DBG_CFG, "failed to generate identity");
+		return NULL;
+	}
 
 	data = this->reauth->get(this->reauth, id);
 	if (data)
@@ -125,14 +135,18 @@ METHOD(simaka_provider_t, gen_reauth, identification_t*,
 		if (permanent)
 		{
 			data->id->destroy(data->id);
-			data->id = gen_identity(this);
+			data->id = new_id;
 			this->permanent->put(this->permanent, data->id, permanent);
+		}
+		else
+		{
+			new_id->destroy(new_id);
 		}
 	}
 	else
 	{	/* generate new entry */
 		INIT(data,
-			.id = gen_identity(this),
+			.id = new_id,
 		);
 		id = id->clone(id);
 		this->reauth->put(this->reauth, id, data);
