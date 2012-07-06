@@ -170,7 +170,10 @@ static private_key_t *decrypt_private_key(chunk_t blob,
 		}
 
 		crypter->set_key(crypter, key);
-		crypter->decrypt(crypter, blob, iv, &decrypted);
+		if (!crypter->decrypt(crypter, blob, iv, &decrypted))
+		{
+			continue;
+		}
 		if (verify_padding(&decrypted))
 		{
 			private_key = parse_private_key(decrypted);

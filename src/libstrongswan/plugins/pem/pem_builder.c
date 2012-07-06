@@ -134,7 +134,11 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 		DBG1(DBG_ASN, "  data size is not multiple of block size");
 		return PARSE_ERROR;
 	}
-	crypter->decrypt(crypter, *blob, iv, &decrypted);
+	if (!crypter->decrypt(crypter, *blob, iv, &decrypted))
+	{
+		crypter->destroy(crypter);
+		return FAILED;
+	}
 	crypter->destroy(crypter);
 	memcpy(blob->ptr, decrypted.ptr, blob->len);
 	chunk_free(&decrypted);

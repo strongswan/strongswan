@@ -131,7 +131,7 @@ static size_t lookup_alg(encryption_algorithm_t algo, char **name,
 	return 0;
 }
 
-METHOD(crypter_t, decrypt, void,
+METHOD(crypter_t, decrypt, bool,
 	private_af_alg_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	if (dst)
@@ -143,6 +143,7 @@ METHOD(crypter_t, decrypt, void,
 	{
 		this->ops->crypt(this->ops, ALG_OP_DECRYPT, iv, data, data.ptr);
 	}
+	return TRUE;
 }
 
 METHOD(crypter_t, encrypt, bool,

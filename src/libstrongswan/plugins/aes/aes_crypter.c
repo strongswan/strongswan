@@ -1331,7 +1331,7 @@ static void decrypt_block(const private_aes_crypter_t *this, const unsigned char
     state_out(out_blk, b0);
 }
 
-METHOD(crypter_t, decrypt, void,
+METHOD(crypter_t, decrypt, bool,
 	private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	int pos;
@@ -1371,6 +1371,7 @@ METHOD(crypter_t, decrypt, void,
 		out-=16;
 		pos-=16;
 	}
+	return TRUE;
 }
 
 METHOD(crypter_t, encrypt, bool,

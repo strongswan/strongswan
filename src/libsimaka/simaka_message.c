@@ -499,8 +499,10 @@ static bool decrypt(private_simaka_message_t *this)
 			 eap_type_names, this->hdr->type);
 		return FALSE;
 	}
-
-	crypter->decrypt(crypter, this->encr, this->iv, &plain);
+	if (!crypter->decrypt(crypter, this->encr, this->iv, &plain))
+	{
+		return FALSE;
+	}
 
 	this->encrypted = TRUE;
 	success = parse_attributes(this, plain);

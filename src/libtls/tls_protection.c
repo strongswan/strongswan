@@ -150,7 +150,12 @@ METHOD(tls_protection_t, process, status_t,
 				return NEED_MORE;
 			}
 		}
-		this->crypter_in->decrypt(this->crypter_in, data, iv, NULL);
+		if (!this->crypter_in->decrypt(this->crypter_in, data, iv, NULL))
+		{
+			free(next_iv.ptr);
+			this->alert->add(this->alert, TLS_FATAL, TLS_BAD_RECORD_MAC);
+			return NEED_MORE;
+		}
 
 		if (next_iv.len)
 		{	/* next record IV is last ciphertext block of this record */

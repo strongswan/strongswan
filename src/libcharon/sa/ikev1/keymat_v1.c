@@ -174,8 +174,7 @@ METHOD(aead_t, decrypt, bool,
 	private_aead_t *this, chunk_t encrypted, chunk_t assoc, chunk_t iv,
 	chunk_t *plain)
 {
-	this->crypter->decrypt(this->crypter, encrypted, iv, plain);
-	return TRUE;
+	return this->crypter->decrypt(this->crypter, encrypted, iv, plain);
 }
 
 METHOD(aead_t, get_block_size, size_t,

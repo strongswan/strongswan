@@ -110,9 +110,12 @@ int main(int argc, char *argv[])
 			{
 				continue;
 			}
-			crypter->decrypt(crypter,
-				chunk_create(buffer, sizeof(buffer) / bs * bs),
-				chunk_create(iv, crypter->get_iv_size(crypter)), NULL);
+			if (!crypter->decrypt(crypter,
+					chunk_create(buffer, sizeof(buffer) / bs * bs),
+					chunk_create(iv, crypter->get_iv_size(crypter)), NULL))
+			{
+				continue;
+			}
 			if (limit && ++i == limit)
 			{
 				break;

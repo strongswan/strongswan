@@ -109,10 +109,11 @@ static void crypt(private_padlock_aes_crypter_t *this, char *iv,
 	memwipe(key_aligned, sizeof(key_aligned));
 }
 
-METHOD(crypter_t, decrypt, void,
+METHOD(crypter_t, decrypt, bool,
 	private_padlock_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, iv.ptr, data, dst, TRUE);
+	return TRUE;
 }
 
 METHOD(crypter_t, encrypt, bool,

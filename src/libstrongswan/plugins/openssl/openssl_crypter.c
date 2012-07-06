@@ -114,10 +114,10 @@ static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 		   EVP_CIPHER_CTX_cleanup(&ctx);
 }
 
-METHOD(crypter_t, decrypt, void,
+METHOD(crypter_t, decrypt, bool,
 	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
-	crypt(this, data, iv, dst, 0);
+	return crypt(this, data, iv, dst, 0);
 }
 
 METHOD(crypter_t, encrypt, bool,

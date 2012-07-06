@@ -639,7 +639,11 @@ end:
 
 	/* decrypt the content */
 	crypter->set_key(crypter, symmetric_key);
-	crypter->decrypt(crypter, encrypted_content, iv, &this->data);
+	if (!crypter->decrypt(crypter, encrypted_content, iv, &this->data))
+	{
+		success = FALSE;
+		goto failed;
+	}
 	DBG4(DBG_LIB, "decrypted content with padding: %B", &this->data);
 
 	/* remove the padding */
