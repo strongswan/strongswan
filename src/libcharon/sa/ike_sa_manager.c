@@ -944,13 +944,14 @@ static void remove_connected_peers(private_ike_sa_manager_t *this, entry_t *entr
  */
 static u_int64_t get_spi(private_ike_sa_manager_t *this)
 {
-	u_int64_t spi = 0;
+	u_int64_t spi;
 
-	if (this->rng)
+	if (this->rng &&
+		this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi))
 	{
-		this->rng->get_bytes(this->rng, sizeof(spi), (u_int8_t*)&spi);
+		return spi;
 	}
-	return spi;
+	return 0;
 }
 
 /**
@@ -962,15 +963,18 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
  * stored together with the hash, otherwise it is newly allocated and should
  * be used to create the IKE_SA.
  *
- * @returns TRUE if the message with the given hash was seen before
+ * @returns ALREADY_DONE if the message with the given hash has been seen before
+ *			NOT_FOUND if the message hash was not found
+ *			FAILED if the SPI allocation failed
  */
-static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
-									chunk_t init_hash, u_int64_t *our_spi)
+static status_t check_and_put_init_hash(private_ike_sa_manager_t *this,
+										chunk_t init_hash, u_int64_t *our_spi)
 {
 	table_item_t *item;
 	u_int row, segment;
 	mutex_t *mutex;
 	init_hash_t *init;
+	u_int64_t spi;
 
 	row = chunk_hash(init_hash) & this->table_mask;
 	segment = row & this->segment_mask;
@@ -985,9 +989,15 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 		{
 			*our_spi = current->our_spi;
 			mutex->unlock(mutex);
-			return TRUE;
+			return ALREADY_DONE;
 		}
 		item = item->next;
+	}
+
+	spi = get_spi(this);
+	if (!spi)
+	{
+		return FAILED;
 	}
 
 	INIT(init,
@@ -995,7 +1005,7 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 			.len = init_hash.len,
 			.ptr = init_hash.ptr,
 		},
-		.our_spi = get_spi(this),
+		.our_spi = spi,
 	);
 	INIT(item,
 		.value = init,
@@ -1004,7 +1014,7 @@ static bool check_and_put_init_hash(private_ike_sa_manager_t *this,
 	this->init_hashes_table[row] = item;
 	*our_spi = init->our_spi;
 	mutex->unlock(mutex);
-	return FALSE;
+	return NOT_FOUND;
 }
 
 /**
@@ -1075,16 +1085,24 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
 	u_int8_t ike_version;
+	u_int64_t spi;
 
 	ike_version = version == IKEV1 ? IKEV1_MAJOR_VERSION : IKEV2_MAJOR_VERSION;
 
+	spi = get_spi(this);
+	if (!spi)
+	{
+		DBG1(DBG_MGR, "failed to allocate SPI for new IKE_SA");
+		return NULL;
+	}
+
 	if (initiator)
 	{
-		ike_sa_id = ike_sa_id_create(ike_version, get_spi(this), 0, TRUE);
+		ike_sa_id = ike_sa_id_create(ike_version, spi, 0, TRUE);
 	}
 	else
 	{
-		ike_sa_id = ike_sa_id_create(ike_version, 0, get_spi(this), FALSE);
+		ike_sa_id = ike_sa_id_create(ike_version, 0, spi, FALSE);
 	}
 	ike_sa = ike_sa_create(ike_sa_id, initiator, version);
 	ike_sa_id->destroy(ike_sa_id);
@@ -1150,35 +1168,49 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 									message->get_packet_data(message), &hash);
 
 		/* ensure this is not a retransmit of an already handled init message */
-		if (!check_and_put_init_hash(this, hash, &our_spi))
-		{	/* we've not seen this packet yet, create a new IKE_SA */
-			id->set_responder_spi(id, our_spi);
-			ike_sa = ike_sa_create(id, FALSE, ike_version);
-			if (ike_sa)
-			{
-				entry = entry_create();
-				entry->ike_sa = ike_sa;
-				entry->ike_sa_id = id->clone(id);
+		switch (check_and_put_init_hash(this, hash, &our_spi))
+		{
+			case NOT_FOUND:
+			{	/* we've not seen this packet yet, create a new IKE_SA */
+				id->set_responder_spi(id, our_spi);
+				ike_sa = ike_sa_create(id, FALSE, ike_version);
+				if (ike_sa)
+				{
+					entry = entry_create();
+					entry->ike_sa = ike_sa;
+					entry->ike_sa_id = id->clone(id);
 
-				segment = put_entry(this, entry);
-				entry->checked_out = TRUE;
-				unlock_single_segment(this, segment);
+					segment = put_entry(this, entry);
+					entry->checked_out = TRUE;
+					unlock_single_segment(this, segment);
 
-				entry->message_id = message->get_message_id(message);
-				entry->init_hash = hash;
+					entry->message_id = message->get_message_id(message);
+					entry->init_hash = hash;
 
-				DBG2(DBG_MGR, "created IKE_SA %s[%u]",
-					 ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+					DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+						 ike_sa->get_name(ike_sa),
+						 ike_sa->get_unique_id(ike_sa));
+				}
+				else
+				{
+					remove_init_hash(this, hash);
+					chunk_free(&hash);
+					DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
+				}
+				id->destroy(id);
+				charon->bus->set_sa(charon->bus, ike_sa);
+				return ike_sa;
 			}
-			else
-			{
-				remove_init_hash(this, hash);
+			case FAILED:
+			{	/* we failed to allocate an SPI */
 				chunk_free(&hash);
-				DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
+				id->destroy(id);
+				DBG1(DBG_MGR, "ignoring message, failed to allocate SPI");
+				return NULL;
 			}
-			id->destroy(id);
-			charon->bus->set_sa(charon->bus, ike_sa);
-			return ike_sa;
+			case ALREADY_DONE:
+			default:
+				break;
 		}
 		/* it looks like we already handled this init message to some degree */
 		id->set_responder_spi(id, our_spi);
