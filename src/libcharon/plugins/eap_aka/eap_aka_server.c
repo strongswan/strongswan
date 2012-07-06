@@ -199,8 +199,11 @@ static status_t challenge(private_eap_aka_server_t *this, eap_payload_t **out)
 	}
 	data = chunk_cata("cc", chunk_create(ik, AKA_IK_LEN),
 					  chunk_create(ck, AKA_CK_LEN));
-	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
+	chunk_clear(&this->msk);
+	if (!this->crypto->derive_keys_full(this->crypto, id, data, &mk, &this->msk))
+	{
+		return FAILED;
+	}
 	this->rand = chunk_clone(chunk_create(rand, AKA_RAND_LEN));
 	this->xres = chunk_clone(chunk_create(xres, xres_len));
 
@@ -252,9 +255,12 @@ static status_t reauthenticate(private_eap_aka_server_t *this,
 	counter = htons(counter);
 	this->counter = chunk_clone(chunk_create((char*)&counter, sizeof(counter)));
 
-	this->crypto->derive_keys_reauth(this->crypto, mkc);
-	this->msk = this->crypto->derive_keys_reauth_msk(this->crypto,
-								this->reauth, this->counter, this->nonce, mkc);
+	if (!this->crypto->derive_keys_reauth(this->crypto, mkc) ||
+		!this->crypto->derive_keys_reauth_msk(this->crypto,
+					this->reauth, this->counter, this->nonce, mkc, &this->msk))
+	{
+		return FAILED;
+	}
 
 	message = simaka_message_create(TRUE, this->identifier++, EAP_AKA,
 									AKA_REAUTHENTICATION, this->crypto);

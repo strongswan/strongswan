@@ -180,9 +180,12 @@ static status_t reauthenticate(private_eap_sim_server_t *this,
 	counter = htons(counter);
 	this->counter = chunk_clone(chunk_create((char*)&counter, sizeof(counter)));
 
-	this->crypto->derive_keys_reauth(this->crypto, mkc);
-	this->msk = this->crypto->derive_keys_reauth_msk(this->crypto,
-								this->reauth, this->counter, this->nonce, mkc);
+	if (!this->crypto->derive_keys_reauth(this->crypto, mkc) ||
+		!this->crypto->derive_keys_reauth_msk(this->crypto,
+					this->reauth, this->counter, this->nonce, mkc, &this->msk))
+	{
+		return FAILED;
+	}
 
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,
 									SIM_REAUTHENTICATION, this->crypto);
@@ -406,7 +409,10 @@ static status_t process_start(private_eap_sim_server_t *this,
 	{
 		id = this->pseudonym;
 	}
-	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
+	if (!this->crypto->derive_keys_full(this->crypto, id, data, &mk, &this->msk))
+	{
+		return FAILED;
+	}
 
 	/* build response with AT_MAC, built over "EAP packet | NONCE_MT" */
 	message = simaka_message_create(TRUE, this->identifier++, EAP_SIM,

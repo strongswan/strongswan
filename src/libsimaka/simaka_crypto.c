@@ -115,11 +115,11 @@ static void call_hook(private_simaka_crypto_t *this, chunk_t encr, chunk_t auth)
 	mgr->key_hook(mgr, encr, auth);
 }
 
-METHOD(simaka_crypto_t, derive_keys_full, chunk_t,
+METHOD(simaka_crypto_t, derive_keys_full, bool,
 	private_simaka_crypto_t *this, identification_t *id,
-	chunk_t data, chunk_t *mk)
+	chunk_t data, chunk_t *mk, chunk_t *msk)
 {
-	chunk_t str, msk, k_encr, k_auth;
+	chunk_t str, k_encr, k_auth;
 	int i;
 
 	/* For SIM: MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version)
@@ -138,19 +138,20 @@ METHOD(simaka_crypto_t, derive_keys_full, chunk_t,
 
 	k_encr = chunk_create(str.ptr, KENCR_LEN);
 	k_auth = chunk_create(str.ptr + KENCR_LEN, KAUTH_LEN);
-	msk = chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN);
 	DBG3(DBG_LIB, "K_encr %B\nK_auth %B\nMSK %B", &k_encr, &k_auth, &msk);
 
 	this->signer->set_key(this->signer, k_auth);
 	this->crypter->set_key(this->crypter, k_encr);
 
+	*msk = chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN);
+
 	call_hook(this, k_encr, k_auth);
 
 	this->derived = TRUE;
-	return chunk_clone(msk);
+	return TRUE;
 }
 
-METHOD(simaka_crypto_t, derive_keys_reauth, void,
+METHOD(simaka_crypto_t, derive_keys_reauth, bool,
 	private_simaka_crypto_t *this, chunk_t mk)
 {
 	chunk_t str, k_encr, k_auth;
@@ -173,14 +174,15 @@ METHOD(simaka_crypto_t, derive_keys_reauth, void,
 	call_hook(this, k_encr, k_auth);
 
 	this->derived = TRUE;
+	return TRUE;
 }
 
-METHOD(simaka_crypto_t, derive_keys_reauth_msk, chunk_t,
+METHOD(simaka_crypto_t, derive_keys_reauth_msk, bool,
 	private_simaka_crypto_t *this, identification_t *id, chunk_t counter,
-	chunk_t nonce_s, chunk_t mk)
+	chunk_t nonce_s, chunk_t mk, chunk_t *msk)
 {
 	char xkey[HASH_SIZE_SHA1];
-	chunk_t str, msk;
+	chunk_t str;
 	int i;
 
 	this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL);
@@ -195,10 +197,10 @@ METHOD(simaka_crypto_t, derive_keys_reauth_msk, chunk_t,
 	{
 		this->prf->get_bytes(this->prf, chunk_empty, str.ptr + str.len / 2 * i);
 	}
-	msk = chunk_create(str.ptr, MSK_LEN);
-	DBG3(DBG_LIB, "MSK %B", &msk);
+	*msk = chunk_create(str.ptr, MSK_LEN);
+	DBG3(DBG_LIB, "MSK %B", msk);
 
-	return chunk_clone(msk);
+	return TRUE;
 }
 
 METHOD(simaka_crypto_t, clear_keys, void,

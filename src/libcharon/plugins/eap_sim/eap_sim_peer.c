@@ -344,10 +344,13 @@ static status_t process_challenge(private_eap_sim_peer_t *this,
 		id = this->pseudonym;
 	}
 	data = chunk_cata("cccc", kcs, this->nonce, this->version_list, version);
-	free(this->msk.ptr);
-	this->msk = this->crypto->derive_keys_full(this->crypto, id, data, &mk);
+	chunk_clear(&this->msk);
+	if (!this->crypto->derive_keys_full(this->crypto, id, data, &mk, &this->msk))
+	{
+		return FAILED;
+	}
 	memcpy(this->mk, mk.ptr, mk.len);
-	free(mk.ptr);
+	chunk_clear(&mk);
 
 	/* Verify AT_MAC attribute, signature is over "EAP packet | NONCE_MT", and
 	 * parse() again after key derivation, reading encrypted attributes */
@@ -427,8 +430,11 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 		return NEED_MORE;
 	}
 
-	this->crypto->derive_keys_reauth(this->crypto,
-									 chunk_create(this->mk, HASH_SIZE_SHA1));
+	if (!this->crypto->derive_keys_reauth(this->crypto,
+									chunk_create(this->mk, HASH_SIZE_SHA1)))
+	{
+		return FAILED;
+	}
 
 	/* verify MAC and parse again with decryption key */
 	if (!in->verify(in, chunk_empty) || !in->parse(in))
@@ -488,10 +494,14 @@ static status_t process_reauthentication(private_eap_sim_peer_t *this,
 	}
 	else
 	{
-		free(this->msk.ptr);
-		this->msk = this->crypto->derive_keys_reauth_msk(this->crypto,
-										this->reauth, counter, nonce,
-										chunk_create(this->mk, HASH_SIZE_SHA1));
+		chunk_clear(&this->msk);
+		if (!this->crypto->derive_keys_reauth_msk(this->crypto,
+						this->reauth, counter, nonce,
+						chunk_create(this->mk, HASH_SIZE_SHA1), &this->msk))
+		{
+			message->destroy(message);
+			return FAILED;
+		}
 		if (id.len)
 		{
 			identification_t *reauth;
