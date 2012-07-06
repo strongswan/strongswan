@@ -15,6 +15,7 @@
 
 #include "eap_simaka_pseudonym_provider.h"
 
+#include <debug.h>
 #include <utils/hashtable.h>
 
 typedef struct private_eap_simaka_pseudonym_provider_t private_eap_simaka_pseudonym_provider_t;
@@ -82,7 +83,10 @@ static identification_t *gen_identity(
 {
 	char buf[8], hex[sizeof(buf) * 2 + 1];
 
-	this->rng->get_bytes(this->rng, sizeof(buf), buf);
+	if (!this->rng->get_bytes(this->rng, sizeof(buf), buf))
+	{
+		return NULL;
+	}
 	chunk_to_hex(chunk_create(buf, sizeof(buf)), hex, FALSE);
 
 	return identification_create_from_string(hex);
@@ -106,6 +110,11 @@ METHOD(simaka_provider_t, gen_pseudonym, identification_t*,
 	}
 
 	pseudonym = gen_identity(this);
+	if (!pseudonym)
+	{
+		DBG1(DBG_CFG, "failed to generate pseudonym");
+		return NULL;
+	}
 
 	/* create new entries */
 	id = id->clone(id);
