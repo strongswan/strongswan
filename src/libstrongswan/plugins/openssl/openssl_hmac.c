@@ -99,12 +99,12 @@ METHOD(mac_t, get_mac_size, size_t,
 	return EVP_MD_size(this->hasher);
 }
 
-METHOD(mac_t, set_key, void,
+METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 	chunk_clear(&this->key);
 	this->key = chunk_clone(key);
-	reset(this);
+	return reset(this);
 }
 
 METHOD(mac_t, destroy, void,

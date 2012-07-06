@@ -198,7 +198,7 @@ METHOD(mac_t, get_mac_size, size_t,
 	return this->b;
 }
 
-METHOD(mac_t, set_key, void,
+METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 	chunk_t iv, k1, lengthened;
@@ -218,8 +218,11 @@ METHOD(mac_t, set_key, void,
 	{	/* shorten key using xcbc */
 		lengthened = chunk_alloca(this->b);
 		memset(lengthened.ptr, 0, lengthened.len);
-		set_key(this, lengthened);
-		get_mac(this, key, lengthened.ptr);
+		if (!set_key(this, lengthened) ||
+			!get_mac(this, key, lengthened.ptr))
+		{
+			return FALSE;
+		}
 	}
 
 	k1 = chunk_alloca(this->b);
@@ -243,6 +246,8 @@ METHOD(mac_t, set_key, void,
 	this->k1->set_key(this->k1, k1);
 
 	memwipe(k1.ptr, k1.len);
+
+	return TRUE;
 }
 
 METHOD(mac_t, destroy, void,

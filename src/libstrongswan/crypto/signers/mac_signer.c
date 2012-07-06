@@ -103,8 +103,7 @@ METHOD(signer_t, get_block_size, size_t,
 METHOD(signer_t, set_key, bool,
 	private_signer_t *this, chunk_t key)
 {
-	this->mac->set_key(this->mac, key);
-	return TRUE;
+	return this->mac->set_key(this->mac, key);
 }
 
 METHOD(signer_t, destroy, void,

@@ -226,7 +226,7 @@ static void derive_key(chunk_t chunk)
 	}
 }
 
-METHOD(mac_t, set_key, void,
+METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 	chunk_t resized, iv, l;
@@ -240,8 +240,11 @@ METHOD(mac_t, set_key, void,
 	{	/* use cmac recursively to resize longer or shorter keys */
 		resized = chunk_alloca(this->b);
 		memset(resized.ptr, 0, resized.len);
-		set_key(this, resized);
-		get_mac(this, key, resized.ptr);
+		if (!set_key(this, resized) ||
+			!get_mac(this, key, resized.ptr))
+		{
+			return FALSE;
+		}
 	}
 
 	/*
@@ -267,6 +270,8 @@ METHOD(mac_t, set_key, void,
 	derive_key(l);
 	memcpy(this->k2, l.ptr, l.len);
 	memwipe(l.ptr, l.len);
+
+	return TRUE;
 }
 
 METHOD(mac_t, destroy, void,

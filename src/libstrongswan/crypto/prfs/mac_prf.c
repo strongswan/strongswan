@@ -68,8 +68,7 @@ METHOD(prf_t, get_key_size, size_t,
 METHOD(prf_t, set_key, bool,
 	private_prf_t *this, chunk_t key)
 {
-	this->mac->set_key(this->mac, key);
-	return TRUE;
+	return this->mac->set_key(this->mac, key);
 }
 
 METHOD(prf_t, destroy, void,

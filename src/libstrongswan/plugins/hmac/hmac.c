@@ -99,7 +99,7 @@ METHOD(mac_t, get_mac_size, size_t,
 	return this->h->get_hash_size(this->h);
 }
 
-METHOD(mac_t, set_key, void,
+METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 	int i;
@@ -128,6 +128,8 @@ METHOD(mac_t, set_key, void,
 	/* begin hashing of inner pad */
 	this->h->reset(this->h);
 	this->h->get_hash(this->h, this->ipaded_key, NULL);
+
+	return TRUE;
 }
 
 METHOD(mac_t, destroy, void,

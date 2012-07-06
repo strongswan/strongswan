@@ -62,8 +62,10 @@ struct mac_t {
 	 * Any key length must be accepted.
 	 *
 	 * @param key		key to set
+	 * @return			TRUE if key set successfully
 	 */
-	void (*set_key) (mac_t *this, chunk_t key);
+	__attribute__((warn_unused_result))
+	bool (*set_key) (mac_t *this, chunk_t key);
 
 	/**
 	 * Destroys a mac_t object.
