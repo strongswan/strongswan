@@ -227,18 +227,20 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 /**
  * build a cookie and add it to the message
  */
-static void build_cookie(private_ike_mobike_t *this, message_t *message)
+static bool build_cookie(private_ike_mobike_t *this, message_t *message)
 {
 	rng_t *rng;
 
 	chunk_free(&this->cookie2);
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (rng)
+	if (!rng || !rng->allocate_bytes(rng, COOKIE2_SIZE, &this->cookie2))
 	{
-		rng->allocate_bytes(rng, COOKIE2_SIZE, &this->cookie2);
-		rng->destroy(rng);
-		message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+		DESTROY_IF(rng);
+		return FALSE;
 	}
+	message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+	rng->destroy(rng);
+	return TRUE;
 }
 
 /**
@@ -358,7 +360,10 @@ METHOD(task_t, build_i, status_t,
 		{
 			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES,
 								chunk_empty);
-			build_cookie(this, message);
+			if (!build_cookie(this, message))
+			{
+				return FAILED;
+			}
 			update_children(this);
 		}
 		if (this->address && !this->check)
