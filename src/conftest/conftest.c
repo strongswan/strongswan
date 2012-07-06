@@ -392,7 +392,7 @@ static void load_loggers(file_logger_t *logger)
 			}
 			logger = file_logger_create(file, NULL, FALSE);
 			load_log_levels(logger, section);
-			charon->bus->add_listener(charon->bus, &logger->listener);
+			charon->bus->add_logger(charon->bus, &logger->logger);
 			charon->file_loggers->insert_last(charon->file_loggers, logger);
 		}
 	}
@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
 
 	logger = file_logger_create(stdout, NULL, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
-	charon->bus->add_listener(charon->bus, &logger->listener);
+	charon->bus->add_logger(charon->bus, &logger->logger);
 	charon->file_loggers->insert_last(charon->file_loggers, logger);
 
 	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
