@@ -51,7 +51,6 @@ static job_requeue_t reset_cb(struct xfrm_usersa_id *data)
 	struct nlmsghdr *hdr;
 	struct xfrm_aevent_id *id;
 	struct rtattr *rthdr;
-	struct xfrm_replay_state *replay;
 	struct sockaddr_nl addr;
 	int s, len;
 
@@ -73,8 +72,6 @@ static job_requeue_t reset_cb(struct xfrm_usersa_id *data)
 	rthdr->rta_type = XFRMA_REPLAY_VAL;
 	rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
 	hdr->nlmsg_len += rthdr->rta_len;
-
-	replay = (struct xfrm_replay_state*)RTA_DATA(rthdr);
 
 	s = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (s == -1)
