@@ -576,11 +576,11 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return in ? this->aead_in : this->aead_out;
 }
 
-METHOD(keymat_v2_t, get_auth_octets, chunk_t,
+METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3])
+	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
 {
-	chunk_t chunk, idx, octets;
+	chunk_t chunk, idx;
 	chunk_t skp;
 
 	skp = verify ? this->skp_verify : this->skp_build;
@@ -595,9 +595,9 @@ METHOD(keymat_v2_t, get_auth_octets, chunk_t,
 	this->prf->set_key(this->prf, skp);
 	this->prf->allocate_bytes(this->prf, idx, &chunk);
 
-	octets = chunk_cat("ccm", ike_sa_init, nonce, chunk);
-	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", &octets);
-	return octets;
+	*octets = chunk_cat("ccm", ike_sa_init, nonce, chunk);
+	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", octets);
+	return TRUE;
 }
 
 /**
@@ -616,7 +616,10 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	{	/* EAP uses SK_p if no MSK has been established */
 		secret = verify ? this->skp_verify : this->skp_build;
 	}
-	octets = get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved);
+	if (!get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved, &octets))
+	{
+		return FALSE;
+	}
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad = chunk_create(IKEV2_KEY_PAD, IKEV2_KEY_PAD_LENGTH);
 	this->prf->set_key(this->prf, secret);

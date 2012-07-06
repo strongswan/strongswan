@@ -57,7 +57,7 @@ struct private_pubkey_authenticator_t {
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
 {
-	chunk_t octets, auth_data;
+	chunk_t octets = chunk_empty, auth_data;
 	status_t status = FAILED;
 	private_key_t *private;
 	identification_t *id;
@@ -112,9 +112,9 @@ METHOD(authenticator_t, build, status_t,
 			return status;
 	}
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-									 this->nonce, id, this->reserved);
-	if (private->sign(private, scheme, octets, &auth_data))
+	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+								this->nonce, id, this->reserved, &octets) &&
+		private->sign(private, scheme, octets, &auth_data))
 	{
 		auth_payload = auth_payload_create();
 		auth_payload->set_auth_method(auth_payload, auth_method);
@@ -176,8 +176,11 @@ METHOD(authenticator_t, process, status_t,
 	auth_data = auth_payload->get_data(auth_payload);
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
-									 this->nonce, id, this->reserved);
+	if (!keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
+								 this->nonce, id, this->reserved, &octets))
+	{
+		return FAILED;
+	}
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
 														key_type, id, auth);

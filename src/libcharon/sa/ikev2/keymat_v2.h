@@ -99,11 +99,12 @@ struct keymat_v2_t {
 	 * @param nonce			nonce value
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
-	 * @return				authentication octets
+	 * @param octests		chunk receiving allocated auth octets
+	 * @return				TRUE if octets created successfully
 	 */
-	chunk_t (*get_auth_octets)(keymat_v2_t *this, bool verify,
-							   chunk_t ike_sa_init, chunk_t nonce,
-							   identification_t *id, char reserved[3]);
+	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
+							chunk_t nonce, identification_t *id,
+							char reserved[3], chunk_t *octets);
 	/**
 	 * Build the shared secret signature used for PSK and EAP authentication.
 	 *
