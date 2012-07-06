@@ -240,7 +240,12 @@ static bool expand_skeyid_e(chunk_t skeyid_e, size_t key_size, prf_t *prf,
 	ka->len = key_size;
 
 	/* Ka = K1 | K2 | ..., K1 = prf(SKEYID_e, 0), K2 = prf(SKEYID_e, K1) ... */
-	prf->set_key(prf, skeyid_e);
+	if (!prf->set_key(prf, skeyid_e))
+	{
+		chunk_clear(ka);
+		chunk_clear(&skeyid_e);
+		return FALSE;
+	}
 	seed = octet_0;
 	for (i = 0; i < key_size; i += block_size)
 	{
@@ -434,8 +439,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			}
 			psk = shared_key->get_key(shared_key);
 			adjust_keylen(alg, &psk);
-			this->prf->set_key(this->prf, psk);
-			if (!this->prf->allocate_bytes(this->prf, nonces, &skeyid))
+			if (!this->prf->set_key(this->prf, psk) ||
+				!this->prf->allocate_bytes(this->prf, nonces, &skeyid))
 			{
 				chunk_clear(&g_xy);
 				return FALSE;
@@ -451,8 +456,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		case AUTH_HYBRID_INIT_RSA:
 		case AUTH_HYBRID_RESP_RSA:
 		{
-			this->prf->set_key(this->prf, nonces);
-			if (!this->prf->allocate_bytes(this->prf, g_xy, &skeyid))
+			if (!this->prf->set_key(this->prf, nonces) ||
+				!this->prf->allocate_bytes(this->prf, g_xy, &skeyid))
 			{
 				chunk_clear(&g_xy);
 				return FALSE;
@@ -467,11 +472,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	}
 	adjust_keylen(alg, &skeyid);
 	DBG4(DBG_IKE, "SKEYID %B", &skeyid);
-	this->prf->set_key(this->prf, skeyid);
 
 	/* SKEYID_d = prf(SKEYID, g^xy | CKY-I | CKY-R | 0) */
 	data = chunk_cat("cccc", g_xy, spi_i, spi_r, octet_0);
-	if (!this->prf->allocate_bytes(this->prf, data, &this->skeyid_d))
+	if (!this->prf->set_key(this->prf, skeyid) ||
+		!this->prf->allocate_bytes(this->prf, data, &this->skeyid_d))
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
@@ -525,7 +530,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 		chunk_clear(&skeyid);
 		return FALSE;
 	}
-	this->prf_auth->set_key(this->prf_auth, skeyid);
+	if (!this->prf_auth->set_key(this->prf_auth, skeyid))
+	{
+		chunk_clear(&skeyid);
+		return FALSE;
+	}
 	chunk_clear(&skeyid);
 
 	this->aead = create_aead(proposal, this->prf, skeyid_e);
@@ -628,7 +637,10 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 	}
 
 	/* KEYMAT = prf+(SKEYID_d, [ g(qm)^xy | ] protocol | SPI | Ni_b | Nr_b) */
-	this->prf->set_key(this->prf, this->skeyid_d);
+	if (!this->prf->set_key(this->prf, this->skeyid_d))
+	{
+		return FALSE;
+	}
 	protocol = proposal->get_protocol(proposal);
 	if (dh)
 	{
@@ -918,7 +930,10 @@ METHOD(keymat_v1_t, get_hash_phase2, bool,
 		default:
 			return FALSE;
 	}
-	this->prf->set_key(this->prf, this->skeyid_a);
+	if (!this->prf->set_key(this->prf, this->skeyid_a))
+	{
+		return FALSE;
+	}
 	if (add_message)
 	{
 		generator_t *generator;

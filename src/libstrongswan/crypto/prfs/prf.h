@@ -113,8 +113,10 @@ struct prf_t {
 	 * Set the key for this prf_t object.
 	 *
 	 * @param key		key to set
+	 * @return			TRUE if key set successfully
 	 */
-	void (*set_key) (prf_t *this, chunk_t key);
+	__attribute__((warn_unused_result))
+	bool (*set_key) (prf_t *this, chunk_t key);
 
 	/**
 	 * Destroys a prf object.

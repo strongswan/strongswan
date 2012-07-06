@@ -225,7 +225,10 @@ static bool pbkdf2(prf_t *prf, chunk_t password, chunk_t salt,
 	size_t blocks;
 	u_int32_t i = 0, *ni;
 
-	prf->set_key(prf, password);
+	if (!prf->set_key(prf, password))
+	{
+		return FALSE;
+	}
 
 	block.len = prf->get_block_size(prf);
 	blocks = (key.len - 1) / block.len + 1;

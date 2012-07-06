@@ -843,7 +843,10 @@ METHOD(crypto_tester_t, test_prf, bool,
 		failed = FALSE;
 
 		key = chunk_create(vector->key, vector->key_size);
-		prf->set_key(prf, key);
+		if (!prf->set_key(prf, key))
+		{
+			failed = TRUE;
+		}
 
 		/* allocated bytes */
 		seed = chunk_create(vector->seed, vector->len);
@@ -863,7 +866,10 @@ METHOD(crypto_tester_t, test_prf, bool,
 		memset(out.ptr, 0, out.len);
 		if (vector->stateful)
 		{
-			prf->set_key(prf, key);
+			if (!prf->set_key(prf, key))
+			{
+				failed = TRUE;
+			}
 		}
 		if (!prf->get_bytes(prf, seed, out.ptr))
 		{
@@ -879,7 +885,10 @@ METHOD(crypto_tester_t, test_prf, bool,
 			memset(out.ptr, 0, out.len);
 			if (vector->stateful)
 			{
-				prf->set_key(prf, key);
+				if (!prf->set_key(prf, key))
+				{
+					failed = TRUE;
+				}
 			}
 			if (!prf->allocate_bytes(prf, chunk_create(seed.ptr, 1), NULL) ||
 				!prf->get_bytes(prf, chunk_create(seed.ptr + 1, 1), NULL) ||

@@ -77,11 +77,15 @@ METHOD(prf_t, get_key_size, size_t,
 	return HASH_SIZE_SHA1;
 }
 
-METHOD(prf_t, set_key, void,
+METHOD(prf_t, set_key, bool,
 	private_openssl_sha1_prf_t *this, chunk_t key)
 {
 	SHA1_Init(&this->ctx);
 
+	if (key.len % 4)
+	{
+		return FALSE;
+	}
 	if (key.len >= 4)
 	{
 		this->ctx.h0 ^= untoh32(key.ptr);
@@ -102,6 +106,7 @@ METHOD(prf_t, set_key, void,
 	{
 		this->ctx.h4 ^= untoh32(key.ptr + 16);
 	}
+	return TRUE;
 }
 
 METHOD(prf_t, destroy, void,

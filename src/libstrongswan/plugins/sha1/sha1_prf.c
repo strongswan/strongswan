@@ -94,7 +94,7 @@ METHOD(prf_t, get_key_size, size_t,
 	return sizeof(this->hasher->state);
 }
 
-METHOD(prf_t, set_key, void,
+METHOD(prf_t, set_key, bool,
 	private_sha1_prf_t *this, chunk_t key)
 {
 	int i, rounds;
@@ -106,6 +106,7 @@ METHOD(prf_t, set_key, void,
 	{
 		this->hasher->state[i] ^= htonl(iv[i]);
 	}
+	return TRUE;
 }
 
 METHOD(prf_t, destroy, void,

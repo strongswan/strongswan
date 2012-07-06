@@ -160,11 +160,12 @@ METHOD(prf_t, get_key_size, size_t,
 	return this->b;
 }
 
-METHOD(prf_t, set_key, void,
+METHOD(prf_t, set_key, bool,
 	private_fips_prf_t *this, chunk_t key)
 {
 	/* save key as "key mod 2^b" */
 	chunk_mod(this->b, key, this->key);
+	return TRUE;
 }
 
 /**
@@ -189,8 +190,8 @@ static bool g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
 	}
 
 	/* use the keyed hasher, but use an empty key to use SHA1 IV */
-	this->keyed_prf->set_key(this->keyed_prf, chunk_empty);
-	if (!this->keyed_prf->get_bytes(this->keyed_prf, c, res))
+	if (!this->keyed_prf->set_key(this->keyed_prf, chunk_empty) ||
+		!this->keyed_prf->get_bytes(this->keyed_prf, c, res))
 	{
 		return FALSE;
 	}

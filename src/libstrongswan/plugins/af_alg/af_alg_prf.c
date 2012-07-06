@@ -135,7 +135,7 @@ METHOD(prf_t, get_key_size, size_t,
 	return this->block_size;
 }
 
-METHOD(prf_t, set_key, void,
+METHOD(prf_t, set_key, bool,
 	private_af_alg_prf_t *this, chunk_t key)
 {
 	char buf[this->block_size];
@@ -159,6 +159,7 @@ METHOD(prf_t, set_key, void,
 		}
 	}
 	this->ops->set_key(this->ops, key);
+	return TRUE;
 }
 
 METHOD(prf_t, destroy, void,

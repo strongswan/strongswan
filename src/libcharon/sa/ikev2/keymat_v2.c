@@ -322,10 +322,10 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	if (rekey_function == PRF_UNDEFINED) /* not rekeying */
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
-		this->prf->set_key(this->prf, fixed_nonce);
-		if (this->prf->allocate_bytes(this->prf, secret, &skeyseed))
+		if (this->prf->set_key(this->prf, fixed_nonce) &&
+			this->prf->allocate_bytes(this->prf, secret, &skeyseed) &&
+			this->prf->set_key(this->prf, skeyseed))
 		{
-			this->prf->set_key(this->prf, skeyseed);
 			prf_plus = prf_plus_create(this->prf, TRUE, prf_plus_seed);
 		}
 	}
@@ -344,10 +344,10 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			return FALSE;
 		}
 		secret = chunk_cat("mc", secret, full_nonce);
-		rekey_prf->set_key(rekey_prf, rekey_skd);
-		if (rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed))
+		if (rekey_prf->set_key(rekey_prf, rekey_skd) &&
+			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed) &&
+			rekey_prf->set_key(rekey_prf, skeyseed))
 		{
-			rekey_prf->set_key(rekey_prf, skeyseed);
 			prf_plus = prf_plus_create(rekey_prf, TRUE, prf_plus_seed);
 		}
 	}
@@ -536,7 +536,10 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		int_size /= 8;
 	}
 
-	this->prf->set_key(this->prf, this->skd);
+	if (!this->prf->set_key(this->prf, this->skd))
+	{
+		return FALSE;
+	}
 	prf_plus = prf_plus_create(this->prf, TRUE, seed);
 	if (!prf_plus)
 	{
@@ -596,8 +599,8 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 
 	DBG3(DBG_IKE, "IDx' %B", &idx);
 	DBG3(DBG_IKE, "SK_p %B", &skp);
-	this->prf->set_key(this->prf, skp);
-	if (!this->prf->allocate_bytes(this->prf, idx, &chunk))
+	if (!this->prf->set_key(this->prf, skp) ||
+		!this->prf->allocate_bytes(this->prf, idx, &chunk))
 	{
 		return FALSE;
 	}
@@ -628,14 +631,14 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	}
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad = chunk_create(IKEV2_KEY_PAD, IKEV2_KEY_PAD_LENGTH);
-	this->prf->set_key(this->prf, secret);
-	if (!this->prf->allocate_bytes(this->prf, key_pad, &key))
+	if (!this->prf->set_key(this->prf, secret) ||
+		!this->prf->allocate_bytes(this->prf, key_pad, &key))
 	{
 		chunk_free(&octets);
 		return FALSE;
 	}
-	this->prf->set_key(this->prf, key);
-	if (!this->prf->allocate_bytes(this->prf, octets, sig))
+	if (!this->prf->set_key(this->prf, key) ||
+		!this->prf->allocate_bytes(this->prf, octets, sig))
 	{
 		chunk_free(&key);
 		chunk_free(&octets);

@@ -129,7 +129,10 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 	DBG3(DBG_LIB, "MK %B", mk);
 
 	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf() */
-	this->prf->set_key(this->prf, *mk);
+	if (this->prf->set_key(this->prf, *mk))
+	{
+		return FALSE;
+	}
 	str = chunk_alloca(this->prf->get_block_size(this->prf) * 3);
 	for (i = 0; i < 3; i++)
 	{
@@ -167,7 +170,10 @@ METHOD(simaka_crypto_t, derive_keys_reauth, bool,
 	int i;
 
 	/* K_encr | K_auth = prf() | prf() */
-	this->prf->set_key(this->prf, mk);
+	if (!this->prf->set_key(this->prf, mk))
+	{
+		return FALSE;
+	}
 	str = chunk_alloca(this->prf->get_block_size(this->prf) * 2);
 	for (i = 0; i < 2; i++)
 	{
@@ -207,7 +213,10 @@ METHOD(simaka_crypto_t, derive_keys_reauth_msk, bool,
 	this->hasher->get_hash(this->hasher, mk, xkey);
 
 	/* MSK | EMSK = prf() | prf() | prf() | prf() */
-	this->prf->set_key(this->prf, chunk_create(xkey, sizeof(xkey)));
+	if (!this->prf->set_key(this->prf, chunk_create(xkey, sizeof(xkey))))
+	{
+		return FALSE;
+	}
 	str = chunk_alloca(this->prf->get_block_size(this->prf) * 2);
 	for (i = 0; i < 2; i++)
 	{
