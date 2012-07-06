@@ -44,8 +44,9 @@ struct tls_prf_t {
 	 * @param seed		seed input value
 	 * @param bytes		number of bytes to get
 	 * @param out		buffer receiving bytes
+	 * @return			TRUE if bytes generated successfully
 	 */
-	void (*get_bytes)(tls_prf_t *this, char *label, chunk_t seed,
+	bool (*get_bytes)(tls_prf_t *this, char *label, chunk_t seed,
 					  size_t bytes, char *out);
 
 	/**

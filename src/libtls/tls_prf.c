@@ -42,7 +42,7 @@ METHOD(tls_prf_t, set_key12, void,
 /**
  * The P_hash function as in TLS 1.0/1.2
  */
-static void p_hash(prf_t *prf, char *label, chunk_t seed, size_t block_size,
+static bool p_hash(prf_t *prf, char *label, chunk_t seed, size_t block_size,
 				   size_t bytes, char *out)
 {
 	char buf[block_size], abuf[block_size];
@@ -71,14 +71,15 @@ static void p_hash(prf_t *prf, char *label, chunk_t seed, size_t block_size,
 		out += block_size;
 		bytes -= block_size;
 	}
+	return TRUE;
 }
 
-METHOD(tls_prf_t, get_bytes12, void,
+METHOD(tls_prf_t, get_bytes12, bool,
 	private_tls_prf12_t *this, char *label, chunk_t seed,
 	size_t bytes, char *out)
 {
-	p_hash(this->prf, label, seed, this->prf->get_block_size(this->prf),
-		   bytes, out);
+	return p_hash(this->prf, label, seed, this->prf->get_block_size(this->prf),
+				  bytes, out);
 }
 
 METHOD(tls_prf_t, destroy12, void,
@@ -144,17 +145,21 @@ METHOD(tls_prf_t, set_key10, void,
 	this->sha1->set_key(this->sha1, chunk_create(key.ptr + key.len - len, len));
 }
 
-METHOD(tls_prf_t, get_bytes10, void,
+METHOD(tls_prf_t, get_bytes10, bool,
 	private_tls_prf10_t *this, char *label, chunk_t seed,
 	size_t bytes, char *out)
 {
 	char buf[bytes];
 
-	p_hash(this->md5, label, seed, this->md5->get_block_size(this->md5),
-		   bytes, out);
-	p_hash(this->sha1, label, seed, this->sha1->get_block_size(this->sha1),
-		   bytes, buf);
+	if (!p_hash(this->md5, label, seed, this->md5->get_block_size(this->md5),
+				bytes, out) ||
+		!p_hash(this->sha1, label, seed, this->sha1->get_block_size(this->sha1),
+				bytes, buf))
+	{
+		return FALSE;
+	}
 	memxor(out, buf, bytes);
+	return TRUE;
 }
 
 METHOD(tls_prf_t, destroy10, void,

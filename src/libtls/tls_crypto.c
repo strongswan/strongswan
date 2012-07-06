@@ -1462,7 +1462,11 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 	{
 		return FALSE;
 	}
-	this->prf->get_bytes(this->prf, label, seed, 12, out);
+	if (!this->prf->get_bytes(this->prf, label, seed, 12, out))
+	{
+		free(seed.ptr);
+		return FALSE;
+	}
 	free(seed.ptr);
 	return TRUE;
 }
@@ -1470,7 +1474,7 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 /**
  * Derive master secret from premaster, optionally save session
  */
-static void derive_master(private_tls_crypto_t *this, chunk_t premaster,
+static bool derive_master(private_tls_crypto_t *this, chunk_t premaster,
 						  chunk_t session, identification_t *id,
 						  chunk_t client_random, chunk_t server_random)
 {
@@ -1480,16 +1484,20 @@ static void derive_master(private_tls_crypto_t *this, chunk_t premaster,
 	/* derive master secret */
 	seed = chunk_cata("cc", client_random, server_random);
 	this->prf->set_key(this->prf, premaster);
-	this->prf->get_bytes(this->prf, "master secret", seed,
-						 sizeof(master), master);
-
+	if (!this->prf->get_bytes(this->prf, "master secret", seed,
+						 sizeof(master), master))
+	{
+		return FALSE;
+	}
 	this->prf->set_key(this->prf, chunk_from_thing(master));
+
 	if (this->cache && session.len)
 	{
 		this->cache->create(this->cache, session, id, chunk_from_thing(master),
 							this->suite);
 	}
 	memwipe(master, sizeof(master));
+	return TRUE;
 }
 
 /**
@@ -1513,7 +1521,11 @@ static bool expand_keys(private_tls_crypto_t *this,
 	}
 	seed = chunk_cata("cc", server_random, client_random);
 	block = chunk_alloca((mks + eks + ivs) * 2);
-	this->prf->get_bytes(this->prf, "key expansion", seed, block.len, block.ptr);
+	if (!this->prf->get_bytes(this->prf, "key expansion", seed,
+							  block.len, block.ptr))
+	{
+		return FALSE;
+	}
 
 	/* signer keys */
 	client_write = chunk_create(block.ptr, mks);
@@ -1580,8 +1592,11 @@ static bool expand_keys(private_tls_crypto_t *this,
 	{
 		seed = chunk_cata("cc", client_random, server_random);
 		this->msk = chunk_alloc(64);
-		this->prf->get_bytes(this->prf, this->msk_label, seed,
-							 this->msk.len, this->msk.ptr);
+		if (!this->prf->get_bytes(this->prf, this->msk_label, seed,
+								  this->msk.len, this->msk.ptr))
+		{
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
@@ -1590,8 +1605,9 @@ METHOD(tls_crypto_t, derive_secrets, bool,
 	private_tls_crypto_t *this, chunk_t premaster, chunk_t session,
 	identification_t *id, chunk_t client_random, chunk_t server_random)
 {
-	derive_master(this, premaster, session, id, client_random, server_random);
-	return expand_keys(this, client_random, server_random);
+	return derive_master(this, premaster, session, id,
+						 client_random, server_random) &&
+		   expand_keys(this, client_random, server_random);
 }
 
 METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
