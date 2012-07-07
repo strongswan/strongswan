@@ -40,14 +40,9 @@ struct private_esp_packet_t {
 	esp_packet_t public;
 
 	/**
-	 * Source address
+	 * Raw ESP packet
 	 */
-	host_t *src;
-
-	/**
-	 * Destination address
-	 */
-	host_t *dst;
+	packet_t *packet;
 
 	/**
 	 * Payload of this packet
@@ -59,11 +54,65 @@ struct private_esp_packet_t {
 	 */
 	u_int8_t next_header;
 
-	/**
-	 * Raw packet data
-	 */
-	chunk_t packet_data;
 };
+
+/**
+ * Forward declaration for clone()
+ */
+static private_esp_packet_t *esp_packet_create_empty(packet_t *packet);
+
+METHOD(packet_t, set_source, void,
+	private_esp_packet_t *this, host_t *src)
+{
+	return this->packet->set_source(this->packet, src);
+}
+
+METHOD2(esp_packet_t, packet_t, get_source, host_t*,
+	private_esp_packet_t *this)
+{
+	return this->packet->get_source(this->packet);
+}
+
+METHOD(packet_t, set_destination, void,
+	private_esp_packet_t *this, host_t *dst)
+{
+	return this->packet->set_destination(this->packet, dst);
+}
+
+METHOD2(esp_packet_t, packet_t, get_destination, host_t*,
+	private_esp_packet_t *this)
+{
+	return this->packet->get_destination(this->packet);
+}
+
+METHOD(packet_t, get_data, chunk_t,
+	private_esp_packet_t *this)
+{
+	return this->packet->get_data(this->packet);
+}
+
+METHOD(packet_t, set_data, void,
+	private_esp_packet_t *this, chunk_t data)
+{
+	return this->packet->set_data(this->packet, data);
+}
+
+METHOD(packet_t, skip_bytes, void,
+	private_esp_packet_t *this, size_t bytes)
+{
+	return this->packet->skip_bytes(this->packet, bytes);
+}
+
+METHOD(packet_t, clone, packet_t*,
+	private_esp_packet_t *this)
+{
+	private_esp_packet_t *pkt;
+
+	pkt = esp_packet_create_empty(this->packet->clone(this->packet));
+	pkt->payload = chunk_clone(this->payload);
+	pkt->next_header = this->next_header;
+	return &pkt->public.packet;
+}
 
 METHOD(esp_packet_t, parse_header, bool,
 	private_esp_packet_t *this, u_int32_t *spi)
@@ -71,7 +120,7 @@ METHOD(esp_packet_t, parse_header, bool,
 	bio_reader_t *reader;
 	u_int32_t seq;
 
-	reader = bio_reader_create(this->packet_data);
+	reader = bio_reader_create(this->packet->get_data(this->packet));
 	if (!reader->read_uint32(reader, spi) ||
 		!reader->read_uint32(reader, &seq))
 	{
@@ -142,16 +191,17 @@ METHOD(esp_packet_t, decrypt, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t spi, seq;
-	chunk_t spi_seq, iv, icv, ciphertext;
+	chunk_t data, iv, icv, ciphertext;
 	crypter_t *crypter;
 	signer_t *signer;
 
 	chunk_free(&this->payload);
 
+	data = this->packet->get_data(this->packet);
 	crypter = esp_context->get_crypter(esp_context);
 	signer = esp_context->get_signer(esp_context);
 
-	reader = bio_reader_create(this->packet_data);
+	reader = bio_reader_create(data);
 	if (!reader->read_uint32(reader, &spi) ||
 		!reader->read_uint32(reader, &seq) ||
 		!reader->read_data(reader, crypter->get_iv_size(crypter), &iv) ||
@@ -168,14 +218,13 @@ METHOD(esp_packet_t, decrypt, status_t,
 	{
 		DBG1(DBG_ESP, "ESP sequence number verification failed:\n  "
 			 "src %H, dst %H, SPI %.8x [seq %u]",
-			 this->src, this->dst, spi, seq);
+			 get_source(this), get_destination(this), spi, seq);
 		return VERIFY_ERROR;
 	}
 	DBG3(DBG_ESP, "ESP decryption:\n  SPI %.8x [seq %u]\n  IV %B\n  "
 		 "encrypted %B\n  ICV %B", spi, seq, &iv, &ciphertext, &icv);
 
-	spi_seq = chunk_create(this->packet_data.ptr, 8);
-	if (!signer->get_signature(signer, spi_seq, NULL) ||
+	if (!signer->get_signature(signer, chunk_create(data.ptr, 8), NULL) ||
 		!signer->get_signature(signer, iv, NULL) ||
 		!signer->verify_signature(signer, ciphertext, icv))
 	{
@@ -222,7 +271,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	signer_t *signer;
 	rng_t *rng;
 
-	chunk_free(&this->packet_data);
+	this->packet->set_data(this->packet, chunk_empty);
 
 	if (!esp_context->next_seqno(esp_context, &next_seqno))
 	{
@@ -303,7 +352,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 		 "encrypted %B\n  ICV %B", ntohl(spi), next_seqno, &iv,
 		 &ciphertext, &icv);
 
-	this->packet_data = writer->extract_buf(writer);
+	this->packet->set_data(this->packet, writer->extract_buf(writer));
 	writer->destroy(writer);
 	return SUCCESS;
 }
@@ -320,43 +369,33 @@ METHOD(esp_packet_t, get_payload, chunk_t,
 	return this->payload;
 }
 
-METHOD(esp_packet_t, get_packet_data, chunk_t,
-	private_esp_packet_t *this)
-{
-	return this->packet_data;
-}
-
-METHOD(esp_packet_t, get_source, host_t*,
-	private_esp_packet_t *this)
-{
-	return this->src;
-}
-
-METHOD(esp_packet_t, get_destination, host_t*,
-	private_esp_packet_t *this)
-{
-	return this->dst;
-}
-
-METHOD(esp_packet_t, destroy, void,
+METHOD2(esp_packet_t, packet_t, destroy, void,
 	private_esp_packet_t *this)
 {
 	chunk_free(&this->payload);
-	chunk_free(&this->packet_data);
-	this->src->destroy(this->src);
-	this->dst->destroy(this->dst);
+	this->packet->destroy(this->packet);
 	free(this);
 }
 
-static private_esp_packet_t *esp_packet_create_empty(host_t *src, host_t *dst)
+static private_esp_packet_t *esp_packet_create_empty(packet_t *packet)
 {
 	private_esp_packet_t *this;
 
 	INIT(this,
 		.public = {
+			.packet = {
+				.set_source = _set_source,
+				.get_source = _get_source,
+				.set_destination = _set_destination,
+				.get_destination = _get_destination,
+				.get_data = _get_data,
+				.set_data = _set_data,
+				.skip_bytes = _skip_bytes,
+				.clone = _clone,
+				.destroy = _destroy,
+			},
 			.get_source = _get_source,
 			.get_destination = _get_destination,
-			.get_packet_data = _get_packet_data,
 			.get_payload = _get_payload,
 			.get_next_header = _get_next_header,
 			.parse_header = _parse_header,
@@ -364,8 +403,7 @@ static private_esp_packet_t *esp_packet_create_empty(host_t *src, host_t *dst)
 			.encrypt = _encrypt,
 			.destroy = _destroy,
 		},
-		.src = src,
-		.dst = dst,
+		.packet = packet,
 		.next_header = IPPROTO_NONE,
 	);
 	return this;
@@ -374,13 +412,11 @@ static private_esp_packet_t *esp_packet_create_empty(host_t *src, host_t *dst)
 /**
  * Described in header.
  */
-esp_packet_t *esp_packet_create_from_packet(host_t *src, host_t *dst,
-											chunk_t packet_data)
+esp_packet_t *esp_packet_create_from_packet(packet_t *packet)
 {
 	private_esp_packet_t *this;
 
-	this = esp_packet_create_empty(src, dst);
-	this->packet_data = packet_data;
+	this = esp_packet_create_empty(packet);
 
 	return &this->public;
 }
@@ -389,14 +425,16 @@ esp_packet_t *esp_packet_create_from_packet(host_t *src, host_t *dst,
  * Described in header.
  */
 esp_packet_t *esp_packet_create_from_payload(host_t *src, host_t *dst,
-										chunk_t payload, u_int8_t next_header)
+											 chunk_t payload,
+											 u_int8_t next_header)
 {
 	private_esp_packet_t *this;
+	packet_t *packet;
 
-	this = esp_packet_create_empty(src, dst);
+	packet = packet_create_from_data(src, dst, chunk_empty);
+	this = esp_packet_create_empty(packet);
 	this->next_header = next_header;
 	this->payload = payload;
 
 	return &this->public;
 }
-

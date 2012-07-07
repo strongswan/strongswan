@@ -27,6 +27,7 @@
 
 #include <library.h>
 #include <utils/host.h>
+#include <utils/packet.h>
 
 typedef struct esp_packet_t esp_packet_t;
 
@@ -34,6 +35,11 @@ typedef struct esp_packet_t esp_packet_t;
  *  ESP packet
  */
 struct esp_packet_t {
+
+	/**
+	 * Implements packet_t interface to access the raw ESP packet
+	 */
+	packet_t packet;
 
 	/**
 	 * Get the source address of this packet
@@ -107,14 +113,6 @@ struct esp_packet_t {
 	chunk_t (*get_payload)(esp_packet_t *this);
 
 	/**
-	 * Get the packet data to send / as received on the wire.
-	 *
-	 * @return					encrypted packet data (internal data),
-	 * 							chunk_empty if not encrypted
-	 */
-	chunk_t (*get_packet_data)(esp_packet_t *this);
-
-	/**
 	 * Destroy an esp_packet_t
 	 */
 	void (*destroy)(esp_packet_t *this);
@@ -124,13 +122,10 @@ struct esp_packet_t {
 /**
  * Create an ESP packet out of data from the wire.
  *
- * @param src			source address from which the packet was sent, owned
- * @param dst			destination address to which the packet was sent, owned
- * @param data			the packet data as received, gets owned
+ * @param packet		the packet data as received, gets owned
  * @return				esp_packet_t instance
  */
-esp_packet_t *esp_packet_create_from_packet(host_t *src, host_t *dst,
-											chunk_t data);
+esp_packet_t *esp_packet_create_from_packet(packet_t *packet);
 
 /**
  * Create an ESP packet from a plaintext payload (e.g. inner IP packet)
@@ -142,7 +137,8 @@ esp_packet_t *esp_packet_create_from_packet(host_t *src, host_t *dst,
  * @return				esp_packet_t instance
  */
 esp_packet_t *esp_packet_create_from_payload(host_t *src, host_t *dst,
-										chunk_t payload, u_int8_t next_header);
+											 chunk_t payload,
+											 u_int8_t next_header);
 
 #endif /** ESP_PACKET_H_ @}*/
 
