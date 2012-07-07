@@ -126,10 +126,10 @@ METHOD(packet_t, clone_, packet_t*,
 	return other;
 }
 
-/*
- * Documented in header
+/**
+ * Described in header.
  */
-packet_t *packet_create()
+packet_t *packet_create_from_data(host_t *src, host_t *dst, chunk_t data)
 {
 	private_packet_t *this;
 
@@ -145,8 +145,19 @@ packet_t *packet_create()
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
+		.source = src,
+		.destination = dst,
+		.adjusted_data = data,
+		.data = data,
 	);
 
 	return &this->public;
 }
 
+/*
+ * Described in header.
+ */
+packet_t *packet_create()
+{
+	return packet_create_from_data(NULL, NULL, chunk_empty);
+}

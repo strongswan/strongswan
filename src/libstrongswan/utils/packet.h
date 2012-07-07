@@ -108,4 +108,14 @@ struct packet_t {
  */
 packet_t *packet_create();
 
+/**
+ * Create a packet from the supplied data
+ *
+ * @param src			source address (gets owned)
+ * @param dst			destination address (gets owned)
+ * @param data			packet data (gets owned)
+ * @return packet_t object
+ */
+packet_t *packet_create_from_data(host_t *src, host_t *dst, chunk_t data);
+
 #endif /** PACKET_H_ @}*/
