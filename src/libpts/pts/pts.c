@@ -943,7 +943,7 @@ METHOD(pts_t, quote_tpm, bool,
 			Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS,
 							TSS_PCRS_STRUCT_INFO_SHORT, &hPcrComposite) :
 			Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_PCRS,
-							0, &hPcrComposite);
+							TSS_PCRS_STRUCT_DEFAULT, &hPcrComposite);
 	if (result != TSS_SUCCESS)
 	{
 		goto err2;
