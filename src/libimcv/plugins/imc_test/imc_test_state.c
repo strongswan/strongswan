@@ -55,6 +55,11 @@ struct private_imc_test_state_t {
 	char *command;
 
 	/**
+	 * Size of the dummy attribute value to transmit to IMV
+	 */
+	int dummy_size;
+
+	/**
 	 * Is it the first handshake?
 	 */
 	bool first_handshake;
@@ -120,6 +125,13 @@ METHOD(imc_test_state_t, set_command, void,
 	free(old_command);
 }
 
+METHOD(imc_test_state_t, get_dummy_size, int,
+	private_imc_test_state_t *this)
+{
+	return this->dummy_size;
+}
+
+
 METHOD(imc_test_state_t, is_first_handshake, bool,
 	private_imc_test_state_t *this)
 {
@@ -146,7 +158,7 @@ METHOD(imc_test_state_t, do_handshake_retry, bool,
  * Described in header.
  */
 imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
-								   char *command, bool retry)
+								   char *command, int dummy_size, bool retry)
 {
 	private_imc_test_state_t *this;
 
@@ -162,17 +174,18 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 			},
 			.get_command = _get_command,
 			.set_command = _set_command,
+			.get_dummy_size = _get_dummy_size,
 			.is_first_handshake = _is_first_handshake,
 			.do_handshake_retry = _do_handshake_retry,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.connection_id = connection_id,
 		.command = strdup(command),
+		.dummy_size = dummy_size,
 		.first_handshake = TRUE,
 		.handshake_retry = retry,
 	);
 	
 	return &this->public.interface;
 }
-
 

@@ -20,6 +20,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
+#include <ita/ita_attr_dummy.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -75,7 +76,7 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	TNC_Result result;
 	char *command;
 	bool retry;
-	int additional_ids;
+	int dummy_size, additional_ids;
 
 	if (!imc_test)
 	{
@@ -88,9 +89,12 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			command = lib->settings->get_str(lib->settings,
 						 		"libimcv.plugins.imc-test.command", "none");
+			dummy_size = lib->settings->get_int(lib->settings,
+								"libimcv.plugins.imc-test.dummy_size", 0);
 			retry = lib->settings->get_bool(lib->settings,
 								"libimcv.plugins.imc-test.retry", FALSE);
-			state = imc_test_state_create(connection_id, command, retry);
+			state = imc_test_state_create(connection_id, command, dummy_size,
+										  retry);
 
 			result = imc_test->create_state(imc_test, state);
 			if (result != TNC_RESULT_SUCCESS)
@@ -166,9 +170,16 @@ static TNC_Result send_message(imc_state_t *state, TNC_UInt32 src_imc_id,
 
 	connection_id = state->get_connection_id(state);
 	test_state = (imc_test_state_t*)state;
+
+	msg = pa_tnc_msg_create();
+	if (test_state->get_dummy_size(test_state))
+	{
+		attr = ita_attr_dummy_create(test_state->get_dummy_size(test_state));
+		attr->set_noskip_flag(attr, TRUE);
+		msg->add_attribute(msg, attr);
+	}
 	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
-	msg = pa_tnc_msg_create();
 	msg->add_attribute(msg, attr);
 	msg->build(msg);
 	excl = dst_imv_id != TNC_IMVID_ANY;
@@ -279,14 +290,25 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_ITA &&
-			attr->get_type(attr) == ITA_ATTR_COMMAND)
+		if (attr->get_vendor_id(attr) != PEN_ITA)
+		{
+			continue;
+		}
+		if (attr->get_type(attr) == ITA_ATTR_COMMAND)
 		{
 			ita_attr_command_t *ita_attr;
-			char *command;
-	
+
 			ita_attr = (ita_attr_command_t*)attr;
-			command = ita_attr->get_command(ita_attr);
+			DBG1(DBG_IMC, "received command '%s'",
+						   ita_attr->get_command(ita_attr));
+		}
+		else if (attr->get_type(attr) == ITA_ATTR_DUMMY)
+		{
+			ita_attr_dummy_t *ita_attr;
+
+			ita_attr = (ita_attr_dummy_t*)attr;
+			DBG1(DBG_IMC, "received dummy attribute value (%d bytes)",
+						   ita_attr->get_size(ita_attr));
 		}
 	}
 	enumerator->destroy(enumerator);

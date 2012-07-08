@@ -52,6 +52,13 @@ struct imc_test_state_t {
 	void (*set_command)(imc_test_state_t *this, char *command);
 
 	/**
+	 * get the value size of a dummy attribute to send to IMV
+	 *
+	 * @return				size of the dummy attribute value to send to IMV
+	 */
+	int (*get_dummy_size)(imc_test_state_t *this);
+
+	/**
 	 * Test and reset the first handshake flag
 	 *
 	 * @return				TRUE if first handshake
@@ -70,11 +77,12 @@ struct imc_test_state_t {
 /**
  * Create an imc_test_state_t instance
  *
- * @param id		connection ID
- * @param command	command to send to IMV
- * @param retry		TRUE if a handshake retry should be done
+ * @param id			connection ID
+ * @param command		command to send to IMV
+ * @param dummy_size	size of the dummy attribute to send (only if > 0)
+ * @param retry			TRUE if a handshake retry should be done
  */
 imc_state_t* imc_test_state_create(TNC_ConnectionID id, char* command,
-								   bool retry);
+								   int dummy_size, bool retry);
 
 #endif /** IMC_TEST_STATE_H_ @}*/

@@ -20,6 +20,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
+#include <ita/ita_attr_dummy.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -143,8 +144,11 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_ITA &&
-			attr->get_type(attr) == ITA_ATTR_COMMAND)
+		if (attr->get_vendor_id(attr) != PEN_ITA)
+		{
+			continue;
+		}
+		if (attr->get_type(attr) == ITA_ATTR_COMMAND)
 		{
 			ita_attr_command_t *ita_attr;
 			char *command;
@@ -181,7 +185,15 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 			}
-		}		
+		}
+		else if (attr->get_type(attr) == ITA_ATTR_DUMMY)
+		{
+			ita_attr_dummy_t *ita_attr;
+
+			ita_attr = (ita_attr_dummy_t*)attr;
+			DBG1(DBG_IMV, "received dummy attribute value (%d bytes)",
+						   ita_attr->get_size(ita_attr));
+		}
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);

@@ -32,6 +32,7 @@ typedef enum ita_attr_t ita_attr_t;
  */
 enum ita_attr_t {
 	ITA_ATTR_COMMAND =	1,
+	ITA_ATTR_DUMMY = 2,
 };
 
 /**

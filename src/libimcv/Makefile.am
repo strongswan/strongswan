@@ -15,6 +15,7 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_product_info.h ietf/ietf_attr_product_info.c \
 	ita/ita_attr.h ita/ita_attr.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
+	ita/ita_attr_dummy.h ita/ita_attr_dummy.c \
 	pa_tnc/pa_tnc_attr.h \
 	pa_tnc/pa_tnc_msg.h pa_tnc/pa_tnc_msg.c \
 	pa_tnc/pa_tnc_attr_manager.h pa_tnc/pa_tnc_attr_manager.c
