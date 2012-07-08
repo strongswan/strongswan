@@ -165,7 +165,8 @@ static status_t process_pkt(private_tls_eap_t *this, eap_tls_packet_t *pkt)
 		if (msg_len < pkt_len - sizeof(eap_tls_packet_t) - sizeof(msg_len) ||
 			msg_len > MAX_TLS_MESSAGE_LEN)
 		{
-			DBG1(DBG_TLS, "invalid %N packet length", eap_type_names, this->type);
+			DBG1(DBG_TLS, "invalid %N packet length (%u bytes)", eap_type_names,
+				 this->type, msg_len);
 			return FAILED;
 		}
 		return this->tls->process(this->tls, (char*)(pkt + 1) + sizeof(msg_len),
