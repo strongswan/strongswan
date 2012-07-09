@@ -631,11 +631,8 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $SSHCONF $HOSTLOGIN grep pluto /var/log/auth.log \
-		> $TESTRESULTDIR/${host}.auth.log
-	    echo >> $TESTRESULTDIR/${host}.auth.log
-	    ssh $SSHCONF $HOSTLOGIN grep charon /var/log/auth.log \
-		>> $TESTRESULTDIR/${host}.auth.log
+	    ssh $SSHCONF $HOSTLOGIN "grep -E 'charon|last message repeated' \
+		/var/log/auth.log" >> $TESTRESULTDIR/${host}.auth.log
 	done
 
 
@@ -646,11 +643,8 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $SSHCONF $HOSTLOGIN grep pluto /var/log/daemon.log \
-		> $TESTRESULTDIR/${host}.daemon.log
-	    echo >> $TESTRESULTDIR/${host}.daemon.log
-	    ssh $SSHCONF $HOSTLOGIN grep charon /var/log/daemon.log \
-		>> $TESTRESULTDIR/${host}.daemon.log
+	    ssh $SSHCONF $HOSTLOGIN "grep -E 'charon|last message repeated' \
+		/var/log/daemon.log" >> $TESTRESULTDIR/${host}.daemon.log
 	done
 
 
