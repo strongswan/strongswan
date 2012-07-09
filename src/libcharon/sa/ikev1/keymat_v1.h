@@ -121,9 +121,10 @@ struct keymat_v1_t {
 	 * Returns the IV for a message with the given message ID.
 	 *
 	 * @param mid			message ID
-	 * @return				IV (needs to be freed)
+	 * @param iv			chunk receiving allocated IV
+	 * @return				TRUE if IV allocated successfully
 	 */
-	chunk_t (*get_iv)(keymat_v1_t *this, u_int32_t mid);
+	bool (*get_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t *iv);
 
 	/**
 	 * Updates the IV for the next message with the given message ID.
@@ -135,8 +136,9 @@ struct keymat_v1_t {
 	 *
 	 * @param mid			message ID
 	 * @param last_block	last block of encrypted message (gets cloned)
+	 * @return				TRUE if IV updated successfully
 	 */
-	void (*update_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t last_block);
+	bool (*update_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t last_block);
 
 	/**
 	 * Confirms the updated IV for the given message ID.
@@ -145,9 +147,9 @@ struct keymat_v1_t {
 	 * be called after update_iv.
 	 *
 	 * @param mid			message ID
+	 * @return				TRUE if IV confirmed successfully
 	 */
-	void (*confirm_iv)(keymat_v1_t *this, u_int32_t mid);
-
+	bool (*confirm_iv)(keymat_v1_t *this, u_int32_t mid);
 };
 
 /**

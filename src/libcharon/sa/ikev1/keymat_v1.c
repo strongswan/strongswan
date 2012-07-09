@@ -964,7 +964,7 @@ METHOD(keymat_v1_t, get_hash_phase2, bool,
 /**
  * Generate an IV
  */
-static void generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
+static bool generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
 {
 	if (iv->mid == 0 || iv->iv.ptr)
 	{	/* use last block of previous encrypted message */
@@ -985,6 +985,7 @@ static void generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
 		}
 	}
 	DBG4(DBG_IKE, "next IV for MID %u %B", iv->mid, &iv->iv);
+	return TRUE;
 }
 
 /**
@@ -1016,7 +1017,11 @@ static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
 		INIT(found,
 			.mid = mid,
 		);
-		generate_iv(this, found);
+		if (!generate_iv(this, found))
+		{
+			iv_data_destroy(found);
+			return NULL;
+		}
 	}
 	this->ivs->insert_first(this->ivs, found);
 	/* remove least recently used IV if maximum reached */
@@ -1028,13 +1033,21 @@ static iv_data_t *lookup_iv(private_keymat_v1_t *this, u_int32_t mid)
 	return found;
 }
 
-METHOD(keymat_v1_t, get_iv, chunk_t,
-	private_keymat_v1_t *this, u_int32_t mid)
+METHOD(keymat_v1_t, get_iv, bool,
+	private_keymat_v1_t *this, u_int32_t mid, chunk_t *out)
 {
-	return chunk_clone(lookup_iv(this, mid)->iv);
+	iv_data_t *iv;
+
+	iv = lookup_iv(this, mid);
+	if (iv)
+	{
+		*out = iv->iv;
+		return TRUE;
+	}
+	return FALSE;
 }
 
-METHOD(keymat_v1_t, update_iv, void,
+METHOD(keymat_v1_t, update_iv, bool,
 	private_keymat_v1_t *this, u_int32_t mid, chunk_t last_block)
 {
 	iv_data_t *iv = lookup_iv(this, mid);
@@ -1042,17 +1055,20 @@ METHOD(keymat_v1_t, update_iv, void,
 	{	/* update last block */
 		chunk_free(&iv->last_block);
 		iv->last_block = chunk_clone(last_block);
+		return TRUE;
 	}
+	return FALSE;
 }
 
-METHOD(keymat_v1_t, confirm_iv, void,
+METHOD(keymat_v1_t, confirm_iv, bool,
 	private_keymat_v1_t *this, u_int32_t mid)
 {
 	iv_data_t *iv = lookup_iv(this, mid);
 	if (iv)
 	{
-		generate_iv(this, iv);
+		return generate_iv(this, iv);
 	}
+	return FALSE;
 }
 
 METHOD(keymat_t, get_version, ike_version_t,

@@ -1568,7 +1568,11 @@ METHOD(message_t, generate, status_t,
 		encryption->set_transform(encryption, aead);
 		if (this->is_encrypted)
 		{	/* for IKEv1 instead of associated data we provide the IV */
-			chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
+			if (!keymat_v1->get_iv(keymat_v1, this->message_id, &chunk))
+			{
+				generator->destroy(generator);
+				return FAILED;
+			}
 		}
 		else
 		{	/* build associated data (without header of encryption payload) */
@@ -1579,8 +1583,16 @@ METHOD(message_t, generate, status_t,
 		this->payloads->insert_last(this->payloads, encryption);
 		if (!encryption->encrypt(encryption, chunk))
 		{
+			if (this->is_encrypted)
+			{
+				free(chunk.ptr);
+			}
 			generator->destroy(generator);
 			return INVALID_STATE;
+		}
+		if (this->is_encrypted)
+		{
+			free(chunk.ptr);
 		}
 		generator->generate_payload(generator, &encryption->payload_interface);
 	}
@@ -1595,8 +1607,12 @@ METHOD(message_t, generate, status_t,
 
 		bs = aead->get_block_size(aead);
 		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
-		keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
-		keymat_v1->confirm_iv(keymat_v1, this->message_id);
+		if (!keymat_v1->update_iv(keymat_v1, this->message_id, last_block) ||
+			!keymat_v1->confirm_iv(keymat_v1, this->message_id))
+		{
+			generator->destroy(generator);
+			return FAILED;
+		}
 	}
 	generator->destroy(generator);
 	*packet = this->packet->clone(this->packet);
@@ -1846,17 +1862,25 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{	/* instead of associated data we provide the IV, we also update
 				 * the IV with the last encrypted block */
 				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-				chunk_t last_block;
+				chunk_t iv = chunk_empty;
 
-				last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
-				chunk = keymat_v1->get_iv(keymat_v1, this->message_id);
-				keymat_v1->update_iv(keymat_v1, this->message_id, last_block);
+				if (keymat_v1->get_iv(keymat_v1, this->message_id, &iv) &&
+					keymat_v1->update_iv(keymat_v1, this->message_id,
+							chunk_create(chunk.ptr + chunk.len - bs, bs)))
+				{
+					status = encryption->decrypt(encryption, iv);
+				}
+				else
+				{
+					status = FAILED;
+				}
+				free(chunk.ptr);
 			}
 			else
 			{
 				chunk.len -= encryption->get_length(encryption);
+				status = encryption->decrypt(encryption, chunk);
 			}
-			status = encryption->decrypt(encryption, chunk);
 			if (status != SUCCESS)
 			{
 				break;
@@ -2035,7 +2059,10 @@ METHOD(message_t, parse_body, status_t,
 		}
 		if (this->is_encrypted)
 		{	/* message verified, confirm IV */
-			keymat_v1->confirm_iv(keymat_v1, this->message_id);
+			if (!keymat_v1->confirm_iv(keymat_v1, this->message_id))
+			{
+				return FAILED;
+			}
 		}
 	}
 	return SUCCESS;

@@ -302,13 +302,15 @@ METHOD(listener_t, message_hook, bool,
 		if (mid == 0)
 		{
 			keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
-			iv = keymat->get_iv(keymat, mid);
-			m = ha_message_create(HA_IKE_IV);
-			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-			m->add_attribute(m, HA_IV, iv);
-			free(iv.ptr);
-			this->socket->push(this->socket, m);
-			this->cache->cache(this->cache, ike_sa, m);
+			if (keymat->get_iv(keymat, mid, &iv))
+			{
+				m = ha_message_create(HA_IKE_IV);
+				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+				m->add_attribute(m, HA_IV, iv);
+				free(iv.ptr);
+				this->socket->push(this->socket, m);
+				this->cache->cache(this->cache, ike_sa, m);
+			}
 		}
 		if (!incoming && message->get_exchange_type(message) == TRANSACTION)
 		{

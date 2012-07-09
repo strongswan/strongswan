@@ -525,8 +525,10 @@ static void process_ike_iv(private_ha_dispatcher_t *this, ha_message_t *message)
 				keymat_v1_t *keymat;
 
 				keymat = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
-				keymat->update_iv(keymat, 0, iv);
-				keymat->confirm_iv(keymat, 0);
+				if (keymat->update_iv(keymat, 0, iv))
+				{
+					keymat->confirm_iv(keymat, 0);
+				}
 			}
 		}
 		this->cache->cache(this->cache, ike_sa, message);
