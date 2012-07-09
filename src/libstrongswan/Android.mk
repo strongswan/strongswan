@@ -68,6 +68,7 @@ threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \
 threading/mutex.h threading/mutex.c threading/condvar.h  \
 threading/semaphore.h threading/semaphore.c \
+threading/spinlock.h threading/spinlock.c \
 threading/rwlock.h threading/rwlock.c \
 threading/lock_profiler.h \
 utils.h utils.c \
@@ -78,6 +79,7 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
+utils/capabilities.c utils/capabilities.h \
 utils/backtrace.c utils/backtrace.h
 
 # adding the plugin source files
