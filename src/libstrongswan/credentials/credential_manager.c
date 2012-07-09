@@ -450,6 +450,17 @@ METHOD(credential_manager_t, remove_local_set, void,
 	}
 }
 
+METHOD(credential_manager_t, issued_by, bool,
+	private_credential_manager_t *this, certificate_t *subject,
+	certificate_t *issuer, signature_scheme_t *scheme)
+{
+	if (this->cache)
+	{
+		return this->cache->issued_by(this->cache, subject, issuer, scheme);
+	}
+	return subject->issued_by(subject, issuer, scheme);
+}
+
 METHOD(credential_manager_t, cache_cert, void,
 	private_credential_manager_t *this, certificate_t *cert)
 {
@@ -579,7 +590,7 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 										subject->get_issuer(subject), trusted);
 	while (enumerator->enumerate(enumerator, &candidate))
 	{
-		if (this->cache->issued_by(this->cache, subject, candidate, scheme))
+		if (issued_by(this, subject, candidate, scheme))
 		{
 			issuer = candidate->get_ref(candidate);
 			break;
@@ -643,7 +654,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		if (issuer)
 		{
 			/* accept only self-signed CAs as trust anchor */
-			if (this->cache->issued_by(this->cache, issuer, issuer, NULL))
+			if (issued_by(this, issuer, issuer, NULL))
 			{
 				auth->add(auth, AUTH_RULE_CA_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
@@ -767,8 +778,7 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			/* if we find a trusted self signed certificate, we just accept it.
 			 * However, in order to fulfill authorization rules, we try to build
 			 * the trust chain if it is not self signed */
-			if (this->this->cache->issued_by(this->this->cache,
-								   this->pretrusted, this->pretrusted, NULL) ||
+			if (issued_by(this->this, this->pretrusted, this->pretrusted, NULL) ||
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->online))
 			{
@@ -975,8 +985,7 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		}
 		else
 		{
-			if (!has_anchor &&
-				this->cache->issued_by(this->cache, current, current, NULL))
+			if (!has_anchor && issued_by(this, current, current, NULL))
 			{	/* If no trust anchor specified, accept any CA */
 				trustchain->add(trustchain, AUTH_RULE_CA_CERT, current);
 				return trustchain;
@@ -1115,14 +1124,10 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 METHOD(credential_manager_t, flush_cache, void,
 	private_credential_manager_t *this, certificate_type_t type)
 {
-	this->cache->flush(this->cache, type);
-}
-
-METHOD(credential_manager_t, issued_by, bool,
-	private_credential_manager_t *this, certificate_t *subject,
-	certificate_t *issuer, signature_scheme_t *scheme)
-{
-	return this->cache->issued_by(this->cache, subject, issuer, scheme);
+	if (this->cache)
+	{
+		this->cache->flush(this->cache, type);
+	}
 }
 
 METHOD(credential_manager_t, add_set, void,
@@ -1162,11 +1167,14 @@ METHOD(credential_manager_t, destroy, void,
 {
 	cache_queue(this);
 	this->cache_queue->destroy(this->cache_queue);
-	this->sets->remove(this->sets, this->cache, NULL);
+	if (this->cache)
+	{
+		this->sets->remove(this->sets, this->cache, NULL);
+		this->cache->destroy(this->cache);
+	}
 	this->sets->destroy(this->sets);
 	this->local_sets->destroy(this->local_sets);
 	this->exclusive_local_sets->destroy(this->exclusive_local_sets);
-	this->cache->destroy(this->cache);
 	this->validators->destroy(this->validators);
 	this->lock->destroy(this->lock);
 	this->queue_mutex->destroy(this->queue_mutex);
@@ -1203,7 +1211,6 @@ credential_manager_t *credential_manager_create()
 		},
 		.sets = linked_list_create(),
 		.validators = linked_list_create(),
-		.cache = cert_cache_create(),
 		.cache_queue = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.queue_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -1211,7 +1218,11 @@ credential_manager_t *credential_manager_create()
 
 	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
 	this->exclusive_local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
-	this->sets->insert_first(this->sets, this->cache);
+	if (lib->settings->get_bool(lib->settings, "libstrongswan.cert_cache", TRUE))
+	{
+		this->cache = cert_cache_create();
+		this->sets->insert_first(this->sets, this->cache);
+	}
 
 	return &this->public;
 }
