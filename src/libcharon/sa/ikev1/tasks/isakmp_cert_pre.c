@@ -349,6 +349,10 @@ METHOD(task_t, build_i, status_t,
 		case AGGRESSIVE:
 			if (this->state == CR_SA)
 			{
+				if (!use_certs(this, message))
+				{
+					return SUCCESS;
+				}
 				build_certreqs(this, message);
 			}
 			return NEED_MORE;
