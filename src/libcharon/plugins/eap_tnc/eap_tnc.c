@@ -154,8 +154,6 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"%s.plugins.eap-tnc.max_message_count",
 					EAP_TNC_MAX_MESSAGE_COUNT, charon->name);
-	include_length = lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-tnc.include_length", TRUE, charon->name);
 	protocol = lib->settings->get_str(lib->settings,
 					"%s.plugins.eap-tnc.protocol", "tnccs-1.1", charon->name);
 	if (strcaseeq(protocol, "tnccs-2.0"))
@@ -179,7 +177,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs,
 											 EAP_TNC_MAX_MESSAGE_LEN,
-											 max_msg_count, include_length);
+											 max_msg_count, FALSE);
 	if (!this->tls_eap)
 	{
 		free(this);
