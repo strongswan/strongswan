@@ -110,8 +110,7 @@ static size_t lookup_alg(integrity_algorithm_t algo, char **name,
 METHOD(signer_t, get_signature, bool,
 	private_af_alg_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
-	this->ops->hash(this->ops, data, buffer, this->block_size);
-	return TRUE;
+	return this->ops->hash(this->ops, data, buffer, this->block_size);
 }
 
 METHOD(signer_t, allocate_signature, bool,
@@ -156,8 +155,7 @@ METHOD(signer_t, get_block_size, size_t,
 METHOD(signer_t, set_key, bool,
 	private_af_alg_signer_t *this, chunk_t key)
 {
-	this->ops->set_key(this->ops, key);
-	return TRUE;
+	return this->ops->set_key(this->ops, key);
 }
 
 METHOD(signer_t, destroy, void,

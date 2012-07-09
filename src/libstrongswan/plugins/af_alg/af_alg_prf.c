@@ -108,8 +108,7 @@ static size_t lookup_alg(pseudo_random_function_t algo, char **name, bool *xcbc)
 METHOD(prf_t, get_bytes, bool,
 	private_af_alg_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
-	this->ops->hash(this->ops, seed, buffer, this->block_size);
-	return TRUE;
+	return this->ops->hash(this->ops, seed, buffer, this->block_size);
 }
 
 METHOD(prf_t, allocate_bytes, bool,
@@ -153,13 +152,15 @@ METHOD(prf_t, set_key, bool,
 		else if (key.len > this->block_size)
 		{
 			memset(buf, 0, this->block_size);
-			this->ops->set_key(this->ops, chunk_from_thing(buf));
-			this->ops->hash(this->ops, key, buf, this->block_size);
+			if (!this->ops->set_key(this->ops, chunk_from_thing(buf)) ||
+				!this->ops->hash(this->ops, key, buf, this->block_size))
+			{
+				return FALSE;
+			}
 			key = chunk_from_thing(buf);
 		}
 	}
-	this->ops->set_key(this->ops, key);
-	return TRUE;
+	return this->ops->set_key(this->ops, key);
 }
 
 METHOD(prf_t, destroy, void,

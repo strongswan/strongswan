@@ -46,8 +46,9 @@ struct af_alg_ops_t {
 	 * @param data		data to hash
 	 * @param out		buffer to write hash to, NULL for append mode
 	 * @param outlen	number of bytes to read into out
+	 * @return			TRUE if successful
 	 */
-	void (*hash)(af_alg_ops_t *this, chunk_t data, char *out, size_t outlen);
+	bool (*hash)(af_alg_ops_t *this, chunk_t data, char *out, size_t outlen);
 
 	/**
 	 * Reset hasher state.
@@ -61,16 +62,18 @@ struct af_alg_ops_t {
 	 * @param iv		iv to use
 	 * @param data		data to encrypt/decrypt
 	 * @param out		buffer write processed data to
+	 * @return			TRUE if successful
 	 */
-	void (*crypt)(af_alg_ops_t *this, u_int32_t type, chunk_t iv, chunk_t data,
+	bool (*crypt)(af_alg_ops_t *this, u_int32_t type, chunk_t iv, chunk_t data,
 				  char *out);
 
 	/**
 	 * Set the key for en-/decryption or HMAC/XCBC operations.
 	 *
 	 * @param key		key to set for transform
+	 * @return			TRUE if successful
 	 */
-	void (*set_key)(af_alg_ops_t *this, chunk_t key);
+	bool (*set_key)(af_alg_ops_t *this, chunk_t key);
 
 	/**
 	 * Destroy a af_alg_ops_t.

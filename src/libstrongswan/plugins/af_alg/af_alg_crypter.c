@@ -137,13 +137,9 @@ METHOD(crypter_t, decrypt, bool,
 	if (dst)
 	{
 		*dst = chunk_alloc(data.len);
-		this->ops->crypt(this->ops, ALG_OP_DECRYPT, iv, data, dst->ptr);
+		return this->ops->crypt(this->ops, ALG_OP_DECRYPT, iv, data, dst->ptr);
 	}
-	else
-	{
-		this->ops->crypt(this->ops, ALG_OP_DECRYPT, iv, data, data.ptr);
-	}
-	return TRUE;
+	return this->ops->crypt(this->ops, ALG_OP_DECRYPT, iv, data, data.ptr);
 }
 
 METHOD(crypter_t, encrypt, bool,
@@ -152,13 +148,9 @@ METHOD(crypter_t, encrypt, bool,
 	if (dst)
 	{
 		*dst = chunk_alloc(data.len);
-		this->ops->crypt(this->ops, ALG_OP_ENCRYPT, iv, data, dst->ptr);
+		return this->ops->crypt(this->ops, ALG_OP_ENCRYPT, iv, data, dst->ptr);
 	}
-	else
-	{
-		this->ops->crypt(this->ops, ALG_OP_ENCRYPT, iv, data, data.ptr);
-	}
-	return TRUE;
+	return this->ops->crypt(this->ops, ALG_OP_ENCRYPT, iv, data, data.ptr);
 }
 
 METHOD(crypter_t, get_block_size, size_t,
@@ -182,8 +174,7 @@ METHOD(crypter_t, get_key_size, size_t,
 METHOD(crypter_t, set_key, bool,
 	private_af_alg_crypter_t *this, chunk_t key)
 {
-	this->ops->set_key(this->ops, key);
-	return TRUE;
+	return this->ops->set_key(this->ops, key);
 }
 
 METHOD(crypter_t, destroy, void,

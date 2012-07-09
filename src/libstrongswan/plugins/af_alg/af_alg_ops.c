@@ -54,7 +54,7 @@ METHOD(af_alg_ops_t, reset, void,
 	}
 }
 
-METHOD(af_alg_ops_t, hash, void,
+METHOD(af_alg_ops_t, hash, bool,
 	private_af_alg_ops_t *this, chunk_t data, char *out, size_t outlen)
 {
 	ssize_t len;
@@ -62,39 +62,52 @@ METHOD(af_alg_ops_t, hash, void,
 	while (this->op == -1)
 	{
 		this->op = accept(this->tfm, NULL, 0);
-		if (this->op == -1)
+		if (this->op == -1 && errno != EINTR)
 		{
 			DBG1(DBG_LIB, "opening AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
+			return FALSE;
 		}
 	}
+
 	do
 	{
 		len = send(this->op, data.ptr, data.len, out ? 0 : MSG_MORE);
 		if (len == -1)
 		{
+			if (errno == EINTR)
+			{
+				continue;
+			}
 			DBG1(DBG_LIB, "writing to AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
+			return FALSE;
 		}
-		else
-		{
-			data = chunk_skip(data, len);
-		}
+		data = chunk_skip(data, len);
 	}
 	while (data.len);
 
 	if (out)
 	{
-		while (read(this->op, out, outlen) != outlen)
+		while (outlen)
 		{
-			DBG1(DBG_LIB, "reading AF_ALG hasher failed: %s", strerror(errno));
-			sleep(1);
+			len = read(this->op, out, outlen);
+			if (len == -1)
+			{
+				if (errno == EINTR)
+				{
+					continue;
+				}
+				DBG1(DBG_LIB, "reading AF_ALG hasher failed: %s", strerror(errno));
+				return FALSE;
+			}
+			outlen -= len;
+			out += len;
 		}
 		reset(this);
 	}
+	return TRUE;
 }
 
-METHOD(af_alg_ops_t, crypt, void,
+METHOD(af_alg_ops_t, crypt, bool,
 	private_af_alg_ops_t *this, u_int32_t type, chunk_t iv, chunk_t data,
 	char *out)
 {
@@ -107,11 +120,16 @@ METHOD(af_alg_ops_t, crypt, void,
 	ssize_t len;
 	int op;
 
-	while ((op = accept(this->tfm, NULL, 0)) == -1)
+	do
 	{
-		DBG1(DBG_LIB, "accepting AF_ALG crypter failed: %s", strerror(errno));
-		sleep(1);
+		op = accept(this->tfm, NULL, 0);
+		if (op == -1 && errno != EINTR)
+		{
+			DBG1(DBG_LIB, "accepting AF_ALG crypter failed: %s", strerror(errno));
+			return FALSE;
+		}
 	}
+	while (op == -1);
 
 	memset(buf, 0, sizeof(buf));
 
@@ -143,30 +161,39 @@ METHOD(af_alg_ops_t, crypt, void,
 		len = sendmsg(op, &msg, 0);
 		if (len == -1)
 		{
-			DBG1(DBG_LIB, "writing to AF_ALG crypter failed: %s",
-				 strerror(errno));
-			sleep(1);
-			continue;
+			if (errno == EINTR)
+			{
+				continue;
+			}
+			DBG1(DBG_LIB, "writing to AF_ALG crypter failed: %s", strerror(errno));
+			return FALSE;
 		}
-		if (read(op, out, len) != len)
+		while (read(op, out, len) != len)
 		{
-			DBG1(DBG_LIB, "reading from AF_ALG crypter failed: %s",
-				 strerror(errno));
+			if (errno != EINTR)
+			{
+				DBG1(DBG_LIB, "reading from AF_ALG crypter failed: %s",
+					 strerror(errno));
+				return FALSE;
+			}
 		}
 		data = chunk_skip(data, len);
 		/* no IV for subsequent data chunks */
 		msg.msg_controllen = 0;
 	}
 	close(op);
+	return TRUE;
 }
 
-METHOD(af_alg_ops_t, set_key, void,
+METHOD(af_alg_ops_t, set_key, bool,
 	private_af_alg_ops_t *this, chunk_t key)
 {
 	if (setsockopt(this->tfm, SOL_ALG, ALG_SET_KEY, key.ptr, key.len) == -1)
 	{
 		DBG1(DBG_LIB, "setting AF_ALG key failed: %s", strerror(errno));
+		return FALSE;
 	}
+	return TRUE;
 }
 
 METHOD(af_alg_ops_t, destroy, void,
