@@ -235,11 +235,11 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 		}
 
 		hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-		if (hasher == NULL)
+		if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
 		{
+			DESTROY_IF(hasher);
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, data, &hash);
 		hasher->destroy(hasher);
 
 		/* build DER-encoded digestInfo */

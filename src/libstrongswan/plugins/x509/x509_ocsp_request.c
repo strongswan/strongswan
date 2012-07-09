@@ -159,22 +159,24 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 				enumerator_t *enumerator;
 
 				issuer = cert->get_subject(cert);
-				hasher->allocate_hash(hasher, issuer->get_encoding(issuer),
-									  &issuerNameHash);
-				hasher->destroy(hasher);
-
-				enumerator = this->candidates->create_enumerator(this->candidates);
-				while (enumerator->enumerate(enumerator, &x509))
+				if (hasher->allocate_hash(hasher, issuer->get_encoding(issuer),
+										  &issuerNameHash))
 				{
-					chunk_t request, serialNumber;
+					enumerator = this->candidates->create_enumerator(
+															this->candidates);
+					while (enumerator->enumerate(enumerator, &x509))
+					{
+						chunk_t request, serialNumber;
 
-					serialNumber = x509->get_serial(x509);
-					request = build_Request(this, issuerNameHash, issuerKeyHash,
-											serialNumber);
-					list = chunk_cat("mm", list, request);
+						serialNumber = x509->get_serial(x509);
+						request = build_Request(this, issuerNameHash,
+												issuerKeyHash, serialNumber);
+						list = chunk_cat("mm", list, request);
+					}
+					enumerator->destroy(enumerator);
+					chunk_free(&issuerNameHash);
 				}
-				enumerator->destroy(enumerator);
-				chunk_free(&issuerNameHash);
+				hasher->destroy(hasher);
 			}
 		}
 		else

@@ -421,13 +421,13 @@ end:
 
 				algorithm = hasher_algorithm_from_oid(digest_alg);
 				hasher = lib->crypto->create_hasher(lib->crypto, algorithm);
-				if (hasher == NULL)
+				if (!hasher || !hasher->allocate_hash(hasher, this->data, &hash))
 				{
+					DESTROY_IF(hasher);
 					DBG1(DBG_LIB, "hash algorithm %N not supported",
 						 hash_algorithm_names, algorithm);
 					return FALSE;
 				}
-				hasher->allocate_hash(hasher, this->data, &hash);
 				hasher->destroy(hasher);
 				DBG3(DBG_LIB, "hash: %B", &hash);
 
@@ -921,13 +921,14 @@ METHOD(pkcs7_t, build_signedData, bool,
 			time_t now;
 
 			hasher = lib->crypto->create_hasher(lib->crypto, alg);
-			if (hasher == NULL)
+			if (!hasher ||
+				!hasher->allocate_hash(hasher, this->data, &messageDigest))
 			{
+				DESTROY_IF(hasher);
 				DBG1(DBG_LIB, "  hash algorithm %N not support",
 					 hash_algorithm_names, alg);
 				return FALSE;
 			}
-			hasher->allocate_hash(hasher, this->data, &messageDigest);
 			hasher->destroy(hasher);
 			this->attributes->set_attribute(this->attributes,
 									OID_PKCS9_MESSAGE_DIGEST,

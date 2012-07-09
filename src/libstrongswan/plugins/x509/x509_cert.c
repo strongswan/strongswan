@@ -1490,12 +1490,13 @@ end:
 		}
 		/* create certificate hash */
 		hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (hasher == NULL)
+		if (!hasher ||
+			!hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash))
 		{
+			DESTROY_IF(hasher);
 			DBG1(DBG_ASN, "  unable to create hash of certificate, SHA1 not supported");
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
 		hasher->destroy(hasher);
 	}
 	return success;
@@ -2344,11 +2345,12 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 							   asn1_bitstring("c", cert->signature));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher)
+	if (!hasher ||
+		!hasher->allocate_hash(hasher, cert->encoding, &cert->encoding_hash))
 	{
+		DESTROY_IF(hasher);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, cert->encoding, &cert->encoding_hash);
 	hasher->destroy(hasher);
 	return TRUE;
 }

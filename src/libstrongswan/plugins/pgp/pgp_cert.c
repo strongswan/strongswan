@@ -321,8 +321,12 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 			DBG1(DBG_ASN, "no SHA-1 hasher available");
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, pubkey_packet_header, NULL);
-		hasher->allocate_hash(hasher, pubkey_packet, &this->fingerprint);
+		if (!hasher->allocate_hash(hasher, pubkey_packet_header, NULL) ||
+			!hasher->allocate_hash(hasher, pubkey_packet, &this->fingerprint))
+		{
+			hasher->destroy(hasher);
+			return FALSE;
+		}
 		hasher->destroy(hasher);
 		DBG2(DBG_ASN, "L2 - v4 fingerprint %#B", &this->fingerprint);
 	}

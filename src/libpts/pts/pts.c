@@ -287,10 +287,15 @@ METHOD(pts_t, calculate_secret, bool,
 	hash_alg = pts_meas_algo_to_hash(this->dh_hash_algorithm);
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
 
-	hasher->allocate_hash(hasher, chunk_from_chars('1'), NULL);
-	hasher->allocate_hash(hasher, this->initiator_nonce, NULL);
-	hasher->allocate_hash(hasher, this->responder_nonce, NULL);
-	hasher->allocate_hash(hasher, shared_secret, &this->secret);
+	if (!hasher ||
+		!hasher->get_hash(hasher, chunk_from_chars('1'), NULL) ||
+		!hasher->get_hash(hasher, this->initiator_nonce, NULL) ||
+		!hasher->get_hash(hasher, this->responder_nonce, NULL) ||
+		!hasher->allocate_hash(hasher, shared_secret, &this->secret))
+	{
+		DESTROY_IF(hasher);
+		return FALSE;
+	}
 	hasher->destroy(hasher);
 
 	/* The DH secret must be destroyed */
@@ -1073,7 +1078,12 @@ METHOD(pts_t, get_quote_info, bool,
 		hasher = lib->crypto->create_hasher(lib->crypto, algo);
 
 		/* Hash the PCR Composite Structure */
-		hasher->allocate_hash(hasher, pcr_comp, out_pcr_comp);
+		if (!hasher || !hasher->allocate_hash(hasher, pcr_comp, out_pcr_comp))
+		{
+			DESTROY_IF(hasher);
+			free(pcr_comp.ptr);
+			return FALSE;
+		}
 		DBG3(DBG_PTS, "constructed PCR Composite hash: %#B", out_pcr_comp);
 		hasher->destroy(hasher);
 	}
@@ -1084,7 +1094,13 @@ METHOD(pts_t, get_quote_info, bool,
 
 	/* SHA1 hash of PCR Composite to construct TPM_QUOTE_INFO */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	hasher->allocate_hash(hasher, pcr_comp, &hash_pcr_comp);
+	if (!hasher || !hasher->allocate_hash(hasher, pcr_comp, &hash_pcr_comp))
+	{
+		DESTROY_IF(hasher);
+		chunk_free(out_pcr_comp);
+		free(pcr_comp.ptr);
+		return FALSE;
+	}
 	hasher->destroy(hasher);
 
 	/* Construct TPM_QUOTE_INFO/TPM_QUOTE_INFO2 structure */

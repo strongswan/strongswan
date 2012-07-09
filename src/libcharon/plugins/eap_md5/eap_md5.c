@@ -100,7 +100,11 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response,
 		DBG1(DBG_IKE, "EAP-MD5 failed, MD5 not supported");
 		return FAILED;
 	}
-	hasher->allocate_hash(hasher, concat, response);
+	if (!hasher->allocate_hash(hasher, concat, response))
+	{
+		hasher->destroy(hasher);
+		return FAILED;
+	}
 	hasher->destroy(hasher);
 	return SUCCESS;
 }

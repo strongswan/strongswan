@@ -311,7 +311,7 @@ METHOD(hasher_t, get_hash, bool,
 	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash, void,
+METHOD(hasher_t, allocate_hash, bool,
 	private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
@@ -327,6 +327,7 @@ METHOD(hasher_t, allocate_hash, void,
 
 		*hash = allocated_hash;
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash_size, size_t,

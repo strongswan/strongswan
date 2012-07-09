@@ -512,7 +512,7 @@ METHOD(hasher_t, get_hash512, bool,
 	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash224, void,
+METHOD(hasher_t, allocate_hash224, bool,
 	private_sha256_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
@@ -526,9 +526,10 @@ METHOD(hasher_t, allocate_hash224, void,
 		reset224(this);
 		*hash = allocated_hash;
 	}
+	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash256, void,
+METHOD(hasher_t, allocate_hash256, bool,
 	private_sha256_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
@@ -542,9 +543,10 @@ METHOD(hasher_t, allocate_hash256, void,
 		reset256(this);
 		*hash = allocated_hash;
 	}
+	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash384, void,
+METHOD(hasher_t, allocate_hash384, bool,
 	private_sha512_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
@@ -558,9 +560,10 @@ METHOD(hasher_t, allocate_hash384, void,
 		reset384(this);
 		*hash = allocated_hash;
 	}
+	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash512, void,
+METHOD(hasher_t, allocate_hash512, bool,
 	private_sha512_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
@@ -574,6 +577,7 @@ METHOD(hasher_t, allocate_hash512, void,
 		reset512(this);
 		*hash = allocated_hash;
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash_size224, size_t,

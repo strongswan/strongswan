@@ -61,18 +61,15 @@ METHOD(hasher_t, get_hash, bool,
 	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash, void,
+METHOD(hasher_t, allocate_hash, bool,
 	private_gcrypt_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	if (hash)
 	{
 		*hash = chunk_alloc(get_hash_size(this));
-		get_hash(this, chunk, hash->ptr);
+		return get_hash(this, chunk, hash->ptr);
 	}
-	else
-	{
-		get_hash(this, chunk, NULL);
-	}
+	return get_hash(this, chunk, NULL);
 }
 
 METHOD(hasher_t, destroy, void,

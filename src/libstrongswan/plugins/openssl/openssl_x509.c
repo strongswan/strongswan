@@ -973,11 +973,11 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	parse_extKeyUsage(this);
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher)
+	if (!hasher || !hasher->allocate_hash(hasher, this->encoding, &this->hash))
 	{
+		DESTROY_IF(hasher);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, this->encoding, &this->hash);
 	hasher->destroy(hasher);
 
 	if (issued_by(this, &this->public.x509.interface, NULL))

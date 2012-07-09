@@ -354,10 +354,12 @@ METHOD(stroke_ca_t, check_for_hash_and_url, void,
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
 			{
-				hasher->allocate_hash(hasher, encoded, &hash);
-				section->hashes->insert_last(section->hashes,
+				if (hasher->allocate_hash(hasher, encoded, &hash))
+				{
+					section->hashes->insert_last(section->hashes,
 						identification_create_from_encoding(ID_KEY_ID, hash));
-				chunk_free(&hash);
+					chunk_free(&hash);
+				}
 				chunk_free(&encoded);
 			}
 			break;

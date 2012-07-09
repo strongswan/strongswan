@@ -124,11 +124,11 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 
 	/* For SIM: MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version)
 	 * For AKA: MK = SHA1(Identity|IK|CK) */
-	if (!this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL))
+	if (!this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL) ||
+		!this->hasher->allocate_hash(this->hasher, data, mk))
 	{
 		return FALSE;
 	}
-	this->hasher->allocate_hash(this->hasher, data, mk);
 	DBG3(DBG_LIB, "MK %B", mk);
 
 	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf() */

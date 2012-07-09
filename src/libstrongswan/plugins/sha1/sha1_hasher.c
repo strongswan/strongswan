@@ -199,7 +199,7 @@ METHOD(hasher_t, get_hash, bool,
 	return TRUE;
 }
 
-METHOD(hasher_t, allocate_hash, void,
+METHOD(hasher_t, allocate_hash, bool,
 	private_sha1_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	SHA1Update(this, chunk.ptr, chunk.len);
@@ -211,6 +211,7 @@ METHOD(hasher_t, allocate_hash, void,
 		SHA1Final(this, hash->ptr);
 		reset(this);
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash_size, size_t,

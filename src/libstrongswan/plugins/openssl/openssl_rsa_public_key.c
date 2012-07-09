@@ -217,13 +217,13 @@ bool openssl_rsa_fingerprint(RSA *rsa, cred_encoding_type_t type, chunk_t *fp)
 			return FALSE;
 	}
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher)
+	if (!hasher || !hasher->allocate_hash(hasher, key, fp))
 	{
 		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
+		DESTROY_IF(hasher);
 		free(key.ptr);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, key, fp);
 	free(key.ptr);
 	hasher->destroy(hasher);
 	lib->encoding->cache(lib->encoding, type, rsa, *fp);

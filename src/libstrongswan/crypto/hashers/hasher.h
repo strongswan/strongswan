@@ -94,8 +94,10 @@ struct hasher_t {
 	 *
 	 * @param data		chunk with data to hash
 	 * @param hash		chunk which will hold allocated hash
+	 * @return			TRUE if hash allocated successfully
 	 */
-	void (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
+	__attribute__((warn_unused_result))
+	bool (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
 
 	/**
 	 * Get the size of the resulting hash.

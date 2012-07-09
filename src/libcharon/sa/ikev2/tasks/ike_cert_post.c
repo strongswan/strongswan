@@ -78,7 +78,12 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this,
 		hasher->destroy(hasher);
 		return NULL;
 	}
-	hasher->allocate_hash(hasher, encoded, &hash);
+	if (!hasher->allocate_hash(hasher, encoded, &hash))
+	{
+		hasher->destroy(hasher);
+		chunk_free(&encoded);
+		return cert_payload_create_from_cert(CERTIFICATE, cert);
+	}
 	chunk_free(&encoded);
 	hasher->destroy(hasher);
 	id = identification_create_from_encoding(ID_KEY_ID, hash);

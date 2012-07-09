@@ -266,13 +266,15 @@ METHOD(private_key_t, sign, bool,
 	}
 	if (hash_alg != HASH_UNKNOWN)
 	{
-		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-		if (!hasher)
+		hasher_t *hasher;
+
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
 		{
+			DESTROY_IF(hasher);
 			this->lib->f->C_CloseSession(session);
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, data, &hash);
 		hasher->destroy(hasher);
 		data = hash;
 	}

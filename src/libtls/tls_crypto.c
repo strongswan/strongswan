@@ -1196,12 +1196,12 @@ static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 			return FALSE;
 		}
 		hasher = lib->crypto->create_hasher(lib->crypto, alg->hash);
-		if (!hasher)
+		if (!hasher || !hasher->allocate_hash(hasher, data, hash))
 		{
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, alg->hash);
+			DESTROY_IF(hasher);
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, data, hash);
 		hasher->destroy(hasher);
 	}
 	else

@@ -735,7 +735,10 @@ METHOD(crypto_tester_t, test_hasher, bool,
 
 		/* allocated hash */
 		data = chunk_create(vector->data, vector->len);
-		hasher->allocate_hash(hasher, data, &hash);
+		if (!hasher->allocate_hash(hasher, data, &hash))
+		{
+			failed = TRUE;
+		}
 		if (hash.len != hasher->get_hash_size(hasher))
 		{
 			failed = TRUE;
@@ -758,8 +761,8 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		if (data.len > 2)
 		{
 			memset(hash.ptr, 0, hash.len);
-			hasher->allocate_hash(hasher, chunk_create(data.ptr, 1), NULL);
-			if (!hasher->get_hash(hasher, chunk_create(data.ptr + 1, 1), NULL) ||
+			if (!hasher->allocate_hash(hasher, chunk_create(data.ptr, 1), NULL) ||
+				!hasher->get_hash(hasher, chunk_create(data.ptr + 1, 1), NULL) ||
 				!hasher->get_hash(hasher, chunk_skip(data, 2), hash.ptr) ||
 				!memeq(vector->hash, hash.ptr, hash.len))
 			{

@@ -94,14 +94,14 @@ static bool hash_pubkey(chunk_t pubkey, chunk_t *hash)
 	hasher_t *hasher;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
+	if (!hasher || !hasher->allocate_hash(hasher, pubkey, hash))
 	{
+		DESTROY_IF(hasher);
 		chunk_free(&pubkey);
 		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, "
 			 "fingerprinting failed");
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, pubkey, hash);
 	hasher->destroy(hasher);
 	chunk_free(&pubkey);
 	return TRUE;

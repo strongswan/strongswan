@@ -1164,8 +1164,13 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		u_int64_t our_spi;
 		chunk_t hash;
 
-		this->hasher->allocate_hash(this->hasher,
-									message->get_packet_data(message), &hash);
+		if (!this->hasher->allocate_hash(this->hasher,
+									message->get_packet_data(message), &hash))
+		{
+			DBG1(DBG_MGR, "ignoring message, failed to hash message");
+			id->destroy(id);
+			return NULL;
+		}
 
 		/* ensure this is not a retransmit of an already handled init message */
 		switch (check_and_put_init_hash(this, hash, &our_spi))

@@ -235,13 +235,15 @@ METHOD(public_key_t, verify, bool,
 	}
 	if (hash_alg != HASH_UNKNOWN)
 	{
-		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-		if (!hasher)
+		hasher_t *hasher;
+
+		hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+		if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
 		{
+			DESTROY_IF(hasher);
 			this->lib->f->C_CloseSession(session);
 			return FALSE;
 		}
-		hasher->allocate_hash(hasher, data, &hash);
 		hasher->destroy(hasher);
 		data = hash;
 	}
@@ -374,12 +376,12 @@ static bool fingerprint_ecdsa(private_pkcs11_public_key_t *this,
 			return FALSE;
 	}
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher)
+	if (!hasher || !hasher->allocate_hash(hasher, asn1, fp))
 	{
+		DESTROY_IF(hasher);
 		chunk_clear(&asn1);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, asn1, fp);
 	hasher->destroy(hasher);
 	chunk_clear(&asn1);
 	lib->encoding->cache(lib->encoding, type, this, *fp);

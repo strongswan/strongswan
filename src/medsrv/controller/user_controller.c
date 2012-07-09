@@ -64,7 +64,11 @@ static chunk_t hash_password(char *login, char *password)
 	}
 	data = chunk_cata("cc",	chunk_create(login, strlen(login)),
 							chunk_create(password, strlen(password)));
-	hasher->allocate_hash(hasher, data, &hash);
+	if (!hasher->allocate_hash(hasher, data, &hash))
+	{
+		hasher->destroy(hasher);
+		return chunk_empty;
+	}
 	hasher->destroy(hasher);
 	return hash;
 }

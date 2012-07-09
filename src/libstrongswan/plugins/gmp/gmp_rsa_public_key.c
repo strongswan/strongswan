@@ -252,7 +252,11 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 					}
 
 					/* build our own hash and compare */
-					hasher->allocate_hash(hasher, data, &hash);
+					if (!hasher->allocate_hash(hasher, data, &hash))
+					{
+						hasher->destroy(hasher);
+						goto end_parser;
+					}
 					hasher->destroy(hasher);
 					success = memeq(object.ptr, hash.ptr, hash.len);
 					free(hash.ptr);

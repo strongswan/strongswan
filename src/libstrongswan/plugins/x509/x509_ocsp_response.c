@@ -201,19 +201,22 @@ METHOD(ocsp_response_t, get_status, cert_validation_t,
 		/* check issuerNameHash, if available */
 		else if (response->issuerNameHash.ptr)
 		{
+			id = issuercert->get_subject(issuercert);
 			hasher = lib->crypto->create_hasher(lib->crypto,
 							hasher_algorithm_from_oid(response->hashAlgorithm));
-			if (!hasher)
+			if (!hasher ||
+				!hasher->allocate_hash(hasher, id->get_encoding(id), &hash))
 			{
+				DESTROY_IF(hasher);
 				continue;
 			}
-			id = issuercert->get_subject(issuercert);
-			hasher->allocate_hash(hasher, id->get_encoding(id), &hash);
 			hasher->destroy(hasher);
 			if (!chunk_equals(hash, response->issuerNameHash))
 			{
+				free(hash.ptr);
 				continue;
 			}
+			free(hash.ptr);
 		}
 		else
 		{

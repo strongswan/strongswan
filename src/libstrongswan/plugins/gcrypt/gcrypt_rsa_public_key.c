@@ -121,11 +121,11 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	gcry_sexp_t in, sig;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, algorithm);
-	if (!hasher)
+	if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
 	{
+		DESTROY_IF(hasher);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",

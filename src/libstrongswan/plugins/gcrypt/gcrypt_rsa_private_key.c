@@ -165,11 +165,11 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 		return FALSE;
 	}
 	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-	if (!hasher)
+	if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
 	{
+		DESTROY_IF(hasher);
 		return FALSE;
 	}
-	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 
 	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",

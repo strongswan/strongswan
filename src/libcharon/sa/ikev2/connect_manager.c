@@ -839,7 +839,10 @@ static chunk_t build_signature(private_connect_manager_t *this,
 	/* signature = SHA1( MID | ME_CONNECTID | ME_ENDPOINT | ME_CONNECTKEY ) */
 	sig_chunk = chunk_cat("cccc", mid_chunk, check->connect_id,
 						  check->endpoint_raw, key_chunk);
-	this->hasher->allocate_hash(this->hasher, sig_chunk, &sig_hash);
+	if (!this->hasher->allocate_hash(this->hasher, sig_chunk, &sig_hash))
+	{
+		sig_hash = chunk_empty;
+	}
 	DBG3(DBG_IKE, "sig_chunk %#B", &sig_chunk);
 	DBG3(DBG_IKE, "sig_hash %#B", &sig_hash);
 

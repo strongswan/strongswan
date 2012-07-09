@@ -554,7 +554,11 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 	/* initial IV = hash(g^xi | g^xr) */
 	data = chunk_cata("cc", g_xi, g_xr);
-	this->hasher->allocate_hash(this->hasher, data, &this->phase1_iv.iv);
+	if (!this->hasher->allocate_hash(this->hasher, data, &this->phase1_iv.iv))
+	{
+		chunk_free(&dh_me);
+		return FALSE;
+	}
 	if (this->phase1_iv.iv.len > this->aead->get_block_size(this->aead))
 	{
 		this->phase1_iv.iv.len = this->aead->get_block_size(this->aead);
@@ -975,10 +979,15 @@ static bool generate_iv(private_keymat_v1_t *this, iv_data_t *iv)
 	else
 	{
 		/* initial phase 2 IV = hash(last_phase1_block | mid) */
-		u_int32_t net = htonl(iv->mid);
-		chunk_t data = chunk_cata("cc", this->phase1_iv.iv,
-								  chunk_from_thing(net));
-		this->hasher->allocate_hash(this->hasher, data, &iv->iv);
+		u_int32_t net;;
+		chunk_t data;
+
+		net = htonl(iv->mid);
+		data = chunk_cata("cc", this->phase1_iv.iv, chunk_from_thing(net));
+		if (!this->hasher->allocate_hash(this->hasher, data, &iv->iv))
+		{
+			return FALSE;
+		}
 		if (iv->iv.len > this->aead->get_block_size(this->aead))
 		{
 			iv->iv.len = this->aead->get_block_size(this->aead);

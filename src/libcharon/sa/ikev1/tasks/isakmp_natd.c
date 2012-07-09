@@ -100,7 +100,11 @@ static chunk_t generate_natd_hash(private_isakmp_natd_t *this,
 	natd_chunk = chunk_cata("cccc", chunk_from_thing(spi_i),
 						    chunk_from_thing(spi_r), host->get_address(host),
 						    chunk_from_thing(port));
-	hasher->allocate_hash(hasher, natd_chunk, &natd_hash);
+	if (!hasher->allocate_hash(hasher, natd_chunk, &natd_hash))
+	{
+		DBG1(DBG_IKE, "creating NAT-D payload hash failed");
+		return chunk_empty;
+	}
 	DBG3(DBG_IKE, "natd_chunk %B", &natd_chunk);
 	DBG3(DBG_IKE, "natd_hash %B", &natd_hash);
 
@@ -154,6 +158,10 @@ static hash_payload_t *build_natd_payload(private_isakmp_natd_t *this, bool src,
 		ike_sa_id_t *ike_sa_id = this->ike_sa->get_id(this->ike_sa);
 		hash = generate_natd_hash(this, ike_sa_id, host);
 	}
+	if (!hash.len)
+	{
+		return NULL;
+	}
 	payload = hash_payload_create(NAT_D_V1);
 	payload->set_hash(payload, hash);
 	chunk_free(&hash);
@@ -171,14 +179,20 @@ static void add_natd_payloads(private_isakmp_natd_t *this, message_t *message)
 	/* destination has to be added first */
 	host = message->get_destination(message);
 	payload = build_natd_payload(this, FALSE, host);
-	message->add_payload(message, (payload_t*)payload);
+	if (payload)
+	{
+		message->add_payload(message, (payload_t*)payload);
+	}
 
 	/* source is added second, compared with IKEv2 we always know the source,
 	 * as these payloads are added in the second Phase 1 exchange or the
 	 * response to the first */
 	host = message->get_source(message);
 	payload = build_natd_payload(this, TRUE, host);
-	message->add_payload(message, (payload_t*)payload);
+	if (payload)
+	{
+		message->add_payload(message, (payload_t*)payload);
+	}
 }
 
 /**
