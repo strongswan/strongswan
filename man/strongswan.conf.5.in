@@ -302,7 +302,7 @@ PAM service to be used for authentication
 Maximum size of an EAP-PEAP packet
 .TP
 .BR charon.plugins.eap-peap.max_message_count " [32]"
-Maximum number of processed EAP-PEAP packets
+Maximum number of processed EAP-PEAP packets (0 = no limit)
 .TP
 .BR charon.plugins.eap-peap.include_length " [no]"
 Include length in non-fragmented EAP-PEAP packets
@@ -394,7 +394,7 @@ Number of sockets (ports) to use, increase for high load
 Maximum size of an EAP-TLS packet
 .TP
 .BR charon.plugins.eap-tls.max_message_count " [32]"
-Maximum number of processed EAP-TLS packets
+Maximum number of processed EAP-TLS packets (0 = no limit)
 .TP
 .BR charon.plugins.eap-tls.include_length " [yes]"
 Include length in non-fragmented EAP-TLS packets
@@ -403,7 +403,7 @@ Include length in non-fragmented EAP-TLS packets
 Maximum size of an EAP-TNC packet
 .TP
 .BR charon.plugins.eap-tnc.max_message_count " [10]"
-Maximum number of processed EAP-TNC packets
+Maximum number of processed EAP-TNC packets (0 = no limit)
 .TP
 .BR charon.plugins.eap-tnc.include_length " [yes]"
 Include length in non-fragmented EAP-TNC packets
@@ -412,7 +412,7 @@ Include length in non-fragmented EAP-TNC packets
 Maximum size of an EAP-TTLS packet
 .TP
 .BR charon.plugins.eap-ttls.max_message_count " [32]"
-Maximum number of processed EAP-TTLS packets
+Maximum number of processed EAP-TTLS packets (0 = no limit)
 .TP
 .BR charon.plugins.eap-ttls.include_length " [yes]"
 Include length in non-fragmented EAP-TTLS packets

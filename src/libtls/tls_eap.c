@@ -320,7 +320,7 @@ METHOD(tls_eap_t, process, status_t,
 	eap_tls_packet_t *pkt;
 	status_t status;
 
-	if (++this->processed > this->max_msg_count)
+	if (this->max_msg_count && ++this->processed > this->max_msg_count)
 	{
 		DBG1(DBG_TLS, "%N packet count exceeded (%d > %d)",
 			 eap_type_names, this->type,
