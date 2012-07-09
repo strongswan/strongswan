@@ -21,8 +21,11 @@
 #include <debug.h>
 #include <library.h>
 
-/** Size limit for a single TLS message */
-#define MAX_TLS_MESSAGE_LEN 65536
+/**
+ * Size limit for a TLS message allowing for worst-case protection overhead
+ * according to section 6.2.3. "Payload Protection" of RFC 5246 TLS 1.2
+ */
+#define TLS_MAX_MESSAGE_LEN		4 * (TLS_MAX_FRAGMENT_LEN + 2048)
 
 typedef struct private_tls_eap_t private_tls_eap_t;
 
@@ -165,7 +168,7 @@ static status_t process_pkt(private_tls_eap_t *this, eap_tls_packet_t *pkt)
 		}
 		msg_len = untoh32(pkt + 1);
 		if (msg_len < pkt_len - sizeof(eap_tls_packet_t) - sizeof(msg_len) ||
-			msg_len > MAX_TLS_MESSAGE_LEN)
+			msg_len > TLS_MAX_MESSAGE_LEN)
 		{
 			DBG1(DBG_TLS, "invalid %N packet length (%u bytes)", eap_type_names,
 				 this->type, msg_len);

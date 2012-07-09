@@ -26,6 +26,12 @@
 #ifndef TLS_H_
 #define TLS_H_
 
+/**
+ * Maximum size of a TLS fragment
+ * as defined by section 6.2.1. "Fragmentation" of RFC 5246 TLS 1.2
+ */
+#define TLS_MAX_FRAGMENT_LEN	16384
+
 typedef enum tls_version_t tls_version_t;
 typedef enum tls_content_type_t tls_content_type_t;
 typedef enum tls_handshake_type_t tls_handshake_type_t;

@@ -18,6 +18,11 @@
 #include <bio/bio_reader.h>
 #include <debug.h>
 
+/**
+ * Maximum size of a TLS handshake message we accept
+ */
+#define TLS_MAX_HANDSHAKE_LEN	65536
+
 typedef struct private_tls_fragmentation_t private_tls_fragmentation_t;
 
 /**
@@ -94,16 +99,6 @@ struct private_tls_fragmentation_t {
 };
 
 /**
- * Maximum size of a TLS fragment
- */
-#define MAX_TLS_FRAGMENT_LEN 16384
-
-/**
- * Maximum size of a TLS handshake message we accept
- */
-#define MAX_TLS_HANDSHAKE_LEN 65536
-
-/**
  * Process a TLS alert
  */
 static status_t process_alert(private_tls_fragmentation_t *this,
@@ -134,7 +129,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 		status_t status;
 		chunk_t data;
 
-		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
+		if (reader->remaining(reader) > TLS_MAX_FRAGMENT_LEN)
 		{
 			DBG1(DBG_TLS, "TLS fragment has invalid length");
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
@@ -151,7 +146,7 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 				return NEED_MORE;
 			}
 			this->type = type;
-			if (len > MAX_TLS_HANDSHAKE_LEN)
+			if (len > TLS_MAX_HANDSHAKE_LEN)
 			{
 				DBG1(DBG_TLS, "TLS handshake exceeds maximum length");
 				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
@@ -207,7 +202,7 @@ static status_t process_application(private_tls_fragmentation_t *this,
 		status_t status;
 		chunk_t data;
 
-		if (reader->remaining(reader) > MAX_TLS_FRAGMENT_LEN)
+		if (reader->remaining(reader) > TLS_MAX_FRAGMENT_LEN)
 		{
 			DBG1(DBG_TLS, "TLS fragment has invalid length");
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
@@ -427,14 +422,14 @@ METHOD(tls_fragmentation_t, build, status_t,
 	if (this->output.len)
 	{
 		*type = this->output_type;
-		if (this->output.len <= MAX_TLS_FRAGMENT_LEN)
+		if (this->output.len <= TLS_MAX_FRAGMENT_LEN)
 		{
 			*data = this->output;
 			this->output = chunk_empty;
 			return NEED_MORE;
 		}
-		*data = chunk_create(this->output.ptr, MAX_TLS_FRAGMENT_LEN);
-		this->output = chunk_clone(chunk_skip(this->output, MAX_TLS_FRAGMENT_LEN));
+		*data = chunk_create(this->output.ptr, TLS_MAX_FRAGMENT_LEN);
+		this->output = chunk_clone(chunk_skip(this->output, TLS_MAX_FRAGMENT_LEN));
 		return NEED_MORE;
 	}
 	return status;
