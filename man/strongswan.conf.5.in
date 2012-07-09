@@ -677,6 +677,9 @@ Number of additional IMC IDs
 .BR libimcv.plugins.imc-test.command " [none]"
 Command to be sent to the Test IMV
 .TP
+.BR libimcv.plugins.imc-test.dummy_size " [0]"
+Size of dummy attribute to be sent to the Test IMV (0 = disabled)
+.TP
 .BR libimcv.plugins.imc-test.retry " [no]"
 Do a handshake retry
 .TP
