@@ -457,7 +457,7 @@ METHOD(tls_t, build, status_t,
 		DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
 					   data.len, this->connection_id);
 		DBG3(DBG_TNC, "%.*s", data.len, data.ptr);
-		*msglen = data.len;
+		*msglen = 0;
 
 		if (data.len > *buflen)
 		{

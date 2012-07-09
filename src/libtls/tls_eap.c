@@ -251,10 +251,14 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 				}
 				kind = "packet";
 			}
-			else
+			else if (this->type != EAP_TNC)
 			{
 				this->first_fragment = TRUE;
 				kind = "final fragment";
+			}
+			else
+			{
+				kind = "packet";
 			}
 			break;
 		default:
@@ -448,7 +452,7 @@ tls_eap_t *tls_eap_create(eap_type_t type, tls_t *tls, size_t frag_size,
 		},
 		.type = type,
 		.is_server = tls->is_server(tls),
-		.first_fragment = TRUE,
+		.first_fragment = (type != EAP_TNC),
 		.frag_size = frag_size,
 		.max_msg_count = max_msg_count,
 		.include_length = include_length,
