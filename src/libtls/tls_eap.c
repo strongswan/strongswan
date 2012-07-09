@@ -150,10 +150,12 @@ METHOD(tls_eap_t, initiate, status_t,
  */
 static status_t process_pkt(private_tls_eap_t *this, eap_tls_packet_t *pkt)
 {
-	u_int32_t msg_len;
 	u_int16_t pkt_len;
+	u_int32_t msg_len;
+	size_t msg_len_offset = 0;
 
 	pkt_len = untoh16(&pkt->length);
+
 	if (pkt->flags & EAP_TLS_LENGTH)
 	{
 		if (pkt_len < sizeof(eap_tls_packet_t) + sizeof(msg_len))
@@ -169,11 +171,11 @@ static status_t process_pkt(private_tls_eap_t *this, eap_tls_packet_t *pkt)
 				 this->type, msg_len);
 			return FAILED;
 		}
-		return this->tls->process(this->tls, (char*)(pkt + 1) + sizeof(msg_len),
-						pkt_len - sizeof(eap_tls_packet_t) - sizeof(msg_len));
+		msg_len_offset = sizeof(msg_len);
 	}
-	return this->tls->process(this->tls, (char*)(pkt + 1),
-							  pkt_len - sizeof(eap_tls_packet_t));
+
+	return this->tls->process(this->tls, (char*)(pkt + 1) + msg_len_offset,
+					   pkt_len - sizeof(eap_tls_packet_t) - msg_len_offset);
 }
 
 /**
@@ -183,7 +185,7 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 {
 	char buf[this->frag_size];
 	eap_tls_packet_t *pkt;
-	size_t len, reclen;
+	size_t len, reclen, msg_len_offset;
 	status_t status;
 	char *kind;
 
@@ -215,15 +217,16 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 	if (this->first_fragment)
 	{
 		len = sizeof(buf) - sizeof(eap_tls_packet_t) - sizeof(u_int32_t);
-		status = this->tls->build(this->tls, buf + sizeof(eap_tls_packet_t) +
-								  sizeof(u_int32_t), &len, &reclen);
+		msg_len_offset = sizeof(u_int32_t);
 	}
 	else
 	{
 		len = sizeof(buf) - sizeof(eap_tls_packet_t);
-		status = this->tls->build(this->tls, buf + sizeof(eap_tls_packet_t),
-								  &len, &reclen);
+		msg_len_offset = 0;
 	}
+	status = this->tls->build(this->tls, buf + sizeof(eap_tls_packet_t) +
+										 msg_len_offset, &len, &reclen);
+
 	switch (status)
 	{
 		case NEED_MORE:
