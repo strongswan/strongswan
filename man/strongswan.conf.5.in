@@ -399,14 +399,8 @@ Maximum number of processed EAP-TLS packets (0 = no limit)
 .BR charon.plugins.eap-tls.include_length " [yes]"
 Include length in non-fragmented EAP-TLS packets
 .TP
-.BR charon.plugins.eap-tnc.fragment_size " [50000]"
-Maximum size of an EAP-TNC packet
-.TP
 .BR charon.plugins.eap-tnc.max_message_count " [10]"
 Maximum number of processed EAP-TNC packets (0 = no limit)
-.TP
-.BR charon.plugins.eap-tnc.include_length " [yes]"
-Include length in non-fragmented EAP-TNC packets
 .TP
 .BR charon.plugins.eap-ttls.fragment_size " [1024]"
 Maximum size of an EAP-TTLS packet

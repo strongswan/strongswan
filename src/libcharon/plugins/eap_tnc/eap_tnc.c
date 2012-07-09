@@ -21,6 +21,16 @@
 #include <debug.h>
 #include <daemon.h>
 
+/**
+ * Maximum size of an EAP-TNC message
+ */
+#define EAP_TNC_MAX_MESSAGE_LEN 65535
+
+/**
+ * Maximum number of EAP-TNC messages allowed
+ */
+#define EAP_TNC_MAX_MESSAGE_COUNT 10
+
 typedef struct private_eap_tnc_t private_eap_tnc_t;
 
 /**
@@ -38,12 +48,6 @@ struct private_eap_tnc_t {
 	 */
 	tls_eap_t *tls_eap;
 };
-
-
-/** Maximum number of EAP-TNC messages/fragments allowed */
-#define MAX_MESSAGE_COUNT 10
-/** Default size of a EAP-TNC fragment */
-#define MAX_FRAGMENT_LEN 50000
 
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_tnc_t *this, eap_payload_t **out)
@@ -147,12 +151,9 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		},
 	);
 
-	frag_size = lib->settings->get_int(lib->settings,
-					"%s.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN,
-					charon->name);
 	max_msg_count = lib->settings->get_int(lib->settings,
-					"%s.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT,
-					charon->name);
+					"%s.plugins.eap-tnc.max_message_count",
+					EAP_TNC_MAX_MESSAGE_COUNT, charon->name);
 	include_length = lib->settings->get_bool(lib->settings,
 					"%s.plugins.eap-tnc.include_length", TRUE, charon->name);
 	protocol = lib->settings->get_str(lib->settings,
@@ -176,7 +177,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		return NULL;
 	}
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server);
-	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size,
+	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs,
+											 EAP_TNC_MAX_MESSAGE_LEN,
 											 max_msg_count, include_length);
 	if (!this->tls_eap)
 	{
