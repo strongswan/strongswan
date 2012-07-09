@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -26,6 +28,11 @@
 #endif /* HAVE_PRCTL */
 
 #include <debug.h>
+
+#if !defined(HAVE_GETPWNAM_R) || !defined(HAVE_GETGRNAM_R)
+# include <threading/mutex.h>
+# define EMULATE_R_FUNCS
+#endif
 
 typedef struct private_capabilities_t private_capabilities_t;
 
@@ -58,6 +65,13 @@ struct private_capabilities_t {
 #ifdef CAPABILITIES_NATIVE
 	struct __user_cap_data_struct caps[2];
 #endif /* CAPABILITIES_NATIVE */
+
+#ifdef EMULATE_R_FUNCS
+	/**
+	 * mutex to emulate get(pw|gr)nam_r functions
+	 */
+	mutex_t *mutex;
+#endif
 };
 
 METHOD(capabilities_t, keep, void,
@@ -109,45 +123,69 @@ METHOD(capabilities_t, set_gid, void,
 METHOD(capabilities_t, resolve_uid, bool,
 	private_capabilities_t *this, char *username)
 {
-	const char *errstr = "user not found";
-	struct passwd passwd, *pwp;
-	char buf[1024];
+	struct passwd *pwp;
 	int err;
 
+#ifdef HAVE_GETPWNAM_R
+	struct passwd passwd;
+	char buf[1024];
+
 	err = getpwnam_r(username, &passwd, buf, sizeof(buf), &pwp);
-	if (pwp == NULL)
+	if (pwp)
 	{
-		if (err)
-		{
-			errstr = strerror(err);
-		}
-		DBG1(DBG_LIB, "resolving user '%s' failed: %s", username, errstr);
-		return FALSE;
+		this->uid = pwp->pw_uid;
 	}
-	this->uid = pwp->pw_uid;
-	return TRUE;
+#else /* HAVE GETPWNAM_R */
+	this->mutex->lock(this->mutex);
+	pwp = getpwnam(username);
+	if (pwp)
+	{
+		this->uid = pwp->pw_uid;
+	}
+	err = errno;
+	this->mutex->unlock(this->mutex);
+#endif /* HAVE GETPWNAM_R */
+	if (pwp)
+	{
+		return TRUE;
+	}
+	DBG1(DBG_LIB, "resolving user '%s' failed: %s", username,
+		 err ? strerror(err) : "user not found");
+	return FALSE;
 }
 
 METHOD(capabilities_t, resolve_gid, bool,
 	private_capabilities_t *this, char *groupname)
 {
-	const char *errstr = "group not found";
-	struct group group, *grp;
-	char buf[1024];
+	struct group *grp;
 	int err;
 
+#ifdef HAVE_GETGRNAM_R
+	struct group group;
+	char buf[1024];
+
 	err = getgrnam_r(groupname, &group, buf, sizeof(buf), &grp);
-	if (grp == NULL)
+	if (grp)
 	{
-		if (err)
-		{
-			errstr = strerror(err);
-		}
-		DBG1(DBG_LIB, "resolving user '%s' failed: %s", groupname, errstr);
-		return FALSE;
+		this->gid = grp->gr_gid;
 	}
-	this->gid = grp->gr_gid;
-	return TRUE;
+#else /* HAVE_GETGRNAM_R */
+	this->mutex->lock(this->mutex);
+	grp = getgrnam(groupname);
+	if (grp)
+	{
+		this->gid = grp->gr_gid;
+	}
+	err = errno;
+	this->mutex->unlock(this->mutex);
+#endif /* HAVE_GETGRNAM_R */
+	if (grp)
+	{
+		return TRUE;
+	}
+	DBG1(DBG_LIB, "resolving user '%s' failed: %s", groupname,
+		 err ? strerror(err) : "group not found");
+	return FALSE;
 }
 
 METHOD(capabilities_t, drop, bool,
@@ -205,6 +243,9 @@ METHOD(capabilities_t, drop, bool,
 METHOD(capabilities_t, destroy, void,
 	private_capabilities_t *this)
 {
+#ifdef EMULATE_R_FUNCS
+	this->mutex->destroy(this->mutex);
+#endif /* EMULATE_R_FUNCS */
 #ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
 #endif /* CAPABILITIES_LIBCAP */
@@ -241,6 +282,10 @@ capabilities_t *capabilities_create()
 		keep(this, CAP_SYS_NICE);
 	}
 #endif /* CAPABILITIES */
+
+#ifdef EMULATE_R_FUNCS
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+#endif /* EMULATE_R_FUNCS */
 
 	return &this->public;
 }
