@@ -84,7 +84,7 @@ METHOD(hasher_t, get_hash_size, size_t,
 /**
  * Save the Operation state to host memory
  */
-static void save_state(private_pkcs11_hasher_t *this)
+static bool save_state(private_pkcs11_hasher_t *this)
 {
 	CK_RV rv;
 
@@ -110,20 +110,20 @@ static void save_state(private_pkcs11_hasher_t *this)
 				continue;
 			case CKR_OK:
 				this->have_state = TRUE;
-				return;
+				return TRUE;
 			default:
 				break;
 		}
 		break;
 	}
 	DBG1(DBG_CFG, "C_GetOperationState() failed: %N", ck_rv_names, rv);
-	abort();
+	return FALSE;
 }
 
 /**
  * Load the Operation state from host memory
  */
-static void load_state(private_pkcs11_hasher_t *this)
+static bool load_state(private_pkcs11_hasher_t *this)
 {
 	CK_RV rv;
 
@@ -132,9 +132,10 @@ static void load_state(private_pkcs11_hasher_t *this)
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_SetOperationState() failed: %N", ck_rv_names, rv);
-		abort();
+		return FALSE;
 	}
 	this->have_state = FALSE;
+	return TRUE;
 }
 
 METHOD(hasher_t, reset, void,
@@ -143,7 +144,7 @@ METHOD(hasher_t, reset, void,
 	this->have_state = FALSE;
 }
 
-METHOD(hasher_t, get_hash, void,
+METHOD(hasher_t, get_hash, bool,
 	private_pkcs11_hasher_t *this, chunk_t chunk, u_int8_t *hash)
 {
 	CK_RV rv;
@@ -152,7 +153,11 @@ METHOD(hasher_t, get_hash, void,
 	this->mutex->lock(this->mutex);
 	if (this->have_state)
 	{
-		load_state(this);
+		if (!load_state(this))
+		{
+			this->mutex->unlock(this->mutex);
+			return FALSE;
+		}
 	}
 	else
 	{
@@ -160,7 +165,8 @@ METHOD(hasher_t, get_hash, void,
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestInit() failed: %N", ck_rv_names, rv);
-			abort();
+			this->mutex->unlock(this->mutex);
+			return FALSE;
 		}
 	}
 	if (chunk.len)
@@ -169,7 +175,8 @@ METHOD(hasher_t, get_hash, void,
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestUpdate() failed: %N", ck_rv_names, rv);
-			abort();
+			this->mutex->unlock(this->mutex);
+			return FALSE;
 		}
 	}
 	if (hash)
@@ -180,14 +187,20 @@ METHOD(hasher_t, get_hash, void,
 		if (rv != CKR_OK)
 		{
 			DBG1(DBG_CFG, "C_DigestFinal() failed: %N", ck_rv_names, rv);
-			abort();
+			this->mutex->unlock(this->mutex);
+			return FALSE;
 		}
 	}
 	else
 	{
-		save_state(this);
+		if (!save_state(this))
+		{
+			this->mutex->unlock(this->mutex);
+			return FALSE;
+		}
 	}
 	this->mutex->unlock(this->mutex);
+	return TRUE;
 }
 
 METHOD(hasher_t, allocate_hash, void,

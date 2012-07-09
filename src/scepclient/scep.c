@@ -131,7 +131,11 @@ chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 	hasher_t *hasher;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, pkcs10, digest.ptr);
+	if (!hasher || !hasher->get_hash(hasher, pkcs10, digest.ptr))
+	{
+		DESTROY_IF(hasher);
+		return chunk_empty;
+	}
 	hasher->destroy(hasher);
 
 	return chunk_to_hex(digest, NULL, FALSE);
@@ -157,8 +161,11 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 						asn1_bitstring("m", keyEncoding));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, keyInfo, digest.ptr);
-	hasher->destroy(hasher);
+	if (!hasher || !hasher->get_hash(hasher, keyInfo, digest.ptr))
+	{
+		memset(digest.ptr, 0, digest.len);
+	}
+	DESTROY_IF(hasher);
 	free(keyInfo.ptr);
 
 	/* is the most significant bit of the digest set? */

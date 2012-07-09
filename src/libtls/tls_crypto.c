@@ -1210,20 +1210,20 @@ static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 		char buf[HASH_SIZE_MD5 + HASH_SIZE_SHA1];
 
 		md5 = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-		if (!md5)
+		if (!md5 || !md5->get_hash(md5, data, buf))
 		{
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_MD5);
+			DESTROY_IF(md5);
 			return FALSE;
 		}
-		md5->get_hash(md5, data, buf);
 		md5->destroy(md5);
 		sha1 = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-		if (!sha1)
+		if (!sha1 || !sha1->get_hash(sha1, data, buf + HASH_SIZE_MD5))
 		{
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names, HASH_SHA1);
+			DESTROY_IF(sha1);
 			return FALSE;
 		}
-		sha1->get_hash(sha1, data, buf + HASH_SIZE_MD5);
 		sha1->destroy(sha1);
 
 		*hash = chunk_clone(chunk_from_thing(buf));

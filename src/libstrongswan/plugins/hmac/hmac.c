@@ -72,25 +72,18 @@ METHOD(mac_t, get_mac, bool,
 	if (out == NULL)
 	{
 		/* append data to inner */
-		this->h->get_hash(this->h, data, NULL);
+		return this->h->get_hash(this->h, data, NULL);
 	}
-	else
-	{
-		/* append and do outer hash */
-		inner.ptr = buffer;
-		inner.len = this->h->get_hash_size(this->h);
 
-		/* complete inner */
-		this->h->get_hash(this->h, data, buffer);
+	/* append and do outer hash */
+	inner.ptr = buffer;
+	inner.len = this->h->get_hash_size(this->h);
 
-		/* do outer */
-		this->h->get_hash(this->h, this->opaded_key, NULL);
-		this->h->get_hash(this->h, inner, out);
-
-		/* reinit for next call */
-		this->h->get_hash(this->h, this->ipaded_key, NULL);
-	}
-	return TRUE;
+	/* complete inner, do outer and reinit for next call */
+	return this->h->get_hash(this->h, data, buffer) &&
+		   this->h->get_hash(this->h, this->opaded_key, NULL) &&
+		   this->h->get_hash(this->h, inner, out) &&
+		   this->h->get_hash(this->h, this->ipaded_key, NULL);
 }
 
 METHOD(mac_t, get_mac_size, size_t,
@@ -110,7 +103,10 @@ METHOD(mac_t, set_key, bool,
 	if (key.len > this->b)
 	{
 		/* if key is too long, it will be hashed */
-		this->h->get_hash(this->h, key, buffer);
+		if (!this->h->get_hash(this->h, key, buffer))
+		{
+			return FALSE;
+		}
 	}
 	else
 	{
@@ -127,9 +123,7 @@ METHOD(mac_t, set_key, bool,
 
 	/* begin hashing of inner pad */
 	this->h->reset(this->h);
-	this->h->get_hash(this->h, this->ipaded_key, NULL);
-
-	return TRUE;
+	return this->h->get_hash(this->h, this->ipaded_key, NULL);
 }
 
 METHOD(mac_t, destroy, void,

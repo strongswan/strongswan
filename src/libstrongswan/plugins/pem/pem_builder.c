@@ -104,15 +104,21 @@ static status_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg,
 	}
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
-	hasher->get_hash(hasher, passphrase, NULL);
-	hasher->get_hash(hasher, salt, hash.ptr);
+	if (!hasher->get_hash(hasher, passphrase, NULL) ||
+		!hasher->get_hash(hasher, salt, hash.ptr))
+	{
+		return FAILED;
+	}
 	memcpy(key.ptr, hash.ptr, hash.len);
 
 	if (key.len > hash.len)
 	{
-		hasher->get_hash(hasher, hash, NULL);
-		hasher->get_hash(hasher, passphrase, NULL);
-		hasher->get_hash(hasher, salt, hash.ptr);
+		if (!hasher->get_hash(hasher, hash, NULL) ||
+			!hasher->get_hash(hasher, passphrase, NULL) ||
+			!hasher->get_hash(hasher, salt, hash.ptr))
+		{
+			return FAILED;
+		}
 		memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
 	}
 	hasher->destroy(hasher);

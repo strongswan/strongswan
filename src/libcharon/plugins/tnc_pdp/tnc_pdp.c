@@ -231,8 +231,12 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 	while (c < data.ptr + data.len)
 	{
 		/* b(i) = MD5(S + c(i-1)) */
-		this->hasher->get_hash(this->hasher, this->secret, NULL);
-		this->hasher->get_hash(this->hasher, seed, b);
+		if (!this->hasher->get_hash(this->hasher, this->secret, NULL) ||
+			!this->hasher->get_hash(this->hasher, seed, b))
+		{
+			free(data.ptr);
+			return chunk_empty;
+		}
 
 		/* c(i) = b(i) xor p(1) */
 		memxor(c, b, HASH_SIZE_MD5);

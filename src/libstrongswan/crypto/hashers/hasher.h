@@ -67,6 +67,7 @@ extern enum_name_t *hash_algorithm_names;
  * Generic interface for all hash functions.
  */
 struct hasher_t {
+
 	/**
 	 * Hash data and write it in the buffer.
 	 *
@@ -79,8 +80,10 @@ struct hasher_t {
 	 *
 	 * @param data		data to hash
 	 * @param hash		pointer where the hash will be written
+	 * @return			TRUE if hash created successfully
 	 */
-	void (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
+	__attribute__((warn_unused_result))
+	bool (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
 
 	/**
 	 * Hash data and allocate space for the hash.

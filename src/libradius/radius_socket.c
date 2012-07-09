@@ -260,8 +260,11 @@ static chunk_t decrypt_mppe_key(private_radius_socket_t *this, u_int16_t salt,
 	while (c < C.ptr + C.len)
 	{
 		/* b(i) = MD5(S + c(i-1)) */
-		this->hasher->get_hash(this->hasher, this->secret, NULL);
-		this->hasher->get_hash(this->hasher, seed, p);
+		if (!this->hasher->get_hash(this->hasher, this->secret, NULL) ||
+			!this->hasher->get_hash(this->hasher, seed, p))
+		{
+			return chunk_empty;
+		}
 
 		/* p(i) = b(i) xor c(1) */
 		memxor(p, c, HASH_SIZE_MD5);

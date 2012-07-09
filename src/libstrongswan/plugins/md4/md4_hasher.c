@@ -268,7 +268,7 @@ static void MD4Final (private_md4_hasher_t *this, u_int8_t digest[16])
 
 
 
-METHOD(hasher_t, get_hash, void,
+METHOD(hasher_t, get_hash, bool,
 	private_md4_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
 	MD4Update(this, chunk.ptr, chunk.len);
@@ -277,6 +277,7 @@ METHOD(hasher_t, get_hash, void,
 		MD4Final(this, buffer);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, allocate_hash, void,

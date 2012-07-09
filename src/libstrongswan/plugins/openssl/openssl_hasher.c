@@ -102,15 +102,22 @@ METHOD(hasher_t, reset, void,
 	EVP_DigestInit_ex(this->ctx, this->hasher, NULL);
 }
 
-METHOD(hasher_t, get_hash, void,
+METHOD(hasher_t, get_hash, bool,
 	private_openssl_hasher_t *this, chunk_t chunk, u_int8_t *hash)
 {
-	EVP_DigestUpdate(this->ctx, chunk.ptr, chunk.len);
+	if (EVP_DigestUpdate(this->ctx, chunk.ptr, chunk.len) != 1)
+	{
+		return FALSE;
+	}
 	if (hash)
 	{
-		EVP_DigestFinal_ex(this->ctx, hash, NULL);
+		if (EVP_DigestFinal_ex(this->ctx, hash, NULL) != 1)
+		{
+			return FALSE;
+		}
 		reset(this);
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, allocate_hash, void,

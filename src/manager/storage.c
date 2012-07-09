@@ -58,7 +58,11 @@ METHOD(storage_t, login, int,
 	data = chunk_alloca(username_len + password_len);
 	memcpy(data.ptr, username, username_len);
 	memcpy(data.ptr + username_len, password, password_len);
-	hasher->get_hash(hasher, data, hash.ptr);
+	if (!hasher->get_hash(hasher, data, hash.ptr))
+	{
+		hasher->destroy(hasher);
+		return 0;
+	}
 	hasher->destroy(hasher);
 	hex_str = chunk_to_hex(hash, NULL, FALSE);
 

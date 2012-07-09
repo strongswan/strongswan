@@ -293,12 +293,18 @@ static bool pbkdf1(hasher_t *hasher, chunk_t password, chunk_t salt,
 	u_int64_t i;
 
 	hash = chunk_alloca(hasher->get_hash_size(hasher));
-	hasher->get_hash(hasher, password, NULL);
-	hasher->get_hash(hasher, salt, hash.ptr);
+	if (!hasher->get_hash(hasher, password, NULL) ||
+		!hasher->get_hash(hasher, salt, hash.ptr))
+	{
+		return FALSE;
+	}
 
 	for (i = 1; i < iterations; i++)
 	{
-		hasher->get_hash(hasher, hash, hash.ptr);
+		if (!hasher->get_hash(hasher, hash, hash.ptr))
+		{
+			return FALSE;
+		}
 	}
 
 	memcpy(key.ptr, hash.ptr, key.len);

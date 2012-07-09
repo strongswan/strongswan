@@ -688,8 +688,10 @@ static u_int bench_hasher(private_crypto_tester_t *this,
 		start_timing(&start);
 		while (end_timing(&start) < this->bench_time)
 		{
-			hasher->get_hash(hasher, buf, hash);
-			runs++;
+			if (hasher->get_hash(hasher, buf, hash))
+			{
+				runs++;
+			}
 		}
 		free(buf.ptr);
 		hasher->destroy(hasher);
@@ -744,7 +746,10 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		}
 		/* hash to existing buffer */
 		memset(hash.ptr, 0, hash.len);
-		hasher->get_hash(hasher, data, hash.ptr);
+		if (!hasher->get_hash(hasher, data, hash.ptr))
+		{
+			failed = TRUE;
+		}
 		if (!memeq(vector->hash, hash.ptr, hash.len))
 		{
 			failed = TRUE;
@@ -754,9 +759,9 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		{
 			memset(hash.ptr, 0, hash.len);
 			hasher->allocate_hash(hasher, chunk_create(data.ptr, 1), NULL);
-			hasher->get_hash(hasher, chunk_create(data.ptr + 1, 1), NULL);
-			hasher->get_hash(hasher, chunk_skip(data, 2), hash.ptr);
-			if (!memeq(vector->hash, hash.ptr, hash.len))
+			if (!hasher->get_hash(hasher, chunk_create(data.ptr + 1, 1), NULL) ||
+				!hasher->get_hash(hasher, chunk_skip(data, 2), hash.ptr) ||
+				!memeq(vector->hash, hash.ptr, hash.len))
 			{
 				failed = TRUE;
 			}

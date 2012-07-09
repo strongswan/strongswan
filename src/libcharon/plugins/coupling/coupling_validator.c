@@ -70,7 +70,11 @@ static bool get_cert_hash(private_coupling_validator_t *this,
 	{
 		return FALSE;
 	}
-	this->hasher->get_hash(this->hasher, encoding, buf);
+	if (!this->hasher->get_hash(this->hasher, encoding, buf))
+	{
+		free(encoding.ptr);
+		return FALSE;
+	}
 	free(encoding.ptr);
 	chunk_to_hex(chunk_create(buf, this->hasher->get_hash_size(this->hasher)),
 				 hex, FALSE);

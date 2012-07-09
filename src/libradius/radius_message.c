@@ -332,8 +332,11 @@ METHOD(radius_message_t, sign, bool,
 
 		/* build Response-Authenticator */
 		msg = chunk_create((u_char*)this->msg, ntohs(this->msg->length));
-		hasher->get_hash(hasher, msg, NULL);
-		hasher->get_hash(hasher, secret, this->msg->authenticator);
+		if (!hasher->get_hash(hasher, msg, NULL) ||
+			!hasher->get_hash(hasher, secret, this->msg->authenticator))
+		{
+			return FALSE;
+		}
 	}
 	return TRUE;
 }
@@ -364,9 +367,9 @@ METHOD(radius_message_t, verify, bool,
 		}
 
 		/* verify Response-Authenticator */
-		hasher->get_hash(hasher, msg, NULL);
-		hasher->get_hash(hasher, secret, buf);
-		if (!memeq(buf, res_auth, HASH_SIZE_MD5))
+		if (!hasher->get_hash(hasher, msg, NULL) ||
+			!hasher->get_hash(hasher, secret, buf) ||
+			!memeq(buf, res_auth, HASH_SIZE_MD5))
 		{
 			DBG1(DBG_CFG, "RADIUS Response-Authenticator verification failed");
 			return FALSE;

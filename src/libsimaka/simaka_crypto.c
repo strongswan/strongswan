@@ -124,7 +124,10 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 
 	/* For SIM: MK = SHA1(Identity|n*Kc|NONCE_MT|Version List|Selected Version)
 	 * For AKA: MK = SHA1(Identity|IK|CK) */
-	this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL);
+	if (!this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL))
+	{
+		return FALSE;
+	}
 	this->hasher->allocate_hash(this->hasher, data, mk);
 	DBG3(DBG_LIB, "MK %B", mk);
 
@@ -207,10 +210,13 @@ METHOD(simaka_crypto_t, derive_keys_reauth_msk, bool,
 	chunk_t str;
 	int i;
 
-	this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL);
-	this->hasher->get_hash(this->hasher, counter, NULL);
-	this->hasher->get_hash(this->hasher, nonce_s, NULL);
-	this->hasher->get_hash(this->hasher, mk, xkey);
+	if (!this->hasher->get_hash(this->hasher, id->get_encoding(id), NULL) ||
+		!this->hasher->get_hash(this->hasher, counter, NULL) ||
+		!this->hasher->get_hash(this->hasher, nonce_s, NULL) ||
+		!this->hasher->get_hash(this->hasher, mk, xkey))
+	{
+		return FALSE;
+	}
 
 	/* MSK | EMSK = prf() | prf() | prf() | prf() */
 	if (!this->prf->set_key(this->prf, chunk_create(xkey, sizeof(xkey))))

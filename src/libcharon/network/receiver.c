@@ -171,8 +171,8 @@ static void send_notify(message_t *request, int major, exchange_type_t exchange,
 /**
  * build a cookie
  */
-static chunk_t cookie_build(private_receiver_t *this, message_t *message,
-							u_int32_t t, chunk_t secret)
+static bool cookie_build(private_receiver_t *this, message_t *message,
+						 u_int32_t t, chunk_t secret, chunk_t *cookie)
 {
 	u_int64_t spi = message->get_initiator_spi(message);
 	host_t *ip = message->get_source(message);
@@ -182,8 +182,12 @@ static chunk_t cookie_build(private_receiver_t *this, message_t *message,
 	input = chunk_cata("cccc", ip->get_address(ip), chunk_from_thing(spi),
 					  chunk_from_thing(t), secret);
 	hash = chunk_alloca(this->hasher->get_hash_size(this->hasher));
-	this->hasher->get_hash(this->hasher, input, hash.ptr);
-	return chunk_cat("cc", chunk_from_thing(t), hash);
+	if (!this->hasher->get_hash(this->hasher, input, hash.ptr))
+	{
+		return FALSE;
+	}
+	*cookie = chunk_cat("cc", chunk_from_thing(t), hash);
+	return TRUE;
 }
 
 /**
@@ -218,7 +222,10 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	}
 
 	/* compare own calculation against received */
-	reference = cookie_build(this, message, t, secret);
+	if (!cookie_build(this, message, t, secret, &reference))
+	{
+		return FALSE;
+	}
 	if (chunk_equals(reference, cookie))
 	{
 		chunk_free(&reference);
@@ -311,11 +318,14 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 	{
 		chunk_t cookie;
 
-		cookie = cookie_build(this, message, now - this->secret_offset,
-							  chunk_from_thing(this->secret));
 		DBG2(DBG_NET, "received packet from: %#H to %#H",
 			 message->get_source(message),
 			 message->get_destination(message));
+		if (!cookie_build(this, message, now - this->secret_offset,
+						  chunk_from_thing(this->secret), &cookie))
+		{
+			return TRUE;
+		}
 		DBG2(DBG_NET, "sending COOKIE notify to %H",
 			 message->get_source(message));
 		send_notify(message, IKEV2_MAJOR_VERSION, IKE_SA_INIT, COOKIE, cookie);

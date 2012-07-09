@@ -49,7 +49,7 @@ METHOD(hasher_t, reset, void,
 	gcry_md_reset(this->hd);
 }
 
-METHOD(hasher_t, get_hash, void,
+METHOD(hasher_t, get_hash, bool,
 	private_gcrypt_hasher_t *this, chunk_t chunk, u_int8_t *hash)
 {
 	gcry_md_write(this->hd, chunk.ptr, chunk.len);
@@ -58,6 +58,7 @@ METHOD(hasher_t, get_hash, void,
 		memcpy(hash, gcry_md_read(this->hd, 0), get_hash_size(this));
 		gcry_md_reset(this->hd);
 	}
+	return TRUE;
 }
 
 METHOD(hasher_t, allocate_hash, void,
