@@ -426,38 +426,46 @@ static void sha512_final(private_sha512_hasher_t *ctx)
 	} while(++j < 8);
 }
 
-METHOD(hasher_t, reset224, void,
+METHOD(hasher_t, reset224, bool,
 	private_sha256_hasher_t *this)
 {
 	memcpy(&this->sha_H[0], &sha224_hashInit[0], sizeof(this->sha_H));
 	this->sha_blocks = 0;
 	this->sha_bufCnt = 0;
+
+	return TRUE;
 }
 
-METHOD(hasher_t, reset256, void,
+METHOD(hasher_t, reset256, bool,
 	private_sha256_hasher_t *this)
 {
 	memcpy(&this->sha_H[0], &sha256_hashInit[0], sizeof(this->sha_H));
 	this->sha_blocks = 0;
 	this->sha_bufCnt = 0;
+
+	return TRUE;
 }
 
-METHOD(hasher_t, reset384, void,
+METHOD(hasher_t, reset384, bool,
 	private_sha512_hasher_t *this)
 {
 	memcpy(&this->sha_H[0], &sha384_hashInit[0], sizeof(this->sha_H));
 	this->sha_blocks = 0;
 	this->sha_blocksMSB = 0;
 	this->sha_bufCnt = 0;
+
+	return TRUE;
 }
 
-METHOD(hasher_t, reset512, void,
+METHOD(hasher_t, reset512, bool,
 	private_sha512_hasher_t *this)
 {
 	memcpy(&this->sha_H[0], &sha512_hashInit[0], sizeof(this->sha_H));
 	this->sha_blocks = 0;
 	this->sha_blocksMSB = 0;
 	this->sha_bufCnt = 0;
+
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash224, bool,

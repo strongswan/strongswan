@@ -175,7 +175,7 @@ static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 	}
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_sha1_hasher_t *this)
 {
 	this->state[0] = 0x67452301;
@@ -185,6 +185,8 @@ METHOD(hasher_t, reset, void,
 	this->state[4] = 0xC3D2E1F0;
 	this->count[0] = 0;
 	this->count[1] = 0;
+
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash, bool,

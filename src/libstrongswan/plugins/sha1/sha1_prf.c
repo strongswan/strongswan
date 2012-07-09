@@ -100,7 +100,11 @@ METHOD(prf_t, set_key, bool,
 	int i, rounds;
 	u_int32_t *iv = (u_int32_t*)key.ptr;
 
-	this->hasher->public.hasher_interface.reset(&this->hasher->public.hasher_interface);
+	if (!this->hasher->public.hasher_interface.reset(
+										&this->hasher->public.hasher_interface))
+	{
+		return FALSE;
+	}
 	rounds = min(key.len/sizeof(u_int32_t), sizeof(this->hasher->state));
 	for (i = 0; i < rounds; i++)
 	{

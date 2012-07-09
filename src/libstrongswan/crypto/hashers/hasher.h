@@ -108,8 +108,11 @@ struct hasher_t {
 
 	/**
 	 * Resets the hasher's state.
+	 *
+	 * @return			TRUE if hasher reset successfully
 	 */
-	void (*reset) (hasher_t *this);
+	__attribute__((warn_unused_result))
+	bool (*reset) (hasher_t *this);
 
 	/**
 	 * Destroys a hasher object.

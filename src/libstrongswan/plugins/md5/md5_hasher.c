@@ -299,44 +299,7 @@ static void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
 	}
 }
 
-METHOD(hasher_t, get_hash, bool,
-	private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
-{
-	MD5Update(this, chunk.ptr, chunk.len);
-	if (buffer != NULL)
-	{
-		MD5Final(this, buffer);
-		this->public.hasher_interface.reset(&(this->public.hasher_interface));
-	}
-	return TRUE;
-}
-
-METHOD(hasher_t, allocate_hash, bool,
-	private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
-{
-	chunk_t allocated_hash;
-
-	MD5Update(this, chunk.ptr, chunk.len);
-	if (hash != NULL)
-	{
-		allocated_hash.ptr = malloc(HASH_SIZE_MD5);
-		allocated_hash.len = HASH_SIZE_MD5;
-
-		MD5Final(this, allocated_hash.ptr);
-		this->public.hasher_interface.reset(&(this->public.hasher_interface));
-
-		*hash = allocated_hash;
-	}
-	return TRUE;
-}
-
-METHOD(hasher_t, get_hash_size, size_t,
-	private_md5_hasher_t *this)
-{
-	return HASH_SIZE_MD5;
-}
-
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_md5_hasher_t *this)
 {
 	this->state[0] = 0x67452301;
@@ -345,6 +308,39 @@ METHOD(hasher_t, reset, void,
 	this->state[3] = 0x10325476;
 	this->count[0] = 0;
 	this->count[1] = 0;
+
+	return TRUE;
+}
+
+METHOD(hasher_t, get_hash, bool,
+	private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+{
+	MD5Update(this, chunk.ptr, chunk.len);
+	if (buffer != NULL)
+	{
+		MD5Final(this, buffer);
+		reset(this);
+	}
+	return TRUE;
+}
+
+METHOD(hasher_t, allocate_hash, bool,
+	private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
+{
+	MD5Update(this, chunk.ptr, chunk.len);
+	if (hash != NULL)
+	{
+		*hash = chunk_alloc(HASH_SIZE_MD5);
+		MD5Final(this, hash->ptr);
+		reset(this);
+	}
+	return TRUE;
+}
+
+METHOD(hasher_t, get_hash_size, size_t,
+	private_md5_hasher_t *this)
+{
+	return HASH_SIZE_MD5;
 }
 
 METHOD(hasher_t, destroy, void,

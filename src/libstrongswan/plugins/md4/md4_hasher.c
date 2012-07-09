@@ -266,6 +266,19 @@ static void MD4Final (private_md4_hasher_t *this, u_int8_t digest[16])
 	}
 }
 
+METHOD(hasher_t, reset, bool,
+	private_md4_hasher_t *this)
+{
+	this->state[0] = 0x67452301;
+	this->state[1] = 0xefcdab89;
+	this->state[2] = 0x98badcfe;
+	this->state[3] = 0x10325476;
+	this->count[0] = 0;
+	this->count[1] = 0;
+
+	return TRUE;
+}
+
 METHOD(hasher_t, get_hash, bool,
 	private_md4_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
@@ -273,7 +286,7 @@ METHOD(hasher_t, get_hash, bool,
 	if (buffer != NULL)
 	{
 		MD4Final(this, buffer);
-		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+		reset(this);
 	}
 	return TRUE;
 }
@@ -290,7 +303,7 @@ METHOD(hasher_t, allocate_hash, bool,
 		allocated_hash.len = HASH_SIZE_MD4;
 
 		MD4Final(this, allocated_hash.ptr);
-		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+		reset(this);
 
 		*hash = allocated_hash;
 	}
@@ -301,17 +314,6 @@ METHOD(hasher_t, get_hash_size, size_t,
 	private_md4_hasher_t *this)
 {
 	return HASH_SIZE_MD4;
-}
-
-METHOD(hasher_t, reset, void,
-	private_md4_hasher_t *this)
-{
-	this->state[0] = 0x67452301;
-	this->state[1] = 0xefcdab89;
-	this->state[2] = 0x98badcfe;
-	this->state[3] = 0x10325476;
-	this->count[0] = 0;
-	this->count[1] = 0;
 }
 
 METHOD(hasher_t, destroy, void,

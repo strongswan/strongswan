@@ -43,10 +43,11 @@ METHOD(hasher_t, get_hash_size, size_t,
 	return gcry_md_get_algo_dlen(gcry_md_get_algo(this->hd));
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_gcrypt_hasher_t *this)
 {
 	gcry_md_reset(this->hd);
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash, bool,

@@ -83,10 +83,11 @@ static void append_data(private_padlock_sha1_hasher_t *this, chunk_t data)
 	this->data.len += data.len;
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_padlock_sha1_hasher_t *this)
 {
 	chunk_free(&this->data);
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash, bool,

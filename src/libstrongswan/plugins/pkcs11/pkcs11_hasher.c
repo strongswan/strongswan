@@ -138,10 +138,11 @@ static bool load_state(private_pkcs11_hasher_t *this)
 	return TRUE;
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_pkcs11_hasher_t *this)
 {
 	this->have_state = FALSE;
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash, bool,

@@ -99,10 +99,11 @@ METHOD(hasher_t, get_hash_size, size_t,
 	return this->size;
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_af_alg_hasher_t *this)
 {
 	this->ops->reset(this->ops);
+	return TRUE;
 }
 
 METHOD(hasher_t, get_hash, bool,

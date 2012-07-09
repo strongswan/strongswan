@@ -96,10 +96,10 @@ METHOD(hasher_t, get_hash_size, size_t,
 	return this->hasher->md_size;
 }
 
-METHOD(hasher_t, reset, void,
+METHOD(hasher_t, reset, bool,
 	private_openssl_hasher_t *this)
 {
-	EVP_DigestInit_ex(this->ctx, this->hasher, NULL);
+	return EVP_DigestInit_ex(this->ctx, this->hasher, NULL) == 1;
 }
 
 METHOD(hasher_t, get_hash, bool,
@@ -115,7 +115,7 @@ METHOD(hasher_t, get_hash, bool,
 		{
 			return FALSE;
 		}
-		reset(this);
+		return reset(this);
 	}
 	return TRUE;
 }
@@ -175,7 +175,11 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 	this->ctx = EVP_MD_CTX_create();
 
 	/* initialization */
-	reset(this);
+	if (!reset(this))
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }

@@ -122,8 +122,8 @@ METHOD(mac_t, set_key, bool,
 	}
 
 	/* begin hashing of inner pad */
-	this->h->reset(this->h);
-	return this->h->get_hash(this->h, this->ipaded_key, NULL);
+	return this->h->reset(this->h) &&
+		   this->h->get_hash(this->h, this->ipaded_key, NULL);
 }
 
 METHOD(mac_t, destroy, void,
