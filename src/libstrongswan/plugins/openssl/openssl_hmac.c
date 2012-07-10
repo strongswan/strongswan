@@ -65,11 +65,6 @@ struct private_mac_t {
 	 * Current HMAC context
 	 */
 	HMAC_CTX hmac;
-
-	/**
-	 * Key
-	 */
-	chunk_t key;
 };
 
 /**
@@ -77,8 +72,7 @@ struct private_mac_t {
  */
 static bool reset(private_mac_t *this)
 {
-	return HMAC_Init_ex(&this->hmac, this->key.ptr, this->key.len,
-						this->hasher, NULL);
+	return HMAC_Init_ex(&this->hmac, NULL, 0, this->hasher, NULL);
 }
 
 METHOD(mac_t, get_mac, bool,
@@ -102,16 +96,13 @@ METHOD(mac_t, get_mac_size, size_t,
 METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
-	chunk_clear(&this->key);
-	this->key = chunk_clone(key);
-	return reset(this);
+	return HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
 }
 
 METHOD(mac_t, destroy, void,
 	private_mac_t *this)
 {
 	HMAC_CTX_cleanup(&this->hmac);
-	chunk_clear(&this->key);
 	free(this);
 }
 
