@@ -159,6 +159,11 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 	}
 
 	HMAC_CTX_init(&this->hmac);
+	if (!HMAC_Init_ex(&this->hmac, NULL, 0, this->hasher, NULL))
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }
