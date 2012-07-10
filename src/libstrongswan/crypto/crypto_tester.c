@@ -746,8 +746,16 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		{
 			goto failure;
 		}
-		/* hash to existing buffer */
+		/* hash to existing buffer, with a reset */
 		memset(hash.ptr, 0, hash.len);
+		if (!hasher->get_hash(hasher, data, NULL))
+		{
+			goto failure;
+		}
+		if (!hasher->reset(hasher))
+		{
+			goto failure;
+		}
 		if (!hasher->get_hash(hasher, data, hash.ptr))
 		{
 			goto failure;
