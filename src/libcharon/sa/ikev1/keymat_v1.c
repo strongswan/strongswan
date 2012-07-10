@@ -481,6 +481,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		return FALSE;
 	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_d %B", &this->skeyid_d);
@@ -491,6 +492,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		return FALSE;
 	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_a %B", &this->skeyid_a);
@@ -501,6 +503,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		return FALSE;
 	}
 	chunk_clear(&data);
 	DBG4(DBG_IKE, "SKEYID_e %B", &skeyid_e);
@@ -554,16 +557,15 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 
 	/* initial IV = hash(g^xi | g^xr) */
 	data = chunk_cata("cc", g_xi, g_xr);
+	chunk_free(&dh_me);
 	if (!this->hasher->allocate_hash(this->hasher, data, &this->phase1_iv.iv))
 	{
-		chunk_free(&dh_me);
 		return FALSE;
 	}
 	if (this->phase1_iv.iv.len > this->aead->get_block_size(this->aead))
 	{
 		this->phase1_iv.iv.len = this->aead->get_block_size(this->aead);
 	}
-	chunk_free(&dh_me);
 	DBG4(DBG_IKE, "initial IV %B", &this->phase1_iv.iv);
 
 	return TRUE;
@@ -578,6 +580,7 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 	u_int8_t protocol;
 	prf_plus_t *prf_plus;
 	chunk_t seed, secret = chunk_empty;
+	bool success = FALSE;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 								&enc_alg, &enc_size))
@@ -656,44 +659,30 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 		DBG4(DBG_CHD, "DH secret %B", &secret);
 	}
 
+	*encr_r = *integ_r = *encr_i = *integ_i = chunk_empty;
 	seed = chunk_cata("ccccc", secret, chunk_from_thing(protocol),
 					  chunk_from_thing(spi_r), nonce_i, nonce_r);
 	DBG4(DBG_CHD, "initiator SA seed %B", &seed);
 
 	prf_plus = prf_plus_create(this->prf, FALSE, seed);
-	if (!prf_plus)
-	{
-		chunk_clear(&secret);
-		return FALSE;
-	}
-	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
+	if (!prf_plus ||
+		!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i))
 	{
-		prf_plus->destroy(prf_plus);
-		chunk_clear(&secret);
-		return FALSE;
+		goto failure;
 	}
-	prf_plus->destroy(prf_plus);
 
 	seed = chunk_cata("ccccc", secret, chunk_from_thing(protocol),
 					  chunk_from_thing(spi_i), nonce_i, nonce_r);
 	DBG4(DBG_CHD, "responder SA seed %B", &seed);
+	prf_plus->destroy(prf_plus);
 	prf_plus = prf_plus_create(this->prf, FALSE, seed);
-	if (!prf_plus)
-	{
-		chunk_clear(&secret);
-		return FALSE;
-	}
-	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
+	if (!prf_plus ||
+		!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_r))
 	{
-		prf_plus->destroy(prf_plus);
-		chunk_clear(&secret);
-		return FALSE;
+		goto failure;
 	}
-	prf_plus->destroy(prf_plus);
-
-	chunk_clear(&secret);
 
 	if (enc_size)
 	{
@@ -705,7 +694,20 @@ METHOD(keymat_v1_t, derive_child_keys, bool,
 		DBG4(DBG_CHD, "integrity initiator key %B", integ_i);
 		DBG4(DBG_CHD, "integrity responder key %B", integ_r);
 	}
-	return TRUE;
+	success = TRUE;
+
+failure:
+	if (!success)
+	{
+		chunk_clear(encr_i);
+		chunk_clear(integ_i);
+		chunk_clear(encr_r);
+		chunk_clear(integ_r);
+	}
+	DESTROY_IF(prf_plus);
+	chunk_clear(&secret);
+
+	return success;
 }
 
 METHOD(keymat_v1_t, create_hasher, bool,
