@@ -815,10 +815,17 @@ static u_int bench_prf(private_crypto_tester_t *this,
 	prf = create(alg);
 	if (prf)
 	{
-		char bytes[prf->get_block_size(prf)];
+		char bytes[prf->get_block_size(prf)], key[prf->get_block_size(prf)];
 		chunk_t buf;
 		struct timespec start;
 		u_int runs;
+
+		memset(key, 0x56, prf->get_block_size(prf));
+		if (!prf->set_key(prf, chunk_create(key, prf->get_block_size(prf))))
+		{
+			prf->destroy(prf);
+			return 0;
+		}
 
 		buf = chunk_alloc(this->bench_size);
 		memset(buf.ptr, 0x34, buf.len);
