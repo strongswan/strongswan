@@ -132,8 +132,9 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 	DBG3(DBG_LIB, "MK %B", mk);
 
 	/* K_encr | K_auth | MSK | EMSK = prf() | prf() | prf() | prf() */
-	if (this->prf->set_key(this->prf, *mk))
+	if (!this->prf->set_key(this->prf, *mk))
 	{
+		chunk_clear(mk);
 		return FALSE;
 	}
 	str = chunk_alloca(this->prf->get_block_size(this->prf) * 3);
@@ -158,7 +159,7 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 		return FALSE;
 	}
 
-	*msk = chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN);
+	*msk = chunk_clone(chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN));
 
 	call_hook(this, k_encr, k_auth);
 
@@ -232,7 +233,7 @@ METHOD(simaka_crypto_t, derive_keys_reauth_msk, bool,
 			return FALSE;
 		}
 	}
-	*msk = chunk_create(str.ptr, MSK_LEN);
+	*msk = chunk_clone(chunk_create(str.ptr, MSK_LEN));
 	DBG3(DBG_LIB, "MSK %B", msk);
 
 	return TRUE;
