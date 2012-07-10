@@ -335,6 +335,34 @@ static bool use_certs(private_isakmp_cert_pre_t *this, message_t *message)
 	return use;
 }
 
+/**
+ * Check if we should send a certificate request
+ */
+static bool send_certreq(private_isakmp_cert_pre_t *this)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *peer_cfg;
+	auth_cfg_t *auth;
+	bool req = FALSE;
+	auth_class_t class;
+
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg)
+	{
+		enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, FALSE);
+		if (enumerator->enumerate(enumerator, &auth))
+		{
+			class = (intptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
+			if (class == AUTH_CLASS_PUBKEY)
+			{
+				req = TRUE;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	return req;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_isakmp_cert_pre_t *this, message_t *message)
 {
@@ -349,11 +377,10 @@ METHOD(task_t, build_i, status_t,
 		case AGGRESSIVE:
 			if (this->state == CR_SA)
 			{
-				if (!use_certs(this, message))
+				if (send_certreq(this))
 				{
-					return SUCCESS;
+					build_certreqs(this, message);
 				}
-				build_certreqs(this, message);
 			}
 			return NEED_MORE;
 		default:
