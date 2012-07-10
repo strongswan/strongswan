@@ -74,13 +74,19 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 	mac = autn + AKA_SQN_LEN + AKA_AMF_LEN;
 
 	/* XOR anonymity key AK into SQN to decrypt it */
-	this->f->f5(this->f, k, rand, ak);
+	if (!this->f->f5(this->f, k, rand, ak))
+	{
+		return FAILED;
+	}
 	DBG3(DBG_IKE, "using ak %b", ak, AKA_AK_LEN);
 	memxor(sqn, ak, AKA_SQN_LEN);
 	DBG3(DBG_IKE, "using sqn %b", sqn, AKA_SQN_LEN);
 
 	/* calculate expected MAC and compare against received one */
-	this->f->f1(this->f, k, rand, sqn, amf, xmac);
+	if (!this->f->f1(this->f, k, rand, sqn, amf, xmac))
+	{
+		return FAILED;
+	}
 	if (!memeq(mac, xmac, AKA_MAC_LEN))
 	{
 		DBG1(DBG_IKE, "received MAC does not match XMAC");
@@ -98,11 +104,13 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 	/* update stored SQN to the received one */
 	memcpy(this->sqn, sqn, AKA_SQN_LEN);
 
-	/* CK/IK */
-	this->f->f3(this->f, k, rand, ck);
-	this->f->f4(this->f, k, rand, ik);
-	/* calculate RES */
-	this->f->f2(this->f, k, rand, res);
+	/* CK/IK, calculate RES */
+	if (!this->f->f3(this->f, k, rand, ck) ||
+		!this->f->f4(this->f, k, rand, ik) ||
+		!this->f->f2(this->f, k, rand, res))
+	{
+		return FAILED;
+	}
 	*res_len = AKA_RES_MAX;
 
 	return SUCCESS;
@@ -122,8 +130,11 @@ METHOD(simaka_card_t, resync, bool,
 
 	/* AMF is set to zero in resync */
 	memset(amf, 0, AKA_AMF_LEN);
-	this->f->f5star(this->f, k, rand, aks);
-	this->f->f1star(this->f, k, rand, this->sqn, amf, macs);
+	if (!this->f->f5star(this->f, k, rand, aks) ||
+		!this->f->f1star(this->f, k, rand, this->sqn, amf, macs))
+	{
+		return FALSE;
+	}
 	/* AUTS = SQN xor AKS | MACS */
 	memcpy(auts, this->sqn, AKA_SQN_LEN);
 	memxor(auts, aks, AKA_AK_LEN);

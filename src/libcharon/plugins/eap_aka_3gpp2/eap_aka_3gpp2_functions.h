@@ -45,8 +45,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param sqn	sequence number
 	 * @param amf	authentication management field
 	 * @param mac	buffer receiving mac MAC
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f1)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f1)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
 				u_char amf[AKA_AMF_LEN], u_char mac[AKA_MAC_LEN]);
 
@@ -58,8 +59,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param sqn	sequence number
 	 * @param amf	authentication management field
 	 * @param macs	buffer receiving resynchronization mac MACS
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f1star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f1star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char sqn[AKA_SQN_LEN],
 				u_char amf[AKA_AMF_LEN], u_char macs[AKA_MAC_LEN]);
 
@@ -69,8 +71,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param k		secret key K
 	 * @param rand	random value RAND
 	 * @param res	buffer receiving result RES, uses full 128 bit
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f2)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f2)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char res[AKA_RES_MAX]);
 	/**
 	 * Calculate CK from RAND using K
@@ -78,8 +81,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param k		secret key K
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving encryption key CK
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f3)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f3)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char ck[AKA_CK_LEN]);
 	/**
 	 * Calculate IK from RAND using K
@@ -87,8 +91,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param k		secret key K
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving integrity key IK
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f4)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f4)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char ik[AKA_IK_LEN]);
 	/**
 	 * Calculate AK from a RAND using K
@@ -96,8 +101,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param k		secret key K
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving anonymity key AK
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f5)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f5)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char ak[AKA_AK_LEN]);
 	/**
 	 * Calculate AKS from a RAND using K
@@ -105,8 +111,9 @@ struct eap_aka_3gpp2_functions_t {
 	 * @param k		secret key K
 	 * @param rand	random value RAND
 	 * @param macs	buffer receiving resynchronization anonymity key AKS
+	 * @return		TRUE if calculations successful
 	 */
-	void (*f5star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
+	bool (*f5star)(eap_aka_3gpp2_functions_t *this, u_char k[AKA_K_LEN],
 				u_char rand[AKA_RAND_LEN], u_char aks[AKA_AK_LEN]);
 
 	/**

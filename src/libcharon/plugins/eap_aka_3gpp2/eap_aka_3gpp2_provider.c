@@ -107,12 +107,13 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 	DBG3(DBG_IKE, "generated rand %b", rand, AKA_RAND_LEN);
 	DBG3(DBG_IKE, "using K %b", k, AKA_K_LEN);
 
-	/* MAC */
-	this->f->f1(this->f, k, rand, this->sqn, amf, mac);
-	/* AK */
-	this->f->f5(this->f, k, rand, ak);
-	/* XRES as expected from client */
-	this->f->f2(this->f, k, rand, xres);
+	/* MAC, AK, XRES as expected from client */
+	if (!this->f->f1(this->f, k, rand, this->sqn, amf, mac) ||
+		!this->f->f5(this->f, k, rand, ak) ||
+		!this->f->f2(this->f, k, rand, xres))
+	{
+		return FALSE;
+	}
 	*xres_len = AKA_RES_MAX;
 	/* AUTN = (SQN xor AK) || AMF || MAC */
 	memcpy(autn, this->sqn, AKA_SQN_LEN);
@@ -121,9 +122,11 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 	memcpy(autn + AKA_SQN_LEN + AKA_AMF_LEN, mac, AKA_MAC_LEN);
 	DBG3(DBG_IKE, "AUTN %b", autn, AKA_AUTN_LEN);
 	/* CK/IK */
-	this->f->f3(this->f, k, rand, ck);
-	this->f->f4(this->f, k, rand, ik);
-
+	if (!this->f->f3(this->f, k, rand, ck) ||
+		!this->f->f4(this->f, k, rand, ik))
+	{
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -143,12 +146,18 @@ METHOD(simaka_provider_t, resync, bool,
 	/* AUTHS = (AK xor SQN) | MAC */
 	sqn = auts;
 	macs = auts + AKA_SQN_LEN;
-	this->f->f5star(this->f, k, rand, aks);
+	if (!this->f->f5star(this->f, k, rand, aks))
+	{
+		return FALSE;
+	}
 	memxor(sqn, aks, AKA_AK_LEN);
 
 	/* verify XMACS, AMF of zero is used in resynchronization */
 	memset(amf, 0, AKA_AMF_LEN);
-	this->f->f1star(this->f, k, rand, sqn, amf, xmacs);
+	if (!this->f->f1star(this->f, k, rand, sqn, amf, xmacs))
+	{
+		return FALSE;
+	}
 	if (!memeq(macs, xmacs, AKA_MAC_LEN))
 	{
 		DBG1(DBG_IKE, "received MACS does not match XMACS");
