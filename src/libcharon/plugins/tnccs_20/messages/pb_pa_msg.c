@@ -116,6 +116,11 @@ METHOD(pb_tnc_msg_t, build, void,
 	chunk_t msg_header;
 	bio_writer_t *writer;
 
+	if (this->encoding.ptr)
+	{
+		return;
+	}
+
 	/* build message header */
 	writer = bio_writer_create(64);
 	writer->write_uint8 (writer, this->excl ? PA_FLAG_EXCL : PA_FLAG_NONE);
@@ -126,7 +131,6 @@ METHOD(pb_tnc_msg_t, build, void,
 	msg_header = writer->get_buf(writer);
 
 	/* create encoding by concatenating message header and message body */
-	free(this->encoding.ptr);
 	this->encoding = chunk_cat("cc", msg_header, this->msg_body);
 	writer->destroy(writer);
 }

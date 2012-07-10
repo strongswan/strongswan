@@ -120,6 +120,11 @@ METHOD(pb_tnc_msg_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->encoding.ptr)
+	{
+		return;
+	}
+
 	/* build message header */
 	writer = bio_writer_create(ERROR_HEADER_SIZE);
 	writer->write_uint8 (writer, this->fatal ?
@@ -142,8 +147,6 @@ METHOD(pb_tnc_msg_t, build, void,
 		/* Error Offset */
 		writer->write_uint32(writer, this->error_offset);
 	}
-
-	free(this->encoding.ptr);
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
 	writer->destroy(writer);

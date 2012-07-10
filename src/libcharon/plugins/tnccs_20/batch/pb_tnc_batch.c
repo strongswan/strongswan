@@ -51,7 +51,6 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_BATCH_FLAG_NONE		0x00
 #define PB_TNC_BATCH_FLAG_D			(1<<7)
-#define PB_TNC_BATCH_HEADER_SIZE	8
 
 /**
  *   PB-TNC Message (see section 4.2 of RFC 5793)
@@ -71,7 +70,6 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_FLAG_NONE			0x00
 #define PB_TNC_FLAG_NOSKIP			(1<<7)
-#define PB_TNC_HEADER_SIZE			12
 
 #define PB_TNC_RESERVED_MSG_TYPE	0xffffffff
 
@@ -151,7 +149,6 @@ METHOD(pb_tnc_batch_t, build, void,
 	enumerator = this->messages->create_enumerator(this->messages);
 	while (enumerator->enumerate(enumerator, &msg))
 	{
-		msg->build(msg);
 		msg_value = msg->get_encoding(msg);
 		batch_len += PB_TNC_HEADER_SIZE + msg_value.len;
 	}

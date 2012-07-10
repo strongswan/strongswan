@@ -108,14 +108,16 @@ METHOD(pb_tnc_msg_t, build, void,
 {
 	bio_writer_t *writer;
 
-	/* build message */
+	if (this->encoding.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(64);
 	writer->write_uint32(writer, this->vendor_id);
 	writer->write_uint32(writer, this->parameters_type);
 	writer->write_data32(writer, this->remediation_string);
 	writer->write_data8 (writer, this->language_code);
 
-	free(this->encoding.ptr);
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
 	writer->destroy(writer);

@@ -78,10 +78,12 @@ METHOD(pb_tnc_msg_t, build, void,
 {
 	bio_writer_t *writer;
 
-	/* build message */
+	if (this->encoding.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(ASSESSMENT_RESULT_MSG_SIZE);
 	writer->write_uint32(writer, this->assessment_result);
-	free(this->encoding.ptr);
 	this->encoding = writer->get_buf(writer);
 	this->encoding = chunk_clone(this->encoding);
 	writer->destroy(writer);
@@ -92,7 +94,6 @@ METHOD(pb_tnc_msg_t, process, status_t,
 {
 	bio_reader_t *reader;
 
-	/* process message */
 	reader = bio_reader_create(this->encoding);
 	reader->read_uint32(reader, &this->assessment_result);
 	reader->destroy(reader);
