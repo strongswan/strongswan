@@ -25,8 +25,8 @@ processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils.c utils/host.c utils/packet.c utils/identification.c utils/lexparser.c \
-utils/linked_list.c utils/hashtable.c utils/enumerator.c utils/optionsfrom.c \
-utils/capabilities.c utils/backtrace.c
+utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
+utils/optionsfrom.c utils/capabilities.c utils/backtrace.c
 
 # adding the plugin source files
 
