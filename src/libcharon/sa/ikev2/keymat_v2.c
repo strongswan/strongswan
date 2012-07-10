@@ -96,7 +96,7 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 							u_int16_t key_size, prf_plus_t *prf_plus)
 {
 	aead_t *aead_i, *aead_r;
-	chunk_t key;
+	chunk_t key = chunk_empty;
 
 	/* SK_ei/SK_er used for encryption */
 	aead_i = lib->crypto->create_aead(lib->crypto, alg, key_size / 8);
@@ -106,33 +106,33 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
 			 encryption_algorithm_names, alg, key_size);
-		return FALSE;
+		goto failure;
 	}
 	key_size = aead_i->get_key_size(aead_i);
-
+	if (key_size != aead_r->get_key_size(aead_r))
+	{
+		goto failure;
+	}
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	if (!aead_i->set_key(aead_i, key))
 	{
-		chunk_clear(&key);
-		return FALSE;
+		goto failure;
 	}
 	chunk_clear(&key);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	if (!aead_r->set_key(aead_r, key))
 	{
-		chunk_clear(&key);
-		return FALSE;
+		goto failure;
 	}
-	chunk_clear(&key);
 
 	if (this->initiator)
 	{
@@ -144,7 +144,13 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 		this->aead_in = aead_i;
 		this->aead_out = aead_r;
 	}
-	return TRUE;
+	aead_i = aead_r = NULL;
+
+failure:
+	DESTROY_IF(aead_i);
+	DESTROY_IF(aead_r);
+	chunk_clear(&key);
+	return this->aead_in && this->aead_out;
 }
 
 /**
@@ -153,106 +159,78 @@ static bool derive_ike_aead(private_keymat_v2_t *this, u_int16_t alg,
 static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 					u_int16_t enc_size, u_int16_t int_alg, prf_plus_t *prf_plus)
 {
-	crypter_t *crypter_i, *crypter_r;
+	crypter_t *crypter_i = NULL, *crypter_r = NULL;
 	signer_t *signer_i, *signer_r;
 	size_t key_size;
-	chunk_t key;
+	chunk_t key = chunk_empty;
 
-	/* SK_ai/SK_ar used for integrity protection */
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
 	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
 	if (signer_i == NULL || signer_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N not supported!",
 			 transform_type_names, INTEGRITY_ALGORITHM,
 			 integrity_algorithm_names, int_alg);
-		return FALSE;
+		goto failure;
 	}
-	key_size = signer_i->get_key_size(signer_i);
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
-	{
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
-	}
-	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
-	if (!signer_i->set_key(signer_i, key))
-	{
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		chunk_clear(&key);
-		return FALSE;
-	}
-	chunk_clear(&key);
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
-	{
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
-	}
-	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
-	if (!signer_r->set_key(signer_r, key))
-	{
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		chunk_clear(&key);
-		return FALSE;
-	}
-	chunk_clear(&key);
-
-	/* SK_ei/SK_er used for encryption */
-	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
 			 encryption_algorithm_names, enc_alg, enc_size);
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
+		goto failure;
 	}
+
+	/* SK_ai/SK_ar used for integrity protection */
+	key_size = signer_i->get_key_size(signer_i);
+
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		goto failure;
+	}
+	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
+	if (!signer_i->set_key(signer_i, key))
+	{
+		goto failure;
+	}
+	chunk_clear(&key);
+
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	{
+		goto failure;
+	}
+	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
+	if (!signer_r->set_key(signer_r, key))
+	{
+		goto failure;
+	}
+	chunk_clear(&key);
+
+	/* SK_ei/SK_er used for encryption */
 	key_size = crypter_i->get_key_size(crypter_i);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		crypter_i->destroy(crypter_i);
-		crypter_r->destroy(crypter_r);
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	if (!crypter_i->set_key(crypter_i, key))
 	{
-		crypter_i->destroy(crypter_i);
-		crypter_r->destroy(crypter_r);
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
+		goto failure;
 	}
 	chunk_clear(&key);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		crypter_i->destroy(crypter_i);
-		crypter_r->destroy(crypter_r);
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	if (!crypter_r->set_key(crypter_r, key))
 	{
-		crypter_i->destroy(crypter_i);
-		crypter_r->destroy(crypter_r);
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		return FALSE;
+		goto failure;
 	}
-	chunk_clear(&key);
 
 	if (this->initiator)
 	{
@@ -264,7 +242,16 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, u_int16_t enc_alg,
 		this->aead_in = aead_create(crypter_i, signer_i);
 		this->aead_out = aead_create(crypter_r, signer_r);
 	}
-	return TRUE;
+	signer_i = signer_r = NULL;
+	crypter_i = crypter_r = NULL;
+
+failure:
+	chunk_clear(&key);
+	DESTROY_IF(signer_i);
+	DESTROY_IF(signer_r);
+	DESTROY_IF(crypter_i);
+	DESTROY_IF(crypter_r);
+	return this->aead_in && this->aead_out;
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
@@ -375,8 +362,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	if (!prf_plus)
 	{
-		DESTROY_IF(rekey_prf);
-		return FALSE;
+		goto failure;
 	}
 
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
@@ -385,9 +371,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	key_size = this->prf->get_key_size(this->prf);
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &this->skd))
 	{
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_d secret %B", &this->skd);
 
@@ -395,18 +379,14 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, ENCRYPTION_ALGORITHM);
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
+		goto failure;
 	}
 
 	if (encryption_algorithm_is_aead(alg))
 	{
 		if (!derive_ike_aead(this, alg, key_size, prf_plus))
 		{
-			prf_plus->destroy(prf_plus);
-			DESTROY_IF(rekey_prf);
-			return FALSE;
+			goto failure;
 		}
 	}
 	else
@@ -416,15 +396,11 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		{
 			DBG1(DBG_IKE, "no %N selected",
 				 transform_type_names, INTEGRITY_ALGORITHM);
-			prf_plus->destroy(prf_plus);
-			DESTROY_IF(rekey_prf);
-			return FALSE;
+			goto failure;
 		}
 		if (!derive_ike_traditional(this, alg, key_size, int_alg, prf_plus))
 		{
-			prf_plus->destroy(prf_plus);
-			DESTROY_IF(rekey_prf);
-			return FALSE;
+			goto failure;
 		}
 	}
 
@@ -432,9 +408,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	key_size = this->prf->get_key_size(this->prf);
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
 	if (this->initiator)
@@ -447,9 +421,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
 	{
-		prf_plus->destroy(prf_plus);
-		DESTROY_IF(rekey_prf);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
 	if (this->initiator)
@@ -462,10 +434,11 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 
 	/* all done, prf_plus not needed anymore */
-	prf_plus->destroy(prf_plus);
+failure:
+	DESTROY_IF(prf_plus);
 	DESTROY_IF(rekey_prf);
 
-	return TRUE;
+	return this->skp_build.len && this->skp_verify.len;
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
@@ -560,11 +533,16 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		return FALSE;
 	}
 
+	*encr_i = *integ_i = *encr_r = *integ_r = chunk_empty;
 	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i) ||
 		!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
 		!prf_plus->allocate_bytes(prf_plus, int_size, integ_r))
 	{
+		chunk_free(encr_i);
+		chunk_free(integ_i);
+		chunk_free(encr_r);
+		chunk_free(integ_r);
 		prf_plus->destroy(prf_plus);
 		return FALSE;
 	}
