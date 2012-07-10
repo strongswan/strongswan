@@ -72,14 +72,18 @@ struct encryption_payload_t {
 	 * Generate, encrypt and sign contained payloads.
 	 *
 	 * @param assoc			associated data
-	 * @return				TRUE if encrypted
+	 * @return
+	 * 						- SUCCESS if encryption successful
+	 * 						- FAILED if encryption failed
+	 * 						- INVALID_STATE if aead not supplied, but needed
 	 */
-	bool (*encrypt) (encryption_payload_t *this, chunk_t assoc);
+	status_t (*encrypt) (encryption_payload_t *this, chunk_t assoc);
 
 	/**
 	 * Decrypt, verify and parse contained payloads.
 	 *
 	 * @param assoc			associated data
+	 * @return
 	 * 						- SUCCESS if parsing successful
 	 *						- PARSE_ERROR if sub-payload parsing failed
 	 * 						- VERIFY_ERROR if sub-payload verification failed

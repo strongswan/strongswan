@@ -1581,18 +1581,10 @@ METHOD(message_t, generate, status_t,
 			htoun32(lenpos, chunk.len + encryption->get_length(encryption));
 		}
 		this->payloads->insert_last(this->payloads, encryption);
-		if (!encryption->encrypt(encryption, chunk))
+		if (encryption->encrypt(encryption, chunk) != SUCCESS)
 		{
-			if (this->is_encrypted)
-			{
-				free(chunk.ptr);
-			}
 			generator->destroy(generator);
 			return INVALID_STATE;
-		}
-		if (this->is_encrypted)
-		{
-			free(chunk.ptr);
 		}
 		generator->generate_payload(generator, &encryption->payload_interface);
 	}
@@ -1862,19 +1854,24 @@ static status_t decrypt_payloads(private_message_t *this, keymat_t *keymat)
 			{	/* instead of associated data we provide the IV, we also update
 				 * the IV with the last encrypted block */
 				keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
-				chunk_t iv = chunk_empty;
+				chunk_t iv;
 
-				if (keymat_v1->get_iv(keymat_v1, this->message_id, &iv) &&
-					keymat_v1->update_iv(keymat_v1, this->message_id,
-							chunk_create(chunk.ptr + chunk.len - bs, bs)))
+				if (keymat_v1->get_iv(keymat_v1, this->message_id, &iv))
 				{
 					status = encryption->decrypt(encryption, iv);
+					if (status == SUCCESS)
+					{
+						if (!keymat_v1->update_iv(keymat_v1, this->message_id,
+								chunk_create(chunk.ptr + chunk.len - bs, bs)))
+						{
+							status = FAILED;
+						}
+					}
 				}
 				else
 				{
 					status = FAILED;
 				}
-				free(chunk.ptr);
 			}
 			else
 			{

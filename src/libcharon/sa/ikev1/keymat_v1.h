@@ -120,8 +120,11 @@ struct keymat_v1_t {
 	/**
 	 * Returns the IV for a message with the given message ID.
 	 *
+	 * The return chunk contains internal data and is valid until the next
+	 * get_iv/udpate_iv/confirm_iv call.
+	 *
 	 * @param mid			message ID
-	 * @param iv			chunk receiving allocated IV
+	 * @param iv			chunk receiving IV, internal data
 	 * @return				TRUE if IV allocated successfully
 	 */
 	bool (*get_iv)(keymat_v1_t *this, u_int32_t mid, chunk_t *iv);

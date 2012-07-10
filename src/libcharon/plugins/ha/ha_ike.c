@@ -307,7 +307,6 @@ METHOD(listener_t, message_hook, bool,
 				m = ha_message_create(HA_IKE_IV);
 				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 				m->add_attribute(m, HA_IV, iv);
-				free(iv.ptr);
 				this->socket->push(this->socket, m);
 				this->cache->cache(this->cache, ike_sa, m);
 			}
