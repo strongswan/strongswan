@@ -123,8 +123,13 @@ METHOD(recommendations_t, have_recommendation, bool,
 	TNC_IMV_Evaluation_Result final_eval;
 	bool first = TRUE, incomplete = FALSE;
 
-	*rec = final_rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
-	*eval = final_eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+	final_rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	final_eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+	if (rec && eval)
+	{
+		*rec  = final_rec;
+		*eval = final_eval;
+	}
 
 	if (this->recs->get_count(this->recs) == 0)
 	{
@@ -267,8 +272,11 @@ METHOD(recommendations_t, have_recommendation, bool,
 	{
 		return FALSE;
 	}
-	*rec = final_rec;
-	*eval = final_eval;
+	if (rec && eval)
+	{
+		*rec  = final_rec;
+		*eval = final_eval;
+	}
 	return TRUE;
 }
 
