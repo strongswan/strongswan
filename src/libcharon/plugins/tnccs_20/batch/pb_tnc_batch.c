@@ -235,7 +235,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	/* Version */
 	if (version != PB_TNC_VERSION)
 	{
-		DBG1(DBG_TNC, "unsupported TNCCS batch version 0x%01x", version);
+		DBG1(DBG_TNC, "unsupported TNCCS batch version 0x%02x", version);
 		msg = pb_error_msg_create(TRUE, PEN_IETF,
 								  PB_ERROR_VERSION_NOT_SUPPORTED);
 		err_msg = (pb_error_msg_t*)msg;
