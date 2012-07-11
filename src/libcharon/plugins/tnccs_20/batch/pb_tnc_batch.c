@@ -51,6 +51,7 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_BATCH_FLAG_NONE		0x00
 #define PB_TNC_BATCH_FLAG_D			(1<<7)
+#define PB_TNC_BATCH_HEADER_SIZE	8
 
 /**
  *   PB-TNC Message (see section 4.2 of RFC 5793)
@@ -70,6 +71,7 @@ typedef struct private_pb_tnc_batch_t private_pb_tnc_batch_t;
 
 #define PB_TNC_FLAG_NONE			0x00
 #define PB_TNC_FLAG_NOSKIP			(1<<7)
+#define PB_TNC_HEADER_SIZE			12
 
 #define PB_TNC_RESERVED_MSG_TYPE	0xffffffff
 
@@ -92,6 +94,16 @@ struct private_pb_tnc_batch_t {
 	 * PB-TNC Batch type
 	 */
 	pb_tnc_batch_type_t type;
+
+	/**
+	 * Current PB-TNC Batch size
+	 */
+	size_t batch_len;
+
+	/**
+	 * Maximum PB-TNC Batch size
+	 */
+	size_t max_batch_len;
 
 	/**
 	 * linked list of PB-TNC messages
@@ -126,41 +138,46 @@ METHOD(pb_tnc_batch_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-METHOD(pb_tnc_batch_t, add_msg, void,
+METHOD(pb_tnc_batch_t, add_msg, bool,
 	private_pb_tnc_batch_t *this, pb_tnc_msg_t* msg)
 {
+	chunk_t msg_value;
+	size_t msg_len;
+
+	msg->build(msg);
+	msg_value = msg->get_encoding(msg);
+	msg_len = PB_TNC_HEADER_SIZE + msg_value.len;
+
+	if (this->batch_len + msg_len > this->max_batch_len)
+	{
+		/* message just does not fit into this batch */
+		return FALSE;
+	}
+	this->batch_len += msg_len;
+
 	DBG2(DBG_TNC, "adding %N message", pb_tnc_msg_type_names,
 									   msg->get_type(msg));
 	this->messages->insert_last(this->messages, msg);
+	return TRUE;
 }
 
 METHOD(pb_tnc_batch_t, build, void,
 	private_pb_tnc_batch_t *this)
 {
-	u_int32_t batch_len, msg_len;
+	u_int32_t msg_len;
 	chunk_t msg_value;
 	enumerator_t *enumerator;
 	pb_tnc_msg_type_t msg_type;
 	pb_tnc_msg_t *msg;
 	bio_writer_t *writer;
 
-	/* compute total PB-TNC batch size by summing over all messages */
-	batch_len = PB_TNC_BATCH_HEADER_SIZE;
-	enumerator = this->messages->create_enumerator(this->messages);
-	while (enumerator->enumerate(enumerator, &msg))
-	{
-		msg_value = msg->get_encoding(msg);
-		batch_len += PB_TNC_HEADER_SIZE + msg_value.len;
-	}
-	enumerator->destroy(enumerator);
-
 	/* build PB-TNC batch header */
-	writer = bio_writer_create(batch_len);	
+	writer = bio_writer_create(this->batch_len);	
 	writer->write_uint8 (writer, PB_TNC_VERSION);
 	writer->write_uint8 (writer, this->is_server ?
 								 PB_TNC_BATCH_FLAG_D : PB_TNC_BATCH_FLAG_NONE);
 	writer->write_uint16(writer, this->type);
-	writer->write_uint32(writer, batch_len); 
+	writer->write_uint32(writer, this->batch_len); 
 
 	/* build PB-TNC messages */
 	enumerator = this->messages->create_enumerator(this->messages);
@@ -487,7 +504,8 @@ METHOD(pb_tnc_batch_t, destroy, void,
 /**
  * See header
  */
-pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type)
+pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type,
+									size_t max_batch_len)
 {
 	private_pb_tnc_batch_t *this;
 
@@ -504,6 +522,8 @@ pb_tnc_batch_t* pb_tnc_batch_create(bool is_server, pb_tnc_batch_type_t type)
 		},
 		.is_server = is_server,
 		.type = type,
+		.max_batch_len = max_batch_len,
+		.batch_len = PB_TNC_BATCH_HEADER_SIZE,
 		.messages = linked_list_create(),
 		.errors = linked_list_create(),
 	);

@@ -639,29 +639,26 @@ METHOD(tls_t, build, status_t,
 	{
 		pb_tnc_batch_t *batch;
 		pb_tnc_msg_t *msg;
-		chunk_t msg_value, data;
+		chunk_t data;
 		int msg_count;
-		size_t batch_len;
 		enumerator_t *enumerator;
 
 		if (this->state_machine->send_batch(this->state_machine, this->batch_type))
 		{
-			batch = pb_tnc_batch_create(this->is_server, this->batch_type);
-			batch_len = PB_TNC_BATCH_HEADER_SIZE;
+			batch = pb_tnc_batch_create(this->is_server, this->batch_type,
+										min(this->max_batch_len, *buflen));
 
 			enumerator = this->messages->create_enumerator(this->messages);
 			while (enumerator->enumerate(enumerator, &msg))
 			{
-				msg->build(msg);
-				msg_value = msg->get_encoding(msg);
-				batch_len += PB_TNC_HEADER_SIZE + msg_value.len;
-				if (batch_len > min(this->max_batch_len, *buflen))
+				if (batch->add_msg(batch, msg))
 				{
-					/* message does not fit into batch of maximum size */
+					this->messages->remove_at(this->messages, enumerator);
+				}
+				else
+				{
 					break;
 				}
-				batch->add_msg(batch, msg);
-				this->messages->remove_at(this->messages, enumerator);
 			}
 			enumerator->destroy(enumerator);
 
