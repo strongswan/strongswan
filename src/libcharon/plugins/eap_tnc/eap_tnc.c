@@ -129,9 +129,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 								 identification_t *peer, bool is_server)
 {
 	private_eap_tnc_t *this;
-	size_t frag_size;
 	int max_msg_count;
-	bool include_length;
 	char* protocol;
 	tnccs_type_t type;
 	tnccs_t *tnccs;
