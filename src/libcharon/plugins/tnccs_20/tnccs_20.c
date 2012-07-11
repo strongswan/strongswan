@@ -35,6 +35,7 @@
 #include <tnc/imv/imv_manager.h>
 
 #include <debug.h>
+#include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
 #include <pen/pen.h>
@@ -75,6 +76,11 @@ struct private_tnccs_20_t {
 	 * Type of PB-TNC batch being constructed
 	 */
 	pb_tnc_batch_type_t batch_type;
+
+	/**
+	 * Maximum PA-TNC batch size
+	 */
+	size_t max_batch_len;
 
 	/**
 	 * Mutex locking the batch in construction
@@ -649,7 +655,7 @@ METHOD(tls_t, build, status_t,
 				msg->build(msg);
 				msg_value = msg->get_encoding(msg);
 				batch_len += PB_TNC_HEADER_SIZE + msg_value.len;
-				if (batch_len > *buflen)
+				if (batch_len > min(this->max_batch_len, *buflen))
 				{
 					/* message does not fit into batch of maximum size */
 					break;
@@ -674,7 +680,7 @@ METHOD(tls_t, build, status_t,
 			msg_count = this->messages->get_count(this->messages);
 			if (msg_count)
 			{
-				DBG2(DBG_TNC, "%d PB-TNC message%s for %N batch queued",
+				DBG2(DBG_TNC, "queued %d PB-TNC message%s for next %N batch",
 					 msg_count, (msg_count == 1) ? "" : "s",
 					 pb_tnc_batch_type_names, this->batch_type);
 			}
@@ -768,6 +774,9 @@ tls_t *tnccs_20_create(bool is_server)
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.messages = linked_list_create(),
+		.max_batch_len = lib->settings->get_int(lib->settings,
+								"%s.plugins.tnccs-20.max_batch_size", 65522,
+								charon->name),
 	);
 
 	return &this->public;
