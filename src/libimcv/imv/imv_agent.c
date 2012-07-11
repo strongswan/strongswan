@@ -18,7 +18,6 @@
 #include <tncif_names.h>
 
 #include <debug.h>
-#include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_imv_agent_t private_imv_agent_t;
@@ -470,11 +469,14 @@ METHOD(imv_agent_t, get_state, bool,
 
 METHOD(imv_agent_t, send_message, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id, bool excl,
-	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, chunk_t msg)
+	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, linked_list_t *attr_list)
 {
 	TNC_MessageType type;
 	TNC_UInt32 msg_flags;
 	imv_state_t *state;
+	pa_tnc_attr_t *attr;
+	pa_tnc_msg_t *pa_tnc_msg;
+	chunk_t msg;
 
 	state = find_connection(this, connection_id);
 	if (!state)
@@ -483,6 +485,15 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 					  this->id, this->name, connection_id);
 		return TNC_RESULT_FATAL;
 	}
+
+	pa_tnc_msg = pa_tnc_msg_create();
+
+	while (attr_list->remove_first(attr_list, (void**)&attr) == SUCCESS)
+	{
+		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
+	}
+	pa_tnc_msg->build(pa_tnc_msg);
+	msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
 
 	if (state->has_long(state) && this->send_message_long)
 	{

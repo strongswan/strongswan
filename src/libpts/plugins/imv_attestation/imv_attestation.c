@@ -168,13 +168,10 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
-	pa_tnc_msg_t *msg;
-	pa_tnc_attr_t *attr;
+	linked_list_t *attr_list;
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	TNC_Result result;
-	linked_list_t *attr_list;
-	enumerator_t *enumerator;
 
 	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
 	{
@@ -188,21 +185,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	{
 		if (attr_list->get_count(attr_list))
 		{
-			msg = pa_tnc_msg_create();
-
-			/* move PA-TNC attributes to PA-TNC message */
-			enumerator = attr_list->create_enumerator(attr_list);
-			while (enumerator->enumerate(enumerator, &attr))
-			{
-				msg->add_attribute(msg, attr);
-			}
-			enumerator->destroy(enumerator);
-
-			msg->build(msg);
 			result = imv_attestation->send_message(imv_attestation,
-							connection_id, FALSE, 0, TNC_IMCID_ANY,
-							msg->get_encoding(msg));
-			msg->destroy(msg);
+							connection_id, FALSE, 0, TNC_IMCID_ANY,	attr_list);
 		}
 		else
 		{
@@ -330,24 +314,9 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 	if (attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg = pa_tnc_msg_create();
-
-		/* move PA-TNC attributes to PA-TNC message */
-		enumerator = attr_list->create_enumerator(attr_list);
-		while (enumerator->enumerate(enumerator, &attr))
-		{
-			pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-		}
-		enumerator->destroy(enumerator);
-
-		pa_tnc_msg->build(pa_tnc_msg);
 		result = imv_attestation->send_message(imv_attestation, connection_id,
-										FALSE, 0, TNC_IMCID_ANY,
-										pa_tnc_msg->get_encoding(pa_tnc_msg));
-		
-		pa_tnc_msg->destroy(pa_tnc_msg);
+										FALSE, 0, TNC_IMCID_ANY, attr_list);
 		attr_list->destroy(attr_list);
-		
 		return result;
 	}
 	attr_list->destroy(attr_list);

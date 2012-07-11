@@ -149,17 +149,15 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	platform_info = pts->get_platform_info(pts);
 	if (platform_info)
 	{
-		pa_tnc_msg_t *pa_tnc_msg;
+		linked_list_t *attr_list;
 		pa_tnc_attr_t *attr;
 
-		pa_tnc_msg = pa_tnc_msg_create();
+		attr_list = linked_list_create();
 		attr = ietf_attr_product_info_create(0, 0, platform_info);
-		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-		pa_tnc_msg->build(pa_tnc_msg);
+		attr_list->insert_last(attr_list, attr);
 		result = imc_attestation->send_message(imc_attestation, connection_id,
-										FALSE, 0, TNC_IMVID_ANY,
-										pa_tnc_msg->get_encoding(pa_tnc_msg));
-		pa_tnc_msg->destroy(pa_tnc_msg);
+										FALSE, 0, TNC_IMVID_ANY, attr_list);
+		attr_list->destroy(attr_list);
 	}
 
 	return result;
@@ -253,23 +251,11 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 
 	if (result == TNC_RESULT_SUCCESS && attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg = pa_tnc_msg_create();
-
-		enumerator = attr_list->create_enumerator(attr_list);
-		while (enumerator->enumerate(enumerator, &attr))
-		{
-			pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-		}
-		enumerator->destroy(enumerator);
-
-		pa_tnc_msg->build(pa_tnc_msg);
 		result = imc_attestation->send_message(imc_attestation, connection_id,
-										FALSE, 0, TNC_IMVID_ANY,
-										pa_tnc_msg->get_encoding(pa_tnc_msg));
-		pa_tnc_msg->destroy(pa_tnc_msg);
+										FALSE, 0, TNC_IMVID_ANY, attr_list);
 	}
-
 	attr_list->destroy(attr_list);
+
 	return result;
 }
 

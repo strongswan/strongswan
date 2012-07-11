@@ -221,7 +221,7 @@ end:
 
 static TNC_Result send_message(TNC_ConnectionID connection_id)
 {
-	pa_tnc_msg_t *msg;
+	linked_list_t *attr_list;
 	pa_tnc_attr_t *attr;
 	ietf_attr_port_filter_t *attr_port_filter;
 	TNC_Result result;
@@ -234,12 +234,11 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		attr->destroy(attr);
 		return TNC_RESULT_FATAL;
 	}
-	msg = pa_tnc_msg_create();
-	msg->add_attribute(msg, attr);
-	msg->build(msg);
+	attr_list = linked_list_create();
+	attr_list->insert_last(attr_list, attr);
 	result = imc_scanner->send_message(imc_scanner, connection_id, FALSE, 0,
-									   TNC_IMVID_ANY, msg->get_encoding(msg));	
-	msg->destroy(msg);
+									   TNC_IMVID_ANY, attr_list);
+	attr_list->destroy(attr_list);
 
 	return result;
 }

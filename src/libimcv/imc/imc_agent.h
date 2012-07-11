@@ -26,6 +26,7 @@
 
 #include <tncifimc.h>
 #include <pen/pen.h>
+#include <utils/linked_list.h>
 
 #include <library.h>
 
@@ -104,13 +105,13 @@ struct imc_agent_t {
 	 * @param excl				exclusive flag
 	 * @param src_imc_id		IMC ID to be set as source
 	 * @param dst_imv_id		IMV ID to be set as destination
-	 * @param msg				message to send
+	 * @param attr_list			list of PA-TNC attributes to send
 	 * @return					TNC result code
 	 */
 	TNC_Result (*send_message)(imc_agent_t *this,
 							   TNC_ConnectionID connection_id, bool excl,
 							   TNC_UInt32 src_imc_id, TNC_UInt32 dst_imv_id,
-							   chunk_t msg);
+							   linked_list_t *attr_list);
 
 	/**
 	 * Call when a PA-TNC message was received

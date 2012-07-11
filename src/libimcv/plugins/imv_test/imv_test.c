@@ -102,6 +102,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	linked_list_t *attr_list;
 	imv_state_t *state;
 	imv_test_state_t *test_state;
 	enumerator_t *enumerator;
@@ -217,13 +218,12 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	/* repeat the measurement ? */
 	if (test_state->another_round(test_state, src_imc_id))
 	{
+		attr_list = linked_list_create();
 		attr = ita_attr_command_create("repeat");
-		pa_tnc_msg = pa_tnc_msg_create();
-		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-		pa_tnc_msg->build(pa_tnc_msg);
+		attr_list->insert_last(attr_list, attr);
 		result = imv_test->send_message(imv_test, connection_id, TRUE, imv_id,
-							src_imc_id, pa_tnc_msg->get_encoding(pa_tnc_msg));	
-		pa_tnc_msg->destroy(pa_tnc_msg);
+							src_imc_id, attr_list);	
+		attr_list->destroy(attr_list);
 
 		return result;
 	}

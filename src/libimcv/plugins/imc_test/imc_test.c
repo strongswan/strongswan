@@ -162,30 +162,30 @@ static TNC_Result send_message(imc_state_t *state, TNC_UInt32 src_imc_id,
 												   TNC_UInt32 dst_imv_id)
 {
 	imc_test_state_t *test_state;
-	pa_tnc_msg_t *msg;
+	linked_list_t *attr_list;
 	pa_tnc_attr_t *attr;
 	bool excl;
 	TNC_ConnectionID connection_id;
 	TNC_Result result;
 
+	attr_list = linked_list_create();
 	connection_id = state->get_connection_id(state);
 	test_state = (imc_test_state_t*)state;
 
-	msg = pa_tnc_msg_create();
 	if (test_state->get_dummy_size(test_state))
 	{
 		attr = ita_attr_dummy_create(test_state->get_dummy_size(test_state));
 		attr->set_noskip_flag(attr, TRUE);
-		msg->add_attribute(msg, attr);
+		attr_list->insert_last(attr_list, attr);
 	}
 	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
-	msg->add_attribute(msg, attr);
-	msg->build(msg);
+	attr_list->insert_last(attr_list, attr);
+
 	excl = dst_imv_id != TNC_IMVID_ANY;
 	result = imc_test->send_message(imc_test, connection_id, excl, src_imc_id,
-									dst_imv_id, msg->get_encoding(msg));	
-	msg->destroy(msg);
+									dst_imv_id, attr_list);
+	attr_list->destroy(attr_list);
 
 	return result;
 }
