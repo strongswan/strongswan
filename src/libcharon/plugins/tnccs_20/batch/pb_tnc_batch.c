@@ -272,6 +272,8 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 								  PB_ERROR_UNEXPECTED_BATCH_TYPE);
 		goto fatal;
 	}
+	DBG1(DBG_TNC, "processing PB-TNC %N batch", pb_tnc_batch_type_names,
+												this->type);
 
 	/* Batch Length */
 	if (this->encoding.len != batch_len)
@@ -284,6 +286,13 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 	}
 
 	this->offset = PB_TNC_BATCH_HEADER_SIZE;
+
+	/* Register an empty CDATA batch with the state machine */
+	if (this->type == PB_BATCH_CDATA)
+	{
+		state_machine->set_empty_cdata(state_machine,
+									   this->offset == this->encoding.len);
+	}
 	return SUCCESS;
 
 fatal:
@@ -459,8 +468,7 @@ METHOD(pb_tnc_batch_t, process, status_t,
 	{
 		return FAILED;
 	}
-	DBG1(DBG_TNC, "processing PB-TNC %N batch", pb_tnc_batch_type_names,
-												this->type);
+
 	while (this->offset < this->encoding.len)
 	{
 		switch (process_tnc_msg(this))

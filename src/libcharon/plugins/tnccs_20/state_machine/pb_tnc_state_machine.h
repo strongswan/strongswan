@@ -73,6 +73,20 @@ struct pb_tnc_state_machine_t {
 	bool (*send_batch)(pb_tnc_state_machine_t *this, pb_tnc_batch_type_t type);
 
 	/**
+	 * Informs whether the last received PB-TNC CDATA Batch was empty
+	 *
+	 * @result				TRUE if last received PB-TNC CDATA Batch was empty
+	 */
+	bool (*get_empty_cdata)(pb_tnc_state_machine_t *this);
+
+	/**
+	 * Store information whether the received PB-TNC CDATA Batch was empty
+	 *
+	 * @bool empty			set to TRUE if received PB-TNC CDATA Batch was empty
+	 */
+	void (*set_empty_cdata)(pb_tnc_state_machine_t *this, bool empty);
+
+	/**
 	 * Destroys a pb_tnc_state_machine_t object.
 	 */
 	void (*destroy)(pb_tnc_state_machine_t *this);

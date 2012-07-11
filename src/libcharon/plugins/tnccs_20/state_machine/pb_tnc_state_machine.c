@@ -71,6 +71,11 @@ struct private_pb_tnc_state_machine_t {
 	bool is_server;
 
 	/**
+	 * Informs whether last received PB-TNC CDATA Batch was empty
+	 */
+	bool empty_cdata;
+
+	/**
 	 * Current PB-TNC state
 	 */
 	pb_tnc_state_t state;
@@ -265,6 +270,22 @@ METHOD(pb_tnc_state_machine_t, send_batch, bool,
 	return TRUE;
 }
 
+METHOD(pb_tnc_state_machine_t, get_empty_cdata, bool,
+	private_pb_tnc_state_machine_t *this)
+{
+	return this->empty_cdata;
+}
+
+METHOD(pb_tnc_state_machine_t, set_empty_cdata, void,
+	private_pb_tnc_state_machine_t *this, bool empty)
+{
+	if (empty)
+	{
+		DBG2(DBG_TNC, "received empty PB-TNC CDATA batch");
+	}
+	this->empty_cdata = empty;
+}
+
 METHOD(pb_tnc_state_machine_t, destroy, void,
 	private_pb_tnc_state_machine_t *this)
 {
@@ -283,6 +304,8 @@ pb_tnc_state_machine_t* pb_tnc_state_machine_create(bool is_server)
 			.get_state = _get_state,
 			.receive_batch = _receive_batch,
 			.send_batch = _send_batch,
+			.get_empty_cdata = _get_empty_cdata,
+			.set_empty_cdata = _set_empty_cdata,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,

@@ -632,7 +632,17 @@ METHOD(tls_t, build, status_t,
 	if (this->batch_type == PB_BATCH_NONE && this->is_server &&
 		state == PB_STATE_SERVER_WORKING)
 	{
-		check_and_build_recommendation(this);
+		if (this->state_machine->get_empty_cdata(this->state_machine) ||
+			this->recs->have_recommendation(this->recs, NULL, NULL))
+		{
+			check_and_build_recommendation(this);
+		}
+		else
+		{
+			DBG2(DBG_TNC, "no recommendation available yet, "
+						  "sending empty PB-TNC SDATA batch");
+			this->batch_type = PB_BATCH_SDATA;
+		}
 	}
 
 	if (this->batch_type != PB_BATCH_NONE)
