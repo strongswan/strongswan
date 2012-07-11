@@ -46,6 +46,7 @@ ARG_WITH_SUBST([ipsec-script],       [ipsec], [change the name of the ipsec scri
 
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
+ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -783,6 +784,9 @@ if test x$integrity_test = xtrue; then
 		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
 	)
 fi
+
+AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])
+AC_SUBST(dev_headers)
 
 CFLAGS="$CFLAGS -include `pwd`/config.h"
 

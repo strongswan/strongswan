@@ -26,7 +26,8 @@ utils.c utils/host.c utils/identification.c utils/lexparser.c \
 utils/linked_list.c utils/hashtable.c utils/enumerator.c utils/optionsfrom.c \
 utils/capabilities.c utils/backtrace.c
 
-strongswan_includedir = $(includedir)/strongswan
+if USE_DEV_HEADERS
+strongswan_includedir = ${dev_headers}
 nobase_strongswan_include_HEADERS = \
 library.h chunk.h debug.h enum.h settings.h printf_hook.h \
 asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
@@ -58,6 +59,7 @@ threading/spinlock.h threading/semaphore.h threading/rwlock.h \
 threading/lock_profiler.h utils.h utils/host.h utils/identification.h \
 utils/lexparser.h utils/linked_list.h utils/hashtable.h utils/enumerator.h \
 utils/optionsfrom.h utils/capabilities.h utils/backtrace.h
+endif
 
 library.lo :	$(top_builddir)/config.status
 

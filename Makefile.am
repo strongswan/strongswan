@@ -11,8 +11,10 @@ CLEANFILES = Doxyfile
 BUILT_SOURCES = Android.mk
 MAINTAINERCLEANFILES = Android.mk
 
+if USE_DEV_HEADERS
 config_includedir = $(ipseclibdir)/include
 nodist_config_include_HEADERS = config.h
+endif
 
 Android.mk :	Android.mk.in configure.in
 		sed \
