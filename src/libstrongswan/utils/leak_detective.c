@@ -188,6 +188,7 @@ static void uninstall_hooks()
 char *whitelist[] = {
 	/* backtraces, including own */
 	"backtrace_create",
+	"safe_strerror",
 	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",
