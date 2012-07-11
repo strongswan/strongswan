@@ -471,6 +471,7 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id, bool excl,
 	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, linked_list_t *attr_list)
 {
+	TNC_Result result = TNC_RESULT_FATAL;
 	TNC_MessageType type;
 	TNC_UInt32 msg_flags;
 	imv_state_t *state;
@@ -503,18 +504,20 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 		}
 		msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 
-		return this->send_message_long(src_imv_id, connection_id, msg_flags,
-									   msg.ptr, msg.len, this->vendor_id,
-									   this->subtype, dst_imc_id);
+		result = this->send_message_long(src_imv_id, connection_id, msg_flags,
+										 msg.ptr, msg.len, this->vendor_id,
+										 this->subtype, dst_imc_id);
 	}
-	if (this->send_message)
+	else if (this->send_message)
 	{
 		type = (this->vendor_id << 8) | this->subtype;
 
-		return this->send_message(this->id, connection_id, msg.ptr, msg.len,
-								  type);
+		result = this->send_message(this->id, connection_id, msg.ptr, msg.len,
+									type);
 	}
-	return TNC_RESULT_FATAL;
+	pa_tnc_msg->destroy(pa_tnc_msg);
+
+	return result;
 }
 
 METHOD(imv_agent_t, set_recommendation, TNC_Result,

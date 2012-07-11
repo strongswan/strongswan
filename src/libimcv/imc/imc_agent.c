@@ -456,6 +456,7 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 {
 	TNC_MessageType type;
 	TNC_UInt32 msg_flags;
+	TNC_Result result = TNC_RESULT_FATAL;
 	imc_state_t *state;
 	pa_tnc_attr_t *attr;
 	pa_tnc_msg_t *pa_tnc_msg;
@@ -486,18 +487,20 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 		}
 		msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 
-		return this->send_message_long(src_imc_id, connection_id, msg_flags,
-									   msg.ptr, msg.len, this->vendor_id,
-									   this->subtype, dst_imv_id);
+		result = this->send_message_long(src_imc_id, connection_id, msg_flags,
+										 msg.ptr, msg.len, this->vendor_id,
+										 this->subtype, dst_imv_id);
 	}
-	if (this->send_message)
+	else if (this->send_message)
 	{
 		type = (this->vendor_id << 8) | this->subtype;
 
-		return this->send_message(this->id, connection_id, msg.ptr, msg.len,
-								  type);
+		result = this->send_message(this->id, connection_id, msg.ptr, msg.len,
+									type);
 	}
-	return TNC_RESULT_FATAL;
+	pa_tnc_msg->destroy(pa_tnc_msg);
+
+	return result;
 }
 
 METHOD(imc_agent_t, receive_message, TNC_Result,
