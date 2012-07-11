@@ -194,6 +194,7 @@ ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates
 ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
+ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 
 dnl =========================
 dnl  set up compiler and flags
@@ -783,6 +784,14 @@ if test x$integrity_test = xtrue; then
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
 		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
 	)
+fi
+
+if test x$bfd_backtraces = xtrue; then
+	AC_HAVE_LIBRARY([bfd],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])])
+	AC_CHECK_HEADER([bfd.h],[AC_DEFINE([HAVE_BFD_H],,[have binutils bfd.h])],
+		[AC_MSG_ERROR([binutils bfd.h header not found!])])
+	BFDLIB="-lbfd"
+	AC_SUBST(BFDLIB)
 fi
 
 AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])

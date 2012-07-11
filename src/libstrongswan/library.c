@@ -23,6 +23,7 @@
 #include <utils/identification.h>
 #include <utils/host.h>
 #include <utils/hashtable.h>
+#include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>
 
 #define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
@@ -88,6 +89,7 @@ void library_deinit()
 	}
 
 	threads_deinit();
+	backtrace_deinit();
 
 	free(this);
 	lib = NULL;
@@ -146,6 +148,7 @@ bool library_init(char *settings)
 	);
 	lib = &this->public;
 
+	backtrace_init();
 	threads_init();
 
 #ifdef LEAK_DETECTIVE
@@ -204,6 +207,7 @@ bool library_init(char *settings)
 		return FALSE;
 #endif /* INTEGRITY_TEST */
 	}
+
 	return TRUE;
 }
 

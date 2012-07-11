@@ -50,6 +50,276 @@ struct private_backtrace_t {
 	void *frames[];
 };
 
+#ifdef HAVE_DLADDR
+#ifdef HAVE_BFD_H
+
+#include <bfd.h>
+#include <utils/hashtable.h>
+#include <threading/mutex.h>
+
+/**
+ * Hashtable-cached bfd handle
+ */
+typedef struct {
+	/** binary file name on disk */
+	char *filename;
+	/** bfd handle */
+	bfd *abfd;
+	/** loaded symbols */
+	asymbol **syms;
+} bfd_entry_t;
+
+/**
+ * Destroy a bfd_entry
+ */
+static void bfd_entry_destroy(bfd_entry_t *this)
+{
+	free(this->filename);
+	free(this->syms);
+	bfd_close(this->abfd);
+	free(this);
+}
+
+/**
+ * Data to pass to find_addr()
+ */
+typedef struct {
+	/** used bfd entry */
+	bfd_entry_t *entry;
+	/** backtrace address */
+	bfd_vma vma;
+	/** stream to log to */
+	FILE *file;
+	/** TRUE if complete */
+	bool found;
+} bfd_find_data_t;
+
+/**
+ * bfd entry cache
+ */
+static hashtable_t *bfds;
+
+static mutex_t *bfd_mutex;
+
+/**
+ * Hashtable hash function
+ */
+static u_int bfd_hash(char *key)
+{
+	return chunk_hash(chunk_create(key, strlen(key)));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool bfd_equals(char *a, char *b)
+{
+	return streq(a, b);
+}
+
+/**
+ * See header.
+ */
+void backtrace_init()
+{
+	bfd_init();
+	bfds = hashtable_create((hashtable_hash_t)bfd_hash,
+							(hashtable_equals_t)bfd_equals, 8);
+	bfd_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+}
+
+/**
+ * See header.
+ */
+void backtrace_deinit()
+{
+	enumerator_t *enumerator;
+	bfd_entry_t *entry;
+	char *key;
+
+	enumerator = bfds->create_enumerator(bfds);
+	while (enumerator->enumerate(enumerator, &key, &entry))
+	{
+		bfds->remove_at(bfds, enumerator);
+		bfd_entry_destroy(entry);
+	}
+	enumerator->destroy(enumerator);
+
+	bfds->destroy(bfds);
+	bfd_mutex->destroy(bfd_mutex);
+}
+
+/**
+ * Find and print information to an address
+ */
+static void find_addr(bfd *abfd, asection *section, bfd_find_data_t *data)
+{
+	bfd_size_type size;
+	bfd_vma vma;
+	const char *source;
+	const char *function;
+	u_int line;
+
+	if (!data->found || (bfd_get_section_flags(abfd, section) & SEC_ALLOC) != 0)
+	{
+		vma = bfd_get_section_vma(abfd, section);
+		if (data->vma >= vma)
+		{
+			size = bfd_get_section_size(section);
+			if (data->vma < vma + size)
+			{
+				data->found = bfd_find_nearest_line(abfd, section,
+											data->entry->syms, data->vma - vma,
+											&source, &function, &line);
+				if (data->found)
+				{
+					if (source || function)
+					{
+						fprintf(data->file, "    -> ");
+						if (function)
+						{
+							fprintf(data->file, "\e[34m%s() ", function);
+						}
+						if (source)
+						{
+							fprintf(data->file, "\e[32m@ %s:%d", source, line);
+						}
+						fprintf(data->file, "\e[0m\n");
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Find a cached bfd entry, create'n'cache if not found
+ */
+static bfd_entry_t *get_bfd_entry(char *filename)
+{
+	bool dynamic = FALSE, ok = FALSE;
+	bfd_entry_t *entry;
+	long size;
+
+	/* check cache */
+	entry = bfds->get(bfds, filename);
+	if (entry)
+	{
+		return entry;
+	}
+
+	INIT(entry,
+		.abfd = bfd_openr(filename, NULL),
+	);
+
+	if (!entry->abfd)
+	{
+		free(entry);
+		return NULL;
+	}
+	entry->abfd->flags |= BFD_DECOMPRESS;
+	if (bfd_check_format(entry->abfd, bfd_archive) == 0 &&
+		bfd_check_format_matches(entry->abfd, bfd_object, NULL))
+	{
+		if (bfd_get_file_flags(entry->abfd) & HAS_SYMS)
+		{
+			size = bfd_get_symtab_upper_bound(entry->abfd);
+			if (size == 0)
+			{
+				size = bfd_get_dynamic_symtab_upper_bound(entry->abfd);
+			}
+			if (size >= 0)
+			{
+				entry->syms = malloc(size);
+				if (dynamic)
+				{
+					ok = bfd_canonicalize_dynamic_symtab(entry->abfd,
+														 entry->syms) >= 0;
+				}
+				else
+				{
+					ok = bfd_canonicalize_symtab(entry->abfd,
+												 entry->syms) >= 0;
+				}
+			}
+		}
+	}
+	if (ok)
+	{
+		entry->filename = strdup(filename);
+		bfds->put(bfds, entry->filename, entry);
+		return entry;
+	}
+	bfd_entry_destroy(entry);
+	return NULL;
+}
+
+/**
+ * Print the source file with line number to file, libbfd variant
+ */
+static void print_sourceline(FILE *file, char *filename, void *ptr)
+{
+	bfd_entry_t *entry;
+	bfd_find_data_t data = {
+		.file = file,
+		.vma = (bfd_vma)ptr,
+	};
+	bool old = FALSE;
+
+	bfd_mutex->lock(bfd_mutex);
+	if (lib->leak_detective)
+	{
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
+	entry = get_bfd_entry(filename);
+	if (entry)
+	{
+		data.entry = entry;
+		bfd_map_over_sections(entry->abfd, (void*)find_addr, &data);
+	}
+	if (lib->leak_detective)
+	{
+		lib->leak_detective->set_state(lib->leak_detective, old);
+	}
+	bfd_mutex->unlock(bfd_mutex);
+}
+
+#else /* !HAVE_BFD_H */
+
+void backtrace_init() {}
+void backtrace_deinit() {}
+
+/**
+ * Print the source file with line number to file, slow addr2line variant
+ */
+static void print_sourceline(FILE *file, char *filename, void *ptr)
+{
+	char cmd[1024];
+	FILE *output;
+	int c;
+
+	snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", filename, ptr);
+	output = popen(cmd, "r");
+	if (output)
+	{
+		fprintf(file, "    -> \e[32m");
+		while (TRUE)
+		{
+			c = getc(output);
+			if (c == '\n' || c == EOF)
+			{
+				break;
+			}
+			fputc(c, file);
+		}
+		pclose(output);
+		fprintf(file, "\e[0m\n");
+	}
+}
+
+#endif /* HAVE_BFD_H */
+#endif /* HAVE_DLADDR */
+
 METHOD(backtrace_t, log_, void,
 	private_backtrace_t *this, FILE *file, bool detailed)
 {
@@ -67,9 +337,6 @@ METHOD(backtrace_t, log_, void,
 
 		if (dladdr(this->frames[i], &info))
 		{
-			char cmd[1024];
-			FILE *output;
-			int c;
 			void *ptr = this->frames[i];
 
 			if (strstr(info.dli_fname, ".so"))
@@ -89,37 +356,14 @@ METHOD(backtrace_t, log_, void,
 			}
 			if (detailed)
 			{
-				fprintf(file, "    -> \e[32m");
-				snprintf(cmd, sizeof(cmd), "addr2line -e %s %p",
-						 info.dli_fname, ptr);
-				output = popen(cmd, "r");
-				if (output)
-				{
-					while (TRUE)
-					{
-						c = getc(output);
-						if (c == '\n' || c == EOF)
-						{
-							break;
-						}
-						fputc(c, file);
-					}
-					pclose(output);
-				}
-				else
-				{
-	#endif /* HAVE_DLADDR */
-					fprintf(file, "    %s\n", strings[i]);
-	#ifdef HAVE_DLADDR
-				}
-				fprintf(file, "\n\e[0m");
+				print_sourceline(file, (char*)info.dli_fname, ptr);
 			}
 		}
 		else
+#endif /* HAVE_DLADDR */
 		{
 			fprintf(file, "    %s\n", strings[i]);
 		}
-#endif /* HAVE_DLADDR */
 	}
 	free (strings);
 #else /* !HAVE_BACKTRACE */

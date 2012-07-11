@@ -86,4 +86,14 @@ backtrace_t *backtrace_create(int skip);
  */
 void backtrace_dump(char *label, FILE *file, bool detailed);
 
+/**
+ * Initialize backtracing framework.
+ */
+void backtrace_init();
+
+/**
+ * Deinitialize backtracing framework.
+ */
+void backtrace_deinit();
+
 #endif /** BACKTRACE_H_ @}*/
