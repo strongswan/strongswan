@@ -5,7 +5,7 @@
 require 'mkmf'
 
 $defs << " @DEFS@"
-$CFLAGS << " -Wno-format"
+$CFLAGS << " -Wno-format -include \"@top_builddir@/config.h\""
 
 dir_config('dumm', '@top_srcdir@/src/dumm', '../.libs')
 dir_config('strongswan', '@top_srcdir@/src/libstrongswan', '../../libstrongswan/.libs')
