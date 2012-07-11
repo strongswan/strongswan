@@ -609,7 +609,7 @@ METHOD(tls_t, build, status_t,
 
 	state = this->state_machine->get_state(this->state_machine);
 
-	if (this->is_server && this->fatal_error && state == PB_STATE_END)
+	if (this->fatal_error && state == PB_STATE_END)
 	{
 		DBG1(DBG_TNC, "a fatal PB-TNC error occurred, terminating connection");
 		return FAILED;
@@ -629,19 +629,32 @@ METHOD(tls_t, build, status_t,
 		this->request_handshake_retry = FALSE;
 	}
 
-	if (this->batch_type == PB_BATCH_NONE && this->is_server &&
-		state == PB_STATE_SERVER_WORKING)
+	if (this->batch_type == PB_BATCH_NONE)
 	{
-		if (this->state_machine->get_empty_cdata(this->state_machine) ||
-			this->recs->have_recommendation(this->recs, NULL, NULL))
+		if (this->is_server && state == PB_STATE_SERVER_WORKING)
 		{
-			check_and_build_recommendation(this);
+			if (this->state_machine->get_empty_cdata(this->state_machine) ||
+				this->recs->have_recommendation(this->recs, NULL, NULL))
+			{
+				check_and_build_recommendation(this);
+			}
+			else
+			{
+				DBG2(DBG_TNC, "no recommendation available yet, "
+							  "sending empty PB-TNC SDATA batch");
+				this->batch_type = PB_BATCH_SDATA;
+			}
 		}
 		else
-		{
-			DBG2(DBG_TNC, "no recommendation available yet, "
-						  "sending empty PB-TNC SDATA batch");
-			this->batch_type = PB_BATCH_SDATA;
+        {
+			/**
+			 * In the DECIDED state and if no CRETRY is under way,
+			 * a PB-TNC client replies with an empty CLOSE batch.
+			 */
+			if (state == PB_STATE_DECIDED)
+			{
+				this->batch_type = PB_BATCH_CLOSE;
+			}
 		}
 	}
 
