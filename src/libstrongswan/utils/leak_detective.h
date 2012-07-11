@@ -50,6 +50,14 @@ struct leak_detective_t {
 	void (*usage)(leak_detective_t *this, FILE *out);
 
 	/**
+	 * Enable/disable leak detective hooks.
+	 *
+	 * @param				TRUE to enable, FALSE to disable
+	 * @return				state active before calling set_state
+	 */
+	bool (*set_state)(leak_detective_t *this, bool enabled);
+
+	/**
 	 * Destroy a leak_detective instance.
 	 */
 	void (*destroy)(leak_detective_t *this);

@@ -397,6 +397,35 @@ METHOD(leak_detective_t, report, void,
 	}
 }
 
+METHOD(leak_detective_t, set_state, bool,
+	private_leak_detective_t *this, bool enable)
+{
+	static struct sched_param oldparams;
+	static int oldpolicy;
+	struct sched_param params;
+	pthread_t thread_id;
+
+	if (enable == installed)
+	{
+		return installed;
+	}
+	thread_id = pthread_self();
+	if (enable)
+	{
+		install_hooks();
+		pthread_setschedparam(thread_id, oldpolicy, &oldparams);
+	}
+	else
+	{
+		pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+		params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+		pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+		uninstall_hooks();
+	}
+	installed = enable;
+	return !installed;
+}
+
 METHOD(leak_detective_t, usage, void,
 	private_leak_detective_t *this, FILE *out)
 {
@@ -620,6 +649,7 @@ leak_detective_t *leak_detective_create()
 		.public = {
 			.report = _report,
 			.usage = _usage,
+			.set_state = _set_state,
 			.destroy = _destroy,
 		},
 	);
