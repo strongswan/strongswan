@@ -786,6 +786,9 @@ if test x$integrity_test = xtrue; then
 fi
 
 AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])
+if test x$dev_headers = xyes; then
+	dev_headers="$includedir/strongswan"
+fi
 AC_SUBST(dev_headers)
 
 CFLAGS="$CFLAGS -include `pwd`/config.h"
