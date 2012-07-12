@@ -599,15 +599,17 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		fprintf(stderr, "reallocating invalid memory (%p): "
-				"header magic 0x%x, tail magic 0x%x:\n",
-				old, hdr->magic, tail->magic);
+		fprintf(stderr, "reallocating invalid memory (%p):\n"
+				"header magic 0x%x:\n", old, hdr->magic);
 		backtrace = backtrace_create(3);
 		backtrace->log(backtrace, stderr, TRUE);
 		backtrace->destroy(backtrace);
 	}
-	/* clear tail magic, allocate, set tail magic */
-	memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
+	else
+	{
+		/* clear tail magic, allocate, set tail magic */
+		memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
+	}
 	hdr = realloc(hdr, sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
 	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
 	tail->magic = MEMORY_TAIL_MAGIC;
