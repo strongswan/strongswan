@@ -113,6 +113,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_MEAS_ALGO_SIZE);
 	writer->write_uint16(writer, PTS_MEAS_ALGO_RESERVED);
 	writer->write_uint16(writer, this->algorithms);

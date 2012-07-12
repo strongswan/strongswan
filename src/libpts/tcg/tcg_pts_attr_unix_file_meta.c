@@ -148,6 +148,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	pts_file_metadata_t *entry;
 	u_int64_t number_of_files;
 	
+	if (this->value.ptr)
+	{
+		return;
+	}
 	number_of_files = this->metadata->get_file_count(this->metadata);
 	writer = bio_writer_create(PTS_FILE_META_SIZE);
 

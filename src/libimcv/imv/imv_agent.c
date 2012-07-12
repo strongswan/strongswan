@@ -48,6 +48,11 @@ struct private_imv_agent_t {
 	TNC_MessageSubtype subtype;
 
 	/**
+	 * Maximum PA-TNC Message size
+	 */
+	size_t max_msg_len;
+
+	/**
 	 * ID of IMV as assigned by TNCS
 	 */
 	TNC_IMVID id;
@@ -471,13 +476,14 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id, bool excl,
 	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, linked_list_t *attr_list)
 {
-	TNC_Result result = TNC_RESULT_FATAL;
 	TNC_MessageType type;
 	TNC_UInt32 msg_flags;
+	TNC_Result result = TNC_RESULT_FATAL;
 	imv_state_t *state;
 	pa_tnc_attr_t *attr;
 	pa_tnc_msg_t *pa_tnc_msg;
 	chunk_t msg;
+	enumerator_t *enumerator;
 
 	state = find_connection(this, connection_id);
 	if (!state)
@@ -487,36 +493,53 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 		return TNC_RESULT_FATAL;
 	}
 
-	pa_tnc_msg = pa_tnc_msg_create();
-
-	while (attr_list->remove_first(attr_list, (void**)&attr) == SUCCESS)
+	pa_tnc_msg = pa_tnc_msg_create(this->max_msg_len);
+	while (attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-	}
-	pa_tnc_msg->build(pa_tnc_msg);
-	msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
+		pa_tnc_msg = pa_tnc_msg_create(this->max_msg_len);
 
-	if (state->has_long(state) && this->send_message_long)
-	{
-		if (!src_imv_id)
+		enumerator = attr_list->create_enumerator(attr_list);
+		while (enumerator->enumerate(enumerator, &attr))
 		{
-			src_imv_id = this->id;
+			if (!pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
+			{
+				break;
+			}
+			attr_list->remove_at(attr_list, enumerator);
 		}
-		msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+		enumerator->destroy(enumerator);
 
-		result = this->send_message_long(src_imv_id, connection_id, msg_flags,
-										 msg.ptr, msg.len, this->vendor_id,
-										 this->subtype, dst_imc_id);
+		/* build and send the PA-TNC message via the IF-IMV interface */
+		pa_tnc_msg->build(pa_tnc_msg);
+		msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
+
+		if (state->has_long(state) && this->send_message_long)
+		{
+			if (!src_imv_id)
+			{
+				src_imv_id = this->id;
+			}
+			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+
+			result = this->send_message_long(src_imv_id, connection_id,
+								msg_flags, msg.ptr, msg.len, this->vendor_id,
+								this->subtype, dst_imc_id);
+		}
+		else if (this->send_message)
+		{
+			type = (this->vendor_id << 8) | this->subtype;
+
+			result = this->send_message(this->id, connection_id, msg.ptr,
+								msg.len, type);
+		}
+
+		pa_tnc_msg->destroy(pa_tnc_msg);
+
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			break;
+		}
 	}
-	else if (this->send_message)
-	{
-		type = (this->vendor_id << 8) | this->subtype;
-
-		result = this->send_message(this->id, connection_id, msg.ptr, msg.len,
-									type);
-	}
-	pa_tnc_msg->destroy(pa_tnc_msg);
-
 	return result;
 }
 
@@ -585,7 +608,7 @@ METHOD(imv_agent_t, receive_message, TNC_Result,
 			break;
 		case VERIFY_ERROR:
 			/* build error message */
-			error_msg = pa_tnc_msg_create();
+			error_msg = pa_tnc_msg_create(this->max_msg_len);
 			enumerator = pa_msg->create_error_enumerator(pa_msg);
 			while (enumerator->enumerate(enumerator, &error_attr))
 			{
@@ -791,6 +814,7 @@ imv_agent_t *imv_agent_create(const char *name,
 		.name = name,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
+		.max_msg_len = 65490,
 		.id = id,
 		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),

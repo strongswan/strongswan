@@ -125,6 +125,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator_t *enumerator;
 	port_entry_t *entry;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(this->ports->get_count(this->ports) *
 							   PORT_FILTER_ENTRY_SIZE);
 

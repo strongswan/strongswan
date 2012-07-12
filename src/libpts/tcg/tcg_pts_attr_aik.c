@@ -117,6 +117,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	cred_encoding_type_t encoding_type = CERT_ASN1_DER;
 	chunk_t aik_blob;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	if (this->aik->get_type(this->aik) == CERT_TRUSTED_PUBKEY)
 	{
 		flags |= PTS_AIK_FLAGS_NAKED_KEY;

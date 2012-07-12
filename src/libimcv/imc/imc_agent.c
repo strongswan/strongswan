@@ -48,6 +48,11 @@ struct private_imc_agent_t {
 	TNC_MessageSubtype subtype;
 
 	/**
+	 * Maximum PA-TNC Message size
+	 */
+	size_t max_msg_len;
+
+	/**
 	 * ID of IMC as assigned by TNCC
 	 */
 	TNC_IMCID id;
@@ -461,6 +466,7 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 	pa_tnc_attr_t *attr;
 	pa_tnc_msg_t *pa_tnc_msg;
 	chunk_t msg;
+	enumerator_t *enumerator;
 
 	state = find_connection(this, connection_id);
 	if (!state)
@@ -470,36 +476,52 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 		return TNC_RESULT_FATAL;
 	}
 
-	pa_tnc_msg = pa_tnc_msg_create();
-
-	while (attr_list->remove_first(attr_list, (void**)&attr) == SUCCESS)
+	while (attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg->add_attribute(pa_tnc_msg, attr);
-	}
-	pa_tnc_msg->build(pa_tnc_msg);
-	msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
+		pa_tnc_msg = pa_tnc_msg_create(this->max_msg_len);
 
-	if (state->has_long(state) && this->send_message_long)
-	{
-		if (!src_imc_id)
+		enumerator = attr_list->create_enumerator(attr_list);
+		while (enumerator->enumerate(enumerator, &attr))
 		{
-			src_imc_id = this->id;
+			if (!pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
+			{
+				break;
+			}
+			attr_list->remove_at(attr_list, enumerator);
 		}
-		msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+		enumerator->destroy(enumerator);
 
-		result = this->send_message_long(src_imc_id, connection_id, msg_flags,
-										 msg.ptr, msg.len, this->vendor_id,
-										 this->subtype, dst_imv_id);
+		/* build and send the PA-TNC message via the IF-IMC interface */
+		pa_tnc_msg->build(pa_tnc_msg);
+		msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
+
+		if (state->has_long(state) && this->send_message_long)
+		{
+			if (!src_imc_id)
+			{
+				src_imc_id = this->id;
+			}
+			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
+
+			result = this->send_message_long(src_imc_id, connection_id,
+								msg_flags, msg.ptr, msg.len, this->vendor_id,
+								this->subtype, dst_imv_id);
+		}
+		else if (this->send_message)
+		{
+			type = (this->vendor_id << 8) | this->subtype;
+
+			result = this->send_message(this->id, connection_id, msg.ptr,
+								msg.len, type);
+		}
+
+		pa_tnc_msg->destroy(pa_tnc_msg);
+
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			break;
+		}
 	}
-	else if (this->send_message)
-	{
-		type = (this->vendor_id << 8) | this->subtype;
-
-		result = this->send_message(this->id, connection_id, msg.ptr, msg.len,
-									type);
-	}
-	pa_tnc_msg->destroy(pa_tnc_msg);
-
 	return result;
 }
 
@@ -549,7 +571,7 @@ METHOD(imc_agent_t, receive_message, TNC_Result,
 			break;
 		case VERIFY_ERROR:
 			/* build error message */
-			error_msg = pa_tnc_msg_create();
+			error_msg = pa_tnc_msg_create(this->max_msg_len);
 			enumerator = pa_msg->create_error_enumerator(pa_msg);
 			while (enumerator->enumerate(enumerator, &error_attr))
 			{
@@ -693,6 +715,7 @@ imc_agent_t *imc_agent_create(const char *name,
 		.name = name,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
+		.max_msg_len = 65490,
 		.id = id,
 		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),

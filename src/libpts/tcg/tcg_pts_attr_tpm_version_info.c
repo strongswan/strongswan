@@ -114,6 +114,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_TPM_VER_INFO_SIZE);
 	writer->write_data(writer, this->tpm_version_info);
 

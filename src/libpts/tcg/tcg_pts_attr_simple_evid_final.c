@@ -169,6 +169,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	u_int8_t flags;
 	
+	if (this->value.ptr)
+	{
+		return;
+	}
 	flags = this->flags & PTS_SIMPLE_EVID_FINAL_FLAG_MASK;
 
 	if (this->has_evid_sig)

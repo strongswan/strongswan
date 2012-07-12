@@ -177,6 +177,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator_t *enumerator;
 	entry_t *entry;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_REQ_FUNC_COMP_EVID_SIZE);
 
 	enumerator = this->list->create_enumerator(this->list);

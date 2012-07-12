@@ -192,6 +192,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE);
 	writer->write_uint8 (writer, PA_ERROR_RESERVED);
 	writer->write_uint24(writer, this->error_vendor_id);

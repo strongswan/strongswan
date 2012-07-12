@@ -95,6 +95,10 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 METHOD(pa_tnc_attr_t, build, void,
 	private_ita_attr_command_t *this)
 {
+	if (this->value.ptr)
+	{
+		return;
+	}
 	this->value = chunk_create(this->command, strlen(this->command));
 	this->value = chunk_clone(this->value);
 }

@@ -108,7 +108,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	enumerator_t *enumerator;
 	TNC_Result result;
 	int rounds;
-	bool fatal_error, retry = FALSE;
+	bool fatal_error, received_command = FALSE, retry = FALSE;
 
 	if (!imv_test)
 	{
@@ -154,6 +154,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 			ita_attr_command_t *ita_attr;
 			char *command;
 	
+			received_command = TRUE;
 			ita_attr = (ita_attr_command_t*)attr;
 			command = ita_attr->get_command(ita_attr);
 
@@ -228,7 +229,9 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		return result;
 	}
 
-	return imv_test->provide_recommendation(imv_test, connection_id);
+	return received_command ?
+				imv_test->provide_recommendation(imv_test, connection_id) :
+				TNC_RESULT_SUCCESS;
 }
 
 /**

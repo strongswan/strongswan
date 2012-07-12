@@ -136,6 +136,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	chunk_t pathname;
 	bio_writer_t *writer;
 	
+	if (this->value.ptr)
+	{
+		return;
+	}
 	if (this->directory_flag)
 	{
 		flags |= DIRECTORY_CONTENTS_FLAG;

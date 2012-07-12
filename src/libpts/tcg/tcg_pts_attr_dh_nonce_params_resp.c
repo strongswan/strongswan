@@ -135,6 +135,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_DH_NONCE_PARAMS_RESP_SIZE);
 	writer->write_uint24(writer, PTS_DH_NONCE_PARAMS_RESP_RESERVED);
 	writer->write_uint8 (writer, this->responder_nonce.len);

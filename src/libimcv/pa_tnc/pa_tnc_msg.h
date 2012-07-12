@@ -46,8 +46,9 @@ struct pa_tnc_msg_t {
 	 * Add a PA-TNC attribute
 	 *
 	 * @param attr				PA-TNC attribute to be addedd
+	 * @return					TRUE if attribute fit into message and was added
 	 */
-	void (*add_attribute)(pa_tnc_msg_t *this, pa_tnc_attr_t* attr);
+	bool (*add_attribute)(pa_tnc_msg_t *this, pa_tnc_attr_t* attr);
 
 	/**
 	 * Build the PA-TNC message
@@ -91,7 +92,7 @@ struct pa_tnc_msg_t {
 /**
  * Create an empty PA-TNC message
  */
-pa_tnc_msg_t* pa_tnc_msg_create(void);
+pa_tnc_msg_t* pa_tnc_msg_create(size_t max_msg_len);
 
 /**
  * Create an unprocessed PA-TNC message from received data

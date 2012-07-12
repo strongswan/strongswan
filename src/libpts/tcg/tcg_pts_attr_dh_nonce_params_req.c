@@ -119,6 +119,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_DH_NONCE_PARAMS_REQ_SIZE);
 	writer->write_uint8 (writer, PTS_DH_NONCE_PARAMS_REQ_RESERVED);
 	writer->write_uint8 (writer, this->min_nonce_len);

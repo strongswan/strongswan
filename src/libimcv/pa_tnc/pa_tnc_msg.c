@@ -90,6 +90,16 @@ struct private_pa_tnc_msg_t {
 	u_int32_t identifier;
 
 	/**
+	 * Current PA-TNC Message size
+	 */
+	size_t msg_len;
+
+	/**
+	 * Maximum PA-TNC Message size
+	 */
+	size_t max_msg_len;
+
+	/**
 	 * Encoded message
 	 */
 	chunk_t encoding;
@@ -101,10 +111,25 @@ METHOD(pa_tnc_msg_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-METHOD(pa_tnc_msg_t, add_attribute, void,
+METHOD(pa_tnc_msg_t, add_attribute, bool,
 	private_pa_tnc_msg_t *this, pa_tnc_attr_t *attr)
 {
+	chunk_t attr_value;
+	size_t attr_len;
+
+	attr->build(attr);
+	attr_value = attr->get_value(attr);
+	attr_len = PA_TNC_ATTR_HEADER_SIZE + attr_value.len;
+
+	if (this->msg_len + attr_len > this->max_msg_len)
+	{
+		/* attribute just does not fit into this message */
+		return FALSE;
+	}
+	this->msg_len += attr_len;
+
 	this->attributes->insert_last(this->attributes, attr);
+	return TRUE;
 }
 
 METHOD(pa_tnc_msg_t, build, void,
@@ -127,16 +152,15 @@ METHOD(pa_tnc_msg_t, build, void,
 	DBG2(DBG_TNC, "creating PA-TNC message with ID 0x%08x", this->identifier);
 
 	/* build message header */
-	writer = bio_writer_create(PA_TNC_HEADER_SIZE);
+	writer = bio_writer_create(this->msg_len);
 	writer->write_uint8 (writer, PA_TNC_VERSION);
 	writer->write_uint24(writer, PA_TNC_RESERVED);
 	writer->write_uint32(writer, this->identifier);
 
-	/* build and append encoding of PA-TNC attributes */
+	/* append encoded value of PA-TNC attributes */
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		attr->build(attr);
 		vendor_id = attr->get_vendor_id(attr);
 		type = attr->get_type(attr);
 		value = attr->get_value(attr);
@@ -292,7 +316,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 						offset + PA_TNC_ATTR_HEADER_SIZE + attr_offset);
 			goto err;
 		}
-		add_attribute(this, attr);
+		this->attributes->insert_last(this->attributes, attr);
 		offset += length;
 	}
 
@@ -394,6 +418,33 @@ METHOD(pa_tnc_msg_t, destroy, void,
 /**
  * See header
  */
+pa_tnc_msg_t *pa_tnc_msg_create(size_t max_msg_len)
+{
+	private_pa_tnc_msg_t *this;
+
+	INIT(this,
+		.public = {
+			.get_encoding = _get_encoding,
+			.add_attribute = _add_attribute,
+			.build = _build,
+			.process = _process,
+			.process_ietf_std_errors = _process_ietf_std_errors,
+			.create_attribute_enumerator = _create_attribute_enumerator,
+			.create_error_enumerator = _create_error_enumerator,
+			.destroy = _destroy,
+		},
+		.attributes = linked_list_create(),
+		.errors = linked_list_create(),
+		.msg_len = PA_TNC_HEADER_SIZE,
+		.max_msg_len = max_msg_len,
+	);
+
+	return &this->public;
+}
+
+/**
+ * See header
+ */
 pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 {
 	private_pa_tnc_msg_t *this;
@@ -415,13 +466,5 @@ pa_tnc_msg_t *pa_tnc_msg_create_from_data(chunk_t data)
 	);
 
 	return &this->public;
-}
-
-/**
- * See header
- */
-pa_tnc_msg_t *pa_tnc_msg_create(void)
-{
-	return pa_tnc_msg_create_from_data(chunk_empty);
 }
 

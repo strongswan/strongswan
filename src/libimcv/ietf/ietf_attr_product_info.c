@@ -122,6 +122,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	bio_writer_t *writer;
 	chunk_t product_name;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	product_name = chunk_create(this->product_name, strlen(this->product_name));
 
 	writer = bio_writer_create(PRODUCT_INFO_MIN_SIZE);

@@ -135,6 +135,10 @@ METHOD(pa_tnc_attr_t, build, void,
 	chunk_t measurement;
 	bool first = TRUE;
 	
+	if (this->value.ptr)
+	{
+		return;
+	}
 	number_of_files = this->measurements->get_file_count(this->measurements);
 	request_id = this->measurements->get_request_id(this->measurements);
 

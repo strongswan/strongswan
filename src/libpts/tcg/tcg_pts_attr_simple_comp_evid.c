@@ -195,6 +195,11 @@ METHOD(pa_tnc_attr_t, build, void,
 	time_t measurement_time;
 	chunk_t measurement, utc_time, pcr_before, pcr_after, policy_uri;
 	
+	if (this->value.ptr)
+	{
+		return;
+	}
+
 	/* Extract parameters from comp_evidence_t object */
 	name         = this->evidence->get_comp_func_name(this->evidence,
 							&depth);

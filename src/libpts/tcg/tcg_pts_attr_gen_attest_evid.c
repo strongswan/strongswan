@@ -110,6 +110,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_GEN_ATTEST_EVID_SIZE);
 	writer->write_uint32 (writer, PTS_GEN_ATTEST_EVID_RESERVED);
 

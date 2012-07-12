@@ -113,6 +113,10 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 
+	if (this->value.ptr)
+	{
+		return;
+	}
 	writer = bio_writer_create(PTS_PROTO_CAPS_SIZE);
 	writer->write_uint16(writer, PTS_PROTO_CAPS_RESERVED);
 	writer->write_uint16(writer, this->flags);
