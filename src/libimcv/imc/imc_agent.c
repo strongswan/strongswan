@@ -516,6 +516,7 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 				else
 				{
 					DBG1(DBG_IMC, "PA-TNC attribute too large to send, deleted");
+					attr->destroy(attr);
 				}
 			}
 			attr_list->remove_at(attr_list, enumerator);
