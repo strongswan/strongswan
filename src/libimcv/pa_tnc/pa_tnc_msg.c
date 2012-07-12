@@ -382,8 +382,9 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 					break;
 			}
 
-			/* remove the processed IETF standard error attribute */
+			/* remove and delete the processed IETF standard error attribute */
 			this->attributes->remove_at(this->attributes, enumerator);
+			attr->destroy(attr);
 			fatal_error = TRUE;
 		}
 	}
