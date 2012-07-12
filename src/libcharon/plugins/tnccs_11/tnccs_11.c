@@ -32,6 +32,7 @@
 #include <tnc/tnccs/tnccs_manager.h>
 
 #include <debug.h>
+#include <daemon.h>
 #include <threading/mutex.h>
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;
@@ -65,6 +66,11 @@ struct private_tnccs_11_t {
 	 * TNCCS batch being constructed
 	 */
 	tnccs_batch_t *batch;
+
+	/**
+	 * Maximum PA-TNC message size
+	 */
+	size_t max_msg_len;
 
 	/**
 	 * Mutex locking the batch in construction
@@ -289,8 +295,9 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
-								TNCCS_1_1, (tnccs_t*)this, _send_msg,
-								&this->request_handshake_retry, &this->recs);
+									TNCCS_1_1, (tnccs_t*)this, _send_msg,
+									&this->request_handshake_retry,
+									this->max_msg_len, &this->recs);
 		if (!this->connection_id)
 		{
 			return FAILED;
@@ -416,7 +423,8 @@ METHOD(tls_t, build, status_t,
 
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
 										TNCCS_1_1, (tnccs_t*)this, _send_msg,
-										&this->request_handshake_retry, NULL);
+										&this->request_handshake_retry,
+										this->max_msg_len, NULL);
 		if (!this->connection_id)
 		{
 			return FAILED;
@@ -545,6 +553,9 @@ tls_t *tnccs_11_create(bool is_server)
 		},
 		.is_server = is_server,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.max_msg_len = lib->settings->get_int(lib->settings,
+								"%s.plugins.tnccs-11.max_msg_size", 45000,
+								charon->name),
 	);
 
 	return &this->public;

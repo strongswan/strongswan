@@ -78,9 +78,14 @@ struct private_tnccs_20_t {
 	pb_tnc_batch_type_t batch_type;
 
 	/**
-	 * Maximum PA-TNC batch size
+	 * Maximum PB-TNC batch size
 	 */
 	size_t max_batch_len;
+
+	/**
+	 * Maximum PA-TNC message size
+	 */
+	size_t max_msg_len;
 
 	/**
 	 * Mutex locking the batch in construction
@@ -407,8 +412,9 @@ METHOD(tls_t, process, status_t,
 	if (this->is_server && !this->connection_id)
 	{
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
-								TNCCS_2_0, (tnccs_t*)this, _send_msg,
-								&this->request_handshake_retry, &this->recs);
+									TNCCS_2_0, (tnccs_t*)this, _send_msg,
+									&this->request_handshake_retry,
+									this->max_msg_len, &this->recs);
 		if (!this->connection_id)
 		{
 			return FAILED;
@@ -583,7 +589,8 @@ METHOD(tls_t, build, status_t,
 
 		this->connection_id = tnc->tnccs->create_connection(tnc->tnccs,
 										TNCCS_2_0, (tnccs_t*)this, _send_msg,
-										&this->request_handshake_retry, NULL);
+										&this->request_handshake_retry,
+										this->max_msg_len, NULL);
 		if (!this->connection_id)
 		{
 			return FAILED;
@@ -796,6 +803,9 @@ tls_t *tnccs_20_create(bool is_server)
 		.messages = linked_list_create(),
 		.max_batch_len = lib->settings->get_int(lib->settings,
 								"%s.plugins.tnccs-20.max_batch_size", 65522,
+								charon->name),
+		.max_msg_len = lib->settings->get_int(lib->settings,
+								"%s.plugins.tnccs-20.max_msg_size", 65490,
 								charon->name),
 	);
 

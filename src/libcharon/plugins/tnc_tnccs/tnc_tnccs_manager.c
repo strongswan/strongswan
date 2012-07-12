@@ -75,6 +75,11 @@ struct tnccs_connection_entry_t {
 	bool *request_handshake_retry;
 
 	/**
+	 * Maximum size of a PA-TNC message
+	 */
+	u_int32_t max_msg_len;
+
+	/**
 	 * collection of IMV recommendations
 	 */
 	recommendations_t *recs;
@@ -181,7 +186,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	private_tnc_tnccs_manager_t *this, tnccs_type_t type, tnccs_t *tnccs,
 	tnccs_send_message_t send_message, bool* request_handshake_retry,
-	recommendations_t **recs)
+	u_int32_t max_msg_len, recommendations_t **recs)
 {
 	tnccs_connection_entry_t *entry;
 
@@ -190,6 +195,7 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 	entry->tnccs = tnccs;
 	entry->send_message = send_message;
 	entry->request_handshake_retry = request_handshake_retry;
+	entry->max_msg_len = max_msg_len;
 	if (recs)
 	{
 		/* we assume a TNC Server needing recommendations from IMVs */
@@ -564,16 +570,18 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			return TNC_RESULT_SUCCESS;
 		}
 		case TNC_ATTRIBUTEID_MAX_ROUND_TRIPS:
-			return uint_attribute(buffer_len, buffer, value_len, 0xffffffff);
+			return uint_attribute(buffer_len, buffer, value_len,
+								  0xffffffff);
 		case TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE:
-			return uint_attribute(buffer_len, buffer, value_len, 0x00000000);
+			return uint_attribute(buffer_len, buffer, value_len,
+								  entry->max_msg_len);
 		case TNC_ATTRIBUTEID_HAS_LONG_TYPES:
 		case TNC_ATTRIBUTEID_HAS_EXCLUSIVE:
 			return bool_attribute(buffer_len, buffer, value_len, 
-								 	 entry->type == TNCCS_2_0);
+								  entry->type == TNCCS_2_0);
 		case TNC_ATTRIBUTEID_HAS_SOH:
 			return bool_attribute(buffer_len, buffer, value_len, 
-								  	entry->type == TNCCS_SOH);
+								  entry->type == TNCCS_SOH);
 		case TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL:
 		{
 			char *protocol;

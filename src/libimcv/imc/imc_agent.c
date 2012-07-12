@@ -48,11 +48,6 @@ struct private_imc_agent_t {
 	TNC_MessageSubtype subtype;
 
 	/**
-	 * Maximum PA-TNC Message size
-	 */
-	size_t max_msg_len;
-
-	/**
 	 * ID of IMC as assigned by TNCC
 	 */
 	TNC_IMCID id;
@@ -337,12 +332,31 @@ static char* get_str_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
 	return NULL;
  }
 
+/**
+ * Read an UInt32 attribute
+ */
+static u_int32_t get_uint_attribute(private_imc_agent_t *this, TNC_ConnectionID id,
+									TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[4];
+
+	if (this->get_attribute  &&
+		this->get_attribute(this->id, id, attribute_id, 4, buf, &len) ==
+							TNC_RESULT_SUCCESS && len == 4)
+	{
+		return untoh32(buf);
+	}
+	return 0;
+ }
+
 METHOD(imc_agent_t, create_state, TNC_Result,
 	private_imc_agent_t *this, imc_state_t *state)
 {
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
 	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
+	u_int32_t max_msg_len;
 
 	conn_id = state->get_connection_id(state);
 	if (find_connection(this, conn_id))
@@ -361,14 +375,18 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
 	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
 	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
+	max_msg_len = get_uint_attribute(this, conn_id, TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE);
 
 	state->set_flags(state, has_long, has_excl);
+	state->set_max_msg_len(state, max_msg_len);
 
-	DBG2(DBG_IMC, "IMC %u \"%s\" created a state for Connection ID %u: "
-				  "%s %s with %slong %sexcl %ssoh over %s %s",
-				  this->id, this->name, conn_id, tnccs_p ? tnccs_p:"?",
-				  tnccs_v ? tnccs_v:"?", has_long ? "+":"-", has_excl ? "+":"-",
-				  has_soh ? "+":"-",  t_p ? t_p:"?", t_v ? t_v :"?");
+	DBG2(DBG_IMC, "IMC %u \"%s\" created a state for %s %s Connection ID %u: "
+				  "%slong %sexcl %ssoh", this->id, this->name,
+				  tnccs_p ? tnccs_p:"?", tnccs_v ? tnccs_v:"?", conn_id,
+			      has_long ? "+":"-", has_excl ? "+":"-", has_soh ? "+":"-");
+	DBG2(DBG_IMC, "  over %s %s with maximum PA-TNC msg size of %u bytes",
+				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
+
 	free(tnccs_p);
 	free(tnccs_v);
 	free(t_p);
@@ -478,7 +496,7 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 
 	while (attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg = pa_tnc_msg_create(this->max_msg_len);
+		pa_tnc_msg = pa_tnc_msg_create(state->get_max_msg_len(state));
 
 		enumerator = attr_list->create_enumerator(attr_list);
 		while (enumerator->enumerate(enumerator, &attr))
@@ -688,7 +706,6 @@ imc_agent_t *imc_agent_create(const char *name,
 		.name = name,
 		.vendor_id = vendor_id,
 		.subtype = subtype,
-		.max_msg_len = 65490,
 		.id = id,
 		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),

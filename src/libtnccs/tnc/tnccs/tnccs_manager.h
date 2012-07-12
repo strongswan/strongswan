@@ -70,6 +70,7 @@ struct tnccs_manager_t {
 	 * @param tnccs						TNCCS connection instance
 	 * @param send_message				TNCCS callback function
 	 * @param request_handshake_retry	pointer to boolean variable
+	 * @param max_msg_len				maximum PA-TNC message size
 	 * @param recs						pointer to IMV recommendation set
 	 * @return							assigned connection ID
 	 */
@@ -77,6 +78,7 @@ struct tnccs_manager_t {
 										  tnccs_type_t type, tnccs_t *tnccs,
 										  tnccs_send_message_t send_message,
 										  bool *request_handshake_retry,
+										  u_int32_t max_msg_len,
 										  recommendations_t **recs);
 
 	/**

@@ -64,6 +64,20 @@ D attached to the state
 	void (*set_flags)(imc_state_t *this, bool has_long, bool has_excl);
 
 	/**
+	 * Set the maximum size of a PA-TNC message for this TNCCS connection
+	 *
+	 * @max_msg_len			maximum size of a PA-TNC message
+	 */
+	void (*set_max_msg_len)(imc_state_t *this, u_int32_t max_msg_len);
+
+	/**
+	 * Get the maximum size of a PA-TNC message for this TNCCS connection
+	 *
+	 * @return				maximum size of a PA-TNC message
+	 */
+	u_int32_t (*get_max_msg_len)(imc_state_t *this);
+
+	/**
 	 * Change the connection state
 	 *
 	 * @param new_state		new connection state

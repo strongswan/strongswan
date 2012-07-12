@@ -48,6 +48,10 @@ struct private_imc_scanner_state_t {
 	 */
 	bool has_excl;
 
+	/**
+	 * Maximum PA-TNC message size for this TNCCS connection
+	 */
+	u_int32_t max_msg_len;
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -73,6 +77,18 @@ METHOD(imc_state_t, set_flags, void,
 {
 	this->has_long = has_long;
 	this->has_excl = has_excl;
+}
+
+METHOD(imc_state_t, set_max_msg_len, void,
+	private_imc_scanner_state_t *this, u_int32_t max_msg_len)
+{
+	this->max_msg_len = max_msg_len;
+}
+
+METHOD(imc_state_t, get_max_msg_len, u_int32_t,
+	private_imc_scanner_state_t *this)
+{
+	return this->max_msg_len;
 }
 
 METHOD(imc_state_t, change_state, void,
@@ -101,6 +117,8 @@ imc_state_t *imc_scanner_state_create(TNC_ConnectionID connection_id)
 				.has_long = _has_long,
 				.has_excl = _has_excl,
 				.set_flags = _set_flags,
+				.set_max_msg_len = _set_max_msg_len,
+				.get_max_msg_len = _get_max_msg_len,
 				.change_state = _change_state,
 				.destroy = _destroy,
 			},

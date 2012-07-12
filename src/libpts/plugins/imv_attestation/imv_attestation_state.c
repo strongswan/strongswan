@@ -62,6 +62,11 @@ struct private_imv_attestation_state_t {
 	bool has_excl;
 
 	/**
+	 * Maximum PA-TNC message size for this TNCCS connection
+	 */
+	u_int32_t max_msg_len;
+
+	/**
 	 * IMV Attestation handshake state
 	 */
 	imv_attestation_handshake_state_t handshake_state;
@@ -148,6 +153,18 @@ METHOD(imv_state_t, set_flags, void,
 {
 	this->has_long = has_long;
 	this->has_excl = has_excl;
+}
+
+METHOD(imv_state_t, set_max_msg_len, void,
+	private_imv_attestation_state_t *this, u_int32_t max_msg_len)
+{
+	this->max_msg_len = max_msg_len;
+}
+
+METHOD(imv_state_t, get_max_msg_len, u_int32_t,
+	private_imv_attestation_state_t *this)
+{
+	return this->max_msg_len;
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -358,6 +375,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.has_long = _has_long,
 				.has_excl = _has_excl,
 				.set_flags = _set_flags,
+				.set_max_msg_len = _set_max_msg_len,
+				.get_max_msg_len = _get_max_msg_len,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
