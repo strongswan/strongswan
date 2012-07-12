@@ -102,7 +102,6 @@ static void destroy(private_daemon_t *this)
 	/* cancel all threads and wait for their termination */
 	lib->processor->cancel(lib->processor);
 
-	DESTROY_IF(this->public.receiver);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -118,7 +117,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.xauth);
 	DESTROY_IF(this->public.backends);
-	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.socket);
 	DESTROY_IF(this->public.caps);
 
@@ -142,17 +140,44 @@ METHOD(daemon_t, start, void,
 											   DEFAULT_THREADS, charon->name));
 }
 
+
+/**
+ * Initialize/deinitialize sender and receiver
+ */
+static bool sender_receiver_cb(void *plugin, plugin_feature_t *feature,
+							   bool reg, private_daemon_t *this)
+{
+	if (reg)
+	{
+		this->public.receiver = receiver_create();
+		if (!this->public.receiver)
+		{
+			return FALSE;
+		}
+		this->public.sender = sender_create();
+	}
+	else
+	{
+		DESTROY_IF(this->public.receiver);
+		DESTROY_IF(this->public.sender);
+	}
+	return TRUE;
+}
+
 METHOD(daemon_t, initialize, bool,
 	private_daemon_t *this, char *plugins)
 {
-	static plugin_feature_t features[] = {
+	plugin_feature_t features[] = {
 		PLUGIN_PROVIDE(CUSTOM, "libcharon"),
-			PLUGIN_DEPENDS(HASHER, HASH_SHA1),
-			PLUGIN_DEPENDS(RNG, RNG_STRONG),
 			PLUGIN_DEPENDS(NONCE_GEN),
+			PLUGIN_DEPENDS(CUSTOM, "libcharon-receiver"),
 			PLUGIN_DEPENDS(CUSTOM, "kernel-ipsec"),
 			PLUGIN_DEPENDS(CUSTOM, "kernel-net"),
-			PLUGIN_DEPENDS(CUSTOM, "socket"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)sender_receiver_cb, this),
+			PLUGIN_PROVIDE(CUSTOM, "libcharon-receiver"),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA1),
+				PLUGIN_DEPENDS(RNG, RNG_STRONG),
+				PLUGIN_DEPENDS(CUSTOM, "socket"),
 	};
 	lib->plugins->add_static_features(lib->plugins, charon->name, features,
 									  countof(features), TRUE);
@@ -167,12 +192,6 @@ METHOD(daemon_t, initialize, bool,
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)
-	{
-		return FALSE;
-	}
-	this->public.sender = sender_create();
-	this->public.receiver = receiver_create();
-	if (this->public.receiver == NULL)
 	{
 		return FALSE;
 	}
