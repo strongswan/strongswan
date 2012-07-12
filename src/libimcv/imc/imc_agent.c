@@ -530,11 +530,11 @@ METHOD(imc_agent_t, receive_message, TNC_Result,
 	TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype,
 	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, pa_tnc_msg_t **pa_tnc_msg)
 {
-	pa_tnc_msg_t *pa_msg, *error_msg;
+	pa_tnc_msg_t *pa_msg;
 	pa_tnc_attr_t *error_attr;
+	linked_list_t *error_attr_list;
 	enumerator_t *enumerator;
-	TNC_MessageType msg_type;
-	TNC_UInt32 msg_flags, src_imc_id, dst_imv_id;
+	TNC_UInt32 src_imc_id, dst_imv_id;
 	TNC_ConnectionID connection_id;
 	TNC_Result result;
 
@@ -570,51 +570,24 @@ METHOD(imc_agent_t, receive_message, TNC_Result,
 			*pa_tnc_msg = pa_msg;
 			break;
 		case VERIFY_ERROR:
-			/* build error message */
-			error_msg = pa_tnc_msg_create(this->max_msg_len);
+			/* extract and copy by refence all error attributes */
+			error_attr_list = linked_list_create();
+
 			enumerator = pa_msg->create_error_enumerator(pa_msg);
 			while (enumerator->enumerate(enumerator, &error_attr))
 			{
-				error_msg->add_attribute(error_msg,
-										 error_attr->get_ref(error_attr));
+				error_attr_list->insert_last(error_attr_list,
+											 error_attr->get_ref(error_attr));
 			}
 			enumerator->destroy(enumerator);
-			error_msg->build(error_msg);
 
-			/* send error message */
-			if (state->has_long(state) && this->send_message_long)
-			{
-				if (state->has_excl(state))
-				{
-					msg_flags =	TNC_MESSAGE_FLAGS_EXCLUSIVE;
-					dst_imv_id = src_imv_id;
-				}
-				else
-				{
-					msg_flags = 0;
-					dst_imv_id = TNC_IMVID_ANY;
-				}
-				src_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? this->id
-														   : dst_imc_id;
+			src_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? this->id : dst_imc_id;
+			dst_imv_id = state->has_excl(state) ? src_imv_id : TNC_IMVID_ANY;
 
-				result = this->send_message_long(src_imc_id, connection_id,
-										msg_flags, msg.ptr, msg.len, msg_vid,
-										msg_subtype, dst_imv_id);
-			}
-			else if (this->send_message)
-			{
-				msg_type = (msg_vid << 8) | msg_subtype;
+			result = send_message(this, connection_id, state->has_excl(state),
+ 								  src_imc_id, dst_imv_id, error_attr_list);
 
-				result = this->send_message(this->id, connection_id,
-										msg.ptr, msg.len, msg_type);
-			}
-			else
-			{
-				result = TNC_RESULT_FATAL;
-			}
-
-			/* clean up */
-			error_msg->destroy(error_msg);
+			error_attr_list->destroy(error_attr_list);
 			pa_msg->destroy(pa_msg);
 			return result;
 		case FAILED:
