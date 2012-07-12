@@ -326,7 +326,8 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 	}
 	if (reg->kind == FEATURE_CALLBACK)
 	{
-		if (reg->arg.cb.f(plugin, feature, TRUE, reg->arg.cb.data))
+		if (!reg->arg.cb.f ||
+			 reg->arg.cb.f(plugin, feature, TRUE, reg->arg.cb.data))
 		{
 			return TRUE;
 		}
@@ -409,7 +410,8 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 	}
 	if (reg->kind == FEATURE_CALLBACK)
 	{
-		if (reg->arg.cb.f(plugin, feature, FALSE, reg->arg.cb.data))
+		if (!reg->arg.cb.f ||
+			 reg->arg.cb.f(plugin, feature, FALSE, reg->arg.cb.data))
 		{
 			return TRUE;
 		}

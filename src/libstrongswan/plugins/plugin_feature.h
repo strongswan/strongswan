@@ -51,17 +51,19 @@ typedef bool (*plugin_feature_callback_t)(plugin_t *plugin,
  * features provided by the plugin, hard (DEPENDS) or soft (SDEPEND) dependency
  * specified is related to the previously defined PROVIDE feature.
  * If a plugin feature requires to hook in functionality into the library
- * or a daemon, it can use REGISTER or CALLBACK entries. Each PROVIDED feature
+ * or a daemon, it can use REGISTER or CALLBACK entries. Each PROVIDE feature
  * uses the REGISTER/CALLBACK entry defined previously. The REGISTER entry
  * defines a common feature registration function directly passed to the
  * associated manager or factory (crypto/credential factory etc.). A callback
  * function is more generic allows the loader to invoke a callback to do
- * the registration.
+ * the registration. PROVIDE features that do not use a registration or callback
+ * function must be listed before any REGISTER/CALLBACK entry, or use the NOOP
+ * helper macro.
  *
- * To conviently create feature lists, use the four macros PLUGIN_REGISTER,
- * PLUGIN_CALLBACK, PLUGIN_PROVIDE, PLUGIN_DEPENDS and PLUGIN_SDEPEND. Use
- * identation to show how the registration functions and dependencies are
- * related to a provided feature, such as:
+ * To conveniently create feature lists, use the macros PLUGIN_REGISTER,
+ * PLUGIN_CALLBACK, PLUGIN_NOOP, PLUGIN_PROVIDE, PLUGIN_DEPENDS and
+ * PLUGIN_SDEPEND. Use indentation to show how the registration functions
+ * and dependencies are related to a provided feature, such as:
  *
  * @verbatim
 	// two features, one with two dependencies, both use a callback to register
@@ -75,7 +77,8 @@ typedef bool (*plugin_feature_callback_t)(plugin_t *plugin,
 		PLUGIN_PROVIDE(...),
 			PLUGIN_DEPENDS(...),
 	// feature that does not use a registration function
-	PLUGIN_PROVIDE(...),
+	PLUGIN_NOOP,
+		PLUGIN_PROVIDE(...),
 	@endverbatim
  */
 struct plugin_feature_t {
@@ -230,6 +233,11 @@ struct plugin_feature_t {
  * @param data		data pointer to pass to callback
  */
 #define PLUGIN_CALLBACK(cb, data) _PLUGIN_FEATURE_CALLBACK(cb, data)
+
+/**
+ * The upcoming features use neither a callback nor a register function.
+ */
+#define PLUGIN_NOOP _PLUGIN_FEATURE_CALLBACK(NULL, NULL)
 
 /**
  * Define a feature the plugin provides.
