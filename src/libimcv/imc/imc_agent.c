@@ -384,7 +384,7 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 				  "%slong %sexcl %ssoh", this->id, this->name,
 				  tnccs_p ? tnccs_p:"?", tnccs_v ? tnccs_v:"?", conn_id,
 			      has_long ? "+":"-", has_excl ? "+":"-", has_soh ? "+":"-");
-	DBG2(DBG_IMC, "  over %s %s with maximum PA-TNC msg size of %u bytes",
+	DBG2(DBG_IMC, "  over %s %s with maximum PA-TNC message size of %u bytes",
 				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
 
 	free(tnccs_p);
@@ -485,6 +485,7 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 	pa_tnc_msg_t *pa_tnc_msg;
 	chunk_t msg;
 	enumerator_t *enumerator;
+	bool attr_added;
 
 	state = find_connection(this, connection_id);
 	if (!state)
@@ -497,13 +498,25 @@ METHOD(imc_agent_t, send_message, TNC_Result,
 	while (attr_list->get_count(attr_list))
 	{
 		pa_tnc_msg = pa_tnc_msg_create(state->get_max_msg_len(state));
+		attr_added = FALSE;
 
 		enumerator = attr_list->create_enumerator(attr_list);
 		while (enumerator->enumerate(enumerator, &attr))
 		{
-			if (!pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
+			if (pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
 			{
-				break;
+				attr_added = TRUE;
+			}
+			else
+			{
+				if (attr_added)
+				{
+					break;
+				}
+				else
+				{
+					DBG1(DBG_IMC, "PA-TNC attribute too large to send, deleted");
+				}
 			}
 			attr_list->remove_at(attr_list, enumerator);
 		}
