@@ -62,7 +62,7 @@ static bool stroke_log(stroke_log_info_t *info, debug_t group, level_t level,
 {
 	if (level <= info->level)
 	{
-		if (fprintf(info->out, message) < 0 ||
+		if (fprintf(info->out, "%s", message) < 0 ||
 			fprintf(info->out, "\n") < 0 ||
 			fflush(info->out) != 0)
 		{
