@@ -121,7 +121,7 @@ METHOD(pa_tnc_msg_t, add_attribute, bool,
 	attr_value = attr->get_value(attr);
 	attr_len = PA_TNC_ATTR_HEADER_SIZE + attr_value.len;
 
-	if (this->msg_len + attr_len > this->max_msg_len)
+	if (this->max_msg_len && this->msg_len + attr_len > this->max_msg_len)
 	{
 		/* attribute just does not fit into this message */
 		return FALSE;
