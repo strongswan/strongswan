@@ -524,6 +524,7 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 
 		enumerator = attr_list->create_enumerator(attr_list);
 		while (enumerator->enumerate(enumerator, &attr))
+		{
 			if (pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
 			{
 				attr_added = TRUE;
