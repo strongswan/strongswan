@@ -131,6 +131,25 @@ METHOD(ipsec_sa_t, get_esp_context, esp_context_t*,
 	return this->esp_context;
 }
 
+METHOD(ipsec_sa_t, match_by_spi_dst, bool,
+	private_ipsec_sa_t *this, u_int32_t spi, host_t *dst)
+{
+	return this->spi == spi && this->dst->ip_equals(this->dst, dst);
+}
+
+METHOD(ipsec_sa_t, match_by_spi_src_dst, bool,
+	private_ipsec_sa_t *this, u_int32_t spi, host_t *src, host_t *dst)
+{
+	return this->spi == spi && this->src->ip_equals(this->src, src) &&
+		   this->dst->ip_equals(this->dst, dst);
+}
+
+METHOD(ipsec_sa_t, match_by_reqid, bool,
+	private_ipsec_sa_t *this, u_int32_t reqid, bool inbound)
+{
+	return this->reqid == reqid && this->inbound == inbound;
+}
+
 METHOD(ipsec_sa_t, destroy, void,
 	private_ipsec_sa_t *this)
 {
@@ -188,6 +207,9 @@ ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
 			.get_protocol = _get_protocol,
 			.get_lifetime = _get_lifetime,
 			.is_inbound = _is_inbound,
+			.match_by_spi_dst = _match_by_spi_dst,
+			.match_by_spi_src_dst = _match_by_spi_src_dst,
+			.match_by_reqid = _match_by_reqid,
 			.get_esp_context = _get_esp_context,
 		},
 		.spi = spi,

@@ -96,6 +96,35 @@ struct ipsec_sa_t {
 	esp_context_t *(*get_esp_context)(ipsec_sa_t *this);
 
 	/**
+	 * Check if this SA matches all given parameters
+	 *
+	 * @param spi		SPI
+	 * @param dst		destination address
+	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
+	 */
+	bool (*match_by_spi_dst)(ipsec_sa_t *this, u_int32_t spi, host_t *dst);
+
+	/**
+	 * Check if this SA matches all given parameters
+	 *
+	 * @param spi		SPI
+	 * @param src		source address
+	 * @param dst		destination address
+	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
+	 */
+	bool (*match_by_spi_src_dst)(ipsec_sa_t *this, u_int32_t spi, host_t *src,
+								 host_t *dst);
+
+	/**
+	 * Check if this SA matches all given parameters
+	 *
+	 * @param reqid		reqid
+	 * @param inbound	TRUE for inbound SA, FALSE for outbound
+	 * @return			TRUE if this SA matches all parameters, FALSE otherwise
+	 */
+	bool (*match_by_reqid)(ipsec_sa_t *this, u_int32_t reqid, bool inbound);
+
+	/**
 	 * Destroy an ipsec_sa_t
 	 */
 	void (*destroy)(ipsec_sa_t *this);
