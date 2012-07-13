@@ -15,10 +15,12 @@
  * for more details.
  */
 
+#include "ipsec.h"
 #include "ipsec_sa_mgr.h"
 
 #include <debug.h>
 #include <library.h>
+#include <processing/jobs/callback_job.h>
 #include <threading/mutex.h>
 #include <utils/hashtable.h>
 #include <utils/linked_list.h>
@@ -56,6 +58,28 @@ struct private_ipsec_sa_mgr_t {
 	rng_t *rng;
 };
 
+/**
+ * Helper struct for expiration events
+ */
+typedef struct {
+
+	/**
+	 * IPsec SA manager
+	 */
+	private_ipsec_sa_mgr_t *manager;
+
+	/**
+	 * SA that expired
+	 */
+	ipsec_sa_t *sa;
+
+	/**
+	 * 0 if this is a hard expire, otherwise the offset in s (soft->hard)
+	 */
+	u_int32_t hard_offset;
+
+} ipsec_sa_expired_t;
+
 /*
  * Used for the hash table of allocated SPIs
  */
@@ -92,6 +116,11 @@ static void flush_entries(private_ipsec_sa_mgr_t *this)
 /*
  * Different match functions to find SAs in the linked list
  */
+static bool match_entry_by_ptr(ipsec_sa_t *sa, ipsec_sa_t *other)
+{
+	return sa == other;
+}
+
 static bool match_entry_by_spi_inbound(ipsec_sa_t *sa, u_int32_t spi,
 									   bool inbound)
 {
@@ -102,6 +131,69 @@ static bool match_entry_by_spi_src_dst(ipsec_sa_t *sa, u_int32_t spi,
 									   host_t *src, host_t *dst)
 {
 	return sa->match_by_spi_src_dst(sa, spi, src, dst);
+}
+
+/**
+ * Callback for expiration events
+ */
+static job_requeue_t sa_expired(ipsec_sa_expired_t *expired)
+{
+	private_ipsec_sa_mgr_t *this = expired->manager;
+
+	this->mutex->lock(this->mutex);
+	if (this->sas->find_first(this->sas, (void*)match_entry_by_ptr,
+							  NULL, expired->sa) == SUCCESS)
+	{
+		u_int32_t hard_offset = expired->hard_offset;
+		ipsec_sa_t *sa = expired->sa;
+
+		ipsec->events->expire(ipsec->events, sa->get_reqid(sa),
+							  sa->get_protocol(sa), sa->get_spi(sa),
+							  hard_offset == 0);
+		if (hard_offset)
+		{	/* soft limit reached, schedule hard expire */
+			expired->hard_offset = 0;
+			this->mutex->unlock(this->mutex);
+			return JOB_RESCHEDULE(hard_offset);
+		}
+		/* hard limit reached */
+		this->sas->remove(this->sas, sa, NULL);
+		sa->destroy(sa);
+	}
+	this->mutex->unlock(this->mutex);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Schedule a job to handle IPsec SA expiration
+ */
+static void schedule_expiration(private_ipsec_sa_mgr_t *this,
+								ipsec_sa_t *sa)
+{
+	lifetime_cfg_t *lifetime = sa->get_lifetime(sa);
+	ipsec_sa_expired_t *expired;
+	callback_job_t *job;
+	u_int32_t timeout;
+
+	INIT(expired,
+		.manager = this,
+		.sa = sa,
+	);
+
+	/* schedule a rekey first, a hard timeout will be scheduled then, if any */
+	expired->hard_offset = lifetime->time.life - lifetime->time.rekey;
+	timeout = lifetime->time.rekey;
+
+	if (lifetime->time.life <= lifetime->time.rekey ||
+		lifetime->time.rekey == 0)
+	{	/* no rekey, schedule hard timeout */
+		expired->hard_offset = 0;
+		timeout = lifetime->time.life;
+	}
+
+	job = callback_job_create((callback_job_cb_t)sa_expired, expired,
+							  (callback_job_cleanup_t)free, NULL);
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)job, timeout);
 }
 
 /**
@@ -228,7 +320,10 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 		sa_new->destroy(sa_new);
 		return FAILED;
 	}
+
+	schedule_expiration(this, sa_new);
 	this->sas->insert_last(this->sas, sa_new);
+
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;
 }
