@@ -6,6 +6,7 @@ esp_context.c esp_context.h \
 esp_packet.c esp_packet.h \
 ipsec_event_listener.h \
 ipsec_event_relay.c ipsec_event_relay.h \
+ipsec_policy.c ipsec_policy.h \
 ipsec_sa.c ipsec_sa.h \
 ipsec_sa_mgr.c ipsec_sa_mgr.h
 
