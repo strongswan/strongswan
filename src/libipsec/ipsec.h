@@ -26,6 +26,7 @@
 #define IPSEC_H_
 
 #include "ipsec_sa_mgr.h"
+#include "ipsec_event_relay.h"
 
 #include <library.h>
 
@@ -40,6 +41,11 @@ struct ipsec_t {
 	 * IPsec SA manager instance
 	 */
 	ipsec_sa_mgr_t *sas;
+
+	/**
+	 * Event relay instance
+	 */
+	ipsec_event_relay_t *events;
 
 };
 
