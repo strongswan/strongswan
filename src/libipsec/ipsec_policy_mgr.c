@@ -19,12 +19,11 @@
 #include "ipsec_policy.h"
 
 #include <debug.h>
-#include <library.h>
-#include <ipsec/ipsec_types.h>
-#include <selectors/traffic_selector.h>
 #include <threading/rwlock.h>
-#include <utils/host.h>
 #include <utils/linked_list.h>
+
+/** Base priority for installed policies */
+#define PRIO_BASE 512
 
 typedef struct private_ipsec_policy_mgr_t private_ipsec_policy_mgr_t;
 
@@ -39,25 +38,101 @@ struct private_ipsec_policy_mgr_t {
 	ipsec_policy_mgr_t public;
 
 	/**
-	 * Installed policies
+	 * Installed policies (ipsec_policy_entry_t*)
 	 */
 	linked_list_t *policies;
 
 	/**
-	 * Lock to safely access policies
+	 * Lock to safely access the list of policies
 	 */
 	rwlock_t *lock;
 
 };
 
-static bool match_policy(ipsec_policy_t *policy, ipsec_policy_t *other_policy)
+/**
+ * Helper struct to store policies in a list sorted by the same pseudo-priority
+ * used by the NETLINK kernel interface.
+ */
+typedef struct {
+
+	/**
+	 * Priority used to sort policies
+	 */
+	u_int32_t priority;
+
+	/**
+	 * The policy
+	 */
+	ipsec_policy_t *policy;
+
+} ipsec_policy_entry_t;
+
+/**
+ * Calculate the pseudo-priority to sort policies.  This is the same algorithm
+ * used by the NETLINK kernel interface (i.e. high priority -> low value).
+ */
+static u_int32_t calculate_priority(policy_priority_t policy_priority,
+									traffic_selector_t *src,
+									traffic_selector_t *dst)
 {
-	return policy->match(policy, other_policy->get_source_ts(other_policy),
-						 other_policy->get_destination_ts(other_policy),
-						 other_policy->get_direction(other_policy),
-						 other_policy->get_reqid(other_policy),
-						 (mark_t){ .value = 0, },
-						 other_policy->get_priority(other_policy));
+	u_int32_t priority = PRIO_BASE;
+	u_int16_t port;
+	u_int8_t mask, proto;
+	host_t *net;
+
+	switch (policy_priority)
+	{
+		case POLICY_PRIORITY_FALLBACK:
+			priority <<= 1;
+			/* fall-through */
+		case POLICY_PRIORITY_ROUTED:
+			priority <<= 1;
+			/* fall-through */
+		case POLICY_PRIORITY_DEFAULT:
+			break;
+	}
+	/* calculate priority based on selector size, small size = high prio */
+	src->to_subnet(src, &net, &mask);
+	priority -= mask;
+	proto = src->get_protocol(src);
+	port = net->get_port(net);
+	net->destroy(net);
+
+	dst->to_subnet(dst, &net, &mask);
+	priority -= mask;
+	proto = max(proto, dst->get_protocol(dst));
+	port = max(port, net->get_port(net));
+	net->destroy(net);
+
+	priority <<= 2; /* make some room for the two flags */
+	priority += port ? 0 : 2;
+	priority += proto ? 0 : 1;
+	return priority;
+}
+
+/**
+ * Create a policy entry
+ */
+static ipsec_policy_entry_t *policy_entry_create(ipsec_policy_t *policy)
+{
+	ipsec_policy_entry_t *this;
+
+	INIT(this,
+		.policy = policy,
+		.priority = calculate_priority(policy->get_priority(policy),
+									   policy->get_source_ts(policy),
+									   policy->get_destination_ts(policy)),
+	);
+	return this;
+}
+
+/**
+ * Destroy a policy entry
+ */
+static void policy_entry_destroy(ipsec_policy_entry_t *this)
+{
+	this->policy->destroy(this->policy);
+	free(this);
 }
 
 METHOD(ipsec_policy_mgr_t, add_policy, status_t,
@@ -66,20 +141,33 @@ METHOD(ipsec_policy_mgr_t, add_policy, status_t,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa, mark_t mark,
 	policy_priority_t priority)
 {
+	enumerator_t *enumerator;
+	ipsec_policy_entry_t *entry, *current;
 	ipsec_policy_t *policy;
+
+	if (type != POLICY_IPSEC || direction == POLICY_FWD)
+	{	/* we ignore these policies as we currently have no use for them */
+		return SUCCESS;
+	}
+
+	DBG2(DBG_ESP, "adding policy %R === %R %N", src_ts, dst_ts,
+		 policy_dir_names, direction);
 
 	policy = ipsec_policy_create(src, dst, src_ts, dst_ts, direction, type, sa,
 								 mark, priority);
+	entry = policy_entry_create(policy);
+
 	this->lock->write_lock(this->lock);
-	if (this->policies->find_first(this->policies, (void*)match_policy,
-								   NULL, policy) != SUCCESS)
+	enumerator = this->policies->create_enumerator(this->policies);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		this->policies->insert_last(this->policies, policy);
+		if (current->priority >= entry->priority)
+		{
+			break;
+		}
 	}
-	else
-	{
-		policy->destroy(policy);
-	}
+	this->policies->insert_before(this->policies, enumerator, entry);
+	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	return SUCCESS;
 }
@@ -87,17 +175,28 @@ METHOD(ipsec_policy_mgr_t, add_policy, status_t,
 METHOD(ipsec_policy_mgr_t, del_policy, status_t,
 	private_ipsec_policy_mgr_t *this, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
-	mark_t mark, policy_priority_t priority)
+	mark_t mark, policy_priority_t policy_priority)
 {
 	enumerator_t *enumerator;
-	ipsec_policy_t *current, *found = NULL;
+	ipsec_policy_entry_t *current, *found = NULL;
+	u_int32_t priority;
+
+	if (direction == POLICY_FWD)
+	{	/* we ignore these policies as we currently have no use for them */
+		return SUCCESS;
+	}
+	DBG2(DBG_ESP, "deleting policy %R === %R %N", src_ts, dst_ts,
+		 policy_dir_names, direction);
+
+	priority = calculate_priority(policy_priority, src_ts, dst_ts);
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		if (current->match(current, src_ts, dst_ts, direction, reqid,
-						   mark, priority))
+		if (current->priority == priority &&
+			current->policy->match(current->policy, src_ts, dst_ts, direction,
+								   reqid, mark, policy_priority))
 		{
 			this->policies->remove_at(this->policies, enumerator);
 			found = current;
@@ -108,7 +207,7 @@ METHOD(ipsec_policy_mgr_t, del_policy, status_t,
 	this->lock->unlock(this->lock);
 	if (found)
 	{
-		found->destroy(found);
+		policy_entry_destroy(found);
 		return SUCCESS;
 	}
 	return FAILED;
@@ -117,15 +216,15 @@ METHOD(ipsec_policy_mgr_t, del_policy, status_t,
 METHOD(ipsec_policy_mgr_t, flush_policies, status_t,
 	private_ipsec_policy_mgr_t *this)
 {
-	ipsec_policy_t *policy;
+	ipsec_policy_entry_t *entry;
 
 	DBG2(DBG_ESP, "flushing policies");
 
 	this->lock->write_lock(this->lock);
 	while (this->policies->remove_last(this->policies,
-									  (void**)&policy) == SUCCESS)
+									  (void**)&entry) == SUCCESS)
 	{
-		policy->destroy(policy);
+		policy_entry_destroy(entry);
 	}
 	this->lock->unlock(this->lock);
 	return SUCCESS;
