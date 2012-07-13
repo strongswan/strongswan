@@ -500,8 +500,14 @@ certificates even if they don't contain a CA basic constraint.
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
+.BR charon.plugins.tnccs-11.max_msg_size " [45000]"
+Maximum size of a PA-TNC message (XML & Base64 encoding)
+.TP
 .BR charon.plugins.tnccs-20.max_batch_size " [65522]"
 Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
+.TP
+.BR charon.plugins.tnccs-20.max_msg_size " [65490]"
+Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
 .TP
 .BR charon.plugins.tnc-ifmap.device_name
 Unique name of strongSwan as a PEP and/or PDP device
