@@ -269,7 +269,7 @@ typedef struct {
 	/** debug level */
 	level_t level;
 	/** message */
-	char message[8192];
+	char *message;
 } log_data_t;
 
 /**
@@ -294,13 +294,33 @@ METHOD(bus_t, vlog, void,
 	{
 		linked_list_t *loggers = this->loggers[group];
 		log_data_t data;
+		va_list copy;
+		char buf[1024];
+		ssize_t len;
 
 		data.ike_sa = this->thread_sa->get(this->thread_sa);
 		data.thread = thread_current_id();
 		data.group = group;
 		data.level = level;
-		vsnprintf(data.message, sizeof(data.message), format, args);
-		loggers->invoke_function(loggers, (linked_list_invoke_t)log_cb, &data);
+		data.message = buf;
+
+		va_copy(copy, args);
+		len = vsnprintf(data.message, sizeof(buf), format, copy);
+		va_end(copy);
+		if (len >= sizeof(buf))
+		{
+			data.message = malloc(len);
+			len = vsnprintf(data.message, len, format, args);
+		}
+		if (len > 0)
+		{
+			loggers->invoke_function(loggers, (linked_list_invoke_t)log_cb,
+									 &data);
+		}
+		if (data.message != buf)
+		{
+			free(data.message);
+		}
 	}
 	this->log_lock->unlock(this->log_lock);
 }
