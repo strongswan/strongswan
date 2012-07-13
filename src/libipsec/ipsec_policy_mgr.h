@@ -23,6 +23,9 @@
 #ifndef IPSEC_POLICY_MGR_H_
 #define IPSEC_POLICY_MGR_H_
 
+#include "ipsec_policy.h"
+#include "ip_packet.h"
+
 #include <library.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
@@ -88,6 +91,16 @@ struct ipsec_policy_mgr_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*flush_policies)(ipsec_policy_mgr_t *this);
+
+	/**
+	 * Find the policy that matches the given IP packet best
+	 *
+	 * @param packet		IP packet to match
+	 * @param inbound		TRUE for an inbound packet
+	 * @return				reference to the policy, or NULL if none found
+	 */
+	ipsec_policy_t *(*find_by_packet)(ipsec_policy_mgr_t *this,
+									  ip_packet_t *packet, bool inbound);
 
 	/**
 	 * Destroy an ipsec_policy_mgr_t

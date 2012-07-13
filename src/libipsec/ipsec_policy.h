@@ -23,6 +23,8 @@
 #ifndef IPSEC_POLICY_H
 #define IPSEC_POLICY_H
 
+#include "ip_packet.h"
+
 #include <library.h>
 #include <utils/host.h>
 #include <ipsec/ipsec_types.h>
@@ -98,6 +100,14 @@ struct ipsec_policy_t {
 	bool (*match)(ipsec_policy_t *this, traffic_selector_t *src_ts,
 				  traffic_selector_t *dst_ts, policy_dir_t direction,
 				  u_int32_t reqid, mark_t mark, policy_priority_t priority);
+
+	/**
+	 * Check if this policy matches the given IP packet
+	 *
+	 * @param packet		IP packet
+	 * @return				TRUE if policy matches the packet
+	 */
+	bool (*match_packet)(ipsec_policy_t *this, ip_packet_t *packet);
 
 	/**
 	 * Destroy an ipsec_policy_t

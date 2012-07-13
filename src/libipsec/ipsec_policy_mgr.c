@@ -16,7 +16,6 @@
  */
 
 #include "ipsec_policy_mgr.h"
-#include "ipsec_policy.h"
 
 #include <debug.h>
 #include <threading/rwlock.h>
@@ -230,6 +229,31 @@ METHOD(ipsec_policy_mgr_t, flush_policies, status_t,
 	return SUCCESS;
 }
 
+METHOD(ipsec_policy_mgr_t, find_by_packet, ipsec_policy_t*,
+	private_ipsec_policy_mgr_t *this, ip_packet_t *packet, bool inbound)
+{
+	enumerator_t *enumerator;
+	ipsec_policy_entry_t *current;
+	ipsec_policy_t *found = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->policies->create_enumerator(this->policies);
+	while (enumerator->enumerate(enumerator, (void**)&current))
+	{
+		ipsec_policy_t *policy = current->policy;
+
+		if ((inbound == (policy->get_direction(policy) == POLICY_IN)) &&
+			 policy->match_packet(policy, packet))
+		{
+			found = policy->get_ref(policy);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return found;
+}
+
 METHOD(ipsec_policy_mgr_t, destroy, void,
 	private_ipsec_policy_mgr_t *this)
 {
@@ -251,6 +275,7 @@ ipsec_policy_mgr_t *ipsec_policy_mgr_create()
 			.add_policy = _add_policy,
 			.del_policy = _del_policy,
 			.flush_policies = _flush_policies,
+			.find_by_packet = _find_by_packet,
 			.destroy = _destroy,
 		},
 		.policies = linked_list_create(),

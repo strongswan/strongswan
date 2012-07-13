@@ -101,6 +101,18 @@ METHOD(ipsec_policy_t, match, bool,
 			this->dst_ts->equals(this->dst_ts, dst_ts));
 }
 
+METHOD(ipsec_policy_t, match_packet, bool,
+	private_ipsec_policy_t *this, ip_packet_t *packet)
+{
+	u_int8_t proto = packet->get_next_header(packet);
+	host_t *src = packet->get_source(packet),
+		   *dst = packet->get_destination(packet);
+
+	return (!this->protocol || this->protocol == proto) &&
+		   this->src_ts->includes(this->src_ts, src) &&
+		   this->dst_ts->includes(this->dst_ts, dst);
+}
+
 METHOD(ipsec_policy_t, get_source_ts, traffic_selector_t*,
 	private_ipsec_policy_t *this)
 {
@@ -172,6 +184,7 @@ ipsec_policy_t *ipsec_policy_create(host_t *src, host_t *dst,
 	INIT(this,
 		.public = {
 			.match = _match,
+			.match_packet = _match_packet,
 			.get_source_ts = _get_source_ts,
 			.get_destination_ts = _get_destination_ts,
 			.get_direction = _get_direction,
