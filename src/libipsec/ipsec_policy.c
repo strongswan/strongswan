@@ -88,6 +88,19 @@ struct private_ipsec_policy_t {
 
 };
 
+METHOD(ipsec_policy_t, match, bool,
+	private_ipsec_policy_t *this, traffic_selector_t *src_ts,
+	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
+	mark_t mark, policy_priority_t priority)
+{
+	return (this->direction == direction &&
+			this->priority == priority &&
+			this->sa.reqid == reqid &&
+			memeq(&this->mark, &mark, sizeof(mark_t)) &&
+			this->src_ts->equals(this->src_ts, src_ts) &&
+			this->dst_ts->equals(this->dst_ts, dst_ts));
+}
+
 METHOD(ipsec_policy_t, get_source_ts, traffic_selector_t*,
 	private_ipsec_policy_t *this)
 {
@@ -158,6 +171,7 @@ ipsec_policy_t *ipsec_policy_create(host_t *src, host_t *dst,
 
 	INIT(this,
 		.public = {
+			.match = _match,
 			.get_source_ts = _get_source_ts,
 			.get_destination_ts = _get_destination_ts,
 			.get_direction = _get_direction,

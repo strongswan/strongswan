@@ -85,6 +85,21 @@ struct ipsec_policy_t {
 	ipsec_policy_t *(*get_ref)(ipsec_policy_t *this);
 
 	/**
+	 * Check if this policy matches all given parameters
+	 *
+	 * @param src_ts		source traffic selector
+	 * @param dst_ts		destination traffic selector
+	 * @param direction		traffic direction
+	 * @param reqid			reqid of the policy
+	 * @param mark			mark for this policy
+	 * @param prioirty		policy priority
+	 * @return				TRUE if policy matches all parameters
+	 */
+	bool (*match)(ipsec_policy_t *this, traffic_selector_t *src_ts,
+				  traffic_selector_t *dst_ts, policy_dir_t direction,
+				  u_int32_t reqid, mark_t mark, policy_priority_t priority);
+
+	/**
 	 * Destroy an ipsec_policy_t
 	 */
 	void (*destroy)(ipsec_policy_t *this);
