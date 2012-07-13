@@ -306,8 +306,8 @@ METHOD(task_t, build_i, status_t,
 	 * 3. Include all possbile addresses
 	 */
 	host = message->get_source(message);
-	if (!host->is_anyaddr(host))
-	{	/* 1. */
+	if (!host->is_anyaddr(host) || ike_cfg->force_encap(ike_cfg))
+	{	/* 1. or if we force UDP encap, as it doesn't matter if it's %any */
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 		message->add_payload(message, (payload_t*)notify);
 	}
