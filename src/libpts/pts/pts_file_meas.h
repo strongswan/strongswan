@@ -21,6 +21,8 @@
 #ifndef PTS_FILE_MEAS_H_
 #define PTS_FILE_MEAS_H_
 
+#include "pts/pts_database.h"
+
 #include <library.h>
 
 typedef struct pts_file_meas_t pts_file_meas_t;
@@ -58,6 +60,15 @@ struct pts_file_meas_t {
 	  * @return				Enumerator returning filename and measurement 
 	  */
 	enumerator_t* (*create_enumerator)(pts_file_meas_t *this);
+
+	/**
+	 * Insert PTS File Measurements into the database
+	 *
+	 * @param db			PTS Measurement database
+	 * @param product		Software product (os, vpn client, etc.)
+	 * @return				TRUE if all measurements could be inserted
+	 */
+	bool (*insert)(pts_file_meas_t *this, pts_database_t *db, char* product);
 
 	/**
 	 * Verify stored hashes against PTS File Measurements

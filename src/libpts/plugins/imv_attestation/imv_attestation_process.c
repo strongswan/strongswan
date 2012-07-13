@@ -193,9 +193,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			int file_count, file_id;
 			pts_meas_algorithms_t algo;
 			pts_file_meas_t *measurements;
-			char *platform_info, *filename;
-			chunk_t measurement;
-			enumerator_t *e, *e_hash;
+			char *platform_info;
+			enumerator_t *e_hash;
 			bool is_dir;
 
 			platform_info = pts->get_platform_info(pts);
@@ -238,12 +237,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			else
 			{
-				e = measurements->create_enumerator(measurements);
-				while (e->enumerate(e, &filename, &measurement))
-				{
-					DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
-				}
-				e->destroy(e);
+				measurements->insert(measurements, pts_db, platform_info);
 			}
 			break;
 		}

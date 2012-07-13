@@ -107,6 +107,22 @@ METHOD(pts_file_meas_t, create_enumerator, enumerator_t*,
 								   (void*)entry_filter, NULL, NULL);
 }
 
+METHOD(pts_file_meas_t, insert, bool,
+	private_pts_file_meas_t *this, pts_database_t *pts_db, char *product)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		DBG2(DBG_PTS, "  %#B for '%s'", &entry->measurement, entry->filename);
+	}
+	enumerator->destroy(enumerator);
+
+	return TRUE;
+}
+
 METHOD(pts_file_meas_t, verify, bool,
 	private_pts_file_meas_t *this, enumerator_t *e_hash, bool is_dir)
 {
@@ -174,6 +190,7 @@ pts_file_meas_t *pts_file_meas_create(u_int16_t request_id)
 			.get_file_count = _get_file_count,
 			.add = _add,
 			.create_enumerator = _create_enumerator,
+			.insert = _insert,
 			.verify = _verify,
 			.destroy = _destroy,
 		},
