@@ -213,7 +213,7 @@ host_t *host_create_any(int family);
  *	host_t *host
  * Use #-modifier to include port number
  */
-int host_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args);
 
 #endif /** HOST_H_ @}*/

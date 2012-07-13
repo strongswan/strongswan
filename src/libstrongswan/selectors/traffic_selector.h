@@ -310,7 +310,7 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
  * With the #-specifier, arguments are:
  *	linked_list_t *list containing traffic_selector_t*
  */
-int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
-								 const void *const *args);
+int traffic_selector_printf_hook(printf_hook_data_t *data,
+							printf_hook_spec_t *spec, const void *const *args);
 
 #endif /** TRAFFIC_SELECTOR_H_ @}*/

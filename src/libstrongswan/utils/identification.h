@@ -342,7 +342,7 @@ identification_t * identification_create_from_sockaddr(sockaddr_t *sockaddr);
  * Arguments are:
  *	identification_t *identification
  */
-int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
-							   const void *const *args);
+int identification_printf_hook(printf_hook_data_t *data,
+							printf_hook_spec_t *spec, const void *const *args);
 
 #endif /** IDENTIFICATION_H_ @}*/

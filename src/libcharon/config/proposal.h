@@ -216,7 +216,7 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
  * With the #-specifier, arguments are:
  *	linked_list_t *list containing proposal_t*
  */
-int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						 const void *const *args);
 
 #endif /** PROPOSAL_H_ @}*/

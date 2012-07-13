@@ -100,7 +100,7 @@ METHOD(host_t, is_anyaddr, bool,
 /**
  * Described in header.
  */
-int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
+int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
@@ -152,9 +152,9 @@ int host_printf_hook(char *dst, size_t dstlen, printf_hook_spec_t *spec,
 	}
 	if (spec->minus)
 	{
-		return print_in_hook(dst, dstlen, "%-*s", spec->width, buffer);
+		return print_in_hook(data, "%-*s", spec->width, buffer);
 	}
-	return print_in_hook(dst, dstlen, "%*s", spec->width, buffer);
+	return print_in_hook(data, "%*s", spec->width, buffer);
 }
 
 METHOD(host_t, get_address, chunk_t,

@@ -24,6 +24,7 @@
 
 typedef struct printf_hook_t printf_hook_t;
 typedef struct printf_hook_spec_t printf_hook_spec_t;
+typedef struct printf_hook_data_t printf_hook_data_t;
 typedef enum printf_hook_argtype_t printf_hook_argtype_t;
 
 #if !defined(USE_VSTR) && \
@@ -90,13 +91,12 @@ int vstr_wrapper_vasprintf(char **str, const char *format, va_list ap);
 /**
  * Callback function type for printf hooks.
  *
- * @param dst		destination buffer
- * @param len		length of the buffer
+ * @param data		hook data, to pass to print_in_hook()
  * @param spec		format specifier
  * @param args		arguments array
  * @return			number of characters written
  */
-typedef int (*printf_hook_function_t)(char *dst, size_t len,
+typedef int (*printf_hook_function_t)(printf_hook_data_t *data,
 									  printf_hook_spec_t *spec,
 									  const void *const *args);
 
@@ -104,16 +104,32 @@ typedef int (*printf_hook_function_t)(char *dst, size_t len,
  * Helper macro to be used in printf hook callbacks.
  * buf and buflen get modified.
  */
-#define print_in_hook(buf, buflen, fmt, ...) ({\
-	int _written = snprintf(buf, buflen, fmt, ##__VA_ARGS__);\
-	if (_written < 0 || _written >= buflen)\
+#define print_in_hook(data, fmt, ...) ({\
+	int _written = snprintf(data->buf, data->buflen, fmt, ##__VA_ARGS__);\
+	if (_written < 0 || _written >= data->buflen)\
 	{\
-		_written = buflen - 1;\
+		_written = data->buflen - 1;\
 	}\
-	buf += _written;\
-	buflen -= _written;\
+	data->buf += _written;\
+	data->buflen -= _written;\
 	_written;\
 })
+
+/**
+ * Data to pass to a printf hook.
+ */
+struct printf_hook_data_t {
+
+	/**
+	 * Buffer to write to
+	 */
+	char *buf;
+
+	/**
+	 * Size of the buffer
+	 */
+	size_t buflen;
+};
 
 /**
  * Properties of the format specifier

@@ -312,7 +312,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
  *	chunk_t *chunk
  * Use #-modifier to print a compact version
  */
-int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					  const void *const *args);
 
 #endif /** CHUNK_H_ @}*/

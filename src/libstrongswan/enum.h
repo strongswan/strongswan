@@ -130,7 +130,7 @@ int enum_from_name(enum_name_t *e, char *name);
  * Arguments are:
  *	enum_names_t *names, int value
  */
-int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args);
 
 #endif /** ENUM_H_ @}*/

@@ -756,8 +756,8 @@ METHOD(identification_t, matches_dn, id_match_t,
 /**
  * Described in header.
  */
-int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
-							   const void *const *args)
+int identification_printf_hook(printf_hook_data_t *data,
+							printf_hook_spec_t *spec, const void *const *args)
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	chunk_t proper;
@@ -765,7 +765,7 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 
 	if (this == NULL)
 	{
-		return print_in_hook(dst, len, "%*s", spec->width, "(null)");
+		return print_in_hook(data, "%*s", spec->width, "(null)");
 	}
 
 	switch (this->type)
@@ -821,9 +821,9 @@ int identification_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	}
 	if (spec->minus)
 	{
-		return print_in_hook(dst, len, "%-*s", spec->width, buf);
+		return print_in_hook(data, "%-*s", spec->width, buf);
 	}
-	return print_in_hook(dst, len, "%*s", spec->width, buf);
+	return print_in_hook(data, "%*s", spec->width, buf);
 }
 
 METHOD(identification_t, clone_, identification_t*,

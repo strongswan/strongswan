@@ -60,7 +60,7 @@ int enum_from_name(enum_name_t *e, char *name)
 /**
  * Described in header.
  */
-int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
 {
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
@@ -70,10 +70,10 @@ int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 
 	if (name == NULL)
 	{
-		return print_in_hook(dst, len, "(%d)", val);
+		return print_in_hook(data, "(%d)", val);
 	}
 	else
 	{
-		return print_in_hook(dst, len, "%s", name);
+		return print_in_hook(data, "%s", name);
 	}
 }

@@ -658,7 +658,7 @@ u_int32_t chunk_hash(chunk_t chunk)
 /**
  * Described in header.
  */
-int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int chunk_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					  const void *const *args)
 {
 	chunk_t *chunk = *((chunk_t**)(args[0]));
@@ -670,7 +670,7 @@ int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	{
 		u_int chunk_len = chunk->len;
 		const void *new_args[] = {&chunk->ptr, &chunk_len};
-		return mem_printf_hook(dst, len, spec, new_args);
+		return mem_printf_hook(data, spec, new_args);
 	}
 
 	while (copy.len > 0)
@@ -681,9 +681,9 @@ int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		}
 		else
 		{
-			written += print_in_hook(dst, len, ":");
+			written += print_in_hook(data, ":");
 		}
-		written += print_in_hook(dst, len, "%02x", *copy.ptr++);
+		written += print_in_hook(data, "%02x", *copy.ptr++);
 		copy.len--;
 	}
 	return written;

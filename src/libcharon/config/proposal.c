@@ -616,7 +616,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 /**
  * print all algorithms of a kind to buffer
  */
-static int print_alg(private_proposal_t *this, char **dst, size_t *len,
+static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
 					 u_int kind, void *names, bool *first)
 {
 	enumerator_t *enumerator;
@@ -628,16 +628,16 @@ static int print_alg(private_proposal_t *this, char **dst, size_t *len,
 	{
 		if (*first)
 		{
-			written += print_in_hook(*dst, *len, "%N", names, alg);
+			written += print_in_hook(data, "%N", names, alg);
 			*first = FALSE;
 		}
 		else
 		{
-			written += print_in_hook(*dst, *len, "/%N", names, alg);
+			written += print_in_hook(data, "/%N", names, alg);
 		}
 		if (size)
 		{
-			written += print_in_hook(*dst, *len, "_%u", size);
+			written += print_in_hook(data, "_%u", size);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -647,7 +647,7 @@ static int print_alg(private_proposal_t *this, char **dst, size_t *len,
 /**
  * Described in header.
  */
-int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						 const void *const *args)
 {
 	private_proposal_t *this = *((private_proposal_t**)(args[0]));
@@ -658,7 +658,7 @@ int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 
 	if (this == NULL)
 	{
-		return print_in_hook(dst, len, "(null)");
+		return print_in_hook(data, "(null)");
 	}
 
 	if (spec->hash)
@@ -668,28 +668,28 @@ int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		{	/* call recursivly */
 			if (first)
 			{
-				written += print_in_hook(dst, len, "%P", this);
+				written += print_in_hook(data, "%P", this);
 				first = FALSE;
 			}
 			else
 			{
-				written += print_in_hook(dst, len, ", %P", this);
+				written += print_in_hook(data, ", %P", this);
 			}
 		}
 		enumerator->destroy(enumerator);
 		return written;
 	}
 
-	written = print_in_hook(dst, len, "%N:", protocol_id_names, this->protocol);
-	written += print_alg(this, &dst, &len, ENCRYPTION_ALGORITHM,
+	written = print_in_hook(data, "%N:", protocol_id_names, this->protocol);
+	written += print_alg(this, data, ENCRYPTION_ALGORITHM,
 						 encryption_algorithm_names, &first);
-	written += print_alg(this, &dst, &len, INTEGRITY_ALGORITHM,
+	written += print_alg(this, data, INTEGRITY_ALGORITHM,
 						 integrity_algorithm_names, &first);
-	written += print_alg(this, &dst, &len, PSEUDO_RANDOM_FUNCTION,
+	written += print_alg(this, data, PSEUDO_RANDOM_FUNCTION,
 						 pseudo_random_function_names, &first);
-	written += print_alg(this, &dst, &len, DIFFIE_HELLMAN_GROUP,
+	written += print_alg(this, data, DIFFIE_HELLMAN_GROUP,
 						 diffie_hellman_group_names, &first);
-	written += print_alg(this, &dst, &len, EXTENDED_SEQUENCE_NUMBERS,
+	written += print_alg(this, data, EXTENDED_SEQUENCE_NUMBERS,
 						 extended_sequence_numbers_names, &first);
 	return written;
 }

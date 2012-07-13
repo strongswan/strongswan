@@ -450,7 +450,7 @@ _cas_impl(ptr, void*)
 /**
  * Described in header.
  */
-int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
 {
 	static const char* months[] = {
@@ -463,7 +463,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 
 	if (time == UNDEFINED_TIME)
 	{
-		return print_in_hook(dst, len, "--- -- --:--:--%s----",
+		return print_in_hook(data, "--- -- --:--:--%s----",
 							 utc ? " UTC " : " ");
 	}
 	if (utc)
@@ -474,7 +474,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	{
 		localtime_r(time, &t);
 	}
-	return print_in_hook(dst, len, "%s %02d %02d:%02d:%02d%s%04d",
+	return print_in_hook(data, "%s %02d %02d:%02d:%02d%s%04d",
 						 months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
 						 t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
 }
@@ -482,7 +482,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 /**
  * Described in header.
  */
-int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int time_delta_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						   const void *const *args)
 {
 	char* unit = "second";
@@ -505,7 +505,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 		delta /= 60;
 		unit = "minute";
 	}
-	return print_in_hook(dst, len, "%" PRIu64 " %s%s", delta, unit,
+	return print_in_hook(data, "%" PRIu64 " %s%s", delta, unit,
 						 (delta == 1) ? "" : "s");
 }
 
@@ -519,7 +519,7 @@ static char hexdig_upper[] = "0123456789ABCDEF";
 /**
  * Described in header.
  */
-int mem_printf_hook(char *dst, size_t dstlen,
+int mem_printf_hook(printf_hook_data_t *data,
 					printf_hook_spec_t *spec, const void *const *args)
 {
 	char *bytes = *((void**)(args[0]));
@@ -534,7 +534,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 	int i = 0;
 	int written = 0;
 
-	written += print_in_hook(dst, dstlen, "=> %u bytes @ %p", len, bytes);
+	written += print_in_hook(data, "=> %u bytes @ %p", len, bytes);
 
 	while (bytes_pos < bytes_roof)
 	{
@@ -555,7 +555,7 @@ int mem_printf_hook(char *dst, size_t dstlen,
 			*buffer_pos++ = '\0';
 			ascii_buffer[i] = '\0';
 
-			written += print_in_hook(dst, dstlen, "\n%4d: %s  %s",
+			written += print_in_hook(data, "\n%4d: %s  %s",
 									 line_start, buffer, ascii_buffer);
 
 			buffer_pos = buffer;

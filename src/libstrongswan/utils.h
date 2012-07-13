@@ -653,7 +653,7 @@ bool cas_ptr(void **ptr, void *oldval, void *newval);
  * Arguments are:
  *	time_t* time, bool utc
  */
-int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args);
 
 /**
@@ -662,7 +662,7 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  * Arguments are:
  *	time_t* begin, time_t* end
  */
-int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int time_delta_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						   const void *const *args);
 
 /**
@@ -671,7 +671,7 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
  * Arguments are:
  *	u_char *ptr, u_int len
  */
-int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+int mem_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					const void *const *args);
 
 #endif /** UTILS_H_ @}*/
