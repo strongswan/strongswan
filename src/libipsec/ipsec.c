@@ -44,6 +44,7 @@ void libipsec_deinit()
 {
 	private_ipsec_t *this = (private_ipsec_t*)ipsec;
 	DESTROY_IF(this->public.events);
+	DESTROY_IF(this->public.policies);
 	DESTROY_IF(this->public.sas);
 	free(this);
 	ipsec = NULL;
@@ -67,6 +68,7 @@ bool libipsec_init()
 	}
 
 	this->public.sas = ipsec_sa_mgr_create();
+	this->public.policies = ipsec_policy_mgr_create();
 	this->public.events = ipsec_event_relay_create();
 	return TRUE;
 }
