@@ -264,7 +264,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr)
 	bfd_entry_t *entry;
 	bfd_find_data_t data = {
 		.file = file,
-		.vma = (bfd_vma)ptr,
+		.vma = (uintptr_t)ptr,
 	};
 	bool old = FALSE;
 
