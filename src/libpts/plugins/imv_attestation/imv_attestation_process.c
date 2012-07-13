@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
