@@ -6,6 +6,7 @@ LOCAL_SRC_FILES := \
 ipsec.c ipsec.h \
 esp_context.c esp_context.h \
 esp_packet.c esp_packet.h \
+ip_packet.c ip_packet.h \
 ipsec_event_listener.h \
 ipsec_event_relay.c ipsec_event_relay.h \
 ipsec_policy.c ipsec_policy.h \
