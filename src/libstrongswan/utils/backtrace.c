@@ -217,7 +217,9 @@ static bfd_entry_t *get_bfd_entry(char *filename)
 		free(entry);
 		return NULL;
 	}
+#ifdef BFD_DECOMPRESS
 	entry->abfd->flags |= BFD_DECOMPRESS;
+#endif
 	if (bfd_check_format(entry->abfd, bfd_archive) == 0 &&
 		bfd_check_format_matches(entry->abfd, bfd_object, NULL))
 	{
