@@ -5,7 +5,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 ipsec.c ipsec.h \
 esp_context.c esp_context.h \
-esp_packet.c esp_packet.h
+esp_packet.c esp_packet.h \
+ipsec_sa.c ipsec_sa.h
 
 # build libipsec ---------------------------------------------------------------
 

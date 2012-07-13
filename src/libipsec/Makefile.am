@@ -3,7 +3,8 @@ ipseclib_LTLIBRARIES = libipsec.la
 libipsec_la_SOURCES = \
 ipsec.c ipsec.h \
 esp_context.c esp_context.h \
-esp_packet.c esp_packet.h
+esp_packet.c esp_packet.h \
+ipsec_sa.c ipsec_sa.h
 
 libipsec_la_LIBADD =
 
