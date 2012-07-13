@@ -12,9 +12,9 @@ case "$LIBTOOLIZE" in
 		;;
 esac
 
-autoheader &&
 $LIBTOOLIZE --force &&
 aclocal &&
+autoheader &&
 automake -a &&
 autoconf
 
