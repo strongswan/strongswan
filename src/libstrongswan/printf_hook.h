@@ -115,27 +115,22 @@ int vstr_wrapper_vasprintf(char **str, const char *format, va_list ap);
 struct printf_hook_data_t {
 
 	/**
-	 * Buffer to write to
+	 * Base to append printf to
 	 */
-	char *buf;
+	Vstr_base *base;
 
 	/**
-	 * Size of the buffer
+	 * Position in base to write to
 	 */
-	size_t buflen;
+	size_t pos;
 };
 
 /**
  * Helper macro to be used in printf hook callbacks.
  */
 #define print_in_hook(data, fmt, ...) ({\
-	int _written = snprintf(data->buf, data->buflen, fmt, ##__VA_ARGS__);\
-	if (_written < 0 || _written >= data->buflen)\
-	{\
-		_written = data->buflen - 1;\
-	}\
-	data->buf += _written;\
-	data->buflen -= _written;\
+	int _written =  vstr_add_fmt(data->base, data->pos, fmt, ##__VA_ARGS__);\
+	data->pos += _written;\
 	_written;\
 })
 
