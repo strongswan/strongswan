@@ -18,6 +18,7 @@ credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
+ipsec/ipsec_types.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
@@ -51,10 +52,11 @@ credentials/sets/ocsp_response_wrapper.h credentials/sets/cert_cache.h \
 credentials/sets/mem_cred.h credentials/sets/callback_cred.h \
 credentials/auth_cfg.h credentials/credential_set.h credentials/cert_validator.h \
 database/database.h database/database_factory.h fetcher/fetcher.h \
-fetcher/fetcher_manager.h eap/eap.h pen/pen.h plugins/plugin_loader.h \
-plugins/plugin.h plugins/plugin_feature.h processing/jobs/job.h \
-processing/jobs/callback_job.h processing/processor.h processing/scheduler.h \
-selectors/traffic_selector.h threading/thread.h threading/thread_value.h \
+fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
+plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h
+processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h
+processing/scheduler.h selectors/traffic_selector.h \
+threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/lock_profiler.h utils.h utils/host.h \
 utils/packet.h utils/identification.h utils/lexparser.h utils/linked_list.h \

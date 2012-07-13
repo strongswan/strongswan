@@ -8,8 +8,7 @@ esp_packet.c esp_packet.h
 libipsec_la_LIBADD =
 
 INCLUDES = \
-	-I$(top_srcdir)/src/libstrongswan \
-	-I$(top_srcdir)/src/libhydra
+	-I$(top_srcdir)/src/libstrongswan
 
 EXTRA_DIST = Android.mk
 
