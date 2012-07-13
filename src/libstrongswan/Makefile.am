@@ -25,7 +25,7 @@ selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils.c utils/host.c utils/packet.c utils/identification.c utils/lexparser.c \
 utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
-utils/optionsfrom.c utils/capabilities.c utils/backtrace.c
+utils/optionsfrom.c utils/capabilities.c utils/backtrace.c utils/tun_device.c
 
 if USE_DEV_HEADERS
 strongswan_includedir = ${dev_headers}
@@ -61,7 +61,7 @@ threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h
 threading/rwlock.h threading/lock_profiler.h utils.h utils/host.h \
 utils/packet.h utils/identification.h utils/lexparser.h utils/linked_list.h \
 utils/blocking_queue.h utils/hashtable.h utils/enumerator.h utils/optionsfrom.h \
-utils/capabilities.h utils/backtrace.h
+utils/capabilities.h utils/backtrace.h utils/tun_device.h
 endif
 
 library.lo :	$(top_builddir)/config.status
