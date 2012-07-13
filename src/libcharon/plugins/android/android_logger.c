@@ -45,26 +45,27 @@ struct private_android_logger_t {
 	mutex_t *mutex;
 };
 
-
 METHOD(logger_t, log_, void,
 	private_android_logger_t *this, debug_t group, level_t level,
-	int thread, ike_sa_t* ike_sa, char *message)
+	int thread, ike_sa_t* ike_sa, const char *message)
 {
 	int prio = level > 1 ? ANDROID_LOG_DEBUG : ANDROID_LOG_INFO;
 	char sgroup[16];
-	char *current = message, *next;
+	const char *current = message, *next;
 	snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
 	this->mutex->lock(this->mutex);
-	while (current)
+	while (TRUE)
 	{	/* log each line separately */
 		next = strchr(current, '\n');
-		if (next)
+		if (next == NULL)
 		{
-			*(next++) = '\0';
+			__android_log_print(prio, "charon", "%.2d[%s] %s\n",
+								thread, sgroup, current);
+			break;
 		}
-		__android_log_print(prio, "charon", "%.2d[%s] %s\n",
-							thread, sgroup, current);
-		current = next;
+		__android_log_print(prio, "charon", "%.2d[%s] %.*s\n",
+							thread, sgroup, (int)(next - current), current);
+		current = next + 1;
 	}
 	this->mutex->unlock(this->mutex);
 }

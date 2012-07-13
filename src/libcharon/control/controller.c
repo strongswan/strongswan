@@ -209,7 +209,7 @@ static bool wait_for_listener(interface_job_t *job, u_int timeout)
 
 METHOD(logger_t, listener_log, void,
 	interface_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t *ike_sa, char* message)
+	ike_sa_t *ike_sa, const char *message)
 {
 	ike_sa_t *target;
 
@@ -627,7 +627,7 @@ METHOD(controller_t, terminate_child, status_t,
  * See header
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
-						 ike_sa_t *ike_sa, char *message)
+						 ike_sa_t *ike_sa, const char *message)
 {
 	return TRUE;
 }

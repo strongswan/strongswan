@@ -57,10 +57,10 @@ struct private_sys_logger_t {
 
 METHOD(logger_t, log_, void,
 	private_sys_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t* ike_sa, char *message)
+	ike_sa_t* ike_sa, const char *message)
 {
 	char groupstr[4], namestr[128] = "";
-	char *current = message, *next;
+	const char *current = message, *next;
 
 	/* cache group name and optional name string */
 	snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
@@ -81,16 +81,18 @@ METHOD(logger_t, log_, void,
 
 	/* do a syslog for every line */
 	this->mutex->lock(this->mutex);
-	while (current)
+	while (TRUE)
 	{
 		next = strchr(current, '\n');
-		if (next)
+		if (next == NULL)
 		{
-			*(next++) = '\0';
+			syslog(this->facility | LOG_INFO, "%.2d[%s]%s %s\n",
+				   thread, groupstr, namestr, current);
+			break;
 		}
-		syslog(this->facility|LOG_INFO, "%.2d[%s]%s %s\n",
-			   thread, groupstr, namestr, current);
-		current = next;
+		syslog(this->facility | LOG_INFO, "%.2d[%s]%s %.*s\n",
+			   thread, groupstr, namestr, (int)(next - current), current);
+		current = next + 1;
 	}
 	this->mutex->unlock(this->mutex);
 }

@@ -34,7 +34,7 @@
  * @return				FALSE to return from called controller method
  */
 typedef bool (*controller_cb_t)(void* param, debug_t group, level_t level,
-								ike_sa_t* ike_sa, char* message);
+								ike_sa_t* ike_sa, const char *message);
 
 /**
  * Empty callback function for controller_t methods.
@@ -43,7 +43,7 @@ typedef bool (*controller_cb_t)(void* param, debug_t group, level_t level,
  * this function to the controller methods.
  */
 bool controller_cb_empty(void *param, debug_t group, level_t level,
-						 ike_sa_t *ike_sa, char *message);
+						 ike_sa_t *ike_sa, const char *message);
 
 typedef struct controller_t controller_t;
 

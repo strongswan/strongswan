@@ -62,10 +62,10 @@ struct private_file_logger_t {
 
 METHOD(logger_t, log_, void,
 	private_file_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t* ike_sa, char *message)
+	ike_sa_t* ike_sa, const char *message)
 {
 	char timestr[128], namestr[128] = "";
-	char *current = message, *next;
+	const char *current = message, *next;
 	struct tm tm;
 	time_t t;
 
@@ -95,24 +95,26 @@ METHOD(logger_t, log_, void,
 
 	/* prepend a prefix in front of every line */
 	this->mutex->lock(this->mutex);
-	while (current)
+	while (TRUE)
 	{
 		next = strchr(current, '\n');
-		if (next)
-		{
-			*(next++) = '\0';
-		}
 		if (this->time_format)
 		{
-			fprintf(this->out, "%s %.2d[%N]%s %s\n",
-					timestr, thread, debug_names, group, namestr, current);
+			fprintf(this->out, "%s %.2d[%N]%s ",
+					timestr, thread, debug_names, group, namestr);
 		}
 		else
 		{
-			fprintf(this->out, "%.2d[%N]%s %s\n",
-					thread, debug_names, group, namestr, current);
+			fprintf(this->out, "%.2d[%N]%s ",
+					thread, debug_names, group, namestr);
 		}
-		current = next;
+		if (next == NULL)
+		{
+			fprintf(this->out, "%s\n", current);
+			break;
+		}
+		fprintf(this->out, "%.*s\n", (int)(next - current), current);
+		current = next + 1;
 	}
 	this->mutex->unlock(this->mutex);
 }

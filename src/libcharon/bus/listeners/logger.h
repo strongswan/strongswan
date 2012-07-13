@@ -45,7 +45,7 @@ struct logger_t {
 	 * @param message	log message
 	 */
 	void (*log)(logger_t *this, debug_t group, level_t level, int thread,
-				ike_sa_t *ike_sa, char* message);
+				ike_sa_t *ike_sa, const char *message);
 
 	/**
 	 * Get the desired log level for a debug group.  This is called during

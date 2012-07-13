@@ -50,7 +50,7 @@ struct private_sql_logger_t {
 
 METHOD(logger_t, log_, void,
 	private_sql_logger_t *this, debug_t group, level_t level, int thread,
-	ike_sa_t* ike_sa, char *message)
+	ike_sa_t* ike_sa, const char *message)
 {
 	if (this->recursive->get(this->recursive))
 	{
