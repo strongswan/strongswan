@@ -46,6 +46,29 @@ enum printf_hook_argtype_t {
 	PRINTF_HOOK_ARGTYPE_POINTER = PA_POINTER,
 };
 
+/**
+ * Data to pass to a printf hook.
+ */
+struct printf_hook_data_t {
+
+	/**
+	 * Output FILE stream
+	 */
+	FILE *stream;;
+};
+
+/**
+ * Helper macro to be used in printf hook callbacks.
+ */
+#define print_in_hook(data, fmt, ...) ({\
+	int _written = fprintf(data->stream, fmt, ##__VA_ARGS__);\
+	if (_written < 0)\
+	{\
+		_written = 0;\
+	}\
+	_written;\
+})
+
 #else
 
 #include <vstr.h>
@@ -86,35 +109,6 @@ int vstr_wrapper_vasprintf(char **str, const char *format, va_list ap);
 #define vsnprintf vstr_wrapper_vsnprintf
 #define vasprintf vstr_wrapper_vasprintf
 
-#endif
-
-/**
- * Callback function type for printf hooks.
- *
- * @param data		hook data, to pass to print_in_hook()
- * @param spec		format specifier
- * @param args		arguments array
- * @return			number of characters written
- */
-typedef int (*printf_hook_function_t)(printf_hook_data_t *data,
-									  printf_hook_spec_t *spec,
-									  const void *const *args);
-
-/**
- * Helper macro to be used in printf hook callbacks.
- * buf and buflen get modified.
- */
-#define print_in_hook(data, fmt, ...) ({\
-	int _written = snprintf(data->buf, data->buflen, fmt, ##__VA_ARGS__);\
-	if (_written < 0 || _written >= data->buflen)\
-	{\
-		_written = data->buflen - 1;\
-	}\
-	data->buf += _written;\
-	data->buflen -= _written;\
-	_written;\
-})
-
 /**
  * Data to pass to a printf hook.
  */
@@ -130,6 +124,34 @@ struct printf_hook_data_t {
 	 */
 	size_t buflen;
 };
+
+/**
+ * Helper macro to be used in printf hook callbacks.
+ */
+#define print_in_hook(data, fmt, ...) ({\
+	int _written = snprintf(data->buf, data->buflen, fmt, ##__VA_ARGS__);\
+	if (_written < 0 || _written >= data->buflen)\
+	{\
+		_written = data->buflen - 1;\
+	}\
+	data->buf += _written;\
+	data->buflen -= _written;\
+	_written;\
+})
+
+#endif
+
+/**
+ * Callback function type for printf hooks.
+ *
+ * @param data		hook data, to pass to print_in_hook()
+ * @param spec		format specifier
+ * @param args		arguments array
+ * @return			number of characters written
+ */
+typedef int (*printf_hook_function_t)(printf_hook_data_t *data,
+									  printf_hook_spec_t *spec,
+									  const void *const *args);
 
 /**
  * Properties of the format specifier

@@ -86,25 +86,17 @@ static printf_hook_handler_t *printf_hooks[NUM_HANDLERS];
 static int custom_print(FILE *stream, const struct printf_info *info,
 						const void *const *args)
 {
-	int written;
-	char buf[PRINTF_BUF_LEN];
 	printf_hook_spec_t spec;
 	printf_hook_handler_t *handler = printf_hooks[SPEC_TO_INDEX(info->spec)];
 	printf_hook_data_t data = {
-		.buf = buf,
-		.buflen = sizeof(buf),
+		.stream = stream,
 	};
 
 	spec.hash = info->alt;
 	spec.minus = info->left;
 	spec.width = info->width;
 
-	written = handler->hook(&data, &spec, args);
-	if (written > 0)
-	{
-		ignore_result(fwrite(buf, 1, written, stream));
-	}
-	return written;
+	return handler->hook(&data, &spec, args);
 }
 
 /**
