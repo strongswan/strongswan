@@ -108,6 +108,49 @@ struct ipsec_sa_mgr_t {
 	status_t (*flush_sas)(ipsec_sa_mgr_t *this);
 
 	/**
+	 * Checkout an installed IPsec SA by SPI and destination address
+	 * Can be used to find the correct SA for an inbound packet.
+	 *
+	 * The matching SA is locked until it is checked in using checkin().
+	 * If the matching SA is already checked out, this call blocks until the
+	 * SA is checked in.
+	 *
+	 * Since other threads may be waiting for the checked out SA, it should be
+	 * checked in as soon as possible after use.
+	 *
+	 * @param spi			SPI (e.g. of an inbound packet)
+	 * @param dst			destination address (e.g. of an inbound packet)
+	 * @return				the matching IPsec SA, or NULL if none is found
+	 */
+	ipsec_sa_t *(*checkout_by_spi)(ipsec_sa_mgr_t *this, u_int32_t spi,
+								   host_t *dst);
+
+	/**
+	 * Checkout an installed IPsec SA by its reqid and inbound/outbound flag.
+	 * Can be used to find the correct SA for an outbound packet.
+	 *
+	 * The matching SA is locked until it is checked in using checkin().
+	 * If the matching SA is already checked out, this call blocks until the
+	 * SA is checked in.
+	 *
+	 * Since other threads may be waiting for a checked out SA, it should be
+	 * checked in as soon as possible after use.
+	 *
+	 * @param reqid			reqid of the SA
+	 * @param inbound		TRUE for an inbound SA, FALSE for an outbound SA
+	 * @return				the matching IPsec SA, or NULL if none is found
+	 */
+	ipsec_sa_t *(*checkout_by_reqid)(ipsec_sa_mgr_t *this, u_int32_t reqid,
+									 bool inbound);
+
+	/**
+	 * Checkin an SA after use.
+	 *
+	 * @param sa			checked out SA
+	 */
+	void (*checkin)(ipsec_sa_mgr_t *this, ipsec_sa_t *sa);
+
+	/**
 	 * Destroy an ipsec_sa_mgr_t
 	 */
 	void (*destroy)(ipsec_sa_mgr_t *this);
