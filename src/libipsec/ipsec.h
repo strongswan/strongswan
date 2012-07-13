@@ -28,6 +28,7 @@
 #include "ipsec_sa_mgr.h"
 #include "ipsec_policy_mgr.h"
 #include "ipsec_event_relay.h"
+#include "ipsec_processor.h"
 
 #include <library.h>
 
@@ -52,6 +53,11 @@ struct ipsec_t {
 	 * Event relay instance
 	 */
 	ipsec_event_relay_t *events;
+
+	/**
+	 * IPsec processor instance
+	 */
+	ipsec_processor_t *processor;
 
 };
 
