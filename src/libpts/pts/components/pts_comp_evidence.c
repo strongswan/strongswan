@@ -152,8 +152,8 @@ METHOD(pts_comp_evidence_t, set_pcr_info, void,
 	this->pcr_before = pcr_before;
 	this->pcr_after =  pcr_after;
 
-	DBG2(DBG_PTS, "PCR %2d before value : %#B", this->extended_pcr, &pcr_before);
-	DBG2(DBG_PTS, "PCR %2d after value  : %#B", this->extended_pcr, &pcr_after);
+	DBG3(DBG_PTS, "PCR %2d before value : %#B", this->extended_pcr, &pcr_before);
+	DBG3(DBG_PTS, "PCR %2d after value  : %#B", this->extended_pcr, &pcr_after);
 }
 
 METHOD(pts_comp_evidence_t, get_validation, pts_comp_evid_validation_t,
@@ -219,8 +219,8 @@ pts_comp_evidence_t *pts_comp_evidence_create(pts_comp_func_name_t *name,
 	);
 
 	name->log(name, "");
-	DBG2(DBG_PTS, "measurement time: %T", &measurement_time, FALSE);
-	DBG2(DBG_PTS, "PCR %2d extended with: %#B", extended_pcr, &measurement);
+	DBG3(DBG_PTS, "measurement time: %T", &measurement_time, FALSE);
+	DBG3(DBG_PTS, "PCR %2d extended with: %#B", extended_pcr, &measurement);
 
 	return &this->public;
 }
