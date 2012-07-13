@@ -6,7 +6,8 @@ LOCAL_SRC_FILES := \
 ipsec.c ipsec.h \
 esp_context.c esp_context.h \
 esp_packet.c esp_packet.h \
-ipsec_sa.c ipsec_sa.h
+ipsec_sa.c ipsec_sa.h \
+ipsec_sa_mgr.c ipsec_sa_mgr.h
 
 # build libipsec ---------------------------------------------------------------
 

@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2012 Giuliano Grassi
+ * Copyright (C) 2012 Ralf Sager
  * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -41,6 +43,7 @@ ipsec_t *ipsec;
 void libipsec_deinit()
 {
 	private_ipsec_t *this = (private_ipsec_t*)ipsec;
+	DESTROY_IF(this->public.sas);
 	free(this);
 	ipsec = NULL;
 }
@@ -52,10 +55,7 @@ bool libipsec_init()
 {
 	private_ipsec_t *this;
 
-	INIT(this,
-		.public = {
-		},
-	);
+	INIT(this);
 	ipsec = &this->public;
 
 	if (lib->integrity &&
@@ -64,6 +64,8 @@ bool libipsec_init()
 		DBG1(DBG_LIB, "integrity check of libipsec failed");
 		return FALSE;
 	}
+
+	this->public.sas = ipsec_sa_mgr_create();
 	return TRUE;
 }
 

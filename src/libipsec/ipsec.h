@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2012 Giuliano Grassi
+ * Copyright (C) 2012 Ralf Sager
  * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,14 +25,21 @@
 #ifndef IPSEC_H_
 #define IPSEC_H_
 
-typedef struct ipsec_t ipsec_t;
+#include "ipsec_sa_mgr.h"
 
 #include <library.h>
+
+typedef struct ipsec_t ipsec_t;
 
 /**
  * User space IPsec implementation.
  */
 struct ipsec_t {
+
+	/**
+	 * IPsec SA manager instance
+	 */
+	ipsec_sa_mgr_t *sas;
 
 };
 
