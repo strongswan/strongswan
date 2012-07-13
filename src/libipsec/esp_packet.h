@@ -23,6 +23,7 @@
 #ifndef ESP_PACKET_H_
 #define ESP_PACKET_H_
 
+#include "ip_packet.h"
 #include "esp_context.h"
 
 #include <library.h>
@@ -105,12 +106,20 @@ struct esp_packet_t {
 	u_int8_t (*get_next_header)(esp_packet_t *this);
 
 	/**
-	 * Get the plaintext payload of this packet (e.g. inner IP packet).
+	 * Get the plaintext payload of this packet.
 	 *
 	 * @return					plaintext payload (internal data),
-	 * 							chunk_empty if not decrypted
+	 *							NULL if not decrypted
 	 */
-	chunk_t (*get_payload)(esp_packet_t *this);
+	ip_packet_t *(*get_payload)(esp_packet_t *this);
+
+	/**
+	 * Extract the plaintext payload from this packet.
+	 *
+	 * @return					plaintext payload (has to be destroyed),
+	 *							NULL if not decrypted
+	 */
+	ip_packet_t *(*extract_payload)(esp_packet_t *this);
 
 	/**
 	 * Destroy an esp_packet_t
@@ -128,17 +137,15 @@ struct esp_packet_t {
 esp_packet_t *esp_packet_create_from_packet(packet_t *packet);
 
 /**
- * Create an ESP packet from a plaintext payload (e.g. inner IP packet)
+ * Create an ESP packet from a plaintext payload
  *
  * @param src			source address
  * @param dst			destination address
- * @param payload		plaintext payload (e.g. inner IP packet), gets owned
- * @param next_header	next header type of the payload (e.g IPPROTO_IPIP)
+ * @param payload		plaintext payload, gets owned
  * @return				esp_packet_t instance
  */
 esp_packet_t *esp_packet_create_from_payload(host_t *src, host_t *dst,
-											 chunk_t payload,
-											 u_int8_t next_header);
+											 ip_packet_t *payload);
 
 #endif /** ESP_PACKET_H_ @}*/
 

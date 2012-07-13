@@ -47,7 +47,7 @@ struct private_esp_packet_t {
 	/**
 	 * Payload of this packet
 	 */
-	chunk_t payload;
+	ip_packet_t *payload;
 
 	/**
 	 * Next Header info (e.g. IPPROTO_IPIP)
@@ -59,7 +59,7 @@ struct private_esp_packet_t {
 /**
  * Forward declaration for clone()
  */
-static private_esp_packet_t *esp_packet_create_empty(packet_t *packet);
+static private_esp_packet_t *esp_packet_create_internal(packet_t *packet);
 
 METHOD(packet_t, set_source, void,
 	private_esp_packet_t *this, host_t *src)
@@ -108,8 +108,8 @@ METHOD(packet_t, clone, packet_t*,
 {
 	private_esp_packet_t *pkt;
 
-	pkt = esp_packet_create_empty(this->packet->clone(this->packet));
-	pkt->payload = chunk_clone(this->payload);
+	pkt = esp_packet_create_internal(this->packet->clone(this->packet));
+	pkt->payload = this->payload ? this->payload->clone(this->payload) : NULL;
 	pkt->next_header = this->next_header;
 	return &pkt->public.packet;
 }
@@ -155,35 +155,44 @@ static bool check_padding(chunk_t padding)
 /**
  * Remove the padding from the payload and set the next header info
  */
-static bool remove_padding(private_esp_packet_t *this)
+static bool remove_padding(private_esp_packet_t *this, chunk_t plaintext)
 {
 	u_int8_t next_header, pad_length;
-	chunk_t padding;
+	chunk_t padding, payload;
 	bio_reader_t *reader;
 
-	reader = bio_reader_create(this->payload);
+	reader = bio_reader_create(plaintext);
 	if (!reader->read_uint8_end(reader, &next_header) ||
 		!reader->read_uint8_end(reader, &pad_length))
 	{
 		DBG1(DBG_ESP, "parsing ESP payload failed: invalid length");
-		reader->destroy(reader);
-		return FALSE;
+		goto failed;
 	}
 	if (!reader->read_data_end(reader, pad_length, &padding) ||
 		!check_padding(padding))
 	{
 		DBG1(DBG_ESP, "parsing ESP payload failed: invalid padding");
-		reader->destroy(reader);
+		goto failed;
+	}
+	this->payload = ip_packet_create(reader->peek(reader));
+	reader->destroy(reader);
+	if (!this->payload)
+	{
+		DBG1(DBG_ESP, "parsing ESP payload failed: unsupported payload");
 		return FALSE;
 	}
-	this->payload = reader->peek(reader);
 	this->next_header = next_header;
-	reader->destroy(reader);
+	payload = this->payload->get_encoding(this->payload);
 
 	DBG3(DBG_ESP, "ESP payload:\n  payload %B\n  padding %B\n  "
-		 "padding length = %hhu, next header = %hhu", &this->payload,
-		 &padding, pad_length, this->next_header);
+		 "padding length = %hhu, next header = %hhu", &payload, &padding,
+		 pad_length, this->next_header);
 	return TRUE;
+
+failed:
+	reader->destroy(reader);
+	chunk_free(&plaintext);
+	return FALSE;
 }
 
 METHOD(esp_packet_t, decrypt, status_t,
@@ -191,11 +200,12 @@ METHOD(esp_packet_t, decrypt, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t spi, seq;
-	chunk_t data, iv, icv, ciphertext;
+	chunk_t data, iv, icv, ciphertext, plaintext;
 	crypter_t *crypter;
 	signer_t *signer;
 
-	chunk_free(&this->payload);
+	DESTROY_IF(this->payload);
+	this->payload = NULL;
 
 	data = this->packet->get_data(this->packet);
 	crypter = esp_context->get_crypter(esp_context);
@@ -233,15 +243,14 @@ METHOD(esp_packet_t, decrypt, status_t,
 	}
 	esp_context->set_authenticated_seqno(esp_context, seq);
 
-	if (!crypter->decrypt(crypter, ciphertext, iv, &this->payload))
+	if (!crypter->decrypt(crypter, ciphertext, iv, &plaintext))
 	{
 		DBG1(DBG_ESP, "ESP decryption failed");
 		return FAILED;
 	}
 
-	if (!remove_padding(this))
+	if (!remove_padding(this, plaintext))
 	{
-		chunk_free(&this->payload);
 		return PARSE_ERROR;
 	}
 	return SUCCESS;
@@ -263,7 +272,7 @@ static void generate_padding(chunk_t padding)
 METHOD(esp_packet_t, encrypt, status_t,
 	private_esp_packet_t *this, esp_context_t *esp_context, u_int32_t spi)
 {
-	chunk_t iv, icv, padding, ciphertext, auth_data;
+	chunk_t iv, icv, padding, payload, ciphertext, auth_data;
 	bio_writer_t *writer;
 	u_int32_t next_seqno;
 	size_t blocksize, plainlen;
@@ -293,7 +302,9 @@ METHOD(esp_packet_t, encrypt, status_t,
 	icv.len = signer->get_block_size(signer);
 
 	/* plaintext = payload, padding, pad_length, next_header */
-	plainlen = this->payload.len + 2;
+	payload = this->payload ? this->payload->get_encoding(this->payload)
+							: chunk_empty;
+	plainlen = payload.len + 2;
 	padding.len = blocksize - (plainlen % blocksize);
 	plainlen += padding.len;
 
@@ -318,7 +329,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	ciphertext.ptr += ciphertext.len;
 	ciphertext.len = plainlen;
 
-	writer->write_data(writer, this->payload);
+	writer->write_data(writer, payload);
 
 	padding = writer->skip(writer, padding.len);
 	generate_padding(padding);
@@ -327,7 +338,7 @@ METHOD(esp_packet_t, encrypt, status_t,
 	writer->write_uint8(writer, this->next_header);
 
 	DBG3(DBG_ESP, "ESP before encryption:\n  payload = %B\n  padding = %B\n  "
-		 "padding length = %hhu, next header = %hhu", &this->payload, &padding,
+		 "padding length = %hhu, next header = %hhu", &payload, &padding,
 		 (u_int8_t)padding.len, this->next_header);
 
 	/* encrypt the content inline */
@@ -363,21 +374,31 @@ METHOD(esp_packet_t, get_next_header, u_int8_t,
 	return this->next_header;
 }
 
-METHOD(esp_packet_t, get_payload, chunk_t,
+METHOD(esp_packet_t, get_payload, ip_packet_t*,
 	private_esp_packet_t *this)
 {
 	return this->payload;
 }
 
+METHOD(esp_packet_t, extract_payload, ip_packet_t*,
+	private_esp_packet_t *this)
+{
+	ip_packet_t *payload;
+
+	payload = this->payload;
+	this->payload = NULL;
+	return payload;
+}
+
 METHOD2(esp_packet_t, packet_t, destroy, void,
 	private_esp_packet_t *this)
 {
-	chunk_free(&this->payload);
+	DESTROY_IF(this->payload);
 	this->packet->destroy(this->packet);
 	free(this);
 }
 
-static private_esp_packet_t *esp_packet_create_empty(packet_t *packet)
+static private_esp_packet_t *esp_packet_create_internal(packet_t *packet)
 {
 	private_esp_packet_t *this;
 
@@ -396,11 +417,12 @@ static private_esp_packet_t *esp_packet_create_empty(packet_t *packet)
 			},
 			.get_source = _get_source,
 			.get_destination = _get_destination,
-			.get_payload = _get_payload,
 			.get_next_header = _get_next_header,
 			.parse_header = _parse_header,
 			.decrypt = _decrypt,
 			.encrypt = _encrypt,
+			.get_payload = _get_payload,
+			.extract_payload = _extract_payload,
 			.destroy = _destroy,
 		},
 		.packet = packet,
@@ -416,7 +438,7 @@ esp_packet_t *esp_packet_create_from_packet(packet_t *packet)
 {
 	private_esp_packet_t *this;
 
-	this = esp_packet_create_empty(packet);
+	this = esp_packet_create_internal(packet);
 
 	return &this->public;
 }
@@ -425,16 +447,22 @@ esp_packet_t *esp_packet_create_from_packet(packet_t *packet)
  * Described in header.
  */
 esp_packet_t *esp_packet_create_from_payload(host_t *src, host_t *dst,
-											 chunk_t payload,
-											 u_int8_t next_header)
+											 ip_packet_t *payload)
 {
 	private_esp_packet_t *this;
 	packet_t *packet;
 
 	packet = packet_create_from_data(src, dst, chunk_empty);
-	this = esp_packet_create_empty(packet);
-	this->next_header = next_header;
+	this = esp_packet_create_internal(packet);
 	this->payload = payload;
-
+	if (payload)
+	{
+		this->next_header = payload->get_version(payload) == 4 ? IPPROTO_IPIP
+															   : IPPROTO_IPV6;
+	}
+	else
+	{
+		this->next_header = IPPROTO_NONE;
+	}
 	return &this->public;
 }
