@@ -320,6 +320,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			pts_proto_caps_flag_t negotiated_caps;
+			pts_file_meas_t *measurements;
 			pts_comp_func_name_t *name;
 			pts_comp_evidence_t *evid;
 			pts_component_t *comp;
@@ -387,12 +388,19 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				/* do the component evidence measurement[s] */
 				do
 				{
-					status = comp->measure(comp, pts, &evid);
+					status = comp->measure(comp, pts, &evid, &measurements);
 					if (status == FAILED)
 					{
 						break;
 					}
 					attestation_state->add_evidence(attestation_state, evid);
+					if (measurements)
+					{
+						DBG2(DBG_IMC, "collected %d file measurements",
+							 measurements->get_file_count(measurements));
+						attr = tcg_pts_attr_file_meas_create(measurements);
+						attr_list->insert_last(attr_list, attr);
+					}
 				}
 				while (status == NEED_MORE);
 				comp->destroy(comp);

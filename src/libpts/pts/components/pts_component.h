@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@ typedef struct pts_component_t pts_component_t;
 
 #include "pts/pts.h"
 #include "pts/pts_database.h"
+#include "pts/pts_file_meas.h"
 #include "pts/components/pts_comp_func_name.h"
 #include "pts/components/pts_comp_evidence.h"
 
@@ -61,10 +62,12 @@ struct pts_component_t {
 	 *
 	 * @param pts			PTS interface
 	 * @param evidence		returns component evidence measureemt
+	 * @param measurements	additional file measurements (NULL if not present)
 	 * @return				status return code
 	 */
 	status_t (*measure)(pts_component_t *this, pts_t *pts,
-						pts_comp_evidence_t** evidence);
+						pts_comp_evidence_t** evidence,
+						pts_file_meas_t** measurements);
 
 	/**
 	 * Verify the evidence measurements of the PTS Functional Component
@@ -75,7 +78,6 @@ struct pts_component_t {
 	 */
 	status_t (*verify)(pts_component_t *this, pts_t *pts,
 					   pts_comp_evidence_t *evidence);
-
 
 	/**
 	 * Tell the PTS Functional Component to finalize pending registrations

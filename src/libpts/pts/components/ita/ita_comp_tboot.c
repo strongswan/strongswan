@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
- *
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -107,7 +106,9 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
+	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
+	pts_file_meas_t **measurements)
+
 {
 	pts_comp_evidence_t *evid;
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;

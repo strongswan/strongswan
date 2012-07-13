@@ -193,8 +193,9 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			int file_count, file_id;
 			pts_meas_algorithms_t algo;
 			pts_file_meas_t *measurements;
-			char *platform_info;
-			enumerator_t *e_hash;
+			char *platform_info, *filename;
+			chunk_t measurement;
+			enumerator_t *e, *e_hash;
 			bool is_dir;
 
 			platform_info = pts->get_platform_info(pts);
@@ -216,22 +217,34 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			DBG1(DBG_IMV, "measurement request %d returned %d file%s:",
 				 request_id, file_count, (file_count == 1) ? "":"s");
 
-			if (!attestation_state->check_off_file_meas_request(attestation_state,
-				request_id, &file_id, &is_dir))
+			if (request_id)
 			{
-				DBG1(DBG_IMV, "  no entry found for file measurement request %d",
-					 request_id);
-				break;
-			}
+				if (!attestation_state->check_off_file_meas_request(
+					attestation_state, request_id, &file_id, &is_dir))
+				{
+					DBG1(DBG_IMV, "  no entry found for file measurement "
+								  "request %d", request_id);
+					break;
+				}
 
-			/* check hashes from database against measurements */
-			e_hash = pts_db->create_file_hash_enumerator(pts_db,
-							platform_info, algo, file_id, is_dir);
-			if (!measurements->verify(measurements, e_hash, is_dir))
-			{
-				attestation_state->set_measurement_error(attestation_state);
+				/* check hashes from database against measurements */
+				e_hash = pts_db->create_file_hash_enumerator(pts_db,
+								platform_info, algo, file_id, is_dir);
+				if (!measurements->verify(measurements, e_hash, is_dir))
+				{
+					attestation_state->set_measurement_error(attestation_state);
+				}
+				e_hash->destroy(e_hash);
 			}
-			e_hash->destroy(e_hash);
+			else
+			{
+				e = measurements->create_enumerator(measurements);
+				while (e->enumerate(e, &filename, &measurement))
+				{
+					DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
+				}
+				e->destroy(e);
+			}
 			break;
 		}
 		case TCG_PTS_UNIX_FILE_META:

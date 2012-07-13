@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
- *
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -172,7 +171,7 @@ struct ima_entry_t {
 	/**
 	 * absolute path of executable files or basename of dynamic libraries
 	 */
-	chunk_t filename;
+	char *filename;
 };
 
 /**
@@ -191,7 +190,7 @@ static void free_ima_entry(ima_entry_t *this)
 {
 	free(this->measurement.ptr);
 	free(this->file_measurement.ptr);
-	free(this->filename.ptr);
+	free(this->filename);
 	free(this);
 }
 
@@ -311,7 +310,7 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 		entry = malloc_thing(ima_entry_t);
 		entry->measurement = chunk_alloc(HASH_SIZE_SHA1);
 		entry->file_measurement = chunk_alloc(HASH_SIZE_SHA1);
-		entry->filename = chunk_empty;
+		entry->filename = NULL;
 
 		if (res != 4 || pcr != IMA_PCR)
 		{
@@ -338,11 +337,13 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 		{
 			break;
 		}
-		entry->filename = chunk_alloc(len);
-		if (read(fd, entry->filename.ptr, len) != len)
+		entry->filename = malloc(len + 1);
+		if (read(fd, entry->filename, len) != len)
 		{
 			break;
 		}
+		entry->filename[len] = '\0';
+
 		list->insert_last(list, entry);
 	}
 
@@ -428,11 +429,16 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_ima_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
+	pts_ita_comp_ima_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
+	pts_file_meas_t **measurements)
 {
 	bios_entry_t *bios_entry;
-	ima_entry_t *ima_entry;
+	ima_entry_t *ima_entry, *entry;
 	status_t status;
+	enumerator_t *e;
+	pts_file_meas_t *file_meas;
+
+	*measurements = NULL;
 
 	switch (this->state)
 	{
@@ -486,19 +492,31 @@ METHOD(pts_component_t, measure, status_t,
 			if (this->state == IMA_STATE_BOOT_AGGREGATE)
 			{
 				check_boot_aggregate(this, ima_entry->measurement);
+
+				if (this->ima_list->get_count(this->ima_list))
+				{
+					/* extract file measurements */
+					file_meas = pts_file_meas_create(0);
+
+					e = this->ima_list->create_enumerator(this->ima_list);
+					while (e->enumerate(e, &entry))
+					{
+						file_meas->add(file_meas, entry->filename,
+												  entry->file_measurement);
+					}
+					e->destroy(e);
+					*measurements = file_meas;
+				}
 			}
 
-			/* TODO optionally send file measurements */
-			chunk_free(&ima_entry->file_measurement);
-			chunk_free(&ima_entry->filename);
+			free(ima_entry->file_measurement.ptr);
+			free(ima_entry->filename);
 			free(ima_entry);
-
 			this->state = this->ima_list->get_count(this->ima_list) ?
 									IMA_STATE_RUNTIME : IMA_STATE_END;
 			break;
 		case IMA_STATE_END:
-			/* shouldn't happen */
-			return FAILED;
+			break;
 	}
 	
 	return (this->state == IMA_STATE_END) ? SUCCESS : NEED_MORE;
