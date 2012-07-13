@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -125,6 +125,11 @@ struct imv_attestation_state_t {
 	 * and to check if all expected measurements were received
 	 */
 	void (*finalize_components)(imv_attestation_state_t *this);
+
+	/**
+	 * Have the Functional Component measurements been finalized?
+	 */
+	bool (*components_finalized)(imv_attestation_state_t *this);
 
 	/**
 	 * Indicates if a file measurement error occurred

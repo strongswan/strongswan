@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -290,8 +290,11 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			break;
 		}
 		case IMV_ATTESTATION_STATE_EVID_FINAL:
-			attestation_state->set_handshake_state(attestation_state,
+			if (attestation_state->components_finalized(attestation_state))
+			{
+				attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_END);
+			}
 			break;
 		case IMV_ATTESTATION_STATE_END:
 			break;

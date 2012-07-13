@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -360,6 +360,12 @@ METHOD(imv_attestation_state_t, finalize_components, void,
 	}
 }
 
+METHOD(imv_attestation_state_t, components_finalized, bool,
+	private_imv_attestation_state_t *this)
+{
+	return this->components->get_count(this->components) == 0;
+}
+
 /**
  * Described in header.
  */
@@ -392,6 +398,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 			.add_component = _add_component,
 			.get_component = _get_component,
 			.finalize_components = _finalize_components,
+			.components_finalized = _components_finalized,
 			.get_measurement_error = _get_measurement_error,
 			.set_measurement_error = _set_measurement_error,
 		},
