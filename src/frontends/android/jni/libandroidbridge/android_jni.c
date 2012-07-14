@@ -18,6 +18,7 @@
 #include "android_jni.h"
 
 #include <library.h>
+#include <threading/thread_value.h>
 
 /**
  * JVM
@@ -25,6 +26,40 @@
 static JavaVM *android_jvm;
 
 jclass *android_charonvpnservice_class;
+
+/**
+ * Thread-local variable. Only used because of the destructor
+ */
+static thread_value_t *androidjni_threadlocal;
+
+/**
+ * Thread-local destructor to ensure that a native thread is detached
+ * from the JVM even if androidjni_detach_thread() is not called.
+ */
+static void attached_thread_cleanup(void *arg)
+{
+	(*android_jvm)->DetachCurrentThread(android_jvm);
+}
+
+/*
+ * Described in header
+ */
+void androidjni_attach_thread(JNIEnv **env)
+{
+	(*android_jvm)->AttachCurrentThread(android_jvm, env, NULL);
+	/* use a thread-local value with a destructor that automatically detaches
+	 * the thread from the JVM before it terminates, if not done manually */
+	androidjni_threadlocal->set(androidjni_threadlocal, (void*)*env);
+}
+
+/*
+ * Described in header
+ */
+void androidjni_detach_thread()
+{
+	androidjni_threadlocal->set(androidjni_threadlocal, NULL);
+	(*android_jvm)->DetachCurrentThread(android_jvm);
+}
 
 /**
  * Called when this library is loaded by the JVM
@@ -40,10 +75,20 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 		return -1;
 	}
 
+	androidjni_threadlocal = thread_value_create(attached_thread_cleanup);
+
 	android_charonvpnservice_class =
 				(*env)->NewGlobalRef(env, (*env)->FindClass(env,
 						JNI_PACKAGE_STRING "/CharonVpnService"));
 
 	return JNI_VERSION_1_6;
+}
+
+/**
+ * Called when this library is unloaded by the JVM
+ */
+void JNI_OnUnload(JavaVM *vm, void *reserved)
+{
+	androidjni_threadlocal->destroy(androidjni_threadlocal);
 }
 

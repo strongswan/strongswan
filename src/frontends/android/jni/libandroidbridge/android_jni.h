@@ -43,4 +43,23 @@
  */
 extern jclass *android_charonvpnservice_class;
 
+/**
+ * Attach the current thread to the JVM
+ *
+ * As local JNI references are not freed until the thread detaches
+ * androidjni_detach_thread() should be called as soon as possible.
+ * If it is not called a thread-local destructor ensures that the
+ * thread is at least detached as soon as it terminates.
+ *
+ * @param env		JNIEnv
+ */
+void androidjni_attach_thread(JNIEnv **env);
+
+/**
+ * Detach the current thread from the JVM
+ *
+ * Call this as soon as possible to ensure that local JNI references are freed.
+ */
+void androidjni_detach_thread();
+
 #endif /** ANDROID_JNI_H_ @}*/
