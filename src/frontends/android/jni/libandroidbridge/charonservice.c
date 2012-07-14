@@ -18,6 +18,7 @@
 #include <string.h>
 #include <android/log.h>
 
+#include "charonservice.h"
 #include "android_jni.h"
 
 #include <daemon.h>
@@ -25,6 +26,23 @@
 #include <ipsec.h>
 #include <library.h>
 
+typedef struct private_charonservice_t private_charonservice_t;
+
+/**
+ * private data of charonservice
+ */
+struct private_charonservice_t {
+
+	/**
+	 * public interface
+	 */
+	charonservice_t public;
+};
+
+/**
+ * Single instance of charonservice_t.
+ */
+charonservice_t *charonservice;
 
 /**
  * hook in library for debugging messages
@@ -61,6 +79,31 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 }
 
 /**
+ * Initialize the charonservice object
+ */
+static void charonservice_init()
+{
+	private_charonservice_t *this;
+
+	INIT(this,
+		.public = {
+		},
+	);
+	charonservice = &this->public;
+}
+
+/**
+ * Deinitialize the charonservice object
+ */
+static void charonservice_deinit()
+{
+	private_charonservice_t *this = (private_charonservice_t*)charonservice;
+
+	free(this);
+	charonservice = NULL;
+}
+
+/**
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, void)
@@ -90,10 +133,13 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 		return;
 	}
 
+	charonservice_init();
+
 	if (!libcharon_init("charon") ||
 		!charon->initialize(charon, PLUGINS))
 	{
 		libcharon_deinit();
+		charonservice_deinit();
 		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
@@ -105,11 +151,12 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 }
 
 /**
- * Initialize charon and the libraries via JNI
+ * Deinitialize charon and all libraries
  */
 JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 {
 	libcharon_deinit();
+	charonservice_deinit();
 	libipsec_deinit();
 	libhydra_deinit();
 	library_deinit();
