@@ -320,6 +320,12 @@ static void print_sourceline(FILE *file, char *filename, void *ptr)
 }
 
 #endif /* HAVE_BFD_H */
+
+#else /* !HAVE_DLADDR */
+
+void backtrace_init() {}
+void backtrace_deinit() {}
+
 #endif /* HAVE_DLADDR */
 
 METHOD(backtrace_t, log_, void,
