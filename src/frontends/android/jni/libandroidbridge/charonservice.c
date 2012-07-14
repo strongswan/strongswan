@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2012 Giuliano Grassi
+ * Copyright (C) 2012 Ralf Sager
  * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,28 +17,19 @@
 
 #include <string.h>
 #include <android/log.h>
-#include <jni.h>
 
+#include "android_jni.h"
+
+#include <daemon.h>
 #include <hydra.h>
 #include <ipsec.h>
-#include <daemon.h>
 #include <library.h>
 
-#define JNI_PACKAGE org_strongswan_android
-
-#define JNI_METHOD_PP(pack, klass, name, ret, ...) \
-	ret Java_##pack##_##klass##_##name(JNIEnv *env, jobject this, ##__VA_ARGS__)
-
-#define JNI_METHOD_P(pack, klass, name, ret, ...) \
-	JNI_METHOD_PP(pack, klass, name, ret, ##__VA_ARGS__)
-
-#define JNI_METHOD(klass, name, ret, ...) \
-	JNI_METHOD_P(JNI_PACKAGE, klass, name, ret, ##__VA_ARGS__)
 
 /**
  * hook in library for debugging messages
  */
-extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
+extern void (*dbg)(debug_t group, level_t level, char *fmt, ...);
 
 /**
  * Logging hook for library logs, using android specific logging

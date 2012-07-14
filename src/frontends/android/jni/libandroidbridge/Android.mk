@@ -3,6 +3,7 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
+android_jni.c android_jni.h \
 charonservice.c
 
 # build libandroidbridge -------------------------------------------------------
