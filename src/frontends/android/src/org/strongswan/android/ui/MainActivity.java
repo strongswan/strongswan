@@ -1,11 +1,11 @@
-package org.strongswan.android;
+package org.strongswan.android.ui;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Bundle;
 
-public class strongSwanActivity extends Activity
+public class MainActivity extends Activity
 {
 	@Override
 	public void onCreate(Bundle savedInstanceState)
