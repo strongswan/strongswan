@@ -21,7 +21,9 @@
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
+#endif
 
 typedef struct private_ip_packet_t private_ip_packet_t;
 
@@ -143,6 +145,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			next_header = ip->protocol;
 			break;
 		}
+#ifdef HAVE_NETINET_IP6_H
 		case 6:
 		{
 			struct ip6_hdr *ip;
@@ -159,6 +162,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 										 chunk_from_thing(ip->ip6_dst), 0);
 			next_header = ip->ip6_nxt;
 		}
+#endif /* HAVE_NETINET_IP6_H */
 		default:
 			DBG1(DBG_ESP, "unsupported IP version");
 			goto failed;
