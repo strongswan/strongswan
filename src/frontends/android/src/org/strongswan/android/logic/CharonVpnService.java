@@ -1,4 +1,4 @@
-package org.strongswan.android;
+package org.strongswan.android.logic;
 
 import android.content.Intent;
 import android.net.VpnService;

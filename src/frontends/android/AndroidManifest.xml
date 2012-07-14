@@ -5,6 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk android:minSdkVersion="14" />
+
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -19,9 +20,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".CharonVpnService" android:permission="android.permission.BIND_VPN_SERVICE">
+        <service
+            android:name=".logic.CharonVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE" >
             <intent-filter>
-                <action android:name="android.net.VpnService"/>
+                <action android:name="org.strongswan.android.logic.CharonVpnService" />
             </intent-filter>
         </service>
     </application>
