@@ -82,9 +82,9 @@ struct private_tnc_pdp_t {
 	signer_t *signer;
 
 	/**
-	 * Random number generator for MS-MPPE salt values
+	 * Nonce generator for MS-MPPE salt values
 	 */
-	rng_t *rng;
+	nonce_gen_t *ng;
 
 	/**
 	 * List of registered TNC-PDP connections
@@ -216,7 +216,11 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 	a = chunk_create((u_char*)&(mppe_key->salt), sizeof(mppe_key->salt));
 	do
 	{
-		this->rng->get_bytes(this->rng, a.len, a.ptr);
+		if (!this->ng->get_nonce(this->ng, a.len, a.ptr))
+		{
+			free(data.ptr);
+			return chunk_empty;
+		}	
 		*a.ptr |= 0x80;
 	}
 	while (mppe_key->salt == *salt);
@@ -557,7 +561,7 @@ METHOD(tnc_pdp_t, destroy, void,
 	DESTROY_IF(this->server);
 	DESTROY_IF(this->signer);
 	DESTROY_IF(this->hasher);
-	DESTROY_IF(this->rng);
+	DESTROY_IF(this->ng);
 	DESTROY_IF(this->connections);
 	free(this);
 }
@@ -578,13 +582,13 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		.ipv6 = open_socket(AF_INET6, port),
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5),
 		.signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_MD5_128),
-		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
+		.ng = lib->crypto->create_nonce_gen(lib->crypto),
 		.connections = tnc_pdp_connections_create(),
 	);
 
-	if (!this->hasher || !this->signer || !this->rng)
+	if (!this->hasher || !this->signer || !this->ng)
 	{
-		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/RNG required");
+		DBG1(DBG_CFG, "RADIUS initialization failed, HMAC/MD5/NG required");
 		destroy(this);
 		return NULL;
 	}
@@ -622,7 +626,12 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		return NULL;
 	}
 	this->secret = chunk_create(secret, strlen(secret));
-	this->signer->set_key(this->signer, this->secret);
+	if (!this->signer->set_key(this->signer, this->secret))
+	{
+		DBG1(DBG_CFG, "could not set signer key");
+		destroy(this);
+		return NULL;
+	}
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 						"%s.plugins.tnc-pdp.method", "ttls", charon->name);
