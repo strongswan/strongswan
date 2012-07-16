@@ -547,7 +547,11 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 		enumerator->destroy(enumerator);
 
 		/* build and send the PA-TNC message via the IF-IMV interface */
-		pa_tnc_msg->build(pa_tnc_msg);
+		if (!pa_tnc_msg->build(pa_tnc_msg))
+		{
+			pa_tnc_msg->destroy(pa_tnc_msg);
+			return TNC_RESULT_FATAL;
+		}
 		msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
 
 		if (state->has_long(state) && this->send_message_long)

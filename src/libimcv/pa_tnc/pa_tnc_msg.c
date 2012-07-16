@@ -131,7 +131,7 @@ METHOD(pa_tnc_msg_t, add_attribute, bool,
 	return TRUE;
 }
 
-METHOD(pa_tnc_msg_t, build, void,
+METHOD(pa_tnc_msg_t, build, bool,
 	private_pa_tnc_msg_t *this)
 {
 	bio_writer_t *writer;
@@ -142,12 +142,17 @@ METHOD(pa_tnc_msg_t, build, void,
 	u_int32_t type;
 	u_int8_t flags;
 	chunk_t value;
-	rng_t *rng;
+	nonce_gen_t *ng;
 
-	/* create a random message identifier */
-	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	rng->get_bytes(rng, sizeof(this->identifier), (u_int8_t*)&this->identifier);
-	rng->destroy(rng);
+	/* generate a nonce as a message identifier */
+	ng = lib->crypto->create_nonce_gen(lib->crypto);
+	if (!ng || !ng->get_nonce(ng, 4, (u_int8_t*)&this->identifier))
+	{
+		DBG1(DBG_TNC, "failed to generate random PA-TNC message identifier");
+		DESTROY_IF(ng);
+		return FALSE;
+	}
+	ng->destroy(ng);
 	DBG2(DBG_TNC, "creating PA-TNC message with ID 0x%08x", this->identifier);
 
 	/* build message header */
@@ -193,6 +198,8 @@ METHOD(pa_tnc_msg_t, build, void,
 	free(this->encoding.ptr);
 	this->encoding = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
+
+	return TRUE;
 }
 
 METHOD(pa_tnc_msg_t, process, status_t,

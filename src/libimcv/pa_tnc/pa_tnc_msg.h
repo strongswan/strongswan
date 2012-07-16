@@ -52,8 +52,10 @@ struct pa_tnc_msg_t {
 
 	/**
 	 * Build the PA-TNC message
+	 *
+	 * @return					TRUE if PA-TNC message was built successfully
 	 */
-	void (*build)(pa_tnc_msg_t *this);
+	bool (*build)(pa_tnc_msg_t *this);
 
 	/**
 	 * Process the PA-TNC message
