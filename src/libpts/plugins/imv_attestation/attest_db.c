@@ -1144,6 +1144,11 @@ METHOD(attest_db_t, add, bool,
 			ima = TRUE;
 			this->algo = PTS_MEAS_ALGO_SHA1;
 			hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+			if (!hasher)
+			{
+				printf("could not create hasher\n");
+				return FALSE;
+			}
 		}
 
 		pathname = this->did ? this->dir : this->file;
@@ -1207,9 +1212,12 @@ METHOD(attest_db_t, add, bool,
 			strncpy(ima_buffer, filename, IMA_MAX_NAME_LEN);
 			ima_buffer[IMA_MAX_NAME_LEN] = '\0';
 			ima_template = chunk_create(ima_buffer, sizeof(ima_buffer));
-			hasher->get_hash(hasher, measurement, NULL);
-			hasher->get_hash(hasher, ima_template, measurement.ptr);
-
+			if (!hasher->get_hash(hasher, measurement, NULL) ||
+				!hasher->get_hash(hasher, ima_template, measurement.ptr))
+			{
+				printf("could not compute IMA template hash\n");
+				break;
+			}
 			if (!insert_file_hash(this, PTS_MEAS_ALGO_SHA1_IMA, measurement,
 								  fid, did, TRUE, &ima_hashes_added))
 			{
