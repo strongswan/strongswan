@@ -369,8 +369,11 @@ pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
 	pcr_len = HASH_SIZE_SHA1;
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 	pcr_before = chunk_clone(this->pcrs[pcr]);
-	this->hasher->get_hash(this->hasher, pcr_before, NULL);
-	this->hasher->get_hash(this->hasher, measurement, this->pcrs[pcr].ptr);
+	if (!this->hasher->get_hash(this->hasher, pcr_before, NULL) ||
+		!this->hasher->get_hash(this->hasher, measurement, this->pcrs[pcr].ptr))
+	{
+		DBG1(DBG_PTS, "PCR%d was not extended due to a hasher problem", pcr);
+	}
 	pcr_after = chunk_clone(this->pcrs[pcr]);
 
 	evidence = pts_comp_evidence_create(this->name->clone(this->name),
@@ -391,6 +394,7 @@ void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
 	u_char boot_aggregate_name[] = "boot_aggregate";
 	u_char filename_buffer[IMA_EVENT_NAME_LEN_MAX + 1];
 	chunk_t boot_aggregate, file_name;
+	bool pcr_ok = TRUE;
 
 	/* See Linux kernel header: security/integrity/ima/ima.h */
 	boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
@@ -398,14 +402,18 @@ void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
 	strcpy(filename_buffer, boot_aggregate_name);
 	file_name = chunk_create(filename_buffer, sizeof(filename_buffer));
 
-	for (pcr = 0; pcr < 8; pcr++)
+	for (pcr = 0; pcr < 8 && pcr_ok; pcr++)
 	{
-		this->hasher->get_hash(this->hasher, this->pcrs[pcr], NULL);
+		pcr_ok = this->hasher->get_hash(this->hasher, this->pcrs[pcr], NULL);
 	}
-	this->hasher->get_hash(this->hasher, chunk_empty, pcr_buffer);
-	this->hasher->get_hash(this->hasher, boot_aggregate, NULL);
-	this->hasher->get_hash(this->hasher, file_name, pcr_buffer);
-
+	if (!pcr_ok ||
+		!this->hasher->get_hash(this->hasher, chunk_empty, pcr_buffer) ||
+		!this->hasher->get_hash(this->hasher, boot_aggregate, NULL) ||
+		!this->hasher->get_hash(this->hasher, file_name, pcr_buffer))
+	{
+		DBG1(DBG_PTS, "failed to compute boot aggregate value");
+		return;
+	}
 	DBG1(DBG_PTS, "boot aggregate value is %scorrect",
 		 chunk_equals(boot_aggregate, measurement) ? "":"in");
 }

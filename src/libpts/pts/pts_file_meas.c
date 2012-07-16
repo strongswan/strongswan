@@ -212,6 +212,7 @@ static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
 {
 	u_char buffer[4096];
 	size_t bytes_read;
+	bool success = TRUE;
 	FILE *file;
 
 	file = fopen(pathname, "rb");
@@ -226,17 +227,26 @@ static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
 		bytes_read = fread(buffer, 1, sizeof(buffer), file);
 		if (bytes_read > 0)
 		{
-			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+			if (!hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL))
+			{
+				DBG1(DBG_PTS, "  hasher increment error");
+				success = FALSE;
+				break;
+			}
 		}
 		else
 		{
-			hasher->get_hash(hasher, chunk_empty, hash);
+			if (!hasher->get_hash(hasher, chunk_empty, hash))
+			{
+				DBG1(DBG_PTS, "  hasher finalize error");
+				success = FALSE;
+			}
 			break;
 		}
 	}
 	fclose(file);
 
-	return TRUE;
+	return success;
 }
 
 /**
