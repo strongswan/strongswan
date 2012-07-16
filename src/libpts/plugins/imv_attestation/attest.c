@@ -131,7 +131,7 @@ static void do_args(int argc, char *argv[])
 			{ "directory", required_argument, NULL, 'D' },
 			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
-			{ "ima", no_argument, NULL, 'I' },
+			{ "sha1-ima", no_argument, NULL, 'I' },
 			{ "key", required_argument, NULL, 'K' },
 			{ "owner", required_argument, NULL, 'O' },
 			{ "product", required_argument, NULL, 'P' },
@@ -235,7 +235,7 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 'I':
-				attest->set_ima(attest);
+				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1_IMA);
 				continue;
 			case 'K':
 			{

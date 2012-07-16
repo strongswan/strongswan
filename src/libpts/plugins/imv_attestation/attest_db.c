@@ -16,10 +16,13 @@
 #include "attest_db.h"
 
 #include "libpts.h"
+#include "pts/pts_meas_algo.h"
 #include "pts/pts_file_meas.h"
 #include "pts/components/pts_comp_func_name.h"
 
 #include <libgen.h>
+
+#define IMA_MAX_NAME_LEN	255
 
 typedef struct private_attest_db_t private_attest_db_t;
 
@@ -112,11 +115,6 @@ struct private_attest_db_t {
 	 * TRUE if relative filenames are to be used
 	 */
 	bool relative;
-
-	/**
-	 * TRUE if IMA-specific SHA-1 template hash be computed
-	 */
-	bool ima;
 
 	/**
 	 * File measurement hash algorithm
@@ -589,12 +587,6 @@ METHOD(attest_db_t, set_algo, void,
 	this->algo = algo;
 }
 
-METHOD(attest_db_t, set_ima, void,
-	private_attest_db_t *this)
-{
-	this->ima = TRUE;
-}
-
 METHOD(attest_db_t, set_relative, void,
 	private_attest_db_t *this)
 {
@@ -869,7 +861,7 @@ METHOD(attest_db_t, list_hashes, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for product '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", this->product);
 		}
 	}
@@ -904,7 +896,7 @@ METHOD(attest_db_t, list_hashes, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for product '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", this->product);
 		}
 	}
@@ -928,7 +920,7 @@ METHOD(attest_db_t, list_hashes, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for file '%s%s%s'\n",
-				   count, hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   count, pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", this->dir,
 				   slash(this->dir, this->file) ? "/" : "", this->file);
 		}
@@ -964,8 +956,8 @@ METHOD(attest_db_t, list_hashes, void,
 			}
 			e->destroy(e);
 
-			printf("%d %N value%s found\n", count, hash_algorithm_names,
-				   pts_meas_algo_to_hash(this->algo), (count == 1) ? "" : "s");
+			printf("%d %N value%s found\n", count, pts_meas_algorithm_names,
+				   this->algo, (count == 1) ? "" : "s");
 		}
 	}
 	free(dir);
@@ -1006,7 +998,7 @@ METHOD(attest_db_t, list_measurements, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for component '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", print_cfn(this->cfn));
 		}
 	}
@@ -1035,7 +1027,7 @@ METHOD(attest_db_t, list_measurements, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for component '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", print_cfn(this->cfn));
 		}
 
@@ -1069,10 +1061,53 @@ METHOD(attest_db_t, list_measurements, void,
 			e->destroy(e);
 
 			printf("%d %N value%s found for key %#B '%s'\n", count,
-				   hash_algorithm_names, pts_meas_algo_to_hash(this->algo),
+				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", &this->key, this->owner);
 		}
 	}
+}
+
+bool insert_file_hash(private_attest_db_t *this, pts_meas_algorithms_t algo,
+					  chunk_t measurement, int fid, int did, bool ima,
+					  int *hashes_added)
+{
+	enumerator_t *e;
+	chunk_t hash;
+	char *label;
+
+	label = "could not be created";
+
+	e = this->db->query(this->db,
+		"SELECT hash FROM file_hashes WHERE algo = ? "
+		"AND file = ? AND directory = ? AND product = ? and key = 0",
+		DB_INT, algo, DB_INT, fid, DB_INT, did, DB_INT, this->pid, DB_BLOB);
+	if (!e)
+	{
+		printf("file_hashes query failed\n");
+		return FALSE;
+	}
+	if (e->enumerate(e, &hash))
+	{
+		label = chunk_equals(measurement, hash) ?
+				"exists and equals" : "exists and differs";
+	}
+	else
+	{
+		if (this->db->execute(this->db, NULL,
+			"INSERT INTO file_hashes "
+			"(file, directory, product, key, algo, hash) "
+			"VALUES (?, ?, ?, 0, ?, ?)",
+			DB_INT, fid, DB_INT, did, DB_INT, this->pid,
+			DB_INT, algo, DB_BLOB, measurement) == 1)
+		{
+			label = "created";
+			(*hashes_added)++;
+		}
+	}
+	e->destroy(e);
+
+	printf("     %#B - %s%s\n", &measurement, ima ? "ima - " : "", label);
+	return TRUE;
 }
 
 METHOD(attest_db_t, add, bool,
@@ -1095,10 +1130,21 @@ METHOD(attest_db_t, add, bool,
 	if ((this->did || this->fid) && this->pid)
 	{
 		char *pathname, *filename, *label;
+		char ima_buffer[IMA_MAX_NAME_LEN + 1];
+		chunk_t measurement, ima_template;
 		pts_file_meas_t *measurements;
-		chunk_t measurement, hash;
-		int fid, did, files_added = 0, hashes_added = 0;
+		hasher_t *hasher = NULL;
+		bool ima;
+		int fid, did;
+		int files_added = 0, hashes_added = 0, ima_hashes_added = 0;
 		enumerator_t *enumerator, *e;
+
+		if (this->algo == PTS_MEAS_ALGO_SHA1_IMA)
+		{
+			ima = TRUE;
+			this->algo = PTS_MEAS_ALGO_SHA1;
+			hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+		}
 
 		pathname = this->did ? this->dir : this->file;
 		measurements = pts_file_meas_create_from_path(0, pathname, this->did,
@@ -1145,46 +1191,42 @@ METHOD(attest_db_t, add, bool,
 
 			printf("%4d: %s - %s\n", fid, filename, label);
 
-			/* retrieve or create file hash */
-			label = "could not be created";
-
-			e = this->db->query(this->db,
-				"SELECT hash FROM file_hashes "
-				"WHERE algo = ? AND file = ? AND directory = ? AND product = ?",
-				DB_INT, this->algo, DB_INT, fid, DB_INT, did, DB_INT, this->pid,
-				DB_BLOB);
-			if (!e)
+			/* compute file measurement hash */
+			if (!insert_file_hash(this, this->algo, measurement,
+								  fid, did, FALSE, &hashes_added))
 			{
-				printf("file_hashes query failed\n");
 				break;
 			}
-			if (e->enumerate(e, &hash))
-			{
-				label = chunk_equals(measurement, hash) ?
-						"exists and equals" : "exists and differs";
-			}
-			else
-			{
-				if (this->db->execute(this->db, NULL,
-					"INSERT INTO file_hashes "
-					"(file, directory, product, algo, hash) "
-					"VALUES (?, ?, ?, ?, ?)",
-					DB_INT, fid, DB_INT, did, DB_INT, this->pid,
-					DB_INT, this->algo,	DB_BLOB, measurement) == 1)
-				{
-					label = "created";
-					hashes_added++;
-				}
-			}
-			e->destroy(e);
 
-			printf("     %#B - %s\n", &measurement, label);
+			if (!ima)
+			{
+				continue;
+			}
+
+			/* compute IMA template hash */
+			strncpy(ima_buffer, filename, IMA_MAX_NAME_LEN);
+			ima_buffer[IMA_MAX_NAME_LEN] = '\0';
+			ima_template = chunk_create(ima_buffer, sizeof(ima_buffer));
+			hasher->get_hash(hasher, measurement, NULL);
+			hasher->get_hash(hasher, ima_template, measurement.ptr);
+
+			if (!insert_file_hash(this, PTS_MEAS_ALGO_SHA1_IMA, measurement,
+								  fid, did, TRUE, &ima_hashes_added))
+			{
+				break;
+			}
 		}
 		enumerator->destroy(enumerator);
 
-		printf("%d measurements, added %d new files and %d new file hashes\n",
+		printf("%d measurements, added %d new files, %d new file hashes",
 			    measurements->get_file_count(measurements),
 			    files_added, hashes_added);
+		if (ima)
+		{
+			printf(" , %d new ima hashes");
+			hasher->destroy(hasher);
+		}
+		printf("\n");
 		measurements->destroy(measurements);
 		success = TRUE;
 	}
@@ -1305,7 +1347,6 @@ attest_db_t *attest_db_create(char *uri)
 			.set_product = _set_product,
 			.set_pid = _set_pid,
 			.set_algo = _set_algo,
-			.set_ima = _set_ima,
 			.set_relative = _set_relative,
 			.set_owner = _set_owner,
 			.list_products = _list_products,

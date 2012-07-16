@@ -17,12 +17,21 @@
 
 #include <debug.h>
 
-ENUM(pts_meas_algorithm_names, PTS_MEAS_ALGO_NONE, PTS_MEAS_ALGO_SHA384,
-	"None",
-	"SHA1",
-	"SHA256",
-	"SHA384"
-);
+ENUM_BEGIN(pts_meas_algorithm_names, PTS_MEAS_ALGO_NONE, PTS_MEAS_ALGO_NONE,
+	"None");
+ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA384, PTS_MEAS_ALGO_SHA384,
+									PTS_MEAS_ALGO_NONE,
+	"SHA384");
+ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA256, PTS_MEAS_ALGO_SHA256,
+									PTS_MEAS_ALGO_SHA384,
+	"SHA256");
+ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA1, PTS_MEAS_ALGO_SHA1,
+									PTS_MEAS_ALGO_SHA256,
+	"SHA1");
+ENUM_NEXT(pts_meas_algorithm_names,	PTS_MEAS_ALGO_SHA1_IMA, PTS_MEAS_ALGO_SHA1_IMA,
+									PTS_MEAS_ALGO_SHA1,
+	"SHA1-IMA");
+ENUM_END(pts_meas_algorithm_names,  PTS_MEAS_ALGO_SHA1_IMA);
 
 /**
  * Described in header.

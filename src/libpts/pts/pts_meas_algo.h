@@ -30,10 +30,11 @@ typedef enum pts_meas_algorithms_t pts_meas_algorithms_t;
  * PTS Measurement Algorithms
  */
 enum pts_meas_algorithms_t {
-	PTS_MEAS_ALGO_NONE   =	   0,
-	PTS_MEAS_ALGO_SHA1   =	(1<<15),
-	PTS_MEAS_ALGO_SHA256 =	(1<<14),
-	PTS_MEAS_ALGO_SHA384 =	(1<<13),
+	PTS_MEAS_ALGO_NONE     =      0,
+	PTS_MEAS_ALGO_SHA384   = (1<<13),
+	PTS_MEAS_ALGO_SHA256   = (1<<14),
+	PTS_MEAS_ALGO_SHA1     = (1<<15),
+	PTS_MEAS_ALGO_SHA1_IMA = (1<<16), /* internal use only */
 };
 
 /**
