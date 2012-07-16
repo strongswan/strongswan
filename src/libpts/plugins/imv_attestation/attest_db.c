@@ -16,7 +16,10 @@
 #include "attest_db.h"
 
 #include "libpts.h"
+#include "pts/pts_file_meas.h"
 #include "pts/components/pts_comp_func_name.h"
+
+#include <libgen.h>
 
 typedef struct private_attest_db_t private_attest_db_t;
 
@@ -104,6 +107,16 @@ struct private_attest_db_t {
 	 * TRUE if product has been set
 	 */
 	bool product_set;
+
+	/**
+	 * TRUE if relative filenames are to be used
+	 */
+	bool relative;
+
+	/**
+	 * TRUE if IMA-specific SHA-1 template hash be computed
+	 */
+	bool ima;
 
 	/**
 	 * File measurement hash algorithm
@@ -252,6 +265,7 @@ METHOD(attest_db_t, set_directory, bool,
 	private_attest_db_t *this, char *dir, bool create)
 {
 	enumerator_t *e;
+	size_t len;
 
 	if (this->dir_set)
 	{
@@ -259,6 +273,13 @@ METHOD(attest_db_t, set_directory, bool,
 		return FALSE;
 	}
 	free(this->dir);
+
+	/* remove trailing '/' character */
+	len = strlen(dir);
+	if (len && dir[len-1] == '/')
+	{
+		dir[len-1] = '\0';
+	}
 	this->dir = strdup(dir);
 
 	e = this->db->query(this->db,
@@ -568,6 +589,18 @@ METHOD(attest_db_t, set_algo, void,
 	this->algo = algo;
 }
 
+METHOD(attest_db_t, set_ima, void,
+	private_attest_db_t *this)
+{
+	this->ima = TRUE;
+}
+
+METHOD(attest_db_t, set_relative, void,
+	private_attest_db_t *this)
+{
+	this->relative = TRUE;
+}
+
 METHOD(attest_db_t, set_owner, void,
 	private_attest_db_t *this, char *owner)
 {
@@ -603,7 +636,7 @@ METHOD(attest_db_t, list_components, void,
 		while (e->enumerate(e, &cid, &vid, &name, &qualifier))
 		{
 			cfn   = pts_comp_func_name_create(vid, name, qualifier);
-			printf("%3d: %s\n", cid, print_cfn(cfn));
+			printf("%4d: %s\n", cid, print_cfn(cfn));
 			cfn->destroy(cfn);
 			count++;
 		}
@@ -637,7 +670,7 @@ METHOD(attest_db_t, list_keys, void,
 		{
 			while (e->enumerate(e, &kid, &keyid, &owner))
 			{
-				printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+				printf("%4d: %#B '%s'\n", kid, &keyid, owner);
 				count++;
 			}
 			e->destroy(e);
@@ -652,7 +685,7 @@ METHOD(attest_db_t, list_keys, void,
 		{
 			while (e->enumerate(e, &kid, &keyid, &owner))
 			{
-				printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+				printf("%4d: %#B '%s'\n", kid, &keyid, owner);
 				count++;
 			}
 			e->destroy(e);
@@ -687,7 +720,7 @@ METHOD(attest_db_t, list_files, void,
 			while (e->enumerate(e, &fid, &type, &file, &meas, &meta))
 			{
 				type = (type < 0 || type > 2) ? 0 : type;
-				printf("%3d: |%s%s| %s %s\n", fid, meas ? "M":" ", meta ? "T":" ",
+				printf("%4d: |%s%s| %s %s\n", fid, meas ? "M":" ", meta ? "T":" ",
 											  file_type[type], file);
 				count++;
 			}
@@ -705,7 +738,7 @@ METHOD(attest_db_t, list_files, void,
 			while (e->enumerate(e, &fid, &type, &file))
 			{
 				type = (type < 0 || type > 2) ? 0 : type;
-				printf("%3d: %s %s\n", fid, file_type[type], file);
+				printf("%4d: %s %s\n", fid, file_type[type], file);
 				count++;
 			}
 			e->destroy(e);
@@ -739,7 +772,7 @@ METHOD(attest_db_t, list_products, void,
 		{
 			while (e->enumerate(e, &pid, &product, &meas, &meta))
 			{
-				printf("%3d: |%s%s| %s\n", pid, meas ? "M":" ", meta ? "T":" ",
+				printf("%4d: |%s%s| %s\n", pid, meas ? "M":" ", meta ? "T":" ",
 										   product);
 				count++;
 			}
@@ -755,7 +788,7 @@ METHOD(attest_db_t, list_products, void,
 		{
 			while (e->enumerate(e, &pid, &product))
 			{
-				printf("%3d: %s\n", pid, product);
+				printf("%4d: %s\n", pid, product);
 				count++;
 			}
 			e->destroy(e);
@@ -826,11 +859,11 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (this->fid != fid_old)
 				{
-					printf("%3d: %s%s%s\n", this->fid, this->dir,
+					printf("%4d: %s%s%s\n", this->fid, this->dir,
 						   slash(this->dir, this->file) ? "/" : "", this->file);
 					fid_old = this->fid;
 				}
-				printf("     %#B\n", &hash);
+				printf("      %#B\n", &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -860,12 +893,12 @@ METHOD(attest_db_t, list_hashes, void,
 					{
 						get_directory(this, did, &dir);
 					}
-					printf("%3d: %s%s%s\n", fid,
+					printf("%4d: %s%s%s\n", fid,
 						   dir, slash(dir, file) ? "/" : "", file);
 					fid_old = fid;
 					did_old = did;
 				}
-				printf("     %#B\n", &hash);
+				printf("      %#B\n", &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -922,11 +955,11 @@ METHOD(attest_db_t, list_hashes, void,
 						get_directory(this, did, &dir);
 						did_old = did;
 					}
-					printf("%3d: %s%s%s\n", fid,
+					printf("%4d: %s%s%s\n", fid,
 						   dir, slash(dir, file) ? "/" : "", file);
 					fid_old = fid;
 				}
-				printf("     %#B '%s'\n", &hash, product);
+				printf("      %#B '%s'\n", &hash, product);
 				count++;
 			}
 			e->destroy(e);
@@ -964,7 +997,7 @@ METHOD(attest_db_t, list_measurements, void,
 			{
 				if (this->kid != kid_old)
 				{
-					printf("%3d: %#B '%s'\n", this->kid, &this->key, owner);
+					printf("%4d: %#B '%s'\n", this->kid, &this->key, owner);
 					kid_old = this->kid;
 				}
 				printf("%5d %02d %#B\n", seq_no, pcr, &hash);
@@ -993,7 +1026,7 @@ METHOD(attest_db_t, list_measurements, void,
 			{
 				if (kid != kid_old)
 				{
-					printf("%3d: %#B '%s'\n", kid, &keyid, owner);
+					printf("%4d: %#B '%s'\n", kid, &keyid, owner);
 					kid_old = kid;
 				}
 				printf("%5d %02d %#B\n", seq_no, pcr, &hash);
@@ -1026,7 +1059,7 @@ METHOD(attest_db_t, list_measurements, void,
 				if (cid != cid_old)
 				{
 					cfn = pts_comp_func_name_create(vid, name, qualifier);
-					printf("%3d: %s\n", cid, print_cfn(cfn));
+					printf("%4d: %s\n", cid, print_cfn(cfn));
 					cfn->destroy(cfn);
 					cid_old = cid;
 				}
@@ -1047,6 +1080,7 @@ METHOD(attest_db_t, add, bool,
 {
 	bool success = FALSE;
 
+	/* add key/component pair */
 	if (this->kid && this->cid)
 	{
 		success = this->db->execute(this->db, NULL,
@@ -1055,6 +1089,104 @@ METHOD(attest_db_t, add, bool,
 
 		printf("key/component pair (%d/%d) %sinserted into database\n",
 				this->kid, this->cid, success ? "" : "could not be ");
+	}
+
+	/* add directory or file measurement for a given product */
+	if ((this->did || this->fid) && this->pid)
+	{
+		char *pathname, *filename, *label;
+		pts_file_meas_t *measurements;
+		chunk_t measurement, hash;
+		int fid, did, files_added = 0, hashes_added = 0;
+		enumerator_t *enumerator, *e;
+
+		pathname = this->did ? this->dir : this->file;
+		measurements = pts_file_meas_create_from_path(0, pathname, this->did,
+												this->relative, this->algo);
+		if (!measurements)
+		{
+			return FALSE;
+		}
+		if (this->fid && this->relative)
+		{
+			set_directory(this, dirname(pathname), TRUE);
+		}
+		did = this->relative ? this->did : 0;
+
+		enumerator = measurements->create_enumerator(measurements);
+		while (enumerator->enumerate(enumerator, &filename, &measurement))
+		{
+			/* retrieve or create filename */
+			label = "could not be created";
+
+			e = this->db->query(this->db,
+				"SELECT id FROM files WHERE path = ?",
+				DB_TEXT, filename, DB_INT);
+			if (!e)
+			{
+				printf("files query failed\n");
+				break;
+			}
+			if (e->enumerate(e, &fid))
+			{
+				label = "exists";
+			}
+			else
+			{
+				if (this->db->execute(this->db, &fid,
+					"INSERT INTO files (type, path) VALUES (0, ?)",
+					DB_TEXT, filename) == 1)
+				{
+					label = "created";
+					files_added++;
+				}
+			}
+			e->destroy(e);
+
+			printf("%4d: %s - %s\n", fid, filename, label);
+
+			/* retrieve or create file hash */
+			label = "could not be created";
+
+			e = this->db->query(this->db,
+				"SELECT hash FROM file_hashes "
+				"WHERE algo = ? AND file = ? AND directory = ? AND product = ?",
+				DB_INT, this->algo, DB_INT, fid, DB_INT, did, DB_INT, this->pid,
+				DB_BLOB);
+			if (!e)
+			{
+				printf("file_hashes query failed\n");
+				break;
+			}
+			if (e->enumerate(e, &hash))
+			{
+				label = chunk_equals(measurement, hash) ?
+						"exists and equals" : "exists and differs";
+			}
+			else
+			{
+				if (this->db->execute(this->db, NULL,
+					"INSERT INTO file_hashes "
+					"(file, directory, product, algo, hash) "
+					"VALUES (?, ?, ?, ?, ?)",
+					DB_INT, fid, DB_INT, did, DB_INT, this->pid,
+					DB_INT, this->algo,	DB_BLOB, measurement) == 1)
+				{
+					label = "created";
+					hashes_added++;
+				}
+			}
+			e->destroy(e);
+
+			printf("     %#B - %s\n", &measurement, label);
+		}
+		enumerator->destroy(enumerator);
+
+		printf("%d measurements, added %d new files and %d new file hashes\n",
+			    measurements->get_file_count(measurements),
+			    files_added, hashes_added);
+		measurements->destroy(measurements);
+		success = TRUE;
 	}
 	return success;
 }
@@ -1173,6 +1305,8 @@ attest_db_t *attest_db_create(char *uri)
 			.set_product = _set_product,
 			.set_pid = _set_pid,
 			.set_algo = _set_algo,
+			.set_ima = _set_ima,
+			.set_relative = _set_relative,
 			.set_owner = _set_owner,
 			.list_products = _list_products,
 			.list_files = _list_files,

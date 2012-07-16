@@ -126,6 +126,16 @@ struct attest_db_t {
 	void (*set_algo)(attest_db_t *this, pts_meas_algorithms_t algo);
 
 	/**
+	 * Set that the IMA-specific SHA-1 template hash be computed
+	 */
+	void (*set_ima)(attest_db_t *this);
+
+	/**
+	 * Set that relative filenames are to be used
+	 */
+	void (*set_relative)(attest_db_t *this);
+
+	/**
 	 * Set owner [user/host] of an AIK
 	 *
 	 * @param owner			user/host name

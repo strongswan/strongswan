@@ -18,6 +18,10 @@
 #include <utils/linked_list.h>
 #include <debug.h>
 
+#include <sys/stat.h>
+#include <libgen.h>
+#include <errno.h>
+
 typedef struct private_pts_file_meas_t private_pts_file_meas_t;
 
 /**
@@ -201,3 +205,131 @@ pts_file_meas_t *pts_file_meas_create(u_int16_t request_id)
 	return &this->public;
 }
 
+/**
+ * Hash a file with a given absolute pathname
+ */
+static bool hash_file(hasher_t *hasher, char *pathname, u_char *hash)
+{
+	u_char buffer[4096];
+	size_t bytes_read;
+	FILE *file;
+
+	file = fopen(pathname, "rb");
+	if (!file)
+	{
+		DBG1(DBG_PTS,"  file '%s' can not be opened, %s", pathname,
+			 strerror(errno));
+		return FALSE;
+	}
+	while (TRUE)
+	{
+		bytes_read = fread(buffer, 1, sizeof(buffer), file);
+		if (bytes_read > 0)
+		{
+			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
+		}
+		else
+		{
+			hasher->get_hash(hasher, chunk_empty, hash);
+			break;
+		}
+	}
+	fclose(file);
+
+	return TRUE;
+}
+
+/**
+ * See header
+ */
+pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
+							char *pathname, bool is_dir, bool use_rel_name,
+							pts_meas_algorithms_t alg)
+{
+	private_pts_file_meas_t *this;
+	hash_algorithm_t hash_alg;
+	hasher_t *hasher;
+	u_char hash[HASH_SIZE_SHA384];
+	chunk_t measurement;
+	char* filename;
+	bool success = TRUE;
+
+	/* Create a hasher and a hash measurement buffer */
+	hash_alg = pts_meas_algo_to_hash(alg);
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_PTS, "hasher %N not available", hash_algorithm_names, hash_alg);
+		return NULL;
+	}
+	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
+
+	INIT(this,
+		.public = {
+			.get_request_id = _get_request_id,
+			.get_file_count = _get_file_count,
+			.add = _add,
+			.create_enumerator = _create_enumerator,
+			.insert = _insert,
+			.verify = _verify,
+			.destroy = _destroy,
+		},
+		.request_id = request_id,
+		.list = linked_list_create(),
+	);
+
+	if (is_dir)
+	{
+		enumerator_t *enumerator;
+		char *rel_name, *abs_name;
+		struct stat st;
+
+		enumerator = enumerator_create_directory(pathname);
+		if (!enumerator)
+		{
+			DBG1(DBG_PTS, "  directory '%s' can not be opened, %s", pathname,
+				 strerror(errno));
+			success = FALSE;
+			goto end;
+		}
+		while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
+		{
+			/* measure regular files only */
+			if (S_ISREG(st.st_mode) && *rel_name != '.')
+			{
+				if (!hash_file(hasher, abs_name, hash))
+				{
+					success = FALSE;
+					break;
+				}
+				filename = use_rel_name ? rel_name : abs_name;
+				DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
+				add(this, filename, measurement);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		if (!hash_file(hasher, pathname, hash))
+		{
+			success = FALSE;
+			goto end;
+		}
+		filename = use_rel_name ? basename(pathname) : pathname;
+		DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
+		add(this, filename, measurement);
+	}
+
+end:
+	hasher->destroy(hasher);
+	if (success)
+	{
+		return &this->public;
+	}
+	else
+	{
+		destroy(this);
+		return NULL;
+	}
+}

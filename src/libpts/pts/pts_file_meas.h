@@ -93,4 +93,17 @@ struct pts_file_meas_t {
  */
 pts_file_meas_t* pts_file_meas_create(u_int16_t request_id);
 
+/**
+ * Creates a pts_file_meas_t object measuring a file/directory
+ *
+ * @param request_id		ID of PTS File Measurement Request
+ * @param pathname			Absolute file or directory pathname
+ * @param is_dir			TRUE if directory path
+ * @param use_rel_name		TRUE if relative filenames are to be used
+ * @param alg				PTS hash measurement algorithm to be used
+ */
+pts_file_meas_t* pts_file_meas_create_from_path(u_int16_t request_id,
+							char* pathname, bool is_dir, bool use_rel_name,
+							pts_meas_algorithms_t alg);
+
 #endif /** PTS_FILE_MEAS_H_ @}*/

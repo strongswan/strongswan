@@ -254,8 +254,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			DBG2(DBG_IMC, "measurement request %d for %s '%s'",
 				 request_id, is_directory ? "directory" : "file",
 				 pathname);
-			measurements = pts->do_measurements(pts, request_id,
-									pathname, is_directory);
+			measurements = pts_file_meas_create_from_path(request_id,
+										pathname, is_directory, TRUE,
+										pts->get_meas_algorithm(pts));
 			if (!measurements)
 			{
 				/* TODO handle error codes from measurements */

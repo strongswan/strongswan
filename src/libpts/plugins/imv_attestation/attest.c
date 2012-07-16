@@ -131,9 +131,11 @@ static void do_args(int argc, char *argv[])
 			{ "directory", required_argument, NULL, 'D' },
 			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
+			{ "ima", no_argument, NULL, 'I' },
 			{ "key", required_argument, NULL, 'K' },
 			{ "owner", required_argument, NULL, 'O' },
 			{ "product", required_argument, NULL, 'P' },
+			{ "relative", no_argument, NULL, 'R' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
 			{ "sha384", no_argument, NULL, '3' },
@@ -232,6 +234,9 @@ static void do_args(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			case 'I':
+				attest->set_ima(attest);
+				continue;
 			case 'K':
 			{
 				chunk_t aik;
@@ -251,6 +256,9 @@ static void do_args(int argc, char *argv[])
 				{
 					exit(EXIT_FAILURE);
 				}
+				continue;
+			case 'R':
+				attest->set_relative(attest);
 				continue;
 			case '1':
 				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);

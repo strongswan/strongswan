@@ -23,11 +23,12 @@
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
+#include <libgen.h>
+#include <unistd.h>
 #include <errno.h>
-
-#define PTS_BUF_SIZE	4096
 
 /**
  * Maximum number of PCR's of TPM, TPM Spec 1.2
@@ -486,54 +487,6 @@ METHOD(pts_t, get_aik_keyid, bool,
 	return success;
 }
 
-METHOD(pts_t, hash_file, bool,
-	private_pts_t *this, hasher_t *hasher, char *pathname, u_char *hash)
-{
-	u_char buffer[PTS_BUF_SIZE];
-	FILE *file;
-	int bytes_read;
-
-	file = fopen(pathname, "rb");
-	if (!file)
-	{
-		DBG1(DBG_PTS,"  file '%s' can not be opened, %s", pathname,
-			 strerror(errno));
-		return FALSE;
-	}
-	while (TRUE)
-	{
-		bytes_read = fread(buffer, 1, sizeof(buffer), file);
-		if (bytes_read > 0)
-		{
-			hasher->get_hash(hasher, chunk_create(buffer, bytes_read), NULL);
-		}
-		else
-		{
-			hasher->get_hash(hasher, chunk_empty, hash);
-			break;
-		}
-	}
-	fclose(file);
-
-	return TRUE;
-}
-
-/**
- * Get the relative filename of a fully qualified file pathname
- */
-static char* get_filename(char *pathname)
-{
-	char *pos, *filename;
-
-	pos = filename = pathname;
-	while (pos && *(++pos) != '\0')
-	{
-		filename = pos;
-		pos = strchr(filename, '/');
-	}
-	return filename;
-}
-
 METHOD(pts_t, is_path_valid, bool,
 	private_pts_t *this, char *path, pts_error_code_t *error_code)
 {
@@ -563,82 +516,6 @@ METHOD(pts_t, is_path_valid, bool,
 	}
 
 	return TRUE;
-}
-
-METHOD(pts_t, do_measurements, pts_file_meas_t*,
-	private_pts_t *this, u_int16_t request_id, char *pathname, bool is_directory)
-{
-	hasher_t *hasher;
-	hash_algorithm_t hash_alg;
-	u_char hash[HASH_SIZE_SHA384];
-	chunk_t measurement;
-	pts_file_meas_t *measurements;
-
-	/* Create a hasher */
-	hash_alg = pts_meas_algo_to_hash(this->algorithm);
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_alg);
-	if (!hasher)
-	{
-		DBG1(DBG_PTS, "hasher %N not available", hash_algorithm_names, hash_alg);
-		return NULL;
-	}
-
-	/* Create a measurement object */
-	measurements = pts_file_meas_create(request_id);
-
-	/* Link the hash to the measurement and set the measurement length */
-	measurement = chunk_create(hash, hasher->get_hash_size(hasher));
-
-	if (is_directory)
-	{
-		enumerator_t *enumerator;
-		char *rel_name, *abs_name;
-		struct stat st;
-
-		enumerator = enumerator_create_directory(pathname);
-		if (!enumerator)
-		{
-			DBG1(DBG_PTS,"  directory '%s' can not be opened, %s", pathname,
-				 strerror(errno));
-			hasher->destroy(hasher);
-			measurements->destroy(measurements);
-			return NULL;
-		}
-		while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
-		{
-			/* measure regular files only */
-			if (S_ISREG(st.st_mode) && *rel_name != '.')
-			{
-				if (!hash_file(this, hasher, abs_name, hash))
-				{
-					enumerator->destroy(enumerator);
-					hasher->destroy(hasher);
-					measurements->destroy(measurements);
-					return NULL;
-				}
-				DBG2(DBG_PTS, "  %#B for '%s'", &measurement, rel_name);
-				measurements->add(measurements, rel_name, measurement);
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	else
-	{
-		char *filename;
-
-		if (!hash_file(this, hasher, pathname, hash))
-		{
-			hasher->destroy(hasher);
-			measurements->destroy(measurements);
-			return NULL;
-		}
-		filename = get_filename(pathname);
-		DBG2(DBG_PTS, "  %#B for '%s'", &measurement, filename);
-		measurements->add(measurements, filename, measurement);
-	}
-	hasher->destroy(hasher);
-
-	return measurements;
 }
 
 /**
@@ -748,7 +625,7 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 			metadata->destroy(metadata);
 			return NULL;
 		}
-		entry->filename = strdup(get_filename(pathname));
+		entry->filename = strdup(basename(pathname));
 		metadata->add(metadata, entry);
 	}
 
@@ -1499,8 +1376,6 @@ pts_t *pts_create(bool is_imc)
 			.set_aik = _set_aik,
 			.get_aik_keyid = _get_aik_keyid,
 			.is_path_valid = _is_path_valid,
-			.hash_file = _hash_file,
-			.do_measurements = _do_measurements,
 			.get_metadata = _get_metadata,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,

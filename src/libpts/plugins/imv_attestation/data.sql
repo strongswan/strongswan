@@ -89,7 +89,7 @@ INSERT INTO files (
 INSERT INTO files (
   type, path
 ) VALUES (
-  1, '/lib/xtables/'
+  1, '/lib/xtables'
 );
 
 INSERT INTO files (

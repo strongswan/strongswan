@@ -230,34 +230,13 @@ struct pts_t {
 	bool (*is_path_valid)(pts_t *this, char *path, pts_error_code_t *error_code);
 
 	/**
-	* Compute a hash over a file
-	 * @param hasher			Hasher to be used
-	 * @param pathname			Absolute path of a file
-	 * @param hash				Buffer to keep hash output
-	 * @return					TRUE if path is valid and hashing succeeded
-	 */
-	bool (*hash_file)(pts_t *this, hasher_t *hasher, char *pathname, u_char *hash);
-
-	/**
-	 * Do PTS File Measurements
-	 *
-	 * @param request_id		ID of PTS File Measurement Request
-	 * @param pathname			Absolute pathname of file to be measured
-	 * @param is_directory		TRUE if directory contents are measured
-	 * @return					PTS File Measurements of NULL if FAILED
-	 */
-	pts_file_meas_t* (*do_measurements)(pts_t *this, u_int16_t request_id,
-										char *pathname, bool is_directory);
-
-	/**
 	 * Obtain file metadata
 	 *
 	 * @param pathname			Absolute pathname of file/directory
-	 * @param is_directory		TRUE if directory contents are requested
+	 * @param is_dir			TRUE if directory contents are requested
 	 * @return					PTS File Metadata or NULL if FAILED
 	 */
-	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname,
-									 bool is_directory);
+	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_dir);
 
 	/**
 	 * Reads given PCR value and returns it
