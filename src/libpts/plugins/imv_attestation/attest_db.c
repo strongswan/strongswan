@@ -1156,6 +1156,8 @@ METHOD(attest_db_t, add, bool,
 												this->relative, this->algo);
 		if (!measurements)
 		{
+			printf("file measurement failed\n");
+			hasher->destroy(hasher);
 			return FALSE;
 		}
 		if (this->fid && this->relative)

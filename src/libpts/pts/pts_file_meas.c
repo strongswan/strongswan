@@ -129,7 +129,7 @@ METHOD(pts_file_meas_t, check, bool,
 		switch (status)
 		{
 			case SUCCESS:
-				status_msg = "ok";
+				status_msg = "is ok";
 				count_ok++;
 				break;
 			case NOT_FOUND:
@@ -144,7 +144,7 @@ METHOD(pts_file_meas_t, check, bool,
 			default:
 				status_msg = "failed";
 		}
-		DBG2(DBG_PTS, "  %#B for '%s' - %s", &entry->measurement,
+		DBG2(DBG_PTS, "  %#B for '%s' %s", &entry->measurement,
 			 entry->filename, status_msg);
 	}
 	enumerator->destroy(enumerator);

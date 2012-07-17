@@ -31,7 +31,7 @@
 #define SECURITY_DIR				"/sys/kernel/security/"
 #define IMA_BIOS_MEASUREMENTS		SECURITY_DIR "tpm0/binary_bios_measurements"
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
-#define IMA_MEASUREMENT_BATCH_SIZE	1000
+#define IMA_MEASUREMENT_BATCH_SIZE	200
 #define IMA_EVENT_NAME_LEN_MAX		255
 #define IMA_PCR						10
 #define IMA_PCR_MAX					16

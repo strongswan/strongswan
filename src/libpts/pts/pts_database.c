@@ -130,10 +130,10 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 	status_t status;
 
 	e = this->db->query(this->db,
-		"SELECT fh.hash FROM file_hashes AS fh"
-		"JOIN files AS f ON f.id = fh.file"
+		"SELECT fh.hash FROM file_hashes AS fh "
+		"JOIN files AS f ON f.id = fh.file "
 		"JOIN products AS p ON p.id = fh.product "
-		"WHERE p.product = ? AND f.file = ? AND fh.algo = ?",
+		"WHERE p.name = ? AND f.path = ? AND fh.algo = ?",
 		DB_TEXT, product, DB_TEXT, filename, DB_INT, algo, DB_BLOB);
 	if (!e)
 	{
