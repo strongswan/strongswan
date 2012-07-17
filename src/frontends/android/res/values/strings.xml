@@ -21,6 +21,8 @@
     <string name="app_name">strongSwan VPN Client</string>
     <string name="hello">Hello World, strongSwanActivity!</string>
 
+    <!-- VPN profile list -->
+    <string name="no_profiles">No VPN profiles.</string>
     <string name="profile_gateway_label">Gateway:</string>
     <string name="profile_username_label">Username:</string>
 
