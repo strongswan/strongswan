@@ -8,5 +8,6 @@ thread_analysis
 dh_speed
 pubkey_speed
 crypt_burn
+hash_burn
 tls_test
 fetch

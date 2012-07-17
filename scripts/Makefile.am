@@ -3,7 +3,7 @@ AM_CFLAGS = \
 -DPLUGINS="\"${scripts_plugins}\""
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
-	thread_analysis dh_speed pubkey_speed crypt_burn fetch
+	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch
 
 if USE_TLS
   noinst_PROGRAMS += tls_test
@@ -22,6 +22,7 @@ thread_analysis_SOURCES = thread_analysis.c
 dh_speed_SOURCES = dh_speed.c
 pubkey_speed_SOURCES = pubkey_speed.c
 crypt_burn_SOURCES = crypt_burn.c
+hash_burn_SOURCES = hash_burn.c
 fetch_SOURCES = fetch.c
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
@@ -30,6 +31,7 @@ oid2der_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 crypt_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+hash_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 key2keyid.o :	$(top_builddir)/config.status
