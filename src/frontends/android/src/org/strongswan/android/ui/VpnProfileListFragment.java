@@ -17,6 +17,8 @@
 
 package org.strongswan.android.ui;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import org.strongswan.android.R;
@@ -29,17 +31,23 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView.MultiChoiceModeListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
+import android.widget.Toast;
 
 public class VpnProfileListFragment extends Fragment
 {
 	private static final int ADD_REQUEST = 1;
+	private static final int EDIT_REQUEST = 2;
 
 	private List<VpnProfile> mVpnProfiles;
 	private VpnProfileDataSource mDataSource;
@@ -54,6 +62,8 @@ public class VpnProfileListFragment extends Fragment
 
 		mListView = (ListView)view.findViewById(R.id.profile_list);
 		mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
+		mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+		mListView.setMultiChoiceModeListener(mVpnProfileSelected);
 		mListView.setAdapter(mListAdapter);
 
 		return view;
@@ -110,6 +120,7 @@ public class VpnProfileListFragment extends Fragment
 		switch (requestCode)
 		{
 			case ADD_REQUEST:
+			case EDIT_REQUEST:
 				if (resultCode != Activity.RESULT_OK)
 				{
 					return;
@@ -117,7 +128,8 @@ public class VpnProfileListFragment extends Fragment
 				long id = data.getLongExtra(VpnProfileDataSource.KEY_ID, 0);
 				VpnProfile profile = mDataSource.getVpnProfile(id);
 				if (profile != null)
-				{
+				{	/* in case this was an edit, we remove it first */
+					mVpnProfiles.remove(profile);
 					mVpnProfiles.add(profile);
 					mListAdapter.notifyDataSetChanged();
 				}
@@ -125,4 +137,97 @@ public class VpnProfileListFragment extends Fragment
 		}
 		super.onActivityResult(requestCode, resultCode, data);
 	}
+
+	private final MultiChoiceModeListener mVpnProfileSelected = new MultiChoiceModeListener() {
+		private HashSet<Integer> mSelected;
+		private MenuItem mEditProfile;
+
+		@Override
+		public boolean onPrepareActionMode(ActionMode mode, Menu menu)
+		{
+			return false;
+		}
+
+		@Override
+		public void onDestroyActionMode(ActionMode mode)
+		{
+		}
+
+		@Override
+		public boolean onCreateActionMode(ActionMode mode, Menu menu)
+		{
+			MenuInflater inflater = mode.getMenuInflater();
+			inflater.inflate(R.menu.profile_list_context, menu);
+			mEditProfile = menu.findItem(R.id.edit_profile);
+			mSelected = new HashSet<Integer>();
+			mode.setTitle("Select Profiles");
+			return true;
+		}
+
+		@Override
+		public boolean onActionItemClicked(ActionMode mode, MenuItem item)
+		{
+			switch (item.getItemId())
+			{
+				case R.id.edit_profile:
+				{
+					int position = mSelected.iterator().next();
+					VpnProfile profile = (VpnProfile)mListView.getItemAtPosition(position);
+					Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
+					connectionIntent.putExtra(VpnProfileDataSource.KEY_ID, profile.getId());
+					startActivityForResult(connectionIntent, EDIT_REQUEST);
+					break;
+				}
+				case R.id.delete_profile:
+				{
+					ArrayList<VpnProfile> profiles = new ArrayList<VpnProfile>();
+					for (int position : mSelected)
+					{
+						profiles.add((VpnProfile)mListView.getItemAtPosition(position));
+					}
+					for (VpnProfile profile : profiles)
+					{
+						mDataSource.deleteVpnProfile(profile);
+						mVpnProfiles.remove(profile);
+					}
+					mListAdapter.notifyDataSetChanged();
+					Toast.makeText(VpnProfileListFragment.this.getActivity(),
+								   R.string.profiles_deleted, Toast.LENGTH_SHORT).show();
+					break;
+				}
+				default:
+					return false;
+			}
+			mode.finish();
+			return true;
+		}
+
+		@Override
+		public void onItemCheckedStateChanged(ActionMode mode, int position,
+											  long id, boolean checked)
+		{
+			if (checked)
+			{
+				mSelected.add(position);
+			}
+			else
+			{
+				mSelected.remove(position);
+			}
+			final int checkedCount = mSelected.size();
+			mEditProfile.setEnabled(checkedCount == 1);
+			switch (checkedCount)
+			{
+				case 0:
+					mode.setSubtitle(R.string.no_profile_selected);
+					break;
+				case 1:
+					mode.setSubtitle(R.string.one_profile_selected);
+					break;
+				default:
+					mode.setSubtitle(String.format(getString(R.string.x_profiles_selected), checkedCount));
+					break;
+			}
+		}
+	};
 }

@@ -87,4 +87,14 @@ public class VpnProfile
 	{
 		return mName;
 	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (o != null && o instanceof VpnProfile)
+		{
+			return this.mId == ((VpnProfile)o).getId();
+		}
+		return false;
+	}
 }

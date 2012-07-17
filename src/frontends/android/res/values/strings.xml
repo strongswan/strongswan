@@ -23,6 +23,12 @@
     <!-- VPN profile list -->
     <string name="no_profiles">No VPN profiles.</string>
     <string name="add_profile">Add VPN profile</string>
+    <string name="edit_profile">Edit</string>
+    <string name="delete_profile">Delete</string>
+    <string name="profiles_deleted">Selected profiles deleted</string>
+    <string name="no_profile_selected">No profile selected</string>
+    <string name="one_profile_selected">One profile selected</string>
+    <string name="x_profiles_selected">%1$d profiles selected"</string>
 
     <!-- VPN profile details -->
     <string name="profile_edit_save">Save</string>
