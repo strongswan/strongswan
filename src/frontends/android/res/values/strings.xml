@@ -22,7 +22,14 @@
 
     <!-- VPN profile list -->
     <string name="no_profiles">No VPN profiles.</string>
+    <string name="add_profile">Add VPN profile</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_name_label">Profile Name:</string>
+    <string name="profile_name_hint">(use gateway address)</string>
     <string name="profile_gateway_label">Gateway:</string>
     <string name="profile_username_label">Username:</string>
+    <string name="profile_password_label">Password:</string>
+    <string name="profile_password_hint">(prompt when needed)</string>
 
 </resources>
