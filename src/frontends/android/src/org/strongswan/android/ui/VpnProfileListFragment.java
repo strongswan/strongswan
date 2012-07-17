@@ -24,16 +24,23 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 
 public class VpnProfileListFragment extends Fragment
 {
+	private static final int ADD_REQUEST = 1;
+
 	private List<VpnProfile> mVpnProfiles;
 	private VpnProfileDataSource mDataSource;
 	private VpnProfileAdapter mListAdapter;
@@ -56,6 +63,7 @@ public class VpnProfileListFragment extends Fragment
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		setHasOptionsMenu(true);
 
 		Context context = getActivity().getApplicationContext();
 
@@ -73,5 +81,48 @@ public class VpnProfileListFragment extends Fragment
 	{
 		super.onDestroy();
 		mDataSource.close();
+	}
+
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	{
+		inflater.inflate(R.menu.profile_list, menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		switch (item.getItemId())
+		{
+			case R.id.add_profile:
+				Intent connectionIntent = new Intent(getActivity(),
+													 VpnProfileDetailActivity.class);
+				startActivityForResult(connectionIntent, ADD_REQUEST);
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
+
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data)
+	{
+		switch (requestCode)
+		{
+			case ADD_REQUEST:
+				if (resultCode != Activity.RESULT_OK)
+				{
+					return;
+				}
+				long id = data.getLongExtra(VpnProfileDataSource.KEY_ID, 0);
+				VpnProfile profile = mDataSource.getVpnProfile(id);
+				if (profile != null)
+				{
+					mVpnProfiles.add(profile);
+					mListAdapter.notifyDataSetChanged();
+				}
+				return;
+		}
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 }
