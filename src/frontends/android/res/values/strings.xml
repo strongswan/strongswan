@@ -19,7 +19,6 @@
 
     <!-- Application -->
     <string name="app_name">strongSwan VPN Client</string>
-    <string name="hello">Hello World, strongSwanActivity!</string>
 
     <!-- VPN profile list -->
     <string name="no_profiles">No VPN profiles.</string>
