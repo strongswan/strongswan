@@ -53,6 +53,14 @@ public class VpnProfileListFragment extends Fragment
 	private VpnProfileDataSource mDataSource;
 	private VpnProfileAdapter mListAdapter;
 	private ListView mListView;
+	private OnVpnProfileSelectedListener mListener;
+
+	/**
+	 * The activity containing this fragment should implement this interface
+	 */
+	public interface OnVpnProfileSelectedListener {
+		public void onVpnProfileSelected(VpnProfile profile);
+	}
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -62,6 +70,7 @@ public class VpnProfileListFragment extends Fragment
 
 		mListView = (ListView)view.findViewById(R.id.profile_list);
 		mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
+		mListView.setOnItemClickListener(mVpnProfileClicked);
 		mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
 		mListView.setMultiChoiceModeListener(mVpnProfileSelected);
 		mListView.setAdapter(mListAdapter);
@@ -91,6 +100,17 @@ public class VpnProfileListFragment extends Fragment
 	{
 		super.onDestroy();
 		mDataSource.close();
+	}
+
+	@Override
+	public void onAttach(Activity activity)
+	{
+		super.onAttach(activity);
+
+		if (activity instanceof OnVpnProfileSelectedListener)
+		{
+			mListener = (OnVpnProfileSelectedListener)activity;
+		}
 	}
 
 	@Override
@@ -137,6 +157,17 @@ public class VpnProfileListFragment extends Fragment
 		}
 		super.onActivityResult(requestCode, resultCode, data);
 	}
+
+	private final OnItemClickListener mVpnProfileClicked = new OnItemClickListener() {
+		@Override
+		public void onItemClick(AdapterView<?> a, View v, int position, long id)
+		{
+			if (mListener != null)
+			{
+				mListener.onVpnProfileSelected((VpnProfile)a.getItemAtPosition(position));
+			}
+		}
+	};
 
 	private final MultiChoiceModeListener mVpnProfileSelected = new MultiChoiceModeListener() {
 		private HashSet<Integer> mSelected;
