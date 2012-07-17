@@ -141,8 +141,8 @@ static int sign_crl()
 			case 'h':
 				goto usage;
 			case 'g':
-				digest = get_digest(arg);
-				if (digest == HASH_UNKNOWN)
+				digest = enum_from_name(hash_algorithm_short_names, arg);
+				if (digest == -1)
 				{
 					error = "invalid --digest type";
 					goto usage;

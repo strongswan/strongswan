@@ -80,38 +80,6 @@ bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type)
 }
 
 /**
- * Convert a digest string to a hash algorithm
- */
-hash_algorithm_t get_digest(char *name)
-{
-	if (streq(name, "md5"))
-	{
-		return HASH_MD5;
-	}
-	if (streq(name, "sha1"))
-	{
-		return HASH_SHA1;
-	}
-	if (streq(name, "sha224"))
-	{
-		return HASH_SHA224;
-	}
-	if (streq(name, "sha256"))
-	{
-		return HASH_SHA256;
-	}
-	if (streq(name, "sha384"))
-	{
-		return HASH_SHA384;
-	}
-	if (streq(name, "sha512"))
-	{
-		return HASH_SHA512;
-	}
-	return HASH_UNKNOWN;
-}
-
-/**
  * Callback credential set pki uses
  */
 static callback_cred_t *cb_set;
