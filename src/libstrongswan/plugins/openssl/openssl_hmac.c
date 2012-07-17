@@ -124,6 +124,13 @@ METHOD(mac_t, destroy, void,
 static mac_t *hmac_create(hash_algorithm_t algo)
 {
 	private_mac_t *this;
+	char *name;
+
+	name = enum_to_name(hash_algorithm_short_names, algo);
+	if (!name)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -132,28 +139,8 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
+		.hasher = EVP_get_digestbyname(name),
 	);
-
-	switch (algo)
-	{
-		case HASH_MD5:
-			this->hasher = EVP_get_digestbyname("md5");
-			break;
-		case HASH_SHA1:
-			this->hasher = EVP_get_digestbyname("sha1");
-			break;
-		case HASH_SHA256:
-			this->hasher = EVP_get_digestbyname("sha256");
-			break;
-		case HASH_SHA384:
-			this->hasher = EVP_get_digestbyname("sha384");
-			break;
-		case HASH_SHA512:
-			this->hasher = EVP_get_digestbyname("sha512");
-			break;
-		default:
-			break;
-	}
 
 	if (!this->hasher)
 	{

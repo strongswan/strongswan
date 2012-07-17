@@ -40,56 +40,6 @@ struct private_openssl_hasher_t {
 	EVP_MD_CTX *ctx;
 };
 
-/**
- * Mapping from the algorithms defined in IKEv2 to
- * OpenSSL algorithm names
- */
-typedef struct {
-	/**
-	 * Identifier specified in IKEv2
-	 */
-	int ikev2_id;
-
-	/**
-	 * Name of the algorithm, as used in OpenSSL
-	 */
-	char *name;
-} openssl_algorithm_t;
-
-#define END_OF_LIST -1
-
-/**
- * Algorithms for integrity
- */
-static openssl_algorithm_t integrity_algs[] = {
-	{HASH_MD2,		"md2"},
-	{HASH_MD5,		"md5"},
-	{HASH_SHA1,		"sha1"},
-	{HASH_SHA224,	"sha224"},
-	{HASH_SHA256,	"sha256"},
-	{HASH_SHA384,	"sha384"},
-	{HASH_SHA512,	"sha512"},
-	{HASH_MD4,		"md4"},
-	{END_OF_LIST, 	NULL},
-};
-
-/**
- * Look up an OpenSSL algorithm name
- */
-static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
-					   u_int16_t ikev2_algo)
-{
-	while (openssl_algo->ikev2_id != END_OF_LIST)
-	{
-		if (ikev2_algo == openssl_algo->ikev2_id)
-		{
-			return openssl_algo->name;
-		}
-		openssl_algo++;
-	}
-	return NULL;
-}
-
 METHOD(hasher_t, get_hash_size, size_t,
 	private_openssl_hasher_t *this)
 {
@@ -144,11 +94,11 @@ METHOD(hasher_t, destroy, void,
 openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 {
 	private_openssl_hasher_t *this;
+	char* name;
 
-	char* name = lookup_algorithm(integrity_algs, algo);
+	name = enum_to_name(hash_algorithm_short_names, algo);
 	if (!name)
 	{
-		/* algo unavailable */
 		return NULL;
 	}
 
