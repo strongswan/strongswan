@@ -111,19 +111,47 @@ METHOD(pts_file_meas_t, create_enumerator, enumerator_t*,
 								   (void*)entry_filter, NULL, NULL);
 }
 
-METHOD(pts_file_meas_t, insert, bool,
-	private_pts_file_meas_t *this, pts_database_t *pts_db, char *product)
+METHOD(pts_file_meas_t, check, bool,
+	private_pts_file_meas_t *this, pts_database_t *pts_db, char *product,
+	pts_meas_algorithms_t algo)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	char *status_msg;
+	int count_ok = 0, count_not_found = 0, count_differ = 0;
+	status_t status;
 
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		DBG2(DBG_PTS, "  %#B for '%s'", &entry->measurement, entry->filename);
+		status = pts_db->check_file_measurement(pts_db, product, algo,
+									entry->measurement, entry->filename);
+		switch (status)
+		{
+			case SUCCESS:
+				status_msg = "ok";
+				count_ok++;
+				break;
+			case NOT_FOUND:
+				status_msg = "not found";
+				count_not_found++;
+				break;
+			case VERIFY_ERROR:
+				status_msg = "differs";
+				count_differ++;
+				break;
+			case FAILED:
+			default:
+				status_msg = "failed";
+		}
+		DBG2(DBG_PTS, "  %#B for '%s' - %s", &entry->measurement,
+			 entry->filename, status_msg);
 	}
 	enumerator->destroy(enumerator);
 
+	DBG1(DBG_PTS, "%d measurements, %d ok, %d not found, %d differ",
+		 this->list->get_count(this->list),
+		 count_ok, count_not_found, count_differ);
 	return TRUE;
 }
 
@@ -194,7 +222,7 @@ pts_file_meas_t *pts_file_meas_create(u_int16_t request_id)
 			.get_file_count = _get_file_count,
 			.add = _add,
 			.create_enumerator = _create_enumerator,
-			.insert = _insert,
+			.check = _check,
 			.verify = _verify,
 			.destroy = _destroy,
 		},
@@ -280,7 +308,7 @@ pts_file_meas_t *pts_file_meas_create_from_path(u_int16_t request_id,
 			.get_file_count = _get_file_count,
 			.add = _add,
 			.create_enumerator = _create_enumerator,
-			.insert = _insert,
+			.check = _check,
 			.verify = _verify,
 			.destroy = _destroy,
 		},

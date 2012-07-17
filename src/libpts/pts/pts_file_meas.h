@@ -62,13 +62,15 @@ struct pts_file_meas_t {
 	enumerator_t* (*create_enumerator)(pts_file_meas_t *this);
 
 	/**
-	 * Insert PTS File Measurements into the database
+	 * Check PTS File Measurements against reference value in the database
 	 *
 	 * @param db			PTS Measurement database
 	 * @param product		Software product (os, vpn client, etc.)
-	 * @return				TRUE if all measurements could be inserted
+	 * @param algo			PTS Measurement algorithm used
+	 * @return				TRUE if all measurements agreed
 	 */
-	bool (*insert)(pts_file_meas_t *this, pts_database_t *db, char* product);
+	bool (*check)(pts_file_meas_t *this, pts_database_t *db, char* product,
+				  pts_meas_algorithms_t algo);
 
 	/**
 	 * Verify stored hashes against PTS File Measurements

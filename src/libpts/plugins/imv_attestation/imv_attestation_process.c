@@ -237,7 +237,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			else
 			{
-				measurements->insert(measurements, pts_db, platform_info);
+				measurements->check(measurements, pts_db, platform_info, algo);
 			}
 			break;
 		}
