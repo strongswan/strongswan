@@ -31,6 +31,7 @@
 #define SECURITY_DIR				"/sys/kernel/security/"
 #define IMA_BIOS_MEASUREMENTS		SECURITY_DIR "tpm0/binary_bios_measurements"
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
+#define IMA_MEASUREMENT_BATCH_SIZE	1000
 #define IMA_EVENT_NAME_LEN_MAX		255
 #define IMA_PCR						10
 #define IMA_PCR_MAX					16
@@ -103,7 +104,12 @@ struct pts_ita_comp_ima_t {
 	/**
 	 * Expected IMA BIOS measurement count
 	 */
-	int count;
+	int bios_count;
+
+	/**
+	 * Count of IMA file measurements in current batch
+	 */
+	int ima_count;
 
 	/**
      * IMA BIOS measurements
@@ -443,6 +449,7 @@ METHOD(pts_component_t, measure, status_t,
 	bios_entry_t *bios_entry;
 	ima_entry_t *ima_entry, *entry;
 	status_t status;
+	int count;
 	enumerator_t *e;
 	pts_file_meas_t *file_meas;
 
@@ -488,6 +495,28 @@ METHOD(pts_component_t, measure, status_t,
 			break;
 		case IMA_STATE_BOOT_AGGREGATE:
 		case IMA_STATE_RUNTIME:
+			/* ready to send next batch of file measurements ? */
+			if (this->ima_count++ == 0)
+			{
+				file_meas = pts_file_meas_create(0);
+				count = 0;
+
+				e = this->ima_list->create_enumerator(this->ima_list);
+				while (e->enumerate(e, &entry) &&
+					   count++ < IMA_MEASUREMENT_BATCH_SIZE)
+				{
+					file_meas->add(file_meas, entry->filename,
+											  entry->file_measurement);
+				}
+				e->destroy(e);
+				*measurements = file_meas;
+			}
+			else if (this->ima_count == IMA_MEASUREMENT_BATCH_SIZE)
+			{
+				/* ready for file measurement batch in the next round */
+				this->ima_count = 0;
+			}
+
 			status = this->ima_list->remove_first(this->ima_list,
 												 (void**)&ima_entry);
 			if (status != SUCCESS)
@@ -500,21 +529,6 @@ METHOD(pts_component_t, measure, status_t,
 			if (this->state == IMA_STATE_BOOT_AGGREGATE)
 			{
 				check_boot_aggregate(this, ima_entry->measurement);
-
-				if (this->ima_list->get_count(this->ima_list))
-				{
-					/* extract file measurements */
-					file_meas = pts_file_meas_create(0);
-
-					e = this->ima_list->create_enumerator(this->ima_list);
-					while (e->enumerate(e, &entry))
-					{
-						file_meas->add(file_meas, entry->filename,
-												  entry->file_measurement);
-					}
-					e->destroy(e);
-					*measurements = file_meas;
-				}
 			}
 
 			free(ima_entry->file_measurement.ptr);
@@ -561,7 +575,7 @@ METHOD(pts_component_t, verify, status_t,
 			}
 			status = this->pts_db->get_comp_measurement_count(this->pts_db,
 									this->name, this->keyid, algo,
-									&this->cid, &this->kid, &this->count);
+									&this->cid, &this->kid, &this->bios_count);
 			if (status != SUCCESS)
 			{
 				return status;
@@ -570,11 +584,11 @@ METHOD(pts_component_t, verify, status_t,
 			name = this->name->get_name(this->name);
 			names = pts_components->get_comp_func_names(pts_components, vid);
 
-			if (this->count)
+			if (this->bios_count)
 			{
 				DBG1(DBG_PTS, "checking %d %N '%N' functional component "
-							  "evidence measurements", this->count, pen_names,
-							   vid, names, name);
+							  "evidence measurements", this->bios_count,
+							   pen_names, vid, names, name);
 			}
 			else
 			{
@@ -597,7 +611,7 @@ METHOD(pts_component_t, verify, status_t,
 					{
 						return status;
 					}
-					this->count = this->seq_no + 1;
+					this->bios_count = this->seq_no + 1;
 				}
 				else
 				{
@@ -652,11 +666,11 @@ METHOD(pts_component_t, finalize, bool,
 		DBG1(DBG_PTS, "registered %d %N '%N' functional component evidence "
 					  "measurements", this->seq_no, pen_names, vid, names, name);
 	}
-	else if (this->seq_no < this->count)
+	else if (this->seq_no < this->bios_count)
 	{
 		DBG1(DBG_PTS, "%d of %d %N '%N' functional component evidence "
-					  "measurements missing", this->count - this->seq_no,
-					   this->count, pen_names, vid, names, name);
+					  "measurements missing", this->bios_count - this->seq_no,
+					   this->bios_count, pen_names, vid, names, name);
 		return FALSE;
 	}
 
@@ -717,6 +731,7 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 		.pts_db = pts_db,
 		.bios_list = linked_list_create(),
 		.ima_list = linked_list_create(),
+		.ima_count = IMA_MEASUREMENT_BATCH_SIZE - 1,
 		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1),
 	);
 
