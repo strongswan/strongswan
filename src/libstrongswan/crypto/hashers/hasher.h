@@ -64,6 +64,11 @@ enum hash_algorithm_t {
 extern enum_name_t *hash_algorithm_names;
 
 /**
+ * Short names for hash_algorithm_names
+ */
+extern enum_name_t *hash_algorithm_short_names;
+
+/**
  * Generic interface for all hash functions.
  */
 struct hasher_t {

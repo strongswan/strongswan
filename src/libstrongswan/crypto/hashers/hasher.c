@@ -32,6 +32,19 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_SHA512"
 );
 
+ENUM(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SHA512,
+	"unknown",
+	"preferred",
+	"md2",
+	"md4",
+	"md5",
+	"sha1",
+	"sha224",
+	"sha256",
+	"sha384",
+	"sha512"
+);
+
 /*
  * Described in header.
  */
