@@ -55,11 +55,14 @@ static bool p_hash(prf_t *prf, char *label, chunk_t seed, size_t block_size,
 
 	while (TRUE)
 	{
+		/* A(i) = HMAC_hash(secret, A(i-1)) */
+		if (!prf->get_bytes(prf, a, abuf))
+		{
+			return FALSE;
+		}
 		a = chunk_from_thing(abuf);
-		/* A(i) = HMAC_hash(secret, A(i-1))
-		 * HMAC_hash(secret, A(i) + seed) */
-		if (!prf->get_bytes(prf, a, abuf) ||
-			!prf->get_bytes(prf, a, NULL) ||
+		/* HMAC_hash(secret, A(i) + seed) */
+		if (!prf->get_bytes(prf, a, NULL) ||
 			!prf->get_bytes(prf, seed, buf))
 		{
 			return FALSE;
