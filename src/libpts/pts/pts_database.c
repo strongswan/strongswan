@@ -39,38 +39,6 @@ struct private_pts_database_t {
 
 };
 
-METHOD(pts_database_t, check_file_measurement, status_t,
-	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
-	chunk_t measurement, char *filename)
-{
-	enumerator_t *e;
-	chunk_t hash;
-	status_t status;
-
-	e = this->db->query(this->db,
-		"SELECT fh.hash FROM file_hashes AS fh"
-		"JOIN files AS f ON f.id = fh.file"
-		"JOIN products AS p ON p.id = fh.product "
-		"WHERE p.product = ? AND f.file = ? AND fh.algo = ?",
-		DB_TEXT, product, DB_TEXT, filename, DB_INT, algo, DB_BLOB);
-	if (!e)
-	{
-		return FAILED;
-	}
-	if (e->enumerate(e, &hash))
-	{
-		status = chunk_equals(measurement, hash) ?
-				SUCCESS : VERIFY_ERROR;
-	}
-	else
-	{
-		status = NOT_FOUND;
-	}
-	e->destroy(e);
-
-	return status;
-}
-
 METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 	private_pts_database_t *this, char *product)
 {
@@ -151,6 +119,38 @@ METHOD(pts_database_t, check_aik_keyid, status_t,
 	e->destroy(e);
 
 	return SUCCESS;
+}
+
+METHOD(pts_database_t, check_file_measurement, status_t,
+	private_pts_database_t *this, char *product, pts_meas_algorithms_t algo,
+	chunk_t measurement, char *filename)
+{
+	enumerator_t *e;
+	chunk_t hash;
+	status_t status;
+
+	e = this->db->query(this->db,
+		"SELECT fh.hash FROM file_hashes AS fh"
+		"JOIN files AS f ON f.id = fh.file"
+		"JOIN products AS p ON p.id = fh.product "
+		"WHERE p.product = ? AND f.file = ? AND fh.algo = ?",
+		DB_TEXT, product, DB_TEXT, filename, DB_INT, algo, DB_BLOB);
+	if (!e)
+	{
+		return FAILED;
+	}
+	if (e->enumerate(e, &hash))
+	{
+		status = chunk_equals(measurement, hash) ?
+				SUCCESS : VERIFY_ERROR;
+	}
+	else
+	{
+		status = NOT_FOUND;
+	}
+	e->destroy(e);
+
+	return status;
 }
 
 METHOD(pts_database_t, create_comp_evid_enumerator, enumerator_t*,
@@ -322,6 +322,7 @@ pts_database_t *pts_database_create(char *uri)
 			.create_comp_evid_enumerator = _create_comp_evid_enumerator,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
 			.check_aik_keyid = _check_aik_keyid,
+			.check_file_measurement = _check_file_measurement,
 			.check_comp_measurement = _check_comp_measurement,
 			.insert_comp_measurement = _insert_comp_measurement,
 			.delete_comp_measurements = _delete_comp_measurements,
