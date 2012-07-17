@@ -22,8 +22,13 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.Window;
 import android.widget.EditText;
 
 public class VpnProfileDetailActivity extends Activity
@@ -76,6 +81,91 @@ public class VpnProfileDetailActivity extends Activity
 	{
 		super.onSaveInstanceState(outState);
 		outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu)
+	{
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.profile_edit, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		switch (item.getItemId())
+		{
+			case android.R.id.home:
+			case R.id.menu_cancel:
+				finish();
+				return true;
+			case R.id.menu_accept:
+				saveProfile();
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
+
+	/**
+	 * Save or update the profile depending on whether we actually have a
+	 * profile object or not (this was created in updateProfileData)
+	 */
+	private void saveProfile()
+	{
+		if (verifyInput())
+		{
+			if (mProfile != null)
+			{
+				updateProfileData();
+				mDataSource.updateVpnProfile(mProfile);
+			}
+			else
+			{
+				mProfile = new VpnProfile();
+				updateProfileData();
+				mDataSource.insertProfile(mProfile);
+			}
+			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));
+			finish();
+		}
+	}
+
+	/**
+	 * Verify the user input and display error messages.
+	 * @return true if the input is valid
+	 */
+	private boolean verifyInput()
+	{
+		boolean valid = true;
+		if (mGateway.getText().toString().trim().isEmpty())
+		{
+			mGateway.setError(getString(R.string.alert_text_no_input_gateway));
+			valid = false;
+		}
+		if (mUsername.getText().toString().trim().isEmpty())
+		{
+			mUsername.setError(getString(R.string.alert_text_no_input_username));
+			valid = false;
+		}
+		return valid;
+	}
+
+	/**
+	 * Update the profile object with the data entered by the user
+	 */
+	private void updateProfileData()
+	{
+		/* the name is optional, we default to the gateway if none is given */
+		String name = mName.getText().toString().trim();
+		String gateway = mGateway.getText().toString().trim();
+		mProfile.setName(name.isEmpty() ? gateway : name);
+		mProfile.setGateway(gateway);
+		mProfile.setUsername(mUsername.getText().toString().trim());
+		String password = mPassword.getText().toString().trim();
+		password = password.isEmpty() ? null : password;
+		mProfile.setPassword(password);
 	}
 
 	/**
