@@ -67,36 +67,48 @@ struct private_mac_t {
 	HMAC_CTX hmac;
 };
 
-/**
- * Resets HMAC context
- */
-static bool reset(private_mac_t *this)
+METHOD(mac_t, set_key, bool,
+	private_mac_t *this, chunk_t key)
 {
-	return HMAC_Init_ex(&this->hmac, NULL, 0, this->hasher, NULL);
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	return HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
+	HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
+	return TRUE;
+#endif
 }
 
 METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, u_int8_t *out)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	if (!HMAC_Update(&this->hmac, data.ptr, data.len))
+	{
+		return FALSE;
+	}
 	if (out == NULL)
 	{
-		return HMAC_Update(&this->hmac, data.ptr, data.len);
+		return TRUE;
 	}
-	return HMAC_Update(&this->hmac, data.ptr, data.len) &&
-		   HMAC_Final(&this->hmac, out, NULL) &&
-		   reset(this);
+	if (!HMAC_Final(&this->hmac, out, NULL))
+	{
+		return FALSE;
+	}
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
+	HMAC_Update(&this->hmac, data.ptr, data.len);
+	if (out == NULL)
+	{
+		return TRUE;
+	}
+	HMAC_Final(&this->hmac, out, NULL);
+#endif
+	return set_key(this, chunk_empty);
 }
 
 METHOD(mac_t, get_mac_size, size_t,
 	private_mac_t *this)
 {
 	return EVP_MD_size(this->hasher);
-}
-
-METHOD(mac_t, set_key, bool,
-	private_mac_t *this, chunk_t key)
-{
-	return HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
 }
 
 METHOD(mac_t, destroy, void,
@@ -150,7 +162,7 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 	}
 
 	HMAC_CTX_init(&this->hmac);
-	if (!HMAC_Init_ex(&this->hmac, NULL, 0, this->hasher, NULL))
+	if (!set_key(this, chunk_empty))
 	{
 		destroy(this);
 		return NULL;
@@ -189,5 +201,4 @@ signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
 	}
 	return NULL;
 }
-
 
