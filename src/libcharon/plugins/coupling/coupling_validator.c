@@ -199,17 +199,6 @@ coupling_validator_t *coupling_validator_create()
 {
 	private_coupling_validator_t *this;
 	char *path, *hash;
-	int i;
-	struct {
-		hash_algorithm_t alg;
-		char *name;
-	} hash_types[] = {
-		{ HASH_MD5,		"md5"},
-		{ HASH_SHA1,	"sha1"},
-		{ HASH_SHA256,	"sha256"},
-		{ HASH_SHA384,	"sha384"},
-		{ HASH_SHA512,	"sha512"},
-	};
 
 	INIT(this,
 		.public = {
@@ -227,15 +216,8 @@ coupling_validator_t *coupling_validator_create()
 	hash = lib->settings->get_str(lib->settings,
 								  "%s.plugins.coupling.hash", "sha1",
 								  charon->name);
-	for (i = 0; i < countof(hash_types); i++)
-	{
-		if (strcaseeq(hash_types[i].name, hash))
-		{
-			this->hasher = lib->crypto->create_hasher(lib->crypto,
-													  hash_types[i].alg);
-			break;
-		}
-	}
+	this->hasher = lib->crypto->create_hasher(lib->crypto,
+							enum_from_name(hash_algorithm_short_names, hash));
 	if (!this->hasher)
 	{
 		DBG1(DBG_CFG, "unsupported coupling hash algorithm: %s", hash);
