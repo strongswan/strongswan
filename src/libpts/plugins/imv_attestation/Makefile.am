@@ -31,3 +31,5 @@ attest_LDADD = \
 	$(top_builddir)/src/libpts/libpts.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 attest.o :	$(top_builddir)/config.status
+
+EXTRA_DIST = build_database.sh
