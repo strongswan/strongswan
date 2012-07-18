@@ -461,13 +461,21 @@ static status_t GenerateMSK(chunk_t password_hash_hash,
 		return FAILED;
 	}
 
-	master = chunk_create(master_key, 16);
 	concat = chunk_cata("ccc", password_hash_hash, nt_response, magic1);
+	if (!hasher->get_hash(hasher, concat, master_key))
+	{
+		hasher->destroy(hasher);
+		return FAILED;
+	}
+	master = chunk_create(master_key, 16);
 	concat = chunk_cata("cccc", master, shapad1, magic2, shapad2);
+	if (!hasher->get_hash(hasher, concat, master_receive_key))
+	{
+		hasher->destroy(hasher);
+		return FAILED;
+	}
 	concat = chunk_cata("cccc", master, shapad1, magic3, shapad2);
-	if (!hasher->get_hash(hasher, concat, master_key) ||
-		!hasher->get_hash(hasher, concat, master_receive_key) ||
-		!hasher->get_hash(hasher, concat, master_send_key))
+	if (!hasher->get_hash(hasher, concat, master_send_key))
 	{
 		hasher->destroy(hasher);
 		return FAILED;
