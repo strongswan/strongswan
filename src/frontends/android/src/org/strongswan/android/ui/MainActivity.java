@@ -17,6 +17,8 @@
 
 package org.strongswan.android.ui;
 
+import org.strongswan.android.logic.TrustedCertificateManager;
+
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
@@ -34,6 +36,15 @@ public class MainActivity extends Activity
 
 		ActionBar bar = getActionBar();
 		bar.setDisplayShowTitleEnabled(false);
+
+		/* load CA certificates in a background thread */
+		new Thread(new Runnable() {
+			@Override
+			public void run()
+			{
+				TrustedCertificateManager.getInstance().load();
+			}
+		}).start();
 	}
 
 	private void startVpnService()
