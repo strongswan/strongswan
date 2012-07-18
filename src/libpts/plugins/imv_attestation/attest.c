@@ -34,7 +34,7 @@
 /**
  * global debug output variables
  */
-static int debug_level = 2;
+static int debug_level = 1;
 static bool stderr_quiet = TRUE;
 
 /**

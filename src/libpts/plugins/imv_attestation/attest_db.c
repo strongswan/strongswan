@@ -1233,7 +1233,7 @@ METHOD(attest_db_t, add, bool,
 			    files_added, hashes_added);
 		if (ima)
 		{
-			printf(" , %d new ima hashes");
+			printf(" , %d new ima hashes", ima_hashes_added);
 			hasher->destroy(hasher);
 		}
 		printf("\n");
