@@ -144,6 +144,7 @@ static int add_connection(char *name,
 	msg.add_conn.mode = 1;
 	msg.add_conn.mobike = 1;
 	msg.add_conn.dpd.action = 1;
+	msg.add_conn.install_policy = 1;
 
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
