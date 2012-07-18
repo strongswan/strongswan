@@ -49,3 +49,9 @@ hasher_test_vector_t sha1_3 = {
 			  "\x2b\xad\x27\xb3"
 };
 
+hasher_test_vector_t sha1_4 = {
+	.alg = HASH_SHA1, .len = 62,
+	.data	= "12345678901234567890123456789012345678901234567890123456789012",
+	.hash	= "\xd8\xd0\x73\xb3\x83\x15\x66\x17\xc5\xca\xdf\x17\xf6\x15\x96\xa3"
+			  "\x84\x0a\xfd\x8b"
+};
