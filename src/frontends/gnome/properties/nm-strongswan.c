@@ -366,16 +366,8 @@ update_connection (NMVpnPluginUiWidgetInterface *iface,
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
 
-
-	if (!nm_setting_set_secret_flags (NM_SETTING (settings),
-				"password", NM_SETTING_SECRET_FLAG_AGENT_OWNED, NULL))
-	{
-		fprintf(stderr, "no\n");
-	}
-	else
-	{
-		fprintf(stderr, "yes\n");
-	}
+	nm_setting_set_secret_flags (NM_SETTING (settings), "password",
+								 NM_SETTING_SECRET_FLAG_AGENT_OWNED, NULL);
 
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
