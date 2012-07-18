@@ -6,6 +6,10 @@ CREATE TABLE files (
   type INTEGER NOT NULL,
   path TEXT NOT NULL
 );
+DROP INDEX IF EXISTS files_path;
+CREATE INDEX files_path ON files (
+  path
+);
 
 DROP TABLE IF EXISTS products;
 CREATE TABLE products (
