@@ -99,6 +99,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/security
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/apache2/modules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/compiz
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/compizconfig/backends/
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/enchant
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libemiscwidgets.so.0.0.0
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libeutil.so.0.0.0
@@ -114,6 +115,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/flashplu
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gedit/plugins
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gnome-bluetooth
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gnome-settings-daemon-3.0
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gtk-3.0/3.0.0/menuproxies
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gtk-3.0/3.0.0/theming-engines
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/alsa-lib
@@ -136,6 +138,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-lin
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/polkit-1/extensions
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/nss
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/sane
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/sse2
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/indicators3/7
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/indicator-messages/status-providers/1
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/libpeas-1.0/loaders
@@ -177,6 +180,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/python2.
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/python2.7/dist-packages/zope/interface/_zope_interface_coptimizations.so
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/rsyslog
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sane
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sse2
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sudo
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldap60.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldif60.so
