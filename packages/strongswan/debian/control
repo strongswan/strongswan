@@ -34,8 +34,16 @@ Description: strongSwan plugin to interact with NetworkManager
 
 Package: libstrongswan
 Architecture: any
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: strongSwan utility and crypto library
  libstrongswan is the underlying library of charon and other strongSwan
  components. It is built in a modular way and is extendable through various
  plugins.
+
+Package: libstrongswan-dev
+Architecture: any
+Priority: optional
+Depends: ${misc:Depends}, libstrongswan (=${binary:Version})
+Section: devel
+Description: strongSwan development headers
+ C header files to develop with libstrongswan.
