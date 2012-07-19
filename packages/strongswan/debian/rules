@@ -28,8 +28,8 @@ endif
 
 build:
 	dh_testdir
-	./configure $(CONFIGURE_ARGS)
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
+	./configure $(CONFIGURE_ARGS) CC="$(CC)" CFLAGS="$(CFLAGS)"
+	$(MAKE)
 	touch build
 
 clean:
