@@ -25,7 +25,9 @@ ipsec attest --add --product "$p" --sha1-ima --file /lib/init/apparmor-profile-l
 ipsec attest --add --product "$p" --sha1-ima --file /lib/resolvconf/list-records
 ipsec attest --add --product "$p" --sha1-ima --dir  /lib/udev
 ipsec attest --add --product "$p" --sha1-ima --file /lib/ufw/ufw-init
+ipsec attest --add --product "$p" --sha1-ima --file /opt/Adobe/Reader9/Reader/intellinux/bin/acroread
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/accountsservice/accounts-daemon
+ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/apt/methods
 ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/at-spi2-core
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/avahi/avahi-daemon-check-dns.sh
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/bamf/bamfdaemon
@@ -39,7 +41,10 @@ ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/deja-dup/deja-dup/d
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/evolution/3.2/evolution-alarm-notify
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/firefox/firefox
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/firefox/plugin-container
+ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/gcc/i686-linux-gnu/4.6/cc1
+ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/gcc/i686-linux-gnu/4.6/collect2
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/geoclue/geoclue-master
+ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/git-core
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/gnome-desktop3/check_gl_texture_size
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/gnome-disk-utility/gdu-notification-daemon
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/gnome-online-accounts/goa-daemon
@@ -67,6 +72,7 @@ ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/policykit-1/polkitd
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/pulseaudio/pulse/gconf-helper
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/rtkit/rtkit-daemon
+ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/system-service/system-service-d
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/telepathy/mission-control-5
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/thunderbird/thunderbird
 ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/ubuntuone-client
@@ -96,6 +102,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/i386-linux-g
 ipsec attest --add --product "$p" --sha1-ima --relative --file /lib/plymouth/details.so
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/plymouth/renderers
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/security
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /opt/Adobe/Reader9/Reader/intellinux/lib
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/apache2/modules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/compiz
@@ -104,17 +111,31 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/enchant
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libemiscwidgets.so.0.0.0
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libeutil.so.0.0.0
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libgnomecanvas.so.0.0.0
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libbrowsercomps.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libfreebl3.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libmozalloc.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libmozsqlite3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnspr4.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnss3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssckbi.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssdbm3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssutil3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libplc4.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libplds4.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libsoftokn3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libsmime3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libssl3.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libxpcom.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libxul.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libbrowsercomps.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libdbusservice.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libmozgnome.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox-addons/extensions/globalmenu@ubuntu.com/components/libglobalmenu.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox-addons/plugins/nppdf.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/flashplugin-installer/libflashplayer.so
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gedit/plugins
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gnome-bluetooth
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gnome-settings-daemon-3.0
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gtk-2.0/2.10.0/menuproxies
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gtk-3.0/3.0.0/menuproxies
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/gtk-3.0/3.0.0/theming-engines
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu
@@ -126,6 +147,7 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-lin
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gio/modules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gtk-2.0/modules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gtk-2.0/2.10.0/engines
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gtk-2.0/2.10.0/immodules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gtk-3.0/modules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gtk-3.0/3.0.0/immodules
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-linux-gnu/gvfs
@@ -142,6 +164,8 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/i386-lin
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/indicators3/7
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/indicator-messages/status-providers/1
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/libpeas-1.0/loaders
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/man-db/libman-2.6.1.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/man-db/libmandb-2.6.1.so
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/mission-control-plugins.0
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/ModemManager
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/nautilus/extensions-3.0
@@ -182,9 +206,24 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/rsyslog
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sane
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sse2
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sudo
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libfreebl3.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldap60.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldif60.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libmozalloc.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libmozsqlite3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnspr4.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnss3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssckbi.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssutil3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libplc4.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libplds4.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libprldap60.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libsmime3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libsoftokn3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssdbm3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libssl3.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libxpcom.so
+ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libxul.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/components/libdbusservice.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/components/libmozgnome.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird-addons/extensions/globalmenu@ubuntu.com/components/libglobalmenu.so
