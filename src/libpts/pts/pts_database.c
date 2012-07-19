@@ -127,7 +127,7 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 {
 	enumerator_t *e;
 	chunk_t hash;
-	status_t status;
+	status_t status = NOT_FOUND;
 
 	e = this->db->query(this->db,
 		"SELECT fh.hash FROM file_hashes AS fh "
@@ -139,15 +139,19 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 	{
 		return FAILED;
 	}
-	if (e->enumerate(e, &hash))
+	while (e->enumerate(e, &hash))
 	{
-		status = chunk_equals(measurement, hash) ?
-				SUCCESS : VERIFY_ERROR;
-	}
-	else
-	{
-		status = NOT_FOUND;
-	}
+		/* with relative filenames there might be multiple entries */
+		if (chunk_equals(measurement, hash))
+		{
+			status = SUCCESS;
+			break;
+		}
+		else
+		{
+			status = VERIFY_ERROR;
+		}
+	}	
 	e->destroy(e);
 
 	return status;
