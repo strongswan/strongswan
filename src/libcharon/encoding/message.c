@@ -2044,14 +2044,14 @@ METHOD(message_t, parse_body, status_t,
 			}
 			hash_payload = (hash_payload_t*)get_payload(this, HASH_V1);
 			other_hash = hash_payload->get_hash(hash_payload);
+			DBG3(DBG_ENC, "HASH received %B\nHASH expected %B",
+				 &other_hash, &hash);
 			if (!chunk_equals(hash, other_hash))
 			{
-				DBG1(DBG_ENC, "our hash does not match received %B",
-					 &other_hash);
+				DBG1(DBG_ENC, "received HASH payload does not match");
 				chunk_free(&hash);
 				return FAILED;
 			}
-			DBG2(DBG_ENC, "verified IKEv1 message with hash %B", &hash);
 			chunk_free(&hash);
 		}
 		if (this->is_encrypted)
