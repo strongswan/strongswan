@@ -17,6 +17,7 @@
 #include "ita_comp_func_name.h"
 
 #include "libpts.h"
+#include "pts/pts_pcr.h"
 #include "pts/components/pts_component.h"
 
 #include <debug.h>
@@ -32,10 +33,9 @@
 #define IMA_BIOS_MEASUREMENTS		SECURITY_DIR "tpm0/binary_bios_measurements"
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
 #define IMA_MEASUREMENT_BATCH_SIZE	200
-#define IMA_EVENT_NAME_LEN_MAX		255
 #define IMA_PCR						10
-#define IMA_PCR_MAX					16
 #define IMA_TYPE_LEN				3
+#define IMA_FILENAME_LEN_MAX	255
 
 typedef struct pts_ita_comp_ima_t pts_ita_comp_ima_t;
 typedef struct bios_entry_t bios_entry_t;
@@ -122,9 +122,14 @@ struct pts_ita_comp_ima_t {
 	linked_list_t *ima_list;
 
 	/**
-	 * Shadow PCR registers
+	 * Shadow PCR set
 	 */
-	chunk_t pcrs[IMA_PCR_MAX];
+	pts_pcr_t *pcrs;
+
+	/**
+	 * Whether to send pcr_before and pcr_after info
+	 */
+	bool pcr_info;
 
 	/**
 	 * IMA measurement time
@@ -135,12 +140,6 @@ struct pts_ita_comp_ima_t {
 	 * IMA state machine
 	 */
 	ima_state_t state;
-
-	/**
-	 * Hasher used to extend emulated PCRs
-	 */
-	hasher_t *hasher;
-
 };
 
 /**
@@ -362,66 +361,84 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 /**
  * Extend measurement into PCR an create evidence
  */
-pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
-								chunk_t measurement)
+static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
+									   chunk_t measurement)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
 	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evidence;
-	chunk_t pcr_before, pcr_after;
+	chunk_t pcr_before = chunk_empty, pcr_after = chunk_empty;
 
 	hash_algo = PTS_MEAS_ALGO_SHA1;
 	pcr_len = HASH_SIZE_SHA1;
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
-	pcr_before = chunk_clone(this->pcrs[pcr]);
-	if (!this->hasher->get_hash(this->hasher, pcr_before, NULL) ||
-		!this->hasher->get_hash(this->hasher, measurement, this->pcrs[pcr].ptr))
-	{
-		DBG1(DBG_PTS, "PCR%d was not extended due to a hasher problem", pcr);
-	}
-	pcr_after = chunk_clone(this->pcrs[pcr]);
 
+	if (this->pcr_info)
+	{
+		pcr_before = chunk_clone(this->pcrs->get(this->pcrs, pcr));
+	}
+	pcr_after = this->pcrs->extend(this->pcrs, pcr, measurement);
+	if (!pcr_after.ptr)
+	{
+		free(pcr_before.ptr);
+		return NULL;
+	}
 	evidence = pts_comp_evidence_create(this->name->clone(this->name),
 								this->depth, pcr, hash_algo, pcr_transform,
 								this->measurement_time, measurement);
-	evidence->set_pcr_info(evidence, pcr_before, pcr_after);
-
+	if (this->pcr_info)
+	{
+		pcr_after =chunk_clone(this->pcrs->get(this->pcrs, pcr));
+		evidence->set_pcr_info(evidence, pcr_before, pcr_after);
+	}
 	return evidence;
 }
 
 /**
  * Compute and check boot aggregate value by hashing PCR0 to PCR7
  */
-void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
+static void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
 {
-	u_int32_t pcr;
+	u_int32_t i;
+	u_char filename_buffer[IMA_FILENAME_LEN_MAX + 1];
 	u_char pcr_buffer[HASH_SIZE_SHA1];
-	u_char boot_aggregate_name[] = "boot_aggregate";
-	u_char filename_buffer[IMA_EVENT_NAME_LEN_MAX + 1];
-	chunk_t boot_aggregate, file_name;
+	chunk_t file_name, boot_aggregate;
+	hasher_t *hasher;
 	bool pcr_ok = TRUE;
 
-	/* See Linux kernel header: security/integrity/ima/ima.h */
-	boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
-	memset(filename_buffer, 0, sizeof(filename_buffer));
-	strcpy(filename_buffer, boot_aggregate_name);
-	file_name = chunk_create(filename_buffer, sizeof(filename_buffer));
-
-	for (pcr = 0; pcr < 8 && pcr_ok; pcr++)
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher)
 	{
-		pcr_ok = this->hasher->get_hash(this->hasher, this->pcrs[pcr], NULL);
+		DBG1(DBG_PTS, "%N hasher could not be created",
+			 hash_algorithm_short_names, HASH_SHA1);
 	}
-	if (!pcr_ok ||
-		!this->hasher->get_hash(this->hasher, chunk_empty, pcr_buffer) ||
-		!this->hasher->get_hash(this->hasher, boot_aggregate, NULL) ||
-		!this->hasher->get_hash(this->hasher, file_name, pcr_buffer))
+	for (i = 0; i < 8 && pcr_ok; i++)
+	{
+		pcr_ok = hasher->get_hash(hasher, this->pcrs->get(this->pcrs, i), NULL);
+	}
+	if (pcr_ok)
+	{
+		boot_aggregate = chunk_create(pcr_buffer, sizeof(pcr_buffer));
+		memset(filename_buffer, 0, sizeof(filename_buffer));
+		strcpy(filename_buffer, "boot_aggregate");
+		file_name = chunk_create (filename_buffer, sizeof(filename_buffer));
+
+		pcr_ok = hasher->get_hash(hasher, chunk_empty, pcr_buffer) &&
+				 hasher->get_hash(hasher, boot_aggregate, NULL) &&
+				 hasher->get_hash(hasher, file_name, boot_aggregate.ptr);
+	}
+	hasher->destroy(hasher);
+
+	if (pcr_ok)
+	{
+		DBG1(DBG_PTS, "boot aggregate value is %scorrect",
+			 chunk_equals(boot_aggregate, measurement) ? "":"in");
+	}
+	else
 	{
 		DBG1(DBG_PTS, "failed to compute boot aggregate value");
-		return;
 	}
-	DBG1(DBG_PTS, "boot aggregate value is %scorrect",
-		 chunk_equals(boot_aggregate, measurement) ? "":"in");
 }
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -476,6 +493,10 @@ METHOD(pts_component_t, measure, status_t,
 			*evidence = extend_pcr(this, bios_entry->pcr,
 										 bios_entry->measurement);
 			free(bios_entry);
+			if (!evidence)
+			{
+				return FAILED;
+			}
 	
 			/* break if still some BIOS measurements are left */
 			if (this->bios_list->get_count(this->bios_list))
@@ -534,6 +555,11 @@ METHOD(pts_component_t, measure, status_t,
 			free(ima_entry->file_measurement.ptr);
 			free(ima_entry->filename);
 			free(ima_entry);
+
+			if (!evidence)
+			{
+				return FAILED;
+			}
 			this->state = this->ima_list->get_count(this->ima_list) ?
 									IMA_STATE_RUNTIME : IMA_STATE_END;
 			break;
@@ -680,14 +706,10 @@ METHOD(pts_component_t, finalize, bool,
 METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_ima_t *this)
 {
-	int i, count;
+	int count;
 	u_int32_t vid, name;
 	enum_name_t *names;
 
-	for (i = 0; i < IMA_PCR_MAX; i++)
-	{
-		free(this->pcrs[i].ptr);
-	}
 	if (this->is_registering)
 	{
 		count = this->pts_db->delete_comp_measurements(this->pts_db,
@@ -701,7 +723,7 @@ METHOD(pts_component_t, destroy, void,
 	this->bios_list->destroy_function(this->bios_list, (void *)free_bios_entry);
 	this->ima_list->destroy_function(this->ima_list, (void *)free_ima_entry);
 	this->name->destroy(this->name);
-	this->hasher->destroy(this->hasher);
+	this->pcrs->destroy(this->pcrs);
 	free(this->keyid.ptr);
 	free(this);
 }
@@ -713,7 +735,14 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 										 pts_database_t *pts_db)
 {
 	pts_ita_comp_ima_t *this;
-	int i;
+	pts_pcr_t *pcrs;
+
+	pcrs = pts_pcr_create();
+	if (!pcrs)
+	{
+		DBG1(DBG_PTS, "shadow PCR set could not be created");
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -732,14 +761,11 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 		.bios_list = linked_list_create(),
 		.ima_list = linked_list_create(),
 		.ima_count = IMA_MEASUREMENT_BATCH_SIZE - 1,
-		.hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1),
+		.pcrs = pcrs,
+		.pcr_info = lib->settings->get_bool(lib->settings,
+						"libimcv.plugins.imc-attestation.pcr_info", TRUE),
 	);
 
-	for (i = 0; i < IMA_PCR_MAX; i++)
-	{
-		this->pcrs[i] = chunk_alloc(HASH_SIZE_SHA1);
-		memset(this->pcrs[i].ptr, 0x00, HASH_SIZE_SHA1);
-	}
 	return &this->public;
 }
 
