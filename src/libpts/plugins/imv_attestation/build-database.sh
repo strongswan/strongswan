@@ -68,6 +68,7 @@ ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/NetworkManager/nm-d
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/notify-osd/notify-osd
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/nux/unity_support_test
 ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/pm-utils/power.d
+ipsec attest --add --product "$p" --sha1-ima --dir  /usr/lib/pm-utils/sleep.d
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/policykit-1/polkitd
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 ipsec attest --add --product "$p" --sha1-ima --file /usr/lib/pulseaudio/pulse/gconf-helper
