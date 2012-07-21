@@ -394,14 +394,15 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					{
 						break;
 					}
-					attestation_state->add_evidence(attestation_state, evid);
 					if (measurements)
 					{
 						DBG2(DBG_IMC, "collected %d file measurements",
 							 measurements->get_file_count(measurements));
 						attr = tcg_pts_attr_file_meas_create(measurements);
-						attr_list->insert_last(attr_list, attr);
+						attestation_state->add_attr(attestation_state, attr);
 					}
+					attr = tcg_pts_attr_simple_comp_evid_create(evid);
+					attestation_state->add_attr(attestation_state, attr);
 				}
 				while (status == NEED_MORE);
 				comp->destroy(comp);
@@ -413,14 +414,12 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			pts_simple_evid_final_flag_t flags;
 			pts_meas_algorithms_t comp_hash_algorithm;
-			pts_comp_evidence_t *evid;
 			chunk_t pcr_composite, quote_sig;
 			bool use_quote2;
 
-			/* Send buffered Simple Component Evidences */
-			while (attestation_state->next_evidence(attestation_state, &evid))
+			/* Send buffered PA-TNC attributes */
+			while (attestation_state->next_attr(attestation_state, &attr))
 			{
-				attr = tcg_pts_attr_simple_comp_evid_create(evid);
 				attr_list->insert_last(attr_list, attr);
 			}
 

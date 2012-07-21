@@ -61,7 +61,7 @@ struct private_imc_attestation_state_t {
 	pts_t *pts;
 
 	/**
-	 * PTS Component Evidence list
+	 * PA-TNC attribute cache list
 	 */
 	linked_list_t *list;
 
@@ -125,16 +125,16 @@ METHOD(imc_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
-METHOD(imc_attestation_state_t, add_evidence, void,
-	private_imc_attestation_state_t *this, pts_comp_evidence_t *evidence)
+METHOD(imc_attestation_state_t, add_attr, void,
+	private_imc_attestation_state_t *this, pa_tnc_attr_t *attr)
 {
-	this->list->insert_last(this->list, evidence);
+	this->list->insert_last(this->list, attr);
 }
 
-METHOD(imc_attestation_state_t, next_evidence, bool,
-	private_imc_attestation_state_t *this, pts_comp_evidence_t **evid)
+METHOD(imc_attestation_state_t, next_attr, bool,
+	private_imc_attestation_state_t *this, pa_tnc_attr_t **attr)
 {
-	return this->list->remove_first(this->list, (void**)evid) == SUCCESS;
+	return this->list->remove_first(this->list, (void**)attr) == SUCCESS;
 }
 
 /**
@@ -158,8 +158,8 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.destroy = _destroy,
 			},
 			.get_pts = _get_pts,
-			.add_evidence = _add_evidence,
-			.next_evidence = _next_evidence,
+			.add_attr = _add_attr,
+			.next_attr = _next_attr,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
