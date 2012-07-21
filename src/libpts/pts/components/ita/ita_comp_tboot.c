@@ -110,13 +110,14 @@ METHOD(pts_component_t, measure, status_t,
 	pts_file_meas_t **measurements)
 
 {
+	size_t pcr_len;
+	pts_pcr_t *pcrs;
+	pts_pcr_transform_t pcr_transform;
+	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evid;
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
 	chunk_t measurement, pcr_before, pcr_after;
-	size_t hash_size, pcr_len;
 	u_int32_t extended_pcr;
-	pts_pcr_transform_t pcr_transform;
-	pts_meas_algorithms_t hash_algo;
 	
 	switch (this->seq_no++)
 	{
@@ -150,9 +151,8 @@ METHOD(pts_component_t, measure, status_t,
 		return FAILED;
 	}
 
-	hash_algo = pts->get_meas_algorithm(pts);
-	hash_size = pts_meas_algo_hash_size(hash_algo);
-	pcr_len = pts->get_pcr_len(pts);
+	hash_algo = PTS_MEAS_ALGO_SHA1;
+	pcr_len = HASH_SIZE_SHA1;
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 
 	/* get and check the measurement data */
@@ -163,7 +163,7 @@ METHOD(pts_component_t, measure, status_t,
 	pcr_after = chunk_from_hex(
 					chunk_create(pcr_after_hex, strlen(pcr_after_hex)), NULL);
 	if (pcr_before.len != pcr_len || pcr_after.len != pcr_len ||
-		measurement.len != hash_size)
+		measurement.len != pcr_len)
 	{
 		DBG1(DBG_PTS, "TBOOT measurement or pcr data have the wrong size");
 		free(measurement.ptr);
@@ -172,10 +172,11 @@ METHOD(pts_component_t, measure, status_t,
 		return FAILED;
 	}
 
+	pcrs = pts->get_pcrs(pts);
+	pcrs->set(pcrs, extended_pcr, pcr_after);
 	evid = *evidence = pts_comp_evidence_create(this->name->clone(this->name),
-								this->depth, extended_pcr,
-								hash_algo, pcr_transform,
-								this->measurement_time, measurement);
+							this->depth, extended_pcr, hash_algo, pcr_transform,
+							this->measurement_time, measurement);
 	evid->set_pcr_info(evid, pcr_before, pcr_after);
 
 	return (this->seq_no < 2) ? NEED_MORE : SUCCESS;
@@ -189,10 +190,12 @@ METHOD(pts_component_t, verify, status_t,
 	enum_name_t *names;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
+	pts_pcr_t *pcrs;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 	status_t status;
 
+	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
 
@@ -258,9 +261,14 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		if (!pts->add_pcr(pts, extended_pcr, pcr_before, pcr_after))
+		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
-			return FAILED;
+			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value",
+						   extended_pcr);
+		}
+		if (pcrs->set(pcrs, extended_pcr, pcr_after))
+		{
+			return SUCCESS;
 		}
 	}
 

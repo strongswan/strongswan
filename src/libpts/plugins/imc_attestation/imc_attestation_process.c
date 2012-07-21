@@ -420,9 +420,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			/* Send buffered Simple Component Evidences */
 			while (attestation_state->next_evidence(attestation_state, &evid))
 			{
-				pts->select_pcr(pts, evid->get_extended_pcr(evid));
-
-				/* Send Simple Component Evidence */
 				attr = tcg_pts_attr_simple_comp_evid_create(evid);
 				attr_list->insert_last(attr_list, attr);
 			}

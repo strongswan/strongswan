@@ -30,16 +30,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-/**
- * Maximum number of PCR's of TPM, TPM Spec 1.2
- */
-#define PCR_MAX_NUM				24
-
-/**
- * Number of bytes that can be saved in a PCR of TPM, TPM Spec 1.2
- */
-#define PCR_LEN					20
-
 typedef struct private_pts_t private_pts_t;
 
 /**
@@ -119,29 +109,9 @@ struct private_pts_t {
  	certificate_t *aik;
 
 	/**
-	 * Table of extended PCRs with corresponding values
+	 * Shadow PCR set
 	 */
-	u_char* pcrs[PCR_MAX_NUM];
-
-	/**
-	 * Length of PCR registers
-	 */
-	size_t pcr_len;
-
-	/**
-	 * Number of extended PCR registers
-	 */
-	u_int32_t pcr_count;
-
-	/**
-	 * Highest extended PCR register
-	 */
-	u_int32_t pcr_max;
-
-	/**
-	 * Bitmap of extended PCR registers
-	 */
-	u_int8_t pcr_select[PCR_MAX_NUM / 8];
+	pts_pcr_t *pcrs;
 
 };
 
@@ -367,12 +337,6 @@ METHOD(pts_t, set_tpm_version_info, void,
 {
 	this->tpm_version_info = chunk_clone(info);
 	print_tpm_version_info(this);
-}
-
-METHOD(pts_t, get_pcr_len, size_t,
-	private_pts_t *this)
-{
-	return this->pcr_len;
 }
 
 /**
@@ -715,8 +679,8 @@ METHOD(pts_t, extend_pcr, bool,
 		goto err;
 	}
 
-	pcr_value = chunk_alloc(PCR_LEN);
-	result = Tspi_TPM_PcrExtend(hTPM, pcr_num, PCR_LEN, input.ptr,
+	pcr_value = chunk_alloc(PTS_PCR_LEN);
+	result = Tspi_TPM_PcrExtend(hTPM, pcr_num, PTS_PCR_LEN, input.ptr,
 								NULL, &pcr_length, &pcr_value.ptr);
 	if (result != TSS_SUCCESS)
 	{
@@ -745,22 +709,6 @@ err:
 	return FALSE;
 }
 
-
-static void clear_pcrs(private_pts_t *this)
-{
-	int i;
-
-	for (i = 0; i <= this->pcr_max; i++)
-	{
-		free(this->pcrs[i]);
-		this->pcrs[i] = NULL;
-	}
-	this->pcr_count = 0;
-	this->pcr_max = 0;
-
-	memset(this->pcr_select, 0x00, sizeof(this->pcr_select));
-}
-
 METHOD(pts_t, quote_tpm, bool,
 	private_pts_t *this, bool use_quote2, chunk_t *pcr_comp, chunk_t *quote_sig)
 {
@@ -776,7 +724,8 @@ METHOD(pts_t, quote_tpm, bool,
 	TSS_RESULT result;
 	chunk_t quote_info;
 	BYTE* versionInfo;
-	u_int32_t versionInfoSize, pcr, i = 0, f = 1;
+	u_int32_t versionInfoSize, pcr;
+	enumerator_t *enumerator;
 	bool success = FALSE;
 
 	result = Tspi_Context_Create(&hContext);
@@ -836,25 +785,23 @@ METHOD(pts_t, quote_tpm, bool,
 	}
 
 	/* Select PCRs */
-	for (pcr = 0; pcr <= this->pcr_max ; pcr++)
+	enumerator = this->pcrs->create_enumerator(this->pcrs);
+	while (enumerator->enumerate(enumerator, &pcr))
 	{
-		if (f == 256)
+		result = use_quote2 ?
+				Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
+											TSS_PCRS_DIRECTION_RELEASE) :
+				Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr);
+		if (result != TSS_SUCCESS)
 		{
-			i++;
-			f = 1;
+			break;
 		}
-		if (this->pcr_select[i] & f)
-		{
-			result = use_quote2 ?
-					Tspi_PcrComposite_SelectPcrIndexEx(hPcrComposite, pcr,
-												TSS_PCRS_DIRECTION_RELEASE) :
-					Tspi_PcrComposite_SelectPcrIndex(hPcrComposite, pcr);
-			if (result != TSS_SUCCESS)
-			{
-				goto err3;
-			}
-		}
-		f <<= 1;
+	}
+	enumerator->destroy(enumerator);
+
+	if (result != TSS_SUCCESS)
+	{
+		goto err3;
 	}
 
 	/* Set the Validation Data */
@@ -914,87 +861,14 @@ err1:
 	{
 		DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	}
-	clear_pcrs(this);
 
 	return success;
 }
 
-METHOD(pts_t, select_pcr, bool,
-	private_pts_t *this, u_int32_t pcr)
+METHOD(pts_t, get_pcrs, pts_pcr_t*,
+	private_pts_t *this)
 {
-	u_int32_t i, f;
-
-	if (pcr >= PCR_MAX_NUM)
-	{
-		DBG1(DBG_PTS, "PCR %u: number is larger than maximum of %u",
-					   pcr, PCR_MAX_NUM-1);
-		return FALSE;
-	}
-
-	/* Determine PCR selection flag */
-	i = pcr / 8;
-	f = 1 << (pcr - 8*i);
-
-	/* Has this PCR already been selected? */
-	if (!(this->pcr_select[i] & f))
-	{
-		this->pcr_select[i] |= f;
-		this->pcr_max = max(this->pcr_max, pcr);
-		this->pcr_count++;
-	}
-
-	return TRUE;
-}
-
-METHOD(pts_t, add_pcr, bool,
-	private_pts_t *this, u_int32_t pcr, chunk_t pcr_before, chunk_t pcr_after)
-{
-	if (pcr >= PCR_MAX_NUM)
-	{
-		DBG1(DBG_PTS, "PCR %u: number is larger than maximum of %u",
-					   pcr, PCR_MAX_NUM-1);
-		return FALSE;
-	}
-
-	/* Is the length of the PCR registers already set? */
-	if (this->pcr_len)
-	{
-		if (pcr_after.len != this->pcr_len)
-		{
-			DBG1(DBG_PTS, "PCR %02u: length is %d bytes but should be %d bytes",
-						   pcr_after.len, this->pcr_len);
-			return FALSE;
-		}
-	}
-	else
-	{
-		this->pcr_len = pcr_after.len;
-	}
-
-	/* Has the value of the PCR register already been assigned? */
-	if (this->pcrs[pcr])
-	{
-		if (!memeq(this->pcrs[pcr], pcr_before.ptr, this->pcr_len))
-		{
-			DBG1(DBG_PTS, "PCR %02u: new pcr_before value does not equal "
-						  "old pcr_after value");
-		}
-		/* remove the old PCR value */
-		free(this->pcrs[pcr]);
-	}
-	else
-	{
-		/* add extended PCR Register */
-		this->pcr_select[pcr / 8] |= 1 << (pcr % 8);
-		this->pcr_max = max(this->pcr_max, pcr);
-		this->pcr_count++;
-	}
-
-	/* Duplicate and store current PCR value */
-	pcr_after = chunk_clone(pcr_after);
-	this->pcrs[pcr] = pcr_after.ptr;
-
-	return TRUE;
+	return this->pcrs;
 }
 
 /**
@@ -1016,13 +890,11 @@ METHOD(pts_t, get_quote_info, bool,
 	pts_meas_algorithms_t comp_hash_algo,
 	chunk_t *out_pcr_comp, chunk_t *out_quote_info)
 {
-	u_int8_t size_of_select;
-	int pcr_comp_len, i;
-	chunk_t pcr_comp, hash_pcr_comp;
+	chunk_t selection, pcr_comp, hash_pcr_comp;
 	bio_writer_t *writer;
 	hasher_t *hasher;
 
-	if (this->pcr_count == 0)
+	if (!this->pcrs->get_count(this->pcrs))
 	{
 		DBG1(DBG_PTS, "No extended PCR entries available, "
 					  "unable to construct TPM Quote Info");
@@ -1041,33 +913,8 @@ METHOD(pts_t, get_quote_info, bool,
 		return FALSE;
 	}
 
-	/**
-	 * A TPM v1.2 has 24 PCR Registers
-	 * so the bitmask field length used by TrouSerS is at least 3 bytes
-	 */
-	size_of_select = max(PCR_MAX_NUM / 8, 1 + this->pcr_max / 8);
-	pcr_comp_len = 2 + size_of_select + 4 + this->pcr_count * this->pcr_len;
+	pcr_comp = this->pcrs->get_composite(this->pcrs);
 
-	writer = bio_writer_create(pcr_comp_len);
-
-	writer->write_uint16(writer, size_of_select);
-	for (i = 0; i < size_of_select; i++)
-	{
-		writer->write_uint8(writer, this->pcr_select[i]);
-	}
-
-	writer->write_uint32(writer, this->pcr_count * this->pcr_len);
-	for (i = 0; i < 8 * size_of_select; i++)
-	{
-		if (this->pcrs[i])
-		{
-			writer->write_data(writer, chunk_create(this->pcrs[i], this->pcr_len));
-		}
-	}
-	pcr_comp = chunk_clone(writer->get_buf(writer));
-	DBG3(DBG_PTS, "constructed PCR Composite: %B", &pcr_comp);
-
-	writer->destroy(writer);
 
 	/* Output the TPM_PCR_COMPOSITE expected from IMC */
 	if (comp_hash_algo)
@@ -1117,14 +964,10 @@ METHOD(pts_t, get_quote_info, bool,
 		/* Secret assessment value 20 bytes (nonce) */
 		writer->write_data(writer, this->secret);
 
-		/* Length of the PCR selection field */
-		writer->write_uint16(writer, size_of_select);
-
 		/* PCR selection */
-		for (i = 0; i < size_of_select ; i++)
-		{
-			writer->write_uint8(writer, this->pcr_select[i]);
-		}
+		selection.ptr = pcr_comp.ptr;
+		selection.len = 2 + this->pcrs->get_selection_size(this->pcrs);
+		writer->write_data(writer, selection);
 
 		/* TPM Locality Selection */
 		writer->write_uint8(writer, TPM_LOC_ZERO);
@@ -1160,7 +1003,6 @@ METHOD(pts_t, get_quote_info, bool,
 	writer->destroy(writer);
 	free(pcr_comp.ptr);
 	free(hash_pcr_comp.ptr);
-	clear_pcrs(this);
 
 	return TRUE;
 }
@@ -1192,7 +1034,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 METHOD(pts_t, destroy, void,
 	private_pts_t *this)
 {
-	clear_pcrs(this);
+	DESTROY_IF(this->pcrs);
 	DESTROY_IF(this->aik);
 	DESTROY_IF(this->dh);
 	free(this->initiator_nonce.ptr);
@@ -1374,6 +1216,14 @@ static bool has_tpm(private_pts_t *this)
 pts_t *pts_create(bool is_imc)
 {
 	private_pts_t *this;
+	pts_pcr_t *pcrs;
+
+	pcrs = pts_pcr_create();
+	if (!pcrs)
+	{
+		DBG1(DBG_PTS, "shadow PCR set could not be created");
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {
@@ -1391,7 +1241,6 @@ pts_t *pts_create(bool is_imc)
 			.set_platform_info = _set_platform_info,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,
-			.get_pcr_len = _get_pcr_len,
 			.get_aik = _get_aik,
 			.set_aik = _set_aik,
 			.get_aik_keyid = _get_aik_keyid,
@@ -1400,8 +1249,7 @@ pts_t *pts_create(bool is_imc)
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote_tpm = _quote_tpm,
-			.select_pcr = _select_pcr,
-			.add_pcr = _add_pcr,
+			.get_pcrs = _get_pcrs,
 			.get_quote_info = _get_quote_info,
 			.verify_quote_signature  = _verify_quote_signature,
 			.destroy = _destroy,
@@ -1410,6 +1258,7 @@ pts_t *pts_create(bool is_imc)
 		.proto_caps = PTS_PROTO_CAPS_V,
 		.algorithm = PTS_MEAS_ALGO_SHA256,
 		.dh_hash_algorithm = PTS_MEAS_ALGO_SHA256,
+		.pcrs = pcrs,
 	);
 
 	if (is_imc)
@@ -1419,7 +1268,6 @@ pts_t *pts_create(bool is_imc)
 		if (has_tpm(this))
 		{
 			this->has_tpm = TRUE;
-			this->pcr_len = PCR_LEN;
 			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			load_aik(this);
 			load_aik_blob(this);

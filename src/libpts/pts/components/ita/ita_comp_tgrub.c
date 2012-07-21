@@ -73,13 +73,13 @@ METHOD(pts_component_t, measure, status_t,
 	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
 	pts_file_meas_t **measurements)
 {
+	size_t pcr_len;
+	pts_pcr_transform_t pcr_transform;
+	pts_meas_algorithms_t hash_algo;
 	pts_comp_evidence_t *evid;
 	u_int32_t extended_pcr;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
-	pts_pcr_transform_t pcr_transform;
-	pts_meas_algorithms_t hash_algo;
-	size_t hash_size, pcr_len;
 
 	/* Provisional implementation for TGRUB */
 	extended_pcr = PCR_DEBUG;
@@ -91,12 +91,11 @@ METHOD(pts_component_t, measure, status_t,
 		return FAILED;
 	}
 
-	hash_algo = pts->get_meas_algorithm(pts);
-	hash_size = pts_meas_algo_hash_size(hash_algo);
-	pcr_len = pts->get_pcr_len(pts);
+	hash_algo = PTS_MEAS_ALGO_SHA1;
+	pcr_len = HASH_SIZE_SHA1;
 	pcr_transform = pts_meas_algo_to_pcr_transform(hash_algo, pcr_len);
 
-	measurement = chunk_alloc(hash_size);
+	measurement = chunk_alloc(pcr_len);
 	memset(measurement.ptr, 0x00, measurement.len);
 		
 	pcr_before = chunk_alloc(pcr_len);
@@ -118,9 +117,11 @@ METHOD(pts_component_t, verify, status_t,
 	u_int32_t extended_pcr;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
+	pts_pcr_t *pcrs;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 
+	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
 	if (extended_pcr != PCR_DEBUG)
@@ -133,9 +134,13 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		if (!pts->add_pcr(pts, extended_pcr, pcr_before, pcr_after))
+		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
-			return FAILED;
+			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value");
+		}
+		if (pcrs->set(pcrs, extended_pcr, pcr_after))
+		{
+			return SUCCESS;
 		}
 	}
 	

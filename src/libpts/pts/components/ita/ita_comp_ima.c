@@ -122,11 +122,6 @@ struct pts_ita_comp_ima_t {
 	linked_list_t *ima_list;
 
 	/**
-	 * Shadow PCR set
-	 */
-	pts_pcr_t *pcrs;
-
-	/**
 	 * Whether to send pcr_before and pcr_after info
 	 */
 	bool pcr_info;
@@ -361,8 +356,8 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 /**
  * Extend measurement into PCR an create evidence
  */
-static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
-									   chunk_t measurement)
+static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, pts_pcr_t *pcrs,
+									   u_int32_t pcr, chunk_t measurement)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
@@ -376,9 +371,9 @@ static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
 
 	if (this->pcr_info)
 	{
-		pcr_before = chunk_clone(this->pcrs->get(this->pcrs, pcr));
+		pcr_before = chunk_clone(pcrs->get(pcrs, pcr));
 	}
-	pcr_after = this->pcrs->extend(this->pcrs, pcr, measurement);
+	pcr_after = pcrs->extend(pcrs, pcr, measurement);
 	if (!pcr_after.ptr)
 	{
 		free(pcr_before.ptr);
@@ -389,7 +384,7 @@ static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
 								this->measurement_time, measurement);
 	if (this->pcr_info)
 	{
-		pcr_after =chunk_clone(this->pcrs->get(this->pcrs, pcr));
+		pcr_after =chunk_clone(pcrs->get(pcrs, pcr));
 		evidence->set_pcr_info(evidence, pcr_before, pcr_after);
 	}
 	return evidence;
@@ -398,7 +393,7 @@ static pts_comp_evidence_t* extend_pcr(pts_ita_comp_ima_t* this, u_int32_t pcr,
 /**
  * Compute and check boot aggregate value by hashing PCR0 to PCR7
  */
-static void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
+static void check_boot_aggregate(pts_pcr_t *pcrs, chunk_t measurement)
 {
 	u_int32_t i;
 	u_char filename_buffer[IMA_FILENAME_LEN_MAX + 1];
@@ -415,7 +410,7 @@ static void check_boot_aggregate(pts_ita_comp_ima_t *this, chunk_t measurement)
 	}
 	for (i = 0; i < 8 && pcr_ok; i++)
 	{
-		pcr_ok = hasher->get_hash(hasher, this->pcrs->get(this->pcrs, i), NULL);
+		pcr_ok = hasher->get_hash(hasher, pcrs->get(pcrs, i), NULL);
 	}
 	if (pcr_ok)
 	{
@@ -468,8 +463,10 @@ METHOD(pts_component_t, measure, status_t,
 	status_t status;
 	int count;
 	enumerator_t *e;
+	pts_pcr_t *pcrs;
 	pts_file_meas_t *file_meas;
 
+	pcrs = pts->get_pcrs(pts);
 	*measurements = NULL;
 
 	switch (this->state)
@@ -490,8 +487,8 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve bios measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, bios_entry->pcr,
-										 bios_entry->measurement);
+			*evidence = extend_pcr(this, pcrs, bios_entry->pcr,
+											   bios_entry->measurement);
 			free(bios_entry);
 			if (!evidence)
 			{
@@ -545,11 +542,11 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve ima measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, IMA_PCR, ima_entry->measurement);
+			*evidence = extend_pcr(this, pcrs, IMA_PCR, ima_entry->measurement);
 
 			if (this->state == IMA_STATE_BOOT_AGGREGATE)
 			{
-				check_boot_aggregate(this, ima_entry->measurement);
+				check_boot_aggregate(pcrs, ima_entry->measurement);
 			}
 
 			free(ima_entry->file_measurement.ptr);
@@ -578,10 +575,12 @@ METHOD(pts_component_t, verify, status_t,
 	enum_name_t *names;
 	pts_meas_algorithms_t algo;
 	pts_pcr_transform_t transform;
+	pts_pcr_t *pcrs;
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 	status_t status;
 
+	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
 								&algo, &transform, &measurement_time);
 
@@ -665,13 +664,25 @@ METHOD(pts_component_t, verify, status_t,
 	has_pcr_info = evidence->get_pcr_info(evidence, &pcr_before, &pcr_after);
 	if (has_pcr_info)
 	{
-		if (!pts->add_pcr(pts, extended_pcr, pcr_before, pcr_after))
+		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
-			return FAILED;
+			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value",
+						   extended_pcr);
+		}
+		if (pcrs->set(pcrs, extended_pcr, pcr_after))
+		{
+			return SUCCESS;
 		}
 	}
-
-	return SUCCESS;
+	else
+	{
+		pcr_after = pcrs->extend(pcrs, extended_pcr, measurement);
+		if (pcr_after.ptr)
+		{
+			return SUCCESS;
+		}
+	}
+	return FAILED;
 }
 
 METHOD(pts_component_t, finalize, bool,
@@ -723,7 +734,6 @@ METHOD(pts_component_t, destroy, void,
 	this->bios_list->destroy_function(this->bios_list, (void *)free_bios_entry);
 	this->ima_list->destroy_function(this->ima_list, (void *)free_ima_entry);
 	this->name->destroy(this->name);
-	this->pcrs->destroy(this->pcrs);
 	free(this->keyid.ptr);
 	free(this);
 }
@@ -735,14 +745,6 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 										 pts_database_t *pts_db)
 {
 	pts_ita_comp_ima_t *this;
-	pts_pcr_t *pcrs;
-
-	pcrs = pts_pcr_create();
-	if (!pcrs)
-	{
-		DBG1(DBG_PTS, "shadow PCR set could not be created");
-		return NULL;
-	}
 
 	INIT(this,
 		.public = {
@@ -761,7 +763,6 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 		.bios_list = linked_list_create(),
 		.ima_list = linked_list_create(),
 		.ima_count = IMA_MEASUREMENT_BATCH_SIZE - 1,
-		.pcrs = pcrs,
 		.pcr_info = lib->settings->get_bool(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr_info", TRUE),
 	);
