@@ -136,6 +136,7 @@ static void do_args(int argc, char *argv[])
 			{ "owner", required_argument, NULL, 'O' },
 			{ "product", required_argument, NULL, 'P' },
 			{ "relative", no_argument, NULL, 'R' },
+			{ "rel", no_argument, NULL, 'R' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
 			{ "sha384", no_argument, NULL, '3' },
