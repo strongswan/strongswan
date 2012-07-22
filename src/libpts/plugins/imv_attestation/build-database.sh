@@ -233,4 +233,9 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/xorg/mod
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/xorg/modules/extensions
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/xorg/modules/input
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/share/fonts/truetype/ubuntu-font-family
-
+ipsec attest --del --product "$p" --sha1                --file /lib/resolvconf/list-records
+ipsec attest --del --product "$p" --sha1-ima            --file /lib/resolvconf/list-records
+ipsec attest --del --product "$p" --sha1                --file /usr/bin/lsb_release
+ipsec attest --del --product "$p" --sha1-ima            --file /usr/bin/lsb_release
+ipsec attest --del --product "$p" --sha1                --file /usr/share/language-tools/language-options
+ipsec attest --del --product "$p" --sha1-ima            --file /usr/share/language-tools/language-options

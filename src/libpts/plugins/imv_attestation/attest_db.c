@@ -1248,6 +1248,25 @@ METHOD(attest_db_t, delete, bool,
 {
 	bool success;
 
+	/* delete a file measurement hash for a given product */
+	if (this->algo && this->pid && this->fid)
+	{
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM file_hashes "
+								"WHERE algo = ? AND product = ? "
+								"AND file = ? AND directory = ?",
+								DB_UINT, this->algo, DB_UINT, this->pid,
+								DB_UINT, this->fid, DB_UINT, this->cid) > 0;
+
+		printf("%4d: %s%s%s\n", this->fid, this->dir, this->did ? "/":"",
+								this->file);
+		printf("%N value for product '%s' %sdeleted from database\n",
+				pts_meas_algorithm_names, this->algo, this->product,
+				success ? "" : "could not be ");
+
+		return success;
+	}
+
 	if (this->pid && (this->fid || this->did))
 	{
 		printf("deletion of product/file entries not supported yet\n");
@@ -1370,7 +1389,6 @@ attest_db_t *attest_db_create(char *uri)
 			.destroy = _destroy,
 		},
 		.dir = strdup(""),
-		.algo = PTS_MEAS_ALGO_SHA256,
 		.db = lib->db->create(lib->db, uri),
 	);
 
