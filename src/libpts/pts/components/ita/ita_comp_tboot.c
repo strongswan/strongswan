@@ -106,8 +106,7 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
-	pts_file_meas_t **measurements)
+	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
 
 {
 	size_t pcr_len;
@@ -165,7 +164,7 @@ METHOD(pts_component_t, measure, status_t,
 	if (pcr_before.len != pcr_len || pcr_after.len != pcr_len ||
 		measurement.len != pcr_len)
 	{
-		DBG1(DBG_PTS, "TBOOT measurement or pcr data have the wrong size");
+		DBG1(DBG_PTS, "TBOOT measurement or PCR data have the wrong size");
 		free(measurement.ptr);
 		free(pcr_before.ptr);
 		free(pcr_after.ptr);
@@ -263,7 +262,7 @@ METHOD(pts_component_t, verify, status_t,
 	{
 		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
-			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value",
+			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value",
 						   extended_pcr);
 		}
 		if (pcrs->set(pcrs, extended_pcr, pcr_after))

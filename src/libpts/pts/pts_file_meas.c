@@ -117,7 +117,6 @@ METHOD(pts_file_meas_t, check, bool,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	char *status_msg;
 	int count_ok = 0, count_not_found = 0, count_differ = 0;
 	status_t status;
 
@@ -129,23 +128,25 @@ METHOD(pts_file_meas_t, check, bool,
 		switch (status)
 		{
 			case SUCCESS:
-				status_msg = "is ok";
+				DBG3(DBG_PTS, "  %#B for '%s' is ok", &entry->measurement,
+													   entry->filename);
 				count_ok++;
 				break;
 			case NOT_FOUND:
-				status_msg = "not found";
+				DBG2(DBG_PTS, "  %#B for '%s' not found", &entry->measurement,
+														   entry->filename);
 				count_not_found++;
 				break;
 			case VERIFY_ERROR:
-				status_msg = "differs";
+				DBG1(DBG_PTS, "  %#B for '%s' differs", &entry->measurement,
+														 entry->filename);
 				count_differ++;
 				break;
 			case FAILED:
 			default:
-				status_msg = "failed";
+				DBG1(DBG_PTS, "  %#B for '%s' failed", &entry->measurement,
+														entry->filename);
 		}
-		DBG2(DBG_PTS, "  %#B for '%s' %s", &entry->measurement,
-			 entry->filename, status_msg);
 	}
 	enumerator->destroy(enumerator);
 

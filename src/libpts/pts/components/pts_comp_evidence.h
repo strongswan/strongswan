@@ -120,7 +120,7 @@ struct pts_comp_evidence_t {
 	 * @return validation		Validation Result
 	 */
 	pts_comp_evid_validation_t (*get_validation)(pts_comp_evidence_t *this,
-								chunk_t *uri);
+								char **uri);
 
 	/**
 	 * Sets Validation Result if available
@@ -129,7 +129,7 @@ struct pts_comp_evidence_t {
 	 * @param uri				Verification Policy URI
 	 */
 	void (*set_validation)(pts_comp_evidence_t *this,
-						   pts_comp_evid_validation_t validation, chunk_t uri);
+						   pts_comp_evid_validation_t validation, char* uri);
 
 	/**
 	 * Destroys a pts_comp_evidence_t object.

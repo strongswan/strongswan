@@ -321,7 +321,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			tcg_pts_attr_req_func_comp_evid_t *attr_cast;
 			pts_proto_caps_flag_t negotiated_caps;
-			pts_file_meas_t *measurements;
 			pts_comp_func_name_t *name;
 			pts_comp_evidence_t *evid;
 			pts_component_t *comp;
@@ -386,23 +385,15 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					continue;
 				}
 
-				/* do the component evidence measurement[s] */
+				/* do the component evidence measurement[s] and cache them */
 				do
 				{
-					status = comp->measure(comp, pts, &evid, &measurements);
+					status = comp->measure(comp, pts, &evid);
 					if (status == FAILED)
 					{
 						break;
 					}
-					if (measurements)
-					{
-						DBG2(DBG_IMC, "collected %d file measurements",
-							 measurements->get_file_count(measurements));
-						attr = tcg_pts_attr_file_meas_create(measurements);
-						attestation_state->add_attr(attestation_state, attr);
-					}
-					attr = tcg_pts_attr_simple_comp_evid_create(evid);
-					attestation_state->add_attr(attestation_state, attr);
+					attestation_state->add_evidence(attestation_state, evid);
 				}
 				while (status == NEED_MORE);
 				comp->destroy(comp);
@@ -414,12 +405,14 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		{
 			pts_simple_evid_final_flag_t flags;
 			pts_meas_algorithms_t comp_hash_algorithm;
+			pts_comp_evidence_t *evid;
 			chunk_t pcr_composite, quote_sig;
 			bool use_quote2;
 
-			/* Send buffered PA-TNC attributes */
-			while (attestation_state->next_attr(attestation_state, &attr))
+			/* Send cached Component Evidence entries */
+			while (attestation_state->next_evidence(attestation_state, &evid))
 			{
+				attr = tcg_pts_attr_simple_comp_evid_create(evid);
 				attr_list->insert_last(attr_list, attr);
 			}
 

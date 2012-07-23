@@ -47,19 +47,19 @@ struct imc_attestation_state_t {
 	pts_t* (*get_pts)(imc_attestation_state_t *this);
 
 	/**
-	 * Add an entry to the PA-TNC attribute cache list
+	 * Add an entry to the Component Evidence cache list
 	 *
-	 * @param attr				PA-TNC attribute entry
+	 * @param evid				Component Evidence entry
 	 */
-	void (*add_attr)(imc_attestation_state_t *this, pa_tnc_attr_t *attr);
+	void (*add_evidence)(imc_attestation_state_t *this, pts_comp_evidence_t *evid);
 
 	/**
-	 * Removes next entry from the PA-TNC attribute cash list and returns it
+	 * Removes next entry from the Component Evidence cache list and returns it
 	 *
-	 * @param attr				Next PA-TNC attribute entry
+	 * @param evid				Next Component Evidence entry
 	 * @return					TRUE if next entry is available
 	 */
-	bool (*next_attr)(imc_attestation_state_t *this, pa_tnc_attr_t** attr);
+	bool (*next_evidence)(imc_attestation_state_t *this, pts_comp_evidence_t** evid);
 
 };
 

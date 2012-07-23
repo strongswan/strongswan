@@ -70,8 +70,7 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
-	pts_file_meas_t **measurements)
+	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;

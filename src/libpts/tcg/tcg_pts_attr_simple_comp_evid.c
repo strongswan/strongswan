@@ -185,15 +185,16 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	bool has_pcr_info;
-	char utc_time_buf[25];
+	char utc_time_buf[25], *policy_uri;
 	u_int8_t flags;
+	u_int16_t len;
 	u_int32_t depth, extended_pcr;
 	pts_comp_func_name_t *name;
 	pts_meas_algorithms_t hash_algorithm;
 	pts_pcr_transform_t transform;
 	pts_comp_evid_validation_t validation;
 	time_t measurement_time;
-	chunk_t measurement, utc_time, pcr_before, pcr_after, policy_uri;
+	chunk_t measurement, utc_time, pcr_before, pcr_after;
 	
 	if (this->value.ptr)
 	{
@@ -239,8 +240,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||
 		validation == PTS_COMP_EVID_VALIDATION_PASSED)
 	{
-		writer->write_uint16(writer, policy_uri.len);
-		writer->write_data  (writer, policy_uri);
+		len = strlen(policy_uri);
+		writer->write_uint16(writer, len);
+		writer->write_data  (writer, chunk_create(policy_uri, len));
 	}
 	if (has_pcr_info)
 	{
@@ -414,8 +416,13 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	/* Add options */
 	if (has_validation)
 	{
-		policy_uri = chunk_clone(policy_uri);
-		this->evidence->set_validation(this->evidence, validation, policy_uri);
+		char buf[BUF_LEN];
+		size_t len;
+
+		len = min(policy_uri.len, BUF_LEN-1);
+		memcpy(buf, policy_uri.ptr, len);
+		buf[len] = '\0';
+		this->evidence->set_validation(this->evidence, validation, buf);
 	}
 	if (has_pcr_info)
 	{

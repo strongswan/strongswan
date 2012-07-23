@@ -87,7 +87,7 @@ struct private_pts_comp_evidence_t {
 	/**
 	 * Verification Policy URI
 	 */
-	chunk_t policy_uri;
+	char *policy_uri;
 
 };
 
@@ -157,7 +157,7 @@ METHOD(pts_comp_evidence_t, set_pcr_info, void,
 }
 
 METHOD(pts_comp_evidence_t, get_validation, pts_comp_evid_validation_t,
-	private_pts_comp_evidence_t *this, chunk_t *uri)
+	private_pts_comp_evidence_t *this, char **uri)
 {
 	if (uri)
 	{
@@ -168,10 +168,14 @@ METHOD(pts_comp_evidence_t, get_validation, pts_comp_evid_validation_t,
 
 METHOD(pts_comp_evidence_t, set_validation, void,
 	private_pts_comp_evidence_t *this, pts_comp_evid_validation_t validation,
-	chunk_t uri)
+	char *uri)
 {
 	this->validation = validation;
-	this->policy_uri = chunk_clone(uri);
+	if (uri)
+	{
+		this->policy_uri = strdup(uri);
+		DBG3(DBG_PTS, "'%s'", uri);
+	}
 }
 
 METHOD(pts_comp_evidence_t, destroy, void,
@@ -181,7 +185,7 @@ METHOD(pts_comp_evidence_t, destroy, void,
 	free(this->measurement.ptr);
 	free(this->pcr_before.ptr);
 	free(this->pcr_after.ptr);
-	free(this->policy_uri.ptr);
+	free(this->policy_uri);
 	free(this);
 }
 

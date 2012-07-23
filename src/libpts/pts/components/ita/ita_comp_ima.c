@@ -32,7 +32,6 @@
 #define SECURITY_DIR				"/sys/kernel/security/"
 #define IMA_BIOS_MEASUREMENTS		SECURITY_DIR "tpm0/binary_bios_measurements"
 #define IMA_RUNTIME_MEASUREMENTS	SECURITY_DIR "ima/binary_runtime_measurements"
-#define IMA_MEASUREMENT_BATCH_SIZE	200
 #define IMA_PCR						10
 #define IMA_TYPE_LEN				3
 #define IMA_FILENAME_LEN_MAX	255
@@ -107,11 +106,6 @@ struct pts_ita_comp_ima_t {
 	int bios_count;
 
 	/**
-	 * Count of IMA file measurements in current batch
-	 */
-	int ima_count;
-
-	/**
      * IMA BIOS measurements
 	 */
 	linked_list_t *bios_list;
@@ -135,6 +129,32 @@ struct pts_ita_comp_ima_t {
 	 * IMA state machine
 	 */
 	ima_state_t state;
+
+	/**
+	 * Total number of component measurements
+	 */
+	int count;
+
+	/**
+	 * Number of successful component measurements
+	 */
+	int count_ok;
+
+	/**
+	 * Number of unknown component measurements
+	 */
+	int count_unknown;
+
+	/**
+	 * Number of differing component measurements
+	 */
+	int count_differ;
+
+	/**
+	 * Number of failed component measurements
+	 */
+	int count_failed;
+
 };
 
 /**
@@ -455,19 +475,15 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_ima_t *this, pts_t *pts, pts_comp_evidence_t **evidence,
-	pts_file_meas_t **measurements)
+	pts_ita_comp_ima_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
 {
 	bios_entry_t *bios_entry;
-	ima_entry_t *ima_entry, *entry;
-	status_t status;
-	int count;
-	enumerator_t *e;
+	ima_entry_t *ima_entry;
 	pts_pcr_t *pcrs;
-	pts_file_meas_t *file_meas;
+	pts_comp_evidence_t *evid = NULL;
+	status_t status;
 
 	pcrs = pts->get_pcrs(pts);
-	*measurements = NULL;
 
 	switch (this->state)
 	{
@@ -487,13 +503,9 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve bios measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, pcrs, bios_entry->pcr,
-											   bios_entry->measurement);
+			evid = extend_pcr(this, pcrs, bios_entry->pcr,
+										  bios_entry->measurement);
 			free(bios_entry);
-			if (!evidence)
-			{
-				return FAILED;
-			}
 	
 			/* break if still some BIOS measurements are left */
 			if (this->bios_list->get_count(this->bios_list))
@@ -513,28 +525,6 @@ METHOD(pts_component_t, measure, status_t,
 			break;
 		case IMA_STATE_BOOT_AGGREGATE:
 		case IMA_STATE_RUNTIME:
-			/* ready to send next batch of file measurements ? */
-			if (this->ima_count++ == 0)
-			{
-				file_meas = pts_file_meas_create(0);
-				count = 0;
-
-				e = this->ima_list->create_enumerator(this->ima_list);
-				while (e->enumerate(e, &entry) &&
-					   count++ < IMA_MEASUREMENT_BATCH_SIZE)
-				{
-					file_meas->add(file_meas, entry->filename,
-											  entry->file_measurement);
-				}
-				e->destroy(e);
-				*measurements = file_meas;
-			}
-			else if (this->ima_count == IMA_MEASUREMENT_BATCH_SIZE)
-			{
-				/* ready for file measurement batch in the next round */
-				this->ima_count = 0;
-			}
-
 			status = this->ima_list->remove_first(this->ima_list,
 												 (void**)&ima_entry);
 			if (status != SUCCESS)
@@ -542,29 +532,31 @@ METHOD(pts_component_t, measure, status_t,
 				DBG1(DBG_PTS, "could not retrieve ima measurement entry");
 				return status;
 			}
-			*evidence = extend_pcr(this, pcrs, IMA_PCR, ima_entry->measurement);
-
 			if (this->state == IMA_STATE_BOOT_AGGREGATE)
 			{
 				check_boot_aggregate(pcrs, ima_entry->measurement);
 			}
 
+			evid = extend_pcr(this, pcrs, IMA_PCR, ima_entry->measurement);
+			if (evid)
+			{
+				evid->set_validation(evid, PTS_COMP_EVID_VALIDATION_PASSED,
+										   ima_entry->filename);
+			}
 			free(ima_entry->file_measurement.ptr);
 			free(ima_entry->filename);
 			free(ima_entry);
 
-			if (!evidence)
-			{
-				return FAILED;
-			}
 			this->state = this->ima_list->get_count(this->ima_list) ?
 									IMA_STATE_RUNTIME : IMA_STATE_END;
 			break;
 		case IMA_STATE_END:
 			break;
 	}
-	
-	return (this->state == IMA_STATE_END) ? SUCCESS : NEED_MORE;
+
+	*evidence = evid;
+	return evid ? ((this->state == IMA_STATE_END) ? SUCCESS : NEED_MORE) :
+					FAILED;
 }
 
 METHOD(pts_component_t, verify, status_t,
@@ -579,6 +571,7 @@ METHOD(pts_component_t, verify, status_t,
 	time_t measurement_time;
 	chunk_t measurement, pcr_before, pcr_after;
 	status_t status;
+	char *uri;
 
 	pcrs = pts->get_pcrs(pts);
 	measurement = evidence->get_measurement(evidence, &extended_pcr,
@@ -611,15 +604,13 @@ METHOD(pts_component_t, verify, status_t,
 
 			if (this->bios_count)
 			{
-				DBG1(DBG_PTS, "checking %d %N '%N' functional component "
-							  "evidence measurements", this->bios_count,
-							   pen_names, vid, names, name);
+				DBG1(DBG_PTS, "checking %d %N '%N' BIOS evidence measurements",
+							   this->bios_count, pen_names, vid, names, name);
 			}
 			else
 			{
-				DBG1(DBG_PTS, "registering %N '%N' functional component "
-							  "evidence measurements", pen_names, vid, names,
-							   name);
+				DBG1(DBG_PTS, "registering %N '%N' BIOS evidence measurements",
+							   pen_names, vid, names, name);
 				this->is_registering = TRUE;
 			}
 			this->state = IMA_STATE_BIOS;
@@ -653,9 +644,42 @@ METHOD(pts_component_t, verify, status_t,
 			this->state = IMA_STATE_BOOT_AGGREGATE;
 			/* fall through to next state */
 		case IMA_STATE_BOOT_AGGREGATE:
+			check_boot_aggregate(pcrs, measurement);
 			this->state = IMA_STATE_RUNTIME;
 			break;
 		case IMA_STATE_RUNTIME:
+			this->count++;
+			if (evidence->get_validation(evidence, &uri) !=
+				PTS_COMP_EVID_VALIDATION_PASSED)
+			{
+				DBG1(DBG_PTS, "policy URI could no be retrieved");
+				this->count_failed++;
+				return FAILED;
+			}
+			status = this->pts_db->check_file_measurement(this->pts_db,
+											pts->get_platform_info(pts),
+											PTS_MEAS_ALGO_SHA1_IMA,
+											measurement, uri);
+			switch (status)
+			{
+				case SUCCESS:
+					DBG3(DBG_PTS, "%#B for '%s' is ok", &measurement, uri);
+					this->count_ok++;
+				break;
+				case NOT_FOUND:
+				DBG2(DBG_PTS, "%#B for '%s' not found", &measurement, uri);
+				this->count_unknown++;
+				break;
+			case VERIFY_ERROR:
+				DBG1(DBG_PTS, "%#B for '%s' differs", &measurement, uri);
+				this->count_differ++;
+				break;
+			case FAILED:
+			default:
+				DBG1(DBG_PTS, "%#B for '%s' failed", &measurement, uri);
+				this->count_failed++;
+		}
+
 			break;
 		case IMA_STATE_END:
 			break;
@@ -666,7 +690,7 @@ METHOD(pts_component_t, verify, status_t,
 	{
 		if (!chunk_equals(pcr_before, pcrs->get(pcrs, extended_pcr)))
 		{
-			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to pcr value",
+			DBG1(DBG_PTS, "PCR %2u: pcr_before is not equal to register value",
 						   extended_pcr);
 		}
 		if (pcrs->set(pcrs, extended_pcr, pcr_after))
@@ -700,15 +724,27 @@ METHOD(pts_component_t, finalize, bool,
 		/* close registration */
 		this->is_registering = FALSE;
 
-		DBG1(DBG_PTS, "registered %d %N '%N' functional component evidence "
-					  "measurements", this->seq_no, pen_names, vid, names, name);
+		DBG1(DBG_PTS, "registered %d %N '%N' BIOS evidence measurements",
+					   this->seq_no, pen_names, vid, names, name);
 	}
 	else if (this->seq_no < this->bios_count)
 	{
-		DBG1(DBG_PTS, "%d of %d %N '%N' functional component evidence "
-					  "measurements missing", this->bios_count - this->seq_no,
-					   this->bios_count, pen_names, vid, names, name);
+		DBG1(DBG_PTS, "%d of %d %N '%N' BIOS evidence measurements missing",
+					   this->bios_count - this->seq_no, this->bios_count,
+					   pen_names, vid, names, name);
 		return FALSE;
+	}
+
+	/* finalize IMA file measurements */
+	if (this->count)
+	{
+		DBG1(DBG_PTS, "processed %d %N '%N' file evidence measurements: "
+					  "%d ok, %d unknown, %d differ, %d failed",
+					   this->count, pen_names, vid, names, name,
+					   this->count_ok, this->count_unknown, this->count_differ,
+					   this->count_failed);
+
+		return !this->count_differ && !this->count_failed;
 	}
 
 	return TRUE;
@@ -762,7 +798,6 @@ pts_component_t *pts_ita_comp_ima_create(u_int8_t qualifier, u_int32_t depth,
 		.pts_db = pts_db,
 		.bios_list = linked_list_create(),
 		.ima_list = linked_list_create(),
-		.ima_count = IMA_MEASUREMENT_BATCH_SIZE - 1,
 		.pcr_info = lib->settings->get_bool(lib->settings,
 						"libimcv.plugins.imc-attestation.pcr_info", TRUE),
 	);

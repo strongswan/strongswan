@@ -66,8 +66,7 @@ struct pts_component_t {
 	 * @return				status return code
 	 */
 	status_t (*measure)(pts_component_t *this, pts_t *pts,
-						pts_comp_evidence_t** evidence,
-						pts_file_meas_t** measurements);
+						pts_comp_evidence_t** evidence);
 
 	/**
 	 * Verify the evidence measurements of the PTS Functional Component

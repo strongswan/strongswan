@@ -125,16 +125,16 @@ METHOD(imc_attestation_state_t, get_pts, pts_t*,
 	return this->pts;
 }
 
-METHOD(imc_attestation_state_t, add_attr, void,
-	private_imc_attestation_state_t *this, pa_tnc_attr_t *attr)
+METHOD(imc_attestation_state_t, add_evidence, void,
+	private_imc_attestation_state_t *this, pts_comp_evidence_t *evid)
 {
-	this->list->insert_last(this->list, attr);
+	this->list->insert_last(this->list, evid);
 }
 
-METHOD(imc_attestation_state_t, next_attr, bool,
-	private_imc_attestation_state_t *this, pa_tnc_attr_t **attr)
+METHOD(imc_attestation_state_t, next_evidence, bool,
+	private_imc_attestation_state_t *this, pts_comp_evidence_t **evid)
 {
-	return this->list->remove_first(this->list, (void**)attr) == SUCCESS;
+	return this->list->remove_first(this->list, (void**)evid) == SUCCESS;
 }
 
 /**
@@ -158,8 +158,8 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.destroy = _destroy,
 			},
 			.get_pts = _get_pts,
-			.add_attr = _add_attr,
-			.next_attr = _next_attr,
+			.add_evidence = _add_evidence,
+			.next_evidence = _next_evidence,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
