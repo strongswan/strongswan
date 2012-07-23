@@ -206,6 +206,7 @@ METHOD(shunt_manager_t, uninstall, bool,
 		return FALSE;
 	}
 	uninstall_shunt_policy(child);
+	child->destroy(child);
 	return TRUE;
 }
 
