@@ -184,11 +184,6 @@ struct ima_entry_t {
 	chunk_t measurement;
 
 	/**
-	 * SHA1 file measurement thash
-	 */
-	chunk_t file_measurement;
-
-	/**
 	 * absolute path of executable files or basename of dynamic libraries
 	 */
 	char *filename;
@@ -209,7 +204,6 @@ static void free_bios_entry(bios_entry_t *this)
 static void free_ima_entry(ima_entry_t *this)
 {
 	free(this->measurement.ptr);
-	free(this->file_measurement.ptr);
 	free(this->filename);
 	free(this);
 }
@@ -329,7 +323,6 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 
 		entry = malloc_thing(ima_entry_t);
 		entry->measurement = chunk_alloc(HASH_SIZE_SHA1);
-		entry->file_measurement = chunk_alloc(HASH_SIZE_SHA1);
 		entry->filename = NULL;
 
 		if (res != 4 || pcr != IMA_PCR)
@@ -349,7 +342,7 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 		{
 			break;
 		}
-		if (read(fd, entry->file_measurement.ptr, HASH_SIZE_SHA1) != HASH_SIZE_SHA1)
+		if (lseek(fd, HASH_SIZE_SHA1, SEEK_CUR) == -1)
 		{
 			break;
 		}
@@ -543,7 +536,6 @@ METHOD(pts_component_t, measure, status_t,
 				evid->set_validation(evid, PTS_COMP_EVID_VALIDATION_PASSED,
 										   ima_entry->filename);
 			}
-			free(ima_entry->file_measurement.ptr);
 			free(ima_entry->filename);
 			free(ima_entry);
 
