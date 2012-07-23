@@ -1,0 +1,18 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
+
+AM_CFLAGS = -rdynamic
+
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-unity.la
+else
+plugin_LTLIBRARIES = libstrongswan-unity.la
+endif
+
+libstrongswan_unity_la_SOURCES = \
+	unity_plugin.h unity_plugin.c \
+	unity_handler.h unity_handler.c \
+	unity_narrow.h unity_narrow.c
+
+libstrongswan_unity_la_LDFLAGS = -module -avoid-version

@@ -206,6 +206,7 @@ ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
+ARG_ENABL_SET([unity],          [enables Cisco Unity extension plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
 ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
@@ -953,6 +954,7 @@ ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([maemo],                [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
+ADD_PLUGIN([unity],                [c charon])
 ADD_PLUGIN([unit-tester],          [c charon])
 
 AC_SUBST(charon_plugins)
@@ -1078,6 +1080,7 @@ AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
+AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 
 dnl hydra plugins
 dnl =============
@@ -1257,6 +1260,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/medsrv/Makefile
 	src/libcharon/plugins/medcli/Makefile
 	src/libcharon/plugins/addrblock/Makefile
+	src/libcharon/plugins/unity/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/whitelist/Makefile
