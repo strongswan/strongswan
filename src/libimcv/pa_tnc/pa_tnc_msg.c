@@ -153,7 +153,7 @@ METHOD(pa_tnc_msg_t, build, bool,
 		return FALSE;
 	}
 	ng->destroy(ng);
-	DBG2(DBG_TNC, "creating PA-TNC message with ID 0x%08x", this->identifier);
+	DBG1(DBG_TNC, "creating PA-TNC message with ID 0x%08x", this->identifier);
 
 	/* build message header */
 	writer = bio_writer_create(this->msg_len);
@@ -221,7 +221,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	reader->read_uint8 (reader, &version);
 	reader->read_uint24(reader, &reserved);
 	reader->read_uint32(reader, &this->identifier);
-	DBG2(DBG_TNC, "processing PA-TNC message with ID 0x%08x", this->identifier);
+	DBG1(DBG_TNC, "processing PA-TNC message with ID 0x%08x", this->identifier);
 
 	if (version != PA_TNC_VERSION)
 	{
