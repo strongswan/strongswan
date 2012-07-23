@@ -1256,7 +1256,7 @@ METHOD(attest_db_t, delete, bool,
 								"WHERE algo = ? AND product = ? "
 								"AND file = ? AND directory = ?",
 								DB_UINT, this->algo, DB_UINT, this->pid,
-								DB_UINT, this->fid, DB_UINT, this->cid) > 0;
+								DB_UINT, this->fid, DB_UINT, this->did) > 0;
 
 		printf("%4d: %s%s%s\n", this->fid, this->dir, this->did ? "/":"",
 								this->file);
