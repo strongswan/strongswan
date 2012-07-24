@@ -214,7 +214,7 @@ static bool install(private_quick_mode_t *this)
 	else
 	{
 		charon->bus->narrow(charon->bus, this->child_sa,
-							NARROW_RESPONDER, tsr, tsi);
+							NARROW_RESPONDER_POST, tsr, tsi);
 	}
 	if (tsi->get_count(tsi) == 0 || tsr->get_count(tsr) == 0)
 	{
@@ -419,7 +419,7 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 											   supplied, host);
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{
-		if (list->get_count(list) > 1)
+		if (this->initiator && list->get_count(list) > 1)
 		{
 			DBG1(DBG_IKE, "configuration has more than one %s traffic selector,"
 				 " using first only", local ? "local" : "remote");
@@ -974,6 +974,24 @@ METHOD(task_t, process_r, status_t,
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp);
+
+			tsi = linked_list_create();
+			tsr = linked_list_create();
+			tsi->insert_last(tsi, this->tsi);
+			tsr->insert_last(tsr, this->tsr);
+			this->tsi = this->tsr = NULL;
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_RESPONDER, tsr, tsi);
+			if (tsi->remove_first(tsi, (void**)&this->tsi) != SUCCESS ||
+				tsr->remove_first(tsr, (void**)&this->tsr) != SUCCESS)
+			{
+				tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+				tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+				return send_notify(this, INVALID_ID_INFORMATION);
+			}
+			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+
 			return NEED_MORE;
 		}
 		case QM_NEGOTIATED:

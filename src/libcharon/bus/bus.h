@@ -111,6 +111,8 @@ enum narrow_hook_t {
 	NARROW_INITIATOR_PRE_AUTH,
 	/** invoked as responder during exchange, peer is authenticated */
 	NARROW_RESPONDER,
+	/** invoked as responder after exchange, peer is authenticated */
+	NARROW_RESPONDER_POST,
 	/** invoked as initiator after exchange, follows a INITIATOR_PRE_NOAUTH */
 	NARROW_INITIATOR_POST_NOAUTH,
 	/** invoked as initiator after exchange, follows a INITIATOR_PRE_AUTH */
