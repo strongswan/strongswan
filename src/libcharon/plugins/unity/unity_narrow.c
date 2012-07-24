@@ -35,37 +35,102 @@ struct private_unity_narrow_t {
 	unity_handler_t *handler;
 };
 
-METHOD(listener_t, narrow, bool,
-	private_unity_narrow_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-	narrow_hook_t type, linked_list_t *local, linked_list_t *remote)
+/**
+ * Narrow TS as initiator to Unity Split-Include/Local-LAN
+ */
+static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
+							 linked_list_t *remote)
 {
 	traffic_selector_t *current, *orig = NULL;
 	enumerator_t *enumerator;
 
-	if (type == NARROW_INITIATOR_POST_AUTH &&
-		remote->get_count(remote) == 1)
+	enumerator = this->handler->create_include_enumerator(this->handler,
+											ike_sa->get_unique_id(ike_sa));
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		enumerator = this->handler->create_include_enumerator(this->handler,
-												ike_sa->get_unique_id(ike_sa));
-		while (enumerator->enumerate(enumerator, &current))
-		{
-			if (orig == NULL)
-			{	/* got one, replace original TS */
-				remote->remove_first(remote, (void**)&orig);
-			}
-			current = orig->get_subset(orig, current);
-			if (current)
+		if (orig == NULL)
+		{	/* got one, replace original TS */
+			if (remote->remove_first(remote, (void**)&orig) != SUCCESS)
 			{
-				remote->insert_last(remote, current);
+				break;
 			}
 		}
-		enumerator->destroy(enumerator);
-		if (orig)
+		current = orig->get_subset(orig, current);
+		if (current)
 		{
-			DBG1(DBG_CFG, "narrowed CHILD_SA to %N %#R",
-				 configuration_attribute_type_names,
-				 UNITY_SPLIT_INCLUDE, remote);
-			orig->destroy(orig);
+			remote->insert_last(remote, current);
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (orig)
+	{
+		DBG1(DBG_CFG, "narrowed CHILD_SA to %N %#R",
+			 configuration_attribute_type_names,
+			 UNITY_SPLIT_INCLUDE, remote);
+		orig->destroy(orig);
+	}
+}
+
+/**
+ * As responder, bump up TS to 0.0.0.0/0 for on-the-wire bits
+ */
+static void narrow_responder_pre(linked_list_t *local)
+{
+	traffic_selector_t *ts;
+
+	while (local->remove_first(local, (void**)&ts) == SUCCESS)
+	{
+		ts->destroy(ts);
+	}
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
+											 "0.0.0.0", 0,
+											 "255.255.255.255", 65535);
+	if (ts)
+	{
+		local->insert_last(local, ts);
+	}
+}
+
+/**
+ * As responder, rarrow down TS to configuration for installation
+ */
+static void narrow_responder_post(child_cfg_t *child_cfg, linked_list_t *local)
+{
+	traffic_selector_t *ts;
+	linked_list_t *configured;
+
+	while (local->remove_first(local, (void**)&ts) == SUCCESS)
+	{
+		ts->destroy(ts);
+	}
+	configured = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+
+	while (configured->remove_first(configured, (void**)&ts) == SUCCESS)
+	{
+		local->insert_last(local, ts);
+	}
+	configured->destroy(configured);
+}
+
+METHOD(listener_t, narrow, bool,
+	private_unity_narrow_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	narrow_hook_t type, linked_list_t *local, linked_list_t *remote)
+{
+	if (ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		switch (type)
+		{
+			case NARROW_INITIATOR_POST_AUTH:
+				narrow_initiator(this, ike_sa, remote);
+				break;
+			case NARROW_RESPONDER:
+				narrow_responder_pre(local);
+				break;
+			case NARROW_RESPONDER_POST:
+				narrow_responder_post(child_sa->get_config(child_sa), local);
+				break;
+			default:
+				break;
 		}
 	}
 	return TRUE;
