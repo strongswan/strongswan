@@ -14,13 +14,30 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
+#ifndef TKM_DIFFIE_HELLMAN_H_
+#define TKM_DIFFIE_HELLMAN_H_
 
-#include <check.h>
+typedef struct tkm_diffie_hellman_t tkm_diffie_hellman_t;
 
-TCase *make_id_manager_tests(void);
-TCase *make_nonceg_tests(void);
-TCase *make_diffie_hellman_tests(void);
+#include <library.h>
 
-#endif /** TEST_RUNNER_H_ */
+/**
+ * diffie_hellman_t implementation using the trusted key manager.
+ */
+struct tkm_diffie_hellman_t {
+
+	/**
+	 * Implements diffie_hellman_t interface.
+	 */
+	diffie_hellman_t dh;
+};
+
+/**
+ * Creates a new tkm_diffie_hellman_t object.
+ *
+ * @param group			Diffie Hellman group number to use
+ * @return				tkm_diffie_hellman_t object, NULL if not supported
+ */
+tkm_diffie_hellman_t *tkm_diffie_hellman_create(diffie_hellman_group_t group);
+
+#endif /** TKM_DIFFIE_HELLMAN_H_ */

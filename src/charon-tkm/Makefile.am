@@ -24,7 +24,6 @@ BUILD_OPTS = \
 PLUGINS = \
 	aes \
 	constraints \
-	gmp \
 	hmac \
 	kernel-netlink \
 	pem \

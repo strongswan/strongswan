@@ -34,6 +34,7 @@
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
+#include "tkm_diffie_hellman.h"
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -271,7 +272,10 @@ int main(int argc, char *argv[])
 	/* register TKM specific plugins */
 	static plugin_feature_t features[] = {
 		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
-		PLUGIN_PROVIDE(NONCE_GEN)
+			PLUGIN_PROVIDE(NONCE_GEN),
+		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE);
