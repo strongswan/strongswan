@@ -338,7 +338,13 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 	unity_handler_t *this, identification_t *id, linked_list_t *vips)
 {
 	attribute_enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
 
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa || ike_sa->get_version(ike_sa) != IKEV1)
+	{
+		return enumerator_create_empty();
+	}
 	INIT(enumerator,
 		.public = {
 			.enumerate = (void*)_enumerate_attributes,
