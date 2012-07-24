@@ -53,7 +53,11 @@ METHOD(listener_t, narrow, bool,
 			{	/* got one, replace original TS */
 				remote->remove_first(remote, (void**)&orig);
 			}
-			remote->insert_last(remote, orig->get_subset(orig, current));
+			current = orig->get_subset(orig, current);
+			if (current)
+			{
+				remote->insert_last(remote, current);
+			}
 		}
 		enumerator->destroy(enumerator);
 		if (orig)
