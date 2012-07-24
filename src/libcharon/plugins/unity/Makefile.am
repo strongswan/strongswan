@@ -13,6 +13,7 @@ endif
 libstrongswan_unity_la_SOURCES = \
 	unity_plugin.h unity_plugin.c \
 	unity_handler.h unity_handler.c \
-	unity_narrow.h unity_narrow.c
+	unity_narrow.h unity_narrow.c \
+	unity_provider.h unity_provider.c
 
 libstrongswan_unity_la_LDFLAGS = -module -avoid-version

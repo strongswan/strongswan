@@ -16,6 +16,7 @@
 #include "unity_plugin.h"
 #include "unity_handler.h"
 #include "unity_narrow.h"
+#include "unity_provider.h"
 
 #include <daemon.h>
 #include <hydra.h>
@@ -38,6 +39,11 @@ struct private_unity_plugin_t {
 	unity_handler_t *handler;
 
 	/**
+	 * Responder Unity configuration attribute provider
+	 */
+	unity_provider_t *provider;
+
+	/**
 	 * Traffic selector narrower, for Unity Split-Includes
 	 */
 	unity_narrow_t *narrower;
@@ -55,7 +61,10 @@ METHOD(plugin_t, destroy, void,
 	charon->bus->remove_listener(charon->bus, &this->narrower->listener);
 	this->narrower->destroy(this->narrower);
 	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	hydra->attributes->remove_provider(hydra->attributes,
+									   &this->provider->provider);
 	this->handler->destroy(this->handler);
+	this->provider->destroy(this->provider);
 	free(this);
 }
 
@@ -75,8 +84,10 @@ plugin_t *unity_plugin_create()
 			},
 		},
 		.handler = unity_handler_create(),
+		.provider = unity_provider_create(),
 	);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+	hydra->attributes->add_provider(hydra->attributes, &this->provider->provider);
 
 	this->narrower = unity_narrow_create(this->handler),
 	charon->bus->add_listener(charon->bus, &this->narrower->listener);
