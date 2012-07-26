@@ -51,11 +51,6 @@ struct private_xauth_t {
 	bool initiator;
 
 	/**
-	 * Authentication requirements to fulfill
-	 */
-	auth_cfg_t *auth;
-
-	/**
 	 * XAuth backend to use
 	 */
 	xauth_method_t *xauth;
@@ -119,14 +114,13 @@ static xauth_method_t *load_method(private_xauth_t* this)
 			return NULL;
 		}
 	}
-	enumerator->destroy(enumerator);
 	name = auth->get(auth, AUTH_RULE_XAUTH_BACKEND);
 	this->user = auth->get(auth, AUTH_RULE_XAUTH_IDENTITY);
+	enumerator->destroy(enumerator);
 	if (!this->initiator && this->user)
 	{	/* use XAUTH username, if configured */
 		peer = this->user;
 	}
-	this->auth = auth;
 	xauth = charon->xauth->create_instance(charon->xauth, name, role,
 										   server, peer);
 	if (!xauth)
@@ -187,6 +181,82 @@ static bool establish(private_xauth_t *this)
 }
 
 /**
+ * Check if we are compliant to a given peer config
+ */
+static bool is_compliant(private_xauth_t *this, peer_cfg_t *peer_cfg, bool log)
+{
+	bool complies = TRUE;
+	enumerator_t *e1, *e2;
+	auth_cfg_t *c1, *c2;
+
+	e1 = peer_cfg->create_auth_cfg_enumerator(peer_cfg, FALSE);
+	e2 = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
+	while (e1->enumerate(e1, &c1))
+	{
+		if (!e2->enumerate(e2, &c2) || !c2->complies(c2, c1, log))
+		{
+			complies = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	return complies;
+}
+
+/**
+ * Check if we are compliant to current config, switch to another if not
+ */
+static bool select_compliant_config(private_xauth_t *this)
+{
+	peer_cfg_t *peer_cfg = NULL, *old, *current;
+	identification_t *my_id, *other_id;
+	host_t *my_host, *other_host;
+	enumerator_t *enumerator;
+	bool aggressive;
+
+	old = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (is_compliant(this, old, TRUE))
+	{	/* current config is fine */
+		return TRUE;
+	}
+	DBG1(DBG_CFG, "selected peer config '%s' inacceptable",
+		 old->get_name(old));
+	aggressive = old->use_aggressive(old);
+
+	my_host = this->ike_sa->get_my_host(this->ike_sa);
+	other_host = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+								my_host, other_host, my_id, other_id, IKEV1);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (!current->equals(current, old) &&
+			current->use_aggressive(current) == aggressive &&
+			is_compliant(this, current, FALSE))
+		{
+			peer_cfg = current;
+			break;
+		}
+	}
+	if (peer_cfg)
+	{
+		DBG1(DBG_CFG, "switching to peer config '%s'",
+			 peer_cfg->get_name(peer_cfg));
+		this->ike_sa->set_peer_cfg(this->ike_sa, peer_cfg);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "no alternative config found");
+	}
+	enumerator->destroy(enumerator);
+
+	return peer_cfg != NULL;
+}
+
+/**
  * Create auth config after successful authentication
  */
 static bool add_auth_cfg(private_xauth_t *this, identification_t *id, bool local)
@@ -196,15 +266,10 @@ static bool add_auth_cfg(private_xauth_t *this, identification_t *id, bool local
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
 	auth->add(auth, AUTH_RULE_XAUTH_IDENTITY, id->clone(id));
-	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), TRUE);
-
-	if (!auth->complies(auth, this->auth, TRUE))
-	{
-		auth->destroy(auth);
-		return FALSE;
-	}
+	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), FALSE);
 	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);
-	return TRUE;
+
+	return select_compliant_config(this);
 }
 
 METHOD(task_t, build_i_status, status_t,
