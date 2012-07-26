@@ -190,6 +190,7 @@ static void add_auth_cfg(private_xauth_t *this, identification_t *id, bool local
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
 	auth->add(auth, AUTH_RULE_XAUTH_IDENTITY, id->clone(id));
+	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), FALSE);
 
 	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);
 }
