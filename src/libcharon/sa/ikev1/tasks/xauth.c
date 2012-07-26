@@ -51,6 +51,11 @@ struct private_xauth_t {
 	bool initiator;
 
 	/**
+	 * Authentication requirements to fulfill
+	 */
+	auth_cfg_t *auth;
+
+	/**
 	 * XAuth backend to use
 	 */
 	xauth_method_t *xauth;
@@ -114,13 +119,14 @@ static xauth_method_t *load_method(private_xauth_t* this)
 			return NULL;
 		}
 	}
+	enumerator->destroy(enumerator);
 	name = auth->get(auth, AUTH_RULE_XAUTH_BACKEND);
 	this->user = auth->get(auth, AUTH_RULE_XAUTH_IDENTITY);
 	if (!this->initiator && this->user)
 	{	/* use XAUTH username, if configured */
 		peer = this->user;
 	}
-	enumerator->destroy(enumerator);
+	this->auth = auth;
 	xauth = charon->xauth->create_instance(charon->xauth, name, role,
 										   server, peer);
 	if (!xauth)
@@ -183,16 +189,22 @@ static bool establish(private_xauth_t *this)
 /**
  * Create auth config after successful authentication
  */
-static void add_auth_cfg(private_xauth_t *this, identification_t *id, bool local)
+static bool add_auth_cfg(private_xauth_t *this, identification_t *id, bool local)
 {
 	auth_cfg_t *auth;
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_XAUTH);
 	auth->add(auth, AUTH_RULE_XAUTH_IDENTITY, id->clone(id));
-	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), FALSE);
+	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), TRUE);
 
+	if (!auth->complies(auth, this->auth, TRUE))
+	{
+		auth->destroy(auth);
+		return FALSE;
+	}
 	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);
+	return TRUE;
 }
 
 METHOD(task_t, build_i_status, status_t,
@@ -305,11 +317,11 @@ METHOD(task_t, process_r, status_t,
 			}
 		}
 		enumerator->destroy(enumerator);
-		if (this->status == XAUTH_OK)
+		if (this->status == XAUTH_OK &&
+			add_auth_cfg(this, this->xauth->get_identity(this->xauth), TRUE))
 		{
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' (myself) successful",
 				 this->xauth->get_identity(this->xauth));
-			add_auth_cfg(this, this->xauth->get_identity(this->xauth), TRUE);
 		}
 		else
 		{
@@ -385,8 +397,7 @@ METHOD(task_t, process_i, status_t,
 				break;
 			}
 			DBG1(DBG_IKE, "XAuth authentication of '%Y' successful", id);
-			add_auth_cfg(this, id, FALSE);
-			if (allowed(this))
+			if (add_auth_cfg(this, id, FALSE) && allowed(this))
 			{
 				this->status = XAUTH_OK;
 			}
