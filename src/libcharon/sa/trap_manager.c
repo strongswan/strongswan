@@ -290,6 +290,11 @@ METHOD(trap_manager_t, acquire, void,
 		{
 			ike_sa->set_peer_cfg(ike_sa, peer);
 		}
+		if (ike_sa->get_version(ike_sa) == IKEV1)
+		{	/* in IKEv1, don't prepend the acquiring packet TS, as we only
+			 * have a single TS that we can establish in a Quick Mode. */
+			src = dst = NULL;
+		}
 		if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
 		{
 			/* make sure the entry is still there */
