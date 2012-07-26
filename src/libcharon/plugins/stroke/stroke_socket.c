@@ -181,6 +181,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->ca);
 	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
+	pop_string(msg, &end->groups2);
 	pop_string(msg, &end->cert_policy);
 	pop_string(msg, &end->updown);
 
@@ -197,6 +198,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	DBG2(DBG_CFG, "  %sca=%s", label, end->ca);
 	DBG2(DBG_CFG, "  %sca2=%s", label, end->ca2);
 	DBG2(DBG_CFG, "  %sgroups=%s", label, end->groups);
+	DBG2(DBG_CFG, "  %sgroups2=%s", label, end->groups2);
 	DBG2(DBG_CFG, "  %supdown=%s", label, end->updown);
 }
 

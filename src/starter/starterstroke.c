@@ -127,6 +127,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);
+	msg_end->groups2 = push_string(msg, conn_end->groups2);
 	msg_end->updown = push_string(msg, conn_end->updown);
 	if (conn_end->host)
 	{

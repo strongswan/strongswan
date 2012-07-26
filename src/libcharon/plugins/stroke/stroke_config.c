@@ -365,7 +365,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 {
 	identification_t *identity;
 	certificate_t *certificate;
-	char *auth, *id, *pubkey, *cert, *ca;
+	char *auth, *id, *pubkey, *cert, *ca, *groups;
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
 
@@ -491,12 +491,13 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 
 	/* groups */
-	if (end->groups)
+	groups = primary ? end->groups : end->groups2;
+	if (groups)
 	{
 		enumerator_t *enumerator;
 		char *group;
 
-		enumerator = enumerator_create_token(end->groups, ",", " ");
+		enumerator = enumerator_create_token(groups, ",", " ");
 		while (enumerator->enumerate(enumerator, &group))
 		{
 			cfg->add(cfg, AUTH_RULE_GROUP,

@@ -102,6 +102,7 @@ leftsendcert,      KW_LEFTSENDCERT
 leftca,            KW_LEFTCA
 leftca2,           KW_LEFTCA2
 leftgroups,        KW_LEFTGROUPS
+leftgroups2,       KW_LEFTGROUPS2
 right,             KW_RIGHT
 rightikeport,      KW_RIGHTIKEPORT
 rightsubnet,       KW_RIGHTSUBNET
@@ -125,6 +126,7 @@ rightsendcert,     KW_RIGHTSENDCERT
 rightca,           KW_RIGHTCA
 rightca2,          KW_RIGHTCA2
 rightgroups,       KW_RIGHTGROUPS
+rightgroups2,      KW_RIGHTGROUPS2
 also,              KW_ALSO
 auto,              KW_AUTO
 # deprecated/removed keywords

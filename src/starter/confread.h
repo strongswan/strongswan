@@ -97,6 +97,7 @@ struct starter_end {
 		char            *ca;
 		char            *ca2;
 		char            *groups;
+		char            *groups2;
 		char            *cert_policy;
 		char            *host;
 		u_int           ikeport;

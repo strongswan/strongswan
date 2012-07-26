@@ -622,6 +622,12 @@ a comma separated list of group names. If the
 parameter is present then the peer must be a member of at least one
 of the groups defined by the parameter.
 .TP
+.BR leftgroups2 " = <group list>"
+Same as
+.B leftgroups,
+but for the second authentication round defined with
+.B leftauth2.
+.TP
 .BR lefthostaccess " = yes | " no
 inserts a pair of INPUT and OUTPUT iptables rules using the default
 \fBipsec _updown\fR script, thus allowing access to the host itself

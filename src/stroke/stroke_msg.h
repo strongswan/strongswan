@@ -152,6 +152,7 @@ struct stroke_end_t {
 	char *ca;
 	char *ca2;
 	char *groups;
+	char *groups2;
 	char *cert_policy;
 	char *updown;
 	char *address;
