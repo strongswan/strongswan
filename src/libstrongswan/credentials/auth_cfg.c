@@ -495,7 +495,8 @@ METHOD(auth_cfg_t, complies, bool,
 	private_auth_cfg_t *this, auth_cfg_t *constraints, bool log_error)
 {
 	enumerator_t *e1, *e2;
-	bool success = TRUE, has_group = FALSE, group_match = FALSE;
+	bool success = TRUE, group_match = FALSE;
+	identification_t *require_group = NULL;
 	signature_scheme_t scheme = SIGN_UNKNOWN;
 	u_int strength = 0;
 	auth_rule_t t1, t2;
@@ -659,15 +660,15 @@ METHOD(auth_cfg_t, complies, bool,
 			}
 			case AUTH_RULE_GROUP:
 			{
-				identification_t *id1, *id2;
+				identification_t *group;
 
 				/* for groups, a match of a single group is sufficient */
-				has_group = TRUE;
-				id1 = (identification_t*)value;
+				require_group = (identification_t*)value;
 				e2 = create_enumerator(this);
-				while (e2->enumerate(e2, &t2, &id2))
+				while (e2->enumerate(e2, &t2, &group))
 				{
-					if (t2 == AUTH_RULE_GROUP && id2->matches(id2, id1))
+					if (t2 == AUTH_RULE_GROUP &&
+						group->matches(group, require_group))
 					{
 						group_match = TRUE;
 					}
@@ -797,11 +798,12 @@ METHOD(auth_cfg_t, complies, bool,
 		e2->destroy(e2);
 	}
 
-	if (has_group && !group_match)
+	if (require_group && !group_match)
 	{
 		if (log_error)
 		{
-			DBG1(DBG_CFG, "constraint check failed: group membership required");
+			DBG1(DBG_CFG, "constraint check failed: group membership to "
+				 "'%Y' required", require_group);
 		}
 		return FALSE;
 	}
