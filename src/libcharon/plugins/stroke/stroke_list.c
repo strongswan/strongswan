@@ -338,8 +338,13 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 	enumerator = peer_cfg->create_auth_cfg_enumerator(peer_cfg, local);
 	while (enumerator->enumerate(enumerator, &auth))
 	{
-		fprintf(out, "%12s:   %s [%Y] uses ", name,	local ? "local: " : "remote:",
-				auth->get(auth, AUTH_RULE_IDENTITY));
+		fprintf(out, "%12s:   %s", name, local ? "local: " : "remote:");
+		id = auth->get(auth, AUTH_RULE_IDENTITY);
+		if (id)
+		{
+			fprintf(out, " [%Y]", id);
+		}
+		fprintf(out, " uses ");
 
 		auth_class = (uintptr_t)auth->get(auth, AUTH_RULE_AUTH_CLASS);
 		if (auth_class == AUTH_CLASS_EAP)

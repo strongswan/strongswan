@@ -458,7 +458,14 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			}
 		}
 	}
-	cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
+	if (identity->get_type(identity) != ID_ANY)
+	{
+		cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
+	}
+	else
+	{
+		identity->destroy(identity);
+	}
 
 	/* add raw RSA public key */
 	pubkey = end->rsakey;
