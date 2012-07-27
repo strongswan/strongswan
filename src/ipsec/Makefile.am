@@ -1,16 +1,16 @@
 sbin_SCRIPTS = _ipsec
 CLEANFILES = _ipsec _ipsec.8
 dist_man8_MANS = _ipsec.8
-EXTRA_DIST = ipsec.in ipsec.8.in Android.mk
+EXTRA_DIST = _ipsec.in _ipsec.8.in Android.mk
 
-_ipsec.8 : ipsec.8.in
+_ipsec.8 : _ipsec.8.in
 	sed \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
 	-e "s:@IPSEC_SCRIPT@:$(ipsec_script):g" \
 	-e "s:@IPSEC_SCRIPT_UPPER@:$(ipsec_script_upper):g" \
-	$< > $@
+	$(srcdir)/$@.in > $@
 
-_ipsec : ipsec.in
+_ipsec : _ipsec.in
 	sed \
 	-e "s:@IPSEC_SHELL@:/bin/sh:" \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
@@ -21,7 +21,7 @@ _ipsec : ipsec.in
 	-e "s:@IPSEC_SBINDIR@:$(sbindir):" \
 	-e "s:@IPSEC_CONFDIR@:$(sysconfdir):" \
 	-e "s:@IPSEC_PIDDIR@:$(piddir):" \
-	$< > $@
+	$(srcdir)/$@.in > $@
 	chmod +x $@
 
 install-exec-hook:
