@@ -349,6 +349,7 @@ METHOD(attest_db_t, set_file, bool,
 	private_attest_db_t *this, char *file, bool create)
 {
 	enumerator_t *e;
+	char *filename;
 
 	if (this->file_set)
 	{
@@ -356,9 +357,10 @@ METHOD(attest_db_t, set_file, bool,
 		return FALSE;
 	}
 	this->file = strdup(file);
+	filename = this->relative ? basename(file) : file;
 
 	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
-						DB_TEXT, file, DB_INT);
+						DB_TEXT, filename, DB_INT);
 	if (e)
 	{
 		if (e->enumerate(e, &this->fid))
@@ -381,9 +383,9 @@ METHOD(attest_db_t, set_file, bool,
 	/* Add a new database entry */
 	this->file_set = this->db->execute(this->db, &this->fid,
 								"INSERT INTO files (type, path) VALUES (0, ?)",
-								DB_TEXT, file) == 1;
+								DB_TEXT, filename) == 1;
 
-	printf("file '%s' %sinserted into database\n", file,
+	printf("file '%s' %sinserted into database\n", filename,
 		   this->file_set ? "" : "could not be ");
 
 	return this->file_set;
