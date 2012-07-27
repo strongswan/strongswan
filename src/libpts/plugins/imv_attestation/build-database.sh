@@ -100,7 +100,11 @@ ipsec attest --add --product "$p" --sha1-ima --relative --file /etc/ld.so.cache
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/i386-linux-gnu
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/i386-linux-gnu/security
-ipsec attest --add --product "$p" --sha1-ima --relative --file /lib/plymouth/details.so
+for file in `find /lib/modules/3.2.21ima/kernel -name *.ko`
+do
+ipsec attest --add --product "$p" --sha1-ima --relative --file $file
+done
+ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/plymouth
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/plymouth/renderers
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /lib/security
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /opt/Adobe/Reader9/Reader/intellinux/lib
@@ -112,21 +116,10 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/enchant
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libemiscwidgets.so.0.0.0
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libeutil.so.0.0.0
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/evolution/3.2/libgnomecanvas.so.0.0.0
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libfreebl3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libmozalloc.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libmozsqlite3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnspr4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnss3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssckbi.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssdbm3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libnssutil3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libplc4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libplds4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libsoftokn3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libsmime3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libssl3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libxpcom.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/libxul.so
+for file in /usr/lib/firefox/*.so
+do
+ipsec attest --add --product "$p" --sha1-ima --relative --file $file
+done
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libbrowsercomps.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libdbusservice.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/firefox/components/libmozgnome.so
@@ -207,24 +200,10 @@ ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/rsyslog
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sane
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sse2
 ipsec attest --add --product "$p" --sha1-ima --relative --dir  /usr/lib/sudo
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libfreebl3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldap60.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libldif60.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libmozalloc.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libmozsqlite3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnspr4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnss3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssckbi.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssutil3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libplc4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libplds4.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libprldap60.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libsmime3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libsoftokn3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libnssdbm3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libssl3.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libxpcom.so
-ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/libxul.so
+for file in /usr/lib/thunderbird/*.so
+do
+ipsec attest --add --product "$p" --sha1-ima --relative --file $file
+done
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/components/libdbusservice.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird/components/libmozgnome.so
 ipsec attest --add --product "$p" --sha1-ima --relative --file /usr/lib/thunderbird-addons/extensions/globalmenu@ubuntu.com/components/libglobalmenu.so
@@ -239,3 +218,4 @@ ipsec attest --del --product "$p" --sha1                --file /usr/bin/lsb_rele
 ipsec attest --del --product "$p" --sha1-ima            --file /usr/bin/lsb_release
 ipsec attest --del --product "$p" --sha1                --file /usr/share/language-tools/language-options
 ipsec attest --del --product "$p" --sha1-ima            --file /usr/share/language-tools/language-options
+
