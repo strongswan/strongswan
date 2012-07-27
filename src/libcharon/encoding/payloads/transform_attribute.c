@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "transform_attribute.h"
 
@@ -107,13 +108,13 @@ struct private_transform_attribute_t {
  */
 static encoding_rule_t encodings[] = {
 	/* Flag defining the format of this payload */
-	{ ATTRIBUTE_FORMAT,			offsetof(private_transform_attribute_t, attribute_format) 			},
+	{ ATTRIBUTE_FORMAT,			offsetof(private_transform_attribute_t, attribute_format)			},
 	/* type of the attribute as 15 bit unsigned integer */
 	{ ATTRIBUTE_TYPE,			offsetof(private_transform_attribute_t, attribute_type)				},
 	/* Length or value, depending on the attribute format flag */
 	{ ATTRIBUTE_LENGTH_OR_VALUE,offsetof(private_transform_attribute_t, attribute_length_or_value)	},
 	/* Value of attribute if attribute format flag is zero */
-	{ ATTRIBUTE_VALUE,			offsetof(private_transform_attribute_t, attribute_value) 			}
+	{ ATTRIBUTE_VALUE,			offsetof(private_transform_attribute_t, attribute_value)			}
 };
 
 /*
