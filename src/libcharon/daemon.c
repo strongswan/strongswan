@@ -29,6 +29,10 @@
 #include <kernel/kernel_handler.h>
 #include <processing/jobs/start_action_job.h>
 
+#ifndef CAP_NET_ADMIN
+#define CAP_NET_ADMIN 12
+#endif
+
 typedef struct private_daemon_t private_daemon_t;
 
 /**

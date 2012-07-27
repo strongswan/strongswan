@@ -24,7 +24,7 @@
 #include <library.h>
 #ifdef HAVE_SYS_CAPABILITY_H
 # include <sys/capability.h>
-#else
+#elif defined(CAPABILITIES_NATIVE)
 # include <linux/capability.h>
 #endif
 

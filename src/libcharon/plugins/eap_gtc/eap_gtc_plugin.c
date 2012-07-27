@@ -19,8 +19,9 @@
 
 #include <daemon.h>
 
-/* missing in cababilities.h */
+#ifndef CAP_AUDIT_WRITE
 #define CAP_AUDIT_WRITE 29
+#endif
 
 METHOD(plugin_t, get_name, char*,
 	eap_gtc_plugin_t *this)

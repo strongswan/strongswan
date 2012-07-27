@@ -22,7 +22,9 @@
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
+#ifndef CAP_DAC_OVERRIDE
 #define CAP_DAC_OVERRIDE 1
+#endif
 
 typedef struct nm_backend_t nm_backend_t;
 
