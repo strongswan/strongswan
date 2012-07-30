@@ -40,7 +40,7 @@ Usage:\n\
     Show a list of measurement hashes for a given software product or\n\
     its primary key as an optional selector.\n\
   \n\
-  ipsec attest --hashes [--sha1|--sha256|--sha384] [--file <path>|--fid <id>]\n\
+  ipsec attest --hashes [--sha1|--sha1-ima|--sha256|--sha384] [--file <path>|--fid <id>]\n\
     Show a list of measurement hashes for a given file or\n\
     its primary key as an optional selector.\n\
   \n\
@@ -52,11 +52,11 @@ Usage:\n\
     Show a list of AIK key digests with a component or\n\
     its primary key as an optional selector.\n\
   \n\
-  ipsec attest --measurements [--sha1|--sha256|--sha384] [--component <cfn>|--cid <id>]\n\
+  ipsec attest --measurements --sha1|--sha256|--sha384 [--component <cfn>|--cid <id>]\n\
     Show a list of component measurements for a given component or\n\
     its primary key as an optional selector.\n\
   \n\
-  ipsec attest --measurements [--sha1|--sha256|--sha384] [--key <digest>|--kid <id>|--aik <path>]\n\
+  ipsec attest --measurements --sha1|--sha256|--sha384 [--key <digest>|--kid <id>|--aik <path>]\n\
     Show a list of component measurements for a given AIK or\n\
     its primary key as an optional selector.\n\
   \n\
@@ -67,6 +67,13 @@ Usage:\n\
   ipsec attest --add [--owner <name>] --key <digest>|--aik <path>\n\
     Add an AIK public key digest entry preceded by an optional owner name\n\
   \n\
+  ipsec attest --add --product <name>|--pid <id> --sha1|--sha1-ima|--sha256|--sha384\n\
+              [--relative|--rel] --dir <path>|--file <path>\n\
+    Add hashes of a single file or all files in a directory under absolute or relative filenames\n\
+  \n\
+  ipsec attest --add --key <digest|--kid <id> --component <cfn>|--cid <id> --sequence <no>|--seq <no>\n\
+    Add an ordered key/component entry\n\
+  \n\
   ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>\n\
     Delete a file or directory entry referenced either by value or primary key\n\
   \n\
@@ -75,6 +82,13 @@ Usage:\n\
   \n\
   ipsec attest --del --key <digest>|--kid <id>|--aik <path>\n\
     Delete an AIK entry referenced either by value or primary key\n\
+  \n\
+  ipsec attest --del --key <digest|--kid <id> --component <cfn>|--cid <id>\n\
+    Delete a key/component entry\n\
+  \n\
+  ipsec attest --del --product <name>|--pid <id> --sha1|--sha1-ima|--sha256|--sha384\n\
+               [--dir <path>|--did <id>] --file <path>|--fid <id>\n\
+    Delete a file hash given an absolute or relative filename\n\
   \n");
 }
 

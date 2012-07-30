@@ -136,6 +136,11 @@ struct attest_db_t {
 	void (*set_relative)(attest_db_t *this);
 
 	/**
+	 * Set the sequence number
+	 */
+	void (*set_sequence)(attest_db_t *this, int seq_no);
+
+	/**
 	 * Set owner [user/host] of an AIK
 	 *
 	 * @param owner			user/host name

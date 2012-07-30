@@ -137,6 +137,8 @@ static void do_args(int argc, char *argv[])
 			{ "product", required_argument, NULL, 'P' },
 			{ "relative", no_argument, NULL, 'R' },
 			{ "rel", no_argument, NULL, 'R' },
+			{ "sequence", required_argument, NULL, 'S' },
+			{ "seq", required_argument, NULL, 'S' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
 			{ "sha384", no_argument, NULL, '3' },
@@ -260,6 +262,9 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'R':
 				attest->set_relative(attest);
+				continue;
+			case 'S':
+				attest->set_sequence(attest, atoi(optarg));
 				continue;
 			case '1':
 				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);
