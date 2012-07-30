@@ -736,11 +736,12 @@ METHOD(pts_component_t, verify, status_t,
 													measurement, this->ima_cid,
 										 			this->kid, 1, pcr, algo);
 				}
+				this->state = IMA_STATE_RUNTIME;
+
 				if (status != SUCCESS)
 				{
 					return status;
 				}
-				this->state = IMA_STATE_RUNTIME;
 				break;
 			case IMA_STATE_RUNTIME:
 				this->count++;
@@ -758,23 +759,26 @@ METHOD(pts_component_t, verify, status_t,
 				switch (status)
 				{
 					case SUCCESS:
-						DBG3(DBG_PTS, "%#B for '%s' is ok", &measurement, uri);
+						DBG3(DBG_PTS, "%#B for '%s' is ok",
+									   &measurement, uri);
 						this->count_ok++;
-					break;
+						break;
 					case NOT_FOUND:
-					DBG2(DBG_PTS, "%#B for '%s' not found", &measurement, uri);
-					this->count_unknown++;
-					break;
-				case VERIFY_ERROR:
-					DBG1(DBG_PTS, "%#B for '%s' differs", &measurement, uri);
-					this->count_differ++;
-					break;
-				case FAILED:
-				default:
-					DBG1(DBG_PTS, "%#B for '%s' failed", &measurement, uri);
-					this->count_failed++;
-			}
-
+						DBG2(DBG_PTS, "%#B for '%s' not found",
+									   &measurement, uri);
+						this->count_unknown++;
+						break;
+					case VERIFY_ERROR:
+						DBG1(DBG_PTS, "%#B for '%s' differs",
+									   &measurement, uri);
+						this->count_differ++;
+						break;
+					case FAILED:
+					default:
+						DBG1(DBG_PTS, "%#B for '%s' failed",
+									   &measurement, uri);
+						this->count_failed++;
+				}
 				break;
 			default:
 				return FAILED;
