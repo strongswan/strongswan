@@ -30,8 +30,7 @@ typedef struct pts_component_manager_t pts_component_manager_t;
 #include <library.h>
 #include <pen/pen.h>
 
-typedef pts_component_t* (*pts_component_create_t)(u_int8_t qualifier,
-												   u_int32_t depth,
+typedef pts_component_t* (*pts_component_create_t)(u_int32_t depth,
 												   pts_database_t *pts_db);
 
 /**

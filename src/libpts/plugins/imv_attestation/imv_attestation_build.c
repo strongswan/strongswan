@@ -16,7 +16,6 @@
 #include "imv_attestation_build.h"
 #include "imv_attestation_state.h"
 
-#include <libpts.h>
 #include <tcg/tcg_pts_attr_proto_caps.h>
 #include <tcg/tcg_pts_attr_meas_algo.h>
 #include <tcg/tcg_pts_attr_dh_nonce_params_req.h>
@@ -252,15 +251,15 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				comp_name = pts_comp_func_name_create(vid, name, qualifier);
 				comp_name->log(comp_name, "  ");
 
-				comp = pts_components->create(pts_components, comp_name,
-											  depth, pts_db);
+				comp = attestation_state->create_component(attestation_state,
+													comp_name, depth, pts_db);
 				if (!comp)
 				{
-					DBG2(DBG_IMV, "    not registered: removed from request");
+					DBG2(DBG_IMV, "    not registered or duplicate"
+								  " - removed from request");
 					comp_name->destroy(comp_name);
 					continue;
 				}
-				attestation_state->add_component(attestation_state, comp);
 				if (first_component)
 				{
 					attr = tcg_pts_attr_req_func_comp_evid_create();

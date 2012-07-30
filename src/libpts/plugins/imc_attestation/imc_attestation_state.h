@@ -24,6 +24,7 @@
 
 #include <imc/imc_state.h>
 #include <pts/pts.h>
+#include <pts/components/pts_component.h>
 #include <pts/components/pts_comp_evidence.h>
 #include <library.h>
 
@@ -45,6 +46,16 @@ struct imc_attestation_state_t {
 	 * @return					PTS object
 	 */
 	pts_t* (*get_pts)(imc_attestation_state_t *this);
+
+	/**
+	 * Create and add an entry to the list of Functional Components
+	 *
+	 * @param name				Component Functional Name
+	 * @param depth				Sub-component Depth
+	 * @return					created functional component instance or NULL
+	 */
+	pts_component_t* (*create_component)(imc_attestation_state_t *this,
+							 pts_comp_func_name_t *name, u_int32_t depth);
 
 	/**
 	 * Add an entry to the Component Evidence cache list

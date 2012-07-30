@@ -294,7 +294,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				DBG1(DBG_IMV, "  no entry found for component evidence request");
 				break;
 			}
-			if (comp->verify(comp, pts, evidence) != SUCCESS)
+			if (comp->verify(comp, name->get_qualifier(name), pts,
+							 evidence) != SUCCESS)
 			{
 				attestation_state->set_measurement_error(attestation_state);
 				name->log(name, "  measurement mismatch for ");

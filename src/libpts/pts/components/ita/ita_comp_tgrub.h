@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,11 +26,10 @@
 /**
  * Create a PTS ITS Functional Component object
  *
- * @param qualifier		PTS Component Functional Name Qualifier
  * @param depth			Sub-component depth
  * @param pts_db		PTS measurement database
  */
-pts_component_t* pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth,
+pts_component_t* pts_ita_comp_tgrub_create(u_int32_t depth,
 										   pts_database_t *pts_db);
 
 #endif /** PTS_ITA_COMP_TGRUB_H_ @}*/

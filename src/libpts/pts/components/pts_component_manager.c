@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
- *
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -270,8 +269,7 @@ METHOD(pts_component_manager_t, create, pts_component_t*,
 			{
 				if (entry2->name == name->get_name(name) && entry2->create)
 				{
-					component = entry2->create(name->get_qualifier(name),
-											   depth, pts_db);
+					component = entry2->create(depth, pts_db);
 					break;
 				}
 			}

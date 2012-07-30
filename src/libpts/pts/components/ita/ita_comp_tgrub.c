@@ -49,6 +49,12 @@ struct pts_ita_comp_tgrub_t {
 	 */
 	pts_database_t *pts_db;
 
+
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
+
 };
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -70,7 +76,8 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tgrub_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
+	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_comp_evidence_t **evidence)
 {
 	size_t pcr_len;
 	pts_pcr_transform_t pcr_transform;
@@ -110,7 +117,8 @@ METHOD(pts_component_t, measure, status_t,
 }
 
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_tgrub_t *this, pts_t *pts,	pts_comp_evidence_t *evidence)
+	pts_ita_comp_tgrub_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
 	u_int32_t extended_pcr;
@@ -147,22 +155,32 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_tgrub_t *this)
+	pts_ita_comp_tgrub_t *this, u_int8_t qualifier)
 {
 	return FALSE;
+}
+
+METHOD(pts_component_t, get_ref, pts_component_t*,
+	pts_ita_comp_tgrub_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 METHOD(pts_component_t, destroy, void,
 	pts_ita_comp_tgrub_t *this)
 {
-	this->name->destroy(this->name);
-	free(this);
+	if (ref_put(&this->ref))
+	{
+		this->name->destroy(this->name);
+		free(this);
+	}
 }
 
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth,
+pts_component_t *pts_ita_comp_tgrub_create(u_int32_t depth,
 										   pts_database_t *pts_db)
 {
 	pts_ita_comp_tgrub_t *this;
@@ -175,12 +193,15 @@ pts_component_t *pts_ita_comp_tgrub_create(u_int8_t qualifier, u_int32_t depth,
 			.measure = _measure,
 			.verify = _verify,
 			.finalize = _finalize,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TGRUB,
-										  qualifier),
+										  PTS_ITA_QUALIFIER_FLAG_KERNEL |
+										  PTS_ITA_QUALIFIER_TYPE_TRUSTED),
 		.depth = depth,
 		.pts_db = pts_db,
+		.ref = 1,
 	);
 
 	return &this->public;

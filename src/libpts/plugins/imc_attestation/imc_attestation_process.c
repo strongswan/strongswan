@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
 
 #include <ietf/ietf_attr_pa_tnc_error.h>
 
-#include <libpts.h>
 #include <pts/pts.h>
 
 #include <tcg/tcg_pts_attr_proto_caps.h>
@@ -378,7 +377,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 								  "support sub component measurements");
 					return FALSE;
 				}
-				comp = pts_components->create(pts_components, name, depth, NULL);
+				comp = attestation_state->create_component(attestation_state,
+														   name, depth);
 				if (!comp)
 				{
 					DBG2(DBG_IMC, "    not registered: no evidence provided");
@@ -388,7 +388,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				/* do the component evidence measurement[s] and cache them */
 				do
 				{
-					status = comp->measure(comp, pts, &evid);
+					status = comp->measure(comp, name->get_qualifier(name),
+										   pts, &evid);
 					if (status == FAILED)
 					{
 						break;
@@ -396,7 +397,6 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 					attestation_state->add_evidence(attestation_state, evid);
 				}
 				while (status == NEED_MORE);
-				comp->destroy(comp);
 			}
 			e->destroy(e);
 			break;

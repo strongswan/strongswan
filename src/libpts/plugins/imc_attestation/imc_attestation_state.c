@@ -15,10 +15,13 @@
 
 #include "imc_attestation_state.h"
 
+#include <libpts.h>
+
 #include <utils/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imc_attestation_state_t private_imc_attestation_state_t;
+typedef struct func_comp_t func_comp_t;
 
 /**
  * Private data of an imc_attestation_state_t object.
@@ -61,7 +64,12 @@ struct private_imc_attestation_state_t {
 	pts_t *pts;
 
 	/**
-	 * PA-TNC attribute cache list
+	 * List of Functional Components
+	 */
+	linked_list_t *components;
+
+	/**
+	 * Functional Component Evidence cache list
 	 */
 	linked_list_t *list;
 
@@ -110,12 +118,14 @@ METHOD(imc_state_t, change_state, void,
 	this->state = new_state;
 }
 
-
 METHOD(imc_state_t, destroy, void,
 	private_imc_attestation_state_t *this)
 {
 	this->pts->destroy(this->pts);
-	this->list->destroy_offset(this->list, offsetof(pts_comp_evidence_t, destroy));
+	this->components->destroy_offset(this->components,
+							offsetof(pts_component_t, destroy));
+	this->list->destroy_offset(this->list,
+							offsetof(pts_comp_evidence_t, destroy));
 	free(this);
 }
 
@@ -123,6 +133,38 @@ METHOD(imc_attestation_state_t, get_pts, pts_t*,
 	private_imc_attestation_state_t *this)
 {
 	return this->pts;
+}
+
+METHOD(imc_attestation_state_t, create_component, pts_component_t*,
+	private_imc_attestation_state_t *this, pts_comp_func_name_t *name,
+	u_int32_t depth)
+{
+	enumerator_t *enumerator;
+	pts_component_t *component;
+	bool found = FALSE;
+
+	enumerator = this->components->create_enumerator(this->components);
+	while (enumerator->enumerate(enumerator, &component))
+	{
+		if (name->equals(name, component->get_comp_func_name(component)))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		component = pts_components->create(pts_components, name, depth, NULL);
+		if (!component)
+		{
+			return NULL;
+		}
+		this->components->insert_last(this->components, component);
+
+	}
+	return component;
 }
 
 METHOD(imc_attestation_state_t, add_evidence, void,
@@ -158,12 +200,14 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.destroy = _destroy,
 			},
 			.get_pts = _get_pts,
+			.create_component = _create_component,
 			.add_evidence = _add_evidence,
 			.next_evidence = _next_evidence,
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.pts = pts_create(TRUE),
+		.components = linked_list_create(),
 		.list = linked_list_create(),
 	);
 

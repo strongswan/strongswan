@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2012 Andreas Steffen
  *
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -65,6 +65,12 @@ METHOD(pts_comp_func_name_t, get_qualifier, u_int8_t,
 	private_pts_comp_func_name_t *this)
 {
 	return this->qualifier;
+}
+
+METHOD(pts_comp_func_name_t, set_qualifier, void,
+	private_pts_comp_func_name_t *this, u_int8_t qualifier)
+{
+	this->qualifier = qualifier;
 }
 
 static bool equals(private_pts_comp_func_name_t *this,
@@ -137,6 +143,7 @@ pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vid, u_int32_t name,
 			.get_vendor_id = _get_vendor_id,
 			.get_name = _get_name,
 			.get_qualifier = _get_qualifier,
+			.set_qualifier = _set_qualifier,
 			.equals = (bool(*)(pts_comp_func_name_t*,pts_comp_func_name_t*))equals,
 			.clone = _clone_,
 			.log = _log_,

@@ -85,6 +85,11 @@ struct pts_ita_comp_tboot_t {
 	 */
 	int seq_no;
 
+	/**
+	 * Reference count
+	 */
+	refcount_t ref;
+
 };
 
 METHOD(pts_component_t, get_comp_func_name, pts_comp_func_name_t*,
@@ -106,7 +111,8 @@ METHOD(pts_component_t, get_depth, u_int32_t,
 }
 
 METHOD(pts_component_t, measure, status_t,
-	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t **evidence)
+	pts_ita_comp_tboot_t *this, u_int8_t qualifier, pts_t *pts,
+	pts_comp_evidence_t **evidence)
 
 {
 	size_t pcr_len;
@@ -182,7 +188,8 @@ METHOD(pts_component_t, measure, status_t,
 }
 
 METHOD(pts_component_t, verify, status_t,
-	pts_ita_comp_tboot_t *this, pts_t *pts, pts_comp_evidence_t *evidence)
+	pts_ita_comp_tboot_t *this, u_int8_t qualifier,pts_t *pts,
+	pts_comp_evidence_t *evidence)
 {
 	bool has_pcr_info;
 	u_int32_t extended_pcr, vid, name;
@@ -275,7 +282,7 @@ METHOD(pts_component_t, verify, status_t,
 }
 
 METHOD(pts_component_t, finalize, bool,
-	pts_ita_comp_tboot_t *this)
+	pts_ita_comp_tboot_t *this, u_int8_t qualifier)
 {
 	u_int32_t vid, name;
 	enum_name_t *names;
@@ -303,6 +310,13 @@ METHOD(pts_component_t, finalize, bool,
 	return TRUE;
 }
 
+METHOD(pts_component_t, get_ref, pts_component_t*,
+	pts_ita_comp_tboot_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
+}
+
 METHOD(pts_component_t, destroy, void,
 	   pts_ita_comp_tboot_t *this)
 {
@@ -310,25 +324,28 @@ METHOD(pts_component_t, destroy, void,
 	u_int32_t vid, name;
 	enum_name_t *names;
 
-	if (this->is_registering)
+	if (ref_put(&this->ref))
 	{
-		count = this->pts_db->delete_comp_measurements(this->pts_db,
-													   this->cid, this->kid);
-		vid = this->name->get_vendor_id(this->name);
-		name = this->name->get_name(this->name);
-		names = pts_components->get_comp_func_names(pts_components, vid);
-		DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
-			 "evidence measurements", count, pen_names, vid, names, name);
+		if (this->is_registering)
+		{
+			count = this->pts_db->delete_comp_measurements(this->pts_db,
+													this->cid, this->kid);
+			vid = this->name->get_vendor_id(this->name);
+			name = this->name->get_name(this->name);
+			names = pts_components->get_comp_func_names(pts_components, vid);
+			DBG1(DBG_PTS, "deleted %d registered %N '%N' functional component "
+				 "evidence measurements", count, pen_names, vid, names, name);
+		}
+		this->name->destroy(this->name);
+		free(this->keyid.ptr);
+		free(this);
 	}
-	this->name->destroy(this->name);
-	free(this->keyid.ptr);
-	free(this);
 }
 
 /**
  * See header
  */
-pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier, u_int32_t depth,
+pts_component_t *pts_ita_comp_tboot_create(u_int32_t depth,
 										   pts_database_t *pts_db)
 {
 	pts_ita_comp_tboot_t *this;
@@ -341,12 +358,15 @@ pts_component_t *pts_ita_comp_tboot_create(u_int8_t qualifier, u_int32_t depth,
 			.measure = _measure,
 			.verify = _verify,
 			.finalize = _finalize,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.name = pts_comp_func_name_create(PEN_ITA, PTS_ITA_COMP_FUNC_NAME_TBOOT,
-										  qualifier),
+										  PTS_ITA_QUALIFIER_FLAG_KERNEL |
+										  PTS_ITA_QUALIFIER_TYPE_TRUSTED),
 		.depth = depth,
 		.pts_db = pts_db,
+		.ref = 1,
 	);
 
 	return &this->public;

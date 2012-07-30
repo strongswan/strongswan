@@ -24,6 +24,7 @@
 
 #include <imv/imv_state.h>
 #include <pts/pts.h>
+#include <pts/pts_database.h>
 #include <pts/components/pts_component.h>
 #include <library.h>
 
@@ -105,11 +106,17 @@ struct imv_attestation_state_t {
 										u_int16_t id, int *file_id, bool *is_dir);
 
 	/**
-	 * Add an entry to the list of Functional Components waiting for evidence
+	 * Create and add an entry to the list of Functional Components
 	 *
-	 * @param entry				Functional Component
+	 * @param name				Component Functional Name
+	 * @param depth				Sub-component Depth
+	 * @param pts_db			PTS measurement database
+	 * @return					created functional component instance or NULL
 	 */
-	void (*add_component)(imv_attestation_state_t *this, pts_component_t *entry);
+	pts_component_t* (*create_component)(imv_attestation_state_t *this,
+										 pts_comp_func_name_t *name,
+										 u_int32_t depth,
+										 pts_database_t *pts_db);
 
 	/**
 	 * Get a Functional Component with a given name

@@ -1599,16 +1599,16 @@ INSERT INTO components (
 INSERT INTO components (
   vendor_id, name, qualifier
 ) VALUES (
-  36906, 3, 33  /* ITA IMA */
+  36906, 3, 33  /* ITA IMA - Trusted Platform */
+);
+
+INSERT INTO components (
+  vendor_id, name, qualifier
+) VALUES (
+  36906, 3, 34  /* ITA IMA - Operating System */
 );
 
 /* AIK Component */
-
-INSERT INTO key_component (
-  key, component, depth, seq_no
-) VALUES (
-  2, 2, 0, 1
-);
 
 INSERT INTO key_component (
   key, component, depth, seq_no
@@ -1620,5 +1620,11 @@ INSERT INTO key_component (
   key, component, depth, seq_no
 ) VALUES (
   1, 2, 0, 2
+);
+
+INSERT INTO key_component (
+  key, component, depth, seq_no
+) VALUES (
+  1, 4, 0, 3
 );
 
