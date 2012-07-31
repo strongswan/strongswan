@@ -128,6 +128,12 @@
 #              contains the remote UDP port in the case of ESP_IN_UDP
 #              encapsulation
 #
+#       PLUTO_DNS4_$i
+#       PLUTO_DNS6_$i
+#              contains IPv4/IPv6 DNS server attribute received from a
+#              responder, $i enumerates from 1 to the number of servers per
+#              address family.
+#
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@sbindir@"
