@@ -169,7 +169,7 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 		{
 			my_id = my_auth->get(my_auth, AUTH_RULE_IDENTITY);
 			other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
-			if (my_id && other_id)
+			if (my_id)
 			{
 				shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
 													  my_id, other_id);
