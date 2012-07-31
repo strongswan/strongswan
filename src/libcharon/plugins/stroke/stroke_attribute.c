@@ -39,10 +39,35 @@ struct private_stroke_attribute_t {
 	linked_list_t *pools;
 
 	/**
+	 * List of connection specific attributes, as attributes_t
+	 */
+	linked_list_t *attrs;
+
+	/**
 	 * rwlock to lock access to pools
 	 */
 	rwlock_t *lock;
 };
+
+/**
+ * Attributes assigned to a connection
+ */
+typedef struct {
+	/** name of the connection */
+	char *name;
+	/** list of DNS attributes, as host_t */
+	linked_list_t *dns;
+} attributes_t;
+
+/**
+ * Destroy an attributes_t entry
+ */
+static void attributes_destroy(attributes_t *this)
+{
+	this->dns->destroy_offset(this->dns, offsetof(host_t, destroy));
+	free(this->name);
+	free(this);
+}
 
 /**
  * find a pool by name
@@ -66,8 +91,8 @@ static mem_pool_t *find_pool(private_stroke_attribute_t *this, char *name)
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	   private_stroke_attribute_t *this, char *name, identification_t *id,
-	   host_t *requested)
+	private_stroke_attribute_t *this, char *name, identification_t *id,
+	host_t *requested)
 {
 	mem_pool_t *pool;
 	host_t *addr = NULL;
@@ -82,8 +107,8 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	   private_stroke_attribute_t *this, char *name, host_t *address,
-	   identification_t *id)
+	private_stroke_attribute_t *this, char *name, host_t *address,
+	identification_t *id)
 {
 	mem_pool_t *pool;
 	bool found = FALSE;
@@ -97,8 +122,64 @@ METHOD(attribute_provider_t, release_address, bool,
 	return found;
 }
 
+/**
+ * Filter function to convert host to DNS configuration attributes
+ */
+static bool attr_filter(void *lock, host_t **in,
+						configuration_attribute_type_t *type,
+						void *dummy, chunk_t *data)
+{
+	host_t *host = *in;
+
+	switch (host->get_family(host))
+	{
+		case AF_INET:
+			*type = INTERNAL_IP4_DNS;
+			break;
+		case AF_INET6:
+			*type = INTERNAL_IP6_DNS;
+			break;
+		default:
+			return FALSE;
+	}
+	*data = host->get_address(host);
+	return TRUE;
+}
+
+METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
+	private_stroke_attribute_t *this, char *pool, identification_t *id,
+	host_t *vip)
+{
+	ike_sa_t *ike_sa;
+	peer_cfg_t *peer_cfg;
+	enumerator_t *enumerator;
+	attributes_t *attr;
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
+	{
+		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+		this->lock->read_lock(this->lock);
+		enumerator = this->attrs->create_enumerator(this->attrs);
+		while (enumerator->enumerate(enumerator, &attr))
+		{
+			if (streq(attr->name, peer_cfg->get_name(peer_cfg)))
+			{
+				enumerator->destroy(enumerator);
+				return enumerator_create_filter(
+									attr->dns->create_enumerator(attr->dns),
+									(void*)attr_filter, this->lock,
+									(void*)this->lock->unlock);
+			}
+		}
+		enumerator->destroy(enumerator);
+		this->lock->unlock(this->lock);
+	}
+	return enumerator_create_empty();
+}
+
 METHOD(stroke_attribute_t, add_pool, void,
-	   private_stroke_attribute_t *this, stroke_msg_t *msg)
+	private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	if (msg->add_conn.other.sourceip_mask)
 	{
@@ -127,12 +208,49 @@ METHOD(stroke_attribute_t, add_pool, void,
 		this->pools->insert_last(this->pools, pool);
 		this->lock->unlock(this->lock);
 	}
+
+	if (msg->add_conn.other.dns)
+	{
+		enumerator_t *enumerator;
+		attributes_t *attr = NULL;
+		host_t *host;
+		char *token;
+
+		enumerator = enumerator_create_token(msg->add_conn.other.dns, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			host = host_create_from_string(token, 0);
+			if (host)
+			{
+				if (!attr)
+				{
+					INIT(attr,
+						.name = strdup(msg->add_conn.name),
+						.dns = linked_list_create(),
+					);
+				}
+				attr->dns->insert_last(attr->dns, host);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "ignoring invalid DNS address '%s'", token);
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (attr)
+		{
+			this->lock->write_lock(this->lock);
+			this->attrs->insert_last(this->attrs, attr);
+			this->lock->unlock(this->lock);
+		}
+	}
 }
 
 METHOD(stroke_attribute_t, del_pool, void,
-	   private_stroke_attribute_t *this, stroke_msg_t *msg)
+	private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
+	attributes_t *attr;
 	mem_pool_t *pool;
 
 	this->lock->write_lock(this->lock);
@@ -147,6 +265,19 @@ METHOD(stroke_attribute_t, del_pool, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	enumerator = this->attrs->create_enumerator(this->attrs);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		if (streq(msg->del_conn.name, attr->name))
+		{
+			this->attrs->remove_at(this->attrs, enumerator);
+			attributes_destroy(attr);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	this->lock->unlock(this->lock);
 }
 
@@ -166,7 +297,7 @@ static bool pool_filter(void *lock, mem_pool_t **poolp, const char **name,
 }
 
 METHOD(stroke_attribute_t, create_pool_enumerator, enumerator_t*,
-	   private_stroke_attribute_t *this)
+	private_stroke_attribute_t *this)
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->pools->create_enumerator(this->pools),
@@ -175,7 +306,7 @@ METHOD(stroke_attribute_t, create_pool_enumerator, enumerator_t*,
 }
 
 METHOD(stroke_attribute_t, create_lease_enumerator, enumerator_t*,
-	   private_stroke_attribute_t *this, char *name)
+	private_stroke_attribute_t *this, char *name)
 {
 	mem_pool_t *pool;
 	this->lock->read_lock(this->lock);
@@ -190,10 +321,11 @@ METHOD(stroke_attribute_t, create_lease_enumerator, enumerator_t*,
 }
 
 METHOD(stroke_attribute_t, destroy, void,
-	   private_stroke_attribute_t *this)
+	private_stroke_attribute_t *this)
 {
 	this->lock->destroy(this->lock);
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
+	this->attrs->destroy_function(this->attrs, (void*)attributes_destroy);
 	free(this);
 }
 
@@ -209,7 +341,7 @@ stroke_attribute_t *stroke_attribute_create()
 			.provider = {
 				.acquire_address = _acquire_address,
 				.release_address = _release_address,
-				.create_attribute_enumerator = enumerator_create_empty,
+				.create_attribute_enumerator = _create_attribute_enumerator,
 			},
 			.add_pool = _add_pool,
 			.del_pool = _del_pool,
@@ -218,6 +350,7 @@ stroke_attribute_t *stroke_attribute_create()
 			.destroy = _destroy,
 		},
 		.pools = linked_list_create(),
+		.attrs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
