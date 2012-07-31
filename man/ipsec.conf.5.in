@@ -585,6 +585,16 @@ Comma separated list of certificate policy OIDs the peer's certificate must
 have.
 OIDs are specified using the numerical dotted representation.
 .TP
+.BR leftdns " = <servers>"
+Comma separated list of DNS server addresses to exchange as configuration
+attributes. On the initiator, a server is a fixed IPv4 / IPv6 address, or
+.B %config4
+/
+.B %config6
+to request attributes without an address. On the responder,
+only fixed IPv4 /IPv6 addresses are allowed and define DNS servers assigned
+to the client.
+.TP
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
 (including masquerading) using iptables for traffic from \fIleftsubnet\fR,
