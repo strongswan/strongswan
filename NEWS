@@ -1,3 +1,17 @@
+strongswan-5.0.1
+----------------
+
+- Extended PTS Attestation IMC/IMV pair to provide full evidence of
+  the Linux IMA measurement process. All pertinent file information
+  of a Linux OS can be collected an stored in an SQL database.
+
+- The PA-TNC and PB-TNC protocols can now process huge data payloads
+  >64 kB by distributing PA-TNC attributes over multiple PA-TNC messages
+  and these messages over several PB-TNC batches. As long as no
+  consolidated recommandation from all IMVs can be obtained the TNC
+  server requests more client data by sending an empty SDATA batch.
+
+
 strongswan-5.0.0
 ----------------
 
