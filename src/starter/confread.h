@@ -113,6 +113,7 @@ struct starter_end {
 		u_int8_t        protocol;
 		char            *sourceip;
 		int				sourceip_mask;
+		char            *dns;
 };
 
 typedef struct also also_t;

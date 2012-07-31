@@ -171,6 +171,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->address);
 	pop_string(msg, &end->subnets);
 	pop_string(msg, &end->sourceip);
+	pop_string(msg, &end->dns);
 	pop_string(msg, &end->auth);
 	pop_string(msg, &end->auth2);
 	pop_string(msg, &end->id);
@@ -188,6 +189,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
 	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnets);
 	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
+	DBG2(DBG_CFG, "  %sdns=%s", label, end->dns);
 	DBG2(DBG_CFG, "  %sauth=%s", label, end->auth);
 	DBG2(DBG_CFG, "  %sauth2=%s", label, end->auth2);
 	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
