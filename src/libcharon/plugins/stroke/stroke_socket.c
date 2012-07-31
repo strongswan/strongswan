@@ -37,6 +37,7 @@
 #include "stroke_cred.h"
 #include "stroke_ca.h"
 #include "stroke_attribute.h"
+#include "stroke_handler.h"
 #include "stroke_list.h"
 
 /**
@@ -97,6 +98,11 @@ struct private_stroke_socket_t {
 	 * attribute provider
 	 */
 	stroke_attribute_t *attribute;
+
+	/**
+	 * attribute handler (requests only)
+	 */
+	stroke_handler_t *handler;
 
 	/**
 	 * controller to control daemon
@@ -238,6 +244,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 
 	this->config->add(this->config, msg);
 	this->attribute->add_pool(this->attribute, msg);
+	this->handler->add_attributes(this->handler, msg);
 }
 
 /**
@@ -250,6 +257,7 @@ static void stroke_del_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 
 	this->config->del(this->config, msg);
 	this->attribute->del_pool(this->attribute, msg);
+	this->handler->del_attributes(this->handler, msg);
 }
 
 /**
@@ -789,10 +797,12 @@ METHOD(stroke_socket_t, destroy, void,
 	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
+	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
 	this->attribute->destroy(this->attribute);
+	this->handler->destroy(this->handler);
 	this->control->destroy(this->control);
 	this->list->destroy(this->list);
 	free(this);
@@ -819,6 +829,7 @@ stroke_socket_t *stroke_socket_create()
 
 	this->cred = stroke_cred_create();
 	this->attribute = stroke_attribute_create();
+	this->handler = stroke_handler_create();
 	this->ca = stroke_ca_create(this->cred);
 	this->config = stroke_config_create(this->ca, this->cred);
 	this->control = stroke_control_create();
@@ -835,6 +846,7 @@ stroke_socket_t *stroke_socket_create()
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
+	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
