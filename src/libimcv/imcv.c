@@ -108,7 +108,7 @@ bool libimcv_init(void)
 		}
 
 		if (!lib->plugins->load(lib->plugins, NULL,
-							"sha1 sha2 random gmp pubkey x509"))
+							"sha1 sha2 random nonce gmp pubkey x509"))
 		{
 			library_deinit();
 			return FALSE;
