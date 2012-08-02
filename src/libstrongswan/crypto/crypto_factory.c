@@ -359,7 +359,17 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
+	va_list args;
+	chunk_t g, p;
 	diffie_hellman_t *diffie_hellman = NULL;
+
+	if (group == MODP_CUSTOM)
+	{
+		va_start(args, group);
+		g = va_arg(args, chunk_t);
+		p = va_arg(args, chunk_t);
+		va_end(args);
+	}
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->dhs->create_enumerator(this->dhs);
@@ -367,21 +377,7 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	{
 		if (entry->algo == group)
 		{
-			if (group == MODP_CUSTOM)
-			{
-				va_list args;
-				chunk_t g, p;
-
-				va_start(args, group);
-				g = va_arg(args, chunk_t);
-				p = va_arg(args, chunk_t);
-				va_end(args);
-				diffie_hellman = entry->create_dh(MODP_CUSTOM, g, p);
-			}
-			else
-			{
-				diffie_hellman = entry->create_dh(group);
-			}
+			diffie_hellman = entry->create_dh(group, g, p);
 			if (diffie_hellman)
 			{
 				break;
