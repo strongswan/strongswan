@@ -11,6 +11,16 @@ strongswan-5.0.1
   consolidated recommandation from all IMVs can be obtained the TNC
   server requests more client data by sending an empty SDATA batch.
 
+- The rightgroups2 ipsec.conf option can require group membership during
+  a second authentication round, for example during XAuth authentication
+  against a RADIUS server.
+
+- The autotools build has been migrated to use a config.h header. strongSwan
+  development headers will get installed during "make install" if
+  --with-dev-headers has been passed to ./configure.
+
+- All crypto primitives gained return values for most operations, allowing
+  crypto backends to fail, for example when using hardware accelerators.
 
 strongswan-5.0.0
 ----------------
