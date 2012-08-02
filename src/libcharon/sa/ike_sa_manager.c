@@ -955,6 +955,34 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
 }
 
 /**
+ * Calculate the hash of the initial IKE message.  Memory for the hash is
+ * allocated on success.
+ *
+ * @returns TRUE on success
+ */
+static bool get_init_hash(private_ike_sa_manager_t *this, message_t *message,
+						  chunk_t *hash)
+{
+	if (!this->hasher)
+	{	/* this might be the case when flush() has been called */
+		return FALSE;
+	}
+	if (message->get_exchange_type(message) == ID_PROT)
+	{	/* include the source for Main Mode as the hash will be the same if
+		 * SPIs are reused by two initiators that use the same proposal */
+		host_t *src = message->get_source(message);
+
+		if (!this->hasher->allocate_hash(this->hasher,
+										 src->get_address(src), NULL))
+		{
+			return FALSE;
+		}
+	}
+	return this->hasher->allocate_hash(this->hasher,
+									   message->get_packet_data(message), hash);
+}
+
+/**
  * Check if we already have created an IKE_SA based on the initial IKE message
  * with the given hash.
  * If not the hash is stored, the hash data is not(!) cloned.
@@ -1158,14 +1186,12 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		}
 	}
 
-	if (is_init && this->hasher)
-	{	/* initial request. checking for the hasher prevents crashes once
-		 * flush() has been called */
+	if (is_init)
+	{
 		u_int64_t our_spi;
 		chunk_t hash;
 
-		if (!this->hasher->allocate_hash(this->hasher,
-									message->get_packet_data(message), &hash))
+		if (!get_init_hash(this, message, &hash))
 		{
 			DBG1(DBG_MGR, "ignoring message, failed to hash message");
 			id->destroy(id);
