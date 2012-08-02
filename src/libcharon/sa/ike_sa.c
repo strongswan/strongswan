@@ -1205,6 +1205,24 @@ METHOD(ike_sa_t, process_message, status_t,
 	{	/* do not handle messages in passive state */
 		return FAILED;
 	}
+	switch (message->get_exchange_type(message))
+	{
+		case ID_PROT:
+		case AGGRESSIVE:
+		case TRANSACTION:
+		case IKE_SA_INIT:
+		case IKE_AUTH:
+			if (this->state != IKE_CREATED &&
+				this->state != IKE_CONNECTING)
+			{
+				DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
+					 exchange_type_names, message->get_exchange_type(message));
+				return FAILED;
+			}
+			break;
+		default:
+			break;
+	}
 	if (message->get_major_version(message) != this->version)
 	{
 		DBG1(DBG_IKE, "ignoring %N IKEv%u exchange on %N SA",
