@@ -3,6 +3,8 @@ ipsec_PROGRAMS = charon
 charon_SOURCES = \
 charon.c
 
+charon.o :	$(top_builddir)/config.status
+
 INCLUDES = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
