@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -73,9 +73,9 @@ struct private_r_mutex_t {
 	pthread_t thread;
 
 	/**
-	 * times we have locked the lock, stored per thread
+	 * times the current thread locked the mutex
 	 */
-	pthread_key_t times;
+	u_int times;
 };
 
 /**
@@ -127,35 +127,24 @@ METHOD(mutex_t, lock_r, void,
 {
 	pthread_t self = pthread_self();
 
-	if (this->thread == self)
+	if (pthread_equal(this->thread, self))
 	{
-		uintptr_t times;
-
-		/* times++ */
-		times = (uintptr_t)pthread_getspecific(this->times);
-		pthread_setspecific(this->times, (void*)times + 1);
+		this->times++;
 	}
 	else
 	{
 		lock(&this->generic);
 		this->thread = self;
-		/* times = 1 */
-		pthread_setspecific(this->times, (void*)1);
+		this->times = 1;
 	}
 }
 
 METHOD(mutex_t, unlock_r, void,
 	private_r_mutex_t *this)
 {
-	uintptr_t times;
-
-	/* times-- */
-	times = (uintptr_t)pthread_getspecific(this->times);
-	pthread_setspecific(this->times, (void*)--times);
-
-	if (times == 0)
+	if (--this->times == 0)
 	{
-		this->thread = 0;
+		memset(&this->thread, 0, sizeof(this->thread));
 		unlock(&this->generic);
 	}
 }
@@ -173,7 +162,6 @@ METHOD(mutex_t, mutex_destroy_r, void,
 {
 	profiler_cleanup(&this->generic.profile);
 	pthread_mutex_destroy(&this->generic.mutex);
-	pthread_key_delete(this->times);
 	free(this);
 }
 
@@ -200,7 +188,6 @@ mutex_t *mutex_create(mutex_type_t type)
 			);
 
 			pthread_mutex_init(&this->generic.mutex, NULL);
-			pthread_key_create(&this->times, NULL);
 			profiler_init(&this->generic.profile);
 
 			return &this->generic.public;
@@ -233,11 +220,15 @@ METHOD(condvar_t, wait_, void,
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
+		u_int times;
 
+		/* keep track of the number of times this thread locked the mutex */
+		times = recursive->times;
 		/* mutex owner gets cleared during condvar wait */
-		recursive->thread = 0;
+		memset(&recursive->thread, 0, sizeof(recursive->thread));
 		pthread_cond_wait(&this->condvar, &mutex->mutex);
 		recursive->thread = pthread_self();
+		recursive->times = times;
 	}
 	else
 	{
@@ -262,11 +253,14 @@ METHOD(condvar_t, timed_wait_abs, bool,
 	if (mutex->recursive)
 	{
 		private_r_mutex_t* recursive = (private_r_mutex_t*)mutex;
+		u_int times;
 
-		recursive->thread = 0;
+		times = recursive->times;
+		memset(&recursive->thread, 0, sizeof(recursive->thread));
 		timed_out = pthread_cond_timedwait(&this->condvar, &mutex->mutex,
 										   &ts) == ETIMEDOUT;
 		recursive->thread = pthread_self();
+		recursive->times = times;
 	}
 	else
 	{
