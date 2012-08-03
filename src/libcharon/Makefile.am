@@ -522,7 +522,7 @@ endif
 if USE_ADDRBLOCK
   SUBDIRS += plugins/addrblock
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/uci/libstrongswan-addrblock.la
+  libcharon_la_LIBADD += plugins/addrblock/libstrongswan-addrblock.la
 endif
 endif
 
