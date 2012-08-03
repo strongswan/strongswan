@@ -879,7 +879,7 @@ static status_t process_request(private_task_manager_t *this,
 				}
 				break;
 			case TRANSACTION:
-				if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
 				{
 					task = (task_t *)mode_config_create(this->ike_sa, FALSE);
 				}

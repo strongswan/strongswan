@@ -1209,7 +1209,6 @@ METHOD(ike_sa_t, process_message, status_t,
 	{
 		case ID_PROT:
 		case AGGRESSIVE:
-		case TRANSACTION:
 		case IKE_SA_INIT:
 		case IKE_AUTH:
 			if (this->state != IKE_CREATED &&
