@@ -841,6 +841,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 			case MODP_1024_BIT:
 			case MODP_1536_BIT:
 			case MODP_2048_BIT:
+			case MODP_3072_BIT:
 			case MODP_4096_BIT:
 			case MODP_8192_BIT:
 			case ECP_256_BIT:
