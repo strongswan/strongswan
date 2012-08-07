@@ -18,7 +18,11 @@
 package org.strongswan.android.ui;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.CharonVpnService;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
 import android.app.ActionBar;
 import android.app.Activity;
@@ -30,15 +34,17 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.Window;
 
-public class MainActivity extends Activity
+public class MainActivity extends Activity implements OnVpnProfileSelectedListener
 {
+	private static final int PREPARE_VPN_SERVICE = 0;
+	private VpnProfile activeProfile;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.main);
-		startVpnService();
 
 		ActionBar bar = getActionBar();
 		bar.setDisplayShowTitleEnabled(false);
@@ -96,26 +102,45 @@ public class MainActivity extends Activity
 		}
 	}
 
+	/**
+	 * Prepare the VpnService. If this succeeds the current VPN profile is
+	 * started.
+	 */
 	protected void prepareVpnService()
 	{
 		Intent intent = VpnService.prepare(this);
 		if (intent != null)
 		{
-			startActivityForResult(intent, 0);
+			startActivityForResult(intent, PREPARE_VPN_SERVICE);
 		}
 		else
 		{
-			onActivityResult(0, RESULT_OK, null);
+			onActivityResult(PREPARE_VPN_SERVICE, RESULT_OK, null);
 		}
 	}
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data)
 	{
-		if (resultCode == RESULT_OK)
+		switch (requestCode)
 		{
-			Intent intent = new Intent(this, CharonVpnService.class);
-			startService(intent);
+			case PREPARE_VPN_SERVICE:
+				if (resultCode == RESULT_OK && activeProfile != null)
+				{
+					Intent intent = new Intent(this, CharonVpnService.class);
+					intent.putExtra(VpnProfileDataSource.KEY_ID, activeProfile.getId());
+					this.startService(intent);
+				}
+				break;
+			default:
+				super.onActivityResult(requestCode, resultCode, data);
 		}
+	}
+
+	@Override
+	public void onVpnProfileSelected(VpnProfile profile)
+	{
+		activeProfile = profile;
+		prepareVpnService();
 	}
 }
