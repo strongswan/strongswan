@@ -19,6 +19,7 @@
 
     <!-- Application -->
     <string name="app_name">strongSwan VPN Client</string>
+    <string name="reload_trusted_certs">Reload CA certificates</string>
 
     <!-- VPN profile list -->
     <string name="no_profiles">No VPN profiles.</string>

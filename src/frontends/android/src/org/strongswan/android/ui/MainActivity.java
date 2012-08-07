@@ -17,6 +17,7 @@
 
 package org.strongswan.android.ui;
 
+import org.strongswan.android.R;
 import org.strongswan.android.logic.TrustedCertificateManager;
 
 import android.app.ActionBar;
@@ -24,6 +25,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.Window;
 
 public class MainActivity extends Activity
@@ -57,7 +61,42 @@ public class MainActivity extends Activity
 		}).start();
 	}
 
-	private void startVpnService()
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu)
+	{
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item)
+	{
+		switch (item.getItemId())
+		{
+			case R.id.menu_reload_certs:
+				setProgressBarIndeterminateVisibility(true);
+				new Thread(new Runnable() {
+					@Override
+					public void run()
+					{
+						TrustedCertificateManager.getInstance().reload();
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run()
+							{
+								setProgressBarIndeterminateVisibility(false);
+							}
+						});
+					}
+				}).start();
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
+	}
+
+	protected void prepareVpnService()
 	{
 		Intent intent = VpnService.prepare(this);
 		if (intent != null)
