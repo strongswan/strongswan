@@ -41,6 +41,11 @@ struct private_charonservice_t {
 	 * public interface
 	 */
 	charonservice_t public;
+
+	/**
+	 * CharonVpnService reference
+	 */
+	jobject vpn_service;
 };
 
 /**
@@ -86,13 +91,14 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 /**
  * Initialize the charonservice object
  */
-static void charonservice_init()
+static void charonservice_init(JNIEnv *env, jobject service)
 {
 	private_charonservice_t *this;
 
 	INIT(this,
 		.public = {
 		},
+		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
 
@@ -103,10 +109,11 @@ static void charonservice_init()
 /**
  * Deinitialize the charonservice object
  */
-static void charonservice_deinit()
+static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	(*env)->DeleteGlobalRef(env, this->vpn_service);
 	free(this);
 	charonservice = NULL;
 }
@@ -153,13 +160,13 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 		return;
 	}
 
-	charonservice_init();
+	charonservice_init(env, this);
 
 	if (!libcharon_init("charon") ||
 		!charon->initialize(charon, PLUGINS))
 	{
 		libcharon_deinit();
-		charonservice_deinit();
+		charonservice_deinit(env);
 		libipsec_deinit();
 		libhydra_deinit();
 		library_deinit();
@@ -186,7 +193,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 {
 	libcharon_deinit();
-	charonservice_deinit();
+	charonservice_deinit(env);
 	libipsec_deinit();
 	libhydra_deinit();
 	library_deinit();
