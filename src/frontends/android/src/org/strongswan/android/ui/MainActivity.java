@@ -26,14 +26,23 @@ import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedList
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.app.Dialog;
+import android.app.DialogFragment;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
+import android.widget.EditText;
 
 public class MainActivity extends Activity implements OnVpnProfileSelectedListener
 {
@@ -102,6 +111,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 				{
 					Intent intent = new Intent(this, CharonVpnService.class);
 					intent.putExtra(VpnProfileDataSource.KEY_ID, activeProfile.getId());
+					/* submit the password as the profile might not store one */
+					intent.putExtra(VpnProfileDataSource.KEY_PASSWORD, activeProfile.getPassword());
 					this.startService(intent);
 				}
 				break;
@@ -114,7 +125,14 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	public void onVpnProfileSelected(VpnProfile profile)
 	{
 		activeProfile = profile;
-		prepareVpnService();
+		if (activeProfile.getPassword() == null)
+		{
+			new LoginDialog().show(getFragmentManager(), "LoginDialog");
+		}
+		else
+		{
+			prepareVpnService();
+		}
 	}
 
 	/**
@@ -140,6 +158,39 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		protected void onPostExecute(TrustedCertificateManager result)
 		{
 			setProgressBarIndeterminateVisibility(false);
+		}
+	}
+
+	private class LoginDialog extends DialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			View view = inflater.inflate(R.layout.login_dialog, null);
+			EditText username = (EditText)view.findViewById(R.id.username);
+			username.setText(activeProfile.getUsername());
+			final EditText password = (EditText)view.findViewById(R.id.password);
+
+			Builder adb = new AlertDialog.Builder(MainActivity.this);
+			adb.setView(view);
+			adb.setTitle(getString(R.string.login_title));
+			adb.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int whichButton)
+				{
+					activeProfile.setPassword(password.getText().toString().trim());
+					prepareVpnService();
+				}
+			});
+			adb.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					dismiss();
+				}
+			});
+			return adb.create();
 		}
 	}
 }

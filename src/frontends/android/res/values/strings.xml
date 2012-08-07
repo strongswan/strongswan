@@ -50,4 +50,8 @@
     <string name="alert_text_nocertfound_title">No CA certificate selected</string>
     <string name="alert_text_nocertfound">Please select one or activate <i>Select automatically</i></string>
 
+    <!-- Dialogs -->
+    <string name="login_title">Enter password to connect</string>
+    <string name="login_confirm">Connect</string>
+
 </resources>
