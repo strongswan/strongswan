@@ -26,6 +26,8 @@
 #include <ipsec.h>
 #include <library.h>
 
+#define ANDROID_DEBUG_LEVEL 1
+
 typedef struct private_charonservice_t private_charonservice_t;
 
 /**
@@ -56,10 +58,11 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 {
 	va_list args;
 
-	if (level <= 4)
+	if (level <= ANDROID_DEBUG_LEVEL)
 	{
 		char sgroup[16], buffer[8192];
 		char *current = buffer, *next;
+
 		snprintf(sgroup, sizeof(sgroup), "%N", debug_names, group);
 		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -90,6 +93,9 @@ static void charonservice_init()
 		},
 	);
 	charonservice = &this->public;
+
+	lib->settings->set_int(lib->settings,
+					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
 }
 
 /**
