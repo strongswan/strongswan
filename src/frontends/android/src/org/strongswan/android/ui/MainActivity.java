@@ -24,6 +24,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.view.Window;
 
 public class MainActivity extends Activity
 {
@@ -31,6 +32,7 @@ public class MainActivity extends Activity
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.main);
 		startVpnService();
 
@@ -38,11 +40,19 @@ public class MainActivity extends Activity
 		bar.setDisplayShowTitleEnabled(false);
 
 		/* load CA certificates in a background thread */
+		setProgressBarIndeterminateVisibility(true);
 		new Thread(new Runnable() {
 			@Override
 			public void run()
 			{
 				TrustedCertificateManager.getInstance().load();
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run()
+					{
+						setProgressBarIndeterminateVisibility(false);
+					}
+				});
 			}
 		}).start();
 	}
