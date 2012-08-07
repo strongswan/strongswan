@@ -24,6 +24,7 @@
 #define ANDROID_JNI_H_
 
 #include <jni.h>
+#include <library.h>
 
 #define JNI_PACKAGE org_strongswan_android_logic
 #define JNI_PACKAGE_STRING "org/strongswan/android/logic"
@@ -61,5 +62,22 @@ void androidjni_attach_thread(JNIEnv **env);
  * Call this as soon as possible to ensure that local JNI references are freed.
  */
 void androidjni_detach_thread();
+
+/**
+ * Handle exceptions thrown by a JNI call
+ *
+ * @param env		JNIEnv
+ * @return			TRUE if an exception was thrown
+ */
+static inline bool androidjni_exception_occurred(JNIEnv *env)
+{
+	if ((*env)->ExceptionOccurred(env))
+	{	/* clear any exception, otherwise the VM is terminated */
+		(*env)->ExceptionDescribe(env);
+		(*env)->ExceptionClear(env);
+		return TRUE;
+	}
+	return FALSE;
+}
 
 #endif /** ANDROID_JNI_H_ @}*/
