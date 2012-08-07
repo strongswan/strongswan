@@ -179,6 +179,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 				@Override
 				public void onClick(DialogInterface dialog, int whichButton)
 				{
+					/* let's work on a clone of the profile when updating the password */
+					activeProfile = activeProfile.clone();
 					activeProfile.setPassword(password.getText().toString().trim());
 					prepareVpnService();
 				}
