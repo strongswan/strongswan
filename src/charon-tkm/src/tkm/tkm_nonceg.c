@@ -14,10 +14,11 @@
  * for more details.
  */
 
-#include "tkm_nonceg.h"
-
 #include <tkm/client.h>
 #include <tkm/constants.h>
+
+#include "tkm.h"
+#include "tkm_nonceg.h"
 
 typedef struct private_tkm_nonceg_t private_tkm_nonceg_t;
 
@@ -31,16 +32,18 @@ struct private_tkm_nonceg_t {
 	 */
 	tkm_nonceg_t public;
 
+	/**
+	 * Context id.
+	 */
+	nc_id_type context_id;
+
 };
 
 METHOD(nonce_gen_t, get_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, u_int8_t *buffer)
 {
 	nonce_type nonce;
-
-	/* request nonce from TKM, the context is not yet used */
-	const result_type result = ike_nc_create(1, size, &nonce);
-	if (result != TKM_OK)
+	if (ike_nc_create(this->context_id, size, &nonce) != TKM_OK)
 	{
 		return FALSE;
 	}
@@ -77,7 +80,14 @@ tkm_nonceg_t *tkm_nonceg_create()
 				.destroy = _destroy,
 			},
 		},
+		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_NONCE),
 	);
+
+	if (!this->context_id)
+	{
+		free(this);
+		return NULL;
+	}
 
 	return &this->public;
 }
