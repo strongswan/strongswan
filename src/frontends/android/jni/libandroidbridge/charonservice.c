@@ -15,6 +15,7 @@
  * for more details.
  */
 
+#include <signal.h>
 #include <string.h>
 #include <android/log.h>
 
@@ -25,6 +26,7 @@
 #include <hydra.h>
 #include <ipsec.h>
 #include <library.h>
+#include <threading/thread.h>
 
 #define ANDROID_DEBUG_LEVEL 1
 
@@ -110,10 +112,22 @@ static void charonservice_deinit()
 }
 
 /**
+ * Handle SIGSEGV/SIGILL signals raised by threads
+ */
+static void segv_handler(int signal)
+{
+	dbg_android(DBG_DMN, 1, "thread %u received %d", thread_current_id(),
+				signal);
+	exit(1);
+}
+
+/**
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, void)
 {
+	struct sigaction action;
+
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
 
@@ -151,6 +165,16 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 		library_deinit();
 		return;
 	}
+
+	/* add handler for SEGV and ILL etc. */
+	action.sa_handler = segv_handler;
+	action.sa_flags = 0;
+	sigemptyset(&action.sa_mask);
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
+	action.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &action, NULL);
 
 	/* start daemon (i.e. the threads in the thread-pool) */
 	charon->start(charon);
