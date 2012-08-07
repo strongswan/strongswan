@@ -18,27 +18,33 @@
 #include <sa/ikev1/keymat_v1.h>
 #include <sa/ikev2/keymat_v2.h>
 
+static keymat_constructor_t keymat_v1_ctor = NULL, keymat_v2_ctor = NULL;
+
 /**
  * See header
  */
 keymat_t *keymat_create(ike_version_t version, bool initiator)
 {
+	keymat_t *keymat = NULL;
+
 	switch (version)
 	{
 		case IKEV1:
 #ifdef USE_IKEV1
-			return &keymat_v1_create(initiator)->keymat;
+			keymat = keymat_v1_ctor ? keymat_v1_ctor(initiator)
+									: &keymat_v1_create(initiator)->keymat;
 #endif
 			break;
 		case IKEV2:
 #ifdef USE_IKEV2
-			return &keymat_v2_create(initiator)->keymat;
+			keymat = keymat_v2_ctor ? keymat_v2_ctor(initiator)
+									: &keymat_v2_create(initiator)->keymat;
 #endif
 			break;
 		default:
 			break;
 	}
-	return NULL;
+	return keymat;
 }
 
 /**
@@ -98,4 +104,23 @@ int keymat_get_keylen_integ(integrity_algorithm_t alg)
 		}
 	}
 	return 0;
+}
+
+/**
+ * See header.
+ */
+void keymat_register_constructor(ike_version_t version,
+								 keymat_constructor_t create)
+{
+	switch (version)
+	{
+		case IKEV1:
+			keymat_v1_ctor = create;
+			break;
+		case IKEV2:
+			keymat_v2_ctor = create;
+			break;
+		default:
+			break;
+	}
 }

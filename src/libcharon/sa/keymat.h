@@ -32,6 +32,14 @@ typedef struct keymat_t keymat_t;
 #include <sa/ike_sa_id.h>
 
 /**
+ * Constructor function for custom keymat implementations
+ *
+ * @param initiator		TRUE if the keymat is used as initiator
+ * @return				keymat_t implementation
+ */
+typedef keymat_t* (*keymat_constructor_t)(bool initiator);
+
+/**
  * Derivation an management of sensitive keying material.
  */
 struct keymat_t {
@@ -109,5 +117,14 @@ int keymat_get_keylen_encr(encryption_algorithm_t alg);
  * @return					key length in bits
  */
 int keymat_get_keylen_integ(integrity_algorithm_t alg);
+
+/**
+ * Register keymat_t constructor for given IKE version.
+ *
+ * @param version			IKE version of given keymat constructor
+ * @param create			keymat constructor function, NULL to unregister
+ */
+void keymat_register_constructor(ike_version_t version,
+								 keymat_constructor_t create);
 
 #endif /** KEYMAT_H_ @}*/
