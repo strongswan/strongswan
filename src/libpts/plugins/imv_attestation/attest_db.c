@@ -1273,19 +1273,6 @@ METHOD(attest_db_t, delete, bool,
 {
 	bool success;
 
-	/* delete key/component pair */
-	if (this->kid && this->cid)
-	{
-		success = this->db->execute(this->db, NULL,
-								"DELETE FROM key_component "
-								"WHERE key = ? AND component = ?",
-								DB_UINT, this->kid, DB_UINT, this->cid) > 0;
-
-		printf("key/component pair (%d/%d) %sdeleted from database\n",
-				this->kid, this->cid, success ? "" : "could not be ");
-		return success;
-	}
-
 	/* delete a file measurement hash for a given product */
 	if (this->algo && this->pid && this->fid)
 	{
@@ -1305,12 +1292,23 @@ METHOD(attest_db_t, delete, bool,
 		return success;
 	}
 
+	/* delete product/file entries */
 	if (this->pid && (this->fid || this->did))
 	{
-		printf("deletion of product/file entries not supported yet\n");
-		return FALSE;
+		success = this->db->execute(this->db, NULL,
+							"DELETE FROM product_file "
+							"WHERE product = ? AND file = ?",
+							DB_UINT, this->pid,
+							DB_UINT, this->fid ? this->fid : this->did) > 0;
+
+		printf("product/file pair (%d/%d) %sdeleted from database\n",
+				this->pid, this->fid ? this->fid : this->did,
+				success ? "" : "could not be ");
+
+		return success;
 	}
 
+	/* delete key/component pair */
 	if (this->kid && this->cid)
 	{
 		success = this->db->execute(this->db, NULL,
