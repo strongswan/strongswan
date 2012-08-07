@@ -17,7 +17,7 @@
 
 package org.strongswan.android.data;
 
-public class VpnProfile
+public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate;
 	private long mId = -1;
@@ -96,5 +96,18 @@ public class VpnProfile
 			return this.mId == ((VpnProfile)o).getId();
 		}
 		return false;
+	}
+
+	@Override
+	public VpnProfile clone()
+	{
+		try
+		{
+			return (VpnProfile)super.clone();
+		}
+		catch (CloneNotSupportedException e)
+		{
+			throw new AssertionError();
+		}
 	}
 }
