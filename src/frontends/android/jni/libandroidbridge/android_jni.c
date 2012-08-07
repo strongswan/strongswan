@@ -46,6 +46,11 @@ static void attached_thread_cleanup(void *arg)
  */
 void androidjni_attach_thread(JNIEnv **env)
 {
+	if ((*android_jvm)->GetEnv(android_jvm, (void**)env,
+							   JNI_VERSION_1_6) == JNI_OK)
+	{	/* already attached or even a Java thread */
+		return;
+	}
 	(*android_jvm)->AttachCurrentThread(android_jvm, env, NULL);
 	/* use a thread-local value with a destructor that automatically detaches
 	 * the thread from the JVM before it terminates, if not done manually */
@@ -57,8 +62,11 @@ void androidjni_attach_thread(JNIEnv **env)
  */
 void androidjni_detach_thread()
 {
-	androidjni_threadlocal->set(androidjni_threadlocal, NULL);
-	(*android_jvm)->DetachCurrentThread(android_jvm);
+	if (androidjni_threadlocal->get(androidjni_threadlocal))
+	{	/* only do this if we actually attached this thread */
+		androidjni_threadlocal->set(androidjni_threadlocal, NULL);
+		(*android_jvm)->DetachCurrentThread(android_jvm);
+	}
 }
 
 /**
@@ -85,7 +93,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 /**
- * Called when this library is unloaded by the JVM
+ * Called when this library is unloaded by the JVM (which never happens on
+ * Android)
  */
 void JNI_OnUnload(JavaVM *vm, void *reserved)
 {
