@@ -28,6 +28,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.VpnService;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -49,22 +50,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		ActionBar bar = getActionBar();
 		bar.setDisplayShowTitleEnabled(false);
 
-		/* load CA certificates in a background thread */
-		setProgressBarIndeterminateVisibility(true);
-		new Thread(new Runnable() {
-			@Override
-			public void run()
-			{
-				TrustedCertificateManager.getInstance().load();
-				runOnUiThread(new Runnable() {
-					@Override
-					public void run()
-					{
-						setProgressBarIndeterminateVisibility(false);
-					}
-				});
-			}
-		}).start();
+		/* load CA certificates in a background task */
+		new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, false);
 	}
 
 	@Override
@@ -81,21 +68,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		switch (item.getItemId())
 		{
 			case R.id.menu_reload_certs:
-				setProgressBarIndeterminateVisibility(true);
-				new Thread(new Runnable() {
-					@Override
-					public void run()
-					{
-						TrustedCertificateManager.getInstance().reload();
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run()
-							{
-								setProgressBarIndeterminateVisibility(false);
-							}
-						});
-					}
-				}).start();
+				new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, true);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
@@ -142,5 +115,31 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	{
 		activeProfile = profile;
 		prepareVpnService();
+	}
+
+	/**
+	 * Class that loads or reloads the cached CA certificates.
+	 */
+	private class CertificateLoadTask extends AsyncTask<Boolean, Void, TrustedCertificateManager>
+	{
+		@Override
+		protected void onPreExecute()
+		{
+			setProgressBarIndeterminateVisibility(true);
+		}
+		@Override
+		protected TrustedCertificateManager doInBackground(Boolean... params)
+		{
+			if (params.length > 0 && params[0])
+			{	/* force a reload of the certificates */
+				return TrustedCertificateManager.getInstance().reload();
+			}
+			return TrustedCertificateManager.getInstance().load();
+		}
+		@Override
+		protected void onPostExecute(TrustedCertificateManager result)
+		{
+			setProgressBarIndeterminateVisibility(false);
+		}
 	}
 }
