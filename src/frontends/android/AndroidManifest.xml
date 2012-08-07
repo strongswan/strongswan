@@ -14,7 +14,7 @@
         android:theme="@style/ApplicationTheme" >
         <activity
             android:name=".ui.MainActivity"
-            android:label="@string/app_name"
+            android:label="@string/main_activity_name"
             android:launchMode="singleTop" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -22,8 +22,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.VpnProfileDetailActivity"
-            android:label="@string/app_name" >
+            android:name=".ui.VpnProfileDetailActivity" >
         </activity>
 
         <service
