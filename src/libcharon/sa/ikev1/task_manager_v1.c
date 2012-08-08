@@ -962,6 +962,7 @@ static status_t process_response(private_task_manager_t *this,
 								 message_t *message)
 {
 	enumerator_t *enumerator;
+	message_t *queued;
 	status_t status;
 	task_t *task;
 
@@ -1010,10 +1011,11 @@ static status_t process_response(private_task_manager_t *this,
 
 	if (this->queued && this->active_tasks->get_count(this->active_tasks) == 0)
 	{
-		status = this->public.task_manager.process_message(
-									&this->public.task_manager, this->queued);
-		this->queued->destroy(this->queued);
+		queued = this->queued;
 		this->queued = NULL;
+		status = this->public.task_manager.process_message(
+											&this->public.task_manager, queued);
+		queued->destroy(queued);
 		if (status == DESTROY_ME)
 		{
 			return status;
