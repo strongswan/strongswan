@@ -22,6 +22,7 @@ import java.util.concurrent.Callable;
 import org.strongswan.android.data.VpnProfile;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
@@ -143,6 +144,24 @@ public class VpnStateService extends Service
 	public ErrorState getErrorState()
 	{	/* only updated from the main thread so no synchronization needed */
 		return mError;
+	}
+
+	/**
+	 * Disconnect any existing connection and shutdown the daemon, the
+	 * VpnService is not stopped but it is reset so new connections can be
+	 * started.
+	 */
+	public void disconnect()
+	{
+		/* as soon as the TUN device is created by calling establish() on the
+		 * VpnService.Builder object the system binds to the service and keeps
+		 * bound until the file descriptor of the TUN device is closed.  thus
+		 * calling stopService() here would not stop (destroy) the service yet,
+		 * instead we call startService() with an empty Intent which shuts down
+		 * the daemon (and closes the TUN device, if any) */
+		Context context = getApplicationContext();
+		Intent intent = new Intent(context, CharonVpnService.class);
+		context.startService(intent);
 	}
 
 	/**
