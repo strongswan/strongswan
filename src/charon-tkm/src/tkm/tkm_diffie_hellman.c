@@ -17,6 +17,7 @@
 #include <tkm/client.h>
 #include <tkm/constants.h>
 
+#include "tkm.h"
 #include "tkm_diffie_hellman.h"
 
 #include <utils/debug.h>
@@ -27,6 +28,7 @@ typedef struct private_tkm_diffie_hellman_t private_tkm_diffie_hellman_t;
  * Private data of a tkm_diffie_hellman_t object.
  */
 struct private_tkm_diffie_hellman_t {
+
 	/**
 	 * Public tkm_diffie_hellman_t interface.
 	 */
@@ -41,6 +43,12 @@ struct private_tkm_diffie_hellman_t {
 	 * Diffie Hellman public value.
 	 */
 	dh_pubvalue_type pubvalue;
+
+	/**
+	 * Context id.
+	 */
+	dh_id_type context_id;
+
 };
 
 METHOD(diffie_hellman_t, get_my_public_value, void,
@@ -54,7 +62,7 @@ METHOD(diffie_hellman_t, get_shared_secret, status_t,
 	private_tkm_diffie_hellman_t *this, chunk_t *secret)
 {
 	dh_key_type shared_secret;
-	if (ike_dh_get_shared_secret(1, &shared_secret) != TKM_OK)
+	if (ike_dh_get_shared_secret(this->context_id, &shared_secret) != TKM_OK)
 	{
 		return FAILED;
 	}
@@ -74,7 +82,7 @@ METHOD(diffie_hellman_t, set_other_public_value, void,
 	othervalue.size = value.len;
 	memcpy(&othervalue.data, value.ptr, value.len);
 
-	ike_dh_generate_key(1, othervalue);
+	ike_dh_generate_key(this->context_id, othervalue);
 }
 
 METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
@@ -86,13 +94,13 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_tkm_diffie_hellman_t *this)
 {
-	// TODO: unvoid this function
-
-	free(this);
-	if (ike_dh_reset(1) != TKM_OK)
+	if (ike_dh_reset(this->context_id) != TKM_OK)
 	{
-		DBG1(DBG_LIB, "resetting DH context 1 failed");
+		DBG1(DBG_LIB, "failed to reset DH context %d", this->context_id);
 	}
+
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_DH, this->context_id);
+	free(this);
 }
 
 /*
@@ -112,15 +120,21 @@ tkm_diffie_hellman_t *tkm_diffie_hellman_create(diffie_hellman_group_t group)
 				.destroy = _destroy,
 			},
 		},
+		.group = group,
+		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_DH),
 	);
 
-	if (ike_dh_create(1, group, &this->pubvalue) != TKM_OK)
+	if (!this->context_id)
 	{
 		free(this);
 		return NULL;
 	}
 
-	this->group = group;
+	if (ike_dh_create(this->context_id, group, &this->pubvalue) != TKM_OK)
+	{
+		free(this);
+		return NULL;
+	}
 
 	return &this->public;
 }
