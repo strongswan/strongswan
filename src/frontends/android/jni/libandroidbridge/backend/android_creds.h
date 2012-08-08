@@ -27,7 +27,8 @@
 typedef struct android_creds_t android_creds_t;
 
 /**
- * Android credential set that provides CA certificates via JNI.
+ * Android credential set that provides CA certificates via JNI and supplied
+ * user credentials.
  */
 struct android_creds_t {
 
@@ -37,7 +38,16 @@ struct android_creds_t {
 	credential_set_t set;
 
 	/**
-	 * Clear the cached CA certificates.
+	 * Add user name and password for EAP authentication
+	 *
+	 * @param username			user name
+	 * @param password			password
+	 */
+	void (*add_username_password)(android_creds_t *this, char *username,
+								  char *password);
+
+	/**
+	 * Clear the cached certificates and stored credentials.
 	 */
 	void (*clear)(android_creds_t *this);
 

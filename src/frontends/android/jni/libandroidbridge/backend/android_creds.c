@@ -34,7 +34,7 @@ struct private_android_creds_t {
 	android_creds_t public;
 
 	/**
-	 * Credential set storing trusted certificates
+	 * Credential set storing trusted certificates and user credentials
 	 */
 	mem_cred_t *creds;
 
@@ -108,6 +108,28 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 									 this->lock);
 }
 
+METHOD(android_creds_t, add_username_password, void,
+	private_android_creds_t *this, char *username, char *password)
+{
+	shared_key_t *shared_key;
+	identification_t *id;
+	chunk_t secret;
+
+	secret = chunk_create(password, strlen(password));
+	shared_key = shared_key_create(SHARED_EAP, chunk_clone(secret));
+	id = identification_create_from_string(username);
+
+	this->creds->add_shared(this->creds, shared_key, id, NULL);
+}
+
+METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+	private_android_creds_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
+{
+	return this->creds->set.create_shared_enumerator(&this->creds->set,
+													 type, me, other);
+}
+
 METHOD(android_creds_t, clear, void,
 	private_android_creds_t *this)
 {
@@ -137,11 +159,12 @@ android_creds_t *android_creds_create()
 		.public = {
 			.set = {
 				.create_cert_enumerator = _create_cert_enumerator,
-				.create_shared_enumerator = (void*)return_null,
+				.create_shared_enumerator = _create_shared_enumerator,
 				.create_private_enumerator = (void*)return_null,
 				.create_cdp_enumerator = (void*)return_null,
 				.cache_cert = (void*)nop,
 			},
+			.add_username_password = _add_username_password,
 			.clear = _clear,
 			.destroy = _destroy,
 		},
