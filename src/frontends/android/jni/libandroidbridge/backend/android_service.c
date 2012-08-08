@@ -71,6 +71,51 @@ struct private_android_service_t {
 };
 
 /**
+ * Add a route to the TUN device builder
+ */
+static bool add_route(vpnservice_builder_t *builder, host_t *net,
+					  u_int8_t prefix)
+{
+	/* if route is 0.0.0.0/0, split it into two routes 0.0.0.0/1 and
+	 * 128.0.0.0/1 because otherwise it would conflict with the current default
+	 * route */
+	if (net->is_anyaddr(net) && prefix == 0)
+	{
+		bool success;
+
+		success = add_route(builder, net, 1);
+		net = host_create_from_string("128.0.0.0", 0);
+		success = success && add_route(builder, net, 1);
+		net->destroy(net);
+		return success;
+	}
+	return builder->add_route(builder, net, prefix);
+}
+
+/**
+ * Generate and set routes from installed IPsec policies
+ */
+static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
+{
+	traffic_selector_t *src_ts, *dst_ts;
+	enumerator_t *enumerator;
+	bool success = TRUE;
+
+	enumerator = child_sa->create_policy_enumerator(child_sa);
+	while (success && enumerator->enumerate(enumerator, &src_ts, &dst_ts))
+	{
+		host_t *net;
+		u_int8_t prefix;
+
+		dst_ts->to_subnet(dst_ts, &net, &prefix);
+		success = add_route(builder, net, prefix);
+		net->destroy(net);
+	}
+	enumerator->destroy(enumerator);
+	return success;
+}
+
+/**
  * Setup a new TUN device for the supplied SAs.
  * Additional information such as DNS servers are gathered in appropriate
  * listeners asynchronously.  To be sure every required bit of information is
@@ -94,6 +139,7 @@ static bool setup_tun_device(private_android_service_t *this,
 
 	builder = charonservice->get_vpnservice_builder(charonservice);
 	if (!builder->add_address(builder, vip) ||
+		!add_routes(builder, child_sa) ||
 		!builder->set_mtu(builder, TUN_DEFAULT_MTU))
 	{
 		return FALSE;
