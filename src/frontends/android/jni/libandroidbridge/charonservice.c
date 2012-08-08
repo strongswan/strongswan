@@ -21,6 +21,7 @@
 
 #include "charonservice.h"
 #include "android_jni.h"
+#include "backend/android_attr.h"
 #include "backend/android_creds.h"
 #include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
@@ -45,6 +46,11 @@ struct private_charonservice_t {
 	 * public interface
 	 */
 	charonservice_t public;
+
+	/**
+	 * android_attr instance
+	 */
+	android_attr_t *attr;
 
 	/**
 	 * android_creds instance
@@ -243,10 +249,14 @@ static bool charonservice_register(void *plugin, plugin_feature_t *feature,
 	if (reg)
 	{
 		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+		hydra->attributes->add_handler(hydra->attributes,
+									   &this->attr->handler);
 	}
 	else
 	{
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+		hydra->attributes->remove_handler(hydra->attributes,
+										  &this->attr->handler);
 		if (this->service)
 		{
 			this->service->destroy(this->service);
@@ -279,6 +289,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_vpnservice_builder = _get_vpnservice_builder,
 		},
+		.attr = android_attr_create(),
 		.creds = android_creds_create(),
 		.builder = vpnservice_builder_create(builder),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
@@ -301,6 +312,7 @@ static void charonservice_deinit(JNIEnv *env)
 
 	this->builder->destroy(this->builder);
 	this->creds->destroy(this->creds);
+	this->attr->destroy(this->attr);
 	(*env)->DeleteGlobalRef(env, this->vpn_service);
 	free(this);
 	charonservice = NULL;

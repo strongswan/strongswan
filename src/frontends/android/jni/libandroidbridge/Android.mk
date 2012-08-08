@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
 android_jni.c android_jni.h \
+backend/android_attr.c backend/android_attr.h \
 backend/android_creds.c backend/android_creds.h \
 backend/android_service.c backend/android_service.h \
 charonservice.c charonservice.h \
