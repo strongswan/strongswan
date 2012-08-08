@@ -19,10 +19,16 @@ package org.strongswan.android.logic;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.VpnStateService.ErrorState;
+import org.strongswan.android.logic.VpnStateService.State;
 
+import android.app.Service;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.VpnService;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 
 public class CharonVpnService extends VpnService implements Runnable
@@ -34,6 +40,29 @@ public class CharonVpnService extends VpnService implements Runnable
 	private VpnProfile mNextProfile;
 	private volatile boolean mProfileUpdated;
 	private volatile boolean mTerminate;
+	private VpnStateService mService;
+	private final Object mServiceLock = new Object();
+	private final ServiceConnection mServiceConnection = new ServiceConnection() {
+		@Override
+		public void onServiceDisconnected(ComponentName name)
+		{	/* since the service is local this is theoretically only called when the process is terminated */
+			synchronized (mServiceLock)
+			{
+				mService = null;
+			}
+		}
+
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service)
+		{
+			synchronized (mServiceLock)
+			{
+				mService = ((VpnStateService.LocalBinder)service).getService();
+			}
+			/* we are now ready to start the handler thread */
+			mConnectionHandler.start();
+		}
+	};
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId)
@@ -63,7 +92,9 @@ public class CharonVpnService extends VpnService implements Runnable
 		mDataSource.open();
 		/* use a separate thread as main thread for charon */
 		mConnectionHandler = new Thread(this);
-		mConnectionHandler.start();
+		/* the thread is started when the service is bound */
+		bindService(new Intent(this, VpnStateService.class),
+					mServiceConnection, Service.BIND_AUTO_CREATE);
 	}
 
 	@Override
@@ -85,6 +116,10 @@ public class CharonVpnService extends VpnService implements Runnable
 		catch (InterruptedException e)
 		{
 			e.printStackTrace();
+		}
+		if (mService != null)
+		{
+			unbindService(mServiceConnection);
 		}
 		mDataSource.close();
 	}
@@ -122,6 +157,8 @@ public class CharonVpnService extends VpnService implements Runnable
 					stopCurrentConnection();
 					if (mNextProfile == null)
 					{
+						setProfile(null);
+						setState(State.DISABLED);
 						if (mTerminate)
 						{
 							break;
@@ -132,6 +169,10 @@ public class CharonVpnService extends VpnService implements Runnable
 						mCurrentProfile = mNextProfile;
 						mNextProfile = null;
 
+						setProfile(mCurrentProfile);
+						setError(ErrorState.NO_ERROR);
+						setState(State.CONNECTING);
+
 						initializeCharon();
 						Log.i(TAG, "charon started");
 					}
@@ -139,6 +180,7 @@ public class CharonVpnService extends VpnService implements Runnable
 				catch (InterruptedException ex)
 				{
 					stopCurrentConnection();
+					setState(State.DISABLED);
 				}
 			}
 		}
@@ -153,9 +195,60 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			if (mCurrentProfile != null)
 			{
+				setState(State.DISCONNECTING);
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
+			}
+		}
+	}
+
+	/**
+	 * Update the VPN profile on the state service. Called by the handler thread.
+	 *
+	 * @param profile currently active VPN profile
+	 */
+	private void setProfile(VpnProfile profile)
+	{
+		synchronized (mServiceLock)
+		{
+			if (mService != null)
+			{
+				mService.setProfile(profile);
+			}
+		}
+	}
+
+	/**
+	 * Update the current VPN state on the state service. Called by the handler
+	 * thread and any of charon's threads.
+	 *
+	 * @param state current state
+	 */
+	private void setState(State state)
+	{
+		synchronized (mServiceLock)
+		{
+			if (mService != null)
+			{
+				mService.setState(state);
+			}
+		}
+	}
+
+	/**
+	 * Set an error on the state service. Called by the handler thread and any
+	 * of charon's threads.
+	 *
+	 * @param error error state
+	 */
+	private void setError(ErrorState error)
+	{
+		synchronized (mServiceLock)
+		{
+			if (mService != null)
+			{
+				mService.setError(error);
 			}
 		}
 	}
