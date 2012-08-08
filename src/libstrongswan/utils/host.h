@@ -155,7 +155,7 @@ struct host_t {
  *
  * @param string		string of an address, such as "152.96.193.130"
  * @param port			port number
- * @return 				host_t, NULL if string not an address.
+ * @return				host_t, NULL if string not an address.
  */
 host_t *host_create_from_string(char *string, u_int16_t port);
 
@@ -165,7 +165,7 @@ host_t *host_create_from_string(char *string, u_int16_t port);
  * @param string		hostname to resolve
  * @param family		family to prefer, 0 for first match
  * @param port			port number
- * @return 				host_t, NULL lookup failed
+ * @return				host_t, NULL lookup failed
  */
 host_t *host_create_from_dns(char *string, int family, u_int16_t port);
 
@@ -174,10 +174,10 @@ host_t *host_create_from_dns(char *string, int family, u_int16_t port);
  *
  * If family is AF_UNSPEC, it is guessed using address.len.
  *
- * @param family 		Address family, such as AF_INET or AF_INET6
+ * @param family		Address family, such as AF_INET or AF_INET6
  * @param address		address as chunk_t in network order
  * @param port			port number
- * @return 				host_t, NULL if family not supported/chunk invalid
+ * @return				host_t, NULL if family not supported/chunk invalid
  */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
 
@@ -185,7 +185,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
  * Constructor to create a host_t object from a sockaddr struct
  *
  * @param sockaddr		sockaddr struct which contains family, address and port
- * @return 				host_t, NULL if family not supported
+ * @return				host_t, NULL if family not supported
  */
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 
@@ -202,7 +202,7 @@ host_t *host_create_from_subnet(char *string, int *bits);
  * Create a host without an address, a "any" host.
  *
  * @param family		family of the any host
- * @return 				host_t, NULL if family not supported
+ * @return				host_t, NULL if family not supported
  */
 host_t *host_create_any(int family);
 
@@ -212,6 +212,7 @@ host_t *host_create_any(int family);
  * Arguments are:
  *	host_t *host
  * Use #-modifier to include port number
+ * Use +-modifier to force numeric representation (instead of e.g. %any)
  */
 int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args);
