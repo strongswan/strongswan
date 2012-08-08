@@ -142,6 +142,53 @@ failed:
 	return FALSE;
 }
 
+METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
+	private_charonservice_t *this)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jobjectArray jcerts;
+	linked_list_t *list;
+	jsize i;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env,
+						android_charonvpnservice_class,
+						"getTrustedCertificates", "(Ljava/lang/String;)[[B");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jcerts = (*env)->CallObjectMethod(env, this->vpn_service, method_id, NULL);
+	if (!jcerts)
+	{
+		goto failed;
+	}
+	list = linked_list_create();
+	for (i = 0; i < (*env)->GetArrayLength(env, jcerts); ++i)
+	{
+		chunk_t *ca_cert;
+		jbyteArray jcert;
+
+		ca_cert = malloc_thing(chunk_t);
+		list->insert_last(list, ca_cert);
+
+		jcert = (*env)->GetObjectArrayElement(env, jcerts, i);
+		*ca_cert = chunk_alloc((*env)->GetArrayLength(env, jcert));
+		(*env)->GetByteArrayRegion(env, jcert, 0, ca_cert->len, ca_cert->ptr);
+		(*env)->DeleteLocalRef(env, jcert);
+	}
+	(*env)->DeleteLocalRef(env, jcerts);
+	androidjni_detach_thread();
+	return list;
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return NULL;
+}
+
 /**
  * Initialize the charonservice object
  */
@@ -159,6 +206,7 @@ static void charonservice_init(JNIEnv *env, jobject service)
 		.public = {
 			.update_status = _update_status,
 			.bypass_socket = _bypass_socket,
+			.get_trusted_certificates = _get_trusted_certificates,
 		},
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);

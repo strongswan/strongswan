@@ -17,6 +17,10 @@
 
 package org.strongswan.android.logic;
 
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
@@ -326,6 +330,63 @@ public class CharonVpnService extends VpnService implements Runnable
 				Log.e(TAG, "Unknown status code received");
 				break;
 		}
+	}
+
+	/**
+	 * Function called via JNI to generate a list of DER encoded CA certificates
+	 * as byte array.
+	 *
+	 * @param hash optional alias (only hash part), if given matching certificates are returned
+	 * @return a list of DER encoded CA certificates
+	 */
+	private synchronized byte[][] getTrustedCertificates(String hash)
+	{
+		ArrayList<byte[]> certs = new ArrayList<byte[]>();
+		TrustedCertificateManager certman = TrustedCertificateManager.getInstance();
+		try
+		{
+			if (hash != null)
+			{
+				String alias = "user:" + hash + ".0";
+				X509Certificate cert = certman.getCACertificateFromAlias(alias);
+				if (cert == null)
+				{
+					alias = "system:" + hash + ".0";
+					cert = certman.getCACertificateFromAlias(alias);
+				}
+				if (cert == null)
+				{
+					return null;
+				}
+				certs.add(cert.getEncoded());
+			}
+			else
+			{
+				String alias = this.mCurrentProfile.getCertificateAlias();
+				if (alias != null)
+				{
+					X509Certificate cert = certman.getCACertificateFromAlias(alias);
+					if (cert == null)
+					{
+						return null;
+					}
+					certs.add(cert.getEncoded());
+				}
+				else
+				{
+					for (X509Certificate cert : certman.getAllCACertificates().values())
+					{
+						certs.add(cert.getEncoded());
+					}
+				}
+			}
+		}
+		catch (CertificateEncodingException e)
+		{
+			e.printStackTrace();
+			return null;
+		}
+		return certs.toArray(new byte[certs.size()][]);
 	}
 
 	/**

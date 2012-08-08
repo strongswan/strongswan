@@ -29,6 +29,7 @@
 #define CHARONSERVICE_H_
 
 #include <library.h>
+#include <utils/linked_list.h>
 
 typedef enum android_vpn_state_t android_vpn_state_t;
 typedef struct charonservice_t charonservice_t;
@@ -70,6 +71,14 @@ struct charonservice_t {
 	 * @return				TRUE if operation successful
 	 */
 	bool (*bypass_socket)(charonservice_t *this, int fd, int family);
+
+	/**
+	 * Get a list of trusted certificates via JNI
+	 *
+	 * @return				list of DER encoded certificates (as chunk_t*),
+	 *						NULL on failure
+	 */
+	linked_list_t *(*get_trusted_certificates)(charonservice_t *this);
 
 };
 
