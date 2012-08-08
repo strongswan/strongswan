@@ -46,6 +46,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	private VpnProfileDataSource mDataSource;
 	private Thread mConnectionHandler;
 	private VpnProfile mCurrentProfile;
+	private volatile String mCurrentCertificateAlias;
 	private VpnProfile mNextProfile;
 	private volatile boolean mProfileUpdated;
 	private volatile boolean mTerminate;
@@ -188,6 +189,10 @@ public class CharonVpnService extends VpnService implements Runnable
 					{
 						mCurrentProfile = mNextProfile;
 						mNextProfile = null;
+
+						/* store this in a separate (volatile) variable to avoid
+						 * a possible deadlock during deinitialization */
+						mCurrentCertificateAlias = mCurrentProfile.getCertificateAlias();
 
 						setProfile(mCurrentProfile);
 						setError(ErrorState.NO_ERROR);
@@ -350,7 +355,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	 * @param hash optional alias (only hash part), if given matching certificates are returned
 	 * @return a list of DER encoded CA certificates
 	 */
-	private synchronized byte[][] getTrustedCertificates(String hash)
+	private byte[][] getTrustedCertificates(String hash)
 	{
 		ArrayList<byte[]> certs = new ArrayList<byte[]>();
 		TrustedCertificateManager certman = TrustedCertificateManager.getInstance();
@@ -373,7 +378,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			}
 			else
 			{
-				String alias = this.mCurrentProfile.getCertificateAlias();
+				String alias = this.mCurrentCertificateAlias;
 				if (alias != null)
 				{
 					X509Certificate cert = certman.getCACertificateFromAlias(alias);
