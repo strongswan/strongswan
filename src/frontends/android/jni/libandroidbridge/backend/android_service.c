@@ -17,12 +17,16 @@
 
 #include "android_service.h"
 #include "../charonservice.h"
+#include "../vpnservice_builder.h"
 
 #include <daemon.h>
 #include <library.h>
 #include <processing/jobs/callback_job.h>
+#include <threading/rwlock.h>
 
 typedef struct private_android_service_t private_android_service_t;
+
+#define TUN_DEFAULT_MTU 1400
 
 /**
  * private data of Android service
@@ -54,7 +58,71 @@ struct private_android_service_t {
 	 */
 	char *username;
 
+	/**
+	 * lock to safely access the TUN device fd
+	 */
+	rwlock_t *lock;
+
+	/**
+	 * TUN device file descriptor
+	 */
+	int tunfd;
+
 };
+
+/**
+ * Setup a new TUN device for the supplied SAs.
+ * Additional information such as DNS servers are gathered in appropriate
+ * listeners asynchronously.  To be sure every required bit of information is
+ * available this should be called after the CHILD_SA has been established.
+ */
+static bool setup_tun_device(private_android_service_t *this,
+							 ike_sa_t *ike_sa, child_sa_t *child_sa)
+{
+	vpnservice_builder_t *builder;
+	int tunfd;
+
+	DBG1(DBG_DMN, "setting up TUN device for CHILD_SA %s{%u}",
+		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+
+	builder = charonservice->get_vpnservice_builder(charonservice);
+	if (!builder->set_mtu(builder, TUN_DEFAULT_MTU))
+	{
+		return FALSE;
+	}
+
+	tunfd = builder->establish(builder);
+	if (tunfd == -1)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	this->tunfd = tunfd;
+	this->lock->unlock(this->lock);
+
+	DBG1(DBG_DMN, "successfully created TUN device");
+	return TRUE;
+}
+
+/**
+ * Close the current tun device
+ */
+static void close_tun_device(private_android_service_t *this)
+{
+	int tunfd;
+
+	this->lock->write_lock(this->lock);
+	if (this->tunfd < 0)
+	{	/* already closed (or never created) */
+		this->lock->unlock(this->lock);
+		return;
+	}
+	tunfd = this->tunfd;
+	this->tunfd = -1;
+	this->lock->unlock(this->lock);
+	close(tunfd);
+}
 
 METHOD(listener_t, child_updown, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
@@ -67,11 +135,20 @@ METHOD(listener_t, child_updown, bool,
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
 			this->public.listener.ike_state_change = NULL;
+			if (!setup_tun_device(this, ike_sa, child_sa))
+			{
+				DBG1(DBG_DMN, "failed to setup TUN device");
+				charonservice->update_status(charonservice,
+											 CHARONSERVICE_GENERIC_ERROR);
+				return FALSE;
+
+			}
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_UP);
 		}
 		else
 		{
+			close_tun_device(this);
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_DOWN);
 			return FALSE;
@@ -230,6 +307,9 @@ METHOD(android_service_t, destroy, void,
 	private_android_service_t *this)
 {
 	charon->bus->remove_listener(charon->bus, &this->public.listener);
+	/* make sure the tun device is actually closed */
+	close_tun_device(this);
+	this->lock->destroy(this->lock);
 	free(this->local_address);
 	free(this->username);
 	free(this->gateway);
@@ -255,9 +335,11 @@ android_service_t *android_service_create(char *local_address, char *gateway,
 			},
 			.destroy = _destroy,
 		},
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.local_address = local_address,
 		.username = username,
 		.gateway = gateway,
+		.tunfd = -1,
 	);
 
 	charon->bus->add_listener(charon->bus, &this->public.listener);
