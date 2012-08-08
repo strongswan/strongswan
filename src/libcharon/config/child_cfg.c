@@ -171,6 +171,8 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 	}
 	enumerator->destroy(enumerator);
 
+	DBG2(DBG_CFG, "configured proposals: %#P", proposals);
+
 	return proposals;
 }
 
