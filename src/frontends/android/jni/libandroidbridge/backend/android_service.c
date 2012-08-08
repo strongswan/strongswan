@@ -15,6 +15,8 @@
  * for more details.
  */
 
+#include <unistd.h>
+
 #include "android_service.h"
 #include "../charonservice.h"
 #include "../vpnservice_builder.h"
@@ -77,6 +79,35 @@ struct private_android_service_t {
 static void send_esp(void *data, esp_packet_t *packet)
 {
 	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
+}
+
+/**
+ * Inbound callback
+ */
+static void deliver_plain(private_android_service_t *this,
+						  ip_packet_t *packet)
+{
+	chunk_t encoding;
+	ssize_t len;
+
+	encoding = packet->get_encoding(packet);
+
+	this->lock->read_lock(this->lock);
+	if (this->tunfd < 0)
+	{	/* the TUN device is already closed */
+		this->lock->unlock(this->lock);
+		packet->destroy(packet);
+		return;
+	}
+	len = write(this->tunfd, encoding.ptr, encoding.len);
+	this->lock->unlock(this->lock);
+
+	if (len < 0 || len != encoding.len)
+	{
+		DBG1(DBG_DMN, "failed to write packet to TUN device: %s",
+			 strerror(errno));
+	}
+	packet->destroy(packet);
 }
 
 /**
@@ -179,6 +210,8 @@ static bool setup_tun_device(private_android_service_t *this,
 
 	charon->receiver->add_esp_cb(charon->receiver,
 								(receiver_esp_cb_t)receiver_esp_cb, NULL);
+	ipsec->processor->register_inbound(ipsec->processor,
+									  (ipsec_inbound_cb_t)deliver_plain, this);
 	ipsec->processor->register_outbound(ipsec->processor,
 									   (ipsec_outbound_cb_t)send_esp, NULL);
 
@@ -204,6 +237,8 @@ static void close_tun_device(private_android_service_t *this)
 
 	ipsec->processor->unregister_outbound(ipsec->processor,
 										 (ipsec_outbound_cb_t)send_esp);
+	ipsec->processor->unregister_inbound(ipsec->processor,
+										(ipsec_inbound_cb_t)deliver_plain);
 	charon->receiver->del_esp_cb(charon->receiver,
 								(receiver_esp_cb_t)receiver_esp_cb);
 	close(tunfd);
