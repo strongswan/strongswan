@@ -18,6 +18,9 @@
 /**
  * @defgroup libandroidbridge libandroidbridge
  *
+ * @defgroup android_kernel kernel
+ * @ingroup libandroidbridge
+ *
  * @defgroup charonservice charonservice
  * @{ @ingroup libandroidbridge
  */

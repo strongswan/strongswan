@@ -21,6 +21,7 @@
 
 #include "charonservice.h"
 #include "android_jni.h"
+#include "kernel/android_net.h"
 
 #include <daemon.h>
 #include <hydra.h>
@@ -94,6 +95,10 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 static void charonservice_init(JNIEnv *env, jobject service)
 {
 	private_charonservice_t *this;
+	static plugin_feature_t features[] = {
+		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
+	};
 
 	INIT(this,
 		.public = {
@@ -101,6 +106,9 @@ static void charonservice_init(JNIEnv *env, jobject service)
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
+
+	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
+									  countof(features), TRUE);
 
 	lib->settings->set_int(lib->settings,
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);

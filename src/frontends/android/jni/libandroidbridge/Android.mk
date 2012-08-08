@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
 android_jni.c android_jni.h \
-charonservice.c charonservice.h
+charonservice.c charonservice.h \
+kernel/android_net.c kernel/android_net.h
 
 # build libandroidbridge -------------------------------------------------------
 
