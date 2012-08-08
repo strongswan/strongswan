@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 android_jni.c android_jni.h \
 charonservice.c charonservice.h \
+kernel/android_ipsec.c kernel/android_ipsec.h \
 kernel/android_net.c kernel/android_net.h
 
 # build libandroidbridge -------------------------------------------------------

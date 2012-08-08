@@ -21,6 +21,7 @@
 
 #include "charonservice.h"
 #include "android_jni.h"
+#include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
 
 #include <daemon.h>
@@ -98,6 +99,8 @@ static void charonservice_init(JNIEnv *env, jobject service)
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
+		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 	};
 
 	INIT(this,
