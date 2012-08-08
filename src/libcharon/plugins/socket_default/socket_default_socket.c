@@ -116,6 +116,11 @@ struct private_socket_default_socket_t {
 	 * Maximum packet size to receive
 	 */
 	int max_packet;
+
+	/**
+	 * TRUE if the source address should be set on outbound packets
+	 */
+	bool set_source;
 };
 
 METHOD(socket_t, receiver, status_t,
@@ -352,7 +357,7 @@ METHOD(socket_t, sender, status_t,
 	msg.msg_iovlen = 1;
 	msg.msg_flags = 0;
 
-	if (!src->is_anyaddr(src))
+	if (this->set_source && !src->is_anyaddr(src))
 	{
 		if (family == AF_INET)
 		{
@@ -576,6 +581,9 @@ socket_default_socket_t *socket_default_socket_create()
 							"%s.port_nat_t", CHARON_NATT_PORT, charon->name),
 		.max_packet = lib->settings->get_int(lib->settings,
 							"%s.max_packet", MAX_PACKET, charon->name),
+		.set_source = lib->settings->get_bool(lib->settings,
+							"%s.plugins.socket-default.set_source", TRUE,
+							charon->name),
 	);
 
 	if (this->port && this->port == this->natt)

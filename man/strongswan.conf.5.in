@@ -496,6 +496,9 @@ is appended to this prefix to make it unique.  The result has to be a valid
 interface name according to the rules defined by resolvconf.  Also, it should
 have a high priority according to the order defined in interface-order(5).
 .TP
+.BR charon.plugins.socket-default.set_source " [yes]"
+Set source address on outbound packets, if possible.
+.TP
 .BR charon.plugins.sql.database
 Database URI for charons SQL plugin
 .TP
