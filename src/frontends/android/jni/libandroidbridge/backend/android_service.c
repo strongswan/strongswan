@@ -80,13 +80,21 @@ static bool setup_tun_device(private_android_service_t *this,
 							 ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	vpnservice_builder_t *builder;
+	host_t *vip;
 	int tunfd;
 
 	DBG1(DBG_DMN, "setting up TUN device for CHILD_SA %s{%u}",
 		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
+	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
+	if (!vip || vip->is_anyaddr(vip))
+	{
+		DBG1(DBG_DMN, "setting up TUN device failed, no virtual IP found");
+		return FALSE;
+	}
 
 	builder = charonservice->get_vpnservice_builder(charonservice);
-	if (!builder->set_mtu(builder, TUN_DEFAULT_MTU))
+	if (!builder->add_address(builder, vip) ||
+		!builder->set_mtu(builder, TUN_DEFAULT_MTU))
 	{
 		return FALSE;
 	}
