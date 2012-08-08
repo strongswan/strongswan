@@ -37,6 +37,7 @@ import android.content.ServiceConnection;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 public class CharonVpnService extends VpnService implements Runnable
@@ -445,6 +446,104 @@ public class CharonVpnService extends VpnService implements Runnable
 			return null;
 		}
 		return null;
+	}
+
+	/**
+	 * Adapter for VpnService.Builder which is used to access it safely via JNI.
+	 */
+	public class BuilderAdapter
+	{
+		VpnService.Builder builder;
+
+		public BuilderAdapter(String name)
+		{
+			builder = new CharonVpnService.Builder();
+			builder.setSession(name);
+		}
+
+		public synchronized boolean addAddress(String address, int prefixLength)
+		{
+			try
+			{
+				builder.addAddress(address, prefixLength);
+			}
+			catch (IllegalArgumentException ex)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		public synchronized boolean addDnsServer(String address)
+		{
+			try
+			{
+				builder.addDnsServer(address);
+			}
+			catch (IllegalArgumentException ex)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		public synchronized boolean addRoute(String address, int prefixLength)
+		{
+			try
+			{
+				builder.addRoute(address, prefixLength);
+			}
+			catch (IllegalArgumentException ex)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		public synchronized boolean addSearchDomain(String domain)
+		{
+			try
+			{
+				builder.addSearchDomain(domain);
+			}
+			catch (IllegalArgumentException ex)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		public synchronized boolean setMtu(int mtu)
+		{
+			try
+			{
+				builder.setMtu(mtu);
+			}
+			catch (IllegalArgumentException ex)
+			{
+				return false;
+			}
+			return true;
+		}
+
+		public synchronized int establish()
+		{
+			ParcelFileDescriptor fd;
+			try
+			{
+				fd = builder.establish();
+			}
+			catch (Exception ex)
+			{
+				ex.printStackTrace();
+				return -1;
+			}
+			if (fd == null)
+			{
+				return -1;
+			}
+			return fd.detachFd();
+		}
 	}
 
 	/*
