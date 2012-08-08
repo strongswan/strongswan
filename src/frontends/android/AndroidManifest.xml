@@ -26,6 +26,10 @@
         </activity>
 
         <service
+            android:name=".logic.VpnStateService"
+            android:exported="false" >
+        </service>
+        <service
             android:name=".logic.CharonVpnService"
             android:exported="false"
             android:permission="android.permission.BIND_VPN_SERVICE" >
