@@ -22,6 +22,7 @@
 #include "charonservice.h"
 #include "android_jni.h"
 #include "backend/android_creds.h"
+#include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
 
@@ -49,6 +50,11 @@ struct private_charonservice_t {
 	 * android_creds instance
 	 */
 	android_creds_t *creds;
+
+	/**
+	 * android_service instance
+	 */
+	android_service_t *service;
 
 	/**
 	 * CharonVpnService reference
@@ -196,6 +202,27 @@ failed:
 }
 
 /**
+ * Initiate a new connection
+ *
+ * @param local				local ip address (gets owned)
+ * @param gateway			gateway address (gets owned)
+ * @param username			username (gets owned)
+ * @param password			password (gets owned)
+ */
+static void initiate(char *local, char *gateway, char *username, char *password)
+{
+	private_charonservice_t *this = (private_charonservice_t*)charonservice;
+
+	this->creds->clear(this->creds);
+	this->creds->add_username_password(this->creds, username, password);
+	memwipe(password, strlen(password));
+	free(password);
+
+	DESTROY_IF(this->service);
+	this->service = android_service_create(local, gateway, username);
+}
+
+/**
  * Initialize/deinitialize Android backend
  */
 static bool charonservice_register(void *plugin, plugin_feature_t *feature,
@@ -209,6 +236,11 @@ static bool charonservice_register(void *plugin, plugin_feature_t *feature,
 	else
 	{
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+		if (this->service)
+		{
+			this->service->destroy(this->service);
+			this->service = NULL;
+		}
 	}
 	return TRUE;
 }
@@ -341,3 +373,34 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 	library_deinit();
 }
 
+/**
+ * Convert a Java string to a C string.  Memory is allocated.
+ */
+static inline char *convert_jstring(JNIEnv *env, jstring jstr)
+{
+	char *str;
+	jsize len;
+
+	len = (*env)->GetStringUTFLength(env, jstr);
+	str = malloc(len + 1);
+	(*env)->GetStringUTFRegion(env, jstr, 0, len, str);
+	str[len] = '\0';
+	return str;
+}
+
+/**
+ * Initiate SA
+ */
+JNI_METHOD(CharonVpnService, initiate, void,
+	jstring jlocal_address, jstring jgateway, jstring jusername,
+	jstring jpassword)
+{
+	char *local_address, *gateway, *username, *password;
+
+	local_address = convert_jstring(env, jlocal_address);
+	gateway = convert_jstring(env, jgateway);
+	username = convert_jstring(env, jusername);
+	password = convert_jstring(env, jpassword);
+
+	initiate(local_address, gateway, username, password);
+}

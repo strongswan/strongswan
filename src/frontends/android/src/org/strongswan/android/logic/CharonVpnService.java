@@ -194,6 +194,11 @@ public class CharonVpnService extends VpnService implements Runnable
 
 						initializeCharon();
 						Log.i(TAG, "charon started");
+
+						String local_address = getLocalIPv4Address();
+						initiate(local_address != null ? local_address : "0.0.0.0",
+								 mCurrentProfile.getGateway(), mCurrentProfile.getUsername(),
+								 mCurrentProfile.getPassword());
 					}
 				}
 				catch (InterruptedException ex)
@@ -402,6 +407,12 @@ public class CharonVpnService extends VpnService implements Runnable
 	 * Deinitialize charon, provided by libandroidbridge.so
 	 */
 	public native void deinitializeCharon();
+
+	/**
+	 * Initiate VPN, provided by libandroidbridge.so
+	 */
+	public native void initiate(String local_address, String gateway,
+								String username, String password);
 
 	/**
 	 * Helper function that retrieves a local IPv4 address.
