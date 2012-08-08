@@ -21,6 +21,7 @@
 
 #include "charonservice.h"
 #include "android_jni.h"
+#include "backend/android_creds.h"
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
 
@@ -43,6 +44,11 @@ struct private_charonservice_t {
 	 * public interface
 	 */
 	charonservice_t public;
+
+	/**
+	 * android_creds instance
+	 */
+	android_creds_t *creds;
 
 	/**
 	 * CharonVpnService reference
@@ -190,6 +196,24 @@ failed:
 }
 
 /**
+ * Initialize/deinitialize Android backend
+ */
+static bool charonservice_register(void *plugin, plugin_feature_t *feature,
+								   bool reg, void *data)
+{
+	private_charonservice_t *this = (private_charonservice_t*)charonservice;
+	if (reg)
+	{
+		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+	}
+	else
+	{
+		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	}
+	return TRUE;
+}
+
+/**
  * Initialize the charonservice object
  */
 static void charonservice_init(JNIEnv *env, jobject service)
@@ -200,6 +224,9 @@ static void charonservice_init(JNIEnv *env, jobject service)
 			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)charonservice_register, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "Android backend"),
+				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
 	};
 
 	INIT(this,
@@ -208,6 +235,7 @@ static void charonservice_init(JNIEnv *env, jobject service)
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
 		},
+		.creds = android_creds_create(),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
@@ -226,6 +254,7 @@ static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	this->creds->destroy(this->creds);
 	(*env)->DeleteGlobalRef(env, this->vpn_service);
 	free(this);
 	charonservice = NULL;
