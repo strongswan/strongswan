@@ -15,6 +15,7 @@
  */
 
 #include "android_ipsec.h"
+#include "../charonservice.h"
 
 #include <debug.h>
 #include <library.h>
@@ -139,7 +140,7 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 METHOD(kernel_ipsec_t, bypass_socket, bool,
 	private_kernel_android_ipsec_t *this, int fd, int family)
 {
-	return NOT_SUPPORTED;
+	return charonservice->bypass_socket(charonservice, fd, family);
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,

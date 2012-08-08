@@ -28,6 +28,8 @@
 #ifndef CHARONSERVICE_H_
 #define CHARONSERVICE_H_
 
+#include <library.h>
+
 typedef struct charonservice_t charonservice_t;
 
 /**
@@ -36,6 +38,16 @@ typedef struct charonservice_t charonservice_t;
  * Used to communicate with CharonVpnService via JNI
  */
 struct charonservice_t {
+
+	/**
+	 * Install a bypass policy for the given socket using the protect() Method
+	 * of the Android VpnService interface
+	 *
+	 * @param fd			socket file descriptor
+	 * @param family		socket protocol family
+	 * @return				TRUE if operation successful
+	 */
+	bool (*bypass_socket)(charonservice_t *this, int fd, int family);
 
 };
 

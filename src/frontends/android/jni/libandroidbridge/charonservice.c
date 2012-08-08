@@ -90,6 +90,34 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 	}
 }
 
+METHOD(charonservice_t, bypass_socket, bool,
+	private_charonservice_t *this, int fd, int family)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"protect", "(I)Z");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	if (!(*env)->CallBooleanMethod(env, this->vpn_service, method_id, fd))
+	{
+		DBG1(DBG_CFG, "VpnService.protect() failed");
+		goto failed;
+	}
+	androidjni_detach_thread();
+	return TRUE;
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return FALSE;
+}
+
 /**
  * Initialize the charonservice object
  */
@@ -105,6 +133,7 @@ static void charonservice_init(JNIEnv *env, jobject service)
 
 	INIT(this,
 		.public = {
+			.bypass_socket = _bypass_socket,
 		},
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
