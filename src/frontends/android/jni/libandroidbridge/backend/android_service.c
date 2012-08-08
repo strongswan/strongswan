@@ -15,6 +15,7 @@
  * for more details.
  */
 
+#include <errno.h>
 #include <unistd.h>
 
 #include "android_service.h"
@@ -26,6 +27,7 @@
 #include <ipsec.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/rwlock.h>
+#include <threading/thread.h>
 
 typedef struct private_android_service_t private_android_service_t;
 
@@ -122,6 +124,62 @@ static void receiver_esp_cb(void *data, packet_t *packet)
 }
 
 /**
+ * Job handling outbound plaintext packets
+ */
+static job_requeue_t handle_plain(private_android_service_t *this)
+{
+	ip_packet_t *packet;
+	chunk_t raw;
+	fd_set set;
+	ssize_t len;
+	int tunfd;
+	bool old;
+
+	FD_ZERO(&set);
+
+	this->lock->read_lock(this->lock);
+	if (this->tunfd < 0)
+	{	/* the TUN device is already closed */
+		this->lock->unlock(this->lock);
+		return JOB_REQUEUE_NONE;
+	}
+	tunfd = this->tunfd;
+	FD_SET(tunfd, &set);
+	this->lock->unlock(this->lock);
+
+	old = thread_cancelability(TRUE);
+	len = select(tunfd + 1, &set, NULL, NULL, NULL);
+	thread_cancelability(old);
+
+	if (len < 0)
+	{
+		DBG1(DBG_DMN, "select on TUN device failed: %s", strerror(errno));
+		return JOB_REQUEUE_NONE;
+	}
+
+	raw = chunk_alloc(TUN_DEFAULT_MTU);
+	len = read(tunfd, raw.ptr, raw.len);
+	if (len < 0)
+	{
+		DBG1(DBG_DMN, "reading from TUN device failed: %s", strerror(errno));
+		chunk_free(&raw);
+		return JOB_REQUEUE_FAIR;
+	}
+	raw.len = len;
+
+	packet = ip_packet_create(raw);
+	if (packet)
+	{
+		ipsec->processor->queue_outbound(ipsec->processor, packet);
+	}
+	else
+	{
+		DBG1(DBG_DMN, "invalid IP packet read from TUN device");
+	}
+	return JOB_REQUEUE_DIRECT;
+}
+
+/**
  * Add a route to the TUN device builder
  */
 static bool add_route(vpnservice_builder_t *builder, host_t *net,
@@ -167,7 +225,8 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
 }
 
 /**
- * Setup a new TUN device for the supplied SAs.
+ * Setup a new TUN device for the supplied SAs, also queues a job that
+ * reads packets from this device.
  * Additional information such as DNS servers are gathered in appropriate
  * listeners asynchronously.  To be sure every required bit of information is
  * available this should be called after the CHILD_SA has been established.
@@ -215,6 +274,9 @@ static bool setup_tun_device(private_android_service_t *this,
 	ipsec->processor->register_outbound(ipsec->processor,
 									   (ipsec_outbound_cb_t)send_esp, NULL);
 
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
+									NULL, (callback_job_cancel_t)return_false));
 	return TRUE;
 }
 
