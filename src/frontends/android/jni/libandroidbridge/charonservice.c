@@ -34,6 +34,9 @@
 #include <threading/thread.h>
 
 #define ANDROID_DEBUG_LEVEL 1
+#define ANDROID_RETRASNMIT_TRIES 3
+#define ANDROID_RETRANSMIT_TIMEOUT 3.0
+#define ANDROID_RETRANSMIT_BASE 1.4
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -301,6 +304,12 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 
 	lib->settings->set_int(lib->settings,
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
+	lib->settings->set_int(lib->settings,
+					"charon.retransmit_tries", ANDROID_RETRASNMIT_TRIES);
+	lib->settings->set_double(lib->settings,
+					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
+	lib->settings->set_double(lib->settings,
+					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
 }
 
 /**
