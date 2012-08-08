@@ -21,6 +21,7 @@
 
 #include <daemon.h>
 #include <library.h>
+#include <ipsec.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/rwlock.h>
 
@@ -69,6 +70,25 @@ struct private_android_service_t {
 	int tunfd;
 
 };
+
+/**
+ * Outbound callback
+ */
+static void send_esp(void *data, esp_packet_t *packet)
+{
+	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
+}
+
+/**
+ * Receiver callback
+ */
+static void receiver_esp_cb(void *data, packet_t *packet)
+{
+	esp_packet_t *esp_packet;
+
+	esp_packet = esp_packet_create_from_packet(packet);
+	ipsec->processor->queue_inbound(ipsec->processor, esp_packet);
+}
 
 /**
  * Add a route to the TUN device builder
@@ -156,6 +176,12 @@ static bool setup_tun_device(private_android_service_t *this,
 	this->lock->unlock(this->lock);
 
 	DBG1(DBG_DMN, "successfully created TUN device");
+
+	charon->receiver->add_esp_cb(charon->receiver,
+								(receiver_esp_cb_t)receiver_esp_cb, NULL);
+	ipsec->processor->register_outbound(ipsec->processor,
+									   (ipsec_outbound_cb_t)send_esp, NULL);
+
 	return TRUE;
 }
 
@@ -175,6 +201,11 @@ static void close_tun_device(private_android_service_t *this)
 	tunfd = this->tunfd;
 	this->tunfd = -1;
 	this->lock->unlock(this->lock);
+
+	ipsec->processor->unregister_outbound(ipsec->processor,
+										 (ipsec_outbound_cb_t)send_esp);
+	charon->receiver->del_esp_cb(charon->receiver,
+								(receiver_esp_cb_t)receiver_esp_cb);
 	close(tunfd);
 }
 
