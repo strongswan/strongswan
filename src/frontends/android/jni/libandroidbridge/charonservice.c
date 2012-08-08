@@ -312,6 +312,15 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
 	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
+	/* setting the source address breaks the VpnService.protect() function which
+	 * uses SO_BINDTODEVICE internally.  the addresses provided to the kernel as
+	 * auxiliary data have precedence over this option causing a routing loop if
+	 * the gateway is contained in the VPN routes.  alternatively, providing an
+	 * explicit device (in addition or instead of the source address) in the
+	 * auxiliary data would also work, but we currently don't have that
+	 * information */
+	lib->settings->set_bool(lib->settings,
+					"charon.plugins.socket-default.set_source", FALSE);
 }
 
 /**
