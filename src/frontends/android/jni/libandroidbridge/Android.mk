@@ -8,7 +8,8 @@ backend/android_creds.c backend/android_creds.h \
 backend/android_service.c backend/android_service.h \
 charonservice.c charonservice.h \
 kernel/android_ipsec.c kernel/android_ipsec.h \
-kernel/android_net.c kernel/android_net.h
+kernel/android_net.c kernel/android_net.h \
+vpnservice_builder.c vpnservice_builder.h
 
 # build libandroidbridge -------------------------------------------------------
 

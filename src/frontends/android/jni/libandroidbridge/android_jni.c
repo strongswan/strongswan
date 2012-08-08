@@ -26,6 +26,7 @@
 static JavaVM *android_jvm;
 
 jclass *android_charonvpnservice_class;
+jclass *android_charonvpnservice_builder_class;
 
 /**
  * Thread-local variable. Only used because of the destructor
@@ -88,6 +89,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	android_charonvpnservice_class =
 				(*env)->NewGlobalRef(env, (*env)->FindClass(env,
 						JNI_PACKAGE_STRING "/CharonVpnService"));
+	android_charonvpnservice_builder_class =
+				(*env)->NewGlobalRef(env, (*env)->FindClass(env,
+						JNI_PACKAGE_STRING "/CharonVpnService$BuilderAdapter"));
 
 	return JNI_VERSION_1_6;
 }

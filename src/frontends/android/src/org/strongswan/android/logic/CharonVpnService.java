@@ -193,7 +193,8 @@ public class CharonVpnService extends VpnService implements Runnable
 						setError(ErrorState.NO_ERROR);
 						setState(State.CONNECTING);
 
-						initializeCharon();
+						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
+						initializeCharon(builder);
 						Log.i(TAG, "charon started");
 
 						String local_address = getLocalIPv4Address();
@@ -401,8 +402,10 @@ public class CharonVpnService extends VpnService implements Runnable
 
 	/**
 	 * Initialization of charon, provided by libandroidbridge.so
+	 *
+	 * @param builder BuilderAdapter for this connection
 	 */
-	public native void initializeCharon();
+	public native void initializeCharon(BuilderAdapter builder);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
@@ -450,6 +453,7 @@ public class CharonVpnService extends VpnService implements Runnable
 
 	/**
 	 * Adapter for VpnService.Builder which is used to access it safely via JNI.
+	 * There is a corresponding C object to access it from native code.
 	 */
 	public class BuilderAdapter
 	{

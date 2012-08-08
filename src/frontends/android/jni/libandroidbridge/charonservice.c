@@ -57,6 +57,11 @@ struct private_charonservice_t {
 	android_service_t *service;
 
 	/**
+	 * VpnService builder (accessed via JNI)
+	 */
+	vpnservice_builder_t *builder;
+
+	/**
 	 * CharonVpnService reference
 	 */
 	jobject vpn_service;
@@ -201,6 +206,12 @@ failed:
 	return NULL;
 }
 
+METHOD(charonservice_t, get_vpnservice_builder, vpnservice_builder_t*,
+	private_charonservice_t *this)
+{
+	return this->builder;
+}
+
 /**
  * Initiate a new connection
  *
@@ -248,7 +259,7 @@ static bool charonservice_register(void *plugin, plugin_feature_t *feature,
 /**
  * Initialize the charonservice object
  */
-static void charonservice_init(JNIEnv *env, jobject service)
+static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
@@ -266,8 +277,10 @@ static void charonservice_init(JNIEnv *env, jobject service)
 			.update_status = _update_status,
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
+			.get_vpnservice_builder = _get_vpnservice_builder,
 		},
 		.creds = android_creds_create(),
+		.builder = vpnservice_builder_create(builder),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
@@ -286,6 +299,7 @@ static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	this->builder->destroy(this->builder);
 	this->creds->destroy(this->creds);
 	(*env)->DeleteGlobalRef(env, this->vpn_service);
 	free(this);
@@ -305,7 +319,8 @@ static void segv_handler(int signal)
 /**
  * Initialize charon and the libraries via JNI
  */
-JNI_METHOD(CharonVpnService, initializeCharon, void)
+JNI_METHOD(CharonVpnService, initializeCharon, void,
+	jobject builder)
 {
 	struct sigaction action;
 
@@ -334,7 +349,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void)
 		return;
 	}
 
-	charonservice_init(env, this);
+	charonservice_init(env, this, builder);
 
 	if (!libcharon_init("charon") ||
 		!charon->initialize(charon, PLUGINS))

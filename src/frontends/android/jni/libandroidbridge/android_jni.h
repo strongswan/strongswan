@@ -43,6 +43,7 @@
  * Initialized in JNI_OnLoad()
  */
 extern jclass *android_charonvpnservice_class;
+extern jclass *android_charonvpnservice_builder_class;
 
 /**
  * Attach the current thread to the JVM

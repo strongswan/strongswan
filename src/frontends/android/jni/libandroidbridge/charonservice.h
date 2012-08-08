@@ -31,6 +31,8 @@
 #ifndef CHARONSERVICE_H_
 #define CHARONSERVICE_H_
 
+#include "vpnservice_builder.h"
+
 #include <library.h>
 #include <utils/linked_list.h>
 
@@ -82,6 +84,13 @@ struct charonservice_t {
 	 *						NULL on failure
 	 */
 	linked_list_t *(*get_trusted_certificates)(charonservice_t *this);
+
+	/**
+	 * Get the current vpnservice_builder_t object
+	 *
+	 * @return				VpnService.Builder instance
+	 */
+	vpnservice_builder_t *(*get_vpnservice_builder)(charonservice_t *this);
 
 };
 
