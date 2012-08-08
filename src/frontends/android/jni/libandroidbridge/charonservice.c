@@ -90,6 +90,30 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 	}
 }
 
+METHOD(charonservice_t, update_status, bool,
+	private_charonservice_t *this, android_vpn_state_t code)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	bool success = FALSE;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"updateStatus", "(I)V");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	(*env)->CallVoidMethod(env, this->vpn_service, method_id, (jint)code);
+	success = !androidjni_exception_occurred(env);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return success;
+}
+
 METHOD(charonservice_t, bypass_socket, bool,
 	private_charonservice_t *this, int fd, int family)
 {
@@ -133,6 +157,7 @@ static void charonservice_init(JNIEnv *env, jobject service)
 
 	INIT(this,
 		.public = {
+			.update_status = _update_status,
 			.bypass_socket = _bypass_socket,
 		},
 		.vpn_service = (*env)->NewGlobalRef(env, service),

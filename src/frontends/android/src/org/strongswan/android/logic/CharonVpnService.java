@@ -64,6 +64,17 @@ public class CharonVpnService extends VpnService implements Runnable
 		}
 	};
 
+	/**
+	 * as defined in charonservice.h
+	 */
+	static final int STATE_CHILD_SA_UP = 1;
+	static final int STATE_CHILD_SA_DOWN = 2;
+	static final int STATE_AUTH_ERROR = 3;
+	static final int STATE_PEER_AUTH_ERROR = 4;
+	static final int STATE_LOOKUP_ERROR = 5;
+	static final int STATE_UNREACHABLE_ERROR = 6;
+	static final int STATE_GENERIC_ERROR = 7;
+
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId)
 	{
@@ -250,6 +261,70 @@ public class CharonVpnService extends VpnService implements Runnable
 			{
 				mService.setError(error);
 			}
+		}
+	}
+
+	/**
+	 * Set an error on the state service and disconnect the current connection.
+	 * This is not done by calling stopCurrentConnection() above, but instead
+	 * is done asynchronously via state service.
+	 *
+	 * @param error error state
+	 */
+	private void setErrorDisconnect(ErrorState error)
+	{
+		synchronized (mServiceLock)
+		{
+			if (mService != null)
+			{
+				mService.setError(error);
+				mService.disconnect();
+			}
+		}
+	}
+
+	/**
+	 * Updates the state of the current connection.
+	 * Called via JNI by different threads (but not concurrently).
+	 *
+	 * @param status new state
+	 */
+	public void updateStatus(int status)
+	{
+		switch (status)
+		{
+			case STATE_CHILD_SA_DOWN:
+				synchronized (mServiceLock)
+				{
+					/* since this state is also reached when the SA is closed remotely,
+					 * we call disconnect() to make sure charon is properly deinitialized */
+					if (mService != null)
+					{
+						mService.disconnect();
+					}
+				}
+				break;
+			case STATE_CHILD_SA_UP:
+				setState(State.CONNECTED);
+				break;
+			case STATE_AUTH_ERROR:
+				setErrorDisconnect(ErrorState.AUTH_FAILED);
+				break;
+			case STATE_PEER_AUTH_ERROR:
+				setErrorDisconnect(ErrorState.PEER_AUTH_FAILED);
+				break;
+			case STATE_LOOKUP_ERROR:
+				setErrorDisconnect(ErrorState.LOOKUP_FAILED);
+				break;
+			case STATE_UNREACHABLE_ERROR:
+				setErrorDisconnect(ErrorState.UNREACHABLE);
+				break;
+			case STATE_GENERIC_ERROR:
+				setErrorDisconnect(ErrorState.GENERIC_ERROR);
+				break;
+			default:
+				Log.e(TAG, "Unknown status code received");
+				break;
 		}
 	}
 

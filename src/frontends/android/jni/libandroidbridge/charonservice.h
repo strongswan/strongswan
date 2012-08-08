@@ -30,7 +30,21 @@
 
 #include <library.h>
 
+typedef enum android_vpn_state_t android_vpn_state_t;
 typedef struct charonservice_t charonservice_t;
+
+/**
+ * VPN status codes. As defined in CharonVpnService.java
+ */
+enum android_vpn_state_t {
+	CHARONSERVICE_CHILD_STATE_UP = 1,
+	CHARONSERVICE_CHILD_STATE_DOWN,
+	CHARONSERVICE_AUTH_ERROR,
+	CHARONSERVICE_PEER_AUTH_ERROR,
+	CHARONSERVICE_LOOKUP_ERROR,
+	CHARONSERVICE_UNREACHABLE_ERROR,
+	CHARONSERVICE_GENERIC_ERROR,
+};
 
 /**
  * Public interface of charonservice.
@@ -38,6 +52,14 @@ typedef struct charonservice_t charonservice_t;
  * Used to communicate with CharonVpnService via JNI
  */
 struct charonservice_t {
+
+	/**
+	 * Update the status in the Java domain (UI)
+	 *
+	 * @param code			status code
+	 * @return				TRUE on success
+	 */
+	bool (*update_status)(charonservice_t *this, android_vpn_state_t code);
 
 	/**
 	 * Install a bypass policy for the given socket using the protect() Method
