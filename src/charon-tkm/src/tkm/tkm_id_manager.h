@@ -28,6 +28,8 @@ typedef enum tkm_context_kind_t tkm_context_kind_t;
 enum tkm_context_kind_t {
 	/** Nonce context */
 	TKM_CTX_NONCE,
+	/** Diffie-Hellman context */
+	TKM_CTX_DH,
 
 	/** helper to determine the number of elements in this enum */
 	TKM_CTX_MAX,

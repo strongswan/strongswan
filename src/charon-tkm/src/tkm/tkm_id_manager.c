@@ -20,9 +20,10 @@
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
-ENUM_BEGIN(tkm_context_kind_names, TKM_CTX_NONCE, TKM_CTX_NONCE,
-	"NONCE_CONTEXT");
-ENUM_END(tkm_context_kind_names, TKM_CTX_NONCE);
+ENUM_BEGIN(tkm_context_kind_names, TKM_CTX_NONCE, TKM_CTX_DH,
+	"NONCE_CONTEXT",
+	"DH_CONTEXT");
+ENUM_END(tkm_context_kind_names, TKM_CTX_DH);
 
 typedef struct private_tkm_id_manager_t private_tkm_id_manager_t;
 
