@@ -310,6 +310,8 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
+	lib->settings->set_bool(lib->settings,
+					"charon.close_ike_on_child_failure", TRUE);
 }
 
 /**
