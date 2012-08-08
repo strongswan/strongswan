@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 android_jni.c android_jni.h \
 backend/android_creds.c backend/android_creds.h \
+backend/android_service.c backend/android_service.h \
 charonservice.c charonservice.h \
 kernel/android_ipsec.c kernel/android_ipsec.h \
 kernel/android_net.c kernel/android_net.h
