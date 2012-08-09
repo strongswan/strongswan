@@ -191,7 +191,7 @@ public class VpnProfileListFragment extends Fragment
 			inflater.inflate(R.menu.profile_list_context, menu);
 			mEditProfile = menu.findItem(R.id.edit_profile);
 			mSelected = new HashSet<Integer>();
-			mode.setTitle("Select Profiles");
+			mode.setTitle(R.string.select_profiles);
 			return true;
 		}
 

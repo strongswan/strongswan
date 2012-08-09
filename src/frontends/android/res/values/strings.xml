@@ -27,6 +27,7 @@
     <string name="add_profile">Add VPN profile</string>
     <string name="edit_profile">Edit</string>
     <string name="delete_profile">Delete</string>
+    <string name="select_profiles">Select profiles</string>
     <string name="profiles_deleted">Selected profiles deleted</string>
     <string name="no_profile_selected">No profile selected</string>
     <string name="one_profile_selected">One profile selected</string>

@@ -27,6 +27,7 @@
     <string name="add_profile">Profil hinzufügen</string>
     <string name="edit_profile">Bearbeiten</string>
     <string name="delete_profile">Löschen</string>
+    <string name="select_profiles">Profile auswählen</string>
     <string name="profiles_deleted">Ausgewählte Profile gelöscht</string>
     <string name="no_profile_selected">Kein Profil ausgewählt</string>
     <string name="one_profile_selected">Ein Profil ausgewählt</string>
