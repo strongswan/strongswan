@@ -225,6 +225,7 @@ char *whitelist[] = {
 	"getpwent_r",
 	"setpwent",
 	"endpwent",
+	"getspnam_r",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
