@@ -14,16 +14,17 @@
  * for more details.
  */
 
-#include <stdlib.h>
 #include <check.h>
 
 #include "tkm_id_manager.h"
+
+static const tkm_limits_t limits = {125, 100};
 
 START_TEST(test_id_mgr_creation)
 {
 	tkm_id_manager_t *idmgr = NULL;
 
-	idmgr = tkm_id_manager_create();
+	idmgr = tkm_id_manager_create(limits);
 	fail_if(idmgr == NULL, "Error creating tkm id manager");
 
 	idmgr->destroy(idmgr);
@@ -33,7 +34,7 @@ END_TEST
 START_TEST(test_acquire_id)
 {
 	int i, id = 0;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
@@ -51,7 +52,7 @@ END_TEST
 START_TEST(test_acquire_id_invalid_kind)
 {
 	int id = 0;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	id = idmgr->acquire_id(idmgr, TKM_CTX_MAX);
 	fail_unless(id == 0, "Acquired id for invalid context kind %d", TKM_CTX_MAX);
@@ -69,7 +70,7 @@ END_TEST
 START_TEST(test_acquire_id_same)
 {
 	int id1 = 0, id2 = 0;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	id1 = idmgr->acquire_id(idmgr, TKM_CTX_NONCE);
 	fail_unless(id1 > 0, "Unable to acquire first id");
@@ -87,7 +88,7 @@ START_TEST(test_release_id)
 {
 	int i, id = 0;
 	bool released = false;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
@@ -107,7 +108,7 @@ END_TEST
 START_TEST(test_release_id_invalid_kind)
 {
 	bool released = TRUE;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	released = idmgr->release_id(idmgr, TKM_CTX_MAX, 1);
 	fail_if(released, "Released id for invalid context kind %d", TKM_CTX_MAX);
@@ -125,7 +126,7 @@ END_TEST
 START_TEST(test_release_id_nonexistent)
 {
 	bool released = FALSE;
-	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	released = idmgr->release_id(idmgr, TKM_CTX_NONCE, 1);
 	fail_unless(released, "Release of nonexistent id failed");

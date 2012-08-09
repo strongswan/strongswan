@@ -132,7 +132,7 @@ METHOD(tkm_id_manager_t, destroy, void,
 /*
  * see header file
  */
-tkm_id_manager_t *tkm_id_manager_create()
+tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 {
 	private_tkm_id_manager_t *this;
 	int i, j;

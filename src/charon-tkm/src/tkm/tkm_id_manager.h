@@ -41,6 +41,11 @@ enum tkm_context_kind_t {
 extern enum_name_t *tkm_context_kind_names;
 
 /**
+ * TKM context limits.
+ */
+typedef uint64_t tkm_limits_t[TKM_CTX_MAX];
+
+/**
  * The tkm id manager hands out context ids for all context kinds (e.g. nonce).
  */
 struct tkm_id_manager_t {
@@ -74,8 +79,8 @@ struct tkm_id_manager_t {
 };
 
 /**
- * Create a tkm id manager instance.
+ * Create a tkm id manager instance using the given context limits.
  */
-tkm_id_manager_t *tkm_id_manager_create();
+tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits);
 
 #endif /** TKM_ID_MANAGER_H_ */

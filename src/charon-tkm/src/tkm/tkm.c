@@ -75,9 +75,12 @@ bool tkm_init()
 		return FALSE;
 	}
 
+	/* only nonce and DH context limits are currently needed */
+	const tkm_limits_t limits = {nc, dh};
+
 	INIT(this,
 		.public = {
-			.idmgr = tkm_id_manager_create(),
+			.idmgr = tkm_id_manager_create(limits),
 		},
 	);
 	tkm = &this->public;
