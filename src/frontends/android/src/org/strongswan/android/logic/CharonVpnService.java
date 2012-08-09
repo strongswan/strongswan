@@ -29,9 +29,12 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
+import org.strongswan.android.ui.MainActivity;
 
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.VpnService;
@@ -468,6 +471,14 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			builder = new CharonVpnService.Builder();
 			builder.setSession(name);
+
+			/* even though the option displayed in the system dialog says "Configure"
+			 * we just use our main Activity */
+			Context context = getApplicationContext();
+			Intent intent = new Intent(context, MainActivity.class);
+			PendingIntent pending = PendingIntent.getActivity(context, 0, intent,
+															  Intent.FLAG_ACTIVITY_NEW_TASK);
+			builder.setConfigureIntent(pending);
 		}
 
 		public synchronized boolean addAddress(String address, int prefixLength)
