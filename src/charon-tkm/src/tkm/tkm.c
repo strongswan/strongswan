@@ -46,6 +46,14 @@ bool tkm_init()
 {
 	private_tkm_t *this;
 
+	active_requests_type max_requests;
+	nc_id_type nc;
+	dh_id_type dh;
+	cc_id_type cc;
+	ae_id_type ae;
+	isa_id_type isa;
+	esa_id_type esa;
+
 	/* initialize TKM client library */
 	tkmlib_init();
 	if (ike_init(IKE_SOCKET) != TKM_OK)
@@ -55,6 +63,13 @@ bool tkm_init()
 	}
 
 	if (ike_tkm_reset() != TKM_OK)
+	{
+		tkmlib_final();
+		return FALSE;
+	}
+
+	/* get limits from tkm */
+	if (ike_tkm_limits(&max_requests, &nc, &dh, &cc, &ae, &isa, &esa) != TKM_OK)
 	{
 		tkmlib_final();
 		return FALSE;
