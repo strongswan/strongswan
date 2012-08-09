@@ -17,6 +17,7 @@
 
 #include <signal.h>
 #include <string.h>
+#include <sys/utsname.h>
 #include <android/log.h>
 
 #include "charonservice.h"
@@ -355,6 +356,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	jobject builder)
 {
 	struct sigaction action;
+	struct utsname utsname;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -381,10 +383,25 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		return;
 	}
 
+	if (!libcharon_init("charon"))
+	{
+		libcharon_deinit();
+		libipsec_deinit();
+		libhydra_deinit();
+		library_deinit();
+		return;
+	}
+
 	charonservice_init(env, this, builder);
 
-	if (!libcharon_init("charon") ||
-		!charon->initialize(charon, PLUGINS))
+	if (uname(&utsname) != 0)
+	{
+		memset(&utsname, 0, sizeof(utsname));
+	}
+	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
+		  utsname.sysname, utsname.release, utsname.machine);
+
+	if (!charon->initialize(charon, PLUGINS))
 	{
 		libcharon_deinit();
 		charonservice_deinit(env);
@@ -413,6 +430,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
  */
 JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 {
+	/* deinitialize charon before we destroy our own objects */
 	libcharon_deinit();
 	charonservice_deinit(env);
 	libipsec_deinit();
