@@ -554,7 +554,7 @@ tls_t *tnccs_11_create(bool is_server)
 		.is_server = is_server,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_msg_len = lib->settings->get_int(lib->settings,
-								"%s.plugins.tnccs-11.max_msg_size", 45000,
+								"%s.plugins.tnccs-11.max_message_size", 45000,
 								charon->name),
 	);
 

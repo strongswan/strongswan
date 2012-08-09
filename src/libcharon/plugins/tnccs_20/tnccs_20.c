@@ -805,7 +805,7 @@ tls_t *tnccs_20_create(bool is_server)
 								"%s.plugins.tnccs-20.max_batch_size", 65522,
 								charon->name),
 		.max_msg_len = lib->settings->get_int(lib->settings,
-								"%s.plugins.tnccs-20.max_msg_size", 65490,
+								"%s.plugins.tnccs-20.max_message_size", 65490,
 								charon->name),
 	);
 
