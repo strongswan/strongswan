@@ -45,6 +45,11 @@ struct private_tkm_id_manager_t {
 	bool* ctxids[TKM_CTX_MAX];
 
 	/**
+	 * Per-kind context limits.
+	 */
+	tkm_limits_t limits;
+
+	/**
 	 * rwlocks for context id lists
 	 */
 	rwlock_t *locks[TKM_CTX_MAX];
@@ -66,7 +71,8 @@ static bool is_valid_kind(const tkm_context_kind_t kind)
 METHOD(tkm_id_manager_t, acquire_id, int,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind)
 {
-	int j, id = 0;
+	int id = 0;
+	uint64_t j;
 
 	if (!is_valid_kind(kind))
 	{
@@ -76,7 +82,7 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-	for (j = 0; j < TKM_LIMIT; j++)
+	for (j = 0; j < this->limits[kind]; j++)
 	{
 		if (this->ctxids[kind][j])
 		{
@@ -135,7 +141,8 @@ METHOD(tkm_id_manager_t, destroy, void,
 tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 {
 	private_tkm_id_manager_t *this;
-	int i, j;
+	int i;
+	uint64_t j;
 
 	INIT(this,
 		.public = {
@@ -147,13 +154,16 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
-		this->ctxids[i] = malloc(TKM_LIMIT * sizeof(bool));
+		this->limits[i] = limits[i];
+		this->ctxids[i] = malloc(limits[i] * sizeof(bool));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
-		for (j = 0; j < TKM_LIMIT; j++)
+		for (j = 0; j < limits[i]; j++)
 		{
 			/* available id slots are in true state (is_available) */
 			this->ctxids[i][j] = true;
 		}
+		DBG2(DBG_LIB, "%N initialized, %llu slot(s)",
+				tkm_context_kind_names, i, limits[i]);
 	}
 
 	return &this->public;
