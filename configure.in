@@ -134,6 +134,7 @@ ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.]
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
+ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
@@ -745,7 +746,7 @@ if test x$nm = xtrue; then
 	AC_SUBST(nm_LIBS)
 fi
 
-if test x$eap_gtc = xtrue; then
+if test x$xauth_pam = xtrue; then
 	AC_HAVE_LIBRARY([pam],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])])
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
@@ -900,6 +901,7 @@ ADD_PLUGIN([eap-peap],             [c charon nm])
 ADD_PLUGIN([eap-tnc],              [c charon])
 ADD_PLUGIN([xauth-generic],        [c charon])
 ADD_PLUGIN([xauth-eap],            [c charon])
+ADD_PLUGIN([xauth-pam],            [c charon])
 ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
 ADD_PLUGIN([tnc-imc],              [c charon])
@@ -1026,6 +1028,7 @@ AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_XAUTH_GENERIC, test x$xauth_generic = xtrue)
 AM_CONDITIONAL(USE_XAUTH_EAP, test x$xauth_eap = xtrue)
+AM_CONDITIONAL(USE_XAUTH_PAM, test x$xauth_pam = xtrue)
 AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
@@ -1204,6 +1207,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/xauth_generic/Makefile
 	src/libcharon/plugins/xauth_eap/Makefile
+	src/libcharon/plugins/xauth_pam/Makefile
 	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile

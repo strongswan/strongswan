@@ -546,3 +546,10 @@ if MONOLITHIC
   libcharon_la_LIBADD += plugins/xauth_eap/libstrongswan-xauth-eap.la
 endif
 endif
+
+if USE_XAUTH_PAM
+  SUBDIRS += plugins/xauth_pam
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/xauth_pam/libstrongswan-xauth-pam.la
+endif
+endif
