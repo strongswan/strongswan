@@ -33,7 +33,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
@@ -213,7 +212,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				showProfile(true);
 				enableActionButton(true);
 				mStateView.setText(R.string.state_connected);
-				mStateView.setTextColor(Color.GREEN);
+				mStateView.setTextColor(getResources().getColor(R.color.success_text));
 				break;
 			case DISCONNECTING:
 				showProfile(true);
@@ -254,7 +253,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		showProfile(true);
 		enableActionButton(false);
 		mStateView.setText(R.string.state_error);
-		mStateView.setTextColor(Color.RED);
+		mStateView.setTextColor(getResources().getColor(R.color.error_text));
 		switch (error)
 		{
 			case AUTH_FAILED:
