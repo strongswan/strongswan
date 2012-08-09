@@ -439,21 +439,6 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
 }
 
 /**
- * Convert a Java string to a C string.  Memory is allocated.
- */
-static inline char *convert_jstring(JNIEnv *env, jstring jstr)
-{
-	char *str;
-	jsize len;
-
-	len = (*env)->GetStringUTFLength(env, jstr);
-	str = malloc(len + 1);
-	(*env)->GetStringUTFRegion(env, jstr, 0, len, str);
-	str[len] = '\0';
-	return str;
-}
-
-/**
  * Initiate SA
  */
 JNI_METHOD(CharonVpnService, initiate, void,
@@ -462,10 +447,10 @@ JNI_METHOD(CharonVpnService, initiate, void,
 {
 	char *local_address, *gateway, *username, *password;
 
-	local_address = convert_jstring(env, jlocal_address);
-	gateway = convert_jstring(env, jgateway);
-	username = convert_jstring(env, jusername);
-	password = convert_jstring(env, jpassword);
+	local_address = androidjni_convert_jstring(env, jlocal_address);
+	gateway = androidjni_convert_jstring(env, jgateway);
+	username = androidjni_convert_jstring(env, jusername);
+	password = androidjni_convert_jstring(env, jpassword);
 
 	initiate(local_address, gateway, username, password);
 }

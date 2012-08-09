@@ -81,4 +81,23 @@ static inline bool androidjni_exception_occurred(JNIEnv *env)
 	return FALSE;
 }
 
+/**
+ * Convert a Java string to a C string.  Memory is allocated.
+ *
+ * @param env		JNIEnv
+ * @param jstr		Java string
+ * @return			native C string (allocated)
+ */
+static inline char *androidjni_convert_jstring(JNIEnv *env, jstring jstr)
+{
+	char *str;
+	jsize len;
+
+	len = (*env)->GetStringUTFLength(env, jstr);
+	str = malloc(len + 1);
+	(*env)->GetStringUTFRegion(env, jstr, 0, len, str);
+	str[len] = '\0';
+	return str;
+}
+
 #endif /** ANDROID_JNI_H_ @}*/
