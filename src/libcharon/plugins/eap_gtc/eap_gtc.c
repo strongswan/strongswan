@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2007-2012 Martin Willi
+ * Copyright (C) 2012 revosec AG
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,12 +18,8 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <crypto/hashers/hasher.h>
-
-#include <security/pam_appl.h>
 
 #define GTC_REQUEST_MSG "password"
-#define GTC_PAM_SERVICE "login"
 
 typedef struct private_eap_gtc_t private_eap_gtc_t;
 
@@ -75,63 +72,6 @@ METHOD(eap_method_t, initiate_peer, status_t,
 {
 	/* peer never initiates */
 	return FAILED;
-}
-
-/**
- * PAM conv callback function
- */
-static int auth_conv(int num_msg, const struct pam_message **msg,
-					 struct pam_response **resp, char *password)
-{
-	struct pam_response *response;
-
-	if (num_msg != 1)
-	{
-		return PAM_CONV_ERR;
-	}
-	response = malloc(sizeof(struct pam_response));
-	response->resp = strdup(password);
-	response->resp_retcode = 0;
-	*resp = response;
-	return PAM_SUCCESS;
-}
-
-/**
- * Authenticate a username/password using PAM
- */
-static bool authenticate(char *service, char *user, char *password)
-{
-	pam_handle_t *pamh = NULL;
-	static struct pam_conv conv;
-	int ret;
-
-	conv.conv = (void*)auth_conv;
-	conv.appdata_ptr = password;
-
-	ret = pam_start(service, user, &conv, &pamh);
-	if (ret != PAM_SUCCESS)
-	{
-		DBG1(DBG_IKE, "EAP-GTC pam_start failed: %s",
-			 pam_strerror(pamh, ret));
-		return FALSE;
-	}
-	ret = pam_authenticate(pamh, 0);
-	if (ret == PAM_SUCCESS)
-	{
-		ret = pam_acct_mgmt(pamh, 0);
-		if (ret != PAM_SUCCESS)
-		{
-			DBG1(DBG_IKE, "EAP-GTC pam_acct_mgmt failed: %s",
-				 pam_strerror(pamh, ret));
-		}
-	}
-	else
-	{
-		DBG1(DBG_IKE, "EAP-GTC pam_authenticate failed: %s",
-			 pam_strerror(pamh, ret));
-	}
-	pam_end(pamh, ret);
-	return ret == PAM_SUCCESS;
 }
 
 METHOD(eap_method_t, initiate_server, status_t,
@@ -192,40 +132,57 @@ METHOD(eap_method_t, process_peer, status_t,
 METHOD(eap_method_t, process_server, status_t,
 	private_eap_gtc_t *this, eap_payload_t *in, eap_payload_t **out)
 {
-	chunk_t data, encoding;
-	char *user, *password, *service, *pos;
+	status_t status = FAILED;
+	chunk_t user, pass;
+	xauth_method_t *xauth;
+	cp_payload_t *ci, *co;
+	char *backend;
 
-	data = chunk_skip(in->get_data(in), 5);
-	if (this->identifier != in->get_identifier(in) || !data.len)
+	user = this->peer->get_encoding(this->peer);
+	pass = chunk_skip(in->get_data(in), 5);
+	if (this->identifier != in->get_identifier(in) || !pass.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-GTC message");
 		return FAILED;
 	}
 
-	encoding = this->peer->get_encoding(this->peer);
-	/* if a RFC822_ADDR id is provided, we use the username part only */
-	pos = memchr(encoding.ptr, '@', encoding.len);
-	if (pos)
+	/* get XAuth backend to use for credential verification. Default to PAM
+	 * to support legacy EAP-GTC configurations */
+	backend = lib->settings->get_str(lib->settings,
+							"%s.plugins.eap-gtc.backend", "pam", charon->name);
+	xauth = charon->xauth->create_instance(charon->xauth, backend, XAUTH_SERVER,
+										   this->server, this->peer);
+	if (!xauth)
 	{
-		encoding.len = (u_char*)pos - encoding.ptr;
-	}
-	user = alloca(encoding.len + 1);
-	memcpy(user, encoding.ptr, encoding.len);
-	user[encoding.len] = '\0';
-
-	password = alloca(data.len + 1);
-	memcpy(password, data.ptr, data.len);
-	password[data.len] = '\0';
-
-	service = lib->settings->get_str(lib->settings,
-							"%s.plugins.eap-gtc.pam_service", GTC_PAM_SERVICE,
-							charon->name);
-
-	if (!authenticate(service, user, password))
-	{
+		DBG1(DBG_IKE, "creating EAP-GTC XAuth backend '%s' failed", backend);
 		return FAILED;
 	}
-	return SUCCESS;
+	if (xauth->initiate(xauth, &co) == NEED_MORE)
+	{
+		/* assume that "out" contains username/password attributes */
+		co->destroy(co);
+		ci = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
+		ci->add_attribute(ci, configuration_attribute_create_chunk(
+					CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_NAME, user));
+		ci->add_attribute(ci, configuration_attribute_create_chunk(
+					CONFIGURATION_ATTRIBUTE_V1, XAUTH_USER_PASSWORD, pass));
+		switch (xauth->process(xauth, ci, &co))
+		{
+			case SUCCESS:
+				status = SUCCESS;
+				break;
+			case NEED_MORE:
+				/* TODO: multiple exchanges currently not supported */
+				co->destroy(co);
+				break;
+			case FAILED:
+			default:
+				break;
+		}
+		ci->destroy(ci);
+	}
+	xauth->destroy(xauth);
+	return status;
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,

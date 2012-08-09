@@ -13,4 +13,4 @@ endif
 libstrongswan_eap_gtc_la_SOURCES = \
 	eap_gtc_plugin.h eap_gtc_plugin.c eap_gtc.h eap_gtc.c
 
-libstrongswan_eap_gtc_la_LDFLAGS = -module -avoid-version -lpam
+libstrongswan_eap_gtc_la_LDFLAGS = -module -avoid-version
