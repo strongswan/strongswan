@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012 Giuliano Grassi
+    Copyright (C) 2012 Ralf Sager
     Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -16,19 +18,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_margin="5dp"
+    android:background="@drawable/vpn_state_background"
     android:orientation="vertical" >
 
-    <fragment
-            class="org.strongswan.android.ui.VpnStateFragment"
-            android:id="@+id/vpn_state_frag"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    <fragment
-            class="org.strongswan.android.ui.VpnProfileListFragment"
-            android:id="@+id/profile_list_frag"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="?android:attr/listDivider" />
 
 </LinearLayout>
