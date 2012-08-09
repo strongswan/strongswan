@@ -53,6 +53,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	private VpnProfile mNextProfile;
 	private volatile boolean mProfileUpdated;
 	private volatile boolean mTerminate;
+	private volatile boolean mIsDisconnecting;
 	private VpnStateService mService;
 	private final Object mServiceLock = new Object();
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -200,6 +201,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						setProfile(mCurrentProfile);
 						setError(ErrorState.NO_ERROR);
 						setState(State.CONNECTING);
+						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
 						initializeCharon(builder);
@@ -230,6 +232,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			if (mCurrentProfile != null)
 			{
 				setState(State.DISCONNECTING);
+				mIsDisconnecting = true;
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
@@ -301,7 +304,10 @@ public class CharonVpnService extends VpnService implements Runnable
 			if (mService != null)
 			{
 				mService.setError(error);
-				mService.disconnect();
+				if (!mIsDisconnecting)
+				{
+					mService.disconnect();
+				}
 			}
 		}
 	}
@@ -319,9 +325,9 @@ public class CharonVpnService extends VpnService implements Runnable
 			case STATE_CHILD_SA_DOWN:
 				synchronized (mServiceLock)
 				{
-					/* since this state is also reached when the SA is closed remotely,
-					 * we call disconnect() to make sure charon is properly deinitialized */
-					if (mService != null)
+					/* if we are not actively disconnecting we assume the remote terminated
+					 * the connection and call disconnect() to deinitialize charon properly */
+					if (mService != null && !mIsDisconnecting)
 					{
 						mService.disconnect();
 					}
