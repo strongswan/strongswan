@@ -22,6 +22,56 @@
     android:background="@drawable/vpn_state_background"
     android:orientation="vertical" >
 
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="10dp"
+        android:columnCount="2"
+        android:rowCount="2" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            android:gravity="top"
+            android:text="@string/state_label"
+            android:textColor="?android:textColorPrimary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/vpn_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:text="@string/state_disabled"
+            android:textColor="?android:textColorSecondary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/vpn_profile_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            android:gravity="top"
+            android:text="@string/profile_label"
+            android:textColor="?android:textColorPrimary"
+            android:textSize="20sp"
+            android:visibility="gone" >
+        </TextView>
+
+        <TextView
+            android:id="@+id/vpn_profile_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="top"
+            android:textSize="20sp"
+            android:visibility="gone" >
+        </TextView>
+    </GridLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="2dp"

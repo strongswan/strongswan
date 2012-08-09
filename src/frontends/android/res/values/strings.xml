@@ -50,8 +50,18 @@
     <string name="alert_text_nocertfound_title">No CA certificate selected</string>
     <string name="alert_text_nocertfound">Please select one or activate <i>Select automatically</i></string>
 
+    <!-- VPN state fragment -->
+    <string name="state_label">Status:</string>
+    <string name="profile_label">Profile:</string>
+    <string name="state_connecting">Connecting&#8230;</string>
+    <string name="state_connected">Connected</string>
+    <string name="state_disconnecting">Disconnecting&#8230;</string>
+    <string name="state_disabled">No active VPN</string>
+
     <!-- Dialogs -->
     <string name="login_title">Enter password to connect</string>
     <string name="login_confirm">Connect</string>
+    <string name="connecting_title">Connecting: %1$s</string>
+    <string name="connecting_message">Establishing VPN with \""%1$s\".</string>
 
 </resources>
