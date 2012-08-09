@@ -197,6 +197,12 @@ static status_t process_handshake(private_tls_fragmentation_t *this,
 static status_t process_application(private_tls_fragmentation_t *this,
 									bio_reader_t *reader)
 {
+	if (!this->handshake->finished(this->handshake))
+	{
+		DBG1(DBG_TLS, "received TLS application data, "
+			 "but handshake not finished");
+		return FAILED;
+	}
 	while (reader->remaining(reader))
 	{
 		status_t status;
