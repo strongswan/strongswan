@@ -20,9 +20,11 @@ package org.strongswan.android.ui;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.VpnStateService;
+import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.app.Service;
@@ -50,6 +52,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private Button mActionButton;
 	private ProgressDialog mProgressDialog;
 	private State mState;
+	private AlertDialog mErrorDialog;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
@@ -119,6 +122,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	public void onStop()
 	{
 		super.onStop();
+		hideErrorDialog();
 		hideProgressDialog();
 	}
 
@@ -142,6 +146,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	public void updateView()
 	{
 		State state = mService.getState();
+		ErrorState error = ErrorState.NO_ERROR;
 		String name = "", gateway = "";
 
 		if (state != State.DISABLED)
@@ -152,6 +157,12 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				name = profile.getName();
 				gateway = profile.getGateway();
 			}
+			error = mService.getErrorState();
+		}
+
+		if (reportError(name, state, error))
+		{
+			return;
 		}
 
 		if (state == mState)
@@ -192,6 +203,44 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 	}
 
+	private boolean reportError(String name, State state, ErrorState error)
+	{
+		if (error == ErrorState.NO_ERROR || state != State.CONNECTING && state != State.CONNECTED)
+		{	/* we only report errors while initiating */
+			hideErrorDialog();
+			return false;
+		}
+		else if (mErrorDialog != null)
+		{	/* we already show the dialog */
+			return true;
+		}
+		hideProgressDialog();
+		mProfileNameView.setText(name);
+		showProfile(true);
+		enableActionButton(false);
+		mStateView.setText(R.string.state_error);
+		mStateView.setTextColor(Color.RED);
+		switch (error)
+		{
+			case AUTH_FAILED:
+				showErrorDialog(R.string.error_auth_failed);
+				break;
+			case PEER_AUTH_FAILED:
+				showErrorDialog(R.string.error_peer_auth_failed);
+				break;
+			case LOOKUP_FAILED:
+				showErrorDialog(R.string.error_lookup_failed);
+				break;
+			case UNREACHABLE:
+				showErrorDialog(R.string.error_unreachable);
+				break;
+			default:
+				showErrorDialog(R.string.error_generic);
+				break;
+		}
+		return true;
+	}
+
 	private void showProfile(boolean show)
 	{
 		mProfileView.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -210,6 +259,15 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		{
 			mProgressDialog.dismiss();
 			mProgressDialog = null;
+		}
+	}
+
+	private void hideErrorDialog()
+	{
+		if (mErrorDialog != null)
+		{
+			mErrorDialog.dismiss();
+			mErrorDialog = null;
 		}
 	}
 
@@ -242,5 +300,21 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mProgressDialog.setIndeterminate(true);
 		mProgressDialog.setCancelable(false);
 		mProgressDialog.show();
+	}
+
+	private void showErrorDialog(int textid)
+	{
+		mErrorDialog = new AlertDialog.Builder(getActivity())
+			.setMessage(getString(R.string.error_introduction) + " " + getString(textid))
+			.setCancelable(false)
+			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int id)
+				{
+					mErrorDialog = null;
+					dialog.dismiss();
+				}
+			}).create();
+		mErrorDialog.show();
 	}
 }

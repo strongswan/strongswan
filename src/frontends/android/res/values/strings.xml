@@ -58,10 +58,17 @@
     <string name="state_connected">Connected</string>
     <string name="state_disconnecting">Disconnecting&#8230;</string>
     <string name="state_disabled">No active VPN</string>
+    <string name="state_error">Error</string>
 
     <!-- Dialogs -->
     <string name="login_title">Enter password to connect</string>
     <string name="login_confirm">Connect</string>
+    <string name="error_introduction">Failed to establish VPN:</string>
+    <string name="error_lookup_failed">Gateway address lookup failed.</string>
+    <string name="error_unreachable">Gateway is unreachable.</string>
+    <string name="error_peer_auth_failed">Verifying gateway authentication failed.</string>
+    <string name="error_auth_failed">User authentication failed.</string>
+    <string name="error_generic">Unspecified failure while connecting.</string>
     <string name="connecting_title">Connecting: %1$s</string>
     <string name="connecting_message">Establishing VPN with \""%1$s\".</string>
 
