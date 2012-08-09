@@ -45,6 +45,9 @@ import android.widget.TextView;
 
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
+	private static final String KEY_ERROR = "error";
+	private static final String KEY_NAME = "name";
+
 	private TextView mProfileNameView;
 	private TextView mProfileView;
 	private TextView mStateView;
@@ -53,6 +56,8 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private ProgressDialog mProgressDialog;
 	private State mState;
 	private AlertDialog mErrorDialog;
+	private ErrorState mError;
+	private String mErrorProfileName;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
 		@Override
@@ -79,6 +84,22 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		Context context = getActivity().getApplicationContext();
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
+
+		mError = ErrorState.NO_ERROR;
+		if (savedInstanceState != null && savedInstanceState.containsKey(KEY_ERROR))
+		{
+			mError = (ErrorState)savedInstanceState.getSerializable(KEY_ERROR);
+			mErrorProfileName = savedInstanceState.getString(KEY_NAME);
+		}
+	}
+
+	@Override
+	public void onSaveInstanceState(Bundle outState)
+	{
+		super.onSaveInstanceState(outState);
+
+		outState.putSerializable(KEY_ERROR, mError);
+		outState.putString(KEY_NAME, mErrorProfileName);
 	}
 
 	@Override
@@ -205,8 +226,22 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private boolean reportError(String name, State state, ErrorState error)
 	{
-		if (error == ErrorState.NO_ERROR || state != State.CONNECTING && state != State.CONNECTED)
-		{	/* we only report errors while initiating */
+		if (mError != ErrorState.NO_ERROR)
+		{	/* we are currently reporting an error which was not yet dismissed */
+			error = mError;
+			name = mErrorProfileName;
+		}
+		else if (error != ErrorState.NO_ERROR && (state == State.CONNECTING || state == State.CONNECTED))
+		{	/* while initiating we report errors */
+			mError = error;
+			mErrorProfileName = name;
+		}
+		else
+		{	/* ignore all other errors */
+			error = ErrorState.NO_ERROR;
+		}
+		if (error == ErrorState.NO_ERROR)
+		{
 			hideErrorDialog();
 			return false;
 		}
@@ -310,8 +345,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int id)
-				{
+				{	/* clear the error */
+					mError = ErrorState.NO_ERROR;
 					mErrorDialog = null;
+					updateView();
 					dialog.dismiss();
 				}
 			}).create();
