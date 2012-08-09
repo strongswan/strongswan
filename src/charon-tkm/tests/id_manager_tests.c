@@ -66,6 +66,23 @@ START_TEST(test_acquire_id_invalid_kind)
 }
 END_TEST
 
+START_TEST(test_acquire_id_same)
+{
+	int id1 = 0, id2 = 0;
+	tkm_id_manager_t *idmgr = tkm_id_manager_create();
+
+	id1 = idmgr->acquire_id(idmgr, TKM_CTX_NONCE);
+	fail_unless(id1 > 0, "Unable to acquire first id");
+
+	/* Acquire another id, must be different than first */
+	id2 = idmgr->acquire_id(idmgr, TKM_CTX_NONCE);
+	fail_unless(id2 > 0, "Unable to acquire second id");
+	fail_unless(id1 != id2, "Same id received twice");
+
+	idmgr->destroy(idmgr);
+}
+END_TEST
+
 START_TEST(test_release_id)
 {
 	int i, id = 0;
@@ -123,6 +140,7 @@ TCase *make_id_manager_tests(void)
 	tcase_add_test(tc, test_id_mgr_creation);
 	tcase_add_test(tc, test_acquire_id);
 	tcase_add_test(tc, test_acquire_id_invalid_kind);
+	tcase_add_test(tc, test_acquire_id_same);
 	tcase_add_test(tc, test_release_id);
 	tcase_add_test(tc, test_release_id_invalid_kind);
 	tcase_add_test(tc, test_release_id_nonexistent);

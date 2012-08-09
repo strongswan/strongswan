@@ -20,6 +20,8 @@
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
+#define TKM_LIMIT 100
+
 ENUM_BEGIN(tkm_context_kind_names, TKM_CTX_NONCE, TKM_CTX_DH,
 	"NONCE_CONTEXT",
 	"DH_CONTEXT");
@@ -38,14 +40,9 @@ struct private_tkm_id_manager_t {
 	tkm_id_manager_t public;
 
 	/**
-	 * Next free context id values.
+	 * Per-kind array of free context ids
 	 */
-	int nextids[TKM_CTX_MAX];
-
-	/**
-	 * Per-kind list of acquired context ids
-	 */
-	linked_list_t *ctxids[TKM_CTX_MAX];
+	bool* ctxids[TKM_CTX_MAX];
 
 	/**
 	 * rwlocks for context id lists
@@ -69,8 +66,7 @@ static bool is_valid_kind(const tkm_context_kind_t kind)
 METHOD(tkm_id_manager_t, acquire_id, int,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind)
 {
-	int *current;
-	int id = 0;
+	int j, id = 0;
 
 	if (!is_valid_kind(kind))
 	{
@@ -80,13 +76,15 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-
-	id = this->nextids[kind];
-	current = malloc(sizeof(int));
-	*current = id;
-	this->ctxids[kind]->insert_last(this->ctxids[kind], current);
-	this->nextids[kind]++;
-
+	for (j = 0; j < TKM_LIMIT; j++)
+	{
+		if (this->ctxids[kind][j])
+		{
+			this->ctxids[kind][j] = false;
+			id = j + 1;
+			break;
+		}
+	}
 	this->locks[kind]->unlock(this->locks[kind]);
 
 	if (!id)
@@ -102,9 +100,7 @@ METHOD(tkm_id_manager_t, release_id, bool,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
 	const int id)
 {
-	enumerator_t *enumerator;
-	int *current;
-	bool found = FALSE;
+	const int idx = id - 1;
 
 	if (!is_valid_kind(kind))
 	{
@@ -114,24 +110,8 @@ METHOD(tkm_id_manager_t, release_id, bool,
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-	enumerator = this->ctxids[kind]->create_enumerator(this->ctxids[kind]);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (*current == id)
-		{
-			this->ctxids[kind]->remove_at(this->ctxids[kind], enumerator);
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
+	this->ctxids[kind][idx] = true;
 	this->locks[kind]->unlock(this->locks[kind]);
-
-	if (!found)
-	{
-		DBG3(DBG_LIB, "releasing non-existent %N context id %d, nothing to do",
-					  tkm_context_kind_names, kind, id);
-	}
 
 	return TRUE;
 }
@@ -141,10 +121,9 @@ METHOD(tkm_id_manager_t, destroy, void,
 	private_tkm_id_manager_t *this)
 {
 	int i;
-
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
-		this->ctxids[i]->destroy(this->ctxids[i]);
+		free(this->ctxids[i]);
 		this->locks[i]->destroy(this->locks[i]);
 	}
 	free(this);
@@ -156,7 +135,7 @@ METHOD(tkm_id_manager_t, destroy, void,
 tkm_id_manager_t *tkm_id_manager_create()
 {
 	private_tkm_id_manager_t *this;
-	int i;
+	int i, j;
 
 	INIT(this,
 		.public = {
@@ -168,9 +147,13 @@ tkm_id_manager_t *tkm_id_manager_create()
 
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
-		this->nextids[i] = 1;
-		this->ctxids[i] = linked_list_create();
+		this->ctxids[i] = malloc(TKM_LIMIT * sizeof(bool));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
+		for (j = 0; j < TKM_LIMIT; j++)
+		{
+			/* available id slots are in true state (is_available) */
+			this->ctxids[i][j] = true;
+		}
 	}
 
 	return &this->public;
