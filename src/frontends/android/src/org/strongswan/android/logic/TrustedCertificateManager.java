@@ -147,9 +147,32 @@ public class TrustedCertificateManager
 	 */
 	public X509Certificate getCACertificateFromAlias(String alias)
 	{
-		this.mLock.readLock().lock();
-		X509Certificate certificate = this.mCACerts.get(alias);
-		this.mLock.readLock().unlock();
+		X509Certificate certificate = null;
+
+		if (this.mLock.readLock().tryLock())
+		{
+			certificate = this.mCACerts.get(alias);
+			this.mLock.readLock().unlock();
+		}
+		else
+		{	/* if we cannot get the lock load it directly from the KeyStore,
+			 * should be fast for a single certificate */
+			try
+			{
+				KeyStore store = KeyStore.getInstance("AndroidCAStore");
+				store.load(null, null);
+				Certificate cert = store.getCertificate(alias);
+				if (cert != null && cert instanceof X509Certificate)
+				{
+					certificate = (X509Certificate)cert;
+				}
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+
+		}
 		return certificate;
 	}
 
