@@ -72,6 +72,17 @@
         </TextView>
     </GridLayout>
 
+    <Button
+        android:id="@+id/action"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:text="@string/disconnect"
+        style="?android:attr/borderlessButtonStyle" >
+    </Button>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="2dp"

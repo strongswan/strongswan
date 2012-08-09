@@ -36,7 +36,9 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 public class VpnStateFragment extends Fragment implements VpnStateListener
@@ -45,6 +47,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private TextView mProfileView;
 	private TextView mStateView;
 	private int stateBaseColor;
+	private Button mActionButton;
 	private ProgressDialog mProgressDialog;
 	private State mState;
 	private VpnStateService mService;
@@ -80,6 +83,19 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 							 Bundle savedInstanceState)
 	{
 		View view = inflater.inflate(R.layout.vpn_state_fragment, null);
+
+		mActionButton = (Button)view.findViewById(R.id.action);
+		mActionButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v)
+			{
+				if (mService != null)
+				{
+					mService.disconnect();
+				}
+			}
+		});
+		enableActionButton(false);
 
 		mStateView = (TextView)view.findViewById(R.id.vpn_state);
 		stateBaseColor = mStateView.getCurrentTextColor();
@@ -144,6 +160,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 
 		hideProgressDialog();
+		enableActionButton(false);
 		mProfileNameView.setText(name);
 		mState = state;
 
@@ -162,6 +179,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				break;
 			case CONNECTED:
 				showProfile(true);
+				enableActionButton(true);
 				mStateView.setText(R.string.state_connected);
 				mStateView.setTextColor(Color.GREEN);
 				break;
@@ -178,6 +196,12 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	{
 		mProfileView.setVisibility(show ? View.VISIBLE : View.GONE);
 		mProfileNameView.setVisibility(show ? View.VISIBLE : View.GONE);
+	}
+
+	private void enableActionButton(boolean enable)
+	{
+		mActionButton.setEnabled(enable);
+		mActionButton.setVisibility(enable ? View.VISIBLE : View.GONE);
 	}
 
 	private void hideProgressDialog()

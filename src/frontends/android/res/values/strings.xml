@@ -53,6 +53,7 @@
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>
     <string name="profile_label">Profile:</string>
+    <string name="disconnect">Disconnect</string>
     <string name="state_connecting">Connecting&#8230;</string>
     <string name="state_connected">Connected</string>
     <string name="state_disconnecting">Disconnecting&#8230;</string>
