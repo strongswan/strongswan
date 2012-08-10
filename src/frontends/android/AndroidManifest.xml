@@ -62,6 +62,9 @@
         <provider
             android:name=".data.LogContentProvider"
             android:authorities="org.strongswan.android.content.log" >
+            <!-- android:grantUriPermissions="true" combined with a custom permission does
+                 not work (probably too many indirections with ACTION_SEND) so we secure
+                 this provider with a custom ticketing system -->
         </provider>
     </application>
 

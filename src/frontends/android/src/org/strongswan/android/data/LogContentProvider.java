@@ -17,6 +17,9 @@ package org.strongswan.android.data;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.strongswan.android.logic.CharonVpnService;
 
@@ -26,11 +29,15 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.provider.OpenableColumns;
 
 public class LogContentProvider extends ContentProvider
 {
 	private static final String AUTHORITY = "org.strongswan.android.content.log";
+	/* an Uri is valid for 30 minutes */
+	private static final long URI_VALIDITY = 30 * 60 * 1000;
+	private static ConcurrentHashMap<Uri, Long> mUris = new ConcurrentHashMap<Uri, Long>();
 	private File mLogFile;
 
 	public LogContentProvider()
@@ -50,7 +57,17 @@ public class LogContentProvider extends ContentProvider
 	 */
 	public static Uri createContentUri()
 	{
-		Uri uri = Uri.parse("content://"+ AUTHORITY + "/" + CharonVpnService.LOG_FILE);
+		SecureRandom random;
+		try
+		{
+			random = SecureRandom.getInstance("SHA1PRNG");
+		}
+		catch (NoSuchAlgorithmException e)
+		{
+			return null;
+		}
+		Uri uri = Uri.parse("content://" + AUTHORITY + "/" + random.nextLong());
+		mUris.put(uri, SystemClock.uptimeMillis());
 		return uri;
 	}
 
@@ -69,6 +86,11 @@ public class LogContentProvider extends ContentProvider
 		 * since we only provide a single file this is simple to implement */
 		if (projection == null || projection.length < 1)
 		{
+			return null;
+		}
+		Long timestamp = mUris.get(uri);
+		if (timestamp == null)
+		{	/* don't check the validity as this information is not really private */
 			return null;
 		}
 		MatrixCursor cursor = new MatrixCursor(projection, 1);
@@ -90,7 +112,17 @@ public class LogContentProvider extends ContentProvider
 	@Override
 	public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException
 	{
-		return ParcelFileDescriptor.open(mLogFile, ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_READ_ONLY);
+		Long timestamp = mUris.get(uri);
+		if (timestamp != null)
+		{
+			long elapsed = SystemClock.uptimeMillis() - timestamp;
+			if (elapsed > 0 && elapsed < URI_VALIDITY)
+			{	/* we fail if clock wrapped, should happen rarely though */
+				return ParcelFileDescriptor.open(mLogFile, ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_READ_ONLY);
+			}
+			mUris.remove(uri);
+		}
+		return super.openFile(uri, mode);
 	}
 
 	@Override
