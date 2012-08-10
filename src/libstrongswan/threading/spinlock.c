@@ -23,6 +23,10 @@
 #include "mutex.h"
 #include "lock_profiler.h"
 
+#if defined(_POSIX_SPIN_LOCKS) && _POSIX_SPIN_LOCKS == -1
+#undef _POSIX_SPIN_LOCKS
+#endif
+
 typedef struct private_spinlock_t private_spinlock_t;
 
 /**
