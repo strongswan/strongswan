@@ -385,8 +385,9 @@ METHOD(task_t, process_r, status_t,
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_PSK:
-					if (!lib->settings->get_bool(lib->settings, "charon.i_dont_"
-						"care_about_security_and_use_aggressive_mode_psk", FALSE))
+					if (!lib->settings->get_bool(lib->settings, "%s.i_dont_care"
+						"_about_security_and_use_aggressive_mode_psk",
+						FALSE, charon->name))
 					{
 						DBG1(DBG_IKE, "Aggressive Mode PSK disabled for "
 							 "security reasons");
