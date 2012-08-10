@@ -38,7 +38,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
@@ -66,8 +65,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu)
 	{
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.main, menu);
+		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
 
@@ -78,6 +76,10 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		{
 			case R.id.menu_reload_certs:
 				new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, true);
+				return true;
+			case R.id.menu_show_log:
+				Intent logIntent = new Intent(this, LogActivity.class);
+				startActivity(logIntent);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);

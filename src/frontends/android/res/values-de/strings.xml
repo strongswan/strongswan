@@ -21,6 +21,10 @@
     <string name="app_name">strongSwan VPN Client</string>
     <string name="main_activity_name">strongSwan</string>
     <string name="reload_trusted_certs">CA-Zertifikate neu laden</string>
+    <string name="show_log">Log anzeigen</string>
+
+    <!-- Log view -->
+    <string name="log_title">Log</string>
 
     <!-- VPN profile list -->
     <string name="no_profiles">Keine VPN Profile vorhanden.</string>

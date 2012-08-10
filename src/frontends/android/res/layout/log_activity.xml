@@ -13,16 +13,14 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
 
-    <item
-        android:id="@+id/menu_reload_certs"
-        android:title="@string/reload_trusted_certs"
-        android:showAsAction="withText" />
+    <fragment
+            class="org.strongswan.android.ui.LogFragment"
+            android:id="@+id/log_frag"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <item
-        android:id="@+id/menu_show_log"
-        android:title="@string/show_log"
-        android:showAsAction="withText" />
-
-</menu>
+</FrameLayout>
