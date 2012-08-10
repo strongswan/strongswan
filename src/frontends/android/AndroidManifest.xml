@@ -58,6 +58,11 @@
                 <action android:name="org.strongswan.android.logic.CharonVpnService" />
             </intent-filter>
         </service>
+
+        <provider
+            android:name=".data.LogContentProvider"
+            android:authorities="org.strongswan.android.content.log" >
+        </provider>
     </application>
 
 </manifest>
