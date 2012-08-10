@@ -45,6 +45,7 @@ import android.widget.EditText;
 
 public class MainActivity extends Activity implements OnVpnProfileSelectedListener
 {
+	public static final String CONTACT_EMAIL = "android@strongswan.org";
 	private static final int PREPARE_VPN_SERVICE = 0;
 	private VpnProfile activeProfile;
 

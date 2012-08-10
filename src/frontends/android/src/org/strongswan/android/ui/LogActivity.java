@@ -15,11 +15,19 @@
 
 package org.strongswan.android.ui;
 
+import java.io.File;
+
 import org.strongswan.android.R;
+import org.strongswan.android.data.LogContentProvider;
+import org.strongswan.android.logic.CharonVpnService;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 public class LogActivity extends Activity
 {
@@ -33,12 +41,44 @@ public class LogActivity extends Activity
 	}
 
 	@Override
+	public boolean onCreateOptionsMenu(Menu menu)
+	{
+		getMenuInflater().inflate(R.menu.log, menu);
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
 		switch (item.getItemId())
 		{
 			case android.R.id.home:
 				finish();
+				return true;
+			case R.id.menu_send_log:
+				File logfile = new File(getFilesDir(), CharonVpnService.LOG_FILE);
+				if (!logfile.exists() || logfile.length() == 0)
+				{
+					Toast.makeText(this, getString(R.string.empty_log), Toast.LENGTH_SHORT).show();
+					return true;
+				}
+
+				String version = "";
+				try
+				{
+					version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+				}
+				catch (NameNotFoundException e)
+				{
+					e.printStackTrace();
+				}
+
+				Intent intent = new Intent(Intent.ACTION_SEND);
+				intent.putExtra(Intent.EXTRA_EMAIL, new String[] { MainActivity.CONTACT_EMAIL });
+				intent.putExtra(Intent.EXTRA_SUBJECT, String.format(getString(R.string.log_mail_subject), version));
+				intent.setType("text/plain");
+				intent.putExtra(Intent.EXTRA_STREAM, LogContentProvider.createContentUri());
+				startActivity(Intent.createChooser(intent, getString(R.string.send_log)));
 				return true;
 		}
 		return super.onOptionsItemSelected(item);

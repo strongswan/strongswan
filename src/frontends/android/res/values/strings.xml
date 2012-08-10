@@ -25,6 +25,9 @@
 
     <!-- Log view -->
     <string name="log_title">Log</string>
+    <string name="send_log">Send log file</string>
+    <string name="empty_log">Log file is empty</string>
+    <string name="log_mail_subject">strongSwan %1$s Log File</string>
 
     <!-- VPN profile list -->
     <string name="no_profiles">No VPN profiles.</string>
