@@ -15,6 +15,11 @@ strongswan-5.0.1
   a second authentication round, for example during XAuth authentication
   against a RADIUS server.
 
+- The xauth-pam backend can authenticate IKEv1 XAuth and Hybrid authenticated
+  clients against any PAM service. The IKEv2 eap-gtc plugin does not use
+  PAM directly anymore, but can use any XAuth backend to verify credentials,
+  including xauth-pam.
+
 - The autotools build has been migrated to use a config.h header. strongSwan
   development headers will get installed during "make install" if
   --with-dev-headers has been passed to ./configure.
