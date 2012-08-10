@@ -17,6 +17,7 @@
 
 package org.strongswan.android.logic;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -46,6 +47,9 @@ import android.util.Log;
 public class CharonVpnService extends VpnService implements Runnable
 {
 	private static final String TAG = CharonVpnService.class.getSimpleName();
+	public static final String LOG_FILE = "charon.log";
+
+	private String mLogFile;
 	private VpnProfileDataSource mDataSource;
 	private Thread mConnectionHandler;
 	private VpnProfile mCurrentProfile;
@@ -113,6 +117,8 @@ public class CharonVpnService extends VpnService implements Runnable
 	@Override
 	public void onCreate()
 	{
+		mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
+
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
 		/* use a separate thread as main thread for charon */
@@ -204,7 +210,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						mIsDisconnecting = false;
 
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName());
-						initializeCharon(builder);
+						initializeCharon(builder, mLogFile);
 						Log.i(TAG, "charon started");
 
 						String local_address = getLocalIPv4Address();
@@ -418,8 +424,9 @@ public class CharonVpnService extends VpnService implements Runnable
 	 * Initialization of charon, provided by libandroidbridge.so
 	 *
 	 * @param builder BuilderAdapter for this connection
+	 * @param logfile absolute path to the logfile
 	 */
-	public native void initializeCharon(BuilderAdapter builder);
+	public native void initializeCharon(BuilderAdapter builder, String logfile);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so

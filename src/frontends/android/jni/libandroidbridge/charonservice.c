@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/utsname.h>
 #include <android/log.h>
+#include <errno.h>
 
 #include "charonservice.h"
 #include "android_jni.h"
@@ -115,6 +116,35 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 			current = next;
 		}
 	}
+}
+
+/**
+ * Initialize file logger
+ */
+static void initialize_logger(char *logfile)
+{
+	file_logger_t *file_logger;
+	debug_t group;
+	FILE *file;
+
+	/* truncate an existing file */
+	file = fopen(logfile, "w");
+	if (!file)
+	{
+		DBG1(DBG_DMN, "opening file %s for logging failed: %s",
+			 logfile, strerror(errno));
+		return;
+	}
+	/* flush each line */
+	setlinebuf(file);
+
+	file_logger = file_logger_create(file, "%b %e %T", FALSE);
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		file_logger->set_level(file_logger, group, ANDROID_DEBUG_LEVEL);
+	}
+	charon->file_loggers->insert_last(charon->file_loggers, file_logger);
+	charon->bus->add_logger(charon->bus, &file_logger->logger);
 }
 
 METHOD(charonservice_t, update_status, bool,
@@ -353,10 +383,11 @@ static void segv_handler(int signal)
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, void,
-	jobject builder)
+	jobject builder, jstring jlogfile)
 {
 	struct sigaction action;
 	struct utsname utsname;
+	char *logfile;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -391,6 +422,10 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 		library_deinit();
 		return;
 	}
+
+	logfile = androidjni_convert_jstring(env, jlogfile);
+	initialize_logger(logfile);
+	free(logfile);
 
 	charonservice_init(env, this, builder);
 
