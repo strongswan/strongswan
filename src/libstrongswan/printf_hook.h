@@ -97,6 +97,37 @@ int vstr_wrapper_vsprintf(char *str, const char *format, va_list ap);
 int vstr_wrapper_vsnprintf(char *str, size_t size, const char *format, va_list ap);
 int vstr_wrapper_vasprintf(char **str, const char *format, va_list ap);
 
+#ifdef printf
+#undef printf
+#endif
+#ifdef fprintf
+#undef fprintf
+#endif
+#ifdef sprintf
+#undef sprintf
+#endif
+#ifdef snprintf
+#undef snprintf
+#endif
+#ifdef asprintf
+#undef asprintf
+#endif
+#ifdef vprintf
+#undef vprintf
+#endif
+#ifdef vfprintf
+#undef vfprintf
+#endif
+#ifdef vsprintf
+#undef vsprintf
+#endif
+#ifdef vsnprintf
+#undef vsnprintf
+#endif
+#ifdef vasprintf
+#undef vasprintf
+#endif
+
 #define printf vstr_wrapper_printf
 #define fprintf vstr_wrapper_fprintf
 #define sprintf vstr_wrapper_sprintf
