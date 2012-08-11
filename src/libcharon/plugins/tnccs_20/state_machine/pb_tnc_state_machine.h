@@ -82,7 +82,7 @@ struct pb_tnc_state_machine_t {
 	/**
 	 * Store information whether the received PB-TNC CDATA Batch was empty
 	 *
-	 * @bool empty			set to TRUE if received PB-TNC CDATA Batch was empty
+	 * @param empty			set to TRUE if received PB-TNC CDATA Batch was empty
 	 */
 	void (*set_empty_cdata)(pb_tnc_state_machine_t *this, bool empty);
 
