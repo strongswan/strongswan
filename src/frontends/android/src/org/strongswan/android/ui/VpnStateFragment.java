@@ -341,16 +341,31 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mErrorDialog = new AlertDialog.Builder(getActivity())
 			.setMessage(getString(R.string.error_introduction) + " " + getString(textid))
 			.setCancelable(false)
+			.setNeutralButton(R.string.show_log, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					dialog.dismiss();
+					Intent logIntent = new Intent(getActivity(), LogActivity.class);
+					startActivity(logIntent);
+				}
+			})
 			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int id)
-				{	/* clear the error */
-					mError = ErrorState.NO_ERROR;
-					mErrorDialog = null;
-					updateView();
+				{
 					dialog.dismiss();
 				}
 			}).create();
+		mErrorDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+			@Override
+			public void onDismiss(DialogInterface dialog)
+			{	/* clear the error */
+				mError = ErrorState.NO_ERROR;
+				mErrorDialog = null;
+				updateView();
+			}
+		});
 		mErrorDialog.show();
 	}
 }
