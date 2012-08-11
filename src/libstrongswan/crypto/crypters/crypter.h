@@ -92,9 +92,8 @@ struct crypter_t {
 	 * @param encrypted		chunk to allocate encrypted data, or NULL
 	 * @return				TRUE if encryption successful
 	 */
-	__attribute__((warn_unused_result))
-	bool (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *encrypted);
+	bool (*encrypt)(crypter_t *this, chunk_t data, chunk_t iv,
+					chunk_t *encrypted) __attribute__((warn_unused_result));
 
 	/**
 	 * Decrypt a chunk of data and allocate space for the decrypted value.
@@ -108,9 +107,8 @@ struct crypter_t {
 	 * @param encrypted		chunk to allocate decrypted data, or NULL
 	 * @return				TRUE if decryption successful
 	 */
-	__attribute__((warn_unused_result))
-	bool (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv,
-					 chunk_t *decrypted);
+	bool (*decrypt)(crypter_t *this, chunk_t data, chunk_t iv,
+					chunk_t *decrypted) __attribute__((warn_unused_result));
 
 	/**
 	 * Get the block size of the crypto algorithm.
@@ -121,7 +119,7 @@ struct crypter_t {
 	 *
 	 * @return				block size in bytes
 	 */
-	size_t (*get_block_size) (crypter_t *this);
+	size_t (*get_block_size)(crypter_t *this);
 
 	/**
 	 * Get the IV size of the crypto algorithm.
@@ -139,7 +137,7 @@ struct crypter_t {
 	 *
 	 * @return				key size in bytes
 	 */
-	size_t (*get_key_size) (crypter_t *this);
+	size_t (*get_key_size)(crypter_t *this);
 
 	/**
 	 * Set the key.
@@ -149,13 +147,13 @@ struct crypter_t {
 	 * @param key			key to set
 	 * @return				TRUE if key set successfully
 	 */
-	__attribute__((warn_unused_result))
-	bool (*set_key) (crypter_t *this, chunk_t key);
+	bool (*set_key)(crypter_t *this,
+					chunk_t key) __attribute__((warn_unused_result));
 
 	/**
 	 * Destroys a crypter_t object.
 	 */
-	void (*destroy) (crypter_t *this);
+	void (*destroy)(crypter_t *this);
 };
 
 /**

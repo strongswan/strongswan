@@ -47,9 +47,8 @@ struct aead_t {
 	 * @param encrypted		allocated encryption result
 	 * @return				TRUE if successfully encrypted
 	 */
-	__attribute__((warn_unused_result))
 	bool (*encrypt)(aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
-					chunk_t *encrypted);
+					chunk_t *encrypted) __attribute__((warn_unused_result));
 
 	/**
 	 * Decrypt and verify data, verify associated data.
@@ -102,8 +101,8 @@ struct aead_t {
 	 * @param key			encryption and authentication key
 	 * @return				TRUE if key set successfully
 	 */
-	__attribute__((warn_unused_result))
-	bool (*set_key)(aead_t *this, chunk_t key);
+	bool (*set_key)(aead_t *this,
+					chunk_t key) __attribute__((warn_unused_result));
 
 	/**
 	 * Destroy a aead_t.

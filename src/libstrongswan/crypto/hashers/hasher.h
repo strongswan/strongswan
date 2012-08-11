@@ -87,8 +87,8 @@ struct hasher_t {
 	 * @param hash		pointer where the hash will be written
 	 * @return			TRUE if hash created successfully
 	 */
-	__attribute__((warn_unused_result))
-	bool (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
+	bool (*get_hash)(hasher_t *this, chunk_t data,
+					 u_int8_t *hash) __attribute__((warn_unused_result));
 
 	/**
 	 * Hash data and allocate space for the hash.
@@ -101,28 +101,27 @@ struct hasher_t {
 	 * @param hash		chunk which will hold allocated hash
 	 * @return			TRUE if hash allocated successfully
 	 */
-	__attribute__((warn_unused_result))
-	bool (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
+	bool (*allocate_hash)(hasher_t *this, chunk_t data,
+						  chunk_t *hash) __attribute__((warn_unused_result));
 
 	/**
 	 * Get the size of the resulting hash.
 	 *
 	 * @return			hash size in bytes
 	 */
-	size_t (*get_hash_size) (hasher_t *this);
+	size_t (*get_hash_size)(hasher_t *this);
 
 	/**
 	 * Resets the hasher's state.
 	 *
 	 * @return			TRUE if hasher reset successfully
 	 */
-	__attribute__((warn_unused_result))
-	bool (*reset) (hasher_t *this);
+	bool (*reset)(hasher_t *this) __attribute__((warn_unused_result));
 
 	/**
 	 * Destroys a hasher object.
 	 */
-	void (*destroy) (hasher_t *this);
+	void (*destroy)(hasher_t *this);
 };
 
 /**

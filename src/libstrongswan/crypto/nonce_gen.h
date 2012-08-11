@@ -37,8 +37,8 @@ struct nonce_gen_t {
 	 * @param buffer	pointer where the generated nonce will be written
 	 * @return			TRUE if nonce allocation was succesful, FALSE otherwise
 	 */
-	__attribute__((warn_unused_result))
-	bool (*get_nonce) (nonce_gen_t *this, size_t size, u_int8_t *buffer);
+	bool (*get_nonce)(nonce_gen_t *this, size_t size,
+					  u_int8_t *buffer) __attribute__((warn_unused_result));
 
 	/**
 	 * Generates a nonce and allocates space for it.
@@ -47,13 +47,13 @@ struct nonce_gen_t {
 	 * @param chunk		chunk which will hold the generated nonce
 	 * @return			TRUE if nonce allocation was succesful, FALSE otherwise
 	 */
-	__attribute__((warn_unused_result))
-	bool (*allocate_nonce) (nonce_gen_t *this, size_t size, chunk_t *chunk);
+	bool (*allocate_nonce)(nonce_gen_t *this, size_t size,
+						   chunk_t *chunk) __attribute__((warn_unused_result));
 
 	/**
 	 * Destroys a nonce generator object.
 	 */
-	void (*destroy) (nonce_gen_t *this);
+	void (*destroy)(nonce_gen_t *this);
 };
 
 #endif /** NONCE_GEN_H_ @}*/
