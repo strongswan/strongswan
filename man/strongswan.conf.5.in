@@ -294,9 +294,8 @@ enable loaded duplicheck plugin
 .BR charon.plugins.eap-aka-3ggp2.seq_check
 
 .TP
-.BR charon.plugins.eap-gtc.pam_service " [login]"
-PAM service to be used for authentication
-
+.BR charon.plugins.eap-gtc.backend " [pam]"
+XAuth backend to be used for credential verification
 .TP
 .BR charon.plugins.eap-peap.fragment_size " [1024]"
 Maximum size of an EAP-PEAP packet
@@ -544,6 +543,9 @@ name of the strongSwan PDP as contained in the AAA certificate
 .TP
 .BR charon.plugins.whitelist.enable " [yes]"
 enable loaded whitelist plugin
+.TP
+.BR charon.plugins.xauth-pam.pam_service " [login]"
+PAM service to be used for authentication
 .SS libstrongswan section
 .TP
 .BR libstrongswan.crypto_test.bench " [no]"

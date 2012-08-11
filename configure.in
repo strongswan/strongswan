@@ -125,7 +125,7 @@ ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plug
 ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
 ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
 ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authentication module.])
-ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authentication module.])
+ARG_ENABL_SET([eap-gtc],        [enable EAP GTC authentication module.])
 ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authentication module.])
 ARG_ENABL_SET([eap-tls],        [enable EAP TLS authentication module.])
 ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
