@@ -480,6 +480,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 	if (base)
 	{
 		addr_bits = base->get_family(base) == AF_INET ? 32 : 128;
+		bits = max(0, min(bits, base->get_family(base) == AF_INET ? 32 : 128));
 		/* net bits -> host bits */
 		bits = addr_bits - bits;
 		if (bits > POOL_LIMIT)
