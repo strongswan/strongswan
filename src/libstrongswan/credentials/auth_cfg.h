@@ -180,7 +180,7 @@ struct auth_cfg_t {
 	 * For rules we expect only once the latest value is returned.
 	 *
 	 * @param rule		rule type
-	 * @return			bool if item has been found
+	 * @return			rule or NULL (or an appropriate default) if not found
 	 */
 	void* (*get)(auth_cfg_t *this, auth_rule_t rule);
 
