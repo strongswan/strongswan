@@ -108,12 +108,6 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	return SUCCESS;
 }
 
-METHOD(kernel_ipsec_t, bypass_socket, bool,
-	private_load_tester_ipsec_t *this, int fd, int family)
-{
-	return TRUE;
-}
-
 METHOD(kernel_ipsec_t, destroy, void,
 	private_load_tester_ipsec_t *this)
 {
@@ -141,7 +135,8 @@ load_tester_ipsec_t *load_tester_ipsec_create()
 				.query_policy = _query_policy,
 				.del_policy = _del_policy,
 				.flush_policies = (void*)return_failed,
-				.bypass_socket = _bypass_socket,
+				.bypass_socket = (void*)return_true,
+				.enable_udp_decap = (void*)return_true,
 				.destroy = _destroy,
 			},
 		},

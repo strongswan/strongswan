@@ -178,14 +178,29 @@ typedef struct daemon_t daemon_t;
 #define DEFAULT_THREADS 16
 
 /**
- * UDP Port on which the daemon will listen for incoming traffic.
+ * Primary UDP port used by IKE.
  */
 #define IKEV2_UDP_PORT 500
 
 /**
- * UDP Port to which the daemon will float to if NAT is detected.
+ * UDP port defined for use in case a NAT is detected.
  */
 #define IKEV2_NATT_PORT 4500
+
+/**
+ * UDP port on which the daemon will listen for incoming traffic (also used as
+ * source port for outgoing traffic).
+ */
+#ifndef CHARON_UDP_PORT
+#define CHARON_UDP_PORT IKEV2_UDP_PORT
+#endif
+
+/**
+ * UDP port used by the daemon in case a NAT is detected.
+ */
+#ifndef CHARON_NATT_PORT
+#define CHARON_NATT_PORT IKEV2_NATT_PORT
+#endif
 
 /**
  * Main class of daemon, contains some globals.

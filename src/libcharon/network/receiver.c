@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -27,6 +27,7 @@
 #include <processing/jobs/process_message_job.h>
 #include <processing/jobs/callback_job.h>
 #include <crypto/hashers/hasher.h>
+#include <threading/mutex.h>
 
 /** lifetime of a cookie, in seconds */
 #define COOKIE_LIFETIME 10
@@ -53,6 +54,19 @@ struct private_receiver_t {
 	 * Public part of a receiver_t object.
 	 */
 	receiver_t public;
+
+	/**
+	 * Registered callback for ESP packets
+	 */
+	struct {
+		receiver_esp_cb_t cb;
+		void *data;
+	} esp_cb;
+
+	/**
+	 * Mutex for ESP callback
+	 */
+	mutex_t *esp_cb_mutex;
 
 	/**
 	 * current secret to use for cookie calculation
@@ -400,8 +414,10 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	ike_sa_id_t *id;
 	packet_t *packet;
 	message_t *message;
+	host_t *src, *dst;
 	status_t status;
 	bool supported = TRUE;
+	chunk_t data, marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00);
 
 	/* read in a packet */
 	status = charon->socket->receive(charon->socket, &packet);
@@ -413,6 +429,46 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	{
 		DBG2(DBG_NET, "receiving from socket failed!");
 		return JOB_REQUEUE_FAIR;
+	}
+
+	data = packet->get_data(packet);
+	if (data.len == 1 && data.ptr[0] == 0xFF)
+	{	/* silently drop NAT-T keepalives */
+		packet->destroy(packet);
+		return JOB_REQUEUE_DIRECT;
+	}
+	else if (data.len < marker.len)
+	{	/* drop packets that are too small */
+		DBG3(DBG_NET, "received packet is too short (%d bytes)", data.len);
+		packet->destroy(packet);
+		return JOB_REQUEUE_DIRECT;
+	}
+
+	/* if neither source nor destination port is 500 we assume an IKE packet
+	 * with Non-ESP marker or an ESP packet */
+	dst = packet->get_destination(packet);
+	src = packet->get_source(packet);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{
+		if (memeq(data.ptr, marker.ptr, marker.len))
+		{	/* remove Non-ESP marker */
+			packet->skip_bytes(packet, marker.len);
+		}
+		else
+		{	/* this seems to be an ESP packet */
+			this->esp_cb_mutex->lock(this->esp_cb_mutex);
+			if (this->esp_cb.cb)
+			{
+				this->esp_cb.cb(this->esp_cb.data, packet);
+			}
+			else
+			{
+				packet->destroy(packet);
+			}
+			this->esp_cb_mutex->unlock(this->esp_cb_mutex);
+			return JOB_REQUEUE_DIRECT;
+		}
 	}
 
 	/* parse message header */
@@ -513,11 +569,33 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
+METHOD(receiver_t, add_esp_cb, void,
+	private_receiver_t *this, receiver_esp_cb_t callback, void *data)
+{
+	this->esp_cb_mutex->lock(this->esp_cb_mutex);
+	this->esp_cb.cb = callback;
+	this->esp_cb.data = data;
+	this->esp_cb_mutex->unlock(this->esp_cb_mutex);
+}
+
+METHOD(receiver_t, del_esp_cb, void,
+	private_receiver_t *this, receiver_esp_cb_t callback)
+{
+	this->esp_cb_mutex->lock(this->esp_cb_mutex);
+	if (this->esp_cb.cb == callback)
+	{
+		this->esp_cb.cb = NULL;
+		this->esp_cb.data = NULL;
+	}
+	this->esp_cb_mutex->unlock(this->esp_cb_mutex);
+}
+
 METHOD(receiver_t, destroy, void,
 	private_receiver_t *this)
 {
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
+	this->esp_cb_mutex->destroy(this->esp_cb_mutex);
 	free(this);
 }
 
@@ -531,8 +609,11 @@ receiver_t *receiver_create()
 
 	INIT(this,
 		.public = {
+			.add_esp_cb = _add_esp_cb,
+			.del_esp_cb = _del_esp_cb,
 			.destroy = _destroy,
 		},
+		.esp_cb_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.secret_switch = now,
 		.secret_offset = random() % now,
 	);

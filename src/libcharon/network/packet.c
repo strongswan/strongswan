@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -42,6 +43,11 @@ struct private_packet_t {
 	  * message data
 	  */
 	chunk_t data;
+
+	/**
+	 * actual chunk returned from get_data, adjusted when skip_bytes is called
+	 */
+	chunk_t adjusted_data;
 };
 
 METHOD(packet_t, set_source, void,
@@ -73,14 +79,20 @@ METHOD(packet_t, get_destination, host_t*,
 METHOD(packet_t, get_data, chunk_t,
 	private_packet_t *this)
 {
-	return this->data;
+	return this->adjusted_data;
 }
 
 METHOD(packet_t, set_data, void,
 	private_packet_t *this, chunk_t data)
 {
 	free(this->data.ptr);
-	this->data = data;
+	this->adjusted_data = this->data = data;
+}
+
+METHOD(packet_t, skip_bytes, void,
+	private_packet_t *this, size_t bytes)
+{
+	this->adjusted_data = chunk_skip(this->adjusted_data, bytes);
 }
 
 METHOD(packet_t, destroy, void,
@@ -108,7 +120,7 @@ METHOD(packet_t, clone_, packet_t*,
 	}
 	if (this->data.ptr != NULL)
 	{
-		other->set_data(other, chunk_clone(this->data));
+		other->set_data(other, chunk_clone(this->adjusted_data));
 	}
 	return other;
 }
@@ -128,6 +140,7 @@ packet_t *packet_create(void)
 			.get_source = _get_source,
 			.set_destination = _set_destination,
 			.get_destination = _get_destination,
+			.skip_bytes = _skip_bytes,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},

@@ -456,6 +456,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ANDROID_LOG
+  SUBDIRS += plugins/android_log
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/android_log/libstrongswan-android-log.la
+endif
+endif
+
 if USE_MAEMO
   SUBDIRS += plugins/maemo
 if MONOLITHIC

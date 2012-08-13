@@ -40,6 +40,11 @@ if !MONOLITHIC
 endif
 endif
 
+if USE_LIBIPSEC
+  deps += $(top_builddir)/src/libipsec/libipsec.la
+  libs += $(DESTDIR)$(ipseclibdir)/libipsec.so
+endif
+
 if USE_TLS
   deps += $(top_builddir)/src/libtls/libtls.la
   libs += $(DESTDIR)$(ipseclibdir)/libtls.so

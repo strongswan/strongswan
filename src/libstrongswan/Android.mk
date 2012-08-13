@@ -58,7 +58,7 @@ LOCAL_SRC_FILES += $(call add_plugin, nonce)
 
 LOCAL_SRC_FILES += $(call add_plugin, openssl)
 ifneq ($(call plugin_enabled, openssl),)
-LOCAL_C_INCLUDES += external/openssl/include
+LOCAL_C_INCLUDES += $(openssl_PATH)
 LOCAL_SHARED_LIBRARIES += libcrypto
 endif
 

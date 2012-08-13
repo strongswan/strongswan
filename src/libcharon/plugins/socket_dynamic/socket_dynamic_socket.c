@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -45,27 +45,12 @@
 /* Maximum size of a packet */
 #define MAX_PACKET 10000
 
-/* length of non-esp marker */
-#define MARKER_LEN sizeof(u_int32_t)
-
-/* from linux/udp.h */
-#ifndef UDP_ENCAP
-#define UDP_ENCAP 100
-#endif /*UDP_ENCAP*/
-
-#ifndef UDP_ENCAP_ESPINUDP
-#define UDP_ENCAP_ESPINUDP 2
-#endif /*UDP_ENCAP_ESPINUDP*/
-
 /* these are not defined on some platforms */
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
 #endif
 #ifndef SOL_IPV6
 #define SOL_IPV6 IPPROTO_IPV6
-#endif
-#ifndef SOL_UDP
-#define SOL_UDP IPPROTO_UDP
 #endif
 
 /* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
@@ -237,12 +222,6 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	}
 	DBG3(DBG_NET, "received packet %b", buffer, (u_int)len);
 
-	if (len < MARKER_LEN)
-	{
-		DBG3(DBG_NET, "received packet too short (%d bytes)", len);
-		return NULL;
-	}
-
 	/* read ancillary data to get destination address */
 	for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL;
 		 cmsgptr = CMSG_NXTHDR(&msg, cmsgptr))
@@ -297,12 +276,6 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	packet = packet_create();
 	packet->set_source(packet, source);
 	packet->set_destination(packet, dest);
-	/* we assume a non-ESP marker if none of the ports is on 500 */
-	if (dest->get_port(dest) != IKEV2_UDP_PORT &&
-		source->get_port(source) != IKEV2_UDP_PORT)
-	{
-		data = chunk_skip(data, MARKER_LEN);
-	}
 	packet->set_data(packet, chunk_clone(data));
 	return packet;
 }
@@ -358,7 +331,7 @@ METHOD(socket_t, receiver, status_t,
 static int open_socket(private_socket_dynamic_socket_t *this,
 					   int family, u_int16_t port)
 {
-	int on = TRUE, type = UDP_ENCAP_ESPINUDP;
+	int on = TRUE;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
@@ -430,10 +403,12 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 	}
 
 	/* enable UDP decapsulation on each socket */
-	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   fd, family, port))
 	{
-		DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
 	}
+
 	return fd;
 }
 
@@ -483,7 +458,7 @@ METHOD(socket_t, sender, status_t,
 	host_t *src, *dst;
 	int port, family;
 	ssize_t len;
-	chunk_t data, marked;
+	chunk_t data;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	struct iovec iov;
@@ -492,6 +467,7 @@ METHOD(socket_t, sender, status_t,
 	dst = packet->get_destination(packet);
 	family = src->get_family(src);
 	port = src->get_port(src);
+	port = port ?: CHARON_UDP_PORT;
 	skt = find_socket(this, family, port);
 	if (!skt)
 	{
@@ -500,19 +476,6 @@ METHOD(socket_t, sender, status_t,
 
 	data = packet->get_data(packet);
 	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
-
-	/* use non-ESP marker if none of the ports is 500, not for keep alives */
-	if (port != IKEV2_UDP_PORT && dst->get_port(dst) != IKEV2_UDP_PORT &&
-		!(data.len == 1 && data.ptr[0] == 0xFF))
-	{
-		/* add non esp marker to packet */
-		marked = chunk_alloc(data.len + MARKER_LEN);
-		memset(marked.ptr, 0, MARKER_LEN);
-		memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
-		/* let the packet do the clean up for us */
-		packet->set_data(packet, marked);
-		data = marked;
-	}
 
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_name = dst->get_sockaddr(dst);;
@@ -572,6 +535,14 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
+METHOD(socket_t, get_port, u_int16_t,
+	private_socket_dynamic_socket_t *this, bool nat_t)
+{
+	/* we return 0 here for users that have no explicit port configured, the
+	 * sender will default to the default port in this case */
+	return 0;
+}
+
 METHOD(socket_t, destroy, void,
 	private_socket_dynamic_socket_t *this)
 {
@@ -605,6 +576,7 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.get_port = _get_port,
 				.destroy = _destroy,
 			},
 		},

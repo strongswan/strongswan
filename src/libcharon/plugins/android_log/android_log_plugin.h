@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,39 +14,29 @@
  */
 
 /**
- * @defgroup android_logger android_logger
- * @{ @ingroup android
+ * @defgroup android_log android_log
+ * @ingroup cplugins
+ *
+ * @defgroup android_log_plugin android_log_plugin
+ * @{ @ingroup android_log
  */
 
-#ifndef ANDROID_LOGGER_H_
-#define ANDROID_LOGGER_H_
+#ifndef ANDROID_LOG_PLUGIN_H_
+#define ANDROID_LOG_PLUGIN_H_
 
-#include <bus/bus.h>
+#include <plugins/plugin.h>
 
-typedef struct android_logger_t android_logger_t;
+typedef struct android_log_plugin_t android_log_plugin_t;
 
 /**
- * Android specific logger.
+ * Plugin providing an Android specific logger implementation.
  */
-struct android_logger_t {
+struct android_log_plugin_t {
 
 	/**
-	 * Implements logger_t interface
+	 * Implements plugin interface.
 	 */
-	logger_t logger;
-
-	/**
-	 * Destroy the logger.
-	 */
-	void (*destroy)(android_logger_t *this);
-
+	plugin_t plugin;
 };
 
-/**
- * Create an Android specific logger instance.
- *
- * @return			logger instance
- */
-android_logger_t *android_logger_create();
-
-#endif /** ANDROID_LOGGER_H_ @}*/
+#endif /** ANDROID_LOG_PLUGIN_H_ @}*/

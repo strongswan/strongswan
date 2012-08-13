@@ -130,6 +130,11 @@ LOCAL_C_INCLUDES += frameworks/base/cmds/keystore
 LOCAL_SHARED_LIBRARIES += libcutils
 endif
 
+LOCAL_SRC_FILES += $(call add_plugin, android-log)
+ifneq ($(call plugin_enabled, android-log),)
+LOCAL_LDLIBS += -llog
+endif
+
 LOCAL_SRC_FILES += $(call add_plugin, attr)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka)

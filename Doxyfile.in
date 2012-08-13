@@ -530,6 +530,7 @@ WARN_LOGFILE           =
 INPUT                  = @SRC_DIR@/src/libstrongswan \
                          @SRC_DIR@/src/libhydra \
                          @SRC_DIR@/src/libcharon \
+                         @SRC_DIR@/src/libipsec \
                          @SRC_DIR@/src/libsimaka \
                          @SRC_DIR@/src/libtls \
                          @SRC_DIR@/src/libradius \

@@ -71,6 +71,29 @@ AC_ARG_WITH(
 	[AC_SUBST(ipsecgroup, "root")]
 )
 
+AC_ARG_WITH(
+	[charon-udp-port],
+	AS_HELP_STRING([--with-charon-udp-port=port],[UDP port used by charon locally (default 500). Set to 0 to allocate randomly.]),
+	[AC_DEFINE_UNQUOTED(CHARON_UDP_PORT, [$withval], [UDP port used by charon locally])
+	 AC_SUBST(charon_udp_port, [$withval])],
+	[AC_SUBST(charon_udp_port, 500)]
+)
+
+AC_ARG_WITH(
+	[charon-natt-port],
+	AS_HELP_STRING([--with-charon-natt-port=port],[UDP port used by charon locally in case a NAT is detected (must be different from charon-udp-port, default 4500). Set to 0 to allocate randomly.]),
+	[AC_DEFINE_UNQUOTED(CHARON_NATT_PORT, [$withval], [UDP post used by charon locally in case a NAT is detected])
+	 AC_SUBST(charon_natt_port, [$withval])],
+	[AC_SUBST(charon_natt_port, 4500)]
+)
+
+AC_MSG_CHECKING([configured UDP ports ($charon_udp_port, $charon_natt_port)])
+if test x$charon_udp_port != x0 -a x$charon_udp_port = x$charon_natt_port; then
+	AC_MSG_ERROR(the ports have to be different)
+else
+	AC_MSG_RESULT(ok)
+fi
+
 # convert script name to uppercase
 AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 
@@ -152,6 +175,7 @@ ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
@@ -184,6 +208,7 @@ ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
+ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
 ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
@@ -914,6 +939,7 @@ ADD_PLUGIN([medsrv],               [c charon])
 ADD_PLUGIN([medcli],               [c charon])
 ADD_PLUGIN([dhcp],                 [c charon])
 ADD_PLUGIN([android],              [c charon])
+ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
 ADD_PLUGIN([whitelist],            [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
@@ -995,6 +1021,7 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
+AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
 AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
@@ -1081,6 +1108,7 @@ AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue)
+AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
@@ -1172,6 +1200,7 @@ AC_OUTPUT(
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/plugins/resolve/Makefile
+	src/libipsec/Makefile
 	src/libsimaka/Makefile
 	src/libtls/Makefile
 	src/libradius/Makefile
@@ -1234,6 +1263,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/coupling/Makefile
 	src/libcharon/plugins/radattr/Makefile
 	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/android_log/Makefile
 	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile

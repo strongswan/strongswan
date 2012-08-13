@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -79,7 +80,7 @@ struct private_sender_t {
 	bool send_delay_response;
 };
 
-METHOD(sender_t, send_, void,
+METHOD(sender_t, send_no_marker, void,
 	private_sender_t *this, packet_t *packet)
 {
 	host_t *src, *dst;
@@ -115,10 +116,30 @@ METHOD(sender_t, send_, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(sender_t, send_, void,
+	private_sender_t *this, packet_t *packet)
+{
+	host_t *src, *dst;
+
+	/* if neither source nor destination port is 500 we add a Non-ESP marker */
+	src = packet->get_source(packet);
+	dst = packet->get_destination(packet);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
+		src->get_port(src) != IKEV2_UDP_PORT)
+	{
+		chunk_t data, marker = chunk_from_chars(0x00, 0x00, 0x00, 0x00);
+
+		data = chunk_cat("cc", marker, packet->get_data(packet));
+		packet->set_data(packet, data);
+	}
+
+	send_no_marker(this, packet);
+}
+
 /**
  * Job callback function to send packets
  */
-static job_requeue_t send_packets(private_sender_t * this)
+static job_requeue_t send_packets(private_sender_t *this)
 {
 	packet_t *packet;
 	bool oldstate;
@@ -176,6 +197,7 @@ sender_t * sender_create()
 	INIT(this,
 		.public = {
 			.send = _send_,
+			.send_no_marker = _send_no_marker,
 			.flush = _flush,
 			.destroy = _destroy,
 		},

@@ -16,8 +16,8 @@ include $(CLEAR_VARS)
 
 # this is the list of plugins that are built into libstrongswan and charon
 # also these plugins are loaded by default (if not changed in strongswan.conf)
-strongswan_CHARON_PLUGINS := openssl fips-prf random nonce pubkey pkcs1 \
-	pem xcbc hmac kernel-netlink socket-default android \
+strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
+	pkcs1 pem xcbc hmac kernel-netlink socket-default android \
 	stroke eap-identity eap-mschapv2 eap-md5
 
 ifneq ($(strongswan_BUILD_SCEPCLIENT),)
@@ -32,27 +32,16 @@ strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
 			     $(strongswan_STARTER_PLUGINS) \
 			     $(strongswan_SCEPCLIENT_PLUGINS))
 
-# helper macros to only add source files for plugins included in the list above
-# source files are relative to the android.mk that called the macro
-plugin_enabled = $(findstring $(1), $(strongswan_PLUGINS))
-add_plugin = $(if $(call plugin_enabled,$(1)), \
-               $(patsubst $(LOCAL_PATH)/%,%, \
-                 $(wildcard \
-                   $(subst %,$(subst -,_,$(strip $(1))), \
-                     $(LOCAL_PATH)/plugins/%/%*.c \
-                    ) \
-                  ) \
-                ) \
-              )
+include $(LOCAL_PATH)/Android.common.mk
 
 # includes
 strongswan_PATH := $(LOCAL_PATH)
 libvstr_PATH := external/strongswan-support/vstr/include
 libcurl_PATH := external/strongswan-support/libcurl/include
 libgmp_PATH := external/strongswan-support/gmp
+openssl_PATH := external/openssl/include
 
 # some definitions
-strongswan_VERSION := "@PACKAGE_VERSION@"
 strongswan_DIR := "/system/bin"
 strongswan_SBINDIR := "/system/bin"
 strongswan_PIDDIR := "/data/misc/vpn"

@@ -210,6 +210,15 @@ Enable multiple authentication exchanges (RFC 4739)
 .BR charon.nbns2
 WINS servers assigned to peer via configuration payload (CP)
 .TP
+.BR charon.port " [500]"
+UDP port used locally. If set to 0 a random port will be allocated.
+.TP
+.BR charon.port_nat_t " [4500]"
+UDP port used locally in case of NAT-T. If set to 0 a random port will be
+allocated.  Has to be different from
+.BR charon.port ,
+otherwise a random port will be allocated.
+.TP
 .BR charon.process_route " [yes]"
 Process RTM_NEWROUTE and RTM_DELROUTE events
 .TP
@@ -272,7 +281,7 @@ Section to define syslog loggers, see LOGGER CONFIGURATION
 Number of worker threads in charon
 .SS charon.plugins subsection
 .TP
-.BR charon.plugins.android.loglevel " [1]"
+.BR charon.plugins.android_log.loglevel " [1]"
 Loglevel for logging to Android specific logger
 .TP
 .BR charon.plugins.attr
@@ -485,6 +494,9 @@ Prefix used for interface names sent to resolvconf(8). The nameserver address
 is appended to this prefix to make it unique.  The result has to be a valid
 interface name according to the rules defined by resolvconf.  Also, it should
 have a high priority according to the order defined in interface-order(5).
+.TP
+.BR charon.plugins.socket-default.set_source " [yes]"
+Set source address on outbound packets, if possible.
 .TP
 .BR charon.plugins.sql.database
 Database URI for charons SQL plugin
@@ -921,6 +933,9 @@ Packet encoding/decoding encryption/decryption operations
 .TP
 .B tls
 libtls library messages
+.TP
+.B esp
+libipsec library messages
 .TP
 .B lib
 libstrongwan library messages

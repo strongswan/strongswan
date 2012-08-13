@@ -58,6 +58,20 @@
 #define IPV6_XFRM_POLICY 34
 #endif /*IPV6_XFRM_POLICY*/
 
+/* from linux/udp.h */
+#ifndef UDP_ENCAP
+#define UDP_ENCAP 100
+#endif
+
+#ifndef UDP_ENCAP_ESPINUDP
+#define UDP_ENCAP_ESPINUDP 2
+#endif
+
+/* this is not defined on some platforms */
+#ifndef SOL_UDP
+#define SOL_UDP IPPROTO_UDP
+#endif
+
 /** Default priority of installed policies */
 #define PRIO_BASE 512
 
@@ -2607,6 +2621,19 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	return TRUE;
 }
 
+METHOD(kernel_ipsec_t, enable_udp_decap, bool,
+	private_kernel_netlink_ipsec_t *this, int fd, int family, u_int16_t port)
+{
+	int type = UDP_ENCAP_ESPINUDP;
+
+	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set UDP_ENCAP: %s", strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_netlink_ipsec_t *this)
 {
@@ -2654,6 +2681,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 				.del_policy = _del_policy,
 				.flush_policies = _flush_policies,
 				.bypass_socket = _bypass_socket,
+				.enable_udp_decap = _enable_udp_decap,
 				.destroy = _destroy,
 			},
 		},

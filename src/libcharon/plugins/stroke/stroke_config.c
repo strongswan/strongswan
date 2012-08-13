@@ -188,6 +188,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	ike_cfg_t *ike_cfg;
 	char *interface;
 	host_t *host;
+	u_int16_t ikeport;
 
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
@@ -224,11 +225,14 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 			}
 		}
 	}
+	ikeport = msg->add_conn.me.ikeport;
+	ikeport = (ikeport == IKEV2_UDP_PORT) ?
+			   charon->socket->get_port(charon->socket, FALSE) : ikeport;
 	ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
 							 msg->add_conn.force_encap,
 							 msg->add_conn.me.address,
 							 msg->add_conn.me.allow_any,
-							 msg->add_conn.me.ikeport,
+							 ikeport,
 							 msg->add_conn.other.address,
 							 msg->add_conn.other.allow_any,
 							 msg->add_conn.other.ikeport);

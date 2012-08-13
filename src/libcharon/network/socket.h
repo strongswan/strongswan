@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -66,6 +66,14 @@ struct socket_t {
 	 *						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_t *this, packet_t *packet);
+
+	/**
+	 * Get the port this socket is listening on.
+	 *
+	 * @param nat_t			TRUE to get the port used to float in case of NAT-T
+	 * @return				the port
+	 */
+	u_int16_t (*get_port) (socket_t *this, bool nat_t);
 
 	/**
 	 * Destroy a socket implementation.

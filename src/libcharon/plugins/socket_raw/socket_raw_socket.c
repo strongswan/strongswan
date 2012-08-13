@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2010 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -54,15 +54,6 @@
 #define IP6_PROTO_OFFSET 6
 #define IKE_VERSION_OFFSET 17
 #define IKE_LENGTH_OFFSET 24
-
-/* from linux/udp.h */
-#ifndef UDP_ENCAP
-#define UDP_ENCAP 100
-#endif /*UDP_ENCAP*/
-
-#ifndef UDP_ENCAP_ESPINUDP
-#define UDP_ENCAP_ESPINUDP 2
-#endif /*UDP_ENCAP_ESPINUDP*/
 
 /* needed for older kernel headers */
 #ifndef IPV6_2292PKTINFO
@@ -181,7 +172,7 @@ METHOD(socket_t, receiver, status_t,
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
 
 		/* read source/dest from raw IP/UDP header */
-		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
+		if (bytes_read < IP_LEN + UDP_LEN)
 		{
 			DBG1(DBG_NET, "received IPv4 packet too short (%d bytes)",
 				 bytes_read);
@@ -203,16 +194,9 @@ METHOD(socket_t, receiver, status_t,
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
-		/* remove non esp marker */
-		if (dest->get_port(dest) == IKEV2_NATT_PORT)
-		{
-			data_offset += MARKER_LEN;
-		}
-		/* fill in packet */
 		data.len = bytes_read - data_offset;
-		data.ptr = malloc(data.len);
-		memcpy(data.ptr, buffer + data_offset, data.len);
-		pkt->set_data(pkt, data);
+		data.ptr = buffer + data_offset;
+		pkt->set_data(pkt, chunk_clone(data));
 	}
 	else if (this->recv6 && FD_ISSET(this->recv6, &rfds))
 	{
@@ -242,7 +226,7 @@ METHOD(socket_t, receiver, status_t,
 		}
 		DBG3(DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
 
-		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
+		if (bytes_read < IP_LEN + UDP_LEN)
 		{
 			DBG3(DBG_NET, "received IPv6 packet too short (%d bytes)",
 				 bytes_read);
@@ -290,16 +274,9 @@ METHOD(socket_t, receiver, status_t,
 		pkt->set_destination(pkt, dest);
 		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
-		/* remove non esp marker */
-		if (dest->get_port(dest) == IKEV2_NATT_PORT)
-		{
-			data_offset += MARKER_LEN;
-		}
-		/* fill in packet */
 		data.len = bytes_read - data_offset;
-		data.ptr = malloc(data.len);
-		memcpy(data.ptr, buffer + data_offset, data.len);
-		pkt->set_data(pkt, data);
+		data.ptr = buffer + data_offset;
+		pkt->set_data(pkt, chunk_clone(data));
 	}
 	else
 	{
@@ -317,7 +294,7 @@ METHOD(socket_t, sender, status_t,
 {
 	int sport, skt, family;
 	ssize_t bytes_sent;
-	chunk_t data, marked;
+	chunk_t data;
 	host_t *src, *dst;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -332,7 +309,7 @@ METHOD(socket_t, sender, status_t,
 	/* send data */
 	sport = src->get_port(src);
 	family = dst->get_family(dst);
-	if (sport == IKEV2_UDP_PORT)
+	if (sport == 0 || sport == CHARON_UDP_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -343,7 +320,7 @@ METHOD(socket_t, sender, status_t,
 			skt = this->send6;
 		}
 	}
-	else if (sport == IKEV2_NATT_PORT)
+	else if (sport == CHARON_NATT_PORT)
 	{
 		if (family == AF_INET)
 		{
@@ -352,17 +329,6 @@ METHOD(socket_t, sender, status_t,
 		else
 		{
 			skt = this->send6_natt;
-		}
-		/* NAT keepalives without marker */
-		if (data.len != 1 || data.ptr[0] != 0xFF)
-		{
-			/* add non esp marker to packet */
-			marked = chunk_alloc(data.len + MARKER_LEN);
-			memset(marked.ptr, 0, MARKER_LEN);
-			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
-			/* let the packet do the clean up for us */
-			packet->set_data(packet, marked);
-			data = marked;
 		}
 	}
 	else
@@ -437,7 +403,6 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 							int family, u_int16_t port)
 {
 	int on = TRUE;
-	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
 	int skt;
 
@@ -488,23 +453,27 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		return 0;
 	}
 
-	if (family == AF_INET)
-	{
-		/* enable UDP decapsulation globally, only for one socket needed */
-		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
-		{
-			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s; NAT-T may fail",
-				 strerror(errno));
-		}
-	}
-
 	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
 												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on send socket failed");
 	}
 
+	/* enable UDP decapsulation globally, only for one socket needed */
+	if (family == AF_INET && port == CHARON_NATT_PORT &&
+		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   skt, family, port))
+	{
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
+	}
+
 	return skt;
+}
+
+METHOD(socket_t, get_port, u_int16_t,
+	private_socket_raw_socket_t *this, bool nat_t)
+{
+	return nat_t ? CHARON_NATT_PORT : CHARON_UDP_PORT;
 }
 
 /**
@@ -541,8 +510,8 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 	{
 		/* Destination Port must be either port or natt_port */
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, udp_header + 2),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_UDP_PORT, 1, 0),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IKEV2_NATT_PORT, 6, 14),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, CHARON_UDP_PORT, 1, 0),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, CHARON_NATT_PORT, 6, 14),
 		/* port */
 			/* IKE version must be 2.x */
 			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, ike_header + IKE_VERSION_OFFSET),
@@ -653,6 +622,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.get_port = _get_port,
 				.destroy = _destroy,
 			},
 		},
@@ -667,7 +637,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 	}
 	else
 	{
-		this->send4 = open_send_socket(this, AF_INET, IKEV2_UDP_PORT);
+		this->send4 = open_send_socket(this, AF_INET, CHARON_UDP_PORT);
 		if (this->send4 == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv4 send socket, IPv4 disabled");
@@ -675,7 +645,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 		}
 		else
 		{
-			this->send4_natt = open_send_socket(this, AF_INET, IKEV2_NATT_PORT);
+			this->send4_natt = open_send_socket(this, AF_INET, CHARON_NATT_PORT);
 			if (this->send4_natt == 0)
 			{
 				DBG1(DBG_NET, "could not open IPv4 NAT-T send socket");
@@ -690,7 +660,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 	}
 	else
 	{
-		this->send6 = open_send_socket(this, AF_INET6, IKEV2_UDP_PORT);
+		this->send6 = open_send_socket(this, AF_INET6, CHARON_UDP_PORT);
 		if (this->send6 == 0)
 		{
 			DBG1(DBG_NET, "could not open IPv6 send socket, IPv6 disabled");
@@ -698,7 +668,7 @@ socket_raw_socket_t *socket_raw_socket_create()
 		}
 		else
 		{
-			this->send6_natt = open_send_socket(this, AF_INET6, IKEV2_NATT_PORT);
+			this->send6_natt = open_send_socket(this, AF_INET6, CHARON_NATT_PORT);
 			if (this->send6_natt == 0)
 			{
 				DBG1(DBG_NET, "could not open IPv6 NAT-T send socket");

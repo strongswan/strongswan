@@ -119,7 +119,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 		return NULL;
 	}
 	ike_cfg = ike_cfg_create(FALSE, FALSE,
-							 "0.0.0.0", FALSE, IKEV2_UDP_PORT,
+							 "0.0.0.0", FALSE, charon->socket->get_port(charon->socket, FALSE),
 							 address, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	med_cfg = peer_cfg_create(
@@ -396,7 +396,7 @@ medcli_config_t *medcli_config_create(database_t *db)
 		.rekey = lib->settings->get_time(lib->settings, "medcli.rekey", 1200),
 		.dpd = lib->settings->get_time(lib->settings, "medcli.dpd", 300),
 		.ike = ike_cfg_create(FALSE, FALSE,
-							  "0.0.0.0", FALSE, IKEV2_UDP_PORT,
+							  "0.0.0.0", FALSE, charon->socket->get_port(charon->socket, FALSE),
 							  "0.0.0.0", FALSE, IKEV2_UDP_PORT),
 	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));

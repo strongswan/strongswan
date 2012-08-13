@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -294,6 +294,16 @@ METHOD(kernel_interface_t, bypass_socket, bool,
 	return this->ipsec->bypass_socket(this->ipsec, fd, family);
 }
 
+METHOD(kernel_interface_t, enable_udp_decap, bool,
+	private_kernel_interface_t *this, int fd, int family, u_int16_t port)
+{
+	if (!this->ipsec)
+	{
+		return FALSE;
+	}
+	return this->ipsec->enable_udp_decap(this->ipsec, fd, family, port);
+}
+
 METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *ts, host_t **ip)
 {
@@ -539,6 +549,7 @@ kernel_interface_t *kernel_interface_create()
 			.add_route = _add_route,
 			.del_route = _del_route,
 			.bypass_socket = _bypass_socket,
+			.enable_udp_decap = _enable_udp_decap,
 
 			.get_address_by_ts = _get_address_by_ts,
 			.add_ipsec_interface = _add_ipsec_interface,

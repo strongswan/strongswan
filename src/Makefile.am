@@ -8,6 +8,10 @@ if USE_LIBHYDRA
   SUBDIRS += libhydra
 endif
 
+if USE_LIBIPSEC
+  SUBDIRS += libipsec
+endif
+
 if USE_SIMAKA
   SUBDIRS += libsimaka
 endif

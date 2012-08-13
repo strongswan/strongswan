@@ -15,7 +15,6 @@
  */
 
 #include "android_plugin.h"
-#include "android_logger.h"
 #include "android_handler.h"
 #include "android_creds.h"
 #include "android_service.h"
@@ -34,11 +33,6 @@ struct private_android_plugin_t {
 	 * Public android_plugin_t interface.
 	 */
 	android_plugin_t public;
-
-	/**
-	 * Android specific logger
-	 */
-	android_logger_t *logger;
 
 	/**
 	 * Android specific DNS handler
@@ -68,10 +62,8 @@ METHOD(plugin_t, destroy, void,
 	hydra->attributes->remove_handler(hydra->attributes,
 									  &this->handler->handler);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	charon->bus->remove_logger(charon->bus, &this->logger->logger);
 	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
-	this->logger->destroy(this->logger);
 	DESTROY_IF(this->service);
 	free(this);
 }
@@ -91,14 +83,12 @@ plugin_t *android_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.logger = android_logger_create(),
 		.creds = android_creds_create(),
 	);
 
 	this->service = android_service_create(this->creds);
 	this->handler = android_handler_create(this->service != NULL);
 
-	charon->bus->add_logger(charon->bus, &this->logger->logger);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 

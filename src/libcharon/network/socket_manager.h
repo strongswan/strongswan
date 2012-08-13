@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -51,6 +51,14 @@ struct socket_manager_t {
 	 *						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_manager_t *this, packet_t *packet);
+
+	/**
+	 * Get the port the registered socket is listening on.
+	 *
+	 * @param nat_t			TRUE to get the port used to float in case of NAT-T
+	 * @return				the port, or 0, if no socket is registered
+	 */
+	u_int16_t (*get_port) (socket_manager_t *this, bool nat_t);
 
 	/**
 	 * Register a socket constructor.

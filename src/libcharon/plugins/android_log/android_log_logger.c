@@ -16,23 +16,23 @@
 #include <string.h>
 #include <android/log.h>
 
-#include "android_logger.h"
+#include "android_log_logger.h"
 
 #include <library.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 
-typedef struct private_android_logger_t private_android_logger_t;
+typedef struct private_android_log_logger_t private_android_log_logger_t;
 
 /**
- * Private data of an android_logger_t object
+ * Private data of an android_log_logger_t object
  */
-struct private_android_logger_t {
+struct private_android_log_logger_t {
 
 	/**
 	 * Public interface
 	 */
-	android_logger_t public;
+	android_log_logger_t public;
 
 	/**
 	 * logging level
@@ -46,7 +46,7 @@ struct private_android_logger_t {
 };
 
 METHOD(logger_t, log_, void,
-	private_android_logger_t *this, debug_t group, level_t level,
+	private_android_log_logger_t *this, debug_t group, level_t level,
 	int thread, ike_sa_t* ike_sa, const char *message)
 {
 	int prio = level > 1 ? ANDROID_LOG_DEBUG : ANDROID_LOG_INFO;
@@ -71,13 +71,13 @@ METHOD(logger_t, log_, void,
 }
 
 METHOD(logger_t, get_level, level_t,
-	private_android_logger_t *this, debug_t group)
+	private_android_log_logger_t *this, debug_t group)
 {
 	return this->level;
 }
 
-METHOD(android_logger_t, destroy, void,
-	private_android_logger_t *this)
+METHOD(android_log_logger_t, destroy, void,
+	private_android_log_logger_t *this)
 {
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -86,9 +86,9 @@ METHOD(android_logger_t, destroy, void,
 /**
  * Described in header.
  */
-android_logger_t *android_logger_create()
+android_log_logger_t *android_log_logger_create()
 {
-	private_android_logger_t *this;
+	private_android_log_logger_t *this;
 
 	INIT(this,
 		.public = {
@@ -100,7 +100,7 @@ android_logger_t *android_logger_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.level = lib->settings->get_int(lib->settings,
-								"%s.plugins.android.loglevel", 1, charon->name),
+							"%s.plugins.android_log.loglevel", 1, charon->name),
 	);
 
 	return &this->public;
