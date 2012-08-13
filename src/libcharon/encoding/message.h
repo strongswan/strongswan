@@ -27,11 +27,11 @@
 typedef struct message_t message_t;
 
 #include <library.h>
-#include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/keymat.h>
 #include <sa/ike_sa_id.h>
+#include <utils/packet.h>
 #include <utils/linked_list.h>
 
 /**

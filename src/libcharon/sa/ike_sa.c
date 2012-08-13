@@ -488,7 +488,7 @@ METHOD(ike_sa_t, send_keepalive, void,
 		data.ptr[0] = 0xFF;
 		data.len = 1;
 		packet->set_data(packet, data);
-		DBG1(DBG_IKE, "sending keep alive");
+		DBG1(DBG_IKE, "sending keep alive to %#H", this->other_host);
 		charon->sender->send_no_marker(charon->sender, packet);
 		diff = 0;
 	}

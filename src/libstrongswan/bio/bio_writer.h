@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -27,6 +30,8 @@ typedef struct bio_writer_t bio_writer_t;
 
 /**
  * Buffered output generator.
+ *
+ * @note Integers are converted to network byte order before writing.
  */
 struct bio_writer_t {
 
@@ -121,11 +126,28 @@ struct bio_writer_t {
 	void (*wrap32)(bio_writer_t *this);
 
 	/**
+	 * Skips len bytes in the buffer before the next data is written, returns
+	 * a chunk covering the skipped bytes.
+	 *
+	 * @param len		number of bytes to skip
+	 * @return			chunk pointing to skipped bytes in the internal buffer
+	 */
+	chunk_t (*skip)(bio_writer_t *this, size_t len);
+
+	/**
 	 * Get the encoded data buffer.
 	 *
 	 * @return			chunk to internal buffer
 	 */
 	chunk_t (*get_buf)(bio_writer_t *this);
+
+	/**
+	 * Return the encoded data buffer and detach it from the writer (resets
+	 * the internal buffer).
+	 *
+	 * @return			chunk to internal buffer (has to be freed)
+	 */
+	chunk_t (*extract_buf)(bio_writer_t *this);
 
 	/**
 	 * Destroy a bio_writer_t.
@@ -135,6 +157,9 @@ struct bio_writer_t {
 
 /**
  * Create a bio_writer instance.
+ *
+ * The size of the internal buffer is increased automatically by bufsize (or a
+ * default if not given) if the initial size does not suffice.
  *
  * @param bufsize		initially allocated buffer size
  */

@@ -194,6 +194,11 @@ struct printf_hook_spec_t {
 	int minus;
 
 	/**
+	 * TRUE if a '+' was used in the format specifier
+	 */
+	int plus;
+
+	/**
 	 * The width as given in the format specifier.
 	 */
 	int width;

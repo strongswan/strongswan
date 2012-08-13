@@ -114,7 +114,7 @@ typedef struct {
 /**
  * Next thread ID.
  */
-static u_int next_id = 1;
+static u_int next_id;
 
 /**
  * Mutex to safely access the next thread ID.
@@ -452,6 +452,7 @@ void threads_init()
 
 	dummy1 = thread_value_create(NULL);
 
+	next_id = 1;
 	main_thread->id = 0;
 	main_thread->thread_id = pthread_self();
 	current_thread = thread_value_create(NULL);
@@ -482,4 +483,3 @@ void threads_deinit()
 	current_thread->destroy(current_thread);
 	id_mutex->destroy(id_mutex);
 }
-

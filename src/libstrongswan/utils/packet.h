@@ -17,7 +17,7 @@
 
 /**
  * @defgroup packet packet
- * @{ @ingroup network
+ * @{ @ingroup utils
  */
 
 #ifndef PACKET_H_
@@ -29,97 +29,93 @@ typedef struct packet_t packet_t;
 #include <utils/host.h>
 
 /**
- * Abstraction of an UDP-Packet, contains data, sender and receiver.
+ * Abstraction of an IP/UDP-Packet, contains data, sender and receiver.
  */
 struct packet_t {
 
 	/**
 	 * Set the source address.
 	 *
-	 * Set host_t is now owned by packet_t, it will destroy
-	 * it if necessary.
-	 *
-	 * @param source	address to set as source
+	 * @param source	address to set as source (gets owned)
 	 */
-	void (*set_source) (packet_t *packet, host_t *source);
+	void (*set_source)(packet_t *packet, host_t *source);
 
 	/**
 	 * Set the destination address.
 	 *
-	 * Set host_t is now owned by packet_t, it will destroy
-	 * it if necessary.
-	 *
-	 * @param source	address to set as destination
+	 * @param source	address to set as destination (gets owned)
 	 */
-	void (*set_destination) (packet_t *packet, host_t *destination);
+	void (*set_destination)(packet_t *packet, host_t *destination);
 
 	/**
 	 * Get the source address.
 	 *
-	 * Set host_t is still owned by packet_t, clone it
-	 * if needed.
-	 *
-	 * @return			source address
+	 * @return			source address (internal data)
 	 */
-	host_t *(*get_source) (packet_t *packet);
+	host_t *(*get_source)(packet_t *packet);
 
 	/**
 	 * Get the destination address.
 	 *
-	 * Set host_t is still owned by packet_t, clone it
-	 * if needed.
-	 *
-	 * @return			destination address
+	 * @return			destination address (internal data)
 	 */
-	host_t *(*get_destination) (packet_t *packet);
+	host_t *(*get_destination)(packet_t *packet);
 
 	/**
 	 * Get the data from the packet.
 	 *
-	 * The data pointed by the chunk is still owned
-	 * by the packet. Clone it if needed.
-	 *
-	 * @return			chunk containing the data
+	 * @return			chunk containing the data (internal data)
 	 */
-	chunk_t (*get_data) (packet_t *packet);
+	chunk_t (*get_data)(packet_t *packet);
 
 	/**
 	 * Set the data in the packet.
 	 *
-	 * Supplied chunk data is now owned by the
-	 * packet. It will free it.
-	 *
-	 * @param data		chunk with data to set
+	 * @param data		chunk with data to set (gets owned)
 	 */
-	void (*set_data) (packet_t *packet, chunk_t data);
+	void (*set_data)(packet_t *packet, chunk_t data);
 
 	/**
 	 * Increase the offset where the actual packet data starts.
+	 *
+	 * The total offset applies to future calls of get_data() and clone().
 	 *
 	 * @note The offset is reset to 0 when set_data() is called.
 	 *
 	 * @param bytes		the number of additional bytes to skip
 	 */
-	void (*skip_bytes) (packet_t *packet, size_t bytes);
+	void (*skip_bytes)(packet_t *packet, size_t bytes);
 
 	/**
 	 * Clones a packet_t object.
 	 *
+	 * @note Data is cloned without skipped bytes.
+	 *
 	 * @param clone		clone of the packet
 	 */
-	packet_t* (*clone) (packet_t *packet);
+	packet_t* (*clone)(packet_t *packet);
 
 	/**
 	 * Destroy the packet, freeing contained data.
 	 */
-	void (*destroy) (packet_t *packet);
+	void (*destroy)(packet_t *packet);
 };
 
 /**
- * create an empty packet
+ * Create an empty packet
  *
  * @return packet_t object
  */
-packet_t *packet_create(void);
+packet_t *packet_create();
+
+/**
+ * Create a packet from the supplied data
+ *
+ * @param src			source address (gets owned)
+ * @param dst			destination address (gets owned)
+ * @param data			packet data (gets owned)
+ * @return packet_t object
+ */
+packet_t *packet_create_from_data(host_t *src, host_t *dst, chunk_t data);
 
 #endif /** PACKET_H_ @}*/

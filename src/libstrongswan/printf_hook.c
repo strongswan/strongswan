@@ -93,6 +93,7 @@ static int custom_print(FILE *stream, const struct printf_info *info,
 	};
 
 	spec.hash = info->alt;
+	spec.plus = info->showsign;
 	spec.minus = info->left;
 	spec.width = info->width;
 
@@ -164,6 +165,7 @@ static int custom_fmt_cb(Vstr_base *base, size_t pos, Vstr_fmt_spec *fmt_spec)
 	}
 
 	spec.hash = fmt_spec->fmt_hash;
+	spec.plus = fmt_spec->fmt_plus;
 	spec.minus = fmt_spec->fmt_minus;
 	spec.width = fmt_spec->fmt_field_width;
 

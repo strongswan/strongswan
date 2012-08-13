@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012 Giuliano Grassi
+    Copyright (C) 2012 Ralf Sager
+    Hochschule fuer Technik Rapperswil
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+
+    <!-- Application -->
+    <string name="app_name">strongSwan VPN Client</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="reload_trusted_certs">CA-Zertifikate neu laden</string>
+    <string name="show_log">Log anzeigen</string>
+
+    <!-- Log view -->
+    <string name="log_title">Log</string>
+    <string name="send_log">Logdatei senden</string>
+    <string name="empty_log">Logdatei ist leer</string>
+    <string name="log_mail_subject">strongSwan %1$s Logdatei</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">Keine VPN Profile vorhanden.</string>
+    <string name="add_profile">Profil hinzufügen</string>
+    <string name="edit_profile">Bearbeiten</string>
+    <string name="delete_profile">Löschen</string>
+    <string name="select_profiles">Profile auswählen</string>
+    <string name="profiles_deleted">Ausgewählte Profile gelöscht</string>
+    <string name="no_profile_selected">Kein Profil ausgewählt</string>
+    <string name="one_profile_selected">Ein Profil ausgewählt</string>
+    <string name="x_profiles_selected">%1$d Profile ausgewählt</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">Speichern</string>
+    <string name="profile_edit_cancel">Abbrechen</string>
+    <string name="profile_name_label">Profilname:</string>
+    <string name="profile_name_hint">(Gateway-Adresse verwenden)</string>
+    <string name="profile_gateway_label">Gateway:</string>
+    <string name="profile_username_label">Benutzername:</string>
+    <string name="profile_password_label">Passwort:</string>
+    <string name="profile_password_hint">(anfordern wenn benötigt)</string>
+    <string name="profile_ca_label">CA-Zertifikat:</string>
+    <string name="profile_ca_auto_label">Automatisch wählen</string>
+    <string name="profile_ca_show_all">Alle Zertifikate anzeigen</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">Bitte geben Sie hier die Gateway-Adresse ein</string>
+    <string name="alert_text_no_input_username">Bitte geben Sie hier Ihren Benutzernamen ein</string>
+    <string name="alert_text_nocertfound_title">Kein CA-Zertifikat ausgewählt</string>
+    <string name="alert_text_nocertfound">Bitte wählen Sie eines aus oder aktivieren Sie <i>Automatisch wählen</i></string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">Status:</string>
+    <string name="profile_label">Profil:</string>
+    <string name="disconnect">Trennen</string>
+    <string name="state_connecting">Verbinden&#8230;</string>
+    <string name="state_connected">Verbunden</string>
+    <string name="state_disconnecting">Trennen&#8230;</string>
+    <string name="state_disabled">Kein aktives Profil</string>
+    <string name="state_error">Fehler</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">Passwort eingeben um zu verbinden</string>
+    <string name="login_confirm">Verbinden</string>
+    <string name="error_introduction">Fehler beim Aufsetzen des VPN:</string>
+    <string name="error_lookup_failed">Gateway-Adresse konnte nicht aufgelöst werden.</string>
+    <string name="error_unreachable">Gateway ist nicht erreichbar.</string>
+    <string name="error_peer_auth_failed">Authentifizierung des Gateway ist fehlgeschlagen.</string>
+    <string name="error_auth_failed">Benutzerauthentifizierung ist fehlgeschlagen.</string>
+    <string name="error_generic">Unbekannter Fehler während des Verbindens.</string>
+    <string name="connecting_title">Verbinden: %1$s</string>
+    <string name="connecting_message">Verbinde mit \""%1$s\".</string>
+
+</resources>

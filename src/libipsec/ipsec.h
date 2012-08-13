@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2012 Giuliano Grassi
+ * Copyright (C) 2012 Ralf Sager
  * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
@@ -23,14 +25,39 @@
 #ifndef IPSEC_H_
 #define IPSEC_H_
 
-typedef struct ipsec_t ipsec_t;
+#include "ipsec_sa_mgr.h"
+#include "ipsec_policy_mgr.h"
+#include "ipsec_event_relay.h"
+#include "ipsec_processor.h"
 
 #include <library.h>
+
+typedef struct ipsec_t ipsec_t;
 
 /**
  * User space IPsec implementation.
  */
 struct ipsec_t {
+
+	/**
+	 * IPsec SA manager instance
+	 */
+	ipsec_sa_mgr_t *sas;
+
+	/**
+	 * IPsec policy manager instance
+	 */
+	ipsec_policy_mgr_t *policies;
+
+	/**
+	 * Event relay instance
+	 */
+	ipsec_event_relay_t *events;
+
+	/**
+	 * IPsec processor instance
+	 */
+	ipsec_processor_t *processor;
 
 };
 

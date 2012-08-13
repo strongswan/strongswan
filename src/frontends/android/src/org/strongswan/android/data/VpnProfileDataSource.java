@@ -1,0 +1,231 @@
+/*
+ * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012 Giuliano Grassi
+ * Copyright (C) 2012 Ralf Sager
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+package org.strongswan.android.data;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+public class VpnProfileDataSource
+{
+	private static final String TAG = VpnProfileDataSource.class.getSimpleName();
+	public static final String KEY_ID = "_id";
+	public static final String KEY_NAME = "name";
+	public static final String KEY_GATEWAY = "gateway";
+	public static final String KEY_USERNAME = "username";
+	public static final String KEY_PASSWORD = "password";
+	public static final String KEY_CERTIFICATE = "certificate";
+
+	private DatabaseHelper mDbHelper;
+	private SQLiteDatabase mDatabase;
+	private final Context mContext;
+
+	private static final String DATABASE_NAME = "strongswan.db";
+	private static final String TABLE_VPNPROFILE = "vpnprofile";
+
+	private static final int DATABASE_VERSION = 1;
+
+	public static final String DATABASE_CREATE =
+							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
+								KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+								KEY_NAME + " TEXT NOT NULL," +
+								KEY_GATEWAY + " TEXT NOT NULL," +
+								KEY_USERNAME + " TEXT NOT NULL," +
+								KEY_PASSWORD + " TEXT," +
+								KEY_CERTIFICATE + " TEXT" +
+							");";
+	private final String[] ALL_COLUMNS = new String[] {
+								KEY_ID,
+								KEY_NAME,
+								KEY_GATEWAY,
+								KEY_USERNAME,
+								KEY_PASSWORD,
+								KEY_CERTIFICATE
+							};
+
+	private static class DatabaseHelper extends SQLiteOpenHelper
+	{
+		public DatabaseHelper(Context context)
+		{
+			super(context, DATABASE_NAME, null, DATABASE_VERSION);
+		}
+
+		@Override
+		public void onCreate(SQLiteDatabase database)
+		{
+			database.execSQL(DATABASE_CREATE);
+		}
+
+		@Override
+		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
+		{
+			Log.w(TAG, "Upgrading database from version " + oldVersion +
+					   " to " + newVersion + ", which will destroy all old data");
+			db.execSQL("DROP TABLE IF EXISTS " + TABLE_VPNPROFILE);
+			onCreate(db);
+		}
+	}
+
+	/**
+	 * Construct a new VPN profile data source. The context is used to
+	 * open/create the database.
+	 * @param context context used to access the database
+	 */
+	public VpnProfileDataSource(Context context)
+	{
+		this.mContext = context;
+	}
+
+	/**
+	 * Open the VPN profile data source. The database is automatically created
+	 * if it does not yet exist. If that fails an exception is thrown.
+	 * @return itself (allows to chain initialization calls)
+	 * @throws SQLException if the database could not be opened or created
+	 */
+	public VpnProfileDataSource open() throws SQLException
+	{
+		if (mDbHelper == null)
+		{
+			mDbHelper = new DatabaseHelper(mContext);
+			mDatabase = mDbHelper.getWritableDatabase();
+		}
+		return this;
+	}
+
+	/**
+	 * Close the data source.
+	 */
+	public void close()
+	{
+		if (mDbHelper != null)
+		{
+			mDbHelper.close();
+			mDbHelper = null;
+		}
+	}
+
+	/**
+	 * Insert the given VPN profile into the database.  On success the Id of
+	 * the object is updated and the object returned.
+	 *
+	 * @param profile the profile to add
+	 * @return the added VPN profile or null, if failed
+	 */
+	public VpnProfile insertProfile(VpnProfile profile)
+	{
+		ContentValues values = ContentValuesFromVpnProfile(profile);
+		long insertId = mDatabase.insert(TABLE_VPNPROFILE, null, values);
+		if (insertId == -1)
+		{
+			return null;
+		}
+		profile.setId(insertId);
+		return profile;
+	}
+
+	/**
+	 * Updates the given VPN profile in the database.
+	 * @param profile the profile to update
+	 * @return true if update succeeded, false otherwise
+	 */
+	public boolean updateVpnProfile(VpnProfile profile)
+	{
+		long id = profile.getId();
+		ContentValues values = ContentValuesFromVpnProfile(profile);
+		return mDatabase.update(TABLE_VPNPROFILE, values, KEY_ID + " = " + id, null) > 0;
+	}
+
+	/**
+	 * Delete the given VPN profile from the database.
+	 * @param profile the profile to delete
+	 * @return true if deleted, false otherwise
+	 */
+	public boolean deleteVpnProfile(VpnProfile profile)
+	{
+		long id = profile.getId();
+		return mDatabase.delete(TABLE_VPNPROFILE, KEY_ID + " = " + id, null) > 0;
+	}
+
+	/**
+	 * Get a single VPN profile from the database.
+	 * @param id the ID of the VPN profile
+	 * @return the profile or null, if not found
+	 */
+	public VpnProfile getVpnProfile(long id)
+	{
+		VpnProfile profile = null;
+		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
+										KEY_ID + "=" + id, null, null, null, null);
+		if (cursor.moveToFirst())
+		{
+			profile = VpnProfileFromCursor(cursor);
+		}
+		cursor.close();
+		return profile;
+	}
+
+	/**
+	 * Get a list of all VPN profiles stored in the database.
+	 * @return list of VPN profiles
+	 */
+	public List<VpnProfile> getAllVpnProfiles()
+	{
+		List<VpnProfile> vpnProfiles = new ArrayList<VpnProfile>();
+
+		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS, null, null, null, null, null);
+		cursor.moveToFirst();
+		while (!cursor.isAfterLast())
+		{
+			VpnProfile vpnProfile = VpnProfileFromCursor(cursor);
+			vpnProfiles.add(vpnProfile);
+			cursor.moveToNext();
+		}
+		cursor.close();
+		return vpnProfiles;
+	}
+
+	private VpnProfile VpnProfileFromCursor(Cursor cursor)
+	{
+		VpnProfile profile = new VpnProfile();
+		profile.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
+		profile.setName(cursor.getString(cursor.getColumnIndex(KEY_NAME)));
+		profile.setGateway(cursor.getString(cursor.getColumnIndex(KEY_GATEWAY)));
+		profile.setUsername(cursor.getString(cursor.getColumnIndex(KEY_USERNAME)));
+		profile.setPassword(cursor.getString(cursor.getColumnIndex(KEY_PASSWORD)));
+		profile.setCertificateAlias(cursor.getString(cursor.getColumnIndex(KEY_CERTIFICATE)));
+		return profile;
+	}
+
+	private ContentValues ContentValuesFromVpnProfile(VpnProfile profile)
+	{
+		ContentValues values = new ContentValues();
+		values.put(KEY_NAME, profile.getName());
+		values.put(KEY_GATEWAY, profile.getGateway());
+		values.put(KEY_USERNAME, profile.getUsername());
+		values.put(KEY_PASSWORD, profile.getPassword());
+		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
+		return values;
+	}
+}

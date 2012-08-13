@@ -1,7 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012 Giuliano Grassi
+    Copyright (C) 2012 Ralf Sager
+    Hochschule fuer Technik Rapperswil
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
 <resources>
 
-    <string name="hello">Hello World, strongSwanActivity!</string>
-    <string name="app_name">strongSwan</string>
+    <!-- Application -->
+    <string name="app_name">strongSwan VPN Client</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="reload_trusted_certs">Reload CA certificates</string>
+    <string name="show_log">View log</string>
+
+    <!-- Log view -->
+    <string name="log_title">Log</string>
+    <string name="send_log">Send log file</string>
+    <string name="empty_log">Log file is empty</string>
+    <string name="log_mail_subject">strongSwan %1$s Log File</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">No VPN profiles.</string>
+    <string name="add_profile">Add VPN profile</string>
+    <string name="edit_profile">Edit</string>
+    <string name="delete_profile">Delete</string>
+    <string name="select_profiles">Select profiles</string>
+    <string name="profiles_deleted">Selected profiles deleted</string>
+    <string name="no_profile_selected">No profile selected</string>
+    <string name="one_profile_selected">One profile selected</string>
+    <string name="x_profiles_selected">%1$d profiles selected"</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">Save</string>
+    <string name="profile_edit_cancel">Cancel</string>
+    <string name="profile_name_label">Profile Name:</string>
+    <string name="profile_name_hint">(use gateway address)</string>
+    <string name="profile_gateway_label">Gateway:</string>
+    <string name="profile_username_label">Username:</string>
+    <string name="profile_password_label">Password:</string>
+    <string name="profile_password_hint">(prompt when needed)</string>
+    <string name="profile_ca_label">CA certificate:</string>
+    <string name="profile_ca_auto_label">Select automatically</string>
+    <string name="profile_ca_show_all">Show all certificates</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">Please enter the gateway address here</string>
+    <string name="alert_text_no_input_username">Please enter your username here</string>
+    <string name="alert_text_nocertfound_title">No CA certificate selected</string>
+    <string name="alert_text_nocertfound">Please select one or activate <i>Select automatically</i></string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">Status:</string>
+    <string name="profile_label">Profile:</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="state_connecting">Connecting&#8230;</string>
+    <string name="state_connected">Connected</string>
+    <string name="state_disconnecting">Disconnecting&#8230;</string>
+    <string name="state_disabled">No active VPN</string>
+    <string name="state_error">Error</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">Enter password to connect</string>
+    <string name="login_confirm">Connect</string>
+    <string name="error_introduction">Failed to establish VPN:</string>
+    <string name="error_lookup_failed">Gateway address lookup failed.</string>
+    <string name="error_unreachable">Gateway is unreachable.</string>
+    <string name="error_peer_auth_failed">Verifying gateway authentication failed.</string>
+    <string name="error_auth_failed">User authentication failed.</string>
+    <string name="error_generic">Unspecified failure while connecting.</string>
+    <string name="connecting_title">Connecting: %1$s</string>
+    <string name="connecting_message">Establishing VPN with \""%1$s\".</string>
 
 </resources>

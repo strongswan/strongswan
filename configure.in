@@ -432,6 +432,7 @@ AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r)
 
 AC_CHECK_HEADERS(sys/sockio.h glob.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
+AC_CHECK_HEADERS(netinet/ip6.h)
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
 [
