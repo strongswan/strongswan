@@ -191,6 +191,25 @@ public class TrustedCertificateManager
 	}
 
 	/**
+	 * Get only the system-wide CA certificates.
+	 * @return Hashtable mapping aliases to certificates
+	 */
+	public Hashtable<String, X509Certificate> getSystemCACertificates()
+	{
+		Hashtable<String, X509Certificate> certs = new Hashtable<String, X509Certificate>();
+		this.mLock.readLock().lock();
+		for (String alias : this.mCACerts.keySet())
+		{
+			if (alias.startsWith("system:"))
+			{
+				certs.put(alias, this.mCACerts.get(alias));
+			}
+		}
+		this.mLock.readLock().unlock();
+		return certs;
+	}
+
+	/**
 	 * Get only the CA certificates installed by the user.
 	 * @return Hashtable mapping aliases to certificates
 	 */
