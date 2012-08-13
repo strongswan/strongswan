@@ -757,6 +757,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 	}
 	from = net->get_address(net);
 	memcpy(this->from, from.ptr, from.len);
+	netbits = min(netbits, this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	calc_range(this, netbits);
 	if (port)
 	{
