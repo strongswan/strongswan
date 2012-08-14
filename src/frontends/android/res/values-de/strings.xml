@@ -57,6 +57,9 @@
     <string name="alert_text_nocertfound_title">Kein CA-Zertifikat ausgewählt</string>
     <string name="alert_text_nocertfound">Bitte wählen Sie eines aus oder aktivieren Sie <i>Automatisch wählen</i></string>
 
+    <!-- Trusted certificate selection -->
+    <string name="no_certificates">Keine Zertifikate</string>
+
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>
     <string name="profile_label">Profil:</string>
