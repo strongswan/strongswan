@@ -58,7 +58,10 @@
     <string name="alert_text_nocertfound">Bitte wählen Sie eines aus oder aktivieren Sie <i>Automatisch wählen</i></string>
 
     <!-- Trusted certificate selection -->
+    <string name="trusted_certs_title">CA-Zertifikate</string>
     <string name="no_certificates">Keine Zertifikate</string>
+    <string name="system_tab">System</string>
+    <string name="user_tab">Benutzer</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>
