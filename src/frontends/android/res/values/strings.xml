@@ -22,6 +22,7 @@
     <string name="main_activity_name">strongSwan</string>
     <string name="reload_trusted_certs">Reload CA certificates</string>
     <string name="show_log">View log</string>
+    <string name="search">Search</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>

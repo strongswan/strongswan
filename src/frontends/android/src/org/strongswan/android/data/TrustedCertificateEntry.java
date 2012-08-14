@@ -107,6 +107,20 @@ public class TrustedCertificateEntry implements Comparable<TrustedCertificateEnt
 	}
 
 	@Override
+	public String toString()
+	{	/* combination of both subject lines, used for filtering lists */
+		if (mString == null)
+		{
+			mString = mSubjectPrimary;
+			if (!mSubjectSecondary.isEmpty())
+			{
+				mString += ", " + mSubjectSecondary;
+			}
+		}
+		return mString;
+	}
+
+	@Override
 	public int compareTo(TrustedCertificateEntry another)
 	{
 		int diff = mSubjectPrimary.compareToIgnoreCase(another.mSubjectPrimary);

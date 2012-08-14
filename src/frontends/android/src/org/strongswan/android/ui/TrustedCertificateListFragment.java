@@ -34,10 +34,16 @@ import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.content.Loader;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
+import android.widget.SearchView;
+import android.widget.SearchView.OnQueryTextListener;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>
+public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
 	private OnTrustedCertificateSelectedListener mListener;
 	private TrustedCertificateAdapter mAdapter;
@@ -54,6 +60,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public void onActivityCreated(Bundle savedInstanceState)
 	{
 		super.onActivityCreated(savedInstanceState);
+		setHasOptionsMenu(true);
 
 		setEmptyText(getString(R.string.no_certificates));
 
@@ -83,6 +90,32 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		{
 			mListener = (OnTrustedCertificateSelectedListener)activity;
 		}
+	}
+
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	{
+		MenuItem item = menu.add(R.string.search);
+		item.setIcon(android.R.drawable.ic_menu_search);
+		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+
+		SearchView sv = new SearchView(getActivity());
+		sv.setOnQueryTextListener(this);
+		item.setActionView(sv);
+	}
+
+	@Override
+	public boolean onQueryTextSubmit(String query)
+	{	/* already handled when the text changes */
+		return true;
+	}
+
+	@Override
+	public boolean onQueryTextChange(String newText)
+	{
+		String search = TextUtils.isEmpty(newText) ? null : newText;
+		mAdapter.getFilter().filter(search);
+		return true;
 	}
 
 	@Override
