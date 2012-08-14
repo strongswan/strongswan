@@ -701,6 +701,7 @@ METHOD(pts_component_t, verify, status_t,
 			case IMA_STATE_BIOS:
 				if (!check_boot_aggregate(pcrs, measurement))
 				{
+					this->state = IMA_STATE_RUNTIME;
 					return FAILED;
 				}
 				this->state = IMA_STATE_INIT;
