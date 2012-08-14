@@ -1,7 +1,5 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
- * Copyright (C) 2012 Giuliano Grassi
- * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,133 +15,57 @@
 
 package org.strongswan.android.ui.adapter;
 
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.Map.Entry;
+import java.util.List;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.TrustedCertificateEntry;
 
 import android.content.Context;
-import android.net.http.SslCertificate;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-public class TrustedCertificateAdapter extends BaseAdapter
+public class TrustedCertificateAdapter extends ArrayAdapter<TrustedCertificateEntry>
 {
-	private final ArrayList<CertEntry> mContent;
-	private final Context mContext;
-
-	public class CertEntry implements Comparable<CertEntry>
+	public TrustedCertificateAdapter(Context context)
 	{
-		public X509Certificate mCert;
-		public String mAlias;
-		public String mDisplayName;
-
-		public CertEntry(String alias, X509Certificate cert)
-		{
-			mCert = cert;
-			mAlias = alias;
-		}
-
-		public String getDisplayText()
-		{
-			if (mDisplayName == null)
-			{
-				SslCertificate cert = new SslCertificate(mCert);
-				String o = cert.getIssuedTo().getOName();
-				String ou = cert.getIssuedTo().getUName();
-				String cn = cert.getIssuedTo().getCName();
-				if (!o.isEmpty())
-				{
-					mDisplayName = o;
-					if (!cn.isEmpty())
-					{
-						mDisplayName = mDisplayName + ", " + cn;
-					}
-					else if (!ou.isEmpty())
-					{
-						mDisplayName = mDisplayName + ", " + ou;
-					}
-				}
-				else if (!cn.isEmpty())
-				{
-					mDisplayName = cn;
-				}
-				else
-				{
-					mDisplayName = cert.getIssuedTo().getDName();
-				}
-			}
-			return mDisplayName;
-		}
-
-		@Override
-		public int compareTo(CertEntry another)
-		{
-			return getDisplayText().compareToIgnoreCase(another.getDisplayText());
-		}
-	}
-
-	public TrustedCertificateAdapter(Context context,
-											Hashtable<String, X509Certificate> content)
-	{
-		mContext = context;
-		mContent = new ArrayList<TrustedCertificateAdapter.CertEntry>();
-		for (Entry<String, X509Certificate> entry : content.entrySet())
-		{
-			mContent.add(new CertEntry(entry.getKey(), entry.getValue()));
-		}
-		Collections.sort(mContent);
-	}
-
-	@Override
-	public int getCount()
-	{
-		return mContent.size();
-	}
-
-	@Override
-	public Object getItem(int position)
-	{
-		return mContent.get(position);
+		super(context, R.layout.trusted_certificates_item);
 	}
 
 	/**
-	 * Returns the position (index) of the entry with the given alias.
+	 * Set new data for this adapter.
 	 *
-	 * @param alias alias of the item to find
-	 * @return the position (index) in the list
+	 * @param data the new data (null to clear)
 	 */
-	public int getItemPosition(String alias)
+	public void setData(List<TrustedCertificateEntry> data)
 	{
-		for (int i = 0; i < mContent.size(); i++)
+		clear();
+		if (data != null)
 		{
-			if (mContent.get(i).mAlias.equals(alias))
-			{
-				return i;
-			}
+			addAll(data);
 		}
-		return -1;
-	}
-
-	@Override
-	public long getItemId(int position)
-	{
-		return position;
 	}
 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent)
 	{
-		LayoutInflater inflater = LayoutInflater.from(mContext);
-		final View certView = inflater.inflate(R.layout.trusted_certificates_item, null);
-		final TextView certText = (TextView)certView.findViewById(R.id.certificate_name);
-		certText.setText(mContent.get(position).getDisplayText());
-		return certView;
+		View view;
+		if (convertView != null)
+		{
+			view = convertView;
+		}
+		else
+		{
+			LayoutInflater inflater = LayoutInflater.from(getContext());
+			view = inflater.inflate(R.layout.trusted_certificates_item, parent, false);
+		}
+		TrustedCertificateEntry item = getItem(position);
+		TextView text = (TextView)view.findViewById(R.id.subject_primary);
+		text.setText(item.getSubjectPrimary());
+		text = (TextView)view.findViewById(R.id.subject_secondary);
+		text.setText(item.getSubjectSecondary());
+		return view;
 	}
 }

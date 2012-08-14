@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Copyright (C) 2012 Tobias Brunner
-    Copyright (C) 2012 Giuliano Grassi
-    Copyright (C) 2012 Ralf Sager
     Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -15,15 +13,24 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
+    android:layout_height="wrap_content"
+    android:minHeight="?android:attr/listPreferredItemHeight"
+    android:background="?android:attr/selectableItemBackground"
+    android:padding="10dp" >
 
-    <TextView
-        android:id="@+id/certificate_name"
+    <TextView android:id="@+id/subject_primary"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:textSize="18sp" />
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
-</TableLayout>
+    <TextView android:id="@+id/subject_secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/subject_primary"
+        android:layout_alignLeft="@id/subject_primary"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="?android:attr/textColorSecondary" />
+
+</RelativeLayout>
