@@ -27,17 +27,28 @@ import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
 
+import android.app.Activity;
 import android.app.ListFragment;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.AsyncTaskLoader;
 import android.content.Context;
 import android.content.Loader;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ListView;
 
 public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>
 {
+	private OnTrustedCertificateSelectedListener mListener;
 	private TrustedCertificateAdapter mAdapter;
 	private boolean mUser;
+
+	/**
+	 * The activity containing this fragment should implement this interface
+	 */
+	public interface OnTrustedCertificateSelectedListener {
+		public void onTrustedCertificateSelected(TrustedCertificateEntry selected);
+	}
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState)
@@ -61,6 +72,17 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public void onDestroy()
 	{
 		super.onDestroy();
+	}
+
+	@Override
+	public void onAttach(Activity activity)
+	{
+		super.onAttach(activity);
+
+		if (activity instanceof OnTrustedCertificateSelectedListener)
+		{
+			mListener = (OnTrustedCertificateSelectedListener)activity;
+		}
 	}
 
 	@Override
@@ -88,6 +110,15 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public void onLoaderReset(Loader<List<TrustedCertificateEntry>> loader)
 	{
 		mAdapter.setData(null);
+	}
+
+	@Override
+	public void onListItemClick(ListView l, View v, int position, long id)
+	{
+		if (mListener != null)
+		{
+			mListener.onTrustedCertificateSelected(mAdapter.getItem(position));
+		}
 	}
 
 	public static class CertificateListLoader extends AsyncTaskLoader<List<TrustedCertificateEntry>>
