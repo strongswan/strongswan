@@ -104,7 +104,10 @@ public class VpnProfileDetailActivity extends Activity
 	protected void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+		if (mId != null)
+		{
+			outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+		}
 	}
 
 	@Override
