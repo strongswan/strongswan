@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
- #include <syslog.h>
+#include <syslog.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -525,13 +525,6 @@ int main (int argc, char **argv)
 		}
 	}
 
-	/* load plugins */
-	if (!lib->plugins->load(lib->plugins, NULL,
-			lib->settings->get_str(lib->settings, "starter.load", PLUGINS)))
-	{
-		exit(LSB_RC_FAILURE);
-	}
-
 	/* we handle these signals only in pselect() */
 	memset(&action, 0, sizeof(action));
 	sigemptyset(&action.sa_mask);
@@ -580,7 +573,6 @@ int main (int argc, char **argv)
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
 			DBG1(DBG_APP, "ipsec starter stopped");
-			lib->plugins->unload(lib->plugins);
 			close_log();
 			exit(LSB_RC_SUCCESS);
 		}
