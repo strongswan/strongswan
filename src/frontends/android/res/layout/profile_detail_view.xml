@@ -91,19 +91,6 @@
             android:layout_height="wrap_content"
             android:text="@string/profile_ca_auto_label" />
 
-        <CheckBox
-            android:id="@+id/ca_show_all"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="@string/profile_ca_show_all" />
-
-        <Spinner
-            android:id="@+id/ca_spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="5dp" />
-
     </LinearLayout>
 
 </ScrollView>

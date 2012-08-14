@@ -17,14 +17,10 @@
 
 package org.strongswan.android.ui;
 
-import java.security.cert.X509Certificate;
-import java.util.Hashtable;
-
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.TrustedCertificateManager;
-import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -38,13 +34,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.Spinner;
 
 public class VpnProfileDetailActivity extends Activity
 {
@@ -53,13 +46,10 @@ public class VpnProfileDetailActivity extends Activity
 	private VpnProfile mProfile;
 	private boolean mCertsLoaded;
 	private String mCertAlias;
-	private Spinner mCertSpinner;
-	private TrustedCertificateAdapter.CertEntry mSelectedCert;
 	private EditText mName;
 	private EditText mGateway;
 	private EditText mUsername;
 	private EditText mPassword;
-	private CheckBox mCheckAll;
 	private CheckBox mCheckAuto;
 
 	@Override
@@ -81,42 +71,13 @@ public class VpnProfileDetailActivity extends Activity
 		mGateway = (EditText)findViewById(R.id.gateway);
 		mUsername = (EditText)findViewById(R.id.username);
 
-		mCheckAll = (CheckBox)findViewById(R.id.ca_show_all);
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
-		mCertSpinner = (Spinner)findViewById(R.id.ca_spinner);
 
 		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
 			{
-				updateCertSpinner();
-			}
-		});
 
-		mCheckAll.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
-			{
-				Hashtable<String, X509Certificate> certs;
-				certs = isChecked ? TrustedCertificateManager.getInstance().getAllCACertificates()
-								  : TrustedCertificateManager.getInstance().getUserCACertificates();
-				mCertSpinner.setAdapter(new TrustedCertificateAdapter(VpnProfileDetailActivity.this, certs));
-				mSelectedCert = (TrustedCertificateAdapter.CertEntry)mCertSpinner.getSelectedItem();
-			}
-		});
-
-		mCertSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(AdapterView<?> parent, View view,
-									   int pos, long id)
-			{
-				mSelectedCert = (TrustedCertificateAdapter.CertEntry)parent.getSelectedItem();
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> arg0)
-			{
-				mSelectedCert = null;
 			}
 		});
 
@@ -215,64 +176,8 @@ public class VpnProfileDetailActivity extends Activity
 		@Override
 		protected void onPostExecute(TrustedCertificateManager result)
 		{
-			TrustedCertificateAdapter adapter;
-			if (mCertAlias != null && mCertAlias.startsWith("system:"))
-			{
-				mCheckAll.setChecked(true);
-				adapter = new TrustedCertificateAdapter(VpnProfileDetailActivity.this,
-														result.getAllCACertificates());
-			}
-			else
-			{
-				mCheckAll.setChecked(false);
-				adapter = new TrustedCertificateAdapter(VpnProfileDetailActivity.this,
-														result.getUserCACertificates());
-			}
-			mCertSpinner.setAdapter(adapter);
-
-			if (mCertAlias != null)
-			{
-				int position = adapter.getItemPosition(mCertAlias);
-				if (position == -1)
-				{	/* previously selected certificate is not here anymore */
-					showCertificateAlert();
-				}
-				else
-				{
-					mCertSpinner.setSelection(position);
-				}
-			}
-
-			mSelectedCert = (TrustedCertificateAdapter.CertEntry)mCertSpinner.getSelectedItem();
-
 			setProgressBarIndeterminateVisibility(false);
 			mCertsLoaded = true;
-			updateCertSpinner();
-		}
-	}
-
-	/**
-	 * Update the CA certificate selection UI depending on whether the
-	 * certificate should be automatically selected or not.
-	 */
-	private void updateCertSpinner()
-	{
-		if (!mCheckAuto.isChecked())
-		{
-			if (mCertsLoaded)
-			{
-				mCertSpinner.setEnabled(true);
-				mCertSpinner.setVisibility(View.VISIBLE);
-				mCheckAll.setEnabled(true);
-				mCheckAll.setVisibility(View.VISIBLE);
-			}
-		}
-		else
-		{
-			mCertSpinner.setEnabled(false);
-			mCertSpinner.setVisibility(View.GONE);
-			mCheckAll.setEnabled(false);
-			mCheckAll.setVisibility(View.GONE);
 		}
 	}
 
@@ -317,7 +222,7 @@ public class VpnProfileDetailActivity extends Activity
 			mUsername.setError(getString(R.string.alert_text_no_input_username));
 			valid = false;
 		}
-		if (!mCheckAuto.isChecked() && mSelectedCert == null)
+		if (!mCheckAuto.isChecked())
 		{
 			showCertificateAlert();
 			valid = false;
@@ -339,8 +244,6 @@ public class VpnProfileDetailActivity extends Activity
 		String password = mPassword.getText().toString().trim();
 		password = password.isEmpty() ? null : password;
 		mProfile.setPassword(password);
-		String certAlias = mCheckAuto.isChecked() ? null : mSelectedCert.mAlias;
-		mProfile.setCertificateAlias(certAlias);
 	}
 
 	/**
@@ -368,8 +271,6 @@ public class VpnProfileDetailActivity extends Activity
 				finish();
 			}
 		}
-		mCheckAll.setChecked(false);
 		mCheckAuto.setChecked(mCertAlias == null);
-		updateCertSpinner();
 	}
 }

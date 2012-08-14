@@ -51,7 +51,6 @@
     <string name="profile_password_hint">(anfordern wenn benötigt)</string>
     <string name="profile_ca_label">CA-Zertifikat:</string>
     <string name="profile_ca_auto_label">Automatisch wählen</string>
-    <string name="profile_ca_show_all">Alle Zertifikate anzeigen</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Bitte geben Sie hier die Gateway-Adresse ein</string>
     <string name="alert_text_no_input_username">Bitte geben Sie hier Ihren Benutzernamen ein</string>
