@@ -561,7 +561,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 	addr_entry_t *addr;
 	enumerator_t *ifaces, *addrs;
 
-	DBG1(DBG_KNL, "listening on interfaces:");
+	DBG2(DBG_KNL, "known interfaces and IP addresses:");
 
 	if (getifaddrs(&ifap) < 0)
 	{
@@ -626,11 +626,11 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 	{
 		if (iface->flags & IFF_UP)
 		{
-			DBG1(DBG_KNL, "  %s", iface->ifname);
+			DBG2(DBG_KNL, "  %s", iface->ifname);
 			addrs = iface->addrs->create_enumerator(iface->addrs);
 			while (addrs->enumerate(addrs, (void**)&addr))
 			{
-				DBG1(DBG_KNL, "    %H", addr->ip);
+				DBG2(DBG_KNL, "    %H", addr->ip);
 			}
 			addrs->destroy(addrs);
 		}
