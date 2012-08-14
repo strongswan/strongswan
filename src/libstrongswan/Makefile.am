@@ -53,8 +53,8 @@ credentials/sets/mem_cred.h credentials/sets/callback_cred.h \
 credentials/auth_cfg.h credentials/credential_set.h credentials/cert_validator.h \
 database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
-plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h
-processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h
+plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
+processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h selectors/traffic_selector.h \
 threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
