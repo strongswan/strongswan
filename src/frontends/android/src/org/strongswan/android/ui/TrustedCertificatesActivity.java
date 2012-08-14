@@ -16,16 +16,19 @@
 package org.strongswan.android.ui;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.TrustedCertificateEntry;
+import org.strongswan.android.data.VpnProfileDataSource;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 
-public class TrustedCertificatesActivity extends Activity
+public class TrustedCertificatesActivity extends Activity implements TrustedCertificateListFragment.OnTrustedCertificateSelectedListener
 {
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -69,6 +72,16 @@ public class TrustedCertificatesActivity extends Activity
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	public void onTrustedCertificateSelected(TrustedCertificateEntry selected)
+	{
+		/* the user selected a certificate, return to calling activity */
+		Intent intent = new Intent();
+		intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
+		setResult(Activity.RESULT_OK, intent);
+		finish();
 	}
 
 	public static class TrustedCertificatesTabListener implements ActionBar.TabListener

@@ -17,7 +17,10 @@
 
 package org.strongswan.android.ui;
 
+import java.security.cert.X509Certificate;
+
 import org.strongswan.android.R;
+import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.TrustedCertificateManager;
@@ -26,37 +29,42 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
+import android.view.View.OnClickListener;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 public class VpnProfileDetailActivity extends Activity
 {
+	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
+
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
+	private TrustedCertificateEntry mCertEntry;
 	private VpnProfile mProfile;
-	private boolean mCertsLoaded;
-	private String mCertAlias;
 	private EditText mName;
 	private EditText mGateway;
 	private EditText mUsername;
 	private EditText mPassword;
 	private CheckBox mCheckAuto;
+	private RelativeLayout mSelectCert;
+	private TextView mCertTitle;
+	private TextView mCertSubtitle;
+
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 
 		/* the title is set when we load the profile, if any */
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -72,12 +80,24 @@ public class VpnProfileDetailActivity extends Activity
 		mUsername = (EditText)findViewById(R.id.username);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
+		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
+		mCertTitle = (TextView)findViewById(R.id.select_certificate_title);
+		mCertSubtitle = (TextView)findViewById(R.id.select_certificate_subtitle);
 
 		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
 			{
+				updateCertificateSelector();
+			}
+		});
 
+		mSelectCert.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v)
+			{
+				Intent intent = new Intent(VpnProfileDetailActivity.this, TrustedCertificatesActivity.class);
+				startActivityForResult(intent, SELECT_TRUSTED_CERTIFICATE);
 			}
 		});
 
@@ -88,9 +108,9 @@ public class VpnProfileDetailActivity extends Activity
 			mId = extras == null ? null : extras.getLong(VpnProfileDataSource.KEY_ID);
 		}
 
-		loadProfileData();
+		loadProfileData(savedInstanceState);
 
-		new CertificateLoadTask().execute();
+		updateCertificateSelector();
 	}
 
 	@Override
@@ -107,6 +127,10 @@ public class VpnProfileDetailActivity extends Activity
 		if (mId != null)
 		{
 			outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+		}
+		if (mCertEntry != null)
+		{
+			outState.putString(VpnProfileDataSource.KEY_CERTIFICATE, mCertEntry.getAlias());
 		}
 	}
 
@@ -135,6 +159,25 @@ public class VpnProfileDetailActivity extends Activity
 		}
 	}
 
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data)
+	{
+		switch (requestCode)
+		{
+			case SELECT_TRUSTED_CERTIFICATE:
+				if (resultCode == RESULT_OK)
+				{
+					String alias = data.getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
+					X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
+					mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
+					updateCertificateSelector();
+				}
+				break;
+			default:
+				super.onActivityResult(requestCode, resultCode, data);
+		}
+	}
+
 	/**
 	 * Show an alert in case the previously selected certificate is not found anymore
 	 * or the user did not select a certificate in the spinner.
@@ -155,32 +198,31 @@ public class VpnProfileDetailActivity extends Activity
 	}
 
 	/**
-	 * Asynchronously executed task which confirms that the certificates are loaded.
-	 * They are loaded from the main Activity already but might not be ready yet, or
-	 * unloaded again.
-	 *
-	 * Once loaded the CA certificate spinner and checkboxes are updated
-	 * accordingly.
+	 * Update the CA certificate selection UI depending on whether the
+	 * certificate should be automatically selected or not.
 	 */
-	private class CertificateLoadTask extends AsyncTask<Void, Void, TrustedCertificateManager>
+	private void updateCertificateSelector()
 	{
-		@Override
-		protected void onPreExecute()
+		if (!mCheckAuto.isChecked())
 		{
-			setProgressBarIndeterminateVisibility(true);
-		}
+			mSelectCert.setEnabled(true);
+			mSelectCert.setVisibility(View.VISIBLE);
 
-		@Override
-		protected TrustedCertificateManager doInBackground(Void... params)
-		{
-			return TrustedCertificateManager.getInstance().load();
+			if (mCertEntry != null)
+			{
+				mCertTitle.setText(mCertEntry.getSubjectPrimary());
+				mCertSubtitle.setText(mCertEntry.getSubjectSecondary());
+			}
+			else
+			{
+				mCertTitle.setText(R.string.profile_ca_select_certificate_label);
+				mCertSubtitle.setText(R.string.profile_ca_select_certificate);
+			}
 		}
-
-		@Override
-		protected void onPostExecute(TrustedCertificateManager result)
+		else
 		{
-			setProgressBarIndeterminateVisibility(false);
-			mCertsLoaded = true;
+			mSelectCert.setEnabled(false);
+			mSelectCert.setVisibility(View.GONE);
 		}
 	}
 
@@ -225,7 +267,7 @@ public class VpnProfileDetailActivity extends Activity
 			mUsername.setError(getString(R.string.alert_text_no_input_username));
 			valid = false;
 		}
-		if (!mCheckAuto.isChecked())
+		if (!mCheckAuto.isChecked() && mCertEntry == null)
 		{
 			showCertificateAlert();
 			valid = false;
@@ -247,13 +289,19 @@ public class VpnProfileDetailActivity extends Activity
 		String password = mPassword.getText().toString().trim();
 		password = password.isEmpty() ? null : password;
 		mProfile.setPassword(password);
+		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
+		mProfile.setCertificateAlias(certAlias);
 	}
 
 	/**
 	 * Load an existing profile if we got an ID
+	 *
+	 * @param savedInstanceState previously saved state
 	 */
-	private void loadProfileData()
+	private void loadProfileData(Bundle savedInstanceState)
 	{
+		String alias = null;
+
 		getActionBar().setTitle(R.string.add_profile);
 		if (mId != null)
 		{
@@ -264,7 +312,7 @@ public class VpnProfileDetailActivity extends Activity
 				mGateway.setText(mProfile.getGateway());
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
-				mCertAlias = mProfile.getCertificateAlias();
+				alias = mProfile.getCertificateAlias();
 				getActionBar().setTitle(mProfile.getName());
 			}
 			else
@@ -274,6 +322,22 @@ public class VpnProfileDetailActivity extends Activity
 				finish();
 			}
 		}
-		mCheckAuto.setChecked(mCertAlias == null);
+
+		/* check if the user selected a certificate previously */
+		alias = savedInstanceState == null ? alias : savedInstanceState.getString(VpnProfileDataSource.KEY_CERTIFICATE);
+		mCheckAuto.setChecked(alias == null);
+		if (alias != null)
+		{
+			X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
+			if (certificate != null)
+			{
+				mCertEntry = new TrustedCertificateEntry(alias, certificate);
+			}
+			else
+			{	/* previously selected certificate is not here anymore */
+				showCertificateAlert();
+				mCertEntry = null;
+			}
+		}
 	}
 }
