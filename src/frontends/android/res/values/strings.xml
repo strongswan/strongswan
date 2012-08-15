@@ -23,6 +23,8 @@
     <string name="reload_trusted_certs">Reload CA certificates</string>
     <string name="show_log">View log</string>
     <string name="search">Search</string>
+    <string name="vpn_not_supported_title">VPN not supported</string>
+    <string name="vpn_not_supported">Your device does not support VPN applications.\nPlease contact the manufacturer.</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>

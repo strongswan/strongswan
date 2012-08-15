@@ -30,6 +30,7 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -46,8 +47,11 @@ import android.widget.EditText;
 public class MainActivity extends Activity implements OnVpnProfileSelectedListener
 {
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
+	private static final String SHOW_ERROR_DIALOG = "errordialog";
 	private static final int PREPARE_VPN_SERVICE = 0;
+
 	private VpnProfile activeProfile;
+	private AlertDialog mErrorDialog;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -59,8 +63,30 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		ActionBar bar = getActionBar();
 		bar.setDisplayShowTitleEnabled(false);
 
+		if (savedInstanceState != null && savedInstanceState.getBoolean(SHOW_ERROR_DIALOG))
+		{
+			showVpnNotSupportedError();
+		}
+
 		/* load CA certificates in a background task */
 		new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, false);
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState)
+	{
+		super.onSaveInstanceState(outState);
+		outState.putBoolean(SHOW_ERROR_DIALOG, mErrorDialog != null);
+	}
+
+	@Override
+	protected void onDestroy()
+	{
+		super.onDestroy();
+		if (mErrorDialog != null)
+		{	/* avoid any errors about leaked windows */
+			mErrorDialog.dismiss();
+		}
 	}
 
 	@Override
@@ -96,7 +122,18 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		Intent intent = VpnService.prepare(this);
 		if (intent != null)
 		{
-			startActivityForResult(intent, PREPARE_VPN_SERVICE);
+			try
+			{
+				startActivityForResult(intent, PREPARE_VPN_SERVICE);
+			}
+			catch (ActivityNotFoundException ex)
+			{
+				/* it seems some devices, even though they come with Android 4,
+				 * don't have the VPN components built into the system image.
+				 * com.android.vpndialogs/com.android.vpndialogs.ConfirmDialog
+				 * will not be found then */
+				showVpnNotSupportedError();
+			}
 		}
 		else
 		{
@@ -136,6 +173,25 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		{
 			prepareVpnService();
 		}
+	}
+
+	/**
+	 * Show an error dialog if case the device lacks VPN support.
+	 */
+	private void showVpnNotSupportedError()
+	{
+		mErrorDialog = new AlertDialog.Builder(this)
+			.setTitle(R.string.vpn_not_supported_title)
+			.setMessage(getString(R.string.vpn_not_supported))
+			.setCancelable(false)
+			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int id)
+				{
+					mErrorDialog = null;
+					dialog.dismiss();
+				}
+			}).show();
 	}
 
 	/**

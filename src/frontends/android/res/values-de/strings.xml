@@ -23,6 +23,8 @@
     <string name="reload_trusted_certs">CA-Zertifikate neu laden</string>
     <string name="show_log">Log anzeigen</string>
     <string name="search">Suchen</string>
+    <string name="vpn_not_supported_title">VPN nicht unterstützt</string>
+    <string name="vpn_not_supported">Ihr Gerät unterstützt keine VPN Anwendungen.\nBitte kontaktieren Sie den Hersteller.</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
