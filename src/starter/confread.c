@@ -257,12 +257,12 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		else
 		{
 			host_t *host;
-			char *pos;
+			char *sep;
 
-			pos = strchr(value, '/');
-			if (pos)
+			sep = strchr(value, '/');
+			if (sep)
 			{	/* CIDR notation, address pool */
-				*pos = '\0';
+				*sep = '\0';
 				host = host_create_from_string(value, 0);
 				if (!host)
 				{
@@ -272,7 +272,9 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				host->destroy(host);
 				free(end->sourceip);
 				end->sourceip = strdupnull(value);
-				end->sourceip_mask = atoi(pos + 1);
+				end->sourceip_mask = atoi(sep + 1);
+				/* restore the original text in case also= is used */
+				*sep = '/';
 			}
 			else
 			{	/* fixed srcip */
@@ -314,14 +316,14 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 	{
 		struct protoent *proto;
 		struct servent *svc;
-		char *pos, *port = "";
+		char *sep, *port = "", *endptr;
 		long int p;
 
-		pos = strchr(value, '/');
-		if (pos)
+		sep = strchr(value, '/');
+		if (sep)
 		{	/* protocol/port */
-			*pos = '\0';
-			port = pos + 1;
+			*sep = '\0';
+			port = sep + 1;
 		}
 
 		proto = getprotobyname(value);
@@ -331,8 +333,8 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		else
 		{
-			p = strtol(value, &pos, 0);
-			if ((*value && *pos) || p < 0 || p > 0xff)
+			p = strtol(value, &endptr, 0);
+			if ((*value && *endptr) || p < 0 || p > 0xff)
 			{
 				DBG1(DBG_APP, "# bad protocol: %s=%s", name, value);
 				goto err;
@@ -353,14 +355,18 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			}
 			else
 			{
-				p = strtol(port, &pos, 0);
-				if ((*port && *pos) || p < 0 || p > 0xffff)
+				p = strtol(port, &endptr, 0);
+				if ((*port && *endptr) || p < 0 || p > 0xffff)
 				{
 					DBG1(DBG_APP, "# bad port: %s=%s", name, value);
 					goto err;
 				}
 				end->port = (u_int16_t)p;
 			}
+		}
+		if (sep)
+		{	/* restore the original text in case also= is used */
+			*sep = '/';
 		}
 		break;
 	}
@@ -419,16 +425,16 @@ static void handle_firewall(const char *label, starter_end_t *end,
 
 static bool handle_mark(char *value, mark_t *mark)
 {
-	char *pos, *endptr;
+	char *sep, *endptr;
 
-	pos = strchr(value, '/');
-	if (pos)
+	sep = strchr(value, '/');
+	if (sep)
 	{
-		*pos = '\0';
-		mark->mask = strtoul(pos+1, &endptr, 0);
+		*sep = '\0';
+		mark->mask = strtoul(sep+1, &endptr, 0);
 		if (*endptr != '\0')
 		{
-			DBG1(DBG_APP, "# invalid mark mask: %s", pos+1);
+			DBG1(DBG_APP, "# invalid mark mask: %s", sep+1);
 			return FALSE;
 		}
 	}
@@ -448,6 +454,10 @@ static bool handle_mark(char *value, mark_t *mark)
 			DBG1(DBG_APP, "# invalid mark value: %s", value);
 			return FALSE;
 		}
+	}
+	if (sep)
+	{	/* restore the original text in case also= is used */
+		*sep = '/';
 	}
 	/* apply the mask to ensure the value is in range */
 	mark->value &= mark->mask;
