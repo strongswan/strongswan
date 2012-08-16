@@ -562,13 +562,12 @@ static char* sanitize(char *str)
 
 /**
  * Returns a chunk of just the username part of the given user identity.
- * Note: the chunk points to internal data of the identification.
+ * Note: the chunk points to internal data of the given chunk
  */
-static chunk_t extract_username(identification_t* identification)
+static chunk_t extract_username(chunk_t id)
 {
 	char *has_domain;
-	chunk_t id;
-	id = identification->get_encoding(identification);
+
 	has_domain = (char*)memchr(id.ptr, '\\', id.len);
 	if (has_domain)
 	{
@@ -674,7 +673,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	eap_mschapv2_challenge_t *cha;
 	eap_mschapv2_response_t *res;
-	chunk_t data, peer_challenge, username, nt_hash;
+	chunk_t data, peer_challenge, userid, username, nt_hash;
 	u_int16_t len = RESPONSE_PAYLOAD_LEN;
 
 	data = in->get_data(in);
@@ -716,8 +715,11 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 		return NOT_FOUND;
 	}
 
-	username = extract_username(this->peer);
-	len += username.len;
+	/* we transmit the whole user identity (including the domain part) but
+	 * only use the user part when calculating the challenge hash */
+	userid = this->peer->get_encoding(this->peer);
+	len += userid.len;
+	username = extract_username(userid);
 
 	if (GenerateStuff(this, this->challenge, peer_challenge,
 					  username, nt_hash) != SUCCESS)
@@ -742,9 +744,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	memset(&res->response, 0, RESPONSE_LEN);
 	memcpy(res->response.peer_challenge, peer_challenge.ptr, peer_challenge.len);
 	memcpy(res->response.nt_response, this->nt_response.ptr, this->nt_response.len);
-
-	username = this->peer->get_encoding(this->peer);
-	memcpy(res->name, username.ptr, username.len);
+	memcpy(res->name, userid.ptr, userid.len);
 
 	*out = eap_payload_create_data(chunk_create((void*) eap, len));
 	return NEED_MORE;
@@ -1055,7 +1055,8 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	snprintf(buf, sizeof(buf), "%.*s", name_len, res->name);
 	userid = identification_create_from_string(buf);
 	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
-	username = extract_username(userid);
+	/* userid can only be destroyed after the last use of username */
+	username = extract_username(userid->get_encoding(userid));
 
 	if (!get_nt_hash(this, this->server, userid, &nt_hash))
 	{
