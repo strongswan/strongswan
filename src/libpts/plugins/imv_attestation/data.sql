@@ -48,6 +48,12 @@ INSERT INTO products (
  'Ubuntu 12.04 LTS i686'
 );
 
+INSERT INTO products (
+  name
+) VALUES (
+ 'Ubuntu 12.04.1 LTS i686'
+);
+
 /* Files */
 
 INSERT INTO files (			/* 1 */
@@ -437,6 +443,18 @@ INSERT INTO product_file (
   8, 24, 1
 );
 
+INSERT INTO product_file (
+  product, file, measurement
+) VALUES (
+  9, 1, 1
+);
+
+INSERT INTO product_file (
+  product, file, metadata
+) VALUES (
+  9, 22, 1
+);
+
 /* File Hashes */
 
 INSERT INTO file_hashes (
@@ -491,6 +509,24 @@ INSERT INTO file_hashes (
   file, product, algo, hash
 ) VALUES (
   1, 8, 8192, X'a23fa7034dabdce2d10f2893d52b21d14fe24c6ae4c8570fb6c7190228046e4c064c4d29d736cd84ca42a3d9abf9bfde'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  1, 9, 32768, X'9c3ed3179990c0ffb3a65b75a09b61faa4aca907'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  1, 9, 16384, X'af474dd532c9f2d85c12368334eda3609a7c6287e08940f078547ab0f2871c94'
+);
+
+INSERT INTO file_hashes (
+  file, product, algo, hash
+) VALUES (
+  1, 9, 8192, X'a23fa7034dabdce2d10f2893d52b21d14fe24c6ae4c8570fb6c7190228046e4c064c4d29d736cd84ca42a3d9abf9bfde'
 );
 
 INSERT INTO file_hashes (
