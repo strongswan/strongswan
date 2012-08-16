@@ -459,8 +459,8 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		DBG1(DBG_NET, "installing bypass policy on send socket failed");
 	}
 
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (family == AF_INET && port == CHARON_NATT_PORT &&
+	/* enable UDP decapsulation for NAT-T sockets */
+	if (port == CHARON_NATT_PORT &&
 		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
 												   skt, family, port))
 	{

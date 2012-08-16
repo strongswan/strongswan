@@ -534,6 +534,15 @@ static int open_socket(private_socket_default_socket_t *this,
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
+
+	/* enable UDP decapsulation for NAT-T sockets */
+	if (port == &this->natt &&
+		!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
+												   skt, family, this->natt))
+	{
+		DBG1(DBG_NET, "enabling UDP decapsulation failed");
+	}
+
 	return skt;
 }
 
@@ -630,13 +639,6 @@ socket_default_socket_t *socket_default_socket_create()
 		return NULL;
 	}
 
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
-							this->ipv6_natt ?: this->ipv4_natt,
-							this->ipv6_natt ? AF_INET6 : AF_INET, this->natt))
-	{
-		DBG1(DBG_NET, "enabling UDP decapsulation failed");
-	}
 	return &this->public;
 }
 
