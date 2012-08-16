@@ -80,6 +80,9 @@ Usage:\n\
   ipsec attest --del --product <name>|--pid <id>|--component <cfn>|--cid <id>\n\
     Delete a product or component entry referenced either by value or primary key\n\
   \n\
+  ipsec attest --del --product <name>|--pid <id> --file <path>|--fid <id>|--dir <path>|--did <id>\n\
+    Delete a product/file entry referenced either by value or primary key\n\
+  \n\
   ipsec attest --del --key <digest>|--kid <id>|--aik <path>\n\
     Delete an AIK entry referenced either by value or primary key\n\
   \n\
