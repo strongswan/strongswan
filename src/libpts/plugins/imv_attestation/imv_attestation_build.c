@@ -197,7 +197,13 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				attr_list->insert_last(attr_list, attr);
 			}
 			enumerator->destroy(enumerator);
-			break;
+
+			/* do we have any file metadata or measurement requests? */
+			if (attr_list->get_count(attr_list))
+			{
+				break;
+			}
+			/* fall through to next state */
 		}
 		case IMV_ATTESTATION_STATE_COMP_EVID:
 		{
