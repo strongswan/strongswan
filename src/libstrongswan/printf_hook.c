@@ -238,6 +238,21 @@ static inline Vstr_conf *get_vstr_conf()
 }
 
 /**
+ * Described in header
+ */
+size_t vstr_print_in_hook(struct Vstr_base *base, size_t pos, const char *fmt,
+						  ...)
+{
+	va_list args;
+	int written;
+
+	va_start(args, fmt);
+	written = vstr_add_vfmt(base, pos, fmt, args);
+	va_end(args);
+	return written;
+}
+
+/**
  * Wrapper functions for printf and alike
  */
 int vstr_wrapper_printf(const char *format, ...)

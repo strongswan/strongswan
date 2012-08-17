@@ -61,7 +61,7 @@ struct printf_hook_data_t {
  * Helper macro to be used in printf hook callbacks.
  */
 #define print_in_hook(data, fmt, ...) ({\
-	int _written = fprintf(data->stream, fmt, ##__VA_ARGS__);\
+	ssize_t _written = fprintf(data->stream, fmt, ##__VA_ARGS__);\
 	if (_written < 0)\
 	{\
 		_written = 0;\
@@ -157,10 +157,24 @@ struct printf_hook_data_t {
 };
 
 /**
+ * Wrapper around vstr_add_vfmt(), avoids having to link all users of
+ * print_in_hook() against libvstr.
+ *
+ * @param base		Vstr_string to add string to
+ * @param pos		position to write to
+ * @param fmt		format string
+ * @param ...		arguments
+ * @return			number of characters written
+ */
+size_t vstr_print_in_hook(struct Vstr_base *base, size_t pos, const char *fmt,
+						  ...);
+
+/**
  * Helper macro to be used in printf hook callbacks.
  */
 #define print_in_hook(data, fmt, ...) ({\
-	int _written =  vstr_add_fmt(data->base, data->pos, fmt, ##__VA_ARGS__);\
+	size_t _written; \
+	_written = vstr_print_in_hook(data->base, data->pos, fmt, ##__VA_ARGS__);\
 	data->pos += _written;\
 	_written;\
 })
