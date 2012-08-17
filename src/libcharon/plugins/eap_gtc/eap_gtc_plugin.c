@@ -66,11 +66,6 @@ plugin_t *eap_gtc_plugin_create()
 	/* required for PAM authentication */
 	charon->caps->keep(charon->caps, CAP_AUDIT_WRITE);
 
-	charon->eap->add_method(charon->eap, EAP_GTC, 0, EAP_SERVER,
-							(eap_constructor_t)eap_gtc_create_server);
-	charon->eap->add_method(charon->eap, EAP_GTC, 0, EAP_PEER,
-							(eap_constructor_t)eap_gtc_create_peer);
-
 	return &this->plugin;
 }
 
