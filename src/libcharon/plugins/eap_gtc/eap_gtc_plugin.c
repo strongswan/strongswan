@@ -19,10 +19,6 @@
 
 #include <daemon.h>
 
-#ifndef CAP_AUDIT_WRITE
-#define CAP_AUDIT_WRITE 29
-#endif
-
 METHOD(plugin_t, get_name, char*,
 	eap_gtc_plugin_t *this)
 {
@@ -62,9 +58,6 @@ plugin_t *eap_gtc_plugin_create()
 			.destroy = _destroy,
 		},
 	);
-
-	/* required for PAM authentication */
-	charon->caps->keep(charon->caps, CAP_AUDIT_WRITE);
 
 	return &this->plugin;
 }
