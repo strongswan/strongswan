@@ -174,6 +174,26 @@ LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 	)
 endif
 
+LOCAL_SRC_FILES += $(call add_plugin, eap-tls)
+
+LOCAL_SRC_FILES += $(call add_plugin, eap-ttls)
+ifneq ($(call plugin_enabled, eap-ttls),)
+# for radius_message.h
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libradius/
+endif
+
+LOCAL_SRC_FILES += $(call add_plugin, eap-peap)
+
+# adding libtls if any of the three plugins above is enabled
+ifneq ($(or $(call plugin_enabled, eap-tls), $(call plugin_enabled, eap-ttls), $(call plugin_enabled, eap-peap)),)
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtls/
+LOCAL_SRC_FILES += $(addprefix ../libtls/, \
+		tls_protection.c tls_compression.c tls_fragmentation.c tls_alert.c \
+		tls_crypto.c tls_prf.c tls_socket.c tls_eap.c tls_cache.c tls_peer.c \
+		tls_server.c tls.c \
+	)
+endif
+
 LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 
 LOCAL_SRC_FILES += $(call add_plugin, socket-default)
