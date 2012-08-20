@@ -37,6 +37,7 @@ public class VpnProfileDataSource
 	public static final String KEY_USERNAME = "username";
 	public static final String KEY_PASSWORD = "password";
 	public static final String KEY_CERTIFICATE = "certificate";
+	public static final String KEY_USER_CERTIFICATE = "user_certificate";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -45,7 +46,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 1;
+	private static final int DATABASE_VERSION = 2;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -54,7 +55,8 @@ public class VpnProfileDataSource
 								KEY_GATEWAY + " TEXT NOT NULL," +
 								KEY_USERNAME + " TEXT NOT NULL," +
 								KEY_PASSWORD + " TEXT," +
-								KEY_CERTIFICATE + " TEXT" +
+								KEY_CERTIFICATE + " TEXT," +
+								KEY_USER_CERTIFICATE + " TEXT" +
 							");";
 	private final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -62,7 +64,8 @@ public class VpnProfileDataSource
 								KEY_GATEWAY,
 								KEY_USERNAME,
 								KEY_PASSWORD,
-								KEY_CERTIFICATE
+								KEY_CERTIFICATE,
+								KEY_USER_CERTIFICATE,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -82,9 +85,12 @@ public class VpnProfileDataSource
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
 		{
 			Log.w(TAG, "Upgrading database from version " + oldVersion +
-					   " to " + newVersion + ", which will destroy all old data");
-			db.execSQL("DROP TABLE IF EXISTS " + TABLE_VPNPROFILE);
-			onCreate(db);
+				  " to " + newVersion);
+			if (oldVersion < 2)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_USER_CERTIFICATE +
+						   " TEXT;");
+			}
 		}
 	}
 
@@ -215,6 +221,7 @@ public class VpnProfileDataSource
 		profile.setUsername(cursor.getString(cursor.getColumnIndex(KEY_USERNAME)));
 		profile.setPassword(cursor.getString(cursor.getColumnIndex(KEY_PASSWORD)));
 		profile.setCertificateAlias(cursor.getString(cursor.getColumnIndex(KEY_CERTIFICATE)));
+		profile.setUserCertificateAlias(cursor.getString(cursor.getColumnIndex(KEY_USER_CERTIFICATE)));
 		return profile;
 	}
 
@@ -226,6 +233,7 @@ public class VpnProfileDataSource
 		values.put(KEY_USERNAME, profile.getUsername());
 		values.put(KEY_PASSWORD, profile.getPassword());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
+		values.put(KEY_USER_CERTIFICATE, profile.getUserCertificateAlias());
 		return values;
 	}
 }

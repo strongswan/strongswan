@@ -19,7 +19,7 @@ package org.strongswan.android.data;
 
 public class VpnProfile implements Cloneable
 {
-	private String mName, mGateway, mUsername, mPassword, mCertificate;
+	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private long mId = -1;
 
 	public long getId()
@@ -77,9 +77,19 @@ public class VpnProfile implements Cloneable
 		return mCertificate;
 	}
 
-	public void setCertificateAlias(String certificate)
+	public void setCertificateAlias(String alias)
 	{
-		this.mCertificate = certificate;
+		this.mCertificate = alias;
+	}
+
+	public String getUserCertificateAlias()
+	{
+		return mUserCertificate;
+	}
+
+	public void setUserCertificateAlias(String alias)
+	{
+		this.mUserCertificate = alias;
 	}
 
 	@Override
