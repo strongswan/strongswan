@@ -15,6 +15,14 @@
 
 #include <library.h>
 
+#if defined(HAVE_CLOCK_GETTIME) && \
+	(defined(HAVE_CONDATTR_CLOCK_MONOTONIC) || \
+	 defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC))
+/* if we use MONOTONIC times, we can't use POSIX_SEMAPHORES since they use
+ * times based on CLOCK_REALTIME */
+#undef HAVE_SEM_TIMEDWAIT
+#endif /* HAVE_CLOCK_GETTIME && ... */
+
 #ifdef HAVE_SEM_TIMEDWAIT
 #include <semaphore.h>
 #else /* !HAVE_SEM_TIMEDWAIT */
