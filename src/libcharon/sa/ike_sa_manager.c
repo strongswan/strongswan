@@ -650,7 +650,7 @@ static void remove_entry_at(private_enumerator_t *this)
  */
 static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
 					ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment,
-					linked_list_match_t match, void *p1, void *p2)
+					linked_list_match_t match, void *param)
 {
 	table_item_t *item;
 	u_int row, seg;
@@ -662,7 +662,7 @@ static status_t get_entry_by_match_function(private_ike_sa_manager_t *this,
 	item = this->ike_sa_table[row];
 	while (item)
 	{
-		if (match(item->value, p1, p2))
+		if (match(item->value, param))
 		{
 			*entry = item->value;
 			*segment = seg;
@@ -683,7 +683,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this,
 						ike_sa_id_t *ike_sa_id, entry_t **entry, u_int *segment)
 {
 	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
-				(linked_list_match_t)entry_match_by_id, ike_sa_id, NULL);
+				(linked_list_match_t)entry_match_by_id, ike_sa_id);
 }
 
 /**
@@ -694,7 +694,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this,
 			ike_sa_id_t *ike_sa_id, ike_sa_t *ike_sa, entry_t **entry, u_int *segment)
 {
 	return get_entry_by_match_function(this, ike_sa_id, entry, segment,
-				(linked_list_match_t)entry_match_by_sa, ike_sa, NULL);
+				(linked_list_match_t)entry_match_by_sa, ike_sa);
 }
 
 /**
