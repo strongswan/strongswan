@@ -24,7 +24,6 @@
 #include <debug.h>
 
 typedef struct private_ietf_attr_attr_request_t private_ietf_attr_attr_request_t;
-typedef struct entry_t entry_t;
 
 /**
  * PA-TNC Attribute Request type  (see section 4.2.1 of RFC 5792)
@@ -80,14 +79,6 @@ struct private_ietf_attr_attr_request_t {
 	refcount_t ref;
 };
 
-/**
- * Attribute type entry
- */
-struct entry_t {
-	pen_t vendor_id;
-	u_int32_t type;
-};
-
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_ietf_attr_attr_request_t *this)
 {
@@ -117,7 +108,7 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	enumerator_t *enumerator;
-	entry_t *entry;
+	pen_type_t *entry;
 
 	if (this->value.ptr)
 	{
@@ -141,9 +132,9 @@ METHOD(pa_tnc_attr_t, build, void,
 METHOD(ietf_attr_attr_request_t, add, void,
 	private_ietf_attr_attr_request_t *this, pen_t vendor_id, u_int32_t type)
 {
-	entry_t *entry;
+	pen_type_t *entry;
 
-	entry = malloc_thing(entry_t);
+	entry = malloc_thing(pen_type_t);
 	entry->vendor_id = vendor_id;
 	entry->type = type;
 	this->list->insert_last(this->list, entry);
@@ -211,22 +202,10 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-/**
- * Enumerate attribute type entries
- */
-static bool entry_filter(void *null, entry_t **entry, pen_t *vendor_id,
-						 void *i2, u_int32_t *type)
-{
-	*vendor_id = (*entry)->vendor_id;
-	*type = (*entry)->type;
-	return TRUE;
-}
-
 METHOD(ietf_attr_attr_request_t, create_enumerator, enumerator_t*,
 	private_ietf_attr_attr_request_t *this)
 {
-	return enumerator_create_filter(this->list->create_enumerator(this->list),
-								   (void*)entry_filter, NULL, NULL);
+	return this->list->create_enumerator(this->list);
 }
 
 /**
