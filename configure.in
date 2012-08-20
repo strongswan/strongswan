@@ -409,6 +409,8 @@ dnl check if we can cancel threads
 AC_CHECK_FUNCS(pthread_cancel)
 dnl check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
+dnl check if we have POSIX semaphore functions, including timed-wait
+AC_CHECK_FUNCS(sem_timedwait)
 LIBS=$saved_LIBS
 
 AC_CHECK_FUNC(

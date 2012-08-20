@@ -13,9 +13,13 @@
  * for more details.
  */
 
-#include <semaphore.h>
-
 #include <library.h>
+
+#ifdef HAVE_SEM_TIMEDWAIT
+#include <semaphore.h>
+#else /* !HAVE_SEM_TIMEDWAIT */
+#include <threading/condvar.h>
+#endif /* HAVE_SEM_TIMEDWAIT */
 
 #include "semaphore.h"
 
@@ -30,21 +34,50 @@ struct private_semaphore_t {
 	 */
 	semaphore_t public;
 
+#ifdef HAVE_SEM_TIMEDWAIT
 	/**
 	 * wrapped POSIX semaphore object
 	 */
 	sem_t sem;
+#else /* !HAVE_SEM_TIMEDWAIT */
+
+	/**
+	 * Mutex to lock count variable
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Condvar to signal count increase
+	 */
+	condvar_t *cond;
+
+	/**
+	 * Semaphore count value
+	 */
+	u_int count;
+#endif /* HAVE_SEM_TIMEDWAIT */
 };
 
 METHOD(semaphore_t, wait_, void,
 	private_semaphore_t *this)
 {
+#ifdef HAVE_SEM_TIMEDWAIT
 	sem_wait(&this->sem);
+#else /* !HAVE_SEM_TIMEDWAIT */
+	this->mutex->lock(this->mutex);
+	while (this->count == 0)
+	{
+		this->cond->wait(this->cond, this->mutex);
+	}
+	this->count--;
+	this->mutex->unlock(this->mutex);
+#endif /* HAVE_SEM_TIMEDWAIT */
 }
 
 METHOD(semaphore_t, timed_wait_abs, bool,
 	private_semaphore_t *this, timeval_t tv)
 {
+#ifdef HAVE_SEM_TIMEDWAIT
 	timespec_t ts;
 
 	ts.tv_sec = tv.tv_sec;
@@ -53,6 +86,20 @@ METHOD(semaphore_t, timed_wait_abs, bool,
 	/* there are errors other than ETIMEDOUT possible, but we consider them
 	 * all as timeout */
 	return sem_timedwait(&this->sem, &ts) == -1;
+#else /* !HAVE_SEM_TIMEDWAIT */
+	this->mutex->lock(this->mutex);
+	while (this->count == 0)
+	{
+		if (this->cond->timed_wait_abs(this->cond, this->mutex, tv))
+		{
+			this->mutex->unlock(this->mutex);
+			return TRUE;
+		}
+	}
+	this->count--;
+	this->mutex->unlock(this->mutex);
+	return FALSE;
+#endif /* HAVE_SEM_TIMEDWAIT */
 }
 
 METHOD(semaphore_t, timed_wait, bool,
@@ -72,13 +119,25 @@ METHOD(semaphore_t, timed_wait, bool,
 METHOD(semaphore_t, post, void,
 	private_semaphore_t *this)
 {
+#ifdef HAVE_SEM_TIMEDWAIT
 	sem_post(&this->sem);
+#else /* !HAVE_SEM_TIMEDWAIT */
+	this->mutex->lock(this->mutex);
+	this->count++;
+	this->mutex->unlock(this->mutex);
+	this->cond->signal(this->cond);
+#endif /* HAVE_SEM_TIMEDWAIT */
 }
 
 METHOD(semaphore_t, destroy, void,
 	private_semaphore_t *this)
 {
+#ifdef HAVE_SEM_TIMEDWAIT
 	sem_destroy(&this->sem);
+#else /* !HAVE_SEM_TIMEDWAIT */
+	this->cond->destroy(this->cond);
+	this->mutex->destroy(this->mutex);
+#endif /* HAVE_SEM_TIMEDWAIT */
 	free(this);
 }
 
@@ -99,7 +158,13 @@ semaphore_t *semaphore_create(u_int value)
 		},
 	);
 
+#ifdef HAVE_SEM_TIMEDWAIT
 	sem_init(&this->sem, 0, value);
+#else /* !HAVE_SEM_TIMEDWAIT */
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->cond = condvar_create(CONDVAR_TYPE_DEFAULT);
+	this->count = value;
+#endif /* HAVE_SEM_TIMEDWAIT */
 
 	return &this->public;
 }
