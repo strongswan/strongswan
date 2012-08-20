@@ -926,6 +926,14 @@ static void add_ts(private_stroke_config_t *this,
 				net = host_create_from_string(subnet, 0);
 				if (net)
 				{
+					int maxbits = net->get_family(net) == AF_INET ? 32 : 128;
+
+					if (intbits < 0 || intbits > maxbits)
+					{
+						DBG1(DBG_CFG, "invalid netmask: %d, changed to %d",
+							 intbits, maxbits);
+						intbits = maxbits;
+					}
 					ts = traffic_selector_create_from_subnet(net, intbits,
 												end->protocol, end->port);
 					child_cfg->add_traffic_selector(child_cfg, local, ts);
