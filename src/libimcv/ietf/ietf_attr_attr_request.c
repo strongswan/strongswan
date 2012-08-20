@@ -27,7 +27,7 @@ typedef struct private_ietf_attr_attr_request_t private_ietf_attr_attr_request_t
 typedef struct entry_t entry_t;
 
 /**
- * PA-TNC Product Information type  (see section 4.2.2 of RFC 5792)
+ * PA-TNC Attribute Request type  (see section 4.2.1 of RFC 5792)
  *
  *                      1                   2                   3
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
