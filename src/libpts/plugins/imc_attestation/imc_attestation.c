@@ -174,6 +174,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	pen_type_t type;
 	linked_list_t *attr_list;
 	imc_state_t *state;
 	imc_attestation_state_t *attestation_state;
@@ -213,30 +214,29 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_IETF &&
-			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		type = attr->get_type(attr);
+
+		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
 		{
 			ietf_attr_pa_tnc_error_t *error_attr;
-			pen_t error_vendor_id;
-			pa_tnc_error_code_t error_code;
+			pen_type_t error_code;
 			chunk_t msg_info;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-			error_vendor_id = error_attr->get_vendor_id(error_attr);
+			error_code = error_attr->get_error_code(error_attr);
 
-			if (error_vendor_id == PEN_TCG)
+			if (error_code.vendor_id == PEN_TCG)
 			{
-				error_code = error_attr->get_error_code(error_attr);
 				msg_info = error_attr->get_msg_info(error_attr);
 
 				DBG1(DBG_IMC, "received TCG-PTS error '%N'",
-					 pts_error_code_names, error_code);
+					 pts_error_code_names, error_code.type);
 				DBG1(DBG_IMC, "error information: %B", &msg_info);
 
 				result = TNC_RESULT_FATAL;
 			}
 		}
-		else if (attr->get_vendor_id(attr) == PEN_TCG)
+		else if (type.vendor_id == PEN_TCG)
 		{
 			if (!imc_attestation_process(attr, attr_list, attestation_state,
 				supported_algorithms, supported_dh_groups))

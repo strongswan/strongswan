@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #include <library.h>
 
 typedef enum pen_t pen_t;
+typedef struct pen_type_t pen_type_t;
 
 enum pen_t {
 	PEN_IETF =		0x000000,	/*        0 */
@@ -39,6 +40,23 @@ enum pen_t {
 	PEN_OPENPTS =	0x00950e,	/*    38158 */
 	PEN_RESERVED =	0xffffff,	/* 16777215 */
 };
+
+/**
+ * Vendor specific type
+ */
+struct pen_type_t {
+	pen_t vendor_id;
+	u_int32_t type;
+};
+
+/**
+ * Create a pen_type_t struct
+ */
+static inline pen_type_t pen_type_create(pen_t vendor_id, u_int32_t type)
+{
+	pen_type_t pen_type = {vendor_id, type};
+	return pen_type;
+}
 
 /**
  * enum names for pen_t.

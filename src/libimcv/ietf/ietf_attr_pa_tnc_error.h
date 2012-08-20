@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -62,11 +62,11 @@ struct ietf_attr_pa_tnc_error_t {
 	pen_t (*get_vendor_id)(ietf_attr_pa_tnc_error_t *this);
 
 	/**
-	 * Get PA-TNC error code
+	 * Get Vendor-specific PA-TNC error code
 	 *
 	 * @return				error code
 	 */
-	pa_tnc_error_code_t (*get_error_code)(ietf_attr_pa_tnc_error_t *this);
+	pen_type_t (*get_error_code)(ietf_attr_pa_tnc_error_t *this);
 
 	/**
 	 * Get first 8 bytes of erroneous PA-TNC message
@@ -101,26 +101,22 @@ struct ietf_attr_pa_tnc_error_t {
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from an error code
  *
- * @param vendor_id			PA-TNC error code vendor ID
- * @param error_code		PA-TNC error code
+ * @param error_code		Vendor-specific PA-TNC error code
  * @param header			PA-TNC message header (first 8 bytes)
  * 
  */
-pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_t vendor_id,
-											 u_int32_t error_code,
+pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_type_t error_code,
 											 chunk_t header);
 
 /**
  * Creates an ietf_attr_pa_tnc_error_t object from an error code with offset
  *
- * @param vendor_id			PA-TNC error code vendor ID
- * @param error_code		PA-TNC error code
+ * @param error_code		Vendor-specifica PA-TNC error code
  * @param header			PA-TNC message header (first 8 bytes)
  * @param error_offset		PA-TNC error offset in bytes
  * 
  */
-pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
-														 u_int32_t error_code,
+pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 														 chunk_t header,
 														 u_int32_t error_offset);
 

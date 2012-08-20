@@ -55,14 +55,9 @@ struct private_ietf_attr_attr_request_t {
 	ietf_attr_attr_request_t public;
 
 	/**
-	 * Attribute vendor ID
+	 * Vendor-specific attribute type
 	 */
-	pen_t vendor_id;
-
-	/**
-	 * Attribute type
-	 */
-	u_int32_t type;
+	pen_type_t type;
 
 	/**
 	 * Attribute value
@@ -93,13 +88,7 @@ struct entry_t {
 	u_int32_t type;
 };
 
-METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_ietf_attr_attr_request_t *this)
-{
-	return this->vendor_id;
-}
-
-METHOD(pa_tnc_attr_t, get_type, u_int32_t,
+METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_ietf_attr_attr_request_t *this)
 {
 	return this->type;
@@ -250,7 +239,6 @@ pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type)
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -263,8 +251,7 @@ pa_tnc_attr_t *ietf_attr_attr_request_create(pen_t vendor_id, u_int32_t type)
 			.add = _add,
 			.create_enumerator = _create_enumerator,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_ATTRIBUTE_REQUEST,
+		.type = { PEN_IETF, IETF_ATTR_ATTRIBUTE_REQUEST },
 		.list = linked_list_create(),
 		.ref = 1,
 	);
@@ -283,7 +270,6 @@ pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(chunk_t data)
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.build = _build,
@@ -294,8 +280,7 @@ pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(chunk_t data)
 			.add = _add,
 			.create_enumerator = _create_enumerator,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_ATTRIBUTE_REQUEST,
+		.type = { PEN_IETF,IETF_ATTR_ATTRIBUTE_REQUEST },
 		.value = chunk_clone(data),
 		.list = linked_list_create(),
 		.ref = 1,

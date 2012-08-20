@@ -138,8 +138,7 @@ METHOD(pa_tnc_msg_t, build, bool,
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	enum_name_t *pa_attr_names;
-	pen_t vendor_id;
-	u_int32_t type;
+	pen_type_t type;
 	u_int8_t flags;
 	chunk_t value;
 	nonce_gen_t *ng;
@@ -165,31 +164,30 @@ METHOD(pa_tnc_msg_t, build, bool,
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		vendor_id = attr->get_vendor_id(attr);
-		type = attr->get_type(attr);
+		type  = attr->get_type(attr);
 		value = attr->get_value(attr);
 		flags = attr->get_noskip_flag(attr) ? PA_TNC_ATTR_FLAG_NOSKIP :
 											  PA_TNC_ATTR_FLAG_NONE;
 
 		pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
-														  vendor_id);
+														  type.vendor_id);
 		if (pa_attr_names)
 		{
 			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N/%N' "
-						  "0x%06x/0x%08x", pen_names, vendor_id,
-						   pa_attr_names, type, vendor_id, type);
+						  "0x%06x/0x%08x", pen_names, type.vendor_id,
+						   pa_attr_names, type.type, type.vendor_id, type.type);
 		}
 		else
 		{
 			DBG2(DBG_TNC, "creating PA-TNC attribute type '%N' "
-						  "0x%06x/0x%08x", pen_names, vendor_id,
-						   vendor_id, type);
+						  "0x%06x/0x%08x", pen_names, type.vendor_id,
+						   type.vendor_id, type.type);
 		}
 		DBG3(DBG_TNC, "%B", &value);
 
 		writer->write_uint8 (writer, flags);
-		writer->write_uint24(writer, vendor_id);
-		writer->write_uint32(writer, type);
+		writer->write_uint24(writer, type.vendor_id);
+		writer->write_uint32(writer, type.type);
 		writer->write_uint32(writer, PA_TNC_ATTR_HEADER_SIZE + value.len);
 		writer->write_data  (writer, value);
 	}
@@ -209,6 +207,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	pa_tnc_attr_t *error;
 	u_int8_t version;
 	u_int32_t reserved, offset, attr_offset;
+	pen_type_t error_code;
 
 	/* process message header */
 	if (this->encoding.len < PA_TNC_HEADER_SIZE)
@@ -225,9 +224,10 @@ METHOD(pa_tnc_msg_t, process, status_t,
 
 	if (version != PA_TNC_VERSION)
 	{
+		pen_type_t error_code = { PEN_IETF, PA_ERROR_VERSION_NOT_SUPPORTED };
+
 		DBG1(DBG_TNC, "PA-TNC version %u not supported", version);
-		error = ietf_attr_pa_tnc_error_create(PEN_IETF,
-					PA_ERROR_VERSION_NOT_SUPPORTED, this->encoding);
+		error = ietf_attr_pa_tnc_error_create(error_code, this->encoding);
 		goto err;
 	}
 	
@@ -244,6 +244,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		pa_tnc_attr_t *attr;
 		enum_name_t *pa_attr_names;
 		ietf_attr_pa_tnc_error_t *error_attr;
+		pen_type_t error_code;
 
 		attr_info = reader->peek(reader);
 		attr_info.len = PA_TNC_ATTR_INFO_SIZE;
@@ -271,18 +272,18 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		{
 			DBG1(DBG_TNC, "%u bytes too small for PA-TNC attribute length",
 						   length);
-			error = ietf_attr_pa_tnc_error_create_with_offset(PEN_IETF,
-						PA_ERROR_INVALID_PARAMETER, this->encoding,
-						offset + PA_TNC_ATTR_INFO_SIZE);
+			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding, offset + PA_TNC_ATTR_INFO_SIZE);
 			goto err;
 		}
 
 		if (!reader->read_data(reader, length - PA_TNC_ATTR_HEADER_SIZE, &value))
 		{
 			DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
-			error = ietf_attr_pa_tnc_error_create_with_offset(PEN_IETF,
-						PA_ERROR_INVALID_PARAMETER, this->encoding,
-						offset + PA_TNC_ATTR_INFO_SIZE);
+			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding, offset + PA_TNC_ATTR_INFO_SIZE);
 			goto err; 
 		} 
 		DBG3(DBG_TNC, "%B", &value);
@@ -294,8 +295,10 @@ METHOD(pa_tnc_msg_t, process, status_t,
 			if (flags & PA_TNC_ATTR_FLAG_NOSKIP)
 			{
 				DBG1(DBG_TNC, "unsupported PA-TNC attribute with NOSKIP flag");
-				error = ietf_attr_pa_tnc_error_create(PEN_IETF,
-							PA_ERROR_ATTR_TYPE_NOT_SUPPORTED, this->encoding);
+				error_code = pen_type_create(PEN_IETF,
+											 PA_ERROR_ATTR_TYPE_NOT_SUPPORTED);
+				error = ietf_attr_pa_tnc_error_create(error_code,
+							this->encoding);
 				error_attr = (ietf_attr_pa_tnc_error_t*)error;
 				error_attr->set_attr_info(error_attr, attr_info);
 				goto err;
@@ -311,14 +314,17 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		if (attr->process(attr, &attr_offset) != SUCCESS)
 		{
 			attr->destroy(attr);
-			if (vendor_id == PEN_IETF && type == IETF_ATTR_PA_TNC_ERROR)
+			if (error_code.vendor_id == PEN_IETF &&
+				error_code.type == IETF_ATTR_PA_TNC_ERROR)
 			{
 				/* error while processing a PA-TNC error attribute - abort */
 				reader->destroy(reader);
 				return FAILED;
 			}
-			error = ietf_attr_pa_tnc_error_create_with_offset(PEN_IETF,
-						PA_ERROR_INVALID_PARAMETER, this->encoding,
+			error_code = pen_type_create(PEN_IETF,
+										 PA_ERROR_ATTR_TYPE_NOT_SUPPORTED);
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding,
 						offset + PA_TNC_ATTR_HEADER_SIZE + attr_offset);
 			goto err;
 		}
@@ -332,8 +338,9 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		return SUCCESS;
 	}
 	DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute header");
-	error = ietf_attr_pa_tnc_error_create_with_offset(PEN_IETF,
-				PA_ERROR_INVALID_PARAMETER, this->encoding, offset);
+	error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
+	error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding, offset);
 
 err:
 	reader->destroy(reader);
@@ -346,35 +353,35 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 {
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
+	pen_type_t type;
 	bool fatal_error = FALSE;
 
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_IETF &&
-			attr->get_type(attr) == IETF_ATTR_PA_TNC_ERROR)
+		type = attr->get_type(attr);
+
+		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
 		{
 			ietf_attr_pa_tnc_error_t *error_attr;
-			pen_t error_vendor_id;
-			pa_tnc_error_code_t error_code;
+			pen_type_t error_code;
 			chunk_t msg_info, attr_info;
 			u_int32_t offset;
 
 			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-			error_vendor_id = error_attr->get_vendor_id(error_attr);
 			error_code = error_attr->get_error_code(error_attr);
 			msg_info = error_attr->get_msg_info(error_attr);
 
 			/* skip errors from non-IETF namespaces */
-			if (error_vendor_id != PEN_IETF)
+			if (error_code.vendor_id != PEN_IETF)
 			{
 				continue;
 			}
 			DBG1(DBG_IMC, "received PA-TNC error '%N' concerning message "
-				 "0x%08x/0x%08x", pa_tnc_error_code_names, error_code,
+				 "0x%08x/0x%08x", pa_tnc_error_code_names, error_code.type,
 				 untoh32(msg_info.ptr), untoh32(msg_info.ptr + 4));
 
-			switch (error_code)
+			switch (error_code.type)
 			{
 				case PA_ERROR_INVALID_PARAMETER:
 					offset = error_attr->get_offset(error_attr);

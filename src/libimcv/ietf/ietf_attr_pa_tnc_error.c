@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2012 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -107,14 +108,9 @@ struct private_ietf_attr_pa_tnc_error_t {
 	ietf_attr_pa_tnc_error_t public;
 
 	/**
-	 * Attribute vendor ID
+	 * Vendor-specific attribute type
 	 */
-	pen_t vendor_id;
-
-	/**
-	 * Attribute type
-	 */
-	u_int32_t type;
+	pen_type_t type;
 
 	/**
 	 * Attribute value
@@ -127,14 +123,9 @@ struct private_ietf_attr_pa_tnc_error_t {
 	bool noskip_flag;
 
 	/**
-	 * Error code vendor ID
+	 * Vendor-specific error code
 	 */
-	pen_t error_vendor_id;
-
-	/**
-	 * Error code
-	 */
-	u_int32_t error_code;
+	pen_type_t error_code;
 
 	/**
 	 * First 8 bytes of erroneous PA-TNC message
@@ -157,13 +148,7 @@ struct private_ietf_attr_pa_tnc_error_t {
 	refcount_t ref;
 };
 
-METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_ietf_attr_pa_tnc_error_t *this)
-{
-	return this->vendor_id;
-}
-
-METHOD(pa_tnc_attr_t, get_type, u_int32_t,
+METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
 	return this->type;
@@ -198,13 +183,13 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 	writer = bio_writer_create(PA_ERROR_HEADER_SIZE + PA_ERROR_MSG_INFO_SIZE);
 	writer->write_uint8 (writer, PA_ERROR_RESERVED);
-	writer->write_uint24(writer, this->error_vendor_id);
-	writer->write_uint32(writer, this->error_code);
+	writer->write_uint24(writer, this->error_code.vendor_id);
+	writer->write_uint32(writer, this->error_code.type);
 	writer->write_data  (writer, this->msg_info);
 	
-	if (this->error_vendor_id == PEN_IETF)
+	if (this->error_code.vendor_id == PEN_IETF)
 	{
-		switch (this->error_code)
+		switch (this->error_code.type)
 		{
 			case PA_ERROR_INVALID_PARAMETER:
 				writer->write_uint32(writer, this->error_offset);
@@ -239,10 +224,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader = bio_reader_create(this->value);
 	reader->read_uint8 (reader, &reserved);
-	reader->read_uint24(reader, &this->error_vendor_id);
-	reader->read_uint32(reader, &this->error_code);
+	reader->read_uint24(reader, &this->error_code.vendor_id);
+	reader->read_uint32(reader, &this->error_code.type);
 
-	if (this->error_vendor_id == PEN_IETF)
+	if (this->error_code.vendor_id == PEN_IETF)
 	{
 		if (!reader->read_data(reader, PA_ERROR_MSG_INFO_SIZE, &this->msg_info))
 		{
@@ -253,7 +238,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		this->msg_info = chunk_clone(this->msg_info);
 
-		switch (this->error_code)
+		switch (this->error_code.type)
 		{
 			case PA_ERROR_INVALID_PARAMETER:
 				if (!reader->read_uint32(reader, &this->error_offset))
@@ -309,13 +294,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(ietf_attr_pa_tnc_error_t, get_error_vendor_id, pen_t,
-	private_ietf_attr_pa_tnc_error_t *this)
-{
-	return this->error_vendor_id;
-}
-
-METHOD(ietf_attr_pa_tnc_error_t, get_error_code, u_int32_t,
+METHOD(ietf_attr_pa_tnc_error_t, get_error_code, pen_type_t,
 	private_ietf_attr_pa_tnc_error_t *this)
 {
 	return this->error_code;
@@ -348,13 +327,12 @@ METHOD(ietf_attr_pa_tnc_error_t, get_offset, u_int32_t,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
-											 u_int32_t error_code,
+pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_type_t error_code,
 											 chunk_t msg_info)
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
-	if (vendor_id == PEN_IETF)
+	if (error_code.vendor_id == PEN_IETF)
 	{
 		msg_info.len = PA_ERROR_MSG_INFO_SIZE;
 	}
@@ -366,7 +344,6 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -376,16 +353,13 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_vendor_id = _get_error_vendor_id,
 			.get_error_code = _get_error_code,
 			.get_msg_info = _get_msg_info,
 			.get_attr_info = _get_attr_info,
 			.set_attr_info = _set_attr_info,
 			.get_offset = _get_offset,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_PA_TNC_ERROR,
-		.error_vendor_id = vendor_id,
+		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
 		.error_code = error_code,
 		.msg_info = chunk_clone(msg_info),
 		.ref = 1,
@@ -397,8 +371,7 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_t vendor_id,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
-														 u_int32_t error_code,
+pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 														 chunk_t msg_info,
 														 u_int32_t error_offset)
 {
@@ -410,7 +383,6 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -420,16 +392,13 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_t vendor_id,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_vendor_id = _get_error_vendor_id,
 			.get_error_code = _get_error_code,
 			.get_msg_info = _get_msg_info,
 			.get_attr_info = _get_attr_info,
 			.set_attr_info = _set_attr_info,
 			.get_offset = _get_offset,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_PA_TNC_ERROR,
-		.error_vendor_id = vendor_id,
+		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
 		.error_code = error_code,
 		.msg_info = chunk_clone(msg_info),
 		.error_offset = error_offset,
@@ -449,7 +418,6 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.build = _build,
@@ -457,15 +425,13 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_vendor_id = _get_error_vendor_id,
 			.get_error_code = _get_error_code,
 			.get_msg_info = _get_msg_info,
 			.get_attr_info = _get_attr_info,
 			.set_attr_info = _set_attr_info,
 			.get_offset = _get_offset,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_PA_TNC_ERROR,
+		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

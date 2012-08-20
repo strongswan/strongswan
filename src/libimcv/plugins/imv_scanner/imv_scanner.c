@@ -187,6 +187,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	pen_type_t type;
 	imv_state_t *state;
 	enumerator_t *enumerator;
 	TNC_Result result;
@@ -221,8 +222,9 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) == PEN_IETF &&
-			attr->get_type(attr) == IETF_ATTR_PORT_FILTER)
+		type = attr->get_type(attr);
+
+		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PORT_FILTER)
 		{
 			ietf_attr_port_filter_t *attr_port_filter;
 			enumerator_t *enumerator;

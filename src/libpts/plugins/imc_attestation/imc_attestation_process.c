@@ -56,10 +56,13 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 	chunk_t attr_info;
 	pts_t *pts;
 	pts_error_code_t pts_error;
+	pen_type_t attr_type;
 	bool valid_path;
 
 	pts = attestation_state->get_pts(attestation_state);
-	switch (attr->get_type(attr))
+	attr_type = attr->get_type(attr);
+
+	switch (attr_type.type)
 	{
 		case TCG_PTS_REQ_PROTO_CAPS:
 		{
@@ -181,12 +184,12 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 		case TCG_PTS_GET_TPM_VERSION_INFO:
 		{
 			chunk_t tpm_version_info, attr_info;
+			pen_type_t error_code = { PEN_TCG, TCG_PTS_TPM_VERS_NOT_SUPPORTED };
 
 			if (!pts->get_tpm_version_info(pts, &tpm_version_info))
 			{
 				attr_info = attr->get_value(attr);
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-							TCG_PTS_TPM_VERS_NOT_SUPPORTED, attr_info);
+				attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -220,6 +223,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			bool is_directory;
 			u_int32_t delimiter;
 			pts_file_meas_t *measurements;
+			pen_type_t error_code;
 
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_file_meas_t*)attr;
@@ -231,8 +235,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			if (valid_path && pts_error)
 			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										pts_error, attr_info);
+				error_code = pen_type_create(PEN_TCG, pts_error);
+				attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -243,8 +247,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
 			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_DELIMITER, attr_info);
+				error_code = pen_type_create(PEN_TCG,
+											 TCG_PTS_INVALID_DELIMITER);
+				attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -273,6 +278,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			bool is_directory;
 			u_int8_t delimiter;
 			pts_file_meta_t *metadata;
+			pen_type_t error_code;
 
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_file_meta_t*)attr;
@@ -283,8 +289,8 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			valid_path = pts->is_path_valid(pts, pathname, &pts_error);
 			if (valid_path && pts_error)
 			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										pts_error, attr_info);
+				error_code = pen_type_create(PEN_TCG, pts_error);
+				attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -294,8 +300,9 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			}
 			if (delimiter != SOLIDUS_UTF && delimiter != REVERSE_SOLIDUS_UTF)
 			{
-				attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_INVALID_DELIMITER, attr_info);
+				error_code = pen_type_create(PEN_TCG,
+											 TCG_PTS_INVALID_DELIMITER);
+				attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 				attr_list->insert_last(attr_list, attr);
 				break;
 			}
@@ -323,6 +330,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			pts_comp_func_name_t *name;
 			pts_comp_evidence_t *evid;
 			pts_component_t *comp;
+			pen_type_t error_code;
 			u_int32_t depth;
 			u_int8_t flags;
 			status_t status;
@@ -342,32 +350,36 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 
 				if (flags & PTS_REQ_FUNC_COMP_EVID_TTC)
 				{
-					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-											TCG_PTS_UNABLE_DET_TTC, attr_info);
+					error_code = pen_type_create(PEN_TCG,
+												 TCG_PTS_UNABLE_DET_TTC); 
+					attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				if (flags & PTS_REQ_FUNC_COMP_EVID_VER &&
 					!(negotiated_caps & PTS_PROTO_CAPS_V))
 				{
-					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_UNABLE_LOCAL_VAL, attr_info);
+					error_code = pen_type_create(PEN_TCG,
+												 TCG_PTS_UNABLE_LOCAL_VAL);
+					attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				if (flags & PTS_REQ_FUNC_COMP_EVID_CURR &&
 					!(negotiated_caps & PTS_PROTO_CAPS_C))
 				{
-					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_UNABLE_CUR_EVID, attr_info);
+					error_code = pen_type_create(PEN_TCG,
+												 TCG_PTS_UNABLE_CUR_EVID);
+					attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}
 				if (flags & PTS_REQ_FUNC_COMP_EVID_PCR &&
 					!(negotiated_caps & PTS_PROTO_CAPS_T))
 				{
-					attr = ietf_attr_pa_tnc_error_create(PEN_TCG,
-										TCG_PTS_UNABLE_DET_PCR, attr_info);
+					error_code = pen_type_create(PEN_TCG,
+												 TCG_PTS_UNABLE_DET_PCR);
+					attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 					attr_list->insert_last(attr_list, attr);
 					break;
 				}

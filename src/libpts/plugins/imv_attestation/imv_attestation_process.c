@@ -41,11 +41,13 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 							 pts_database_t *pts_db,
 							 credential_manager_t *pts_credmgr)
 {
+	pen_type_t attr_type;
 	pts_t *pts;
-
+	
 	pts = attestation_state->get_pts(attestation_state);
+	attr_type = attr->get_type(attr);
 
-	switch (attr->get_type(attr))
+	switch (attr_type.type)
 	{
 		case TCG_PTS_PROTO_CAPS:
 		{

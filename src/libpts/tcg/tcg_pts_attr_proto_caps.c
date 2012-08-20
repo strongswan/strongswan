@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -48,14 +48,9 @@ struct private_tcg_pts_attr_proto_caps_t {
 	tcg_pts_attr_proto_caps_t public;
 
 	/**
-	 * Attribute vendor ID
+	 * Vendor-specific attribute type
 	 */
-	pen_t vendor_id;
-
-	/**
-	 * Attribute type
-	 */
-	u_int32_t type;
+	pen_type_t type;
 
 	/**
 	 * Attribute value
@@ -78,13 +73,7 @@ struct private_tcg_pts_attr_proto_caps_t {
 	refcount_t ref;
 };
 
-METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_tcg_pts_attr_proto_caps_t *this)
-{
-	return this->vendor_id;
-}
-
-METHOD(pa_tnc_attr_t, get_type, u_int32_t,
+METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_tcg_pts_attr_proto_caps_t *this)
 {
 	return this->type;
@@ -180,7 +169,6 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -192,8 +180,8 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create(pts_proto_caps_flag_t flags,
 			},
 			.get_flags = _get_flags,
 		},
-		.vendor_id = PEN_TCG,
-		.type = request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS,
+		.type = { PEN_TCG,
+				  request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS },
 		.flags = flags,
 		.ref = 1,
 	);
@@ -212,7 +200,6 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(chunk_t data,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -224,8 +211,8 @@ pa_tnc_attr_t *tcg_pts_attr_proto_caps_create_from_data(chunk_t data,
 			},
 			.get_flags = _get_flags,
 		},
-		.vendor_id = PEN_TCG,
-		.type = request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS,
+		.type = { PEN_TCG,
+				  request ? TCG_PTS_REQ_PROTO_CAPS : TCG_PTS_PROTO_CAPS },
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

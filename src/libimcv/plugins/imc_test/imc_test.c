@@ -257,6 +257,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
+	pen_type_t attr_type;
 	imc_state_t *state;
 	enumerator_t *enumerator;
 	TNC_Result result;
@@ -291,11 +292,13 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		if (attr->get_vendor_id(attr) != PEN_ITA)
+		attr_type = attr->get_type(attr);
+
+		if (attr_type.vendor_id != PEN_ITA)
 		{
 			continue;
 		}
-		if (attr->get_type(attr) == ITA_ATTR_COMMAND)
+		if (attr_type.type == ITA_ATTR_COMMAND)
 		{
 			ita_attr_command_t *ita_attr;
 
@@ -303,7 +306,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 			DBG1(DBG_IMC, "received command '%s'",
 						   ita_attr->get_command(ita_attr));
 		}
-		else if (attr->get_type(attr) == ITA_ATTR_DUMMY)
+		else if (attr_type.type == ITA_ATTR_DUMMY)
 		{
 			ita_attr_dummy_t *ita_attr;
 

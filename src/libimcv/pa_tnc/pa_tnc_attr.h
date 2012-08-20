@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2012 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -33,18 +33,11 @@ typedef struct pa_tnc_attr_t pa_tnc_attr_t;
 struct pa_tnc_attr_t {
 
 	/**
-	 * Get the vendor ID of an PA-TNC attribute
+	 * Get the vendor ID/type of an PA-TNC attribute
 	 *
-	 * @return					attribute vendor ID
+	 * @return					vendor-specific attribute type
 	 */
-	u_int32_t (*get_vendor_id)(pa_tnc_attr_t *this);
-
-	/**
-	 * Get the type of an PA-TNC attribute
-	 *
-	 * @return					attribute type
-	 */
-	u_int32_t (*get_type)(pa_tnc_attr_t *this);
+	pen_type_t (*get_type)(pa_tnc_attr_t *this);
 
 	/**
 	 * Get the value of an PA-TNC attribute

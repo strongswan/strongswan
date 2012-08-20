@@ -46,14 +46,9 @@ struct private_ietf_attr_product_info_t {
 	ietf_attr_product_info_t public;
 
 	/**
-	 * Attribute vendor ID
+	 * Vendor-specific attribute type
 	 */
-	pen_t vendor_id;
-
-	/**
-	 * Attribute type
-	 */
-	u_int32_t type;
+	pen_type_t type;
 
 	/**
 	 * Attribute value
@@ -86,13 +81,7 @@ struct private_ietf_attr_product_info_t {
 	refcount_t ref;
 };
 
-METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_ietf_attr_product_info_t *this)
-{
-	return this->vendor_id;
-}
-
-METHOD(pa_tnc_attr_t, get_type, u_int32_t,
+METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_ietf_attr_product_info_t *this)
 {
 	return this->type;
@@ -205,7 +194,6 @@ pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -217,8 +205,7 @@ pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
 			},
 			.get_info = _get_info,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_PRODUCT_INFORMATION,
+		.type = { PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION },
 		.product_vendor_id = vendor_id,
 		.product_id = id,
 		.product_name = strdup(name),
@@ -238,7 +225,6 @@ pa_tnc_attr_t *ietf_attr_product_info_create_from_data(chunk_t data)
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.build = _build,
@@ -248,8 +234,7 @@ pa_tnc_attr_t *ietf_attr_product_info_create_from_data(chunk_t data)
 			},
 			.get_info = _get_info,
 		},
-		.vendor_id = PEN_IETF,
-		.type = IETF_ATTR_PRODUCT_INFORMATION,
+		.type = { PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION },
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

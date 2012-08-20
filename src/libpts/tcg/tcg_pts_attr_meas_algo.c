@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Sansar Choinyambuu
+ * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -48,14 +48,9 @@ struct private_tcg_pts_attr_meas_algo_t {
 	tcg_pts_attr_meas_algo_t public;
 
 	/**
-	 * Attribute vendor ID
+	 * Vendor-specific attribute type
 	 */
-	pen_t vendor_id;
-
-	/**
-	 * Attribute type
-	 */
-	u_int32_t type;
+	pen_type_t type;
 
 	/**
 	 * Attribute value
@@ -78,13 +73,7 @@ struct private_tcg_pts_attr_meas_algo_t {
 	refcount_t ref;
 };
 
-METHOD(pa_tnc_attr_t, get_vendor_id, pen_t,
-	private_tcg_pts_attr_meas_algo_t *this)
-{
-	return this->vendor_id;
-}
-
-METHOD(pa_tnc_attr_t, get_type, u_int32_t,
+METHOD(pa_tnc_attr_t, get_type, pen_type_t,
 	private_tcg_pts_attr_meas_algo_t *this)
 {
 	return this->type;
@@ -179,7 +168,6 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -191,8 +179,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create(pts_meas_algorithms_t algorithms,
 			},
 			.get_algorithms = _get_algorithms,
 		},
-		.vendor_id = PEN_TCG,
-		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
+		.type = { PEN_TCG,
+				  selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO },
 		.algorithms = algorithms,
 		.ref = 1,
 	);
@@ -212,7 +200,6 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {
-				.get_vendor_id = _get_vendor_id,
 				.get_type = _get_type,
 				.get_value = _get_value,
 				.get_noskip_flag = _get_noskip_flag,
@@ -224,8 +211,8 @@ pa_tnc_attr_t *tcg_pts_attr_meas_algo_create_from_data(chunk_t data,
 			},
 			.get_algorithms = _get_algorithms,
 		},
-		.vendor_id = PEN_TCG,
-		.type = selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO,
+		.type = { PEN_TCG,
+				  selection ? TCG_PTS_MEAS_ALGO_SELECTION : TCG_PTS_MEAS_ALGO },
 		.value = chunk_clone(data),
 		.ref = 1,
 	);

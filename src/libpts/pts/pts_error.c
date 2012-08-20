@@ -46,13 +46,13 @@ pa_tnc_attr_t* pts_hash_alg_error_create(pts_meas_algorithms_t algorithms)
 	bio_writer_t *writer;
 	chunk_t msg_info;
 	pa_tnc_attr_t *attr;
+	pen_type_t error_code = { PEN_TCG, TCG_PTS_HASH_ALG_NOT_SUPPORTED };
 
 	writer = bio_writer_create(4);
 	writer->write_uint16(writer, 0x0000);
 	writer->write_uint16(writer, algorithms);
 	msg_info = writer->get_buf(writer);
-	attr = ietf_attr_pa_tnc_error_create(PEN_TCG, TCG_PTS_HASH_ALG_NOT_SUPPORTED,
-										 msg_info);
+	attr = ietf_attr_pa_tnc_error_create(error_code, msg_info);
 	writer->destroy(writer);
 
 	return attr;
@@ -66,13 +66,13 @@ pa_tnc_attr_t* pts_dh_group_error_create(pts_dh_group_t dh_groups)
 	bio_writer_t *writer;
 	chunk_t msg_info;
 	pa_tnc_attr_t *attr;
+	pen_type_t error_code = { PEN_TCG, TCG_PTS_DH_GRPS_NOT_SUPPORTED };
 
 	writer = bio_writer_create(4);
 	writer->write_uint16(writer, 0x0000);
 	writer->write_uint16(writer, dh_groups);
 	msg_info = writer->get_buf(writer);
-	attr = ietf_attr_pa_tnc_error_create(PEN_TCG, TCG_PTS_DH_GRPS_NOT_SUPPORTED,
-										 msg_info);
+	attr = ietf_attr_pa_tnc_error_create(error_code, msg_info);
 	writer->destroy(writer);
 
 	return attr;
@@ -86,13 +86,13 @@ pa_tnc_attr_t* pts_dh_nonce_error_create(int min_nonce_len, int max_nonce_len)
 	bio_writer_t *writer;
 	chunk_t msg_info;
 	pa_tnc_attr_t *attr;
+	pen_type_t error_code = { PEN_TCG, TCG_PTS_BAD_NONCE_LENGTH };
 
 	writer = bio_writer_create(4);
 	writer->write_uint16(writer, min_nonce_len);
 	writer->write_uint16(writer, max_nonce_len);
 	msg_info = writer->get_buf(writer);
-	attr = ietf_attr_pa_tnc_error_create(PEN_TCG, TCG_PTS_BAD_NONCE_LENGTH,
-										 msg_info);
+	attr = ietf_attr_pa_tnc_error_create(error_code, msg_info);
 	writer->destroy(writer);
 
 	return attr;
