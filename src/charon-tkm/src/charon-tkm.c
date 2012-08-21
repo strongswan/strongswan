@@ -31,10 +31,12 @@
 #include <library.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
+#include <sa/keymat.h>
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
 #include "tkm_diffie_hellman.h"
+#include "tkm_keymat.h"
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -279,6 +281,9 @@ int main(int argc, char *argv[])
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE);
+
+	/* register TKM keymat variant */
+	keymat_register_constructor(IKEV2, (keymat_constructor_t)tkm_keymat_create);
 
 	/* initialize daemon */
 	if (!charon->initialize(charon, PLUGINS))
