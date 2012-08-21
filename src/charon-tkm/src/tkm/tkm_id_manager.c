@@ -84,9 +84,9 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	this->locks[kind]->write_lock(this->locks[kind]);
 	for (j = 0; j < this->limits[kind]; j++)
 	{
-		if (this->ctxids[kind][j])
+		if (!this->ctxids[kind][j])
 		{
-			this->ctxids[kind][j] = false;
+			this->ctxids[kind][j] = true;
 			id = j + 1;
 			break;
 		}
@@ -116,7 +116,7 @@ METHOD(tkm_id_manager_t, release_id, bool,
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-	this->ctxids[kind][idx] = true;
+	this->ctxids[kind][idx] = false;
 	this->locks[kind]->unlock(this->locks[kind]);
 
 	return TRUE;
@@ -142,7 +142,6 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 {
 	private_tkm_id_manager_t *this;
 	int i;
-	uint64_t j;
 
 	INIT(this,
 		.public = {
@@ -155,13 +154,8 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
 		this->limits[i] = limits[i];
-		this->ctxids[i] = malloc(limits[i] * sizeof(bool));
+		this->ctxids[i] = calloc(limits[i], sizeof(bool));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
-		for (j = 0; j < limits[i]; j++)
-		{
-			/* available id slots are in true state (is_available) */
-			this->ctxids[i][j] = true;
-		}
 		DBG2(DBG_LIB, "%N initialized, %llu slot(s)",
 				tkm_context_kind_names, i, limits[i]);
 	}
