@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -52,6 +53,14 @@ struct eap_manager_t {
 	 * @param constructor	constructor function to remove, as added in add_method
 	 */
 	void (*remove_method)(eap_manager_t *this, eap_constructor_t constructor);
+
+	/**
+	 * Enumerate the registered EAP methods for the given role.
+	 *
+	 * @param role			EAP role of methods to enumerate
+	 * @return				enumerator over (eap_type_t type, u_int32_t vendor)
+	 */
+	enumerator_t* (*create_enumerator)(eap_manager_t *this, eap_role_t role);
 
 	/**
 	 * Create a new EAP method instance.
