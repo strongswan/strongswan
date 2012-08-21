@@ -231,11 +231,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		end->host = strdupnull(value);
 		break;
 	case KW_SOURCEIP:
-		if (end->has_natip)
-		{
-			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
-			goto err;
-		}
 		if (value[0] == '%')
 		{
 			if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
@@ -368,27 +363,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		{	/* restore the original text in case also= is used */
 			*sep = '/';
 		}
-		break;
-	}
-	case KW_NATIP:
-	{
-		host_t *host;
-		if (end->sourceip)
-		{
-			DBG1(DBG_APP, "# natip and sourceip cannot be defined at the same time");
-			goto err;
-		}
-		host = host_create_from_string(value, 0);
-		if (!host)
-		{
-			DBG1(DBG_APP, "# bad addr: %s=%s", name, value);
-			goto err;
-		}
-		host->destroy(host);
-		end->sourceip = strdupnull(value);
-		end->has_natip = TRUE;
-		conn->mode = MODE_TUNNEL;
-		conn->proxy_mode = FALSE;
 		break;
 	}
 	default:

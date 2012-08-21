@@ -86,7 +86,6 @@ leftsubnetwithin,  KW_LEFTSUBNET
 leftprotoport,     KW_LEFTPROTOPORT
 leftsourceip,      KW_LEFTSOURCEIP
 leftdns,           KW_LEFTDNS
-leftnatip,         KW_LEFTNATIP
 leftfirewall,      KW_LEFTFIREWALL
 lefthostaccess,    KW_LEFTHOSTACCESS
 leftallowany,      KW_LEFTALLOWANY
@@ -111,7 +110,6 @@ rightsubnetwithin, KW_RIGHTSUBNET
 rightprotoport,    KW_RIGHTPROTOPORT
 rightsourceip,     KW_RIGHTSOURCEIP
 rightdns,          KW_RIGHTDNS
-rightnatip,        KW_RIGHTNATIP
 rightfirewall,     KW_RIGHTFIREWALL
 righthostaccess,   KW_RIGHTHOSTACCESS
 rightallowany,     KW_RIGHTALLOWANY
