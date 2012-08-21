@@ -138,7 +138,7 @@ METHOD(tls_application_t, process, status_t,
 		chunk_free(&avp_data);
 	}
 	while (eap_pos < eap_data.len);
- 		
+
 	in = eap_payload_create_data(eap_data);
 	chunk_free(&eap_data);
 	payload = (payload_t*)in;
@@ -192,7 +192,8 @@ METHOD(tls_application_t, process, status_t,
 		if (!this->method)
 		{
 			DBG1(DBG_IKE, "EAP method not supported");
-			this->out = eap_payload_create_nak(in->get_identifier(in));
+			this->out = eap_payload_create_nak(in->get_identifier(in),
+											   received_vendor != 0);
 			in->destroy(in);
 			return NEED_MORE;
 		}

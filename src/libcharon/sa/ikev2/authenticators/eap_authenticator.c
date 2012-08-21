@@ -357,9 +357,11 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 			this->method->destroy(this->method);
 			this->method = NULL;
 		}
+		/* FIXME: sending a Nak is not correct here as EAP_IDENTITY (1) is no
+		 * EAP method (types 3-253, 255) */
 		DBG1(DBG_IKE, "%N not supported, sending EAP_NAK",
 			 eap_type_names, type);
-		return eap_payload_create_nak(in->get_identifier(in));
+		return eap_payload_create_nak(in->get_identifier(in), FALSE);
 	}
 	if (this->method == NULL)
 	{
@@ -377,7 +379,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		if (!this->method)
 		{
 			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
-			return eap_payload_create_nak(in->get_identifier(in));
+			return eap_payload_create_nak(in->get_identifier(in), vendor != 0);
 		}
 	}
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -20,6 +21,7 @@
 
 #include <daemon.h>
 #include <eap/eap.h>
+#include <bio/bio_writer.h>
 
 typedef struct private_eap_payload_t private_eap_payload_t;
 
@@ -313,15 +315,75 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier)
 	return eap_payload_create_data(data);
 }
 
+/**
+ * Write the given type either expanded or not
+ */
+static void write_type(bio_writer_t *writer, eap_type_t type, u_int32_t vendor,
+					   bool expanded)
+{
+	if (expanded)
+	{
+		writer->write_uint8(writer, EAP_EXPANDED);
+		writer->write_uint24(writer, vendor);
+		writer->write_uint32(writer, type);
+	}
+	else
+	{
+		writer->write_uint8(writer, type);
+	}
+}
+
 /*
  * Described in header
  */
-eap_payload_t *eap_payload_create_nak(u_int8_t identifier)
+eap_payload_t *eap_payload_create_nak(u_int8_t identifier, bool expanded)
 {
-	chunk_t data;
+	enumerator_t *enumerator;
+	eap_type_t reg_type;
+	u_int32_t reg_vendor;
+	bio_writer_t *writer;
+	chunk_t length, data;
+	bool added_any = FALSE, found_vendor = FALSE;
+	eap_payload_t *payload;
 
-	data = chunk_from_chars(EAP_RESPONSE, identifier, 0, 0, EAP_NAK);
-	htoun16(data.ptr + 2, data.len);
-	return eap_payload_create_data(data);
+	writer = bio_writer_create(12);
+	writer->write_uint8(writer, EAP_RESPONSE);
+	writer->write_uint8(writer, identifier);
+	length = writer->skip(writer, 2);
+
+	write_type(writer, EAP_NAK, 0, expanded);
+
+	enumerator = charon->eap->create_enumerator(charon->eap, EAP_PEER);
+	while (enumerator->enumerate(enumerator, &reg_type, &reg_vendor))
+	{
+		if (!reg_vendor || expanded)
+		{
+			write_type(writer, reg_type, reg_vendor, expanded);
+			added_any = TRUE;
+		}
+		else if (reg_vendor)
+		{	/* found vendor specifc method, but this is not an expanded Nak */
+			found_vendor = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found_vendor)
+	{	/* request an expanded authentication type */
+		write_type(writer, EAP_EXPANDED, 0, expanded);
+		added_any = TRUE;
+	}
+	if (!added_any)
+	{	/* no methods added */
+		write_type(writer, 0, 0, expanded);
+	}
+
+	/* set length */
+	data = writer->get_buf(writer);
+	htoun16(length.ptr, data.len);
+
+	payload = eap_payload_create_data(data);
+	writer->destroy(writer);
+	return payload;
 }
 

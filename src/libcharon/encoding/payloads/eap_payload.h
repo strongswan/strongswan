@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -126,8 +127,10 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  * Creates an eap_payload_t EAP_RESPONSE containing an EAP_NAK.
  *
  * @param identifier	EAP identifier to use in payload
+ * @param expanded		TRUE to send an expanded Nak (as response to an expanded
+ * 						request, i.e. one with vendor specific type)
  * @return 				eap_payload_t object
  */
-eap_payload_t *eap_payload_create_nak(u_int8_t identifier);
+eap_payload_t *eap_payload_create_nak(u_int8_t identifier, bool expanded);
 
 #endif /** EAP_PAYLOAD_H_ @}*/
