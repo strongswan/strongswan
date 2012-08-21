@@ -336,8 +336,8 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 										 eap_payload_t *in)
 {
-	eap_type_t type;
-	u_int32_t vendor;
+	eap_type_t type, conf_type;
+	u_int32_t vendor, conf_vendor;
 	auth_cfg_t *auth;
 	eap_payload_t *out;
 	identification_t *id;
@@ -373,7 +373,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		 * EAP method (types 3-253, 255) */
 		DBG1(DBG_IKE, "%N not supported, sending EAP_NAK",
 			 eap_type_names, type);
-		return eap_payload_create_nak(in->get_identifier(in), FALSE);
+		return eap_payload_create_nak(in->get_identifier(in), 0, 0, FALSE);
 	}
 	if (this->method == NULL)
 	{
@@ -387,11 +387,31 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 			DBG1(DBG_IKE, "server requested %N authentication (id 0x%02X)",
 				 eap_type_names, type, in->get_identifier(in));
 		}
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+		conf_type = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE);
+		conf_vendor = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR);
+		if (conf_type != EAP_NAK &&
+		   (conf_type != type || conf_vendor != vendor))
+		{
+			if (conf_vendor)
+			{
+				DBG1(DBG_IKE, "requesting EAP method %d-%d, sending EAP_NAK",
+					 conf_type, conf_vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "requesting %N authentication, sending EAP_NAK",
+					 eap_type_names, conf_type);
+			}
+			return eap_payload_create_nak(in->get_identifier(in), conf_type,
+										  conf_vendor, vendor != 0);
+		}
 		this->method = load_method(this, type, vendor, EAP_PEER);
 		if (!this->method)
 		{
 			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
-			return eap_payload_create_nak(in->get_identifier(in), vendor != 0);
+			return eap_payload_create_nak(in->get_identifier(in), 0, 0,
+										  vendor != 0);
 		}
 	}
 
