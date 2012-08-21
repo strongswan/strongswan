@@ -15,6 +15,7 @@
  */
 
 #include <daemon.h>
+#include <sa/ikev2/keymat_v2.h>
 
 #include "tkm_keymat.h"
 
@@ -29,6 +30,11 @@ struct private_tkm_keymat_t {
 	 * Public tkm_keymat_t interface.
 	 */
 	tkm_keymat_t public;
+
+	/**
+	 * IKEv2 keymat proxy (will be removed).
+	 */
+	keymat_v2_t *proxy;
 
 };
 
@@ -56,7 +62,8 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	DBG1(DBG_IKE, "deriving IKE keys");
-	return FALSE;
+	return this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
+			nonce_r, id, rekey_function, rekey_skd);
 }
 
 METHOD(tkm_keymat_t, derive_child_keys, bool,
@@ -65,14 +72,15 @@ METHOD(tkm_keymat_t, derive_child_keys, bool,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	DBG1(DBG_CHD, "deriving child keys");
-	return FALSE;
+	return this->proxy->derive_child_keys(this->proxy, proposal, dh, nonce_i,
+			nonce_r, encr_i, integ_i, encr_r, integ_r);
 }
 
 METHOD(keymat_t, get_aead, aead_t*,
 	private_tkm_keymat_t *this, bool in)
 {
-	DBG1(DBG_IKE, "get_aead called");
-	return NULL;
+	DBG1(DBG_IKE, "returning aead transform");
+	return this->proxy->keymat.get_aead(&this->proxy->keymat, in);
 }
 
 METHOD(tkm_keymat_t, get_auth_octets, bool,
@@ -80,14 +88,15 @@ METHOD(tkm_keymat_t, get_auth_octets, bool,
 	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
 {
 	DBG1(DBG_IKE, "returning auth octets");
-	return FALSE;
+	return this->proxy->get_auth_octets(this->proxy, verify, ike_sa_init, nonce,
+			id, reserved, octets);
 }
 
 METHOD(tkm_keymat_t, get_skd, pseudo_random_function_t,
 	private_tkm_keymat_t *this, chunk_t *skd)
 {
 	DBG1(DBG_IKE, "returning skd");
-	return PRF_UNDEFINED;
+	return this->proxy->get_skd(this->proxy, skd);
 }
 
 METHOD(tkm_keymat_t, get_psk_sig, bool,
@@ -95,7 +104,8 @@ METHOD(tkm_keymat_t, get_psk_sig, bool,
 	chunk_t secret, identification_t *id, char reserved[3], chunk_t *sig)
 {
 	DBG1(DBG_IKE, "returning PSK signature");
-	return FALSE;
+	return this->proxy->get_psk_sig(this->proxy, verify, ike_sa_init, nonce,
+			secret, id, reserved, sig);
 }
 
 METHOD(keymat_t, destroy, void,
@@ -126,6 +136,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
 		},
+		.proxy = keymat_v2_create(initiator),
 	);
 
 	return &this->public;
