@@ -65,6 +65,12 @@ METHOD(nonce_gen_t, destroy, void,
 	free(this);
 }
 
+METHOD(tkm_nonceg_t, get_id, nc_id_type,
+	private_tkm_nonceg_t *this)
+{
+	return this->context_id;
+}
+
 /*
  * Described in header.
  */
@@ -79,6 +85,7 @@ tkm_nonceg_t *tkm_nonceg_create()
 				.allocate_nonce = _allocate_nonce,
 				.destroy = _destroy,
 			},
+			.get_id = _get_id,
 		},
 		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_NONCE),
 	);
