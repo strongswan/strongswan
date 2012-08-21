@@ -83,11 +83,6 @@ struct private_sender_t {
 METHOD(sender_t, send_no_marker, void,
 	private_sender_t *this, packet_t *packet)
 {
-	host_t *src, *dst;
-
-	src = packet->get_source(packet);
-	dst = packet->get_destination(packet);
-
 	if (this->send_delay)
 	{
 		message_t *message;
