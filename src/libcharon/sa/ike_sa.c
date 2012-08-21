@@ -182,14 +182,14 @@ struct private_ike_sa_t {
 	keymat_t *keymat;
 
 	/**
-	 * Virtual IP on local host, if any
+	 * Virtual IPs on local host
 	 */
-	host_t *my_virtual_ip;
+	linked_list_t *my_vips;
 
 	/**
-	 * Virtual IP on remote host, if any
+	 * Virtual IPs on remote host
 	 */
-	host_t *other_virtual_ip;
+	linked_list_t *other_vips;
 
 	/**
 	 * List of configuration attributes (attribute_entry_t)
@@ -735,7 +735,7 @@ METHOD(ike_sa_t, get_keymat, keymat_t*,
 	return this->keymat;
 }
 
-METHOD(ike_sa_t, set_virtual_ip, void,
+METHOD(ike_sa_t, add_virtual_ip, void,
 	private_ike_sa_t *this, bool local, host_t *ip)
 {
 	if (local)
@@ -744,39 +744,27 @@ METHOD(ike_sa_t, set_virtual_ip, void,
 		if (hydra->kernel_interface->add_ip(hydra->kernel_interface, ip,
 											this->my_host) == SUCCESS)
 		{
-			if (this->my_virtual_ip)
-			{
-				DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-				hydra->kernel_interface->del_ip(hydra->kernel_interface,
-												this->my_virtual_ip);
-			}
-			DESTROY_IF(this->my_virtual_ip);
-			this->my_virtual_ip = ip->clone(ip);
+			this->my_vips->insert_last(this->my_vips, ip->clone(ip));
 		}
 		else
 		{
 			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
-			this->my_virtual_ip = NULL;
 		}
 	}
 	else
 	{
-		DESTROY_IF(this->other_virtual_ip);
-		this->other_virtual_ip = ip->clone(ip);
+		this->other_vips->insert_last(this->other_vips, ip->clone(ip));
 	}
 }
 
-METHOD(ike_sa_t, get_virtual_ip, host_t*,
+METHOD(ike_sa_t, create_virtual_ip_enumerator, enumerator_t*,
 	private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
-		return this->my_virtual_ip;
+		return this->my_vips->create_enumerator(this->my_vips);
 	}
-	else
-	{
-		return this->other_virtual_ip;
-	}
+	return this->other_vips->create_enumerator(this->other_vips);
 }
 
 METHOD(ike_sa_t, add_peer_address, void,
@@ -909,7 +897,7 @@ METHOD(ike_sa_t, update_hosts, void,
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
 			if (child_sa->update(child_sa, this->my_host,
-						this->other_host, this->my_virtual_ip,
+						this->other_host, this->my_vips,
 						has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
 			{
 				this->public.rekey_child_sa(&this->public,
@@ -1458,7 +1446,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
-		if (this->other_virtual_ip != NULL ||
+		if (this->other_vips->get_count(this->other_vips) != 0 ||
 			has_condition(this, COND_XAUTH_AUTHENTICATED) ||
 			has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
@@ -1562,7 +1550,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 
 	/* check if we are able to reestablish this IKE_SA */
 	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
-		(this->other_virtual_ip != NULL ||
+		(this->other_vips->get_count(this->other_vips) != 0 ||
 		 has_condition(this, COND_EAP_AUTHENTICATED)
 #ifdef ME
 		 || this->is_mediation_server
@@ -1585,11 +1573,12 @@ METHOD(ike_sa_t, reestablish, status_t,
 	host = this->my_host;
 	new->set_my_host(new, host->clone(host));
 	/* if we already have a virtual IP, we reuse it */
-	host = this->my_virtual_ip;
-	if (host)
+	enumerator = this->my_vips->create_enumerator(this->my_vips);
+	while (enumerator->enumerate(enumerator, &host))
 	{
-		new->set_virtual_ip(new, TRUE, host);
+		new->add_virtual_ip(new, TRUE, host);
 	}
+	enumerator->destroy(enumerator);
 
 #ifdef ME
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
@@ -1732,7 +1721,7 @@ METHOD(ike_sa_t, set_auth_lifetime, status_t,
 	 * We send the notify in IKE_AUTH if not yet ESTABLISHED. */
 	send_update = this->state == IKE_ESTABLISHED && this->version == IKEV2 &&
 				  !has_condition(this, COND_ORIGINAL_INITIATOR) &&
-				  (this->other_virtual_ip != NULL ||
+				  (this->other_vips->get_count(this->other_vips) != 0 ||
 				  has_condition(this, COND_EAP_AUTHENTICATED));
 
 	if (lifetime < diff)
@@ -1937,6 +1926,7 @@ METHOD(ike_sa_t, inherit, void,
 	attribute_entry_t *entry;
 	enumerator_t *enumerator;
 	auth_cfg_t *cfg;
+	host_t *vip;
 
 	/* apply hosts and ids */
 	this->my_host->destroy(this->my_host);
@@ -1948,16 +1938,15 @@ METHOD(ike_sa_t, inherit, void,
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
 
-	/* apply virtual assigned IPs... */
-	if (other->my_virtual_ip)
+	/* apply assigned virtual IPs... */
+	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
 	{
-		this->my_virtual_ip = other->my_virtual_ip;
-		other->my_virtual_ip = NULL;
+		other->my_vips->insert_first(other->my_vips, vip);
 	}
-	if (other->other_virtual_ip)
+	while (this->other_vips->remove_last(this->other_vips,
+										 (void**)&vip) == SUCCESS)
 	{
-		this->other_virtual_ip = other->other_virtual_ip;
-		other->other_virtual_ip = NULL;
+		other->other_vips->insert_first(other->other_vips, vip);
 	}
 
 	/* authentication information */
@@ -2032,6 +2021,7 @@ METHOD(ike_sa_t, destroy, void,
 	private_ike_sa_t *this)
 {
 	attribute_entry_t *entry;
+	host_t *vip;
 
 	charon->bus->set_sa(charon->bus, &this->public);
 
@@ -2056,22 +2046,24 @@ METHOD(ike_sa_t, destroy, void,
 
 	DESTROY_IF(this->keymat);
 
-	if (this->my_virtual_ip)
+	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
 	{
-		hydra->kernel_interface->del_ip(hydra->kernel_interface,
-										this->my_virtual_ip);
-		this->my_virtual_ip->destroy(this->my_virtual_ip);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+		vip->destroy(vip);
 	}
-	if (this->other_virtual_ip)
+	this->my_vips->destroy(this->my_vips);
+	while (this->other_vips->remove_last(this->other_vips,
+										 (void**)&vip) == SUCCESS)
 	{
 		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
 		{
 			hydra->attributes->release_address(hydra->attributes,
 							this->peer_cfg->get_pool(this->peer_cfg),
-							this->other_virtual_ip, get_other_eap_id(this));
+							vip, get_other_eap_id(this));
 		}
-		this->other_virtual_ip->destroy(this->other_virtual_ip);
+		vip->destroy(vip);
 	}
+	this->other_vips->destroy(this->other_vips);
 	this->peer_addresses->destroy_offset(this->peer_addresses,
 										 offsetof(host_t, destroy));
 #ifdef ME
@@ -2190,8 +2182,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.generate_message = _generate_message,
 			.reset = _reset,
 			.get_unique_id = _get_unique_id,
-			.set_virtual_ip = _set_virtual_ip,
-			.get_virtual_ip = _get_virtual_ip,
+			.add_virtual_ip = _add_virtual_ip,
+			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
@@ -2226,6 +2218,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.other_auths = linked_list_create(),
 		.unique_id = ++unique_id,
 		.peer_addresses = linked_list_create(),
+		.my_vips = linked_list_create(),
+		.other_vips = linked_list_create(),
 		.attributes = linked_list_create(),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 							"%s.keep_alive", KEEPALIVE_INTERVAL, charon->name),

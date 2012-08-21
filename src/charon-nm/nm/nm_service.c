@@ -507,8 +507,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 					600, 600, /* jitter, over 10min */
 					TRUE, FALSE, /* mobike, aggressive */
 					0, 0, /* DPD delay, timeout */
-					virtual ? host_create_from_string("0.0.0.0", 0) : NULL,
 					NULL, FALSE, NULL, NULL); /* pool, mediation */
+	if (virtual)
+	{
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+	}
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_class);
 	auth->add(auth, AUTH_RULE_IDENTITY, user);

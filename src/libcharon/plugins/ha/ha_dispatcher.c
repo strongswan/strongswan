@@ -344,10 +344,10 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				ike_sa->set_other_host(ike_sa, value.host->clone(value.host));
 				break;
 			case HA_LOCAL_VIP:
-				ike_sa->set_virtual_ip(ike_sa, TRUE, value.host);
+				ike_sa->add_virtual_ip(ike_sa, TRUE, value.host);
 				break;
 			case HA_REMOTE_VIP:
-				ike_sa->set_virtual_ip(ike_sa, FALSE, value.host);
+				ike_sa->add_virtual_ip(ike_sa, FALSE, value.host);
 				received_vip = TRUE;
 				break;
 			case HA_PEER_ADDR:
@@ -417,13 +417,18 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 			char *pool;
 
 			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-			if (peer_cfg && vip)
+			if (peer_cfg)
 			{
 				pool = peer_cfg->get_pool(peer_cfg);
 				if (pool)
 				{
-					this->attr->reserve(this->attr, pool, vip);
+					enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa,
+																	  FALSE);
+					while (enumerator->enumerate(enumerator, &vip))
+					{
+						this->attr->reserve(this->attr, pool, vip);
+					}
+					enumerator->destroy(enumerator);
 				}
 			}
 		}

@@ -134,6 +134,46 @@ static char *make_dns_vars(private_updown_listener_t *this, ike_sa_t *ike_sa)
 	return strdup(total);
 }
 
+/**
+ * Create variables for local virtual IPs
+ */
+static char *make_vip_vars(private_updown_listener_t *this, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+	int v4 = 0, v6 = 0;
+	char total[512] = "", current[64];
+	bool first = TRUE;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		if (first)
+		{	/* legacy variable for first VIP */
+			snprintf(current, sizeof(current),
+						 "PLUTO_MY_SOURCEIP='%H' ", host);
+			strncat(total, current, sizeof(total) - strlen(total) - 1);
+		}
+		switch (host->get_family(host))
+		{
+			case AF_INET:
+				snprintf(current, sizeof(current),
+						 "PLUTO_MY_SOURCEIP4_%d='%H' ", ++v4, host);
+				break;
+			case AF_INET6:
+				snprintf(current, sizeof(current),
+						 "PLUTO_MY_SOURCEIP6_%d='%H' ", ++v6, host);
+				break;
+			default:
+				continue;
+		}
+		strncat(total, current, sizeof(total) - strlen(total) - 1);
+	}
+	enumerator->destroy(enumerator);
+
+	return strdup(total);
+}
+
 METHOD(listener_t, child_updown, bool,
 	private_updown_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
@@ -141,11 +181,10 @@ METHOD(listener_t, child_updown, bool,
 	traffic_selector_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
 	child_cfg_t *config;
-	host_t *vip, *me, *other;
+	host_t *me, *other;
 	char *script;
 
 	config = child_sa->get_config(child_sa);
-	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
 	script = config->get_updown(config);
 	me = ike_sa->get_my_host(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
@@ -169,20 +208,7 @@ METHOD(listener_t, child_updown, bool,
 		my_ts->to_subnet(my_ts, &my_client, &my_client_mask);
 		other_ts->to_subnet(other_ts, &other_client, &other_client_mask);
 
-		if (vip)
-		{
-			if (asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ", vip) < 0)
-			{
-				virtual_ip = NULL;
-			}
-		}
-		else
-		{
-			if (asprintf(&virtual_ip, "") < 0)
-			{
-				virtual_ip = NULL;
-			}
-		}
+		virtual_ip = make_vip_vars(this, ike_sa);
 
 		/* check for the presence of an inbound mark */
 		mark = config->get_mark(config, TRUE);

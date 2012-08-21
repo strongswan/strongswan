@@ -242,12 +242,19 @@ METHOD(task_t, build_i, status_t,
 	host_t *vip;
 
 	/* reuse virtual IP if we already have one */
-	vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	if (!vip)
+	enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa, TRUE);
+	if (!enumerator->enumerate(enumerator, &vip))
 	{
+		enumerator->destroy(enumerator);
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		vip = config->get_virtual_ip(config);
+		enumerator = config->create_virtual_ip_enumerator(config);
+		if (!enumerator->enumerate(enumerator, &vip))
+		{
+			vip = NULL;
+		}
 	}
+	enumerator->destroy(enumerator);
+
 	if (vip)
 	{
 		cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
@@ -319,7 +326,7 @@ METHOD(task_t, build_r, status_t,
 		if (vip)
 		{
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", vip, id);
-			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
+			this->ike_sa->add_virtual_ip(this->ike_sa, FALSE, vip);
 			cp->add_attribute(cp, build_vip(vip));
 		}
 		else
@@ -360,7 +367,7 @@ METHOD(task_t, process_i, status_t,
 
 	if (this->virtual_ip)
 	{
-		this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
+		this->ike_sa->add_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
 	}
 	return SUCCESS;
 }

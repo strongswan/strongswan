@@ -109,6 +109,14 @@ struct phase1_t {
 	identification_t* (*get_id)(phase1_t *this, peer_cfg_t *peer_cfg, bool local);
 
 	/**
+	 * Check if peer config has virtual IPs to request
+	 *
+	 * @param peer_cfg		peer_config to check
+	 * @return				TRUE if peer config contains at least one virtual IP
+	 */
+	bool (*has_virtual_ip)(phase1_t *this, peer_cfg_t *peer_cfg);
+
+	/**
 	 * Extract and store SA payload bytes from encoded message.
 	 *
 	 * @param message		message to extract SA payload bytes from

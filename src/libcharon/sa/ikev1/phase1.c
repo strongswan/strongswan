@@ -597,6 +597,20 @@ METHOD(phase1_t, get_id, identification_t*,
 	return NULL;
 }
 
+METHOD(phase1_t, has_virtual_ip, bool,
+	private_phase1_t *this, peer_cfg_t *peer_cfg)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	host_t *host;
+
+	enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
+	found = enumerator->enumerate(enumerator, &host);
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
 METHOD(phase1_t, save_sa_payload, bool,
 	private_phase1_t *this, message_t *message)
 {
@@ -736,6 +750,7 @@ phase1_t *phase1_create(ike_sa_t *ike_sa, bool initiator)
 			.get_auth_method = _get_auth_method,
 			.get_id = _get_id,
 			.select_config = _select_config,
+			.has_virtual_ip = _has_virtual_ip,
 			.verify_auth = _verify_auth,
 			.build_auth = _build_auth,
 			.save_sa_payload = _save_sa_payload,

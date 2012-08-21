@@ -79,9 +79,10 @@ METHOD(job_t, execute, job_requeue_t,
 	}
 	if (ike_sa)
 	{
-		enumerator_t *children;
+		enumerator_t *children, *enumerator;
 		child_sa_t *child_sa;
 		host_t *host;
+		linked_list_t *vips;
 
 		children = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (children->enumerate(children, (void**)&child_sa))
@@ -104,14 +105,22 @@ METHOD(job_t, execute, job_requeue_t,
 		host->set_port(host, IKEV2_UDP_PORT);
 		ike_sa->set_other_host(ike_sa, host);
 
-		if (child_sa->update(child_sa, this->local, this->remote,
-				ike_sa->get_virtual_ip(ike_sa, TRUE),
+		vips = linked_list_create();
+		enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
+		while (enumerator->enumerate(enumerator, &host))
+		{
+			vips->insert_last(vips, host);
+		}
+		enumerator->destroy(enumerator);
+
+		if (child_sa->update(child_sa, this->local, this->remote, vips,
 				ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
 		{
 			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 								   child_sa->get_spi(child_sa, TRUE));
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		vips->destroy(vips);
 	}
 	else
 	{

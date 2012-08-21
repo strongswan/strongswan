@@ -149,6 +149,7 @@ static bool send_message(private_eap_radius_accounting_t *this,
  */
 static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 {
+	enumerator_t *enumerator;
 	host_t *vip;
 	char buf[64];
 	chunk_t data;
@@ -157,17 +158,25 @@ static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 	message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
 	snprintf(buf, sizeof(buf), "%#H", ike_sa->get_other_host(ike_sa));
 	message->add(message, RAT_CALLING_STATION_ID, chunk_create(buf, strlen(buf)));
-	vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-	if (vip && vip->get_family(vip) == AF_INET)
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &vip))
 	{
-		message->add(message, RAT_FRAMED_IP_ADDRESS, vip->get_address(vip));
-	}
-	if (vip && vip->get_family(vip) == AF_INET6)
-	{
-		/* we currently assign /128 prefixes, only (reserved, length) */
-		data = chunk_from_chars(0, 128);
-		data = chunk_cata("cc", data, vip->get_address(vip));
-		message->add(message, RAT_FRAMED_IPV6_PREFIX, data);
+		switch (vip->get_family(vip))
+		{
+			case AF_INET:
+				message->add(message, RAT_FRAMED_IP_ADDRESS,
+							 vip->get_address(vip));
+				break;
+			case AF_INET6:
+				/* we currently assign /128 prefixes, only (reserved, length) */
+				data = chunk_from_chars(0, 128);
+				data = chunk_cata("cc", data, vip->get_address(vip));
+				message->add(message, RAT_FRAMED_IPV6_PREFIX, data);
+				break;
+			default:
+				break;
+		}
 	}
 }
 

@@ -931,7 +931,7 @@ struct ike_sa_t {
 	status_t (*set_auth_lifetime)(ike_sa_t *this, u_int32_t lifetime);
 
 	/**
-	 * Set the virtual IP to use for this IKE_SA and its children.
+	 * Add a virtual IP to use for this IKE_SA and its children.
 	 *
 	 * The virtual IP is assigned per IKE_SA, not per CHILD_SA. It has the same
 	 * lifetime as the IKE_SA.
@@ -939,15 +939,15 @@ struct ike_sa_t {
 	 * @param local			TRUE to set local address, FALSE for remote
 	 * @param ip			IP to set as virtual IP
 	 */
-	void (*set_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
+	void (*add_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
 
 	/**
-	 * Get the virtual IP configured.
+	 * Create an enumerator over virtual IPs.
 	 *
 	 * @param local			TRUE to get local virtual IP, FALSE for remote
-	 * @return				host_t *virtual IP
+	 * @return				enumerator over host_t*
 	 */
-	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
+	enumerator_t* (*create_virtual_ip_enumerator) (ike_sa_t *this, bool local);
 
 	/**
 	 * Register a configuration attribute to the IKE_SA.
