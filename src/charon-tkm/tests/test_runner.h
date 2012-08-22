@@ -20,6 +20,7 @@
 #include <check.h>
 
 TCase *make_id_manager_tests(void);
+TCase *make_chunk_map_tests(void);
 TCase *make_nonceg_tests(void);
 TCase *make_diffie_hellman_tests(void);
 

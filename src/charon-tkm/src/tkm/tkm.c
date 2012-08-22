@@ -81,6 +81,7 @@ bool tkm_init()
 	INIT(this,
 		.public = {
 			.idmgr = tkm_id_manager_create(limits),
+			.chunk_map = tkm_chunk_map_create(),
 		},
 	);
 	tkm = &this->public;
@@ -99,6 +100,7 @@ void tkm_deinit()
 	}
 	private_tkm_t *this = (private_tkm_t*)tkm;
 	this->public.idmgr->destroy(this->public.idmgr);
+	this->public.chunk_map->destroy(this->public.chunk_map);
 
 	tkmlib_final();
 	free(this);

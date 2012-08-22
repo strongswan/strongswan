@@ -18,6 +18,7 @@
 #define TKM_H_
 
 #include "tkm_id_manager.h"
+#include "tkm_chunk_map.h"
 
 typedef struct tkm_t tkm_t;
 
@@ -30,6 +31,11 @@ struct tkm_t {
 	 * Context ID manager.
 	 */
 	tkm_id_manager_t *idmgr;
+
+	/**
+	 * Chunk-to-ID mappings.
+	 */
+	tkm_chunk_map_t *chunk_map;
 
 };
 
