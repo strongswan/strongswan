@@ -55,7 +55,10 @@ struct eap_manager_t {
 	void (*remove_method)(eap_manager_t *this, eap_constructor_t constructor);
 
 	/**
-	 * Enumerate the registered EAP methods for the given role.
+	 * Enumerate the registered EAP authentication methods for the given role.
+	 *
+	 * @note Only authentication types are enumerated (e.g. EAP-Identity is not
+	 * even though it is registered as method with this manager).
 	 *
 	 * @param role			EAP role of methods to enumerate
 	 * @return				enumerator over (eap_type_t type, u_int32_t vendor)

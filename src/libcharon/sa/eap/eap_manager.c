@@ -115,6 +115,12 @@ static bool filter_methods(uintptr_t role, eap_entry_t **entry,
 	{
 		return FALSE;
 	}
+	if ((*entry)->vendor == 0 &&
+	   ((*entry)->type < 4 || (*entry)->type == EAP_EXPANDED ||
+	    (*entry)->type > EAP_EXPERIMENTAL))
+	{	/* filter invalid types */
+		return FALSE;
+	}
 	if (type)
 	{
 		*type = (*entry)->type;
