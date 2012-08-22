@@ -18,6 +18,7 @@
 #include <sa/ikev2/keymat_v2.h>
 
 #include "tkm.h"
+#include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
 
 typedef struct private_tkm_keymat_t private_tkm_keymat_t;
@@ -67,8 +68,9 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	DBG1(DBG_IKE, "deriving IKE keys");
+	tkm_diffie_hellman_t * const tkm_dh = (tkm_diffie_hellman_t *)dh;
 	chunk_t * const nonce = this->initiator ? &nonce_i : &nonce_r;
+
 	const uint64_t nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
 	if (!nc_id)
 	{
@@ -76,6 +78,8 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
+	DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu)", nc_id,
+			tkm_dh->get_id(tkm_dh));
 	if (this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
 				nonce_r, id, rekey_function, rekey_skd))
 	{
