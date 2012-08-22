@@ -20,6 +20,7 @@
 typedef struct tkm_diffie_hellman_t tkm_diffie_hellman_t;
 
 #include <library.h>
+#include <tkm/types.h>
 
 /**
  * diffie_hellman_t implementation using the trusted key manager.
@@ -30,6 +31,14 @@ struct tkm_diffie_hellman_t {
 	 * Implements diffie_hellman_t interface.
 	 */
 	diffie_hellman_t dh;
+
+	/**
+	 * Get Diffie-Hellman context id.
+	 *
+	 * @return	id of this DH context.
+	 */
+	dh_id_type (*get_id)(tkm_diffie_hellman_t * const this);
+
 };
 
 /**

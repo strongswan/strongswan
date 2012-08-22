@@ -103,6 +103,12 @@ METHOD(diffie_hellman_t, destroy, void,
 	free(this);
 }
 
+METHOD(tkm_diffie_hellman_t, get_id, dh_id_type,
+	private_tkm_diffie_hellman_t *this)
+{
+	return this->context_id;
+}
+
 /*
  * Described in header.
  */
@@ -119,6 +125,7 @@ tkm_diffie_hellman_t *tkm_diffie_hellman_create(diffie_hellman_group_t group)
 				.get_dh_group = _get_dh_group,
 				.destroy = _destroy,
 			},
+			.get_id = _get_id,
 		},
 		.group = group,
 		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_DH),

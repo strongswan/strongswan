@@ -27,6 +27,7 @@ START_TEST(test_dh_creation)
 
 	dh = tkm_diffie_hellman_create(MODP_4096_BIT);
 	fail_if(!dh, "MODP_4096 not created");
+	fail_if(!dh->get_id(dh), "Invalid context id (0)");
 
 	dh->dh.destroy(&dh->dh);
 }
