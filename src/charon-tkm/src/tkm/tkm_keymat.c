@@ -17,6 +17,7 @@
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
 
+#include "tkm.h"
 #include "tkm_keymat.h"
 
 typedef struct private_tkm_keymat_t private_tkm_keymat_t;
@@ -35,6 +36,11 @@ struct private_tkm_keymat_t {
 	 * IKEv2 keymat proxy (will be removed).
 	 */
 	keymat_v2_t *proxy;
+
+	/**
+	 * IKE_SA Role, initiator or responder
+	 */
+	bool initiator;
 
 };
 
@@ -62,8 +68,21 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	DBG1(DBG_IKE, "deriving IKE keys");
-	return this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
-			nonce_r, id, rekey_function, rekey_skd);
+	chunk_t * const nonce = this->initiator ? &nonce_i : &nonce_r;
+	const uint64_t nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
+	if (!nc_id)
+	{
+		DBG1(DBG_IKE, "unable to acquire context id for nonce");
+		return FALSE;
+	}
+
+	if (this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
+				nonce_r, id, rekey_function, rekey_skd))
+	{
+		tkm->chunk_map->remove(tkm->chunk_map, nonce);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(tkm_keymat_t, derive_child_keys, bool,
@@ -136,6 +155,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
 		},
+		.initiator = initiator,
 		.proxy = keymat_v2_create(initiator),
 	);
 
