@@ -56,7 +56,12 @@ METHOD(nonce_gen_t, allocate_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(size);
-	return get_nonce(this, chunk->len, chunk->ptr);
+	if (get_nonce(this, chunk->len, chunk->ptr))
+	{
+		tkm->chunk_map->insert(tkm->chunk_map, chunk, this->context_id);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(nonce_gen_t, destroy, void,
