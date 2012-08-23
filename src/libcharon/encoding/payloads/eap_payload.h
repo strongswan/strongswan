@@ -83,6 +83,14 @@ struct eap_payload_t {
 	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
 
 	/**
+	 * Enumerate the EAP method types contained in an EAP-Nak (i.e. get_type()
+	 * returns EAP_NAK).
+	 *
+	 * @return			enumerator over (eap_type_t type, u_int32_t vendor)
+	 */
+	enumerator_t* (*get_types) (eap_payload_t *this);
+
+	/**
 	 * Check if the EAP method type is encoded in the Expanded Type format.
 	 *
 	 * @return			TRUE if in Expanded Type format

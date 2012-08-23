@@ -219,26 +219,85 @@ METHOD(eap_payload_t, get_identifier, u_int8_t,
 	return 0;
 }
 
+/**
+ * Get the current type at the given offset into this->data.
+ * @return	the new offset or 0 if failed
+ */
+static size_t extract_type(private_eap_payload_t *this, size_t offset,
+					       eap_type_t *type, u_int32_t *vendor)
+{
+	if (this->data.len > offset)
+	{
+		*vendor = 0;
+		*type = this->data.ptr[offset];
+		if (*type != EAP_EXPANDED)
+		{
+			return offset + 1;
+		}
+		if (this->data.len >= offset + 8)
+		{
+			*vendor = untoh32(this->data.ptr + offset) & 0x00FFFFFF;
+			*type = untoh32(this->data.ptr + offset + 4);
+			return offset + 8;
+		}
+	}
+	return 0;
+}
+
 METHOD(eap_payload_t, get_type, eap_type_t,
 	private_eap_payload_t *this, u_int32_t *vendor)
 {
 	eap_type_t type;
 
 	*vendor = 0;
-	if (this->data.len > 4)
+	if (extract_type(this, 4, &type, vendor))
 	{
-		type = this->data.ptr[4];
-		if (type != EAP_EXPANDED)
-		{
-			return type;
-		}
-		if (this->data.len >= 12)
-		{
-			*vendor = untoh32(this->data.ptr + 4) & 0x00FFFFFF;
-			return untoh32(this->data.ptr + 8);
-		}
+		return type;
 	}
 	return 0;
+}
+
+/**
+ * Type enumerator
+ */
+typedef struct {
+	/** public interface */
+	enumerator_t public;
+	/** payload */
+	private_eap_payload_t *payload;
+	/** current offset in the data */
+	size_t offset;
+} type_enumerator_t;
+
+METHOD(enumerator_t, enumerate_types, bool,
+	type_enumerator_t *this, eap_type_t *type, u_int32_t *vendor)
+{
+	this->offset = extract_type(this->payload, this->offset, type, vendor);
+	return this->offset;
+}
+
+METHOD(eap_payload_t, get_types, enumerator_t*,
+	private_eap_payload_t *this)
+{
+	type_enumerator_t *enumerator;
+	eap_type_t type;
+	u_int32_t vendor;
+	size_t offset;
+
+	offset = extract_type(this, 4, &type, &vendor);
+	if (offset && type == EAP_NAK)
+	{
+		INIT(enumerator,
+			.public = {
+				.enumerate = (void*)_enumerate_types,
+				.destroy = (void*)free,
+			},
+			.payload = this,
+			.offset = offset,
+		);
+		return &enumerator->public;
+	}
+	return enumerator_create_empty();
 }
 
 METHOD(eap_payload_t, is_expanded, bool,
@@ -278,6 +337,7 @@ eap_payload_t *eap_payload_create()
 			.get_code = _get_code,
 			.get_identifier = _get_identifier,
 			.get_type = _get_type,
+			.get_types = _get_types,
 			.is_expanded = _is_expanded,
 			.destroy = _destroy,
 		},
