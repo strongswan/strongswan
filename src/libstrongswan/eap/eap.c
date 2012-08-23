@@ -114,6 +114,7 @@ eap_type_t eap_type_from_string(char *name)
 		{"peap",		EAP_PEAP},
 		{"mschapv2",	EAP_MSCHAPV2},
 		{"tnc",			EAP_TNC},
+		{"dynamic",		EAP_DYNAMIC},
 		{"radius",		EAP_RADIUS},
 	};
 

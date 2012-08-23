@@ -316,6 +316,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_DYNAMIC
+  SUBDIRS += plugins/eap_dynamic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_dynamic/libstrongswan-eap-dynamic.la
+endif
+endif
+
 if USE_EAP_RADIUS
   SUBDIRS += plugins/eap_radius
 if MONOLITHIC
