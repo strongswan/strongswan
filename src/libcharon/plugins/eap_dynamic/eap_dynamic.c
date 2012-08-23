@@ -51,6 +51,11 @@ struct private_eap_dynamic_t {
 	linked_list_t *other_types;
 
 	/**
+	 * Prefer types sent by peer
+	 */
+	bool prefer_peer;
+
+	/**
 	 * The proxied EAP method
 	 */
 	eap_method_t *method;
@@ -90,41 +95,60 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 }
 
 /**
- * Select the first method we can instantiate and is (optionally) supported
- * by the client.
+ * Select the first method we can instantiate and is supported by both peers.
  */
 static void select_method(private_eap_dynamic_t *this)
 {
 	eap_vendor_type_t *entry;
+	linked_list_t *outer = this->types, *inner = this->other_types;
+	char *who = "peer";
 
-	while (this->types->remove_first(this->types, (void*)&entry) == SUCCESS)
+	if (this->other_types && this->prefer_peer)
 	{
-		if (this->other_types)
+		outer = this->other_types;
+		inner = this->types;
+		who = "us";
+	}
+
+	while (outer->remove_first(outer, (void*)&entry) == SUCCESS)
+	{
+		if (inner)
 		{
-			if (this->other_types->find_first(this->other_types,
-								(void*)entry_matches, NULL, entry) != SUCCESS)
+			if (inner->find_first(inner, (void*)entry_matches,
+								  NULL, entry) != SUCCESS)
 			{
 				if (entry->vendor)
 				{
-					DBG2(DBG_IKE, "skip vendor specific EAP method %d-%d not "
-						 "supported by peer", entry->type, entry->vendor);
+					DBG2(DBG_IKE, "proposed vendor specific EAP method %d-%d "
+						 "not supported by %s, skipped", entry->type,
+						  entry->vendor, who);
 				}
 				else
 				{
-					DBG2(DBG_IKE, "skip %N method not supported by peer",
-						 eap_type_names, entry->type);
+					DBG2(DBG_IKE, "proposed %N method not supported by %s, "
+						 "skipped", eap_type_names, entry->type, who);
 				}
 				free(entry);
 				continue;
 			}
 		}
 		this->method = load_method(this, entry->type, entry->vendor);
-		free(entry);
-
 		if (this->method)
 		{
+			if (entry->vendor)
+			{
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%d selected",
+					 entry->type, entry->vendor);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "%N method selected", eap_type_names,
+					 entry->type);
+			}
+			free(entry);
 			break;
 		}
+		free(entry);
 	}
 }
 
@@ -154,7 +178,9 @@ METHOD(eap_method_t, process, status_t,
 	{
 		enumerator_t *enumerator;
 
-		DBG1(DBG_IKE, "received %N", eap_type_names, EAP_NAK);
+		DBG1(DBG_IKE, "received %N, selecting a different EAP method",
+			 eap_type_names, EAP_NAK);
+
 		if (this->other_types)
 		{	/* we already received a Nak or a proper response before */
 			DBG1(DBG_IKE, "%N is not supported in this state", eap_type_names,
@@ -350,13 +376,15 @@ eap_dynamic_t *eap_dynamic_create(identification_t *server,
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
 		.types = linked_list_create(),
+		.prefer_peer = lib->settings->get_bool(lib->settings,
+					"%s.plugins.eap-dynamic.prefer_peer", FALSE, charon->name),
 	);
 
 	/* get all supported EAP methods */
 	get_supported_eap_types(this);
 	/* move preferred methods to the front */
 	preferred = lib->settings->get_str(lib->settings,
-						"%s.plugins.eap-dynamic.preferred", NULL, charon->name);
+					"%s.plugins.eap-dynamic.preferred", NULL, charon->name);
 	if (preferred)
 	{
 		handle_preferred_eap_types(this, preferred);
