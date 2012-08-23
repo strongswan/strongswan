@@ -1,6 +1,8 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +25,7 @@
 
 typedef enum eap_code_t eap_code_t;
 typedef enum eap_type_t eap_type_t;
+typedef struct eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
 
@@ -83,6 +86,22 @@ extern enum_name_t *eap_type_names;
 extern enum_name_t *eap_type_short_names;
 
 /**
+ * Struct that stores EAP type and vendor ID
+ */
+struct eap_vendor_type_t {
+
+	/**
+	 * EAP type
+	 */
+	eap_type_t type;
+
+	/**
+	 * Vendor Id
+	 */
+	u_int32_t vendor;
+};
+
+/**
  * EAP packet format
  */
 typedef struct __attribute__((packed)) {
@@ -100,5 +119,13 @@ typedef struct __attribute__((packed)) {
  * @return			method type, 0 if unknown
  */
 eap_type_t eap_type_from_string(char *name);
+
+/**
+ * Parse a string of the form [eap-]type[-vendor].
+ *
+ * @param str		EAP method string
+ * @return			parsed type (gets allocated), NULL if unknown or failed
+ */
+eap_vendor_type_t *eap_vendor_type_from_string(char *str);
 
 #endif /** EAP_H_ @}*/
