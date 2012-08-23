@@ -303,6 +303,16 @@ enable loaded duplicheck plugin
 .BR charon.plugins.eap-aka-3ggp2.seq_check
 
 .TP
+.BR charon.plugins.eap-dynamic.preferred
+The preferred EAP method(s) to be used.  If it is not given the first
+registered method will be used initially.  If a comma separated list is given
+the methods are tried in the given order before trying the rest of the
+registered methods.
+.TP
+.BR charon.plugins.eap-dynamic.prefer_user " [no]"
+If enabled the EAP methods proposed in an EAP-Nak message sent by the peer are
+preferred over the methods registered locally.
+.TP
 .BR charon.plugins.eap-gtc.backend " [pam]"
 XAuth backend to be used for credential verification
 .TP
