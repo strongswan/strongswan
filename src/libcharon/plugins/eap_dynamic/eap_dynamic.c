@@ -52,6 +52,14 @@ struct private_eap_dynamic_t {
 };
 
 /**
+ * Compare two eap_vendor_type_t objects
+ */
+static bool entry_matches(eap_vendor_type_t *item, eap_vendor_type_t *other)
+{
+	return item->type == other->type && item->vendor == other->vendor;
+}
+
+/**
  * Load the given EAP method
  */
 static eap_method_t *load_method(private_eap_dynamic_t *this,
@@ -181,6 +189,49 @@ METHOD(eap_method_t, destroy, void,
 }
 
 /**
+ * Parse preferred EAP types
+ */
+static void handle_preferred_eap_types(private_eap_dynamic_t *this,
+									   char *methods)
+{
+	enumerator_t *enumerator;
+	eap_vendor_type_t *type, *entry;
+	linked_list_t *preferred;
+	char *method;
+
+	/* parse preferred EAP methods, format: type[-vendor], ... */
+	preferred = linked_list_create();
+	enumerator = enumerator_create_token(methods, ",", " ");
+	while (enumerator->enumerate(enumerator, &method))
+	{
+		type = eap_vendor_type_from_string(method);
+		if (type)
+		{
+			preferred->insert_last(preferred, type);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = this->types->create_enumerator(this->types);
+	while (preferred->remove_last(preferred, (void**)&type) == SUCCESS)
+	{	/* move (supported) types to the front, maintain the preferred order */
+		this->types->reset_enumerator(this->types, enumerator);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			if (entry_matches(entry, type))
+			{
+				this->types->remove_at(this->types, enumerator);
+				this->types->insert_first(this->types, entry);
+				break;
+			}
+		}
+		free(type);
+	}
+	enumerator->destroy(enumerator);
+	preferred->destroy(preferred);
+}
+
+/**
  * Get all supported EAP methods
  */
 static void get_supported_eap_types(private_eap_dynamic_t *this)
@@ -210,6 +261,7 @@ eap_dynamic_t *eap_dynamic_create(identification_t *server,
 								  identification_t *peer)
 {
 	private_eap_dynamic_t *this;
+	char *preferred;
 
 	INIT(this,
 		.public = {
@@ -231,6 +283,12 @@ eap_dynamic_t *eap_dynamic_create(identification_t *server,
 
 	/* get all supported EAP methods */
 	get_supported_eap_types(this);
-
+	/* move preferred methods to the front */
+	preferred = lib->settings->get_str(lib->settings,
+						"%s.plugins.eap-dynamic.preferred", NULL, charon->name);
+	if (preferred)
+	{
+		handle_preferred_eap_types(this, preferred);
+	}
 	return &this->public;
 }
