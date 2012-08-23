@@ -41,20 +41,82 @@ struct private_eap_dynamic_t {
 	identification_t *peer;
 
 	/**
+	 * Our supported EAP types (as eap_vendor_type_t*)
+	 */
+	linked_list_t *types;
+
+	/**
 	 * The proxied EAP method
 	 */
 	eap_method_t *method;
 };
 
+/**
+ * Load the given EAP method
+ */
+static eap_method_t *load_method(private_eap_dynamic_t *this,
+								 eap_type_t type, u_int32_t vendor)
+{
+	eap_method_t *method;
+
+	method = charon->eap->create_instance(charon->eap, type, vendor, EAP_SERVER,
+										  this->server, this->peer);
+	if (!method)
+	{
+		if (vendor)
+		{
+			DBG1(DBG_IKE, "loading vendor specific EAP method %d-%d failed",
+				 type, vendor);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "loading %N method failed", eap_type_names, type);
+		}
+	}
+	return method;
+}
+
+/**
+ * Select the first method we can instantiate
+ */
+static void select_method(private_eap_dynamic_t *this)
+{
+	eap_vendor_type_t *entry;
+
+	while (this->types->remove_first(this->types, (void*)&entry) == SUCCESS)
+	{
+		this->method = load_method(this, entry->type, entry->vendor);
+		free(entry);
+
+		if (this->method)
+		{
+			break;
+		}
+	}
+}
+
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_dynamic_t *this, eap_payload_t **out)
 {
-	return FAILED;
+	if (!this->method)
+	{
+		select_method(this);
+		if (!this->method)
+		{
+			DBG1(DBG_IKE, "no supported EAP method found");
+			return FAILED;
+		}
+	}
+	return this->method->initiate(this->method, out);
 }
 
 METHOD(eap_method_t, process, status_t,
 	private_eap_dynamic_t *this, eap_payload_t *in, eap_payload_t **out)
 {
+	if (this->method)
+	{
+		return this->method->process(this->method, in, out);
+	}
 	return FAILED;
 }
 
@@ -112,9 +174,33 @@ METHOD(eap_method_t, destroy, void,
 	private_eap_dynamic_t *this)
 {
 	DESTROY_IF(this->method);
+	this->types->destroy_function(this->types, (void*)free);
 	this->server->destroy(this->server);
 	this->peer->destroy(this->peer);
 	free(this);
+}
+
+/**
+ * Get all supported EAP methods
+ */
+static void get_supported_eap_types(private_eap_dynamic_t *this)
+{
+	enumerator_t *enumerator;
+	eap_type_t type;
+	u_int32_t vendor;
+
+	enumerator = charon->eap->create_enumerator(charon->eap, EAP_SERVER);
+	while (enumerator->enumerate(enumerator, &type, &vendor))
+	{
+		eap_vendor_type_t *entry;
+
+		INIT(entry,
+			.type = type,
+			.vendor = vendor,
+		);
+		this->types->insert_last(this->types, entry);
+	}
+	enumerator->destroy(enumerator);
 }
 
 /*
@@ -140,7 +226,11 @@ eap_dynamic_t *eap_dynamic_create(identification_t *server,
 		},
 		.peer = peer->clone(peer),
 		.server = server->clone(server),
+		.types = linked_list_create(),
 	);
+
+	/* get all supported EAP methods */
+	get_supported_eap_types(this);
 
 	return &this->public;
 }
