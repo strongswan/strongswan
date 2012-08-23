@@ -25,6 +25,8 @@ typedef struct pb_pa_msg_t pb_pa_msg_t;
 
 #include "pb_tnc_msg.h"
 
+#include <pen/pen.h>
+
 /**
  * Class representing the PB-PA message type.
  */
@@ -38,10 +40,9 @@ struct pb_pa_msg_t {
 	/**
 	 * Get PA Message Vendor ID and Subtype
 	 *
-	 * @param subtype		PA Subtype
-	 * @return				PA Message Vendor ID
+	 * @return				Vendor-specific PA Subtype
 	 */
-	u_int32_t (*get_vendor_id)(pb_pa_msg_t *this, u_int32_t *subtype);
+	pen_type_t (*get_subtype)(pb_pa_msg_t *this);
 
 	/**
 	 * Get Posture Collector ID

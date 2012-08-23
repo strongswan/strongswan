@@ -68,14 +68,9 @@ struct private_pb_pa_msg_t {
 	bool excl;
 
 	/**
-	 * PA Message Vendor ID
+	 * Vendor-specific PA Subtype
 	 */
-	u_int32_t vendor_id;
-
-	/**
-	 * PA Subtype
-	 */
-	u_int32_t subtype;
+	pen_type_t subtype;
 
 	/**
 	 * Posture Validator Identifier
@@ -124,8 +119,8 @@ METHOD(pb_tnc_msg_t, build, void,
 	/* build message header */
 	writer = bio_writer_create(64);
 	writer->write_uint8 (writer, this->excl ? PA_FLAG_EXCL : PA_FLAG_NONE);
-	writer->write_uint24(writer, this->vendor_id);
-	writer->write_uint32(writer, this->subtype);
+	writer->write_uint24(writer, this->subtype.vendor_id);
+	writer->write_uint32(writer, this->subtype.type);
 	writer->write_uint16(writer, this->collector_id);
 	writer->write_uint16(writer, this->validator_id);
 	msg_header = writer->get_buf(writer);
@@ -145,8 +140,8 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	/* process message header */
 	reader = bio_reader_create(this->encoding);
 	reader->read_uint8 (reader, &flags);
-	reader->read_uint24(reader, &this->vendor_id);
-	reader->read_uint32(reader, &this->subtype);
+	reader->read_uint24(reader, &this->subtype.vendor_id);
+	reader->read_uint32(reader, &this->subtype.type);
 	reader->read_uint16(reader, &this->collector_id);
 	reader->read_uint16(reader, &this->validator_id);
 	this->excl = ((flags & PA_FLAG_EXCL) != PA_FLAG_NONE);
@@ -160,14 +155,14 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	}
 	reader->destroy(reader);
 
-	if (this->vendor_id == PEN_RESERVED)
+	if (this->subtype.vendor_id == PEN_RESERVED)
 	{
 		DBG1(DBG_TNC, "Vendor ID 0x%06x is reserved", PEN_RESERVED);
 		*offset = 1;
 		return FAILED;
 	}
 
-	if (this->subtype == PA_RESERVED_SUBTYPE)
+	if (this->subtype.type == PA_RESERVED_SUBTYPE)
 	{
 		DBG1(DBG_TNC, "PA Subtype 0x%08x is reserved", PA_RESERVED_SUBTYPE);
 		*offset = 4;
@@ -184,11 +179,10 @@ METHOD(pb_tnc_msg_t, destroy, void,
 	free(this);
 }
 
-METHOD(pb_pa_msg_t, get_vendor_id, u_int32_t,
-	private_pb_pa_msg_t *this, u_int32_t *subtype)
+METHOD(pb_pa_msg_t, get_subtype, pen_type_t,
+	private_pb_pa_msg_t *this)
 {
-	*subtype = this->subtype;
-	return this->vendor_id;
+	return this->subtype;
 }
 
 METHOD(pb_pa_msg_t, get_collector_id, u_int16_t,
@@ -230,7 +224,7 @@ pb_tnc_msg_t *pb_pa_msg_create_from_data(chunk_t data)
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_vendor_id = _get_vendor_id,
+			.get_subtype = _get_subtype,
 			.get_collector_id = _get_collector_id,
 			.get_validator_id = _get_validator_id,
 			.get_body = _get_body,
@@ -261,15 +255,14 @@ pb_tnc_msg_t *pb_pa_msg_create(u_int32_t vendor_id, u_int32_t subtype,
 				.process = _process,
 				.destroy = _destroy,
 			},
-			.get_vendor_id = _get_vendor_id,
+			.get_subtype= _get_subtype,
 			.get_collector_id = _get_collector_id,
 			.get_validator_id = _get_validator_id,
 			.get_body = _get_body,
 			.get_exclusive_flag = _get_exclusive_flag,
 		},
 		.type = PB_MSG_PA,
-		.vendor_id = vendor_id,
-		.subtype = subtype,
+		.subtype = { vendor_id, subtype },
 		.collector_id = collector_id,
 		.validator_id = validator_id,
 		.excl = excl,
