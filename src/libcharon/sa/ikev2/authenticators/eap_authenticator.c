@@ -187,9 +187,9 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	if (this->method)
 	{
 		action = "initiating";
-		type = this->method->get_type(this->method, &vendor);
 		if (this->method->initiate(this->method, &out) == NEED_MORE)
 		{
+			type = this->method->get_type(this->method, &vendor);
 			if (vendor)
 			{
 				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method (id 0x%02X)",
@@ -202,6 +202,8 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 			}
 			return out;
 		}
+		/* type might have changed for virtual methods */
+		type = this->method->get_type(this->method, &vendor);
 	}
 	if (vendor)
 	{
@@ -314,6 +316,8 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			return eap_payload_create_code(EAP_SUCCESS, in->get_identifier(in));
 		case FAILED:
 		default:
+			/* type might have changed for virtual methods */
+			type = this->method->get_type(this->method, &vendor);
 			if (vendor)
 			{
 				DBG1(DBG_IKE, "EAP vendor specific method %d-%d failed for "
