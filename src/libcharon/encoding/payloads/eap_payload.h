@@ -83,6 +83,13 @@ struct eap_payload_t {
 	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
 
 	/**
+	 * Check if the EAP method type is encoded in the Expanded Type format.
+	 *
+	 * @return			TRUE if in Expanded Type format
+	 */
+	bool (*is_expanded) (eap_payload_t *this);
+
+	/**
 	 * Destroys an eap_payload_t object.
 	 */
 	void (*destroy) (eap_payload_t *this);
@@ -129,8 +136,7 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  * @param identifier	EAP identifier to use in payload
  * @param type			preferred auth type, 0 to send all supported types
  * @param vendor		vendor identifier for auth type, 0 for default
- * @param expanded		TRUE to send an expanded Nak (as response to an expanded
- * 						request, i.e. one with vendor specific type)
+ * @param expanded		TRUE to send an expanded Nak
  * @return 				eap_payload_t object
  */
 eap_payload_t *eap_payload_create_nak(u_int8_t identifier, eap_type_t type,

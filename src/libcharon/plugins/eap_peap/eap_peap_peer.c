@@ -152,7 +152,7 @@ METHOD(tls_application_t, process, status_t,
 		{
 			DBG1(DBG_IKE, "EAP method not supported");
 			this->out = eap_payload_create_nak(in->get_identifier(in), 0, 0,
-											   received_vendor != 0);
+											   in->is_expanded(in));
 			in->destroy(in);
 			return NEED_MORE;
 		}

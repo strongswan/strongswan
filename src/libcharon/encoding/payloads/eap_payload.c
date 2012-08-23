@@ -241,6 +241,12 @@ METHOD(eap_payload_t, get_type, eap_type_t,
 	return 0;
 }
 
+METHOD(eap_payload_t, is_expanded, bool,
+	private_eap_payload_t *this)
+{
+	return this->data.len > 4 ? this->data.ptr[4] == EAP_EXPANDED : FALSE;
+}
+
 METHOD2(payload_t, eap_payload_t, destroy, void,
 	private_eap_payload_t *this)
 {
@@ -272,6 +278,7 @@ eap_payload_t *eap_payload_create()
 			.get_code = _get_code,
 			.get_identifier = _get_identifier,
 			.get_type = _get_type,
+			.is_expanded = _is_expanded,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,

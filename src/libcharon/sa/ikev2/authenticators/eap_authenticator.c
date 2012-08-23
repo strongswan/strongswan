@@ -404,14 +404,14 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 					 eap_type_names, conf_type);
 			}
 			return eap_payload_create_nak(in->get_identifier(in), conf_type,
-										  conf_vendor, vendor != 0);
+										  conf_vendor, in->is_expanded(in));
 		}
 		this->method = load_method(this, type, vendor, EAP_PEER);
 		if (!this->method)
 		{
 			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
 			return eap_payload_create_nak(in->get_identifier(in), 0, 0,
-										  vendor != 0);
+										  in->is_expanded(in));
 		}
 	}
 
