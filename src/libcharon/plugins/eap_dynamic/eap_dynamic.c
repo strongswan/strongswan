@@ -46,6 +46,11 @@ struct private_eap_dynamic_t {
 	linked_list_t *types;
 
 	/**
+	 * EAP types supported by peer, if any
+	 */
+	linked_list_t *other_types;
+
+	/**
 	 * The proxied EAP method
 	 */
 	eap_method_t *method;
@@ -85,7 +90,8 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 }
 
 /**
- * Select the first method we can instantiate
+ * Select the first method we can instantiate and is (optionally) supported
+ * by the client.
  */
 static void select_method(private_eap_dynamic_t *this)
 {
@@ -93,6 +99,25 @@ static void select_method(private_eap_dynamic_t *this)
 
 	while (this->types->remove_first(this->types, (void*)&entry) == SUCCESS)
 	{
+		if (this->other_types)
+		{
+			if (this->other_types->find_first(this->other_types,
+								(void*)entry_matches, NULL, entry) != SUCCESS)
+			{
+				if (entry->vendor)
+				{
+					DBG2(DBG_IKE, "skip vendor specific EAP method %d-%d not "
+						 "supported by peer", entry->type, entry->vendor);
+				}
+				else
+				{
+					DBG2(DBG_IKE, "skip %N method not supported by peer",
+						 eap_type_names, entry->type);
+				}
+				free(entry);
+				continue;
+			}
+		}
 		this->method = load_method(this, entry->type, entry->vendor);
 		free(entry);
 
@@ -121,6 +146,51 @@ METHOD(eap_method_t, initiate, status_t,
 METHOD(eap_method_t, process, status_t,
 	private_eap_dynamic_t *this, eap_payload_t *in, eap_payload_t **out)
 {
+	eap_type_t received_type, type;
+	u_int32_t received_vendor, vendor;
+
+	received_type = in->get_type(in, &received_vendor);
+	if (received_vendor == 0 && received_type == EAP_NAK)
+	{
+		enumerator_t *enumerator;
+
+		DBG1(DBG_IKE, "received %N", eap_type_names, EAP_NAK);
+		if (this->other_types)
+		{	/* we already received a Nak or a proper response before */
+			DBG1(DBG_IKE, "%N is not supported in this state", eap_type_names,
+				 EAP_NAK);
+			return FAILED;
+		}
+
+		this->other_types = linked_list_create();
+		enumerator = in->get_types(in);
+		while (enumerator->enumerate(enumerator, &type, &vendor))
+		{
+			eap_vendor_type_t *entry;
+
+			if (!type)
+			{
+				DBG1(DBG_IKE, "peer does not support any other EAP methods");
+				enumerator->destroy(enumerator);
+				return FAILED;
+			}
+			INIT(entry,
+				.type = type,
+				.vendor = vendor,
+			);
+			this->other_types->insert_last(this->other_types, entry);
+		}
+		enumerator->destroy(enumerator);
+
+		/* restart with a different method */
+		this->method->destroy(this->method);
+		this->method = NULL;
+		return initiate(this, out);
+	}
+	if (!this->other_types)
+	{	/* so we don't handle EAP-Naks later */
+		this->other_types = linked_list_create();
+	}
 	if (this->method)
 	{
 		return this->method->process(this->method, in, out);
@@ -183,6 +253,7 @@ METHOD(eap_method_t, destroy, void,
 {
 	DESTROY_IF(this->method);
 	this->types->destroy_function(this->types, (void*)free);
+	DESTROY_FUNCTION_IF(this->other_types, (void*)free);
 	this->server->destroy(this->server);
 	this->peer->destroy(this->peer);
 	free(this);
