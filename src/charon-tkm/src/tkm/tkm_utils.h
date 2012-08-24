@@ -30,4 +30,12 @@
 void sequence_to_chunk(const byte_t * const first, const uint32_t len,
 		chunk_t * const chunk);
 
+/**
+ * Convert chunk to variable-length byte sequence.
+ *
+ * @param chunk		pointer to chunk struct
+ * @param sequence	pointer to variable-length sequence
+ */
+void chunk_to_sequence(const chunk_t * const chunk, void *sequence);
+
 #endif /** TKM_UTILS_H_ */

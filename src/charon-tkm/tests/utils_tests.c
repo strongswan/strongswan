@@ -36,10 +36,28 @@ START_TEST(test_sequence_to_chunk)
 }
 END_TEST
 
+START_TEST(test_chunk_to_sequence)
+{
+	chunk_t chunk = chunk_from_thing("ABCDEFGH");
+	key_type key;
+
+	chunk_to_sequence(&chunk, &key);
+	fail_if(key.size != chunk.len, "Seq size mismatch");
+
+	uint32_t i;
+	for (i = 0; i < key.size - 1; i++)
+	{
+		fail_if(key.data[i] != 65 + i, "Data mismatch (1)");
+	}
+	fail_if(key.data[key.size - 1] != 0, "Data mismatch (2)");
+}
+END_TEST
+
 TCase *make_utility_tests(void)
 {
 	TCase *tc = tcase_create("Utility tests");
 	tcase_add_test(tc, test_sequence_to_chunk);
+	tcase_add_test(tc, test_chunk_to_sequence);
 
 	return tc;
 }

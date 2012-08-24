@@ -16,9 +16,23 @@
 
 #include "tkm_utils.h"
 
+/* Generic variable-length sequence */
+struct sequence_type {
+	uint32_t size;
+	byte_t data[];
+};
+typedef struct sequence_type sequence_type;
+
 void sequence_to_chunk(const byte_t * const first, const uint32_t len,
 		chunk_t * const chunk)
 {
 	*chunk = chunk_alloc(len);
 	memcpy(chunk->ptr, first, len);
+}
+
+void chunk_to_sequence(const chunk_t * const chunk, void *sequence)
+{
+	sequence_type *seq = sequence;
+	seq->size = chunk->len;
+	memcpy(seq->data, chunk->ptr, seq->size);
 }
