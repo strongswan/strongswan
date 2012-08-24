@@ -14,15 +14,20 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
+#ifndef TKM_UTILS_H_
+#define TKM_UTILS_H_
 
-#include <check.h>
+#include <utils/chunk.h>
+#include <tkm/types.h>
 
-TCase *make_id_manager_tests(void);
-TCase *make_chunk_map_tests(void);
-TCase *make_utility_tests(void);
-TCase *make_nonceg_tests(void);
-TCase *make_diffie_hellman_tests(void);
+/**
+ * Convert byte sequence to chunk.
+ *
+ * @param first		pointer to first byte of sequence
+ * @param len		length of byte sequence
+ * @param chunk		pointer to chunk struct
+ */
+void sequence_to_chunk(const byte_t * const first, const uint32_t len,
+		chunk_t * const chunk);
 
-#endif /** TEST_RUNNER_H_ */
+#endif /** TKM_UTILS_H_ */

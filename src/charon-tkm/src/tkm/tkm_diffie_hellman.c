@@ -18,6 +18,7 @@
 #include <tkm/constants.h>
 
 #include "tkm.h"
+#include "tkm_utils.h"
 #include "tkm_diffie_hellman.h"
 
 #include <utils/debug.h>
@@ -54,8 +55,7 @@ struct private_tkm_diffie_hellman_t {
 METHOD(diffie_hellman_t, get_my_public_value, void,
 	private_tkm_diffie_hellman_t *this, chunk_t *value)
 {
-	*value = chunk_alloc(this->pubvalue.size);
-	memcpy(value->ptr, &this->pubvalue.data, value->len);
+	sequence_to_chunk(this->pubvalue.data, this->pubvalue.size, value);
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, status_t,
@@ -67,8 +67,7 @@ METHOD(diffie_hellman_t, get_shared_secret, status_t,
 		return FAILED;
 	}
 
-	*secret = chunk_alloc(shared_secret.size);
-	memcpy(secret->ptr, &shared_secret.data, secret->len);
+	sequence_to_chunk(&shared_secret.data[0], shared_secret.size, secret);
 	return SUCCESS;
 }
 

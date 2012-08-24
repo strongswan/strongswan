@@ -14,15 +14,11 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
+#include "tkm_utils.h"
 
-#include <check.h>
-
-TCase *make_id_manager_tests(void);
-TCase *make_chunk_map_tests(void);
-TCase *make_utility_tests(void);
-TCase *make_nonceg_tests(void);
-TCase *make_diffie_hellman_tests(void);
-
-#endif /** TEST_RUNNER_H_ */
+void sequence_to_chunk(const byte_t * const first, const uint32_t len,
+		chunk_t * const chunk)
+{
+	*chunk = chunk_alloc(len);
+	memcpy(chunk->ptr, first, len);
+}

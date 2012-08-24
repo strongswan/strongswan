@@ -29,6 +29,7 @@ int main(void)
 	Suite *s = suite_create("TKM tests");
 	suite_add_tcase(s, make_id_manager_tests());
 	suite_add_tcase(s, make_chunk_map_tests());
+	suite_add_tcase(s, make_utility_tests());
 	suite_add_tcase(s, make_nonceg_tests());
 	suite_add_tcase(s, make_diffie_hellman_tests());
 

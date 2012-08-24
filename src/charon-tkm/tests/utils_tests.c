@@ -14,15 +14,32 @@
  * for more details.
  */
 
-#ifndef TEST_RUNNER_H_
-#define TEST_RUNNER_H_
-
 #include <check.h>
+#include <tkm/types.h>
 
-TCase *make_id_manager_tests(void);
-TCase *make_chunk_map_tests(void);
-TCase *make_utility_tests(void);
-TCase *make_nonceg_tests(void);
-TCase *make_diffie_hellman_tests(void);
+#include "tkm_utils.h"
 
-#endif /** TEST_RUNNER_H_ */
+START_TEST(test_sequence_to_chunk)
+{
+	key_type key = {5, {0, 1, 2, 3, 4}};
+	chunk_t chunk = chunk_empty;
+
+	sequence_to_chunk(key.data, key.size, &chunk);
+	fail_if(chunk.len != key.size, "Chunk size mismatch");
+
+	uint32_t i;
+	for (i = 0; i < key.size; i++)
+	{
+		fail_if(chunk.ptr[i] != i, "Data mismatch");
+	}
+	chunk_free(&chunk);
+}
+END_TEST
+
+TCase *make_utility_tests(void)
+{
+	TCase *tc = tcase_create("Utility tests");
+	tcase_add_test(tc, test_sequence_to_chunk);
+
+	return tc;
+}
