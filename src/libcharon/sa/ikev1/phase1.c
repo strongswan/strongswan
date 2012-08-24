@@ -587,14 +587,26 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 METHOD(phase1_t, get_id, identification_t*,
 	private_phase1_t *this, peer_cfg_t *peer_cfg, bool local)
 {
+	identification_t *id = NULL;
 	auth_cfg_t *auth;
 
 	auth = get_auth_cfg(peer_cfg, local);
 	if (auth)
 	{
-		return auth->get(auth, AUTH_RULE_IDENTITY);
+		id = auth->get(auth, AUTH_RULE_IDENTITY);
+		if (local && (!id || id->get_type(id) == ID_ANY))
+		{	/* no ID configured, use local IP address */
+			host_t *me;
+
+			me = this->ike_sa->get_my_host(this->ike_sa);
+			if (!me->is_anyaddr(me))
+			{
+				id = identification_create_from_sockaddr(me->get_sockaddr(me));
+				auth->add(auth, AUTH_RULE_IDENTITY, id);
+			}
+		}
 	}
-	return NULL;
+	return id;
 }
 
 METHOD(phase1_t, save_sa_payload, bool,
