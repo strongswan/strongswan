@@ -178,7 +178,6 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 					1800, 900,						/* jitter, overtime */
 					TRUE, FALSE,				/* mobike, aggressive */
 					60, 0,						/* DPD delay, timeout */
-					NULL,						/* pool */
 					FALSE, NULL, NULL);			/* mediation, med by, peer id */
 		auth = auth_cfg_create();
 		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);

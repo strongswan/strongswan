@@ -109,6 +109,14 @@ struct phase1_t {
 	identification_t* (*get_id)(phase1_t *this, peer_cfg_t *peer_cfg, bool local);
 
 	/**
+	 * Check if peer config has virtual IPs pool assigned.
+	 *
+	 * @param peer_cfg		peer_config to check
+	 * @return				TRUE if peer config contains at least one pool
+	 */
+	bool (*has_pool)(phase1_t *this, peer_cfg_t *peer_cfg);
+
+	/**
 	 * Check if peer config has virtual IPs to request
 	 *
 	 * @param peer_cfg		peer_config to check

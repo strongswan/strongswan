@@ -413,23 +413,24 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 		}
 		if (received_vip)
 		{
+			enumerator_t *pools, *vips;
 			host_t *vip;
 			char *pool;
 
 			peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 			if (peer_cfg)
 			{
-				pool = peer_cfg->get_pool(peer_cfg);
-				if (pool)
+				pools = peer_cfg->create_pool_enumerator(peer_cfg);
+				while (pools->enumerate(pools, &pool))
 				{
-					enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa,
-																	  FALSE);
-					while (enumerator->enumerate(enumerator, &vip))
+					vips = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+					while (vips->enumerate(vips, &vip))
 					{
 						this->attr->reserve(this->attr, pool, vip);
 					}
-					enumerator->destroy(enumerator);
+					vips->destroy(vips);
 				}
+				pools->destroy(pools);
 			}
 		}
 		if (ike_sa->get_version(ike_sa) == IKEV1)

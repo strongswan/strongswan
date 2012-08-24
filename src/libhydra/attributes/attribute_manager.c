@@ -87,7 +87,7 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 	return host;
 }
 
-METHOD(attribute_manager_t, release_address, void,
+METHOD(attribute_manager_t, release_address, bool,
 	private_attribute_manager_t *this, char *pool, host_t *address,
 	identification_t *id)
 {
@@ -108,10 +108,7 @@ METHOD(attribute_manager_t, release_address, void,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (!found)
-	{
-		DBG1(DBG_CFG, "releasing address to pool '%s' failed", pool);
-	}
+	return found;
 }
 
 /**

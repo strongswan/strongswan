@@ -348,11 +348,20 @@ static bool mode_config_expected(private_task_manager_t *this)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
+	char *pool;
 	host_t *host;
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && peer_cfg->get_pool(peer_cfg))
+	if (peer_cfg)
 	{
+		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
+		if (!enumerator->enumerate(enumerator, &pool))
+		{	/* no pool configured */
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		enumerator->destroy(enumerator);
+
 		enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa,
 																FALSE);
 		if (!enumerator->enumerate(enumerator, &host))

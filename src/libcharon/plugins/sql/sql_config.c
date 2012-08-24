@@ -371,11 +371,15 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			peer_cfg = peer_cfg_create(
 					name, IKEV2, ike, cert_policy, uniqueid,
 					keyingtries, rekeytime, reauthtime, jitter, overtime,
-					mobike, FALSE, dpd_delay, 0, pool,
+					mobike, FALSE, dpd_delay, 0,
 					mediation, mediated_cfg, peer_id);
 			if (vip)
 			{
 				peer_cfg->add_virtual_ip(peer_cfg, vip);
+			}
+			if (pool)
+			{
+				peer_cfg->add_pool(peer_cfg, pool);
 			}
 			auth = auth_cfg_create();
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_method);

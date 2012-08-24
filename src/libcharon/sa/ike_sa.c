@@ -2055,11 +2055,21 @@ METHOD(ike_sa_t, destroy, void,
 	while (this->other_vips->remove_last(this->other_vips,
 										 (void**)&vip) == SUCCESS)
 	{
-		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
+		if (this->peer_cfg)
 		{
-			hydra->attributes->release_address(hydra->attributes,
-							this->peer_cfg->get_pool(this->peer_cfg),
-							vip, get_other_eap_id(this));
+			enumerator_t *enumerator;
+			char *pool;
+
+			enumerator = this->peer_cfg->create_pool_enumerator(this->peer_cfg);
+			while (enumerator->enumerate(enumerator, &pool))
+			{
+				if (hydra->attributes->release_address(hydra->attributes, pool,
+												vip, get_other_eap_id(this)))
+				{
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
 		}
 		vip->destroy(vip);
 	}

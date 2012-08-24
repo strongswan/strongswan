@@ -268,10 +268,14 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 							   FALSE, FALSE, /* mobike, aggressive mode */
 							   this->dpd_delay,   /* dpd_delay */
 							   this->dpd_timeout, /* dpd_timeout */
-							   this->pool, FALSE, NULL, NULL);
+							   FALSE, NULL, NULL);
 	if (this->vip)
 	{
 		peer_cfg->add_virtual_ip(peer_cfg, this->vip->clone(this->vip));
+	}
+	if (this->pool)
+	{
+		peer_cfg->add_pool(peer_cfg, this->pool);
 	}
 	if (num)
 	{	/* initiator */

@@ -321,17 +321,25 @@ METHOD(task_t, build_r, status_t,
 		cp_payload_t *cp = NULL;
 		peer_cfg_t *config;
 		identification_t *id;
+		char *pool;
 
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
 
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
+		enumerator = config->create_pool_enumerator(config);
+		if (!enumerator->enumerate(enumerator, &pool))
+		{	/* TODO: currently we query the first pool, only */
+			pool = NULL;
+		}
+		enumerator->destroy(enumerator);
+
 		if (this->virtual_ip)
 		{
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			if (config->get_pool(config))
+			if (pool)
 			{
 				vip = hydra->attributes->acquire_address(hydra->attributes,
-							config->get_pool(config), id, this->virtual_ip);
+												pool, id, this->virtual_ip);
 			}
 			if (vip == NULL)
 			{
@@ -350,7 +358,7 @@ METHOD(task_t, build_r, status_t,
 
 		/* query registered providers for additional attributes to include */
 		enumerator = hydra->attributes->create_responder_enumerator(
-						hydra->attributes, config->get_pool(config), id, vip);
+											hydra->attributes, pool, id, vip);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)

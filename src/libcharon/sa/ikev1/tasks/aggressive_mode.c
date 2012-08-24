@@ -497,7 +497,7 @@ METHOD(task_t, process_r, status_t,
 										this->ike_sa->get_id(this->ike_sa)));
 					break;
 			}
-			if (this->peer_cfg->get_pool(this->peer_cfg) == NULL &&
+			if (!this->ph1->has_pool(this->ph1, this->peer_cfg) &&
 				this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
 			{
 				this->ike_sa->queue_task(this->ike_sa,

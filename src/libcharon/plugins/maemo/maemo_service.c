@@ -335,7 +335,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 							   600, 600, /* jitter, over 10min */
 							   TRUE, FALSE, /* mobike, aggressive */
 							   0, 0, /* DPD delay, timeout */
-							   NULL, FALSE, NULL, NULL); /* pool, mediation */
+							   FALSE, NULL, NULL); /* mediation */
 	peer_cfg->add_virtual_ip(peer_cfg,  host_create_from_string("0.0.0.0", 0));
 
 	auth = auth_cfg_create();
