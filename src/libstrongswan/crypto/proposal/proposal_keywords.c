@@ -20,51 +20,13 @@
  * THE SOFTWARE.
  */
 
-/**
- * @defgroup proposal_keywords proposal_keywords
- * @{ @ingroup crypto
+#include "proposal_keywords.h"
+#include "proposal_keywords_static.h"
+
+/*
+ * see header file
  */
-
-#ifndef PROPOSAL_KEYWORDS_H_
-#define PROPOSAL_KEYWORDS_H_
-
-#include <crypto/transform.h>
-
-typedef struct proposal_token proposal_token_t;
-
-/**
- * Class representing a proposal token..
- */
-struct proposal_token {
-
-	/**
-	 * The name of the token.
-	 */
-	char *name;
-
-	/**
-	 * The type of transform in the token.
-	 */
-	transform_type_t type;
-
-	/**
-	 * The IKE id of the algorithm.
-	 */
-	u_int16_t algorithm;
-
-	/**
-	 * The key size associated with the specific algorithm.
-	 */
-	u_int16_t keysize;
-};
-
-/**
- * Returns a proposal token for the specified string if a token exists.
- *
- * @param str		the string containing the name of the token
- * @param len		the length of the string
- * @return			proposal_tolen if found otherwise NULL
- */
-const proposal_token_t* proposal_get_token(const char *str, u_int len);
-
-#endif /** PROPOSAL_KEYWORDS_H_ @}*/
+const proposal_token_t* proposal_get_token(const char *str, u_int len)
+{
+	return proposal_get_token_static(str, len);
+}

@@ -6,7 +6,8 @@ LOCAL_SRC_FILES := \
 library.c chunk.c debug.c enum.c settings.c printf_hook.c asn1/asn1.c \
 asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs7.c crypto/pkcs9.c \
-crypto/proposal/proposal_keywords.c crypto/prfs/prf.c crypto/prfs/mac_prf.c \
+crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
+crypto/prfs/prf.c crypto/prfs/mac_prf.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
