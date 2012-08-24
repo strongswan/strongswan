@@ -83,6 +83,22 @@ struct private_sender_t {
 METHOD(sender_t, send_no_marker, void,
 	private_sender_t *this, packet_t *packet)
 {
+	this->mutex->lock(this->mutex);
+	this->list->insert_last(this->list, packet);
+	this->got->signal(this->got);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(sender_t, send_, void,
+	private_sender_t *this, packet_t *packet)
+{
+	host_t *src, *dst;
+
+	/* if neither source nor destination port is 500 we add a Non-ESP marker */
+	src = packet->get_source(packet);
+	dst = packet->get_destination(packet);
+	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
+
 	if (this->send_delay)
 	{
 		message_t *message;
@@ -103,22 +119,6 @@ METHOD(sender_t, send_no_marker, void,
 		}
 		message->destroy(message);
 	}
-
-	this->mutex->lock(this->mutex);
-	this->list->insert_last(this->list, packet);
-	this->got->signal(this->got);
-	this->mutex->unlock(this->mutex);
-}
-
-METHOD(sender_t, send_, void,
-	private_sender_t *this, packet_t *packet)
-{
-	host_t *src, *dst;
-
-	/* if neither source nor destination port is 500 we add a Non-ESP marker */
-	src = packet->get_source(packet);
-	dst = packet->get_destination(packet);
-	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
 
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
