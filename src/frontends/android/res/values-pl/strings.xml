@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 Giuliano Grassi
+    Copyright (C) 2012 Ralf Sager
+    Copyright (C) 2012 Andreas Steffen
+    HSR Hochschule fuer Technik Rapperswil
+
+    Copyright (C) 2012 Ewa Steffen-Zolkiewicz
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+
+    <!-- Application -->
+    <string name="app_name">strongSwan klient VPN</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="reload_trusted_certs">Przeładuj certyfikaty CA</string>
+    <string name="show_log">Pokaż log</string>
+    <string name="search">Szukaj</string>
+    <string name="vpn_not_supported_title">Nie obsługiwany VPN</string>
+    <string name="vpn_not_supported">Urządzenie nie obsługuje aplikacji VPN.\nProszę skontaktować się z producentem.</string>
+
+    <!-- Log view -->
+    <string name="log_title">Log</string>
+    <string name="send_log">Prześlij log</string>
+    <string name="empty_log">Log jest pusty</string>
+    <string name="log_mail_subject">strongSwan %1$s Log</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">Brak profilu VPN</string>
+    <string name="add_profile">Dodaj profil VPN</string>
+    <string name="edit_profile">Edytuj</string>
+    <string name="delete_profile">Usuń</string>
+    <string name="select_profiles">Wybierz profile</string>
+    <string name="profiles_deleted">Wybrane profile usunięte</string>
+    <string name="no_profile_selected">Nie wybrano profilu</string>
+    <string name="one_profile_selected">Wybrano jeden profil</string>
+    <string name="x_profiles_selected">Wzbrano %1$d profile"</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">Zapisz</string>
+    <string name="profile_edit_cancel">Anuluj</string>
+    <string name="profile_name_label">Nazwa profilu:</string>
+    <string name="profile_name_hint">(użyj adresu bramki)</string>
+    <string name="profile_gateway_label">Bramka:</string>
+    <string name="profile_username_label">Użytkownik:</string>
+    <string name="profile_password_label">Hasło:</string>
+    <string name="profile_password_hint">(w razie potrzebz zapromptuj)</string>
+    <string name="profile_ca_label">Certyfikat CA:</string>
+    <string name="profile_ca_auto_label">Wybierz automatycznie</string>
+    <string name="profile_ca_select_certificate_label">Wybierz certyfikat CA</string>
+    <string name="profile_ca_select_certificate">Wybierz określony certyfikat CA</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">Wprowadź adres bramki</string>
+    <string name="alert_text_no_input_username">Wprowadź swoją nazwę użytkownika</string>
+    <string name="alert_text_nocertfound_title">Nie wybrano żadnego certyfikatu CA</string>
+    <string name="alert_text_nocertfound">Wybierz lub uaktywnij jeden <i>Wybierz automatycznie</i></string>
+
+    <!-- Trusted certificate selection -->
+    <string name="trusted_certs_title">Certyfikaty CA</string>
+    <string name="no_certificates">Brak certyfikatów</string>
+    <string name="system_tab">System</string>
+    <string name="user_tab">Użytkownik</string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">Status:</string>
+    <string name="profile_label">Profil:</string>
+    <string name="disconnect">Rozłącz</string>
+    <string name="state_connecting">Łączenie&#8230;</string>
+    <string name="state_connected">Połączony</string>
+    <string name="state_disconnecting">Przerywam połączenie&#8230;</string>
+    <string name="state_disabled">Brak aktywnego VPN</string>
+    <string name="state_error">Błąd</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">Wprowadż hasło</string>
+    <string name="login_confirm">Połącz</string>
+    <string name="error_introduction">Nie udało się utworzyć tunelu VPN:</string>
+    <string name="error_lookup_failed">Nie znaleziono adresu bramki</string>
+    <string name="error_unreachable">Bramka jest nieosiągalna</string>
+    <string name="error_peer_auth_failed">Błąd przy weryfikacji bramki</string>
+    <string name="error_auth_failed">Błąd przy autoryzacji użytkownika</string>
+    <string name="error_generic">Nieznany błąd w czasie połączenia</string>
+    <string name="connecting_title">Łączenie: %1$s</string>
+    <string name="connecting_message">Tworzenie tunelu VPN z \""%1$s\".</string>
+
+</resources>
