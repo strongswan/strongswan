@@ -162,6 +162,12 @@ METHOD(mem_pool_t, get_name, const char*,
 	return this->name;
 }
 
+METHOD(mem_pool_t, get_base, host_t*,
+	private_mem_pool_t *this)
+{
+	return this->base;
+}
+
 METHOD(mem_pool_t, get_size, u_int,
 	private_mem_pool_t *this)
 {
@@ -463,6 +469,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
+			.get_base = _get_base,
 			.get_size = _get_size,
 			.get_online = _get_online,
 			.get_offline = _get_offline,
