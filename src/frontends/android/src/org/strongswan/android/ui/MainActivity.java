@@ -31,7 +31,6 @@ import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.VpnService;
@@ -50,8 +49,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	private static final String SHOW_ERROR_DIALOG = "errordialog";
 	private static final int PREPARE_VPN_SERVICE = 0;
 
-	private VpnProfile activeProfile;
 	private AlertDialog mErrorDialog;
+	private Bundle mProfileInfo;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -116,10 +115,13 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	/**
 	 * Prepare the VpnService. If this succeeds the current VPN profile is
 	 * started.
+	 * @param profileInfo a bundle containing the information about the profile to be started
 	 */
-	protected void prepareVpnService()
+	protected void prepareVpnService(Bundle profileInfo)
 	{
 		Intent intent = VpnService.prepare(this);
+		/* store profile info until the user grants us permission */
+		mProfileInfo = profileInfo;
 		if (intent != null)
 		{
 			try
@@ -136,7 +138,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 			}
 		}
 		else
-		{
+		{	/* user already granted permission to use VpnService */
 			onActivityResult(PREPARE_VPN_SERVICE, RESULT_OK, null);
 		}
 	}
@@ -147,12 +149,10 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		switch (requestCode)
 		{
 			case PREPARE_VPN_SERVICE:
-				if (resultCode == RESULT_OK && activeProfile != null)
+				if (resultCode == RESULT_OK && mProfileInfo != null)
 				{
 					Intent intent = new Intent(this, CharonVpnService.class);
-					intent.putExtra(VpnProfileDataSource.KEY_ID, activeProfile.getId());
-					/* submit the password as the profile might not store one */
-					intent.putExtra(VpnProfileDataSource.KEY_PASSWORD, activeProfile.getPassword());
+					intent.putExtras(mProfileInfo);
 					this.startService(intent);
 				}
 				break;
@@ -164,14 +164,19 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	@Override
 	public void onVpnProfileSelected(VpnProfile profile)
 	{
-		activeProfile = profile;
-		if (activeProfile.getPassword() == null)
+		Bundle profileInfo = new Bundle();
+		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
+		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
+		if (profile.getPassword() == null)
 		{
-			new LoginDialog().show(getFragmentManager(), "LoginDialog");
+			LoginDialog login = new LoginDialog();
+			login.setArguments(profileInfo);
+			login.show(getFragmentManager(), "LoginDialog");
 		}
 		else
 		{
-			prepareVpnService();
+			profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
+			prepareVpnService(profileInfo);
 		}
 	}
 
@@ -220,28 +225,32 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		}
 	}
 
-	private class LoginDialog extends DialogFragment
+	/**
+	 * Class that displays a login dialog and initiates the selected VPN
+	 * profile if the user confirms the dialog.
+	 */
+	public static class LoginDialog extends DialogFragment
 	{
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)
 		{
-			LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			final Bundle profileInfo = getArguments();
+			LayoutInflater inflater = getActivity().getLayoutInflater();
 			View view = inflater.inflate(R.layout.login_dialog, null);
 			EditText username = (EditText)view.findViewById(R.id.username);
-			username.setText(activeProfile.getUsername());
+			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
 			final EditText password = (EditText)view.findViewById(R.id.password);
 
-			Builder adb = new AlertDialog.Builder(MainActivity.this);
+			Builder adb = new AlertDialog.Builder(getActivity());
 			adb.setView(view);
 			adb.setTitle(getString(R.string.login_title));
 			adb.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int whichButton)
 				{
-					/* let's work on a clone of the profile when updating the password */
-					activeProfile = activeProfile.clone();
-					activeProfile.setPassword(password.getText().toString().trim());
-					prepareVpnService();
+					MainActivity activity = (MainActivity)getActivity();
+					profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, password.getText().toString().trim());
+					activity.prepareVpnService(profileInfo);
 				}
 			});
 			adb.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
