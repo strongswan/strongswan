@@ -16,8 +16,11 @@
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
+#include <tkm/constants.h>
+#include <tkm/client.h>
 
 #include "tkm.h"
+#include "tkm_utils.h"
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
 
@@ -68,9 +71,7 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	tkm_diffie_hellman_t * const tkm_dh = (tkm_diffie_hellman_t *)dh;
 	chunk_t * const nonce = this->initiator ? &nonce_i : &nonce_r;
-
 	const uint64_t nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
 	if (!nc_id)
 	{
@@ -78,12 +79,46 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu)", nc_id,
-			tkm_dh->get_id(tkm_dh));
+	tkm_diffie_hellman_t * const tkm_dh = (tkm_diffie_hellman_t *)dh;
+	const dh_id_type dh_id = tkm_dh->get_id(tkm_dh);
+
+	nonce_type nonce_rem;
+	u_int64_t spi_loc, spi_rem;
+
+	if (this->initiator)
+	{
+		chunk_to_sequence(&nonce_r, &nonce_rem);
+		spi_loc = id->get_initiator_spi(id);
+		spi_rem = id->get_responder_spi(id);
+	}
+	else
+	{
+		chunk_to_sequence(&nonce_i, &nonce_rem);
+		spi_loc = id->get_responder_spi(id);
+		spi_rem = id->get_initiator_spi(id);
+	}
+
+	key_type sk_ai, sk_ar, sk_ei, sk_er;
+	DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu, spi_loc: %llx, "
+			"spi_rem: %llx)", nc_id, dh_id, spi_loc, spi_rem);
+	/* Fake some data for now */
+	if (ike_isa_create(1, 1, 1, dh_id, nc_id, nonce_rem, 1, spi_loc, spi_rem,
+				&sk_ai, &sk_ar, &sk_ei, &sk_er) != TKM_OK)
+	{
+		DBG1(DBG_IKE, "key derivation failed");
+		return FALSE;
+	}
+
 	if (this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
 				nonce_r, id, rekey_function, rekey_skd))
 	{
 		tkm->chunk_map->remove(tkm->chunk_map, nonce);
+		if (ike_nc_reset(nc_id) != TKM_OK)
+		{
+			DBG1(DBG_IKE, "failed to reset nonce context %llu", nc_id);
+		}
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nc_id);
+
 		return TRUE;
 	}
 	return FALSE;
