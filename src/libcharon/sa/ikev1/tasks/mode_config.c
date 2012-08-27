@@ -326,7 +326,7 @@ METHOD(task_t, build_r, status_t,
 	cp_payload_t *cp = NULL;
 	peer_cfg_t *config;
 	identification_t *id;
-	linked_list_t *vips;
+	linked_list_t *vips, *pools;
 	char *pool;
 
 	id = this->ike_sa->get_other_eap_id(this->ike_sa);
@@ -365,8 +365,14 @@ METHOD(task_t, build_r, status_t,
 	{
 		vips->insert_last(vips, vip);
 	}
+	pools = linked_list_create();
+	/* TODO: use list of all pools */
+	if (pool)
+	{
+		pools->insert_last(pools, pool);
+	}
 	enumerator = hydra->attributes->create_responder_enumerator(
-											hydra->attributes, pool, id, vips);
+											hydra->attributes, pools, id, vips);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
 		if (!cp)
@@ -381,6 +387,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 	vips->destroy(vips);
+	pools->destroy(pools);
 
 	if (cp)
 	{

@@ -339,14 +339,14 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_sql_attribute_t *this, char *names, identification_t *id,
+	private_sql_attribute_t *this, linked_list_t *pools, identification_t *id,
 	linked_list_t *vips)
 {
 	enumerator_t *attr_enumerator = NULL;
 
 	if (vips->get_count(vips))
 	{
-		enumerator_t *names_enumerator;
+		enumerator_t *pool_enumerator;
 		u_int count;
 		char *name;
 
@@ -357,8 +357,8 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		{
 			u_int identity = get_identity(this, id);
 
-			names_enumerator = enumerator_create_token(names, ",", " ");
-			while (names_enumerator->enumerate(names_enumerator, &name))
+			pool_enumerator = pools->create_enumerator(pools);
+			while (pool_enumerator->enumerate(pool_enumerator, &name))
 			{
 				u_int attr_pool = get_attr_pool(this, name);
 				if (!attr_pool)
@@ -385,14 +385,14 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 				DESTROY_IF(attr_enumerator);
 				attr_enumerator = NULL;
 			}
-			names_enumerator->destroy(names_enumerator);
+			pool_enumerator->destroy(pool_enumerator);
 		}
 
 		/* in a second step check for attributes that match name */
 		if (!attr_enumerator)
 		{
-			names_enumerator = enumerator_create_token(names, ",", " ");
-			while (names_enumerator->enumerate(names_enumerator, &name))
+			pool_enumerator = pools->create_enumerator(pools);
+			while (pool_enumerator->enumerate(pool_enumerator, &name))
 			{
 				u_int attr_pool = get_attr_pool(this, name);
 				if (!attr_pool)
@@ -419,7 +419,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 				DESTROY_IF(attr_enumerator);
 				attr_enumerator = NULL;
 			}
-			names_enumerator->destroy(names_enumerator);
+			pool_enumerator->destroy(pool_enumerator);
 		}
 
 		this->db->execute(this->db, NULL, "END TRANSACTION");

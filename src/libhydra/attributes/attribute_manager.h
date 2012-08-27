@@ -62,13 +62,14 @@ struct attribute_manager_t {
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
-	 * @param pool			pool name to get attributes from
+	 * @param pool			list of pools names (char*) to query attributes from
 	 * @param id			peer identity to hand out attributes to
 	 * @param vip			list of virtual IPs (host_t*) to assign to peer
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_responder_enumerator)(attribute_manager_t *this,
-						char *pool, identification_t *id, linked_list_t *vips);
+									linked_list_t *pool, identification_t *id,
+									linked_list_t *vips);
 
 	/**
 	 * Register an attribute provider to the manager.

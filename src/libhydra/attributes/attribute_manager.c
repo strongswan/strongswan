@@ -51,8 +51,8 @@ struct private_attribute_manager_t {
  * Data to pass to enumerator filters
  */
 typedef struct {
-	/** attribute group pool */
-	char *pool;
+	/** attribute group pools */
+	linked_list_t *pools;
 	/** server/peer identity */
 	identification_t *id;
 	/** requesting/assigned virtual IPs */
@@ -117,18 +117,18 @@ METHOD(attribute_manager_t, release_address, bool,
 static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
-	return provider->create_attribute_enumerator(provider, data->pool,
+	return provider->create_attribute_enumerator(provider, data->pools,
 												 data->id, data->vips);
 }
 
 METHOD(attribute_manager_t, create_responder_enumerator, enumerator_t*,
-	private_attribute_manager_t *this, char *pool, identification_t *id,
-	linked_list_t *vips)
+	private_attribute_manager_t *this, linked_list_t *pools,
+	identification_t *id, linked_list_t *vips)
 {
 	enum_data_t *data;
 
 	INIT(data,
-		.pool = pool,
+		.pools = pools,
 		.id = id,
 		.vips = vips,
 	);

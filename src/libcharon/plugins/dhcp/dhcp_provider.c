@@ -129,7 +129,7 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_dhcp_provider_t *this, char *pool, identification_t *id,
+	private_dhcp_provider_t *this, linked_list_t *pools, identification_t *id,
 	linked_list_t *vips)
 {
 	dhcp_transaction_t *transaction = NULL;
