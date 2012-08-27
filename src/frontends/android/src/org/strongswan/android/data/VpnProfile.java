@@ -20,6 +20,7 @@ package org.strongswan.android.data;
 public class VpnProfile implements Cloneable
 {
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
+	private VpnType mVpnType;
 	private long mId = -1;
 
 	public long getId()
@@ -50,6 +51,16 @@ public class VpnProfile implements Cloneable
 	public void setGateway(String gateway)
 	{
 		this.mGateway = gateway;
+	}
+
+	public VpnType getVpnType()
+	{
+		return mVpnType;
+	}
+
+	public void setVpnType(VpnType type)
+	{
+		this.mVpnType = type;
 	}
 
 	public String getUsername()

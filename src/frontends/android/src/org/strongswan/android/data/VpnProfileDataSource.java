@@ -34,6 +34,7 @@ public class VpnProfileDataSource
 	public static final String KEY_ID = "_id";
 	public static final String KEY_NAME = "name";
 	public static final String KEY_GATEWAY = "gateway";
+	public static final String KEY_VPN_TYPE = "vpn_type";
 	public static final String KEY_USERNAME = "username";
 	public static final String KEY_PASSWORD = "password";
 	public static final String KEY_CERTIFICATE = "certificate";
@@ -46,13 +47,14 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 2;
+	private static final int DATABASE_VERSION = 3;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
 								KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
 								KEY_NAME + " TEXT NOT NULL," +
 								KEY_GATEWAY + " TEXT NOT NULL," +
+								KEY_VPN_TYPE + " TEXT NOT NULL," +
 								KEY_USERNAME + " TEXT NOT NULL," +
 								KEY_PASSWORD + " TEXT," +
 								KEY_CERTIFICATE + " TEXT," +
@@ -62,6 +64,7 @@ public class VpnProfileDataSource
 								KEY_ID,
 								KEY_NAME,
 								KEY_GATEWAY,
+								KEY_VPN_TYPE,
 								KEY_USERNAME,
 								KEY_PASSWORD,
 								KEY_CERTIFICATE,
@@ -90,6 +93,11 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_USER_CERTIFICATE +
 						   " TEXT;");
+			}
+			if (oldVersion < 3)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_VPN_TYPE +
+						   " TEXT DEFAULT '';");
 			}
 		}
 	}
@@ -218,6 +226,7 @@ public class VpnProfileDataSource
 		profile.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
 		profile.setName(cursor.getString(cursor.getColumnIndex(KEY_NAME)));
 		profile.setGateway(cursor.getString(cursor.getColumnIndex(KEY_GATEWAY)));
+		profile.setVpnType(VpnType.fromIdentifier(cursor.getString(cursor.getColumnIndex(KEY_VPN_TYPE))));
 		profile.setUsername(cursor.getString(cursor.getColumnIndex(KEY_USERNAME)));
 		profile.setPassword(cursor.getString(cursor.getColumnIndex(KEY_PASSWORD)));
 		profile.setCertificateAlias(cursor.getString(cursor.getColumnIndex(KEY_CERTIFICATE)));
@@ -230,6 +239,7 @@ public class VpnProfileDataSource
 		ContentValues values = new ContentValues();
 		values.put(KEY_NAME, profile.getName());
 		values.put(KEY_GATEWAY, profile.getGateway());
+		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
 		values.put(KEY_USERNAME, profile.getUsername());
 		values.put(KEY_PASSWORD, profile.getPassword());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
