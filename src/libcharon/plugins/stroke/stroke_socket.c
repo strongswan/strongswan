@@ -243,7 +243,7 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  keyexchange=ikev%u", msg->add_conn.version);
 
 	this->config->add(this->config, msg);
-	this->attribute->add_pool(this->attribute, msg);
+	this->attribute->add_dns(this->attribute, msg);
 	this->handler->add_attributes(this->handler, msg);
 }
 
@@ -256,7 +256,7 @@ static void stroke_del_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
 
 	this->config->del(this->config, msg);
-	this->attribute->del_pool(this->attribute, msg);
+	this->attribute->del_dns(this->attribute, msg);
 	this->handler->del_attributes(this->handler, msg);
 }
 
@@ -831,7 +831,7 @@ stroke_socket_t *stroke_socket_create()
 	this->attribute = stroke_attribute_create();
 	this->handler = stroke_handler_create();
 	this->ca = stroke_ca_create(this->cred);
-	this->config = stroke_config_create(this->ca, this->cred);
+	this->config = stroke_config_create(this->ca, this->cred, this->attribute);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);
 

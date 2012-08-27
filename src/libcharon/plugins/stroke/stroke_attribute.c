@@ -17,7 +17,6 @@
 #include "stroke_attribute.h"
 
 #include <daemon.h>
-#include <attributes/mem_pool.h>
 #include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
@@ -96,6 +95,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 {
 	mem_pool_t *pool;
 	host_t *addr = NULL;
+
 	this->lock->read_lock(this->lock);
 	pool = find_pool(this, name);
 	if (pool)
@@ -112,6 +112,7 @@ METHOD(attribute_provider_t, release_address, bool,
 {
 	mem_pool_t *pool;
 	bool found = FALSE;
+
 	this->lock->read_lock(this->lock);
 	pool = find_pool(this, name);
 	if (pool)
@@ -179,36 +180,48 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 }
 
 METHOD(stroke_attribute_t, add_pool, void,
-	private_stroke_attribute_t *this, stroke_msg_t *msg)
+	private_stroke_attribute_t *this, mem_pool_t *pool)
 {
-	if (msg->add_conn.other.sourceip_mask)
+	enumerator_t *enumerator;
+	mem_pool_t *current;
+	host_t *base;
+	int size;
+
+	base = pool->get_base(pool);
+	size = pool->get_size(pool);
+
+	this->lock->write_lock(this->lock);
+
+	enumerator = this->pools->create_enumerator(this->pools);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		mem_pool_t *pool;
-		host_t *base = NULL;
-		u_int32_t bits = 0;
-
-		/* if %config, add an empty pool, otherwise */
-		if (msg->add_conn.other.sourceip)
+		if (base && current->get_base(current) &&
+			base->ip_equals(base, current->get_base(current)) &&
+			size == current->get_size(current))
 		{
-			DBG1(DBG_CFG, "adding virtual IP address pool '%s': %s/%d",
-				 msg->add_conn.name, msg->add_conn.other.sourceip,
-				 msg->add_conn.other.sourceip_mask);
-			base = host_create_from_string(msg->add_conn.other.sourceip, 0);
-			if (!base)
-			{
-				DBG1(DBG_CFG, "virtual IP address invalid, discarded");
-				return;
-			}
-			bits = msg->add_conn.other.sourceip_mask;
+			pool->destroy(pool);
+			pool = NULL;
+			DBG1(DBG_CFG, "reusing virtual IP address pool %H/%d", base, size);
+			break;
 		}
-		pool = mem_pool_create(msg->add_conn.name, base, bits);
-		DESTROY_IF(base);
+	}
+	enumerator->destroy(enumerator);
 
-		this->lock->write_lock(this->lock);
+	if (pool)
+	{
+		if (base)
+		{
+			DBG1(DBG_CFG, "adding virtual IP address pool %H/%d", base, size);
+		}
 		this->pools->insert_last(this->pools, pool);
-		this->lock->unlock(this->lock);
 	}
 
+	this->lock->unlock(this->lock);
+}
+
+METHOD(stroke_attribute_t, add_dns, void,
+	private_stroke_attribute_t *this, stroke_msg_t *msg)
+{
 	if (msg->add_conn.other.dns)
 	{
 		enumerator_t *enumerator;
@@ -246,25 +259,13 @@ METHOD(stroke_attribute_t, add_pool, void,
 	}
 }
 
-METHOD(stroke_attribute_t, del_pool, void,
+METHOD(stroke_attribute_t, del_dns, void,
 	private_stroke_attribute_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
 	attributes_t *attr;
-	mem_pool_t *pool;
 
 	this->lock->write_lock(this->lock);
-	enumerator = this->pools->create_enumerator(this->pools);
-	while (enumerator->enumerate(enumerator, &pool))
-	{
-		if (streq(msg->del_conn.name, pool->get_name(pool)))
-		{
-			this->pools->remove_at(this->pools, enumerator);
-			pool->destroy(pool);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
 
 	enumerator = this->attrs->create_enumerator(this->attrs);
 	while (enumerator->enumerate(enumerator, &attr))
@@ -289,6 +290,11 @@ static bool pool_filter(void *lock, mem_pool_t **poolp, const char **name,
 						void *d3, u_int *offline)
 {
 	mem_pool_t *pool = *poolp;
+
+	if (pool->get_size(pool) == 0)
+	{
+		return FALSE;
+	}
 	*name = pool->get_name(pool);
 	*size = pool->get_size(pool);
 	*online = pool->get_online(pool);
@@ -344,7 +350,8 @@ stroke_attribute_t *stroke_attribute_create()
 				.create_attribute_enumerator = _create_attribute_enumerator,
 			},
 			.add_pool = _add_pool,
-			.del_pool = _del_pool,
+			.add_dns = _add_dns,
+			.del_dns = _del_dns,
 			.create_pool_enumerator = _create_pool_enumerator,
 			.create_lease_enumerator = _create_lease_enumerator,
 			.destroy = _destroy,

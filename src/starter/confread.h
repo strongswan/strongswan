@@ -111,7 +111,6 @@ struct starter_end {
 		u_int16_t       port;
 		u_int8_t        protocol;
 		char            *sourceip;
-		int				sourceip_mask;
 		char            *dns;
 };
 

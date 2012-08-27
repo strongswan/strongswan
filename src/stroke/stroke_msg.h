@@ -158,7 +158,6 @@ struct stroke_end_t {
 	char *address;
 	u_int16_t ikeport;
 	char *sourceip;
-	int sourceip_mask;
 	char *dns;
 	char *subnets;
 	int sendcert;

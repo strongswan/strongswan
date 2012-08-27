@@ -23,6 +23,7 @@
 
 #include <stroke_msg.h>
 #include <attributes/attribute_provider.h>
+#include <attributes/mem_pool.h>
 
 typedef struct stroke_attribute_t stroke_attribute_t;
 
@@ -37,18 +38,28 @@ struct stroke_attribute_t {
 	attribute_provider_t provider;
 
 	/**
-	 * Add a virtual IP address pool.
+	 * Add a memory pool to this virtual IP backend.
 	 *
-	 * @param msg		stroke message
+	 * The pool gets owned by the provider, or destroyed if such a pool
+	 * is already registered.
+	 *
+	 * @param pool		virtual IP pool to add
 	 */
-	void (*add_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
+	void (*add_pool)(stroke_attribute_t *this, mem_pool_t *pool);
 
 	/**
-	 * Remove a virtual IP address pool.
+	 * Add connection specific DNS servers.
 	 *
-	 * @param msg		stroke message
+	 * @param msg		stroke add message
 	 */
-	void (*del_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
+	void (*add_dns)(stroke_attribute_t *this, stroke_msg_t *msg);
+
+	/**
+	 * Remove connection specific DNS servers.
+	 *
+	 * @param msg		stroke del message
+	 */
+	void (*del_dns)(stroke_attribute_t *this, stroke_msg_t *msg);
 
 	/**
 	 * Create an enumerator over installed pools.
