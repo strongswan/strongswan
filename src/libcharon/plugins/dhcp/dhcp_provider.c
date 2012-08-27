@@ -84,7 +84,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_dhcp_provider_t *this, char *pool,
 	identification_t *id, host_t *requested)
 {
-	if (streq(pool, "dhcp"))
+	if (streq(pool, "dhcp") && requested->get_family(requested) == AF_INET)
 	{
 		dhcp_transaction_t *transaction, *old;
 		host_t *vip;
@@ -110,7 +110,7 @@ METHOD(attribute_provider_t, release_address, bool,
 	private_dhcp_provider_t *this, char *pool,
 	host_t *address, identification_t *id)
 {
-	if (streq(pool, "dhcp"))
+	if (streq(pool, "dhcp") && address->get_family(address) == AF_INET)
 	{
 		dhcp_transaction_t *transaction;
 
