@@ -80,10 +80,6 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (!host)
-	{
-		DBG1(DBG_CFG, "acquiring address from pool '%s' failed", pool);
-	}
 	return host;
 }
 
