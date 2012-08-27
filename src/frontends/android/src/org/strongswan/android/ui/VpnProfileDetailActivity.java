@@ -346,7 +346,7 @@ public class VpnProfileDetailActivity extends Activity
 		String alias = null;
 
 		getActionBar().setTitle(R.string.add_profile);
-		if (mId != null)
+		if (mId != null && mId != 0)
 		{
 			mProfile = mDataSource.getVpnProfile(mId);
 			if (mProfile != null)
