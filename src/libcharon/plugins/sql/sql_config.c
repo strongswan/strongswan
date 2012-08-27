@@ -333,6 +333,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		mediation, mediated_by, p_type;
 	chunk_t l_data, r_data, p_data;
 	char *name, *virtual, *pool;
+	enumerator_t *enumerator;
 
 	while (e->enumerate(e,
 			&id, &name, &ike_cfg, &l_type, &l_data, &r_type, &r_data,
@@ -379,7 +380,14 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			}
 			if (pool)
 			{
-				peer_cfg->add_pool(peer_cfg, pool);
+				/* attr-sql used comma separated pools, but we now completely
+				 * support multiple pools directly. Support old SQL configs: */
+				enumerator = enumerator_create_token(pool, ",", " ");
+				while (enumerator->enumerate(enumerator, &pool))
+				{
+					peer_cfg->add_pool(peer_cfg, pool);
+				}
+				enumerator->destroy(enumerator);
 			}
 			auth = auth_cfg_create();
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_method);
