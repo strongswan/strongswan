@@ -26,6 +26,14 @@ strongswan-5.0.1
   multiple servers, both for IPv4 and IPv6. rightdns takes a list of DNS server
   IP addresses to return.
 
+- The left/rightsourceip options now accept multiple addresses or pools.
+  leftsourceip can be any (comma separated) combination of %config4, %config6
+  or fixed IP addresses to request. rightsourceip accepts multiple explicitly
+  specified or referenced named pools.
+
+- Multiple connections can now share a single address pool when they use the
+  same definition in one of the rightsourceip pools.
+
 - The autotools build has been migrated to use a config.h header. strongSwan
   development headers will get installed during "make install" if
   --with-dev-headers has been passed to ./configure.
