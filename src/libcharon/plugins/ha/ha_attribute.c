@@ -181,6 +181,12 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	pool = get_pool(this, name);
 	if (pool)
 	{
+		if (pool->base->get_family(pool->base) !=
+			requested->get_family(requested))
+		{
+			this->mutex->unlock(this->mutex);
+			return NULL;
+		}
 		for (byte = 0; byte < pool->size / 8; byte++)
 		{
 			if (pool->mask[byte] != 0xFF)
