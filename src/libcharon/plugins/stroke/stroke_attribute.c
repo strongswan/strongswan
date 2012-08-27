@@ -149,7 +149,7 @@ static bool attr_filter(void *lock, host_t **in,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_stroke_attribute_t *this, char *pool, identification_t *id,
-	host_t *vip)
+	linked_list_t *vips)
 {
 	ike_sa_t *ike_sa;
 	peer_cfg_t *peer_cfg;

@@ -130,17 +130,24 @@ METHOD(attribute_provider_t, release_address, bool,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_dhcp_provider_t *this, char *pool, identification_t *id,
-	host_t *vip)
+	linked_list_t *vips)
 {
-	dhcp_transaction_t *transaction;
+	dhcp_transaction_t *transaction = NULL;
+	enumerator_t *enumerator;
+	host_t *vip;
 
-	if (!vip)
-	{
-		return NULL;
-	}
 	this->mutex->lock(this->mutex);
-	transaction = this->transactions->get(this->transactions,
-										  (void*)hash_id_host(id, vip));
+	enumerator = vips->create_enumerator(vips);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		transaction = this->transactions->get(this->transactions,
+											  (void*)hash_id_host(id, vip));
+		if (transaction)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
 	if (!transaction)
 	{
 		this->mutex->unlock(this->mutex);

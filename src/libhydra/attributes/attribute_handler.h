@@ -22,8 +22,8 @@
 #define ATTRIBUTE_HANDLER_H_
 
 #include <chunk.h>
-#include <utils/host.h>
 #include <utils/identification.h>
+#include <utils/linked_list.h>
 
 #include "attributes.h"
 
@@ -62,11 +62,11 @@ struct attribute_handler_t {
 	 * Enumerate attributes to request from a server.
 	 *
 	 * @param server		server identity to request attributes from
-	 * @param vip			virtual IP we are requesting, if any
+	 * @param vips			list of virtual IPs (host_t*) we are requesting
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_attribute_enumerator)(attribute_handler_t *this,
-										identification_t *server, host_t *vip);
+								identification_t *server, linked_list_t *vips);
 };
 
 #endif /** ATTRIBUTE_HANDLER_H_ @}*/

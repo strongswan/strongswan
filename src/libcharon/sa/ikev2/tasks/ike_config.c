@@ -242,30 +242,45 @@ METHOD(task_t, build_i, status_t,
 		peer_cfg_t *config;
 		configuration_attribute_type_t type;
 		chunk_t data;
-		host_t *vip;
+		linked_list_t *vips;
+		host_t *host;
+
+		vips = linked_list_create();
 
 		/* reuse virtual IP if we already have one */
 		enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa,
 																TRUE);
-		if (!enumerator->enumerate(enumerator, &vip))
+		while (enumerator->enumerate(enumerator, &host))
 		{
-			enumerator->destroy(enumerator);
-			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			enumerator = config->create_virtual_ip_enumerator(config);
-			if (!enumerator->enumerate(enumerator, &vip))
-			{
-				vip = NULL;
-			}
+			vips->insert_last(vips, host);
 		}
 		enumerator->destroy(enumerator);
-		if (vip)
+
+		if (vips->get_count(vips) == 0)
 		{
-			cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
-			cp->add_attribute(cp, build_vip(vip));
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			enumerator = config->create_virtual_ip_enumerator(config);
+			while (enumerator->enumerate(enumerator, &host))
+			{
+				vips->insert_last(vips, host);
+			}
+			enumerator->destroy(enumerator);
 		}
 
-		enumerator = hydra->attributes->create_initiator_enumerator(hydra->attributes,
-								this->ike_sa->get_other_id(this->ike_sa), vip);
+		if (vips->get_count(vips))
+		{
+			cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
+			enumerator = vips->create_enumerator(vips);
+			while (enumerator->enumerate(enumerator, &host))
+			{
+				cp->add_attribute(cp, build_vip(host));
+			}
+			enumerator->destroy(enumerator);
+		}
+
+		enumerator = hydra->attributes->create_initiator_enumerator(
+								hydra->attributes,
+								this->ike_sa->get_other_id(this->ike_sa), vips);
 		while (enumerator->enumerate(enumerator, &handler, &type, &data))
 		{
 			configuration_attribute_t *ca;
@@ -290,6 +305,8 @@ METHOD(task_t, build_i, status_t,
 			this->requested->insert_last(this->requested, entry);
 		}
 		enumerator->destroy(enumerator);
+
+		vips->destroy(vips);
 
 		if (cp)
 		{
@@ -321,6 +338,7 @@ METHOD(task_t, build_r, status_t,
 		cp_payload_t *cp = NULL;
 		peer_cfg_t *config;
 		identification_t *id;
+		linked_list_t *vips;
 		char *pool;
 
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
@@ -357,8 +375,14 @@ METHOD(task_t, build_r, status_t,
 		}
 
 		/* query registered providers for additional attributes to include */
+		vips = linked_list_create();
+		/* TODO: use list with all assigned VIPs */
+		if (vip)
+		{
+			vips->insert_last(vips, vip);
+		}
 		enumerator = hydra->attributes->create_responder_enumerator(
-											hydra->attributes, pool, id, vip);
+											hydra->attributes, pool, id, vips);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)
@@ -372,6 +396,7 @@ METHOD(task_t, build_r, status_t,
 													 type, value));
 		}
 		enumerator->destroy(enumerator);
+		vips->destroy(vips);
 
 		if (cp)
 		{

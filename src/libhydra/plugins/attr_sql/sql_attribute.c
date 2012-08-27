@@ -340,11 +340,11 @@ METHOD(attribute_provider_t, release_address, bool,
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_sql_attribute_t *this, char *names, identification_t *id,
-	host_t *vip)
+	linked_list_t *vips)
 {
 	enumerator_t *attr_enumerator = NULL;
 
-	if (vip)
+	if (vips->get_count(vips))
 	{
 		enumerator_t *names_enumerator;
 		u_int count;

@@ -80,7 +80,7 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_android_attr_t *this, identification_t *server, host_t *vip)
+	private_android_attr_t *this, identification_t *server, linked_list_t *vips)
 {
 	enumerator_t *enumerator;
 
