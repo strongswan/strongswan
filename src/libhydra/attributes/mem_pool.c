@@ -226,11 +226,9 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 		return requested->clone(requested);
 	}
 
-	if (!requested->is_anyaddr(requested) &&
-		requested->get_family(requested) !=
+	if (requested->get_family(requested) !=
 		this->base->get_family(this->base))
 	{
-		DBG1(DBG_CFG, "IP pool address family mismatch");
 		return NULL;
 	}
 
