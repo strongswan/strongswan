@@ -56,28 +56,49 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="@string/profile_username_label" />
+            android:text="@string/profile_vpn_type_label" />
 
-        <EditText
-            android:id="@+id/username"
+        <Spinner
+            android:id="@+id/vpn_type"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="textNoSuggestions" />
+            android:spinnerMode="dialog"
+            android:entries="@array/vpn_types" />
 
-        <TextView
+        <LinearLayout
+            android:id="@+id/username_password_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/profile_password_label" />
+            android:orientation="vertical" >
 
-        <EditText
-            android:id="@+id/password"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:inputType="textPassword|textNoSuggestions"
-            android:hint="@string/profile_password_hint" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_username_label" />
+
+            <EditText
+                android:id="@+id/username"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:inputType="textNoSuggestions" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_password_label" />
+
+            <EditText
+                android:id="@+id/password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:inputType="textPassword|textNoSuggestions"
+                android:hint="@string/profile_password_hint" />
+
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"

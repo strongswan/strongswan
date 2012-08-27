@@ -49,6 +49,7 @@
     <string name="profile_name_label">Profile Name:</string>
     <string name="profile_name_hint">(use gateway address)</string>
     <string name="profile_gateway_label">Gateway:</string>
+    <string name="profile_vpn_type_label">Type:</string>
     <string name="profile_username_label">Username:</string>
     <string name="profile_password_label">Password:</string>
     <string name="profile_password_hint">(prompt when needed)</string>

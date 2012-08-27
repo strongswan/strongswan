@@ -51,6 +51,7 @@
     <string name="profile_name_label">Nazwa profilu:</string>
     <string name="profile_name_hint">(użyj adresu bramki)</string>
     <string name="profile_gateway_label">Bramka:</string>
+    <string name="profile_vpn_type_label">Typ:</string>
     <string name="profile_username_label">Użytkownik:</string>
     <string name="profile_password_label">Hasło:</string>
     <string name="profile_password_hint">(w razie potrzebz zapromptuj)</string>

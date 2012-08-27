@@ -23,6 +23,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.TrustedCertificateManager;
 
 import android.app.Activity;
@@ -36,11 +37,15 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 public class VpnProfileDetailActivity extends Activity
@@ -50,16 +55,18 @@ public class VpnProfileDetailActivity extends Activity
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
 	private TrustedCertificateEntry mCertEntry;
+	private VpnType mVpnType = VpnType.IKEV2_EAP;
 	private VpnProfile mProfile;
 	private EditText mName;
 	private EditText mGateway;
+	private Spinner mSelectVpnType;
+	private ViewGroup mUsernamePassword;
 	private EditText mUsername;
 	private EditText mPassword;
 	private CheckBox mCheckAuto;
 	private RelativeLayout mSelectCert;
 	private TextView mCertTitle;
 	private TextView mCertSubtitle;
-
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -75,14 +82,34 @@ public class VpnProfileDetailActivity extends Activity
 		setContentView(R.layout.profile_detail_view);
 
 		mName = (EditText)findViewById(R.id.name);
-		mPassword = (EditText)findViewById(R.id.password);
 		mGateway = (EditText)findViewById(R.id.gateway);
+		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
+
+		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
 		mUsername = (EditText)findViewById(R.id.username);
+		mPassword = (EditText)findViewById(R.id.password);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
 		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
 		mCertTitle = (TextView)findViewById(R.id.select_certificate_title);
 		mCertSubtitle = (TextView)findViewById(R.id.select_certificate_subtitle);
+
+
+		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+			{
+				mVpnType = VpnType.values()[position];
+				updateClientCredentialView();
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> parent)
+			{	/* should not happen */
+				mVpnType = VpnType.IKEV2_EAP;
+				updateClientCredentialView();
+			}
+		});
 
 		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
@@ -110,6 +137,7 @@ public class VpnProfileDetailActivity extends Activity
 
 		loadProfileData(savedInstanceState);
 
+		updateClientCredentialView();
 		updateCertificateSelector();
 	}
 
@@ -176,6 +204,14 @@ public class VpnProfileDetailActivity extends Activity
 			default:
 				super.onActivityResult(requestCode, resultCode, data);
 		}
+	}
+
+	/**
+	 * Update the UI to enter client credentials depending on the type of VPN currently selected
+	 */
+	private void updateClientCredentialView()
+	{
+		mUsernamePassword.setVisibility(mVpnType.getRequiresUsernamePassword() ? View.VISIBLE : View.GONE);
 	}
 
 	/**
@@ -262,10 +298,13 @@ public class VpnProfileDetailActivity extends Activity
 			mGateway.setError(getString(R.string.alert_text_no_input_gateway));
 			valid = false;
 		}
-		if (mUsername.getText().toString().trim().isEmpty())
+		if (mVpnType.getRequiresUsernamePassword())
 		{
-			mUsername.setError(getString(R.string.alert_text_no_input_username));
-			valid = false;
+			if (mUsername.getText().toString().trim().isEmpty())
+			{
+				mUsername.setError(getString(R.string.alert_text_no_input_username));
+				valid = false;
+			}
 		}
 		if (!mCheckAuto.isChecked() && mCertEntry == null)
 		{
@@ -285,10 +324,14 @@ public class VpnProfileDetailActivity extends Activity
 		String gateway = mGateway.getText().toString().trim();
 		mProfile.setName(name.isEmpty() ? gateway : name);
 		mProfile.setGateway(gateway);
-		mProfile.setUsername(mUsername.getText().toString().trim());
-		String password = mPassword.getText().toString().trim();
-		password = password.isEmpty() ? null : password;
-		mProfile.setPassword(password);
+		mProfile.setVpnType(mVpnType);
+		if (mVpnType.getRequiresUsernamePassword())
+		{
+			mProfile.setUsername(mUsername.getText().toString().trim());
+			String password = mPassword.getText().toString().trim();
+			password = password.isEmpty() ? null : password;
+			mProfile.setPassword(password);
+		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
 	}
@@ -310,6 +353,7 @@ public class VpnProfileDetailActivity extends Activity
 			{
 				mName.setText(mProfile.getName());
 				mGateway.setText(mProfile.getGateway());
+				mVpnType = mProfile.getVpnType();
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
 				alias = mProfile.getCertificateAlias();
@@ -322,6 +366,8 @@ public class VpnProfileDetailActivity extends Activity
 				finish();
 			}
 		}
+
+		mSelectVpnType.setSelection(mVpnType.ordinal());
 
 		/* check if the user selected a certificate previously */
 		alias = savedInstanceState == null ? alias : savedInstanceState.getString(VpnProfileDataSource.KEY_CERTIFICATE);

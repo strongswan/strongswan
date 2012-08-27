@@ -17,6 +17,7 @@ package org.strongswan.android.data;
 
 public enum VpnType
 {
+	/* the order here must match the items in R.array.vpn_types */
 	IKEV2_EAP("ikev2-eap", true, false),
 	IKEV2_CERT("ikev2-cert", false, true);
 
