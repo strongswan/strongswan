@@ -112,32 +112,9 @@
             android:layout_height="wrap_content"
             android:text="@string/profile_ca_auto_label" />
 
-        <RelativeLayout
+        <include
             android:id="@+id/select_certificate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="?android:attr/listPreferredItemHeight"
-            android:background="?android:attr/selectableItemBackground"
-            android:padding="10dp" >
-
-            <TextView
-                android:id="@+id/select_certificate_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceMedium"
-                android:text="@string/profile_ca_select_certificate_label" />
-
-            <TextView
-                android:id="@+id/select_certificate_subtitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/select_certificate_title"
-                android:layout_alignLeft="@id/select_certificate_title"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                android:textColor="?android:attr/textColorSecondary"
-                android:text="@string/profile_ca_select_certificate" />
-
-        </RelativeLayout>
+            layout="@layout/certificate_selector" />
 
     </LinearLayout>
 

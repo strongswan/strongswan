@@ -44,9 +44,8 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.RelativeLayout;
 import android.widget.Spinner;
-import android.widget.TextView;
+import android.widget.TwoLineListItem;
 
 public class VpnProfileDetailActivity extends Activity
 {
@@ -64,9 +63,7 @@ public class VpnProfileDetailActivity extends Activity
 	private EditText mUsername;
 	private EditText mPassword;
 	private CheckBox mCheckAuto;
-	private RelativeLayout mSelectCert;
-	private TextView mCertTitle;
-	private TextView mCertSubtitle;
+	private TwoLineListItem mSelectCert;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -90,10 +87,7 @@ public class VpnProfileDetailActivity extends Activity
 		mPassword = (EditText)findViewById(R.id.password);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
-		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
-		mCertTitle = (TextView)findViewById(R.id.select_certificate_title);
-		mCertSubtitle = (TextView)findViewById(R.id.select_certificate_subtitle);
-
+		mSelectCert = (TwoLineListItem)findViewById(R.id.select_certificate);
 
 		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
@@ -246,13 +240,13 @@ public class VpnProfileDetailActivity extends Activity
 
 			if (mCertEntry != null)
 			{
-				mCertTitle.setText(mCertEntry.getSubjectPrimary());
-				mCertSubtitle.setText(mCertEntry.getSubjectSecondary());
+				mSelectCert.getText1().setText(mCertEntry.getSubjectPrimary());
+				mSelectCert.getText2().setText(mCertEntry.getSubjectSecondary());
 			}
 			else
 			{
-				mCertTitle.setText(R.string.profile_ca_select_certificate_label);
-				mCertSubtitle.setText(R.string.profile_ca_select_certificate);
+				mSelectCert.getText1().setText(R.string.profile_ca_select_certificate_label);
+				mSelectCert.getText2().setText(R.string.profile_ca_select_certificate);
 			}
 		}
 		else
