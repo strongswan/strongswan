@@ -143,7 +143,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		Bundle profileInfo = new Bundle();
 		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
-		if (profile.getPassword() == null)
+		if (profile.getVpnType().getRequiresUsernamePassword() &&
+			profile.getPassword() == null)
 		{
 			LoginDialog login = new LoginDialog();
 			login.setArguments(profileInfo);
