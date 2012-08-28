@@ -310,13 +310,9 @@ static void initiate(char *type, char *local, char *gateway,
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
 	this->creds->clear(this->creds);
-	this->creds->add_username_password(this->creds, username, password);
-	memwipe(password, strlen(password));
-	free(password);
-
 	DESTROY_IF(this->service);
-	this->service = android_service_create(local, gateway, username);
-	free(type);
+	this->service = android_service_create(this->creds, type, local, gateway,
+										   username, password);
 }
 
 /**
