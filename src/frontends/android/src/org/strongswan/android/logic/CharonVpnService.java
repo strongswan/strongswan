@@ -21,6 +21,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ import android.net.VpnService;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import android.security.KeyChain;
+import android.security.KeyChainException;
 import android.util.Log;
 
 public class CharonVpnService extends VpnService implements Runnable
@@ -54,6 +57,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	private Thread mConnectionHandler;
 	private VpnProfile mCurrentProfile;
 	private volatile String mCurrentCertificateAlias;
+	private volatile String mCurrentUserCertificateAlias;
 	private VpnProfile mNextProfile;
 	private volatile boolean mProfileUpdated;
 	private volatile boolean mTerminate;
@@ -203,6 +207,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						/* store this in a separate (volatile) variable to avoid
 						 * a possible deadlock during deinitialization */
 						mCurrentCertificateAlias = mCurrentProfile.getCertificateAlias();
+						mCurrentUserCertificateAlias = mCurrentProfile.getUserCertificateAlias();
 
 						setProfile(mCurrentProfile);
 						setError(ErrorState.NO_ERROR);
@@ -419,6 +424,41 @@ public class CharonVpnService extends VpnService implements Runnable
 			return null;
 		}
 		return certs.toArray(new byte[certs.size()][]);
+	}
+
+	/**
+	 * Function called via JNI to get a list containing the DER encoded private key
+	 * and DER encoded certificates of the user selected certificate chain (beginning
+	 * with the user certificate).
+	 *
+	 * Since this method is called from a thread of charon's thread pool we are safe
+	 * to call methods on KeyChain directly.
+	 *
+	 * @return list containing the private key and certificates (first element is the key)
+	 * @throws InterruptedException
+	 * @throws KeyChainException
+	 * @throws CertificateEncodingException
+	 */
+	private byte[][] getUserCertificate() throws KeyChainException, InterruptedException, CertificateEncodingException
+	{
+		ArrayList<byte[]> encodings = new ArrayList<byte[]>();
+		String alias = mCurrentUserCertificateAlias;
+		PrivateKey key = KeyChain.getPrivateKey(getApplicationContext(), alias);
+		if (key == null)
+		{
+			return null;
+		}
+		encodings.add(key.getEncoded());
+		X509Certificate[] chain = KeyChain.getCertificateChain(getApplicationContext(), alias);
+		if (chain == null || chain.length == 0)
+		{
+			return null;
+		}
+		for (X509Certificate cert : chain)
+		{
+			encodings.add(cert.getEncoded());
+		}
+		return encodings.toArray(new byte[encodings.size()][]);
 	}
 
 	/**

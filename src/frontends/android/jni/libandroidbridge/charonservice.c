@@ -199,6 +199,33 @@ failed:
 	return FALSE;
 }
 
+/**
+ * Converts the given Java array of byte arrays (byte[][]) to a linked list
+ * of chunk_t objects.
+ */
+static linked_list_t *convert_array_of_byte_arrays(JNIEnv *env,
+												   jobjectArray jarray)
+{
+	linked_list_t *list;
+	jsize i;
+
+	list = linked_list_create();
+	for (i = 0; i < (*env)->GetArrayLength(env, jarray); ++i)
+	{
+		chunk_t *chunk;
+		jbyteArray jbytearray;
+
+		chunk = malloc_thing(chunk_t);
+		list->insert_last(list, chunk);
+
+		jbytearray = (*env)->GetObjectArrayElement(env, jarray, i);
+		*chunk = chunk_alloc((*env)->GetArrayLength(env, jbytearray));
+		(*env)->GetByteArrayRegion(env, jbytearray, 0, chunk->len, chunk->ptr);
+		(*env)->DeleteLocalRef(env, jbytearray);
+	}
+	return list;
+}
+
 METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
 	private_charonservice_t *this)
 {
@@ -206,7 +233,6 @@ METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
 	jmethodID method_id;
 	jobjectArray jcerts;
 	linked_list_t *list;
-	jsize i;
 
 	androidjni_attach_thread(&env);
 
@@ -222,21 +248,39 @@ METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
 	{
 		goto failed;
 	}
-	list = linked_list_create();
-	for (i = 0; i < (*env)->GetArrayLength(env, jcerts); ++i)
+	list = convert_array_of_byte_arrays(env, jcerts);
+	androidjni_detach_thread();
+	return list;
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return NULL;
+}
+
+METHOD(charonservice_t, get_user_certificate, linked_list_t*,
+	private_charonservice_t *this)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jobjectArray jencodings;
+	linked_list_t *list;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env,
+						android_charonvpnservice_class,
+						"getUserCertificate", "()[[B");
+	if (!method_id)
 	{
-		chunk_t *ca_cert;
-		jbyteArray jcert;
-
-		ca_cert = malloc_thing(chunk_t);
-		list->insert_last(list, ca_cert);
-
-		jcert = (*env)->GetObjectArrayElement(env, jcerts, i);
-		*ca_cert = chunk_alloc((*env)->GetArrayLength(env, jcert));
-		(*env)->GetByteArrayRegion(env, jcert, 0, ca_cert->len, ca_cert->ptr);
-		(*env)->DeleteLocalRef(env, jcert);
+		goto failed;
 	}
-	(*env)->DeleteLocalRef(env, jcerts);
+	jencodings = (*env)->CallObjectMethod(env, this->vpn_service, method_id, NULL);
+	if (!jencodings)
+	{
+		goto failed;
+	}
+	list = convert_array_of_byte_arrays(env, jencodings);
 	androidjni_detach_thread();
 	return list;
 
@@ -323,6 +367,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 			.update_status = _update_status,
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
+			.get_user_certificate = _get_user_certificate,
 			.get_vpnservice_builder = _get_vpnservice_builder,
 		},
 		.attr = android_attr_create(),
