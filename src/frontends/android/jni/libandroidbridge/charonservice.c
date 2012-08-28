@@ -260,7 +260,8 @@ METHOD(charonservice_t, get_vpnservice_builder, vpnservice_builder_t*,
  * @param username			username (gets owned)
  * @param password			password (gets owned)
  */
-static void initiate(char *local, char *gateway, char *username, char *password)
+static void initiate(char *type, char *local, char *gateway,
+					 char *username, char *password)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
@@ -271,6 +272,7 @@ static void initiate(char *local, char *gateway, char *username, char *password)
 
 	DESTROY_IF(this->service);
 	this->service = android_service_create(local, gateway, username);
+	free(type);
 }
 
 /**
@@ -477,15 +479,16 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
  * Initiate SA
  */
 JNI_METHOD(CharonVpnService, initiate, void,
-	jstring jlocal_address, jstring jgateway, jstring jusername,
+	jstring jtype, jstring jlocal_address, jstring jgateway, jstring jusername,
 	jstring jpassword)
 {
-	char *local_address, *gateway, *username, *password;
+	char *type, *local_address, *gateway, *username, *password;
 
+	type = androidjni_convert_jstring(env, jtype);
 	local_address = androidjni_convert_jstring(env, jlocal_address);
 	gateway = androidjni_convert_jstring(env, jgateway);
 	username = androidjni_convert_jstring(env, jusername);
 	password = androidjni_convert_jstring(env, jpassword);
 
-	initiate(local_address, gateway, username, password);
+	initiate(type, local_address, gateway, username, password);
 }
