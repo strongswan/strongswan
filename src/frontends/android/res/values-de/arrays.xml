@@ -17,5 +17,6 @@
     <!-- the order here must match the enum entries in VpnType.java -->
     <string-array name="vpn_types">
         <item>IKEv2 EAP (Benutzername/Passwort)</item>
+        <item>IKEv2 Zertifikat</item>
     </string-array>
 </resources>

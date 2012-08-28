@@ -25,6 +25,7 @@
     <string name="search">Suchen</string>
     <string name="vpn_not_supported_title">VPN nicht unterstützt</string>
     <string name="vpn_not_supported">Ihr Gerät unterstützt keine VPN Anwendungen.\nBitte kontaktieren Sie den Hersteller.</string>
+    <string name="loading">Laden&#8230;</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
@@ -53,6 +54,9 @@
     <string name="profile_username_label">Benutzername:</string>
     <string name="profile_password_label">Passwort:</string>
     <string name="profile_password_hint">(anfordern wenn benötigt)</string>
+    <string name="profile_user_certificate_label">Benutzer-Zertifikat:</string>
+    <string name="profile_user_select_certificate_label">Benutzer-Zertifikat auswählen</string>
+    <string name="profile_user_select_certificate">Wählen Sie ein bestimmtes Benutzer-Zertifikat</string>
     <string name="profile_ca_label">CA-Zertifikat:</string>
     <string name="profile_ca_auto_label">Automatisch wählen</string>
     <string name="profile_ca_select_certificate_label">CA-Zertifikat auswählen</string>
