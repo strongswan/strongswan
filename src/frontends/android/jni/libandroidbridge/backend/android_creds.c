@@ -50,6 +50,15 @@ struct private_android_creds_t {
 };
 
 /**
+ * Free allocated DER encoding
+ */
+static void free_encoding(chunk_t *chunk)
+{
+	chunk_free(chunk);
+	free(chunk);
+}
+
+/**
  * Load trusted certificates via charonservice (JNI).
  */
 static void load_trusted_certificates(private_android_creds_t *this)
@@ -71,8 +80,7 @@ static void load_trusted_certificates(private_android_creds_t *this)
 					 cert->get_subject(cert));
 				this->creds->add_cert(this->creds, TRUE, cert);
 			}
-			chunk_free(current);
-			free(current);
+			free_encoding(current);
 		}
 		certs->destroy(certs);
 	}
@@ -130,6 +138,76 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 													 type, me, other);
 }
 
+METHOD(android_creds_t, load_user_certificate, certificate_t*,
+	private_android_creds_t *this)
+{
+	linked_list_t *encodings;
+	certificate_t *cert = NULL, *ca_cert;
+	private_key_t *key = NULL;
+	chunk_t *current;
+
+	encodings = charonservice->get_user_certificate(charonservice);
+	if (!encodings)
+	{
+		return NULL;
+	}
+
+	while (encodings->remove_first(encodings, (void**)&current) == SUCCESS)
+	{
+		if (!key)
+		{	/* the first element is the private key, we assume RSA */
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									 BUILD_BLOB_ASN1_DER, *current, BUILD_END);
+			if (key)
+			{
+				this->creds->add_key(this->creds, key);
+				free_encoding(current);
+				continue;
+			}
+			goto failed;
+		}
+		if (!cert)
+		{	/* the next element is the user certificate */
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+									  BUILD_BLOB_ASN1_DER, *current, BUILD_END);
+			if (cert)
+			{
+				DBG1(DBG_CFG, "loaded user certificate '%Y' and private key",
+					 cert->get_subject(cert));
+				cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+				free_encoding(current);
+				continue;
+			}
+			goto failed;
+		}
+		/* the rest are CA certificates, we ignore failures */
+		ca_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+									 BUILD_BLOB_ASN1_DER, *current, BUILD_END);
+		if (ca_cert)
+		{
+			DBG1(DBG_CFG, "loaded CA certificate '%Y'",
+				 ca_cert->get_subject(ca_cert));
+			this->creds->add_cert(this->creds, TRUE, ca_cert);
+		}
+		free_encoding(current);
+	}
+	encodings->destroy(encodings);
+	return cert;
+
+failed:
+	DBG1(DBG_CFG, "failed to load user certificate and private key");
+	free_encoding(current);
+	encodings->destroy_function(encodings, (void*)free_encoding);
+	return NULL;
+}
+
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	private_android_creds_t *this, key_type_t type, identification_t *id)
+{
+	return this->creds->set.create_private_enumerator(&this->creds->set,
+													  type, id);
+}
+
 METHOD(android_creds_t, clear, void,
 	private_android_creds_t *this)
 {
@@ -160,11 +238,12 @@ android_creds_t *android_creds_create()
 			.set = {
 				.create_cert_enumerator = _create_cert_enumerator,
 				.create_shared_enumerator = _create_shared_enumerator,
-				.create_private_enumerator = (void*)return_null,
+				.create_private_enumerator = _create_private_enumerator,
 				.create_cdp_enumerator = (void*)return_null,
 				.cache_cert = (void*)nop,
 			},
 			.add_username_password = _add_username_password,
+			.load_user_certificate = _load_user_certificate,
 			.clear = _clear,
 			.destroy = _destroy,
 		},

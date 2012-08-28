@@ -47,6 +47,13 @@ struct android_creds_t {
 								  char *password);
 
 	/**
+	 * Load the user certificate and private key
+	 *
+	 * @preturn					loaded client certificate, NULL on failure
+	 */
+	certificate_t *(*load_user_certificate)(android_creds_t *this);
+
+	/**
 	 * Clear the cached certificates and stored credentials.
 	 */
 	void (*clear)(android_creds_t *this);
