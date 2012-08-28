@@ -3,6 +3,7 @@
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012 Martin Willi
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,8 +25,16 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef __APPLE__
+#include <net/if.h>
+#include <net/if_utun.h>
+#include <netinet/in_var.h>
+#include <sys/kern_control.h>
+#else /* !__APPLE__ */
 #include <linux/if.h>
 #include <linux/if_tun.h>
+#endif /* !__APPLE__ */
 
 #include "tun_device.h"
 
@@ -127,6 +136,14 @@ METHOD(tun_device_t, set_address, bool,
 			 this->if_name, strerror(errno));
 		return FALSE;
 	}
+#ifdef __APPLE__
+	if (ioctl(this->sock, SIOCSIFDSTADDR, &ifr) < 0)
+	{
+		DBG1(DBG_LIB, "failed to set dest address on %s: %s",
+			 this->if_name, strerror(errno));
+		return FALSE;
+	}
+#endif /* __APPLE__ */
 
 	set_netmask(&ifr, family, netmask);
 
@@ -278,18 +295,70 @@ METHOD(tun_device_t, destroy, void,
 }
 
 /**
- * Allocate a TUN device
+ * Initialize the tun device
  */
-static int tun_alloc(char dev[IFNAMSIZ])
+static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 {
-	struct ifreq ifr;
-	int fd;
+#ifdef __APPLE__
 
-	fd = open("/dev/net/tun", O_RDWR);
-	if (fd < 0)
+	struct ctl_info info;
+	struct sockaddr_ctl addr;
+	socklen_t size = IFNAMSIZ;
+
+	memset(&info, 0, sizeof(info));
+	memset(&addr, 0, sizeof(addr));
+
+	this->tunfd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+	if (this->tunfd < 0)
+	{
+		DBG1(DBG_LIB, "failed to open tundevice PF_SYSTEM socket: %s",
+			 strerror(errno));
+		return FALSE;
+	}
+
+	/* get a control identifier for the utun kernel extension */
+	strncpy(info.ctl_name, UTUN_CONTROL_NAME, strlen(UTUN_CONTROL_NAME));
+	if (ioctl(this->tunfd, CTLIOCGINFO, &info) < 0)
+	{
+		DBG1(DBG_LIB, "failed to ioctl tundevice: %s", strerror(errno));
+		close(this->tunfd);
+		return FALSE;
+	}
+
+	addr.sc_id = info.ctl_id;
+	addr.sc_len = sizeof(addr);
+	addr.sc_family = AF_SYSTEM;
+	addr.ss_sysaddr = AF_SYS_CONTROL;
+	/* allocate identifier dynamically */
+	addr.sc_unit = 0;
+
+	if (connect(this->tunfd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	{
+		DBG1(DBG_LIB, "failed to connect tundevice: %s", strerror(errno));
+		close(this->tunfd);
+		return FALSE;
+	}
+	if (getsockopt(this->tunfd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME,
+				   this->if_name, &size) < 0)
+	{
+		DBG1(DBG_LIB, "getting tundevice name failed: %s", strerror(errno));
+		close(this->tunfd);
+		return FALSE;
+	}
+	return TRUE;
+
+#else /* !__APPLE__ */
+
+	struct ifreq ifr;
+
+	strncpy(this->if_name, name_tmpl ?: "tun%d", IFNAMSIZ);
+	this->if_name[IFNAMSIZ-1] = '\0';
+
+	this->tunfd = open("/dev/net/tun", O_RDWR);
+	if (this->tunfd < 0)
 	{
 		DBG1(DBG_LIB, "failed to open /dev/net/tun: %s", strerror(errno));
-		return fd;
+		return FALSE;
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
@@ -297,16 +366,17 @@ static int tun_alloc(char dev[IFNAMSIZ])
 	/* TUN device, no packet info */
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
-	strncpy(ifr.ifr_name, dev, IFNAMSIZ);
-
-	if (ioctl(fd, TUNSETIFF, (void*)&ifr) < 0)
+	strncpy(ifr.ifr_name, this->if_name, IFNAMSIZ);
+	if (ioctl(this->tunfd, TUNSETIFF, (void*)&ifr) < 0)
 	{
 		DBG1(DBG_LIB, "failed to configure TUN device: %s", strerror(errno));
-		close(fd);
-		return -1;
+		close(this->tunfd);
+		return FALSE;
 	}
-	strncpy(dev, ifr.ifr_name, IFNAMSIZ);
-	return fd;
+	strncpy(this->if_name, ifr.ifr_name, IFNAMSIZ);
+	return TRUE;
+
+#endif /* !__APPLE__ */
 }
 
 /*
@@ -331,13 +401,9 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		.sock = -1,
 	);
 
-	strncpy(this->if_name, name_tmpl ?: "tun%d", IFNAMSIZ);
-	this->if_name[IFNAMSIZ-1] = '\0';
-
-	this->tunfd = tun_alloc(this->if_name);
-	if (this->tunfd < 0)
+	if (!init_tun(this, name_tmpl))
 	{
-		destroy(this);
+		free(this);
 		return NULL;
 	}
 	DBG1(DBG_LIB, "created TUN device: %s", this->if_name);
