@@ -26,6 +26,7 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteQueryBuilder;
 import android.util.Log;
 
 public class VpnProfileDataSource
@@ -47,7 +48,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 3;
+	private static final int DATABASE_VERSION = 4;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -55,12 +56,12 @@ public class VpnProfileDataSource
 								KEY_NAME + " TEXT NOT NULL," +
 								KEY_GATEWAY + " TEXT NOT NULL," +
 								KEY_VPN_TYPE + " TEXT NOT NULL," +
-								KEY_USERNAME + " TEXT NOT NULL," +
+								KEY_USERNAME + " TEXT," +
 								KEY_PASSWORD + " TEXT," +
 								KEY_CERTIFICATE + " TEXT," +
 								KEY_USER_CERTIFICATE + " TEXT" +
 							");";
-	private final String[] ALL_COLUMNS = new String[] {
+	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
 								KEY_NAME,
 								KEY_GATEWAY,
@@ -98,6 +99,29 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_VPN_TYPE +
 						   " TEXT DEFAULT '';");
+			}
+			if (oldVersion < 4)
+			{	/* remove NOT NULL constraint from username column */
+				updateColumns(db);
+			}
+		}
+
+		private void updateColumns(SQLiteDatabase db)
+		{
+			db.beginTransaction();
+			try
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " RENAME TO tmp_" + TABLE_VPNPROFILE + ";");
+				db.execSQL(DATABASE_CREATE);
+				StringBuilder insert = new StringBuilder("INSERT INTO " + TABLE_VPNPROFILE + " SELECT ");
+				SQLiteQueryBuilder.appendColumns(insert, ALL_COLUMNS);
+				db.execSQL(insert.append(" FROM tmp_" + TABLE_VPNPROFILE + ";").toString());
+				db.execSQL("DROP TABLE tmp_" + TABLE_VPNPROFILE + ";");
+				db.setTransactionSuccessful();
+			}
+			finally
+			{
+				db.endTransaction();
 			}
 		}
 	}
