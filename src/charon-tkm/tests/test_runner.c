@@ -32,6 +32,7 @@ int main(void)
 	suite_add_tcase(s, make_utility_tests());
 	suite_add_tcase(s, make_nonceg_tests());
 	suite_add_tcase(s, make_diffie_hellman_tests());
+	suite_add_tcase(s, make_keymat_tests());
 
 	SRunner *sr = srunner_create(s);
 

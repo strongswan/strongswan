@@ -24,5 +24,6 @@ TCase *make_chunk_map_tests(void);
 TCase *make_utility_tests(void);
 TCase *make_nonceg_tests(void);
 TCase *make_diffie_hellman_tests(void);
+TCase *make_keymat_tests(void);
 
 #endif /** TEST_RUNNER_H_ */
