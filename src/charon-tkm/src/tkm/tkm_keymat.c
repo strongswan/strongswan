@@ -71,6 +71,31 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
+	/* Check encryption and integrity algorithms */
+	u_int16_t enc_alg, int_alg, key_size;
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg, &key_size))
+	{
+		DBG1(DBG_IKE, "no %N selected", transform_type_names,
+				ENCRYPTION_ALGORITHM);
+		return FALSE;
+	}
+	if (encryption_algorithm_is_aead(enc_alg))
+	{
+		DBG1(DBG_IKE, "AEAD algorithm %N not supported",
+			   encryption_algorithm_names, enc_alg);
+		return FALSE;
+	}
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg, NULL))
+	{
+		DBG1(DBG_IKE, "no %N selected", transform_type_names,
+				INTEGRITY_ALGORITHM);
+		return FALSE;
+	}
+	DBG2(DBG_IKE, "using %N for encryption, %N for integrity",
+			encryption_algorithm_names, enc_alg,
+			integrity_algorithm_names, int_alg);
+
+	/* Acquire nonce context id */
 	chunk_t * const nonce = this->initiator ? &nonce_i : &nonce_r;
 	const uint64_t nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
 	if (!nc_id)
@@ -79,6 +104,7 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
+	/* Get DH context id */
 	tkm_diffie_hellman_t * const tkm_dh = (tkm_diffie_hellman_t *)dh;
 	const dh_id_type dh_id = tkm_dh->get_id(tkm_dh);
 
