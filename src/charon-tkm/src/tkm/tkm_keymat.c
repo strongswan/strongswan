@@ -42,9 +42,19 @@ struct private_tkm_keymat_t {
 	keymat_v2_t *proxy;
 
 	/**
-	 * IKE_SA Role, initiator or responder
+	 * IKE_SA Role, initiator or responder.
 	 */
 	bool initiator;
+
+	/**
+	 * Inbound AEAD.
+	 */
+	aead_t *aead_in;
+
+	/**
+	 * Outbound AEAD.
+	 */
+	aead_t *aead_out;
 
 };
 
@@ -135,6 +145,76 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
+	/* Initialize AEAD with crypters and signers */
+	signer_t * const signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
+	signer_t * const signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
+	if (signer_i == NULL || signer_r == NULL)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, INTEGRITY_ALGORITHM,
+			 integrity_algorithm_names, int_alg);
+		return FALSE;
+	}
+	crypter_t * const crypter_i = lib->crypto->create_crypter(lib->crypto,
+			enc_alg, key_size / 8);
+	crypter_t * const crypter_r = lib->crypto->create_crypter(lib->crypto,
+			enc_alg, key_size / 8);
+	if (crypter_i == NULL || crypter_r == NULL)
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
+			 transform_type_names, ENCRYPTION_ALGORITHM,
+			 encryption_algorithm_names, enc_alg, key_size);
+		return FALSE;
+	}
+
+	chunk_t key;
+	sequence_to_chunk(sk_ai.data, sk_ai.size, &key);
+	DBG4(DBG_IKE, "Sk_ai %B", &key);
+	if (!signer_i->set_key(signer_i, key))
+	{
+		return FALSE;
+	}
+	chunk_clear(&key);
+
+	sequence_to_chunk(sk_ar.data, sk_ar.size, &key);
+	DBG4(DBG_IKE, "Sk_ar %B", &key);
+	if (!signer_r->set_key(signer_r, key))
+	{
+		return FALSE;
+	}
+	chunk_clear(&key);
+
+	sequence_to_chunk(sk_ei.data, sk_ei.size, &key);
+	DBG4(DBG_IKE, "Sk_ei %B", &key);
+	if (!crypter_i->set_key(crypter_i, key))
+	{
+		return FALSE;
+	}
+	chunk_clear(&key);
+
+	sequence_to_chunk(sk_er.data, sk_er.size, &key);
+	DBG4(DBG_IKE, "Sk_er %B", &key);
+	if (!crypter_r->set_key(crypter_r, key))
+	{
+		return FALSE;
+	}
+	chunk_clear(&key);
+
+	if (this->initiator)
+	{
+		this->aead_in = aead_create(crypter_r, signer_r);
+		this->aead_out = aead_create(crypter_i, signer_i);
+	}
+	else
+	{
+		this->aead_in = aead_create(crypter_i, signer_i);
+		this->aead_out = aead_create(crypter_r, signer_r);
+	}
+
+	/* TODO: Add failure handler (see keymat_v2.c) */
+
 	if (this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
 				nonce_r, id, rekey_function, rekey_skd))
 	{
@@ -163,8 +243,7 @@ METHOD(tkm_keymat_t, derive_child_keys, bool,
 METHOD(keymat_t, get_aead, aead_t*,
 	private_tkm_keymat_t *this, bool in)
 {
-	DBG1(DBG_IKE, "returning aead transform");
-	return this->proxy->keymat.get_aead(&this->proxy->keymat, in);
+	return in ? this->aead_in : this->aead_out;
 }
 
 METHOD(tkm_keymat_t, get_auth_octets, bool,
@@ -195,6 +274,9 @@ METHOD(tkm_keymat_t, get_psk_sig, bool,
 METHOD(keymat_t, destroy, void,
 	private_tkm_keymat_t *this)
 {
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
+	this->proxy->keymat.destroy(&this->proxy->keymat);
 	free(this);
 }
 
