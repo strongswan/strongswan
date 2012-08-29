@@ -16,6 +16,7 @@
  */
 
 #include <limits.h>
+#include <stdint.h>
 
 #include "esp_context.h"
 
