@@ -130,19 +130,19 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 	{
 		case 4:
 		{
-			struct iphdr *ip;
+			struct ip *ip;
 
-			if (packet.len < sizeof(struct iphdr))
+			if (packet.len < sizeof(struct ip))
 			{
 				DBG1(DBG_ESP, "IPv4 packet too short");
 				goto failed;
 			}
-			ip = (struct iphdr*)packet.ptr;
+			ip = (struct ip*)packet.ptr;
 			src = host_create_from_chunk(AF_INET,
-										 chunk_from_thing(ip->saddr), 0);
+										 chunk_from_thing(ip->ip_src), 0);
 			dst = host_create_from_chunk(AF_INET,
-										 chunk_from_thing(ip->daddr), 0);
-			next_header = ip->protocol;
+										 chunk_from_thing(ip->ip_dst), 0);
+			next_header = ip->ip_p;
 			break;
 		}
 #ifdef HAVE_NETINET_IP6_H
