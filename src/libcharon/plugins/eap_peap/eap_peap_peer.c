@@ -42,17 +42,17 @@ struct private_eap_peap_peer_t {
 	identification_t *peer;
 
 	/**
-     * Outer phase 1 EAP method
+	 * Outer phase 1 EAP method
 	 */
 	eap_method_t *ph1_method;
 
 	/**
-     * Current phase 2 EAP method
+	 * Current phase 2 EAP method
 	 */
 	eap_method_t *ph2_method;
 
 	/**
-     * Pending outbound EAP message
+	 * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -101,9 +101,8 @@ METHOD(tls_application_t, process, status_t,
 	if (code == EAP_REQUEST || code == EAP_RESPONSE)
 	{
 		received_type = in->get_type(in, &received_vendor);
-		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N/%N]",
-						   		eap_code_short_names, code,
-								eap_type_short_names, received_type);
+		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
+			 eap_code_short_names, code, eap_type_short_names, received_type);
 		if (code != EAP_REQUEST)
 		{
 			DBG1(DBG_IKE, "%N expected", eap_code_names, EAP_REQUEST);
@@ -113,8 +112,8 @@ METHOD(tls_application_t, process, status_t,
 	}
 	else
 	{
-		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N]",
-						   		eap_code_short_names, code);
+		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N ]",
+			 eap_code_short_names, code);
 		this->out = eap_payload_create_code(code, in->get_identifier(in));
 		in->destroy(in);
 		return NEED_MORE;
@@ -137,8 +136,8 @@ METHOD(tls_application_t, process, status_t,
 		if (received_vendor)
 		{
 			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
-						  "(id 0x%02X", received_type, received_vendor,
-						   in->get_identifier(in));
+				 "(id 0x%02X", received_type, received_vendor,
+				 in->get_identifier(in));
 		}
 		else
 		{
@@ -175,7 +174,7 @@ METHOD(tls_application_t, process, status_t,
 			if (vendor)
 			{
 				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
-							   type, vendor);
+					 type, vendor);
 			}
 			else
 			{
@@ -199,12 +198,12 @@ METHOD(tls_application_t, build, status_t,
 		type = this->out->get_type(this->out, &vendor);
 		if (code == EAP_REQUEST || code == EAP_RESPONSE)
 		{
-			DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [EAP/%N/%N]",
+			DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
 				 eap_code_short_names, code, eap_type_short_names, type);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [EAP/%N]",
+			DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [ EAP/%N ]",
 				 eap_code_short_names, code);
 		}
 

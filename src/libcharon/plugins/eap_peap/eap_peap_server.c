@@ -62,17 +62,17 @@ struct private_eap_peap_server_t {
 	eap_code_t phase2_result;
 
 	/**
-     * Outer phase 1 EAP method
+	 * Outer phase 1 EAP method
 	 */
 	eap_method_t *ph1_method;
 
 	/**
-     * Current phase 2 EAP method
+	 * Current phase 2 EAP method
 	 */
 	eap_method_t *ph2_method;
 
 	/**
-     * Pending outbound EAP message
+	 * Pending outbound EAP message
 	 */
 	eap_payload_t *out;
 
@@ -119,7 +119,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	else
 	{
 		DBG1(DBG_IKE, "%N method failed", eap_type_names, type);
-			return FAILED;
+		return FAILED;
 	}
 }
 
@@ -197,7 +197,7 @@ METHOD(tls_application_t, process, status_t,
 	if (code == EAP_REQUEST || code == EAP_RESPONSE)
 	{
 		received_type = in->get_type(in, &received_vendor);
-		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N/%N]",
+		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
 								eap_code_short_names, code,
 								eap_type_short_names, received_type);
 		if (code != EAP_RESPONSE)
@@ -209,7 +209,7 @@ METHOD(tls_application_t, process, status_t,
 	}
 	else
 	{
-		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N]",
+		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N ]",
 								eap_code_short_names, code);
 
 		/* if EAP_SUCCESS check if to continue phase2 with EAP-TNC */
