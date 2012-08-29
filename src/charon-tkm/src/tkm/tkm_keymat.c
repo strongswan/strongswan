@@ -58,6 +58,84 @@ struct private_tkm_keymat_t {
 
 };
 
+/**
+ * Create AEAD transforms from given key chunks.
+ *
+ * @param in			inbound AEAD transform to allocate, NULL if failed
+ * @param out			outbound AEAD transform to allocate, NULL if failed
+ * @param sk_ai			SK_ai key chunk
+ * @param sk_ar			SK_ar key chunk
+ * @param sk_ei			SK_ei key chunk
+ * @param sk_er			SK_er key chunk
+ * @param enc_alg		encryption algorithm to use
+ * @param int_alg		integrity algorithm to use
+ * @param key_size		encryption key size in bytes
+ * @param initiator		TRUE if initiator
+ */
+static void aead_create_from_keys(aead_t **in, aead_t **out,
+	   const chunk_t * const sk_ai, const chunk_t * const sk_ar,
+	   const chunk_t * const sk_ei, const chunk_t * const sk_er,
+	   const u_int16_t enc_alg, const u_int16_t int_alg,
+	   const u_int16_t key_size, bool initiator)
+{
+	*in = *out = NULL;
+
+	signer_t * const signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
+	signer_t * const signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
+	if (signer_i == NULL || signer_r == NULL)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, INTEGRITY_ALGORITHM,
+			 integrity_algorithm_names, int_alg);
+		return;
+	}
+	crypter_t * const crypter_i = lib->crypto->create_crypter(lib->crypto,
+			enc_alg, key_size);
+	crypter_t * const crypter_r = lib->crypto->create_crypter(lib->crypto,
+			enc_alg, key_size);
+	if (crypter_i == NULL || crypter_r == NULL)
+	{
+		signer_i->destroy(signer_i);
+		signer_r->destroy(signer_r);
+		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
+			 transform_type_names, ENCRYPTION_ALGORITHM,
+			 encryption_algorithm_names, enc_alg, key_size);
+		return;
+	}
+
+	DBG4(DBG_IKE, "Sk_ai %B", sk_ai);
+	if (!signer_i->set_key(signer_i, *sk_ai))
+	{
+		return;
+	}
+	DBG4(DBG_IKE, "Sk_ar %B", sk_ar);
+	if (!signer_r->set_key(signer_r, *sk_ar))
+	{
+		return;
+	}
+	DBG4(DBG_IKE, "Sk_ei %B", sk_ei);
+	if (!crypter_i->set_key(crypter_i, *sk_ei))
+	{
+		return;
+	}
+	DBG4(DBG_IKE, "Sk_er %B", sk_er);
+	if (!crypter_r->set_key(crypter_r, *sk_er))
+	{
+		return;
+	}
+
+	if (initiator)
+	{
+		*in = aead_create(crypter_r, signer_r);
+		*out = aead_create(crypter_i, signer_i);
+	}
+	else
+	{
+		*in = aead_create(crypter_i, signer_i);
+		*out = aead_create(crypter_r, signer_r);
+	}
+}
+
 METHOD(keymat_t, get_version, ike_version_t,
 	private_tkm_keymat_t *this)
 {
@@ -145,72 +223,25 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	/* Initialize AEAD with crypters and signers */
-	signer_t * const signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
-	signer_t * const signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
-	if (signer_i == NULL || signer_r == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, INTEGRITY_ALGORITHM,
-			 integrity_algorithm_names, int_alg);
-		return FALSE;
-	}
-	crypter_t * const crypter_i = lib->crypto->create_crypter(lib->crypto,
-			enc_alg, key_size / 8);
-	crypter_t * const crypter_r = lib->crypto->create_crypter(lib->crypto,
-			enc_alg, key_size / 8);
-	if (crypter_i == NULL || crypter_r == NULL)
-	{
-		signer_i->destroy(signer_i);
-		signer_r->destroy(signer_r);
-		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
-			 transform_type_names, ENCRYPTION_ALGORITHM,
-			 encryption_algorithm_names, enc_alg, key_size);
-		return FALSE;
-	}
+	chunk_t c_ai, c_ar, c_ei, c_er;
+	sequence_to_chunk(sk_ai.data, sk_ai.size, &c_ai);
+	sequence_to_chunk(sk_ar.data, sk_ar.size, &c_ar);
+	sequence_to_chunk(sk_ei.data, sk_ei.size, &c_ei);
+	sequence_to_chunk(sk_er.data, sk_er.size, &c_er);
 
-	chunk_t key;
-	sequence_to_chunk(sk_ai.data, sk_ai.size, &key);
-	DBG4(DBG_IKE, "Sk_ai %B", &key);
-	if (!signer_i->set_key(signer_i, key))
-	{
-		return FALSE;
-	}
-	chunk_clear(&key);
+	aead_create_from_keys(&this->aead_in, &this->aead_out,
+			&c_ai, &c_ar, &c_ei, &c_er,
+			enc_alg, int_alg, key_size / 8, this->initiator);
 
-	sequence_to_chunk(sk_ar.data, sk_ar.size, &key);
-	DBG4(DBG_IKE, "Sk_ar %B", &key);
-	if (!signer_r->set_key(signer_r, key))
-	{
-		return FALSE;
-	}
-	chunk_clear(&key);
+	chunk_clear(&c_ai);
+	chunk_clear(&c_ar);
+	chunk_clear(&c_ei);
+	chunk_clear(&c_er);
 
-	sequence_to_chunk(sk_ei.data, sk_ei.size, &key);
-	DBG4(DBG_IKE, "Sk_ei %B", &key);
-	if (!crypter_i->set_key(crypter_i, key))
+	if (!this->aead_in || !this->aead_out)
 	{
+		DBG1(DBG_IKE, "could not initialize AEAD transforms");
 		return FALSE;
-	}
-	chunk_clear(&key);
-
-	sequence_to_chunk(sk_er.data, sk_er.size, &key);
-	DBG4(DBG_IKE, "Sk_er %B", &key);
-	if (!crypter_r->set_key(crypter_r, key))
-	{
-		return FALSE;
-	}
-	chunk_clear(&key);
-
-	if (this->initiator)
-	{
-		this->aead_in = aead_create(crypter_r, signer_r);
-		this->aead_out = aead_create(crypter_i, signer_i);
-	}
-	else
-	{
-		this->aead_in = aead_create(crypter_i, signer_i);
-		this->aead_out = aead_create(crypter_r, signer_r);
 	}
 
 	/* TODO: Add failure handler (see keymat_v2.c) */
