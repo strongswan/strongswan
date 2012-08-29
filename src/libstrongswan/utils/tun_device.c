@@ -25,16 +25,17 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <net/if.h>
 
 #ifdef __APPLE__
-#include <net/if.h>
 #include <net/if_utun.h>
 #include <netinet/in_var.h>
 #include <sys/kern_control.h>
-#else /* !__APPLE__ */
-#include <linux/if.h>
+#elif defined(__linux__)
 #include <linux/if_tun.h>
-#endif /* !__APPLE__ */
+#else
+#include <net/if_tun.h>
+#endif
 
 #include "tun_device.h"
 
@@ -193,6 +194,8 @@ METHOD(tun_device_t, set_mtu, bool,
 
 	if (ioctl(this->sock, SIOCSIFMTU, &ifr) < 0)
 	{
+		DBG1(DBG_LIB, "failed to set MTU on %s: %s", this->if_name,
+			 strerror(errno));
 		return FALSE;
 	}
 	this->mtu = mtu;
@@ -286,6 +289,20 @@ METHOD(tun_device_t, destroy, void,
 	if (this->tunfd > 0)
 	{
 		close(this->tunfd);
+#ifdef __FreeBSD__
+		/* tun(4) says the following: "These network interfaces persist until
+		 * the if_tun.ko module is unloaded, or until removed with the
+		 * ifconfig(8) command."  So simply closing the FD is not enough. */
+		struct ifreq ifr;
+
+		memset(&ifr, 0, sizeof(ifr));
+		strncpy(ifr.ifr_name, this->if_name, IFNAMSIZ);
+		if (ioctl(this->sock, SIOCIFDESTROY, &ifr) < 0)
+		{
+			DBG1(DBG_LIB, "failed to destroy %s: %s", this->if_name,
+				 strerror(errno));
+		}
+#endif /* __FreeBSD__ */
 	}
 	if (this->sock > 0)
 	{
@@ -347,7 +364,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 	}
 	return TRUE;
 
-#else /* !__APPLE__ */
+#elif defined(IFF_TUN)
 
 	struct ifreq ifr;
 
@@ -375,6 +392,31 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 	}
 	strncpy(this->if_name, ifr.ifr_name, IFNAMSIZ);
 	return TRUE;
+
+#else /* !IFF_TUN */
+
+	/* this works on FreeBSD and might also work on Linux with older TUN
+	 * driver versions (no IFF_TUN) */
+	char devname[IFNAMSIZ];
+	int i;
+
+	if (name_tmpl)
+	{
+		DBG1(DBG_LIB, "arbitrary naming of TUN devices is not supported");
+	}
+
+	for (i = 0; i < 256; i++)
+	{
+		snprintf(devname, IFNAMSIZ, "/dev/tun%d", i);
+		this->tunfd = open(devname, O_RDWR);
+		if (this->tunfd > 0)
+		{	/* for ioctl(2) calls only the interface name is used */
+			snprintf(this->if_name, IFNAMSIZ, "tun%d", i);
+			break;
+		}
+		DBG1(DBG_LIB, "failed to open %s: %s", this->if_name, strerror(errno));
+	}
+	return this->tunfd > 0;
 
 #endif /* !__APPLE__ */
 }
