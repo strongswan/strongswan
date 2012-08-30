@@ -305,34 +305,28 @@ METHOD(tkm_keymat_t, get_psk_sig, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
 	chunk_t secret, identification_t *id, char reserved[3], chunk_t *sig)
 {
-	DBG1(DBG_IKE, "returning PSK signature");
-	if (!verify)
+	DBG1(DBG_IKE, "returning %s PSK signature", verify ? "remote" : "local");
+
+	signature_type signature;
+	init_message_type msg;
+	chunk_to_sequence(&ike_sa_init, &msg);
+
+	chunk_t idx_chunk, chunk = chunk_alloca(4);
+	chunk.ptr[0] = id->get_type(id);
+	memcpy(chunk.ptr + 1, reserved, 3);
+	idx_chunk = chunk_cata("cc", chunk, id->get_encoding(id));
+	idx_type idx;
+	chunk_to_sequence(&idx_chunk, &idx);
+
+	if (ike_isa_sign_psk(1, msg, idx, verify == TRUE, &signature) != TKM_OK)
 	{
-		signature_type signature;
-		init_message_type msg;
-		chunk_to_sequence(&ike_sa_init, &msg);
-
-		chunk_t idx_chunk, chunk = chunk_alloca(4);
-		chunk.ptr[0] = id->get_type(id);
-		memcpy(chunk.ptr + 1, reserved, 3);
-		idx_chunk = chunk_cata("cc", chunk, id->get_encoding(id));
-		idx_type idx;
-		chunk_to_sequence(&idx_chunk, &idx);
-
-		if (ike_isa_sign_psk(1, msg, idx, &signature) != TKM_OK)
-		{
-			DBG1(DBG_IKE, "get local PSK signature failed");
-			return FALSE;
-		}
-
-		sequence_to_chunk(&signature.data[0], signature.size, sig);
-		return TRUE;
+		DBG1(DBG_IKE, "get %s PSK signature failed", verify ?
+				"remote" : "local");
+		return FALSE;
 	}
-	else
-	{
-		return this->proxy->get_psk_sig(this->proxy, verify, ike_sa_init, nonce,
-			secret, id, reserved, sig);
-	}
+
+	sequence_to_chunk(&signature.data[0], signature.size, sig);
+	return TRUE;
 }
 
 METHOD(keymat_t, destroy, void,
