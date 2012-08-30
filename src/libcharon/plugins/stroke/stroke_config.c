@@ -569,11 +569,11 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	else if (strneq(auth, "eap", 3))
 	{
 		eap_type_t type;
-		u_int32_t vendor = 0;
+		u_int32_t vendor;
 
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 
-		type = eap_type_from_string(auth);
+		type = eap_type_from_string(auth, &vendor);
 		if (type)
 		{
 			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);

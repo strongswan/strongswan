@@ -113,11 +113,16 @@ typedef struct __attribute__((packed)) {
 } eap_packet_t;
 
 /**
- * Lookup the EAP method type from a string.
+ * Lookup the EAP method type/vendor from a string.
  *
- * @param name		EAP method name (such as "md5", "aka")
+ * The string may optionally have a leading "eap-" prefix. If the string is
+ * unknown, it is interpreted numerically, either as a single IETF number
+ * or a "type-vendor" number pair.
+ *
+ * @param name		EAP method name ("eap-md5", "aka", "ms-soh", "33-311")
+ * @param vendor	vendor ID to return
  * @return			method type, 0 if unknown
  */
-eap_type_t eap_type_from_string(char *name);
+eap_type_t eap_type_from_string(char *name, u_int32_t *vendor);
 
 #endif /** EAP_H_ @}*/

@@ -181,6 +181,7 @@ METHOD(xauth_method_t, process, status_t,
 	chunk_t user = chunk_empty;
 	eap_method_t *backend;
 	eap_type_t type;
+	u_int32_t vendor;
 	char *name;
 	bool ok;
 
@@ -225,13 +226,13 @@ METHOD(xauth_method_t, process, status_t,
 	name = lib->settings->get_str(lib->settings,
 								  "%s.plugins.xauth-eap.backend", "radius",
 								  charon->name);
-	type = eap_type_from_string(name);
+	type = eap_type_from_string(name, &vendor);
 	if (!type)
 	{
 		DBG1(DBG_CFG, "Unknown XAuth-EAP method: %s", name);
 		return FAILED;
 	}
-	backend = charon->eap->create_instance(charon->eap, type, 0, EAP_SERVER,
+	backend = charon->eap->create_instance(charon->eap, type, vendor, EAP_SERVER,
 										   this->server, this->peer);
 	if (!backend)
 	{

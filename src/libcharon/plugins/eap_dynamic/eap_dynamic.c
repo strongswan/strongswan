@@ -280,6 +280,7 @@ static void handle_preferred_eap_types(private_eap_dynamic_t *this,
 {
 	enumerator_t *enumerator;
 	eap_type_t type;
+	u_int32_t vendor;
 	entry_t *entry, *pref_entry;
 	linked_list_t *preferred;
 	char *method;
@@ -289,11 +290,12 @@ static void handle_preferred_eap_types(private_eap_dynamic_t *this,
 	enumerator = enumerator_create_token(methods, ",", " ");
 	while (enumerator->enumerate(enumerator, &method))
 	{
-		type = eap_type_from_string(method);
+		type = eap_type_from_string(method, &vendor);
 		if (type)
 		{
 			INIT(entry,
 				.type = type,
+				.vendor = vendor,
 			);
 			preferred->insert_last(preferred, entry);
 		}

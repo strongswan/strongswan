@@ -57,6 +57,11 @@ struct private_tnc_pdp_t {
 	eap_type_t type;
 
 	/**
+	 * EAP method vendor ID
+	 */
+	u_int32_t vendor;
+
+	/**
 	 * IPv4 RADIUS socket
 	 */
 	int ipv4;
@@ -220,7 +225,7 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 		{
 			free(data.ptr);
 			return chunk_empty;
-		}	
+		}
 		*a.ptr |= 0x80;
 	}
 	while (mppe_key->salt == *salt);
@@ -269,7 +274,8 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	if (eap)
 	{
 		data = eap->get_data(eap);
-		DBG3(DBG_CFG, "%N payload %B", eap_type_names, this->type, &data);
+		DBG3(DBG_CFG, "%N payload %B",
+			 eap_type_get_names(this->vendor), this->type, &data);
 
 		/* fragment data suitable for RADIUS */
 		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
@@ -373,7 +379,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
 			method = charon->eap->create_instance(charon->eap, this->type,
-										0, EAP_SERVER, this->server, peer);
+								this->vendor, EAP_SERVER, this->server, peer);
 			if (!method)
 			{
 				peer->destroy(peer);
@@ -574,6 +580,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 {
 	private_tnc_pdp_t *this;
 	char *secret, *server, *eap_type_str;
+	u_int32_t vendor;
 
 	INIT(this,
 		.public = {
@@ -636,14 +643,15 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 						"%s.plugins.tnc-pdp.method", "ttls", charon->name);
-	this->type = eap_type_from_string(eap_type_str);
+	this->type = eap_type_from_string(eap_type_str, &this->vendor);
 	if (this->type == 0)
 	{
 		DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);
 		destroy(this);
 		return NULL;
 	}
-	DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
+	DBG1(DBG_IKE, "eap method %N selected",
+		 eap_type_get_names(this->vendor), this->type);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
