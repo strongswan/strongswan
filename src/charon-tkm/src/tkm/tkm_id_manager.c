@@ -22,11 +22,12 @@
 
 #define TKM_LIMIT 100
 
-ENUM_BEGIN(tkm_context_kind_names, TKM_CTX_NONCE, TKM_CTX_ISA,
+ENUM_BEGIN(tkm_context_kind_names, TKM_CTX_NONCE, TKM_CTX_AE,
 	"NONCE_CONTEXT",
 	"DH_CONTEXT",
-	"ISA_CONTEXT");
-ENUM_END(tkm_context_kind_names, TKM_CTX_ISA);
+	"ISA_CONTEXT",
+	"AE_CONTEXT");
+ENUM_END(tkm_context_kind_names, TKM_CTX_AE);
 
 typedef struct private_tkm_id_manager_t private_tkm_id_manager_t;
 

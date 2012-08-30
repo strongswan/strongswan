@@ -32,6 +32,8 @@ enum tkm_context_kind_t {
 	TKM_CTX_DH,
 	/** IKE SA context */
 	TKM_CTX_ISA,
+	/** Authenticated Endpoint context */
+	TKM_CTX_AE,
 
 	/** helper to determine the number of elements in this enum */
 	TKM_CTX_MAX,

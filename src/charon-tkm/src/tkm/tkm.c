@@ -75,7 +75,7 @@ bool tkm_init()
 		return FALSE;
 	}
 
-	const tkm_limits_t limits = {nc, dh, isa};
+	const tkm_limits_t limits = {nc, dh, isa, ae};
 
 	INIT(this,
 		.public = {
