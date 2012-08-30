@@ -746,28 +746,32 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
 	this->crypto->get_signature_algorithms(this->crypto, extensions);
 
-	/* add supported Elliptic Curves, if any */
-	enumerator = this->crypto->create_ec_enumerator(this->crypto);
-	while (enumerator->enumerate(enumerator, NULL, &curve))
+	/* Microsofts PEAP does not like EC curves */
+	if (this->tls->get_purpose(this->tls) != TLS_PURPOSE_EAP_PEAP)
 	{
-		if (!curves)
+		/* add supported Elliptic Curves, if any */
+		enumerator = this->crypto->create_ec_enumerator(this->crypto);
+		while (enumerator->enumerate(enumerator, NULL, &curve))
 		{
-			extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
-			curves = bio_writer_create(16);
+			if (!curves)
+			{
+				extensions->write_uint16(extensions, TLS_EXT_ELLIPTIC_CURVES);
+				curves = bio_writer_create(16);
+			}
+			curves->write_uint16(curves, curve);
 		}
-		curves->write_uint16(curves, curve);
-	}
-	enumerator->destroy(enumerator);
-	if (curves)
-	{
-		extensions->write_data16(extensions, curves->get_buf(curves));
-		curves->destroy(curves);
+		enumerator->destroy(enumerator);
+		if (curves)
+		{
+			extensions->write_data16(extensions, curves->get_buf(curves));
+			curves->destroy(curves);
 
-		/* if we support curves, add point format extension */
-		extensions->write_uint16(extensions, TLS_EXT_EC_POINT_FORMATS);
-		extensions->write_uint16(extensions, 2);
-		extensions->write_uint8(extensions, 1);
-		extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
+			/* if we support curves, add point format extension */
+			extensions->write_uint16(extensions, TLS_EXT_EC_POINT_FORMATS);
+			extensions->write_uint16(extensions, 2);
+			extensions->write_uint8(extensions, 1);
+			extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
+		}
 	}
 	if (this->server->get_type(this->server) == ID_FQDN)
 	{
