@@ -275,8 +275,8 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 		else
 		{
 			/* get rid of the reserved length field */
-			memcpy(buf+sizeof(eap_packet_t),
-				   buf+sizeof(eap_packet_t)+sizeof(u_int32_t), len);
+			memmove(buf + sizeof(eap_tls_packet_t),
+					buf + sizeof(eap_tls_packet_t) + sizeof(u_int32_t), len);
 		}
 	}
 	len += sizeof(eap_tls_packet_t);
