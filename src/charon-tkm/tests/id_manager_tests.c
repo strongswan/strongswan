@@ -18,7 +18,7 @@
 
 #include "tkm_id_manager.h"
 
-static const tkm_limits_t limits = {125, 100};
+static const tkm_limits_t limits = {125, 100, 30};
 
 START_TEST(test_id_mgr_creation)
 {

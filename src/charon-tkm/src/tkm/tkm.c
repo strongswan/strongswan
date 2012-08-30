@@ -75,8 +75,7 @@ bool tkm_init()
 		return FALSE;
 	}
 
-	/* only nonce and DH context limits are currently needed */
-	const tkm_limits_t limits = {nc, dh};
+	const tkm_limits_t limits = {nc, dh, isa};
 
 	INIT(this,
 		.public = {

@@ -30,6 +30,8 @@ enum tkm_context_kind_t {
 	TKM_CTX_NONCE,
 	/** Diffie-Hellman context */
 	TKM_CTX_DH,
+	/** IKE SA context */
+	TKM_CTX_ISA,
 
 	/** helper to determine the number of elements in this enum */
 	TKM_CTX_MAX,
