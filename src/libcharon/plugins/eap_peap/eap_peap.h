@@ -22,8 +22,41 @@
 #define EAP_PEAP_H_
 
 typedef struct eap_peap_t eap_peap_t;
+typedef struct eap_hdr_t eap_hdr_t;
+typedef enum eap_mstlv_type_t eap_mstlv_type_t;
+typedef enum eap_mstlv_result_t eap_mstlv_result_t;
 
 #include <sa/eap/eap_method.h>
+
+/**
+ * 4 byte EAP header, without type field
+ */
+struct eap_hdr_t {
+	u_int8_t code;
+	u_int8_t identifier;
+	u_int16_t length;
+};
+
+/**
+ * TLV types within EAP_MSTLV
+ */
+enum eap_mstlv_type_t {
+	MSTLV_SOH = 1,
+	MSTLV_SOH_REQUEST = 2,
+	MSTLV_RESULT = 3,
+	MSTLV_VENDOR = 7,
+	MSTLV_CRYPTO_BINDING = 12,
+	/* not a type, but a flag to apply to types */
+	MSTLV_MANDATORY = 0x8000,
+};
+
+/**
+ * TLV result options
+ */
+enum eap_mstlv_result_t {
+	MSTLV_RESULT_SUCCESS = 1,
+	MSTLV_RESULT_FAILURE = 2,
+};
 
 /**
  * Implementation of eap_method_t using EAP-PEAP.
