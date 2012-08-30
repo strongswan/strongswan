@@ -358,7 +358,8 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 		/* apply EAP method selected by RADIUS server */
 		eap_type = in->get_type(in, &eap_vendor);
 
-		DBG3(DBG_CFG, "%N payload %B", eap_type_names, eap_type, &message);
+		DBG3(DBG_CFG, "EAP-%N payload %B",
+			 eap_type_get_names(eap_vendor), eap_type, &message);
 
 		if (eap_type == EAP_IDENTITY)
 		{

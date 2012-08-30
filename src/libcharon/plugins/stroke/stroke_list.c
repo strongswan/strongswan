@@ -355,17 +355,10 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 			}
 			else
 			{
-				if ((uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR))
-				{
-					fprintf(out, "EAP_%" PRIuPTR "-%" PRIuPTR " authentication",
-						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE),
-						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR));
-				}
-				else
-				{
-					fprintf(out, "%N authentication", eap_type_names,
+				fprintf(out, "EAP-%N authentication",
+						eap_type_get_names(
+							(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR)),
 						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE));
-				}
 			}
 			id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
 			if (id)
