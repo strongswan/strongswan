@@ -154,6 +154,7 @@ ARG_ENABL_SET([eap-tls],        [enable EAP TLS authentication module.])
 ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
 ARG_ENABL_SET([eap-peap],       [enable EAP PEAP authentication module.])
 ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
+ARG_ENABL_SET([eap-ms-soh],     [enable Microsoft Statement of Health EAP module.])
 ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
@@ -929,6 +930,7 @@ ADD_PLUGIN([eap-tls],              [c charon nm])
 ADD_PLUGIN([eap-ttls],             [c charon nm])
 ADD_PLUGIN([eap-peap],             [c charon nm])
 ADD_PLUGIN([eap-tnc],              [c charon])
+ADD_PLUGIN([eap-ms-soh],           [c charon])
 ADD_PLUGIN([xauth-generic],        [c charon])
 ADD_PLUGIN([xauth-eap],            [c charon])
 ADD_PLUGIN([xauth-pam],            [c charon])
@@ -1057,6 +1059,7 @@ AM_CONDITIONAL(USE_EAP_TLS, test x$eap_tls = xtrue)
 AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
 AM_CONDITIONAL(USE_EAP_PEAP, test x$eap_peap = xtrue)
 AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
+AM_CONDITIONAL(USE_EAP_MS_SOH, test x$eap_ms_soh = xtrue)
 AM_CONDITIONAL(USE_EAP_DYNAMIC, test x$eap_dynamic = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_XAUTH_GENERIC, test x$xauth_generic = xtrue)
@@ -1240,6 +1243,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_ttls/Makefile
 	src/libcharon/plugins/eap_peap/Makefile
 	src/libcharon/plugins/eap_tnc/Makefile
+	src/libcharon/plugins/eap_ms_soh/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
 	src/libcharon/plugins/xauth_generic/Makefile
 	src/libcharon/plugins/xauth_eap/Makefile

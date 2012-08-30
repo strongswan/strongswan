@@ -358,6 +358,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_MS_SOH
+  SUBDIRS += plugins/eap_ms_soh
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_ms_soh/libstrongswan-eap-ms-soh.la
+endif
+endif
+
 if USE_TLS
 if MONOLITHIC
   # otherwise this library is linked to eap_tls
