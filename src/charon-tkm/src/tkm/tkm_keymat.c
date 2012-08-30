@@ -179,6 +179,14 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 				INTEGRITY_ALGORITHM);
 		return FALSE;
 	}
+	if (!(enc_alg == ENCR_AES_CBC && key_size == 256 &&
+			int_alg == AUTH_HMAC_SHA2_512_256))
+	{
+		DBG1(DBG_IKE, "the TKM only supports aes256-sha512 at the moment, please"
+				" update your configuration");
+		return FALSE;
+	}
+
 	DBG2(DBG_IKE, "using %N for encryption, %N for integrity",
 			encryption_algorithm_names, enc_alg,
 			integrity_algorithm_names, int_alg);
