@@ -93,6 +93,31 @@ ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
 	"DYN");
 ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
+ENUM(eap_vendor_names_unknown, 0, 0,
+	"(0)",
+);
+
+ENUM(eap_vendor_names_ms, EAP_MS_SOH, EAP_MS_CAPABILITES,
+	"MS-SOH",
+	"MS-CAP",
+);
+
+/*
+ * See header
+ */
+enum_name_t* eap_type_get_names(pen_t vendor)
+{
+	switch (vendor)
+	{
+		case PEN_IETF:
+			return eap_type_short_names;
+		case PEN_MICROSOFT:
+			return eap_vendor_names_ms;
+		default:
+			return eap_vendor_names_unknown;
+	}
+}
+
 /*
  * See header
  */

@@ -25,8 +25,10 @@
 
 typedef enum eap_code_t eap_code_t;
 typedef enum eap_type_t eap_type_t;
+typedef enum eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
+#include <pen/pen.h>
 
 /**
  * EAP code, type of an EAP message
@@ -83,6 +85,21 @@ extern enum_name_t *eap_type_names;
  * short string enum names for eap_type_t.
  */
 extern enum_name_t *eap_type_short_names;
+
+/**
+ * Vendor specific types. Vendors itself are defined as pen_t.
+ */
+enum eap_vendor_type_t {
+	/** Microsoft Statement of Health */
+	EAP_MS_SOH = 0x21,
+	/** Microsoft PEAP Capabilities */
+	EAP_MS_CAPABILITES = 0x22,
+};
+
+/**
+ * Get the enum names for a specific vendor
+ */
+enum_name_t* eap_type_get_names(pen_t vendor);
 
 /**
  * EAP packet format
