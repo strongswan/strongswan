@@ -1752,10 +1752,12 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 	switch (tls->get_purpose(tls))
 	{
 		case TLS_PURPOSE_EAP_TLS:
-		case TLS_PURPOSE_EAP_PEAP:
 			/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
 			this->msk_label = "client EAP encryption";
 			build_cipher_suite_list(this, FALSE);
+		case TLS_PURPOSE_EAP_PEAP:
+			this->msk_label = "client EAP encryption";
+			build_cipher_suite_list(this, TRUE);
 			break;
 		case TLS_PURPOSE_EAP_TTLS:
 			/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
