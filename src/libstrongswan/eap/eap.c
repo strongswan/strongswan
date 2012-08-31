@@ -21,6 +21,12 @@
 
 #include <debug.h>
 
+/**
+ * Forward declaration of enum name fallback callback.
+ */
+static int eap_type_names_cb(printf_hook_data_t *data, int vendor,
+							 enum_name_t *e, int type);
+
 ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_REQUEST",
 	"EAP_RESPONSE",
@@ -93,14 +99,30 @@ ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
 	"DYN");
 ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
-ENUM(eap_vendor_names_unknown, 0, 0,
-	"(0)",
+ENUM_CB(eap_vendor_names_unknown, eap_type_names_cb, 1, 0,
 );
 
-ENUM(eap_vendor_names_ms, EAP_MS_SOH, EAP_MS_CAPABILITES,
+ENUM_CB(eap_vendor_names_ms, eap_type_names_cb, EAP_MS_SOH, EAP_MS_CAPABILITES,
 	"MS-SOH",
 	"MS-CAP",
 );
+
+/**
+ * Callback function if mapping EAP type to enum name failed
+ */
+static int eap_type_names_cb(printf_hook_data_t *data, int vendor,
+							 enum_name_t *e, int type)
+{
+	if (e == eap_type_short_names)
+	{
+		return print_in_hook(data, "%d", type);
+	}
+	if (e == eap_vendor_names_ms)
+	{
+		return print_in_hook(data, "MS-%d", type);
+	}
+	return print_in_hook(data, "%d-%d", type, vendor);
+}
 
 /*
  * See header
