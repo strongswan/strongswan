@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -82,6 +83,21 @@ struct eap_payload_t {
 	eap_type_t (*get_type) (eap_payload_t *this, u_int32_t *vendor);
 
 	/**
+	 * Enumerate the EAP method types contained in an EAP-Nak (i.e. get_type()
+	 * returns EAP_NAK).
+	 *
+	 * @return			enumerator over (eap_type_t type, u_int32_t vendor)
+	 */
+	enumerator_t* (*get_types) (eap_payload_t *this);
+
+	/**
+	 * Check if the EAP method type is encoded in the Expanded Type format.
+	 *
+	 * @return			TRUE if in Expanded Type format
+	 */
+	bool (*is_expanded) (eap_payload_t *this);
+
+	/**
 	 * Destroys an eap_payload_t object.
 	 */
 	void (*destroy) (eap_payload_t *this);
@@ -126,8 +142,12 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  * Creates an eap_payload_t EAP_RESPONSE containing an EAP_NAK.
  *
  * @param identifier	EAP identifier to use in payload
+ * @param type			preferred auth type, 0 to send all supported types
+ * @param vendor		vendor identifier for auth type, 0 for default
+ * @param expanded		TRUE to send an expanded Nak
  * @return 				eap_payload_t object
  */
-eap_payload_t *eap_payload_create_nak(u_int8_t identifier);
+eap_payload_t *eap_payload_create_nak(u_int8_t identifier, eap_type_t type,
+									  u_int32_t vendor, bool expanded);
 
 #endif /** EAP_PAYLOAD_H_ @}*/

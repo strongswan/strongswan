@@ -563,51 +563,20 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 	else if (strneq(auth, "eap", 3))
 	{
-		enumerator_t *enumerator;
-		char *str;
-		int i = 0, type = 0, vendor;
+		eap_vendor_type_t *type;
 
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 
-		/* parse EAP string, format: eap[-type[-vendor]] */
-		enumerator = enumerator_create_token(auth, "-", " ");
-		while (enumerator->enumerate(enumerator, &str))
+		type = eap_vendor_type_from_string(auth);
+		if (type)
 		{
-			switch (i)
+			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type->type);
+			if (type->vendor)
 			{
-				case 1:
-					type = eap_type_from_string(str);
-					if (!type)
-					{
-						type = atoi(str);
-						if (!type)
-						{
-							DBG1(DBG_CFG, "unknown EAP method: %s", str);
-							break;
-						}
-					}
-					cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);
-					break;
-				case 2:
-					if (type)
-					{
-						vendor = atoi(str);
-						if (vendor)
-						{
-							cfg->add(cfg, AUTH_RULE_EAP_VENDOR, vendor);
-						}
-						else
-						{
-							DBG1(DBG_CFG, "unknown EAP vendor: %s", str);
-						}
-					}
-					break;
-				default:
-					break;
+				cfg->add(cfg, AUTH_RULE_EAP_VENDOR, type->vendor);
 			}
-			i++;
+			free(type);
 		}
-		enumerator->destroy(enumerator);
 
 		if (msg->add_conn.eap_identity)
 		{

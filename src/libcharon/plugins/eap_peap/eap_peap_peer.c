@@ -85,7 +85,7 @@ METHOD(tls_application_t, process, status_t,
 		default:
 			return FAILED;
 	}
- 		
+
 	in = eap_payload_create_data(data);
 	DBG3(DBG_IKE, "%B", &data);
 	chunk_free(&data);
@@ -151,7 +151,8 @@ METHOD(tls_application_t, process, status_t,
 		if (!this->ph2_method)
 		{
 			DBG1(DBG_IKE, "EAP method not supported");
-			this->out = eap_payload_create_nak(in->get_identifier(in));
+			this->out = eap_payload_create_nak(in->get_identifier(in), 0, 0,
+											   in->is_expanded(in));
 			in->destroy(in);
 			return NEED_MORE;
 		}

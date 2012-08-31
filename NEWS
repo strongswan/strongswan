@@ -20,6 +20,15 @@ strongswan-5.0.1
   PAM directly anymore, but can use any XAuth backend to verify credentials,
   including xauth-pam.
 
+- An EAP-Nak payload is returned by clients if the gateway requests an EAP
+  method that the client does not support.  Clients can also request a specific
+  EAP method by configuring that method with leftauth.
+
+- The eap-dynamic plugin handles EAP-Nak payloads returned by clients and uses
+  these to select a different EAP method supported/requested by the client.
+  The plugin initially requests the first registered method or the first method
+  configured with charon.plugins.eap-dynamic.preferred.
+
 - The autotools build has been migrated to use a config.h header. strongSwan
   development headers will get installed during "make install" if
   --with-dev-headers has been passed to ./configure.

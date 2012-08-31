@@ -523,6 +523,7 @@ an optional EAP method can be appended. Currently defined methods are
 .BR eap-sim ,
 .BR eap-tls ,
 .BR eap-ttls ,
+.BR eap-dynamic ,
 and
 .BR eap-radius .
 Alternatively, IANA assigned EAP method numbers are accepted. Vendor specific

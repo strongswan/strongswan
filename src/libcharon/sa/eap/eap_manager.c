@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -104,6 +105,44 @@ METHOD(eap_manager_t, remove_method, void,
 	this->lock->unlock(this->lock);
 }
 
+/**
+ * filter the registered methods
+ */
+static bool filter_methods(uintptr_t role, eap_entry_t **entry,
+						   eap_type_t *type, void *in, u_int32_t *vendor)
+{
+	if ((*entry)->role != (eap_role_t)role)
+	{
+		return FALSE;
+	}
+	if ((*entry)->vendor == 0 &&
+	   ((*entry)->type < 4 || (*entry)->type == EAP_EXPANDED ||
+	    (*entry)->type > EAP_EXPERIMENTAL))
+	{	/* filter invalid types */
+		return FALSE;
+	}
+	if (type)
+	{
+		*type = (*entry)->type;
+	}
+	if (vendor)
+	{
+		*vendor = (*entry)->vendor;
+	}
+	return TRUE;
+}
+
+METHOD(eap_manager_t, create_enumerator, enumerator_t*,
+	private_eap_manager_t *this, eap_role_t role)
+{
+	this->lock->read_lock(this->lock);
+	return enumerator_create_cleaner(
+				enumerator_create_filter(
+					this->methods->create_enumerator(this->methods),
+					(void*)filter_methods, (void*)(uintptr_t)role, NULL),
+				(void*)this->lock->unlock, this->lock);
+}
+
 METHOD(eap_manager_t, create_instance, eap_method_t*,
 	private_eap_manager_t *this, eap_type_t type, u_int32_t vendor,
 	eap_role_t role, identification_t *server, identification_t *peer)
@@ -150,6 +189,7 @@ eap_manager_t *eap_manager_create()
 			.public = {
 				.add_method = _add_method,
 				.remove_method = _remove_method,
+				.create_enumerator = _create_enumerator,
 				.create_instance = _create_instance,
 				.destroy = _destroy,
 			},
