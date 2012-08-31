@@ -78,6 +78,10 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	name = enum_to_name(e, val);
 	if (name == NULL)
 	{
+		if (e->cb)
+		{
+			return e->cb(data, 0, e, val);
+		}
 		return print_in_hook(data, "(%d)", val);
 	}
 	else
@@ -108,6 +112,10 @@ int enum_dynamic_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	}
 	if (name == NULL)
 	{
+		if (e && e->cb)
+		{
+			return e->cb(data, id, e, val);
+		}
 		return print_in_hook(data, "(%d)", val);
 	}
 	else

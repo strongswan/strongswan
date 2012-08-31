@@ -36,6 +36,21 @@ typedef struct enum_name_elem_t enum_name_elem_t;
 typedef enum_name_t* (*enum_name_get_t)(int id);
 
 /**
+ * Fallback callback to call if enum could not be mapped to a string.
+ *
+ * This callback is invoked from within the printf hook. Use print_in_hook()
+ * with the supplied data to write to the output stream.
+ *
+ * @param data		printf hook data to pass to print_in_hook()
+ * @param id		index variable, as passed to enum_name_get function, or 0
+ * @param e			enum name for which callback is invoked
+ * @param val		enum value to map
+ * @return			number of characters written
+ */
+typedef int (*enum_name_cb_t)(printf_hook_data_t *data, int id, enum_name_t *e,
+							  int val);
+
+/**
  * Struct to store names for enums.
  *
  * To print the string representation of enumeration values, the strings
@@ -70,6 +85,8 @@ typedef enum_name_t* (*enum_name_get_t)(int id);
 struct enum_name_t {
 	/** first enum_name_elem_t in chain */
 	enum_name_elem_t *elem;
+	/** callback function to invoke if enum string for value not found */
+	enum_name_cb_t cb;
 };
 
 struct enum_name_elem_t {
@@ -117,6 +134,17 @@ struct enum_name_elem_t {
 	enum_name_t *name = &name##head
 
 /**
+ * Complete enum name list started with ENUM_BEGIN, with a fallback callback.
+ *
+ * @param name	name of the enum_name list
+ * @param cbf	callback function if enum value could not be mapped
+ * @param prev	enum value of the "last" defined in ENUM_BEGIN/previous ENUM_NEXT
+ */
+#define ENUM_END_CB(name, cbf, prev) \
+	static enum_name_t name##head = { .elem = &name##prev, .cb = cbf }; \
+	enum_name_t *name = &name##head
+
+/**
  * Define a enum name with only one range.
  *
  * This is a convenience macro to use when a enum_name list contains only
@@ -129,6 +157,18 @@ struct enum_name_elem_t {
  */
 #define ENUM(name, first, last, ...) \
 	ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
+
+/**
+ * Define a enum name with only one range, but with a fallback callback.
+ *
+ * @param name	name of the enum_name list
+ * @param cbf	callback function if enum value could not be mapped
+ * @param first	enum value of the first enum string
+ * @param last	enum value of the last enum string
+ * @param ...	a list of strings
+ */
+#define ENUM_CB(name, cbf, first, last, ...) \
+	ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END_CB(name, cbf, last)
 
 /**
  * Convert a enum value to its string representation.
