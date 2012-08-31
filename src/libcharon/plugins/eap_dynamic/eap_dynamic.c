@@ -41,7 +41,7 @@ struct private_eap_dynamic_t {
 	identification_t *peer;
 
 	/**
-	 * Our supported EAP types (as eap_vendor_type_t*)
+	 * Our supported EAP types (as entry_t*)
 	 */
 	linked_list_t *types;
 
@@ -62,9 +62,19 @@ struct private_eap_dynamic_t {
 };
 
 /**
- * Compare two eap_vendor_type_t objects
+ * Struct that stores EAP type and vendor ID
  */
-static bool entry_matches(eap_vendor_type_t *item, eap_vendor_type_t *other)
+typedef struct {
+	/** EAP type */
+	eap_type_t type;
+	/** Vendor Id */
+	u_int32_t vendor;
+} entry_t;
+
+/**
+ * Compare two entry_t objects
+ */
+static bool entry_matches(entry_t *item, entry_t *other)
 {
 	return item->type == other->type && item->vendor == other->vendor;
 }
@@ -99,7 +109,7 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
  */
 static void select_method(private_eap_dynamic_t *this)
 {
-	eap_vendor_type_t *entry;
+	entry_t *entry;
 	linked_list_t *outer = this->types, *inner = this->other_types;
 	char *who = "peer";
 
@@ -192,7 +202,7 @@ METHOD(eap_method_t, process, status_t,
 		enumerator = in->get_types(in);
 		while (enumerator->enumerate(enumerator, &type, &vendor))
 		{
-			eap_vendor_type_t *entry;
+			entry_t *entry;
 
 			if (!type)
 			{
@@ -292,7 +302,8 @@ static void handle_preferred_eap_types(private_eap_dynamic_t *this,
 									   char *methods)
 {
 	enumerator_t *enumerator;
-	eap_vendor_type_t *type, *entry;
+	eap_type_t type;
+	entry_t *entry, *pref_entry;
 	linked_list_t *preferred;
 	char *method;
 
@@ -301,28 +312,31 @@ static void handle_preferred_eap_types(private_eap_dynamic_t *this,
 	enumerator = enumerator_create_token(methods, ",", " ");
 	while (enumerator->enumerate(enumerator, &method))
 	{
-		type = eap_vendor_type_from_string(method);
+		type = eap_type_from_string(method);
 		if (type)
 		{
-			preferred->insert_last(preferred, type);
+			INIT(entry,
+				.type = type,
+			);
+			preferred->insert_last(preferred, entry);
 		}
 	}
 	enumerator->destroy(enumerator);
 
 	enumerator = this->types->create_enumerator(this->types);
-	while (preferred->remove_last(preferred, (void**)&type) == SUCCESS)
+	while (preferred->remove_last(preferred, (void**)&pref_entry) == SUCCESS)
 	{	/* move (supported) types to the front, maintain the preferred order */
 		this->types->reset_enumerator(this->types, enumerator);
 		while (enumerator->enumerate(enumerator, &entry))
 		{
-			if (entry_matches(entry, type))
+			if (entry_matches(entry, pref_entry))
 			{
 				this->types->remove_at(this->types, enumerator);
 				this->types->insert_first(this->types, entry);
 				break;
 			}
 		}
-		free(type);
+		free(pref_entry);
 	}
 	enumerator->destroy(enumerator);
 	preferred->destroy(preferred);
@@ -340,7 +354,7 @@ static void get_supported_eap_types(private_eap_dynamic_t *this)
 	enumerator = charon->eap->create_enumerator(charon->eap, EAP_SERVER);
 	while (enumerator->enumerate(enumerator, &type, &vendor))
 	{
-		eap_vendor_type_t *entry;
+		entry_t *entry;
 
 		INIT(entry,
 			.type = type,
