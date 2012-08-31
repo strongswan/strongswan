@@ -37,6 +37,12 @@
 #include "tkm_nonceg.h"
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
+#include "tkm_listener.h"
+
+/**
+ * TKM bus listener for IKE authorize events.
+ */
+static tkm_listener_t *listener;
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -319,6 +325,10 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	/* register TKM authorization hook */
+	listener = tkm_listener_create();
+	charon->bus->add_listener(charon->bus, &listener->listener);
+
 	/* add handler for SEGV and ILL,
 	 * INT and TERM are handled by sigwait() in run() */
 	action.sa_handler = segv_handler;
@@ -342,6 +352,8 @@ int main(int argc, char *argv[])
 
 	unlink_pidfile();
 	status = 0;
+	charon->bus->remove_listener(charon->bus, &listener->listener);
+	listener->destroy(listener);
 
 deinit:
 	libcharon_deinit();
