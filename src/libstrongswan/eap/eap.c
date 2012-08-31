@@ -51,12 +51,12 @@ ENUM_NEXT(eap_type_names, EAP_MSTLV, EAP_MSTLV, EAP_MSCHAPV2,
 	"EAP_MSTLV");
 ENUM_NEXT(eap_type_names, EAP_TNC, EAP_TNC, EAP_MSTLV,
 	"EAP_TNC");
-ENUM_NEXT(eap_type_names, EAP_DYNAMIC, EAP_EXPERIMENTAL, EAP_TNC,
-	"EAP_DYNAMIC",
-	"EAP_RADIUS",
+ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
 	"EAP_EXPANDED",
-	"EAP_EXPERIMENTAL");
-ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
+	"EAP_EXPERIMENTAL",
+	"EAP_RADIUS",
+	"EAP_DYNAMIC");
+ENUM_END(eap_type_names, EAP_DYNAMIC);
 
 ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
 	"ID",
@@ -80,12 +80,12 @@ ENUM_NEXT(eap_type_short_names, EAP_MSTLV, EAP_MSTLV, EAP_MSCHAPV2,
 	"MSTLV");
 ENUM_NEXT(eap_type_short_names, EAP_TNC, EAP_TNC, EAP_MSTLV,
 	"TNC");
-ENUM_NEXT(eap_type_short_names, EAP_DYNAMIC, EAP_EXPERIMENTAL, EAP_TNC,
-	"DYN",
-	"RAD",
+ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
 	"EXP",
-	"XP");
-ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
+	"XP",
+	"RAD",
+	"DYN");
+ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
 /*
  * See header
