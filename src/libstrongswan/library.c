@@ -168,6 +168,9 @@ bool library_init(char *settings)
 	pfh->add_handler(pfh, 'N', enum_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
 					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'M', enum_dynamic_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
+					 PRINTF_HOOK_ARGTYPE_INT, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'T', time_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_INT,
 					 PRINTF_HOOK_ARGTYPE_END);

@@ -63,11 +63,43 @@ int enum_from_name(enum_name_t *e, char *name)
 int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
 {
-	enum_name_t *ed = *((enum_name_t**)(args[0]));
-	int val = *((int*)(args[1]));
+	enum_name_t *e;
+	int val;
+	char *name;
 
-	char *name = enum_to_name(ed, val);
+	e = *((enum_name_t**)(args[0]));
+	val = *((int*)(args[1]));
+	name = enum_to_name(e, val);
+	if (name == NULL)
+	{
+		return print_in_hook(data, "(%d)", val);
+	}
+	else
+	{
+		return print_in_hook(data, "%s", name);
+	}
+}
 
+/**
+ * Described in header.
+ */
+int enum_dynamic_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
+							 const void *const *args)
+{
+	enum_name_t *e;
+	enum_name_get_t e_get;
+	int val, id = 0;
+	char *name = NULL;
+
+	e_get = *((enum_name_get_t*)(args[0]));
+	id = *((int*)(args[1]));
+	val = *((int*)(args[2]));
+
+	e = e_get(id);
+	if (e)
+	{
+		name = enum_to_name(e, val);
+	}
 	if (name == NULL)
 	{
 		return print_in_hook(data, "(%d)", val);

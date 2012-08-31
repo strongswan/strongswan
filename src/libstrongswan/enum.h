@@ -27,6 +27,14 @@
 typedef struct enum_name_t enum_name_t;
 
 /**
+ * Callback function to get an enum name using an index variable.
+ *
+ * @param			index variable to select enum_name_t
+ * @return			enum name
+ */
+typedef enum_name_t* (*enum_name_get_t)(int id);
+
+/**
  * Struct to store names for enums.
  *
  * To print the string representation of enumeration values, the strings
@@ -52,6 +60,11 @@ typedef struct enum_name_t enum_name_t;
  * character %N is replaced by the enum string. Printf needs two arguments to
  * resolve a %N, the enum_name_t* (the defined name in ENUM_BEGIN) followed
  * by the numerical enum value.
+ *
+ * To select an enum name dynamically, the %M printf format specifier can be
+ * used. Instead of an enum_name_t, the printf hook expects a enum_name_get_t
+ * followed by an index, followed by the enum value. The enum_name_t is looked
+ * up using the function and the index argument.
  */
 struct enum_name_t {
 	/** value of the first enum string */
@@ -132,5 +145,14 @@ int enum_from_name(enum_name_t *e, char *name);
  */
 int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args);
+
+/**
+ * printf hook function for dynamically selected enum_names_t.
+ *
+ * Arguments are:
+ *	enum_name_get_t getter, int index, int value
+ */
+int enum_dynamic_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
+							 const void *const *args);
 
 #endif /** ENUM_H_ @}*/
