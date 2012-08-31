@@ -25,14 +25,17 @@
  */
 char *enum_to_name(enum_name_t *e, int val)
 {
-	do
+	enum_name_elem_t *current;
+
+	current = e->elem;
+	while (current)
 	{
-		if (val >= e->first && val <= e->last)
+		if (val >= current->first && val <= current->last)
 		{
-			return e->names[val - e->first];
+			return current->names[val - current->first];
 		}
+		current = current->next;
 	}
-	while ((e = e->next));
 	return NULL;
 }
 
@@ -41,19 +44,22 @@ char *enum_to_name(enum_name_t *e, int val)
  */
 int enum_from_name(enum_name_t *e, char *name)
 {
-	do
+	enum_name_elem_t *current;
+
+	current = e->elem;
+	while (current)
 	{
-		int i, count = e->last - e->first + 1;
+		int i, count = current->last - current->first + 1;
 
 		for (i = 0; i < count; i++)
 		{
-			if (strcaseeq(name, e->names[i]))
+			if (strcaseeq(name, current->names[i]))
 			{
-				return e->first + i;
+				return current->first + i;
 			}
 		}
+		current = current->next;
 	}
-	while ((e = e->next));
 	return -1;
 }
 
