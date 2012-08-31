@@ -61,6 +61,11 @@ struct private_tkm_keymat_t {
 	 */
 	isa_id_type isa_ctx_id;
 
+	/**
+	 * AE context id.
+	 */
+	ae_id_type ae_ctx_id;
+
 };
 
 /**
@@ -229,8 +234,8 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 	DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu, spi_loc: %llx, "
 			"spi_rem: %llx)", nc_id, dh_id, spi_loc, spi_rem);
 	/* Fake some data for now */
-	if (ike_isa_create(this->isa_ctx_id, 1, 1, dh_id, nc_id, nonce_rem, 1,
-				spi_loc, spi_rem,
+	if (ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, 1, dh_id, nc_id,
+				nonce_rem, 1, spi_loc, spi_rem,
 				&sk_ai, &sk_ar, &sk_ei, &sk_er) != TKM_OK)
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -375,10 +380,11 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 		},
 		.initiator = initiator,
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),
+		.ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE),
 		.proxy = keymat_v2_create(initiator),
 	);
 
-	if (!this->isa_ctx_id)
+	if (!this->isa_ctx_id || !this->ae_ctx_id)
 	{
 		free(this);
 		return NULL;
