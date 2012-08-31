@@ -356,6 +356,12 @@ METHOD(keymat_t, destroy, void,
 	free(this);
 }
 
+METHOD(tkm_keymat_t, get_isa_id, isa_id_type,
+	private_tkm_keymat_t *this)
+{
+	return this->isa_ctx_id;
+}
+
 /**
  * See header.
  */
@@ -377,6 +383,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.get_skd = _get_skd,
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
+			.get_isa_id = _get_isa_id,
 		},
 		.initiator = initiator,
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),

@@ -106,6 +106,14 @@ struct tkm_keymat_t {
 	bool (*get_psk_sig)(tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
 						chunk_t nonce, chunk_t secret,
 						identification_t *id, char reserved[3], chunk_t *sig);
+
+	/**
+	 * Get ISA context id.
+	 *
+	 * @return	id of associated ISA context.
+	 */
+	isa_id_type (*get_isa_id)(tkm_keymat_t * const this);
+
 };
 
 /**

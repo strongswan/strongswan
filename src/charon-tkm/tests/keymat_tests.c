@@ -54,6 +54,7 @@ START_TEST(test_derive_ike_keys)
 
 	tkm_keymat_t *keymat = tkm_keymat_create(TRUE);
 	fail_if(!keymat, "Unable to create keymat");
+	fail_if(!keymat->get_isa_id(keymat), "Invalid ISA context id (0)");
 
 	chunk_t nonce;
 	tkm_nonceg_t *ng = tkm_nonceg_create();
