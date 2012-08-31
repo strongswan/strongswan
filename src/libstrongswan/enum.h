@@ -25,6 +25,7 @@
 #include "printf_hook.h"
 
 typedef struct enum_name_t enum_name_t;
+typedef struct enum_name_elem_t enum_name_elem_t;
 
 /**
  * Callback function to get an enum name using an index variable.
@@ -67,12 +68,17 @@ typedef enum_name_t* (*enum_name_get_t)(int id);
  * up using the function and the index argument.
  */
 struct enum_name_t {
+	/** first enum_name_elem_t in chain */
+	enum_name_elem_t *elem;
+};
+
+struct enum_name_elem_t {
 	/** value of the first enum string */
 	int first;
 	/** value of the last enum string */
 	int last;
 	/** next enum_name_t in list */
-	enum_name_t *next;
+	enum_name_elem_t *next;
 	/** array of strings containing names from first to last */
 	char *names[];
 };
@@ -85,7 +91,8 @@ struct enum_name_t {
  * @param last	enum value of the last enum string
  * @param ...	a list of strings
  */
-#define ENUM_BEGIN(name, first, last, ...) static enum_name_t name##last = {first, last, NULL, { __VA_ARGS__ }}
+#define ENUM_BEGIN(name, first, last, ...) \
+	static enum_name_elem_t name##last = {first, last, NULL, { __VA_ARGS__ }}
 
 /**
  * Continue a enum name list startetd with ENUM_BEGIN.
@@ -96,7 +103,8 @@ struct enum_name_t {
  * @param prev	enum value of the "last" defined in ENUM_BEGIN/previous ENUM_NEXT
  * @param ...	a list of strings
  */
-#define ENUM_NEXT(name, first, last, prev, ...) static enum_name_t name##last = {first, last, &name##prev, { __VA_ARGS__ }}
+#define ENUM_NEXT(name, first, last, prev, ...) \
+	static enum_name_elem_t name##last = {first, last, &name##prev, { __VA_ARGS__ }}
 
 /**
  * Complete enum name list started with ENUM_BEGIN.
@@ -104,7 +112,9 @@ struct enum_name_t {
  * @param name	name of the enum_name list
  * @param prev	enum value of the "last" defined in ENUM_BEGIN/previous ENUM_NEXT
  */
-#define ENUM_END(name, prev) enum_name_t *name = &name##prev;
+#define ENUM_END(name, prev) \
+	static enum_name_t name##head = { .elem = &name##prev }; \
+	enum_name_t *name = &name##head
 
 /**
  * Define a enum name with only one range.
@@ -117,7 +127,8 @@ struct enum_name_t {
  * @param last	enum value of the last enum string
  * @param ...	a list of strings
  */
-#define ENUM(name, first, last, ...) ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
+#define ENUM(name, first, last, ...) \
+	ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
 
 /**
  * Convert a enum value to its string representation.
