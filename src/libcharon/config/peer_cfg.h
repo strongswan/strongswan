@@ -278,23 +278,34 @@ struct peer_cfg_t {
 	u_int32_t (*get_dpd_timeout) (peer_cfg_t *this);
 
 	/**
-	 * Get a virtual IP for the local peer.
+	 * Add a virtual IP to request as initiator.
 	 *
-	 * If no virtual IP should be used, NULL is returned. %any means to request
-	 * a virtual IP using configuration payloads. A specific address is also
-	 * used for a request and may be changed by the server.
-	 *
-	 * @param suggestion	NULL, %any or specific
-	 * @return				virtual IP, %any or NULL
+	 * @param vip			virtual IP to request, may be %any or %any6
 	 */
-	host_t* (*get_virtual_ip) (peer_cfg_t *this);
+	void (*add_virtual_ip)(peer_cfg_t *this, host_t *vip);
 
 	/**
-	 * Get the name of the pool to acquire configuration attributes from.
+	 * Create an enumerator over virtual IPs to request.
 	 *
-	 * @return				pool name, NULL if none defined
+	 * The returned enumerator enumerates over IPs added with add_virtual_ip().
+	 *
+	 * @return				enumerator over host_t*
 	 */
-	char* (*get_pool)(peer_cfg_t *this);
+	enumerator_t* (*create_virtual_ip_enumerator)(peer_cfg_t *this);
+
+	/**
+	 * Add a pool name this configuration uses to select virtual IPs.
+	 *
+	 * @param name			pool name to use for virtual IP lookup
+	 */
+	void (*add_pool)(peer_cfg_t *this, char *name);
+
+	/**
+	 * Create an enumerator over pool names of this config.
+	 *
+	 * @return				enumerator over char*
+	 */
+	enumerator_t* (*create_pool_enumerator)(peer_cfg_t *this);
 
 #ifdef ME
 	/**
@@ -374,8 +385,6 @@ struct peer_cfg_t {
  * @param aggressive		use/accept aggressive mode with IKEv1
  * @param dpd				DPD check interval, 0 to disable
  * @param dpd_timeout		DPD timeout interval (IKEv1 only), if 0 default applies
- * @param virtual_ip		virtual IP for local host, or NULL
- * @param pool				pool name to get configuration attributes from, or NULL
  * @param mediation			TRUE if this is a mediation connection
  * @param mediated_by		peer_cfg_t of the mediation connection to mediate through
  * @param peer_id			ID that identifies our peer at the mediation server
@@ -387,8 +396,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
 							bool mobike, bool aggressive, u_int32_t dpd,
-							u_int32_t dpd_timeout, host_t *virtual_ip,
-							char *pool, bool mediation, peer_cfg_t *mediated_by,
+							u_int32_t dpd_timeout,
+							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id);
 
 #endif /** PEER_CFG_H_ @}*/

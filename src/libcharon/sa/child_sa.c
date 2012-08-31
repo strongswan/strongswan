@@ -819,9 +819,18 @@ METHOD(child_sa_t, add_policies, status_t,
 	return status;
 }
 
+/**
+ * Callback to reinstall a virtual IP
+ */
+static void reinstall_vip(host_t *vip, host_t *me)
+{
+	hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+	hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, me);
+}
+
 METHOD(child_sa_t, update, status_t,
-	   private_child_sa_t *this,  host_t *me, host_t *other, host_t *vip,
-	   bool encap)
+	private_child_sa_t *this,  host_t *me, host_t *other, linked_list_t *vips,
+	bool encap)
 {
 	child_sa_state_t old;
 	bool transport_proxy_mode;
@@ -927,13 +936,7 @@ METHOD(child_sa_t, update, status_t,
 
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
-				if (vip)
-				{
-					hydra->kernel_interface->del_ip(hydra->kernel_interface,
-													vip);
-					hydra->kernel_interface->add_ip(hydra->kernel_interface,
-													vip, me);
-				}
+				vips->invoke_function(vips, (void*)reinstall_vip, me);
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,

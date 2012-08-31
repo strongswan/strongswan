@@ -94,7 +94,6 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 				this->rekey*5, this->rekey*3,	/* jitter, overtime */
 				TRUE, FALSE,					/* mobike, aggressiv */
 				this->dpd, 0,					/* DPD delay, timeout */
-				NULL, NULL,						/* vip, pool */
 				TRUE, NULL, NULL);				/* mediation, med by, peer id */
 			e->destroy(e);
 

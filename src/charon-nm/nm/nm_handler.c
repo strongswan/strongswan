@@ -92,15 +92,17 @@ static bool enumerate_dns(enumerator_t *this,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_nm_handler_t *this, identification_t *server, host_t *vip)
+	private_nm_handler_t *this, identification_t *server, linked_list_t *vips)
 {
-	if (vip && vip->get_family(vip) == AF_INET)
-	{	/* no IPv6 attributes yet */
-		enumerator_t *enumerator = malloc_thing(enumerator_t);
-		/* enumerate DNS attribute first ... */
-		enumerator->enumerate = (void*)enumerate_dns;
-		enumerator->destroy = (void*)free;
+	if (vips->get_count(vips))
+	{
+		enumerator_t *enumerator;
 
+		INIT(enumerator,
+			/* enumerate DNS attribute first ... */
+			.enumerate = (void*)enumerate_dns,
+			.destroy = (void*)free,
+		);
 		return enumerator;
 	}
 	return enumerator_create_empty();

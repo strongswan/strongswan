@@ -141,14 +141,14 @@ struct private_peer_cfg_t {
 	u_int32_t dpd_timeout;
 
 	/**
-	 * virtual IP to use locally
+	 * List of virtual IPs (host_t*) to request
 	 */
-	host_t *virtual_ip;
+	linked_list_t *vips;
 
 	/**
-	 * pool to acquire configuration attributes from
+	 * List of pool names to use for virtual IP lookup
 	 */
-	char *pool;
+	linked_list_t *pools;
 
 	/**
 	 * local authentication configs (rulesets)
@@ -409,16 +409,28 @@ METHOD(peer_cfg_t, get_dpd_timeout, u_int32_t,
 	return this->dpd_timeout;
 }
 
-METHOD(peer_cfg_t, get_virtual_ip, host_t*,
-	private_peer_cfg_t *this)
+METHOD(peer_cfg_t, add_virtual_ip, void,
+	private_peer_cfg_t *this, host_t *vip)
 {
-	return this->virtual_ip;
+	this->vips->insert_last(this->vips, vip);
 }
 
-METHOD(peer_cfg_t, get_pool, char*,
+METHOD(peer_cfg_t, create_virtual_ip_enumerator, enumerator_t*,
 	private_peer_cfg_t *this)
 {
-	return this->pool;
+	return this->vips->create_enumerator(this->vips);
+}
+
+METHOD(peer_cfg_t, add_pool, void,
+	private_peer_cfg_t *this, char *name)
+{
+	this->pools->insert_last(this->pools, strdup(name));
+}
+
+METHOD(peer_cfg_t, create_pool_enumerator, enumerator_t*,
+	private_peer_cfg_t *this)
+{
+	return this->pools->create_enumerator(this->pools);
 }
 
 METHOD(peer_cfg_t, add_auth_cfg, void,
@@ -521,6 +533,10 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 METHOD(peer_cfg_t, equals, bool,
 	private_peer_cfg_t *this, private_peer_cfg_t *other)
 {
+	enumerator_t *e1, *e2;
+	host_t *vip1, *vip2;
+	char *pool1, *pool2;
+
 	if (this == other)
 	{
 		return TRUE;
@@ -529,6 +545,43 @@ METHOD(peer_cfg_t, equals, bool,
 	{
 		return FALSE;
 	}
+
+	if (this->vips->get_count(this->vips) != other->vips->get_count(other->vips))
+	{
+		return FALSE;
+	}
+	e1 = create_virtual_ip_enumerator(this);
+	e2 = create_virtual_ip_enumerator(other);
+	if (e1->enumerate(e1, &vip1) && e2->enumerate(e2, &vip2))
+	{
+		if (!vip1->ip_equals(vip1, vip2))
+		{
+			e1->destroy(e1);
+			e2->destroy(e2);
+			return FALSE;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	if (this->pools->get_count(this->pools) !=
+		other->pools->get_count(other->pools))
+	{
+		return FALSE;
+	}
+	e1 = create_pool_enumerator(this);
+	e2 = create_pool_enumerator(other);
+	if (e1->enumerate(e1, &pool1) && e2->enumerate(e2, &pool2))
+	{
+		if (!streq(pool1, pool2))
+		{
+			e1->destroy(e1);
+			e2->destroy(e2);
+			return FALSE;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
 
 	return (
 		this->ike_version == other->ike_version &&
@@ -541,11 +594,6 @@ METHOD(peer_cfg_t, equals, bool,
 		this->jitter_time == other->jitter_time &&
 		this->over_time == other->over_time &&
 		this->dpd == other->dpd &&
-		(this->virtual_ip == other->virtual_ip ||
-		 (this->virtual_ip && other->virtual_ip &&
-		  this->virtual_ip->equals(this->virtual_ip, other->virtual_ip))) &&
-		(this->pool == other->pool ||
-		 (this->pool && other->pool && streq(this->pool, other->pool))) &&
 		auth_cfg_equal(this, other)
 #ifdef ME
 		&& this->mediation == other->mediation &&
@@ -572,18 +620,18 @@ METHOD(peer_cfg_t, destroy, void,
 		this->ike_cfg->destroy(this->ike_cfg);
 		this->child_cfgs->destroy_offset(this->child_cfgs,
 										offsetof(child_cfg_t, destroy));
-		DESTROY_IF(this->virtual_ip);
 		this->local_auth->destroy_offset(this->local_auth,
 										offsetof(auth_cfg_t, destroy));
 		this->remote_auth->destroy_offset(this->remote_auth,
 										offsetof(auth_cfg_t, destroy));
+		this->vips->destroy_offset(this->vips, offsetof(host_t, destroy));
+		this->pools->destroy_function(this->pools, free);
 #ifdef ME
 		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
 #endif /* ME */
 		this->mutex->destroy(this->mutex);
 		free(this->name);
-		free(this->pool);
 		free(this);
 	}
 }
@@ -597,8 +645,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 							u_int32_t rekey_time, u_int32_t reauth_time,
 							u_int32_t jitter_time, u_int32_t over_time,
 							bool mobike, bool aggressive, u_int32_t dpd,
-							u_int32_t dpd_timeout, host_t *virtual_ip,
-							char *pool, bool mediation, peer_cfg_t *mediated_by,
+							u_int32_t dpd_timeout,
+							bool mediation, peer_cfg_t *mediated_by,
 							identification_t *peer_id)
 {
 	private_peer_cfg_t *this;
@@ -631,8 +679,10 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 			.use_aggressive = _use_aggressive,
 			.get_dpd = _get_dpd,
 			.get_dpd_timeout = _get_dpd_timeout,
-			.get_virtual_ip = _get_virtual_ip,
-			.get_pool = _get_pool,
+			.add_virtual_ip = _add_virtual_ip,
+			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
+			.add_pool = _add_pool,
+			.create_pool_enumerator = _create_pool_enumerator,
 			.add_auth_cfg = _add_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
 			.equals = (void*)_equals,
@@ -660,8 +710,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
 		.aggressive = aggressive,
 		.dpd = dpd,
 		.dpd_timeout = dpd_timeout,
-		.virtual_ip = virtual_ip,
-		.pool = strdupnull(pool),
+		.vips = linked_list_create(),
+		.pools = linked_list_create(),
 		.local_auth = linked_list_create(),
 		.remote_auth = linked_list_create(),
 		.refcount = 1,

@@ -285,6 +285,30 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 }
 
 /**
+ * Get host to use for dynamic traffic selectors
+ */
+static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
+	if (!enumerator->enumerate(enumerator, &host))
+	{
+		if (local)
+		{
+			host = ike_sa->get_my_host(ike_sa);
+		}
+		else
+		{
+			host = ike_sa->get_other_host(ike_sa);
+		}
+	}
+	enumerator->destroy(enumerator);
+	return host;
+}
+
+/**
  * Install a CHILD_SA for usage, return value:
  * - FAILED: no acceptable proposal
  * - INVALID_ARG: diffie hellman group inacceptable
@@ -298,7 +322,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
-	host_t *me, *other, *other_vip, *my_vip;
+	host_t *me, *other;
 	bool private;
 
 	if (this->proposals == NULL)
@@ -314,8 +338,6 @@ static status_t select_and_install(private_child_create_t *this,
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
 
 	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
 	this->proposal = this->config->select_proposal(this->config,
@@ -354,15 +376,6 @@ static status_t select_and_install(private_child_create_t *this,
 		this->dh_group = MODP_NONE;
 	}
 
-	if (my_vip == NULL)
-	{
-		my_vip = me;
-	}
-	if (other_vip == NULL)
-	{
-		other_vip = other;
-	}
-
 	if (this->initiator)
 	{
 		nonce_i = this->my_nonce;
@@ -378,9 +391,9 @@ static status_t select_and_install(private_child_create_t *this,
 		other_ts = this->tsi;
 	}
 	my_ts = this->config->get_traffic_selectors(this->config, TRUE, my_ts,
-												my_vip);
+										get_dynamic_host(this->ike_sa, TRUE));
 	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts,
-												   other_vip);
+										get_dynamic_host(this->ike_sa, FALSE));
 
 	if (this->initiator)
 	{
@@ -723,7 +736,8 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_child_create_t *this, message_t *message)
 {
-	host_t *me, *other, *vip;
+	enumerator_t *enumerator;
+	host_t *vip;
 	peer_cfg_t *peer_cfg;
 
 	switch (message->get_exchange_type(message))
@@ -763,22 +777,10 @@ METHOD(task_t, build_i, status_t,
 			 this->config->get_name(this->config));
 	}
 
-	/* reuse virtual IP if we already have one */
-	me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	if (me == NULL)
-	{
-		me = this->ike_sa->get_my_host(this->ike_sa);
-	}
-	other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
-	if (other == NULL)
-	{
-		other = this->ike_sa->get_other_host(this->ike_sa);
-	}
-
 	/* check if we want a virtual IP, but don't have one */
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	vip = peer_cfg->get_virtual_ip(peer_cfg);
-	if (!this->reqid && vip)
+	enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
+	if (!this->reqid && enumerator->enumerate(enumerator, &vip))
 	{
 		/* propose a 0.0.0.0/0 or ::/0 subnet when we use virtual ip */
 		vip = host_create_any(vip->get_family(vip));
@@ -788,11 +790,12 @@ METHOD(task_t, build_i, status_t,
 	}
 	else
 	{	/* but narrow it for host2host / if we already have a vip */
-		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
-														NULL, me);
+		this->tsi = this->config->get_traffic_selectors(this->config, TRUE, NULL,
+										get_dynamic_host(this->ike_sa, TRUE));
 	}
-	this->tsr = this->config->get_traffic_selectors(this->config, FALSE,
-													NULL, other);
+	enumerator->destroy(enumerator);
+	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, NULL,
+										get_dynamic_host(this->ike_sa, FALSE));
 
 	if (this->packet_tsi)
 	{
@@ -948,20 +951,10 @@ METHOD(task_t, build_r, status_t,
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (!this->config && peer_cfg && this->tsi && this->tsr)
 	{
-		host_t *me, *other;
-
-		me = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-		if (me == NULL)
-		{
-			me = this->ike_sa->get_my_host(this->ike_sa);
-		}
-		other = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
-		if (other == NULL)
-		{
-			other = this->ike_sa->get_other_host(this->ike_sa);
-		}
-		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr,
-												  this->tsi, me, other);
+		this->config = peer_cfg->select_child_cfg(peer_cfg,
+										this->tsr, this->tsi,
+										get_dynamic_host(this->ike_sa, TRUE),
+										get_dynamic_host(this->ike_sa, FALSE));
 	}
 
 	if (this->config == NULL)

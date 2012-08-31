@@ -346,15 +346,30 @@ METHOD(task_manager_t, retransmit, status_t,
  */
 static bool mode_config_expected(private_task_manager_t *this)
 {
+	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
+	char *pool;
+	host_t *host;
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && peer_cfg->get_pool(peer_cfg))
+	if (peer_cfg)
 	{
-		if (!this->ike_sa->get_virtual_ip(this->ike_sa, FALSE))
-		{
+		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
+		if (!enumerator->enumerate(enumerator, &pool))
+		{	/* no pool configured */
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		enumerator->destroy(enumerator);
+
+		enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa,
+																FALSE);
+		if (!enumerator->enumerate(enumerator, &host))
+		{	/* have a pool, but no VIP assigned yet */
+			enumerator->destroy(enumerator);
 			return TRUE;
 		}
+		enumerator->destroy(enumerator);
 	}
 	return FALSE;
 }
@@ -1309,11 +1324,12 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	new->set_other_host(new, host->clone(host));
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	new->set_my_host(new, host->clone(host));
-	host = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-	if (host)
+	enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa, TRUE);
+	while (enumerator->enumerate(enumerator, &host))
 	{
-		new->set_virtual_ip(new, TRUE, host);
+		new->add_virtual_ip(new, TRUE, host);
 	}
+	enumerator->destroy(enumerator);
 
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, &child_sa))

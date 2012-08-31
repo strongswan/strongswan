@@ -52,6 +52,11 @@ struct private_stroke_config_t {
 	 * credentials
 	 */
 	stroke_cred_t *cred;
+
+	/**
+	 * Virtual IP pool / DNS backend
+	 */
+	stroke_attribute_t *attributes;
 };
 
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
@@ -618,7 +623,6 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 {
 	identification_t *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
-	host_t *vip = NULL;
 	unique_policy_t unique;
 	u_int32_t rekey = 0, reauth = 0, over, jitter;
 	peer_cfg_t *peer_cfg;
@@ -677,49 +681,6 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	{
 		rekey = msg->add_conn.rekey.ike_lifetime - over;
 	}
-	if (msg->add_conn.me.sourceip_mask)
-	{
-		if (msg->add_conn.me.sourceip)
-		{
-			vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
-		}
-		if (!vip)
-		{	/* if it is set to something like %poolname, request an address */
-			if (msg->add_conn.me.subnets)
-			{	/* use the same family as in local subnet, if any */
-				if (strchr(msg->add_conn.me.subnets, '.'))
-				{
-					vip = host_create_any(AF_INET);
-				}
-				else
-				{
-					vip = host_create_any(AF_INET6);
-				}
-			}
-			else if (msg->add_conn.other.subnets)
-			{	/* use the same family as in remote subnet, if any */
-				if (strchr(msg->add_conn.other.subnets, '.'))
-				{
-					vip = host_create_any(AF_INET);
-				}
-				else
-				{
-					vip = host_create_any(AF_INET6);
-				}
-			}
-			else
-			{
-				if (strchr(ike_cfg->get_my_addr(ike_cfg, NULL), ':'))
-				{
-					vip = host_create_any(AF_INET6);
-				}
-				else
-				{
-					vip = host_create_any(AF_INET);
-				}
-			}
-		}
-	}
 	switch (msg->add_conn.unique)
 	{
 		case 1: /* yes */
@@ -747,9 +708,125 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.aggressive,
 		msg->add_conn.dpd.delay, msg->add_conn.dpd.timeout,
-		vip, msg->add_conn.other.sourceip_mask ?
-							msg->add_conn.name : msg->add_conn.other.sourceip,
 		msg->add_conn.ikeme.mediation, mediated_by, peer_id);
+
+	if (msg->add_conn.other.sourceip)
+	{
+		enumerator_t *enumerator;
+		char *token;
+
+		enumerator = enumerator_create_token(msg->add_conn.other.sourceip,
+											 ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			if (streq(token, "%modeconfig") || streq(token, "%modecfg") ||
+				streq(token, "%config") || streq(token, "%cfg") ||
+				streq(token, "%config4") || streq(token, "%config6"))
+			{
+				/* empty pool, uses connection name */
+				this->attributes->add_pool(this->attributes,
+								mem_pool_create(msg->add_conn.name, NULL, 0));
+				peer_cfg->add_pool(peer_cfg, msg->add_conn.name);
+			}
+			else if (*token == '%')
+			{
+				/* external named pool */
+				peer_cfg->add_pool(peer_cfg, token + 1);
+			}
+			else
+			{
+				/* in-memory pool, named using CIDR notation */
+				host_t *base;
+				int bits;
+
+				base = host_create_from_subnet(token, &bits);
+				if (base)
+				{
+					this->attributes->add_pool(this->attributes,
+										mem_pool_create(token, base, bits));
+					peer_cfg->add_pool(peer_cfg, token);
+					base->destroy(base);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "IP pool %s invalid, ignored", token);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (msg->add_conn.me.sourceip)
+	{
+		enumerator_t *enumerator;
+		char *token;
+
+		enumerator = enumerator_create_token(msg->add_conn.me.sourceip, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			host_t *vip = NULL;
+
+			if (streq(token, "%modeconfig") || streq(token, "%modecfg") ||
+				streq(token, "%config") || streq(token, "%cfg"))
+			{	/* try to deduce an address family */
+				if (msg->add_conn.me.subnets)
+				{	/* use the same family as in local subnet, if any */
+					if (strchr(msg->add_conn.me.subnets, '.'))
+					{
+						vip = host_create_any(AF_INET);
+					}
+					else
+					{
+						vip = host_create_any(AF_INET6);
+					}
+				}
+				else if (msg->add_conn.other.subnets)
+				{	/* use the same family as in remote subnet, if any */
+					if (strchr(msg->add_conn.other.subnets, '.'))
+					{
+						vip = host_create_any(AF_INET);
+					}
+					else
+					{
+						vip = host_create_any(AF_INET6);
+					}
+				}
+				else
+				{
+					if (strchr(ike_cfg->get_my_addr(ike_cfg, NULL), ':'))
+					{
+						vip = host_create_any(AF_INET6);
+					}
+					else
+					{
+						vip = host_create_any(AF_INET);
+					}
+				}
+			}
+			else if (streq(token, "%config4"))
+			{
+				vip = host_create_any(AF_INET);
+			}
+			else if (streq(token, "%config6"))
+			{
+				vip = host_create_any(AF_INET6);
+			}
+			else
+			{
+				vip = host_create_from_string(token, 0);
+				if (vip)
+				{
+					DBG1(DBG_CFG, "ignored invalid subnet token: %s", token);
+				}
+			}
+
+			if (vip)
+			{
+				peer_cfg->add_virtual_ip(peer_cfg, vip);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	/* build leftauth= */
 	auth_cfg = build_auth_cfg(this, msg, TRUE, TRUE);
@@ -1209,7 +1286,8 @@ METHOD(stroke_config_t, destroy, void,
 /*
  * see header file
  */
-stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
+stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred,
+									  stroke_attribute_t *attributes)
 {
 	private_stroke_config_t *this;
 
@@ -1229,6 +1307,7 @@ stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.ca = ca,
 		.cred = cred,
+		.attributes = attributes,
 	);
 
 	return &this->public;

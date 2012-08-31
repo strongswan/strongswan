@@ -23,6 +23,8 @@
 
 #include <bus/bus.h>
 
+#include "updown_handler.h"
+
 typedef struct updown_listener_t updown_listener_t;
 
 /**
@@ -44,6 +46,6 @@ struct updown_listener_t {
 /**
  * Create a updown_listener instance.
  */
-updown_listener_t *updown_listener_create();
+updown_listener_t *updown_listener_create(updown_handler_t *handler);
 
 #endif /** UPDOWN_LISTENER_H_ @}*/

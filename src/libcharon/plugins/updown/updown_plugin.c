@@ -15,8 +15,10 @@
 
 #include "updown_plugin.h"
 #include "updown_listener.h"
+#include "updown_handler.h"
 
 #include <daemon.h>
+#include <hydra.h>
 
 typedef struct private_updown_plugin_t private_updown_plugin_t;
 
@@ -34,6 +36,11 @@ struct private_updown_plugin_t {
 	 * Listener interface, listens to CHILD_SA state changes
 	 */
 	updown_listener_t *listener;
+
+	/**
+	 * Attribute handler, to pass DNS servers to updown
+	 */
+	updown_handler_t *handler;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -47,6 +54,12 @@ METHOD(plugin_t, destroy, void,
 {
 	charon->bus->remove_listener(charon->bus, &this->listener->listener);
 	this->listener->destroy(this->listener);
+	if (this->handler)
+	{
+		hydra->attributes->remove_handler(hydra->attributes,
+										  &this->handler->handler);
+		this->handler->destroy(this->handler);
+	}
 	free(this);
 }
 
@@ -65,9 +78,16 @@ plugin_t *updown_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.listener = updown_listener_create(),
 	);
 
+	if (lib->settings->get_bool(lib->settings,
+								"charon.plugins.updown.dns_handler", FALSE))
+	{
+		this->handler = updown_handler_create();
+		hydra->attributes->add_handler(hydra->attributes,
+									   &this->handler->handler);
+	}
+	this->listener = updown_listener_create(this->handler);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;

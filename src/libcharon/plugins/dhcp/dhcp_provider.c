@@ -84,7 +84,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_dhcp_provider_t *this, char *pool,
 	identification_t *id, host_t *requested)
 {
-	if (streq(pool, "dhcp"))
+	if (streq(pool, "dhcp") && requested->get_family(requested) == AF_INET)
 	{
 		dhcp_transaction_t *transaction, *old;
 		host_t *vip;
@@ -110,7 +110,7 @@ METHOD(attribute_provider_t, release_address, bool,
 	private_dhcp_provider_t *this, char *pool,
 	host_t *address, identification_t *id)
 {
-	if (streq(pool, "dhcp"))
+	if (streq(pool, "dhcp") && address->get_family(address) == AF_INET)
 	{
 		dhcp_transaction_t *transaction;
 
@@ -129,18 +129,25 @@ METHOD(attribute_provider_t, release_address, bool,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_dhcp_provider_t *this, char *pool, identification_t *id,
-	host_t *vip)
+	private_dhcp_provider_t *this, linked_list_t *pools, identification_t *id,
+	linked_list_t *vips)
 {
-	dhcp_transaction_t *transaction;
+	dhcp_transaction_t *transaction = NULL;
+	enumerator_t *enumerator;
+	host_t *vip;
 
-	if (!vip)
-	{
-		return NULL;
-	}
 	this->mutex->lock(this->mutex);
-	transaction = this->transactions->get(this->transactions,
-										  (void*)hash_id_host(id, vip));
+	enumerator = vips->create_enumerator(vips);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		transaction = this->transactions->get(this->transactions,
+											  (void*)hash_id_host(id, vip));
+		if (transaction)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
 	if (!transaction)
 	{
 		this->mutex->unlock(this->mutex);

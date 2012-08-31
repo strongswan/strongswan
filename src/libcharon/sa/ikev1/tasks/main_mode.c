@@ -524,8 +524,8 @@ METHOD(task_t, build_r, status_t,
 										this->ike_sa->get_id(this->ike_sa)));
 					break;
 			}
-			if (this->peer_cfg->get_pool(this->peer_cfg) == NULL &&
-				this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			if (!this->ph1->has_pool(this->ph1, this->peer_cfg) &&
+				this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
 			{
 				this->ike_sa->queue_task(this->ike_sa,
 							(task_t*)mode_config_create(this->ike_sa, TRUE));
@@ -658,7 +658,7 @@ METHOD(task_t, process_i, status_t,
 					}
 					break;
 			}
-			if (this->peer_cfg->get_virtual_ip(this->peer_cfg))
+			if (this->ph1->has_virtual_ip(this->ph1, this->peer_cfg))
 			{
 				this->ike_sa->queue_task(this->ike_sa,
 							(task_t*)mode_config_create(this->ike_sa, TRUE));

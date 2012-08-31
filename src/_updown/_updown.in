@@ -73,8 +73,12 @@
 #              just the host, this will be 255.255.255.255.
 #
 #       PLUTO_MY_SOURCEIP
-#              if non-empty, then the source address for the route will be
-#              set to this IP address.
+#       PLUTO_MY_SOURCEIP4_$i
+#       PLUTO_MY_SOURCEIP6_$i
+#              contains IPv4/IPv6 virtual IP received from a responder,
+#              $i enumerates from 1 to the number of IP per address family.
+#              PLUTO_MY_SOURCEIP is a legacy variable and equals to the first
+#              virtual IP, IPv4 or IPv6.
 #
 #       PLUTO_MY_PROTOCOL
 #              is the IP protocol that will be transported.
@@ -127,6 +131,12 @@
 #       PLUTO_UDP_ENC
 #              contains the remote UDP port in the case of ESP_IN_UDP
 #              encapsulation
+#
+#       PLUTO_DNS4_$i
+#       PLUTO_DNS6_$i
+#              contains IPv4/IPv6 DNS server attribute received from a
+#              responder, $i enumerates from 1 to the number of servers per
+#              address family.
 #
 
 # define a minimum PATH environment in case it is not set

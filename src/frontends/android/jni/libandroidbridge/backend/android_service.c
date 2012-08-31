@@ -235,21 +235,36 @@ static bool setup_tun_device(private_android_service_t *this,
 							 ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	vpnservice_builder_t *builder;
+	enumerator_t *enumerator;
+	bool vip_found = FALSE;
 	host_t *vip;
 	int tunfd;
 
 	DBG1(DBG_DMN, "setting up TUN device for CHILD_SA %s{%u}",
 		 child_sa->get_name(child_sa), child_sa->get_reqid(child_sa));
-	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
-	if (!vip || vip->is_anyaddr(vip))
+
+	builder = charonservice->get_vpnservice_builder(charonservice);
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		if (!vip->is_anyaddr(vip))
+		{
+			if (!builder->add_address(builder, vip))
+			{
+				break;
+			}
+			vip_found = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!vip_found)
 	{
 		DBG1(DBG_DMN, "setting up TUN device failed, no virtual IP found");
 		return FALSE;
 	}
-
-	builder = charonservice->get_vpnservice_builder(charonservice);
-	if (!builder->add_address(builder, vip) ||
-		!add_routes(builder, child_sa) ||
+	if (!add_routes(builder, child_sa) ||
 		!builder->set_mtu(builder, TUN_DEFAULT_MTU))
 	{
 		return FALSE;
@@ -427,9 +442,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 							   600, 600, /* jitter, over 10min */
 							   TRUE, FALSE, /* mobike, aggressive */
 							   0, 0, /* DPD delay, timeout */
-							   host_create_from_string("0.0.0.0", 0) /* virt */,
-							   NULL, FALSE, NULL, NULL); /* pool, mediation */
-
+							   FALSE, NULL, NULL); /* mediation */
+	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);

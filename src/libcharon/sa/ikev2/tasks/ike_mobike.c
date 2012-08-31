@@ -250,15 +250,26 @@ static void update_children(private_ike_mobike_t *this)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
+	linked_list_t *vips;
+	host_t *host;
+
+	vips = linked_list_create();
+
+	enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa, TRUE);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		vips->insert_last(vips, host);
+	}
+	enumerator->destroy(enumerator);
 
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->update(child_sa,
 				this->ike_sa->get_my_host(this->ike_sa),
-				this->ike_sa->get_other_host(this->ike_sa),
-				this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),
-				this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+				this->ike_sa->get_other_host(this->ike_sa), vips,
+				this->ike_sa->has_condition(this->ike_sa,
+											COND_NAT_ANY)) == NOT_SUPPORTED)
 		{
 			this->ike_sa->rekey_child_sa(this->ike_sa,
 					child_sa->get_protocol(child_sa),
@@ -266,6 +277,8 @@ static void update_children(private_ike_mobike_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	vips->destroy(vips);
 }
 
 /**

@@ -196,7 +196,7 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	android_handler_t *this, identification_t *id, host_t *vip)
+	android_handler_t *this, identification_t *id, linked_list_t *vips)
 {
 	enumerator_t *enumerator;
 

@@ -26,7 +26,6 @@ static bool starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	if ((c1 == NULL) || (c2 == NULL))
 		return FALSE;
 
-	VARCMP(has_natip);
 	VARCMP(modecfg);
 	VARCMP(port);
 	VARCMP(protocol);

@@ -77,10 +77,10 @@ static bool attr_enum_filter(void *null, attribute_entry_t **in,
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_attr_provider_t *this, char *pool,
-	identification_t *id, host_t *vip)
+	private_attr_provider_t *this, linked_list_t *pools,
+	identification_t *id, linked_list_t *vips)
 {
-	if (vip)
+	if (vips->get_count(vips))
 	{
 		this->lock->read_lock(this->lock);
 		return enumerator_create_filter(

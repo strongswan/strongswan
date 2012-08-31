@@ -23,6 +23,7 @@
 
 #include <utils/host.h>
 #include <utils/identification.h>
+#include <utils/linked_list.h>
 
 typedef struct attribute_provider_t attribute_provider_t;
 
@@ -56,13 +57,14 @@ struct attribute_provider_t {
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.
 	 *
-	 * @param pool			pool name to get attributes from
+	 * @param pool			list of pools names (char*) to query attributes from
 	 * @param id			peer ID
-	 * @param vip			virtual IP to assign to peer, if any
+	 * @param vip			list of virtual IPs (host_t*) to assign to peer
 	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
 	 */
 	enumerator_t* (*create_attribute_enumerator)(attribute_provider_t *this,
-							char *pool, identification_t *id, host_t *vip);
+									linked_list_t *pools, identification_t *id,
+									linked_list_t *vips);
 };
 
 #endif /** ATTRIBUTE_PROVIDER_H_ @}*/

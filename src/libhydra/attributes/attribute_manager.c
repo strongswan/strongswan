@@ -51,12 +51,12 @@ struct private_attribute_manager_t {
  * Data to pass to enumerator filters
  */
 typedef struct {
-	/** attribute group pool */
-	char *pool;
+	/** attribute group pools */
+	linked_list_t *pools;
 	/** server/peer identity */
 	identification_t *id;
-	/** requesting/assigned virtual IP */
-	host_t *vip;
+	/** requesting/assigned virtual IPs */
+	linked_list_t *vips;
 } enum_data_t;
 
 METHOD(attribute_manager_t, acquire_address, host_t*,
@@ -80,14 +80,10 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (!host)
-	{
-		DBG1(DBG_CFG, "acquiring address from pool '%s' failed", pool);
-	}
 	return host;
 }
 
-METHOD(attribute_manager_t, release_address, void,
+METHOD(attribute_manager_t, release_address, bool,
 	private_attribute_manager_t *this, char *pool, host_t *address,
 	identification_t *id)
 {
@@ -108,10 +104,7 @@ METHOD(attribute_manager_t, release_address, void,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	if (!found)
-	{
-		DBG1(DBG_CFG, "releasing address to pool '%s' failed", pool);
-	}
+	return found;
 }
 
 /**
@@ -120,19 +113,21 @@ METHOD(attribute_manager_t, release_address, void,
 static enumerator_t *responder_enum_create(attribute_provider_t *provider,
 										   enum_data_t *data)
 {
-	return provider->create_attribute_enumerator(provider, data->pool,
-												 data->id, data->vip);
+	return provider->create_attribute_enumerator(provider, data->pools,
+												 data->id, data->vips);
 }
 
 METHOD(attribute_manager_t, create_responder_enumerator, enumerator_t*,
-	private_attribute_manager_t *this, char *pool, identification_t *id,
-	host_t *vip)
+	private_attribute_manager_t *this, linked_list_t *pools,
+	identification_t *id, linked_list_t *vips)
 {
-	enum_data_t *data = malloc_thing(enum_data_t);
+	enum_data_t *data;
 
-	data->pool = pool;
-	data->id = id;
-	data->vip = vip;
+	INIT(data,
+		.pools = pools,
+		.id = id,
+		.vips = vips,
+	);
 	this->lock->read_lock(this->lock);
 	return enumerator_create_cleaner(
 				enumerator_create_nested(
@@ -238,8 +233,8 @@ typedef struct {
 	enumerator_t *inner;
 	/** server ID we want attributes for */
 	identification_t *id;
-	/** virtual IP we are requesting along with attriubutes */
-	host_t *vip;
+	/** virtual IPs we are requesting along with attriubutes */
+	linked_list_t *vips;
 } initiator_enumerator_t;
 
 /**
@@ -259,7 +254,7 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 		}
 		DESTROY_IF(this->inner);
 		this->inner = this->handler->create_attribute_enumerator(this->handler,
-														this->id, this->vip);
+														this->id, this->vips);
 	}
 	/* inject the handler as additional attribute */
 	*handler = this->handler;
@@ -278,20 +273,22 @@ static void initiator_destroy(initiator_enumerator_t *this)
 }
 
 METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
-	private_attribute_manager_t *this, identification_t *id, host_t *vip)
+	private_attribute_manager_t *this, identification_t *id, linked_list_t *vips)
 {
-	initiator_enumerator_t *enumerator = malloc_thing(initiator_enumerator_t);
+	initiator_enumerator_t *enumerator;
 
 	this->lock->read_lock(this->lock);
-	enumerator->public.enumerate = (void*)initiator_enumerate;
-	enumerator->public.destroy = (void*)initiator_destroy;
-	enumerator->this = this;
-	enumerator->id = id;
-	enumerator->vip = vip;
-	enumerator->outer = this->handlers->create_enumerator(this->handlers);
-	enumerator->inner = NULL;
-	enumerator->handler = NULL;
 
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)initiator_enumerate,
+			.destroy = (void*)initiator_destroy,
+		},
+		.this = this,
+		.id = id,
+		.vips = vips,
+		.outer = this->handlers->create_enumerator(this->handlers),
+	);
 	return &enumerator->public;
 }
 

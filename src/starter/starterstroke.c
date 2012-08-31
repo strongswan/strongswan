@@ -140,7 +140,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->ikeport = conn_end->ikeport;
 	msg_end->subnets = push_string(msg, conn_end->subnet);
 	msg_end->sourceip = push_string(msg, conn_end->sourceip);
-	msg_end->sourceip_mask = conn_end->sourceip_mask;
+	msg_end->dns = push_string(msg, conn_end->dns);
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->tohost = !conn_end->subnet;

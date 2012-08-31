@@ -346,12 +346,12 @@ struct child_sa_t {
 	 *
 	 * @param me		the new local host
 	 * @param other		the new remote host
-	 * @param vip		virtual IP, if any
+	 * @param vips		list of local virtual IPs
 	 * @param			TRUE to use UDP encapsulation for NAT traversal
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update)(child_sa_t *this, host_t *me, host_t *other,
-					   host_t *vip, bool encap);
+					   linked_list_t *vips, bool encap);
 	/**
 	 * Destroys a child_sa.
 	 */

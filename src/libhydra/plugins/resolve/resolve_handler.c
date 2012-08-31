@@ -267,46 +267,71 @@ METHOD(attribute_handler_t, release, void,
 typedef struct {
 	/** implements enumerator_t interface */
 	enumerator_t public;
-	/** virtual IP we are requesting */
-	host_t *vip;
+	/** request IPv4 DNS? */
+	bool v4;
+	/** request IPv6 DNS? */
+	bool v6;
 } attribute_enumerator_t;
 
 static bool attribute_enumerate(attribute_enumerator_t *this,
 								configuration_attribute_type_t *type,
 								chunk_t *data)
 {
-	switch (this->vip->get_family(this->vip))
+	if (this->v4)
 	{
-		case AF_INET:
-			*type = INTERNAL_IP4_DNS;
-			break;
-		case AF_INET6:
-			*type = INTERNAL_IP6_DNS;
-			break;
-		default:
-			return FALSE;
+		*type = INTERNAL_IP4_DNS;
+		*data = chunk_empty;
+		this->v4 = FALSE;
+		return TRUE;
 	}
-	*data = chunk_empty;
-	/* enumerate only once */
-	this->public.enumerate = (void*)return_false;
-	return TRUE;
+	if (this->v6)
+	{
+		*type = INTERNAL_IP6_DNS;
+		*data = chunk_empty;
+		this->v6 = FALSE;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Check if a list has a host of given family
+ */
+static bool has_host_family(linked_list_t *list, int family)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+	bool found = FALSE;
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		if (host->get_family(host) == family)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
-	private_resolve_handler_t *this, identification_t *server, host_t *vip)
+	private_resolve_handler_t *this, identification_t *server,
+	linked_list_t *vips)
 {
-	if (vip)
-	{
-		attribute_enumerator_t *enumerator;
+	attribute_enumerator_t *enumerator;
 
-		enumerator = malloc_thing(attribute_enumerator_t);
-		enumerator->public.enumerate = (void*)attribute_enumerate;
-		enumerator->public.destroy = (void*)free;
-		enumerator->vip = vip;
-
-		return &enumerator->public;
-	}
-	return enumerator_create_empty();
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)attribute_enumerate,
+			.destroy = (void*)free,
+		},
+		.v4 = has_host_family(vips, AF_INET),
+		.v6 = has_host_family(vips, AF_INET6),
+	);
+	return &enumerator->public;
 }
 
 METHOD(resolve_handler_t, destroy, void,

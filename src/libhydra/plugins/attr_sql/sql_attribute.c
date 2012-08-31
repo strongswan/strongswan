@@ -233,7 +233,7 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_sql_attribute_t *this, char *names, identification_t *id,
+	private_sql_attribute_t *this, char *name, identification_t *id,
 	host_t *requested)
 {
 	host_t *address = NULL;
@@ -242,58 +242,16 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	identity = get_identity(this, id);
 	if (identity)
 	{
-		/* check for a single pool first (no concatenation and enumeration) */
-		if (strchr(names, ',') == NULL)
+		pool = get_pool(this, name, &timeout);
+		if (pool)
 		{
-			pool = get_pool(this, names, &timeout);
-			if (pool)
+			/* check for an existing lease */
+			address = check_lease(this, name, pool, identity);
+			if (address == NULL)
 			{
-				/* check for an existing lease */
-				address = check_lease(this, names, pool, identity);
-				if (address == NULL)
-				{
-					/* get an unallocated address or expired lease */
-					address = get_lease(this, names, pool, timeout, identity);
-				}
+				/* get an unallocated address or expired lease */
+				address = get_lease(this, name, pool, timeout, identity);
 			}
-		}
-		else
-		{
-			enumerator_t *enumerator;
-			char *name;
-
-			/* in a first step check for an existing lease over all pools */
-			enumerator = enumerator_create_token(names, ",", " ");
-			while (enumerator->enumerate(enumerator, &name))
-			{
-				pool = get_pool(this, name, &timeout);
-				if (pool)
-				{
-					address = check_lease(this, name, pool, identity);
-					if (address)
-					{
-						enumerator->destroy(enumerator);
-						return address;
-					}
-				}
-			}
-			enumerator->destroy(enumerator);
-
-			/* in a second step get an unallocated address or expired lease */
-			enumerator = enumerator_create_token(names, ",", " ");
-			while (enumerator->enumerate(enumerator, &name))
-			{
-				pool = get_pool(this, name, &timeout);
-				if (pool)
-				{
-					address = get_lease(this, name, pool, timeout, identity);
-					if (address)
-					{
-						break;
-					}
-				}
-			}
-			enumerator->destroy(enumerator);
 		}
 	}
 	return address;
@@ -303,50 +261,41 @@ METHOD(attribute_provider_t, release_address, bool,
 	private_sql_attribute_t *this, char *name, host_t *address,
 	identification_t *id)
 {
-	enumerator_t *enumerator;
-	bool found = FALSE;
+	u_int pool, timeout;
 	time_t now = time(NULL);
 
-	enumerator = enumerator_create_token(name, ",", " ");
-	while (enumerator->enumerate(enumerator, &name))
+	pool = get_pool(this, name, &timeout);
+	if (pool)
 	{
-		u_int pool, timeout;
-
-		pool = get_pool(this, name, &timeout);
-		if (pool)
+		if (this->history)
 		{
-			if (this->history)
-			{
-				this->db->execute(this->db, NULL,
-					"INSERT INTO leases (address, identity, acquired, released)"
-					" SELECT id, identity, acquired, ? FROM addresses "
-					" WHERE pool = ? AND address = ?",
-					DB_UINT, now, DB_UINT, pool,
-					DB_BLOB, address->get_address(address));
-			}
-			if (this->db->execute(this->db, NULL,
-					"UPDATE addresses SET released = ? WHERE "
-					"pool = ? AND address = ?", DB_UINT, time(NULL),
-					DB_UINT, pool, DB_BLOB, address->get_address(address)) > 0)
-			{
-				found = TRUE;
-				break;
-			}
+			this->db->execute(this->db, NULL,
+				"INSERT INTO leases (address, identity, acquired, released)"
+				" SELECT id, identity, acquired, ? FROM addresses "
+				" WHERE pool = ? AND address = ?",
+				DB_UINT, now, DB_UINT, pool,
+				DB_BLOB, address->get_address(address));
+		}
+		if (this->db->execute(this->db, NULL,
+				"UPDATE addresses SET released = ? WHERE "
+				"pool = ? AND address = ?", DB_UINT, time(NULL),
+				DB_UINT, pool, DB_BLOB, address->get_address(address)) > 0)
+		{
+			return TRUE;
 		}
 	}
-	enumerator->destroy(enumerator);
-	return found;
+	return FALSE;
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
-	private_sql_attribute_t *this, char *names, identification_t *id,
-	host_t *vip)
+	private_sql_attribute_t *this, linked_list_t *pools, identification_t *id,
+	linked_list_t *vips)
 {
 	enumerator_t *attr_enumerator = NULL;
 
-	if (vip)
+	if (vips->get_count(vips))
 	{
-		enumerator_t *names_enumerator;
+		enumerator_t *pool_enumerator;
 		u_int count;
 		char *name;
 
@@ -357,8 +306,8 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		{
 			u_int identity = get_identity(this, id);
 
-			names_enumerator = enumerator_create_token(names, ",", " ");
-			while (names_enumerator->enumerate(names_enumerator, &name))
+			pool_enumerator = pools->create_enumerator(pools);
+			while (pool_enumerator->enumerate(pool_enumerator, &name))
 			{
 				u_int attr_pool = get_attr_pool(this, name);
 				if (!attr_pool)
@@ -385,14 +334,14 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 				DESTROY_IF(attr_enumerator);
 				attr_enumerator = NULL;
 			}
-			names_enumerator->destroy(names_enumerator);
+			pool_enumerator->destroy(pool_enumerator);
 		}
 
 		/* in a second step check for attributes that match name */
 		if (!attr_enumerator)
 		{
-			names_enumerator = enumerator_create_token(names, ",", " ");
-			while (names_enumerator->enumerate(names_enumerator, &name))
+			pool_enumerator = pools->create_enumerator(pools);
+			while (pool_enumerator->enumerate(pool_enumerator, &name))
 			{
 				u_int attr_pool = get_attr_pool(this, name);
 				if (!attr_pool)
@@ -419,7 +368,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 				DESTROY_IF(attr_enumerator);
 				attr_enumerator = NULL;
 			}
-			names_enumerator->destroy(names_enumerator);
+			pool_enumerator->destroy(pool_enumerator);
 		}
 
 		this->db->execute(this->db, NULL, "END TRANSACTION");

@@ -102,7 +102,6 @@ struct starter_end {
 		char            *host;
 		u_int           ikeport;
 		char            *subnet;
-		bool            has_natip;
 		bool            modecfg;
 		certpolicy_t    sendcert;
 		bool            firewall;
@@ -112,7 +111,7 @@ struct starter_end {
 		u_int16_t       port;
 		u_int8_t        protocol;
 		char            *sourceip;
-		int				sourceip_mask;
+		char            *dns;
 };
 
 typedef struct also also_t;

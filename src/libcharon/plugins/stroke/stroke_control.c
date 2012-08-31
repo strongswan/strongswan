@@ -407,10 +407,10 @@ METHOD(stroke_control_t, rekey, void,
 METHOD(stroke_control_t, terminate_srcip, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	enumerator_t *enumerator;
+	enumerator_t *enumerator, *vips;
 	ike_sa_t *ike_sa;
 	host_t *start = NULL, *end = NULL, *vip;
-	chunk_t chunk_start, chunk_end = chunk_empty, chunk_vip;
+	chunk_t chunk_start, chunk_end = chunk_empty, chunk;
 
 	if (msg->terminate_srcip.start)
 	{
@@ -438,33 +438,40 @@ METHOD(stroke_control_t, terminate_srcip, void,
 													charon->controller, TRUE);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
-		vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-		if (!vip)
-		{
-			continue;
-		}
-		if (!end)
-		{
-			if (!vip->ip_equals(vip, start))
-			{
-				continue;
-			}
-		}
-		else
-		{
-			chunk_vip = vip->get_address(vip);
-			if (chunk_vip.len != chunk_start.len ||
-				chunk_vip.len != chunk_end.len ||
-				memcmp(chunk_vip.ptr, chunk_start.ptr, chunk_vip.len) < 0 ||
-				memcmp(chunk_vip.ptr, chunk_end.ptr, chunk_vip.len) > 0)
-			{
-				continue;
-			}
-		}
+		bool match = FALSE;
 
-		/* schedule delete asynchronously */
-		lib->processor->queue_job(lib->processor, (job_t*)
+		vips = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+		while (vips->enumerate(vips, &vip))
+		{
+			if (!end)
+			{
+				if (vip->ip_equals(vip, start))
+				{
+					match = TRUE;
+					break;
+				}
+			}
+			else
+			{
+				chunk = vip->get_address(vip);
+				if (chunk.len == chunk_start.len &&
+					chunk.len == chunk_end.len &&
+					memcmp(chunk.ptr, chunk_start.ptr, chunk.len) >= 0 &&
+					memcmp(chunk.ptr, chunk_end.ptr, chunk.len) <= 0)
+				{
+					match = TRUE;
+					break;
+				}
+			}
+		}
+		vips->destroy(vips);
+
+		if (match)
+		{
+			/* schedule delete asynchronously */
+			lib->processor->queue_job(lib->processor, (job_t*)
 						delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
+		}
 	}
 	enumerator->destroy(enumerator);
 	start->destroy(start);

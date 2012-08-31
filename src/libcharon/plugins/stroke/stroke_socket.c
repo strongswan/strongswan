@@ -37,6 +37,7 @@
 #include "stroke_cred.h"
 #include "stroke_ca.h"
 #include "stroke_attribute.h"
+#include "stroke_handler.h"
 #include "stroke_list.h"
 
 /**
@@ -97,6 +98,11 @@ struct private_stroke_socket_t {
 	 * attribute provider
 	 */
 	stroke_attribute_t *attribute;
+
+	/**
+	 * attribute handler (requests only)
+	 */
+	stroke_handler_t *handler;
 
 	/**
 	 * controller to control daemon
@@ -171,6 +177,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->address);
 	pop_string(msg, &end->subnets);
 	pop_string(msg, &end->sourceip);
+	pop_string(msg, &end->dns);
 	pop_string(msg, &end->auth);
 	pop_string(msg, &end->auth2);
 	pop_string(msg, &end->id);
@@ -188,6 +195,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
 	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnets);
 	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
+	DBG2(DBG_CFG, "  %sdns=%s", label, end->dns);
 	DBG2(DBG_CFG, "  %sauth=%s", label, end->auth);
 	DBG2(DBG_CFG, "  %sauth2=%s", label, end->auth2);
 	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
@@ -235,7 +243,8 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "  keyexchange=ikev%u", msg->add_conn.version);
 
 	this->config->add(this->config, msg);
-	this->attribute->add_pool(this->attribute, msg);
+	this->attribute->add_dns(this->attribute, msg);
+	this->handler->add_attributes(this->handler, msg);
 }
 
 /**
@@ -247,7 +256,8 @@ static void stroke_del_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
 
 	this->config->del(this->config, msg);
-	this->attribute->del_pool(this->attribute, msg);
+	this->attribute->del_dns(this->attribute, msg);
+	this->handler->del_attributes(this->handler, msg);
 }
 
 /**
@@ -787,10 +797,12 @@ METHOD(stroke_socket_t, destroy, void,
 	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
+	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
 	this->attribute->destroy(this->attribute);
+	this->handler->destroy(this->handler);
 	this->control->destroy(this->control);
 	this->list->destroy(this->list);
 	free(this);
@@ -817,8 +829,9 @@ stroke_socket_t *stroke_socket_create()
 
 	this->cred = stroke_cred_create();
 	this->attribute = stroke_attribute_create();
+	this->handler = stroke_handler_create();
 	this->ca = stroke_ca_create(this->cred);
-	this->config = stroke_config_create(this->ca, this->cred);
+	this->config = stroke_config_create(this->ca, this->cred, this->attribute);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);
 
@@ -833,6 +846,7 @@ stroke_socket_t *stroke_socket_create()
 	lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
+	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,

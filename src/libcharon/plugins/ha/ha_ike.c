@@ -241,6 +241,34 @@ METHOD(listener_t, ike_state_change, bool,
 	return TRUE;
 }
 
+/**
+ * Send a virtual IP sync message for remote VIPs
+ */
+static void sync_vips(private_ha_ike_t *this, ike_sa_t *ike_sa)
+{
+	ha_message_t *m = NULL;
+	enumerator_t *enumerator;
+	host_t *vip;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		if (!m)
+		{
+			m = ha_message_create(HA_IKE_UPDATE);
+			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+		}
+		m->add_attribute(m, HA_REMOTE_VIP, vip);
+	}
+	enumerator->destroy(enumerator);
+
+	if (m)
+	{
+		this->socket->push(this->socket, m);
+		this->cache->cache(this->cache, ike_sa, m);
+	}
+}
+
 METHOD(listener_t, message_hook, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, message_t *message,
 	bool incoming, bool plain)
@@ -276,18 +304,7 @@ METHOD(listener_t, message_hook, bool,
 		{	/* After IKE_SA has been established, sync peers virtual IP.
 			 * We cannot sync it in the state_change hook, it is installed later.
 			 * TODO: where to sync local VIP? */
-			ha_message_t *m;
-			host_t *vip;
-
-			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-			if (vip)
-			{
-				m = ha_message_create(HA_IKE_UPDATE);
-				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-				m->add_attribute(m, HA_REMOTE_VIP, vip);
-				this->socket->push(this->socket, m);
-				this->cache->cache(this->cache, ike_sa, m);
-			}
+			sync_vips(this, ike_sa);
 		}
 	}
 	if (!plain && ike_sa->get_version(ike_sa) == IKEV1)
@@ -296,7 +313,6 @@ METHOD(listener_t, message_hook, bool,
 		keymat_v1_t *keymat;
 		u_int32_t mid;
 		chunk_t iv;
-		host_t *vip;
 
 		mid = message->get_message_id(message);
 		if (mid == 0)
@@ -313,15 +329,7 @@ METHOD(listener_t, message_hook, bool,
 		}
 		if (!incoming && message->get_exchange_type(message) == TRANSACTION)
 		{
-			vip = ike_sa->get_virtual_ip(ike_sa, FALSE);
-			if (vip)
-			{
-				m = ha_message_create(HA_IKE_UPDATE);
-				m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-				m->add_attribute(m, HA_REMOTE_VIP, vip);
-				this->socket->push(this->socket, m);
-				this->cache->cache(this->cache, ike_sa, m);
-			}
+			sync_vips(this, ike_sa);
 		}
 	}
 	if (plain && ike_sa->get_version(ike_sa) == IKEV1 &&

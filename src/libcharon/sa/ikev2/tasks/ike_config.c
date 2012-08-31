@@ -43,9 +43,9 @@ struct private_ike_config_t {
 	bool initiator;
 
 	/**
-	 * virtual ip
+	 * Received list of virtual IPs, host_t*
 	 */
-	host_t *virtual_ip;
+	linked_list_t *vips;
 
 	/**
 	 * list of attributes requested and its handler, entry_t
@@ -170,8 +170,7 @@ static void process_attribute(private_ike_config_t *this,
 			}
 			if (ip)
 			{
-				DESTROY_IF(this->virtual_ip);
-				this->virtual_ip = ip;
+				this->vips->insert_last(this->vips, ip);
 			}
 			break;
 		}
@@ -242,23 +241,45 @@ METHOD(task_t, build_i, status_t,
 		peer_cfg_t *config;
 		configuration_attribute_type_t type;
 		chunk_t data;
-		host_t *vip;
+		linked_list_t *vips;
+		host_t *host;
+
+		vips = linked_list_create();
 
 		/* reuse virtual IP if we already have one */
-		vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
-		if (!vip)
+		enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa,
+																TRUE);
+		while (enumerator->enumerate(enumerator, &host))
+		{
+			vips->insert_last(vips, host);
+		}
+		enumerator->destroy(enumerator);
+
+		if (vips->get_count(vips) == 0)
 		{
 			config = this->ike_sa->get_peer_cfg(this->ike_sa);
-			vip = config->get_virtual_ip(config);
-		}
-		if (vip)
-		{
-			cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
-			cp->add_attribute(cp, build_vip(vip));
+			enumerator = config->create_virtual_ip_enumerator(config);
+			while (enumerator->enumerate(enumerator, &host))
+			{
+				vips->insert_last(vips, host);
+			}
+			enumerator->destroy(enumerator);
 		}
 
-		enumerator = hydra->attributes->create_initiator_enumerator(hydra->attributes,
-								this->ike_sa->get_other_id(this->ike_sa), vip);
+		if (vips->get_count(vips))
+		{
+			cp = cp_payload_create_type(CONFIGURATION, CFG_REQUEST);
+			enumerator = vips->create_enumerator(vips);
+			while (enumerator->enumerate(enumerator, &host))
+			{
+				cp->add_attribute(cp, build_vip(host));
+			}
+			enumerator->destroy(enumerator);
+		}
+
+		enumerator = hydra->attributes->create_initiator_enumerator(
+								hydra->attributes,
+								this->ike_sa->get_other_id(this->ike_sa), vips);
 		while (enumerator->enumerate(enumerator, &handler, &type, &data))
 		{
 			configuration_attribute_t *ca;
@@ -283,6 +304,8 @@ METHOD(task_t, build_i, status_t,
 			this->requested->insert_last(this->requested, entry);
 		}
 		enumerator->destroy(enumerator);
+
+		vips->destroy(vips);
 
 		if (cp)
 		{
@@ -310,40 +333,75 @@ METHOD(task_t, build_r, status_t,
 		enumerator_t *enumerator;
 		configuration_attribute_type_t type;
 		chunk_t value;
-		host_t *vip = NULL;
 		cp_payload_t *cp = NULL;
 		peer_cfg_t *config;
 		identification_t *id;
+		linked_list_t *vips, *pools;
+		host_t *requested;
 
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
-
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (this->virtual_ip)
-		{
-			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			if (config->get_pool(config))
-			{
-				vip = hydra->attributes->acquire_address(hydra->attributes,
-							config->get_pool(config), id, this->virtual_ip);
-			}
-			if (vip == NULL)
-			{
-				DBG1(DBG_IKE, "no virtual IP found, sending %N",
-					 notify_type_names, INTERNAL_ADDRESS_FAILURE);
-				message->add_notify(message, FALSE, INTERNAL_ADDRESS_FAILURE,
-									chunk_empty);
-				return SUCCESS;
-			}
-			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", vip, id);
-			this->ike_sa->set_virtual_ip(this->ike_sa, FALSE, vip);
+		vips = linked_list_create();
+		pools = linked_list_create();
 
-			cp = cp_payload_create_type(CONFIGURATION, CFG_REPLY);
-			cp->add_attribute(cp, build_vip(vip));
+		enumerator = this->vips->create_enumerator(this->vips);
+		while (enumerator->enumerate(enumerator, &requested))
+		{
+			enumerator_t *poolenum;
+			char *pool;
+			host_t *found = NULL;
+
+			/* query all pools until we get an address */
+			DBG1(DBG_IKE, "peer requested virtual IP %H", requested);
+
+			poolenum = config->create_pool_enumerator(config);
+			while (poolenum->enumerate(poolenum, &pool))
+			{
+				found = hydra->attributes->acquire_address(hydra->attributes,
+														   pool, id, requested);
+				if (!found)
+				{
+					continue;
+				}
+				DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
+				this->ike_sa->add_virtual_ip(this->ike_sa, FALSE, found);
+				if (!cp)
+				{
+					cp = cp_payload_create_type(CONFIGURATION, CFG_REPLY);
+				}
+				cp->add_attribute(cp, build_vip(found));
+				/* use pool to request other attributes */
+				if (pools->find_first(pools, NULL, (void**)&pool) == NOT_FOUND)
+				{
+					pools->insert_last(pools, pool);
+				}
+				vips->insert_last(vips, found);
+				break;
+			}
+			poolenum->destroy(poolenum);
+
+			if (!found)
+			{
+				DBG1(DBG_IKE, "no virtual IP found for %H requested by '%Y'",
+					 requested, id);
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (this->vips->get_count(this->vips) && !vips->get_count(vips))
+		{
+			DBG1(DBG_IKE, "no virtual IP found, sending %N",
+				 notify_type_names, INTERNAL_ADDRESS_FAILURE);
+			message->add_notify(message, FALSE, INTERNAL_ADDRESS_FAILURE,
+								chunk_empty);
+			vips->destroy_offset(vips, offsetof(host_t, destroy));
+			pools->destroy(pools);
+			return SUCCESS;
 		}
 
 		/* query registered providers for additional attributes to include */
 		enumerator = hydra->attributes->create_responder_enumerator(
-						hydra->attributes, config->get_pool(config), id, vip);
+											hydra->attributes, pools, id, vips);
 		while (enumerator->enumerate(enumerator, &type, &value))
 		{
 			if (!cp)
@@ -357,12 +415,13 @@ METHOD(task_t, build_r, status_t,
 													 type, value));
 		}
 		enumerator->destroy(enumerator);
+		vips->destroy_offset(vips, offsetof(host_t, destroy));
+		pools->destroy(pools);
 
 		if (cp)
 		{
 			message->add_payload(message, (payload_t*)cp);
 		}
-		DESTROY_IF(vip);
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -373,14 +432,20 @@ METHOD(task_t, process_i, status_t,
 {
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
 	{	/* in last IKE_AUTH exchange */
+		enumerator_t *enumerator;
+		host_t *host;
 
 		process_payloads(this, message);
 
-		if (this->virtual_ip &&
-			!this->virtual_ip->is_anyaddr(this->virtual_ip))
+		enumerator = this->vips->create_enumerator(this->vips);
+		while (enumerator->enumerate(enumerator, &host))
 		{
-			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
+			if (!host->is_anyaddr(host))
+			{
+				this->ike_sa->add_virtual_ip(this->ike_sa, TRUE, host);
+			}
 		}
+		enumerator->destroy(enumerator);
 		return SUCCESS;
 	}
 	return NEED_MORE;
@@ -395,10 +460,9 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(task_t, migrate, void,
 	private_ike_config_t *this, ike_sa_t *ike_sa)
 {
-	DESTROY_IF(this->virtual_ip);
-
 	this->ike_sa = ike_sa;
-	this->virtual_ip = NULL;
+	this->vips->destroy_offset(this->vips, offsetof(host_t, destroy));
+	this->vips = linked_list_create();
 	this->requested->destroy_function(this->requested, free);
 	this->requested = linked_list_create();
 }
@@ -406,7 +470,7 @@ METHOD(task_t, migrate, void,
 METHOD(task_t, destroy, void,
 	private_ike_config_t *this)
 {
-	DESTROY_IF(this->virtual_ip);
+	this->vips->destroy_offset(this->vips, offsetof(host_t, destroy));
 	this->requested->destroy_function(this->requested, free);
 	free(this);
 }
@@ -428,6 +492,7 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 		},
 		.initiator = initiator,
 		.ike_sa = ike_sa,
+		.vips = linked_list_create(),
 		.requested = linked_list_create(),
 	);
 

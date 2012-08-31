@@ -586,6 +586,16 @@ Comma separated list of certificate policy OIDs the peer's certificate must
 have.
 OIDs are specified using the numerical dotted representation.
 .TP
+.BR leftdns " = <servers>"
+Comma separated list of DNS server addresses to exchange as configuration
+attributes. On the initiator, a server is a fixed IPv4 / IPv6 address, or
+.B %config4
+/
+.B %config6
+to request attributes without an address. On the responder,
+only fixed IPv4 /IPv6 addresses are allowed and define DNS servers assigned
+to the client.
+.TP
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
 (including masquerading) using iptables for traffic from \fIleftsubnet\fR,
@@ -691,19 +701,19 @@ and
 the latter meaning that the peer must send a certificate request payload in
 order to get a certificate in return.
 .TP
-.BR leftsourceip " = %config | %cfg | %modeconfig | %modecfg | <ip address>"
-The internal source IP to use in a tunnel, also known as virtual IP. If the
-value is one of the synonyms
+.BR leftsourceip " = %config4 | %config6 | <ip address>"
+Comma separated list of internal source IPs to use in a tunnel, also known as
+virtual IP. If the value is one of the synonyms
 .BR %config ,
 .BR %cfg ,
 .BR %modeconfig ,
 or
 .BR %modecfg ,
-an address is requested from the peer.
+an address (from the tunnel address family) is requested from the peer.
 .TP
 .BR rightsourceip " = %config | <network>/<netmask> | %poolname"
-The internal source IP to use in a tunnel for the remote peer. If the
-value is
+Comma separated list of internal source IPs to use in a tunnel for the remote
+peer. If the value is
 .B %config
 on the responder side, the initiator must propose an address which is then
 echoed back. Also supported are address pools expressed as

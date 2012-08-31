@@ -39,6 +39,13 @@ struct mem_pool_t {
 	const char* (*get_name)(mem_pool_t *this);
 
 	/**
+	 * Get the base (first) address of this pool.
+	 *
+	 * @return			base address, internal host
+	 */
+	host_t* (*get_base)(mem_pool_t *this);
+
+	/**
 	 * Get the size (i.e. number of addresses) of this pool.
 	 *
 	 * @return			the size of this pool
