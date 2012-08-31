@@ -95,9 +95,9 @@ static status_t process_phase2(private_eap_peap_peer_t *this, eap_payload_t *in)
 
 	code = in->get_code(in);
 	received_type = in->get_type(in, &received_vendor);
-	DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
+	DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%M ]",
 		 eap_code_short_names, code,
-		 eap_type_get_names(received_vendor), received_type);
+		 eap_type_get_names, received_vendor, received_type);
 
 	/* yet another phase2 authentication? */
 	if (this->ph2)
@@ -113,8 +113,8 @@ static status_t process_phase2(private_eap_peap_peer_t *this, eap_payload_t *in)
 
 	if (this->ph2 == NULL)
 	{
-		DBG1(DBG_IKE, "server requested EAP method %N (id 0x%02X)",
-			 eap_type_get_names(received_vendor), received_type,
+		DBG1(DBG_IKE, "server requested EAP method %M (id 0x%02X)",
+			 eap_type_get_names, received_vendor, received_type,
 			 in->get_identifier(in));
 		this->ph2 = charon->eap->create_instance(charon->eap,
 									received_type, received_vendor,
@@ -143,7 +143,7 @@ static status_t process_phase2(private_eap_peap_peer_t *this, eap_payload_t *in)
 			return NEED_MORE;
 		case FAILED:
 		default:
-			DBG1(DBG_IKE, "EAP-%N failed", eap_type_get_names(vendor), type);
+			DBG1(DBG_IKE, "EAP-%M failed", eap_type_get_names, vendor, type);
 			return FAILED;
 	}
 }
@@ -278,9 +278,9 @@ static status_t process_eap_with_header(private_eap_peap_peer_t *this,
 				DBG1(DBG_IKE, "parsing PEAP inner expanded EAP header failed");
 				return FAILED;
 			}
-			DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
+			DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [ EAP/%N/%M ]",
 				 eap_code_short_names, code,
-				 eap_type_get_names(vendor), type);
+				 eap_type_get_names, vendor, type);
 			if (vendor == PEN_MICROSOFT && type == EAP_MS_CAPABILITES)
 			{
 				return process_capabilities(this, reader);
@@ -338,9 +338,9 @@ METHOD(tls_application_t, build, status_t,
 	{
 		code = this->out->get_code(this->out);
 		type = this->out->get_type(this->out, &vendor);
-		DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [ EAP/%N/%N ]",
+		DBG1(DBG_IKE, "sending tunneled EAP-PEAP AVP [ EAP/%N/%M ]",
 			 eap_code_short_names, code,
-			 eap_type_get_names(vendor), type);
+			 eap_type_get_names, vendor, type);
 
 		data = this->out->get_data(this->out);
 

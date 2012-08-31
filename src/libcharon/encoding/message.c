@@ -1229,8 +1229,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			type = eap->get_type(eap, &vendor);
 			if (type)
 			{
-				snprintf(method, sizeof(method), "/%N",
-						eap_type_get_names(vendor), type);
+				snprintf(method, sizeof(method), "/%M",
+						eap_type_get_names, vendor, type);
 			}
 			written = snprintf(pos, len, "/%N%s", eap_code_short_names,
 							   eap->get_code(eap), method);

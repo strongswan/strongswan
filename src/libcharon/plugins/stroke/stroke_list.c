@@ -355,9 +355,9 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 			}
 			else
 			{
-				fprintf(out, "EAP-%N authentication",
-						eap_type_get_names(
-							(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR)),
+				fprintf(out, "EAP-%M authentication",
+						eap_type_get_names,
+						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_VENDOR),
 						(uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE));
 			}
 			id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
