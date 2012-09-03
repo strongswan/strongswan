@@ -191,14 +191,14 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 		{
 			type = this->method->get_type(this->method, &vendor);
 			DBG1(DBG_IKE, "%s EAP-%M method (id 0x%02X)", action,
-				 eap_type_get_names, vendor, type, out->get_identifier(out));
+				 eap_type_get_names, &vendor, type, out->get_identifier(out));
 			return out;
 		}
 		/* type might have changed for virtual methods */
 		type = this->method->get_type(this->method, &vendor);
 	}
 	DBG1(DBG_IKE, "%s EAP-%M method failed", action,
-		 eap_type_get_names, vendor, type);
+		 eap_type_get_names, &vendor, type);
 	return eap_payload_create_code(EAP_FAILURE, 0);
 }
 
@@ -285,7 +285,7 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 				this->msk = chunk_clone(this->msk);
 			}
 			DBG1(DBG_IKE, "EAP method %M succeeded, %sMSK established",
-				 eap_type_get_names, vendor, type, this->msk.ptr ? "" : "no ");
+				 eap_type_get_names, &vendor, type, this->msk.ptr ? "" : "no ");
 			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED,
 										TRUE);
 			this->eap_complete = TRUE;
@@ -294,7 +294,7 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 		default:
 			/* type might have changed for virtual methods */
 			DBG1(DBG_IKE, "EAP method %M failed for peer %Y",
-				 eap_type_get_names, vendor, type,
+				 eap_type_get_names, &vendor, type,
 				 this->ike_sa->get_other_id(this->ike_sa));
 			return eap_payload_create_code(EAP_FAILURE, in->get_identifier(in));
 	}
@@ -348,7 +348,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 	if (this->method == NULL)
 	{
 		DBG1(DBG_IKE, "server requested %M authentication (id 0x%02X)",
-			 eap_type_get_names, vendor, type, in->get_identifier(in));
+			 eap_type_get_names, &vendor, type, in->get_identifier(in));
 
 		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		conf_type = (uintptr_t)auth->get(auth, AUTH_RULE_EAP_TYPE);
@@ -357,7 +357,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		   (conf_type != type || conf_vendor != vendor))
 		{
 			DBG1(DBG_IKE, "requesting EAP-%M authentication, sending EAP_NAK",
-				 eap_type_get_names, conf_vendor, conf_type);
+				 eap_type_get_names, &conf_vendor, conf_type);
 			return eap_payload_create_nak(in->get_identifier(in), conf_type,
 										  conf_vendor, in->is_expanded(in));
 		}
@@ -377,7 +377,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		return out;
 	}
 
-	DBG1(DBG_IKE, "EAP-%M method failed", eap_type_get_names, vendor, type);
+	DBG1(DBG_IKE, "EAP-%M method failed", eap_type_get_names, &vendor, type);
 	return NULL;
 }
 
@@ -528,7 +528,7 @@ METHOD(authenticator_t, process_client, status_t,
 			type = this->method->get_type(this->method, &vendor);
 			DBG1(DBG_IKE, "EAP-only authentication requires a mutual and "
 				 "MSK deriving EAP method, but %M is not",
-				 eap_type_get_names, vendor, type);
+				 eap_type_get_names, &vendor, type);
 			return FAILED;
 		}
 		return SUCCESS;
@@ -561,7 +561,7 @@ METHOD(authenticator_t, process_client, status_t,
 				}
 				type = this->method->get_type(this->method, &vendor);
 				DBG1(DBG_IKE, "EAP method %M succeeded, %sMSK established",
-					 eap_type_get_names, vendor, type,
+					 eap_type_get_names, &vendor, type,
 					 this->msk.ptr ? "" : "no ");
 				cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 				cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);

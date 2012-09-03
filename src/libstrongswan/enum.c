@@ -80,7 +80,7 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	{
 		if (e->cb)
 		{
-			return e->cb(data, 0, e, val);
+			return e->cb(data, e, val, NULL);
 		}
 		return print_in_hook(data, "(%d)", val);
 	}
@@ -98,14 +98,15 @@ int enum_dynamic_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 {
 	enum_name_t *e;
 	enum_name_get_t e_get;
-	int val, id = 0;
+	int val;
 	char *name = NULL;
+	void *user;
 
 	e_get = *((enum_name_get_t*)(args[0]));
-	id = *((int*)(args[1]));
+	user = *((void**)(args[1]));
 	val = *((int*)(args[2]));
 
-	e = e_get(id);
+	e = e_get(user);
 	if (e)
 	{
 		name = enum_to_name(e, val);
@@ -114,7 +115,7 @@ int enum_dynamic_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	{
 		if (e && e->cb)
 		{
-			return e->cb(data, id, e, val);
+			return e->cb(data, e, val, user);
 		}
 		return print_in_hook(data, "(%d)", val);
 	}

@@ -28,12 +28,12 @@ typedef struct enum_name_t enum_name_t;
 typedef struct enum_name_elem_t enum_name_elem_t;
 
 /**
- * Callback function to get an enum name using an index variable.
+ * Callback function to get an enum name.
  *
- * @param			index variable to select enum_name_t
+ * @param user		function specific pointer value to select enum name
  * @return			enum name
  */
-typedef enum_name_t* (*enum_name_get_t)(int id);
+typedef enum_name_t* (*enum_name_get_t)(void *user);
 
 /**
  * Fallback callback to call if enum could not be mapped to a string.
@@ -42,13 +42,13 @@ typedef enum_name_t* (*enum_name_get_t)(int id);
  * with the supplied data to write to the output stream.
  *
  * @param data		printf hook data to pass to print_in_hook()
- * @param id		index variable, as passed to enum_name_get function, or 0
  * @param e			enum name for which callback is invoked
  * @param val		enum value to map
+ * @param user		function specific pointer, as passed to enum_name_get_t
  * @return			number of characters written
  */
-typedef int (*enum_name_cb_t)(printf_hook_data_t *data, int id, enum_name_t *e,
-							  int val);
+typedef int (*enum_name_cb_t)(printf_hook_data_t *data, enum_name_t *e,
+							  int val, void *user);
 
 /**
  * Struct to store names for enums.
@@ -79,8 +79,8 @@ typedef int (*enum_name_cb_t)(printf_hook_data_t *data, int id, enum_name_t *e,
  *
  * To select an enum name dynamically, the %M printf format specifier can be
  * used. Instead of an enum_name_t, the printf hook expects a enum_name_get_t
- * followed by an index, followed by the enum value. The enum_name_t is looked
- * up using the function and the index argument.
+ * followed by a pointer, followed by the enum value. The enum_name_t is looked
+ * up using the function and the function specific pointer argument.
  */
 struct enum_name_t {
 	/** first enum_name_elem_t in chain */

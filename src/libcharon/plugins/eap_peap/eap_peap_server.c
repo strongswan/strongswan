@@ -100,13 +100,13 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
 		return FAILED;
 	}
-	DBG1(DBG_IKE, "phase2 method %M selected", eap_type_get_names, vendor, type);
+	DBG1(DBG_IKE, "phase2 method %M selected", eap_type_get_names, &vendor, type);
 		this->ph2_method = charon->eap->create_instance(charon->eap, type,
 								vendor, EAP_SERVER, this->server, this->peer);
 	if (this->ph2_method == NULL)
 	{
 		DBG1(DBG_IKE, "%M method not available",
-			 eap_type_get_names, vendor, type);
+			 eap_type_get_names, &vendor, type);
 		return FAILED;
 	}
 
@@ -120,7 +120,7 @@ static status_t start_phase2_auth(private_eap_peap_server_t *this)
 	}
 	else
 	{
-		DBG1(DBG_IKE, "%M method failed", eap_type_get_names, vendor, type);
+		DBG1(DBG_IKE, "%M method failed", eap_type_get_names, &vendor, type);
 		return FAILED;
 	}
 }

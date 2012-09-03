@@ -24,8 +24,8 @@
 /**
  * Forward declaration of enum name fallback callback.
  */
-static int eap_type_names_cb(printf_hook_data_t *data, int vendor,
-							 enum_name_t *e, int type);
+static int eap_type_names_cb(printf_hook_data_t *data, enum_name_t *e, int type,
+							 void *vendor);
 
 ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_REQUEST",
@@ -110,10 +110,10 @@ ENUM_CB(eap_vendor_names_ms, eap_type_names_cb, EAP_MS_SOH, EAP_MS_CAPABILITES,
 /**
  * Callback function if mapping EAP type to enum name failed
  */
-static int eap_type_names_cb(printf_hook_data_t *data, int vendor,
-							 enum_name_t *e, int type)
+static int eap_type_names_cb(printf_hook_data_t *data, enum_name_t *e, int type,
+							 void *vendor)
 {
-	if (e == eap_type_short_names)
+	if (e == eap_type_short_names || !vendor)
 	{
 		return print_in_hook(data, "%d", type);
 	}
@@ -121,15 +121,15 @@ static int eap_type_names_cb(printf_hook_data_t *data, int vendor,
 	{
 		return print_in_hook(data, "MS-%d", type);
 	}
-	return print_in_hook(data, "%d-%d", type, vendor);
+	return print_in_hook(data, "%d-%d", type, *(u_int32_t*)vendor);
 }
 
 /*
  * See header
  */
-enum_name_t* eap_type_get_names(pen_t vendor)
+enum_name_t* eap_type_get_names(u_int32_t *vendor)
 {
-	switch (vendor)
+	switch (*vendor)
 	{
 		case PEN_IETF:
 			return eap_type_short_names;
@@ -178,7 +178,7 @@ eap_type_t eap_type_from_string(char *name, u_int32_t *vendor)
 	/* check IETF and vendor specific names */
 	for (i = 0; i < countof(vendors); i++)
 	{
-		enum_name = eap_type_get_names(vendors[i]);
+		enum_name = eap_type_get_names(&vendors[i]);
 		if (enum_name != eap_vendor_names_unknown)
 		{
 			type = enum_from_name(enum_name, name);

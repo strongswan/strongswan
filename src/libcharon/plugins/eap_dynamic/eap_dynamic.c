@@ -92,7 +92,7 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 	if (!method)
 	{
 		DBG1(DBG_IKE, "loading EAP-%M method failed",
-			 eap_type_get_names, vendor, type);
+			 eap_type_get_names, &vendor, type);
 	}
 	return method;
 }
@@ -121,7 +121,7 @@ static void select_method(private_eap_dynamic_t *this)
 								  NULL, entry) != SUCCESS)
 			{
 				DBG2(DBG_IKE, "proposed EAP-%M method not supported "
-					 "by %s, skipped", eap_type_get_names, entry->vendor,
+					 "by %s, skipped", eap_type_get_names, &entry->vendor,
 					 entry->type, who);
 				free(entry);
 				continue;
@@ -131,7 +131,7 @@ static void select_method(private_eap_dynamic_t *this)
 		if (this->method)
 		{
 			DBG1(DBG_IKE, "EAP-%M method selected",
-				 eap_type_get_names, entry->vendor, entry->type);
+				 eap_type_get_names, &entry->vendor, entry->type);
 			free(entry);
 			break;
 		}

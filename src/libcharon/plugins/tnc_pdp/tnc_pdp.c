@@ -275,7 +275,7 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	{
 		data = eap->get_data(eap);
 		DBG3(DBG_CFG, "%M payload %B",
-			 eap_type_get_names, this->vendor, this->type, &data);
+			 eap_type_get_names, &this->vendor, this->type, &data);
 
 		/* fragment data suitable for RADIUS */
 		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
@@ -365,7 +365,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 		eap_type = in->get_type(in, &eap_vendor);
 
 		DBG3(DBG_CFG, "EAP-%M payload %B",
-			 eap_type_get_names, eap_vendor, eap_type, &message);
+			 eap_type_get_names, &eap_vendor, eap_type, &message);
 
 		if (eap_type == EAP_IDENTITY)
 		{
@@ -651,7 +651,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		return NULL;
 	}
 	DBG1(DBG_IKE, "eap method %M selected",
-		 eap_type_get_names, this->vendor, this->type);
+		 eap_type_get_names, &this->vendor, this->type);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,

@@ -97,9 +97,12 @@ enum eap_vendor_type_t {
 };
 
 /**
- * Get the enum names for a specific vendor
+ * Get the enum names for a specific vendor, implementing enum_name_get_t.
+ *
+ * @param vendor		pointer to vendor ID
+ * @return				enum name for given vendor
  */
-enum_name_t* eap_type_get_names(pen_t vendor);
+enum_name_t* eap_type_get_names(u_int32_t *vendor);
 
 /**
  * EAP packet format
