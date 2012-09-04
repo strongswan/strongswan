@@ -25,6 +25,7 @@
     <string name="search">Search</string>
     <string name="vpn_not_supported_title">VPN not supported</string>
     <string name="vpn_not_supported">Your device does not support VPN applications.\nPlease contact the manufacturer.</string>
+    <string name="loading">Loading&#8230;</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
@@ -49,9 +50,13 @@
     <string name="profile_name_label">Profile Name:</string>
     <string name="profile_name_hint">(use gateway address)</string>
     <string name="profile_gateway_label">Gateway:</string>
+    <string name="profile_vpn_type_label">Type:</string>
     <string name="profile_username_label">Username:</string>
     <string name="profile_password_label">Password:</string>
     <string name="profile_password_hint">(prompt when needed)</string>
+    <string name="profile_user_certificate_label">User certificate:</string>
+    <string name="profile_user_select_certificate_label">Select user certificate</string>
+    <string name="profile_user_select_certificate">Select a specific user certificate</string>
     <string name="profile_ca_label">CA certificate:</string>
     <string name="profile_ca_auto_label">Select automatically</string>
     <string name="profile_ca_select_certificate_label">Select CA certificate</string>

@@ -44,9 +44,19 @@ struct private_android_service_t {
 	android_service_t public;
 
 	/**
+	 * credential set
+	 */
+	android_creds_t *creds;
+
+	/**
 	 * current IKE_SA
 	 */
 	ike_sa_t *ike_sa;
+
+	/**
+	 * the type of VPN
+	 */
+	char *type;
 
 	/**
 	 * local ipv4 address
@@ -62,6 +72,11 @@ struct private_android_service_t {
 	 * username
 	 */
 	char *username;
+
+	/**
+	 * password
+	 */
+	char *password;
 
 	/**
 	 * lock to safely access the TUN device fd
@@ -445,11 +460,42 @@ static job_requeue_t initiate(private_android_service_t *this)
 							   FALSE, NULL, NULL); /* mediation */
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
-	auth = auth_cfg_create();
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
-	user = identification_create_from_string(this->username);
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
-	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	/* local auth config */
+	if (streq("ikev2-eap", this->type))
+	{
+		auth = auth_cfg_create();
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+		user = identification_create_from_string(this->username);
+		auth->add(auth, AUTH_RULE_IDENTITY, user);
+
+		this->creds->add_username_password(this->creds, this->username,
+										   this->password);
+		memwipe(this->password, strlen(this->password));
+		peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	}
+	else if (streq("ikev2-cert", this->type))
+	{
+		certificate_t *cert;
+		identification_t *id;
+
+		cert = this->creds->load_user_certificate(this->creds);
+		if (!cert)
+		{
+			peer_cfg->destroy(peer_cfg);
+			charonservice->update_status(charonservice,
+										 CHARONSERVICE_GENERIC_ERROR);
+			return JOB_REQUEUE_NONE;
+
+		}
+		auth = auth_cfg_create();
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+		auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
+		id = cert->get_subject(cert);
+		auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+		peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	}
+
+	/* remote auth config */
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	gateway = identification_create_from_string(this->gateway);
@@ -506,17 +552,24 @@ METHOD(android_service_t, destroy, void,
 	/* make sure the tun device is actually closed */
 	close_tun_device(this);
 	this->lock->destroy(this->lock);
+	free(this->type);
 	free(this->local_address);
-	free(this->username);
 	free(this->gateway);
+	free(this->username);
+	if (this->password)
+	{
+		memwipe(this->password, strlen(this->password));
+		free(this->password);
+	}
 	free(this);
 }
 
 /**
  * See header
  */
-android_service_t *android_service_create(char *local_address, char *gateway,
-										  char *username)
+android_service_t *android_service_create(android_creds_t *creds, char *type,
+										  char *local_address, char *gateway,
+										  char *username, char *password)
 {
 	private_android_service_t *this;
 
@@ -534,7 +587,10 @@ android_service_t *android_service_create(char *local_address, char *gateway,
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.local_address = local_address,
 		.username = username,
+		.password = password,
 		.gateway = gateway,
+		.creds = creds,
+		.type = type,
 		.tunfd = -1,
 	);
 

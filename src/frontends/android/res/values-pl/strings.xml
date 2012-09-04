@@ -27,6 +27,7 @@
     <string name="search">Szukaj</string>
     <string name="vpn_not_supported_title">Nie obsługiwany VPN</string>
     <string name="vpn_not_supported">Urządzenie nie obsługuje aplikacji VPN.\nProszę skontaktować się z producentem.</string>
+    <string name="loading">Wczytywanie&#8230;</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
@@ -51,9 +52,13 @@
     <string name="profile_name_label">Nazwa profilu:</string>
     <string name="profile_name_hint">(użyj adresu bramki)</string>
     <string name="profile_gateway_label">Bramka:</string>
+    <string name="profile_vpn_type_label">Typ:</string>
     <string name="profile_username_label">Użytkownik:</string>
     <string name="profile_password_label">Hasło:</string>
-    <string name="profile_password_hint">(w razie potrzebz zapromptuj)</string>
+    <string name="profile_password_hint">(w razie potrzeby zapromptuj)</string>
+    <string name="profile_user_certificate_label">Certyfikat użytkownika:</string>
+    <string name="profile_user_select_certificate_label">Wybierz certyfikat użytkownika</string>
+    <string name="profile_user_select_certificate">>Wybierz określony certyfikat użytkownika</string>
     <string name="profile_ca_label">Certyfikat CA:</string>
     <string name="profile_ca_auto_label">Wybierz automatycznie</string>
     <string name="profile_ca_select_certificate_label">Wybierz certyfikat CA</string>

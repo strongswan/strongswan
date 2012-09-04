@@ -51,11 +51,15 @@ struct android_service_t {
  * Create an Android service instance. Queues a job that starts initiation of a
  * new IKE SA.
  *
+ * @param creds					Android specific credential set
+ * @param type					VPN type (see VpnType.java)
  * @param local_address			local ip address
  * @param gateway				gateway address
  * @param username				user name (local identity)
+ * @param password				password (if any)
  */
-android_service_t *android_service_create(char *local_address, char *gateway,
-										  char *username);
+android_service_t *android_service_create(android_creds_t *creds, char *type,
+										  char *local_address, char *gateway,
+										  char *username, char *password);
 
 #endif /** ANDROID_SERVICE_H_ @}*/

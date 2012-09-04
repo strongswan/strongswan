@@ -90,13 +90,16 @@ static inline bool androidjni_exception_occurred(JNIEnv *env)
  */
 static inline char *androidjni_convert_jstring(JNIEnv *env, jstring jstr)
 {
-	char *str;
+	char *str = NULL;
 	jsize len;
 
-	len = (*env)->GetStringUTFLength(env, jstr);
-	str = malloc(len + 1);
-	(*env)->GetStringUTFRegion(env, jstr, 0, len, str);
-	str[len] = '\0';
+	if (jstr)
+	{
+		len = (*env)->GetStringUTFLength(env, jstr);
+		str = malloc(len + 1);
+		(*env)->GetStringUTFRegion(env, jstr, 0, len, str);
+		str[len] = '\0';
+	}
 	return str;
 }
 

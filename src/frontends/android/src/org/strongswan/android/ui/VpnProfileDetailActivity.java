@@ -23,25 +23,34 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.TrustedCertificateEntry;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.TrustedCertificateManager;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.security.KeyChain;
+import android.security.KeyChainAliasCallback;
+import android.security.KeyChainException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.RelativeLayout;
-import android.widget.TextView;
+import android.widget.Spinner;
+import android.widget.TwoLineListItem;
 
 public class VpnProfileDetailActivity extends Activity
 {
@@ -50,16 +59,20 @@ public class VpnProfileDetailActivity extends Activity
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
 	private TrustedCertificateEntry mCertEntry;
+	private String mUserCertLoading;
+	private TrustedCertificateEntry mUserCertEntry;
+	private VpnType mVpnType = VpnType.IKEV2_EAP;
 	private VpnProfile mProfile;
 	private EditText mName;
 	private EditText mGateway;
+	private Spinner mSelectVpnType;
+	private ViewGroup mUsernamePassword;
 	private EditText mUsername;
 	private EditText mPassword;
+	private ViewGroup mUserCertificate;
+	private TwoLineListItem mSelectUserCert;
 	private CheckBox mCheckAuto;
-	private RelativeLayout mSelectCert;
-	private TextView mCertTitle;
-	private TextView mCertSubtitle;
-
+	private TwoLineListItem mSelectCert;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -75,14 +88,36 @@ public class VpnProfileDetailActivity extends Activity
 		setContentView(R.layout.profile_detail_view);
 
 		mName = (EditText)findViewById(R.id.name);
-		mPassword = (EditText)findViewById(R.id.password);
 		mGateway = (EditText)findViewById(R.id.gateway);
+		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
+
+		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
 		mUsername = (EditText)findViewById(R.id.username);
+		mPassword = (EditText)findViewById(R.id.password);
+
+		mUserCertificate = (ViewGroup)findViewById(R.id.user_certificate_group);
+		mSelectUserCert = (TwoLineListItem)findViewById(R.id.select_user_certificate);
 
 		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
-		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
-		mCertTitle = (TextView)findViewById(R.id.select_certificate_title);
-		mCertSubtitle = (TextView)findViewById(R.id.select_certificate_subtitle);
+		mSelectCert = (TwoLineListItem)findViewById(R.id.select_certificate);
+
+		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+			{
+				mVpnType = VpnType.values()[position];
+				updateCredentialView();
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> parent)
+			{	/* should not happen */
+				mVpnType = VpnType.IKEV2_EAP;
+				updateCredentialView();
+			}
+		});
+
+		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
 
 		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
@@ -110,6 +145,7 @@ public class VpnProfileDetailActivity extends Activity
 
 		loadProfileData(savedInstanceState);
 
+		updateCredentialView();
 		updateCertificateSelector();
 	}
 
@@ -127,6 +163,10 @@ public class VpnProfileDetailActivity extends Activity
 		if (mId != null)
 		{
 			outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+		}
+		if (mUserCertEntry != null)
+		{
+			outState.putString(VpnProfileDataSource.KEY_USER_CERTIFICATE, mUserCertEntry.getAlias());
 		}
 		if (mCertEntry != null)
 		{
@@ -179,6 +219,35 @@ public class VpnProfileDetailActivity extends Activity
 	}
 
 	/**
+	 * Update the UI to enter credentials depending on the type of VPN currently selected
+	 */
+	private void updateCredentialView()
+	{
+		mUsernamePassword.setVisibility(mVpnType.getRequiresUsernamePassword() ? View.VISIBLE : View.GONE);
+		mUserCertificate.setVisibility(mVpnType.getRequiresCertificate() ? View.VISIBLE : View.GONE);
+
+		if (mVpnType.getRequiresCertificate())
+		{
+			if (mUserCertLoading != null)
+			{
+				mSelectUserCert.getText1().setText(mUserCertLoading);
+				mSelectUserCert.getText2().setText(R.string.loading);
+			}
+			else if (mUserCertEntry != null)
+			{	/* clear any errors and set the new data */
+				mSelectUserCert.getText1().setError(null);
+				mSelectUserCert.getText1().setText(mUserCertEntry.getAlias());
+				mSelectUserCert.getText2().setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
+			}
+			else
+			{
+				mSelectUserCert.getText1().setText(R.string.profile_user_select_certificate_label);
+				mSelectUserCert.getText2().setText(R.string.profile_user_select_certificate);
+			}
+		}
+	}
+
+	/**
 	 * Show an alert in case the previously selected certificate is not found anymore
 	 * or the user did not select a certificate in the spinner.
 	 */
@@ -210,13 +279,13 @@ public class VpnProfileDetailActivity extends Activity
 
 			if (mCertEntry != null)
 			{
-				mCertTitle.setText(mCertEntry.getSubjectPrimary());
-				mCertSubtitle.setText(mCertEntry.getSubjectSecondary());
+				mSelectCert.getText1().setText(mCertEntry.getSubjectPrimary());
+				mSelectCert.getText2().setText(mCertEntry.getSubjectSecondary());
 			}
 			else
 			{
-				mCertTitle.setText(R.string.profile_ca_select_certificate_label);
-				mCertSubtitle.setText(R.string.profile_ca_select_certificate);
+				mSelectCert.getText1().setText(R.string.profile_ca_select_certificate_label);
+				mSelectCert.getText2().setText(R.string.profile_ca_select_certificate);
 			}
 		}
 		else
@@ -262,9 +331,17 @@ public class VpnProfileDetailActivity extends Activity
 			mGateway.setError(getString(R.string.alert_text_no_input_gateway));
 			valid = false;
 		}
-		if (mUsername.getText().toString().trim().isEmpty())
+		if (mVpnType.getRequiresUsernamePassword())
 		{
-			mUsername.setError(getString(R.string.alert_text_no_input_username));
+			if (mUsername.getText().toString().trim().isEmpty())
+			{
+				mUsername.setError(getString(R.string.alert_text_no_input_username));
+				valid = false;
+			}
+		}
+		if (mVpnType.getRequiresCertificate() && mUserCertEntry == null)
+		{	/* let's show an error icon */
+			mSelectUserCert.getText1().setError("");
 			valid = false;
 		}
 		if (!mCheckAuto.isChecked() && mCertEntry == null)
@@ -285,10 +362,18 @@ public class VpnProfileDetailActivity extends Activity
 		String gateway = mGateway.getText().toString().trim();
 		mProfile.setName(name.isEmpty() ? gateway : name);
 		mProfile.setGateway(gateway);
-		mProfile.setUsername(mUsername.getText().toString().trim());
-		String password = mPassword.getText().toString().trim();
-		password = password.isEmpty() ? null : password;
-		mProfile.setPassword(password);
+		mProfile.setVpnType(mVpnType);
+		if (mVpnType.getRequiresUsernamePassword())
+		{
+			mProfile.setUsername(mUsername.getText().toString().trim());
+			String password = mPassword.getText().toString().trim();
+			password = password.isEmpty() ? null : password;
+			mProfile.setPassword(password);
+		}
+		if (mVpnType.getRequiresCertificate())
+		{
+			mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
+		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
 	}
@@ -300,18 +385,20 @@ public class VpnProfileDetailActivity extends Activity
 	 */
 	private void loadProfileData(Bundle savedInstanceState)
 	{
-		String alias = null;
+		String useralias = null, alias = null;
 
 		getActionBar().setTitle(R.string.add_profile);
-		if (mId != null)
+		if (mId != null && mId != 0)
 		{
 			mProfile = mDataSource.getVpnProfile(mId);
 			if (mProfile != null)
 			{
 				mName.setText(mProfile.getName());
 				mGateway.setText(mProfile.getGateway());
+				mVpnType = mProfile.getVpnType();
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
+				useralias = mProfile.getUserCertificateAlias();
 				alias = mProfile.getCertificateAlias();
 				getActionBar().setTitle(mProfile.getName());
 			}
@@ -323,7 +410,18 @@ public class VpnProfileDetailActivity extends Activity
 			}
 		}
 
-		/* check if the user selected a certificate previously */
+		mSelectVpnType.setSelection(mVpnType.ordinal());
+
+		/* check if the user selected a user certificate previously */
+		useralias = savedInstanceState == null ? useralias: savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
+		if (useralias != null)
+		{
+			UserCertificateLoader loader = new UserCertificateLoader(this, useralias);
+			mUserCertLoading = useralias;
+			loader.execute();
+		}
+
+		/* check if the user selected a CA certificate previously */
 		alias = savedInstanceState == null ? alias : savedInstanceState.getString(VpnProfileDataSource.KEY_CERTIFICATE);
 		mCheckAuto.setChecked(alias == null);
 		if (alias != null)
@@ -338,6 +436,104 @@ public class VpnProfileDetailActivity extends Activity
 				showCertificateAlert();
 				mCertEntry = null;
 			}
+		}
+	}
+
+	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback
+	{
+		@Override
+		public void onClick(View v)
+		{
+			String useralias = mUserCertEntry != null ? mUserCertEntry.getAlias() : null;
+			KeyChain.choosePrivateKeyAlias(VpnProfileDetailActivity.this, this, new String[] { "RSA" }, null, null, -1, useralias);
+		}
+
+		@Override
+		public void alias(final String alias)
+		{
+			if (alias != null)
+			{	/* otherwise the dialog was canceled, the request denied */
+				try
+				{
+					final X509Certificate[] chain = KeyChain.getCertificateChain(VpnProfileDetailActivity.this, alias);
+					/* alias() is not called from our main thread */
+					runOnUiThread(new Runnable() {
+						@Override
+						public void run()
+						{
+							if (chain != null && chain.length > 0)
+							{
+								mUserCertEntry = new TrustedCertificateEntry(alias, chain[0]);
+							}
+							updateCredentialView();
+						}
+					});
+				}
+				catch (KeyChainException e)
+				{
+					e.printStackTrace();
+				}
+				catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Load the selected user certificate asynchronously.  This cannot be done
+	 * from the main thread as getCertificateChain() calls back to our main
+	 * thread to bind to the KeyChain service resulting in a deadlock.
+	 */
+	private class UserCertificateLoader extends AsyncTask<Void, Void, X509Certificate>
+	{
+		private final Context mContext;
+		private final String mAlias;
+
+		public UserCertificateLoader(Context context, String alias)
+		{
+			mContext = context;
+			mAlias = alias;
+		}
+
+		@Override
+		protected X509Certificate doInBackground(Void... params)
+		{
+			X509Certificate[] chain = null;
+			try
+			{
+				chain = KeyChain.getCertificateChain(mContext, mAlias);
+			}
+			catch (KeyChainException e)
+			{
+				e.printStackTrace();
+			}
+			catch (InterruptedException e)
+			{
+				e.printStackTrace();
+			}
+			if (chain != null && chain.length > 0)
+			{
+				return chain[0];
+			}
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(X509Certificate result)
+		{
+			if (result != null)
+			{
+				mUserCertEntry = new TrustedCertificateEntry(mAlias, result);
+			}
+			else
+			{	/* previously selected certificate is not here anymore */
+				mSelectUserCert.getText1().setError("");
+				mUserCertEntry = null;
+			}
+			mUserCertLoading = null;
+			updateCredentialView();
 		}
 	}
 }
