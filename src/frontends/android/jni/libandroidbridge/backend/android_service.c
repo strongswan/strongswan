@@ -149,6 +149,10 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	ssize_t len;
 	int tunfd;
 	bool old;
+	timeval_t tv = {
+		/* check every second if tunfd is still valid */
+		.tv_sec = 1,
+	};
 
 	FD_ZERO(&set);
 
@@ -163,13 +167,17 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 	this->lock->unlock(this->lock);
 
 	old = thread_cancelability(TRUE);
-	len = select(tunfd + 1, &set, NULL, NULL, NULL);
+	len = select(tunfd + 1, &set, NULL, NULL, &tv);
 	thread_cancelability(old);
 
 	if (len < 0)
 	{
 		DBG1(DBG_DMN, "select on TUN device failed: %s", strerror(errno));
 		return JOB_REQUEUE_NONE;
+	}
+	else if (len == 0)
+	{	/* timeout, check again right away */
+		return JOB_REQUEUE_DIRECT;
 	}
 
 	raw = chunk_alloc(TUN_DEFAULT_MTU);
@@ -251,7 +259,7 @@ static bool setup_tun_device(private_android_service_t *this,
 {
 	vpnservice_builder_t *builder;
 	enumerator_t *enumerator;
-	bool vip_found = FALSE;
+	bool vip_found = FALSE, already_registered = FALSE;
 	host_t *vip;
 	int tunfd;
 
@@ -292,21 +300,29 @@ static bool setup_tun_device(private_android_service_t *this,
 	}
 
 	this->lock->write_lock(this->lock);
+	if (this->tunfd > 0)
+	{	/* close previously opened TUN device */
+		close(this->tunfd);
+		already_registered = true;
+	}
 	this->tunfd = tunfd;
 	this->lock->unlock(this->lock);
 
 	DBG1(DBG_DMN, "successfully created TUN device");
 
-	charon->receiver->add_esp_cb(charon->receiver,
+	if (!already_registered)
+	{
+		charon->receiver->add_esp_cb(charon->receiver,
 								(receiver_esp_cb_t)receiver_esp_cb, NULL);
-	ipsec->processor->register_inbound(ipsec->processor,
+		ipsec->processor->register_inbound(ipsec->processor,
 									  (ipsec_inbound_cb_t)deliver_plain, this);
-	ipsec->processor->register_outbound(ipsec->processor,
+		ipsec->processor->register_outbound(ipsec->processor,
 									   (ipsec_outbound_cb_t)send_esp, NULL);
 
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
+		lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
 									NULL, (callback_job_cancel_t)return_false));
+	}
 	return TRUE;
 }
 
@@ -360,6 +376,10 @@ METHOD(listener_t, child_updown, bool,
 		}
 		else
 		{
+			if (ike_sa->has_condition(ike_sa, COND_REAUTHENTICATING))
+			{	/* we ignore this during reauthentication */
+				return TRUE;
+			}
 			close_tun_device(this);
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_CHILD_STATE_DOWN);
@@ -425,6 +445,20 @@ METHOD(listener_t, ike_rekey, bool,
 	if (this->ike_sa == old)
 	{
 		this->ike_sa = new;
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_reestablish, bool,
+	private_android_service_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	if (this->ike_sa == old)
+	{
+		this->ike_sa = new;
+		/* re-register hooks to detect initiation failures */
+		this->public.listener.ike_updown = _ike_updown;
+		this->public.listener.ike_state_change = _ike_state_change;
+		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
 }
@@ -577,6 +611,7 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
+				.ike_reestablish = _ike_reestablish,
 				.ike_updown = _ike_updown,
 				.ike_state_change = _ike_state_change,
 				.child_updown = _child_updown,
