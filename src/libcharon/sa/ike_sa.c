@@ -1659,6 +1659,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	}
 	else
 	{
+		charon->bus->ike_reestablish(charon->bus, &this->public, new);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 		status = SUCCESS;
 	}

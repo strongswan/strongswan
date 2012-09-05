@@ -127,6 +127,18 @@ struct listener_t {
 	bool (*ike_rekey)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
 
 	/**
+	 * Hook called when an initiator reestablishes an IKE_SA.
+	 *
+	 * This is invoked right before the new IKE_SA is checked in after
+	 * initiating it.  It is not invoked on the responder.
+	 *
+	 * @param old		IKE_SA getting reestablished (is destroyed)
+	 * @param new		new IKE_SA replacing old (gets established)
+	 * @return			TRUE to stay registered, FALSE to unregister
+	 */
+	bool (*ike_reestablish)(listener_t *this, ike_sa_t *old, ike_sa_t *new);
+
+	/**
 	 * Hook called when a CHILD_SA gets up or down.
 	 *
 	 * @param ike_sa	IKE_SA containing the handled CHILD_SA

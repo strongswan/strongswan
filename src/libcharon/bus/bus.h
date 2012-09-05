@@ -318,6 +318,14 @@ struct bus_t {
 	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
 
 	/**
+	 * IKE_SA reestablishing hook.
+	 *
+	 * @param old		reestablished and obsolete IKE_SA
+	 * @param new		new IKE_SA replacing old
+	 */
+	void (*ike_reestablish)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
+
+	/**
 	 * CHILD_SA up/down hook.
 	 *
 	 * @param child_sa	CHILD_SA coming up/going down
