@@ -711,6 +711,22 @@ int main (int argc, char **argv)
 				starter_stroke_configure(cfg);
 			}
 			_action_ &= ~FLAG_ACTION_START_CHARON;
+
+			for (ca = cfg->ca_first; ca; ca = ca->next)
+			{
+				if (ca->state == STATE_ADDED)
+				{
+					ca->state = STATE_TO_ADD;
+				}
+			}
+
+			for (conn = cfg->conn_first; conn; conn = conn->next)
+			{
+				if (conn->state == STATE_ADDED)
+				{
+					conn->state = STATE_TO_ADD;
+				}
+			}
 		}
 
 		/*
