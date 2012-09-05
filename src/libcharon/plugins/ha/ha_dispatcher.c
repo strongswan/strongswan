@@ -310,7 +310,7 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *peer_cfg = NULL;
 	auth_cfg_t *auth;
-	bool received_vip = FALSE, first_peer_addr = TRUE;
+	bool received_vip = FALSE, first_local_vip = TRUE, first_peer_addr = TRUE;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -344,9 +344,18 @@ static void process_ike_update(private_ha_dispatcher_t *this,
 				ike_sa->set_other_host(ike_sa, value.host->clone(value.host));
 				break;
 			case HA_LOCAL_VIP:
+				if (first_local_vip)
+				{
+					ike_sa->clear_virtual_ips(ike_sa, TRUE);
+					first_local_vip = FALSE;
+				}
 				ike_sa->add_virtual_ip(ike_sa, TRUE, value.host);
 				break;
 			case HA_REMOTE_VIP:
+				if (!received_vip)
+				{
+					ike_sa->clear_virtual_ips(ike_sa, FALSE);
+				}
 				ike_sa->add_virtual_ip(ike_sa, FALSE, value.host);
 				received_vip = TRUE;
 				break;

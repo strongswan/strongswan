@@ -942,6 +942,13 @@ struct ike_sa_t {
 	void (*add_virtual_ip) (ike_sa_t *this, bool local, host_t *ip);
 
 	/**
+	 * Clear all virtual IPs stored on this IKE_SA.
+	 *
+	 * @param local			TRUE to clear local addresses, FALSE for remote
+	 */
+	void (*clear_virtual_ips) (ike_sa_t *this, bool local);
+
+	/**
 	 * Create an enumerator over virtual IPs.
 	 *
 	 * @param local			TRUE to get local virtual IP, FALSE for remote

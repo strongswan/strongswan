@@ -344,6 +344,8 @@ METHOD(task_t, build_r, status_t,
 		vips = linked_list_create();
 		pools = linked_list_create();
 
+		this->ike_sa->clear_virtual_ips(this->ike_sa, FALSE);
+
 		enumerator = this->vips->create_enumerator(this->vips);
 		while (enumerator->enumerate(enumerator, &requested))
 		{
@@ -436,6 +438,8 @@ METHOD(task_t, process_i, status_t,
 		host_t *host;
 
 		process_payloads(this, message);
+
+		this->ike_sa->clear_virtual_ips(this->ike_sa, TRUE);
 
 		enumerator = this->vips->create_enumerator(this->vips);
 		while (enumerator->enumerate(enumerator, &host))

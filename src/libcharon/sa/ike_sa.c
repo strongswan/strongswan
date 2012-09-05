@@ -757,6 +757,23 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 	}
 }
 
+
+METHOD(ike_sa_t, clear_virtual_ips, void,
+	private_ike_sa_t *this, bool local)
+{
+	linked_list_t *vips = local ? this->my_vips : this->other_vips;
+	host_t *vip;
+
+	while (vips->remove_first(vips, (void**)&vip) == SUCCESS)
+	{
+		if (local)
+		{
+			hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+		}
+		vip->destroy(vip);
+	}
+}
+
 METHOD(ike_sa_t, create_virtual_ip_enumerator, enumerator_t*,
 	private_ike_sa_t *this, bool local)
 {
@@ -2193,6 +2210,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.reset = _reset,
 			.get_unique_id = _get_unique_id,
 			.add_virtual_ip = _add_virtual_ip,
+			.clear_virtual_ips = _clear_virtual_ips,
 			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.set_kmaddress = _set_kmaddress,
