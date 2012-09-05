@@ -519,12 +519,19 @@ public class CharonVpnService extends VpnService implements Runnable
 	 */
 	public class BuilderAdapter
 	{
-		VpnService.Builder builder;
+		private final String mName;
+		private VpnService.Builder mBuilder;
 
 		public BuilderAdapter(String name)
 		{
-			builder = new CharonVpnService.Builder();
-			builder.setSession(name);
+			mName = name;
+			mBuilder = createBuilder(name);
+		}
+
+		private VpnService.Builder createBuilder(String name)
+		{
+			VpnService.Builder builder = new CharonVpnService.Builder();
+			builder.setSession(mName);
 
 			/* even though the option displayed in the system dialog says "Configure"
 			 * we just use our main Activity */
@@ -533,13 +540,14 @@ public class CharonVpnService extends VpnService implements Runnable
 			PendingIntent pending = PendingIntent.getActivity(context, 0, intent,
 															  Intent.FLAG_ACTIVITY_NEW_TASK);
 			builder.setConfigureIntent(pending);
+			return builder;
 		}
 
 		public synchronized boolean addAddress(String address, int prefixLength)
 		{
 			try
 			{
-				builder.addAddress(address, prefixLength);
+				mBuilder.addAddress(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -552,7 +560,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				builder.addDnsServer(address);
+				mBuilder.addDnsServer(address);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -565,7 +573,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				builder.addRoute(address, prefixLength);
+				mBuilder.addRoute(address, prefixLength);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -578,7 +586,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				builder.addSearchDomain(domain);
+				mBuilder.addSearchDomain(domain);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -591,7 +599,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		{
 			try
 			{
-				builder.setMtu(mtu);
+				mBuilder.setMtu(mtu);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -605,7 +613,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			ParcelFileDescriptor fd;
 			try
 			{
-				fd = builder.establish();
+				fd = mBuilder.establish();
 			}
 			catch (Exception ex)
 			{
@@ -616,6 +624,9 @@ public class CharonVpnService extends VpnService implements Runnable
 			{
 				return -1;
 			}
+			/* now that the TUN device is created we don't need the current
+			 * builder anymore, but we might need another when reestablishing */
+			mBuilder = createBuilder(mName);
 			return fd.detachFd();
 		}
 	}
