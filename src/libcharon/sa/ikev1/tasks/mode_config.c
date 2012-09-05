@@ -393,7 +393,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 	vips->destroy_offset(vips, offsetof(host_t, destroy));
-	vips->destroy(vips);
+	pools->destroy(pools);
 
 	if (cp)
 	{
