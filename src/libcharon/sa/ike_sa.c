@@ -1713,6 +1713,10 @@ METHOD(ike_sa_t, retransmit, status_t,
 				reestablish(this);
 				break;
 		}
+		if (this->state != IKE_CONNECTING)
+		{
+			charon->bus->ike_updown(charon->bus, &this->public, FALSE);
+		}
 		return DESTROY_ME;
 	}
 	return SUCCESS;

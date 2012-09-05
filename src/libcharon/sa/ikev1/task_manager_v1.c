@@ -293,10 +293,6 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 	if (retransmitted > this->retransmit_tries)
 	{
 		DBG1(DBG_IKE, "giving up after %u retransmits", retransmitted - 1);
-		if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
-		{
-			charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
-		}
 		return DESTROY_ME;
 	}
 	t = (u_int32_t)(this->retransmit_timeout * 1000.0 *
@@ -599,7 +595,7 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 
 	this->initiating.seqnr++;
-	if (expect_response )
+	if (expect_response)
 	{
 		message->destroy(message);
 		return retransmit(this, this->initiating.seqnr);

@@ -257,10 +257,6 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "giving up after %d retransmits",
 					 this->initiating.retransmitted - 1);
-				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
-				{
-					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
-				}
 				return DESTROY_ME;
 			}
 
@@ -282,7 +278,6 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "giving up after %d path probings",
 					 this->initiating.retransmitted - 1);
-				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				return DESTROY_ME;
 			}
 
