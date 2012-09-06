@@ -18,9 +18,12 @@
 #include <encoding/payloads/auth_payload.h>
 #include <utils/chunk.h>
 #include <tkm/types.h>
+#include <tkm/constants.h>
+#include <tkm/client.h>
 
 #include "tkm_listener.h"
 #include "tkm_keymat.h"
+#include "tkm_utils.h"
 
 typedef struct private_tkm_listener_t private_tkm_listener_t;
 
@@ -56,9 +59,21 @@ METHOD(listener_t, authorize, bool,
 		*success = FALSE;
 	}
 
-	DBG1(DBG_IKE, "TKM based authentication successful"
-		   " for ISA context %llu", isa_id);
-	*success = TRUE;
+	signature_type signature;
+	chunk_to_sequence(auth, &signature);
+	if (ike_isa_auth_psk(isa_id, signature) != TKM_OK)
+	{
+		DBG1(DBG_IKE, "TKM based authentication failed"
+			 " for ISA context %llu", isa_id);
+		*success = FALSE;
+	}
+	else
+	{
+		DBG1(DBG_IKE, "TKM based authentication successful"
+			 " for ISA context %llu", isa_id);
+		*success = TRUE;
+	}
+
 	return TRUE;
 }
 
