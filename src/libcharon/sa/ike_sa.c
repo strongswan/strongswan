@@ -251,11 +251,6 @@ struct private_ike_sa_t {
 	 * Flush auth configs once established?
 	 */
 	bool flush_auth_cfg;
-
-	/**
-	 * TRUE if we are currently reauthenticating this IKE_SA
-	 */
-	bool is_reauthenticating;
 };
 
 /**
@@ -1491,7 +1486,7 @@ METHOD(ike_sa_t, reauth, status_t,
 		DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
 			 get_name(this), this->unique_id);
 	}
-	this->is_reauthenticating = TRUE;
+	set_condition(this, COND_REAUTHENTICATING, TRUE);
 	this->task_manager->queue_ike_reauth(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -1508,7 +1503,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	bool restart = FALSE;
 	status_t status = FAILED;
 
-	if (this->is_reauthenticating)
+	if (has_condition(this, COND_REAUTHENTICATING))
 	{	/* only reauthenticate if we have children */
 		if (this->child_sas->get_count(this->child_sas) == 0
 #ifdef ME
@@ -1608,7 +1603,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 		enumerator = this->child_sas->create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
-			if (this->is_reauthenticating)
+			if (has_condition(this, COND_REAUTHENTICATING))
 			{
 				switch (child_sa->get_state(child_sa))
 				{
@@ -1703,7 +1698,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 			}
 			case IKE_DELETING:
 				DBG1(DBG_IKE, "proper IKE_SA delete failed, peer not responding");
-				if (this->is_reauthenticating)
+				if (has_condition(this, COND_REAUTHENTICATING))
 				{
 					DBG1(DBG_IKE, "delete during reauthentication failed, "
 						 "trying to reestablish IKE_SA anyway");

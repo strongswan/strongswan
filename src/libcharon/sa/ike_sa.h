@@ -175,6 +175,11 @@ enum ike_condition_t {
 	 * Peer has been authenticated using XAuth
 	 */
 	COND_XAUTH_AUTHENTICATED = (1<<9),
+
+	/**
+	 * This IKE_SA is currently being reauthenticated
+	 */
+	COND_REAUTHENTICATING = (1<<10),
 };
 
 /**
