@@ -114,6 +114,20 @@ struct tkm_keymat_t {
 	 */
 	isa_id_type (*get_isa_id)(tkm_keymat_t * const this);
 
+	/**
+	 * Set IKE AUTH payload.
+	 *
+	 * @param payload		AUTH payload
+	 */
+	void (*set_auth_payload)(tkm_keymat_t *this, const chunk_t * const payload);
+
+	/**
+	 * Get IKE AUTH payload.
+	 *
+	 * @return				AUTH payload if set, chunk_empty otherwise
+	 */
+	chunk_t* (*get_auth_payload)(tkm_keymat_t * const this);
+
 };
 
 /**

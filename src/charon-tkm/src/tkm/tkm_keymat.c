@@ -66,6 +66,11 @@ struct private_tkm_keymat_t {
 	 */
 	ae_id_type ae_ctx_id;
 
+	/**
+	 * AUTH payload chunk.
+	 */
+	chunk_t auth_payload;
+
 };
 
 /**
@@ -352,6 +357,7 @@ METHOD(keymat_t, destroy, void,
 
 	DESTROY_IF(this->aead_in);
 	DESTROY_IF(this->aead_out);
+	chunk_free(&this->auth_payload);
 	this->proxy->keymat.destroy(&this->proxy->keymat);
 	free(this);
 }
@@ -360,6 +366,18 @@ METHOD(tkm_keymat_t, get_isa_id, isa_id_type,
 	private_tkm_keymat_t *this)
 {
 	return this->isa_ctx_id;
+}
+
+METHOD(tkm_keymat_t, set_auth_payload, void,
+	private_tkm_keymat_t *this, const chunk_t * const payload)
+{
+	this->auth_payload = chunk_clone(*payload);
+}
+
+METHOD(tkm_keymat_t, get_auth_payload, chunk_t*,
+	private_tkm_keymat_t *this)
+{
+	return &this->auth_payload;
 }
 
 /**
@@ -384,10 +402,13 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
 			.get_isa_id = _get_isa_id,
+			.set_auth_payload = _set_auth_payload,
+			.get_auth_payload = _get_auth_payload,
 		},
 		.initiator = initiator,
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),
 		.ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE),
+		.auth_payload = chunk_empty,
 		.proxy = keymat_v2_create(initiator),
 	);
 
