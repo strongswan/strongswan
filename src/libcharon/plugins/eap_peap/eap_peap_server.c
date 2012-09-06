@@ -233,6 +233,9 @@ static status_t process_soh(private_eap_peap_server_t *this, eap_payload_t *in)
 		default:
 			DBG1(DBG_IKE, "EAP-%M method failed",
 				 eap_type_get_names, &vendor, type);
+			this->ph2->destroy(this->ph2);
+			this->ph2 = NULL;
+			this->state = FAILED;
 			break;
 	}
 	in->destroy(in);
