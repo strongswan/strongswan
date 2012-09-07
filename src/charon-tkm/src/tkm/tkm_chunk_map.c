@@ -45,44 +45,73 @@ struct private_tkm_chunk_map_t {
 
 };
 
+/**
+ * Entry for hashtables
+ */
+typedef struct {
+	/** Key chunk */
+	chunk_t key;
+	/** Entry value */
+	uint64_t value;
+} entry_t;
+
+/**
+ * Destroy a hashtable entry
+ */
+static void entry_destroy(entry_t *this)
+{
+	chunk_free(&this->key);
+	free(this);
+}
+
 METHOD(tkm_chunk_map_t, insert, void,
 	private_tkm_chunk_map_t * const this, const chunk_t * const data,
 	const uint64_t id)
 {
-	uint64_t *value = malloc_thing(uint64_t);
-	*value = id;
+	entry_t *entry;
+	INIT(entry,
+		.key = chunk_clone(*data),
+		.value = id
+	);
 
 	this->lock->write_lock(this->lock);
-	value = this->mappings->put(this->mappings, (void*)data, value);
+	entry = this->mappings->put(this->mappings, (void*)&entry->key, entry);
 	this->lock->unlock(this->lock);
 
-	if (value)
+	if (entry)
 	{
-		free(value);
+		entry_destroy(entry);
 	}
 }
 
 METHOD(tkm_chunk_map_t, get_id, uint64_t,
 	private_tkm_chunk_map_t * const this, chunk_t *data)
 {
-	uint64_t *value;
+	entry_t *entry;
 	this->lock->read_lock(this->lock);
-	value = this->mappings->get(this->mappings, data);
+	entry = this->mappings->get(this->mappings, data);
 	this->lock->unlock(this->lock);
 
-	return value == NULL ? 0 : *value;
+	if (!entry)
+	{
+		return 0;
+	}
+
+	return entry->value;
 }
 
 METHOD(tkm_chunk_map_t, remove_, bool,
 	private_tkm_chunk_map_t * const this, chunk_t *data)
 {
+	entry_t *entry;
+
 	this->lock->write_lock(this->lock);
-	uint64_t *value = this->mappings->remove(this->mappings, data);
+	entry = this->mappings->remove(this->mappings, data);
 	this->lock->unlock(this->lock);
 
-	if (value)
+	if (entry)
 	{
-		free(value);
+		entry_destroy(entry);
 		return TRUE;
 	}
 	else
@@ -94,21 +123,20 @@ METHOD(tkm_chunk_map_t, remove_, bool,
 METHOD(tkm_chunk_map_t, destroy, void,
 	private_tkm_chunk_map_t *this)
 {
-	uint64_t *value;
+	entry_t *entry;
 	enumerator_t *enumerator;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->mappings->create_enumerator(this->mappings);
-	while (enumerator->enumerate(enumerator, NULL, &value))
+	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		this->mappings->remove_at(this->mappings, enumerator);
-		free(value);
+		entry_destroy(entry);
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 
-	this->lock->destroy(this->lock);
 	this->mappings->destroy(this->mappings);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
