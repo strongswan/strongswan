@@ -38,6 +38,7 @@
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
 #include "tkm_listener.h"
+#include "tkm_kernel_ipsec.h"
 
 /**
  * TKM bus listener for IKE authorize events.
@@ -284,6 +285,8 @@ int main(int argc, char *argv[])
 		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE);
