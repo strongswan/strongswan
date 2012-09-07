@@ -575,6 +575,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 {
 	job_t *job;
 	time_t diff, delay;
+	bool task_queued = FALSE;
 
 	if (this->state == IKE_PASSIVE)
 	{
@@ -595,9 +596,10 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		diff = now - last_in;
 		if (!delay || diff >= delay)
 		{
-			/* to long ago, initiate dead peer detection */
+			/* too long ago, initiate dead peer detection */
 			DBG1(DBG_IKE, "sending DPD request");
 			this->task_manager->queue_dpd(this->task_manager);
+			task_queued = TRUE;
 			diff = 0;
 		}
 	}
@@ -607,7 +609,11 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		job = (job_t*)send_dpd_job_create(this->ike_sa_id);
 		lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
 	}
-	return this->task_manager->initiate(this->task_manager);
+	if (task_queued)
+	{
+		return this->task_manager->initiate(this->task_manager);
+	}
+	return SUCCESS;
 }
 
 METHOD(ike_sa_t, get_state, ike_sa_state_t,
