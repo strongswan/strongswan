@@ -734,18 +734,20 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 		}
 	}
 
-	/* Send and IETF Assessment Result attribute */
-	attr = ietf_attr_assess_result_create(eval);
-	attr_list = linked_list_create();
-	attr_list->insert_last(attr_list, attr);
-	result = send_message(this, connection_id, FALSE, this->id, dst_imc_id,
-						  attr_list);
-	attr_list->destroy(attr_list);
-	if (result != TNC_RESULT_SUCCESS)
+	/* Send an IETF Assessment Result attribute if enabled */
+	if (lib->settings->get_bool(lib->settings, "libimcv.assessment_result", TRUE))
 	{
-		return result;
+		attr = ietf_attr_assess_result_create(eval);
+		attr_list = linked_list_create();
+		attr_list->insert_last(attr_list, attr);
+		result = send_message(this, connection_id, FALSE, this->id, dst_imc_id,
+							  attr_list);
+		attr_list->destroy(attr_list);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
 	}
-
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
