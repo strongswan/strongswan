@@ -649,6 +649,9 @@ Whether the PKCS#11 modules should be used as RNG
 TNC IMC/IMV configuration directory
 .SS libimcv section
 .TP
+.BR libimcv.assessment_result " [yes]"
+Whether IMVs send a standard IETF Assessment Result attribute
+.TP
 .BR libimcv.debug_level " [1]"
 Debug level for a stand-alone libimcv library
 .TP
