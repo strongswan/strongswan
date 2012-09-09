@@ -189,6 +189,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	imc_attestation_state_t *attestation_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
+	TNC_UInt32 target_imc_id;
 
 	if (!imc_attestation)
 	{
@@ -212,6 +213,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	{
 		return result;
 	}
+	target_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? imc_id : dst_imc_id;
 	
 	/* preprocess any IETF standard error attributes */
 	result = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg) ?
@@ -252,7 +254,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 				ietf_attr_assess_result_t *ietf_attr;
 
 				ietf_attr = (ietf_attr_assess_result_t*)attr;
-				state->set_result(state, dst_imc_id,
+				state->set_result(state, target_imc_id,
 								  ietf_attr->get_result(ietf_attr));
 			}
 		}

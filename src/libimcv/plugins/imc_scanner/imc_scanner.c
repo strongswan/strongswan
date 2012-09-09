@@ -282,6 +282,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	imc_state_t *state;
 	enumerator_t *enumerator;
 	TNC_Result result;
+	TNC_UInt32 target_imc_id;
 	bool fatal_error;
 
 	if (!imc_scanner)
@@ -305,6 +306,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	{
 		return result;
 	}
+	target_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? imc_id : dst_imc_id;
 
 	/* preprocess any IETF standard error attributes */
 	fatal_error = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg);
@@ -321,7 +323,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 			ietf_attr_assess_result_t *ietf_attr;
 
 			ietf_attr = (ietf_attr_assess_result_t*)attr;
-			state->set_result(state, dst_imc_id,
+			state->set_result(state, target_imc_id,
 							  ietf_attr->get_result(ietf_attr));
 		}
 	}
@@ -334,7 +336,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	}
 
 	/* if no assessment result is known then repeat the measurement */
-	return state->get_result(state, dst_imc_id, NULL) ?
+	return state->get_result(state, target_imc_id, NULL) ?
 		   TNC_RESULT_SUCCESS : send_message(connection_id);
 }
 
