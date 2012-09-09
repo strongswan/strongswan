@@ -68,6 +68,11 @@ struct recommendations_t {
 								TNC_IMV_Evaluation_Result *eval);
 
 	/**
+	 * Clear all recommendation information
+	 */
+	void (*clear_recommendation)(recommendations_t *this);
+
+	/**
 	 * Get the preferred language for remediation messages
 	 *
 	 * @return				preferred language
@@ -108,11 +113,6 @@ struct recommendations_t {
 	 * @return				enumerator
 	 */
 	enumerator_t* (*create_reason_enumerator)(recommendations_t *this);
-
-	/**
-	 * Clears all reason entries
-	 */
-	void (*clear_reasons)(recommendations_t *this);
 
 	/**
 	 * Destroys an imv_t object.

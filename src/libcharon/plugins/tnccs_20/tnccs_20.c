@@ -398,6 +398,7 @@ static void build_retry_batch(private_tnccs_20_t *this)
 
 	if (this->is_server)
 	{
+		this->recs->clear_recommendation(this->recs);
 		tnc->imvs->notify_connection_change(tnc->imvs, this->connection_id,
 											TNC_CONNECTION_STATE_HANDSHAKE);
 	}
@@ -574,7 +575,6 @@ static void check_and_build_recommendation(private_tnccs_20_t *this)
 			this->messages->insert_last(this->messages, msg);
 		}
 		enumerator->destroy(enumerator);
-		this->recs->clear_reasons(this->recs);
 	}
 }
 
@@ -639,12 +639,17 @@ METHOD(tls_t, build, status_t,
 		this->request_handshake_retry = FALSE;
 	}
 
+	if (this->is_server &&  state == PB_STATE_SERVER_WORKING &&
+		this->recs->have_recommendation(this->recs, NULL, NULL))
+	{
+		check_and_build_recommendation(this);
+	}
+
 	if (this->batch_type == PB_BATCH_NONE)
 	{
 		if (this->is_server && state == PB_STATE_SERVER_WORKING)
 		{
-			if (this->state_machine->get_empty_cdata(this->state_machine) ||
-				this->recs->have_recommendation(this->recs, NULL, NULL))
+			if (this->state_machine->get_empty_cdata(this->state_machine))
 			{
 				check_and_build_recommendation(this);
 			}

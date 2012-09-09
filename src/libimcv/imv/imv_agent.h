@@ -151,10 +151,12 @@ struct imv_agent_t {
 	 * Deliver IMV Action Recommendation and IMV Evaluation Result to the TNCS
 	 *
 	 * @param connection_id		network connection ID assigned by TNCS
+	 * @param dst_imc_id		IMD ID to be set as destination
 	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_recommendation)(imv_agent_t *this,
-										 TNC_ConnectionID connection_id);
+										 TNC_ConnectionID connection_id,
+										 TNC_UInt32 dst_imc_id);
 
 	/**
 	 * Reserve additional IMV IDs from TNCS

@@ -23,6 +23,8 @@
 #define IMC_STATE_H_
 
 #include <tncif.h>
+#include <tncifimv.h>
+#include <tncifimc.h>
 
 #include <library.h>
 
@@ -34,8 +36,7 @@ typedef struct imc_state_t imc_state_t;
 struct imc_state_t {
 
 	/**
-	 * Get the TNCS connection I
-D attached to the state
+	 * Get the TNCS connection ID attached to the state
 	 *
 	 * @return				TNCS connection ID of the state
 	 */
@@ -84,6 +85,25 @@ D attached to the state
 	 * @param new_state		new connection state
 	 */
 	void (*change_state)(imc_state_t *this, TNC_ConnectionState new_state);
+
+	/**
+	 * Set the Assessment/Evaluation Result
+	 *
+	 * @param id			IMC ID
+	 * @param result		Assessment/Evaluation Result
+	 */
+	void (*set_result)(imc_state_t *this, TNC_IMCID id,
+										  TNC_IMV_Evaluation_Result result);
+
+	/**
+	 * Get the Assessment/Evaluation Result
+	 *
+	 * @param id			IMC ID
+	 * @param result		Assessment/Evaluation Result
+	 * @return				TRUE if result is known
+	 */
+	bool (*get_result)(imc_state_t *this, TNC_IMCID id,
+										  TNC_IMV_Evaluation_Result *result);
 
 	/**
 	 * Destroys an imc_state_t object

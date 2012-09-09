@@ -19,11 +19,11 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ietf/ietf_attr_assess_result.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
 #include <ita/ita_attr_dummy.h>
 
-#include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
@@ -75,8 +75,11 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	imc_state_t *state;
 	imc_test_state_t *test_state;
 	TNC_Result result;
+	TNC_UInt32 additional_id;
 	char *command;
 	bool retry;
+	void *pointer;
+	enumerator_t *enumerator;
 	int dummy_size, additional_ids;
 
 	if (!imc_test)
@@ -129,6 +132,26 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 								test_state->get_command(test_state));
 				test_state->set_command(test_state, command);
 			}
+
+			state->set_result(state, imc_id, TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+
+			/* Exit if there are no additional IMC IDs */
+			if (!imc_test->count_additional_ids(imc_test))
+			{
+				return result;
+			}
+
+			enumerator = imc_test->create_id_enumerator(imc_test);
+			while (enumerator->enumerate(enumerator, &pointer))
+			{
+				/* interpret pointer as scalar value */
+				additional_id = (TNC_UInt32)pointer;
+
+				state->set_result(state, additional_id,
+								  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			}
+			enumerator->destroy(enumerator);
+
 			return TNC_RESULT_SUCCESS;
 
 		case TNC_CONNECTION_STATE_DELETE:
@@ -294,33 +317,45 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	{
 		attr_type = attr->get_type(attr);
 
-		if (attr_type.vendor_id != PEN_ITA)
+		if (attr_type.vendor_id == PEN_IETF)
 		{
-			continue;
-		}
-		if (attr_type.type == ITA_ATTR_COMMAND)
-		{
-			ita_attr_command_t *ita_attr;
+			ietf_attr_assess_result_t *ietf_attr;
 
-			ita_attr = (ita_attr_command_t*)attr;
-			DBG1(DBG_IMC, "received command '%s'",
-						   ita_attr->get_command(ita_attr));
+			ietf_attr = (ietf_attr_assess_result_t*)attr;
+			state->set_result(state, dst_imc_id,
+							  ietf_attr->get_result(ietf_attr));
 		}
-		else if (attr_type.type == ITA_ATTR_DUMMY)
+		else if (attr_type.vendor_id == PEN_ITA)
 		{
-			ita_attr_dummy_t *ita_attr;
+			if (attr_type.type == ITA_ATTR_COMMAND)
+			{
+				ita_attr_command_t *ita_attr;
 
-			ita_attr = (ita_attr_dummy_t*)attr;
-			DBG1(DBG_IMC, "received dummy attribute value (%d bytes)",
-						   ita_attr->get_size(ita_attr));
+				ita_attr = (ita_attr_command_t*)attr;
+				DBG1(DBG_IMC, "received command '%s'",
+					 ita_attr->get_command(ita_attr));
+			}
+			else if (attr_type.type == ITA_ATTR_DUMMY)
+			{
+				ita_attr_dummy_t *ita_attr;
+
+				ita_attr = (ita_attr_dummy_t*)attr;
+				DBG1(DBG_IMC, "received dummy attribute value (%d bytes)",
+					 ita_attr->get_size(ita_attr));
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
-	/* if no error occurred then always return the same response */
-	return fatal_error ? TNC_RESULT_FATAL :
-						 send_message(state, dst_imc_id, src_imv_id);
+	if (fatal_error)
+	{
+		return TNC_RESULT_FATAL;
+	}
+
+	/* if no assessment result is known then repeat the measurement */
+	return state->get_result(state, dst_imc_id, NULL) ?
+		   TNC_RESULT_SUCCESS : send_message(state, dst_imc_id, src_imv_id);
 }
 
 /**

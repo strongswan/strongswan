@@ -209,7 +209,8 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
-		return imv_test->provide_recommendation(imv_test, connection_id);
+		return imv_test->provide_recommendation(imv_test, connection_id,
+												src_imc_id);
 	}
 
 	/* request a handshake retry ? */
@@ -233,9 +234,8 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		return result;
 	}
 
-	return received_command ?
-				imv_test->provide_recommendation(imv_test, connection_id) :
-				TNC_RESULT_SUCCESS;
+	return received_command ? imv_test->provide_recommendation(imv_test,
+			 connection_id, src_imc_id) : TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -286,7 +286,8 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imv_test->provide_recommendation(imv_test, connection_id);
+	return imv_test->provide_recommendation(imv_test, connection_id,
+											TNC_IMCID_ANY);
 }
 
 /**

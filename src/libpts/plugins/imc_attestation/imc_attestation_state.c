@@ -17,6 +17,8 @@
 
 #include <libpts.h>
 
+#include <tncif_names.h>
+
 #include <utils/linked_list.h>
 #include <debug.h>
 
@@ -42,6 +44,11 @@ struct private_imc_attestation_state_t {
 	 * TNCCS connection state
 	 */
 	TNC_ConnectionState state;
+
+	/**
+	 * Assessment/Evaluation Result
+	 */
+	TNC_IMV_Evaluation_Result result;
 
 	/**
 	 * Does the TNCCS connection support long message types?
@@ -116,6 +123,26 @@ METHOD(imc_state_t, change_state, void,
 	private_imc_attestation_state_t *this, TNC_ConnectionState new_state)
 {
 	this->state = new_state;
+}
+
+METHOD(imc_state_t, set_result, void,
+	private_imc_attestation_state_t *this, TNC_IMCID id,
+	TNC_IMV_Evaluation_Result result)
+{
+	DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
+		 id, TNC_IMV_Evaluation_Result_names, result);
+	this->result = result;
+}
+
+METHOD(imc_state_t, get_result, bool,
+	private_imc_attestation_state_t *this, TNC_IMCID id,
+	TNC_IMV_Evaluation_Result *result)
+{
+	if (result)
+	{
+		*result = this->result;
+	}
+	return this->result != TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 }
 
 METHOD(imc_state_t, destroy, void,
@@ -197,6 +224,8 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
 				.change_state = _change_state,
+				.set_result = _set_result,
+				.get_result = _get_result,
 				.destroy = _destroy,
 			},
 			.get_pts = _get_pts,
@@ -206,6 +235,7 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 		},
 		.connection_id = connection_id,
 		.state = TNC_CONNECTION_STATE_CREATE,
+		.result = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.pts = pts_create(TRUE),
 		.components = linked_list_create(),
 		.list = linked_list_create(),

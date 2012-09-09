@@ -21,6 +21,7 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_assess_result.h>
 
 #include <libpts.h>
 
@@ -108,9 +109,17 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imc_attestation_state_create(connection_id);
 			return imc_attestation->create_state(imc_attestation, state);
+		case TNC_CONNECTION_STATE_HANDSHAKE:
+			if (imc_attestation->change_state(imc_attestation, connection_id,
+				new_state, &state) != TNC_RESULT_SUCCESS)
+			{
+				return TNC_RESULT_FATAL;
+			}
+			state->set_result(state, imc_id,
+							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_attestation->delete_state(imc_attestation, connection_id);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 		default:
@@ -216,24 +225,35 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	{
 		type = attr->get_type(attr);
 
-		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PA_TNC_ERROR)
+		if (type.vendor_id == PEN_IETF)
 		{
-			ietf_attr_pa_tnc_error_t *error_attr;
-			pen_type_t error_code;
-			chunk_t msg_info;
-
-			error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-			error_code = error_attr->get_error_code(error_attr);
-
-			if (error_code.vendor_id == PEN_TCG)
+			if (type.type == IETF_ATTR_PA_TNC_ERROR)
 			{
-				msg_info = error_attr->get_msg_info(error_attr);
+				ietf_attr_pa_tnc_error_t *error_attr;
+				pen_type_t error_code;
+				chunk_t msg_info;
 
-				DBG1(DBG_IMC, "received TCG-PTS error '%N'",
-					 pts_error_code_names, error_code.type);
-				DBG1(DBG_IMC, "error information: %B", &msg_info);
+				error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+				error_code = error_attr->get_error_code(error_attr);
 
-				result = TNC_RESULT_FATAL;
+				if (error_code.vendor_id == PEN_TCG)
+				{
+					msg_info = error_attr->get_msg_info(error_attr);
+
+					DBG1(DBG_IMC, "received TCG-PTS error '%N'",
+						 pts_error_code_names, error_code.type);
+					DBG1(DBG_IMC, "error information: %B", &msg_info);
+
+					result = TNC_RESULT_FATAL;
+				}
+			}
+			else if (type.type == IETF_ATTR_ASSESSMENT_RESULT)
+			{
+				ietf_attr_assess_result_t *ietf_attr;
+
+				ietf_attr = (ietf_attr_assess_result_t*)attr;
+				state->set_result(state, dst_imc_id,
+								  ietf_attr->get_result(ietf_attr));
 			}
 		}
 		else if (type.vendor_id == PEN_TCG)

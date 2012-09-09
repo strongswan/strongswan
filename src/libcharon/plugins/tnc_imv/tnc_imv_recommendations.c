@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2012 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -280,6 +281,24 @@ METHOD(recommendations_t, have_recommendation, bool,
 	return TRUE;
 }
 
+METHOD(recommendations_t, clear_recommendation, void,
+	private_tnc_imv_recommendations_t *this)
+{
+	enumerator_t *enumerator;
+	recommendation_entry_t *entry;
+
+	enumerator = this->recs->create_enumerator(this->recs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		entry->have_recommendation = FALSE;
+		entry->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+		entry->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+		chunk_clear(&entry->reason);
+		chunk_clear(&entry->reason_language);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(recommendations_t, get_preferred_language, chunk_t,
 	private_tnc_imv_recommendations_t *this)
 {
@@ -370,21 +389,6 @@ METHOD(recommendations_t, create_reason_enumerator, enumerator_t*,
 					(void*)reason_filter, NULL, NULL);
 }
 
-METHOD(recommendations_t, clear_reasons, void,
-	private_tnc_imv_recommendations_t *this)
-{
-	enumerator_t *enumerator;
-	recommendation_entry_t *entry;
-
-	enumerator = this->recs->create_enumerator(this->recs);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		chunk_clear(&entry->reason);
-		chunk_clear(&entry->reason_language);
-	}
-	enumerator->destroy(enumerator);
-}
-
 METHOD(recommendations_t, destroy, void,
 	private_tnc_imv_recommendations_t *this)
 {
@@ -415,12 +419,12 @@ recommendations_t* tnc_imv_recommendations_create(linked_list_t *imv_list)
 		.public = {
 			.provide_recommendation = _provide_recommendation,
 			.have_recommendation = _have_recommendation,
+			.clear_recommendation = _clear_recommendation,
 			.get_preferred_language = _get_preferred_language,
 			.set_preferred_language = _set_preferred_language,
 			.set_reason_string = _set_reason_string,
 			.set_reason_language = _set_reason_language,
 			.create_reason_enumerator = _create_reason_enumerator,
-			.clear_reasons = _clear_reasons,
 			.destroy = _destroy,
 		},
 		.recs = linked_list_create(),

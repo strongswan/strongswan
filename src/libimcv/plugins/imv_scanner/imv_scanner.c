@@ -308,10 +308,9 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
-		return imv_scanner->provide_recommendation(imv_scanner, connection_id);
 	}
-
-	return imv_scanner->provide_recommendation(imv_scanner, connection_id);
+	return imv_scanner->provide_recommendation(imv_scanner, connection_id,
+											   src_imc_id);
  }
 
 /**
@@ -362,7 +361,8 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imv_scanner->provide_recommendation(imv_scanner, connection_id);
+	return imv_scanner->provide_recommendation(imv_scanner, connection_id,
+											   TNC_IMCID_ANY);
 }
 
 /**

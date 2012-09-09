@@ -310,7 +310,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id);
+													   connection_id, src_imc_id);
 	}
 
 	if (attr_list->get_count(attr_list))
@@ -330,7 +330,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id);
+													   connection_id, src_imc_id);
 	}
 
 	if (attestation_state->get_handshake_state(attestation_state) ==
@@ -355,7 +355,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 		}
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id);
+													   connection_id, src_imc_id);
 	}
 
 	return result;
@@ -410,7 +410,7 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	return imv_attestation->provide_recommendation(imv_attestation,
-												   connection_id);
+												   connection_id, TNC_IMCID_ANY);
 }
 
 /**

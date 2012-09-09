@@ -15,10 +15,13 @@
 
 #include "imc_test_state.h"
 
+#include <tncif_names.h>
+
 #include <debug.h>
 #include <utils/linked_list.h>
 
 typedef struct private_imc_test_state_t private_imc_test_state_t;
+typedef struct entry_t entry_t;
 
 /**
  * Private data of an imc_test_state_t object.
@@ -39,6 +42,11 @@ struct private_imc_test_state_t {
 	 * TNCCS connection state
 	 */
 	TNC_ConnectionState state;
+
+	/**
+	 * Assessment/Evaluation Results for all IMC IDs
+	 */
+	linked_list_t *results;
 
 	/**
 	 * Does the TNCCS connection support long message types?
@@ -75,6 +83,14 @@ struct private_imc_test_state_t {
 	 */
 	bool handshake_retry;
 	
+};
+
+/**
+ * Stores the Assessment/Evaluation Result for a given IMC ID
+ */
+struct entry_t {
+	TNC_IMCID id;
+	TNC_IMV_Evaluation_Result result;
 };
 
 METHOD(imc_state_t, get_connection_id, TNC_ConnectionID,
@@ -120,9 +136,68 @@ METHOD(imc_state_t, change_state, void,
 	this->state = new_state;
 }
 
+METHOD(imc_state_t, set_result, void,
+	private_imc_test_state_t *this, TNC_IMCID id,
+	TNC_IMV_Evaluation_Result result)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
+		 id, TNC_IMV_Evaluation_Result_names, result);
+
+	enumerator = this->results->create_enumerator(this->results);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->id == id)
+		{
+			entry->result = result;
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		entry = malloc_thing(entry_t);
+		entry->id = id;
+		entry->result = result;
+		this->results->insert_last(this->results, entry);
+	}
+}
+
+METHOD(imc_state_t, get_result, bool,
+	private_imc_test_state_t *this, TNC_IMCID id,
+	TNC_IMV_Evaluation_Result *result)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	TNC_IMV_Evaluation_Result eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	enumerator = this->results->create_enumerator(this->results);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->id == id)
+		{
+			eval = entry->result;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (result)
+	{
+		*result = eval;
+	}
+	return eval != TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+}
+
 METHOD(imc_state_t, destroy, void,
 	private_imc_test_state_t *this)
 {
+	this->results->destroy_function(this->results, free);
 	free(this->command);
 	free(this);
 }
@@ -190,6 +265,8 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
 				.change_state = _change_state,
+				.set_result = _set_result,
+				.get_result = _get_result,
 				.destroy = _destroy,
 			},
 			.get_command = _get_command,
@@ -199,6 +276,7 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 			.do_handshake_retry = _do_handshake_retry,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
+		.results = linked_list_create(),
 		.connection_id = connection_id,
 		.command = strdup(command),
 		.dummy_size = dummy_size,

@@ -15,6 +15,7 @@
 
 #include "imcv.h"
 #include "imv_agent.h"
+#include "ietf/ietf_attr_assess_result.h"
 
 #include <tncif_names.h>
 
@@ -682,9 +683,13 @@ METHOD(imv_agent_t, receive_message, TNC_Result,
 }
 
 METHOD(imv_agent_t, provide_recommendation, TNC_Result,
-	private_imv_agent_t *this, TNC_ConnectionID connection_id)
+	private_imv_agent_t *this, TNC_ConnectionID connection_id,
+	TNC_UInt32 dst_imc_id)
 {
 	imv_state_t *state;
+	linked_list_t *attr_list;
+	pa_tnc_attr_t *attr;
+	TNC_Result result;
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 	TNC_UInt32 lang_len;
@@ -699,7 +704,6 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 		return TNC_RESULT_FATAL;
 	}
 	state->get_recommendation(state, &rec, &eval);
-
 
 	/* send a reason string if action recommendation is not allow */
 	if (rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
@@ -729,7 +733,19 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 								reason_lang.len, reason_lang.ptr);
 		}
 	}
-			
+
+	/* Send and IETF Assessment Result attribute */
+	attr = ietf_attr_assess_result_create(eval);
+	attr_list = linked_list_create();
+	attr_list->insert_last(attr_list, attr);
+	result = send_message(this, connection_id, FALSE, this->id, dst_imc_id,
+						  attr_list);
+	attr_list->destroy(attr_list);
+	if (result != TNC_RESULT_SUCCESS)
+	{
+		return result;
+	}
+
 	return this->provide_recommendation(this->id, connection_id, rec, eval);
 }
 
