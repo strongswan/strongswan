@@ -13,9 +13,9 @@ dave:: ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
 moon:: cat /var/log/daemon.log::adding virtual IP address pool::YES
 moon:: cat /var/log/daemon.log::peer requested virtual IP %any::YES
 moon:: cat /var/log/daemon.log::assigning virtual IP::YES
-moon:: ipsec leases rw 2> /dev/null::2/15, 2 online::YES
-moon:: ipsec leases rw 10.3.0.1 2> /dev/null::carol@strongswan.org::YES
-moon:: ipsec leases rw 10.3.0.2 2> /dev/null::dave@strongswan.org::YES
+moon:: ipsec leases 10.3.0.0/28 2> /dev/null::2/14, 2 online::YES
+moon:: ipsec leases 10.3.0.0/28 10.3.0.1 2> /dev/null::carol@strongswan.org::YES
+moon:: ipsec leases 10.3.0.0/28 10.3.0.2 2> /dev/null::dave@strongswan.org::YES
 moon:: ipsec status 2> /dev/null::rw\[1]: ESTABLISHED.*moon.strongswan.org.*carol@strongswan.org::YES
 moon:: ipsec status 2> /dev/null::rw\[2]: ESTABLISHED.*moon.strongswan.org.*dave@strongswan.org::YES
 moon:: ipsec status 2> /dev/null::rw[{]1}.*INSTALLED, TUNNEL::ESP

@@ -7,8 +7,8 @@ moon:: ipsec status 2> /dev/null::int.*ESTABLISHED.*moon.strongswan.org.*alice@s
 moon:: ipsec status 2> /dev/null::ext.*INSTALLED, TUNNEL::YES
 moon:: ipsec status 2> /dev/null::int.*INSTALLED, TUNNEL::YES
 moon:: cat /var/log/daemon.log::adding virtual IP address pool.*ext.*10.3.0.0/28::YES
-moon:: ipsec leases ext 2> /dev/null::1/15, 1 online::YES
-moon:: ipsec leases ext 10.3.0.1 2> /dev/null::carol@strongswan.org::YES
+moon:: ipsec leases 10.3.0.0/28 2> /dev/null::1/14, 1 online::YES
+moon:: ipsec leases 10.3.0.0/28 10.3.0.1 2> /dev/null::carol@strongswan.org::YES
 moon:: ipsec pool --status 2> /dev/null::intpool.*10.4.0.1.*10.4.1.244.*static.*1::YES
 moon:: ipsec pool --leases --filter pool=intpool,addr=10.4.0.1,id=alice@strongswan.org 2> /dev/null::online::YES
 carol::cat /var/log/daemon.log::installing new virtual IP 10.3.0.1::YES
