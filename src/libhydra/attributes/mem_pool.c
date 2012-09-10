@@ -499,7 +499,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 		if (this->size > 2)
 		{	/* do not use first and last addresses of a block */
 			this->unused++;
-			this->size--;
+			this->size -= 2;
 		}
 		this->base = base->clone(base);
 	}
