@@ -81,11 +81,13 @@ extern enum_name_t *cert_policy_names;
  * Uniqueness of an IKE_SA, used to drop multiple connections with one peer.
  */
 enum unique_policy_t {
-	/** do not check for client uniqueness */
+	/** never check for client uniqueness */
+	UNIQUE_NEVER,
+	/** only check for client uniqueness when receiving an INITIAL_CONTACT */
 	UNIQUE_NO,
-	/** replace unique IKE_SAs if new ones get established */
+	/** replace existing IKE_SAs when new ones get established by a client */
 	UNIQUE_REPLACE,
-	/** keep existing IKE_SAs, close the new ones on connection attept */
+	/** keep existing IKE_SAs, close the new ones on connection attempt */
 	UNIQUE_KEEP,
 };
 

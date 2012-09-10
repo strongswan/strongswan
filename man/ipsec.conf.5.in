@@ -1035,19 +1035,26 @@ if at least one CRL URI is defined and to
 .B no
 if no URI is known.
 .TP
-.BR uniqueids " = " yes " | no | replace | keep"
+.BR uniqueids " = " yes " | no | never | replace | keep"
 whether a particular participant ID should be kept unique,
-with any new (automatically keyed)
-connection using an ID from a different IP address
-deemed to replace all old ones using that ID;
+with any new IKE_SA using an ID deemed to replace all old ones using that ID;
 acceptable values are
-.B yes
+.BR yes ,
 (the default)
+.B no
 and
-.BR no .
-Participant IDs normally \fIare\fR unique,
-so a new (automatically-keyed) connection using the same ID is
-almost invariably intended to replace an old one.
+.BR never .
+Participant IDs normally \fIare\fR unique, so a new IKE_SA using the same ID is
+almost invariably intended to replace an old one. The difference between
+.B no
+and
+.B never
+is that the daemon will replace old IKE_SAs when receving an INITIAL_CONTACT
+notify when the option is
+.B no
+but will ignore these notifies if
+.B never
+is configured.
 The daemon also accepts the value
 .B replace
 which is identical to

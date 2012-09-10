@@ -61,6 +61,7 @@ static const char *LST_unique[] = {
 	"yes",
 	"replace",
 	"keep",
+	"never",
 	 NULL
 };
 

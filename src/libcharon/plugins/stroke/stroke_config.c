@@ -690,6 +690,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		case 3: /* keep */
 			unique = UNIQUE_KEEP;
 			break;
+		case 4: /* never */
+			unique = UNIQUE_NEVER;
+			break;
 		default: /* no */
 			unique = UNIQUE_NO;
 			break;

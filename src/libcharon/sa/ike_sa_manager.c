@@ -1711,7 +1711,7 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 
 	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 	policy = peer_cfg->get_unique_policy(peer_cfg);
-	if (policy == UNIQUE_NO && !force_replace)
+	if (policy == UNIQUE_NEVER || (policy == UNIQUE_NO && !force_replace))
 	{
 		return FALSE;
 	}
