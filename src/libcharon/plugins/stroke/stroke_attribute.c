@@ -199,9 +199,10 @@ METHOD(stroke_attribute_t, add_pool, void,
 			base->ip_equals(base, current->get_base(current)) &&
 			size == current->get_size(current))
 		{
+			DBG1(DBG_CFG, "reusing virtual IP address pool %s",
+				 current->get_name(current));
 			pool->destroy(pool);
 			pool = NULL;
-			DBG1(DBG_CFG, "reusing virtual IP address pool %H/%d", base, size);
 			break;
 		}
 	}
@@ -211,7 +212,8 @@ METHOD(stroke_attribute_t, add_pool, void,
 	{
 		if (base)
 		{
-			DBG1(DBG_CFG, "adding virtual IP address pool %H/%d", base, size);
+			DBG1(DBG_CFG, "adding virtual IP address pool %s",
+				 pool->get_name(pool));
 		}
 		this->pools->insert_last(this->pools, pool);
 	}
