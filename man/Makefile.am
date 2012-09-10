@@ -7,5 +7,7 @@ SUFFIXES = .in
 .in:
 	sed \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
+	-e "s:@DEV_URANDOM@:$(urandom_device):" \
+	-e "s:@DEV_RANDOM@:$(random_device):" \
 	$(srcdir)/$@.in > $@
 

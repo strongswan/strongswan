@@ -643,6 +643,12 @@ keys not stored on tokens
 .TP
 .BR libstrongswan.plugins.pkcs11.use_rng " [no]"
 Whether the PKCS#11 modules should be used as RNG
+.TP
+.BR libstrongswan.plugins.random.random " [@DEV_RANDOM@]"
+File to read random bytes from, instead of @DEV_RANDOM@
+.TP
+.BR libstrongswan.plugins.random.urandom " [@DEV_URANDOM@]"
+File to read pseudo random bytes from, instead of @DEV_URANDOM@
 .SS libtnccs section
 .TP
 .BR libtnccs.tnc_config " [/etc/tnc_config]"
