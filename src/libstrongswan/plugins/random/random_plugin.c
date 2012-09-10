@@ -119,6 +119,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *random_plugin_create()
 {
 	private_random_plugin_t *this;
+	char *urandom_file, *random_file;
 
 	INIT(this,
 		.public = {
@@ -130,8 +131,12 @@ plugin_t *random_plugin_create()
 		},
 	);
 
-	if (!open_dev(DEV_URANDOM, &dev_urandom) ||
-		!open_dev(DEV_RANDOM, &dev_random))
+	urandom_file = lib->settings->get_str(lib->settings,
+						"libstrongswan.plugins.random.urandom", DEV_URANDOM);
+	random_file = lib->settings->get_str(lib->settings,
+						"libstrongswan.plugins.random.random", DEV_RANDOM);
+	if (!open_dev(urandom_file, &dev_urandom) ||
+		!open_dev(random_file, &dev_random))
 	{
 		destroy(this);
 		return NULL;
