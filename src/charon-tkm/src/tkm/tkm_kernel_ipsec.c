@@ -16,7 +16,11 @@
 
 #include <utils/debug.h>
 #include <plugins/kernel_netlink/kernel_netlink_ipsec.h>
+#include <tkm/constants.h>
+#include <tkm/client.h>
 
+#include "tkm_types.h"
+#include "tkm_keymat.h"
 #include "tkm_kernel_ipsec.h"
 
 typedef struct private_tkm_kernel_ipsec_t private_tkm_kernel_ipsec_t;
@@ -35,6 +39,11 @@ struct private_tkm_kernel_ipsec_t {
 	 * Kernel interface proxy (will be removed).
 	 */
 	kernel_netlink_ipsec_t *proxy;
+
+	/**
+	 * Local CHILD SA SPI.
+	 */
+	uint32_t esp_spi_loc;
 
 };
 
@@ -62,11 +71,30 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
-	DBG1(DBG_KNL, "adding child SA with SPI %.8x and reqid {%u}", ntohl(spi),
-		 reqid);
+	if (inbound && this->esp_spi_loc == 0)
+	{
+		DBG1(DBG_KNL, "store local child SA SPI for installation", ntohl(spi));
+		this->esp_spi_loc = spi;
+		this->proxy->interface.add_sa(&this->proxy->interface, src, dst, spi,
+									  protocol, reqid, mark, tfc, lifetime,
+									  enc_alg, enc_key, int_alg, int_key, mode,
+									  ipcomp, cpi, encap, esn, inbound, src_ts,
+									  dst_ts);
+		return SUCCESS;
+	}
+	const esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
+	DBG1(DBG_KNL, "adding child SA (isa: %llu, esp_spi_loc: %x, esp_spi_rem:"
+		 " %x)", esa.isa_id, ntohl(this->esp_spi_loc), ntohl(spi));
+	if (ike_esa_create_first (1, esa.isa_id, 1, 1, ntohl(this->esp_spi_loc),
+							  ntohl(spi)) != TKM_OK)
+	{
+		DBG1(DBG_KNL, "child SA creation failed");
+		return FAILED;
+	}
+	this->esp_spi_loc = 0;
 	return this->proxy->interface.add_sa(&this->proxy->interface, src, dst, spi,
 										 protocol, reqid, mark, tfc, lifetime,
-										 enc_alg, enc_key, int_alg, int_key,
+										 enc_alg, esa.enc_key, int_alg, int_key,
 										 mode, ipcomp, cpi, encap, esn, inbound,
 										 src_ts, dst_ts);
 }
@@ -186,6 +214,7 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
+		.esp_spi_loc = 0,
 		.proxy = kernel_netlink_ipsec_create(),
 	);
 

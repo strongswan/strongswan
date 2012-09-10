@@ -20,6 +20,7 @@
 #include <tkm/client.h>
 
 #include "tkm.h"
+#include "tkm_types.h"
 #include "tkm_utils.h"
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
@@ -291,8 +292,14 @@ METHOD(tkm_keymat_t, derive_child_keys, bool,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	DBG1(DBG_CHD, "deriving child keys");
-	return this->proxy->derive_child_keys(this->proxy, proposal, dh, nonce_i,
-			nonce_r, encr_i, integ_i, encr_r, integ_r);
+	*encr_i = chunk_alloc(sizeof(esa_info_t));
+	(*(esa_info_t*)(encr_i->ptr)).isa_id = this->isa_ctx_id;
+	const bool result = this->proxy->derive_child_keys(this->proxy, proposal,
+													   dh, nonce_i, nonce_r,
+													   &(*(esa_info_t*)(encr_i->ptr)).enc_key,
+													   integ_i, encr_r,
+													   integ_r);
+	return result;
 }
 
 METHOD(keymat_t, get_aead, aead_t*,
