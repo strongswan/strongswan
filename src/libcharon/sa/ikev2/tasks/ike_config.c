@@ -386,6 +386,15 @@ METHOD(task_t, build_r, status_t,
 			pools->destroy(pools);
 			return SUCCESS;
 		}
+		if (pools->get_count(pools) && !this->vips->get_count(this->vips))
+		{
+			DBG1(DBG_IKE, "expected a virtual IP request, sending %N",
+				 notify_type_names, FAILED_CP_REQUIRED);
+			message->add_notify(message, FALSE, FAILED_CP_REQUIRED, chunk_empty);
+			vips->destroy_offset(vips, offsetof(host_t, destroy));
+			pools->destroy(pools);
+			return SUCCESS;
+		}
 
 		/* query registered providers for additional attributes to include */
 		enumerator = hydra->attributes->create_responder_enumerator(
