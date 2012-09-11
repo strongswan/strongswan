@@ -285,6 +285,29 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 }
 
 /**
+ * Check if we have a an address pool configured
+ */
+static bool have_pool(ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *peer_cfg;
+	char *pool;
+	bool found = FALSE;
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	if (peer_cfg)
+	{
+		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
+		if (enumerator->enumerate(enumerator, &pool))
+		{
+			found = TRUE;
+		}
+		enumerator->destroy(enumerator);
+	}
+	return found;
+}
+
+/**
  * Get host to use for dynamic traffic selectors
  */
 static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
@@ -301,7 +324,16 @@ static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
 		}
 		else
 		{
-			host = ike_sa->get_other_host(ike_sa);
+			if (have_pool(ike_sa))
+			{
+				/* we have an IP address pool, but didn't negotiate a
+				 * virtual IP. */
+				host = NULL;
+			}
+			else
+			{
+				host = ike_sa->get_other_host(ike_sa);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
