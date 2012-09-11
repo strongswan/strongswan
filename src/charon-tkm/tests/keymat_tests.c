@@ -19,12 +19,14 @@
 #include <hydra.h>
 #include <config/proposal.h>
 #include <encoding/payloads/ike_header.h>
+#include <plugins/kernel_netlink/kernel_netlink_net.h>
 #include <tkm/client.h>
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
+#include "tkm_kernel_ipsec.h"
 
 START_TEST(test_derive_ike_keys)
 {
@@ -39,6 +41,10 @@ START_TEST(test_derive_ike_keys)
 		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 	};
 	lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
 			countof(features), TRUE);
