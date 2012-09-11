@@ -22,9 +22,22 @@
 #define MEM_POOL_H
 
 typedef struct mem_pool_t mem_pool_t;
+typedef enum mem_pool_op_t mem_pool_op_t;
 
 #include <utils/host.h>
 #include <utils/identification.h>
+
+/**
+ * In-memory IP pool acquire operation.
+ */
+enum mem_pool_op_t {
+	/** Check for an exsiting lease */
+	MEM_POOL_EXISTING,
+	/** Get a new lease */
+	MEM_POOL_NEW,
+	/** Replace an existing offline lease of another ID */
+	MEM_POOL_REASSIGN,
+};
 
 /**
  * An in-memory IP address pool.
@@ -69,12 +82,18 @@ struct mem_pool_t {
 	/**
 	 * Acquire an address for the given id from this pool.
 	 *
+	 * This call is usually invoked several times: The first time to find an
+	 * existing lease (MEM_POOL_EXISTING), if none found a second time to
+	 * acquire a new lease (MEM_POOL_NEW), and if the pool is full once again
+	 * to assign an existing offline lease (MEM_POOL_REASSIGN).
+	 *
 	 * @param id		the id to acquire an address for
 	 * @param requested	acquire this address, if possible
+	 * @param existing	TRUE to look for an existing lease, FALSE for a new one
 	 * @return			the acquired address
 	 */
 	host_t* (*acquire_address)(mem_pool_t *this, identification_t *id,
-							   host_t *requested);
+							   host_t *requested, mem_pool_op_t operation);
 
 	/**
 	 * Release a previously acquired address.

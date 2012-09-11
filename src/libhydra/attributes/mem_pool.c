@@ -212,12 +212,123 @@ METHOD(mem_pool_t, get_offline, u_int,
 	return count;
 }
 
-METHOD(mem_pool_t, acquire_address, host_t*,
-	private_mem_pool_t *this, identification_t *id, host_t *requested)
+/**
+ * Get an existing lease for id
+ */
+static int get_existing(private_mem_pool_t *this, identification_t *id,
+						host_t *requested)
 {
-	uintptr_t offset = 0, current;
 	enumerator_t *enumerator;
-	entry_t *entry, *old;
+	uintptr_t current;
+	entry_t *entry;
+	int offset = 0;
+
+	entry = this->leases->get(this->leases, id);
+	if (!entry)
+	{
+		return 0;
+	}
+
+	/* check for a valid offline lease, refresh */
+	enumerator = entry->offline->create_enumerator(entry->offline);
+	if (enumerator->enumerate(enumerator, &current))
+	{
+		entry->offline->remove_at(entry->offline, enumerator);
+		entry->online->insert_last(entry->online, (void*)current);
+		offset = current;
+	}
+	enumerator->destroy(enumerator);
+	if (offset)
+	{
+		DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
+		return offset;
+	}
+
+	/* check for a valid online lease to reassign */
+	enumerator = entry->online->create_enumerator(entry->online);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current == host2offset(this, requested))
+		{
+			offset = current;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (offset)
+	{
+		DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+	}
+	return offset;
+}
+
+/**
+ * Get a new lease for id
+ */
+static int get_new(private_mem_pool_t *this, identification_t *id)
+{
+	entry_t *entry;
+	int offset = 0;
+
+	if (this->unused < this->size)
+	{
+		INIT(entry,
+			.id = id->clone(id),
+			.online = linked_list_create(),
+			.offline = linked_list_create(),
+		);
+		this->leases->put(this->leases, entry->id, entry);
+
+		/* assigning offset, starting by 1 */
+		offset = ++this->unused;
+		entry->online->insert_last(entry->online, (void*)offset);
+		DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
+	}
+	return offset;
+}
+
+/**
+ * Get a reassigned lease for id in case the pool is full
+ */
+static int get_reassigned(private_mem_pool_t *this, identification_t *id)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	uintptr_t current;
+	int offset = 0;
+
+	enumerator = this->leases->create_enumerator(this->leases);
+	while (enumerator->enumerate(enumerator, NULL, &entry))
+	{
+		if (entry->offline->remove_first(entry->offline,
+										 (void**)&current) == SUCCESS)
+		{
+			offset = current;
+			DBG1(DBG_CFG, "reassigning existing offline lease by '%Y'"
+				 " to '%Y'", entry->id, id);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (offset)
+	{
+		INIT(entry,
+			.id = id->clone(id),
+			.online = linked_list_create(),
+			.offline = linked_list_create(),
+		);
+		entry->online->insert_last(entry->online, (void*)offset);
+		this->leases->put(this->leases, entry->id, entry);
+	}
+	return offset;
+}
+
+METHOD(mem_pool_t, acquire_address, host_t*,
+	private_mem_pool_t *this, identification_t *id, host_t *requested,
+	mem_pool_op_t operation)
+{
+	int offset = 0;
 
 	/* if the pool is empty (e.g. in the %config case) we simply return the
 	 * requested address */
@@ -233,87 +344,30 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 	}
 
 	this->mutex->lock(this->mutex);
-	while (TRUE)
+	switch (operation)
 	{
-		entry = this->leases->get(this->leases, id);
-		if (entry)
-		{
-			/* check for a valid offline lease, refresh */
-			enumerator = entry->offline->create_enumerator(entry->offline);
-			if (enumerator->enumerate(enumerator, &current))
-			{
-				entry->offline->remove_at(entry->offline, enumerator);
-				entry->online->insert_last(entry->online, (void*)current);
-				offset = current;
-			}
-			enumerator->destroy(enumerator);
-			if (offset)
-			{
-				DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
-				break;
-			}
-			/* check for a valid online lease to reassign */
-			enumerator = entry->online->create_enumerator(entry->online);
-			while (enumerator->enumerate(enumerator, &current))
-			{
-				if (current == host2offset(this, requested))
-				{
-					offset = current;
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
-			if (offset)
-			{
-				DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
-				break;
-			}
-		}
-		else
-		{
-			INIT(entry,
-				.id = id->clone(id),
-				.online = linked_list_create(),
-				.offline = linked_list_create(),
-			);
-			this->leases->put(this->leases, entry->id, entry);
-		}
-		if (this->unused < this->size)
-		{
-			/* assigning offset, starting by 1 */
-			offset = ++this->unused;
-			entry->online->insert_last(entry->online, (void*)offset);
-			DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
+		case MEM_POOL_EXISTING:
+			offset = get_existing(this, id, requested);
 			break;
-		}
-
-		/* no more addresses, replace the first found offline lease */
-		enumerator = this->leases->create_enumerator(this->leases);
-		while (enumerator->enumerate(enumerator, NULL, &old))
-		{
-			if (old->offline->remove_first(old->offline,
-										   (void**)&current) == SUCCESS)
+		case MEM_POOL_NEW:
+			offset = get_new(this, id);
+			break;
+		case MEM_POOL_REASSIGN:
+			offset = get_reassigned(this, id);
+			if (!offset)
 			{
-				offset = current;
-				entry->online->insert_last(entry->online, (void*)offset);
-				DBG1(DBG_CFG, "reassigning existing offline lease by '%Y'"
-					 " to '%Y'", old->id, id);
-				break;
+				DBG1(DBG_CFG, "pool '%s' is full, unable to assign address",
+					 this->name);
 			}
-		}
-		enumerator->destroy(enumerator);
-		break;
+			break;
+		default:
+			break;
 	}
 	this->mutex->unlock(this->mutex);
 
 	if (offset)
 	{
 		return offset2host(this, offset);
-	}
-	else
-	{
-		DBG1(DBG_CFG, "pool '%s' is full, unable to assign address",
-			 this->name);
 	}
 	return NULL;
 }

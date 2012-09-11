@@ -89,31 +89,55 @@ static mem_pool_t *find_pool(private_stroke_attribute_t *this, char *name)
 	return found;
 }
 
-METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_stroke_attribute_t *this, linked_list_t *pools, identification_t *id,
-	host_t *requested)
+/**
+ * Find an existing or not yet existing lease
+ */
+static host_t *find_addr(private_stroke_attribute_t *this, linked_list_t *pools,
+						 identification_t *id, host_t *requested,
+						 mem_pool_op_t operation)
 {
+	host_t *addr = NULL;
 	enumerator_t *enumerator;
 	mem_pool_t *pool;
-	host_t *addr = NULL;
 	char *name;
 
 	enumerator = pools->create_enumerator(pools);
-	this->lock->read_lock(this->lock);
 	while (enumerator->enumerate(enumerator, &name))
 	{
 		pool = find_pool(this, name);
 		if (pool)
 		{
-			addr = pool->acquire_address(pool, id, requested);
+			addr = pool->acquire_address(pool, id, requested, operation);
 			if (addr)
 			{
 				break;
 			}
 		}
 	}
-	this->lock->unlock(this->lock);
 	enumerator->destroy(enumerator);
+
+	return addr;
+}
+
+METHOD(attribute_provider_t, acquire_address, host_t*,
+	private_stroke_attribute_t *this, linked_list_t *pools, identification_t *id,
+	host_t *requested)
+{
+	host_t *addr;
+
+	this->lock->read_lock(this->lock);
+
+	addr = find_addr(this, pools, id, requested, MEM_POOL_EXISTING);
+	if (!addr)
+	{
+		addr = find_addr(this, pools, id, requested, MEM_POOL_NEW);
+		if (!addr)
+		{
+			addr = find_addr(this, pools, id, requested, MEM_POOL_REASSIGN);
+		}
+	}
+
+	this->lock->unlock(this->lock);
 
 	return addr;
 }
