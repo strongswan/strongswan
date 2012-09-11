@@ -299,4 +299,12 @@ struct linked_list_t {
  */
 linked_list_t *linked_list_create(void);
 
+/**
+ * Creates a linked list from an enumerator.
+ *
+ * @enumerator	enumerator over void*, gets destroyed
+ * @return		linked_list_t object, containing enumerated values
+ */
+linked_list_t *linked_list_create_from_enumerator(enumerator_t *enumerator);
+
 #endif /** LINKED_LIST_H_ @}*/
