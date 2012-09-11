@@ -14,6 +14,9 @@
  * for more details.
  */
 
+#include <errno.h>
+#include <netinet/udp.h>
+#include <linux/xfrm.h>
 #include <utils/debug.h>
 #include <plugins/kernel_netlink/kernel_netlink_ipsec.h>
 #include <tkm/constants.h>
@@ -170,15 +173,55 @@ METHOD(kernel_ipsec_t, flush_policies, status_t,
 METHOD(kernel_ipsec_t, bypass_socket, bool,
 	private_tkm_kernel_ipsec_t *this, int fd, int family)
 {
-	return this->proxy->interface.bypass_socket(&this->proxy->interface, fd,
-												family);
+	struct xfrm_userpolicy_info policy;
+	u_int sol, ipsec_policy;
+
+	switch (family)
+	{
+		case AF_INET:
+			sol = SOL_IP;
+			ipsec_policy = IP_XFRM_POLICY;
+			break;
+		case AF_INET6:
+			sol = SOL_IPV6;
+			ipsec_policy = IPV6_XFRM_POLICY;
+			break;
+		default:
+			return FALSE;
+	}
+
+	memset(&policy, 0, sizeof(policy));
+	policy.action = XFRM_POLICY_ALLOW;
+	policy.sel.family = family;
+
+	policy.dir = XFRM_POLICY_OUT;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+					   strerror(errno));
+		return FALSE;
+	}
+	policy.dir = XFRM_POLICY_IN;
+	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
+					   strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 	private_tkm_kernel_ipsec_t *this, int fd, int family, u_int16_t port)
 {
-	return this->proxy->interface.enable_udp_decap(&this->proxy->interface, fd,
-												   family, port);
+	int type = UDP_ENCAP_ESPINUDP;
+
+	if (setsockopt(fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	{
+		DBG1(DBG_KNL, "unable to set UDP_ENCAP: %s", strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(kernel_ipsec_t, destroy, void,
