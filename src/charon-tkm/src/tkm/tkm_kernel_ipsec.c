@@ -18,7 +18,7 @@
 #include <netinet/udp.h>
 #include <linux/xfrm.h>
 #include <utils/debug.h>
-#include <plugins/kernel_netlink/kernel_netlink_ipsec.h>
+#include <utils/chunk.h>
 #include <tkm/constants.h>
 #include <tkm/client.h>
 
@@ -39,11 +39,6 @@ struct private_tkm_kernel_ipsec_t {
 	tkm_kernel_ipsec_t public;
 
 	/**
-	 * Kernel interface proxy (will be removed).
-	 */
-	kernel_netlink_ipsec_t *proxy;
-
-	/**
 	 * Local CHILD SA SPI.
 	 */
 	uint32_t esp_spi_loc;
@@ -55,8 +50,9 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	DBG1(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-	return this->proxy->interface.get_spi(&this->proxy->interface, src, dst,
-										  protocol, reqid, spi);
+	/* fake SPI for now */
+	*spi = 92726226;
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
@@ -78,11 +74,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		DBG1(DBG_KNL, "store local child SA SPI for installation", ntohl(spi));
 		this->esp_spi_loc = spi;
-		this->proxy->interface.add_sa(&this->proxy->interface, src, dst, spi,
-									  protocol, reqid, mark, tfc, lifetime,
-									  enc_alg, enc_key, int_alg, int_key, mode,
-									  ipcomp, cpi, encap, esn, inbound, src_ts,
-									  dst_ts);
 		return SUCCESS;
 	}
 	const esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
@@ -95,11 +86,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		return FAILED;
 	}
 	this->esp_spi_loc = 0;
-	return this->proxy->interface.add_sa(&this->proxy->interface, src, dst, spi,
-										 protocol, reqid, mark, tfc, lifetime,
-										 enc_alg, esa.enc_key, int_alg, int_key,
-										 mode, ipcomp, cpi, encap, esn, inbound,
-										 src_ts, dst_ts);
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
@@ -115,8 +102,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
 	DBG1(DBG_KNL, "deleting child SA with SPI %.8x", ntohl(spi));
-	return this->proxy->interface.del_sa(&this->proxy->interface, src, dst, spi,
-										 protocol, cpi, mark);
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
@@ -131,7 +117,7 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	private_tkm_kernel_ipsec_t *this)
 {
 	DBG1(DBG_KNL, "flushing child SA entries");
-	return this->proxy->interface.flush_sas(&this->proxy->interface);
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
@@ -140,9 +126,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t priority)
 {
-	return this->proxy->interface.add_policy(&this->proxy->interface, src, dst,
-											 src_ts, dst_ts, direction, type,
-											 sa, mark, priority);
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
@@ -158,15 +142,13 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
 	mark_t mark, policy_priority_t prio)
 {
-	return this->proxy->interface.del_policy(&this->proxy->interface, src_ts,
-											 dst_ts, direction, reqid, mark,
-											 prio);
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, flush_policies, status_t,
 	private_tkm_kernel_ipsec_t *this)
 {
-	return this->proxy->interface.flush_policies(&this->proxy->interface);
+	return SUCCESS;
 }
 
 
@@ -227,7 +209,6 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_tkm_kernel_ipsec_t *this)
 {
-	this->proxy->interface.destroy(&this->proxy->interface);
 	free(this);
 }
 
@@ -258,14 +239,7 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 			},
 		},
 		.esp_spi_loc = 0,
-		.proxy = kernel_netlink_ipsec_create(),
 	);
-
-	if (!this->proxy)
-	{
-		free(this);
-		return NULL;
-	}
 
 	return &this->public;
 }
