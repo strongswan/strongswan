@@ -175,6 +175,62 @@ static void schedule_inactivity_timeout(private_quick_mode_t *this)
 }
 
 /**
+ * Check if we have a an address pool configured
+ */
+static bool have_pool(ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *peer_cfg;
+	char *pool;
+	bool found = FALSE;
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	if (peer_cfg)
+	{
+		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
+		if (enumerator->enumerate(enumerator, &pool))
+		{
+			found = TRUE;
+		}
+		enumerator->destroy(enumerator);
+	}
+	return found;
+}
+
+/**
+ * Get host to use for dynamic traffic selectors
+ */
+static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
+	if (!enumerator->enumerate(enumerator, &host))
+	{
+		if (local)
+		{
+			host = ike_sa->get_my_host(ike_sa);
+		}
+		else
+		{
+			if (have_pool(ike_sa))
+			{
+				/* we have an IP address pool, but didn't negotiate a
+				 * virtual IP. */
+				host = NULL;
+			}
+			else
+			{
+				host = ike_sa->get_other_host(ike_sa);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return host;
+}
+
+/**
  * Install negotiated CHILD_SA
  */
 static bool install(private_quick_mode_t *this)
@@ -398,25 +454,10 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 									 linked_list_t *supplied)
 {
 	traffic_selector_t *ts;
-	enumerator_t *enumerator;
 	linked_list_t *list;
-	host_t *host;
 
-	enumerator = this->ike_sa->create_virtual_ip_enumerator(this->ike_sa, local);
-	if (!enumerator->enumerate(enumerator, &host))
-	{
-		if (local)
-		{
-			host = this->ike_sa->get_my_host(this->ike_sa);
-		}
-		else
-		{
-			host = this->ike_sa->get_other_host(this->ike_sa);
-		}
-	}
-	enumerator->destroy(enumerator);
 	list = this->config->get_traffic_selectors(this->config, local,
-											   supplied, host);
+							supplied, get_dynamic_host(this->ike_sa, local));
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{
 		if (this->initiator && list->get_count(list) > 1)
@@ -831,30 +872,6 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
-}
-
-/**
- * Get host to use for dynamic traffic selectors
- */
-static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
-{
-	enumerator_t *enumerator;
-	host_t *host;
-
-	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
-	if (!enumerator->enumerate(enumerator, &host))
-	{
-		if (local)
-		{
-			host = ike_sa->get_my_host(ike_sa);
-		}
-		else
-		{
-			host = ike_sa->get_other_host(ike_sa);
-		}
-	}
-	enumerator->destroy(enumerator);
-	return host;
 }
 
 METHOD(task_t, process_r, status_t,
