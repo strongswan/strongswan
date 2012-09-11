@@ -21,7 +21,6 @@ typedef struct esa_info_t esa_info_t;
 
 struct esa_info_t {
 	isa_id_type isa_id;
-	chunk_t enc_key;
 };
 
 #endif /** TKM_TYPES_H_ */

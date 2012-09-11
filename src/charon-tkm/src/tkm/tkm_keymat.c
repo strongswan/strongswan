@@ -15,7 +15,6 @@
  */
 
 #include <daemon.h>
-#include <sa/ikev2/keymat_v2.h>
 #include <tkm/constants.h>
 #include <tkm/client.h>
 
@@ -36,11 +35,6 @@ struct private_tkm_keymat_t {
 	 * Public tkm_keymat_t interface.
 	 */
 	tkm_keymat_t public;
-
-	/**
-	 * IKEv2 keymat proxy (will be removed).
-	 */
-	keymat_v2_t *proxy;
 
 	/**
 	 * IKE_SA Role, initiator or responder.
@@ -271,19 +265,14 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 
 	/* TODO: Add failure handler (see keymat_v2.c) */
 
-	if (this->proxy->derive_ike_keys(this->proxy, proposal, dh, nonce_i,
-				nonce_r, id, rekey_function, rekey_skd))
+	tkm->chunk_map->remove(tkm->chunk_map, nonce);
+	if (ike_nc_reset(nc_id) != TKM_OK)
 	{
-		tkm->chunk_map->remove(tkm->chunk_map, nonce);
-		if (ike_nc_reset(nc_id) != TKM_OK)
-		{
-			DBG1(DBG_IKE, "failed to reset nonce context %llu", nc_id);
-		}
-		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nc_id);
-
-		return TRUE;
+		DBG1(DBG_IKE, "failed to reset nonce context %llu", nc_id);
 	}
-	return FALSE;
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nc_id);
+
+	return TRUE;
 }
 
 METHOD(tkm_keymat_t, derive_child_keys, bool,
@@ -294,12 +283,7 @@ METHOD(tkm_keymat_t, derive_child_keys, bool,
 	DBG1(DBG_CHD, "deriving child keys");
 	*encr_i = chunk_alloc(sizeof(esa_info_t));
 	(*(esa_info_t*)(encr_i->ptr)).isa_id = this->isa_ctx_id;
-	const bool result = this->proxy->derive_child_keys(this->proxy, proposal,
-													   dh, nonce_i, nonce_r,
-													   &(*(esa_info_t*)(encr_i->ptr)).enc_key,
-													   integ_i, encr_r,
-													   integ_r);
-	return result;
+	return TRUE;
 }
 
 METHOD(keymat_t, get_aead, aead_t*,
@@ -313,15 +297,16 @@ METHOD(tkm_keymat_t, get_auth_octets, bool,
 	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
 {
 	DBG1(DBG_IKE, "returning auth octets");
-	return this->proxy->get_auth_octets(this->proxy, verify, ike_sa_init, nonce,
-			id, reserved, octets);
+	*octets = chunk_empty;
+	return TRUE;
 }
 
 METHOD(tkm_keymat_t, get_skd, pseudo_random_function_t,
 	private_tkm_keymat_t *this, chunk_t *skd)
 {
 	DBG1(DBG_IKE, "returning skd");
-	return this->proxy->get_skd(this->proxy, skd);
+	*skd = chunk_empty;
+	return PRF_HMAC_SHA2_512;
 }
 
 METHOD(tkm_keymat_t, get_psk_sig, bool,
@@ -365,7 +350,6 @@ METHOD(keymat_t, destroy, void,
 	DESTROY_IF(this->aead_in);
 	DESTROY_IF(this->aead_out);
 	chunk_free(&this->auth_payload);
-	this->proxy->keymat.destroy(&this->proxy->keymat);
 	free(this);
 }
 
@@ -416,7 +400,6 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),
 		.ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE),
 		.auth_payload = chunk_empty,
-		.proxy = keymat_v2_create(initiator),
 	);
 
 	if (!this->isa_ctx_id || !this->ae_ctx_id)
