@@ -232,7 +232,7 @@ static void process_payloads(private_mode_config_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_mode_config_t *this, message_t *message)
 {
-	cp_payload_t *cp = NULL;
+	cp_payload_t *cp;
 	enumerator_t *enumerator;
 	attribute_handler_t *handler;
 	peer_cfg_t *config;
@@ -240,6 +240,8 @@ METHOD(task_t, build_i, status_t,
 	chunk_t data;
 	linked_list_t *vips;
 	host_t *host;
+
+	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
 
 	vips = linked_list_create();
 
@@ -264,7 +266,6 @@ METHOD(task_t, build_i, status_t,
 
 	if (vips->get_count(vips))
 	{
-		cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
 		enumerator = vips->create_enumerator(vips);
 		while (enumerator->enumerate(enumerator, &host))
 		{
@@ -278,19 +279,13 @@ METHOD(task_t, build_i, status_t,
 								this->ike_sa->get_other_id(this->ike_sa), vips);
 	while (enumerator->enumerate(enumerator, &handler, &type, &data))
 	{
-		configuration_attribute_t *ca;
 		entry_t *entry;
 
 		DBG2(DBG_IKE, "building %N attribute",
 			 configuration_attribute_type_names, type);
-		ca = configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE_V1,
-												  type, data);
-		if (!cp)
-		{
-			cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REQUEST);
-		}
-		cp->add_attribute(cp, ca);
-
+		cp->add_attribute(cp,
+				configuration_attribute_create_chunk(CONFIGURATION_ATTRIBUTE_V1,
+													 type, data));
 		INIT(entry,
 			.type = type,
 			.handler = handler,
@@ -301,10 +296,8 @@ METHOD(task_t, build_i, status_t,
 
 	vips->destroy(vips);
 
-	if (cp)
-	{
-		message->add_payload(message, (payload_t*)cp);
-	}
+	message->add_payload(message, (payload_t*)cp);
+
 	return NEED_MORE;
 }
 
@@ -321,11 +314,13 @@ METHOD(task_t, build_r, status_t,
 	enumerator_t *enumerator;
 	configuration_attribute_type_t type;
 	chunk_t value;
-	cp_payload_t *cp = NULL;
+	cp_payload_t *cp;
 	peer_cfg_t *config;
 	identification_t *id;
 	linked_list_t *vips, *pools;
 	host_t *requested;
+
+	cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
 
 	id = this->ike_sa->get_other_eap_id(this->ike_sa);
 	config = this->ike_sa->get_peer_cfg(this->ike_sa);
@@ -349,10 +344,6 @@ METHOD(task_t, build_r, status_t,
 		{
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
 			this->ike_sa->add_virtual_ip(this->ike_sa, FALSE, found);
-			if (!cp)
-			{
-				cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
-			}
 			cp->add_attribute(cp, build_vip(found));
 			vips->insert_last(vips, found);
 		}
@@ -369,10 +360,6 @@ METHOD(task_t, build_r, status_t,
 											hydra->attributes, pools, id, vips);
 	while (enumerator->enumerate(enumerator, &type, &value))
 	{
-		if (!cp)
-		{
-			cp = cp_payload_create_type(CONFIGURATION_V1, CFG_REPLY);
-		}
 		DBG2(DBG_IKE, "building %N attribute",
 			 configuration_attribute_type_names, type);
 		cp->add_attribute(cp,
@@ -383,11 +370,9 @@ METHOD(task_t, build_r, status_t,
 	vips->destroy_offset(vips, offsetof(host_t, destroy));
 	pools->destroy(pools);
 
-	if (cp)
-	{
-		cp->set_identifier(cp, this->identifier);
-		message->add_payload(message, (payload_t*)cp);
-	}
+	cp->set_identifier(cp, this->identifier);
+	message->add_payload(message, (payload_t*)cp);
+
 	return SUCCESS;
 }
 
