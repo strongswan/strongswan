@@ -310,6 +310,10 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
  */
 static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
 {
+	if (this->dynamic || other->dynamic)
+	{	/* no set_address() applied, TS has no subset */
+		return NULL;
+	}
 	if (this->type == other->type && (this->protocol == other->protocol ||
 								this->protocol == 0 || other->protocol == 0))
 	{
@@ -367,7 +371,6 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 
 		/* we have a match in protocol, port, and address: return it... */
 		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port);
-		new_ts->dynamic = this->dynamic || other->dynamic;
 		memcpy(new_ts->from, from, size);
 		memcpy(new_ts->to, to, size);
 		calc_netbits(new_ts);
@@ -528,6 +531,7 @@ METHOD(traffic_selector_t, set_address, void,
 			memcpy(this->to, from.ptr, from.len);
 			this->netbits = from.len * 8;
 		}
+		this->dynamic = FALSE;
 	}
 }
 
