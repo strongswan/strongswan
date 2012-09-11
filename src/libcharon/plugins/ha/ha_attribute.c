@@ -170,22 +170,28 @@ static bool responsible_for(private_ha_attribute_t *this, int bit)
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_ha_attribute_t *this, char *name, identification_t *id,
+	private_ha_attribute_t *this, linked_list_t *pools, identification_t *id,
 	host_t *requested)
 {
+	enumerator_t *enumerator;
 	pool_t *pool;
 	int offset = -1, byte, bit;
 	host_t *address;
+	char *name;
 
+	enumerator = pools->create_enumerator(pools);
 	this->mutex->lock(this->mutex);
-	pool = get_pool(this, name);
-	if (pool)
+	while (enumerator->enumerate(enumerator, &name))
 	{
+		pool = get_pool(this, name);
+		if (!pool)
+		{
+			continue;
+		}
 		if (pool->base->get_family(pool->base) !=
 			requested->get_family(requested))
 		{
-			this->mutex->unlock(this->mutex);
-			return NULL;
+			continue;
 		}
 		for (byte = 0; byte < pool->size / 8; byte++)
 		{
@@ -214,6 +220,8 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 		}
 	}
 	this->mutex->unlock(this->mutex);
+	enumerator->destroy(enumerator);
+
 	if (offset != -1)
 	{
 		address = offset2host(pool, offset);

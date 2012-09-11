@@ -90,19 +90,31 @@ static mem_pool_t *find_pool(private_stroke_attribute_t *this, char *name)
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_stroke_attribute_t *this, char *name, identification_t *id,
+	private_stroke_attribute_t *this, linked_list_t *pools, identification_t *id,
 	host_t *requested)
 {
+	enumerator_t *enumerator;
 	mem_pool_t *pool;
 	host_t *addr = NULL;
+	char *name;
 
+	enumerator = pools->create_enumerator(pools);
 	this->lock->read_lock(this->lock);
-	pool = find_pool(this, name);
-	if (pool)
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		addr = pool->acquire_address(pool, id, requested);
+		pool = find_pool(this, name);
+		if (pool)
+		{
+			addr = pool->acquire_address(pool, id, requested);
+			if (addr)
+			{
+				break;
+			}
+		}
 	}
 	this->lock->unlock(this->lock);
+	enumerator->destroy(enumerator);
+
 	return addr;
 }
 

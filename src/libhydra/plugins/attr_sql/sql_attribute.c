@@ -233,25 +233,50 @@ static host_t* get_lease(private_sql_attribute_t *this, char *name,
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_sql_attribute_t *this, char *name, identification_t *id,
+	private_sql_attribute_t *this, linked_list_t *pools, identification_t *id,
 	host_t *requested)
 {
+	enumerator_t *enumerator;
 	host_t *address = NULL;
 	u_int identity, pool, timeout;
+	char *name;
 
 	identity = get_identity(this, id);
 	if (identity)
 	{
-		pool = get_pool(this, name, &timeout);
-		if (pool)
+		/* check for an existing lease in all pools */
+		enumerator = pools->create_enumerator(pools);
+		while (enumerator->enumerate(enumerator, &name))
 		{
-			/* check for an existing lease */
-			address = check_lease(this, name, pool, identity);
-			if (address == NULL)
+			pool = get_pool(this, name, &timeout);
+			if (pool)
 			{
-				/* get an unallocated address or expired lease */
-				address = get_lease(this, name, pool, timeout, identity);
+				address = check_lease(this, name, pool, identity);
+				if (address)
+				{
+					break;
+				}
 			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (!address)
+		{
+			/* get an unallocated address or expired lease */
+			enumerator = pools->create_enumerator(pools);
+			while (enumerator->enumerate(enumerator, &name))
+			{
+				pool = get_pool(this, name, &timeout);
+				if (pool)
+				{
+					address = get_lease(this, name, pool, timeout, identity);
+					if (address)
+					{
+						break;
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
 		}
 	}
 	return address;

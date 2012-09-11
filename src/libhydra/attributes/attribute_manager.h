@@ -39,13 +39,13 @@ struct attribute_manager_t {
 	/**
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
-	 * @param pool			pool name to acquire address from
+	 * @param pools			list of pool names (char*) to acquire from
 	 * @param id			peer identity to get address forua
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_manager_t *this,
-							   char *pool, identification_t *id,
+							   linked_list_t *pool, identification_t *id,
 							   host_t *requested);
 
 	/**

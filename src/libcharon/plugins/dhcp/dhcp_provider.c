@@ -81,18 +81,29 @@ static uintptr_t hash_transaction(dhcp_transaction_t *transaction)
 }
 
 METHOD(attribute_provider_t, acquire_address, host_t*,
-	private_dhcp_provider_t *this, char *pool,
+	private_dhcp_provider_t *this, linked_list_t *pools,
 	identification_t *id, host_t *requested)
 {
-	if (streq(pool, "dhcp") && requested->get_family(requested) == AF_INET)
-	{
-		dhcp_transaction_t *transaction, *old;
-		host_t *vip;
+	dhcp_transaction_t *transaction, *old;
+	enumerator_t *enumerator;
+	char *pool;
+	host_t *vip = NULL;
 
+	if (requested->get_family(requested) != AF_INET)
+	{
+		return NULL;
+	}
+	enumerator = pools->create_enumerator(pools);
+	while (enumerator->enumerate(enumerator, &pool))
+	{
+		if (!streq(pool, "dhcp"))
+		{
+			continue;
+		}
 		transaction = this->socket->enroll(this->socket, id);
 		if (!transaction)
 		{
-			return NULL;
+			continue;
 		}
 		vip = transaction->get_address(transaction);
 		vip = vip->clone(vip);
@@ -101,9 +112,10 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 							(void*)hash_transaction(transaction), transaction);
 		this->mutex->unlock(this->mutex);
 		DESTROY_IF(old);
-		return vip;
+		break;
 	}
-	return NULL;
+	enumerator->destroy(enumerator);
+	return vip;
 }
 
 METHOD(attribute_provider_t, release_address, bool,

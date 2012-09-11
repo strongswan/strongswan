@@ -60,8 +60,8 @@ typedef struct {
 } enum_data_t;
 
 METHOD(attribute_manager_t, acquire_address, host_t*,
-	private_attribute_manager_t *this, char *pool, identification_t *id,
-	host_t *requested)
+	private_attribute_manager_t *this, linked_list_t *pools,
+	identification_t *id, host_t *requested)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
@@ -71,7 +71,7 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		host = current->acquire_address(current, pool, id, requested);
+		host = current->acquire_address(current, pools, id, requested);
 		if (host)
 		{
 			break;

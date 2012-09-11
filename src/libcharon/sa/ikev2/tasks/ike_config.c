@@ -342,29 +342,23 @@ METHOD(task_t, build_r, status_t,
 		id = this->ike_sa->get_other_eap_id(this->ike_sa);
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		vips = linked_list_create();
-		pools = linked_list_create();
+		pools = linked_list_create_from_enumerator(
+									config->create_pool_enumerator(config));
 
 		this->ike_sa->clear_virtual_ips(this->ike_sa, FALSE);
 
 		enumerator = this->vips->create_enumerator(this->vips);
 		while (enumerator->enumerate(enumerator, &requested))
 		{
-			enumerator_t *poolenum;
-			char *pool;
 			host_t *found = NULL;
 
 			/* query all pools until we get an address */
 			DBG1(DBG_IKE, "peer requested virtual IP %H", requested);
 
-			poolenum = config->create_pool_enumerator(config);
-			while (poolenum->enumerate(poolenum, &pool))
+			found = hydra->attributes->acquire_address(hydra->attributes,
+													   pools, id, requested);
+			if (found)
 			{
-				found = hydra->attributes->acquire_address(hydra->attributes,
-														   pool, id, requested);
-				if (!found)
-				{
-					continue;
-				}
 				DBG1(DBG_IKE, "assigning virtual IP %H to peer '%Y'", found, id);
 				this->ike_sa->add_virtual_ip(this->ike_sa, FALSE, found);
 				if (!cp)
@@ -372,17 +366,9 @@ METHOD(task_t, build_r, status_t,
 					cp = cp_payload_create_type(CONFIGURATION, CFG_REPLY);
 				}
 				cp->add_attribute(cp, build_vip(found));
-				/* use pool to request other attributes */
-				if (pools->find_first(pools, NULL, (void**)&pool) == NOT_FOUND)
-				{
-					pools->insert_last(pools, pool);
-				}
 				vips->insert_last(vips, found);
-				break;
 			}
-			poolenum->destroy(poolenum);
-
-			if (!found)
+			else
 			{
 				DBG1(DBG_IKE, "no virtual IP found for %H requested by '%Y'",
 					 requested, id);

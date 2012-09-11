@@ -35,13 +35,13 @@ struct attribute_provider_t {
 	/**
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
-	 * @param pool			name of the pool to acquire address from
+	 * @param pools			list of pool names (char*) to acquire from
 	 * @param id			peer ID
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_provider_t *this,
-							   char *pool, identification_t *id,
+							   linked_list_t *pools, identification_t *id,
 							   host_t *requested);
 	/**
 	 * Release a previously acquired address.
