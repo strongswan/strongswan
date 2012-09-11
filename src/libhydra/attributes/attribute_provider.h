@@ -46,13 +46,14 @@ struct attribute_provider_t {
 	/**
 	 * Release a previously acquired address.
 	 *
-	 * @param pool			name of the pool this address was acquired from
+	 * @param pools			list of pool names (char*) to release to
 	 * @param address		address to release
 	 * @param id			peer ID
 	 * @return				TRUE if the address has been released by the provider
 	 */
 	bool (*release_address)(attribute_provider_t *this,
-							char *pool, host_t *address, identification_t *id);
+							linked_list_t *pools, host_t *address,
+							identification_t *id);
 
 	/**
 	 * Create an enumerator over attributes to hand out to a peer.

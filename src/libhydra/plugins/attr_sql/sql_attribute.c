@@ -283,33 +283,44 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	private_sql_attribute_t *this, char *name, host_t *address,
+	private_sql_attribute_t *this, linked_list_t *pools, host_t *address,
 	identification_t *id)
 {
+	enumerator_t *enumerator;
 	u_int pool, timeout;
 	time_t now = time(NULL);
+	bool found = FALSE;
+	char *name;
 
-	pool = get_pool(this, name, &timeout);
-	if (pool)
+	enumerator = pools->create_enumerator(pools);
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		if (this->history)
+		pool = get_pool(this, name, &timeout);
+		if (!pool)
 		{
-			this->db->execute(this->db, NULL,
-				"INSERT INTO leases (address, identity, acquired, released)"
-				" SELECT id, identity, acquired, ? FROM addresses "
-				" WHERE pool = ? AND address = ?",
-				DB_UINT, now, DB_UINT, pool,
-				DB_BLOB, address->get_address(address));
+			continue;
 		}
 		if (this->db->execute(this->db, NULL,
 				"UPDATE addresses SET released = ? WHERE "
 				"pool = ? AND address = ?", DB_UINT, time(NULL),
 				DB_UINT, pool, DB_BLOB, address->get_address(address)) > 0)
 		{
-			return TRUE;
+			if (this->history)
+			{
+				this->db->execute(this->db, NULL,
+					"INSERT INTO leases (address, identity, acquired, released)"
+					" SELECT id, identity, acquired, ? FROM addresses "
+					" WHERE pool = ? AND address = ?",
+					DB_UINT, now, DB_UINT, pool,
+					DB_BLOB, address->get_address(address));
+			}
+			found = TRUE;
+			break;
 		}
 	}
-	return FALSE;
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,

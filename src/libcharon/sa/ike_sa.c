@@ -2080,19 +2080,14 @@ METHOD(ike_sa_t, destroy, void,
 	{
 		if (this->peer_cfg)
 		{
-			enumerator_t *enumerator;
-			char *pool;
+			linked_list_t *pools;
+			identification_t *id;
 
-			enumerator = this->peer_cfg->create_pool_enumerator(this->peer_cfg);
-			while (enumerator->enumerate(enumerator, &pool))
-			{
-				if (hydra->attributes->release_address(hydra->attributes, pool,
-												vip, get_other_eap_id(this)))
-				{
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
+			id = get_other_eap_id(this);
+			pools = linked_list_create_from_enumerator(
+						this->peer_cfg->create_pool_enumerator(this->peer_cfg));
+			hydra->attributes->release_address(hydra->attributes, pools, vip, id);
+			pools->destroy(pools);
 		}
 		vip->destroy(vip);
 	}

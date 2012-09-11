@@ -119,13 +119,25 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	private_dhcp_provider_t *this, char *pool,
+	private_dhcp_provider_t *this, linked_list_t *pools,
 	host_t *address, identification_t *id)
 {
-	if (streq(pool, "dhcp") && address->get_family(address) == AF_INET)
-	{
-		dhcp_transaction_t *transaction;
+	dhcp_transaction_t *transaction;
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	char *pool;
 
+	if (address->get_family(address) != AF_INET)
+	{
+		return FALSE;
+	}
+	enumerator = pools->create_enumerator(pools);
+	while (enumerator->enumerate(enumerator, &pool))
+	{
+		if (!streq(pool, "dhcp"))
+		{
+			continue;
+		}
 		this->mutex->lock(this->mutex);
 		transaction = this->transactions->remove(this->transactions,
 										(void*)hash_id_host(id, address));
@@ -134,10 +146,12 @@ METHOD(attribute_provider_t, release_address, bool,
 		{
 			this->socket->release(this->socket, transaction);
 			transaction->destroy(transaction);
-			return TRUE;
+			found = TRUE;
+			break;
 		}
 	}
-	return FALSE;
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,

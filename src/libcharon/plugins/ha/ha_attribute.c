@@ -232,26 +232,40 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	private_ha_attribute_t *this, char *name, host_t *address,
+	private_ha_attribute_t *this, linked_list_t *pools, host_t *address,
 	identification_t *id)
 {
+	enumerator_t *enumerator;
 	pool_t *pool;
 	int offset;
+	char *name;
 	bool found = FALSE;
 
+	enumerator = pools->create_enumerator(pools);
 	this->mutex->lock(this->mutex);
-	pool = get_pool(this, name);
-	if (pool)
+	while (enumerator->enumerate(enumerator, &name))
 	{
+		pool = get_pool(this, name);
+		if (!pool)
+		{
+			continue;
+		}
+		if (pool->base->get_family(pool->base) != address->get_family(address))
+		{
+			continue;
+		}
 		offset = host2offset(pool, address);
 		if (offset > 0 && offset < pool->size)
 		{
 			pool->mask[offset / 8] &= ~(1 << (offset % 8));
 			DBG1(DBG_CFG, "released address %H to HA pool '%s'", address, name);
 			found = TRUE;
+			break;
 		}
 	}
 	this->mutex->unlock(this->mutex);
+	enumerator->destroy(enumerator);
+
 	return found;
 }
 

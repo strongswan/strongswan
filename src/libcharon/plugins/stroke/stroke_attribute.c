@@ -119,19 +119,31 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_provider_t, release_address, bool,
-	private_stroke_attribute_t *this, char *name, host_t *address,
+	private_stroke_attribute_t *this, linked_list_t *pools, host_t *address,
 	identification_t *id)
 {
+	enumerator_t *enumerator;
 	mem_pool_t *pool;
 	bool found = FALSE;
+	char *name;
 
+	enumerator = pools->create_enumerator(pools);
 	this->lock->read_lock(this->lock);
-	pool = find_pool(this, name);
-	if (pool)
+	while (enumerator->enumerate(enumerator, &name))
 	{
-		found = pool->release_address(pool, address, id);
+		pool = find_pool(this, name);
+		if (pool)
+		{
+			found = pool->release_address(pool, address, id);
+			if (found)
+			{
+				break;
+			}
+		}
 	}
 	this->lock->unlock(this->lock);
+	enumerator->destroy(enumerator);
+
 	return found;
 }
 

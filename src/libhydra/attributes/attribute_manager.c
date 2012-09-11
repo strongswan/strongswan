@@ -84,7 +84,7 @@ METHOD(attribute_manager_t, acquire_address, host_t*,
 }
 
 METHOD(attribute_manager_t, release_address, bool,
-	private_attribute_manager_t *this, char *pool, host_t *address,
+	private_attribute_manager_t *this, linked_list_t *pools, host_t *address,
 	identification_t *id)
 {
 	enumerator_t *enumerator;
@@ -95,7 +95,7 @@ METHOD(attribute_manager_t, release_address, bool,
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->release_address(current, pool, address, id))
+		if (current->release_address(current, pools, address, id))
 		{
 			found = TRUE;
 			break;

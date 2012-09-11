@@ -53,14 +53,14 @@ static void* testing(void *thread)
 		}
 	}
 
-	pools->destroy(pools);
-
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
 		hydra->attributes->release_address(hydra->attributes,
-										   "test", addr[i], id[i]);
+										   pools, addr[i], id[i]);
 	}
+
+	pools->destroy(pools);
 
 	/* cleanup */
 	for (i = 0; i < ALLOCS; i++)
