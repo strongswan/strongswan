@@ -61,13 +61,7 @@ METHOD(diffie_hellman_t, get_my_public_value, void,
 METHOD(diffie_hellman_t, get_shared_secret, status_t,
 	private_tkm_diffie_hellman_t *this, chunk_t *secret)
 {
-	dh_key_type shared_secret;
-	if (ike_dh_get_shared_secret(this->context_id, &shared_secret) != TKM_OK)
-	{
-		return FAILED;
-	}
-
-	sequence_to_chunk(&shared_secret.data[0], shared_secret.size, secret);
+	*secret = chunk_empty;
 	return SUCCESS;
 }
 
