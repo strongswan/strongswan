@@ -178,6 +178,7 @@ static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 				break;
 		}
 	}
+	enumerator->destroy(enumerator);
 }
 
 /**
