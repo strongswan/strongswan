@@ -91,15 +91,8 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 										  this->server, this->peer);
 	if (!method)
 	{
-		if (vendor)
-		{
-			DBG1(DBG_IKE, "loading vendor specific EAP method %d-%d failed",
-				 type, vendor);
-		}
-		else
-		{
-			DBG1(DBG_IKE, "loading %N method failed", eap_type_names, type);
-		}
+		DBG1(DBG_IKE, "loading EAP-%M method failed",
+			 eap_type_get_names, &vendor, type);
 	}
 	return method;
 }
@@ -127,17 +120,9 @@ static void select_method(private_eap_dynamic_t *this)
 			if (inner->find_first(inner, (void*)entry_matches,
 								  NULL, entry) != SUCCESS)
 			{
-				if (entry->vendor)
-				{
-					DBG2(DBG_IKE, "proposed vendor specific EAP method %d-%d "
-						 "not supported by %s, skipped", entry->type,
-						  entry->vendor, who);
-				}
-				else
-				{
-					DBG2(DBG_IKE, "proposed %N method not supported by %s, "
-						 "skipped", eap_type_names, entry->type, who);
-				}
+				DBG2(DBG_IKE, "proposed EAP-%M method not supported "
+					 "by %s, skipped", eap_type_get_names, &entry->vendor,
+					 entry->type, who);
 				free(entry);
 				continue;
 			}
@@ -145,16 +130,8 @@ static void select_method(private_eap_dynamic_t *this)
 		this->method = load_method(this, entry->type, entry->vendor);
 		if (this->method)
 		{
-			if (entry->vendor)
-			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d selected",
-					 entry->type, entry->vendor);
-			}
-			else
-			{
-				DBG1(DBG_IKE, "%N method selected", eap_type_names,
-					 entry->type);
-			}
+			DBG1(DBG_IKE, "EAP-%M method selected",
+				 eap_type_get_names, &entry->vendor, entry->type);
 			free(entry);
 			break;
 		}

@@ -225,7 +225,7 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 		{
 			free(data.ptr);
 			return chunk_empty;
-		}	
+		}
 		*a.ptr |= 0x80;
 	}
 	while (mppe_key->salt == *salt);
@@ -274,7 +274,8 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	if (eap)
 	{
 		data = eap->get_data(eap);
-		DBG3(DBG_CFG, "%N payload %B", eap_type_names, this->type, &data);
+		DBG3(DBG_CFG, "%M payload %B",
+			 eap_type_get_names, &this->vendor, this->type, &data);
 
 		/* fragment data suitable for RADIUS */
 		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
@@ -363,7 +364,8 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 		/* apply EAP method selected by RADIUS server */
 		eap_type = in->get_type(in, &eap_vendor);
 
-		DBG3(DBG_CFG, "%N payload %B", eap_type_names, eap_type, &message);
+		DBG3(DBG_CFG, "EAP-%M payload %B",
+			 eap_type_get_names, &eap_vendor, eap_type, &message);
 
 		if (eap_type == EAP_IDENTITY)
 		{
@@ -648,7 +650,8 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 		destroy(this);
 		return NULL;
 	}
-	DBG1(DBG_IKE, "eap method %N selected", eap_type_names, this->type);
+	DBG1(DBG_IKE, "eap method %M selected",
+		 eap_type_get_names, &this->vendor, this->type);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
@@ -656,4 +659,3 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 
 	return &this->public;
 }
-
