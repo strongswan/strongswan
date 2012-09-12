@@ -1157,7 +1157,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	memset(&request, 0, sizeof(request));
 
 	DBG2(DBG_KNL, "adding SAD entry with SPI %.8x and reqid {%u}  (mark "
-				  "%u/0x%8x)", ntohl(spi), reqid, mark.value, mark.mask);
+				  "%u/0x%08x)", ntohl(spi), reqid, mark.value, mark.mask);
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -1490,7 +1490,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		if (mark.value)
 		{
 			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x  "
-						  "(mark %u/0x%8x)", ntohl(spi), mark.value, mark.mask);
+						  "(mark %u/0x%08x)", ntohl(spi), mark.value, mark.mask);
 		}
 		else
 		{
@@ -1610,7 +1610,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%8x)",
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x  (mark %u/0x%08x)",
 				   ntohl(spi), mark.value, mark.mask);
 
 	hdr = (struct nlmsghdr*)request;
@@ -1661,7 +1661,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 					if (mark.value)
 					{
 						DBG1(DBG_KNL, "querying SAD entry with SPI %.8x  "
-									  "(mark %u/0x%8x) failed: %s (%d)",
+									  "(mark %u/0x%08x) failed: %s (%d)",
 									   ntohl(spi), mark.value, mark.mask,
 									   strerror(-err->error), -err->error);
 					}
@@ -1713,7 +1713,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%8x)",
+	DBG2(DBG_KNL, "deleting SAD entry with SPI %.8x  (mark %u/0x%08x)",
 				   ntohl(spi), mark.value, mark.mask);
 
 	hdr = (struct nlmsghdr*)request;
@@ -1757,7 +1757,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 			if (mark.value)
 			{
 				DBG1(DBG_KNL, "unable to delete SAD entry with SPI %.8x "
-					 "(mark %u/0x%8x)", ntohl(spi), mark.value, mark.mask);
+					 "(mark %u/0x%08x)", ntohl(spi), mark.value, mark.mask);
 			}
 			else
 			{
@@ -2240,7 +2240,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (current)
 	{
 		/* use existing policy */
-		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%8x) "
+		DBG2(DBG_KNL, "policy %R === %R %N  (mark %u/0x%08x) "
 					  "already exists, increasing refcount",
 					   src_ts, dst_ts, policy_dir_names, direction,
 					   mark.value, mark.mask);
@@ -2287,7 +2287,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		return SUCCESS;
 	}
 
-	DBG2(DBG_KNL, "%s policy %R === %R %N  (mark %u/0x%8x)",
+	DBG2(DBG_KNL, "%s policy %R === %R %N  (mark %u/0x%08x)",
 				   found ? "updating" : "adding", src_ts, dst_ts,
 				   policy_dir_names, direction, mark.value, mark.mask);
 
@@ -2314,7 +2314,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying policy %R === %R %N  (mark %u/0x%8x)",
+	DBG2(DBG_KNL, "querying policy %R === %R %N  (mark %u/0x%08x)",
 				   src_ts, dst_ts, policy_dir_names, direction,
 				   mark.value, mark.mask);
 
@@ -2411,7 +2411,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	bool is_installed = TRUE;
 	u_int32_t priority;
 
-	DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%8x)",
+	DBG2(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%08x)",
 				   src_ts, dst_ts, policy_dir_names, direction,
 				   mark.value, mark.mask);
 
@@ -2428,7 +2428,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	{
 		if (mark.value)
 		{
-			DBG1(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%8x) "
+			DBG1(DBG_KNL, "deleting policy %R === %R %N  (mark %u/0x%08x) "
 						  "failed, not found", src_ts, dst_ts, policy_dir_names,
 						   direction, mark.value, mark.mask);
 		}
@@ -2474,7 +2474,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			return SUCCESS;
 		}
 
-		DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%8x)",
+		DBG2(DBG_KNL, "updating policy %R === %R %N  (mark %u/0x%08x)",
 					   src_ts, dst_ts, policy_dir_names, direction,
 					   mark.value, mark.mask);
 
@@ -2540,7 +2540,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		if (mark.value)
 		{
 			DBG1(DBG_KNL, "unable to delete policy %R === %R %N  "
-						  "(mark %u/0x%8x)", src_ts, dst_ts, policy_dir_names,
+						  "(mark %u/0x%08x)", src_ts, dst_ts, policy_dir_names,
 						   direction, mark.value, mark.mask);
 		}
 		else
