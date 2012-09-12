@@ -268,22 +268,28 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			port = sep + 1;
 		}
 
-		proto = getprotobyname(value);
-		if (proto)
+		if (streq(value, "%any"))
 		{
-			end->protocol = proto->p_proto;
+			end->protocol = 0;
 		}
 		else
 		{
-			p = strtol(value, &endptr, 0);
-			if ((*value && *endptr) || p < 0 || p > 0xff)
+			proto = getprotobyname(value);
+			if (proto)
 			{
-				DBG1(DBG_APP, "# bad protocol: %s=%s", name, value);
-				goto err;
+				end->protocol = proto->p_proto;
 			}
-			end->protocol = (u_int8_t)p;
+			else
+			{
+				p = strtol(value, &endptr, 0);
+				if ((*value && *endptr) || p < 0 || p > 0xff)
+				{
+					DBG1(DBG_APP, "# bad protocol: %s=%s", name, value);
+					goto err;
+				}
+				end->protocol = (u_int8_t)p;
+			}
 		}
-
 		if (streq(port, "%any"))
 		{
 			end->port = 0;
