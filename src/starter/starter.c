@@ -327,8 +327,8 @@ static bool check_pid(char *pid_file)
 
 static void usage(char *name)
 {
-	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
-			"[--debug|--debug-more|--debug-all]\n");
+	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>]\n"
+			"               [--debug|--debug-more|--debug-all|--nolog]\n");
 	exit(LSB_RC_INVALID_ARGUMENT);
 }
 
@@ -371,6 +371,10 @@ int main (int argc, char **argv)
 		else if (streq(argv[i], "--debug-all"))
 		{
 			current_loglevel = 4;
+		}
+		else if (streq(argv[i], "--nolog"))
+		{
+			current_loglevel = 0;
 		}
 		else if (streq(argv[i], "--nofork"))
 		{
