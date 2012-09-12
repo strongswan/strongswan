@@ -233,6 +233,9 @@ defines the identity of the AAA backend used during IKEv2 EAP authentication.
 This is required if the EAP client uses a method that verifies the server
 identity (such as EAP-TLS), but it does not match the IKEv2 gateway identity.
 .TP
+.BR aggressive " = yes | " no
+whether to use IKEv1 Aggressive or Main Mode (the default).
+.TP
 .BR also " = <name>"
 includes conn section
 .BR <name> .
@@ -280,12 +283,12 @@ loads a connection without starting it.
 loads a connection and installs kernel traps. If traffic is detected between
 .B leftsubnet
 and
-.B rightsubnet
-, a connection is established.
+.BR rightsubnet ,
+a connection is established.
 .B start
 loads a connection and brings it up immediately.
 .B ignore
-ignores the connection. This is equal to delete a connection from the config
+ignores the connection. This is equal to deleting a connection from the config
 file.
 Relevant only locally, other end need not agree on it.
 .TP
@@ -353,7 +356,7 @@ defines the timeout interval, after which a CHILD_SA is closed if it did
 not send or receive any traffic.
 .TP
 .BR eap_identity " = <id>"
-defines the identity the client uses to reply to a EAP Identity request.
+defines the identity the client uses to reply to an EAP Identity request.
 If defined on the EAP server, the defined identity will be used as peer
 identity during EAP authentication. The special value
 .B %identity
@@ -410,7 +413,7 @@ In IKEv2, multiple algorithms and proposals may be included, such as
 aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
 .br
 Defaults to
-.B aes128-sha1-modp2048,3des-sha1-modp1536 .
+.BR aes128-sha1-modp2048,3des-sha1-modp1536 .
 The daemon adds its extensive default proposal to this
 default or the configured value.  To restrict it to the configured proposal an
 exclamation mark
@@ -421,7 +424,7 @@ can be added at the end.
 As a responder the daemon accepts the first supported proposal received from
 the peer.  In order to restrict a responder to only accept specific cipher
 suites, the strict flag
-.BR ( ! ,
+.RB ( ! ,
 exclamation mark) can be used, e.g: aes256-sha512-modp4096!
 .TP
 .BR ikelifetime " = " 3h " | <time>"
@@ -438,8 +441,8 @@ Acceptable values are
 .BR no .
 .TP
 .BR keyexchange " = " ike " | ikev1 | ikev2"
-method of key exchange;
-which protocol should be used to initialize the connection. Connections marked with
+which key exchange protocol should be used to initiate the connection.
+Connections marked with
 .B ike
 use IKEv2 when initiating, but accept any protocol version when responding.
 .TP
@@ -462,9 +465,10 @@ the IP address of the left participant's public-network interface
 or one of several magic values.
 The value
 .B %any
-for the local endpoint signifies an address to be filled in (by automatic
-keying) during negotiation. If the local peer initiates the connection setup
-the routing table will be queried to determine the correct local IP address.
+(the default) for the local endpoint signifies an address to be filled in (by
+automatic keying) during negotiation. If the local peer initiates the
+connection setup the routing table will be queried to determine the correct
+local IP address.
 In case the local peer is responding to a connection setup then any IP address
 that is assigned to a local interface will be accepted.
 
@@ -513,7 +517,7 @@ or a key strength definition (for example
 or
 .BR rsa-2048-ecdsa-256-sha256-sha384-sha512 ).
 For
-.B eap ,
+.BR eap ,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
 .BR eap-gtc ,
@@ -548,13 +552,15 @@ Same as
 but defines an additional authentication exchange. In IKEv1, only XAuth can be
 used in the second authentication round. IKEv2 supports multiple complete
 authentication rounds using "Multiple Authentication Exchanges" defined
-in RFC4739. This allows, for example, separated authentication
+in RFC 4739. This allows, for example, separated authentication
 of host and user.
 .TP
 .BR leftca " = <issuer dn> | %same"
 the distinguished name of a certificate authority which is required to
 lie in the trust path going from the left participant's certificate up
 to the root certification authority.
+.B %same
+means that the value configured for the right participant should be reused.
 .TP
 .BR leftca2 " = <issuer dn> | %same"
 Same as
@@ -569,9 +575,7 @@ are accepted. By default
 .B leftcert
 sets
 .B leftid
-to the distinguished name of the certificate's subject and
-.B leftca
-to the distinguished name of the certificate's issuer.
+to the distinguished name of the certificate's subject.
 The left participant's ID can be overridden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
@@ -588,12 +592,10 @@ OIDs are specified using the numerical dotted representation.
 .TP
 .BR leftdns " = <servers>"
 Comma separated list of DNS server addresses to exchange as configuration
-attributes. On the initiator, a server is a fixed IPv4 / IPv6 address, or
-.B %config4
-/
-.B %config6
+attributes. On the initiator, a server is a fixed IPv4/IPv6 address, or
+.BR %config4 / %config6
 to request attributes without an address. On the responder,
-only fixed IPv4 /IPv6 addresses are allowed and define DNS servers assigned
+only fixed IPv4/IPv6 addresses are allowed and define DNS servers assigned
 to the client.
 .TP
 .BR leftfirewall " = yes | " no
@@ -657,7 +659,9 @@ defaults to
 or the subject of the certificate configured with
 .BR leftcert .
 Can be an IP address, a fully-qualified domain name, an email address, or
-a keyid.
+a keyid. If
+.B leftcert
+is configured the identity has to be confirmed by the certificate.
 .TP
 .BR leftid2 " = <id>"
 identity to use for a second authentication for the left participant
@@ -669,7 +673,7 @@ UDP port the left participant uses for IKE communication.
 If unspecified, port 500 is used with the port floating
 to 4500 if a NAT is detected or MOBIKE is enabled. Specifying a local IKE port
 different from the default additionally requires a socket implementation that
-listens to this port.
+listens on this port.
 .TP
 .BR leftprotoport " = <protocol>/<port>"
 restrict the traffic selector to a single protocol and/or port.
@@ -679,14 +683,19 @@ or
 .B leftprotoport=6/80
 or
 .B leftprotoport=udp
+or
+.BR leftprotoport=/53 .
+Instead of omitting either value
+.B %any
+can be used to the same effect, e.g.
+.B leftprotoport=udp/%any
+or
+.BR leftprotoport=%any/53 .
 .TP
-.BR leftrsasigkey " = " %cert " | <raw rsa public key> | <path to public key>"
+.BR leftrsasigkey " = <raw rsa public key> | <path to public key>"
 the left participant's public key for RSA signature authentication, in RFC 2537
 format using hex (0x prefix) or base64 (0s prefix) encoding. Also accepted is
 the path to a file containing the public key in PEM or DER encoding.
-The default value
-.B %cert
-means that the key is extracted from a certificate.
 .TP
 .BR leftsendcert " = never | no | " ifasked " | always | yes"
 Accepted values are
@@ -709,7 +718,13 @@ virtual IP. If the value is one of the synonyms
 .BR %modeconfig ,
 or
 .BR %modecfg ,
-an address (from the tunnel address family) is requested from the peer.
+an address (from the tunnel address family) is requested from the peer. With
+.B %config4
+and
+.B %config6
+an address of the given address family will be requested explicitly.
+If an IP address is configured, it will be requested from the responder,
+which is free to respond with a different address.
 .TP
 .BR rightsourceip " = %config | <network>/<netmask> | %poolname"
 Comma separated list of internal source IPs to use in a tunnel for the remote
@@ -1008,7 +1023,7 @@ defines an alternative OCSP URI.
 .TP
 .BR certuribase " = <uri>"
 defines the base URI for the Hash and URL feature supported by IKEv2.
-Instead of exchanging complete certificates, IKEv2 allows to send an URI
+Instead of exchanging complete certificates, IKEv2 allows one to send an URI
 that resolves to the DER encoded certificate. The certificate URIs are built
 by appending the SHA1 hash of the DER encoded certificates to this base URI.
 .SH "CONFIG SECTIONS"
@@ -1024,44 +1039,11 @@ names in a
 .B setup
 section are:
 .TP
-.BR strictcrlpolicy " = yes | ifuri | " no
-defines if a fresh CRL must be available in order for the peer authentication
-based on RSA signatures to succeed.
-IKEv2 additionally recognizes
-.B ifuri
-which reverts to
-.B yes
-if at least one CRL URI is defined and to
-.B no
-if no URI is known.
-.TP
-.BR uniqueids " = " yes " | no | never | replace | keep"
-whether a particular participant ID should be kept unique,
-with any new IKE_SA using an ID deemed to replace all old ones using that ID;
-acceptable values are
-.BR yes ,
-(the default)
-.B no
-and
-.BR never .
-Participant IDs normally \fIare\fR unique, so a new IKE_SA using the same ID is
-almost invariably intended to replace an old one. The difference between
-.B no
-and
-.B never
-is that the daemon will replace old IKE_SAs when receving an INITIAL_CONTACT
-notify when the option is
-.B no
-but will ignore these notifies if
-.B never
-is configured.
-The daemon also accepts the value
-.B replace
-which is identical to
-.B yes
-and the value
-.B keep
-to reject new IKE_SA setups and keep the duplicate established earlier.
+.BR cachecrls " = yes | " no
+if enabled, certificate revocation lists (CRLs) fetched via HTTP or LDAP will
+be cached in
+.I /etc/ipsec.d/crls/
+under a unique file name derived from the certification authority's public key.
 .TP
 .BR charondebug " = <debug list>"
 how much charon debugging output should be logged.
@@ -1078,6 +1060,45 @@ is set to
 .B 1
 for all types.  For more flexibility see LOGGER CONFIGURATION in
 .IR strongswan.conf (5).
+.TP
+.BR strictcrlpolicy " = yes | ifuri | " no
+defines if a fresh CRL must be available in order for the peer authentication
+based on RSA signatures to succeed.
+IKEv2 additionally recognizes
+.B ifuri
+which reverts to
+.B yes
+if at least one CRL URI is defined and to
+.B no
+if no URI is known.
+.TP
+.BR uniqueids " = " yes " | no | never | replace | keep"
+whether a particular participant ID should be kept unique,
+with any new IKE_SA using an ID deemed to replace all old ones using that ID;
+acceptable values are
+.B yes
+(the default),
+.B no
+and
+.BR never .
+Participant IDs normally \fIare\fR unique, so a new IKE_SA using the same ID is
+almost invariably intended to replace an old one. The difference between
+.B no
+and
+.B never
+is that the daemon will replace old IKE_SAs when receiving an INITIAL_CONTACT
+notify if the option is
+.B no
+but will ignore these notifies if
+.B never
+is configured.
+The daemon also accepts the value
+.B replace
+which is identical to
+.B yes
+and the value
+.B keep
+to reject new IKE_SA setups and keep the duplicate established earlier.
 
 .SH SA EXPIRY/REKEY
 The IKE SAs and IPsec SAs negotiated by the daemon can be configured to expire
