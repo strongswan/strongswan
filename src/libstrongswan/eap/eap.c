@@ -114,24 +114,18 @@ enum_name_t* eap_type_get_names(u_int32_t *vendor)
  */
 eap_type_t eap_type_from_string(char *name, u_int32_t *vendor)
 {
+	enum_name_t *enum_name;
 	int i, type;
 	static struct {
 		char *name;
 		eap_type_t type;
 	} types[] = {
 		{"identity",	EAP_IDENTITY},
-		{"md5",			EAP_MD5},
-		{"otp",			EAP_OTP},
-		{"gtc",			EAP_GTC},
-		{"tls",			EAP_TLS},
-		{"ttls",		EAP_TTLS},
-		{"sim",			EAP_SIM},
-		{"aka",			EAP_AKA},
-		{"peap",		EAP_PEAP},
-		{"mschapv2",	EAP_MSCHAPV2},
-		{"tnc",			EAP_TNC},
 		{"dynamic",		EAP_DYNAMIC},
 		{"radius",		EAP_RADIUS},
+	};
+	static u_int32_t vendors[] = {
+		PEN_IETF,
 	};
 
 	if (strneq(name, "eap-", strlen("eap-")))
@@ -146,6 +140,21 @@ eap_type_t eap_type_from_string(char *name, u_int32_t *vendor)
 		{
 			*vendor = 0;
 			return types[i].type;
+		}
+	}
+
+	/* check IETF and vendor specific names */
+	for (i = 0; i < countof(vendors); i++)
+	{
+		enum_name = eap_type_get_names(&vendors[i]);
+		if (enum_name != eap_vendor_names_unknown)
+		{
+			type = enum_from_name(enum_name, name);
+			if (type != -1)
+			{
+				*vendor = vendors[i];
+				return type;
+			}
 		}
 	}
 
