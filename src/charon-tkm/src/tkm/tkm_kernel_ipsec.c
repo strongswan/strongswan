@@ -39,6 +39,11 @@ struct private_tkm_kernel_ipsec_t {
 	tkm_kernel_ipsec_t public;
 
 	/**
+	 * RNG used for SPI generation.
+	 */
+	rng_t *rng;
+
+	/**
 	 * Local CHILD SA SPI.
 	 */
 	uint32_t esp_spi_loc;
@@ -50,9 +55,9 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
 	DBG1(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-	/* fake SPI for now */
-	*spi = 92726226;
-	return SUCCESS;
+	const bool result = this->rng->get_bytes(this->rng, sizeof(u_int32_t),
+											 (u_int8_t *)spi);
+	return result ? SUCCESS : FAILED;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
@@ -209,6 +214,7 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_tkm_kernel_ipsec_t *this)
 {
+	DESTROY_IF(this->rng);
 	free(this);
 }
 
@@ -238,8 +244,16 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
+		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.esp_spi_loc = 0,
 	);
+
+	if (!this->rng)
+	{
+		DBG1(DBG_KNL, "unable to create RNG");
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 }

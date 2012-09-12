@@ -28,7 +28,6 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <plugins/kernel_netlink/kernel_netlink_net.h>
-
 #include <library.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
@@ -288,6 +287,7 @@ int main(int argc, char *argv[])
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
 		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+			PLUGIN_DEPENDS(RNG, RNG_WEAK),
 		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 
