@@ -93,6 +93,22 @@ ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_TNC,
 	"DYN");
 ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
+ENUM(eap_vendor_names_unknown, 1, 0);
+
+/*
+ * See header
+ */
+enum_name_t* eap_type_get_names(u_int32_t *vendor)
+{
+	switch (*vendor)
+	{
+		case PEN_IETF:
+			return eap_type_short_names;
+		default:
+			return eap_vendor_names_unknown;
+	}
+}
+
 /*
  * See header
  */

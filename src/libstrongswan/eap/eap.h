@@ -27,6 +27,7 @@ typedef enum eap_code_t eap_code_t;
 typedef enum eap_type_t eap_type_t;
 
 #include <library.h>
+#include <pen/pen.h>
 
 /**
  * EAP code, type of an EAP message
@@ -83,6 +84,15 @@ extern enum_name_t *eap_type_names;
  * short string enum names for eap_type_t.
  */
 extern enum_name_t *eap_type_short_names;
+
+/**
+ * Get the enum names for a specific vendor.
+ *
+ * This function is an enum_name_get_t, hence takes a pointer as argument.
+ *
+ * @param vendor		pointer containing the vendor ID to get enum names for
+ */
+enum_name_t* eap_type_get_names(u_int32_t *vendor);
 
 /**
  * EAP packet format
