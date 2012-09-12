@@ -172,6 +172,11 @@ then
     echo -n " --enable-eap-radius" >> $INSTALLSHELL
 fi
 
+if [ "$USE_EAP_DYNAMIC" = "yes" ]
+then
+    echo -n " --enable-eap-dynamic" >> $INSTALLSHELL
+fi
+
 if [ "$USE_EAP_TLS" = "yes" ]
 then
     echo -n " --enable-eap-tls" >> $INSTALLSHELL
