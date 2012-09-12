@@ -86,6 +86,16 @@ extern enum_name_t *eap_type_names;
 extern enum_name_t *eap_type_short_names;
 
 /**
+ * Vendor specific types. Vendors itself are defined as pen_t.
+ */
+enum eap_vendor_type_t {
+	/** Microsoft Statement of Health */
+	EAP_MS_SOH = 0x21,
+	/** Microsoft PEAP Capabilities */
+	EAP_MS_CAPABILITES = 0x22,
+};
+
+/**
  * Get the enum names for a specific vendor.
  *
  * This function is an enum_name_get_t, hence takes a pointer as argument.
