@@ -513,7 +513,7 @@ METHOD(traffic_selector_t, is_dynamic, bool,
 METHOD(traffic_selector_t, set_address, void,
 	private_traffic_selector_t *this, host_t *host)
 {
-	if (this->dynamic)
+	if (is_host(this, NULL))
 	{
 		this->type = host->get_family(host) == AF_INET ?
 				TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
