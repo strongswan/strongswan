@@ -268,7 +268,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 static int get_new(private_mem_pool_t *this, identification_t *id)
 {
 	entry_t *entry;
-	int offset = 0;
+	uintptr_t offset = 0;
 
 	if (this->unused < this->size)
 	{
@@ -294,8 +294,7 @@ static int get_reassigned(private_mem_pool_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
-	uintptr_t current;
-	int offset = 0;
+	uintptr_t current, offset = 0;
 
 	enumerator = this->leases->create_enumerator(this->leases);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
