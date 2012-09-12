@@ -75,12 +75,13 @@ struct private_eap_ttls_server_t {
 static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 {
 	char *eap_type_str;
+	u_int32_t vendor;
 	eap_type_t type;
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 									"%s.plugins.eap-ttls.phase2_method", "md5",
 									charon->name);
-	type = eap_type_from_string(eap_type_str);
+	type = eap_type_from_string(eap_type_str, &vendor);
 	if (type == 0)
 	{
 		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);

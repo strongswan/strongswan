@@ -568,19 +568,19 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	}
 	else if (strneq(auth, "eap", 3))
 	{
-		eap_vendor_type_t *type;
+		eap_type_t type;
+		u_int32_t vendor;
 
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
 
-		type = eap_vendor_type_from_string(auth);
+		type = eap_type_from_string(auth, &vendor);
 		if (type)
 		{
-			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type->type);
-			if (type->vendor)
+			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);
+			if (vendor)
 			{
-				cfg->add(cfg, AUTH_RULE_EAP_VENDOR, type->vendor);
+				cfg->add(cfg, AUTH_RULE_EAP_VENDOR, vendor);
 			}
-			free(type);
 		}
 
 		if (msg->add_conn.eap_identity)

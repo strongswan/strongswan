@@ -57,6 +57,11 @@ struct private_tnc_pdp_t {
 	eap_type_t type;
 
 	/**
+	 * EAP method vendor ID
+	 */
+	u_int32_t vendor;
+
+	/**
 	 * IPv4 RADIUS socket
 	 */
 	int ipv4;
@@ -372,7 +377,7 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			eap_identity = chunk_create(message.ptr + 5, message.len - 5);
 			peer = identification_create_from_data(eap_identity);
 			method = charon->eap->create_instance(charon->eap, this->type,
-										0, EAP_SERVER, this->server, peer);
+								this->vendor, EAP_SERVER, this->server, peer);
 			if (!method)
 			{
 				peer->destroy(peer);
@@ -573,6 +578,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 {
 	private_tnc_pdp_t *this;
 	char *secret, *server, *eap_type_str;
+	u_int32_t vendor;
 
 	INIT(this,
 		.public = {
@@ -635,7 +641,7 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 						"%s.plugins.tnc-pdp.method", "ttls", charon->name);
-	this->type = eap_type_from_string(eap_type_str);
+	this->type = eap_type_from_string(eap_type_str, &this->vendor);
 	if (this->type == 0)
 	{
 		DBG1(DBG_CFG, "unrecognized eap method \"%s\"", eap_type_str);

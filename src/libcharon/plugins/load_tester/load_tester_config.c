@@ -121,6 +121,7 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 	identification_t *id;
 	auth_class_t class;
 	eap_type_t type;
+	u_int32_t vendor;
 	char buf[128];
 	int rnd = 0;
 
@@ -174,10 +175,14 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 			class = AUTH_CLASS_EAP;
 			if (*(str + strlen("eap")) == '-')
 			{
-				type = eap_type_from_string(str + strlen("eap-"));
+				type = eap_type_from_string(str, &vendor);
 				if (type)
 				{
 					auth->add(auth, AUTH_RULE_EAP_TYPE, type);
+					if (vendor)
+					{
+						auth->add(auth, AUTH_RULE_EAP_VENDOR, vendor);
+					}
 				}
 			}
 			if (!id)

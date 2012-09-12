@@ -88,20 +88,21 @@ struct private_eap_peap_server_t {
 static status_t start_phase2_auth(private_eap_peap_server_t *this)
 {
 	char *eap_type_str;
+	u_int32_t vendor;
 	eap_type_t type;
 
 	eap_type_str = lib->settings->get_str(lib->settings,
 							"%s.plugins.eap-peap.phase2_method", "mschapv2",
 							charon->name);
-	type = eap_type_from_string(eap_type_str);
+	type = eap_type_from_string(eap_type_str, &vendor);
 	if (type == 0)
 	{
 		DBG1(DBG_IKE, "unrecognized phase2 method \"%s\"", eap_type_str);
 		return FAILED;
 	}
 	DBG1(DBG_IKE, "phase2 method %N selected", eap_type_names, type);
-		this->ph2_method = charon->eap->create_instance(charon->eap, type, 0,
-								EAP_SERVER, this->server, this->peer);
+	this->ph2_method = charon->eap->create_instance(charon->eap, type,
+								vendor, EAP_SERVER, this->server, this->peer);
 	if (this->ph2_method == NULL)
 	{
 		DBG1(DBG_IKE, "%N method not available", eap_type_names, type);

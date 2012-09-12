@@ -96,9 +96,9 @@ ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 /*
  * See header
  */
-eap_type_t eap_type_from_string(char *name)
+eap_type_t eap_type_from_string(char *name, u_int32_t *vendor)
 {
-	int i;
+	int i, type;
 	static struct {
 		char *name;
 		eap_type_t type;
@@ -118,65 +118,31 @@ eap_type_t eap_type_from_string(char *name)
 		{"radius",		EAP_RADIUS},
 	};
 
+	if (strneq(name, "eap-", strlen("eap-")))
+	{	/* skip 'eap-' at the beginning */
+		name += strlen("eap-");
+	}
+
+	/* check special values not found in enum_names */
 	for (i = 0; i < countof(types); i++)
 	{
 		if (strcaseeq(name, types[i].name))
 		{
+			*vendor = 0;
 			return types[i].type;
 		}
 	}
-	return 0;
-}
 
-/*
- * See header
- */
-eap_vendor_type_t *eap_vendor_type_from_string(char *str)
-{
-	enumerator_t *enumerator;
-	eap_vendor_type_t *result = NULL;
-	eap_type_t type = 0;
-	u_int32_t vendor = 0;
-	char *part, *end;
-
-	/* parse EAP method string of the form: [eap-]type[-vendor] */
-	enumerator = enumerator_create_token(str, "-", " ");
-	while (enumerator->enumerate(enumerator, &part))
+	/* parse numerical IDs */
+	switch (sscanf(name, "%d-%d", &type, &i))
 	{
-		if (!type)
-		{
-			if (streq(part, "eap"))
-			{	/* skip 'eap' at the beginning */
-				continue;
-			}
-			type = eap_type_from_string(part);
-			if (!type)
-			{
-				type = strtoul(part, &end, 0);
-				if (*end != '\0' || errno)
-				{
-					DBG1(DBG_LIB, "unknown or invalid EAP method: %s", part);
-					break;
-				}
-			}
-			continue;
-		}
-		vendor = strtoul(part, &end, 0);
-		if (*end != '\0' || errno)
-		{
-			DBG1(DBG_LIB, "invalid EAP vendor: %s", part);
-			type = 0;
-		}
-		break;
+		case 1: /* IETF type */
+			*vendor = 0;
+			return type;
+		case 2: /* type-vendor */
+			*vendor = i;
+			return type;
+		default:
+			return 0;
 	}
-	enumerator->destroy(enumerator);
-
-	if (type)
-	{
-		INIT(result,
-			.type = type,
-			.vendor = vendor,
-		);
-	}
-	return result;
 }

@@ -25,7 +25,6 @@
 
 typedef enum eap_code_t eap_code_t;
 typedef enum eap_type_t eap_type_t;
-typedef struct eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
 
@@ -86,22 +85,6 @@ extern enum_name_t *eap_type_names;
 extern enum_name_t *eap_type_short_names;
 
 /**
- * Struct that stores EAP type and vendor ID
- */
-struct eap_vendor_type_t {
-
-	/**
-	 * EAP type
-	 */
-	eap_type_t type;
-
-	/**
-	 * Vendor Id
-	 */
-	u_int32_t vendor;
-};
-
-/**
  * EAP packet format
  */
 typedef struct __attribute__((packed)) {
@@ -113,19 +96,16 @@ typedef struct __attribute__((packed)) {
 } eap_packet_t;
 
 /**
- * Lookup the EAP method type from a string.
+ * Lookup the EAP method type/vendor from a string.
  *
- * @param name		EAP method name (such as "md5", "aka")
+ * The string may optionally have a leading "eap-" prefix. If the string is
+ * unknown, it is interpreted numerically, either as a single IETF number
+ * or a "type-vendor" number pair.
+ *
+ * @param name		EAP method name ("eap-md5", "aka", "ms-soh", "33-311")
+ * @param vendor	vendor ID to return
  * @return			method type, 0 if unknown
  */
-eap_type_t eap_type_from_string(char *name);
-
-/**
- * Parse a string of the form [eap-]type[-vendor].
- *
- * @param str		EAP method string
- * @return			parsed type (gets allocated), NULL if unknown or failed
- */
-eap_vendor_type_t *eap_vendor_type_from_string(char *str);
+eap_type_t eap_type_from_string(char *name, u_int32_t *vendor);
 
 #endif /** EAP_H_ @}*/
