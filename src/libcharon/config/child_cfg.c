@@ -261,7 +261,7 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 		{
 			/* we make a copy of the TS, this allows us to update dynamic TS' */
 			selected = ts1->clone(ts1);
-			if (host)
+			if (host && selected->is_dynamic(selected))
 			{
 				selected->set_address(selected, host);
 			}
@@ -280,7 +280,7 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 		{
 			/* we make a copy of the TS, as we have to update dynamic TS' */
 			ts1 = ts1->clone(ts1);
-			if (host)
+			if (host && ts1->is_dynamic(ts1))
 			{
 				ts1->set_address(ts1, host);
 			}
