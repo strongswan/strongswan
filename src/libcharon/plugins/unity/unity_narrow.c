@@ -39,9 +39,10 @@ struct private_unity_narrow_t {
  * Narrow TS as initiator to Unity Split-Include/Local-LAN
  */
 static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
-							 linked_list_t *remote)
+							 child_cfg_t *cfg, linked_list_t *remote)
 {
 	traffic_selector_t *current, *orig = NULL;
+	linked_list_t *received, *selected;
 	enumerator_t *enumerator;
 
 	enumerator = this->handler->create_include_enumerator(this->handler,
@@ -55,11 +56,16 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 				break;
 			}
 		}
-		current = orig->get_subset(orig, current);
-		if (current)
+		/* narrow received Unity TS with the child configuration */
+		received = linked_list_create();
+		received->insert_last(received, current);
+		selected = cfg->get_traffic_selectors(cfg, FALSE, received, NULL);
+		while (selected->remove_first(selected, (void**)&current) == SUCCESS)
 		{
 			remote->insert_last(remote, current);
 		}
+		selected->destroy(selected);
+		received->destroy(received);
 	}
 	enumerator->destroy(enumerator);
 	if (orig)
@@ -125,7 +131,8 @@ METHOD(listener_t, narrow, bool,
 				narrow_pre(remote);
 				break;
 			case NARROW_INITIATOR_POST_AUTH:
-				narrow_initiator(this, ike_sa, remote);
+				narrow_initiator(this, ike_sa,
+								 child_sa->get_config(child_sa), remote);
 				break;
 			case NARROW_RESPONDER:
 				narrow_pre(local);
