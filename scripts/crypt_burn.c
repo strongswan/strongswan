@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 		limit = atoi(argv[2]);
 	}
 
-	token = proposal_get_token(argv[1], strlen(argv[1]));
+	token = proposal_get_token(argv[1]);
 	if (!token)
 	{
 		fprintf(stderr, "algorithm '%s' unknown!\n", argv[1]);

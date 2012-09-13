@@ -62,9 +62,8 @@ struct proposal_token {
  * Returns a proposal token for the specified string if a token exists.
  *
  * @param str		the string containing the name of the token
- * @param len		the length of the string
  * @return			proposal_tolen if found otherwise NULL
  */
-const proposal_token_t* proposal_get_token(const char *str, u_int len);
+const proposal_token_t* proposal_get_token(const char *str);
 
 #endif /** PROPOSAL_KEYWORDS_H_ @}*/

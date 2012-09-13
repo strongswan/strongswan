@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2012 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -21,7 +21,7 @@
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <utils/lexparser.h>
+
 #include <crypto/transform.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
@@ -560,14 +560,14 @@ static void check_proposal(private_proposal_t *this)
 /**
  * add a algorithm identified by a string to the proposal.
  */
-static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
+static bool add_string_algo(private_proposal_t *this, const char *alg)
 {
-	const proposal_token_t *token = proposal_get_token(alg.ptr, alg.len);
+	const proposal_token_t *token = proposal_get_token(alg);
 
 	if (token == NULL)
 	{
-		DBG1(DBG_CFG, "algorithm '%.*s' not recognized", alg.len, alg.ptr);
-		return FAILED;
+		DBG1(DBG_CFG, "algorithm '%s' not recognized", alg);
+		return FALSE;
 	}
 
 	add_algorithm(this, token->type, token->algorithm, token->keysize);
@@ -610,7 +610,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
 		}
 	}
-	return SUCCESS;
+	return TRUE;
 }
 
 /**
@@ -901,28 +901,27 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
 {
-	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);
-	chunk_t string = {(void*)algs, strlen(algs)};
-	chunk_t alg;
-	status_t status = SUCCESS;
+	private_proposal_t *this;
+	enumerator_t *enumerator;
+	bool failed = TRUE;
+	char *alg;
 
-	eat_whitespace(&string);
-	if (string.len < 1)
-	{
-		destroy(this);
-		return NULL;
-	}
+	this = (private_proposal_t*)proposal_create(protocol, 0);
 
 	/* get all tokens, separated by '-' */
-	while (extract_token(&alg, '-', &string))
+	enumerator = enumerator_create_token(algs, "-", " ");
+	while (enumerator->enumerate(enumerator, &alg))
 	{
-		status |= add_string_algo(this, alg);
+		if (!add_string_algo(this, alg))
+		{
+			failed = TRUE;
+			break;
+		}
+		failed = FALSE;
 	}
-	if (string.len)
-	{
-		status |= add_string_algo(this, string);
-	}
-	if (status != SUCCESS)
+	enumerator->destroy(enumerator);
+
+	if (failed)
 	{
 		destroy(this);
 		return NULL;

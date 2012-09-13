@@ -91,7 +91,7 @@ static linked_list_t* load_proposals(private_custom_proposal_t *this,
 			alg = strtoul(value, &end, 10);
 			if (end == value || errno)
 			{
-				token = proposal_get_token(value, strlen(value));
+				token = proposal_get_token(value);
 				if (!token)
 				{
 					DBG1(DBG_CFG, "unknown algorithm: '%s', skipped", value);

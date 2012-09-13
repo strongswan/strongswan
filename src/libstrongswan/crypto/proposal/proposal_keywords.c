@@ -26,7 +26,7 @@
 /*
  * see header file
  */
-const proposal_token_t* proposal_get_token(const char *str, u_int len)
+const proposal_token_t* proposal_get_token(const char *str)
 {
-	return proposal_get_token_static(str, len);
+	return proposal_get_token_static(str, strlen(str));
 }

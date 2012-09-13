@@ -828,7 +828,7 @@ int main(int argc, char **argv)
 
 				if (strcaseeq("enc", type))
 				{
-					token = proposal_get_token(algo, strlen(algo));
+					token = proposal_get_token(algo);
 					if (token == NULL || token->type != ENCRYPTION_ALGORITHM)
 					{
 						usage("invalid algorithm specified");
@@ -846,7 +846,7 @@ int main(int argc, char **argv)
 				{
 					hash_algorithm_t hash;
 
-					token = proposal_get_token(algo, strlen(algo));
+					token = proposal_get_token(algo);
 					if (token == NULL || token->type != INTEGRITY_ALGORITHM)
 					{
 						usage("invalid algorithm specified");
