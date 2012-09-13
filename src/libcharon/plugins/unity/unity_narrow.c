@@ -72,13 +72,13 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * As responder, bump up TS to 0.0.0.0/0 for on-the-wire bits
+ * As responder/responder, bump up TS to 0.0.0.0/0 for on-the-wire bits
  */
-static void narrow_responder_pre(linked_list_t *local)
+static void narrow_pre(linked_list_t *list)
 {
 	traffic_selector_t *ts;
 
-	while (local->remove_first(local, (void**)&ts) == SUCCESS)
+	while (list->remove_first(list, (void**)&ts) == SUCCESS)
 	{
 		ts->destroy(ts);
 	}
@@ -87,7 +87,7 @@ static void narrow_responder_pre(linked_list_t *local)
 											 "255.255.255.255", 65535);
 	if (ts)
 	{
-		local->insert_last(local, ts);
+		list->insert_last(list, ts);
 	}
 }
 
@@ -121,11 +121,14 @@ METHOD(listener_t, narrow, bool,
 	{
 		switch (type)
 		{
+			case NARROW_INITIATOR_PRE_AUTH:
+				narrow_pre(remote);
+				break;
 			case NARROW_INITIATOR_POST_AUTH:
 				narrow_initiator(this, ike_sa, remote);
 				break;
 			case NARROW_RESPONDER:
-				narrow_responder_pre(local);
+				narrow_pre(local);
 				break;
 			case NARROW_RESPONDER_POST:
 				narrow_responder_post(child_sa->get_config(child_sa), local);
