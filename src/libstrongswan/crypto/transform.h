@@ -23,7 +23,7 @@
 
 typedef enum transform_type_t transform_type_t;
 
-#include <library.h>
+#include <enum.h>
 
 /**
  * Type of a transform, as in IKEv2 RFC 3.3.2.
@@ -33,6 +33,7 @@ enum transform_type_t {
 	HASH_ALGORITHM = 242,
 	RANDOM_NUMBER_GENERATOR = 243,
 	AEAD_ALGORITHM = 244,
+	COMPRESSION_ALGORITHM = 245,
 	ENCRYPTION_ALGORITHM = 1,
 	PSEUDO_RANDOM_FUNCTION = 2,
 	INTEGRITY_ALGORITHM = 3,

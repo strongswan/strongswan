@@ -93,7 +93,7 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
  * @param path		path of the directory
  * @return 			the directory enumerator, NULL on failure
  */
-enumerator_t* enumerator_create_directory(char *path);
+enumerator_t* enumerator_create_directory(const char *path);
 
 /**
  * Create an enumerator over tokens of a string.
@@ -106,7 +106,8 @@ enumerator_t* enumerator_create_directory(char *path);
  * @param trim		characters to trim from tokens
  * @return			enumerator over char* tokens
  */
-enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
+enumerator_t* enumerator_create_token(const char *string, const char *sep,
+									  const char *trim);
 
 /**
  * Creates an enumerator which enumerates over enumerated enumerators :-).

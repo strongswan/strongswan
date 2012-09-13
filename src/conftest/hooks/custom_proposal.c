@@ -19,7 +19,6 @@
 
 #include <encoding/payloads/sa_payload.h>
 #include <config/proposal.h>
-#include <crypto/proposal/proposal_keywords.h>
 
 typedef struct private_custom_proposal_t private_custom_proposal_t;
 
@@ -91,7 +90,7 @@ static linked_list_t* load_proposals(private_custom_proposal_t *this,
 			alg = strtoul(value, &end, 10);
 			if (end == value || errno)
 			{
-				token = proposal_get_token(value, strlen(value));
+				token = lib->proposal->get_token(lib->proposal, value);
 				if (!token)
 				{
 					DBG1(DBG_CFG, "unknown algorithm: '%s', skipped", value);

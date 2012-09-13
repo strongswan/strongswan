@@ -1,5 +1,5 @@
 %{
-/* proposal keywords
+/*
  * Copyright (C) 2009 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -23,10 +23,10 @@
 
 %}
 struct proposal_token {
-    char             *name;
-    transform_type_t  type;
+	char             *name;
+	transform_type_t  type;
 	u_int16_t         algorithm;
-    u_int16_t         keysize;
+	u_int16_t         keysize;
 };
 %%
 null,             ENCRYPTION_ALGORITHM, ENCR_NULL,                 0

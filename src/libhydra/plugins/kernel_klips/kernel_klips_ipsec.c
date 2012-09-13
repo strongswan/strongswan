@@ -820,8 +820,22 @@ static kernel_algorithm_t compression_algs[] = {
 /**
  * Look up a kernel algorithm ID and its key size
  */
-static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
+static int lookup_algorithm(transform_type_t type, int ikev2)
 {
+	kernel_algorithm_t *list;
+	int alg = 0;
+
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			list = encryption_algs;
+			break;
+		case INTEGRITY_ALGORITHM:
+			list = integrity_algs;
+			break;
+		default:
+			return 0;
+	}
 	while (list->ikev2 != END_OF_LIST)
 	{
 		if (ikev2 == list->ikev2)
@@ -830,7 +844,9 @@ static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 		}
 		list++;
 	}
-	return 0;
+	hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface, ikev2,
+											  type, &alg, NULL);
+	return alg;
 }
 
 /**
@@ -1713,8 +1729,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	sa->sadb_sa_replay = (protocol == IPPROTO_COMP) ? 0 : 32;
-	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, int_alg);
-	sa->sadb_sa_encrypt = lookup_algorithm(encryption_algs, enc_alg);
+	sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
+	sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 	PFKEY_EXT_ADD(msg, sa);
 
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC);

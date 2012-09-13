@@ -121,7 +121,7 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 /**
  * See header
  */
-enumerator_t* enumerator_create_directory(char *path)
+enumerator_t* enumerator_create_directory(const char *path)
 {
 	int len;
 	dir_enum_t *this = malloc_thing(dir_enum_t);
@@ -168,9 +168,9 @@ typedef struct {
 	/** current position */
 	char *pos;
 	/** separater chars */
-	char *sep;
+	const char *sep;
 	/** trim chars */
-	char *trim;
+	const char *trim;
 } token_enum_t;
 
 /**
@@ -187,7 +187,8 @@ static void destroy_token_enum(token_enum_t *this)
  */
 static bool enumerate_token_enum(token_enum_t *this, char **token)
 {
-	char *pos = NULL, *tmp, *sep, *trim;
+	const char *sep, *trim;
+	char *pos = NULL, *tmp;
 	bool last = FALSE;
 
 	/* trim leading characters/separators */
@@ -303,7 +304,8 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 /**
  * See header
  */
-enumerator_t* enumerator_create_token(char *string, char *sep, char *trim)
+enumerator_t* enumerator_create_token(const char *string, const char *sep,
+									  const char *trim)
 {
 	token_enum_t *enumerator = malloc_thing(token_enum_t);
 

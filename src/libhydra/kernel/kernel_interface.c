@@ -15,6 +15,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (c) 2012 Nanoteq Pty Ltd
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "kernel_interface.h"
 
 #include <debug.h>
@@ -22,6 +44,34 @@
 #include <utils/linked_list.h>
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
+
+typedef struct kernel_algorithm_t kernel_algorithm_t;
+
+/**
+ * Mapping of IKE algorithms to kernel-specific algorithm identifiers
+ */
+struct kernel_algorithm_t {
+
+	/**
+	 * Transform type of the algorithm
+	 */
+	transform_type_t type;
+
+	/**
+	 * Identifier specified in IKE
+	 */
+	u_int16_t ike;
+
+	/**
+	 * Identifier as defined in pfkeyv2.h
+	 */
+	u_int16_t kernel;
+
+	/**
+	 * Name of the algorithm in linux crypto API
+	 */
+	char *name;
+};
 
 /**
  * Private data of a kernel_interface_t object.
@@ -62,6 +112,16 @@ struct private_kernel_interface_t {
 	 * list of registered listeners
 	 */
 	linked_list_t *listeners;
+
+	/**
+	 * mutex for algorithm mappings
+	 */
+	mutex_t *mutex_algs;
+
+	/**
+	 * List of algorithm mappings (kernel_algorithm_t*)
+	 */
+	linked_list_t *algorithms;
 };
 
 METHOD(kernel_interface_t, get_spi, status_t,
@@ -510,13 +570,72 @@ METHOD(kernel_interface_t, roam, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(kernel_interface_t, register_algorithm, void,
+	private_kernel_interface_t *this, u_int16_t alg_id, transform_type_t type,
+	u_int16_t kernel_id, char *kernel_name)
+{
+	kernel_algorithm_t *algorithm;
+
+	INIT(algorithm,
+		.type = type,
+		.ike = alg_id,
+		.kernel = kernel_id,
+		.name = strdup(kernel_name),
+	);
+
+	this->mutex_algs->lock(this->mutex_algs);
+	this->algorithms->insert_first(this->algorithms, algorithm);
+	this->mutex_algs->unlock(this->mutex_algs);
+}
+
+METHOD(kernel_interface_t, lookup_algorithm, bool,
+	private_kernel_interface_t *this, u_int16_t alg_id, transform_type_t type,
+	u_int16_t *kernel_id, char **kernel_name)
+{
+	kernel_algorithm_t *algorithm;
+	enumerator_t *enumerator;
+	bool found = FALSE;
+
+	this->mutex_algs->lock(this->mutex_algs);
+	enumerator = this->algorithms->create_enumerator(this->algorithms);
+	while (enumerator->enumerate(enumerator, &algorithm))
+	{
+		if (algorithm->type == type && algorithm->ike == alg_id)
+		{
+			if (kernel_id)
+			{
+				*kernel_id = algorithm->kernel;
+			}
+			if (kernel_name)
+			{
+				*kernel_name = algorithm->name;
+			}
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex_algs->unlock(this->mutex_algs);
+	return found;
+}
+
 METHOD(kernel_interface_t, destroy, void,
 	private_kernel_interface_t *this)
 {
+	kernel_algorithm_t *algorithm;
+
+	while (this->algorithms->remove_first(this->algorithms,
+										 (void**)&algorithm) == SUCCESS)
+	{
+		free(algorithm->name);
+		free(algorithm);
+	}
+	this->algorithms->destroy(this->algorithms);
+	this->mutex_algs->destroy(this->mutex_algs);
 	DESTROY_IF(this->ipsec);
 	DESTROY_IF(this->net);
-	this->mutex->destroy(this->mutex);
 	this->listeners->destroy(this->listeners);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -559,6 +678,8 @@ kernel_interface_t *kernel_interface_create()
 
 			.add_listener = _add_listener,
 			.remove_listener = _remove_listener,
+			.register_algorithm = _register_algorithm,
+			.lookup_algorithm = _lookup_algorithm,
 			.acquire = _acquire,
 			.expire = _expire,
 			.mapping = _mapping,
@@ -568,6 +689,8 @@ kernel_interface_t *kernel_interface_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.listeners = linked_list_create(),
+		.mutex_algs = mutex_create(MUTEX_TYPE_DEFAULT),
+		.algorithms = linked_list_create(),
 	);
 
 	return &this->public;

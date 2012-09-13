@@ -243,8 +243,25 @@ static kernel_algorithm_t compression_algs[] = {
 /**
  * Look up a kernel algorithm name and its key size
  */
-static char* lookup_algorithm(kernel_algorithm_t *list, int ikev2)
+static char* lookup_algorithm(transform_type_t type, int ikev2)
 {
+	kernel_algorithm_t *list;
+	char *name = NULL;
+
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			list = encryption_algs;
+			break;
+		case INTEGRITY_ALGORITHM:
+			list = integrity_algs;
+			break;
+		case COMPRESSION_ALGORITHM:
+			list = compression_algs;
+			break;
+		default:
+			return NULL;
+	}
 	while (list->ikev2 != END_OF_LIST)
 	{
 		if (list->ikev2 == ikev2)
@@ -253,7 +270,9 @@ static char* lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 		}
 		list++;
 	}
-	return NULL;
+	hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface, ikev2,
+											  type, NULL, &name);
+	return name;
 }
 
 typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
@@ -1222,12 +1241,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			struct xfrm_algo_aead *algo;
 
-			alg_name = lookup_algorithm(encryption_algs, enc_alg);
+			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
-					 encryption_algorithm_names, enc_alg);
-				goto failed;
+						 encryption_algorithm_names, enc_alg);
+					goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
@@ -1254,7 +1273,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			struct xfrm_algo *algo;
 
-			alg_name = lookup_algorithm(encryption_algs, enc_alg);
+			alg_name = lookup_algorithm(ENCRYPTION_ALGORITHM, enc_alg);
 			if (alg_name == NULL)
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
@@ -1285,7 +1304,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		u_int trunc_len = 0;
 
-		alg_name = lookup_algorithm(integrity_algs, int_alg);
+		alg_name = lookup_algorithm(INTEGRITY_ALGORITHM, int_alg);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
@@ -1355,7 +1374,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	if (ipcomp != IPCOMP_NONE)
 	{
 		rthdr->rta_type = XFRMA_ALG_COMP;
-		alg_name = lookup_algorithm(compression_algs, ipcomp);
+		alg_name = lookup_algorithm(COMPRESSION_ALGORITHM, ipcomp);
 		if (alg_name == NULL)
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",

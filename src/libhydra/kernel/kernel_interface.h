@@ -16,6 +16,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (c) 2012 Nanoteq Pty Ltd
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 /**
  * @defgroup kernel_interface kernel_interface
  * @{ @ingroup hkernel
@@ -491,6 +513,32 @@ struct kernel_interface_t {
 	 * @param address		TRUE if address list, FALSE if routing changed
 	 */
 	void (*roam)(kernel_interface_t *this, bool address);
+
+	/**
+	 * Register a new algorithm with the kernel interface.
+	 *
+	 * @param alg_id			the IKE id of the algorithm
+	 * @param type				the transform type of the algorithm
+	 * @param kernel_id			the kernel id of the algorithm
+	 * @param kernel_name		the kernel name of the algorithm
+	 */
+	void (*register_algorithm)(kernel_interface_t *this, u_int16_t alg_id,
+							   transform_type_t type, u_int16_t kernel_id,
+							   char *kernel_name);
+
+	/**
+	 * Return the kernel-specific id and/or name for an algorithms depending on
+	 * the arguments specified.
+	 *
+	 * @param alg_id			the IKE id of the algorithm
+	 * @param type				the transform type of the algorithm
+	 * @param kernel_id			the kernel id of the algorithm (optional)
+	 * @param kernel_name		the kernel name of the algorithm (optional)
+	 * @return					TRUE if algorithm was found
+	 */
+	bool (*lookup_algorithm)(kernel_interface_t *this, u_int16_t alg_id,
+							 transform_type_t type, u_int16_t *kernel_id,
+							 char **kernel_name);
 
 	/**
 	 * Destroys a kernel_interface_manager_t object.
