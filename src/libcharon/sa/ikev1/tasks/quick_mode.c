@@ -460,11 +460,6 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 	hosts->destroy(hosts);
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{
-		if (this->initiator && list->get_count(list) > 1)
-		{
-			DBG1(DBG_IKE, "configuration has more than one %s traffic selector,"
-				 " using first only", local ? "local" : "remote");
-		}
 		ts = ts->clone(ts);
 	}
 	else
