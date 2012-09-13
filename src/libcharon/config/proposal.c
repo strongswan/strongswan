@@ -26,7 +26,6 @@
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <crypto/proposal/proposal_keywords.h>
 
 ENUM(protocol_id_names, PROTO_NONE, PROTO_IPCOMP,
 	"PROTO_NONE",
@@ -562,8 +561,9 @@ static void check_proposal(private_proposal_t *this)
  */
 static bool add_string_algo(private_proposal_t *this, const char *alg)
 {
-	const proposal_token_t *token = proposal_get_token(alg);
+	const proposal_token_t *token;
 
+	token = lib->proposal->get_token(lib->proposal, alg);
 	if (token == NULL)
 	{
 		DBG1(DBG_CFG, "algorithm '%s' not recognized", alg);

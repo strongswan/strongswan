@@ -1,4 +1,19 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+/*
  * Copyright (c) 2012 Nanoteq Pty Ltd
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,10 +38,109 @@
 #include "proposal_keywords.h"
 #include "proposal_keywords_static.h"
 
-/*
- * see header file
+#include <utils/linked_list.h>
+#include <threading/rwlock.h>
+
+typedef struct private_proposal_keywords_t private_proposal_keywords_t;
+
+struct private_proposal_keywords_t {
+
+	/**
+	 * public interface
+	 */
+	proposal_keywords_t public;
+
+	/**
+	 * registered tokens, as proposal_token_t
+	 */
+	linked_list_t * tokens;
+
+	/**
+	 * rwlock to lock access to modules
+	 */
+	rwlock_t *lock;
+};
+
+/**
+ * Find the token object for the algorithm specified.
  */
-const proposal_token_t* proposal_get_token(const char *str)
+static const proposal_token_t* find_token(private_proposal_keywords_t *this,
+										  const char *str)
 {
-	return proposal_get_token_static(str, strlen(str));
+	proposal_token_t *token, *found = NULL;
+	enumerator_t *enumerator;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->tokens->create_enumerator(this->tokens);
+	while (enumerator->enumerate(enumerator, &token))
+	{
+		if (streq(token->name, str))
+		{
+			found = token;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return found;
+}
+
+METHOD(proposal_keywords_t, get_token, const proposal_token_t*,
+	private_proposal_keywords_t *this, const char *str)
+{
+	const proposal_token_t *token = proposal_get_token_static(str, strlen(str));
+	return token ?: find_token(this, str);
+}
+
+METHOD(proposal_keywords_t, register_token, void,
+	private_proposal_keywords_t *this, const char *name, transform_type_t type,
+	u_int16_t algorithm, u_int16_t keysize)
+{
+	proposal_token_t *token;
+
+	INIT(token,
+		.name = strdup(name),
+		.type = type,
+		.algorithm = algorithm,
+		.keysize = keysize,
+	);
+
+	this->lock->write_lock(this->lock);
+	this->tokens->insert_first(this->tokens, token);
+	this->lock->unlock(this->lock);
+}
+
+METHOD(proposal_keywords_t, destroy, void,
+	private_proposal_keywords_t *this)
+{
+	proposal_token_t *token;
+
+	while (this->tokens->remove_first(this->tokens, (void**)&token) == SUCCESS)
+	{
+		free(token->name);
+		free(token);
+	}
+	this->tokens->destroy(this->tokens);
+	this->lock->destroy(this->lock);
+	free(this);
+}
+
+/*
+ * Described in header.
+ */
+proposal_keywords_t *proposal_keywords_create()
+{
+	private_proposal_keywords_t *this;
+
+	INIT(this,
+		.public = {
+			.get_token = _get_token,
+			.register_token = _register_token,
+			.destroy = _destroy,
+		},
+		.tokens = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
+
+	return &this->public;
 }
