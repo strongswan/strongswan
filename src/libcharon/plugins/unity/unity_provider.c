@@ -108,6 +108,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 
 	ike_sa = charon->bus->get_sa(charon->bus);
 	if (!ike_sa || ike_sa->get_version(ike_sa) != IKEV1 ||
+		!ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY) ||
 		!vips->get_count(vips))
 	{
 		return NULL;

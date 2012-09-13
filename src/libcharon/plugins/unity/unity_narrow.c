@@ -116,7 +116,8 @@ METHOD(listener_t, narrow, bool,
 	private_unity_narrow_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	narrow_hook_t type, linked_list_t *local, linked_list_t *remote)
 {
-	if (ike_sa->get_version(ike_sa) == IKEV1)
+	if (ike_sa->get_version(ike_sa) == IKEV1 &&
+		ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
 	{
 		switch (type)
 		{
