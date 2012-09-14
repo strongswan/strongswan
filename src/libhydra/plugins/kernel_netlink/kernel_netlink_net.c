@@ -589,10 +589,6 @@ static void process_link(private_kernel_netlink_net_t *this,
 	{
 		case RTM_NEWLINK:
 		{
-			if (msg->ifi_flags & IFF_LOOPBACK)
-			{	/* ignore loopback interfaces */
-				break;
-			}
 			enumerator = this->ifaces->create_enumerator(this->ifaces);
 			while (enumerator->enumerate(enumerator, &current))
 			{
@@ -924,6 +920,8 @@ typedef struct {
 	bool include_down_ifaces;
 	/** whether to enumerate virtual ip addresses */
 	bool include_virtual_ips;
+	/** whether to enumerate loopback interfaces */
+	bool include_loopback;
 } address_enumerator_t;
 
 /**
@@ -970,6 +968,10 @@ static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
 static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 							  iface_entry_t** out)
 {
+	if (!data->include_loopback && ((*in)->flags & IFF_LOOPBACK))
+	{	/* ignore loopback devices */
+		return FALSE;
+	}
 	if (!data->include_down_ifaces && !((*in)->flags & IFF_UP))
 	{	/* skip interfaces not up */
 		return FALSE;
@@ -980,12 +982,13 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_netlink_net_t *this,
-	bool include_down_ifaces, bool include_virtual_ips)
+	bool include_down_ifaces, bool include_virtual_ips, bool include_loopback)
 {
 	address_enumerator_t *data = malloc_thing(address_enumerator_t);
 	data->this = this;
 	data->include_down_ifaces = include_down_ifaces;
 	data->include_virtual_ips = include_virtual_ips;
+	data->include_loopback = include_loopback;
 
 	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(

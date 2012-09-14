@@ -341,7 +341,7 @@ METHOD(task_t, build_i, status_t,
 		else
 		{	/* 3. */
 			enumerator = hydra->kernel_interface->create_address_enumerator(
-										hydra->kernel_interface, FALSE, FALSE);
+								hydra->kernel_interface, FALSE, FALSE, FALSE);
 			while (enumerator->enumerate(enumerator, (void**)&host))
 			{
 				/* apply port 500 to host, but work on a copy */

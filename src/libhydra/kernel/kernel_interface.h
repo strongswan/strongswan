@@ -320,11 +320,13 @@ struct kernel_interface_t {
 	 * The hosts are read-only, do not modify of free.
 	 *
 	 * @param include_down_ifaces	TRUE to enumerate addresses from down interfaces
-	 * @param include_virtual_ips	TRUE to enumerate virtual ip addresses
+	 * @param include_virtual_ips	TRUE to enumerate virtual IP addresses
+	 * @param include_loopback		TRUE to enumerate addresses on loopback interfaces
 	 * @return						enumerator over host_t's
 	 */
 	enumerator_t *(*create_address_enumerator) (kernel_interface_t *this,
-						bool include_down_ifaces, bool include_virtual_ips);
+							bool include_down_ifaces, bool include_virtual_ips,
+							bool include_loopback);
 
 	/**
 	 * Add a virtual IP to an interface.

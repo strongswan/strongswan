@@ -192,7 +192,7 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	enumerator = hydra->kernel_interface->create_address_enumerator(
-										hydra->kernel_interface, FALSE, FALSE);
+								hydra->kernel_interface, FALSE, FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&host))
 	{
 		if (me->ip_equals(me, host))

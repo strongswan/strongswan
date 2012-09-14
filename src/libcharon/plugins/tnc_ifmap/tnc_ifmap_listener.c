@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen 
+ * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
 	bool success = TRUE;
 
 	enumerator = hydra->kernel_interface->create_address_enumerator(
-							hydra->kernel_interface, FALSE, FALSE);
+							hydra->kernel_interface, FALSE, FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, &host))
 	{
 		if (!this->ifmap->publish_device_ip(this->ifmap, host))
@@ -87,7 +87,7 @@ static bool reload_metadata(private_tnc_ifmap_listener_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	return success;
 }
 
