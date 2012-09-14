@@ -280,9 +280,41 @@ METHOD(tkm_keymat_t, derive_child_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
-	DBG1(DBG_CHD, "deriving child keys");
-	*encr_i = chunk_alloc(sizeof(esa_info_t));
-	(*(esa_info_t*)(encr_i->ptr)).isa_id = this->isa_ctx_id;
+	esa_info_t *esa_info_i, *esa_info_r;
+
+	dh_id_type dh_id = 0;
+	if (dh)
+	{
+		dh_id = ((tkm_diffie_hellman_t *)dh)->get_id((tkm_diffie_hellman_t *)dh);
+	}
+
+	INIT(esa_info_i,
+		 .isa_id = this->isa_ctx_id,
+		 .spi_r = proposal->get_spi(proposal),
+		 .nonce_i = chunk_clone(nonce_i),
+		 .nonce_r = chunk_clone(nonce_r),
+		 .is_encr_r = FALSE,
+		 .dh_id = dh_id,
+	);
+
+	INIT(esa_info_r,
+		 .isa_id = this->isa_ctx_id,
+		 .spi_r = proposal->get_spi(proposal),
+		 .nonce_i = chunk_clone(nonce_i),
+		 .nonce_r = chunk_clone(nonce_r),
+		 .is_encr_r = TRUE,
+		 .dh_id = dh_id,
+	);
+
+	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_r: %x, dh_id: %llu)",
+		 esa_info_i->isa_id, ntohl(esa_info_i->spi_r), esa_info_i->dh_id);
+
+	/* store ESA info in encr_i/r, which is passed to add_sa */
+	*encr_i = chunk_create((u_char *)esa_info_i, sizeof(esa_info_t));
+	*encr_r = chunk_create((u_char *)esa_info_r, sizeof(esa_info_t));
+	*integ_i = chunk_empty;
+	*integ_r = chunk_empty;
+
 	return TRUE;
 }
 

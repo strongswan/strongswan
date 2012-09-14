@@ -46,11 +46,6 @@ struct private_tkm_kernel_ipsec_t {
 	rng_t *rng;
 
 	/**
-	 * Local CHILD SA SPI.
-	 */
-	uint32_t esp_spi_loc;
-
-	/**
 	 * CHILD/ESP SA database.
 	 */
 	tkm_kernel_sad_t *sad;
@@ -82,31 +77,28 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
-	if (inbound && this->esp_spi_loc == 0)
+	if (!inbound)
 	{
-		DBG1(DBG_KNL, "store local child SA SPI for installation", ntohl(spi));
-		this->esp_spi_loc = spi;
 		return SUCCESS;
 	}
 	const esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
 	const esa_id_type esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
-	DBG1(DBG_KNL, "adding child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, esp_spi_rem:"
-		 " %x)", esa_id, esa.isa_id, ntohl(this->esp_spi_loc), ntohl(spi));
+	DBG1(DBG_KNL, "adding child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, "
+		 "esp_spi_rem: %x)", esa_id, esa.isa_id, ntohl(spi), ntohl(esa.spi_r));
 	if (!this->sad->insert(this->sad, esa_id, src, dst, spi, protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
 		return FAILED;
 	}
-	if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(this->esp_spi_loc),
-							 ntohl(spi)) != TKM_OK)
+	if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(spi),
+							 ntohl(esa.spi_r)) != TKM_OK)
 	{
 		DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
 		this->sad->remove(this->sad, esa_id);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
 		return FAILED;
 	}
-	this->esp_spi_loc = 0;
 	return SUCCESS;
 }
 
@@ -275,7 +267,6 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 			},
 		},
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
-		.esp_spi_loc = 0,
 		.sad = tkm_kernel_sad_create(),
 	);
 
