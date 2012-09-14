@@ -480,6 +480,11 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	addr_entry_t *addr;
 	bool found = FALSE;
 
+	if (ip->is_anyaddr(ip))
+	{
+		return FALSE;
+	}
+
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
