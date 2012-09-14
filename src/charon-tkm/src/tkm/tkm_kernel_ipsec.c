@@ -22,8 +22,10 @@
 #include <tkm/constants.h>
 #include <tkm/client.h>
 
+#include "tkm.h"
 #include "tkm_types.h"
 #include "tkm_keymat.h"
+#include "tkm_kernel_sad.h"
 #include "tkm_kernel_ipsec.h"
 
 typedef struct private_tkm_kernel_ipsec_t private_tkm_kernel_ipsec_t;
@@ -47,6 +49,11 @@ struct private_tkm_kernel_ipsec_t {
 	 * Local CHILD SA SPI.
 	 */
 	uint32_t esp_spi_loc;
+
+	/**
+	 * CHILD/ESP SA database.
+	 */
+	tkm_kernel_sad_t *sad;
 
 };
 
@@ -82,12 +89,21 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		return SUCCESS;
 	}
 	const esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
-	DBG1(DBG_KNL, "adding child SA (isa: %llu, esp_spi_loc: %x, esp_spi_rem:"
-		 " %x)", esa.isa_id, ntohl(this->esp_spi_loc), ntohl(spi));
-	if (ike_esa_create_first (1, esa.isa_id, 1, 1, ntohl(this->esp_spi_loc),
-							  ntohl(spi)) != TKM_OK)
+	const esa_id_type esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
+	DBG1(DBG_KNL, "adding child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, esp_spi_rem:"
+		 " %x)", esa_id, esa.isa_id, ntohl(this->esp_spi_loc), ntohl(spi));
+	if (!this->sad->insert(this->sad, esa_id, src, dst, spi, protocol))
 	{
-		DBG1(DBG_KNL, "child SA creation failed");
+		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
+		return FAILED;
+	}
+	if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(this->esp_spi_loc),
+							 ntohl(spi)) != TKM_OK)
+	{
+		DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
+		this->sad->remove(this->sad, esa_id);
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
 		return FAILED;
 	}
 	this->esp_spi_loc = 0;
@@ -106,7 +122,20 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
-	DBG1(DBG_KNL, "deleting child SA with SPI %.8x", ntohl(spi));
+	const esa_id_type esa_id = this->sad->get_esa_id(this->sad, src, dst, spi,
+													 protocol);
+	if (esa_id)
+	{
+		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
+			 ntohl(spi));
+		if (ike_esa_reset(esa_id) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "child SA (%llu) deletion failed", esa_id);
+			return FAILED;
+		}
+		this->sad->remove(this->sad, esa_id);
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
+	}
 	return SUCCESS;
 }
 
@@ -215,6 +244,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 	private_tkm_kernel_ipsec_t *this)
 {
 	DESTROY_IF(this->rng);
+	DESTROY_IF(this->sad);
 	free(this);
 }
 
@@ -246,11 +276,18 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 		},
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.esp_spi_loc = 0,
+		.sad = tkm_kernel_sad_create(),
 	);
 
 	if (!this->rng)
 	{
 		DBG1(DBG_KNL, "unable to create RNG");
+		destroy(this);
+		return NULL;
+	}
+	if (!this->sad)
+	{
+		DBG1(DBG_KNL, "unable to create SAD");
 		destroy(this);
 		return NULL;
 	}
