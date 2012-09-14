@@ -74,20 +74,16 @@ METHOD(host_t, get_sockaddr_len, socklen_t*,
 METHOD(host_t, is_anyaddr, bool,
 	private_host_t *this)
 {
+	static const u_int8_t zeroes[IPV6_LEN];
+
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
-			u_int8_t zeroes[IPV4_LEN];
-
-			memset(zeroes, 0, IPV4_LEN);
 			return memeq(zeroes, &(this->address4.sin_addr.s_addr), IPV4_LEN);
 		}
 		case AF_INET6:
 		{
-			u_int8_t zeroes[IPV6_LEN];
-
-			memset(zeroes, 0, IPV6_LEN);
 			return memeq(zeroes, &(this->address6.sin6_addr.s6_addr), IPV6_LEN);
 		}
 		default:
