@@ -566,6 +566,15 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 		tsr = traffic_selector_create_from_subnet(hsr->clone(hsr),
 							hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0);
 	}
+	if (!this->initiator && this->mode == MODE_TRANSPORT && this->udp &&
+	   (!tsi->is_host(tsi, hsi) || !tsr->is_host(tsr, hsr)))
+	{	/* change TS in case of a NAT in transport mode */
+		DBG2(DBG_IKE, "changing received traffic selectors %R=== %R due to NAT",
+			 tsi, tsr);
+		tsi->set_address(tsi, hsi);
+		tsr->set_address(tsr, hsr);
+	}
+
 	if (this->initiator)
 	{
 		/* check if peer selection valid */
@@ -887,6 +896,16 @@ METHOD(task_t, process_r, status_t,
 			u_int16_t group;
 			bool private;
 
+			sa_payload = (sa_payload_t*)message->get_payload(message,
+													SECURITY_ASSOCIATION_V1);
+			if (!sa_payload)
+			{
+				DBG1(DBG_IKE, "sa payload missing");
+				return send_notify(this, INVALID_PAYLOAD_TYPE);
+			}
+
+			this->mode = sa_payload->get_encap_mode(sa_payload, &this->udp);
+
 			if (!get_ts(this, message))
 			{
 				return FAILED;
@@ -913,13 +932,6 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 
-			sa_payload = (sa_payload_t*)message->get_payload(message,
-													SECURITY_ASSOCIATION_V1);
-			if (!sa_payload)
-			{
-				DBG1(DBG_IKE, "sa payload missing");
-				return send_notify(this, INVALID_PAYLOAD_TYPE);
-			}
 			if (this->config->use_ipcomp(this->config))
 			{
 				if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY))
@@ -949,8 +961,6 @@ METHOD(task_t, process_r, status_t,
 			this->proposal = this->config->select_proposal(this->config,
 														   list, FALSE, private);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
-
-			this->mode = sa_payload->get_encap_mode(sa_payload, &this->udp);
 
 			get_lifetimes(this);
 			apply_lifetimes(this, sa_payload);
