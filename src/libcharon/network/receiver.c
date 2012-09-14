@@ -20,6 +20,7 @@
 
 #include "receiver.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <network/socket.h>
 #include <processing/jobs/job.h>
@@ -444,10 +445,19 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		return JOB_REQUEUE_DIRECT;
 	}
 
-	/* if neither source nor destination port is 500 we assume an IKE packet
-	 * with Non-ESP marker or an ESP packet */
 	dst = packet->get_destination(packet);
 	src = packet->get_source(packet);
+	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												dst, NULL))
+	{
+		DBG3(DBG_NET, "received packet from %#H to %#H on ignored interface",
+			 src, dst);
+		packet->destroy(packet);
+		return JOB_REQUEUE_DIRECT;
+	}
+
+	/* if neither source nor destination port is 500 we assume an IKE packet
+	 * with Non-ESP marker or an ESP packet */
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
 	{
