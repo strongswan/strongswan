@@ -52,9 +52,33 @@
 #define BUF_LEN 512
 
 /**
- * Macro compares two strings for equality
+ * General purpose boolean type.
  */
-#define streq(x,y) (strcmp(x, y) == 0)
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else
+# ifndef HAVE__BOOL
+#  define _Bool signed char
+# endif /* HAVE__BOOL */
+# define bool _Bool
+# define false 0
+# define true 1
+# define __bool_true_false_are_defined 1
+#endif /* HAVE_STDBOOL_H */
+#ifndef FALSE
+# define FALSE false
+#endif /* FALSE */
+#ifndef TRUE
+# define TRUE  true
+#endif /* TRUE */
+
+/**
+ * Helper function that compares two strings for equality
+ */
+static inline bool streq(const char *x, const char *y)
+{
+	return strcmp(x, y) == 0;
+}
 
 /**
  * Macro compares two strings for equality, length limited
@@ -62,9 +86,12 @@
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
 /**
- * Macro compares two strings for equality ignoring case
+ * Helper function that compares two strings for equality ignoring case
  */
-#define strcaseeq(x,y) (strcasecmp(x, y) == 0)
+static inline bool strcaseeq(const char *x, const char *y)
+{
+	return strcasecmp(x, y) == 0;
+}
 
 /**
  * Macro compares two strings for equality ignoring case, length limited
@@ -201,27 +228,6 @@ static inline char *strdupnull(const char *s)
  * Maximum time since epoch causing wrap-around on Jan 19 03:14:07 UTC 2038
  */
 #define TIME_32_BIT_SIGNED_MAX	0x7fffffff
-
-/**
- * General purpose boolean type.
- */
-#ifdef HAVE_STDBOOL_H
-# include <stdbool.h>
-#else
-# ifndef HAVE__BOOL
-#  define _Bool signed char
-# endif /* HAVE__BOOL */
-# define bool _Bool
-# define false 0
-# define true 1
-# define __bool_true_false_are_defined 1
-#endif /* HAVE_STDBOOL_H */
-#ifndef FALSE
-# define FALSE false
-#endif /* FALSE */
-#ifndef TRUE
-# define TRUE  true
-#endif /* TRUE */
 
 /**
  * define some missing fixed width int types on OpenSolaris.

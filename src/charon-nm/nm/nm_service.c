@@ -624,7 +624,7 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 				}
 			}
 		}
-		else if streq(method, "smartcard")
+		else if (streq(method, "smartcard"))
 		{
 			if (nm_setting_vpn_get_secret(settings, "password"))
 			{
