@@ -58,11 +58,12 @@ bool libhydra_init(const char *daemon)
 	INIT(this,
 		.public = {
 			.attributes = attribute_manager_create(),
-			.kernel_interface = kernel_interface_create(),
 			.daemon = strdup(daemon ?: "libhydra"),
 		},
 	);
 	hydra = &this->public;
+
+	this->public.kernel_interface = kernel_interface_create();
 
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libhydra", libhydra_init))

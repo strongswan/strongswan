@@ -406,11 +406,20 @@ struct kernel_interface_t {
 	 */
 
 	/**
-	 * Tries to find an ip address of a local interface that is included in the
+	 * Verifies that the given interface is usable and not excluded by
+	 * configuration.
+	 *
+	 * @param iface			interface name
+	 * @return				TRUE if usable
+	 */
+	bool (*is_interface_usable)(kernel_interface_t *this, const char *iface);
+
+	/**
+	 * Tries to find an IP address of a local interface that is included in the
 	 * supplied traffic selector.
 	 *
 	 * @param ts			traffic selector
-	 * @param ip			returned ip (has to be destroyed)
+	 * @param ip			returned IP address (has to be destroyed)
 	 * @return				SUCCESS if address found
 	 */
 	status_t (*get_address_by_ts)(kernel_interface_t *this,

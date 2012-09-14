@@ -173,7 +173,7 @@ keys, which is discouraged due to security concerns (offline attacks on the
 openly transmitted hash of the PSK)
 .TP
 .BR charon.ignore_routing_tables
-A list of routing tables to be excluded from route lookup
+A space-separated list of routing tables to be excluded from route lookups
 .TP
 .BR charon.ikesa_table_segments " [1]"
 Number of exclusively locked segments in the hash table
@@ -197,6 +197,14 @@ Install routes into a separate routing table for established IPsec tunnels
 .TP
 .BR charon.install_virtual_ip " [yes]"
 Install virtual IP addresses
+.TP
+.BR charon.interfaces_ignore
+A comma-separated list of network interfaces that should be ignored, if
+charon.interfaces_use is specified this option has no effect.
+.TP
+.BR charon.interfaces_use
+A comma-separated list of network interfaces that sould be used by charon.
+All other interfaces are ignored.
 .TP
 .BR charon.keep_alive " [20s]"
 NAT keep alive interval

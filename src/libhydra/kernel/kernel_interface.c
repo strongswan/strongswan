@@ -39,6 +39,7 @@
 
 #include "kernel_interface.h"
 
+#include <hydra.h>
 #include <debug.h>
 #include <threading/mutex.h>
 #include <utils/linked_list.h>
@@ -122,6 +123,18 @@ struct private_kernel_interface_t {
 	 * List of algorithm mappings (kernel_algorithm_t*)
 	 */
 	linked_list_t *algorithms;
+
+	/**
+	 * List of interface names to include or exclude (char*), NULL if interfaces
+	 * are not filtered
+	 */
+	linked_list_t *ifaces_filter;
+
+	/**
+	 * TRUE to exclude interfaces listed in ifaces_filter, FALSE to consider
+	 * only those listed there
+	 */
+	bool ifaces_exclude;
 };
 
 METHOD(kernel_interface_t, get_spi, status_t,
@@ -362,6 +375,20 @@ METHOD(kernel_interface_t, enable_udp_decap, bool,
 		return FALSE;
 	}
 	return this->ipsec->enable_udp_decap(this->ipsec, fd, family, port);
+}
+
+METHOD(kernel_interface_t, is_interface_usable, bool,
+	private_kernel_interface_t *this, const char *iface)
+{
+	status_t expected;
+
+	if (!this->ifaces_filter)
+	{
+		return TRUE;
+	}
+	expected = this->ifaces_exclude ? NOT_FOUND : SUCCESS;
+	return this->ifaces_filter->find_first(this->ifaces_filter, (void*)streq,
+										   NULL, iface) == expected;
 }
 
 METHOD(kernel_interface_t, get_address_by_ts, status_t,
@@ -634,6 +661,7 @@ METHOD(kernel_interface_t, destroy, void,
 	this->mutex_algs->destroy(this->mutex_algs);
 	DESTROY_IF(this->ipsec);
 	DESTROY_IF(this->net);
+	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
 	this->listeners->destroy(this->listeners);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -645,6 +673,7 @@ METHOD(kernel_interface_t, destroy, void,
 kernel_interface_t *kernel_interface_create()
 {
 	private_kernel_interface_t *this;
+	char *ifaces;
 
 	INIT(this,
 		.public = {
@@ -670,6 +699,7 @@ kernel_interface_t *kernel_interface_create()
 			.bypass_socket = _bypass_socket,
 			.enable_udp_decap = _enable_udp_decap,
 
+			.is_interface_usable = _is_interface_usable,
 			.get_address_by_ts = _get_address_by_ts,
 			.add_ipsec_interface = _add_ipsec_interface,
 			.remove_ipsec_interface = _remove_ipsec_interface,
@@ -692,6 +722,35 @@ kernel_interface_t *kernel_interface_create()
 		.mutex_algs = mutex_create(MUTEX_TYPE_DEFAULT),
 		.algorithms = linked_list_create(),
 	);
+
+	ifaces = lib->settings->get_str(lib->settings,
+					"%s.interfaces_use", NULL, hydra->daemon);
+	if (!ifaces)
+	{
+		ifaces = lib->settings->get_str(lib->settings,
+					"%s.interfaces_ignore", NULL, hydra->daemon);
+		if (ifaces)
+		{
+			this->ifaces_exclude = TRUE;
+		}
+	}
+	if (ifaces)
+	{
+		enumerator_t *enumerator;
+		char *iface;
+
+		enumerator = enumerator_create_token(ifaces, ",", " ");
+		while (enumerator->enumerate(enumerator, &iface))
+		{
+			if (!this->ifaces_filter)
+			{
+				this->ifaces_filter = linked_list_create();
+			}
+			this->ifaces_filter->insert_last(this->ifaces_filter,
+											 strdup(iface));
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	return &this->public;
 }
