@@ -176,13 +176,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_SOCKET_RAW
-  SUBDIRS += plugins/socket_raw
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/socket_raw/libstrongswan-socket-raw.la
-endif
-endif
-
 if USE_SOCKET_DYNAMIC
   SUBDIRS += plugins/socket_dynamic
 if MONOLITHIC

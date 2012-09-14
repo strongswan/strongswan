@@ -178,7 +178,6 @@ ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
-ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
@@ -904,7 +903,6 @@ ADD_PLUGIN([kernel-klips],         [h charon starter])
 ADD_PLUGIN([kernel-netlink],       [h charon starter nm])
 ADD_PLUGIN([resolve],              [h charon])
 ADD_PLUGIN([socket-default],       [c charon nm])
-ADD_PLUGIN([socket-raw],           [c charon nm])
 ADD_PLUGIN([socket-dynamic],       [c charon])
 ADD_PLUGIN([farp],                 [c charon])
 ADD_PLUGIN([stroke],               [c charon])
@@ -1077,7 +1075,6 @@ AM_CONDITIONAL(USE_IMV_SCANNER, test x$imv_scanner = xtrue)
 AM_CONDITIONAL(USE_IMC_ATTESTATION, test x$imc_attestation = xtrue)
 AM_CONDITIONAL(USE_IMV_ATTESTATION, test x$imv_attestation = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
-AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
@@ -1253,7 +1250,6 @@ AC_OUTPUT(
 	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/tnccs_dynamic/Makefile
 	src/libcharon/plugins/socket_default/Makefile
-	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
 	src/libcharon/plugins/farp/Makefile
 	src/libcharon/plugins/smp/Makefile
