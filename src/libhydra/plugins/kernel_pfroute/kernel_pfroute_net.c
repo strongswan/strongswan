@@ -85,6 +85,9 @@ struct iface_entry_t {
 
 	/** list of addresses as host_t */
 	linked_list_t *addrs;
+
+	/** TRUE if usable by config */
+	bool usable;
 };
 
 /**
@@ -94,6 +97,14 @@ static void iface_entry_destroy(iface_entry_t *this)
 {
 	this->addrs->destroy_function(this->addrs, (void*)addr_entry_destroy);
 	free(this);
+}
+
+/**
+ * check if an interface is up and usable
+ */
+static inline bool iface_entry_up_and_usable(iface_entry_t *iface)
+{
+	return iface->usable && (iface->flags & IFF_UP) == IFF_UP;
 }
 
 
@@ -229,7 +240,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 					if (ifa->ifam_type == RTM_DELADDR)
 					{
 						iface->addrs->remove_at(iface->addrs, addrs);
-						if (!addr->virtual)
+						if (!addr->virtual && iface->usable)
 						{
 							changed = TRUE;
 							DBG1(DBG_KNL, "%H disappeared from %s",
@@ -253,10 +264,13 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 				addr->virtual = FALSE;
 				addr->refcount = 1;
 				iface->addrs->insert_last(iface->addrs, addr);
-				DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
+				if (iface->usable)
+				{
+					DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
+				}
 			}
 
-			if (changed && (iface->flags & IFF_UP))
+			if (changed && iface_entry_up_and_usable(iface))
 			{
 				roam = TRUE;
 			}
@@ -290,15 +304,18 @@ static void process_link(private_kernel_pfroute_net_t *this,
 	{
 		if (iface->ifindex == msg->ifm_index)
 		{
-			if (!(iface->flags & IFF_UP) && (msg->ifm_flags & IFF_UP))
+			if (iface->usable)
 			{
-				roam = TRUE;
-				DBG1(DBG_KNL, "interface %s activated", iface->ifname);
-			}
-			else if ((iface->flags & IFF_UP) && !(msg->ifm_flags & IFF_UP))
-			{
-				roam = TRUE;
-				DBG1(DBG_KNL, "interface %s deactivated", iface->ifname);
+				if (!(iface->flags & IFF_UP) && (msg->ifm_flags & IFF_UP))
+				{
+					roam = TRUE;
+					DBG1(DBG_KNL, "interface %s activated", iface->ifname);
+				}
+				else if ((iface->flags & IFF_UP) && !(msg->ifm_flags & IFF_UP))
+				{
+					roam = TRUE;
+					DBG1(DBG_KNL, "interface %s deactivated", iface->ifname);
+				}
 			}
 			iface->flags = msg->ifm_flags;
 			break;
@@ -441,6 +458,10 @@ static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
 static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 							  iface_entry_t** out)
 {
+	if (!(*in)->usable)
+	{	/* skip interfaces excluded by config */
+		return FALSE;
+	}
 	if (!data->include_loopback && ((*in)->flags & IFF_LOOPBACK))
 	{	/* ignore loopback devices */
 		return FALSE;
@@ -478,7 +499,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
-	bool found = FALSE;
+	bool found = FALSE, ignored = FALSE;
 
 	if (ip->is_anyaddr(ip))
 	{
@@ -495,6 +516,11 @@ METHOD(kernel_net_t, get_interface_name, bool,
 			if (ip->ip_equals(ip, addr->ip))
 			{
 				found = TRUE;
+				if (!iface->usable)
+				{
+					ignored = TRUE;
+					break;
+				}
 				if (name)
 				{
 					*name = strdup(iface->ifname);
@@ -511,15 +537,18 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
 
-	if (!found)
+	if (!ignored)
 	{
-		DBG2(DBG_KNL, "%H is not a local address", ip);
+		if (!found)
+		{
+			DBG2(DBG_KNL, "%H is not a local address", ip);
+		}
+		else if (name)
+		{
+			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
+		}
 	}
-	else if (name)
-	{
-		DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
-	}
-	return found;
+	return found && !ignored;
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
@@ -609,6 +638,8 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 					iface->ifindex = if_nametoindex(ifa->ifa_name);
 					iface->flags = ifa->ifa_flags;
 					iface->addrs = linked_list_create();
+					iface->usable = hydra->kernel_interface->is_interface_usable(
+										hydra->kernel_interface, ifa->ifa_name);
 					this->ifaces->insert_last(this->ifaces, iface);
 				}
 
@@ -628,7 +659,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
-		if (iface->flags & IFF_UP)
+		if (iface->usable && iface->flags & IFF_UP)
 		{
 			DBG2(DBG_KNL, "  %s", iface->ifname);
 			addrs = iface->addrs->create_enumerator(iface->addrs);

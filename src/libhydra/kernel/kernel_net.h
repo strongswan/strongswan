@@ -65,7 +65,8 @@ struct kernel_net_t {
 	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, host_t *src);
 
 	/**
-	 * Get the interface name of a local address.
+	 * Get the interface name of a local address. Interfaces that are down or
+	 * ignored by config are not considered.
 	 *
 	 * @param host			address to get interface name from
 	 * @param name			allocated interface name (optional)

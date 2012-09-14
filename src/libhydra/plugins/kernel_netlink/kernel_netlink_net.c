@@ -110,6 +110,9 @@ struct iface_entry_t {
 
 	/** list of addresses as host_t */
 	linked_list_t *addrs;
+
+	/** TRUE if usable by config */
+	bool usable;
 };
 
 /**
@@ -119,6 +122,22 @@ static void iface_entry_destroy(iface_entry_t *this)
 {
 	this->addrs->destroy_function(this->addrs, (void*)addr_entry_destroy);
 	free(this);
+}
+
+/**
+ * find an interface entry by index
+ */
+static bool iface_entry_by_index(iface_entry_t *this, int *ifindex)
+{
+	return this->ifindex == *ifindex;
+}
+
+/**
+ * check if an interface is up and usable
+ */
+static inline bool iface_entry_up_and_usable(iface_entry_t *iface)
+{
+	return iface->usable && (iface->flags & IFF_UP) == IFF_UP;
 }
 
 typedef struct route_entry_t route_entry_t;
@@ -486,6 +505,10 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 	{
 		if (iface->ifindex == ifindex)
 		{
+			if (!iface->usable)
+			{	/* ignore interfaces excluded by config */
+				break;
+			}
 			addrs = iface->addrs->create_enumerator(iface->addrs);
 			while (addrs->enumerate(addrs, &addr))
 			{
@@ -558,6 +581,22 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 }
 
 /**
+ * check if an interface with a given index is up and usable
+ */
+static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
+									   int index)
+{
+	iface_entry_t *iface;
+
+	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
+								 (void**)&iface, &index) == SUCCESS)
+	{
+		return iface_entry_up_and_usable(iface);
+	}
+	return FALSE;
+}
+
+/**
  * process RTM_NEWLINK/RTM_DELLINK from kernel
  */
 static void process_link(private_kernel_netlink_net_t *this,
@@ -606,12 +645,14 @@ static void process_link(private_kernel_netlink_net_t *this,
 				entry = malloc_thing(iface_entry_t);
 				entry->ifindex = msg->ifi_index;
 				entry->flags = 0;
+				entry->usable = hydra->kernel_interface->is_interface_usable(
+												hydra->kernel_interface, name);
 				entry->addrs = linked_list_create();
 				this->ifaces->insert_last(this->ifaces, entry);
 			}
 			strncpy(entry->ifname, name, IFNAMSIZ);
 			entry->ifname[IFNAMSIZ-1] = '\0';
-			if (event)
+			if (event && entry->usable)
 			{
 				if (!(entry->flags & IFF_UP) && (msg->ifi_flags & IFF_UP))
 				{
@@ -634,7 +675,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 			{
 				if (current->ifindex == msg->ifi_index)
 				{
-					if (event)
+					if (event && current->usable)
 					{
 						update = TRUE;
 						DBG1(DBG_KNL, "interface %s deleted", current->ifname);
@@ -727,7 +768,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 					if (hdr->nlmsg_type == RTM_DELADDR)
 					{
 						iface->addrs->remove_at(iface->addrs, addrs);
-						if (!addr->virtual)
+						if (!addr->virtual && iface->usable)
 						{
 							changed = TRUE;
 							DBG1(DBG_KNL, "%H disappeared from %s",
@@ -757,7 +798,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 					addr->scope = msg->ifa_scope;
 
 					iface->addrs->insert_last(iface->addrs, addr);
-					if (event)
+					if (event && iface->usable)
 					{
 						DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
 					}
@@ -766,6 +807,10 @@ static void process_addr(private_kernel_netlink_net_t *this,
 			if (found && (iface->flags & IFF_UP))
 			{
 				update = TRUE;
+			}
+			if (!iface->usable)
+			{	/* ignore events for interfaces excluded by config */
+				update = changed = FALSE;
 			}
 			break;
 		}
@@ -830,20 +875,26 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
+	this->mutex->lock(this->mutex);
+	if (rta_oif && !is_interface_up_and_usable(this, rta_oif))
+	{	/* ignore route changes for interfaces that are ignored or down */
+		this->mutex->unlock(this->mutex);
+		DESTROY_IF(host);
+		return;
+	}
 	if (!host && rta_oif)
 	{
 		host = get_interface_address(this, rta_oif, msg->rtm_family, NULL);
 	}
 	if (host)
 	{
-		this->mutex->lock(this->mutex);
 		if (!get_vip_refcount(this, host))
 		{	/* ignore routes added for virtual IPs */
 			fire_roam_event(this, FALSE);
 		}
-		this->mutex->unlock(this->mutex);
 		host->destroy(host);
 	}
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -970,6 +1021,10 @@ static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
 static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 							  iface_entry_t** out)
 {
+	if (!(*in)->usable)
+	{	/* skip interfaces excluded by config */
+		return FALSE;
+	}
 	if (!data->include_loopback && ((*in)->flags & IFF_LOOPBACK))
 	{	/* ignore loopback devices */
 		return FALSE;
@@ -1007,7 +1062,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
-	bool found = FALSE;
+	bool found = FALSE, ignored = FALSE;
 
 	if (ip->is_anyaddr(ip))
 	{
@@ -1024,6 +1079,11 @@ METHOD(kernel_net_t, get_interface_name, bool,
 			if (ip->ip_equals(ip, addr->ip))
 			{
 				found = TRUE;
+				if (!iface->usable)
+				{
+					ignored = TRUE;
+					break;
+				}
 				if (name)
 				{
 					*name = strdup(iface->ifname);
@@ -1040,15 +1100,18 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
 
-	if (!found)
+	if (!ignored)
 	{
-		DBG2(DBG_KNL, "%H is not a local address", ip);
+		if (!found)
+		{
+			DBG2(DBG_KNL, "%H is not a local address", ip);
+		}
+		else if (name)
+		{
+			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
+		}
 	}
-	else if (name)
-	{
-		DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
-	}
-	return found;
+	return found && !ignored;
 }
 
 /**
@@ -1080,29 +1143,6 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 		DBG1(DBG_KNL, "unable to get interface index for %s", name);
 	}
 	return ifindex;
-}
-
-/**
- * Check if an interface with a given index is up
- */
-static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
-{
-	enumerator_t *ifaces;
-	iface_entry_t *iface;
-	/* default to TRUE for interface we do not monitor (e.g. lo) */
-	bool up = TRUE;
-
-	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (ifaces->enumerate(ifaces, &iface))
-	{
-		if (iface->ifindex == index)
-		{
-			up = iface->flags & IFF_UP;
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	return up;
 }
 
 /**
@@ -1303,7 +1343,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* route is from our own ipsec routing table */
 					continue;
 				}
-				if (route->oif && !is_interface_up(this, route->oif))
+				if (route->oif && !is_interface_up_and_usable(this, route->oif))
 				{	/* interface is down */
 					continue;
 				}
@@ -1830,7 +1870,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
-		if (iface->flags & IFF_UP)
+		if (iface_entry_up_and_usable(iface))
 		{
 			DBG2(DBG_KNL, "  %s", iface->ifname);
 			addrs = iface->addrs->create_enumerator(iface->addrs);
