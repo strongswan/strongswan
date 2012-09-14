@@ -191,42 +191,34 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 {
 	stroke_end_t tmp_end;
 	ike_cfg_t *ike_cfg;
-	char *interface;
 	host_t *host;
 	u_int16_t ikeport;
 
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
 	{
-		interface = hydra->kernel_interface->get_interface(
-												hydra->kernel_interface, host);
-		host->destroy(host);
-		if (interface)
+		if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												   host, NULL))
 		{
 			DBG2(DBG_CFG, "left is other host, swapping ends");
 			tmp_end = msg->add_conn.me;
 			msg->add_conn.me = msg->add_conn.other;
 			msg->add_conn.other = tmp_end;
-			free(interface);
+			host->destroy(host);
 		}
 		else
 		{
+			host->destroy(host);
 			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
 			if (host)
 			{
-				interface = hydra->kernel_interface->get_interface(
-												hydra->kernel_interface, host);
-				host->destroy(host);
-				if (!interface)
+				if (!hydra->kernel_interface->get_interface(
+										hydra->kernel_interface, host, NULL))
 				{
 					DBG1(DBG_CFG, "left nor right host is our side, "
 						 "assuming left=local");
 				}
-				else
-				{
-					free(interface);
-				}
-
+				host->destroy(host);
 			}
 		}
 	}

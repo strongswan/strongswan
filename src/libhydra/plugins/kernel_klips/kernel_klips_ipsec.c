@@ -2108,7 +2108,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	 */
 	if (policy->route == NULL && direction == POLICY_OUT)
 	{
-		char *iface;
+		char *iface = NULL;
 		ipsec_dev_t *dev;
 		route_entry_t *route = malloc_thing(route_entry_t);
 		route->src_ip = NULL;
@@ -2126,8 +2126,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		}
 
 		/* find the virtual interface */
-		iface = hydra->kernel_interface->get_interface(hydra->kernel_interface,
-													   src);
+		hydra->kernel_interface->get_interface(hydra->kernel_interface,
+											   src, &iface);
 		if (find_ipsec_dev(this, iface, &dev) == SUCCESS)
 		{
 			/* above, we got either the name of a virtual or a physical

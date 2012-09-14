@@ -472,15 +472,13 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 				(void*)address_enumerator_destroy);
 }
 
-METHOD(kernel_net_t, get_interface_name, char*,
-	private_kernel_pfroute_net_t *this, host_t* ip)
+METHOD(kernel_net_t, get_interface_name, bool,
+	private_kernel_pfroute_net_t *this, host_t* ip, char **name)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
-	char *name = NULL;
-
-	DBG2(DBG_KNL, "getting interface name for %H", ip);
+	bool found = FALSE;
 
 	this->mutex->lock(this->mutex);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
@@ -491,12 +489,16 @@ METHOD(kernel_net_t, get_interface_name, char*,
 		{
 			if (ip->ip_equals(ip, addr->ip))
 			{
-				name = strdup(iface->ifname);
+				found = TRUE;
+				if (name)
+				{
+					*name = strdup(iface->ifname);
+				}
 				break;
 			}
 		}
 		addrs->destroy(addrs);
-		if (name)
+		if (found)
 		{
 			break;
 		}
@@ -504,15 +506,15 @@ METHOD(kernel_net_t, get_interface_name, char*,
 	ifaces->destroy(ifaces);
 	this->mutex->unlock(this->mutex);
 
-	if (name)
-	{
-		DBG2(DBG_KNL, "%H is on interface %s", ip, name);
-	}
-	else
+	if (!found)
 	{
 		DBG2(DBG_KNL, "%H is not a local address", ip);
 	}
-	return name;
+	else if (name)
+	{
+		DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
+	}
+	return found;
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,

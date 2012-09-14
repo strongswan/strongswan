@@ -267,9 +267,8 @@ METHOD(listener_t, child_updown, bool,
 
 		if (up)
 		{
-			iface = hydra->kernel_interface->get_interface(
-												hydra->kernel_interface, me);
-			if (iface)
+			if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
+													   me, &iface))
 			{
 				cache_iface(this, child_sa->get_reqid(child_sa), iface);
 			}

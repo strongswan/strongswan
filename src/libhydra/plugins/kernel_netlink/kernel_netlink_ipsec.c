@@ -2169,14 +2169,13 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			route->gateway = hydra->kernel_interface->get_nexthop(
 											hydra->kernel_interface, ipsec->src,
 											ipsec->dst);
-			/* install route via outgoing interface */
-			route->if_name = hydra->kernel_interface->get_interface(
-										hydra->kernel_interface, ipsec->dst);
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 			route->prefixlen = policy->sel.prefixlen_s;
 
-			if (!route->if_name)
+			/* install route via outgoing interface */
+			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												ipsec->dst, &route->if_name))
 			{
 				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);

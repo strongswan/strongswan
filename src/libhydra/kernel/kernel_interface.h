@@ -308,9 +308,10 @@ struct kernel_interface_t {
 	 * Get the interface name of a local address.
 	 *
 	 * @param host			address to get interface name from
-	 * @return				allocated interface name, or NULL if not found
+	 * @param name			allocated interface name (optional)
+	 * @return				TRUE if interface found and usable
 	 */
-	char* (*get_interface) (kernel_interface_t *this, host_t *host);
+	bool (*get_interface) (kernel_interface_t *this, host_t *host, char **name);
 
 	/**
 	 * Creates an enumerator over all local addresses.

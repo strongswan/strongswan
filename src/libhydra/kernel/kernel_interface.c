@@ -291,14 +291,14 @@ METHOD(kernel_interface_t, get_nexthop, host_t*,
 	return this->net->get_nexthop(this->net, dest, src);
 }
 
-METHOD(kernel_interface_t, get_interface, char*,
-	private_kernel_interface_t *this, host_t *host)
+METHOD(kernel_interface_t, get_interface, bool,
+	private_kernel_interface_t *this, host_t *host, char **name)
 {
 	if (!this->net)
 	{
 		return NULL;
 	}
-	return this->net->get_interface(this->net, host);
+	return this->net->get_interface(this->net, host, name);
 }
 
 METHOD(kernel_interface_t, create_address_enumerator, enumerator_t*,

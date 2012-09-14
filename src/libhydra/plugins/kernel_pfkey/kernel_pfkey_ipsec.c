@@ -2028,14 +2028,13 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 			route->gateway = hydra->kernel_interface->get_nexthop(
 											hydra->kernel_interface, ipsec->src,
 											ipsec->dst);
-			/* install route via outgoing interface */
-			route->if_name = hydra->kernel_interface->get_interface(
-										hydra->kernel_interface, ipsec->dst);
 			route->dst_net = chunk_clone(policy->src.net->get_address(
 											policy->src.net));
 			route->prefixlen = policy->src.mask;
 
-			if (!route->if_name)
+			/* install route via outgoing interface */
+			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												ipsec->dst, &route->if_name))
 			{
 				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);
