@@ -23,6 +23,13 @@ strongswan-5.0.1
   PAM directly anymore, but can use any XAuth backend to verify credentials,
   including xauth-pam.
 
+- The new unity plugin brings support for some parts of the IKEv1 Cisco Unity
+  Extension. As client, charon narrows traffic selectors to the received
+  Split-Include attributes and automatically installs IPsec bypass policies
+  for received Local-LAN attributes. As server, charon sends Split-Include
+  attributes for leftsubnet definitions containing multiple subnets to Unity-
+  aware clients.
+
 - An EAP-Nak payload is returned by clients if the gateway requests an EAP
   method that the client does not support.  Clients can also request a specific
   EAP method by configuring that method with leftauth.
