@@ -302,15 +302,13 @@ METHOD(kernel_interface_t, get_interface, bool,
 }
 
 METHOD(kernel_interface_t, create_address_enumerator, enumerator_t*,
-	private_kernel_interface_t *this, bool include_down_ifaces,
-	bool include_virtual_ips, bool include_loopback)
+	private_kernel_interface_t *this, kernel_address_type_t which)
 {
 	if (!this->net)
 	{
 		return enumerator_create_empty();
 	}
-	return this->net->create_address_enumerator(this->net, include_down_ifaces,
-										include_virtual_ips, include_loopback);
+	return this->net->create_address_enumerator(this->net, which);
 }
 
 METHOD(kernel_interface_t, add_ip, status_t,
@@ -423,7 +421,7 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	}
 	host->destroy(host);
 
-	addrs = create_address_enumerator(this, TRUE, TRUE, TRUE);
+	addrs = create_address_enumerator(this, ADDR_TYPE_ALL);
 	while (addrs->enumerate(addrs, (void**)&host))
 	{
 		if (ts->includes(ts, host))

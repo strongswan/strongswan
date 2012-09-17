@@ -509,12 +509,8 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 /** enumerator over addresses */
 typedef struct {
 	private_kernel_pfroute_net_t* this;
-	/** whether to enumerate down interfaces */
-	bool include_down_ifaces;
-	/** whether to enumerate virtual ip addresses */
-	bool include_virtual_ips;
-	/** whether to enumerate loopback interfaces */
-	bool include_loopback;
+	/** which addresses to enumerate */
+	address_type_t which;
 } address_enumerator_t;
 
 /**
@@ -533,7 +529,7 @@ static bool filter_addresses(address_enumerator_t *data,
 							 addr_entry_t** in, host_t** out)
 {
 	host_t *ip;
-	if (!data->include_virtual_ips && (*in)->virtual)
+	if (!(data->which & ADDR_TYPE_VIRTUAL) && (*in)->virtual)
 	{   /* skip virtual interfaces added by us */
 		return FALSE;
 	}
@@ -566,16 +562,16 @@ static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
 static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 							  iface_entry_t** out)
 {
-	if (!(*in)->usable)
+	if (!(data->which & ADDR_TYPE_IGNORED) && !(*in)->usable)
 	{	/* skip interfaces excluded by config */
 		return FALSE;
 	}
-	if (!data->include_loopback && ((*in)->flags & IFF_LOOPBACK))
+	if (!(data->which & ADDR_TYPE_LOOPBACK) && ((*in)->flags & IFF_LOOPBACK))
 	{	/* ignore loopback devices */
 		return FALSE;
 	}
-	if (!data->include_down_ifaces && !((*in)->flags & IFF_UP))
-	{   /* skip interfaces not up */
+	if (!(data->which & ADDR_TYPE_DOWN) && !((*in)->flags & IFF_UP))
+	{	/* skip interfaces not up */
 		return FALSE;
 	}
 	*out = *in;
@@ -583,14 +579,11 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 }
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
-	private_kernel_pfroute_net_t *this,
-	bool include_down_ifaces, bool include_virtual_ips, bool include_loopback)
+	private_kernel_pfroute_net_t *this, address_type_t which)
 {
 	address_enumerator_t *data = malloc_thing(address_enumerator_t);
 	data->this = this;
-	data->include_down_ifaces = include_down_ifaces;
-	data->include_virtual_ips = include_virtual_ips;
-	data->include_loopback = include_loopback;
+	data->which = which;
 
 	this->mutex->lock(this->mutex);
 	return enumerator_create_nested(

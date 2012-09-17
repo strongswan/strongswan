@@ -517,7 +517,7 @@ METHOD(stroke_list_t, status, void,
 		enumerator->destroy(enumerator);
 
 		enumerator = hydra->kernel_interface->create_address_enumerator(
-								hydra->kernel_interface, FALSE, FALSE, FALSE);
+								hydra->kernel_interface, ADDR_TYPE_REGULAR);
 		fprintf(out, "Listening IP addresses:\n");
 		while (enumerator->enumerate(enumerator, (void**)&host))
 		{

@@ -49,7 +49,7 @@ static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
 	bool success = TRUE;
 
 	enumerator = hydra->kernel_interface->create_address_enumerator(
-							hydra->kernel_interface, FALSE, FALSE, FALSE);
+									hydra->kernel_interface, ADDR_TYPE_REGULAR);
 	while (enumerator->enumerate(enumerator, &host))
 	{
 		if (!this->ifmap->publish_device_ip(this->ifmap, host))

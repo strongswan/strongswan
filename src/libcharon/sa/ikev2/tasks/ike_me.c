@@ -136,7 +136,7 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	port = host->get_port(host);
 
 	enumerator = hydra->kernel_interface->create_address_enumerator(
-								hydra->kernel_interface, FALSE, FALSE, FALSE);
+									hydra->kernel_interface, ADDR_TYPE_REGULAR);
 	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);
