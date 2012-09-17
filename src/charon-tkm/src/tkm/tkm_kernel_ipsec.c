@@ -23,6 +23,7 @@
 #include <tkm/client.h>
 
 #include "tkm.h"
+#include "tkm_utils.h"
 #include "tkm_types.h"
 #include "tkm_keymat.h"
 #include "tkm_kernel_sad.h"
@@ -77,29 +78,112 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
-	if (!inbound)
+	if (enc_key.ptr == NULL)
 	{
+		DBG1(DBG_KNL, "Unable to get ESA information");
+		return FAILED;
+	}
+	esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
+
+	/* only handle the case where we have both distinct ESP spi's available */
+	if (esa.spi_r == spi)
+	{
+		chunk_free(&esa.nonce_i);
+		chunk_free(&esa.nonce_r);
 		return SUCCESS;
 	}
-	const esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
+
+	/* Initiator if encr_r is passed as enc_key to the inbound add_sa call */
+	const bool initiator = esa.is_encr_r && inbound;
+
+	esp_spi_type spi_loc, spi_rem;
+	host_t *local, *peer;
+	chunk_t *nonce_loc, *nonce_rem;
+	if (initiator)
+	{
+		spi_loc = spi;
+		spi_rem = esa.spi_r;
+		local = dst;
+		peer = src;
+		nonce_loc = &esa.nonce_i;
+		nonce_rem = &esa.nonce_r;
+	}
+	else
+	{
+		spi_loc = esa.spi_r;
+		spi_rem = spi;
+		local = src;
+		peer = dst;
+		nonce_loc = &esa.nonce_r;
+		nonce_rem = &esa.nonce_i;
+	}
+
+	const nc_id_type nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map,
+														   nonce_loc);
+
 	const esa_id_type esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
-	DBG1(DBG_KNL, "adding child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, "
-		 "esp_spi_rem: %x)", esa_id, esa.isa_id, ntohl(spi), ntohl(esa.spi_r));
-	if (!this->sad->insert(this->sad, esa_id, src, dst, spi, protocol))
+	if (!this->sad->insert(this->sad, esa_id, peer, local, spi_loc, protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
-		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
-		return FAILED;
+		goto sad_failure;
 	}
-	if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(spi),
-							 ntohl(esa.spi_r)) != TKM_OK)
+
+	/*
+	 * creation of first CHILD SA:
+	 * no nonce and no dh contexts because the ones from the IKE SA are re-used
+	 */
+	if (nonce_loc_id == 0 && esa.dh_id == 0)
 	{
-		DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
-		this->sad->remove(this->sad, esa_id);
-		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
-		return FAILED;
+		if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(spi_loc),
+								 ntohl(spi_rem)) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "child SA (%llu, first) creation failed", esa_id);
+			goto failure;
+		}
 	}
+	/* creation of child SA without PFS: no dh context */
+	else if (nonce_loc_id != 0 && esa.dh_id == 0)
+	{
+		nonce_type nc_rem;
+		chunk_to_sequence(nonce_rem, &nc_rem);
+		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, 1, 1, nonce_loc_id,
+								  nc_rem, initiator, ntohl(spi_loc),
+								  ntohl(spi_rem)) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "child SA (%llu, no PFS) creation failed", esa_id);
+			goto failure;
+		}
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
+	}
+	/* creation of subsequent child SA with PFS: nonce and dh context are set */
+	else
+	{
+		nonce_type nc_rem;
+		chunk_to_sequence(nonce_rem, &nc_rem);
+		if (ike_esa_create(esa_id, esa.isa_id, 1, 1, esa.dh_id, nonce_loc_id,
+						   nc_rem, initiator, ntohl(spi_loc),
+						   ntohl(spi_rem)) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
+			goto failure;
+		}
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
+	}
+	DBG1(DBG_KNL, "added child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, "
+		 "esp_spi_rem: %x, role: %s)", esa_id, esa.isa_id, ntohl(spi_loc),
+		 ntohl(spi_rem), initiator ? "initiator" : "responder");
+	chunk_free(&esa.nonce_i);
+	chunk_free(&esa.nonce_r);
+
 	return SUCCESS;
+
+failure:
+	this->sad->remove(this->sad, esa_id);
+sad_failure:
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
+	chunk_free(&esa.nonce_i);
+	chunk_free(&esa.nonce_r);
+	return FAILED;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
