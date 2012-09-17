@@ -78,9 +78,9 @@ static void narrow_initiator(private_unity_narrow_t *this, ike_sa_t *ike_sa,
 }
 
 /**
- * As responder/responder, bump up TS to 0.0.0.0/0 for on-the-wire bits
+ * As initiator, bump up TS to 0.0.0.0/0 for on-the-wire bits
  */
-static void narrow_pre(linked_list_t *list)
+static void narrow_initiator_pre(linked_list_t *list)
 {
 	traffic_selector_t *ts;
 
@@ -98,7 +98,7 @@ static void narrow_pre(linked_list_t *list)
 }
 
 /**
- * As responder, rarrow down TS to configuration for installation
+ * As responder, narrow down TS to configuration for installation
  */
 static void narrow_responder_post(child_cfg_t *child_cfg, linked_list_t *local)
 {
@@ -128,14 +128,11 @@ METHOD(listener_t, narrow, bool,
 		switch (type)
 		{
 			case NARROW_INITIATOR_PRE_AUTH:
-				narrow_pre(remote);
+				narrow_initiator_pre(remote);
 				break;
 			case NARROW_INITIATOR_POST_AUTH:
 				narrow_initiator(this, ike_sa,
 								 child_sa->get_config(child_sa), remote);
-				break;
-			case NARROW_RESPONDER:
-				narrow_pre(local);
 				break;
 			case NARROW_RESPONDER_POST:
 				narrow_responder_post(child_sa->get_config(child_sa), local);

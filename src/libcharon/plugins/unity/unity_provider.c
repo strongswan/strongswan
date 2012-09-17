@@ -133,6 +133,9 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		list->destroy(list);
 		return NULL;
 	}
+	DBG1(DBG_CFG, "sending %N: %#R",
+		 configuration_attribute_type_names, UNITY_SPLIT_INCLUDE, list);
+
 	INIT(attr_enum,
 		.public = {
 			.enumerate = (void*)_attribute_enumerate,
@@ -140,6 +143,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		},
 		.list = list,
 	);
+
 	return &attr_enum->public;
 }
 
