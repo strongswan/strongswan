@@ -133,11 +133,71 @@ static bool iface_entry_by_index(iface_entry_t *this, int *ifindex)
 }
 
 /**
+ * check if an interface is up
+ */
+static inline bool iface_entry_up(iface_entry_t *iface)
+{
+	return (iface->flags & IFF_UP) == IFF_UP;
+}
+
+/**
  * check if an interface is up and usable
  */
 static inline bool iface_entry_up_and_usable(iface_entry_t *iface)
 {
-	return iface->usable && (iface->flags & IFF_UP) == IFF_UP;
+	return iface->usable && iface_entry_up(iface);
+}
+
+typedef struct addr_map_entry_t addr_map_entry_t;
+
+/**
+ * Entry that maps an IP address to an interface entry
+ */
+struct addr_map_entry_t {
+	/** The IP address */
+	host_t *ip;
+
+	/** The interface this address is installed on */
+	iface_entry_t *iface;
+};
+
+/**
+ * Hash a addr_map_entry_t object, all entries with the same IP address
+ * are stored in the same bucket
+ */
+static u_int addr_map_entry_hash(addr_map_entry_t *this)
+{
+	return chunk_hash(this->ip->get_address(this->ip));
+}
+
+/**
+ * Compare two addr_map_entry_t objects, two entries are equal if they are
+ * installed on the same interface
+ */
+static bool addr_map_entry_equals(addr_map_entry_t *a, addr_map_entry_t *b)
+{
+	return a->iface->ifindex == b->iface->ifindex &&
+		   a->ip->ip_equals(a->ip, b->ip);
+}
+
+/**
+ * Used with get_match this finds an address entry if it is installed on
+ * an up and usable interface
+ */
+static bool addr_map_entry_match_up_and_usable(addr_map_entry_t *a,
+											   addr_map_entry_t *b)
+{
+	return iface_entry_up_and_usable(b->iface) &&
+		   a->ip->ip_equals(a->ip, b->ip);
+}
+
+/**
+ * Used with get_match this finds an address entry if it is installed on
+ * any active local interface
+ */
+static bool addr_map_entry_match_up(addr_map_entry_t *a, addr_map_entry_t *b)
+{
+	return iface_entry_up(b->iface) && a->ip->ip_equals(a->ip, b->ip);
 }
 
 typedef struct route_entry_t route_entry_t;
@@ -271,6 +331,11 @@ struct private_kernel_netlink_net_t {
 	 * Cached list of interfaces and its addresses (iface_entry_t)
 	 */
 	linked_list_t *ifaces;
+
+	/**
+	 * Map for IP addresses to iface_entry_t objects (addr_map_entry_t)
+	 */
+	hashtable_t *addrs;
 
 	/**
 	 * netlink rt socket (routing)
@@ -486,6 +551,48 @@ static int get_vip_refcount(private_kernel_netlink_net_t *this, host_t* ip)
 }
 
 /**
+ * Add an address map entry
+ */
+static void addr_map_entry_add(private_kernel_netlink_net_t *this,
+							   addr_entry_t *addr, iface_entry_t *iface)
+{
+	addr_map_entry_t *entry;
+
+	if (addr->virtual)
+	{	/* don't map virtual IPs */
+		return;
+	}
+
+	INIT(entry,
+		.ip = addr->ip,
+		.iface = iface,
+	);
+	entry = this->addrs->put(this->addrs, entry, entry);
+	free(entry);
+}
+
+/**
+ * Remove an address map entry (the argument order is a bit strange because
+ * it is also used with linked_list_t.invoke_function)
+ */
+static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
+								  private_kernel_netlink_net_t *this)
+{
+	addr_map_entry_t *entry, lookup = {
+		.ip = addr->ip,
+		.iface = iface,
+	};
+
+	if (addr->virtual)
+	{	/* these are never mapped, but this check avoids problems if a
+		 * virtual IP equals a regular one */
+		return;
+	}
+	entry = this->addrs->remove(this->addrs, &lookup);
+	free(entry);
+}
+
+/**
  * get the first non-virtual ip address on the given interface.
  * if a candidate address is given, we first search for that address and if not
  * found return the address as above.
@@ -681,6 +788,8 @@ static void process_link(private_kernel_netlink_net_t *this,
 						DBG1(DBG_KNL, "interface %s deleted", current->ifname);
 					}
 					this->ifaces->remove_at(this->ifaces, enumerator);
+					current->addrs->invoke_function(current->addrs,
+								(void*)addr_map_entry_remove, current, this);
 					iface_entry_destroy(current);
 					break;
 				}
@@ -774,6 +883,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 							DBG1(DBG_KNL, "%H disappeared from %s",
 								 host, iface->ifname);
 						}
+						addr_map_entry_remove(addr, iface, this);
 						addr_entry_destroy(addr);
 					}
 					else if (hdr->nlmsg_type == RTM_NEWADDR && addr->virtual)
@@ -798,6 +908,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 					addr->scope = msg->ifa_scope;
 
 					iface->addrs->insert_last(iface->addrs, addr);
+					addr_map_entry_add(this, addr, iface);
 					if (event && iface->usable)
 					{
 						DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
@@ -1059,59 +1170,37 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_netlink_net_t *this, host_t* ip, char **name)
 {
-	enumerator_t *ifaces, *addrs;
-	iface_entry_t *iface;
-	addr_entry_t *addr;
-	bool found = FALSE, ignored = FALSE;
+	addr_map_entry_t *entry, lookup = {
+		.ip = ip,
+	};
 
 	if (ip->is_anyaddr(ip))
 	{
 		return FALSE;
 	}
-
 	this->mutex->lock(this->mutex);
-	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (ifaces->enumerate(ifaces, &iface))
+	/* first try to find it on an up and usable interface */
+	entry = this->addrs->get_match(this->addrs, &lookup,
+								  (void*)addr_map_entry_match_up_and_usable);
+	if (entry)
 	{
-		addrs = iface->addrs->create_enumerator(iface->addrs);
-		while (addrs->enumerate(addrs, &addr))
+		if (name)
 		{
-			if (ip->ip_equals(ip, addr->ip))
-			{
-				found = TRUE;
-				if (!iface->usable)
-				{
-					ignored = TRUE;
-					break;
-				}
-				if (name)
-				{
-					*name = strdup(iface->ifname);
-				}
-				break;
-			}
-		}
-		addrs->destroy(addrs);
-		if (found)
-		{
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	this->mutex->unlock(this->mutex);
-
-	if (!ignored)
-	{
-		if (!found)
-		{
-			DBG2(DBG_KNL, "%H is not a local address", ip);
-		}
-		else if (name)
-		{
+			*name = strdup(entry->iface->ifname);
 			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
 		}
+		this->mutex->unlock(this->mutex);
+		return TRUE;
 	}
-	return found && !ignored;
+	/* maybe it is installed on an ignored interface */
+	entry = this->addrs->get_match(this->addrs, &lookup,
+								  (void*)addr_map_entry_match_up);
+	if (!entry)
+	{
+		DBG2(DBG_KNL, "%H is not a local address or the interface is down", ip);
+	}
+	this->mutex->unlock(this->mutex);
+	return FALSE;
 }
 
 /**
@@ -1955,6 +2044,7 @@ METHOD(kernel_net_t, destroy, void,
 {
 	enumerator_t *enumerator;
 	route_entry_t *route;
+	addr_map_entry_t *addr;
 
 	if (this->routing_table)
 	{
@@ -1981,6 +2071,14 @@ METHOD(kernel_net_t, destroy, void,
 	net_changes_clear(this);
 	this->net_changes->destroy(this->net_changes);
 	this->net_changes_lock->destroy(this->net_changes_lock);
+
+	enumerator = this->addrs->create_enumerator(this->addrs);
+	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
+	{
+		free(addr);
+	}
+	enumerator->destroy(enumerator);
+	this->addrs->destroy(this->addrs);
 
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->rt_exclude->destroy(this->rt_exclude);
@@ -2020,6 +2118,9 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.net_changes = hashtable_create(
 								   (hashtable_hash_t)net_change_hash,
 								   (hashtable_equals_t)net_change_equals, 16),
+		.addrs = hashtable_create(
+								(hashtable_hash_t)addr_map_entry_hash,
+								(hashtable_equals_t)addr_map_entry_equals, 16),
 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
