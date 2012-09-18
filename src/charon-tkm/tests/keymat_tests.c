@@ -27,6 +27,7 @@
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
 #include "tkm_kernel_ipsec.h"
+#include "tkm_types.h"
 
 START_TEST(test_derive_ike_keys)
 {
@@ -102,10 +103,98 @@ START_TEST(test_derive_ike_keys)
 }
 END_TEST
 
+START_TEST(test_derive_child_keys)
+{
+	fail_if(!library_init(NULL), "Unable to init library");
+	fail_if(!libhydra_init("tkm-tests"), "Unable to init libhydra");
+	fail_if(!libcharon_init("tkm-tests"), "Unable to init libcharon");
+
+	/* Register TKM specific plugins */
+	static plugin_feature_t features[] = {
+		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
+			PLUGIN_PROVIDE(NONCE_GEN),
+		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+			PLUGIN_DEPENDS(RNG, RNG_WEAK),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
+	};
+	lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
+			countof(features), TRUE);
+
+	fail_if(!charon->initialize(charon, PLUGINS), "Unable to init charon");
+
+	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
+	fail_if(!dh, "Unable to create DH object");
+	proposal_t *proposal = proposal_create_from_string(PROTO_ESP,
+			"aes256-sha512-modp4096");
+	fail_if(!proposal, "Unable to create proposal");
+	proposal->set_spi(proposal, 42);
+
+	tkm_keymat_t *keymat = tkm_keymat_create(TRUE);
+	fail_if(!keymat, "Unable to create keymat");
+
+	chunk_t encr_i, encr_r, integ_i, integ_r;
+	chunk_t nonce = chunk_from_chars("test chunk");
+
+	fail_unless(keymat->derive_child_keys(keymat, proposal, (diffie_hellman_t *)dh, nonce, nonce,
+										  &encr_i, &integ_i, &encr_r, &integ_r),
+				"Child key derivation failed");
+
+	esa_info_t *info = (esa_info_t *)encr_i.ptr;
+	fail_if(!info, "encr_i does not contain esa information");
+	fail_if(info->isa_id != keymat->get_isa_id(keymat),
+			"Isa context id mismatch (encr_i)");
+	fail_if(info->spi_r != 42,
+			"SPI mismatch (encr_i)");
+	fail_unless(chunk_equals(info->nonce_i, nonce),
+				"nonce_i mismatch (encr_i)");
+	fail_unless(chunk_equals(info->nonce_r, nonce),
+				"nonce_r mismatch (encr_i)");
+	fail_if(info->is_encr_r,
+			"Flag is_encr_r set for encr_i");
+	fail_if(info->dh_id != dh->get_id(dh),
+			"DH context id mismatch (encr_i)");
+	chunk_free(&info->nonce_i);
+	chunk_free(&info->nonce_r);
+
+	info = (esa_info_t *)encr_r.ptr;
+	fail_if(!info, "encr_r does not contain esa information");
+	fail_if(info->isa_id != keymat->get_isa_id(keymat),
+			"Isa context id mismatch (encr_r)");
+	fail_if(info->spi_r != 42,
+			"SPI mismatch (encr_r)");
+	fail_unless(chunk_equals(info->nonce_i, nonce),
+				"nonce_i mismatch (encr_r)");
+	fail_unless(chunk_equals(info->nonce_r, nonce),
+				"nonce_r mismatch (encr_r)");
+	fail_unless(info->is_encr_r,
+				"Flag is_encr_r set for encr_r");
+	fail_if(info->dh_id != dh->get_id(dh),
+			"DH context id mismatch (encr_i)");
+	chunk_free(&info->nonce_i);
+	chunk_free(&info->nonce_r);
+
+	proposal->destroy(proposal);
+	dh->dh.destroy(&dh->dh);
+	keymat->keymat.destroy(&keymat->keymat);
+	chunk_free(&encr_i);
+	chunk_free(&encr_r);
+
+	libcharon_deinit();
+	libhydra_deinit();
+	library_deinit();
+}
+END_TEST
+
 TCase *make_keymat_tests(void)
 {
 	TCase *tc = tcase_create("Keymat tests");
 	tcase_add_test(tc, test_derive_ike_keys);
+	tcase_add_test(tc, test_derive_child_keys);
 
 	return tc;
 }
