@@ -1179,8 +1179,8 @@ METHOD(stroke_config_t, set_user_credentials, void,
 		return;
 	}
 
-	/* replace/set the username in the first EAP auth_cfg, also look for a
-	 * suitable remote ID.
+	/* replace/set the username in the first EAP/XAuth auth_cfg, also look for
+	 * a suitable remote ID.
 	 * note that adding the identity here is not fully thread-safe as the
 	 * peer_cfg and in turn the auth_cfg could be in use. for the default use
 	 * case (setting user credentials before upping the connection) this will
@@ -1199,16 +1199,25 @@ METHOD(stroke_config_t, set_user_credentials, void,
 		}
 
 		auth_class = (uintptr_t)auth_cfg->get(auth_cfg, AUTH_RULE_AUTH_CLASS);
-		if (auth_class == AUTH_CLASS_EAP)
+		if (auth_class == AUTH_CLASS_EAP || auth_class == AUTH_CLASS_XAUTH)
 		{
-			auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
-			/* if aaa_identity is specified use that as remote ID */
-			identity = auth_cfg->get(auth_cfg, AUTH_RULE_AAA_IDENTITY);
-			if (identity && identity->get_type(identity) != ID_ANY)
+			if (auth_class == AUTH_CLASS_EAP)
 			{
-				gw = identity;
+				auth_cfg->add(auth_cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+				/* if aaa_identity is specified use that as remote ID */
+				identity = auth_cfg->get(auth_cfg, AUTH_RULE_AAA_IDENTITY);
+				if (identity && identity->get_type(identity) != ID_ANY)
+				{
+					gw = identity;
+				}
+				DBG1(DBG_CFG, "  configured EAP-Identity %Y", id);
 			}
-			DBG1(DBG_CFG, "  configured EAP-Identity %Y", id);
+			else
+			{
+				auth_cfg->add(auth_cfg, AUTH_RULE_XAUTH_IDENTITY,
+							  id->clone(id));
+				DBG1(DBG_CFG, "  configured XAuth username %Y", id);
+			}
 			type = SHARED_EAP;
 			break;
 		}
