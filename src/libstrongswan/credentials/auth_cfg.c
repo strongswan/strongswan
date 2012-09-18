@@ -915,9 +915,9 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 }
 
 /**
- * Implementation of auth_cfg_t.equals.
+ * Compare two auth_cfg_t objects for equality.
  */
-static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
+static bool auth_cfg_equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 {
 	enumerator_t *e1, *e2;
 	entry_t *i1, *i2;
@@ -952,6 +952,20 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 	}
 	e1->destroy(e1);
 	return equal;
+}
+
+/**
+ * Implementation of auth_cfg_t.equals.
+ */
+static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
+{
+	if (auth_cfg_equals(this, other))
+	{
+		/* as 'other' might contain entries that 'this' doesn't we also check
+		 * the other way around */
+		return auth_cfg_equals(other, this);
+	}
+	return FALSE;
 }
 
 METHOD(auth_cfg_t, purge, void,
