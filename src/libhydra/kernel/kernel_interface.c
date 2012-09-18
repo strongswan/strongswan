@@ -269,13 +269,13 @@ METHOD(kernel_interface_t, get_source_addr, host_t*,
 }
 
 METHOD(kernel_interface_t, get_nexthop, host_t*,
-	private_kernel_interface_t *this, host_t *dest)
+	private_kernel_interface_t *this, host_t *dest, host_t *src)
 {
 	if (!this->net)
 	{
 		return NULL;
 	}
-	return this->net->get_nexthop(this->net, dest);
+	return this->net->get_nexthop(this->net, dest, src);
 }
 
 METHOD(kernel_interface_t, get_interface, char*,

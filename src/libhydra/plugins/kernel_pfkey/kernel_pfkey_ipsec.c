@@ -2026,7 +2026,8 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD).*/
 			route->gateway = hydra->kernel_interface->get_nexthop(
-										hydra->kernel_interface, ipsec->src);
+											hydra->kernel_interface, ipsec->src,
+											ipsec->dst);
 			/* install route via outgoing interface */
 			route->if_name = hydra->kernel_interface->get_interface(
 										hydra->kernel_interface, ipsec->dst);

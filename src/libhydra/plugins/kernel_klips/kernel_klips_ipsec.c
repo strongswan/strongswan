@@ -2174,7 +2174,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 		/* get the nexthop to dst */
 		route->gateway = hydra->kernel_interface->get_nexthop(
-												hydra->kernel_interface, dst);
+								hydra->kernel_interface, dst, route->src_ip);
 		route->dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net));
 		route->prefixlen = policy->dst.mask;
 

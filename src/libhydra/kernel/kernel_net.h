@@ -42,7 +42,7 @@ struct kernel_net_t {
 	 * Does a route lookup to get the source address used to reach dest.
 	 * The returned host is allocated and must be destroyed.
 	 * An optional src address can be used to check if a route is available
-	 * for given source to dest.
+	 * for the given source to dest.
 	 *
 	 * @param dest			target destination address
 	 * @param src			source address to check, or NULL
@@ -55,11 +55,14 @@ struct kernel_net_t {
 	 *
 	 * Does a route lookup to get the next hop used to reach dest.
 	 * The returned host is allocated and must be destroyed.
+	 * An optional src address can be used to check if a route is available
+	 * for the given source to dest.
 	 *
 	 * @param dest			target destination address
+	 * @param src			source address to check, or NULL
 	 * @return				next hop address, NULL if unreachable
 	 */
-	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest);
+	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, host_t *src);
 
 	/**
 	 * Get the interface name of a local address.
