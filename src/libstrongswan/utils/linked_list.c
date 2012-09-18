@@ -16,6 +16,7 @@
  */
 
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "linked_list.h"
 
@@ -588,6 +589,27 @@ linked_list_t *linked_list_create_from_enumerator(enumerator_t *enumerator)
 		list->insert_last(list, item);
 	}
 	enumerator->destroy(enumerator);
+
+	return list;
+}
+
+/*
+ * See header.
+ */
+linked_list_t *linked_list_create_with_items(void *item, ...)
+{
+	linked_list_t *list;
+	va_list args;
+
+	list = linked_list_create();
+
+	va_start(args, item);
+	while (item)
+	{
+		list->insert_last(list, item);
+		item = va_arg(args, void*);
+	}
+	va_end(args);
 
 	return list;
 }
