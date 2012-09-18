@@ -277,7 +277,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
 	x509_t *x509;
-	bool agent = FALSE, smartcard = FALSE;
+	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
 	lifetime_cfg_t lifetime = {
 		.time = {
 			.life = 10800 /* 3h */,
@@ -380,6 +380,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		 * included in the gateway certificate. */
 		gateway = identification_create_from_string((char*)address);
 		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
+		loose_gateway_id = TRUE;
 	}
 
 	if (auth_class == AUTH_CLASS_EAP)
@@ -519,6 +520,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
+	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, loose_gateway_id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create(priv->name, &lifetime,
