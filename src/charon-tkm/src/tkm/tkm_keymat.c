@@ -230,15 +230,36 @@ METHOD(tkm_keymat_t, derive_ike_keys, bool,
 		spi_rem = id->get_initiator_spi(id);
 	}
 
+	result_type res;
 	key_type sk_ai, sk_ar, sk_ei, sk_er;
-	DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu, spi_loc: %llx, "
-			"spi_rem: %llx)", nc_id, dh_id, spi_loc, spi_rem);
-	/* Fake some data for now */
-	if (ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, 1, dh_id, nc_id,
-				nonce_rem, 1, spi_loc, spi_rem,
-				&sk_ai, &sk_ar, &sk_ei, &sk_er) != TKM_OK)
+	if (rekey_function == PRF_UNDEFINED)
 	{
-		DBG1(DBG_IKE, "key derivation failed");
+		DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu, spi_loc: %llx, "
+			 "spi_rem: %llx)", nc_id, dh_id, spi_loc, spi_rem);
+		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, 1, dh_id, nc_id,
+							 nonce_rem, this->initiator, spi_loc, spi_rem,
+							 &sk_ai, &sk_ar, &sk_ei, &sk_er);
+	}
+	else
+	{
+		if (rekey_skd.ptr == NULL || rekey_skd.len != sizeof(isa_id_type))
+		{
+			DBG1(DBG_IKE, "unable to retrieve parent isa context id");
+			return FALSE;
+		}
+		const isa_id_type parent_isa_id = *((isa_id_type *)(rekey_skd.ptr));
+		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, nc: %llu, dh: %llu,"
+			 "spi_loc: %llx, spi_rem: %llx)", parent_isa_id, nc_id, dh_id,
+			 spi_loc, spi_rem);
+		res = ike_isa_create_child(this->isa_ctx_id, parent_isa_id, 1, dh_id,
+								   nc_id, nonce_rem, this->initiator, spi_loc,
+								   spi_rem, &sk_ai, &sk_ar, &sk_ei, &sk_er);
+		chunk_free(&rekey_skd);
+	}
+
+	if (res != TKM_OK)
+	{
+		DBG1(DBG_IKE, "key derivation failed (isa: %llu)", this->isa_ctx_id);
 		return FALSE;
 	}
 
@@ -336,8 +357,7 @@ METHOD(tkm_keymat_t, get_auth_octets, bool,
 METHOD(tkm_keymat_t, get_skd, pseudo_random_function_t,
 	private_tkm_keymat_t *this, chunk_t *skd)
 {
-	DBG1(DBG_IKE, "returning skd");
-	*skd = chunk_empty;
+	*skd = chunk_clone(chunk_from_thing(this->isa_ctx_id));
 	return PRF_HMAC_SHA2_512;
 }
 
