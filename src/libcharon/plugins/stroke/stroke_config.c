@@ -377,6 +377,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	char *auth, *id, *pubkey, *cert, *ca, *groups;
 	stroke_end_t *end, *other_end;
 	auth_cfg_t *cfg;
+	bool loose = FALSE;
 
 	/* select strings */
 	if (local)
@@ -418,6 +419,11 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		{
 			ca = other_end->ca2;
 		}
+	}
+	if (id && *id == '%' && !streq(id, "%any"))
+	{	/* has only an effect on rightid/2 */
+		loose = !local;
+		id++;
 	}
 
 	if (!auth)
@@ -470,6 +476,10 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	if (identity->get_type(identity) != ID_ANY)
 	{
 		cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
+		if (loose)
+		{
+			cfg->add(cfg, AUTH_RULE_IDENTITY_LOOSE, TRUE);
+		}
 	}
 	else
 	{

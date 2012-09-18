@@ -662,6 +662,18 @@ Can be an IP address, a fully-qualified domain name, an email address, or
 a keyid. If
 .B leftcert
 is configured the identity has to be confirmed by the certificate.
+
+For IKEv2 and
+.B rightid
+the prefix
+.B %
+in front of the identity prevents the daemon from sending IDr in its IKE_AUTH
+request and will allow it to verify the configured identity against the subject
+and subjectAltNames contained in the responder's certificate (otherwise it is
+only compared with the IDr returned by the responder).  The IDr sent by the
+initiator might otherwise prevent the responder from finding a config if it
+has configured a different value for
+.BR leftid .
 .TP
 .BR leftid2 " = <id>"
 identity to use for a second authentication for the left participant
