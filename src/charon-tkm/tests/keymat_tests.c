@@ -79,11 +79,12 @@ START_TEST(test_derive_ike_keys)
 	dh->dh.get_my_public_value(&dh->dh, &pubvalue);
 	dh->dh.set_other_public_value(&dh->dh, pubvalue);
 
-	fail_unless(keymat->derive_ike_keys(keymat, proposal, &dh->dh, nonce, nonce,
-				ike_sa_id, PRF_UNDEFINED, chunk_empty), "Key derivation failed");
+	fail_unless(keymat->keymat_v2.derive_ike_keys(&keymat->keymat_v2, proposal,
+				&dh->dh, nonce, nonce, ike_sa_id, PRF_UNDEFINED, chunk_empty),
+				"Key derivation failed");
 	chunk_free(&nonce);
 
-	aead_t * const aead = keymat->keymat.get_aead(&keymat->keymat, TRUE);
+	aead_t * const aead = keymat->keymat_v2.keymat.get_aead(&keymat->keymat_v2.keymat, TRUE);
 	fail_if(!aead, "AEAD is NULL");
 
 	fail_if(aead->get_key_size(aead) != 96, "Key size mismatch %d",
@@ -94,7 +95,7 @@ START_TEST(test_derive_ike_keys)
 	proposal->destroy(proposal);
 	dh->dh.destroy(&dh->dh);
 	ike_sa_id->destroy(ike_sa_id);
-	keymat->keymat.destroy(&keymat->keymat);
+	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&pubvalue);
 
 	libcharon_deinit();
@@ -140,8 +141,10 @@ START_TEST(test_derive_child_keys)
 	chunk_t encr_i, encr_r, integ_i, integ_r;
 	chunk_t nonce = chunk_from_chars("test chunk");
 
-	fail_unless(keymat->derive_child_keys(keymat, proposal, (diffie_hellman_t *)dh, nonce, nonce,
-										  &encr_i, &integ_i, &encr_r, &integ_r),
+	fail_unless(keymat->keymat_v2.derive_child_keys(&keymat->keymat_v2, proposal,
+													(diffie_hellman_t *)dh,
+													nonce, nonce, &encr_i,
+													&integ_i, &encr_r, &integ_r),
 				"Child key derivation failed");
 
 	esa_info_t *info = (esa_info_t *)encr_i.ptr;
@@ -180,7 +183,7 @@ START_TEST(test_derive_child_keys)
 
 	proposal->destroy(proposal);
 	dh->dh.destroy(&dh->dh);
-	keymat->keymat.destroy(&keymat->keymat);
+	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&encr_i);
 	chunk_free(&encr_r);
 
