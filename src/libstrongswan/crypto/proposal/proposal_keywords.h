@@ -50,7 +50,7 @@ typedef struct proposal_keywords_t proposal_keywords_t;
 #include <crypto/transform.h>
 
 /**
- * Class representing a proposal token..
+ * Class representing a proposal token.
  */
 struct proposal_token_t {
 
