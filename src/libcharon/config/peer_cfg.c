@@ -256,7 +256,7 @@ METHOD(peer_cfg_t, create_child_cfg_enumerator, enumerator_t*,
  * Check how good a list of TS matches a given child config
  */
 static int get_ts_match(child_cfg_t *cfg, bool local,
-						linked_list_t *sup_list, host_t *host)
+						linked_list_t *sup_list, linked_list_t *hosts)
 {
 	linked_list_t *cfg_list;
 	enumerator_t *sup_enum, *cfg_enum;
@@ -264,7 +264,7 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 	int match = 0, round;
 
 	/* fetch configured TS list, narrowing dynamic TS */
-	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, host);
+	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, hosts);
 
 	/* use a round counter to rate leading TS with higher priority */
 	round = sup_list->get_count(sup_list);
@@ -297,7 +297,7 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 
 METHOD(peer_cfg_t, select_child_cfg, child_cfg_t*,
 	private_peer_cfg_t *this, linked_list_t *my_ts, linked_list_t *other_ts,
-	host_t *my_host, host_t *other_host)
+	linked_list_t *my_hosts, linked_list_t *other_hosts)
 {
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -309,8 +309,8 @@ METHOD(peer_cfg_t, select_child_cfg, child_cfg_t*,
 	{
 		int my_prio, other_prio;
 
-		my_prio = get_ts_match(current, TRUE, my_ts, my_host);
-		other_prio = get_ts_match(current, FALSE, other_ts, other_host);
+		my_prio = get_ts_match(current, TRUE, my_ts, my_hosts);
+		other_prio = get_ts_match(current, FALSE, other_ts, other_hosts);
 
 		if (my_prio && other_prio)
 		{

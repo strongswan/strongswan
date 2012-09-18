@@ -98,7 +98,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 	ike_cfg_t *ike_cfg;
 	child_sa_t *child_sa;
 	host_t *me, *other;
-	linked_list_t *my_ts, *other_ts;
+	linked_list_t *my_ts, *other_ts, *list;
 	enumerator_t *enumerator;
 	bool found = FALSE;
 	status_t status;
@@ -152,10 +152,14 @@ METHOD(trap_manager_t, install, u_int32_t,
 
 	/* create and route CHILD_SA */
 	child_sa = child_sa_create(me, other, child, 0, FALSE);
-	my_ts = child->get_traffic_selectors(child, TRUE, NULL, me);
-	other_ts = child->get_traffic_selectors(child, FALSE, NULL, other);
-	me->destroy(me);
-	other->destroy(other);
+
+	list = linked_list_create_with_items(me, NULL);
+	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list);
+	list->destroy_offset(list, offsetof(host_t, destroy));
+
+	list = linked_list_create_with_items(other, NULL);
+	other_ts = child->get_traffic_selectors(child, FALSE, NULL, list);
+	list->destroy_offset(list, offsetof(host_t, destroy));
 
 	/* while we don't know the finally negotiated protocol (ESP|AH), we
 	 * could iterate all proposals for a best guess (TODO). But as we

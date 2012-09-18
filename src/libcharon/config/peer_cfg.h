@@ -183,13 +183,13 @@ struct peer_cfg_t {
 	 *
 	 * @param my_ts			TS for local side
 	 * @param other_ts		TS for remote side
-	 * @param my_host		host to narrow down dynamic TS for local side
-	 * @param other_host	host to narrow down dynamic TS for remote side
+	 * @param my_hosts		hosts to narrow down dynamic TS for local side
+	 * @param other_hosts	hosts to narrow down dynamic TS for remote side
 	 * @return				selected CHILD config, or NULL if no match found
 	 */
-	child_cfg_t* (*select_child_cfg) (peer_cfg_t *this, linked_list_t *my_ts,
-									  linked_list_t *other_ts, host_t *my_host,
-									  host_t *other_host);
+	child_cfg_t* (*select_child_cfg) (peer_cfg_t *this,
+							linked_list_t *my_ts, linked_list_t *other_ts,
+							linked_list_t *my_hosts, linked_list_t *other_hosts);
 
 	/**
 	 * Add an authentication config to the peer configuration.

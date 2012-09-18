@@ -237,12 +237,16 @@ METHOD(child_cfg_t, add_traffic_selector, void,
 }
 
 METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
-	private_child_cfg_t *this, bool local, linked_list_t *supplied,	host_t *host)
+	private_child_cfg_t *this, bool local, linked_list_t *supplied,
+	linked_list_t *hosts)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
-	linked_list_t *result = linked_list_create();
+	linked_list_t *result, *derived;
+	host_t *host;
 
+	result = linked_list_create();
+	derived = linked_list_create();
 	if (local)
 	{
 		e1 = this->my_ts->create_enumerator(this->my_ts);
@@ -251,42 +255,48 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	{
 		e1 = this->other_ts->create_enumerator(this->other_ts);
 	}
+	/* In a first step, replace "dynamic" TS with the host list */
+	while (e1->enumerate(e1, &ts1))
+	{
+		if (ts1->is_dynamic(ts1))
+		{
+			if (hosts)
+			{
+				e2 = hosts->create_enumerator(hosts);
+				while (e2->enumerate(e2, &host))
+				{
+					ts2 = ts1->clone(ts1);
+					ts2->set_address(ts2, host);
+					result->insert_last(derived, ts2);
+				}
+				e2->destroy(e2);
+			}
+		}
+		else
+		{
+			derived->insert_last(derived, ts1->clone(ts1));
+		}
+	}
+	e1->destroy(e1);
 
-	/* no list supplied, just fetch the stored traffic selectors */
+	DBG2(DBG_CFG, "%s traffic selectors for %s:",
+		 supplied ? "selecting" : "proposing", local ? "us" : "other");
 	if (supplied == NULL)
 	{
-		DBG2(DBG_CFG, "proposing traffic selectors for %s:",
-			 local ? "us" : "other");
-		while (e1->enumerate(e1, &ts1))
+		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
 		{
-			/* we make a copy of the TS, this allows us to update dynamic TS' */
-			selected = ts1->clone(ts1);
-			if (host && selected->is_dynamic(selected))
-			{
-				selected->set_address(selected, host);
-			}
-			DBG2(DBG_CFG, " %R (derived from %R)", selected, ts1);
-			result->insert_last(result, selected);
+			DBG2(DBG_CFG, " %R", ts1);
+			result->insert_last(result, ts1);
 		}
-		e1->destroy(e1);
 	}
 	else
 	{
-		DBG2(DBG_CFG, "selecting traffic selectors for %s:",
-			 local ? "us" : "other");
-		e2 = supplied->create_enumerator(supplied);
-		/* iterate over all stored selectors */
-		while (e1->enumerate(e1, &ts1))
+		e1 = supplied->create_enumerator(supplied);
+		/* enumerate all configured/derived selectors */
+		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
 		{
-			/* we make a copy of the TS, as we have to update dynamic TS' */
-			ts1 = ts1->clone(ts1);
-			if (host && ts1->is_dynamic(ts1))
-			{
-				ts1->set_address(ts1, host);
-			}
-
-			/* iterate over all supplied traffic selectors */
-			while (e2->enumerate(e2, &ts2))
+			/* enumerate all supplied traffic selectors */
+			while (e1->enumerate(e1, &ts2))
 			{
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
@@ -301,13 +311,12 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 						 ts1, ts2);
 				}
 			}
-			e2->destroy(e2);
-			e2 = supplied->create_enumerator(supplied);
+			supplied->reset_enumerator(supplied, e1);
 			ts1->destroy(ts1);
 		}
 		e1->destroy(e1);
-		e2->destroy(e2);
 	}
+	derived->destroy(derived);
 
 	/* remove any redundant traffic selectors in the list */
 	e1 = result->create_enumerator(result);
@@ -322,16 +331,14 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				{
 					result->remove_at(result, e2);
 					ts2->destroy(ts2);
-					e1->destroy(e1);
-					e1 = result->create_enumerator(result);
+					result->reset_enumerator(result, e1);
 					break;
 				}
 				if (ts1->is_contained_in(ts1, ts2))
 				{
 					result->remove_at(result, e1);
 					ts1->destroy(ts1);
-					e2->destroy(e2);
-					e2 = result->create_enumerator(result);
+					result->reset_enumerator(result, e2);
 					break;
 				}
 			}

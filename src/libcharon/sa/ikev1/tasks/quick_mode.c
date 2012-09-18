@@ -198,36 +198,36 @@ static bool have_pool(ike_sa_t *ike_sa)
 }
 
 /**
- * Get host to use for dynamic traffic selectors
+ * Get hosts to use for dynamic traffic selectors
  */
-static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
+static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	host_t *host;
 
+	list = linked_list_create();
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
-	if (!enumerator->enumerate(enumerator, &host))
+	while (enumerator->enumerate(enumerator, &host))
 	{
+		list->insert_last(list, host);
+	}
+	enumerator->destroy(enumerator);
+
+	if (list->get_count(list) == 0)
+	{	/* no virtual IPs assigned */
 		if (local)
 		{
 			host = ike_sa->get_my_host(ike_sa);
+			list->insert_last(list, host);
 		}
-		else
-		{
-			if (have_pool(ike_sa))
-			{
-				/* we have an IP address pool, but didn't negotiate a
-				 * virtual IP. */
-				host = NULL;
-			}
-			else
-			{
-				host = ike_sa->get_other_host(ike_sa);
-			}
+		else if (!have_pool(ike_sa))
+		{	/* use host only if we don't have a pool configured */
+			host = ike_sa->get_other_host(ike_sa);
+			list->insert_last(list, host);
 		}
 	}
-	enumerator->destroy(enumerator);
-	return host;
+	return list;
 }
 
 /**
@@ -452,10 +452,12 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 									 linked_list_t *supplied)
 {
 	traffic_selector_t *ts;
-	linked_list_t *list;
+	linked_list_t *list, *hosts;
 
-	list = this->config->get_traffic_selectors(this->config, local,
-							supplied, get_dynamic_host(this->ike_sa, local));
+	hosts = get_dynamic_hosts(this->ike_sa, local);
+	list = this->config->get_traffic_selectors(this->config,
+											   local, supplied, hosts);
+	hosts->destroy(hosts);
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{
 		if (this->initiator && list->get_count(list) > 1)
@@ -887,7 +889,7 @@ METHOD(task_t, process_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
-			linked_list_t *tsi, *tsr, *list = NULL;
+			linked_list_t *tsi, *tsr, *hostsi, *hostsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
 			u_int16_t group;
 			bool private;
@@ -910,9 +912,12 @@ METHOD(task_t, process_r, status_t,
 			tsi = linked_list_create_with_items(this->tsi, NULL);
 			tsr = linked_list_create_with_items(this->tsr, NULL);
 			this->tsi = this->tsr = NULL;
+			hostsi = get_dynamic_hosts(this->ike_sa, FALSE);
+			hostsr = get_dynamic_hosts(this->ike_sa, TRUE);
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
-										get_dynamic_host(this->ike_sa, TRUE),
-										get_dynamic_host(this->ike_sa, FALSE));
+													  hostsr, hostsi);
+			hostsi->destroy(hostsi);
+			hostsr->destroy(hostsr);
 			if (this->config)
 			{
 				this->tsi = select_ts(this, FALSE, tsi);

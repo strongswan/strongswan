@@ -308,36 +308,36 @@ static bool have_pool(ike_sa_t *ike_sa)
 }
 
 /**
- * Get host to use for dynamic traffic selectors
+ * Get hosts to use for dynamic traffic selectors
  */
-static host_t *get_dynamic_host(ike_sa_t *ike_sa, bool local)
+static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	host_t *host;
 
+	list = linked_list_create();
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
-	if (!enumerator->enumerate(enumerator, &host))
+	while (enumerator->enumerate(enumerator, &host))
 	{
+		list->insert_last(list, host);
+	}
+	enumerator->destroy(enumerator);
+
+	if (list->get_count(list) == 0)
+	{	/* no virtual IPs assigned */
 		if (local)
 		{
 			host = ike_sa->get_my_host(ike_sa);
+			list->insert_last(list, host);
 		}
-		else
-		{
-			if (have_pool(ike_sa))
-			{
-				/* we have an IP address pool, but didn't negotiate a
-				 * virtual IP. */
-				host = NULL;
-			}
-			else
-			{
-				host = ike_sa->get_other_host(ike_sa);
-			}
+		else if (!have_pool(ike_sa))
+		{	/* use host only if we don't have a pool configured */
+			host = ike_sa->get_other_host(ike_sa);
+			list->insert_last(list, host);
 		}
 	}
-	enumerator->destroy(enumerator);
-	return host;
+	return list;
 }
 
 /**
@@ -353,7 +353,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t nonce_i, nonce_r;
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
-	linked_list_t *my_ts, *other_ts;
+	linked_list_t *my_ts, *other_ts, *list;
 	host_t *me, *other;
 	bool private;
 
@@ -422,10 +422,14 @@ static status_t select_and_install(private_child_create_t *this,
 		my_ts = this->tsr;
 		other_ts = this->tsi;
 	}
-	my_ts = this->config->get_traffic_selectors(this->config, TRUE, my_ts,
-										get_dynamic_host(this->ike_sa, TRUE));
-	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts,
-										get_dynamic_host(this->ike_sa, FALSE));
+	list = get_dynamic_hosts(this->ike_sa, TRUE);
+	my_ts = this->config->get_traffic_selectors(this->config,
+												TRUE, my_ts, list);
+	list->destroy(list);
+	list = get_dynamic_hosts(this->ike_sa, FALSE);
+	other_ts = this->config->get_traffic_selectors(this->config,
+												FALSE, other_ts, list);
+	list->destroy(list);
 
 	if (this->initiator)
 	{
@@ -796,6 +800,7 @@ METHOD(task_t, build_i, status_t,
 	enumerator_t *enumerator;
 	host_t *vip;
 	peer_cfg_t *peer_cfg;
+	linked_list_t *list;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -835,24 +840,37 @@ METHOD(task_t, build_i, status_t,
 	}
 
 	/* check if we want a virtual IP, but don't have one */
+	list = linked_list_create();
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
-	if (!this->reqid && enumerator->enumerate(enumerator, &vip))
+	if (!this->reqid)
 	{
-		/* propose a 0.0.0.0/0 or ::/0 subnet when we use virtual ip */
-		vip = host_create_any(vip->get_family(vip));
-		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
-														NULL, vip);
-		vip->destroy(vip);
+		enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
+		while (enumerator->enumerate(enumerator, &vip))
+		{
+			/* propose a 0.0.0.0/0 or ::/0 subnet when we use virtual ip */
+			vip = host_create_any(vip->get_family(vip));
+			list->insert_last(list, vip);
+		}
+		enumerator->destroy(enumerator);
+	}
+	if (list->get_count(list))
+	{
+		this->tsi = this->config->get_traffic_selectors(this->config,
+														TRUE, NULL, list);
+		list->destroy_offset(list, offsetof(host_t, destroy));
 	}
 	else
-	{	/* but narrow it for host2host / if we already have a vip */
-		this->tsi = this->config->get_traffic_selectors(this->config, TRUE, NULL,
-										get_dynamic_host(this->ike_sa, TRUE));
+	{	/* no virtual IPs configured */
+		list->destroy(list);
+		list = get_dynamic_hosts(this->ike_sa, TRUE);
+		this->tsi = this->config->get_traffic_selectors(this->config,
+														TRUE, NULL, list);
+		list->destroy(list);
 	}
-	enumerator->destroy(enumerator);
-	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, NULL,
-										get_dynamic_host(this->ike_sa, FALSE));
+	list = get_dynamic_hosts(this->ike_sa, FALSE);
+	this->tsr = this->config->get_traffic_selectors(this->config,
+													FALSE, NULL, list);
+	list->destroy(list);
 
 	if (this->packet_tsi)
 	{
@@ -1008,10 +1026,14 @@ METHOD(task_t, build_r, status_t,
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (!this->config && peer_cfg && this->tsi && this->tsr)
 	{
+		linked_list_t *listr, *listi;
+
+		listr = get_dynamic_hosts(this->ike_sa, TRUE);
+		listi = get_dynamic_hosts(this->ike_sa, FALSE);
 		this->config = peer_cfg->select_child_cfg(peer_cfg,
-										this->tsr, this->tsi,
-										get_dynamic_host(this->ike_sa, TRUE),
-										get_dynamic_host(this->ike_sa, FALSE));
+											this->tsr, this->tsi, listr, listi);
+		listr->destroy(listr);
+		listi->destroy(listi);
 	}
 
 	if (this->config == NULL)

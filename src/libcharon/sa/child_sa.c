@@ -1125,12 +1125,14 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		chunk_t addr;
 		host_t *host;
 		enumerator_t *enumerator;
-		linked_list_t *my_ts_list, *other_ts_list;
+		linked_list_t *my_ts_list, *other_ts_list, *list;
 		traffic_selector_t *my_ts, *other_ts;
 
 		this->mode = MODE_TRANSPORT;
 
-		my_ts_list = config->get_traffic_selectors(config, TRUE, NULL, me);
+		list = linked_list_create_with_items(me, NULL);
+		my_ts_list = config->get_traffic_selectors(config, TRUE, NULL, list);
+		list->destroy(list);
 		enumerator = my_ts_list->create_enumerator(my_ts_list);
 		if (enumerator->enumerate(enumerator, &my_ts))
 		{
@@ -1151,7 +1153,9 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		enumerator->destroy(enumerator);
 		my_ts_list->destroy_offset(my_ts_list, offsetof(traffic_selector_t, destroy));
 
-		other_ts_list = config->get_traffic_selectors(config, FALSE, NULL, other);
+		list = linked_list_create_with_items(other, NULL);
+		other_ts_list = config->get_traffic_selectors(config, FALSE, NULL, list);
+		list->destroy(list);
 		enumerator = other_ts_list->create_enumerator(other_ts_list);
 		if (enumerator->enumerate(enumerator, &other_ts))
 		{

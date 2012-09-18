@@ -129,12 +129,12 @@ struct child_cfg_t {
 	 *
 	 * @param local			TRUE for TS on local side, FALSE for remote
 	 * @param supplied		list with TS to select from, or NULL
-	 * @param host			address to use for narrowing "dynamic" TS', or NULL
+	 * @param hosts			addresses to use for narrowing "dynamic" TS', host_t
 	 * @return				list containing the traffic selectors
 	 */
 	linked_list_t *(*get_traffic_selectors)(child_cfg_t *this, bool local,
 											linked_list_t *supplied,
-											host_t *host);
+											linked_list_t *hosts);
 	/**
 	 * Get the updown script to run for the CHILD_SA.
 	 *
