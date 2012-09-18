@@ -392,6 +392,11 @@ then
     echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
 fi
 
+if [ "$USE_UNITY" = "yes" ]
+then
+    echo -n " --enable-unity" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
 echo "make -j" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL

@@ -533,6 +533,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_UNITY
+  SUBDIRS += plugins/unity
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/unity/libstrongswan-unity.la
+endif
+endif
+
 if USE_UNIT_TESTS
   SUBDIRS += plugins/unit_tester
 if MONOLITHIC
