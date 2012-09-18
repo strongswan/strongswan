@@ -534,6 +534,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	gateway = identification_create_from_string(this->gateway);
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
+	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
