@@ -258,10 +258,8 @@ static bool install(private_quick_mode_t *this)
 
 	status_i = status_o = FAILED;
 	encr_i = encr_r = integ_i = integ_r = chunk_empty;
-	tsi = linked_list_create();
-	tsr = linked_list_create();
-	tsi->insert_last(tsi, this->tsi->clone(this->tsi));
-	tsr->insert_last(tsr, this->tsr->clone(this->tsr));
+	tsi = linked_list_create_with_items(this->tsi->clone(this->tsi), NULL);
+	tsr = linked_list_create_with_items(this->tsr->clone(this->tsr), NULL);
 	if (this->initiator)
 	{
 		charon->bus->narrow(charon->bus, this->child_sa,
@@ -782,10 +780,8 @@ METHOD(task_t, build_i, status_t,
 			{
 				this->tsr = select_ts(this, FALSE, NULL);
 			}
-			tsi = linked_list_create();
-			tsr = linked_list_create();
-			tsi->insert_last(tsi, this->tsi);
-			tsr->insert_last(tsr, this->tsr);
+			tsi = linked_list_create_with_items(this->tsi, NULL);
+			tsr = linked_list_create_with_items(this->tsr, NULL);
 			this->tsi = this->tsr = NULL;
 			charon->bus->narrow(charon->bus, this->child_sa,
 								NARROW_INITIATOR_PRE_AUTH, tsi, tsr);
@@ -911,10 +907,8 @@ METHOD(task_t, process_r, status_t,
 				return FAILED;
 			}
 			peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-			tsi = linked_list_create();
-			tsr = linked_list_create();
-			tsi->insert_last(tsi, this->tsi);
-			tsr->insert_last(tsr, this->tsr);
+			tsi = linked_list_create_with_items(this->tsi, NULL);
+			tsr = linked_list_create_with_items(this->tsr, NULL);
 			this->tsi = this->tsr = NULL;
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
 										get_dynamic_host(this->ike_sa, TRUE),
@@ -1002,10 +996,8 @@ METHOD(task_t, process_r, status_t,
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp);
 
-			tsi = linked_list_create();
-			tsr = linked_list_create();
-			tsi->insert_last(tsi, this->tsi);
-			tsr->insert_last(tsr, this->tsr);
+			tsi = linked_list_create_with_items(this->tsi, NULL);
+			tsr = linked_list_create_with_items(this->tsr, NULL);
 			this->tsi = this->tsr = NULL;
 			charon->bus->narrow(charon->bus, this->child_sa,
 								NARROW_RESPONDER, tsr, tsi);
