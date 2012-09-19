@@ -70,4 +70,28 @@ struct esa_info_t {
 
 };
 
+typedef struct isa_info_t isa_info_t;
+
+/**
+ * IKE SA info data structure.
+ * This type is used to transfer ISA information from the keymat of the parent
+ * SA to the keymat of the new IKE SA. For this purpose the skd data chunk is
+ * (ab)used. This is possible since the sk_d chunk is treated as an opaque value
+ * and handed to the derive_ike_keys procedure of the new keymat as-is without
+ * any processing.
+ */
+struct isa_info_t {
+
+	/**
+	 * Parent isa context id.
+	 */
+	isa_id_type parent_isa_id;
+
+	/**
+	 * Authenticated endpoint context id.
+	 */
+	ae_id_type ae_id;
+
+};
+
 #endif /** TKM_TYPES_H_ */

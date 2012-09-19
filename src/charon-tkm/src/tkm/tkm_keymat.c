@@ -234,6 +234,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	key_type sk_ai, sk_ar, sk_ei, sk_er;
 	if (rekey_function == PRF_UNDEFINED)
 	{
+		this->ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE);
+		if (!this->ae_ctx_id)
+		{
+			DBG1(DBG_IKE, "unable to acquire ae context id");
+			return FALSE;
+		}
 		DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, dh: %llu, spi_loc: %llx, "
 			 "spi_rem: %llx)", nc_id, dh_id, spi_loc, spi_rem);
 		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, 1, dh_id, nc_id,
@@ -242,18 +248,20 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 	else
 	{
-		if (rekey_skd.ptr == NULL || rekey_skd.len != sizeof(isa_id_type))
+		if (rekey_skd.ptr == NULL || rekey_skd.len != sizeof(isa_info_t))
 		{
-			DBG1(DBG_IKE, "unable to retrieve parent isa context id");
+			DBG1(DBG_IKE, "unable to retrieve parent isa info");
 			return FALSE;
 		}
-		const isa_id_type parent_isa_id = *((isa_id_type *)(rekey_skd.ptr));
-		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, nc: %llu, dh: %llu,"
-			 "spi_loc: %llx, spi_rem: %llx)", parent_isa_id, nc_id, dh_id,
-			 spi_loc, spi_rem);
-		res = ike_isa_create_child(this->isa_ctx_id, parent_isa_id, 1, dh_id,
-								   nc_id, nonce_rem, this->initiator, spi_loc,
-								   spi_rem, &sk_ai, &sk_ar, &sk_ei, &sk_er);
+		const isa_info_t isa_info = *((isa_info_t *)(rekey_skd.ptr));
+		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: %llu,"
+			 "dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
+			 isa_info.ae_id, nc_id, dh_id, spi_loc, spi_rem);
+		this->ae_ctx_id = isa_info.ae_id;
+		res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id, 1,
+								   dh_id, nc_id, nonce_rem, this->initiator,
+								   spi_loc, spi_rem, &sk_ai, &sk_ar, &sk_ei,
+								   &sk_er);
 		chunk_free(&rekey_skd);
 	}
 
@@ -357,7 +365,20 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 	private_tkm_keymat_t *this, chunk_t *skd)
 {
-	*skd = chunk_clone(chunk_from_thing(this->isa_ctx_id));
+	isa_info_t *isa_info;
+
+	INIT(isa_info,
+		 .parent_isa_id = this->isa_ctx_id,
+		 .ae_id = this->ae_ctx_id,
+	);
+
+	*skd = chunk_create((u_char *)isa_info, sizeof(isa_info_t));
+
+	/*
+	 * remove ae context id, since control has now been handed over to the new
+	 * IKE SA keymat
+	 */
+	this->ae_ctx_id = 0;
 	return PRF_HMAC_SHA2_512;
 }
 
@@ -398,6 +419,15 @@ METHOD(keymat_t, destroy, void,
 		DBG1(DBG_IKE, "failed to reset ISA context %d", this->isa_ctx_id);
 	}
 	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ISA, this->isa_ctx_id);
+	/* only reset ae context if set */
+	if (this->ae_ctx_id != 0)
+	{
+		if (ike_ae_reset(this->ae_ctx_id) != TKM_OK)
+		{
+			DBG1(DBG_IKE, "failed to reset AE context %d", this->ae_ctx_id);
+		}
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_AE, this->ae_ctx_id);
+	}
 
 	DESTROY_IF(this->aead_in);
 	DESTROY_IF(this->aead_out);
@@ -452,11 +482,11 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 		},
 		.initiator = initiator,
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),
-		.ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE),
+		.ae_ctx_id = 0,
 		.auth_payload = chunk_empty,
 	);
 
-	if (!this->isa_ctx_id || !this->ae_ctx_id)
+	if (!this->isa_ctx_id)
 	{
 		free(this);
 		return NULL;
