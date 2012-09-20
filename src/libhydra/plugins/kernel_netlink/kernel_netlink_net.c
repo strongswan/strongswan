@@ -51,8 +51,9 @@
 #include <hydra.h>
 #include <debug.h>
 #include <threading/thread.h>
-#include <threading/condvar.h>
 #include <threading/mutex.h>
+#include <threading/rwlock.h>
+#include <threading/rwlock_condvar.h>
 #include <threading/spinlock.h>
 #include <utils/hashtable.h>
 #include <utils/linked_list.h>
@@ -339,14 +340,14 @@ struct private_kernel_netlink_net_t {
 	kernel_netlink_net_t public;
 
 	/**
-	 * mutex to lock access to various lists
+	 * lock to access various lists and maps
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 
 	/**
 	 * condition variable to signal virtual IP add/removal
 	 */
-	condvar_t *condvar;
+	rwlock_condvar_t *condvar;
 
 	/**
 	 * Cached list of interfaces and its addresses (iface_entry_t)
@@ -563,7 +564,7 @@ static void queue_route_reinstall(private_kernel_netlink_net_t *this,
  * this function will also return TRUE if the virtual IP entry disappeared.
  * in that case the returned entry will be NULL.
  *
- * this->mutex must be locked when calling this function
+ * this->lock must be held when calling this function
  */
 static bool is_vip_installed_or_gone(private_kernel_netlink_net_t *this,
 									 host_t *ip, addr_map_entry_t **entry)
@@ -584,7 +585,7 @@ static bool is_vip_installed_or_gone(private_kernel_netlink_net_t *this,
 /**
  * check if the given IP is known as virtual IP
  *
- * this->mutex must be locked when calling this function
+ * this->lock must be held when calling this function
  */
 static bool is_known_vip(private_kernel_netlink_net_t *this, host_t *ip)
 {
@@ -634,6 +635,8 @@ static void addr_map_entry_remove(hashtable_t *map, addr_entry_t *addr,
  * if a candidate address is given, we first search for that address and if not
  * found return the address as above.
  * returned host is a clone, has to be freed by caller.
+ *
+ * this->lock must be held when calling this function
  */
 static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 									 int ifindex, int family, host_t *candidate)
@@ -643,7 +646,6 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 	addr_entry_t *addr;
 	host_t *ip = NULL;
 
-	this->mutex->lock(this->mutex);
 	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
 								 (void**)&iface, &ifindex) == SUCCESS)
 	{
@@ -674,12 +676,7 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 			addrs->destroy(addrs);
 		}
 	}
-	if (ip)
-	{
-		ip = ip->clone(ip);
-	}
-	this->mutex->unlock(this->mutex);
-	return ip;
+	return ip ? ip->clone(ip) : NULL;
 }
 
 /**
@@ -725,7 +722,7 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 /**
  * check if an interface with a given index is up and usable
  *
- * this->mutex must be locked when calling this function
+ * this->lock must be locked when calling this function
  */
 static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
 									   int index)
@@ -743,7 +740,7 @@ static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
 /**
  * unregister the current addr_entry_t from the hashtable it is stored in
  *
- * this->mutex must be locked when calling this function
+ * this->lock must be locked when calling this function
  */
 static void addr_entry_unregister(addr_entry_t *addr, iface_entry_t *iface,
 								  private_kernel_netlink_net_t *this)
@@ -786,7 +783,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 		name = "(unknown)";
 	}
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	switch (hdr->nlmsg_type)
 	{
 		case RTM_NEWLINK:
@@ -846,7 +843,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 			break;
 		}
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 
 	if (update_routes && event)
 	{
@@ -907,7 +904,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 		return;
 	}
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
 								 (void**)&iface, &msg->ifa_index) == SUCCESS)
 	{
@@ -933,7 +930,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 			}
 			/* no roam events etc. for virtual IPs */
 			this->condvar->broadcast(this->condvar);
-			this->mutex->unlock(this->mutex);
+			this->lock->unlock(this->lock);
 			host->destroy(host);
 			return;
 		}
@@ -983,7 +980,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
 			update = changed = FALSE;
 		}
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 
 	if (update && event && route_ifname)
 	{
@@ -1042,10 +1039,10 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	if (rta_oif && !is_interface_up_and_usable(this, rta_oif))
 	{	/* ignore route changes for interfaces that are ignored or down */
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		DESTROY_IF(host);
 		return;
 	}
@@ -1053,15 +1050,15 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	{
 		host = get_interface_address(this, rta_oif, msg->rtm_family, NULL);
 	}
-	if (host)
-	{
-		if (!is_known_vip(this, host))
-		{	/* ignore routes added for virtual IPs */
-			fire_roam_event(this, FALSE);
-		}
-		host->destroy(host);
+	if (!host || is_known_vip(this, host))
+	{	/* ignore routes added for virtual IPs */
+		this->lock->unlock(this->lock);
+		DESTROY_IF(host);
+		return;
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
+	fire_roam_event(this, FALSE);
+	host->destroy(host);
 }
 
 /**
@@ -1143,7 +1140,7 @@ typedef struct {
  */
 static void address_enumerator_destroy(address_enumerator_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
@@ -1205,7 +1202,7 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	data->this = this;
 	data->which = which;
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
 				enumerator_create_filter(
 					this->ifaces->create_enumerator(this->ifaces),
@@ -1225,7 +1222,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	{
 		return FALSE;
 	}
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	/* first try to find it on an up and usable interface */
 	entry = this->addrs->get_match(this->addrs, &lookup,
 								  (void*)addr_map_entry_match_up_and_usable);
@@ -1236,7 +1233,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 			*name = strdup(entry->iface->ifname);
 			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
 		}
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return TRUE;
 	}
 	/* maybe it is installed on an ignored interface */
@@ -1246,7 +1243,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	{
 		DBG2(DBG_KNL, "%H is not a local address or the interface is down", ip);
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
@@ -1260,13 +1257,13 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 
 	DBG2(DBG_KNL, "getting iface index for %s", name);
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
 								(void**)&iface, name) == SUCCESS)
 	{
 		ifindex = iface->ifindex;
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 
 	if (ifindex == 0)
 	{
@@ -1446,7 +1443,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		return NULL;
 	}
 	routes = linked_list_create();
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 
 	for (current = out; NLMSG_OK(current, len);
 		 current = NLMSG_NEXT(current, len))
@@ -1601,7 +1598,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			addr = best->src_host->clone(best->src_host);
 		}
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	routes->destroy_function(routes, (void*)rt_entry_destroy);
 	free(out);
 
@@ -1676,7 +1673,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 		return SUCCESS;
 	}
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	/* the virtual IP might actually be installed as regular IP, in which case
 	 * we don't track it as virtual IP */
 	entry = this->addrs->get_match(this->addrs, &lookup,
@@ -1690,12 +1687,12 @@ METHOD(kernel_net_t, add_ip, status_t,
 			 * ready, 2) just added by another thread, but not yet confirmed to
 			 * be installed by the kernel, 3) just deleted, but not yet gone.
 			 * Then while we wait below, several things could happen (as we
-			 * release the mutex).  For instance, the interface could disappear,
+			 * release the lock).  For instance, the interface could disappear,
 			 * or the IP is finally deleted, and it reappears on a different
 			 * interface. All these cases are handled by the call below. */
 			while (!is_vip_installed_or_gone(this, virtual_ip, &entry))
 			{
-				this->condvar->wait(this->condvar, this->mutex);
+				this->condvar->wait(this->condvar, this->lock);
 			}
 			if (entry)
 			{
@@ -1707,7 +1704,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		DBG2(DBG_KNL, "virtual IP %H is already installed on %s", virtual_ip,
 			 entry->iface->ifname);
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return SUCCESS;
 	}
 	/* try to find the target interface, either by config or via src ip */
@@ -1743,21 +1740,21 @@ METHOD(kernel_net_t, add_ip, status_t,
 		{
 			while (!is_vip_installed_or_gone(this, virtual_ip, &entry))
 			{	/* wait until address appears */
-				this->condvar->wait(this->condvar, this->mutex);
+				this->condvar->wait(this->condvar, this->lock);
 			}
 			if (entry)
 			{	/* we fail if the interface got deleted in the meantime */
 				DBG2(DBG_KNL, "virtual IP %H installed on %s", virtual_ip,
 					 entry->iface->ifname);
-				this->mutex->unlock(this->mutex);
+				this->lock->unlock(this->lock);
 				return SUCCESS;
 			}
 		}
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		DBG1(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
 		return FAILED;
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_KNL, "no interface available, unable to install virtual IP %H",
 		 virtual_ip);
 	return FAILED;
@@ -1777,7 +1774,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	entry = this->vips->get_match(this->vips, &lookup,
 								 (void*)addr_map_entry_match);
 	if (!entry)
@@ -1788,11 +1785,11 @@ METHOD(kernel_net_t, del_ip, status_t,
 		{
 			DBG2(DBG_KNL, "not deleting existing IP %H on %s", virtual_ip,
 				 entry->iface->ifname);
-			this->mutex->unlock(this->mutex);
+			this->lock->unlock(this->lock);
 			return SUCCESS;
 		}
 		DBG2(DBG_KNL, "virtual IP %H not cached, unable to delete", virtual_ip);
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return FAILED;
 	}
 	if (entry->addr->refcount == 1)
@@ -1808,10 +1805,10 @@ METHOD(kernel_net_t, del_ip, status_t,
 		{	/* wait until the address is really gone */
 			while (is_known_vip(this, virtual_ip))
 			{
-				this->condvar->wait(this->condvar, this->mutex);
+				this->condvar->wait(this->condvar, this->lock);
 			}
 		}
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return status;
 	}
 	else
@@ -1820,7 +1817,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 	}
 	DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
 		 virtual_ip);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return SUCCESS;
 }
 
@@ -2018,7 +2015,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 	}
 	free(out);
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -2034,7 +2031,7 @@ static status_t init_address_list(private_kernel_netlink_net_t *this)
 		}
 	}
 	ifaces->destroy(ifaces);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return SUCCESS;
 }
 
@@ -2159,7 +2156,7 @@ METHOD(kernel_net_t, destroy, void,
 	this->rt_exclude->destroy(this->rt_exclude);
 	this->roam_lock->destroy(this->roam_lock);
 	this->condvar->destroy(this->condvar);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -2202,8 +2199,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.routes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
-		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
-		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.condvar = rwlock_condvar_create(),
 		.roam_lock = spinlock_create(),
 		.routing_table = lib->settings->get_int(lib->settings,
 				"%s.routing_table", ROUTING_TABLE, hydra->daemon),
