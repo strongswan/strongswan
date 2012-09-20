@@ -272,13 +272,16 @@ static int get_new(private_mem_pool_t *this, identification_t *id)
 
 	if (this->unused < this->size)
 	{
-		INIT(entry,
-			.id = id->clone(id),
-			.online = linked_list_create(),
-			.offline = linked_list_create(),
-		);
-		this->leases->put(this->leases, entry->id, entry);
-
+		entry = this->leases->get(this->leases, id);
+		if (!entry)
+		{
+			INIT(entry,
+				.id = id->clone(id),
+				.online = linked_list_create(),
+				.offline = linked_list_create(),
+			);
+			this->leases->put(this->leases, entry->id, entry);
+		}
 		/* assigning offset, starting by 1 */
 		offset = ++this->unused;
 		entry->online->insert_last(entry->online, (void*)offset);
