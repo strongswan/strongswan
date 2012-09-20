@@ -53,6 +53,7 @@
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
+#include <threading/spinlock.h>
 #include <utils/hashtable.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
@@ -373,9 +374,14 @@ struct private_kernel_netlink_net_t {
 	int socket_events;
 
 	/**
-	 * time of the last roam event
+	 * earliest time of the next roam event
 	 */
-	timeval_t last_roam;
+	timeval_t next_roam;
+
+	/**
+	 * lock to check and update roam event time
+	 */
+	spinlock_t *roam_lock;
 
 	/**
 	 * routing table to install routes
@@ -690,21 +696,25 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 	job_t *job;
 
 	time_monotonic(&now);
-	if (timercmp(&now, &this->last_roam, >))
+	this->roam_lock->lock(this->roam_lock);
+	if (!timercmp(&now, &this->next_roam, >))
 	{
-		now.tv_usec += ROAM_DELAY * 1000;
-		while (now.tv_usec > 1000000)
-		{
-			now.tv_sec++;
-			now.tv_usec -= 1000000;
-		}
-		this->last_roam = now;
-
-		job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
-										  (void*)(uintptr_t)(address ? 1 : 0),
-										  NULL, NULL);
-		lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+		this->roam_lock->unlock(this->roam_lock);
+		return;
 	}
+	now.tv_usec += ROAM_DELAY * 1000;
+	while (now.tv_usec > 1000000)
+	{
+		now.tv_sec++;
+		now.tv_usec -= 1000000;
+	}
+	this->next_roam = now;
+	this->roam_lock->unlock(this->roam_lock);
+
+	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,
+									  (void*)(uintptr_t)(address ? 1 : 0),
+									   NULL, NULL);
+	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 }
 
 /**
@@ -2141,6 +2151,7 @@ METHOD(kernel_net_t, destroy, void,
 
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->rt_exclude->destroy(this->rt_exclude);
+	this->roam_lock->destroy(this->roam_lock);
 	this->condvar->destroy(this->condvar);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -2186,6 +2197,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		.ifaces = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.roam_lock = spinlock_create(),
 		.routing_table = lib->settings->get_int(lib->settings,
 				"%s.routing_table", ROUTING_TABLE, hydra->daemon),
 		.routing_table_prio = lib->settings->get_int(lib->settings,
@@ -2198,7 +2210,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				"%s.install_virtual_ip_on", NULL, hydra->daemon),
 	);
 	timerclear(&this->last_route_reinstall);
-	timerclear(&this->last_roam);
+	timerclear(&this->next_roam);
 
 	check_kernel_features(this);
 
