@@ -21,11 +21,13 @@
 #include <debug.h>
 
 #include "rwlock.h"
+#include "rwlock_condvar.h"
 #include "condvar.h"
 #include "mutex.h"
 #include "lock_profiler.h"
 
 typedef struct private_rwlock_t private_rwlock_t;
+typedef struct private_rwlock_condvar_t private_rwlock_condvar_t;
 
 /**
  * private data of rwlock
@@ -82,6 +84,27 @@ struct private_rwlock_t {
 	 * profiling info, if enabled
 	 */
 	lock_profile_t profile;
+};
+
+/**
+ * private data of condvar
+ */
+struct private_rwlock_condvar_t {
+
+	/**
+	 * public interface
+	 */
+	rwlock_condvar_t public;
+
+	/**
+	 * mutex used to implement rwlock condvar
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * regular condvar to implement rwlock condvar
+	 */
+	condvar_t *condvar;
 };
 
 
@@ -357,3 +380,106 @@ rwlock_t *rwlock_create(rwlock_type_t type)
 
 #endif /* HAVE_PTHREAD_RWLOCK_INIT */
 
+
+METHOD(rwlock_condvar_t, wait_, void,
+	private_rwlock_condvar_t *this, private_rwlock_t *lock)
+{
+	/* at this point we have the write lock locked, to make signals more
+	 * predictable we try to prevent other threads from signaling by acquiring
+	 * the mutex while we still hold the write lock (this assumes they will
+	 * hold the write lock themselves when signaling, which is not mandatory) */
+	this->mutex->lock(this->mutex);
+	/* unlock the rwlock and wait for a signal */
+	lock->public.unlock(&lock->public);
+	this->condvar->wait(this->condvar, this->mutex);
+	/* we release the mutex to allow other threads into the condvar (might even
+	 * be required so we can acquire the lock again below) */
+	this->mutex->unlock(this->mutex);
+	/* finally we reacquire the lock we held previously */
+	lock->public.write_lock(&lock->public);
+}
+
+METHOD(rwlock_condvar_t, timed_wait_abs, bool,
+	private_rwlock_condvar_t *this, private_rwlock_t *lock, timeval_t time)
+{
+	bool timed_out;
+
+	/* see wait() above for details on what is going on here */
+	this->mutex->lock(this->mutex);
+	lock->public.unlock(&lock->public);
+	timed_out = this->condvar->timed_wait_abs(this->condvar, this->mutex, time);
+	this->mutex->unlock(this->mutex);
+	if (!timed_out)
+	{
+		lock->public.write_lock(&lock->public);
+	}
+	return timed_out;
+}
+
+METHOD(rwlock_condvar_t, timed_wait, bool,
+	private_rwlock_condvar_t *this, private_rwlock_t *lock, u_int timeout)
+{
+	timeval_t tv;
+	u_int s, ms;
+
+	time_monotonic(&tv);
+
+	s = timeout / 1000;
+	ms = timeout % 1000;
+
+	tv.tv_sec += s;
+	tv.tv_usec += ms * 1000;
+
+	if (tv.tv_usec > 1000000 /* 1s */)
+	{
+		tv.tv_usec -= 1000000;
+		tv.tv_sec++;
+	}
+	return timed_wait_abs(this, lock, tv);
+}
+
+METHOD(rwlock_condvar_t, signal_, void,
+	private_rwlock_condvar_t *this)
+{
+	this->mutex->lock(this->mutex);
+	this->condvar->signal(this->condvar);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(rwlock_condvar_t, broadcast, void,
+	private_rwlock_condvar_t *this)
+{
+	this->mutex->lock(this->mutex);
+	this->condvar->broadcast(this->condvar);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(rwlock_condvar_t, condvar_destroy, void,
+	private_rwlock_condvar_t *this)
+{
+	this->condvar->destroy(this->condvar);
+	this->mutex->destroy(this->mutex);
+	free(this);
+}
+
+/*
+ * see header file
+ */
+rwlock_condvar_t *rwlock_condvar_create()
+{
+	private_rwlock_condvar_t *this;
+
+	INIT(this,
+		.public = {
+			.wait = (void*)_wait_,
+			.timed_wait = (void*)_timed_wait,
+			.timed_wait_abs = (void*)_timed_wait_abs,
+			.signal = _signal_,
+			.broadcast = _broadcast,
+			.destroy = _condvar_destroy,
+		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+	);
+	return &this->public;
+}

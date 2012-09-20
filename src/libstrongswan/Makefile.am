@@ -60,10 +60,10 @@ processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h selectors/traffic_selector.h \
 threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
-threading/rwlock.h threading/lock_profiler.h utils.h utils/host.h \
-utils/packet.h utils/identification.h utils/lexparser.h utils/linked_list.h \
-utils/blocking_queue.h utils/hashtable.h utils/enumerator.h utils/optionsfrom.h \
-utils/capabilities.h utils/backtrace.h utils/tun_device.h
+threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
+utils.h utils/host.h utils/packet.h utils/identification.h utils/lexparser.h \
+utils/linked_list.h utils/blocking_queue.h utils/hashtable.h utils/enumerator.h \
+utils/optionsfrom.h utils/capabilities.h utils/backtrace.h utils/tun_device.h
 endif
 
 library.lo :	$(top_builddir)/config.status
