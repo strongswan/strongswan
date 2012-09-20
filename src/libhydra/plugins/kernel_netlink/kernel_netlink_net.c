@@ -399,6 +399,11 @@ struct private_kernel_netlink_net_t {
 	hashtable_t *routes;
 
 	/**
+	 * mutex for routes
+	 */
+	mutex_t *routes_lock;
+
+	/**
 	 * interface changes which may trigger route reinstallation
 	 */
 	hashtable_t *net_changes;
@@ -473,7 +478,7 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
 	route_entry_t *route;
 
 	this->net_changes_lock->lock(this->net_changes_lock);
-	this->mutex->lock(this->mutex);
+	this->routes_lock->lock(this->routes_lock);
 
 	enumerator = this->routes->create_enumerator(this->routes);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
@@ -503,7 +508,7 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->routes_lock->unlock(this->routes_lock);
 
 	net_changes_clear(this);
 	this->net_changes_lock->unlock(this->net_changes_lock);
@@ -1899,18 +1904,18 @@ METHOD(kernel_net_t, add_route, status_t,
 		.if_name = if_name,
 	};
 
-	this->mutex->lock(this->mutex);
+	this->routes_lock->lock(this->routes_lock);
 	found = this->routes->get(this->routes, &route);
 	if (found)
 	{
-		this->mutex->unlock(this->mutex);
+		this->routes_lock->unlock(this->routes_lock);
 		return ALREADY_DONE;
 	}
 	found = route_entry_clone(&route);
 	this->routes->put(this->routes, found, found);
 	status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
 							 dst_net, prefixlen, gateway, src_ip, if_name);
-	this->mutex->unlock(this->mutex);
+	this->routes_lock->unlock(this->routes_lock);
 	return status;
 }
 
@@ -1927,18 +1932,18 @@ METHOD(kernel_net_t, del_route, status_t,
 		.if_name = if_name,
 	};
 
-	this->mutex->lock(this->mutex);
+	this->routes_lock->lock(this->routes_lock);
 	found = this->routes->get(this->routes, &route);
 	if (!found)
 	{
-		this->mutex->unlock(this->mutex);
+		this->routes_lock->unlock(this->routes_lock);
 		return NOT_FOUND;
 	}
 	this->routes->remove(this->routes, found);
 	route_entry_destroy(found);
 	status = manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
 							 gateway, src_ip, if_name);
-	this->mutex->unlock(this->mutex);
+	this->routes_lock->unlock(this->routes_lock);
 	return status;
 }
 
@@ -2140,6 +2145,7 @@ METHOD(kernel_net_t, destroy, void,
 	}
 	enumerator->destroy(enumerator);
 	this->routes->destroy(this->routes);
+	this->routes_lock->destroy(this->routes_lock);
 	DESTROY_IF(this->socket);
 
 	net_changes_clear(this);
@@ -2193,6 +2199,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 								(hashtable_equals_t)addr_map_entry_equals, 16),
 		.vips = hashtable_create((hashtable_hash_t)addr_map_entry_hash,
 								 (hashtable_equals_t)addr_map_entry_equals, 16),
+		.routes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
