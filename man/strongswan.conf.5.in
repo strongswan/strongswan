@@ -198,6 +198,10 @@ Install routes into a separate routing table for established IPsec tunnels
 .BR charon.install_virtual_ip " [yes]"
 Install virtual IP addresses
 .TP
+.BR charon.install_virtual_ip_on
+The name of the interface on which virtual IP addresses should be installed.
+If not specified the addresses will be installed on the outbound interface.
+.TP
 .BR charon.interfaces_ignore
 A comma-separated list of network interfaces that should be ignored, if
 charon.interfaces_use is specified this option has no effect.

@@ -76,7 +76,7 @@ struct addr_entry_t {
 	/** scope of the address */
 	u_char scope;
 
-	/** number of times this IP is used, if virtual (> 0 IP is managed by us) */
+	/** number of times this IP is used, if virtual (i.e. managed by us) */
 	u_int refcount;
 
 	/** TRUE once it is installed, if virtual */
@@ -418,6 +418,11 @@ struct private_kernel_netlink_net_t {
 	bool install_virtual_ip;
 
 	/**
+	 * the name of the interface virtual IP addresses are installed on
+	 */
+	char *install_virtual_ip_on;
+
+	/**
 	 * whether preferred source addresses can be specified for IPv6 routes
 	 */
 	bool rta_prefsrc_for_ipv6;
@@ -725,7 +730,7 @@ static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
  *
  * this->mutex must be locked when calling this function
  */
-static void unregister_addr_entry(addr_entry_t *addr, iface_entry_t *iface,
+static void addr_entry_unregister(addr_entry_t *addr, iface_entry_t *iface,
 								  private_kernel_netlink_net_t *this)
 {
 	if (addr->refcount)
@@ -817,7 +822,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 					 * another interface? */
 					this->ifaces->remove_at(this->ifaces, enumerator);
 					current->addrs->invoke_function(current->addrs,
-								(void*)unregister_addr_entry, current, this);
+								(void*)addr_entry_unregister, current, this);
 					iface_entry_destroy(current);
 					break;
 				}
@@ -1649,14 +1654,13 @@ METHOD(kernel_net_t, add_ip, status_t,
 	addr_map_entry_t *entry, lookup = {
 		.ip = virtual_ip,
 	};
-	iface_entry_t *iface;
+	iface_entry_t *iface = NULL;
 
 	if (!this->install_virtual_ip)
 	{	/* disabled by config */
 		return SUCCESS;
 	}
 
-	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 	this->mutex->lock(this->mutex);
 	/* the virtual IP might actually be installed as regular IP, in which case
 	 * we don't track it as virtual IP */
@@ -1671,8 +1675,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 			 * ready, 2) just added by another thread, but not yet confirmed to
 			 * be installed by the kernel, 3) just deleted, but not yet gone.
 			 * Then while we wait below, several things could happen (as we
-			 * release the mutex).  For instance, the interface could disappear.
-			 * Or the IP is finally deleted, and it reappears on a different
+			 * release the mutex).  For instance, the interface could disappear,
+			 * or the IP is finally deleted, and it reappears on a different
 			 * interface. All these cases are handled by the call below. */
 			while (!is_vip_installed_or_gone(this, virtual_ip, &entry))
 			{
@@ -1691,20 +1695,22 @@ METHOD(kernel_net_t, add_ip, status_t,
 		this->mutex->unlock(this->mutex);
 		return SUCCESS;
 	}
-	/* try to find the target interface */
-	lookup.ip = iface_ip;
-	entry = this->addrs->get_match(this->addrs, &lookup,
-								  (void*)addr_map_entry_match);
-	if (!entry)
-	{	/* if we don't find the requested interface we just use the first */
-		if (this->ifaces->get_first(this->ifaces, (void**)&iface) != SUCCESS)
-		{
-			iface = NULL;
-		}
-	}
-	else
+	/* try to find the target interface, either by config or via src ip */
+	if (!this->install_virtual_ip_on ||
+		 this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
+						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
 	{
-		iface = entry->iface;
+		lookup.ip = iface_ip;
+		entry = this->addrs->get_match(this->addrs, &lookup,
+									  (void*)addr_map_entry_match);
+		if (!entry)
+		{	/* if we don't find the requested interface we just use the first */
+			this->ifaces->get_first(this->ifaces, (void**)&iface);
+		}
+		else
+		{
+			iface = entry->iface;
+		}
 	}
 	if (iface)
 	{
@@ -1726,6 +1732,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 			}
 			if (entry)
 			{	/* we fail if the interface got deleted in the meantime */
+				DBG2(DBG_KNL, "virtual IP %H installed on %s", virtual_ip,
+					 entry->iface->ifname);
 				this->mutex->unlock(this->mutex);
 				return SUCCESS;
 			}
@@ -2186,6 +2194,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				"%s.process_route", TRUE, hydra->daemon),
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
 				"%s.install_virtual_ip", TRUE, hydra->daemon),
+		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
+				"%s.install_virtual_ip_on", NULL, hydra->daemon),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->last_roam);
