@@ -258,19 +258,17 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	/* In a first step, replace "dynamic" TS with the host list */
 	while (e1->enumerate(e1, &ts1))
 	{
-		if (ts1->is_dynamic(ts1))
+		if (hosts && hosts->get_count(hosts) &&
+			ts1->is_dynamic(ts1))
 		{
-			if (hosts)
+			e2 = hosts->create_enumerator(hosts);
+			while (e2->enumerate(e2, &host))
 			{
-				e2 = hosts->create_enumerator(hosts);
-				while (e2->enumerate(e2, &host))
-				{
-					ts2 = ts1->clone(ts1);
-					ts2->set_address(ts2, host);
-					result->insert_last(derived, ts2);
-				}
-				e2->destroy(e2);
+				ts2 = ts1->clone(ts1);
+				ts2->set_address(ts2, host);
+				derived->insert_last(derived, ts2);
 			}
+			e2->destroy(e2);
 		}
 		else
 		{
