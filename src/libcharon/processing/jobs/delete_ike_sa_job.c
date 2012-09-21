@@ -76,10 +76,20 @@ METHOD(job_t, execute, job_requeue_t,
 		}
 		else
 		{
-			/* destroy IKE_SA did not complete connecting phase */
+			/* destroy IKE_SA only if it did not complete connecting phase */
 			if (ike_sa->get_state(ike_sa) != IKE_CONNECTING)
 			{
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			}
+			else if (ike_sa->get_version(ike_sa) == IKEV1 &&
+					 ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
+			{	/* as initiator we waited for the peer to initiate e.g. an
+				 * XAuth exchange, reauth the SA to eventually trigger DPD */
+				DBG1(DBG_JOB, "peer did not initiate expected exchange, "
+					 "reestablishing IKE_SA");
+				ike_sa->reauth(ike_sa);
+				charon->ike_sa_manager->checkin_and_destroy(
+												charon->ike_sa_manager, ike_sa);
 			}
 			else
 			{

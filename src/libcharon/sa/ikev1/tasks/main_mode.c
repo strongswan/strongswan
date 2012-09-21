@@ -30,6 +30,7 @@
 #include <sa/ikev1/tasks/informational.h>
 #include <sa/ikev1/tasks/isakmp_delete.h>
 #include <processing/jobs/adopt_children_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 typedef struct private_main_mode_t private_main_mode_t;
 
@@ -638,8 +639,14 @@ METHOD(task_t, process_i, status_t,
 				case AUTH_XAUTH_INIT_PSK:
 				case AUTH_XAUTH_INIT_RSA:
 				case AUTH_HYBRID_INIT_RSA:
-					/* wait for XAUTH request */
+				{	/* wait for XAUTH request, since this may never come,
+					 * we queue a timeout */
+					job_t *job = (job_t*)delete_ike_sa_job_create(
+									this->ike_sa->get_id(this->ike_sa), FALSE);
+					lib->scheduler->schedule_job(lib->scheduler, job,
+												 HALF_OPEN_IKE_SA_TIMEOUT);
 					break;
+				}
 				case AUTH_XAUTH_RESP_PSK:
 				case AUTH_XAUTH_RESP_RSA:
 				case AUTH_HYBRID_RESP_RSA:
