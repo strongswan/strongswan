@@ -53,6 +53,17 @@ strongswan-5.0.1
 - Multiple connections can now share a single address pool when they use the
   same definition in one of the rightsourceip pools.
 
+- The options charon.interfaces_ignore and charon.interfaces_use allow one to
+  configure the network interfaces used by the daemon.
+
+- The kernel-netlink plugin supports the charon.install_virtual_ip_on option,
+  which specifies the interface on which virtual IP addresses will be installed.
+  If it is not specified the current behavior of using the outbound interface
+  is preserved.
+
+- The kernel-netlink plugin tries to keep the current source address when
+  looking for valid routes to reach other hosts.
+
 - The autotools build has been migrated to use a config.h header. strongSwan
   development headers will get installed during "make install" if
   --with-dev-headers has been passed to ./configure.
