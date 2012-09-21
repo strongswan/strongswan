@@ -28,6 +28,7 @@
 #include <utils/host.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
@@ -180,9 +181,9 @@ struct private_kernel_pfroute_net_t
 	kernel_pfroute_net_t public;
 
 	/**
-	 * mutex to lock access to various lists
+	 * lock to access lists and maps
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 
 	/**
 	 * Cached list of interfaces and their addresses (iface_entry_t)
@@ -331,7 +332,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 		return;
 	}
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
@@ -386,7 +387,7 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 		}
 	}
 	ifaces->destroy(ifaces);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	host->destroy(host);
 
 	if (roam)
@@ -406,7 +407,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 	iface_entry_t *iface;
 	bool roam = FALSE;
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
 	while (enumerator->enumerate(enumerator, &iface))
 	{
@@ -430,7 +431,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 
 	if (roam)
 	{
@@ -518,7 +519,7 @@ typedef struct {
  */
 static void address_enumerator_destroy(address_enumerator_t *data)
 {
-	data->this->mutex->unlock(data->this->mutex);
+	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
@@ -585,7 +586,7 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	data->this = this;
 	data->which = which;
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
 				enumerator_create_filter(
 					this->ifaces->create_enumerator(this->ifaces),
@@ -605,7 +606,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	{
 		return FALSE;
 	}
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	/* first try to find it on an up and usable interface */
 	entry = this->addrs->get_match(this->addrs, &lookup,
 								  (void*)addr_map_entry_match_up_and_usable);
@@ -616,7 +617,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 			*name = strdup(entry->iface->ifname);
 			DBG2(DBG_KNL, "%H is on interface %s", ip, *name);
 		}
-		this->mutex->unlock(this->mutex);
+		this->lock->unlock(this->lock);
 		return TRUE;
 	}
 	/* maybe it is installed on an ignored interface */
@@ -626,7 +627,7 @@ METHOD(kernel_net_t, get_interface_name, bool,
 	{	/* the address does not exist, is on a down interface */
 		DBG2(DBG_KNL, "%H is not a local address or the interface is down", ip);
 	}
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
@@ -775,7 +776,7 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->addrs->destroy(this->addrs);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	this->mutex_pfroute->destroy(this->mutex_pfroute);
 	free(this);
 }
@@ -806,7 +807,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.addrs = hashtable_create(
 								(hashtable_hash_t)addr_map_entry_hash,
 								(hashtable_equals_t)addr_map_entry_equals, 16),
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
