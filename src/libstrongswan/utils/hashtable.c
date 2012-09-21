@@ -257,6 +257,11 @@ static void *get_internal(private_hashtable_t *this, void *key,
 	void *value = NULL;
 	pair_t *pair;
 
+	if (!this->count)
+	{	/* no need to calculate the hash */
+		return NULL;
+	}
+
 	pair = this->table[this->hash(key) & this->mask];
 	while (pair)
 	{
