@@ -2018,8 +2018,12 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	if (policy->direction == POLICY_FWD &&
 		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
-		route_entry_t *route = malloc_thing(route_entry_t);
 		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
+		route_entry_t *route;
+
+		INIT(route,
+			.prefixlen = policy->src.mask,
+		);
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
 				fwd->dst_ts, &route->src_ip) == SUCCESS)
@@ -2030,7 +2034,6 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 											ipsec->dst);
 			route->dst_net = chunk_clone(policy->src.net->get_address(
 											policy->src.net));
-			route->prefixlen = policy->src.mask;
 
 			/* install route via outgoing interface */
 			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
