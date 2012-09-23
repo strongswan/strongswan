@@ -97,6 +97,14 @@ struct charonservice_t {
 	linked_list_t *(*get_user_certificate)(charonservice_t *this);
 
 	/**
+	 * Get the configured private key via JNI
+	 *
+	 * @param pubkey		the public key as extracted from the certificate
+	 * @return				PrivateKey object, NULL on failure
+	 */
+	private_key_t *(*get_user_key)(charonservice_t *this, public_key_t *pubkey);
+
+	/**
 	 * Get the current vpnservice_builder_t object
 	 *
 	 * @return				VpnService.Builder instance

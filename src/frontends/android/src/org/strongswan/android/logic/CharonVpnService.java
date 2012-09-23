@@ -462,6 +462,23 @@ public class CharonVpnService extends VpnService implements Runnable
 	}
 
 	/**
+	 * Function called via JNI to get the private key the user selected.
+	 *
+	 * Since this method is called from a thread of charon's thread pool we are safe
+	 * to call methods on KeyChain directly.
+	 *
+	 * @return the private key
+	 * @throws InterruptedException
+	 * @throws KeyChainException
+	 * @throws CertificateEncodingException
+	 */
+	private PrivateKey getUserKey() throws KeyChainException, InterruptedException
+	{
+		return KeyChain.getPrivateKey(getApplicationContext(), mCurrentUserCertificateAlias);
+
+	}
+
+	/**
 	 * Initialization of charon, provided by libandroidbridge.so
 	 *
 	 * @param builder BuilderAdapter for this connection

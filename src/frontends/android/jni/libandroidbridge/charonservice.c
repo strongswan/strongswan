@@ -25,6 +25,7 @@
 #include "android_jni.h"
 #include "backend/android_attr.h"
 #include "backend/android_creds.h"
+#include "backend/android_private_key.h"
 #include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
@@ -275,7 +276,7 @@ METHOD(charonservice_t, get_user_certificate, linked_list_t*,
 	{
 		goto failed;
 	}
-	jencodings = (*env)->CallObjectMethod(env, this->vpn_service, method_id, NULL);
+	jencodings = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
 	if (!jencodings)
 	{
 		goto failed;
@@ -285,6 +286,39 @@ METHOD(charonservice_t, get_user_certificate, linked_list_t*,
 	return list;
 
 failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return NULL;
+}
+
+METHOD(charonservice_t, get_user_key, private_key_t*,
+	private_charonservice_t *this, public_key_t *pubkey)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	private_key_t *key;
+	jobject jkey;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env,
+						android_charonvpnservice_class,
+						"getUserKey", "()Ljava/security/PrivateKey;");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jkey = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
+	if (!jkey)
+	{
+		goto failed;
+	}
+	key = android_private_key_create(jkey, pubkey);
+	androidjni_detach_thread();
+	return key;
+
+failed:
+	DESTROY_IF(pubkey);
 	androidjni_exception_occurred(env);
 	androidjni_detach_thread();
 	return NULL;
@@ -364,6 +398,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 			.bypass_socket = _bypass_socket,
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_user_certificate = _get_user_certificate,
+			.get_user_key = _get_user_key,
 			.get_vpnservice_builder = _get_vpnservice_builder,
 		},
 		.attr = android_attr_create(),
