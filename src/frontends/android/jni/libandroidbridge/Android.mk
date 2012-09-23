@@ -6,6 +6,7 @@ LOCAL_SRC_FILES := \
 android_jni.c android_jni.h \
 backend/android_attr.c backend/android_attr.h \
 backend/android_creds.c backend/android_creds.h \
+backend/android_private_key.c backend/android_private_key.h \
 backend/android_service.c backend/android_service.h \
 charonservice.c charonservice.h \
 kernel/android_ipsec.c kernel/android_ipsec.h \
