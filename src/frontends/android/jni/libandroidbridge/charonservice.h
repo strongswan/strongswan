@@ -86,12 +86,12 @@ struct charonservice_t {
 	linked_list_t *(*get_trusted_certificates)(charonservice_t *this);
 
 	/**
-	 * Get the configured user certificate chain and private key via JNI
+	 * Get the configured user certificate chain via JNI
 	 *
-	 * The first item in the returned list is the private key, followed by the
-	 * user certificate and any remaining elements of the certificate chain.
+	 * The first item in the returned list is the  user certificate followed
+	 * by any remaining elements of the certificate chain.
 	 *
-	 * @return				list of DER encoded objects (as chunk_t*),
+	 * @return				list of DER encoded certificates (as chunk_t*),
 	 *						NULL on failure
 	 */
 	linked_list_t *(*get_user_certificate)(charonservice_t *this);

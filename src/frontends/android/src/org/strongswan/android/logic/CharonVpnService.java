@@ -427,14 +427,13 @@ public class CharonVpnService extends VpnService implements Runnable
 	}
 
 	/**
-	 * Function called via JNI to get a list containing the DER encoded private key
-	 * and DER encoded certificates of the user selected certificate chain (beginning
-	 * with the user certificate).
+	 * Function called via JNI to get a list containing the DER encoded certificates
+	 * of the user selected certificate chain (beginning with the user certificate).
 	 *
 	 * Since this method is called from a thread of charon's thread pool we are safe
 	 * to call methods on KeyChain directly.
 	 *
-	 * @return list containing the private key and certificates (first element is the key)
+	 * @return list containing the certificates (first element is the user certificate)
 	 * @throws InterruptedException
 	 * @throws KeyChainException
 	 * @throws CertificateEncodingException
@@ -442,14 +441,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	private byte[][] getUserCertificate() throws KeyChainException, InterruptedException, CertificateEncodingException
 	{
 		ArrayList<byte[]> encodings = new ArrayList<byte[]>();
-		String alias = mCurrentUserCertificateAlias;
-		PrivateKey key = KeyChain.getPrivateKey(getApplicationContext(), alias);
-		if (key == null)
-		{
-			return null;
-		}
-		encodings.add(key.getEncoded());
-		X509Certificate[] chain = KeyChain.getCertificateChain(getApplicationContext(), alias);
+		X509Certificate[] chain = KeyChain.getCertificateChain(getApplicationContext(), mCurrentUserCertificateAlias);
 		if (chain == null || chain.length == 0)
 		{
 			return null;

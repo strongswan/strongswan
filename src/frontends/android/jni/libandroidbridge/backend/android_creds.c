@@ -143,7 +143,6 @@ METHOD(android_creds_t, load_user_certificate, certificate_t*,
 {
 	linked_list_t *encodings;
 	certificate_t *cert = NULL, *ca_cert;
-	private_key_t *key = NULL;
 	chunk_t *current;
 
 	encodings = charonservice->get_user_certificate(charonservice);
@@ -154,31 +153,21 @@ METHOD(android_creds_t, load_user_certificate, certificate_t*,
 
 	while (encodings->remove_first(encodings, (void**)&current) == SUCCESS)
 	{
-		if (!key)
-		{	/* the first element is the private key, we assume RSA */
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-									 BUILD_BLOB_ASN1_DER, *current, BUILD_END);
-			if (key)
-			{
-				this->creds->add_key(this->creds, key);
-				free_encoding(current);
-				continue;
-			}
-			goto failed;
-		}
 		if (!cert)
-		{	/* the next element is the user certificate */
+		{	/* the first element is the user certificate */
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									  BUILD_BLOB_ASN1_DER, *current, BUILD_END);
-			if (cert)
+			if (!cert)
 			{
-				DBG1(DBG_CFG, "loaded user certificate '%Y' and private key",
-					 cert->get_subject(cert));
-				cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+				DBG1(DBG_CFG, "failed to load user certificate");
 				free_encoding(current);
-				continue;
+				break;
 			}
-			goto failed;
+			DBG1(DBG_CFG, "loaded user certificate '%Y' and private key",
+				 cert->get_subject(cert));
+			cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+			free_encoding(current);
+			continue;
 		}
 		/* the rest are CA certificates, we ignore failures */
 		ca_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -191,14 +180,26 @@ METHOD(android_creds_t, load_user_certificate, certificate_t*,
 		}
 		free_encoding(current);
 	}
-	encodings->destroy(encodings);
-	return cert;
-
-failed:
-	DBG1(DBG_CFG, "failed to load user certificate and private key");
-	free_encoding(current);
 	encodings->destroy_function(encodings, (void*)free_encoding);
-	return NULL;
+
+	if (cert)
+	{
+		private_key_t *key;
+
+		key = charonservice->get_user_key(charonservice,
+										  cert->get_public_key(cert));
+		if (key)
+		{
+			this->creds->add_key(this->creds, key);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "failed to load private key");
+			cert->destroy(cert);
+			cert = NULL;
+		}
+	}
+	return cert;
 }
 
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
