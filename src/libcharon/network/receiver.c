@@ -447,8 +447,9 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 
 	dst = packet->get_destination(packet);
 	src = packet->get_source(packet);
-	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												dst, NULL))
+	if (!hydra->kernel_interface->all_interfaces_usable(hydra->kernel_interface)
+		&& !hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												   dst, NULL))
 	{
 		DBG3(DBG_NET, "received packet from %#H to %#H on ignored interface",
 			 src, dst);

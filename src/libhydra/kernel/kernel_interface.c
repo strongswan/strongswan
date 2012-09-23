@@ -389,6 +389,12 @@ METHOD(kernel_interface_t, is_interface_usable, bool,
 										   NULL, iface) == expected;
 }
 
+METHOD(kernel_interface_t, all_interfaces_usable, bool,
+	private_kernel_interface_t *this)
+{
+	return this->ifaces_filter == NULL;
+}
+
 METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	private_kernel_interface_t *this, traffic_selector_t *ts, host_t **ip)
 {
@@ -698,6 +704,7 @@ kernel_interface_t *kernel_interface_create()
 			.enable_udp_decap = _enable_udp_decap,
 
 			.is_interface_usable = _is_interface_usable,
+			.all_interfaces_usable = _all_interfaces_usable,
 			.get_address_by_ts = _get_address_by_ts,
 			.add_ipsec_interface = _add_ipsec_interface,
 			.remove_ipsec_interface = _remove_ipsec_interface,
@@ -725,12 +732,9 @@ kernel_interface_t *kernel_interface_create()
 					"%s.interfaces_use", NULL, hydra->daemon);
 	if (!ifaces)
 	{
+		this->ifaces_exclude = TRUE;
 		ifaces = lib->settings->get_str(lib->settings,
 					"%s.interfaces_ignore", NULL, hydra->daemon);
-		if (ifaces)
-		{
-			this->ifaces_exclude = TRUE;
-		}
 	}
 	if (ifaces)
 	{

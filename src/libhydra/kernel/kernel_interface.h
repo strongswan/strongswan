@@ -312,7 +312,7 @@ struct kernel_interface_t {
 	 * @param name			allocated interface name (optional)
 	 * @return				TRUE if interface found and usable
 	 */
-	bool (*get_interface) (kernel_interface_t *this, host_t *host, char **name);
+	bool (*get_interface)(kernel_interface_t *this, host_t *host, char **name);
 
 	/**
 	 * Creates an enumerator over all local addresses.
@@ -414,6 +414,13 @@ struct kernel_interface_t {
 	 * @return				TRUE if usable
 	 */
 	bool (*is_interface_usable)(kernel_interface_t *this, const char *iface);
+
+	/**
+	 * Check if interfaces are excluded by config.
+	 *
+	 * @return				TRUE if no interfaces are exclued by config
+	 */
+	bool (*all_interfaces_usable)(kernel_interface_t *this);
 
 	/**
 	 * Tries to find an IP address of a local interface that is included in the
