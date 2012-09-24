@@ -46,6 +46,24 @@ extern jclass *android_charonvpnservice_class;
 extern jclass *android_charonvpnservice_builder_class;
 
 /**
+ * Currently known (supported) SDK versions
+ *
+ * see android.os.Build.VERSION_CODES for definitions
+ */
+typedef enum {
+	ANDROID_ICE_CREAM_SANDWICH = 14,
+	ANDROID_ICE_CREAM_SANDWICH_MR1 = 15,
+	ANDROID_JELLY_BEAN = 16,
+} android_sdk_version_t;
+
+/**
+ * The current SDK version of the Android framework
+ *
+ * see android.os.Build.VERSION.SDK_INT
+ */
+extern android_sdk_version_t android_sdk_version;
+
+/**
  * Attach the current thread to the JVM
  *
  * As local JNI references are not freed until the thread detaches
