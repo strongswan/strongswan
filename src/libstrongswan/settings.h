@@ -189,7 +189,7 @@ struct settings_t {
 	 * @param key		key including sections, printf style format
 	 * @param def		value returned if key not found
 	 * @param ...		argument list for key
-	 * @return			value of the key
+	 * @return			value of the key (in seconds)
 	 */
 	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
 

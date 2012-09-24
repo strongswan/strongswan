@@ -240,7 +240,7 @@ otherwise a random port will be allocated.
 Process RTM_NEWROUTE and RTM_DELROUTE events
 .TP
 .BR charon.receive_delay " [0]"
-Delay for receiving packets, to simulate larger RTT
+Delay in ms for receiving packets, to simulate larger RTT
 .TP
 .BR charon.receive_delay_response " [yes]"
 Delay response messages
@@ -277,7 +277,7 @@ Numerical routing table to install routes to
 Priority of the routing table
 .TP
 .BR charon.send_delay " [0]"
-Delay for sending packets, to simulate larger RTT
+Delay in ms for sending packets, to simulate larger RTT
 .TP
 .BR charon.send_delay_response " [yes]"
 Delay response messages
