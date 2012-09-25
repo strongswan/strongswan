@@ -21,6 +21,7 @@
 #include <tkm/constants.h>
 #include <tkm/client.h>
 
+#include "tkm.h"
 #include "tkm_listener.h"
 #include "tkm_keymat.h"
 #include "tkm_utils.h"
@@ -39,6 +40,133 @@ struct private_tkm_listener_t {
 
 };
 
+/**
+ * Build a TKM certificate chain context with given cc id.
+ *
+ * @param ike_sa	IKE SA containing auth config to build certificate chain from
+ * @param cc_id		Certificate chain ID
+ * @return			TRUE if certificate chain was built successfully,
+ *					FALSE otherwise
+ */
+static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
+{
+	DBG1(DBG_IKE, "building certificate chain context %llu for IKE SA %s",
+		 cc_id, ike_sa->get_name((ike_sa_t *)ike_sa));
+
+	auth_cfg_t *auth;
+	certificate_t *cert;
+	enumerator_t *rounds;
+	rounds = ike_sa->create_auth_cfg_enumerator((ike_sa_t *)ike_sa, FALSE);
+	while(rounds->enumerate(rounds, &auth))
+	{
+		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
+		{
+			/* set user certificate */
+			chunk_t enc_user_cert;
+			if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_user_cert))
+			{
+				DBG1(DBG_IKE, "unable to extract encoded user certificate");
+				rounds->destroy(rounds);
+				return FALSE;
+			}
+
+			certificate_type user_cert;
+			chunk_to_sequence(&enc_user_cert, &user_cert,
+							  sizeof(certificate_type));
+			chunk_free(&enc_user_cert);
+			if (ike_cc_set_user_certificate(cc_id, 1, 1, user_cert) != TKM_OK)
+			{
+				DBG1(DBG_IKE, "error setting user certificate of cert chain"
+					 " (cc_id: %llu)", cc_id);
+				rounds->destroy(rounds);
+				return FALSE;
+			}
+
+			/* process intermediate CA certificates */
+			auth_rule_t rule;
+			enumerator_t *enumerator = auth->create_enumerator(auth);
+			while (enumerator->enumerate(enumerator, &rule, &cert))
+			{
+				if (rule == AUTH_RULE_IM_CERT)
+				{
+					chunk_t enc_im_cert;
+					if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_im_cert))
+					{
+						DBG1(DBG_IKE, "unable to extract encoded intermediate CA"
+							" certificate");
+						rounds->destroy(rounds);
+						enumerator->destroy(enumerator);
+						return FALSE;
+					}
+
+					certificate_type im_cert;
+					chunk_to_sequence(&enc_im_cert, &im_cert,
+									  sizeof(certificate_type));
+					chunk_free(&enc_im_cert);
+					if (ike_cc_add_certificate(cc_id, 1, im_cert) != TKM_OK)
+					{
+						DBG1(DBG_IKE, "error adding intermediate certificate to"
+							 " cert chain (cc_id: %llu)", cc_id);
+						rounds->destroy(rounds);
+						enumerator->destroy(enumerator);
+						return FALSE;
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
+
+			/* finally add CA certificate */
+			cert = auth->get(auth, AUTH_RULE_CA_CERT);
+			if (cert)
+			{
+				chunk_t enc_ca_cert;
+				if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_ca_cert))
+				{
+					DBG1(DBG_IKE, "unable to extract encoded CA certificate");
+					rounds->destroy(rounds);
+					return FALSE;
+				}
+
+				const ca_id_type ca_id = 1;
+				certificate_type ca_cert;
+				chunk_to_sequence(&enc_ca_cert, &ca_cert,
+								  sizeof(certificate_type));
+				chunk_free(&enc_ca_cert);
+				if (ike_cc_add_certificate(cc_id, 1, ca_cert) != TKM_OK)
+				{
+					DBG1(DBG_IKE, "error adding CA certificate to cert chain "
+						 "(cc_id: %llu)", cc_id);
+					rounds->destroy(rounds);
+					return FALSE;
+				}
+
+				if (ike_cc_check_ca(cc_id, ca_id) != TKM_OK)
+				{
+					DBG1(DBG_IKE, "certificate chain (cc_id: %llu) not based on"
+						 " trusted CA (ca_id: %llu)", cc_id, ca_id);
+					rounds->destroy(rounds);
+					return FALSE;
+				}
+
+				rounds->destroy(rounds);
+				return TRUE;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "no CA certificate");
+			}
+		}
+		else
+		{
+			DBG1(DBG_IKE, "no subject certificate for remote peer");
+		}
+	}
+
+	rounds->destroy(rounds);
+	return FALSE;
+}
+
 METHOD(listener_t, authorize, bool,
 	private_tkm_listener_t *this, ike_sa_t *ike_sa,
 	bool final, bool *success)
@@ -51,6 +179,21 @@ METHOD(listener_t, authorize, bool,
 	tkm_keymat_t * const keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
 	const isa_id_type isa_id = keymat->get_isa_id(keymat);
 	DBG1(DBG_IKE, "TKM authorize listener called for ISA context %llu", isa_id);
+
+	const cc_id_type cc_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_CC);
+	if (!cc_id)
+	{
+		DBG1(DBG_IKE, "unable to acquire CC context id");
+		*success = FALSE;
+		return TRUE;
+	}
+	const bool cc_success = build_cert_chain(ike_sa, cc_id);
+	if (!cc_success)
+	{
+		DBG1(DBG_IKE, "unable to build certificate chain");
+		*success = FALSE;
+		return TRUE;
+	}
 
 	const chunk_t * const auth = keymat->get_auth_payload(keymat);
 	if (!auth->ptr)
