@@ -159,7 +159,10 @@ Enable Denial of Service protection using cookies and aggressiveness checks
 Section to define file loggers, see LOGGER CONFIGURATION
 .TP
 .BR charon.flush_auth_cfg " [no]"
-
+If enabled objects used during authentication (certificates, identities etc.)
+are released to free memory once an IKE_SA is established.
+Enabling this might conflict with plugins that later need access to e.g. the
+used certificates.
 .TP
 .BR charon.half_open_timeout " [30]"
 Timeout in seconds for connecting IKE_SAs (also see IKE_SA_INIT DROPPING).
@@ -204,10 +207,11 @@ If not specified the addresses will be installed on the outbound interface.
 .TP
 .BR charon.interfaces_ignore
 A comma-separated list of network interfaces that should be ignored, if
-charon.interfaces_use is specified this option has no effect.
+.B charon.interfaces_use
+is specified this option has no effect.
 .TP
 .BR charon.interfaces_use
-A comma-separated list of network interfaces that sould be used by charon.
+A comma-separated list of network interfaces that should be used by charon.
 All other interfaces are ignored.
 .TP
 .BR charon.keep_alive " [20s]"
@@ -391,7 +395,6 @@ Start phase2 EAP TNC protocol after successful client authentication
 .TP
 .BR charon.plugins.eap-peap.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
-
 .TP
 .BR charon.plugins.eap-radius.accounting " [no]"
 Send RADIUS accounting information to RADIUS servers.
@@ -439,7 +442,9 @@ name or attribute number, a colon can be used to specify vendor-specific
 attributes, e.g. Reply-Message, or 11, or 36906:12).
 .TP
 .BR charon.plugins.eap-radius.forward.radius_to_ike
-Same as charon.plugins.eap-radius.forward.ike_to_radius but from RADIUS to
+Same as
+.B charon.plugins.eap-radius.forward.ike_to_radius
+but from RADIUS to
 IKEv2, a strongSwan specific private notify (40969) is used to transmit the
 attributes.
 .TP
@@ -466,10 +471,15 @@ Section to specify multiple RADIUS servers. The
 .B sockets
 and
 .B port
+(or
+.BR auth_port )
 options can be specified for each server. A server's IP/Hostname can be
 configured using the
 .B address
-option. For each RADIUS server a priority can be specified using the
+option. The
+.BR acct_port " [1813]"
+option can be used to specify the port used for RADIUS accounting.
+For each RADIUS server a priority can be specified using the
 .BR preference " [0]"
 option.
 .TP
