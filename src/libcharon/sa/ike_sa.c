@@ -1732,7 +1732,6 @@ METHOD(ike_sa_t, set_auth_lifetime, status_t,
 	private_ike_sa_t *this, u_int32_t lifetime)
 {
 	u_int32_t diff, hard, soft, now;
-	ike_auth_lifetime_t *task;
 	bool send_update;
 
 	diff = this->peer_cfg->get_over_time(this->peer_cfg);
@@ -1782,12 +1781,16 @@ METHOD(ike_sa_t, set_auth_lifetime, status_t,
 	/* give at least some seconds to reauthenticate */
 	this->stats[STAT_DELETE] = max(hard, now + 10);
 
+#ifdef USE_IKEV2
 	if (send_update)
 	{
+		ike_auth_lifetime_t *task;
+
 		task = ike_auth_lifetime_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, &task->task);
 		return this->task_manager->initiate(this->task_manager);
 	}
+#endif
 	return SUCCESS;
 }
 
