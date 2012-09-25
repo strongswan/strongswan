@@ -30,6 +30,8 @@ enum tkm_context_kind_t {
 	TKM_CTX_NONCE,
 	/** Diffie-Hellman context */
 	TKM_CTX_DH,
+	/** Certificate chain context */
+	TKM_CTX_CC,
 	/** IKE SA context */
 	TKM_CTX_ISA,
 	/** Authenticated Endpoint context */
