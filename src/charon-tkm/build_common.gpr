@@ -1,10 +1,22 @@
 with "tkmrpc_client";
+with "tkmrpc_server-ees";
 
 project Build_Common is
 
    for Source_Dirs use ();
 
-   Obj_Dir           := "obj";
-   Compiler_Switches := ("-W", "-Wall", "-Wno-unused-parameter");
+   Obj_Dir := "obj";
 
+   C_Compiler_Switches   := ("-W",
+                             "-Wall",
+                             "-Wno-unused-parameter");
+   Ada_Compiler_Switches := ("-gnatwale",
+                             "-gnatygAdISuxo",
+                             "-gnata",
+                             "-gnatVa",
+                             "-gnat05",
+                             "-gnatf",
+                             "-fstack-check",
+                             "-gnato",
+                             "-g");
 end Build_Common;

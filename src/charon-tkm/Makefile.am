@@ -17,6 +17,7 @@ LIBFL = -lstrongswan -lhydra -lcharon
 DEFS += -DPLUGINS=\""$(PLUGINS)\"" -DIPSEC_PIDDIR=\"${piddir}\"
 
 BUILD_OPTS = \
+	-XOBJ_DIR=$(CURDIR)/obj \
 	-cargs $(INCLUDES) $(DEFS) \
 	-largs $(LIBLD) $(LIBFL)
 

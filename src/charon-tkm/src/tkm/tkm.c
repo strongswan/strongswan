@@ -20,10 +20,14 @@
 #include "tkm.h"
 
 #define IKE_SOCKET "/tmp/tkm.rpc.ike"
+#define EES_SOCKET "/tmp/tkm.rpc.ees"
 
 typedef struct private_tkm_t private_tkm_t;
 
-/**
+extern result_type ees_server_init(const char * const address);
+extern void ees_server_finalize(void);
+
+/*
  * Private additions to tkm_t.
  */
 struct private_tkm_t {
@@ -61,9 +65,16 @@ bool tkm_init()
 		tkmlib_final();
 		return FALSE;
 	}
+	/* init esa event service */
+	if (ees_server_init(EES_SOCKET) != TKM_OK)
+	{
+		tkmlib_final();
+		return FALSE;
+	}
 
 	if (ike_tkm_reset() != TKM_OK)
 	{
+		ees_server_finalize();
 		tkmlib_final();
 		return FALSE;
 	}
@@ -71,6 +82,7 @@ bool tkm_init()
 	/* get limits from tkm */
 	if (ike_tkm_limits(&max_requests, &nc, &dh, &cc, &ae, &isa, &esa) != TKM_OK)
 	{
+		ees_server_finalize();
 		tkmlib_final();
 		return FALSE;
 	}
@@ -100,6 +112,8 @@ void tkm_deinit()
 	private_tkm_t *this = (private_tkm_t*)tkm;
 	this->public.idmgr->destroy(this->public.idmgr);
 	this->public.chunk_map->destroy(this->public.chunk_map);
+
+	ees_server_finalize();
 
 	tkmlib_final();
 	free(this);
