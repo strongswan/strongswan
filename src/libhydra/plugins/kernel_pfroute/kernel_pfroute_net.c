@@ -29,6 +29,7 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+#include <utils/hashtable.h>
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
@@ -224,7 +225,7 @@ struct private_kernel_pfroute_net_t
 /**
  * Add an address map entry
  */
-static void addr_map_entry_add(private_kernel_netlink_net_t *this,
+static void addr_map_entry_add(private_kernel_pfroute_net_t *this,
 							   addr_entry_t *addr, iface_entry_t *iface)
 {
 	addr_map_entry_t *entry;
@@ -247,7 +248,7 @@ static void addr_map_entry_add(private_kernel_netlink_net_t *this,
  * it is also used with linked_list_t.invoke_function)
  */
 static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
-								  private_kernel_netlink_net_t *this)
+								  private_kernel_pfroute_net_t *this)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = addr->ip,
@@ -511,7 +512,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 typedef struct {
 	private_kernel_pfroute_net_t* this;
 	/** which addresses to enumerate */
-	address_type_t which;
+	kernel_address_type_t which;
 } address_enumerator_t;
 
 /**
@@ -580,7 +581,7 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 }
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
-	private_kernel_pfroute_net_t *this, address_type_t which)
+	private_kernel_pfroute_net_t *this, kernel_address_type_t which)
 {
 	address_enumerator_t *data = malloc_thing(address_enumerator_t);
 	data->this = this;
@@ -759,6 +760,7 @@ METHOD(kernel_net_t, destroy, void,
 	private_kernel_pfroute_net_t *this)
 {
 	enumerator_t *enumerator;
+	addr_entry_t *addr;
 
 	if (this->socket > 0)
 	{
