@@ -731,6 +731,7 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 					addr->virtual = FALSE;
 					addr->refcount = 1;
 					iface->addrs->insert_last(iface->addrs, addr);
+					addr_map_entry_add(this, addr, iface);
 				}
 			}
 		}
