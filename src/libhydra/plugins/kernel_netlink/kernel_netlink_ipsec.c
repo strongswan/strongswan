@@ -322,12 +322,12 @@ struct private_kernel_netlink_ipsec_t {
 	bool policy_history;
 
 	/**
-	 * Size of the replay window, in packets
+	 * Size of the replay window, in packets (= bits)
 	 */
 	u_int32_t replay_window;
 
 	/**
-	 * Size of the replay window bitmap, in bytes
+	 * Size of the replay window bitmap, in number of __u32 blocks
 	 */
 	u_int32_t replay_bmp;
 };
@@ -1488,7 +1488,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			/* bmp_len contains number uf __u32's */
 			replay->bmp_len = this->replay_bmp;
 			replay->replay_window = this->replay_window;
-			DBG2(DBG_KNL, "  using replay window of %u bytes",
+			DBG2(DBG_KNL, "  using replay window of %u packets",
 				 this->replay_window);
 
 			rthdr = XFRM_RTA_NEXT(rthdr);
@@ -1500,7 +1500,9 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 		else
 		{
-			sa->replay_window = DEFAULT_REPLAY_WINDOW;
+			DBG2(DBG_KNL, "  using replay window of %u packets",
+				 this->replay_window);
+			sa->replay_window = this->replay_window;
 		}
 	}
 
