@@ -406,7 +406,8 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 	if (!hydra->kernel_interface->enable_udp_decap(hydra->kernel_interface,
 												   fd, family, port))
 	{
-		DBG1(DBG_NET, "enabling UDP decapsulation failed");
+		DBG1(DBG_NET, "enabling UDP decapsulation for %s on port %d failed",
+			 family == AF_INET ? "IPv4" : "IPv6", port);
 	}
 
 	return fd;
