@@ -207,9 +207,9 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		this->mutex->lock(this->mutex);
 		entry = this->sessions->put(this->sessions, (void*)(uintptr_t)id, entry);
 		this->mutex->unlock(this->mutex);
-		free(entry);
 	}
 	message->destroy(message);
+	free(entry);
 }
 
 /**
