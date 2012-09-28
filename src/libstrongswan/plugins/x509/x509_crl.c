@@ -221,7 +221,7 @@ static bool parse(private_x509_crl_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
-	chunk_t extnID;
+	chunk_t extnID = chunk_empty;
 	chunk_t userCertificate = chunk_empty;
 	int objectID;
 	int sig_alg = OID_UNKNOWN;
