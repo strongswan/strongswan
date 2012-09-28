@@ -138,6 +138,7 @@ METHOD(ha_socket_t, pull, ha_message_t*,
 					DBG1(DBG_CFG, "pulling HA message failed: %s",
 						 strerror(errno));
 					sleep(1);
+					continue;
 			}
 		}
 		message = ha_message_parse(chunk_create(buf, len));
