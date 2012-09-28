@@ -611,10 +611,10 @@ encryption_payload_t *encryption_payload_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
-		.payload_length = get_header_length(this),
 		.payloads = linked_list_create(),
 		.type = type,
 	);
+	this->payload_length = get_header_length(this);
 
 	if (type == ENCRYPTED_V1)
 	{
