@@ -1075,17 +1075,15 @@ METHOD(crypto_tester_t, test_rng, bool,
 		{
 			goto failure;
 		}
-		if (!failed)
-		{	/* write bytes into existing buffer */
-			memset(data.ptr, 0, data.len);
-			if (!rng->get_bytes(rng, vector->len, data.ptr))
-			{
-				goto failure;
-			}
-			if (!vector->test(vector->user, data))
-			{
-				goto failure;
-			}
+		/* write bytes into existing buffer */
+		memset(data.ptr, 0, data.len);
+		if (!rng->get_bytes(rng, vector->len, data.ptr))
+		{
+			goto failure;
+		}
+		if (!vector->test(vector->user, data))
+		{
+			goto failure;
 		}
 
 		failed = FALSE;
