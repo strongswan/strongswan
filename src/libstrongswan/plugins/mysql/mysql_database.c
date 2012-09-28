@@ -472,6 +472,7 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 				break;
 		}
 	}
+	va_end(args);
 	return TRUE;
 }
 

@@ -206,6 +206,7 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 			}
 			default:
 				DBG1(DBG_LIB, "invalid result type supplied");
+				va_end(args);
 				return FALSE;
 		}
 	}
