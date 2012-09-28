@@ -220,7 +220,7 @@ static chunk_t encrypt_mppe_key(private_tnc_pdp_t *this, u_int8_t type,
 		{
 			free(data.ptr);
 			return chunk_empty;
-		}	
+		}
 		*a.ptr |= 0x80;
 	}
 	while (mppe_key->salt == *salt);
@@ -266,20 +266,18 @@ static void send_response(private_tnc_pdp_t *this, radius_message_t *request,
 	u_int16_t salt = 0;
 
 	response = radius_message_create(code);
-	if (eap)
-	{
-		data = eap->get_data(eap);
-		DBG3(DBG_CFG, "%N payload %B", eap_type_names, this->type, &data);
+	data = eap->get_data(eap);
+	DBG3(DBG_CFG, "%N payload %B", eap_type_names, this->type, &data);
 
-		/* fragment data suitable for RADIUS */
-		while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
-		{
-			response->add(response, RAT_EAP_MESSAGE,
-						  chunk_create(data.ptr, MAX_RADIUS_ATTRIBUTE_SIZE));
-			data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
-		}
-		response->add(response, RAT_EAP_MESSAGE, data);
+	/* fragment data suitable for RADIUS */
+	while (data.len > MAX_RADIUS_ATTRIBUTE_SIZE)
+	{
+		response->add(response, RAT_EAP_MESSAGE,
+					  chunk_create(data.ptr, MAX_RADIUS_ATTRIBUTE_SIZE));
+		data = chunk_skip(data, MAX_RADIUS_ATTRIBUTE_SIZE);
 	}
+	response->add(response, RAT_EAP_MESSAGE, data);
+
 	if (group)
 	{
 		tunnel_type = RADIUS_TUNNEL_TYPE_ESP;
