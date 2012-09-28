@@ -648,7 +648,13 @@ METHOD(dhcp_socket_t, destroy, void,
 dhcp_socket_t *dhcp_socket_create()
 {
 	private_dhcp_socket_t *this;
-	struct sockaddr_in src;
+	struct sockaddr_in src = {
+		.sin_family = AF_INET,
+		.sin_port = htons(DHCP_CLIENT_PORT),
+		.sin_addr = {
+			.s_addr = INADDR_ANY,
+		},
+	};
 	int on = 1;
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS,
@@ -738,9 +744,6 @@ dhcp_socket_t *dhcp_socket_create()
 		destroy(this);
 		return NULL;
 	}
-	src.sin_family = AF_INET;
-	src.sin_port = htons(DHCP_CLIENT_PORT);
-	src.sin_addr.s_addr = INADDR_ANY;
 	if (bind(this->send, (struct sockaddr*)&src, sizeof(src)) == -1)
 	{
 		DBG1(DBG_CFG, "unable to bind DHCP send socket: %s", strerror(errno));

@@ -136,7 +136,13 @@ METHOD(smtp_t, destroy, void,
 smtp_t *smtp_create()
 {
 	private_smtp_t *this;
-	struct sockaddr_in addr;
+	struct sockaddr_in addr = {
+		.sin_family = AF_INET,
+		.sin_port = htons(25),
+		.sin_addr = {
+			.s_addr = htonl(INADDR_LOOPBACK),
+		},
+	};
 	int s;
 
 	INIT(this,
@@ -153,9 +159,6 @@ smtp_t *smtp_create()
 		free(this);
 		return NULL;
 	}
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	addr.sin_port = htons(25);
 	if (connect(s, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
 		DBG1(DBG_LIB, "connecting to SMTP server failed: %s", strerror(errno));
