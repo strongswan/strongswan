@@ -1755,6 +1755,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 			/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
 			this->msk_label = "client EAP encryption";
 			build_cipher_suite_list(this, FALSE);
+			break;
 		case TLS_PURPOSE_EAP_PEAP:
 			this->msk_label = "client EAP encryption";
 			build_cipher_suite_list(this, TRUE);
