@@ -991,6 +991,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 				DBG1(DBG_ENC, "payload type %N is not supported, "
 					 "but its critical!", payload_type_names, type);
 				status = NOT_SUPPORTED;
+				break;
 			}
 		}
 		enumerator->destroy(enumerator);
