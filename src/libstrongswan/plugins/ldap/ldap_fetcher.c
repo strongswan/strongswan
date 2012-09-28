@@ -176,13 +176,14 @@ METHOD(fetcher_t, set_option, bool,
 	switch (option)
 	{
 		case FETCH_TIMEOUT:
-		{
 			this->timeout = va_arg(args, u_int);
-			return TRUE;
-		}
+			break;
 		default:
+			va_end(args);
 			return FALSE;
 	}
+	va_end(args);
+	return TRUE;
 }
 
 METHOD(fetcher_t, destroy, void,
