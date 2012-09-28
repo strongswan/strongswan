@@ -357,7 +357,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			lang = lang_msg->get_language_preference(lang_msg);
 
 			DBG2(DBG_TNC, "setting language preference to '%.*s'",
-						   lang.len, lang.ptr);
+						   (int)lang.len, lang.ptr);
 			this->recs->set_preferred_language(this->recs, lang);
 			break;
 		}
@@ -369,9 +369,9 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			reason_msg = (pb_reason_string_msg_t*)msg;
 			reason_string = reason_msg->get_reason_string(reason_msg);
 			language_code = reason_msg->get_language_code(reason_msg);
-			DBG2(DBG_TNC, "reason string is '%.*s'", reason_string.len,
+			DBG2(DBG_TNC, "reason string is '%.*s'", (int)reason_string.len,
 													 reason_string.ptr);
-			DBG2(DBG_TNC, "language code is '%.*s'", language_code.len,
+			DBG2(DBG_TNC, "language code is '%.*s'", (int)language_code.len,
 													 language_code.ptr);
 			break;
 		}
@@ -723,7 +723,7 @@ METHOD(tls_t, build, status_t,
 			{
 				this->batch_type = PB_BATCH_NONE;
 			}
-			
+
 			status = ALREADY_DONE;
 		}
 		else

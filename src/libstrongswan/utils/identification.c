@@ -310,7 +310,7 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 		len -= written;
 
 		chunk_printable(data, &printable, '?');
-		written = snprintf(buf, len, "%.*s", printable.len, printable.ptr);
+		written = snprintf(buf, len, "%.*s", (int)printable.len, printable.ptr);
 		chunk_free(&printable);
 		if (written < 0 || written >= len)
 		{
@@ -791,7 +791,7 @@ int identification_printf_hook(printf_hook_data_t *data,
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
 			chunk_printable(this->encoded, &proper, '?');
-			snprintf(buf, sizeof(buf), "%.*s", proper.len, proper.ptr);
+			snprintf(buf, sizeof(buf), "%.*s", (int)proper.len, proper.ptr);
 			chunk_free(&proper);
 			break;
 		case ID_DER_ASN1_DN:
@@ -804,8 +804,8 @@ int identification_printf_hook(printf_hook_data_t *data,
 			if (chunk_printable(this->encoded, NULL, '?') &&
 				this->encoded.len != HASH_SIZE_SHA1)
 			{	/* fully printable, use ascii version */
-				snprintf(buf, sizeof(buf), "%.*s",
-						 this->encoded.len, this->encoded.ptr);
+				snprintf(buf, sizeof(buf), "%.*s", (int)this->encoded.len,
+						 this->encoded.ptr);
 			}
 			else
 			{	/* not printable, hex dump */
@@ -1024,7 +1024,7 @@ identification_t * identification_create_from_data(chunk_t data)
 	char buf[data.len + 1];
 
 	/* use string constructor */
-	snprintf(buf, sizeof(buf), "%.*s", data.len, data.ptr);
+	snprintf(buf, sizeof(buf), "%.*s", (int)data.len, data.ptr);
 	return identification_create_from_string(buf);
 }
 

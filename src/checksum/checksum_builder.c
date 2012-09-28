@@ -106,14 +106,16 @@ static void build_binary_checksum(char *path)
 		pos = strrchr(binary, '.');
 		if (pos && streq(pos, ".so"))
 		{
-			snprintf(name, sizeof(name), "%.*s\",", pos - binary, binary);
+			snprintf(name, sizeof(name), "%.*s\",", (int)(pos - binary),
+					 binary);
 			if (streq(name, "libstrongswan\","))
 			{
 				snprintf(sname, sizeof(sname), "%s", "library_init");
 			}
 			else
 			{
-				snprintf(sname, sizeof(sname), "%.*s_init", pos - binary, binary);
+				snprintf(sname, sizeof(sname), "%.*s_init", (int)(pos - binary),
+						 binary);
 			}
 			build_checksum(path, name, sname);
 		}

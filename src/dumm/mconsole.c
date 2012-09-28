@@ -150,7 +150,7 @@ static int request(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 				if (reply.len && *reply.data)
 				{
 					DBG1(DBG_LIB, "received mconsole error %d: %.*s",
-						 reply.err, reply.len, reply.data);
+						 reply.err, (int)reply.len, reply.data);
 				}
 				break;
 			}

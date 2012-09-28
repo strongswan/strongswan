@@ -285,7 +285,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 					else
 					{
 						DBG1(DBG_ASN, "  encryption algorithm '%.*s'"
-							 " not supported", dek.len, dek.ptr);
+							 " not supported", (int)dek.len, dek.ptr);
 						return NOT_SUPPORTED;
 					}
 					eat_whitespace(&value);

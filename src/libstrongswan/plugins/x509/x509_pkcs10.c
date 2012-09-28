@@ -334,7 +334,7 @@ static bool parse_challengePassword(private_x509_pkcs10_t *this, chunk_t blob, i
 		return FALSE;
 	}
 	DBG2(DBG_ASN, "L%d - challengePassword:", level);
-	DBG4(DBG_ASN, "  '%.*s'", blob.len, blob.ptr);
+	DBG4(DBG_ASN, "  '%.*s'", (int)blob.len, blob.ptr);
 	return TRUE;
 }
 

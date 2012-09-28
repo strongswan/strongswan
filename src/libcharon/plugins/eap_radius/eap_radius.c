@@ -264,7 +264,7 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 			case RAT_FILTER_ID:
 				filter_id = data;
 				DBG1(DBG_IKE, "received RADIUS attribute Filter-Id: "
-							  "'%.*s'", filter_id.len, filter_id.ptr);
+							  "'%.*s'", (int)filter_id.len, filter_id.ptr);
 				break;
 			default:
 				break;

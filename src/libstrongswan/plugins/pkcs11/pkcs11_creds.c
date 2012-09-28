@@ -109,7 +109,8 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		if (cert)
 		{
 			DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
-				 entry->trusted ? "" : "un", entry->label.len, entry->label.ptr);
+				 entry->trusted ? "" : "un", (int)entry->label.len,
+				 entry->label.ptr);
 			/* trusted certificates are also returned as untrusted */
 			this->untrusted->insert_last(this->untrusted, cert);
 			if (entry->trusted)
@@ -120,7 +121,7 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		else
 		{
 			DBG1(DBG_CFG, "    loading cert '%.*s' failed",
-				 entry->label.len, entry->label.ptr);
+				(int)entry->label.len, entry->label.ptr);
 		}
 		free(entry->value.ptr);
 		free(entry->label.ptr);

@@ -289,7 +289,8 @@ static bool load_hooks()
 		pos = strchr(name, '-');
 		if (pos)
 		{
-			snprintf(buf, sizeof(buf), "%.*s_hook_create", pos - name, name);
+			snprintf(buf, sizeof(buf), "%.*s_hook_create", (int)(pos - name),
+					 name);
 		}
 		else
 		{

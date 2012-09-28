@@ -396,7 +396,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	has_long = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_LONG_TYPES);
 	has_excl = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
 	has_soh  = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_SOH);
-	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL); 
+	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL);
 	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
 	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
 	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
@@ -478,7 +478,7 @@ METHOD(imv_agent_t, change_state, TNC_Result,
 			DBG1(DBG_IMV, "IMV %u \"%s\" was notified of unknown state %u "
 				 		  "for Connection ID %u",
 						  this->id, this->name, new_state, connection_id);
-			return TNC_RESULT_INVALID_PARAMETER;		
+			return TNC_RESULT_INVALID_PARAMETER;
 	}
 	return TNC_RESULT_SUCCESS;
 }
@@ -716,8 +716,8 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 			lang_len <= BUF_LEN)
 		{
 			pref_lang.len = lang_len;
-			DBG2(DBG_IMV, "preferred language is '%.*s'",
-						   pref_lang.len, pref_lang.ptr);
+			DBG2(DBG_IMV, "preferred language is '%.*s'", (int)pref_lang.len,
+				 pref_lang.ptr);
 		}
 
 		/* find a reason string for the preferred or default language and set it */

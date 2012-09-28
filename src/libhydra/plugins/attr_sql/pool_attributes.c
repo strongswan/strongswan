@@ -492,7 +492,7 @@ void del_attr(char *name, char *pool, char *identity,
 			{
 				fprintf(stderr, "deleting %s attribute (%N) with value '%.*s'%s failed.\n",
 						 		name, configuration_attribute_type_names, type,
-								blob_db.len, blob_db.ptr, id_pool_str);
+								(int)blob_db.len, blob_db.ptr, id_pool_str);
 			}
 
 			else
@@ -514,7 +514,7 @@ void del_attr(char *name, char *pool, char *identity,
 		{
 			printf("deleted %s attribute (%N) with value '%.*s'%s.\n",
 				   name, configuration_attribute_type_names, type,
-				   blob_db.len, blob_db.ptr, id_pool_str);
+				   (int)blob_db.len, blob_db.ptr, id_pool_str);
 		}
 		else
 		{
@@ -555,7 +555,7 @@ void del_attr(char *name, char *pool, char *identity,
 				fprintf(stderr, "the %s attribute (%N) with value '%.*s'%s "
 								"was not found.\n", name,
 								 configuration_attribute_type_names, type,
-								 blob.len, blob.ptr, id_pool_str);
+								 (int)blob.len, blob.ptr, id_pool_str);
 			}
 		}
 	}

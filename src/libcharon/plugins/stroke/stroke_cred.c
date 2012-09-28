@@ -722,7 +722,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 
 	if (key)
 	{
-		DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
+		DBG1(DBG_CFG, "  loaded private key from %.*s", (int)sc.len, sc.ptr);
 		this->creds->add_key(this->creds, key);
 	}
 	return TRUE;

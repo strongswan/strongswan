@@ -475,7 +475,8 @@ static bool login(ENGINE *engine, chunk_t keyid)
 	{
 		found = TRUE;
 		key = shared->get_key(shared);
-		if (snprintf(pin, sizeof(pin), "%.*s", key.len, key.ptr) >= sizeof(pin))
+		if (snprintf(pin, sizeof(pin),
+					 "%.*s", (int)key.len, key.ptr) >= sizeof(pin))
 		{
 			continue;
 		}

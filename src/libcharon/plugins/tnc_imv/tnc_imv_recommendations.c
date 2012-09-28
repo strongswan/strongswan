@@ -320,7 +320,7 @@ METHOD(recommendations_t, set_reason_string, TNC_Result,
 	bool found = FALSE;
 
 	DBG2(DBG_TNC, "IMV %u is setting reason string to '%.*s'",
-		 id, reason.len, reason.ptr);
+		 id, (int)reason.len, reason.ptr);
 
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -345,7 +345,7 @@ METHOD(recommendations_t, set_reason_language, TNC_Result,
 	bool found = FALSE;
 
 	DBG2(DBG_TNC, "IMV %u is setting reason language to '%.*s'",
-		 id, reason_lang.len, reason_lang.ptr);
+		 id, (int)reason_lang.len, reason_lang.ptr);
 
 	enumerator = this->recs->create_enumerator(this->recs);
 	while (enumerator->enumerate(enumerator, &entry))

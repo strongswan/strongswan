@@ -128,7 +128,7 @@ METHOD(tnccs_t, send_msg, TNC_Result,
 		return TNC_RESULT_NO_LONG_MESSAGE_TYPES;
 	}
 	msg_type = (msg_vid << 8) | msg_subtype;
- 
+
 	pa_subtype_names = get_pa_subtype_names(msg_vid);
 	if (pa_subtype_names)
 	{
@@ -272,10 +272,10 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 
 			reason_msg = (tnccs_reason_strings_msg_t*)msg;
 			reason_string = reason_msg->get_reason(reason_msg, &reason_lang);
-			DBG2(DBG_TNC, "reason string is '%.*s'",   reason_string.len,
-													  reason_string.ptr);
-			DBG2(DBG_TNC, "reason language is '%.*s'", reason_lang.len,
-													  reason_lang.ptr);
+			DBG2(DBG_TNC, "reason string is '%.*s'", (int)reason_string.len,
+													 reason_string.ptr);
+			DBG2(DBG_TNC, "language code is '%.*s'", (int)reason_lang.len,
+													 reason_lang.ptr);
 			break;
 		}
 		default:
@@ -311,7 +311,7 @@ METHOD(tls_t, process, status_t,
 	data = chunk_create(buf, buflen);
 	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
 				   data.len, this->connection_id);
-	DBG3(DBG_TNC, "%.*s", data.len, data.ptr);
+	DBG3(DBG_TNC, "%.*s", (int)data.len, data.ptr);
 	batch = tnccs_batch_create_from_data(this->is_server, ++this->batch_id, data);
 	status = batch->process(batch);
 
@@ -463,7 +463,7 @@ METHOD(tls_t, build, status_t,
 		data = this->batch->get_encoding(this->batch);
 		DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
 					   data.len, this->connection_id);
-		DBG3(DBG_TNC, "%.*s", data.len, data.ptr);
+		DBG3(DBG_TNC, "%.*s", (int)data.len, data.ptr);
 		*msglen = 0;
 
 		if (data.len > *buflen)

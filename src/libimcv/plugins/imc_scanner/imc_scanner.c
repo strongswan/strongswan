@@ -38,7 +38,7 @@ static const char imc_name[] = "Scanner";
 #define IMC_SUBTYPE		PA_SUBTYPE_ITA_SCANNER
 
 static imc_agent_t *imc_scanner;
- 
+
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
  */
@@ -133,7 +133,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		enumerator_t *enumerator;
 		bool allowed, found = FALSE;
 
-		DBG2(DBG_IMC, "%.*s", strlen(buf)-1, buf);
+		DBG2(DBG_IMC, "%.*s", (int)(strlen(buf)-1), buf);
 
 		if (n++ < 2)
 		{
@@ -209,7 +209,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 			}
 		}
 		enumerator->destroy(enumerator);
-		
+
 		/* Skip the duplicate port entry */
 		if (found)
 		{
@@ -297,7 +297,7 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 
-	/* parse received PA-TNC message and automatically handle any errors */ 
+	/* parse received PA-TNC message and automatically handle any errors */
 	result = imc_scanner->receive_message(imc_scanner, state, msg, msg_vid,
 							msg_subtype, src_imv_id, dst_imc_id, &pa_tnc_msg);
 
