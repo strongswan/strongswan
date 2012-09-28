@@ -2741,7 +2741,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 
 	/* disable lifetimes for allocated SPIs in kernel */
 	fd = open("/proc/sys/net/core/xfrm_acq_expires", O_WRONLY);
-	if (fd)
+	if (fd > 0)
 	{
 		ignore_result(write(fd, "165", 3));
 		close(fd);
