@@ -163,7 +163,7 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
 {
 	linked_list_t *list;
 
-	xmlTextWriterWriteFormatElement(writer, "spi", "%lx",
+	xmlTextWriterWriteFormatElement(writer, "spi", "%x",
 									htonl(child->get_spi(child, local)));
 	list = child->get_traffic_selectors(child, local);
 	write_networks(writer, "networks", list);
