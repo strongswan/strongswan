@@ -203,6 +203,8 @@ METHOD(task_t, process_r, status_t,
 					return NEED_MORE;
 				case CR_AUTH:
 					return NEED_MORE;
+				default:
+					return FAILED;
 			}
 		}
 		case AGGRESSIVE:
