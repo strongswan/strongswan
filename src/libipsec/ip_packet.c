@@ -161,6 +161,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			dst = host_create_from_chunk(AF_INET6,
 										 chunk_from_thing(ip->ip6_dst), 0);
 			next_header = ip->ip6_nxt;
+			break;
 		}
 #endif /* HAVE_NETINET_IP6_H */
 		default:
