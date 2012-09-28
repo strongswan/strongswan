@@ -659,7 +659,7 @@ METHOD(pts_t, extend_pcr, bool,
 	TSS_HTPM hTPM;
 	TSS_RESULT result;
 	u_int32_t pcr_length;
-	chunk_t pcr_value;
+	chunk_t pcr_value = chunk_empty;
 
 	result = Tspi_Context_Create(&hContext);
 	if (result != TSS_SUCCESS)
