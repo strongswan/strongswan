@@ -590,9 +590,8 @@ static void policy_entry_destroy(private_kernel_netlink_ipsec_t *this,
  */
 static u_int policy_hash(policy_entry_t *key)
 {
-	chunk_t chunk = chunk_create((void*)&key->sel,
-							sizeof(struct xfrm_selector) + sizeof(u_int32_t));
-	return chunk_hash(chunk);
+	chunk_t chunk = chunk_from_thing(key->sel);
+	return chunk_hash_inc(chunk, chunk_hash(chunk_from_thing(key->mark)));
 }
 
 /**
@@ -600,8 +599,8 @@ static u_int policy_hash(policy_entry_t *key)
  */
 static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 {
-	return memeq(&key->sel, &other_key->sel,
-				 sizeof(struct xfrm_selector) + sizeof(u_int32_t)) &&
+	return memeq(&key->sel, &other_key->sel, sizeof(struct xfrm_selector)) &&
+		   key->mark == other_key->mark &&
 		   key->direction == other_key->direction;
 }
 
