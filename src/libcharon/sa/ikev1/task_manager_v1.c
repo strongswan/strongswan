@@ -732,7 +732,7 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 	host_t *me, *other;
 	u_int32_t mid;
 
-	if (request && request->get_exchange_type(request) == INFORMATIONAL_V1)
+	if (request->get_exchange_type(request) == INFORMATIONAL_V1)
 	{	/* don't respond to INFORMATIONAL requests to avoid a notify war */
 		DBG1(DBG_IKE, "ignore malformed INFORMATIONAL request");
 		return;
