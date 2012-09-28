@@ -84,7 +84,7 @@ static bool create_sid(private_session_t *this)
 	rng_t *rng;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (rng)
+	if (!rng)
 	{
 		return FALSE;
 	}
