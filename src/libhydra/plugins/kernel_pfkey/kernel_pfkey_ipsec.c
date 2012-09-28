@@ -1321,11 +1321,13 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this,
 		{
 			struct sockaddr_in *sin = (struct sockaddr_in*)sa;
 			sin->sin_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);
+			break;
 		}
 		case AF_INET6:
 		{
 			struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)sa;
 			sin6->sin6_port = htons(response.x_natt_dport->sadb_x_nat_t_port_port);
+			break;
 		}
 		default:
 			break;
