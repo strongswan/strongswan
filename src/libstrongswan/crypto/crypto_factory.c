@@ -360,7 +360,7 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	va_list args;
-	chunk_t g, p;
+	chunk_t g = chunk_empty, p = chunk_empty;
 	diffie_hellman_t *diffie_hellman = NULL;
 
 	if (group == MODP_CUSTOM)
