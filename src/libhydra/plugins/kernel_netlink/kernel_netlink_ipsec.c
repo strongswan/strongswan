@@ -1967,7 +1967,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			goto failed;
 		}
-		memcpy(RTA_DATA(rta), replay, sizeof(replay));
+		memcpy(RTA_DATA(rta), replay, sizeof(struct xfrm_replay_state));
 
 		rta = XFRM_RTA_NEXT(rta);
 	}
