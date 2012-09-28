@@ -1263,7 +1263,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
-			strcpy(algo->alg_name, alg_name);
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
+			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 
 			rthdr = XFRM_RTA_NEXT(rthdr);
@@ -1293,7 +1294,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
-			strcpy(algo->alg_name, alg_name);
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
+			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 
 			rthdr = XFRM_RTA_NEXT(rthdr);
@@ -1347,7 +1349,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
 			algo->alg_key_len = int_key.len * 8;
 			algo->alg_trunc_len = trunc_len;
-			strcpy(algo->alg_name, alg_name);
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
+			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		}
 		else
@@ -1365,7 +1368,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = int_key.len * 8;
-			strcpy(algo->alg_name, alg_name);
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
+			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		}
 		rthdr = XFRM_RTA_NEXT(rthdr);
@@ -1393,7 +1397,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 		algo->alg_key_len = 0;
-		strcpy(algo->alg_name, alg_name);
+		strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
+		algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
