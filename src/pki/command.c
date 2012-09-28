@@ -144,7 +144,7 @@ void command_register(command_t command)
 	/* append default options, but not to --help */
 	if (!active)
 	{
-		for (i = 0; i < countof(cmds[registered].options); i++)
+		for (i = 0; i < countof(cmds[registered].options) - 1; i++)
 		{
 			if (cmds[registered].options[i].name)
 			{
