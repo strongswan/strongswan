@@ -426,13 +426,15 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 	{
 		case AF_INET:
 		{
-			memcpy(&this->address4, sockaddr, sizeof(struct sockaddr_in));
+			memcpy(&this->address4, (struct sockaddr_in*)sockaddr,
+				   sizeof(struct sockaddr_in));
 			this->socklen = sizeof(struct sockaddr_in);
 			return &this->public;
 		}
 		case AF_INET6:
 		{
-			memcpy(&this->address6, sockaddr, sizeof(struct sockaddr_in6));
+			memcpy(&this->address6, (struct sockaddr_in6*)sockaddr,
+				   sizeof(struct sockaddr_in6));
 			this->socklen = sizeof(struct sockaddr_in6);
 			return &this->public;
 		}
