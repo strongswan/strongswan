@@ -410,6 +410,8 @@ METHOD(task_t, process_r, status_t,
 					process_certreqs(this, message);
 					process_certs(this, message);
 					return SUCCESS;
+				default:
+					return FAILED;
 			}
 		}
 		case AGGRESSIVE:
@@ -455,6 +457,8 @@ METHOD(task_t, build_r, status_t,
 					return NEED_MORE;
 				case CR_AUTH:
 					return NEED_MORE;
+				default:
+					return FAILED;
 			}
 		case AGGRESSIVE:
 			switch (this->state)
