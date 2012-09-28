@@ -296,7 +296,7 @@ static axiom_node_t* create_ip_address(private_tnc_ifmap_soap_t *this,
 		{
 			written = snprintf(pos, len, "%s%x", first ? "" : ":",
 							   256*address.ptr[i] +  address.ptr[i+1]);
-			if (written < 0 || written > len)
+			if (written < 0 || written >= len)
 			{
 				break;
 			}
