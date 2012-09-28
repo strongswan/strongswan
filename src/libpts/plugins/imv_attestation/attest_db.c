@@ -1182,7 +1182,7 @@ METHOD(attest_db_t, add, bool,
 		if (!measurements)
 		{
 			printf("file measurement failed\n");
-			hasher->destroy(hasher);
+			DESTROY_IF(hasher);
 			return FALSE;
 		}
 		if (this->fid && this->relative)
