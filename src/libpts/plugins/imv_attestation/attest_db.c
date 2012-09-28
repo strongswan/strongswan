@@ -1159,7 +1159,7 @@ METHOD(attest_db_t, add, bool,
 		chunk_t measurement, ima_template;
 		pts_file_meas_t *measurements;
 		hasher_t *hasher = NULL;
-		bool ima;
+		bool ima = FALSE;
 		int fid, did;
 		int files_added = 0, hashes_added = 0, ima_hashes_added = 0;
 		enumerator_t *enumerator, *e;
