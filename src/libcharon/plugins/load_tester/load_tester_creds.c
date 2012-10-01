@@ -299,6 +299,9 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	enumerator_t *enumerator;
 	certificate_t *peer_cert, *ca_cert;
 	public_key_t *peer_key, *ca_key;
+	identification_t *dn = NULL;
+	linked_list_t *sans;
+	char buf[128];
 	u_int32_t serial;
 	time_t now;
 
@@ -344,18 +347,30 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		/* peer certificate, generate on demand */
 		serial = htonl(++this->serial);
 		now = time(NULL);
+
+		sans = linked_list_create();
+		if (id->get_type(id) != ID_DER_ASN1_DN)
+		{	/* encode as subjectAltName, construct a sane DN */
+			sans->insert_last(sans, id);
+			snprintf(buf, sizeof(buf), "CN=%Y", id);
+			dn = identification_create_from_string(buf);
+		}
+
 		peer_key = this->private->get_public_key(this->private);
 		peer_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_SIGNING_KEY, this->private,
 									BUILD_SIGNING_CERT, this->ca,
 									BUILD_DIGEST_ALG, this->digest,
 									BUILD_PUBLIC_KEY, peer_key,
-									BUILD_SUBJECT, id,
+									BUILD_SUBJECT, dn ?: id,
+									BUILD_SUBJECT_ALTNAMES, sans,
 									BUILD_NOT_BEFORE_TIME, now - 60 * 60 * 24,
 									BUILD_NOT_AFTER_TIME, now + 60 * 60 * 24,
 									BUILD_SERIAL, chunk_from_thing(serial),
 									BUILD_END);
 		peer_key->destroy(peer_key);
+		sans->destroy(sans);
+		DESTROY_IF(dn);
 		if (peer_cert)
 		{
 			return enumerator_create_single(peer_cert, (void*)peer_cert->destroy);
