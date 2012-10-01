@@ -75,6 +75,11 @@ struct private_load_tester_config_t {
 	char *initiator_id;
 
 	/**
+	 * Initiator ID to to match against as responder
+	 */
+	char *initiator_match;
+
+	/**
 	 * Responder ID to enforce
 	 */
 	char *responder_id;
@@ -133,8 +138,14 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 
 		if (this->initiator_id)
 		{
-			if ((local && num) || (!local && !num))
-			{
+			if (this->initiator_match && (!local && !num))
+			{	/* as responder, use the secified identity that matches
+				 * all used initiator identities, if given. */
+				snprintf(buf, sizeof(buf), this->initiator_match, rnd);
+				id = identification_create_from_string(buf);
+			}
+			else if ((local && num) || (!local && !num))
+			{	/* as initiator, create peer specific identities */
 				snprintf(buf, sizeof(buf), this->initiator_id, num, rnd);
 				id = identification_create_from_string(buf);
 			}
@@ -391,6 +402,8 @@ load_tester_config_t *load_tester_config_create()
 			"%s.plugins.load-tester.responder_auth", "pubkey", charon->name);
 	this->initiator_id = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.initiator_id", NULL, charon->name);
+	this->initiator_match = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.initiator_match", NULL, charon->name);
 	this->responder_id = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.responder_id", NULL, charon->name);
 
