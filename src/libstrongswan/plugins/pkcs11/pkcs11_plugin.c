@@ -160,6 +160,21 @@ static bool handle_certs(private_pkcs11_plugin_t *this,
 	}
 	return TRUE;
 }
+
+METHOD(plugin_t, reload, bool,
+	private_pkcs11_plugin_t *this)
+{
+	if (lib->settings->get_bool(lib->settings,
+					"libstrongswan.plugins.pkcs11.reload_certs", FALSE))
+	{
+		DBG1(DBG_CFG, "reloading certificates from PKCS#11 tokens");
+		handle_certs(this, NULL, FALSE, NULL);
+		handle_certs(this, NULL, TRUE, NULL);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 /**
  * Add a set of features
  */
@@ -292,6 +307,7 @@ plugin_t *pkcs11_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},

@@ -734,6 +734,9 @@ ENGINE ID to use in the OpenSSL plugin
 .BR libstrongswan.plugins.pkcs11.modules
 List of available PKCS#11 modules
 .TP
+.BR libstrongswan.plugins.pkcs11.reload_certs " [no]"
+Reload certificates from all tokens if charon receives a SIGHUP
+.TP
 .BR libstrongswan.plugins.pkcs11.use_dh " [no]"
 Whether the PKCS#11 modules should be used for DH and ECDH (see use_ecc option)
 .TP
