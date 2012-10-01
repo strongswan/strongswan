@@ -50,6 +50,11 @@ struct private_load_tester_creds_t {
 	linked_list_t *cas;
 
 	/**
+	 * Digest algorithm to issue certificates
+	 */
+	hash_algorithm_t digest;
+
+	/**
 	 * serial number to issue certificates
 	 */
 	u_int32_t serial;
@@ -343,6 +348,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		peer_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_SIGNING_KEY, this->private,
 									BUILD_SIGNING_CERT, this->ca,
+									BUILD_DIGEST_ALG, this->digest,
 									BUILD_PUBLIC_KEY, peer_key,
 									BUILD_SUBJECT, id,
 									BUILD_NOT_BEFORE_TIME, now - 60 * 60 * 24,
@@ -411,12 +417,14 @@ METHOD(load_tester_creds_t, destroy, void,
 load_tester_creds_t *load_tester_creds_create()
 {
 	private_load_tester_creds_t *this;
-	char *pwd, *psk;
+	char *pwd, *psk, *digest;
 
 	psk = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.preshared_key", default_psk, charon->name);
 	pwd = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.eap_password", default_pwd, charon->name);
+	digest = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.digest", "sha1", charon->name);
 
 	INIT(this,
 		.public = {
@@ -432,6 +440,7 @@ load_tester_creds_t *load_tester_creds_create()
 		.private = load_issuer_key(this),
 		.ca = load_issuer_cert(this),
 		.cas = linked_list_create(),
+		.digest = enum_from_name(hash_algorithm_short_names, digest),
 		.psk = shared_key_create(SHARED_IKE,
 								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
@@ -441,6 +450,12 @@ load_tester_creds_t *load_tester_creds_create()
 	if (this->ca)
 	{
 		this->cas->insert_last(this->cas, this->ca->get_ref(this->ca));
+	}
+
+	if (this->digest == -1)
+	{
+		DBG1(DBG_CFG, "invalid load-tester digest: '%s', using sha1", digest);
+		this->digest = HASH_SHA1;
 	}
 
 	load_ca_certs(this);
