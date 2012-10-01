@@ -182,6 +182,48 @@ static char *default_psk = "default-psk";
  */
 static char *default_pwd = "default-pwd";
 
+
+/**
+ * Load the private key, hard-coded or from a file
+ */
+static private_key_t *load_issuer_key(private_load_tester_creds_t *this)
+{
+	char *path;
+
+	path = lib->settings->get_str(lib->settings,
+					"%s.plugins.load-tester.issuer_key", NULL, charon->name);
+	if (!path)
+	{
+		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					BUILD_BLOB_ASN1_DER, chunk_create(private, sizeof(private)),
+					BUILD_END);
+	}
+	DBG1(DBG_CFG, "loading load-tester private key from '%s'", path);
+	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+					BUILD_FROM_FILE, path, BUILD_END);
+}
+
+/**
+ * Load the issuing certificate, hard-coded or from a file
+ */
+static certificate_t *load_issuer_cert(private_load_tester_creds_t *this)
+{
+	char *path;
+
+	path = lib->settings->get_str(lib->settings,
+					"%s.plugins.load-tester.issuer_cert", NULL, charon->name);
+	if (!path)
+	{
+		return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+					BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)),
+					BUILD_X509_FLAG, X509_CA,
+					BUILD_END);
+	}
+	DBG1(DBG_CFG, "loading load-tester issuer cert from '%s'", path);
+	return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+					BUILD_FROM_FILE, path, BUILD_END);
+}
+
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	private_load_tester_creds_t *this, key_type_t type, identification_t *id)
 {
@@ -336,18 +378,14 @@ load_tester_creds_t *load_tester_creds_create()
 			},
 			.destroy = _destroy,
 		},
-		.private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-					BUILD_BLOB_ASN1_DER, chunk_create(private, sizeof(private)),
-					BUILD_END),
-		.ca = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-					BUILD_BLOB_ASN1_DER, chunk_create(cert, sizeof(cert)),
-					BUILD_X509_FLAG, X509_CA,
-					BUILD_END),
+		.private = load_issuer_key(this),
+		.ca = load_issuer_cert(this),
 		.psk = shared_key_create(SHARED_IKE,
 								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
 								 chunk_clone(chunk_create(pwd, strlen(pwd)))),
 	);
+
 	return &this->public;
 }
 
