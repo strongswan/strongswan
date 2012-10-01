@@ -347,15 +347,25 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		/* peer certificate, generate on demand */
 		serial = htonl(++this->serial);
 		now = time(NULL);
-
 		sans = linked_list_create();
-		if (id->get_type(id) != ID_DER_ASN1_DN)
-		{	/* encode as subjectAltName, construct a sane DN */
-			sans->insert_last(sans, id);
-			snprintf(buf, sizeof(buf), "CN=%Y", id);
-			dn = identification_create_from_string(buf);
-		}
 
+		switch (id->get_type(id))
+		{
+			case ID_DER_ASN1_DN:
+				break;
+			case ID_FQDN:
+			case ID_RFC822_ADDR:
+			case ID_IPV4_ADDR:
+			case ID_IPV6_ADDR:
+				/* encode as subjectAltName, construct a sane DN */
+				sans->insert_last(sans, id);
+				snprintf(buf, sizeof(buf), "CN=%Y", id);
+				dn = identification_create_from_string(buf);
+				break;
+			default:
+				sans->destroy(sans);
+				return NULL;
+		}
 		peer_key = this->private->get_public_key(this->private);
 		peer_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_SIGNING_KEY, this->private,
