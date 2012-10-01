@@ -16,6 +16,7 @@
 #include "load_tester_creds.h"
 
 #include <time.h>
+#include <sys/stat.h>
 
 #include <daemon.h>
 #include <credentials/keys/shared_key.h>
@@ -42,6 +43,11 @@ struct private_load_tester_creds_t {
 	 * CA certificate, to issue/verify peer certificates
 	 */
 	certificate_t *ca;
+
+	/**
+	 * Trusted CA certificates, including issuer CA
+	 */
+	linked_list_t *cas;
 
 	/**
 	 * serial number to issue certificates
@@ -224,6 +230,42 @@ static certificate_t *load_issuer_cert(private_load_tester_creds_t *this)
 					BUILD_FROM_FILE, path, BUILD_END);
 }
 
+/**
+ * Load (intermediate) CA certificates, hard-coded or from a file
+ */
+static void load_ca_certs(private_load_tester_creds_t *this)
+{
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	struct stat st;
+	char *path;
+
+	path = lib->settings->get_str(lib->settings,
+						"%s.plugins.load-tester.ca_dir", NULL, charon->name);
+	if (path)
+	{
+		enumerator = enumerator_create_directory(path);
+		if (enumerator)
+		{
+			while (enumerator->enumerate(enumerator, NULL, &path, &st))
+			{
+				if (S_ISREG(st.st_mode))
+				{
+					DBG1(DBG_CFG, "loading load-tester CA cert from '%s'", path);
+					cert = lib->creds->create(lib->creds,
+											CRED_CERTIFICATE, CERT_X509,
+											BUILD_FROM_FILE, path, BUILD_END);
+					if (cert)
+					{
+						this->cas->insert_last(this->cas, cert);
+					}
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+	}
+}
+
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	private_load_tester_creds_t *this, key_type_t type, identification_t *id)
 {
@@ -249,7 +291,8 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	private_load_tester_creds_t *this, certificate_type_t cert, key_type_t key,
 	identification_t *id, bool trusted)
 {
-	certificate_t *peer_cert;
+	enumerator_t *enumerator;
+	certificate_t *peer_cert, *ca_cert;
 	public_key_t *peer_key, *ca_key;
 	u_int32_t serial;
 	time_t now;
@@ -268,7 +311,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	}
 	if (!id)
 	{
-		return enumerator_create_single(this->ca, NULL);
+		return this->cas->create_enumerator(this->cas);
 	}
 	ca_key = this->ca->get_public_key(this->ca);
 	if (ca_key)
@@ -280,10 +323,17 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		}
 		ca_key->destroy(ca_key);
 	}
-	if (this->ca->has_subject(this->ca, id))
+	enumerator = this->cas->create_enumerator(this->cas);
+	while (enumerator->enumerate(enumerator, &ca_cert))
 	{
-		return enumerator_create_single(this->ca, NULL);
+		if (ca_cert->has_subject(ca_cert, id))
+		{
+			enumerator->destroy(enumerator);
+			return enumerator_create_single(ca_cert, NULL);
+		}
 	}
+	enumerator->destroy(enumerator);
+
 	if (!trusted)
 	{
 		/* peer certificate, generate on demand */
@@ -350,6 +400,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 METHOD(load_tester_creds_t, destroy, void,
 	private_load_tester_creds_t *this)
 {
+	this->cas->destroy_offset(this->cas, offsetof(certificate_t, destroy));
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->ca);
 	this->psk->destroy(this->psk);
@@ -380,11 +431,19 @@ load_tester_creds_t *load_tester_creds_create()
 		},
 		.private = load_issuer_key(this),
 		.ca = load_issuer_cert(this),
+		.cas = linked_list_create(),
 		.psk = shared_key_create(SHARED_IKE,
 								 chunk_clone(chunk_create(psk, strlen(psk)))),
 		.pwd = shared_key_create(SHARED_EAP,
 								 chunk_clone(chunk_create(pwd, strlen(pwd)))),
 	);
+
+	if (this->ca)
+	{
+		this->cas->insert_last(this->cas, this->ca->get_ref(this->ca));
+	}
+
+	load_ca_certs(this);
 
 	return &this->public;
 }
