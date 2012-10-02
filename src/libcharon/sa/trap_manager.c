@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
+ * Copyright (C) 2011-2012 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -94,36 +94,14 @@ static void destroy_entry(entry_t *entry)
 METHOD(trap_manager_t, install, u_int32_t,
 	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child)
 {
-	entry_t *entry;
+	entry_t *entry, *found = NULL;
 	ike_cfg_t *ike_cfg;
 	child_sa_t *child_sa;
 	host_t *me, *other;
 	linked_list_t *my_ts, *other_ts, *list;
 	enumerator_t *enumerator;
-	bool found = FALSE;
 	status_t status;
-	u_int32_t reqid;
-
-	/* check if not already done */
-	this->lock->read_lock(this->lock);
-	enumerator = this->traps->create_enumerator(this->traps);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (streq(entry->child_sa->get_name(entry->child_sa),
-				  child->get_name(child)))
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-	if (found)
-	{
-		DBG1(DBG_CFG, "CHILD_SA named '%s' already routed",
-			 child->get_name(child));
-		return 0;
-	}
+	u_int32_t reqid = 0;
 
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
@@ -150,8 +128,28 @@ METHOD(trap_manager_t, install, u_int32_t,
 		me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 	}
 
+	this->lock->write_lock(this->lock);
+	enumerator = this->traps->create_enumerator(this->traps);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (streq(entry->child_sa->get_name(entry->child_sa),
+				  child->get_name(child)))
+		{
+			this->traps->remove_at(this->traps, enumerator);
+			found = entry;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (found)
+	{	/* config might have changed so update everything */
+		DBG1(DBG_CFG, "updating already routed CHILD_SA '%s'",
+			 child->get_name(child));
+		reqid = found->child_sa->get_reqid(found->child_sa);
+	}
+
 	/* create and route CHILD_SA */
-	child_sa = child_sa_create(me, other, child, 0, FALSE);
+	child_sa = child_sa_create(me, other, child, reqid, FALSE);
 
 	list = linked_list_create_with_items(me, NULL);
 	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list);
@@ -171,21 +169,25 @@ METHOD(trap_manager_t, install, u_int32_t,
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	if (status != SUCCESS)
 	{
-		child_sa->destroy(child_sa);
 		DBG1(DBG_CFG, "installing trap failed");
-		return 0;
+		child_sa->destroy(child_sa);
+		reqid = 0;
 	}
-
-	reqid = child_sa->get_reqid(child_sa);
-	INIT(entry,
-		.child_sa = child_sa,
-		.peer_cfg = peer->get_ref(peer),
-	);
-
-	this->lock->write_lock(this->lock);
-	this->traps->insert_last(this->traps, entry);
+	else
+	{
+		INIT(entry,
+			.child_sa = child_sa,
+			.peer_cfg = peer->get_ref(peer),
+		);
+		this->traps->insert_last(this->traps, entry);
+		reqid = child_sa->get_reqid(child_sa);
+	}
 	this->lock->unlock(this->lock);
 
+	if (found)
+	{
+		destroy_entry(found);
+	}
 	return reqid;
 }
 
