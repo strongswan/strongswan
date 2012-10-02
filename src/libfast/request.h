@@ -185,6 +185,15 @@ struct request_t {
 	void (*serve)(request_t *this, char *headers, chunk_t chunk);
 
 	/**
+	 * Send a file from the file system.
+	 *
+	 * @param path		path to file to serve
+	 * @param mime		mime type of file to send, or NULL
+	 * @return			TRUE if file served successfully
+	 */
+	bool (*sendfile)(request_t *this, char *path, char *mime);
+
+	/**
 	 * Increase the reference count to the stream.
 	 *
 	 * @return			this with increased refcount

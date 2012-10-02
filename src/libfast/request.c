@@ -22,6 +22,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include <ClearSilver/ClearSilver.h>
 
 #include <threading/thread.h>
@@ -275,6 +280,60 @@ METHOD(request_t, serve, void,
 	FCGX_PutStr(chunk.ptr, chunk.len, this->req.out);
 }
 
+METHOD(request_t, sendfile, bool,
+	private_request_t *this, char *path, char *mime)
+{
+	struct stat sb;
+	chunk_t data;
+	void *addr;
+	int fd, written;
+	char buf[24];
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1)
+	{
+		return FALSE;
+	}
+	if (fstat(fd, &sb) == -1)
+	{
+		close(fd);
+		return FALSE;
+	}
+	addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		close(fd);
+		return FALSE;
+	}
+
+	/* FCGX does not like large integers, print to a buffer using libc */
+	snprintf(buf, sizeof(buf), "%lld", (int64_t)sb.st_size);
+	FCGX_FPrintF(this->req.out, "Content-Length: %s\n", buf);
+	if (mime)
+	{
+		FCGX_FPrintF(this->req.out, "Content-Type: %s\n", mime);
+	}
+	FCGX_FPrintF(this->req.out, "\n");
+
+	data = chunk_create(addr, sb.st_size);
+
+	while (data.len)
+	{
+		written = FCGX_PutStr(data.ptr, data.len, this->req.out);
+		if (written == -1)
+		{
+			munmap(addr, sb.st_size);
+			close(fd);
+			return FALSE;
+		}
+		data = chunk_skip(data, written);
+	}
+
+	munmap(addr, sb.st_size);
+	close(fd);
+	return TRUE;
+}
+
 METHOD(request_t, render, void,
 	private_request_t *this, char *template)
 {
@@ -380,6 +439,7 @@ request_t *request_create(int fd, bool debug)
 			.render = _render,
 			.streamf = _streamf,
 			.serve = _serve,
+			.sendfile = _sendfile,
 			.set = _set,
 			.setf = _setf,
 			.get_ref = _get_ref,
