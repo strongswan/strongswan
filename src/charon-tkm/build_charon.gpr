@@ -13,4 +13,8 @@ project Build_Charon is
         & "-Werror";
    end Compiler;
 
+   package Binder is
+      for Default_Switches ("ada") use Build_Common.Ada_Binder_Switches;
+   end Binder;
+
 end Build_Charon;

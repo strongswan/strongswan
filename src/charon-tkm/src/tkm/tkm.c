@@ -26,6 +26,7 @@ typedef struct private_tkm_t private_tkm_t;
 
 extern result_type ees_server_init(const char * const address);
 extern void ees_server_finalize(void);
+extern void ehandler_init(void);
 
 /*
  * Private additions to tkm_t.
@@ -60,6 +61,9 @@ bool tkm_init()
 
 	/* initialize TKM client library */
 	tkmlib_init();
+
+	ehandler_init();
+
 	if (ike_init(IKE_SOCKET) != TKM_OK)
 	{
 		tkmlib_final();

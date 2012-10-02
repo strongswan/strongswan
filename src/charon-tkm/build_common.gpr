@@ -19,4 +19,7 @@ project Build_Common is
                              "-fstack-check",
                              "-gnato",
                              "-g");
+
+   Ada_Binder_Switches   := ("-E");
+
 end Build_Common;
