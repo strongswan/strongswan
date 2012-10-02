@@ -64,6 +64,11 @@ struct conftest_t {
 	 * Action handling
 	 */
 	actions_t *actions;
+
+	/**
+	 * Test specific loggers
+	 */
+	linked_list_t *loggers;
 };
 
 /**
