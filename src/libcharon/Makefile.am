@@ -484,6 +484,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_LOOKIP
+  SUBDIRS += plugins/lookip
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/lookip/libstrongswan-lookip.la
+endif
+endif
+
 if USE_CERTEXPIRE
   SUBDIRS += plugins/certexpire
 if MONOLITHIC
