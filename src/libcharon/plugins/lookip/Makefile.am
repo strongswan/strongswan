@@ -8,6 +8,7 @@ else
 plugin_LTLIBRARIES = libstrongswan-lookip.la
 endif
 
-libstrongswan_lookip_la_SOURCES = lookip_plugin.h lookip_plugin.c
+libstrongswan_lookip_la_SOURCES = lookip_plugin.h lookip_plugin.c \
+	lookip_listener.h lookip_listener.c
 
 libstrongswan_lookip_la_LDFLAGS = -module -avoid-version

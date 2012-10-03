@@ -15,6 +15,8 @@
 
 #include "lookip_plugin.h"
 
+#include "lookip_listener.h"
+
 #include <daemon.h>
 
 typedef struct private_lookip_plugin_t private_lookip_plugin_t;
@@ -28,6 +30,11 @@ struct private_lookip_plugin_t {
 	 * implements plugin interface
 	 */
 	lookip_plugin_t public;
+
+	/**
+	 * Listener collecting virtual IP assignements
+	 */
+	lookip_listener_t *listener;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -39,6 +46,8 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, destroy, void,
 	private_lookip_plugin_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener->listener);
+	this->listener->destroy(this->listener);
 	free(this);
 }
 
@@ -57,7 +66,10 @@ plugin_t *lookip_plugin_create()
 				.destroy = _destroy,
 			},
 		},
+		.listener = lookip_listener_create(),
 	);
+
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	return &this->public.plugin;
 }
