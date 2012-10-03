@@ -172,6 +172,35 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+METHOD(lookip_listener_t, lookup, void,
+	private_lookip_listener_t *this, host_t *vip,
+	lookip_callback_t cb, void *user)
+{
+	entry_t *entry;
+
+	this->lock->read_lock(this->lock);
+	if (vip)
+	{
+		entry = this->entries->get(this->entries, vip);
+		if (entry)
+		{
+			cb(user, entry->vip, entry->other, entry->id, entry->name);
+		}
+	}
+	else
+	{
+		enumerator_t *enumerator;
+
+		enumerator = this->entries->create_enumerator(this->entries);
+		while (enumerator->enumerate(enumerator, &vip, &entry))
+		{
+			cb(user, entry->vip, entry->other, entry->id, entry->name);
+		}
+		enumerator->destroy(enumerator);
+	}
+	this->lock->unlock(this->lock);
+}
+
 METHOD(lookip_listener_t, destroy, void,
 	private_lookip_listener_t *this)
 {
@@ -193,6 +222,7 @@ lookip_listener_t *lookip_listener_create()
 				.message = _message_hook,
 				.ike_updown = _ike_updown,
 			},
+			.lookup = _lookup,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
