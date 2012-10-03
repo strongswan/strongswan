@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <utils/hashtable.h>
+#include <utils/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_lookip_listener_t private_lookip_listener_t;
@@ -40,7 +41,22 @@ struct private_lookip_listener_t {
 	 * Hashtable with entries: host_t => entry_t
 	 */
 	hashtable_t *entries;
+
+	/**
+	 * List of registered listeners
+	 */
+	linked_list_t *listeners;
 };
+
+/**
+ * Listener entry
+ */
+typedef struct {
+	/** callback function */
+	lookip_callback_t cb;
+	/** user data for callback */
+	void *user;
+} listener_entry_t;
 
 /**
  * Hashtable entry
@@ -85,6 +101,34 @@ static bool equals(host_t *a, host_t *b)
 }
 
 /**
+ * Compare callback that invokes up callback of all registered listeners
+ */
+static bool notify_up(listener_entry_t *listener, entry_t *entry)
+{
+	if (!listener->cb(listener->user, TRUE, entry->vip, entry->other,
+					  entry->id, entry->name))
+	{
+		free(listener);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Compare callback that invokes down callback of all registered listeners
+ */
+static bool notify_down(listener_entry_t *listener, entry_t *entry)
+{
+	if (!listener->cb(listener->user, FALSE, entry->vip, entry->other,
+						 entry->id, entry->name))
+	{
+		free(listener);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Add a new entry to the hashtable
  */
 static void add_entry(private_lookip_listener_t *this, ike_sa_t *ike_sa)
@@ -106,6 +150,10 @@ static void add_entry(private_lookip_listener_t *this, ike_sa_t *ike_sa)
 			.id = id->clone(id),
 			.name = strdup(ike_sa->get_name(ike_sa)),
 		);
+
+		this->lock->read_lock(this->lock);
+		this->listeners->remove(this->listeners, entry, (void*)notify_up);
+		this->lock->unlock(this->lock);
 
 		this->lock->write_lock(this->lock);
 		entry = this->entries->put(this->entries, entry->vip, entry);
@@ -135,6 +183,10 @@ static void remove_entry(private_lookip_listener_t *this, ike_sa_t *ike_sa)
 		this->lock->unlock(this->lock);
 		if (entry)
 		{
+			this->lock->read_lock(this->lock);
+			this->listeners->remove(this->listeners, entry, (void*)notify_down);
+			this->lock->unlock(this->lock);
+
 			entry_destroy(entry);
 		}
 	}
@@ -184,7 +236,7 @@ METHOD(lookip_listener_t, lookup, void,
 		entry = this->entries->get(this->entries, vip);
 		if (entry)
 		{
-			cb(user, entry->vip, entry->other, entry->id, entry->name);
+			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
 		}
 	}
 	else
@@ -194,16 +246,32 @@ METHOD(lookip_listener_t, lookup, void,
 		enumerator = this->entries->create_enumerator(this->entries);
 		while (enumerator->enumerate(enumerator, &vip, &entry))
 		{
-			cb(user, entry->vip, entry->other, entry->id, entry->name);
+			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
 		}
 		enumerator->destroy(enumerator);
 	}
 	this->lock->unlock(this->lock);
 }
 
+METHOD(lookip_listener_t, add_listener, void,
+	private_lookip_listener_t *this, lookip_callback_t cb, void *user)
+{
+	listener_entry_t *listener;
+
+	INIT(listener,
+		.cb = cb,
+		.user = user,
+	);
+
+	this->lock->write_lock(this->lock);
+	this->listeners->insert_last(this->listeners, listener);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(lookip_listener_t, destroy, void,
 	private_lookip_listener_t *this)
 {
+	this->listeners->destroy_function(this->listeners, free);
 	this->entries->destroy(this->entries);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -223,11 +291,13 @@ lookip_listener_t *lookip_listener_create()
 				.ike_updown = _ike_updown,
 			},
 			.lookup = _lookup,
+			.add_listener = _add_listener,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.entries = hashtable_create((hashtable_hash_t)hash,
 									(hashtable_equals_t)equals, 32),
+		.listeners = linked_list_create(),
 	);
 
 	return &this->public;

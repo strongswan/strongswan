@@ -29,14 +29,15 @@ typedef struct lookip_listener_t lookip_listener_t;
  * Callback function to query virtual IP entries
  *
  * @param user		user supplied pointer
+ * @param up		TRUE if tunnels established, FALSE if closed
  * @param vip		virtual IP of remote peer
  * @param other		peer external IP
  * @param id		peer identity
  * @param name		associated connection name
  * @return			TRUE to receive more results, FALSE to cancel
  */
-typedef bool (*lookip_callback_t)(void *user, host_t *vip, host_t *other,
-								  identification_t *id, char *name);
+typedef bool (*lookip_callback_t)(void *user, bool up, host_t *vip,
+							host_t *other, identification_t *id, char *name);
 
 /**
  * Listener collecting virtual IPs.
@@ -51,12 +52,24 @@ struct lookip_listener_t {
 	/**
 	 * Perform a lookup for a given virtual IP, invoke callback for matches.
 	 *
+	 * The "up" parameter is always TRUE when the callback is invoked using
+	 * lookup().
+	 *
 	 * @param vip		virtual IP to look up, NULL to get all entries
 	 * @param cb		callback function to invoke
 	 * @param user		user data to pass to callback function
 	 */
 	void (*lookup)(lookip_listener_t *this, host_t *vip,
 				   lookip_callback_t cb, void *user);
+
+	/**
+	 * Register a listener function that gets notified about virtual IP changes.
+	 *
+	 * @param cb		callback function to invoke
+	 * @param user		user data to pass to callback function
+	 */
+	void (*add_listener)(lookip_listener_t *this,
+						 lookip_callback_t cb, void *user);
 
 	/**
 	 * Destroy a lookip_listener_t.
