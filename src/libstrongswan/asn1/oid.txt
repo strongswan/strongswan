@@ -343,6 +343,8 @@
                 0x02         "id-SHA-384"				OID_SHA384
                 0x03         "id-SHA-512"				OID_SHA512
                 0x04         "id-SHA-224"				OID_SHA224
+                0x05         "id-SHA-512-224"
+                0x06         "id-SHA-512-256"
         0x86                 ""
           0xf8               ""
             0x42             "netscape"
