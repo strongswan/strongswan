@@ -666,7 +666,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		free(secret.ptr);
 		if (!prompt)
 		{	/* no IO channel to prompt, skip */
-			free(chunk.ptr);
+			chunk_clear(&chunk);
 			return TRUE;
 		}
 		/* use callback credential set to prompt for the pin */
@@ -719,6 +719,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
 		cb->destroy(cb);
 	}
+	chunk_clear(&chunk);
 
 	if (key)
 	{
