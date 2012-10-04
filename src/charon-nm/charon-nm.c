@@ -117,28 +117,6 @@ static void segv_handler(int signal)
 }
 
 /**
- * Initialize logging to syslog
- */
-static void initialize_logger()
-{
-	sys_logger_t *sys_logger;
-	debug_t group;
-	level_t def;
-
-	sys_logger = sys_logger_create(LOG_DAEMON);
-	def = lib->settings->get_int(lib->settings,
-								 "charon-nm.syslog.default", 1);
-	for (group = 0; group < DBG_MAX; group++)
-	{
-		sys_logger->set_level(sys_logger, group,
-			lib->settings->get_int(lib->settings, "charon-nm.syslog.%N", def,
-								   debug_lower_names, group));
-	}
-	charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
-	charon->bus->add_logger(charon->bus, &sys_logger->logger);
-}
-
-/**
  * Lookup UID and GID
  */
 static bool lookup_uid_gid()
@@ -204,7 +182,11 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	initialize_logger();
+	/* make sure we log to the DAEMON facility by default */
+	lib->settings->set_int(lib->settings, "charon-nm.syslog.daemon.default",
+		lib->settings->get_int(lib->settings,
+							   "charon-nm.syslog.daemon.default", 1));
+	charon->load_loggers(charon, NULL, FALSE);
 
 	/* use random ports to avoid conflicts with regular charon */
 	lib->settings->set_int(lib->settings, "charon-nm.port", 0);

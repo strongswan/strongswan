@@ -500,9 +500,6 @@ static void stroke_user_creds(private_stroke_socket_t *this,
 static void stroke_loglevel(private_stroke_socket_t *this,
 							stroke_msg_t *msg, FILE *out)
 {
-	enumerator_t *enumerator;
-	sys_logger_t *sys_logger;
-	file_logger_t *file_logger;
 	debug_t group;
 
 	pop_string(msg, &(msg->loglevel.type));
@@ -515,21 +512,7 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 		fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
 		return;
 	}
-	/* we set the loglevel on ALL sys- and file-loggers */
-	enumerator = charon->sys_loggers->create_enumerator(charon->sys_loggers);
-	while (enumerator->enumerate(enumerator, &sys_logger))
-	{
-		sys_logger->set_level(sys_logger, group, msg->loglevel.level);
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
-	}
-	enumerator->destroy(enumerator);
-	enumerator = charon->file_loggers->create_enumerator(charon->file_loggers);
-	while (enumerator->enumerate(enumerator, &file_logger))
-	{
-		file_logger->set_level(file_logger, group, msg->loglevel.level);
-		charon->bus->add_logger(charon->bus, &file_logger->logger);
-	}
-	enumerator->destroy(enumerator);
+	charon->set_level(charon, group, msg->loglevel.level);
 }
 
 /**

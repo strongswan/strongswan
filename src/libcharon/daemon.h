@@ -157,8 +157,6 @@ typedef struct daemon_t daemon_t;
 #include <network/socket_manager.h>
 #include <control/controller.h>
 #include <bus/bus.h>
-#include <bus/listeners/file_logger.h>
-#include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <sa/shunt_manager.h>
@@ -248,16 +246,6 @@ struct daemon_t {
 	bus_t *bus;
 
 	/**
-	 * A list of installed file_logger_t's
-	 */
-	linked_list_t *file_loggers;
-
-	/**
-	 * A list of installed sys_logger_t's
-	 */
-	linked_list_t *sys_loggers;
-
-	/**
 	 * Controller to control the daemon
 	 */
 	controller_t *controller;
@@ -307,6 +295,25 @@ struct daemon_t {
 	 */
 	void (*start)(daemon_t *this);
 
+	/**
+	 * Load/Reload loggers defined in strongswan.conf
+	 *
+	 * @param levels	optional debug levels used to create default loggers
+	 * 					if none are defined in strongswan.conf
+	 * @param to_stderr	TRUE to log to stderr/stdout if no loggers are defined
+	 * 					in strongswan.conf
+	 */
+	void (*load_loggers)(daemon_t *this, level_t levels[DBG_MAX],
+						 bool to_stderr);
+
+	/**
+	 * Set the log level for the given log group for all configured file- and
+	 * syslog-loggers.
+	 *
+	 * @param group		log group
+	 * @param level		log level
+	 */
+	void (*set_level)(daemon_t *this, debug_t group, level_t level);
 };
 
 /**

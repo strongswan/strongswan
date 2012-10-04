@@ -24,8 +24,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
-#include <syslog.h>
-#include <errno.h>
 #include <unistd.h>
 #include <getopt.h>
 
@@ -40,10 +38,6 @@
 #include <private/android_filesystem_config.h> /* for AID_VPN */
 #endif
 
-#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
-#define LOG_AUTHPRIV LOG_AUTH
-#endif
-
 /**
  * PID file, in which charon stores its process id
  */
@@ -53,6 +47,16 @@
  * Global reference to PID file (required to truncate, if undeletable)
  */
 static FILE *pidfile = NULL;
+
+/**
+ * Log levels as defined via command line arguments
+ */
+static level_t levels[DBG_MAX];
+
+/**
+ * Whether to only use syslog when logging
+ */
+static bool use_syslog = FALSE;
 
 /**
  * hook in library for debugging messages
@@ -109,6 +113,7 @@ static void run()
 					 "configuration");
 				if (lib->settings->load_files(lib->settings, NULL, FALSE))
 				{
+					charon->load_loggers(charon, levels, !use_syslog);
 					lib->plugins->reload(lib->plugins, NULL);
 				}
 				else
@@ -239,123 +244,6 @@ static void unlink_pidfile()
 }
 
 /**
- * Initialize logging
- */
-static void initialize_loggers(bool use_stderr, level_t levels[])
-{
-	sys_logger_t *sys_logger;
-	file_logger_t *file_logger;
-	enumerator_t *enumerator;
-	char *identifier, *facility, *filename;
-	int loggers_defined = 0;
-	debug_t group;
-	level_t  def;
-
-	/* setup sysloggers */
-	identifier = lib->settings->get_str(lib->settings,
-										"charon.syslog.identifier", NULL);
-	if (identifier)
-	{	/* set identifier, which is prepended to each log line */
-		openlog(identifier, 0, 0);
-	}
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.syslog");
-	while (enumerator->enumerate(enumerator, &facility))
-	{
-		loggers_defined++;
-
-		if (streq(facility, "daemon"))
-		{
-			sys_logger = sys_logger_create(LOG_DAEMON);
-		}
-		else if (streq(facility, "auth"))
-		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV);
-		}
-		else
-		{
-			continue;
-		}
-		sys_logger->set_options(sys_logger,
-						lib->settings->get_bool(lib->settings,
-								"charon.syslog.%s.ike_name", FALSE, facility));
-
-		def = lib->settings->get_int(lib->settings,
-									 "charon.syslog.%s.default", 1, facility);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.syslog.%s.%N", def,
-									   facility, debug_lower_names, group));
-		}
-		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
-	}
-	enumerator->destroy(enumerator);
-
-	/* and file loggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.filelog");
-	while (enumerator->enumerate(enumerator, &filename))
-	{
-		loggers_defined++;
-		file_logger = file_logger_create(filename);
-		file_logger->set_options(file_logger,
-						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename),
-						lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.ike_name", FALSE, filename));
-		file_logger->open(file_logger,
-						lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.flush_line", FALSE, filename),
-						lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.append", TRUE, filename));
-		def = lib->settings->get_int(lib->settings,
-									 "charon.filelog.%s.default", 1, filename);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			file_logger->set_level(file_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.filelog.%s.%N", def,
-									   filename, debug_lower_names, group));
-		}
-		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
-		charon->bus->add_logger(charon->bus, &file_logger->logger);
-
-	}
-	enumerator->destroy(enumerator);
-
-	/* set up legacy style default loggers provided via command-line */
-	if (!loggers_defined)
-	{
-		/* set up default stdout file_logger */
-		file_logger = file_logger_create("stdout");
-		file_logger->open(file_logger, FALSE, FALSE);
-		charon->file_loggers->insert_last(charon->file_loggers, file_logger);
-		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON);
-		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group, levels[group]);
-			if (use_stderr)
-			{
-				file_logger->set_level(file_logger, group, levels[group]);
-			}
-		}
-		charon->bus->add_logger(charon->bus, &file_logger->logger);
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
-
-		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV);
-		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
-		charon->sys_loggers->insert_last(charon->sys_loggers, sys_logger);
-		charon->bus->add_logger(charon->bus, &sys_logger->logger);
-	}
-}
-
-/**
  * print command line usage and exit
  */
 static void usage(const char *msg)
@@ -382,8 +270,6 @@ static void usage(const char *msg)
 int main(int argc, char *argv[])
 {
 	struct sigaction action;
-	bool use_syslog = FALSE;
-	level_t levels[DBG_MAX];
 	int group, status = SS_RC_INITIALIZATION_FAILED;
 	struct utsname utsname;
 
@@ -487,7 +373,7 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	initialize_loggers(!use_syslog, levels);
+	charon->load_loggers(charon, levels, !use_syslog);
 
 	if (uname(&utsname) != 0)
 	{

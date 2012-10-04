@@ -129,25 +129,6 @@ static void dbg_android(debug_t group, level_t level, char *fmt, ...)
 	}
 }
 
-/**
- * Initialize file logger
- */
-static void initialize_logger(char *logfile)
-{
-	file_logger_t *file_logger;
-	debug_t group;
-
-	file_logger = file_logger_create(logfile);
-	file_logger->set_options(file_logger, "%b %e %T", FALSE);
-	file_logger->open(file_logger, TRUE, FALSE);
-	for (group = 0; group < DBG_MAX; group++)
-	{
-		file_logger->set_level(file_logger, group, ANDROID_DEBUG_LEVEL);
-	}
-	charon->file_loggers->insert_last(charon->file_loggers, file_logger);
-	charon->bus->add_logger(charon->bus, &file_logger->logger);
-}
-
 METHOD(charonservice_t, update_status, bool,
 	private_charonservice_t *this, android_vpn_state_t code)
 {
@@ -398,7 +379,8 @@ static bool charonservice_register(void *plugin, plugin_feature_t *feature,
 /**
  * Initialize the charonservice object
  */
-static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
+static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
+							   char *logfile)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
@@ -435,6 +417,16 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 
 	lib->settings->set_int(lib->settings,
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
+	/* setup file logger */
+	lib->settings->set_str(lib->settings,
+					"charon.filelog.%s.time_format", "%b %e %T", logfile);
+	lib->settings->set_bool(lib->settings,
+					"charon.filelog.%s.append", FALSE, logfile);
+	lib->settings->set_bool(lib->settings,
+					"charon.filelog.%s.flush_line", TRUE, logfile);
+	lib->settings->set_int(lib->settings,
+					"charon.filelog.%s.default", ANDROID_DEBUG_LEVEL, logfile);
+
 	lib->settings->set_int(lib->settings,
 					"charon.retransmit_tries", ANDROID_RETRASNMIT_TRIES);
 	lib->settings->set_double(lib->settings,
@@ -526,10 +518,10 @@ JNI_METHOD(CharonVpnService, initializeCharon, void,
 	}
 
 	logfile = androidjni_convert_jstring(env, jlogfile);
-	initialize_logger(logfile);
+	charonservice_init(env, this, builder, logfile);
 	free(logfile);
 
-	charonservice_init(env, this, builder);
+	charon->load_loggers(charon, NULL, FALSE);
 
 	if (uname(&utsname) != 0)
 	{
