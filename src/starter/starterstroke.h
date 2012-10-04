@@ -21,6 +21,7 @@
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn);
 int starter_stroke_del_conn(starter_conn_t *conn);
 int starter_stroke_route_conn(starter_conn_t *conn);
+int starter_stroke_unroute_conn(starter_conn_t *conn);
 int starter_stroke_initiate_conn(starter_conn_t *conn);
 int starter_stroke_add_ca(starter_ca_t *ca);
 int starter_stroke_del_ca(starter_ca_t *ca);

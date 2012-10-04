@@ -270,6 +270,16 @@ int starter_stroke_route_conn(starter_conn_t *conn)
 	return send_stroke_msg(&msg);
 }
 
+int starter_stroke_unroute_conn(starter_conn_t *conn)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_UNROUTE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.route.name = push_string(&msg, connection_name(conn));
+	return send_stroke_msg(&msg);
+}
+
 int starter_stroke_initiate_conn(starter_conn_t *conn)
 {
 	stroke_msg_t msg;

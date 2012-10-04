@@ -594,6 +594,10 @@ int main (int argc, char **argv)
 					{
 						if (starter_charon_pid())
 						{
+							if (conn->startup == STARTUP_ROUTE)
+							{
+								starter_stroke_unroute_conn(conn);
+							}
 							starter_stroke_del_conn(conn);
 						}
 						conn->state = STATE_TO_ADD;
@@ -651,6 +655,10 @@ int main (int argc, char **argv)
 					{
 						if (starter_charon_pid())
 						{
+							if (conn->startup == STARTUP_ROUTE)
+							{
+								starter_stroke_unroute_conn(conn);
+							}
 							starter_stroke_del_conn(conn);
 						}
 					}
