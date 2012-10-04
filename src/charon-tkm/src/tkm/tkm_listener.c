@@ -60,7 +60,7 @@ METHOD(listener_t, authorize, bool,
 	}
 
 	signature_type signature;
-	chunk_to_sequence(auth, &signature);
+	chunk_to_sequence(auth, &signature, sizeof(signature_type));
 	if (ike_isa_auth_psk(isa_id, signature) != TKM_OK)
 	{
 		DBG1(DBG_IKE, "TKM based authentication failed"

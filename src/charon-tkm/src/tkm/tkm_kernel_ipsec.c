@@ -145,7 +145,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	else if (nonce_loc_id != 0 && esa.dh_id == 0)
 	{
 		nonce_type nc_rem;
-		chunk_to_sequence(nonce_rem, &nc_rem);
+		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
 		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, 1, 1, nonce_loc_id,
 								  nc_rem, initiator, ntohl(spi_loc),
 								  ntohl(spi_rem)) != TKM_OK)
@@ -159,7 +159,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	else
 	{
 		nonce_type nc_rem;
-		chunk_to_sequence(nonce_rem, &nc_rem);
+		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
 		if (ike_esa_create(esa_id, esa.isa_id, 1, 1, esa.dh_id, nonce_loc_id,
 						   nc_rem, initiator, ntohl(spi_loc),
 						   ntohl(spi_rem)) != TKM_OK)

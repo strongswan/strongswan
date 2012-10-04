@@ -30,8 +30,10 @@ void sequence_to_chunk(const byte_t * const first, const uint32_t len,
 	memcpy(chunk->ptr, first, len);
 }
 
-void chunk_to_sequence(const chunk_t * const chunk, void *sequence)
+void chunk_to_sequence(const chunk_t * const chunk, void *sequence,
+		const uint32_t typelen)
 {
+	memset(sequence, 0, typelen);
 	sequence_type *seq = sequence;
 	seq->size = chunk->len;
 	memcpy(seq->data, chunk->ptr, seq->size);

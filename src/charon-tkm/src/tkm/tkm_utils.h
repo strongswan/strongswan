@@ -35,7 +35,9 @@ void sequence_to_chunk(const byte_t * const first, const uint32_t len,
  *
  * @param chunk		pointer to chunk struct
  * @param sequence	pointer to variable-length sequence
+ * @param typelen	length of sequence type
  */
-void chunk_to_sequence(const chunk_t * const chunk, void *sequence);
+void chunk_to_sequence(const chunk_t * const chunk, void *sequence,
+		const uint32_t typelen);
 
 #endif /** TKM_UTILS_H_ */

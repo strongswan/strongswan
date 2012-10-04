@@ -219,13 +219,13 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	if (this->initiator)
 	{
-		chunk_to_sequence(&nonce_r, &nonce_rem);
+		chunk_to_sequence(&nonce_r, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_initiator_spi(id);
 		spi_rem = id->get_responder_spi(id);
 	}
 	else
 	{
-		chunk_to_sequence(&nonce_i, &nonce_rem);
+		chunk_to_sequence(&nonce_i, &nonce_rem, sizeof(nonce_type));
 		spi_loc = id->get_responder_spi(id);
 		spi_rem = id->get_initiator_spi(id);
 	}
@@ -390,14 +390,14 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 
 	signature_type signature;
 	init_message_type msg;
-	chunk_to_sequence(&ike_sa_init, &msg);
+	chunk_to_sequence(&ike_sa_init, &msg, sizeof(init_message_type));
 
 	chunk_t idx_chunk, chunk = chunk_alloca(4);
 	chunk.ptr[0] = id->get_type(id);
 	memcpy(chunk.ptr + 1, reserved, 3);
 	idx_chunk = chunk_cata("cc", chunk, id->get_encoding(id));
 	idx_type idx;
-	chunk_to_sequence(&idx_chunk, &idx);
+	chunk_to_sequence(&idx_chunk, &idx, sizeof(idx_type));
 
 	if (ike_isa_sign_psk(this->isa_ctx_id, msg, idx, verify == TRUE, &signature)
 			!= TKM_OK)

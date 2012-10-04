@@ -41,7 +41,7 @@ START_TEST(test_chunk_to_sequence)
 	chunk_t chunk = chunk_from_thing("ABCDEFGH");
 	key_type key;
 
-	chunk_to_sequence(&chunk, &key);
+	chunk_to_sequence(&chunk, &key, sizeof(key_type));
 	fail_if(key.size != chunk.len, "Seq size mismatch");
 
 	uint32_t i;
