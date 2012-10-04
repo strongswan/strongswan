@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -44,6 +45,22 @@ struct file_logger_t {
 	void (*set_level) (file_logger_t *this, debug_t group, level_t level);
 
 	/**
+	 * Set options used by this logger
+	 *
+	 * @param time_format	format of timestamp prefix, as in strftime(), cloned
+	 * @param ike_name		TRUE to prefix the name of the IKE_SA
+	 */
+	void (*set_options) (file_logger_t *this, char *time_format, bool ike_name);
+
+	/**
+	 * Open (or reopen) the log file according to the given parameters
+	 *
+	 * @param flush_line	TRUE to flush buffers after every logged line
+	 * @param append		FALSE to overwrite an existing file, TRUE to append
+	 */
+	void (*open) (file_logger_t *this, bool flush_line, bool append);
+
+	/**
 	 * Destroys a file_logger_t object.
 	 */
 	void (*destroy) (file_logger_t *this);
@@ -52,11 +69,13 @@ struct file_logger_t {
 /**
  * Constructor to create a file_logger_t object.
  *
- * @param out			FILE to write to
- * @param time_format	format of timestamp prefix, as in strftime()
- * @param ike_name		TRUE to prefix the name of the IKE_SA
- * @return				file_logger_t object
+ * The logger has to be opened via file_logger_t.open() before anything is
+ * logged.
+ *
+ * @param filename	name of the log file (stderr and stdout are handled
+ *					specially), cloned
+ * @return			file_logger_t object
  */
-file_logger_t *file_logger_create(FILE *out, char *time_format, bool ike_name);
+file_logger_t *file_logger_create(char *filename);
 
 #endif /** FILE_LOGGER_H_ @}*/

@@ -21,6 +21,7 @@
 #include "sys_logger.h"
 
 #include <threading/mutex.h>
+#include <threading/rwlock.h>
 
 typedef struct private_sys_logger_t private_sys_logger_t;
 
@@ -53,6 +54,11 @@ struct private_sys_logger_t {
 	 * Mutex to ensure multi-line log messages are not torn apart
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Lock to read/write options (levels, ike_name)
+	 */
+	rwlock_t *lock;
 };
 
 METHOD(logger_t, log_, void,
@@ -65,6 +71,7 @@ METHOD(logger_t, log_, void,
 	/* cache group name and optional name string */
 	snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
 
+	this->lock->read_lock(this->lock);
 	if (this->ike_name && ike_sa)
 	{
 		if (ike_sa->get_peer_cfg(ike_sa))
@@ -78,6 +85,7 @@ METHOD(logger_t, log_, void,
 				ike_sa->get_unique_id(ike_sa));
 		}
 	}
+	this->lock->unlock(this->lock);
 
 	/* do a syslog for every line */
 	this->mutex->lock(this->mutex);
@@ -100,12 +108,18 @@ METHOD(logger_t, log_, void,
 METHOD(logger_t, get_level, level_t,
 	private_sys_logger_t *this, debug_t group)
 {
-	return this->levels[group];
+	level_t level;
+
+	this->lock->read_lock(this->lock);
+	level = this->levels[group];
+	this->lock->unlock(this->lock);
+	return level;
 }
 
 METHOD(sys_logger_t, set_level, void,
 	private_sys_logger_t *this, debug_t group, level_t level)
 {
+	this->lock->write_lock(this->lock);
 	if (group < DBG_ANY)
 	{
 		this->levels[group] = level;
@@ -117,12 +131,21 @@ METHOD(sys_logger_t, set_level, void,
 			this->levels[group] = level;
 		}
 	}
+	this->lock->unlock(this->lock);
+}
+
+METHOD(sys_logger_t, set_options, void,
+	private_sys_logger_t *this, bool ike_name)
+{
+	this->lock->write_lock(this->lock);
+	this->ike_name = ike_name;
+	this->lock->unlock(this->lock);
 }
 
 METHOD(sys_logger_t, destroy, void,
 	private_sys_logger_t *this)
 {
-	closelog();
+	this->lock->destroy(this->lock);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -130,7 +153,7 @@ METHOD(sys_logger_t, destroy, void,
 /*
  * Described in header.
  */
-sys_logger_t *sys_logger_create(int facility, bool ike_name)
+sys_logger_t *sys_logger_create(int facility)
 {
 	private_sys_logger_t *this;
 
@@ -141,11 +164,12 @@ sys_logger_t *sys_logger_create(int facility, bool ike_name)
 				.get_level = _get_level,
 			},
 			.set_level = _set_level,
+			.set_options = _set_options,
 			.destroy = _destroy,
 		},
 		.facility = facility,
-		.ike_name = ike_name,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	set_level(this, DBG_ANY, LEVEL_SILENT);

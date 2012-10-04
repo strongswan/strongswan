@@ -26,6 +26,7 @@
 #include "config.h"
 #include "hooks/hook.h"
 
+#include <bus/listeners/file_logger.h>
 #include <threading/thread.h>
 #include <credentials/certificates/x509.h>
 
@@ -383,7 +384,6 @@ static void load_loggers(file_logger_t *logger)
 {
 	enumerator_t *enumerator;
 	char *section;
-	FILE *file;
 
 	load_log_levels(logger, "stdout");
 
@@ -392,14 +392,9 @@ static void load_loggers(file_logger_t *logger)
 	{
 		if (!streq(section, "stdout"))
 		{
-			file = fopen(section, "w");
-			if (file == NULL)
-			{
-				fprintf(stderr, "opening file %s for logging failed: %s",
-						section, strerror(errno));
-				continue;
-			}
-			logger = file_logger_create(file, NULL, FALSE);
+			logger = file_logger_create(section);
+			logger->set_options(logger, NULL, FALSE);
+			logger->open(logger, FALSE, FALSE);
 			load_log_levels(logger, section);
 			charon->bus->add_logger(charon->bus, &logger->logger);
 			conftest->loggers->insert_last(conftest->loggers, logger);
@@ -447,7 +442,9 @@ int main(int argc, char *argv[])
 	);
 	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
 
-	logger = file_logger_create(stdout, NULL, FALSE);
+	logger = file_logger_create("stdout");
+	logger->set_options(logger, NULL, FALSE);
+	logger->open(logger, FALSE, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
 	charon->bus->add_logger(charon->bus, &logger->logger);
 	conftest->loggers->insert_last(conftest->loggers, logger);

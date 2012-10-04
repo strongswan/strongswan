@@ -125,7 +125,7 @@ static void initialize_logger()
 	debug_t group;
 	level_t def;
 
-	sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
+	sys_logger = sys_logger_create(LOG_DAEMON);
 	def = lib->settings->get_int(lib->settings,
 								 "charon-nm.syslog.default", 1);
 	for (group = 0; group < DBG_MAX; group++)

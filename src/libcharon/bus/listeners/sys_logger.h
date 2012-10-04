@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -44,6 +45,13 @@ struct sys_logger_t {
 	void (*set_level) (sys_logger_t *this, debug_t group, level_t level);
 
 	/**
+	 * Set options used by this logger.
+	 *
+	 * @param ike_name	TRUE to prefix the name of the IKE_SA
+	 */
+	void (*set_options) (sys_logger_t *this, bool ike_name);
+
+	/**
 	 * Destroys a sys_logger_t object.
 	 */
 	void (*destroy) (sys_logger_t *this);
@@ -53,9 +61,8 @@ struct sys_logger_t {
  * Constructor to create a sys_logger_t object.
  *
  * @param facility	syslog facility to use
- * @param ike_name	TRUE to prefix the name of the IKE_SA
  * @return			sys_logger_t object
  */
-sys_logger_t *sys_logger_create(int facility, bool ike_name);
+sys_logger_t *sys_logger_create(int facility);
 
 #endif /** SYS_LOGGER_H_ @}*/

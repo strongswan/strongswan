@@ -136,20 +136,10 @@ static void initialize_logger(char *logfile)
 {
 	file_logger_t *file_logger;
 	debug_t group;
-	FILE *file;
 
-	/* truncate an existing file */
-	file = fopen(logfile, "w");
-	if (!file)
-	{
-		DBG1(DBG_DMN, "opening file %s for logging failed: %s",
-			 logfile, strerror(errno));
-		return;
-	}
-	/* flush each line */
-	setlinebuf(file);
-
-	file_logger = file_logger_create(file, "%b %e %T", FALSE);
+	file_logger = file_logger_create(logfile);
+	file_logger->set_options(file_logger, "%b %e %T", FALSE);
+	file_logger->open(file_logger, TRUE, FALSE);
 	for (group = 0; group < DBG_MAX; group++)
 	{
 		file_logger->set_level(file_logger, group, ANDROID_DEBUG_LEVEL);
