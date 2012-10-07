@@ -288,8 +288,11 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 							 " not supported", (int)dek.len, dek.ptr);
 						return NOT_SUPPORTED;
 					}
-					eat_whitespace(&value);
-					iv = chunk_from_hex(value, iv.ptr);
+					if (!eat_whitespace(&value) || value.len > 2*sizeof(iv_buf))
+					{
+						return PARSE_ERROR;
+					}
+					iv = chunk_from_hex(value, iv_buf);
 				}
 			}
 			else /* state is PEM_BODY */
