@@ -56,7 +56,7 @@ struct pb_tnc_msg_info_t {
 	u_int32_t min_size;
 	bool exact_size;
 	bool in_result_batch;
-	bool has_noskip_flag;
+	signed char has_noskip_flag;
 };
 
 #define	TRUE_OR_FALSE	2
