@@ -207,7 +207,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 	pa_tnc_attr_t *error;
 	u_int8_t version;
 	u_int32_t reserved, offset, attr_offset;
-	pen_type_t error_code;
+	pen_type_t error_code = { PEN_IETF, PA_ERROR_INVALID_PARAMETER };
 
 	/* process message header */
 	if (this->encoding.len < PA_TNC_HEADER_SIZE)
@@ -224,9 +224,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 
 	if (version != PA_TNC_VERSION)
 	{
-		pen_type_t error_code = { PEN_IETF, PA_ERROR_VERSION_NOT_SUPPORTED };
-
 		DBG1(DBG_TNC, "PA-TNC version %u not supported", version);
+		error_code = pen_type_create(PEN_IETF, PA_ERROR_VERSION_NOT_SUPPORTED);
 		error = ietf_attr_pa_tnc_error_create(error_code, this->encoding);
 		goto err;
 	}
@@ -244,7 +243,6 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		pa_tnc_attr_t *attr;
 		enum_name_t *pa_attr_names;
 		ietf_attr_pa_tnc_error_t *error_attr;
-		pen_type_t error_code;
 
 		attr_info = reader->peek(reader);
 		attr_info.len = PA_TNC_ATTR_INFO_SIZE;
@@ -272,7 +270,6 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		{
 			DBG1(DBG_TNC, "%u bytes too small for PA-TNC attribute length",
 						   length);
-			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
 			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
 						this->encoding, offset + PA_TNC_ATTR_INFO_SIZE);
 			goto err;
@@ -281,7 +278,6 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		if (!reader->read_data(reader, length - PA_TNC_ATTR_HEADER_SIZE, &value))
 		{
 			DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
-			error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
 			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
 						this->encoding, offset + PA_TNC_ATTR_INFO_SIZE);
 			goto err; 
@@ -314,8 +310,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		if (attr->process(attr, &attr_offset) != SUCCESS)
 		{
 			attr->destroy(attr);
-			if (error_code.vendor_id == PEN_IETF &&
-				error_code.type == IETF_ATTR_PA_TNC_ERROR)
+			if (vendor_id == PEN_IETF && type == IETF_ATTR_PA_TNC_ERROR)
 			{
 				/* error while processing a PA-TNC error attribute - abort */
 				reader->destroy(reader);
@@ -338,7 +333,6 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		return SUCCESS;
 	}
 	DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute header");
-	error_code = pen_type_create(PEN_IETF, PA_ERROR_INVALID_PARAMETER);
 	error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
 						this->encoding, offset);
 
