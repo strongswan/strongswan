@@ -584,7 +584,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	 * update or delete capability metadata
 	 */
 	e1 = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
-	while (e1->enumerate(e1, &auth))
+	while (e1->enumerate(e1, &auth) && (first || up))
 	{
 		e2 = auth->create_enumerator(auth);
 		while (e2->enumerate(e2, &type, &group))
@@ -620,10 +620,6 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 				}
 				axiom_node_add_child(node2, this->env,
 									 create_capability(this, group));
-			}
-			if (!first && !up)
-			{
-				break;
 			}
 		}
 		e2->destroy(e2);
