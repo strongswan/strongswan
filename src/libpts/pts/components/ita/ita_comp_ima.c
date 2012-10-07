@@ -291,6 +291,7 @@ static bool load_bios_measurements(char *file, linked_list_t *list,
 
 	DBG1(DBG_PTS, "loading bios measurements '%s' failed: %s", file,
 		 strerror(errno));
+	free_bios_entry(entry);
 	close(fd);
 	return FALSE;
 }
@@ -377,6 +378,7 @@ static bool load_runtime_measurements(char *file, linked_list_t *list,
 
 	DBG1(DBG_PTS, "loading ima measurements '%s' failed: %s",
 		 file, strerror(errno));
+	free_ima_entry(entry);
 	close(fd);
 	return FALSE;
 }
