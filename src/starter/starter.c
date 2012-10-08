@@ -626,7 +626,7 @@ int main (int argc, char **argv)
 			DBG2(DBG_APP, "Reloading config...");
 			new_cfg = confread_load(CONFIG_FILE);
 
-			if (new_cfg && (new_cfg->err + new_cfg->non_fatal_err == 0))
+			if (new_cfg && (new_cfg->err == 0))
 			{
 				/* Switch to new config. New conn will be loaded below */
 
