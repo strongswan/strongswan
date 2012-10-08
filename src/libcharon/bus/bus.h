@@ -96,6 +96,9 @@ enum alert_t {
 	ALERT_INVALID_IKE_SPI,
 	/** received IKE message with invalid header, argument is message_t* */
 	ALERT_PARSE_ERROR_HEADER,
+	/** received IKE message with invalid body, argument is message_t*,
+	 *  followed by a status_t result returned by message_t.parse_body(). */
+	ALERT_PARSE_ERROR_BODY,
 };
 
 /**

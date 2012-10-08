@@ -1076,6 +1076,8 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 			 msg->get_request(msg) ? "request" : "response",
 			 msg->get_message_id(msg));
 
+		charon->bus->alert(charon->bus, ALERT_PARSE_ERROR_BODY, msg, status);
+
 		if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED)
 		{	/* invalid initiation attempt, close SA */
 			return DESTROY_ME;
