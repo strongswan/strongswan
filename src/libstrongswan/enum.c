@@ -65,15 +65,17 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 {
 	enum_name_t *ed = *((enum_name_t**)(args[0]));
 	int val = *((int*)(args[1]));
+	char *name, buf[32];
 
-	char *name = enum_to_name(ed, val);
-
+	name = enum_to_name(ed, val);
 	if (name == NULL)
 	{
-		return print_in_hook(data, "(%d)", val);
+		snprintf(buf, sizeof(buf), "(%d)", val);
+		name = buf;
 	}
-	else
+	if (spec->minus)
 	{
-		return print_in_hook(data, "%s", name);
+		return print_in_hook(data, "%-*s", spec->width, name);
 	}
+	return print_in_hook(data, "%*s", spec->width, name);
 }
