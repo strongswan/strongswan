@@ -125,6 +125,80 @@ METHOD(listener_t, child_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, message_hook, bool,
+	private_stroke_counter_t *this, ike_sa_t *ike_sa, message_t *message,
+	bool incoming, bool plain)
+{
+	stroke_counter_type_t type;
+	bool request;
+
+	if ((incoming && !plain) || (!incoming && !plain))
+	{	/* handle each message only once */
+		return TRUE;
+	}
+
+	request = message->get_request(message);
+	switch (message->get_exchange_type(message))
+	{
+		case IKE_SA_INIT:
+			if (incoming)
+			{
+				type = request ? COUNTER_IN_IKE_SA_INIT_REQ
+							   : COUNTER_IN_IKE_SA_INIT_RSP;
+			}
+			else
+			{
+				type = request ? COUNTER_OUT_IKE_SA_INIT_REQ
+							   : COUNTER_OUT_IKE_SA_INIT_RES;
+			}
+			break;
+		case IKE_AUTH:
+			if (incoming)
+			{
+				type = request ? COUNTER_IN_IKE_AUTH_REQ
+							   : COUNTER_IN_IKE_AUTH_RSP;
+			}
+			else
+			{
+				type = request ? COUNTER_OUT_IKE_AUTH_REQ
+							   : COUNTER_OUT_IKE_AUTH_RSP;
+			}
+			break;
+		case CREATE_CHILD_SA:
+			if (incoming)
+			{
+				type = request ? COUNTER_IN_CREATE_CHILD_SA_REQ
+							   : COUNTER_IN_CREATE_CHILD_SA_RSP;
+			}
+			else
+			{
+				type = request ? COUNTER_OUT_CREATE_CHILD_SA_REQ
+							   : COUNTER_OUT_CREATE_CHILD_SA_RSP;
+			}
+			break;
+		case INFORMATIONAL:
+			if (incoming)
+			{
+				type = request ? COUNTER_IN_INFORMATIONAL_REQ
+							   : COUNTER_IN_INFORMATIONAL_RSP;
+			}
+			else
+			{
+				type = request ? COUNTER_OUT_INFORMATIONAL_REQ
+							   : COUNTER_OUT_INFORMATIONAL_RSP;
+			}
+			break;
+		default:
+			return TRUE;
+	}
+
+	this->lock->lock(this->lock);
+	this->counter[type]++;
+	this->lock->unlock(this->lock);
+
+	return TRUE;
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
@@ -145,6 +219,7 @@ stroke_counter_t *stroke_counter_create()
 				.alert = _alert,
 				.ike_rekey = _ike_rekey,
 				.child_rekey = _child_rekey,
+				.message = _message_hook,
 			},
 			.destroy = _destroy,
 		},
