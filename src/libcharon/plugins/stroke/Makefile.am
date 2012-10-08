@@ -22,6 +22,7 @@ libstrongswan_stroke_la_SOURCES = \
 	stroke_ca.h stroke_ca.c \
 	stroke_attribute.h stroke_attribute.c \
 	stroke_handler.h stroke_handler.c \
+	stroke_counter.h stroke_counter.c \
 	stroke_list.h stroke_list.c
 
 libstrongswan_stroke_la_LDFLAGS = -module -avoid-version

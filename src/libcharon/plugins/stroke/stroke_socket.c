@@ -39,6 +39,7 @@
 #include "stroke_attribute.h"
 #include "stroke_handler.h"
 #include "stroke_list.h"
+#include "stroke_counter.h"
 
 /**
  * To avoid clogging the thread pool with (blocking) jobs, we limit the number
@@ -123,6 +124,11 @@ struct private_stroke_socket_t {
 	 * status information logging
 	 */
 	stroke_list_t *list;
+
+	/**
+	 * Counter values for IKE events
+	 */
+	stroke_counter_t *counter;
 };
 
 /**
@@ -781,6 +787,7 @@ METHOD(stroke_socket_t, destroy, void,
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
 	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	charon->bus->remove_listener(charon->bus, &this->counter->listener);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
@@ -788,6 +795,7 @@ METHOD(stroke_socket_t, destroy, void,
 	this->handler->destroy(this->handler);
 	this->control->destroy(this->control);
 	this->list->destroy(this->list);
+	this->counter->destroy(this->counter);
 	free(this);
 }
 
@@ -817,6 +825,7 @@ stroke_socket_t *stroke_socket_create()
 	this->config = stroke_config_create(this->ca, this->cred, this->attribute);
 	this->control = stroke_control_create();
 	this->list = stroke_list_create(this->attribute);
+	this->counter = stroke_counter_create();
 
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
@@ -830,6 +839,7 @@ stroke_socket_t *stroke_socket_create()
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	hydra->attributes->add_provider(hydra->attributes, &this->attribute->provider);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+	charon->bus->add_listener(charon->bus, &this->counter->listener);
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)receive, this,
