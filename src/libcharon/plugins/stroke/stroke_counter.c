@@ -88,6 +88,17 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, child_rekey, bool,
+	private_stroke_counter_t *this, ike_sa_t *ike_sa,
+	child_sa_t *old, child_sa_t *new)
+{
+	this->lock->lock(this->lock);
+	this->counter[COUNTER_CHILD_SA_REKEY]++;
+	this->lock->unlock(this->lock);
+
+	return TRUE;
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
@@ -106,6 +117,7 @@ stroke_counter_t *stroke_counter_create()
 		.public = {
 			.listener = {
 				.ike_rekey = _ike_rekey,
+				.child_rekey = _child_rekey,
 			},
 			.destroy = _destroy,
 		},
