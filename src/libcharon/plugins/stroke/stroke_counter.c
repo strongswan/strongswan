@@ -65,6 +65,29 @@ struct private_stroke_counter_t {
 	spinlock_t *lock;
 };
 
+METHOD(listener_t, ike_rekey, bool,
+	private_stroke_counter_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	stroke_counter_type_t type;
+	ike_sa_id_t *id;
+
+	id = new->get_id(new);
+	if (id->is_initiator(id))
+	{
+		type = COUNTER_INIT_IKE_SA_REKEY;
+	}
+	else
+	{
+		type = COUNTER_RESP_IKE_SA_REKEY;
+	}
+
+	this->lock->lock(this->lock);
+	this->counter[type]++;
+	this->lock->unlock(this->lock);
+
+	return TRUE;
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
@@ -81,6 +104,9 @@ stroke_counter_t *stroke_counter_create()
 
 	INIT(this,
 		.public = {
+			.listener = {
+				.ike_rekey = _ike_rekey,
+			},
 			.destroy = _destroy,
 		},
 		.lock = spinlock_create(),
