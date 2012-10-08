@@ -199,6 +199,27 @@ METHOD(listener_t, message_hook, bool,
 	return TRUE;
 }
 
+METHOD(stroke_counter_t, print, void,
+	private_stroke_counter_t *this, FILE *out)
+{
+	u_int64_t counter[COUNTER_MAX];
+	int i;
+
+	/* Take a snapshot to have congruent results, */
+	this->lock->lock(this->lock);
+	for (i = 0; i < countof(this->counter); i++)
+	{
+		counter[i] = this->counter[i];
+	}
+	this->lock->unlock(this->lock);
+
+	/* but do blocking write without the lock. */
+	for (i = 0; i < countof(this->counter); i++)
+	{
+		fprintf(out, "%-18N %12llu\n", stroke_counter_type_names, i, counter[i]);
+	}
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
@@ -221,6 +242,7 @@ stroke_counter_t *stroke_counter_create()
 				.child_rekey = _child_rekey,
 				.message = _message_hook,
 			},
+			.print = _print,
 			.destroy = _destroy,
 		},
 		.lock = spinlock_create(),

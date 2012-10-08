@@ -84,6 +84,13 @@ struct stroke_counter_t {
 	listener_t listener;
 
 	/**
+	 * Print counter values to an output stream.
+	 *
+	 * @param out		output stream to write to
+	 */
+	void (*print)(stroke_counter_t *this, FILE *out);
+
+	/**
 	 * Destroy a stroke_counter_t.
 	 */
 	void (*destroy)(stroke_counter_t *this);
