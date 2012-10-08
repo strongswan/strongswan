@@ -161,7 +161,7 @@ void pkcs11_library_trim(char *str, int len);
 /**
  * Create a pkcs11_library instance.
  *
- * @param name		an arbitrary name, for debugging
+ * @param name		an arbitrary name (for debugging), cloned
  * @param file		pkcs11 library file to dlopen()
  * @param os_lock	enforce OS Locking for this library
  * @return			library abstraction
