@@ -65,6 +65,32 @@ struct private_stroke_counter_t {
 	spinlock_t *lock;
 };
 
+METHOD(listener_t, alert, bool,
+	private_stroke_counter_t *this, ike_sa_t *ike_sa,
+	alert_t alert, va_list args)
+{
+	stroke_counter_type_t type;
+
+	switch (alert)
+	{
+		case ALERT_INVALID_IKE_SPI:
+			type = COUNTER_IN_INVALID_IKE_SPI;
+			break;
+		case ALERT_PARSE_ERROR_HEADER:
+		case ALERT_PARSE_ERROR_BODY:
+			type = COUNTER_IN_INVALID;
+			break;
+		default:
+			return TRUE;
+	}
+
+	this->lock->lock(this->lock);
+	this->counter[type]++;
+	this->lock->unlock(this->lock);
+
+	return TRUE;
+}
+
 METHOD(listener_t, ike_rekey, bool,
 	private_stroke_counter_t *this, ike_sa_t *old, ike_sa_t *new)
 {
@@ -116,6 +142,7 @@ stroke_counter_t *stroke_counter_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.alert = _alert,
 				.ike_rekey = _ike_rekey,
 				.child_rekey = _child_rekey,
 			},
