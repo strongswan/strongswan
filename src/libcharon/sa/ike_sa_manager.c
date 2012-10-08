@@ -1274,6 +1274,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		}
 		unlock_single_segment(this, segment);
 	}
+	else
+	{
+		charon->bus->alert(charon->bus, ALERT_INVALID_IKE_SPI, message);
+	}
 	id->destroy(id);
 	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;

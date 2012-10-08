@@ -92,6 +92,8 @@ enum alert_t {
 	ALERT_PEER_ADDR_FAILED,
 	/** peer did not respond to initial message, current try (int, 0-based) */
 	ALERT_PEER_INIT_UNREACHABLE,
+	/** received IKE message with invalid SPI, argument is message_t* */
+	ALERT_INVALID_IKE_SPI,
 };
 
 /**
