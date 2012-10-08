@@ -15,6 +15,33 @@
 
 #include "stroke_counter.h"
 
+#include <threading/spinlock.h>
+
+ENUM(stroke_counter_type_names,
+	COUNTER_INIT_IKE_SA_REKEY, COUNTER_OUT_INFORMATIONAL_RSP,
+	"ikeInitRekey",
+	"ikeRspRekey",
+	"ikeChildSaRekey",
+	"ikeInInvalid",
+	"ikeInInvalidSpi",
+	"ikeInInitReq",
+	"ikeInInitRsp",
+	"ikeOutInitReq",
+	"ikeOutInitRsp",
+	"ikeInAuthReq",
+	"ikeInAuthRsp",
+	"ikeOutAuthReq",
+	"ikeOutAuthRsp",
+	"ikeInCrChildReq",
+	"ikeInCrChildRsp",
+	"ikeOutCrChildReq",
+	"ikeOutCrChildRsp",
+	"ikeInInfoReq",
+	"ikeInInfoRsp",
+	"ikeOutInfoReq",
+	"ikeOutInfoRsp",
+);
+
 typedef struct private_stroke_counter_t private_stroke_counter_t;
 
 /**
@@ -27,11 +54,21 @@ struct private_stroke_counter_t {
 	 */
 	stroke_counter_t public;
 
+	/**
+	 * Counter values
+	 */
+	u_int64_t counter[COUNTER_MAX];
+
+	/**
+	 * Lock for counter values
+	 */
+	spinlock_t *lock;
 };
 
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -46,6 +83,7 @@ stroke_counter_t *stroke_counter_create()
 		.public = {
 			.destroy = _destroy,
 		},
+		.lock = spinlock_create(),
 	);
 
 	return &this->public;
