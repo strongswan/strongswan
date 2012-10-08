@@ -67,8 +67,10 @@ enum list_flag_t {
 	LIST_ALGS =			0x0400,
 	/** list plugin information */
 	LIST_PLUGINS =		0x0800,
+	/** list IKE counters */
+	LIST_COUNTERS =		0x1000,
 	/** all list options */
-	LIST_ALL =			0x0FFF,
+	LIST_ALL =			0x1FFF,
 };
 
 typedef enum reread_flag_t reread_flag_t;

@@ -265,6 +265,7 @@ static int list_flags[] = {
 	LIST_OCSP,
 	LIST_ALGS,
 	LIST_PLUGINS,
+	LIST_COUNTERS,
 	LIST_ALL
 };
 
@@ -363,7 +364,6 @@ static int user_credentials(char *name, char *user, char *pass)
 	return send_stroke_msg(&msg);
 }
 
-
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
@@ -418,7 +418,7 @@ static void exit_usage(char *error)
 	printf("  Show list of authority and attribute certificates:\n");
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
-	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
+	printf("    stroke listcerts|listcainfos|listcrls|listcounters|listall\n");
 	printf("  Show list of supported algorithms:\n");
 	printf("    stroke listalgs\n");
 	printf("  Reload authority and attribute certificates:\n");
@@ -552,6 +552,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALGS:
 		case STROKE_LIST_PLUGINS:
+		case STROKE_LIST_COUNTERS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;

@@ -395,6 +395,10 @@ static void stroke_list(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *
 		this->ca->list(this->ca, msg, out);
 	}
 	this->list->list(this->list, msg, out);
+	if (msg->list.flags & LIST_COUNTERS)
+	{
+		this->counter->print(this->counter, out);
+	}
 }
 
 /**

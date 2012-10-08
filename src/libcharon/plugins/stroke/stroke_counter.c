@@ -213,6 +213,8 @@ METHOD(stroke_counter_t, print, void,
 	}
 	this->lock->unlock(this->lock);
 
+	fprintf(out, "\nList of IKE counters:\n\n");
+
 	/* but do blocking write without the lock. */
 	for (i = 0; i < countof(this->counter); i++)
 	{

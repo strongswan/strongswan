@@ -49,6 +49,7 @@ listcrls,        STROKE_LIST_CRLS
 listocsp,        STROKE_LIST_OCSP
 listalgs,        STROKE_LIST_ALGS
 listplugins,     STROKE_LIST_PLUGINS
+listcounters,    STROKE_LIST_COUNTERS
 listall,         STROKE_LIST_ALL
 rereadsecrets,   STROKE_REREAD_SECRETS
 rereadcacerts,   STROKE_REREAD_CACERTS

@@ -59,7 +59,7 @@ case "$1" in
 	echo "	listalgs|listpubkeys|listcerts [--utc]"
 	echo "	listcacerts|listaacerts|listocspcerts [--utc]"
 	echo "	listacerts|listgroups|listcainfos [--utc]"
-	echo "	listcrls|listocsp|listcards|listplugins|listall [--utc]"
+	echo "	listcrls|listocsp|listcards|listplugins|listcounters|listall [--utc]"
 	echo "	leases [<poolname> [<address>]]"
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
@@ -149,7 +149,7 @@ leases)
 listalgs|listpubkeys|listplugins|\
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
-listcainfos|listcrls|listocsp|listall|\
+listcainfos|listcrls|listocsp|listcounters|listall|\
 rereadsecrets|rereadcacerts|rereadaacerts|\
 rereadacerts|rereadocspcerts|rereadcrls|\
 rereadall|purgeocsp)
