@@ -858,7 +858,7 @@ METHOD(attest_db_t, list_hashes, void,
 
 	dir = strdup("");
 
-	if (this->pid && this->fid)
+	if (this->pid && this->fid & this->did)
 	{
 		e = this->db->query(this->db,
 				"SELECT hash FROM file_hashes "
@@ -883,6 +883,32 @@ METHOD(attest_db_t, list_hashes, void,
 			printf("%d %N value%s found for product '%s'\n", count,
 				   pts_meas_algorithm_names, this->algo,
 				   (count == 1) ? "" : "s", this->product);
+		}
+	}
+	else if (this->pid && this->fid)
+	{
+		e = this->db->query(this->db,
+				"SELECT f.path, fh.hash FROM file_hashes AS fh "
+				"JOIN files AS f ON f.id = fh.directory "
+				"WHERE algo = ? AND file = ? AND product = ?",
+				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->pid,
+				DB_TEXT, DB_BLOB);
+		if (e)
+		{
+			free(dir);
+			while (e->enumerate(e, &dir, &hash))
+			{
+				printf("%4d: %s%s%s\n", this->fid, dir,
+						   slash(dir, this->file) ? "/" : "", this->file);
+				printf("      %#B\n", &hash);
+				count++;
+			}
+			e->destroy(e);
+
+			printf("%d %N value%s found for product '%s'\n", count,
+				   pts_meas_algorithm_names, this->algo,
+				   (count == 1) ? "" : "s", this->product);
+			dir = NULL;
 		}
 	}
 	else if (this->pid)
