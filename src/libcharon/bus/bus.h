@@ -94,6 +94,8 @@ enum alert_t {
 	ALERT_PEER_INIT_UNREACHABLE,
 	/** received IKE message with invalid SPI, argument is message_t* */
 	ALERT_INVALID_IKE_SPI,
+	/** received IKE message with invalid header, argument is message_t* */
+	ALERT_PARSE_ERROR_HEADER,
 };
 
 /**

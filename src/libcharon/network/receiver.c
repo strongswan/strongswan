@@ -488,6 +488,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	{
 		DBG1(DBG_NET, "received invalid IKE header from %H - ignored",
 			 packet->get_source(packet));
+		charon->bus->alert(charon->bus, ALERT_PARSE_ERROR_HEADER, message);
 		message->destroy(message);
 		return JOB_REQUEUE_DIRECT;
 	}
