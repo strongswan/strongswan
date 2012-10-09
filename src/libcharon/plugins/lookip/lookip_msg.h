@@ -40,19 +40,21 @@ enum {
 	/** request a dump of all entries */
 	LOOKIP_DUMP = 1,
 	/** lookup a specific virtual IP */
-	LOOKIP_LOOKUP = 2,
+	LOOKIP_LOOKUP,
 	/** reply message for DUMP and LOOKUP */
-	LOOKIP_ENTRY = 3,
+	LOOKIP_ENTRY,
+	/** reply message for LOOKUP if no such IP found */
+	LOOKIP_NOT_FOUND,
 	/** register for notifications about new virtual IPs */
-	LOOKIP_REGISTER_UP = 4,
+	LOOKIP_REGISTER_UP,
 	/** register for notifications about virtual IPs released */
-	LOOKIP_REGISTER_DOWN = 5,
+	LOOKIP_REGISTER_DOWN,
 	/** notify reply message for REGISTER_UP */
-	LOOKIP_NOTIFY_UP = 6,
+	LOOKIP_NOTIFY_UP,
 	/** notify reply message for REGISTER_DOWN */
-	LOOKIP_NOTIFY_DOWN = 7,
+	LOOKIP_NOTIFY_DOWN,
 	/** end of request batch */
-	LOOKIP_END = 8,
+	LOOKIP_END,
 };
 
 /**
@@ -72,7 +74,9 @@ struct lookip_request_t {
 /**
  * Response message sent to client.
  *
- * Valid response message types are ENTRY and NOTIFY_UP/DOWN.
+ * Valid response message types are ENTRY, NOT_FOUND and NOTIFY_UP/DOWN.
+ *
+ * All fields are set in all messages, except in NOT_FOUND: Only vip is set.
  */
 struct lookip_response_t {
 	/** response message type */

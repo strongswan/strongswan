@@ -188,6 +188,7 @@ static void query(private_lookip_socket_t *this, int fd, lookip_request_t *req)
 		.type = LOOKIP_ENTRY,
 	};
 	host_t *vip = NULL;
+	int matches = 0;
 
 	if (req)
 	{	/* lookup */
@@ -195,9 +196,22 @@ static void query(private_lookip_socket_t *this, int fd, lookip_request_t *req)
 		vip = host_create_from_string(req->vip, 0);
 		if (vip)
 		{
-			this->listener->lookup(this->listener, vip,
-								   (void*)listener_cb, &entry);
+			matches = this->listener->lookup(this->listener, vip,
+											 (void*)listener_cb, &entry);
 			vip->destroy(vip);
+		}
+		if (matches == 0)
+		{
+			lookip_response_t resp = {
+				.type = LOOKIP_NOT_FOUND,
+			};
+
+			snprintf(resp.vip, sizeof(resp.vip), "%s", req->vip);
+			if (send(fd, &resp, sizeof(resp), 0) < 0)
+			{
+				DBG1(DBG_CFG, "sending lookip not-found failed: %s",
+					 strerror(errno));
+			}
 		}
 	}
 	else

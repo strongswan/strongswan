@@ -102,6 +102,9 @@ static int receive(int fd, int block)
 			case LOOKIP_ENTRY:
 				label = "lookup:";
 				break;
+			case LOOKIP_NOT_FOUND:
+				label = "not found:";
+				break;
 			case LOOKIP_NOTIFY_UP:
 				label = "up:";
 				break;
@@ -117,7 +120,7 @@ static int receive(int fd, int block)
 		resp.id[sizeof(resp.id) - 1] = '\0';
 		resp.name[sizeof(resp.name) - 1] = '\0';
 
-		printf("%-8s %16s %16s %20s %s\n",
+		printf("%-12s %16s %16s %20s %s\n",
 			   label, resp.vip, resp.ip, resp.name, resp.id);
 	}
 }
