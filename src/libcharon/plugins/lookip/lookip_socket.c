@@ -55,7 +55,7 @@ struct private_lookip_socket_t {
 	/**
 	 * List of registered listeners, as entry_t
 	 */
-	linked_list_t *clients;
+	linked_list_t *registered;
 
 	/**
 	 * Mutex to lock clients list
@@ -165,7 +165,7 @@ static bool listener_cb(entry_t *entry, bool up, host_t *vip,
 	if (entry->this)
 	{	/* unregister listener */
 		entry->this->mutex->lock(entry->this->mutex);
-		entry->this->clients->remove(entry->this->clients, entry, NULL);
+		entry->this->registered->remove(entry->this->registered, entry, NULL);
 		entry->this->mutex->unlock(entry->this->mutex);
 
 		entry_destroy(entry);
@@ -216,7 +216,7 @@ static void subscribe(private_lookip_socket_t *this, int fd, int type)
 	);
 
 	this->mutex->lock(this->mutex);
-	this->clients->insert_last(this->clients, entry);
+	this->registered->insert_last(this->registered, entry);
 	this->mutex->unlock(this->mutex);
 
 	this->listener->add_listener(this->listener, (void*)listener_cb, entry);
@@ -296,7 +296,7 @@ static job_requeue_t receive(private_lookip_socket_t *this)
 METHOD(lookip_socket_t, destroy, void,
 	private_lookip_socket_t *this)
 {
-	this->clients->destroy_function(this->clients, (void*)entry_destroy);
+	this->registered->destroy_function(this->registered, (void*)entry_destroy);
 	this->mutex->destroy(this->mutex);
 	close(this->socket);
 	free(this);
@@ -314,7 +314,7 @@ lookip_socket_t *lookip_socket_create(lookip_listener_t *listener)
 			.destroy = _destroy,
 		},
 		.listener = listener,
-		.clients = linked_list_create(),
+		.registered = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
