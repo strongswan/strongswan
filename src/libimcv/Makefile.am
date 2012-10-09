@@ -39,4 +39,12 @@ endif
 
 if USE_IMV_SCANNER
   SUBDIRS += plugins/imv_scanner
-endif 
+endif
+
+if USE_IMC_OS
+  SUBDIRS += plugins/imc_os
+endif
+
+if USE_IMV_OS
+  SUBDIRS += plugins/imv_os
+endif

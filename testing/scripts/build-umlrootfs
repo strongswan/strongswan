@@ -247,6 +247,16 @@ then
     echo -n " --enable-imv-scanner" >> $INSTALLSHELL
 fi
 
+if [ "$USE_IMC_OS" = "yes" ]
+then
+    echo -n " --enable-imc-os" >> $INSTALLSHELL
+fi
+
+if [ "$USE_IMV_OS" = "yes" ]
+then
+    echo -n " --enable-imv-os" >> $INSTALLSHELL
+fi
+
 if [ "$USE_IMC_ATTESTATION" = "yes" ]
 then
     echo -n " --enable-imc-attestation" >> $INSTALLSHELL
