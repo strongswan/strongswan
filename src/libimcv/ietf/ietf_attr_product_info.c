@@ -144,6 +144,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_data  (reader, reader->remaining(reader), &product_name);
 	reader->destroy(reader);
 
+	if (!this->product_vendor_id && this->product_id)
+	{
+		DBG1(DBG_TNC, "IETF product information vendor ID is 0 "
+					  "but product ID is not 0");
+		*offset = 3;
+		return FAILED;
+	}
+
 	this->product_name = malloc(product_name.len + 1);
 	memcpy(this->product_name, product_name.ptr, product_name.len);
 	this->product_name[product_name.len] = '\0';
