@@ -259,7 +259,7 @@ pa_tnc_attr_t *ietf_attr_attr_request_create_from_data(chunk_t data)
 			.add = _add,
 			.create_enumerator = _create_enumerator,
 		},
-		.type = { PEN_IETF,IETF_ATTR_ATTRIBUTE_REQUEST },
+		.type = { PEN_IETF, IETF_ATTR_ATTRIBUTE_REQUEST },
 		.value = chunk_clone(data),
 		.list = linked_list_create(),
 		.ref = 1,

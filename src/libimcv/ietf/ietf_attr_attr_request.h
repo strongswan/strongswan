@@ -50,7 +50,7 @@ struct ietf_attr_attr_request_t {
 	 * Creates an enumerator over all attribute types contained
 	 * in the attribute request
 	 *
-	 * @return				Attribute Type enumerator returns (vendor ID, type)
+	 * @return			Attribute Type enumerator returns { vendor ID, type }
 	 */
 	enumerator_t* (*create_enumerator)(ietf_attr_attr_request_t *this);
 };
