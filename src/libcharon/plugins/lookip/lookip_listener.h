@@ -58,9 +58,10 @@ struct lookip_listener_t {
 	 * @param vip		virtual IP to look up, NULL to get all entries
 	 * @param cb		callback function to invoke
 	 * @param user		user data to pass to callback function
+	 * @return			number of matches
 	 */
-	void (*lookup)(lookip_listener_t *this, host_t *vip,
-				   lookip_callback_t cb, void *user);
+	int (*lookup)(lookip_listener_t *this, host_t *vip,
+				  lookip_callback_t cb, void *user);
 
 	/**
 	 * Register a listener function that gets notified about virtual IP changes.

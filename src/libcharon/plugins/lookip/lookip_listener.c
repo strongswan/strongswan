@@ -224,11 +224,12 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
-METHOD(lookip_listener_t, lookup, void,
+METHOD(lookip_listener_t, lookup, int,
 	private_lookip_listener_t *this, host_t *vip,
 	lookip_callback_t cb, void *user)
 {
 	entry_t *entry;
+	int matches = 0;
 
 	this->lock->read_lock(this->lock);
 	if (vip)
@@ -237,6 +238,7 @@ METHOD(lookip_listener_t, lookup, void,
 		if (entry)
 		{
 			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
+			matches ++;
 		}
 	}
 	else
@@ -247,10 +249,13 @@ METHOD(lookip_listener_t, lookup, void,
 		while (enumerator->enumerate(enumerator, &vip, &entry))
 		{
 			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
+			matches++;
 		}
 		enumerator->destroy(enumerator);
 	}
 	this->lock->unlock(this->lock);
+
+	return matches;
 }
 
 METHOD(lookip_listener_t, add_listener, void,
