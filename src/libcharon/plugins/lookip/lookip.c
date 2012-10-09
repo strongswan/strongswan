@@ -75,13 +75,13 @@ static int send_request(int fd, int type, char *vip)
 /**
  * Receive entries from fd. If block is != 0, the call blocks until closed
  */
-static int receive(int fd, int block)
+static int receive(int fd, int block, int loop)
 {
 	lookip_response_t resp;
 	char *label;
 	int res;
 
-	for (;;)
+	do
 	{
 		res = recv(fd, &resp, sizeof(resp), block ? 0 : MSG_DONTWAIT);
 		if (res == 0)
@@ -123,6 +123,53 @@ static int receive(int fd, int block)
 		printf("%-12s %16s %16s %20s %s\n",
 			   label, resp.vip, resp.ip, resp.name, resp.id);
 	}
+	while (loop);
+
+	return 0;
+}
+
+/**
+ * Interactive IP lookup shell
+ */
+static int interactive(int fd)
+{
+	printf("Enter IP address or 'quit'\n");
+
+	while (1)
+	{
+		char line[64], *pos;
+		int res;
+
+		printf("> ");
+		fflush(stdout);
+
+		if (fgets(line, sizeof(line), stdin))
+		{
+			pos = strchr(line, '\n');
+			if (pos)
+			{
+				*pos = '\0';
+			}
+			if (strlen(line) == 0)
+			{
+				continue;
+			}
+			if (strcmp(line, "quit") == 0)
+			{
+				return send_request(fd, LOOKIP_END, NULL);
+			}
+			res = send_request(fd, LOOKIP_LOOKUP, line);
+			if (res != 0)
+			{
+				return res;
+			}
+			res = receive(fd, 1, 0);
+			if (res != 0)
+			{
+				return res;
+			}
+		}
+	}
 }
 
 /**
@@ -151,16 +198,17 @@ int main(int argc, char *argv[])
 		{ 0,0,0,0 }
 	};
 
-	if (argc == 1)
-	{
-		usage(argv[0]);
-		return 1;
-	}
-
 	fd = make_connection();
 	if (fd == -1)
 	{
 		return 1;
+	}
+
+	if (argc == 1)
+	{
+		res = interactive(fd);
+		close(fd);
+		return res;
 	}
 
 	while (res == 0)
@@ -196,7 +244,7 @@ int main(int argc, char *argv[])
 		}
 		if (res == 0)
 		{	/* read all currently available results */
-			res = receive(fd, 0);
+			res = receive(fd, 0, 1);
 		}
 	}
 	if (res == 0)
@@ -204,7 +252,7 @@ int main(int argc, char *argv[])
 		/* send close message */
 		send_request(fd, LOOKIP_END, NULL);
 		/* read until socket gets closed */
-		res = receive(fd, 1);
+		res = receive(fd, 1, 1);
 	}
 	close(fd);
 
