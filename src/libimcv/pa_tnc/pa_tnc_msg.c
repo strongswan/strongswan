@@ -317,7 +317,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 				return FAILED;
 			}
 			error_code = pen_type_create(PEN_IETF,
-										 PA_ERROR_ATTR_TYPE_NOT_SUPPORTED);
+										 PA_ERROR_INVALID_PARAMETER);
 			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
 						this->encoding,
 						offset + PA_TNC_ATTR_HEADER_SIZE + attr_offset);
