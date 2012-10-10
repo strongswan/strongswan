@@ -11,6 +11,7 @@ backend/android_service.c backend/android_service.h \
 charonservice.c charonservice.h \
 kernel/android_ipsec.c kernel/android_ipsec.h \
 kernel/android_net.c kernel/android_net.h \
+kernel/network_manager.c kernel/network_manager.h \
 vpnservice_builder.c vpnservice_builder.h
 
 # build libandroidbridge -------------------------------------------------------
