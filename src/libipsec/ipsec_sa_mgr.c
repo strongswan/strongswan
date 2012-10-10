@@ -237,29 +237,29 @@ static bool match_entry_by_sa_ptr(ipsec_sa_entry_t *item, ipsec_sa_t *sa)
 	return item->sa == sa;
 }
 
-static bool match_entry_by_spi_inbound(ipsec_sa_entry_t *item, u_int32_t spi,
-									   bool inbound)
+static bool match_entry_by_spi_inbound(ipsec_sa_entry_t *item, u_int32_t *spi,
+									   bool *inbound)
 {
-	return item->sa->get_spi(item->sa) == spi &&
-		   item->sa->is_inbound(item->sa) == inbound;
+	return item->sa->get_spi(item->sa) == *spi &&
+		   item->sa->is_inbound(item->sa) == *inbound;
 }
 
-static bool match_entry_by_spi_src_dst(ipsec_sa_entry_t *item, u_int32_t spi,
+static bool match_entry_by_spi_src_dst(ipsec_sa_entry_t *item, u_int32_t *spi,
 									   host_t *src, host_t *dst)
 {
-	return item->sa->match_by_spi_src_dst(item->sa, spi, src, dst);
+	return item->sa->match_by_spi_src_dst(item->sa, *spi, src, dst);
 }
 
 static bool match_entry_by_reqid_inbound(ipsec_sa_entry_t *item,
-										 u_int32_t reqid, bool inbound)
+										 u_int32_t *reqid, bool *inbound)
 {
-	return item->sa->match_by_reqid(item->sa, reqid, inbound);
+	return item->sa->match_by_reqid(item->sa, *reqid, *inbound);
 }
 
-static bool match_entry_by_spi_dst(ipsec_sa_entry_t *item, u_int32_t spi,
+static bool match_entry_by_spi_dst(ipsec_sa_entry_t *item, u_int32_t *spi,
 								   host_t *dst)
 {
-	return item->sa->match_by_spi_dst(item->sa, spi, dst);
+	return item->sa->match_by_spi_dst(item->sa, *spi, dst);
 }
 
 /**
@@ -381,7 +381,7 @@ static bool allocate_spi(private_ipsec_sa_mgr_t *this, u_int32_t spi)
 
 	if (this->allocated_spis->get(this->allocated_spis, &spi) ||
 		this->sas->find_first(this->sas, (void*)match_entry_by_spi_inbound,
-							  NULL, spi, TRUE) == SUCCESS)
+							  NULL, &spi, TRUE) == SUCCESS)
 	{
 		return FALSE;
 	}
@@ -471,7 +471,7 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	}
 
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_spi_src_dst,
-							  NULL, spi, src, dst) == SUCCESS)
+							  NULL, &spi, src, dst) == SUCCESS)
 	{
 		this->mutex->unlock(this->mutex);
 		DBG1(DBG_ESP, "failed to install SAD entry: already installed");
@@ -506,7 +506,7 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 
 	this->mutex->lock(this->mutex);
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_spi_src_dst,
-							 (void**)&entry, spi, src, dst) == SUCCESS &&
+							 (void**)&entry, &spi, src, dst) == SUCCESS &&
 		wait_for_entry(this, entry))
 	{
 		entry->sa->set_source(entry->sa, new_src);
@@ -536,7 +536,7 @@ METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 	enumerator = this->sas->create_enumerator(this->sas);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		if (match_entry_by_spi_src_dst(current, spi, src, dst))
+		if (match_entry_by_spi_src_dst(current, &spi, src, dst))
 		{
 			if (wait_remove_entry(this, current))
 			{
@@ -567,7 +567,7 @@ METHOD(ipsec_sa_mgr_t, checkout_by_reqid, ipsec_sa_t*,
 
 	this->mutex->lock(this->mutex);
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_reqid_inbound,
-							 (void**)&entry, reqid, inbound) == SUCCESS &&
+							 (void**)&entry, &reqid, &inbound) == SUCCESS &&
 		wait_for_entry(this, entry))
 	{
 		sa = entry->sa;
@@ -584,7 +584,7 @@ METHOD(ipsec_sa_mgr_t, checkout_by_spi, ipsec_sa_t*,
 
 	this->mutex->lock(this->mutex);
 	if (this->sas->find_first(this->sas, (void*)match_entry_by_spi_dst,
-							 (void**)&entry, spi, dst) == SUCCESS &&
+							 (void**)&entry, &spi, dst) == SUCCESS &&
 		wait_for_entry(this, entry))
 	{
 		sa = entry->sa;
