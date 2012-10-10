@@ -132,6 +132,14 @@ md5_128,          INTEGRITY_ALGORITHM,  AUTH_HMAC_MD5_128,         0
 aesxcbc,          INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,          0
 camelliaxcbc,     INTEGRITY_ALGORITHM,  AUTH_CAMELLIA_XCBC_96,     0
 aescmac,          INTEGRITY_ALGORITHM,  AUTH_AES_CMAC_96,          0
+prfsha1,          PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,           0
+prfsha256,        PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,       0
+prfsha384,        PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384,       0
+prfsha512,        PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512,       0
+prfmd5,           PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,            0
+prfaesxcbc,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,         0
+prfcamelliaxcbc,  PSEUDO_RANDOM_FUNCTION, PRF_CAMELLIA128_XCBC,    0
+prfaescmac,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_CMAC,         0
 modpnull,         DIFFIE_HELLMAN_GROUP, MODP_NULL,                 0
 modp768,          DIFFIE_HELLMAN_GROUP, MODP_768_BIT,              0
 modp1024,         DIFFIE_HELLMAN_GROUP, MODP_1024_BIT,             0
