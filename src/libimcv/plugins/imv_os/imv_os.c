@@ -19,9 +19,10 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
-#include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
+#include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_string_version.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -111,6 +112,8 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	imv_os_state_t *os_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
+	char *os_name = NULL;
+	chunk_t os_version = chunk_empty;
 	bool fatal_error, assessment = FALSE;
 
 	if (!imv_os)
@@ -155,19 +158,25 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 			case IETF_ATTR_PRODUCT_INFORMATION:
 			{
 				ietf_attr_product_info_t *attr_cast;
-				char *info;
 
 				attr_cast = (ietf_attr_product_info_t*)attr;
-				info = attr_cast->get_info(attr_cast, NULL, NULL);
-				os_state->set_info(os_state, info);
-				DBG1(DBG_IMV, "operating system is '%s'", info);
-				
-				/* request installed packages */
-				attr = ietf_attr_attr_request_create(PEN_IETF,
-											IETF_ATTR_INSTALLED_PACKAGES);
-				attr_list->insert_last(attr_list, attr);
+				os_name = attr_cast->get_info(attr_cast, NULL, NULL);
+				DBG1(DBG_IMV, "operating system name is '%s'", os_name);
 				break;
-			}	
+			}
+			case IETF_ATTR_STRING_VERSION:
+			{
+				ietf_attr_string_version_t *attr_cast;
+
+				attr_cast = (ietf_attr_string_version_t*)attr;
+				os_version = attr_cast->get_version(attr_cast, NULL, NULL);
+				if (os_version.len)
+				{
+					DBG1(DBG_IMV, "operating system version is '%.*s'",
+								   os_version.len, os_version.ptr);
+				}
+				break;
+			}
 			case IETF_ATTR_INSTALLED_PACKAGES:
 			{ 
 				ietf_attr_installed_packages_t *attr_cast;
@@ -194,6 +203,17 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		}		
 	}
 	enumerator->destroy(enumerator);
+
+	if (os_name && os_version.len)
+	{
+		os_state->set_info(os_state, os_name, os_version);
+
+		DBG1(DBG_IMV, "requesting installed packages for '%s'",
+					   os_state->get_info(os_state));
+		attr = ietf_attr_attr_request_create(PEN_IETF,
+											 IETF_ATTR_INSTALLED_PACKAGES);
+		attr_list->insert_last(attr_list, attr);
+	}
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	if (fatal_error)
@@ -203,6 +223,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		assessment = TRUE;
 	}
+
 	if (assessment)
 	{
 		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
@@ -295,10 +316,13 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	{
 		pa_tnc_attr_t *attr;
 		linked_list_t *attr_list;
+		ietf_attr_attr_request_t *attr_cast;
 
 		attr_list = linked_list_create();
 		attr = ietf_attr_attr_request_create(PEN_IETF,
 											 IETF_ATTR_PRODUCT_INFORMATION);
+		attr_cast = (ietf_attr_attr_request_t*)attr;
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
 		attr_list->insert_last(attr_list, attr);
 		result = imv_os->send_message(imv_os, connection_id, FALSE, imv_id,
 									  TNC_IMCID_ANY, attr_list);

@@ -164,9 +164,14 @@ METHOD(imv_state_t, destroy, void,
 }
 
 METHOD(imv_os_state_t, set_info, void,
-	private_imv_os_state_t *this, char *info)
+	private_imv_os_state_t *this, char *name, chunk_t version)
 {
-	this->info = strdup(info);
+	int len = strlen(name) + 1 + version.len + 1;
+
+	/* OS info is a concatenation of OS name and OS version */
+	free(this->info);
+	this->info = malloc(len);
+	snprintf(this->info, len, "%s %.*s", name, version.len, version.ptr);
 }
 
 METHOD(imv_os_state_t, get_info, char*,

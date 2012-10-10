@@ -13,12 +13,13 @@
  */
 
 #include "ietf_attr.h"
+#include "ietf/ietf_attr_assess_result.h"
+#include "ietf/ietf_attr_attr_request.h"
+#include "ietf/ietf_attr_installed_packages.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "ietf/ietf_attr_product_info.h"
-#include "ietf/ietf_attr_installed_packages.h"
-#include "ietf/ietf_attr_attr_request.h"
-#include "ietf/ietf_attr_assess_result.h"
+#include "ietf/ietf_attr_string_version.h"
 
 
 ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
@@ -48,6 +49,8 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ietf_attr_attr_request_create_from_data(value);
 		case IETF_ATTR_PRODUCT_INFORMATION:
 			return ietf_attr_product_info_create_from_data(value);
+		case IETF_ATTR_STRING_VERSION:
+			return ietf_attr_string_version_create_from_data(value);
 		case IETF_ATTR_PORT_FILTER:
 			return ietf_attr_port_filter_create_from_data(value);
 		case IETF_ATTR_INSTALLED_PACKAGES:
@@ -58,7 +61,6 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ietf_attr_assess_result_create_from_data(value);
 		case IETF_ATTR_TESTING:
 		case IETF_ATTR_NUMERIC_VERSION:
-		case IETF_ATTR_STRING_VERSION:
 		case IETF_ATTR_OPERATIONAL_STATUS:
 		case IETF_ATTR_REMEDIATION_INSTRUCTIONS:
 		case IETF_ATTR_FORWARDING_ENABLED:

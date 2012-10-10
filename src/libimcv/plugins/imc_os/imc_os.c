@@ -18,11 +18,12 @@
 #include <imc/imc_agent.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_assess_result.h>
 #include <ietf/ietf_attr_attr_request.h>
-#include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
-#include <ietf/ietf_attr_assess_result.h>
+#include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_string_version.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -104,13 +105,26 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 }
 
 /**
- * Add an IETF Product Information attribute to the send queue
+ * Add IETF Product Information attribute to the send queue
  */
 static void add_product_info(linked_list_t *attr_list)
 {
 	pa_tnc_attr_t *attr;
+	char *os_name = "Ubuntu";
 
-	attr = ietf_attr_product_info_create(PEN_IETF, 0, "Ubuntu 12.04 LTS i686");
+	attr = ietf_attr_product_info_create(PEN_IETF, 0, os_name);
+	attr_list->insert_last(attr_list, attr);
+}
+
+/**
+ * Add IETF String Version attribute to the send queue
+ */
+static void add_string_version(linked_list_t *attr_list)
+{
+	pa_tnc_attr_t *attr;
+	chunk_t os_version = { "12.04", 5};
+
+	attr = ietf_attr_string_version_create(os_version, chunk_empty, chunk_empty);
 	attr_list->insert_last(attr_list, attr);
 }
 
@@ -148,12 +162,13 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	}
 
 	if (lib->settings->get_bool(lib->settings,
-							"libimcv.plugins.imc-os.send_product_info", TRUE))
+								"libimcv.plugins.imc-os.send_info", TRUE))
 	{
 		linked_list_t *attr_list;
 
 		attr_list = linked_list_create();
 		add_product_info(attr_list);
+		add_string_version(attr_list);
 		result = imc_os->send_message(imc_os, connection_id, FALSE, 0,
 									  TNC_IMVID_ANY, attr_list);
 		attr_list->destroy(attr_list);
@@ -237,6 +252,9 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 				{
 					case IETF_ATTR_PRODUCT_INFORMATION:
 						add_product_info(attr_list);
+						break;
+					case IETF_ATTR_STRING_VERSION:
+						add_string_version(attr_list);
 						break;
 					case IETF_ATTR_INSTALLED_PACKAGES:
 						add_installed_packages(attr_list);
