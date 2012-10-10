@@ -16,11 +16,14 @@ openssl_PATH := $(LOCAL_PATH)/openssl/include
 
 # CFLAGS (partially from a configure run using droid-gcc)
 strongswan_CFLAGS := \
+	-Wall \
+	-Wextra \
 	-Wno-format \
 	-Wno-pointer-sign \
 	-Wno-pointer-arith \
 	-Wno-sign-compare \
 	-Wno-strict-aliasing \
+	-Wno-unused-parameter \
 	-DHAVE___BOOL \
 	-DHAVE_STDBOOL_H \
 	-DHAVE_ALLOCA_H \
