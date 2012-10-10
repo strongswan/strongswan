@@ -487,6 +487,44 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	return SUCCESS;
 }
 
+METHOD(ipsec_sa_mgr_t, update_sa, status_t,
+	private_ipsec_sa_mgr_t *this, u_int32_t spi, u_int8_t protocol,
+	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
+	bool encap, bool new_encap, mark_t mark)
+{
+	ipsec_sa_entry_t *entry = NULL;
+
+	DBG2(DBG_ESP, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
+		 ntohl(spi), src, dst, new_src, new_dst);
+
+	if (!new_encap)
+	{
+		DBG1(DBG_ESP, "failed to update SAD entry: can't deactivate UDP "
+			 "encapsulation");
+		return NOT_SUPPORTED;
+	}
+
+	this->mutex->lock(this->mutex);
+	if (this->sas->find_first(this->sas, (void*)match_entry_by_spi_src_dst,
+							 (void**)&entry, spi, src, dst) == SUCCESS &&
+		wait_for_entry(this, entry))
+	{
+		entry->sa->set_source(entry->sa, new_src);
+		entry->sa->set_destination(entry->sa, new_dst);
+		/* checkin the entry */
+		entry->locked = FALSE;
+		entry->condvar->signal(entry->condvar);
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (!entry)
+	{
+		DBG1(DBG_ESP, "failed to update SAD entry: not found");
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 METHOD(ipsec_sa_mgr_t, del_sa, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, u_int32_t spi,
 	u_int8_t protocol, u_int16_t cpi, mark_t mark)
@@ -609,6 +647,7 @@ ipsec_sa_mgr_t *ipsec_sa_mgr_create()
 		.public = {
 			.get_spi = _get_spi,
 			.add_sa = _add_sa,
+			.update_sa = _update_sa,
 			.del_sa = _del_sa,
 			.checkout_by_spi = _checkout_by_spi,
 			.checkout_by_reqid = _checkout_by_reqid,
