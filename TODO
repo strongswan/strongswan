@@ -2,31 +2,7 @@
                   strongSwan - TODO
                  ----------------------
 
-This is a TODO list we should keep in mind. A roadmap of the strongSwan
-project is available online at:
+A roadmap of the strongSwan project is available online at:
 
         http://wiki.strongswan.org/projects/strongswan/roadmap
-
-Certificate support
--------------------
-- synchronized CRL fetcher
-- Smartcard interface
-- Attribute certificates
-
-Stroke interface
-----------------
-- add a Rekey-Counter for SAs in "statusall"
-- ipsec statusall bytecount
-
-Misc
-----
-- Address pool/backend for virtual IP assignement
-
-libstrongswan stuff
--------------------
-- Header installation support (#include <strongswan/strongswan.h>?)
-- object style for leak detective, include an API
-- Cleanup/Refactor PEM/ASN1 stuff
-- replace file reads through chunk_read
-- rewrite lexparser in object-oriented style
 
