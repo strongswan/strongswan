@@ -369,7 +369,7 @@ for the connection, e.g.
 .BR aes128-sha256 .
 The notation is
 .BR encryption-integrity[-dhgroup][-esnmode] .
-.br
+
 Defaults to
 .BR aes128-sha1,3des-sha1 .
 The daemon adds its extensive default proposal to this default
@@ -377,7 +377,7 @@ or the configured value.  To restrict it to the configured proposal an
 exclamation mark
 .RB ( ! )
 can be added at the end.
-.br
+
 .BR Note :
 As a responder the daemon accepts the first supported proposal received from
 the peer. In order to restrict a responder to only accept specific cipher
@@ -408,10 +408,19 @@ comma-separated list of IKE/ISAKMP SA encryption/authentication algorithms
 to be used, e.g.
 .BR aes128-sha1-modp2048 .
 The notation is
-.BR encryption-integrity-dhgroup .
-In IKEv2, multiple algorithms and proposals may be included, such as
-aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024.
+.BR encryption-integrity[-prf]-dhgroup .
+If no PRF is given, the algorithms defined for integrity are used for the PRF.
+The prf keywords are the same as the integrity algorithms, but have a
+.B prf
+prefix (such as
+.BR prfsha1 ,
+.B prfsha256
+or
+.BR prfaesxcbc ).
 .br
+In IKEv2, multiple algorithms and proposals may be included, such as
+.BR aes128-aes256-sha1-modp1536-modp2048,3des-sha1-md5-modp1024 .
+
 Defaults to
 .BR aes128-sha1-modp2048,3des-sha1-modp1536 .
 The daemon adds its extensive default proposal to this
@@ -419,13 +428,14 @@ default or the configured value.  To restrict it to the configured proposal an
 exclamation mark
 .RB ( ! )
 can be added at the end.
-.br
+
 .BR Note :
 As a responder the daemon accepts the first supported proposal received from
 the peer.  In order to restrict a responder to only accept specific cipher
 suites, the strict flag
 .RB ( ! ,
-exclamation mark) can be used, e.g: aes256-sha512-modp4096!
+exclamation mark) can be used, e.g:
+.BR aes256-sha512-modp4096!
 .TP
 .BR ikelifetime " = " 3h " | <time>"
 how long the keying channel of a connection (ISAKMP or IKE SA)
