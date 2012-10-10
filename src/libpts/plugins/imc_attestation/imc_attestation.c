@@ -22,6 +22,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_assess_result.h>
+#include <os_info/os_info.h>
 
 #include <libpts.h>
 
@@ -44,6 +45,7 @@ static const char imc_name[] = "Attestation";
 #define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
 
 static imc_agent_t *imc_attestation;
+static os_info_t *os;
 
 /**
  * Supported PTS measurement algorithms
@@ -77,6 +79,15 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 									   imc_id, actual_version);
 	if (!imc_attestation)
 	{
+		return TNC_RESULT_FATAL;
+	}
+
+	os = os_info_create();
+	if (!os)
+	{
+		imc_attestation->destroy(imc_attestation);
+		imc_attestation = NULL;
+
 		return TNC_RESULT_FATAL;
 	}
 
@@ -135,10 +146,9 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
-	imc_state_t *state;
-	imc_attestation_state_t *attestation_state;
-	pts_t *pts;
-	char *platform_info;
+	linked_list_t *attr_list;
+	pa_tnc_attr_t *attr;
+	chunk_t os_name, os_version;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imc_attestation)
@@ -147,27 +157,15 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	/* get current IMC state */
-	if (!imc_attestation->get_state(imc_attestation, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	attestation_state = (imc_attestation_state_t*)state;
-	pts = attestation_state->get_pts(attestation_state);
-
-	platform_info = pts->get_platform_info(pts);
-	if (platform_info)
-	{
-		linked_list_t *attr_list;
-		pa_tnc_attr_t *attr;
-
-		attr_list = linked_list_create();
-		attr = ietf_attr_product_info_create(0, 0, platform_info);
-		attr_list->insert_last(attr_list, attr);
-		result = imc_attestation->send_message(imc_attestation, connection_id,
-										FALSE, 0, TNC_IMVID_ANY, attr_list);
-		attr_list->destroy(attr_list);
-	}
+	attr_list = linked_list_create();
+	attr = ietf_attr_product_info_create(0, 0, os->get_name(os));
+	attr_list->insert_last(attr_list, attr);
+	attr = ietf_attr_string_version_create(os->get_version(os),
+										   chunk_empty, chunk_empty);
+	attr_list->insert_last(attr_list, attr);
+	result = imc_attestation->send_message(imc_attestation, connection_id,
+										   FALSE, 0, TNC_IMVID_ANY, attr_list);
+	attr_list->destroy(attr_list);
 
 	return result;
 }
@@ -347,6 +345,9 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 
 	imc_attestation->destroy(imc_attestation);
 	imc_attestation = NULL;
+
+	os->destroy(os);
+	os = NULL;
 
 	return TNC_RESULT_SUCCESS;
 }

@@ -112,7 +112,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	imv_os_state_t *os_state;
 	enumerator_t *enumerator;
 	TNC_Result result;
-	char *os_name = NULL;
+	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
 	bool fatal_error, assessment = FALSE;
 
@@ -161,7 +161,8 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 				attr_cast = (ietf_attr_product_info_t*)attr;
 				os_name = attr_cast->get_info(attr_cast, NULL, NULL);
-				DBG1(DBG_IMV, "operating system name is '%s'", os_name);
+				DBG1(DBG_IMV, "operating system name is '%.*s'",
+							   os_name.len, os_name.ptr);
 				break;
 			}
 			case IETF_ATTR_STRING_VERSION:
@@ -204,15 +205,30 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	}
 	enumerator->destroy(enumerator);
 
-	if (os_name && os_version.len)
+	if (os_name.len && os_version.len)
 	{
-		os_state->set_info(os_state, os_name, os_version);
+		char *product_info;
 
-		DBG1(DBG_IMV, "requesting installed packages for '%s'",
-					   os_state->get_info(os_state));
-		attr = ietf_attr_attr_request_create(PEN_IETF,
-											 IETF_ATTR_INSTALLED_PACKAGES);
-		attr_list->insert_last(attr_list, attr);
+		os_state->set_info(os_state, os_name, os_version);
+		product_info = os_state->get_info(os_state);
+
+		if (streq(product_info, "Windows 1.2.3"))
+		{
+			DBG1(DBG_IMV, "OS '%s' is not supported", product_info);
+
+			state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
+			assessment = TRUE;
+		}
+		else
+		{	
+			DBG1(DBG_IMV, "requesting installed packages for '%s'",
+						   product_info);
+			attr = ietf_attr_attr_request_create(PEN_IETF,
+								IETF_ATTR_INSTALLED_PACKAGES);
+			attr_list->insert_last(attr_list, attr);
+		}
 	}
 	pa_tnc_msg->destroy(pa_tnc_msg);
 

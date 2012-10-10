@@ -24,6 +24,7 @@
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
+#include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
 
@@ -40,6 +41,7 @@ static const char imc_name[] = "OS";
 #define IMC_SUBTYPE		PA_SUBTYPE_IETF_OPERATING_SYSTEM
 
 static imc_agent_t *imc_os;
+static os_info_t *os;
 
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
@@ -60,6 +62,16 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
+
+	os = os_info_create();
+	if (!os)
+	{
+		imc_os->destroy(imc_os);
+		imc_os = NULL;
+
+		return TNC_RESULT_FATAL;
+	}
+
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
 		DBG1(DBG_IMC, "no common IF-IMC version");
@@ -110,9 +122,8 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 static void add_product_info(linked_list_t *attr_list)
 {
 	pa_tnc_attr_t *attr;
-	char *os_name = "Ubuntu";
 
-	attr = ietf_attr_product_info_create(PEN_IETF, 0, os_name);
+	attr = ietf_attr_product_info_create(PEN_IETF, 0, os->get_name(os));
 	attr_list->insert_last(attr_list, attr);
 }
 
@@ -122,9 +133,9 @@ static void add_product_info(linked_list_t *attr_list)
 static void add_string_version(linked_list_t *attr_list)
 {
 	pa_tnc_attr_t *attr;
-	chunk_t os_version = { "12.04", 5};
 
-	attr = ietf_attr_string_version_create(os_version, chunk_empty, chunk_empty);
+	attr = ietf_attr_string_version_create(os->get_version(os),
+										   chunk_empty, chunk_empty);
 	attr_list->insert_last(attr_list, attr);
 }
 
@@ -361,6 +372,9 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 	}
 	imc_os->destroy(imc_os);
 	imc_os = NULL;
+
+	os->destroy(os);
+	os = NULL;
 
 	return TNC_RESULT_SUCCESS;
 }

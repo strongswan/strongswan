@@ -764,10 +764,13 @@ Debug level for a stand-alone libimcv library
 .TP
 .BR libimcv.stderr_quiet " [no]"
 Disable output to stderr with a stand-alone libimcv library
-.SS libimcv plugins section
 .TP
-.BR libimcv.plugins.imc-attestation.platform_info
-Information on operating system and hardware platform
+.BR libimcv.os_info.name
+Manually set the name of the client OS (e.g. Ubuntu)
+.TP
+.BR libimcv.os_info.version
+Manually set the version of the client OS (e.g. 12.04 i686)
+.SS libimcv plugins section
 .TP
 .BR libimcv.plugins.imc-attestation.aik_blob
 AIK encrypted private key blob file
@@ -798,9 +801,6 @@ Preferred measurement hash algorithm
 .TP
 .BR libimcv.plugins.imv-attestation.min_nonce_len " [0]"
 DH minimum nonce length
-.TP
-.BR libimcv.plugins.imv-attestation.platform_info
-Information on operating system and hardware platform
 .TP
 .BR libimcv.plugins.imv-scanner.closed_port_policy " [yes]"
 By default all ports must be closed (yes) or can be open (no)

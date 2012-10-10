@@ -314,10 +314,15 @@ METHOD(pts_t, get_platform_info, char*,
 }
 
 METHOD(pts_t, set_platform_info, void,
-	private_pts_t *this, char *info)
+	private_pts_t *this, chunk_t name, chunk_t version)
 {
+	int len = name.len + 1 + version.len + 1;
+
+	/* platform info is a concatenation of OS name and OS version */
 	free(this->platform_info);
-	this->platform_info = strdup(info);
+	this->platform_info = malloc(len);
+	snprintf(this->platform_info, len, "%.*s %.*s", name.len, name.ptr,
+													version.len, version.ptr);
 }
 
 METHOD(pts_t, get_tpm_version_info, bool,
@@ -1047,122 +1052,6 @@ METHOD(pts_t, destroy, void,
 	free(this);
 }
 
-#define RELEASE_LSB		0
-#define RELEASE_DEBIAN	1
-
-/**
- * Determine Linux distribution and hardware platform
- */
-static char* extract_platform_info(void)
-{
-	FILE *file;
-	char buf[BUF_LEN], *pos = buf, *value = NULL;
-	int i, len = BUF_LEN - 1;
-	struct utsname uninfo;
-
-	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
-	const char* releases[] = {
-		"/etc/lsb-release",           "/etc/debian_version",
-		"/etc/SuSE-release",          "/etc/novell-release",
-		"/etc/sles-release",          "/etc/redhat-release",
-		"/etc/fedora-release",        "/etc/gentoo-release",
-		"/etc/slackware-version",     "/etc/annvix-release",
-		"/etc/arch-release",          "/etc/arklinux-release",
-		"/etc/aurox-release",         "/etc/blackcat-release",
-		"/etc/cobalt-release",        "/etc/conectiva-release",
-		"/etc/debian_release",        "/etc/immunix-release",
-		"/etc/lfs-release",           "/etc/linuxppc-release",
-		"/etc/mandrake-release",      "/etc/mandriva-release",
-		"/etc/mandrakelinux-release", "/etc/mklinux-release",
-		"/etc/pld-release",           "/etc/redhat_version",
-		"/etc/slackware-release",     "/etc/e-smith-release",
-		"/etc/release",               "/etc/sun-release",
-		"/etc/tinysofa-release",      "/etc/turbolinux-release",
-		"/etc/ultrapenguin-release",  "/etc/UnitedLinux-release",
-		"/etc/va-release",            "/etc/yellowdog-release"
-	};
-
-	const char description[] = "DISTRIB_DESCRIPTION=\"";
-	const char str_debian[] = "Debian ";
-
-	for (i = 0; i < countof(releases); i++)
-	{
-		file = fopen(releases[i], "r");
-		if (!file)
-		{
-			continue;
-		}
-
-		if (i == RELEASE_DEBIAN)
-		{
-			strcpy(buf, str_debian);
-			pos += strlen(str_debian);
-			len -= strlen(str_debian);
-		}
-
-		fseek(file, 0, SEEK_END);
-		len = min(ftell(file), len);
-		rewind(file);
-		pos[len] = '\0';
-		if (fread(pos, 1, len, file) != len)
-		{
-			DBG1(DBG_PTS, "failed to read file '%s'", releases[i]);
-			fclose(file);
-			return NULL;
-		}
-		fclose(file);
-
-		if (i == RELEASE_LSB)
-		{
-			pos = strstr(buf, description);
-			if (!pos)
-			{
-				DBG1(DBG_PTS, "failed to find begin of lsb-release "
-							  "DESCRIPTION field");
-				return NULL;
-			}
-			value = pos + strlen(description);
-			pos = strchr(value, '"');
-			if (!pos)
-			{
-				DBG1(DBG_PTS, "failed to find end of lsb-release "
-							  "DESCRIPTION field");
-				return NULL;
-			 }
-		}
-		else
-		{
-			value = buf;
-			pos = strchr(pos, '\n');
-			if (!pos)
-			{
-				DBG1(DBG_PTS, "failed to find end of release string");
-				return NULL;
-			 }
-		}
-		break;
-	}
-
-	if (!value)
-	{
-		DBG1(DBG_PTS, "no distribution release file found");
-		return NULL;
-	}
-
-	if (uname(&uninfo) < 0)
-	{
-		DBG1(DBG_PTS, "could not retrieve machine architecture");
-		return NULL;
-	}
-
-	*pos++ = ' ';
-	len = sizeof(buf)-1 + (pos - buf);
-	strncpy(pos, uninfo.machine, len);
-
-	DBG1(DBG_PTS, "platform is '%s'", value);
-	return strdup(value);
-}
-
 /**
  * Check for a TPM by querying for TPM Version Info
  */
@@ -1264,8 +1153,6 @@ pts_t *pts_create(bool is_imc)
 
 	if (is_imc)
 	{
-		this->platform_info = extract_platform_info();
-
 		if (has_tpm(this))
 		{
 			this->has_tpm = TRUE;

@@ -212,7 +212,6 @@ METHOD(imc_attestation_state_t, next_evidence, bool,
 imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 {
 	private_imc_attestation_state_t *this;
-	char *platform_info;
 
 	INIT(this,
 		.public = {
@@ -240,13 +239,6 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 		.components = linked_list_create(),
 		.list = linked_list_create(),
 	);
-
-	platform_info = lib->settings->get_str(lib->settings,
-						 "libimcv.plugins.imc-attestation.platform_info", NULL);
-	if (platform_info)
-	{
-		this->pts->set_platform_info(this->pts, platform_info);
-	}
 	
 	return &this->public.interface;
 }

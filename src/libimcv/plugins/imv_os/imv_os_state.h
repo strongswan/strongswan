@@ -43,7 +43,7 @@ struct imv_os_state_t {
 	 * @param name		OS name
 	 * @param version	OS version
 	 */
-	void (*set_info)(imv_os_state_t *this, char *name, chunk_t version);
+	void (*set_info)(imv_os_state_t *this, chunk_t name, chunk_t version);
 
 	/**
 	 * Get OS Product Information

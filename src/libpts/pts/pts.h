@@ -171,9 +171,10 @@ struct pts_t {
 	/**
 	 * Set Platform and OS Info
 	 *
-	 * @param info				Platform and OS info
+	 * @param name				OS name
+	 * @param version			OS version
 	 */
-	void (*set_platform_info)(pts_t *this, char *info);
+	void (*set_platform_info)(pts_t *this, chunk_t name, chunk_t version);
 
 	/**
 	 * Get TPM 1.2 Version Info

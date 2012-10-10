@@ -22,6 +22,7 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_string_version.h>
 
 #include <libpts.h>
 
@@ -219,6 +220,8 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	pts_t *pts;
+	chunk_t os_name = chunk_empty;
+	chunk_t os_version = chunk_empty;
 	enumerator_t *enumerator;
 	TNC_Result result;
 
@@ -228,7 +231,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	/* get current IMV state */
+	/* get current IMV state  */
 	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
@@ -260,34 +263,47 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 
 		if (type.vendor_id == PEN_IETF)
 		{
-			if (type.type == IETF_ATTR_PA_TNC_ERROR)
+			switch (type.type)
 			{
-				ietf_attr_pa_tnc_error_t *error_attr;
-				pen_type_t error_code;
-				chunk_t msg_info;
-
-				error_attr = (ietf_attr_pa_tnc_error_t*)attr;
-				error_code = error_attr->get_error_code(error_attr);
-
-				if (error_code.vendor_id == PEN_TCG)
+				case IETF_ATTR_PA_TNC_ERROR:
 				{
-					msg_info = error_attr->get_msg_info(error_attr);
+					ietf_attr_pa_tnc_error_t *error_attr;
+					pen_type_t error_code;
+					chunk_t msg_info;
 
-					DBG1(DBG_IMV, "received TCG-PTS error '%N'",
-						 pts_error_code_names, error_code.type);
-					DBG1(DBG_IMV, "error information: %B", &msg_info);
+					error_attr = (ietf_attr_pa_tnc_error_t*)attr;
+					error_code = error_attr->get_error_code(error_attr);
 
-					result = TNC_RESULT_FATAL;
+					if (error_code.vendor_id == PEN_TCG)
+					{
+						msg_info = error_attr->get_msg_info(error_attr);
+
+						DBG1(DBG_IMV, "received TCG-PTS error '%N'",
+							 pts_error_code_names, error_code.type);
+						DBG1(DBG_IMV, "error information: %B", &msg_info);
+
+						result = TNC_RESULT_FATAL;
+					}
+					break;
 				}
-			}
-			else if (type.type == IETF_ATTR_PRODUCT_INFORMATION)
-			{
-				ietf_attr_product_info_t *attr_cast;
-				char *platform_info;
+				case IETF_ATTR_PRODUCT_INFORMATION:
+				{
+					ietf_attr_product_info_t *attr_cast;
 
-				attr_cast = (ietf_attr_product_info_t*)attr;
-				platform_info = attr_cast->get_info(attr_cast, NULL, NULL);
-				pts->set_platform_info(pts, platform_info);
+					attr_cast = (ietf_attr_product_info_t*)attr;
+					os_name = attr_cast->get_info(attr_cast, NULL, NULL);
+					break;
+				}
+				case IETF_ATTR_STRING_VERSION:
+				{
+					ietf_attr_string_version_t *attr_cast;
+
+					attr_cast = (ietf_attr_string_version_t*)attr;
+					os_version = attr_cast->get_version(attr_cast, NULL, NULL);
+					break;
+				}
+				default:
+					break;
 			}
 		}
 		else if (type.vendor_id == PEN_TCG)
@@ -301,6 +317,11 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (os_name.len && os_version.len)
+	{
+		pts->set_platform_info(pts, os_name, os_version);
+	}
 	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	if (result != TNC_RESULT_SUCCESS)

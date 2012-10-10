@@ -51,7 +51,7 @@ INSERT INTO products (
 INSERT INTO products (
   name
 ) VALUES (
- 'Ubuntu 12.04.1 LTS i686'
+ 'Ubuntu 12.04 i686'
 );
 
 /* Files */

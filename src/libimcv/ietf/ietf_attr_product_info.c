@@ -73,7 +73,7 @@ struct private_ietf_attr_product_info_t {
 	/**
 	 * Product Name
 	 */
-	char *product_name;
+	chunk_t product_name;
 
 	/**
 	 * Reference count
@@ -109,18 +109,15 @@ METHOD(pa_tnc_attr_t, build, void,
 	private_ietf_attr_product_info_t *this)
 {
 	bio_writer_t *writer;
-	chunk_t product_name;
 
 	if (this->value.ptr)
 	{
 		return;
 	}
-	product_name = chunk_create(this->product_name, strlen(this->product_name));
-
 	writer = bio_writer_create(PRODUCT_INFO_MIN_SIZE);
 	writer->write_uint24(writer, this->product_vendor_id);
 	writer->write_uint16(writer, this->product_id);
-	writer->write_data  (writer, product_name);
+	writer->write_data  (writer, this->product_name);
 
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -151,10 +148,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset = 3;
 		return FAILED;
 	}
-
-	this->product_name = malloc(product_name.len + 1);
-	memcpy(this->product_name, product_name.ptr, product_name.len);
-	this->product_name[product_name.len] = '\0';
+	this->product_name = chunk_clone(product_name);
 
 	return SUCCESS;
 }
@@ -171,13 +165,13 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		free(this->product_name);
+		free(this->product_name.ptr);
 		free(this->value.ptr);
 		free(this);
 	}
 }
 
-METHOD(ietf_attr_product_info_t, get_info, char*,
+METHOD(ietf_attr_product_info_t, get_info, chunk_t,
 	private_ietf_attr_product_info_t *this, pen_t *vendor_id, u_int16_t *id)
 {
 	if (vendor_id)
@@ -195,7 +189,7 @@ METHOD(ietf_attr_product_info_t, get_info, char*,
  * Described in header.
  */
 pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
-											 char *name)
+											 chunk_t name)
 {
 	private_ietf_attr_product_info_t *this;
 
@@ -216,7 +210,7 @@ pa_tnc_attr_t *ietf_attr_product_info_create(pen_t vendor_id, u_int16_t id,
 		.type = { PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION },
 		.product_vendor_id = vendor_id,
 		.product_id = id,
-		.product_name = strdup(name),
+		.product_name = chunk_clone(name),
 		.ref = 1,
 	);
 

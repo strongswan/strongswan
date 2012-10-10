@@ -1,6 +1,6 @@
 #!/bin/sh
 
-p="Ubuntu 12.04.1 LTS i686"
+p="Ubuntu 12.04 i686"
 
 ipsec attest --add --product "$p" --sha1-ima --dir  /sbin 
 ipsec attest --add --product "$p" --sha1-ima --dir  /usr/sbin
