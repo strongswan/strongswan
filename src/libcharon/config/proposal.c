@@ -515,6 +515,23 @@ METHOD(proposal_t, clone_, proposal_t*,
 }
 
 /**
+ * Map integrity algorithms to the PRF functions using the same algorithm.
+ */
+static const struct {
+	integrity_algorithm_t integ;
+	pseudo_random_function_t prf;
+} integ_prf_map[] = {
+	{AUTH_HMAC_SHA1_96,					PRF_HMAC_SHA1					},
+	{AUTH_HMAC_SHA2_256_128,			PRF_HMAC_SHA2_256				},
+	{AUTH_HMAC_SHA2_384_192,			PRF_HMAC_SHA2_384				},
+	{AUTH_HMAC_SHA2_512_256,			PRF_HMAC_SHA2_512				},
+	{AUTH_HMAC_MD5_96,					PRF_HMAC_MD5					},
+	{AUTH_AES_XCBC_96,					PRF_AES128_XCBC					},
+	{AUTH_CAMELLIA_XCBC_96,				PRF_CAMELLIA128_XCBC			},
+	{AUTH_AES_CMAC_96,					PRF_AES128_CMAC					},
+};
+
+/**
  * Checks the proposal read from a string.
  */
 static void check_proposal(private_proposal_t *this)
@@ -522,6 +539,27 @@ static void check_proposal(private_proposal_t *this)
 	enumerator_t *e;
 	algorithm_t *alg;
 	bool all_aead = TRUE;
+	int i;
+
+	if (this->protocol == PROTO_IKE &&
+		this->prf_algos->get_count(this->prf_algos) == 0)
+	{	/* No explicit PRF found. We assume the same algorithm as used
+		 * for integrity checking */
+		e = this->integrity_algos->create_enumerator(this->integrity_algos);
+		while (e->enumerate(e, &alg))
+		{
+			for (i = 0; i < countof(integ_prf_map); i++)
+			{
+				if (alg->algorithm == integ_prf_map[i].integ)
+				{
+					add_algorithm(this, PSEUDO_RANDOM_FUNCTION,
+								  integ_prf_map[i].prf, 0);
+					break;
+				}
+			}
+		}
+		e->destroy(e);
+	}
 
 	e = this->encryption_algos->create_enumerator(this->encryption_algos);
 	while (e->enumerate(e, &alg))
@@ -572,44 +610,6 @@ static bool add_string_algo(private_proposal_t *this, const char *alg)
 
 	add_algorithm(this, token->type, token->algorithm, token->keysize);
 
-	if (this->protocol == PROTO_IKE && token->type == INTEGRITY_ALGORITHM)
-	{
-		pseudo_random_function_t prf;
-
-		switch (token->algorithm)
-		{
-			case AUTH_HMAC_SHA1_96:
-				prf = PRF_HMAC_SHA1;
-				break;
-			case AUTH_HMAC_SHA2_256_128:
-				prf = PRF_HMAC_SHA2_256;
-				break;
-			case AUTH_HMAC_SHA2_384_192:
-				prf = PRF_HMAC_SHA2_384;
-				break;
-			case AUTH_HMAC_SHA2_512_256:
-				prf = PRF_HMAC_SHA2_512;
-				break;
-			case AUTH_HMAC_MD5_96:
-				prf = PRF_HMAC_MD5;
-				break;
-			case AUTH_AES_XCBC_96:
-				prf = PRF_AES128_XCBC;
-				break;
-			case AUTH_CAMELLIA_XCBC_96:
-				prf = PRF_CAMELLIA128_XCBC;
-				break;
-			case AUTH_AES_CMAC_96:
-				prf = PRF_AES128_CMAC;
-				break;
-			default:
-				prf = PRF_UNDEFINED;
-		}
-		if (prf != PRF_UNDEFINED)
-		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
-		}
-	}
 	return TRUE;
 }
 
