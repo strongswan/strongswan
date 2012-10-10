@@ -59,11 +59,6 @@ struct private_android_service_t {
 	char *type;
 
 	/**
-	 * local ipv4 address
-	 */
-	char *local_address;
-
-	/**
 	 * gateway
 	 */
 	char *gateway;
@@ -480,7 +475,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		}
 	};
 
-	ike_cfg = ike_cfg_create(TRUE, TRUE, this->local_address, FALSE,
+	ike_cfg = ike_cfg_create(TRUE, TRUE, "0.0.0.0", FALSE,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 this->gateway, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
@@ -591,7 +586,6 @@ METHOD(android_service_t, destroy, void,
 	close_tun_device(this);
 	this->lock->destroy(this->lock);
 	free(this->type);
-	free(this->local_address);
 	free(this->gateway);
 	free(this->username);
 	if (this->password)
@@ -606,8 +600,8 @@ METHOD(android_service_t, destroy, void,
  * See header
  */
 android_service_t *android_service_create(android_creds_t *creds, char *type,
-										  char *local_address, char *gateway,
-										  char *username, char *password)
+										  char *gateway, char *username,
+										  char *password)
 {
 	private_android_service_t *this;
 
@@ -624,7 +618,6 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.local_address = local_address,
 		.username = username,
 		.password = password,
 		.gateway = gateway,

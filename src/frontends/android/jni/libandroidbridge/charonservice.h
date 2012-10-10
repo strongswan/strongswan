@@ -32,6 +32,7 @@
 #define CHARONSERVICE_H_
 
 #include "vpnservice_builder.h"
+#include "kernel/network_manager.h"
 
 #include <library.h>
 #include <utils/linked_list.h>
@@ -111,6 +112,12 @@ struct charonservice_t {
 	 */
 	vpnservice_builder_t *(*get_vpnservice_builder)(charonservice_t *this);
 
+	/**
+	 * Get the current network_manager_t object
+	 *
+	 * @return				NetworkManager instance
+	 */
+	network_manager_t *(*get_network_manager)(charonservice_t *this);
 };
 
 /**

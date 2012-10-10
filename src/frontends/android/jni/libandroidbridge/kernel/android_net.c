@@ -14,6 +14,8 @@
 
 #include "android_net.h"
 
+#include "../charonservice.h"
+
 typedef struct private_kernel_android_net_t private_kernel_android_net_t;
 
 struct private_kernel_android_net_t {
@@ -22,7 +24,19 @@ struct private_kernel_android_net_t {
 	 * Public kernel interface
 	 */
 	kernel_android_net_t public;
+
+	/**
+	 * Reference to NetworkManager object
+	 */
+	network_manager_t *network_manager;
 };
+
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_kernel_android_net_t *this, host_t *dest, host_t *src)
+{
+	return this->network_manager->get_local_address(this->network_manager,
+											dest->get_family(dest) == AF_INET);
+}
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_android_net_t *this, host_t *virtual_ip, host_t *iface_ip)
@@ -47,7 +61,7 @@ kernel_android_net_t *kernel_android_net_create()
 	INIT(this,
 		.public = {
 			.interface = {
-				.get_source_addr = (void*)return_null,
+				.get_source_addr = _get_source_addr,
 				.get_nexthop = (void*)return_null,
 				.get_interface = (void*)return_null,
 				.create_address_enumerator = (void*)enumerator_create_empty,
@@ -58,6 +72,7 @@ kernel_android_net_t *kernel_android_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.network_manager = charonservice->get_network_manager(charonservice),
 	);
 
 	return &this->public;

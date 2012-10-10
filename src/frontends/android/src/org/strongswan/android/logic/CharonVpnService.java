@@ -18,14 +18,10 @@
 package org.strongswan.android.logic;
 
 import java.io.File;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Enumeration;
 
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
@@ -218,9 +214,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						initializeCharon(builder, mLogFile);
 						Log.i(TAG, "charon started");
 
-						String local_address = getLocalIPv4Address();
 						initiate(mCurrentProfile.getVpnType().getIdentifier(),
-								 local_address != null ? local_address : "0.0.0.0",
 								 mCurrentProfile.getGateway(), mCurrentProfile.getUsername(),
 								 mCurrentProfile.getPassword());
 					}
@@ -486,41 +480,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	/**
 	 * Initiate VPN, provided by libandroidbridge.so
 	 */
-	public native void initiate(String type, String local_address, String gateway,
-								String username, String password);
-
-	/**
-	 * Helper function that retrieves a local IPv4 address.
-	 *
-	 * @return string representation of an IPv4 address, or null if none found
-	 */
-	private static String getLocalIPv4Address()
-	{
-		try
-		{
-			Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
-			while (en.hasMoreElements())
-			{
-				NetworkInterface intf = en.nextElement();
-
-				Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses();
-				while (enumIpAddr.hasMoreElements())
-				{
-					InetAddress inetAddress = enumIpAddr.nextElement();
-					if (!inetAddress.isLoopbackAddress() && inetAddress.getAddress().length == 4)
-					{
-						return inetAddress.getHostAddress().toString();
-					}
-				}
-			}
-		}
-		catch (SocketException ex)
-		{
-			ex.printStackTrace();
-			return null;
-		}
-		return null;
-	}
+	public native void initiate(String type, String gateway, String username, String password);
 
 	/**
 	 * Adapter for VpnService.Builder which is used to access it safely via JNI.
