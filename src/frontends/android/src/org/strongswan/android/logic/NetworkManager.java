@@ -22,11 +22,47 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 
-public class NetworkManager
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
+public class NetworkManager extends BroadcastReceiver
 {
-	public NetworkManager()
+	private final Context mContext;
+	private boolean mRegistered;
+
+	public NetworkManager(Context context)
 	{
+		mContext = context;
 	}
+
+	public void Register()
+	{
+		mContext.registerReceiver(this, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+	}
+
+	public void Unregister()
+	{
+		mContext.unregisterReceiver(this);
+	}
+
+	@Override
+	public void onReceive(Context context, Intent intent)
+	{
+		ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo info = cm.getActiveNetworkInfo();
+		networkChanged(info == null || !info.isConnected());
+	}
+
+	/**
+	 * Notify the native parts about a network change
+	 *
+	 * @param disconnected true if no connection is available at the moment
+	 */
+	public native void networkChanged(boolean disconnected);
 
 	/**
 	 * Function that retrieves a local address of the given family.

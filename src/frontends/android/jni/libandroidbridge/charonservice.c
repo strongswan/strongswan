@@ -414,7 +414,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 		.attr = android_attr_create(),
 		.creds = android_creds_create(),
 		.builder = vpnservice_builder_create(builder),
-		.network_manager = network_manager_create(),
+		.network_manager = network_manager_create(service),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;

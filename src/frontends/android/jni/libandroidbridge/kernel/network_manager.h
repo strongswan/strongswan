@@ -29,7 +29,19 @@
 typedef struct network_manager_t network_manager_t;
 
 /**
- * NetworkManager, used to retrieve local IP addresses.
+ * Callback called if connectivity changes somehow.
+ *
+ * Implementation should be quick as the call is made by the Java apps main
+ * thread.
+ *
+ * @param data					data supplied during registration
+ * @param disconnected			TRUE if currently disconnected
+ */
+typedef void (*connectivity_cb_t)(void *data, bool disconnected);
+
+/**
+ * NetworkManager, used to listen for network changes and retrieve local IP
+ * addresses.
  *
  * Communicates with NetworkManager via JNI
  */
@@ -44,6 +56,25 @@ struct network_manager_t {
 	host_t *(*get_local_address)(network_manager_t *this, bool ipv4);
 
 	/**
+	 * Register a callback that is called if connectivity changes
+	 *
+	 * @note Only the first registered callback is currently used
+	 *
+	 * @param cb				callback to register
+	 * @param data				data provided to callback
+	 */
+	void (*add_connectivity_cb)(network_manager_t *this, connectivity_cb_t cb,
+								void *data);
+
+	/**
+	 * Unregister a previously registered callback for connectivity changes
+	 *
+	 * @param cb				previously registered callback
+	 */
+	void (*remove_connectivity_cb)(network_manager_t *this,
+								   connectivity_cb_t cb);
+
+	/**
 	 * Destroy a network_manager_t instance
 	 */
 	void (*destroy)(network_manager_t *this);
@@ -52,8 +83,9 @@ struct network_manager_t {
 /**
  * Create a network_manager_t instance
  *
+ * @param context				Context object
  * @return						network_manager_t instance
  */
-network_manager_t *network_manager_create();
+network_manager_t *network_manager_create(jobject context);
 
 #endif /** NETWORK_MANAGER_H_ @}*/
