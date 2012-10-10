@@ -547,7 +547,7 @@ public class CharonVpnService extends VpnService implements Runnable
 			Context context = getApplicationContext();
 			Intent intent = new Intent(context, MainActivity.class);
 			PendingIntent pending = PendingIntent.getActivity(context, 0, intent,
-															  Intent.FLAG_ACTIVITY_NEW_TASK);
+															  PendingIntent.FLAG_UPDATE_CURRENT);
 			builder.setConfigureIntent(pending);
 			return builder;
 		}
