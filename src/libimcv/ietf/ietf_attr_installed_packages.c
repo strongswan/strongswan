@@ -242,6 +242,10 @@ METHOD(ietf_attr_installed_packages_t, add, void,
 {
 	package_entry_t *entry;
 
+	/* restrict package name and package version number fields to 255 octets */
+	name.len = min(255, name.len);
+	version.len = min(255, version.len);
+
 	entry = malloc_thing(package_entry_t);
 	entry->name = chunk_clone(name);
 	entry->version = chunk_clone(version);
