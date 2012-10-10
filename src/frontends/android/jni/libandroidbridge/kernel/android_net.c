@@ -15,6 +15,13 @@
 #include "android_net.h"
 
 #include "../charonservice.h"
+#include <hydra.h>
+#include <debug.h>
+#include <processing/jobs/callback_job.h>
+#include <threading/mutex.h>
+
+/** delay before firing roam events (ms) */
+#define ROAM_DELAY 100
 
 typedef struct private_kernel_android_net_t private_kernel_android_net_t;
 
@@ -29,7 +36,56 @@ struct private_kernel_android_net_t {
 	 * Reference to NetworkManager object
 	 */
 	network_manager_t *network_manager;
+
+	/**
+	 * earliest time of the next roam event
+	 */
+	timeval_t next_roam;
+
+	/**
+	 * mutex to check and update roam event time
+	 */
+	mutex_t *mutex;
 };
+
+/**
+ * callback function that raises the delayed roam event
+ */
+static job_requeue_t roam_event()
+{
+	hydra->kernel_interface->roam(hydra->kernel_interface, TRUE);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Listen for connectivity change events and queue a roam event
+ */
+static void connectivity_cb(private_kernel_android_net_t *this,
+							bool disconnected)
+{
+	timeval_t now;
+	job_t *job;
+
+	time_monotonic(&now);
+	this->mutex->lock(this->mutex);
+	if (!timercmp(&now, &this->next_roam, >))
+	{
+		this->mutex->unlock(this->mutex);
+		return;
+	}
+	now.tv_usec += ROAM_DELAY * 1000;
+	while (now.tv_usec > 1000000)
+	{
+		now.tv_sec++;
+		now.tv_usec -= 1000000;
+	}
+	this->next_roam = now;
+	this->mutex->unlock(this->mutex);
+
+	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event, NULL,
+									   NULL, NULL);
+	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+}
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_android_net_t *this, host_t *dest, host_t *src)
@@ -48,6 +104,9 @@ METHOD(kernel_net_t, add_ip, status_t,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_android_net_t *this)
 {
+	this->network_manager->remove_connectivity_cb(this->network_manager,
+												 (void*)connectivity_cb);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -72,8 +131,12 @@ kernel_android_net_t *kernel_android_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.network_manager = charonservice->get_network_manager(charonservice),
 	);
+	timerclear(&this->next_roam);
 
+	this->network_manager->add_connectivity_cb(this->network_manager,
+											  (void*)connectivity_cb, this);
 	return &this->public;
 };
