@@ -53,6 +53,8 @@ struct private_kernel_android_net_t {
  */
 static job_requeue_t roam_event()
 {
+	/* this will fail if no connection is up */
+	charonservice->bypass_socket(charonservice, -1, 0);
 	hydra->kernel_interface->roam(hydra->kernel_interface, TRUE);
 	return JOB_REQUEUE_NONE;
 }

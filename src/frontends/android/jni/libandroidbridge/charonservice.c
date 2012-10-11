@@ -82,6 +82,11 @@ struct private_charonservice_t {
 	 * CharonVpnService reference
 	 */
 	jobject vpn_service;
+
+	/**
+	 * Sockets that were bypassed and we keep track for
+	 */
+	linked_list_t *sockets;
 };
 
 /**
@@ -177,8 +182,10 @@ failed:
 	return success;
 }
 
-METHOD(charonservice_t, bypass_socket, bool,
-	private_charonservice_t *this, int fd, int family)
+/**
+ * Bypass a single socket
+ */
+static bool bypass_single_socket(intptr_t fd, private_charonservice_t *this)
 {
 	JNIEnv *env;
 	jmethodID method_id;
@@ -193,7 +200,7 @@ METHOD(charonservice_t, bypass_socket, bool,
 	}
 	if (!(*env)->CallBooleanMethod(env, this->vpn_service, method_id, fd))
 	{
-		DBG1(DBG_CFG, "VpnService.protect() failed");
+		DBG2(DBG_KNL, "VpnService.protect() failed");
 		goto failed;
 	}
 	androidjni_detach_thread();
@@ -203,6 +210,19 @@ failed:
 	androidjni_exception_occurred(env);
 	androidjni_detach_thread();
 	return FALSE;
+}
+
+METHOD(charonservice_t, bypass_socket, bool,
+	private_charonservice_t *this, int fd, int family)
+{
+	if (fd >= 0)
+	{
+		this->sockets->insert_last(this->sockets, (void*)(intptr_t)fd);
+		return bypass_single_socket((intptr_t)fd, this);
+	}
+	this->sockets->invoke_function(this->sockets, (void*)bypass_single_socket,
+								   this);
+	return TRUE;
 }
 
 /**
@@ -415,6 +435,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 		.creds = android_creds_create(),
 		.builder = vpnservice_builder_create(builder),
 		.network_manager = network_manager_create(service),
+		.sockets = linked_list_create(),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
@@ -451,6 +472,7 @@ static void charonservice_deinit(JNIEnv *env)
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
 	this->network_manager->destroy(this->network_manager);
+	this->sockets->destroy(this->sockets);
 	this->builder->destroy(this->builder);
 	this->creds->destroy(this->creds);
 	this->attr->destroy(this->attr);

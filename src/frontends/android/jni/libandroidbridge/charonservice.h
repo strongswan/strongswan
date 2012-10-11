@@ -70,7 +70,9 @@ struct charonservice_t {
 
 	/**
 	 * Install a bypass policy for the given socket using the protect() Method
-	 * of the Android VpnService interface
+	 * of the Android VpnService interface.
+	 *
+	 * Use -1 as fd to re-bypass previously bypassed sockets.
 	 *
 	 * @param fd			socket file descriptor
 	 * @param family		socket protocol family
