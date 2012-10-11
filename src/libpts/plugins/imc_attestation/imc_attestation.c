@@ -21,6 +21,7 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_string_version.h>
 #include <ietf/ietf_attr_assess_result.h>
 #include <os_info/os_info.h>
 
@@ -148,7 +149,6 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 {
 	linked_list_t *attr_list;
 	pa_tnc_attr_t *attr;
-	chunk_t os_name, os_version;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imc_attestation)
