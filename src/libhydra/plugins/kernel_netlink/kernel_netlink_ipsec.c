@@ -1834,6 +1834,24 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
+	if (mark.value)
+	{
+		struct xfrm_mark *mrk;
+		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
+
+		rthdr->rta_type = XFRMA_MARK;
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+
+		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
+		mrk->v = mark.value;
+		mrk->m = mark.mask;
+	}
+
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
