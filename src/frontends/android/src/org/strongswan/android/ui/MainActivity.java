@@ -58,6 +58,8 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
+	/** Use "bring your own device" (BYOD) features */
+	public static final boolean USE_BYOD = true;
 	private static final int PREPARE_VPN_SERVICE = 0;
 	private static final String PROFILE_NAME = "org.strongswan.android.MainActivity.PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "org.strongswan.android.MainActivity.REQUIRES_PASSWORD";

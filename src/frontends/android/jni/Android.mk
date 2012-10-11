@@ -1,9 +1,17 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+# use "bring your own device" (BYOD) features (also see USE_BYOD in
+# MainActivity.java)
+strongswan_USE_BYOD := true
+
 strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
 	pkcs1 pkcs8 pem xcbc hmac socket-default kernel-netlink \
 	eap-identity eap-mschapv2 eap-md5 eap-gtc
+
+ifneq ($(strongswan_USE_BYOD),)
+strongswan_CHARON_PLUGINS += eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20
+endif
 
 strongswan_PLUGINS := $(strongswan_CHARON_PLUGINS)
 
@@ -52,12 +60,25 @@ strongswan_CFLAGS := \
 	-DDEV_RANDOM=\"/dev/random\" \
 	-DDEV_URANDOM=\"/dev/urandom\"
 
+ifneq ($(strongswan_USE_BYOD),)
+strongswan_CFLAGS += -DUSE_BYOD
+endif
+
+strongswan_BUILD := \
+	vstr \
+	openssl \
+	libandroidbridge \
+	strongswan/src/libipsec \
+	strongswan/src/libcharon \
+	strongswan/src/libhydra \
+	strongswan/src/libstrongswan
+
+ifneq ($(strongswan_USE_BYOD),)
+strongswan_BUILD += \
+	strongswan/src/libtnccs \
+	strongswan/src/libtncif \
+	strongswan/src/libimcv
+endif
+
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
-		vstr \
-		openssl \
-		libandroidbridge \
-		strongswan/src/libipsec \
-		strongswan/src/libcharon \
-		strongswan/src/libhydra \
-		strongswan/src/libstrongswan \
-))
+		$(strongswan_BUILD)))
