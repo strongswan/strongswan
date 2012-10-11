@@ -21,6 +21,9 @@
  * @defgroup android_backend backend
  * @ingroup libandroidbridge
  *
+ * @defgroup android_byod byod
+ * @ingroup libandroidbridge
+ *
  * @defgroup android_kernel kernel
  * @ingroup libandroidbridge
  *

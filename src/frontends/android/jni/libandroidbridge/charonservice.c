@@ -30,6 +30,10 @@
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
 
+#ifdef USE_BYOD
+#include "byod/imc_android.h"
+#endif
+
 #include <daemon.h>
 #include <hydra.h>
 #include <ipsec.h>
@@ -357,7 +361,7 @@ static void initiate(char *type, char *gateway, char *username, char *password)
 /**
  * Initialize/deinitialize Android backend
  */
-static bool charonservice_register(void *plugin, plugin_feature_t *feature,
+static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 								   bool reg, void *data)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
@@ -434,6 +438,13 @@ static void set_options(char *logfile)
 	lib->settings->set_str(lib->settings,
 					"charon.interfaces_ignore", "lo, tun0, tun1, tun2, tun3, "
 					"tun4");
+
+#ifdef USE_BYOD
+	lib->settings->set_str(lib->settings,
+					"charon.plugins.eap-tnc.protocol", "tnccs-2.0");
+	lib->settings->set_bool(lib->settings,
+					"android.imc.send_os_info", TRUE);
+#endif
 }
 
 /**
@@ -445,10 +456,18 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 	static plugin_feature_t features[] = {
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-		PLUGIN_CALLBACK((plugin_feature_callback_t)charonservice_register, NULL),
-			PLUGIN_PROVIDE(CUSTOM, "Android backend"),
+		PLUGIN_CALLBACK(charonservice_register, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
 	};
+#ifdef USE_BYOD
+	static plugin_feature_t byod_features[] = {
+		PLUGIN_CALLBACK(imc_android_register, NULL),
+			PLUGIN_PROVIDE(CUSTOM, "android-imc"),
+				PLUGIN_DEPENDS(CUSTOM, "android-backend"),
+				PLUGIN_DEPENDS(CUSTOM, "imc-manager"),
+	};
+#endif
 
 	INIT(this,
 		.public = {
@@ -471,6 +490,11 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 
 	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
 									  countof(features), TRUE);
+
+#ifdef USE_BYOD
+	lib->plugins->add_static_features(lib->plugins, "android-byod",
+								byod_features, countof(byod_features), TRUE);
+#endif
 }
 
 /**
