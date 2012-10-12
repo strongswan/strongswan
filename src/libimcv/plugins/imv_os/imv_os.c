@@ -19,6 +19,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include <ietf/ietf_attr_default_pwd_enabled.h>
 #include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
@@ -191,6 +192,17 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 							   os_fwd_status_names, fwd_status);
 				break;
 			}
+			case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
+			{
+				ietf_attr_default_pwd_enabled_t *attr_cast;
+				bool default_pwd_status;
+
+				attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
+				default_pwd_status = attr_cast->get_status(attr_cast);
+				DBG1(DBG_IMV, "factory default password: %sabled",
+							   default_pwd_status ? "en":"dis");
+				break;
+			}
 			case IETF_ATTR_INSTALLED_PACKAGES:
 			{ 
 				ietf_attr_installed_packages_t *attr_cast;
@@ -353,6 +365,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 		attr_cast = (ietf_attr_attr_request_t*)attr;
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
 		attr_list->insert_last(attr_list, attr);
 		result = imv_os->send_message(imv_os, connection_id, FALSE, imv_id,
 									  TNC_IMCID_ANY, attr_list);
