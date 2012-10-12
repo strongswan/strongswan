@@ -22,8 +22,20 @@
 #define OS_INFO_H_
 
 typedef struct os_info_t os_info_t;
+typedef enum os_fwd_status_t os_fwd_status_t;
 
 #include <library.h>
+
+/**
+ * Defines the IPv4 forwarding status
+ */
+enum os_fwd_status_t {
+	OS_FWD_DISABLED =	0,
+	OS_FWD_ENABLED =	1,
+	OS_FWD_UNKNOWN =	2
+};
+
+extern enum_name_t *os_fwd_status_names;
 
 /**
  * Interface for the Operating System (OS) information module
@@ -43,6 +55,13 @@ struct os_info_t {
 	 * @return					OS version
 	 */
 	chunk_t (*get_version)(os_info_t *this);
+
+	/**
+	 * Get the OS IPv4 forwarding status
+	 *
+	 * @return					IP forwarding status
+	 */
+	os_fwd_status_t (*get_fwd_status)(os_info_t *this);
 
 	/**
 	 * Enumerates over all installed packages

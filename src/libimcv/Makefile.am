@@ -12,6 +12,7 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
 	ietf/ietf_attr_attr_request.h ietf/ietf_attr_attr_request.c \
+	ietf/ietf_attr_fwd_enabled.h ietf/ietf_attr_fwd_enabled.c \
 	ietf/ietf_attr_installed_packages.h ietf/ietf_attr_installed_packages.c \
 	ietf/ietf_attr_pa_tnc_error.h ietf/ietf_attr_pa_tnc_error.c \
 	ietf/ietf_attr_port_filter.h ietf/ietf_attr_port_filter.c \

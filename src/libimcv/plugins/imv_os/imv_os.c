@@ -19,10 +19,12 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
+#include <os_info/os_info.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -176,6 +178,17 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 					DBG1(DBG_IMV, "operating system version is '%.*s'",
 								   os_version.len, os_version.ptr);
 				}
+				break;
+			}
+			case IETF_ATTR_FORWARDING_ENABLED:
+			{
+				ietf_attr_fwd_enabled_t *attr_cast;
+				os_fwd_status_t fwd_status;
+
+				attr_cast = (ietf_attr_fwd_enabled_t*)attr;
+				fwd_status = attr_cast->get_status(attr_cast);
+				DBG1(DBG_IMV, "IPv4 forwarding status: %N",
+							   os_fwd_status_names, fwd_status);
 				break;
 			}
 			case IETF_ATTR_INSTALLED_PACKAGES:
@@ -339,6 +352,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 											 IETF_ATTR_PRODUCT_INFORMATION);
 		attr_cast = (ietf_attr_attr_request_t*)attr;
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
 		attr_list->insert_last(attr_list, attr);
 		result = imv_os->send_message(imv_os, connection_id, FALSE, imv_id,
 									  TNC_IMCID_ANY, attr_list);

@@ -20,6 +20,7 @@
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_assess_result.h>
 #include <ietf/ietf_attr_attr_request.h>
+#include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
@@ -30,8 +31,6 @@
 
 #include <pen/pen.h>
 #include <debug.h>
-
-#include <stdio.h>
 
 /* IMC definitions */
 
@@ -140,6 +139,21 @@ static void add_string_version(linked_list_t *attr_list)
 }
 
 /**
+ * Add IETF Forwarding Enabled attribute to the send queue
+ */
+static void add_fwd_enabled(linked_list_t *attr_list)
+{
+	pa_tnc_attr_t *attr;
+	os_fwd_status_t fwd_status;
+
+	fwd_status = os->get_fwd_status(os);
+	DBG1(DBG_IMC, "IPv4 forwarding status: %N",
+				   os_fwd_status_names, fwd_status);
+	attr = ietf_attr_fwd_enabled_create(fwd_status);
+	attr_list->insert_last(attr_list, attr);
+}
+
+/**
  * Add an IETF Installed Packages attribute to the send queue
  */
 static void add_installed_packages(linked_list_t *attr_list)
@@ -180,6 +194,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		attr_list = linked_list_create();
 		add_product_info(attr_list);
 		add_string_version(attr_list);
+		add_fwd_enabled(attr_list);
 		result = imc_os->send_message(imc_os, connection_id, FALSE, 0,
 									  TNC_IMVID_ANY, attr_list);
 		attr_list->destroy(attr_list);
@@ -266,6 +281,9 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 						break;
 					case IETF_ATTR_STRING_VERSION:
 						add_string_version(attr_list);
+						break;
+					case IETF_ATTR_FORWARDING_ENABLED:
+						add_fwd_enabled(attr_list);
 						break;
 					case IETF_ATTR_INSTALLED_PACKAGES:
 						add_installed_packages(attr_list);

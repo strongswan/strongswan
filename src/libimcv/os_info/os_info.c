@@ -16,13 +16,18 @@
 #include "os_info.h"
 
 #include <sys/utsname.h>
+#include <stdio.h>
 
 #include <utils/linked_list.h>
 #include <debug.h>
 
-
 typedef struct private_os_info_t private_os_info_t;
 
+ENUM(os_fwd_status_names, OS_FWD_DISABLED, OS_FWD_UNKNOWN,
+	"disabled",
+	"enabled",
+	"unknown"
+);
 
 /**
  * Private data of an os_info_t object.
@@ -57,6 +62,47 @@ METHOD(os_info_t, get_version, chunk_t,
 	private_os_info_t *this)
 {
 	return this->version;
+}
+
+METHOD(os_info_t, get_fwd_status, os_fwd_status_t,
+	private_os_info_t *this)
+{
+	const char ip_forward[] = "/proc/sys/net/ipv4/ip_forward";
+	char buf[2];
+	FILE *file;
+
+	os_fwd_status_t fwd_status = OS_FWD_UNKNOWN;
+
+	file = fopen(ip_forward, "r");
+	if (file)
+	{
+		if (fread(buf, 1, 1, file) == 1)
+		{
+			switch (buf[0])
+			{
+				case '0':
+					fwd_status = OS_FWD_DISABLED;
+					break;
+				case '1':
+					fwd_status = OS_FWD_ENABLED;
+					break;
+				default:
+					DBG1(DBG_IMC, "\"%s\" returns invalid value ", ip_forward);
+					break;
+			}
+		}
+		else
+		{
+			DBG1(DBG_IMC, "could not read from \"%s\"", ip_forward);
+		}
+	}
+	else
+	{
+		DBG1(DBG_IMC, "failed to open \"%s\"", ip_forward);
+	}
+	fclose(file);
+
+	return fwd_status;
 }
 
 METHOD(os_info_t, create_package_enumerator, enumerator_t*,
@@ -298,6 +344,7 @@ os_info_t *os_info_create(void)
 		.public = {
 			.get_name = _get_name,
 			.get_version = _get_version,
+			.get_fwd_status = _get_fwd_status,
 			.create_package_enumerator = _create_package_enumerator,
 			.destroy = _destroy,
 		},
