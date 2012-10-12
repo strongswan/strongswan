@@ -1537,7 +1537,8 @@ failed:
  * Allocates into one the replay state structure we get from the kernel.
  */
 static void get_replay_state(private_kernel_netlink_ipsec_t *this,
-							 u_int32_t spi, u_int8_t protocol, host_t *dst,
+							 u_int32_t spi, u_int8_t protocol,
+							 host_t *dst, mark_t mark,
 							 struct xfrm_replay_state_esn **replay_esn,
 							 struct xfrm_replay_state **replay)
 {
@@ -1565,6 +1566,24 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	aevent_id->sa_id.spi = spi;
 	aevent_id->sa_id.proto = protocol;
 	aevent_id->sa_id.family = dst->get_family(dst);
+
+	if (mark.value)
+	{
+		struct xfrm_mark *mrk;
+		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
+
+		rthdr->rta_type = XFRMA_MARK;
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return;
+		}
+
+		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
+		mrk->v = mark.value;
+		mrk->m = mark.mask;
+	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
@@ -1886,7 +1905,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		goto failed;
 	}
 
-	get_replay_state(this, spi, protocol, dst, &replay_esn, &replay);
+	get_replay_state(this, spi, protocol, dst, mark, &replay_esn, &replay);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
