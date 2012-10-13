@@ -95,20 +95,44 @@ METHOD(os_info_t, get_fwd_status, os_fwd_status_t,
 		{
 			DBG1(DBG_IMC, "could not read from \"%s\"", ip_forward);
 		}
+		fclose(file);
 	}
 	else
 	{
 		DBG1(DBG_IMC, "failed to open \"%s\"", ip_forward);
 	}
-	fclose(file);
 
 	return fwd_status;
+}
+
+METHOD(os_info_t, get_uptime, time_t,
+	private_os_info_t *this)
+{
+	const char proc_uptime[] = "/proc/uptime";
+	FILE *file;
+	time_t uptime;
+
+	file = fopen(proc_uptime, "r");
+	if (!file)
+	{
+		DBG1(DBG_IMC, "failed to open \"%s\"", proc_uptime);
+		return 0;	
+	}
+	if (fscanf(file, "%u", &uptime) != 1)
+	{
+		DBG1(DBG_IMC, "failed to read file \"%s\"", proc_uptime);
+		uptime = 0;
+	}		
+	fclose(file);
+
+	return uptime;
 }
 
 METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 	private_os_info_t *this)
 {
 	/* TODO */
+
 	return NULL;
 }
 
@@ -345,6 +369,7 @@ os_info_t *os_info_create(void)
 			.get_name = _get_name,
 			.get_version = _get_version,
 			.get_fwd_status = _get_fwd_status,
+			.get_uptime = _get_uptime,
 			.create_package_enumerator = _create_package_enumerator,
 			.destroy = _destroy,
 		},

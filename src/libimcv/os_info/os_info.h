@@ -26,6 +26,8 @@ typedef enum os_fwd_status_t os_fwd_status_t;
 
 #include <library.h>
 
+#include <time.h>
+
 /**
  * Defines the IPv4 forwarding status
  */
@@ -62,6 +64,13 @@ struct os_info_t {
 	 * @return					IP forwarding status
 	 */
 	os_fwd_status_t (*get_fwd_status)(os_info_t *this);
+
+	/**
+	 * Get the OS uptime in seconds
+	 *
+	 * @return					OS uptime
+	 */
+	time_t (*get_uptime)(os_info_t *this);
 
 	/**
 	 * Enumerates over all installed packages

@@ -23,6 +23,7 @@
 #include <ietf/ietf_attr_default_pwd_enabled.h>
 #include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
+#include <ietf/ietf_attr_op_status.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
@@ -140,6 +141,25 @@ static void add_string_version(linked_list_t *attr_list)
 }
 
 /**
+ * Add IETF Operational Status attribute to the send queue
+ */
+static void add_op_status(linked_list_t *attr_list)
+{
+	pa_tnc_attr_t *attr;
+	time_t uptime, last_boot;
+
+	uptime = os->get_uptime(os);
+	last_boot = uptime ? time(NULL) - uptime : UNDEFINED_TIME;
+	if (last_boot != UNDEFINED_TIME)
+	{
+		DBG1(DBG_IMC, "last boot: %T, %u s ago", &last_boot, TRUE, uptime);
+	}
+	attr = ietf_attr_op_status_create(OP_STATUS_OPERATIONAL,
+									  OP_RESULT_SUCCESSFUL, last_boot);
+	attr_list->insert_last(attr_list, attr);
+}
+
+/**
  * Add IETF Forwarding Enabled attribute to the send queue
  */
 static void add_fwd_enabled(linked_list_t *attr_list)
@@ -207,6 +227,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		attr_list = linked_list_create();
 		add_product_info(attr_list);
 		add_string_version(attr_list);
+		add_op_status(attr_list);
 		add_fwd_enabled(attr_list);
 		add_default_pwd_enabled(attr_list);
 		result = imc_os->send_message(imc_os, connection_id, FALSE, 0,
@@ -295,6 +316,9 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 						break;
 					case IETF_ATTR_STRING_VERSION:
 						add_string_version(attr_list);
+						break;
+					case IETF_ATTR_OPERATIONAL_STATUS:
+						add_op_status(attr_list);
 						break;
 					case IETF_ATTR_FORWARDING_ENABLED:
 						add_fwd_enabled(attr_list);
