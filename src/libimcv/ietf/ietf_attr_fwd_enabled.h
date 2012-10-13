@@ -28,7 +28,7 @@ typedef struct ietf_attr_fwd_enabled_t ietf_attr_fwd_enabled_t;
 #include "os_info/os_info.h"
 
 /**
- * Class implementing the IETF PA-TNC Product Information attribute.
+ * Class implementing the IETF PA-TNC Forwarding Enabled attribute.
  *
  */
 struct ietf_attr_fwd_enabled_t {

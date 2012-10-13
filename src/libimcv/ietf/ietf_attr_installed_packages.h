@@ -28,7 +28,7 @@ typedef struct ietf_attr_installed_packages_t ietf_attr_installed_packages_t;
 
 
 /**
- * Class implementing the IETF PA-TNC Port Filter attribute.
+ * Class implementing the IETF PA-TNC Installed Packages attribute.
  *
  */
 struct ietf_attr_installed_packages_t {

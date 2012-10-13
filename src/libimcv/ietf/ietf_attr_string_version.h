@@ -28,7 +28,7 @@ typedef struct ietf_attr_string_version_t ietf_attr_string_version_t;
 
 
 /**
- * Class implementing the IETF PA-TNC Product Information attribute.
+ * Class implementing the IETF PA-TNC String Version attribute.
  *
  */
 struct ietf_attr_string_version_t {
