@@ -43,8 +43,10 @@
 
 static const char imv_name[] = "Attestation";
 
-#define IMV_VENDOR_ID			PEN_TCG
-#define IMV_SUBTYPE				PA_SUBTYPE_TCG_PTS
+static pen_type_t msg_types[] = {
+	{ PEN_TCG,  PA_SUBTYPE_TCG_PTS },
+	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM }
+};
 
 static imv_agent_t *imv_attestation;
 
@@ -93,8 +95,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	imv_attestation = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-									   imv_id, actual_version);
+	imv_attestation = imv_agent_create(imv_name, msg_types, 2, imv_id,
+									   actual_version);
 	if (!imv_attestation)
 	{
 		return TNC_RESULT_FATAL;
@@ -187,7 +189,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 		if (attr_list->get_count(attr_list))
 		{
 			result = imv_attestation->send_message(imv_attestation,
-							connection_id, FALSE, 0, TNC_IMCID_ANY,	attr_list);
+							connection_id, FALSE, 0, TNC_IMCID_ANY,
+							PEN_TCG, PA_SUBTYPE_TCG_PTS, attr_list);
 		}
 		else
 		{
@@ -331,13 +334,14 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id, src_imc_id);
+					connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
 	}
 
 	if (attr_list->get_count(attr_list))
 	{
 		result = imv_attestation->send_message(imv_attestation, connection_id,
-										FALSE, 0, TNC_IMCID_ANY, attr_list);
+						FALSE, 0, TNC_IMCID_ANY, PEN_TCG, PA_SUBTYPE_TCG_PTS,
+						attr_list);
 		attr_list->destroy(attr_list);
 		return result;
 	}
@@ -351,7 +355,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id, src_imc_id);
+						connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
 	}
 
 	if (attestation_state->get_handshake_state(attestation_state) ==
@@ -376,7 +380,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 		}
 		return imv_attestation->provide_recommendation(imv_attestation,
-													   connection_id, src_imc_id);
+						connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
 	}
 
 	return result;
@@ -431,7 +435,7 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	return imv_attestation->provide_recommendation(imv_attestation,
-												   connection_id, TNC_IMCID_ANY);
+					connection_id, TNC_IMCID_ANY, PEN_TCG, PA_SUBTYPE_TCG_PTS);
 }
 
 /**

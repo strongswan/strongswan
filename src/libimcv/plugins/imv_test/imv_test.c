@@ -33,8 +33,9 @@
 
 static const char imv_name[] = "Test";
 
-#define IMV_VENDOR_ID	PEN_ITA
-#define IMV_SUBTYPE		PA_SUBTYPE_ITA_TEST
+static pen_type_t msg_types[] = {
+	{ PEN_ITA, PA_SUBTYPE_ITA_TEST }
+};
 
 static imv_agent_t *imv_test;
 
@@ -51,8 +52,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imv_test = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-								imv_id, actual_version);
+	imv_test = imv_agent_create(imv_name, msg_types, 1, imv_id, actual_version);
 	if (!imv_test)
 	{
 		return TNC_RESULT_FATAL;
@@ -210,7 +210,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 		return imv_test->provide_recommendation(imv_test, connection_id,
-												src_imc_id);
+									src_imc_id, PEN_ITA, PA_SUBTYPE_ITA_TEST);
 	}
 
 	/* request a handshake retry ? */
@@ -228,14 +228,15 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		attr = ita_attr_command_create("repeat");
 		attr_list->insert_last(attr_list, attr);
 		result = imv_test->send_message(imv_test, connection_id, TRUE, imv_id,
-							src_imc_id, attr_list);	
+						src_imc_id, PEN_ITA, PA_SUBTYPE_ITA_TEST, attr_list);	
 		attr_list->destroy(attr_list);
 
 		return result;
 	}
 
 	return received_command ? imv_test->provide_recommendation(imv_test,
-			 connection_id, src_imc_id) : TNC_RESULT_SUCCESS;
+				 connection_id, src_imc_id, PEN_ITA, PA_SUBTYPE_ITA_TEST) :
+				 TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -287,7 +288,7 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	return imv_test->provide_recommendation(imv_test, connection_id,
-											TNC_IMCID_ANY);
+							TNC_IMCID_ANY, PEN_ITA, PA_SUBTYPE_ITA_TEST);
 }
 
 /**

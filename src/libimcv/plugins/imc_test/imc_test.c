@@ -33,8 +33,9 @@
 
 static const char imc_name[] = "Test";
 
-#define IMC_VENDOR_ID	PEN_ITA
-#define IMC_SUBTYPE		PA_SUBTYPE_ITA_TEST
+static pen_type_t msg_types[] = {
+	{ PEN_ITA, PA_SUBTYPE_ITA_TEST }
+};
 
 static imc_agent_t *imc_test;
  
@@ -51,8 +52,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imc_test = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-								imc_id, actual_version);
+	imc_test = imc_agent_create(imc_name, msg_types, 1, imc_id, actual_version);
 	if (!imc_test)
 	{
 		return TNC_RESULT_FATAL;
@@ -208,7 +208,8 @@ static TNC_Result send_message(imc_state_t *state, TNC_UInt32 src_imc_id,
 
 	excl = dst_imv_id != TNC_IMVID_ANY;
 	result = imc_test->send_message(imc_test, connection_id, excl, src_imc_id,
-									dst_imv_id, attr_list);
+									dst_imv_id, PEN_ITA, PA_SUBTYPE_ITA_TEST,
+									attr_list);
 	attr_list->destroy(attr_list);
 
 	return result;

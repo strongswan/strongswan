@@ -39,8 +39,9 @@
 
 static const char imv_name[] = "OS";
 
-#define IMV_VENDOR_ID	PEN_IETF
-#define IMV_SUBTYPE		PA_SUBTYPE_IETF_OPERATING_SYSTEM
+static pen_type_t msg_types[] = {
+	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM }
+};
 
 static imv_agent_t *imv_os;
 
@@ -57,8 +58,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imv_os = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-								imv_id, actual_version);
+	imv_os = imv_agent_create(imv_name, msg_types, 1, imv_id, actual_version);
 	if (!imv_os)
 	{
 		return TNC_RESULT_FATAL;
@@ -285,11 +285,13 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	if (assessment)
 	{
 		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
-		return imv_os->provide_recommendation(imv_os, connection_id, src_imc_id);
+		return imv_os->provide_recommendation(imv_os, connection_id, src_imc_id,
+									PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM);
 	}
 
 	result = imv_os->send_message(imv_os, connection_id, TRUE, imv_id,
-								  src_imc_id, attr_list);
+					src_imc_id, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
+					attr_list);
 	attr_list->destroy(attr_list);
 
 	return result;
@@ -343,8 +345,8 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imv_os->provide_recommendation(imv_os, connection_id,
-											   TNC_IMCID_ANY);
+	return imv_os->provide_recommendation(imv_os, connection_id, TNC_IMCID_ANY,
+								PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM);
 }
 
 /**
@@ -386,7 +388,8 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
 		attr_list->insert_last(attr_list, attr);
 		result = imv_os->send_message(imv_os, connection_id, FALSE, imv_id,
-									  TNC_IMCID_ANY, attr_list);
+					TNC_IMCID_ANY, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
+					attr_list);
 		attr_list->destroy(attr_list);
 	}
 

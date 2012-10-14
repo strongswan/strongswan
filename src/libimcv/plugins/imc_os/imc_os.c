@@ -38,8 +38,9 @@
 
 static const char imc_name[] = "OS";
 
-#define IMC_VENDOR_ID	PEN_IETF
-#define IMC_SUBTYPE		PA_SUBTYPE_IETF_OPERATING_SYSTEM
+static pen_type_t msg_types[] = {
+	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM }
+};
 
 static imc_agent_t *imc_os;
 static os_info_t *os;
@@ -57,8 +58,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imc_os = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-								imc_id, actual_version);
+	imc_os = imc_agent_create(imc_name, msg_types, 1, imc_id, actual_version);
 	if (!imc_os)
 	{
 		return TNC_RESULT_FATAL;
@@ -231,7 +231,8 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		add_fwd_enabled(attr_list);
 		add_default_pwd_enabled(attr_list);
 		result = imc_os->send_message(imc_os, connection_id, FALSE, 0,
-									  TNC_IMVID_ANY, attr_list);
+					TNC_IMVID_ANY, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
+					attr_list);
 		attr_list->destroy(attr_list);
 	}
 
@@ -356,7 +357,8 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	if (attr_list->get_count(attr_list))
 	{
 		result = imc_os->send_message(imc_os, connection_id, TRUE, imc_id,
-									  src_imv_id, attr_list);
+						src_imv_id, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
+						attr_list);
 	}
 	else
 	{

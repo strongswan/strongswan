@@ -33,8 +33,9 @@
 
 static const char imv_name[] = "Scanner";
 
-#define IMV_VENDOR_ID	PEN_ITA
-#define IMV_SUBTYPE		PA_SUBTYPE_ITA_SCANNER
+static pen_type_t msg_types[] = {
+	{ PEN_ITA, PA_SUBTYPE_ITA_SCANNER }
+};
 
 static imv_agent_t *imv_scanner;
 
@@ -124,8 +125,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imv_scanner = imv_agent_create(imv_name, IMV_VENDOR_ID, IMV_SUBTYPE,
-								imv_id, actual_version);
+	imv_scanner = imv_agent_create(imv_name, msg_types, 1, imv_id, actual_version);
 	if (!imv_scanner)
 	{
 		return TNC_RESULT_FATAL;
@@ -310,7 +310,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_EVALUATION_RESULT_ERROR);			  
 	}
 	return imv_scanner->provide_recommendation(imv_scanner, connection_id,
-											   src_imc_id);
+								src_imc_id, PEN_ITA, PA_SUBTYPE_ITA_SCANNER);
  }
 
 /**
@@ -362,7 +362,7 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 	return imv_scanner->provide_recommendation(imv_scanner, connection_id,
-											   TNC_IMCID_ANY);
+							TNC_IMCID_ANY, PEN_ITA, PA_SUBTYPE_ITA_SCANNER);
 }
 
 /**

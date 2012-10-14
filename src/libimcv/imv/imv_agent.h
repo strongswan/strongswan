@@ -106,12 +106,16 @@ struct imv_agent_t {
 	 * @param excl				exclusive flag
 	 * @param src_imv_id		IMV ID to be set as source
 	 * @param dst_imc_id		IMD ID to be set as destination
+	 * @param msg_vid			message vendor ID
+	 * @param msg_subtype		message subtype
 	 * @param attr_list			list of PA-TNC attributes to send
 	 * @return					TNC result code
 	 */
 	TNC_Result (*send_message)(imv_agent_t *this,
 							   TNC_ConnectionID connection_id, bool excl,
 							   TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id,
+							   TNC_VendorID msg_vid,
+							   TNC_MessageSubtype msg_subtype,
 							   linked_list_t *attr_list);
 
 	/**
@@ -152,11 +156,15 @@ struct imv_agent_t {
 	 *
 	 * @param connection_id		network connection ID assigned by TNCS
 	 * @param dst_imc_id		IMD ID to be set as destination
+	 * @param msg_vid			message vendor ID
+	 * @param msg_subtype		message subtype
 	 * @return					TNC result code
 	 */
 	TNC_Result (*provide_recommendation)(imv_agent_t *this,
 										 TNC_ConnectionID connection_id,
-										 TNC_UInt32 dst_imc_id);
+										 TNC_UInt32 dst_imc_id,
+							  			 TNC_VendorID msg_vid,
+							  			 TNC_MessageSubtype msg_subtype);
 
 	/**
 	 * Reserve additional IMV IDs from TNCS
@@ -188,14 +196,14 @@ struct imv_agent_t {
  * Create an imv_agent_t object
  *
  * @param name				name of the IMV
- * @param vendor_id			vendor ID of the IMV
- * @param subtype			message subtype of the IMV
+ * @param supported_types	list of message types registered by the IMV
+ * @param type_count		number of registered message types
  * @param id				ID of the IMV as assigned by the TNCS
  * @param actual_version	actual version of the IF-IMV API
  *
  */
 imv_agent_t *imv_agent_create(const char *name,
-							  pen_t vendor_id, u_int32_t subtype,
+							  pen_type_t *supported_types, u_int32_t type_count,
 							  TNC_IMVID id, TNC_Version *actual_version);
 
 #endif /** IMV_AGENT_H_ @}*/

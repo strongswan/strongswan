@@ -34,8 +34,9 @@
 
 static const char imc_name[] = "Scanner";
 
-#define IMC_VENDOR_ID	PEN_ITA
-#define IMC_SUBTYPE		PA_SUBTYPE_ITA_SCANNER
+static pen_type_t msg_types[] = {
+	{ PEN_ITA, PA_SUBTYPE_ITA_SCANNER }
+};
 
 static imc_agent_t *imc_scanner;
 
@@ -52,8 +53,7 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imc_scanner = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-								imc_id, actual_version);
+	imc_scanner = imc_agent_create(imc_name, msg_types, 1, imc_id, actual_version);
 	if (!imc_scanner)
 	{
 		return TNC_RESULT_FATAL;
@@ -247,7 +247,8 @@ static TNC_Result send_message(TNC_ConnectionID connection_id)
 	attr_list = linked_list_create();
 	attr_list->insert_last(attr_list, attr);
 	result = imc_scanner->send_message(imc_scanner, connection_id, FALSE, 0,
-									   TNC_IMVID_ANY, attr_list);
+							TNC_IMVID_ANY, PEN_ITA, PA_SUBTYPE_ITA_SCANNER,
+							attr_list);
 	attr_list->destroy(attr_list);
 
 	return result;

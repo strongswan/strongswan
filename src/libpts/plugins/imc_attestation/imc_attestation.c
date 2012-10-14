@@ -42,11 +42,11 @@
 
 static const char imc_name[] = "Attestation";
 
-#define IMC_VENDOR_ID				PEN_TCG
-#define IMC_SUBTYPE					PA_SUBTYPE_TCG_PTS
+static pen_type_t msg_types[] = {
+	{ PEN_TCG, PA_SUBTYPE_TCG_PTS }
+};
 
 static imc_agent_t *imc_attestation;
-static os_info_t *os;
 
 /**
  * Supported PTS measurement algorithms
@@ -76,19 +76,10 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	imc_attestation = imc_agent_create(imc_name, IMC_VENDOR_ID, IMC_SUBTYPE,
-									   imc_id, actual_version);
+	imc_attestation = imc_agent_create(imc_name, msg_types, 1, imc_id,
+									   actual_version);
 	if (!imc_attestation)
 	{
-		return TNC_RESULT_FATAL;
-	}
-
-	os = os_info_create();
-	if (!os)
-	{
-		imc_attestation->destroy(imc_attestation);
-		imc_attestation = NULL;
-
 		return TNC_RESULT_FATAL;
 	}
 
@@ -147,27 +138,13 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
-	linked_list_t *attr_list;
-	pa_tnc_attr_t *attr;
-	TNC_Result result = TNC_RESULT_SUCCESS;
-
 	if (!imc_attestation)
 	{
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
 
-	attr_list = linked_list_create();
-	attr = ietf_attr_product_info_create(0, 0, os->get_name(os));
-	attr_list->insert_last(attr_list, attr);
-	attr = ietf_attr_string_version_create(os->get_version(os),
-										   chunk_empty, chunk_empty);
-	attr_list->insert_last(attr_list, attr);
-	result = imc_attestation->send_message(imc_attestation, connection_id,
-										   FALSE, 0, TNC_IMVID_ANY, attr_list);
-	attr_list->destroy(attr_list);
-
-	return result;
+	return TNC_RESULT_SUCCESS;
 }
 
 static TNC_Result receive_message(TNC_IMCID imc_id,
@@ -272,7 +249,8 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	if (result == TNC_RESULT_SUCCESS && attr_list->get_count(attr_list))
 	{
 		result = imc_attestation->send_message(imc_attestation, connection_id,
-										FALSE, 0, TNC_IMVID_ANY, attr_list);
+						FALSE, 0, TNC_IMVID_ANY, PEN_TCG, PA_SUBTYPE_TCG_PTS,
+						attr_list);
 	}
 	attr_list->destroy(attr_list);
 
@@ -345,9 +323,6 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 
 	imc_attestation->destroy(imc_attestation);
 	imc_attestation = NULL;
-
-	os->destroy(os);
-	os = NULL;
 
 	return TNC_RESULT_SUCCESS;
 }

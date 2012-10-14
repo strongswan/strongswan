@@ -40,19 +40,14 @@ struct private_imv_agent_t {
 	const char *name;
 
 	/**
-	 * message vendor ID of IMV
+	 * message types registered by IMV
 	 */
-	TNC_VendorID vendor_id;
+	pen_type_t *supported_types;
 
 	/**
-	 * message subtype of IMV
+	 * number of message types registered by IMV
 	 */
-	TNC_MessageSubtype subtype;
-
-	/**
-	 * Maximum PA-TNC Message size
-	 */
-	size_t max_msg_len;
+	u_int32_t type_count;
 
 	/**
 	 * ID of IMV as assigned by TNCS
@@ -258,17 +253,37 @@ METHOD(imv_agent_t, bind_functions, TNC_Result,
 
 	if (this->report_message_types_long)
 	{
-		this->report_message_types_long(this->id, &this->vendor_id,
-										&this->subtype, 1);
-	}
-	else if (this->report_message_types &&
-			 this->vendor_id <= TNC_VENDORID_ANY &&
-			 this->subtype <= TNC_SUBTYPE_ANY)
-	{
-		TNC_MessageType type;
+		TNC_VendorIDList vendor_id_list;
+		TNC_MessageSubtypeList subtype_list;
+		int i;
 
-		type = (this->vendor_id << 8) | this->subtype;
-		this->report_message_types(this->id, &type, 1);
+		vendor_id_list = malloc(this->type_count * sizeof(TNC_UInt32));
+		subtype_list   = malloc(this->type_count * sizeof(TNC_UInt32));
+
+		for (i = 0; i < this->type_count; i++)
+		{
+			vendor_id_list[i] = this->supported_types[i].vendor_id;
+			subtype_list[i]   = this->supported_types[i].type;
+		}
+		this->report_message_types_long(this->id, vendor_id_list, subtype_list,
+										this->type_count);
+		free(vendor_id_list);
+		free(subtype_list);
+	}
+	else if (this->report_message_types)
+	{
+		TNC_MessageTypeList type_list;
+		int i;
+
+		type_list = malloc(this->type_count * sizeof(TNC_UInt32));
+
+		for (i = 0; i < this->type_count; i++)
+		{
+			type_list[i] = (this->supported_types[i].vendor_id << 8) |
+						   (this->supported_types[i].type & 0xff);
+		}
+		this->report_message_types(this->id, type_list, this->type_count);
+		free(type_list);
 	}
 	return TNC_RESULT_SUCCESS;
 }
@@ -499,7 +514,8 @@ METHOD(imv_agent_t, get_state, bool,
 
 METHOD(imv_agent_t, send_message, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id, bool excl,
-	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, linked_list_t *attr_list)
+	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, TNC_VendorID msg_vid,
+	TNC_MessageSubtype msg_subtype, linked_list_t *attr_list)
 {
 	TNC_MessageType type;
 	TNC_UInt32 msg_flags;
@@ -521,7 +537,7 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 
 	while (attr_list->get_count(attr_list))
 	{
-		pa_tnc_msg = pa_tnc_msg_create(this->max_msg_len);
+		pa_tnc_msg = pa_tnc_msg_create(state->get_max_msg_len(state));
 		attr_added = FALSE;
 
 		enumerator = attr_list->create_enumerator(attr_list);
@@ -564,12 +580,12 @@ METHOD(imv_agent_t, send_message, TNC_Result,
 			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 
 			result = this->send_message_long(src_imv_id, connection_id,
-								msg_flags, msg.ptr, msg.len, this->vendor_id,
-								this->subtype, dst_imc_id);
+								msg_flags, msg.ptr, msg.len, msg_vid,
+								msg_subtype, dst_imc_id);
 		}
 		else if (this->send_message)
 		{
-			type = (this->vendor_id << 8) | this->subtype;
+			type = msg_vid << 8 | msg_subtype;
 
 			result = this->send_message(this->id, connection_id, msg.ptr,
 								msg.len, type);
@@ -664,7 +680,8 @@ METHOD(imv_agent_t, receive_message, TNC_Result,
 			dst_imc_id = state->has_excl(state) ? src_imc_id : TNC_IMCID_ANY;
 
 			result = send_message(this, connection_id, state->has_excl(state),
- 								  src_imv_id, dst_imc_id, error_attr_list);
+ 								  src_imv_id, dst_imc_id, msg_vid, msg_subtype,
+								  error_attr_list);
 
 			error_attr_list->destroy(error_attr_list);
 			pa_msg->destroy(pa_msg);
@@ -684,7 +701,7 @@ METHOD(imv_agent_t, receive_message, TNC_Result,
 
 METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	private_imv_agent_t *this, TNC_ConnectionID connection_id,
-	TNC_UInt32 dst_imc_id)
+	TNC_UInt32 dst_imc_id, TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype)
 {
 	imv_state_t *state;
 	linked_list_t *attr_list;
@@ -741,7 +758,7 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 		attr_list = linked_list_create();
 		attr_list->insert_last(attr_list, attr);
 		result = send_message(this, connection_id, FALSE, this->id, dst_imc_id,
-							  attr_list);
+							  msg_vid, msg_subtype, attr_list);
 		attr_list->destroy(attr_list);
 		if (result != TNC_RESULT_SUCCESS)
 		{
@@ -814,7 +831,7 @@ METHOD(imv_agent_t, destroy, void,
  * Described in header.
  */
 imv_agent_t *imv_agent_create(const char *name,
-							  pen_t vendor_id, u_int32_t subtype,
+							  pen_type_t *supported_types, u_int32_t type_count,
 							  TNC_IMVID id, TNC_Version *actual_version)
 {
 	private_imv_agent_t *this;
@@ -842,9 +859,8 @@ imv_agent_t *imv_agent_create(const char *name,
 			.destroy = _destroy,
 		},
 		.name = name,
-		.vendor_id = vendor_id,
-		.subtype = subtype,
-		.max_msg_len = 65490,
+		.supported_types = supported_types,
+		.type_count = type_count,
 		.id = id,
 		.additional_ids = linked_list_create(),
 		.connections = linked_list_create(),
