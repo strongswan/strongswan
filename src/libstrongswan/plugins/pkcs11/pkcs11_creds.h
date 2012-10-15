@@ -65,4 +65,15 @@ struct pkcs11_creds_t {
  */
 pkcs11_creds_t *pkcs11_creds_create(pkcs11_library_t *p11, CK_SLOT_ID slot);
 
+/**
+ * Load a specific certificate from a token.
+ *
+ * Accepts a BUILD_PKCS11_KEYID as the only argument.
+ *
+ * @param type			certificate type, must be CERT_X509
+ * @param args			variable argument list, containing BUILD_PKCS11_KEYID.
+ * @return				loaded certificate, or NULL on failure
+ */
+certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args);
+
 #endif /** PKCS11_CREDS_H_ @}*/

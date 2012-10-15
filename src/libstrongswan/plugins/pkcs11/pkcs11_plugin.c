@@ -147,6 +147,9 @@ static bool handle_certs(private_pkcs11_plugin_t *this,
 			token_event_cb(this, p11, slot, TRUE);
 		}
 		enumerator->destroy(enumerator);
+
+		lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, FALSE, (void*)pkcs11_creds_load);
 	}
 	else
 	{
@@ -157,6 +160,8 @@ static bool handle_certs(private_pkcs11_plugin_t *this,
 			lib->credmgr->remove_set(lib->credmgr, &creds->set);
 			creds->destroy(creds);
 		}
+
+		lib->creds->remove_builder(lib->creds, (void*)pkcs11_creds_load);
 	}
 	return TRUE;
 }
