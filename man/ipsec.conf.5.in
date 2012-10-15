@@ -589,6 +589,18 @@ to the distinguished name of the certificate's subject.
 The left participant's ID can be overridden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
+.br
+A value in the form
+.B %smartcard:<keyid>
+defines a specific certificate to load from a PKCS#11 backend for this
+connection.
+.B <keyid>
+has to be a hex encoded key identifier under which the certificate is stored
+on any of the configured smartcards.
+.B leftcert
+is required only if selecting the certificate with
+.B leftid
+is not sufficient, for example if multiple certificates use the same subject.
 .TP
 .BR leftcert2 " = <path>"
 Same as
