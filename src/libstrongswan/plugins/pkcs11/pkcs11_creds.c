@@ -340,12 +340,7 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 								  BUILD_BLOB_ASN1_DER, data, BUILD_END);
 		free(data.ptr);
-		if (cert)
-		{
-			DBG1(DBG_CFG, "loaded PKCS#11 certificate '%Y'",
-				 cert->get_subject(cert));
-		}
-		else
+		if (!cert)
 		{
 			DBG1(DBG_CFG, "parsing PKCS#11 certificate %#B failed", &keyid);
 		}
