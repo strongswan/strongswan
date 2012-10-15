@@ -146,7 +146,9 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 				policy->destroy(policy);
 				break;
 			}
-			DBG1(DBG_ESP, "discarding inbound IP packet due to policy");
+			DBG1(DBG_ESP, "discarding inbound IP packet %H == %H due to "
+				 "policy", ip_packet->get_source(ip_packet),
+				 ip_packet->get_destination(ip_packet));
 			/* no matching policy found, fall-through */
 		}
 		case IPPROTO_NONE:
