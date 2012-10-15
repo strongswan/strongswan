@@ -1570,7 +1570,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	if (mark.value)
 	{
 		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
+		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_aevent_id);
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
