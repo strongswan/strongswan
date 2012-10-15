@@ -572,6 +572,50 @@ static bool login(private_pkcs11_private_key_t *this, int slot)
 }
 
 /**
+ * Get a public key from a certificate with a given key ID.
+ */
+static public_key_t* find_pubkey_in_certs(private_pkcs11_private_key_t *this,
+										  chunk_t keyid)
+{
+	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+	CK_CERTIFICATE_TYPE type = CKC_X_509;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
+		{CKA_ID, keyid.ptr, keyid.len},
+	};
+	CK_OBJECT_HANDLE object;
+	CK_ATTRIBUTE attr[] = {
+		{CKA_VALUE, NULL, 0},
+	};
+	enumerator_t *enumerator;
+	chunk_t data = chunk_empty;
+	public_key_t *key = NULL;
+	certificate_t *cert;
+
+	enumerator = this->lib->create_object_enumerator(this->lib, this->session,
+									tmpl, countof(tmpl), attr, countof(attr));
+	if (enumerator->enumerate(enumerator, &object))
+	{
+		data = chunk_clone(chunk_create(attr[0].pValue, attr[0].ulValueLen));
+	}
+	enumerator->destroy(enumerator);
+
+	if (data.ptr)
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_BLOB_ASN1_DER, data, BUILD_END);
+		free(data.ptr);
+		if (cert)
+		{
+			key = cert->get_public_key(cert);
+			cert->destroy(cert);
+		}
+	}
+	return key;
+}
+
+/**
  * See header.
  */
 pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
@@ -673,12 +717,17 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	this->pubkey = pkcs11_public_key_connect(this->lib, slot, this->type,
-											 keyid);
+	this->pubkey = pkcs11_public_key_connect(this->lib, slot, this->type, keyid);
 	if (!this->pubkey)
 	{
-		destroy(this);
-		return NULL;
+		this->pubkey = find_pubkey_in_certs(this, keyid);
+		if (!this->pubkey)
+		{
+			DBG1(DBG_CFG, "no public key or certificate found for private key "
+				 "on '%s':%d", module, slot);
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	return &this->public;
