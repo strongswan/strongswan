@@ -357,7 +357,6 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
-			this->public.listener.ike_state_change = NULL;
 			if (!setup_tun_device(this, ike_sa, child_sa))
 			{
 				DBG1(DBG_DMN, "failed to setup TUN device");
@@ -398,19 +397,6 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, ike_state_change, bool,
-	private_android_service_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
-{
-	/* this call back is only registered during initiation */
-	if (this->ike_sa == ike_sa && state == IKE_DESTROYING)
-	{
-		charonservice->update_status(charonservice,
-									 CHARONSERVICE_UNREACHABLE_ERROR);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(listener_t, alert, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, alert_t alert,
 	va_list args)
@@ -426,6 +412,10 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_AUTH_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
+				break;
+			case ALERT_PEER_INIT_UNREACHABLE:
+				charonservice->update_status(charonservice,
+											 CHARONSERVICE_UNREACHABLE_ERROR);
 				break;
 			default:
 				break;
@@ -450,9 +440,8 @@ METHOD(listener_t, ike_reestablish, bool,
 	if (this->ike_sa == old)
 	{
 		this->ike_sa = new;
-		/* re-register hooks to detect initiation failures */
+		/* re-register hook to detect initiation failures */
 		this->public.listener.ike_updown = _ike_updown;
-		this->public.listener.ike_state_change = _ike_state_change;
 		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
@@ -612,7 +601,6 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 				.ike_rekey = _ike_rekey,
 				.ike_reestablish = _ike_reestablish,
 				.ike_updown = _ike_updown,
-				.ike_state_change = _ike_state_change,
 				.child_updown = _child_updown,
 				.alert = _alert,
 			},
