@@ -133,20 +133,32 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 {
 	certificate_t *cert;
 	char path[PATH_MAX];
+	chunk_t keyid;
 
-	if (*filename == '/')
+	if (strneq(filename, "%smartcard:", strlen("%smartcard:")))
 	{
-		snprintf(path, sizeof(path), "%s", filename);
+		keyid = chunk_create(filename, strlen(filename));
+		keyid = chunk_from_hex(chunk_skip(keyid, strlen("%smartcard:")), NULL);
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_PKCS11_KEYID, keyid, BUILD_END);
+		free(keyid.ptr);
 	}
 	else
 	{
-		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
-	}
+		if (*filename == '/')
+		{
+			snprintf(path, sizeof(path), "%s", filename);
+		}
+		else
+		{
+			snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
+		}
 
-	cert = lib->creds->create(lib->creds,
-							  CRED_CERTIFICATE, CERT_ANY,
-							  BUILD_FROM_FILE, path,
-							  BUILD_END);
+		cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_ANY,
+								  BUILD_FROM_FILE, path,
+								  BUILD_END);
+	}
 	if (cert)
 	{
 		cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
