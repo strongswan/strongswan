@@ -20,6 +20,7 @@
 
 #include "pkcs11_library.h"
 #include "pkcs11_manager.h"
+#include "pkcs11_public_key.h"
 
 #include <debug.h>
 
@@ -80,12 +81,6 @@ struct private_pkcs11_private_key_t {
 	 */
 	key_type_t type;
 };
-
-/**
- * Implemented in pkcs11_public_key.c
- */
-public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11,
-									int slot, key_type_t type, chunk_t keyid);
 
 
 METHOD(private_key_t, get_type, key_type_t,

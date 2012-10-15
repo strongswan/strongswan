@@ -26,6 +26,8 @@ typedef struct pkcs11_public_key_t pkcs11_public_key_t;
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
+#include "pkcs11_library.h"
+
 /**
  * PKCS#11 based public key implementation.
  */
@@ -45,5 +47,16 @@ struct pkcs11_public_key_t {
  * @return			loaded key, NULL on failure
  */
 pkcs11_public_key_t *pkcs11_public_key_load(key_type_t type, va_list args);
+
+/**
+ * Find a public key on the given token with a specific keyid.
+ *
+ * @param p11		PKCS#11 module
+ * @param slot		slot id
+ * @param type		type of the key
+ * @param keyid		key id
+ */
+public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11, int slot,
+										key_type_t type, chunk_t keyid);
 
 #endif /** PKCS11_PUBLIC_KEY_H_ @}*/

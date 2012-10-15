@@ -882,20 +882,10 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 }
 
 /**
- * Find a public key on the given token with a specific keyid.
- *
- * Used by pkcs11_private_key_t.
- *
- * TODO: if no public key is found, we should perhaps search for a certificate
- * with the given keyid and extract the key from there
- *
- * @param p11		PKCS#11 module
- * @param slot		slot id
- * @param type		type of the key
- * @param keyid		key id
+ * See header.
  */
-pkcs11_public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11,
-									int slot, key_type_t type, chunk_t keyid)
+public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11, int slot,
+										key_type_t type, chunk_t keyid)
 {
 	private_pkcs11_public_key_t *this;
 
@@ -904,5 +894,5 @@ pkcs11_public_key_t *pkcs11_public_key_connect(pkcs11_library_t *p11,
 	{
 		return NULL;
 	}
-	return &this->public;
+	return &this->public.key;
 }
