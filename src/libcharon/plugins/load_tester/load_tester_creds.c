@@ -197,7 +197,7 @@ static char *default_pwd = "default-pwd";
 /**
  * Load the private key, hard-coded or from a file
  */
-static private_key_t *load_issuer_key(private_load_tester_creds_t *this)
+static private_key_t *load_issuer_key()
 {
 	char *path;
 
@@ -217,7 +217,7 @@ static private_key_t *load_issuer_key(private_load_tester_creds_t *this)
 /**
  * Load the issuing certificate, hard-coded or from a file
  */
-static certificate_t *load_issuer_cert(private_load_tester_creds_t *this)
+static certificate_t *load_issuer_cert()
 {
 	char *path;
 
@@ -462,8 +462,8 @@ load_tester_creds_t *load_tester_creds_create()
 			},
 			.destroy = _destroy,
 		},
-		.private = load_issuer_key(this),
-		.ca = load_issuer_cert(this),
+		.private = load_issuer_key(),
+		.ca = load_issuer_cert(),
 		.cas = linked_list_create(),
 		.digest = enum_from_name(hash_algorithm_short_names, digest),
 		.psk = shared_key_create(SHARED_IKE,
