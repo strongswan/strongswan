@@ -84,7 +84,8 @@ static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
 	lib->processor->set_threads(lib->processor, 0);
-
+	/* make sure nobody waits for a DNS query */
+	lib->hosts->flush(lib->hosts);
 	/* close all IKE_SAs */
 	if (this->public.ike_sa_manager)
 	{

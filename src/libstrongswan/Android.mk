@@ -3,8 +3,8 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-library.c chunk.c debug.c enum.c settings.c printf_hook.c asn1/asn1.c \
-asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
+library.c chunk.c debug.c enum.c host_resolver.c settings.c printf_hook.c \
+asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs7.c crypto/pkcs9.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c \
