@@ -164,7 +164,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t last_use;
 	u_int16_t reserved;
 	struct tm t;
-	int nr;
 
 	*offset = 0;
 
