@@ -264,22 +264,6 @@ static id_match_t get_peer_match(identification_t *id,
 }
 
 /**
- * Get match quality of IKE version
- */
-static int get_version_match(ike_version_t cfg, ike_version_t req)
-{
-	if (req == IKE_ANY || cfg == IKE_ANY)
-	{
-		return 1;
-	}
-	if (req == cfg)
-	{
-		return 2;
-	}
-	return 0;
-}
-
-/**
  * data to pass nested peer enumerator
  */
 typedef struct {
@@ -403,21 +387,18 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	{
 		id_match_t match_peer_me, match_peer_other;
 		ike_cfg_match_t match_ike;
-		int match_version;
 		match_entry_t *entry;
 
 		match_peer_me = get_peer_match(my_id, cfg, TRUE);
 		match_peer_other = get_peer_match(other_id, cfg, FALSE);
 		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other, version);
-		match_version = get_version_match(cfg->get_ike_version(cfg), version);
 		DBG3(DBG_CFG, "ike config match: %d (%H %H %N)",
 			 match_ike, me, other, ike_version_names, version);
 
-		if (match_peer_me && match_peer_other && match_ike && match_version)
+		if (match_peer_me && match_peer_other && match_ike)
 		{
-			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d/%d "
-				 "(me/other/ike/version)", cfg->get_name(cfg),
-				 match_peer_me, match_peer_other, match_ike, match_version);
+			DBG2(DBG_CFG, "  candidate \"%s\", match: %d/%d/%d (me/other/ike)",
+				 cfg->get_name(cfg), match_peer_me, match_peer_other, match_ike);
 
 			INIT(entry,
 				.match_peer = match_peer_me + match_peer_other,
