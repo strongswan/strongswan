@@ -181,9 +181,23 @@ METHOD(eap_method_t, initiate, status_t,
 	if (response)
 	{
 		eap_radius_forward_to_ike(response);
-		if (radius2ike(this, response, out))
+		switch (response->get_code(response))
 		{
-			status = NEED_MORE;
+			case RMC_ACCESS_CHALLENGE:
+				if (radius2ike(this, response, out))
+				{
+					status = NEED_MORE;
+				}
+				break;
+			case RMC_ACCESS_ACCEPT:
+				/* Microsoft RADIUS servers can run in a mode where they respond
+				 * like this on the first request (i.e. without authentication),
+				 * we treat this as Access-Reject */
+			case RMC_ACCESS_REJECT:
+			default:
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' failed",
+					 this->peer);
+				break;
 		}
 		response->destroy(response);
 	}
@@ -365,7 +379,8 @@ METHOD(eap_method_t, process, status_t,
 				break;
 			case RMC_ACCESS_REJECT:
 			default:
-				DBG1(DBG_IKE, "RADIUS authentication of '%Y' failed", this->peer);
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' failed",
+					 this->peer);
 				status = FAILED;
 				break;
 		}
