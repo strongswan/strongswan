@@ -24,6 +24,7 @@
 typedef struct crypto_factory_t crypto_factory_t;
 
 #include <library.h>
+#include <collections/enumerator.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/aead.h>
 #include <crypto/signers/signer.h>

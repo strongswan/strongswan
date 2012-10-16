@@ -83,7 +83,6 @@
 /* make sure we include printf_hook.h first */
 #include "utils/printf_hook.h"
 #include "utils.h"
-#include "settings.h"
 #include "networking/host_resolver.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"
@@ -97,6 +96,7 @@
 #include "utils/chunk.h"
 #include "utils/integrity_checker.h"
 #include "utils/leak_detective.h"
+#include "utils/settings.h"
 #include "plugins/plugin_loader.h"
 
 typedef struct library_t library_t;

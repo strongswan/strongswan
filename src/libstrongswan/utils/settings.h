@@ -16,7 +16,7 @@
 
 /**
  * @defgroup settings settings
- * @{ @ingroup libstrongswan
+ * @{ @ingroup utils
  */
 
 #ifndef SETTINGS_H_
@@ -24,7 +24,7 @@
 
 typedef struct settings_t settings_t;
 
-#include "utils.h"
+#include "../utils.h"
 #include "collections/enumerator.h"
 
 /**

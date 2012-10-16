@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-library.c settings.c \
+library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
 collections/linked_list.c \
@@ -32,7 +32,7 @@ selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
-utils/printf_hook.c
+utils/printf_hook.c utils/settings.c
 
 # adding the plugin source files
 
