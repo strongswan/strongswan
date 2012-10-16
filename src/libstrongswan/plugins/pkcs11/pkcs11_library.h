@@ -30,7 +30,7 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 #include "pkcs11.h"
 
 #include <enum.h>
-#include <chunk.h>
+#include <utils/chunk.h>
 #include <collections/enumerator.h>
 
 /**

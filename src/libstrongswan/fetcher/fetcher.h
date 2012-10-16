@@ -26,7 +26,7 @@ typedef struct fetcher_t fetcher_t;
 typedef enum fetcher_option_t fetcher_option_t;
 
 #include <stdarg.h>
-#include <chunk.h>
+#include <utils/chunk.h>
 
 /**
  * Constructor function which creates fetcher instances.

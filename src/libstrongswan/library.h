@@ -83,7 +83,6 @@
 /* make sure we include printf_hook.h first */
 #include "utils/printf_hook.h"
 #include "utils.h"
-#include "chunk.h"
 #include "settings.h"
 #include "networking/host_resolver.h"
 #include "processing/processor.h"
@@ -95,6 +94,7 @@
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
 #include "credentials/cred_encoding.h"
+#include "utils/chunk.h"
 #include "utils/integrity_checker.h"
 #include "utils/leak_detective.h"
 #include "plugins/plugin_loader.h"

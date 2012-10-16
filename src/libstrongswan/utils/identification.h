@@ -29,7 +29,7 @@ typedef struct identification_t identification_t;
 typedef enum id_match_t id_match_t;
 typedef enum id_part_t id_part_t;
 
-#include <chunk.h>
+#include <utils/chunk.h>
 #include <collections/enumerator.h>
 
 /**

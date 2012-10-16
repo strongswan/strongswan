@@ -21,7 +21,7 @@
 #ifndef ATTRIBUTE_HANDLER_H_
 #define ATTRIBUTE_HANDLER_H_
 
-#include <chunk.h>
+#include <utils/chunk.h>
 #include <utils/identification.h>
 #include <collections/linked_list.h>
 
