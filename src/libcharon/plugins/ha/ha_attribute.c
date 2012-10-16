@@ -15,7 +15,7 @@
 
 #include "ha_attribute.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/mutex.h>
 
 typedef struct private_ha_attribute_t private_ha_attribute_t;

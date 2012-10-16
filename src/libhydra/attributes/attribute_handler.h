@@ -23,7 +23,7 @@
 
 #include <chunk.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include "attributes.h"
 

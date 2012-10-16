@@ -38,7 +38,7 @@
 #include <pen/pen.h>
 #include <debug.h>
 #include <credentials/credential_manager.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /* IMV definitions */
 
@@ -104,7 +104,7 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	}
 
 	libpts_init();
-	
+
 	if (min_version > TNC_IFIMV_VERSION_1 || max_version < TNC_IFIMV_VERSION_1)
 	{
 		DBG1(DBG_IMV, "no common IF-IMV version");

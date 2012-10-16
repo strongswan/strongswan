@@ -18,7 +18,7 @@
 #include "stroke_cred.h"
 
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
 #include <daemon.h>

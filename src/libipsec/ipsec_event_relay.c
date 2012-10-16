@@ -20,8 +20,8 @@
 #include <library.h>
 #include <debug.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
-#include <utils/blocking_queue.h>
+#include <collections/linked_list.h>
+#include <collections/blocking_queue.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ipsec_event_relay_t private_ipsec_event_relay_t;

@@ -27,7 +27,7 @@
 #include <stroke_msg.h>
 #include <credentials/credential_set.h>
 #include <credentials/certificates/certificate.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct stroke_cred_t stroke_cred_t;
 

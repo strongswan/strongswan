@@ -17,7 +17,7 @@
 #define BRIDGE_H
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct bridge_t bridge_t;
 

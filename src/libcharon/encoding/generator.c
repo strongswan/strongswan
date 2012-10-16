@@ -24,7 +24,7 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <encoding/payloads/transform_substructure.h>

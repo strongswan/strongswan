@@ -15,7 +15,7 @@
 
 #include "dhcp_transaction.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_dhcp_transaction_t private_dhcp_transaction_t;
 

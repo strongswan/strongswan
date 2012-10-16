@@ -18,7 +18,7 @@
 #include "traffic_selector_substructure.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_traffic_selector_substructure_t private_traffic_selector_substructure_t;
 

@@ -16,8 +16,8 @@
 #include "lookip_listener.h"
 
 #include <daemon.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_lookip_listener_t private_lookip_listener_t;

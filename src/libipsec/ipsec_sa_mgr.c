@@ -23,8 +23,8 @@
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 
 typedef struct private_ipsec_sa_mgr_t private_ipsec_sa_mgr_t;
 

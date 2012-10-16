@@ -18,7 +18,7 @@
 #include <sys/types.h>
 
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 

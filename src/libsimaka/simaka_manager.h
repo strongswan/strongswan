@@ -23,7 +23,7 @@
 
 #include <crypto/hashers/hasher.h>
 #include <utils/identification.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <plugins/plugin.h>
 
 typedef struct simaka_manager_t simaka_manager_t;

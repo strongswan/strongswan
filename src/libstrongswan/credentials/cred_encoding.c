@@ -17,8 +17,8 @@
 
 #include <stdint.h>
 
-#include <utils/linked_list.h>
-#include <utils/hashtable.h>
+#include <collections/linked_list.h>
+#include <collections/hashtable.h>
 #include <threading/rwlock.h>
 
 typedef struct private_cred_encoding_t private_cred_encoding_t;

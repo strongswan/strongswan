@@ -20,7 +20,7 @@
 #include "ts_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_ts_payload_t private_ts_payload_t;
 

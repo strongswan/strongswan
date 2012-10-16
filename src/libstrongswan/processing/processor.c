@@ -27,7 +27,7 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/thread_value.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_processor_t private_processor_t;
 

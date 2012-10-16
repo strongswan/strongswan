@@ -23,7 +23,7 @@
 
 #include <debug.h>
 #include <daemon.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 #include <credentials/certificates/x509.h>
 

@@ -19,7 +19,7 @@
 
 #include <tncif_names.h>
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imc_attestation_state_t private_imc_attestation_state_t;
@@ -237,7 +237,7 @@ imc_state_t *imc_attestation_state_create(TNC_ConnectionID connection_id)
 		.components = linked_list_create(),
 		.list = linked_list_create(),
 	);
-	
+
 	return &this->public.interface;
 }
 

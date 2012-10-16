@@ -43,7 +43,7 @@
 #include <openssl/x509v3.h>
 
 #include <debug.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <credentials/certificates/x509.h>
 
 typedef struct private_openssl_crl_t private_openssl_crl_t;

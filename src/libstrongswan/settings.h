@@ -25,7 +25,7 @@
 typedef struct settings_t settings_t;
 
 #include "utils.h"
-#include "utils/enumerator.h"
+#include "collections/enumerator.h"
 
 /**
  * Convert a string value returned by a key/value enumerator to a boolean.

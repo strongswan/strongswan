@@ -21,7 +21,7 @@
 #include <fcgiapp.h>
 #include <stdio.h>
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #define COOKIE_LEN 16
 

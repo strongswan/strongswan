@@ -20,7 +20,7 @@
 #include "sa_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <daemon.h>
 
 /* IKEv1 situation */

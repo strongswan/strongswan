@@ -15,7 +15,7 @@
 
 #include "dumm.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include <sys/types.h>
 #include <unistd.h>

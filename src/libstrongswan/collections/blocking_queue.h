@@ -17,7 +17,7 @@
 
 /**
  * @defgroup blocking_queue blocking_queue
- * @{ @ingroup utils
+ * @{ @ingroup collections
  */
 
 #ifndef BLOCKING_QUEUE_H_

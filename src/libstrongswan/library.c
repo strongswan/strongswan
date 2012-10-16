@@ -22,7 +22,7 @@
 #include <threading/thread.h>
 #include <utils/identification.h>
 #include <networking/host.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>
 

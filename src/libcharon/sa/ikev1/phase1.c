@@ -22,7 +22,7 @@
 #include <sa/ikev1/keymat_v1.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_phase1_t private_phase1_t;
 

@@ -15,7 +15,7 @@
 
 #include "pts_file_meta.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_pts_file_meta_t private_pts_file_meta_t;

@@ -27,7 +27,7 @@ typedef struct ike_cfg_t ike_cfg_t;
 
 #include <library.h>
 #include <networking/host.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <config/proposal.h>
 #include <crypto/diffie_hellman.h>

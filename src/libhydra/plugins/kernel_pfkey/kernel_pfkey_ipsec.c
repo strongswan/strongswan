@@ -60,8 +60,8 @@
 #include <hydra.h>
 #include <debug.h>
 #include <networking/host.h>
-#include <utils/linked_list.h>
-#include <utils/hashtable.h>
+#include <collections/linked_list.h>
+#include <collections/hashtable.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>

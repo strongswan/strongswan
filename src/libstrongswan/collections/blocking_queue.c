@@ -20,7 +20,7 @@
 #include <threading/mutex.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_blocking_queue_t private_blocking_queue_t;
 

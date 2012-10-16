@@ -23,7 +23,7 @@
 #define TNC_IMV_RECOMMENDATIONS_H_
 
 #include <tnc/imv/imv_recommendations.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * Create an IMV empty recommendations instance

@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_tcg_pts_attr_req_func_comp_evid_t private_tcg_pts_attr_req_func_comp_evid_t;
@@ -47,7 +47,7 @@ typedef struct private_tcg_pts_attr_req_func_comp_evid_t private_tcg_pts_attr_re
  */
 
 /**
- * Component Functional Name Structure 
+ * Component Functional Name Structure
  * (see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification)
  *
  *					   1				   2				   3
@@ -58,7 +58,7 @@ typedef struct private_tcg_pts_attr_req_func_comp_evid_t private_tcg_pts_attr_re
  *  |                   Component Functional Name                   |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
- 
+
 #define PTS_REQ_FUNC_COMP_EVID_SIZE		12
 #define PTS_REQ_FUNC_COMP_FAMILY_MASK	0xC0
 
@@ -81,7 +81,7 @@ struct private_tcg_pts_attr_req_func_comp_evid_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
@@ -249,7 +249,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		entry->flags = flags;
 		entry->depth = depth;
 		entry->name = pts_comp_func_name_create(vendor_id, name, qualifier);
-		
+
 		this->list->insert_last(this->list, entry);
 	}
 	status = SUCCESS;

@@ -18,7 +18,7 @@
 #define GUEST_H
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef enum guest_state_t guest_state_t;
 typedef struct guest_t guest_t;

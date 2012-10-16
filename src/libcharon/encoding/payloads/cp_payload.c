@@ -20,7 +20,7 @@
 #include "cp_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 ENUM(config_type_names, CFG_REQUEST, CFG_ACK,
 	"CFG_REQUEST",

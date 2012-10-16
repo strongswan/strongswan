@@ -20,7 +20,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include "pkcs9.h"
 

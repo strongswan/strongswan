@@ -22,7 +22,7 @@
 #define TRAP_MANAGER_H_
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <config/peer_cfg.h>
 
 typedef struct trap_manager_t trap_manager_t;

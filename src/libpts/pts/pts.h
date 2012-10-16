@@ -35,7 +35,7 @@ typedef struct pts_t pts_t;
 #include "components/pts_comp_func_name.h"
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * UTF-8 encoding of the character used to delimiter the filename

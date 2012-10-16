@@ -25,7 +25,7 @@ typedef enum db_type_t db_type_t;
 typedef enum db_driver_t db_driver_t;
 typedef struct database_t database_t;
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * Database column types

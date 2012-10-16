@@ -23,7 +23,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 

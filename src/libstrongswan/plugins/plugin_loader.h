@@ -24,7 +24,7 @@
 
 typedef struct plugin_loader_t plugin_loader_t;
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /* to avoid circular references we can't include plugin_feature.h */
 struct plugin_feature_t;

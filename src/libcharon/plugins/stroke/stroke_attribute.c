@@ -17,7 +17,7 @@
 #include "stroke_attribute.h"
 
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_stroke_attribute_t private_stroke_attribute_t;

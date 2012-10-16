@@ -15,7 +15,7 @@
 
 #include "tnc_pdp_connections.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_tnc_pdp_connections_t private_tnc_pdp_connections_t;

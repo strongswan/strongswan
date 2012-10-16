@@ -29,7 +29,7 @@ typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
 #include <utils/identification.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <selectors/traffic_selector.h>
 #include <config/proposal.h>
 #include <config/ike_cfg.h>

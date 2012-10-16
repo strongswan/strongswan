@@ -42,7 +42,7 @@
 #include <hydra.h>
 #include <debug.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 

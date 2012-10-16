@@ -21,7 +21,7 @@
 #ifndef X509_H_
 #define X509_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <credentials/certificates/certificate.h>
 
 /* constraints are currently restricted to the range 0..127 */

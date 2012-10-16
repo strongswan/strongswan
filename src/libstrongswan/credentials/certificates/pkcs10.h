@@ -21,7 +21,7 @@
 #ifndef PKCS10_H_
 #define PKCS10_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <credentials/certificates/certificate.h>
 
 typedef struct pkcs10_t pkcs10_t;

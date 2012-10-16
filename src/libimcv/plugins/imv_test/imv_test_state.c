@@ -16,7 +16,7 @@
 #include "imv_test_state.h"
 
 #include <utils/lexparser.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imv_test_state_t private_imv_test_state_t;
@@ -94,7 +94,7 @@ struct entry_t {
 };
 
 /**
- * Table of multi-lingual reason string entries 
+ * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
 	{ "en", "IMC Test was not configured with \"command = allow\"" },
@@ -191,7 +191,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 			if (chunk_equals(lang, pref_lang))
 			{
 				*reason_language = lang;
-				*reason_string = chunk_create(reasons[i].string, 
+				*reason_string = chunk_create(reasons[i].string,
 										strlen(reasons[i].string));
 				return TRUE;
 			}
@@ -201,7 +201,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	/* no preferred language match found - use the default language */
 	*reason_string =   chunk_create(reasons[0].string,
 									strlen(reasons[0].string));
-	*reason_language = chunk_create(reasons[0].lang, 
+	*reason_language = chunk_create(reasons[0].lang,
 									strlen(reasons[0].lang));
 	return TRUE;
 }
@@ -274,8 +274,8 @@ METHOD(imv_test_state_t, another_round, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
-	
-	return not_finished;	
+
+	return not_finished;
 }
 
 /**
@@ -310,7 +310,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 		.connection_id = connection_id,
 		.imcs = linked_list_create(),
 	);
-	
+
 	return &this->public.interface;
 }
 

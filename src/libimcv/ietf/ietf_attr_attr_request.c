@@ -19,7 +19,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include <debug.h>
 
@@ -114,12 +114,12 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(ATTR_REQUEST_ENTRY_SIZE * 
+	writer = bio_writer_create(ATTR_REQUEST_ENTRY_SIZE *
 							   this->list->get_count(this->list));
 
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
-	{	
+	{
 		writer->write_uint32(writer, entry->vendor_id);
 		writer->write_uint32(writer, entry->type);
 	}
@@ -161,7 +161,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader = bio_reader_create(this->value);
 	while (count--)
 	{
-		reader->read_uint8 (reader, &reserved);	
+		reader->read_uint8 (reader, &reserved);
 		reader->read_uint24(reader, &vendor_id);
 		reader->read_uint32(reader, &type);
 

@@ -15,7 +15,7 @@
 
 #include "pts/components/pts_component_manager.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_pts_component_manager_t private_pts_component_manager_t;
@@ -56,7 +56,7 @@ struct vendor_entry_t {
 
 	/**
 	 * List of vendor-specific registered Functional Components
-	 */	
+	 */
 	linked_list_t *components;
 };
 
@@ -103,7 +103,7 @@ struct private_pts_component_manager_t {
 };
 
 METHOD(pts_component_manager_t, add_vendor, void,
-	private_pts_component_manager_t *this, pen_t vendor_id, 
+	private_pts_component_manager_t *this, pen_t vendor_id,
 	enum_name_t *comp_func_names, int qualifier_type_size,
 	char *qualifier_flag_names, enum_name_t *qualifier_type_names)
 {
@@ -285,7 +285,7 @@ METHOD(pts_component_manager_t, create, pts_component_t*,
 METHOD(pts_component_manager_t, destroy, void,
 	private_pts_component_manager_t *this)
 {
-	this->list->destroy_function(this->list, (void *)vendor_entry_destroy); 
+	this->list->destroy_function(this->list, (void *)vendor_entry_destroy);
 	free(this);
 }
 

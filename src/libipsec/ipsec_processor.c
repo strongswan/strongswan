@@ -19,7 +19,7 @@
 #include <debug.h>
 #include <library.h>
 #include <threading/rwlock.h>
-#include <utils/blocking_queue.h>
+#include <collections/blocking_queue.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ipsec_processor_t private_ipsec_processor_t;

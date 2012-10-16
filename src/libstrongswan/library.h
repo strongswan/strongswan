@@ -22,6 +22,9 @@
  * @defgroup bio bio
  * @ingroup libstrongswan
  *
+ * @defgroup collections collections
+ * @ingroup libstrongswan
+ *
  * @defgroup credentials credentials
  * @ingroup libstrongswan
  *

@@ -15,13 +15,13 @@
 
 /**
  * @defgroup hashtable hashtable
- * @{ @ingroup utils
+ * @{ @ingroup collections
  */
 
 #ifndef HASHTABLE_H_
 #define HASHTABLE_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct hashtable_t hashtable_t;
 

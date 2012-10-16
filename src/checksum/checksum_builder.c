@@ -21,7 +21,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <daemon.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /* we need to fake the pluto symbol to dlopen() the xauth plugin */
 void *pluto;

@@ -24,8 +24,8 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/thread.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 
 /**
  * Default minimum and maximum number of threads

@@ -35,7 +35,7 @@
 #include "kernel/network_manager.h"
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef enum android_vpn_state_t android_vpn_state_t;
 typedef struct charonservice_t charonservice_t;

@@ -27,7 +27,7 @@ typedef struct sa_payload_t sa_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <kernel/kernel_ipsec.h>
 #include <sa/authenticator.h>
 

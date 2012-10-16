@@ -25,7 +25,7 @@
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 #include "lookip_msg.h"

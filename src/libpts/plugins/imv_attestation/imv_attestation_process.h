@@ -25,7 +25,7 @@
 #include "imv_attestation_state.h"
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <credentials/credential_manager.h>
 #include <crypto/hashers/hasher.h>
 

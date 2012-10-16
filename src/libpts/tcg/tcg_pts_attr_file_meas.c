@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t;
@@ -26,7 +26,7 @@ typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t
 /**
  * File Measurement
  * see section 3.19.2 of PTS Protocol: Binding to TNC IF-M Specification
- * 
+ *
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -72,12 +72,12 @@ struct private_tcg_pts_attr_file_meas_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * PTS File Measurements
 	 */
@@ -123,7 +123,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	char *filename;
 	chunk_t measurement;
 	bool first = TRUE;
-	
+
 	if (this->value.ptr)
 	{
 		return;
@@ -169,7 +169,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t measurement, filename;
 	char buf[BUF_LEN];
 	status_t status = FAILED;
-	
+
 	if (this->value.len < PTS_FILE_MEAS_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS file measurement header");
@@ -181,9 +181,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint64(reader, &number_of_files);
 	reader->read_uint16(reader, &request_id);
 	reader->read_uint16(reader, &meas_len);
-	
+
 	this->measurements = pts_file_meas_create(request_id);
-	
+
 	while (number_of_files--)
 	{
 		if (!reader->read_data(reader, meas_len, &measurement))

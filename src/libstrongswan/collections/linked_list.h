@@ -17,7 +17,7 @@
 
 /**
  * @defgroup linked_list linked_list
- * @{ @ingroup utils
+ * @{ @ingroup collections
  */
 
 #ifndef LINKED_LIST_H_
@@ -25,7 +25,7 @@
 
 typedef struct linked_list_t linked_list_t;
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * Method to match elements in a linked list (used in find_* functions)

@@ -27,7 +27,7 @@ typedef struct ha_cache_t ha_cache_t;
 #include "ha_kernel.h"
 #include "ha_socket.h"
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 #include <sa/ike_sa.h>
 

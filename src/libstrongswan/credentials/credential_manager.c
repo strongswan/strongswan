@@ -20,7 +20,7 @@
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <credentials/sets/cert_cache.h>
 #include <credentials/sets/auth_cfg_wrapper.h>
 #include <credentials/certificates/x509.h>

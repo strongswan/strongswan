@@ -22,7 +22,7 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/sa_payload.h>

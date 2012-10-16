@@ -37,7 +37,7 @@
 #include <debug.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /** define _XOPEN_SOURCE 500 fails when using libstrongswan, define popen */
 extern ssize_t pread(int fd, void *buf, size_t count, off_t offset);

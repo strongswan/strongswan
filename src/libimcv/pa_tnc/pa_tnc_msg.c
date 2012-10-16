@@ -19,7 +19,7 @@
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <pen/pen.h>
 #include <debug.h>
 
@@ -42,7 +42,7 @@ typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;
 #define PA_TNC_RESERVED		0x000000
 
 /**
- *  PA-TNC attribute 
+ *  PA-TNC attribute
  *
  *                       1                   2                   3
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -229,7 +229,7 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		error = ietf_attr_pa_tnc_error_create(error_code, this->encoding);
 		goto err;
 	}
-	
+
 	/* offset of the first PA-TNC attribute in the PA-TNC message */
 	offset = PA_TNC_HEADER_SIZE;
 
@@ -280,8 +280,8 @@ METHOD(pa_tnc_msg_t, process, status_t,
 			DBG1(DBG_TNC, "insufficient bytes for PA-TNC attribute value");
 			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
 						this->encoding, offset + PA_TNC_ATTR_INFO_SIZE);
-			goto err; 
-		} 
+			goto err;
+		}
 		DBG3(DBG_TNC, "%B", &value);
 
 		attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
@@ -416,7 +416,7 @@ METHOD(pa_tnc_msg_t, destroy, void,
 	private_pa_tnc_msg_t *this)
 {
 	this->attributes->destroy_offset(this->attributes,
-									 offsetof(pa_tnc_attr_t, destroy)); 
+									 offsetof(pa_tnc_attr_t, destroy));
 	this->errors->destroy_offset(this->errors,
 									 offsetof(pa_tnc_attr_t, destroy));
 	free(this->encoding.ptr);

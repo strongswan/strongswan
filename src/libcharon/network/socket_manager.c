@@ -20,7 +20,7 @@
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_socket_manager_t private_socket_manager_t;
 

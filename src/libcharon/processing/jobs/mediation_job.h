@@ -26,7 +26,7 @@ typedef struct mediation_job_t mediation_job_t;
 #include <library.h>
 #include <processing/jobs/job.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * Class representing a MEDIATION Job.

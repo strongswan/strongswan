@@ -21,7 +21,7 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/hashers/hasher.h>
 

@@ -31,7 +31,7 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 
 #include <enum.h>
 #include <chunk.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * Optional PKCS#11 features some libraries support, some not

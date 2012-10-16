@@ -21,7 +21,7 @@
 #ifndef SHARED_KEY_H_
 #define SHARED_KEY_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <utils/identification.h>
 
 typedef struct shared_key_t shared_key_t;

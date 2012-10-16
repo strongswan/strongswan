@@ -29,7 +29,7 @@
 
 #include "enum.h"
 #include "debug.h"
-#include "utils/enumerator.h"
+#include "collections/enumerator.h"
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",

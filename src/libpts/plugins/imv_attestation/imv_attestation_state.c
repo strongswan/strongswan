@@ -18,7 +18,7 @@
 #include <libpts.h>
 
 #include <utils/lexparser.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imv_attestation_state_t private_imv_attestation_state_t;
@@ -44,7 +44,7 @@ struct private_imv_attestation_state_t {
 	 * TNCCS connection state
 	 */
 	TNC_ConnectionState state;
-	
+
 	/**
 	 * Does the TNCCS connection support long message types?
 	 */
@@ -139,7 +139,7 @@ struct entry_t {
 };
 
 /**
- * Table of multi-lingual reason string entries 
+ * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
 	{ "en", "IMV Attestation: Incorrect/pending file measurement/component"
@@ -302,7 +302,7 @@ METHOD(imv_attestation_state_t, check_off_file_meas_request, bool,
 	enumerator_t *enumerator;
 	file_meas_request_t *request;
 	bool found = FALSE;
-	
+
 	enumerator = this->file_meas_requests->create_enumerator(this->file_meas_requests);
 	while (enumerator->enumerate(enumerator, &request))
 	{

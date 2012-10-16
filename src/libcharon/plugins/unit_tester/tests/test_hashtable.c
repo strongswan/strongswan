@@ -14,7 +14,7 @@
  */
 
 #include <library.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 
 static u_int hash(char *key)
 {

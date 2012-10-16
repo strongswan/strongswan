@@ -21,7 +21,7 @@
 #include <tncif_names.h>
 
 #include <pen/pen.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_imc_msg_t private_imc_msg_t;

@@ -22,7 +22,7 @@
 
 #include "traffic_selector.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <debug.h>
 

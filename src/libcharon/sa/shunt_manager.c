@@ -18,7 +18,7 @@
 #include <hydra.h>
 #include <daemon.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 
 typedef struct private_shunt_manager_t private_shunt_manager_t;

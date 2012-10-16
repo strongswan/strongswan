@@ -21,7 +21,7 @@
 #include <radius_message.h>
 #include <radius_client.h>
 #include <daemon.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 
 typedef struct private_eap_radius_accounting_t private_eap_radius_accounting_t;

@@ -17,7 +17,7 @@
 
 #include <threading/mutex.h>
 #include <threading/condvar.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_radius_config_t private_radius_config_t;
 

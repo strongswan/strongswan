@@ -38,7 +38,7 @@
 #include "proposal_keywords.h"
 #include "proposal_keywords_static.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_proposal_keywords_t private_proposal_keywords_t;

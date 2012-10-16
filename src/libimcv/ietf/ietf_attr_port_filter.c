@@ -17,7 +17,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 
@@ -152,7 +152,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	while (reader->remaining(reader))
 	{
-		entry = malloc_thing(port_entry_t);	
+		entry = malloc_thing(port_entry_t);
 		reader->read_uint8 (reader, &blocked);
 		entry->blocked = blocked & 0x01;
 		reader->read_uint8 (reader, &entry->protocol);
@@ -161,7 +161,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
@@ -192,7 +192,7 @@ METHOD(ietf_attr_port_filter_t, add_port, void,
 	entry->blocked = blocked;
 	entry->protocol = protocol;
 	entry->port = port;
-	this->ports->insert_last(this->ports, entry);	
+	this->ports->insert_last(this->ports, entry);
 }
 
 /**

@@ -21,7 +21,7 @@
 #ifndef STORAGE_H_
 #define STORAGE_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 
 typedef struct storage_t storage_t;

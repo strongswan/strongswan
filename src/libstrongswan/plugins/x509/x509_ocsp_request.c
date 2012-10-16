@@ -21,7 +21,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/keys/private_key.h>

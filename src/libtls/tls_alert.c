@@ -16,7 +16,7 @@
 #include "tls_alert.h"
 
 #include <debug.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 ENUM_BEGIN(tls_alert_desc_names, TLS_CLOSE_NOTIFY, TLS_CLOSE_NOTIFY,
 	"close notify",

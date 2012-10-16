@@ -29,7 +29,7 @@
 #include <threading/mutex.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 #include "stroke_config.h"

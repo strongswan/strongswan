@@ -26,7 +26,7 @@
 #include <library.h>
 #include <hydra.h>
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/lexparser.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>

@@ -29,8 +29,8 @@
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 #ifndef HAVE_STRUCT_SOCKADDR_SA_LEN

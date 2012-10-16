@@ -15,7 +15,7 @@
 
 #include "farp_listener.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_farp_listener_t private_farp_listener_t;

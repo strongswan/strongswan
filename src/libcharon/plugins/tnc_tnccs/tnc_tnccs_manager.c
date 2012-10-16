@@ -21,7 +21,7 @@
 #include <tnc/imv/imv_manager.h>
 
 #include <debug.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_tnc_tnccs_manager_t private_tnc_tnccs_manager_t;
@@ -454,7 +454,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 	bool attribute_match = FALSE, entry_found = FALSE;
-	
+
 	if (is_imc)
 	{
 		switch (attribute_id)
@@ -520,7 +520,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 				return TNC_RESULT_INVALID_PARAMETER;
 		}
 	}
-	
+
 	/* attributes specific to the TNCC or TNCS are unsupported */
 	if (id == TNC_CONNECTIONID_ANY)
 	{
@@ -577,10 +577,10 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 								  entry->max_msg_len);
 		case TNC_ATTRIBUTEID_HAS_LONG_TYPES:
 		case TNC_ATTRIBUTEID_HAS_EXCLUSIVE:
-			return bool_attribute(buffer_len, buffer, value_len, 
+			return bool_attribute(buffer_len, buffer, value_len,
 								  entry->type == TNCCS_2_0);
 		case TNC_ATTRIBUTEID_HAS_SOH:
-			return bool_attribute(buffer_len, buffer, value_len, 
+			return bool_attribute(buffer_len, buffer, value_len,
 								  entry->type == TNCCS_SOH);
 		case TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL:
 		{

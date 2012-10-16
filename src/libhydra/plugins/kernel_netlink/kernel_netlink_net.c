@@ -55,8 +55,8 @@
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
 #include <threading/spinlock.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 /** delay before firing roam events (ms) */

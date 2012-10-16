@@ -32,7 +32,7 @@ typedef struct message_t message_t;
 #include <sa/keymat.h>
 #include <sa/ike_sa_id.h>
 #include <networking/packet.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * This class is used to represent an IKE-Message.

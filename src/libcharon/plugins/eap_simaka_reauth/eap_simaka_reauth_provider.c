@@ -16,7 +16,7 @@
 #include "eap_simaka_reauth_provider.h"
 
 #include <daemon.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 
 typedef struct private_eap_simaka_reauth_provider_t private_eap_simaka_reauth_provider_t;
 

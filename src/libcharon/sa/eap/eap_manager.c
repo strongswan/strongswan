@@ -16,7 +16,7 @@
 
 #include "eap_manager.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_eap_manager_t private_eap_manager_t;

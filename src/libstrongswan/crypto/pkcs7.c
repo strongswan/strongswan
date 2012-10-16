@@ -30,7 +30,7 @@
 #include <crypto/pkcs9.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include "pkcs7.h"
 

@@ -25,7 +25,7 @@
 #include <linux/if_ether.h>
 #include <linux/filter.h>
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>

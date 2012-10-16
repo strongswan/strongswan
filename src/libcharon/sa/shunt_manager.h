@@ -22,7 +22,7 @@
 #define SHUNT_MANAGER_H_
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <config/child_cfg.h>
 
 typedef struct shunt_manager_t shunt_manager_t;

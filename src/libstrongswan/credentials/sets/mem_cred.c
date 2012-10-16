@@ -18,7 +18,7 @@
 #include "mem_cred.h"
 
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_mem_cred_t private_mem_cred_t;
 

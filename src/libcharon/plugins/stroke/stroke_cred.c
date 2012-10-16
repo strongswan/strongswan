@@ -34,7 +34,7 @@
 #include <credentials/certificates/ac.h>
 #include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/lexparser.h>
 #include <threading/rwlock.h>
 #include <daemon.h>

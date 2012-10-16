@@ -15,7 +15,7 @@
 
 /**
  * @defgroup enumerator enumerator
- * @{ @ingroup utils
+ * @{ @ingroup collections
  */
 
 #ifndef ENUMERATOR_H_

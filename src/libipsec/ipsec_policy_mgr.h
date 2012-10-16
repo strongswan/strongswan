@@ -28,7 +28,7 @@
 
 #include <library.h>
 #include <networking/host.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
 

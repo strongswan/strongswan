@@ -25,7 +25,7 @@
 
 #include <hydra.h>
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <plugins/plugin.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>

@@ -26,8 +26,8 @@
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
-#include <utils/hashtable.h>
+#include <collections/linked_list.h>
+#include <collections/hashtable.h>
 
 /** Intervall to check for expired sessions, in seconds */
 #define CLEANUP_INTERVAL 30

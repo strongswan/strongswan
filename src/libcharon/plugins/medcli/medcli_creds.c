@@ -17,7 +17,7 @@
 
 #include <daemon.h>
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct private_medcli_creds_t private_medcli_creds_t;
 

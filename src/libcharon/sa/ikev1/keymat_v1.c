@@ -18,7 +18,7 @@
 #include <daemon.h>
 #include <encoding/generator.h>
 #include <encoding/payloads/nonce_payload.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_keymat_v1_t private_keymat_v1_t;
 

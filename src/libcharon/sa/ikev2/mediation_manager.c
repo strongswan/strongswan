@@ -17,7 +17,7 @@
 
 #include <daemon.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/mediation_job.h>
 
 typedef struct peer_t peer_t;

@@ -24,7 +24,7 @@
 typedef struct credential_manager_t credential_manager_t;
 
 #include <utils/identification.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <credentials/auth_cfg.h>
 #include <credentials/credential_set.h>
 #include <credentials/keys/private_key.h>

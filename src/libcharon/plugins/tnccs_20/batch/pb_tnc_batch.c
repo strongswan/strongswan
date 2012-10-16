@@ -20,7 +20,7 @@
 
 #include <tnc/tnccs/tnccs.h>
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <pen/pen.h>
@@ -172,12 +172,12 @@ METHOD(pb_tnc_batch_t, build, void,
 	bio_writer_t *writer;
 
 	/* build PB-TNC batch header */
-	writer = bio_writer_create(this->batch_len);	
+	writer = bio_writer_create(this->batch_len);
 	writer->write_uint8 (writer, PB_TNC_VERSION);
 	writer->write_uint8 (writer, this->is_server ?
 								 PB_TNC_BATCH_FLAG_D : PB_TNC_BATCH_FLAG_NONE);
 	writer->write_uint16(writer, this->type);
-	writer->write_uint32(writer, this->batch_len); 
+	writer->write_uint32(writer, this->batch_len);
 
 	/* build PB-TNC messages */
 	enumerator = this->messages->create_enumerator(this->messages);
@@ -297,7 +297,7 @@ static status_t process_batch_header(private_pb_tnc_batch_t *this,
 
 fatal:
 	this->errors->insert_last(this->errors, msg);
-	return FAILED;	
+	return FAILED;
 }
 
 static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
@@ -329,7 +329,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	reader->destroy(reader);
 
 	noskip_flag = (flags & PB_TNC_FLAG_NOSKIP) != PB_TNC_FLAG_NONE;
-	
+
 	if (msg_len > data.len)
 	{
 		DBG1(DBG_TNC, "%u bytes insufficient to parse PB-TNC message", data.len);
@@ -455,7 +455,7 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 
 fatal:
 	this->errors->insert_last(this->errors, msg);
-	return FAILED;	
+	return FAILED;
 }
 
 METHOD(pb_tnc_batch_t, process, status_t,

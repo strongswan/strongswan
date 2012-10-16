@@ -23,7 +23,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 #include <library.h>

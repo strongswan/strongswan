@@ -21,7 +21,7 @@
 #include "crypto_tester.h"
 
 #include <debug.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_crypto_tester_t private_crypto_tester_t;
 

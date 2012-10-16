@@ -16,7 +16,7 @@
 #include "updown_handler.h"
 
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_updown_handler_t private_updown_handler_t;

@@ -15,7 +15,7 @@
 
 #include <library.h>
 #include <daemon.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 #include <unistd.h>
 

@@ -40,7 +40,7 @@
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 
 /* Maximum size of a packet */
 #define MAX_PACKET 10000

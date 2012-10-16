@@ -37,7 +37,7 @@
 #include <debug.h>
 #include <daemon.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <pen/pen.h>
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;

@@ -20,7 +20,7 @@
 #include <signal.h>
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 #include "guest.h"
 #include "bridge.h"

@@ -20,7 +20,7 @@
 
 #include <library.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /** cache size, a power of 2 for fast modulo */
 #define CACHE_SIZE 32

@@ -22,7 +22,7 @@
 #ifndef UCI_PARSER_H_
 #define UCI_PARSER_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct uci_parser_t uci_parser_t;
 

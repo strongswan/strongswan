@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_tcg_pts_attr_file_meta_t private_tcg_pts_attr_file_meta_t;
@@ -26,7 +26,7 @@ typedef struct private_tcg_pts_attr_file_meta_t private_tcg_pts_attr_file_meta_t
 /**
  * Unix-Style File Metadata
  * see section 3.17.3 of PTS Protocol: Binding to TNC IF-M Specification
- * 
+ *
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -88,12 +88,12 @@ struct private_tcg_pts_attr_file_meta_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * PTS File Metadata
 	 */
@@ -136,7 +136,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator_t *enumerator;
 	pts_file_metadata_t *entry;
 	u_int64_t number_of_files;
-	
+
 	if (this->value.ptr)
 	{
 		return;
@@ -163,7 +163,7 @@ METHOD(pa_tnc_attr_t, build, void,
 												  strlen(entry->filename)));
 	}
 	enumerator->destroy(enumerator);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -179,7 +179,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int64_t owner, group;
 	chunk_t filename;
 	status_t status = FAILED;
-	
+
 	if (this->value.len < PTS_FILE_META_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for PTS Unix-Style file metadata header");
@@ -190,7 +190,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint64(reader, &number_of_files);
 
 	this->metadata = pts_file_meta_create();
-	
+
 	while (number_of_files--)
 	{
 		if (!reader->read_uint16(reader, &len))
@@ -243,7 +243,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			DBG1(DBG_TNC, "insufficient data for filename");
 			goto end;
 		}
-		
+
 		entry = malloc_thing(pts_file_metadata_t);
 		entry->type = type;
 		entry->filesize = filesize;

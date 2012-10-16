@@ -22,7 +22,7 @@
 
 #include <debug.h>
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/mutex.h>
 
 typedef struct private_tnc_imc_t private_tnc_imc_t;

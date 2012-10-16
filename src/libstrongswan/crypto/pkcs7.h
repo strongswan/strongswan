@@ -28,7 +28,7 @@ typedef struct pkcs7_t pkcs7_t;
 #include <credentials/keys/private_key.h>
 #include <crypto/pkcs9.h>
 #include <crypto/crypters/crypter.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * PKCS#7 contentInfo object.

@@ -22,7 +22,7 @@
 #define GATEWAY_H_
 
 #include <networking/host.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct gateway_t gateway_t;
 

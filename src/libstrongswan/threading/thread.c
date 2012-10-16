@@ -36,7 +36,7 @@ static inline pid_t gettid()
 
 #include <threading/thread_value.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 #include "thread.h"
 

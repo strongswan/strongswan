@@ -30,8 +30,8 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
-#include <utils/enumerator.h>
-#include <utils/linked_list.h>
+#include <collections/enumerator.h>
+#include <collections/linked_list.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/proposal/proposal_keywords.h>

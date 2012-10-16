@@ -39,8 +39,8 @@
 #include <debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
-#include <utils/hashtable.h>
-#include <utils/linked_list.h>
+#include <collections/hashtable.h>
+#include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
 /** Required for Linux 2.6.26 kernel and later */

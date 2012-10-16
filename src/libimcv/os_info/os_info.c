@@ -18,7 +18,7 @@
 #include <sys/utsname.h>
 #include <stdio.h>
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_os_info_t private_os_info_t;
@@ -132,13 +132,13 @@ METHOD(os_info_t, get_uptime, time_t,
 	if (!file)
 	{
 		DBG1(DBG_IMC, "failed to open \"%s\"", proc_uptime);
-		return 0;	
+		return 0;
 	}
 	if (fscanf(file, "%u", &uptime) != 1)
 	{
 		DBG1(DBG_IMC, "failed to read file \"%s\"", proc_uptime);
 		uptime = 0;
-	}		
+	}
 	fclose(file);
 
 	return uptime;
@@ -229,7 +229,7 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 		{
 			case RELEASE_LSB:
 			{
-				/* Determine Distribution ID */				
+				/* Determine Distribution ID */
 				pos = strstr(buf, lsb_distrib_id);
 				if (!pos)
 				{
@@ -249,7 +249,7 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 
 				os_name.len = pos - os_name.ptr;
 
-				/* Determine Distribution Release */				
+				/* Determine Distribution Release */
 				pos = strstr(buf, lsb_distrib_release);
 				if (!pos)
 				{
@@ -270,7 +270,7 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 				os_version.len = pos - os_version.ptr;
 
 				break;
-			}			 
+			}
 			case RELEASE_DEBIAN:
 			{
 				char str_debian[] = "Debian";
@@ -344,7 +344,7 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 	*pos++ = ' ';
 	memcpy(pos, uninfo.machine, strlen(uninfo.machine));
 
-	return TRUE;	
+	return TRUE;
 }
 
 /**
@@ -356,9 +356,9 @@ os_info_t *os_info_create(void)
 	chunk_t name, version;
 
 	/* As an opton OS name and OS version can be configured manually */
-	name.ptr = lib->settings->get_str(lib->settings, 
+	name.ptr = lib->settings->get_str(lib->settings,
 									  "libimcv.os_info.name", NULL);
-	version.ptr = lib->settings->get_str(lib->settings, 
+	version.ptr = lib->settings->get_str(lib->settings,
 									  "libimcv.os_info.version", NULL);
 	if (name.ptr && version.ptr)
 	{
@@ -366,7 +366,7 @@ os_info_t *os_info_create(void)
 		name = chunk_clone(name);
 
 		version.len = strlen(version.ptr);
-		version = chunk_clone(version);	
+		version = chunk_clone(version);
 	}
 	else
 	{

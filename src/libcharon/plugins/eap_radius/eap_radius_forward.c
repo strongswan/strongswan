@@ -16,8 +16,8 @@
 #include "eap_radius_forward.h"
 
 #include <daemon.h>
-#include <utils/linked_list.h>
-#include <utils/hashtable.h>
+#include <collections/linked_list.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 
 typedef struct private_eap_radius_forward_t private_eap_radius_forward_t;

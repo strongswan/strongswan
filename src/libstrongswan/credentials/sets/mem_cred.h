@@ -27,7 +27,7 @@ typedef struct mem_cred_t mem_cred_t;
 
 #include <credentials/credential_set.h>
 #include <credentials/certificates/crl.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * Generic in-memory credential set.

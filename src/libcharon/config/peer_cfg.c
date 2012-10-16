@@ -22,7 +22,7 @@
 #include <daemon.h>
 
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,

@@ -26,7 +26,7 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
 /* the default size of the hash table (MUST be a power of 2) */

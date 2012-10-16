@@ -26,7 +26,7 @@ typedef struct backend_t backend_t;
 #include <library.h>
 #include <config/ike_cfg.h>
 #include <config/peer_cfg.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * The interface for a configuration backend.

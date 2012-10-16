@@ -21,7 +21,7 @@
 #include <threading/condvar.h>
 #include <threading/semaphore.h>
 #include <threading/mutex.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_callback_job_t private_callback_job_t;
 

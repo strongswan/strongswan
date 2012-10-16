@@ -18,7 +18,7 @@
 #include <tncif_names.h>
 
 #include <debug.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 typedef struct private_imc_test_state_t private_imc_test_state_t;
 typedef struct entry_t entry_t;
@@ -82,7 +82,7 @@ struct private_imc_test_state_t {
 	 * Do a handshake retry
 	 */
 	bool handshake_retry;
-	
+
 };
 
 /**
@@ -280,7 +280,7 @@ imc_state_t *imc_test_state_create(TNC_ConnectionID connection_id,
 		.first_handshake = TRUE,
 		.handshake_retry = retry,
 	);
-	
+
 	return &this->public.interface;
 }
 

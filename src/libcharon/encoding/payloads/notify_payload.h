@@ -30,7 +30,7 @@ typedef struct notify_payload_t notify_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 
 /**
  * Notify message types for IKEv2, and a subset for IKEv1.

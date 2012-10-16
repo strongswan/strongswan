@@ -54,7 +54,7 @@ struct private_backtrace_t {
 #ifdef HAVE_BFD_H
 
 #include <bfd.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 
 /**

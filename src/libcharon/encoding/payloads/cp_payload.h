@@ -28,7 +28,7 @@ typedef struct cp_payload_t cp_payload_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/configuration_attribute.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * Config Type of an Configuration Payload.

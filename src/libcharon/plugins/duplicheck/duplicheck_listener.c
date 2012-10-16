@@ -17,7 +17,7 @@
 
 #include <daemon.h>
 #include <threading/mutex.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 

@@ -21,7 +21,7 @@
 #ifndef EAP_SIM_FILE_TRIPLETS_H_
 #define EAP_SIM_FILE_TRIPLETS_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct eap_sim_file_triplets_t eap_sim_file_triplets_t;
 

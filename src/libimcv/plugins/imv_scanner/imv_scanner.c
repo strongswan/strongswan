@@ -25,7 +25,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/lexparser.h>
 #include <debug.h>
 
@@ -47,7 +47,7 @@ struct port_range_t {
 
 
 /**
- * Default port policy 
+ * Default port policy
  *
  * TRUE:  all server ports on the TNC client must be closed
  * FALSE: any server port on the TNC client is allowed to be open
@@ -207,7 +207,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			char buf[BUF_LEN], *pos = buf;
 			size_t len = BUF_LEN;
 			bool blocked, compliant = TRUE;
-	
+
 			attr_port_filter = (ietf_attr_port_filter_t*)attr;
 			enumerator = attr_port_filter->create_port_enumerator(attr_port_filter);
 			while (enumerator->enumerate(enumerator, &blocked, &protocol, &port))
@@ -237,7 +237,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				e->destroy(e);
 
 				passed = (closed_port_policy == found);
-				DBG2(DBG_IMV, "%s port %5u %s: %s", 
+				DBG2(DBG_IMV, "%s port %5u %s: %s",
 					(protocol == IPPROTO_TCP) ? "tcp" : "udp", port,
 					 blocked ? "closed" : "open", passed ? "ok" : "fatal");
 				if (!passed)
@@ -253,14 +253,14 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					pos += written;
 					len -= written;
 				}
-			} 
+			}
 			enumerator->destroy(enumerator);
 
 			if (compliant)
 			{
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);	
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 			}
 			else
 			{
@@ -270,9 +270,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				imv_scanner_state->set_violating_ports(imv_scanner_state, buf);
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);	
-			}		  
-		}		
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
+			}
+		}
 	}
 	enumerator->destroy(enumerator);
 

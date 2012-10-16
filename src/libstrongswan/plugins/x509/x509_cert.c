@@ -35,7 +35,7 @@
 #include <asn1/asn1_parser.h>
 #include <crypto/hashers/hasher.h>
 #include <credentials/keys/private_key.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <selectors/traffic_selector.h>
 

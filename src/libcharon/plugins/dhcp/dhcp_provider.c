@@ -15,7 +15,7 @@
 
 #include "dhcp_provider.h"
 
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 
 typedef struct private_dhcp_provider_t private_dhcp_provider_t;

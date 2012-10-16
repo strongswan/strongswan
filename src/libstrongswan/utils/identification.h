@@ -30,7 +30,7 @@ typedef enum id_match_t id_match_t;
 typedef enum id_part_t id_part_t;
 
 #include <chunk.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 /**
  * Matches returned from identification_t.match

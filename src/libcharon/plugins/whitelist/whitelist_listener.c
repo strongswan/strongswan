@@ -16,7 +16,7 @@
 #include "whitelist_listener.h"
 
 #include <daemon.h>
-#include <utils/hashtable.h>
+#include <collections/hashtable.h>
 #include <threading/rwlock.h>
 
 typedef struct private_whitelist_listener_t private_whitelist_listener_t;

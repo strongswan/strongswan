@@ -27,7 +27,7 @@ typedef struct proposal_t proposal_t;
 
 #include <library.h>
 #include <utils/identification.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <networking/host.h>
 #include <crypto/transform.h>
 #include <crypto/crypters/crypter.h>

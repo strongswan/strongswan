@@ -34,7 +34,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 /* IMV definitions */
@@ -208,7 +208,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				break;
 			}
 			case IETF_ATTR_INSTALLED_PACKAGES:
-			{ 
+			{
 				ietf_attr_installed_packages_t *attr_cast;
 				enumerator_t *e;
 				chunk_t name, version;
@@ -224,13 +224,13 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 				state->set_recommendation(state,
 									  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-									  TNC_IMV_EVALUATION_RESULT_COMPLIANT);	
+									  TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 				assessment = TRUE;
 				break;
 			}
 			default:
 				break;
-		}		
+		}
 	}
 	enumerator->destroy(enumerator);
 
@@ -263,7 +263,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			assessment = TRUE;
 		}
 		else
-		{	
+		{
 			DBG1(DBG_IMV, "requesting installed packages for '%s'",
 						   product_info);
 			attr = ietf_attr_attr_request_create(PEN_IETF,

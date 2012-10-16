@@ -15,7 +15,7 @@
 
 #include "xauth_manager.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
 typedef struct private_xauth_manager_t private_xauth_manager_t;

@@ -3,6 +3,8 @@ ipseclib_LTLIBRARIES = libstrongswan.la
 libstrongswan_la_SOURCES = \
 library.c chunk.c debug.c enum.c settings.c printf_hook.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
+collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
+collections/linked_list.c \
 crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs7.c crypto/pkcs9.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c \
@@ -27,7 +29,6 @@ processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils.c utils/identification.c utils/lexparser.c \
-utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
 utils/optionsfrom.c utils/capabilities.c utils/backtrace.c
 
 if USE_DEV_HEADERS
@@ -35,6 +36,8 @@ strongswan_includedir = ${dev_headers}
 nobase_strongswan_include_HEADERS = \
 library.h chunk.h debug.h enum.h settings.h printf_hook.h \
 asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
+collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
+collections/linked_list.h \
 crypto/crypters/crypter.h crypto/hashers/hasher.h crypto/mac.h \
 crypto/pkcs7.h crypto/pkcs9.h crypto/proposal/proposal_keywords.h \
 crypto/proposal/proposal_keywords_static.h \
@@ -66,7 +69,6 @@ threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils.h utils/identification.h utils/lexparser.h \
-utils/linked_list.h utils/blocking_queue.h utils/hashtable.h utils/enumerator.h \
 utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h integrity_checker.h
 endif

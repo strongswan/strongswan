@@ -21,7 +21,7 @@
 #ifndef XML_H_
 #define XML_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct xml_t xml_t;
 

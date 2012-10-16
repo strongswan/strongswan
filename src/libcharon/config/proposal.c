@@ -19,7 +19,7 @@
 #include "proposal.h"
 
 #include <daemon.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <utils/identification.h>
 
 #include <crypto/transform.h>

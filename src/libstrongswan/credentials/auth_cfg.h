@@ -22,7 +22,7 @@
 #ifndef AUTH_CFG_H_
 #define AUTH_CFG_H_
 
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 
 typedef struct auth_cfg_t auth_cfg_t;
 typedef enum auth_rule_t auth_rule_t;

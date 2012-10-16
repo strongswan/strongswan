@@ -17,7 +17,7 @@
 #define IFACE_H
 
 #include <library.h>
-#include <utils/enumerator.h>
+#include <collections/enumerator.h>
 #include <networking/host.h>
 
 #define TAP_DEVICE "/dev/net/tun"

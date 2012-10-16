@@ -20,7 +20,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 
@@ -87,7 +87,7 @@ struct package_entry_t {
 	chunk_t version;
 };
 
-/** 
+/**
  * Free a package entry
  */
 static void free_package_entry(package_entry_t *entry)
@@ -169,7 +169,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint16(reader, &reserved);
 	reader->read_uint16(reader, &count);
 	*offset = INSTALLED_PACKAGES_MIN_SIZE;
-		
+
 	while (reader->remaining(reader))
 	{
 		if (!reader->read_data8(reader, &name))
@@ -190,7 +190,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		{
 			DBG1(DBG_TNC, "insufficient data for IETF installed package version");
 			goto end;
-		}	
+		}
 		pos = memchr(version.ptr, '\0', version.len);
 		if (pos)
 		{
@@ -199,8 +199,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			goto end;
 		}
 		*offset += 1 + version.len;
-	
-		entry = malloc_thing(package_entry_t);	
+
+		entry = malloc_thing(package_entry_t);
 		entry->name = chunk_clone(name);
 		entry->version = chunk_clone(version);
 		this->packages->insert_last(this->packages, entry);
@@ -216,7 +216,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 end:
 	reader->destroy(reader);
-	return status;	
+	return status;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
@@ -249,7 +249,7 @@ METHOD(ietf_attr_installed_packages_t, add, void,
 	entry = malloc_thing(package_entry_t);
 	entry->name = chunk_clone(name);
 	entry->version = chunk_clone(version);
-	this->packages->insert_last(this->packages, entry);	
+	this->packages->insert_last(this->packages, entry);
 }
 
 /**

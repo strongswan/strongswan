@@ -22,7 +22,7 @@
 #include <encoding/payloads/transform_attribute.h>
 #include <encoding/payloads/encodings.h>
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <daemon.h>
 
 typedef struct private_transform_substructure_t private_transform_substructure_t;

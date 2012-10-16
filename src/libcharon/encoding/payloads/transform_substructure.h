@@ -27,7 +27,7 @@ typedef struct transform_substructure_t transform_substructure_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_attribute.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/signers/signer.h>
 #include <crypto/prfs/prf.h>

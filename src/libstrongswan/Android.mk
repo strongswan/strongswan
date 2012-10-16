@@ -5,6 +5,8 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 library.c chunk.c debug.c enum.c settings.c printf_hook.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
+collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
+collections/linked_list.c \
 crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs7.c crypto/pkcs9.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c \
@@ -29,7 +31,6 @@ processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils.c utils/identification.c utils/lexparser.c \
-utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
 utils/optionsfrom.c utils/capabilities.c utils/backtrace.c
 
 # adding the plugin source files

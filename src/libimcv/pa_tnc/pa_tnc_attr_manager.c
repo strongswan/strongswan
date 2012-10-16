@@ -16,7 +16,7 @@
 
 #include "pa_tnc_attr_manager.h"
 
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <debug.h>
 
 typedef struct private_pa_tnc_attr_manager_t private_pa_tnc_attr_manager_t;
@@ -46,7 +46,7 @@ struct private_pa_tnc_attr_manager_t {
 };
 
 METHOD(pa_tnc_attr_manager_t, add_vendor, void,
-	private_pa_tnc_attr_manager_t *this, pen_t vendor_id, 
+	private_pa_tnc_attr_manager_t *this, pen_t vendor_id,
 	pa_tnc_attr_create_t attr_create, enum_name_t *attr_names)
 {
 	entry_t *entry;
@@ -128,7 +128,7 @@ METHOD(pa_tnc_attr_manager_t, create, pa_tnc_attr_t*,
 METHOD(pa_tnc_attr_manager_t, destroy, void,
 	private_pa_tnc_attr_manager_t *this)
 {
-	this->list->destroy_function(this->list, free); 
+	this->list->destroy_function(this->list, free);
 	free(this);
 }
 

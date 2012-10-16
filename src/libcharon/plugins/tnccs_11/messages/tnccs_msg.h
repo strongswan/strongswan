@@ -25,7 +25,7 @@ typedef enum tnccs_msg_type_t tnccs_msg_type_t;
 typedef struct tnccs_msg_t tnccs_msg_t;
 
 #include <library.h>
-#include <utils/linked_list.h>
+#include <collections/linked_list.h>
 #include <libxml/parser.h>
 
 /**
