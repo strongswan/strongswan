@@ -366,9 +366,21 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	{
 		/* store peer init message for authentication step */
 		this->other_init_msg = chunk_clone(ike_sa_init);
+		*octets = chunk_empty;
+		return TRUE;
 	}
-	DBG1(DBG_IKE, "returning auth octets");
-	*octets = chunk_empty;
+
+	sign_info_t *sign;
+	INIT(sign,
+		 .isa_id = this->isa_ctx_id,
+		 .init_message = chunk_clone(ike_sa_init),
+	);
+
+	/*
+	 * store signature info in AUTH octets, which is passed to the private key
+	 * sign() operation
+	 */
+	*octets = chunk_create((u_char *)sign, sizeof(sign_info_t));
 	return TRUE;
 }
 
