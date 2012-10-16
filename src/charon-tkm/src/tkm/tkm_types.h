@@ -74,6 +74,7 @@ typedef struct isa_info_t isa_info_t;
 
 /**
  * IKE SA info data structure.
+ *
  * This type is used to transfer ISA information from the keymat of the parent
  * SA to the keymat of the new IKE SA. For this purpose the skd data chunk is
  * (ab)used. This is possible since the sk_d chunk is treated as an opaque value
@@ -91,6 +92,31 @@ struct isa_info_t {
 	 * Authenticated endpoint context id.
 	 */
 	ae_id_type ae_id;
+
+};
+
+typedef struct sign_info_t sign_info_t;
+
+/**
+ * AUTH signature info data structure.
+ *
+ * This type is used to transfer an ISA context id and the initial message
+ * from the keymat to the TKM private key sign operation. For this purpose the
+ * auth octets chunk is (ab)used and the data is stored in this chunk.
+ * This is possible since the auth octets are treated as opaque value and handed
+ * to the private key sign function as-is without any processing.
+ */
+struct sign_info_t {
+
+	/**
+	 * ISA context id.
+	 */
+	isa_id_type isa_id;
+
+	/**
+	 * Init message.
+	 */
+	chunk_t init_message;
 
 };
 
