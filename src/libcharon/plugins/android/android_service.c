@@ -264,7 +264,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		this->creds->set_username_password(this->creds, user, password);
 	}
 
-	ike_cfg = ike_cfg_create(TRUE, FALSE, "0.0.0.0", FALSE,
+	ike_cfg = ike_cfg_create(IKEV2, TRUE, FALSE, "0.0.0.0", FALSE,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 hostname, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));

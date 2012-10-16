@@ -57,6 +57,13 @@ extern enum_name_t *ike_version_names;
 struct ike_cfg_t {
 
 	/**
+	 * Get the IKE version to use with this configuration.
+	 *
+	 * @return				IKE major version
+	 */
+	ike_version_t (*get_version)(ike_cfg_t *this);
+
+	/**
 	 * Get own address.
 	 *
 	 * @param allow_any		allow any address to match
@@ -167,6 +174,7 @@ struct ike_cfg_t {
  *
  * Supplied hosts become owned by ike_cfg, the name gets cloned.
  *
+ * @param version			IKE major version to use for this config
  * @param certreq			TRUE to send a certificate request
  * @param force_encap		enforce UDP encapsulation by faking NATD notify
  * @param me				address/DNS name of local peer
@@ -177,7 +185,7 @@ struct ike_cfg_t {
  * @param other_port		IKE port to use as dest, 500 uses IKEv2 port floating
  * @return 					ike_cfg_t object.
  */
-ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
+ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port);
 

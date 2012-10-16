@@ -261,14 +261,15 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 
 	if (this->port && num)
 	{
-		ike_cfg = ike_cfg_create(FALSE, FALSE,
+		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
 								 this->local, FALSE, this->port + num - 1,
 								 this->remote, FALSE, IKEV2_NATT_PORT);
 	}
 	else
 	{
-		ike_cfg = ike_cfg_create(FALSE, FALSE,
-								 this->local, FALSE, charon->socket->get_port(charon->socket, FALSE),
+		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
+								 this->local, FALSE,
+								 charon->socket->get_port(charon->socket, FALSE),
 								 this->remote, FALSE, IKEV2_UDP_PORT);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));

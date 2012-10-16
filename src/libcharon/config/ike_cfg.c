@@ -45,6 +45,11 @@ struct private_ike_cfg_t {
 	refcount_t refcount;
 
 	/**
+	 * IKE version to use
+	 */
+	ike_version_t version;
+
+	/**
 	 * Address of local host
 	 */
 	char *me;
@@ -89,6 +94,12 @@ struct private_ike_cfg_t {
 	 */
 	linked_list_t *proposals;
 };
+
+METHOD(ike_cfg_t, get_version, ike_version_t,
+	private_ike_cfg_t *this)
+{
+	return this->version;
+}
 
 METHOD(ike_cfg_t, send_certreq, bool,
 	private_ike_cfg_t *this)
@@ -254,6 +265,7 @@ METHOD(ike_cfg_t, equals, bool,
 	e2->destroy(e2);
 
 	return (eq &&
+		this->version == other->version &&
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
 		streq(this->me, other->me) &&
@@ -285,7 +297,7 @@ METHOD(ike_cfg_t, destroy, void,
 /**
  * Described in header.
  */
-ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
+ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port)
 {
@@ -293,6 +305,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 
 	INIT(this,
 		.public = {
+			.get_version = _get_version,
 			.send_certreq = _send_certreq,
 			.force_encap = _force_encap_,
 			.get_my_addr = _get_my_addr,
@@ -308,6 +321,7 @@ ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
 			.destroy = _destroy,
 		},
 		.refcount = 1,
+		.version = version,
 		.certreq = certreq,
 		.force_encap = force_encap,
 		.me = strdup(me),

@@ -139,8 +139,9 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 		.db = db,
 		.rekey = lib->settings->get_time(lib->settings, "medsrv.rekey", 1200),
 		.dpd = lib->settings->get_time(lib->settings, "medsrv.dpd", 300),
-		.ike = ike_cfg_create(FALSE, FALSE,
-							  "0.0.0.0", FALSE, charon->socket->get_port(charon->socket, FALSE),
+		.ike = ike_cfg_create(IKEV2, FALSE, FALSE,
+							  "0.0.0.0", FALSE,
+							  charon->socket->get_port(charon->socket, FALSE),
 							  "0.0.0.0", FALSE, IKEV2_UDP_PORT),
 	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));

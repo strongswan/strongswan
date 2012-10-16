@@ -101,7 +101,7 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 	proposal_t *proposal;
 	char *token;
 
-	ike_cfg = ike_cfg_create(TRUE,
+	ike_cfg = ike_cfg_create(IKEV2, TRUE,
 		settings->get_bool(settings, "configs.%s.fake_nat", FALSE, config),
 		settings->get_str(settings, "configs.%s.lhost", "%any", config), FALSE,
 		settings->get_int(settings, "configs.%s.lport", 500, config),

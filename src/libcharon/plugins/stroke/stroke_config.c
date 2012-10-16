@@ -225,7 +225,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	ikeport = msg->add_conn.me.ikeport;
 	ikeport = (ikeport == IKEV2_UDP_PORT) ?
 			   charon->socket->get_port(charon->socket, FALSE) : ikeport;
-	ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
+	ike_cfg = ike_cfg_create(msg->add_conn.version,
+							 msg->add_conn.other.sendcert != CERT_NEVER_SEND,
 							 msg->add_conn.force_encap,
 							 msg->add_conn.me.address,
 							 msg->add_conn.me.allow_any,
