@@ -38,7 +38,7 @@
 
 #define ANDROID_DEBUG_LEVEL 1
 #define ANDROID_RETRASNMIT_TRIES 3
-#define ANDROID_RETRANSMIT_TIMEOUT 3.0
+#define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
 
 typedef struct private_charonservice_t private_charonservice_t;
