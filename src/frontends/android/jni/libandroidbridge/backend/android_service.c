@@ -414,8 +414,13 @@ METHOD(listener_t, alert, bool,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
 				break;
 			case ALERT_PEER_INIT_UNREACHABLE:
-				charonservice->update_status(charonservice,
-											 CHARONSERVICE_UNREACHABLE_ERROR);
+				this->lock->read_lock(this->lock);
+				if (this->tunfd < 0)
+				{	/* only handle this if we are not reestablishing the SA */
+					charonservice->update_status(charonservice,
+											CHARONSERVICE_UNREACHABLE_ERROR);
+				}
+				this->lock->unlock(this->lock);
 				break;
 			default:
 				break;
