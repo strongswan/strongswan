@@ -470,7 +470,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create("android", IKEV2, ike_cfg, CERT_SEND_IF_ASKED,
-							   UNIQUE_REPLACE, 1, /* keyingtries */
+							   UNIQUE_REPLACE, 0, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */
 							   TRUE, FALSE, /* mobike, aggressive */
@@ -522,8 +522,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
+								 ACTION_NONE, ACTION_RESTART, ACTION_RESTART,
+								 FALSE, 0, 0, NULL, NULL, 0);
 	/* create an ESP proposal with the algorithms currently supported by
 	 * libipsec, no PFS for now */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
