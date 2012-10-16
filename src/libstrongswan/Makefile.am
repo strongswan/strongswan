@@ -70,7 +70,7 @@ threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
 utils.h utils/identification.h utils/lexparser.h \
 utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
-utils/leak_detective.h integrity_checker.h
+utils/leak_detective.h utils/integrity_checker.h
 endif
 
 library.lo :	$(top_builddir)/config.status
@@ -95,7 +95,7 @@ endif
 
 if USE_INTEGRITY_TEST
   AM_CFLAGS += -DINTEGRITY_TEST
-  libstrongswan_la_SOURCES += integrity_checker.c
+  libstrongswan_la_SOURCES += utils/integrity_checker.c
 endif
 
 if USE_VSTR
