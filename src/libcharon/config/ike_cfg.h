@@ -22,6 +22,7 @@
 #ifndef IKE_CFG_H_
 #define IKE_CFG_H_
 
+typedef enum ike_version_t ike_version_t;
 typedef struct ike_cfg_t ike_cfg_t;
 
 #include <library.h>
@@ -30,6 +31,23 @@ typedef struct ike_cfg_t ike_cfg_t;
 #include <utils/identification.h>
 #include <config/proposal.h>
 #include <crypto/diffie_hellman.h>
+
+/**
+ * IKE version.
+ */
+enum ike_version_t {
+	/** any version */
+	IKE_ANY = 0,
+	/** IKE version 1 */
+	IKEV1 = 1,
+	/** IKE version 2 */
+	IKEV2 = 2,
+};
+
+/**
+ * enum strings fro ike_version_t
+ */
+extern enum_name_t *ike_version_names;
 
 /**
  * An ike_cfg_t defines the rules to set up an IKE_SA.

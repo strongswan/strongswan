@@ -21,6 +21,12 @@
 #include <daemon.h>
 
 
+ENUM(ike_version_names, IKE_ANY, IKEV2,
+	"IKEv1/2",
+	"IKEv1",
+	"IKEv2",
+);
+
 typedef struct private_ike_cfg_t private_ike_cfg_t;
 
 /**

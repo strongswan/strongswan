@@ -23,7 +23,6 @@
 #ifndef PEER_CFG_H_
 #define PEER_CFG_H_
 
-typedef enum ike_version_t ike_version_t;
 typedef enum cert_policy_t cert_policy_t;
 typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
@@ -36,23 +35,6 @@ typedef struct peer_cfg_t peer_cfg_t;
 #include <config/ike_cfg.h>
 #include <config/child_cfg.h>
 #include <credentials/auth_cfg.h>
-
-/**
- * IKE version.
- */
-enum ike_version_t {
-	/** any version */
-	IKE_ANY = 0,
-	/** IKE version 1 */
-	IKEV1 = 1,
-	/** IKE version 2 */
-	IKEV2 = 2,
-};
-
-/**
- * enum strings fro ike_version_t
- */
-extern enum_name_t *ike_version_names;
 
 /**
  * Certificate sending policy. This is also used for certificate
