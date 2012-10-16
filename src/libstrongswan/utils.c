@@ -27,7 +27,6 @@
 #include <time.h>
 #include <pthread.h>
 
-#include "enum.h"
 #include "debug.h"
 #include "collections/enumerator.h"
 

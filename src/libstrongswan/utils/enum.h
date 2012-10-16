@@ -16,13 +16,13 @@
 
 /**
  * @defgroup enum enum
- * @{ @ingroup libstrongswan
+ * @{ @ingroup utils
  */
 
 #ifndef ENUM_H_
 #define ENUM_H_
 
-#include "utils/printf_hook.h"
+#include "printf_hook.h"
 
 typedef struct enum_name_t enum_name_t;
 

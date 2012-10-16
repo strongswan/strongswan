@@ -26,7 +26,7 @@
 #ifndef SIMAKA_MESSAGE_H_
 #define SIMAKA_MESSAGE_H_
 
-#include <enum.h>
+#include <utils/enum.h>
 #include <eap/eap.h>
 
 #include "simaka_crypto.h"
