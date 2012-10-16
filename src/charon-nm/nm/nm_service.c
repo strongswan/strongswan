@@ -18,7 +18,7 @@
 #include "nm_service.h"
 
 #include <daemon.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
 #include <credentials/certificates/x509.h>

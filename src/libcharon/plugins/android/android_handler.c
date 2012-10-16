@@ -16,7 +16,7 @@
 
 #include "android_handler.h"
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/linked_list.h>
 
 #include <cutils/properties.h>

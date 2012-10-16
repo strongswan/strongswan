@@ -18,7 +18,7 @@
 
 #include <library.h>
 #include <utils/enumerator.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 #define TAP_DEVICE "/dev/net/tun"
 

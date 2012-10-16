@@ -25,7 +25,7 @@
 
 #include <hydra.h>
 #include <debug.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>

@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 #include <daemon.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 

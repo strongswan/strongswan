@@ -15,13 +15,13 @@
 
 /**
  * @defgroup host_resolver host_resolver
- * @{ @ingroup libstrongswan
+ * @{ @ingroup networking
  */
 
 #ifndef HOST_RESOLVER_H_
 #define HOST_RESOLVER_H_
 
-#include "utils/host.h"
+#include "host.h"
 
 typedef struct host_resolver_t host_resolver_t;
 

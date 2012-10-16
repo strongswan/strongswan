@@ -17,7 +17,7 @@
 #include <string.h>
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 #include "pool_attributes.h"
 #include "pool_usage.h"

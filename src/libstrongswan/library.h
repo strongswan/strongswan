@@ -46,6 +46,9 @@
  * @defgroup ipsec ipsec
  * @ingroup libstrongswan
  *
+ * @defgroup networking networking
+ * @ingroup libstrongswan
+ *
  * @defgroup plugins plugins
  * @ingroup libstrongswan
  *
@@ -77,9 +80,9 @@
 #include "printf_hook.h"
 #include "utils.h"
 #include "chunk.h"
-#include "host_resolver.h"
 #include "settings.h"
 #include "integrity_checker.h"
+#include "networking/host_resolver.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"
 #include "crypto/crypto_factory.h"

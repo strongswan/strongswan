@@ -15,14 +15,14 @@
 
 /**
  * @defgroup tnc_ifmap_soap tnc_ifmap_soap
- * @{ @ingroup tnc_ifmap 
+ * @{ @ingroup tnc_ifmap
  */
 
 #ifndef TNC_IFMAP_SOAP_H_
 #define TNC_IFMAP_SOAP_H_
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <sa/ike_sa.h>
 
 typedef struct tnc_ifmap_soap_t tnc_ifmap_soap_t;
@@ -47,7 +47,7 @@ struct tnc_ifmap_soap_t {
 	bool (*purgePublisher)(tnc_ifmap_soap_t *this);
 
 	/**
-	 * Publish metadata about established/deleted IKE_SAs 
+	 * Publish metadata about established/deleted IKE_SAs
 	 *
 	 * @param ike_sa		IKE_SA for which metadate is published
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
@@ -56,7 +56,7 @@ struct tnc_ifmap_soap_t {
 	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up);
 
 	/**
-	 * Publish PEP device-ip metadata 
+	 * Publish PEP device-ip metadata
 	 *
 	 * @param host			IP address of local endpoint
 	 * @return				TRUE if command was successful

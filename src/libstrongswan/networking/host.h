@@ -18,7 +18,7 @@
 
 /**
  * @defgroup host host
- * @{ @ingroup utils
+ * @{ @ingroup networking
  */
 
 #ifndef HOST_H_

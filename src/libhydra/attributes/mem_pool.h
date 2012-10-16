@@ -24,7 +24,7 @@
 typedef struct mem_pool_t mem_pool_t;
 typedef enum mem_pool_op_t mem_pool_op_t;
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 
 /**

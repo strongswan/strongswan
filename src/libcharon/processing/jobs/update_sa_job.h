@@ -24,7 +24,7 @@
 typedef struct update_sa_job_t update_sa_job_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <processing/jobs/job.h>
 
 /**

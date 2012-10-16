@@ -21,7 +21,7 @@
 #include <debug.h>
 #include <threading/thread.h>
 #include <utils/identification.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/hashtable.h>
 #include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>

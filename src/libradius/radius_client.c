@@ -20,7 +20,7 @@
 #include <errno.h>
 
 #include <debug.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/linked_list.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>

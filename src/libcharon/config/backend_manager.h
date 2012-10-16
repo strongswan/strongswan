@@ -24,7 +24,7 @@
 typedef struct backend_manager_t backend_manager_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <config/ike_cfg.h>
 #include <config/peer_cfg.h>

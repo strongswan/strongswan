@@ -26,7 +26,7 @@ typedef enum ike_version_t ike_version_t;
 typedef struct ike_cfg_t ike_cfg_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <config/proposal.h>

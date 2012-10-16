@@ -26,7 +26,7 @@
 typedef struct receiver_t receiver_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/packet.h>
 
 /**

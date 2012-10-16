@@ -22,7 +22,7 @@
 #define IP_PACKET_H_
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/packet.h>
 
 typedef struct ip_packet_t ip_packet_t;

@@ -59,7 +59,7 @@
 
 #include <hydra.h>
 #include <debug.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/linked_list.h>
 #include <utils/hashtable.h>
 #include <threading/thread.h>

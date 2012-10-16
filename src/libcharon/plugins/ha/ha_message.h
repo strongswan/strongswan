@@ -22,7 +22,7 @@
 #define HA_MESSAGE_H_
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <sa/ike_sa_id.h>
 #include <selectors/traffic_selector.h>

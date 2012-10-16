@@ -28,7 +28,7 @@
 #include <library.h>
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 typedef struct ipsec_sa_mgr_t ipsec_sa_mgr_t;
 

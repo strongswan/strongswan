@@ -21,7 +21,7 @@
 #ifndef FARP_LISTENER_H_
 #define FARP_LISTENER_H_
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <bus/listeners/listener.h>
 
 typedef struct farp_listener_t farp_listener_t;

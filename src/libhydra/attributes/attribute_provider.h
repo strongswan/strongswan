@@ -21,7 +21,7 @@
 #ifndef ATTRIBUTE_PROVIDER_H_
 #define ATTRIBUTE_PROVIDER_H_
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
 

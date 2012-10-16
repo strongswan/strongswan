@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-library.c chunk.c debug.c enum.c host_resolver.c settings.c printf_hook.c \
+library.c chunk.c debug.c enum.c settings.c printf_hook.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs7.c crypto/pkcs9.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
@@ -22,11 +22,12 @@ credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
 ipsec/ipsec_types.c \
+networking/host.c networking/host_resolver.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
-utils.c utils/host.c utils/packet.c utils/identification.c utils/lexparser.c \
+utils.c utils/packet.c utils/identification.c utils/lexparser.c \
 utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
 utils/optionsfrom.c utils/capabilities.c utils/backtrace.c utils/tun_device.c
 

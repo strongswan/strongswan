@@ -23,7 +23,7 @@
 
 #include <debug.h>
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <attributes/attributes.h>
 

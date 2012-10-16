@@ -48,7 +48,7 @@
 
 typedef struct kernel_interface_t kernel_interface_t;
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <crypto/prf_plus.h>
 
 #include <kernel/kernel_listener.h>

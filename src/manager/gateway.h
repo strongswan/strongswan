@@ -21,7 +21,7 @@
 #ifndef GATEWAY_H_
 #define GATEWAY_H_
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/enumerator.h>
 
 typedef struct gateway_t gateway_t;

@@ -26,7 +26,7 @@
 typedef struct packet_t packet_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 /**
  * Abstraction of an IP/UDP-Packet, contains data, sender and receiver.

@@ -24,7 +24,7 @@
 typedef struct migrate_job_t migrate_job_t;
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <selectors/traffic_selector.h>
 #include <kernel/kernel_ipsec.h>
 #include <processing/jobs/job.h>

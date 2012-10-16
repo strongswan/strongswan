@@ -21,7 +21,7 @@
 #ifndef DHCP_TRANSACTION_H_
 #define DHCP_TRANSACTION_H_
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <utils/identification.h>
 #include <attributes/attributes.h>
 

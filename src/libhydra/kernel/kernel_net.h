@@ -26,7 +26,7 @@ typedef struct kernel_net_t kernel_net_t;
 typedef enum kernel_address_type_t kernel_address_type_t;
 
 #include <utils/enumerator.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <plugins/plugin.h>
 
 /**

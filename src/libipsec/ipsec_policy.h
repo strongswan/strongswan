@@ -26,7 +26,7 @@
 #include "ip_packet.h"
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
 

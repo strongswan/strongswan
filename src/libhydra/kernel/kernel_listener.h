@@ -25,7 +25,7 @@ typedef struct kernel_listener_t kernel_listener_t;
 
 #include <kernel/kernel_ipsec.h>
 #include <selectors/traffic_selector.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 /**
  * Interface for components interested in kernel events.

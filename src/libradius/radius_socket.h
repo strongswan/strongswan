@@ -25,7 +25,7 @@ typedef struct radius_socket_t radius_socket_t;
 
 #include "radius_message.h"
 
-#include <utils/host.h>
+#include <networking/host.h>
 
 /**
  * RADIUS socket to a server.

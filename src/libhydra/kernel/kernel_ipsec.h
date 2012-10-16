@@ -26,7 +26,7 @@
 
 typedef struct kernel_ipsec_t kernel_ipsec_t;
 
-#include <utils/host.h>
+#include <networking/host.h>
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
 #include <plugins/plugin.h>

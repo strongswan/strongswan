@@ -24,7 +24,7 @@
 #include <jni.h>
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 typedef struct network_manager_t network_manager_t;
 

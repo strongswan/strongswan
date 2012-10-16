@@ -26,7 +26,7 @@
 #include <jni.h>
 
 #include <library.h>
-#include <utils/host.h>
+#include <networking/host.h>
 
 typedef struct vpnservice_builder_t vpnservice_builder_t;
 
