@@ -75,12 +75,7 @@ static void connectivity_cb(private_kernel_android_net_t *this,
 		this->mutex->unlock(this->mutex);
 		return;
 	}
-	now.tv_usec += ROAM_DELAY * 1000;
-	while (now.tv_usec > 1000000)
-	{
-		now.tv_sec++;
-		now.tv_usec -= 1000000;
-	}
+	timeval_add_ms(&now, ROAM_DELAY);
 	this->next_roam = now;
 	this->mutex->unlock(this->mutex);
 

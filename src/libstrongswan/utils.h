@@ -455,6 +455,22 @@ void closefrom(int lowfd);
 time_t time_monotonic(timeval_t *tv);
 
 /**
+ * Add the given number of milliseconds to the given timeval struct
+ *
+ * @param tv		timeval struct to modify
+ * @param ms		number of milliseconds
+ */
+static inline void timeval_add_ms(timeval_t *tv, u_int ms)
+{
+	tv->tv_usec += ms * 1000;
+	while (tv->tv_usec > 1000000 /* 1s */)
+	{
+		tv->tv_usec -= 1000000;
+		tv->tv_sec++;
+	}
+}
+
+/**
  * returns null
  */
 void *return_null();

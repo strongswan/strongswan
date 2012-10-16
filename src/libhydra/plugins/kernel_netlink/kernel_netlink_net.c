@@ -543,12 +543,7 @@ static void queue_route_reinstall(private_kernel_netlink_net_t *this,
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_route_reinstall, >))
 	{
-		now.tv_usec += ROUTE_DELAY * 1000;
-		while (now.tv_usec > 1000000)
-		{
-			now.tv_sec++;
-			now.tv_usec -= 1000000;
-		}
+		timeval_add_ms(&now, ROUTE_DELAY);
 		this->last_route_reinstall = now;
 
 		job = (job_t*)callback_job_create((callback_job_cb_t)reinstall_routes,
@@ -704,12 +699,7 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 		this->roam_lock->unlock(this->roam_lock);
 		return;
 	}
-	now.tv_usec += ROAM_DELAY * 1000;
-	while (now.tv_usec > 1000000)
-	{
-		now.tv_sec++;
-		now.tv_usec -= 1000000;
-	}
+	timeval_add_ms(&now, ROAM_DELAY);
 	this->next_roam = now;
 	this->roam_lock->unlock(this->roam_lock);
 
