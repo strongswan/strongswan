@@ -16,7 +16,7 @@
 #include "eap_ttls_server.h"
 #include "eap_ttls_avp.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 
 #include <sa/eap/eap_method.h>

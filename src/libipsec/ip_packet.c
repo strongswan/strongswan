@@ -17,7 +17,7 @@
 #include "ip_packet.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>

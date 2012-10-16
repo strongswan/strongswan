@@ -17,7 +17,7 @@
 #include "libpts.h"
 #include "pts/components/pts_comp_func_name.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pts_comp_func_name_t private_pts_comp_func_name_t;
 

@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_os_info_t private_os_info_t;
 

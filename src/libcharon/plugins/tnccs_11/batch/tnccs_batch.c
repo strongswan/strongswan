@@ -19,7 +19,7 @@
 #include <tnc/tnccs/tnccs.h>
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <libxml/parser.h>
 

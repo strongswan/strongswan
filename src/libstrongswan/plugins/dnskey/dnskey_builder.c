@@ -15,7 +15,7 @@
 
 #include "dnskey_builder.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/keys/private_key.h>
 
 

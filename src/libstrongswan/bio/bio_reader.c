@@ -18,7 +18,7 @@
 
 #include "bio_reader.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_bio_reader_t private_bio_reader_t;
 

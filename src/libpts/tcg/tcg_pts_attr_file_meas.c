@@ -19,7 +19,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_file_meas_t private_tcg_pts_attr_file_meas_t;
 

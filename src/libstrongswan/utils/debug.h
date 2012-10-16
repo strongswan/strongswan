@@ -15,7 +15,7 @@
 
 /**
  * @defgroup debug debug
- * @{ @ingroup libstrongswan
+ * @{ @ingroup utils
  */
 
 #ifndef DEBUG_H_

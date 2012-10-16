@@ -25,7 +25,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /* IMC definitions */
 
@@ -36,7 +36,7 @@ static pen_type_t msg_types[] = {
 };
 
 static imc_agent_t *imc_test;
- 
+
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
  */

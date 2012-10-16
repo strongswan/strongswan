@@ -16,7 +16,7 @@
 #include "ipsec.h"
 #include "ipsec_processor.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <threading/rwlock.h>
 #include <collections/blocking_queue.h>

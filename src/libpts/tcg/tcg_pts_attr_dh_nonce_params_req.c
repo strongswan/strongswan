@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_dh_nonce_params_req_t
 					private_tcg_pts_attr_dh_nonce_params_req_t;
@@ -32,7 +32,7 @@ typedef struct private_tcg_pts_attr_dh_nonce_params_req_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |	Reserved  | Min. Nonce Len |		D-H Group Set			|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 #define PTS_DH_NONCE_PARAMS_REQ_SIZE			4
@@ -62,7 +62,7 @@ struct private_tcg_pts_attr_dh_nonce_params_req_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Minimum acceptable length of nonce
 	 */
@@ -116,7 +116,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8 (writer, PTS_DH_NONCE_PARAMS_REQ_RESERVED);
 	writer->write_uint8 (writer, this->min_nonce_len);
 	writer->write_uint16(writer, this->dh_groups);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }

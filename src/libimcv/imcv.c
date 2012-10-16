@@ -17,7 +17,7 @@
 #include "ita/ita_attr.h"
 
 #include <utils.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <pen/pen.h>
 
 #include <syslog.h>
@@ -119,7 +119,7 @@ bool libimcv_init(void)
 									"libimcv.debug_level", IMCV_DEBUG_LEVEL);
 		imcv_stderr_quiet = lib->settings->get_int(lib->settings,
 									"libimcv.stderr_quiet", FALSE);
-		
+
 		/* activate the imcv debugging hook */
 		dbg = imcv_dbg;
 		openlog("imcv", 0, LOG_DAEMON);
@@ -155,7 +155,7 @@ void libimcv_deinit(void)
 	}
 	if (ref_put(&libstrongswan_ref))
 	{
-		library_deinit();		
+		library_deinit();
 	}
 }
 

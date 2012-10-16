@@ -18,7 +18,7 @@
 
 #include "pts/components/pts_component.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <pen/pen.h>
 
 typedef struct pts_ita_comp_tgrub_t pts_ita_comp_tgrub_t;
@@ -90,7 +90,7 @@ METHOD(pts_component_t, measure, status_t,
 	/* Provisional implementation for TGRUB */
 	extended_pcr = PCR_DEBUG;
 	time(&measurement_time);
-		
+
 	if (!pts->read_pcr(pts, extended_pcr, &pcr_after))
 	{
 		DBG1(DBG_PTS, "error occurred while reading PCR: %d", extended_pcr);
@@ -103,7 +103,7 @@ METHOD(pts_component_t, measure, status_t,
 
 	measurement = chunk_alloc(pcr_len);
 	memset(measurement.ptr, 0x00, measurement.len);
-		
+
 	pcr_before = chunk_alloc(pcr_len);
 	memset(pcr_before.ptr, 0x00, pcr_before.len);
 
@@ -150,7 +150,7 @@ METHOD(pts_component_t, verify, status_t,
 			return SUCCESS;
 		}
 	}
-	
+
 	return SUCCESS;
 }
 

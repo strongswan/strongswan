@@ -22,7 +22,7 @@
 
 #include "processor.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/thread.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>

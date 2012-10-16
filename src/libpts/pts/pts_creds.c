@@ -15,7 +15,7 @@
 
 #include "pts_creds.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/sets/mem_cred.h>
 

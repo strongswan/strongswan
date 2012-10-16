@@ -15,7 +15,7 @@
 
 #include "radius_message.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/hashers/hasher.h>
 
 typedef struct private_radius_message_t private_radius_message_t;

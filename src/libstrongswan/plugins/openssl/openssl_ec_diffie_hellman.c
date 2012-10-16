@@ -23,7 +23,7 @@
 #include "openssl_ec_diffie_hellman.h"
 #include "openssl_util.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_openssl_ec_diffie_hellman_t private_openssl_ec_diffie_hellman_t;
 

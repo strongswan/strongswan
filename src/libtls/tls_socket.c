@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/thread.h>
 
 /**

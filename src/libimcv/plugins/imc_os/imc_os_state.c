@@ -17,7 +17,7 @@
 
 #include <tncif_names.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imc_os_state_t private_imc_os_state_t;
 
@@ -155,7 +155,7 @@ imc_state_t *imc_os_state_create(TNC_ConnectionID connection_id)
 		.result = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
 	);
-	
+
 	return &this->public.interface;
 }
 

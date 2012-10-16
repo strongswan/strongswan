@@ -36,7 +36,7 @@
 #include "kernel_netlink_shared.h"
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <collections/hashtable.h>

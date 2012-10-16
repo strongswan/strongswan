@@ -19,7 +19,7 @@
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pb_assessment_result_msg_t private_pb_assessment_result_msg_t;
 
@@ -106,7 +106,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 		*offset = 0;
 		return FAILED;
 	}
-		
+
 	return SUCCESS;
 }
 

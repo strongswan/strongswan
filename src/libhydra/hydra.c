@@ -15,7 +15,7 @@
 
 #include "hydra.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_hydra_t private_hydra_t;
 

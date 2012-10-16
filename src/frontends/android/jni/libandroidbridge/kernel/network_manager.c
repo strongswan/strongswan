@@ -16,7 +16,7 @@
 
 #include "../android_jni.h"
 #include "../charonservice.h"
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 typedef struct private_network_manager_t private_network_manager_t;

@@ -21,7 +21,7 @@
 
 #include "plugin_feature.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"NONE",

@@ -15,7 +15,7 @@
 
 #include "pkcs11_dh.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <asn1/asn1.h>
 #include <asn1/oid.h>

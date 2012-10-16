@@ -17,7 +17,7 @@
 
 #include "credential_factory.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 #include <threading/thread_value.h>
 #include <threading/rwlock.h>

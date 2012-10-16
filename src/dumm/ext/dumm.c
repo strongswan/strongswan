@@ -21,7 +21,7 @@
 
 #include <library.h>
 #include <dumm.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 
 #undef PACKAGE_NAME

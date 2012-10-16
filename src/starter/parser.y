@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "ipsec-parser.h"
 

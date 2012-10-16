@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_tpm_version_info_t private_tcg_pts_attr_tpm_version_info_t;
 
@@ -62,7 +62,7 @@ struct private_tcg_pts_attr_tpm_version_info_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * TPM Version Information
 	 */
@@ -118,7 +118,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	private_tcg_pts_attr_tpm_version_info_t *this, u_int32_t *offset)
 {
 	bio_reader_t *reader;
-	
+
 	if (this->value.len < PTS_TPM_VER_INFO_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for TPM Version Information");

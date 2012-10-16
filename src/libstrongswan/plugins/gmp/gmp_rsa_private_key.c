@@ -22,7 +22,7 @@
 #include "gmp_rsa_private_key.h"
 #include "gmp_rsa_public_key.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>

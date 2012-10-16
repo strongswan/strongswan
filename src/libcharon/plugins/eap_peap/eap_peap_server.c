@@ -16,7 +16,7 @@
 #include "eap_peap_server.h"
 #include "eap_peap_avp.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 
 typedef struct private_eap_peap_server_t private_eap_peap_server_t;

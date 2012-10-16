@@ -22,7 +22,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pb_pa_msg_t private_pb_pa_msg_t;
 

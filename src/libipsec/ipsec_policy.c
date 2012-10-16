@@ -17,7 +17,7 @@
 
 #include "ipsec_policy.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ipsec_policy_t private_ipsec_policy_t;
 

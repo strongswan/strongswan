@@ -28,7 +28,7 @@ typedef struct bus_t bus_t;
 
 #include <stdarg.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 #include <processing/jobs/job.h>

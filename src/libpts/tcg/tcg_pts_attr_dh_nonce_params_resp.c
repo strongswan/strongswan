@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_dh_nonce_params_resp_t
 					private_tcg_pts_attr_dh_nonce_params_resp_t;
@@ -38,7 +38,7 @@ typedef struct private_tcg_pts_attr_dh_nonce_params_resp_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |					D-H Responder Public Value ...				|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 #define PTS_DH_NONCE_PARAMS_RESP_SIZE			16
@@ -68,7 +68,7 @@ struct private_tcg_pts_attr_dh_nonce_params_resp_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Selected Diffie Hellman group
 	 */
@@ -135,7 +135,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->hash_algo_set);
 	writer->write_data  (writer, this->responder_nonce);
 	writer->write_data  (writer, this->responder_value);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }

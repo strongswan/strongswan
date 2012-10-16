@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_proto_caps_t private_tcg_pts_attr_proto_caps_t;
 
@@ -31,7 +31,7 @@ typedef struct private_tcg_pts_attr_proto_caps_t private_tcg_pts_attr_proto_caps
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |						Reserved					  |C|V|D|T|X|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 #define PTS_PROTO_CAPS_SIZE			4
@@ -61,7 +61,7 @@ struct private_tcg_pts_attr_proto_caps_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Set of flags
 	 */
@@ -109,7 +109,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_PROTO_CAPS_SIZE);
 	writer->write_uint16(writer, PTS_PROTO_CAPS_RESERVED);
 	writer->write_uint16(writer, this->flags);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }

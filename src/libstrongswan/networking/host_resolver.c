@@ -19,8 +19,8 @@
 
 #include "host_resolver.h"
 
-#include <debug.h>
 #include <library.h>
+#include <utils/debug.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/thread.h>

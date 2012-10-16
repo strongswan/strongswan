@@ -18,7 +18,7 @@
 
 #include <unistd.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/sets/callback_cred.h>
 
 /**

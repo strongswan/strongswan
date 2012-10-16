@@ -18,7 +18,7 @@
 #include "vpnservice_builder.h"
 #include "android_jni.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 
 typedef struct private_vpnservice_builder_t private_vpnservice_builder_t;

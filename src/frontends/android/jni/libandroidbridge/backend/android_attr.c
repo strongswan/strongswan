@@ -19,7 +19,7 @@
 #include "../charonservice.h"
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 
 typedef struct private_android_attr_t private_android_attr_t;

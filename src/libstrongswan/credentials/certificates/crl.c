@@ -16,7 +16,7 @@
 
 #include "crl.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(crl_reason_names, CRL_REASON_UNSPECIFIED, CRL_REASON_REMOVE_FROM_CRL,
 	"unspecified",

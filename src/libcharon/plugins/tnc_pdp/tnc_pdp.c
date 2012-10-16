@@ -23,7 +23,7 @@
 #include <radius_mppe.h>
 
 #include <daemon.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <pen/pen.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>

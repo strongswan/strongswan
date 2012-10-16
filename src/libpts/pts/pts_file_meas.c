@@ -16,7 +16,7 @@
 #include "pts_file_meas.h"
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <sys/stat.h>
 #include <libgen.h>

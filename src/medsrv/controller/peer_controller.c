@@ -20,7 +20,7 @@
 #include "peer_controller.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <utils/identification.h>

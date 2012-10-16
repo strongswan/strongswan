@@ -18,7 +18,7 @@
 #include <libsoup/soup.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #define DEFAULT_TIMEOUT 10
 

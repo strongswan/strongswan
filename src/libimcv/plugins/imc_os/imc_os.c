@@ -32,7 +32,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /* IMC definitions */
 
@@ -329,7 +329,7 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 						break;
 				}
 			}
-			e->destroy(e); 
+			e->destroy(e);
 		}
 		else if (attr_type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
 		{

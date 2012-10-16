@@ -21,7 +21,7 @@
 #include <bio/bio_reader.h>
 #include <collections/linked_list.h>
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 
 typedef struct private_pa_tnc_msg_t private_pa_tnc_msg_t;

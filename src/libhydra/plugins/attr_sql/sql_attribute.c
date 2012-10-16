@@ -15,7 +15,7 @@
 
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 
 #include "sql_attribute.h"

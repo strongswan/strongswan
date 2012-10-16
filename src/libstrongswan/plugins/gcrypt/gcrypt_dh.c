@@ -18,7 +18,7 @@
 
 #include "gcrypt_dh.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_gcrypt_dh_t private_gcrypt_dh_t;
 

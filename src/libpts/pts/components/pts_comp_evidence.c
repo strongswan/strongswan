@@ -15,7 +15,7 @@
 
 #include "pts/components/pts_comp_evidence.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pts_comp_evidence_t private_pts_comp_evidence_t;
 
@@ -148,7 +148,7 @@ METHOD(pts_comp_evidence_t, get_pcr_info, bool,
 METHOD(pts_comp_evidence_t, set_pcr_info, void,
 	private_pts_comp_evidence_t *this, chunk_t pcr_before, chunk_t pcr_after)
 {
-	this->has_pcr_info = TRUE;	
+	this->has_pcr_info = TRUE;
 	this->pcr_before = pcr_before;
 	this->pcr_after =  pcr_after;
 

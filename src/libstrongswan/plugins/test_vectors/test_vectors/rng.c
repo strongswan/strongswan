@@ -15,7 +15,7 @@
 
 #include <crypto/crypto_tester.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Monobit test

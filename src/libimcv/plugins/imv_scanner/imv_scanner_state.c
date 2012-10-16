@@ -16,7 +16,7 @@
 #include "imv_scanner_state.h"
 
 #include <utils/lexparser.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imv_scanner_state_t private_imv_scanner_state_t;
 
@@ -87,7 +87,7 @@ struct entry_t {
 };
 
 /**
- * Table of multi-lingual reason string entries 
+ * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
 	{ "en", "The following ports are open:" },
@@ -189,7 +189,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 			if (chunk_equals(lang, pref_lang))
 			{
 				this->reason_string = chunk_cat("cc",
-									chunk_create(reasons[i].string, 
+									chunk_create(reasons[i].string,
 												 strlen(reasons[i].string)),
 									chunk_create(this->violating_ports,
 												 strlen(this->violating_ports)));
@@ -208,7 +208,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 									chunk_create(this->violating_ports,
 												 strlen(this->violating_ports)));
 	*reason_string = this->reason_string;
-	*reason_language = chunk_create(reasons[0].lang, 
+	*reason_language = chunk_create(reasons[0].lang,
 									strlen(reasons[0].lang));
 	return TRUE;
 }
@@ -256,7 +256,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
 	);
-	
+
 	return &this->public.interface;
 }
 

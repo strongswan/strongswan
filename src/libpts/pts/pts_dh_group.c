@@ -15,7 +15,7 @@
 
 #include "pts_dh_group.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Described in header.
@@ -27,7 +27,7 @@ bool pts_dh_group_probe(pts_dh_group_t *dh_groups)
 	const char *plugin_name;
 	char format1[] = "  %s PTS DH group %N[%s] available";
 	char format2[] = "  %s PTS DH group %N not available";
-	
+
 	*dh_groups = PTS_DH_GROUP_NONE;
 
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);

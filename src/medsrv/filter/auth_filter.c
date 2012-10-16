@@ -16,7 +16,7 @@
 
 #include "auth_filter.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_auth_filter_t private_auth_filter_t;
 

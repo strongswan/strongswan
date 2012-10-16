@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 /* path to resolvconf executable */

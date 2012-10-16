@@ -16,7 +16,7 @@
 #include "tls_fragmentation.h"
 
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Maximum size of a TLS handshake message we accept

@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
 

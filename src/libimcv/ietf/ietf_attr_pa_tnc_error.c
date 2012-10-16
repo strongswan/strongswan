@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
 							  PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
@@ -80,7 +80,7 @@ typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t
  *  |  Max Version  |  Min Version  |            Reserved           |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-	
+
 #define PA_ERROR_VERSION_RESERVED	0x0000
 
 /**
@@ -186,7 +186,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint24(writer, this->error_code.vendor_id);
 	writer->write_uint32(writer, this->error_code.type);
 	writer->write_data  (writer, this->msg_info);
-	
+
 	if (this->error_code.vendor_id == PEN_IETF)
 	{
 		switch (this->error_code.type)
@@ -272,7 +272,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	}
 	reader->destroy(reader);
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,

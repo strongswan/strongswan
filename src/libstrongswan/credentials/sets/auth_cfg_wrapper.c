@@ -15,7 +15,7 @@
  */
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "auth_cfg_wrapper.h"
 

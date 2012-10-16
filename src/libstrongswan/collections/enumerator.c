@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Implementation of enumerator_create_empty().enumerate

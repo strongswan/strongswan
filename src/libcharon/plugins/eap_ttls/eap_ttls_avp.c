@@ -15,7 +15,7 @@
 
 #include "eap_ttls_avp.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #define AVP_EAP_MESSAGE		79
 #define AVP_HEADER_LEN		 8

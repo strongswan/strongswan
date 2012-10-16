@@ -16,7 +16,7 @@
 
 #include "mem_pool.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
 #include <threading/mutex.h>

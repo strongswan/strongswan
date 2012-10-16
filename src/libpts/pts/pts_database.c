@@ -15,7 +15,7 @@
 
 #include "pts_database.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/hashers/hasher.h>
 
 
@@ -151,7 +151,7 @@ METHOD(pts_database_t, check_file_measurement, status_t,
 		{
 			status = VERIFY_ERROR;
 		}
-	}	
+	}
 	e->destroy(e);
 
 	return status;
@@ -179,7 +179,7 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 	enumerator_t *e;
 	chunk_t hash;
 	status_t status = NOT_FOUND;
-	
+
 	e = this->db->query(this->db,
 					"SELECT hash FROM component_hashes "
 					"WHERE component = ?  AND key = ? "
@@ -188,7 +188,7 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 					DB_INT, pcr, DB_INT, algo, DB_BLOB);
 	if (!e)
 	{
-		DBG1(DBG_PTS, "no database query enumerator returned"); 
+		DBG1(DBG_PTS, "no database query enumerator returned");
 		return FAILED;
 	}
 
@@ -225,7 +225,7 @@ METHOD(pts_database_t, insert_comp_measurement, status_t,
 	int seq_no, int pcr, pts_meas_algorithms_t algo)
 {
 	int id;
-	
+
 	if (this->db->execute(this->db, &id,
 					"INSERT INTO component_hashes "
 					"(component, key, seq_no, pcr, algo, hash) "

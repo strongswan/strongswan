@@ -16,7 +16,7 @@
 
 #include "../charonservice.h"
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/mutex.h>
 

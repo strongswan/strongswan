@@ -20,7 +20,7 @@
 #include <tncif_names.h>
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imc_attestation_state_t private_imc_attestation_state_t;
 typedef struct func_comp_t func_comp_t;

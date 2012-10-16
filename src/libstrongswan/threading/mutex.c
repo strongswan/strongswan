@@ -21,7 +21,7 @@
 #include <errno.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "condvar.h"
 #include "mutex.h"

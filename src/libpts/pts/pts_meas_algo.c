@@ -15,7 +15,7 @@
 
 #include "pts_meas_algo.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM_BEGIN(pts_meas_algorithm_names, PTS_MEAS_ALGO_NONE, PTS_MEAS_ALGO_NONE,
 	"None");
@@ -43,7 +43,7 @@ bool pts_meas_algo_probe(pts_meas_algorithms_t *algorithms)
 	const char *plugin_name;
 	char format1[] = "  %s PTS measurement algorithm %N[%s] available";
 	char format2[] = "  %s PTS measurement algorithm %N not available";
-	
+
 	*algorithms = 0;
 
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);

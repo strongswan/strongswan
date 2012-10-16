@@ -17,7 +17,7 @@
 #include "pa_tnc_attr_manager.h"
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pa_tnc_attr_manager_t private_pa_tnc_attr_manager_t;
 typedef struct entry_t entry_t;

@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 static int count = 0;
 

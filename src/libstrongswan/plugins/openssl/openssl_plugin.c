@@ -25,7 +25,7 @@
 #include "openssl_plugin.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include "openssl_util.h"

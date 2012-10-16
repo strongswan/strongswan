@@ -17,7 +17,7 @@
 
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
 

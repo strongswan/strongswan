@@ -19,7 +19,7 @@
 
 #include "eap.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(eap_code_names, EAP_REQUEST, EAP_FAILURE,
 	"EAP_REQUEST",

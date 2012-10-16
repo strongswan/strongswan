@@ -19,7 +19,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "asn1.h"
 #include "asn1_parser.h"

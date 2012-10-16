@@ -22,7 +22,7 @@
 #include <asn1/asn1.h>
 #include <utils/identification.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/keys/private_key.h>
 

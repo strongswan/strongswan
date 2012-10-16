@@ -15,7 +15,7 @@
 
 #include "tls_crypto.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM_BEGIN(tls_cipher_suite_names, TLS_NULL_WITH_NULL_NULL,
 								   TLS_DH_anon_WITH_3DES_EDE_CBC_SHA,

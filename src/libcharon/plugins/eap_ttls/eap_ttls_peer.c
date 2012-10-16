@@ -16,7 +16,7 @@
 #include "eap_ttls_peer.h"
 #include "eap_ttls_avp.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 #include <radius_message.h>
 #include <sa/eap/eap_method.h>

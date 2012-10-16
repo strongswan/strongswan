@@ -15,7 +15,7 @@
 
 #include "tnccs_preferred_language_msg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnccs_preferred_language_msg_t private_tnccs_preferred_language_msg_t;
 

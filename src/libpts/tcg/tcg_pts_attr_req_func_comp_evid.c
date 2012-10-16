@@ -19,7 +19,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_req_func_comp_evid_t private_tcg_pts_attr_req_func_comp_evid_t;
 

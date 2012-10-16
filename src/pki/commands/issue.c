@@ -17,7 +17,7 @@
 
 #include "pki.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <asn1/asn1.h>
 #include <collections/linked_list.h>
 #include <credentials/certificates/certificate.h>

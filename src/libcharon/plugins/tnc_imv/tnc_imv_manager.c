@@ -30,7 +30,7 @@
 
 #include <daemon.h>
 #include <utils/lexparser.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;

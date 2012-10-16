@@ -18,7 +18,7 @@
 #include "ipsec_event_relay.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 #include <collections/blocking_queue.h>

@@ -31,9 +31,9 @@
 
 #include "settings.h"
 
-#include "debug.h"
 #include "collections/linked_list.h"
 #include "threading/rwlock.h"
+#include "utils/debug.h"
 
 #define MAX_INCLUSION_LEVEL		10
 

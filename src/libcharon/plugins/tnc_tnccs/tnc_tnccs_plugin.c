@@ -18,7 +18,7 @@
 
 #include <tnc/tnc.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnc_tnccs_plugin_t private_tnc_tnccs_plugin_t;
 

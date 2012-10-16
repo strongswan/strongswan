@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "rwlock.h"
 #include "rwlock_condvar.h"

@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
 

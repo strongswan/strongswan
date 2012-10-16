@@ -17,7 +17,7 @@
 #include <stdlib.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "files.h"
 

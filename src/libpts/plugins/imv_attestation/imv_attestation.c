@@ -36,7 +36,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/credential_manager.h>
 #include <collections/linked_list.h>
 

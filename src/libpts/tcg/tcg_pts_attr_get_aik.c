@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_get_aik_t private_tcg_pts_attr_get_aik_t;
 
@@ -112,7 +112,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t reserved;
-	
+
 	if (this->value.len < PTS_GET_AIK_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Get AIK");

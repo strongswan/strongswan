@@ -14,7 +14,7 @@
  */
 
 #include <dispatcher.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <stdio.h>
 
 #include "manager.h"

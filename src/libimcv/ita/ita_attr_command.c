@@ -18,7 +18,7 @@
 
 #include <pen/pen.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ita_attr_command_t private_ita_attr_command_t;
 
@@ -100,7 +100,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	memcpy(this->command, this->value.ptr, this->value.len);
 	this->command[this->value.len] = '\0';
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,

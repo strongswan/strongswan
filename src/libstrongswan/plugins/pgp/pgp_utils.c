@@ -15,7 +15,7 @@
 
 #include "pgp_utils.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM_BEGIN(pgp_pubkey_alg_names, PGP_PUBKEY_ALG_RSA, PGP_PUBKEY_ALG_RSA_SIGN_ONLY,
 	"RSA",

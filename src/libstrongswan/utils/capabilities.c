@@ -27,7 +27,7 @@
 # include <sys/prctl.h>
 #endif /* HAVE_PRCTL */
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #if !defined(HAVE_GETPWNAM_R) || !defined(HAVE_GETGRNAM_R)
 # include <threading/mutex.h>

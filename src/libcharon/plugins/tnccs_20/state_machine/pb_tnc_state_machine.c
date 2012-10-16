@@ -15,7 +15,7 @@
 
 #include "pb_tnc_state_machine.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(pb_tnc_state_names, PB_STATE_INIT, PB_STATE_END,
 	"Init",

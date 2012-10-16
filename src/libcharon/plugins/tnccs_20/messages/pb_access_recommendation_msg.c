@@ -17,7 +17,7 @@
 
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(pb_access_recommendation_code_names, PB_REC_ACCESS_ALLOWED, PB_REC_QUARANTINED,
 	"Access Allowed",
@@ -113,7 +113,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 		*offset = 2;
 		return FAILED;
 	}
-		
+
 	return SUCCESS;
 }
 

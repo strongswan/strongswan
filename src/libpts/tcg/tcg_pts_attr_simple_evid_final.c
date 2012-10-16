@@ -19,14 +19,14 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_simple_evid_final_t private_tcg_pts_attr_simple_evid_final_t;
 
 /**
  * Simple Evidence Final
  * see section 3.15.2 of PTS Protocol: Binding to TNC IF-M Specification
- * 
+ *
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -66,7 +66,7 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
@@ -81,22 +81,22 @@ struct private_tcg_pts_attr_simple_evid_final_t {
 	 * Optional Composite Hash Algorithm
 	 */
 	pts_meas_algorithms_t comp_hash_algorithm;
-	
+
 	/**
 	 * Optional TPM PCR Composite
 	 */
 	chunk_t pcr_comp;
-	
+
 	/**
 	 * Optional TPM Quote Signature
 	 */
 	chunk_t tpm_quote_sig;
-	
+
 	/**
 	 * Is Evidence Signature included?
 	 */
 	bool has_evid_sig;
-	
+
 	/**
 	 * Optional Evidence Signature
 	 */
@@ -157,7 +157,7 @@ METHOD(pa_tnc_attr_t, build, void,
 {
 	bio_writer_t *writer;
 	u_int8_t flags;
-	
+
 	if (this->value.ptr)
 	{
 		return;
@@ -172,7 +172,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_SIMPLE_EVID_FINAL_SIZE);
 	writer->write_uint8 (writer, flags);
 	writer->write_uint8 (writer, PTS_SIMPLE_EVID_FINAL_RESERVED);
-	
+
 	/** Optional Composite Hash Algorithm field is always present
 	 * Field has value of all zeroes if not used.
 	 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
@@ -193,7 +193,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		writer->write_data (writer, this->evid_sig);
 	}
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -206,7 +206,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int16_t algorithm;
 	u_int32_t pcr_comp_len, tpm_quote_sig_len, evid_sig_len;
 	status_t status = FAILED;
-	
+
 	if (this->value.len < PTS_SIMPLE_EVID_FINAL_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Simple Evidence Final");
@@ -214,7 +214,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	
+
 	reader->read_uint8(reader, &flags);
 	reader->read_uint8(reader, &reserved);
 
@@ -226,10 +226,10 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	 * Field has value of all zeroes if not used.
 	 * Implemented adhering the suggestion of Paul Sangster 28.Oct.2011
 	 */
-	
+
 	reader->read_uint16(reader, &algorithm);
 	this->comp_hash_algorithm = algorithm;
-	
+
 	/*  Optional Composite Hash Algorithm and TPM PCR Composite fields */
 	if (this->flags != PTS_SIMPLE_EVID_FINAL_NO)
 	{
@@ -246,7 +246,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			goto end;
 		}
 		this->pcr_comp = chunk_clone(this->pcr_comp);
-		
+
 		if (!reader->read_uint32(reader, &tpm_quote_sig_len))
 		{
 			DBG1(DBG_TNC, "insufficient data for PTS Simple Evidence Final "
@@ -261,7 +261,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		this->tpm_quote_sig = chunk_clone(this->tpm_quote_sig);
 	}
-	
+
 	/*  Optional Evidence Signature field */
 	if (this->has_evid_sig)
 	{
@@ -269,7 +269,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		reader->read_data(reader, evid_sig_len, &this->evid_sig);
 		this->evid_sig = chunk_clone(this->evid_sig);
 	}
-	
+
 	reader->destroy(reader);
 	return SUCCESS;
 

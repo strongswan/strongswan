@@ -18,7 +18,7 @@
 #include <tnc/tnc.h>
 #include <tnc/tnccs/tnccs_manager.h>
 #include <tls_eap.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 
 /**

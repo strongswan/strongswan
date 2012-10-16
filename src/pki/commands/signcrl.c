@@ -17,7 +17,7 @@
 
 #include "pki.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>

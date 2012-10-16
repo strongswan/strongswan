@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/keys/private_key.h>
 
 void start_timing(struct timespec *start)

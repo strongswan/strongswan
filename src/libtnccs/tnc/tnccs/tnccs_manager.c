@@ -17,7 +17,7 @@
 
 #include "tnc/tnc.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * See header

@@ -17,7 +17,7 @@
 
 #include <tncif_names.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 
 typedef struct private_imc_test_state_t private_imc_test_state_t;

@@ -22,7 +22,7 @@
 #include "openssl_ec_public_key.h"
 #include "openssl_util.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <openssl/evp.h>
 #include <openssl/ecdsa.h>

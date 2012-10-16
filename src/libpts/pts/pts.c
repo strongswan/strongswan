@@ -15,7 +15,7 @@
 
 #include "pts.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/hashers/hasher.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>

@@ -34,7 +34,7 @@
 #include <hydra.h>
 #include <utils/backtrace.h>
 #include <threading/thread.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "confread.h"
 #include "files.h"

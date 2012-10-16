@@ -19,7 +19,7 @@
 
 #include <tncif_names.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/rwlock.h>
 
 typedef struct private_imv_agent_t private_imv_agent_t;

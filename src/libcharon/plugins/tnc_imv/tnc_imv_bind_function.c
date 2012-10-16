@@ -18,7 +18,7 @@
 #include <tnc/imv/imv_manager.h>
 #include <tnc/tnccs/tnccs_manager.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Called by the IMV to inform a TNCS about the set of message types the IMV

@@ -40,7 +40,7 @@
 #include "kernel_interface.h"
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 #include <collections/linked_list.h>
 

@@ -17,7 +17,7 @@
 #include <errno.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <utils/lexparser.h>
 
 #include "optionsfrom.h"

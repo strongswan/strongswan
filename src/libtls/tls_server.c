@@ -17,7 +17,7 @@
 
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 
 typedef struct private_tls_server_t private_tls_server_t;

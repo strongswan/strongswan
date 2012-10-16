@@ -15,7 +15,7 @@
 
 #include "certificate.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 
 ENUM(certificate_type_names, CERT_ANY, CERT_PLUTO_CRL,

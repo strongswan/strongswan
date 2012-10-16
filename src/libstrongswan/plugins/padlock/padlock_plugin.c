@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_padlock_plugin_t private_padlock_plugin_t;
 typedef enum padlock_feature_t padlock_feature_t;

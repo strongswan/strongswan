@@ -27,7 +27,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <utils/lexparser.h>
 #include <asn1/asn1.h>

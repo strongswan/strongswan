@@ -15,7 +15,7 @@
 
 #include "tnccs_error_msg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(tnccs_error_type_names, TNCCS_ERROR_BATCH_TOO_LONG, TNCCS_ERROR_OTHER,
 	"batch-too-long",
@@ -108,7 +108,7 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 {
 	private_tnccs_error_msg_t *this;
 	xmlChar *error_type_name, *error_msg;
-	
+
 	INIT(this,
 		.public = {
 			.tnccs_msg_interface = {

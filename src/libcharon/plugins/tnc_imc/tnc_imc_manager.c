@@ -20,7 +20,7 @@
 #include <tncifimc.h>
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 
 typedef struct private_tnc_imc_manager_t private_tnc_imc_manager_t;

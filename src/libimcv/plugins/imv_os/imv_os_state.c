@@ -15,7 +15,7 @@
 
 #include "imv_os_state.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imv_os_state_t private_imv_os_state_t;
 
@@ -81,7 +81,7 @@ struct entry_t {
 };
 
 /**
- * Table of multi-lingual reason string entries 
+ * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
 	{ "en", "" },
@@ -211,7 +211,7 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
 	);
-	
+
 	return &this->public.interface;
 }
 

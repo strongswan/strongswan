@@ -27,8 +27,8 @@
 #include <time.h>
 #include <pthread.h>
 
-#include "debug.h"
 #include "collections/enumerator.h"
+#include "utils/debug.h"
 
 ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",

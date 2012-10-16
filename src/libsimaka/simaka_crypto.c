@@ -17,7 +17,7 @@
 
 #include "simaka_manager.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /** length of the k_encr key */
 #define KENCR_LEN 16

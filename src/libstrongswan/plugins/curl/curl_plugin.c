@@ -16,7 +16,7 @@
 #include "curl_plugin.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include "curl_fetcher.h"
 
 #include <curl/curl.h>

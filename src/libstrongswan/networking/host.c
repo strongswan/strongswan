@@ -18,7 +18,7 @@
 
 #include "host.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 
 #define IPV4_LEN	 4

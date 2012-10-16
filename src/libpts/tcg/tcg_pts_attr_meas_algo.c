@@ -18,12 +18,12 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t;
 
 /**
- * PTS Measurement Algorithm 
+ * PTS Measurement Algorithm
  * see section 3.9.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *					   1				   2				   3
@@ -31,7 +31,7 @@ typedef struct private_tcg_pts_attr_meas_algo_t private_tcg_pts_attr_meas_algo_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |			Reserved			|	   Hash Algorithm Set	  	|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 #define PTS_MEAS_ALGO_SIZE		4
@@ -61,7 +61,7 @@ struct private_tcg_pts_attr_meas_algo_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Set of algorithms
 	 */

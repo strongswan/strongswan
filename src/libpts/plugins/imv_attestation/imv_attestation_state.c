@@ -19,7 +19,7 @@
 
 #include <utils/lexparser.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imv_attestation_state_t private_imv_attestation_state_t;
 typedef struct file_meas_request_t file_meas_request_t;

@@ -25,7 +25,7 @@
 
 #include <library.h>
 #include <utils/chunk.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #ifndef UNIX_PATH_MAX
 #define UNIX_PATH_MAX 108

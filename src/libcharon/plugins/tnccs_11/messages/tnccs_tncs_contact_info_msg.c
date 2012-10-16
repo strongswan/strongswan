@@ -14,7 +14,7 @@
 
 #include "tnccs_tncs_contact_info_msg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnccs_tncs_contact_info_msg_t private_tnccs_tncs_contact_info_msg_t;
 

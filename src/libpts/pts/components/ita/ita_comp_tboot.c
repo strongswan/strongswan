@@ -19,7 +19,7 @@
 #include "libpts.h"
 #include "pts/components/pts_component.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <pen/pen.h>
 
 typedef struct pts_ita_comp_tboot_t pts_ita_comp_tboot_t;
@@ -66,7 +66,7 @@ struct pts_ita_comp_tboot_t {
 	int kid;
 
 	/**
-	 * Component is registering measurements 
+	 * Component is registering measurements
 	 */
 	bool is_registering;
 
@@ -123,7 +123,7 @@ METHOD(pts_component_t, measure, status_t,
 	char *meas_hex, *pcr_before_hex, *pcr_after_hex;
 	chunk_t measurement, pcr_before, pcr_after;
 	u_int32_t extended_pcr;
-	
+
 	switch (this->seq_no++)
 	{
 		case 0:
@@ -286,7 +286,7 @@ METHOD(pts_component_t, finalize, bool,
 {
 	u_int32_t vid, name;
 	enum_name_t *names;
-		
+
 	vid = this->name->get_vendor_id(this->name);
 	name = this->name->get_name(this->name);
 	names = pts_components->get_comp_func_names(pts_components, vid);

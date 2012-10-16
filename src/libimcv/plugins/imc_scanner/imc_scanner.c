@@ -24,7 +24,7 @@
 
 #include <pen/pen.h>
 #include <utils/lexparser.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <stdio.h>
 

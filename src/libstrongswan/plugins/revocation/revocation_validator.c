@@ -17,7 +17,7 @@
 
 #include "revocation_validator.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ocsp_request.h>

@@ -19,7 +19,7 @@
 #include "esp_packet.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <bio/bio_reader.h>

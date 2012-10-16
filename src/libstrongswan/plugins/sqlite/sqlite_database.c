@@ -18,7 +18,7 @@
 #include <sqlite3.h>
 #include <unistd.h>
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 typedef struct private_sqlite_database_t private_sqlite_database_t;

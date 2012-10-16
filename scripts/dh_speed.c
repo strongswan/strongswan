@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/diffie_hellman.h>
 
 static void usage()

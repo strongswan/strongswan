@@ -15,7 +15,7 @@
 
 #include "tls_peer.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 
 #include <time.h>

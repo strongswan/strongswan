@@ -27,7 +27,7 @@
 #include <credentials/auth_cfg.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <stroke_msg.h>
 

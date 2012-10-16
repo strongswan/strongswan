@@ -17,7 +17,7 @@
 
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_certexpire_cron_t private_certexpire_cron_t;

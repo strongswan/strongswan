@@ -25,7 +25,7 @@
 #include <sys/ioctl.h>
 #include <linux/if_tun.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 
 #include "iface.h"

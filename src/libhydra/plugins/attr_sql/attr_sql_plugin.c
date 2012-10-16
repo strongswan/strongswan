@@ -14,7 +14,7 @@
  */
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "attr_sql_plugin.h"
 #include "sql_attribute.h"

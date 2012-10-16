@@ -15,7 +15,7 @@
 
 #include "gcrypt_hasher.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <gcrypt.h>
 

@@ -18,7 +18,7 @@
 
 #include <daemon.h>
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnc_ifmap_listener_t private_tnc_ifmap_listener_t;
 

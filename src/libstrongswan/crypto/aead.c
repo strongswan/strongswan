@@ -15,7 +15,7 @@
 
 #include "aead.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_aead_t private_aead_t;
 

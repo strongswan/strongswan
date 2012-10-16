@@ -19,7 +19,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "oid.h"
 #include "asn1.h"

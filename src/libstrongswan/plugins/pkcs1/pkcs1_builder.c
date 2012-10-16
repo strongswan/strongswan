@@ -17,7 +17,7 @@
 
 #include "pkcs1_builder.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>

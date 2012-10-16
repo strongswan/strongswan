@@ -21,7 +21,7 @@
 
 #include "kernel_netlink_shared.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 typedef struct private_netlink_socket_t private_netlink_socket_t;

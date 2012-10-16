@@ -29,7 +29,7 @@
 #include <tcg/tcg_pts_attr_tpm_version_info.h>
 #include <tcg/tcg_pts_attr_unix_file_meta.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/hashers/hasher.h>
 
 #include <inttypes.h>
@@ -43,7 +43,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 {
 	pen_type_t attr_type;
 	pts_t *pts;
-	
+
 	pts = attestation_state->get_pts(attestation_state);
 	attr_type = attr->get_type(attr);
 

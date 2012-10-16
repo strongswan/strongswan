@@ -18,7 +18,7 @@
 #include "request.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>

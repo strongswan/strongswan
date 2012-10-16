@@ -15,7 +15,7 @@
 
 #include "nonce_nonceg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_nonce_nonceg_t private_nonce_nonceg_t;
 

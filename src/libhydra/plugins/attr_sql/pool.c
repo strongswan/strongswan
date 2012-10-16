@@ -21,7 +21,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <networking/host.h>
 #include <utils/identification.h>

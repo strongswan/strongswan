@@ -21,7 +21,7 @@
 
 #include "gmp_diffie_hellman.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #ifdef HAVE_MPZ_POWM_SEC
 # undef mpz_powm

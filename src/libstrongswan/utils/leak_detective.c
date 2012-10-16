@@ -32,7 +32,7 @@
 #include "leak_detective.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <utils/backtrace.h>
 #include <collections/hashtable.h>
 

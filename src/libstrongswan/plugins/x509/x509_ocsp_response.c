@@ -24,7 +24,7 @@
 #include <asn1/asn1_parser.h>
 #include <utils/identification.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <library.h>
 #include <credentials/certificates/x509.h>

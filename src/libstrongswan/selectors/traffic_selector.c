@@ -24,7 +24,7 @@
 
 #include <collections/linked_list.h>
 #include <utils/identification.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #define NON_SUBNET_ADDRESS_RANGE	255
 

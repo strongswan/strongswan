@@ -47,7 +47,7 @@
 #include "openssl_x509.h"
 #include "openssl_util.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <asn1/oid.h>
 #include <collections/linked_list.h>
 

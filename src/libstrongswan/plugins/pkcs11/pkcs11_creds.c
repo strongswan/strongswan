@@ -16,7 +16,7 @@
 #include "pkcs11_creds.h"
 #include "pkcs11_manager.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/linked_list.h>
 
 typedef struct private_pkcs11_creds_t private_pkcs11_creds_t;

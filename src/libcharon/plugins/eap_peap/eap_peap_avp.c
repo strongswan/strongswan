@@ -16,7 +16,7 @@
 #include "eap_peap_avp.h"
 
 #include <eap/eap.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Microsoft Success and Failure Result AVPs
@@ -78,7 +78,7 @@ METHOD(eap_peap_avp_t, build, void,
 	}
 	*/
 	else
-	{	
+	{
 		avp_data = chunk_skip(data, 4);
 	}
 	writer->write_data(writer, avp_data);

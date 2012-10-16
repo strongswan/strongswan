@@ -17,7 +17,7 @@
 #include <pthread.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "spinlock.h"
 #include "mutex.h"

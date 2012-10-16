@@ -58,7 +58,7 @@
 #include "kernel_pfkey_ipsec.h"
 
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <networking/host.h>
 #include <collections/linked_list.h>
 #include <collections/hashtable.h>

@@ -16,7 +16,7 @@
 
 #include "openssl_rsa_public_key.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>

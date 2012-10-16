@@ -17,7 +17,7 @@
 #include <stdio.h>
 
 #include <dispatcher.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <database/database.h>
 
 #include "filter/auth_filter.h"

@@ -17,7 +17,7 @@
 #include <tnc/imc/imc_manager.h>
 #include <tnc/tnccs/tnccs_manager.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Called by the IMC to inform a TNCC about the set of message types the IMC

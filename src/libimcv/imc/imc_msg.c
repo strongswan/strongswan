@@ -22,7 +22,7 @@
 
 #include <pen/pen.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imc_msg_t private_imc_msg_t;
 

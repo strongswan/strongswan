@@ -17,7 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "random_rng.h"
 #include "random_plugin.h"

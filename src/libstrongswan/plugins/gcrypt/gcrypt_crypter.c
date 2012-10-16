@@ -17,7 +17,7 @@
 
 #include <gcrypt.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_gcrypt_crypter_t private_gcrypt_crypter_t;
 

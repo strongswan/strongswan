@@ -15,7 +15,7 @@
 
 #include "pkcs11_rng.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "pkcs11_manager.h"
 

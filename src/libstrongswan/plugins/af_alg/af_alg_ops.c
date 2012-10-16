@@ -19,7 +19,7 @@
 #include <errno.h>
 #include <linux/socket.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_af_alg_ops_t private_af_alg_ops_t;
 

@@ -17,7 +17,7 @@
 
 #include <unistd.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 #include "pkcs11_manager.h"

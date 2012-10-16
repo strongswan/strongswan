@@ -22,7 +22,7 @@
 #include <syslog.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <imcv.h>
 #include <libpts.h>

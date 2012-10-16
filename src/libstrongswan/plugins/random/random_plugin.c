@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include "random_rng.h"
 
 #ifndef DEV_RANDOM

@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <tls_socket.h>
 #include <networking/host.h>
 #include <credentials/sets/mem_cred.h>

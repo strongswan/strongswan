@@ -43,7 +43,7 @@
 #include <tcg/tcg_pts_attr_req_file_meta.h>
 #include <tcg/tcg_pts_attr_unix_file_meta.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <utils/lexparser.h>
 
 #define DEFAULT_NONCE_LEN		20
@@ -173,7 +173,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 							  "have differing lengths");
 				return FALSE;
 			}
-					
+
 			pts->set_peer_public_value(pts, initiator_value, initiator_nonce);
 			if (!pts->calculate_secret(pts))
 			{
@@ -334,7 +334,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			u_int8_t flags;
 			status_t status;
 			enumerator_t *e;
-			
+
 			attr_info = attr->get_value(attr);
 			attr_cast = (tcg_pts_attr_req_func_comp_evid_t*)attr;
 
@@ -350,7 +350,7 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 				if (flags & PTS_REQ_FUNC_COMP_EVID_TTC)
 				{
 					error_code = pen_type_create(PEN_TCG,
-												 TCG_PTS_UNABLE_DET_TTC); 
+												 TCG_PTS_UNABLE_DET_TTC);
 					attr = ietf_attr_pa_tnc_error_create(error_code, attr_info);
 					msg->add_attribute(msg, attr);
 					break;

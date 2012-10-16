@@ -18,14 +18,14 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_req_file_meta_t private_tcg_pts_attr_req_file_meta_t;
 
 /**
  * Request File Metadata
  * see section 3.17.1 of PTS Protocol: Binding to TNC IF-M Specification
- * 
+ *
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -60,22 +60,22 @@ struct private_tcg_pts_attr_req_file_meta_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Directory Contents flag
 	 */
 	bool directory_flag;
-	
+
 	/**
 	 * UTF8 Encoding of Delimiter Character
 	 */
 	u_int8_t delimiter;
-	
+
 	/**
 	 * Fully Qualified File Pathname
 	 */
@@ -117,7 +117,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	u_int8_t flags = PTS_REQ_FILE_META_NO_FLAGS;
 	chunk_t pathname;
 	bio_writer_t *writer;
-	
+
 	if (this->value.ptr)
 	{
 		return;
@@ -132,7 +132,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8 (writer, flags);
 	writer->write_uint8 (writer, this->delimiter);
 	writer->write_uint16(writer, PTS_REQ_FILE_META_RESERVED);
-	
+
 	writer->write_data  (writer, pathname);
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -145,7 +145,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_int8_t flags;
 	u_int16_t reserved;
 	chunk_t pathname;
-	
+
 	if (this->value.len < PTS_REQ_FILE_META_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Request File Metadata");
@@ -157,7 +157,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint8 (reader, &flags);
 	reader->read_uint8 (reader, &this->delimiter);
 	reader->read_uint16(reader, &reserved);
-	
+
 	reader->read_data  (reader, reader->remaining(reader), &pathname);
 
 	this->directory_flag = (flags & DIRECTORY_CONTENTS_FLAG) !=

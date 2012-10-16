@@ -18,7 +18,7 @@
 
 #include "tls.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 
 /**

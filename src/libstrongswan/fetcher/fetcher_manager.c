@@ -15,7 +15,7 @@
 
 #include "fetcher_manager.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 

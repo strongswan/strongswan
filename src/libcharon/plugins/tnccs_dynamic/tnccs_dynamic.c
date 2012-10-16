@@ -17,7 +17,7 @@
 
 #include <tnc/tnc.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnccs_dynamic_t private_tnccs_dynamic_t;
 
@@ -120,7 +120,7 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_dynamic_t *this)
 {
 	DESTROY_IF(this->tls);
-	free(this);	
+	free(this);
 }
 
 /**

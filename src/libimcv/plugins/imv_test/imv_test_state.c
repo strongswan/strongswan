@@ -17,7 +17,7 @@
 
 #include <utils/lexparser.h>
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_imv_test_state_t private_imv_test_state_t;
 

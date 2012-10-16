@@ -22,7 +22,7 @@
 #include "pkcs11_manager.h"
 #include "pkcs11_public_key.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pkcs11_private_key_t private_pkcs11_private_key_t;
 

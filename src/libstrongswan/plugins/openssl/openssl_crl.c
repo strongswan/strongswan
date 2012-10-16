@@ -42,7 +42,7 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <collections/enumerator.h>
 #include <credentials/certificates/x509.h>
 

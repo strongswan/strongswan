@@ -18,16 +18,16 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <time.h>
 
 typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simple_comp_evid_t;
 
 /**
- * Simple Component Evidence 
+ * Simple Component Evidence
  * see section 3.15.1 of PTS Protocol: Binding to TNC IF-M Specification
- * 
+ *
  *					   1				   2				   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -66,7 +66,7 @@ typedef struct private_tcg_pts_attr_simple_comp_evid_t private_tcg_pts_attr_simp
  */
 
 /**
- * Specific Functional Component -> Component Functional Name Structure 
+ * Specific Functional Component -> Component Functional Name Structure
  * see section 5.1 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *					   1				   2				   3
@@ -108,12 +108,12 @@ struct private_tcg_pts_attr_simple_comp_evid_t {
 	 * Attribute value
 	 */
 	chunk_t value;
-	
+
 	/**
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * PTS Component Evidence
 	 */
@@ -184,7 +184,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	pts_comp_evid_validation_t validation;
 	time_t measurement_time;
 	chunk_t measurement, utc_time, pcr_before, pcr_after;
-	
+
 	if (this->value.ptr)
 	{
 		return;
@@ -200,7 +200,7 @@ METHOD(pa_tnc_attr_t, build, void,
 							&pcr_before, &pcr_after);
 	validation   = this->evidence->get_validation(this->evidence,
 							&policy_uri);
-	
+
 	/* Determine the flags to set*/
 	flags = validation;
 	if (has_pcr_info)
@@ -208,7 +208,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		flags |= PTS_SIMPLE_COMP_EVID_FLAG_PCR;
 	}
 
-	utc_time = chunk_create(utc_time_buf, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE);	
+	utc_time = chunk_create(utc_time_buf, PTS_SIMPLE_COMP_EVID_MEAS_TIME_SIZE);
 	measurement_time_to_utc(measurement_time, &utc_time);
 
 	writer = bio_writer_create(PTS_SIMPLE_COMP_EVID_SIZE);
@@ -224,7 +224,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8 (writer, transform);
 	writer->write_uint8 (writer, PTS_SIMPLE_COMP_EVID_RESERVED);
 	writer->write_data  (writer, utc_time);
-	
+
 	/* Optional fields */
 	if (validation == PTS_COMP_EVID_VALIDATION_FAILED ||
 		validation == PTS_COMP_EVID_VALIDATION_PASSED)
@@ -241,7 +241,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	}
 
 	writer->write_data(writer, measurement);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }
@@ -250,7 +250,7 @@ static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 33
 static const int tm_leap_1970 = 477;
 
 /**
- * Convert Simple Component Evidence UTS string format to time_t  
+ * Convert Simple Component Evidence UTS string format to time_t
  */
 bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 {
@@ -314,7 +314,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	
+
 	reader->read_uint8 (reader, &flags);
 	reader->read_uint24(reader, &depth);
 	reader->read_uint24(reader, &vendor_id);
@@ -364,7 +364,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		has_validation = TRUE;
 	}
-	
+
 	/*  Are optional PCR value fields included? */
 	if (flags & PTS_SIMPLE_COMP_EVID_FLAG_PCR)
 	{
@@ -389,11 +389,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		has_pcr_info = TRUE;
 	}
 
-	/* Measurement field comes at the very end */ 
+	/* Measurement field comes at the very end */
 	reader->read_data(reader,reader->remaining(reader), &measurement);
 	reader->destroy(reader);
 
-	/* Create Component Functional Name object */	
+	/* Create Component Functional Name object */
 	name = pts_comp_func_name_create(vendor_id, comp_name, qualifier);
 
 	/* Create Component Evidence object */
@@ -457,7 +457,7 @@ METHOD(tcg_pts_attr_simple_comp_evid_t, get_comp_evidence, pts_comp_evidence_t*,
 pa_tnc_attr_t *tcg_pts_attr_simple_comp_evid_create(pts_comp_evidence_t *evid)
 {
 	private_tcg_pts_attr_simple_comp_evid_t *this;
-	
+
 	INIT(this,
 		.public = {
 			.pa_tnc_attribute = {

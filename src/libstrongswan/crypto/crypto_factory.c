@@ -15,7 +15,7 @@
 
 #include "crypto_factory.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
 #include <crypto/crypto_tester.h>

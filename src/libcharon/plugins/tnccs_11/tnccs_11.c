@@ -31,7 +31,7 @@
 #include <tnc/tnccs/tnccs.h>
 #include <tnc/tnccs/tnccs_manager.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 

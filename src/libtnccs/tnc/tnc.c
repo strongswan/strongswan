@@ -23,7 +23,7 @@
 #include <fcntl.h>
 
 #include <utils/lexparser.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnc_t private_tnc_t;
 

@@ -17,7 +17,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ietf_attr_product_info_t private_ietf_attr_product_info_t;
 

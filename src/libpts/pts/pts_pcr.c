@@ -15,7 +15,7 @@
 
 #include "pts_pcr.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include <stdarg.h>
 

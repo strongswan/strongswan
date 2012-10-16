@@ -16,7 +16,7 @@
 #include "tnccs_reason_strings_msg.h"
 #include "tnccs_error_msg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnccs_reason_strings_msg_t private_tnccs_reason_strings_msg_t;
 

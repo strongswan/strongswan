@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <sys/un.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "mconsole.h"
 

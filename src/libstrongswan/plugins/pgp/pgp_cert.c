@@ -18,7 +18,7 @@
 
 #include <time.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pgp_cert_t private_pgp_cert_t;
 

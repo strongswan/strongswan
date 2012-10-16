@@ -20,7 +20,7 @@
 
 #include <tncif_pa_subtypes.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <collections/linked_list.h>
 #include <threading/mutex.h>

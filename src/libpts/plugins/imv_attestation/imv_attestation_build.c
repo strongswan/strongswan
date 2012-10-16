@@ -27,7 +27,7 @@
 #include <tcg/tcg_pts_attr_req_file_meas.h>
 #include <tcg/tcg_pts_attr_req_file_meta.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 bool imv_attestation_build(imv_msg_t *out_msg,
 						   imv_attestation_state_t *attestation_state,
@@ -177,7 +177,7 @@ bool imv_attestation_build(imv_msg_t *out_msg,
 				have_request = TRUE;
 			}
 			enumerator->destroy(enumerator);
-			
+
 			/* Send Request File Measurement attribute */
 			enumerator = pts_db->create_file_meas_enumerator(pts_db,
 															 platform_info);

@@ -16,7 +16,7 @@
 #include "android_private_key.h"
 
 #include "../android_jni.h"
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_private_key_t private_private_key_t;
 

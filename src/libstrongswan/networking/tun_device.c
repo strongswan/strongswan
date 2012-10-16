@@ -40,7 +40,7 @@
 #include "tun_device.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/thread.h>
 
 #define TUN_DEFAULT_MTU 1500

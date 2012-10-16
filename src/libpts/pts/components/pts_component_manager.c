@@ -16,7 +16,7 @@
 #include "pts/components/pts_component_manager.h"
 
 #include <collections/linked_list.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pts_component_manager_t private_pts_component_manager_t;
 typedef struct vendor_entry_t vendor_entry_t;

@@ -23,7 +23,7 @@
 #include <stdio.h>
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <utils/optionsfrom.h>
 
 /**

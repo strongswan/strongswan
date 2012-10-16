@@ -22,7 +22,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>

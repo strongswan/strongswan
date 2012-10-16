@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ietf_attr_string_version_t private_ietf_attr_string_version_t;
 
@@ -143,7 +143,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	
+
 	if (!reader->read_data8(reader, &version))
 	{
 		DBG1(DBG_TNC, "insufficient data for IETF product version number");
@@ -187,7 +187,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset += 1 + (pos - config.ptr);
 		goto end;
 	}
-	
+
 	this->version = chunk_clone(version);
 	this->build = chunk_clone(build);
 	this->config = chunk_clone(config);

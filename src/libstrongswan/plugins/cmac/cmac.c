@@ -17,7 +17,7 @@
 
 #include "cmac.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <crypto/mac.h>
 #include <crypto/prfs/mac_prf.h>
 #include <crypto/signers/mac_signer.h>

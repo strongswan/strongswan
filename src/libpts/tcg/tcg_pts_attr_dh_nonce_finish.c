@@ -18,7 +18,7 @@
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tcg_pts_attr_dh_nonce_finish_t
 					private_tcg_pts_attr_dh_nonce_finish_t;
@@ -36,7 +36,7 @@ typedef struct private_tcg_pts_attr_dh_nonce_finish_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |						D-H Initiator Nonce ...					|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 #define PTS_DH_NONCE_FINISH_SIZE			12
@@ -66,7 +66,7 @@ struct private_tcg_pts_attr_dh_nonce_finish_t {
 	 * Noskip flag
 	 */
 	bool noskip_flag;
-	
+
 	/**
 	 * Selected Hashing Algorithm
 	 */
@@ -127,7 +127,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->hash_algo);
 	writer->write_data  (writer, this->initiator_value);
 	writer->write_data  (writer, this->initiator_nonce);
-	
+
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
 }

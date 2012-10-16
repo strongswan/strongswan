@@ -18,7 +18,7 @@
 
 #include <tncif_names.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/rwlock.h>
 
 typedef struct private_imc_agent_t private_imc_agent_t;
@@ -353,7 +353,7 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	has_long = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_LONG_TYPES);
 	has_excl = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_EXCLUSIVE);
 	has_soh  = get_bool_attribute(this, conn_id, TNC_ATTRIBUTEID_HAS_SOH);
-	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL); 
+	tnccs_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_PROTOCOL);
 	tnccs_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFTNCCS_VERSION);
 	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
 	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
@@ -408,7 +408,7 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
 		case TNC_CONNECTION_STATE_ACCESS_NONE:
 			state = find_connection(this, connection_id);
-			
+
 			if (!state)
 			{
 				DBG1(DBG_IMC, "IMC %u \"%s\" has no state for Connection ID %u",
@@ -436,7 +436,7 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 			DBG1(DBG_IMC, "IMC %u \"%s\" was notified of unknown state %u "
 				 		  "for Connection ID %u",
 						  this->id, this->name, new_state, connection_id);
-			return TNC_RESULT_INVALID_PARAMETER;		
+			return TNC_RESULT_INVALID_PARAMETER;
 	}
 	return TNC_RESULT_SUCCESS;
 }
@@ -562,7 +562,7 @@ imc_agent_t *imc_agent_create(const char *name,
 		.connections = linked_list_create(),
 		.connection_lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
-	
+
 	*actual_version = TNC_IFIMC_VERSION_1;
 	DBG1(DBG_IMC, "IMC %u \"%s\" initialized", this->id, this->name);
 

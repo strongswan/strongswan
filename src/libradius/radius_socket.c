@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_radius_socket_t private_radius_socket_t;
 

@@ -18,7 +18,7 @@
 
 #include <library.h>
 #include <hydra.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 #include "files.h"
 

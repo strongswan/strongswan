@@ -18,7 +18,7 @@
 #include "ipsec_sa.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ipsec_sa_t private_ipsec_sa_t;
 

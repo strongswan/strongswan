@@ -16,7 +16,7 @@
 #include "mysql_plugin.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include "mysql_database.h"
 
 typedef struct private_mysql_plugin_t private_mysql_plugin_t;

@@ -15,7 +15,7 @@
 
 #include "pgp_encoder.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * Build a PGPv3 fingerprint

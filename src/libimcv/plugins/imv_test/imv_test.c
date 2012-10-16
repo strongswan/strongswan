@@ -27,7 +27,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /* IMV definitions */
 
@@ -130,7 +130,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		{
 			ita_attr_command_t *ita_attr;
 			char *command;
-	
+
 			received_command = TRUE;
 			ita_attr = (ita_attr_command_t*)attr;
 			command = ita_attr->get_command(ita_attr);
@@ -139,19 +139,19 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			{
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-								TNC_IMV_EVALUATION_RESULT_COMPLIANT);			  
+								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 			}
 			else if (streq(command, "isolate"))
 			{
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);			  
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
 			}
 			else if (streq(command, "block") || streq(command, "none"))
 			{
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);			  
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);
 			}
 			else if (streq(command, "retry"))
 			{
@@ -162,7 +162,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				DBG1(DBG_IMV, "unsupported ITA Command '%s'", command);
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
-								TNC_IMV_EVALUATION_RESULT_ERROR);			  
+								TNC_IMV_EVALUATION_RESULT_ERROR);
 			}
 		}
 		else if (attr_type.type == ITA_ATTR_DUMMY)
@@ -199,7 +199,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 											state->get_connection_id(state),
 											TNC_RETRY_REASON_IMV_SERIOUS_EVENT);
 	}
-	
+
 	/* repeat the measurement ? */
 	if (test_state->another_round(test_state, in_msg->get_src_id(in_msg)))
 	{

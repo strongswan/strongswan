@@ -18,7 +18,7 @@
 #include "ipsec.h"
 #include "ipsec_sa_mgr.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>

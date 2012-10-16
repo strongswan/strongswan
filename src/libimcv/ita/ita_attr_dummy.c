@@ -18,7 +18,7 @@
 
 #include <pen/pen.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ita_attr_dummy_t private_ita_attr_dummy_t;
 
@@ -98,7 +98,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	this->size = this->value.len;
 
-	return SUCCESS;	
+	return SUCCESS;
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,

@@ -16,7 +16,7 @@
 #include "tnccs_recommendation_msg.h"
 #include "tnccs_error_msg.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_tnccs_recommendation_msg_t private_tnccs_recommendation_msg_t;
 

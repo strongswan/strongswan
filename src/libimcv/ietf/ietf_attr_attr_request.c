@@ -21,7 +21,7 @@
 #include <bio/bio_reader.h>
 #include <collections/linked_list.h>
 
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_ietf_attr_attr_request_t private_ietf_attr_attr_request_t;
 

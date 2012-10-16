@@ -23,7 +23,7 @@
 #include "gcrypt_rsa_public_key.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 #include <threading/mutex.h>
 
 #include <errno.h>

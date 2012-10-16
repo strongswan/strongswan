@@ -23,7 +23,7 @@
 #include "pts/components/ita/ita_comp_tgrub.h"
 
 #include <imcv.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /**
  * PTS Functional Component manager

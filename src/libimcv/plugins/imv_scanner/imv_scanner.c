@@ -27,7 +27,7 @@
 #include <pen/pen.h>
 #include <collections/linked_list.h>
 #include <utils/lexparser.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 /* IMV definitions */
 

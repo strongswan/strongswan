@@ -20,7 +20,7 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <pen/pen.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(pb_tnc_error_code_names, PB_ERROR_UNEXPECTED_BATCH_TYPE,
 							  PB_ERROR_VERSION_NOT_SUPPORTED,
@@ -88,7 +88,7 @@ struct private_pb_error_msg_t {
 	u_int32_t error_offset;
 
 	/**
-	 * Bad PB-TNC version received 
+	 * Bad PB-TNC version received
 	 */
 	u_int8_t bad_version;
 

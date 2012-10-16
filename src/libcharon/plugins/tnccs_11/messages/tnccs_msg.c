@@ -22,7 +22,7 @@
 #include "tnccs_tncs_contact_info_msg.h"
 
 #include <library.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 ENUM(tnccs_msg_type_names, IMC_IMV_MSG, TNCCS_MSG_ROOF,
 	"IMC-IMV",

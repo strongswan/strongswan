@@ -25,7 +25,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <debug.h>
+#include <utils/debug.h>
 
 typedef struct private_pkcs11_public_key_t private_pkcs11_public_key_t;
 

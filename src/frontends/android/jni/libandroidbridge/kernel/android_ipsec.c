@@ -17,7 +17,7 @@
 #include "android_ipsec.h"
 #include "../charonservice.h"
 
-#include <debug.h>
+#include <utils/debug.h>
 #include <library.h>
 #include <hydra.h>
 #include <ipsec.h>
