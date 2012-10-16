@@ -49,10 +49,16 @@ struct private_backend_manager_t {
  * match of an ike_cfg
  */
 typedef enum ike_cfg_match_t {
-	MATCH_NONE  = 0x00,
-	MATCH_ANY   = 0x01,
-	MATCH_ME	= 0x04,
-	MATCH_OTHER = 0x08,
+	/* doesn't match at all */
+	MATCH_NONE		= 0x00,
+	/* match for a %any host. For both hosts, hence skip 0x02 */
+	MATCH_ANY		= 0x01,
+	/* IKE version matches exactly (config is not for any version) */
+	MATCH_VERSION	= 0x04,
+	/* local identity matches */
+	MATCH_ME		= 0x08,
+	/* remote identity matches */
+	MATCH_OTHER		= 0x10,
 } ike_cfg_match_t;
 
 /**
@@ -75,12 +81,19 @@ static enumerator_t *ike_enum_create(backend_t *backend, ike_data_t *data)
 /**
  * get a match of a candidate ike_cfg for two hosts
  */
-static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
+static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other,
+									 ike_version_t version)
 {
 	host_t *me_cand, *other_cand;
 	char *my_addr, *other_addr;
 	bool my_allow_any, other_allow_any;
 	ike_cfg_match_t match = MATCH_NONE;
+
+	if (cand->get_version(cand) != IKE_ANY &&
+		version != cand->get_version(cand))
+	{
+		return MATCH_NONE;
+	}
 
 	if (me)
 	{
@@ -137,11 +150,18 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 	{
 		match += MATCH_ANY;
 	}
+
+	if (match != MATCH_NONE &&
+		cand->get_version(cand) != IKE_ANY)
+	{	/* if we have a match, improve it if candidate version specified */
+		match += MATCH_VERSION;
+	}
 	return match;
 }
 
 METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
-	private_backend_manager_t *this, host_t *me, host_t *other)
+	private_backend_manager_t *this, host_t *me, host_t *other,
+	ike_version_t version)
 {
 	ike_cfg_t *current, *found = NULL;
 	char *my_addr, *other_addr;
@@ -164,8 +184,9 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 						(void*)ike_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
-		match = get_ike_match(current, me, other);
-		DBG3(DBG_CFG, "ike config match: %d (%H %H)", match, me, other);
+		match = get_ike_match(current, me, other, version);
+		DBG3(DBG_CFG, "ike config match: %d (%H %H %N)",
+			 match, me, other, ike_version_names, version);
 		if (match)
 		{
 			my_addr = current->get_my_addr(current, &my_allow_any);
@@ -387,9 +408,10 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 
 		match_peer_me = get_peer_match(my_id, cfg, TRUE);
 		match_peer_other = get_peer_match(other_id, cfg, FALSE);
-		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other);
+		match_ike = get_ike_match(cfg->get_ike_cfg(cfg), me, other, version);
 		match_version = get_version_match(cfg->get_ike_version(cfg), version);
-		DBG3(DBG_CFG, "ike config match: %d (%H %H)", match_ike, me, other);
+		DBG3(DBG_CFG, "ike config match: %d (%H %H %N)",
+			 match_ike, me, other, ike_version_names, version);
 
 		if (match_peer_me && match_peer_other && match_ike && match_version)
 		{

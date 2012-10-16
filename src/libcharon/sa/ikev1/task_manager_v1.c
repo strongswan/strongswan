@@ -1202,7 +1202,8 @@ METHOD(task_manager_t, process_message, status_t,
 			ike_cfg_t *ike_cfg;
 			job_t *job;
 
-			ike_cfg = charon->backends->get_ike_cfg(charon->backends, me, other);
+			ike_cfg = charon->backends->get_ike_cfg(charon->backends,
+													me, other, IKEV1);
 			if (ike_cfg == NULL)
 			{
 				/* no config found for these hosts, destroy */

@@ -60,7 +60,8 @@ struct backend_manager_t {
 	 * @return					matching ike_config, or NULL if none found
 	 */
 	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this,
-							  host_t *my_host, host_t *other_host);
+							  host_t *my_host, host_t *other_host,
+							  ike_version_t version);
 
 	/**
 	 * Get a peer_config identified by it's name.
