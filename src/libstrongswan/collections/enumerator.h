@@ -23,7 +23,7 @@
 
 typedef struct enumerator_t enumerator_t;
 
-#include "../utils.h"
+#include <utils/utils.h>
 
 /**
  * Enumerator interface, allows enumeration over collections.

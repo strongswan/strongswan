@@ -16,8 +16,8 @@
 #include "ietf/ietf_attr.h"
 #include "ita/ita_attr.h"
 
-#include <utils.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <pen/pen.h>
 
 #include <syslog.h>

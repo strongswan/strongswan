@@ -28,7 +28,7 @@ pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
-utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
+utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
 utils/lexparser.c utils/optionsfrom.c utils/capabilities.c utils/backtrace.c \
 utils/printf_hook.c utils/settings.c
 
@@ -69,7 +69,7 @@ processing/scheduler.h selectors/traffic_selector.h \
 threading/thread.h threading/thread_value.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
 threading/rwlock.h threading/rwlock_condvar.h threading/lock_profiler.h \
-utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
+utils/utils.h utils/chunk.h utils/debug.h utils/enum.h utils/identification.h \
 utils/lexparser.h utils/optionsfrom.h utils/capabilities.h utils/backtrace.h \
 utils/leak_detective.h utils/printf_hook.h utils/settings.h utils/integrity_checker.h
 endif

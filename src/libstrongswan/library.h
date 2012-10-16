@@ -80,9 +80,9 @@
 # error config.h not included, pass "-include [...]/config.h" to gcc
 #endif
 
-/* make sure we include printf_hook.h first */
+/* make sure we include printf_hook.h and utils.h first */
 #include "utils/printf_hook.h"
-#include "utils.h"
+#include "utils/utils.h"
 #include "networking/host_resolver.h"
 #include "processing/processor.h"
 #include "processing/scheduler.h"

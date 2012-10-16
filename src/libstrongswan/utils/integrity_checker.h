@@ -21,7 +21,7 @@
 #ifndef INTEGRITY_CHECKER_H_
 #define INTEGRITY_CHECKER_H_
 
-#include "../utils.h"
+#include "utils.h"
 
 typedef struct integrity_checker_t integrity_checker_t;
 typedef struct integrity_checksum_t integrity_checksum_t;

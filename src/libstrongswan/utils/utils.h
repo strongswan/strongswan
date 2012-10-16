@@ -15,8 +15,8 @@
  */
 
 /**
- * @defgroup utils utils
- * @{ @ingroup libstrongswan
+ * @defgroup utils_i utils
+ * @{ @ingroup utils
  */
 
 #ifndef UTILS_H_
@@ -29,7 +29,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include "utils/enum.h"
+#include "enum.h"
 
 /**
  * strongSwan program return codes
