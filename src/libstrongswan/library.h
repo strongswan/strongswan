@@ -80,7 +80,8 @@
 # error config.h not included, pass "-include [...]/config.h" to gcc
 #endif
 
-#include "printf_hook.h"
+/* make sure we include printf_hook.h first */
+#include "utils/printf_hook.h"
 #include "utils.h"
 #include "chunk.h"
 #include "settings.h"

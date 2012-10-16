@@ -16,7 +16,7 @@
 
 /**
  * @defgroup printf_hook printf_hook
- * @{ @ingroup libstrongswan
+ * @{ @ingroup utils
  */
 
 #ifndef PRINTF_HOOK_H_
