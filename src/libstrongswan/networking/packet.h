@@ -17,7 +17,7 @@
 
 /**
  * @defgroup packet packet
- * @{ @ingroup utils
+ * @{ @ingroup networking
  */
 
 #ifndef PACKET_H_

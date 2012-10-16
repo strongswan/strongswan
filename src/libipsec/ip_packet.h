@@ -23,7 +23,7 @@
 
 #include <library.h>
 #include <networking/host.h>
-#include <utils/packet.h>
+#include <networking/packet.h>
 
 typedef struct ip_packet_t ip_packet_t;
 

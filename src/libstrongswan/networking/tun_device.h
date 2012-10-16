@@ -17,7 +17,7 @@
 
 /**
  * @defgroup tun_device tun_device
- * @{ @ingroup utils
+ * @{ @ingroup networking
  */
 
 #ifndef TUN_DEVICE_H_

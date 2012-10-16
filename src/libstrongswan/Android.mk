@@ -22,14 +22,15 @@ credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
 ipsec/ipsec_types.c \
-networking/host.c networking/host_resolver.c \
+networking/host.c networking/host_resolver.c networking/packet.c \
+networking/tun_device.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
-utils.c utils/packet.c utils/identification.c utils/lexparser.c \
+utils.c utils/identification.c utils/lexparser.c \
 utils/linked_list.c utils/blocking_queue.c utils/hashtable.c utils/enumerator.c \
-utils/optionsfrom.c utils/capabilities.c utils/backtrace.c utils/tun_device.c
+utils/optionsfrom.c utils/capabilities.c utils/backtrace.c
 
 # adding the plugin source files
 

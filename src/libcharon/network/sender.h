@@ -26,7 +26,7 @@
 typedef struct sender_t sender_t;
 
 #include <library.h>
-#include <utils/packet.h>
+#include <networking/packet.h>
 
 /**
  * Callback job responsible for sending IKE packets over the socket.

@@ -26,7 +26,7 @@ typedef struct ike_mobike_t ike_mobike_t;
 #include <library.h>
 #include <sa/ike_sa.h>
 #include <sa/task.h>
-#include <utils/packet.h>
+#include <networking/packet.h>
 
 /**
  * Task of type ike_mobike, detects and handles MOBIKE extension.

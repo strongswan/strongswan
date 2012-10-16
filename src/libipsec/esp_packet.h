@@ -28,7 +28,7 @@
 
 #include <library.h>
 #include <networking/host.h>
-#include <utils/packet.h>
+#include <networking/packet.h>
 
 typedef struct esp_packet_t esp_packet_t;
 

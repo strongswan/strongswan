@@ -28,7 +28,7 @@
 #include <processing/jobs/callback_job.h>
 #include <crypto/hashers/hasher.h>
 #include <threading/mutex.h>
-#include <utils/packet.h>
+#include <networking/packet.h>
 
 /** lifetime of a cookie, in seconds */
 #define COOKIE_LIFETIME 10
