@@ -474,7 +474,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 							 this->gateway, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create("android", IKEV2, ike_cfg, CERT_SEND_IF_ASKED,
+	peer_cfg = peer_cfg_create("android", ike_cfg, CERT_SEND_IF_ASKED,
 							   UNIQUE_REPLACE, 0, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */

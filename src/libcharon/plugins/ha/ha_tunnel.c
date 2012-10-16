@@ -207,7 +207,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 remote, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	peer_cfg = peer_cfg_create("ha", IKEV2, ike_cfg, CERT_NEVER_SEND,
+	peer_cfg = peer_cfg_create("ha", ike_cfg, CERT_NEVER_SEND,
 						UNIQUE_KEEP, 0, 86400, 0, 7200, 3600, FALSE, FALSE, 30,
 						0, FALSE, NULL, NULL);
 

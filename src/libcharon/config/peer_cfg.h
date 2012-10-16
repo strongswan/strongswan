@@ -356,7 +356,6 @@ struct peer_cfg_t {
  * (rekeylifetime - random(0, jitter)).
  *
  * @param name				name of the peer_cfg
- * @param ike_version		which IKE version we should use for this peer
  * @param ike_cfg			IKE config to use when acting as initiator
  * @param cert_policy		should we send a certificate payload?
  * @param unique			uniqueness of an IKE_SA
@@ -374,7 +373,7 @@ struct peer_cfg_t {
  * @param peer_id			ID that identifies our peer at the mediation server
  * @return					peer_cfg_t object
  */
-peer_cfg_t *peer_cfg_create(char *name, ike_version_t ike_version,
+peer_cfg_t *peer_cfg_create(char *name,
 							ike_cfg_t *ike_cfg, cert_policy_t cert_policy,
 							unique_policy_t unique, u_int32_t keyingtries,
 							u_int32_t rekey_time, u_int32_t reauth_time,

@@ -328,7 +328,7 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 							 hostname, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
-	peer_cfg = peer_cfg_create(this->current, IKEV2, ike_cfg,
+	peer_cfg = peer_cfg_create(this->current, ike_cfg,
 							   CERT_SEND_IF_ASKED,
 							   UNIQUE_REPLACE, 1, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
