@@ -70,6 +70,11 @@ struct private_host_resolver_t {
 	u_int threads;
 
 	/**
+	 * Current number of busy threads
+	 */
+	u_int busy_threads;
+
+	/**
 	 * TRUE if no new queries are accepted
 	 */
 	bool disabled;
@@ -148,6 +153,7 @@ static job_requeue_t resolve_hosts(private_host_resolver_t *this)
 		thread_cancelability(old);
 		thread_cleanup_pop(FALSE);
 	}
+	this->busy_threads++;
 	this->mutex->unlock(this->mutex);
 
 	memset(&hints, 0, sizeof(hints));
@@ -160,6 +166,7 @@ static job_requeue_t resolve_hosts(private_host_resolver_t *this)
 	thread_cleanup_pop(FALSE);
 
 	this->mutex->lock(this->mutex);
+	this->busy_threads--;
 	if (error != 0)
 	{
 		DBG1(DBG_LIB, "resolving '%s' failed: %s", query->name,
@@ -218,7 +225,8 @@ METHOD(host_resolver_t, resolve, host_t*,
 		this->new_query->signal(this->new_query);
 	}
 	ref_get(&query->refcount);
-	if (this->threads < this->max_threads)
+	if (this->busy_threads == this->threads &&
+		this->threads < this->max_threads)
 	{
 		this->threads++;
 		lib->processor->queue_job(lib->processor,
