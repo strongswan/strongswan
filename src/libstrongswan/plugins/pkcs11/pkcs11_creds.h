@@ -68,7 +68,8 @@ pkcs11_creds_t *pkcs11_creds_create(pkcs11_library_t *p11, CK_SLOT_ID slot);
 /**
  * Load a specific certificate from a token.
  *
- * Accepts a BUILD_PKCS11_KEYID as the only argument.
+ * Requires a BUILD_PKCS11_KEYID argument, and optionally BUILD_PKCS11_MODULE
+ * and/or BUILD_PKCS11_SLOT.
  *
  * @param type			certificate type, must be CERT_X509
  * @param args			variable argument list, containing BUILD_PKCS11_KEYID.

@@ -269,7 +269,8 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 	pkcs11_manager_t *manager;
 	pkcs11_library_t *p11;
 	certificate_t *cert = NULL;
-	CK_SLOT_ID slot;
+	CK_SLOT_ID current, slot = -1;
+	char *module = NULL;
 
 	while (TRUE)
 	{
@@ -277,6 +278,12 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 		{
 			case BUILD_PKCS11_KEYID:
 				keyid = va_arg(args, chunk_t);
+				continue;
+			case BUILD_PKCS11_SLOT:
+				slot = va_arg(args, int);
+				continue;
+			case BUILD_PKCS11_MODULE:
+				module = va_arg(args, char*);
 				continue;
 			case BUILD_END:
 				break;
@@ -296,7 +303,7 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 		return NULL;
 	}
 	enumerator = manager->create_token_enumerator(manager);
-	while (enumerator->enumerate(enumerator, &p11, &slot))
+	while (enumerator->enumerate(enumerator, &p11, &current))
 	{
 		CK_OBJECT_CLASS class = CKO_CERTIFICATE;
 		CK_CERTIFICATE_TYPE type = CKC_X_509;
@@ -312,7 +319,16 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 		CK_SESSION_HANDLE session;
 		CK_RV rv;
 
-		rv = p11->f->C_OpenSession(slot, CKF_SERIAL_SESSION, NULL, NULL,
+		if (slot != -1 && slot != current)
+		{
+			continue;
+		}
+		if (module && !streq(module, p11->get_name(p11)))
+		{
+			continue;
+		}
+
+		rv = p11->f->C_OpenSession(current, CKF_SERIAL_SESSION, NULL, NULL,
 								   &session);
 		if (rv != CKR_OK)
 		{
