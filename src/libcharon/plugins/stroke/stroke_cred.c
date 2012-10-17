@@ -168,32 +168,48 @@ static certificate_t *load_from_smartcard(smartcard_format_t format,
 METHOD(stroke_cred_t, load_ca, certificate_t*,
 	private_stroke_cred_t *this, char *filename)
 {
-	certificate_t *cert;
+	certificate_t *cert = NULL;
 	char path[PATH_MAX];
 
-	if (*filename == '/')
+	if (strneq(filename, "%smartcard", strlen("%smartcard")))
 	{
-		snprintf(path, sizeof(path), "%s", filename);
-	}
-	else
-	{
-		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
-	}
+		smartcard_format_t format;
+		char module[BUF_LEN], keyid[BUF_LEN];
+		u_int slot;
 
-	if (this->force_ca_cert)
-	{	/* we treat this certificate as a CA certificate even if it has no
-		 * CA basic constraint */
-		cert = lib->creds->create(lib->creds,
-							  CRED_CERTIFICATE, CERT_X509,
-							  BUILD_FROM_FILE, path, BUILD_X509_FLAG, X509_CA,
-							  BUILD_END);
+		format = parse_smartcard(filename, &slot, module, keyid);
+		if (format != SC_FORMAT_INVALID)
+		{
+			cert = (certificate_t*)load_from_smartcard(format,
+							slot, module, keyid, CRED_CERTIFICATE, CERT_X509);
+		}
 	}
 	else
 	{
-		cert = lib->creds->create(lib->creds,
-							  CRED_CERTIFICATE, CERT_X509,
-							  BUILD_FROM_FILE, path,
-							  BUILD_END);
+		if (*filename == '/')
+		{
+			snprintf(path, sizeof(path), "%s", filename);
+		}
+		else
+		{
+			snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
+		}
+
+		if (this->force_ca_cert)
+		{	/* we treat this certificate as a CA certificate even if it has no
+			 * CA basic constraint */
+			cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, path, BUILD_X509_FLAG, X509_CA,
+								  BUILD_END);
+		}
+		else
+		{
+			cert = lib->creds->create(lib->creds,
+								  CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, path,
+								  BUILD_END);
+		}
 	}
 	if (cert)
 	{
@@ -206,6 +222,8 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 			cert->destroy(cert);
 			return NULL;
 		}
+		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s",
+			 cert->get_subject(cert), filename);
 		return this->creds->add_cert_ref(this->creds, TRUE, cert);
 	}
 	return NULL;
