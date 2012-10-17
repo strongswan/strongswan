@@ -29,7 +29,7 @@
 
 #include <debug.h>
 
-bool imv_attestation_build(linked_list_t *attr_list,
+bool imv_attestation_build(imv_msg_t *out_msg,
 						   imv_attestation_state_t *attestation_state,
 						   pts_meas_algorithms_t supported_algorithms,
 						   pts_dh_group_t supported_dh_groups,
@@ -76,12 +76,12 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			flags = pts->get_proto_caps(pts);
 			attr = tcg_pts_attr_proto_caps_create(flags, TRUE);
 			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+			out_msg->add_attribute(out_msg, attr);
 
 			/* Send Measurement Algorithms attribute */
 			attr = tcg_pts_attr_meas_algo_create(supported_algorithms, FALSE);
 			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+			out_msg->add_attribute(out_msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_NONCE_REQ);
@@ -97,7 +97,7 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			attr = tcg_pts_attr_dh_nonce_params_req_create(min_nonce_len,
 													 supported_dh_groups);
 			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+			out_msg->add_attribute(out_msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_TPM_INIT);
@@ -116,18 +116,18 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				attr = tcg_pts_attr_dh_nonce_finish_create(selected_algorithm,
 											initiator_value, initiator_nonce);
 				attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
 			}
 
 			/* Send Get TPM Version attribute */
 			attr = tcg_pts_attr_get_tpm_version_info_create();
 			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+			out_msg->add_attribute(out_msg, attr);
 
 			/* Send Get AIK attribute */
 			attr = tcg_pts_attr_get_aik_create();
 			attr->set_noskip_flag(attr, TRUE);
-			attr_list->insert_last(attr_list, attr);
+			out_msg->add_attribute(out_msg, attr);
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_MEAS);
@@ -140,7 +140,7 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			char *platform_info, *pathname;
 			u_int16_t request_id;
 			int id, type;
-			bool is_dir;
+			bool is_dir, have_request = FALSE;
 
 			attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_COMP_EVID);
@@ -173,7 +173,8 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				attr = tcg_pts_attr_req_file_meta_create(is_dir, delimiter,
 														 pathname);
 				attr->set_noskip_flag(attr, TRUE);
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
+				have_request = TRUE;
 			}
 			enumerator->destroy(enumerator);
 			
@@ -194,12 +195,13 @@ bool imv_attestation_build(linked_list_t *attr_list,
 				attr = tcg_pts_attr_req_file_meas_create(is_dir, request_id,
 													 delimiter, pathname);
 				attr->set_noskip_flag(attr, TRUE);
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
+				have_request = TRUE;
 			}
 			enumerator->destroy(enumerator);
 
 			/* do we have any file metadata or measurement requests? */
-			if (attr_list->get_count(attr_list))
+			if (have_request)
 			{
 				break;
 			}
@@ -282,12 +284,12 @@ bool imv_attestation_build(linked_list_t *attr_list,
 			if (attr)
 			{
 				/* Send Request Functional Component Evidence attribute */
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
 
 				/* Send Generate Attestation Evidence attribute */
 				attr = tcg_pts_attr_gen_attest_evid_create();
 				attr->set_noskip_flag(attr, TRUE);
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
 
 				attestation_state->set_handshake_state(attestation_state,
 										IMV_ATTESTATION_STATE_EVID_FINAL);

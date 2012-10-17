@@ -29,6 +29,7 @@
 #include <credentials/credential_manager.h>
 #include <crypto/hashers/hasher.h>
 
+#include <imv/imv_msg.h>
 #include <pa_tnc/pa_tnc_attr.h>
 
 #include <pts/pts_database.h>
@@ -39,7 +40,7 @@
  * Process a TCG PTS attribute
  *
  * @param attr					PA-TNC attribute to be processed
- * @param attr_list				list with PA-TNC error attributes
+ * @param out_msg				PA-TNC message containing error messages
  * @param attestation_state		attestation state of a given connection
  * @param supported_algorithms	supported PTS measurement algorithms
  * @param supported_dh_groups	supported DH groups
@@ -47,7 +48,7 @@
  * @param pts_credmgr			PTS credential manager
  * @return						TRUE if successful
  */
-bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
+bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							 imv_attestation_state_t *attestation_state,
 							 pts_meas_algorithms_t supported_algorithms,
 							 pts_dh_group_t supported_dh_groups,

@@ -10,6 +10,7 @@ libimcv_la_SOURCES = \
 	imc/imc_agent.h imc/imc_agent.c imc/imc_state.h \
 	imc/imc_msg.h imc/imc_msg.c \
 	imv/imv_agent.h imv/imv_agent.c imv/imv_state.h \
+	imv/imv_msg.h imv/imv_msg.c \
 	ietf/ietf_attr.h ietf/ietf_attr.c \
 	ietf/ietf_attr_assess_result.h ietf/ietf_attr_assess_result.c \
 	ietf/ietf_attr_attr_request.h ietf/ietf_attr_attr_request.c \

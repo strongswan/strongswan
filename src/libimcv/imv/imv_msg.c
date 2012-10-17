@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "imc_msg.h"
+#include "imv_msg.h"
 
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_assess_result.h"
@@ -24,18 +24,18 @@
 #include <utils/linked_list.h>
 #include <debug.h>
 
-typedef struct private_imc_msg_t private_imc_msg_t;
+typedef struct private_imv_msg_t private_imv_msg_t;
 
 /**
- * Private data of a imc_msg_t object.
+ * Private data of a imv_msg_t object.
  *
  */
-struct private_imc_msg_t {
+struct private_imv_msg_t {
 
 	/**
-	 * Public imc_msg_t interface.
+	 * Public imv_msg_t interface.
 	 */
-	imc_msg_t public;
+	imv_msg_t public;
 
 	/**
 	 * Connection ID 
@@ -68,30 +68,47 @@ struct private_imc_msg_t {
 	pa_tnc_msg_t *pa_msg;
 
 	/**
-	 * Assigned IMC agent 
+	 * Assigned IMV agent 
 	 */
-	imc_agent_t *agent;
+	imv_agent_t *agent;
 
 	/**
-	 * Assigned IMC state 
+	 * Assigned IMV state 
 	 */
-	imc_state_t *state;
+	imv_state_t *state;
 };
 
-METHOD(imc_msg_t, get_src_id, TNC_UInt32,
-	private_imc_msg_t *this)
+METHOD(imv_msg_t, get_src_id, TNC_UInt32,
+	private_imv_msg_t *this)
 {
 	return this->src_id;
 }
 
-METHOD(imc_msg_t, get_dst_id, TNC_UInt32,
-	private_imc_msg_t *this)
+METHOD(imv_msg_t, get_dst_id, TNC_UInt32,
+	private_imv_msg_t *this)
 {
 	return this->dst_id;
 }
 
-METHOD(imc_msg_t, send_, TNC_Result,
-	private_imc_msg_t *this, bool excl)
+METHOD(imv_msg_t, set_msg_type, void,
+	private_imv_msg_t *this, pen_type_t msg_type)
+{
+	if (msg_type.vendor_id != this->msg_type.vendor_id ||
+		msg_type.type != this->msg_type.type)
+	{
+		this->msg_type = msg_type;
+		this->dst_id = TNC_IMCID_ANY;
+	}
+}
+
+METHOD(imv_msg_t, add_attribute, void,
+	private_imv_msg_t *this, pa_tnc_attr_t *attr)
+{
+	this->attr_list->insert_last(this->attr_list, attr);
+}
+
+METHOD(imv_msg_t, send_, TNC_Result,
+	private_imv_msg_t *this, bool excl)
 {
 	pa_tnc_msg_t *pa_tnc_msg;
 	pa_tnc_attr_t *attr;
@@ -122,7 +139,7 @@ METHOD(imc_msg_t, send_, TNC_Result,
 				}
 				else
 				{
-					DBG1(DBG_IMC, "PA-TNC attribute too large to send, deleted");
+					DBG1(DBG_IMV, "PA-TNC attribute too large to send, deleted");
 					attr->destroy(attr);
 				}
 			}
@@ -130,19 +147,19 @@ METHOD(imc_msg_t, send_, TNC_Result,
 		}
 		enumerator->destroy(enumerator);
 
-		/* build and send the PA-TNC message via the IF-IMC interface */
+		/* build and send the PA-TNC message via the IF-IMV interface */
 		if (!pa_tnc_msg->build(pa_tnc_msg))
 		{
 			pa_tnc_msg->destroy(pa_tnc_msg);
 			return TNC_RESULT_FATAL;
 		}
 		msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
-		DBG3(DBG_IMC, "created PA-TNC message: %B", &msg);
+		DBG3(DBG_IMV, "created PA-TNC message: %B", &msg);
 
 		if (this->state->has_long(this->state) && this->agent->send_message_long)
 		{
 			excl = excl && this->state->has_excl(this->state) && 
-						   this->dst_id != TNC_IMVID_ANY;
+						   this->dst_id != TNC_IMCID_ANY;
 			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 			result = this->agent->send_message_long(this->src_id,
 							this->connection_id, msg_flags,	msg.ptr, msg.len,
@@ -167,41 +184,61 @@ METHOD(imc_msg_t, send_, TNC_Result,
 	return result;
 }
 
-METHOD(imc_msg_t, receive, TNC_Result,
-	private_imc_msg_t *this, bool *fatal_error)
+METHOD(imv_msg_t, send_assessment, TNC_Result,
+	private_imv_msg_t *this)
+{
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	pa_tnc_attr_t *attr;
+
+	/* Send an IETF Assessment Result attribute if enabled */
+	if (lib->settings->get_bool(lib->settings, "libimcv.assessment_result",
+								TRUE))
+	{
+		this->state->get_recommendation(this->state, &rec, &eval);
+		attr = ietf_attr_assess_result_create(eval);
+		add_attribute(this, attr);
+
+		/* send PA-TNC message with the excl flag set */
+		return send_(this, TRUE);
+	}
+	return TNC_RESULT_SUCCESS;
+}
+
+METHOD(imv_msg_t, receive, TNC_Result,
+	private_imv_msg_t *this, bool *fatal_error)
 {
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
-	pen_type_t attr_type;
 	chunk_t msg;
 
 	if (this->state->has_long(this->state))
 	{
-		if (this->dst_id != TNC_IMCID_ANY)
+		if (this->dst_id != TNC_IMVID_ANY)
 		{
-			DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u "
-						  "from IMV %u to IMC %u",
+			DBG2(DBG_IMV, "IMV %u \"%s\" received message for Connection ID %u "
+						  "from IMC %u to IMV %u",
 						   this->agent->get_id(this->agent),
 						   this->agent->get_name(this->agent),
 						   this->connection_id, this->src_id, this->dst_id);
 		}
 		else
 		{
-			DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u "
-						  "from IMV %u", this->agent->get_id(this->agent),
+			DBG2(DBG_IMV, "IMV %u \"%s\" received message for Connection ID %u "
+						  "from IMC %u", this->agent->get_id(this->agent),
 						   this->agent->get_name(this->agent),
 						   this->connection_id, this->src_id);
 		}
 	}
 	else
 	{
-		DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u",
+		DBG2(DBG_IMV, "IMV %u \"%s\" received message for Connection ID %u",
 					   this->agent->get_id(this->agent),
 					   this->agent->get_name(this->agent),
 					   this->connection_id);
 	}
 	msg = this->pa_msg->get_encoding(this->pa_msg);
-	DBG3(DBG_IMC, "%B", &msg);
+	DBG3(DBG_IMV, "%B", &msg);
 
 	switch (this->pa_msg->process(this->pa_msg))
 	{
@@ -209,10 +246,10 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			break;
 		case VERIFY_ERROR:
 		{
-			imc_msg_t *error_msg;
+			imv_msg_t *error_msg;
 			TNC_Result result;
 
-			error_msg = imc_msg_create_as_reply(&this->public);
+			error_msg = imv_msg_create_as_reply(&this->public);
 
 			/* extract and copy by reference all error attributes */
 			enumerator = this->pa_msg->create_error_enumerator(this->pa_msg);
@@ -237,49 +274,29 @@ METHOD(imc_msg_t, receive, TNC_Result,
 
 	/* preprocess any received IETF standard error attributes */
 	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg);
-
-	/* preprocess any received IETF assessment result attribute */
-	enumerator = this->pa_msg->create_attribute_enumerator(this->pa_msg);
-	while (enumerator->enumerate(enumerator, &attr))
-	{
-		attr_type = attr->get_type(attr);
-		
-		if (attr_type.vendor_id == PEN_IETF &&
-			attr_type.type == IETF_ATTR_ASSESSMENT_RESULT)
-		{
-			ietf_attr_assess_result_t *attr_cast;
-			TNC_UInt32 target_imc_id;
-			TNC_IMV_Evaluation_Result result;
-
-			attr_cast = (ietf_attr_assess_result_t*)attr;
-			result =  attr_cast->get_result(attr_cast);
-			target_imc_id = (this->dst_id != TNC_IMCID_ANY) ?
-							 this->dst_id : this->agent->get_id(this->agent); 
-			this->state->set_result(this->state, target_imc_id, result);
-
-			DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
-				 target_imc_id, TNC_IMV_Evaluation_Result_names, result);
-		}
-	}
-	enumerator->destroy(enumerator);
 		
 	return TNC_RESULT_SUCCESS;
 }
 
-METHOD(imc_msg_t, add_attribute, void,
-	private_imc_msg_t *this, pa_tnc_attr_t *attr)
+METHOD(imv_msg_t, delete_attributes, void,
+	private_imv_msg_t *this)
 {
-	this->attr_list->insert_last(this->attr_list, attr);
+	pa_tnc_attr_t *attr;
+
+	while (this->attr_list->remove_last(this->attr_list, (void**)&attr) == SUCCESS)
+	{
+		attr->destroy(attr);
+	}
 }
 
-METHOD(imc_msg_t, create_attribute_enumerator, enumerator_t*,
-	private_imc_msg_t *this)
+METHOD(imv_msg_t, create_attribute_enumerator, enumerator_t*,
+	private_imv_msg_t *this)
 {
 	return this->pa_msg->create_attribute_enumerator(this->pa_msg);
 }
 
-METHOD(imc_msg_t, destroy, void,
-	private_imc_msg_t *this)
+METHOD(imv_msg_t, destroy, void,
+	private_imv_msg_t *this)
 {
 	this->attr_list->destroy_offset(this->attr_list,
 									offsetof(pa_tnc_attr_t, destroy));
@@ -290,18 +307,20 @@ METHOD(imc_msg_t, destroy, void,
 /**
  * See header
  */
-imc_msg_t *imc_msg_create(imc_agent_t *agent, imc_state_t *state,
+imv_msg_t *imv_msg_create(imv_agent_t *agent, imv_state_t *state,
 						  TNC_ConnectionID connection_id,
 						  TNC_UInt32 src_id, TNC_UInt32 dst_id,
 						  pen_type_t msg_type)
 {
-	private_imc_msg_t *this;
+	private_imv_msg_t *this;
 
 	INIT(this,
 		.public = {
 			.get_src_id = _get_src_id,
 			.get_dst_id = _get_dst_id,
+			.set_msg_type = _set_msg_type,
 			.send = _send_,
+			.send_assessment = _send_assessment,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
 			.create_attribute_enumerator = _create_attribute_enumerator,
@@ -322,23 +341,23 @@ imc_msg_t *imc_msg_create(imc_agent_t *agent, imc_state_t *state,
 /**
  * See header
  */
-imc_msg_t* imc_msg_create_as_reply(imc_msg_t *msg)
+imv_msg_t* imv_msg_create_as_reply(imv_msg_t *msg)
 {
-	private_imc_msg_t *in;
+	private_imv_msg_t *in;
 	TNC_UInt32 src_id;
 
-	in = (private_imc_msg_t*)msg;
-	src_id = (in->dst_id != TNC_IMCID_ANY) ? 
+	in = (private_imv_msg_t*)msg;
+	src_id = (in->dst_id != TNC_IMVID_ANY) ? 
 			  in->dst_id : in->agent->get_id(in->agent);
 
-	return imc_msg_create(in->agent, in->state, in->connection_id, src_id,
+	return imv_msg_create(in->agent, in->state, in->connection_id, src_id,
 						  in->src_id, in->msg_type);
 }
 
 /**
  * See header
  */
-imc_msg_t *imc_msg_create_from_data(imc_agent_t *agent, imc_state_t *state,
+imv_msg_t *imv_msg_create_from_data(imv_agent_t *agent, imv_state_t *state,
 									TNC_ConnectionID connection_id,
 									TNC_MessageType msg_type,
 									chunk_t msg)
@@ -349,15 +368,15 @@ imc_msg_t *imc_msg_create_from_data(imc_agent_t *agent, imc_state_t *state,
 	msg_vid = msg_type >> 8;
 	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
-	return imc_msg_create_from_long_data(agent, state, connection_id,
-								TNC_IMVID_ANY, agent->get_id(agent),  
+	return imv_msg_create_from_long_data(agent, state, connection_id,
+								TNC_IMCID_ANY, agent->get_id(agent),  
 								msg_vid, msg_subtype, msg);
 }
 
 /**
  * See header
  */
-imc_msg_t *imc_msg_create_from_long_data(imc_agent_t *agent, imc_state_t *state,
+imv_msg_t *imv_msg_create_from_long_data(imv_agent_t *agent, imv_state_t *state,
 										 TNC_ConnectionID connection_id,
 										 TNC_UInt32 src_id,
 										 TNC_UInt32 dst_id,
@@ -365,15 +384,17 @@ imc_msg_t *imc_msg_create_from_long_data(imc_agent_t *agent, imc_state_t *state,
 										 TNC_MessageSubtype msg_subtype,
 										 chunk_t msg)
 {
-	private_imc_msg_t *this;
+	private_imv_msg_t *this;
 
 	INIT(this,
 		.public = {
 			.get_src_id = _get_src_id,
 			.get_dst_id = _get_dst_id,
+			.set_msg_type = _set_msg_type,
 			.send = _send_,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
+			.delete_attributes = _delete_attributes,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.destroy = _destroy,
 		},

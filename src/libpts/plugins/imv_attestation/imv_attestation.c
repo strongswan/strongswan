@@ -18,6 +18,7 @@
 #include "imv_attestation_build.h"
 
 #include <imv/imv_agent.h>
+#include <imv/imv_msg.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
@@ -169,97 +170,55 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	}
 }
 
-static TNC_Result send_message(TNC_ConnectionID connection_id)
+static TNC_Result send_message(imv_state_t *state, imv_msg_t *out_msg)
 {
-	linked_list_t *attr_list;
-	imv_state_t *state;
 	imv_attestation_state_t *attestation_state;
 	TNC_Result result;
 
-	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
 	attestation_state = (imv_attestation_state_t*)state;
-	attr_list = linked_list_create();
 
-	if (imv_attestation_build(attr_list, attestation_state, supported_algorithms,
+	if (imv_attestation_build(out_msg, attestation_state, supported_algorithms,
 							  supported_dh_groups, pts_db))
 	{
-		if (attr_list->get_count(attr_list))
-		{
-			result = imv_attestation->send_message(imv_attestation,
-							connection_id, FALSE, 0, TNC_IMCID_ANY,
-							PEN_TCG, PA_SUBTYPE_TCG_PTS, attr_list);
-		}
-		else
-		{
-			result = TNC_RESULT_SUCCESS;
-		}
-		attr_list->destroy(attr_list);
+		result = out_msg->send(out_msg, TRUE);
 	}
 	else
 	{
-		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
+		out_msg->delete_attributes(out_msg);
 		result = TNC_RESULT_FATAL;
 	}
 
 	return result;
 }
 
-static TNC_Result receive_message(TNC_IMVID imv_id,
-								  TNC_ConnectionID connection_id,
-								  TNC_UInt32 msg_flags,
-								  chunk_t msg,
-								  TNC_VendorID msg_vid,
-								  TNC_MessageSubtype msg_subtype,
-								  TNC_UInt32 src_imc_id,
-								  TNC_UInt32 dst_imv_id)
+static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 {
-	pa_tnc_msg_t *pa_tnc_msg;
+	imv_attestation_state_t *attestation_state;
+	imv_msg_t *out_msg;
+	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t type;
-	linked_list_t *attr_list;
-	imv_state_t *state;
-	imv_attestation_state_t *attestation_state;
+	TNC_Result result;
 	pts_t *pts;
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
-	enumerator_t *enumerator;
-	TNC_Result result;
+	bool fatal_error = FALSE;
 
-	if (!imv_attestation)
-	{
-		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
-		return TNC_RESULT_NOT_INITIALIZED;
-	}
-
-	/* get current IMV state  */
-	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	attestation_state = (imv_attestation_state_t*)state;
-	pts = attestation_state->get_pts(attestation_state);
-
-	/* parse received PA-TNC message and automatically handle any errors */
-	result = imv_attestation->receive_message(imv_attestation, state, msg,
-					 msg_vid, msg_subtype, src_imc_id, dst_imv_id, &pa_tnc_msg);
-
-	/* no parsed PA-TNC attributes available if an error occurred */
-	if (!pa_tnc_msg)
+	/* parse received PA-TNC message and handle local and remote errors */
+	result = in_msg->receive(in_msg, &fatal_error);
+	if (result != TNC_RESULT_SUCCESS)
 	{
 		return result;
 	}
 
-	/* preprocess any IETF standard error attributes */
-	result = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg) ?
-					TNC_RESULT_FATAL : TNC_RESULT_SUCCESS;
+	attestation_state = (imv_attestation_state_t*)state;
+	pts = attestation_state->get_pts(attestation_state);
 
-	attr_list = linked_list_create();
+	out_msg = imv_msg_create_as_reply(in_msg);
+	out_msg->set_msg_type(out_msg, msg_types[0]);
 
 	/* analyze PA-TNC attributes */
-	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
+	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		type = attr->get_type(attr);
@@ -311,7 +270,7 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 		}
 		else if (type.vendor_id == PEN_TCG)
 		{
-			if (!imv_attestation_process(attr, attr_list, attestation_state,
+			if (!imv_attestation_process(attr, out_msg, attestation_state, 
 				supported_algorithms,supported_dh_groups, pts_db, pts_credmgr))
 			{
 				result = TNC_RESULT_FATAL;
@@ -325,37 +284,46 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 	{
 		pts->set_platform_info(pts, os_name, os_version);
 	}
-	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	if (result != TNC_RESULT_SUCCESS)
 	{
-		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
+		out_msg->delete_attributes(out_msg);
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
-		return imv_attestation->provide_recommendation(imv_attestation,
-					connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return imv_attestation->provide_recommendation(imv_attestation, state);
 	}
 
-	if (attr_list->get_count(attr_list))
+	/* send PA-TNC message with excl flag set */
+	result = out_msg->send(out_msg, TRUE);
+
+	if (result != TNC_RESULT_SUCCESS)
 	{
-		result = imv_attestation->send_message(imv_attestation, connection_id,
-						FALSE, 0, TNC_IMCID_ANY, PEN_TCG, PA_SUBTYPE_TCG_PTS,
-						attr_list);
-		attr_list->destroy(attr_list);
+		out_msg->destroy(out_msg);
 		return result;
 	}
-	attr_list->destroy(attr_list);
 
 	/* check the IMV state for the next PA-TNC attributes to send */
-	result = send_message(connection_id);
+	result = send_message(state, out_msg);
+
 	if (result != TNC_RESULT_SUCCESS)
 	{
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
-		return imv_attestation->provide_recommendation(imv_attestation,
-						connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
+		out_msg->delete_attributes(out_msg);
+		result = out_msg->send_assessment(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return imv_attestation->provide_recommendation(imv_attestation, state);
 	}
 
 	if (attestation_state->get_handshake_state(attestation_state) ==
@@ -379,9 +347,15 @@ static TNC_Result receive_message(TNC_IMVID imv_id,
 								TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
 								TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 		}
-		return imv_attestation->provide_recommendation(imv_attestation,
-						connection_id, src_imc_id, PEN_TCG, PA_SUBTYPE_TCG_PTS);
+		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
+		if (result != TNC_RESULT_SUCCESS)
+		{
+			return result;
+		}
+		return imv_attestation->provide_recommendation(imv_attestation, state);
 	}
+	out_msg->destroy(out_msg);
 
 	return result;
 }
@@ -395,14 +369,25 @@ TNC_Result TNC_IMV_ReceiveMessage(TNC_IMVID imv_id,
 								  TNC_UInt32 msg_len,
 								  TNC_MessageType msg_type)
 {
-	TNC_VendorID msg_vid;
-	TNC_MessageSubtype msg_subtype;
+	imv_state_t *state;
+	imv_msg_t *in_msg;
+	TNC_Result result;
 
-	msg_vid = msg_type >> 8;
-	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+	if (!imv_attestation)
+	{
+		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	in_msg = imv_msg_create_from_data(imv_attestation, state, connection_id, 
+									  msg_type, chunk_create(msg, msg_len));
+	result = receive_message(state, in_msg);
+	in_msg->destroy(in_msg);
 
-	return receive_message(imv_id, connection_id, 0, chunk_create(msg, msg_len),
-						   msg_vid,	msg_subtype, 0, TNC_IMVID_ANY);
+	return result;
 }
 
 /**
@@ -418,9 +403,26 @@ TNC_Result TNC_IMV_ReceiveMessageLong(TNC_IMVID imv_id,
 									  TNC_UInt32 src_imc_id,
 									  TNC_UInt32 dst_imv_id)
 {
-	return receive_message(imv_id, connection_id, msg_flags,
-						   chunk_create(msg, msg_len), msg_vid, msg_subtype,
-						   src_imc_id, dst_imv_id);
+	imv_state_t *state;
+	imv_msg_t *in_msg;
+	TNC_Result result;
+
+	if (!imv_attestation)
+	{
+		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	in_msg = imv_msg_create_from_long_data(imv_attestation, state, connection_id,
+								src_imc_id, dst_imv_id, msg_vid, msg_subtype,
+								chunk_create(msg, msg_len));
+	result =receive_message(state, in_msg);
+	in_msg->destroy(in_msg);
+
+	return result;
 }
 
 /**
@@ -429,13 +431,18 @@ TNC_Result TNC_IMV_ReceiveMessageLong(TNC_IMVID imv_id,
 TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 										 TNC_ConnectionID connection_id)
 {
+	imv_state_t *state;
+
 	if (!imv_attestation)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return imv_attestation->provide_recommendation(imv_attestation,
-					connection_id, TNC_IMCID_ANY, PEN_TCG, PA_SUBTYPE_TCG_PTS);
+	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	return imv_attestation->provide_recommendation(imv_attestation, state);
 }
 
 /**
@@ -444,26 +451,10 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 							   TNC_ConnectionID connection_id)
 {
-	imv_state_t *state;
-	imv_attestation_state_t *attestation_state;
-
 	if (!imv_attestation)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
-	}
-	/* get current IMV state */
-	if (!imv_attestation->get_state(imv_attestation, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-	attestation_state = (imv_attestation_state_t*)state;
-
-	/* Check if IMV has to initiate the PA-TNC exchange */
-	if (attestation_state->get_handshake_state(attestation_state) ==
-		IMV_ATTESTATION_STATE_INIT)
-	{
-		return send_message(connection_id);
 	}
 	return TNC_RESULT_SUCCESS;
 }

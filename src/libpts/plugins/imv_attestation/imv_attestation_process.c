@@ -34,7 +34,7 @@
 
 #include <inttypes.h>
 
-bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
+bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 							 imv_attestation_state_t *attestation_state,
 							 pts_meas_algorithms_t supported_algorithms,
 							 pts_dh_group_t supported_dh_groups,
@@ -96,7 +96,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 				attr = pts_dh_nonce_error_create(
 									max(PTS_MIN_NONCE_LEN, min_nonce_len),
 										PTS_MAX_NONCE_LEN);
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
 				break;
 			}
 
@@ -113,7 +113,7 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, linked_list_t *attr_list,
 			if (selected_algorithm == PTS_MEAS_ALGO_NONE)
 			{
 				attr = pts_hash_alg_error_create(supported_algorithms);
-				attr_list->insert_last(attr_list, attr);
+				out_msg->add_attribute(out_msg, attr);
 				break;
 			}
 			pts->set_dh_hash_algorithm(pts, selected_algorithm);
