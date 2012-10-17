@@ -82,13 +82,18 @@ static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
 	this->handle_events_lock->read_lock(this->handle_events_lock);
 	if (add && this->handle_events)
 	{
-		creds = pkcs11_creds_create(p11, slot);
-		if (creds)
+		if (lib->settings->get_bool(lib->settings,
+						"libstrongswan.plugins.pkcs11.modules.%s.load_certs",
+						TRUE, p11->get_name(p11)))
 		{
-			this->mutex->lock(this->mutex);
-			this->creds->insert_last(this->creds, creds);
-			this->mutex->unlock(this->mutex);
-			lib->credmgr->add_set(lib->credmgr, &creds->set);
+			creds = pkcs11_creds_create(p11, slot);
+			if (creds)
+			{
+				this->mutex->lock(this->mutex);
+				this->creds->insert_last(this->creds, creds);
+				this->mutex->unlock(this->mutex);
+				lib->credmgr->add_set(lib->credmgr, &creds->set);
+			}
 		}
 	}
 	else if (this->handle_events)
