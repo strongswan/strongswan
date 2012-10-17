@@ -591,12 +591,9 @@ The left participant's ID can be overridden by specifying a
 value which must be certified by the certificate, though.
 .br
 A value in the form
-.B %smartcard:<keyid>
+.B %smartcard[<slot nr>[@<module>]]:<keyid>
 defines a specific certificate to load from a PKCS#11 backend for this
-connection.
-.B <keyid>
-has to be a hex encoded key identifier under which the certificate is stored
-on any of the configured smartcards.
+connection. See ipsec.secrets(5) for details about smartcard definitions.
 .B leftcert
 is required only if selecting the certificate with
 .B leftid
@@ -1034,6 +1031,11 @@ currently can have either the value
 .BR cacert " = <path>"
 defines a path to the CA certificate either relative to
 \fI/etc/ipsec.d/cacerts\fP or as an absolute path.
+.br
+A value in the form
+.B %smartcard[<slot nr>[@<module>]]:<keyid>
+defines a specific CA certificate to load from a PKCS#11 backend for this CA.
+See ipsec.secrets(5) for details about smartcard definitions.
 .TP
 .BR crluri " = <uri>"
 defines a CRL distribution point (ldap, http, or file URI)
