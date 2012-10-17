@@ -113,6 +113,11 @@ struct private_load_tester_config_t {
 	 * Dynamic source port, if used
 	 */
 	u_int16_t port;
+
+	/**
+	 * IKE version to use for load testing
+	 */
+	ike_version_t version;
 };
 
 /**
@@ -261,13 +266,13 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 
 	if (this->port && num)
 	{
-		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
+		ike_cfg = ike_cfg_create(this->version, FALSE, FALSE,
 								 this->local, FALSE, this->port + num - 1,
 								 this->remote, FALSE, IKEV2_NATT_PORT);
 	}
 	else
 	{
-		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
+		ike_cfg = ike_cfg_create(this->version, FALSE, FALSE,
 								 this->local, FALSE,
 								 charon->socket->get_port(charon->socket, FALSE),
 								 this->remote, FALSE, IKEV2_UDP_PORT);
@@ -410,6 +415,8 @@ load_tester_config_t *load_tester_config_create()
 
 	this->port = lib->settings->get_int(lib->settings,
 			"%s.plugins.load-tester.dynamic_port", 0, charon->name);
+	this->version = lib->settings->get_int(lib->settings,
+			"%s.plugins.load-tester.version", IKE_ANY, charon->name);
 
 	this->peer_cfg = generate_config(this, 0);
 
