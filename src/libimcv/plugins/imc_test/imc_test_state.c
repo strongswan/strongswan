@@ -144,9 +144,6 @@ METHOD(imc_state_t, set_result, void,
 	entry_t *entry;
 	bool found = FALSE;
 
-	DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
-		 id, TNC_IMV_Evaluation_Result_names, result);
-
 	enumerator = this->results->create_enumerator(this->results);
 	while (enumerator->enumerate(enumerator, &entry))
 	{

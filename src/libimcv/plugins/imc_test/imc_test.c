@@ -16,10 +16,9 @@
 #include "imc_test_state.h"
 
 #include <imc/imc_agent.h>
+#include <imc/imc_msg.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
-#include <ietf/ietf_attr_pa_tnc_error.h>
-#include <ietf/ietf_attr_assess_result.h>
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_command.h>
 #include <ita/ita_attr_dummy.h>
@@ -182,37 +181,24 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 	}
 }
 
-static TNC_Result send_message(imc_state_t *state, TNC_UInt32 src_imc_id,
-												   TNC_UInt32 dst_imv_id)
+static TNC_Result send_message(imc_state_t *state, imc_msg_t *out_msg)
 {
 	imc_test_state_t *test_state;
-	linked_list_t *attr_list;
 	pa_tnc_attr_t *attr;
-	bool excl;
-	TNC_ConnectionID connection_id;
-	TNC_Result result;
 
-	attr_list = linked_list_create();
-	connection_id = state->get_connection_id(state);
 	test_state = (imc_test_state_t*)state;
-
 	if (test_state->get_dummy_size(test_state))
 	{
 		attr = ita_attr_dummy_create(test_state->get_dummy_size(test_state));
 		attr->set_noskip_flag(attr, TRUE);
-		attr_list->insert_last(attr_list, attr);
+		out_msg->add_attribute(out_msg, attr);
 	}
 	attr = ita_attr_command_create(test_state->get_command(test_state));
 	attr->set_noskip_flag(attr, TRUE);
-	attr_list->insert_last(attr_list, attr);
+	out_msg->add_attribute(out_msg, attr);
 
-	excl = dst_imv_id != TNC_IMVID_ANY;
-	result = imc_test->send_message(imc_test, connection_id, excl, src_imc_id,
-									dst_imv_id, PEN_ITA, PA_SUBTYPE_ITA_TEST,
-									attr_list);
-	attr_list->destroy(attr_list);
-
-	return result;
+	/* send PA-TNC message with the excl flag set */
+	return out_msg->send(out_msg, TRUE);
 }
 
 /**
@@ -222,6 +208,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
 	imc_state_t *state;
+	imc_msg_t *out_msg;
 	enumerator_t *enumerator;
 	void *pointer;
 	TNC_UInt32 additional_id;
@@ -232,15 +219,16 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-
-	/* get current IMC state */
 	if (!imc_test->get_state(imc_test, connection_id, &state))
 	{
 		return TNC_RESULT_FATAL;
 	}
 
 	/* send PA message for primary IMC ID */
-	result = send_message(state, imc_id, TNC_IMVID_ANY);
+	out_msg = imc_msg_create(imc_test, state, connection_id, imc_id,
+							 TNC_IMVID_ANY, msg_types[0]);
+	result = send_message(state, out_msg);
+	out_msg->destroy(out_msg);
 
 	/* Exit if there are no additional IMC IDs */
 	if (!imc_test->count_additional_ids(imc_test))
@@ -263,93 +251,60 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	{
 		/* interpret pointer as scalar value */
 		additional_id = (TNC_UInt32)pointer;
-		result = send_message(state, additional_id, TNC_IMVID_ANY);	
+		out_msg = imc_msg_create(imc_test, state, connection_id, additional_id,
+								 TNC_IMVID_ANY, msg_types[0]);
+		result = send_message(state, out_msg);
+		out_msg->destroy(out_msg);
 	}
 	enumerator->destroy(enumerator);
 
 	return result;
 }
 
-static TNC_Result receive_message(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id,
-								  TNC_UInt32 msg_flags,
-								  chunk_t msg,
-								  TNC_VendorID msg_vid,
-								  TNC_MessageSubtype msg_subtype,
-								  TNC_UInt32 src_imv_id,
-								  TNC_UInt32 dst_imc_id)
+static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 {
-	pa_tnc_msg_t *pa_tnc_msg;
+	imc_msg_t *out_msg;
+	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t attr_type;
-	imc_state_t *state;
-	enumerator_t *enumerator;
 	TNC_Result result;
-	TNC_UInt32 target_imc_id;
 	bool fatal_error = FALSE;
 
-	if (!imc_test)
-	{
-		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
-		return TNC_RESULT_NOT_INITIALIZED;
-	}
-
-	/* get current IMC state */
-	if (!imc_test->get_state(imc_test, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-
-	/* parse received PA-TNC message and automatically handle any errors */ 
-	result = imc_test->receive_message(imc_test, state, msg, msg_vid,
-							msg_subtype, src_imv_id, dst_imc_id, &pa_tnc_msg);
-
-	/* no parsed PA-TNC attributes available if an error occurred */
-	if (!pa_tnc_msg)
+	/* parse received PA-TNC message and handle local and remote errors */
+	result = in_msg->receive(in_msg, &fatal_error);
+	if (result != TNC_RESULT_SUCCESS)
 	{
 		return result;
 	}
-	target_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? imc_id : dst_imc_id;
-
-	/* preprocess any IETF standard error attributes */
-	fatal_error = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg);
 
 	/* analyze PA-TNC attributes */
-	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
+	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		attr_type = attr->get_type(attr);
 
-		if (attr_type.vendor_id == PEN_IETF)
+		if (attr_type.vendor_id != PEN_ITA)
 		{
-			ietf_attr_assess_result_t *ietf_attr;
-
-			ietf_attr = (ietf_attr_assess_result_t*)attr;
-			state->set_result(state, target_imc_id,
-							  ietf_attr->get_result(ietf_attr));
+			continue;
 		}
-		else if (attr_type.vendor_id == PEN_ITA)
+		if (attr_type.type == ITA_ATTR_COMMAND)
 		{
-			if (attr_type.type == ITA_ATTR_COMMAND)
-			{
-				ita_attr_command_t *ita_attr;
+			ita_attr_command_t *ita_attr;
 
-				ita_attr = (ita_attr_command_t*)attr;
-				DBG1(DBG_IMC, "received command '%s'",
-					 ita_attr->get_command(ita_attr));
-			}
-			else if (attr_type.type == ITA_ATTR_DUMMY)
-			{
-				ita_attr_dummy_t *ita_attr;
+			ita_attr = (ita_attr_command_t*)attr;
+			DBG1(DBG_IMC, "received command '%s'",
+				 ita_attr->get_command(ita_attr));
+		}
+		else if (attr_type.type == ITA_ATTR_DUMMY)
+		{
+			ita_attr_dummy_t *ita_attr;
 
-				ita_attr = (ita_attr_dummy_t*)attr;
-				DBG1(DBG_IMC, "received dummy attribute value (%d bytes)",
-					 ita_attr->get_size(ita_attr));
-			}
+			ita_attr = (ita_attr_dummy_t*)attr;
+			DBG1(DBG_IMC, "received dummy attribute value (%d bytes)",
+				 ita_attr->get_size(ita_attr));
 		}
 	}
 	enumerator->destroy(enumerator);
-	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	if (fatal_error)
 	{
@@ -357,8 +312,15 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 	}
 
 	/* if no assessment result is known then repeat the measurement */
-	return state->get_result(state, target_imc_id, NULL) ?
-		   TNC_RESULT_SUCCESS : send_message(state, dst_imc_id, src_imv_id);
+	if (state->get_result(state, in_msg->get_dst_id(in_msg), NULL))
+	{
+		return TNC_RESULT_SUCCESS;
+	}
+	out_msg = imc_msg_create_as_reply(in_msg);
+ 	result = send_message(state, out_msg);
+	out_msg->destroy(out_msg);
+
+	return result;
 }
 
 /**
@@ -370,14 +332,26 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_UInt32 msg_len,
 								  TNC_MessageType msg_type)
 {
-	TNC_VendorID msg_vid;
-	TNC_MessageSubtype msg_subtype;
+	imc_state_t *state;
+	imc_msg_t *in_msg;
+	TNC_Result result;
 
-	msg_vid = msg_type >> 8;
-	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+	if (!imc_test)
+	{
+		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_test->get_state(imc_test, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
 
-	return receive_message(imc_id, connection_id, 0, chunk_create(msg, msg_len),
-						   msg_vid,	msg_subtype, 0, TNC_IMCID_ANY);
+	in_msg = imc_msg_create_from_data(imc_test, state, connection_id, msg_type,
+									  chunk_create(msg, msg_len));
+	result = receive_message(state, in_msg);
+	in_msg->destroy(in_msg);
+
+	return result;
 }
 
 /**
@@ -393,9 +367,26 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 									  TNC_UInt32 src_imv_id,
 									  TNC_UInt32 dst_imc_id)
 {
-	return receive_message(imc_id, connection_id, msg_flags,
-						   chunk_create(msg, msg_len), msg_vid, msg_subtype,
-						   src_imv_id, dst_imc_id);
+	imc_state_t *state;
+	imc_msg_t *in_msg;
+	TNC_Result result;
+
+	if (!imc_test)
+	{
+		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_test->get_state(imc_test, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	in_msg = imc_msg_create_from_long_data(imc_test, state, connection_id,
+								src_imv_id, dst_imc_id, msg_vid, msg_subtype,
+								chunk_create(msg, msg_len));
+	result =receive_message(state, in_msg);
+	in_msg->destroy(in_msg);
+
+	return result;
 }
 
 /**

@@ -95,45 +95,6 @@ struct private_imc_agent_t {
 									TNC_UInt32 type_count);
 
 	/**
-	 * Call when an IMC-IMC message is to be sent
-	 *
-	 * @param imc_id			IMC ID assigned by TNCC
-	 * @param connection_id		network connection ID assigned by TNCC
-	 * @param msg				message to send
-	 * @param msg_len			message length in bytes
-	 * @param msg_type			message type
-	 * @return					TNC result code
-	 */
-	TNC_Result (*send_message)(TNC_IMCID imc_id,
-							   TNC_ConnectionID connection_id,
-							   TNC_BufferReference msg,
-							   TNC_UInt32 msg_len,
-							   TNC_MessageType msg_type);
-
-
-	/**
-	 * Call when an IMC-IMC message is to be sent with long message types
-	 *
-	 * @param imc_id			IMC ID assigned by TNCC
-	 * @param connection_id		network connection ID assigned by TNCC
-	 * @param msg_flags			message flags
-	 * @param msg				message to send
-	 * @param msg_len			message length in bytes
-	 * @param msg_vid			message vendor ID
-	 * @param msg_subtype		message subtype
-	 * @param dst_imc_id		destination IMV ID
-	 * @return					TNC result code
-	 */
-	TNC_Result (*send_message_long)(TNC_IMCID imc_id,
-									TNC_ConnectionID connection_id,
-									TNC_UInt32 msg_flags,
-									TNC_BufferReference msg,
-									TNC_UInt32 msg_len,
-									TNC_VendorID msg_vid,
-									TNC_MessageSubtype msg_subtype,
-									TNC_UInt32 dst_imv_id);
-
-	/**
 	 * Get the value of an attribute associated with a connection
 	 * or with the TNCC as a whole.
 	 *
@@ -205,14 +166,14 @@ METHOD(imc_agent_t, bind_functions, TNC_Result,
 		this->public.request_handshake_retry = NULL;
 	}
 	if (bind_function(this->id, "TNC_TNCC_SendMessage",
-			(void**)&this->send_message) != TNC_RESULT_SUCCESS)
+			(void**)&this->public.send_message) != TNC_RESULT_SUCCESS)
 	{
-		this->send_message = NULL;
+		this->public.send_message = NULL;
 	}
 	if (bind_function(this->id, "TNC_TNCC_SendMessageLong",
-			(void**)&this->send_message_long) != TNC_RESULT_SUCCESS)
+			(void**)&this->public.send_message_long) != TNC_RESULT_SUCCESS)
 	{
-		this->send_message_long = NULL;
+		this->public.send_message_long = NULL;
 	}
 	if (bind_function(this->id, "TNC_TNCC_GetAttribute",
 			(void**)&this->get_attribute) != TNC_RESULT_SUCCESS)
@@ -494,167 +455,16 @@ METHOD(imc_agent_t, get_state, bool,
 	return TRUE;
 }
 
-METHOD(imc_agent_t, send_message, TNC_Result,
-	private_imc_agent_t *this, TNC_ConnectionID connection_id, bool excl,
-	TNC_UInt32 src_imc_id, TNC_UInt32 dst_imv_id, TNC_VendorID msg_vid,
-	TNC_MessageSubtype msg_subtype,	linked_list_t *attr_list)
+METHOD(imc_agent_t, get_name, const char*,
+	private_imc_agent_t *this)
 {
-	TNC_MessageType type;
-	TNC_UInt32 msg_flags;
-	TNC_Result result = TNC_RESULT_FATAL;
-	imc_state_t *state;
-	pa_tnc_attr_t *attr;
-	pa_tnc_msg_t *pa_tnc_msg;
-	chunk_t msg;
-	enumerator_t *enumerator;
-	bool attr_added;
-
-	state = find_connection(this, connection_id);
-	if (!state)
-	{
-		DBG1(DBG_IMV, "IMC %u \"%s\" has no state for Connection ID %u",
-					  this->id, this->name, connection_id);
-		return TNC_RESULT_FATAL;
-	}
-
-	while (attr_list->get_count(attr_list))
-	{
-		pa_tnc_msg = pa_tnc_msg_create(state->get_max_msg_len(state));
-		attr_added = FALSE;
-
-		enumerator = attr_list->create_enumerator(attr_list);
-		while (enumerator->enumerate(enumerator, &attr))
-		{
-			if (pa_tnc_msg->add_attribute(pa_tnc_msg, attr))
-			{
-				attr_added = TRUE;
-			}
-			else
-			{
-				if (attr_added)
-				{
-					break;
-				}
-				else
-				{
-					DBG1(DBG_IMC, "PA-TNC attribute too large to send, deleted");
-					attr->destroy(attr);
-				}
-			}
-			attr_list->remove_at(attr_list, enumerator);
-		}
-		enumerator->destroy(enumerator);
-
-		/* build and send the PA-TNC message via the IF-IMC interface */
-		if (!pa_tnc_msg->build(pa_tnc_msg))
-		{
-			pa_tnc_msg->destroy(pa_tnc_msg);
-			return TNC_RESULT_FATAL;
-		}
-		msg = pa_tnc_msg->get_encoding(pa_tnc_msg);
-
-		if (state->has_long(state) && this->send_message_long)
-		{
-			if (!src_imc_id)
-			{
-				src_imc_id = this->id;
-			}
-			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
-
-			result = this->send_message_long(src_imc_id, connection_id,
-								msg_flags, msg.ptr, msg.len, msg_vid,
-								msg_subtype, dst_imv_id);
-		}
-		else if (this->send_message)
-		{
-			type = msg_vid << 8 | msg_subtype;
-
-			result = this->send_message(this->id, connection_id, msg.ptr,
-								msg.len, type);
-		}
-
-		pa_tnc_msg->destroy(pa_tnc_msg);
-
-		if (result != TNC_RESULT_SUCCESS)
-		{
-			break;
-		}
-	}
-	return result;
+	return	this->name;
 }
 
-METHOD(imc_agent_t, receive_message, TNC_Result,
-	private_imc_agent_t *this, imc_state_t *state, chunk_t msg,
-	TNC_VendorID msg_vid, TNC_MessageSubtype msg_subtype,
-	TNC_UInt32 src_imv_id, TNC_UInt32 dst_imc_id, pa_tnc_msg_t **pa_tnc_msg)
+METHOD(imc_agent_t, get_id, TNC_IMCID,
+	private_imc_agent_t *this)
 {
-	pa_tnc_msg_t *pa_msg;
-	pa_tnc_attr_t *error_attr;
-	linked_list_t *error_attr_list;
-	enumerator_t *enumerator;
-	TNC_UInt32 src_imc_id, dst_imv_id;
-	TNC_ConnectionID connection_id;
-	TNC_Result result;
-
-	connection_id = state->get_connection_id(state);
-
-	if (state->has_long(state))
-	{
-		if (dst_imc_id != TNC_IMCID_ANY)
-		{
-			DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u "
-						  "from IMV %u to IMC %u", this->id, this->name,
-						   connection_id, src_imv_id, dst_imc_id);
-		}
-		else
-		{
-			DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u "
-						  "from IMV %u", this->id, this->name, connection_id,
-						   src_imv_id);
-		}
-	}
-	else
-	{
-		DBG2(DBG_IMC, "IMC %u \"%s\" received message for Connection ID %u",
-					   this->id, this->name, connection_id);
-	}
-
-	*pa_tnc_msg = NULL;
-	pa_msg = pa_tnc_msg_create_from_data(msg);
-
-	switch (pa_msg->process(pa_msg))
-	{
-		case SUCCESS:
-			*pa_tnc_msg = pa_msg;
-			break;
-		case VERIFY_ERROR:
-			/* extract and copy by refence all error attributes */
-			error_attr_list = linked_list_create();
-
-			enumerator = pa_msg->create_error_enumerator(pa_msg);
-			while (enumerator->enumerate(enumerator, &error_attr))
-			{
-				error_attr_list->insert_last(error_attr_list,
-											 error_attr->get_ref(error_attr));
-			}
-			enumerator->destroy(enumerator);
-
-			src_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? this->id : dst_imc_id;
-			dst_imv_id = state->has_excl(state) ? src_imv_id : TNC_IMVID_ANY;
-
-			result = send_message(this, connection_id, state->has_excl(state),
-								  src_imc_id, dst_imv_id, msg_vid, msg_subtype,
-								  error_attr_list);
-
-			error_attr_list->destroy(error_attr_list);
-			pa_msg->destroy(pa_msg);
-			return result;
-		case FAILED:
-		default:
-			pa_msg->destroy(pa_msg);
-			return TNC_RESULT_FATAL;
-	}
-	return TNC_RESULT_SUCCESS;
+	return	this->id;
 }
 
 METHOD(imc_agent_t, reserve_additional_ids, TNC_Result,
@@ -737,8 +547,8 @@ imc_agent_t *imc_agent_create(const char *name,
 			.delete_state = _delete_state,
 			.change_state = _change_state,
 			.get_state = _get_state,
-			.send_message = _send_message,
-			.receive_message = _receive_message,
+			.get_name = _get_name,
+			.get_id = _get_id,
 			.reserve_additional_ids = _reserve_additional_ids,
 			.count_additional_ids = _count_additional_ids,
 			.create_id_enumerator = _create_id_enumerator,

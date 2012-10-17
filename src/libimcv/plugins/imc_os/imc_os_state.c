@@ -109,8 +109,6 @@ METHOD(imc_state_t, set_result, void,
 	private_imc_os_state_t *this, TNC_IMCID id,
 	TNC_IMV_Evaluation_Result result)
 {
-	DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
-		 id, TNC_IMV_Evaluation_Result_names, result);
 	this->result = result;
 }
 

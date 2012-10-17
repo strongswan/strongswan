@@ -16,15 +16,14 @@
 #include "imc_os_state.h"
 
 #include <imc/imc_agent.h>
+#include <imc/imc_msg.h>
 #include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
-#include <ietf/ietf_attr_assess_result.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_default_pwd_enabled.h>
 #include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_op_status.h>
-#include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <os_info/os_info.h>
@@ -120,30 +119,30 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 /**
  * Add IETF Product Information attribute to the send queue
  */
-static void add_product_info(linked_list_t *attr_list)
+static void add_product_info(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 
 	attr = ietf_attr_product_info_create(PEN_IETF, 0, os->get_name(os));
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
  * Add IETF String Version attribute to the send queue
  */
-static void add_string_version(linked_list_t *attr_list)
+static void add_string_version(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 
 	attr = ietf_attr_string_version_create(os->get_version(os),
 										   chunk_empty, chunk_empty);
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
  * Add IETF Operational Status attribute to the send queue
  */
-static void add_op_status(linked_list_t *attr_list)
+static void add_op_status(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 	time_t uptime, last_boot;
@@ -156,13 +155,13 @@ static void add_op_status(linked_list_t *attr_list)
 	}
 	attr = ietf_attr_op_status_create(OP_STATUS_OPERATIONAL,
 									  OP_RESULT_SUCCESSFUL, last_boot);
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
  * Add IETF Forwarding Enabled attribute to the send queue
  */
-static void add_fwd_enabled(linked_list_t *attr_list)
+static void add_fwd_enabled(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 	os_fwd_status_t fwd_status;
@@ -171,25 +170,25 @@ static void add_fwd_enabled(linked_list_t *attr_list)
 	DBG1(DBG_IMC, "IPv4 forwarding status: %N",
 				   os_fwd_status_names, fwd_status);
 	attr = ietf_attr_fwd_enabled_create(fwd_status);
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
  * Add IETF Factory Default Password Enabled attribute to the send queue
  */
-static void add_default_pwd_enabled(linked_list_t *attr_list)
+static void add_default_pwd_enabled(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 
 	DBG1(DBG_IMC, "factory default password: disabled");
 	attr = ietf_attr_default_pwd_enabled_create(FALSE);
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
  * Add an IETF Installed Packages attribute to the send queue
  */
-static void add_installed_packages(linked_list_t *attr_list)
+static void add_installed_packages(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 	ietf_attr_installed_packages_t *attr_cast;
@@ -202,7 +201,7 @@ static void add_installed_packages(linked_list_t *attr_list)
 	attr_cast = (ietf_attr_installed_packages_t*)attr;
 	attr_cast->add(attr_cast, libc_name, libc_version);
 	attr_cast->add(attr_cast, selinux_name, selinux_version);
-	attr_list->insert_last(attr_list, attr);
+	msg->add_attribute(msg, attr);
 }
 
 /**
@@ -211,6 +210,8 @@ static void add_installed_packages(linked_list_t *attr_list)
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								  TNC_ConnectionID connection_id)
 {
+	imc_state_t *state;
+	imc_msg_t *out_msg;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imc_os)
@@ -218,75 +219,48 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-
+	if (!imc_os->get_state(imc_os, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
 	if (lib->settings->get_bool(lib->settings,
 								"libimcv.plugins.imc-os.send_info", TRUE))
 	{
-		linked_list_t *attr_list;
+		out_msg = imc_msg_create(imc_os, state, connection_id, imc_id,
+								 TNC_IMVID_ANY, msg_types[0]);
+		add_product_info(out_msg);
+		add_string_version(out_msg);
+		add_op_status(out_msg);
+		add_fwd_enabled(out_msg);
+		add_default_pwd_enabled(out_msg);
 
-		attr_list = linked_list_create();
-		add_product_info(attr_list);
-		add_string_version(attr_list);
-		add_op_status(attr_list);
-		add_fwd_enabled(attr_list);
-		add_default_pwd_enabled(attr_list);
-		result = imc_os->send_message(imc_os, connection_id, FALSE, 0,
-					TNC_IMVID_ANY, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
-					attr_list);
-		attr_list->destroy(attr_list);
+		/* send PA-TNC message with the excl flag not set */
+		result = out_msg->send(out_msg, FALSE);
+		out_msg->destroy(out_msg);
 	}
 
 	return result;
 }
 
-static TNC_Result receive_message(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id,
-								  TNC_UInt32 msg_flags,
-								  chunk_t msg,
-								  TNC_VendorID msg_vid,
-								  TNC_MessageSubtype msg_subtype,
-								  TNC_UInt32 src_imv_id,
-								  TNC_UInt32 dst_imc_id)
+static TNC_Result receive_message(imc_msg_t *in_msg)
 {
-	pa_tnc_msg_t *pa_tnc_msg;
+	imc_msg_t *out_msg;
+	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t attr_type;
-	linked_list_t *attr_list;
-	imc_state_t *state;
-	enumerator_t *enumerator;
 	TNC_Result result;
-	TNC_UInt32 target_imc_id;
-	bool fatal_error;
+	bool fatal_error = FALSE;
 
-	if (!imc_os)
-	{
-		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
-		return TNC_RESULT_NOT_INITIALIZED;
-	}
-
-	/* get current IMC state */
-	if (!imc_os->get_state(imc_os, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-
-	/* parse received PA-TNC message and automatically handle any errors */
-	result = imc_os->receive_message(imc_os, state, msg, msg_vid,
-							msg_subtype, src_imv_id, dst_imc_id, &pa_tnc_msg);
-
-	/* no parsed PA-TNC attributes available if an error occurred */
-	if (!pa_tnc_msg)
+	/* parse received PA-TNC message and handle local and remote errors */
+	result = in_msg->receive(in_msg, &fatal_error);
+	if (result != TNC_RESULT_SUCCESS)
 	{
 		return result;
 	}
-	target_imc_id = (dst_imc_id == TNC_IMCID_ANY) ? imc_id : dst_imc_id;
-
-	/* preprocess any IETF standard error attributes */
-	fatal_error = pa_tnc_msg->process_ietf_std_errors(pa_tnc_msg);
+	out_msg = imc_msg_create_as_reply(in_msg);
 
 	/* analyze PA-TNC attributes */
-	attr_list = linked_list_create();
-	enumerator = pa_tnc_msg->create_attribute_enumerator(pa_tnc_msg);
+	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		attr_type = attr->get_type(attr);
@@ -313,22 +287,22 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 				switch (entry->type)
 				{
 					case IETF_ATTR_PRODUCT_INFORMATION:
-						add_product_info(attr_list);
+						add_product_info(out_msg);
 						break;
 					case IETF_ATTR_STRING_VERSION:
-						add_string_version(attr_list);
+						add_string_version(out_msg);
 						break;
 					case IETF_ATTR_OPERATIONAL_STATUS:
-						add_op_status(attr_list);
+						add_op_status(out_msg);
 						break;
 					case IETF_ATTR_FORWARDING_ENABLED:
-						add_fwd_enabled(attr_list);
+						add_fwd_enabled(out_msg);
 						break;
 					case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
-						add_default_pwd_enabled(attr_list);
+						add_default_pwd_enabled(out_msg);
 						break;
 					case IETF_ATTR_INSTALLED_PACKAGES:
-						add_installed_packages(attr_list);
+						add_installed_packages(out_msg);
 						break;
 					default:
 						break;
@@ -336,35 +310,18 @@ static TNC_Result receive_message(TNC_IMCID imc_id,
 			}
 			e->destroy(e); 
 		}
-		else if (attr_type.type == IETF_ATTR_ASSESSMENT_RESULT)
-		{
-			ietf_attr_assess_result_t *attr_cast;
-
-			attr_cast = (ietf_attr_assess_result_t*)attr;
-			state->set_result(state, target_imc_id,
-							  attr_cast->get_result(attr_cast));
-		}
 	}
 	enumerator->destroy(enumerator);
-	pa_tnc_msg->destroy(pa_tnc_msg);
 
 	if (fatal_error)
 	{
-		attr_list->destroy_offset(attr_list, offsetof(pa_tnc_attr_t, destroy));
-		return TNC_RESULT_FATAL;
-	}
-
-	if (attr_list->get_count(attr_list))
-	{
-		result = imc_os->send_message(imc_os, connection_id, TRUE, imc_id,
-						src_imv_id, PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM,
-						attr_list);
+		result = TNC_RESULT_FATAL;
 	}
 	else
 	{
-		result = TNC_RESULT_SUCCESS;
+		result = out_msg->send(out_msg, TRUE);
 	}
-	attr_list->destroy(attr_list);
+	out_msg->destroy(out_msg);
 
 	return result;
 }
@@ -379,14 +336,25 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 								  TNC_UInt32 msg_len,
 								  TNC_MessageType msg_type)
 {
-	TNC_VendorID msg_vid;
-	TNC_MessageSubtype msg_subtype;
+	imc_state_t *state;
+	imc_msg_t *in_msg;
+	TNC_Result result;
 
-	msg_vid = msg_type >> 8;
-	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+	if (!imc_os)
+	{
+		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_os->get_state(imc_os, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	in_msg = imc_msg_create_from_data(imc_os, state, connection_id, msg_type,
+									  chunk_create(msg, msg_len));
+	result = receive_message(in_msg);
+	in_msg->destroy(in_msg);
 
-	return receive_message(imc_id, connection_id, 0, chunk_create(msg, msg_len),
-						   msg_vid,	msg_subtype, 0, TNC_IMCID_ANY);
+	return result;
 }
 
 /**
@@ -402,9 +370,26 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 									  TNC_UInt32 src_imv_id,
 									  TNC_UInt32 dst_imc_id)
 {
-	return receive_message(imc_id, connection_id, msg_flags,
-						   chunk_create(msg, msg_len), msg_vid, msg_subtype,
-						   src_imv_id, dst_imc_id);
+	imc_state_t *state;
+	imc_msg_t *in_msg;
+	TNC_Result result;
+
+	if (!imc_os)
+	{
+		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_os->get_state(imc_os, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	in_msg = imc_msg_create_from_long_data(imc_os, state, connection_id,
+								src_imv_id, dst_imc_id,msg_vid, msg_subtype,
+								chunk_create(msg, msg_len));
+	result =receive_message(in_msg);
+	in_msg->destroy(in_msg);
+
+	return result;
 }
 
 /**
