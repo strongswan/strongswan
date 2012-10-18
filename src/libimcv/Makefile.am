@@ -21,6 +21,7 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_pa_tnc_error.h ietf/ietf_attr_pa_tnc_error.c \
 	ietf/ietf_attr_port_filter.h ietf/ietf_attr_port_filter.c \
 	ietf/ietf_attr_product_info.h ietf/ietf_attr_product_info.c \
+	ietf/ietf_attr_remediation_instr.h ietf/ietf_attr_remediation_instr.c \
 	ietf/ietf_attr_string_version.h ietf/ietf_attr_string_version.c \
 	ita/ita_attr.h ita/ita_attr.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \

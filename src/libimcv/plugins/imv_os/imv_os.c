@@ -25,6 +25,7 @@
 #include <ietf/ietf_attr_op_status.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_remediation_instr.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <os_info/os_info.h>
 
@@ -224,6 +225,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	if (os_name.len && os_version.len)
 	{
 		char *product_info;
+		char *uri = "http://remediation.strongswan.org/fix-it/";
+		char *string = "use a Linux operating system instead of Windows 1.2.3";
+		char *lang_code = "en";
 
 		os_state = (imv_os_state_t*)state;
 		os_state->set_info(os_state, os_name, os_version);
@@ -232,6 +236,14 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		if (streq(product_info, "Windows 1.2.3"))
 		{
 			DBG1(DBG_IMV, "OS '%s' is not supported", product_info);
+
+			attr = ietf_attr_remediation_instr_create_from_string(
+								chunk_create(string, strlen(string)),
+								chunk_create(lang_code, strlen(lang_code)));
+			out_msg->add_attribute(out_msg, attr);
+			attr = ietf_attr_remediation_instr_create_from_uri(
+								chunk_create(uri, strlen(uri)));
+			out_msg->add_attribute(out_msg, attr);
 
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,

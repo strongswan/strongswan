@@ -24,6 +24,7 @@
 #include <ietf/ietf_attr_installed_packages.h>
 #include <ietf/ietf_attr_op_status.h>
 #include <ietf/ietf_attr_product_info.h>
+#include <ietf/ietf_attr_remediation_instr.h>
 #include <ietf/ietf_attr_string_version.h>
 #include <os_info/os_info.h>
 
@@ -309,6 +310,39 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 			}
 			e->destroy(e); 
 		}
+		else if (attr_type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
+		{
+			ietf_attr_remediation_instr_t *attr_cast;
+			pen_type_t parameters_type;
+			chunk_t parameters, string, lang_code;
+
+			attr_cast = (ietf_attr_remediation_instr_t*)attr;
+			parameters_type = attr_cast->get_parameters_type(attr_cast);
+			parameters = attr_cast->get_parameters(attr_cast);
+
+			if (parameters_type.vendor_id == PEN_IETF)
+			{
+				switch (parameters_type.type)
+				{
+					case IETF_REMEDIATION_PARAMETERS_URI:
+						DBG1(DBG_IMC, "remediation uri: '%.*s'",
+									   parameters.len, parameters.ptr);
+						break;
+					case IETF_REMEDIATION_PARAMETERS_STRING:
+						string = attr_cast->get_string(attr_cast, &lang_code);
+						DBG1(DBG_IMC, "remediation string: '%.*s' [%.*s]",
+									   string.len, string.ptr,
+									   lang_code.len, lang_code.ptr);
+						break;
+					default:
+						DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+				}						
+			}
+			else
+			{
+				DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+			}
+		}	
 	}
 	enumerator->destroy(enumerator);
 

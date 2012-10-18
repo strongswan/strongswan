@@ -23,6 +23,7 @@
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
 #include "ietf/ietf_attr_product_info.h"
+#include "ietf/ietf_attr_remediation_instr.h"
 #include "ietf/ietf_attr_string_version.h"
 
 
@@ -65,13 +66,14 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ietf_attr_pa_tnc_error_create_from_data(value);
 		case IETF_ATTR_ASSESSMENT_RESULT:
 			return ietf_attr_assess_result_create_from_data(value);
+		case IETF_ATTR_REMEDIATION_INSTRUCTIONS:
+			return ietf_attr_remediation_instr_create_from_data(value);
 		case IETF_ATTR_FORWARDING_ENABLED:
 			return ietf_attr_fwd_enabled_create_from_data(value);
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 			return ietf_attr_default_pwd_enabled_create_from_data(value);
 		case IETF_ATTR_TESTING:
 		case IETF_ATTR_NUMERIC_VERSION:
-		case IETF_ATTR_REMEDIATION_INSTRUCTIONS:
 		case IETF_ATTR_RESERVED:
 		default:
 			return NULL;
