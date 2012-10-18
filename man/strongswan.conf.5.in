@@ -696,6 +696,12 @@ strength
 .BR libstrongswan.ecp_x_coordinate_only " [yes]"
 Compliance with the errata for RFC 4753
 .TP
+.BR libstrongswan.host_resolver.max_threads " [3]"
+Maximum number of concurrent resolver threads (they are terminated if unused)
+.TP
+.BR libstrongswan.host_resolver.min_threads " [0]"
+Minimum number of resolver threads to keep around
+.TP
 .BR libstrongswan.integrity_test " [no]"
 Check daemon, libstrongswan and plugin integrity at startup
 .TP

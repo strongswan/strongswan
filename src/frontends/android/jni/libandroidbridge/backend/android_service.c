@@ -59,11 +59,6 @@ struct private_android_service_t {
 	char *type;
 
 	/**
-	 * local ipv4 address
-	 */
-	char *local_address;
-
-	/**
 	 * gateway
 	 */
 	char *gateway;
@@ -362,7 +357,6 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable the hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
-			this->public.listener.ike_state_change = NULL;
 			if (!setup_tun_device(this, ike_sa, child_sa))
 			{
 				DBG1(DBG_DMN, "failed to setup TUN device");
@@ -403,19 +397,6 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
-METHOD(listener_t, ike_state_change, bool,
-	private_android_service_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
-{
-	/* this call back is only registered during initiation */
-	if (this->ike_sa == ike_sa && state == IKE_DESTROYING)
-	{
-		charonservice->update_status(charonservice,
-									 CHARONSERVICE_UNREACHABLE_ERROR);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(listener_t, alert, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, alert_t alert,
 	va_list args)
@@ -431,6 +412,15 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_AUTH_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
+				break;
+			case ALERT_PEER_INIT_UNREACHABLE:
+				this->lock->read_lock(this->lock);
+				if (this->tunfd < 0)
+				{	/* only handle this if we are not reestablishing the SA */
+					charonservice->update_status(charonservice,
+											CHARONSERVICE_UNREACHABLE_ERROR);
+				}
+				this->lock->unlock(this->lock);
 				break;
 			default:
 				break;
@@ -455,9 +445,8 @@ METHOD(listener_t, ike_reestablish, bool,
 	if (this->ike_sa == old)
 	{
 		this->ike_sa = new;
-		/* re-register hooks to detect initiation failures */
+		/* re-register hook to detect initiation failures */
 		this->public.listener.ike_updown = _ike_updown;
-		this->public.listener.ike_state_change = _ike_state_change;
 		/* the TUN device will be closed when the new CHILD_SA is established */
 	}
 	return TRUE;
@@ -480,13 +469,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 		}
 	};
 
-	ike_cfg = ike_cfg_create(TRUE, TRUE, this->local_address, FALSE,
+	ike_cfg = ike_cfg_create(TRUE, TRUE, "0.0.0.0", FALSE,
 							 charon->socket->get_port(charon->socket, FALSE),
 							 this->gateway, FALSE, IKEV2_UDP_PORT);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create("android", IKEV2, ike_cfg, CERT_SEND_IF_ASKED,
-							   UNIQUE_REPLACE, 1, /* keyingtries */
+							   UNIQUE_REPLACE, 0, /* keyingtries */
 							   36000, 0, /* rekey 10h, reauth none */
 							   600, 600, /* jitter, over 10min */
 							   TRUE, FALSE, /* mobike, aggressive */
@@ -538,10 +527,14 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
-								 0, 0, NULL, NULL, 0);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
+								 ACTION_NONE, ACTION_RESTART, ACTION_RESTART,
+								 FALSE, 0, 0, NULL, NULL, 0);
+	/* create an ESP proposal with the algorithms currently supported by
+	 * libipsec, no PFS for now */
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128-aes192-aes256-sha1-sha256-sha384-sha512"));
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "0.0.0.0",
+											 0, "255.255.255.255", 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "0.0.0.0",
 											 0, "255.255.255.255", 65535);
@@ -588,7 +581,6 @@ METHOD(android_service_t, destroy, void,
 	close_tun_device(this);
 	this->lock->destroy(this->lock);
 	free(this->type);
-	free(this->local_address);
 	free(this->gateway);
 	free(this->username);
 	if (this->password)
@@ -603,8 +595,8 @@ METHOD(android_service_t, destroy, void,
  * See header
  */
 android_service_t *android_service_create(android_creds_t *creds, char *type,
-										  char *local_address, char *gateway,
-										  char *username, char *password)
+										  char *gateway, char *username,
+										  char *password)
 {
 	private_android_service_t *this;
 
@@ -614,14 +606,12 @@ android_service_t *android_service_create(android_creds_t *creds, char *type,
 				.ike_rekey = _ike_rekey,
 				.ike_reestablish = _ike_reestablish,
 				.ike_updown = _ike_updown,
-				.ike_state_change = _ike_state_change,
 				.child_updown = _child_updown,
 				.alert = _alert,
 			},
 			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.local_address = local_address,
 		.username = username,
 		.password = password,
 		.gateway = gateway,

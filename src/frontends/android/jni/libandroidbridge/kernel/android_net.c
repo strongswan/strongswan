@@ -14,6 +14,15 @@
 
 #include "android_net.h"
 
+#include "../charonservice.h"
+#include <hydra.h>
+#include <debug.h>
+#include <processing/jobs/callback_job.h>
+#include <threading/mutex.h>
+
+/** delay before firing roam events (ms) */
+#define ROAM_DELAY 100
+
 typedef struct private_kernel_android_net_t private_kernel_android_net_t;
 
 struct private_kernel_android_net_t {
@@ -22,7 +31,65 @@ struct private_kernel_android_net_t {
 	 * Public kernel interface
 	 */
 	kernel_android_net_t public;
+
+	/**
+	 * Reference to NetworkManager object
+	 */
+	network_manager_t *network_manager;
+
+	/**
+	 * earliest time of the next roam event
+	 */
+	timeval_t next_roam;
+
+	/**
+	 * mutex to check and update roam event time
+	 */
+	mutex_t *mutex;
 };
+
+/**
+ * callback function that raises the delayed roam event
+ */
+static job_requeue_t roam_event()
+{
+	/* this will fail if no connection is up */
+	charonservice->bypass_socket(charonservice, -1, 0);
+	hydra->kernel_interface->roam(hydra->kernel_interface, TRUE);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Listen for connectivity change events and queue a roam event
+ */
+static void connectivity_cb(private_kernel_android_net_t *this,
+							bool disconnected)
+{
+	timeval_t now;
+	job_t *job;
+
+	time_monotonic(&now);
+	this->mutex->lock(this->mutex);
+	if (!timercmp(&now, &this->next_roam, >))
+	{
+		this->mutex->unlock(this->mutex);
+		return;
+	}
+	timeval_add_ms(&now, ROAM_DELAY);
+	this->next_roam = now;
+	this->mutex->unlock(this->mutex);
+
+	job = (job_t*)callback_job_create((callback_job_cb_t)roam_event, NULL,
+									   NULL, NULL);
+	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+}
+
+METHOD(kernel_net_t, get_source_addr, host_t*,
+	private_kernel_android_net_t *this, host_t *dest, host_t *src)
+{
+	return this->network_manager->get_local_address(this->network_manager,
+											dest->get_family(dest) == AF_INET);
+}
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_android_net_t *this, host_t *virtual_ip, host_t *iface_ip)
@@ -34,6 +101,9 @@ METHOD(kernel_net_t, add_ip, status_t,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_android_net_t *this)
 {
+	this->network_manager->remove_connectivity_cb(this->network_manager,
+												 (void*)connectivity_cb);
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -47,7 +117,7 @@ kernel_android_net_t *kernel_android_net_create()
 	INIT(this,
 		.public = {
 			.interface = {
-				.get_source_addr = (void*)return_null,
+				.get_source_addr = _get_source_addr,
 				.get_nexthop = (void*)return_null,
 				.get_interface = (void*)return_null,
 				.create_address_enumerator = (void*)enumerator_create_empty,
@@ -58,7 +128,12 @@ kernel_android_net_t *kernel_android_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.network_manager = charonservice->get_network_manager(charonservice),
 	);
+	timerclear(&this->next_roam);
 
+	this->network_manager->add_connectivity_cb(this->network_manager,
+											  (void*)connectivity_cb, this);
 	return &this->public;
 };

@@ -77,6 +77,7 @@
 #include "printf_hook.h"
 #include "utils.h"
 #include "chunk.h"
+#include "host_resolver.h"
 #include "settings.h"
 #include "integrity_checker.h"
 #include "processing/processor.h"
@@ -169,6 +170,11 @@ struct library_t {
 	 * schedule jobs
 	 */
 	scheduler_t *scheduler;
+
+	/**
+	 * resolve hosts by DNS name
+	 */
+	host_resolver_t *hosts;
 
 	/**
 	 * various settings loaded from settings file

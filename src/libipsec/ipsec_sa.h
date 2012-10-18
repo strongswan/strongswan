@@ -52,6 +52,20 @@ struct ipsec_sa_t {
 	host_t *(*get_destination)(ipsec_sa_t *this);
 
 	/**
+	 * Set the source address for this SA
+	 *
+	 * @param addr		source address of this SA (gets cloned)
+	 */
+	void (*set_source)(ipsec_sa_t *this, host_t *addr);
+
+	/**
+	 * Set the destination address for this SA
+	 *
+	 * @param addr		destination address of this SA (gets cloned)
+	 */
+	void (*set_destination)(ipsec_sa_t *this, host_t *addr);
+
+	/**
 	 * Get the SPI for this SA
 	 *
 	 * @return			SPI of this SA

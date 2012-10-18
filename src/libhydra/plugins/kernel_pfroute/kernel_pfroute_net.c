@@ -285,12 +285,7 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 	time_monotonic(&now);
 	if (timercmp(&now, &this->last_roam, >))
 	{
-		now.tv_usec += ROAM_DELAY * 1000;
-		while (now.tv_usec > 1000000)
-		{
-			now.tv_sec++;
-			now.tv_usec -= 1000000;
-		}
+		timeval_add_ms(&now, ROAM_DELAY);
 		this->last_roam = now;
 
 		job = (job_t*)callback_job_create((callback_job_cb_t)roam_event,

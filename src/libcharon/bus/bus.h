@@ -90,6 +90,8 @@ enum alert_t {
 	ALERT_PEER_AUTH_FAILED,
 	/** failed to resolve peer address, no arguments */
 	ALERT_PEER_ADDR_FAILED,
+	/** peer did not respond to initial message, current try (int, 0-based) */
+	ALERT_PEER_INIT_UNREACHABLE,
 };
 
 /**

@@ -79,7 +79,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
 	bool encap, bool new_encap, mark_t mark)
 {
-	return NOT_SUPPORTED;
+	return ipsec->sas->update_sa(ipsec->sas, spi, protocol, cpi, src, dst,
+								 new_src, new_dst, encap, new_encap, mark);
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,

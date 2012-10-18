@@ -433,13 +433,8 @@ METHOD(rwlock_condvar_t, timed_wait, bool,
 	ms = timeout % 1000;
 
 	tv.tv_sec += s;
-	tv.tv_usec += ms * 1000;
+	timeval_add_ms(&tv, ms);
 
-	if (tv.tv_usec > 1000000 /* 1s */)
-	{
-		tv.tv_usec -= 1000000;
-		tv.tv_sec++;
-	}
 	return timed_wait_abs(this, lock, tv);
 }
 

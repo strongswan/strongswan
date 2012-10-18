@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2012 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -16,14 +16,10 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-#include <sys/socket.h>
-#include <netdb.h>
-#include <string.h>
-
 #include "host.h"
 
 #include <debug.h>
+#include <library.h>
 
 #define IPV4_LEN	 4
 #define IPV6_LEN	16
@@ -450,48 +446,14 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
  */
 host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 {
-	private_host_t *this;
-	struct addrinfo hints, *result;
-	int error;
+	host_t *this;
 
-	if (streq(string, "%any"))
-	{
-		return host_create_any_port(af ? af : AF_INET, port);
-	}
-	if (streq(string, "%any6"))
-	{
-		return host_create_any_port(af ? af : AF_INET6, port);
-	}
-	if (af == AF_INET && strchr(string, ':'))
-	{	/* do not try to convert v6 addresses for v4 family */
-		return NULL;
-	}
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = af;
-	error = getaddrinfo(string, NULL, &hints, &result);
-	if (error != 0)
-	{
-		DBG1(DBG_LIB, "resolving '%s' failed: %s", string, gai_strerror(error));
-		return NULL;
-	}
-	/* result is a linked list, but we use only the first address */
-	this = (private_host_t*)host_create_from_sockaddr(result->ai_addr);
-	freeaddrinfo(result);
+	this = lib->hosts->resolve(lib->hosts, string, af);
 	if (this)
 	{
-		switch (this->address.sa_family)
-		{
-			case AF_INET:
-				this->address4.sin_port = htons(port);
-				break;
-			case AF_INET6:
-				this->address6.sin6_port = htons(port);
-				break;
-		}
-		return &this->public;
+		this->set_port(this, port);
 	}
-	return NULL;
+	return this;
 }
 
 /*

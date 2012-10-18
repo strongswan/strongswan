@@ -68,6 +68,7 @@ void library_deinit()
 	this->public.scheduler->destroy(this->public.scheduler);
 	this->public.processor->destroy(this->public.processor);
 	this->public.plugins->destroy(this->public.plugins);
+	this->public.hosts->destroy(this->public.hosts);
 	this->public.settings->destroy(this->public.settings);
 	this->public.credmgr->destroy(this->public.credmgr);
 	this->public.creds->destroy(this->public.creds);
@@ -183,6 +184,7 @@ bool library_init(char *settings)
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
 	this->public.settings = settings_create(settings);
+	this->public.hosts = host_resolver_create();
 	this->public.proposal = proposal_keywords_create();
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();

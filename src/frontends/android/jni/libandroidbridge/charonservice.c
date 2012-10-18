@@ -38,7 +38,7 @@
 
 #define ANDROID_DEBUG_LEVEL 1
 #define ANDROID_RETRASNMIT_TRIES 3
-#define ANDROID_RETRANSMIT_TIMEOUT 3.0
+#define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
 
 typedef struct private_charonservice_t private_charonservice_t;
@@ -74,9 +74,19 @@ struct private_charonservice_t {
 	vpnservice_builder_t *builder;
 
 	/**
+	 * NetworkManager instance (accessed via JNI)
+	 */
+	network_manager_t *network_manager;
+
+	/**
 	 * CharonVpnService reference
 	 */
 	jobject vpn_service;
+
+	/**
+	 * Sockets that were bypassed and we keep track for
+	 */
+	linked_list_t *sockets;
 };
 
 /**
@@ -172,8 +182,10 @@ failed:
 	return success;
 }
 
-METHOD(charonservice_t, bypass_socket, bool,
-	private_charonservice_t *this, int fd, int family)
+/**
+ * Bypass a single socket
+ */
+static bool bypass_single_socket(intptr_t fd, private_charonservice_t *this)
 {
 	JNIEnv *env;
 	jmethodID method_id;
@@ -188,7 +200,7 @@ METHOD(charonservice_t, bypass_socket, bool,
 	}
 	if (!(*env)->CallBooleanMethod(env, this->vpn_service, method_id, fd))
 	{
-		DBG1(DBG_CFG, "VpnService.protect() failed");
+		DBG2(DBG_KNL, "VpnService.protect() failed");
 		goto failed;
 	}
 	androidjni_detach_thread();
@@ -198,6 +210,19 @@ failed:
 	androidjni_exception_occurred(env);
 	androidjni_detach_thread();
 	return FALSE;
+}
+
+METHOD(charonservice_t, bypass_socket, bool,
+	private_charonservice_t *this, int fd, int family)
+{
+	if (fd >= 0)
+	{
+		this->sockets->insert_last(this->sockets, (void*)(intptr_t)fd);
+		return bypass_single_socket((intptr_t)fd, this);
+	}
+	this->sockets->invoke_function(this->sockets, (void*)bypass_single_socket,
+								   this);
+	return TRUE;
 }
 
 /**
@@ -330,22 +355,26 @@ METHOD(charonservice_t, get_vpnservice_builder, vpnservice_builder_t*,
 	return this->builder;
 }
 
+METHOD(charonservice_t, get_network_manager, network_manager_t*,
+	private_charonservice_t *this)
+{
+	return this->network_manager;
+}
+
 /**
  * Initiate a new connection
  *
- * @param local				local ip address (gets owned)
  * @param gateway			gateway address (gets owned)
  * @param username			username (gets owned)
  * @param password			password (gets owned)
  */
-static void initiate(char *type, char *local, char *gateway,
-					 char *username, char *password)
+static void initiate(char *type, char *gateway, char *username, char *password)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
-	this->service = android_service_create(this->creds, type, local, gateway,
+	this->service = android_service_create(this->creds, type, gateway,
 										   username, password);
 }
 
@@ -400,10 +429,13 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 			.get_user_certificate = _get_user_certificate,
 			.get_user_key = _get_user_key,
 			.get_vpnservice_builder = _get_vpnservice_builder,
+			.get_network_manager = _get_network_manager,
 		},
 		.attr = android_attr_create(),
 		.creds = android_creds_create(),
 		.builder = vpnservice_builder_create(builder),
+		.network_manager = network_manager_create(service),
+		.sockets = linked_list_create(),
 		.vpn_service = (*env)->NewGlobalRef(env, service),
 	);
 	charonservice = &this->public;
@@ -439,6 +471,8 @@ static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	this->network_manager->destroy(this->network_manager);
+	this->sockets->destroy(this->sockets);
 	this->builder->destroy(this->builder);
 	this->creds->destroy(this->creds);
 	this->attr->destroy(this->attr);
@@ -555,16 +589,14 @@ JNI_METHOD(CharonVpnService, deinitializeCharon, void)
  * Initiate SA
  */
 JNI_METHOD(CharonVpnService, initiate, void,
-	jstring jtype, jstring jlocal_address, jstring jgateway, jstring jusername,
-	jstring jpassword)
+	jstring jtype, jstring jgateway, jstring jusername, jstring jpassword)
 {
-	char *type, *local_address, *gateway, *username, *password;
+	char *type, *gateway, *username, *password;
 
 	type = androidjni_convert_jstring(env, jtype);
-	local_address = androidjni_convert_jstring(env, jlocal_address);
 	gateway = androidjni_convert_jstring(env, jgateway);
 	username = androidjni_convert_jstring(env, jusername);
 	password = androidjni_convert_jstring(env, jpassword);
 
-	initiate(type, local_address, gateway, username, password);
+	initiate(type, gateway, username, password);
 }

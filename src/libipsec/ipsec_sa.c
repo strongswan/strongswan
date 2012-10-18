@@ -95,6 +95,20 @@ METHOD(ipsec_sa_t, get_destination, host_t*,
 	return this->dst;
 }
 
+METHOD(ipsec_sa_t, set_source, void,
+	private_ipsec_sa_t *this, host_t *addr)
+{
+	this->src->destroy(this->src);
+	this->src = addr->clone(addr);
+}
+
+METHOD(ipsec_sa_t, set_destination, void,
+	private_ipsec_sa_t *this, host_t *addr)
+{
+	this->dst->destroy(this->dst);
+	this->dst = addr->clone(addr);
+}
+
 METHOD(ipsec_sa_t, get_spi, u_int32_t,
 	private_ipsec_sa_t *this)
 {
@@ -202,6 +216,8 @@ ipsec_sa_t *ipsec_sa_create(u_int32_t spi, host_t *src, host_t *dst,
 			.destroy = _destroy,
 			.get_source = _get_source,
 			.get_destination = _get_destination,
+			.set_source = _set_source,
+			.set_destination = _set_destination,
 			.get_spi = _get_spi,
 			.get_reqid = _get_reqid,
 			.get_protocol = _get_protocol,
