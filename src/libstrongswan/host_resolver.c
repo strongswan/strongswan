@@ -197,6 +197,7 @@ static void *resolve_hosts(private_host_resolver_t *this)
 
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = query->family;
+		hints.ai_socktype = SOCK_DGRAM;
 
 		thread_cleanup_push((thread_cleanup_t)query_signal_and_destroy, query);
 		old = thread_cancelability(TRUE);
@@ -224,6 +225,33 @@ static void *resolve_hosts(private_host_resolver_t *this)
 	return NULL;
 }
 
+/**
+ * Try to convert IP addresses directly
+ */
+static host_t *try_numeric_lookup(char *name, int family)
+{
+	struct addrinfo hints, *result;
+	int error;
+	host_t *host;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = family;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_NUMERICHOST;
+
+	error = getaddrinfo(name, NULL, &hints, &result);
+	if (error != 0)
+	{	/* not an IP address */
+		return NULL;
+	}
+	else
+	{	/* result is a linked list, but we use only the first address */
+		host = host_create_from_sockaddr(result->ai_addr);
+		freeaddrinfo(result);
+	}
+	return host;
+}
+
 METHOD(host_resolver_t, resolve, host_t*,
 	private_host_resolver_t *this, char *name, int family)
 {
@@ -244,6 +272,11 @@ METHOD(host_resolver_t, resolve, host_t*,
 	if (family == AF_INET && strchr(name, ':'))
 	{	/* do not try to convert v6 addresses for v4 family */
 		return NULL;
+	}
+	result = try_numeric_lookup(name, family);
+	if (result)
+	{	/* shortcut for numeric IP addresses */
+		return result;
 	}
 	this->mutex->lock(this->mutex);
 	if (this->disabled)
