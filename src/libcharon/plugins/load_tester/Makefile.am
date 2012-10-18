@@ -21,3 +21,6 @@ libstrongswan_load_tester_la_SOURCES = \
 	load_tester_diffie_hellman.c load_tester_diffie_hellman.h
 
 libstrongswan_load_tester_la_LDFLAGS = -module -avoid-version
+
+ipsec_PROGRAMS = load-tester
+load_tester_SOURCES = load_tester.c
