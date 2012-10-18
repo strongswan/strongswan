@@ -818,6 +818,23 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
+traffic_selector_t *traffic_selector_create_from_cidr(char *string,
+									u_int8_t protocol, u_int16_t port)
+{
+	host_t *net;
+	int bits;
+
+	net = host_create_from_subnet(string, &bits);
+	if (net)
+	{
+		return traffic_selector_create_from_subnet(net, bits, protocol, port);
+	}
+	return NULL;
+}
+
+/*
+ * see header
+ */
 traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 									u_int16_t from_port, u_int16_t to_port)
 {

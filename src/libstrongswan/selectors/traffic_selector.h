@@ -231,6 +231,19 @@ traffic_selector_t *traffic_selector_create_from_string(
 									char *from_addr, u_int16_t from_port,
 									char *to_addr, u_int16_t to_port);
 
+
+
+/**
+ * Create a traffic selector from a CIDR string.
+ *
+ * @param string		CIDR string, such as 10.1.0.0/16
+ * @param protocol		protocol for this ts, such as TCP or UDP
+ * @param port			single port for this TS, 0 for any port
+ * @return				traffic selector, NULL if string invalid
+ */
+traffic_selector_t *traffic_selector_create_from_cidr(char *string,
+									u_int8_t protocol, u_int16_t port);
+
 /**
  * Create a new traffic selector using data read from the net.
  *
