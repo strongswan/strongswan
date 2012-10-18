@@ -61,28 +61,12 @@ static traffic_selector_t *ts_from_string(char *str)
 {
 	if (str)
 	{
-		int netbits = 32;
-		host_t *net;
-		char *pos;
+		traffic_selector_t *ts;
 
-		str = strdupa(str);
-		pos = strchr(str, '/');
-		if (pos)
+		ts = traffic_selector_create_from_cidr(str, 0, 0);
+		if (ts)
 		{
-			*pos++ = '\0';
-			netbits = atoi(pos);
-		}
-		else
-		{
-			if (strchr(str, ':'))
-			{
-				netbits = 128;
-			}
-		}
-		net = host_create_from_string(str, 0);
-		if (net)
-		{
-			return traffic_selector_create_from_subnet(net, netbits, 0, 0);
+			return ts;
 		}
 	}
 	return traffic_selector_create_dynamic(0, 0, 65535);

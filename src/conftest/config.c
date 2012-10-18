@@ -143,9 +143,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 	proposal_t *proposal;
 	traffic_selector_t *ts;
 	ipsec_mode_t mode = MODE_TUNNEL;
-	host_t *net;
 	char *token;
-	int bits;
 	u_int32_t tfc;
 
 	if (settings->get_bool(settings, "configs.%s.%s.transport",
@@ -189,10 +187,9 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		enumerator = enumerator_create_token(token, ",", " ");
 		while (enumerator->enumerate(enumerator, &token))
 		{
-			net = host_create_from_subnet(token, &bits);
-			if (net)
+			ts = traffic_selector_create_from_cidr(token, 0, 0);
+			if (ts)
 			{
-				ts = traffic_selector_create_from_subnet(net, bits, 0, 0);
 				child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 			}
 			else
@@ -214,10 +211,9 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		enumerator = enumerator_create_token(token, ",", " ");
 		while (enumerator->enumerate(enumerator, &token))
 		{
-			net = host_create_from_subnet(token, &bits);
-			if (net)
+			ts = traffic_selector_create_from_cidr(token, 0, 0);
+			if (ts)
 			{
-				ts = traffic_selector_create_from_subnet(net, bits, 0, 0);
 				child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 			}
 			else

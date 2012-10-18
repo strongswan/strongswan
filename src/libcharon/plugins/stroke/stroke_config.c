@@ -881,10 +881,10 @@ static void add_ts(private_stroke_config_t *this,
 	}
 	else
 	{
-		host_t *net;
-
 		if (!end->subnets)
 		{
+			host_t *net;
+
 			net = host_create_from_string(end->address, 0);
 			if (net)
 			{
@@ -895,39 +895,24 @@ static void add_ts(private_stroke_config_t *this,
 		}
 		else
 		{
-			char *del, *start, *bits;
+			enumerator_t *enumerator;
+			char *subnet;
 
-			start = end->subnets;
-			do
+			enumerator = enumerator_create_token(end->subnets, ",", " ");
+			while (enumerator->enumerate(enumerator, &subnet))
 			{
-				int intbits = 0;
-
-				del = strchr(start, ',');
-				if (del)
+				ts = traffic_selector_create_from_cidr(subnet,
+													end->protocol, end->port);
+				if (ts)
 				{
-					*del = '\0';
-				}
-				bits = strchr(start, '/');
-				if (bits)
-				{
-					*bits = '\0';
-					intbits = atoi(bits + 1);
-				}
-
-				net = host_create_from_string(start, 0);
-				if (net)
-				{
-					ts = traffic_selector_create_from_subnet(net, intbits,
-												end->protocol, end->port);
 					child_cfg->add_traffic_selector(child_cfg, local, ts);
 				}
 				else
 				{
-					DBG1(DBG_CFG, "invalid subnet: %s, skipped", start);
+					DBG1(DBG_CFG, "invalid subnet: %s, skipped", subnet);
 				}
-				start = del + 1;
 			}
-			while (del);
+			enumerator->destroy(enumerator);
 		}
 	}
 }
