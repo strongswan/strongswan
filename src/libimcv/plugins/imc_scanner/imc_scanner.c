@@ -17,7 +17,6 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
-#include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_port_filter.h>
 
@@ -349,7 +348,7 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 	in_msg = imc_msg_create_from_long_data(imc_scanner, state, connection_id,
 								src_imv_id, dst_imc_id, msg_vid, msg_subtype,
 								chunk_create(msg, msg_len));
-	result =receive_message(in_msg);
+	result = receive_message(in_msg);
 	in_msg->destroy(in_msg);
 
 	return result;

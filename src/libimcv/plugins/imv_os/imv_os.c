@@ -17,7 +17,6 @@
 
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
-#include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_default_pwd_enabled.h>
