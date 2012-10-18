@@ -85,6 +85,26 @@ struct private_load_tester_config_t {
 	char *responder_id;
 
 	/**
+	 * Traffic Selector on initiator side, as proposed from initiator
+	 */
+	char *initiator_tsi;
+
+	/**
+	 * Traffic Selector on responder side, as proposed from initiator
+	 */
+	char *initiator_tsr;
+
+	/**
+	 * Traffic Selector on initiator side, as narrowed by responder
+	 */
+	char *responder_tsi;
+
+	/**
+	 * Traffic Selector on responder side, as narrowed by responder
+	 */
+	char *responder_tsr;
+
+	/**
 	 * IKE_SA rekeying delay
 	 */
 	u_int ike_rekey;
@@ -247,6 +267,31 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 }
 
 /**
+ * Add a TS from a string to a child_cfg
+ */
+static void add_ts(char *string, child_cfg_t *cfg, bool local)
+{
+	traffic_selector_t *ts;
+
+	if (string)
+	{
+		ts = traffic_selector_create_from_cidr(string, 0, 0);
+		if (!ts)
+		{
+			DBG1(DBG_CFG, "parsing TS string '%s' failed", string);
+		}
+	}
+	else
+	{
+		ts = traffic_selector_create_dynamic(0, 0, 65535);
+	}
+	if (ts)
+	{
+		cfg->add_traffic_selector(cfg, local, ts);
+	}
+}
+
+/**
  * Generate a new initiator config, num = 0 for responder config
  */
 static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
@@ -254,7 +299,6 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	peer_cfg_t *peer_cfg;
-	traffic_selector_t *ts;
 	proposal_t *proposal;
 	lifetime_cfg_t lifetime = {
 		.time = {
@@ -310,10 +354,17 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 								 0, 0, NULL, NULL, 0);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+
+	if (num)
+	{	/* initiator */
+		add_ts(this->initiator_tsi, child_cfg, TRUE);
+		add_ts(this->initiator_tsr, child_cfg, FALSE);
+	}
+	else
+	{	/* responder */
+		add_ts(this->responder_tsr, child_cfg, TRUE);
+		add_ts(this->responder_tsi, child_cfg, FALSE);
+	}
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 	return peer_cfg;
 }
@@ -412,6 +463,17 @@ load_tester_config_t *load_tester_config_create()
 			"%s.plugins.load-tester.initiator_match", NULL, charon->name);
 	this->responder_id = lib->settings->get_str(lib->settings,
 			"%s.plugins.load-tester.responder_id", NULL, charon->name);
+
+	this->initiator_tsi = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.initiator_tsi", NULL, charon->name);
+	this->responder_tsi =lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.responder_tsi",
+			this->initiator_tsi, charon->name);
+	this->initiator_tsr = lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.initiator_tsr", NULL, charon->name);
+	this->responder_tsr =lib->settings->get_str(lib->settings,
+			"%s.plugins.load-tester.responder_tsr",
+			this->initiator_tsr, charon->name);
 
 	this->port = lib->settings->get_int(lib->settings,
 			"%s.plugins.load-tester.dynamic_port", 0, charon->name);
