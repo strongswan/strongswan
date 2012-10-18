@@ -735,11 +735,33 @@ METHOD(task_t, build_i, status_t,
 				DBG1(DBG_IKE, "allocating SPI from kernel failed");
 				return FAILED;
 			}
+			group = this->config->get_dh_group(this->config);
+			if (group != MODP_NONE)
+			{
+				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+														  group);
+				if (!this->dh)
+				{
+					DBG1(DBG_IKE, "configured DH group %N not supported",
+						 diffie_hellman_group_names, group);
+					return FAILED;
+				}
+			}
 
 			list = this->config->get_proposals(this->config, FALSE);
 			enumerator = list->create_enumerator(list);
 			while (enumerator->enumerate(enumerator, &proposal))
 			{
+				if (group != MODP_NONE)
+				{
+					if (!proposal->has_dh_group(proposal, group))
+					{
+						list->remove_at(list, enumerator);
+						proposal->destroy(proposal);
+						continue;
+					}
+					proposal->strip_dh(proposal, group);
+				}
 				proposal->set_spi(proposal, this->spi_i);
 			}
 			enumerator->destroy(enumerator);
@@ -755,18 +777,8 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-
-			group = this->config->get_dh_group(this->config);
 			if (group != MODP_NONE)
 			{
-				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
-														  group);
-				if (!this->dh)
-				{
-					DBG1(DBG_IKE, "configured DH group %N not supported",
-						 diffie_hellman_group_names, group);
-					return FAILED;
-				}
 				add_ke(this, message);
 			}
 			if (!this->tsi)
