@@ -27,7 +27,6 @@
 #include <selectors/traffic_selector.h>
 
 #define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
-#define HOST_RESOLVER_MAX_THREADS 2
 
 typedef struct private_library_t private_library_t;
 
@@ -184,8 +183,8 @@ bool library_init(char *settings)
 
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
-	this->public.hosts = host_resolver_create(HOST_RESOLVER_MAX_THREADS);
 	this->public.settings = settings_create(settings);
+	this->public.hosts = host_resolver_create();
 	this->public.proposal = proposal_keywords_create();
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();

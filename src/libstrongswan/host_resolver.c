@@ -27,6 +27,17 @@
 #include <utils/hashtable.h>
 #include <utils/linked_list.h>
 
+/**
+ * Default minimum and maximum number of threads
+ */
+#define MIN_THREADS_DEFAULT 0
+#define MAX_THREADS_DEFAULT 3
+
+/**
+ * Timeout in seconds to wait for new queries until a thread may be stopped
+ */
+#define NEW_QUERY_WAIT_TIMEOUT 30
+
 typedef struct private_host_resolver_t private_host_resolver_t;
 
 /**
@@ -58,6 +69,11 @@ struct private_host_resolver_t {
 	 * Condvar to signal arrival of new queries
 	 */
 	condvar_t *new_query;
+
+	/**
+	 * Minimum number of resolver threads
+	 */
+	u_int min_threads;
 
 	/**
 	 * Maximum number of resolver threads
@@ -142,15 +158,22 @@ static job_requeue_t resolve_hosts(private_host_resolver_t *this)
 	struct addrinfo hints, *result;
 	query_t *query;
 	int error;
-	bool old;
+	bool old, timed_out;
 
 	this->mutex->lock(this->mutex);
 	while (this->queue->remove_first(this->queue, (void**)&query) != SUCCESS)
 	{
 		thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
 		old = thread_cancelability(TRUE);
-		this->new_query->wait(this->new_query, this->mutex);
+		timed_out = this->new_query->timed_wait(this->new_query, this->mutex,
+												NEW_QUERY_WAIT_TIMEOUT * 1000);
 		thread_cancelability(old);
+		if (timed_out && (this->threads > this->min_threads))
+		{
+			this->threads--;
+			thread_cleanup_pop(TRUE);
+			return JOB_REQUEUE_NONE;
+		}
 		thread_cleanup_pop(FALSE);
 	}
 	this->busy_threads++;
@@ -275,7 +298,7 @@ METHOD(host_resolver_t, destroy, void,
 /*
  * Described in header
  */
-host_resolver_t *host_resolver_create(u_int max_threads)
+host_resolver_t *host_resolver_create()
 {
 	private_host_resolver_t *this;
 
@@ -290,8 +313,14 @@ host_resolver_t *host_resolver_create(u_int max_threads)
 		.queue = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.new_query = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.max_threads = max_threads,
 	);
 
+	this->min_threads = max(0, lib->settings->get_int(lib->settings,
+									"libstrongswan.host_resolver.min_threads",
+									 MIN_THREADS_DEFAULT));
+	this->max_threads = max(this->min_threads ?: 1,
+							lib->settings->get_int(lib->settings,
+									"libstrongswan.host_resolver.max_threads",
+									 MAX_THREADS_DEFAULT));
 	return &this->public;
 }

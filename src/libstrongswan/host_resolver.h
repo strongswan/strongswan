@@ -54,9 +54,7 @@ struct host_resolver_t {
 
 /**
  * Create a host_resolver_t instance.
- *
- * @param max_threads	maximum number of resolver threads to use
  */
-host_resolver_t *host_resolver_create(u_int max_threads);
+host_resolver_t *host_resolver_create();
 
 #endif /** HOST_RESOLVER_H_ @}*/
