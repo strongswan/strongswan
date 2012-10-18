@@ -111,8 +111,10 @@ struct proposal_t {
 
 	/**
 	 * Strip DH groups from proposal to use it without PFS.
+	 *
+	 * @param keep			group to keep (MODP_NONE to remove all)
 	 */
-	void (*strip_dh)(proposal_t *this);
+	void (*strip_dh)(proposal_t *this, diffie_hellman_group_t keep);
 
 	/**
 	 * Compare two proposal, and select a matching subset.

@@ -232,14 +232,21 @@ METHOD(proposal_t, has_dh_group, bool,
 }
 
 METHOD(proposal_t, strip_dh, void,
-	private_proposal_t *this)
+	private_proposal_t *this, diffie_hellman_group_t keep)
 {
+	enumerator_t *enumerator;
 	algorithm_t *alg;
 
-	while (this->dh_groups->remove_last(this->dh_groups, (void**)&alg) == SUCCESS)
+	enumerator = this->dh_groups->create_enumerator(this->dh_groups);
+	while (enumerator->enumerate(enumerator, (void**)&alg))
 	{
-		free(alg);
+		if (alg->algorithm != keep)
+		{
+			this->dh_groups->remove_at(this->dh_groups, enumerator);
+			free(alg);
+		}
 	}
+	enumerator->destroy(enumerator);
 }
 
 /**

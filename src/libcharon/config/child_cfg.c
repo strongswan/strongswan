@@ -165,7 +165,7 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 		current = current->clone(current);
 		if (strip_dh)
 		{
-			current->strip_dh(current);
+			current->strip_dh(current, MODP_NONE);
 		}
 		proposals->insert_last(proposals, current);
 	}
@@ -194,7 +194,7 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 		{
 			if (strip_dh)
 			{
-				stored->strip_dh(stored);
+				stored->strip_dh(stored, MODP_NONE);
 			}
 			selected = stored->select(stored, supplied, private);
 			if (selected)
