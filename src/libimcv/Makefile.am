@@ -17,6 +17,7 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_fwd_enabled.h ietf/ietf_attr_fwd_enabled.c \
 	ietf/ietf_attr_default_pwd_enabled.h ietf/ietf_attr_default_pwd_enabled.c \
 	ietf/ietf_attr_installed_packages.h ietf/ietf_attr_installed_packages.c \
+	ietf/ietf_attr_numeric_version.h ietf/ietf_attr_numeric_version.c \
 	ietf/ietf_attr_op_status.h ietf/ietf_attr_op_status.c \
 	ietf/ietf_attr_pa_tnc_error.h ietf/ietf_attr_pa_tnc_error.c \
 	ietf/ietf_attr_port_filter.h ietf/ietf_attr_port_filter.c \

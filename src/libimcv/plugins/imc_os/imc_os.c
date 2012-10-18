@@ -22,6 +22,7 @@
 #include <ietf/ietf_attr_default_pwd_enabled.h>
 #include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
+#include <ietf/ietf_attr_numeric_version.h>
 #include <ietf/ietf_attr_op_status.h>
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_remediation_instr.h>
@@ -128,6 +129,22 @@ static void add_product_info(imc_msg_t *msg)
 }
 
 /**
+ * Add IETF Numeric Version attribute to the send queue
+ */
+static void add_numeric_version(imc_msg_t *msg)
+{
+	pa_tnc_attr_t *attr;
+	u_int32_t major, minor;
+
+	os->get_numeric_version(os, &major, &minor);
+	DBG1(DBG_IMC, "operating system numeric version is %d.%d",
+				   major, minor);
+
+	attr = ietf_attr_numeric_version_create(major, minor, 0, 0, 0);
+	msg->add_attribute(msg, attr);
+}
+
+/**
  * Add IETF String Version attribute to the send queue
  */
 static void add_string_version(imc_msg_t *msg)
@@ -230,6 +247,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 								 TNC_IMVID_ANY, msg_types[0]);
 		add_product_info(out_msg);
 		add_string_version(out_msg);
+		add_numeric_version(out_msg);
 		add_op_status(out_msg);
 		add_fwd_enabled(out_msg);
 		add_default_pwd_enabled(out_msg);
@@ -291,6 +309,9 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 						break;
 					case IETF_ATTR_STRING_VERSION:
 						add_string_version(out_msg);
+						break;
+					case IETF_ATTR_NUMERIC_VERSION:
+						add_numeric_version(out_msg);
 						break;
 					case IETF_ATTR_OPERATIONAL_STATUS:
 						add_op_status(out_msg);

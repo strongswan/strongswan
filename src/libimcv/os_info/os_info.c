@@ -58,6 +58,22 @@ METHOD(os_info_t, get_name, chunk_t,
 	return this->name;
 }
 
+METHOD(os_info_t, get_numeric_version, void,
+	private_os_info_t *this, u_int32_t *major, u_int32_t *minor)
+{
+	u_char *pos;
+
+	if (major)
+	{
+		*major = atol(this->version.ptr);
+	}
+	pos = memchr(this->version.ptr, '.', this->version.len);
+	if (minor)
+	{
+		*minor = pos ? atol(pos + 1) : 0;
+	}
+}
+
 METHOD(os_info_t, get_version, chunk_t,
 	private_os_info_t *this)
 {
@@ -367,6 +383,7 @@ os_info_t *os_info_create(void)
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
+			.get_numeric_version = _get_numeric_version,
 			.get_version = _get_version,
 			.get_fwd_status = _get_fwd_status,
 			.get_uptime = _get_uptime,

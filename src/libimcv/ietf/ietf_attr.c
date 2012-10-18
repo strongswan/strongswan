@@ -19,6 +19,7 @@
 #include "ietf/ietf_attr_fwd_enabled.h"
 #include "ietf/ietf_attr_default_pwd_enabled.h"
 #include "ietf/ietf_attr_installed_packages.h"
+#include "ietf/ietf_attr_numeric_version.h"
 #include "ietf/ietf_attr_op_status.h"
 #include "ietf/ietf_attr_pa_tnc_error.h"
 #include "ietf/ietf_attr_port_filter.h"
@@ -54,6 +55,8 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ietf_attr_attr_request_create_from_data(value);
 		case IETF_ATTR_PRODUCT_INFORMATION:
 			return ietf_attr_product_info_create_from_data(value);
+		case IETF_ATTR_NUMERIC_VERSION:
+			return ietf_attr_numeric_version_create_from_data(value);
 		case IETF_ATTR_STRING_VERSION:
 			return ietf_attr_string_version_create_from_data(value);
 		case IETF_ATTR_OPERATIONAL_STATUS:
@@ -73,7 +76,6 @@ pa_tnc_attr_t* ietf_attr_create_from_data(u_int32_t type, chunk_t value)
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 			return ietf_attr_default_pwd_enabled_create_from_data(value);
 		case IETF_ATTR_TESTING:
-		case IETF_ATTR_NUMERIC_VERSION:
 		case IETF_ATTR_RESERVED:
 		default:
 			return NULL;

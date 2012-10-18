@@ -52,6 +52,15 @@ struct os_info_t {
 	chunk_t (*get_name)(os_info_t *this);
 
 	/**
+	 * Get the numeric OS version or release
+	 *
+	 * @param major				OS major version number
+	 * @param minor				OS minor version number
+	 */
+	void (*get_numeric_version)(os_info_t *this, u_int32_t *major,
+												 u_int32_t *minor);
+
+	/**
 	 * Get the OS version or release
 	 *
 	 * @return					OS version

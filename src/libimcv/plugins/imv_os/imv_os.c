@@ -22,6 +22,7 @@
 #include <ietf/ietf_attr_default_pwd_enabled.h>
 #include <ietf/ietf_attr_fwd_enabled.h>
 #include <ietf/ietf_attr_installed_packages.h>
+#include <ietf/ietf_attr_numeric_version.h>
 #include <ietf/ietf_attr_op_status.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
@@ -155,6 +156,17 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					DBG1(DBG_IMV, "operating system version is '%.*s'",
 								   os_version.len, os_version.ptr);
 				}
+				break;
+			}
+			case IETF_ATTR_NUMERIC_VERSION:
+			{
+				ietf_attr_numeric_version_t *attr_cast;
+				u_int32_t major, minor;
+
+				attr_cast = (ietf_attr_numeric_version_t*)attr;
+				attr_cast->get_version(attr_cast, &major, &minor);
+				DBG1(DBG_IMV, "operating system numeric version is %d.%d",
+							   major, minor);
 				break;
 			}
 			case IETF_ATTR_OPERATIONAL_STATUS:
@@ -404,6 +416,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 											 IETF_ATTR_PRODUCT_INFORMATION);
 		attr_cast = (ietf_attr_attr_request_t*)attr;
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_STRING_VERSION);
+		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_NUMERIC_VERSION);
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_OPERATIONAL_STATUS);
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
