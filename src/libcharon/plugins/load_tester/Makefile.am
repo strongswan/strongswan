@@ -2,7 +2,8 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic \
+	-DIPSEC_PIDDIR=\"${piddir}\"
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-load-tester.la
@@ -16,6 +17,7 @@ libstrongswan_load_tester_la_SOURCES = \
 	load_tester_creds.c load_tester_creds.h \
 	load_tester_ipsec.c load_tester_ipsec.h \
 	load_tester_listener.c load_tester_listener.h \
+	load_tester_control.c load_tester_control.h \
 	load_tester_diffie_hellman.c load_tester_diffie_hellman.h
 
 libstrongswan_load_tester_la_LDFLAGS = -module -avoid-version
