@@ -257,6 +257,8 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "giving up after %d retransmits",
 					 this->initiating.retransmitted - 1);
+				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT,
+								   this->initiating.packet);
 				return DESTROY_ME;
 			}
 
@@ -264,6 +266,8 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
 					 this->initiating.retransmitted, message_id);
+				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND,
+								   this->initiating.packet);
 			}
 			packet = this->initiating.packet->clone(this->initiating.packet);
 			charon->sender->send(charon->sender, packet);
@@ -1136,6 +1140,7 @@ METHOD(task_manager_t, process_message, status_t,
 
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
+			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
 			clone = this->responding.packet->clone(this->responding.packet);
 			host = msg->get_destination(msg);
 			clone->set_source(clone, host->clone(host));

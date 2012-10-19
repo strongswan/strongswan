@@ -293,6 +293,7 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 	if (retransmitted > this->retransmit_tries)
 	{
 		DBG1(DBG_IKE, "giving up after %u retransmits", retransmitted - 1);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT, packet);
 		return DESTROY_ME;
 	}
 	t = (u_int32_t)(this->retransmit_timeout * 1000.0 *
@@ -302,6 +303,7 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 		DBG1(DBG_IKE, "sending retransmit %u of %s message ID %u, seq %u",
 			 retransmitted, seqnr < RESPONDING_SEQ ? "request" : "response",
 			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
 	}
 	charon->sender->send(charon->sender, packet->clone(packet));
 	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
@@ -1167,6 +1169,7 @@ METHOD(task_manager_t, process_message, status_t,
 				DBG1(DBG_IKE, "received retransmit of request with ID %u, "
 					 "but no response to retransmit", mid);
 			}
+			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
 			return SUCCESS;
 		}
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
