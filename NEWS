@@ -1,3 +1,10 @@
+strongswan-5.0.2
+----------------
+
+- Implemented all IETF Standard PA-TNC attributes and an OS IMC/IMV
+  pair using them to transfer operating system information.
+
+
 strongswan-5.0.1
 ----------------
 
