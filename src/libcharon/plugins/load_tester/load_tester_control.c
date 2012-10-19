@@ -223,7 +223,7 @@ static job_requeue_t initiate(FILE *stream)
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	u_int i, count, failed = 0;
+	u_int i, count, failed = 0, delay = 0;
 	char buf[16] = "";
 
 	fflush(stream);
@@ -231,7 +231,7 @@ static job_requeue_t initiate(FILE *stream)
 	{
 		return JOB_REQUEUE_NONE;
 	}
-	if (sscanf(buf, "%u", &count) != 1)
+	if (sscanf(buf, "%u %u", &count, &delay) < 1)
 	{
 		return JOB_REQUEUE_NONE;
 	}
@@ -284,6 +284,10 @@ static job_requeue_t initiate(FILE *stream)
 			default:
 				fprintf(stream, "!");
 				break;
+		}
+		if (delay)
+		{
+			usleep(delay * 1000);
 		}
 		fflush(stream);
 	}

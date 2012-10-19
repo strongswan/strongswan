@@ -61,7 +61,7 @@ static FILE* make_connection()
 /**
  * Initiate load-tests
  */
-static int initiate(unsigned int count)
+static int initiate(unsigned int count, unsigned int delay)
 {
 	FILE *stream;
 	char c;
@@ -72,7 +72,7 @@ static int initiate(unsigned int count)
 		return 1;
 	}
 
-	fprintf(stream, "%u\n", count);
+	fprintf(stream, "%u %u\n", count, delay);
 
 	while (1)
 	{
@@ -94,11 +94,11 @@ static int initiate(unsigned int count)
 
 int main(int argc, char *argv[])
 {
-	if (argc == 3 && strcmp(argv[1], "initiate") == 0)
+	if (argc >= 3 && strcmp(argv[1], "initiate") == 0)
 	{
-		return initiate(atoi(argv[2]));
+		return initiate(atoi(argv[2]), argc > 3 ? atoi(argv[3]) : 0);
 	}
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "  %s initiate <count>\n", argv[0]);
+	fprintf(stderr, "  %s initiate <count> [<delay in ms>]\n", argv[0]);
 	return 1;
 }
