@@ -198,7 +198,7 @@ static job_requeue_t initiate(FILE *stream)
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	u_int i, count;
+	u_int i, count, failed = 0;
 	char buf[16] = "";
 
 	fflush(stream);
@@ -210,20 +210,6 @@ static job_requeue_t initiate(FILE *stream)
 	{
 		return JOB_REQUEUE_NONE;
 	}
-
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
-													  "load-test");
-	if (!peer_cfg)
-	{
-		return JOB_REQUEUE_NONE;
-	}
-	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-	if (!enumerator->enumerate(enumerator, &child_cfg))
-	{
-		enumerator->destroy(enumerator);
-		return JOB_REQUEUE_NONE;
-	}
-	enumerator->destroy(enumerator);
 
 	INIT(listener,
 		.listener = {
@@ -240,9 +226,28 @@ static job_requeue_t initiate(FILE *stream)
 
 	for (i = 0; i < count; i++)
 	{
+		peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+														  "load-test");
+		if (!peer_cfg)
+		{
+			failed++;
+			fprintf(stream, "!");
+			continue;
+		}
+		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+		if (!enumerator->enumerate(enumerator, &child_cfg))
+		{
+			enumerator->destroy(enumerator);
+			peer_cfg->destroy(peer_cfg);
+			failed++;
+			fprintf(stream, "!");
+			continue;
+		}
+		enumerator->destroy(enumerator);
+
 		switch (charon->controller->initiate(charon->controller,
-					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
-					(void*)initiate_cb, listener, 0))
+										peer_cfg, child_cfg->get_ref(child_cfg),
+										(void*)initiate_cb, listener, 0))
 		{
 			case NEED_MORE:
 				/* Callback returns FALSE once it got track of this IKE_SA.
@@ -258,7 +263,7 @@ static job_requeue_t initiate(FILE *stream)
 	}
 
 	listener->mutex->lock(listener->mutex);
-	while (listener->completed->get_count(listener->completed) < count)
+	while (listener->completed->get_count(listener->completed) < count - failed)
 	{
 		listener->condvar->wait(listener->condvar, listener->mutex);
 	}
@@ -272,7 +277,6 @@ static job_requeue_t initiate(FILE *stream)
 	listener->condvar->destroy(listener->condvar);
 	free(listener);
 
-	peer_cfg->destroy(peer_cfg);
 	fprintf(stream, "\n");
 
 	return JOB_REQUEUE_NONE;
