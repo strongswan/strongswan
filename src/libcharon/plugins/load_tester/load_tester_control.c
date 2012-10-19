@@ -142,6 +142,31 @@ static bool equals(uintptr_t a, uintptr_t b)
 	return a == b;
 }
 
+METHOD(listener_t, alert, bool,
+	init_listener_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
+{
+	if (alert == ALERT_RETRANSMIT_SEND)
+	{
+		uintptr_t id;
+		bool match = FALSE;
+
+		id = ike_sa->get_unique_id(ike_sa);
+		this->mutex->lock(this->mutex);
+		if (this->initiated->get(this->initiated, (void*)id))
+		{
+			match = TRUE;
+		}
+		this->mutex->unlock(this->mutex);
+
+		if (match)
+		{
+			fprintf(this->stream, "*");
+			fflush(this->stream);
+		}
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, ike_state_change, bool,
 	init_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
 {
@@ -214,6 +239,7 @@ static job_requeue_t initiate(FILE *stream)
 	INIT(listener,
 		.listener = {
 			.ike_state_change = _ike_state_change,
+			.alert = _alert,
 		},
 		.stream = stream,
 		.initiated = hashtable_create((void*)hash, (void*)equals, count),
