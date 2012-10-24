@@ -4,6 +4,9 @@ strongswan-5.0.2
 - Implemented all IETF Standard PA-TNC attributes and an OS IMC/IMV
   pair using them to transfer operating system information.
 
+- The new "ipsec listcounters" command prints a list of global counter values
+  about received and sent IKE messages and rekeyings.
+
 
 strongswan-5.0.1
 ----------------
