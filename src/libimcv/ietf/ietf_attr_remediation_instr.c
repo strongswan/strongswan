@@ -178,7 +178,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint24(reader, &this->parameters_type.vendor_id);
 	reader->read_uint32(reader, &this->parameters_type.type);
 	reader->read_data  (reader, reader->remaining(reader), &this->parameters);
-	
+
 	this->parameters = chunk_clone(this->parameters);
 	reader->destroy(reader);
 
@@ -341,6 +341,8 @@ pa_tnc_attr_t *ietf_attr_remediation_instr_create_from_data(chunk_t data)
 			.pa_tnc_attribute = {
 				.get_type = _get_type,
 				.get_value = _get_value,
+				.get_noskip_flag = _get_noskip_flag,
+				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
 				.get_ref = _get_ref,

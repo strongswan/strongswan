@@ -281,6 +281,8 @@ pa_tnc_attr_t *ietf_attr_string_version_create_from_data(chunk_t data)
 			.pa_tnc_attribute = {
 				.get_type = _get_type,
 				.get_value = _get_value,
+				.get_noskip_flag = _get_noskip_flag,
+				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
 				.get_ref = _get_ref,

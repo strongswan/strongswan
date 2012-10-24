@@ -153,11 +153,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint32(reader, &this->major_version);	
-	reader->read_uint32(reader, &this->minor_version);	
-	reader->read_uint32(reader, &this->build);	
-	reader->read_uint16(reader, &this->service_pack_major);	
-	reader->read_uint16(reader, &this->service_pack_minor);	
+	reader->read_uint32(reader, &this->major_version);
+	reader->read_uint32(reader, &this->minor_version);
+	reader->read_uint32(reader, &this->build);
+	reader->read_uint16(reader, &this->service_pack_major);
+	reader->read_uint16(reader, &this->service_pack_minor);
 	reader->destroy(reader);
 
 	return SUCCESS;
@@ -262,6 +262,8 @@ pa_tnc_attr_t *ietf_attr_numeric_version_create_from_data(chunk_t data)
 			.pa_tnc_attribute = {
 				.get_type = _get_type,
 				.get_value = _get_value,
+				.get_noskip_flag = _get_noskip_flag,
+				.set_noskip_flag = _set_noskip_flag,
 				.build = _build,
 				.process = _process,
 				.get_ref = _get_ref,
