@@ -57,7 +57,7 @@
 /**
  * Max number of certificate request payloads per IKEv1 message
  */
-#define MAX_CERTREQ_PAYLOADS 5
+#define MAX_CERTREQ_PAYLOADS 20
 
 /**
  * Max number of NAT-D payloads per IKEv1 message
