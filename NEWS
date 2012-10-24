@@ -17,6 +17,10 @@ strongswan-5.0.2
   explicitly (such as prfsha1 or prfsha256), no implicit PRF algorithm based on
   the integrity algorithm is added to the proposal.
 
+- The pkcs11 plugin can now load leftcert certificates from a smartcard for a
+  specific ipsec.conf conn section and cacert CA certificates for a specific ca
+  section.
+
 strongswan-5.0.1
 ----------------
 
