@@ -319,7 +319,7 @@ static char* escape_http_request(chunk_t req)
 /**
  * Send a SCEP request via HTTP and wait for a response
  */
-bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
+bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 					   bool http_get_request, chunk_t *response)
 {
 	int len;
@@ -337,7 +337,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 
 		if (http_get_request)
 		{
-			char *escaped_req = escape_http_request(pkcs7);
+			char *escaped_req = escape_http_request(msg);
 
 			/* form complete url */
 			len = strlen(url) + 20 + strlen(operation) + strlen(escaped_req) + 1;
@@ -362,7 +362,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_HTTP_VERSION_1_0,
-										 FETCH_REQUEST_DATA, pkcs7,
+										 FETCH_REQUEST_DATA, msg,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
 										 FETCH_END);
@@ -371,12 +371,22 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 	else  /* SCEP_GET_CA_CERT */
 	{
 		const char operation[] = "GetCACert";
+		int i;
+
+		/* escape spaces, TODO: complete URL escape */
+		for (i = 0; i < msg.len; i++)
+		{
+			if (msg.ptr[i] == ' ')
+			{
+				msg.ptr[i] = '+';
+			}
+		}
 
 		/* form complete url */
-		len = strlen(url) + 32 + strlen(operation) + 1;
+		len = strlen(url) + 32 + strlen(operation) + msg.len + 1;
 		complete_url = malloc(len);
-		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier",
-				 url, operation);
+		snprintf(complete_url, len, "%s?operation=%s&message=%.*s",
+				 url, operation, (int)msg.len, msg.ptr);
 
 		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_HTTP_VERSION_1_0,

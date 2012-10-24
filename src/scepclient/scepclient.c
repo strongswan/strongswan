@@ -361,6 +361,9 @@ static void usage(const char *message)
 		"                                   <algo> = md5 (default) | sha1 | sha256 |\n"
 		"                                            sha384 | sha512\n"
 		"\n"
+		"Options for CA certificate acquisition:\n"
+		" --caname (-c) <name>              name of CA to fetch CA certificate(s)\n"
+		"                                   (default: CAIdentifier)\n"
 		"Options for enrollment (cert):\n"
 		" --url (-u) <url>                  url of the SCEP server\n"
 		" --method (-m) post | get          http request type\n"
@@ -451,6 +454,9 @@ int main(int argc, char **argv)
 	/* URL of the SCEP-Server */
 	char *scep_url = NULL;
 
+	/* Name of CA to fetch CA certs for */
+	char *ca_name = "CAIdentifier";
+
 	/* http request method, default is GET */
 	bool http_get_request = TRUE;
 
@@ -512,6 +518,7 @@ int main(int argc, char **argv)
 			{ "password", required_argument, NULL, 'p' },
 			{ "algorithm", required_argument, NULL, 'a' },
 			{ "url", required_argument, NULL, 'u' },
+			{ "caname", required_argument, NULL, 'c'},
 			{ "method", required_argument, NULL, 'm' },
 			{ "interval", required_argument, NULL, 't' },
 			{ "maxpolltime", required_argument, NULL, 'x' },
@@ -519,7 +526,7 @@ int main(int argc, char **argv)
 		};
 
 		/* parse next option */
-		int c = getopt_long(argc, argv, "hv+:qi:o:fk:d:s:p:a:u:m:t:x:APRCMS", long_opts, NULL);
+		int c = getopt_long(argc, argv, "hv+:qi:o:fk:d:s:p:a:u:c:m:t:x:APRCMS", long_opts, NULL);
 
 		switch (c)
 		{
@@ -782,6 +789,10 @@ int main(int argc, char **argv)
 				scep_url = optarg;
 				continue;
 
+			case 'c':       /* -- caname */
+				ca_name = optarg;
+				continue;
+
 			case 'm':       /* --method */
 				if (strcaseeq("get", optarg))
 				{
@@ -917,8 +928,8 @@ int main(int argc, char **argv)
 		char ca_path[PATH_MAX];
 		pkcs7_t *pkcs7;
 
-		if (!scep_http_request(scep_url, chunk_empty, SCEP_GET_CA_CERT,
-							   http_get_request, &scep_response))
+		if (!scep_http_request(scep_url, chunk_create(ca_name, strlen(ca_name)),
+							SCEP_GET_CA_CERT, http_get_request, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
