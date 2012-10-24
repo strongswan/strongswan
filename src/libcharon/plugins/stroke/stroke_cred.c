@@ -96,16 +96,16 @@ typedef enum {
  * Parse a smartcard specifier token
  */
 static smartcard_format_t parse_smartcard(char *smartcard, u_int *slot,
-									char module[BUF_LEN], char keyid[BUF_LEN])
+									char module[128], char keyid[128])
 {
 	/* The token has one of the following three formats:
 	 * - %smartcard<slot>@<module>:<keyid>
 	 * - %smartcard<slot>:<keyid>
 	 * - %smartcard:<keyid>
 	 */
-	char buf[BUF_LEN], *pos;
+	char buf[256], *pos;
 
-	if (sscanf(smartcard, "%%smartcard%u@%127s", slot, buf) == 2)
+	if (sscanf(smartcard, "%%smartcard%u@%255s", slot, buf) == 2)
 	{
 		pos = strchr(buf, ':');
 		if (!pos)
@@ -117,11 +117,11 @@ static smartcard_format_t parse_smartcard(char *smartcard, u_int *slot,
 		snprintf(keyid, BUF_LEN, "%s", pos);
 		return SC_FORMAT_SLOT_MODULE_KEYID;
 	}
-	if (sscanf(smartcard, "%%smartcard%u:%63s", slot, keyid) == 2)
+	if (sscanf(smartcard, "%%smartcard%u:%127s", slot, keyid) == 2)
 	{
 		return SC_FORMAT_SLOT_KEYID;
 	}
-	if (sscanf(smartcard, "%%smartcard:%63s", keyid) == 1)
+	if (sscanf(smartcard, "%%smartcard:%127s", keyid) == 1)
 	{
 		return SC_FORMAT_KEYID;
 	}
@@ -174,7 +174,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 	if (strneq(filename, "%smartcard", strlen("%smartcard")))
 	{
 		smartcard_format_t format;
-		char module[BUF_LEN], keyid[BUF_LEN];
+		char module[128], keyid[128];
 		u_int slot;
 
 		format = parse_smartcard(filename, &slot, module, keyid);
@@ -238,7 +238,7 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 	if (strneq(filename, "%smartcard", strlen("%smartcard")))
 	{
 		smartcard_format_t format;
-		char module[BUF_LEN], keyid[BUF_LEN];
+		char module[128], keyid[128];
 		u_int slot;
 
 		format = parse_smartcard(filename, &slot, module, keyid);
@@ -702,7 +702,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 					 FILE *prompt)
 {
 	chunk_t sc = chunk_empty, secret = chunk_empty;
-	char smartcard[BUF_LEN], keyid[BUF_LEN], module[BUF_LEN];
+	char smartcard[256], keyid[128], module[128];
 	private_key_t *key = NULL;
 	u_int slot;
 	chunk_t chunk;
