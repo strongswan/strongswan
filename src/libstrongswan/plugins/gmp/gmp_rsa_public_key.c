@@ -361,6 +361,8 @@ METHOD(public_key_t, encrypt_, bool,
 	}
 	rng->destroy(rng);
 
+	pos += padding;
+
 	/* append the padding terminator */
 	*pos++ = 0x00;
 
