@@ -415,7 +415,8 @@ static pkcs11_library_t* find_lib(char *module)
 /**
  * Find the PKCS#11 lib having a keyid, and optionally a slot
  */
-static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot)
+static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot,
+										   CK_OBJECT_CLASS class)
 {
 	pkcs11_manager_t *manager;
 	enumerator_t *enumerator;
@@ -432,8 +433,7 @@ static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot)
 	{
 		if (*slot == -1 || *slot == current)
 		{
-			/* we look for a public key, it is usually readable without login */
-			CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+			/* look for a pubkey/cert, it is usually readable without login */
 			CK_ATTRIBUTE tmpl[] = {
 				{CKA_CLASS, &class, sizeof(class)},
 				{CKA_ID, keyid.ptr, keyid.len},
@@ -683,7 +683,11 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 	}
 	else
 	{
-		this->lib = find_lib_by_keyid(keyid, &slot);
+		this->lib = find_lib_by_keyid(keyid, &slot, CKO_PUBLIC_KEY);
+		if (!this->lib)
+		{
+			this->lib = find_lib_by_keyid(keyid, &slot, CKO_CERTIFICATE);
+		}
 		if (!this->lib)
 		{
 			DBG1(DBG_CFG, "no PKCS#11 module found having a keyid %#B", &keyid);
