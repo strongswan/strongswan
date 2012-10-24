@@ -7,6 +7,11 @@ strongswan-5.0.2
 - The new "ipsec listcounters" command prints a list of global counter values
   about received and sent IKE messages and rekeyings.
 
+- A new lookip plugin can perform fast lookup of tunnel information using a
+  clients virtual IP and can send notifications about established or deleted
+  tunnels. The "ipsec lookip" command can be used to query such information
+  or receive notifications.
+
 
 strongswan-5.0.1
 ----------------
