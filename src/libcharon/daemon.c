@@ -71,6 +71,16 @@ struct private_daemon_t {
 	 * Mutex for configured loggers
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Integrity check failed?
+	 */
+	bool integrity_failed;
+
+	/**
+	 * Number of times we have been initialized
+	 */
+	refcount_t ref;
 };
 
 /**
@@ -570,6 +580,7 @@ private_daemon_t *daemon_create(const char *name)
 		},
 		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.ref = 1,
 	);
 	charon = &this->public;
 	this->public.caps = capabilities_create();
@@ -592,7 +603,14 @@ private_daemon_t *daemon_create(const char *name)
  */
 void libcharon_deinit()
 {
-	destroy((private_daemon_t*)charon);
+	private_daemon_t *this = (private_daemon_t*)charon;
+
+	if (!this || !ref_put(&this->ref))
+	{	/* have more users */
+		return;
+	}
+
+	destroy(this);
 	charon = NULL;
 }
 
@@ -601,7 +619,16 @@ void libcharon_deinit()
  */
 bool libcharon_init(const char *name)
 {
-	daemon_create(name);
+	private_daemon_t *this;
+
+	if (charon)
+	{	/* already initialized, increase refcount */
+		this = (private_daemon_t*)charon;
+		ref_get(&this->ref);
+		return !this->integrity_failed;
+	}
+
+	this = daemon_create(name);
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
@@ -619,8 +646,7 @@ bool libcharon_init(const char *name)
 		!lib->integrity->check(lib->integrity, "libcharon", libcharon_init))
 	{
 		dbg(DBG_DMN, 1, "integrity check of libcharon failed");
-		return FALSE;
+		this->integrity_failed = TRUE;
 	}
-
-	return TRUE;
+	return !this->integrity_failed;
 }

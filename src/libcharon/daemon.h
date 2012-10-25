@@ -329,6 +329,9 @@ extern daemon_t *charon;
  * This function initializes the bus, listeners can be registered before
  * calling initialize().
  *
+ * libcharon_init() may be called multiple times in a single process, but each
+ * caller should call libcharon_deinit() for each call to libcharon_init().
+ *
  * @param name	name of the binary that uses the library
  * @return		FALSE if integrity check failed
  */
