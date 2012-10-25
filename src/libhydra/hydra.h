@@ -72,6 +72,9 @@ extern hydra_t *hydra;
  *
  * The daemon's name is used to load daemon-specific settings.
  *
+ * libhydra_init() may be called multiple times in a single process, but each
+ * caller should call libhydra_deinit() for each call to libhydra_init().
+ *
  * @param daemon		name of the daemon that initializes the library
  * @return				FALSE if integrity check failed
  */
