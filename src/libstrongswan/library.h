@@ -202,6 +202,9 @@ struct library_t {
 /**
  * Initialize library, creates "lib" instance.
  *
+ * library_init() may be called multiple times in a single process, but each
+ * caller should call library_deinit() for each call to library_init().
+ *
  * @param settings		file to read settings from, may be NULL for default
  * @return				FALSE if integrity check failed
  */
