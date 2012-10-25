@@ -40,6 +40,11 @@ struct private_tnc_t {
 	 * Public members of tnc_t.
 	 */
 	tnc_t public;
+
+	/**
+	 * Number of times we have been initialized
+	 */
+	refcount_t ref;
 };
 
 /**
@@ -54,9 +59,17 @@ void libtnccs_init(void)
 {
 	private_tnc_t *this;
 
+	if (tnc)
+	{	/* already initialized, increase refcount */
+		this = (private_tnc_t*)tnc;
+		ref_get(&this->ref);
+		return;
+	}
+
 	INIT(this,
 		.public = {
 		},
+		.ref = 1,
 	);
 
 	tnc = &this->public;
@@ -68,6 +81,11 @@ void libtnccs_init(void)
 void libtnccs_deinit(void)
 {
 	private_tnc_t *this = (private_tnc_t*)tnc;
+
+	if (!this || !ref_put(&this->ref))
+	{	/* have more users */
+		return;
+	}
 
 	free(this);
 	tnc = NULL;
