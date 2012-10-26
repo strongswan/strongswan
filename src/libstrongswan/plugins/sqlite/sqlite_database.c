@@ -300,7 +300,10 @@ static int busy_handler(private_sqlite_database_t *this, int count)
 METHOD(database_t, destroy, void,
 	private_sqlite_database_t *this)
 {
-	sqlite3_close(this->db);
+	if (sqlite3_close(this->db) == SQLITE_BUSY)
+	{
+		DBG1(DBG_LIB, "sqlite close failed because database is busy");
+	}
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
