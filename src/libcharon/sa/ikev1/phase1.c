@@ -186,7 +186,7 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	if (!peer_cfg)
+	if (!shared_key)
 	{
 		DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
 	}
