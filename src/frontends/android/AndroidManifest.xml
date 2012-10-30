@@ -50,6 +50,12 @@
             android:name=".ui.LogActivity"
             android:label="@string/log_title" >
         </activity>
+        <activity
+            android:name=".ui.appwidget.VpnAppWidgetConfigure">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".logic.VpnStateService"
@@ -63,6 +69,17 @@
                 <action android:name="org.strongswan.android.logic.CharonVpnService" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".ui.appwidget.VpnAppWidgetProvider"
+            android:label="strongSwan Widget">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/vpn_appwidget_info" />
+        </receiver>
 
         <provider
             android:name=".data.LogContentProvider"
