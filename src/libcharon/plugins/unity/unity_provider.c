@@ -59,6 +59,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			return FALSE;
 		}
 		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE &&
+			!ts->is_dynamic(ts) &&
 			ts->to_subnet(ts, &net, &mask))
 		{
 			ts->destroy(ts);
