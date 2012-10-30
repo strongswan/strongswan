@@ -105,6 +105,8 @@ typedef struct {
 	peer_cfg_t *peer_cfg;
 	/** ref to instantiated CHILD_SA (i.e the trap policy) */
 	child_sa_t *child_sa;
+	/** TRUE in case of wildcard Transport Mode SA */
+	bool wildcard;
 } entry_t;
 
 /**
@@ -115,6 +117,8 @@ typedef struct {
 	ike_sa_t *ike_sa;
 	/** reqid of pending trap policy */
 	u_int32_t reqid;
+	/** destination address (wildcard case) */
+	host_t *dst;
 } acquire_t;
 
 /**
@@ -133,6 +137,7 @@ static void destroy_entry(entry_t *this)
  */
 static void destroy_acquire(acquire_t *this)
 {
+	DESTROY_IF(this->dst);
 	free(this);
 }
 
@@ -142,6 +147,14 @@ static void destroy_acquire(acquire_t *this)
 static bool acquire_by_reqid(acquire_t *this, u_int32_t *reqid)
 {
 	return this->reqid == *reqid;
+}
+
+/**
+ * match an acquire entry by destination address
+ */
+static bool acquire_by_dst(acquire_t *this, host_t *dst)
+{
+	return this->dst && this->dst->ip_equals(this->dst, dst);
 }
 
 METHOD(trap_manager_t, install, u_int32_t,
@@ -158,29 +171,40 @@ METHOD(trap_manager_t, install, u_int32_t,
 	linked_list_t *proposals;
 	proposal_t *proposal;
 	protocol_id_t proto = PROTO_ESP;
+	bool wildcard = FALSE;
 
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
 	other = ike_cfg->resolve_other(ike_cfg, AF_UNSPEC);
-	if (!other || other->is_anyaddr(other))
+	if (other && other->is_anyaddr(other) &&
+		child->get_mode(child) == MODE_TRANSPORT)
+	{
+		/* allow wildcard for Transport Mode SAs */
+		me = host_create_any(other->get_family(other));
+		wildcard = TRUE;
+	}
+	else if (!other || other->is_anyaddr(other))
 	{
 		DESTROY_IF(other);
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
 	}
-	me = ike_cfg->resolve_me(ike_cfg, other->get_family(other));
-	if (!me || me->is_anyaddr(me))
+	else
 	{
-		DESTROY_IF(me);
-		me = hydra->kernel_interface->get_source_addr(
-									hydra->kernel_interface, other, NULL);
-		if (!me)
+		me = ike_cfg->resolve_me(ike_cfg, other->get_family(other));
+		if (!me || me->is_anyaddr(me))
 		{
-			DBG1(DBG_CFG, "installing trap failed, local address unknown");
-			other->destroy(other);
-			return 0;
+			DESTROY_IF(me);
+			me = hydra->kernel_interface->get_source_addr(
+										hydra->kernel_interface, other, NULL);
+			if (!me)
+			{
+				DBG1(DBG_CFG, "installing trap failed, local address unknown");
+				other->destroy(other);
+				return 0;
+			}
+			me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 		}
-		me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 	}
 
 	this->lock->write_lock(this->lock);
@@ -220,6 +244,7 @@ METHOD(trap_manager_t, install, u_int32_t,
 	INIT(entry,
 		.name = strdup(child->get_name(child)),
 		.peer_cfg = peer->get_ref(peer),
+		.wildcard = wildcard,
 	);
 	this->traps->insert_first(this->traps, entry);
 	this->installing++;
@@ -374,6 +399,8 @@ METHOD(trap_manager_t, acquire, void,
 	peer_cfg_t *peer;
 	child_cfg_t *child;
 	ike_sa_t *ike_sa;
+	host_t *host;
+	bool wildcard, ignore = FALSE;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->traps->create_enumerator(this->traps);
@@ -390,38 +417,94 @@ METHOD(trap_manager_t, acquire, void,
 
 	if (!found)
 	{
-		DBG1(DBG_CFG, "trap not found, unable to acquire reqid %d",reqid);
+		DBG1(DBG_CFG, "trap not found, unable to acquire reqid %d", reqid);
 		this->lock->unlock(this->lock);
 		return;
 	}
 	reqid = found->child_sa->get_reqid(found->child_sa);
+	wildcard = found->wildcard;
 
 	this->mutex->lock(this->mutex);
-	if (this->acquires->find_first(this->acquires, (void*)acquire_by_reqid,
-								  (void**)&acquire, &reqid) == SUCCESS)
-	{
-		DBG1(DBG_CFG, "ignoring acquire, connection attempt pending");
-		this->mutex->unlock(this->mutex);
-		this->lock->unlock(this->lock);
-		return;
+	if (wildcard)
+	{	/* for wildcard acquires we check that we don't have a pending acquire
+		 * with the same peer */
+		u_int8_t mask;
+
+		dst->to_subnet(dst, &host, &mask);
+		if (this->acquires->find_first(this->acquires, (void*)acquire_by_dst,
+									  (void**)&acquire, host) == SUCCESS)
+		{
+			host->destroy(host);
+			ignore = TRUE;
+		}
+		else
+		{
+			INIT(acquire,
+				.dst = host,
+				.reqid = reqid,
+			);
+			this->acquires->insert_last(this->acquires, acquire);
+		}
 	}
 	else
 	{
-		INIT(acquire,
-			.reqid = reqid,
-		);
-		this->acquires->insert_last(this->acquires, acquire);
+		if (this->acquires->find_first(this->acquires, (void*)acquire_by_reqid,
+									  (void**)&acquire, &reqid) == SUCCESS)
+		{
+			ignore = TRUE;
+		}
+		else
+		{
+			INIT(acquire,
+				.reqid = reqid,
+			);
+			this->acquires->insert_last(this->acquires, acquire);
+		}
 	}
 	this->mutex->unlock(this->mutex);
-
+	if (ignore)
+	{
+		DBG1(DBG_CFG, "ignoring acquire, connection attempt pending");
+		this->lock->unlock(this->lock);
+		return;
+	}
 	peer = found->peer_cfg->get_ref(found->peer_cfg);
 	child = found->child_sa->get_config(found->child_sa);
 	child = child->get_ref(child);
 	/* don't hold the lock while checking out the IKE_SA */
 	this->lock->unlock(this->lock);
 
-	ike_sa = charon->ike_sa_manager->checkout_by_config(
+	if (wildcard)
+	{	/* the peer config would match IKE_SAs with other peers */
+		ike_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+											peer->get_ike_version(peer), TRUE);
+		if (ike_sa)
+		{
+			ike_cfg_t *ike_cfg;
+			u_int16_t port;
+			u_int8_t mask;
+
+			ike_sa->set_peer_cfg(ike_sa, peer);
+			ike_cfg = ike_sa->get_ike_cfg(ike_sa);
+
+			port = ike_cfg->get_other_port(ike_cfg);
+			dst->to_subnet(dst, &host, &mask);
+			host->set_port(host, port);
+			ike_sa->set_other_host(ike_sa, host);
+
+			port = ike_cfg->get_my_port(ike_cfg);
+			src->to_subnet(src, &host, &mask);
+			host->set_port(host, port);
+			ike_sa->set_my_host(ike_sa, host);
+
+			charon->bus->set_sa(charon->bus, ike_sa);
+		}
+	}
+	else
+	{
+		ike_sa = charon->ike_sa_manager->checkout_by_config(
 											charon->ike_sa_manager, peer);
+	}
 	if (ike_sa)
 	{
 		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
@@ -476,9 +559,17 @@ static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
 		{
 			continue;
 		}
-		if (child_sa && child_sa->get_reqid(child_sa) != acquire->reqid)
+		if (child_sa)
 		{
-			continue;
+			if (acquire->dst)
+			{
+				/* since every wildcard acquire results in a separate IKE_SA
+				 * there is no need to compare the destination address */
+			}
+			else if (child_sa->get_reqid(child_sa) != acquire->reqid)
+			{
+				continue;
+			}
 		}
 		this->acquires->remove_at(this->acquires, enumerator);
 		destroy_acquire(acquire);
