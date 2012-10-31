@@ -33,8 +33,13 @@ enum pen_t {
 	PEN_IETF =		0x000000,	/*        0 */
 	PEN_IBM	=		0x000002,	/*        2 */
 	PEN_MICROSOFT = 0x000137,	/*      311 */
+	PEN_REDHAT =	0x000908,	/*     2312 */
 	PEN_OSC =		0x002358,	/*     9048 */
+	PEN_DEBIAN =	0x002572,	/*     9586 */
+	PEN_GOOGLE =    0x002B79,	/*    11129 */
 	PEN_TCG =		0x005597,	/*    21911 */
+	PEN_CANONICAL = 0x007132,	/*    28978 */
+	PEN_FEDORA =	0x0076C1,	/*    30401 */
 	PEN_FHH =		0x0080ab,	/*    32939 */
 	PEN_ITA =		0x00902a,	/*    36906 */
 	PEN_OPENPTS =	0x00950e,	/*    38158 */
