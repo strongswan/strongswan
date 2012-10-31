@@ -26,7 +26,7 @@ ENUM_NEXT(pen_names, PEN_REDHAT, PEN_REDHAT, PEN_MICROSOFT,
 ENUM_NEXT(pen_names, PEN_OSC, PEN_OSC, PEN_REDHAT,
 	"OSC");
 ENUM_NEXT(pen_names, PEN_DEBIAN, PEN_DEBIAN, PEN_OSC,
-	"Debian");
+	"Debian Project");
 ENUM_NEXT(pen_names, PEN_GOOGLE, PEN_GOOGLE, PEN_DEBIAN,
 	"Google");
 ENUM_NEXT(pen_names, PEN_TCG, PEN_TCG, PEN_GOOGLE,
@@ -34,7 +34,7 @@ ENUM_NEXT(pen_names, PEN_TCG, PEN_TCG, PEN_GOOGLE,
 ENUM_NEXT(pen_names, PEN_CANONICAL, PEN_CANONICAL, PEN_TCG,
     "Canonical");
 ENUM_NEXT(pen_names, PEN_FEDORA, PEN_FEDORA, PEN_CANONICAL,
-	"Fedora");
+	"Fedora Project");
 ENUM_NEXT(pen_names, PEN_FHH, PEN_FHH, PEN_FEDORA,
 	"FHH");
 ENUM_NEXT(pen_names, PEN_ITA, PEN_ITA, PEN_FHH,

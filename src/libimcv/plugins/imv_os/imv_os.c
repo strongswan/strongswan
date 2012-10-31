@@ -138,11 +138,21 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			case IETF_ATTR_PRODUCT_INFORMATION:
 			{
 				ietf_attr_product_info_t *attr_cast;
+				pen_t vendor_id;
 
 				attr_cast = (ietf_attr_product_info_t*)attr;
-				os_name = attr_cast->get_info(attr_cast, NULL, NULL);
-				DBG1(DBG_IMV, "operating system name is '%.*s'",
-							   os_name.len, os_name.ptr);
+				os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
+				if (vendor_id != PEN_IETF)
+				{
+					DBG1(DBG_IMV, "operating system name is '%.*s' "
+								  "from vendor %N", os_name.len, os_name.ptr,
+								   pen_names, vendor_id);
+				}
+				else
+				{
+					DBG1(DBG_IMV, "operating system name is '%.*s'",
+								   os_name.len, os_name.ptr);
+				}
 				break;
 			}
 			case IETF_ATTR_STRING_VERSION:

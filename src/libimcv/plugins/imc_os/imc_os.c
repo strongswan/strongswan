@@ -123,8 +123,32 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 static void add_product_info(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
+	chunk_t os_name;
+	pen_t vendor_id = PEN_IETF;
+	char *vendor;
+	int i;
 
-	attr = ietf_attr_product_info_create(PEN_IETF, 0, os->get_name(os));
+	typedef struct vendor_pen_t {
+		char *vendor;
+		pen_t pen;
+	} vendor_pen_t;
+
+	vendor_pen_t vendor_pens[] = {
+		{ "Debian", PEN_DEBIAN },
+		{ "Ubuntu", PEN_CANONICAL }
+	};
+
+	os_name = os->get_name(os);
+	for (i = 0; i < countof(vendor_pens); i++)
+	{
+		vendor = vendor_pens[i].vendor;
+		if (chunk_equals(os_name, chunk_create(vendor, strlen(vendor))))
+		{
+			vendor_id = vendor_pens[i].pen;
+			break;
+		}
+	}
+	attr = ietf_attr_product_info_create(vendor_id, 0, os_name);
 	msg->add_attribute(msg, attr);
 }
 
