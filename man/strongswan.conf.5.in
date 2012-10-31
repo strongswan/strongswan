@@ -811,6 +811,12 @@ Preferred measurement hash algorithm
 .BR libimcv.plugins.imv-attestation.min_nonce_len " [0]"
 DH minimum nonce length
 .TP
+.BR libimcv.plugins.imc-os.send_info " [yes]"
+Send operating system info without being prompted
+.TP
+.BR libimcv.plugins.imc-scanner.send_ports " [yes]"
+Send open listening ports without being prompted
+.TP
 .BR libimcv.plugins.imv-scanner.closed_port_policy " [yes]"
 By default all ports must be closed (yes) or can be open (no)
 .TP

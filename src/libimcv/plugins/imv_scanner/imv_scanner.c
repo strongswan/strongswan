@@ -18,6 +18,7 @@
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
 #include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_port_filter.h>
 
@@ -34,7 +35,7 @@
 static const char imv_name[] = "Scanner";
 
 static pen_type_t msg_types[] = {
-	{ PEN_ITA, PA_SUBTYPE_ITA_SCANNER }
+	{ PEN_IETF, PA_SUBTYPE_IETF_VPN }
 };
 
 static imv_agent_t *imv_scanner;
@@ -385,12 +386,36 @@ TNC_Result TNC_IMV_SolicitRecommendation(TNC_IMVID imv_id,
 TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 							   TNC_ConnectionID connection_id)
 {
+	imv_state_t *state;
+	imv_msg_t *out_msg;
+	pa_tnc_attr_t *attr;
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	TNC_Result result = TNC_RESULT_SUCCESS;
+
 	if (!imv_scanner)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
-	return TNC_RESULT_SUCCESS;
+	if (!imv_scanner->get_state(imv_scanner, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	state->get_recommendation(state, &rec, &eval);
+	if (rec == TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION)
+	{
+		out_msg = imv_msg_create(imv_scanner, state, connection_id, imv_id,
+								 TNC_IMCID_ANY, msg_types[0]);
+		attr = ietf_attr_attr_request_create(PEN_IETF, IETF_ATTR_PORT_FILTER);
+		out_msg->add_attribute(out_msg, attr);
+
+		/* send PA-TNC message with excl flag not set */
+		result = out_msg->send(out_msg, FALSE);
+		out_msg->destroy(out_msg);
+
+	}
+	return result;
 }
 
 /**

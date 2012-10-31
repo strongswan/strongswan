@@ -18,6 +18,7 @@
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
 #include <ietf/ietf_attr.h>
+#include <ietf/ietf_attr_attr_request.h>
 #include <ietf/ietf_attr_port_filter.h>
 
 #include <tncif_pa_subtypes.h>
@@ -33,7 +34,7 @@
 static const char imc_name[] = "Scanner";
 
 static pen_type_t msg_types[] = {
-	{ PEN_ITA, PA_SUBTYPE_ITA_SCANNER }
+	{ PEN_IETF, PA_SUBTYPE_IETF_VPN }
 };
 
 static imc_agent_t *imc_scanner;
@@ -227,7 +228,10 @@ end:
 	return success;
 }
 
-static TNC_Result send_message(imc_msg_t *out_msg)
+/**
+ * Add IETF Port Filter attribute to the send queue
+ */
+static TNC_Result add_port_filter(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
 	ietf_attr_port_filter_t *attr_port_filter;
@@ -240,10 +244,9 @@ static TNC_Result send_message(imc_msg_t *out_msg)
 		attr->destroy(attr);
 		return TNC_RESULT_FATAL;
 	}
-	out_msg->add_attribute(out_msg, attr);
+	msg->add_attribute(msg, attr);
 
-	/* send PA-TNC message with the excl flag not set */
-	return out_msg->send(out_msg, FALSE);
+	return TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -254,7 +257,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 {
 	imc_state_t *state;
 	imc_msg_t *out_msg;
-	TNC_Result result;
+	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imc_scanner)
 	{
@@ -265,17 +268,30 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	out_msg = imc_msg_create(imc_scanner, state, connection_id, imc_id,
-							 TNC_IMVID_ANY, msg_types[0]);
-	result = send_message(out_msg);
-	out_msg->destroy(out_msg);
+	if (lib->settings->get_bool(lib->settings,
+								"libimcv.plugins.imc-scanner.send_ports", TRUE))
+	{
+		out_msg = imc_msg_create(imc_scanner, state, connection_id, imc_id,
+								 TNC_IMVID_ANY, msg_types[0]);
+		result = add_port_filter(out_msg);
+		if (result == TNC_RESULT_SUCCESS)
+		{
+			/* send PA-TNC message with the excl flag not set */
+			result = out_msg->send(out_msg, FALSE);
+		}
+		out_msg->destroy(out_msg);
+	}
 
 	return result;
 }
 
 static TNC_Result receive_message(imc_msg_t *in_msg)
 {
-	TNC_Result result;
+	imc_msg_t *out_msg;
+	enumerator_t *enumerator;
+	pa_tnc_attr_t *attr;
+	pen_type_t attr_type;
+	TNC_Result result = TNC_RESULT_SUCCESS;
 	bool fatal_error = FALSE;
 
 	/* parse received PA-TNC message and handle local and remote errors */
@@ -284,7 +300,58 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 	{
 		return result;
 	}
-	return fatal_error ? TNC_RESULT_FATAL : TNC_RESULT_SUCCESS;
+	out_msg = imc_msg_create_as_reply(in_msg);
+
+	/* analyze PA-TNC attributes */
+	enumerator = in_msg->create_attribute_enumerator(in_msg);
+	while (enumerator->enumerate(enumerator, &attr))
+	{
+		attr_type = attr->get_type(attr);
+
+		if (attr_type.vendor_id != PEN_IETF)
+		{
+			continue;
+		}
+		if (attr_type.type == IETF_ATTR_ATTRIBUTE_REQUEST)
+		{
+			ietf_attr_attr_request_t *attr_cast;
+			pen_type_t *entry;
+			enumerator_t *e;
+
+			attr_cast = (ietf_attr_attr_request_t*)attr;
+
+			e = attr_cast->create_enumerator(attr_cast);
+			while (e->enumerate(e, &entry))
+			{
+				if (entry->vendor_id != PEN_IETF)
+				{
+					continue;
+				}
+				switch (entry->type)
+				{
+					case IETF_ATTR_PORT_FILTER:
+						result = add_port_filter(out_msg);
+						break;
+					default:
+						break;
+				}
+			}
+			e->destroy(e);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (fatal_error)
+	{
+		result = TNC_RESULT_FATAL;
+	}
+	else if (result == TNC_RESULT_SUCCESS)
+	{
+		result = out_msg->send(out_msg, TRUE);
+	}
+	out_msg->destroy(out_msg);
+
+	return result;
 }
 
 /**

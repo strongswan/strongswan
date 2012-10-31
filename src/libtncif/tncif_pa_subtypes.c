@@ -61,12 +61,11 @@ ENUM_NEXT(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY, PA_SUBTYPE_FHH_ANY,
 );
 ENUM_END(pa_subtype_fhh_names, PA_SUBTYPE_FHH_ANY);
 
-ENUM_BEGIN(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_SCANNER,
-	"Test",
-	"Scanner"
+ENUM_BEGIN(pa_subtype_ita_names, PA_SUBTYPE_ITA_TEST, PA_SUBTYPE_ITA_TEST,
+	"Test"
 );
 ENUM_NEXT(pa_subtype_ita_names, PA_SUBTYPE_ITA_ANY, PA_SUBTYPE_ITA_ANY,
-								PA_SUBTYPE_ITA_SCANNER,
+								PA_SUBTYPE_ITA_TEST,
 	"ANY"
 );
 ENUM_END(pa_subtype_ita_names, PA_SUBTYPE_ITA_ANY);

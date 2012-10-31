@@ -84,7 +84,6 @@ extern enum_name_t *pa_subtype_fhh_names;
  */
  enum pa_subtype_ita_t {
 	PA_SUBTYPE_ITA_TEST =				0x01,
-	PA_SUBTYPE_ITA_SCANNER =			0x02,
 	PA_SUBTYPE_ITA_ANY =				0xff
 };
 
