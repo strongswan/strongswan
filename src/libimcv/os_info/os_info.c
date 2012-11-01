@@ -144,6 +144,36 @@ METHOD(os_info_t, get_uptime, time_t,
 	return uptime;
 }
 
+METHOD(os_info_t, get_setting, chunk_t,
+	private_os_info_t *this, char *name)
+{
+	FILE *file;
+	u_char buf[2048];
+	size_t i = 0;
+	chunk_t value;
+
+	if (!strneq(name, "/etc/", 5) && !strneq(name, "/proc/", 6) &&
+		!strneq(name, "/sys/", 5))
+	{
+		/**
+		 * In order to guarantee privacy, only settings from the
+		 * /etc/, /proc/ and /sys/ directories can be retrieved
+		 */
+		return chunk_empty;
+	}
+
+	file = fopen(name, "r");
+	while (i < sizeof(buf) && fread(buf + i, 1, 1, file) == 1)
+	{
+		i++;
+	}
+	fclose(file);
+
+	value = chunk_create(buf, i);
+
+	return chunk_clone(value);
+}
+
 METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 	private_os_info_t *this)
 {
@@ -387,6 +417,7 @@ os_info_t *os_info_create(void)
 			.get_version = _get_version,
 			.get_fwd_status = _get_fwd_status,
 			.get_uptime = _get_uptime,
+			.get_setting = _get_setting,
 			.create_package_enumerator = _create_package_enumerator,
 			.destroy = _destroy,
 		},

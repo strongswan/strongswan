@@ -82,6 +82,14 @@ struct os_info_t {
 	time_t (*get_uptime)(os_info_t *this);
 
 	/**
+	 * Get an OS setting (restricted to /proc, /sys, and /etc)
+	 *
+	 * @param name				name of OS setting
+	 * @return					value of OS setting
+	 */
+	chunk_t (*get_setting)(os_info_t *this, char *name);
+
+	/**
 	 * Enumerates over all installed packages
 	 *
 	 * @return				return package enumerator

@@ -16,10 +16,14 @@
 #include "ita_attr.h"
 #include "ita/ita_attr_command.h"
 #include "ita/ita_attr_dummy.h"
+#include "ita/ita_attr_get_settings.h"
+#include "ita/ita_attr_settings.h"
 
-ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_DUMMY,
+ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_SETTINGS,
 	"Command",
 	"Dummy",
+	"Get Settings",
+	"Settings"
 );
 
 /**
@@ -33,6 +37,10 @@ pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ita_attr_command_create_from_data(value);
 		case ITA_ATTR_DUMMY:
 			return ita_attr_dummy_create_from_data(value);
+		case ITA_ATTR_GET_SETTINGS:
+			return ita_attr_get_settings_create_from_data(value);
+		case ITA_ATTR_SETTINGS:
+			return ita_attr_settings_create_from_data(value);
 		default:
 			return NULL;
 	}

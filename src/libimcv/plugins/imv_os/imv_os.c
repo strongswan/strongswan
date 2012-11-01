@@ -28,7 +28,9 @@
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_remediation_instr.h>
 #include <ietf/ietf_attr_string_version.h>
-#include <os_info/os_info.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_get_settings.h>
+#include <ita/ita_attr_settings.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -36,6 +38,7 @@
 #include <pen/pen.h>
 #include <collections/linked_list.h>
 #include <utils/debug.h>
+#include <utils/lexparser.h>
 
 /* IMV definitions */
 
@@ -102,6 +105,23 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	}
 }
 
+/**
+ * print multi-line values to debug output
+ */
+static void dbg_imv_multi_line(chunk_t value)
+{
+	chunk_t line;
+
+	while (extract_token(&line, '\n', &value))
+	{
+		DBG2(DBG_IMV, "  %.*s", line.len, line.ptr);
+	}
+	if (value.len)
+	{
+		DBG2(DBG_IMV, "  %.*s", value.len, value.ptr);
+	}
+}
+
 static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 {
 	imv_msg_t *out_msg;
@@ -130,117 +150,132 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	{
 		type = attr->get_type(attr);
 
-		if (type.vendor_id != PEN_IETF)
+		if (type.vendor_id == PEN_IETF)
 		{
-			continue;
+			switch (type.type)
+			{
+				case IETF_ATTR_PRODUCT_INFORMATION:
+				{
+					ietf_attr_product_info_t *attr_cast;
+					pen_t vendor_id;
+
+					attr_cast = (ietf_attr_product_info_t*)attr;
+					os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
+					if (vendor_id != PEN_IETF)
+					{
+						DBG1(DBG_IMV, "operating system name is '%.*s' "
+									  "from vendor %N", os_name.len, os_name.ptr,
+									   pen_names, vendor_id);
+					}
+					else
+					{
+						DBG1(DBG_IMV, "operating system name is '%.*s'",
+									   os_name.len, os_name.ptr);
+					}
+					break;
+				}
+				case IETF_ATTR_STRING_VERSION:
+				{
+					ietf_attr_string_version_t *attr_cast;
+
+					attr_cast = (ietf_attr_string_version_t*)attr;
+					os_version = attr_cast->get_version(attr_cast, NULL, NULL);
+					if (os_version.len)
+					{
+						DBG1(DBG_IMV, "operating system version is '%.*s'",
+									   os_version.len, os_version.ptr);
+					}
+					break;
+				}
+				case IETF_ATTR_NUMERIC_VERSION:
+				{
+					ietf_attr_numeric_version_t *attr_cast;
+					u_int32_t major, minor;
+
+					attr_cast = (ietf_attr_numeric_version_t*)attr;
+					attr_cast->get_version(attr_cast, &major, &minor);
+					DBG1(DBG_IMV, "operating system numeric version is %d.%d",
+								   major, minor);
+					break;
+				}
+				case IETF_ATTR_OPERATIONAL_STATUS:
+				{
+					ietf_attr_op_status_t *attr_cast;
+					op_status_t op_status;
+					op_result_t op_result;
+					time_t last_boot;
+
+					attr_cast = (ietf_attr_op_status_t*)attr;
+					op_status = attr_cast->get_status(attr_cast);
+					op_result = attr_cast->get_result(attr_cast);
+					last_boot = attr_cast->get_last_use(attr_cast);
+					DBG1(DBG_IMV, "operational status: %N, result: %N",
+						 op_status_names, op_status, op_result_names, op_result);
+					DBG1(DBG_IMV, "last boot: %T", &last_boot, TRUE);
+					break;
+				}
+				case IETF_ATTR_FORWARDING_ENABLED:
+				{
+					ietf_attr_fwd_enabled_t *attr_cast;
+					os_fwd_status_t fwd_status;
+
+					attr_cast = (ietf_attr_fwd_enabled_t*)attr;
+					fwd_status = attr_cast->get_status(attr_cast);
+					DBG1(DBG_IMV, "IPv4 forwarding status: %N",
+								   os_fwd_status_names, fwd_status);
+					break;
+				}
+				case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
+				{
+					ietf_attr_default_pwd_enabled_t *attr_cast;
+					bool default_pwd_status;
+
+					attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
+					default_pwd_status = attr_cast->get_status(attr_cast);
+					DBG1(DBG_IMV, "factory default password: %sabled",
+								   default_pwd_status ? "en":"dis");
+					break;
+				}
+				case IETF_ATTR_INSTALLED_PACKAGES:
+				{
+					ietf_attr_installed_packages_t *attr_cast;
+					enumerator_t *e;
+					chunk_t name, version;
+
+					attr_cast = (ietf_attr_installed_packages_t*)attr;
+					e = attr_cast->create_enumerator(attr_cast);
+					while (e->enumerate(e, &name, &version))
+					{
+						DBG1(DBG_IMV, "package '%.*s' %.*s", name.len, name.ptr,
+									   version.len, version.ptr);
+					}
+					e->destroy(e);
+
+					state->set_recommendation(state,
+										  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+										  TNC_IMV_EVALUATION_RESULT_COMPLIANT);
+					assessment = TRUE;
+					break;
+				}
+				default:
+					break;
+			}
 		}
-		switch (type.type)
+		else if (type.vendor_id == PEN_ITA && type.type == ITA_ATTR_SETTINGS)
 		{
-			case IETF_ATTR_PRODUCT_INFORMATION:
+			ita_attr_settings_t *attr_cast;
+			enumerator_t *e;
+			char *name;
+			chunk_t value;
+
+			attr_cast = (ita_attr_settings_t*)attr;
+			e = attr_cast->create_enumerator(attr_cast);
+			while (e->enumerate(e, &name, &value))
 			{
-				ietf_attr_product_info_t *attr_cast;
-				pen_t vendor_id;
-
-				attr_cast = (ietf_attr_product_info_t*)attr;
-				os_name = attr_cast->get_info(attr_cast, &vendor_id, NULL);
-				if (vendor_id != PEN_IETF)
-				{
-					DBG1(DBG_IMV, "operating system name is '%.*s' "
-								  "from vendor %N", os_name.len, os_name.ptr,
-								   pen_names, vendor_id);
-				}
-				else
-				{
-					DBG1(DBG_IMV, "operating system name is '%.*s'",
-								   os_name.len, os_name.ptr);
-				}
-				break;
+				DBG1(DBG_IMV, "setting '%s'", name);
+				dbg_imv_multi_line(value);
 			}
-			case IETF_ATTR_STRING_VERSION:
-			{
-				ietf_attr_string_version_t *attr_cast;
-
-				attr_cast = (ietf_attr_string_version_t*)attr;
-				os_version = attr_cast->get_version(attr_cast, NULL, NULL);
-				if (os_version.len)
-				{
-					DBG1(DBG_IMV, "operating system version is '%.*s'",
-								   os_version.len, os_version.ptr);
-				}
-				break;
-			}
-			case IETF_ATTR_NUMERIC_VERSION:
-			{
-				ietf_attr_numeric_version_t *attr_cast;
-				u_int32_t major, minor;
-
-				attr_cast = (ietf_attr_numeric_version_t*)attr;
-				attr_cast->get_version(attr_cast, &major, &minor);
-				DBG1(DBG_IMV, "operating system numeric version is %d.%d",
-							   major, minor);
-				break;
-			}
-			case IETF_ATTR_OPERATIONAL_STATUS:
-			{
-				ietf_attr_op_status_t *attr_cast;
-				op_status_t op_status;
-				op_result_t op_result;
-				time_t last_boot;
-
-				attr_cast = (ietf_attr_op_status_t*)attr;
-				op_status = attr_cast->get_status(attr_cast);
-				op_result = attr_cast->get_result(attr_cast);
-				last_boot = attr_cast->get_last_use(attr_cast);
-				DBG1(DBG_IMV, "operational status: %N, result: %N",
-					 op_status_names, op_status, op_result_names, op_result);
-				DBG1(DBG_IMV, "last boot: %T", &last_boot, TRUE);
-				break;
-			}
-			case IETF_ATTR_FORWARDING_ENABLED:
-			{
-				ietf_attr_fwd_enabled_t *attr_cast;
-				os_fwd_status_t fwd_status;
-
-				attr_cast = (ietf_attr_fwd_enabled_t*)attr;
-				fwd_status = attr_cast->get_status(attr_cast);
-				DBG1(DBG_IMV, "IPv4 forwarding status: %N",
-							   os_fwd_status_names, fwd_status);
-				break;
-			}
-			case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
-			{
-				ietf_attr_default_pwd_enabled_t *attr_cast;
-				bool default_pwd_status;
-
-				attr_cast = (ietf_attr_default_pwd_enabled_t*)attr;
-				default_pwd_status = attr_cast->get_status(attr_cast);
-				DBG1(DBG_IMV, "factory default password: %sabled",
-							   default_pwd_status ? "en":"dis");
-				break;
-			}
-			case IETF_ATTR_INSTALLED_PACKAGES:
-			{
-				ietf_attr_installed_packages_t *attr_cast;
-				enumerator_t *e;
-				chunk_t name, version;
-
-				attr_cast = (ietf_attr_installed_packages_t*)attr;
-				e = attr_cast->create_enumerator(attr_cast);
-				while (e->enumerate(e, &name, &version))
-				{
-					DBG1(DBG_IMV, "package '%.*s' %.*s", name.len, name.ptr,
-								   version.len, version.ptr);
-				}
-				e->destroy(e);
-
-				state->set_recommendation(state,
-									  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-									  TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-				assessment = TRUE;
-				break;
-			}
-			default:
-				break;
+			e->destroy(e);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -275,10 +310,28 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		}
 		else
 		{
+			ita_attr_get_settings_t *attr_cast;
+
 			DBG1(DBG_IMV, "requesting installed packages for '%s'",
 						   product_info);
 			attr = ietf_attr_attr_request_create(PEN_IETF,
 								IETF_ATTR_INSTALLED_PACKAGES);
+			out_msg->add_attribute(out_msg, attr);
+
+			/* requesting Android or Linux settings */
+			attr = ita_attr_get_settings_create();
+			attr_cast = (ita_attr_get_settings_t*)attr;
+
+			if (chunk_equals(os_name, chunk_create("Android", 7)))
+			{
+				attr_cast->add(attr_cast, "android_id");
+				attr_cast->add(attr_cast, "install_non_market_apps");
+			}
+			else
+			{
+				attr_cast->add(attr_cast, "/proc/sys/kernel/random/boot_id");
+				attr_cast->add(attr_cast, "/proc/sys/kernel/tainted");
+			}
 			out_msg->add_attribute(out_msg, attr);
 		}
 	}

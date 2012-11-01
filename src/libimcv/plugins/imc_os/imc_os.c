@@ -27,6 +27,9 @@
 #include <ietf/ietf_attr_product_info.h>
 #include <ietf/ietf_attr_remediation_instr.h>
 #include <ietf/ietf_attr_string_version.h>
+#include <ita/ita_attr.h>
+#include <ita/ita_attr_get_settings.h>
+#include <ita/ita_attr_settings.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
@@ -247,6 +250,43 @@ static void add_installed_packages(imc_msg_t *msg)
 }
 
 /**
+ * Add ITA Settings attribute to the send queue
+ */
+static void add_settings(enumerator_t *enumerator, imc_msg_t *msg)
+{
+	pa_tnc_attr_t *attr = NULL;
+	ita_attr_settings_t *attr_cast;
+	chunk_t value;
+	char *name;
+	bool first = TRUE;
+
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		DBG1(DBG_IMC, "setting '%s'", name);
+
+		value = os->get_setting(os, name);
+		if (!value.ptr)
+		{
+			DBG1(DBG_IMC, "  failed to get setting");
+			continue;
+		}
+		if (first)
+		{
+			attr = ita_attr_settings_create();
+			first = FALSE;
+		}
+		attr_cast = (ita_attr_settings_t*)attr;
+		attr_cast->add(attr_cast, name, value);
+		chunk_free(&value);
+	}
+
+	if (attr)
+	{
+		msg->add_attribute(msg, attr);
+	}
+}
+
+/**
  * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
@@ -290,7 +330,7 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 	imc_msg_t *out_msg;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
-	pen_type_t attr_type;
+	pen_type_t type;
 	TNC_Result result;
 	bool fatal_error = FALSE;
 
@@ -306,89 +346,99 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		attr_type = attr->get_type(attr);
+		type = attr->get_type(attr);
 
-		if (attr_type.vendor_id != PEN_IETF)
+		if (type.vendor_id == PEN_IETF)
 		{
-			continue;
+			if (type.type == IETF_ATTR_ATTRIBUTE_REQUEST)
+			{
+				ietf_attr_attr_request_t *attr_cast;
+				pen_type_t *entry;
+				enumerator_t *e;
+
+				attr_cast = (ietf_attr_attr_request_t*)attr;
+
+				e = attr_cast->create_enumerator(attr_cast);
+				while (e->enumerate(e, &entry))
+				{
+					if (entry->vendor_id != PEN_IETF)
+					{
+						continue;
+					}
+					switch (entry->type)
+					{
+						case IETF_ATTR_PRODUCT_INFORMATION:
+							add_product_info(out_msg);
+							break;
+						case IETF_ATTR_STRING_VERSION:
+							add_string_version(out_msg);
+							break;
+						case IETF_ATTR_NUMERIC_VERSION:
+							add_numeric_version(out_msg);
+							break;
+						case IETF_ATTR_OPERATIONAL_STATUS:
+							add_op_status(out_msg);
+							break;
+						case IETF_ATTR_FORWARDING_ENABLED:
+							add_fwd_enabled(out_msg);
+							break;
+						case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
+							add_default_pwd_enabled(out_msg);
+							break;
+						case IETF_ATTR_INSTALLED_PACKAGES:
+							add_installed_packages(out_msg);
+							break;
+						default:
+							break;
+					}
+				}
+				e->destroy(e);
+			}
+			else if (type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
+			{
+				ietf_attr_remediation_instr_t *attr_cast;
+				pen_type_t parameters_type;
+				chunk_t parameters, string, lang_code;
+
+				attr_cast = (ietf_attr_remediation_instr_t*)attr;
+				parameters_type = attr_cast->get_parameters_type(attr_cast);
+				parameters = attr_cast->get_parameters(attr_cast);
+
+				if (parameters_type.vendor_id == PEN_IETF)
+				{
+					switch (parameters_type.type)
+					{
+						case IETF_REMEDIATION_PARAMETERS_URI:
+							DBG1(DBG_IMC, "remediation uri: '%.*s'",
+										   parameters.len, parameters.ptr);
+							break;
+						case IETF_REMEDIATION_PARAMETERS_STRING:
+							string = attr_cast->get_string(attr_cast, &lang_code);
+							DBG1(DBG_IMC, "remediation string: '%.*s' [%.*s]",
+										   string.len, string.ptr,
+										   lang_code.len, lang_code.ptr);
+							break;
+						default:
+							DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+					}
+				}
+				else
+				{
+					DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+				}
+			}
 		}
-		if (attr_type.type == IETF_ATTR_ATTRIBUTE_REQUEST)
+		else if (type.vendor_id == PEN_ITA && type.type == ITA_ATTR_GET_SETTINGS)
 		{
-			ietf_attr_attr_request_t *attr_cast;
-			pen_type_t *entry;
+			ita_attr_get_settings_t *attr_cast;
 			enumerator_t *e;
 
-			attr_cast = (ietf_attr_attr_request_t*)attr;
+			attr_cast = (ita_attr_get_settings_t*)attr;
 
 			e = attr_cast->create_enumerator(attr_cast);
-			while (e->enumerate(e, &entry))
-			{
-				if (entry->vendor_id != PEN_IETF)
-				{
-					continue;
-				}
-				switch (entry->type)
-				{
-					case IETF_ATTR_PRODUCT_INFORMATION:
-						add_product_info(out_msg);
-						break;
-					case IETF_ATTR_STRING_VERSION:
-						add_string_version(out_msg);
-						break;
-					case IETF_ATTR_NUMERIC_VERSION:
-						add_numeric_version(out_msg);
-						break;
-					case IETF_ATTR_OPERATIONAL_STATUS:
-						add_op_status(out_msg);
-						break;
-					case IETF_ATTR_FORWARDING_ENABLED:
-						add_fwd_enabled(out_msg);
-						break;
-					case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
-						add_default_pwd_enabled(out_msg);
-						break;
-					case IETF_ATTR_INSTALLED_PACKAGES:
-						add_installed_packages(out_msg);
-						break;
-					default:
-						break;
-				}
-			}
+			add_settings(e, out_msg);
 			e->destroy(e);
 		}
-		else if (attr_type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
-		{
-			ietf_attr_remediation_instr_t *attr_cast;
-			pen_type_t parameters_type;
-			chunk_t parameters, string, lang_code;
-
-			attr_cast = (ietf_attr_remediation_instr_t*)attr;
-			parameters_type = attr_cast->get_parameters_type(attr_cast);
-			parameters = attr_cast->get_parameters(attr_cast);
-
-			if (parameters_type.vendor_id == PEN_IETF)
-			{
-				switch (parameters_type.type)
-				{
-					case IETF_REMEDIATION_PARAMETERS_URI:
-						DBG1(DBG_IMC, "remediation uri: '%.*s'",
-									   parameters.len, parameters.ptr);
-						break;
-					case IETF_REMEDIATION_PARAMETERS_STRING:
-						string = attr_cast->get_string(attr_cast, &lang_code);
-						DBG1(DBG_IMC, "remediation string: '%.*s' [%.*s]",
-									   string.len, string.ptr,
-									   lang_code.len, lang_code.ptr);
-						break;
-					default:
-						DBG1(DBG_IMC, "remediation parameters %B", &parameters);
-				}						
-			}
-			else
-			{
-				DBG1(DBG_IMC, "remediation parameters %B", &parameters);
-			}
-		}	
 	}
 	enumerator->destroy(enumerator);
 
