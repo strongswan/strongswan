@@ -18,7 +18,6 @@
 
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
-#include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
@@ -77,8 +76,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	imc_attestation = imc_agent_create(imc_name, msg_types, 1, imc_id,
-									   actual_version);
+	imc_attestation = imc_agent_create(imc_name, msg_types, countof(msg_types),
+									   imc_id, actual_version);
 	if (!imc_attestation)
 	{
 		return TNC_RESULT_FATAL;

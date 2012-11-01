@@ -126,7 +126,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imv_scanner = imv_agent_create(imv_name, msg_types, 1, imv_id, actual_version);
+	imv_scanner = imv_agent_create(imv_name, msg_types, countof(msg_types),
+								   imv_id, actual_version);
 	if (!imv_scanner)
 	{
 		return TNC_RESULT_FATAL;

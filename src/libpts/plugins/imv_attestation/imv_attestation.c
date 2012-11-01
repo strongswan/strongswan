@@ -19,7 +19,6 @@
 
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
-#include <pa_tnc/pa_tnc_msg.h>
 #include <ietf/ietf_attr.h>
 #include <ietf/ietf_attr_pa_tnc_error.h>
 #include <ietf/ietf_attr_product_info.h>
@@ -96,8 +95,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
-	imv_attestation = imv_agent_create(imv_name, msg_types, 2, imv_id,
-									   actual_version);
+	imv_attestation = imv_agent_create(imv_name, msg_types, countof(msg_types),
+									   imv_id, actual_version);
 	if (!imv_attestation)
 	{
 		return TNC_RESULT_FATAL;

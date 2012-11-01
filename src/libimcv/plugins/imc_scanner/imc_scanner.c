@@ -52,7 +52,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 		DBG1(DBG_IMC, "IMC \"%s\" has already been initialized", imc_name);
 		return TNC_RESULT_ALREADY_INITIALIZED;
 	}
-	imc_scanner = imc_agent_create(imc_name, msg_types, 1, imc_id, actual_version);
+	imc_scanner = imc_agent_create(imc_name, msg_types, countof(msg_types),
+								   imc_id, actual_version);
 	if (!imc_scanner)
 	{
 		return TNC_RESULT_FATAL;
