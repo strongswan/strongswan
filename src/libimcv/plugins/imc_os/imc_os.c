@@ -267,7 +267,6 @@ static void add_settings(enumerator_t *enumerator, imc_msg_t *msg)
 		value = os->get_setting(os, name);
 		if (!value.ptr)
 		{
-			DBG1(DBG_IMC, "  failed to get setting");
 			continue;
 		}
 		if (first)

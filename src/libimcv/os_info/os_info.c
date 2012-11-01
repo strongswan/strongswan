@@ -159,10 +159,18 @@ METHOD(os_info_t, get_setting, chunk_t,
 		 * In order to guarantee privacy, only settings from the
 		 * /etc/, /proc/ and /sys/ directories can be retrieved
 		 */
+		DBG1(DBG_IMC, "not allowed to access \"%s\"", name);
+
 		return chunk_empty;
 	}
 
 	file = fopen(name, "r");
+	if (!file)
+	{
+		DBG1(DBG_IMC, "failed to open \"%s\"", name);
+
+		return chunk_empty;
+	}
 	while (i < sizeof(buf) && fread(buf + i, 1, 1, file) == 1)
 	{
 		i++;
