@@ -144,8 +144,7 @@ METHOD(pa_tnc_attr_t, build, void,
 			first = FALSE;
 		}
 		writer->write_data  (writer, measurement);
-		writer->write_uint16(writer, strlen(filename));
-		writer->write_data  (writer, chunk_create(filename, strlen(filename)));
+		writer->write_data16(writer, chunk_create(filename, strlen(filename)));
 	}
 	enumerator->destroy(enumerator);
 
@@ -164,9 +163,9 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int64_t number_of_files;
-	u_int16_t request_id, meas_len, filename_len;
-	size_t len;
+	u_int16_t request_id, meas_len;
 	chunk_t measurement, filename;
+	size_t len;
 	char buf[BUF_LEN];
 	status_t status = FAILED;
 
@@ -181,6 +180,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint64(reader, &number_of_files);
 	reader->read_uint16(reader, &request_id);
 	reader->read_uint16(reader, &meas_len);
+	*offset = PTS_FILE_MEAS_SIZE;
 
 	this->measurements = pts_file_meas_create(request_id);
 
@@ -191,16 +191,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			DBG1(DBG_TNC, "insufficient data for PTS file measurement");
 			goto end;
 		}
-		if (!reader->read_uint16(reader, &filename_len))
-		{
-			DBG1(DBG_TNC, "insufficient data for filename length");
-			goto end;
-		}
-		if (!reader->read_data(reader, filename_len, &filename))
+		*offset += meas_len;
+
+		if (!reader->read_data16(reader, &filename))
 		{
 			DBG1(DBG_TNC, "insufficient data for filename");
 			goto end;
 		}
+		*offset += 2 + filename.len;
 
 		len = min(filename.len, BUF_LEN-1);
 		memcpy(buf, filename.ptr, len);
