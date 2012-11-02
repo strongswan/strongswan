@@ -130,6 +130,7 @@ METHOD(task_t, build, status_t,
 		   (vendor_ids[i].extension == EXT_STRONGSWAN && strongswan) ||
 		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity))
 		{
+			DBG2(DBG_IKE, "sending %s vendor ID", vendor_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
 				chunk_clone(chunk_create(vendor_ids[i].id, vendor_ids[i].len)));
 			message->add_payload(message, &vid_payload->payload_interface);
