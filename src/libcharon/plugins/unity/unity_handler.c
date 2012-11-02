@@ -170,7 +170,7 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 {
 	enumerator_t *enumerator;
 	child_cfg_t *child_cfg;
-	lifetime_cfg_t lft = {};
+	lifetime_cfg_t lft = { .time = { .life = 0 } };
 	ike_sa_t *ike_sa;
 	char name[128];
 	host_t *host;
