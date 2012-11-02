@@ -102,6 +102,7 @@ static void do_args(int argc, char *argv[])
 		OP_FILES,
 		OP_HASHES,
 		OP_MEASUREMENTS,
+		OP_PACKAGES,
 		OP_PRODUCTS,
 		OP_ADD,
 		OP_DEL,
@@ -119,6 +120,7 @@ static void do_args(int argc, char *argv[])
 			{ "components", no_argument, NULL, 'c' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "keys", no_argument, NULL, 'k' },
+			{ "packages", no_argument, NULL, 'g' },
 			{ "products", no_argument, NULL, 'p' },
 			{ "hashes", no_argument, NULL, 'H' },
 			{ "measurements", no_argument, NULL, 'm' },
@@ -126,18 +128,21 @@ static void do_args(int argc, char *argv[])
 			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
 			{ "aik", required_argument, NULL, 'A' },
+			{ "security", no_argument, NULL, 'B' },
 			{ "component", required_argument, NULL, 'C' },
 			{ "comp", required_argument, NULL, 'C' },
 			{ "directory", required_argument, NULL, 'D' },
 			{ "dir", required_argument, NULL, 'D' },
 			{ "file", required_argument, NULL, 'F' },
 			{ "sha1-ima", no_argument, NULL, 'I' },
+			{ "package", required_argument, NULL, 'G' },
 			{ "key", required_argument, NULL, 'K' },
 			{ "owner", required_argument, NULL, 'O' },
 			{ "product", required_argument, NULL, 'P' },
 			{ "relative", no_argument, NULL, 'R' },
 			{ "rel", no_argument, NULL, 'R' },
 			{ "sequence", required_argument, NULL, 'S' },
+			{ "version", required_argument, NULL, 'V' },
 			{ "seq", required_argument, NULL, 'S' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
@@ -147,6 +152,7 @@ static void do_args(int argc, char *argv[])
 			{ "pid", required_argument, NULL, '6' },
 			{ "cid", required_argument, NULL, '7' },
 			{ "kid", required_argument, NULL, '8' },
+			{ "gid", required_argument, NULL, '9' },
 			{ 0,0,0,0 }
 		};
 
@@ -163,6 +169,9 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'f':
 				op = OP_FILES;
+				continue;
+			case 'g':
+				op = OP_PACKAGES;
 				continue;
 			case 'k':
 				op = OP_KEYS;
@@ -219,6 +228,9 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			}
+			case 'B':
+				attest->set_security(attest);
+				continue;
 			case 'C':
 				if (!attest->set_component(attest, optarg, op == OP_ADD))
 				{
@@ -233,6 +245,12 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'F':
 				if (!attest->set_file(attest, optarg, op == OP_ADD))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			case 'G':
+				if (!attest->set_package(attest, optarg, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
@@ -265,6 +283,12 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'S':
 				attest->set_sequence(attest, atoi(optarg));
+				continue;
+			case 'V':
+				if (!attest->set_version(attest, optarg))
+				{
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			case '1':
 				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);
@@ -305,6 +329,12 @@ static void do_args(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			case '9':
+				if (!attest->set_gid(attest, atoi(optarg)))
+				{
+					exit(EXIT_FAILURE);
+				}
+				continue;
 		}
 		break;
 	}
@@ -313,6 +343,9 @@ static void do_args(int argc, char *argv[])
 	{
 		case OP_USAGE:
 			usage();
+			break;
+		case OP_PACKAGES:
+			attest->list_packages(attest);
 			break;
 		case OP_PRODUCTS:
 			attest->list_products(attest);

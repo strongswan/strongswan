@@ -85,3 +85,26 @@ CREATE TABLE component_hashes (
   hash BLOB NOT NULL,
   PRIMARY KEY(component, key, seq_no, algo)
 );
+
+DROP TABLE IF EXISTS packages;
+CREATE TABLE packages (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL
+);
+DROP INDEX IF EXISTS packages_name;
+CREATE INDEX packages_name ON packages (
+  name
+);
+
+DROP TABLE IF EXISTS versions;
+CREATE TABLE versions (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  package INTEGER NOT NULL,
+  product INTEGER NOT NULL,
+  release TEXT NOT NULL,
+  security INTEGER DEFAULT 0
+);
+DROP INDEX IF EXISTS versions_release;
+CREATE INDEX versions_release ON versions (
+  release
+);

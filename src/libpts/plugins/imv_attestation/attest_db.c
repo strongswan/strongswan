@@ -97,6 +97,21 @@ struct private_attest_db_t {
 	bool key_set;
 
 	/**
+	 * Software package to be queried
+	 */
+	char *package;
+
+	/**
+	 * Primary key of software package to be queried
+	 */
+	int gid;
+
+	/**
+	 * TRUE if package has been set
+	 */
+	bool package_set;
+
+	/**
 	 * Software product to be queried
 	 */
 	char *product;
@@ -112,9 +127,24 @@ struct private_attest_db_t {
 	bool product_set;
 
 	/**
+	 * Software package version to be queried
+	 */
+	char *version;
+
+	/**
+	 * TRUE if version has been set
+	 */
+	bool version_set;
+
+	/**
 	 * TRUE if relative filenames are to be used
 	 */
 	bool relative;
+
+	/**
+	 * TRUE if a security issue exists
+	 */
+	bool security;
 
 	/**
 	 * Sequence number for ordering entries
@@ -588,6 +618,96 @@ METHOD(attest_db_t, set_pid, bool,
 	return this->product_set;
 }
 
+METHOD(attest_db_t, set_package, bool,
+	private_attest_db_t *this, char *package, bool create)
+{
+	enumerator_t *e;
+
+	if (this->package_set)
+	{
+		printf("package has already been set\n");
+		return FALSE;
+	}
+	this->package = strdup(package);
+
+	e = this->db->query(this->db, "SELECT id FROM packages WHERE name = ?",
+						DB_TEXT, package, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &this->gid))
+		{
+			this->package_set = TRUE;
+		}
+		e->destroy(e);
+	}
+	if (this->package_set)
+	{
+		return TRUE;
+	}
+
+	if (!create)
+	{
+		printf("package '%s' not found in database\n", package);
+		return FALSE;
+	}
+
+	/* Add a new database entry */
+	this->package_set = this->db->execute(this->db, &this->gid,
+									"INSERT INTO packages (name) VALUES (?)",
+									DB_TEXT, package) == 1;
+
+	printf("package '%s' %sinserted into database\n", package,
+		   this->package_set ? "" : "could not be ");
+
+	return this->package_set;
+}
+
+METHOD(attest_db_t, set_gid, bool,
+	private_attest_db_t *this, int gid)
+{
+	enumerator_t *e;
+	char *package;
+
+	if (this->package_set)
+	{
+		printf("package has already been set\n");
+		return FALSE;
+	}
+	this->gid = gid;
+
+	e = this->db->query(this->db, "SELECT name FROM packages WHERE id = ?",
+						DB_UINT, gid, DB_TEXT);
+	if (e)
+	{
+		if (e->enumerate(e, &package))
+		{
+			this->package = strdup(package);
+			this->package_set = TRUE;
+		}
+		else
+		{
+			printf("no package found with gid %d in database\n", gid);
+		}
+		e->destroy(e);
+	}
+	return this->package_set;
+}
+
+METHOD(attest_db_t, set_version, bool,
+	private_attest_db_t *this, char *version)
+{
+	if (this->version_set)
+	{
+		printf("version has already been set\n");
+		return FALSE;
+	}
+	this->version = strdup(version);
+	this->version_set = TRUE;
+
+	return TRUE;
+}
+
+
 METHOD(attest_db_t, set_algo, void,
 	private_attest_db_t *this, pts_meas_algorithms_t algo)
 {
@@ -598,6 +718,12 @@ METHOD(attest_db_t, set_relative, void,
 	private_attest_db_t *this)
 {
 	this->relative = TRUE;
+}
+
+METHOD(attest_db_t, set_security, void,
+	private_attest_db_t *this)
+{
+	this->security = TRUE;
 }
 
 METHOD(attest_db_t, set_sequence, void,
@@ -765,6 +891,67 @@ METHOD(attest_db_t, list_files, void,
 	printf("\n");
 }
 
+METHOD(attest_db_t, list_packages, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	char *package, *version;
+	int gid, gid_old = 0, security, spaces, count = 0;
+
+	if (this->pid)
+	{
+		e = this->db->query(this->db,
+				"SELECT p.id, p.name, v.release, v.security FROM packages AS p "
+				"JOIN versions AS v ON v.package = p.id "
+				"Where v.product = ? ORDER BY p.name, v.release",
+				DB_INT, this->pid, DB_INT, DB_TEXT, DB_TEXT, DB_INT);
+		if (e)
+		{
+			while (e->enumerate(e, &gid, &package, &version, &security))
+			{
+				if (gid != gid_old)
+				{
+					printf("%5d: %s", gid, package);
+					gid_old = gid;
+				}
+				else
+				{
+					spaces = 7 + strlen(package);
+					while (spaces--)
+					{
+						printf(" ");
+					}
+				}
+				printf(" (%s) %s\n", version, security ? "[s]" : "");
+				count++;
+			}
+			e->destroy(e);
+		}
+	}
+	else
+	{
+		e = this->db->query(this->db, "SELECT id, name FROM packages "
+				"ORDER BY name",
+				DB_INT, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &gid, &package))
+			{
+				printf("%4d: %s\n", gid, package);
+				count++;
+			}
+			e->destroy(e);
+		}
+	}
+
+	printf("%d package%s found", count, (count == 1) ? "" : "s");
+	if (this->product_set)
+	{
+		printf(" for product '%s'", this->product);
+	}
+	printf("\n");
+}
+
 METHOD(attest_db_t, list_products, void,
 	private_attest_db_t *this)
 {
@@ -889,7 +1076,7 @@ METHOD(attest_db_t, list_hashes, void,
 	{
 		e = this->db->query(this->db,
 				"SELECT f.path, fh.hash FROM file_hashes AS fh "
-				"JOIN files AS f ON f.id = fh.directory "
+				"JOIN files AS f ON f.id = fh.file "
 				"WHERE algo = ? AND file = ? AND product = ?",
 				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->pid,
 				DB_TEXT, DB_BLOB);
@@ -1291,6 +1478,20 @@ METHOD(attest_db_t, add, bool,
 		measurements->destroy(measurements);
 		success = TRUE;
 	}
+
+	/* insert package version */
+	if (this->version_set && this->gid && this->pid)
+	{
+		success = this->db->execute(this->db, NULL,
+					"INSERT INTO versions (package, product, release, security) "
+					"VALUES (?, ?, ?, ?)",
+					DB_UINT, this->gid, DB_UINT, this->pid,
+					DB_TEXT, this->version, DB_UINT, this->security) == 1;
+
+		printf("'%s' package %s (%s) %s%sinserted into database\n",
+				this->product, this->package, this->version,
+				this->security ? "[s] " : "", success ? "" : "could not be ");
+	}
 	return success;
 }
 
@@ -1410,7 +1611,9 @@ METHOD(attest_db_t, destroy, void,
 {
 	DESTROY_IF(this->db);
 	DESTROY_IF(this->cfn);
+	free(this->package);
 	free(this->product);
+	free(this->version);
 	free(this->file);
 	free(this->dir);
 	free(this->owner);
@@ -1435,12 +1638,17 @@ attest_db_t *attest_db_create(char *uri)
 			.set_fid = _set_fid,
 			.set_key = _set_key,
 			.set_kid = _set_kid,
+			.set_package = _set_package,
+			.set_gid = _set_gid,
 			.set_product = _set_product,
 			.set_pid = _set_pid,
+			.set_version = _set_version,
 			.set_algo = _set_algo,
 			.set_relative = _set_relative,
+			.set_security = _set_security,
 			.set_sequence = _set_sequence,
 			.set_owner = _set_owner,
+			.list_packages = _list_packages,
 			.list_products = _list_products,
 			.list_files = _list_files,
 			.list_components = _list_components,
