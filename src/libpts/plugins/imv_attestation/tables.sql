@@ -102,7 +102,8 @@ CREATE TABLE versions (
   package INTEGER NOT NULL,
   product INTEGER NOT NULL,
   release TEXT NOT NULL,
-  security INTEGER DEFAULT 0
+  security INTEGER DEFAULT 0,
+  time INTEGER DEFAULT 0
 );
 DROP INDEX IF EXISTS versions_release;
 CREATE INDEX versions_release ON versions (

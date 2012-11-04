@@ -21,6 +21,7 @@
 #include "pts/components/pts_comp_func_name.h"
 
 #include <libgen.h>
+#include <time.h>
 
 #define IMA_MAX_NAME_LEN	255
 
@@ -897,17 +898,18 @@ METHOD(attest_db_t, list_packages, void,
 	enumerator_t *e;
 	char *package, *version;
 	int gid, gid_old = 0, security, spaces, count = 0;
+	time_t t;
 
 	if (this->pid)
 	{
 		e = this->db->query(this->db,
-				"SELECT p.id, p.name, v.release, v.security FROM packages AS p "
-				"JOIN versions AS v ON v.package = p.id "
-				"Where v.product = ? ORDER BY p.name, v.release",
-				DB_INT, this->pid, DB_INT, DB_TEXT, DB_TEXT, DB_INT);
+				"SELECT p.id, p.name, v.release, v.security, v.time "
+				"FROM packages AS p JOIN versions AS v ON v.package = p.id "
+				"WHERE v.product = ? ORDER BY p.name, v.release",
+				DB_INT, this->pid, DB_INT, DB_TEXT, DB_TEXT, DB_INT, DB_INT);
 		if (e)
 		{
-			while (e->enumerate(e, &gid, &package, &version, &security))
+			while (e->enumerate(e, &gid, &package, &version, &security, &t))
 			{
 				if (gid != gid_old)
 				{
@@ -922,7 +924,7 @@ METHOD(attest_db_t, list_packages, void,
 						printf(" ");
 					}
 				}
-				printf(" (%s) %s\n", version, security ? "[s]" : "");
+				printf(" %T (%s) %s\n", &t, TRUE, version, security ? "[s]" : "");
 				count++;
 			}
 			e->destroy(e);
@@ -1482,11 +1484,14 @@ METHOD(attest_db_t, add, bool,
 	/* insert package version */
 	if (this->version_set && this->gid && this->pid)
 	{
+		time_t t = time(NULL);
+
 		success = this->db->execute(this->db, NULL,
-					"INSERT INTO versions (package, product, release, security) "
-					"VALUES (?, ?, ?, ?)",
-					DB_UINT, this->gid, DB_UINT, this->pid,
-					DB_TEXT, this->version, DB_UINT, this->security) == 1;
+					"INSERT INTO versions "
+					"(package, product, release, security, time) "
+					"VALUES (?, ?, ?, ?, ?)",
+					DB_UINT, this->gid, DB_UINT, this->pid, DB_TEXT,
+					this->version, DB_UINT, this->security, DB_INT, t) == 1;
 
 		printf("'%s' package %s (%s) %s%sinserted into database\n",
 				this->product, this->package, this->version,
