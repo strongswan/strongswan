@@ -235,18 +235,40 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
  */
 static void add_installed_packages(imc_msg_t *msg)
 {
-	pa_tnc_attr_t *attr;
+	pa_tnc_attr_t *attr = NULL;
 	ietf_attr_installed_packages_t *attr_cast;
-	chunk_t libc_name = { "libc-bin", 8 };
-	chunk_t libc_version = { "2.15-0ubuntu10.2", 16 };
-	chunk_t selinux_name =  { "selinux", 7 };
-	chunk_t selinux_version = { "1:0.11", 6 };
+	enumerator_t *enumerator;
+	chunk_t name, version;
+	size_t attr_size = 0;
 
-	attr = ietf_attr_installed_packages_create();
-	attr_cast = (ietf_attr_installed_packages_t*)attr;
-	attr_cast->add(attr_cast, libc_name, libc_version);
-	attr_cast->add(attr_cast, selinux_name, selinux_version);
-	msg->add_attribute(msg, attr);
+	enumerator = os->create_package_enumerator(os);
+	if (!enumerator)
+	{
+		return;
+	}
+	while (enumerator->enumerate(enumerator, &name, &version))
+	{
+		if (attr_size == 0)
+		{
+			attr = ietf_attr_installed_packages_create();
+		}
+		attr_cast = (ietf_attr_installed_packages_t*)attr;
+		attr_cast->add(attr_cast, name, version);
+		DBG2(DBG_IMC, "package '%.*s' (%.*s)",
+			 name.len, name.ptr, version.len, version.ptr);
+		attr_size += 2 + name.len + version.len;
+		if (attr_size > 20000)
+		{
+			msg->add_attribute(msg, attr);
+			attr_size = 0;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (attr_size)
+	{
+		msg->add_attribute(msg, attr);
+	}
 }
 
 /**
