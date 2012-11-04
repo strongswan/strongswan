@@ -913,12 +913,12 @@ METHOD(attest_db_t, list_packages, void,
 			{
 				if (gid != gid_old)
 				{
-					printf("%5d: %s", gid, package);
+					printf("%5d: %s,", gid, package);
 					gid_old = gid;
 				}
 				else
 				{
-					spaces = 7 + strlen(package);
+					spaces = 8 + strlen(package);
 					while (spaces--)
 					{
 						printf(" ");

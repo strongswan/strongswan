@@ -185,11 +185,11 @@ static void process_packages(char *filename, char *product, bool update)
 
 	while (fgets(line, sizeof(line), file))
 	{
-		char *package, *version, *current_version;
+		char *package, *version, *cur_version;
 		bool security, update_version = TRUE;
-		int current_security;
+		int cur_security;
 		u_int32_t gid = 0, vid = 0;
-		time_t generation_time;
+		time_t gen_time, cur_time;
 
 		count++;
 		if (count == 1)
@@ -198,16 +198,16 @@ static void process_packages(char *filename, char *product, bool update)
 		}
 		if (count == 3)
 		{
-			generation_time = extract_time(line);
+			gen_time = extract_time(line);
 
-			if (generation_time == UNDEFINED_TIME)
+			if (gen_time == UNDEFINED_TIME)
 			{
 				fprintf(stderr, "could not extract generation time\n");
 				fclose(file);
 				db->destroy(db);
 				exit(EXIT_FAILURE);
 			}
-			printf("Generated: %T\n", &generation_time, TRUE);
+			printf("Generated: %T\n", &gen_time, TRUE);
 		}
 		if (count < 7)
 		{
@@ -286,14 +286,15 @@ static void process_packages(char *filename, char *product, bool update)
 		}
 
 		/* check for package versions already in database */
-		e = db->query(db, "SELECT id, release, security FROM versions "
-						  "WHERE package = ? AND product = ?",
-						  DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT);
+		e = db->query(db, 
+				"SELECT id, release, security, time FROM versions "
+				"WHERE package = ? AND product = ?",
+				DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT, DB_INT);
 		if (e)
 		{
-			while (e->enumerate(e, &vid, &current_version, &current_security))
+			while (e->enumerate(e, &vid, &cur_version, &cur_security, &cur_time))
 			{
-				if (streq(version, current_version))
+				if (streq(version, cur_version))
 				{
 					update_version = FALSE;
 				}
@@ -302,12 +303,13 @@ static void process_packages(char *filename, char *product, bool update)
 		}
 		if ((!vid && security) || (vid && update_version))
 		{	
-			printf("'%s' (%s) %s\n", package, version, security ? "[s]" : "");
+			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
 
 			if (db->execute(db, &gid,
-				"INSERT INTO versions (package, product, release, security) "
-				"VALUES (?, ?, ?, ?)", DB_INT, gid, DB_INT, pid,
-				DB_TEXT, version, DB_INT, security) != 1)
+				"INSERT INTO versions "
+				"(package, product, release, security, time) "
+				"VALUES (?, ?, ?, ?, ?)", DB_INT, gid, DB_INT, pid,
+				DB_TEXT, version, DB_INT, security, DB_INT, gen_time) != 1)
 			{
 				fprintf(stderr, "could not store version '%s' to database\n",
 								 version);
