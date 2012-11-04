@@ -119,12 +119,12 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 	file = popen("/bin/netstat -n -l -p -4 -6 --inet", "r");
 	if (!file)
 	{
-		DBG1(DBG_IMC, "Failed to run netstat command");
+		DBG1(DBG_IMC, "failed to run netstat command");
 		return FALSE;
 	}
 
 	/* Read the output a line at a time */
-	while (fgets(buf, BUF_LEN-1, file))
+	while (fgets(buf, sizeof(buf), file))
 	{
 		u_char *pos;
 		u_int8_t new_protocol, protocol;
@@ -145,7 +145,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		/* Extract the IP protocol type */
 		if (!extract_token(&token, ' ', &line))
 		{
-			DBG1(DBG_IMC, "Protocol field in netstat output not found");
+			DBG1(DBG_IMC, "protocol field in netstat output not found");
 			goto end;
 		}
 		if (match("tcp", &token) || match("tcp6", &token))
@@ -158,7 +158,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		}
 		else
 		{
-			DBG1(DBG_IMC, "Skipped unknown IP protocol in netstat output");
+			DBG1(DBG_IMC, "skipped unknown IP protocol in netstat output");
 			continue;
 		}
 
@@ -173,7 +173,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		}
 		if (token.len == 0)
 		{
-			DBG1(DBG_IMC, "Local Address field in netstat output not found");
+			DBG1(DBG_IMC, "local address field in netstat output not found");
 			goto end;
 		}
 
@@ -182,7 +182,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		while (*--pos != ':' && --token.len);
 		if (*pos != ':')
 		{
-			DBG1(DBG_IMC, "Local port field in netstat output not found");
+			DBG1(DBG_IMC, "local port field in netstat output not found");
 			goto end;
 		}
 		token.len--;
