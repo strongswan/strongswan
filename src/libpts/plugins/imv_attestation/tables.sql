@@ -109,3 +109,7 @@ DROP INDEX IF EXISTS versions_release;
 CREATE INDEX versions_release ON versions (
   release
 );
+DROP INDEX IF EXISTS versions_package_product;
+CREATE INDEX versions_package_product ON versions (
+  package, product
+);
