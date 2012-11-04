@@ -87,11 +87,11 @@ static void usage(void)
 /**
  * Process a package file and store updates in the database
  */
-static void process_packages(char *filename, char *product)
+static void process_packages(char *filename, char *product, bool update)
 {
-	char *uri, line[1024], *pos;
+	char *uri, line[12288], *pos;
 	int count = 0, errored = 0, vulnerable = 0;
-	int new_packages = 0, new_versions = 0, updates = 0, reverted = 0;
+	int new_packages = 0, new_versions = 0;
 	u_int32_t pid = 0;
 	enumerator_t *e;
 	database_t *db;
@@ -148,8 +148,8 @@ static void process_packages(char *filename, char *product)
 
 	while (fgets(line, sizeof(line), file))
 	{
-		char *package, *version;
-		bool security;
+		char *package, *version, *current_version;
+		bool security, update_version = TRUE;
 		int current_security;
 		u_int32_t gid = 0, vid = 0;
 
@@ -174,7 +174,40 @@ static void process_packages(char *filename, char *product)
 		}
 		*pos++ = '\0';
 		package = line;
-		version = "";
+
+		/* look for version string in parentheses */
+		if (*pos == '(')
+		{
+			version = ++pos;
+			pos = strchr(pos, ')');
+			if (pos)
+			{
+				*pos++ = '\0';
+			}
+			else
+			{
+				fprintf(stderr, "could not extract package version from '%.*s'\n",
+					strlen(line)-1, line);
+				errored++;
+				continue;
+			}
+		}
+		else
+		{
+			/* no version information, skip entry */
+			continue;
+		}
+		security = (strstr(pos, "[security]") != NULL);
+		if (security)
+		{
+			vulnerable++;
+		}
+
+		/* handle non-security packages in update mode only */
+		if (!update && !security)
+		{
+			continue;
+		}
 
 		/* check if package is already in database */
 		e = db->query(db, "SELECT id FROM packages WHERE name = ?",
@@ -187,7 +220,7 @@ static void process_packages(char *filename, char *product)
 			}
 			e->destroy(e);
 		}
-		if (!gid)
+		if (!gid && security)
 		{	
 			if (db->execute(db, &gid, "INSERT INTO packages (name) VALUES (?)",
 								DB_TEXT, package) != 1)
@@ -201,44 +234,25 @@ static void process_packages(char *filename, char *product)
 			new_packages++;
 		}
 
-		/* look for version string in parentheses */
-		if (*pos == '(')
-		{
-			version = ++pos;
-			pos = strchr(pos, ')');
-			if (pos)
-			{
-				*pos++ = '\0'; 
-			}
-			else
-			{
-				fprintf(stderr, "could not extract package version from '%.*s'",
-					strlen(line)-1, line);
-				errored++;
-				continue;
-			}
-		}
-		security = (strstr(pos, "[security]") != NULL);
-		if (security)
-		{
-			vulnerable++;
-		}
-
-		/* check if version is already in database */
-		e = db->query(db, "SELECT id, security FROM versions "
-						  "WHERE release = ? AND package = ? AND product = ?",
-					  	  DB_TEXT, version, DB_INT, pid, DB_INT, gid,
-						  DB_INT, DB_INT);
+		/* check for package versions already in database */
+		e = db->query(db, "SELECT id, release, security FROM versions "
+						  "WHERE package = ? AND product = ?",
+						  DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT);
 		if (e)
 		{
-			if (!e->enumerate(e, &vid, &current_security))
+			while (e->enumerate(e, &vid, &current_version, &current_security))
 			{
-				vid = 0;
+				if (streq(version, current_version))
+				{
+					update_version = FALSE;
+				}
 			}
 			e->destroy(e);
 		}
-		if (!vid)
+		if ((!vid && security) || (vid && update_version))
 		{	
+			printf("'%s' (%s) %s\n", package, version, security ? "[s]" : "");
+
 			if (db->execute(db, &gid,
 				"INSERT INTO versions (package, product, release, security) "
 				"VALUES (?, ?, ?, ?)", DB_INT, gid, DB_INT, pid,
@@ -252,41 +266,19 @@ static void process_packages(char *filename, char *product)
 			}
 			new_versions++;
 		}
-		else if (current_security != security)
-		{
-			printf("'%s' (%s) %s\n", package, version, security ? "[s]" : "");
-
-			if (security)
-			{
-				if (db->execute(db, NULL,
-					"UPDATE versions SET security = ? WHERE vid = ?",
-					DB_INT, security, DB_INT, vid)  < 0)
-				{
-					fprintf(stderr, "could not store update security field\n");
-					fclose(file);
-					db->destroy(db);
-					exit(EXIT_FAILURE);
-				}
-				updates++;
-			}
-			else
-			{
-				reverted++;
-			}
-		}							
 	}
 
 	fclose(file);
 	db->destroy(db);
 	printf("processed %d packages, %d vulnerable, %d errored, "
-		   "%d new packages, %d new versions, %d updates, %d reverted\n",
-			count - 6, vulnerable, errored, new_packages, new_versions,
-			updates, reverted);	
+		   "%d new packages, %d new versions\n", count - 6, vulnerable,
+			errored, new_packages, new_versions);
 }
 
 static void do_args(int argc, char *argv[])
 {
 	char *filename = NULL, *product = NULL;
+	bool update = FALSE;
 
 	/* reinit getopt state */
 	optind = 0;
@@ -299,6 +291,7 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "file", required_argument, NULL, 'f' },
 			{ "product", required_argument, NULL, 'p' },
+			{ "update", no_argument, NULL, 'u' },
 			{ 0,0,0,0 }
 		};
 
@@ -316,13 +309,16 @@ static void do_args(int argc, char *argv[])
 			case 'p':
 				product = optarg;
 				continue;
+			case 'u':
+				update = TRUE;
+				continue;
 		}
 		break;
 	}
 
 	if (filename && product)
 	{
-		process_packages(filename, product);
+		process_packages(filename, product, update);
 	}
 	else
 	{
