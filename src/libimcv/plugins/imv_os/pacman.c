@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
+#include <time.h>
 
 #include <library.h>
 #include <utils/debug.h>
@@ -85,6 +86,42 @@ static void usage(void)
 }
 
 /**
+ * Extract the time the package file was generated
+ */
+static time_t extract_time(char *line)
+{
+	struct tm t;
+	char wday[4], mon[4];
+	char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+					   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	int i;
+	
+	if (sscanf(line, "Generated: %3s %3s %2d %2d:%2d:%2d %4d UTC", wday, mon,
+			   &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec, &t.tm_year) != 7)
+	{
+		return UNDEFINED_TIME;
+	}
+	t.tm_isdst = 0;	
+	t.tm_year -= 1900;
+	t.tm_mon = 12;
+
+	for (i = 0; i < countof(months); i++)
+	{
+		if (streq(mon, months[i]))
+		{
+			t.tm_mon = i;
+			break;
+		}
+	}
+	if (t.tm_mon == 12)
+	{
+		return UNDEFINED_TIME;
+	}
+
+	return mktime(&t) - timezone;
+}
+
+/**
  * Process a package file and store updates in the database
  */
 static void process_packages(char *filename, char *product, bool update)
@@ -102,7 +139,7 @@ static void process_packages(char *filename, char *product, bool update)
 	file = fopen(filename, "r");
 	if (!file)
 	{
-		fprintf(stderr, "could not open \"%s\"", filename);
+		fprintf(stderr, "could not open \"%s\"\n", filename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -152,11 +189,25 @@ static void process_packages(char *filename, char *product, bool update)
 		bool security, update_version = TRUE;
 		int current_security;
 		u_int32_t gid = 0, vid = 0;
+		time_t generation_time;
 
 		count++;
-		if (count == 1 || count == 3)
+		if (count == 1)
 		{
 			printf("%s", line);
+		}
+		if (count == 3)
+		{
+			generation_time = extract_time(line);
+
+			if (generation_time == UNDEFINED_TIME)
+			{
+				fprintf(stderr, "could not extract generation time\n");
+				fclose(file);
+				db->destroy(db);
+				exit(EXIT_FAILURE);
+			}
+			printf("Generated: %T\n", &generation_time, TRUE);
 		}
 		if (count < 7)
 		{
