@@ -24,6 +24,18 @@
 
 typedef struct private_os_info_t private_os_info_t;
 
+ENUM(os_type_names, OS_TYPE_UNKNOWN, OS_TYPE_ANDROID,
+	"Unknown",
+	"Debian",
+	"Ubuntu",
+	"Fedora",
+	"Red Hat",
+	"CentOS",
+	"SUSE",
+	"Gentoo",
+	"Android"
+);
+
 ENUM(os_fwd_status_names, OS_FWD_DISABLED, OS_FWD_UNKNOWN,
 	"disabled",
 	"enabled",
@@ -42,6 +54,11 @@ struct private_os_info_t {
 	os_info_t public;
 
 	/**
+	 * OS type
+	 */
+	os_type_t type;
+
+	/**
 	 * OS name
 	 */
 	chunk_t name;
@@ -52,6 +69,12 @@ struct private_os_info_t {
 	chunk_t version;
 
 };
+
+METHOD(os_info_t, get_type, os_type_t,
+	private_os_info_t *this)
+{
+	return this->type;
+}
 
 METHOD(os_info_t, get_name, chunk_t,
 	private_os_info_t *this)
@@ -190,7 +213,7 @@ typedef struct {
 	enumerator_t public;
 
 	/**
-	 * streamed pipe
+	 * package info pipe stream
 	 */
 	FILE* file;
 
@@ -247,11 +270,9 @@ METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 {
 	FILE *file;
 	package_enumerator_t *enumerator;
-	chunk_t debian = { "Debian", 6 };
-	chunk_t ubuntu = { "Ubuntu", 6 };
 
 	/* Only Debian and Ubuntu package enumeration is currently supported */
-	if (!chunk_equals(this->name, debian) && !chunk_equals(this->name, ubuntu))
+	if (this->type != OS_TYPE_DEBIAN && this->type != OS_TYPE_UBUNTU)
 	{
 		return NULL;
 	}
@@ -288,15 +309,18 @@ METHOD(os_info_t, destroy, void,
 /**
  * Determine Linux distribution version and hardware platform
  */
-static bool extract_platform_info(chunk_t *name, chunk_t *version)
+static bool extract_platform_info(os_type_t *type, chunk_t *name,
+								  chunk_t *version)
 {
 	FILE *file;
 	u_char buf[BUF_LEN], *pos = buf;
 	int len = BUF_LEN - 1;
+	os_type_t os_type = OS_TYPE_UNKNOWN;
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
+	char *os_str;
 	struct utsname uninfo;
-	int i;
+	int i, t;
 
 	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
 	const char* releases[] = {
@@ -367,7 +391,6 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 					DBG1(DBG_IMC, "failed to find end of DISTRIB_ID field");
 					return FALSE;
 			 	}
-
 				os_name.len = pos - os_name.ptr;
 
 				/* Determine Distribution Release */
@@ -387,18 +410,15 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 					DBG1(DBG_IMC, "failed to find end of DISTRIB_RELEASE field");
 					return FALSE;
 			 	}
-
 				os_version.len = pos - os_version.ptr;
 
 				break;
 			}
 			case RELEASE_DEBIAN:
 			{
-				char str_debian[] = "Debian";
+				os_type = OS_TYPE_DEBIAN;
 
-				os_name = chunk_create(str_debian, strlen(str_debian));
 				os_version.ptr = buf;
-
 				pos = strchr(buf, '\n');
 				if (!pos)
 				{
@@ -424,6 +444,7 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 				}
 
 				os_name.len = pos - os_name.ptr;
+
 				pos += strlen(str_release);
 				os_version.ptr = pos;
 
@@ -454,6 +475,29 @@ static bool extract_platform_info(chunk_t *name, chunk_t *version)
 		return FALSE;
 	}
 
+	/* Try to find a matching OS type */
+	if (os_type == OS_TYPE_UNKNOWN)
+	{
+		for (t = OS_TYPE_DEBIAN; t <= OS_TYPE_GENTOO; t++)
+		{
+			os_str = enum_to_name(os_type_names, t);
+			if (memeq(os_name.ptr, os_str, min(os_name.len, strlen(os_str))))
+			{
+				os_type = t;
+				os_name = chunk_create(os_str, strlen(os_str));
+				break;
+			}
+		}
+	}
+	else
+	{
+		os_str = enum_to_name(os_type_names, os_type);
+		os_name = chunk_create(os_str, strlen(os_str));
+	}
+
+	/* copy OS type */
+	*type = os_type;
+
 	/* copy OS name */
 	*name = chunk_clone(os_name);
 
@@ -475,8 +519,9 @@ os_info_t *os_info_create(void)
 {
 	private_os_info_t *this;
 	chunk_t name, version;
+	os_type_t type;
 
-	/* As an opton OS name and OS version can be configured manually */
+	/* As an option OS name and OS version can be configured manually */
 	name.ptr = lib->settings->get_str(lib->settings,
 									  "libimcv.os_info.name", NULL);
 	version.ptr = lib->settings->get_str(lib->settings,
@@ -491,7 +536,7 @@ os_info_t *os_info_create(void)
 	}
 	else
 	{
-		if (!extract_platform_info(&name, &version))
+		if (!extract_platform_info(&type, &name, &version))
 		{
 			return NULL;
 		}
@@ -503,6 +548,7 @@ os_info_t *os_info_create(void)
 
 	INIT(this,
 		.public = {
+			.get_type = _get_type,
 			.get_name = _get_name,
 			.get_numeric_version = _get_numeric_version,
 			.get_version = _get_version,
@@ -512,6 +558,7 @@ os_info_t *os_info_create(void)
 			.create_package_enumerator = _create_package_enumerator,
 			.destroy = _destroy,
 		},
+		.type = type,
 		.name = name,
 		.version = version,
 	);

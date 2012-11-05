@@ -22,11 +22,26 @@
 #define OS_INFO_H_
 
 typedef struct os_info_t os_info_t;
+typedef enum os_type_t os_type_t;
 typedef enum os_fwd_status_t os_fwd_status_t;
 
 #include <library.h>
 
 #include <time.h>
+
+enum os_type_t {
+	OS_TYPE_UNKNOWN,
+	OS_TYPE_DEBIAN,
+	OS_TYPE_UBUNTU,
+	OS_TYPE_FEDORA,
+	OS_TYPE_REDHAT,
+	OS_TYPE_CENTOS,
+	OS_TYPE_SUSE,
+	OS_TYPE_GENTOO,
+	OS_TYPE_ANDROID
+};
+
+extern enum_name_t *os_type_names;
 
 /**
  * Defines the IPv4 forwarding status
@@ -43,6 +58,13 @@ extern enum_name_t *os_fwd_status_names;
  * Interface for the Operating System (OS) information module
  */
 struct os_info_t {
+
+	/**
+	 * Get the OS type if it can be determined
+	 *
+	 * @return					OS type
+	 */
+	os_type_t (*get_type)(os_info_t *this);
 
 	/**
 	 * Get the OS product name or distribution
