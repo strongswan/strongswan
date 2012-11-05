@@ -30,6 +30,7 @@
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
+#include <ita/ita_attr_angel.h>
 #include <os_info/os_info.h>
 
 #include <tncif_pa_subtypes.h>
@@ -235,11 +236,12 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
  */
 static void add_installed_packages(imc_msg_t *msg)
 {
-	pa_tnc_attr_t *attr = NULL;
+	pa_tnc_attr_t *attr = NULL, *attr_angel;
 	ietf_attr_installed_packages_t *attr_cast;
 	enumerator_t *enumerator;
 	chunk_t name, version;
 	size_t attr_size = 0;
+	bool first = TRUE;
 
 	enumerator = os->create_package_enumerator(os);
 	if (!enumerator)
@@ -259,6 +261,16 @@ static void add_installed_packages(imc_msg_t *msg)
 		attr_size += 2 + name.len + version.len;
 		if (attr_size > 20000)
 		{
+			if (first)
+			{
+				/**
+				 * Send an ITA Start Angel attribute to the IMV signalling that
+				 * there are multiple ITA Installed Package attributes to come.
+				 */
+				attr_angel = ita_attr_angel_create(TRUE);
+				msg->add_attribute(msg, attr_angel);
+				first = FALSE;
+			}
 			msg->add_attribute(msg, attr);
 			attr_size = 0;
 		}
@@ -268,6 +280,15 @@ static void add_installed_packages(imc_msg_t *msg)
 	if (attr_size)
 	{
 		msg->add_attribute(msg, attr);
+	}
+	if (!first)
+	{
+		/**
+		 * If we sent an ITA Start Angel attribute in the first place,
+		 * terminate by appending a matching ITA Stop Angel attribute.
+		 */
+		attr_angel = ita_attr_angel_create(FALSE);
+		msg->add_attribute(msg, attr_angel);
 	}
 }
 

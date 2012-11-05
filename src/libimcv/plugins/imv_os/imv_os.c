@@ -31,6 +31,7 @@
 #include <ita/ita_attr.h>
 #include <ita/ita_attr_get_settings.h>
 #include <ita/ita_attr_settings.h>
+#include <ita/ita_attr_angel.h>
 
 #include <tncif_names.h>
 #include <tncif_pa_subtypes.h>
@@ -134,6 +135,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
 
+	os_state = (imv_os_state_t*)state;
 
 	/* parse received PA-TNC message and handle local and remote errors */
 	result = in_msg->receive(in_msg, &fatal_error);
@@ -251,31 +253,44 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					}
 					e->destroy(e);
 
-					state->set_recommendation(state,
-										  TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-										  TNC_IMV_EVALUATION_RESULT_COMPLIANT);
-					assessment = TRUE;
+					/* Received at least one Installed Packages attribute */
+					os_state->set_package_request(os_state, FALSE);
 					break;
 				}
 				default:
 					break;
 			}
 		}
-		else if (type.vendor_id == PEN_ITA && type.type == ITA_ATTR_SETTINGS)
+		else if (type.vendor_id == PEN_ITA)
 		{
-			ita_attr_settings_t *attr_cast;
-			enumerator_t *e;
-			char *name;
-			chunk_t value;
-
-			attr_cast = (ita_attr_settings_t*)attr;
-			e = attr_cast->create_enumerator(attr_cast);
-			while (e->enumerate(e, &name, &value))
+			switch (type.type)
 			{
-				DBG1(DBG_IMV, "setting '%s'", name);
-				dbg_imv_multi_line(value);
+				case ITA_ATTR_SETTINGS:
+				{
+					ita_attr_settings_t *attr_cast;
+					enumerator_t *e;
+					char *name;
+					chunk_t value;
+
+					attr_cast = (ita_attr_settings_t*)attr;
+					e = attr_cast->create_enumerator(attr_cast);
+					while (e->enumerate(e, &name, &value))
+					{
+						DBG1(DBG_IMV, "setting '%s'", name);
+						dbg_imv_multi_line(value);
+					}
+					e->destroy(e);
+					break;
+				}
+				case ITA_ATTR_START_ANGEL:
+					os_state->set_angel_count(os_state, TRUE);
+					break;
+				case ITA_ATTR_STOP_ANGEL:
+					os_state->set_angel_count(os_state, FALSE);
+					break;
+				default:
+					break;
 			}
-			e->destroy(e);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -287,7 +302,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		char *string = "use a Linux operating system instead of Windows 1.2.3";
 		char *lang_code = "en";
 
-		os_state = (imv_os_state_t*)state;
 		os_state->set_info(os_state, os_name, os_version);
 		product_info = os_state->get_info(os_state);
 
@@ -314,6 +328,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 			DBG1(DBG_IMV, "requesting installed packages for '%s'",
 						   product_info);
+			os_state->set_package_request(os_state, TRUE);
 			attr = ietf_attr_attr_request_create(PEN_IETF,
 								IETF_ATTR_INSTALLED_PACKAGES);
 			out_msg->add_attribute(out_msg, attr);
@@ -341,6 +356,15 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
+		assessment = TRUE;
+	}
+
+	/* If all Installed Packages attributes were received, go to assessment */
+	if (!os_state->get_package_request(os_state) &&
+		!os_state->get_angel_count(os_state))
+	{
+		state->set_recommendation(state, TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
+										 TNC_IMV_EVALUATION_RESULT_COMPLIANT);
 		assessment = TRUE;
 	}
 

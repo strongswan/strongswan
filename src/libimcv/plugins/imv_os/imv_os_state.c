@@ -68,6 +68,17 @@ struct private_imv_os_state_t {
 	 * OS Product Information
 	 */
 	char *info;
+
+	/**
+	 * OS Installed Package request sent - mandatory response expected
+	 */
+	bool package_request;
+
+	/**
+	 * Angel count
+	 */
+	int angel_count;
+
 };
 
 typedef struct entry_t entry_t;
@@ -181,6 +192,30 @@ METHOD(imv_os_state_t, get_info, char*,
 	return this->info;
 }
 
+METHOD(imv_os_state_t, set_package_request, void,
+	private_imv_os_state_t *this, bool set)
+{
+	this->package_request = set;
+}
+
+METHOD(imv_os_state_t, get_package_request, bool,
+	private_imv_os_state_t *this)
+{
+	return this->package_request;
+}
+
+METHOD(imv_os_state_t, set_angel_count, void,
+	private_imv_os_state_t *this, bool start)
+{
+	this->angel_count += start ? 1 : -1;
+}
+
+METHOD(imv_os_state_t, get_angel_count, int,
+	private_imv_os_state_t *this)
+{
+	return this->angel_count;
+}
+
 /**
  * Described in header.
  */
@@ -205,6 +240,10 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_info = _set_info,
 			.get_info = _get_info,
+			.set_package_request = _set_package_request,
+			.get_package_request = _get_package_request,
+			.set_angel_count = _set_angel_count,
+			.get_angel_count = _get_angel_count,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,

@@ -52,6 +52,34 @@ struct imv_os_state_t {
 	 */
 	char* (*get_info)(imv_os_state_t *this);
 
+	/**
+	 * Set/reset OS Installed Packages request status
+	 *
+	 * @param set		TRUE to set, FALSE to clear
+	 */
+	void (*set_package_request)(imv_os_state_t *this, bool set);
+
+	/**
+	 * Get OS Installed Packages request status
+	 *
+	 * @result			TRUE if set, FALSE if unset
+	 */
+	bool (*get_package_request)(imv_os_state_t *this);
+
+	/**
+	 * Increase/Decrease the ITA Angel count
+	 *
+	 * @param start			TRUE increases and FALSE decreases count by one
+	 */
+	void (*set_angel_count)(imv_os_state_t *this, bool start);
+
+	/**
+	 * Get the ITA Angel count
+	 *
+	 * @result			ITA Angel count
+	 */
+	int (*get_angel_count)(imv_os_state_t *this);
+
 };
 
 /**

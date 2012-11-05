@@ -18,12 +18,15 @@
 #include "ita/ita_attr_dummy.h"
 #include "ita/ita_attr_get_settings.h"
 #include "ita/ita_attr_settings.h"
+#include "ita/ita_attr_angel.h"
 
-ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_SETTINGS,
+ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_STOP_ANGEL,
 	"Command",
 	"Dummy",
 	"Get Settings",
-	"Settings"
+	"Settings",
+	"Start Angel",
+	"Stop Angel"
 );
 
 /**
@@ -41,6 +44,10 @@ pa_tnc_attr_t* ita_attr_create_from_data(u_int32_t type, chunk_t value)
 			return ita_attr_get_settings_create_from_data(value);
 		case ITA_ATTR_SETTINGS:
 			return ita_attr_settings_create_from_data(value);
+		case ITA_ATTR_START_ANGEL:
+			return ita_attr_angel_create_from_data(TRUE, value);
+		case ITA_ATTR_STOP_ANGEL:
+			return ita_attr_angel_create_from_data(FALSE, value);
 		default:
 			return NULL;
 	}
