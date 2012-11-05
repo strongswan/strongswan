@@ -360,7 +360,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	}
 
 	/* If all Installed Packages attributes were received, go to assessment */
-	if (!os_state->get_package_request(os_state) &&
+	if (!assessment &&
+		!os_state->get_package_request(os_state) &&
 		!os_state->get_angel_count(os_state))
 	{
 		state->set_recommendation(state, TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
