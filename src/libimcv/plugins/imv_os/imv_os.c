@@ -14,6 +14,7 @@
  */
 
 #include "imv_os_state.h"
+#include "imv_os_database.h"
 
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
@@ -51,6 +52,11 @@ static pen_type_t msg_types[] = {
 
 static imv_agent_t *imv_os;
 
+/**
+ * IMV OS database
+ */
+static imv_os_database_t *os_db;
+
 /*
  * see section 3.8.1 of TCG TNC IF-IMV Specification 1.3
  */
@@ -59,6 +65,8 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 							  TNC_Version max_version,
 							  TNC_Version *actual_version)
 {
+	char *uri;
+
 	if (imv_os)
 	{
 		DBG1(DBG_IMV, "IMV \"%s\" has already been initialized", imv_name);
@@ -74,6 +82,14 @@ TNC_Result TNC_IMV_Initialize(TNC_IMVID imv_id,
 	{
 		DBG1(DBG_IMV, "no common IF-IMV version");
 		return TNC_RESULT_NO_COMMON_VERSION;
+	}
+
+	/* attach OS database */
+	uri = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-os.database", NULL);
+	if (uri)
+	{
+		os_db = imv_os_database_create(uri);
 	}
 
 	return TNC_RESULT_SUCCESS;
@@ -242,19 +258,39 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				{
 					ietf_attr_installed_packages_t *attr_cast;
 					enumerator_t *e;
-					chunk_t name, version;
-
-					attr_cast = (ietf_attr_installed_packages_t*)attr;
-					e = attr_cast->create_enumerator(attr_cast);
-					while (e->enumerate(e, &name, &version))
-					{
-						DBG1(DBG_IMV, "package '%.*s' %.*s", name.len, name.ptr,
-									   version.len, version.ptr);
-					}
-					e->destroy(e);
+					status_t status;
 
 					/* Received at least one Installed Packages attribute */
 					os_state->set_package_request(os_state, FALSE);
+
+					if (!os_db)
+					{
+						break;
+					}
+					attr_cast = (ietf_attr_installed_packages_t*)attr;
+
+					e = attr_cast->create_enumerator(attr_cast);
+					status = os_db->check_packages(os_db,
+									os_state->get_info(os_state), e);
+					e->destroy(e);
+
+					switch (status)
+					{
+						case VERIFY_ERROR:
+							state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
+							assessment = TRUE;
+							break;
+						case FAILED:
+							state->set_recommendation(state,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
+								TNC_IMV_EVALUATION_RESULT_ERROR);
+							assessment = TRUE;
+							break;
+						default:
+							break;
+					}
 					break;
 				}
 				default:
@@ -529,6 +565,8 @@ TNC_Result TNC_IMV_Terminate(TNC_IMVID imv_id)
 		DBG1(DBG_IMV, "IMV \"%s\" has not been initialized", imv_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+	DESTROY_IF(os_db);
+
 	imv_os->destroy(imv_os);
 	imv_os = NULL;
 
