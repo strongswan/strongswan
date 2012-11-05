@@ -220,7 +220,7 @@ typedef struct {
 	/**
 	 * line buffer
 	 */
-	char line[512];
+	u_char line[512];
 
 } package_enumerator_t;
 
@@ -239,36 +239,53 @@ static void package_enumerator_destroy(package_enumerator_t *this)
 static bool package_enumerator_enumerate(package_enumerator_t *this, ...)
 {
 	chunk_t *name, *version;
-	char *pos;
+	u_char *pos;
 	va_list args;
 
-	if (!fgets(this->line, sizeof(this->line), this->file))
+	while (TRUE)
 	{
-		return FALSE;
+		if (!fgets(this->line, sizeof(this->line), this->file))
+		{
+			return FALSE;
+		}
+
+		pos = strchr(this->line, '\t');
+		if (!pos)
+		{
+			return FALSE;
+		}
+		*pos++ = '\0';
+
+		if (!streq(this->line, "install ok installed"))
+		{
+			continue;
+		}
+		va_start(args, this);
+
+		name = va_arg(args, chunk_t*);
+		name->ptr = pos;
+		pos = strchr(pos, '\t');
+		if (!pos)
+		{
+			return FALSE;
+		}
+		name->len = pos++ - name->ptr;
+
+		version = va_arg(args, chunk_t*);
+		version->ptr = pos;
+		version->len = strlen(pos) - 1;
+
+		va_end(args);
+		return TRUE;
 	}
-	va_start(args, this);
-
-	name = va_arg(args, chunk_t*);
-	name->ptr = this->line;
-	pos = strchr(this->line, '\t');
-	if (!pos)
-	{
-		return FALSE;
-	}
-	name->len = pos++ - this->line;
-
-	version = va_arg(args, chunk_t*);
-	version->ptr = pos;
-	version->len = strlen(pos) - 1;
-
-	va_end(args);
-	return TRUE;
 }
 
 METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 	private_os_info_t *this)
 {
 	FILE *file;
+	const char command[] = "dpkg-query --show --showformat="
+								"'${Status}\t${PackageSpec}\t${Version}\n'";
 	package_enumerator_t *enumerator;
 
 	/* Only Debian and Ubuntu package enumeration is currently supported */
@@ -278,7 +295,7 @@ METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 	}
 
 	/* Open a pipe stream for reading the output of the dpkg-query commmand */
-	file = popen("/usr/bin/dpkg-query --show", "r");
+	file = popen(command, "r");
 	if (!file)
 	{
 		DBG1(DBG_IMC, "failed to run dpkg command");
