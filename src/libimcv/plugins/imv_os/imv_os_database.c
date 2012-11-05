@@ -94,8 +94,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	}
 	e->destroy(e);
 
-	DBG1(DBG_IMV, "'%s': pid = %d", product, pid);
-
 	while (package_enumerator->enumerate(package_enumerator, &name, &version))
 	{
 		/* Convert package name chunk to a string */
@@ -116,7 +114,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		}
 		if (!e->enumerate(e, &gid))
 		{
-			/* not found in database vor any product - skip */
+			/* package not present in database for any product - skip */
 			count_not_found++;
 			e->destroy(e);
 			continue;
@@ -171,6 +169,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		}
 		else
 		{
+			/* package not present in database for this product - skip */
 			count_not_found++;
 		}
 		free(package);
@@ -178,8 +177,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	}
 	free(product);
 
-	DBG1(DBG_IMV, "processed %d packages: %d ok, %d no match, %d not found",
-		 count, count_ok, count_no_match, count_not_found);
+	DBG1(DBG_IMV, "processed %d packages: %d no match, %d ok, %d not found",
+		 count, count_no_match, count_ok, count_not_found);
 
 	return status;
 }
