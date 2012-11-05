@@ -234,53 +234,60 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 /**
  * Add an IETF Installed Packages attribute to the send queue
  */
-static void add_installed_packages(imc_msg_t *msg)
+static void add_installed_packages(imc_state_t *state, imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr = NULL, *attr_angel;
 	ietf_attr_installed_packages_t *attr_cast;
 	enumerator_t *enumerator;
 	chunk_t name, version;
-	size_t attr_size = 0;
+	size_t max_attr_size, attr_size, entry_size;
 	bool first = TRUE;
 
-	enumerator = os->create_package_enumerator(os);
-	if (!enumerator)
-	{
-		return;
-	}
-	while (enumerator->enumerate(enumerator, &name, &version))
-	{
-		if (attr_size == 0)
-		{
-			attr = ietf_attr_installed_packages_create();
-		}
-		attr_cast = (ietf_attr_installed_packages_t*)attr;
-		attr_cast->add(attr_cast, name, version);
-		DBG2(DBG_IMC, "package '%.*s' (%.*s)",
-			 name.len, name.ptr, version.len, version.ptr);
-		attr_size += 2 + name.len + version.len;
-		if (attr_size > 20000)
-		{
-			if (first)
-			{
-				/**
-				 * Send an ITA Start Angel attribute to the IMV signalling that
-				 * there are multiple ITA Installed Package attributes to come.
-				 */
-				attr_angel = ita_attr_angel_create(TRUE);
-				msg->add_attribute(msg, attr_angel);
-				first = FALSE;
-			}
-			msg->add_attribute(msg, attr);
-			attr_size = 0;
-		}
-	}
-	enumerator->destroy(enumerator);
+	/**
+	 * Compute the maximum IETF Installed Packages attribute size
+	 * leaving space for an additional ITA Angel attribute
+	 */
+	max_attr_size = state->get_max_msg_len(state) - 8 - 12;
 
-	if (attr_size)
+	/* At least one IETF Installed Packages attribute is sent */
+	attr = ietf_attr_installed_packages_create();
+	attr_size = 12 + 4;
+
+	enumerator = os->create_package_enumerator(os);
+	if (enumerator)
 	{
-		msg->add_attribute(msg, attr);
+		while (enumerator->enumerate(enumerator, &name, &version))
+		{
+			DBG2(DBG_IMC, "package '%.*s' (%.*s)",
+						   name.len, name.ptr, version.len, version.ptr);
+
+			entry_size = 2 + name.len + version.len;
+			if (attr_size + entry_size > max_attr_size)
+			{
+				if (first)
+				{
+					/**
+					 * Send an ITA Start Angel attribute to the IMV signalling
+					 * that multiple ITA Installed Package attributes follow.
+					 */
+					attr_angel = ita_attr_angel_create(TRUE);
+					msg->add_attribute(msg, attr_angel);
+					first = FALSE;
+				}
+				msg->add_attribute(msg, attr);
+
+				/* create the next IETF Installed Packages attribute */
+				attr = ietf_attr_installed_packages_create();
+				attr_size = 12 + 4;
+			}
+			attr_cast = (ietf_attr_installed_packages_t*)attr;
+			attr_cast->add(attr_cast, name, version);
+			attr_size += entry_size;
+		}
+		enumerator->destroy(enumerator);
 	}
+	msg->add_attribute(msg, attr);
+
 	if (!first)
 	{
 		/**
@@ -367,7 +374,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	return result;
 }
 
-static TNC_Result receive_message(imc_msg_t *in_msg)
+static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 {
 	imc_msg_t *out_msg;
 	enumerator_t *enumerator;
@@ -428,7 +435,7 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 							add_default_pwd_enabled(out_msg);
 							break;
 						case IETF_ATTR_INSTALLED_PACKAGES:
-							add_installed_packages(out_msg);
+							add_installed_packages(state, out_msg);
 							break;
 						default:
 							break;
@@ -522,7 +529,7 @@ TNC_Result TNC_IMC_ReceiveMessage(TNC_IMCID imc_id,
 	}
 	in_msg = imc_msg_create_from_data(imc_os, state, connection_id, msg_type,
 									  chunk_create(msg, msg_len));
-	result = receive_message(in_msg);
+	result = receive_message(state, in_msg);
 	in_msg->destroy(in_msg);
 
 	return result;
@@ -557,7 +564,7 @@ TNC_Result TNC_IMC_ReceiveMessageLong(TNC_IMCID imc_id,
 	in_msg = imc_msg_create_from_long_data(imc_os, state, connection_id,
 								src_imv_id, dst_imc_id,msg_vid, msg_subtype,
 								chunk_create(msg, msg_len));
-	result =receive_message(in_msg);
+	result =receive_message(state, in_msg);
 	in_msg->destroy(in_msg);
 
 	return result;
