@@ -377,6 +377,8 @@ static status_t select_and_install(private_child_create_t *this,
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
+		charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_CHILD,
+						   this->proposals);
 		return FAILED;
 	}
 	this->other_spi = this->proposal->get_spi(this->proposal);
