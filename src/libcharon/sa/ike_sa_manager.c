@@ -1769,6 +1769,7 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 					switch (policy)
 					{
 						case UNIQUE_REPLACE:
+							charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
 							DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer "
 									"'%Y' due to uniqueness policy", other);
 							status = duplicate->delete(duplicate);

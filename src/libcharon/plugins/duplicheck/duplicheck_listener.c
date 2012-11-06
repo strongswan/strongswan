@@ -191,6 +191,7 @@ METHOD(listener_t, message_hook, bool,
 		{
 			DBG1(DBG_CFG, "got a response on a duplicate IKE_SA for '%Y', "
 				 "deleting new IKE_SA", id);
+			charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
 			entry_destroy(entry);
 			this->mutex->lock(this->mutex);
 			entry = this->active->remove(this->active, id);

@@ -807,6 +807,7 @@ METHOD(task_t, build_r, status_t,
 													 this->ike_sa, FALSE))
 		{
 			DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
+			charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
 								chunk_empty);
 			return FAILED;
