@@ -114,6 +114,8 @@ enum alert_t {
 	/** traffic selectors do not match, arguments are two linked_list_t
 	 *  containing traffic_selector_t for initiator and for responder */
 	ALERT_TS_MISMATCH,
+	/** Installation of IPsec SAs failed, argument is child_sa_t */
+	ALERT_INSTALL_CHILD_SA_FAILED,
 	/** IKE_SA deleted because of "replace" unique policy, no argument */
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no arguement */

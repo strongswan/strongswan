@@ -552,6 +552,8 @@ static status_t select_and_install(private_child_create_t *this,
 			(status_i != SUCCESS) ? "inbound " : "",
 			(status_i != SUCCESS && status_o != SUCCESS) ? "and ": "",
 			(status_o != SUCCESS) ? "outbound " : "");
+		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
+						   this->child_sa);
 		return FAILED;
 	}
 
