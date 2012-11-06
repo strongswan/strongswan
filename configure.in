@@ -219,6 +219,7 @@ ARG_ENABL_SET([nm],             [enable NetworkManager backend.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
 ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
+ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
@@ -966,6 +967,7 @@ ADD_PLUGIN([android-log],          [c charon])
 ADD_PLUGIN([ha],                   [c charon])
 ADD_PLUGIN([whitelist],            [c charon])
 ADD_PLUGIN([lookip],               [c charon])
+ADD_PLUGIN([error-notify],         [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
 ADD_PLUGIN([led],                  [c charon])
 ADD_PLUGIN([duplicheck],           [c charon])
@@ -1058,6 +1060,7 @@ AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
+AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
 AM_CONDITIONAL(USE_LED, test x$led = xtrue)
 AM_CONDITIONAL(USE_DUPLICHECK, test x$duplicheck = xtrue)
@@ -1293,6 +1296,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/ha/Makefile
 	src/libcharon/plugins/whitelist/Makefile
 	src/libcharon/plugins/lookip/Makefile
+	src/libcharon/plugins/error_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile
 	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/duplicheck/Makefile

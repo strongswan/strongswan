@@ -1,0 +1,19 @@
+
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
+
+AM_CFLAGS = -rdynamic \
+	-DIPSEC_PIDDIR=\"${piddir}\"
+
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-error-notify.la
+else
+plugin_LTLIBRARIES = libstrongswan-error-notify.la
+endif
+
+libstrongswan_error_notify_la_SOURCES = \
+	error_notify_plugin.h error_notify_plugin.c \
+	error_notify_socket.h error_notify_socket.c \
+	error_notify_listener.h error_notify_listener.c
+
+libstrongswan_error_notify_la_LDFLAGS = -module -avoid-version

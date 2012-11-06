@@ -491,6 +491,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ERROR_NOTIFY
+  SUBDIRS += plugins/error_notify
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/error_notify/libstrongswan-error-notify.la
+endif
+endif
+
 if USE_CERTEXPIRE
   SUBDIRS += plugins/certexpire
 if MONOLITHIC
