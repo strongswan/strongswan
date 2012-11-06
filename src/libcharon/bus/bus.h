@@ -111,6 +111,9 @@ enum alert_t {
 	ALERT_PROPOSAL_MISMATCH_IKE,
 	/** CHILD proposals do not match, argument is linked_list_t of proposal_t */
 	ALERT_PROPOSAL_MISMATCH_CHILD,
+	/** traffic selectors do not match, arguments are two linked_list_t
+	 *  containing traffic_selector_t for initiator and for responder */
+	ALERT_TS_MISMATCH,
 	/** IKE_SA deleted because of "replace" unique policy, no argument */
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no arguement */
