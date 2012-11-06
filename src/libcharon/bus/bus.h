@@ -107,6 +107,8 @@ enum alert_t {
 	ALERT_RETRANSMIT_SEND_TIMEOUT,
 	/** received a retransmit for a message, argument is message_t */
 	ALERT_RETRANSMIT_RECEIVE,
+	/** IKE proposals do not match, argument is linked_list_t of proposal_t */
+	ALERT_PROPOSAL_MISMATCH_IKE,
 };
 
 /**

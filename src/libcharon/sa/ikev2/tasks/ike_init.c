@@ -187,6 +187,11 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 														   EXT_STRONGSWAN);
 				this->proposal = this->config->select_proposal(this->config,
 														proposal_list, private);
+				if (!this->proposal)
+				{
+					charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
+									   proposal_list);
+				}
 				proposal_list->destroy_offset(proposal_list,
 											  offsetof(proposal_t, destroy));
 				break;
