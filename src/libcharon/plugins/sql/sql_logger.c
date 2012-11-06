@@ -102,7 +102,8 @@ METHOD(logger_t, log_, void,
 						  DB_BLOB, local_host->get_address(local_host),
 						  DB_BLOB, remote_host->get_address(remote_host));
 		this->db->execute(this->db, NULL, "INSERT INTO logs ("
-						  "local_spi, signal, level, msg) VALUES (?, ?, ?, ?)",
+						  "local_spi, `signal`, level, msg) "
+						  "VALUES (?, ?, ?, ?)",
 						  DB_BLOB, local_spi, DB_INT, group, DB_INT, level,
 						  DB_TEXT, message);
 	}
