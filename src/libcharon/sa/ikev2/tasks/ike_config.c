@@ -380,6 +380,7 @@ METHOD(task_t, build_r, status_t,
 		{
 			DBG1(DBG_IKE, "no virtual IP found, sending %N",
 				 notify_type_names, INTERNAL_ADDRESS_FAILURE);
+			charon->bus->alert(charon->bus, ALERT_VIP_FAILURE, this->vips);
 			message->add_notify(message, FALSE, INTERNAL_ADDRESS_FAILURE,
 								chunk_empty);
 			vips->destroy_offset(vips, offsetof(host_t, destroy));
@@ -390,6 +391,7 @@ METHOD(task_t, build_r, status_t,
 		{
 			DBG1(DBG_IKE, "expected a virtual IP request, sending %N",
 				 notify_type_names, FAILED_CP_REQUIRED);
+			charon->bus->alert(charon->bus, ALERT_VIP_FAILURE, this->vips);
 			message->add_notify(message, FALSE, FAILED_CP_REQUIRED, chunk_empty);
 			vips->destroy_offset(vips, offsetof(host_t, destroy));
 			pools->destroy(pools);

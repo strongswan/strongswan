@@ -122,6 +122,8 @@ enum alert_t {
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no arguement */
 	ALERT_UNIQUE_KEEP,
+	/** allocating virtual IP failed, linked_list_t of host_t requested */
+	ALERT_VIP_FAILURE,
 };
 
 /**
