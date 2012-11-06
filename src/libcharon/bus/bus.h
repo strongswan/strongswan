@@ -124,6 +124,8 @@ enum alert_t {
 	ALERT_UNIQUE_KEEP,
 	/** allocating virtual IP failed, linked_list_t of host_t requested */
 	ALERT_VIP_FAILURE,
+	/** an authorize() hook failed, no argument */
+	ALERT_AUTHORIZATION_FAILED,
 };
 
 /**

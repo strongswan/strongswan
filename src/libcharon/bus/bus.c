@@ -720,6 +720,10 @@ METHOD(bus_t, authorize, bool,
 	}
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
+	if (!success)
+	{
+		alert(this, ALERT_AUTHORIZATION_FAILED);
+	}
 	return success;
 }
 
