@@ -586,6 +586,8 @@ static status_t select_and_install(private_child_create_t *this,
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
+		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_POLICY_FAILED,
+						   this->child_sa);
 		return NOT_FOUND;
 	}
 

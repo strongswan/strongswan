@@ -116,6 +116,8 @@ enum alert_t {
 	ALERT_TS_MISMATCH,
 	/** Installation of IPsec SAs failed, argument is child_sa_t */
 	ALERT_INSTALL_CHILD_SA_FAILED,
+	/** Installation of IPsec Policy failed, argument is child_sa_t */
+	ALERT_INSTALL_CHILD_POLICY_FAILED,
 	/** IKE_SA deleted because of "replace" unique policy, no argument */
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no arguement */
