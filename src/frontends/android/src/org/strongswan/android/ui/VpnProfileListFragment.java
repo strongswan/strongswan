@@ -30,7 +30,9 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -54,6 +56,7 @@ public class VpnProfileListFragment extends Fragment
 	private VpnProfileAdapter mListAdapter;
 	private ListView mListView;
 	private OnVpnProfileSelectedListener mListener;
+	private boolean mReadOnly;
 
 	/**
 	 * The activity containing this fragment should implement this interface
@@ -63,18 +66,30 @@ public class VpnProfileListFragment extends Fragment
 	}
 
 	@Override
+	public void onInflate(Activity activity, AttributeSet attrs, Bundle savedInstanceState)
+	{
+		super.onInflate(activity, attrs, savedInstanceState);
+		TypedArray a = activity.obtainStyledAttributes(attrs, R.styleable.Fragment);
+		mReadOnly = a.getBoolean(R.styleable.Fragment_read_only, false);
+		a.recycle();
+	}
+
+	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 							 Bundle savedInstanceState)
 	{
 		View view = inflater.inflate(R.layout.profile_list_fragment, null);
 
 		mListView = (ListView)view.findViewById(R.id.profile_list);
+		mListView.setAdapter(mListAdapter);
 		mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
 		mListView.setOnItemClickListener(mVpnProfileClicked);
-		mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
-		mListView.setMultiChoiceModeListener(mVpnProfileSelected);
-		mListView.setAdapter(mListAdapter);
 
+		if (!mReadOnly)
+		{
+			mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+			mListView.setMultiChoiceModeListener(mVpnProfileSelected);
+		}
 		return view;
 	}
 
@@ -82,7 +97,17 @@ public class VpnProfileListFragment extends Fragment
 	public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		setHasOptionsMenu(true);
+
+		Bundle args = getArguments();
+		if (args != null)
+		{
+			mReadOnly = args.getBoolean("read_only", mReadOnly);
+		}
+
+		if (!mReadOnly)
+		{
+			setHasOptionsMenu(true);
+		}
 
 		Context context = getActivity().getApplicationContext();
 
