@@ -53,6 +53,14 @@
             android:name=".ui.LogActivity"
             android:label="@string/log_title" >
         </activity>
+        <activity
+            android:name=".ui.VpnProfileSelectActivity"
+            android:label="@string/strongswan_shortcut" >
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+                <action android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".logic.VpnStateService"

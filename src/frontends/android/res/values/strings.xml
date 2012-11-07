@@ -28,6 +28,7 @@
     <string name="vpn_not_supported_during_lockdown">VPN connections are not supported in lockdown mode.</string>
     <string name="loading">Loading&#8230;</string>
     <string name="profile_not_found">Profile not found</string>
+    <string name="strongswan_shortcut">strongSwan shortcut</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
