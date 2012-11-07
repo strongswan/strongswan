@@ -85,6 +85,21 @@ struct private_imv_os_state_t {
 	chunk_t version;
 
 	/**
+	 * Number of processed packages
+	 */
+	int count;
+
+	/**
+	 * Number of blacklisted or not updated packages
+	 */
+	int count_bad;
+
+	/**
+	 * Number of whitelisted packages
+	 */
+	int count_ok;
+
+	/**
 	 * OS Installed Package request sent - mandatory response expected
 	 */
 	bool package_request;
@@ -225,6 +240,31 @@ METHOD(imv_os_state_t, get_info, char*,
 	return this->info;
 }
 
+METHOD(imv_os_state_t, set_count, void,
+	private_imv_os_state_t *this, int count, int count_bad, int count_ok)
+{
+	this->count     += count;
+	this->count_bad += count_bad;
+	this->count_ok  += count_ok;
+}
+
+METHOD(imv_os_state_t, get_count, void,
+	private_imv_os_state_t *this, int *count, int *count_bad, int *count_ok)
+{
+	if (count)
+	{
+		*count = this->count;
+	}
+	if (count_bad)
+	{
+		*count_bad = this->count_bad;
+	}
+	if (count_ok)
+	{
+		*count_ok = this->count_ok;
+	}
+}
+
 METHOD(imv_os_state_t, get_type, os_type_t,
 	private_imv_os_state_t *this)
 {
@@ -279,6 +319,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			},
 			.set_info = _set_info,
 			.get_info = _get_info,
+			.set_count = _set_count,
+			.get_count = _get_count,
 			.set_package_request = _set_package_request,
 			.get_package_request = _get_package_request,
 			.set_angel_count = _set_angel_count,

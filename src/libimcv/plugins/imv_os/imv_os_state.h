@@ -41,9 +41,9 @@ struct imv_os_state_t {
 	/**
 	 * Set OS Product Information
 	 *
-	 * @param type		OS type (enumerated)
-	 * @param name		OS name (string)
-	 * @param version	OS version
+	 * @param type			OS type (enumerated)
+	 * @param name			OS name (string)
+	 * @param version		OS version
 	 */
 	void (*set_info)(imv_os_state_t *this, os_type_t os_type,
 					 chunk_t name, chunk_t version);
@@ -51,25 +51,44 @@ struct imv_os_state_t {
 	/**
 	 * Get OS Product Information
 	 *
-	 * @param type		OS type (enumerated)
-	 * @param name		OS name (string)
-	 * @param version	OS version
-	 * @result			OS name & version as a concatenated string 
+	 * @param type			OS type (enumerated)
+	 * @param name			OS name (string)
+	 * @param version		OS version
+	 * @return				OS name & version as a concatenated string 
 	 */
 	char* (*get_info)(imv_os_state_t *this, os_type_t *os_type,
 					  chunk_t *name, chunk_t *version);
 
 	/**
+	 * Set [or with multiple attributes increment] package counters
+	 *
+	 * @param count			Number of processed packages
+	 * @param count_bad		Number of blacklisted or not updated packages
+	 * @param count_ok		Number of whitelisted packages
+	 */
+	void (*set_count)(imv_os_state_t *this, int count, int count_bad,
+					  int count_ok);
+
+	/**
+	 * Set [or with multiple attributes increment] package counters
+	 *
+	 * @param count			Number of processed packages
+	 * @param count_bad		Number of blacklisted or not updated packages
+	 * @param count_ok		Number of whitelisted packages
+	 */
+	void (*get_count)(imv_os_state_t *this, int *count, int *count_bad,
+					  int *count_ok);
+	/**
 	 * Set/reset OS Installed Packages request status
 	 *
-	 * @param set		TRUE to set, FALSE to clear
+	 * @param set			TRUE to set, FALSE to clear
 	 */
 	void (*set_package_request)(imv_os_state_t *this, bool set);
 
 	/**
 	 * Get OS Installed Packages request status
 	 *
-	 * @result			TRUE if set, FALSE if unset
+	 * @return				TRUE if set, FALSE if unset
 	 */
 	bool (*get_package_request)(imv_os_state_t *this);
 
@@ -83,7 +102,7 @@ struct imv_os_state_t {
 	/**
 	 * Get the ITA Angel count
 	 *
-	 * @result			ITA Angel count
+	 * @return				ITA Angel count
 	 */
 	int (*get_angel_count)(imv_os_state_t *this);
 

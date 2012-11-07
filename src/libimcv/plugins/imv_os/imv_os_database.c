@@ -47,7 +47,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	os_type_t os_type;
 	size_t os_version_len;
 	int pid, gid, security;
-	int count = 0, count_ok = 0, count_no_match = 0, count_not_found = 0;
+	int count = 0, count_ok = 0, count_no_match = 0;
 	enumerator_t *e;
 	status_t status = SUCCESS;
 	bool found, match;
@@ -113,7 +113,6 @@ METHOD(imv_os_database_t, check_packages, status_t,
 				DBG2(DBG_IMV, "package '%s' (%.*s) not found",
 					 package, version.len, version.ptr);
 			}
-			count_not_found++;
 			e->destroy(e);
 			continue;
 		}
@@ -162,21 +161,17 @@ METHOD(imv_os_database_t, check_packages, status_t,
 			{
 				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
 				count_no_match++;
-				status = VERIFY_ERROR;
 			}
 		}
 		else
 		{
 			/* package not present in database for this product - skip */
-			count_not_found++;
 		}
 		free(package);
 		free(release);
 	}
 	free(product);
-
-	DBG1(DBG_IMV, "processed %d packages: %d no match, %d ok, %d not found",
-		 count, count_no_match, count_ok, count_not_found);
+	state->set_count(state, count, count_no_match, count_ok);
 
 	return status;
 }
