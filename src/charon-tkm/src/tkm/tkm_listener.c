@@ -202,9 +202,19 @@ METHOD(listener_t, authorize, bool,
 		*success = FALSE;
 	}
 
+	const chunk_t * const other_init_msg = keymat->get_peer_init_msg(keymat);
+	if (!other_init_msg->ptr)
+	{
+		DBG1(DBG_IKE, "no peer init message available");
+		*success = FALSE;
+	}
+
 	signature_type signature;
 	chunk_to_sequence(auth, &signature, sizeof(signature_type));
-	if (ike_isa_auth_psk(isa_id, signature) != TKM_OK)
+	init_message_type init_msg;
+	chunk_to_sequence(other_init_msg, &init_msg, sizeof(init_message_type));
+
+	if (ike_isa_auth(isa_id, cc_id, init_msg, signature) != TKM_OK)
 	{
 		DBG1(DBG_IKE, "TKM based authentication failed"
 			 " for ISA context %llu", isa_id);
