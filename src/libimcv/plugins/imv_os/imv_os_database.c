@@ -57,18 +57,18 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	if (os_type == OS_TYPE_ANDROID)
 	{
 		/*no package dependency on Android version */
-		os_version_len = 0;
+		product = strdup(enum_to_name(os_type_names, os_type));
 	}
 	else
 	{
 		/* remove appended platform info */
 		pos = memchr(os_version.ptr, ' ', os_version.len);
 		os_version_len = pos ? (pos - os_version.ptr) : os_version.len;
+		product = malloc(os_name.len + 1 + os_version_len + 1);
+		sprintf(product, "%.*s %.*s", os_name.len, os_name.ptr,
+									  os_version_len, os_version.ptr); 
 	}
-
-	product = malloc(os_name.len + 1 + os_version_len + 1);
-	sprintf(product, "%.*s %.*s", os_name.len, os_name.ptr,
-								  os_version_len, os_version.ptr); 
+	DBG1(DBG_IMV, "processing installed '%s' packages", product);
 
 	/* Get primary key of product */
 	e = this->db->query(this->db,

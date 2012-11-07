@@ -354,8 +354,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		{
 			ita_attr_get_settings_t *attr_cast;
 
-			DBG1(DBG_IMV, "requesting installed packages for '%s'",
-						   product_info);
+			/* requesting installed packages */
 			os_state->set_package_request(os_state, TRUE);
 			attr = ietf_attr_attr_request_create(PEN_IETF,
 								IETF_ATTR_INSTALLED_PACKAGES);
