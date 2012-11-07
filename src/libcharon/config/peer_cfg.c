@@ -583,6 +583,7 @@ METHOD(peer_cfg_t, equals, bool,
 		this->jitter_time == other->jitter_time &&
 		this->over_time == other->over_time &&
 		this->dpd == other->dpd &&
+		this->aggressive == other->aggressive &&
 		auth_cfg_equal(this, other)
 #ifdef ME
 		&& this->mediation == other->mediation &&
