@@ -22,6 +22,7 @@
 #ifndef IMV_OS_STATE_H_
 #define IMV_OS_STATE_H_
 
+#include "os_info/os_info.h"
 #include <imv/imv_state.h>
 #include <library.h>
 
@@ -40,17 +41,23 @@ struct imv_os_state_t {
 	/**
 	 * Set OS Product Information
 	 *
-	 * @param name		OS name
+	 * @param type		OS type (enumerated)
+	 * @param name		OS name (string)
 	 * @param version	OS version
 	 */
-	void (*set_info)(imv_os_state_t *this, chunk_t name, chunk_t version);
+	void (*set_info)(imv_os_state_t *this, os_type_t os_type,
+					 chunk_t name, chunk_t version);
 
 	/**
 	 * Get OS Product Information
 	 *
-	 * @result			OS name & version
+	 * @param type		OS type (enumerated)
+	 * @param name		OS name (string)
+	 * @param version	OS version
+	 * @result			OS name & version as a concatenated string 
 	 */
-	char* (*get_info)(imv_os_state_t *this);
+	char* (*get_info)(imv_os_state_t *this, os_type_t *os_type,
+					  chunk_t *name, chunk_t *version);
 
 	/**
 	 * Set/reset OS Installed Packages request status

@@ -38,44 +38,37 @@ struct private_imv_os_database_t {
 };
 
 METHOD(imv_os_database_t, check_packages, status_t,
-	private_imv_os_database_t *this, char *os_info,
+	private_imv_os_database_t *this, imv_os_state_t *state,
 	enumerator_t *package_enumerator)
 {
-	char *product, *package, *release, *cur_release, *pos;
-	size_t len;
-	int pid, gid, security, i;
+	char *product, *package, *release, *cur_release;
+	u_char *pos;
+	chunk_t os_name, os_version, name, version;
+	os_type_t os_type;
+	size_t os_version_len;
+	int pid, gid, security;
 	int count = 0, count_ok = 0, count_no_match = 0, count_not_found = 0;
 	enumerator_t *e;
-	chunk_t name, version;
 	status_t status = SUCCESS;
 	bool found, match;
 
-	char *platform[] = {
-		"i686",
-		"x86_64"
-	};
+	state->get_info(state, &os_type, &os_name, &os_version);
 
-	/* looking for appended platform info */
-	for (i = 0; i < countof(platform); i++)
+	if (os_type == OS_TYPE_ANDROID)
 	{
-		pos = strstr(os_info, platform[i]);
-		if (pos)
-		{
-			break;
-		}
-	}
-	if (pos)
-	{
-		/* Remove platform info, leaving OS name and version only */
-		len = pos - os_info - 1;
-		product = malloc(len + 1);
-		memcpy(product, os_info, len);
-		product[len] = '\0';
+		/*no package dependency on Android version */
+		os_version_len = 0;
 	}
 	else
 	{
-		product = strdup(os_info);
+		/* remove appended platform info */
+		pos = memchr(os_version.ptr, ' ', os_version.len);
+		os_version_len = pos ? (pos - os_version.ptr) : os_version.len;
 	}
+
+	product = malloc(os_name.len + 1 + os_version_len + 1);
+	sprintf(product, "%.*s %.*s", os_name.len, os_name.ptr,
+								  os_version_len, os_version.ptr); 
 
 	/* Get primary key of product */
 	e = this->db->query(this->db,
@@ -115,6 +108,11 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		if (!e->enumerate(e, &gid))
 		{
 			/* package not present in database for any product - skip */
+			if (os_type == OS_TYPE_ANDROID)
+			{
+				DBG2(DBG_IMV, "package '%s' (%.*s) not found",
+					 package, version.len, version.ptr);
+			}
 			count_not_found++;
 			e->destroy(e);
 			continue;

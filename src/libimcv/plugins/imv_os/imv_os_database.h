@@ -22,6 +22,8 @@
 #ifndef IMV_OS_DATABASE_H_
 #define IMV_OS_DATABASE_H_
 
+#include "imv_os_state.h"
+
 #include <library.h>
 
 typedef struct imv_os_database_t imv_os_database_t;
@@ -34,10 +36,10 @@ struct imv_os_database_t {
 	/**
 	 * Check Installed Packages for a given OS
 	 *
-	 * @param os_info				OS name and version
+	 * @param state					OS IMV state
 	 * @param package_enumerator	enumerates over installed packages
 	 */
-	status_t (*check_packages)(imv_os_database_t *this, char* os_info,
+	status_t (*check_packages)(imv_os_database_t *this, imv_os_state_t *state,
 							   enumerator_t *package_enumerator);
 
 	/**

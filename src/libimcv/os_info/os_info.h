@@ -38,7 +38,8 @@ enum os_type_t {
 	OS_TYPE_CENTOS,
 	OS_TYPE_SUSE,
 	OS_TYPE_GENTOO,
-	OS_TYPE_ANDROID
+	OS_TYPE_ANDROID,
+	OS_TYPE_ROOF
 };
 
 extern enum_name_t *os_type_names;
@@ -123,6 +124,14 @@ struct os_info_t {
 	 */
 	void (*destroy)(os_info_t *this);
 };
+
+/**
+ * Convert an OS name into an OS enumeration type
+ *
+ * @param name				OS name
+ * @return					OS enumeration type
+ */
+os_type_t os_type_from_name(chunk_t name);
 
 /**
  * Create an os_info_t object

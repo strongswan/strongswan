@@ -65,9 +65,24 @@ struct private_imv_os_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
-	 * OS Product Information
+	 * OS Product Information (concatenation of OS Name and Version)
 	 */
 	char *info;
+
+	/**
+	 * OS Type
+	 */
+	os_type_t type;
+
+	/**
+	 * OS Name
+	 */
+	chunk_t name;
+
+	/**
+	 * OS Version
+	 */
+	chunk_t version;
 
 	/**
 	 * OS Installed Package request sent - mandatory response expected
@@ -171,11 +186,13 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_os_state_t *this)
 {
 	free(this->info);
+	free(this->name.ptr);
+	free(this->version.ptr);
 	free(this);
 }
 
 METHOD(imv_os_state_t, set_info, void,
-	private_imv_os_state_t *this, chunk_t name, chunk_t version)
+	private_imv_os_state_t *this, os_type_t type, chunk_t name, chunk_t version)
 {
 	int len = name.len + 1 + version.len + 1;
 
@@ -184,12 +201,34 @@ METHOD(imv_os_state_t, set_info, void,
 	this->info = malloc(len);
 	snprintf(this->info, len, "%.*s %.*s", name.len, name.ptr,
 										   version.len, version.ptr);
+	this->type = type;
+	this->name = chunk_clone(name);
+	this->version = chunk_clone(version);
 }
 
 METHOD(imv_os_state_t, get_info, char*,
+	private_imv_os_state_t *this, os_type_t *type, chunk_t *name,
+	chunk_t *version)
+{
+	if (type)
+	{
+		*type = this->type;
+	}
+	if (name)
+	{
+		*name = this->name;
+	}
+	if (version)
+	{
+		*version = this->version;
+	}
+	return this->info;
+}
+
+METHOD(imv_os_state_t, get_type, os_type_t,
 	private_imv_os_state_t *this)
 {
-	return this->info;
+	return this->type;
 }
 
 METHOD(imv_os_state_t, set_package_request, void,

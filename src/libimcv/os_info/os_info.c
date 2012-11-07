@@ -177,13 +177,13 @@ METHOD(os_info_t, get_setting, chunk_t,
 	chunk_t value;
 
 	if (!strneq(name, "/etc/", 5) && !strneq(name, "/proc/", 6) &&
-		!strneq(name, "/sys/", 5))
+		!strneq(name, "/sys/", 5) && !strneq(name, "/var/", 5))
 	{
 		/**
 		 * In order to guarantee privacy, only settings from the
 		 * /etc/, /proc/ and /sys/ directories can be retrieved
 		 */
-		DBG1(DBG_IMC, "not allowed to access \"%s\"", name);
+		DBG1(DBG_IMC, "not allowed to access '%s'", name);
 
 		return chunk_empty;
 	}
@@ -191,7 +191,7 @@ METHOD(os_info_t, get_setting, chunk_t,
 	file = fopen(name, "r");
 	if (!file)
 	{
-		DBG1(DBG_IMC, "failed to open \"%s\"", name);
+		DBG1(DBG_IMC, "failed to open '%s'", name);
 
 		return chunk_empty;
 	}
@@ -337,7 +337,7 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 	chunk_t os_version = chunk_empty;
 	char *os_str;
 	struct utsname uninfo;
-	int i, t;
+	int i;
 
 	/* Linux/Unix distribution release info (from http://linuxmafia.com) */
 	const char* releases[] = {
@@ -492,21 +492,14 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 		return FALSE;
 	}
 
-	/* Try to find a matching OS type */
+	/* Try to find a matching OS type based on the OS name */
 	if (os_type == OS_TYPE_UNKNOWN)
 	{
-		for (t = OS_TYPE_DEBIAN; t <= OS_TYPE_GENTOO; t++)
-		{
-			os_str = enum_to_name(os_type_names, t);
-			if (memeq(os_name.ptr, os_str, min(os_name.len, strlen(os_str))))
-			{
-				os_type = t;
-				os_name = chunk_create(os_str, strlen(os_str));
-				break;
-			}
-		}
+		os_type = os_type_from_name(os_name);
 	}
-	else
+
+	/* If known use the official OS name */
+	if (os_type != OS_TYPE_UNKNOWN)
 	{
 		os_str = enum_to_name(os_type_names, os_type);
 		os_name = chunk_create(os_str, strlen(os_str));
@@ -527,6 +520,26 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 	memcpy(pos, uninfo.machine, strlen(uninfo.machine));
 
 	return TRUE;
+}
+
+/**
+ * See header
+ */
+os_type_t os_type_from_name(chunk_t name)
+{
+	os_type_t type;
+	char *name_str;
+
+	for (type = OS_TYPE_DEBIAN; type < OS_TYPE_ROOF; type++)
+	{
+		/* name_str is a substring of name.ptr */
+		name_str = enum_to_name(os_type_names, type);
+		if (memeq(name.ptr, name_str, min(name.len, strlen(name_str))))
+		{
+			return type;
+		}
+	}
+	return OS_TYPE_UNKNOWN;
 }
 
 /**

@@ -270,8 +270,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					attr_cast = (ietf_attr_installed_packages_t*)attr;
 
 					e = attr_cast->create_enumerator(attr_cast);
-					status = os_db->check_packages(os_db,
-									os_state->get_info(os_state), e);
+					status = os_db->check_packages(os_db, os_state, e);
 					e->destroy(e);
 
 					switch (status)
@@ -333,13 +332,15 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 	if (os_name.len && os_version.len)
 	{
+		os_type_t os_type;
 		char *product_info;
 		char *uri = "http://remediation.strongswan.org/fix-it/";
 		char *string = "use a Linux operating system instead of Windows 1.2.3";
 		char *lang_code = "en";
 
-		os_state->set_info(os_state, os_name, os_version);
-		product_info = os_state->get_info(os_state);
+		os_type = os_type_from_name(os_name);
+		os_state->set_info(os_state,os_type, os_name, os_version);
+		product_info = os_state->get_info(os_state, NULL, NULL, NULL);
 
 		if (streq(product_info, "Windows 1.2.3"))
 		{
@@ -373,7 +374,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			attr = ita_attr_get_settings_create();
 			attr_cast = (ita_attr_get_settings_t*)attr;
 
-			if (chunk_equals(os_name, chunk_create("Android", 7)))
+			if (os_type == OS_TYPE_ANDROID)
 			{
 				attr_cast->add(attr_cast, "android_id");
 				attr_cast->add(attr_cast, "install_non_market_apps");
@@ -529,7 +530,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 	}
 	os_state = (imv_os_state_t*)state;
 
-	if (os_state->get_info(os_state) == NULL)
+	if (os_state->get_info(os_state, NULL, NULL, NULL) == NULL)
 	{
 		imv_msg_t *out_msg;
 		pa_tnc_attr_t *attr;
