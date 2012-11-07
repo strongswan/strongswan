@@ -82,7 +82,7 @@ static void cleanup(void)
 static void usage(void)
 {
  	printf("Usage:\n"
-		   "ipsec pacman --file <filename> --package <name>\n");
+		   "ipsec pacman --product <name> --file <filename> [--update]\n");
 }
 
 /**
@@ -127,8 +127,8 @@ static time_t extract_time(char *line)
 static void process_packages(char *filename, char *product, bool update)
 {
 	char *uri, line[12288], *pos;
-	int count = 0, errored = 0, vulnerable = 0;
-	int new_packages = 0, new_versions = 0;
+	int count = 0, errored = 0, vulnerable = 0, new_packages = 0;
+	int new_versions = 0, updated_versions = 0, deleted_versions = 0;
 	u_int32_t pid = 0;
 	enumerator_t *e;
 	database_t *db;
@@ -185,10 +185,11 @@ static void process_packages(char *filename, char *product, bool update)
 
 	while (fgets(line, sizeof(line), file))
 	{
-		char *package, *version, *cur_version;
-		bool security, update_version = TRUE;
-		int cur_security;
-		u_int32_t gid = 0, vid = 0;
+		char *package, *version;
+		char *cur_version, *version_update = NULL, *version_delete = NULL;
+		bool security, add_version = TRUE;
+		int cur_security, security_update = 0, security_delete = 0;
+		u_int32_t gid = 0, vid = 0, vid_update = 0, vid_delete = 0;
 		time_t gen_time, cur_time;
 
 		count++;
@@ -290,22 +291,65 @@ static void process_packages(char *filename, char *product, bool update)
 				"SELECT id, release, security, time FROM versions "
 				"WHERE package = ? AND product = ?",
 				DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT, DB_INT);
-		if (e)
+		if (!e)
 		{
-			while (e->enumerate(e, &vid, &cur_version, &cur_security, &cur_time))
+			break;
+		}
+		while (e->enumerate(e, &vid, &cur_version, &cur_security, &cur_time))
+		{
+			if (streq(version, cur_version))
 			{
-				if (streq(version, cur_version))
+				/* already in data base */
+				add_version = FALSE;
+				break;
+			}
+			else if (gen_time > cur_time)
+			{
+				if (security)
 				{
-					update_version = FALSE;
+					if (cur_security)
+					{
+						vid_update = vid;
+						version_update = strdup(cur_version);
+						security_update = cur_security;
+					}
+					else
+					{
+						vid_delete = vid;
+						version_delete = strdup(cur_version);
+						security_delete = cur_security;
+					}
+				}
+				else
+				{
+					if (!cur_security)
+					{
+						vid_update = vid;
+						version_update = strdup(cur_version);
+						security_update = cur_security;
+					}
 				}
 			}
-			e->destroy(e);
+			else
+			{
+				if (security == cur_security)
+				{
+					add_version = FALSE;
+				}
+			}
 		}
-		if ((!vid && security) || (vid && update_version))
+		e->destroy(e);
+
+		if ((!vid && !security) || (vid && !add_version))
+		{
+			continue;
+		}
+
+		if ((!vid && security) || (vid && !vid_update))
 		{	
 			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
 
-			if (db->execute(db, &gid,
+			if (db->execute(db, &vid,
 				"INSERT INTO versions "
 				"(package, product, release, security, time) "
 				"VALUES (?, ?, ?, ?, ?)", DB_INT, gid, DB_INT, pid,
@@ -319,13 +363,52 @@ static void process_packages(char *filename, char *product, bool update)
 			}
 			new_versions++;
 		}
-	}
+		else
+		{
+			printf("%s (%s) %s updated by\n",
+				   package, version_update, security_update ? "[s]" : "");
+			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
 
+			if (db->execute(db, NULL,
+				"UPDATE versions SET release = ?, time = ? WHERE id = ?",
+				DB_TEXT, version, DB_INT, gen_time, DB_INT, vid_update) <= 0)
+			{
+				fprintf(stderr, "could not update version '%s' to database\n",
+								 version);
+				fclose(file);
+				db->destroy(db);
+				exit(EXIT_FAILURE);
+			}
+			updated_versions++;
+		}
+
+		if (vid_delete)
+		{
+			printf("%s (%s) %s deleted\n",
+				   package, version_delete, security_delete ? "[s]" : "");
+
+			if (db->execute(db, NULL,
+				"DELETE FROM  versions WHERE id = ?",
+				DB_INT, vid_delete) <= 0)
+			{
+				fprintf(stderr, "could not delete version '%s' from database\n",
+								 version_delete);
+				fclose(file);
+				db->destroy(db);
+				exit(EXIT_FAILURE);
+			}
+			deleted_versions++;
+		}
+		free(version_update);
+		free(version_delete);
+	}
 	fclose(file);
 	db->destroy(db);
-	printf("processed %d packages, %d vulnerable, %d errored, "
-		   "%d new packages, %d new versions\n", count - 6, vulnerable,
-			errored, new_packages, new_versions);
+
+	printf("processed %d packages, %d security, %d new packages, "
+		   "%d new versions, %d updated versions, %d deleted versions, "
+		   "%d errored\n", count - 6, vulnerable, new_packages, new_versions,
+		   updated_versions, deleted_versions, errored);
 }
 
 static void do_args(int argc, char *argv[])
