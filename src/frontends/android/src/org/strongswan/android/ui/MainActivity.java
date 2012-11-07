@@ -42,10 +42,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnVpnProfileSelectedListener
 {
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
+	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
+	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 	private static final int PREPARE_VPN_SERVICE = 0;
 
 	private Bundle mProfileInfo;
@@ -62,6 +65,25 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 
 		/* load CA certificates in a background task */
 		new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, false);
+
+		if (START_PROFILE.equals(getIntent().getAction()))
+		{
+			startVpnProfile(getIntent());
+		}
+	}
+
+	/**
+	 * Due to launchMode=singleTop this is called if the Activity already exists
+	 */
+	@Override
+	protected void onNewIntent(Intent intent)
+	{
+		super.onNewIntent(intent);
+
+		if (START_PROFILE.equals(intent.getAction()))
+		{
+			startVpnProfile(intent);
+		}
 	}
 
 	@Override
@@ -164,6 +186,33 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		{
 			profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
 			prepareVpnService(profileInfo);
+		}
+	}
+
+	/**
+	 * Start the VPN profile referred to by the given intent. Displays an error
+	 * if the profile doesn't exist.
+	 * @param intent Intent that caused us to start this
+	 */
+	private void startVpnProfile(Intent intent)
+	{
+		long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
+		if (profileId <= 0)
+		{	/* invalid invocation */
+			return;
+		}
+		VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+		dataSource.open();
+		VpnProfile profile = dataSource.getVpnProfile(profileId);
+		dataSource.close();
+
+		if (profile != null)
+		{
+			onVpnProfileSelected(profile);
+		}
+		else
+		{
+			Toast.makeText(this, R.string.profile_not_found, Toast.LENGTH_LONG).show();
 		}
 	}
 
