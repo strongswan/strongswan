@@ -66,6 +66,11 @@ struct private_tkm_keymat_t {
 	 */
 	chunk_t auth_payload;
 
+	/**
+	 * Peer init message chunk.
+	 */
+	chunk_t other_init_msg;
+
 };
 
 /**
@@ -357,6 +362,11 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
 {
+	if (verify)
+	{
+		/* store peer init message for authentication step */
+		this->other_init_msg = chunk_clone(ike_sa_init);
+	}
 	DBG1(DBG_IKE, "returning auth octets");
 	*octets = chunk_empty;
 	return TRUE;
@@ -432,6 +442,7 @@ METHOD(keymat_t, destroy, void,
 	DESTROY_IF(this->aead_in);
 	DESTROY_IF(this->aead_out);
 	chunk_free(&this->auth_payload);
+	chunk_free(&this->other_init_msg);
 	free(this);
 }
 
@@ -451,6 +462,12 @@ METHOD(tkm_keymat_t, get_auth_payload, chunk_t*,
 	private_tkm_keymat_t *this)
 {
 	return &this->auth_payload;
+}
+
+METHOD(tkm_keymat_t, get_peer_init_msg, chunk_t*,
+	private_tkm_keymat_t *this)
+{
+	return &this->other_init_msg;
 }
 
 /**
@@ -479,11 +496,13 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.get_isa_id = _get_isa_id,
 			.set_auth_payload = _set_auth_payload,
 			.get_auth_payload = _get_auth_payload,
+			.get_peer_init_msg = _get_peer_init_msg,
 		},
 		.initiator = initiator,
 		.isa_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ISA),
 		.ae_ctx_id = 0,
 		.auth_payload = chunk_empty,
+		.other_init_msg = chunk_empty,
 	);
 
 	if (!this->isa_ctx_id)

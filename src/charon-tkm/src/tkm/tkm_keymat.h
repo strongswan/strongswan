@@ -52,6 +52,13 @@ struct tkm_keymat_t {
 	 */
 	chunk_t* (*get_auth_payload)(tkm_keymat_t * const this);
 
+	/**
+	 * Get IKE init message of peer.
+	 *
+	 * @return				init message if set, chunk_empty otherwise
+	 */
+	chunk_t* (*get_peer_init_msg)(tkm_keymat_t * const this);
+
 };
 
 /**
