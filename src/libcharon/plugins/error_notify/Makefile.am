@@ -17,3 +17,6 @@ libstrongswan_error_notify_la_SOURCES = \
 	error_notify_listener.h error_notify_listener.c
 
 libstrongswan_error_notify_la_LDFLAGS = -module -avoid-version
+
+ipsec_PROGRAMS = error-notify
+error_notify_SOURCES = error_notify.c
