@@ -673,6 +673,7 @@ if test x$dumm = xtrue; then
 		[AC_MSG_RESULT([$LIBS]); RUBYLIB=$LIBS],
 		[AC_MSG_ERROR([not found])])
 	AC_SUBST(RUBYLIB)
+	AC_CHECK_FUNCS(rb_errinfo)
 	LIBS=$saved_LIBS
 fi
 

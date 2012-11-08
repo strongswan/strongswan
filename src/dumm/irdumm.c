@@ -21,6 +21,10 @@
 #undef PACKAGE_URL
 #include <ruby.h>
 
+#ifdef HAVE_RB_ERRINFO
+#define ruby_errinfo rb_errinfo()
+#endif
+
 /**
  * main routine, parses args and reads from console
  */
