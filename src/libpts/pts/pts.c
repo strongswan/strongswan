@@ -20,8 +20,17 @@
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 
+#ifdef TSS_TROUSERS
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
+#else
+#ifndef TPM_TAG_QUOTE_INFO2
+#define TPM_TAG_QUOTE_INFO2 0x0036
+#endif
+#ifndef TPM_LOC_ZERO
+#define TPM_LOC_ZERO 0x01
+#endif
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -280,6 +289,8 @@ METHOD(pts_t, calculate_secret, bool,
 	return TRUE;
 }
 
+#ifdef TSS_TROUSERS
+
 /**
  * Print TPM 1.2 Version Info
  */
@@ -306,6 +317,15 @@ static void print_tpm_version_info(private_pts_t *this)
 					  versionInfo.tpmVendorID);
 	}
 }
+
+#else
+
+static void print_tpm_version_info(private_pts_t *this)
+{
+	DBG1(DBG_PTS, "unknown TPM version: no TSS implementation available");
+}
+
+#endif /* TSS_TROUSERS */
 
 METHOD(pts_t, get_platform_info, char*,
 	private_pts_t *this)
@@ -611,6 +631,9 @@ METHOD(pts_t, get_metadata, pts_file_meta_t*,
 	return metadata;
 }
 
+
+#ifdef TSS_TROUSERS
+
 METHOD(pts_t, read_pcr, bool,
 	private_pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value)
 {
@@ -862,20 +885,34 @@ err2:
 
 err1:
 	Tspi_Context_Close(hContext);
-
 	if (!success)
 	{
 		DBG1(DBG_PTS, "TPM not available: tss error 0x%x", result);
 	}
-
 	return success;
 }
 
-METHOD(pts_t, get_pcrs, pts_pcr_t*,
-	private_pts_t *this)
+#else /* TSS_TROUSERS */
+
+METHOD(pts_t, read_pcr, bool,
+	private_pts_t *this, u_int32_t pcr_num, chunk_t *pcr_value)
 {
-	return this->pcrs;
+	return FALSE;
 }
+
+METHOD(pts_t, extend_pcr, bool,
+	private_pts_t *this, u_int32_t pcr_num, chunk_t input, chunk_t *output)
+{
+	return FALSE;
+}
+
+METHOD(pts_t, quote_tpm, bool,
+	private_pts_t *this, bool use_quote2, chunk_t *pcr_comp, chunk_t *quote_sig)
+{
+	return FALSE;
+}
+
+#endif /* TSS_TROUSERS */
 
 /**
  * TPM_QUOTE_INFO structure:
@@ -1037,6 +1074,12 @@ METHOD(pts_t, verify_quote_signature, bool,
 	return TRUE;
 }
 
+METHOD(pts_t, get_pcrs, pts_pcr_t*,
+	private_pts_t *this)
+{
+	return this->pcrs;
+}
+
 METHOD(pts_t, destroy, void,
 	private_pts_t *this)
 {
@@ -1051,6 +1094,9 @@ METHOD(pts_t, destroy, void,
 	free(this->tpm_version_info.ptr);
 	free(this);
 }
+
+
+#ifdef TSS_TROUSERS
 
 /**
  * Check for a TPM by querying for TPM Version Info
@@ -1099,6 +1145,16 @@ static bool has_tpm(private_pts_t *this)
 	Tspi_Context_Close(hContext);
 	return FALSE;
 }
+
+#else /* TSS_TROUSERS */
+
+static bool has_tpm(private_pts_t *this)
+{
+	return FALSE;
+}
+
+#endif /* TSS_TROUSERS */
+
 
 /**
  * See header

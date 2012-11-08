@@ -3,7 +3,11 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libimcv
 
 ipseclib_LTLIBRARIES = libpts.la
 
-libpts_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la -ltspi
+libpts_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la
+
+if USE_TROUSERS
+  libpts_la_LIBADD += -ltspi
+endif
 
 libpts_la_SOURCES = \
 	libpts.h libpts.c \
@@ -47,7 +51,7 @@ libpts_la_SOURCES = \
 	tcg/tcg_pts_attr_file_meas.h tcg/tcg_pts_attr_file_meas.c \
 	tcg/tcg_pts_attr_req_file_meta.h tcg/tcg_pts_attr_req_file_meta.c \
 	tcg/tcg_pts_attr_unix_file_meta.h tcg/tcg_pts_attr_unix_file_meta.c
-	
+
 SUBDIRS = .
 
 if USE_IMC_ATTESTATION

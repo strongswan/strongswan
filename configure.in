@@ -44,6 +44,7 @@ ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec 
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 ARG_WITH_SUBST([ipsec-script],       [ipsec], [change the name of the ipsec script])
 
+ARG_WITH_SET([tss],                  [no], [set implementation of the Trusted Computing Group's Software Stack (TSS). Currently the only supported value is "trousers"])
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
@@ -630,7 +631,7 @@ if test x$axis2c = xtrue; then
 	AC_SUBST(axis2c_LIBS)
 fi
 
-if test x$imc_attestation = xtrue -o x$imv_attestation = xtrue; then
+if test x$tss = xtrousers; then
 	AC_HAVE_LIBRARY([tspi],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])])
 	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
 fi
@@ -1133,6 +1134,7 @@ AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
+AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
