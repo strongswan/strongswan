@@ -20,3 +20,5 @@ pacman_SOURCES = pacman.c
 pacman_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 pacman.o :	$(top_builddir)/config.status
 
+EXTRA_DIST = pacman.sh
+
