@@ -39,6 +39,7 @@
 #include "tkm_keymat.h"
 #include "tkm_listener.h"
 #include "tkm_kernel_ipsec.h"
+#include "tkm_public_key.h"
 
 /**
  * TKM bus listener for IKE authorize events.
@@ -285,6 +286,10 @@ int main(int argc, char *argv[])
 		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+		PLUGIN_REGISTER(PUBKEY, tkm_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
+			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA256),
 		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 			PLUGIN_DEPENDS(RNG, RNG_WEAK),
