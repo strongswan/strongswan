@@ -21,7 +21,7 @@ ipsec pacman --product "Ubuntu 12.10" --file $DATE-quantal-updates.txt --update
 echo
 ipsec pacman --product "Ubuntu 12.04" --file $DATE-precise.txt
 echo
-ipsec pacman --product "Ubuntu 12.04" --file $DATE-precise-updates.txt
+ipsec pacman --product "Ubuntu 12.04" --file $DATE-precise-updates.txt --update
 echo
 ipsec pacman --product "Ubuntu 11.10" --file $DATE-oneiric.txt
 echo
