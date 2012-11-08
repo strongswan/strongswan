@@ -11,7 +11,7 @@ irdumm_SOURCES = irdumm.c
 
 libdumm_la_LIBADD = -lbridge -lfuse -lutil $(top_builddir)/src/libstrongswan/libstrongswan.la
 dumm_LDADD = libdumm.la ${gtk_LIBS} $(top_builddir)/src/libstrongswan/libstrongswan.la
-irdumm_LDADD = libdumm.la -lruby1.8 $(top_builddir)/src/libstrongswan/libstrongswan.la
+irdumm_LDADD = libdumm.la ${RUBYLIB} $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan ${gtk_CFLAGS} \
   ${RUBYINCLUDE}

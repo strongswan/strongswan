@@ -666,6 +666,14 @@ if test x$dumm = xtrue; then
 	else
 		AC_MSG_ERROR([don't know how to run ruby])
 	fi
+	AC_MSG_CHECKING([for libruby])
+	saved_LIBS=$LIBS
+	LIBS=`($RUBY -r rbconfig -e 'print RbConfig::CONFIG[["LIBRUBYARG_SHARED"]] || ""') 2>/dev/null`
+	AC_TRY_LINK_FUNC(ruby_init,
+		[AC_MSG_RESULT([$LIBS]); RUBYLIB=$LIBS],
+		[AC_MSG_ERROR([not found])])
+	AC_SUBST(RUBYLIB)
+	LIBS=$saved_LIBS
 fi
 
 if test x$fast = xtrue; then
