@@ -16,16 +16,11 @@
 
 with Interfaces.C.Strings;
 
-with Tkmrpc.Results;
-
 package Esa_Event_Service
 is
 
-   procedure Init
-     (Result  : out Tkmrpc.Results.Result_Type;
-      Address :     Interfaces.C.Strings.chars_ptr);
+   procedure Init (Address : Interfaces.C.Strings.chars_ptr);
    pragma Export (C, Init, "ees_server_init");
-   pragma Export_Valued_Procedure (Init);
    --  Initialize Esa Event Service (EES) with given address.
 
    procedure Finalize;

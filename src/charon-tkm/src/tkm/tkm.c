@@ -69,12 +69,8 @@ bool tkm_init()
 		tkmlib_final();
 		return FALSE;
 	}
-	/* init esa event service */
-	if (ees_server_init(EES_SOCKET) != TKM_OK)
-	{
-		tkmlib_final();
-		return FALSE;
-	}
+
+	ees_server_init(EES_SOCKET);
 
 	if (ike_tkm_reset() != TKM_OK)
 	{

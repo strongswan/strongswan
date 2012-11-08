@@ -45,21 +45,13 @@ is
 
    -------------------------------------------------------------------------
 
-   procedure Init
-     (Result  : out Tkmrpc.Results.Result_Type;
-      Address :     Interfaces.C.Strings.chars_ptr)
+   procedure Init (Address : Interfaces.C.Strings.chars_ptr)
    is
       Path : constant String := Interfaces.C.Strings.Value (Address);
    begin
       Sock.Init;
       Sock.Bind (Path => Anet.Sockets.Unix.Path_Type (Path));
       Receiver.Listen (Callback => Dispatch'Access);
-
-      Result := Tkmrpc.Results.Ok;
-
-   exception
-      when others =>
-         Result := Tkmrpc.Results.Invalid_Operation;
    end Init;
 
 end Esa_Event_Service;
