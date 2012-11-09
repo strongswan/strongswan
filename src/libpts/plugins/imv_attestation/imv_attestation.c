@@ -284,7 +284,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		pts->set_platform_info(pts, os_name, os_version);
 	}
 
-	if (result != TNC_RESULT_SUCCESS)
+	if (fatal_error || result != TNC_RESULT_SUCCESS)
 	{
 		out_msg->delete_attributes(out_msg);
 		state->set_recommendation(state,
