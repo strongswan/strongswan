@@ -824,8 +824,8 @@ METHOD(child_sa_t, add_policies, status_t,
  */
 static void reinstall_vip(host_t *vip, host_t *me)
 {
-	hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
-	hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, me);
+	hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
+	hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, -1, me);
 }
 
 METHOD(child_sa_t, update, status_t,

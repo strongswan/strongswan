@@ -1634,7 +1634,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
  * By setting the appropriate nlmsg_type, the ip will be set or unset.
  */
 static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type,
-							  int flags, int if_index, host_t *ip)
+							  int flags, int if_index, host_t *ip, int prefix)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1653,7 +1653,7 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 	msg = (struct ifaddrmsg*)NLMSG_DATA(hdr);
 	msg->ifa_family = ip->get_family(ip);
 	msg->ifa_flags = 0;
-	msg->ifa_prefixlen = 8 * chunk.len;
+	msg->ifa_prefixlen = prefix < 0 ? chunk.len * 8 : prefix;
 	msg->ifa_scope = RT_SCOPE_UNIVERSE;
 	msg->ifa_index = if_index;
 
@@ -1663,7 +1663,8 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 }
 
 METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_netlink_net_t *this, host_t *virtual_ip, host_t *iface_ip)
+	private_kernel_netlink_net_t *this, host_t *virtual_ip, int prefix,
+	host_t *iface_ip)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = virtual_ip,
@@ -1738,7 +1739,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 		iface->addrs->insert_last(iface->addrs, addr);
 		addr_map_entry_add(this->vips, addr, iface);
 		if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
-						  iface->ifindex, virtual_ip) == SUCCESS)
+						  iface->ifindex, virtual_ip, prefix) == SUCCESS)
 		{
 			while (!is_vip_installed_or_gone(this, virtual_ip, &entry))
 			{	/* wait until address appears */
@@ -1763,7 +1764,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_netlink_net_t *this, host_t *virtual_ip)
+	private_kernel_netlink_net_t *this, host_t *virtual_ip, int prefix)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = virtual_ip,
@@ -1802,7 +1803,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 		 * until the entry is gone, also so we can wait below */
 		entry->addr->installed = FALSE;
 		status = manage_ipaddr(this, RTM_DELADDR, 0, entry->iface->ifindex,
-							   virtual_ip);
+							   virtual_ip, prefix);
 		if (status == SUCCESS)
 		{	/* wait until the address is really gone */
 			while (is_known_vip(this, virtual_ip))

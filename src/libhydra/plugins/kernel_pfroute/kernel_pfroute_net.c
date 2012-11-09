@@ -640,13 +640,14 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 }
 
 METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, host_t *iface_ip)
+	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
+	host_t *iface_ip)
 {
 	return FAILED;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip)
+	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix)
 {
 	return FAILED;
 }

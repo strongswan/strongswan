@@ -115,10 +115,11 @@ struct kernel_net_t {
 	 * The virtual IP is attached to the interface where the iface_ip is found.
 	 *
 	 * @param virtual_ip	virtual ip address to assign
+	 * @param prefix		prefix length to install with IP address, -1 for auto
 	 * @param iface_ip		IP of an interface to attach virtual IP
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_ip) (kernel_net_t *this, host_t *virtual_ip,
+	status_t (*add_ip) (kernel_net_t *this, host_t *virtual_ip, int prefix,
 						host_t *iface_ip);
 
 	/**
@@ -127,9 +128,10 @@ struct kernel_net_t {
 	 * The kernel interface uses refcounting, see add_ip().
 	 *
 	 * @param virtual_ip	virtual ip address to assign
+	 * @param prefix		prefix length of the IP to uninstall, -1 for auto
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_ip) (kernel_net_t *this, host_t *virtual_ip);
+	status_t (*del_ip) (kernel_net_t *this, host_t *virtual_ip, int prefix);
 
 	/**
 	 * Add a route.

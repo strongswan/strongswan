@@ -742,8 +742,8 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 	if (local)
 	{
 		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (hydra->kernel_interface->add_ip(hydra->kernel_interface, ip,
-											this->my_host) == SUCCESS)
+		if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
+											ip, -1, this->my_host) == SUCCESS)
 		{
 			this->my_vips->insert_last(this->my_vips, ip->clone(ip));
 		}
@@ -769,7 +769,7 @@ METHOD(ike_sa_t, clear_virtual_ips, void,
 	{
 		if (local)
 		{
-			hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+			hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
 		}
 		vip->destroy(vip);
 	}
@@ -2076,7 +2076,7 @@ METHOD(ike_sa_t, destroy, void,
 
 	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
 	{
-		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
 		vip->destroy(vip);
 	}
 	this->my_vips->destroy(this->my_vips);

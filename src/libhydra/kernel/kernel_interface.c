@@ -312,23 +312,24 @@ METHOD(kernel_interface_t, create_address_enumerator, enumerator_t*,
 }
 
 METHOD(kernel_interface_t, add_ip, status_t,
-	private_kernel_interface_t *this, host_t *virtual_ip, host_t *iface_ip)
+	private_kernel_interface_t *this, host_t *virtual_ip, int prefix,
+	host_t *iface_ip)
 {
 	if (!this->net)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->net->add_ip(this->net, virtual_ip, iface_ip);
+	return this->net->add_ip(this->net, virtual_ip, prefix, iface_ip);
 }
 
 METHOD(kernel_interface_t, del_ip, status_t,
-	private_kernel_interface_t *this, host_t *virtual_ip)
+	private_kernel_interface_t *this, host_t *virtual_ip, int prefix)
 {
 	if (!this->net)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->net->del_ip(this->net, virtual_ip);
+	return this->net->del_ip(this->net, virtual_ip, prefix);
 }
 
 METHOD(kernel_interface_t, add_route, status_t,
