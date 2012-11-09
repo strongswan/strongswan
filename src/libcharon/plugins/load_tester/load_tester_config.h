@@ -36,6 +36,13 @@ struct load_tester_config_t {
 	backend_t backend;
 
 	/**
+	 * Delete external IP if it was dynamically installed.
+	 *
+	 * @param ip			external IP
+	 */
+	void (*delete_ip)(load_tester_config_t *this, host_t *ip);
+
+	/**
 	 * Destroy the backend.
 	 */
 	void (*destroy)(load_tester_config_t *this);

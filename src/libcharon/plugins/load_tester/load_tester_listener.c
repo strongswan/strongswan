@@ -50,6 +50,11 @@ struct private_load_tester_listener_t {
 	 * Shutdown the daemon if we have established this SA count
 	 */
 	u_int shutdown_on;
+
+	/**
+	 * Configuration backend
+	 */
+	load_tester_config_t *config;
 };
 
 METHOD(listener_t, ike_updown, bool,
@@ -83,6 +88,16 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_state_change, bool,
+	private_load_tester_listener_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
+{
+	if (state == IKE_DESTROYING)
+	{
+		this->config->delete_ip(this->config, ike_sa->get_my_host(ike_sa));
+	}
+	return TRUE;
+}
+
 METHOD(load_tester_listener_t, get_established, u_int,
 	private_load_tester_listener_t *this)
 {
@@ -95,7 +110,8 @@ METHOD(load_tester_listener_t, destroy, void,
 	free(this);
 }
 
-load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
+load_tester_listener_t *load_tester_listener_create(u_int shutdown_on,
+													load_tester_config_t *config)
 {
 	private_load_tester_listener_t *this;
 
@@ -103,6 +119,7 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
+				.ike_state_change = _ike_state_change,
 			},
 			.get_established = _get_established,
 			.destroy = _destroy,
@@ -111,6 +128,7 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on)
 					"%s.plugins.load-tester.delete_after_established", FALSE,
 					charon->name),
 		.shutdown_on = shutdown_on,
+		.config = config,
 	);
 
 	return &this->public;

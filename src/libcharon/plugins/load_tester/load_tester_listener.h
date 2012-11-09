@@ -23,6 +23,8 @@
 
 #include <bus/bus.h>
 
+#include "load_tester_config.h"
+
 typedef struct load_tester_listener_t load_tester_listener_t;
 
 /**
@@ -52,8 +54,10 @@ struct load_tester_listener_t {
  * Create a listener to handle special events during load test
  *
  * @param shutdown_on	shut down the daemon after this many SAs are established
+ * @param config		configuration backend
  * @return				listener
  */
-load_tester_listener_t *load_tester_listener_create(u_int shutdown_on);
+load_tester_listener_t *load_tester_listener_create(u_int shutdown_on,
+													load_tester_config_t *config);
 
 #endif /** LOAD_TESTER_LISTENER_H_ @}*/

@@ -197,7 +197,7 @@ static bool register_load_tester(private_load_tester_plugin_t *this,
 		{
 			shutdown_on = this->iterations * this->initiators;
 		}
-		this->listener = load_tester_listener_create(shutdown_on);
+		this->listener = load_tester_listener_create(shutdown_on, this->config);
 		charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 		for (i = 0; i < this->initiators; i++)
@@ -236,6 +236,7 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_DEPENDS(CUSTOM, "load-tester"),
 		PLUGIN_CALLBACK((plugin_feature_callback_t)register_load_tester, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "load-tester"),
+				PLUGIN_DEPENDS(CUSTOM, "kernel-net"),
 				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_ANY),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
