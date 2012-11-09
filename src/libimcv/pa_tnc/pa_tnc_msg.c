@@ -371,7 +371,7 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 			{
 				continue;
 			}
-			DBG1(DBG_IMC, "received PA-TNC error '%N' concerning message "
+			DBG1(DBG_TNC, "received PA-TNC error '%N' concerning message "
 				 "0x%08x/0x%08x", pa_tnc_error_code_names, error_code.type,
 				 untoh32(msg_info.ptr), untoh32(msg_info.ptr + 4));
 
@@ -379,11 +379,11 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 			{
 				case PA_ERROR_INVALID_PARAMETER:
 					offset = error_attr->get_offset(error_attr);
-					DBG1(DBG_IMC, "  occurred at offset of %u bytes", offset);
+					DBG1(DBG_TNC, "  occurred at offset of %u bytes", offset);
 					break;
 				case PA_ERROR_ATTR_TYPE_NOT_SUPPORTED:
 					attr_info = error_attr->get_attr_info(error_attr);
-					DBG1(DBG_IMC, "  unsupported attribute %#B", &attr_info);
+					DBG1(DBG_TNC, "  unsupported attribute %#B", &attr_info);
 					break;
 				default:
 					break;
