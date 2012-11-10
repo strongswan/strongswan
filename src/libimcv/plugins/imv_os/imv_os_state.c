@@ -191,8 +191,8 @@ METHOD(imv_state_t, set_recommendation, void,
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
-	private_imv_os_state_t *this, chunk_t preferred_language,
-	chunk_t *reason_string, chunk_t *reason_language)
+	private_imv_os_state_t *this, enumerator_t *language_enumerator,
+	char **reason_string, char **reason_language)
 {
 	return FALSE;
 }
@@ -263,12 +263,6 @@ METHOD(imv_os_state_t, get_count, void,
 	{
 		*count_ok = this->count_ok;
 	}
-}
-
-METHOD(imv_os_state_t, get_type, os_type_t,
-	private_imv_os_state_t *this)
-{
-	return this->type;
 }
 
 METHOD(imv_os_state_t, set_package_request, void,

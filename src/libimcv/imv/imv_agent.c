@@ -474,50 +474,6 @@ METHOD(imv_agent_t, get_state, bool,
 	return TRUE;
 }
 
-METHOD(imv_agent_t, provide_recommendation, TNC_Result,
-	private_imv_agent_t *this, imv_state_t *state)
-{
-	TNC_IMV_Action_Recommendation rec;
-	TNC_IMV_Evaluation_Result eval;
-	TNC_ConnectionID connection_id;
-	TNC_UInt32 lang_len;
-	char buf[BUF_LEN];
-	chunk_t pref_lang = { buf, 0 }, reason_string, reason_lang;
-
-	state->get_recommendation(state, &rec, &eval);
-	connection_id = state->get_connection_id(state);
-
-	/* send a reason string if action recommendation is not allow */
-	if (rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
-	{
-		/* check if there a preferred language has been requested */
-		if (this->get_attribute  &&
-			this->get_attribute(this->id, connection_id,
-								TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
-								buf, &lang_len) == TNC_RESULT_SUCCESS &&
-			lang_len <= BUF_LEN)
-		{
-			pref_lang.len = lang_len;
-			DBG2(DBG_IMV, "preferred language is '%.*s'", (int)pref_lang.len,
-				 pref_lang.ptr);
-		}
-
-		/* find a reason string for the preferred or default language and set it */
-		if (this->set_attribute &&
-			state->get_reason_string(state, pref_lang, &reason_string,
-													   &reason_lang))
-		{
-			this->set_attribute(this->id, connection_id,
-								TNC_ATTRIBUTEID_REASON_STRING,
-								reason_string.len, reason_string.ptr);
-			this->set_attribute(this->id, connection_id,
-								TNC_ATTRIBUTEID_REASON_LANGUAGE,
-								reason_lang.len, reason_lang.ptr);
-		}
-	}
-	return this->provide_recommendation(this->id, connection_id, rec, eval);
-}
-
 METHOD(imv_agent_t, get_name, const char*,
 	private_imv_agent_t *this)
 {
@@ -575,6 +531,147 @@ METHOD(imv_agent_t, create_id_enumerator, enumerator_t*,
 	return this->additional_ids->create_enumerator(this->additional_ids);
 }
 
+typedef struct {
+	/**
+	 * implements enumerator_t
+	 */
+	enumerator_t public;
+
+	/**
+	 * language length
+	 */
+	TNC_UInt32 lang_len;
+
+	/**
+	 * language buffer
+	 */
+	char lang_buf[BUF_LEN];
+
+	/**
+	 * position pointer into language buffer
+	 */
+	char *lang_pos;
+
+} language_enumerator_t;
+
+/**
+ * Implementation of language_enumerator.destroy.
+ */
+static void language_enumerator_destroy(language_enumerator_t *this)
+{
+	free(this);
+}
+
+/**
+ * Implementation of language_enumerator.enumerate
+ */
+static bool language_enumerator_enumerate(language_enumerator_t *this, ...)
+{
+	char *pos, *cur_lang, **lang;
+	TNC_UInt32 len;
+	va_list args;
+
+	if (!this->lang_len)
+	{
+		return FALSE;
+	}
+	cur_lang = this->lang_pos;
+	pos = strchr(this->lang_pos, ',');
+	if (pos)
+	{
+		len = pos - this->lang_pos;
+		this->lang_pos += len + 1,
+		this->lang_len -= len + 1;
+	}
+	else
+	{
+		pos = this->lang_pos + len;
+		len = this->lang_len;
+		this->lang_pos = NULL;
+		this->lang_len = 0;
+	}
+
+	/* remove preceding whitespace */
+	while (*cur_lang == ' ' && len--)
+	{
+		cur_lang++;
+	}
+
+	/* remove trailing whitespace */
+	while (len && *(--pos) == ' ')
+	{
+		len--;
+	}
+	cur_lang[len] = '\0';
+	DBG1(DBG_IMV, "current language = '%s'", cur_lang);
+
+	va_start(args, this);
+	lang = va_arg(args, char**);
+	*lang = cur_lang;
+	va_end(args);
+
+	return TRUE;
+}
+
+METHOD(imv_agent_t, create_language_enumerator, enumerator_t*,
+	private_imv_agent_t *this, imv_state_t *state)
+{
+	language_enumerator_t *e;
+
+	/* Create a language enumerator instance */
+	e = malloc_thing(language_enumerator_t);
+
+	if (!this->get_attribute  ||
+		!this->get_attribute(this->id, state->get_connection_id(state),
+						TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
+						e->lang_buf, &e->lang_len) == TNC_RESULT_SUCCESS ||
+		e->lang_len >= BUF_LEN)
+	{
+		free(e);
+		return NULL;
+	}
+	e->public.enumerate = (void*)language_enumerator_enumerate;
+	e->public.destroy = (void*)language_enumerator_destroy;
+	e->lang_buf[e->lang_len] = '\0';
+	e->lang_pos = e->lang_buf;
+
+	return (enumerator_t*)e;
+}
+
+METHOD(imv_agent_t, provide_recommendation, TNC_Result,
+	private_imv_agent_t *this, imv_state_t *state)
+{
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
+	TNC_ConnectionID connection_id;
+	char *reason_string, *reason_lang;
+	enumerator_t *e;
+
+	state->get_recommendation(state, &rec, &eval);
+	connection_id = state->get_connection_id(state);
+
+	/* send a reason string if action recommendation is not allow */
+	if (rec != TNC_IMV_ACTION_RECOMMENDATION_ALLOW)
+	{
+		/* find a reason string for the preferred language and set it */
+		if (this->set_attribute)
+		{
+			e = create_language_enumerator(this, state);
+			if (state->get_reason_string(state, e, &reason_string, &reason_lang))
+			{
+				this->set_attribute(this->id, connection_id,
+									TNC_ATTRIBUTEID_REASON_STRING,
+									strlen(reason_string), reason_string);
+				this->set_attribute(this->id, connection_id,
+									TNC_ATTRIBUTEID_REASON_LANGUAGE,
+									strlen(reason_lang), reason_lang);
+			}
+			e->destroy(e);
+		}
+	}
+	return this->provide_recommendation(this->id, connection_id, rec, eval);
+}
+
 METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
@@ -611,12 +708,13 @@ imv_agent_t *imv_agent_create(const char *name,
 			.delete_state = _delete_state,
 			.change_state = _change_state,
 			.get_state = _get_state,
-			.provide_recommendation = _provide_recommendation,
 			.get_name = _get_name,
 			.get_id = _get_id,
 			.reserve_additional_ids = _reserve_additional_ids,
 			.count_additional_ids = _count_additional_ids,
 			.create_id_enumerator = _create_id_enumerator,
+			.create_language_enumerator = _create_language_enumerator,
+			.provide_recommendation = _provide_recommendation,
 			.destroy = _destroy,
 		},
 		.name = name,

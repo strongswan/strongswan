@@ -210,46 +210,35 @@ METHOD(imv_state_t, set_recommendation, void,
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
-	private_imv_attestation_state_t *this, chunk_t preferred_language,
-	chunk_t *reason_string, chunk_t *reason_language)
+	private_imv_attestation_state_t *this, enumerator_t *language_enumerator,
+	char **reason_string, char **reason_language)
 {
-	chunk_t pref_lang, lang;
-	u_char *pos;
+	bool match = FALSE;
+	char *lang;
 	int i;
 
-	while (eat_whitespace(&preferred_language))
+	/* set the default language */
+	*reason_language = reasons[0].lang;
+	*reason_string   = reasons[0].string;
+
+	while (language_enumerator->enumerate(language_enumerator, &lang))
 	{
-		if (!extract_token(&pref_lang, ',', &preferred_language))
-		{
-			/* last entry in a comma-separated list or single entry */
-			pref_lang = preferred_language;
-		}
-
-		/* eat trailing whitespace */
-		pos = pref_lang.ptr + pref_lang.len - 1;
-		while (pref_lang.len && *pos-- == ' ')
-		{
-			pref_lang.len--;
-		}
-
 		for (i = 0 ; i < countof(reasons); i++)
 		{
-			lang = chunk_create(reasons[i].lang, strlen(reasons[i].lang));
-			if (chunk_equals(lang, pref_lang))
+			if (streq(lang, reasons[i].lang))
 			{
-				*reason_language = lang;
-				*reason_string = chunk_create(reasons[i].string,
-										strlen(reasons[i].string));
-				return TRUE;
+				match = TRUE;
+				*reason_language = reasons[i].lang;
+				*reason_string   = reasons[i].string;
+				break;
 			}
+		}
+		if (match)
+		{
+			break;
 		}
 	}
 
-	/* no preferred language match found - use the default language */
-	*reason_string =   chunk_create(reasons[0].string,
-									strlen(reasons[0].string));
-	*reason_language = chunk_create(reasons[0].lang,
-									strlen(reasons[0].lang));
 	return TRUE;
 }
 

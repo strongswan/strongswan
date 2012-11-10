@@ -138,14 +138,6 @@ struct imv_agent_t {
 					  TNC_ConnectionID connection_id, imv_state_t **state);
 
 	/**
-	 * Deliver IMV Action Recommendation and IMV Evaluation Result to the TNCS
-	 *
-	 * @param state				state bound to a connection ID
-	 * @return					TNC result code
-	 */
-	TNC_Result (*provide_recommendation)(imv_agent_t *this, imv_state_t* state);
-
-	/**
 	 * Get IMV name
 	 *
 	 * return					IMV name
@@ -178,6 +170,22 @@ struct imv_agent_t {
 	 * Create an enumerator for the additional IMV IDs
 	 */
 	enumerator_t* (*create_id_enumerator)(imv_agent_t *this);
+
+	/**
+	 * Create a preferred languages enumerator
+	 *
+	 * @param					state of TNCCS connection
+	 */
+	enumerator_t* (*create_language_enumerator)(imv_agent_t *this,
+				   imv_state_t *state);
+
+	/**
+	 * Deliver IMV Action Recommendation and IMV Evaluation Result to the TNCS
+	 *
+	 * @param state				state bound to a connection ID
+	 * @return					TNC result code
+	 */
+	TNC_Result (*provide_recommendation)(imv_agent_t *this, imv_state_t* state);
 
 	/**
 	 * Destroys an imv_agent_t object

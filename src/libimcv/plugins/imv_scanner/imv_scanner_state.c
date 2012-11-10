@@ -73,7 +73,7 @@ struct private_imv_scanner_state_t {
 	/**
 	 * Local copy of the reason string
 	 */
-	chunk_t reason_string;
+	char *reason_string;
 };
 
 typedef struct entry_t entry_t;
@@ -91,7 +91,7 @@ struct entry_t {
  */
 static entry_t reasons[] = {
 	{ "en", "The following ports are open:" },
-	{ "de", "Die folgenden Ports sind offen" },
+	{ "de", "Die folgenden Ports sind offen:" },
 	{ "fr", "Les ports suivants sont ouverts:" },
 	{ "pl", "Następujące porty sa otwarte:" }
 };
@@ -156,60 +156,43 @@ METHOD(imv_state_t, set_recommendation, void,
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
-	private_imv_scanner_state_t *this, chunk_t preferred_language,
-	chunk_t *reason_string, chunk_t *reason_language)
+	private_imv_scanner_state_t *this, enumerator_t *language_enumerator,
+	char **reason_string, char **reason_language)
 {
-	chunk_t pref_lang, lang;
-	u_char *pos;
+	bool match = FALSE;
+	char *lang;
 	int i;
 
 	if (!this->violating_ports)
 	{
 		return FALSE;
 	}
+	/* set the default language */
+	*reason_language = reasons[0].lang;
+	*reason_string   = reasons[0].string;
 
-	while (eat_whitespace(&preferred_language))
+	while (language_enumerator->enumerate(language_enumerator, &lang))
 	{
-		if (!extract_token(&pref_lang, ',', &preferred_language))
+		for (i = 0; i < countof(reasons); i++)
 		{
-			/* last entry in a comma-separated list or single entry */
-			pref_lang = preferred_language;
-		}
-
-		/* eat trailing whitespace */
-		pos = pref_lang.ptr + pref_lang.len - 1;
-		while (pref_lang.len && *pos-- == ' ')
-		{
-			pref_lang.len--;
-		}
-
-		for (i = 0 ; i < countof(reasons); i++)
-		{
-			lang = chunk_create(reasons[i].lang, strlen(reasons[i].lang));
-			if (chunk_equals(lang, pref_lang))
+			if (streq(lang, reasons[i].lang))
 			{
-				this->reason_string = chunk_cat("cc",
-									chunk_create(reasons[i].string,
-												 strlen(reasons[i].string)),
-									chunk_create(this->violating_ports,
-												 strlen(this->violating_ports)));
-				*reason_string = this->reason_string;
-				*reason_language = lang;
-				return TRUE;
+				match = TRUE;
+				*reason_language = reasons[i].lang;
+				*reason_string   = reasons[i].string;
+				break;
 			}
 		}
+		if (match)
+		{
+			break;
+		}
 	}
-
-	/* no preferred language match found - use the default language */
-
-	this->reason_string =   chunk_cat("cc",
-									chunk_create(reasons[0].string,
-												 strlen(reasons[0].string)),
-									chunk_create(this->violating_ports,
-												 strlen(this->violating_ports)));
+	this->reason_string = malloc(strlen(*reason_string) +
+								 strlen(this->violating_ports + 1));
+	sprintf(this->reason_string, "%s%s", *reason_string, this->violating_ports);
 	*reason_string = this->reason_string;
-	*reason_language = chunk_create(reasons[0].lang,
-									strlen(reasons[0].lang));
+
 	return TRUE;
 }
 
@@ -217,7 +200,7 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_scanner_state_t *this)
 {
 	free(this->violating_ports);
-	free(this->reason_string.ptr);
+	free(this->reason_string);
 	free(this);
 }
 
