@@ -603,7 +603,6 @@ static bool language_enumerator_enumerate(language_enumerator_t *this, ...)
 		len--;
 	}
 	cur_lang[len] = '\0';
-	DBG1(DBG_IMV, "current language = '%s'", cur_lang);
 
 	va_start(args, this);
 	lang = va_arg(args, char**);
