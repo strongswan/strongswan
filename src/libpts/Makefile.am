@@ -7,6 +7,7 @@ libpts_la_LIBADD = $(top_builddir)/src/libimcv/libimcv.la
 
 if USE_TROUSERS
   libpts_la_LIBADD += -ltspi
+  AM_CFLAGS = -DTSS_TROUSERS
 endif
 
 libpts_la_SOURCES = \
