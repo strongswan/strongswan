@@ -585,8 +585,8 @@ static bool language_enumerator_enumerate(language_enumerator_t *this, ...)
 	}
 	else
 	{
-		pos = this->lang_pos + len;
 		len = this->lang_len;
+		pos = this->lang_pos + len;
 		this->lang_pos = NULL;
 		this->lang_len = 0;
 	}
@@ -619,18 +619,17 @@ METHOD(imv_agent_t, create_language_enumerator, enumerator_t*,
 
 	/* Create a language enumerator instance */
 	e = malloc_thing(language_enumerator_t);
+	e->public.enumerate = (void*)language_enumerator_enumerate;
+	e->public.destroy = (void*)language_enumerator_destroy;
 
-	if (!this->get_attribute  ||
+	if (!this->get_attribute ||
 		!this->get_attribute(this->id, state->get_connection_id(state),
 						TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
 						e->lang_buf, &e->lang_len) == TNC_RESULT_SUCCESS ||
 		e->lang_len >= BUF_LEN)
 	{
-		free(e);
-		return NULL;
+		e->lang_len = 0;
 	}
-	e->public.enumerate = (void*)language_enumerator_enumerate;
-	e->public.destroy = (void*)language_enumerator_destroy;
 	e->lang_buf[e->lang_len] = '\0';
 	e->lang_pos = e->lang_buf;
 

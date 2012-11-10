@@ -71,9 +71,9 @@ struct private_imv_scanner_state_t {
 	char *violating_ports;
 
 	/**
-	 * Local copy of the reason string
+	 * Local copy of the remediation instruction string
 	 */
-	char *reason_string;
+	char *instructions;
 };
 
 typedef struct entry_t entry_t;
@@ -90,10 +90,20 @@ struct entry_t {
  * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
-	{ "en", "The following ports are open:" },
-	{ "de", "Die folgenden Ports sind offen:" },
-	{ "fr", "Les ports suivants sont ouverts:" },
-	{ "pl", "Następujące porty sa otwarte:" }
+	{ "en", "Open server ports were detected" },
+	{ "de", "Offene Serverports wurden festgestellt" },
+	{ "fr", "Il y a des ports du serveur ouverts" },
+	{ "pl", "Są otwarte porty serwera" }
+};
+
+/**
+ * Table of multi-lingual remediation instruction string entries
+ */
+static entry_t instructions [] = {
+	{ "en", "Please close the following server ports:" },
+	{ "de", "Bitte schliessen Sie die folgenden Serverports:" },
+	{ "fr", "Fermez les ports du serveur suivants s'il vous plait:" },
+	{ "pl", "Proszę zamknąć następujące porty serwera:" }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -167,6 +177,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	{
 		return FALSE;
 	}
+
 	/* set the default language */
 	*reason_language = reasons[0].lang;
 	*reason_string   = reasons[0].string;
@@ -188,10 +199,48 @@ METHOD(imv_state_t, get_reason_string, bool,
 			break;
 		}
 	}
-	this->reason_string = malloc(strlen(*reason_string) +
-								 strlen(this->violating_ports + 1));
-	sprintf(this->reason_string, "%s%s", *reason_string, this->violating_ports);
-	*reason_string = this->reason_string;
+
+	return TRUE;
+}
+
+METHOD(imv_state_t, get_remediation_instructions, bool,
+	private_imv_scanner_state_t *this, enumerator_t *language_enumerator,
+	char **string, char **lang_code)
+{
+	bool match = FALSE;
+	char *lang;
+	int i;
+
+	if (!this->violating_ports)
+	{
+		return FALSE;
+	}
+
+	/* set the default language */
+	*lang_code = instructions[0].lang;
+	*string    = instructions[0].string;
+
+	while (language_enumerator->enumerate(language_enumerator, &lang))
+	{
+		for (i = 0; i < countof(instructions); i++)
+		{
+			if (streq(lang, instructions[i].lang))
+			{
+				match = TRUE;
+				*lang_code = instructions[i].lang;
+				*string    = instructions[i].string;
+				break;
+			}
+		}
+		if (match)
+		{
+			break;
+		}
+	}
+	this->instructions = malloc(strlen(*string) +
+								strlen(this->violating_ports) + 1);
+	sprintf(this->instructions, "%s%s", *string, this->violating_ports);
+	*string = this->instructions;
 
 	return TRUE;
 }
@@ -200,7 +249,7 @@ METHOD(imv_state_t, destroy, void,
 	private_imv_scanner_state_t *this)
 {
 	free(this->violating_ports);
-	free(this->reason_string);
+	free(this->instructions);
 	free(this);
 }
 
@@ -230,6 +279,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,
 				.get_reason_string = _get_reason_string,
+				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
 			},
 			.set_violating_ports = _set_violating_ports,

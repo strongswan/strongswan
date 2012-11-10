@@ -111,12 +111,24 @@ struct imv_state_t {
 	 *
 	 * @param language_enumerator	language enumerator
 	 * @param reason_string			reason string
-	 * @param language code			language of the returned reason string
+	 * @param reason_language		language of the returned reason string
 	 * @return						TRUE if a reason string was found
 	 */
 	bool (*get_reason_string)(imv_state_t *this,
 							  enumerator_t *language_enumerator,
-							  char **reason_string, char **language_code);
+							  char **reason_string, char **reason_language);
+
+	/**
+	 * Get remediation instructions based on the preferred language
+	 *
+	 * @param language_enumerator	language enumerator
+	 * @param string				remediation instruction string
+	 * @param lang_code				language of the remediation instructions
+	 * @return						TRUE if remediation instructions were found
+	 */
+	bool (*get_remediation_instructions)(imv_state_t *this,
+										 enumerator_t *language_enumerator,
+										 char **string, char **lang_code);
 
 	/**
 	 * Destroys an imv_state_t object

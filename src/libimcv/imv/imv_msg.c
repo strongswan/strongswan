@@ -17,6 +17,7 @@
 
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_assess_result.h"
+#include "ietf/ietf_attr_remediation_instr.h"
 
 #include <tncif_names.h>
 
@@ -190,6 +191,8 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 	pa_tnc_attr_t *attr;
+	char *string, *lang_code;
+	enumerator_t *e;
 
 	/* Send an IETF Assessment Result attribute if enabled */
 	if (lib->settings->get_bool(lib->settings, "libimcv.assessment_result",
@@ -198,6 +201,21 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 		this->state->get_recommendation(this->state, &rec, &eval);
 		attr = ietf_attr_assess_result_create(eval);
 		add_attribute(this, attr);
+
+		if (eval != TNC_IMV_EVALUATION_RESULT_COMPLIANT)
+		{
+			e = this->agent->create_language_enumerator(this->agent,
+														this->state);
+			if (this->state->get_remediation_instructions(this->state,
+												e, &string, &lang_code))
+			{
+				attr = ietf_attr_remediation_instr_create_from_string(
+									chunk_create(string, strlen(string)),
+									chunk_create(lang_code, strlen(lang_code)));
+				add_attribute(this, attr);
+			}
+			e->destroy(e);
+		}
 
 		/* send PA-TNC message with the excl flag set */
 		return send_(this, TRUE);
