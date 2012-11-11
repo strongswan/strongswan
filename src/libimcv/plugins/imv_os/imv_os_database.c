@@ -161,6 +161,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 			{
 				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
 				count_no_match++;
+				state->add_bad_package(state, package);
 			}
 		}
 		else

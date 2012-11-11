@@ -16,6 +16,7 @@
 #include "imv_os_state.h"
 
 #include <utils/debug.h>
+#include <collections/linked_list.h>
 
 typedef struct private_imv_os_state_t private_imv_os_state_t;
 
@@ -85,6 +86,16 @@ struct private_imv_os_state_t {
 	chunk_t version;
 
 	/**
+	 * List of vulnerable or blacklisted packages
+	 */
+	linked_list_t *bad_packages;
+
+	/**
+	 * Local copy of the remediation instruction string
+	 */
+	char *instructions;
+
+	/**
 	 * Number of processed packages
 	 */
 	int count;
@@ -125,10 +136,17 @@ struct entry_t {
  * Table of multi-lingual reason string entries
  */
 static entry_t reasons[] = {
-	{ "en", "" },
-	{ "de", "" },
-	{ "fr", "" },
-	{ "pl", "" }
+	{ "en", "Vulnerable or blacklisted software packages were found" },
+	{ "de", "Schwachstellenbehaftete oder gesperrte Softwarepakete wurden gefunden" },
+};
+
+/**
+ * Table of multi-lingual remediation instruction string entries
+ */
+static entry_t instructions [] = {
+	{ "en", "Please update the following software packages:\n" },
+	{ "de", "Bitte updaten Sie die folgenden Softwarepakete\n" },
+	{ "pl", "Proszę zaktualizować następujące pakiety:\n" }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -194,19 +212,111 @@ METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_os_state_t *this, enumerator_t *language_enumerator,
 	char **reason_string, char **reason_language)
 {
-	return FALSE;
+	bool match = FALSE;
+	char *lang;
+	int i;
+
+	if (!this->count_bad)
+	{
+		return FALSE;
+	}
+
+	/* set the default language */
+	*reason_language = reasons[0].lang;
+	*reason_string   = reasons[0].string;
+
+	while (language_enumerator->enumerate(language_enumerator, &lang))
+	{
+		for (i = 0; i < countof(reasons); i++)
+		{
+			if (streq(lang, reasons[i].lang))
+			{
+				match = TRUE;
+				*reason_language = reasons[i].lang;
+				*reason_string   = reasons[i].string;
+				break;
+			}
+		}
+		if (match)
+		{
+			break;
+		}
+	}
+
+	return TRUE;
+
 }
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_os_state_t *this, enumerator_t *language_enumerator,
 	char **string, char **lang_code, char **uri)
 {
-	return FALSE;
+	bool match = FALSE;
+	char *lang, *package, *pos;
+	enumerator_t *enumerator;
+	int i, len;
+
+	if (!this->count_bad)
+	{
+		return FALSE;
+	}
+
+	/* set the default language */
+	*lang_code = instructions[0].lang;
+	*string    = instructions[0].string;
+
+	while (language_enumerator->enumerate(language_enumerator, &lang))
+	{
+		for (i = 0; i < countof(instructions); i++)
+		{
+			if (streq(lang, instructions[i].lang))
+			{
+				match = TRUE;
+				*lang_code = instructions[i].lang;
+				*string    = instructions[i].string;
+				break;
+			}
+		}
+		if (match)
+		{
+			break;
+		}
+	}
+
+	/* Compute the size of the remediation string */
+	len = strlen(*string);
+
+	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
+	while (enumerator->enumerate(enumerator, &package))
+	{
+		len += strlen(package);
+	}
+	enumerator->destroy(enumerator);
+
+	pos = this->instructions = malloc(len + 1);
+	strcopy(pos, *string);
+	pos += strlen(*string);
+
+	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
+	while (enumerator->enumerate(enumerator, &package))
+	{
+		strcpy(pos, package);
+		pos += strlen(package);
+	}
+	enumerator->destroy(enumerator);
+
+	*string = this->instructions;
+	*uri = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-os.remediation_uri", NULL);
+
+	return TRUE;
 }
 
 METHOD(imv_state_t, destroy, void,
 	private_imv_os_state_t *this)
 {
+	this->bad_packages->destroy_function(this->bad_packages, free);
+	free(this->instructions);
 	free(this->info);
 	free(this->name.ptr);
 	free(this->version.ptr);
@@ -296,6 +406,12 @@ METHOD(imv_os_state_t, get_angel_count, int,
 	return this->angel_count;
 }
 
+METHOD(imv_os_state_t, add_bad_package, void,
+	private_imv_os_state_t *this, char *package)
+{
+	this->bad_packages->insert_last(this->bad_packages, strdup(package));
+}
+
 /**
  * Described in header.
  */
@@ -327,11 +443,13 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_package_request = _get_package_request,
 			.set_angel_count = _set_angel_count,
 			.get_angel_count = _get_angel_count,
+			.add_bad_package = _add_bad_package,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.bad_packages = linked_list_create(),
 	);
 
 	return &this->public.interface;

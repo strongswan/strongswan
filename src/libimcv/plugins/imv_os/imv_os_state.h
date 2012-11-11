@@ -106,6 +106,13 @@ struct imv_os_state_t {
 	 */
 	int (*get_angel_count)(imv_os_state_t *this);
 
+	/**
+	 * Store a bad package that has to be updated or removed
+	 *
+	 * @param package		Name of software package
+	 */
+	void (*add_bad_package)(imv_os_state_t *this, char *package);
+
 };
 
 /**
