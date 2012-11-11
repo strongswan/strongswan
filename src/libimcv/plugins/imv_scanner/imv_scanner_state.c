@@ -205,7 +205,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_scanner_state_t *this, enumerator_t *language_enumerator,
-	char **string, char **lang_code)
+	char **string, char **lang_code, char **uri)
 {
 	bool match = FALSE;
 	char *lang;
@@ -241,6 +241,8 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 								strlen(this->violating_ports) + 1);
 	sprintf(this->instructions, "%s%s", *string, this->violating_ports);
 	*string = this->instructions;
+	*uri = lib->settings->get_str(lib->settings,
+				"libimcv.plugins.imv-scanner.remediation_uri", NULL);
 
 	return TRUE;
 }

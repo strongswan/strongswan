@@ -17,6 +17,7 @@
 
 #include "ietf/ietf_attr.h"
 #include "ietf/ietf_attr_assess_result.h"
+#include "ietf/ietf_attr_remediation_instr.h"
 
 #include <tncif_names.h>
 
@@ -167,13 +168,38 @@ METHOD(imc_msg_t, send_, TNC_Result,
 	return result;
 }
 
+/**
+ * Print a clearly visible assessment header to the log
+ */
+static void print_assessment_header(const char *name, TNC_UInt32 id, bool *first)
+{
+	if (*first)
+	{
+		DBG1(DBG_IMC, "***** assessment of IMC %u \"%s\" *****", id, name);
+		*first = FALSE;
+	}
+}
+
+/**
+ * Print a clearly visible assessment trailer to the log
+ */
+static void print_assessment_trailer(bool first)
+{
+	if (!first)
+	{
+		DBG1(DBG_IMC, "***** end of assessment *****");
+	}
+}
+
 METHOD(imc_msg_t, receive, TNC_Result,
 	private_imc_msg_t *this, bool *fatal_error)
 {
+	TNC_UInt32 target_imc_id;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
 	pen_type_t attr_type;
 	chunk_t msg;
+	bool first = TRUE;
 
 	if (this->state->has_long(this->state))
 	{
@@ -235,6 +261,10 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			return TNC_RESULT_FATAL;
 	}
 
+	/* determine target IMC ID */
+	target_imc_id = (this->dst_id != TNC_IMCID_ANY) ?
+					 this->dst_id : this->agent->get_id(this->agent);
+
 	/* preprocess any received IETF standard error attributes */
 	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg);
 
@@ -244,24 +274,63 @@ METHOD(imc_msg_t, receive, TNC_Result,
 	{
 		attr_type = attr->get_type(attr);
 		
-		if (attr_type.vendor_id == PEN_IETF &&
-			attr_type.type == IETF_ATTR_ASSESSMENT_RESULT)
+		if (attr_type.vendor_id != PEN_IETF)
+		{
+			continue;
+		}
+		if (attr_type.type == IETF_ATTR_ASSESSMENT_RESULT)
 		{
 			ietf_attr_assess_result_t *attr_cast;
-			TNC_UInt32 target_imc_id;
 			TNC_IMV_Evaluation_Result result;
 
 			attr_cast = (ietf_attr_assess_result_t*)attr;
 			result =  attr_cast->get_result(attr_cast);
-			target_imc_id = (this->dst_id != TNC_IMCID_ANY) ?
-							 this->dst_id : this->agent->get_id(this->agent); 
 			this->state->set_result(this->state, target_imc_id, result);
 
-			DBG1(DBG_IMC, "set assessment result for IMC %u to '%N'",
-				 target_imc_id, TNC_IMV_Evaluation_Result_names, result);
+			print_assessment_header(this->agent->get_name(this->agent),
+									target_imc_id, &first);
+			DBG1(DBG_IMC, "assessment result is '%N'",
+				 TNC_IMV_Evaluation_Result_names, result);
+		}
+		else if (attr_type.type == IETF_ATTR_REMEDIATION_INSTRUCTIONS)
+		{
+			ietf_attr_remediation_instr_t *attr_cast;
+			pen_type_t parameters_type;
+			chunk_t parameters, string, lang_code;
+
+			attr_cast = (ietf_attr_remediation_instr_t*)attr;
+			parameters_type = attr_cast->get_parameters_type(attr_cast);
+			parameters = attr_cast->get_parameters(attr_cast);
+
+			print_assessment_header(this->agent->get_name(this->agent),
+									target_imc_id, &first);
+			if (parameters_type.vendor_id == PEN_IETF)
+			{
+				switch (parameters_type.type)
+				{
+					case IETF_REMEDIATION_PARAMETERS_URI:
+						DBG1(DBG_IMC, "remediation uri: '%.*s'",
+									   parameters.len, parameters.ptr);
+						break;
+					case IETF_REMEDIATION_PARAMETERS_STRING:
+						string = attr_cast->get_string(attr_cast, &lang_code);
+						DBG1(DBG_IMC, "remediation string: '%.*s' [%.*s]",
+									   string.len, string.ptr,
+									   lang_code.len, lang_code.ptr);
+						break;
+					default:
+						DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+				}
+			}
+			else
+			{
+				DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	print_assessment_trailer(first);
 		
 	return TNC_RESULT_SUCCESS;
 }

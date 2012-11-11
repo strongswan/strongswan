@@ -197,9 +197,9 @@ METHOD(imv_state_t, get_reason_string, bool,
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_test_state_t *this, enumerator_t *language_enumerator,
-	char **string, char **lang_code)
+	char **string, char **lang_code, char **uri)
 {
-
+	return FALSE;
 }
 
 METHOD(imv_state_t, destroy, void,

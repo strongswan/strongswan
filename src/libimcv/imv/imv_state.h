@@ -124,11 +124,13 @@ struct imv_state_t {
 	 * @param language_enumerator	language enumerator
 	 * @param string				remediation instruction string
 	 * @param lang_code				language of the remediation instructions
+	 * @param uri					remediation URI
 	 * @return						TRUE if remediation instructions were found
 	 */
 	bool (*get_remediation_instructions)(imv_state_t *this,
 										 enumerator_t *language_enumerator,
-										 char **string, char **lang_code);
+										 char **string, char **lang_code,
+										 char **uri);
 
 	/**
 	 * Destroys an imv_state_t object
