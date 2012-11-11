@@ -811,14 +811,23 @@ Preferred measurement hash algorithm
 .BR libimcv.plugins.imv-attestation.min_nonce_len " [0]"
 DH minimum nonce length
 .TP
-.BR libimcv.plugins.imc-os.send_info " [yes]"
+.BR libimcv.plugins.imv-attestation.remediation_uri
+URI pointing to attestation remediation instructions
+.TP
+.BR libimcv.plugins.imc-os.push_info " [yes]"
 Send operating system info without being prompted
 .TP
-.BR libimcv.plugins.imc-scanner.send_ports " [yes]"
+.BR libimcv.plugins.imv-os.remediation_uri
+URI pointing to operating system remediation instructions
+.TP
+.BR libimcv.plugins.imc-scanner.push_info " [yes]"
 Send open listening ports without being prompted
 .TP
 .BR libimcv.plugins.imv-scanner.closed_port_policy " [yes]"
 By default all ports must be closed (yes) or can be open (no)
+.TP
+.BR libimcv.plugins.imv-scanner.remediation_uri
+URI pointing to scanner remediation instructions
 .TP
 .BR libimcv.plugins.imv-scanner.tcp_ports
 List of TCP ports that can be open or must be closed
@@ -840,6 +849,9 @@ Do a handshake retry
 .TP
 .BR libimcv.plugins.imc-test.retry_command
 Command to be sent to the Test IMV in the handshake retry
+.TP
+.BR libimcv.plugins.imv-test.remediation_uri
+URI pointing to test remediation instructions
 .TP
 .BR libimcv.plugins.imv-test.rounds " [0]"
 Number of IMC-IMV retry rounds

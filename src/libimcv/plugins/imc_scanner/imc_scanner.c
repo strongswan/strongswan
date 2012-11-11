@@ -270,7 +270,7 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		return TNC_RESULT_FATAL;
 	}
 	if (lib->settings->get_bool(lib->settings,
-								"libimcv.plugins.imc-scanner.send_ports", TRUE))
+								"libimcv.plugins.imc-scanner.push_info", TRUE))
 	{
 		out_msg = imc_msg_create(imc_scanner, state, connection_id, imc_id,
 								 TNC_IMVID_ANY, msg_types[0]);
