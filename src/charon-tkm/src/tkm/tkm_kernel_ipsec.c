@@ -169,6 +169,16 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
+	if (ike_esa_select(esa_id) != TKM_OK)
+	{
+		DBG1(DBG_KNL, "error selecting new child SA (%llu)", esa_id);
+		if (ike_esa_reset(esa_id) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "child SA (%llu) deletion failed", esa_id);
+		}
+		goto failure;
+	}
+
 	DBG1(DBG_KNL, "added child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, "
 		 "esp_spi_rem: %x, role: %s)", esa_id, esa.isa_id, ntohl(spi_loc),
 		 ntohl(spi_rem), initiator ? "initiator" : "responder");
