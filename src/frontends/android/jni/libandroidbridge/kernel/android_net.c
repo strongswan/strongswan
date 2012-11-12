@@ -93,7 +93,7 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_android_net_t *this, host_t *virtual_ip, int prefix,
-	host_t *iface_ip)
+	char *iface)
 {
 	/* we get the IP from the IKE_SA once the CHILD_SA is established */
 	return SUCCESS;

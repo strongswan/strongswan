@@ -313,13 +313,13 @@ METHOD(kernel_interface_t, create_address_enumerator, enumerator_t*,
 
 METHOD(kernel_interface_t, add_ip, status_t,
 	private_kernel_interface_t *this, host_t *virtual_ip, int prefix,
-	host_t *iface_ip)
+	char *iface)
 {
 	if (!this->net)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->net->add_ip(this->net, virtual_ip, prefix, iface_ip);
+	return this->net->add_ip(this->net, virtual_ip, prefix, iface);
 }
 
 METHOD(kernel_interface_t, del_ip, status_t,

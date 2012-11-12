@@ -641,7 +641,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
-	host_t *iface_ip)
+	char *iface)
 {
 	return FAILED;
 }

@@ -741,15 +741,26 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 {
 	if (local)
 	{
-		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
-											ip, -1, this->my_host) == SUCCESS)
+		char *iface;
+
+		if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												   this->my_host, &iface))
 		{
-			this->my_vips->insert_last(this->my_vips, ip->clone(ip));
+			DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+			if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
+												ip, -1, iface) == SUCCESS)
+			{
+				this->my_vips->insert_last(this->my_vips, ip->clone(ip));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			}
+			free(iface);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			DBG1(DBG_IKE, "looking up interface for virtual IP %H failed", ip);
 		}
 	}
 	else

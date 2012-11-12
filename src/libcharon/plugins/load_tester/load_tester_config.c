@@ -342,58 +342,42 @@ static void add_ts(char *string, child_cfg_t *cfg, bool local)
  */
 static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 {
-	enumerator_t *pools, *addrs;
+	enumerator_t *enumerator;
 	mem_pool_t *pool;
-	host_t *addr, *iface = NULL, *found = NULL, *requested;
+	host_t *found = NULL, *requested;
 	identification_t *id;
-	char *name, buf[32];
+	char *iface = NULL, buf[32];
 
 	requested = host_create_any(AF_INET);
 	snprintf(buf, sizeof(buf), "ext-%d", num);
 	id = identification_create_from_string(buf);
-	pools = this->pools->create_enumerator(this->pools);
-	while (!found && pools->enumerate(pools, &pool))
+	enumerator = this->pools->create_enumerator(this->pools);
+	while (enumerator->enumerate(enumerator, &pool))
 	{
-		addrs = hydra->kernel_interface->create_address_enumerator(
-									hydra->kernel_interface, ADDR_TYPE_REGULAR);
-		while (!found && addrs->enumerate(addrs, &addr))
+		found = pool->acquire_address(pool, id, requested, MEM_POOL_NEW);
+		if (found)
 		{
-			if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
-													   addr, &name))
-			{
-				if (streq(pool->get_name(pool), name))
-				{
-					found = pool->acquire_address(pool, id, requested,
-												  MEM_POOL_NEW);
-					if (found)
-					{
-						iface = addr->clone(addr);
-					}
-				}
-				free(name);
-			}
+			iface = (char*)pool->get_name(pool);
+			break;
 		}
-		addrs->destroy(addrs);
 	}
-	pools->destroy(pools);
+	enumerator->destroy(enumerator);
 	requested->destroy(requested);
 	id->destroy(id);
 
 	if (!found)
 	{
-		DBG1(DBG_CFG, "no interface found to install load-tester IP");
+		DBG1(DBG_CFG, "no address found to install as load-tester external IP");
 		return NULL;
 	}
 	if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
 										found, this->prefix, iface) != SUCCESS)
 	{
-		DBG1(DBG_CFG, "installing load-tester IP %H failed", found);
-		iface->destroy(iface);
+		DBG1(DBG_CFG, "installing load-tester IP %H on %s failed", found, iface);
 		found->destroy(found);
 		return NULL;
 	}
-	DBG1(DBG_CFG, "installed load-tester IP %H", found);
-	iface->destroy(iface);
+	DBG1(DBG_CFG, "installed load-tester IP %H on %s", found, iface);
 	return found;
 }
 

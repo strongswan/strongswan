@@ -1664,7 +1664,7 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_netlink_net_t *this, host_t *virtual_ip, int prefix,
-	host_t *iface_ip)
+	char *iface_name)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = virtual_ip,
@@ -1715,16 +1715,10 @@ METHOD(kernel_net_t, add_ip, status_t,
 		 this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
 						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
 	{
-		lookup.ip = iface_ip;
-		entry = this->addrs->get_match(this->addrs, &lookup,
-									  (void*)addr_map_entry_match);
-		if (!entry)
+		if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
+									 (void**)&iface, iface_name) != SUCCESS)
 		{	/* if we don't find the requested interface we just use the first */
 			this->ifaces->get_first(this->ifaces, (void**)&iface);
-		}
-		else
-		{
-			iface = entry->iface;
 		}
 	}
 	if (iface)

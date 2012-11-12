@@ -333,15 +333,14 @@ struct kernel_interface_t {
 	 * Virtual IPs are attached to an interface. If an IP is added multiple
 	 * times, the IP is refcounted and not removed until del_ip() was called
 	 * as many times as add_ip().
-	 * The virtual IP is attached to the interface where the iface_ip is found.
 	 *
 	 * @param virtual_ip	virtual ip address to assign
 	 * @param prefix		prefix length to install IP with, -1 for auto
-	 * @param iface_ip		IP of an interface to attach virtual IP
+	 * @param iface			interface to install virtual IP on
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_ip) (kernel_interface_t *this, host_t *virtual_ip, int prefix,
-						host_t *iface_ip);
+						char *iface);
 
 	/**
 	 * Remove a virtual IP from an interface.
