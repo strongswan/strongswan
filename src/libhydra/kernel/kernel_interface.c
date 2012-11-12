@@ -323,13 +323,13 @@ METHOD(kernel_interface_t, add_ip, status_t,
 }
 
 METHOD(kernel_interface_t, del_ip, status_t,
-	private_kernel_interface_t *this, host_t *virtual_ip, int prefix)
+	private_kernel_interface_t *this, host_t *virtual_ip, int prefix, bool wait)
 {
 	if (!this->net)
 	{
 		return NOT_SUPPORTED;
 	}
-	return this->net->del_ip(this->net, virtual_ip, prefix);
+	return this->net->del_ip(this->net, virtual_ip, prefix, wait);
 }
 
 METHOD(kernel_interface_t, add_route, status_t,

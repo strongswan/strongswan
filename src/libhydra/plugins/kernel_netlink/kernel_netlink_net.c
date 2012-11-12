@@ -1758,7 +1758,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_netlink_net_t *this, host_t *virtual_ip, int prefix)
+	private_kernel_netlink_net_t *this, host_t *virtual_ip, int prefix,
+	bool wait)
 {
 	addr_map_entry_t *entry, lookup = {
 		.ip = virtual_ip,
@@ -1798,7 +1799,7 @@ METHOD(kernel_net_t, del_ip, status_t,
 		entry->addr->installed = FALSE;
 		status = manage_ipaddr(this, RTM_DELADDR, 0, entry->iface->ifindex,
 							   virtual_ip, prefix);
-		if (status == SUCCESS)
+		if (status == SUCCESS && wait)
 		{	/* wait until the address is really gone */
 			while (is_known_vip(this, virtual_ip))
 			{

@@ -647,7 +647,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix)
+	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
+	bool wait)
 {
 	return FAILED;
 }

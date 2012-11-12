@@ -780,7 +780,8 @@ METHOD(ike_sa_t, clear_virtual_ips, void,
 	{
 		if (local)
 		{
-			hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
+			hydra->kernel_interface->del_ip(hydra->kernel_interface,
+											vip, -1, TRUE);
 		}
 		vip->destroy(vip);
 	}
@@ -2087,7 +2088,7 @@ METHOD(ike_sa_t, destroy, void,
 
 	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
 	{
-		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1, TRUE);
 		vip->destroy(vip);
 	}
 	this->my_vips->destroy(this->my_vips);

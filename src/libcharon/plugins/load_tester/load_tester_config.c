@@ -539,7 +539,7 @@ METHOD(load_tester_config_t, delete_ip, void,
 			if (pool->release_address(pool, ip, found))
 			{
 				hydra->kernel_interface->del_ip(hydra->kernel_interface,
-												ip, this->prefix);
+												ip, this->prefix, FALSE);
 			}
 			found->destroy(found);
 			break;

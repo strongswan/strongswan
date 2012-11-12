@@ -128,9 +128,11 @@ struct kernel_net_t {
 	 *
 	 * @param virtual_ip	virtual ip address to assign
 	 * @param prefix		prefix length of the IP to uninstall, -1 for auto
+	 * @param wait			TRUE to wait until IP is gone
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_ip) (kernel_net_t *this, host_t *virtual_ip, int prefix);
+	status_t (*del_ip) (kernel_net_t *this, host_t *virtual_ip, int prefix,
+						bool wait);
 
 	/**
 	 * Add a route.

@@ -829,7 +829,7 @@ static void reinstall_vip(host_t *vip, host_t *me)
 	if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
 											   me, &iface))
 	{
-		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1, TRUE);
 		hydra->kernel_interface->add_ip(hydra->kernel_interface, vip, -1, iface);
 		free(iface);
 	}
