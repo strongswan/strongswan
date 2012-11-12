@@ -113,6 +113,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 				DBG2(DBG_IMV, "package '%s' (%.*s) not found",
 					 package, version.len, version.ptr);
 			}
+			free(package);
 			e->destroy(e);
 			continue;
 		}
