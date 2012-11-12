@@ -358,57 +358,59 @@ static host_t *host_create_any_port(int family, u_int16_t port)
 /*
  * Described in header.
  */
-host_t *host_create_from_string(char *string, u_int16_t port)
+host_t *host_create_from_string_and_family(char *string, int family,
+										   u_int16_t port)
 {
-	private_host_t *this;
+	union {
+		sockaddr_t sockaddr;
+		struct sockaddr_in v4;
+		struct sockaddr_in6 v6;
+	} addr;
 
-	if (streq(string, "%any"))
+	if ((family == AF_UNSPEC || family == AF_INET) && streq(string, "%any"))
 	{
 		return host_create_any_port(AF_INET, port);
 	}
-	if (streq(string, "%any6"))
+	if ((family == AF_UNSPEC || family == AF_INET6) && streq(string, "%any6"))
 	{
 		return host_create_any_port(AF_INET6, port);
 	}
-
-	this = host_create_empty();
-	if (strchr(string, '.'))
+	switch (family)
 	{
-		this->address.sa_family = AF_INET;
-	}
-	else
-	{
-		this->address.sa_family = AF_INET6;
-	}
-	switch (this->address.sa_family)
-	{
-		case AF_INET:
-		{
-			if (inet_pton(AF_INET, string, &this->address4.sin_addr) <=0)
+		case AF_UNSPEC:
+			if (strchr(string, '.'))
 			{
-				break;
+				goto af_inet;
 			}
-			this->address4.sin_port = htons(port);
-			this->socklen = sizeof(struct sockaddr_in);
-			return &this->public;
-		}
+			/* FALL */
 		case AF_INET6:
-		{
-			if (inet_pton(AF_INET6, string, &this->address6.sin6_addr) <=0)
+			if (inet_pton(AF_INET6, string, &addr.v6.sin6_addr) != 1)
 			{
-				break;
+				return NULL;
 			}
-			this->address6.sin6_port = htons(port);
-			this->socklen = sizeof(struct sockaddr_in6);
-			return &this->public;
-		}
+			addr.v6.sin6_port = htons(port);
+			addr.sockaddr.sa_family = AF_INET6;
+			return host_create_from_sockaddr(&addr.sockaddr);
+		case AF_INET:
+		af_inet:
+			if (inet_pton(AF_INET, string, &addr.v4.sin_addr) != 1)
+			{
+				return NULL;
+			}
+			addr.v4.sin_port = htons(port);
+			addr.sockaddr.sa_family = AF_INET;
+			return host_create_from_sockaddr(&addr.sockaddr);
 		default:
-		{
-			break;
-		}
+			return NULL;
 	}
-	free(this);
-	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_string(char *string, u_int16_t port)
+{
+	return host_create_from_string_and_family(string, AF_UNSPEC, port);
 }
 
 /*
