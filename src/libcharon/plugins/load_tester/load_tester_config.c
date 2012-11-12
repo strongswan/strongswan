@@ -18,6 +18,8 @@
 #include <daemon.h>
 #include <hydra.h>
 #include <attributes/mem_pool.h>
+#include <collections/hashtable.h>
+#include <threading/mutex.h>
 
 typedef struct private_load_tester_config_t private_load_tester_config_t;
 
@@ -150,7 +152,53 @@ struct private_load_tester_config_t {
 	 * Address prefix to use when installing dynamic addresses
 	 */
 	int prefix;
+
+	/**
+	 * Hashtable with leases in "pools", host_t => entry_t
+	 */
+	hashtable_t *leases;
+
+	/**
+	 * Mutex for leases hashtable
+	 */
+	mutex_t *mutex;
 };
+
+/**
+ * Lease entry
+ */
+typedef struct {
+	/** host reference, equal to key */
+	host_t *host;
+	/** associated identity */
+	identification_t *id;
+} entry_t;
+
+/**
+ * Destroy an entry_t
+ */
+static void entry_destroy(entry_t *this)
+{
+	this->host->destroy(this->host);
+	this->id->destroy(this->id);
+	free(this);
+}
+
+/**
+ * Hashtable hash function
+ */
+static u_int hash(host_t *key)
+{
+	return chunk_hash(key->get_address(key));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals(host_t *a, host_t *b)
+{
+	return a->ip_equals(a, b);
+}
 
 /**
  * Load external addresses to use, if any
@@ -347,6 +395,7 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 	host_t *found = NULL, *requested;
 	identification_t *id;
 	char *iface = NULL, buf[32];
+	entry_t *entry;
 
 	requested = host_create_any(AF_INET);
 	snprintf(buf, sizeof(buf), "ext-%d", num);
@@ -363,11 +412,11 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 	}
 	enumerator->destroy(enumerator);
 	requested->destroy(requested);
-	id->destroy(id);
 
 	if (!found)
 	{
 		DBG1(DBG_CFG, "no address found to install as load-tester external IP");
+		id->destroy(id);
 		return NULL;
 	}
 	if (hydra->kernel_interface->add_ip(hydra->kernel_interface,
@@ -375,9 +424,21 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 	{
 		DBG1(DBG_CFG, "installing load-tester IP %H on %s failed", found, iface);
 		found->destroy(found);
+		id->destroy(id);
 		return NULL;
 	}
 	DBG1(DBG_CFG, "installed load-tester IP %H on %s", found, iface);
+	INIT(entry,
+		.host = found->clone(found),
+		.id = id,
+	);
+	this->mutex->lock(this->mutex);
+	entry = this->leases->put(this->leases, entry->host, entry);
+	this->mutex->unlock(this->mutex);
+	if (entry)
+	{	/* shouldn't actually happen */
+		entry_destroy(entry);
+	}
 	return found;
 }
 
@@ -515,43 +576,36 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 METHOD(load_tester_config_t, delete_ip, void,
 	private_load_tester_config_t *this, host_t *ip)
 {
+	enumerator_t *enumerator;
 	mem_pool_t *pool;
-	enumerator_t *pools, *leases;
-	identification_t *id, *found = FALSE;
-	host_t *host;
-	bool online;
+	entry_t *entry;
 
-	/* find identity for this IP, so we can call release_address() */
-	pools = this->pools->create_enumerator(this->pools);
-	while (pools->enumerate(pools, &pool))
+	this->mutex->lock(this->mutex);
+	entry = this->leases->remove(this->leases, ip);
+	this->mutex->unlock(this->mutex);
+
+	if (entry)
 	{
-		leases = pool->create_lease_enumerator(pool);
-		while (leases->enumerate(leases, &id, &host, &online))
+		enumerator = this->pools->create_enumerator(this->pools);
+		while (enumerator->enumerate(enumerator, &pool))
 		{
-			if (online && host->ip_equals(host, ip))
-			{
-				found = id->clone(id);
-			}
-		}
-		leases->destroy(leases);
-		if (found)
-		{
-			if (pool->release_address(pool, ip, found))
+			if (pool->release_address(pool, entry->host, entry->id))
 			{
 				hydra->kernel_interface->del_ip(hydra->kernel_interface,
-												ip, this->prefix, FALSE);
+											entry->host, this->prefix, FALSE);
+				break;
 			}
-			found->destroy(found);
-			break;
 		}
+		enumerator->destroy(enumerator);
+		entry_destroy(entry);
 	}
-	pools->destroy(pools);
 }
-
 
 METHOD(load_tester_config_t, destroy, void,
 	private_load_tester_config_t *this)
 {
+	this->mutex->destroy(this->mutex);
+	this->leases->destroy(this->leases);
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
 	this->peer_cfg->destroy(this->peer_cfg);
 	DESTROY_IF(this->proposal);
@@ -577,6 +631,9 @@ load_tester_config_t *load_tester_config_create()
 			.destroy = _destroy,
 		},
 		.pools = linked_list_create(),
+		.leases = hashtable_create((hashtable_hash_t)hash,
+								   (hashtable_equals_t)equals, 256),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.num = 1,
 	);
 
