@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <utils/debug.h>
+
 #include "tkm_utils.h"
 
 /* Generic variable-length sequence */
@@ -33,8 +35,18 @@ void sequence_to_chunk(const byte_t * const first, const uint32_t len,
 void chunk_to_sequence(const chunk_t * const chunk, void *sequence,
 		const uint32_t typelen)
 {
+	const uint32_t seqlenmax = typelen - sizeof(uint32_t);
 	memset(sequence, 0, typelen);
 	sequence_type *seq = sequence;
-	seq->size = chunk->len;
+	if (chunk->len > seqlenmax)
+	{
+		DBG1(DBG_LIB, "chunk too large to fit into sequence %d > %d, limiting"
+			 " to %d bytes", chunk->len, seqlenmax, seqlenmax);
+		seq->size = seqlenmax;
+	}
+	else
+	{
+		seq->size = chunk->len;
+	}
 	memcpy(seq->data, chunk->ptr, seq->size);
 }
