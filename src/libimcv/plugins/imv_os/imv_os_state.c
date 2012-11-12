@@ -294,7 +294,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	enumerator->destroy(enumerator);
 
 	pos = this->instructions = malloc(len + 1);
-	strcopy(pos, *string);
+	strcpy(pos, *string);
 	pos += strlen(*string);
 
 	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
