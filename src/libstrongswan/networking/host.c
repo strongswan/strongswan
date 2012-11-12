@@ -450,7 +450,11 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 {
 	host_t *this;
 
-	this = lib->hosts->resolve(lib->hosts, string, af);
+	this = host_create_from_string_and_family(string, af, port);
+	if (!this)
+	{
+		this = lib->hosts->resolve(lib->hosts, string, af);
+	}
 	if (this)
 	{
 		this->set_port(this, port);
