@@ -1557,8 +1557,11 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			host_t *gtw;
 
 			gtw = host_create_from_chunk(msg->rtm_family, route->gtw, 0);
-			route->src_host = get_route(this, gtw, FALSE, candidate);
-			gtw->destroy(gtw);
+			if (gtw && !gtw->ip_equals(gtw, dest))
+			{
+				route->src_host = get_route(this, gtw, FALSE, candidate);
+			}
+			DESTROY_IF(gtw);
 			if (route->src_host)
 			{	/* more of the same */
 				if (!candidate ||
