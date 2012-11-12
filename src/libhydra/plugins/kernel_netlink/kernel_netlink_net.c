@@ -65,6 +65,9 @@
 /** delay before reinstalling routes (ms) */
 #define ROUTE_DELAY 100
 
+/** maximum recursion when searching for addresses in get_route() */
+#define MAX_ROUTE_RECURSION 2
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -1390,7 +1393,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
-						 bool nexthop, host_t *candidate)
+						 bool nexthop, host_t *candidate, u_int recursion)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
@@ -1401,6 +1404,11 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	rt_entry_t *route = NULL, *best = NULL;
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
+
+	if (recursion > MAX_ROUTE_RECURSION)
+	{
+		return NULL;
+	}
 
 	memset(&request, 0, sizeof(request));
 
@@ -1559,7 +1567,8 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			gtw = host_create_from_chunk(msg->rtm_family, route->gtw, 0);
 			if (gtw && !gtw->ip_equals(gtw, dest))
 			{
-				route->src_host = get_route(this, gtw, FALSE, candidate);
+				route->src_host = get_route(this, gtw, FALSE, candidate,
+											recursion + 1);
 			}
 			DESTROY_IF(gtw);
 			if (route->src_host)
@@ -1600,7 +1609,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		DBG2(DBG_KNL, "using %H as %s to reach %H", addr,
 			 nexthop ? "nexthop" : "address", dest);
 	}
-	else
+	else if (!recursion)
 	{
 		DBG2(DBG_KNL, "no %s found to reach %H",
 			 nexthop ? "nexthop" : "address", dest);
@@ -1611,13 +1620,13 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, dest, FALSE, src);
+	return get_route(this, dest, FALSE, src, 0);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, dest, TRUE, src);
+	return get_route(this, dest, TRUE, src, 0);
 }
 
 /**
