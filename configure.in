@@ -634,6 +634,7 @@ fi
 if test x$tss = xtrousers; then
 	AC_HAVE_LIBRARY([tspi],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])])
 	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
+	AC_DEFINE([TSS_TROUSERS], [], [use TrouSerS library libtspi as TSS implementation])
 fi
 
 if test x$dumm = xtrue; then
