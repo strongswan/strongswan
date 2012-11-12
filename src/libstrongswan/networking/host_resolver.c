@@ -234,14 +234,6 @@ METHOD(host_resolver_t, resolve, host_t*,
 	};
 	host_t *result;
 
-	if (streq(name, "%any") || streq(name, "0.0.0.0"))
-	{
-		return host_create_any(family ? family : AF_INET);
-	}
-	if (streq(name, "%any6") || streq(name, "::"))
-	{
-		return host_create_any(family ? family : AF_INET6);
-	}
 	if (family == AF_INET && strchr(name, ':'))
 	{	/* do not try to convert v6 addresses for v4 family */
 		return NULL;

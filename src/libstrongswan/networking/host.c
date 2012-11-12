@@ -367,13 +367,19 @@ host_t *host_create_from_string_and_family(char *string, int family,
 		struct sockaddr_in6 v6;
 	} addr;
 
-	if ((family == AF_UNSPEC || family == AF_INET) && streq(string, "%any"))
+	if (family == AF_UNSPEC || family == AF_INET)
 	{
-		return host_create_any_port(AF_INET, port);
+		if (streq(string, "%any") || streq(string, "0.0.0.0"))
+		{
+			return host_create_any_port(AF_INET, port);
+		}
 	}
-	if ((family == AF_UNSPEC || family == AF_INET6) && streq(string, "%any6"))
+	if (family == AF_UNSPEC || family == AF_INET6)
 	{
-		return host_create_any_port(AF_INET6, port);
+		if (streq(string, "%any6") || streq(string, "::"))
+		{
+			return host_create_any_port(AF_INET6, port);
+		}
 	}
 	switch (family)
 	{
@@ -392,6 +398,10 @@ host_t *host_create_from_string_and_family(char *string, int family,
 			addr.sockaddr.sa_family = AF_INET6;
 			return host_create_from_sockaddr(&addr.sockaddr);
 		case AF_INET:
+			if (strchr(string, ':'))
+			{	/* do not try to convert v6 addresses for v4 family */
+				return NULL;
+			}
 		af_inet:
 			if (inet_pton(AF_INET, string, &addr.v4.sin_addr) != 1)
 			{
