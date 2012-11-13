@@ -289,7 +289,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
 	while (enumerator->enumerate(enumerator, &package))
 	{
-		len += strlen(package);
+		len += strlen(package) + 1;
 	}
 	enumerator->destroy(enumerator);
 
@@ -302,8 +302,10 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	{
 		strcpy(pos, package);
 		pos += strlen(package);
+		*pos++ = '\n';
 	}
 	enumerator->destroy(enumerator);
+	*pos = '\0';
 
 	*string = this->instructions;
 	*uri = lib->settings->get_str(lib->settings,
