@@ -311,9 +311,9 @@ METHOD(imv_t, destroy, void,
 }
 
 /**
- * Described in header.
+ * Generic constructor.
  */
-imv_t* tnc_imv_create(char *name, char *path)
+static private_tnc_imv_t* tnc_imv_create_empty(char *name)
 {
 	private_tnc_imv_t *this;
 
@@ -333,6 +333,18 @@ imv_t* tnc_imv_create(char *name, char *path)
 		.additional_ids = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
+
+	return this;
+}
+
+/**
+ * Described in header.
+ */
+imv_t* tnc_imv_create(char *name, char *path)
+{
+	private_tnc_imv_t *this;
+
+	this = tnc_imv_create_empty(name);
 
 	this->handle = dlopen(path, RTLD_LAZY);
 	if (!this->handle)
@@ -378,6 +390,35 @@ imv_t* tnc_imv_create(char *name, char *path)
 		destroy(this);
 		return NULL;
 	}
+
+	return &this->public;
+}
+
+/**
+ * Described in header.
+ */
+imv_t* tnc_imv_create_from_functions(char *name,
+				TNC_IMV_InitializePointer initialize,
+				TNC_IMV_NotifyConnectionChangePointer notify_connection_change,
+				TNC_IMV_ReceiveMessagePointer receive_message,
+				TNC_IMV_ReceiveMessageLongPointer receive_message_long,
+				TNC_IMV_SolicitRecommendationPointer solicit_recommendation,
+				TNC_IMV_BatchEndingPointer batch_ending,
+				TNC_IMV_TerminatePointer terminate,
+				TNC_IMV_ProvideBindFunctionPointer provide_bind_function)
+{
+	private_tnc_imv_t *this;
+
+	this = tnc_imv_create_empty(name);
+
+	this->public.initialize = initialize;
+	this->public.notify_connection_change = notify_connection_change;
+	this->public.receive_message = receive_message;
+	this->public.receive_message_long = receive_message_long;
+	this->public.solicit_recommendation = solicit_recommendation;
+	this->public.batch_ending = batch_ending;
+	this->public.terminate = terminate;
+	this->public.provide_bind_function = provide_bind_function;
 
 	return &this->public;
 }
