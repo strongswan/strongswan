@@ -51,10 +51,9 @@ METHOD(imc_manager_t, add, bool,
 {
 	TNC_Version version;
 
-	/* Initialize the module */
 	imc->set_id(imc, this->next_imc_id);
 	if (imc->initialize(imc->get_id(imc), TNC_IFIMC_VERSION_1,
-			TNC_IFIMC_VERSION_1, &version) != TNC_RESULT_SUCCESS)
+						TNC_IFIMC_VERSION_1, &version) != TNC_RESULT_SUCCESS)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to initialize", imc->get_name(imc));
 		return FALSE;
@@ -62,15 +61,18 @@ METHOD(imc_manager_t, add, bool,
 	this->imcs->insert_last(this->imcs, imc);
 	this->next_imc_id++;
 
-	if (imc->provide_bind_function(imc->get_id(imc), TNC_TNCC_BindFunction)
-			!= TNC_RESULT_SUCCESS)
+	if (imc->provide_bind_function(imc->get_id(imc),
+								   TNC_TNCC_BindFunction) != TNC_RESULT_SUCCESS)
 	{
+		if (imc->terminate)
+		{
+			imc->terminate(imc->get_id(imc));
+		}
 		DBG1(DBG_TNC, "IMC \"%s\" failed to obtain bind function",
-					   imc->get_name(imc));
+			 imc->get_name(imc));
 		this->imcs->remove_last(this->imcs, (void**)&imc);
 		return FALSE;
 	}
-
 	return TRUE;
 }
 
@@ -107,12 +109,6 @@ METHOD(imc_manager_t, load, bool,
 	}
 	if (!add(this, imc))
 	{
-		if (imc->terminate &&
-			imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "IMC \"%s\" not terminated successfully",
-						   imc->get_name(imc));
-		}
 		imc->destroy(imc);
 		return FALSE;
 	}
