@@ -62,22 +62,24 @@ struct imv_os_state_t {
 	/**
 	 * Set [or with multiple attributes increment] package counters
 	 *
-	 * @param count			Number of processed packages
-	 * @param count_bad		Number of blacklisted or not updated packages
-	 * @param count_ok		Number of whitelisted packages
+	 * @param count				Number of processed packages
+	 * @param count_update		Number of not updated packages
+	 * @param count_blacklist	Number of blacklisted packages
+	 * @param count_ok			Number of whitelisted packages
 	 */
-	void (*set_count)(imv_os_state_t *this, int count, int count_bad,
-					  int count_ok);
+	void (*set_count)(imv_os_state_t *this, int count, int count_update,
+					  int count_blacklist, int count_ok);
 
 	/**
 	 * Set [or with multiple attributes increment] package counters
 	 *
-	 * @param count			Number of processed packages
-	 * @param count_bad		Number of blacklisted or not updated packages
-	 * @param count_ok		Number of whitelisted packages
+	 * @param count				Number of processed packages
+	 * @param count_update		Number of not updated packages
+	 * @param count_blacklist	Number of blacklisted packages
+	 * @param count_ok			Number of whitelisted packages
 	 */
-	void (*get_count)(imv_os_state_t *this, int *count, int *count_bad,
-					  int *count_ok);
+	void (*get_count)(imv_os_state_t *this, int *count, int *count_update,
+					  int *count_blacklist, int *count_ok);
 	/**
 	 * Set/reset OS Installed Packages request status
 	 *
@@ -110,8 +112,10 @@ struct imv_os_state_t {
 	 * Store a bad package that has to be updated or removed
 	 *
 	 * @param package		Name of software package
+	 * @param package_state	Security state of software package
 	 */
-	void (*add_bad_package)(imv_os_state_t *this, char *package);
+	void (*add_bad_package)(imv_os_state_t *this, char *package,
+							os_package_state_t package_state);
 
 };
 

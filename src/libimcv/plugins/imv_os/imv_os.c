@@ -150,7 +150,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
-	int count, count_bad, count_ok;
 
 	os_state = (imv_os_state_t*)state;
 
@@ -391,11 +390,15 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		!os_state->get_package_request(os_state) &&
 		!os_state->get_angel_count(os_state))
 	{
-		os_state->get_count(os_state, &count, &count_bad, &count_ok);
-		DBG1(DBG_IMV, "processed %d packages: %d bad, %d ok, %d not found",
-			count, count_bad, count_ok, count - count_bad - count_ok);
+		int count, count_update, count_blacklist, count_ok;
 
-		if (count_bad)
+		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
+									  &count_ok);
+		DBG1(DBG_IMV, "processed %d packages: %d not updated, %d blacklisted, "
+			 "%d ok, %d not found", count, count_update, count_blacklist,
+			 count_ok, count - count_update - count_blacklist - count_ok);
+
+		if (count_update || count_blacklist)
 		{
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,

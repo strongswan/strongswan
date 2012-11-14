@@ -24,6 +24,7 @@
 typedef struct os_info_t os_info_t;
 typedef enum os_type_t os_type_t;
 typedef enum os_fwd_status_t os_fwd_status_t;
+typedef enum os_package_state_t os_package_state_t;
 
 #include <library.h>
 
@@ -43,6 +44,17 @@ enum os_type_t {
 };
 
 extern enum_name_t *os_type_names;
+
+/**
+ * Defines the security state of a package stored in the database
+ */
+enum os_package_state_t {
+	OS_PACKAGE_STATE_UPDATE =    0,		/* latest update */
+	OS_PACKAGE_STATE_SECURITY =  1,		/* latest security fix */
+	OS_PACKAGE_STATE_BLACKLIST = 2 		/* blacklisted package */
+};
+
+extern enum_name_t *os_package_state_names;
 
 /**
  * Defines the IPv4 forwarding status

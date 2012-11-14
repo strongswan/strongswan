@@ -42,6 +42,12 @@ ENUM(os_fwd_status_names, OS_FWD_DISABLED, OS_FWD_UNKNOWN,
 	"unknown"
 );
 
+ENUM(os_package_state_names, OS_PACKAGE_STATE_UPDATE, OS_PACKAGE_STATE_BLACKLIST,
+	"",
+	" [s]",
+	" [b]"
+);
+
 /**
  * Private data of an os_info_t object.
  *

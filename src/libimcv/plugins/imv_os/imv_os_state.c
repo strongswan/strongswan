@@ -19,6 +19,9 @@
 #include <collections/linked_list.h>
 
 typedef struct private_imv_os_state_t private_imv_os_state_t;
+typedef struct package_entry_t package_entry_t;
+typedef struct reason_entry_t reason_entry_t;
+typedef struct instruction_entry_t instruction_entry_t;
 
 /**
  * Private data of an imv_os_state_t object.
@@ -101,9 +104,14 @@ struct private_imv_os_state_t {
 	int count;
 
 	/**
-	 * Number of blacklisted or not updated packages
+	 * Number of not updated packages
 	 */
-	int count_bad;
+	int count_update;
+
+	/**
+	 * Number of blacklisted packages
+	 */
+	int count_blacklist;
 
 	/**
 	 * Number of whitelisted packages
@@ -122,12 +130,27 @@ struct private_imv_os_state_t {
 
 };
 
-typedef struct entry_t entry_t;
+/**
+ * Store a bad package entry
+ */
+struct package_entry_t {
+	char *name;
+	os_package_state_t state;
+};
+
+/**
+ * Free a bad package entry
+ */
+static void free_package_entry(package_entry_t *this)
+{
+	free(this->name);
+	free(this);
+}
 
 /**
  * Define an internal reason string entry
  */
-struct entry_t {
+struct reason_entry_t {
 	char *lang;
 	char *string;
 };
@@ -135,18 +158,30 @@ struct entry_t {
 /**
  * Table of multi-lingual reason string entries
  */
-static entry_t reasons[] = {
+static reason_entry_t reasons[] = {
 	{ "en", "Vulnerable or blacklisted software packages were found" },
 	{ "de", "Schwachstellenbehaftete oder gesperrte Softwarepakete wurden gefunden" },
 };
 
 /**
- * Table of multi-lingual remediation instruction string entries
+ * Define a remediation instruction string entry
  */
-static entry_t instructions [] = {
-	{ "en", "Please update the following software packages:\n" },
-	{ "de", "Bitte updaten Sie die folgenden Softwarepakete\n" },
-	{ "pl", "Proszę zaktualizować następujące pakiety:\n" }
+struct instruction_entry_t {
+	char *lang;
+	char *update_string;
+	char *removal_string;
+};
+
+/**
+ * Tables of multi-lingual remediation instruction string entries
+ */
+static instruction_entry_t instructions [] = {
+	{ "en", "Please update the following software packages:\n",
+			"Please remove the following software packages:\n" },
+	{ "de", "Bitte updaten Sie die folgenden Softwarepakete\n",
+			"Bitte entfernen Sie die folgenden Softwarepakete\n" },
+	{ "pl", "Proszę zaktualizować następujące pakiety:\n",
+			"Proszę usunąć następujące pakiety:\n" }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -216,7 +251,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 	char *lang;
 	int i;
 
-	if (!this->count_bad)
+	if (!this->count_update && !this->count_blacklist)
 	{
 		return FALSE;
 	}
@@ -254,16 +289,13 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	bool match = FALSE;
 	char *lang, *package, *pos;
 	enumerator_t *enumerator;
-	int i, len;
+	package_entry_t *entry;
+	int i, i_chosen = 0, len = 0;
 
-	if (!this->count_bad)
+	if (!this->count_update && !this->count_blacklist)
 	{
 		return FALSE;
 	}
-
-	/* set the default language */
-	*lang_code = instructions[0].lang;
-	*string    = instructions[0].string;
 
 	while (language_enumerator->enumerate(language_enumerator, &lang))
 	{
@@ -272,8 +304,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 			if (streq(lang, instructions[i].lang))
 			{
 				match = TRUE;
-				*lang_code = instructions[i].lang;
-				*string    = instructions[i].string;
+				i_chosen = i;
 				break;
 			}
 		}
@@ -282,31 +313,67 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 			break;
 		}
 	}
+	*lang_code = instructions[i_chosen].lang;
 
 	/* Compute the size of the remediation string */
-	len = strlen(*string);
+	if (this->count_update)
+	{
+		len += strlen(instructions[i_chosen].update_string);
+	}
+	if (this->count_blacklist)
+	{
+		len += strlen(instructions[i_chosen].removal_string);
+	}
 
 	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
-	while (enumerator->enumerate(enumerator, &package))
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		len += strlen(package) + 1;
+		len += strlen(entry->name) + 1;
 	}
 	enumerator->destroy(enumerator);
 
+	/* Allocate memory for the remediation instructions */
 	pos = this->instructions = malloc(len + 1);
-	strcpy(pos, *string);
-	pos += strlen(*string);
 
-	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
-	while (enumerator->enumerate(enumerator, &package))
+	/* List of blacklisted packages, if any */
+	if (this->count_blacklist)
 	{
-		strcpy(pos, package);
-		pos += strlen(package);
-		*pos++ = '\n';
-	}
-	enumerator->destroy(enumerator);
-	*pos = '\0';
+		strcpy(pos, instructions[i_chosen].removal_string);
+		pos += strlen(instructions[i_chosen].removal_string);
 
+		enumerator = this->bad_packages->create_enumerator(this->bad_packages);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			if (entry->state == OS_PACKAGE_STATE_BLACKLIST)
+			{
+				strcpy(pos, entry->name);
+				pos += strlen(entry->name);
+				*pos++ = '\n';
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	/* List of packages in need of an update, if any */
+	if (this->count_update)
+	{
+		strcpy(pos, instructions[i_chosen].update_string);
+		pos += strlen(instructions[i_chosen].update_string);
+
+		enumerator = this->bad_packages->create_enumerator(this->bad_packages);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			if (entry->state != OS_PACKAGE_STATE_BLACKLIST)
+			{
+				strcpy(pos, entry->name);
+				pos += strlen(entry->name);
+				*pos++ = '\n';
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	*pos = '\0';
 	*string = this->instructions;
 	*uri = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-os.remediation_uri", NULL);
@@ -317,7 +384,8 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_os_state_t *this)
 {
-	this->bad_packages->destroy_function(this->bad_packages, free);
+	this->bad_packages->destroy_function(this->bad_packages,
+										(void*)free_package_entry);
 	free(this->instructions);
 	free(this->info);
 	free(this->name.ptr);
@@ -360,23 +428,30 @@ METHOD(imv_os_state_t, get_info, char*,
 }
 
 METHOD(imv_os_state_t, set_count, void,
-	private_imv_os_state_t *this, int count, int count_bad, int count_ok)
+	private_imv_os_state_t *this, int count, int count_update,
+	int count_blacklist, int count_ok)
 {
-	this->count     += count;
-	this->count_bad += count_bad;
-	this->count_ok  += count_ok;
+	this->count           += count;
+	this->count_update    += count_update;
+	this->count_blacklist += count_blacklist;
+	this->count_ok        += count_ok;
 }
 
 METHOD(imv_os_state_t, get_count, void,
-	private_imv_os_state_t *this, int *count, int *count_bad, int *count_ok)
+	private_imv_os_state_t *this, int *count, int *count_update,
+	int *count_blacklist, int *count_ok)
 {
 	if (count)
 	{
 		*count = this->count;
 	}
-	if (count_bad)
+	if (count_update)
 	{
-		*count_bad = this->count_bad;
+		*count_update = this->count_update;
+	}
+	if (count_blacklist)
+	{
+		*count_blacklist = this->count_blacklist;
 	}
 	if (count_ok)
 	{
@@ -409,9 +484,15 @@ METHOD(imv_os_state_t, get_angel_count, int,
 }
 
 METHOD(imv_os_state_t, add_bad_package, void,
-	private_imv_os_state_t *this, char *package)
+	private_imv_os_state_t *this, char *package,
+	os_package_state_t package_state)
 {
-	this->bad_packages->insert_last(this->bad_packages, strdup(package));
+	package_entry_t *entry;
+
+	entry = malloc_thing(package_entry_t);
+	entry->name = strdup(package);
+	entry->state = package_state;
+	this->bad_packages->insert_last(this->bad_packages, entry);
 }
 
 /**

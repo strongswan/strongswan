@@ -143,9 +143,9 @@ struct private_attest_db_t {
 	bool relative;
 
 	/**
-	 * TRUE if a security issue exists
+	 * Package security state
 	 */
-	bool security;
+	os_package_state_t security;
 
 	/**
 	 * Sequence number for ordering entries
@@ -722,9 +722,9 @@ METHOD(attest_db_t, set_relative, void,
 }
 
 METHOD(attest_db_t, set_security, void,
-	private_attest_db_t *this)
+	private_attest_db_t *this, os_package_state_t security)
 {
-	this->security = TRUE;
+	this->security = security;
 }
 
 METHOD(attest_db_t, set_sequence, void,
@@ -897,7 +897,8 @@ METHOD(attest_db_t, list_packages, void,
 {
 	enumerator_t *e;
 	char *package, *version;
-	int gid, gid_old = 0, security, spaces, count = 0;
+	os_package_state_t security;
+	int gid, gid_old = 0, spaces, count = 0;
 	time_t t;
 
 	if (this->pid)
@@ -924,7 +925,8 @@ METHOD(attest_db_t, list_packages, void,
 						printf(" ");
 					}
 				}
-				printf(" %T (%s) %s\n", &t, TRUE, version, security ? "[s]" : "");
+				printf(" %T (%s)%N\n", &t, TRUE, version,
+					 os_package_state_names, security);
 				count++;
 			}
 			e->destroy(e);
@@ -1493,9 +1495,10 @@ METHOD(attest_db_t, add, bool,
 					DB_UINT, this->gid, DB_UINT, this->pid, DB_TEXT,
 					this->version, DB_UINT, this->security, DB_INT, t) == 1;
 
-		printf("'%s' package %s (%s) %s%sinserted into database\n",
+		printf("'%s' package %s (%s)%N %sinserted into database\n",
 				this->product, this->package, this->version,
-				this->security ? "[s] " : "", success ? "" : "could not be ");
+				os_package_state_names, this->security,
+				success ? "" : "could not be ");
 	}
 	return success;
 }

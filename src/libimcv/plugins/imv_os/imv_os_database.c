@@ -46,8 +46,9 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	chunk_t os_name, os_version, name, version;
 	os_type_t os_type;
 	size_t os_version_len;
-	int pid, gid, security;
-	int count = 0, count_ok = 0, count_no_match = 0;
+	os_package_state_t package_state;
+	int pid, gid;
+	int count = 0, count_ok = 0, count_no_match = 0, count_blacklist = 0;
 	enumerator_t *e;
 	status_t status = SUCCESS;
 	bool found, match;
@@ -139,10 +140,10 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		found = FALSE;
 		match = FALSE;
 
-		while (e->enumerate(e, &cur_release, &security))
+		while (e->enumerate(e, &cur_release, &package_state))
 		{
 			found = TRUE;
-			if (streq(release, cur_release))
+			if (streq(release, cur_release) || streq("*", cur_release))
 			{
 				match = TRUE;
 				break;
@@ -154,15 +155,25 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		{
 			if (match)
 			{
-				DBG2(DBG_IMV, "package '%s' (%s)%s is ok", package, release,
-							   security ? " [s]" : "");
-				count_ok++;
+				if (package_state == OS_PACKAGE_STATE_BLACKLIST)
+				{
+					DBG2(DBG_IMV, "package '%s' (%s) is blacklisted",
+								   package, release);
+					count_blacklist++;
+					state->add_bad_package(state, package, package_state);
+				}
+				else
+				{
+					DBG2(DBG_IMV, "package '%s' (%s)%N is ok", package, release,
+								   os_package_state_names, package_state);
+					count_ok++;
+				}
 			}
 			else
 			{
 				DBG1(DBG_IMV, "package '%s' (%s) no match", package, release);
 				count_no_match++;
-				state->add_bad_package(state, package);
+				state->add_bad_package(state, package, package_state);
 			}
 		}
 		else
@@ -173,7 +184,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		free(release);
 	}
 	free(product);
-	state->set_count(state, count, count_no_match, count_ok);
+	state->set_count(state, count, count_no_match, count_blacklist, count_ok);
 
 	return status;
 }

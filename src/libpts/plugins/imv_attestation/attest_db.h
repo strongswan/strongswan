@@ -23,7 +23,7 @@
 #define ATTEST_DB_H_
 
 #include <pts/pts_meas_algo.h>
-
+#include <os_info/os_info.h>
 #include <library.h>
 
 typedef struct attest_db_t attest_db_t;
@@ -161,9 +161,9 @@ struct attest_db_t {
 	void (*set_relative)(attest_db_t *this);
 
 	/**
-	 * Set the security vulnerability flag
+	 * Set the package security state
 	 */
-	void (*set_security)(attest_db_t *this);
+	void (*set_security)(attest_db_t *this, os_package_state_t security);
 
 	/**
 	 * Set the sequence number

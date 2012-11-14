@@ -128,7 +128,7 @@ static void do_args(int argc, char *argv[])
 			{ "delete", no_argument, NULL, 'd' },
 			{ "del", no_argument, NULL, 'd' },
 			{ "aik", required_argument, NULL, 'A' },
-			{ "security", no_argument, NULL, 'B' },
+			{ "blacklist", no_argument, NULL, 'B' },
 			{ "component", required_argument, NULL, 'C' },
 			{ "comp", required_argument, NULL, 'C' },
 			{ "directory", required_argument, NULL, 'D' },
@@ -142,8 +142,9 @@ static void do_args(int argc, char *argv[])
 			{ "relative", no_argument, NULL, 'R' },
 			{ "rel", no_argument, NULL, 'R' },
 			{ "sequence", required_argument, NULL, 'S' },
-			{ "version", required_argument, NULL, 'V' },
 			{ "seq", required_argument, NULL, 'S' },
+			{ "version", required_argument, NULL, 'V' },
+			{ "security", no_argument, NULL, 'Y' },
 			{ "sha1", no_argument, NULL, '1' },
 			{ "sha256", no_argument, NULL, '2' },
 			{ "sha384", no_argument, NULL, '3' },
@@ -229,7 +230,7 @@ static void do_args(int argc, char *argv[])
 				continue;
 			}
 			case 'B':
-				attest->set_security(attest);
+				attest->set_security(attest, OS_PACKAGE_STATE_BLACKLIST);
 				continue;
 			case 'C':
 				if (!attest->set_component(attest, optarg, op == OP_ADD))
@@ -289,6 +290,9 @@ static void do_args(int argc, char *argv[])
 				{
 					exit(EXIT_FAILURE);
 				}
+				continue;
+			case 'Y':
+				attest->set_security(attest, OS_PACKAGE_STATE_SECURITY);
 				continue;
 			case '1':
 				attest->set_algo(attest, PTS_MEAS_ALGO_SHA1);

@@ -22,6 +22,8 @@
 #include <syslog.h>
 #include <time.h>
 
+#include "imv_os_state.h"
+
 #include <library.h>
 #include <utils/debug.h>
 
