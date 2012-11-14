@@ -38,11 +38,6 @@ struct private_tnc_imv_t {
 	imv_t public;
 
 	/**
-	 * Path of loaded IMV
-	 */
-	char *path;
-
-	/**
 	 * Name of loaded IMV
 	 */
 	char *name;
@@ -287,10 +282,10 @@ METHOD(imv_t, type_supported, bool,
 
 	for (i = 0; i < this->type_count; i++)
 	{
-	    vid = this->supported_vids[i];
-	    subtype = this->supported_subtypes[i];
+		vid = this->supported_vids[i];
+		subtype = this->supported_subtypes[i];
 
-	    if ((vid == TNC_VENDORID_ANY && subtype == TNC_SUBTYPE_ANY) ||
+		if ((vid == TNC_VENDORID_ANY && subtype == TNC_SUBTYPE_ANY) ||
 			(vid == msg_vid && (subtype == TNC_SUBTYPE_ANY ||
 			 subtype == msg_subtype)))
 		{
@@ -303,13 +298,15 @@ METHOD(imv_t, type_supported, bool,
 METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
-	dlclose(this->handle);
+	if (this->handle)
+	{
+		dlclose(this->handle);
+	}
 	this->mutex->destroy(this->mutex);
 	this->additional_ids->destroy_function(this->additional_ids, free);
 	free(this->supported_vids);
 	free(this->supported_subtypes);
 	free(this->name);
-	free(this->path);
 	free(this);
 }
 
@@ -332,8 +329,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 			.type_supported = _type_supported,
 			.destroy = _destroy,
 		},
-		.name = name,
-		.path = path,
+		.name = strdup(name),
 		.additional_ids = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
@@ -342,7 +338,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMV \"%s\" failed to load: %s", name, dlerror());
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
@@ -351,8 +347,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_Initialize in %s: %s\n",
 					   path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 	this->public.notify_connection_change =
@@ -363,8 +358,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_SolicitRecommendation in %s: %s\n",
 					   path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 	this->public.receive_message =
@@ -381,8 +375,7 @@ imv_t* tnc_imv_create(char *name, char *path)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMV_ProvideBindFunction in %s: %s\n",
 					  path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 

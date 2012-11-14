@@ -163,9 +163,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		}
 
 		/* copy the IMC/IMV name */
-		name = malloc(token.len + 1);
-		memcpy(name, token.ptr, token.len);
-		name[token.len] = '\0';
+		name = strndup(token.ptr, token.len);
 
 		/* advance to the IMC/IMV path and extract it */
 		if (!eat_whitespace(&line))
@@ -180,9 +178,7 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		}
 
 		/* copy the IMC/IMV path */
-		path = malloc(token.len + 1);
-		memcpy(path, token.ptr, token.len);
-		path[token.len] = '\0';
+		path = strndup(token.ptr, token.len);
 
 		/* load and register an IMC/IMV instance */
 		if (is_imc)
@@ -193,6 +189,8 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 		{
 			success = tnc->imvs->load(tnc->imvs, name, path);
 		}
+		free(name);
+		free(path);
 		if (!success)
 		{
 			break;

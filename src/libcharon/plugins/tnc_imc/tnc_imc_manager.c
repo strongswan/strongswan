@@ -103,8 +103,6 @@ METHOD(imc_manager_t, load, bool,
 	imc = tnc_imc_create(name, path);
 	if (!imc)
 	{
-		free(name);
-		free(path);
 		return FALSE;
 	}
 	if (!add(this, imc))

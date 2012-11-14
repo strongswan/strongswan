@@ -119,8 +119,6 @@ METHOD(imv_manager_t, load, bool,
 	imv = tnc_imv_create(name, path);
 	if (!imv)
 	{
-		free(name);
-		free(path);
 		return FALSE;
 	}
 	if (!add(this, imv))

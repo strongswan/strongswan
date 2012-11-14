@@ -38,11 +38,6 @@ struct private_tnc_imc_t {
 	imc_t public;
 
 	/**
-	 * Path of loaded IMC
-	 */
-	char *path;
-
-	/**
 	 * Name of loaded IMC
 	 */
 	char *name;
@@ -291,10 +286,10 @@ METHOD(imc_t, type_supported, bool,
 
 	for (i = 0; i < this->type_count; i++)
 	{
-	    vid = this->supported_vids[i];
-	    subtype = this->supported_subtypes[i];
+		vid = this->supported_vids[i];
+		subtype = this->supported_subtypes[i];
 
-	    if ((vid == TNC_VENDORID_ANY && subtype == TNC_SUBTYPE_ANY) ||
+		if ((vid == TNC_VENDORID_ANY && subtype == TNC_SUBTYPE_ANY) ||
 			(vid == msg_vid && (subtype == TNC_SUBTYPE_ANY ||
 			 subtype == msg_subtype)))
 		{
@@ -307,13 +302,15 @@ METHOD(imc_t, type_supported, bool,
 METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
-	dlclose(this->handle);
+	if (this->handle)
+	{
+		dlclose(this->handle);
+	}
 	this->mutex->destroy(this->mutex);
 	this->additional_ids->destroy(this->additional_ids);
 	free(this->supported_vids);
 	free(this->supported_subtypes);
 	free(this->name);
-	free(this->path);
 	free(this);
 }
 
@@ -335,9 +332,8 @@ imc_t* tnc_imc_create(char *name, char *path)
 			.set_message_types_long = _set_message_types_long,
 			.type_supported = _type_supported,
 			.destroy = _destroy,
-        },
-		.name = name,
-		.path = path,
+		},
+		.name = strdup(name),
 		.additional_ids = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
@@ -346,46 +342,43 @@ imc_t* tnc_imc_create(char *name, char *path)
 	if (!this->handle)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to load: %s", name, dlerror());
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
 	this->public.initialize = dlsym(this->handle, "TNC_IMC_Initialize");
 	if (!this->public.initialize)
-    {
+	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_Initialize in %s: %s\n",
 					   path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 	this->public.notify_connection_change =
 						 dlsym(this->handle, "TNC_IMC_NotifyConnectionChange");
-    this->public.begin_handshake = dlsym(this->handle, "TNC_IMC_BeginHandshake");
+	this->public.begin_handshake = dlsym(this->handle, "TNC_IMC_BeginHandshake");
 	if (!this->public.begin_handshake)
-    {
+	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_BeginHandshake in %s: %s\n",
 					   path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
-    this->public.receive_message =
+	this->public.receive_message =
 						dlsym(this->handle, "TNC_IMC_ReceiveMessage");
-    this->public.receive_message_long =
+	this->public.receive_message_long =
 						dlsym(this->handle, "TNC_IMC_ReceiveMessageLong");
-    this->public.batch_ending =
+	this->public.batch_ending =
 						dlsym(this->handle, "TNC_IMC_BatchEnding");
-    this->public.terminate =
+	this->public.terminate =
 						dlsym(this->handle, "TNC_IMC_Terminate");
-    this->public.provide_bind_function =
+	this->public.provide_bind_function =
 						dlsym(this->handle, "TNC_IMC_ProvideBindFunction");
-    if (!this->public.provide_bind_function)
+	if (!this->public.provide_bind_function)
 	{
 		DBG1(DBG_TNC, "could not resolve TNC_IMC_ProvideBindFunction in %s: %s\n",
 					  path, dlerror());
-		dlclose(this->handle);
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
