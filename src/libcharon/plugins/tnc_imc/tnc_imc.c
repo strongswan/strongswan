@@ -315,9 +315,9 @@ METHOD(imc_t, destroy, void,
 }
 
 /**
- * Described in header.
+ * Generic constructor
  */
-imc_t* tnc_imc_create(char *name, char *path)
+static private_tnc_imc_t* tnc_imc_create_empty(char *name)
 {
 	private_tnc_imc_t *this;
 
@@ -337,6 +337,18 @@ imc_t* tnc_imc_create(char *name, char *path)
 		.additional_ids = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
+
+	return this;
+}
+
+/**
+ * See header
+ */
+imc_t* tnc_imc_create(char *name, char *path)
+{
+	private_tnc_imc_t *this;
+
+	this = tnc_imc_create_empty(name);
 
 	this->handle = dlopen(path, RTLD_LAZY);
 	if (!this->handle)
@@ -381,6 +393,35 @@ imc_t* tnc_imc_create(char *name, char *path)
 		destroy(this);
 		return NULL;
 	}
+
+	return &this->public;
+}
+
+/**
+ * See header
+ */
+imc_t* tnc_imc_create_from_functions(char *name,
+				TNC_IMC_InitializePointer initialize,
+				TNC_IMC_NotifyConnectionChangePointer notify_connection_change,
+				TNC_IMC_BeginHandshakePointer begin_handshake,
+				TNC_IMC_ReceiveMessagePointer receive_message,
+				TNC_IMC_ReceiveMessageLongPointer receive_message_long,
+				TNC_IMC_BatchEndingPointer batch_ending,
+				TNC_IMC_TerminatePointer terminate,
+				TNC_IMC_ProvideBindFunctionPointer provide_bind_function)
+{
+	private_tnc_imc_t *this;
+
+	this = tnc_imc_create_empty(name);
+
+	this->public.initialize = initialize;
+	this->public.notify_connection_change = notify_connection_change;
+	this->public.begin_handshake = begin_handshake;
+	this->public.receive_message = receive_message;
+	this->public.receive_message_long = receive_message_long;
+	this->public.batch_ending = batch_ending;
+	this->public.terminate = terminate;
+	this->public.provide_bind_function = provide_bind_function;
 
 	return &this->public;
 }

@@ -25,12 +25,28 @@
 #include <tnc/imc/imc.h>
 
 /**
- * Create an Integrity Measurement Collector.
+ * Create an Integrity Measurement Collector loaded from a library.
  *
  * @param name			name of the IMC
  * @param filename		path to the dynamic IMC library
  * @return				instance of the imc_t interface
  */
 imc_t* tnc_imc_create(char *name, char *filename);
+
+/**
+ * Create an Integrity Measurement Collector from a set of IMC functions.
+ *
+ * @param name			name of the IMC
+ * @return				instance of the imc_t interface
+ */
+imc_t* tnc_imc_create_from_functions(char *name,
+				TNC_IMC_InitializePointer initialize,
+				TNC_IMC_NotifyConnectionChangePointer notify_connection_change,
+				TNC_IMC_BeginHandshakePointer begin_handshake,
+				TNC_IMC_ReceiveMessagePointer receive_message,
+				TNC_IMC_ReceiveMessageLongPointer receive_message_long,
+				TNC_IMC_BatchEndingPointer batch_ending,
+				TNC_IMC_TerminatePointer terminate,
+				TNC_IMC_ProvideBindFunctionPointer provide_bind_function);
 
 #endif /** TNC_IMC_H_ @}*/
