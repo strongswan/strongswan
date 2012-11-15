@@ -259,24 +259,10 @@ bool tnc_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 
 		if (load_imcvs)
 		{
-			char *tnc_config;
-
-			tnc_config = lib->settings->get_str(lib->settings,
-								"libtnccs.tnc_config", "/etc/tnc_config");
-			if (!load_imcvs_from_config(tnc_config, is_imc))
-			{
-				if (is_imc)
-				{
-					tnc->imcs->destroy(tnc->imcs);
-					tnc->imcs = NULL;
-				}
-				else
-				{
-					tnc->imvs->destroy(tnc->imvs);
-					tnc->imvs = NULL;
-				}
-				return FALSE;
-			}
+			load_imcvs_from_config(
+						lib->settings->get_str(lib->settings,
+									"libtnccs.tnc_config", "/etc/tnc_config"),
+						is_imc);
 		}
 	}
 	return TRUE;
