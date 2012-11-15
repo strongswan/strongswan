@@ -110,7 +110,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 				 * don't have the VPN components built into the system image.
 				 * com.android.vpndialogs/com.android.vpndialogs.ConfirmDialog
 				 * will not be found then */
-				new VpnNotSupportedError().show(getFragmentManager(), "ErrorDialog");
+				VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported);
 			}
 		}
 		else
@@ -228,12 +228,25 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	 */
 	public static class VpnNotSupportedError extends DialogFragment
 	{
+		static final String ERROR_MESSAGE_ID = "org.strongswan.android.VpnNotSupportedError.MessageId";
+
+		public static void showWithMessage(Activity activity, int messageId)
+		{
+			Bundle bundle = new Bundle();
+			bundle.putInt(ERROR_MESSAGE_ID, messageId);
+			VpnNotSupportedError dialog = new VpnNotSupportedError();
+			dialog.setArguments(bundle);
+			dialog.show(activity.getFragmentManager(), "ErrorDialog");
+		}
+
 		@Override
 		public Dialog onCreateDialog(Bundle savedInstanceState)
 		{
+			final Bundle arguments = getArguments();
+			final int messageId = arguments.getInt(ERROR_MESSAGE_ID);
 			return new AlertDialog.Builder(getActivity())
 				.setTitle(R.string.vpn_not_supported_title)
-				.setMessage(getString(R.string.vpn_not_supported))
+				.setMessage(messageId)
 				.setCancelable(false)
 				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
