@@ -232,7 +232,7 @@ METHOD(private_key_t, destroy, void,
 		JNIEnv *env;
 
 		androidjni_attach_thread(&env);
-		if (android_sdk_version >= ANDROID_JELLY_BEAN)
+		if (android_sdk_version == ANDROID_JELLY_BEAN)
 		{	/* there is a bug in JB that causes a SIGSEGV if the key object is
 			 * garbage collected so we intentionally leak the reference to it */
 			DBG1(DBG_LIB, "intentionally leaking private key reference due to "
