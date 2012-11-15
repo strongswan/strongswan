@@ -197,9 +197,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		*offset += 2 + value.len;
 
 		entry = malloc_thing(entry_t);
-		entry->name = malloc(name.len + 1);
-		memcpy(entry->name, name.ptr, name.len);
-		entry->name[name.len] = '\0';
+		entry->name = strndup(name.ptr, name.len);
 		entry->value = chunk_clone(value);
 		this->list->insert_last(this->list, entry);
 	}

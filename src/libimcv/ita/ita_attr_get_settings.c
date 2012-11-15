@@ -135,7 +135,6 @@ METHOD(pa_tnc_attr_t, process, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t count;
-	char *name_str;
 	chunk_t name;
 	status_t status = FAILED;
 
@@ -160,10 +159,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		*offset += 2 + name.len;
 
-		name_str = malloc(name.len + 1);
-		memcpy(name_str, name.ptr, name.len);
-		name_str[name.len] = '\0';
-		this->list->insert_last(this->list, name_str);
+		this->list->insert_last(this->list, strndup(name.ptr, name.len));
 	}
 	status = SUCCESS;
 

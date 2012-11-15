@@ -91,9 +91,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	while (package_enumerator->enumerate(package_enumerator, &name, &version))
 	{
 		/* Convert package name chunk to a string */
-		package = malloc(name.len + 1);
-		memcpy(package, name.ptr, name.len);
-		package[name.len] = '\0';
+		package = strndup(name.ptr, name.len);
 		count++;
 
 		/* Get primary key of package */
@@ -121,9 +119,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		e->destroy(e);
 
 		/* Convert package version chunk to a string */
-		release = malloc(version.len + 1);
-		memcpy(release, version.ptr, version.len);
-		release[version.len] = '\0';
+		release = strndup(version.ptr, version.len);
 
 		/* Enumerate over all acceptable versions */
 		e = this->db->query(this->db,

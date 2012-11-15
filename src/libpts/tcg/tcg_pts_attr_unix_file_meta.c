@@ -252,9 +252,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		entry->accessed = accessed;
 		entry->owner = owner;
 		entry->group = group;
-		entry->filename = malloc(filename.len + 1);
-		entry->filename[filename.len] = '\0';
-		memcpy(entry->filename, filename.ptr, filename.len);
+		entry->filename = strndup(filename.ptr, filename.len);
 
 		this->metadata->add(this->metadata, entry);
 	}

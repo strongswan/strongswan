@@ -96,9 +96,7 @@ METHOD(pa_tnc_attr_t, build, void,
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_ita_attr_command_t *this, u_int32_t *offset)
 {
-	this->command = malloc(this->value.len + 1);
-	memcpy(this->command, this->value.ptr, this->value.len);
-	this->command[this->value.len] = '\0';
+	this->command = strndup(this->value.ptr, this->value.len);
 
 	return SUCCESS;
 }

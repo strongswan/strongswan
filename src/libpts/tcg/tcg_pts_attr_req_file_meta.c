@@ -162,10 +162,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	this->directory_flag = (flags & DIRECTORY_CONTENTS_FLAG) !=
 							PTS_REQ_FILE_META_NO_FLAGS;
-
-	this->pathname = malloc(pathname.len + 1);
-	memcpy(this->pathname, pathname.ptr, pathname.len);
-	this->pathname[pathname.len] = '\0';
+	this->pathname = strndup(pathname.ptr, pathname.len);
 
 	reader->destroy(reader);
 	return SUCCESS;
