@@ -25,6 +25,7 @@
     <string name="search">Suchen</string>
     <string name="vpn_not_supported_title">VPN nicht unterstützt</string>
     <string name="vpn_not_supported">Ihr Gerät unterstützt keine VPN Anwendungen.\nBitte kontaktieren Sie den Hersteller.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN Verbindungen sind nicht möglich im abgeriegelten Modus.</string>
     <string name="loading">Laden&#8230;</string>
 
     <!-- Log view -->

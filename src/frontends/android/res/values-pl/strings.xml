@@ -27,6 +27,7 @@
     <string name="search">Szukaj</string>
     <string name="vpn_not_supported_title">Nie obsługiwany VPN</string>
     <string name="vpn_not_supported">Urządzenie nie obsługuje aplikacji VPN.\nProszę skontaktować się z producentem.</string>
+    <string name="vpn_not_supported_during_lockdown">Polączenia nie sa możliwe w trybie zamkniętym</string>
     <string name="loading">Wczytywanie&#8230;</string>
 
     <!-- Log view -->

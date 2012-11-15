@@ -25,6 +25,7 @@
     <string name="search">Search</string>
     <string name="vpn_not_supported_title">VPN not supported</string>
     <string name="vpn_not_supported">Your device does not support VPN applications.\nPlease contact the manufacturer.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported in lockdown mode.</string>
     <string name="loading">Loading&#8230;</string>
 
     <!-- Log view -->

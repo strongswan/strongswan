@@ -95,7 +95,17 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	 */
 	protected void prepareVpnService(Bundle profileInfo)
 	{
-		Intent intent = VpnService.prepare(this);
+		Intent intent;
+		try
+		{
+			intent = VpnService.prepare(this);
+		}
+		catch (IllegalStateException ex)
+		{
+			/* this happens if the always-on VPN feature (Android 4.2+) is activated */
+			VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_during_lockdown);
+			return;
+		}
 		/* store profile info until the user grants us permission */
 		mProfileInfo = profileInfo;
 		if (intent != null)
