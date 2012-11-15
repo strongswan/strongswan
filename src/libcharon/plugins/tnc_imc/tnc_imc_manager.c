@@ -116,6 +116,37 @@ METHOD(imc_manager_t, load, bool,
 	return TRUE;
 }
 
+METHOD(imc_manager_t, load_from_functions, bool,
+	private_tnc_imc_manager_t *this, char *name,
+	TNC_IMC_InitializePointer initialize,
+	TNC_IMC_NotifyConnectionChangePointer notify_connection_change,
+	TNC_IMC_BeginHandshakePointer begin_handshake,
+	TNC_IMC_ReceiveMessagePointer receive_message,
+	TNC_IMC_ReceiveMessageLongPointer receive_message_long,
+	TNC_IMC_BatchEndingPointer batch_ending,
+	TNC_IMC_TerminatePointer terminate,
+	TNC_IMC_ProvideBindFunctionPointer provide_bind_function)
+{
+	imc_t *imc;
+
+	imc = tnc_imc_create_from_functions(name,
+										initialize, notify_connection_change,
+										begin_handshake, receive_message,
+										receive_message_long, batch_ending,
+										terminate, provide_bind_function);
+	if (!imc)
+	{
+		return FALSE;
+	}
+	if (!add(this, imc))
+	{
+		imc->destroy(imc);
+		return FALSE;
+	}
+	DBG1(DBG_TNC, "IMC %u \"%s\" loaded", imc->get_id(imc), name);
+	return TRUE;
+}
+
 METHOD(imc_manager_t, is_registered, bool,
 	private_tnc_imc_manager_t *this, TNC_IMCID id)
 {
@@ -346,6 +377,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.load = _load,
+			.load_from_functions = _load_from_functions,
 			.is_registered = _is_registered,
 			.reserve_id = _reserve_id,
 			.get_preferred_language = _get_preferred_language,

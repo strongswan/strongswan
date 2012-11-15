@@ -35,7 +35,6 @@
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;
 
-
 /**
  * Private data of an imv_manager_t object.
  */
@@ -129,6 +128,37 @@ METHOD(imv_manager_t, load, bool,
 		return FALSE;
 	}
 	DBG1(DBG_TNC, "IMV %u \"%s\" loaded from '%s'", imv->get_id(imv), name, path);
+	return TRUE;
+}
+
+METHOD(imv_manager_t, load_from_functions, bool,
+	private_tnc_imv_manager_t *this, char *name,
+	TNC_IMV_InitializePointer initialize,
+	TNC_IMV_NotifyConnectionChangePointer notify_connection_change,
+	TNC_IMV_ReceiveMessagePointer receive_message,
+	TNC_IMV_ReceiveMessageLongPointer receive_message_long,
+	TNC_IMV_SolicitRecommendationPointer solicit_recommendation,
+	TNC_IMV_BatchEndingPointer batch_ending,
+	TNC_IMV_TerminatePointer terminate,
+	TNC_IMV_ProvideBindFunctionPointer provide_bind_function)
+{
+	imv_t *imv;
+
+	imv = tnc_imv_create_from_functions(name,
+										initialize,notify_connection_change,
+										receive_message, receive_message_long,
+										solicit_recommendation, batch_ending,
+										terminate, provide_bind_function);
+	if (!imv)
+	{
+		return FALSE;
+	}
+	if (!add(this, imv))
+	{
+		imv->destroy(imv);
+		return FALSE;
+	}
+	DBG1(DBG_TNC, "IMV %u \"%s\" loaded", imv->get_id(imv), name);
 	return TRUE;
 }
 
@@ -427,6 +457,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
 			.load = _load,
+			.load_from_functions = _load_from_functions,
 			.is_registered = _is_registered,
 			.reserve_id = _reserve_id,
 			.get_recommendation_policy = _get_recommendation_policy,
