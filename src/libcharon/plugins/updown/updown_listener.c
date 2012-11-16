@@ -200,7 +200,7 @@ METHOD(listener_t, child_updown, bool,
 		char command[1024];
 		host_t *my_client, *other_client;
 		u_int8_t my_client_mask, other_client_mask;
-		char *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc, *dns;
+		char *virtual_ip, *iface, *mark_in, *mark_out, *udp_enc, *dns, *xauth;
 		mark_t mark;
 		bool is_host, is_ipv6;
 		FILE *shell;
@@ -265,6 +265,23 @@ METHOD(listener_t, child_updown, bool,
 
 		}
 
+		if (ike_sa->has_condition(ike_sa, COND_EAP_AUTHENTICATED) ||
+			ike_sa->has_condition(ike_sa, COND_XAUTH_AUTHENTICATED))
+		{
+			if (asprintf(&xauth, "PLUTO_XAUTH_ID='%Y' ",
+						 ike_sa->get_other_eap_id(ike_sa)) < 0)
+			{
+				xauth = NULL;
+			}
+		}
+		else
+		{
+			if (asprintf(&xauth, "") < 0)
+			{
+				xauth = NULL;
+			}
+		}
+
 		if (up)
 		{
 			if (hydra->kernel_interface->get_interface(hydra->kernel_interface,
@@ -311,6 +328,7 @@ METHOD(listener_t, child_updown, bool,
 				"%s"
 				"%s"
 				"%s"
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 is_host ? "-host" : "-client",
@@ -326,6 +344,7 @@ METHOD(listener_t, child_updown, bool,
 				 other_client, other_client_mask,
 				 other_ts->get_from_port(other_ts),
 				 other_ts->get_protocol(other_ts),
+				 xauth,
 				 virtual_ip,
 				 mark_in,
 				 mark_out,
@@ -341,6 +360,7 @@ METHOD(listener_t, child_updown, bool,
 		free(udp_enc);
 		free(dns);
 		free(iface);
+		free(xauth);
 
 		DBG3(DBG_CHD, "running updown script: %s", command);
 		shell = popen(command, "r");
