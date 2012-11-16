@@ -397,6 +397,11 @@ struct private_ike_sa_manager_t {
 	 * reuse existing IKE_SAs in checkout_by_config
 	 */
 	bool reuse_ikesa;
+
+	/**
+	 * Configured IKE_SA limit, if any
+	 */
+	u_int ikesa_limit;
 };
 
 /**
@@ -1203,34 +1208,46 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 		{
 			case NOT_FOUND:
 			{	/* we've not seen this packet yet, create a new IKE_SA */
-				id->set_responder_spi(id, our_spi);
-				ike_sa = ike_sa_create(id, FALSE, ike_version);
-				if (ike_sa)
+				if (!this->ikesa_limit ||
+					this->public.get_count(&this->public) < this->ikesa_limit)
 				{
-					entry = entry_create();
-					entry->ike_sa = ike_sa;
-					entry->ike_sa_id = id->clone(id);
+					id->set_responder_spi(id, our_spi);
+					ike_sa = ike_sa_create(id, FALSE, ike_version);
+					if (ike_sa)
+					{
+						entry = entry_create();
+						entry->ike_sa = ike_sa;
+						entry->ike_sa_id = id;
 
-					segment = put_entry(this, entry);
-					entry->checked_out = TRUE;
-					unlock_single_segment(this, segment);
+						segment = put_entry(this, entry);
+						entry->checked_out = TRUE;
+						unlock_single_segment(this, segment);
 
-					entry->message_id = message->get_message_id(message);
-					entry->init_hash = hash;
+						entry->message_id = message->get_message_id(message);
+						entry->init_hash = hash;
 
-					DBG2(DBG_MGR, "created IKE_SA %s[%u]",
-						 ike_sa->get_name(ike_sa),
-						 ike_sa->get_unique_id(ike_sa));
+						DBG2(DBG_MGR, "created IKE_SA %s[%u]",
+							 ike_sa->get_name(ike_sa),
+							 ike_sa->get_unique_id(ike_sa));
+
+						charon->bus->set_sa(charon->bus, ike_sa);
+						return ike_sa;
+					}
+					else
+					{
+						DBG1(DBG_MGR, "creating IKE_SA failed, ignoring message");
+					}
 				}
 				else
 				{
-					remove_init_hash(this, hash);
-					chunk_free(&hash);
-					DBG1(DBG_MGR, "ignoring message, no such IKE_SA");
+					DBG1(DBG_MGR, "ignoring %N, hitting IKE_SA limit (%u)",
+						 exchange_type_names, message->get_exchange_type(message),
+						 this->ikesa_limit);
 				}
+				remove_init_hash(this, hash);
+				chunk_free(&hash);
 				id->destroy(id);
-				charon->bus->set_sa(charon->bus, ike_sa);
-				return ike_sa;
+				return NULL;
 			}
 			case FAILED:
 			{	/* we failed to allocate an SPI */
@@ -2048,6 +2065,9 @@ ike_sa_manager_t *ike_sa_manager_create()
 		free(this);
 		return NULL;
 	}
+
+	this->ikesa_limit = lib->settings->get_int(lib->settings,
+									"%s.ikesa_limit", 0, charon->name);
 
 	this->table_size = get_nearest_powerof2(lib->settings->get_int(
 									lib->settings, "%s.ikesa_table_size",
