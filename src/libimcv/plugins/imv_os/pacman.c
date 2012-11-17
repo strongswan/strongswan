@@ -344,6 +344,8 @@ static void process_packages(char *filename, char *product, bool update)
 
 		if ((!vid && !security) || (vid && !add_version))
 		{
+			free(version_update);
+			free(version_delete);
 			continue;
 		}
 
@@ -359,6 +361,8 @@ static void process_packages(char *filename, char *product, bool update)
 			{
 				fprintf(stderr, "could not store version '%s' to database\n",
 								 version);
+				free(version_update);
+				free(version_delete);
 				fclose(file);
 				db->destroy(db);
 				exit(EXIT_FAILURE);
@@ -377,6 +381,8 @@ static void process_packages(char *filename, char *product, bool update)
 			{
 				fprintf(stderr, "could not update version '%s' to database\n",
 								 version);
+				free(version_update);
+				free(version_delete);
 				fclose(file);
 				db->destroy(db);
 				exit(EXIT_FAILURE);
@@ -395,6 +401,8 @@ static void process_packages(char *filename, char *product, bool update)
 			{
 				fprintf(stderr, "could not delete version '%s' from database\n",
 								 version_delete);
+				free(version_update);
+				free(version_delete);
 				fclose(file);
 				db->destroy(db);
 				exit(EXIT_FAILURE);
