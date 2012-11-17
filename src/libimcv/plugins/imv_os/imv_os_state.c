@@ -287,7 +287,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	char **string, char **lang_code, char **uri)
 {
 	bool match = FALSE;
-	char *lang, *package, *pos;
+	char *lang, *pos;
 	enumerator_t *enumerator;
 	package_entry_t *entry;
 	int i, i_chosen = 0, len = 0;
