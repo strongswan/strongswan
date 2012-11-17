@@ -439,7 +439,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		this->evidence->destroy(this->evidence);
+		DESTROY_IF(this->evidence);
 		free(this->value.ptr);
 		free(this);
 	}

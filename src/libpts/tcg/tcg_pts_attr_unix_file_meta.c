@@ -275,7 +275,7 @@ METHOD(pa_tnc_attr_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		this->metadata->destroy(this->metadata);
+		DESTROY_IF(this->metadata);
 		free(this->value.ptr);
 		free(this);
 	}
