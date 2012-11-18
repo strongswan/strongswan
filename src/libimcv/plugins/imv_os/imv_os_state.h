@@ -27,6 +27,13 @@
 #include <library.h>
 
 typedef struct imv_os_state_t imv_os_state_t;
+typedef enum os_settings_t os_settings_t;
+
+enum os_settings_t {
+	OS_SETTINGS_FWD_ENABLED =         1,
+	OS_SETTINGS_DEFAULT_PWD_ENABLED = 2,
+	OS_SETTINGS_NON_MARKET_APPS =     4
+};
 
 /**
  * Internal state of an imv_os_t connection instance
@@ -93,6 +100,20 @@ struct imv_os_state_t {
 	 * @return				TRUE if set, FALSE if unset
 	 */
 	bool (*get_package_request)(imv_os_state_t *this);
+
+	/**
+	 * Set OS settings
+	 *
+	 * @param settings		OS settings
+	 */
+	void (*set_os_settings)(imv_os_state_t *this, u_int settings);
+
+	/**
+	 * Get OS settings
+	 *
+	 * @return				OS settings
+	 */
+	u_int (*get_os_settings)(imv_os_state_t *this);
 
 	/**
 	 * Increase/Decrease the ITA Angel count

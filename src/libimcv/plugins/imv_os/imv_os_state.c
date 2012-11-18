@@ -20,7 +20,7 @@
 
 typedef struct private_imv_os_state_t private_imv_os_state_t;
 typedef struct package_entry_t package_entry_t;
-typedef struct reason_entry_t reason_entry_t;
+typedef struct entry_t entry_t;
 typedef struct instruction_entry_t instruction_entry_t;
 
 /**
@@ -94,6 +94,11 @@ struct private_imv_os_state_t {
 	linked_list_t *bad_packages;
 
 	/**
+	 * Local copy of the reason string
+	 */
+	char *reasons;
+
+	/**
 	 * Local copy of the remediation instruction string
 	 */
 	char *instructions;
@@ -124,6 +129,11 @@ struct private_imv_os_state_t {
 	bool package_request;
 
 	/**
+	 * OS Settings
+	 */
+	u_int os_settings;
+
+	/**
 	 * Angel count
 	 */
 	int angel_count;
@@ -148,19 +158,51 @@ static void free_package_entry(package_entry_t *this)
 }
 
 /**
- * Define an internal reason string entry
+ * Define a language string entry
  */
-struct reason_entry_t {
+struct entry_t {
 	char *lang;
 	char *string;
 };
 
 /**
+ * Table of multi-lingual improper settings reason string entries
+ */
+static entry_t settings_reasons[] = {
+	{ "en", "Improper OS settings were detected" },
+	{ "de", "Unzulässige OS Einstellungen wurden festgestellt" }
+};
+
+/**
  * Table of multi-lingual reason string entries
  */
-static reason_entry_t reasons[] = {
+static entry_t reasons[] = {
 	{ "en", "Vulnerable or blacklisted software packages were found" },
-	{ "de", "Schwachstellenbehaftete oder gesperrte Softwarepakete wurden gefunden" },
+	{ "de", "Schwachstellenbehaftete oder gesperrte Softwarepakete wurden gefunden" }
+};
+
+/**
+ * Table of multi-lingual forwarding enable string entries
+ */
+static entry_t instruction_fwd_enabled[] = {
+	{ "en", "Please disable IP forwarding" },
+	{ "de", "Bitte deaktivieren Sie das IP Forwarding" }
+};
+
+/**
+ * Table of multi-lingual default password enabled string entries
+ */
+static entry_t instruction_default_pwd_enabled[] = {
+	{ "en", "Please change the default password" },
+	{ "de", "Bitte ändern Sie das default Passwort" }
+};
+
+/**
+ * Table of multi-lingual defaul install non market apps string entries
+ */
+static entry_t instruction_non_market_apps[] = {
+	{ "en", "Do not allow the installation of apps from unknown sources" },
+	{ "de", "Erlauben Sie nicht die Installation von Apps von unbekannten Quellen" }
 };
 
 /**
@@ -248,17 +290,13 @@ METHOD(imv_state_t, get_reason_string, bool,
 	char **reason_string, char **reason_language)
 {
 	bool match = FALSE;
-	char *lang;
-	int i;
+	char *lang, *pos;
+	int i, i_chosen = 0, len = 0, nr_of_reasons = 0;
 
-	if (!this->count_update && !this->count_blacklist)
+	if (!this->count_update && !this->count_blacklist & !this->os_settings)
 	{
 		return FALSE;
 	}
-
-	/* set the default language */
-	*reason_language = reasons[0].lang;
-	*reason_string   = reasons[0].string;
 
 	while (language_enumerator->enumerate(language_enumerator, &lang))
 	{
@@ -267,8 +305,7 @@ METHOD(imv_state_t, get_reason_string, bool,
 			if (streq(lang, reasons[i].lang))
 			{
 				match = TRUE;
-				*reason_language = reasons[i].lang;
-				*reason_string   = reasons[i].string;
+				i_chosen = i;
 				break;
 			}
 		}
@@ -277,9 +314,40 @@ METHOD(imv_state_t, get_reason_string, bool,
 			break;
 		}
 	}
+	*reason_language = reasons[i_chosen].lang;
+
+	if (this->count_update ||  this->count_blacklist)
+	{
+		len += strlen(reasons[i_chosen].string);
+		nr_of_reasons++;
+	}
+	if (this->os_settings)
+	{
+		len += strlen(settings_reasons[i_chosen].string);
+		nr_of_reasons++;
+	}
+
+	/* Allocate memory for the reason string */
+	pos = this->reasons = malloc(len + nr_of_reasons);
+
+	if (this->count_update ||  this->count_blacklist)
+	{
+		strcpy(pos, reasons[i_chosen].string);
+		pos += strlen(reasons[i_chosen].string);
+		if (--nr_of_reasons)
+		{
+			*pos++ = '\n';
+		}
+	}
+	if (this->os_settings)
+	{
+		strcpy(pos, settings_reasons[i_chosen].string);
+		pos += strlen(settings_reasons[i_chosen].string);
+	}
+	*pos = '\0';
+	*reason_string = this->reasons;
 
 	return TRUE;
-
 }
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
@@ -290,9 +358,9 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	char *lang, *pos;
 	enumerator_t *enumerator;
 	package_entry_t *entry;
-	int i, i_chosen = 0, len = 0;
+	int i, i_chosen = 0, len = 0, nr_of_instructions = 0;
 
-	if (!this->count_update && !this->count_blacklist)
+	if (!this->count_update && !this->count_blacklist & !this->os_settings)
 	{
 		return FALSE;
 	}
@@ -324,6 +392,21 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	{
 		len += strlen(instructions[i_chosen].removal_string);
 	}
+	if (this->os_settings & OS_SETTINGS_FWD_ENABLED)
+	{
+		len += strlen(instruction_fwd_enabled[i_chosen].string);
+		nr_of_instructions++;
+	}
+	if (this->os_settings & OS_SETTINGS_DEFAULT_PWD_ENABLED)
+	{
+		len += strlen(instruction_default_pwd_enabled[i_chosen].string);
+		nr_of_instructions++;
+	}
+	if (this->os_settings & OS_SETTINGS_NON_MARKET_APPS)
+	{
+		len += strlen(instruction_non_market_apps[i_chosen].string);
+		nr_of_instructions++;
+	}
 
 	enumerator = this->bad_packages->create_enumerator(this->bad_packages);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -333,7 +416,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	enumerator->destroy(enumerator);
 
 	/* Allocate memory for the remediation instructions */
-	pos = this->instructions = malloc(len + 1);
+	pos = this->instructions = malloc(len + nr_of_instructions + 1);
 
 	/* List of blacklisted packages, if any */
 	if (this->count_blacklist)
@@ -373,6 +456,31 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 		enumerator->destroy(enumerator);
 	}
 
+	/* Add instructions concerning improper OS settings */
+	if (this->os_settings & OS_SETTINGS_FWD_ENABLED)
+	{
+		strcpy(pos, instruction_fwd_enabled[i_chosen].string);
+		pos += strlen(instruction_fwd_enabled[i_chosen].string);
+		if (--nr_of_instructions)
+		{
+			*pos++ = '\n';
+		}
+	}
+	if (this->os_settings & OS_SETTINGS_DEFAULT_PWD_ENABLED)
+	{
+		strcpy(pos, instruction_default_pwd_enabled[i_chosen].string);
+		pos += strlen(instruction_default_pwd_enabled[i_chosen].string);
+		if (--nr_of_instructions)
+		{
+			*pos++ = '\n';
+		}
+	}
+	if (this->os_settings & OS_SETTINGS_NON_MARKET_APPS)
+	{
+		strcpy(pos, instruction_non_market_apps[i_chosen].string);
+		pos += strlen(instruction_non_market_apps[i_chosen].string);
+	}
+
 	*pos = '\0';
 	*string = this->instructions;
 	*uri = lib->settings->get_str(lib->settings,
@@ -386,6 +494,7 @@ METHOD(imv_state_t, destroy, void,
 {
 	this->bad_packages->destroy_function(this->bad_packages,
 										(void*)free_package_entry);
+	free(this->reasons);
 	free(this->instructions);
 	free(this->info);
 	free(this->name.ptr);
@@ -471,6 +580,18 @@ METHOD(imv_os_state_t, get_package_request, bool,
 	return this->package_request;
 }
 
+METHOD(imv_os_state_t, set_os_settings, void,
+	private_imv_os_state_t *this, u_int settings)
+{
+	this->os_settings |= settings;
+}
+
+METHOD(imv_os_state_t, get_os_settings, u_int,
+	private_imv_os_state_t *this)
+{
+	return this->os_settings;
+}
+
 METHOD(imv_os_state_t, set_angel_count, void,
 	private_imv_os_state_t *this, bool start)
 {
@@ -524,6 +645,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_count = _get_count,
 			.set_package_request = _set_package_request,
 			.get_package_request = _get_package_request,
+			.set_os_settings = _set_os_settings,
+			.get_os_settings = _get_os_settings,
 			.set_angel_count = _set_angel_count,
 			.get_angel_count = _get_angel_count,
 			.add_bad_package = _add_bad_package,

@@ -150,6 +150,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_name = chunk_empty;
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
+	char non_market_apps_str[] = "install_non_market_apps";
 
 	os_state = (imv_os_state_t*)state;
 
@@ -241,6 +242,11 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					fwd_status = attr_cast->get_status(attr_cast);
 					DBG1(DBG_IMV, "IPv4 forwarding status: %N",
 								   os_fwd_status_names, fwd_status);
+					if (fwd_status == OS_FWD_ENABLED)
+					{
+						os_state->set_os_settings(os_state,
+											OS_SETTINGS_FWD_ENABLED);
+					}
 					break;
 				}
 				case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
@@ -252,6 +258,11 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					default_pwd_status = attr_cast->get_status(attr_cast);
 					DBG1(DBG_IMV, "factory default password: %sabled",
 								   default_pwd_status ? "en":"dis");
+					if (default_pwd_status)
+					{
+						os_state->set_os_settings(os_state,
+											OS_SETTINGS_DEFAULT_PWD_ENABLED);
+					}
 					break;
 				}
 				case IETF_ATTR_INSTALLED_PACKAGES:
@@ -301,6 +312,12 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 					e = attr_cast->create_enumerator(attr_cast);
 					while (e->enumerate(e, &name, &value))
 					{
+						if (streq(name, non_market_apps_str) &&
+							chunk_equals(value, chunk_from_chars('1')))
+						{
+							os_state->set_os_settings(os_state,
+												OS_SETTINGS_NON_MARKET_APPS);
+						}
 						DBG1(DBG_IMV, "setting '%s'", name);
 						dbg_imv_multi_line(value);
 					}
@@ -323,58 +340,33 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	if (os_name.len && os_version.len)
 	{
 		os_type_t os_type;
-		char *product_info;
-		char *uri = "http://remediation.strongswan.org/fix-it/";
-		char *string = "use a Linux operating system instead of Windows 1.2.3";
-		char *lang_code = "en";
+		ita_attr_get_settings_t *attr_cast;
 
+		/* set the OS type, name and version */
 		os_type = os_type_from_name(os_name);
 		os_state->set_info(os_state,os_type, os_name, os_version);
-		product_info = os_state->get_info(os_state, NULL, NULL, NULL);
 
-		if (streq(product_info, "Windows 1.2.3"))
+		/* requesting installed packages */
+		os_state->set_package_request(os_state, TRUE);
+		attr = ietf_attr_attr_request_create(PEN_IETF,
+											 IETF_ATTR_INSTALLED_PACKAGES);
+		out_msg->add_attribute(out_msg, attr);
+
+		/* requesting Android or Linux settings */
+		attr = ita_attr_get_settings_create();
+		attr_cast = (ita_attr_get_settings_t*)attr;
+
+		if (os_type == OS_TYPE_ANDROID)
 		{
-			DBG1(DBG_IMV, "OS '%s' is not supported", product_info);
-
-			attr = ietf_attr_remediation_instr_create_from_string(
-								chunk_create(string, strlen(string)),
-								chunk_create(lang_code, strlen(lang_code)));
-			out_msg->add_attribute(out_msg, attr);
-			attr = ietf_attr_remediation_instr_create_from_uri(
-								chunk_create(uri, strlen(uri)));
-			out_msg->add_attribute(out_msg, attr);
-
-			state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR);
-			assessment = TRUE;
+			attr_cast->add(attr_cast, "android_id");
+			attr_cast->add(attr_cast, non_market_apps_str);
 		}
 		else
 		{
-			ita_attr_get_settings_t *attr_cast;
-
-			/* requesting installed packages */
-			os_state->set_package_request(os_state, TRUE);
-			attr = ietf_attr_attr_request_create(PEN_IETF,
-								IETF_ATTR_INSTALLED_PACKAGES);
-			out_msg->add_attribute(out_msg, attr);
-
-			/* requesting Android or Linux settings */
-			attr = ita_attr_get_settings_create();
-			attr_cast = (ita_attr_get_settings_t*)attr;
-
-			if (os_type == OS_TYPE_ANDROID)
-			{
-				attr_cast->add(attr_cast, "android_id");
-				attr_cast->add(attr_cast, "install_non_market_apps");
-			}
-			else
-			{
-				attr_cast->add(attr_cast, "/proc/sys/kernel/random/boot_id");
-				attr_cast->add(attr_cast, "/proc/sys/kernel/tainted");
-			}
-			out_msg->add_attribute(out_msg, attr);
+			attr_cast->add(attr_cast, "/proc/sys/kernel/random/boot_id");
+			attr_cast->add(attr_cast, "/proc/sys/kernel/tainted");
 		}
+		out_msg->add_attribute(out_msg, attr);
 	}
 
 	if (fatal_error)
@@ -398,7 +390,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			 "%d ok, %d not found", count, count_update, count_blacklist,
 			 count_ok, count - count_update - count_blacklist - count_ok);
 
-		if (count_update || count_blacklist)
+		if (count_update || count_blacklist ||
+			os_state->get_os_settings(os_state))
 		{
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
