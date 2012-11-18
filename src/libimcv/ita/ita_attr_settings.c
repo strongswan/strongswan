@@ -22,6 +22,8 @@
 #include <pen/pen.h>
 #include <utils/debug.h>
 
+#include <string.h>
+
 typedef struct private_ita_attr_settings_t private_ita_attr_settings_t;
 typedef struct entry_t entry_t;
 

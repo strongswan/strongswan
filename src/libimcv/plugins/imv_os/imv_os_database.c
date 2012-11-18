@@ -17,6 +17,8 @@
 
 #include <utils/debug.h>
 
+#include <string.h>
+
 typedef struct private_imv_os_database_t private_imv_os_database_t;
 
 /**

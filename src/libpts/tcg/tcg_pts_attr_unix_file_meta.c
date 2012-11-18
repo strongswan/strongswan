@@ -21,6 +21,8 @@
 #include <collections/linked_list.h>
 #include <utils/debug.h>
 
+#include <string.h>
+
 typedef struct private_tcg_pts_attr_file_meta_t private_tcg_pts_attr_file_meta_t;
 
 /**

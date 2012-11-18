@@ -20,6 +20,8 @@
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
+#include <string.h>
+
 typedef struct private_tcg_pts_attr_req_file_meas_t private_tcg_pts_attr_req_file_meas_t;
 
 /**
