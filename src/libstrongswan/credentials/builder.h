@@ -139,6 +139,8 @@ enum builder_part_t {
 	BUILD_RSA_EXP2,
 	/** coefficient (coeff) of a RSA key, chunk_t */
 	BUILD_RSA_COEFF,
+	/** generate (p) and (q) as safe primes */
+	BUILD_SAFE_PRIMES,
 	/** end of variable argument builder list */
 	BUILD_END,
 };

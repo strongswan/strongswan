@@ -132,10 +132,10 @@ static void mpz_clear_sensitive(mpz_t z)
 /**
  * Create a mpz prime of at least prime_size
  */
-static status_t compute_prime(private_gmp_rsa_private_key_t *this,
-							  size_t prime_size, mpz_t *prime)
+static status_t compute_prime(size_t prime_size, bool safe, mpz_t *prime)
 {
 	rng_t *rng;
+	mpz_t q;
 	chunk_t random_bytes;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
@@ -147,6 +147,8 @@ static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 	}
 
 	mpz_init(*prime);
+	mpz_init(q);
+
 	do
 	{
 		if (!rng->allocate_bytes(rng, prime_size, &random_bytes))
@@ -155,17 +157,36 @@ static status_t compute_prime(private_gmp_rsa_private_key_t *this,
 			rng->destroy(rng);
 			return FAILED;
 		}
-		/* make sure the two most significant bits are set */
-		random_bytes.ptr[0] = random_bytes.ptr[0] | 0xC0;
 
-		mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
-		mpz_nextprime (*prime, *prime);
+		/* make sure the two most significant bits are set */
+		if (safe)
+		{
+			random_bytes.ptr[0] &= 0x7F;
+			random_bytes.ptr[0] |= 0x60;
+			mpz_import(q, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			do
+			{
+				mpz_nextprime (q, q);
+				mpz_mul_ui(*prime, q, 2);
+				mpz_add_ui(*prime, *prime, 1);
+			}
+			while (mpz_probab_prime_p(*prime, 10) == 0);
+		}
+		else
+		{
+			random_bytes.ptr[0] |= 0xC0;
+			mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			mpz_nextprime (*prime, *prime);
+		}
 		chunk_clear(&random_bytes);
 	}
-	/* check if it isn't too large */
+
+	/* check if the prime isn't too large */
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
 
 	rng->destroy(rng);
+	mpz_clear(q);
+
 	return SUCCESS;
 }
 
@@ -600,6 +621,7 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	mpz_t p, q, n, e, d, exp1, exp2, coeff, m, q1, t;
 	private_gmp_rsa_private_key_t *this;
 	u_int key_size = 0;
+	bool safe_prime = FALSE;
 
 	while (TRUE)
 	{
@@ -607,6 +629,9 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 		{
 			case BUILD_KEY_SIZE:
 				key_size = va_arg(args, u_int);
+				continue;
+			case BUILD_SAFE_PRIMES:
+				safe_prime = TRUE;
 				continue;
 			case BUILD_END:
 				break;
@@ -620,19 +645,16 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	this = gmp_rsa_private_key_create_empty();
 	key_size = key_size / BITS_PER_BYTE;
 
 	/* Get values of primes p and q  */
-	if (compute_prime(this, key_size/2, &p) != SUCCESS)
+	if (compute_prime(key_size/2, safe_prime, &p) != SUCCESS)
 	{
-		free(this);
 		return NULL;
 	}
-	if (compute_prime(this, key_size/2, &q) != SUCCESS)
+	if (compute_prime(key_size/2, safe_prime, &q) != SUCCESS)
 	{
 		mpz_clear(p);
-		free(this);
 		return NULL;
 	}
 
@@ -651,7 +673,7 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 
 	mpz_mul(n, p, q);						/* n = p*q */
 	mpz_init_set_ui(e, PUBLIC_EXPONENT);	/* assign public exponent */
-	mpz_init_set(m, p);					/* m = p */
+	mpz_init_set(m, p);						/* m = p */
 	mpz_sub_ui(m, m, 1);					/* m = m -1 */
 	mpz_init_set(q1, q);					/* q1 = q */
 	mpz_sub_ui(q1, q1, 1);					/* q1 = q1 -1 */
@@ -679,6 +701,8 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	mpz_clear_sensitive(q1);
 	mpz_clear_sensitive(m);
 	mpz_clear_sensitive(t);
+
+	this = gmp_rsa_private_key_create_empty();
 
 	/* apply values */
 	*(this->p) = *p;
