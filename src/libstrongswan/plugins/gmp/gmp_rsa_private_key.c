@@ -185,7 +185,7 @@ static status_t compute_prime(size_t prime_size, bool safe, mpz_t *prime)
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
 
 	rng->destroy(rng);
-	mpz_clear(q);
+	mpz_clear_sensitive(q);
 
 	return SUCCESS;
 }
