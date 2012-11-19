@@ -347,6 +347,16 @@ METHOD(imc_msg_t, create_attribute_enumerator, enumerator_t*,
 	return this->pa_msg->create_attribute_enumerator(this->pa_msg);
 }
 
+METHOD(imc_msg_t, get_encoding, chunk_t,
+	private_imc_msg_t *this)
+{
+	if (this->pa_msg)
+	{
+		return this->pa_msg->get_encoding(this->pa_msg);
+	}
+	return chunk_empty;
+}
+
 METHOD(imc_msg_t, destroy, void,
 	private_imc_msg_t *this)
 {
@@ -374,6 +384,7 @@ imc_msg_t *imc_msg_create(imc_agent_t *agent, imc_state_t *state,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_encoding = _get_encoding,
 			.destroy = _destroy,
 		},
 		.connection_id = connection_id,
@@ -444,6 +455,7 @@ imc_msg_t *imc_msg_create_from_long_data(imc_agent_t *agent, imc_state_t *state,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_encoding = _get_encoding,
 			.destroy = _destroy,
 		},
 		.connection_id = connection_id,

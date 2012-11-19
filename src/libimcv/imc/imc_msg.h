@@ -78,6 +78,13 @@ struct imc_msg_t {
 	enumerator_t* (*create_attribute_enumerator)(imc_msg_t *this);
 
 	/**
+	 * Get the encoding of the IMC message.
+	 *
+	 * @return					message encoding, internal data
+	 */
+	chunk_t (*get_encoding)(imc_msg_t *this);
+
+	/**
 	 * Destroys a imc_msg_t object.
 	 */
 	void (*destroy)(imc_msg_t *this);

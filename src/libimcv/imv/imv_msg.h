@@ -98,6 +98,13 @@ struct imv_msg_t {
 	enumerator_t* (*create_attribute_enumerator)(imv_msg_t *this);
 
 	/**
+	 * Get the full encoding of an IMV message.
+	 *
+	 * @return					message encoding, internal data
+	 */
+	chunk_t (*get_encoding)(imv_msg_t *this);
+
+	/**
 	 * Destroys a imv_msg_t object.
 	 */
 	void (*destroy)(imv_msg_t *this);

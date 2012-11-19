@@ -323,6 +323,16 @@ METHOD(imv_msg_t, create_attribute_enumerator, enumerator_t*,
 	return this->pa_msg->create_attribute_enumerator(this->pa_msg);
 }
 
+METHOD(imv_msg_t, get_encoding, chunk_t,
+	private_imv_msg_t *this)
+{
+	if (this->pa_msg)
+	{
+		return this->pa_msg->get_encoding(this->pa_msg);
+	}
+	return chunk_empty;
+}
+
 METHOD(imv_msg_t, destroy, void,
 	private_imv_msg_t *this)
 {
@@ -353,6 +363,7 @@ imv_msg_t *imv_msg_create(imv_agent_t *agent, imv_state_t *state,
 			.add_attribute = _add_attribute,
 			.delete_attributes = _delete_attributes,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_encoding = _get_encoding,
 			.destroy = _destroy,
 		},
 		.connection_id = connection_id,
@@ -426,6 +437,7 @@ imv_msg_t *imv_msg_create_from_long_data(imv_agent_t *agent, imv_state_t *state,
 			.add_attribute = _add_attribute,
 			.delete_attributes = _delete_attributes,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_encoding = _get_encoding,
 			.destroy = _destroy,
 		},
 		.connection_id = connection_id,
