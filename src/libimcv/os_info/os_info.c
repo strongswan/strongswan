@@ -486,7 +486,7 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 		break;
 	}
 
-	if (!os_name.ptr)
+	if (!os_version.ptr)
 	{
 		DBG1(DBG_IMC, "no distribution release file found");
 		return FALSE;
