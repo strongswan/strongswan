@@ -426,30 +426,10 @@ imv_msg_t *imv_msg_create_from_long_data(imv_agent_t *agent, imv_state_t *state,
 {
 	private_imv_msg_t *this;
 
-	INIT(this,
-		.public = {
-			.get_src_id = _get_src_id,
-			.get_dst_id = _get_dst_id,
-			.set_msg_type = _set_msg_type,
-			.send = _send_,
-			.send_assessment = _send_assessment,
-			.receive = _receive,
-			.add_attribute = _add_attribute,
-			.delete_attributes = _delete_attributes,
-			.create_attribute_enumerator = _create_attribute_enumerator,
-			.get_encoding = _get_encoding,
-			.destroy = _destroy,
-		},
-		.connection_id = connection_id,
-		.src_id = src_id,
-		.dst_id = dst_id,
-		.msg_type = pen_type_create(msg_vid, msg_subtype),
-		.attr_list = linked_list_create(),
-		.pa_msg = pa_tnc_msg_create_from_data(msg),
-		.agent = agent,
-		.state = state,
-	);
+	this = (private_imv_msg_t*)imv_msg_create(agent, state,
+										connection_id, src_id, dst_id,
+										pen_type_create(msg_vid, msg_subtype));
+	this->pa_msg = pa_tnc_msg_create_from_data(msg);
 
 	return &this->public;
 }
-
