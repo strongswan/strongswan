@@ -1,0 +1,66 @@
+#!/bin/bash
+
+if [ `id -u` != 0 ];
+then
+	echo "! you must be root to run $0"
+	exit
+fi
+
+DIR=`dirname $0`
+
+. $DIR/function.sh
+
+[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+. $DIR/../testing.conf
+
+execute()
+{
+	cmd=${1}
+	echo $cmd >>$LOGFILE
+	$cmd >>$LOGFILE 2>&1
+	status=$?
+	if [ $status != 0 ]; then
+		echo "! command $cmd failed, exiting (status $status)"
+		echo "! check why here $LOGFILE"
+		exit 1
+	fi
+}
+
+# additional packages
+EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb
+SERVICES="isc-dhcp-server apache2 slapd"
+PACKAGES=$EXTRAS,${SERVICES// /,}
+CACHEDIR=$BUILDDIR/cache
+APTCACHE=$LOOPDIR/var/cache/apt/archives
+
+mkdir -p $LOOPDIR
+mkdir -p $BUILDDIR
+mkdir -p $CACHEDIR
+rm -f $ROOTFS
+
+echo "`date`, building $ROOTFS" >>$LOGFILE
+echo " * Creating sparse image $ROOTFS ..."
+execute "dd if=/dev/null of=$ROOTFS bs=1M seek=$ROOTFSSIZE count=1"
+echo " * Creating ext3 filesystem ..."
+execute "mkfs.ext3 -F $ROOTFS"
+execute "mount -o loop $ROOTFS $LOOPDIR"
+mkdir -p $APTCACHE
+execute "mount -o bind $CACHEDIR $APTCACHE"
+
+echo " * Running debootstrap ..."
+execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
+
+echo " * Setting root password to '$ROOTFSPW' ..."
+echo root:$ROOTFSPW | chroot $LOOPDIR chpasswd
+
+echo " * Disabling services ..."
+for service in $SERVICES
+do
+	echo -n "  - $service ... "
+	execute "chroot $LOOPDIR /etc/init.d/$service stop"
+	execute "chroot $LOOPDIR update-rc.d -f $service remove"
+	echo "done"
+done
+
+execute "umount -l $APTCACHE"
+execute "umount -l $LOOPDIR"

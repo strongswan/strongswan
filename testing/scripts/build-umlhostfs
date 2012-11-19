@@ -23,8 +23,9 @@ source $DIR/function.sh
 source $DIR/../testing.conf
 
 cd $BUILDDIR/root-fs
+BASE=$BUILDDIR/base.img
 
-[ -f gentoo-fs ] || die "!! Root file system 'gentoo-fs' not found."
+[ -f $BASE ] || die "!! Base image $BASE not found."
 
 if [ ! -d $BUILDDIR ]
 then
@@ -32,17 +33,6 @@ then
     mkdir $BUILDDIR
     cgecho "done"
 fi
-
-LOGFILE=${BUILDDIR}/testing.log
-
-if [ ! -f $LOGFILE ]
-then
-    cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
-    touch $LOGFILE
-    cgecho "done"
-fi
-
-LOOPDIR=loop
 
 if [ ! -d $LOOPDIR ]
 then
@@ -61,17 +51,22 @@ fi
 for host in $HOSTS
 do
     cecho-n "$host.."
-    cp gentoo-fs gentoo-fs-$host
-    mount -o loop gentoo-fs-$host $LOOPDIR
+    cp $BASE $host.img
+    mount -o loop $host.img $LOOPDIR
     cp -rf $BUILDDIR/hosts/${host}/etc $LOOPDIR
     if [ "$host" = "winnetou" ]
     then
-    	mkdir $LOOPDIR/var/log/apache2/ocsp
-	cp -rf $UMLTESTDIR/testing/images $LOOPDIR/var/www/localhost/htdocs
-	chroot $LOOPDIR ln -s /etc/openssl/certs /var/www/localhost/htdocs/certs
-        chroot $LOOPDIR /etc/openssl/generate-crl >> $LOGFILE 2>&1
+		mkdir $LOOPDIR/var/log/apache2/ocsp
+		cp -rf $UMLTESTDIR/testing/images $LOOPDIR/var/www/
+		chroot $LOOPDIR ln -s /etc/openssl/certs /var/www/certs
+		chroot $LOOPDIR /etc/openssl/generate-crl >> $LOGFILE 2>&1
+		chroot $LOOPDIR update-rc.d apache2 defaults >> $LOGFILE 2>&1
+		chroot $LOOPDIR update-rc.d slapd defaults >> $LOGFILE 2>&1
+		chroot $LOOPDIR rm -rf /var/lib/ldap/*
+		chroot $LOOPDIR slapadd -l /etc/ldap/ldif.txt -f /etc/ldap/slapd.conf >> $LOGFILE 2>&1
+		chroot $LOOPDIR chown -R openldap:openldap /var/lib/ldap >> $LOGFILE 2>&1
     fi
-    chroot $LOOPDIR /etc/init.d/depscan.sh --update >> $LOGFILE 2>&1
+    sync
     umount $LOOPDIR
 done
 

@@ -34,7 +34,7 @@ else
     exit
 fi
 
-cecho-n " * Looking for gentoo root filesystem at '$ROOTFS'.."
+cecho-n " * Looking for root image at '$ROOTFS'.."
 if [ -f "$ROOTFS" ]
 then
     cecho "found it"
@@ -44,19 +44,6 @@ else
 fi
 
 [ -d $BUILDDIR ] || die "!! Directory '$BUILDDIR' does not exist"
-
-HOSTCONFIGDIR=$BUILDDIR/hosts
-
-[ -d $HOSTCONFIGDIR ] || die "!! Directory '$HOSTCONFIGDIR' does not exist"
-
-LOGFILE=$BUILDDIR/testing.log
-
-if [ ! -f $LOGFILE ]
-then
-    cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
-    touch $LOGFILE
-    cgecho "done"
-fi
 
 ROOTFSDIR=$BUILDDIR/root-fs
 
@@ -69,22 +56,18 @@ fi
 
 cd $ROOTFSDIR
 
-LOOPDIR=$ROOTFSDIR/loop
-
 if [ ! -d $LOOPDIR ]
 then
     mkdir $LOOPDIR
 fi
 
 ######################################################
-# creating reiser-based uml root filesystem
+# mount root image
 #
-
-cecho-n " * Building basic root filesystem (gentoo).."
-dd if=/dev/zero of=gentoo-fs count=$ROOTFSSIZE bs=1M >> $LOGFILE 2>&1
-mkreiserfs -q -f gentoo-fs       >> $LOGFILE 2>&1
-mount -o loop gentoo-fs $LOOPDIR >> $LOGFILE 2>&1
-tar xjpf $ROOTFS -C $LOOPDIR     >> $LOGFILE 2>&1
+BASE=$BUILDDIR/base.img
+cecho-n " * Mounting base image $BASE.."
+cp $ROOTFS $BASE
+mount -o loop $BASE $LOOPDIR >> $LOGFILE 2>&1
 cgecho "done"
 
 ######################################################
@@ -92,12 +75,6 @@ cgecho "done"
 #
 cecho " * Removing /etc/resolv.conf"
 rm -f $LOOPDIR/etc/resolv.conf
-
-######################################################
-# copying default /etc/hosts to the root filesystem
-#
-cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
-cp -fp $HOSTCONFIGDIR/default/etc/hosts $LOOPDIR/etc/hosts
 
 #####################################################
 # extracting strongSwan into the root filesystem
@@ -291,7 +268,7 @@ if [ "$USE_KERNEL_PFKEY" = "yes" ]
 then
     echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL
 fi
-  
+
 if [ "$USE_INTEGRITY_TEST" = "yes" ]
 then
     echo -n " --enable-integrity-test" >> $INSTALLSHELL
@@ -408,7 +385,7 @@ then
 fi
 
 echo "" >> $INSTALLSHELL
-echo "make -j" >> $INSTALLSHELL
+echo "make -j5" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
 echo "ldconfig" >> $INSTALLSHELL
 
@@ -417,16 +394,50 @@ chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 rm -f $INSTALLSHELL
 cgecho "done"
 
-######################################################
-# copying default /etc/ipsec.d/tables.sql to the root filesystem
+#####################################
+# preparing ssh for PK authentication
 #
-cecho " * Copying '$HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql' to the root filesystem"
-cp -fp $HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql $LOOPDIR/etc/ipsec.d/tables.sql
+if [ ! -d ~/.ssh ]
+then
+	cecho-n " * Creating directory '~/.ssh'.."
+	mkdir ~/.ssh
+	cgecho "done"
+fi
+
+cecho-n " * Checking for ssh rsa key '~/.ssh/id_rsa.pub'.."
+if [ -f ~/.ssh/id_rsa.pub ]
+then
+	cecho "already exists"
+else
+	cecho "not found"
+	cecho-n " * Generating ssh rsa key pair.."
+	echo "" | ssh-keygen -N "" -t rsa -f ~/.ssh/id_rsa >> $LOGFILE 2>&1
+	cgecho "done"
+fi
+
+if [ -f ~/.ssh/known_hosts ]
+then
+	cecho-n " * Backing up ~/.ssh/known_hosts to '~/.ssh/known_hosts.before_uml'.."
+	cp -fp ~/.ssh/known_hosts ~/.ssh/known_hosts.before_uml
+	cgecho "done"
+fi
+rm ~/.ssh/known_hosts
+cecho-n " * Creating new '~/.ssh/known_hosts'.."
+touch ~/.ssh/known_hosts
+cgecho "done"
+
+for host in $HOSTNAMEIPV4
+do
+	HOSTNAME=`echo $host | awk -F, '{ print $1 }'`
+	IP=`echo $host | awk -F, '{ print $2 }'`
+	cecho-n " * Adding uml host $HOSTNAME ($IP) to '~/.ssh/known_hosts'.."
+	echo "$HOSTNAME,$IP `cat $LOOPDIR/etc/ssh/ssh_host_rsa_key.pub`" >> ~/.ssh/known_hosts
+	cgecho "done"
+done
 
 ######################################################
 # copying the host's ssh public key
 #
-
 if [ ! -d $LOOPDIR/root/.ssh ]
 then
     mkdir $LOOPDIR/root/.ssh
@@ -441,21 +452,8 @@ cp $LOOPDIR/etc/ssh/ssh_host_rsa_key $LOOPDIR/root/.ssh/id_rsa
 for host in $STRONGSWANHOSTS
 do
     eval ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F- '{ print $1 }' | awk '{ print $1 }'`"
-    echo "$host,$ip `cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub`" >> $LOOPDIR/root/.ssh/known_hosts
-    echo "`cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
+    echo "$host,$ip `cat $LOOPDIR/etc/ssh/ssh_host_rsa_key.pub`" >> $LOOPDIR/root/.ssh/known_hosts
+    echo "`cat $LOOPDIR/etc/ssh/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
 done
-
-######################################################
-# defining an empty modules.dep
-#
-
-if [ $UMLPATCH ]
-then
-    mkdir $LOOPDIR/lib/modules/`basename $UMLPATCH .bz2 | sed s/uml-patch-//`um
-    touch $LOOPDIR/lib/modules/`basename $UMLPATCH .bz2 | sed s/uml-patch-//`um/modules.dep
-else
-    mkdir $LOOPDIR/lib/modules/$KERNELVERSION
-    touch $LOOPDIR/lib/modules/$KERNELVERSION/modules.dep
-fi
 
 umount $LOOPDIR

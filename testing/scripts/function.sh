@@ -55,13 +55,6 @@ function searchandreplace {
     [ -d "$DESTDIR" ] || die "$DESTDIR is not a directory!"
 
 
-    #########################
-    # create a temporary file
-    #
-
-    TMPFILE="/tmp/sr.$$"
-
-
     ###########################################
     # search and replace in each found file the
     # given string
@@ -69,16 +62,8 @@ function searchandreplace {
 
     for eachfoundfile in `find $DESTDIR -type f`
     do
-        sed -e "s/$SEARCHSTRING/$REPLACESTRING/g" "$eachfoundfile" > "$TMPFILE"
-        cp -f "$TMPFILE" "$eachfoundfile"
+        sed -i -e "s/$SEARCHSTRING/$REPLACESTRING/g" "$eachfoundfile"
     done
-
-
-    ###########################
-    # delete the temporary file
-    #
-
-    rm -f "$TMPFILE"
 
 }
 

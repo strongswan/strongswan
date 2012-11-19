@@ -42,7 +42,7 @@ do
 	pid=`cat ~/.uml/${host}/pid`
 	up=`ps up $pid | wc -l`
     fi
-    
+
     if [ $up -eq 2 ]
     then
 	cecho " * Great, ${host} is already running!"
@@ -51,16 +51,12 @@ do
 	BOOTING_HOSTS="$BOOTING_HOSTS ${host}"
 	let "count_max += 12"
 
-	UMLHOSTFS=$BUILDDIR/root-fs/gentoo-fs-${host}
+	UMLHOSTFS=$BUILDDIR/root-fs/${host}.img
 	[ -f  $UMLHOSTFS ] || die "!! uml root file system '$UMLHOSTFS' not found"
 
 	cecho-n " * Starting ${host}.."
-	eval screen -dmS ${host} "$UMLKERNEL \
-	    umid=${host} \
-	    ubda=$UMLHOSTFS \
-	    \$SWITCH_${host} \
-	    mem=${MEM}M con=pty con0=fd:0,fd:1"
-        cgecho "done"
+	eval setsid $UMLKERNEL umid=${host} ubda=$UMLHOSTFS \$SWITCH_${host} mem=${MEM}M con=null con1=xterm >>$LOGFILE 2>&1 &
+	cgecho "done"
     fi
 done
 
@@ -106,12 +102,6 @@ do
 	cgecho "up"
     fi
 
-    if [ "$host" = "alice" ]
-    then
-	sleep 5
-	eval ipv4_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-	ssh root@$ipv4_alice /etc/init.d/net.eth1 stop
-    fi
 done
 
 cecho " * All uml instances are up now"

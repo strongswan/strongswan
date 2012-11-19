@@ -41,9 +41,19 @@ then
 fi
 
 mkdir $HOSTCONFIGDIR
-cp -rfp ${UMLTESTDIR}/testing/hosts $BUILDDIR
 
-cecho " * Copied default host config directory to '$HOSTCONFIGDIR'"
+cecho-n " * Copying default host config for.."
+
+for host in $STRONGSWANHOSTS
+do
+	cecho-n "$host.."
+	HOSTDIR=${HOSTCONFIGDIR}/$host
+	mkdir $HOSTDIR
+	cp -rfp $UMLTESTDIR/testing/hosts/default/* $HOSTDIR
+	cp -rfp $UMLTESTDIR/testing/hosts/$host/* $HOSTDIR
+done
+
+cgecho "done"
 
 ########################################
 # assign IP for each host to hostname

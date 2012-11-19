@@ -21,6 +21,7 @@ source $DIR/scripts/function.sh
 [ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found."
 
 source $DIR/testing.conf
+rm -f $LOGFILE
 
 if [ "$#" -eq 0 ]
 then
@@ -28,6 +29,16 @@ then
 else
     HOSTS=$*
 fi
+
+##########################################################################
+# build base image
+#
+if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
+then
+   cecho "Building base image"
+   $DIR/scripts/build-baseimage
+fi
+
 
 ##########################################################################
 # build the UML kernel based on a vanilla kernel form kernel.org
@@ -40,12 +51,13 @@ then
 fi
 
 ##########################################################################
-# Adding the ssh RSA public keys to ~/.ssh/known_hosts
+# build a generic UML root file system based on a Gentoo root file system.
+# compile and install a specified strongSwan release into the file system.
 #
-if [ $ENABLE_BUILD_SSHKEYS = "yes" ]
+if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
 then
-   cecho "Adding ssh public keys of the uml instances (scripts/build-sshkeys)"
-   $DIR/scripts/build-sshkeys
+   cecho "Building uml base image (scripts/build-umlrootfs)"
+   $DIR/scripts/build-umlrootfs
 fi
 
 ##########################################################################
@@ -59,21 +71,11 @@ then
 fi
 
 ##########################################################################
-# build a generic UML root file system based on a Gentoo root file system.
-# compile and install a specified strongSwan release into the file system.
-#
-if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
-then
-   cecho "Building uml root file system with strongSwan (scripts/build-umlrootfs)"
-   $DIR/scripts/build-umlrootfs
-fi
-
-##########################################################################
 # Creating the root filesystems for the specified UML instances
 #
 if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
 then
-   cecho "Building uml host root file systems (scripts/build-umlhostfs)"
+   cecho "Building uml host images (scripts/build-umlhostfs)"
    $DIR/scripts/build-umlhostfs $HOSTS
 fi
 
