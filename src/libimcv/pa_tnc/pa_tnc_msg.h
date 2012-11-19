@@ -65,7 +65,7 @@ struct pa_tnc_msg_t {
 	status_t (*process)(pa_tnc_msg_t *this);
 
 	/**
-	 * Process and remove all IETF standard error PA-TNC attributes
+	 * Process all IETF standard error PA-TNC attributes
 	 *
 	 * @return					TRUE if at least one error attribute processed
 	 */
