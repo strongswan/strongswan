@@ -4,8 +4,8 @@ dave::/etc/init.d/iptables start 2> /dev/null
 moon::rm /etc/ipsec.d/cacerts/*
 carol::rm /etc/ipsec.d/cacerts/*
 dave::rm /etc/ipsec.d/cacerts/*
-alice::cat /etc/raddb/triplets.dat
-alice::/etc/init.d/radiusd start
+alice::cat /etc/freeradius/triplets.dat
+alice::radiusd
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start

@@ -1,11 +1,8 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-dave::/etc/init.d/iptables start 2> /dev/null
-alice::cat /etc/raddb/clients.conf
-alice::cat /etc/raddb/eap.conf
-alice::cat /etc/raddb/proxy.conf
-alice::cat /etc/raddb/triplets.dat
-alice::/etc/init.d/radiusd start
+alice::cat /etc/freeradius/clients.conf
+alice::cat /etc/freeradius/eap.conf
+alice::cat /etc/freeradius/proxy.conf
+alice::cat /etc/freeradius/triplets.dat
+alice::radiusd
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start

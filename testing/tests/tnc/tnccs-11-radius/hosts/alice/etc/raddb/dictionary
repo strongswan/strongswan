@@ -1,2 +1,0 @@
-$INCLUDE	/usr/share/freeradius/dictionary
-$INCLUDE	/etc/raddb/dictionary.tnc

@@ -5,7 +5,8 @@ venus::ipsec stop
 alice::/etc/init.d/iptables stop 2> /dev/null
 venus::/etc/init.d/iptables stop 2> /dev/null
 sun::/etc/init.d/iptables stop 2> /dev/null
-moon::iptables -t nat -F
+moon::iptables-restore < /etc/iptables.flush
 moon::conntrack -F
+sun::iptables-restore < /etc/iptables.flush
 sun::conntrack -F
 sun::rm /etc/mark_updown

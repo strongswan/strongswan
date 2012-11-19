@@ -8,5 +8,5 @@ dave:: cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/3
 moon:: cat /var/log/daemon.log::added group membership 'allow'::YES
 moon:: cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
 moon:: cat /var/log/daemon.log::EAP method EAP_TTLS failed for peer dave@strongswan.org::YES
-carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
-dave:: ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_req=1::YES
+dave:: ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_req=1::NO

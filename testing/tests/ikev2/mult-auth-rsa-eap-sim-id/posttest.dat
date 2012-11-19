@@ -1,7 +1,4 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-alice::/etc/init.d/radiusd stop
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-dave::/etc/init.d/iptables stop 2> /dev/null
+alice::killall radiusd

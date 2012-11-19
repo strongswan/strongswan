@@ -196,8 +196,8 @@ up-client:)
 	    iptables -t nat -A PREROUTING -i $INT_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
 	             -d $OUT_NET -j NETMAP --to $SAME_NET
 	    iptables -I FORWARD 1 -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT -j ACCEPT
-            iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
-                     -s $SAME_NET -j NETMAP --to $IN_NET
+	    iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -s $SAME_NET -j NETMAP --to $IN_NET
 	fi
 	;;
 down-client:)
@@ -215,7 +215,11 @@ down-client:)
 	if [ -n "$PLUTO_MARK_OUT" ]
 	then
 	    iptables -t mangle -D PREROUTING $SET_MARK_OUT
+	    iptables -t nat -D PREROUTING -i $INT_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -d $OUT_NET -j NETMAP --to $SAME_NET
 	    iptables -D FORWARD -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT -j ACCEPT
+	    iptables -t nat -D POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -s $SAME_NET -j NETMAP --to $IN_NET
 	fi
 	;;
 *)	echo "$0: unknown verb \`$PLUTO_VERB' or parameter \`$1'" >&2
