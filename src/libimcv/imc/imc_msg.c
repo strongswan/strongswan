@@ -39,24 +39,24 @@ struct private_imc_msg_t {
 	imc_msg_t public;
 
 	/**
-	 * Connection ID 
+	 * Connection ID
 	 */
 	TNC_ConnectionID connection_id;
 
 	/**
-	 * source ID 
+	 * source ID
 	 */
-	TNC_UInt32 src_id; 
+	TNC_UInt32 src_id;
 
 	/**
-	 * destination ID 
+	 * destination ID
 	 */
-	TNC_UInt32 dst_id; 
+	TNC_UInt32 dst_id;
 
 	/**
-	 * PA-TNC message type 
+	 * PA-TNC message type
 	 */
-	pen_type_t msg_type; 
+	pen_type_t msg_type;
 
 	/**
 	 * List of PA-TNC attributes to be sent
@@ -64,17 +64,17 @@ struct private_imc_msg_t {
 	linked_list_t *attr_list;
 
 	/**
-	 * PA-TNC message 
+	 * PA-TNC message
 	 */
 	pa_tnc_msg_t *pa_msg;
 
 	/**
-	 * Assigned IMC agent 
+	 * Assigned IMC agent
 	 */
 	imc_agent_t *agent;
 
 	/**
-	 * Assigned IMC state 
+	 * Assigned IMC state
 	 */
 	imc_state_t *state;
 };
@@ -142,7 +142,7 @@ METHOD(imc_msg_t, send_, TNC_Result,
 
 		if (this->state->has_long(this->state) && this->agent->send_message_long)
 		{
-			excl = excl && this->state->has_excl(this->state) && 
+			excl = excl && this->state->has_excl(this->state) &&
 						   this->dst_id != TNC_IMVID_ANY;
 			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 			result = this->agent->send_message_long(this->src_id,
@@ -248,7 +248,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 			}
 			enumerator->destroy(enumerator);
 
-			/* 
+			/*
 			 * send the PA-TNC message containing all error attributes
 			 * with the excl flag set
 			 */
@@ -273,7 +273,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 	while (enumerator->enumerate(enumerator, &attr))
 	{
 		attr_type = attr->get_type(attr);
-		
+
 		if (attr_type.vendor_id != PEN_IETF)
 		{
 			continue;
@@ -331,7 +331,7 @@ METHOD(imc_msg_t, receive, TNC_Result,
 	enumerator->destroy(enumerator);
 
 	print_assessment_trailer(first);
-		
+
 	return TNC_RESULT_SUCCESS;
 }
 
@@ -397,7 +397,7 @@ imc_msg_t* imc_msg_create_as_reply(imc_msg_t *msg)
 	TNC_UInt32 src_id;
 
 	in = (private_imc_msg_t*)msg;
-	src_id = (in->dst_id != TNC_IMCID_ANY) ? 
+	src_id = (in->dst_id != TNC_IMCID_ANY) ?
 			  in->dst_id : in->agent->get_id(in->agent);
 
 	return imc_msg_create(in->agent, in->state, in->connection_id, src_id,
@@ -419,7 +419,7 @@ imc_msg_t *imc_msg_create_from_data(imc_agent_t *agent, imc_state_t *state,
 	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
 	return imc_msg_create_from_long_data(agent, state, connection_id,
-								TNC_IMVID_ANY, agent->get_id(agent),  
+								TNC_IMVID_ANY, agent->get_id(agent),
 								msg_vid, msg_subtype, msg);
 }
 

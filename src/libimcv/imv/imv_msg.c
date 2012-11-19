@@ -39,24 +39,24 @@ struct private_imv_msg_t {
 	imv_msg_t public;
 
 	/**
-	 * Connection ID 
+	 * Connection ID
 	 */
 	TNC_ConnectionID connection_id;
 
 	/**
-	 * source ID 
+	 * source ID
 	 */
-	TNC_UInt32 src_id; 
+	TNC_UInt32 src_id;
 
 	/**
-	 * destination ID 
+	 * destination ID
 	 */
-	TNC_UInt32 dst_id; 
+	TNC_UInt32 dst_id;
 
 	/**
-	 * PA-TNC message type 
+	 * PA-TNC message type
 	 */
-	pen_type_t msg_type; 
+	pen_type_t msg_type;
 
 	/**
 	 * List of PA-TNC attributes to be sent
@@ -64,17 +64,17 @@ struct private_imv_msg_t {
 	linked_list_t *attr_list;
 
 	/**
-	 * PA-TNC message 
+	 * PA-TNC message
 	 */
 	pa_tnc_msg_t *pa_msg;
 
 	/**
-	 * Assigned IMV agent 
+	 * Assigned IMV agent
 	 */
 	imv_agent_t *agent;
 
 	/**
-	 * Assigned IMV state 
+	 * Assigned IMV state
 	 */
 	imv_state_t *state;
 };
@@ -159,7 +159,7 @@ METHOD(imv_msg_t, send_, TNC_Result,
 
 		if (this->state->has_long(this->state) && this->agent->send_message_long)
 		{
-			excl = excl && this->state->has_excl(this->state) && 
+			excl = excl && this->state->has_excl(this->state) &&
 						   this->dst_id != TNC_IMCID_ANY;
 			msg_flags = excl ? TNC_MESSAGE_FLAGS_EXCLUSIVE : 0;
 			result = this->agent->send_message_long(this->src_id,
@@ -287,7 +287,7 @@ METHOD(imv_msg_t, receive, TNC_Result,
 			}
 			enumerator->destroy(enumerator);
 
-			/* 
+			/*
 			 * send the PA-TNC message containing all error attributes
 			 * with the excl flag set
 			 */
@@ -302,7 +302,7 @@ METHOD(imv_msg_t, receive, TNC_Result,
 
 	/* preprocess any received IETF standard error attributes */
 	*fatal_error = this->pa_msg->process_ietf_std_errors(this->pa_msg);
-		
+
 	return TNC_RESULT_SUCCESS;
 }
 
@@ -376,7 +376,7 @@ imv_msg_t* imv_msg_create_as_reply(imv_msg_t *msg)
 	TNC_UInt32 src_id;
 
 	in = (private_imv_msg_t*)msg;
-	src_id = (in->dst_id != TNC_IMVID_ANY) ? 
+	src_id = (in->dst_id != TNC_IMVID_ANY) ?
 			  in->dst_id : in->agent->get_id(in->agent);
 
 	return imv_msg_create(in->agent, in->state, in->connection_id, src_id,
@@ -398,7 +398,7 @@ imv_msg_t *imv_msg_create_from_data(imv_agent_t *agent, imv_state_t *state,
 	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
 
 	return imv_msg_create_from_long_data(agent, state, connection_id,
-								TNC_IMCID_ANY, agent->get_id(agent),  
+								TNC_IMCID_ANY, agent->get_id(agent),
 								msg_vid, msg_subtype, msg);
 }
 

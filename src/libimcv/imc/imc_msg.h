@@ -69,7 +69,7 @@ struct imc_msg_t {
 	 * @param attr				PA-TNC attribute to be added
 	 */
 	void (*add_attribute)(imc_msg_t *this, pa_tnc_attr_t *attr);
-	
+
 	/**
 	 * Enumerator over PA-TNC attributes contained in the PA-TNC message
 	 *
@@ -117,7 +117,7 @@ imc_msg_t* imc_msg_create_as_reply(imc_msg_t *msg);
 imc_msg_t* imc_msg_create_from_data(imc_agent_t *agent, imc_state_t *state,
 									TNC_ConnectionID connection_id,
 									TNC_MessageType msg_type,
-									chunk_t msg); 
+									chunk_t msg);
 
 /**
  * Create a wrapper around message data received via the long IF-IMC interface
@@ -137,6 +137,6 @@ imc_msg_t* imc_msg_create_from_long_data(imc_agent_t *agent, imc_state_t *state,
 										 TNC_UInt32 src_id, TNC_UInt32 dst_id,
 										 TNC_VendorID msg_vid,
 										 TNC_MessageSubtype msg_subtype,
-										 chunk_t msg); 
+										 chunk_t msg);
 
 #endif /** IMC_MSG_H_ @}*/
