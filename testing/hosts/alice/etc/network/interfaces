@@ -1,0 +1,20 @@
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+	address PH_IP_ALICE
+	netmask 255.255.0.0
+	broadcast 10.1.255.255
+	gateway 10.1.0.1
+iface eth0 inet6 static
+	address PH_IP6_ALICE
+	netmask 16
+
+iface eth1 inet static
+	address PH_IP_ALICE1
+	netmask 255.255.255.0
+	broadcast 192.168.0.255
+iface eth1 inet6 static
+	address PH_IP6_ALICE1
+	netmask 16
