@@ -55,13 +55,6 @@ struct ietf_attr_pa_tnc_error_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 
 	/**
-	 * Get PA-TNC error code vendor ID
-	 *
-	 * @return				error code vendor ID
-	 */
-	pen_t (*get_vendor_id)(ietf_attr_pa_tnc_error_t *this);
-
-	/**
 	 * Get Vendor-specific PA-TNC error code
 	 *
 	 * @return				error code
