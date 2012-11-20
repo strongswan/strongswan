@@ -29,9 +29,9 @@
 #include <fcntl.h>
 
 #include <daemon.h>
-#include <utils/lexparser.h>
 #include <utils/debug.h>
-#include <threading/mutex.h>
+#include <threading/rwlock.h>
+#include <collections/linked_list.h>
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;
 
@@ -49,6 +49,11 @@ struct private_tnc_imv_manager_t {
 	 * Linked list of IMVs
 	 */
 	linked_list_t *imvs;
+
+	/**
+	 * Lock for IMV list
+	 */
+	rwlock_t *lock;
 
 	/**
 	 * Next IMV ID to be assigned
@@ -73,8 +78,10 @@ METHOD(imv_manager_t, add, bool,
 		DBG1(DBG_TNC, "IMV \"%s\" failed to initialize", imv->get_name(imv));
 		return FALSE;
 	}
+	this->lock->write_lock(this->lock);
 	this->imvs->insert_last(this->imvs, imv);
 	this->next_imv_id++;
+	this->lock->unlock(this->lock);
 
 	if (imv->provide_bind_function(imv->get_id(imv),
 								   TNC_TNCS_BindFunction) != TNC_RESULT_SUCCESS)
@@ -85,7 +92,9 @@ METHOD(imv_manager_t, add, bool,
 		}
 		DBG1(DBG_TNC, "IMV \"%s\" failed to obtain bind function",
 			 imv->get_name(imv));
+		this->lock->write_lock(this->lock);
 		this->imvs->remove_last(this->imvs, (void**)&imv);
+		this->lock->unlock(this->lock);
 		return FALSE;
 	}
 	return TRUE;
@@ -97,6 +106,7 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	enumerator_t *enumerator;
 	imv_t *imv, *removed_imv = NULL;
 
+	this->lock->write_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -108,6 +118,7 @@ METHOD(imv_manager_t, remove_, imv_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	return removed_imv;
 }
@@ -169,6 +180,7 @@ METHOD(imv_manager_t, is_registered, bool,
 	imv_t *imv;
 	bool found = FALSE;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -179,6 +191,7 @@ METHOD(imv_manager_t, is_registered, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	return found;
 }
@@ -190,6 +203,7 @@ METHOD(imv_manager_t, reserve_id, bool,
 	imv_t *imv;
 	bool found = FALSE;
 
+	this->lock->write_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -204,6 +218,7 @@ METHOD(imv_manager_t, reserve_id, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	return found;
 }
@@ -283,6 +298,7 @@ METHOD(imv_manager_t, notify_connection_change, void,
 	enumerator_t *enumerator;
 	imv_t *imv;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -292,6 +308,7 @@ METHOD(imv_manager_t, notify_connection_change, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 METHOD(imv_manager_t, set_message_types, TNC_Result,
@@ -303,6 +320,7 @@ METHOD(imv_manager_t, set_message_types, TNC_Result,
 	imv_t *imv;
 	TNC_Result result = TNC_RESULT_FATAL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -314,6 +332,7 @@ METHOD(imv_manager_t, set_message_types, TNC_Result,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return result;
 }
 
@@ -327,6 +346,7 @@ METHOD(imv_manager_t, set_message_types_long, TNC_Result,
 	imv_t *imv;
 	TNC_Result result = TNC_RESULT_FATAL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -339,6 +359,7 @@ METHOD(imv_manager_t, set_message_types_long, TNC_Result,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return result;
 }
 
@@ -348,12 +369,14 @@ METHOD(imv_manager_t, solicit_recommendation, void,
 	enumerator_t *enumerator;
 	imv_t *imv;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
 		imv->solicit_recommendation(imv->get_id(imv), id);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 METHOD(imv_manager_t, receive_message, void,
@@ -374,11 +397,12 @@ METHOD(imv_manager_t, receive_message, void,
 
 	msg_type = (msg_vid << 8) | msg_subtype;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
 		if (imv->type_supported(imv, msg_vid, msg_subtype) &&
-		   (!excl || (excl && imv->has_id(imv, dst_imv_id)) ))
+			(!excl || (excl && imv->has_id(imv, dst_imv_id))))
 		{
 			if (imv->receive_message_long && src_imc_id)
 			{
@@ -400,6 +424,8 @@ METHOD(imv_manager_t, receive_message, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
 	if (!type_supported)
 	{
 		DBG2(DBG_TNC, "message type 0x%06x/0x%08x not supported by any IMV",
@@ -413,6 +439,7 @@ METHOD(imv_manager_t, batch_ending, void,
 	enumerator_t *enumerator;
 	imv_t *imv;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
@@ -422,8 +449,8 @@ METHOD(imv_manager_t, batch_ending, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
-
 
 METHOD(imv_manager_t, destroy, void,
 	private_tnc_imv_manager_t *this)
@@ -441,6 +468,7 @@ METHOD(imv_manager_t, destroy, void,
 		imv->destroy(imv);
 	}
 	this->imvs->destroy(this->imvs);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -472,6 +500,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 			.destroy = _destroy,
 		},
 		.imvs = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.next_imv_id = 1,
 	);
 
