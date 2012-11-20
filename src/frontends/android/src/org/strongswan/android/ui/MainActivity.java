@@ -32,6 +32,9 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.app.Fragment;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -215,6 +218,10 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().getRequiresUsernamePassword());
 		profileInfo.putString(PROFILE_NAME, profile.getName());
 
+		removeFragmentByTag("ConfirmationDialog");
+		removeFragmentByTag("LoginDialog");
+		removeFragmentByTag("ErrorDialog");
+
 		if (mService != null && mService.getState() == State.CONNECTED)
 		{
 			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
@@ -294,6 +301,21 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		protected void onPostExecute(TrustedCertificateManager result)
 		{
 			setProgressBarIndeterminateVisibility(false);
+		}
+	}
+
+	/**
+	 * Dismiss dialog if shown
+	 */
+	public void removeFragmentByTag(String tag)
+	{
+		FragmentManager fm = getFragmentManager();
+		Fragment login = fm.findFragmentByTag(tag);
+		if (login != null)
+		{
+			FragmentTransaction ft = fm.beginTransaction();
+			ft.remove(login);
+			ft.commit();
 		}
 	}
 
