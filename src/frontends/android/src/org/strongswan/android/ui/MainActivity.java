@@ -22,6 +22,8 @@ import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.CharonVpnService;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.logic.VpnStateService;
+import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
 import android.app.ActionBar;
@@ -30,12 +32,16 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.app.Service;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.VpnService;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -50,8 +56,30 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 	private static final int PREPARE_VPN_SERVICE = 0;
+	private static final String PROFILE_NAME = "org.strongswan.android.MainActivity.PROFILE_NAME";
+	private static final String PROFILE_REQUIRES_PASSWORD = "org.strongswan.android.MainActivity.REQUIRES_PASSWORD";
+	private static final String PROFILE_RECONNECT = "org.strongswan.android.MainActivity.RECONNECT";
 
 	private Bundle mProfileInfo;
+	private VpnStateService mService;
+	private final ServiceConnection mServiceConnection = new ServiceConnection() {
+		@Override
+		public void onServiceDisconnected(ComponentName name)
+		{
+			mService = null;
+		}
+
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service)
+		{
+			mService = ((VpnStateService.LocalBinder)service).getService();
+
+			if (START_PROFILE.equals(getIntent().getAction()))
+			{
+				startVpnProfile(getIntent());
+			}
+		}
+	};
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -60,15 +88,23 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		setContentView(R.layout.main);
 
+		this.bindService(new Intent(this, VpnStateService.class),
+						 mServiceConnection, Service.BIND_AUTO_CREATE);
+
 		ActionBar bar = getActionBar();
 		bar.setDisplayShowTitleEnabled(false);
 
 		/* load CA certificates in a background task */
 		new CertificateLoadTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, false);
+	}
 
-		if (START_PROFILE.equals(getIntent().getAction()))
+	@Override
+	protected void onDestroy()
+	{
+		super.onDestroy();
+		if (mService != null)
 		{
-			startVpnProfile(getIntent());
+			this.unbindService(mServiceConnection);
 		}
 	}
 
@@ -175,18 +211,37 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		Bundle profileInfo = new Bundle();
 		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
-		if (profile.getVpnType().getRequiresUsernamePassword() &&
-			profile.getPassword() == null)
+		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
+		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().getRequiresUsernamePassword());
+		profileInfo.putString(PROFILE_NAME, profile.getName());
+
+		if (mService != null && mService.getState() == State.CONNECTED)
+		{
+			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
+
+			ConfirmationDialog dialog = new ConfirmationDialog();
+			dialog.setArguments(profileInfo);
+			dialog.show(this.getFragmentManager(), "ConfirmationDialog");
+			return;
+		}
+		startVpnProfile(profileInfo);
+	}
+
+	/**
+	 * Start the given VPN profile asking the user for a password if required.
+	 * @param profileInfo data about the profile
+	 */
+	private void startVpnProfile(Bundle profileInfo)
+	{
+		if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
+			profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null)
 		{
 			LoginDialog login = new LoginDialog();
 			login.setArguments(profileInfo);
 			login.show(getFragmentManager(), "LoginDialog");
+			return;
 		}
-		else
-		{
-			profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
-			prepareVpnService(profileInfo);
-		}
+		prepareVpnService(profileInfo);
 	}
 
 	/**
@@ -239,6 +294,51 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		protected void onPostExecute(TrustedCertificateManager result)
 		{
 			setProgressBarIndeterminateVisibility(false);
+		}
+	}
+
+	/**
+	 * Class that displays a confirmation dialog if a VPN profile is already connected
+	 * and then initiates the selected VPN profile if the user confirms the dialog.
+	 */
+	public static class ConfirmationDialog extends DialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			final Bundle profileInfo = getArguments();
+			int icon = android.R.drawable.ic_dialog_alert;
+			int title = R.string.connect_profile_question;
+			int message = R.string.replaces_active_connection;
+			int button = R.string.connect;
+
+			if (profileInfo.getBoolean(PROFILE_RECONNECT))
+			{
+				icon = android.R.drawable.ic_dialog_info;
+				title = R.string.vpn_connected;
+				message = R.string.vpn_profile_connected;
+				button = R.string.reconnect;
+			}
+
+			return new AlertDialog.Builder(getActivity())
+				.setIcon(icon)
+				.setTitle(String.format(getString(title), profileInfo.getString(PROFILE_NAME)))
+				.setMessage(message)
+				.setPositiveButton(button, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int whichButton)
+					{
+						MainActivity activity = (MainActivity)getActivity();
+						activity.startVpnProfile(profileInfo);
+					}
+				})
+				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which)
+					{
+						dismiss();
+					}
+				}).create();
 		}
 	}
 

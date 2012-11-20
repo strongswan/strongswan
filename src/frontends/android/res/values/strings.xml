@@ -97,5 +97,11 @@
     <string name="error_generic">Unspecified failure while connecting.</string>
     <string name="connecting_title">Connecting: %1$s</string>
     <string name="connecting_message">Establishing VPN with \""%1$s\".</string>
+    <string name="vpn_connected">VPN connected</string>
+    <string name="vpn_profile_connected">This VPN profile is currently connected!</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="connect_profile_question">Connect %1$s?</string>
+    <string name="replaces_active_connection">This will replace your active VPN connection!</string>
+    <string name="connect">Connect</string>
 
 </resources>

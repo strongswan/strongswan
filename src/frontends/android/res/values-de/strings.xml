@@ -97,5 +97,11 @@
     <string name="error_generic">Unbekannter Fehler während des Verbindens.</string>
     <string name="connecting_title">Verbinden: %1$s</string>
     <string name="connecting_message">Verbinde mit \""%1$s\".</string>
+    <string name="vpn_connected">VPN verbunden</string>
+    <string name="vpn_profile_connected">Dieses VPN Profil ist momentan verbunden!</string>
+    <string name="reconnect">Neu verbinden</string>
+    <string name="connect_profile_question">Verbinde %1$s?</string>
+    <string name="replaces_active_connection">Dies ersetzt die aktuelle VPN Verbindung!</string>
+    <string name="connect">Verbinden</string>
 
 </resources>

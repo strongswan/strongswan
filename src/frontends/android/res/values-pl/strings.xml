@@ -99,5 +99,11 @@
     <string name="error_generic">Nieznany błąd w czasie połączenia</string>
     <string name="connecting_title">Łączenie: %1$s</string>
     <string name="connecting_message">Tworzenie tunelu VPN z \""%1$s\".</string>
+    <string name="vpn_connected">Połączenie z VPN</string>
+    <string name="vpn_profile_connected">Ten profil VPN jest obecnie połaczony!</string>
+    <string name="reconnect">Połączyć ponownie</string>
+    <string name="connect_profile_question">Połącz %1$s?</string>
+    <string name="replaces_active_connection">To zastąpi aktywne połączenie VPN!</string>
+    <string name="connect">Połącz</string>
 
 </resources>
