@@ -62,6 +62,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 	private static final String PROFILE_NAME = "org.strongswan.android.MainActivity.PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "org.strongswan.android.MainActivity.REQUIRES_PASSWORD";
 	private static final String PROFILE_RECONNECT = "org.strongswan.android.MainActivity.RECONNECT";
+	private static final String DIALOG_TAG = "Dialog";
 
 	private Bundle mProfileInfo;
 	private VpnStateService mService;
@@ -218,9 +219,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().getRequiresUsernamePassword());
 		profileInfo.putString(PROFILE_NAME, profile.getName());
 
-		removeFragmentByTag("ConfirmationDialog");
-		removeFragmentByTag("LoginDialog");
-		removeFragmentByTag("ErrorDialog");
+		removeFragmentByTag(DIALOG_TAG);
 
 		if (mService != null && mService.getState() == State.CONNECTED)
 		{
@@ -228,7 +227,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 
 			ConfirmationDialog dialog = new ConfirmationDialog();
 			dialog.setArguments(profileInfo);
-			dialog.show(this.getFragmentManager(), "ConfirmationDialog");
+			dialog.show(this.getFragmentManager(), DIALOG_TAG);
 			return;
 		}
 		startVpnProfile(profileInfo);
@@ -245,7 +244,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 		{
 			LoginDialog login = new LoginDialog();
 			login.setArguments(profileInfo);
-			login.show(getFragmentManager(), "LoginDialog");
+			login.show(getFragmentManager(), DIALOG_TAG);
 			return;
 		}
 		prepareVpnService(profileInfo);
@@ -417,7 +416,7 @@ public class MainActivity extends Activity implements OnVpnProfileSelectedListen
 			bundle.putInt(ERROR_MESSAGE_ID, messageId);
 			VpnNotSupportedError dialog = new VpnNotSupportedError();
 			dialog.setArguments(bundle);
-			dialog.show(activity.getFragmentManager(), "ErrorDialog");
+			dialog.show(activity.getFragmentManager(), DIALOG_TAG);
 		}
 
 		@Override
