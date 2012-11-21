@@ -22,22 +22,10 @@ source $DIR/function.sh
 
 source $DIR/../testing.conf
 
-STRONGSWANVERSION=`basename $STRONGSWAN .tar.bz2`
-
-cecho-n " * Looking for strongSwan at '$STRONGSWAN'.."
-if [ -f "$STRONGSWAN" ]
-then
-    cecho "found it"
-    cecho " * strongSwan version is '$STRONGSWANVERSION'"
-else
-    cecho "none"
-    exit
-fi
-
 cecho-n " * Looking for root image at '$ROOTFS'.."
 if [ -f "$ROOTFS" ]
 then
-    cecho "found it"
+    cgecho "found it"
 else
     cecho "none"
     exit
@@ -68,19 +56,8 @@ BASE=$BUILDDIR/base.img
 cecho-n " * Mounting base image $BASE.."
 cp $ROOTFS $BASE
 mount -o loop $BASE $LOOPDIR >> $LOGFILE 2>&1
+mount -t proc none $LOOPDIR/proc >> $LOGFILE 2>&1
 cgecho "done"
-
-######################################################
-# remove /etc/resolv.conf
-#
-cecho " * Removing /etc/resolv.conf"
-rm -f $LOOPDIR/etc/resolv.conf
-
-#####################################################
-# extracting strongSwan into the root filesystem
-#
-cecho " * Extracting strongSwan into the root filesystem"
-tar xjf $STRONGSWAN -C $LOOPDIR/root >> $LOGFILE 2>&1
 
 ######################################################
 # setting up mountpoint for shared source tree
@@ -93,306 +70,35 @@ if [ "${SHAREDTREE+set}" = "set" ]; then
 fi
 
 ######################################################
-# installing strongSwan and setting the local timezone
+# install software from source using 'recipes'
 #
+mkdir -p $ROOTFSCOMPILEDIR
+cecho " * Mounting $ROOTFSCOMPILEDIR as /root/compile.."
+mkdir -p $LOOPDIR/root/compile
+mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile >> $LOGFILE 2>&1
 
-INSTALLSHELL=${LOOPDIR}/install.sh
+cecho " * Installing software from source.."
+RECPDIR=$UMLTESTDIR/testing/scripts/recipes
+RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
+for r in $RECIPES
+do
+	cecho-n "   - $r.."
+	cp $RECPDIR/$r ${LOOPDIR}/root/compile
+	chroot ${LOOPDIR} make -C /root/compile -f $r >>$LOGFILE 2>&1
+	if [ $? != 0 ]; then
+		cecho "failed"
+	else
+		cgecho "done"
+	fi
+done
 
-cecho " * Preparing strongSwan installation script"
-echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
+umount $LOOPDIR/root/compile
 
-echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
-echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
-echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
-echo -n " --disable-load-warning" >> $INSTALLSHELL
-
-if [ "$USE_LIBCURL" = "yes" ]
-then
-    echo -n " --enable-curl" >> $INSTALLSHELL
-fi
-
-if [ "$USE_LDAP" = "yes" ]
-then
-    echo -n " --enable-ldap" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_AKA" = "yes" ]
-then
-    echo -n " --enable-eap-aka" >> $INSTALLSHELL
-    echo -n " --enable-eap-aka-3gpp2" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_SIM" = "yes" ]
-then
-    echo -n " --enable-eap-sim" >> $INSTALLSHELL
-    echo -n " --enable-eap-sim-file" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_MD5" = "yes" ]
-then
-    echo -n " --enable-eap-md5" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_MSCHAPV2" = "yes" ]
-then
-    echo -n " --enable-md4" >> $INSTALLSHELL
-    echo -n " --enable-eap-mschapv2" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_IDENTITY" = "yes" ]
-then
-    echo -n " --enable-eap-identity" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_RADIUS" = "yes" ]
-then
-    echo -n " --enable-eap-radius" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_DYNAMIC" = "yes" ]
-then
-    echo -n " --enable-eap-dynamic" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_TLS" = "yes" ]
-then
-    echo -n " --enable-eap-tls" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_TTLS" = "yes" ]
-then
-    echo -n " --enable-eap-ttls" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_PEAP" = "yes" ]
-then
-    echo -n " --enable-eap-peap" >> $INSTALLSHELL
-fi
-
-if [ "$USE_EAP_TNC" = "yes" ]
-then
-    echo -n " --enable-eap-tnc" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNC_PDP" = "yes" ]
-then
-    echo -n " --enable-tnc-pdp" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNC_IMC" = "yes" ]
-then
-    echo -n " --enable-tnc-imc" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNC_IMV" = "yes" ]
-then
-    echo -n " --enable-tnc-imv" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNCCS_11" = "yes" ]
-then
-    echo -n " --enable-tnccs-11" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNCCS_20" = "yes" ]
-then
-    echo -n " --enable-tnccs-20" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TNCCS_DYNAMIC" = "yes" ]
-then
-    echo -n " --enable-tnccs-dynamic" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMC_TEST" = "yes" ]
-then
-    echo -n " --enable-imc-test" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMV_TEST" = "yes" ]
-then
-    echo -n " --enable-imv-test" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMC_SCANNER" = "yes" ]
-then
-    echo -n " --enable-imc-scanner" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMV_SCANNER" = "yes" ]
-then
-    echo -n " --enable-imv-scanner" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMC_OS" = "yes" ]
-then
-    echo -n " --enable-imc-os" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMV_OS" = "yes" ]
-then
-    echo -n " --enable-imv-os" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMC_ATTESTATION" = "yes" ]
-then
-    echo -n " --enable-imc-attestation" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IMV_ATTESTATION" = "yes" ]
-then
-    echo -n " --enable-imv-attestation" >> $INSTALLSHELL
-fi
-
-if [ "$USE_SQL" = "yes" ]
-then
-    echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
-    fi
-
-if [ "$USE_MEDIATION" = "yes" ]
-then
-    echo -n " --enable-mediation" >> $INSTALLSHELL
-fi
-
-if [ "$USE_OPENSSL" = "yes" ]
-then
-    echo -n " --enable-openssl" >> $INSTALLSHELL
-fi
-
-if [ "$USE_BLOWFISH" = "yes" ]
-then
-    echo -n " --enable-blowfish" >> $INSTALLSHELL
-fi
-
-if [ "$USE_KERNEL_PFKEY" = "yes" ]
-then
-    echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL
-fi
-
-if [ "$USE_INTEGRITY_TEST" = "yes" ]
-then
-    echo -n " --enable-integrity-test" >> $INSTALLSHELL
-fi
-
-if [ "$USE_LEAK_DETECTIVE" = "yes" ]
-then
-    echo -n " --enable-leak-detective" >> $INSTALLSHELL
-fi
-
-if [ "$USE_LOAD_TESTER" = "yes" ]
-then
-    echo -n " --enable-load-tester" >> $INSTALLSHELL
-fi
-
-if [ "$USE_TEST_VECTORS" = "yes" ]
-then
-    echo -n " --enable-test-vectors" >> $INSTALLSHELL
-fi
-
-if [ "$USE_GCRYPT" = "yes" ]
-then
-    echo -n " --enable-gcrypt" >> $INSTALLSHELL
-fi
-
-if [ "$USE_SOCKET_DEFAULT" = "yes" ]
-then
-    echo -n " --enable-socket-default" >> $INSTALLSHELL
-fi
-
-if [ "$USE_SOCKET_DYNAMIC" = "yes" ]
-then
-    echo -n " --enable-socket-dynamic" >> $INSTALLSHELL
-fi
-
-if [ "$USE_DHCP" = "yes" ]
-then
-    echo -n " --enable-dhcp" >> $INSTALLSHELL
-fi
-
-if [ "$USE_FARP" = "yes" ]
-then
-    echo -n " --enable-farp" >> $INSTALLSHELL
-fi
-
-if [ "$USE_ADDRBLOCK" = "yes" ]
-then
-    echo -n " --enable-addrblock" >> $INSTALLSHELL
-fi
-
-if [ "$USE_CTR" = "yes" ]
-then
-    echo -n " --enable-ctr" >> $INSTALLSHELL
-fi
-
-if [ "$USE_CCM" = "yes" ]
-then
-    echo -n " --enable-ccm" >> $INSTALLSHELL
-fi
-
-if [ "$USE_GCM" = "yes" ]
-then
-    echo -n " --enable-gcm" >> $INSTALLSHELL
-fi
-
-if [ "$USE_CMAC" = "yes" ]
-then
-    echo -n " --enable-cmac" >> $INSTALLSHELL
-fi
-
-if [ "$USE_HA" = "yes" ]
-then
-    echo -n " --enable-ha" >> $INSTALLSHELL
-fi
-
-if [ "$USE_AF_ALG" = "yes" ]
-then
-    echo -n " --enable-af-alg" >> $INSTALLSHELL
-fi
-
-if [ "$USE_WHITELIST" = "yes" ]
-then
-    echo -n " --enable-whitelist" >> $INSTALLSHELL
-fi
-
-if [ "$USE_XAUTH_GENERIC" = "yes" ]
-then
-    echo -n " --enable-xauth-generic" >> $INSTALLSHELL
-fi
-
-if [ "$USE_XAUTH_EAP" = "yes" ]
-then
-    echo -n " --enable-xauth-eap" >> $INSTALLSHELL
-fi
-
-if [ "$USE_PKCS8" = "yes" ]
-then
-    echo -n " --enable-pkcs8" >> $INSTALLSHELL
-fi
-
-if [ "$USE_IFMAP" = "yes" ]
-then
-    echo -n " --enable-tnc-ifmap" >> $INSTALLSHELL
-fi
-
-if [ "$USE_CISCO_QUIRKS" = "yes" ]
-then
-    echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
-fi
-
-if [ "$USE_UNITY" = "yes" ]
-then
-    echo -n " --enable-unity" >> $INSTALLSHELL
-fi
-
-echo "" >> $INSTALLSHELL
-echo "make -j5" >> $INSTALLSHELL
-echo "make install" >> $INSTALLSHELL
-echo "ldconfig" >> $INSTALLSHELL
-
-cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
-chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
-rm -f $INSTALLSHELL
-cgecho "done"
+######################################################
+# remove /etc/resolv.conf
+#
+cecho " * Removing /etc/resolv.conf"
+rm -f $LOOPDIR/etc/resolv.conf
 
 #####################################
 # preparing ssh for PK authentication
@@ -456,4 +162,5 @@ do
     echo "`cat $LOOPDIR/etc/ssh/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
 done
 
+umount $LOOPDIR/proc
 umount $LOOPDIR
