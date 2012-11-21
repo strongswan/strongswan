@@ -1,7 +1,8 @@
 /*
- * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2005-2009 Martin Willi
+ * Copyright (C) 2012 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -69,9 +70,14 @@ struct private_gmp_rsa_private_key_t {
 	mpz_t q;
 
 	/**
-	 * Private exponent.
+	 * Carmichael function m = lambda(n) = lcm(p-1,q-1).
+	*/
+	mpz_t m;
+
+	/**
+	 * Private exponent and optional secret sharing polynomial coefficients.
 	 */
-	mpz_t d;
+	mpz_t *d;
 
 	/**
 	 * Private exponent 1.
@@ -87,6 +93,21 @@ struct private_gmp_rsa_private_key_t {
 	 * Private coefficient.
 	 */
 	mpz_t coeff;
+
+	/**
+	 * Total number of private key shares
+	 */
+	u_int shares;
+
+	/**
+	 * Secret sharing threshold
+	 */
+	u_int threshold;
+
+	/**
+	 * Optional verification key (threshold > 1).
+	 */
+	mpz_t v;
 
 	/**
 	 * Keysize in bytes.
@@ -121,22 +142,22 @@ chunk_t gmp_mpz_to_chunk(const mpz_t value)
 static void mpz_clear_sensitive(mpz_t z)
 {
 	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
-	u_int8_t *random = alloca(len);
+	u_int8_t *zeros = alloca(len);
 
-	memset(random, 0, len);
+	memset(zeros, 0, len);
 	/* overwrite mpz_t with zero bytes before clearing it */
-	mpz_import(z, len, 1, 1, 1, 0, random);
+	mpz_import(z, len, 1, 1, 1, 0, zeros);
 	mpz_clear(z);
 }
 
 /**
  * Create a mpz prime of at least prime_size
  */
-static status_t compute_prime(size_t prime_size, bool safe, mpz_t *prime)
+static status_t compute_prime(size_t prime_size, bool safe, mpz_t *p, mpz_t *q)
 {
 	rng_t *rng;
-	mpz_t q;
 	chunk_t random_bytes;
+	int count = 0;
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!rng)
@@ -146,14 +167,16 @@ static status_t compute_prime(size_t prime_size, bool safe, mpz_t *prime)
 		return FAILED;
 	}
 
-	mpz_init(*prime);
-	mpz_init(q);
+	mpz_init(*p);
+	mpz_init(*q);
 
 	do
 	{
 		if (!rng->allocate_bytes(rng, prime_size, &random_bytes))
 		{
 			DBG1(DBG_LIB, "failed to allocate random prime");
+			mpz_clear(*p);
+			mpz_clear(*q);
 			rng->destroy(rng);
 			return FAILED;
 		}
@@ -163,29 +186,33 @@ static status_t compute_prime(size_t prime_size, bool safe, mpz_t *prime)
 		{
 			random_bytes.ptr[0] &= 0x7F;
 			random_bytes.ptr[0] |= 0x60;
-			mpz_import(q, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			mpz_import(*q, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
 			do
 			{
-				mpz_nextprime (q, q);
-				mpz_mul_ui(*prime, q, 2);
-				mpz_add_ui(*prime, *prime, 1);
+				count++;
+				mpz_nextprime (*q, *q);
+				mpz_mul_ui(*p, *q, 2);
+				mpz_add_ui(*p, *p, 1);
 			}
-			while (mpz_probab_prime_p(*prime, 10) == 0);
+			while (mpz_probab_prime_p(*p, 10) == 0);
+			DBG2(DBG_LIB, "safe prime found after %d iterations", count);
 		}
 		else
 		{
 			random_bytes.ptr[0] |= 0xC0;
-			mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
-			mpz_nextprime (*prime, *prime);
+			mpz_import(*p, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			mpz_nextprime (*p, *p);
 		}
 		chunk_clear(&random_bytes);
 	}
 
 	/* check if the prime isn't too large */
-	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
+	while (((mpz_sizeinbase(*p, 2) + 7) / 8) > prime_size);
 
 	rng->destroy(rng);
-	mpz_clear_sensitive(q);
+
+	/* additonally return p-1 */
+	mpz_sub_ui(*q, *p, 1);
 
 	return SUCCESS;
 }
@@ -414,7 +441,7 @@ METHOD(private_key_t, get_encoding, bool,
 
 	n = gmp_mpz_to_chunk(this->n);
 	e = gmp_mpz_to_chunk(this->e);
-	d = gmp_mpz_to_chunk(this->d);
+	d = gmp_mpz_to_chunk(*this->d);
 	p = gmp_mpz_to_chunk(this->p);
 	q = gmp_mpz_to_chunk(this->q);
 	exp1 = gmp_mpz_to_chunk(this->exp1);
@@ -472,14 +499,24 @@ METHOD(private_key_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		mpz_clear_sensitive(this->n);
-		mpz_clear_sensitive(this->e);
+		int i;
+
+		mpz_clear(this->n);
+		mpz_clear(this->e);
+		mpz_clear(this->v);
 		mpz_clear_sensitive(this->p);
 		mpz_clear_sensitive(this->q);
-		mpz_clear_sensitive(this->d);
+		mpz_clear_sensitive(this->m);
 		mpz_clear_sensitive(this->exp1);
 		mpz_clear_sensitive(this->exp2);
 		mpz_clear_sensitive(this->coeff);
+
+		for (i = 0; i < this->threshold; i++)
+		{
+			mpz_clear_sensitive(*this->d + i);
+		}
+		free(this->d);
+
 		lib->encoding->clear_cache(lib->encoding, this);
 		free(this);
 	}
@@ -490,7 +527,7 @@ METHOD(private_key_t, destroy, void,
  */
 static status_t check(private_gmp_rsa_private_key_t *this)
 {
-	mpz_t t, u, q1;
+	mpz_t u, p1, q1;
 	status_t status = SUCCESS;
 
 	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
@@ -509,9 +546,13 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 		return FAILED;
 	}
 
-	mpz_init(t);
 	mpz_init(u);
+	mpz_init(p1);
 	mpz_init(q1);
+
+	/* precompute p1 = p-1 and q1 = q-1 */
+	mpz_sub_ui(p1, this->p, 1);
+	mpz_sub_ui(q1, this->q, 1);
 
 	/* check that n == p * q */
 	mpz_mul(u, this->p, this->q);
@@ -521,62 +562,54 @@ static status_t check(private_gmp_rsa_private_key_t *this)
 	}
 
 	/* check that e divides neither p-1 nor q-1 */
-	mpz_sub_ui(t, this->p, 1);
-	mpz_mod(t, t, this->e);
-	if (mpz_cmp_ui(t, 0) == 0)
+	mpz_mod(u, p1, this->e);
+	if (mpz_cmp_ui(u, 0) == 0)
 	{
 		status = FAILED;
 	}
 
-	mpz_sub_ui(t, this->q, 1);
-	mpz_mod(t, t, this->e);
-	if (mpz_cmp_ui(t, 0) == 0)
+	mpz_mod(u, q1, this->e);
+	if (mpz_cmp_ui(u, 0) == 0)
 	{
 		status = FAILED;
 	}
 
 	/* check that d is e^-1 (mod lcm(p-1, q-1)) */
 	/* see PKCS#1v2, aka RFC 2437, for the "lcm" */
-	mpz_sub_ui(q1, this->q, 1);
-	mpz_sub_ui(u, this->p, 1);
-	mpz_gcd(t, u, q1);		/* t := gcd(p-1, q-1) */
-	mpz_mul(u, u, q1);		/* u := (p-1) * (q-1) */
-	mpz_divexact(u, u, t);	/* u := lcm(p-1, q-1) */
-
-	mpz_mul(t, this->d, this->e);
-	mpz_mod(t, t, u);
-	if (mpz_cmp_ui(t, 1) != 0)
+	mpz_lcm(this->m, p1, q1);
+	mpz_mul(u, *this->d, this->e);
+	mpz_mod(u, u, this->m);
+	if (mpz_cmp_ui(u, 1) != 0)
 	{
 		status = FAILED;
 	}
 
 	/* check that exp1 is d mod (p-1) */
-	mpz_sub_ui(u, this->p, 1);
-	mpz_mod(t, this->d, u);
-	if (mpz_cmp(t, this->exp1) != 0)
+	mpz_mod(u, *this->d, p1);
+	if (mpz_cmp(u, this->exp1) != 0)
 	{
 		status = FAILED;
 	}
 
 	/* check that exp2 is d mod (q-1) */
-	mpz_sub_ui(u, this->q, 1);
-	mpz_mod(t, this->d, u);
-	if (mpz_cmp(t, this->exp2) != 0)
+	mpz_mod(u, *this->d, q1);
+	if (mpz_cmp(u, this->exp2) != 0)
 	{
 		status = FAILED;
 	}
 
 	/* check that coeff is (q^-1) mod p */
-	mpz_mul(t, this->coeff, this->q);
-	mpz_mod(t, t, this->p);
-	if (mpz_cmp_ui(t, 1) != 0)
+	mpz_mul(u, this->coeff, this->q);
+	mpz_mod(u, u, this->p);
+	if (mpz_cmp_ui(u, 1) != 0)
 	{
 		status = FAILED;
 	}
 
-	mpz_clear_sensitive(t);
 	mpz_clear_sensitive(u);
+	mpz_clear_sensitive(p1);
 	mpz_clear_sensitive(q1);
+
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_LIB, "key integrity tests failed");
@@ -608,6 +641,7 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 				.destroy = _destroy,
 			},
 		},
+		.threshold = 1,
 		.ref = 1,
 	);
 	return this;
@@ -618,10 +652,11 @@ static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
  */
 gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 {
-	mpz_t p, q, n, e, d, exp1, exp2, coeff, m, q1, t;
 	private_gmp_rsa_private_key_t *this;
-	u_int key_size = 0;
-	bool safe_prime = FALSE;
+	u_int key_size = 0, shares = 0, threshold = 1;
+	bool safe_prime = FALSE, rng_failed = FALSE, invert_failed = FALSE;
+	mpz_t p, q, p1, q1, d;
+;
 
 	while (TRUE)
 	{
@@ -632,6 +667,12 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 				continue;
 			case BUILD_SAFE_PRIMES:
 				safe_prime = TRUE;
+				continue;
+			case BUILD_SHARES:
+				shares = va_arg(args, u_int);
+				continue;
+			case BUILD_THRESHOLD:
+				threshold = va_arg(args, u_int);
 				continue;
 			case BUILD_END:
 				break;
@@ -644,75 +685,112 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	{
 		return NULL;
 	}
-
 	key_size = key_size / BITS_PER_BYTE;
 
 	/* Get values of primes p and q  */
-	if (compute_prime(key_size/2, safe_prime, &p) != SUCCESS)
+	if (compute_prime(key_size/2, safe_prime, &p, &p1) != SUCCESS)
 	{
 		return NULL;
 	}
-	if (compute_prime(key_size/2, safe_prime, &q) != SUCCESS)
+	if (compute_prime(key_size/2, safe_prime, &q, &q1) != SUCCESS)
 	{
 		mpz_clear(p);
+		mpz_clear(p1);
 		return NULL;
 	}
-
-	mpz_init(t);
-	mpz_init(n);
-	mpz_init(d);
-	mpz_init(exp1);
-	mpz_init(exp2);
-	mpz_init(coeff);
 
 	/* Swapping Primes so p is larger then q */
 	if (mpz_cmp(p, q) < 0)
 	{
 		mpz_swap(p, q);
+		mpz_swap(p1, q1);
 	}
 
-	mpz_mul(n, p, q);						/* n = p*q */
-	mpz_init_set_ui(e, PUBLIC_EXPONENT);	/* assign public exponent */
-	mpz_init_set(m, p);						/* m = p */
-	mpz_sub_ui(m, m, 1);					/* m = m -1 */
-	mpz_init_set(q1, q);					/* q1 = q */
-	mpz_sub_ui(q1, q1, 1);					/* q1 = q1 -1 */
-	mpz_gcd(t, m, q1);						/* t = gcd(p-1, q-1) */
-	mpz_mul(m, m, q1);						/* m = (p-1)*(q-1) */
-	mpz_divexact(m, m, t);					/* m = m / t */
-	mpz_gcd(t, m, e);						/* t = gcd(m, e) */
-
-	mpz_invert(d, e, m);					/* e has an inverse mod m */
-	if (mpz_cmp_ui(d, 0) < 0)				/* make sure d is positive */
-	{
-		mpz_add(d, d, m);
-	}
-	mpz_sub_ui(t, p, 1);					/* t = p-1 */
-	mpz_mod(exp1, d, t);					/* exp1 = d mod p-1 */
-	mpz_sub_ui(t, q, 1);					/* t = q-1 */
-	mpz_mod(exp2, d, t);					/* exp2 = d mod q-1 */
-
-	mpz_invert(coeff, q, p);				/* coeff = q^-1 mod p */
-	if (mpz_cmp_ui(coeff, 0) < 0)			/* make coeff d is positive */
-	{
-		mpz_add(coeff, coeff, p);
-	}
-
-	mpz_clear_sensitive(q1);
-	mpz_clear_sensitive(m);
-	mpz_clear_sensitive(t);
-
+	/* Create and initialize RSA private key object */
 	this = gmp_rsa_private_key_create_empty();
+	this->shares = shares;
+	this->threshold = threshold;
+	this->d = malloc(threshold * sizeof(mpz_t));
+	*this->p = *p;
+	*this->q = *q;
 
-	/* apply values */
-	*(this->p) = *p;
-	*(this->q) = *q;
-	*(this->n) = *n;
-	*(this->e) = *e;
-	*(this->d) = *d;
-	*(this->exp1) = *exp1;
-	*(this->exp2) = *exp2;
-	*(this->coeff) = *coeff;
+	mpz_init_set_ui(this->e, PUBLIC_EXPONENT);
+	mpz_init(this->n);
+	mpz_init(this->m);
+	mpz_init(this->exp1);
+	mpz_init(this->exp2);
+	mpz_init(this->coeff);
+	mpz_init(this->v);
+	mpz_init(d);
+
+	mpz_mul(this->n, p, q);					/* n = p*q */
+	mpz_lcm(this->m, p1, q1);				/* m = lcm(p-1,q-1) */
+	mpz_invert(d, this->e, this->m);		/* e has an inverse mod m */
+	mpz_mod(this->exp1, d, p1);				/* exp1 = d mod p-1 */
+	mpz_mod(this->exp2, d, q1);				/* exp2 = d mod q-1 */
+	mpz_invert(this->coeff, q, p);			/* coeff = q^-1 mod p */
+
+	invert_failed = mpz_cmp_ui(this->m, 0) == 0 ||
+					mpz_cmp_ui(this->coeff, 0) == 0;
+
+    /* store secret exponent d */
+	(*this->d)[0] = *d;
+
+	/* generate and store random coefficients of secret sharing polynomial */
+	if (threshold > 1)
+	{
+		rng_t *rng;
+		chunk_t random_bytes;
+		mpz_t u;
+		int i;
+
+		rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
+		mpz_init(u);
+
+		for (i = 1; i < threshold; i++)
+		{
+			mpz_init(d);
+
+			if (!rng->allocate_bytes(rng, key_size, &random_bytes))
+			{
+				rng_failed = TRUE;
+				continue;
+			}
+			mpz_import(d, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			mpz_mod(d, d, this->m);
+			(*this->d)[i] = *d;
+			chunk_clear(&random_bytes);
+		}
+
+		/* generate verification key v as a square number */
+		do
+		{
+			if (!rng->allocate_bytes(rng, key_size, &random_bytes))
+			{
+				rng_failed = TRUE;
+				break;
+			}
+			mpz_import(this->v, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+			mpz_mul(this->v, this->v, this->v);
+			mpz_mod(this->v, this->v, this->n);
+			mpz_gcd(u, this->v, this->n);
+			chunk_free(&random_bytes);
+		}
+		while (mpz_cmp_ui(u, 1) != 0);
+
+		mpz_clear(u);
+		rng->destroy(rng);
+	}
+
+	mpz_clear_sensitive(p1);
+	mpz_clear_sensitive(q1);
+
+	if (rng_failed || invert_failed)
+	{
+		DBG1(DBG_LIB, "rsa key generation failed");
+		destroy(this);
+		return NULL;
+	}
 
 	/* set key size in bytes */
 	this->k = key_size;
@@ -725,8 +803,8 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
  */
 gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 {
-	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 	private_gmp_rsa_private_key_t *this;
+	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 
 	n = e = d = p = q = exp1 = exp2 = coeff = chunk_empty;
 	while (TRUE)
@@ -767,25 +845,28 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 
 	this = gmp_rsa_private_key_create_empty();
 
+	this->d = malloc(sizeof(mpz_t));
 	mpz_init(this->n);
 	mpz_init(this->e);
+	mpz_init(*this->d);
 	mpz_init(this->p);
 	mpz_init(this->q);
-	mpz_init(this->d);
+	mpz_init(this->m);
 	mpz_init(this->exp1);
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
+	mpz_init(this->v);
 
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
-	mpz_import(this->d, d.len, 1, 1, 1, 0, d.ptr);
+	mpz_import(*this->d, d.len, 1, 1, 1, 0, d.ptr);
 	mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
 	mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
 	mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
 	if (!exp1.len)
 	{	/* exp1 missing in key, recalculate: exp1 = d mod (p-1) */
 		mpz_sub_ui(this->exp1, this->p, 1);
-		mpz_mod(this->exp1, this->d, this->exp1);
+		mpz_mod(this->exp1, *this->d, this->exp1);
 	}
 	else
 	{
@@ -794,7 +875,7 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	if (!exp2.len)
 	{	/* exp2 missing in key, recalculate: exp2 = d mod (q-1) */
 		mpz_sub_ui(this->exp2, this->q, 1);
-		mpz_mod(this->exp2, this->d, this->exp2);
+		mpz_mod(this->exp2, *this->d, this->exp2);
 	}
 	else
 	{

@@ -141,6 +141,10 @@ enum builder_part_t {
 	BUILD_RSA_COEFF,
 	/** generate (p) and (q) as safe primes */
 	BUILD_SAFE_PRIMES,
+	/** number of private key shares */
+	BUILD_SHARES,
+	/** minimum number of participating private key shares */
+	BUILD_THRESHOLD,
 	/** end of variable argument builder list */
 	BUILD_END,
 };

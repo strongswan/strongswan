@@ -22,7 +22,7 @@ static int gen()
 {
 	cred_encoding_type_t form = PRIVKEY_ASN1_DER;
 	key_type_t type = KEY_RSA;
-	u_int size = 0;
+	u_int size = 0, shares = 0, threshold = 1;
 	private_key_t *key;
 	chunk_t encoding;
 	bool safe_primes = FALSE;
@@ -64,6 +64,20 @@ static int gen()
 			case 'p':
 				safe_primes = TRUE;
 				continue;
+			case 'n':
+				shares = atoi(arg);
+				if (shares < 2)
+				{
+					return command_usage("invalid number of key shares");
+				}
+				continue;
+			case 'l':
+				threshold = atoi(arg);
+				if (threshold < 1)
+				{
+					return command_usage("invalid key share threshold");
+				}
+				continue;
 			case EOF:
 				break;
 			default:
@@ -86,7 +100,18 @@ static int gen()
 				break;
 		}
 	}
-	if (type == KEY_RSA && safe_primes)
+	if (type == KEY_RSA && shares)
+	{
+		if (threshold > shares)
+		{
+			return command_usage("threshold is larger than number of shares");
+		}
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+							BUILD_KEY_SIZE, size, BUILD_SAFE_PRIMES,
+							BUILD_SHARES, shares, BUILD_THRESHOLD, threshold,
+							BUILD_END);
+	}
+	else if (type == KEY_RSA && safe_primes)
 	{
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							BUILD_KEY_SIZE, size, BUILD_SAFE_PRIMES, BUILD_END);
@@ -125,12 +150,15 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa] [--size bits] [--safe-primes] [--outform der|pem|pgp]"},
+		{"  [--type rsa|ecdsa] [--size bits] [--safe-primes]",
+		 "[--shares n] [--threshold l] [--outform der|pem|pgp]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
 			{"size",		's', 1, "keylength in bits, default: rsa 2048, ecdsa 384"},
 			{"safe-primes", 'p', 0, "generate rsa safe primes"},
+			{"shares",		'n', 1, "number of private rsa key shares"},
+			{"threshold",	'l', 1, "minimum number of participating rsa key shares"},
 			{"outform",		'f', 1, "encoding of generated private key"},
 		}
 	});
