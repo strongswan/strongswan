@@ -241,7 +241,7 @@ METHOD(charonservice_t, get_trusted_certificates, linked_list_t*,
 		goto failed;
 	}
 	jcerts = (*env)->CallObjectMethod(env, this->vpn_service, method_id, NULL);
-	if (!jcerts)
+	if (!jcerts || androidjni_exception_occurred(env))
 	{
 		goto failed;
 	}
@@ -273,7 +273,7 @@ METHOD(charonservice_t, get_user_certificate, linked_list_t*,
 		goto failed;
 	}
 	jencodings = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
-	if (!jencodings)
+	if (!jencodings || androidjni_exception_occurred(env))
 	{
 		goto failed;
 	}
@@ -305,7 +305,7 @@ METHOD(charonservice_t, get_user_key, private_key_t*,
 		goto failed;
 	}
 	jkey = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
-	if (!jkey)
+	if (!jkey || androidjni_exception_occurred(env))
 	{
 		goto failed;
 	}
