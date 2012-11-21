@@ -62,8 +62,12 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 			!ts->is_dynamic(ts) &&
 			ts->to_subnet(ts, &net, &mask))
 		{
-			ts->destroy(ts);
-			break;
+			if (mask > 0)
+			{
+				ts->destroy(ts);
+				break;
+			}
+			net->destroy(net);
 		}
 		ts->destroy(ts);
 	}
