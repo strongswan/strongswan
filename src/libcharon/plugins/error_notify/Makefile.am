@@ -14,7 +14,8 @@ endif
 libstrongswan_error_notify_la_SOURCES = \
 	error_notify_plugin.h error_notify_plugin.c \
 	error_notify_socket.h error_notify_socket.c \
-	error_notify_listener.h error_notify_listener.c
+	error_notify_listener.h error_notify_listener.c \
+	error_notify_msg.h
 
 libstrongswan_error_notify_la_LDFLAGS = -module -avoid-version
 
