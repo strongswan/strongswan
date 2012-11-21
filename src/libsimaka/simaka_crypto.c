@@ -150,7 +150,6 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 
 	k_encr = chunk_create(str.ptr, KENCR_LEN);
 	k_auth = chunk_create(str.ptr + KENCR_LEN, KAUTH_LEN);
-	DBG3(DBG_LIB, "K_encr %B\nK_auth %B\nMSK %B", &k_encr, &k_auth, &msk);
 
 	if (!this->signer->set_key(this->signer, k_auth) ||
 		!this->crypter->set_key(this->crypter, k_encr))
@@ -160,6 +159,7 @@ METHOD(simaka_crypto_t, derive_keys_full, bool,
 	}
 
 	*msk = chunk_clone(chunk_create(str.ptr + KENCR_LEN + KAUTH_LEN, MSK_LEN));
+	DBG3(DBG_LIB, "K_encr %B\nK_auth %B\nMSK %B", &k_encr, &k_auth, msk);
 
 	call_hook(this, k_encr, k_auth);
 
