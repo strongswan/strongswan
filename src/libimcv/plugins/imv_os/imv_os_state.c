@@ -154,7 +154,7 @@ struct private_imv_os_state_t {
 static char* languages[] = { "en", "de", "pl" };
 
 /**
- * Table of "OS settings" reason strings
+ * Reason strings for "OS settings"
  */
 static imv_lang_string_t reason_settings[] = {
 	{ "en", "Improper OS settings were detected" },
@@ -163,7 +163,7 @@ static imv_lang_string_t reason_settings[] = {
 };
 
 /**
- * Table of "software packages" reason strings
+ * Reason strings for "installed software packages"
  */
 static imv_lang_string_t reason_packages[] = {
 	{ "en", "Vulnerable or blacklisted software packages were found" },
@@ -172,47 +172,51 @@ static imv_lang_string_t reason_packages[] = {
 };
 
 /**
- * Table of "software packages update" instruction title strings
+ * Instruction strings for "Software Security Updates"
  */
 static imv_lang_string_t instr_update_packages_title[] = {
 	{ "en", "Software Security Updates" },
 	{ "de", "Software Sicherheitsupdates" },
-	{ "pl", "Software Security Updates" }, /* TODO */
 	{ NULL, NULL }
 };
 
-/**
- * Table of "software packages update" instruction description strings
- */
 static imv_lang_string_t instr_update_packages_descr[] = {
-	{ "en", "Please update the following software packages" },
-	{ "de", "Bitte updaten Sie die folgenden Softwarepakete" },
-	{ "pl", "Proszę zaktualizować następujące pakiety" },
+	{ "en", "Packages with security vulnerabilities were found" },
+	{ "de", "Softwarepakete mit Sicherheitsschwachstellen wurden gefunden" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t instr_update_packages_header[] = {
+	{ "en", "Please update the following software packages:" },
+	{ "de", "Bitte updaten Sie die folgenden Softwarepakete:" },
+	{ "pl", "Proszę zaktualizować następujące pakiety:" },
 	{ NULL, NULL }
 };
 
 /**
- * Tables of "software package removal" instruction titlestrings
+ * Instruction strings for "Blacklisted Software Packages"
  */
 static imv_lang_string_t instr_remove_packages_title[] = {
 	{ "en", "Blacklisted Software Packages" },
 	{ "de", "Gesperrte Softwarepakete" },
-	{ "pl", "Blacklisted Software Packages" }, /* TODO */
 	{ NULL, NULL }
 };
 
-/**
- * Tables of "software package removal" instruction strings
- */
 static imv_lang_string_t instr_remove_packages_descr[] = {
-	{ "en", "Please remove the following software packages" },
-	{ "de", "Bitte entfernen Sie die folgenden Softwarepakete" },
-	{ "pl", "Proszę usunąć następujące pakiety" },
+	{ "en", "Dangereous software packages were found" },
+	{ "de", "Gefährliche Softwarepakete wurden gefunden" },
 	{ NULL, NULL }
-}
+};
+
+static imv_lang_string_t instr_remove_packages_header[] = {
+	{ "en", "Please remove the following software packages:" },
+	{ "de", "Bitte entfernen Sie die folgenden Softwarepakete:" },
+	{ "pl", "Proszę usunąć następujące pakiety:" },
+	{ NULL, NULL }
+};
 
 ;/**
- * Table of "forwarding enable" instruction title strings
+ * Instruction strings for "Forwarding Enabled"
  */
 static imv_lang_string_t instr_fwd_enabled_title[] = {
 	{ "en", "IP Packet Forwarding" },
@@ -220,9 +224,6 @@ static imv_lang_string_t instr_fwd_enabled_title[] = {
 	{ NULL, NULL }
 };
 
-/**
- * Table of "forwarding enable" instruction description strings
- */
 static imv_lang_string_t instr_fwd_enabled_descr[] = {
 	{ "en", "Please disable the forwarding of IP packets" },
 	{ "de", "Bitte deaktivieren Sie das Forwarding von IP Paketen" },
@@ -230,7 +231,7 @@ static imv_lang_string_t instr_fwd_enabled_descr[] = {
 };
 
 /**
- * Table of "default password enabled" instruction title strings
+ * Instruction strings for "Default Password Enabled"
  */
 static imv_lang_string_t instr_default_pwd_enabled_title[] = {
 	{ "en", "Default Password" },
@@ -238,9 +239,6 @@ static imv_lang_string_t instr_default_pwd_enabled_title[] = {
 	{ NULL, NULL }
 };
 
-/**
- * Table of "default password enabled" instruction description strings
- */
 static imv_lang_string_t instr_default_pwd_enabled_descr[] = {
 	{ "en", "Please change the default password" },
 	{ "de", "Bitte ändern Sie das Default Passwort" },
@@ -248,7 +246,7 @@ static imv_lang_string_t instr_default_pwd_enabled_descr[] = {
 };
 
 /**
- * Table of "install non market apps" instruction title strings
+ * Instruction strings for  "Install Non-Market Apps"
  */
 static imv_lang_string_t instr_non_market_apps_title[] = {
 	{ "en", "Unknown Software Origin" },
@@ -256,9 +254,6 @@ static imv_lang_string_t instr_non_market_apps_title[] = {
 	{ NULL, NULL }
 };
 
-/**
- * Table of "install non market apps" instruction description strings
- */
 static imv_lang_string_t instr_non_market_apps_descr[] = {
 	{ "en", "Do not allow the installation of apps from unknown sources" },
 	{ "de", "Erlauben Sie nicht die Installation von Apps von unbekannten Quellen" },
@@ -372,43 +367,45 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	if (this->count_blacklist)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-						instr_remove_packages_title,
-						instr_remove_packages_descr, NULL,
-						this->remove_packages);
+							instr_remove_packages_title,
+							instr_remove_packages_descr,
+							instr_remove_packages_header,
+							this->remove_packages);
 	}
 
 	/* List of packages in need of an update, if any */
 	if (this->count_update)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-						instr_update_packages_title,
-						instr_update_packages_descr, NULL,
-						this->update_packages);
+							instr_update_packages_title,
+							instr_update_packages_descr,
+							instr_update_packages_header,
+							this->update_packages);
 	}
 
 	/* Add instructions concerning improper OS settings */
 	if (this->os_settings & OS_SETTINGS_FWD_ENABLED)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-						instr_fwd_enabled_title,
-						instr_fwd_enabled_descr, NULL, NULL);
+							instr_fwd_enabled_title,
+							instr_fwd_enabled_descr, NULL, NULL);
 	}
 	if (this->os_settings & OS_SETTINGS_DEFAULT_PWD_ENABLED)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-						instr_default_pwd_enabled_title,
-						instr_default_pwd_enabled_descr, NULL, NULL);
+							instr_default_pwd_enabled_title,
+							instr_default_pwd_enabled_descr, NULL, NULL);
 	}
 	if (this->os_settings & OS_SETTINGS_NON_MARKET_APPS)
 	{
 		this->remediation_string->add_instruction(this->remediation_string,
-						instr_non_market_apps_title,
-						instr_non_market_apps_descr, NULL, NULL);
+							instr_non_market_apps_title,
+							instr_non_market_apps_descr, NULL, NULL);
 	}
 
 	*string = this->remediation_string->get_encoding(this->remediation_string);
 	*uri = lib->settings->get_str(lib->settings,
-						"libimcv.plugins.imv-os.remediation_uri", NULL);
+							"libimcv.plugins.imv-os.remediation_uri", NULL);
 
 	return TRUE;
 }

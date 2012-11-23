@@ -37,9 +37,9 @@ struct imv_scanner_state_t {
 	imv_state_t interface;
 
 	/**
-	 * list of violating TCP and UDP ports
+	 * add a violating TCP or UDP port
 	 */
-	void (*set_violating_ports)(imv_scanner_state_t *this, char *ports);
+	void (*add_violating_port)(imv_scanner_state_t *this, char *port);
 };
 
 /**

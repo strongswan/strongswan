@@ -202,14 +202,15 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 		if (type.vendor_id == PEN_IETF && type.type == IETF_ATTR_PORT_FILTER)
 		{
+			imv_scanner_state_t *imv_scanner_state;
 			ietf_attr_port_filter_t *attr_port_filter;
 			enumerator_t *enumerator;
 			u_int8_t protocol;
 			u_int16_t port;
-			char buf[BUF_LEN], *pos = buf;
-			size_t len = BUF_LEN;
 			bool blocked, compliant = TRUE;
 
+
+			imv_scanner_state = (imv_scanner_state_t*)state;
 			attr_port_filter = (ietf_attr_port_filter_t*)attr;
 			enumerator = attr_port_filter->create_port_enumerator(attr_port_filter);
 			while (enumerator->enumerate(enumerator, &blocked, &protocol, &port))
@@ -217,7 +218,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				enumerator_t *e;
 				port_range_t *port_range;
 				bool passed, found = FALSE;
-				int written = 0;
+				char buf[20];
 
 				if (blocked)
 				{
@@ -245,15 +246,10 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 				if (!passed)
 				{
 					compliant = FALSE;
-					written = snprintf(pos, len, " %s/%u",
-									  (protocol == IPPROTO_TCP) ? "tcp" : "udp",
-									   port);
-					if (written < 0 || written >= len)
-					{
-						break;
-					}
-					pos += written;
-					len -= written;
+					snprintf(buf, sizeof(buf), "%s/%u",
+							(protocol == IPPROTO_TCP) ? "tcp" : "udp", port);
+					imv_scanner_state->add_violating_port(imv_scanner_state,
+														  strdup(buf));
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -266,10 +262,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 			}
 			else
 			{
-				imv_scanner_state_t *imv_scanner_state;
-
-				imv_scanner_state = (imv_scanner_state_t*)state;
-				imv_scanner_state->set_violating_ports(imv_scanner_state, buf);
 				state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
 								TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR);

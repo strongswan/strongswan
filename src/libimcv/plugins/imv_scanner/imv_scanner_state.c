@@ -69,9 +69,9 @@ struct private_imv_scanner_state_t {
 	TNC_IMV_Evaluation_Result eval;
 
 	/**
-	 * String with list of ports that should be closed
+	 * List with ports that should be closed
 	 */
-	char *violating_ports;
+	 linked_list_t *violating_ports;
 
 	/**
 	 * TNC Reason String
@@ -91,7 +91,7 @@ struct private_imv_scanner_state_t {
 static char* languages[] = { "en", "de", "fr", "pl" };
 
 /**
- * Table of reason strings
+ * Reason strings for "Port Filter"
  */
 static imv_lang_string_t reasons[] = {
 	{ "en", "Open server ports were detected" },
@@ -102,7 +102,7 @@ static imv_lang_string_t reasons[] = {
 };
 
 /**
- * Table of "ports" remediation instruction title strings
+ * Instruction strings for "Port Filters"
  */
 static imv_lang_string_t instr_ports_title[] = {
 	{ "en", "Open Server Ports" },
@@ -112,14 +112,19 @@ static imv_lang_string_t instr_ports_title[] = {
 	{ NULL, NULL }
 };
 
-/**
- * Table of "ports" remediation instruction descriptions strings
- */
 static imv_lang_string_t instr_ports_descr[] = {
-	{ "en", "Please close the following server ports" },
-	{ "de", "Bitte schliessen Sie die folgenden Serverports" },
-	{ "fr", "Fermez les ports du serveur suivants s'il vous plait" },
-	{ "pl", "Proszę zamknąć następujące porty serwera" },
+	{ "en", "Open Internet ports have been detected" },
+	{ "de", "Offenen Internet-Ports wurden festgestellt" },
+	{ "fr", "Il y'a des ports Internet ouverts" },
+	{ "pl", "Porty internetowe są otwarte" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t instr_ports_header[] = {
+	{ "en", "Please close the following server ports:" },
+	{ "de", "Bitte schliessen Sie die folgenden Serverports:" },
+	{ "fr", "Fermez les ports du serveur suivants s'il vous plait:" },
+	{ "pl", "Proszę zamknąć następujące porty serwera:" },
 	{ NULL, NULL }
 };
 
@@ -219,8 +224,10 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 									TRUE, *lang_code);	/* TODO get os_type */
 
 	this->remediation_string->add_instruction(this->remediation_string,
-						instr_ports_title, instr_ports_descr, NULL, NULL);
-
+									instr_ports_title,
+									instr_ports_descr,
+									instr_ports_header,
+									this->violating_ports);
 	*string = this->remediation_string->get_encoding(this->remediation_string);
 	*uri = lib->settings->get_str(lib->settings,
 				"libimcv.plugins.imv-scanner.remediation_uri", NULL);
@@ -233,14 +240,14 @@ METHOD(imv_state_t, destroy, void,
 {
 	DESTROY_IF(this->reason_string);
 	DESTROY_IF(this->remediation_string);
-	free(this->violating_ports);
+	this->violating_ports->destroy_function(this->violating_ports, free);
 	free(this);
 }
 
-METHOD(imv_scanner_state_t, set_violating_ports, void,
-	private_imv_scanner_state_t *this, char *ports)
+METHOD(imv_scanner_state_t, add_violating_port, void,
+	private_imv_scanner_state_t *this, char *port)
 {
-	this->violating_ports = strdup(ports);
+	this->violating_ports->insert_last(this->violating_ports, port);
 }
 
 /**
@@ -266,12 +273,13 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.get_remediation_instructions = _get_remediation_instructions,
 				.destroy = _destroy,
 			},
-			.set_violating_ports = _set_violating_ports,
+			.add_violating_port = _add_violating_port,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 		.eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW,
 		.connection_id = connection_id,
+		.violating_ports = linked_list_create(),
 	);
 
 	return &this->public.interface;

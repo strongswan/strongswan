@@ -49,20 +49,95 @@ struct private_imv_remediation_string_t {
 METHOD(imv_remediation_string_t, add_instruction, void,
 	private_imv_remediation_string_t *this, imv_lang_string_t title[],
 	imv_lang_string_t description[], imv_lang_string_t itemsheader[],
-	linked_list_t *items)
+	linked_list_t *item_list)
 {
-	char xml_format[] = "  <instruction>\n"
-						"    <title>%s</title>\n"
+	char xml_format[] =  "  <instruction>\n"
+						 "    <title>%s</title>\n"
 						"    <description>%s</description>\n"
 						"%s%s"
 						"  </instruction>\n";
-	char *instruction, *format, *s_title, *s_description, *s_itemsheader;
+	char *instruction, *format, *item, *pos, *header, *items;
+	char *s_title, *s_description, *s_itemsheader;
 	size_t len;
 
 	s_title = imv_lang_string_select_string(title, this->lang);
 	s_description = imv_lang_string_select_string(description, this->lang);
 	s_itemsheader = imv_lang_string_select_string(itemsheader, this->lang);
+	header = NULL;
+	items = NULL;
+
+	if (s_itemsheader)
+	{
+		int header_len = strlen(s_itemsheader);
+		char *header_format;
+
+		if (this->as_xml)
+		{
+			header_format = "    <itemsheader>%s</itemsheader>\n";
+			header_len +=  strlen(header_format) - 2;
+		}
+		else
+		{
+			header_format = "\n  %s";
+			header_len += 3;
+		}
+		header = malloc(header_len + 1);
+		sprintf(header, header_format, s_itemsheader);
+	}
+
+	if (item_list && item_list->get_count(item_list))
+	{
+		enumerator_t *enumerator;
+		int items_len = 0;
+
+		/* compute total length of all items */
+		enumerator = item_list->create_enumerator(item_list);
+		while (enumerator->enumerate(enumerator, &item))
+		{
+			items_len += strlen(item);
+		}
+		enumerator->destroy(enumerator);
+
+		if (this->as_xml)
+		{
+			items_len += 12 + 20 * item_list->get_count(item_list) + 13;
+
+			pos = items = malloc(items_len + 1);
+			pos += sprintf(pos, "    <items>\n");
+
+			enumerator = item_list->create_enumerator(item_list);
+			while (enumerator->enumerate(enumerator, &item))
+			{
+				pos += sprintf(pos, "      <item>%s</item>\n", item);
+			}
+			enumerator->destroy(enumerator);
+
+			pos += sprintf(pos, "    </items>\n");
+		}
+		else
+		{
+			items_len += 5 * item_list->get_count(item_list);
+
+			pos = items = malloc(items_len + 1);
+
+			enumerator = item_list->create_enumerator(item_list);
+			while (enumerator->enumerate(enumerator, &item))
+			{
+				pos += sprintf(pos, "\n    %s", item);
+			}
+			enumerator->destroy(enumerator);
+		}
+	}
+
 	len = strlen(s_title) + strlen(s_description);
+	if (header)
+	{
+		len += strlen(header);
+	}
+	if (items)
+	{
+		len += strlen(items);
+	}
 
 	if (this->as_xml)
 	{
@@ -71,11 +146,14 @@ METHOD(imv_remediation_string_t, add_instruction, void,
 	}
 	else
 	{
-		format = this->instructions.len ? "\n%s\n%s%s%s" : "%s\n%s%s%s";
-		len += 2;
+		format = this->instructions.len ? "\n%s\n  %s%s%s" : "%s\n  %s%s%s";
+		len += 4;
 	}
 	instruction = malloc(len + 1);
-	sprintf(instruction, format, s_title, s_description, "", "");
+	sprintf(instruction, format, s_title, s_description, header ? header : "",
+			items ? items : "");
+	free(header);
+	free(items);
 	this->instructions = chunk_cat("mm", this->instructions, 
 							chunk_create(instruction, strlen(instruction)));
 }
