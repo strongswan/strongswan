@@ -159,6 +159,7 @@ static char* languages[] = { "en", "de", "pl" };
 static imv_lang_string_t reason_settings[] = {
 	{ "en", "Improper OS settings were detected" },
 	{ "de", "Unzulässige OS Einstellungen wurden festgestellt" },
+	{ "pl", "Stwierdzono niewłaściwe ustawienia OS" },
 	{ NULL, NULL }
 };
 
@@ -168,6 +169,7 @@ static imv_lang_string_t reason_settings[] = {
 static imv_lang_string_t reason_packages[] = {
 	{ "en", "Vulnerable or blacklisted software packages were found" },
 	{ "de", "Schwachstellenbehaftete oder gesperrte Softwarepakete wurden gefunden" },
+	{ "pl", "Znaleziono pakiety podatne na atak lub będące na czarnej liście" },
 	{ NULL, NULL }
 };
 
@@ -177,12 +179,14 @@ static imv_lang_string_t reason_packages[] = {
 static imv_lang_string_t instr_update_packages_title[] = {
 	{ "en", "Software Security Updates" },
 	{ "de", "Software Sicherheitsupdates" },
+	{ "pl", "aktualizacja softwaru zabezpieczającego" },
 	{ NULL, NULL }
 };
 
 static imv_lang_string_t instr_update_packages_descr[] = {
 	{ "en", "Packages with security vulnerabilities were found" },
 	{ "de", "Softwarepakete mit Sicherheitsschwachstellen wurden gefunden" },
+	{ "pl", "Znaleziono pakiety podatne na atak" },
 	{ NULL, NULL }
 };
 
@@ -199,12 +203,14 @@ static imv_lang_string_t instr_update_packages_header[] = {
 static imv_lang_string_t instr_remove_packages_title[] = {
 	{ "en", "Blacklisted Software Packages" },
 	{ "de", "Gesperrte Softwarepakete" },
+	{ "pl", "Pakiety będące na czarnej liście" },
 	{ NULL, NULL }
 };
 
 static imv_lang_string_t instr_remove_packages_descr[] = {
-	{ "en", "Dangereous software packages were found" },
+	{ "en", "Dangerous software packages were found" },
 	{ "de", "Gefährliche Softwarepakete wurden gefunden" },
+	{ "pl", "Znaleziono niebezpieczne pakiety" },
 	{ NULL, NULL }
 };
 
@@ -221,12 +227,14 @@ static imv_lang_string_t instr_remove_packages_header[] = {
 static imv_lang_string_t instr_fwd_enabled_title[] = {
 	{ "en", "IP Packet Forwarding" },
 	{ "de", "Weiterleitung von IP Paketen" },
+	{ "pl", "Przekazywanie pakietów IP" },
 	{ NULL, NULL }
 };
 
 static imv_lang_string_t instr_fwd_enabled_descr[] = {
 	{ "en", "Please disable the forwarding of IP packets" },
 	{ "de", "Bitte deaktivieren Sie das Forwarding von IP Paketen" },
+	{ "pl", "Proszę zdezaktywować przekazywanie pakietów IP" },
 	{ NULL, NULL }
 };
 
@@ -236,12 +244,14 @@ static imv_lang_string_t instr_fwd_enabled_descr[] = {
 static imv_lang_string_t instr_default_pwd_enabled_title[] = {
 	{ "en", "Default Password" },
 	{ "de", "Default Passwort" },
+	{ "pl", "Hasło domyślne" },
 	{ NULL, NULL }
 };
 
 static imv_lang_string_t instr_default_pwd_enabled_descr[] = {
 	{ "en", "Please change the default password" },
 	{ "de", "Bitte ändern Sie das Default Passwort" },
+	{ "pl", "Proszę zmienić domyślne hasło" },
 	{ NULL, NULL }
 };
 
@@ -251,12 +261,14 @@ static imv_lang_string_t instr_default_pwd_enabled_descr[] = {
 static imv_lang_string_t instr_non_market_apps_title[] = {
 	{ "en", "Unknown Software Origin" },
 	{ "de", "Unbekannte Softwareherkunft" },
+	{ "pl", "Nieznane pochodzenie softwaru" },
 	{ NULL, NULL }
 };
 
 static imv_lang_string_t instr_non_market_apps_descr[] = {
 	{ "en", "Do not allow the installation of apps from unknown sources" },
-	{ "de", "Erlauben Sie nicht die Installation von Apps von unbekannten Quellen" },
+	{ "de", "Erlauben Sie nicht die Installation von Apps aus unbekannten Quellen" },
+	{ "pl", "Proszę nie dopuszczać do instalacji Apps z nieznanych źródeł" },
 	{ NULL, NULL }
 };
 
