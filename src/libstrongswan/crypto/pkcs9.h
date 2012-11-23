@@ -27,19 +27,19 @@ typedef struct pkcs9_t pkcs9_t;
 #include <library.h>
 
 /**
- * PKCS#9 attributes.
+ * PKCS#9 attribute lists.
  */
 struct pkcs9_t {
 
 	/**
-	 * Gets ASN.1 encoding of PKCS#9 attribute list
+	 * Gets ASN.1 encoding of PKCS#9 attribute list.
 	 *
 	 * @return				ASN.1 encoded PKCSI#9 list
 	 */
 	chunk_t (*get_encoding) (pkcs9_t *this);
 
 	/**
-	 * Gets a PKCS#9 attribute
+	 * Gets a PKCS#9 attribute from the list.
 	 *
 	 * @param oid			OID of the attribute
 	 * @return				value of the attribute (internal data)
@@ -47,7 +47,7 @@ struct pkcs9_t {
 	chunk_t (*get_attribute) (pkcs9_t *this, int oid);
 
 	/**
-	 * Adds a PKCS#9 attribute
+	 * Adds a PKCS#9 attribute.
 	 *
 	 * @param oid			OID of the attribute
 	 * @param value			value of the attribute (gets cloned)
@@ -55,7 +55,7 @@ struct pkcs9_t {
 	void (*set_attribute) (pkcs9_t *this, int oid, chunk_t value);
 
 	/**
-	 * Adds a ASN.1 encoded PKCS#9 attribute
+	 * Adds a ASN.1 encoded PKCS#9 attribute.
 	 *
 	 * @param oid			OID of the attribute
 	 * @param value			ASN.1 encoded value of the attribute (gets adopted)

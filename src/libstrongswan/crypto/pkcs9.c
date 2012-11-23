@@ -25,6 +25,7 @@
 #include "pkcs9.h"
 
 typedef struct private_pkcs9_t private_pkcs9_t;
+typedef struct attribute_t attribute_t;
 
 /**
  * Private data of a pkcs9_t attribute list.
@@ -46,12 +47,11 @@ struct private_pkcs9_t {
 	linked_list_t *attributes;
 };
 
-typedef struct attribute_t attribute_t;
-
 /**
  * Definition of an attribute_t object.
  */
 struct attribute_t {
+
 	/**
 	 * Object Identifier (OID)
 	 */
@@ -66,54 +66,32 @@ struct attribute_t {
 	 * ASN.1 encoding
 	 */
 	chunk_t encoding;
-
-	/**
-	 * Destroys the attribute.
-	 */
-	void (*destroy) (attribute_t *this);
-
 };
 
 /**
  * return the ASN.1 encoding of a PKCS#9 attribute
  */
-static asn1_t asn1_attributeType(int oid)
+static asn1_t get_attribute_type(int oid)
 {
-	asn1_t type;
-
 	switch (oid)
 	{
 		case OID_PKCS9_CONTENT_TYPE:
-			type = ASN1_OID;
-			break;
+			return ASN1_OID;
 		case OID_PKCS9_SIGNING_TIME:
-			type = ASN1_UTCTIME;
-			break;
-		case OID_PKCS9_MESSAGE_DIGEST:
-			type = ASN1_OCTET_STRING;
-			break;
+			return ASN1_UTCTIME;
 		case OID_PKI_MESSAGE_TYPE:
-			type = ASN1_PRINTABLESTRING;
-			break;
 		case OID_PKI_STATUS:
-			type = ASN1_PRINTABLESTRING;
-			break;
 		case OID_PKI_FAIL_INFO:
-			type = ASN1_PRINTABLESTRING;
-			break;
+			return ASN1_PRINTABLESTRING;
 		case OID_PKI_SENDER_NONCE:
-			type = ASN1_OCTET_STRING;
-			break;
 		case OID_PKI_RECIPIENT_NONCE:
-			type = ASN1_OCTET_STRING;
-			break;
+		case OID_PKCS9_MESSAGE_DIGEST:
+			return ASN1_OCTET_STRING;
 		case OID_PKI_TRANS_ID:
-			type = ASN1_PRINTABLESTRING;
-			break;
+			return ASN1_PRINTABLESTRING;
 		default:
-			type = ASN1_EOC;
+			return ASN1_EOC;
 	}
-	return type;
 }
 
 /**
@@ -134,12 +112,11 @@ static attribute_t *attribute_create(int oid, chunk_t value)
 	attribute_t *this;
 
 	INIT(this,
-		.destroy = attribute_destroy,
 		.oid = oid,
 		.value = chunk_clone(value),
 		.encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_build_known_oid(oid),
-							asn1_simple_object(ASN1_SET, value)),
+						asn1_build_known_oid(oid),
+						asn1_wrap(ASN1_SET, "c", value)),
 	);
 
 	return this;
@@ -152,39 +129,26 @@ static void build_encoding(private_pkcs9_t *this)
 {
 	enumerator_t *enumerator;
 	attribute_t *attribute;
-	u_int attributes_len = 0;
-
-	if (this->encoding.ptr)
-	{
-		chunk_free(&this->encoding);
-	}
-	if (this->attributes->get_count(this->attributes) == 0)
-	{
-		return;
-	}
+	u_int len = 0;
+	u_char *pos;
 
 	/* compute the total length of the encoded attributes */
 	enumerator = this->attributes->create_enumerator(this->attributes);
-
-	while (enumerator->enumerate(enumerator, (void**)&attribute))
+	while (enumerator->enumerate(enumerator, &attribute))
 	{
-		attributes_len += attribute->encoding.len;
+		len += attribute->encoding.len;
 	}
 	enumerator->destroy(enumerator);
 
 	/* allocate memory for the attributes and build the encoding */
+	pos = asn1_build_object(&this->encoding, ASN1_SET, len);
+	enumerator = this->attributes->create_enumerator(this->attributes);
+	while (enumerator->enumerate(enumerator, &attribute))
 	{
-		u_char *pos = asn1_build_object(&this->encoding, ASN1_SET, attributes_len);
-
-		enumerator = this->attributes->create_enumerator(this->attributes);
-
-		while (enumerator->enumerate(enumerator, (void**)&attribute))
-		{
-			memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
-			pos += attribute->encoding.len;
-		}
-		enumerator->destroy(enumerator);
+		memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
+		pos += attribute->encoding.len;
 	}
+	enumerator->destroy(enumerator);
 }
 
 METHOD(pkcs9_t, get_encoding, chunk_t,
@@ -205,7 +169,7 @@ METHOD(pkcs9_t, get_attribute, chunk_t,
 	attribute_t *attribute;
 
 	enumerator = this->attributes->create_enumerator(this->attributes);
-	while (enumerator->enumerate(enumerator, (void**)&attribute))
+	while (enumerator->enumerate(enumerator, &attribute))
 	{
 		if (attribute->oid == oid)
 		{
@@ -214,13 +178,11 @@ METHOD(pkcs9_t, get_attribute, chunk_t,
 		}
 	}
 	enumerator->destroy(enumerator);
-	if (value.ptr &&
-		!asn1_parse_simple_object(&value, asn1_attributeType(oid), 0,
-								  oid_names[oid].name))
+	if (value.len && asn1_unwrap(&value, &value) != ASN1_INVALID)
 	{
-		return chunk_empty;
+		return value;
 	}
-	return value;
+	return chunk_empty;
 }
 
 METHOD(pkcs9_t, set_attribute_raw, void,
@@ -235,7 +197,7 @@ METHOD(pkcs9_t, set_attribute_raw, void,
 METHOD(pkcs9_t, set_attribute, void,
 	private_pkcs9_t *this, int oid, chunk_t value)
 {
-	chunk_t attr = asn1_simple_object(asn1_attributeType(oid), value);
+	chunk_t attr = asn1_simple_object(get_attribute_type(oid), value);
 
 	set_attribute_raw(this, oid, attr);
 }
@@ -243,15 +205,16 @@ METHOD(pkcs9_t, set_attribute, void,
 METHOD(pkcs9_t, destroy, void,
 	private_pkcs9_t *this)
 {
-	this->attributes->destroy_offset(this->attributes, offsetof(attribute_t, destroy));
+	this->attributes->destroy_function(this->attributes,
+									   (void*)attribute_destroy);
 	free(this->encoding.ptr);
 	free(this);
 }
 
-/**
- * Generic private constructor
+/*
+ * Described in header.
  */
-static private_pkcs9_t *pkcs9_create_empty(void)
+pkcs9_t *pkcs9_create(void)
 {
 	private_pkcs9_t *this;
 
@@ -265,16 +228,6 @@ static private_pkcs9_t *pkcs9_create_empty(void)
 		},
 		.attributes = linked_list_create(),
 	);
-
-	return this;
-}
-
-/*
- * Described in header.
- */
-pkcs9_t *pkcs9_create(void)
-{
-	private_pkcs9_t *this = pkcs9_create_empty();
 
 	return &this->public;
 }
@@ -317,50 +270,28 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 				oid = asn1_known_oid(object);
 				break;
 			case ATTRIBUTE_OBJ_VALUE:
-				if (oid == OID_UNKNOWN)
+				if (oid != OID_UNKNOWN)
 				{
-					break;
-				}
-				/* add the attribute to a linked list */
-				{
-					attribute_t *attribute = attribute_create(oid, object);
-
 					this->attributes->insert_last(this->attributes,
-												 (void*)attribute);
+												  attribute_create(oid, object));
 				}
-				/* parse known attributes  */
-				{
-					asn1_t type = asn1_attributeType(oid);
-
-					if (type != ASN1_EOC)
-					{
-						if (!asn1_parse_simple_object(&object, type,
-										parser->get_level(parser)+1,
-										oid_names[oid].name))
-						{
-							goto end;
-						}
-					}
-				}
+				break;
 		}
 	}
 	success = parser->success(parser);
 
-end:
 	parser->destroy(parser);
 	return success;
 }
-
 
  /*
  * Described in header.
  */
 pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level)
 {
-	private_pkcs9_t *this = pkcs9_create_empty();
+	private_pkcs9_t *this = (private_pkcs9_t*)pkcs9_create();
 
 	this->encoding = chunk_clone(chunk);
-
 	if (!parse_attributes(chunk, level, this))
 	{
 		destroy(this);
