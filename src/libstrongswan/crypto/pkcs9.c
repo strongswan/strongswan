@@ -69,32 +69,6 @@ struct attribute_t {
 };
 
 /**
- * return the ASN.1 encoding of a PKCS#9 attribute
- */
-static asn1_t get_attribute_type(int oid)
-{
-	switch (oid)
-	{
-		case OID_PKCS9_CONTENT_TYPE:
-			return ASN1_OID;
-		case OID_PKCS9_SIGNING_TIME:
-			return ASN1_UTCTIME;
-		case OID_PKI_MESSAGE_TYPE:
-		case OID_PKI_STATUS:
-		case OID_PKI_FAIL_INFO:
-			return ASN1_PRINTABLESTRING;
-		case OID_PKI_SENDER_NONCE:
-		case OID_PKI_RECIPIENT_NONCE:
-		case OID_PKCS9_MESSAGE_DIGEST:
-			return ASN1_OCTET_STRING;
-		case OID_PKI_TRANS_ID:
-			return ASN1_PRINTABLESTRING;
-		default:
-			return ASN1_EOC;
-	}
-}
-
-/**
  * Destroy an attribute_t object.
  */
 static void attribute_destroy(attribute_t *this)
@@ -185,21 +159,12 @@ METHOD(pkcs9_t, get_attribute, chunk_t,
 	return chunk_empty;
 }
 
-METHOD(pkcs9_t, set_attribute_raw, void,
+METHOD(pkcs9_t, add_attribute, void,
 	private_pkcs9_t *this, int oid, chunk_t value)
 {
-	attribute_t *attribute = attribute_create(oid, value);
-
-	this->attributes->insert_last(this->attributes, attribute);
+	this->attributes->insert_last(this->attributes,
+								  attribute_create(oid, value));
 	chunk_free(&value);
-}
-
-METHOD(pkcs9_t, set_attribute, void,
-	private_pkcs9_t *this, int oid, chunk_t value)
-{
-	chunk_t attr = asn1_simple_object(get_attribute_type(oid), value);
-
-	set_attribute_raw(this, oid, attr);
 }
 
 METHOD(pkcs9_t, destroy, void,
@@ -222,8 +187,7 @@ pkcs9_t *pkcs9_create(void)
 		.public = {
 			.get_encoding = _get_encoding,
 			.get_attribute = _get_attribute,
-			.set_attribute = _set_attribute,
-			.set_attribute_raw = _set_attribute_raw,
+			.add_attribute = _add_attribute,
 			.destroy = _destroy,
 		},
 		.attributes = linked_list_create(),

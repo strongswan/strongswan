@@ -205,7 +205,8 @@ static bool add_senderNonce_attribute(pkcs9_t *pkcs9)
 	}
 	rng->destroy(rng);
 
-	pkcs9->set_attribute(pkcs9, OID_PKI_SENDER_NONCE, senderNonce);
+	pkcs9->add_attribute(pkcs9, OID_PKI_SENDER_NONCE,
+						 asn1_wrap(ASN1_OCTET_STRING, "c", senderNonce));
 	return TRUE;
 }
 
@@ -232,8 +233,10 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 	}
 
 	pkcs9 = pkcs9_create();
-	pkcs9->set_attribute(pkcs9, OID_PKI_TRANS_ID, transID);
-	pkcs9->set_attribute(pkcs9, OID_PKI_MESSAGE_TYPE, msgType);
+	pkcs9->add_attribute(pkcs9, OID_PKI_TRANS_ID,
+						 asn1_wrap(ASN1_PRINTABLESTRING, "c", transID));
+	pkcs9->add_attribute(pkcs9, OID_PKI_MESSAGE_TYPE,
+						 asn1_wrap(ASN1_PRINTABLESTRING, "c", msgType));
 	if (!add_senderNonce_attribute(pkcs9))
 	{
 		pkcs9->destroy(pkcs9);

@@ -930,17 +930,16 @@ METHOD(pkcs7_t, build_signedData, bool,
 				return FALSE;
 			}
 			hasher->destroy(hasher);
-			this->attributes->set_attribute(this->attributes,
-									OID_PKCS9_MESSAGE_DIGEST,
-									messageDigest);
-			free(messageDigest.ptr);
+			this->attributes->add_attribute(this->attributes,
+							OID_PKCS9_MESSAGE_DIGEST,
+							asn1_wrap(ASN1_OCTET_STRING, "m", messageDigest));
 
 			/* take the current time as signingTime */
 			now = time(NULL);
 			signingTime = asn1_from_time(&now, ASN1_UTCTIME);
-			this->attributes->set_attribute_raw(this->attributes,
+			this->attributes->add_attribute(this->attributes,
 									OID_PKCS9_SIGNING_TIME, signingTime);
-			this->attributes->set_attribute_raw(this->attributes,
+			this->attributes->add_attribute(this->attributes,
 									OID_PKCS9_CONTENT_TYPE,
 									asn1_build_known_oid(OID_PKCS7_DATA));
 

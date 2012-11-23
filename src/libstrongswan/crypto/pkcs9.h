@@ -50,17 +50,9 @@ struct pkcs9_t {
 	 * Adds a PKCS#9 attribute.
 	 *
 	 * @param oid			OID of the attribute
-	 * @param value			value of the attribute (gets cloned)
+	 * @param value			value of the attribute, with ASN1 type (gets owned)
 	 */
-	void (*set_attribute) (pkcs9_t *this, int oid, chunk_t value);
-
-	/**
-	 * Adds a ASN.1 encoded PKCS#9 attribute.
-	 *
-	 * @param oid			OID of the attribute
-	 * @param value			ASN.1 encoded value of the attribute (gets adopted)
-	 */
-	void (*set_attribute_raw) (pkcs9_t *this, int oid, chunk_t value);
+	void (*add_attribute) (pkcs9_t *this, int oid, chunk_t value);
 
 	/**
 	 * Destroys the PKCS#9 attribute list.
