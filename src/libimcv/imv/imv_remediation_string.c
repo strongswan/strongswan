@@ -51,8 +51,8 @@ METHOD(imv_remediation_string_t, add_instruction, void,
 	imv_lang_string_t description[], imv_lang_string_t itemsheader[],
 	linked_list_t *item_list)
 {
-	char xml_format[] =  "  <instruction>\n"
-						 "    <title>%s</title>\n"
+	char xml_format[] = "  <instruction>\n"
+						"    <title>%s</title>\n"
 						"    <description>%s</description>\n"
 						"%s%s"
 						"  </instruction>\n";
