@@ -167,6 +167,9 @@ METHOD(pkcs9_t, add_attribute, void,
 	this->attributes->insert_last(this->attributes,
 								  attribute_create(oid, value));
 	chunk_free(&value);
+
+	/* rebuild encoding when adding attributes */
+	chunk_free(&this->encoding);
 }
 
 METHOD(pkcs9_t, destroy, void,
