@@ -74,7 +74,6 @@ struct attribute_t {
 static void attribute_destroy(attribute_t *this)
 {
 	free(this->value.ptr);
-	free(this->encoding.ptr);
 	free(this);
 }
 
@@ -88,9 +87,6 @@ static attribute_t *attribute_create(int oid, chunk_t value)
 	INIT(this,
 		.oid = oid,
 		.value = chunk_clone(value),
-		.encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_build_known_oid(oid),
-						asn1_wrap(ASN1_SET, "c", value)),
 	);
 
 	return this;
@@ -103,26 +99,32 @@ static void build_encoding(private_pkcs9_t *this)
 {
 	enumerator_t *enumerator;
 	attribute_t *attribute;
-	u_int len = 0;
+	u_int len = 0, count, i = 0;
+	chunk_t *chunks;
 	u_char *pos;
 
-	/* compute the total length of the encoded attributes */
+	count = this->attributes->get_count(this->attributes);
+	chunks = malloc(sizeof(chunk_t) * count);
+
 	enumerator = this->attributes->create_enumerator(this->attributes);
 	while (enumerator->enumerate(enumerator, &attribute))
 	{
-		len += attribute->encoding.len;
+		chunks[i] = asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_build_known_oid(attribute->oid),
+								asn1_wrap(ASN1_SET, "c", attribute->value));
+		len += chunks[i].len;
+		i++;
 	}
 	enumerator->destroy(enumerator);
 
-	/* allocate memory for the attributes and build the encoding */
 	pos = asn1_build_object(&this->encoding, ASN1_SET, len);
-	enumerator = this->attributes->create_enumerator(this->attributes);
-	while (enumerator->enumerate(enumerator, &attribute))
+	for (i = 0; i < count; i++)
 	{
-		memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
-		pos += attribute->encoding.len;
+		memcpy(pos, chunks[i].ptr, chunks[i].len);
+		pos += chunks[i].len;
+		free(chunks[i].ptr);
 	}
-	enumerator->destroy(enumerator);
+	free(chunks);
 }
 
 METHOD(pkcs9_t, get_encoding, chunk_t,
