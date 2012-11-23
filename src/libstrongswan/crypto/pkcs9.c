@@ -145,8 +145,10 @@ static attribute_t *attribute_create(int oid, chunk_t value)
 	return this;
 }
 
-METHOD(pkcs9_t, build_encoding, void,
-	private_pkcs9_t *this)
+/**
+ * Build encoding of the attribute list
+ */
+static void build_encoding(private_pkcs9_t *this)
 {
 	enumerator_t *enumerator;
 	attribute_t *attribute;
@@ -188,7 +190,7 @@ METHOD(pkcs9_t, build_encoding, void,
 METHOD(pkcs9_t, get_encoding, chunk_t,
 	private_pkcs9_t *this)
 {
-	if (this->encoding.ptr == NULL)
+	if (!this->encoding.len)
 	{
 		build_encoding(this);
 	}
@@ -255,7 +257,6 @@ static private_pkcs9_t *pkcs9_create_empty(void)
 
 	INIT(this,
 		.public = {
-			.build_encoding = _build_encoding,
 			.get_encoding = _get_encoding,
 			.get_attribute = _get_attribute,
 			.set_attribute = _set_attribute,

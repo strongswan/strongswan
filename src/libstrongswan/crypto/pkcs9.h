@@ -32,11 +32,6 @@ typedef struct pkcs9_t pkcs9_t;
 struct pkcs9_t {
 
 	/**
-	 * Generate ASN.1 encoding of attribute list
-	 */
-	void (*build_encoding) (pkcs9_t *this);
-
-	/**
 	 * Gets ASN.1 encoding of PKCS#9 attribute list
 	 *
 	 * @return				ASN.1 encoded PKCSI#9 list
