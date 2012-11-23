@@ -116,7 +116,7 @@ struct imv_state_t {
 	 */
 	bool (*get_reason_string)(imv_state_t *this,
 							  enumerator_t *language_enumerator,
-							  char **reason_string, char **reason_language);
+							  chunk_t *reason_string, char **reason_language);
 
 	/**
 	 * Get remediation instructions based on the preferred language
@@ -129,7 +129,7 @@ struct imv_state_t {
 	 */
 	bool (*get_remediation_instructions)(imv_state_t *this,
 										 enumerator_t *language_enumerator,
-										 char **string, char **lang_code,
+										 chunk_t *string, char **lang_code,
 										 char **uri);
 
 	/**

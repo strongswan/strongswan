@@ -309,22 +309,22 @@ METHOD(imc_msg_t, receive, TNC_Result,
 				switch (parameters_type.type)
 				{
 					case IETF_REMEDIATION_PARAMETERS_URI:
-						DBG1(DBG_IMC, "remediation uri: '%.*s'",
+						DBG1(DBG_IMC, "remediation uri: %.*s",
 									   parameters.len, parameters.ptr);
 						break;
 					case IETF_REMEDIATION_PARAMETERS_STRING:
 						string = attr_cast->get_string(attr_cast, &lang_code);
-						DBG1(DBG_IMC, "remediation string: '%.*s' [%.*s]",
-									   string.len, string.ptr,
-									   lang_code.len, lang_code.ptr);
+						DBG1(DBG_IMC, "remediation string: [%.*s]\n%.*s",
+									   lang_code.len, lang_code.ptr,
+									   string.len, string.ptr);
 						break;
 					default:
-						DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+						DBG1(DBG_IMC, "remediation parameters: %B", &parameters);
 				}
 			}
 			else
 			{
-				DBG1(DBG_IMC, "remediation parameters %B", &parameters);
+				DBG1(DBG_IMC, "remediation parameters: %B", &parameters);
 			}
 		}
 	}

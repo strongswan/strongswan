@@ -17,6 +17,9 @@
 
 #include <libpts.h>
 
+#include <imv/imv_lang_string.h>
+#include "imv/imv_reason_string.h"
+
 #include <utils/lexparser.h>
 #include <collections/linked_list.h>
 #include <utils/debug.h>
@@ -100,6 +103,11 @@ struct private_imv_attestation_state_t {
 	 */
 	bool measurement_error;
 
+	/**
+	 * TNC Reason String
+	 */
+	imv_reason_string_t *reason_string;
+
 };
 
 /**
@@ -128,26 +136,22 @@ static void free_func_comp(func_comp_t *this)
 	free(this);
 }
 
-typedef struct entry_t entry_t;
+/**
+ * Supported languages
+ */
+static char* languages[] = { "en", "mn", "de" };
 
 /**
- * Define an internal reason string entry
+ * Table of reason strings
  */
-struct entry_t {
-	char *lang;
-	char *string;
-};
-
-/**
- * Table of multi-lingual reason string entries
- */
-static entry_t reasons[] = {
+static imv_lang_string_t reasons[] = {
 	{ "en", "IMV Attestation: Incorrect/pending file measurement/component"
 			" evidence or invalid TPM Quote signature received" },
 	{ "mn", "IMV Attestation:  Буруу/хүлээгдэж байгаа файл/компонент хэмжилт "
 			"эсвэл буруу TPM Quote гарын үсэг" },
 	{ "de", "IMV Attestation: Falsche/Fehlende Dateimessung/Komponenten Beweis "
 			"oder ungültige TPM Quote Unterschrift ist erhalten" },
+	{ NULL, NULL }
 };
 
 METHOD(imv_state_t, get_connection_id, TNC_ConnectionID,
@@ -211,40 +215,23 @@ METHOD(imv_state_t, set_recommendation, void,
 
 METHOD(imv_state_t, get_reason_string, bool,
 	private_imv_attestation_state_t *this, enumerator_t *language_enumerator,
-	char **reason_string, char **reason_language)
+	chunk_t *reason_string, char **reason_language)
 {
-	bool match = FALSE;
-	char *lang;
-	int i;
+	*reason_language = imv_lang_string_select_lang(language_enumerator,
+											  languages, countof(languages));
 
-	/* set the default language */
-	*reason_language = reasons[0].lang;
-	*reason_string   = reasons[0].string;
-
-	while (language_enumerator->enumerate(language_enumerator, &lang))
-	{
-		for (i = 0 ; i < countof(reasons); i++)
-		{
-			if (streq(lang, reasons[i].lang))
-			{
-				match = TRUE;
-				*reason_language = reasons[i].lang;
-				*reason_string   = reasons[i].string;
-				break;
-			}
-		}
-		if (match)
-		{
-			break;
-		}
-	}
+	/* Instantiate a TNC Reason String object */
+	DESTROY_IF(this->reason_string);
+	this->reason_string = imv_reason_string_create(*reason_language);
+	this->reason_string->add_reason(this->reason_string, reasons);
+	*reason_string = this->reason_string->get_encoding(this->reason_string);
 
 	return TRUE;
 }
 
 METHOD(imv_state_t, get_remediation_instructions, bool,
 	private_imv_attestation_state_t *this, enumerator_t *language_enumerator,
-	char **string, char **lang_code, char **uri)
+	chunk_t *string, char **lang_code, char **uri)
 {
 	return FALSE;
 }
@@ -252,6 +239,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
+	DESTROY_IF(this->reason_string);
 	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
 	this->components->destroy_function(this->components, (void *)free_func_comp);
 	this->pts->destroy(this->pts);

@@ -191,7 +191,8 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 	pa_tnc_attr_t *attr;
-	char *string = NULL, *lang_code = NULL, *uri = NULL;
+	chunk_t string = chunk_empty;
+	char *lang_code = NULL, *uri = NULL;
 	enumerator_t *e;
 
 	/* Send an IETF Assessment Result attribute if enabled */
@@ -210,10 +211,9 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 			if (this->state->get_remediation_instructions(this->state,
 									e, &string, &lang_code, &uri))
 			{
-				if (string && lang_code)
+				if (string.len && lang_code)
 				{
-					attr = ietf_attr_remediation_instr_create_from_string(
-									chunk_create(string, strlen(string)),
+					attr = ietf_attr_remediation_instr_create_from_string(string,
 									chunk_create(lang_code, strlen(lang_code)));
 					add_attribute(this, attr);
 				}

@@ -642,7 +642,8 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 	TNC_ConnectionID connection_id;
-	char *reason_string, *reason_lang;
+	chunk_t reason_string;
+	char *reason_lang;
 	enumerator_t *e;
 
 	state->get_recommendation(state, &rec, &eval);
@@ -659,7 +660,7 @@ METHOD(imv_agent_t, provide_recommendation, TNC_Result,
 			{
 				this->set_attribute(this->id, connection_id,
 									TNC_ATTRIBUTEID_REASON_STRING,
-									strlen(reason_string), reason_string);
+									reason_string.len, reason_string.ptr);
 				this->set_attribute(this->id, connection_id,
 									TNC_ATTRIBUTEID_REASON_LANGUAGE,
 									strlen(reason_lang), reason_lang);
