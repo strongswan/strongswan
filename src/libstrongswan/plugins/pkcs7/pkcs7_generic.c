@@ -19,6 +19,7 @@
 
 #include "pkcs7_generic.h"
 #include "pkcs7_data.h"
+#include "pkcs7_signed_data.h"
 
 #include <utils/debug.h>
 #include <asn1/oid.h>
@@ -79,6 +80,8 @@ end:
 		{
 			case OID_PKCS7_DATA:
 				return pkcs7_data_load(blob, content);
+			case OID_PKCS7_SIGNED_DATA:
+				return pkcs7_signed_data_load(blob, content);
 			default:
 				DBG1(DBG_ASN, "pkcs7 content type %d not supported", type);
 				return NULL;
