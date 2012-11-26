@@ -14,6 +14,7 @@
  */
 
 #include "pkcs7_plugin.h"
+#include "pkcs7_generic.h"
 
 #include <library.h>
 
@@ -40,6 +41,8 @@ METHOD(plugin_t, get_features, int,
 	private_pkcs7_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(CONTAINER_DECODE, pkcs7_generic_load, TRUE),
+			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS7),
 	};
 	*features = f;
 	return countof(f);
