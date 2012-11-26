@@ -42,6 +42,8 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"PUBKEY_ENCRYPT",
 	"CERT_DECODE",
 	"CERT_ENCODE",
+	"CONTAINER_DECODE",
+	"CONTAINER_ENCODE",
 	"EAP_SERVER",
 	"EAP_CLIENT",
 	"XAUTH_SERVER",
@@ -83,6 +85,8 @@ u_int32_t plugin_feature_hash(plugin_feature_t *feature)
 		case FEATURE_PUBKEY_ENCRYPT:
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
+		case FEATURE_CONTAINER_DECODE:
+		case FEATURE_CONTAINER_ENCODE:
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
 			data = chunk_from_thing(feature->arg);
@@ -143,6 +147,9 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_CERT_DECODE:
 			case FEATURE_CERT_ENCODE:
 				return a->arg.cert == b->arg.cert;
+			case FEATURE_CONTAINER_DECODE:
+			case FEATURE_CONTAINER_ENCODE:
+				return a->arg.container == b->arg.container;
 			case FEATURE_EAP_SERVER:
 			case FEATURE_EAP_PEER:
 				return a->arg.eap == b->arg.eap;
@@ -267,6 +274,14 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 				return str;
 			}
 			break;
+		case FEATURE_CONTAINER_DECODE:
+		case FEATURE_CONTAINER_ENCODE:
+			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
+					container_type_names, feature->arg.container) > 0)
+			{
+				return str;
+			}
+			break;
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
@@ -385,6 +400,12 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 								feature->arg.cert, reg->arg.reg.final,
 								reg->arg.reg.f);
 			break;
+		case FEATURE_CONTAINER_DECODE:
+		case FEATURE_CONTAINER_ENCODE:
+			lib->creds->add_builder(lib->creds, CRED_CONTAINER,
+								feature->arg.container, reg->arg.reg.final,
+								reg->arg.reg.f);
+			break;
 		case FEATURE_DATABASE:
 			lib->db->add_database(lib->db, reg->arg.reg.f);
 			break;
@@ -452,6 +473,10 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
+			lib->creds->remove_builder(lib->creds, reg->arg.reg.f);
+			break;
+		case FEATURE_CONTAINER_DECODE:
+		case FEATURE_CONTAINER_ENCODE:
 			lib->creds->remove_builder(lib->creds, reg->arg.reg.f);
 			break;
 		case FEATURE_DATABASE:

@@ -29,6 +29,7 @@ typedef struct plugin_feature_t plugin_feature_t;
 #include <library.h>
 #include <eap/eap.h>
 #include <plugins/plugin.h>
+#include <credentials/containers/container.h>
 
 /**
  * Callback function of a plugin to (un-)register a specified feature.
@@ -133,6 +134,10 @@ struct plugin_feature_t {
 		FEATURE_CERT_DECODE,
 		/** generating certificates */
 		FEATURE_CERT_ENCODE,
+		/** parsing containers */
+		FEATURE_CONTAINER_DECODE,
+		/** generating containers */
+		FEATURE_CONTAINER_ENCODE,
 		/** EAP server implementation */
 		FEATURE_EAP_SERVER,
 		/** EAP peer implementation */
@@ -186,6 +191,8 @@ struct plugin_feature_t {
 		encryption_scheme_t pubkey_encrypt;
 		/** FEATURE_CERT_DECODE/ENCODE */
 		certificate_type_t cert;
+		/** FEATURE_CONTAINER_DECODE/ENCODE */
+		container_type_t container;
 		/** FEATURE_EAP_SERVER/CLIENT */
 		eap_type_t eap;
 		/** FEATURE_DATABASE */
@@ -281,6 +288,8 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_PUBKEY_ENCRYPT(kind, scheme)		__PLUGIN_FEATURE(kind, PUBKEY_ENCRYPT, .pubkey_encrypt = scheme)
 #define _PLUGIN_FEATURE_CERT_DECODE(kind, type)				__PLUGIN_FEATURE(kind, CERT_DECODE, .cert = type)
 #define _PLUGIN_FEATURE_CERT_ENCODE(kind, type)				__PLUGIN_FEATURE(kind, CERT_ENCODE, .cert = type)
+#define _PLUGIN_FEATURE_CONTAINER_DECODE(kind, type)		__PLUGIN_FEATURE(kind, CONTAINER_DECODE, .container = type)
+#define _PLUGIN_FEATURE_CONTAINER_ENCODE(kind, type)		__PLUGIN_FEATURE(kind, CONTAINER_ENCODE, .container = type)
 #define _PLUGIN_FEATURE_EAP_SERVER(kind, type)				__PLUGIN_FEATURE(kind, EAP_SERVER, .eap = type)
 #define _PLUGIN_FEATURE_EAP_PEER(kind, type)				__PLUGIN_FEATURE(kind, EAP_PEER, .eap = type)
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
@@ -304,6 +313,8 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_PUBKEY(type, f, final)		__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_CERT_DECODE(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_CERT_ENCODE(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
+#define _PLUGIN_FEATURE_REGISTER_CONTAINER_DECODE(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
+#define _PLUGIN_FEATURE_REGISTER_CONTAINER_ENCODE(type, f, final)__PLUGIN_FEATURE_REGISTER_BUILDER(type, f, final)
 #define _PLUGIN_FEATURE_REGISTER_DATABASE(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_FETCHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 
