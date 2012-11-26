@@ -22,12 +22,13 @@
 #include <threading/thread_value.h>
 #include <threading/rwlock.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/containers/container.h>
 
-ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CERTIFICATE,
+ENUM(credential_type_names, CRED_PRIVATE_KEY, CRED_CONTAINER,
 	"CRED_PRIVATE_KEY",
 	"CRED_PUBLIC_KEY",
 	"CRED_CERTIFICATE",
-	"CRED_PLUTO_CERT",
+	"CRED_CONTAINER",
 );
 
 typedef struct private_credential_factory_t private_credential_factory_t;
@@ -139,11 +140,21 @@ METHOD(credential_factory_t, create, void*,
 
 	if (!construct && !level)
 	{
-		enum_name_t *names = key_type_names;
+		enum_name_t *names;
 
-		if (type == CRED_CERTIFICATE)
+		switch (type)
 		{
-			names = certificate_type_names;
+			case CRED_CERTIFICATE:
+				names = certificate_type_names;
+				break;
+			case CRED_CONTAINER:
+				names = container_type_names;
+				break;
+			case CRED_PRIVATE_KEY:
+			case CRED_PUBLIC_KEY:
+			default:
+				names = key_type_names;
+				break;
 		}
 		DBG1(DBG_LIB, "building %N - %N failed, tried %d builders",
 			 credential_type_names, type, names, subtype, failures);

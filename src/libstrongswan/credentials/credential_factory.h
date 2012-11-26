@@ -28,6 +28,9 @@ typedef enum credential_type_t credential_type_t;
 
 /**
  * Kind of credential.
+ *
+ * While crypto containers are not really credentials, we still use the
+ * credential factory and builders create them.
  */
 enum credential_type_t {
 	/** private key, implemented in private_key_t */
@@ -36,6 +39,8 @@ enum credential_type_t {
 	CRED_PUBLIC_KEY,
 	/** certificates, implemented in certificate_t */
 	CRED_CERTIFICATE,
+	/** crypto container, implemented in container_t */
+	CRED_CONTAINER,
 };
 
 /**
