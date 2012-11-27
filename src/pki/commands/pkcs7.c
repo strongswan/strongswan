@@ -15,6 +15,8 @@
 
 #include "pki.h"
 
+#include <asn1/oid.h>
+#include <asn1/asn1.h>
 #include <credentials/containers/pkcs7.h>
 #include <credentials/sets/mem_cred.h>
 
@@ -71,10 +73,12 @@ static bool write_to_stream(FILE *stream, chunk_t data)
 static int verify(chunk_t chunk)
 {
 	container_t *container;
+	pkcs7_t *pkcs7;
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	auth_cfg_t *auth;
 	chunk_t data;
+	time_t t;
 	bool verified = FALSE;
 
 	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
@@ -92,6 +96,7 @@ static int verify(chunk_t chunk)
 		return 1;
 	}
 
+	pkcs7 = (pkcs7_t*)container;
 	enumerator = container->create_signature_enumerator(container);
 	while (enumerator->enumerate(enumerator, &auth))
 	{
@@ -99,7 +104,18 @@ static int verify(chunk_t chunk)
 		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 		if (cert)
 		{
-			fprintf(stderr, "signed by '%Y'\n", cert->get_subject(cert));
+			fprintf(stderr, "signed by '%Y'", cert->get_subject(cert));
+
+			if (pkcs7->get_attribute(pkcs7, OID_PKCS9_SIGNING_TIME,
+									 enumerator, &data))
+			{
+				t = asn1_to_time(&data, ASN1_UTCTIME);
+				if (t != UNDEFINED_TIME)
+				{
+					fprintf(stderr, " at %T", &t, FALSE);
+				}
+			}
+			fprintf(stderr, "\n");
 		}
 	}
 	enumerator->destroy(enumerator);
