@@ -205,6 +205,7 @@ static int decrypt(chunk_t chunk)
 		container->destroy(container);
 		return 1;
 	}
+	container->destroy(container);
 
 	write_to_stream(stdout, data);
 	free(data.ptr);
