@@ -33,4 +33,14 @@
  */
 pkcs7_t *pkcs7_data_load(chunk_t encoding, chunk_t content);
 
+/**
+ * Generate a PKCS#7 data container.
+ *
+ * The only accepted builder argument is BUILDER_BLOB.
+ *
+ * @param type		container type, must be CONTAINER_PKCS7_DATA
+ * @param args		builder_t arguments to use.
+ */
+pkcs7_t *pkcs7_data_gen(container_type_t type, va_list args);
+
 #endif /** PKCS7_DATA_H_ @}*/

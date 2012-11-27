@@ -16,6 +16,7 @@
 #include "pkcs7_data.h"
 
 #include <asn1/asn1.h>
+#include <asn1/oid.h>
 
 typedef struct private_pkcs7_data_t private_pkcs7_data_t;
 
@@ -35,7 +36,7 @@ struct private_pkcs7_data_t {
 	chunk_t content;
 
 	/**
-	 * Encoded PKCS#7 signed-data
+	 * Encoded PKCS#7 data
 	 */
 	chunk_t encoding;
 };
@@ -82,9 +83,9 @@ METHOD(container_t, destroy, void,
 }
 
 /**
- * See header.
+ * Create an empty container
  */
-pkcs7_t *pkcs7_data_load(chunk_t encoding, chunk_t content)
+static private_pkcs7_data_t* create_empty()
 {
 	private_pkcs7_data_t *this;
 
@@ -98,9 +99,56 @@ pkcs7_t *pkcs7_data_load(chunk_t encoding, chunk_t content)
 				.destroy = _destroy,
 			},
 		},
-		.encoding = chunk_clone(encoding),
-		.content = chunk_clone(content),
 	);
 
+	return this;
+}
+
+/**
+ * See header.
+ */
+pkcs7_t *pkcs7_data_load(chunk_t encoding, chunk_t content)
+{
+	private_pkcs7_data_t *this = create_empty();
+
+	this->encoding = chunk_clone(encoding);
+	this->content = chunk_clone(content);
+
 	return &this->public;
+}
+
+/**
+ * See header.
+ */
+pkcs7_t *pkcs7_data_gen(container_type_t type, va_list args)
+{
+	private_pkcs7_data_t *this;
+	chunk_t blob = chunk_empty;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (blob.len)
+	{
+		this = create_empty();
+
+		this->content = asn1_wrap(ASN1_OCTET_STRING, "c", blob);
+		this->encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_PKCS7_DATA),
+							asn1_wrap(ASN1_CONTEXT_C_0, "c", this->content));
+		return &this->public;
+	}
+	return NULL;
 }
