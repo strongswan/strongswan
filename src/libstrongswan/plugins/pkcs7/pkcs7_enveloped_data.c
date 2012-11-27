@@ -365,9 +365,9 @@ METHOD(container_t, destroy, void,
 }
 
 /**
- * See header.
+ * Generic constructor
  */
-pkcs7_t *pkcs7_enveloped_data_load(chunk_t encoding, chunk_t content)
+static private_pkcs7_enveloped_data_t* create_empty()
 {
 	private_pkcs7_enveloped_data_t *this;
 
@@ -381,9 +381,19 @@ pkcs7_t *pkcs7_enveloped_data_load(chunk_t encoding, chunk_t content)
 				.destroy = _destroy,
 			},
 		},
-		.encoding = chunk_clone(encoding),
 	);
 
+	return this;
+}
+
+/**
+ * See header.
+ */
+pkcs7_t *pkcs7_enveloped_data_load(chunk_t encoding, chunk_t content)
+{
+	private_pkcs7_enveloped_data_t *this = create_empty();
+
+	this->encoding = chunk_clone(encoding);
 	if (!parse(this, content))
 	{
 		destroy(this);
@@ -391,4 +401,211 @@ pkcs7_t *pkcs7_enveloped_data_load(chunk_t encoding, chunk_t content)
 	}
 
 	return &this->public;
+}
+
+/**
+ * Allocate data with an RNG
+ */
+static bool get_random(rng_quality_t quality, size_t size, chunk_t *out)
+{
+	rng_t *rng;
+
+	rng = lib->crypto->create_rng(lib->crypto, quality);
+	if (!rng)
+	{
+		return FALSE;
+	}
+	if (!rng->allocate_bytes(rng, size, out))
+	{
+		rng->destroy(rng);
+		return FALSE;
+	}
+	rng->destroy(rng);
+	return TRUE;
+}
+
+/**
+ * Encrypt symmetric key using a public key from a certificate
+ */
+static bool encrypt_key(certificate_t *cert, chunk_t in, chunk_t *out)
+{
+	public_key_t *key;
+
+	key = cert->get_public_key(cert);
+	if (!key)
+	{
+		return FALSE;
+	}
+	if (!key->encrypt(key, ENCRYPT_RSA_PKCS1, in, out))
+	{
+		key->destroy(key);
+		return FALSE;
+	}
+	key->destroy(key);
+	return TRUE;
+}
+
+/**
+ * build a DER-encoded issuerAndSerialNumber object
+ */
+static chunk_t build_issuerAndSerialNumber(certificate_t *cert)
+{
+	identification_t *issuer = cert->get_issuer(cert);
+	chunk_t serial = chunk_empty;
+
+	if (cert->get_type(cert) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)cert;
+		serial = x509->get_serial(x509);
+	}
+
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+					 issuer->get_encoding(issuer),
+					 asn1_integer("c", serial));
+}
+
+/**
+ * Generate a new PKCS#7 enveloped-data container
+ */
+static bool generate(private_pkcs7_enveloped_data_t *this,
+				certificate_t *cert, encryption_algorithm_t alg, int key_size)
+{
+	chunk_t contentEncryptionAlgorithm, encryptedContentInfo, recipientInfo;
+	chunk_t iv, symmetricKey, protectedKey, content;
+	crypter_t *crypter;
+	size_t bs, padding;
+	int alg_oid;
+
+	alg_oid = encryption_algorithm_to_oid(alg, key_size);
+	if (alg_oid == OID_UNKNOWN)
+	{
+		DBG1(DBG_LIB, "  encryption algorithm %N not supported",
+			 encryption_algorithm_names, alg);
+		return FALSE;
+	}
+	crypter = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
+	if (crypter == NULL)
+	{
+		DBG1(DBG_LIB, "  could not create crypter for algorithm %N",
+			 encryption_algorithm_names, alg);
+		return FALSE;
+	}
+
+	if (!get_random(RNG_TRUE, crypter->get_key_size(crypter), &symmetricKey))
+	{
+		DBG1(DBG_LIB, "  failed to allocate symmetric encryption key");
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	DBG4(DBG_LIB, "  symmetric encryption key: %B", &symmetricKey);
+
+	if (!get_random(RNG_WEAK, crypter->get_iv_size(crypter), &iv))
+	{
+		DBG1(DBG_LIB, "  failed to allocate initialization vector");
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	DBG4(DBG_LIB, "  initialization vector: %B", &iv);
+
+	bs = crypter->get_block_size(crypter);
+	padding = bs - this->content.len % bs;
+	content = chunk_alloc(this->content.len + padding);
+	memcpy(content.ptr, this->content.ptr, this->content.len);
+	memset(content.ptr + this->content.len, padding, padding);
+	DBG3(DBG_LIB, "  padded unencrypted data: %B", &content);
+
+	/* symmetric inline encryption of content */
+	if (!crypter->set_key(crypter, symmetricKey) ||
+		!crypter->encrypt(crypter, content, iv, NULL))
+	{
+		crypter->destroy(crypter);
+		chunk_clear(&symmetricKey);
+		chunk_free(&iv);
+		return FALSE;
+	}
+	crypter->destroy(crypter);
+	DBG3(DBG_LIB, "  encrypted data: %B", &content);
+
+	if (!encrypt_key(cert, symmetricKey, &protectedKey))
+	{
+		DBG1(DBG_LIB, "  encrypting symmetric key failed");
+		chunk_clear(&symmetricKey);
+		chunk_free(&iv);
+		chunk_free(&content);
+		return FALSE;
+	}
+	chunk_clear(&symmetricKey);
+
+	contentEncryptionAlgorithm = asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(alg_oid),
+				asn1_wrap(ASN1_OCTET_STRING, "m", iv));
+
+	encryptedContentInfo = asn1_wrap(ASN1_SEQUENCE, "mmm",
+				asn1_build_known_oid(OID_PKCS7_DATA),
+				contentEncryptionAlgorithm,
+				asn1_wrap(ASN1_CONTEXT_S_0, "m", content));
+
+	recipientInfo = asn1_wrap(ASN1_SEQUENCE, "cmmm",
+				ASN1_INTEGER_0,
+				build_issuerAndSerialNumber(cert),
+				asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+				asn1_wrap(ASN1_OCTET_STRING, "m", protectedKey));
+
+	this->encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+		asn1_build_known_oid(OID_PKCS7_ENVELOPED_DATA),
+		asn1_wrap(ASN1_CONTEXT_C_0, "m",
+			asn1_wrap(ASN1_SEQUENCE, "cmm",
+				ASN1_INTEGER_0,
+				asn1_wrap(ASN1_SET, "m", recipientInfo),
+				encryptedContentInfo)));
+
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+pkcs7_t *pkcs7_enveloped_data_gen(container_type_t type, va_list args)
+{
+	private_pkcs7_enveloped_data_t *this;
+	chunk_t blob = chunk_empty;
+	encryption_algorithm_t alg = ENCR_AES_CBC;
+	certificate_t *cert = NULL;
+	int key_size = 128;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_CERT:
+				cert = va_arg(args, certificate_t*);
+				continue;
+			case BUILD_ENCRYPTION_ALG:
+				alg = va_arg(args, int);
+				continue;
+			case BUILD_KEY_SIZE:
+				alg = va_arg(args, int);
+				continue;
+			case BUILD_BLOB:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (blob.len && cert)
+	{
+		this = create_empty();
+
+		this->content = chunk_clone(blob);
+		if (generate(this, cert, alg, key_size))
+		{
+			return &this->public;
+		}
+		destroy(this);
+	}
+	return NULL;
 }

@@ -17,6 +17,7 @@
 #include "pkcs7_generic.h"
 #include "pkcs7_data.h"
 #include "pkcs7_signed_data.h"
+#include "pkcs7_enveloped_data.h"
 
 #include <library.h>
 
@@ -49,6 +50,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CONTAINER_ENCODE, CONTAINER_PKCS7_DATA),
 		PLUGIN_REGISTER(CONTAINER_ENCODE, pkcs7_signed_data_gen, TRUE),
 			PLUGIN_PROVIDE(CONTAINER_ENCODE, CONTAINER_PKCS7_SIGNED_DATA),
+		PLUGIN_REGISTER(CONTAINER_ENCODE, pkcs7_enveloped_data_gen, TRUE),
+			PLUGIN_PROVIDE(CONTAINER_ENCODE, CONTAINER_PKCS7_ENVELOPED_DATA),
 	};
 	*features = f;
 	return countof(f);

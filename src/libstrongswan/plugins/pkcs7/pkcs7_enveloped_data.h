@@ -33,4 +33,12 @@
  */
 pkcs7_t *pkcs7_enveloped_data_load(chunk_t encoding, chunk_t content);
 
+/**
+ * Generate a PKCS#7 enveloped-data container.
+ *
+ * @param type		container type, must be CONTAINER_PKCS7_ENVELOPED_DATA
+ * @param args		builder_t arguments to use.
+ */
+pkcs7_t *pkcs7_enveloped_data_gen(container_type_t type, va_list args);
+
 #endif /** PKCS7_ENVELOPED_DATA_H_ @}*/
