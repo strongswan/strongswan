@@ -34,6 +34,20 @@ struct pkcs7_t {
 	 * Implements container_t.
 	 */
 	container_t container;
+
+	/**
+	 * Get an authenticated PKCS#9 attribute from PKCS#7 signerInfo.
+	 *
+	 * To select the signerInfo structure to get the attribute from, pass
+	 * the enumerator position from container_t.create_signature_enumerator().
+	 *
+	 * @param oid			OID from the attribute to get
+	 * @param enumerator	enumerator to select signerInfo
+	 * @param value			chunk receiving attribute value, internal data
+	 * @return				TRUE if attribute found
+	 */
+	bool (*get_attribute)(pkcs7_t *this, int oid, enumerator_t *enumerator,
+						  chunk_t *value);
 };
 
 #endif /** PKCS7_H_ @}*/

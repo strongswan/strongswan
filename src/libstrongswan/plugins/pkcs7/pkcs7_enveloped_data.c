@@ -380,6 +380,7 @@ static private_pkcs7_enveloped_data_t* create_empty()
 				.get_encoding = _get_encoding,
 				.destroy = _destroy,
 			},
+			.get_attribute = (void*)return_false,
 		},
 	);
 

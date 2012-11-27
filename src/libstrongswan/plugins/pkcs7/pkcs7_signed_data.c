@@ -172,6 +172,8 @@ typedef struct {
 	enumerator_t *inner;
 	/** currently enumerated auth_cfg */
 	auth_cfg_t *auth;
+	/** currently enumerating signerinfo */
+	signerinfo_t *info;
 	/** reference to container */
 	private_pkcs7_signed_data_t *this;
 } signature_enumerator_t;
@@ -275,8 +277,10 @@ METHOD(enumerator_t, enumerate, bool,
 			continue;
 		}
 		*out = this->auth;
+		this->info = info;
 		return TRUE;
 	}
+	this->info = NULL;
 	return FALSE;
 }
 
@@ -305,6 +309,25 @@ METHOD(container_t, create_signature_enumerator, enumerator_t*,
 
 	lib->credmgr->add_local_set(lib->credmgr, &this->creds->set, FALSE);
 	return &enumerator->public;
+}
+
+METHOD(pkcs7_t, get_attribute, bool,
+	private_pkcs7_signed_data_t *this, int oid, enumerator_t *enumerator, chunk_t *value)
+{
+	signature_enumerator_t *e;
+	chunk_t chunk;
+
+	e = (signature_enumerator_t*)enumerator;
+	if (e->info)
+	{
+		chunk = e->info->attributes->get_attribute(e->info->attributes, oid);
+		if (chunk.len)
+		{
+			*value = chunk;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 METHOD(container_t, get_data, bool,
@@ -351,6 +374,7 @@ static private_pkcs7_signed_data_t* create_empty()
 				.get_encoding = _get_encoding,
 				.destroy = _destroy,
 			},
+			.get_attribute = _get_attribute,
 		},
 		.creds = mem_cred_create(),
 		.signerinfos = linked_list_create(),
