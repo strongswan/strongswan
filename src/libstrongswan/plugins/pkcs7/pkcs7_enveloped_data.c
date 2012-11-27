@@ -380,6 +380,7 @@ static private_pkcs7_enveloped_data_t* create_empty()
 				.get_encoding = _get_encoding,
 				.destroy = _destroy,
 			},
+			.create_cert_enumerator = (void*)enumerator_create_empty,
 			.get_attribute = (void*)return_false,
 		},
 	);

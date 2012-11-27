@@ -330,6 +330,13 @@ METHOD(pkcs7_t, get_attribute, bool,
 	return FALSE;
 }
 
+METHOD(pkcs7_t, create_cert_enumerator, enumerator_t*,
+	private_pkcs7_signed_data_t *this)
+{
+	return this->creds->set.create_cert_enumerator(&this->creds->set,
+											CERT_ANY, KEY_ANY, NULL, FALSE);
+}
+
 METHOD(container_t, get_data, bool,
 	private_pkcs7_signed_data_t *this, chunk_t *data)
 {
@@ -375,6 +382,7 @@ static private_pkcs7_signed_data_t* create_empty()
 				.destroy = _destroy,
 			},
 			.get_attribute = _get_attribute,
+			.create_cert_enumerator = _create_cert_enumerator,
 		},
 		.creds = mem_cred_create(),
 		.signerinfos = linked_list_create(),

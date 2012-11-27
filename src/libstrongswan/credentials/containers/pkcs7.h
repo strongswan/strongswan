@@ -48,6 +48,13 @@ struct pkcs7_t {
 	 */
 	bool (*get_attribute)(pkcs7_t *this, int oid, enumerator_t *enumerator,
 						  chunk_t *value);
+
+	/**
+	 * Create an enumerator over attached certificates.
+	 *
+	 * @return				enumerator over certificate_t
+	 */
+	enumerator_t* (*create_cert_enumerator)(pkcs7_t *this);
 };
 
 #endif /** PKCS7_H_ @}*/

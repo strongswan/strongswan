@@ -99,6 +99,7 @@ static private_pkcs7_data_t* create_empty()
 				.destroy = _destroy,
 			},
 			.get_attribute = (void*)return_false,
+			.create_cert_enumerator = (void*)enumerator_create_empty,
 		},
 	);
 
