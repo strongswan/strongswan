@@ -1547,6 +1547,10 @@ METHOD(certificate_t, has_subject, id_match_t,
 		{
 			return ID_MATCH_PERFECT;
 		}
+		if (chunk_equals(this->serialNumber, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
 	}
 	best = this->subject->matches(this->subject, subject);
 	enumerator = this->subjectAltNames->create_enumerator(this->subjectAltNames);

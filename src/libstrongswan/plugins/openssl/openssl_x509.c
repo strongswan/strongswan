@@ -327,6 +327,10 @@ METHOD(certificate_t, has_subject, id_match_t,
 		{
 			return ID_MATCH_PERFECT;
 		}
+		if (chunk_equals(get_serial(this), encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
 	}
 	best = this->subject->matches(this->subject, subject);
 	enumerator = create_subjectAltName_enumerator(this);
