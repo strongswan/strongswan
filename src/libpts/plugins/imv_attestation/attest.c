@@ -99,6 +99,7 @@ static void do_args(int argc, char *argv[])
 		OP_USAGE,
 		OP_KEYS,
 		OP_COMPONENTS,
+		OP_DEVICES,
 		OP_FILES,
 		OP_HASHES,
 		OP_MEASUREMENTS,
@@ -118,6 +119,7 @@ static void do_args(int argc, char *argv[])
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
 			{ "components", no_argument, NULL, 'c' },
+			{ "devices", no_argument, NULL, 'e' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "keys", no_argument, NULL, 'k' },
 			{ "packages", no_argument, NULL, 'g' },
@@ -167,6 +169,9 @@ static void do_args(int argc, char *argv[])
 				break;
 			case 'c':
 				op = OP_COMPONENTS;
+				continue;
+			case 'e':
+				op = OP_DEVICES;
 				continue;
 			case 'f':
 				op = OP_FILES;
@@ -359,6 +364,9 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_COMPONENTS:
 			attest->list_components(attest);
+			break;
+		case OP_DEVICES:
+			attest->list_devices(attest);
 			break;
 		case OP_FILES:
 			attest->list_files(attest);

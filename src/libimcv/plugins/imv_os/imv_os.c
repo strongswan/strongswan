@@ -122,23 +122,6 @@ TNC_Result TNC_IMV_NotifyConnectionChange(TNC_IMVID imv_id,
 	}
 }
 
-/**
- * print multi-line values to debug output
- */
-static void dbg_imv_multi_line(chunk_t value)
-{
-	chunk_t line;
-
-	while (extract_token(&line, '\n', &value))
-	{
-		DBG2(DBG_IMV, "  %.*s", line.len, line.ptr);
-	}
-	if (value.len)
-	{
-		DBG2(DBG_IMV, "  %.*s", value.len, value.ptr);
-	}
-}
-
 static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 {
 	imv_msg_t *out_msg;
@@ -151,6 +134,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	chunk_t os_version = chunk_empty;
 	bool fatal_error = FALSE, assessment = FALSE;
 	char non_market_apps_str[] = "install_non_market_apps";
+	char android_id_str[] = "android_id";
+	char machine_id_str[] = "/var/lib/dbus/machine-id";
 
 	os_state = (imv_os_state_t*)state;
 
@@ -318,8 +303,14 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 							os_state->set_os_settings(os_state,
 												OS_SETTINGS_NON_MARKET_APPS);
 						}
-						DBG1(DBG_IMV, "setting '%s'", name);
-						dbg_imv_multi_line(value);
+						else if ((streq(name, android_id_str) ||
+								  streq(name, machine_id_str)) && os_db)
+						{
+							os_state->set_device_id(os_state,
+										os_db->get_device_id(os_db, value));
+						}
+						DBG1(DBG_IMV, "setting '%s'\n  %.*s",
+							 name, value.len, value.ptr);
 					}
 					e->destroy(e);
 					break;
@@ -358,12 +349,12 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 		if (os_type == OS_TYPE_ANDROID)
 		{
-			attr_cast->add(attr_cast, "android_id");
+			attr_cast->add(attr_cast, android_id_str);
 			attr_cast->add(attr_cast, non_market_apps_str);
 		}
 		else
 		{
-			attr_cast->add(attr_cast, "/proc/sys/kernel/random/boot_id");
+			attr_cast->add(attr_cast, machine_id_str);
 			attr_cast->add(attr_cast, "/proc/sys/kernel/tainted");
 		}
 		out_msg->add_attribute(out_msg, attr);

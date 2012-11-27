@@ -187,6 +187,32 @@ METHOD(imv_os_database_t, check_packages, status_t,
 	return status;
 }
 
+METHOD(imv_os_database_t, get_device_id, int,
+	private_imv_os_database_t *this, chunk_t value)
+{
+	enumerator_t *e;
+	int id;
+
+	/* get primary key of device ID */
+	e = this->db->query(this->db, "SELECT id FROM devices WHERE value = ?",
+						DB_BLOB, value, DB_INT);
+	if (!e)
+	{
+		return 0;
+	}
+	if (e->enumerate(e, &id))
+	{
+		/* device ID already exists in database - return primary key */
+		e->destroy(e);
+		return id;
+	}
+
+	/* register new device ID in database and return primary key */
+	return (this->db->execute(this->db, &id,
+			"INSERT INTO devices (value) VALUES (?)", DB_BLOB, value) == 1) ?
+			id : 0;
+}
+
 METHOD(imv_os_database_t, destroy, void,
 	private_imv_os_database_t *this)
 {
@@ -204,6 +230,7 @@ imv_os_database_t *imv_os_database_create(char *uri)
 	INIT(this,
 		.public = {
 			.check_packages = _check_packages,
+			.get_device_id = _get_device_id,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),

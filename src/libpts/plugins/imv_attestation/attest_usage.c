@@ -60,6 +60,10 @@ Usage:\n\
     Show a list of component measurements for a given AIK or\n\
     its primary key as an optional selector.\n\
   \n\
+  ipsec attest --packages [--product <name>|--pid <id>]\n\
+    Show a list of software packages for a given product or\n\
+    its primary key as an optional selector.\n\
+  \n\
   ipsec attest --add --file <path>|--dir <path>|--product <name>|--component <cfn>\n\
     Add a file, directory, product or component entry\n\
     Component <cfn> entries must be of the form <vendor_id>/<name>-<qualifier>\n\
@@ -73,6 +77,10 @@ Usage:\n\
   \n\
   ipsec attest --add --key <digest|--kid <id> --component <cfn>|--cid <id> --sequence <no>|--seq <no>\n\
     Add an ordered key/component entry\n\
+  \n\
+  ipsec attest --add --package <name> --version <string> [--security|--blacklist]\n\
+              [--product <name>|--pid <id>]\n\
+    Add a package version for a given product optionally with security or blacklist flag\n\
   \n\
   ipsec attest --del --file <path>|--fid <id>|--dir <path>|--did <id>\n\
     Delete a file or directory entry referenced either by value or primary key\n\

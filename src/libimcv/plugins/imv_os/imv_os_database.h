@@ -43,6 +43,13 @@ struct imv_os_database_t {
 							   enumerator_t *package_enumerator);
 
 	/**
+	* Get the primary database key of the device ID
+	*
+	* @param value					Device ID value
+	*/
+	int (*get_device_id)(imv_os_database_t *this, chunk_t value);
+
+	/**
 	* Destroys an imv_os_database_t object.
 	*/
 	void (*destroy)(imv_os_database_t *this);

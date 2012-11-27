@@ -102,6 +102,20 @@ struct imv_os_state_t {
 	bool (*get_package_request)(imv_os_state_t *this);
 
 	/**
+	 * Set device ID
+	 *
+	 * @param device_id		Device ID primary database key
+	 */
+	void (*set_device_id)(imv_os_state_t *this, int id);
+
+	/**
+	 * Get device ID
+	 *
+	 * @return				Device ID primary database key
+	 */
+	int (*get_device_id)(imv_os_state_t *this);
+
+	/**
 	 * Set OS settings
 	 *
 	 * @param settings		OS settings

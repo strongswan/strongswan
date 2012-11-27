@@ -112,6 +112,11 @@ struct private_imv_os_state_t {
 	imv_remediation_string_t *remediation_string;
 
 	/**
+	 * Primary database key of device ID
+	 */
+	int device_id;
+
+	/**
 	 * Number of processed packages
 	 */
 	int count;
@@ -179,7 +184,7 @@ static imv_lang_string_t reason_packages[] = {
 static imv_lang_string_t instr_update_packages_title[] = {
 	{ "en", "Software Security Updates" },
 	{ "de", "Software Sicherheitsupdates" },
-	{ "pl", "aktualizacja softwaru zabezpieczającego" },
+	{ "pl", "Aktualizacja softwaru zabezpieczającego" },
 	{ NULL, NULL }
 };
 
@@ -513,6 +518,18 @@ METHOD(imv_os_state_t, get_package_request, bool,
 	return this->package_request;
 }
 
+METHOD(imv_os_state_t, set_device_id, void,
+	private_imv_os_state_t *this, int id)
+{
+	this->device_id = id;
+}
+
+METHOD(imv_os_state_t, get_device_id, int,
+	private_imv_os_state_t *this)
+{
+	return this->device_id;
+}
+
 METHOD(imv_os_state_t, set_os_settings, void,
 	private_imv_os_state_t *this, u_int settings)
 {
@@ -582,6 +599,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_count = _get_count,
 			.set_package_request = _set_package_request,
 			.get_package_request = _get_package_request,
+			.set_device_id = _set_device_id,
+			.get_device_id = _get_device_id,
 			.set_os_settings = _set_os_settings,
 			.get_os_settings = _get_os_settings,
 			.set_angel_count = _set_angel_count,

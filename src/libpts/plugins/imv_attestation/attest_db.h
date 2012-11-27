@@ -199,6 +199,11 @@ struct attest_db_t {
 	void (*list_components)(attest_db_t *this);
 
 	/**
+	 * List all devices stored in the database
+	 */
+	void (*list_devices)(attest_db_t *this);
+
+	/**
 	 * List all AIKs stored in the database
 	 */
 	void (*list_keys)(attest_db_t *this);

@@ -198,6 +198,11 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		}
 		*offset += 2 + value.len;
 
+		/* remove a terminating newline character */
+		if (value.len && value.ptr[value.len - 1] == '\n')
+		{
+			value.len--;
+		}
 		entry = malloc_thing(entry_t);
 		entry->name = strndup(name.ptr, name.len);
 		entry->value = chunk_clone(value);

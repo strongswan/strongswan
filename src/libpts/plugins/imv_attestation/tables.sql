@@ -113,3 +113,26 @@ DROP INDEX IF EXISTS versions_package_product;
 CREATE INDEX versions_package_product ON versions (
   package, product
 );
+
+DROP TABLE IF EXISTS devices;
+CREATE TABLE devices (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  value BLOB NOT NULL
+);
+DROP INDEX IF EXISTS devices_id;
+CREATE INDEX devices_value ON devices (
+  value
+);
+
+DROP TABLE IF EXISTS device_infos;
+CREATE TABLE device_infos (
+  device INTEGER NOT NULL,
+  time INTEGER NOT NULL,
+  product INTEGER DEFAULT 0,
+  count INTEGER DEFAULT 0,
+  count_update INTEGER DEFAULT 0,
+  count_remove INTEGER DEFAULT 0,
+  flags INTEGER DEFAULT 0,
+  PRIMARY KEY (device, time)
+);
+

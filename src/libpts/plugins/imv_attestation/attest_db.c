@@ -790,6 +790,27 @@ METHOD(attest_db_t, list_components, void,
 	}
 }
 
+METHOD(attest_db_t, list_devices, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	chunk_t value;
+	int id, count = 0;
+
+	e = this->db->query(this->db,
+						"SELECT id, value FROM devices", DB_INT, DB_BLOB);
+	if (e)
+	{
+		while (e->enumerate(e,  &id, &value))
+		{
+			printf("%4d: %.*s\n", id, value.len, value.ptr);
+			count++;
+		}
+		e->destroy(e);
+		printf("%d device%s found\n", count, (count == 1) ? "" : "s");
+	}
+}
+
 METHOD(attest_db_t, list_keys, void,
 	private_attest_db_t *this)
 {
@@ -1660,6 +1681,7 @@ attest_db_t *attest_db_create(char *uri)
 			.list_products = _list_products,
 			.list_files = _list_files,
 			.list_components = _list_components,
+			.list_devices = _list_devices,
 			.list_keys = _list_keys,
 			.list_hashes = _list_hashes,
 			.list_measurements = _list_measurements,
