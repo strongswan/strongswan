@@ -15,12 +15,16 @@
 
 #include "pkcs7_signed_data.h"
 
+#include <time.h>
+
 #include <utils/debug.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <crypto/pkcs9.h>
 #include <credentials/sets/mem_cred.h>
+#include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 
 typedef struct private_pkcs7_signed_data_t private_pkcs7_signed_data_t;
 
@@ -401,4 +405,184 @@ pkcs7_t *pkcs7_signed_data_load(chunk_t encoding, chunk_t content)
 		return NULL;
 	}
 	return &this->public;
+}
+
+/**
+ * build a DER-encoded issuerAndSerialNumber object
+ */
+static chunk_t build_issuerAndSerialNumber(certificate_t *cert)
+{
+	identification_t *issuer = cert->get_issuer(cert);
+	chunk_t serial = chunk_empty;
+
+	if (cert->get_type(cert) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)cert;
+		serial = x509->get_serial(x509);
+	}
+
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+					 issuer->get_encoding(issuer),
+					 asn1_integer("c", serial));
+}
+
+/**
+ * Generate a new PKCS#7 signed-data container
+ */
+static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
+					 certificate_t *cert, hash_algorithm_t alg)
+{
+	chunk_t authenticatedAttributes = chunk_empty;
+	chunk_t encryptedDigest = chunk_empty;
+	chunk_t data, signerInfo, encoding = chunk_empty;
+	chunk_t messageDigest, signingTime, attributes;
+	signature_scheme_t scheme;
+	hasher_t *hasher;
+	time_t now;
+	int digest_oid;
+
+	digest_oid = hasher_algorithm_to_oid(alg);
+	scheme = signature_scheme_from_oid(digest_oid);
+
+	if (!this->content->get_data(this->content, &data))
+	{
+		return FALSE;
+	}
+
+	hasher = lib->crypto->create_hasher(lib->crypto, alg);
+	if (!hasher || !hasher->allocate_hash(hasher, data, &messageDigest))
+	{
+		DESTROY_IF(hasher);
+		DBG1(DBG_LIB, "  hash algorithm %N not support",
+			 hash_algorithm_names, alg);
+		free(data.ptr);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+	this->attributes->add_attribute(this->attributes,
+					OID_PKCS9_MESSAGE_DIGEST,
+					asn1_wrap(ASN1_OCTET_STRING, "m", messageDigest));
+
+	/* take the current time as signingTime */
+	now = time(NULL);
+	signingTime = asn1_from_time(&now, ASN1_UTCTIME);
+	this->attributes->add_attribute(this->attributes,
+							OID_PKCS9_SIGNING_TIME, signingTime);
+	this->attributes->add_attribute(this->attributes,
+							OID_PKCS9_CONTENT_TYPE,
+							asn1_build_known_oid(OID_PKCS7_DATA));
+
+	attributes = this->attributes->get_encoding(this->attributes);
+
+	if (!key->sign(key, scheme, attributes, &encryptedDigest))
+	{
+		free(data.ptr);
+		return FALSE;
+	}
+	authenticatedAttributes = chunk_clone(attributes);
+	*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
+
+	free(data.ptr);
+	if (encryptedDigest.ptr)
+	{
+		encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", encryptedDigest);
+	}
+	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm",
+					ASN1_INTEGER_1,
+					build_issuerAndSerialNumber(cert),
+					asn1_algorithmIdentifier(digest_oid),
+					authenticatedAttributes,
+					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+					encryptedDigest);
+
+	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+	{
+		free(signerInfo.ptr);
+		return FALSE;
+	}
+	if (!this->content->get_encoding(this->content, &data))
+	{
+		free(encoding.ptr);
+		free(signerInfo.ptr);
+		return FALSE;
+	}
+
+	this->encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
+		asn1_build_known_oid(OID_PKCS7_SIGNED_DATA),
+		asn1_wrap(ASN1_CONTEXT_C_0, "m",
+			asn1_wrap(ASN1_SEQUENCE, "cmmmm",
+				ASN1_INTEGER_1,
+				asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_oid)),
+				data,
+				asn1_wrap(ASN1_CONTEXT_C_0, "m", encoding),
+				asn1_wrap(ASN1_SET, "m", signerInfo))));
+
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
+{
+	private_pkcs7_signed_data_t *this;
+	chunk_t blob = chunk_empty;
+	hash_algorithm_t alg = HASH_SHA1;
+	private_key_t *key = NULL;
+	certificate_t *cert = NULL;
+	pkcs9_t *pkcs9;
+	chunk_t value;
+	int oid;
+
+	pkcs9 = pkcs9_create();
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_SIGNING_KEY:
+				key = va_arg(args, private_key_t*);
+				continue;
+			case BUILD_SIGNING_CERT:
+				cert = va_arg(args, certificate_t*);
+				continue;
+			case BUILD_DIGEST_ALG:
+				alg = va_arg(args, int);
+				continue;
+			case BUILD_BLOB:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_PKCS7_ATTRIBUTE:
+				oid = va_arg(args, int);
+				value = va_arg(args, chunk_t);
+				pkcs9->add_attribute(pkcs9, oid, value);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				pkcs9->destroy(pkcs9);
+				return NULL;
+		}
+		break;
+	}
+	if (blob.len && key && cert)
+	{
+		this = create_empty();
+
+		this->attributes = pkcs9;
+		this->content = lib->creds->create(lib->creds,
+										   CRED_CONTAINER, CONTAINER_PKCS7_DATA,
+										   BUILD_BLOB, blob, BUILD_END);
+
+		if (this->content && generate(this, key, cert, alg))
+		{
+			return &this->public;
+		}
+		destroy(this);
+	}
+	else
+	{
+		pkcs9->destroy(pkcs9);
+	}
+	return NULL;
 }
