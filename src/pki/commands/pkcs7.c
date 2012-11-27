@@ -230,6 +230,43 @@ static int decrypt(chunk_t chunk)
 }
 
 /**
+ * Show info about PKCS#7 container
+ */
+static int show(chunk_t chunk)
+{
+	container_t *container;
+	pkcs7_t *pkcs7;
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	chunk_t data;
+
+	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
+								   BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+	if (!container)
+	{
+		return 1;
+	}
+	fprintf(stderr, "%N\n", container_type_names, container->get_type(container));
+
+	if (container->get_type(container) == CONTAINER_PKCS7_SIGNED_DATA)
+	{
+		pkcs7 = (pkcs7_t*)container;
+		enumerator = pkcs7->create_cert_enumerator(pkcs7);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			if (cert->get_encoding(cert, CERT_PEM, &data))
+			{
+				printf("%.*s", (int)data.len, data.ptr);
+				free(data.ptr);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	container->destroy(container);
+	return 0;
+}
+
+/**
  * Wrap/Unwrap PKCs#7 containers
  */
 static int pkcs7()
@@ -247,6 +284,7 @@ static int pkcs7()
 		OP_VERIFY,
 		OP_ENCRYPT,
 		OP_DECRYPT,
+		OP_SHOW,
 	} op = OP_NONE;
 
 	creds = mem_cred_create();
@@ -287,6 +325,13 @@ static int pkcs7()
 					goto invalid;
 				}
 				op = OP_DECRYPT;
+				continue;
+			case 'p':
+				if (op != OP_NONE)
+				{
+					goto invalid;
+				}
+				op = OP_SHOW;
 				continue;
 			case 'k':
 				key = lib->creds->create(lib->creds,
@@ -339,7 +384,7 @@ static int pkcs7()
 		fprintf(stderr, "reading input failed!\n");
 		goto end;
 	}
-	if (!cert)
+	if (op != OP_SHOW && !cert)
 	{
 		fprintf(stderr, "requiring a certificate!\n");
 		goto end;
@@ -373,6 +418,9 @@ static int pkcs7()
 			}
 			res = decrypt(data);
 			break;
+		case OP_SHOW:
+			res = show(data);
+			break;
 		default:
 			res = 1;
 			break;
@@ -400,6 +448,7 @@ static void __attribute__ ((constructor))reg()
 			{"verify",	'u', 0, "verify PKCS#7 signed-data"},
 			{"encrypt",	'e', 0, "create PKCS#7 enveloped-data"},
 			{"decrypt",	'd', 0, "decrypt PKCS#7 enveloped-data"},
+			{"show",	'p', 0, "show info about PKCS#7, print certificates"},
 			{"in",		'i', 1, "input file, default: stdin"},
 			{"key",		'k', 1, "path to private key for sign/decryp"},
 			{"cert",	'c', 1, "path to certificate for sign/verify/encryp"},
