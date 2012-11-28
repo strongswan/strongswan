@@ -20,7 +20,6 @@
 #include <imv/imv_lang_string.h>
 #include "imv/imv_reason_string.h"
 
-#include <utils/lexparser.h>
 #include <collections/linked_list.h>
 #include <utils/debug.h>
 
@@ -139,7 +138,7 @@ static void free_func_comp(func_comp_t *this)
 /**
  * Supported languages
  */
-static char* languages[] = { "en", "mn", "de" };
+static char* languages[] = { "en", "de", "mn" };
 
 /**
  * Table of reason strings
