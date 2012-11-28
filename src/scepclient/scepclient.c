@@ -40,6 +40,7 @@
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/pkcs10.h>
+#include <credentials/sets/mem_cred.h>
 #include <plugins/plugin.h>
 
 #include "scep.h"
@@ -139,6 +140,8 @@ certificate_t *x509_signer     = NULL;
 certificate_t *x509_ca_enc     = NULL;
 certificate_t *x509_ca_sig     = NULL;
 certificate_t *pkcs10_req      = NULL;
+
+mem_cred_t *creds              = NULL;
 
 /* logging */
 static bool log_to_stderr = TRUE;
@@ -254,6 +257,12 @@ static void add_path_suffix(char *target, size_t target_size, char *filename,
 static void exit_scepclient(err_t message, ...)
 {
 	int status = 0;
+
+	if (creds)
+	{
+		lib->credmgr->remove_set(lib->credmgr, &creds->set);
+		creds->destroy(creds);
+	}
 
 	DESTROY_IF(subject);
 	DESTROY_IF(private_key);
@@ -926,6 +935,7 @@ int main(int argc, char **argv)
 	if (request_ca_certificate)
 	{
 		char ca_path[PATH_MAX];
+		container_t *container;
 		pkcs7_t *pkcs7;
 
 		if (!scep_http_request(scep_url, chunk_create(ca_name, strlen(ca_name)),
@@ -936,10 +946,13 @@ int main(int argc, char **argv)
 
 		join_paths(ca_path, sizeof(ca_path), CA_CERT_PATH, file_out_ca_cert);
 
-		pkcs7 = pkcs7_create_from_chunk(scep_response, 0);
-		if (!pkcs7 || !pkcs7->parse_signedData(pkcs7, NULL))
+		pkcs7 = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
+								BUILD_BLOB_ASN1_DER, scep_response, BUILD_END);
+
+		if (!pkcs7)
 		{	/* no PKCS#7 encoded CA+RA certificates, assume simple CA cert */
-			DESTROY_IF(pkcs7);
+
+			DBG1(DBG_APP, "unable to parse PKCS#7, assuming plain CA cert");
 			if (!chunk_write(scep_response, ca_path, "ca cert",  0022, force))
 			{
 				exit_scepclient("could not write ca cert file '%s'", ca_path);
@@ -952,7 +965,7 @@ int main(int argc, char **argv)
 			int ra_certs = 0, ca_certs = 0;
 			int ra_index = 1, ca_index = 1;
 
-			enumerator = pkcs7->create_certificate_enumerator(pkcs7);
+			enumerator = pkcs7->create_cert_enumerator(pkcs7);
 			while (enumerator->enumerate(enumerator, &cert))
 			{
 				x509_t *x509 = (x509_t*)cert;
@@ -967,7 +980,7 @@ int main(int argc, char **argv)
 			}
 			enumerator->destroy(enumerator);
 
-			enumerator = pkcs7->create_certificate_enumerator(pkcs7);
+			enumerator = pkcs7->create_cert_enumerator(pkcs7);
 			while (enumerator->enumerate(enumerator, &cert))
 			{
 				x509_t *x509 = (x509_t*)cert;
@@ -1004,10 +1017,14 @@ int main(int argc, char **argv)
 				chunk_free(&encoding);
 			}
 			enumerator->destroy(enumerator);
-			pkcs7->destroy(pkcs7);
+			container = &pkcs7->container;
+			container->destroy(container);
 		}
 		exit_scepclient(NULL); /* no further output required */
 	}
+
+	creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &creds->set);
 
 	/*
 	 * input of PKCS#1 file
@@ -1031,6 +1048,7 @@ int main(int argc, char **argv)
 	{
 		exit_scepclient("no RSA private key available");
 	}
+	creds->add_key(creds, private_key->get_ref(private_key));
 	public_key = private_key->get_public_key(private_key);
 
 	/* check for minimum key length */
@@ -1181,6 +1199,7 @@ int main(int argc, char **argv)
 			exit_scepclient("generating certificate failed");
 		}
 	}
+	creds->add_cert(creds, TRUE, x509_signer->get_ref(x509_signer));
 
 	/*
 	 * output of self-signed X.509 certificate file
@@ -1281,7 +1300,9 @@ int main(int argc, char **argv)
 		enumerator_t  *enumerator;
 		char path[PATH_MAX];
 		time_t poll_start = 0;
-		pkcs7_t *data = NULL;
+		pkcs7_t *p7;
+		container_t *container = NULL;
+		chunk_t chunk;
 		scep_attributes_t attrs = empty_scep_attributes;
 
 		join_paths(path, sizeof(path), CA_CERT_PATH, file_in_cacert_sig);
@@ -1293,13 +1314,14 @@ int main(int argc, char **argv)
 			exit_scepclient("could not load signature cacert file '%s'", path);
 		}
 
+		creds->add_cert(creds, TRUE, x509_ca_sig->get_ref(x509_ca_sig));
+
 		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION,
 				http_get_request, &scep_response))
 		{
 			exit_scepclient("did not receive a valid scep response");
 		}
-		ugh = scep_parse_response(scep_response, transID, &data, &attrs,
-								  x509_ca_sig);
+		ugh = scep_parse_response(scep_response, transID, &container, &attrs);
 		if (ugh != NULL)
 		{
 			exit_scepclient(ugh);
@@ -1328,7 +1350,7 @@ int main(int argc, char **argv)
 			DBG2(DBG_APP, "going to sleep for %d seconds", poll_interval);
 			sleep(poll_interval);
 			free(scep_response.ptr);
-			data->destroy(data);
+			container->destroy(container);
 
 			DBG2(DBG_APP, "fingerprint:    %.*s",
 				 (int)fingerprint.len, fingerprint.ptr);
@@ -1349,8 +1371,7 @@ int main(int argc, char **argv)
 			{
 				exit_scepclient("did not receive a valid scep response");
 			}
-			ugh = scep_parse_response(scep_response, transID, &data, &attrs,
-									  x509_ca_sig);
+			ugh = scep_parse_response(scep_response, transID, &container, &attrs);
 			if (ugh != NULL)
 			{
 				exit_scepclient(ugh);
@@ -1359,25 +1380,53 @@ int main(int argc, char **argv)
 
 		if (attrs.pkiStatus != SCEP_SUCCESS)
 		{
-			data->destroy(data);
+			container->destroy(container);
 			exit_scepclient("reply status is not 'SUCCESS'");
 		}
 
-		if (!data->parse_envelopedData(data, serialNumber, private_key))
+		if (!container->get_data(container, &chunk))
 		{
-			data->destroy(data);
+			container->destroy(container);
+			exit_scepclient("extracting signed-data failed");
+		}
+		container->destroy(container);
+
+		/* decrypt enveloped-data container */
+		container = lib->creds->create(lib->creds,
+									   CRED_CONTAINER, CONTAINER_PKCS7,
+									   BUILD_BLOB_ASN1_DER, chunk,
+									   BUILD_END);
+		free(chunk.ptr);
+		if (!container)
+		{
 			exit_scepclient("could not decrypt envelopedData");
 		}
-		if (!data->parse_signedData(data, NULL))
+
+		if (!container->get_data(container, &chunk))
 		{
-			data->destroy(data);
-			exit_scepclient("error parsing the scep response");
+			container->destroy(container);
+			exit_scepclient("extracting signed-data failed");
 		}
+		container->destroy(container);
+
+		/* parse signed-data container */
+		container = lib->creds->create(lib->creds,
+									   CRED_CONTAINER, CONTAINER_PKCS7,
+									   BUILD_BLOB_ASN1_DER, chunk,
+									   BUILD_END);
+		free(chunk.ptr);
+		if (!container)
+		{
+			exit_scepclient("could not parse singed-data");
+		}
+		/* no need to verify the signed-data container, the signature does NOT
+		 * cover the contained certificates */
 
 		/* store the end entity certificate */
 		join_paths(path, sizeof(path), HOST_CERT_PATH, file_out_cert);
 
-		enumerator = data->create_certificate_enumerator(data);
+		p7 = (pkcs7_t*)container;
+		enumerator = p7->create_cert_enumerator(p7);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			x509_t *x509 = (x509_t*)cert;
@@ -1398,7 +1447,7 @@ int main(int argc, char **argv)
 			}
 		}
 		enumerator->destroy(enumerator);
-		data->destroy(data);
+		container->destroy(container);
 		filetype_out &= ~CERT;   /* delete CERT flag */
 	}
 

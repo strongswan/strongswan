@@ -17,7 +17,7 @@
 #ifndef _SCEP_H
 #define _SCEP_H
 
-#include <crypto/pkcs7.h>
+#include <credentials/containers/pkcs7.h>
 #include <credentials/certificates/certificate.h>
 
 /* supported SCEP operation types */
@@ -81,7 +81,6 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 bool scep_http_request(const char *url, chunk_t message, scep_op_t op,
 					   bool http_get_request, chunk_t *response);
 err_t scep_parse_response(chunk_t response, chunk_t transID,
-						  pkcs7_t **data, scep_attributes_t *attrs,
-						  certificate_t *signer_cert);
+						  container_t **out, scep_attributes_t *attrs);
 
 #endif /* _SCEP_H */
