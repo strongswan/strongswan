@@ -760,6 +760,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	enumerator->destroy(enumerator);
 	if (curves)
 	{
+		curves->wrap16(curves);
 		extensions->write_data16(extensions, curves->get_buf(curves));
 		curves->destroy(curves);
 
