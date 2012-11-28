@@ -642,7 +642,7 @@ pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
 			case BUILD_PKCS7_ATTRIBUTE:
 				oid = va_arg(args, int);
 				value = va_arg(args, chunk_t);
-				pkcs9->add_attribute(pkcs9, oid, value);
+				pkcs9->add_attribute(pkcs9, oid, chunk_clone(value));
 				continue;
 			case BUILD_END:
 				break;
