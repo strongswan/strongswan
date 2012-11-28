@@ -40,6 +40,7 @@
 #include "openssl_ec_public_key.h"
 #include "openssl_x509.h"
 #include "openssl_crl.h"
+#include "openssl_pkcs7.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
 
@@ -365,6 +366,10 @@ METHOD(plugin_t, get_features, int,
 				PLUGIN_SDEPEND(PUBKEY, KEY_DSA),
 		PLUGIN_REGISTER(CERT_DECODE, openssl_crl_load, TRUE),
 			PLUGIN_PROVIDE(CERT_DECODE, CERT_X509_CRL),
+#ifndef OPENSSL_NO_CMS
+		PLUGIN_REGISTER(CONTAINER_DECODE, openssl_pkcs7_load, TRUE),
+			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS7),
+#endif /* OPENSSL_NO_CMS */
 #ifndef OPENSSL_NO_ECDH
 		/* EC DH groups */
 		PLUGIN_REGISTER(DH, openssl_ec_diffie_hellman_create),

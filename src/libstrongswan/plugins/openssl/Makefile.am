@@ -23,6 +23,7 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_ec_public_key.c openssl_ec_public_key.h \
 	openssl_x509.c openssl_x509.h \
 	openssl_crl.c openssl_crl.h \
+	openssl_pkcs7.c openssl_pkcs7.h \
 	openssl_rng.c openssl_rng.h \
 	openssl_hmac.c openssl_hmac.h
 
