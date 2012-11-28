@@ -373,13 +373,22 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		!os_state->get_package_request(os_state) &&
 		!os_state->get_angel_count(os_state))
 	{
-		int count, count_update, count_blacklist, count_ok;
+		int device_id, count, count_update, count_blacklist, count_ok;
 
 		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
 									  &count_ok);
 		DBG1(DBG_IMV, "processed %d packages: %d not updated, %d blacklisted, "
 			 "%d ok, %d not found", count, count_update, count_blacklist,
 			 count_ok, count - count_update - count_blacklist - count_ok);
+
+		/* Store device information in database */
+		device_id = os_state->get_device_id(os_state);
+		if (os_db && device_id)
+		{
+			os_db->set_device_info(os_db, device_id,
+						os_state->get_info(os_state, NULL, NULL, NULL),
+						count, count_update, count_blacklist);
+		}
 
 		if (count_update || count_blacklist ||
 			os_state->get_os_settings(os_state))

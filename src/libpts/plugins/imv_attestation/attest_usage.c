@@ -64,6 +64,9 @@ Usage:\n\
     Show a list of software packages for a given product or\n\
     its primary key as an optional selector.\n\
   \n\
+  ipsec attest --devices\n\
+    Show a list of registered devices and associated collected information\n\
+  \n\
   ipsec attest --add --file <path>|--dir <path>|--product <name>|--component <cfn>\n\
     Add a file, directory, product or component entry\n\
     Component <cfn> entries must be of the form <vendor_id>/<name>-<qualifier>\n\

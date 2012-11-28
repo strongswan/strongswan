@@ -213,6 +213,63 @@ METHOD(imv_os_database_t, get_device_id, int,
 			id : 0;
 }
 
+METHOD(imv_os_database_t, set_device_info, void,
+	private_imv_os_database_t *this,  int device_id, char *os_info,
+	int count, int count_update, int count_blacklist)
+{
+	enumerator_t *e;
+	time_t last_time;
+	int pid = 0, last_pid = 0, last_count_update = 0, last_count_blacklist = 0;
+	bool found = FALSE;
+
+	/* get primary key of OS info string if it exists */
+	e = this->db->query(this->db,
+			"SELECT id FROM products WHERE name = ?", DB_TEXT, os_info,
+			 DB_INT);
+	if (e)
+	{
+		e->enumerate(e, &pid);
+		e->destroy(e);
+	}
+
+	/* if OS ifo string has not been found - register it */
+	if (!pid)
+	{
+		this->db->execute(this->db, &pid,
+			"INSERT INTO products (name) VALUES (?)", DB_TEXT, os_info);
+	}
+
+	/* get latest device info record if it exists */
+	e = this->db->query(this->db,
+			"SELECT time, product, count_update, count_blacklist "
+			"FROM device_infos WHERE device = ? ORDER BY time DESC",
+			 DB_INT, device_id, DB_UINT, DB_INT, DB_INT, DB_INT);
+	if (e)
+	{
+		found = e->enumerate(e, &last_time, &last_pid, &last_count_update,
+								&last_count_blacklist);
+		e->destroy(e);
+	}
+	if (found && !last_count_update && !last_count_blacklist && pid == last_pid)
+	{
+		/* update device info */
+		this->db->execute(this->db, NULL,
+			"UPDATE device_infos SET time = ?, count = ?, count_update = ?, "
+			"count_blacklist = ? WHERE device = ? AND time = ?",
+			 DB_UINT, time(NULL), DB_INT, count, DB_INT, count_update,
+			 DB_INT, count_blacklist, DB_INT, device_id, DB_UINT, last_time);
+	}
+	else
+	{
+		/* insert device info */
+		this->db->execute(this->db, NULL,
+			"INSERT INTO device_infos (device, time, product, "
+			"count, count_update, count_blacklist) VALUES (?, ?, ?, ?, ?, ?)",
+			 DB_INT, device_id, DB_UINT, time(NULL), DB_INT, pid,
+			 DB_INT, count, DB_INT, count_update, DB_INT, count_blacklist);
+	}
+}
+
 METHOD(imv_os_database_t, destroy, void,
 	private_imv_os_database_t *this)
 {
@@ -231,6 +288,7 @@ imv_os_database_t *imv_os_database_create(char *uri)
 		.public = {
 			.check_packages = _check_packages,
 			.get_device_id = _get_device_id,
+			.set_device_info = _set_device_info,
 			.destroy = _destroy,
 		},
 		.db = lib->db->create(lib->db, uri),

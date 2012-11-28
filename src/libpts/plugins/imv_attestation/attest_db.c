@@ -795,19 +795,36 @@ METHOD(attest_db_t, list_devices, void,
 {
 	enumerator_t *e;
 	chunk_t value;
-	int id, count = 0;
+	char *product;
+	time_t timestamp;
+	int id, last_id = 0, device_count = 0;
+	int count, count_update, count_blacklist;
 
 	e = this->db->query(this->db,
-						"SELECT id, value FROM devices", DB_INT, DB_BLOB);
+			"SELECT d.id, d.value, i.time, i.count, i.count_update, "
+			"i.count_blacklist, p.name FROM devices AS d "
+			"JOIN device_infos AS i ON d.id = i.device "
+			"JOIN products AS p ON p.id = i.product "
+			"ORDER BY d.value, i.time DESC",
+			 DB_INT, DB_BLOB, DB_UINT, DB_INT, DB_INT, DB_INT, DB_TEXT);
+
 	if (e)
 	{
-		while (e->enumerate(e,  &id, &value))
+		while (e->enumerate(e, &id, &value, &timestamp, &count, &count_update,
+							   &count_blacklist, &product))
 		{
-			printf("%4d: %.*s\n", id, value.len, value.ptr);
-			count++;
+			if (id != last_id)
+			{
+				printf("%4d: %.*s\n", id, value.len, value.ptr);
+				device_count++;
+				last_id = id;
+			}
+			printf("      %T, %4d, %3d, %3d, '%s'\n", &timestamp, TRUE,
+				   count, count_update, count_blacklist, product);
 		}
 		e->destroy(e);
-		printf("%d device%s found\n", count, (count == 1) ? "" : "s");
+		printf("%d device%s found\n", device_count,
+									 (device_count == 1) ? "" : "s");
 	}
 }
 

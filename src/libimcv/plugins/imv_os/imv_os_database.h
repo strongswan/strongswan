@@ -50,6 +50,18 @@ struct imv_os_database_t {
 	int (*get_device_id)(imv_os_database_t *this, chunk_t value);
 
 	/**
+	* Set health infos for a given  device
+	*
+	* @param device_id				Device ID primary key
+	* @param os_info				OS info string
+	* @param count					Number of installed packages
+	* @param count_update			Number of packages to be updated
+	* @param count_blacklist		Number of blacklisted packages
+	*/
+	void (*set_device_info)(imv_os_database_t *this, int device_id, char *os_info,
+							int count, int count_update, int count_blacklist);
+
+	/**
 	* Destroys an imv_os_database_t object.
 	*/
 	void (*destroy)(imv_os_database_t *this);

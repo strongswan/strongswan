@@ -131,7 +131,7 @@ CREATE TABLE device_infos (
   product INTEGER DEFAULT 0,
   count INTEGER DEFAULT 0,
   count_update INTEGER DEFAULT 0,
-  count_remove INTEGER DEFAULT 0,
+  count_blacklist INTEGER DEFAULT 0,
   flags INTEGER DEFAULT 0,
   PRIMARY KEY (device, time)
 );
