@@ -14,19 +14,29 @@ CONFIG_OPTS = \
 	--enable-developer \
 	--with-experimental-modules
 
+PATCHES = \
+	freeradius-eap-sim-identity
+
 all: install
 
 $(TAR):
 	wget $(SRC)
 
-$(PKG): $(TAR)
+.$(PKG)-unpacked: $(TAR)
 	tar xfj $(TAR)
+	@touch $@
 
-configure: $(PKG)
+.$(PKG)-patches-applied: .$(PKG)-unpacked
+	cd $(PKG) && cat $(addprefix ../patches/, $(PATCHES)) | patch -p1
+	@touch $@
+
+.$(PKG)-configured: .$(PKG)-patches-applied
 	cd $(PKG) && ./configure $(CONFIG_OPTS)
+	@touch $@
 
-build: configure
+.$(PKG)-built: .$(PKG)-configured
 	cd $(PKG) && make -j $(NUM_CPUS)
+	@touch $@
 
-install: build
+install: .$(PKG)-built
 	cd $(PKG) && make install

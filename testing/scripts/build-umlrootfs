@@ -80,6 +80,7 @@ mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile >> $LOGFILE 2>&1
 cecho " * Installing software from source.."
 RECPDIR=$UMLTESTDIR/testing/scripts/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
+cp -r $RECPDIR/patches $LOOPDIR/root/compile
 for r in $RECIPES
 do
 	cecho-n "   - $r.."
