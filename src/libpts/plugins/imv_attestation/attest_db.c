@@ -1344,7 +1344,7 @@ METHOD(attest_db_t, list_measurements, void,
 
 bool insert_file_hash(private_attest_db_t *this, pts_meas_algorithms_t algo,
 					  chunk_t measurement, int fid, int did, bool ima,
-					  int *hashes_added)
+					  int *hashes_added, int *hashes_updated)
 {
 	enumerator_t *e;
 	chunk_t hash;
@@ -1363,8 +1363,22 @@ bool insert_file_hash(private_attest_db_t *this, pts_meas_algorithms_t algo,
 	}
 	if (e->enumerate(e, &hash))
 	{
-		label = chunk_equals(measurement, hash) ?
-				"exists and equals" : "exists and differs";
+		if (chunk_equals(measurement, hash))
+		{
+			label = "exists and equals";
+		}
+		else
+		{
+			if (this->db->execute(this->db, NULL,
+				"UPDATE file_hashes SET hash = ? WHERE algo = ? "
+				"AND file = ? AND directory = ? AND product = ? and key = 0",
+				DB_BLOB, measurement, DB_INT, algo, DB_UINT, fid, DB_UINT, did,
+				DB_UINT, this->pid) == 1)
+			{
+				label = "updated";
+				(*hashes_updated)++;
+			}
+		}
 	}
 	else
 	{
@@ -1416,7 +1430,8 @@ METHOD(attest_db_t, add, bool,
 		hasher_t *hasher = NULL;
 		bool ima = FALSE;
 		int fid, did;
-		int files_added = 0, hashes_added = 0, ima_hashes_added = 0;
+		int files_added = 0, hashes_added = 0, hashes_updated = 0;
+		int ima_hashes_added = 0, ima_hashes_updated = 0;
 		enumerator_t *enumerator, *e;
 
 		if (this->algo == PTS_MEAS_ALGO_SHA1_IMA)
@@ -1480,7 +1495,8 @@ METHOD(attest_db_t, add, bool,
 
 			/* compute file measurement hash */
 			if (!insert_file_hash(this, this->algo, measurement,
-								  fid, did, FALSE, &hashes_added))
+								  fid, did, FALSE,
+								  &hashes_added, &hashes_updated))
 			{
 				break;
 			}
@@ -1501,20 +1517,26 @@ METHOD(attest_db_t, add, bool,
 				break;
 			}
 			if (!insert_file_hash(this, PTS_MEAS_ALGO_SHA1_IMA, measurement,
-								  fid, did, TRUE, &ima_hashes_added))
+								  fid, did, TRUE,
+								  &ima_hashes_added, &ima_hashes_updated))
 			{
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
 
-		printf("%d measurements, added %d new files, %d new file hashes",
-			    measurements->get_file_count(measurements),
-			    files_added, hashes_added);
+		printf("%d measurements, added %d new files, %d file hashes",
+			    measurements->get_file_count(measurements), files_added,
+				hashes_added);
 		if (ima)
 		{
-			printf(" , %d new ima hashes", ima_hashes_added);
+			printf(", %d ima hashes", ima_hashes_added, ima_hashes_updated);
 			hasher->destroy(hasher);
+		}
+		printf(", updated %d file hashes", hashes_updated);
+		if (ima)
+		{
+			printf(", %d ima hashes", ima_hashes_updated);
 		}
 		printf("\n");
 		measurements->destroy(measurements);
