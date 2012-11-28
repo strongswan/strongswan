@@ -46,7 +46,7 @@ TESTRESULTSHTML=$TODAYDIR/all.html
 INDEX=$TODAYDIR/index.html
 DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
 
-SOURCEIP_ROUTING_TABLE=@routing_table@
+SOURCEIP_ROUTING_TABLE=220
 
 testnumber="0"
 failed_cnt="0"
@@ -137,7 +137,7 @@ ENVIRONMENT_HEADER=$(cat <<@EOF
     </tr>
     <tr>
       <td width="100">&nbsp;</td>
-      <td width="200">&nbsp;</td>
+      <td width="300">&nbsp;</td>
       <td width=" 50">&nbsp;</td>
       <td >&nbsp;</td>
     </tr>
@@ -208,7 +208,7 @@ do
 	mkdir $TODAYDIR/$SUBDIR
 	if [ $testnumber == 0 ]
 	then
-	    FIRST="<b>Category:</b"
+	    FIRST="<b>Category:</b>"
 	else
 	    FIRST="&nbsp;"
 	fi
@@ -242,7 +242,7 @@ do
     </tr>
     <tr>
       <td width="100">&nbsp;</td>
-      <td width="200">&nbsp;</td>
+      <td width="300">&nbsp;</td>
       <td width=" 50">&nbsp;</td>
       <td >&nbsp;</td>
     </tr>
@@ -507,7 +507,7 @@ do
 	    done
 
 	    scp $SSHCONF $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
-	    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
+		$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
 
 	    ssh $SSHCONF $HOSTLOGIN ip -s xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
@@ -566,7 +566,7 @@ do
 		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
 
 	    scp $SSHCONF $HOSTLOGIN:/var/log/freeradius/radius.log \
-	    	$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
+		$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
 
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -783,4 +783,3 @@ for host in $STRONGSWANHOSTS
 do
     kill `eval echo \\\$ssh_pid_$host`
 done
-
