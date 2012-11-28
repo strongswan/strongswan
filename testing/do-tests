@@ -599,6 +599,28 @@ do
 	done
 
 	cat >> $TESTRESULTDIR/index.html <<@EOF
+	<h3>tcpdump</h3>
+	<ul>
+@EOF
+
+	for host in $TCPDUMPHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+
+		scp $SSHCONF $HOSTLOGIN:/tmp/tcpdump.log \
+			$TESTRESULTDIR/${host}.tcpdump.log > /dev/null 2>&1
+
+	    cat >> $TESTRESULTDIR/index.html <<@EOF
+	    <li><a href="$host.tcpdump.log">$host tcpdump.log</a></li>
+@EOF
+
+	done
+
+	cat >> $TESTRESULTDIR/index.html <<@EOF
+	</ul>
+@EOF
+
+	cat >> $TESTRESULTDIR/index.html <<@EOF
   </td></tr>
 </table>
 </body>
