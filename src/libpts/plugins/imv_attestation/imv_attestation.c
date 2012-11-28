@@ -332,7 +332,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		{
 			DBG1(DBG_IMV, "failure due to %d pending file measurements",
 				attestation_state->get_file_meas_request_count(attestation_state));
-			attestation_state->set_measurement_error(attestation_state);
+			attestation_state->set_measurement_error(attestation_state,
+								IMV_ATTESTATION_ERROR_FILE_MEAS_PEND);
 		}
 		if (attestation_state->get_measurement_error(attestation_state))
 		{

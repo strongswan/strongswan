@@ -233,7 +233,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 								platform_info, algo, file_id, is_dir);
 				if (!measurements->verify(measurements, e_hash, is_dir))
 				{
-					attestation_state->set_measurement_error(attestation_state);
+					attestation_state->set_measurement_error(attestation_state,
+										IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL);
 				}
 				e_hash->destroy(e_hash);
 			}
@@ -299,7 +300,8 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 			if (comp->verify(comp, name->get_qualifier(name), pts,
 							 evidence) != SUCCESS)
 			{
-				attestation_state->set_measurement_error(attestation_state);
+				attestation_state->set_measurement_error(attestation_state,
+									IMV_ATTESTATION_ERROR_COMP_EVID_FAIL);
 				name->log(name, "  measurement mismatch for ");
 			}
 			break;
@@ -335,17 +337,21 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 				{
 					DBG1(DBG_IMV, "received PCR Composite does not match "
 								  "constructed one");
+					attestation_state->set_measurement_error(attestation_state,
+										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
 					free(pcr_composite.ptr);
 					free(quote_info.ptr);
-					return FALSE;
+					break;
 				}
 				DBG2(DBG_IMV, "received PCR Composite matches constructed one");
 				free(pcr_composite.ptr);
 
 				if (!pts->verify_quote_signature(pts, quote_info, tpm_quote_sig))
 				{
+					attestation_state->set_measurement_error(attestation_state,
+										IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL);
 					free(quote_info.ptr);
-					return FALSE;
+					break;
 				}
 				DBG2(DBG_IMV, "TPM Quote Info signature verification successful");
 				free(quote_info.ptr);

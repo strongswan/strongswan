@@ -30,6 +30,7 @@
 
 typedef struct imv_attestation_state_t imv_attestation_state_t;
 typedef enum imv_attestation_handshake_state_t imv_attestation_handshake_state_t;
+typedef enum imv_meas_error_t imv_meas_error_t;
 
 /**
  * IMV Attestation Handshake States (state machine)
@@ -42,6 +43,17 @@ enum imv_attestation_handshake_state_t {
 	IMV_ATTESTATION_STATE_COMP_EVID,
 	IMV_ATTESTATION_STATE_EVID_FINAL,
 	IMV_ATTESTATION_STATE_END,
+};
+
+/**
+ * IMV Measurement Error Types
+ */
+enum imv_meas_error_t {
+	IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL =  1,
+	IMV_ATTESTATION_ERROR_FILE_MEAS_PEND =  2,
+	IMV_ATTESTATION_ERROR_COMP_EVID_FAIL =  4,
+	IMV_ATTESTATION_ERROR_COMP_EVID_PEND =  8,
+	IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL = 16
 };
 
 /**
@@ -139,16 +151,19 @@ struct imv_attestation_state_t {
 	bool (*components_finalized)(imv_attestation_state_t *this);
 
 	/**
-	 * Indicates if a file measurement error occurred
+	 * Indicates the types of measurement errors that occurred
 	 *
-	 * @return					TRUE in case of measurement error
+	 * @return					Measurement error flags
 	 */
-	bool (*get_measurement_error)(imv_attestation_state_t *this);
+	u_int32_t (*get_measurement_error)(imv_attestation_state_t *this);
 
 	/**
-	 * Call if a file measurement error is encountered
+	 * Call if a measurement error is encountered
+	 *
+	 * @param error				Measurement error type
 	 */
-	void (*set_measurement_error)(imv_attestation_state_t *this);
+	void (*set_measurement_error)(imv_attestation_state_t *this,
+								  u_int32_t error);
 
 };
 

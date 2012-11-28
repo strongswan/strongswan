@@ -99,9 +99,9 @@ struct private_imv_attestation_state_t {
 	pts_t *pts;
 
 	/**
-	 * Measurement error
+	 * Measurement error flags
 	 */
-	bool measurement_error;
+	u_int32_t measurement_error;
 
 	/**
 	 * TNC Reason String
@@ -144,13 +144,38 @@ static char* languages[] = { "en", "mn", "de" };
 /**
  * Table of reason strings
  */
-static imv_lang_string_t reasons[] = {
-	{ "en", "IMV Attestation: Incorrect/pending file measurement/component"
-			" evidence or invalid TPM Quote signature received" },
-	{ "mn", "IMV Attestation:  Буруу/хүлээгдэж байгаа файл/компонент хэмжилт "
-			"эсвэл буруу TPM Quote гарын үсэг" },
-	{ "de", "IMV Attestation: Falsche/Fehlende Dateimessung/Komponenten Beweis "
-			"oder ungültige TPM Quote Unterschrift ist erhalten" },
+static imv_lang_string_t reason_file_meas_fail[] = {
+	{ "en", "Incorrect file measurement" },
+	{ "de", "Falsche Dateimessung" },
+	{ "mn", "Буруу байгаа файл" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t reason_file_meas_pend[] = {
+	{ "en", "Pending file measurement" },
+	{ "de", "Ausstehende Dateimessung" },
+	{ "mn", "Xүлээгдэж байгаа файл" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t reason_comp_evid_fail[] = {
+	{ "en", "Incorrect component evidence" },
+	{ "de", "Falsche Komponenten-Evidenz" },
+	{ "mn", "Буруу компонент хэмжилт" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t reason_comp_evid_pend[] = {
+	{ "en", "Pending component evidence" },
+	{ "de", "Ausstehende Komponenten-Evidenz" },
+	{ "mn", "Xүлээгдэж компонент хэмжилт" },
+	{ NULL, NULL }
+};
+
+static imv_lang_string_t reason_tpm_quote_fail[] = {
+	{ "en", "Invalid TPM Quote signature received" },
+	{ "de", "Falsche TPM Quote Signature erhalten" },
+	{ "mn", "Буруу TPM Quote гарын үсэг" },
 	{ NULL, NULL }
 };
 
@@ -223,7 +248,32 @@ METHOD(imv_state_t, get_reason_string, bool,
 	/* Instantiate a TNC Reason String object */
 	DESTROY_IF(this->reason_string);
 	this->reason_string = imv_reason_string_create(*reason_language);
-	this->reason_string->add_reason(this->reason_string, reasons);
+
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_FAIL)
+	{
+		this->reason_string->add_reason(this->reason_string,
+										reason_file_meas_fail);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_FILE_MEAS_PEND)
+	{
+		this->reason_string->add_reason(this->reason_string,
+										reason_file_meas_pend);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_FAIL)
+	{
+		this->reason_string->add_reason(this->reason_string,
+										reason_comp_evid_fail);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_COMP_EVID_PEND)
+	{
+		this->reason_string->add_reason(this->reason_string,
+										reason_comp_evid_pend);
+	}
+	if (this->measurement_error & IMV_ATTESTATION_ERROR_TPM_QUOTE_FAIL)
+	{
+		this->reason_string->add_reason(this->reason_string,
+										reason_tpm_quote_fail);
+	}
 	*reason_string = this->reason_string->get_encoding(this->reason_string);
 
 	return TRUE;
@@ -380,16 +430,16 @@ METHOD(imv_attestation_state_t, get_component, pts_component_t*,
 	return found;
 }
 
-METHOD(imv_attestation_state_t, get_measurement_error, bool,
+METHOD(imv_attestation_state_t, get_measurement_error, u_int32_t,
 	private_imv_attestation_state_t *this)
 {
 	return this->measurement_error;
 }
 
 METHOD(imv_attestation_state_t, set_measurement_error, void,
-	private_imv_attestation_state_t *this)
+	private_imv_attestation_state_t *this, u_int32_t error)
 {
-	this->measurement_error = TRUE;
+	this->measurement_error |= error;
 }
 
 METHOD(imv_attestation_state_t, finalize_components, void,
@@ -402,7 +452,7 @@ METHOD(imv_attestation_state_t, finalize_components, void,
 	{
 		if (!entry->comp->finalize(entry->comp, entry->qualifier))
 		{
-			_set_measurement_error(this);
+			set_measurement_error(this, IMV_ATTESTATION_ERROR_COMP_EVID_PEND);
 		}
 		free_func_comp(entry);
 	}
