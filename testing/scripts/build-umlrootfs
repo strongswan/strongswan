@@ -60,16 +60,6 @@ mount -t proc none $LOOPDIR/proc >> $LOGFILE 2>&1
 cgecho "done"
 
 ######################################################
-# setting up mountpoint for shared source tree
-#
-if [ "${SHAREDTREE+set}" = "set" ]; then
-    cecho " * setting up shared strongswan tree at '$SHAREDTREE'"
-    mkdir $LOOPDIR/root/strongswan-shared
-    echo "" >> $LOOPDIR/etc/fstab
-    echo "none /root/strongswan-shared hostfs $SHAREDTREE" >> $LOOPDIR/etc/fstab
-fi
-
-######################################################
 # install software from source using 'recipes'
 #
 mkdir -p $ROOTFSCOMPILEDIR
@@ -94,6 +84,10 @@ do
 done
 
 umount $LOOPDIR/root/compile
+
+cecho " * Setting up shared build tree at /root/compile"
+echo "" >> $LOOPDIR/etc/fstab
+echo "none /root/compile hostfs $ROOTFSCOMPILEDIR" >> $LOOPDIR/etc/fstab
 
 ######################################################
 # remove /etc/resolv.conf
