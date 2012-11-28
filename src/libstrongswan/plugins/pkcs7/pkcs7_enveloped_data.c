@@ -586,7 +586,7 @@ pkcs7_t *pkcs7_enveloped_data_gen(container_type_t type, va_list args)
 				alg = va_arg(args, int);
 				continue;
 			case BUILD_KEY_SIZE:
-				alg = va_arg(args, int);
+				key_size = va_arg(args, int);
 				continue;
 			case BUILD_BLOB:
 				blob = va_arg(args, chunk_t);
