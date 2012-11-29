@@ -135,7 +135,8 @@ static void entry_destroy(entry_t *this)
  * Callback function for listener
  */
 static bool listener_cb(entry_t *entry, bool up, host_t *vip,
-						host_t *other, identification_t *id, char *name)
+						host_t *other, identification_t *id,
+						char *name, u_int unique_id)
 {
 	lookip_response_t resp = {
 		.type = entry->type,

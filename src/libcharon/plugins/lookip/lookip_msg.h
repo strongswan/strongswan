@@ -87,8 +87,10 @@ struct lookip_response_t {
 	char ip[40];
 	/** null terminated peer identity */
 	char id[128];
-	/** null connection name */
-	char name[44];
+	/** null terminated connection name */
+	char name[40];
+	/** unique connection id */
+	unsigned int unique_id;
 };
 
 #endif /** LOOKIP_MSG_H_ @}*/

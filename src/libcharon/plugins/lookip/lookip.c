@@ -78,7 +78,7 @@ static int send_request(int fd, int type, char *vip)
 static int receive(int fd, int block, int loop)
 {
 	lookip_response_t resp;
-	char *label;
+	char *label, name[32];
 	int res;
 
 	do
@@ -120,8 +120,9 @@ static int receive(int fd, int block, int loop)
 		resp.id[sizeof(resp.id) - 1] = '\0';
 		resp.name[sizeof(resp.name) - 1] = '\0';
 
+		snprintf(name, sizeof(name), "%s[%u]", resp.name, resp.unique_id);
 		printf("%-12s %16s %16s %20s %s\n",
-			   label, resp.vip, resp.ip, resp.name, resp.id);
+			   label, resp.vip, resp.ip, name, resp.id);
 	}
 	while (loop);
 

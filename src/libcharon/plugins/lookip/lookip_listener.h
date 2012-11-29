@@ -34,10 +34,12 @@ typedef struct lookip_listener_t lookip_listener_t;
  * @param other		peer external IP
  * @param id		peer identity
  * @param name		associated connection name
+ * @param unique_id	unique IKE_SA identifier
  * @return			TRUE to receive more results, FALSE to cancel
  */
 typedef bool (*lookip_callback_t)(void *user, bool up, host_t *vip,
-							host_t *other, identification_t *id, char *name);
+								  host_t *other, identification_t *id,
+								  char *name, u_int unique_id);
 
 /**
  * Listener collecting virtual IPs.

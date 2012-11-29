@@ -70,6 +70,8 @@ typedef struct {
 	identification_t *id;
 	/** associated connection name */
 	char *name;
+	/** IKE_SA unique identifier */
+	u_int unique_id;
 } entry_t;
 
 /**
@@ -106,7 +108,7 @@ static bool equals(host_t *a, host_t *b)
 static bool notify_up(listener_entry_t *listener, entry_t *entry)
 {
 	if (!listener->cb(listener->user, TRUE, entry->vip, entry->other,
-					  entry->id, entry->name))
+					  entry->id, entry->name, entry->unique_id))
 	{
 		free(listener);
 		return TRUE;
@@ -120,7 +122,7 @@ static bool notify_up(listener_entry_t *listener, entry_t *entry)
 static bool notify_down(listener_entry_t *listener, entry_t *entry)
 {
 	if (!listener->cb(listener->user, FALSE, entry->vip, entry->other,
-						 entry->id, entry->name))
+					  entry->id, entry->name, entry->unique_id))
 	{
 		free(listener);
 		return TRUE;
@@ -149,6 +151,7 @@ static void add_entry(private_lookip_listener_t *this, ike_sa_t *ike_sa)
 			.other = other->clone(other),
 			.id = id->clone(id),
 			.name = strdup(ike_sa->get_name(ike_sa)),
+			.unique_id = ike_sa->get_unique_id(ike_sa),
 		);
 
 		this->lock->read_lock(this->lock);
@@ -237,7 +240,8 @@ METHOD(lookip_listener_t, lookup, int,
 		entry = this->entries->get(this->entries, vip);
 		if (entry)
 		{
-			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
+			cb(user, TRUE, entry->vip, entry->other, entry->id,
+			   entry->name, entry->unique_id);
 			matches ++;
 		}
 	}
@@ -248,7 +252,8 @@ METHOD(lookip_listener_t, lookup, int,
 		enumerator = this->entries->create_enumerator(this->entries);
 		while (enumerator->enumerate(enumerator, &vip, &entry))
 		{
-			cb(user, TRUE, entry->vip, entry->other, entry->id, entry->name);
+			cb(user, TRUE, entry->vip, entry->other, entry->id,
+			   entry->name, entry->unique_id);
 			matches++;
 		}
 		enumerator->destroy(enumerator);
