@@ -215,11 +215,12 @@ METHOD(imv_os_database_t, get_device_id, int,
 
 METHOD(imv_os_database_t, set_device_info, void,
 	private_imv_os_database_t *this,  int device_id, char *os_info,
-	int count, int count_update, int count_blacklist)
+	int count, int count_update, int count_blacklist, u_int flags)
 {
 	enumerator_t *e;
 	time_t last_time;
 	int pid = 0, last_pid = 0, last_count_update = 0, last_count_blacklist = 0;
+	u_int last_flags;
 	bool found = FALSE;
 
 	/* get primary key of OS info string if it exists */
@@ -241,32 +242,35 @@ METHOD(imv_os_database_t, set_device_info, void,
 
 	/* get latest device info record if it exists */
 	e = this->db->query(this->db,
-			"SELECT time, product, count_update, count_blacklist "
+			"SELECT time, product, count_update, count_blacklist, flags "
 			"FROM device_infos WHERE device = ? ORDER BY time DESC",
-			 DB_INT, device_id, DB_UINT, DB_INT, DB_INT, DB_INT);
+			 DB_INT, device_id, DB_UINT, DB_INT, DB_INT, DB_INT, DB_UINT);
 	if (e)
 	{
 		found = e->enumerate(e, &last_time, &last_pid, &last_count_update,
-								&last_count_blacklist);
+								&last_count_blacklist, &last_flags);
 		e->destroy(e);
 	}
-	if (found && !last_count_update && !last_count_blacklist && pid == last_pid)
+	if (found && !last_count_update && !last_count_blacklist && !last_flags &&
+		pid == last_pid)
 	{
 		/* update device info */
 		this->db->execute(this->db, NULL,
 			"UPDATE device_infos SET time = ?, count = ?, count_update = ?, "
-			"count_blacklist = ? WHERE device = ? AND time = ?",
+			"count_blacklist = ?, flags = ? WHERE device = ? AND time = ?",
 			 DB_UINT, time(NULL), DB_INT, count, DB_INT, count_update,
-			 DB_INT, count_blacklist, DB_INT, device_id, DB_UINT, last_time);
+			 DB_INT, count_blacklist, DB_UINT, flags,
+			 DB_INT, device_id, DB_UINT, last_time);
 	}
 	else
 	{
 		/* insert device info */
 		this->db->execute(this->db, NULL,
-			"INSERT INTO device_infos (device, time, product, "
-			"count, count_update, count_blacklist) VALUES (?, ?, ?, ?, ?, ?)",
+			"INSERT INTO device_infos (device, time, product, count, "
+			"count_update, count_blacklist, flags) VALUES (?, ?, ?, ?, ?, ?, ?)",
 			 DB_INT, device_id, DB_UINT, time(NULL), DB_INT, pid,
-			 DB_INT, count, DB_INT, count_update, DB_INT, count_blacklist);
+			 DB_INT, count, DB_INT, count_update, DB_INT, count_blacklist,
+			 DB_UINT, flags);
 	}
 }
 

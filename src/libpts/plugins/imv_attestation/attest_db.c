@@ -799,19 +799,20 @@ METHOD(attest_db_t, list_devices, void,
 	time_t timestamp;
 	int id, last_id = 0, device_count = 0;
 	int count, count_update, count_blacklist;
+	u_int tstamp, flags = 0;
 
 	e = this->db->query(this->db,
 			"SELECT d.id, d.value, i.time, i.count, i.count_update, "
-			"i.count_blacklist, p.name FROM devices AS d "
+			"i.count_blacklist, i.flags, p.name FROM devices AS d "
 			"JOIN device_infos AS i ON d.id = i.device "
 			"JOIN products AS p ON p.id = i.product "
 			"ORDER BY d.value, i.time DESC",
-			 DB_INT, DB_BLOB, DB_UINT, DB_INT, DB_INT, DB_INT, DB_TEXT);
+			 DB_INT, DB_BLOB, DB_UINT, DB_INT, DB_INT, DB_INT, DB_UINT, DB_TEXT);
 
 	if (e)
 	{
-		while (e->enumerate(e, &id, &value, &timestamp, &count, &count_update,
-							   &count_blacklist, &product))
+		while (e->enumerate(e, &id, &value, &tstamp, &count, &count_update,
+							   &count_blacklist, &flags, &product))
 		{
 			if (id != last_id)
 			{
@@ -819,8 +820,9 @@ METHOD(attest_db_t, list_devices, void,
 				device_count++;
 				last_id = id;
 			}
-			printf("      %T, %4d, %3d, %3d, '%s'\n", &timestamp, TRUE,
-				   count, count_update, count_blacklist, product);
+			timestamp = tstamp;
+			printf("      %T, %4d, %3d, %3d, %1u, '%s'\n", &timestamp, TRUE,
+				   count, count_update, count_blacklist, flags, product);
 		}
 		e->destroy(e);
 		printf("%d device%s found\n", device_count,

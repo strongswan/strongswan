@@ -374,7 +374,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		!os_state->get_angel_count(os_state))
 	{
 		int device_id, count, count_update, count_blacklist, count_ok;
+		u_int os_settings;
 
+		os_settings = os_state->get_os_settings(os_state);
 		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
 									  &count_ok);
 		DBG1(DBG_IMV, "processed %d packages: %d not updated, %d blacklisted, "
@@ -387,11 +389,10 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		{
 			os_db->set_device_info(os_db, device_id,
 						os_state->get_info(os_state, NULL, NULL, NULL),
-						count, count_update, count_blacklist);
+						count, count_update, count_blacklist, os_settings);
 		}
 
-		if (count_update || count_blacklist ||
-			os_state->get_os_settings(os_state))
+		if (count_update || count_blacklist || os_settings)
 		{
 			state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
