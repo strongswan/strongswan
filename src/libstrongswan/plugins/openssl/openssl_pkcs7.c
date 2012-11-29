@@ -19,6 +19,7 @@
 #include <library.h>
 #include <utils/debug.h>
 #include <asn1/oid.h>
+#include <credentials/sets/mem_cred.h>
 
 #include <openssl/cms.h>
 
@@ -150,6 +151,8 @@ typedef struct {
 	auth_cfg_t *auth;
 	/** full CMS */
 	CMS_ContentInfo *cms;
+	/** credential set containing wrapped certificates */
+	mem_cred_t *creds;
 } signature_enumerator_t;
 
 /**
@@ -312,6 +315,8 @@ METHOD(enumerator_t, signature_enumerate, bool,
 METHOD(enumerator_t, signature_destroy, void,
 	signature_enumerator_t *this)
 {
+	lib->credmgr->remove_local_set(lib->credmgr, &this->creds->set);
+	this->creds->destroy(this->creds);
 	DESTROY_IF(this->auth);
 	free(this);
 }
@@ -323,6 +328,9 @@ METHOD(container_t, create_signature_enumerator, enumerator_t*,
 
 	if (this->type == CONTAINER_PKCS7_SIGNED_DATA)
 	{
+		enumerator_t *certs;
+		certificate_t *cert;
+
 		INIT(enumerator,
 			.public = {
 				.enumerate = (void*)_signature_enumerate,
@@ -330,7 +338,21 @@ METHOD(container_t, create_signature_enumerator, enumerator_t*,
 			},
 			.cms = this->cms,
 			.signers = CMS_get0_SignerInfos(this->cms),
+			.creds = mem_cred_create(),
 		);
+
+		/* make available wrapped certs during signature checking */
+		certs = create_cert_enumerator(this);
+		while (certs->enumerate(certs, &cert))
+		{
+			enumerator->creds->add_cert(enumerator->creds, FALSE,
+										cert->get_ref(cert));
+		}
+		certs->destroy(certs);
+
+		lib->credmgr->add_local_set(lib->credmgr, &enumerator->creds->set,
+									FALSE);
+
 		return &enumerator->public;
 	}
 	return enumerator_create_empty();
