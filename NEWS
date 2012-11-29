@@ -21,6 +21,12 @@ strongswan-5.0.2
   specific ipsec.conf conn section and cacert CA certificates for a specific ca
   section.
 
+- The load-tester plugin gained additional options for certificate generation
+  and can load keys and multiple CA certificates from external files. It can
+  install a dedicated outer IP address for each tunnel and tunnel initiation
+  batches can be triggered and monitored externally using the
+  "ipsec load-tester" tool.
+
 strongswan-5.0.1
 ----------------
 
