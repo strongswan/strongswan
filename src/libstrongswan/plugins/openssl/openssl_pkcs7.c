@@ -59,9 +59,10 @@ struct CMS_SignerInfo_st {
 };
 
 /**
- * We can't include asn1.h, declare function prototype directly
+ * We can't include asn1.h, declare function prototypes directly
  */
 chunk_t asn1_wrap(int, const char *mode, ...);
+int asn1_unwrap(chunk_t*, chunk_t*);
 
 /**
  * Enumerator for signatures
@@ -274,6 +275,39 @@ METHOD(pkcs7_t, get_attribute, bool,
 	private_openssl_pkcs7_t *this, int oid,
 	enumerator_t *enumerator, chunk_t *value)
 {
+	signature_enumerator_t *e;
+	CMS_SignerInfo *si;
+	X509_ATTRIBUTE *attr;
+	ASN1_TYPE *type;
+	chunk_t chunk, wrapped;
+	int i;
+
+	e = (signature_enumerator_t*)enumerator;
+	if (e->i <= 0)
+	{
+		return FALSE;
+	}
+
+	/* "i" gets incremeneted after enumerate(), hence read from previous */
+	si = sk_CMS_SignerInfo_value(e->signers, e->i - 1);
+	for (i = 0; i < CMS_signed_get_attr_count(si); i++)
+	{
+		attr = CMS_signed_get_attr(si, i);
+		if (!attr->single && sk_ASN1_TYPE_num(attr->value.set) == 1 &&
+			openssl_asn1_known_oid(attr->object) == oid)
+		{
+			/* get first value in SET */
+			type = sk_ASN1_TYPE_value(attr->value.set, 0);
+			chunk = wrapped = openssl_i2chunk(ASN1_TYPE, type);
+			if (asn1_unwrap(&chunk, &chunk) != 0x100 /* ASN1_INVALID */)
+			{
+				*value = chunk_clone(chunk);
+				free(wrapped.ptr);
+				return TRUE;
+			}
+			free(wrapped.ptr);
+		}
+	}
 	return FALSE;
 }
 
