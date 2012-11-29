@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pkcs7_enveloped_data pkcs7_enveloped_data
- * @{ @ingroup pkcs7
+ * @{ @ingroup pkcs7p
  */
 
 #ifndef PKCS7_ENVELOPED_DATA_H_

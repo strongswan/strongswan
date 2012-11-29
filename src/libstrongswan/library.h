@@ -34,6 +34,9 @@
  * @defgroup certificates certificates
  * @ingroup credentials
  *
+ * @defgroup containers containers
+ * @ingroup credentials
+ *
  * @defgroup sets sets
  * @ingroup credentials
  *

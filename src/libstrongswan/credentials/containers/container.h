@@ -31,13 +31,13 @@ typedef enum container_type_t container_type_t;
  * Type of the container.
  */
 enum container_type_t {
-	/* Any kind of PKCS7/CMS container */
+	/** Any kind of PKCS7/CMS container */
 	CONTAINER_PKCS7,
-	/* PKCS7/CMS plain "data" */
+	/** PKCS7/CMS plain "data" */
 	CONTAINER_PKCS7_DATA,
-	/* PKCS7/CMS "signed-data" */
+	/** PKCS7/CMS "signed-data" */
 	CONTAINER_PKCS7_SIGNED_DATA,
-	/* PKCS7/CMS "enveloped-data" */
+	/** PKCS7/CMS "enveloped-data" */
 	CONTAINER_PKCS7_ENVELOPED_DATA,
 };
 

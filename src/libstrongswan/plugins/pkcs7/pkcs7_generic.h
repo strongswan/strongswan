@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pkcs7_generic pkcs7_generic
- * @{ @ingroup pkcs7
+ * @{ @ingroup pkcs7p
  */
 
 #ifndef PKCS7_GENERIC_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pkcs7_signed_data pkcs7_signed_data
- * @{ @ingroup pkcs7
+ * @{ @ingroup pkcs7p
  */
 
 #ifndef PKCS7_SIGNED_DATA_H_
