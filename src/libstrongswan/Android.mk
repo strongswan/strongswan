@@ -72,6 +72,8 @@ LOCAL_SRC_FILES += $(call add_plugin, pem)
 
 LOCAL_SRC_FILES += $(call add_plugin, pkcs1)
 
+LOCAL_SRC_FILES += $(call add_plugin, pkcs7)
+
 LOCAL_SRC_FILES += $(call add_plugin, pkcs8)
 
 LOCAL_SRC_FILES += $(call add_plugin, pkcs11)
