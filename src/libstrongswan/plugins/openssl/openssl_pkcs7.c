@@ -57,6 +57,45 @@ struct CMS_SignerInfo_st {
 	STACK_OF(X509_ATTRIBUTE) *signedAttrs;
 	X509_ALGOR *signatureAlgorithm;
 	ASN1_OCTET_STRING *signature;
+	/* and more... */
+};
+
+/**
+ * And we also need access to the wrappend CMS_KeyTransRecipientInfo to
+ * read the encrypted key
+ */
+struct CMS_KeyTransRecipientInfo_st {
+	long version;
+	void *rid;
+	X509_ALGOR *keyEncryptionAlgorithm;
+	ASN1_OCTET_STRING *encryptedKey;
+};
+
+struct CMS_RecipientInfo_st {
+	int type;
+	struct CMS_KeyTransRecipientInfo_st *ktri;
+	/* and more in union... */
+};
+
+struct CMS_EncryptedContentInfo_st {
+	ASN1_OBJECT *contentType;
+	X509_ALGOR *contentEncryptionAlgorithm;
+	ASN1_OCTET_STRING *encryptedContent;
+	/* and more... */
+};
+
+struct CMS_EnvelopedData_st {
+	long version;
+	void *originatorInfo;
+	STACK_OF(CMS_RecipientInfo) *recipientInfos;
+	struct CMS_EncryptedContentInfo_st *encryptedContentInfo;
+	/* and more... */
+};
+
+struct CMS_ContentInfo_st {
+	ASN1_OBJECT *contentType;
+	struct CMS_EnvelopedData_st *envelopedData;
+	/* and more in union... */
 };
 
 /**
@@ -405,32 +444,232 @@ METHOD(pkcs7_t, get_attribute, bool,
 	return FALSE;
 }
 
-METHOD(pkcs7_t, create_cert_enumerator, enumerator_t*,
-	private_openssl_pkcs7_t *this)
+/**
+ * Find a private key for issuerAndSerialNumber
+ */
+static private_key_t *find_private(identification_t *issuer,
+								   identification_t *serial)
 {
-	return enumerator_create_empty();
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	public_key_t *public;
+	private_key_t *private = NULL;
+	identification_t *id;
+	chunk_t fp;
+
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+											CERT_X509, KEY_RSA, serial, FALSE);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		if (issuer->equals(issuer, cert->get_issuer(cert)))
+		{
+			public = cert->get_public_key(cert);
+			if (public)
+			{
+				if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &fp))
+				{
+					id = identification_create_from_encoding(ID_KEY_ID, fp);
+					private = lib->credmgr->get_private(lib->credmgr,
+														KEY_ANY, id, NULL);
+					id->destroy(id);
+				}
+				public->destroy(public);
+			}
+		}
+		if (private)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return private;
+}
+
+/**
+ * Decrypt enveloped-data with a decrypted symmetric key
+ */
+static bool decrypt_symmetric(private_openssl_pkcs7_t *this, chunk_t key,
+							  chunk_t encrypted, chunk_t *plain)
+{
+	encryption_algorithm_t encr;
+	X509_ALGOR *alg;
+	crypter_t *crypter;
+	chunk_t iv;
+	size_t key_size;
+
+	/* read encryption algorithm from interal structures; TODO fixup */
+	alg = this->cms->envelopedData->encryptedContentInfo->
+												contentEncryptionAlgorithm;
+	encr = encryption_algorithm_from_oid(openssl_asn1_known_oid(alg->algorithm),
+										 &key_size);
+	if (alg->parameter->type != V_ASN1_OCTET_STRING)
+	{
+		return FALSE;
+	}
+	iv = openssl_asn1_str2chunk(alg->parameter->value.octet_string);
+
+	crypter = lib->crypto->create_crypter(lib->crypto, encr, key_size / 8);
+	if (!crypter)
+	{
+		DBG1(DBG_LIB, "crypter %N-%d not available",
+			 encryption_algorithm_names, alg, key_size);
+		return FALSE;
+	}
+	if (key.len != crypter->get_key_size(crypter))
+	{
+		DBG1(DBG_LIB, "symmetric key length is wrong");
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	if (iv.len != crypter->get_iv_size(crypter))
+	{
+		DBG1(DBG_LIB, "IV length is wrong");
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	if (!crypter->set_key(crypter, key) ||
+		!crypter->decrypt(crypter, encrypted, iv, plain))
+	{
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	crypter->destroy(crypter);
+	return TRUE;
+}
+
+/**
+ * Remove enveloped-data PKCS#7 padding from plain data
+ */
+static bool remove_padding(chunk_t *data)
+{
+	u_char *pos;
+	u_char pattern;
+	size_t padding;
+
+	if (!data->len)
+	{
+		return FALSE;
+	}
+	pos = data->ptr + data->len - 1;
+	padding = pattern = *pos;
+
+	if (padding > data->len)
+	{
+		DBG1(DBG_LIB, "padding greater than data length");
+		return FALSE;
+	}
+	data->len -= padding;
+
+	while (padding-- > 0)
+	{
+		if (*pos-- != pattern)
+		{
+			DBG1(DBG_LIB, "wrong padding pattern");
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Decrypt PKCS#7 enveloped-data
+ */
+static bool decrypt(private_openssl_pkcs7_t *this,
+					chunk_t encrypted, chunk_t *plain)
+{
+	STACK_OF(CMS_RecipientInfo) *ris;
+	CMS_RecipientInfo *ri;
+	chunk_t chunk, key = chunk_empty;
+	int i;
+
+	ris = CMS_get0_RecipientInfos(this->cms);
+	for (i = 0; i < sk_CMS_RecipientInfo_num(ris); i++)
+	{
+		ri = sk_CMS_RecipientInfo_value(ris, i);
+		if (CMS_RecipientInfo_type(ri) == CMS_RECIPINFO_TRANS)
+		{
+			identification_t *serial, *issuer;
+			private_key_t *private;
+			X509_ALGOR *alg;
+			X509_NAME *name;
+			ASN1_INTEGER *sn;
+			int oid;
+
+			if (CMS_RecipientInfo_ktri_get0_algs(ri, NULL, NULL, &alg) == 1 &&
+				CMS_RecipientInfo_ktri_get0_signer_id(ri, NULL, &name, &sn) == 1)
+			{
+				oid = openssl_asn1_known_oid(alg->algorithm);
+				if (oid != OID_RSA_ENCRYPTION)
+				{
+					DBG1(DBG_LIB, "only RSA encryption supported in PKCS#7");
+					continue;
+				}
+				issuer = openssl_x509_name2id(name);
+				if (!issuer)
+				{
+					continue;
+				}
+				serial = identification_create_from_encoding(
+										ID_KEY_ID, openssl_asn1_str2chunk(sn));
+				private = find_private(issuer, serial);
+				issuer->destroy(issuer);
+				serial->destroy(serial);
+
+				if (private)
+				{
+					/* get encryptedKey from internal structure; TODO fixup */
+					chunk = openssl_asn1_str2chunk(ri->ktri->encryptedKey);
+					if (private->decrypt(private, ENCRYPT_RSA_PKCS1,
+										 chunk, &key))
+					{
+						private->destroy(private);
+						break;
+					}
+					private->destroy(private);
+				}
+			}
+		}
+	}
+	if (!key.len)
+	{
+		DBG1(DBG_LIB, "no private key found to decrypt PKCS#7");
+		return FALSE;
+	}
+	if (!decrypt_symmetric(this, key, encrypted, plain))
+	{
+		chunk_clear(&key);
+		return FALSE;
+	}
+	chunk_clear(&key);
+	if (!remove_padding(plain))
+	{
+		free(plain->ptr);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 METHOD(container_t, get_data, bool,
 	private_openssl_pkcs7_t *this, chunk_t *data)
 {
 	ASN1_OCTET_STRING **os;
+	chunk_t chunk;
 
-	switch (this->type)
+	os = CMS_get0_content(this->cms);
+	if (os)
 	{
-		case CONTAINER_PKCS7_DATA:
-		case CONTAINER_PKCS7_SIGNED_DATA:
-			os = CMS_get0_content(this->cms);
-			if (os)
-			{
-				*data = chunk_clone(openssl_asn1_str2chunk(*os));
+		chunk = openssl_asn1_str2chunk(*os);
+		switch (this->type)
+		{
+			case CONTAINER_PKCS7_DATA:
+			case CONTAINER_PKCS7_SIGNED_DATA:
+				*data = chunk_clone(chunk);
 				return TRUE;
-			}
-			break;
-		case CONTAINER_PKCS7_ENVELOPED_DATA:
-			/* TODO: decrypt */
-		default:
-			break;
+			case CONTAINER_PKCS7_ENVELOPED_DATA:
+				return decrypt(this, chunk, data);
+			default:
+				break;
+		}
 	}
 	return FALSE;
 }
