@@ -323,7 +323,7 @@ METHOD(pkcs7_t, get_attribute, bool,
 		chunk = e->info->attributes->get_attribute(e->info->attributes, oid);
 		if (chunk.len)
 		{
-			*value = chunk;
+			*value = chunk_clone(chunk);
 			return TRUE;
 		}
 	}

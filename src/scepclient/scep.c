@@ -85,6 +85,7 @@ void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
 			}
 		}
 		DBG2(DBG_APP, "messageType:  %s", msgType_names[attrs->msgType]);
+		free(attr.ptr);
 	}
 	if (pkcs7->get_attribute(pkcs7, OID_PKI_STATUS, enumerator, &attr))
 	{
@@ -98,6 +99,7 @@ void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
 			}
 		}
 		DBG2(DBG_APP, "pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus]);
+		free(attr.ptr);
 	}
 	if (pkcs7->get_attribute(pkcs7, OID_PKI_FAIL_INFO, enumerator, &attr))
 	{
@@ -109,6 +111,7 @@ void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
 		{
 			DBG1(DBG_APP, "failInfo:     %s", failInfo_reasons[attrs->failInfo]);
 		}
+		free(attr.ptr);
 	}
 
 	pkcs7->get_attribute(pkcs7, OID_PKI_SENDER_NONCE, enumerator,

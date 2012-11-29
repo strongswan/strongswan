@@ -41,9 +41,12 @@ struct pkcs7_t {
 	 * To select the signerInfo structure to get the attribute from, pass
 	 * the enumerator position from container_t.create_signature_enumerator().
 	 *
+	 * The attribute returned does not contain type information and must be
+	 * freed after use.
+	 *
 	 * @param oid			OID from the attribute to get
 	 * @param enumerator	enumerator to select signerInfo
-	 * @param value			chunk receiving attribute value, internal data
+	 * @param value			chunk receiving attribute value, allocated
 	 * @return				TRUE if attribute found
 	 */
 	bool (*get_attribute)(pkcs7_t *this, int oid, enumerator_t *enumerator,

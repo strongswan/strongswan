@@ -114,6 +114,7 @@ static int verify(chunk_t chunk)
 				{
 					fprintf(stderr, " at %T", &t, FALSE);
 				}
+				free(data.ptr);
 			}
 			fprintf(stderr, "\n");
 		}
