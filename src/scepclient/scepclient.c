@@ -1405,7 +1405,7 @@ int main(int argc, char **argv)
 		if (!container->get_data(container, &chunk))
 		{
 			container->destroy(container);
-			exit_scepclient("extracting signed-data failed");
+			exit_scepclient("extracting encrypted-data failed");
 		}
 		container->destroy(container);
 
