@@ -65,6 +65,78 @@ chunk_t asn1_wrap(int, const char *mode, ...);
 int asn1_unwrap(chunk_t*, chunk_t*);
 
 /**
+ * Enumerator over certificates
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** Stack of X509 certificates */
+	STACK_OF(X509) *certs;
+	/** current enumerator position in certificates */
+	int i;
+	/** currently enumerating certificate_t */
+	certificate_t *cert;
+} cert_enumerator_t;
+
+METHOD(enumerator_t, cert_destroy, void,
+	cert_enumerator_t *this)
+{
+	DESTROY_IF(this->cert);
+	free(this);
+}
+
+METHOD(enumerator_t, cert_enumerate, bool,
+	cert_enumerator_t *this, certificate_t **out)
+{
+	if (!this->certs)
+	{
+		return FALSE;
+	}
+	while (this->i < sk_X509_num(this->certs))
+	{
+		chunk_t encoding;
+		X509 *x509;
+
+		/* clean up previous round */
+		DESTROY_IF(this->cert);
+		this->cert = NULL;
+
+		x509 = sk_X509_value(this->certs, this->i++);
+		encoding = openssl_i2chunk(X509, x509);
+		this->cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										BUILD_BLOB_ASN1_DER, encoding,
+										BUILD_END);
+		free(encoding.ptr);
+		if (!this->cert)
+		{
+			continue;
+		}
+		*out = this->cert;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(pkcs7_t, create_cert_enumerator, enumerator_t*,
+	private_openssl_pkcs7_t *this)
+{
+	cert_enumerator_t *enumerator;
+
+	if (this->type == CONTAINER_PKCS7_SIGNED_DATA)
+	{
+		INIT(enumerator,
+			.public = {
+				.enumerate = (void*)_cert_enumerate,
+				.destroy = _cert_destroy,
+			},
+			.certs = CMS_get1_certs(this->cms),
+		);
+		return &enumerator->public;
+	}
+	return enumerator_create_empty();
+}
+
+/**
  * Enumerator for signatures
  */
 typedef struct {
