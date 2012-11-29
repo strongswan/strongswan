@@ -593,6 +593,7 @@ static bool decrypt(private_openssl_pkcs7_t *this,
 			X509_ALGOR *alg;
 			X509_NAME *name;
 			ASN1_INTEGER *sn;
+			u_char zero = 0;
 			int oid;
 
 			if (CMS_RecipientInfo_ktri_get0_algs(ri, NULL, NULL, &alg) == 1 &&
@@ -609,8 +610,12 @@ static bool decrypt(private_openssl_pkcs7_t *this,
 				{
 					continue;
 				}
-				serial = identification_create_from_encoding(
-										ID_KEY_ID, openssl_asn1_str2chunk(sn));
+				chunk = openssl_asn1_str2chunk(sn);
+				if (chunk.len && chunk.ptr[0] | 0x80)
+				{	/* if MSB is set, append a zero to make it non-negative */
+					chunk = chunk_cata("cc", chunk_from_thing(zero), chunk);
+				}
+				serial = identification_create_from_encoding(ID_KEY_ID, chunk);
 				private = find_private(issuer, serial);
 				issuer->destroy(issuer);
 				serial->destroy(serial);
