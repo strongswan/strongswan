@@ -1448,6 +1448,10 @@ int main(int argc, char **argv)
 		}
 		enumerator->destroy(enumerator);
 		container->destroy(container);
+		chunk_free(&attrs.transID);
+		chunk_free(&attrs.senderNonce);
+		chunk_free(&attrs.recipientNonce);
+
 		filetype_out &= ~CERT;   /* delete CERT flag */
 	}
 
