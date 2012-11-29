@@ -22,19 +22,19 @@
 #include <asn1/asn1_parser.h>
 #include <collections/linked_list.h>
 
-#include "pkcs9.h"
+#include "pkcs7_attributes.h"
 
-typedef struct private_pkcs9_t private_pkcs9_t;
+typedef struct private_pkcs7_attributes_t private_pkcs7_attributes_t;
 typedef struct attribute_t attribute_t;
 
 /**
- * Private data of a pkcs9_t attribute list.
+ * Private data of a pkcs7_attributes_t attribute list.
  */
-struct private_pkcs9_t {
+struct private_pkcs7_attributes_t {
 	/**
 	 * Public interface
 	 */
-	pkcs9_t public;
+	pkcs7_attributes_t public;
 
 	/**
 	 * DER encoding of PKCS#9 attributes
@@ -95,7 +95,7 @@ static attribute_t *attribute_create(int oid, chunk_t value)
 /**
  * Build encoding of the attribute list
  */
-static void build_encoding(private_pkcs9_t *this)
+static void build_encoding(private_pkcs7_attributes_t *this)
 {
 	enumerator_t *enumerator;
 	attribute_t *attribute;
@@ -127,8 +127,8 @@ static void build_encoding(private_pkcs9_t *this)
 	free(chunks);
 }
 
-METHOD(pkcs9_t, get_encoding, chunk_t,
-	private_pkcs9_t *this)
+METHOD(pkcs7_attributes_t, get_encoding, chunk_t,
+	private_pkcs7_attributes_t *this)
 {
 	if (!this->encoding.len)
 	{
@@ -137,8 +137,8 @@ METHOD(pkcs9_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-METHOD(pkcs9_t, get_attribute, chunk_t,
-	private_pkcs9_t *this, int oid)
+METHOD(pkcs7_attributes_t, get_attribute, chunk_t,
+	private_pkcs7_attributes_t *this, int oid)
 {
 	enumerator_t *enumerator;
 	chunk_t value = chunk_empty;
@@ -161,8 +161,8 @@ METHOD(pkcs9_t, get_attribute, chunk_t,
 	return chunk_empty;
 }
 
-METHOD(pkcs9_t, add_attribute, void,
-	private_pkcs9_t *this, int oid, chunk_t value)
+METHOD(pkcs7_attributes_t, add_attribute, void,
+	private_pkcs7_attributes_t *this, int oid, chunk_t value)
 {
 	this->attributes->insert_last(this->attributes,
 								  attribute_create(oid, value));
@@ -172,8 +172,8 @@ METHOD(pkcs9_t, add_attribute, void,
 	chunk_free(&this->encoding);
 }
 
-METHOD(pkcs9_t, destroy, void,
-	private_pkcs9_t *this)
+METHOD(pkcs7_attributes_t, destroy, void,
+	private_pkcs7_attributes_t *this)
 {
 	this->attributes->destroy_function(this->attributes,
 									   (void*)attribute_destroy);
@@ -184,9 +184,9 @@ METHOD(pkcs9_t, destroy, void,
 /*
  * Described in header.
  */
-pkcs9_t *pkcs9_create(void)
+pkcs7_attributes_t *pkcs7_attributes_create(void)
 {
-	private_pkcs9_t *this;
+	private_pkcs7_attributes_t *this;
 
 	INIT(this,
 		.public = {
@@ -220,7 +220,8 @@ static const asn1Object_t attributesObjects[] = {
 /**
  * Parse a PKCS#9 attribute list
  */
-static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
+static bool parse_attributes(chunk_t chunk, int level0,
+							 private_pkcs7_attributes_t* this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -256,10 +257,12 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
  /*
  * Described in header.
  */
-pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level)
+pkcs7_attributes_t *pkcs7_attributes_create_from_chunk(chunk_t chunk,
+													   u_int level)
 {
-	private_pkcs9_t *this = (private_pkcs9_t*)pkcs9_create();
+	private_pkcs7_attributes_t *this;
 
+	this = (private_pkcs7_attributes_t*)pkcs7_attributes_create();
 	this->encoding = chunk_clone(chunk);
 	if (!parse_attributes(chunk, level, this))
 	{

@@ -4,8 +4,7 @@ libstrongswan_la_SOURCES = \
 library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
-collections/linked_list.c \
-crypto/crypters/crypter.c crypto/hashers/hasher.c crypto/pkcs9.c \
+collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
@@ -41,8 +40,7 @@ asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
 collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
 collections/linked_list.h \
 crypto/crypters/crypter.h crypto/hashers/hasher.h crypto/mac.h \
-crypto/pkcs9.h crypto/proposal/proposal_keywords.h \
-crypto/proposal/proposal_keywords_static.h \
+crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
 crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/rngs/rng.h crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \

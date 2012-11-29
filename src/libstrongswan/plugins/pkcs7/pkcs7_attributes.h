@@ -15,28 +15,28 @@
  */
 
 /**
- * @defgroup pkcs9 pkcs9
- * @{ @ingroup crypto
+ * @defgroup pkcs7_attributes pkcs7_attributes
+ * @{ @ingroup pkcs7
  */
 
-#ifndef PKCS9_H_
-#define PKCS9_H_
+#ifndef PKCS7_ATTRIBUTES_H_
+#define PKCS7_ATTRIBUTES_H_
 
-typedef struct pkcs9_t pkcs9_t;
+typedef struct pkcs7_attributes_t pkcs7_attributes_t;
 
 #include <library.h>
 
 /**
- * PKCS#9 attribute lists.
+ * PKCS#7 attribute lists, aka PKCS#9.
  */
-struct pkcs9_t {
+struct pkcs7_attributes_t {
 
 	/**
 	 * Gets ASN.1 encoding of PKCS#9 attribute list.
 	 *
 	 * @return				ASN.1 encoded PKCSI#9 list
 	 */
-	chunk_t (*get_encoding) (pkcs9_t *this);
+	chunk_t (*get_encoding) (pkcs7_attributes_t *this);
 
 	/**
 	 * Gets a PKCS#9 attribute from the list.
@@ -44,7 +44,7 @@ struct pkcs9_t {
 	 * @param oid			OID of the attribute
 	 * @return				value of the attribute (internal data)
 	 */
-	chunk_t (*get_attribute) (pkcs9_t *this, int oid);
+	chunk_t (*get_attribute) (pkcs7_attributes_t *this, int oid);
 
 	/**
 	 * Adds a PKCS#9 attribute.
@@ -52,28 +52,28 @@ struct pkcs9_t {
 	 * @param oid			OID of the attribute
 	 * @param value			value of the attribute, with ASN1 type (gets owned)
 	 */
-	void (*add_attribute) (pkcs9_t *this, int oid, chunk_t value);
+	void (*add_attribute) (pkcs7_attributes_t *this, int oid, chunk_t value);
 
 	/**
 	 * Destroys the PKCS#9 attribute list.
 	 */
-	void (*destroy) (pkcs9_t *this);
+	void (*destroy) (pkcs7_attributes_t *this);
 };
 
 /**
- * Read a PKCS#9 attribute list from a DER encoded chunk.
+ * Read a PKCS#7 attribute list (aka PKCS#9) from a DER encoded chunk.
  *
  * @param chunk		chunk containing DER encoded data
  * @param level		ASN.1 parsing start level
  * @return 			created pkcs9 attribute list, or NULL if invalid.
  */
-pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level);
+pkcs7_attributes_t *pkcs7_attributes_create_from_chunk(chunk_t chunk, u_int level);
 
 /**
- * Create an empty PKCS#9 attribute list
+ * Create an empty PKCS#7 attribute list, aka PKCS#9.
  *
  * @return 				created pkcs9 attribute list.
  */
-pkcs9_t *pkcs9_create(void);
+pkcs7_attributes_t *pkcs7_attributes_create(void);
 
 #endif /** PKCS9_H_ @}*/

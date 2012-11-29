@@ -14,6 +14,7 @@
  */
 
 #include "pkcs7_signed_data.h"
+#include "pkcs7_attributes.h"
 
 #include <time.h>
 
@@ -21,7 +22,6 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
-#include <crypto/pkcs9.h>
 #include <credentials/sets/mem_cred.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/keys/private_key.h>
@@ -67,7 +67,7 @@ typedef struct {
 	/**
 	 * Signed attributes of signerInfo
 	 */
-	pkcs9_t *attributes;
+	pkcs7_attributes_t *attributes;
 
 	/**
 	 * Serial of signing certificate
@@ -455,7 +455,8 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 				break;
 			case PKCS7_AUTH_ATTRIBUTES:
 				*object.ptr = ASN1_SET;
-				info->attributes = pkcs9_create_from_chunk(object, level+1);
+				info->attributes = pkcs7_attributes_create_from_chunk(
+														object, level+1);
 				*object.ptr = ASN1_CONTEXT_C_0;
 				break;
 			case PKCS7_DIGEST_ALGORITHM:
@@ -516,7 +517,8 @@ static chunk_t build_issuerAndSerialNumber(certificate_t *cert)
  * Generate a new PKCS#7 signed-data container
  */
 static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
-					 certificate_t *cert, hash_algorithm_t alg, pkcs9_t *pkcs9)
+					 certificate_t *cert, hash_algorithm_t alg,
+					 pkcs7_attributes_t *pkcs9)
 {
 	chunk_t authenticatedAttributes = chunk_empty;
 	chunk_t encryptedDigest = chunk_empty;
@@ -617,11 +619,11 @@ pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
 	hash_algorithm_t alg = HASH_SHA1;
 	private_key_t *key = NULL;
 	certificate_t *cert = NULL;
-	pkcs9_t *pkcs9;
+	pkcs7_attributes_t *pkcs9;
 	chunk_t value;
 	int oid;
 
-	pkcs9 = pkcs9_create();
+	pkcs9 = pkcs7_attributes_create();
 
 	while (TRUE)
 	{

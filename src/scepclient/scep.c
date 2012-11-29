@@ -22,7 +22,6 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
-#include <crypto/pkcs9.h>
 #include <crypto/rngs/rng.h>
 #include <crypto/hashers/hasher.h>
 
