@@ -114,6 +114,12 @@ pkcs7_t *pkcs7_generic_load(container_type_t type, va_list args)
 	}
 	if (blob.len)
 	{
+		if (blob.len >= 2 &&
+			blob.ptr[0] == ASN1_SEQUENCE && blob.ptr[1] == 0x80)
+		{	/* looks like infinite lenght BER encoding, but we can't handle it.
+			 * ignore silently, our openssl backend can handle it */
+			return NULL;
+		}
 		return parse_contentInfo(blob);
 	}
 	return NULL;
