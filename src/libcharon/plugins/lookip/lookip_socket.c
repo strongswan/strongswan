@@ -140,6 +140,7 @@ static bool listener_cb(entry_t *entry, bool up, host_t *vip,
 {
 	lookip_response_t resp = {
 		.type = entry->type,
+		.unique_id = unique_id,
 	};
 
 	/* filter events */
