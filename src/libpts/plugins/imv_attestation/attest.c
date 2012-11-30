@@ -145,6 +145,7 @@ static void do_args(int argc, char *argv[])
 			{ "rel", no_argument, NULL, 'R' },
 			{ "sequence", required_argument, NULL, 'S' },
 			{ "seq", required_argument, NULL, 'S' },
+			{ "utc", no_argument, NULL, 'U' },
 			{ "version", required_argument, NULL, 'V' },
 			{ "security", no_argument, NULL, 'Y' },
 			{ "sha1", no_argument, NULL, '1' },
@@ -289,6 +290,9 @@ static void do_args(int argc, char *argv[])
 				continue;
 			case 'S':
 				attest->set_sequence(attest, atoi(optarg));
+				continue;
+			case 'U':
+				attest->set_utc(attest);
 				continue;
 			case 'V':
 				if (!attest->set_version(attest, optarg))

@@ -143,6 +143,11 @@ struct private_attest_db_t {
 	bool relative;
 
 	/**
+	 * TRUE if dates are to be displayed in UTC
+	 */
+	bool utc;
+
+	/**
 	 * Package security state
 	 */
 	os_package_state_t security;
@@ -740,6 +745,12 @@ METHOD(attest_db_t, set_owner, void,
 	this->owner = strdup(owner);
 }
 
+METHOD(attest_db_t, set_utc, void,
+	private_attest_db_t *this)
+{
+	this->utc = TRUE;
+}
+
 METHOD(attest_db_t, list_components, void,
 	private_attest_db_t *this)
 {
@@ -821,7 +832,7 @@ METHOD(attest_db_t, list_devices, void,
 				last_id = id;
 			}
 			timestamp = tstamp;
-			printf("      %T, %4d, %3d, %3d, %1u, '%s'\n", &timestamp, TRUE,
+			printf("      %T, %4d, %3d, %3d, %1u, '%s'\n", &timestamp, this->utc,
 				   count, count_update, count_blacklist, flags, product);
 		}
 		e->destroy(e);
@@ -965,7 +976,7 @@ METHOD(attest_db_t, list_packages, void,
 						printf(" ");
 					}
 				}
-				printf(" %T (%s)%N\n", &t, TRUE, version,
+				printf(" %T (%s)%N\n", &t, this->utc, version,
 					 os_package_state_names, security);
 				count++;
 			}
@@ -1718,6 +1729,7 @@ attest_db_t *attest_db_create(char *uri)
 			.set_security = _set_security,
 			.set_sequence = _set_sequence,
 			.set_owner = _set_owner,
+			.set_utc = _set_utc,
 			.list_packages = _list_packages,
 			.list_products = _list_products,
 			.list_files = _list_files,

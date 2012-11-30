@@ -179,6 +179,11 @@ struct attest_db_t {
 	void (*set_owner)(attest_db_t *this, char *owner);
 
 	/**
+	 * Display all dates in UTC
+	 */
+	void (*set_utc)(attest_db_t *this);
+
+	/**
 	 * List all packages stored in the database
 	 */
 	void (*list_packages)(attest_db_t *this);
