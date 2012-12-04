@@ -27,7 +27,7 @@ execute()
 }
 
 # additional packages
-EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb
+EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
 SERVICES="isc-dhcp-server apache2 slapd"
 PACKAGES=$EXTRAS,${SERVICES// /,}
 CACHEDIR=$BUILDDIR/cache

@@ -15,7 +15,8 @@ CONFIG_OPTS = \
 	--with-experimental-modules
 
 PATCHES = \
-	freeradius-eap-sim-identity
+	freeradius-eap-sim-identity \
+	freeradius-tnc-fhh
 
 all: install
 
