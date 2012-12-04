@@ -16,6 +16,7 @@ CONFIG_OPTS = \
 
 PATCHES = \
 	freeradius-eap-sim-identity \
+	freeradius-avp-size \
 	freeradius-tnc-fhh
 
 all: install
