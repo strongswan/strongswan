@@ -1,6 +1,6 @@
 #!/usr/bin/make
 
-PV  = 5.0.1
+PV  = $(SWANVERSION)
 PKG = strongswan-$(PV)
 TAR = $(PKG).tar.bz2
 SRC = http://download.strongswan.org/$(TAR)

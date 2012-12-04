@@ -75,7 +75,8 @@ for r in $RECIPES
 do
 	cecho-n "   - $r.."
 	cp $RECPDIR/$r ${LOOPDIR}/root/compile
-	chroot ${LOOPDIR} make -C /root/compile -f $r >>$LOGFILE 2>&1
+	chroot ${LOOPDIR} make SWANVERSION=$SWANVERSION -C /root/compile -f $r \
+		>> $LOGFILE 2>&1
 	if [ $? != 0 ]; then
 		cecho "failed"
 	else
