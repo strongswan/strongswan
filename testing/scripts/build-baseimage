@@ -50,8 +50,8 @@ execute "mount -o bind $CACHEDIR $APTCACHE"
 echo " * Running debootstrap ..."
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
-echo " * Setting root password to '$ROOTFSPW' ..."
-echo root:$ROOTFSPW | chroot $LOOPDIR chpasswd
+echo " * Disabling root password ..."
+chroot $LOOPDIR passwd -d root
 
 echo " * Disabling services ..."
 for service in $SERVICES

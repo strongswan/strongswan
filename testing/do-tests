@@ -105,7 +105,7 @@ done
 #
 for host in $STRONGSWANHOSTS
 do
-    ssh $SSHCONF -N root@`eval echo \\\$ipv4_$host` &
+    ssh $SSHCONF -N root@`eval echo \\\$ipv4_$host` >/dev/null 2>&1 &
     eval ssh_pid_$host="`echo $!`"
 done
 
