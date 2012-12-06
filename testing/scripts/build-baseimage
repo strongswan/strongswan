@@ -51,7 +51,7 @@ echo " * Running debootstrap ..."
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
 echo " * Disabling root password ..."
-chroot $LOOPDIR passwd -d root
+execute "chroot $LOOPDIR passwd -d root"
 
 echo " * Disabling services ..."
 for service in $SERVICES
