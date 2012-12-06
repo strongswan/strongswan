@@ -1,16 +1,14 @@
 #!/bin/bash
 
-if [ `id -u` != 0 ];
-then
-	echo "! you must be root to run $0"
-	exit
-fi
+echo "Building base image"
 
 DIR=`dirname $0`
 
 . $DIR/function.sh
 
-[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
+
+[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
 . $DIR/../testing.conf
 
 # additional packages
@@ -26,7 +24,6 @@ mkdir -p $CACHEDIR
 rm -f $ROOTFS
 
 echo "`date`, building $ROOTFS" >>$LOGFILE
-echo "Building base image"
 log_action "Creating image $ROOTFS"
 execute "dd if=/dev/null of=$ROOTFS bs=1M seek=$ROOTFSSIZE count=1"
 

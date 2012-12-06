@@ -41,6 +41,9 @@ execute_chroot()
 }
 
 export TERM=xterm
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+NORMAL=$(tput op)
 
 function cecho {
     echo -e "\033[1;31m$1\033[0m"
@@ -64,10 +67,6 @@ log_action()
 # $1 - exit status of action
 log_status()
 {
-	RED=$(tput setaf 1)
-	GREEN=$(tput setaf 2)
-	NORMAL=$(tput op)
-
 	tput hpa 0
 	if [ $1 -eq 0 ]; then
 		/bin/echo -ne "[${GREEN} ok ${NORMAL}"
@@ -77,14 +76,11 @@ log_status()
 	echo
 }
 
-#############################################
-# output all args to stderr and exit with
-# return code 1
-#
-
+# exit with given error message
+# $1 - error message
 die() {
-    echo $* 1>&2
-    exit 1
+	echo -e "${RED}$1${NORMAL}"
+	exit 1
 }
 
 #############################################
