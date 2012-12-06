@@ -86,6 +86,34 @@ log_status()
 	echo
 }
 
+# the following two functions are stolen from [1]
+# [1] - http://www.linuxjournal.com/content/use-bash-trap-statement-cleanup-temporary-files
+
+declare -a on_exit_items
+
+# perform registered actions on exit
+on_exit()
+{
+	for i in "${on_exit_items[@]}"
+	do
+		eval $i >>$LOGFILE 2>&1
+	done
+	on_exit_items=""
+	trap - EXIT
+}
+
+# register a command to execute when the calling script terminates. The
+# registered commands are called in FIFO order.
+# $* - command to register
+do_on_exit()
+{
+	local n=${#on_exit_items[*]}
+	on_exit_items[$n]="$*"
+	if [ $n -eq 0 ]; then
+		trap on_exit EXIT
+	fi
+}
+
 #############################################
 # search and replace strings throughout a
 # whole directory
