@@ -25,10 +25,12 @@ DIR=`dirname $0`
 [ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
 . $DIR/../testing.conf
 
-cd $BUILDDIR/root-fs
 BASE=$BUILDDIR/base.img
+ROOTFSDIR=$BUILDDIR/root-fs
+HOSTSDIR=$DIR/../hosts
 
 [ -f $BASE ] || die "Base image $BASE not found"
+[ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"
 
 mkdir -p $BUILDDIR
 mkdir -p $LOOPDIR
@@ -42,9 +44,10 @@ fi
 for host in $HOSTS
 do
 	log_action "Creating guest image for $host"
-	execute "cp $BASE $host.img" 0
-	execute "mount -o loop $host.img $LOOPDIR" 0
-	execute "cp -rf $BUILDDIR/hosts/${host}/etc $LOOPDIR" 0
+	execute "cp $BASE $ROOTFSDIR/$host.img" 0
+	execute "mount -o loop $ROOTFSDIR/$host.img $LOOPDIR" 0
+	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
+	execute "cp -rf $HOSTSDIR/default/etc $LOOPDIR" 0
 	if [ "$host" = "winnetou" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0

@@ -3,10 +3,10 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-	address PH_IP_BOB
+	address 10.2.0.10
 	netmask 255.255.0.0
 	broadcast 10.2.255.255
 	gateway 10.2.0.1
 iface eth0 inet6 static
-	address PH_IP6_BOB
+	address fec2::10
 	netmask 16

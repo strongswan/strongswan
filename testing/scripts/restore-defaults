@@ -16,11 +16,10 @@
 
 DIR=`dirname $0`
 
-source $DIR/function.sh
+. $DIR/function.sh
 
 [ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-
-source $DIR/../testing.conf
+. $DIR/../testing.conf
 
 ##########################################################################
 # load-testconfig requires a testname as an argument
@@ -28,7 +27,7 @@ source $DIR/../testing.conf
 
 testname=$1
 
-HOSTCONFIGDIR=$BUILDDIR/hosts
+HOSTCONFIGDIR=$DIR/../hosts
 TESTSDIR=$BUILDDIR/tests
 
 [ -d $TESTSDIR ] || die "Directory '$TESTSDIR' not found"

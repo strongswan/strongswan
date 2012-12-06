@@ -38,7 +38,6 @@ then
    $DIR/scripts/build-baseimage
 fi
 
-
 ##########################################################################
 # build the UML kernel based on a vanilla kernel form kernel.org
 # and a matching UML patch from user-mode-linux.sourceforge.net
@@ -55,16 +54,6 @@ fi
 if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
 then
    $DIR/scripts/build-umlrootfs
-fi
-
-##########################################################################
-# copy the default UML host configurations to $BUILDDIR
-# and assign actual IP addresses to the UML hosts
-#
-if [ $ENABLE_BUILD_HOSTCONFIG = "yes" ]
-then
-   cecho "Building host configurations (scripts/build-hostconfig)"
-   $DIR/scripts/build-hostconfig
 fi
 
 ##########################################################################
