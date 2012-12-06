@@ -35,7 +35,6 @@ fi
 #
 if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then
-   cecho "Building base image"
    $DIR/scripts/build-baseimage
 fi
 

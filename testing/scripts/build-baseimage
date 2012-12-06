@@ -13,12 +13,17 @@ DIR=`dirname $0`
 [ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
 . $DIR/../testing.conf
 
+# execute command
+# $1 - command to execute
+# $2 - whether or not to log command exit status
+#      (0 -> disable exit status logging)
 execute()
 {
 	cmd=${1}
 	echo $cmd >>$LOGFILE
 	$cmd >>$LOGFILE 2>&1
 	status=$?
+	[ "$2" != 0 ] && log_status $status
 	if [ $status != 0 ]; then
 		echo "! command $cmd failed, exiting (status $status)"
 		echo "! check why here $LOGFILE"
@@ -26,6 +31,8 @@ execute()
 	fi
 }
 
+# execute command in chroot
+# $1 - command to execute
 execute_chroot()
 {
 	execute "chroot $LOOPDIR $@"
@@ -44,28 +51,33 @@ mkdir -p $CACHEDIR
 rm -f $ROOTFS
 
 echo "`date`, building $ROOTFS" >>$LOGFILE
-echo " * Creating sparse image $ROOTFS ..."
+echo "Building base image"
+log_action "Creating image $ROOTFS"
 execute "dd if=/dev/null of=$ROOTFS bs=1M seek=$ROOTFSSIZE count=1"
-echo " * Creating ext3 filesystem ..."
+
+log_action "Creating ext3 filesystem"
 execute "mkfs.ext3 -F $ROOTFS"
+
+log_action "Mounting image to $LOOPDIR"
 execute "mount -o loop $ROOTFS $LOOPDIR"
+
+log_action "Mounting cache to $CACHEDIR"
 mkdir -p $APTCACHE
 execute "mount -o bind $CACHEDIR $APTCACHE"
 
-echo " * Running debootstrap ..."
+log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
-echo " * Disabling root password ..."
+log_action "Disabling root password"
 execute_chroot "passwd -d root"
 
-echo " * Disabling services ..."
 for service in $SERVICES
 do
-	echo -n "  - $service ... "
+	log_action "Stopping service $service"
 	execute_chroot "/etc/init.d/$service stop"
+	log_action "Disabling service $service"
 	execute_chroot "update-rc.d -f $service remove"
-	echo "done"
 done
 
-execute "umount -l $APTCACHE"
-execute "umount -l $LOOPDIR"
+execute "umount -l $APTCACHE" 0
+execute "umount -l $LOOPDIR" 0
