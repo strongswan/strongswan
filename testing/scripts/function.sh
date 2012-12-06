@@ -14,10 +14,31 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+# execute command
+# $1 - command to execute
+# $2 - whether or not to log command exit status
+#      (0 -> disable exit status logging)
+execute()
+{
+	cmd=${1}
+	echo $cmd >>$LOGFILE 2>&1
+	$cmd >>$LOGFILE 2>&1
+	status=$?
+	[ "$2" != 0 ] && log_status $status
+	if [ $status != 0 ]; then
+		echo
+		echo "! Command $cmd failed, exiting (status $status)"
+		echo "! Check why here $LOGFILE"
+		exit 1
+	fi
+}
 
-############################################
-# output functions
-#
+# execute command in chroot
+# $1 - command to execute
+execute_chroot()
+{
+	execute "chroot $LOOPDIR $@"
+}
 
 export TERM=xterm
 
