@@ -36,6 +36,9 @@ else
 	HOSTS=$*
 fi
 
+# just to be sure
+do_on_exit umount $LOOPDIR
+
 for host in $HOSTS
 do
 	log_action "Creating guest image for $host"
@@ -56,6 +59,6 @@ do
 		execute_chroot "chown -R openldap:openldap /var/lib/ldap" 0
 	fi
 	sync
-	umount $LOOPDIR
 	log_status 0
+	umount $LOOPDIR
 done

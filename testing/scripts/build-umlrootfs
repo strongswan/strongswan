@@ -41,6 +41,10 @@ mkdir -p $LOOPDIR/root/compile
 log_action "Mounting $ROOTFSCOMPILEDIR as /root/compile"
 execute "mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile"
 
+do_on_exit umount $LOOPDIR/root/compile
+do_on_exit umount $LOOPDIR/proc
+do_on_exit umount $LOOPDIR
+
 echo "Installing software from source"
 RECPDIR=$UMLTESTDIR/testing/scripts/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
@@ -52,8 +56,6 @@ do
 	execute_chroot "make SWANVERSION=$SWANVERSION -C /root/compile -f $r"
 done
 
-umount $LOOPDIR/root/compile
-
 log_action "Setting up shared build tree at /root/compile"
 echo "" >> $LOOPDIR/etc/fstab
 echo "none /root/compile hostfs $ROOTFSCOMPILEDIR" >> $LOOPDIR/etc/fstab
@@ -61,6 +63,3 @@ log_status 0
 
 log_action "Removing /etc/resolv.conf"
 execute "rm -f $LOOPDIR/etc/resolv.conf"
-
-execute "umount $LOOPDIR/proc" 0
-execute "umount $LOOPDIR" 0

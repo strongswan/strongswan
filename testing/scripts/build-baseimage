@@ -32,6 +32,9 @@ log_action "Mounting cache to $CACHEDIR"
 mkdir -p $APTCACHE
 execute "mount -o bind $CACHEDIR $APTCACHE"
 
+do_on_exit umount -l $APTCACHE
+do_on_exit umount -l $LOOPDIR
+
 log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
@@ -45,6 +48,3 @@ do
 	log_action "Disabling service $service"
 	execute_chroot "update-rc.d -f $service remove"
 done
-
-execute "umount -l $APTCACHE" 0
-execute "umount -l $LOOPDIR" 0
