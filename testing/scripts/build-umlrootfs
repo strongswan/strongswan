@@ -16,14 +16,9 @@
 
 echo "Building root image"
 
-DIR=`dirname $0`
-
-. $DIR/function.sh
+. $PWD/scripts/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-. $DIR/../testing.conf
 
 [ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
 

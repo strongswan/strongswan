@@ -14,12 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
-. $DIR/function.sh
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-
-. $DIR/../testing.conf
+. $PWD/scripts/function.sh
 
 echo "Building guest kernel version $KERNELVERSION"
 

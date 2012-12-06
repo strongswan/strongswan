@@ -2,14 +2,9 @@
 
 echo "Building base image"
 
-DIR=`dirname $0`
-
-. $DIR/function.sh
+. $PWD/scripts/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-. $DIR/../testing.conf
 
 # additional packages
 EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core

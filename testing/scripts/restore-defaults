@@ -14,12 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
-
-. $DIR/function.sh
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-. $DIR/../testing.conf
+. $PWD/scripts/function.sh
 
 ##########################################################################
 # load-testconfig requires a testname as an argument
@@ -27,7 +22,7 @@ DIR=`dirname $0`
 
 testname=$1
 
-HOSTCONFIGDIR=$DIR/../hosts
+HOSTCONFIGDIR=$PWD/hosts
 TESTSDIR=$BUILDDIR/tests
 
 [ -d $TESTSDIR ] || die "Directory '$TESTSDIR' not found"

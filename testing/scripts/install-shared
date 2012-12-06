@@ -17,13 +17,7 @@
 # for more details.
 #
 
-DIR=`dirname $0`
-
-source $DIR/function.sh
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-
-source $DIR/../testing.conf
+. $PWD/scripts/function.sh
 
 cecho "installing strongSwan from shared tree"
 cecho-n "  on: "

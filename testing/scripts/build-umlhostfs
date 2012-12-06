@@ -16,18 +16,13 @@
 
 echo "Creating guest images"
 
-DIR=`dirname $0`
-
-. $DIR/function.sh
+. $PWD/scripts/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-. $DIR/../testing.conf
-
 BASE=$BUILDDIR/base.img
 ROOTFSDIR=$BUILDDIR/root-fs
-HOSTSDIR=$DIR/../hosts
+HOSTSDIR=$PWD/hosts
 
 [ -f $BASE ] || die "Base image $BASE not found"
 [ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"

@@ -14,6 +14,21 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+export TERM=xterm
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 2)
+NORMAL=$(tput op)
+
+# exit with given error message
+# $1 - error message
+die() {
+	echo -e "${RED}$1${NORMAL}"
+	exit 1
+}
+
+[ -f testing.conf ] || die "Configuration file 'testing.conf' not found"
+. testing.conf
+
 # execute command
 # $1 - command to execute
 # $2 - whether or not to log command exit status
@@ -39,11 +54,6 @@ execute_chroot()
 {
 	execute "chroot $LOOPDIR $@"
 }
-
-export TERM=xterm
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 2)
-NORMAL=$(tput op)
 
 function cecho {
     echo -e "\033[1;31m$1\033[0m"
@@ -74,13 +84,6 @@ log_status()
 		/bin/echo -ne "[${RED}FAIL${NORMAL}"
 	fi
 	echo
-}
-
-# exit with given error message
-# $1 - error message
-die() {
-	echo -e "${RED}$1${NORMAL}"
-	exit 1
 }
 
 #############################################
