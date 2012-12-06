@@ -14,87 +14,58 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+echo "Building root image"
+
 DIR=`dirname $0`
 
-source $DIR/function.sh
+. $DIR/function.sh
 
-[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-source $DIR/../testing.conf
+[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
+. $DIR/../testing.conf
 
-cecho-n " * Looking for root image at '$ROOTFS'.."
-if [ -f "$ROOTFS" ]
-then
-    cgecho "found it"
-else
-    cecho "none"
-    exit
-fi
-
-[ -d $BUILDDIR ] || die "!! Directory '$BUILDDIR' does not exist"
+[ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
 
 ROOTFSDIR=$BUILDDIR/root-fs
-
-if [ ! -d $ROOTFSDIR ]
-then
-    cecho-n " * Root file system directory '$ROOTFSDIR' does not exist..creating.."
-    mkdir $ROOTFSDIR
-    cgecho "done"
-fi
-
+mkdir -p $ROOTFSDIR
+mkdir -p $LOOPDIR
+mkdir -p $ROOTFSCOMPILEDIR
 cd $ROOTFSDIR
 
-if [ ! -d $LOOPDIR ]
-then
-    mkdir $LOOPDIR
-fi
-
-######################################################
-# mount root image
-#
 BASE=$BUILDDIR/base.img
-cecho-n " * Mounting base image $BASE.."
-cp $ROOTFS $BASE
-mount -o loop $BASE $LOOPDIR >> $LOGFILE 2>&1
-mount -t proc none $LOOPDIR/proc >> $LOGFILE 2>&1
-cgecho "done"
+log_action "Creating $BASE"
+execute "cp $ROOTFS $BASE"
 
-######################################################
-# install software from source using 'recipes'
-#
-mkdir -p $ROOTFSCOMPILEDIR
-cecho " * Mounting $ROOTFSCOMPILEDIR as /root/compile.."
+log_action "Mounting base image $BASE"
+execute "mount -o loop $BASE $LOOPDIR"
+log_action "Mounting proc filesystem to $LOOPDIR/proc"
+execute "mount -t proc none $LOOPDIR/proc"
+
 mkdir -p $LOOPDIR/root/compile
-mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile >> $LOGFILE 2>&1
+log_action "Mounting $ROOTFSCOMPILEDIR as /root/compile"
+execute "mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile"
 
-cecho " * Installing software from source.."
+echo "Installing software from source"
 RECPDIR=$UMLTESTDIR/testing/scripts/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
-cp -r $RECPDIR/patches $LOOPDIR/root/compile
+execute "cp -r $RECPDIR/patches $LOOPDIR/root/compile" 0
 for r in $RECIPES
 do
-	cecho-n "   - $r.."
 	cp $RECPDIR/$r ${LOOPDIR}/root/compile
-	chroot ${LOOPDIR} make SWANVERSION=$SWANVERSION -C /root/compile -f $r \
-		>> $LOGFILE 2>&1
-	if [ $? != 0 ]; then
-		cecho "failed"
-	else
-		cgecho "done"
-	fi
+	log_action "Installing from recipe $r"
+	execute_chroot "make SWANVERSION=$SWANVERSION -C /root/compile -f $r"
 done
 
 umount $LOOPDIR/root/compile
 
-cecho " * Setting up shared build tree at /root/compile"
+log_action "Setting up shared build tree at /root/compile"
 echo "" >> $LOOPDIR/etc/fstab
 echo "none /root/compile hostfs $ROOTFSCOMPILEDIR" >> $LOOPDIR/etc/fstab
+log_status 0
 
-######################################################
-# remove /etc/resolv.conf
-#
-cecho " * Removing /etc/resolv.conf"
-rm -f $LOOPDIR/etc/resolv.conf
+log_action "Removing /etc/resolv.conf"
+execute "rm -f $LOOPDIR/etc/resolv.conf"
 
-umount $LOOPDIR/proc
-umount $LOOPDIR
+execute "umount $LOOPDIR/proc" 0
+execute "umount $LOOPDIR" 0

@@ -54,7 +54,6 @@ fi
 #
 if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
 then
-   cecho "Building uml base image (scripts/build-umlrootfs)"
    $DIR/scripts/build-umlrootfs
 fi
 
