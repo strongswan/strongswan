@@ -42,25 +42,3 @@ $DIR/scripts/start-bridges
 #
 cecho "Start the uml instances  (scripts/start-umls)"
 $DIR/scripts/start-umls $HOSTS
-
-
-#####################################################
-# do the automated testing
-#
-if [ $ENABLE_DO_TESTS = "yes" ]
-then
-   cecho "Run the automated tests (do-tests)"
-   $DIR/do-tests
-fi
-
-
-##############################################################################
-# stop all UML instances and switches
-#
-
-if [ $ENABLE_STOP_TESTING = "yes" ]
-then
-   cecho "Stopping all UML instances and switches (stop-testing)"
-   $DIR/stop-testing $HOSTS
-fi
-

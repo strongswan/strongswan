@@ -44,5 +44,3 @@ cgecho "done"
 #
 cecho "Stop the uml bridges  (scripts/stop-bridges)"
 $DIR/scripts/stop-bridges
-
-

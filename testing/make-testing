@@ -78,12 +78,3 @@ then
    cecho "Building uml host images (scripts/build-umlhostfs)"
    $DIR/scripts/build-umlhostfs $HOSTS
 fi
-
-##########################################################################
-# Start up the UML switches and designated UML instances
-#
-if [ $ENABLE_START_TESTING = "yes" ]
-then
-   cecho "Starting the uml switches and instances (start-testing)"
-   $DIR/start-testing $HOSTS
-fi
