@@ -16,8 +16,10 @@
 
 
 ############################################
-# print output in color
+# output functions
 #
+
+export TERM=xterm
 
 function cecho {
     echo -e "\033[1;31m$1\033[0m"
@@ -30,6 +32,29 @@ function cecho-n {
     echo -en "\033[1;31m$1\033[0m"
 }
 
+# log an action
+# $1 - current action description
+log_action()
+{
+	/bin/echo -n "[....] $1 "
+}
+
+# log an action status
+# $1 - exit status of action
+log_status()
+{
+	RED=$(tput setaf 1)
+	GREEN=$(tput setaf 2)
+	NORMAL=$(tput op)
+
+	tput hpa 0
+	if [ $1 -eq 0 ]; then
+		/bin/echo -ne "[${GREEN} ok ${NORMAL}"
+	else
+		/bin/echo -ne "[${RED}FAIL${NORMAL}"
+	fi
+	echo
+}
 
 #############################################
 # output all args to stderr and exit with
