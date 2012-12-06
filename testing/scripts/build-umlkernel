@@ -15,107 +15,46 @@
 # for more details.
 
 DIR=`dirname $0`
+. $DIR/function.sh
 
-source $DIR/function.sh
+[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
 
-[ -f $DIR/../testing.conf ] || die "configuration file 'testing.conf' not found"
+. $DIR/../testing.conf
 
-source $DIR/../testing.conf
+echo "Building guest kernel version $KERNELVERSION"
 
-cecho-n " * Looking for kernel at '$KERNEL'.."
-if [ -f "${KERNEL}" ]
-then
-    cecho "found it"
-    KERNELVERSION=`basename $KERNEL .tar.bz2 | sed -e 's/linux-//'`
-    cecho " * Kernel version is $KERNELVERSION"
-else
-    cecho "none"
-    exit
+[ -f "$KERNEL" ] || die "Kernel $KERNEL not found"
+[ -f "$KERNELCONFIG" ] || die "Kernel config $KERNELCONFIG not found"
+
+if [ $UMLPATCH ]; then
+	[ -f "$UMLPATCH" ] || die "Patch $UMLPATCH not found"
 fi
 
-if [ ${UMLPATCH} ]
-then
-    cecho-n " * Looking for uml patch at '$UMLPATCH'.."
-    if [ -f "${UMLPATCH}" ]
-    then
-	cecho "found it"
-    else
-	cecho "none"
-	exit
-    fi
-fi
-
-cecho-n " * Looking for kernel config at '$KERNELCONFIG'.."
-if [ -f "${KERNEL}" ]
-then
-    cecho "found it"
-else
-    cecho "none"
-    exit
-fi
-
-#######################################################
-# unpack kernel and create symlink
-#
-
-if [ ! -d $BUILDDIR ]
-then
-    cecho " * Creating directory '$BUILDDIR'"
-    mkdir $BUILDDIR
-fi
-
-cecho " * Changing to directory '$BUILDDIR'"
+mkdir -p $BUILDDIR
 cd $BUILDDIR
 
-cecho-n " * Unpacking kernel.."
-tar xjf $KERNEL >> $LOGFILE 2>&1
-cgecho "done"
+log_action "Unpacking kernel"
+execute "tar xjf $KERNEL"
 
 KERNELDIR=${BUILDDIR}/linux-${KERNELVERSION}
-
-if [ -d $KERNELDIR ]
-then
-    cecho " * Kernel directory is '$KERNELDIR'"
-    cecho " * Creating symlink 'linux'"
-    if [ -d linux ]
-    then
-	rm linux
-    fi
-    ln -s linux-${KERNELVERSION} linux
-else
-    cecho "!! Kernel directory '$KERNELDIR' can not be found"
-    exit
-fi
-
-#######################################################
-# patch kernel
-#
-
-cecho " * Changing to directory '$KERNELDIR'"
+ln -fs linux-${KERNELVERSION} linux
 cd $KERNELDIR
 
-if [ $UMLPATCH ]
-then
-    cecho-n " * Applying uml patch.."
-    bzcat $UMLPATCH | patch -p1 >> $LOGFILE 2>&1
-    cgecho  "done"
+if [ $UMLPATCH ]; then
+	log_action "Applying uml patch"
+	bzcat $UMLPATCH | patch -p1 >> $LOGFILE 2>&1
+	log_status $?
 fi
 
-#######################################################
-# copy our default .config to linux and build kernel
-#
+execute "cp $KERNELCONFIG .config" 0
 
-cp $KERNELCONFIG .config
-
-cecho "!!"
-cecho "!! Making .config for kernel. You might be prompted for new parameters!"
-cecho "!!"
+echo "!!"
+echo "!! Creating kernel configuration, you might get prompted for new parameters!"
+echo "!!"
 make oldconfig ARCH=um 2>&1 | tee -a $LOGFILE
 
-cecho-n " * Now compiling uml kernel.."
-make -j5 linux ARCH=um >> $LOGFILE 2>&1
-cgecho "done"
+log_action "Compiling the kernel"
+execute "make -j5 linux ARCH=um"
 
-cecho-n " * Copying uml kernel to '${BUILDDIR}/linux-uml-${KERNELVERSION}'.."
-mv linux ${BUILDDIR}/linux-uml-${KERNELVERSION}
-cgecho "done"
+log_action "Copying kernel to '${BUILDDIR}/linux-uml-${KERNELVERSION}'"
+execute "mv linux ${BUILDDIR}/linux-uml-${KERNELVERSION}"

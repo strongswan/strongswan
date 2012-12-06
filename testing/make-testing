@@ -45,7 +45,6 @@ fi
 #
 if [ $ENABLE_BUILD_UMLKERNEL = "yes" ]
 then
-   cecho "Building uml kernel (scripts/build-umlkernel)"
    $DIR/scripts/build-umlkernel
 fi
 
