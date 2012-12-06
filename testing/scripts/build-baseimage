@@ -26,6 +26,11 @@ execute()
 	fi
 }
 
+execute_chroot()
+{
+	execute "chroot $LOOPDIR $@"
+}
+
 # additional packages
 EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
 SERVICES="isc-dhcp-server apache2 slapd"
@@ -51,14 +56,14 @@ echo " * Running debootstrap ..."
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
 echo " * Disabling root password ..."
-execute "chroot $LOOPDIR passwd -d root"
+execute_chroot "passwd -d root"
 
 echo " * Disabling services ..."
 for service in $SERVICES
 do
 	echo -n "  - $service ... "
-	execute "chroot $LOOPDIR /etc/init.d/$service stop"
-	execute "chroot $LOOPDIR update-rc.d -f $service remove"
+	execute_chroot "/etc/init.d/$service stop"
+	execute_chroot "update-rc.d -f $service remove"
 	echo "done"
 done
 
