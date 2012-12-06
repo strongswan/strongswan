@@ -72,6 +72,5 @@ fi
 #
 if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
 then
-   cecho "Building uml host images (scripts/build-umlhostfs)"
    $DIR/scripts/build-umlhostfs $HOSTS
 fi

@@ -14,60 +14,50 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
+echo "Creating guest images"
+
 DIR=`dirname $0`
 
-source $DIR/function.sh
+. $DIR/function.sh
 
-[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found."
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-source $DIR/../testing.conf
+[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
+. $DIR/../testing.conf
 
 cd $BUILDDIR/root-fs
 BASE=$BUILDDIR/base.img
 
-[ -f $BASE ] || die "!! Base image $BASE not found."
+[ -f $BASE ] || die "Base image $BASE not found"
 
-if [ ! -d $BUILDDIR ]
-then
-    cecho-n " * Directory '$BUILDDIR' does not exist..creating.."
-    mkdir $BUILDDIR
-    cgecho "done"
-fi
+mkdir -p $BUILDDIR
+mkdir -p $LOOPDIR
 
-if [ ! -d $LOOPDIR ]
-then
-    mkdir $LOOPDIR
-fi
-
-cecho-n " * Creating root filesystem for.."
-
-if [ "$#" -eq 0 ]
-then
-    HOSTS=$STRONGSWANHOSTS
+if [ "$#" -eq 0 ]; then
+	HOSTS=$STRONGSWANHOSTS
 else
-    HOSTS=$*
+	HOSTS=$*
 fi
 
 for host in $HOSTS
 do
-    cecho-n "$host.."
-    cp $BASE $host.img
-    mount -o loop $host.img $LOOPDIR
-    cp -rf $BUILDDIR/hosts/${host}/etc $LOOPDIR
-    if [ "$host" = "winnetou" ]
-    then
-		mkdir $LOOPDIR/var/log/apache2/ocsp
-		cp -rf $UMLTESTDIR/testing/images $LOOPDIR/var/www/
-		chroot $LOOPDIR ln -s /etc/openssl/certs /var/www/certs
-		chroot $LOOPDIR /etc/openssl/generate-crl >> $LOGFILE 2>&1
-		chroot $LOOPDIR update-rc.d apache2 defaults >> $LOGFILE 2>&1
-		chroot $LOOPDIR update-rc.d slapd defaults >> $LOGFILE 2>&1
-		chroot $LOOPDIR rm -rf /var/lib/ldap/*
-		chroot $LOOPDIR slapadd -l /etc/ldap/ldif.txt -f /etc/ldap/slapd.conf >> $LOGFILE 2>&1
-		chroot $LOOPDIR chown -R openldap:openldap /var/lib/ldap >> $LOGFILE 2>&1
-    fi
-    sync
-    umount $LOOPDIR
+	log_action "Creating guest image for $host"
+	execute "cp $BASE $host.img" 0
+	execute "mount -o loop $host.img $LOOPDIR" 0
+	execute "cp -rf $BUILDDIR/hosts/${host}/etc $LOOPDIR" 0
+	if [ "$host" = "winnetou" ]
+	then
+		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
+		execute "cp -rf $UMLTESTDIR/testing/images $LOOPDIR/var/www/" 0
+		execute_chroot "ln -s /etc/openssl/certs /var/www/certs" 0
+		execute_chroot "/etc/openssl/generate-crl" 0
+		execute_chroot "update-rc.d apache2 defaults" 0
+		execute_chroot "update-rc.d slapd defaults" 0
+		execute_chroot "rm -rf /var/lib/ldap/*" 0
+		execute_chroot "slapadd -l /etc/ldap/ldif.txt -f /etc/ldap/slapd.conf" 0
+		execute_chroot "chown -R openldap:openldap /var/lib/ldap" 0
+	fi
+	sync
+	umount $LOOPDIR
+	log_status 0
 done
-
-cgecho "done"
