@@ -1,44 +1,28 @@
 #!/bin/bash
-# Start up the specified UML instances and wait for them to finish booting
-#
-# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
-# Zuercher Hochschule Winterthur
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
 
-DIR=`dirname $0`
+. $PWD/scripts/function.sh
 
-source $DIR/scripts/function.sh
+NETWORKS="vnet1 vnet2 vnet3"
+CONFDIR=$PWD/config/kvm
+KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
+KNLTARGET=/var/run/kvm-swan-kernel
 
-[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found"
-[ -d $DIR/hosts ] || die "Directory hosts cannot be found."
+echo "Starting test environment"
 
-source $DIR/testing.conf
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-if [ "$#" -eq 0 ]
-then
-    HOSTS=$STRONGSWANHOSTS
-else
-    HOSTS=$*
-fi
+log_action "Deploying kernel $KERNEL"
+execute "ln -fs $KNLSRC $KNLTARGET"
 
-#####################################################
-# start the uml bridges
-#
-cecho "Start the uml bridges  (scripts/start-bridges)"
-$DIR/scripts/start-bridges
+for net in $NETWORKS
+do
+	log_action "Network $net"
+	execute "virsh net-create $CONFDIR/$net.xml"
+done
 
-
-#####################################################
-# start the uml instances
-#
-cecho "Start the uml instances  (scripts/start-umls)"
-$DIR/scripts/start-umls $HOSTS
+for host in $STRONGSWANHOSTS
+do
+	ln -fs $ROOTFSDIR/$host.img $VIRTIMGSTORE/$host.img
+	log_action "Guest $host"
+	execute "virsh create $CONFDIR/$host.xml"
+done

@@ -55,10 +55,5 @@ do
 	execute_chroot "make SWANVERSION=$SWANVERSION -C /root/compile -f $r"
 done
 
-log_action "Setting up shared build tree at /root/compile"
-echo "" >> $LOOPDIR/etc/fstab
-echo "none /root/compile hostfs $ROOTFSCOMPILEDIR" >> $LOOPDIR/etc/fstab
-log_status 0
-
 log_action "Removing /etc/resolv.conf"
 execute "rm -f $LOOPDIR/etc/resolv.conf"
