@@ -69,17 +69,6 @@ echo_failed()
 	echo -e "${RED}$1${NORMAL}"
 }
 
-function cecho {
-    echo -e "\033[1;31m$1\033[0m"
-}
-function cgecho {
-    echo -e "\033[1;32m$1\033[0m"
-}
-
-function cecho-n {
-    echo -en "\033[1;31m$1\033[0m"
-}
-
 # log an action
 # $1 - current action description
 log_action()
