@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create UML root filesystem
+# Create guest root image
 #
 # Copyright (C) 2004  Eric Marchionni, Patrik Rayo
 # Zuercher Hochschule Winterthur
@@ -22,17 +22,24 @@ echo "Building root image"
 
 [ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
 
+load_qemu_nbd
+
 mkdir -p $ROOTFSDIR
 mkdir -p $LOOPDIR
 mkdir -p $ROOTFSCOMPILEDIR
 cd $ROOTFSDIR
 
-BASE=$BUILDDIR/base.img
+BASE=$BUILDDIR/base.qcow2
 log_action "Creating $BASE"
 execute "cp $ROOTFS $BASE"
 
-log_action "Mounting base image $BASE"
-execute "mount -o loop $BASE $LOOPDIR"
+log_action "Connecting base image to NBD device $NBDEV"
+execute "qemu-nbd -c $NBDEV $BASE"
+sync
+
+log_action "Mounting $NBDPARTITION to $LOOPDIR"
+execute "mount $NBDPARTITION $LOOPDIR"
+
 log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
 
@@ -43,6 +50,7 @@ execute "mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile"
 do_on_exit umount $LOOPDIR/root/compile
 do_on_exit umount $LOOPDIR/proc
 do_on_exit umount $LOOPDIR
+do_on_exit qemu-nbd -d $NBDEV
 
 echo "Installing software from source"
 RECPDIR=$TESTDIR/testing/scripts/recipes

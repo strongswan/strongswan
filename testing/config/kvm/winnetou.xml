@@ -7,7 +7,7 @@
   <os>
     <type arch='x86_64' machine='pc-1.1'>hvm</type>
 	<kernel>/var/run/kvm-swan-kernel</kernel>
-    <cmdline>root=/dev/vda loglevel=1</cmdline>
+    <cmdline>root=/dev/vda1 loglevel=1</cmdline>
     <boot dev='hd'/>
   </os>
   <features>
@@ -22,8 +22,8 @@
   <devices>
     <emulator>/usr/bin/kvm</emulator>
     <disk type='file' device='disk'>
-      <driver name='qemu' type='raw' cache='writethrough'/>
-      <source file='/var/lib/libvirt/images/winnetou.img'/>
+      <driver name='qemu' type='qcow2' cache='writethrough'/>
+      <source file='/var/lib/libvirt/images/winnetou.qcow2'/>
       <target dev='vda' bus='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </disk>

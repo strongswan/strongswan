@@ -19,7 +19,7 @@ for host in $STRONGSWANHOSTS
 do
 	log_action "Guest $host"
 	execute "virsh destroy $host"
-	rm -f $VIRTIMGSTORE/$host.img
+	rm -f $VIRTIMGSTORE/$host.qcow2
 done
 
 log_action "Removing kernel $KERNEL"

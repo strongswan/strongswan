@@ -22,7 +22,7 @@ done
 
 for host in $STRONGSWANHOSTS
 do
-	ln -fs $ROOTFSDIR/$host.img $VIRTIMGSTORE/$host.img
+	ln -fs $ROOTFSDIR/$host.qcow2 $VIRTIMGSTORE/$host.qcow2
 	log_action "Guest $host"
 	execute "virsh create $CONFDIR/$host.xml"
 done

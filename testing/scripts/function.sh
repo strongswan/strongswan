@@ -117,6 +117,37 @@ do_on_exit()
 	fi
 }
 
+# wait for a mount to disappear
+# $1 - device/image to wait for
+# $2 - maximum time to wait in seconds, default is 5 seconds
+graceful_umount()
+{
+	secs=$2
+	[ ! $secs ] && secs=5
+
+	let steps=$secs*100
+	for i in `seq 1 $steps`
+	do
+		umount $1 >>$LOGFILE 2>&1
+		mount | grep $1 >/dev/null 2>&1
+		[ $? -eq 0 ] || return 0
+		sleep 0.01
+	done
+
+	return 1
+}
+
+# load qemu NBD kernel module, if not already loaded
+load_qemu_nbd()
+{
+	lsmod | grep ^nbd[[:space:]]* >/dev/null 2>&1
+	if [ $? != 0 ]
+	then
+		log_action "Loading NBD kernel module"
+		execute "modprobe nbd max_part=16"
+	fi
+}
+
 #############################################
 # search and replace strings throughout a
 # whole directory

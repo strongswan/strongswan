@@ -10,6 +10,7 @@ echo "Building base image"
 EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
 SERVICES="isc-dhcp-server apache2 slapd"
 PACKAGES=$EXTRAS,${SERVICES// /,}
+
 CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
 
@@ -19,27 +20,44 @@ mkdir -p $CACHEDIR
 rm -f $ROOTFS
 
 echo "`date`, building $ROOTFS" >>$LOGFILE
+
+load_qemu_nbd
+
 log_action "Creating image $ROOTFS"
-execute "dd if=/dev/null of=$ROOTFS bs=1M seek=$ROOTFSSIZE count=1"
+execute "qemu-img create -f qcow2 $ROOTFS ${ROOTFSSIZE}M"
+
+log_action "Connecting image to NBD device $NBDEV"
+execute "qemu-nbd -c $NBDEV $ROOTFS"
+sync
+
+log_action "Partitioning disk"
+sfdisk /dev/nbd0 -D -uM >>$LOGFILE 2>&1 << EOF
+;
+EOF
+if [ $? != 0 ]
+then
+	log_status 1
+	exit 1
+else
+	log_status 0
+fi
 
 log_action "Creating ext3 filesystem"
-execute "mkfs.ext3 -F $ROOTFS"
+execute "mkfs.ext3 $NBDPARTITION"
 
-log_action "Mounting image to $LOOPDIR"
-execute "mount -o loop $ROOTFS $LOOPDIR"
+log_action "Mounting $NBDPARTITION to $LOOPDIR"
+execute "mount $NBDPARTITION $LOOPDIR"
 
-log_action "Mounting cache to $CACHEDIR"
+log_action "Using $CACHEDIR as archive for apt"
 mkdir -p $APTCACHE
 execute "mount -o bind $CACHEDIR $APTCACHE"
 
-do_on_exit umount -l $APTCACHE
-do_on_exit umount -l $LOOPDIR
+do_on_exit graceful_umount $APTCACHE
+do_on_exit graceful_umount $LOOPDIR
+do_on_exit qemu-nbd -d $NBDEV
 
 log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
-
-log_action "Disabling root password"
-execute_chroot "passwd -d root"
 
 for service in $SERVICES
 do
@@ -48,3 +66,6 @@ do
 	log_action "Disabling service $service"
 	execute_chroot "update-rc.d -f $service remove"
 done
+
+log_action "Disabling root password"
+execute_chroot "passwd -d root"

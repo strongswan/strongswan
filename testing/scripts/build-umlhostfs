@@ -1,5 +1,5 @@
 #!/bin/bash
-# create UML host file systems
+# create specific guest images
 #
 # Copyright (C) 2004  Eric Marchionni, Patrik Rayo
 # Zuercher Hochschule Winterthur
@@ -20,11 +20,13 @@ echo "Creating guest images"
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-BASE=$BUILDDIR/base.img
+BASE=$BUILDDIR/base.qcow2
 HOSTSDIR=$PWD/hosts
 
 [ -f $BASE ] || die "Base image $BASE not found"
 [ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"
+
+load_qemu_nbd
 
 mkdir -p $BUILDDIR
 mkdir -p $LOOPDIR
@@ -41,8 +43,10 @@ do_on_exit umount $LOOPDIR
 for host in $HOSTS
 do
 	log_action "Creating guest image for $host"
-	execute "cp $BASE $ROOTFSDIR/$host.img" 0
-	execute "mount -o loop $ROOTFSDIR/$host.img $LOOPDIR" 0
+	execute "qemu-img create -b $BASE -f qcow2 $ROOTFSDIR/$host.qcow2" 0
+	execute "qemu-nbd -c $NBDEV $ROOTFSDIR/$host.qcow2" 0
+	sync
+	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/default/etc $LOOPDIR" 0
 	if [ "$host" = "winnetou" ]
@@ -58,6 +62,7 @@ do
 		execute_chroot "chown -R openldap:openldap /var/lib/ldap" 0
 	fi
 	sync
+	execute "umount $LOOPDIR" 0
+	execute "qemu-nbd -d $NBDEV" 0
 	log_status 0
-	umount $LOOPDIR
 done
