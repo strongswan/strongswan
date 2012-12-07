@@ -22,7 +22,6 @@ echo "Building root image"
 
 [ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
 
-ROOTFSDIR=$BUILDDIR/root-fs
 mkdir -p $ROOTFSDIR
 mkdir -p $LOOPDIR
 mkdir -p $ROOTFSCOMPILEDIR

@@ -21,7 +21,6 @@ echo "Creating guest images"
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
 BASE=$BUILDDIR/base.img
-ROOTFSDIR=$BUILDDIR/root-fs
 HOSTSDIR=$PWD/hosts
 
 [ -f $BASE ] || die "Base image $BASE not found"
