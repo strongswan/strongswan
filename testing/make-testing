@@ -14,52 +14,26 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
+. $PWD/scripts/function.sh
 
-source $DIR/scripts/function.sh
-
-[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found."
-
-source $DIR/testing.conf
 rm -f $LOGFILE
 
-if [ "$#" -eq 0 ]
-then
-    HOSTS=$STRONGSWANHOSTS
-else
-    HOSTS=$*
-fi
-
-##########################################################################
-# build base image
-#
 if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then
-   $DIR/scripts/build-baseimage
+	$PWD/scripts/build-baseimage
 fi
 
-##########################################################################
-# build the UML kernel based on a vanilla kernel form kernel.org
-# and a matching UML patch from user-mode-linux.sourceforge.net
-#
-if [ $ENABLE_BUILD_UMLKERNEL = "yes" ]
+if [ $ENABLE_BUILD_GUESTKERNEL = "yes" ]
 then
-   $DIR/scripts/build-umlkernel
+	$PWD/scripts/build-guestkernel
 fi
 
-##########################################################################
-# build a generic UML root file system based on a Gentoo root file system.
-# compile and install a specified strongSwan release into the file system.
-#
 if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
 then
-   $DIR/scripts/build-umlrootfs
+	$PWD/scripts/build-umlrootfs
 fi
 
-##########################################################################
-# Creating the root filesystems for the specified UML instances
-#
 if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
 then
-   $DIR/scripts/build-umlhostfs $HOSTS
+	$PWD/scripts/build-umlhostfs $HOSTS
 fi
