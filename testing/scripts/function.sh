@@ -55,6 +55,20 @@ execute_chroot()
 	execute "chroot $LOOPDIR $@"
 }
 
+# write green status message to console
+# $1 - msg
+echo_ok()
+{
+	echo -e "${GREEN}$1${NORMAL}"
+}
+
+# write red status message to console
+# $1 - msg
+echo_failed()
+{
+	echo -e "${RED}$1${NORMAL}"
+}
+
 function cecho {
     echo -e "\033[1;31m$1\033[0m"
 }

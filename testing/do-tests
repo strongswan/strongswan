@@ -16,20 +16,11 @@
 
 DIR=`dirname $0`
 
-source $DIR/scripts/function.sh
+. $PWD/scripts/function.sh
 
-[ -f $DIR/testing.conf ] || die "Configuration file 'testing.conf' not found"
-[ -d $DIR/hosts ] || die "Directory 'hosts' not found"
-[ -d $DIR/tests ] || die "Directory 'tests' not found"
-
-source $DIR/testing.conf
-
-
-##############################################################################
-# test if UMLs have been built at all
-#
-
-[ -d $BUILDDIR ] || die "Directory '$BUILDDIR' does not exist. Please run 'make-testing'first."
+[ -d $PWD/hosts ] || die "Directory 'hosts' not found"
+[ -d $PWD/tests ] || die "Directory 'tests' not found"
+[ -d $BUILDDIR ] || die "Directory '$BUILDDIR' does not exist, please run make-testing first"
 
 
 ##############################################################################
@@ -121,7 +112,7 @@ ENVIRONMENT_HEADER=$(cat <<@EOF
       <td colspan="3">`uname -a`</td>
     </tr>
     <tr valign="top">
-      <td><b>UML kernel</b></td>
+      <td><b>Guest kernel</b></td>
       <td colspan="3">$KERNELVERSION</td>
     </tr>
     <tr valign="top">
@@ -167,10 +158,10 @@ cat > $TESTRESULTSHTML <<@EOF
     </tr>
 @EOF
 
-cecho "UML kernel : $KERNELVERSION"
-cecho "strongSwan : $SWANVERSION"
-cecho "Date       : $TESTDATE"
-cecho ""
+echo "Guest kernel : $KERNELVERSION"
+echo "strongSwan   : $SWANVERSION"
+echo "Date         : $TESTDATE"
+echo
 
 
 ##############################################################################
@@ -255,11 +246,11 @@ do
     do
 	let "testnumber += 1"
 	testname=$SUBDIR/$name
-	cecho-n " $testnumber $testname.."
+	log_action " $testnumber $testname:"
 
 	if [ ! -d $DEFAULTTESTSDIR/${testname} ]
 	then
-	    cecho "is missing..skipped"
+	    echo "is missing..skipped"
 	    continue
 	fi
 
@@ -387,7 +378,7 @@ do
 	# execute pre-test commands
 	#
 
-	cecho-n "pre.."
+	echo -n "pre.."
 	echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
@@ -416,7 +407,7 @@ do
 	# get and evaluate test results
 	#
 
-	cecho-n "test.."
+	echo -n "test.."
 	echo -e "\nTEST\n" >> $CONSOLE_LOG 2>&1
 
 	STATUS="passed"
@@ -629,7 +620,7 @@ do
 	# execute post-test commands
 	#
 
-	cecho-n "post.."
+	echo -n "post"
 	echo -e "\nPOST-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
@@ -694,11 +685,11 @@ do
 
 	if [ $STATUS = "passed" ]
 	then
-	    COLOR="green"
-	    cecho "\033[1;32m$STATUS"
+		COLOR="green"
+		log_status 0
 	else
-	    COLOR="red"
-	    cecho "$STATUS"
+		COLOR="red"
+		log_status 1
 	fi
 
 	cat >> $TESTRESULTSHTML << @EOF
@@ -773,10 +764,10 @@ cat >> $INDEX << @EOF
 </html>
 @EOF
 
-cecho ""
-cecho "\033[1;32mPassed:   $passed_cnt"
-cecho "Failed:   $failed_cnt"
-cecho ""
+echo
+echo_ok     "Passed : $passed_cnt"
+echo_failed "Failed : $failed_cnt"
+echo
 
 
 ##############################################################################
@@ -785,18 +776,16 @@ cecho ""
 
 HTDOCS="/var/www"
 
-cecho-n "Copying test results to winnetou.."
 ssh $SSHCONF root@${ipv4_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
 scp $SSHCONF -r $TODAYDIR root@${ipv4_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
 ssh $SSHCONF root@${ipv4_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
-cgecho "done"
-cecho ""
-cecho "The results are available in $TODAYDIR"
-cecho "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
+echo
+echo "The results are available in $TODAYDIR"
+echo "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
 
 ENDDATE=`date +%Y%m%d-%H%M`
-cecho ""
-cecho "Finished:   $ENDDATE"
+echo
+echo "Finished : $ENDDATE"
 
 ##########################################################################
 # close ssh sessions
