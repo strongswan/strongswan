@@ -112,6 +112,7 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 	chunk_t line, token;
 	int n = 0;
 	bool success = FALSE;
+	const char system_v4[]   = "127.0.1.1";
 	const char loopback_v4[] = "127.0.0.1";
 	const char loopback_v6[] = "::1";
 
@@ -187,8 +188,11 @@ static bool do_netstat(ietf_attr_port_filter_t *attr)
 		}
 		token.len--;
 
-		/* ignore ports of IPv4 and IPv6 loopback interfaces */
-		if ((token.len == strlen(loopback_v4) &&
+		/* ignore ports of IPv4 and IPv6 loopback interfaces
+		   and the internal system IPv4 address */
+		if ((token.len == strlen(system_v4) &&
+				memeq(system_v4, token.ptr, token.len)) ||
+			(token.len == strlen(loopback_v4) &&
 				memeq(loopback_v4, token.ptr, token.len)) ||
 			(token.len == strlen(loopback_v6) &&
 				memeq(loopback_v6, token.ptr, token.len)))
