@@ -183,7 +183,6 @@ static TNC_Result send_message(imv_state_t *state, imv_msg_t *out_msg)
 	}
 	else
 	{
-		out_msg->delete_attributes(out_msg);
 		result = TNC_RESULT_FATAL;
 	}
 
@@ -318,6 +317,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		out_msg->delete_attributes(out_msg);
 		result = out_msg->send_assessment(out_msg);
+		out_msg->destroy(out_msg);
 		if (result != TNC_RESULT_SUCCESS)
 		{
 			return result;
