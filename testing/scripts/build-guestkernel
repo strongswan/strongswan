@@ -6,6 +6,8 @@ echo "Building guest kernel version $KERNELVERSION"
 
 [ -f "$KERNELCONFIG" ] || die "Kernel config $KERNELCONFIG not found"
 
+check_commands bunzip2 bzcat make wget
+
 mkdir -p $BUILDDIR
 cd $BUILDDIR
 

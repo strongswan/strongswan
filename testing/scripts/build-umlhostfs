@@ -26,6 +26,8 @@ HOSTSDIR=$PWD/hosts
 [ -f $BASE ] || die "Base image $BASE not found"
 [ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"
 
+check_commands qemu-img qemu-nbd
+
 load_qemu_nbd
 
 mkdir -p $BUILDDIR

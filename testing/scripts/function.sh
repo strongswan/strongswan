@@ -148,6 +148,16 @@ load_qemu_nbd()
 	fi
 }
 
+# check if given commands exist in $PATH
+# $* - commands to check
+check_commands()
+{
+	for i in $*
+	do
+		command -v $i >/dev/null || { die "Required command $i not found"; exit 1; }
+	done
+}
+
 #############################################
 # search and replace strings throughout a
 # whole directory
