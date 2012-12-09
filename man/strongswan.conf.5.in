@@ -635,8 +635,14 @@ Passphrase protecting the private key
 .BR charon.plugins.tnc-ifmap.username
 Authentication username of strongSwan MAP client
 .TP
+.BR charon.plugins.tnc-imc.dlclose " [yes]"
+Unload IMC after use
+.TP
 .BR charon.plugins.tnc-imc.preferred_language " [en]"
 Preferred language for TNC recommendations
+.TP
+.BR charon.plugins.tnc-imv.dlclose " [yes]"
+Unload IMV after use
 .TP
 .BR charon.plugins.tnc-pdp.method " [ttls]"
 EAP tunnel method to be used
