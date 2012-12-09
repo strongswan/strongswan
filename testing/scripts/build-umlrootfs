@@ -22,7 +22,7 @@ echo "Building root image"
 
 [ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
 
-check_commands qemu-nbd
+check_commands partprobe qemu-nbd
 
 load_qemu_nbd
 
@@ -37,7 +37,7 @@ execute "cp $ROOTFS $BASE"
 
 log_action "Connecting base image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $BASE"
-sync
+partprobe $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"

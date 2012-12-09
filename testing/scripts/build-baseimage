@@ -6,7 +6,7 @@ echo "Building base image"
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-check_commands debootstrap mkfs.ext3 qemu-img qemu-nbd sfdisk
+check_commands debootstrap mkfs.ext3 partprobe qemu-img qemu-nbd sfdisk
 
 # additional packages
 EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
@@ -30,7 +30,6 @@ execute "qemu-img create -f qcow2 $ROOTFS ${ROOTFSSIZE}M"
 
 log_action "Connecting image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $ROOTFS"
-sync
 
 log_action "Partitioning disk"
 sfdisk /dev/nbd0 -D -uM >>$LOGFILE 2>&1 << EOF
@@ -43,6 +42,7 @@ then
 else
 	log_status 0
 fi
+partprobe $NBDEV
 
 log_action "Creating ext3 filesystem"
 execute "mkfs.ext3 $NBDPARTITION"
