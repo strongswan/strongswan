@@ -291,7 +291,7 @@ METHOD(os_info_t, create_package_enumerator, enumerator_t*,
 {
 	FILE *file;
 	const char command[] = "dpkg-query --show --showformat="
-								"'${Status}\t${PackageSpec}\t${Version}\n'";
+								"'${Status}\t${Package}\t${Version}\n'";
 	package_enumerator_t *enumerator;
 
 	/* Only Debian and Ubuntu package enumeration is currently supported */
