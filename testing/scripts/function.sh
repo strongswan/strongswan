@@ -97,16 +97,17 @@ declare -a on_exit_items
 # perform registered actions on exit
 on_exit()
 {
-	for i in "${on_exit_items[@]}"
+	for ((onex=${#on_exit_items[@]}-1; onex>=0; onex--))
 	do
-		eval $i >>$LOGFILE 2>&1
+		echo "On_Exit: ${on_exit_items[$onex]}" >>$LOGFILE
+		${on_exit_items[$onex]} >>$LOGFILE 2>&1
 	done
 	on_exit_items=""
 	trap - EXIT
 }
 
 # register a command to execute when the calling script terminates. The
-# registered commands are called in FIFO order.
+# registered commands are called in FILO order.
 # $* - command to register
 do_on_exit()
 {
@@ -126,7 +127,7 @@ graceful_umount()
 	[ ! $secs ] && secs=5
 
 	let steps=$secs*100
-	for i in `seq 1 $steps`
+	for st in `seq 1 $steps`
 	do
 		umount $1 >>$LOGFILE 2>&1
 		mount | grep $1 >/dev/null 2>&1

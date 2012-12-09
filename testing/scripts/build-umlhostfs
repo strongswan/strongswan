@@ -40,6 +40,7 @@ else
 fi
 
 # just to be sure
+do_on_exit qemu-nbd -d $NBDEV
 do_on_exit umount $LOOPDIR
 
 for host in $HOSTS

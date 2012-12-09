@@ -37,22 +37,21 @@ execute "cp $ROOTFS $BASE"
 
 log_action "Connecting base image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $BASE"
+do_on_exit qemu-nbd -d $NBDEV
 partprobe $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
+do_on_exit umount $LOOPDIR
 
 log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
+do_on_exit umount $LOOPDIR/proc
 
 mkdir -p $LOOPDIR/root/compile
 log_action "Mounting $ROOTFSCOMPILEDIR as /root/compile"
 execute "mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile"
-
 do_on_exit umount $LOOPDIR/root/compile
-do_on_exit umount $LOOPDIR/proc
-do_on_exit umount $LOOPDIR
-do_on_exit qemu-nbd -d $NBDEV
 
 echo "Installing software from source"
 RECPDIR=$TESTDIR/testing/scripts/recipes

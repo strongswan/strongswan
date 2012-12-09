@@ -30,6 +30,7 @@ execute "qemu-img create -f qcow2 $ROOTFS ${ROOTFSSIZE}M"
 
 log_action "Connecting image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $ROOTFS"
+do_on_exit qemu-nbd -d $NBDEV
 
 log_action "Partitioning disk"
 sfdisk /dev/nbd0 -D -uM >>$LOGFILE 2>&1 << EOF
@@ -49,14 +50,12 @@ execute "mkfs.ext3 $NBDPARTITION"
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
+do_on_exit graceful_umount $LOOPDIR
 
 log_action "Using $CACHEDIR as archive for apt"
 mkdir -p $APTCACHE
 execute "mount -o bind $CACHEDIR $APTCACHE"
-
 do_on_exit graceful_umount $APTCACHE
-do_on_exit graceful_umount $LOOPDIR
-do_on_exit qemu-nbd -d $NBDEV
 
 log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
 execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
