@@ -21,6 +21,7 @@
 #include <tncif_pa_subtypes.h>
 
 #include <utils/debug.h>
+#include <daemon.h>
 #include <library.h>
 #include <collections/linked_list.h>
 #include <threading/mutex.h>
@@ -298,7 +299,8 @@ METHOD(imv_t, type_supported, bool,
 METHOD(imv_t, destroy, void,
 	private_tnc_imv_t *this)
 {
-	if (this->handle)
+	if (this->handle && lib->settings->get_bool(lib->settings,
+		"%s.plugins.tnc-imv.dlclose", TRUE, charon->name))
 	{
 		dlclose(this->handle);
 	}
