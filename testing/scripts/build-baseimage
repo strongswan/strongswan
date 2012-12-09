@@ -8,10 +8,14 @@ echo "Building base image"
 
 check_commands debootstrap mkfs.ext3 partprobe qemu-img qemu-nbd sfdisk
 
-# additional packages
-EXTRAS=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
+# package includes/excludes
+INC=build-essential,gperf,libgmp-dev,libldap2-dev,libcurl4-openssl-dev
+INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
+INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev
+INC=$INC,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
 SERVICES="isc-dhcp-server apache2 slapd"
-PACKAGES=$EXTRAS,${SERVICES// /,}
+INC=$INC,${SERVICES// /,}
+EXC=iptables
 
 CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
@@ -58,7 +62,7 @@ execute "mount -o bind $CACHEDIR $APTCACHE"
 do_on_exit graceful_umount $APTCACHE
 
 log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
-execute "debootstrap --arch=$ROOTFSARCH --include=$PACKAGES $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
+execute "debootstrap --arch=$ROOTFSARCH --include=$INC --exclude $EXC $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
 
 for service in $SERVICES
 do
