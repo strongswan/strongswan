@@ -6,20 +6,20 @@ rm -f $LOGFILE
 
 if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then
-	$PWD/scripts/build-baseimage
+	$PWD/scripts/build-baseimage || exit 1
 fi
 
 if [ $ENABLE_BUILD_GUESTKERNEL = "yes" ]
 then
-	$PWD/scripts/build-guestkernel
+	$PWD/scripts/build-guestkernel || exit 1
 fi
 
 if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
 then
-	$PWD/scripts/build-umlrootfs
+	$PWD/scripts/build-umlrootfs || exit 1
 fi
 
 if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
 then
-	$PWD/scripts/build-umlhostfs $HOSTS
+	$PWD/scripts/build-umlhostfs $HOSTS || exit 1
 fi
