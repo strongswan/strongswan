@@ -227,6 +227,18 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_rekey, bool,
+	private_lookip_listener_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	/* During IKE_SA rekey, the unique identifier changes. Fire update events
+	 * and update the cached entry. During the invocation of this hook, the
+	 * virutal IPs have been migrated to new, hence remove that entry. */
+	remove_entry(this, new);
+	add_entry(this, new);
+
+	return TRUE;
+}
+
 METHOD(lookip_listener_t, lookup, int,
 	private_lookip_listener_t *this, host_t *vip,
 	lookip_callback_t cb, void *user)
@@ -299,6 +311,7 @@ lookip_listener_t *lookip_listener_create()
 			.listener = {
 				.message = _message_hook,
 				.ike_updown = _ike_updown,
+				.ike_rekey = _ike_rekey,
 			},
 			.lookup = _lookup,
 			.add_listener = _add_listener,
