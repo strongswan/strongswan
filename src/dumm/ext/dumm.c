@@ -30,6 +30,8 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_URL
+/* avoid redefintiion of snprintf etc. */
+#define RUBY_DONT_SUBST
 #include <ruby.h>
 
 static dumm_t *dumm;
