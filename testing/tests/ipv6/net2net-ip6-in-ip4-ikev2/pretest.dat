@@ -6,6 +6,6 @@ sun::"ip route add fec1:\:/16 via fec0:\:1"
 bob::"ip route add fec1:\:/16 via fec2:\:1"
 moon::ipsec start
 sun::ipsec start
-moon::sleep 2 
+moon::expect-connection net-net
+sun::expect-connection net-net
 moon::ipsec up net-net
-moon::sleep 1
