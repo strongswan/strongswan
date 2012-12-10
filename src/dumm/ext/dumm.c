@@ -631,6 +631,7 @@ static VALUE iface_each_addr(int argc, VALUE *argv, VALUE self)
 	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
+	list = linked_list_create();
 	Data_Get_Struct(self, iface_t, iface);
 	enumerator = iface->create_address_enumerator(iface);
 	while (enumerator->enumerate(enumerator, &addr))
