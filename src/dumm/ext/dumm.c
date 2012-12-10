@@ -141,7 +141,11 @@ static VALUE guest_hash(VALUE class)
 	if (!rb_cvar_defined(class, id))
 	{
 		VALUE hash = guest_hash_create(class);
+#ifdef RB_CVAR_SET_4_ARGS
 		rb_cvar_set(class, id, hash, 0);
+#else
+		rb_cvar_set(class, id, hash);
+#endif
 		return hash;
 	}
 	return rb_cvar_get(class, id);
