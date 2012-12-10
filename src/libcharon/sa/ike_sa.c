@@ -1979,14 +1979,14 @@ METHOD(ike_sa_t, inherit, void,
 	this->other_id = other->other_id->clone(other->other_id);
 
 	/* apply assigned virtual IPs... */
-	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
+	while (other->my_vips->remove_last(other->my_vips, (void**)&vip) == SUCCESS)
 	{
-		other->my_vips->insert_first(other->my_vips, vip);
+		this->my_vips->insert_first(this->my_vips, vip);
 	}
-	while (this->other_vips->remove_last(this->other_vips,
-										 (void**)&vip) == SUCCESS)
+	while (other->other_vips->remove_last(other->other_vips,
+										  (void**)&vip) == SUCCESS)
 	{
-		other->other_vips->insert_first(other->other_vips, vip);
+		this->other_vips->insert_first(this->other_vips, vip);
 	}
 
 	/* authentication information */
