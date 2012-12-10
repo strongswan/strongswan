@@ -19,7 +19,6 @@ echo "Building root image"
 . $PWD/scripts/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
-
 [ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
 
 check_commands partprobe qemu-nbd
