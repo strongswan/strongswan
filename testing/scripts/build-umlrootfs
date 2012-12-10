@@ -20,23 +20,20 @@ echo "Building root image"
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-[ -f "$ROOTFS" ] || die "Root image $ROOTFS not found"
+[ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
 
 check_commands partprobe qemu-nbd
 
 load_qemu_nbd
 
-mkdir -p $ROOTFSDIR
 mkdir -p $LOOPDIR
-mkdir -p $ROOTFSCOMPILEDIR
-cd $ROOTFSDIR
+mkdir -p $ROOTIMGCOMPILEDIR
 
-BASE=$BUILDDIR/base.qcow2
-log_action "Creating $BASE"
-execute "cp $ROOTFS $BASE"
+log_action "Creating root image $ROOTIMG"
+execute "cp $BASEIMG $ROOTIMG"
 
-log_action "Connecting base image to NBD device $NBDEV"
-execute "qemu-nbd -c $NBDEV $BASE"
+log_action "Connecting root image to NBD device $NBDEV"
+execute "qemu-nbd -c $NBDEV $ROOTIMG"
 do_on_exit qemu-nbd -d $NBDEV
 partprobe $NBDEV
 
@@ -49,8 +46,8 @@ execute "mount -t proc none $LOOPDIR/proc"
 do_on_exit umount $LOOPDIR/proc
 
 mkdir -p $LOOPDIR/root/compile
-log_action "Mounting $ROOTFSCOMPILEDIR as /root/compile"
-execute "mount -o bind $ROOTFSCOMPILEDIR $LOOPDIR/root/compile"
+log_action "Mounting $ROOTIMGCOMPILEDIR as /root/compile"
+execute "mount -o bind $ROOTIMGCOMPILEDIR $LOOPDIR/root/compile"
 do_on_exit umount $LOOPDIR/root/compile
 
 echo "Installing software from source"

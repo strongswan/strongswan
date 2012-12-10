@@ -23,17 +23,17 @@ APTCACHE=$LOOPDIR/var/cache/apt/archives
 mkdir -p $LOOPDIR
 mkdir -p $BUILDDIR
 mkdir -p $CACHEDIR
-rm -f $ROOTFS
+rm -f $BASEIMG
 
-echo "`date`, building $ROOTFS" >>$LOGFILE
+echo "`date`, building $BASEIMG" >>$LOGFILE
 
 load_qemu_nbd
 
-log_action "Creating image $ROOTFS"
-execute "qemu-img create -f qcow2 $ROOTFS ${ROOTFSSIZE}M"
+log_action "Creating base image $BASEIMG"
+execute "qemu-img create -f $IMGEXT $BASEIMG ${BASEIMGSIZE}M"
 
 log_action "Connecting image to NBD device $NBDEV"
-execute "qemu-nbd -c $NBDEV $ROOTFS"
+execute "qemu-nbd -c $NBDEV $BASEIMG"
 do_on_exit qemu-nbd -d $NBDEV
 
 log_action "Partitioning disk"
@@ -61,8 +61,8 @@ mkdir -p $APTCACHE
 execute "mount -o bind $CACHEDIR $APTCACHE"
 do_on_exit graceful_umount $APTCACHE
 
-log_action "Running debootstrap ($ROOTFSSUITE, $ROOTFSARCH)"
-execute "debootstrap --arch=$ROOTFSARCH --include=$INC --exclude $EXC $ROOTFSSUITE $LOOPDIR $ROOTFSMIRROR"
+log_action "Running debootstrap ($BASEIMGSUITE, $BASEIMGARCH)"
+execute "debootstrap --arch=$BASEIMGARCH --include=$INC --exclude $EXC $BASEIMGSUITE $LOOPDIR $BASEIMGMIRROR"
 
 for service in $SERVICES
 do
