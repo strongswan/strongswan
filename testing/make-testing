@@ -19,7 +19,7 @@ then
 	$PWD/scripts/build-guestkernel || exit 1
 fi
 
-if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
+if [ $ENABLE_BUILD_GUESTIMAGES = "yes" ]
 then
-	$PWD/scripts/build-umlhostfs $HOSTS || exit 1
+	$PWD/scripts/build-guestimages $HOSTS || exit 1
 fi
