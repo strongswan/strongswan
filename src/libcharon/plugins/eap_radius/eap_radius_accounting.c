@@ -301,6 +301,28 @@ METHOD(listener_t, message_hook, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_rekey, bool,
+	private_eap_radius_accounting_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	entry_t *entry;
+
+	this->mutex->lock(this->mutex);
+	entry = this->sessions->remove(this->sessions,
+							(void*)(uintptr_t)old->get_unique_id(old));
+	if (entry)
+	{
+		entry = this->sessions->put(this->sessions,
+							(void*)(uintptr_t)new->get_unique_id(new), entry);
+		if (entry)
+		{
+			free(entry);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	return TRUE;
+}
+
 METHOD(listener_t, child_rekey, bool,
 	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa,
 	child_sa_t *old, child_sa_t *new)
@@ -340,6 +362,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
+				.ike_rekey = _ike_rekey,
 				.message = _message_hook,
 				.child_updown = _child_updown,
 				.child_rekey = _child_rekey,
