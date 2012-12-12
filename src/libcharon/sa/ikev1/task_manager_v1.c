@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Tobias Brunner
+ * Copyright (C) 2007-2012 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -36,6 +36,9 @@
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/dpd_timeout_job.h>
+#include <processing/jobs/process_message_job.h>
+
+#include <encoding/payloads/fragment_payload.h>
 
 /**
  * Number of old messages hashes we keep for retransmission.
@@ -160,11 +163,35 @@ struct private_task_manager_t {
 		packet_t *packet;
 
 		/**
-		 * type of the initated exchange
+		 * type of the initiated exchange
 		 */
 		exchange_type_t type;
 
 	} initiating;
+
+	/**
+	 * Data used to reassemble a fragmented message
+	 */
+	struct {
+
+		/**
+		 * Fragment ID (currently only one is supported at a time)
+		 */
+		u_int16_t id;
+
+		/**
+		 * The number of the last fragment (in case we receive the fragments out
+		 * of order), since the first starts with 1 this defines the number of
+		 * fragments we expect
+		 */
+		u_int8_t last;
+
+		/**
+		 * List of fragments (fragment_t*)
+		 */
+		linked_list_t *list;
+
+	} frag;
 
 	/**
 	 * List of queued tasks not yet in action
@@ -172,7 +199,7 @@ struct private_task_manager_t {
 	linked_list_t *queued_tasks;
 
 	/**
-	 * List of active tasks, initiated by ourselve
+	 * List of active tasks, initiated by ourselves
 	 */
 	linked_list_t *active_tasks;
 
@@ -211,6 +238,33 @@ struct private_task_manager_t {
 	 */
 	u_int32_t dpd_recv;
 };
+
+/**
+ * A single fragment within a fragmented message
+ */
+typedef struct {
+
+	/** fragment number */
+	u_int8_t num;
+
+	/** fragment data */
+	chunk_t data;
+
+} fragment_t;
+
+static void fragment_destroy(fragment_t *this)
+{
+	chunk_free(&this->data);
+	free(this);
+}
+
+static void clear_fragments(private_task_manager_t *this, u_int16_t id)
+{
+	DESTROY_FUNCTION_IF(this->frag.list, (void*)fragment_destroy);
+	this->frag.list = NULL;
+	this->frag.last = 0;
+	this->frag.id = id;
+}
 
 METHOD(task_manager_t, flush_queue, void,
 	private_task_manager_t *this, task_queue_t queue)
@@ -1038,6 +1092,100 @@ static status_t process_response(private_task_manager_t *this,
 	return initiate(this);
 }
 
+static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
+{
+	fragment_payload_t *payload;
+	enumerator_t *enumerator;
+	fragment_t *fragment;
+	status_t status = SUCCESS;
+	u_int8_t num;
+
+	payload = (fragment_payload_t*)msg->get_payload(msg, FRAGMENT_V1);
+	if (!payload)
+	{
+		return FAILED;
+	}
+
+	if (this->frag.id != payload->get_id(payload))
+	{
+		clear_fragments(this, payload->get_id(payload));
+		this->frag.list = linked_list_create();
+	}
+
+	num = payload->get_number(payload);
+	if (!this->frag.last && payload->is_last(payload))
+	{
+		this->frag.last = num;
+	}
+
+	enumerator = this->frag.list->create_enumerator(this->frag.list);
+	while (enumerator->enumerate(enumerator, &fragment))
+	{
+		if (fragment->num == num)
+		{	/* ignore a duplicate fragment */
+			DBG1(DBG_IKE, "received duplicate fragment #%hhu", num);
+			enumerator->destroy(enumerator);
+			return NEED_MORE;
+		}
+		if (fragment->num > num)
+		{
+			break;
+		}
+	}
+
+	INIT(fragment,
+		.num = num,
+		.data = chunk_clone(payload->get_data(payload)),
+	);
+
+	this->frag.list->insert_before(this->frag.list, enumerator, fragment);
+	enumerator->destroy(enumerator);
+
+	if (this->frag.list->get_count(this->frag.list) == this->frag.last)
+	{
+		message_t *message;
+		packet_t *pkt;
+		chunk_t data = chunk_empty;
+		host_t *src, *dst;
+
+		DBG1(DBG_IKE, "received fragment #%hhu, reassembling fragmented IKE "
+			 "message", num);
+		enumerator = this->frag.list->create_enumerator(this->frag.list);
+		while (enumerator->enumerate(enumerator, &fragment))
+		{
+			data = chunk_cat("mc", data, fragment->data);
+		}
+		enumerator->destroy(enumerator);
+
+		src = msg->get_source(msg);
+		dst = msg->get_destination(msg);
+		pkt = packet_create_from_data(src->clone(src), dst->clone(dst), data);
+
+		message = message_create_from_packet(pkt);
+		if (message->parse_header(message) != SUCCESS)
+		{
+			DBG1(DBG_IKE, "failed to parse header of reassembled IKE message");
+			message->destroy(message);
+			status = FAILED;
+		}
+		else
+		{
+			lib->processor->queue_job(lib->processor,
+								(job_t*)process_message_job_create(message));
+			status = NEED_MORE;
+
+		}
+		clear_fragments(this, 0);
+	}
+	else
+	{	/* there are some fragments missing */
+		DBG1(DBG_IKE, "received fragment #%hhu, waiting for complete IKE "
+			 "message", num);
+		status = NEED_MORE;
+	}
+	return status;
+}
+
 /**
  * Parse the given message and verify that it is valid.
  */
@@ -1085,6 +1233,11 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 			return DESTROY_ME;
 		}
 	}
+
+	if (msg->get_first_payload_type(msg) == FRAGMENT_V1)
+	{
+		return handle_fragment(this, msg);
+	}
 	return status;
 }
 
@@ -1129,6 +1282,10 @@ METHOD(task_manager_t, process_message, status_t,
 		msg->set_request(msg, FALSE);
 		charon->bus->message(charon->bus, msg, TRUE, FALSE);
 		status = parse_message(this, msg);
+		if (status == NEED_MORE)
+		{
+			return SUCCESS;
+		}
 		if (status != SUCCESS)
 		{
 			return status;
@@ -1196,6 +1353,10 @@ METHOD(task_manager_t, process_message, status_t,
 		msg->set_request(msg, TRUE);
 		charon->bus->message(charon->bus, msg, TRUE, FALSE);
 		status = parse_message(this, msg);
+		if (status == NEED_MORE)
+		{
+			return SUCCESS;
+		}
 		if (status != SUCCESS)
 		{
 			return status;
@@ -1591,6 +1752,7 @@ METHOD(task_manager_t, reset, void,
 	this->initiating.seqnr = 0;
 	this->initiating.retransmitted = 0;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
+	clear_fragments(this, 0);
 	if (initiate != UINT_MAX)
 	{
 		this->dpd_send = initiate;
@@ -1641,6 +1803,7 @@ METHOD(task_manager_t, destroy, void,
 	this->active_tasks->destroy(this->active_tasks);
 	this->queued_tasks->destroy(this->queued_tasks);
 	this->passive_tasks->destroy(this->passive_tasks);
+	clear_fragments(this, 0);
 
 	DESTROY_IF(this->queued);
 	DESTROY_IF(this->responding.packet);
