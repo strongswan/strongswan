@@ -11,6 +11,8 @@ echo "Starting test environment"
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
+check_commands virsh
+
 log_action "Deploying kernel $KERNEL"
 execute "ln -fs $KNLSRC $KNLTARGET"
 
