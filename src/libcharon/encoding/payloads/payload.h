@@ -231,6 +231,11 @@ enum payload_type_t {
 	NAT_OA_DRAFT_00_03_V1 = 131,
 
 	/**
+	 * IKE fragment (proprietary IKEv1 extension)
+	 */
+	FRAGMENT_V1 = 132,
+
+	/**
 	 * Header has a value of PRIVATE USE space.
 	 *
 	 * This type and all the following are never sent over wire and are
