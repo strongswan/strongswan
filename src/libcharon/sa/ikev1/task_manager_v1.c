@@ -39,6 +39,7 @@
 #include <processing/jobs/process_message_job.h>
 
 #include <encoding/payloads/fragment_payload.h>
+#include <bio/bio_writer.h>
 
 /**
  * Number of old messages hashes we keep for retransmission.
@@ -48,6 +49,11 @@
  * could be considered as a reply to the newer request.
  */
 #define MAX_OLD_HASHES 2
+
+/**
+ * Maximum packet size for fragmented packets (same as in sockets)
+ */
+#define MAX_PACKET 10000
 
 /**
  * First sequence number of responding packets.
@@ -191,6 +197,16 @@ struct private_task_manager_t {
 		 */
 		linked_list_t *list;
 
+		/**
+		 * Length of all currently received fragments
+		 */
+		size_t len;
+
+		/**
+		 * Maximum length of a fragmented packet
+		 */
+		size_t max_packet;
+
 	} frag;
 
 	/**
@@ -263,6 +279,7 @@ static void clear_fragments(private_task_manager_t *this, u_int16_t id)
 	DESTROY_FUNCTION_IF(this->frag.list, (void*)fragment_destroy);
 	this->frag.list = NULL;
 	this->frag.last = 0;
+	this->frag.len = 0;
 	this->frag.id = id;
 }
 
@@ -1098,6 +1115,7 @@ static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 	enumerator_t *enumerator;
 	fragment_t *fragment;
 	status_t status = SUCCESS;
+	chunk_t data;
 	u_int8_t num;
 
 	payload = (fragment_payload_t*)msg->get_payload(msg, FRAGMENT_V1);
@@ -1133,9 +1151,19 @@ static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 		}
 	}
 
+	data = payload->get_data(payload);
+	this->frag.len += data.len;
+	if (this->frag.len > this->frag.max_packet)
+	{
+		DBG1(DBG_IKE, "fragmented IKE message is too large");
+		enumerator->destroy(enumerator);
+		clear_fragments(this, 0);
+		return FAILED;
+	}
+
 	INIT(fragment,
 		.num = num,
-		.data = chunk_clone(payload->get_data(payload)),
+		.data = chunk_clone(data),
 	);
 
 	this->frag.list->insert_before(this->frag.list, enumerator, fragment);
@@ -1145,21 +1173,24 @@ static status_t handle_fragment(private_task_manager_t *this, message_t *msg)
 	{
 		message_t *message;
 		packet_t *pkt;
-		chunk_t data = chunk_empty;
 		host_t *src, *dst;
+		bio_writer_t *writer;
 
+		writer = bio_writer_create(this->frag.len);
 		DBG1(DBG_IKE, "received fragment #%hhu, reassembling fragmented IKE "
 			 "message", num);
 		enumerator = this->frag.list->create_enumerator(this->frag.list);
 		while (enumerator->enumerate(enumerator, &fragment))
 		{
-			data = chunk_cat("mc", data, fragment->data);
+			writer->write_data(writer, fragment->data);
 		}
 		enumerator->destroy(enumerator);
 
 		src = msg->get_source(msg);
 		dst = msg->get_destination(msg);
-		pkt = packet_create_from_data(src->clone(src), dst->clone(dst), data);
+		pkt = packet_create_from_data(src->clone(src), dst->clone(dst),
+									  writer->extract_buf(writer));
+		writer->destroy(writer);
 
 		message = message_create_from_packet(pkt);
 		if (message->parse_header(message) != SUCCESS)
@@ -1849,6 +1880,10 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 		},
 		.responding = {
 			.seqnr = RESPONDING_SEQ,
+		},
+		.frag = {
+			.max_packet = lib->settings->get_int(lib->settings,
+					"%s.max_packet", MAX_PACKET, charon->name),
 		},
 		.ike_sa = ike_sa,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
