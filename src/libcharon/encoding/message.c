@@ -1693,6 +1693,12 @@ METHOD(message_t, parse_header, status_t,
 	}
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
+	if (this->first_payload == FRAGMENT_V1 && this->is_encrypted)
+	{	/* racoon sets the encryted bit when sending a fragment, but these
+		 * messages are really not encrypted */
+		this->is_encrypted = FALSE;
+	}
+
 	for (i = 0; i < countof(this->reserved); i++)
 	{
 		reserved = payload_get_field(&ike_header->payload_interface,
