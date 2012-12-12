@@ -1280,7 +1280,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 			ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			entry->checked_out = TRUE;
-			entry->message_id = message->get_message_id(message);
+			if (message->get_first_payload_type(message) != FRAGMENT_V1)
+			{
+				entry->message_id = message->get_message_id(message);
+			}
 			if (ike_id->get_responder_spi(ike_id) == 0)
 			{
 				ike_id->set_responder_spi(ike_id, id->get_responder_spi(id));
