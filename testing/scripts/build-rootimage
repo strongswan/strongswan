@@ -21,7 +21,7 @@ echo "Building root image"
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 [ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
 
-check_commands partprobe qemu-nbd
+check_commands partprobe qemu-img qemu-nbd
 
 load_qemu_nbd
 
@@ -29,7 +29,7 @@ mkdir -p $LOOPDIR
 mkdir -p $ROOTIMGCOMPILEDIR
 
 log_action "Creating root image $ROOTIMG"
-execute "cp $BASEIMG $ROOTIMG"
+execute "qemu-img create -b $BASEIMG -f $IMGEXT $ROOTIMG"
 
 log_action "Connecting root image to NBD device $NBDEV"
 execute "qemu-nbd -c $NBDEV $ROOTIMG"
