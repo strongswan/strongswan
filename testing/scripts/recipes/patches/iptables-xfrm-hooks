@@ -1,0 +1,61 @@
+From 4553ba0130bb9f0aa266cc1e4c3288a52f34eed6 Mon Sep 17 00:00:00 2001
+From: Martin Willi <martin@revosec.ch>
+Date: Wed, 7 Apr 2010 11:40:15 +0200
+Subject: [PATCH] Added XFRM hooks to iptables headers
+
+---
+ include/linux/netfilter.h      |    2 ++
+ include/linux/netfilter_ipv4.h |    6 +++++-
+ include/linux/netfilter_ipv6.h |    6 +++++-
+ 3 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/netfilter.h b/include/linux/netfilter.h
+index 2eb00b6..b692c67 100644
+--- a/include/linux/netfilter.h
++++ b/include/linux/netfilter.h
+@@ -35,6 +35,8 @@ enum nf_inet_hooks {
+ 	NF_INET_FORWARD,
+ 	NF_INET_LOCAL_OUT,
+ 	NF_INET_POST_ROUTING,
++	NF_INET_XFRM_IN,
++	NF_INET_XFRM_OUT,
+ 	NF_INET_NUMHOOKS
+ };
+ 
+diff --git a/include/linux/netfilter_ipv4.h b/include/linux/netfilter_ipv4.h
+index 4d7ba3e..28d3ca9 100644
+--- a/include/linux/netfilter_ipv4.h
++++ b/include/linux/netfilter_ipv4.h
+@@ -47,7 +47,11 @@
+ #define NF_IP_LOCAL_OUT		3
+ /* Packets about to hit the wire. */
+ #define NF_IP_POST_ROUTING	4
+-#define NF_IP_NUMHOOKS		5
++/* Packets going into XFRM input transformation. */
++#define NF_IP_XFRM_IN		5
++/* Packets going into XFRM output transformation. */
++#define NF_IP_XFRM_OUT		6
++#define NF_IP_NUMHOOKS		7
+ 
+ enum nf_ip_hook_priorities {
+ 	NF_IP_PRI_FIRST = INT_MIN,
+diff --git a/include/linux/netfilter_ipv6.h b/include/linux/netfilter_ipv6.h
+index 7430b39..18590a5 100644
+--- a/include/linux/netfilter_ipv6.h
++++ b/include/linux/netfilter_ipv6.h
+@@ -51,7 +51,11 @@
+ #define NF_IP6_LOCAL_OUT		3
+ /* Packets about to hit the wire. */
+ #define NF_IP6_POST_ROUTING	4
+-#define NF_IP6_NUMHOOKS		5
++/* Packets going into XFRM input transformation. */
++#define NF_IP6_XFRM_IN		5
++/* Packets going into XFRM output transformation. */
++#define NF_IP6_XFRM_OUT		6
++#define NF_IP6_NUMHOOKS		7
+ 
+ 
+ enum nf_ip6_hook_priorities {
+-- 
+1.6.3.3
+
