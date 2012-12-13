@@ -9,6 +9,8 @@ KNLTARGET=/var/run/kvm-swan-kernel
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
+check_commands virsh
+
 for net in $NETWORKS
 do
 	log_action "Network $net"
