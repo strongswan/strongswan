@@ -310,12 +310,15 @@ static void print_tpm_version_info(private_pts_t *this)
 	else
 	{
 		DBG2(DBG_PTS, "TPM 1.2 Version Info: Chip Version: %hhu.%hhu.%hhu.%hhu,"
-					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s",
+					  " Spec Level: %hu, Errata Rev: %hhu, Vendor ID: %.4s [%.*s]",
 					  versionInfo.version.major, versionInfo.version.minor,
 					  versionInfo.version.revMajor, versionInfo.version.revMinor,
 					  versionInfo.specLevel, versionInfo.errataRev,
-					  versionInfo.tpmVendorID);
+					  versionInfo.tpmVendorID, versionInfo.vendorSpecificSize,
+					  versionInfo.vendorSpecificSize ?
+					  (char*)versionInfo.vendorSpecific : "");
 	}
+	free(versionInfo.vendorSpecific);
 }
 
 #else
