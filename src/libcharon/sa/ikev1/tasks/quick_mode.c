@@ -561,7 +561,7 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 		tsr = traffic_selector_create_from_subnet(hsr->clone(hsr),
 							hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0);
 	}
-	if (!this->initiator && this->mode == MODE_TRANSPORT && this->udp &&
+	if (this->mode == MODE_TRANSPORT && this->udp &&
 	   (!tsi->is_host(tsi, hsi) || !tsr->is_host(tsr, hsr)))
 	{	/* change TS in case of a NAT in transport mode */
 		DBG2(DBG_IKE, "changing received traffic selectors %R=== %R due to NAT",
