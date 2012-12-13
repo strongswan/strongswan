@@ -181,7 +181,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	}
 
-	token = settings->get_str(settings, "configs.%s.%s.lts", NULL, config);
+	token = settings->get_str(settings, "configs.%s.%s.lts", NULL, config, child);
 	if (token)
 	{
 		enumerator = enumerator_create_token(token, ",", " ");
@@ -205,7 +205,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	}
 
-	token = settings->get_str(settings, "configs.%s.%s.rts", NULL, config);
+	token = settings->get_str(settings, "configs.%s.%s.rts", NULL, config, child);
 	if (token)
 	{
 		enumerator = enumerator_create_token(token, ",", " ");
@@ -262,12 +262,12 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 	rid = identification_create_from_string(
 				settings->get_str(settings, "configs.%s.rid", "%any", config));
-	strength = settings->get_int(settings, "configs.%s.rsa_strength", 0);
+	strength = settings->get_int(settings, "configs.%s.rsa_strength", 0, config);
 	if (strength)
 	{
 		auth->add(auth, AUTH_RULE_RSA_STRENGTH, strength);
 	}
-	strength = settings->get_int(settings, "configs.%s.ecdsa_strength", 0);
+	strength = settings->get_int(settings, "configs.%s.ecdsa_strength", 0, config);
 	if (strength)
 	{
 		auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
