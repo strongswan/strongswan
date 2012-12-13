@@ -50,7 +50,7 @@ execute "mount -o bind $ROOTIMGCOMPILEDIR $LOOPDIR/root/compile"
 do_on_exit umount $LOOPDIR/root/compile
 
 echo "Installing software from source"
-RECPDIR=$TESTDIR/testing/scripts/recipes
+RECPDIR=$PWD/scripts/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
 execute "cp -r $RECPDIR/patches $LOOPDIR/root/compile" 0
 for r in $RECIPES
