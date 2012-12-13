@@ -13,7 +13,6 @@
  * for more details.
  */
 
-#include <unistd.h> /* for _POSIX_SPIN_LOCKS */
 #include <pthread.h>
 
 #include <library.h>
@@ -22,10 +21,6 @@
 #include "spinlock.h"
 #include "mutex.h"
 #include "lock_profiler.h"
-
-#if defined(_POSIX_SPIN_LOCKS) && _POSIX_SPIN_LOCKS == -1
-#undef _POSIX_SPIN_LOCKS
-#endif
 
 typedef struct private_spinlock_t private_spinlock_t;
 
@@ -39,7 +34,7 @@ struct private_spinlock_t {
 	 */
 	spinlock_t public;
 
-#ifdef _POSIX_SPIN_LOCKS
+#ifdef HAVE_PTHREAD_SPIN_INIT
 
 	/**
 	 * wrapped pthread spin lock
@@ -51,20 +46,20 @@ struct private_spinlock_t {
 	 */
 	lock_profile_t profile;
 
-#else /* _POSIX_SPIN_LOCKS */
+#else /* HAVE_PTHREAD_SPIN_INIT */
 
 	/**
 	 * use a mutex if spin locks are not available
 	 */
 	mutex_t *mutex;
 
-#endif /* _POSIX_SPIN_LOCKS */
+#endif /* HAVE_PTHREAD_SPIN_INIT */
 };
 
 METHOD(spinlock_t, lock, void,
 	private_spinlock_t *this)
 {
-#ifdef _POSIX_SPIN_LOCKS
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	int err;
 
 	profiler_start(&this->profile);
@@ -82,7 +77,7 @@ METHOD(spinlock_t, lock, void,
 METHOD(spinlock_t, unlock, void,
 	private_spinlock_t *this)
 {
-#ifdef _POSIX_SPIN_LOCKS
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	int err;
 
 	err = pthread_spin_unlock(&this->spinlock);
@@ -98,7 +93,7 @@ METHOD(spinlock_t, unlock, void,
 METHOD(spinlock_t, destroy, void,
 	private_spinlock_t *this)
 {
-#ifdef _POSIX_SPIN_LOCKS
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	profiler_cleanup(&this->profile);
 	pthread_spin_destroy(&this->spinlock);
 #else
@@ -122,15 +117,12 @@ spinlock_t *spinlock_create()
 		},
 	);
 
-#ifdef _POSIX_SPIN_LOCKS
+#ifdef HAVE_PTHREAD_SPIN_INIT
 	pthread_spin_init(&this->spinlock, PTHREAD_PROCESS_PRIVATE);
 	profiler_init(&this->profile);
 #else
-	#warning Using mutexes as spin lock alternatives
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 #endif
 
 	return &this->public;
 }
-
-
