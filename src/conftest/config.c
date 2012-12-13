@@ -244,7 +244,7 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	child_cfg_t *child_cfg;
 	enumerator_t *enumerator;
 	identification_t *lid, *rid;
-	char *child, *policy;
+	char *child, *policy, *pool;
 	uintptr_t strength;
 
 	ike_cfg = load_ike_config(this, settings, config);
@@ -280,6 +280,11 @@ static peer_cfg_t *load_peer_config(private_config_t *this,
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, rid);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+	pool = settings->get_str(settings, "configs.%s.named_pool", NULL, config);
+	if (pool)
+	{
+		peer_cfg->add_pool(peer_cfg, pool);
+	}
 
 	DBG1(DBG_CFG, "loaded config %s: %Y - %Y", config, lid, rid);
 

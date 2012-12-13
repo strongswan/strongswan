@@ -98,9 +98,10 @@ The IKE_SA configuration uses the following options (as key/value pairs):
                   src/libstrongswan/crypt/proposal/proposal_keywords.txt
   fake_nat:       Fake the NAT_DETECTION_*_IP payloads to simulate a NAT
                   scenario
-  rsa_strength:   connection requires a trustchain with RSA keys of given bits
-  ecdsa_strength: connection requires a trustchain with ECDSA keys of given bits
-  cert_policy:    connection requries a certificate with the given OID policy
+  rsa_strength:   Connection requires a trustchain with RSA keys of given bits
+  ecdsa_strength: Connection requires a trustchain with ECDSA keys of given bits
+  cert_policy:    Connection requries a certificate with the given OID policy
+  named_pool:     Name of an IP pool defined e.g. in a database backend
 
 The following CHILD_SA specific configuration options are supported:
 
