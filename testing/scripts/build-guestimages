@@ -32,17 +32,11 @@ mkdir -p $BUILDDIR
 mkdir -p $LOOPDIR
 mkdir -p $GUESTIMGDIR
 
-if [ "$#" -eq 0 ]; then
-	HOSTS=$STRONGSWANHOSTS
-else
-	HOSTS=$*
-fi
-
 # just to be sure
 do_on_exit qemu-nbd -d $NBDEV
 do_on_exit umount $LOOPDIR
 
-for host in $HOSTS
+for host in $STRONGSWANHOSTS
 do
 	log_action "Creating guest image for $host"
 	execute "qemu-img create -b $ROOTIMG -f $IMGEXT $GUESTIMGDIR/$host.$IMGEXT" 0
