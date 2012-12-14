@@ -27,6 +27,7 @@ load_qemu_nbd
 
 mkdir -p $LOOPDIR
 mkdir -p $ROOTIMGCOMPILEDIR
+mkdir -p $IMGDIR
 
 log_action "Creating root image $ROOTIMG"
 execute "qemu-img create -b $BASEIMG -f $IMGEXT $ROOTIMG"

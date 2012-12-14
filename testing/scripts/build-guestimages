@@ -28,9 +28,8 @@ check_commands partprobe qemu-img qemu-nbd
 
 load_qemu_nbd
 
-mkdir -p $BUILDDIR
+mkdir -p $IMGDIR
 mkdir -p $LOOPDIR
-mkdir -p $GUESTIMGDIR
 
 # just to be sure
 do_on_exit qemu-nbd -d $NBDEV
@@ -39,8 +38,8 @@ do_on_exit umount $LOOPDIR
 for host in $STRONGSWANHOSTS
 do
 	log_action "Creating guest image for $host"
-	execute "qemu-img create -b $ROOTIMG -f $IMGEXT $GUESTIMGDIR/$host.$IMGEXT" 0
-	execute "qemu-nbd -c $NBDEV $GUESTIMGDIR/$host.$IMGEXT" 0
+	execute "qemu-img create -b $ROOTIMG -f $IMGEXT $IMGDIR/$host.$IMGEXT" 0
+	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
 	partprobe $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0

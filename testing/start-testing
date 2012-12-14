@@ -24,7 +24,7 @@ done
 
 for host in $STRONGSWANHOSTS
 do
-	ln -fs $GUESTIMGDIR/$host.$IMGEXT $VIRTIMGSTORE/$host.$IMGEXT
+	ln -fs $IMGDIR/$host.$IMGEXT $VIRTIMGSTORE/$host.$IMGEXT
 	log_action "Guest $host"
 	execute "virsh create $CONFDIR/$host.xml"
 done

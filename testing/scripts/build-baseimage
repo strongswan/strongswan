@@ -21,8 +21,8 @@ CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
 
 mkdir -p $LOOPDIR
-mkdir -p $BUILDDIR
 mkdir -p $CACHEDIR
+mkdir -p $IMGDIR
 rm -f $BASEIMG
 
 echo "`date`, building $BASEIMG" >>$LOGFILE
