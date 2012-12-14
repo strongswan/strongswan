@@ -36,6 +36,12 @@
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
+    <interface type='network'>
+      <mac address='52:54:00:3b:0c:d7'/>
+      <source network='vnet1'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </interface>
     <serial type='pty'>
       <target port='0'/>
     </serial>
