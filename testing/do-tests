@@ -172,10 +172,6 @@ echo
 if [ $# -gt 0 ]
 then
     TESTS=$*
-elif [ $SELECTEDTESTSONLY = "yes" ]
-then
-    # set internal field seperator
-    TESTS=$SELECTEDTESTS
 else
     # set internal field seperator
     TESTS="`ls $DEFAULTTESTSDIR`"
