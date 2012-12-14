@@ -98,6 +98,7 @@ for host in $STRONGSWANHOSTS
 do
     ssh $SSHCONF -N root@`eval echo \\\$ipv4_$host` >/dev/null 2>&1 &
     eval ssh_pid_$host="`echo $!`"
+    do_on_exit kill `eval echo \\\$ssh_pid_$host`
 done
 
 
@@ -786,11 +787,3 @@ echo "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
 ENDDATE=`date +%Y%m%d-%H%M`
 echo
 echo "Finished : $ENDDATE"
-
-##########################################################################
-# close ssh sessions
-#
-for host in $STRONGSWANHOSTS
-do
-    kill `eval echo \\\$ssh_pid_$host`
-done
