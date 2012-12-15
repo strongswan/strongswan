@@ -133,13 +133,13 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal);
  * @param lifebytes			lifebytes, in bytes
  * @param auth				authentication method to use, or AUTH_NONE
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp				TRUE to use UDP encapsulation
+ * @param udp				ENCAP_UDP to use UDP encapsulation
  * @param cpi				CPI in case IPComp should be used
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 							u_int32_t lifetime, u_int64_t lifebytes,
-							auth_method_t auth, ipsec_mode_t mode, bool udp,
+							auth_method_t auth, ipsec_mode_t mode, encap_t udp,
 							u_int16_t cpi);
 
 /**
@@ -150,13 +150,13 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
  * @param lifebytes			lifebytes, in bytes
  * @param auth				authentication method to use, or AUTH_NONE
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp				TRUE to use UDP encapsulation
+ * @param udp				ENCAP_UDP to use UDP encapsulation
  * @param cpi				CPI in case IPComp should be used
  * @return					sa_payload_t object
  */
 sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
 							u_int32_t lifetime, u_int64_t lifebytes,
-							auth_method_t auth, ipsec_mode_t mode, bool udp,
+							auth_method_t auth, ipsec_mode_t mode, encap_t udp,
 							u_int16_t cpi);
 
 #endif /** SA_PAYLOAD_H_ @}*/

@@ -16,6 +16,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2012 Volker Rümelin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "quick_mode.h"
 
 #include <string.h>
@@ -596,6 +618,34 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 }
 
 /**
+ * Get encap
+ */
+static encap_t get_encap(ike_sa_t* ike_sa, bool udp)
+{
+	if (!udp)
+	{
+		return ENCAP_NONE;
+	}
+	if (ike_sa->supports_extension(ike_sa, EXT_NATT_DRAFT_02_03))
+	{
+		return ENCAP_UDP_DRAFT_00_03;
+	}
+	return ENCAP_UDP;
+}
+
+/**
+ * Get NAT-OA payload type (RFC 3947 or RFC 3947 drafts).
+ */
+static payload_type_t get_nat_oa_payload_type(ike_sa_t *ike_sa)
+{
+	if (ike_sa->supports_extension(ike_sa, EXT_NATT_DRAFT_02_03))
+	{
+		return NAT_OA_DRAFT_00_03_V1;
+	}
+	return NAT_OA_V1;
+}
+
+/**
  * Add NAT-OA payloads
  */
 static void add_nat_oa_payloads(private_quick_mode_t *this, message_t *message)
@@ -603,6 +653,7 @@ static void add_nat_oa_payloads(private_quick_mode_t *this, message_t *message)
 	identification_t *id;
 	id_payload_t *nat_oa;
 	host_t *src, *dst;
+	payload_type_t nat_oa_payload_type;
 
 	src = message->get_source(message);
 	dst = message->get_destination(message);
@@ -610,15 +661,17 @@ static void add_nat_oa_payloads(private_quick_mode_t *this, message_t *message)
 	src = this->initiator ? src : dst;
 	dst = this->initiator ? dst : src;
 
+	nat_oa_payload_type = get_nat_oa_payload_type(this->ike_sa);
+
 	/* first NAT-OA is the initiator's address */
 	id = identification_create_from_sockaddr(src->get_sockaddr(src));
-	nat_oa = id_payload_create_from_identification(NAT_OA_V1, id);
+	nat_oa = id_payload_create_from_identification(nat_oa_payload_type, id);
 	message->add_payload(message, (payload_t*)nat_oa);
 	id->destroy(id);
 
 	/* second NAT-OA is that of the responder */
 	id = identification_create_from_sockaddr(dst->get_sockaddr(dst));
-	nat_oa = id_payload_create_from_identification(NAT_OA_V1, id);
+	nat_oa = id_payload_create_from_identification(nat_oa_payload_type, id);
 	message->add_payload(message, (payload_t*)nat_oa);
 	id->destroy(id);
 }
@@ -697,6 +750,7 @@ METHOD(task_t, build_i, status_t,
 			linked_list_t *list, *tsi, *tsr;
 			proposal_t *proposal;
 			diffie_hellman_group_t group;
+			encap_t encap;
 
 			this->udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 			this->mode = this->config->get_mode(this->config);
@@ -767,9 +821,10 @@ METHOD(task_t, build_i, status_t,
 			enumerator->destroy(enumerator);
 
 			get_lifetimes(this);
+			encap = get_encap(this->ike_sa, this->udp);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp, this->cpi_i);
+								this->mode, encap, this->cpi_i);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			message->add_payload(message, &sa_payload->payload_interface);
 
@@ -1060,6 +1115,7 @@ METHOD(task_t, build_r, status_t,
 		case QM_INIT:
 		{
 			sa_payload_t *sa_payload;
+			encap_t encap;
 
 			this->spi_r = this->child_sa->alloc_spi(this->child_sa, PROTO_ESP);
 			if (!this->spi_r)
@@ -1086,9 +1142,10 @@ METHOD(task_t, build_r, status_t,
 				add_nat_oa_payloads(this, message);
 			}
 
+			encap = get_encap(this->ike_sa, this->udp);
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
-								this->mode, this->udp, this->cpi_r);
+								this->mode, encap, this->cpi_r);
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			if (!add_nonce(this, &this->nonce_r, message))

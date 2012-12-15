@@ -15,6 +15,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2012 Volker Rümelin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "isakmp_natd.h"
 
 #include <string.h>
@@ -73,6 +95,18 @@ struct private_isakmp_natd_t {
 	 */
 	bool dst_matched;
 };
+
+/**
+ * Get NAT-D payload type (RFC 3947 or RFC 3947 drafts).
+ */
+static payload_type_t get_nat_d_payload_type(ike_sa_t *ike_sa)
+{
+	if (ike_sa->supports_extension(ike_sa, EXT_NATT_DRAFT_02_03))
+	{
+		return NAT_D_DRAFT_00_03_V1;
+	}
+	return NAT_D_V1;
+}
 
 /**
  * Build NAT detection hash for a host.
@@ -162,7 +196,7 @@ static hash_payload_t *build_natd_payload(private_isakmp_natd_t *this, bool src,
 	{
 		return NULL;
 	}
-	payload = hash_payload_create(NAT_D_V1);
+	payload = hash_payload_create(get_nat_d_payload_type(this->ike_sa));
 	payload->set_hash(payload, hash);
 	chunk_free(&hash);
 	return payload;
@@ -221,7 +255,8 @@ static void process_payloads(private_isakmp_natd_t *this, message_t *message)
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
-		if (payload->get_type(payload) != NAT_D_V1)
+		if (payload->get_type(payload) != NAT_D_V1 &&
+			payload->get_type(payload) != NAT_D_DRAFT_00_03_V1)
 		{
 			continue;
 		}

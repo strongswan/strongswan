@@ -165,7 +165,7 @@ METHOD(payload_t, verify, status_t,
 {
 	bool bad_length = FALSE;
 
-	if (this->type == NAT_OA_V1 &&
+	if ((this->type == NAT_OA_V1 || this->type == NAT_OA_DRAFT_00_03_V1) &&
 		this->id_type != ID_IPV4_ADDR && this->id_type != ID_IPV6_ADDR)
 	{
 		DBG1(DBG_ENC, "invalid ID type %N for %N payload", id_type_names,
@@ -195,7 +195,8 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_id_payload_t *this, encoding_rule_t **rules)
 {
-	if (this->type == ID_V1 || this->type == NAT_OA_V1)
+	if (this->type == ID_V1 ||
+		this->type == NAT_OA_V1 || this->type == NAT_OA_DRAFT_00_03_V1)
 	{
 		*rules = encodings_v1;
 		return countof(encodings_v1);

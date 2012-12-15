@@ -23,6 +23,7 @@
 #ifndef PROPOSAL_SUBSTRUCTURE_H_
 #define PROPOSAL_SUBSTRUCTURE_H_
 
+typedef enum encap_t encap_t;
 typedef struct proposal_substructure_t proposal_substructure_t;
 
 #include <library.h>
@@ -32,6 +33,15 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #include <collections/linked_list.h>
 #include <kernel/kernel_ipsec.h>
 #include <sa/authenticator.h>
+
+/**
+ * Encap type for proposal substructure
+ */
+enum encap_t {
+	ENCAP_NONE = 0,
+	ENCAP_UDP,
+	ENCAP_UDP_DRAFT_00_03,
+};
 
 /**
  * Class representing an IKEv1/IKEv2 proposal substructure.
@@ -179,12 +189,12 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  * @param lifebytes	lifebytes, in bytes
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp		TRUE to use UDP encapsulation
+ * @param udp		ENCAP_UDP to use UDP encapsulation
  * @return			proposal_substructure_t object PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			proposal_t *proposal,  u_int32_t lifetime, u_int64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, bool udp);
+			auth_method_t auth, ipsec_mode_t mode, encap_t udp);
 
 /**
  * Creates an IKEv1 proposal_substructure_t from a list of proposal_t.
@@ -194,12 +204,12 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  * @param lifebytes	lifebytes, in bytes
  * @param auth		authentication method to use, or AUTH_NONE
  * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp		TRUE to use UDP encapsulation
+ * @param udp		ENCAP_UDP to use UDP encapsulation
  * @return			IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, bool udp);
+			auth_method_t auth, ipsec_mode_t mode, encap_t udp);
 
 /**
  * Creates an IKEv1 proposal_substructure_t for IPComp with the given
@@ -209,12 +219,12 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  * @param lifebytes			lifebytes, in bytes
  * @param cpi				the CPI to be used
  * @param mode				IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp				TRUE to use UDP encapsulation
+ * @param udp				ENCAP_UDP to use UDP encapsulation
  * @param proposal_number	the proposal number of the proposal to be linked
  * @return					IKEv1 proposal_substructure_t PROPOSAL_SUBSTRUCTURE_V1
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			ipsec_mode_t mode, bool udp, u_int8_t proposal_number);
+			ipsec_mode_t mode, encap_t udp, u_int8_t proposal_number);
 
 #endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

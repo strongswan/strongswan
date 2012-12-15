@@ -235,7 +235,8 @@ METHOD(task_t, build_i, status_t,
 			this->lifetime += this->peer_cfg->get_over_time(this->peer_cfg);
 			proposals = this->ike_cfg->get_proposals(this->ike_cfg);
 			sa_payload = sa_payload_create_from_proposals_v1(proposals,
-						this->lifetime, 0, this->method, MODE_NONE, FALSE, 0);
+									this->lifetime, 0, this->method, MODE_NONE,
+									ENCAP_NONE, 0);
 			proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 
 			message->add_payload(message, &sa_payload->payload_interface);
@@ -520,7 +521,8 @@ METHOD(task_t, build_r, status_t,
 		identification_t *id;
 
 		sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
-						this->lifetime, 0, this->method, MODE_NONE, FALSE, 0);
+									this->lifetime, 0, this->method, MODE_NONE,
+									ENCAP_NONE, 0);
 		message->add_payload(message, &sa_payload->payload_interface);
 
 		if (!this->ph1->add_nonce_ke(this->ph1, message))

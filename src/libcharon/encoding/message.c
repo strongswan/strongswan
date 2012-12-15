@@ -437,6 +437,7 @@ static payload_rule_t id_prot_i_rules[] = {
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
 	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
@@ -459,6 +460,7 @@ static payload_order_t id_prot_i_order[] = {
 	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 	{NAT_D_V1,					0},
+	{NAT_D_DRAFT_00_03_V1,		0},
 };
 
 /**
@@ -473,6 +475,7 @@ static payload_rule_t id_prot_r_rules[] = {
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						TRUE,	FALSE},
 	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
@@ -495,6 +498,7 @@ static payload_order_t id_prot_r_order[] = {
 	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
 	{NAT_D_V1,					0},
+	{NAT_D_DRAFT_00_03_V1,		0},
 };
 
 /**
@@ -509,6 +513,7 @@ static payload_rule_t aggressive_i_rules[] = {
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						FALSE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
@@ -526,6 +531,7 @@ static payload_order_t aggressive_i_order[] = {
 	{ID_V1,						0},
 	{CERTIFICATE_V1,			0},
 	{NAT_D_V1,					0},
+	{NAT_D_DRAFT_00_03_V1,		0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
@@ -545,6 +551,7 @@ static payload_rule_t aggressive_r_rules[] = {
 	{VENDOR_ID_V1,				0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 	{CERTIFICATE_REQUEST_V1,	0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{NAT_D_V1,					0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
+	{NAT_D_DRAFT_00_03_V1,		0,	MAX_NAT_D_PAYLOADS,		FALSE,	FALSE},
 	{ID_V1,						0,	1,						FALSE,	FALSE},
 	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
@@ -562,6 +569,7 @@ static payload_order_t aggressive_r_order[] = {
 	{ID_V1,						0},
 	{CERTIFICATE_V1,			0},
 	{NAT_D_V1,					0},
+	{NAT_D_DRAFT_00_03_V1,		0},
 	{SIGNATURE_V1,				0},
 	{HASH_V1,					0},
 	{CERTIFICATE_REQUEST_V1,	0},
@@ -624,6 +632,7 @@ static payload_rule_t quick_mode_i_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
 	{ID_V1,						0,	2,						TRUE,	FALSE},
 	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
+	{NAT_OA_DRAFT_00_03_V1,		0,	2,						TRUE,	FALSE},
 };
 
 /**
@@ -639,6 +648,7 @@ static payload_order_t quick_mode_i_order[] = {
 	{KEY_EXCHANGE_V1,			0},
 	{ID_V1,						0},
 	{NAT_OA_V1,					0},
+	{NAT_OA_DRAFT_00_03_V1,		0},
 };
 
 /**
@@ -654,6 +664,7 @@ static payload_rule_t quick_mode_r_rules[] = {
 	{KEY_EXCHANGE_V1,			0,	1,						TRUE,	FALSE},
 	{ID_V1,						0,	2,						TRUE,	FALSE},
 	{NAT_OA_V1,					0,	2,						TRUE,	FALSE},
+	{NAT_OA_DRAFT_00_03_V1,		0,	2,						TRUE,	FALSE},
 };
 
 /**
@@ -669,6 +680,7 @@ static payload_order_t quick_mode_r_order[] = {
 	{KEY_EXCHANGE_V1,			0},
 	{ID_V1,						0},
 	{NAT_OA_V1,					0},
+	{NAT_OA_DRAFT_00_03_V1,		0},
 };
 
 /**

@@ -72,6 +72,7 @@ enum ike_extension_t {
 
 	/**
 	 * peer supports NAT traversal as specified in RFC4306 or RFC3947
+	 * including some RFC3947 drafts
 	 */
 	EXT_NATT = (1<<0),
 
@@ -119,6 +120,12 @@ enum ike_extension_t {
 	 * peer supports Cisco Unity configuration attributes
 	 */
 	EXT_CISCO_UNITY = (1<<9),
+
+	/**
+	 * peer supports NAT traversal as specified in
+	 * draft-ietf-ipsec-nat-t-ike-02 .. -03
+	 */
+	EXT_NATT_DRAFT_02_03 = (1<<10),
 };
 
 /**

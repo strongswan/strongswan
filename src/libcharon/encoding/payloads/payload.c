@@ -79,20 +79,15 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METH
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, ID_PEER,
-	"HEADER",
-	"PROPOSAL_SUBSTRUCTURE",
-	"PROPOSAL_SUBSTRUCTURE_V1",
-	"TRANSFORM_SUBSTRUCTURE",
-	"TRANSFORM_SUBSTRUCTURE_V1",
-	"TRANSFORM_ATTRIBUTE",
-	"TRANSFORM_ATTRIBUTE_V1",
-	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-	"CONFIGURATION_ATTRIBUTE",
-	"CONFIGURATION_ATTRIBUTE_V1",
-	"ENCRYPTED_V1");
+ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, ID_PEER,
+	"NAT_D_DRAFT_V1",
+	"NAT_OA_DRAFT_V1");
 #else
-ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, GENERIC_SECURE_PASSWORD_METHOD,
+	"NAT_D_DRAFT_V1",
+	"NAT_OA_DRAFT_V1");
+#endif /* ME */
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, NAT_OA_DRAFT_00_03_V1,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"PROPOSAL_SUBSTRUCTURE_V1",
@@ -104,7 +99,6 @@ ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWORD_METH
 	"CONFIGURATION_ATTRIBUTE",
 	"CONFIGURATION_ATTRIBUTE_V1",
 	"ENCRYPTED_V1");
-#endif /* ME */
 ENUM_END(payload_type_names, ENCRYPTED_V1);
 
 /* short forms of payload names */
@@ -147,23 +141,17 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWOR
 	"EAP",
 	"GSPM");
 #ifdef ME
-ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER,
-									GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, ID_PEER,
-	"HDR",
-	"PROP",
-	"PROP",
-	"TRANS",
-	"TRANS",
-	"TRANSATTR",
-	"TRANSATTR",
-	"TSSUB",
-	"CATTR",
-	"CATTR",
-	"E");
+ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, ID_PEER,
+	"NAT-D",
+	"NAT-OA");
 #else
-ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, GENERIC_SECURE_PASSWORD_METHOD,
+	"NAT-D",
+	"NAT-OA");
+#endif /* ME */
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, NAT_OA_DRAFT_00_03_V1,
 	"HDR",
 	"PROP",
 	"PROP",
@@ -175,7 +163,6 @@ ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, GENERIC_SECURE_PASSWOR
 	"CATTR",
 	"CATTR",
 	"E");
-#endif /* ME */
 ENUM_END(payload_type_short_names, ENCRYPTED_V1);
 
 /*
@@ -206,6 +193,7 @@ payload_t *payload_create(payload_type_t type)
 		case ID_RESPONDER:
 		case ID_V1:
 		case NAT_OA_V1:
+		case NAT_OA_DRAFT_00_03_V1:
 #ifdef ME
 		case ID_PEER:
 #endif /* ME */
@@ -239,6 +227,7 @@ payload_t *payload_create(payload_type_t type)
 		case HASH_V1:
 		case SIGNATURE_V1:
 		case NAT_D_V1:
+		case NAT_D_DRAFT_00_03_V1:
 			return (payload_t*)hash_payload_create(type);
 		case CONFIGURATION:
 		case CONFIGURATION_V1:
@@ -283,6 +272,10 @@ bool payload_is_known(payload_type_t type)
 		return TRUE;
 	}
 #endif
+	if (type >= NAT_D_DRAFT_00_03_V1 && type <= NAT_OA_DRAFT_00_03_V1)
+	{
+		return TRUE;
+	}
 	return FALSE;
 }
 

@@ -253,6 +253,8 @@ typedef enum {
   IKEV1_ENCAP_TRANSPORT = 2,
   IKEV1_ENCAP_UDP_TUNNEL = 3,
   IKEV1_ENCAP_UDP_TRANSPORT = 4,
+  IKEV1_ENCAP_UDP_TUNNEL_DRAFT_00_03 = 61443,
+  IKEV1_ENCAP_UDP_TRANSPORT_DRAFT_00_03 = 61444,
 } ikev1_esp_encap_t;
 
 /**
@@ -810,14 +812,30 @@ static u_int16_t get_ikev1_auth(auth_method_t method)
 /**
  * Get IKEv1 encapsulation mode
  */
-static u_int16_t get_ikev1_mode(ipsec_mode_t mode, bool udp)
+static u_int16_t get_ikev1_mode(ipsec_mode_t mode, encap_t udp)
 {
 	switch (mode)
 	{
 		case MODE_TUNNEL:
-			return udp ? IKEV1_ENCAP_UDP_TUNNEL : IKEV1_ENCAP_TUNNEL;
+			switch (udp)
+			{
+				case ENCAP_UDP:
+					return IKEV1_ENCAP_UDP_TUNNEL;
+				case ENCAP_UDP_DRAFT_00_03:
+					return IKEV1_ENCAP_UDP_TUNNEL_DRAFT_00_03;
+				default:
+					return IKEV1_ENCAP_TUNNEL;
+			}
 		case MODE_TRANSPORT:
-			return udp ? IKEV1_ENCAP_UDP_TRANSPORT : IKEV1_ENCAP_TRANSPORT;
+			switch (udp)
+			{
+				case ENCAP_UDP:
+					return IKEV1_ENCAP_UDP_TRANSPORT;
+				case ENCAP_UDP_DRAFT_00_03:
+					return IKEV1_ENCAP_UDP_TRANSPORT_DRAFT_00_03;
+				default:
+					return IKEV1_ENCAP_TRANSPORT;
+			}
 		default:
 			return IKEV1_ENCAP_TUNNEL;
 	}
@@ -1125,9 +1143,11 @@ METHOD(proposal_substructure_t, get_encap_mode, ipsec_mode_t,
 		case IKEV1_ENCAP_TUNNEL:
 			return MODE_TUNNEL;
 		case IKEV1_ENCAP_UDP_TRANSPORT:
+		case IKEV1_ENCAP_UDP_TRANSPORT_DRAFT_00_03:
 			*udp = TRUE;
 			return MODE_TRANSPORT;
 		case IKEV1_ENCAP_UDP_TUNNEL:
+		case IKEV1_ENCAP_UDP_TUNNEL_DRAFT_00_03:
 			*udp = TRUE;
 			return MODE_TUNNEL;
 		default:
@@ -1263,7 +1283,7 @@ static void set_from_proposal_v1_ike(private_proposal_substructure_t *this,
  */
 static void set_from_proposal_v1_esp(private_proposal_substructure_t *this,
 				proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
-				ipsec_mode_t mode, bool udp, int number)
+				ipsec_mode_t mode, encap_t udp, int number)
 {
 	transform_substructure_t *transform = NULL;
 	u_int16_t alg, key_size;
@@ -1459,7 +1479,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			proposal_t *proposal, u_int32_t lifetime, u_int64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, bool udp)
+			auth_method_t auth, ipsec_mode_t mode, encap_t udp)
 {
 	private_proposal_substructure_t *this;
 
@@ -1487,7 +1507,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
  */
 proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 			linked_list_t *proposals, u_int32_t lifetime, u_int64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, bool udp)
+			auth_method_t auth, ipsec_mode_t mode, encap_t udp)
 {
 	private_proposal_substructure_t *this = NULL;
 	enumerator_t *enumerator;
@@ -1531,7 +1551,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
  */
 proposal_substructure_t *proposal_substructure_create_for_ipcomp_v1(
 			u_int32_t lifetime, u_int64_t lifebytes, u_int16_t cpi,
-			ipsec_mode_t mode, bool udp, u_int8_t proposal_number)
+			ipsec_mode_t mode, encap_t udp, u_int8_t proposal_number)
 {
 	private_proposal_substructure_t *this;
 	transform_substructure_t *transform;

@@ -123,7 +123,7 @@ enum payload_type_t {
 	NAT_D_V1 = 20,
 
 	/**
-	 * NAT original address payload (NAT-OA)
+	 * NAT original address payload (NAT-OA).
 	 */
 	NAT_OA_V1 = 21,
 
@@ -219,6 +219,16 @@ enum payload_type_t {
 	 */
 	ID_PEER = 128,
 #endif /* ME */
+
+	/**
+	 * NAT discovery payload (NAT-D) (drafts).
+	 */
+	NAT_D_DRAFT_00_03_V1 = 130,
+
+	/**
+	 * NAT original address payload (NAT-OA) (drafts).
+	 */
+	NAT_OA_DRAFT_00_03_V1 = 131,
 
 	/**
 	 * Header has a value of PRIVATE USE space.

@@ -552,8 +552,8 @@ sa_payload_t *sa_payload_create_from_proposal_v2(proposal_t *proposal)
  */
 sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
 								u_int32_t lifetime, u_int64_t lifebytes,
-								auth_method_t auth, ipsec_mode_t mode, bool udp,
-								u_int16_t cpi)
+								auth_method_t auth, ipsec_mode_t mode,
+								encap_t udp, u_int16_t cpi)
 {
 	proposal_substructure_t *substruct;
 	private_sa_payload_t *this;
@@ -591,8 +591,8 @@ sa_payload_t *sa_payload_create_from_proposals_v1(linked_list_t *proposals,
  */
 sa_payload_t *sa_payload_create_from_proposal_v1(proposal_t *proposal,
 								u_int32_t lifetime, u_int64_t lifebytes,
-								auth_method_t auth, ipsec_mode_t mode, bool udp,
-								u_int16_t cpi)
+								auth_method_t auth, ipsec_mode_t mode,
+								encap_t udp, u_int16_t cpi)
 {
 	private_sa_payload_t *this;
 	linked_list_t *proposals;
