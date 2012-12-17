@@ -1229,6 +1229,19 @@ METHOD(kernel_net_t, get_interface_name, bool,
 		this->lock->unlock(this->lock);
 		return TRUE;
 	}
+	/* in a second step, consider virtual IPs installed by us */
+	entry = this->vips->get_match(this->vips, &lookup,
+								  (void*)addr_map_entry_match_up_and_usable);
+	if (entry)
+	{
+		if (name)
+		{
+			*name = strdup(entry->iface->ifname);
+			DBG2(DBG_KNL, "virtual %H is on interface %s", ip, *name);
+		}
+		this->lock->unlock(this->lock);
+		return TRUE;
+	}
 	/* maybe it is installed on an ignored interface */
 	entry = this->addrs->get_match(this->addrs, &lookup,
 								  (void*)addr_map_entry_match_up);
