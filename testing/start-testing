@@ -6,6 +6,7 @@ NETWORKS="vnet1 vnet2 vnet3"
 CONFDIR=$PWD/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
+HOSTFSTARGET=/var/run/kvm-swan-hostfs
 
 echo "Starting test environment"
 
@@ -15,6 +16,9 @@ check_commands virsh
 
 log_action "Deploying kernel $KERNEL"
 execute "ln -fs $KNLSRC $KNLTARGET"
+
+log_action "Deploying $ROOTIMGCOMPILEDIR as hostfs"
+execute "ln -Tfs $ROOTIMGCOMPILEDIR $HOSTFSTARGET"
 
 for net in $NETWORKS
 do

@@ -30,6 +30,11 @@
     <controller type='usb' index='0'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x2'/>
     </controller>
+    <filesystem type='mount' accessmode='passthrough'>
+      <source dir='/var/run/kvm-swan-hostfs'/>
+      <target dir='/hostshare'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
+    </filesystem>
     <interface type='network'>
       <mac address='52:54:00:9a:e2:de'/>
       <source network='vnet2'/>

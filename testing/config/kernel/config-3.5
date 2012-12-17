@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86_64 3.5.0 Kernel Configuration
+# Linux/x86_64 3.5.3 Kernel Configuration
 #
 CONFIG_64BIT=y
 # CONFIG_X86_32 is not set
@@ -741,7 +741,9 @@ CONFIG_WIRELESS=y
 #
 # CONFIG_WIMAX is not set
 # CONFIG_RFKILL is not set
-# CONFIG_NET_9P is not set
+CONFIG_NET_9P=y
+CONFIG_NET_9P_VIRTIO=y
+# CONFIG_NET_9P_DEBUG is not set
 # CONFIG_CAIF is not set
 # CONFIG_CEPH_LIB is not set
 # CONFIG_NFC is not set
@@ -1385,7 +1387,7 @@ CONFIG_REISERFS_FS=y
 # CONFIG_GFS2_FS is not set
 # CONFIG_BTRFS_FS is not set
 # CONFIG_NILFS2_FS is not set
-# CONFIG_FS_POSIX_ACL is not set
+CONFIG_FS_POSIX_ACL=y
 CONFIG_FILE_LOCKING=y
 CONFIG_FSNOTIFY=y
 CONFIG_DNOTIFY=y
@@ -1464,6 +1466,8 @@ CONFIG_NETWORK_FILESYSTEMS=y
 # CONFIG_NCP_FS is not set
 # CONFIG_CODA_FS is not set
 # CONFIG_AFS_FS is not set
+CONFIG_9P_FS=y
+CONFIG_9P_FS_POSIX_ACL=y
 CONFIG_NLS=y
 CONFIG_NLS_DEFAULT="iso8859-1"
 # CONFIG_NLS_CODEPAGE_437 is not set
