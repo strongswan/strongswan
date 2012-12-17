@@ -535,7 +535,14 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 
 	if (num)
 	{	/* initiator */
-		add_ts(this->initiator_tsi, child_cfg, TRUE);
+		if (this->vip)
+		{
+			add_ts(NULL, child_cfg, TRUE);
+		}
+		else
+		{
+			add_ts(this->initiator_tsi, child_cfg, TRUE);
+		}
 		add_ts(this->initiator_tsr, child_cfg, FALSE);
 	}
 	else
@@ -700,4 +707,3 @@ load_tester_config_t *load_tester_config_create()
 
 	return &this->public;
 }
-
