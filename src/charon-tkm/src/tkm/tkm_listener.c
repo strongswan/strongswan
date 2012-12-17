@@ -41,6 +41,32 @@ struct private_tkm_listener_t {
 };
 
 /**
+ * Return id of remote identity.
+ *
+ * TODO: Replace this with the lookup for the remote identitiy id.
+ *
+ * Currently the reqid of the first child SA in peer config of IKE SA is
+ * returned. Might choose wrong reqid if IKE SA has multiple child configs
+ * with different reqids.
+ *
+ * @param peer_cfg	Remote peer config
+ * @return			remote identity id if found, 0 otherwise
+ */
+static ri_id_type get_remote_identity_id(peer_cfg_t *peer)
+{
+	ri_id_type remote_id = 0;
+	child_cfg_t *child;
+	enumerator_t* children = peer->create_child_cfg_enumerator(peer);
+
+	/* pick the reqid of the first child, no need to enumerate all children. */
+	children->enumerate(children, &child);
+	remote_id = child->get_reqid(child);
+	children->destroy(children);
+
+	return remote_id;
+}
+
+/**
  * Build a TKM certificate chain context with given cc id.
  *
  * @param ike_sa	IKE SA containing auth config to build certificate chain from
@@ -57,7 +83,7 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 	certificate_t *cert;
 	enumerator_t *rounds;
 	rounds = ike_sa->create_auth_cfg_enumerator((ike_sa_t *)ike_sa, FALSE);
-	while(rounds->enumerate(rounds, &auth))
+	while (rounds->enumerate(rounds, &auth))
 	{
 		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 		if (cert)
@@ -71,11 +97,12 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 				return FALSE;
 			}
 
+			ri_id_type ri_id = get_remote_identity_id(ike_sa->get_peer_cfg((ike_sa_t *)ike_sa));
 			certificate_type user_cert;
 			chunk_to_sequence(&enc_user_cert, &user_cert,
 							  sizeof(certificate_type));
 			chunk_free(&enc_user_cert);
-			if (ike_cc_set_user_certificate(cc_id, 1, 1, user_cert) != TKM_OK)
+			if (ike_cc_set_user_certificate(cc_id, ri_id, 1, user_cert) != TKM_OK)
 			{
 				DBG1(DBG_IKE, "error setting user certificate of cert chain"
 					 " (cc_id: %llu)", cc_id);
