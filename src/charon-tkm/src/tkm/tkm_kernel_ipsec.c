@@ -134,7 +134,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	 */
 	if (nonce_loc_id == 0 && esa.dh_id == 0)
 	{
-		if (ike_esa_create_first(esa_id, esa.isa_id, 1, 1, ntohl(spi_loc),
+		if (ike_esa_create_first(esa_id, esa.isa_id, reqid, 1, ntohl(spi_loc),
 								 ntohl(spi_rem)) != TKM_OK)
 		{
 			DBG1(DBG_KNL, "child SA (%llu, first) creation failed", esa_id);
@@ -146,7 +146,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		nonce_type nc_rem;
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
-		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, 1, 1, nonce_loc_id,
+		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, reqid, 1, nonce_loc_id,
 								  nc_rem, initiator, ntohl(spi_loc),
 								  ntohl(spi_rem)) != TKM_OK)
 		{
@@ -160,7 +160,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		nonce_type nc_rem;
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
-		if (ike_esa_create(esa_id, esa.isa_id, 1, 1, esa.dh_id, nonce_loc_id,
+		if (ike_esa_create(esa_id, esa.isa_id, reqid, 1, esa.dh_id, nonce_loc_id,
 						   nc_rem, initiator, ntohl(spi_loc),
 						   ntohl(spi_rem)) != TKM_OK)
 		{
