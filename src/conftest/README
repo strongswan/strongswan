@@ -109,6 +109,7 @@ The following CHILD_SA specific configuration options are supported:
   transport:   Propose IPsec transport mode instead of tunnel mode
   tfc_padding: Inject Traffic Flow Confidentialty bytes to align packets to the
                given length
+  proposal:    CHILD_SA proposal list, same syntax as IKE_SA proposal list
 
 6. Credentials
 --------------
