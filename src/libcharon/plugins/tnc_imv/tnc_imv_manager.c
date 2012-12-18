@@ -31,6 +31,7 @@
 #include <daemon.h>
 #include <utils/debug.h>
 #include <threading/rwlock.h>
+#include <threading/mutex.h>
 #include <collections/linked_list.h>
 
 typedef struct private_tnc_imv_manager_t private_tnc_imv_manager_t;
@@ -61,6 +62,11 @@ struct private_tnc_imv_manager_t {
 	TNC_IMVID next_imv_id;
 
 	/**
+	 * Mutex to access next IMV ID
+	 */
+	mutex_t *id_mutex;
+
+	/**
 	 * Policy defining how to derive final recommendation from individual ones
 	 */
 	recommendation_policy_t policy;
@@ -70,9 +76,14 @@ METHOD(imv_manager_t, add, bool,
 	private_tnc_imv_manager_t *this, imv_t *imv)
 {
 	TNC_Version version;
+	TNC_IMVID imv_id;
 
-	imv->set_id(imv, this->next_imv_id);
-	if (imv->initialize(imv->get_id(imv), TNC_IFIMV_VERSION_1,
+	this->id_mutex->lock(this->id_mutex);
+	imv_id = this->next_imv_id++;
+	this->id_mutex->unlock(this->id_mutex);
+
+	imv->set_id(imv, imv_id);
+	if (imv->initialize(imv_id, TNC_IFIMV_VERSION_1,
 						TNC_IFIMV_VERSION_1, &version) != TNC_RESULT_SUCCESS)
 	{
 		DBG1(DBG_TNC, "IMV \"%s\" failed to initialize", imv->get_name(imv));
@@ -80,7 +91,6 @@ METHOD(imv_manager_t, add, bool,
 	}
 	this->lock->write_lock(this->lock);
 	this->imvs->insert_last(this->imvs, imv);
-	this->next_imv_id++;
 	this->lock->unlock(this->lock);
 
 	if (imv->provide_bind_function(imv->get_id(imv),
@@ -203,14 +213,16 @@ METHOD(imv_manager_t, reserve_id, bool,
 	imv_t *imv;
 	bool found = FALSE;
 
-	this->lock->write_lock(this->lock);
+	this->lock->read_lock(this->lock);
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
 		if (id == imv->get_id(imv))
 		{
 			found = TRUE;
+			this->id_mutex->lock(this->id_mutex);
 			*new_id = this->next_imv_id++;
+			this->id_mutex->unlock(this->id_mutex);
 			imv->add_id(imv, *new_id);
 			DBG2(DBG_TNC, "additional ID %u reserved for IMV with primary ID %u",
 						  *new_id, id);
@@ -469,6 +481,7 @@ METHOD(imv_manager_t, destroy, void,
 	}
 	this->imvs->destroy(this->imvs);
 	this->lock->destroy(this->lock);
+	this->id_mutex->destroy(this->id_mutex);
 	free(this);
 }
 
@@ -501,6 +514,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		},
 		.imvs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.id_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.next_imv_id = 1,
 	);
 

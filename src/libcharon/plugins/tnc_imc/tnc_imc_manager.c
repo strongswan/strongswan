@@ -22,6 +22,7 @@
 #include <daemon.h>
 #include <utils/debug.h>
 #include <threading/rwlock.h>
+#include <threading/mutex.h>
 #include <collections/linked_list.h>
 
 typedef struct private_tnc_imc_manager_t private_tnc_imc_manager_t;
@@ -50,15 +51,25 @@ struct private_tnc_imc_manager_t {
 	 * Next IMC ID to be assigned
 	 */
 	TNC_IMCID next_imc_id;
+
+	/**
+	 * Mutex to access next IMC ID
+	 */
+	mutex_t *id_mutex;
 };
 
 METHOD(imc_manager_t, add, bool,
 	private_tnc_imc_manager_t *this, imc_t *imc)
 {
 	TNC_Version version;
+	TNC_IMCID imc_id;
 
-	imc->set_id(imc, this->next_imc_id);
-	if (imc->initialize(imc->get_id(imc), TNC_IFIMC_VERSION_1,
+	this->id_mutex->lock(this->id_mutex);
+	imc_id = this->next_imc_id++;
+	this->id_mutex->unlock(this->id_mutex);
+
+	imc->set_id(imc, imc_id);
+	if (imc->initialize(imc_id, TNC_IFIMC_VERSION_1,
 						TNC_IFIMC_VERSION_1, &version) != TNC_RESULT_SUCCESS)
 	{
 		DBG1(DBG_TNC, "IMC \"%s\" failed to initialize", imc->get_name(imc));
@@ -66,7 +77,6 @@ METHOD(imc_manager_t, add, bool,
 	}
 	this->lock->write_lock(this->lock);
 	this->imcs->insert_last(this->imcs, imc);
-	this->next_imc_id++;
 	this->lock->unlock(this->lock);
 
 	if (imc->provide_bind_function(imc->get_id(imc),
@@ -189,14 +199,16 @@ METHOD(imc_manager_t, reserve_id, bool,
 	imc_t *imc;
 	bool found = FALSE;
 
-	this->lock->write_lock(this->lock);
+	this->lock->read_lock(this->lock);
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
 	{
 		if (id == imc->get_id(imc))
 		{
 			found = TRUE;
+			this->id_mutex->lock(this->id_mutex);
 			*new_id = this->next_imc_id++;
+			this->id_mutex->unlock(this->id_mutex);
 			imc->add_id(imc, *new_id);
 			DBG2(DBG_TNC, "additional ID %u reserved for IMC with primary ID %u",
 						  *new_id, id);
@@ -392,6 +404,7 @@ METHOD(imc_manager_t, destroy, void,
 	}
 	this->imcs->destroy(this->imcs);
 	this->lock->destroy(this->lock);
+	this->id_mutex->destroy(this->id_mutex);
 	free(this);
 }
 
@@ -421,6 +434,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 		},
 		.imcs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.id_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.next_imc_id = 1,
 	);
 
