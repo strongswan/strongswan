@@ -35,9 +35,9 @@ struct private_tkm_private_key_t {
 	tkm_private_key_t public;
 
 	/**
-	 * Key fingerprint.
+	 * Key ID.
 	 */
-	chunk_t fingerprint;
+	identification_t *id;
 
 	/**
 	 * Reference count.
@@ -109,7 +109,7 @@ METHOD(private_key_t, get_encoding, bool,
 METHOD(private_key_t, get_fingerprint, bool,
 	private_tkm_private_key_t *this, cred_encoding_type_t type, chunk_t *fp)
 {
-	*fp = this->fingerprint;
+	*fp = this->id->get_encoding(this->id);
 	return TRUE;
 }
 
@@ -125,7 +125,7 @@ METHOD(private_key_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		chunk_free(&this->fingerprint);
+		this->id->destroy(this->id);
 		free(this);
 	}
 }
@@ -133,7 +133,7 @@ METHOD(private_key_t, destroy, void,
 /**
  * See header.
  */
-tkm_private_key_t *tkm_private_key_init(void)
+tkm_private_key_t *tkm_private_key_init(identification_t * const id)
 {
 	private_tkm_private_key_t *this;
 
@@ -155,12 +155,8 @@ tkm_private_key_t *tkm_private_key_init(void)
 			},
 		},
 		.ref = 1,
+		.id = id->clone(id),
 	);
-
-	/* fingerprint of alice@strongswan.org keypair */
-	const char fake_fp[] = "05da04208c02f428470acf6c772d066613da863c";
-	this->fingerprint = chunk_create((u_char *)fake_fp, strlen(fake_fp));
-	this->fingerprint = chunk_from_hex(this->fingerprint, NULL);
 
 	return &this->public;
 }

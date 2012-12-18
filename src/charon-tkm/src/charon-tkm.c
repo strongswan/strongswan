@@ -32,7 +32,7 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 #include <sa/keymat.h>
-#include <credentials/sets/mem_cred.h>
+#include <credentials/credential_manager.h>
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
@@ -41,7 +41,7 @@
 #include "tkm_listener.h"
 #include "tkm_kernel_ipsec.h"
 #include "tkm_public_key.h"
-#include "tkm_private_key.h"
+#include "tkm_cred.h"
 
 /**
  * TKM bus listener for IKE authorize events.
@@ -240,9 +240,8 @@ int main(int argc, char *argv[])
 		dmn_name = "charon-tkm";
 	}
 
-	/* credential set and TKM private key */
-	mem_cred_t *creds;
-	tkm_private_key_t *key;
+	/* TKM credential set */
+	tkm_cred_t *creds;
 
 	struct sigaction action;
 	int status = SS_RC_INITIALIZATION_FAILED;
@@ -347,10 +346,8 @@ int main(int argc, char *argv[])
 	listener = tkm_listener_create();
 	charon->bus->add_listener(charon->bus, &listener->listener);
 
-	/* register TKM private key */
-	creds = mem_cred_create();
-	key = tkm_private_key_init();
-	creds->add_key(creds, (private_key_t *)key);
+	/* register TKM credential set */
+	creds = tkm_cred_create();
 	lib->credmgr->add_set(lib->credmgr, (credential_set_t*)creds);
 
 	/* add handler for SEGV and ILL,

@@ -14,27 +14,33 @@
  * for more details.
  */
 
-#ifndef TKM_PRIVATE_KEY_H_
-#define TKM_PRIVATE_KEY_H_
+#ifndef TKM_CRED_H_
+#define TKM_CRED_H_
 
-#include <credentials/keys/private_key.h>
+typedef struct tkm_cred_t tkm_cred_t;
 
-typedef struct tkm_private_key_t tkm_private_key_t;
+#include <credentials/credential_set.h>
 
 /**
- * TKM private_key_t implementation.
+ * TKM in-memory credential set.
  */
-struct tkm_private_key_t {
+struct tkm_cred_t {
 
 	/**
-	 * Implements private_key_t interface
+	 * Implements credential_set_t.
 	 */
-	private_key_t key;
+	credential_set_t set;
+
+	/**
+	 * Destroy a tkm_cred_t.
+	 */
+	void (*destroy)(tkm_cred_t *this);
+
 };
 
 /**
- * Initialize TKM private key with given key ID.
+ * Create a tkm_cred instance.
  */
-tkm_private_key_t *tkm_private_key_init(identification_t * const id);
+tkm_cred_t *tkm_cred_create();
 
-#endif /** TKM_PRIVATE_KEY_H_ */
+#endif /** TKM_CRED_H_ */
