@@ -390,7 +390,7 @@ static void exit_usage(char *error)
 	printf("Usage:\n");
 	printf("  Add a connection:\n");
 	printf("    stroke add NAME MY_ID OTHER_ID MY_ADDR OTHER_ADDR\\\n");
-	printf("           MY_NET OTHER_NET MY_NETBITS OTHER_NETBITS\n");
+	printf("           MY_NET OTHER_NET\n");
 	printf("    where: ID is any IKEv2 ID \n");
 	printf("           ADDR is a IPv4 address\n");
 	printf("           NET is a IPv4 subnet in CIDR notation\n");
@@ -471,7 +471,7 @@ int main(int argc, char *argv[])
 	switch (token->kw)
 	{
 		case STROKE_ADD:
-			if (argc < 11)
+			if (argc < 9)
 			{
 				exit_usage("\"add\" needs more parameters...");
 			}
