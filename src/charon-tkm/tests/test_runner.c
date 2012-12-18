@@ -14,11 +14,49 @@
  * for more details.
  */
 
+#include <library.h>
+#include <hydra.h>
+#include <daemon.h>
+#include <plugins/kernel_netlink/kernel_netlink_net.h>
+
 #include "tkm.h"
+#include "tkm_nonceg.h"
+#include "tkm_diffie_hellman.h"
+#include "tkm_kernel_ipsec.h"
 #include "test_runner.h"
 
 int main(void)
 {
+	library_init(NULL);
+	libhydra_init("test_runner");
+	libcharon_init("test_runner");
+
+	lib->settings->set_int(lib->settings, "test_runner.filelog.stdout.default",
+						   1);
+	charon->load_loggers(charon, NULL, FALSE);
+
+	/* Register TKM specific plugins */
+	static plugin_feature_t features[] = {
+		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
+			PLUGIN_PROVIDE(NONCE_GEN),
+		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
+			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
+		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
+			PLUGIN_DEPENDS(RNG, RNG_WEAK),
+		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
+			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
+	};
+	lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
+			countof(features), TRUE);
+
+	if (!charon->initialize(charon, PLUGINS))
+	{
+		fprintf(stderr, "Unable to init charon");
+		return EXIT_FAILURE;
+	}
+
 	if (!tkm_init())
 	{
 		fprintf(stderr, "Could not connect to TKM, aborting tests\n");
@@ -41,6 +79,9 @@ int main(void)
 	number_failed = srunner_ntests_failed(sr);
 
 	tkm_deinit();
+	libcharon_deinit();
+	libhydra_deinit();
+	library_deinit();
 	srunner_free(sr);
 
 	return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

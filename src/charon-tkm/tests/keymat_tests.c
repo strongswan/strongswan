@@ -19,40 +19,16 @@
 #include <hydra.h>
 #include <config/proposal.h>
 #include <encoding/payloads/ike_header.h>
-#include <plugins/kernel_netlink/kernel_netlink_net.h>
 #include <tkm/client.h>
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
 #include "tkm_diffie_hellman.h"
 #include "tkm_keymat.h"
-#include "tkm_kernel_ipsec.h"
 #include "tkm_types.h"
 
 START_TEST(test_derive_ike_keys)
 {
-	fail_if(!library_init(NULL), "Unable to init library");
-	fail_if(!libhydra_init("tkm-tests"), "Unable to init libhydra");
-	fail_if(!libcharon_init("tkm-tests"), "Unable to init libcharon");
-
-	/* Register TKM specific plugins */
-	static plugin_feature_t features[] = {
-		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
-			PLUGIN_PROVIDE(NONCE_GEN),
-		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
-			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
-		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-			PLUGIN_DEPENDS(RNG, RNG_WEAK),
-		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
-	};
-	lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
-			countof(features), TRUE);
-
-	fail_if(!charon->initialize(charon, PLUGINS), "Unable to init charon");
-
 	proposal_t *proposal = proposal_create_from_string(PROTO_IKE,
 			"aes256-sha512-modp4096");
 	fail_if(!proposal, "Unable to create proposal");
@@ -97,37 +73,11 @@ START_TEST(test_derive_ike_keys)
 	ike_sa_id->destroy(ike_sa_id);
 	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&pubvalue);
-
-	libcharon_deinit();
-	libhydra_deinit();
-	library_deinit();
 }
 END_TEST
 
 START_TEST(test_derive_child_keys)
 {
-	fail_if(!library_init(NULL), "Unable to init library");
-	fail_if(!libhydra_init("tkm-tests"), "Unable to init libhydra");
-	fail_if(!libcharon_init("tkm-tests"), "Unable to init libcharon");
-
-	/* Register TKM specific plugins */
-	static plugin_feature_t features[] = {
-		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
-			PLUGIN_PROVIDE(NONCE_GEN),
-		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
-			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
-		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
-			PLUGIN_DEPENDS(RNG, RNG_WEAK),
-		PLUGIN_CALLBACK(kernel_net_register, kernel_netlink_net_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
-	};
-	lib->plugins->add_static_features(lib->plugins, "tkm-tests", features,
-			countof(features), TRUE);
-
-	fail_if(!charon->initialize(charon, PLUGINS), "Unable to init charon");
-
 	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
 	fail_if(!dh, "Unable to create DH object");
 	proposal_t *proposal = proposal_create_from_string(PROTO_ESP,
@@ -186,10 +136,6 @@ START_TEST(test_derive_child_keys)
 	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&encr_i);
 	chunk_free(&encr_r);
-
-	libcharon_deinit();
-	libhydra_deinit();
-	library_deinit();
 }
 END_TEST
 
