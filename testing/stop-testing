@@ -1,6 +1,8 @@
 #!/bin/bash
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
+. $DIR/scripts/function.sh
 
 echo "Stopping test environment"
 

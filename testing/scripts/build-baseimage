@@ -2,7 +2,9 @@
 
 echo "Building base image"
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 

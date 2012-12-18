@@ -26,9 +26,6 @@ die() {
 	exit 1
 }
 
-[ -f testing.conf ] || die "Configuration file 'testing.conf' not found"
-. testing.conf
-
 # execute command
 # $1 - command to execute
 # $2 - whether or not to log command exit status

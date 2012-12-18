@@ -14,7 +14,9 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 ##########################################################################
 # load-testconfig requires a testname as an argument

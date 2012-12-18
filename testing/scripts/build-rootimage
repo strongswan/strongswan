@@ -16,7 +16,9 @@
 
 echo "Building root image"
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 [ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
@@ -52,7 +54,7 @@ do_on_exit rm -r $LOOPDIR/root/compile
 do_on_exit umount $LOOPDIR/root/compile
 
 echo "Installing software from source"
-RECPDIR=$PWD/scripts/recipes
+RECPDIR=$DIR/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
 execute "cp -r $RECPDIR/patches $LOOPDIR/root/compile" 0
 for r in $RECIPES

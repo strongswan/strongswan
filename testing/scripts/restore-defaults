@@ -14,11 +14,13 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 testname=$1
 
-HOSTCONFIGDIR=$PWD/hosts
+HOSTCONFIGDIR=$DIR/../hosts
 TESTSDIR=$BUILDDIR/tests
 
 [ -d $TESTSDIR ] || die "Directory '$TESTSDIR' not found"

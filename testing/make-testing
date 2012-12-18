@@ -1,25 +1,26 @@
 #!/bin/bash
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
 
 rm -f $LOGFILE
 
 if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then
-	$PWD/scripts/build-baseimage || exit 1
+	$DIR/scripts/build-baseimage || exit 1
 fi
 
 if [ $ENABLE_BUILD_ROOTIMAGE = "yes" ]
 then
-	$PWD/scripts/build-rootimage || exit 1
+	$DIR/scripts/build-rootimage || exit 1
 fi
 
 if [ $ENABLE_BUILD_GUESTKERNEL = "yes" ]
 then
-	$PWD/scripts/build-guestkernel || exit 1
+	$DIR/scripts/build-guestkernel || exit 1
 fi
 
 if [ $ENABLE_BUILD_GUESTIMAGES = "yes" ]
 then
-	$PWD/scripts/build-guestimages $HOSTS || exit 1
+	$DIR/scripts/build-guestimages $HOSTS || exit 1
 fi

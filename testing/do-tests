@@ -14,14 +14,14 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
+. $DIR/scripts/function.sh
 
-. $PWD/scripts/function.sh
-
-[ -d $PWD/hosts ] || die "Directory 'hosts' not found"
-[ -d $PWD/tests ] || die "Directory 'tests' not found"
-[ -d $BUILDDIR ] || die "Directory '$BUILDDIR' does not exist, please run make-testing first"
-
+[ -d $DIR/hosts ] || die "Directory 'hosts' not found"
+[ -d $DIR/tests ] || die "Directory 'tests' not found"
+[ -d $BUILDDIR ] ||
+	die "Directory '$BUILDDIR' does not exist, please run make-testing first"
 
 ##############################################################################
 # take care of new path and file variables

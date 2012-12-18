@@ -16,9 +16,11 @@
 
 echo "Creating guest images"
 
-. $PWD/scripts/function.sh
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
-HOSTSDIR=$PWD/hosts
+HOSTSDIR=$DIR/../hosts
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 [ -f $ROOTIMG ] || die "Root image $ROOTIMG not found"
@@ -47,7 +49,7 @@ do
 	if [ "$host" = "winnetou" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
-		execute "cp -rf $PWD/images $LOOPDIR/var/www/" 0
+		execute "cp -rf $DIR/../images $LOOPDIR/var/www/" 0
 		execute_chroot "ln -s /etc/openssl/certs /var/www/certs" 0
 		execute_chroot "/etc/openssl/generate-crl" 0
 		execute_chroot "update-rc.d apache2 defaults" 0
