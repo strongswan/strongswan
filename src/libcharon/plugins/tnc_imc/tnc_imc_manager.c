@@ -193,7 +193,7 @@ METHOD(imc_manager_t, reserve_id, bool,
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
 	{
-		if (imc->get_id(imc))
+		if (id == imc->get_id(imc))
 		{
 			found = TRUE;
 			*new_id = this->next_imc_id++;

@@ -207,7 +207,7 @@ METHOD(imv_manager_t, reserve_id, bool,
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
 	{
-		if (imv->get_id(imv))
+		if (id == imv->get_id(imv))
 		{
 			found = TRUE;
 			*new_id = this->next_imv_id++;
