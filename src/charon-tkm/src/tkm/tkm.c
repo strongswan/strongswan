@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <daemon.h>
+
 #include <tkm/client.h>
 #include <tkm/constants.h>
 
@@ -61,16 +63,25 @@ bool tkm_init()
 
 	/* initialize TKM client library */
 	tkmlib_init();
-
 	ehandler_init();
 
-	if (ike_init(IKE_SOCKET) != TKM_OK)
+	const char * const ikesock = lib->settings->get_str(lib->settings,
+														"%s.ike_socket",
+														IKE_SOCKET,
+														charon->name);
+	if (ike_init(ikesock) != TKM_OK)
 	{
 		tkmlib_final();
 		return FALSE;
 	}
+	DBG1(DBG_DMN, "connected to TKM via socket '%s'", ikesock);
 
-	ees_server_init(EES_SOCKET);
+	const char * const eessock = lib->settings->get_str(lib->settings,
+														"%s.ees_socket",
+														EES_SOCKET,
+														charon->name);
+	ees_server_init(eessock);
+	DBG1(DBG_DMN, "serving EES requests on socket '%s'", eessock);
 
 	if (ike_tkm_reset() != TKM_OK)
 	{
