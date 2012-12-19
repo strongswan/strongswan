@@ -179,6 +179,7 @@ METHOD(task_t, build, status_t,
 		if ((this->initiator && vendor_natt_ids[i].send) ||
 			this->best_natt_ext == i)
 		{
+			DBG2(DBG_IKE, "sending %s vendor ID", vendor_natt_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
 							chunk_clone(chunk_create(vendor_natt_ids[i].id,
 													 vendor_natt_ids[i].len)));
