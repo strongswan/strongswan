@@ -18,6 +18,14 @@
 #include <collections/linked_list.h>
 #include <utils/debug.h>
 #include <threading/rwlock.h>
+#include <processing/jobs/callback_job.h>
+
+#include <daemon.h>
+
+/**
+ * Default PDP connection timeout, in s
+ */
+#define DEFAULT_TIMEOUT 30
 
 typedef struct private_tnc_pdp_connections_t private_tnc_pdp_connections_t;
 typedef struct entry_t entry_t;
@@ -41,6 +49,11 @@ struct private_tnc_pdp_connections_t {
 	 * Lock to access PEP connection list
 	 */
 	rwlock_t *lock;
+
+	/**
+	 * Connection timeout before we kill non-completed connections, in s
+	 */
+	int timeout;
 };
 
 /**
@@ -116,6 +129,35 @@ static void dbg_nas_user(chunk_t nas_id, chunk_t user_name, bool not, char *op)
 	}
 }
 
+/**
+ * Check if any connection has timed out
+ */
+static job_requeue_t check_timeouts(private_tnc_pdp_connections_t *this)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	time_t now;
+
+	now = time_monotonic(NULL);
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->list->create_enumerator(this->list);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->created + this->timeout <= now)
+		{
+			DBG1(DBG_CFG, "RADIUS connection timed out after %d seconds",
+				 this->timeout);
+			this->list->remove_at(this->list, enumerator);
+			free_entry(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	return JOB_REQUEUE_NONE;
+}
+
 METHOD(tnc_pdp_connections_t, add, void,
 	private_tnc_pdp_connections_t *this, chunk_t nas_id, chunk_t user_name,
 	identification_t *peer, eap_method_t *method)
@@ -163,6 +205,13 @@ METHOD(tnc_pdp_connections_t, add, void,
 		this->list->insert_last(this->list, entry);
 		this->lock->unlock(this->lock);
 	}
+
+	/* schedule timeout checking */
+	lib->scheduler->schedule_job_ms(lib->scheduler,
+				(job_t*)callback_job_create((callback_job_cb_t)check_timeouts,
+					this, NULL, (callback_job_cancel_t)return_false),
+				this->timeout * 1000);
+
 	dbg_nas_user(nas_id, user_name, FALSE, "created");
 }
 
@@ -248,6 +297,8 @@ tnc_pdp_connections_t *tnc_pdp_connections_create(void)
 		},
 		.list = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.timeout = lib->settings->get_int(lib->settings,
+				"%s.plugins.tnc-pdp.timeout", DEFAULT_TIMEOUT, charon->name),
 	);
 
 	return &this->public;
