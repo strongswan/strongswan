@@ -124,6 +124,8 @@ enum alert_t {
 	ALERT_UNIQUE_REPLACE,
 	/** IKE_SA deleted because of "keep" unique policy, no arguement */
 	ALERT_UNIQUE_KEEP,
+	/** IKE_SA kept on failed child SA establishment, no argument */
+	ALERT_KEEP_ON_CHILD_SA_FAILURE,
 	/** allocating virtual IP failed, linked_list_t of host_t requested */
 	ALERT_VIP_FAILURE,
 	/** an authorize() hook failed, no argument */

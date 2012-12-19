@@ -989,6 +989,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	else
 	{
 		DBG1(DBG_IKE, "failed to establish CHILD_SA, keeping IKE_SA");
+		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE);
 	}
 }
 
