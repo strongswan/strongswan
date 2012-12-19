@@ -239,6 +239,7 @@ Currently, the following hooks are defined with the following options:
   rebuild_auth:       rebuild AUTH payload, i.e. if ID payload changed
   reset_seq:          Reset sequence numbers of an ESP SA
     delay:            Seconds to delay reset after SA established
+    oseq:             Sequence number to set, default is 0
   set_critical:       Set critical bit on existing payloads:
     request:          yes to set in request, no in response
     id:               IKEv2 message identifier of message to mangle payloads
