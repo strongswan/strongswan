@@ -194,6 +194,25 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 	return FALSE;
 }
 
+METHOD(listener_t, alert, bool,
+	private_tkm_listener_t *this, ike_sa_t *ike_sa,
+	alert_t alert, va_list args)
+{
+	if (alert == ALERT_KEEP_ON_CHILD_SA_FAILURE)
+	{
+		tkm_keymat_t * const keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
+		const isa_id_type isa_id = keymat->get_isa_id(keymat);
+		DBG1(DBG_IKE, "TKM alert listener called for ISA context %llu", isa_id);
+		if (ike_isa_skip_create_first(isa_id) != TKM_OK)
+		{
+			DBG1(DBG_IKE, "Skip of first child SA creation failed for ISA "
+				 "context %llu", isa_id);
+		}
+	}
+
+	return TRUE;
+}
+
 METHOD(listener_t, authorize, bool,
 	private_tkm_listener_t *this, ike_sa_t *ike_sa,
 	bool final, bool *success)
@@ -305,6 +324,7 @@ tkm_listener_t *tkm_listener_create()
 			.listener = {
 				.authorize = _authorize,
 				.message = _message,
+				.alert = _alert,
 			},
 			.destroy = _destroy,
 		},
