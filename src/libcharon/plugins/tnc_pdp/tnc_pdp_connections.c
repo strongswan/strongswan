@@ -67,6 +67,11 @@ struct entry_t {
 	 * IKE SA used for bus communication
 	 */
 	ike_sa_t *ike_sa;
+
+	/**
+	 * Timestamp this entry has been created
+	 */
+	time_t created;
 };
 
 /**
@@ -138,6 +143,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 			DBG1(DBG_CFG, "removed stale RADIUS connection");
 			entry->method = method;
 			entry->ike_sa = ike_sa;
+			entry->created = time_monotonic(NULL);
 			break;
 		}
 	}
@@ -151,6 +157,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 			.user_name = chunk_clone(user_name),
 			.method = method,
 			.ike_sa = ike_sa,
+			.created = time_monotonic(NULL),
 		);
 		this->lock->write_lock(this->lock);
 		this->list->insert_last(this->list, entry);
@@ -201,10 +208,19 @@ METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
+	if (!found)
+	{
+		this->lock->unlock(this->lock);
+	}
 
 	dbg_nas_user(nas_id, user_name, !found, "found");
 	return found;
+}
+
+METHOD(tnc_pdp_connections_t, unlock, void,
+	private_tnc_pdp_connections_t *this)
+{
+	this->lock->unlock(this->lock);
 }
 
 METHOD(tnc_pdp_connections_t, destroy, void,
@@ -227,6 +243,7 @@ tnc_pdp_connections_t *tnc_pdp_connections_create(void)
 			.add = _add,
 			.remove = _remove_,
 			.get_state = _get_state,
+			.unlock = _unlock,
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),

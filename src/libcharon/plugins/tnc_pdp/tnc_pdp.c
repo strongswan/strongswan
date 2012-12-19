@@ -378,7 +378,10 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 			}
 			this->connections->add(this->connections, nas_id, user_name, peer,
 								   method);
-			method->initiate(method, &out);
+			if (method->initiate(method, &out) == NEED_MORE)
+			{
+				send_response(this, request, code, out, group, msk, source);
+			}
 		}
 		else
 		{
@@ -428,16 +431,16 @@ static void process_eap(private_tnc_pdp_t *this, radius_message_t *request,
 												  in->get_identifier(in));
 			}
 			charon->bus->set_sa(charon->bus, NULL);
+			send_response(this, request, code, out, group, msk, source);
+			this->connections->unlock(this->connections);
 		}
-
-		send_response(this, request, code, out, group, msk, source);
-		out->destroy(out);
 
 		if (code == RMC_ACCESS_ACCEPT || code == RMC_ACCESS_REJECT)
 		{
 			this->connections->remove(this->connections, nas_id, user_name);
 		}
 
+		out->destroy(out);
 end:
 		free(message.ptr);
 		in->destroy(in);
@@ -648,4 +651,3 @@ tnc_pdp_t *tnc_pdp_create(u_int16_t port)
 
 	return &this->public;
 }
-
