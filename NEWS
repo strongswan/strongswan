@@ -12,6 +12,9 @@ strongswan-5.0.2
   tunnels. The "ipsec lookip" command can be used to query such information
   or receive notifications.
 
+- The new error-notify plugin catches some common error conditions and allows
+  an external application to receive notifications for them over a UNIX socket.
+
 - IKE proposals can now use a PRF algorithm different to that defined for
   integrity protection. If an algorithm with a "prf" prefix is defined
   explicitly (such as prfsha1 or prfsha256), no implicit PRF algorithm based on
