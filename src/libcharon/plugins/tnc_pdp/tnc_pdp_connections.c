@@ -17,6 +17,7 @@
 
 #include <collections/linked_list.h>
 #include <utils/debug.h>
+#include <threading/rwlock.h>
 
 typedef struct private_tnc_pdp_connections_t private_tnc_pdp_connections_t;
 typedef struct entry_t entry_t;
@@ -32,9 +33,14 @@ struct private_tnc_pdp_connections_t {
 	tnc_pdp_connections_t public;
 
 	/**
-	 * List of TNC PEP RADIUS Connections
+	 * TNC PEP RADIUS Connections
 	 */
 	linked_list_t *list;
+
+	/**
+	 * Lock to access PEP connection list
+	 */
+	rwlock_t *lock;
 };
 
 /**
@@ -120,6 +126,7 @@ METHOD(tnc_pdp_connections_t, add, void,
 	ike_sa_id->destroy(ike_sa_id);
 	ike_sa->set_other_id(ike_sa, peer);
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -135,15 +142,19 @@ METHOD(tnc_pdp_connections_t, add, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	if (!found)
 	{
-		entry = malloc_thing(entry_t);
-		entry->nas_id = chunk_clone(nas_id);
-		entry->user_name = chunk_clone(user_name);
-		entry->method = method;
-		entry->ike_sa = ike_sa;
+		INIT(entry,
+			.nas_id = chunk_clone(nas_id),
+			.user_name = chunk_clone(user_name),
+			.method = method,
+			.ike_sa = ike_sa,
+		);
+		this->lock->write_lock(this->lock);
 		this->list->insert_last(this->list, entry);
+		this->lock->unlock(this->lock);
 	}
 	dbg_nas_user(nas_id, user_name, FALSE, "created");
 }
@@ -154,6 +165,7 @@ METHOD(tnc_pdp_connections_t, remove_, void,
 	enumerator_t *enumerator;
 	entry_t *entry;
 
+	this->lock->write_lock(this->lock);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -166,6 +178,7 @@ METHOD(tnc_pdp_connections_t, remove_, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
 METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
@@ -176,6 +189,7 @@ METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
 	entry_t *entry;
 	eap_method_t *found = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->list->create_enumerator(this->list);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -187,6 +201,7 @@ METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 
 	dbg_nas_user(nas_id, user_name, !found, "found");
 	return found;
@@ -195,6 +210,7 @@ METHOD(tnc_pdp_connections_t, get_state, eap_method_t*,
 METHOD(tnc_pdp_connections_t, destroy, void,
 	private_tnc_pdp_connections_t *this)
 {
+	this->lock->destroy(this->lock);
 	this->list->destroy_function(this->list, (void*)free_entry);
 	free(this);
 }
@@ -214,8 +230,8 @@ tnc_pdp_connections_t *tnc_pdp_connections_create(void)
 			.destroy = _destroy,
 		},
 		.list = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
 	return &this->public;
 }
-
