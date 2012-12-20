@@ -122,7 +122,7 @@ enum alert_t {
 	ALERT_INSTALL_CHILD_POLICY_FAILED,
 	/** IKE_SA deleted because of "replace" unique policy, no argument */
 	ALERT_UNIQUE_REPLACE,
-	/** IKE_SA deleted because of "keep" unique policy, no arguement */
+	/** IKE_SA deleted because of "keep" unique policy, no argument */
 	ALERT_UNIQUE_KEEP,
 	/** IKE_SA kept on failed child SA establishment, no argument */
 	ALERT_KEEP_ON_CHILD_SA_FAILURE,

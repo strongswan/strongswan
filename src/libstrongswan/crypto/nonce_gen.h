@@ -35,7 +35,7 @@ struct nonce_gen_t {
 	 *
 	 * @param size		size of nonce in bytes
 	 * @param buffer	pointer where the generated nonce will be written
-	 * @return			TRUE if nonce allocation was succesful, FALSE otherwise
+	 * @return			TRUE if nonce allocation was successful, FALSE otherwise
 	 */
 	bool (*get_nonce)(nonce_gen_t *this, size_t size,
 					  u_int8_t *buffer) __attribute__((warn_unused_result));
@@ -45,7 +45,7 @@ struct nonce_gen_t {
 	 *
 	 * @param size		size of nonce in bytes
 	 * @param chunk		chunk which will hold the generated nonce
-	 * @return			TRUE if nonce allocation was succesful, FALSE otherwise
+	 * @return			TRUE if nonce allocation was successful, FALSE otherwise
 	 */
 	bool (*allocate_nonce)(nonce_gen_t *this, size_t size,
 						   chunk_t *chunk) __attribute__((warn_unused_result));

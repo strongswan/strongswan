@@ -426,7 +426,7 @@ METHOD(task_t, process_i, status_t,
 	enumerator_t *enumerator;
 	payload_t *payload;
 
-	/* check for erronous notifies */
+	/* check for erroneous notifies */
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{

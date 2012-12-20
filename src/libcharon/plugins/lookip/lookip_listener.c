@@ -232,7 +232,7 @@ METHOD(listener_t, ike_rekey, bool,
 {
 	/* During IKE_SA rekey, the unique identifier changes. Fire update events
 	 * and update the cached entry. During the invocation of this hook, the
-	 * virutal IPs have been migrated to new, hence remove that entry. */
+	 * virtual IPs have been migrated to new, hence remove that entry. */
 	remove_entry(this, new);
 	add_entry(this, new);
 

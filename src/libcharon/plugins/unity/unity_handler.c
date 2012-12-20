@@ -115,7 +115,7 @@ static bool add_include(private_unity_handler_t *this, chunk_t subnet)
 }
 
 /**
- * Rempve a subnet from the inclusion list for this IKE_SA
+ * Remove a subnet from the inclusion list for this IKE_SA
  */
 static bool remove_include(private_unity_handler_t *this, chunk_t subnet)
 {

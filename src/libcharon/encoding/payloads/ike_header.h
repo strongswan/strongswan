@@ -72,7 +72,7 @@ enum exchange_type_t{
 	AUTH_ONLY = 3,
 
 	/**
-	 * Aggresive (Aggressive mode)
+	 * Aggressive (Aggressive mode)
 	 */
 	AGGRESSIVE = 4,
 

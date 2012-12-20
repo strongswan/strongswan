@@ -211,7 +211,7 @@ static status_t compute_prime(size_t prime_size, bool safe, mpz_t *p, mpz_t *q)
 
 	rng->destroy(rng);
 
-	/* additonally return p-1 */
+	/* additionally return p-1 */
 	mpz_sub_ui(*q, *p, 1);
 
 	return SUCCESS;

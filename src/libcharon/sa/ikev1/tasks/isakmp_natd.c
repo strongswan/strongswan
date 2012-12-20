@@ -385,7 +385,7 @@ METHOD(task_t, process_r, status_t,
 	switch (message->get_exchange_type(message))
 	{
 		case AGGRESSIVE:
-		{	/* proccess NAT-D payloads in the second request, already added ours
+		{	/* process NAT-D payloads in the second request, already added ours
 			 * in the first response */
 			result = SUCCESS;
 			/* fall */
