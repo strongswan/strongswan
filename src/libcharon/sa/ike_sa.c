@@ -1232,7 +1232,8 @@ METHOD(ike_sa_t, process_message, status_t,
 		case IKE_SA_INIT:
 		case IKE_AUTH:
 			if (this->state != IKE_CREATED &&
-				this->state != IKE_CONNECTING)
+				this->state != IKE_CONNECTING &&
+				message->get_first_payload_type(message) != FRAGMENT_V1)
 			{
 				DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
 					 exchange_type_names, message->get_exchange_type(message));
