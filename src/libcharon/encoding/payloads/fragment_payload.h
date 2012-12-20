@@ -78,4 +78,17 @@ struct fragment_payload_t {
  */
 fragment_payload_t *fragment_payload_create();
 
+/**
+ * Creates a fragment payload from the given data.  All fragments currently
+ * have the same fragment ID (1), which seems what other implementations are
+ * doing.
+ *
+ * @param num		fragment number (first one should be 1)
+ * @param last		TRUE to indicate that this is the last fragment
+ * @param data		fragment data (gets cloned)
+ * @return			fragment_payload_t object
+ */
+fragment_payload_t *fragment_payload_create_from_data(u_int8_t num, bool last,
+													  chunk_t data);
+
 #endif /** FRAGMENT_PAYLOAD_H_ @}*/

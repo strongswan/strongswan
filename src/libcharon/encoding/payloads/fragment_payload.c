@@ -206,3 +206,20 @@ fragment_payload_t *fragment_payload_create()
 	this->payload_length = get_header_length(this);
 	return &this->public;
 }
+
+/*
+ * Described in header
+ */
+fragment_payload_t *fragment_payload_create_from_data(u_int8_t num, bool last,
+													  chunk_t data)
+{
+	private_fragment_payload_t *this;
+
+	this = (private_fragment_payload_t*)fragment_payload_create();
+	this->fragment_id = 1;
+	this->fragment_number = num;
+	this->flags |= (last ? LAST_FRAGMENT : 0);
+	this->data = chunk_clone(data);
+	this->payload_length = get_header_length(this) + data.len;
+	return &this->public;
+}
