@@ -99,6 +99,10 @@ static struct {
 	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, 16,
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 
+	/* Proprietary IKE fragmentation extension (0x800000 is added by racoon) */
+	{ "FRAGMENTATION", EXT_IKE_FRAGMENTATION, FALSE, 20,
+	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3\x80\x00\x00\x00"},
+
 }, vendor_natt_ids[] = {
 
 	/* NAT-Traversal VIDs ordered by preference */

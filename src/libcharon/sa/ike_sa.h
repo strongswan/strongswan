@@ -126,6 +126,11 @@ enum ike_extension_t {
 	 * draft-ietf-ipsec-nat-t-ike-02 .. -03
 	 */
 	EXT_NATT_DRAFT_02_03 = (1<<10),
+
+	/**
+	 * peer support proprietary IKE fragmentation
+	 */
+	EXT_IKE_FRAGMENTATION = (1<<11),
 };
 
 /**
