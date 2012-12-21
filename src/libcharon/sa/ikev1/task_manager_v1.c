@@ -56,6 +56,15 @@
 #define MAX_PACKET 10000
 
 /**
+ * Maximum size of fragment data when sending packets (currently the same is
+ * used for IPv4 and IPv6, even though the latter has a higher minimum datagram
+ * size).  576 (= min. IPv4) - 20 (= IP header) - 8 (= UDP header) -
+ *  - 28 (= IKE header) - 8 (= fragment header) = 512
+ * This is reduced by 4 in case of NAT-T (due to the non-ESP marker).
+ */
+#define MAX_FRAGMENT_SIZE 512
+
+/**
  * First sequence number of responding packets.
  *
  * To distinguish retransmission jobs for initiating and responding packets,
@@ -207,6 +216,13 @@ struct private_task_manager_t {
 		 */
 		size_t max_packet;
 
+		/**
+		 * The exchange type we use for fragments. Always the initial type even
+		 * for fragmented quick mode or transaction messages (i.e. either
+		 * ID_PROT or AGGRESSIVE)
+		 */
+		exchange_type_t exchange;
+
 	} frag;
 
 	/**
@@ -354,10 +370,88 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 }
 
 /**
+ * Send a single fragment with the given data
+ */
+static bool send_fragment(private_task_manager_t *this, bool request,
+					host_t *src, host_t *dst, fragment_payload_t *fragment)
+{
+	message_t *message;
+	packet_t *packet;
+	status_t status;
+
+	message = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
+	/* other implementations seem to just use 0 as message ID, so here we go */
+	message->set_message_id(message, 0);
+	message->set_request(message, request);
+	message->set_source(message, src->clone(src));
+	message->set_destination(message, dst->clone(dst));
+	message->set_exchange_type(message, this->frag.exchange);
+	message->add_payload(message, (payload_t*)fragment);
+
+	status = this->ike_sa->generate_message(this->ike_sa, message, &packet);
+	if (status != SUCCESS)
+	{
+		DBG1(DBG_IKE, "failed to generate IKE fragment");
+		message->destroy(message);
+		return FALSE;
+	}
+	charon->sender->send(charon->sender, packet);
+	message->destroy(message);
+	return TRUE;
+}
+
+/**
+ * Send a packet, if supported and required do so in fragments
+ */
+static bool send_packet(private_task_manager_t *this, bool request,
+						packet_t *packet)
+{
+	host_t *src, *dst;
+	chunk_t data;
+
+	data = packet->get_data(packet);
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
+		data.len > MAX_FRAGMENT_SIZE)
+	{
+		fragment_payload_t *fragment;
+		u_int8_t num, count;
+		size_t len, frag_size;
+		bool nat;
+
+		/* reduce size due to non-ESP marker */
+		nat = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+		frag_size = MAX_FRAGMENT_SIZE - (nat ? 4 : 0);
+
+		src = packet->get_source(packet);
+		dst = packet->get_destination(packet);
+		count = (data.len / (frag_size + 1)) + 1;
+
+		DBG1(DBG_IKE, "sending IKE message with length of %zu bytes in "
+			 "%hhu fragments", data.len, count);
+		for (num = 1; num <= count; num++)
+		{
+			len = min(data.len, frag_size);
+			fragment = fragment_payload_create_from_data(num, num == count,
+												chunk_create(data.ptr, len));
+			if (!send_fragment(this, request, src, dst, fragment))
+			{
+				packet->destroy(packet);
+				return FALSE;
+			}
+			data = chunk_skip(data, len);
+		}
+		packet->destroy(packet);
+		return TRUE;
+	}
+	charon->sender->send(charon->sender, packet);
+	return TRUE;
+}
+
+/**
  * Retransmit a packet, either as initiator or as responder
  */
-static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
-							u_int mid, u_int retransmitted, packet_t *packet)
+static status_t retransmit_packet(private_task_manager_t *this, bool request,
+			u_int32_t seqnr, u_int mid, u_int retransmitted, packet_t *packet)
 {
 	u_int32_t t;
 
@@ -376,7 +470,10 @@ static status_t retransmit_packet(private_task_manager_t *this, u_int32_t seqnr,
 			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
 	}
-	charon->sender->send(charon->sender, packet->clone(packet));
+	if (!send_packet(this, request, packet->clone(packet)))
+	{
+		return DESTROY_ME;
+	}
 	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
 			retransmit_job_create(seqnr, this->ike_sa->get_id(this->ike_sa)), t);
 	return NEED_MORE;
@@ -389,7 +486,7 @@ METHOD(task_manager_t, retransmit, status_t,
 
 	if (seqnr == this->initiating.seqnr && this->initiating.packet)
 	{
-		status = retransmit_packet(this, seqnr, this->initiating.mid,
+		status = retransmit_packet(this, TRUE, seqnr, this->initiating.mid,
 					this->initiating.retransmitted, this->initiating.packet);
 		if (status == NEED_MORE)
 		{
@@ -399,7 +496,7 @@ METHOD(task_manager_t, retransmit, status_t,
 	}
 	if (seqnr == this->responding.seqnr && this->responding.packet)
 	{
-		status = retransmit_packet(this, seqnr, this->responding.mid,
+		status = retransmit_packet(this, FALSE, seqnr, this->responding.mid,
 					this->responding.retransmitted, this->responding.packet);
 		if (status == NEED_MORE)
 		{
@@ -675,12 +772,12 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	if (keep)
 	{	/* keep the packet for retransmission, the responder might request it */
-		charon->sender->send(charon->sender,
+		send_packet(this, TRUE,
 					this->initiating.packet->clone(this->initiating.packet));
 	}
 	else
 	{
-		charon->sender->send(charon->sender, this->initiating.packet);
+		send_packet(this, TRUE, this->initiating.packet);
 		this->initiating.packet = NULL;
 	}
 	message->destroy(message);
@@ -784,8 +881,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	{
 		return retransmit(this, this->responding.seqnr);
 	}
-	charon->sender->send(charon->sender,
-					this->responding.packet->clone(this->responding.packet));
+	send_packet(this, FALSE,
+				this->responding.packet->clone(this->responding.packet));
 	if (delete)
 	{
 		return DESTROY_ME;
@@ -840,7 +937,7 @@ static void send_notify(private_task_manager_t *this, message_t *request,
 	if (this->ike_sa->generate_message(this->ike_sa, response,
 									   &packet) == SUCCESS)
 	{
-		charon->sender->send(charon->sender, packet);
+		send_packet(this, TRUE, packet);
 	}
 	response->destroy(response);
 }
@@ -939,6 +1036,7 @@ static status_t process_request(private_task_manager_t *this,
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t *)isakmp_natd_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
+				this->frag.exchange = AGGRESSIVE;
 				break;
 			case QUICK_MODE:
 				if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
@@ -1295,8 +1393,8 @@ METHOD(task_manager_t, process_message, status_t,
 			{
 				DBG1(DBG_IKE, "received retransmit of response with ID %u, "
 					 "resending last request", mid);
-				charon->sender->send(charon->sender,
-						this->initiating.packet->clone(this->initiating.packet));
+				send_packet(this, TRUE,
+					this->initiating.packet->clone(this->initiating.packet));
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "received retransmit of response with ID %u, "
@@ -1341,7 +1439,7 @@ METHOD(task_manager_t, process_message, status_t,
 			{
 				DBG1(DBG_IKE, "received retransmit of request with ID %u, "
 					 "retransmitting response", mid);
-				charon->sender->send(charon->sender,
+				send_packet(this, FALSE,
 						this->responding.packet->clone(this->responding.packet));
 			}
 			else if (this->initiating.packet &&
@@ -1349,7 +1447,7 @@ METHOD(task_manager_t, process_message, status_t,
 			{
 				DBG1(DBG_IKE, "received retransmit of DPD request, "
 					 "retransmitting response");
-				charon->sender->send(charon->sender,
+				send_packet(this, TRUE,
 						this->initiating.packet->clone(this->initiating.packet));
 			}
 			else
@@ -1480,6 +1578,7 @@ METHOD(task_manager_t, queue_ike, void,
 		{
 			queue_task(this, (task_t*)aggressive_mode_create(this->ike_sa, TRUE));
 		}
+		this->frag.exchange = AGGRESSIVE;
 	}
 	else
 	{
@@ -1882,6 +1981,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.seqnr = RESPONDING_SEQ,
 		},
 		.frag = {
+			.exchange = ID_PROT,
 			.max_packet = lib->settings->get_int(lib->settings,
 					"%s.max_packet", MAX_PACKET, charon->name),
 		},
