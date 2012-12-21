@@ -67,9 +67,10 @@ METHOD(job_t, execute, job_requeue_t,
 														 this->message);
 	if (ike_sa)
 	{
-		DBG1(DBG_NET, "received packet: from %#H to %#H",
+		DBG1(DBG_NET, "received packet: from %#H to %#H (%zu bytes)",
 			 this->message->get_source(this->message),
-			 this->message->get_destination(this->message));
+			 this->message->get_destination(this->message),
+			 this->message->get_packet_data(this->message).len);
 		if (ike_sa->process_message(ike_sa, this->message) == DESTROY_ME)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
