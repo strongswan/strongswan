@@ -178,6 +178,11 @@ openly transmitted hash of the PSK)
 .BR charon.ignore_routing_tables
 A space-separated list of routing tables to be excluded from route lookups
 .TP
+.BR charon.ike_fragmentation " [no]"
+Enables IKE fragmentation (proprietary IKEv1 extension). Fragmented messages
+are always accepted irrespective of the value of this option. If the peer
+supports it larger messages will be sent in fragments.
+.TP
 .BR charon.ikesa_table_segments " [1]"
 Number of exclusively locked segments in the hash table
 .TP

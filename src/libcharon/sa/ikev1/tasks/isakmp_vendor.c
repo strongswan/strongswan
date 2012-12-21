@@ -155,18 +155,26 @@ METHOD(task_t, build, status_t,
 	private_isakmp_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid_payload;
-	bool strongswan, cisco_unity;
+	bool strongswan, cisco_unity, fragmentation;
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
-									"%s.send_vendor_id", FALSE, charon->name);
+								"%s.send_vendor_id", FALSE, charon->name);
 	cisco_unity = lib->settings->get_bool(lib->settings,
-									"%s.cisco_unity", FALSE, charon->name);
+								"%s.cisco_unity", FALSE, charon->name);
+	fragmentation = lib->settings->get_bool(lib->settings,
+								"%s.ike_fragmentation", FALSE, charon->name);
+	if (!this->initiator && fragmentation)
+	{
+		fragmentation = this->ike_sa->supports_extension(this->ike_sa,
+														 EXT_IKE_FRAGMENTATION);
+	}
 	for (i = 0; i < countof(vendor_ids); i++)
 	{
 		if (vendor_ids[i].send ||
 		   (vendor_ids[i].extension == EXT_STRONGSWAN && strongswan) ||
-		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity))
+		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity) ||
+		   (vendor_ids[i].extension == EXT_IKE_FRAGMENTATION && fragmentation))
 		{
 			DBG2(DBG_IKE, "sending %s vendor ID", vendor_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
