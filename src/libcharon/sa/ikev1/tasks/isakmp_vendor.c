@@ -172,7 +172,7 @@ METHOD(task_t, build, status_t,
 	}
 	for (i = 0; i < countof(vendor_natt_ids); i++)
 	{
-		if (this->initiator && vendor_natt_ids[i].send ||
+		if ((this->initiator && vendor_natt_ids[i].send) ||
 			this->best_natt_ext == i)
 		{
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
