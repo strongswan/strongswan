@@ -975,12 +975,19 @@ static bool get_init_hash(private_ike_sa_manager_t *this, message_t *message,
 		return FALSE;
 	}
 	if (message->get_first_payload_type(message) == FRAGMENT_V1)
-	{	/* only hash the source IP and SPI for fragmented init messages */
+	{	/* only hash the source IP, port and SPI for fragmented init messages */
+		u_int16_t port;
 		u_int64_t spi;
 
 		src = message->get_source(message);
 		if (!this->hasher->allocate_hash(this->hasher,
 										 src->get_address(src), NULL))
+		{
+			return FALSE;
+		}
+		port = src->get_port(src);
+		if (!this->hasher->allocate_hash(this->hasher,
+										 chunk_from_thing(port), NULL))
 		{
 			return FALSE;
 		}
