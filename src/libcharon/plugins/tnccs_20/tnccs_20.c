@@ -646,28 +646,40 @@ METHOD(tls_t, build, status_t,
 
 	if (this->batch_type == PB_BATCH_NONE)
 	{
-		if (this->is_server && state == PB_STATE_SERVER_WORKING)
+		if (this->is_server)
 		{
-			if (this->state_machine->get_empty_cdata(this->state_machine))
+			if (state == PB_STATE_SERVER_WORKING)
 			{
-				check_and_build_recommendation(this);
-			}
-			else
-			{
-				DBG2(DBG_TNC, "no recommendation available yet, "
-							  "sending empty PB-TNC SDATA batch");
-				this->batch_type = PB_BATCH_SDATA;
+				if (this->state_machine->get_empty_cdata(this->state_machine))
+				{
+					check_and_build_recommendation(this);
+				}
+				else
+				{
+					DBG2(DBG_TNC, "no recommendation available yet, "
+								  "sending empty PB-TNC SDATA batch");
+					this->batch_type = PB_BATCH_SDATA;
+				}
 			}
 		}
 		else
-        {
-			/**
-			 * In the DECIDED state and if no CRETRY is under way,
-			 * a PB-TNC client replies with an empty CLOSE batch.
-			 */
-			if (state == PB_STATE_DECIDED)
+		{
+			switch (state)
 			{
-				this->batch_type = PB_BATCH_CLOSE;
+				case PB_STATE_CLIENT_WORKING:
+					DBG2(DBG_TNC, "no client data to send, "
+								  "sending empty PB-TNC CDATA batch");
+					this->batch_type = PB_BATCH_CDATA;
+					break;
+				case PB_STATE_DECIDED:
+					/**
+					 * In the DECIDED state and if no CRETRY is under way,
+					 * a PB-TNC client replies with an empty CLOSE batch.
+					 */
+					this->batch_type = PB_BATCH_CLOSE;
+					break;
+				default:
+					break;
 			}
 		}
 	}
