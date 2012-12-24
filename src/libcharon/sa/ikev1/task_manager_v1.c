@@ -226,11 +226,6 @@ struct private_task_manager_t {
 	} frag;
 
 	/**
-	 * TRUE if fragmentation (as sender) is enabled in config
-	 */
-	bool fragmentation;
-
-	/**
 	 * List of queued tasks not yet in action
 	 */
 	linked_list_t *queued_tasks;
@@ -411,12 +406,14 @@ static bool send_fragment(private_task_manager_t *this, bool request,
 static bool send_packet(private_task_manager_t *this, bool request,
 						packet_t *packet)
 {
+	ike_cfg_t *ike_cfg;
 	host_t *src, *dst;
 	chunk_t data;
 
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	data = packet->get_data(packet);
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
-		this->fragmentation && data.len > MAX_FRAGMENT_SIZE)
+		ike_cfg->fragmentation(ike_cfg) && data.len > MAX_FRAGMENT_SIZE)
 	{
 		fragment_payload_t *fragment;
 		u_int8_t num, count;
@@ -2001,8 +1998,6 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 					"%s.retransmit_timeout", RETRANSMIT_TIMEOUT, charon->name),
 		.retransmit_base = lib->settings->get_double(lib->settings,
 					"%s.retransmit_base", RETRANSMIT_BASE, charon->name),
-		.fragmentation = lib->settings->get_bool(lib->settings,
-					"%s.ike_fragmentation", FALSE, charon->name),
 	);
 
 	if (!this->rng)

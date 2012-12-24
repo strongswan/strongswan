@@ -567,6 +567,9 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 		case KW_FORCEENCAPS:
 			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_FORCE_ENCAP)
 			break;
+		case KW_FRAGMENTATION:
+			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_FRAGMENTATION)
+			break;
 		case KW_MODECONFIG:
 			KW_SA_OPTION_FLAG("push", "pull", SA_OPTION_MODECFG_PUSH)
 			break;

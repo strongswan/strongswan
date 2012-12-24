@@ -134,9 +134,16 @@ struct ike_cfg_t {
 	/**
 	 * Enforce UDP encapsulation by faking NATD notifies?
 	 *
-	 * @return				TRUE to enfoce UDP encapsulation
+	 * @return				TRUE to enforce UDP encapsulation
 	 */
 	bool (*force_encap) (ike_cfg_t *this);
+
+	/**
+	 * Use proprietary IKEv1 fragmentation
+	 *
+	 * @return				TRUE to use fragmentation
+	 */
+	bool (*fragmentation) (ike_cfg_t *this);
 
 	/**
 	 * Get the DH group to use for IKE_SA setup.
@@ -183,10 +190,12 @@ struct ike_cfg_t {
  * @param other				address/DNS name of remote peer
  * @param other_allow_any	allow override of remote address by any address
  * @param other_port		IKE port to use as dest, 500 uses IKEv2 port floating
+ * @param fragmentation		use IKEv1 fragmentation
  * @return 					ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
-						  char *other, bool other_allow_any, u_int16_t other_port);
+						  char *other, bool other_allow_any, u_int16_t other_port,
+						  bool fragmentation);
 
 #endif /** IKE_CFG_H_ @}*/

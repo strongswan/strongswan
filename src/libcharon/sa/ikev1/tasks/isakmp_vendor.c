@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -156,14 +157,15 @@ METHOD(task_t, build, status_t,
 {
 	vendor_id_payload_t *vid_payload;
 	bool strongswan, cisco_unity, fragmentation;
+	ike_cfg_t *ike_cfg;
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
 								"%s.send_vendor_id", FALSE, charon->name);
 	cisco_unity = lib->settings->get_bool(lib->settings,
 								"%s.cisco_unity", FALSE, charon->name);
-	fragmentation = lib->settings->get_bool(lib->settings,
-								"%s.ike_fragmentation", FALSE, charon->name);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+	fragmentation = ike_cfg->fragmentation(ike_cfg);
 	if (!this->initiator && fragmentation)
 	{
 		fragmentation = this->ike_sa->supports_extension(this->ike_sa,
