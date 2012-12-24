@@ -165,7 +165,7 @@ METHOD(task_t, build, status_t,
 	cisco_unity = lib->settings->get_bool(lib->settings,
 								"%s.cisco_unity", FALSE, charon->name);
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
-	fragmentation = ike_cfg->fragmentation(ike_cfg);
+	fragmentation = ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO;
 	if (!this->initiator && fragmentation)
 	{
 		fragmentation = this->ike_sa->supports_extension(this->ike_sa,

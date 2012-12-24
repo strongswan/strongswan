@@ -50,7 +50,7 @@ typedef enum {
 typedef enum {
 		STRICT_NO,
 		STRICT_YES,
-		STRICT_IFURI
+		STRICT_IFURI,
 } strict_t;
 
 typedef enum {
@@ -70,6 +70,13 @@ typedef enum {
 } dpd_action_t;
 
 typedef enum {
+		/* same as in ike_cfg.h */
+		FRAGMENTATION_NO,
+		FRAGMENTATION_YES,
+		FRAGMENTATION_FORCE,
+} fragmentation_t;
+
+typedef enum {
 		/* IPsec options */
 		SA_OPTION_AUTHENTICATE	= 1 << 0, /* use AH instead of ESP? */
 		SA_OPTION_COMPRESS      = 1 << 1, /* use IPComp */
@@ -81,7 +88,6 @@ typedef enum {
 		SA_OPTION_XAUTH_SERVER  = 1 << 5, /* are we an XAUTH server? */
 		SA_OPTION_MOBIKE		= 1 << 6, /* enable MOBIKE for IKEv2  */
 		SA_OPTION_FORCE_ENCAP   = 1 << 7, /* force UDP encapsulation */
-		SA_OPTION_FRAGMENTATION = 1 << 8, /* enable IKEv1 fragmentation */
 } sa_option_t;
 
 typedef struct starter_end starter_end_t;
@@ -141,6 +147,7 @@ struct starter_conn {
 		char            *authby;
 		ipsec_mode_t    mode;
 		bool            proxy_mode;
+		fragmentation_t fragmentation;
 		sa_option_t     options;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -23,6 +24,7 @@
 #define IKE_CFG_H_
 
 typedef enum ike_version_t ike_version_t;
+typedef enum fragmentation_t fragmentation_t;
 typedef struct ike_cfg_t ike_cfg_t;
 
 #include <library.h>
@@ -42,6 +44,18 @@ enum ike_version_t {
 	IKEV1 = 1,
 	/** IKE version 2 */
 	IKEV2 = 2,
+};
+
+/**
+ * Proprietary IKEv1 fragmentation
+ */
+enum fragmentation_t {
+	/** disable fragmentation */
+	FRAGMENTATION_NO,
+	/** enable fragmentation if supported by peer */
+	FRAGMENTATION_YES,
+	/** force use of fragmentation (even for the first message) */
+	FRAGMENTATION_FORCE,
 };
 
 /**
@@ -143,7 +157,7 @@ struct ike_cfg_t {
 	 *
 	 * @return				TRUE to use fragmentation
 	 */
-	bool (*fragmentation) (ike_cfg_t *this);
+	fragmentation_t (*fragmentation) (ike_cfg_t *this);
 
 	/**
 	 * Get the DH group to use for IKE_SA setup.
@@ -196,6 +210,6 @@ struct ike_cfg_t {
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port,
-						  bool fragmentation);
+						  fragmentation_t fragmentation);
 
 #endif /** IKE_CFG_H_ @}*/

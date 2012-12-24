@@ -92,7 +92,7 @@ struct private_ike_cfg_t {
 	/**
 	 * use IKEv1 fragmentation
 	 */
-	bool fragmentation;
+	fragmentation_t fragmentation;
 
 	/**
 	 * List of proposals to use
@@ -118,7 +118,7 @@ METHOD(ike_cfg_t, force_encap_, bool,
 	return this->force_encap;
 }
 
-METHOD(ike_cfg_t, fragmentation, bool,
+METHOD(ike_cfg_t, fragmentation, fragmentation_t,
 	private_ike_cfg_t *this)
 {
 	return this->fragmentation;
@@ -312,7 +312,7 @@ METHOD(ike_cfg_t, destroy, void,
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port,
-						  bool fragmentation)
+						  fragmentation_t fragmentation)
 {
 	private_ike_cfg_t *this;
 

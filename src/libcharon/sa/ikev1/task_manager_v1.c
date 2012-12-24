@@ -406,14 +406,17 @@ static bool send_fragment(private_task_manager_t *this, bool request,
 static bool send_packet(private_task_manager_t *this, bool request,
 						packet_t *packet)
 {
+	fragmentation_t fragmentation;
 	ike_cfg_t *ike_cfg;
 	host_t *src, *dst;
 	chunk_t data;
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+	fragmentation = ike_cfg->fragmentation(ike_cfg);
 	data = packet->get_data(packet);
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
-		ike_cfg->fragmentation(ike_cfg) && data.len > MAX_FRAGMENT_SIZE)
+	if (data.len > MAX_FRAGMENT_SIZE && (fragmentation == FRAGMENTATION_FORCE ||
+	   (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
+		fragmentation == FRAGMENTATION_YES)))
 	{
 		fragment_payload_t *fragment;
 		u_int8_t num, count;
