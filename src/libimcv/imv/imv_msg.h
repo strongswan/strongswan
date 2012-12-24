@@ -85,12 +85,6 @@ struct imv_msg_t {
 	void (*add_attribute)(imv_msg_t *this, pa_tnc_attr_t *attr);
 
 	/**
-	 * Delete all PA-TNC attributes in the send queue
-	 *
-	 */
-	void (*delete_attributes)(imv_msg_t *this);
-
-	/**
 	 * Enumerator over PA-TNC attributes contained in the PA-TNC message
 	 *
 	 * @return					PA-TNC attribute enumerator

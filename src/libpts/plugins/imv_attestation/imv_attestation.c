@@ -285,9 +285,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 	if (fatal_error || result != TNC_RESULT_SUCCESS)
 	{
-		out_msg->delete_attributes(out_msg);
 		state->set_recommendation(state,
-								TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
+								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
@@ -315,7 +314,6 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
 								TNC_IMV_EVALUATION_RESULT_ERROR);
-		out_msg->delete_attributes(out_msg);
 		result = out_msg->send_assessment(out_msg);
 		out_msg->destroy(out_msg);
 		if (result != TNC_RESULT_SUCCESS)

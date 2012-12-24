@@ -195,6 +195,12 @@ METHOD(imv_msg_t, send_assessment, TNC_Result,
 	char *lang_code = NULL, *uri = NULL;
 	enumerator_t *e;
 
+	/* Remove any attributes that have already been constructed */
+	while (this->attr_list->remove_last(this->attr_list, (void**)&attr) == SUCCESS)
+	{
+		attr->destroy(attr);
+	}
+
 	/* Send an IETF Assessment Result attribute if enabled */
 	if (lib->settings->get_bool(lib->settings, "libimcv.assessment_result",
 								TRUE))
@@ -306,17 +312,6 @@ METHOD(imv_msg_t, receive, TNC_Result,
 	return TNC_RESULT_SUCCESS;
 }
 
-METHOD(imv_msg_t, delete_attributes, void,
-	private_imv_msg_t *this)
-{
-	pa_tnc_attr_t *attr;
-
-	while (this->attr_list->remove_last(this->attr_list, (void**)&attr) == SUCCESS)
-	{
-		attr->destroy(attr);
-	}
-}
-
 METHOD(imv_msg_t, create_attribute_enumerator, enumerator_t*,
 	private_imv_msg_t *this)
 {
@@ -361,7 +356,6 @@ imv_msg_t *imv_msg_create(imv_agent_t *agent, imv_state_t *state,
 			.send_assessment = _send_assessment,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
-			.delete_attributes = _delete_attributes,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.get_encoding = _get_encoding,
 			.destroy = _destroy,
