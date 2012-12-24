@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 Dmitry Korzhevin
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+
+    <!-- Application -->
+    <string name="app_name">strongSwan VPN клієнт</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="reload_trusted_certs">Перезавантажити CA сертифікати</string>
+    <string name="show_log">Журнал</string>
+    <string name="search">Пошук</string>
+    <string name="vpn_not_supported_title">VPN не підтримуеться</string>
+    <string name="vpn_not_supported">Ваш пристрій не підтримує VPN.\nЗв'яжіться з виробником.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN не пітримується при режимі lockdown.</string>
+    <string name="loading">Завантаження&#8230;</string>
+    <string name="profile_not_found">Профіль не знайдено</string>
+    <string name="strongswan_shortcut">strongSwan посилання</string>
+
+    <!-- Log view -->
+    <string name="log_title">Жернал</string>
+    <string name="send_log">Відправити файл журналу</string>
+    <string name="empty_log">Журнал порожній</string>
+    <string name="log_mail_subject">strongSwan %1$s журнал</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">Немає VPN профилів.</string>
+    <string name="add_profile">Додати VPN профіль</string>
+    <string name="edit_profile">Редагувати</string>
+    <string name="delete_profile">Видалити</string>
+    <string name="select_profiles">Обрати профіль</string>
+    <string name="profiles_deleted">Обрані профілі видалено</string>
+    <string name="no_profile_selected">Не обрані профілі</string>
+    <string name="one_profile_selected">Один профіль обрано</string>
+    <string name="x_profiles_selected">%1$d профілів обрано"</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">Зберегти</string>
+    <string name="profile_edit_cancel">Відміна</string>
+    <string name="profile_name_label">Назва профіля:</string>
+    <string name="profile_name_hint">(використовувати адресу шлюза)</string>
+    <string name="profile_gateway_label">Шлюз:</string>
+    <string name="profile_vpn_type_label">Тип:</string>
+    <string name="profile_username_label">Логін:</string>
+    <string name="profile_password_label">Пароль:</string>
+    <string name="profile_password_hint">(запитати якщо потрібно)</string>
+    <string name="profile_user_certificate_label">Сертифікат користувача:</string>
+    <string name="profile_user_select_certificate_label">Виберіть сертифікат користувача</string>
+    <string name="profile_user_select_certificate">Вибрати спеціальний сертифікат користувача</string>
+    <string name="profile_ca_label">Сертифікат CA:</string>
+    <string name="profile_ca_auto_label">Вибрати автоматично</string>
+    <string name="profile_ca_select_certificate_label">Вибрати сертифікат CA</string>
+    <string name="profile_ca_select_certificate">Вибрати спеціальний сертифікат CA</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">Введіть адресу шлюза тут</string>
+    <string name="alert_text_no_input_username">Введіть ім'я користувача тут</string>
+    <string name="alert_text_nocertfound_title">Не вибрано сертифікат CA</string>
+    <string name="alert_text_nocertfound">Будь ласка виберіть один <i>Вибрати автоматично</i></string>
+
+    <!-- Trusted certificate selection -->
+    <string name="trusted_certs_title">Сертифікати CA</string>
+    <string name="no_certificates">Немає сертифікатів</string>
+    <string name="system_tab">Система</string>
+    <string name="user_tab">Користувач</string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">Статус:</string>
+    <string name="profile_label">Профіль:</string>
+    <string name="disconnect">Роз'єднати</string>
+    <string name="state_connecting">З'єднати&#8230;</string>
+    <string name="state_connected">Підключений</string>
+    <string name="state_disconnecting">Відключений&#8230;</string>
+    <string name="state_disabled">Немає активних VPN</string>
+    <string name="state_error">Помилка</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">Введіть пароль для з'єднання</string>
+    <string name="login_confirm">З'єднати</string>
+    <string name="error_introduction">Помилка підлючення VPN:</string>
+    <string name="error_lookup_failed">Помилка пошуку адреси шлюза.</string>
+    <string name="error_unreachable">Немає зв'язку зі шлюзом.</string>
+    <string name="error_peer_auth_failed">Помилка перевірки данних автентифікації шлюза.</string>
+    <string name="error_auth_failed">Помілка автентифікації користувача.</string>
+    <string name="error_generic">Невідома помилка під час підключення.</string>
+    <string name="connecting_title">З'єдную: %1$s</string>
+    <string name="connecting_message">З'єднання VPN з \""%1$s\".</string>
+    <string name="vpn_connected">VPN підключено</string>
+    <string name="vpn_profile_connected">Цей VPN профіль зараз підключений!</string>
+    <string name="reconnect">Перепідключитися</string>
+    <string name="connect_profile_question">Підключити %1$s?</string>
+    <string name="replaces_active_connection">Ця дія замінить ваше поточне VPN з'єднання!</string>
+    <string name="connect">З'єднати</string>
+
+</resources>
+
