@@ -386,6 +386,9 @@ static void load_loggers(file_logger_t *logger)
 	char *section;
 
 	load_log_levels(logger, "stdout");
+	/* Re-add the logger to propagate configuration changes to the
+	 * logging system */
+	charon->bus->add_logger(charon->bus, &logger->logger);
 
 	enumerator = conftest->test->create_section_enumerator(conftest->test, "log");
 	while (enumerator->enumerate(enumerator, &section))
