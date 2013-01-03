@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#ifndef OPENSSL_NO_CMS
+
 #include "openssl_pkcs7.h"
 #include "openssl_util.h"
 
@@ -782,3 +784,5 @@ pkcs7_t *openssl_pkcs7_load(container_type_t type, va_list args)
 	}
 	return NULL;
 }
+
+#endif /* OPENSSL_NO_CMS */
