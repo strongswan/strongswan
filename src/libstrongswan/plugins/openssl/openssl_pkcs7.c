@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_CMS
 
 #include "openssl_pkcs7.h"
