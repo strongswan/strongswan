@@ -14,6 +14,7 @@
  */
 
 #include "rdrand_plugin.h"
+#include "rdrand_rng.h"
 
 #include <stdio.h>
 
@@ -90,6 +91,17 @@ METHOD(plugin_t, get_name, char*,
 	return "rdrand";
 }
 
+METHOD(plugin_t, get_features, int,
+	private_rdrand_plugin_t *this, plugin_feature_t *features[])
+{
+	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(RNG, rdrand_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_WEAK),
+	};
+	*features = f;
+	return countof(f);
+}
+
 METHOD(plugin_t, destroy, void,
 	private_rdrand_plugin_t *this)
 {
@@ -113,7 +125,10 @@ plugin_t *rdrand_plugin_create()
 		},
 	);
 
-	have_rdrand();
+	if (have_rdrand())
+	{
+		this->public.plugin.get_features = _get_features;
+	}
 
 	return &this->public.plugin;
 }
