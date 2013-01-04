@@ -378,6 +378,22 @@ static void load_log_levels(file_logger_t *logger, char *section)
 }
 
 /**
+ * Load logger options for a logger from section
+ */
+static void load_logger_options(file_logger_t *logger, char *section)
+{
+	bool ike_name;
+	char *time_format;
+
+	time_format = conftest->test->get_str(conftest->test,
+					"log.%s.time_format", NULL, section);
+	ike_name = conftest->test->get_bool(conftest->test,
+					"log.%s.ike_name", FALSE, section);
+
+	logger->set_options(logger, time_format, ike_name);
+}
+
+/**
  * Load logger configuration
  */
 static void load_loggers(file_logger_t *logger)
@@ -386,6 +402,7 @@ static void load_loggers(file_logger_t *logger)
 	char *section;
 
 	load_log_levels(logger, "stdout");
+	load_logger_options(logger, "stdout");
 	/* Re-add the logger to propagate configuration changes to the
 	 * logging system */
 	charon->bus->add_logger(charon->bus, &logger->logger);
@@ -396,7 +413,7 @@ static void load_loggers(file_logger_t *logger)
 		if (!streq(section, "stdout"))
 		{
 			logger = file_logger_create(section);
-			logger->set_options(logger, NULL, FALSE);
+			load_logger_options(logger, section);
 			logger->open(logger, FALSE, FALSE);
 			load_log_levels(logger, section);
 			charon->bus->add_logger(charon->bus, &logger->logger);
