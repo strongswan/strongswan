@@ -15,6 +15,8 @@
 
 #include "rdrand_rng.h"
 
+#include <unistd.h>
+
 typedef struct private_rdrand_rng_t private_rdrand_rng_t;
 
 /**
@@ -43,6 +45,11 @@ struct private_rdrand_rng_t {
  * (must be a power of two >= 8)
  */
 #define FORCE_RESEED 16
+
+/**
+ * How many times we mix reseeded RDRAND output when using RNG_TRUE
+ */
+#define MIX_ROUNDS 32
 
 /**
  * Get a two byte word using RDRAND
@@ -128,6 +135,29 @@ static bool rdrand8(u_int8_t *out)
 }
 
 /**
+ * Get a 16 byte word using RDRAND
+ */
+static bool rdrand128(void *out)
+{
+#ifdef __x86_64__
+	if (!rdrand64(out) ||
+		!rdrand64(out + sizeof(u_int64_t)))
+	{
+		return FALSE;
+	}
+#else /* __i386__ */
+	if (!rdrand32(out) ||
+		!rdrand32(out + 1 * sizeof(u_int32_t)) ||
+		!rdrand32(out + 2 * sizeof(u_int32_t)) ||
+		!rdrand32(out + 3 * sizeof(u_int32_t)))
+	{
+		return FALSE;
+	}
+#endif /* __x86_64__ / __i386__ */
+	return TRUE;
+}
+
+/**
  * Enforce a DRNG reseed by reading 511 128-bit samples
  */
 static bool reseed()
@@ -158,13 +188,11 @@ static bool reseed()
 	return TRUE;
 }
 
-METHOD(rng_t, get_bytes, bool,
-	private_rdrand_rng_t *this, size_t bytes, u_int8_t *buffer)
+/**
+ * Fill a preallocated chunk of data with random bytes
+ */
+static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 {
-	chunk_t chunk;
-
-	chunk = chunk_create(buffer, bytes);
-
 	if (this->quality == RNG_STRONG)
 	{
 		if (!reseed())
@@ -293,6 +321,77 @@ METHOD(rng_t, get_bytes, bool,
 	return TRUE;
 }
 
+/**
+ * Stronger variant mixing reseeded results of rdrand output
+ *
+ * This is based on the Intel DRNG "Software Implementation Guide", using
+ * AES-CBC to mix several reseeded RDRAND outputs.
+ */
+static bool rdrand_mixed(private_rdrand_rng_t *this, chunk_t chunk)
+{
+	u_char block[16], forward[16], key[16], iv[16];
+	crypter_t *crypter;
+	int i, len;
+
+	memset(iv, 0, sizeof(iv));
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
+	if (!crypter)
+	{
+		return FALSE;
+	}
+	for (i = 0; i < sizeof(key); i++)
+	{
+		key[i] = i;
+	}
+	if (!crypter->set_key(crypter, chunk_from_thing(key)))
+	{
+		crypter->destroy(crypter);
+		return FALSE;
+	}
+	while (chunk.len > 0)
+	{
+		memset(forward, 0, sizeof(forward));
+		for (i = 0; i < MIX_ROUNDS; i++)
+		{
+			/* sleep to reseed PRNG */
+			usleep(10);
+			if (!rdrand128(block))
+			{
+				crypter->destroy(crypter);
+				return FALSE;
+			}
+			memxor(forward, block, sizeof(block));
+			if (!crypter->encrypt(crypter, chunk_from_thing(forward),
+								  chunk_from_thing(iv), NULL))
+			{
+				crypter->destroy(crypter);
+				return FALSE;
+			}
+		}
+		len = min(chunk.len, sizeof(forward));
+		memcpy(chunk.ptr, forward, len);
+		chunk = chunk_skip(chunk, len);
+	}
+	crypter->destroy(crypter);
+
+	return TRUE;
+}
+
+METHOD(rng_t, get_bytes, bool,
+	private_rdrand_rng_t *this, size_t bytes, u_int8_t *buffer)
+{
+	switch (this->quality)
+	{
+		case RNG_WEAK:
+		case RNG_STRONG:
+			return rdrand_chunk(this, chunk_create(buffer, bytes));
+		case RNG_TRUE:
+			return rdrand_mixed(this, chunk_create(buffer, bytes));
+		default:
+			return FALSE;
+	}
+}
+
 METHOD(rng_t, allocate_bytes, bool,
 	private_rdrand_rng_t *this, size_t bytes, chunk_t *chunk)
 {
@@ -322,10 +421,9 @@ rdrand_rng_t *rdrand_rng_create(rng_quality_t quality)
 	{
 		case RNG_WEAK:
 		case RNG_STRONG:
-			break;
 		case RNG_TRUE:
+			break;
 		default:
-			/* not yet */
 			return NULL;
 	}
 

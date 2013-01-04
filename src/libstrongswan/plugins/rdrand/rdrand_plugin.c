@@ -98,6 +98,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(RNG, rdrand_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+				PLUGIN_DEPENDS(CRYPTER, ENCR_AES_CBC, 16),
 	};
 	*features = f;
 	return countof(f);
