@@ -204,6 +204,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_RDRAND
+  SUBDIRS += plugins/rdrand
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/rdrand/libstrongswan-rdrand.la
+endif
+endif
+
 if USE_RANDOM
   SUBDIRS += plugins/random
 if MONOLITHIC

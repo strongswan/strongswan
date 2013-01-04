@@ -112,6 +112,7 @@ ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
 ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
 ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
 ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
@@ -890,6 +891,7 @@ ADD_PLUGIN([sha1],                 [s charon openac scepclient pki scripts medsr
 ADD_PLUGIN([sha2],                 [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([md4],                  [s charon openac manager scepclient pki nm])
 ADD_PLUGIN([md5],                  [s charon openac scepclient pki scripts attest nm])
+ADD_PLUGIN([rdrand],               [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([random],               [s charon openac scepclient pki scripts medsrv attest nm])
 ADD_PLUGIN([nonce],                [s charon nm])
 ADD_PLUGIN([x509],                 [s charon openac scepclient pki scripts attest nm])
@@ -1015,6 +1017,7 @@ AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
 AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
 AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
+AM_CONDITIONAL(USE_RDRAND, test x$rdrand = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_NONCE, test x$nonce = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
@@ -1198,6 +1201,7 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sha2/Makefile
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
+	src/libstrongswan/plugins/rdrand/Makefile
 	src/libstrongswan/plugins/random/Makefile
 	src/libstrongswan/plugins/nonce/Makefile
 	src/libstrongswan/plugins/hmac/Makefile
