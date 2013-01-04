@@ -39,6 +39,12 @@ struct private_rdrand_rng_t {
 #define MAX_TRIES 16
 
 /**
+ * After how many bytes should we reseed for RNG_STRONG
+ * (must be a power of two >= 8)
+ */
+#define FORCE_RESEED 16
+
+/**
  * Get a two byte word using RDRAND
  */
 static bool rdrand16(u_int16_t *out)
@@ -121,12 +127,51 @@ static bool rdrand8(u_int8_t *out)
 	return TRUE;
 }
 
+/**
+ * Enforce a DRNG reseed by reading 511 128-bit samples
+ */
+static bool reseed()
+{
+	int i;
+
+#ifdef __x86_64__
+	u_int64_t tmp;
+
+	for (i = 0; i < 511 * 16 / sizeof(u_int64_t); i++)
+	{
+		if (!rdrand64(&tmp))
+		{
+			return FALSE;
+		}
+	}
+#else /* __i386__ */
+	u_int32_t tmp;
+
+	for (i = 0; i < 511 * 16 / sizeof(u_int32_t); i++)
+	{
+		if (!rdrand32(&tmp))
+		{
+			return FALSE;
+		}
+	}
+#endif /* __x86_64__ / __i386__ */
+	return TRUE;
+}
+
 METHOD(rng_t, get_bytes, bool,
 	private_rdrand_rng_t *this, size_t bytes, u_int8_t *buffer)
 {
 	chunk_t chunk;
 
 	chunk = chunk_create(buffer, bytes);
+
+	if (this->quality == RNG_STRONG)
+	{
+		if (!reseed())
+		{
+			return FALSE;
+		}
+	}
 
 	/* align to 2 byte */
 	if (chunk.len >= sizeof(u_int8_t))
@@ -172,6 +217,13 @@ METHOD(rng_t, get_bytes, bool,
 	/* fill with 8 byte words */
 	while (chunk.len >= sizeof(u_int64_t))
 	{
+		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED)
+		{
+			if (!reseed())
+			{
+				return FALSE;
+			}
+		}
 		if (!rdrand64((u_int64_t*)chunk.ptr))
 		{
 			return FALSE;
@@ -194,6 +246,13 @@ METHOD(rng_t, get_bytes, bool,
 	/* fill with 4 byte words */
 	while (chunk.len >= sizeof(u_int32_t))
 	{
+		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED)
+		{
+			if (!reseed())
+			{
+				return FALSE;
+			}
+		}
 		if (!rdrand32((u_int32_t*)chunk.ptr))
 		{
 			return FALSE;
@@ -202,6 +261,14 @@ METHOD(rng_t, get_bytes, bool,
 	}
 
 #endif /* __x86_64__ / __i386__ */
+
+	if (this->quality == RNG_STRONG)
+	{
+		if (!reseed())
+		{
+			return FALSE;
+		}
+	}
 
 	/* append 2 byte word */
 	if (chunk.len >= sizeof(u_int16_t))
@@ -254,8 +321,8 @@ rdrand_rng_t *rdrand_rng_create(rng_quality_t quality)
 	switch (quality)
 	{
 		case RNG_WEAK:
-			break;
 		case RNG_STRONG:
+			break;
 		case RNG_TRUE:
 		default:
 			/* not yet */

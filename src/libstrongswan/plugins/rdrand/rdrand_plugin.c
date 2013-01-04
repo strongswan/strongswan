@@ -97,6 +97,7 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_REGISTER(RNG, rdrand_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 	};
 	*features = f;
 	return countof(f);
