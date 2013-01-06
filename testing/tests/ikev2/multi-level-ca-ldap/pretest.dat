@@ -1,5 +1,5 @@
 winnetou::/etc/init.d/slapd start
-moon::/etc/init.d/iptables start 2> /dev/null
+moon::iptables-restore < /etc/iptables.rules
 carol::ipsec start
 dave::ipsec start
 moon::ipsec start

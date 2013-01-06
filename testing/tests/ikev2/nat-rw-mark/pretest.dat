@@ -1,6 +1,6 @@
-sun::/etc/init.d/iptables start 2> /dev/null
-alice::/etc/init.d/iptables start 2> /dev/null
-venus::/etc/init.d/iptables start 2> /dev/null
+sun::iptables-restore < /etc/iptables.rules
+alice::iptables-restore < /etc/iptables.rules
+venus::iptables-restore < /etc/iptables.rules
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to PH_IP_MOON
 moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_ALICE -p udp --sport 500  -j SNAT --to PH_IP_MOON:510
 moon::iptables -t nat -A POSTROUTING -o eth0 -s PH_IP_VENUS -p udp --sport 500  -j SNAT --to PH_IP_MOON:520

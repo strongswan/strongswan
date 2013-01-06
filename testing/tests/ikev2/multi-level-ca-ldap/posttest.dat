@@ -3,5 +3,5 @@ carol::ipsec stop
 dave::ipsec stop
 moon::rm /etc/ipsec.d/cacerts/*
 winnetou::/etc/init.d/slapd stop
-moon::/etc/init.d/iptables stop 2> /dev/null
+moon::iptables-restore < /etc/iptables.flush
 
