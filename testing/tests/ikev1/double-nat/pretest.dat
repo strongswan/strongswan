@@ -1,5 +1,5 @@
-alice::/etc/init.d/iptables start 2> /dev/null
-bob::/etc/init.d/iptables start 2> /dev/null
+alice::iptables-restore < /etc/iptables.rules
+bob::iptables-restore < /etc/iptables.rules
 moon::echo 1 > /proc/sys/net/ipv4/ip_forward
 sun::echo 1 > /proc/sys/net/ipv4/ip_forward
 moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p udp -j SNAT --to-source PH_IP_MOON:1024-1100

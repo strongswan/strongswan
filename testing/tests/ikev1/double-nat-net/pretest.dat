@@ -1,5 +1,5 @@
-alice::/etc/init.d/iptables start 2> /dev/null
-bob::/etc/init.d/iptables start 2> /dev/null
+alice::iptables-restore < /etc/iptables.rules
+bob::iptables-restore < /etc/iptables.rules
 bob::echo 1 > /proc/sys/net/ipv4/ip_forward
 moon::echo 1 > /proc/sys/net/ipv4/ip_forward
 sun::echo 1 > /proc/sys/net/ipv4/ip_forward
