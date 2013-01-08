@@ -447,24 +447,41 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	identity = identification_create_from_string(id);
 	if (cert)
 	{
-		certificate = this->cred->load_peer(this->cred, cert);
-		if (certificate)
+		enumerator_t *enumerator;
+		bool has_subject = FALSE;
+		certificate_t *first = NULL;
+
+		enumerator = enumerator_create_token(cert, ",", " ");
+		while (enumerator->enumerate(enumerator, &cert))
 		{
-			if (local)
+			certificate = this->cred->load_peer(this->cred, cert);
+			if (certificate)
 			{
-				this->ca->check_for_hash_and_url(this->ca, certificate);
+				if (local)
+				{
+					this->ca->check_for_hash_and_url(this->ca, certificate);
+				}
+				cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
+				if (!first)
+				{
+					first = certificate;
+				}
+				if (identity->get_type(identity) != ID_ANY &&
+					certificate->has_subject(certificate, identity))
+				{
+					has_subject = TRUE;
+				}
 			}
-			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
-			if (identity->get_type(identity) == ID_ANY ||
-				!certificate->has_subject(certificate, identity))
-			{
-				DBG1(DBG_CFG, "  id '%Y' not confirmed by certificate, "
-					 "defaulting to '%Y'", identity,
-					 certificate->get_subject(certificate));
-				identity->destroy(identity);
-				identity = certificate->get_subject(certificate);
-				identity = identity->clone(identity);
-			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (first && !has_subject)
+		{
+			DBG1(DBG_CFG, "  id '%Y' not confirmed by certificate, "
+				 "defaulting to '%Y'", identity, first->get_subject(first));
+			identity->destroy(identity);
+			identity = first->get_subject(first);
+			identity = identity->clone(identity);
 		}
 	}
 	if (identity->get_type(identity) != ID_ANY)
