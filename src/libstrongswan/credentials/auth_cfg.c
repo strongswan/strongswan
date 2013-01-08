@@ -76,7 +76,6 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_XAUTH_IDENTITY:
 		case AUTH_RULE_XAUTH_BACKEND:
-		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_RULE_MAX:
@@ -84,6 +83,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_OCSP_VALIDATION:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_GROUP:
+		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_CERT_POLICY:
@@ -503,8 +503,9 @@ METHOD(auth_cfg_t, complies, bool,
 	private_auth_cfg_t *this, auth_cfg_t *constraints, bool log_error)
 {
 	enumerator_t *e1, *e2;
-	bool success = TRUE, group_match = FALSE;
+	bool success = TRUE, group_match = FALSE, cert_match = FALSE;
 	identification_t *require_group = NULL;
+	certificate_t *require_cert = NULL;
 	signature_scheme_t scheme = SIGN_UNKNOWN;
 	u_int strength = 0;
 	auth_rule_t t1, t2;
@@ -542,20 +543,21 @@ METHOD(auth_cfg_t, complies, bool,
 			}
 			case AUTH_RULE_SUBJECT_CERT:
 			{
-				certificate_t *c1, *c2;
+				certificate_t *cert;
 
-				c1 = (certificate_t*)value;
-				c2 = get(this, AUTH_RULE_SUBJECT_CERT);
-				if (!c2 || !c1->equals(c1, c2))
+				/* for certs, a match of a single cert is sufficient */
+				require_cert = (certificate_t*)value;
+
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &cert))
 				{
-					success = FALSE;
-					if (log_error)
+					if (t2 == AUTH_RULE_SUBJECT_CERT &&
+						cert->equals(cert, require_cert))
 					{
-						DBG1(DBG_CFG, "constraint check failed: peer not "
-							 "authenticated with peer cert '%Y'.",
-							 c1->get_subject(c1));
+						cert_match = TRUE;
 					}
 				}
+				e2->destroy(e2);
 				break;
 			}
 			case AUTH_RULE_CRL_VALIDATION:
@@ -825,6 +827,17 @@ METHOD(auth_cfg_t, complies, bool,
 		{
 			DBG1(DBG_CFG, "constraint check failed: group membership to "
 				 "'%Y' required", require_group);
+		}
+		return FALSE;
+	}
+
+	if (require_cert && !cert_match)
+	{
+		if (log_error)
+		{
+			DBG1(DBG_CFG, "constraint check failed: peer not "
+				 "authenticated with peer cert '%Y'.",
+				 require_cert->get_subject(require_cert));
 		}
 		return FALSE;
 	}
