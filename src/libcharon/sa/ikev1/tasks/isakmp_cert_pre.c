@@ -132,7 +132,7 @@ static void process_certreqs(private_isakmp_cert_pre_t *this, message_t *message
 }
 
 /**
- * Import receuved certificates
+ * Import received certificates
  */
 static void process_certs(private_isakmp_cert_pre_t *this, message_t *message)
 {

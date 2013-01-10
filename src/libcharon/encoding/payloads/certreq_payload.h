@@ -56,7 +56,7 @@ struct certreq_payload_t {
 	/**
 	 * Add a certificates keyid to the payload (IKEv2 only).
 	 *
-	 * @param keyid		keyid of the trusted certifcate
+	 * @param keyid		keyid of the trusted certificate
 	 * @return
 	 */
 	void (*add_keyid)(certreq_payload_t *this, chunk_t keyid);

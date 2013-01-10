@@ -442,7 +442,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 
 	cfg = auth_cfg_create();
 
-	/* add identity and peer certifcate */
+	/* add identity and peer certificate */
 	identity = identification_create_from_string(id);
 	if (cert)
 	{
