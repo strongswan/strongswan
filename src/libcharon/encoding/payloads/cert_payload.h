@@ -28,6 +28,7 @@ typedef enum cert_encoding_t cert_encoding_t;
 
 #include <library.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/containers/container.h>
 #include <encoding/payloads/payload.h>
 
 /**
@@ -70,6 +71,13 @@ struct cert_payload_t {
 	 * @return				certificate copy
 	 */
 	certificate_t *(*get_cert)(cert_payload_t *this);
+
+	/**
+	 * Get the payloads certificate container.
+	 *
+	 * @return				container copy
+	 */
+	container_t *(*get_container)(cert_payload_t *this);
 
 	/**
 	 * Get the encoding of the certificate.

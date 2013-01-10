@@ -234,6 +234,23 @@ METHOD(cert_payload_t, get_cert, certificate_t*,
 							  BUILD_BLOB_ASN1_DER, this->data, BUILD_END);
 }
 
+METHOD(cert_payload_t, get_container, container_t*,
+	private_cert_payload_t *this)
+{
+	int type;
+
+	switch (this->encoding)
+	{
+		case ENC_PKCS7_WRAPPED_X509:
+			type = CONTAINER_PKCS7;
+			break;
+		default:
+			return NULL;
+	}
+	return lib->creds->create(lib->creds, CRED_CONTAINER, type,
+							  BUILD_BLOB_ASN1_DER, this->data, BUILD_END);
+}
+
 METHOD(cert_payload_t, get_hash, chunk_t,
 	private_cert_payload_t *this)
 {
@@ -289,6 +306,7 @@ cert_payload_t *cert_payload_create(payload_type_t type)
 				.destroy = _destroy,
 			},
 			.get_cert = _get_cert,
+			.get_container = _get_container,
 			.get_cert_encoding = _get_cert_encoding,
 			.get_hash = _get_hash,
 			.get_url = _get_url,
