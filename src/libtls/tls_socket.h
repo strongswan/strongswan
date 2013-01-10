@@ -35,24 +35,27 @@ typedef struct tls_socket_t tls_socket_t;
 struct tls_socket_t {
 
 	/**
-	 * Read data from secured socket, return allocated chunk.
+	 * Read data from secured socket.
 	 *
 	 * This call is blocking, you may use select() on the underlying socket to
-	 * wait for data. If the there was non-application data available, the
-	 * read function can return an empty chunk.
+	 * wait for data. If "block" is FALSE and no application data is available,
+	 * the function returns -1 and sets errno to EWOULDBLOCK.
 	 *
-	 * @param data		pointer to allocate received data
-	 * @return			TRUE if data received successfully
+	 * @param buf		buffer to write received data to
+	 * @param len		size of buffer
+	 * @param block		TRUE to block this call, FALSE to fail if it would block
+	 * @return			number of bytes read, 0 on EOF, -1 on error
 	 */
-	bool (*read)(tls_socket_t *this, chunk_t *data);
+	ssize_t (*read)(tls_socket_t *this, void *buf, size_t len, bool block);
 
 	/**
-	 * Write a chunk of data over the secured socket.
+	 * Write data over the secured socket.
 	 *
-	 * @param data		data to send
-	 * @return			TRUE if data sent successfully
+	 * @param buf		data to send
+	 * @param len		number of bytes to write from buf
+	 * @return			number of bytes written, -1 on error
 	 */
-	bool (*write)(tls_socket_t *this, chunk_t data);
+	ssize_t (*write)(tls_socket_t *this, void *buf, size_t len);
 
 	/**
 	 * Read/write plain data from file descriptor.
