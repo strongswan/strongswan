@@ -39,6 +39,9 @@ strongswan-5.0.2
   supports NAT traversal as used by Windows clients. Patches courtesy of
   Volker Rümelin.
 
+- The new rdrand plugin provides a high quality / high performance random
+  source using the Intel rdrand instruction found on Ivy Bridge processors.
+
 strongswan-5.0.1
 ----------------
 
