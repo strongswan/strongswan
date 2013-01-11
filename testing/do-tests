@@ -136,20 +136,20 @@ ENVIRONMENT_HEADER=$(cat <<@EOF
 cat > $INDEX <<@EOF
 <html>
 <head>
-  <title>strongSwan UML Tests</title>
+  <title>strongSwan KVM Tests</title>
 </head>
 <body>
-  <h2>strongSwan UML Tests</h2>
+  <h2>strongSwan KVM Tests</h2>
   $ENVIRONMENT_HEADER
 @EOF
 
 cat > $TESTRESULTSHTML <<@EOF
 <html>
 <head>
-  <title>strongSwan UML Tests - All Tests</title>
+  <title>strongSwan KVM Tests - All Tests</title>
 </head>
 <body>
-  <div><a href="index.html">strongSwan UML Tests</a> / All Tests</div>
+  <div><a href="index.html">strongSwan KVM Tests</a> / All Tests</div>
   <h2>All Tests</h2>
   $ENVIRONMENT_HEADER
     <tr align="left">
@@ -210,11 +210,11 @@ do
   <title>strongSwan $SUBDIR Tests</title>
 </head>
 <body>
-  <div><a href="../index.html">strongSwan UML Tests</a> / $SUBDIR</div>
+  <div><a href="../index.html">strongSwan KVM Tests</a> / $SUBDIR</div>
   <h2>strongSwan $SUBDIR Tests</h2>
   <table border="0" cellspacing="2" cellpadding="2">
     <tr valign="top">
-      <td><b>UML kernel</b></td>
+      <td><b>Guest kernel</b></td>
       <td colspan="3">$KERNELVERSION</td>
     </tr>
     <tr valign="top">
@@ -461,7 +461,7 @@ do
 <body>
 <table border="0" cellpadding="0" cellspacing="0" width="600">
   <tr><td>
-    <div><a href="../../index.html">strongSwan UML Tests</a> / <a href="../index.html">$SUBDIR</a> / $name</div>
+    <div><a href="../../index.html">strongSwan KVM Tests</a> / <a href="../index.html">$SUBDIR</a> / $name</div>
     <h2>Test $testname</h2>
     <h3>Description</h3>
 @EOF
