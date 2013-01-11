@@ -57,6 +57,72 @@ struct private_ike_cert_pre_t {
 };
 
 /**
+ * Process a single certificate request payload
+ */
+static void process_certreq(private_ike_cert_pre_t *this,
+							certreq_payload_t *certreq, auth_cfg_t *auth)
+{
+	enumerator_t *enumerator;
+	u_int unknown = 0;
+	chunk_t keyid;
+
+	this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
+
+	if (certreq->get_cert_type(certreq) != CERT_X509)
+	{
+		DBG1(DBG_IKE, "cert payload %N not supported - ignored",
+			 certificate_type_names, certreq->get_cert_type(certreq));
+		return;
+	}
+
+	enumerator = certreq->create_keyid_enumerator(certreq);
+	while (enumerator->enumerate(enumerator, &keyid))
+	{
+		identification_t *id;
+		certificate_t *cert;
+
+		id = identification_create_from_encoding(ID_KEY_ID, keyid);
+		cert = lib->credmgr->get_cert(lib->credmgr,
+									  CERT_X509, KEY_ANY, id, TRUE);
+		if (cert)
+		{
+			DBG1(DBG_IKE, "received cert request for \"%Y\"",
+				 cert->get_subject(cert));
+			auth->add(auth, AUTH_RULE_CA_CERT, cert);
+		}
+		else
+		{
+			DBG2(DBG_IKE, "received cert request for unknown ca with keyid %Y",
+				 id);
+			unknown++;
+		}
+		id->destroy(id);
+	}
+	enumerator->destroy(enumerator);
+	if (unknown)
+	{
+		DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
+			 unknown);
+	}
+}
+
+/**
+ * Process a single notify payload
+ */
+static void process_notify(private_ike_cert_pre_t *this,
+						   notify_payload_t *notify)
+{
+	switch (notify->get_notify_type(notify))
+	{
+		case HTTP_CERT_LOOKUP_SUPPORTED:
+			this->ike_sa->enable_extension(this->ike_sa, EXT_HASH_AND_URL);
+			break;
+		default:
+			break;
+	}
+}
+
+/**
  * read certificate requests
  */
 static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
@@ -73,62 +139,11 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 		switch (payload->get_type(payload))
 		{
 			case CERTIFICATE_REQUEST:
-			{
-				certreq_payload_t *certreq = (certreq_payload_t*)payload;
-				enumerator_t *enumerator;
-				u_int unknown = 0;
-				chunk_t keyid;
-
-				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
-
-				if (certreq->get_cert_type(certreq) != CERT_X509)
-				{
-					DBG1(DBG_IKE, "cert payload %N not supported - ignored",
-						 certificate_type_names, certreq->get_cert_type(certreq));
-					break;
-				}
-				enumerator = certreq->create_keyid_enumerator(certreq);
-				while (enumerator->enumerate(enumerator, &keyid))
-				{
-					identification_t *id;
-					certificate_t *cert;
-
-					id = identification_create_from_encoding(ID_KEY_ID, keyid);
-					cert = lib->credmgr->get_cert(lib->credmgr,
-												  CERT_X509, KEY_ANY, id, TRUE);
-					if (cert)
-					{
-						DBG1(DBG_IKE, "received cert request for \"%Y\"",
-							 cert->get_subject(cert));
-						auth->add(auth, AUTH_RULE_CA_CERT, cert);
-					}
-					else
-					{
-						DBG2(DBG_IKE, "received cert request for unknown ca "
-									  "with keyid %Y", id);
-						unknown++;
-					}
-					id->destroy(id);
-				}
-				enumerator->destroy(enumerator);
-				if (unknown)
-				{
-					DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
-						 unknown);
-				}
+				process_certreq(this, (certreq_payload_t*)payload, auth);
 				break;
-			}
 			case NOTIFY:
-			{
-				notify_payload_t *notify = (notify_payload_t*)payload;
-
-				/* we only handle one type of notify here */
-				if (notify->get_notify_type(notify) == HTTP_CERT_LOOKUP_SUPPORTED)
-				{
-					this->ike_sa->enable_extension(this->ike_sa, EXT_HASH_AND_URL);
-				}
+				process_notify(this, (notify_payload_t*)payload);
 				break;
-			}
 			default:
 				/* ignore other payloads here, these are handled elsewhere */
 				break;
@@ -177,7 +192,75 @@ static certificate_t *try_get_cert(cert_payload_t *cert_payload)
 }
 
 /**
- * import certificates
+ * Process a X509 certificate payload
+ */
+static void process_x509(cert_payload_t *payload, auth_cfg_t *auth,
+						 cert_encoding_t encoding, bool *first)
+{
+	certificate_t *cert;
+	char *url;
+
+	cert = try_get_cert(payload);
+	if (cert)
+	{
+		if (*first)
+		{	/* the first is an end entity certificate */
+			DBG1(DBG_IKE, "received end entity cert \"%Y\"",
+				 cert->get_subject(cert));
+			auth->add(auth, AUTH_HELPER_SUBJECT_CERT, cert);
+			*first = FALSE;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "received issuer cert \"%Y\"",
+				 cert->get_subject(cert));
+			auth->add(auth, AUTH_HELPER_IM_CERT, cert);
+		}
+	}
+	else if (encoding == ENC_X509_HASH_AND_URL)
+	{
+		/* we fetch the certificate not yet, but only if
+		 * it is really needed during authentication */
+		url = payload->get_url(payload);
+		if (!url)
+		{
+			DBG1(DBG_IKE, "received invalid hash-and-url "
+				 "encoded cert, ignore");
+			return;
+		}
+		url = strdup(url);
+		if (first)
+		{	/* first URL is for an end entity certificate */
+			DBG1(DBG_IKE, "received hash-and-url for end entity cert \"%s\"",
+				 url);
+			auth->add(auth, AUTH_HELPER_SUBJECT_HASH_URL, url);
+			first = FALSE;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "received hash-and-url for issuer cert \"%s\"", url);
+			auth->add(auth, AUTH_HELPER_IM_HASH_URL, url);
+		}
+	}
+}
+
+/**
+ * Process a CRL certificate payload
+ */
+static void process_crl(cert_payload_t *payload, auth_cfg_t *auth)
+{
+	certificate_t *cert;
+
+	cert = payload->get_cert(payload);
+	if (cert)
+	{
+		DBG1(DBG_IKE, "received CRL \"%Y\"", cert->get_subject(cert));
+		auth->add(auth, AUTH_HELPER_REVOCATION_CERT, cert);
+	}
+}
+
+/**
+ * Process certificate payloads
  */
 static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 {
@@ -195,8 +278,6 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 		{
 			cert_payload_t *cert_payload;
 			cert_encoding_t encoding;
-			certificate_t *cert;
-			char *url;
 
 			cert_payload = (cert_payload_t*)payload;
 			encoding = cert_payload->get_cert_encoding(cert_payload);
@@ -204,70 +285,18 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 			switch (encoding)
 			{
 				case ENC_X509_HASH_AND_URL:
-				{
 					if (!this->do_http_lookup)
 					{
-						DBG1(DBG_IKE, "received hash-and-url encoded cert, but"
-								" we don't accept them, ignore");
+						DBG1(DBG_IKE, "received hash-and-url encoded cert, but "
+							 "we don't accept them, ignore");
 						break;
 					}
 					/* FALL */
-				}
 				case ENC_X509_SIGNATURE:
-				{
-					cert = try_get_cert(cert_payload);
-					if (cert)
-					{
-						if (first)
-						{	/* the first is an end entity certificate */
-							DBG1(DBG_IKE, "received end entity cert \"%Y\"",
-								 cert->get_subject(cert));
-							auth->add(auth, AUTH_HELPER_SUBJECT_CERT, cert);
-							first = FALSE;
-						}
-						else
-						{
-							DBG1(DBG_IKE, "received issuer cert \"%Y\"",
-								 cert->get_subject(cert));
-							auth->add(auth, AUTH_HELPER_IM_CERT, cert);
-						}
-					}
-					else if (encoding == ENC_X509_HASH_AND_URL)
-					{
-						/* we fetch the certificate not yet, but only if
-						 * it is really needed during authentication */
-						url = cert_payload->get_url(cert_payload);
-						if (!url)
-						{
-							DBG1(DBG_IKE, "received invalid hash-and-url "
-								 "encoded cert, ignore");
-							break;
-						}
-						url = strdup(url);
-						if (first)
-						{	/* first URL is for an end entity certificate */
-							DBG1(DBG_IKE, "received hash-and-url for end"
-								 " entity cert \"%s\"", url);
-							auth->add(auth, AUTH_HELPER_SUBJECT_HASH_URL, url);
-							first = FALSE;
-						}
-						else
-						{
-							DBG1(DBG_IKE, "received hash-and-url for issuer"
-									" cert \"%s\"", url);
-							auth->add(auth, AUTH_HELPER_IM_HASH_URL, url);
-						}
-					}
+					process_x509(cert_payload, auth, encoding, &first);
 					break;
-				}
 				case ENC_CRL:
-					cert = cert_payload->get_cert(cert_payload);
-					if (cert)
-					{
-						DBG1(DBG_IKE, "received CRL \"%Y\"",
-							 cert->get_subject(cert));
-						auth->add(auth, AUTH_HELPER_REVOCATION_CERT, cert);
-					}
+					process_crl(cert_payload, auth);
 					break;
 				case ENC_PKCS7_WRAPPED_X509:
 				case ENC_PGP:
