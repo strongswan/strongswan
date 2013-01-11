@@ -4,8 +4,8 @@ moon::cat /etc/ipsec.d/tables.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
 sun::cat /etc/ipsec.d/tables.sql /etc/ipsec.d/data.sql > /etc/ipsec.d/ipsec.sql
 moon::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
 sun::cat /etc/ipsec.d/ipsec.sql | sqlite3 /etc/ipsec.d/ipsec.db
-moon::/etc/init.d/iptables start 2> /dev/null
-sun::/etc/init.d/iptables start 2> /dev/null
+moon::iptables-restore < /etc/iptables.rules
+sun::iptables-restore < /etc/iptables.rules
 sun::ipsec start
 moon::ipsec start
 moon::sleep 1
