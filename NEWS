@@ -35,6 +35,10 @@ strongswan-5.0.2
   In contrast to our own DER parser, OpenSSL can handle BER files, which is
   required for interoperability of our scepclient with EJBCA.
 
+- IKEv1 in charon can now parse certificates received in PKCS#7 containers and
+  supports NAT traversal as used by Windows clients. Patches courtesy of
+  Volker Rümelin.
+
 strongswan-5.0.1
 ----------------
 
