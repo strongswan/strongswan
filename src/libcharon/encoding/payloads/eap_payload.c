@@ -410,14 +410,15 @@ eap_payload_t *eap_payload_create_nak(u_int8_t identifier, eap_type_t type,
 	eap_type_t reg_type;
 	u_int32_t reg_vendor;
 	bio_writer_t *writer;
-	chunk_t length, data;
+	chunk_t data;
 	bool added_any = FALSE, found_vendor = FALSE;
 	eap_payload_t *payload;
 
 	writer = bio_writer_create(12);
 	writer->write_uint8(writer, EAP_RESPONSE);
 	writer->write_uint8(writer, identifier);
-	length = writer->skip(writer, 2);
+	/* write zero length, we update it once we know the length */
+	writer->write_uint16(writer, 0);
 
 	write_type(writer, EAP_NAK, 0, expanded);
 
@@ -453,10 +454,9 @@ eap_payload_t *eap_payload_create_nak(u_int8_t identifier, eap_type_t type,
 
 	/* set length */
 	data = writer->get_buf(writer);
-	htoun16(length.ptr, data.len);
+	htoun16(data.ptr + offsetof(eap_packet_t, length), data.len);
 
 	payload = eap_payload_create_data(data);
 	writer->destroy(writer);
 	return payload;
 }
-
