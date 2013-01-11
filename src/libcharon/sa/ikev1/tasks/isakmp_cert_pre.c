@@ -231,7 +231,7 @@ static void process_pkcs7(cert_payload_t *payload, auth_cfg_t *auth)
 
 			if (x509->get_flags(x509) & X509_CA)
 			{
-				DBG1(DBG_IKE, "received intermediate ca cert \"%Y\"",
+				DBG1(DBG_IKE, "received issuer cert \"%Y\"",
 					 cert->get_subject(cert));
 				auth->add(auth, AUTH_HELPER_IM_CERT, cert->get_ref(cert));
 			}
