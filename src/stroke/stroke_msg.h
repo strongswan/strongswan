@@ -254,6 +254,7 @@ struct stroke_msg_t {
 			int mobike;
 			int aggressive;
 			int force_encap;
+			int fragmentation;
 			int ipcomp;
 			time_t inactivity;
 			int proxy_mode;

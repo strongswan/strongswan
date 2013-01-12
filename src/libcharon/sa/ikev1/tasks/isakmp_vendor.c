@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -99,6 +100,11 @@ static struct {
 	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, 16,
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 
+	/* Proprietary IKE fragmentation extension. Capabilities are handled
+	 * specially on receipt of this VID. */
+	{ "FRAGMENTATION", EXT_IKE_FRAGMENTATION, FALSE, 20,
+	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3\x80\x00\x00\x00"},
+
 }, vendor_natt_ids[] = {
 
 	/* NAT-Traversal VIDs ordered by preference */
@@ -145,24 +151,55 @@ static struct {
 
 	{ "draft-stenberg-ipsec-nat-traversal-01", 0, FALSE, 16,
 	  "\x27\xba\xb5\xdc\x01\xea\x07\x60\xea\x4e\x31\x90\xac\x27\xc0\xd0"},
+
 };
+
+/**
+ * According to racoon 0x80000000 seems to indicate support for fragmentation
+ * of Aggressive and Main mode messages.  0x40000000 seems to indicate support
+ * for fragmentation of base ISAKMP messages (Cisco adds that and thus sends
+ * 0xc0000000)
+ */
+static const u_int32_t fragmentation_ike = 0x80000000;
+
+/**
+ * Check if the given vendor ID indicate support for fragmentation
+ */
+static bool fragmentation_supported(chunk_t data, int i)
+{
+	if (vendor_ids[i].extension  == EXT_IKE_FRAGMENTATION &&
+		data.len == 20 && memeq(data.ptr, vendor_ids[i].id, 16))
+	{
+		return untoh32(&data.ptr[16]) & fragmentation_ike;
+	}
+	return FALSE;
+}
 
 METHOD(task_t, build, status_t,
 	private_isakmp_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid_payload;
-	bool strongswan, cisco_unity;
+	bool strongswan, cisco_unity, fragmentation;
+	ike_cfg_t *ike_cfg;
 	int i;
 
 	strongswan = lib->settings->get_bool(lib->settings,
-									"%s.send_vendor_id", FALSE, charon->name);
+								"%s.send_vendor_id", FALSE, charon->name);
 	cisco_unity = lib->settings->get_bool(lib->settings,
-									"%s.cisco_unity", FALSE, charon->name);
+								"%s.cisco_unity", FALSE, charon->name);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+	fragmentation = ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO;
+	if (!this->initiator && fragmentation)
+	{
+		fragmentation = this->ike_sa->supports_extension(this->ike_sa,
+														 EXT_IKE_FRAGMENTATION);
+	}
 	for (i = 0; i < countof(vendor_ids); i++)
 	{
 		if (vendor_ids[i].send ||
 		   (vendor_ids[i].extension == EXT_STRONGSWAN && strongswan) ||
-		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity))
+		   (vendor_ids[i].extension == EXT_CISCO_UNITY && cisco_unity) ||
+		   (vendor_ids[i].extension == EXT_IKE_FRAGMENTATION && fragmentation))
 		{
 			DBG2(DBG_IKE, "sending %s vendor ID", vendor_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
@@ -175,6 +212,7 @@ METHOD(task_t, build, status_t,
 		if ((this->initiator && vendor_natt_ids[i].send) ||
 			this->best_natt_ext == i)
 		{
+			DBG2(DBG_IKE, "sending %s vendor ID", vendor_natt_ids[i].desc);
 			vid_payload = vendor_id_payload_create_data(VENDOR_ID_V1,
 							chunk_clone(chunk_create(vendor_natt_ids[i].id,
 													 vendor_natt_ids[i].len)));
@@ -206,7 +244,8 @@ METHOD(task_t, process, status_t,
 			for (i = 0; i < countof(vendor_ids); i++)
 			{
 				if (chunk_equals(data, chunk_create(vendor_ids[i].id,
-													vendor_ids[i].len)))
+													vendor_ids[i].len)) ||
+					fragmentation_supported(data, i))
 				{
 					DBG1(DBG_IKE, "received %s vendor ID", vendor_ids[i].desc);
 					if (vendor_ids[i].extension)

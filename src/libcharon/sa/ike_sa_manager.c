@@ -968,14 +968,37 @@ static u_int64_t get_spi(private_ike_sa_manager_t *this)
 static bool get_init_hash(private_ike_sa_manager_t *this, message_t *message,
 						  chunk_t *hash)
 {
+	host_t *src;
+
 	if (!this->hasher)
 	{	/* this might be the case when flush() has been called */
 		return FALSE;
 	}
+	if (message->get_first_payload_type(message) == FRAGMENT_V1)
+	{	/* only hash the source IP, port and SPI for fragmented init messages */
+		u_int16_t port;
+		u_int64_t spi;
+
+		src = message->get_source(message);
+		if (!this->hasher->allocate_hash(this->hasher,
+										 src->get_address(src), NULL))
+		{
+			return FALSE;
+		}
+		port = src->get_port(src);
+		if (!this->hasher->allocate_hash(this->hasher,
+										 chunk_from_thing(port), NULL))
+		{
+			return FALSE;
+		}
+		spi = message->get_initiator_spi(message);
+		return this->hasher->allocate_hash(this->hasher,
+										   chunk_from_thing(spi), hash);
+	}
 	if (message->get_exchange_type(message) == ID_PROT)
 	{	/* include the source for Main Mode as the hash will be the same if
 		 * SPIs are reused by two initiators that use the same proposal */
-		host_t *src = message->get_source(message);
+		src = message->get_source(message);
 
 		if (!this->hasher->allocate_hash(this->hasher,
 										 src->get_address(src), NULL))
@@ -1280,7 +1303,10 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 			ike_id = entry->ike_sa->get_id(entry->ike_sa);
 			entry->checked_out = TRUE;
-			entry->message_id = message->get_message_id(message);
+			if (message->get_first_payload_type(message) != FRAGMENT_V1)
+			{
+				entry->message_id = message->get_message_id(message);
+			}
 			if (ike_id->get_responder_spi(ike_id) == 0)
 			{
 				ike_id->set_responder_spi(ike_id, id->get_responder_spi(id));

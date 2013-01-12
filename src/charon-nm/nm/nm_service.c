@@ -500,7 +500,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	 */
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "0.0.0.0", FALSE,
 							 charon->socket->get_port(charon->socket, FALSE),
-							(char*)address, FALSE, IKEV2_UDP_PORT);
+							(char*)address, FALSE, IKEV2_UDP_PORT,
+							 FRAGMENTATION_NO);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create(priv->name, ike_cfg,
 					CERT_SEND_IF_ASKED, UNIQUE_REPLACE, 1, /* keyingtries */

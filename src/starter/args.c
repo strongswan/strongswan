@@ -108,6 +108,13 @@ static const char *LST_authby[] = {
 	 NULL
 };
 
+static const char *LST_fragmentation[] = {
+	"no",
+	"yes",
+	"force",
+	 NULL
+};
+
 typedef struct {
 	arg_t       type;
 	size_t      offset;
@@ -138,6 +145,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_conn_t, aaa_identity), NULL                       },
 	{ ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
 	{ ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
+	{ ARG_ENUM, offsetof(starter_conn_t, fragmentation), LST_fragmentation         },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },

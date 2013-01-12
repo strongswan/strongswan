@@ -94,10 +94,11 @@ METHOD(sender_t, send_, void,
 {
 	host_t *src, *dst;
 
-	/* if neither source nor destination port is 500 we add a Non-ESP marker */
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
-	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
+
+	DBG1(DBG_NET, "sending packet: from %#H to %#H (%zu bytes)", src, dst,
+		 packet->get_data(packet).len);
 
 	if (this->send_delay)
 	{
@@ -120,6 +121,7 @@ METHOD(sender_t, send_, void,
 		message->destroy(message);
 	}
 
+	/* if neither source nor destination port is 500 we add a Non-ESP marker */
 	if (dst->get_port(dst) != IKEV2_UDP_PORT &&
 		src->get_port(src) != IKEV2_UDP_PORT)
 	{

@@ -403,6 +403,21 @@ force UDP encapsulation for ESP packets even if no NAT situation is detected.
 This may help to surmount restrictive firewalls. In order to force the peer to
 encapsulate packets, NAT detection payloads are faked.
 .TP
+.BR fragmentation " = yes | force | " no
+whether to use IKE fragmentation (proprietary IKEv1 extension).  Acceptable
+values are
+.BR yes ,
+.B force
+and
+.B no
+(the default). Fragmented messages sent by a peer are always accepted
+irrespective of the value of this option. If set to
+.BR yes ,
+and the peer supports it, larger IKE messages will be sent in fragments.
+If set to
+.B force
+the initial IKE message will already be fragmented if required.
+.TP
 .BR ike " = <cipher suites>"
 comma-separated list of IKE/ISAKMP SA encryption/authentication algorithms
 to be used, e.g.

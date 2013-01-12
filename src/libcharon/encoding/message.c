@@ -442,6 +442,7 @@ static payload_rule_t id_prot_i_rules[] = {
 	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
 	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -461,6 +462,7 @@ static payload_order_t id_prot_i_order[] = {
 	{VENDOR_ID_V1,				0},
 	{NAT_D_V1,					0},
 	{NAT_D_DRAFT_00_03_V1,		0},
+	{FRAGMENT_V1,				0},
 };
 
 /**
@@ -480,6 +482,7 @@ static payload_rule_t id_prot_r_rules[] = {
 	{CERTIFICATE_V1,			0,	2,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
 	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -499,6 +502,7 @@ static payload_order_t id_prot_r_order[] = {
 	{VENDOR_ID_V1,				0},
 	{NAT_D_V1,					0},
 	{NAT_D_DRAFT_00_03_V1,		0},
+	{FRAGMENT_V1,				0},
 };
 
 /**
@@ -518,6 +522,7 @@ static payload_rule_t aggressive_i_rules[] = {
 	{CERTIFICATE_V1,			0,	1,						TRUE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						TRUE,	FALSE},
 	{HASH_V1,					0,	1,						TRUE,	FALSE},
+	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -537,6 +542,7 @@ static payload_order_t aggressive_i_order[] = {
 	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
+	{FRAGMENT_V1,				0},
 };
 
 /**
@@ -556,6 +562,7 @@ static payload_rule_t aggressive_r_rules[] = {
 	{CERTIFICATE_V1,			0,	1,						FALSE,	FALSE},
 	{SIGNATURE_V1,				0,	1,						FALSE,	FALSE},
 	{HASH_V1,					0,	1,						FALSE,	FALSE},
+	{FRAGMENT_V1,				0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -575,6 +582,7 @@ static payload_order_t aggressive_r_order[] = {
 	{CERTIFICATE_REQUEST_V1,	0},
 	{NOTIFY_V1,					0},
 	{VENDOR_ID_V1,				0},
+	{FRAGMENT_V1,				0},
 };
 
 /**
@@ -1693,6 +1701,12 @@ METHOD(message_t, parse_header, status_t,
 	}
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
+	if (this->first_payload == FRAGMENT_V1 && this->is_encrypted)
+	{	/* racoon sets the encryted bit when sending a fragment, but these
+		 * messages are really not encrypted */
+		this->is_encrypted = FALSE;
+	}
+
 	for (i = 0; i < countof(this->reserved); i++)
 	{
 		reserved = payload_get_field(&ike_header->payload_interface,

@@ -164,6 +164,10 @@ are released to free memory once an IKE_SA is established.
 Enabling this might conflict with plugins that later need access to e.g. the
 used certificates.
 .TP
+.BR charon.fragment_size " [512]"
+Maximum size (in bytes) of a sent fragment when using the proprietary IKEv1
+fragmentation extension.
+.TP
 .BR charon.half_open_timeout " [30]"
 Timeout in seconds for connecting IKE_SAs (also see IKE_SA_INIT DROPPING).
 .TP

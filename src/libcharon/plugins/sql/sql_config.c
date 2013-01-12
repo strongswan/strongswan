@@ -261,7 +261,8 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 		ike_cfg = ike_cfg_create(IKEV2, certreq, force_encap,
 								 local, FALSE,
 								 charon->socket->get_port(charon->socket, FALSE),
-								 remote, FALSE, IKEV2_UDP_PORT);
+								 remote, FALSE, IKEV2_UDP_PORT,
+								 FRAGMENTATION_NO);
 		add_ike_proposals(this, ike_cfg, id);
 		return ike_cfg;
 	}

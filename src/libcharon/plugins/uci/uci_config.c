@@ -155,7 +155,8 @@ METHOD(enumerator_t, peer_enumerator_enumerate, bool,
 		ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
 								 local_addr, FALSE,
 								 charon->socket->get_port(charon->socket, FALSE),
-								 remote_addr, FALSE, IKEV2_UDP_PORT);
+								 remote_addr, FALSE, IKEV2_UDP_PORT,
+								 FRAGMENTATION_NO);
 		ike_cfg->add_proposal(ike_cfg, create_proposal(ike_proposal, PROTO_IKE));
 		this->peer_cfg = peer_cfg_create(
 					name, ike_cfg, CERT_SEND_IF_ASKED, UNIQUE_NO,
@@ -253,7 +254,8 @@ METHOD(enumerator_t, ike_enumerator_enumerate, bool,
 		this->ike_cfg = ike_cfg_create(IKEV2, FALSE, FALSE,
 								local_addr, FALSE,
 								charon->socket->get_port(charon->socket, FALSE),
-								remote_addr, FALSE, IKEV2_UDP_PORT);
+								remote_addr, FALSE, IKEV2_UDP_PORT,
+								FRAGMENTATION_NO);
 		this->ike_cfg->add_proposal(this->ike_cfg,
 									create_proposal(ike_proposal, PROTO_IKE));
 

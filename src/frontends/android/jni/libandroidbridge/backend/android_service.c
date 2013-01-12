@@ -471,7 +471,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, TRUE, "0.0.0.0", FALSE,
 							 charon->socket->get_port(charon->socket, FALSE),
-							 this->gateway, FALSE, IKEV2_UDP_PORT);
+							 this->gateway, FALSE, IKEV2_UDP_PORT,
+							 FRAGMENTATION_NO);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 
 	peer_cfg = peer_cfg_create("android", ike_cfg, CERT_SEND_IF_ASKED,

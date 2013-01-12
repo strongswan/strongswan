@@ -106,7 +106,8 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 		settings->get_str(settings, "configs.%s.lhost", "%any", config), FALSE,
 		settings->get_int(settings, "configs.%s.lport", 500, config),
 		settings->get_str(settings, "configs.%s.rhost", "%any", config), FALSE,
-		settings->get_int(settings, "configs.%s.rport", 500, config));
+		settings->get_int(settings, "configs.%s.rport", 500, config),
+		FRAGMENTATION_NO);
 	token = settings->get_str(settings, "configs.%s.proposal", NULL, config);
 	if (token)
 	{

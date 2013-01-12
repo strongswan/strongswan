@@ -36,6 +36,7 @@
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
 #include <encoding/payloads/hash_payload.h>
+#include <encoding/payloads/fragment_payload.h>
 #include <encoding/payloads/unknown_payload.h>
 
 ENUM_BEGIN(payload_type_names, NO_PAYLOAD, NO_PAYLOAD,
@@ -79,15 +80,17 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWORD_METH
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
 	"ID_PEER");
-ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, ID_PEER,
+ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, ID_PEER,
 	"NAT_D_DRAFT_V1",
-	"NAT_OA_DRAFT_V1");
+	"NAT_OA_DRAFT_V1",
+	"FRAGMENT");
 #else
-ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, GENERIC_SECURE_PASSWORD_METHOD,
 	"NAT_D_DRAFT_V1",
-	"NAT_OA_DRAFT_V1");
+	"NAT_OA_DRAFT_V1",
+	"FRAGMENT");
 #endif /* ME */
-ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, NAT_OA_DRAFT_00_03_V1,
+ENUM_NEXT(payload_type_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"PROPOSAL_SUBSTRUCTURE_V1",
@@ -143,15 +146,17 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, GENERIC_SECURE_PASSWOR
 #ifdef ME
 ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, GENERIC_SECURE_PASSWORD_METHOD,
 	"IDp");
-ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, ID_PEER,
+ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, ID_PEER,
 	"NAT-D",
-	"NAT-OA");
+	"NAT-OA",
+	"FRAG");
 #else
-ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, NAT_OA_DRAFT_00_03_V1, GENERIC_SECURE_PASSWORD_METHOD,
+ENUM_NEXT(payload_type_short_names, NAT_D_DRAFT_00_03_V1, FRAGMENT_V1, GENERIC_SECURE_PASSWORD_METHOD,
 	"NAT-D",
-	"NAT-OA");
+	"NAT-OA",
+	"FRAG");
 #endif /* ME */
-ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, NAT_OA_DRAFT_00_03_V1,
+ENUM_NEXT(payload_type_short_names, HEADER, ENCRYPTED_V1, FRAGMENT_V1,
 	"HDR",
 	"PROP",
 	"PROP",
@@ -240,6 +245,8 @@ payload_t *payload_create(payload_type_t type)
 		case ENCRYPTED:
 		case ENCRYPTED_V1:
 			return (payload_t*)encryption_payload_create(type);
+		case FRAGMENT_V1:
+			return (payload_t*)fragment_payload_create();
 		default:
 			return (payload_t*)unknown_payload_create(type);
 	}
@@ -272,7 +279,7 @@ bool payload_is_known(payload_type_t type)
 		return TRUE;
 	}
 #endif
-	if (type >= NAT_D_DRAFT_00_03_V1 && type <= NAT_OA_DRAFT_00_03_V1)
+	if (type >= NAT_D_DRAFT_00_03_V1 && type <= FRAGMENT_V1)
 	{
 		return TRUE;
 	}

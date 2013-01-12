@@ -50,7 +50,7 @@ typedef enum {
 typedef enum {
 		STRICT_NO,
 		STRICT_YES,
-		STRICT_IFURI
+		STRICT_IFURI,
 } strict_t;
 
 typedef enum {
@@ -68,6 +68,13 @@ typedef enum {
 		DPD_ACTION_RESTART,
 		DPD_ACTION_UNKNOW,
 } dpd_action_t;
+
+typedef enum {
+		/* same as in ike_cfg.h */
+		FRAGMENTATION_NO,
+		FRAGMENTATION_YES,
+		FRAGMENTATION_FORCE,
+} fragmentation_t;
 
 typedef enum {
 		/* IPsec options */
@@ -140,6 +147,7 @@ struct starter_conn {
 		char            *authby;
 		ipsec_mode_t    mode;
 		bool            proxy_mode;
+		fragmentation_t fragmentation;
 		sa_option_t     options;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
