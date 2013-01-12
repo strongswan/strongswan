@@ -35,6 +35,10 @@ strongswan-5.0.2
   In contrast to our own DER parser, OpenSSL can handle BER files, which is
   required for interoperability of our scepclient with EJBCA.
 
+- Support for the proprietary IKEv1 fragmentation extension has been added.
+  Fragments are always handled on receipt but only sent if supported by the peer
+  and if enabled with the new fragmentation ipsec.conf option.
+
 strongswan-5.0.1
 ----------------
 
