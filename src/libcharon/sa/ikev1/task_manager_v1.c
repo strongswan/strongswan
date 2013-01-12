@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2012 Tobias Brunner
+ * Copyright (C) 2007-2013 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -217,6 +217,11 @@ struct private_task_manager_t {
 		size_t max_packet;
 
 		/**
+		 * Maximum length of a single fragment (when sending)
+		 */
+		size_t size;
+
+		/**
 		 * The exchange type we use for fragments. Always the initial type even
 		 * for fragmented quick mode or transaction messages (i.e. either
 		 * ID_PROT or AGGRESSIVE)
@@ -414,7 +419,7 @@ static bool send_packet(private_task_manager_t *this, bool request,
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	fragmentation = ike_cfg->fragmentation(ike_cfg);
 	data = packet->get_data(packet);
-	if (data.len > MAX_FRAGMENT_SIZE && (fragmentation == FRAGMENTATION_FORCE ||
+	if (data.len > this->frag.size && (fragmentation == FRAGMENTATION_FORCE ||
 	   (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
 		fragmentation == FRAGMENTATION_YES)))
 	{
@@ -425,7 +430,7 @@ static bool send_packet(private_task_manager_t *this, bool request,
 
 		/* reduce size due to non-ESP marker */
 		nat = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
-		frag_size = MAX_FRAGMENT_SIZE - (nat ? 4 : 0);
+		frag_size = this->frag.size - (nat ? 4 : 0);
 
 		src = packet->get_source(packet);
 		dst = packet->get_destination(packet);
@@ -1989,6 +1994,8 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.exchange = ID_PROT,
 			.max_packet = lib->settings->get_int(lib->settings,
 					"%s.max_packet", MAX_PACKET, charon->name),
+			.size = lib->settings->get_int(lib->settings,
+					"%s.fragment_size", MAX_FRAGMENT_SIZE, charon->name),
 		},
 		.ike_sa = ike_sa,
 		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
