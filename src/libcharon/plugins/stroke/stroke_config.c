@@ -414,7 +414,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			ca = other_end->ca2;
 		}
 	}
-	if (id && *id == '%' && !streq(id, "%any"))
+	if (id && *id == '%' && !streq(id, "%any") && !streq(id, "%any6"))
 	{	/* has only an effect on rightid/2 */
 		loose = !local;
 		id++;
@@ -1312,4 +1312,3 @@ stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred,
 
 	return &this->public;
 }
-
