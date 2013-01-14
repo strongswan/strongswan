@@ -111,7 +111,6 @@ METHOD(tls_application_t, process, status_t,
 		{
 			return FAILED;
 		}
-
 		memcpy(this->in.ptr + this->in_done, data.ptr, data.len);
 		this->in_done += data.len;
 	}
@@ -145,7 +144,7 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 {
 	char buf[CRYPTO_BUF_SIZE], *pos;
 	ssize_t len, out;
-	int round = 0;
+	int round = 0, flags;
 
 	for (round = 0; TRUE; round++)
 	{
@@ -191,8 +190,16 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 				return TRUE;
 			}
 		}
-		len = recv(this->fd, buf, sizeof(buf),
-				   !block || this->app.in_done || round ? MSG_DONTWAIT : 0);
+
+		flags = 0;
+		if (this->app.out_done == this->app.out.len)
+		{
+			if (!block || this->app.in_done)
+			{
+				flags |= MSG_DONTWAIT;
+			}
+		}
+		len = recv(this->fd, buf, sizeof(buf), flags);
 		if (len < 0)
 		{
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
