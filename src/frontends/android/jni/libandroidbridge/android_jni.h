@@ -122,4 +122,36 @@ static inline char *androidjni_convert_jstring(JNIEnv *env, jstring jstr)
 	return str;
 }
 
+/**
+ * Converts the given Java byte array to a chunk
+ *
+ * @param env			JNIEnv
+ * @param jbytearray	Java byte array
+ * @return				allocated chunk
+ */
+static inline chunk_t chunk_from_byte_array(JNIEnv *env, jbyteArray jbytearray)
+{
+	chunk_t chunk;
+
+	chunk = chunk_alloc((*env)->GetArrayLength(env, jbytearray));
+	(*env)->GetByteArrayRegion(env, jbytearray, 0, chunk.len, chunk.ptr);
+	return chunk;
+}
+
+/**
+ * Converts the given chunk to a Java byte array
+ *
+ * @param env			JNIEnv
+ * @param chunk			native chunk
+ * @return				allocated Java byte array
+ */
+static inline jbyteArray byte_array_from_chunk(JNIEnv *env, chunk_t chunk)
+{
+	jbyteArray jbytearray;
+
+	jbytearray = (*env)->NewByteArray(env, chunk.len);
+	(*env)->SetByteArrayRegion(env, jbytearray, 0, chunk.len, chunk.ptr);
+	return jbytearray;
+}
+
 #endif /** ANDROID_JNI_H_ @}*/

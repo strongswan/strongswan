@@ -51,30 +51,6 @@ struct private_private_key_t {
 	refcount_t ref;
 };
 
-/**
- * Converts the given Java byte array to a chunk
- */
-static chunk_t chunk_from_byte_array(JNIEnv *env, jbyteArray jbytearray)
-{
-	chunk_t chunk;
-
-	chunk = chunk_alloc((*env)->GetArrayLength(env, jbytearray));
-	(*env)->GetByteArrayRegion(env, jbytearray, 0, chunk.len, chunk.ptr);
-	return chunk;
-}
-
-/**
- * Converts the given chunk to a Java byte array
- */
-static jbyteArray byte_array_from_chunk(JNIEnv *env, chunk_t chunk)
-{
-	jbyteArray jbytearray;
-
-	jbytearray = (*env)->NewByteArray(env, chunk.len);
-	(*env)->SetByteArrayRegion(env, jbytearray, 0, chunk.len, chunk.ptr);
-	return jbytearray;
-}
-
 METHOD(private_key_t, sign, bool,
 	private_private_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t *signature)
