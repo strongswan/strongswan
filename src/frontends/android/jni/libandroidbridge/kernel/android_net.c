@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -91,6 +91,13 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 											dest->get_family(dest) == AF_INET);
 }
 
+METHOD(kernel_net_t, get_interface, bool,
+	private_kernel_android_net_t *this, host_t *host, char **name)
+{
+	return this->network_manager->get_interface(this->network_manager, host,
+												name);
+}
+
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_android_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface)
@@ -120,7 +127,7 @@ kernel_android_net_t *kernel_android_net_create()
 			.interface = {
 				.get_source_addr = _get_source_addr,
 				.get_nexthop = (void*)return_null,
-				.get_interface = (void*)return_null,
+				.get_interface = _get_interface,
 				.create_address_enumerator = (void*)enumerator_create_empty,
 				.add_ip = _add_ip,
 				.del_ip = (void*)return_failed,

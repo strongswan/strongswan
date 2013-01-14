@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -69,7 +69,7 @@ METHOD(network_manager_t, get_local_address, host_t*,
 		goto failed;
 	}
 	jaddr = (*env)->CallObjectMethod(env, this->obj, method_id, ipv4);
-	if (!jaddr)
+	if (!jaddr || androidjni_exception_occurred(env))
 	{
 		goto failed;
 	}
@@ -83,6 +83,46 @@ failed:
 	androidjni_exception_occurred(env);
 	androidjni_detach_thread();
 	return NULL;
+}
+
+METHOD(network_manager_t, get_interface, bool,
+	private_network_manager_t *this, host_t *ip, char **name)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jbyteArray jaddr;
+	jstring jinterface;
+
+	if (ip->is_anyaddr(ip))
+	{
+		return FALSE;
+	}
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, this->cls, "getInterface",
+									"([B)Ljava/lang/String;");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jaddr = byte_array_from_chunk(env, ip->get_address(ip));
+	jinterface = (*env)->CallObjectMethod(env, this->obj, method_id, jaddr);
+	if (!jinterface || androidjni_exception_occurred(env))
+	{
+		goto failed;
+	}
+	if (name)
+	{
+		*name = androidjni_convert_jstring(env, jinterface);
+	}
+	androidjni_detach_thread();
+	return TRUE;
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return FALSE;
 }
 
 JNI_METHOD(NetworkManager, networkChanged, void,
@@ -206,6 +246,7 @@ network_manager_t *network_manager_create(jobject context)
 	INIT(this,
 		.public = {
 			.get_local_address = _get_local_address,
+			.get_interface = _get_interface,
 			.add_connectivity_cb = _add_connectivity_cb,
 			.remove_connectivity_cb = _remove_connectivity_cb,
 			.destroy = _destroy,

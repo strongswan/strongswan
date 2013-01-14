@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -54,6 +54,15 @@ struct network_manager_t {
 	 * @return					the address or NULL if none available
 	 */
 	host_t *(*get_local_address)(network_manager_t *this, bool ipv4);
+
+	/**
+	 * Get the name of the interface on which the given IP address is installed
+	 *
+	 * @param ip				the IP address to look for
+	 * @param name				returns the name of the interface (optional)
+	 * @return					TRUE if found
+	 */
+	bool (*get_interface)(network_manager_t *this, host_t *ip, char **name);
 
 	/**
 	 * Register a callback that is called if connectivity changes

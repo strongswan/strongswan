@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 import android.content.BroadcastReceiver;
@@ -107,6 +108,34 @@ public class NetworkManager extends BroadcastReceiver
 		{
 			ex.printStackTrace();
 			return null;
+		}
+		return null;
+	}
+
+	/**
+	 * Search for an interface that has the given address installed.
+	 *
+	 * @param addr network-order byte encoding of the address to look for
+	 * @return name of the interface, or null if not found
+	 */
+	public String getInterface(byte[] addr)
+	{
+		try
+		{
+			InetAddress inetAddress = InetAddress.getByAddress(addr);
+			NetworkInterface intf = NetworkInterface.getByInetAddress(inetAddress);
+			if (intf != null)
+			{
+				return intf.getName();
+			}
+		}
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+		}
+		catch (SocketException e)
+		{
+			e.printStackTrace();
 		}
 		return null;
 	}
