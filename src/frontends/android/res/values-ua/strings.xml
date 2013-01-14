@@ -22,8 +22,8 @@
     <string name="show_log">Перегляд журналу</string>
     <string name="search">Пошук</string>
     <string name="vpn_not_supported_title">VPN не підтримуеться</string>
-    <string name="vpn_not_supported">Ваш пристрій не підтримує VPN.\nЗв'яжіться з виробником.</string>
-    <string name="vpn_not_supported_during_lockdown">VPN з'єднання не пітримується у режимі lockdown.</string>
+    <string name="vpn_not_supported">Ваш пристрій не підтримує VPN.\nЗв\'яжіться з виробником.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN з\'єднання не пітримується у режимі lockdown.</string>
     <string name="loading">Завантаження&#8230;</string>
     <string name="profile_not_found">Профіль не знайдено</string>
     <string name="strongswan_shortcut">strongSwan посилання</string>
@@ -64,7 +64,7 @@
     <string name="profile_ca_select_certificate">Вибрати спеціальний сертифікат CA</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Введіть адресу шлюза тут</string>
-    <string name="alert_text_no_input_username">Введіть ім'я користувача тут</string>
+    <string name="alert_text_no_input_username">Введіть ім\'я користувача тут</string>
     <string name="alert_text_nocertfound_title">Не вибрано сертифікат CA</string>
     <string name="alert_text_nocertfound">Будь ласка виберіть один <i>Вибрати автоматично</i></string>
 
@@ -77,19 +77,19 @@
     <!-- VPN state fragment -->
     <string name="state_label">Статус:</string>
     <string name="profile_label">Профіль:</string>
-    <string name="disconnect">Роз'єднати</string>
+    <string name="disconnect">Роз\'єднати</string>
     <string name="state_connecting">Підключення&#8230;</string>
     <string name="state_connected">Підключений</string>
-    <string name="state_disconnecting">Роз'єднання&#8230;</string>
+    <string name="state_disconnecting">Роз\'єднання&#8230;</string>
     <string name="state_disabled">Немає активних VPN</string>
     <string name="state_error">Помилка</string>
 
     <!-- Dialogs -->
-    <string name="login_title">Введіть пароль для з'єднання</string>
+    <string name="login_title">Введіть пароль для з\'єднання</string>
     <string name="login_confirm">Підключити</string>
     <string name="error_introduction">Помилка підлючення VPN:</string>
     <string name="error_lookup_failed">Помилка пошуку адреси шлюза.</string>
-    <string name="error_unreachable">Немає зв'язку зі шлюзом.</string>
+    <string name="error_unreachable">Немає зв\'язку зі шлюзом.</string>
     <string name="error_peer_auth_failed">Помилка перевірки данних аутентифікації шлюза.</string>
     <string name="error_auth_failed">Помилка аутентифікації користувача.</string>
     <string name="error_generic">Невідома помилка під час підключення.</string>
@@ -99,7 +99,7 @@
     <string name="vpn_profile_connected">Цей VPN профіль зараз підключений!</string>
     <string name="reconnect">Перепідключитися</string>
     <string name="connect_profile_question">Підключити %1$s?</string>
-    <string name="replaces_active_connection">Ця дія замінить ваше поточне VPN з'єднання!</string>
+    <string name="replaces_active_connection">Ця дія замінить ваше поточне VPN з\'єднання!</string>
     <string name="connect">Підключити</string>
 
 </resources>
