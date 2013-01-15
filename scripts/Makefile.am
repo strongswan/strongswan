@@ -1,6 +1,9 @@
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtls
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtls \
+	-I$(top_srcdir)/src/libpttls -I$(top_srcdir)/src/libtncif \
+	-I$(top_srcdir)/src/libtnccs -I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon
 AM_CFLAGS = \
--DPLUGINS="\"${scripts_plugins}\""
+-DPLUGINS="\"${scripts_plugins} nonce tnc-tnccs tnc-imc tnc-imv tnccs-20\""
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql oid2der \
 	thread_analysis dh_speed pubkey_speed crypt_burn hash_burn fetch \
@@ -10,6 +13,17 @@ if USE_TLS
   noinst_PROGRAMS += tls_test
   tls_test_SOURCES = tls_test.c
   tls_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+					$(top_builddir)/src/libtls/libtls.la
+endif
+
+if USE_LIBPTTLS
+  noinst_PROGRAMS += pt_tls_test
+  pt_tls_test_SOUCES = pt_tls_test.c
+  pt_tls_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+					$(top_builddir)/src/libpttls/libpttls.la \
+					$(top_builddir)/src/libtnccs/libtnccs.la \
+					$(top_builddir)/src/libcharon/libcharon.la \
+					$(top_builddir)/src/libhydra/libhydra.la \
 					$(top_builddir)/src/libtls/libtls.la
 endif
 
