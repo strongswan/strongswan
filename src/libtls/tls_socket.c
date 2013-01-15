@@ -70,6 +70,11 @@ struct private_tls_application_t {
 	 * Bytes cosnumed in cache
 	 */
 	size_t cache_done;
+
+	/**
+	 * Close TLS connection?
+	 */
+	bool close;
 };
 
 /**
@@ -104,6 +109,10 @@ METHOD(tls_application_t, process, status_t,
 	chunk_t data;
 	size_t len;
 
+	if (this->close)
+	{
+		return SUCCESS;
+	}
 	len = min(reader->remaining(reader), this->in.len - this->in_done);
 	if (len)
 	{	/* copy to read buffer as much as fits in */
@@ -128,6 +137,10 @@ METHOD(tls_application_t, process, status_t,
 METHOD(tls_application_t, build, status_t,
 	private_tls_application_t *this, bio_writer_t *writer)
 {
+	if (this->close)
+	{
+		return SUCCESS;
+	}
 	if (this->out.len > this->out_done)
 	{
 		writer->write_data(writer, this->out);
@@ -171,6 +184,8 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 					continue;
 				case INVALID_STATE:
 					break;
+				case SUCCESS:
+					return TRUE;
 				default:
 					return FALSE;
 			}
@@ -218,9 +233,14 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 		{	/* EOF */
 			return TRUE;
 		}
-		if (this->tls->process(this->tls, buf, len) != NEED_MORE)
+		switch (this->tls->process(this->tls, buf, len))
 		{
-			return FALSE;
+			case NEED_MORE:
+				break;
+			case SUCCESS:
+				return TRUE;
+			default:
+				return FALSE;
 		}
 	}
 }
@@ -361,6 +381,9 @@ METHOD(tls_socket_t, get_fd, int,
 METHOD(tls_socket_t, destroy, void,
 	private_tls_socket_t *this)
 {
+	/* send a TLS close notify if not done yet */
+	this->app.close = TRUE;
+	write_(this, NULL, 0);
 	free(this->app.cache.ptr);
 	this->tls->destroy(this->tls);
 	free(this);
