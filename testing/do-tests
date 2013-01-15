@@ -23,6 +23,8 @@ DIR=$(dirname `readlink -f $0`)
 [ -d $BUILDDIR ] ||
 	die "Directory '$BUILDDIR' does not exist, please run make-testing first"
 
+ln -sfT $DIR $TESTDIR/testing
+
 ##############################################################################
 # take care of new path and file variables
 #
