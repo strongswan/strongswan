@@ -245,7 +245,7 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 	/* fill with 8 byte words */
 	while (chunk.len >= sizeof(u_int64_t))
 	{
-		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED)
+		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED == 0)
 		{
 			if (!reseed())
 			{
@@ -274,7 +274,7 @@ static bool rdrand_chunk(private_rdrand_rng_t *this, chunk_t chunk)
 	/* fill with 4 byte words */
 	while (chunk.len >= sizeof(u_int32_t))
 	{
-		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED)
+		if (this->quality == RNG_STRONG && chunk.len % FORCE_RESEED == 0)
 		{
 			if (!reseed())
 			{
