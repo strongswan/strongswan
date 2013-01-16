@@ -1,5 +1,3 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-sun::echo 1 > /proc/sys/net/ipv4/ip_forward
 moon::ipsec start
 sun::ipsec start
 carol::ipsec start

@@ -1,5 +1,3 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-sun::echo 1 > /proc/sys/net/ipv4/ip_forward
 winnetou::ip route add 10.1.0.0/16 via PH_IP_MOON
 winnetou::ip route add 10.2.0.0/16 via PH_IP_SUN
 alice::ipsec start
