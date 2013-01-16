@@ -41,14 +41,14 @@ struct private_pt_tls_client_t {
 	tls_socket_t *tls;
 
 	/**
-	 * Server address
+	 * Server address/port
 	 */
-	char *server;
+	host_t *address;
 
 	/**
-	 * Server port
+	 * Server identity
 	 */
-	u_int16_t port;
+	identification_t *id;
 
 	/**
 	 * Current PT-TLS message identifier
@@ -61,36 +61,23 @@ struct private_pt_tls_client_t {
  */
 static bool make_connection(private_pt_tls_client_t *this)
 {
-	identification_t *id;
-	host_t *server;
 	int fd;
 
-	server = host_create_from_dns(this->server, AF_UNSPEC, this->port);
-	if (!server)
-	{
-		return FALSE;
-	}
-
-	fd = socket(server->get_family(server), SOCK_STREAM, 0);
+	fd = socket(this->address->get_family(this->address), SOCK_STREAM, 0);
 	if (fd == -1)
 	{
 		DBG1(DBG_TNC, "opening PT-TLS socket failed: %s", strerror(errno));
-		server->destroy(server);
 		return FALSE;
 	}
-	if (connect(fd, server->get_sockaddr(server),
-				*server->get_sockaddr_len(server)) == -1)
+	if (connect(fd, this->address->get_sockaddr(this->address),
+				*this->address->get_sockaddr_len(this->address)) == -1)
 	{
 		DBG1(DBG_TNC, "connecting to PT-TLS server failed: %s", strerror(errno));
-		server->destroy(server);
 		close(fd);
 		return FALSE;
 	}
-	server->destroy(server);
 
-	id = identification_create_from_string(this->server);
-	this->tls = tls_socket_create(FALSE, id, NULL, fd, NULL);
-	id->destroy(id);
+	this->tls = tls_socket_create(FALSE, this->id, NULL, fd, NULL);
 	if (!this->tls)
 	{
 		close(fd);
@@ -292,14 +279,15 @@ METHOD(pt_tls_client_t, destroy, void,
 		close(this->tls->get_fd(this->tls));
 		this->tls->destroy(this->tls);
 	}
-	free(this->server);
+	this->address->destroy(this->address);
+	this->id->destroy(this->id);
 	free(this);
 }
 
 /**
  * See header
  */
-pt_tls_client_t *pt_tls_client_create(char *server, u_int16_t port)
+pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id)
 {
 	private_pt_tls_client_t *this;
 
@@ -308,8 +296,8 @@ pt_tls_client_t *pt_tls_client_create(char *server, u_int16_t port)
 			.run_assessment = _run_assessment,
 			.destroy = _destroy,
 		},
-		.server = strdup(server),
-		.port = port,
+		.address = address,
+		.id = id,
 	);
 
 	return &this->public;

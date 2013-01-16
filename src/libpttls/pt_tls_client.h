@@ -21,6 +21,9 @@
 #ifndef PT_TLS_CLIENT_H_
 #define PT_TLS_CLIENT_H_
 
+#include <networking/host.h>
+#include <utils/identification.h>
+
 #include <tnc/tnccs/tnccs.h>
 
 typedef struct pt_tls_client_t pt_tls_client_t;
@@ -47,10 +50,10 @@ struct pt_tls_client_t {
 /**
  * Create a pt_tls_client instance.
  *
- * @param server		server address to run assessments against
- * @param port			server TCP port to connect to
+ * @param address		address/port to run assessments against, gets owned
+ * @param id			server identity to use for authentication, gets owned
  * @return				PT-TLS context
  */
-pt_tls_client_t *pt_tls_client_create(char *server, u_int16_t port);
+pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id);
 
 #endif /** PT_TLS_CLIENT_H_ @}*/
