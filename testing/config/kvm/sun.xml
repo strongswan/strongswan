@@ -30,7 +30,7 @@
     <controller type='usb' index='0'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x2'/>
     </controller>
-    <filesystem type='mount' accessmode='passthrough'>
+    <filesystem type='mount' accessmode='mapped'>
       <source dir='/var/run/kvm-swan-hostfs'/>
       <target dir='/hostshare'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>

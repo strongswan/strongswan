@@ -4,6 +4,7 @@ DIR=$(dirname `readlink -f $0`)
 . $DIR/testing.conf
 
 rm -f $LOGFILE
+mkdir -p $BUILDDIR
 
 if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then

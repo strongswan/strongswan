@@ -28,7 +28,7 @@ check_commands partprobe qemu-img qemu-nbd
 load_qemu_nbd
 
 mkdir -p $LOOPDIR
-mkdir -p $ROOTIMGCOMPILEDIR
+mkdir -p $SHAREDDIR/compile
 mkdir -p $IMGDIR
 
 log_action "Creating root image $ROOTIMG"
@@ -47,24 +47,21 @@ log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
 do_on_exit umount $LOOPDIR/proc
 
-mkdir -p $LOOPDIR/root/compile
-log_action "Mounting $ROOTIMGCOMPILEDIR as /root/compile"
-execute "mount -o bind $ROOTIMGCOMPILEDIR $LOOPDIR/root/compile"
-do_on_exit rm -r $LOOPDIR/root/compile
-do_on_exit umount $LOOPDIR/root/compile
+mkdir -p $LOOPDIR/root/shared
+log_action "Mounting $SHAREDDIR as /root/shared"
+execute "mount -o bind $SHAREDDIR $LOOPDIR/root/shared"
+do_on_exit umount $LOOPDIR/root/shared
 
 echo "Installing software from source"
 RECPDIR=$DIR/recipes
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
-execute "cp -r $RECPDIR/patches $LOOPDIR/root/compile" 0
+execute "cp -r $RECPDIR/patches $LOOPDIR/root/shared/compile" 0
 for r in $RECIPES
 do
-	cp $RECPDIR/$r ${LOOPDIR}/root/compile
+	cp $RECPDIR/$r ${LOOPDIR}/root/shared/compile
 	log_action "Installing from recipe $r"
-	execute_chroot "make SWANVERSION=$SWANVERSION -C /root/compile -f $r"
+	execute_chroot "make SWANVERSION=$SWANVERSION -C /root/shared/compile -f $r"
 done
 
 log_action "Removing /etc/resolv.conf"
 execute "rm -f $LOOPDIR/etc/resolv.conf"
-
-mkdir -p $LOOPDIR/hostfs

@@ -10,7 +10,6 @@ echo "Building guest kernel version $KERNELVERSION"
 
 check_commands bunzip2 bzcat make wget
 
-mkdir -p $BUILDDIR
 cd $BUILDDIR
 
 if [ ! -f "$KERNELTARBALL" ]
