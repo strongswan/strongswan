@@ -31,7 +31,7 @@ ln -sfT $DIR $TESTDIR/testing
 
 [ -d $TESTRESULTSDIR ] || mkdir $TESTRESULTSDIR
 
-TESTDATE=`date +%Y%m%d-%H%M`
+TESTDATE=`date +%Y%m%d-%H%M-%S`
 
 TODAYDIR=$TESTRESULTSDIR/$TESTDATE
 mkdir $TODAYDIR
