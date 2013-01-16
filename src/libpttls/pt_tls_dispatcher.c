@@ -18,7 +18,6 @@
 
 #include <threading/thread.h>
 #include <utils/debug.h>
-#include <networking/host.h>
 #include <processing/jobs/callback_job.h>
 
 #include <errno.h>
@@ -51,20 +50,12 @@ struct private_pt_tls_dispatcher_t {
 /**
  * Open listening server socket
  */
-static bool open_socket(private_pt_tls_dispatcher_t *this,
-						char *server, u_int16_t port)
+static bool open_socket(private_pt_tls_dispatcher_t *this, host_t *host)
 {
-	host_t *host;
-
 	this->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (this->fd == -1)
 	{
 		DBG1(DBG_TNC, "opening PT-TLS socket failed: %s", strerror(errno));
-		return FALSE;
-	}
-	host = host_create_from_dns(server, AF_UNSPEC, port);
-	if (!host)
-	{
 		return FALSE;
 	}
 	if (bind(this->fd, host->get_sockaddr(host),
@@ -160,7 +151,8 @@ METHOD(pt_tls_dispatcher_t, destroy, void,
 /**
  * See header
  */
-pt_tls_dispatcher_t *pt_tls_dispatcher_create(char *server, u_int16_t port)
+pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
+											  identification_t *id)
 {
 	private_pt_tls_dispatcher_t *this;
 
@@ -169,15 +161,17 @@ pt_tls_dispatcher_t *pt_tls_dispatcher_create(char *server, u_int16_t port)
 			.dispatch = _dispatch,
 			.destroy = _destroy,
 		},
-		.server = identification_create_from_string(server),
+		.server = id,
 		.fd = -1,
 	);
 
-	if (!open_socket(this, server, port))
+	if (!open_socket(this, address))
 	{
+		address->destroy(address);
 		destroy(this);
 		return NULL;
 	}
+	address->destroy(address);
 
 	return &this->public;
 }

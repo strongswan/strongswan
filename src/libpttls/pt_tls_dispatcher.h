@@ -21,7 +21,8 @@
 #ifndef PT_TLS_DISPATCHER_H_
 #define PT_TLS_DISPATCHER_H_
 
-#include <utils/utils.h>
+#include <networking/host.h>
+#include <utils/identification.h>
 
 typedef struct pt_tls_dispatcher_t pt_tls_dispatcher_t;
 
@@ -46,10 +47,11 @@ struct pt_tls_dispatcher_t {
 /**
  * Create a pt_tls_dispatcher instance.
  *
- * @param server		server address
- * @param port			server port to listen
+ * @param address		server address with port to listen on, gets owned
+ * @param id			TLS server identity, gets owned
  * @return				dispatcher service
  */
-pt_tls_dispatcher_t *pt_tls_dispatcher_create(char *server, u_int16_t port);
+pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
+											  identification_t *id);
 
 #endif /** PT_TLS_DISPATCHER_H_ @}*/
