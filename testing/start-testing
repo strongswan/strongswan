@@ -9,6 +9,7 @@ CONFDIR=$DIR/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
+MCASTBRS="virbr1 virbr2"
 
 echo "Starting test environment"
 
@@ -34,4 +35,14 @@ do
 	ln -fs $IMGDIR/$host.$IMGEXT $VIRTIMGSTORE/$host.$IMGEXT
 	log_action "Guest $host"
 	execute "virsh create $CONFDIR/$host.xml"
+done
+
+# Enforce reception of multicast traffic on bridges
+for br in $MCASTBRS
+do
+	cd /sys/devices/virtual/net/$br/brif
+	for vnet in `find . -name "vnet*"`
+	do
+		echo 2 > $vnet/multicast_router
+	done
 done
