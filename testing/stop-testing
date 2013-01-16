@@ -23,7 +23,7 @@ done
 for host in $STRONGSWANHOSTS
 do
 	log_action "Guest $host"
-	execute "virsh destroy $host"
+	execute "virsh shutdown $host"
 	rm -f $VIRTIMGSTORE/$host.$IMGEXT
 done
 
