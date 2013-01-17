@@ -1,85 +1,48 @@
 #!/bin/bash
-# Start up the specified UML instances and wait for them to finish booting
-#
-# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
-# Zuercher Hochschule Winterthur
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
 
-DIR=`dirname $0`
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
+. $DIR/scripts/function.sh
 
-source $DIR/scripts/function.sh
+NETWORKS="vnet1 vnet2 vnet3"
+CONFDIR=$DIR/config/kvm
+KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
+KNLTARGET=/var/run/kvm-swan-kernel
+HOSTFSTARGET=/var/run/kvm-swan-hostfs
+MCASTBRS="virbr1 virbr2"
 
-[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found"
-[ -d $DIR/hosts ] || die "Directory hosts cannot be found."
+echo "Starting test environment"
 
-source $DIR/testing.conf
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-if [ "$#" -eq 0 ]
-then
-    HOSTS=$STRONGSWANHOSTS
-else
-    HOSTS=$*
-fi
+check_commands virsh
 
-#####################################################
-# start the uml bridges
-#
-cecho "Start the uml bridges  (scripts/start-bridges)"
-$DIR/scripts/start-bridges
+log_action "Deploying kernel $KERNEL"
+execute "ln -fs $KNLSRC $KNLTARGET"
 
+log_action "Deploying $SHAREDDIR as hostfs"
+execute "chown -R $KVMUSER:$KVMGROUP $SHAREDDIR" 0
+execute "ln -Tfs $SHAREDDIR $HOSTFSTARGET"
 
-#####################################################
-# start the uml instances
-#
-case $UMLSTARTMODE in
-    konsole)
-	cecho "Start the uml instances  (scripts/kstart-umls)"
-	$DIR/scripts/kstart-umls $HOSTS
-	;;
-    gnome-terminal)
-	cecho "Start the uml instances  (scripts/gstart-umls)"
-	$DIR/scripts/gstart-umls $HOSTS
-	;;
-    xterm)
-	cecho "Start the uml instances  (scripts/xstart-umls)"
-	$DIR/scripts/xstart-umls $HOSTS
-	;;
-    screen)
-	cecho "Start the uml instances  (scripts/start-umls)"
-	$DIR/scripts/start-umls $HOSTS
-	;;
-    *)
-        die "The start mode is unknown! Please set $UMLSTARTMODE properly."
-	;;
-esac
+for net in $NETWORKS
+do
+	log_action "Network $net"
+	execute "virsh net-create $CONFDIR/$net.xml"
+done
 
+for host in $STRONGSWANHOSTS
+do
+	ln -fs $IMGDIR/$host.$IMGEXT $VIRTIMGSTORE/$host.$IMGEXT
+	log_action "Guest $host"
+	execute "virsh create $CONFDIR/$host.xml"
+done
 
-#####################################################
-# do the automated testing
-#
-if [ $ENABLE_DO_TESTS = "yes" ]
-then
-   cecho "Run the automated tests (do-tests)"
-   $DIR/do-tests
-fi
-
-
-##############################################################################
-# stop all UML instances and switches
-#
-
-if [ $ENABLE_STOP_TESTING = "yes" ]
-then
-   cecho "Stopping all UML instances and switches (stop-testing)"
-   $DIR/stop-testing $HOSTS
-fi
-
+# Enforce reception of multicast traffic on bridges
+for br in $MCASTBRS
+do
+	cd /sys/devices/virtual/net/$br/brif
+	for vnet in `find . -name "vnet*"`
+	do
+		echo 2 > $vnet/multicast_router
+	done
+done

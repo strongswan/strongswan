@@ -1,8 +1,0 @@
-# conf.d file for the openldap-2.1 series
-#
-# To enable both the standard unciphered server and the ssl encrypted
-# one uncomment this line or set any other server starting options
-# you may desire.
-#
-# OPTS="-h 'ldaps:// ldap:// ldapi://%2fvar%2frun%2fopenldap%2fslapd.sock'"
-OPTS="-4"

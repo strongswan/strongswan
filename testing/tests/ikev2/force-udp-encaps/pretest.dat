@@ -1,8 +1,7 @@
-alice::/etc/init.d/iptables start 2> /dev/null
-sun::/etc/init.d/iptables start 2> /dev/null
+alice::iptables-restore < /etc/iptables.rules
+sun::iptables-restore < /etc/iptables.rules
 sun::ip route add 10.1.0.0/16 via PH_IP_MOON
 winnetou::ip route add 10.1.0.0/16 via PH_IP_MOON
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
 alice::ipsec start
 sun::ipsec start
 alice::sleep 4

@@ -1,7 +1,7 @@
 moon::ipsec stop
 sun::ipsec stop
-moon::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
 moon::rm /etc/ipsec.d/private/moonKey.der
 sun::rm /etc/ipsec.d/private/sunKey.der
 moon::rm /etc/ipsec.d/certs/*.der

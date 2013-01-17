@@ -1,5 +1,4 @@
 alice::ip -6 route add default via fec1:\:1
-moon::echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 moon::ipsec start
 carol::ipsec start
 carol::sleep 2

@@ -1,87 +1,27 @@
 #!/bin/bash
-# Create the strongSwan UML testing environment
-#
-# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
-# Zuercher Hochschule Winterthur
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
 
-DIR=`dirname $0`
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
 
-source $DIR/scripts/function.sh
+rm -f $LOGFILE
+mkdir -p $BUILDDIR
 
-[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found."
-
-source $DIR/testing.conf
-
-if [ "$#" -eq 0 ]
+if [ $ENABLE_BUILD_BASEIMAGE = "yes" ]
 then
-    HOSTS=$STRONGSWANHOSTS
-else
-    HOSTS=$*
+	$DIR/scripts/build-baseimage || exit 1
 fi
 
-##########################################################################
-# build the UML kernel based on a vanilla kernel form kernel.org
-# and a matching UML patch from user-mode-linux.sourceforge.net
-#
-if [ $ENABLE_BUILD_UMLKERNEL = "yes" ]
+if [ $ENABLE_BUILD_ROOTIMAGE = "yes" ]
 then
-   cecho "Building uml kernel (scripts/build-umlkernel)"
-   $DIR/scripts/build-umlkernel
+	$DIR/scripts/build-rootimage || exit 1
 fi
 
-##########################################################################
-# Adding the ssh RSA public keys to ~/.ssh/known_hosts
-#
-if [ $ENABLE_BUILD_SSHKEYS = "yes" ]
+if [ $ENABLE_BUILD_GUESTKERNEL = "yes" ]
 then
-   cecho "Adding ssh public keys of the uml instances (scripts/build-sshkeys)"
-   $DIR/scripts/build-sshkeys
+	$DIR/scripts/build-guestkernel || exit 1
 fi
 
-##########################################################################
-# copy the default UML host configurations to $BUILDDIR
-# and assign actual IP addresses to the UML hosts
-#
-if [ $ENABLE_BUILD_HOSTCONFIG = "yes" ]
+if [ $ENABLE_BUILD_GUESTIMAGES = "yes" ]
 then
-   cecho "Building host configurations (scripts/build-hostconfig)"
-   $DIR/scripts/build-hostconfig
-fi
-
-##########################################################################
-# build a generic UML root file system based on a Gentoo root file system.
-# compile and install a specified strongSwan release into the file system.
-#
-if [ $ENABLE_BUILD_UMLROOTFS = "yes" ]
-then
-   cecho "Building uml root file system with strongSwan (scripts/build-umlrootfs)"
-   $DIR/scripts/build-umlrootfs
-fi
-
-##########################################################################
-# Creating the root filesystems for the specified UML instances
-#
-if [ $ENABLE_BUILD_UMLHOSTFS = "yes" ]
-then
-   cecho "Building uml host root file systems (scripts/build-umlhostfs)"
-   $DIR/scripts/build-umlhostfs $HOSTS
-fi
-
-##########################################################################
-# Start up the UML switches and designated UML instances
-#
-if [ $ENABLE_START_TESTING = "yes" ]
-then
-   cecho "Starting the uml switches and instances (start-testing)"
-   $DIR/start-testing $HOSTS
+	$DIR/scripts/build-guestimages $HOSTS || exit 1
 fi

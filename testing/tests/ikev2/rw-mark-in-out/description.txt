@@ -1,7 +1,7 @@
 The roadwarriors <b>alice</b> and <b>venus</b> sitting behind the router <b>moon</b> set up
 tunnels to gateway <b>sun</b>. Since both roadwarriors possess the same 10.1.0.0/25 subnet,
-gateway <b>sun</b> uses Source NAT after ESP decryption to map these subnets to 10.3.0.10
-and 10.3.0.20, respectively.
+gateway <b>sun</b> uses Source NAT after ESP decryption to map these subnets to PH_IP_CAROL10
+and PH_IP_DAVE10, respectively.
 <p/>
 In order to differentiate between the tunnels to <b>alice</b> and <b>venus</b>, respectively,
 <b>XFRM marks</b> are defined for both the inbound and outbound IPsec SAs and policies using

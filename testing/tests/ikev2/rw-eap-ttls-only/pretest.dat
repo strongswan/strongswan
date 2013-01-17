@@ -1,10 +1,10 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-dave::/etc/init.d/iptables start 2> /dev/null
+moon::iptables-restore < /etc/iptables.rules
+carol::iptables-restore < /etc/iptables.rules
+dave::iptables-restore < /etc/iptables.rules
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-carol::sleep 1
+carol::sleep 2
 carol::ipsec up home
 dave::ipsec up home
-dave::sleep 1
+dave::sleep 2

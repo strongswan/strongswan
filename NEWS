@@ -46,6 +46,9 @@ strongswan-5.0.2
 - The new rdrand plugin provides a high quality / high performance random
   source using the Intel rdrand instruction found on Ivy Bridge processors.
 
+- The integration test environment was updated and now uses KVM and reproducible
+  guest images based on Debian.
+
 strongswan-5.0.1
 ----------------
 
@@ -422,7 +425,7 @@ strongswan-4.5.1
   ./configure switch.
 
 - The new libstrongswan constraints plugin provides advanced X.509 constraint
-  checking. In addition to X.509 pathLen constraints, the plugin checks for
+  checking. In additon to X.509 pathLen constraints, the plugin checks for
   nameConstraints and certificatePolicies, including policyMappings and
   policyConstraints. The x509 certificate plugin and the pki tool have been
   enhanced to support these extensions. The new left/rightcertpolicy ipsec.conf

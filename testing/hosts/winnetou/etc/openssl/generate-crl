@@ -16,30 +16,32 @@
 
 export COMMON_NAME=strongSwan
 
+ROOT=/var/www
+
 cd /etc/openssl
 openssl ca -gencrl -crldays 30 -config /etc/openssl/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan.crl
-cp strongswan.crl     /var/www/localhost/htdocs/
-cp strongswanCert.pem /var/www/localhost/htdocs/
-cp index.html         /var/www/localhost/htdocs/
+cp strongswan.crl     ${ROOT}
+cp strongswanCert.pem ${ROOT}
+cp index.html         ${ROOT}
 cd /etc/openssl/research
 openssl ca -gencrl -crldays 15 -config /etc/openssl/research/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out research.crl
-cp research.crl       /var/www/localhost/htdocs/
+cp research.crl       ${ROOT}
 cd /etc/openssl/sales
 openssl ca -gencrl -crldays 15 -config /etc/openssl/sales/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out sales.crl
-cp sales.crl         /var/www/localhost/htdocs/
+cp sales.crl         ${ROOT}
 cd /etc/openssl/ecdsa
 openssl ca -gencrl -crldays 15 -config /etc/openssl/ecdsa/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan_ec.crl
-cp strongswan_ec.crl /var/www/localhost/htdocs/
+cp strongswan_ec.crl ${ROOT}
 cd /etc/openssl/monster
 openssl ca -gencrl -crldays 15 -config /etc/openssl/monster/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan-monster.crl
-cp strongswan-monster.crl /var/www/localhost/htdocs/
+cp strongswan-monster.crl ${ROOT}
 cd /etc/openssl/rfc3779
 openssl ca -gencrl -crldays 15 -config /etc/openssl/rfc3779/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out strongswan_rfc3779.crl
-cp strongswan_rfc3779.crl /var/www/localhost/htdocs/
+cp strongswan_rfc3779.crl ${ROOT}
 

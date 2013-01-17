@@ -1,5 +1,5 @@
 alice::ipsec stop
 sun::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null
+alice::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
 sun::ip route del 10.1.0.0/16 via PH_IP_MOON

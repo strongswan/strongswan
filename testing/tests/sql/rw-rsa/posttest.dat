@@ -1,9 +1,9 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-dave::/etc/init.d/iptables stop 2> /dev/null
+moon::iptables-restore < /etc/iptables.flush
+carol::iptables-restore < /etc/iptables.flush
+dave::iptables-restore < /etc/iptables.flush
 moon::rm /etc/ipsec.d/ipsec.db
 carol::rm /etc/ipsec.d/ipsec.db
 dave::rm /etc/ipsec.d/ipsec.db

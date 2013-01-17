@@ -1,7 +1,8 @@
 Host *
 	# debian default
 	SendEnv LANG LC_*
-	HashKnownHosts yes
+	StrictHostKeyChecking no
+	UserKnownHostsFile /dev/null
 	GSSAPIAuthentication yes
 	# faster encryption
 	Ciphers arcfour

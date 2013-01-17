@@ -14,13 +14,9 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
-
-source $DIR/function.sh
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-
-source $DIR/../testing.conf
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 ##########################################################################
 # load-testconfig requires a testname as an argument
@@ -58,17 +54,16 @@ for host in $IPSECHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
     ssh $SSHCONF $HOSTLOGIN 'rm -f /var/log/auth.log /var/log/daemon.log; \
-		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
+		    kill -SIGHUP `cat /var/run/rsyslogd.pid`' > /dev/null 2>&1
 done
 
 
 ##########################################################################
-# clear radius.log and daemon.log on FreeRadius servers
+# clear radius.log on FreeRadius servers
 #
 
 for host in $RADIUSHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-    ssh $SSHCONF $HOSTLOGIN 'rm -f /var/log/radius/radius.log /var/log/daemon.log; \
-		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
+    ssh $SSHCONF $HOSTLOGIN 'rm -f /var/log/freeradius/radius.log' > /dev/null 2>&1
 done

@@ -2,7 +2,7 @@ moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
 alice::killall radiusd
-alice::rm /etc/raddb/sites-enabled/inner-tunnel-second
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-dave::/etc/init.d/iptables stop 2> /dev/null
+alice::rm /etc/freeradius/sites-enabled/inner-tunnel-second
+moon::iptables-restore < /etc/iptables.flush
+carol::iptables-restore < /etc/iptables.flush
+dave::iptables-restore < /etc/iptables.flush

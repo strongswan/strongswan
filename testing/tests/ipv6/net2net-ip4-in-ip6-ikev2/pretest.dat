@@ -1,7 +1,9 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-sun::/etc/init.d/iptables start 2> /dev/null
+moon::iptables-restore < /etc/iptables.drop
+sun::iptables-restore < /etc/iptables.drop
+moon::ip6tables-restore < /etc/ip6tables.rules
+sun::ip6tables-restore < /etc/ip6tables.rules
 moon::ipsec start
 sun::ipsec start
-moon::sleep 2 
+moon::expect-connection net-net
+sun::expect-connection net-net
 moon::ipsec up net-net
-moon::sleep 2 

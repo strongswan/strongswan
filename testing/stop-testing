@@ -1,48 +1,34 @@
 #!/bin/bash
-# Stop all UML instances and UML switches
-#
-# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
-# Zuercher Hochschule Winterthur
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-# for more details.
 
-DIR=`dirname $0`
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
+. $DIR/scripts/function.sh
 
-source $DIR/scripts/function.sh
+echo "Stopping test environment"
 
-[ -f $DIR/testing.conf ] || die "No configuration file testing.conf found."
+NETWORKS="vnet1 vnet2 vnet3"
+KNLTARGET=/var/run/kvm-swan-kernel
+HOSTFSTARGET=/var/run/kvm-swan-hostfs
 
-source $DIR/testing.conf
+[ `id -u` -eq 0 ] || die "You must be root to run $0"
 
-if [ "$#" -eq 0 ]
-then
-    HOSTS=$STRONGSWANHOSTS
-else
-    HOSTS=$*
-fi
+check_commands virsh
 
-#####################################################
-# Shutting down the uml instances
-#
-cecho-n " * Halting all UML instances.."
-for host in $HOSTS
+for net in $NETWORKS
 do
-    uml_mconsole $host halt &> /dev/null
+	log_action "Network $net"
+	execute "virsh net-destroy $net"
 done
-cgecho "done"
 
-#####################################################
-# Shutting down the uml bridhges
-#
-cecho "Stop the uml bridges  (scripts/stop-bridges)"
-$DIR/scripts/stop-bridges
+for host in $STRONGSWANHOSTS
+do
+	log_action "Guest $host"
+	execute "virsh shutdown $host"
+	rm -f $VIRTIMGSTORE/$host.$IMGEXT
+done
 
+log_action "Removing kernel $KERNEL"
+execute "rm $KNLTARGET"
 
+log_action "Removing link to hostfs"
+execute "rm $HOSTFSTARGET"

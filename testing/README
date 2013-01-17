@@ -1,158 +1,88 @@
 
-                 ------------------------------------
-	          strongSwan UML - Running the Tests
-                 ------------------------------------
+                 ------------------------------
+                  strongSwan Integration Tests
+                 ------------------------------
 
 
 Contents
 --------
 
-   1. Starting up the UML testing environment
-   2. Running the automated tests
-   3. Manual testing
+   1. Building the testing environment
+   2. Starting up the testing environment
+   3. Running the automated tests
+   4. Manual testing
 
 
-1. Starting up the UML testing environment
-   ---------------------------------------
-  
-When the strongSwan UML testing environment has been put into place by
-running the "make-testing" script then you are ready to start up the
-UML instances by calling
+1. Building the testing environment
+   --------------------------------
 
-    ./start-testing <hosts>
-    
-This main script first calls the subscript
-
-    scripts/start-switches
-
-that starts the three UML switches umlswitch0, umlswitch1, and umlswitch2
-which are connecting the UML instances among each other and via tun/tap
-devices also make them accessible from the host system.
-      
-Then depending on the setting of the UMLSTARTMODE variable defined
-in "testing.conf", the UML instances given on the command line are started
-up with different terminals:
-
-If you are running the KDE graphical environment then by setting
-
-    UMLSTARTMODE=konsole
-    
-the script
-
-    scripts/kstart-umls <hosts>
-     
-is called which starts up each of the UML instances defined by <hosts> in
-a KDE konsole. If
-
-    UMLSTARTMODE=xterm
-
-is set then
- 
-    scripts/xstart-umls <hosts>
-    
-starts up the UML instances in an xterm each. And with the choice
-
-    UMLSTARTMODE=screen
-   
-the instances are started up by
-
-    scripts/start-umls <hosts>
-    
-in the background but the Linux command "screen -r <host>" can be used to
-connect a terminal to the UML instance <host> if desired.
+The testing environment can be built with the "make-testing" script after
+adjusting the variables in the testing.conf file.  By default everything is
+built when executing the script.  Setting any of the ENABLE_BUILD_* variables
+in the configuration file to "no" will not build those parts.
 
 
-    if [ $ENABLE_DO_TESTS = "yes" ]
-    then
-        do-tests
-    fi
+2. Starting up the testing environment
+   -----------------------------------
 
-either executes all the tests defined in the "testing/tests" directory
-if the variable SELECTEDTESTSONLY in "testing.conf" is set to "no" or the
-selected tests defined by the string in SELELECTEDTESTS if SELECTEDTESTSONLY
-is set to "yes".
-
-    if [ $ENABLE_STOP_TESTING = "yes" ]
-    then
-        stop-testing <hosts>
-    fi
-
-stops the both the UML switches and the UML instances designated by the
-<hosts> argument.
+When the strongSwan testing environment has been put into place by running
+the "make-testing" script you are ready to start up the KVM instances by
+executing the "start-testing" script.
 
 
-2. Running the automated tests
+3. Running the automated tests
    ---------------------------
 
 The script
 
     ./do-tests <testnames>
 
-runs the automated tests. With an empty <testnames> argument the tests
-as defined in "testing.conf" are executed, otherwise the tests enumerated
-by the <testnames> argument will be run as shown in the example below.
+runs the automated tests.  If the <testnames> argument is omitted all tests
+are executed, otherwise only the tests listed will be run as shown in the
+example below:
 
-    ./do-tests net2net-psk net2net-cert
+    ./do-tests ikev2/net2net-psk ikev2/net2net-cert
 
 Each test is divided into the following phases:
 
-    * scripts/load-testconfig <testname>
-      loads the UML hosts with test specific settings if such are provided.
-      
-    * next the "pretest.dat" script found in each test directory is executed.
+    * Load the test-specific guest configuration if any is provided.
+
+    * Next the "pretest.dat" script found in each test directory is executed.
       Among other commands, strongSwan is started on the IPsec hosts.
 
-    * the "evaltest.dat" script evaluates if the test has been successful.
-      
-    * the "posttest.dat" script terminates the test e.g. by stopping
-      strongSwan on the IPsec hosts.
+    * The "evaltest.dat" script evaluates if the test has been successful.
 
-    * scripts/restore-defaults <testname>
-      restores the default settings on the UML hosts.
+    * The "posttest.dat" script terminates the test e.g. by stopping
+      strongSwan on the IPsec hosts.  It is also responsible to cleaning up
+      things (e.g. firewall rules) set up in "pretest.dat".
 
-The test results and configuration settings for all tests settings are stored
-in a folder labeled with the current date in the directory
-  
-    ~/strongswan-testing/testresults
-     
-the same results are also automatically transferred to the Apache server
-running on UML instance "winnetou" and can be accessed via the URL
+    * Restore the default configuration on every host (new files have to be
+      deleted manually in "posttest.dat").
+
+The test results and configuration files for all tests are stored in a
+folder labeled with the current date and time in the $TESTRESULTSDIR directory.
+
+The same results are also automatically transferred to the Apache server
+running on guest "winnetou" and can be accessed via the URL
 
     http://192.168.0.150/testresults/
 
 
-3. Manual testing
+4. Manual testing
    --------------
-   
-The greates flexibility can be achieved with manual testing. Just set
-   
-    ENABLE_DO_TESTS="no"
-    ENABLE_STOP_TESTING="no"
-       
-in "testing.conf" and start the UML instances that you want to experiment with
-by calling
 
-    ./start-testing <hosts>
-    
-If you want to preload a test scenario with configurations differing from
-the default values, e.g. when using Preshared Keys then you can do this
-with the command
+Instead of running tests automatically with "do-tests" it is possible to
+preload a test scenario with the script:
 
-    scripts/load-testconfig net2net-psk
-    
-You can then log onto any UML instance using its konsole, xterm or screen
-terminal as root with the default password
+    scripts/load-testconfig <testname>
 
-    tuxmux
-    
-You can then execute any commands the UML instances, including changing
-and recompiling the strongSwan source code located in the /root directory.
+Individual configuration files can be changed and any command can be executed by
+logging into a guest host directly (via SSH or a console window).  No password
+is required to login as root.  The sources for every software built during
+"make-testing" are mounted at /root/shared/, which allows you to change and
+recompile these components.
 
-After you have finished testing, the default configuration settings can
-restored with the command
+After you have finished testing, the default configuration can be restored
+with the following command (newly created files have to be deleted manually)
 
-    scripts/restore-defaults net2net-psk
-
-
------------------------------------------------------------------------------
-
+    scripts/restore-defaults

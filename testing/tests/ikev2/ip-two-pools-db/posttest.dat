@@ -3,11 +3,11 @@ venus::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
 moon::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-venus::/etc/init.d/iptables stop 2> /dev/null
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-dave::/etc/init.d/iptables stop 2> /dev/null
+alice::iptables-restore < /etc/iptables.flush
+venus::iptables-restore < /etc/iptables.flush
+moon::iptables-restore < /etc/iptables.flush
+carol::iptables-restore < /etc/iptables.flush
+dave::iptables-restore < /etc/iptables.flush
 moon::ip route del 10.3.0.0/16 via PH_IP_MOON
 moon::ip route del 10.4.0.0/16 via PH_IP_MOON1
 moon::conntrack -F

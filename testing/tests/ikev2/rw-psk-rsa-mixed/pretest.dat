@@ -1,6 +1,6 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-dave::/etc/init.d/iptables start 2> /dev/null
+moon::iptables-restore < /etc/iptables.rules
+carol::iptables-restore < /etc/iptables.rules
+dave::iptables-restore < /etc/iptables.rules
 carol::rm /etc/ipsec.d/cacerts/*
 moon::ipsec start
 carol::ipsec start

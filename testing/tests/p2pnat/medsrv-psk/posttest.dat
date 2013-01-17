@@ -1,10 +1,10 @@
 bob::ipsec stop
 alice::ipsec stop
 carol::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-moon::/etc/init.d/iptables stop 2> /dev/null
-carol::/etc/init.d/iptables stop 2> /dev/null
-sun::/etc/init.d/iptables stop 2> /dev/null
-bob::/etc/init.d/iptables stop 2> /dev/null
+alice::iptables-restore < /etc/iptables.flush
+carol::iptables-restore < /etc/iptables.flush
+bob::iptables-restore < /etc/iptables.flush
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
 moon::conntrack -F
 sun::conntrack -F

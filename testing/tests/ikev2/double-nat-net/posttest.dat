@@ -1,7 +1,7 @@
 bob::ipsec stop
 alice::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-bob::/etc/init.d/iptables stop 2> /dev/null
+alice::iptables-restore < /etc/iptables.flush
+bob::iptables-restore < /etc/iptables.flush
 moon::iptables -t nat -F
 sun::iptables -t nat -F
 moon::conntrack -F

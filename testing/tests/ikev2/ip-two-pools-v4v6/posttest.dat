@@ -1,5 +1,4 @@
 alice::ip -6 route del default via fec1:\:1
 carol::ipsec stop
-moon::echo 0 > /proc/sys/net/ipv6/conf/all/forwarding
 moon::ipsec stop
 moon::conntrack -F

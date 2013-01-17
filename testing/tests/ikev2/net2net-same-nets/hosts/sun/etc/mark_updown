@@ -73,8 +73,12 @@
 #              just the host, this will be 255.255.255.255.
 #
 #       PLUTO_MY_SOURCEIP
-#              if non-empty, then the source address for the route will be
-#              set to this IP address.
+#       PLUTO_MY_SOURCEIP4_$i
+#       PLUTO_MY_SOURCEIP6_$i
+#              contains IPv4/IPv6 virtual IP received from a responder,
+#              $i enumerates from 1 to the number of IP per address family.
+#              PLUTO_MY_SOURCEIP is a legacy variable and equals to the first
+#              virtual IP, IPv4 or IPv6.
 #
 #       PLUTO_MY_PROTOCOL
 #              is the IP protocol that will be transported.
@@ -128,9 +132,15 @@
 #              contains the remote UDP port in the case of ESP_IN_UDP
 #              encapsulation
 #
+#       PLUTO_DNS4_$i
+#       PLUTO_DNS6_$i
+#              contains IPv4/IPv6 DNS server attribute received from a
+#              responder, $i enumerates from 1 to the number of servers per
+#              address family.
+#
 
 # define a minimum PATH environment in case it is not set
-PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/sbin"
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/sbin:/usr/local/sbin"
 export PATH
 
 # check parameter(s)
@@ -196,8 +206,8 @@ up-client:)
 	    iptables -t nat -A PREROUTING -i $INT_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
 	             -d $OUT_NET -j NETMAP --to $SAME_NET
 	    iptables -I FORWARD 1 -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT -j ACCEPT
-            iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
-                     -s $SAME_NET -j NETMAP --to $IN_NET
+	    iptables -t nat -A POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -s $SAME_NET -j NETMAP --to $IN_NET
 	fi
 	;;
 down-client:)
@@ -215,7 +225,11 @@ down-client:)
 	if [ -n "$PLUTO_MARK_OUT" ]
 	then
 	    iptables -t mangle -D PREROUTING $SET_MARK_OUT
+	    iptables -t nat -D PREROUTING -i $INT_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -d $OUT_NET -j NETMAP --to $SAME_NET
 	    iptables -D FORWARD -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT -j ACCEPT
+	    iptables -t nat -D POSTROUTING -o $PLUTO_INTERFACE -m mark --mark $PLUTO_MARK_OUT \
+	             -s $SAME_NET -j NETMAP --to $IN_NET
 	fi
 	;;
 *)	echo "$0: unknown verb \`$PLUTO_VERB' or parameter \`$1'" >&2

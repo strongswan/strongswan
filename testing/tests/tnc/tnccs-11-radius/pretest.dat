@@ -1,8 +1,8 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-dave::/etc/init.d/iptables start 2> /dev/null
-alice::ln -s /etc/raddb/sites-available/inner-tunnel-second /etc/raddb/sites-enabled/inner-tunnel-second
-alice::cat /etc/raddb/sites-enabled/inner-tunnel-second
+moon::iptables-restore < /etc/iptables.rules
+carol::iptables-restore < /etc/iptables.rules
+dave::iptables-restore < /etc/iptables.rules
+alice::ln -s /etc/freeradius/sites-available/inner-tunnel-second /etc/freeradius/sites-enabled/inner-tunnel-second
+alice::cat /etc/freeradius/sites-enabled/inner-tunnel-second
 alice::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties radiusd
 alice::cat /etc/tnc_config
 carol::cat /etc/tnc_config

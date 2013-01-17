@@ -1,5 +1,0 @@
-ATTRIBUTE	TNC-Status	3001	integer
-
-VALUE	TNC-Status	Access	0 
-VALUE	TNC-Status	Isolate	1
-VALUE	TNC-Status	None	2

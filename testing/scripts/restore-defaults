@@ -14,32 +14,20 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-DIR=`dirname $0`
-
-source $DIR/function.sh
-
-[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
-
-source $DIR/../testing.conf
-
-##########################################################################
-# load-testconfig requires a testname as an argument
-#
+DIR=$(dirname `readlink -f $0`)
+. $DIR/../testing.conf
+. $DIR/function.sh
 
 testname=$1
 
-HOSTCONFIGDIR=$BUILDDIR/hosts
+HOSTCONFIGDIR=$DIR/../hosts
 TESTSDIR=$BUILDDIR/tests
 
 [ -d $TESTSDIR ] || die "Directory '$TESTSDIR' not found"
 [ -d $TESTSDIR/$testname ] || die "Test '$testname' not found"
 [ -f $TESTSDIR/$testname/test.conf ] || die "File 'test.conf' is missing"
 
-source $TESTSDIR/$testname/test.conf
-
-##########################################################################
-# copy default host config back if necessary
-#
+. $TESTSDIR/$testname/test.conf
 
 if [ -d $TESTSDIR/${testname}/hosts ]
 then
@@ -47,5 +35,6 @@ then
     do
 	eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
 	scp $SSHCONF -r $HOSTCONFIGDIR/${host}/etc $HOSTLOGIN:/ > /dev/null 2>&1
+	scp $SSHCONF -r $HOSTCONFIGDIR/default/etc $HOSTLOGIN:/ > /dev/null 2>&1
     done
 fi
