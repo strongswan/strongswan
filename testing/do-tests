@@ -553,6 +553,9 @@ do
 	    scp $SSHCONF $HOSTLOGIN:/var/log/freeradius/radius.log \
 		$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
 
+	    ssh $SSHCONF $HOSTLOGIN grep imcv /var/log/daemon.log \
+		>> $TESTRESULTDIR/${host}.daemon.log
+
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
     <h3>$host</h3>
@@ -569,6 +572,7 @@ do
 	  <ul>
 	    <li><a href="$host.eap.conf">eap.conf</a></li>
 	    <li><a href="$host.radius.log">radius.log</a></li>
+	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
 	<td valign="top">
