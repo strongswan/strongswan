@@ -29,6 +29,11 @@
 #include "tkm_kernel_sad.h"
 #include "tkm_kernel_ipsec.h"
 
+/** From linux/in.h */
+#ifndef IP_XFRM_POLICY
+#define IP_XFRM_POLICY 17
+#endif
+
 typedef struct private_tkm_kernel_ipsec_t private_tkm_kernel_ipsec_t;
 
 /**
