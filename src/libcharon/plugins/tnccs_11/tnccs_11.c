@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -51,6 +51,16 @@ struct private_tnccs_11_t {
 	 * TNCC if TRUE, TNCS if FALSE
 	 */
 	bool is_server;
+
+	/**
+	 * Server identity
+	 */
+	identification_t *server;
+
+	/**
+	 * Client identity
+	 */
+	identification_t *peer;
 
 	/**
 	 * Connection ID assigned to this TNCCS connection
@@ -528,6 +538,8 @@ METHOD(tls_t, destroy, void,
 {
 	tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
 											  this->is_server);
+	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
 	free(this);
@@ -536,7 +548,8 @@ METHOD(tls_t, destroy, void,
 /**
  * See header
  */
-tls_t *tnccs_11_create(bool is_server)
+tls_t *tnccs_11_create(bool is_server, identification_t *server,
+					   identification_t *peer)
 {
 	private_tnccs_11_t *this;
 
@@ -551,6 +564,8 @@ tls_t *tnccs_11_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
+		.server = server->clone(server),
+		.peer = peer->clone(peer),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 								"%s.plugins.tnccs-11.max_message_size", 45000,

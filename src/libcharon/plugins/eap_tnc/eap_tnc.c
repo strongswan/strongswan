@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -172,7 +172,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		free(this);
 		return NULL;
 	}
-	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server);
+	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server,
+										server, peer);
 	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs,
 											 EAP_TNC_MAX_MESSAGE_LEN,
 											 max_msg_count, FALSE);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Andreas Steffen
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,6 +30,16 @@ struct private_tnccs_dynamic_t {
 	 * Public tls_t interface.
 	 */
 	tls_t public;
+
+	/**
+	 * Server identity
+	 */
+	identification_t *server;
+
+	/**
+	 * Client identity
+	 */
+	identification_t *peer;
 
 	/**
 	 * Detected TNC IF-TNCCS stack
@@ -76,7 +86,8 @@ METHOD(tls_t, process, status_t,
 		type = determine_tnccs_protocol(*(char*)buf);
 		DBG1(DBG_TNC, "%N protocol detected dynamically",
 					   tnccs_type_names, type);
-		this->tls = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, type, TRUE);
+		this->tls = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, type, TRUE,
+													this->server, this->peer);
 		if (!this->tls)
 		{
 			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);
@@ -120,13 +131,16 @@ METHOD(tls_t, destroy, void,
 	private_tnccs_dynamic_t *this)
 {
 	DESTROY_IF(this->tls);
+	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	free(this);
 }
 
 /**
  * See header
  */
-tls_t *tnccs_dynamic_create(bool is_server)
+tls_t *tnccs_dynamic_create(bool is_server, identification_t *server,
+							identification_t *peer)
 {
 	private_tnccs_dynamic_t *this;
 
@@ -140,6 +154,8 @@ tls_t *tnccs_dynamic_create(bool is_server)
 			.get_eap_msk = _get_eap_msk,
 			.destroy = _destroy,
 		},
+		.server = server->clone(server),
+		.peer = peer->clone(peer),
 	);
 
 	return &this->public;

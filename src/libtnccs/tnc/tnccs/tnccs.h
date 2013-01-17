@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -54,9 +54,13 @@ extern enum_name_t *tnccs_type_names;
  * Constructor definition for a pluggable TNCCS protocol implementation.
  *
  * @param is_server		TRUE if TNC Server, FALSE if TNC Client
+ * @param server		Server identity
+ * @param peer			Client identity
  * @return				implementation of the tnccs_t interface
  */
-typedef tnccs_t *(*tnccs_constructor_t)(bool is_server);
+typedef tnccs_t *(*tnccs_constructor_t)(bool is_server,
+										identification_t *server,
+										identification_t *peer);
 
 /**
  * Callback function adding a message to a TNCCS batch

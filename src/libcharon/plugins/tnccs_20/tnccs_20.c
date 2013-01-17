@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Sansar Choinyanbuu
- * Copyright (C) 2010-2012 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -56,6 +56,16 @@ struct private_tnccs_20_t {
 	 * TNCC if TRUE, TNCS if FALSE
 	 */
 	bool is_server;
+
+	/**
+	 * Server identity
+	 */
+	identification_t *server;
+
+	/**
+	 * Client identity
+	 */
+	identification_t *peer;
 
 	/**
 	 * PB-TNC State Machine
@@ -792,6 +802,8 @@ METHOD(tls_t, destroy, void,
 {
 	tnc->tnccs->remove_connection(tnc->tnccs, this->connection_id,
 											  this->is_server);
+	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	this->state_machine->destroy(this->state_machine);
 	this->mutex->destroy(this->mutex);
 	this->messages->destroy_offset(this->messages,
@@ -802,7 +814,8 @@ METHOD(tls_t, destroy, void,
 /**
  * See header
  */
-tls_t *tnccs_20_create(bool is_server)
+tls_t *tnccs_20_create(bool is_server, identification_t *server,
+					   identification_t *peer)
 {
 	private_tnccs_20_t *this;
 
@@ -817,6 +830,8 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
+		.server = server->clone(server),
+		.peer = peer->clone(peer),
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.messages = linked_list_create(),

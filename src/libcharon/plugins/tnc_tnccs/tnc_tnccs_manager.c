@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Andreas Steffen
+ * Copyright (C) 2010-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -158,7 +158,8 @@ METHOD(tnccs_manager_t, remove_method, void,
 }
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
-	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server)
+	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server,
+	identification_t *server, identification_t *peer)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -170,7 +171,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	{
 		if (type == entry->type)
 		{
-			protocol = entry->constructor(is_server);
+			protocol = entry->constructor(is_server, server, peer);
 			if (protocol)
 			{
 				break;
