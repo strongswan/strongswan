@@ -45,6 +45,11 @@ struct private_pt_tls_dispatcher_t {
 	 * Server identity
 	 */
 	identification_t *server;
+
+	/**
+	 * TNCCS protocol handler constructor
+	 */
+	tnccs_t*(*create)();
 };
 
 /**
@@ -106,11 +111,12 @@ static void cleanup(pt_tls_server_t *connection)
 }
 
 METHOD(pt_tls_dispatcher_t, dispatch, void,
-	private_pt_tls_dispatcher_t *this)
+	private_pt_tls_dispatcher_t *this, tnccs_t*(*create)())
 {
 	while (TRUE)
 	{
 		pt_tls_server_t *connection;
+		tnccs_t *tnccs;
 		bool old;
 		int fd;
 
@@ -123,7 +129,13 @@ METHOD(pt_tls_dispatcher_t, dispatch, void,
 			continue;
 		}
 
-		connection = pt_tls_server_create(this->server, fd);
+		tnccs = create();
+		if (!tnccs)
+		{
+			close(fd);
+			continue;
+		}
+		connection = pt_tls_server_create(this->server, fd, tnccs);
 		if (!connection)
 		{
 			close(fd);

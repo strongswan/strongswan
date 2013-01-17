@@ -24,6 +24,8 @@
 #include <networking/host.h>
 #include <utils/identification.h>
 
+#include <tnc/tnccs/tnccs.h>
+
 typedef struct pt_tls_dispatcher_t pt_tls_dispatcher_t;
 
 /**
@@ -34,9 +36,12 @@ struct pt_tls_dispatcher_t {
 	/**
 	 * Dispatch and handle PT-TLS connections.
 	 *
-	 * This call is blocking and a thread cancellation point.
+	 * This call is blocking and a thread cancellation point. The passed
+	 * constructor gets called for each dispatched connection.
+	 *
+	 * @param create		TNCCS constructor function to use
 	 */
-	void (*dispatch)(pt_tls_dispatcher_t *this);
+	void (*dispatch)(pt_tls_dispatcher_t *this, tnccs_t*(*create)());
 
 	/**
 	 * Destroy a pt_tls_dispatcher_t.

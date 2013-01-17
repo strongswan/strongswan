@@ -18,8 +18,6 @@
 
 #include <utils/debug.h>
 
-#include <tnc/tnc.h>
-
 typedef struct private_pt_tls_server_t private_pt_tls_server_t;
 
 /**
@@ -221,12 +219,6 @@ METHOD(pt_tls_server_t, handle, status_t,
 				return FAILED;
 			}
 			this->state = PT_TLS_SERVER_TNCCS;
-			this->tnccs = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs,
-															  TNCCS_2_0, TRUE);
-			if (!this->tnccs)
-			{
-				return FAILED;
-			}
 			break;
 		case PT_TLS_SERVER_TNCCS:
 			if (!assess(this, (tls_t*)this->tnccs))
@@ -250,7 +242,7 @@ METHOD(pt_tls_server_t, get_fd, int,
 METHOD(pt_tls_server_t, destroy, void,
 	private_pt_tls_server_t *this)
 {
-	DESTROY_IF(this->tnccs);
+	this->tnccs->destroy(this->tnccs);
 	this->tls->destroy(this->tls);
 	free(this);
 }
@@ -258,7 +250,8 @@ METHOD(pt_tls_server_t, destroy, void,
 /**
  * See header
  */
-pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd)
+pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
+									  tnccs_t *tnccs)
 {
 	private_pt_tls_server_t *this;
 
@@ -270,10 +263,12 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd)
 		},
 		.state = PT_TLS_SERVER_VERSION,
 		.tls = tls_socket_create(TRUE, server, NULL, fd, NULL),
+		.tnccs = (tls_t*)tnccs,
 	);
 
 	if (!this->tls)
 	{
+		this->tnccs->destroy(this->tnccs);
 		free(this);
 		return NULL;
 	}
