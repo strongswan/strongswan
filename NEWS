@@ -27,6 +27,9 @@ strongswan-5.0.2
   batches can be triggered and monitored externally using the
   "ipsec load-tester" tool.
 
+- The integration test environment was updated and now uses KVM and reproducible
+  guest images based on Debian.
+
 strongswan-5.0.1
 ----------------
 
