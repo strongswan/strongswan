@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Reto Buerki
- * Copyright (C) 2012 Adrian-Ken Rueegsegger
+ * Copyright (C) 2012-2013 Reto Buerki
+ * Copyright (C) 2012-2013 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,8 +13,6 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
-
-#include <utils/debug.h>
 
 #include "tkm_public_key.h"
 
@@ -31,14 +29,9 @@ struct private_tkm_public_key_t {
 	tkm_public_key_t public;
 
 	/**
-	 * Public modulus.
+	 * ASN.1 blob of pubkey.
 	 */
-	chunk_t n;
-
-	/**
-	 * Public exponent.
-	 */
-	chunk_t e;
+	chunk_t asn_blob;
 
 	/**
 	 * Reference count.
@@ -87,8 +80,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 		return TRUE;
 	}
 	return lib->encoding->encode(lib->encoding, type, this, fp,
-								 CRED_PART_RSA_MODULUS, this->n,
-								 CRED_PART_RSA_PUB_EXP, this->e,
+								 CRED_PART_RSA_PUB_ASN1_DER, this->asn_blob,
 								 CRED_PART_END);
 }
 
@@ -105,8 +97,7 @@ METHOD(public_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
-		chunk_free(&this->n);
-		chunk_free(&this->e);
+		chunk_free(&this->asn_blob);
 		free(this);
 	}
 }
@@ -117,18 +108,14 @@ METHOD(public_key_t, destroy, void,
 tkm_public_key_t *tkm_public_key_load(key_type_t type, va_list args)
 {
 	private_tkm_public_key_t *this;
-	chunk_t n, e;
+	chunk_t blob = chunk_empty;
 
-	n = e = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_RSA_MODULUS:
-				n = va_arg(args, chunk_t);
-				continue;
-			case BUILD_RSA_PUB_EXP:
-				e = va_arg(args, chunk_t);
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
 				continue;
 			case BUILD_END:
 				break;
@@ -138,7 +125,7 @@ tkm_public_key_t *tkm_public_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	if (!e.ptr || !n.ptr)
+	if (!blob.ptr)
 	{
 		return NULL;
 	}
@@ -159,8 +146,7 @@ tkm_public_key_t *tkm_public_key_load(key_type_t type, va_list args)
 			},
 		},
 		.ref = 1,
-		.n = chunk_clone(n),
-		.e = chunk_clone(e),
+		.asn_blob = chunk_clone(blob),
 	);
 
 	return &this->public;

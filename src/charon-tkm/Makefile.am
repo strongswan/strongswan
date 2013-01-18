@@ -25,7 +25,6 @@ BUILD_OPTS = \
 PLUGINS = \
 	kernel-netlink \
 	pem \
-	pkcs1 \
 	socket-default \
 	openssl \
 	stroke

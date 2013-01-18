@@ -41,6 +41,7 @@
 #include "tkm_kernel_ipsec.h"
 #include "tkm_public_key.h"
 #include "tkm_cred.h"
+#include "tkm_encoder.h"
 
 /**
  * TKM bus listener for IKE authorize events.
@@ -345,6 +346,9 @@ int main(int argc, char *argv[])
 	creds = tkm_cred_create();
 	lib->credmgr->add_set(lib->credmgr, (credential_set_t*)creds);
 
+	/* register TKM credential encoder */
+	lib->encoding->add_encoder(lib->encoding, tkm_encoder_encode);
+
 	/* add handler for SEGV and ILL,
 	 * INT and TERM are handled by sigwait() in run() */
 	action.sa_handler = segv_handler;
@@ -371,6 +375,7 @@ int main(int argc, char *argv[])
 	charon->bus->remove_listener(charon->bus, &listener->listener);
 	listener->destroy(listener);
 	creds->destroy(creds);
+	lib->encoding->remove_encoder(lib->encoding, tkm_encoder_encode);
 
 deinit:
 	libcharon_deinit();
