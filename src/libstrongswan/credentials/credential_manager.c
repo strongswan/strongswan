@@ -1041,6 +1041,29 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 	return private;
 }
 
+/**
+ * Move the actually used certificate to front, so it gets returned with get()
+ */
+static void prefer_cert(auth_cfg_t *auth, certificate_t *cert)
+{
+	enumerator_t *enumerator;
+	auth_rule_t rule;
+	certificate_t *current;
+
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &rule, &current))
+	{
+		if (rule == AUTH_RULE_SUBJECT_CERT)
+		{
+			current->get_ref(current);
+			auth->replace(auth, enumerator, AUTH_RULE_SUBJECT_CERT, cert);
+			cert = current;
+		}
+	}
+	enumerator->destroy(enumerator);
+	auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
+}
+
 METHOD(credential_manager_t, get_private, private_key_t*,
 	private_credential_manager_t *this, key_type_t type, identification_t *id,
 	auth_cfg_t *auth)
@@ -1076,6 +1099,7 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 					if (trustchain)
 					{
 						auth->merge(auth, trustchain, FALSE);
+						prefer_cert(auth, cert->get_ref(cert));
 						trustchain->destroy(trustchain);
 						break;
 					}
