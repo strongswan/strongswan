@@ -630,6 +630,8 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message_t *message;
 	host_t *me, *other;
 	bool delete = FALSE, hook = FALSE;
+	ike_sa_id_t *id = NULL;
+	u_int64_t responder_spi;
 	status_t status;
 
 	me = request->get_destination(request);
@@ -680,10 +682,15 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	}
 	enumerator->destroy(enumerator);
 
-	/* remove resonder SPI if IKE_SA_INIT failed */
+	/* RFC 5996, section 2.6 mentions that in the event of a failure during
+	 * IKE_SA_INIT the responder's SPI will be 0 in the response, while it
+	 * actually explicitly allows it to be non-zero.  Since we use the responder
+	 * SPI to create hashes in the IKE_SA manager we can only set the SPI to
+	 * zero temporarily, otherwise checking the SA in would fail. */
 	if (delete && request->get_exchange_type(request) == IKE_SA_INIT)
 	{
-		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
+		id = this->ike_sa->get_id(this->ike_sa);
+		responder_spi = id->get_responder_spi(id);
 		id->set_responder_spi(id, 0);
 	}
 
@@ -693,6 +700,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	message->destroy(message);
+	if (id)
+	{
+		id->set_responder_spi(id, responder_spi);
+	}
 	if (status != SUCCESS)
 	{
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
