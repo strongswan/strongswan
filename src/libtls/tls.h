@@ -193,6 +193,20 @@ struct tls_t {
 	bool (*is_server)(tls_t *this);
 
 	/**
+	 * Return the server identity
+	 *
+	 * @return                     Server identity
+	 */
+	identification_t* (*get_server_id)(tls_t *this);
+
+	/**
+	 * Return the peer identity
+	 *
+	 * @return			Peer identity
+	 */
+	identification_t* (*get_peer_id)(tls_t *this);
+
+	/**
 	 * Get the negotiated TLS/SSL version.
 	 *
 	 * @return			negotiated TLS version

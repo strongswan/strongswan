@@ -20,7 +20,13 @@
 #include <tnc/imc/imc_manager.h>
 #include <tnc/imv/imv_manager.h>
 
+#include <tncif_identity.h>
+
+#include <tls.h>
+
 #include <utils/debug.h>
+#include <pen/pen.h>
+#include <bio/bio_writer.h>
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
@@ -443,6 +449,44 @@ static TNC_Result str_attribute(TNC_UInt32 buffer_len,
 	}
 }
 
+/**
+ * Write the value of a TNC identity list into the buffer
+ */
+static TNC_Result identity_attribute(TNC_UInt32 buffer_len,
+									 TNC_BufferReference buffer,
+									 TNC_UInt32 *value_len,
+									 linked_list_t *list)
+{
+	bio_writer_t *writer;
+	enumerator_t *enumerator;
+	u_int32_t count;
+	chunk_t value;
+	tncif_identity_t *tnc_id;
+	TNC_Result result = TNC_RESULT_INVALID_PARAMETER;
+
+	count = list->get_count(list);
+	writer = bio_writer_create(4 + TNCIF_IDENTITY_MIN_SIZE * count);
+	writer->write_uint32(writer, count);
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &tnc_id))
+	{
+		tnc_id->build(tnc_id, writer);
+	}
+	enumerator->destroy(enumerator);
+
+	value = writer->get_buf(writer);
+	*value_len = value.len;
+	if (buffer && buffer_len >= value.len)
+	{
+		memcpy(buffer, value.ptr, value.len);
+		result = TNC_RESULT_SUCCESS;
+	}
+	writer->destroy(writer);
+
+	return result;
+}
+
 METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 	private_tnc_tnccs_manager_t *this, bool is_imc,
 									   TNC_UInt32 imcv_id,
@@ -488,6 +532,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 
 			/* these attributes are supported */
 			case TNC_ATTRIBUTEID_PRIMARY_IMV_ID:
+			case TNC_ATTRIBUTEID_AR_IDENTITIES:
 				attribute_match = TRUE;
 				break;
 
@@ -626,6 +671,64 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 										 "IF-T for Tunneled EAP");
  		case TNC_ATTRIBUTEID_IFT_VERSION:
 			return str_attribute(buffer_len, buffer, value_len, "1.1");
+		case TNC_ATTRIBUTEID_AR_IDENTITIES:
+		{
+			linked_list_t *list;
+			tls_t *tnccs;
+			identification_t *peer;
+			tncif_identity_t *tnc_id;
+			u_int32_t id_type, subject_type;
+			TNC_Result result;
+
+			list = linked_list_create();
+			tnccs = (tls_t*)entry->tnccs;
+			peer = tnccs->get_peer_id(tnccs);
+			if (peer)
+			{
+				switch (peer->get_type(peer))
+				{
+					case ID_IPV4_ADDR:
+						id_type = TNC_ID_IPV4_ADDR;
+						subject_type = TNC_SUBJECT_MACHINE;
+						break;
+					case ID_IPV6_ADDR:
+						id_type = TNC_ID_IPV6_ADDR;
+						subject_type = TNC_SUBJECT_MACHINE;
+						break;
+					case ID_FQDN:
+						id_type = TNC_ID_FQDN;
+						subject_type = TNC_SUBJECT_MACHINE;
+						break;
+					case ID_RFC822_ADDR:
+						id_type = TNC_ID_RFC822_ADDR;
+						subject_type = TNC_SUBJECT_USER;
+						break;
+					case ID_DER_ASN1_DN:
+						id_type = TNC_ID_DER_ASN1_DN;
+						subject_type = TNC_SUBJECT_UNKNOWN;
+						break;
+					case ID_DER_ASN1_GN:
+						id_type = TNC_ID_DER_ASN1_GN;
+						subject_type = TNC_SUBJECT_UNKNOWN;
+						break;
+					default:
+						id_type = TNC_ID_UNKNOWN;
+						subject_type = TNC_SUBJECT_UNKNOWN;
+				}
+				if (id_type != TNC_ID_UNKNOWN)
+				{
+					tnc_id = tncif_identity_create(
+								pen_type_create(PEN_TCG, id_type),
+								peer->get_encoding(peer),
+								pen_type_create(PEN_TCG, subject_type),
+								pen_type_create(PEN_TCG, TNC_AUTH_UNKNOWN));
+					list->insert_last(list, tnc_id);
+				}
+			}
+			result = identity_attribute(buffer_len, buffer, value_len, list);
+			list->destroy_offset(list, offsetof(tncif_identity_t, destroy));
+			return result;
+		}
 		default:
 			return TNC_RESULT_INVALID_PARAMETER;
 	 }

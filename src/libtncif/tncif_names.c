@@ -45,3 +45,20 @@ ENUM(TNC_IMV_Evaluation_Result_names,
 	"error",
 	"don't know"
 );
+
+ENUM(TNC_Subject_names,
+	TNC_SUBJECT_UNKNOWN,
+	TNC_SUBJECT_USER,
+	"unknown",
+	"machine",
+	"user"
+);
+
+ENUM(TNC_Authentication_names,
+	TNC_AUTH_UNKNOWN,
+	TNC_AUTH_SIM,
+	"unknown method",
+	"certificate",
+	"password",
+	"SIM card"
+);

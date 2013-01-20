@@ -30,5 +30,7 @@
 extern enum_name_t *TNC_Connection_State_names;
 extern enum_name_t *TNC_IMV_Action_Recommendation_names;
 extern enum_name_t *TNC_IMV_Evaluation_Result_names;
+extern enum_name_t *TNC_Subject_names;
+extern enum_name_t *TNC_Authentication_names;
 
 #endif /** TNCIF_NAME_H_ @}*/

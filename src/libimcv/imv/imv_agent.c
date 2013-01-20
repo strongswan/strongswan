@@ -18,8 +18,11 @@
 #include "ietf/ietf_attr_assess_result.h"
 
 #include <tncif_names.h>
+#include <tncif_identity.h>
 
 #include <utils/debug.h>
+#include <collections/linked_list.h>
+#include <bio/bio_reader.h>
 #include <threading/rwlock.h>
 
 typedef struct private_imv_agent_t private_imv_agent_t;
@@ -352,12 +355,59 @@ static u_int32_t get_uint_attribute(private_imv_agent_t *this, TNC_ConnectionID 
 	return 0;
  }
 
+/**
+ * Read a TNC identity attribute
+ */
+static linked_list_t* get_identity_attribute(private_imv_agent_t *this,
+											 TNC_ConnectionID id,
+											 TNC_AttributeID attribute_id)
+{
+	TNC_UInt32 len;
+	char buf[2048];
+	u_int32_t count;
+	tncif_identity_t *tnc_id;
+	bio_reader_t *reader;
+	linked_list_t *list;
+
+	list = linked_list_create();
+
+	if (!this->get_attribute ||
+		 this->get_attribute(this->id, id, attribute_id, sizeof(buf), buf, &len)
+				!= TNC_RESULT_SUCCESS || len > sizeof(buf))
+	{
+		return list;
+	}
+
+	reader = bio_reader_create(chunk_create(buf, len));
+	if (!reader->read_uint32(reader, &count))
+	{
+			goto end;
+	}
+	while (count--)
+	{
+		tnc_id = tncif_identity_create_empty();
+		if (!tnc_id->process(tnc_id, reader))
+		{
+			tnc_id->destroy(tnc_id);
+			goto end;
+		}
+		list->insert_last(list, tnc_id);
+	}
+
+end:
+	reader->destroy(reader);
+	return list;
+ }
+
 METHOD(imv_agent_t, create_state, TNC_Result,
 	private_imv_agent_t *this, imv_state_t *state)
 {
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
 	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
+	linked_list_t *ar_identities;
+	enumerator_t *enumerator;
+	tncif_identity_t *tnc_id;
 	u_int32_t max_msg_len;
 
 	conn_id = state->get_connection_id(state);
@@ -378,6 +428,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	t_p = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_PROTOCOL);
 	t_v = get_str_attribute(this, conn_id, TNC_ATTRIBUTEID_IFT_VERSION);
 	max_msg_len = get_uint_attribute(this, conn_id, TNC_ATTRIBUTEID_MAX_MESSAGE_SIZE);
+	ar_identities = get_identity_attribute(this, conn_id, TNC_ATTRIBUTEID_AR_IDENTITIES);
 
 	state->set_flags(state, has_long, has_excl);
 	state->set_max_msg_len(state, max_msg_len);
@@ -389,6 +440,64 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	DBG2(DBG_IMV, "  over %s %s with maximum PA-TNC message size of %u bytes",
 				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
 
+	enumerator = ar_identities->create_enumerator(ar_identities);
+	while (enumerator->enumerate(enumerator, &tnc_id))
+	{
+		pen_type_t id_type, subject_type, auth_type;
+		int tcg_id_type, tcg_subject_type, tcg_auth_type;
+		chunk_t id_value;
+		id_type_t ike_type;
+		identification_t *id;
+
+		id_type = tnc_id->get_identity_type(tnc_id);
+		id_value = tnc_id->get_identity_value(tnc_id);
+		subject_type = tnc_id->get_subject_type(tnc_id);
+		auth_type = tnc_id->get_auth_type(tnc_id);
+
+		tcg_id_type =      (id_type.vendor_id == PEN_TCG) ?
+							id_type.type : TNC_ID_UNKNOWN;
+		tcg_subject_type = (subject_type.vendor_id == PEN_TCG) ?
+							subject_type.type : TNC_SUBJECT_UNKNOWN;
+		tcg_auth_type =    (auth_type.vendor_id == PEN_TCG) ?
+							auth_type.type : TNC_AUTH_UNKNOWN;
+
+		switch (tcg_id_type)
+		{
+			case TNC_ID_IPV4_ADDR:
+				ike_type = ID_IPV4_ADDR;
+				break;
+			case TNC_ID_IPV6_ADDR:
+				ike_type = ID_IPV6_ADDR;
+				break;
+			case TNC_ID_FQDN:
+			case TNC_ID_USER_NAME:
+				ike_type = ID_FQDN;
+				break;
+			case TNC_ID_RFC822_ADDR:
+				ike_type = ID_RFC822_ADDR;
+				break;
+			case TNC_ID_DER_ASN1_DN:
+				ike_type = ID_DER_ASN1_DN;
+				break;
+			case TNC_ID_DER_ASN1_GN:
+				ike_type = ID_IPV4_ADDR;
+				break;
+			case TNC_ID_UNKNOWN:
+			default:
+				ike_type = ID_KEY_ID;
+				break;
+		}
+
+		id = identification_create_from_encoding(ike_type, id_value);
+		DBG2(DBG_IMV, "%N identity '%Y' authenticated by %N",
+					   TNC_Subject_names, tcg_subject_type, id,
+					   TNC_Authentication_names, tcg_auth_type);
+		id->destroy(id);
+	}
+	enumerator->destroy(enumerator);
+
+	ar_identities->destroy_offset(ar_identities,
+						   offsetof(tncif_identity_t, destroy));
 	free(tnccs_p);
 	free(tnccs_v);
 	free(t_p);

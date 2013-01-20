@@ -359,6 +359,18 @@ METHOD(tls_t, is_server, bool,
 	return this->is_server;
 }
 
+METHOD(tls_t, get_server_id, identification_t*,
+	private_tls_t *this)
+{
+	return this->server;
+}
+
+METHOD(tls_t, get_peer_id, identification_t*,
+	private_tls_t *this)
+{
+	return this->peer;
+}
+
 METHOD(tls_t, get_version, tls_version_t,
 	private_tls_t *this)
 {
@@ -457,6 +469,8 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.process = _process,
 			.build = _build,
 			.is_server = _is_server,
+			.get_server_id = _get_server_id,
+			.get_peer_id = _get_peer_id,
 			.get_version = _get_version,
 			.set_version = _set_version,
 			.get_purpose = _get_purpose,

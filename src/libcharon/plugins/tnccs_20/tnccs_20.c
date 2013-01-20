@@ -769,6 +769,18 @@ METHOD(tls_t, is_server, bool,
 	return this->is_server;
 }
 
+METHOD(tls_t, get_server_id, identification_t*,
+	private_tnccs_20_t *this)
+{
+	return this->server;
+}
+
+METHOD(tls_t, get_peer_id, identification_t*,
+	private_tnccs_20_t *this)
+{
+	return this->peer;
+}
+
 METHOD(tls_t, get_purpose, tls_purpose_t,
 	private_tnccs_20_t *this)
 {
@@ -824,6 +836,8 @@ tls_t *tnccs_20_create(bool is_server, identification_t *server,
 			.process = _process,
 			.build = _build,
 			.is_server = _is_server,
+			.get_server_id = _get_server_id,
+			.get_peer_id = _get_peer_id,
 			.get_purpose = _get_purpose,
 			.is_complete = _is_complete,
 			.get_eap_msk = _get_eap_msk,
