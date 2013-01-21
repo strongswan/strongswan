@@ -55,6 +55,13 @@ struct imv_msg_t {
 	void (*set_msg_type)(imv_msg_t *this, pen_type_t msg_type);
 
 	/**
+	 * Get the type of a PA-TNC message.
+	 *
+	 * @return					message type
+	 */
+	pen_type_t (*get_msg_type)(imv_msg_t *this);
+
+	/**
 	 * Sends one or multiple PA-TNC messages
 	 *
 	 * @param excl				set the excl message flag if supported

@@ -91,6 +91,12 @@ METHOD(imc_msg_t, get_dst_id, TNC_UInt32,
 	return this->dst_id;
 }
 
+METHOD(imc_msg_t, get_msg_type, pen_type_t,
+	private_imc_msg_t *this)
+{
+	return this->msg_type;
+}
+
 METHOD(imc_msg_t, send_, TNC_Result,
 	private_imc_msg_t *this, bool excl)
 {
@@ -380,6 +386,7 @@ imc_msg_t *imc_msg_create(imc_agent_t *agent, imc_state_t *state,
 		.public = {
 			.get_src_id = _get_src_id,
 			.get_dst_id = _get_dst_id,
+			.get_msg_type = _get_msg_type,
 			.send = _send_,
 			.receive = _receive,
 			.add_attribute = _add_attribute,
@@ -454,4 +461,3 @@ imc_msg_t *imc_msg_create_from_long_data(imc_agent_t *agent, imc_state_t *state,
 
 	return &this->public;
 }
-

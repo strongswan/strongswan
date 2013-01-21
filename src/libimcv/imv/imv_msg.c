@@ -102,6 +102,12 @@ METHOD(imv_msg_t, set_msg_type, void,
 	}
 }
 
+METHOD(imv_msg_t, get_msg_type, pen_type_t,
+	private_imv_msg_t *this)
+{
+	return this->msg_type;
+}
+
 METHOD(imv_msg_t, add_attribute, void,
 	private_imv_msg_t *this, pa_tnc_attr_t *attr)
 {
@@ -352,6 +358,7 @@ imv_msg_t *imv_msg_create(imv_agent_t *agent, imv_state_t *state,
 			.get_src_id = _get_src_id,
 			.get_dst_id = _get_dst_id,
 			.set_msg_type = _set_msg_type,
+			.get_msg_type = _get_msg_type,
 			.send = _send_,
 			.send_assessment = _send_assessment,
 			.receive = _receive,

@@ -48,6 +48,13 @@ struct imc_msg_t {
 	TNC_UInt32 (*get_dst_id)(imc_msg_t *this);
 
 	/**
+	 * Get the PA-TNC message type.
+	 *
+	 * @return					message type
+	 */
+	pen_type_t (*get_msg_type)(imc_msg_t *this);
+
+	/**
 	 * Sends one or multiple PA-TNC messages
 	 *
 	 * @param excl				set the excl message flag if supported
