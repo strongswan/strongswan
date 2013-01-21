@@ -58,16 +58,9 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		{
 			return FALSE;
 		}
-		if (ts->get_type(ts) == TS_IPV4_ADDR_RANGE &&
-			!ts->is_dynamic(ts) &&
-			ts->to_subnet(ts, &net, &mask))
+		if (ts->to_subnet(ts, &net, &mask))
 		{
-			if (mask > 0)
-			{
-				ts->destroy(ts);
-				break;
-			}
-			net->destroy(net);
+			break;
 		}
 		ts->destroy(ts);
 	}
@@ -99,6 +92,30 @@ METHOD(enumerator_t, attribute_destroy, void,
 	free(this);
 }
 
+/**
+ * Check if we should send a configured TS as Split-Include attribute
+ */
+static bool use_ts(traffic_selector_t *ts)
+{
+	u_int8_t mask;
+	host_t *net;
+
+	if (ts->get_type(ts) != TS_IPV4_ADDR_RANGE)
+	{
+		return FALSE;
+	}
+	if (ts->is_dynamic(ts))
+	{
+		return FALSE;
+	}
+	if (!ts->to_subnet(ts, &net, &mask))
+	{
+		return FALSE;
+	}
+	net->destroy(net);
+	return mask > 0;
+}
+
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_unity_provider_t *this, linked_list_t *pools, identification_t *id,
 	linked_list_t *vips)
@@ -127,7 +144,14 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		current = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 		while (current->remove_first(current, (void**)&ts) == SUCCESS)
 		{
-			list->insert_last(list, ts);
+			if (use_ts(ts))
+			{
+				list->insert_last(list, ts);
+			}
+			else
+			{
+				ts->destroy(ts);
+			}
 		}
 		current->destroy(current);
 	}
