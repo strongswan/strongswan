@@ -328,7 +328,8 @@ static bool check_pid(char *pid_file)
 static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>]\n"
-			"               [--debug|--debug-more|--debug-all|--nolog]\n");
+			"               [--debug|--debug-more|--debug-all|--nolog]\n"
+			"               [--attach-gdb]\n");
 	exit(LSB_RC_INVALID_ARGUMENT);
 }
 
