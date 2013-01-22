@@ -134,8 +134,8 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint32(writer, this->major_version);
 	writer->write_uint32(writer, this->minor_version);
 	writer->write_uint32(writer, this->build);
-	writer->write_uint32(writer, this->service_pack_major);
-	writer->write_uint32(writer, this->service_pack_minor);
+	writer->write_uint16(writer, this->service_pack_major);
+	writer->write_uint16(writer, this->service_pack_minor);
 
 	this->value = chunk_clone(writer->get_buf(writer));
 	writer->destroy(writer);
@@ -280,4 +280,3 @@ pa_tnc_attr_t *ietf_attr_numeric_version_create_from_data(chunk_t data)
 
 	return &this->public.pa_tnc_attribute;
 }
-
