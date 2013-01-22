@@ -12,6 +12,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -49,6 +51,15 @@
 #endif
 
 #define CHARON_RESTART_DELAY 5
+
+static const char* cmd_default = IPSEC_DIR "/charon";
+static const char* pid_file_default = IPSEC_PIDDIR "/charon.pid";
+static const char* starter_pid_file_default = IPSEC_PIDDIR "/starter.pid";
+
+char *daemon_name = NULL;
+char *cmd = NULL;
+char *pid_file = NULL;
+char *starter_pid_file = NULL;
 
 /* logging */
 static bool log_to_stderr = TRUE;
@@ -162,7 +173,10 @@ static void signal_handler(int signal)
 			{
 				if (pid == starter_charon_pid())
 				{
-					name = " (Charon)";
+					if (asprintf(&name, " (%s)", daemon_name) < 0)
+					{
+						 name = NULL;
+					}
 				}
 				if (WIFSIGNALED(status))
 				{
@@ -192,6 +206,11 @@ static void signal_handler(int signal)
 				{
 					starter_charon_sigchild(pid, exit_status);
 				}
+			}
+
+			if (name)
+			{
+				free(name);
 			}
 		}
 		break;
@@ -325,11 +344,56 @@ static bool check_pid(char *pid_file)
 	return FALSE;
 }
 
+/* Set daemon name and adjust command and pid filenames accordingly */
+static bool set_daemon_name()
+{
+	if (!daemon_name)
+	{
+		daemon_name = "charon";
+	}
+
+	if (asprintf(&cmd, IPSEC_DIR"/%s", daemon_name) < 0)
+	{
+		 cmd = (char*)cmd_default;
+	}
+
+	if (asprintf(&pid_file, IPSEC_PIDDIR"/%s.pid", daemon_name) < 0)
+	{
+		 pid_file = (char*)pid_file_default;
+	}
+
+	if (asprintf(&starter_pid_file, IPSEC_PIDDIR"/starter.%s.pid",
+				 daemon_name) < 0)
+	{
+		 starter_pid_file = (char*)starter_pid_file_default;
+	}
+
+	return TRUE;
+}
+
+static void cleanup()
+{
+	if (cmd != cmd_default)
+	{
+		free(cmd);
+	}
+
+	if (pid_file != pid_file_default)
+	{
+		free(pid_file);
+	}
+
+	if (starter_pid_file != starter_pid_file_default)
+	{
+		free(starter_pid_file);
+	}
+}
+
 static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>]\n"
 			"               [--debug|--debug-more|--debug-all|--nolog]\n"
-			"               [--attach-gdb]\n");
+			"               [--attach-gdb] [--daemon <name>]\n");
 	exit(LSB_RC_INVALID_ARGUMENT);
 }
 
@@ -392,10 +456,20 @@ int main (int argc, char **argv)
 			if (!auto_update)
 				usage(argv[0]);
 		}
+		else if (streq(argv[i], "--daemon") && i+1 < argc)
+		{
+			daemon_name = argv[++i];
+		}
 		else
 		{
 			usage(argv[0]);
 		}
+	}
+
+	if (!set_daemon_name())
+	{
+		DBG1(DBG_APP, "unable to set daemon name");
+		exit(LSB_RC_FAILURE);
 	}
 
 	init_log("ipsec_starter");
@@ -423,13 +497,14 @@ int main (int argc, char **argv)
 	if (getuid() != 0)
 	{
 		DBG1(DBG_APP, "permission denied (must be superuser)");
+		cleanup();
 		exit(LSB_RC_NOT_ALLOWED);
 	}
 
-	if (check_pid(CHARON_PID_FILE))
+	if (check_pid(pid_file))
 	{
-		DBG1(DBG_APP, "charon is already running (%s exists) -- skipping charon start",
-			 CHARON_PID_FILE);
+		DBG1(DBG_APP, "%s is already running (%s exists) -- skipping daemon start",
+			 daemon_name, pid_file);
 	}
 	else
 	{
@@ -438,12 +513,14 @@ int main (int argc, char **argv)
 	if (stat(DEV_RANDOM, &stb) != 0)
 	{
 		DBG1(DBG_APP, "unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
+		cleanup();
 		exit(LSB_RC_FAILURE);
 	}
 
 	if (stat(DEV_URANDOM, &stb)!= 0)
 	{
 		DBG1(DBG_APP, "unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
+		cleanup();
 		exit(LSB_RC_FAILURE);
 	}
 
@@ -455,6 +532,7 @@ int main (int argc, char **argv)
 		{
 			confread_free(cfg);
 		}
+		cleanup();
 		exit(LSB_RC_INVALID_ARGUMENT);
 	}
 
@@ -471,11 +549,12 @@ int main (int argc, char **argv)
 
 	last_reload = time_monotonic(NULL);
 
-	if (check_pid(STARTER_PID_FILE))
+	if (check_pid(starter_pid_file))
 	{
 		DBG1(DBG_APP, "starter is already running (%s exists) -- no fork done",
-			 STARTER_PID_FILE);
+			 starter_pid_file);
 		confread_free(cfg);
+		cleanup();
 		exit(LSB_RC_SUCCESS);
 	}
 
@@ -515,13 +594,14 @@ int main (int argc, char **argv)
 				break;
 			default:
 				confread_free(cfg);
+				cleanup();
 				exit(LSB_RC_SUCCESS);
 		}
 	}
 
-	/* save pid file in /var/run/starter.pid */
+	/* save pid file in /var/run/starter[.daemon_name].pid */
 	{
-		FILE *fd = fopen(STARTER_PID_FILE, "w");
+		FILE *fd = fopen(starter_pid_file, "w");
 
 		if (fd)
 		{
@@ -576,7 +656,8 @@ int main (int argc, char **argv)
 			}
 			starter_netkey_cleanup();
 			confread_free(cfg);
-			unlink(STARTER_PID_FILE);
+			unlink(starter_pid_file);
+			cleanup();
 			DBG1(DBG_APP, "ipsec starter stopped");
 			close_log();
 			exit(LSB_RC_SUCCESS);
@@ -709,13 +790,13 @@ int main (int argc, char **argv)
 		}
 
 		/*
-		 * Start charon
+		 * Start daemon
 		 */
 		if (_action_ & FLAG_ACTION_START_CHARON)
 		{
 			if (cfg->setup.charonstart && !starter_charon_pid())
 			{
-				DBG2(DBG_APP, "Attempting to start charon...");
+				DBG2(DBG_APP, "Attempting to start %s...", daemon_name);
 				if (starter_start_charon(cfg, no_fork, attach_gdb))
 				{
 					/* schedule next try */
@@ -807,7 +888,8 @@ int main (int argc, char **argv)
 		/*
 		 * Wait for something to happen
 		 */
-		if (pselect(0, NULL, NULL, NULL, auto_update ? &ts : NULL,
+		if (!_action_ &&
+			pselect(0, NULL, NULL, NULL, auto_update ? &ts : NULL,
 					&action.sa_mask) == 0)
 		{
 			/* timeout -> auto_update */

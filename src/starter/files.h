@@ -15,8 +15,6 @@
 #ifndef _STARTER_FILES_H_
 #define _STARTER_FILES_H_
 
-#define STARTER_PID_FILE IPSEC_PIDDIR "/starter.pid"
-
 #define PROC_NETKEY             "/proc/net/pfkey"
 #define PROC_KLIPS              "/proc/net/pf_key"
 #define PROC_MODULES    "/proc/modules"
@@ -24,9 +22,11 @@
 #define CONFIG_FILE     IPSEC_CONFDIR "/ipsec.conf"
 #define SECRETS_FILE    IPSEC_CONFDIR "/ipsec.secrets"
 
-#define CHARON_CMD      IPSEC_DIR "/charon"
 #define CHARON_CTL_FILE IPSEC_PIDDIR "/charon.ctl"
-#define CHARON_PID_FILE IPSEC_PIDDIR "/charon.pid"
+
+extern char *daemon_name;
+extern char *cmd;
+extern char *pid_file;
 
 #define DYNIP_DIR       IPSEC_PIDDIR "/dynip"
 
