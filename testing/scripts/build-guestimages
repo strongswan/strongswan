@@ -46,6 +46,8 @@ do
 	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
+	execute_chroot "ldconfig" 0
+
 	if [ "$host" = "winnetou" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
