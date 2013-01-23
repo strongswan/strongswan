@@ -62,6 +62,16 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
+	if (!this->rng)
+	{
+		this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		if (!this->rng)
+		{
+			DBG1(DBG_KNL, "unable to create RNG");
+			return FAILED;
+		}
+	}
+
 	DBG1(DBG_KNL, "getting SPI for reqid {%u}", reqid);
 	const bool result = this->rng->get_bytes(this->rng, sizeof(u_int32_t),
 											 (u_int8_t *)spi);
@@ -365,16 +375,9 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
-		.rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK),
 		.sad = tkm_kernel_sad_create(),
 	);
 
-	if (!this->rng)
-	{
-		DBG1(DBG_KNL, "unable to create RNG");
-		destroy(this);
-		return NULL;
-	}
 	if (!this->sad)
 	{
 		DBG1(DBG_KNL, "unable to create SAD");

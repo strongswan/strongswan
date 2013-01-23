@@ -26,6 +26,7 @@ PLUGINS = \
 	aes \
 	constraints \
 	hmac \
+	kernel-netlink \
 	pem \
 	pkcs1 \
 	pkcs8 \
