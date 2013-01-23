@@ -170,8 +170,8 @@ METHOD(trap_manager_t, install, u_int32_t,
 	if (status != SUCCESS)
 	{
 		DBG1(DBG_CFG, "installing trap failed");
-		child_sa->destroy(child_sa);
 		reqid = 0;
+		/* hold off destroying the CHILD_SA until we released the lock */
 	}
 	else
 	{
@@ -184,6 +184,10 @@ METHOD(trap_manager_t, install, u_int32_t,
 	}
 	this->lock->unlock(this->lock);
 
+	if (status != SUCCESS)
+	{
+		child_sa->destroy(child_sa);
+	}
 	if (found)
 	{
 		destroy_entry(found);
