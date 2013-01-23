@@ -32,9 +32,9 @@ PLUGINS = \
 	random \
 	sha1 \
 	sha2 \
-	stroke \
 	socket-default \
-	x509
+	x509 \
+	stroke
 
 all: build_charon
 
