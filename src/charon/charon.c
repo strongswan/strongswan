@@ -401,7 +401,6 @@ int main(int argc, char *argv[])
 	if (check_pidfile())
 	{
 		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
-		status = -1;
 		goto deinit;
 	}
 
