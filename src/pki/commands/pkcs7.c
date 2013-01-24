@@ -295,6 +295,7 @@ static int pkcs7()
 		switch (command_getopt(&arg))
 		{
 			case 'h':
+				creds->destroy(creds);
 				return command_usage(NULL);
 			case 'i':
 				file = arg;
