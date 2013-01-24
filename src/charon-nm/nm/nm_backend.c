@@ -117,10 +117,13 @@ static bool nm_backend_init()
 	nm_backend_t *this;
 
 	g_type_init ();
+
+#if !GLIB_CHECK_VERSION(2,23,0)
 	if (!g_thread_supported())
 	{
 		g_thread_init(NULL);
 	}
+#endif
 
 	INIT(this,
 		.creds = nm_creds_create(),

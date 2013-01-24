@@ -66,10 +66,13 @@ plugin_t *soup_plugin_create()
 	private_soup_plugin_t *this;
 
 	g_type_init();
+
+#if !GLIB_CHECK_VERSION(2,23,0)
 	if (!g_thread_get_initialized())
 	{
 		g_thread_init(NULL);
 	}
+#endif
 
 	INIT(this,
 		.public = {
