@@ -184,7 +184,7 @@ static void usage(char *cmd)
 	fprintf(stderr, "  %s --lookup <IP>\n", cmd);
 	fprintf(stderr, "  %s --listen-up\n", cmd);
 	fprintf(stderr, "  %s --listen-down\n", cmd);
-	fprintf(stderr, "Any combination of options is allowed.\n", cmd);
+	fprintf(stderr, "Any combination of options is allowed.\n");
 }
 
 int main(int argc, char *argv[])
