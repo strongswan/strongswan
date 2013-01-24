@@ -827,7 +827,7 @@ METHOD(attest_db_t, list_devices, void,
 		{
 			if (id != last_id)
 			{
-				printf("%4d: %.*s\n", id, value.len, value.ptr);
+				printf("%4d: %.*s\n", id, (int)value.len, value.ptr);
 				device_count++;
 				last_id = id;
 			}

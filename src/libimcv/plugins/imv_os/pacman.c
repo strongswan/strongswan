@@ -97,13 +97,13 @@ static time_t extract_time(char *line)
 	char* months[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 					   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	int i;
-	
+
 	if (sscanf(line, "Generated: %3s %3s %2d %2d:%2d:%2d %4d UTC", wday, mon,
 			   &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec, &t.tm_year) != 7)
 	{
 		return UNDEFINED_TIME;
 	}
-	t.tm_isdst = 0;	
+	t.tm_isdst = 0;
 	t.tm_year -= 1900;
 	t.tm_mon = 12;
 
@@ -173,7 +173,7 @@ static void process_packages(char *filename, char *product, bool update)
 		e->destroy(e);
 	}
 	if (!pid)
-	{	
+	{
 		if (db->execute(db, &pid, "INSERT INTO products (name) VALUES (?)",
 						DB_TEXT, product) != 1)
 		{
@@ -221,8 +221,8 @@ static void process_packages(char *filename, char *product, bool update)
 		pos = strchr(line, ' ');
 		if (!pos)
 		{
-			fprintf(stderr, "could not extract package name from '%.*s'",
-					strlen(line)-1, line);
+			fprintf(stderr, "could not extract package name from '%.*s'\n",
+					(int)(strlen(line)-1), line);
 			errored++;
 			continue;
 		}
@@ -240,8 +240,8 @@ static void process_packages(char *filename, char *product, bool update)
 			}
 			else
 			{
-				fprintf(stderr, "could not extract package version from '%.*s'\n",
-					strlen(line)-1, line);
+				fprintf(stderr, "could not extract package version from "
+						"'%.*s'\n", (int)(strlen(line)-1), line);
 				errored++;
 				continue;
 			}
@@ -275,7 +275,7 @@ static void process_packages(char *filename, char *product, bool update)
 			e->destroy(e);
 		}
 		if (!gid && security)
-		{	
+		{
 			if (db->execute(db, &gid, "INSERT INTO packages (name) VALUES (?)",
 								DB_TEXT, package) != 1)
 			{
@@ -289,7 +289,7 @@ static void process_packages(char *filename, char *product, bool update)
 		}
 
 		/* check for package versions already in database */
-		e = db->query(db, 
+		e = db->query(db,
 				"SELECT id, release, security, time FROM versions "
 				"WHERE package = ? AND product = ?",
 				DB_INT, gid, DB_INT, pid, DB_INT, DB_TEXT, DB_INT, DB_INT);
@@ -350,7 +350,7 @@ static void process_packages(char *filename, char *product, bool update)
 		}
 
 		if ((!vid && security) || (vid && !vid_update))
-		{	
+		{
 			printf("%s (%s) %s\n", package, version, security ? "[s]" : "");
 
 			if (db->execute(db, &vid,

@@ -448,8 +448,8 @@ METHOD(imv_os_state_t, set_info, void,
 	/* OS info is a concatenation of OS name and OS version */
 	free(this->info);
 	this->info = malloc(len);
-	snprintf(this->info, len, "%.*s %.*s", name.len, name.ptr,
-										   version.len, version.ptr);
+	snprintf(this->info, len, "%.*s %.*s", (int)name.len, name.ptr,
+										   (int)version.len, version.ptr);
 	this->type = type;
 	this->name = chunk_clone(name);
 	this->version = chunk_clone(version);

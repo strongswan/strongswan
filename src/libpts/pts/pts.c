@@ -344,8 +344,8 @@ METHOD(pts_t, set_platform_info, void,
 	/* platform info is a concatenation of OS name and OS version */
 	free(this->platform_info);
 	this->platform_info = malloc(len);
-	snprintf(this->platform_info, len, "%.*s %.*s", name.len, name.ptr,
-													version.len, version.ptr);
+	snprintf(this->platform_info, len, "%.*s %.*s", (int)name.len, name.ptr,
+			(int)version.len, version.ptr);
 }
 
 METHOD(pts_t, get_tpm_version_info, bool,

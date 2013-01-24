@@ -68,8 +68,8 @@ METHOD(imv_os_database_t, check_packages, status_t,
 		pos = memchr(os_version.ptr, ' ', os_version.len);
 		os_version_len = pos ? (pos - os_version.ptr) : os_version.len;
 		product = malloc(os_name.len + 1 + os_version_len + 1);
-		sprintf(product, "%.*s %.*s", os_name.len, os_name.ptr,
-									  os_version_len, os_version.ptr); 
+		sprintf(product, "%.*s %.*s", (int)os_name.len, os_name.ptr,
+									  (int)os_version_len, os_version.ptr);
 	}
 	DBG1(DBG_IMV, "processing installed '%s' packages", product);
 
@@ -148,7 +148,7 @@ METHOD(imv_os_database_t, check_packages, status_t,
 			}
 		}
 		e->destroy(e);
-		
+
 		if (found)
 		{
 			if (match)
