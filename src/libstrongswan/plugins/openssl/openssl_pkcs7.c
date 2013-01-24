@@ -615,7 +615,7 @@ static bool decrypt(private_openssl_pkcs7_t *this,
 					continue;
 				}
 				chunk = openssl_asn1_str2chunk(sn);
-				if (chunk.len && chunk.ptr[0] | 0x80)
+				if (chunk.len && chunk.ptr[0] & 0x80)
 				{	/* if MSB is set, append a zero to make it non-negative */
 					chunk = chunk_cata("cc", chunk_from_thing(zero), chunk);
 				}
