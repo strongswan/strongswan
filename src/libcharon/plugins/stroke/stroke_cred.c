@@ -82,6 +82,9 @@ struct private_stroke_cred_t {
 	bool cachecrl;
 };
 
+/** Length of smartcard specifier parts (module, keyid) */
+#define SC_PART_LEN 128
+
 /**
  * Kind of smartcard specifier token
  */
@@ -96,14 +99,14 @@ typedef enum {
  * Parse a smartcard specifier token
  */
 static smartcard_format_t parse_smartcard(char *smartcard, u_int *slot,
-									char module[128], char keyid[128])
+										  char *module, char *keyid)
 {
 	/* The token has one of the following three formats:
 	 * - %smartcard<slot>@<module>:<keyid>
 	 * - %smartcard<slot>:<keyid>
 	 * - %smartcard:<keyid>
 	 */
-	char buf[256], *pos;
+	char buf[2 * SC_PART_LEN], *pos;
 
 	if (sscanf(smartcard, "%%smartcard%u@%255s", slot, buf) == 2)
 	{
@@ -113,8 +116,8 @@ static smartcard_format_t parse_smartcard(char *smartcard, u_int *slot,
 			return SC_FORMAT_INVALID;
 		}
 		*pos++ = '\0';
-		snprintf(module, BUF_LEN, "%s", buf);
-		snprintf(keyid, BUF_LEN, "%s", pos);
+		snprintf(module, SC_PART_LEN, "%s", buf);
+		snprintf(keyid, SC_PART_LEN, "%s", pos);
 		return SC_FORMAT_SLOT_MODULE_KEYID;
 	}
 	if (sscanf(smartcard, "%%smartcard%u:%127s", slot, keyid) == 2)
@@ -174,7 +177,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 	if (strneq(filename, "%smartcard", strlen("%smartcard")))
 	{
 		smartcard_format_t format;
-		char module[128], keyid[128];
+		char module[SC_PART_LEN], keyid[SC_PART_LEN];
 		u_int slot;
 
 		format = parse_smartcard(filename, &slot, module, keyid);
@@ -238,7 +241,7 @@ METHOD(stroke_cred_t, load_peer, certificate_t*,
 	if (strneq(filename, "%smartcard", strlen("%smartcard")))
 	{
 		smartcard_format_t format;
-		char module[128], keyid[128];
+		char module[SC_PART_LEN], keyid[SC_PART_LEN];
 		u_int slot;
 
 		format = parse_smartcard(filename, &slot, module, keyid);
@@ -702,7 +705,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 					 FILE *prompt)
 {
 	chunk_t sc = chunk_empty, secret = chunk_empty;
-	char smartcard[256], keyid[128], module[128];
+	char smartcard[BUF_LEN], keyid[SC_PART_LEN], module[SC_PART_LEN];
 	private_key_t *key = NULL;
 	u_int slot;
 	chunk_t chunk;
