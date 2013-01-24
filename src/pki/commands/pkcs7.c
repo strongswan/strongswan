@@ -31,13 +31,16 @@ static chunk_t read_from_stream(FILE *stream)
 	while (TRUE)
 	{
 		len = fread(buf + total, 1, sizeof(buf) - total, stream);
-		if (len < 0)
+		if (len < (sizeof(buf) - total))
 		{
-			return chunk_empty;
-		}
-		if (len == 0)
-		{
-			return chunk_clone(chunk_create(buf, total));
+			if (ferror(stream))
+			{
+				return chunk_empty;
+			}
+			if (feof(stream))
+			{
+				return chunk_clone(chunk_create(buf, total + len));
+			}
 		}
 		total += len;
 		if (total == sizeof(buf))
