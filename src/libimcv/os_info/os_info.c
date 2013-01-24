@@ -214,7 +214,7 @@ METHOD(os_info_t, get_setting, chunk_t,
 
 typedef struct {
 	/**
-	 * implements enumerator_t 
+	 * implements enumerator_t
 	 */
 	enumerator_t public;
 
@@ -273,6 +273,7 @@ static bool package_enumerator_enumerate(package_enumerator_t *this, ...)
 		pos = strchr(pos, '\t');
 		if (!pos)
 		{
+			va_end(args);
 			return FALSE;
 		}
 		name->len = pos++ - name->ptr;
