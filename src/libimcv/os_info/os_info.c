@@ -570,6 +570,8 @@ os_info_t *os_info_create(void)
 
 		version.len = strlen(version.ptr);
 		version = chunk_clone(version);
+
+		type = os_type_from_name(name);
 	}
 	else
 	{
