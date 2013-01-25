@@ -362,7 +362,6 @@ host_t *host_create_from_string_and_family(char *string, int family,
 										   u_int16_t port)
 {
 	union {
-		sockaddr_t sockaddr;
 		struct sockaddr_in v4;
 		struct sockaddr_in6 v6;
 	} addr;
@@ -399,8 +398,8 @@ host_t *host_create_from_string_and_family(char *string, int family,
 				return NULL;
 			}
 			addr.v6.sin6_port = htons(port);
-			addr.sockaddr.sa_family = AF_INET6;
-			return host_create_from_sockaddr(&addr.sockaddr);
+			addr.v6.sin6_family = AF_INET6;
+			return host_create_from_sockaddr((sockaddr_t*)&addr);
 		case AF_INET:
 			if (strchr(string, ':'))
 			{	/* do not try to convert v6 addresses for v4 family */
@@ -412,8 +411,8 @@ host_t *host_create_from_string_and_family(char *string, int family,
 				return NULL;
 			}
 			addr.v4.sin_port = htons(port);
-			addr.sockaddr.sa_family = AF_INET;
-			return host_create_from_sockaddr(&addr.sockaddr);
+			addr.v4.sin_family = AF_INET;
+			return host_create_from_sockaddr((sockaddr_t*)&addr);
 		default:
 			return NULL;
 	}
