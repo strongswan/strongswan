@@ -325,6 +325,38 @@ METHOD(ietf_attr_pa_tnc_error_t, get_offset, u_int32_t,
 }
 
 /**
+ * Generic constructor
+ */
+static private_ietf_attr_pa_tnc_error_t* create_generic()
+{
+	private_ietf_attr_pa_tnc_error_t *this;
+
+	INIT(this,
+		.public = {
+			.pa_tnc_attribute = {
+				.get_type = _get_type,
+				.get_value = _get_value,
+				.get_noskip_flag = _get_noskip_flag,
+				.set_noskip_flag = _set_noskip_flag,
+				.build = _build,
+				.process = _process,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+			.get_error_code = _get_error_code,
+			.get_msg_info = _get_msg_info,
+			.get_attr_info = _get_attr_info,
+			.set_attr_info = _set_attr_info,
+			.get_offset = _get_offset,
+		},
+		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
+		.ref = 1,
+	);
+
+	return this;
+}
+
+/**
  * Described in header.
  */
 pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_type_t error_code,
@@ -341,29 +373,9 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_type_t error_code,
 		msg_info.len = PA_ERROR_MSG_INFO_MAX_SIZE;
 	}
 
-	INIT(this,
-		.public = {
-			.pa_tnc_attribute = {
-				.get_type = _get_type,
-				.get_value = _get_value,
-				.get_noskip_flag = _get_noskip_flag,
-				.set_noskip_flag = _set_noskip_flag,
-				.build = _build,
-				.process = _process,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
-			.get_error_code = _get_error_code,
-			.get_msg_info = _get_msg_info,
-			.get_attr_info = _get_attr_info,
-			.set_attr_info = _set_attr_info,
-			.get_offset = _get_offset,
-		},
-		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
-		.error_code = error_code,
-		.msg_info = chunk_clone(msg_info),
-		.ref = 1,
-	);
+	this = create_generic();
+	this->error_code = error_code;
+	this->msg_info = chunk_clone(msg_info);
 
 	return &this->public.pa_tnc_attribute;
 }
@@ -380,30 +392,10 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 	/* the first 8 bytes of the erroneous PA-TNC message are sent back */
 	msg_info.len = PA_ERROR_MSG_INFO_SIZE;
 
-	INIT(this,
-		.public = {
-			.pa_tnc_attribute = {
-				.get_type = _get_type,
-				.get_value = _get_value,
-				.get_noskip_flag = _get_noskip_flag,
-				.set_noskip_flag = _set_noskip_flag,
-				.build = _build,
-				.process = _process,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
-			.get_error_code = _get_error_code,
-			.get_msg_info = _get_msg_info,
-			.get_attr_info = _get_attr_info,
-			.set_attr_info = _set_attr_info,
-			.get_offset = _get_offset,
-		},
-		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
-		.error_code = error_code,
-		.msg_info = chunk_clone(msg_info),
-		.error_offset = error_offset,
-		.ref = 1,
-	);
+	this = create_generic();
+	this->error_code = error_code;
+	this->msg_info = chunk_clone(msg_info);
+	this->error_offset = error_offset;
 
 	return &this->public.pa_tnc_attribute;
 }
@@ -415,30 +407,8 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create_from_data(chunk_t data)
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
-	INIT(this,
-		.public = {
-			.pa_tnc_attribute = {
-				.get_type = _get_type,
-				.get_value = _get_value,
-				.get_noskip_flag = _get_noskip_flag,
-				.set_noskip_flag = _set_noskip_flag,
-				.build = _build,
-				.process = _process,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
-			.get_error_code = _get_error_code,
-			.get_msg_info = _get_msg_info,
-			.get_attr_info = _get_attr_info,
-			.set_attr_info = _set_attr_info,
-			.get_offset = _get_offset,
-		},
-		.type = { PEN_IETF, IETF_ATTR_PA_TNC_ERROR },
-		.value = chunk_clone(data),
-		.ref = 1,
-	);
+	this = create_generic();
+	this->value = chunk_clone(data);
 
 	return &this->public.pa_tnc_attribute;
 }
-
-
