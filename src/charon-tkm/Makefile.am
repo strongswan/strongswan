@@ -23,18 +23,11 @@ BUILD_OPTS = \
 
 # plugins to enable
 PLUGINS = \
-	aes \
-	constraints \
-	hmac \
 	kernel-netlink \
 	pem \
 	pkcs1 \
-	pkcs8 \
-	random \
-	sha1 \
-	sha2 \
 	socket-default \
-	x509 \
+	openssl \
 	stroke
 
 all: build_charon
