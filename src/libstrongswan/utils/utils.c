@@ -387,6 +387,14 @@ status_t return_failed()
 }
 
 /**
+ * returns SUCCESS
+ */
+status_t return_success()
+{
+	return SUCCESS;
+}
+
+/**
  * nop operation
  */
 void nop()

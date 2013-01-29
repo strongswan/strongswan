@@ -496,6 +496,11 @@ bool return_false();
 status_t return_failed();
 
 /**
+ * returns SUCCESS
+ */
+status_t return_success();
+
+/**
  * Write a 16-bit host order value in network order to an unaligned address.
  *
  * @param host		host order 16-bit value
