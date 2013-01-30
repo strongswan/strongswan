@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-id-manager id manager
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_ID_MANAGER_H_
 #define TKM_ID_MANAGER_H_
 
@@ -91,4 +96,4 @@ struct tkm_id_manager_t {
  */
 tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits);
 
-#endif /** TKM_ID_MANAGER_H_ */
+#endif /** TKM_ID_MANAGER_H_ @}*/

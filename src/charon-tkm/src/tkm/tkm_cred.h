@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-credential credential set
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_CRED_H_
 #define TKM_CRED_H_
 
@@ -43,4 +48,4 @@ struct tkm_cred_t {
  */
 tkm_cred_t *tkm_cred_create();
 
-#endif /** TKM_CRED_H_ */
+#endif /** TKM_CRED_H_ @}*/

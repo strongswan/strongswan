@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-nonceg nonce generator
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_NONCEG_H_
 #define TKM_NONCEG_H_
 
@@ -48,4 +53,4 @@ struct tkm_nonceg_t {
  */
 tkm_nonceg_t *tkm_nonceg_create();
 
-#endif /** TKM_NONCEG_H_ */
+#endif /** TKM_NONCEG_H_ @}*/

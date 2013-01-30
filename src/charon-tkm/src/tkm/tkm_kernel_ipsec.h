@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-kernel-ipsec kernel ipsec
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_KERNEL_IPSEC_H_
 #define TKM_KERNEL_IPSEC_H_
 
@@ -39,4 +44,4 @@ struct tkm_kernel_ipsec_t {
  */
 tkm_kernel_ipsec_t *tkm_kernel_ipsec_create();
 
-#endif /** TKM_KERNEL_IPSEC_H_ */
+#endif /** TKM_KERNEL_IPSEC_H_ @}*/

@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-utils utils
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_UTILS_H_
 #define TKM_UTILS_H_
 
@@ -40,4 +45,4 @@ void sequence_to_chunk(const byte_t * const first, const uint32_t len,
 void chunk_to_sequence(const chunk_t * const chunk, void *sequence,
 		const uint32_t typelen);
 
-#endif /** TKM_UTILS_H_ */
+#endif /** TKM_UTILS_H_ @}*/

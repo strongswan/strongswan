@@ -14,6 +14,15 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-ehandler exception handler
+ * @{ @ingroup tkm
+ *
+ * The exception handler callback is registered as global exception action in
+ * the Ada runtime. If an exception is raised in Ada code this callback is
+ * executed.
+ */
+
 #ifndef EH_CALLBACKS_H_
 #define EH_CALLBACKS_H_
 
@@ -22,4 +31,4 @@
  */
 void charon_terminate(char *msg);
 
-#endif /** EH_CALLBACKS_H_ */
+#endif /** EH_CALLBACKS_H_ @}*/

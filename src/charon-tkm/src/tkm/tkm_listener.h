@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-listener listener
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_LISTENER_H_
 #define TKM_LISTENER_H_
 
@@ -44,4 +49,4 @@ struct tkm_listener_t {
  */
 tkm_listener_t *tkm_listener_create();
 
-#endif /** TKM_LISTENER_H_ */
+#endif /** TKM_LISTENER_H_ @}*/

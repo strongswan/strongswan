@@ -14,6 +14,59 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm tkm
+ *
+ * @addtogroup tkm
+ * @{
+ *
+ * Untrusted IKEv2 component used with Trusted Key Manager for IKE
+ * disaggregation.
+ *
+ * The untrusted IKEv2 component used in conjunction with the Trusted Key
+ * Manager infrastructure is implemented as a separate charon instance located
+ * in its own directory below the strongSwan top-level source directory
+ * (src/charon-tkm). This has the advantage that the TKM code is contained and
+ * does not mix with other strongSwan files. The charon-tkm binary startup code
+ * is modeled after the charon-nm instance, a special charon daemon variant to
+ * be used with the GNOME NetworkManager project. The major difference is the
+ * registration of custom TKM plugins as the final step of the startup phase.
+ * The charon-tkm daemon does not rely on the dynamic plugin loading mechanism
+ * for its core plugins, they are statically registered before entering the main
+ * processing loop.
+ *
+ * The following diagram shows the main components of the system and how they
+ * communicate.
+   @verbatim
+
+       +------------+            +------------+             +------------+
+       | xfrm-proxy |<-[tkm-rpc->| charon-tkm |<-[tkm-rpc]->|    TKM     |
+       +------------+            +------------+             +------------+
+             ^                                                    ^
+    [Netlink | XFRM]                                        [XFRM | Netlink]
+             |                                                    v
+       +-----------------------------------------------------------------+
+       |                            Kernel                               |
+       +-----------------------------------------------------------------+
+
+   @endverbatim
+ * Since the charon-tkm code uses the tkm-rpc library written in Ada, the daemon
+ * has to be built using an Ada-aware toolchain. The integration of Ada code
+ * into the strongSwan codebase is explained in the TKM documentation, section
+ * 5.4.1: http://www.codelabs.ch/tkm#anchor-doc.
+ *
+ * The Trusted Key Manager (TKM) is a minimal Trusted Computing Base which
+ * implements security-critical functions of the IKEv2 protocol.
+ *
+ * The xfrm-proxy receives XFRM Acquire and Expiry events from the kernel and
+ * forwards them to the charon-tkm IKE daemon for further processing.
+ *
+ * The underlying concept of IKE disaggregation and the design of TKM and all
+ * related components, of which charon-tkm is one component, is presented in
+ * detail in the project documentation found at
+ * http://www.codelabs.ch/tkm#anchor-doc.
+ */
+
 #ifndef TKM_H_
 #define TKM_H_
 
@@ -57,4 +110,4 @@ void tkm_deinit();
  */
 extern tkm_t *tkm;
 
-#endif /** TKM_H_ */
+#endif /** TKM_H_ @}*/

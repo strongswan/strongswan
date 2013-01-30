@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-pubkey public key
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_PUBLIC_KEY_H_
 #define TKM_PUBLIC_KEY_H_
 

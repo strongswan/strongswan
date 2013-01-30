@@ -14,6 +14,16 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-eescallbacks ees callbacks
+ * @{ @ingroup tkm
+ *
+ * ESP SA Event Service (EES) callbacks.
+ * The xfrm-proxy forwards acquire and expire events from the kernel to
+ * charon-tkm using the EES interface. Upon reception of an event the
+ * corresponding callback is executed.
+ */
+
 #ifndef EES_CALLBACKS_H_
 #define EES_CALLBACKS_H_
 
@@ -29,4 +39,4 @@ void charon_esa_expire(result_type *res, const sp_id_type sp_id,
 					   const esp_spi_type spi_rem, const protocol_type protocol,
 					   const expiry_flag_type hard);
 
-#endif /** EES_CALLBACKS_H_ */
+#endif /** EES_CALLBACKS_H_ @}*/

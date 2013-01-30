@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-chunk-map chunk map
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_CHUNK_MAP_H_
 #define TKM_CHUNK_MAP_H_
 
@@ -64,4 +69,4 @@ struct tkm_chunk_map_t {
  */
 tkm_chunk_map_t *tkm_chunk_map_create();
 
-#endif /** TKM_CHUNK_MAP_H_ */
+#endif /** TKM_CHUNK_MAP_H_ @}*/

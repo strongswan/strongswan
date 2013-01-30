@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-privkey private key
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_PRIVATE_KEY_H_
 #define TKM_PRIVATE_KEY_H_
 
@@ -37,4 +42,4 @@ struct tkm_private_key_t {
  */
 tkm_private_key_t *tkm_private_key_init(identification_t * const id);
 
-#endif /** TKM_PRIVATE_KEY_H_ */
+#endif /** TKM_PRIVATE_KEY_H_ @}*/

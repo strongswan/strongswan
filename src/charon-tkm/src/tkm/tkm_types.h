@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-types types
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_TYPES_H_
 #define TKM_TYPES_H_
 
@@ -120,4 +125,4 @@ struct sign_info_t {
 
 };
 
-#endif /** TKM_TYPES_H_ */
+#endif /** TKM_TYPES_H_ @}*/

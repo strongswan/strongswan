@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-credential-enc credential encoder
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_ENCODER_H_
 #define TKM_ENCODER_H_
 
@@ -25,4 +30,4 @@
 bool tkm_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						va_list args);
 
-#endif /** TKM_ENCODER_H_ */
+#endif /** TKM_ENCODER_H_ @}*/

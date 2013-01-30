@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-keymat keymat
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_KEYMAT_H_
 #define TKM_KEYMAT_H_
 
@@ -69,4 +74,4 @@ struct tkm_keymat_t {
  */
 tkm_keymat_t *tkm_keymat_create(bool initiator);
 
-#endif /** KEYMAT_TKM_H_ */
+#endif /** KEYMAT_TKM_H_ @}*/

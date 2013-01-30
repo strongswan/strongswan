@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-kernel-sad kernel sad
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_KERNEL_SAD_H_
 #define TKM_KERNEL_SAD_H_
 
@@ -75,4 +80,4 @@ struct tkm_kernel_sad_t {
  */
 tkm_kernel_sad_t *tkm_kernel_sad_create();
 
-#endif /** TKM_KERNEL_SAD_H_ */
+#endif /** TKM_KERNEL_SAD_H_ @}*/

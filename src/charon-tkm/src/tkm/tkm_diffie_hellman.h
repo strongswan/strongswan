@@ -14,6 +14,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup tkm-dh diffie hellman
+ * @{ @ingroup tkm
+ */
+
 #ifndef TKM_DIFFIE_HELLMAN_H_
 #define TKM_DIFFIE_HELLMAN_H_
 
@@ -49,4 +54,4 @@ struct tkm_diffie_hellman_t {
  */
 tkm_diffie_hellman_t *tkm_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /** TKM_DIFFIE_HELLMAN_H_ */
+#endif /** TKM_DIFFIE_HELLMAN_H_ @}*/
