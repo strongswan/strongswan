@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Reto Buerki
- * Copyright (C) 2012 Adrian-Ken Rueegsegger
+ * Copyright (C) 2012-2013 Reto Buerki
+ * Copyright (C) 2012-2013 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -40,6 +40,11 @@ struct private_tkm_private_key_t {
 	identification_t *id;
 
 	/**
+	 * Key type.
+	 */
+	key_type_t key_type;
+
+	/**
 	 * Reference count.
 	 */
 	refcount_t ref;
@@ -49,7 +54,7 @@ struct private_tkm_private_key_t {
 METHOD(private_key_t, get_type, key_type_t,
 	private_tkm_private_key_t *this)
 {
-	return KEY_RSA;
+	return this->key_type;
 }
 
 METHOD(private_key_t, sign, bool,
@@ -157,6 +162,26 @@ tkm_private_key_t *tkm_private_key_init(identification_t * const id)
 		.ref = 1,
 		.id = id->clone(id),
 	);
+
+	/* get key type from associated public key */
+	certificate_t *cert;
+	cert = lib->credmgr->get_cert(lib->credmgr, CERT_ANY, KEY_ANY, id, FALSE);
+	if (!cert)
+	{
+		destroy(this);
+		return NULL;
+	}
+
+	public_key_t *pubkey = cert->get_public_key(cert);
+	if (!pubkey)
+	{
+		cert->destroy(cert);
+		destroy(this);
+		return NULL;
+	}
+	this->key_type = pubkey->get_type(pubkey);
+	pubkey->destroy(pubkey);
+	cert->destroy(cert);
 
 	return &this->public;
 }

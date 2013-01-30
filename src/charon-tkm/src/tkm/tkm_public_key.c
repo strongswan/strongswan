@@ -14,6 +14,8 @@
  * for more details.
  */
 
+#include <utils/debug.h>
+
 #include "tkm_public_key.h"
 
 typedef struct private_tkm_public_key_t private_tkm_public_key_t;
@@ -34,6 +36,11 @@ struct private_tkm_public_key_t {
 	chunk_t asn_blob;
 
 	/**
+	 * Key type.
+	 */
+	key_type_t key_type;
+
+	/**
 	 * Reference count.
 	 */
 	refcount_t ref;
@@ -42,7 +49,7 @@ struct private_tkm_public_key_t {
 METHOD(public_key_t, get_type, key_type_t,
 	private_tkm_public_key_t *this)
 {
-	return KEY_RSA;
+	return this->key_type;
 }
 
 METHOD(public_key_t, verify, bool,
@@ -79,9 +86,17 @@ METHOD(public_key_t, get_fingerprint, bool,
 	{
 		return TRUE;
 	}
-	return lib->encoding->encode(lib->encoding, type, this, fp,
-								 CRED_PART_RSA_PUB_ASN1_DER, this->asn_blob,
-								 CRED_PART_END);
+	switch(this->key_type)
+	{
+		case KEY_RSA:
+			return lib->encoding->encode(lib->encoding, type, this, fp,
+										 CRED_PART_RSA_PUB_ASN1_DER,
+										 this->asn_blob, CRED_PART_END);
+		default:
+			DBG1(DBG_LIB, "%N public key not supported, fingerprinting failed",
+				 key_type_names, this->key_type);
+			return FALSE;
+	}
 }
 
 METHOD(public_key_t, get_ref, public_key_t*,
@@ -147,6 +162,7 @@ tkm_public_key_t *tkm_public_key_load(key_type_t type, va_list args)
 		},
 		.ref = 1,
 		.asn_blob = chunk_clone(blob),
+		.key_type = type,
 	);
 
 	return &this->public;
