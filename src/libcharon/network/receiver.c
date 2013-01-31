@@ -296,7 +296,7 @@ static bool cookie_required(private_receiver_t *this,
 		this->last_cookie = now;
 		return TRUE;
 	}
-	if (now < this->last_cookie + COOKIE_CALMDOWN_DELAY)
+	if (this->last_cookie && now < this->last_cookie + COOKIE_CALMDOWN_DELAY)
 	{
 		/* We don't disable cookies unless we haven't seen IKE_SA_INITs
 		 * for COOKIE_CALMDOWN_DELAY seconds. This avoids jittering between
