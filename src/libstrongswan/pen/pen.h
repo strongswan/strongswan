@@ -74,6 +74,18 @@ static inline pen_type_t pen_type_create(pen_t vendor_id, u_int32_t type)
 }
 
 /**
+ * Check two pen_type_t for equality.
+ *
+ * @param a				first pen_type_t to compare
+ * @param b				second pen_type_t to compare
+ * @return				TRUE if a == b
+ */
+static inline bool pen_type_equals(pen_type_t a, pen_type_t b)
+{
+	return a.vendor_id == b.vendor_id && a.type == b.type;
+}
+
+/**
  * enum names for pen_t.
  */
 extern enum_name_t *pen_names;
