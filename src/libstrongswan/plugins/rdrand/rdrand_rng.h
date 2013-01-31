@@ -15,7 +15,7 @@
 
 /**
  * @defgroup rdrand_rng rdrand_rng
- * @{ @ingroup rdrand
+ * @{ @ingroup rdrand_p
  */
 
 #ifndef RDRAND_RNG_H_
