@@ -1352,7 +1352,7 @@ Authentication method(s) the intiator uses
 Initiator ID used in load test
 .TP
 .BR charon.plugins.load-tester.initiator_match
-Initiator ID to to match against as responder
+Initiator ID to match against as responder
 .TP
 .BR charon.plugins.load-tester.initiator_tsi
 Traffic selector on initiator side, as proposed by initiator
