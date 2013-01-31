@@ -13,6 +13,10 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_SHA1
+
 #include "openssl_sha1_prf.h"
 
 #include <openssl/sha.h>
@@ -143,3 +147,4 @@ openssl_sha1_prf_t *openssl_sha1_prf_create(pseudo_random_function_t algo)
 	return &this->public;
 }
 
+#endif /* OPENSSL_NO_SHA1 */

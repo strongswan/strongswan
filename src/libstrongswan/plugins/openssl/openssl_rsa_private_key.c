@@ -14,6 +14,10 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_RSA
+
 #include "openssl_rsa_private_key.h"
 #include "openssl_rsa_public_key.h"
 
@@ -599,3 +603,4 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 #endif /* OPENSSL_NO_ENGINE */
 }
 
+#endif /* OPENSSL_NO_RSA */

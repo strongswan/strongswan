@@ -14,6 +14,10 @@
  * for more details.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_RSA
+
 #include "openssl_rsa_public_key.h"
 
 #include <utils/debug.h>
@@ -388,3 +392,5 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_load(key_type_t type,
 	destroy(this);
 	return NULL;
 }
+
+#endif /* OPENSSL_NO_RSA */

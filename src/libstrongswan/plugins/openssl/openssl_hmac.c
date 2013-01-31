@@ -35,6 +35,10 @@
  * THE SOFTWARE.
  */
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_HMAC
+
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
@@ -189,3 +193,4 @@ signer_t *openssl_hmac_signer_create(integrity_algorithm_t algo)
 	return NULL;
 }
 
+#endif /* OPENSSL_NO_HMAC */
