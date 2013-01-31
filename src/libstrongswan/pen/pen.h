@@ -86,6 +86,20 @@ static inline bool pen_type_equals(pen_type_t a, pen_type_t b)
 }
 
 /**
+ * Check if a pen_type_t matches vendor and type.
+ *
+ * @param pen_type		pen_type_t to compare
+ * @param vendor_id		vendor to check in pen_type
+ * @param type			type to check in pen_type
+ * @return				TRUE if vendor_id and type matches pen_type
+ */
+static inline bool pen_type_is(pen_type_t pen_type,
+							   pen_t vendor_id, u_int32_t type)
+{
+	return pen_type.vendor_id == vendor_id && pen_type.type == type;
+}
+
+/**
  * enum names for pen_t.
  */
 extern enum_name_t *pen_names;
