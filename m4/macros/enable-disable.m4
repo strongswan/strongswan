@@ -20,6 +20,7 @@ AC_DEFUN([ARG_ENABL_SET],
 # ARG_DISBL_SET(option, help)
 # ---------------------------
 # Create a --disable-$1 option with helptext, set a variable $1 to true/false
+# All $1 are collected in the variable $enabled_by_default
 AC_DEFUN([ARG_DISBL_SET],
 	[AC_ARG_ENABLE(
 		[$1],
@@ -32,5 +33,6 @@ AC_DEFUN([ARG_DISBL_SET],
 		fi],
 		[patsubst([$1], [-], [_])=true
 		patsubst([$1], [-], [_])_given=false]
-	)]
+	)
+	enabled_by_default=${enabled_by_default}" patsubst([$1], [-], [_])"]
 )

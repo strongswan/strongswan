@@ -230,6 +230,19 @@ ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replac
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 
+dnl ===================================
+dnl  option to disable default options
+dnl ===================================
+
+ARG_DISBL_SET([defaults],       [disable all default plugins (they can be enabled with their respective --enable options)])
+
+if test x$defaults = xfalse; then
+	for option in $enabled_by_default; do
+		eval test x\${${option}_given} = xtrue && continue
+		let $option=false
+	done
+fi
+
 dnl =========================
 dnl  set up compiler and flags
 dnl =========================
@@ -994,7 +1007,6 @@ AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
 
 AC_SUBST(c_plugins)
-AC_SUBST(p_plugins)
 AC_SUBST(h_plugins)
 AC_SUBST(s_plugins)
 
