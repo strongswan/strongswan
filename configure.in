@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,5.0.3dr1)
+AC_INIT([strongSwan],[5.0.3dr1])
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
@@ -258,8 +258,8 @@ dnl =========================
 dnl  check required programs
 dnl =========================
 
+LT_INIT
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
 AC_PROG_EGREP
 AC_PROG_AWK
 AC_PROG_LEX
@@ -393,11 +393,12 @@ LIBS=$saved_LIBS
 dnl ======================
 
 AC_MSG_CHECKING(for dladdr)
-AC_TRY_COMPILE(
-	[#define _GNU_SOURCE
-	 #include <dlfcn.h>],
-	[Dl_info* info = 0;
-	 dladdr(0, info);],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#define _GNU_SOURCE
+		  #include <dlfcn.h>]],
+		[[Dl_info* info = 0;
+		  dladdr(0, info);]])],
 	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_DLADDR], [], [have dladdr()])],
 	[AC_MSG_RESULT([no])]
 )
@@ -406,11 +407,12 @@ dnl check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
 saved_LIBS=$LIBS
 LIBS=$PTHREADLIB
 AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONE)])
-AC_TRY_RUN(
-	[#include <pthread.h>
-	 int main() { pthread_condattr_t attr;
-		pthread_condattr_init(&attr);
-		return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}],
+AC_RUN_IFELSE(
+	[AC_LANG_SOURCE(
+		[[#include <pthread.h>
+		  int main() { pthread_condattr_t attr;
+			pthread_condattr_init(&attr);
+			return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
 			   [pthread_condattr_setclock supports CLOCK_MONOTONIC])],
@@ -440,12 +442,13 @@ AC_CHECK_FUNC(
 	[gettid],
 	[AC_DEFINE([HAVE_GETTID], [], [have gettid()])],
 	[AC_MSG_CHECKING([for SYS_gettid])
-	 AC_TRY_COMPILE(
-		[#define _GNU_SOURCE
-		 #include <unistd.h>
-		 #include <sys/syscall.h>],
-		[int main() {
-			return syscall(SYS_gettid);}],
+	 AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#define _GNU_SOURCE
+			  #include <unistd.h>
+			  #include <sys/syscall.h>]],
+			[[int main() {
+			  return syscall(SYS_gettid);}]])],
 		[AC_MSG_RESULT([yes]);
 		 AC_DEFINE([HAVE_GETTID], [], [have gettid()])
 		 AC_DEFINE([HAVE_SYS_GETTID], [], [have syscall(SYS_gettid)])],
@@ -477,98 +480,104 @@ AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
 ])
 
 AC_MSG_CHECKING([for in6addr_any])
-AC_TRY_COMPILE(
-	[#include <sys/types.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>],
-	[struct in6_addr in6;
-	in6 = in6addr_any;],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/types.h>
+		  #include <sys/socket.h>
+		  #include <netinet/in.h>]],
+		[[struct in6_addr in6;
+		  in6 = in6addr_any;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IN6ADDR_ANY], [], [have struct in6_addr in6addr_any])],
 	[AC_MSG_RESULT([no])]
 )
 
 AC_MSG_CHECKING([for in6_pktinfo])
-AC_TRY_COMPILE(
-	[#define _GNU_SOURCE
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>],
-	[struct in6_pktinfo pi;
-	if (pi.ipi6_ifindex)
-	{
-		return 0;
-	}],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#define _GNU_SOURCE
+		  #include <sys/types.h>
+		  #include <sys/socket.h>
+		  #include <netinet/in.h>]],
+		[[struct in6_pktinfo pi;
+		  if (pi.ipi6_ifindex)
+		  {
+		    return 0;
+		  }]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IN6_PKTINFO], [], [have struct in6_pktinfo.ipi6_ifindex])],
 	[AC_MSG_RESULT([no])]
 )
 
 AC_MSG_CHECKING([for IPSEC_MODE_BEET])
-AC_TRY_COMPILE(
-	[#include <sys/types.h>
-	#ifdef HAVE_NETIPSEC_IPSEC_H
-	#include <netipsec/ipsec.h>
-	#elif defined(HAVE_NETINET6_IPSEC_H)
-	#include <netinet6/ipsec.h>
-	#else
-	#include <stdint.h>
-	#include <linux/ipsec.h>
-	#endif],
-	[int mode = IPSEC_MODE_BEET;
-	 return mode;],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/types.h>
+		  #ifdef HAVE_NETIPSEC_IPSEC_H
+		  #include <netipsec/ipsec.h>
+		  #elif defined(HAVE_NETINET6_IPSEC_H)
+		  #include <netinet6/ipsec.h>
+		  #else
+		  #include <stdint.h>
+		  #include <linux/ipsec.h>
+		  #endif]],
+		[[int mode = IPSEC_MODE_BEET;
+		  return mode;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IPSEC_MODE_BEET], [], [have IPSEC_MODE_BEET defined])],
 	[AC_MSG_RESULT([no])]
 )
 
 AC_MSG_CHECKING([for IPSEC_DIR_FWD])
-AC_TRY_COMPILE(
-	[#include <sys/types.h>
-	#ifdef HAVE_NETIPSEC_IPSEC_H
-	#include <netipsec/ipsec.h>
-	#elif defined(HAVE_NETINET6_IPSEC_H)
-	#include <netinet6/ipsec.h>
-	#else
-	#include <stdint.h>
-	#include <linux/ipsec.h>
-	#endif],
-	[int dir = IPSEC_DIR_FWD;
-	 return dir;],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/types.h>
+		  #ifdef HAVE_NETIPSEC_IPSEC_H
+		  #include <netipsec/ipsec.h>
+		  #elif defined(HAVE_NETINET6_IPSEC_H)
+		  #include <netinet6/ipsec.h>
+		  #else
+		  #include <stdint.h>
+		  #include <linux/ipsec.h>
+		  #endif]],
+		[[int dir = IPSEC_DIR_FWD;
+		  return dir;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_IPSEC_DIR_FWD], [], [have IPSEC_DIR_FWD defined])],
 	[AC_MSG_RESULT([no])]
 )
 
 AC_MSG_CHECKING([for RTA_TABLE])
-AC_TRY_COMPILE(
-	[#include <sys/socket.h>
-	#include <linux/netlink.h>
-	#include <linux/rtnetlink.h>],
-	[int rta_type = RTA_TABLE;
-	 return rta_type;],
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <sys/socket.h>
+		  #include <linux/netlink.h>
+		  #include <linux/rtnetlink.h>]],
+		[[int rta_type = RTA_TABLE;
+		  return rta_type;]])],
 	[AC_MSG_RESULT([yes]);
 	 AC_DEFINE([HAVE_RTA_TABLE], [], [have netlink RTA_TABLE defined])],
 	[AC_MSG_RESULT([no])]
 )
 
 AC_MSG_CHECKING([for gcc atomic operations])
-AC_TRY_RUN(
-[
-	int main() {
-		volatile int ref = 1;
-		__sync_fetch_and_add (&ref, 1);
-		__sync_sub_and_fetch (&ref, 1);
-		/* Make sure test fails if operations are not supported */
-		__sync_val_compare_and_swap(&ref, 1, 0);
-		return ref;
-	}
-],
-[AC_MSG_RESULT([yes]);
- AC_DEFINE([HAVE_GCC_ATOMIC_OPERATIONS], [],
+AC_RUN_IFELSE([AC_LANG_SOURCE(
+	[[
+			int main() {
+			volatile int ref = 1;
+			__sync_fetch_and_add (&ref, 1);
+			__sync_sub_and_fetch (&ref, 1);
+			/* Make sure test fails if operations are not supported */
+			__sync_val_compare_and_swap(&ref, 1, 0);
+			return ref;
+		}
+	]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_GCC_ATOMIC_OPERATIONS], [],
 		   [have GCC __sync_* atomic operations])],
-[AC_MSG_RESULT([no])],
-[AC_MSG_RESULT([no])])
+	[AC_MSG_RESULT([no])],
+	[AC_MSG_RESULT([no])]
+)
 
 dnl check for the new register_printf_specifier function with len argument,
 dnl or the deprecated register_printf_function without
@@ -586,20 +595,19 @@ AC_CHECK_FUNC(
 )
 
 if test x$vstr = xtrue; then
-	AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])])
+	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use vstring library for printf hooks])
 fi
 
 if test x$gmp = xtrue; then
 	saved_LIBS=$LIBS
-	AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	AC_CHECK_LIB([gmp],[main],[],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])],[])
 	AC_MSG_CHECKING([mpz_powm_sec])
 	if test x$mpz_powm_sec = xyes; then
-		AC_TRY_COMPILE(
-			[#include "gmp.h"],
-			[
-				void *x = mpz_powm_sec;
-			],
+		AC_COMPILE_IFELSE(
+			[AC_LANG_PROGRAM(
+				[[#include "gmp.h"]],
+				[[void *x = mpz_powm_sec;]])],
 			[AC_MSG_RESULT([yes]);
 			 AC_DEFINE([HAVE_MPZ_POWM_SEC], [], [have mpz_mown_sec()])],
 			[AC_MSG_RESULT([no])]
@@ -609,25 +617,26 @@ if test x$gmp = xtrue; then
 	fi
 	LIBS=$saved_LIBS
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
-	AC_TRY_COMPILE(
-		[#include "gmp.h"],
-		[
-			#if (__GNU_MP_VERSION*100 +  __GNU_MP_VERSION_MINOR*10 + __GNU_MP_VERSION_PATCHLEVEL) < 414
-				#error bad gmp
-			#endif
-		],
-		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include "gmp.h"]],
+			[[
+				#if (__GNU_MP_VERSION*100 +  __GNU_MP_VERSION_MINOR*10 + __GNU_MP_VERSION_PATCHLEVEL) < 414
+					#error bad gmp
+				#endif]])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
 	)
 fi
 
 if test x$ldap = xtrue; then
-	AC_HAVE_LIBRARY([ldap],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])])
-	AC_HAVE_LIBRARY([lber],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library lber not found])])
+	AC_CHECK_LIB([ldap],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])],[])
+	AC_CHECK_LIB([lber],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library lber not found])],[])
 	AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP header ldap.h not found!])])
 fi
 
 if test x$curl = xtrue; then
-	AC_HAVE_LIBRARY([curl],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL library curl not found])])
+	AC_CHECK_LIB([curl],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL library curl not found])],[])
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
@@ -650,7 +659,7 @@ if test x$axis2c = xtrue; then
 fi
 
 if test x$tss = xtrousers; then
-	AC_HAVE_LIBRARY([tspi],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])])
+	AC_CHECK_LIB([tspi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])],[])
 	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
 	AC_DEFINE([TSS_TROUSERS], [], [use TrouSerS library libtspi as TSS implementation])
 fi
@@ -696,18 +705,17 @@ if test x$dumm = xtrue; then
 fi
 
 if test x$fast = xtrue; then
-	AC_HAVE_LIBRARY([neo_cgi],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_cgi not found!])])
-	AC_HAVE_LIBRARY([neo_utl],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])])
+	AC_CHECK_LIB([neo_cgi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_cgi not found!])],[])
+	AC_CHECK_LIB([neo_utl],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
 	AC_MSG_CHECKING([ClearSilver requires zlib])
 	saved_CFLAGS=$CFLAGS
 	saved_LIBS=$LIBS
 	LIBS="-lneo_cgi -lneo_cs -lneo_utl"
 	CFLAGS="-I/usr/include/ClearSilver"
-	AC_TRY_LINK(
-		[#include <ClearSilver.h>],
-		[
-			NEOERR *err = cgi_display(NULL, NULL);
-		],
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include <ClearSilver.h>]],
+			[[NEOERR *err = cgi_display(NULL, NULL);]])],
 		[AC_MSG_RESULT([no]); clearsilver_LIBS="$LIBS"],
 		[AC_MSG_RESULT([yes]); clearsilver_LIBS="$LIBS -lz"]
 	)
@@ -717,7 +725,7 @@ if test x$fast = xtrue; then
 dnl autoconf does not like CamelCase!? How to fix this?
 dnl	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
 
-	AC_HAVE_LIBRARY([fcgi],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])])
+	AC_CHECK_LIB([fcgi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])],[])
 	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
 fi
 
@@ -731,40 +739,43 @@ if test x$mysql = xtrue; then
 fi
 
 if test x$sqlite = xtrue; then
-	AC_HAVE_LIBRARY([sqlite3],[LIBS="$LIBS"],[AC_MSG_ERROR([SQLite library sqlite3 not found])])
+	AC_CHECK_LIB([sqlite3],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([SQLite library sqlite3 not found])],[])
 	AC_CHECK_HEADER([sqlite3.h],,[AC_MSG_ERROR([SQLite header sqlite3.h not found!])])
 	AC_MSG_CHECKING([sqlite3_prepare_v2])
-	AC_TRY_COMPILE(
-		[#include <sqlite3.h>],
-		[
-			void *test = sqlite3_prepare_v2;
-		],
-		[AC_MSG_RESULT([yes])];
-		 AC_DEFINE([HAVE_SQLITE3_PREPARE_V2], [], [have sqlite3_prepare_v2()]),
-		[AC_MSG_RESULT([no])])
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include <sqlite3.h>]],
+			[[void *test = sqlite3_prepare_v2;]])],
+		[AC_MSG_RESULT([yes]);
+		 AC_DEFINE([HAVE_SQLITE3_PREPARE_V2], [], [have sqlite3_prepare_v2()])],
+		[AC_MSG_RESULT([no])]
+	)
 	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
-	AC_TRY_COMPILE(
-		[#include <sqlite3.h>],
-		[
-			#if SQLITE_VERSION_NUMBER < 3003001
-				#error bad sqlite
-			#endif
-		],
-		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])])
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include <sqlite3.h>]],
+			[[
+				#if SQLITE_VERSION_NUMBER < 3003001
+					#error bad sqlite
+				#endif]])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])]
+	)
 fi
 
 if test x$openssl = xtrue; then
-	AC_HAVE_LIBRARY([crypto],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL crypto library not found])])
+	AC_CHECK_LIB([crypto],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([OpenSSL crypto library not found])],[])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
 if test x$gcrypt = xtrue; then
-	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
+	AC_CHECK_LIB([gcrypt],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
 	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
 	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
-	AC_TRY_COMPILE(
-		[#include <gcrypt.h>],
-		[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;],
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include <gcrypt.h>]],
+			[[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;]])],
 		[AC_MSG_RESULT([yes]);
 		 AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA], [], [have GCRY_CIPHER_CAMELLIA128])],
 		[AC_MSG_RESULT([no])]
@@ -772,12 +783,12 @@ if test x$gcrypt = xtrue; then
 fi
 
 if test x$uci = xtrue; then
-	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
+	AC_CHECK_LIB([uci],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])],[])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
 fi
 
 if test x$android = xtrue; then
-	AC_HAVE_LIBRARY([cutils],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])])
+	AC_CHECK_LIB([cutils],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])],[])
 	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
 	dnl we have to force the use of libdl here because the autodetection
 	dnl above does not work correctly when cross-compiling for android.
@@ -809,7 +820,7 @@ if test x$nm = xtrue; then
 fi
 
 if test x$xauth_pam = xtrue; then
-	AC_HAVE_LIBRARY([pam],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])])
+	AC_CHECK_LIB([pam],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])],[])
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
 
@@ -823,7 +834,7 @@ if test x$capabilities = xnative; then
 fi
 
 if test x$capabilities = xlibcap; then
-	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
+	AC_CHECK_LIB([cap],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])],[])
 	AC_CHECK_HEADER([sys/capability.h],
 		[AC_DEFINE([HAVE_SYS_CAPABILITY_H], [], [have sys/capability.h])],
 		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
@@ -832,25 +843,29 @@ fi
 
 if test x$integrity_test = xtrue; then
 	AC_MSG_CHECKING([for dladdr()])
-	AC_TRY_COMPILE(
-		[#define _GNU_SOURCE
-		 #include <dlfcn.h>],
-		[Dl_info info; dladdr(main, &info);],
-		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#define _GNU_SOURCE
+			  #include <dlfcn.h>]],
+			[[Dl_info info; dladdr(main, &info);]])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no]);
 		 AC_MSG_ERROR([dladdr() not supported, required by integrity-test!])]
 	)
 	AC_MSG_CHECKING([for dl_iterate_phdr()])
-	AC_TRY_COMPILE(
-		[#define _GNU_SOURCE
-		 #include <link.h>],
-		[dl_iterate_phdr((void*)0, (void*)0);],
-		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#define _GNU_SOURCE
+			  #include <link.h>]],
+			[[dl_iterate_phdr((void*)0, (void*)0);]])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no]);
 		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
 	)
 fi
 
 if test x$bfd_backtraces = xtrue; then
-	AC_HAVE_LIBRARY([bfd],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])])
+	AC_CHECK_LIB([bfd],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])],[])
 	AC_CHECK_HEADER([bfd.h],[AC_DEFINE([HAVE_BFD_H],,[have binutils bfd.h])],
 		[AC_MSG_ERROR([binutils bfd.h header not found!])])
 	BFDLIB="-lbfd"
@@ -1195,7 +1210,7 @@ dnl ==============================
 dnl  build Makefiles
 dnl ==============================
 
-AC_OUTPUT(
+AC_CONFIG_FILES([
 	Makefile
 	man/Makefile
 	init/Makefile
@@ -1344,4 +1359,5 @@ AC_OUTPUT(
 	src/conftest/Makefile
 	scripts/Makefile
 	testing/Makefile
-)
+])
+AC_OUTPUT
