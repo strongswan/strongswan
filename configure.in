@@ -1364,3 +1364,16 @@ AC_CONFIG_FILES([
 	testing/Makefile
 ])
 AC_OUTPUT
+
+# ========================
+#  report enabled plugins
+# ========================
+
+AC_MSG_RESULT([])
+AC_MSG_RESULT([ strongSwan will be built with the following plugins])
+AC_MSG_RESULT([-----------------------------------------------------])
+
+AC_MSG_RESULT([libstrongswan:$s_plugins])
+AC_MSG_RESULT([libcharon:    $c_plugins])
+AC_MSG_RESULT([libhydra:     $h_plugins])
+AC_MSG_RESULT([])
