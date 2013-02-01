@@ -1,20 +1,23 @@
-dnl  configure.in for linux strongSwan
-dnl  Copyright (C) 2006 Martin Willi
-dnl  Hochschule fuer Technik Rapperswil
-dnl
-dnl  This program is free software; you can redistribute it and/or modify it
-dnl  under the terms of the GNU General Public License as published by the
-dnl  Free Software Foundation; either version 2 of the License, or (at your
-dnl  option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-dnl
-dnl  This program is distributed in the hope that it will be useful, but
-dnl  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-dnl  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-dnl  for more details.
+#
+# Copyright (C) 2007-2013 Tobias Brunner
+# Copyright (C) 2006-2013 Andreas Steffen
+# Copyright (C) 2006-2013 Martin Willi
+# Hochschule fuer Technik Rapperswil
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
 
-dnl ===========================
-dnl  initialize & set some vars
-dnl ===========================
+# ============================
+#  initialize & set some vars
+# ============================
 
 AC_INIT([strongSwan],[5.0.3dr1])
 AM_INIT_AUTOMAKE(tar-ustar)
@@ -23,9 +26,9 @@ AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
 PKG_PROG_PKG_CONFIG
 
-dnl =================================
-dnl  check --enable-xxx & --with-xxx
-dnl =================================
+# =================================
+#  check --enable-xxx & --with-xxx
+# =================================
 
 m4_include(m4/macros/with.m4)
 
@@ -230,9 +233,9 @@ ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replac
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 
-dnl ===================================
-dnl  option to disable default options
-dnl ===================================
+# ===================================
+#  option to disable default options
+# ===================================
 
 ARG_DISBL_SET([defaults],       [disable all default plugins (they can be enabled with their respective --enable options)])
 
@@ -243,9 +246,9 @@ if test x$defaults = xfalse; then
 	done
 fi
 
-dnl =========================
-dnl  set up compiler and flags
-dnl =========================
+# ===========================
+#  set up compiler and flags
+# ===========================
 
 if test -z "$CFLAGS"; then
 	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign"
@@ -254,9 +257,9 @@ AC_PROG_CC
 AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
-dnl =========================
-dnl  check required programs
-dnl =========================
+# =========================
+#  check required programs
+# =========================
 
 LT_INIT
 AC_PROG_INSTALL
@@ -267,7 +270,7 @@ AC_PROG_YACC
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
-dnl because gperf is not needed by end-users we just report it but do not abort on failure
+# because gperf is not needed by end-users we just report it but do not abort on failure
 AC_MSG_CHECKING([gperf version >= 3.0.0])
 if test -x "$GPERF"; then
 	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
@@ -279,9 +282,9 @@ else
 	AC_MSG_RESULT([not found])
 fi
 
-dnl =========================
-dnl  dependency calculation
-dnl =========================
+# ========================
+#  dependency calculation
+# ========================
 
 if test x$xauth_generic_given = xfalse -a x$ikev1 = xfalse; then
 	xauth_generic=false;
@@ -348,49 +351,49 @@ if test x$medcli = xtrue; then
 	mediation=true
 fi
 
-dnl ===========================================
-dnl  check required libraries and header files
-dnl ===========================================
+# ===========================================
+#  check required libraries and header files
+# ===========================================
 
 AC_HEADER_STDBOOL
 AC_FUNC_ALLOCA
 AC_FUNC_STRERROR_R
 
-dnl libraries needed on some platforms but not on others
-dnl ====================================================
+#  libraries needed on some platforms but not on others
+# ------------------------------------------------------
 saved_LIBS=$LIBS
 
-dnl FreeBSD and Mac OS X have dlopen integrated in libc, Linux needs libdl
+# FreeBSD and Mac OS X have dlopen integrated in libc, Linux needs libdl
 LIBS=""
 AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
 AC_SUBST(DLLIB)
 
-dnl glibc's backtrace() can be replicated on FreeBSD with libexecinfo
+# glibc's backtrace() can be replicated on FreeBSD with libexecinfo
 LIBS=""
 AC_SEARCH_LIBS(backtrace, execinfo, [BTLIB=$LIBS])
 AC_CHECK_FUNCS(backtrace)
 AC_SUBST(BTLIB)
 
-dnl OpenSolaris needs libsocket and libnsl for socket()
+# OpenSolaris needs libsocket and libnsl for socket()
 LIBS=""
 AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
 	[AC_CHECK_LIB(nsl, socket, [SOCKLIB="-lsocket -lnsl"], [], [-lsocket])]
 )
 AC_SUBST(SOCKLIB)
 
-dnl FreeBSD has clock_gettime in libc, Linux needs librt
+# FreeBSD has clock_gettime in libc, Linux needs librt
 LIBS=""
 AC_SEARCH_LIBS(clock_gettime, rt, [RTLIB=$LIBS])
 AC_CHECK_FUNCS(clock_gettime)
 AC_SUBST(RTLIB)
 
-dnl Android has pthread_* functions in bionic (libc), others need libpthread
+# Android has pthread_* functions in bionic (libc), others need libpthread
 LIBS=""
 AC_SEARCH_LIBS(pthread_create, pthread, [PTHREADLIB=$LIBS])
 AC_SUBST(PTHREADLIB)
 
 LIBS=$saved_LIBS
-dnl ======================
+# ------------------------------------------------------
 
 AC_MSG_CHECKING(for dladdr)
 AC_COMPILE_IFELSE(
@@ -403,7 +406,7 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([no])]
 )
 
-dnl check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
+# check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
 saved_LIBS=$LIBS
 LIBS=$PTHREADLIB
 AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONE)])
@@ -417,24 +420,24 @@ AC_RUN_IFELSE(
 	 AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
 			   [pthread_condattr_setclock supports CLOCK_MONOTONIC])],
 	[AC_MSG_RESULT([no])],
-	dnl Check existence of pthread_condattr_setclock if cross-compiling
+	# Check existence of pthread_condattr_setclock if cross-compiling
 	[AC_MSG_RESULT([unknown]);
 	 AC_CHECK_FUNCS(pthread_condattr_setclock,
 		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC], [],
 				   [have pthread_condattr_setclock()])]
 	)]
 )
-dnl check if we actually are able to configure attributes on cond vars
+# check if we actually are able to configure attributes on cond vars
 AC_CHECK_FUNCS(pthread_condattr_init)
-dnl instead of pthread_condattr_setclock Android has this function
+# instead of pthread_condattr_setclock Android has this function
 AC_CHECK_FUNCS(pthread_cond_timedwait_monotonic)
-dnl check if we can cancel threads
+# check if we can cancel threads
 AC_CHECK_FUNCS(pthread_cancel)
-dnl check if native rwlocks are available
+# check if native rwlocks are available
 AC_CHECK_FUNCS(pthread_rwlock_init)
-dnl check if pthread spinlocks are available
+# check if pthread spinlocks are available
 AC_CHECK_FUNCS(pthread_spin_init)
-dnl check if we have POSIX semaphore functions, including timed-wait
+# check if we have POSIX semaphore functions, including timed-wait
 AC_CHECK_FUNCS(sem_timedwait)
 LIBS=$saved_LIBS
 
@@ -579,8 +582,8 @@ AC_RUN_IFELSE([AC_LANG_SOURCE(
 	[AC_MSG_RESULT([no])]
 )
 
-dnl check for the new register_printf_specifier function with len argument,
-dnl or the deprecated register_printf_function without
+# check for the new register_printf_specifier function with len argument,
+# or the deprecated register_printf_function without
 AC_CHECK_FUNC(
 	[register_printf_specifier],
 	[AC_DEFINE([HAVE_PRINTF_SPECIFIER], [], [have register_printf_specifier()])],
@@ -722,8 +725,8 @@ if test x$fast = xtrue; then
 	AC_SUBST(clearsilver_LIBS)
 	LIBS=$saved_LIBS
 	CFLAGS=$saved_CFLAGS
-dnl autoconf does not like CamelCase!? How to fix this?
-dnl	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
+# autoconf does not like CamelCase!? How to fix this?
+#	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
 
 	AC_CHECK_LIB([fcgi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])],[])
 	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
@@ -790,8 +793,8 @@ fi
 if test x$android = xtrue; then
 	AC_CHECK_LIB([cutils],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])],[])
 	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
-	dnl we have to force the use of libdl here because the autodetection
-	dnl above does not work correctly when cross-compiling for android.
+	# we have to force the use of libdl here because the autodetection
+	# above does not work correctly when cross-compiling for android.
 	DLLIB="-ldl"
 	AC_SUBST(DLLIB)
 fi
@@ -826,8 +829,8 @@ fi
 
 if test x$capabilities = xnative; then
 	AC_MSG_NOTICE([Usage of the native Linux capabilities interface is deprecated, use libcap instead])
-	dnl Linux requires the following for capset(), Android does not have it,
-	dnl but defines capset() in unistd.h instead.
+	# Linux requires the following for capset(), Android does not have it,
+	# but defines capset() in unistd.h instead.
 	AC_CHECK_HEADERS([sys/capability.h])
 	AC_CHECK_FUNC(capset,,[AC_MSG_ERROR([capset() not found!])])
 	AC_DEFINE([CAPABILITIES_NATIVE], [], [have native linux capset()])
@@ -880,9 +883,9 @@ AC_SUBST(dev_headers)
 
 CFLAGS="$CFLAGS -include `pwd`/config.h"
 
-dnl ==============================================
-dnl  collect plugin list for strongSwan components
-dnl ==============================================
+# ===============================================
+#  collect plugin list for strongSwan components
+# ===============================================
 
 m4_include(m4/macros/add-plugin.m4)
 
@@ -1025,12 +1028,12 @@ AC_SUBST(c_plugins)
 AC_SUBST(h_plugins)
 AC_SUBST(s_plugins)
 
-dnl =========================
-dnl  set Makefile.am vars
-dnl =========================
+# ======================
+#  set Makefile.am vars
+# ======================
 
-dnl libstrongswan plugins
-dnl =====================
+#  libstrongswan plugins
+# -----------------------
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
@@ -1072,8 +1075,8 @@ AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 
-dnl charon plugins
-dnl ==============
+#  charon plugins
+# ----------------
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
@@ -1139,8 +1142,8 @@ AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 
-dnl hydra plugins
-dnl =============
+#  hydra plugins
+# ---------------
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
@@ -1149,8 +1152,8 @@ AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
-dnl other options
-dnl =============
+#  other options
+# ---------------
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
 AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
@@ -1186,9 +1189,9 @@ AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
-dnl ==============================
-dnl  set global definitions
-dnl ==============================
+# ========================
+#  set global definitions
+# ========================
 
 if test x$mediation = xtrue; then
 	AC_DEFINE([ME], [], [mediation extension support])
@@ -1206,9 +1209,9 @@ if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
 fi
 
-dnl ==============================
-dnl  build Makefiles
-dnl ==============================
+# =================
+#  build Makefiles
+# =================
 
 AC_CONFIG_FILES([
 	Makefile
