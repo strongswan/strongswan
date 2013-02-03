@@ -284,6 +284,18 @@ METHOD(pa_tnc_msg_t, process, status_t,
 		}
 		DBG3(DBG_TNC, "%B", &value);
 
+		if (vendor_id == PEN_RESERVED)
+		{
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding, offset + 1);
+			goto err;
+		}
+		if (type == IETF_ATTR_RESERVED)
+		{
+			error = ietf_attr_pa_tnc_error_create_with_offset(error_code,
+						this->encoding, offset + 4);
+			goto err;
+		}
 		attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
 											  vendor_id, type, value);
 		if (!attr)
