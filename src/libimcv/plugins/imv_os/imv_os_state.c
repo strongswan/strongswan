@@ -137,6 +137,11 @@ struct private_imv_os_state_t {
 	int count_ok;
 
 	/**
+	 * Attribute request sent - mandatory response expected
+	 */
+	bool attribute_request;
+
+	/**
 	 * OS Installed Package request sent - mandatory response expected
 	 */
 	bool package_request;
@@ -506,6 +511,18 @@ METHOD(imv_os_state_t, get_count, void,
 	}
 }
 
+METHOD(imv_os_state_t, set_attribute_request, void,
+	private_imv_os_state_t *this, bool set)
+{
+	this->attribute_request = set;
+}
+
+METHOD(imv_os_state_t, get_attribute_request, bool,
+	private_imv_os_state_t *this)
+{
+	return this->attribute_request;
+}
+
 METHOD(imv_os_state_t, set_package_request, void,
 	private_imv_os_state_t *this, bool set)
 {
@@ -597,6 +614,8 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 			.get_info = _get_info,
 			.set_count = _set_count,
 			.get_count = _get_count,
+			.set_attribute_request = _set_attribute_request,
+			.get_attribute_request = _get_attribute_request,
 			.set_package_request = _set_package_request,
 			.get_package_request = _get_package_request,
 			.set_device_id = _set_device_id,

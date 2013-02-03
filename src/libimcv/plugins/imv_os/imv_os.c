@@ -360,7 +360,9 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		out_msg->add_attribute(out_msg, attr);
 	}
 
-	if (fatal_error)
+	if (fatal_error ||
+	   (os_state->get_attribute_request(os_state) &&
+		os_state->get_info(os_state, NULL, NULL, NULL) == NULL))
 	{
 		state->set_recommendation(state,
 								TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,
@@ -371,7 +373,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	/* If all Installed Packages attributes were received, go to assessment */
 	if (!assessment &&
 		!os_state->get_package_request(os_state) &&
-		!os_state->get_angel_count(os_state))
+		!os_state->get_angel_count(os_state) &&
+		 os_state->get_info(os_state, NULL, NULL, NULL))
 	{
 		int device_id, count, count_update, count_blacklist, count_ok;
 		u_int os_settings;
@@ -518,6 +521,8 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 {
 	imv_state_t *state;
 	imv_os_state_t *os_state;
+	TNC_IMV_Action_Recommendation rec;
+	TNC_IMV_Evaluation_Result eval;
 	TNC_Result result = TNC_RESULT_SUCCESS;
 
 	if (!imv_os)
@@ -530,6 +535,18 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 		return TNC_RESULT_FATAL;
 	}
 	os_state = (imv_os_state_t*)state;
+
+	state->get_recommendation(state, &rec, &eval);
+
+	/*
+	 * Don't send an attribute request if an evaluation is available 
+	 * or if an attribute request has already been sent
+	 */
+	if (eval != TNC_IMV_EVALUATION_RESULT_DONT_KNOW ||
+		os_state->get_attribute_request(os_state))
+	{
+		return TNC_RESULT_SUCCESS;
+	}
 
 	if (os_state->get_info(os_state, NULL, NULL, NULL) == NULL)
 	{
@@ -548,6 +565,7 @@ TNC_Result TNC_IMV_BatchEnding(TNC_IMVID imv_id,
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FORWARDING_ENABLED);
 		attr_cast->add(attr_cast, PEN_IETF, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED);
 		out_msg->add_attribute(out_msg, attr);
+		os_state->set_attribute_request(os_state, TRUE);
 
 		/* send PA-TNC message with excl flag not set */
 		result = out_msg->send(out_msg, FALSE);

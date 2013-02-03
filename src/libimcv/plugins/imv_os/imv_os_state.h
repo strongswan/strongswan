@@ -87,6 +87,21 @@ struct imv_os_state_t {
 	 */
 	void (*get_count)(imv_os_state_t *this, int *count, int *count_update,
 					  int *count_blacklist, int *count_ok);
+
+	/**
+	 * Set/reset attribute request status
+	 *
+	 * @param set			TRUE to set, FALSE to clear
+	 */
+	void (*set_attribute_request)(imv_os_state_t *this, bool set);
+
+	/**
+	 * Get attribute request status
+	 *
+	 * @return				TRUE if set, FALSE if unset
+	 */
+	bool (*get_attribute_request)(imv_os_state_t *this);
+
 	/**
 	 * Set/reset OS Installed Packages request status
 	 *
