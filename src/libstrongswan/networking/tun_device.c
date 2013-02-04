@@ -88,7 +88,6 @@ static void set_netmask(struct ifreq *ifr, int family, u_int8_t netmask)
 		case AF_INET:
 		{
 			struct sockaddr_in *addr = (struct sockaddr_in*)&ifr->ifr_addr;
-			addr->sin_family = AF_INET;
 			target = (char*)&addr->sin_addr;
 			len = 4;
 			break;
@@ -96,7 +95,6 @@ static void set_netmask(struct ifreq *ifr, int family, u_int8_t netmask)
 		case AF_INET6:
 		{
 			struct sockaddr_in6 *addr = (struct sockaddr_in6*)&ifr->ifr_addr;
-			addr->sin6_family = AF_INET6;
 			target = (char*)&addr->sin6_addr;
 			len = 16;
 			break;
@@ -104,6 +102,8 @@ static void set_netmask(struct ifreq *ifr, int family, u_int8_t netmask)
 		default:
 			return;
 	}
+
+	ifr->ifr_addr.sa_family = family;
 
 	bytes = (netmask + 7) / 8;
 	bits = (bytes * 8) - netmask;
