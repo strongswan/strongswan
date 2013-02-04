@@ -286,21 +286,55 @@ METHOD(task_t, build_i_status, status_t,
 	return NEED_MORE;
 }
 
+METHOD(task_t, process_i_status, status_t,
+	private_xauth_t *this, message_t *message)
+{
+	cp_payload_t *cp;
+
+	cp = (cp_payload_t*)message->get_payload(message, CONFIGURATION_V1);
+	if (!cp || cp->get_type(cp) != CFG_ACK)
+	{
+		DBG1(DBG_IKE, "received invalid XAUTH status response");
+		return FAILED;
+	}
+	if (this->status != XAUTH_OK)
+	{
+		DBG1(DBG_IKE, "destroying IKE_SA after failed XAuth authentication");
+		return FAILED;
+	}
+	if (!establish(this))
+	{
+		return FAILED;
+	}
+	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
+	lib->processor->queue_job(lib->processor, (job_t*)
+				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
+	return SUCCESS;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_xauth_t *this, message_t *message)
 {
 	if (!this->xauth)
 	{
-		cp_payload_t *cp;
+		cp_payload_t *cp = NULL;
 
 		this->xauth = load_method(this);
 		if (!this->xauth)
 		{
 			return FAILED;
 		}
-		if (this->xauth->initiate(this->xauth, &cp) != NEED_MORE)
+		switch (this->xauth->initiate(this->xauth, &cp))
 		{
-			return FAILED;
+			case NEED_MORE:
+				break;
+			case SUCCESS:
+				DESTROY_IF(cp);
+				this->status = XAUTH_OK;
+				this->public.task.process = _process_i_status;
+				return build_i_status(this, message);
+			default:
+				return FAILED;
 		}
 		message->add_payload(message, (payload_t *)cp);
 		return NEED_MORE;
@@ -409,32 +443,6 @@ METHOD(task_t, build_r, status_t,
 	message->add_payload(message, (payload_t *)this->cp);
 	this->cp = NULL;
 	return NEED_MORE;
-}
-
-METHOD(task_t, process_i_status, status_t,
-	private_xauth_t *this, message_t *message)
-{
-	cp_payload_t *cp;
-
-	cp = (cp_payload_t*)message->get_payload(message, CONFIGURATION_V1);
-	if (!cp || cp->get_type(cp) != CFG_ACK)
-	{
-		DBG1(DBG_IKE, "received invalid XAUTH status response");
-		return FAILED;
-	}
-	if (this->status != XAUTH_OK)
-	{
-		DBG1(DBG_IKE, "destroying IKE_SA after failed XAuth authentication");
-		return FAILED;
-	}
-	if (!establish(this))
-	{
-		return FAILED;
-	}
-	this->ike_sa->set_condition(this->ike_sa, COND_XAUTH_AUTHENTICATED, TRUE);
-	lib->processor->queue_job(lib->processor, (job_t*)
-				adopt_children_job_create(this->ike_sa->get_id(this->ike_sa)));
-	return SUCCESS;
 }
 
 METHOD(task_t, process_i, status_t,
