@@ -460,7 +460,7 @@ int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	bool utc = *((bool*)(args[1]));;
 	struct tm t;
 
-	if (time == UNDEFINED_TIME)
+	if (*time == UNDEFINED_TIME)
 	{
 		return print_in_hook(data, "--- -- --:--:--%s----",
 							 utc ? " UTC " : " ");
