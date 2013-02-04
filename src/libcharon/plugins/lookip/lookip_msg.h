@@ -86,7 +86,7 @@ struct lookip_response_t {
 	/** null terminated string representation of outer IP */
 	char ip[40];
 	/** null terminated peer identity */
-	char id[128];
+	char id[256];
 	/** null terminated connection name */
 	char name[40];
 	/** unique connection id */
