@@ -54,11 +54,11 @@ struct error_notify_msg_t {
 	/** message type */
 	int type;
 	/** string with an error description */
-	char str[128];
+	char str[384];
 	/** connection name, if known */
 	char name[64];
 	/** peer identity, if known */
-	char id[128];
+	char id[256];
 	/** peer address and port, if known */
 	char ip[60];
 } __attribute__((packed));
