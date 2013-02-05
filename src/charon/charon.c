@@ -44,6 +44,17 @@
 #define PID_FILE IPSEC_PIDDIR "/charon.pid"
 
 /**
+ * Default user and group
+ */
+#ifndef IPSEC_USER
+#define IPSEC_USER NULL
+#endif
+
+#ifndef IPSEC_GROUP
+#define IPSEC_GROUP NULL
+#endif
+
+/**
  * Global reference to PID file (required to truncate, if undeletable)
  */
 static FILE *pidfile = NULL;
@@ -148,18 +159,18 @@ static void run()
  */
 static bool lookup_uid_gid()
 {
-#ifdef IPSEC_USER
-	if (!lib->caps->resolve_uid(lib->caps, IPSEC_USER))
+	char *name;
+
+	name = lib->settings->get_str(lib->settings, "charon.user", IPSEC_USER);
+	if (name && !lib->caps->resolve_uid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif
-#ifdef IPSEC_GROUP
-	if (!lib->caps->resolve_gid(lib->caps, IPSEC_GROUP))
+	name = lib->settings->get_str(lib->settings, "charon.group", IPSEC_GROUP);
+	if (name && !lib->caps->resolve_gid(lib->caps, name))
 	{
 		return FALSE;
 	}
-#endif
 #ifdef ANDROID
 	lib->caps->set_uid(lib->caps, AID_VPN);
 #endif

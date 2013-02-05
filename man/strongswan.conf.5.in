@@ -174,6 +174,9 @@ used certificates.
 Maximum size (in bytes) of a sent fragment when using the proprietary IKEv1
 fragmentation extension.
 .TP
+.BR charon.group
+Name of the group the daemon changes to after startup
+.TP
 .BR charon.half_open_timeout " [30]"
 Timeout in seconds for connecting IKE_SAs (also see IKE_SA_INIT DROPPING).
 .TP
@@ -317,6 +320,9 @@ Section to define syslog loggers, see LOGGER CONFIGURATION
 .TP
 .BR charon.threads " [16]"
 Number of worker threads in charon
+.TP
+.BR charon.user
+Name of the user the daemon changes to after startup
 .SS charon.plugins subsection
 .TP
 .BR charon.plugins.android_log.loglevel " [1]"
