@@ -322,24 +322,30 @@ METHOD(socket_t, sender, status_t,
 	family = dst->get_family(dst);
 	if (sport == 0 || sport == this->port)
 	{
-		if (family == AF_INET)
+		switch (family)
 		{
-			skt = this->ipv4;
-		}
-		else
-		{
-			skt = this->ipv6;
+			case AF_INET:
+				skt = this->ipv4;
+				break;
+			case AF_INET6:
+				skt = this->ipv6;
+				break;
+			default:
+				return FAILED;
 		}
 	}
 	else if (sport == this->natt)
 	{
-		if (family == AF_INET)
+		switch (family)
 		{
-			skt = this->ipv4_natt;
-		}
-		else
-		{
-			skt = this->ipv6_natt;
+			case AF_INET:
+				skt = this->ipv4_natt;
+				break;
+			case AF_INET6:
+				skt = this->ipv6_natt;
+				break;
+			default:
+				return FAILED;
 		}
 	}
 	else
