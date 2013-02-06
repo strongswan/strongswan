@@ -939,14 +939,38 @@ METHOD(ike_sa_t, update_hosts, void,
 	}
 }
 
+/**
+ * Set configured DSCP value on packet
+ */
+static void set_dscp(private_ike_sa_t *this, packet_t *packet)
+{
+	ike_cfg_t *ike_cfg;
+
+	/* prefer IKE config on peer_cfg, as its selection is more accurate
+	 * then the initial IKE config */
+	if (this->peer_cfg)
+	{
+		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
+	}
+	else
+	{
+		ike_cfg = this->ike_cfg;
+	}
+	if (ike_cfg)
+	{
+		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
+	}
+}
+
 METHOD(ike_sa_t, generate_message, status_t,
 	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
 	status_t status;
 
 	if (message->is_encoded(message))
-	{	/* already done */
+	{	/* already encoded in task, but set DSCP value */
 		*packet = message->get_packet(message);
+		set_dscp(this, *packet);
 		return SUCCESS;
 	}
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
@@ -955,6 +979,7 @@ METHOD(ike_sa_t, generate_message, status_t,
 	status = message->generate(message, this->keymat, packet);
 	if (status == SUCCESS)
 	{
+		set_dscp(this, *packet);
 		charon->bus->message(charon->bus, message, FALSE, FALSE);
 	}
 	return status;
