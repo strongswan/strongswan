@@ -452,6 +452,11 @@ suites, the strict flag
 exclamation mark) can be used, e.g:
 .BR aes256-sha512-modp4096!
 .TP
+.BR ikedscp " = " 000000 " | <DSCP field>"
+Differentiated Services Field Codepoint to set on outgoing IKE packets sent
+from this connection. The value is a six digit binary encoded string defining
+the Codepoint to set, as defined in RFC 2474.
+.TP
 .BR ikelifetime " = " 3h " | <time>"
 how long the keying channel of a connection (ISAKMP or IKE SA)
 should last before being renegotiated. Also see EXPIRY/REKEY below.
