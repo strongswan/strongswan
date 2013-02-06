@@ -41,6 +41,7 @@ aaa_identity,      KW_AAA_IDENTITY
 mobike,	           KW_MOBIKE
 forceencaps,       KW_FORCEENCAPS
 fragmentation,     KW_FRAGMENTATION
+ikedscp,           KW_IKEDSCP,
 ikelifetime,       KW_IKELIFETIME
 lifetime,          KW_KEYLIFE
 keylife,           KW_KEYLIFE
