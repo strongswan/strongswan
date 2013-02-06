@@ -156,7 +156,7 @@ METHOD(os_info_t, get_uptime, time_t,
 {
 	const char proc_uptime[] = "/proc/uptime";
 	FILE *file;
-	time_t uptime;
+	u_int uptime;
 
 	file = fopen(proc_uptime, "r");
 	if (!file)
