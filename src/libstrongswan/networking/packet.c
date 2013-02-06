@@ -39,6 +39,11 @@ struct private_packet_t {
 	 */
 	host_t *destination;
 
+	/**
+	 * DSCP value on packet
+	 */
+	u_int8_t dscp;
+
 	 /**
 	  * message data
 	  */
@@ -89,6 +94,17 @@ METHOD(packet_t, set_data, void,
 	this->adjusted_data = this->data = data;
 }
 
+METHOD(packet_t, get_dscp, u_int8_t,
+	private_packet_t *this)
+{
+	return this->dscp;
+}
+METHOD(packet_t, set_dscp, void,
+	private_packet_t *this, u_int8_t value)
+{
+	this->dscp = value;
+}
+
 METHOD(packet_t, skip_bytes, void,
 	private_packet_t *this, size_t bytes)
 {
@@ -123,6 +139,7 @@ METHOD(packet_t, clone_, packet_t*,
 	{
 		other->set_data(other, chunk_clone(this->adjusted_data));
 	}
+	other->set_dscp(other, this->dscp);
 	return other;
 }
 
@@ -141,6 +158,8 @@ packet_t *packet_create_from_data(host_t *src, host_t *dst, chunk_t data)
 			.get_source = _get_source,
 			.set_destination = _set_destination,
 			.get_destination = _get_destination,
+			.get_dscp = _get_dscp,
+			.set_dscp = _set_dscp,
 			.skip_bytes = _skip_bytes,
 			.clone = _clone_,
 			.destroy = _destroy,

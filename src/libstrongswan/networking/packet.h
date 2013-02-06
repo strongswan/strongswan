@@ -76,6 +76,20 @@ struct packet_t {
 	void (*set_data)(packet_t *packet, chunk_t data);
 
 	/**
+	 * Get the DiffServ Code Point set on this packet.
+	 *
+	 * @return			DSCP value
+	 */
+	u_int8_t (*get_dscp)(packet_t *this);
+
+	/**
+	 * Set the DiffServ Code Point to use on this packet.
+	 *
+	 * @param value		DSCP value
+	 */
+	void (*set_dscp)(packet_t *this, u_int8_t value);
+
+	/**
 	 * Increase the offset where the actual packet data starts.
 	 *
 	 * The total offset applies to future calls of get_data() and clone().
