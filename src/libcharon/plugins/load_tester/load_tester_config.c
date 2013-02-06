@@ -491,7 +491,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		ike_cfg = ike_cfg_create(this->version, TRUE, FALSE,
 								 local, FALSE, this->port + num - 1,
 								 remote, FALSE, IKEV2_NATT_PORT,
-								 FRAGMENTATION_NO);
+								 FRAGMENTATION_NO, 0);
 	}
 	else
 	{
@@ -499,7 +499,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 								 local, FALSE,
 								 charon->socket->get_port(charon->socket, FALSE),
 								 remote, FALSE, IKEV2_UDP_PORT,
-								 FRAGMENTATION_NO);
+								 FRAGMENTATION_NO, 0);
 	}
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", ike_cfg,

@@ -262,7 +262,7 @@ static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 								 local, FALSE,
 								 charon->socket->get_port(charon->socket, FALSE),
 								 remote, FALSE, IKEV2_UDP_PORT,
-								 FRAGMENTATION_NO);
+								 FRAGMENTATION_NO, 0);
 		add_ike_proposals(this, ike_cfg, id);
 		return ike_cfg;
 	}
@@ -620,4 +620,3 @@ sql_config_t *sql_config_create(database_t *db)
 
 	return &this->public;
 }
-

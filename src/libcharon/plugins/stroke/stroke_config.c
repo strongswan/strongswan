@@ -234,7 +234,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 							 msg->add_conn.other.address,
 							 msg->add_conn.other.allow_any,
 							 msg->add_conn.other.ikeport,
-							 msg->add_conn.fragmentation);
+							 msg->add_conn.fragmentation,
+							 0);
 	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL);
 	return ike_cfg;
 }

@@ -108,6 +108,13 @@ struct ike_cfg_t {
 	u_int16_t (*get_other_port)(ike_cfg_t *this);
 
 	/**
+	 * Get the DSCP value to use for IKE packets send from connections.
+	 *
+	 * @return				DSCP value
+	 */
+	u_int8_t (*get_dscp)(ike_cfg_t *this);
+
+	/**
 	 * Adds a proposal to the list.
 	 *
 	 * The first added proposal has the highest priority, the last
@@ -205,11 +212,12 @@ struct ike_cfg_t {
  * @param other_allow_any	allow override of remote address by any address
  * @param other_port		IKE port to use as dest, 500 uses IKEv2 port floating
  * @param fragmentation		use IKEv1 fragmentation
+ * @param dscp				DSCP value to send IKE packets with
  * @return 					ike_cfg_t object.
  */
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port,
-						  fragmentation_t fragmentation);
+						  fragmentation_t fragmentation, u_int8_t dscp);
 
 #endif /** IKE_CFG_H_ @}*/
