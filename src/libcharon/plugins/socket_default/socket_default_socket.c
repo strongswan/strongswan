@@ -433,22 +433,24 @@ static int open_socket(private_socket_default_socket_t *this,
 					   int family, u_int16_t *port)
 {
 	int on = TRUE;
-	struct sockaddr_storage addr;
+	union {
+		struct sockaddr sockaddr;
+		struct sockaddr_in sin;
+		struct sockaddr_in6 sin6;
+	} addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
 	int skt;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.ss_family = family;
+	addr.sockaddr.sa_family = family;
 	/* precalculate constants depending on address family */
 	switch (family)
 	{
 		case AF_INET:
-		{
-			struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
-			htoun32(&sin->sin_addr.s_addr, INADDR_ANY);
-			htoun16(&sin->sin_port, *port);
-			addrlen = sizeof(struct sockaddr_in);
+			addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
+			addr.sin.sin_port = htons(*port);
+			addrlen = sizeof(addr.sin);
 			sol = SOL_IP;
 #ifdef IP_PKTINFO
 			pktinfo = IP_PKTINFO;
@@ -456,17 +458,13 @@ static int open_socket(private_socket_default_socket_t *this,
 			pktinfo = IP_RECVDSTADDR;
 #endif
 			break;
-		}
 		case AF_INET6:
-		{
-			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
-			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
-			htoun16(&sin6->sin6_port, *port);
-			addrlen = sizeof(struct sockaddr_in6);
+			memcpy(&addr.sin6.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+			addr.sin6.sin6_port = htons(*port);
+			addrlen = sizeof(addr.sin6);
 			sol = SOL_IPV6;
 			pktinfo = IPV6_RECVPKTINFO;
 			break;
-		}
 		default:
 			return 0;
 	}
@@ -485,7 +483,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	}
 
 	/* bind the socket */
-	if (bind(skt, (struct sockaddr *)&addr, addrlen) < 0)
+	if (bind(skt, &addr.sockaddr, addrlen) < 0)
 	{
 		DBG1(DBG_NET, "unable to bind socket: %s", strerror(errno));
 		close(skt);
@@ -495,7 +493,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	/* retrieve randomly allocated port if needed */
 	if (*port == 0)
 	{
-		if (getsockname(skt, (struct sockaddr *)&addr, &addrlen) < 0)
+		if (getsockname(skt, &addr.sockaddr, &addrlen) < 0)
 		{
 			DBG1(DBG_NET, "unable to determine port: %s", strerror(errno));
 			close(skt);
@@ -504,17 +502,11 @@ static int open_socket(private_socket_default_socket_t *this,
 		switch (family)
 		{
 			case AF_INET:
-			{
-				struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
-				*port = untoh16(&sin->sin_port);
+				*port = ntohs(addr.sin.sin_port);
 				break;
-			}
 			case AF_INET6:
-			{
-				struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
-				*port = untoh16(&sin6->sin6_port);
+				*port = ntohs(addr.sin6.sin6_port);
 				break;
-			}
 		}
 	}
 
