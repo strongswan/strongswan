@@ -151,7 +151,7 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
-	{CERTIFICATE_REQUEST,			0,	1,						FALSE,	FALSE},
+	{CERTIFICATE_REQUEST,			0,	MAX_CERTREQ_PAYLOADS,	FALSE,	FALSE},
 	{VENDOR_ID,						0,	MAX_VID_PAYLOADS,		FALSE,	FALSE},
 };
 
@@ -181,7 +181,7 @@ static payload_rule_t ike_auth_i_rules[] = {
 	{AUTHENTICATION,				0,	1,						TRUE,	TRUE},
 	{ID_INITIATOR,					0,	1,						TRUE,	FALSE},
 	{CERTIFICATE,					0,	MAX_CERT_PAYLOADS,		TRUE,	FALSE},
-	{CERTIFICATE_REQUEST,			0,	1,						TRUE,	FALSE},
+	{CERTIFICATE_REQUEST,			0,	MAX_CERTREQ_PAYLOADS,	TRUE,	FALSE},
 	{ID_RESPONDER,					0,	1,						TRUE,	FALSE},
 #ifdef ME
 	{SECURITY_ASSOCIATION,			0,	1,						TRUE,	FALSE},
