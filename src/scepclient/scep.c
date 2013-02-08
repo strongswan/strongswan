@@ -333,7 +333,7 @@ static char* escape_http_request(chunk_t req)
  * Send a SCEP request via HTTP and wait for a response
  */
 bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
-					   bool http_get_request, chunk_t *response)
+					   bool http_get_request, u_int timeout, chunk_t *response)
 {
 	int len;
 	status_t status;
@@ -361,6 +361,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_HTTP_VERSION_1_0,
+										 FETCH_TIMEOUT, timeout,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
@@ -375,6 +376,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_HTTP_VERSION_1_0,
+										 FETCH_TIMEOUT, timeout,
 										 FETCH_REQUEST_DATA, msg,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
@@ -403,6 +405,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 
 		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_HTTP_VERSION_1_0,
+									 FETCH_TIMEOUT, timeout,
 									 FETCH_END);
 	}
 
