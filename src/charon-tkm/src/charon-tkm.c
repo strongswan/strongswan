@@ -289,6 +289,7 @@ int main(int argc, char *argv[])
 		PLUGIN_REGISTER(NONCE_GEN, tkm_nonceg_create),
 			PLUGIN_PROVIDE(NONCE_GEN),
 		PLUGIN_REGISTER(DH, tkm_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
 			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
 			PLUGIN_PROVIDE(DH, MODP_4096_BIT),
 		PLUGIN_REGISTER(PUBKEY, tkm_public_key_load, TRUE),
