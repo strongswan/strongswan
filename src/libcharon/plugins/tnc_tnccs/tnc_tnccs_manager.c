@@ -734,8 +734,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						subject_type = TNC_SUBJECT_MACHINE;
 						break;
 					case ID_FQDN:
-						id_type = TNC_ID_FQDN;
-						subject_type = TNC_SUBJECT_MACHINE;
+						id_type = TNC_ID_USER_NAME;
+						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_RFC822_ADDR:
 						id_type = TNC_ID_RFC822_ADDR;
@@ -743,7 +743,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						break;
 					case ID_DER_ASN1_DN:
 						id_type = TNC_ID_DER_ASN1_DN;
-						subject_type = TNC_SUBJECT_UNKNOWN;
+						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_DER_ASN1_GN:
 						id_type = TNC_ID_DER_ASN1_GN;
