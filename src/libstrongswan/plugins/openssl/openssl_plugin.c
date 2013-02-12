@@ -43,6 +43,7 @@
 #include "openssl_pkcs7.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
+#include "openssl_gcm.h"
 
 typedef struct private_openssl_plugin_t private_openssl_plugin_t;
 
@@ -304,6 +305,19 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
 #endif
 #endif /* OPENSSL_NO_HMAC */
+#ifndef OPENSSL_NO_AES
+		/* AES GCM */
+		PLUGIN_REGISTER(AEAD, openssl_gcm_create),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
+#endif /* OPENSSL_NO_AES */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
 		PLUGIN_REGISTER(DH, openssl_diffie_hellman_create),
