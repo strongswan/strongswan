@@ -42,8 +42,8 @@ struct ccm_aead_t {
 /**
  * Create a ccm_aead instance.
  *
- * @param key_size		key size in bytes
  * @param algo			algorithm to implement, a CCM mode
+ * @param key_size		key size in bytes
  * @return				aead, NULL if not supported
  */
 ccm_aead_t *ccm_aead_create(encryption_algorithm_t algo, size_t key_size);

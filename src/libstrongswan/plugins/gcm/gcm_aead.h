@@ -42,8 +42,8 @@ struct gcm_aead_t {
 /**
  * Create a gcm_aead instance.
  *
- * @param key_size		key size in bytes
  * @param algo			algorithm to implement, a gcm mode
+ * @param key_size		key size in bytes
  * @return				aead, NULL if not supported
  */
 gcm_aead_t *gcm_aead_create(encryption_algorithm_t algo, size_t key_size);
