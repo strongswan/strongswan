@@ -20,6 +20,7 @@
 #include <daemon.h>
 
 #include <sa/eap/eap_method.h>
+#include <sa/eap/eap_inner_method.h>
 
 typedef struct private_eap_ttls_server_t private_eap_ttls_server_t;
 
@@ -108,8 +109,11 @@ static status_t start_phase2_auth(private_eap_ttls_server_t *this)
 /**
  * If configured, start EAP-TNC protocol
  */
-static status_t start_phase2_tnc(private_eap_ttls_server_t *this)
+static status_t start_phase2_tnc(private_eap_ttls_server_t *this,
+								 eap_type_t auth_type)
 {
+	eap_inner_method_t *inner_method;
+
 	if (this->start_phase2_tnc && lib->settings->get_bool(lib->settings,
 						"%s.plugins.eap-ttls.phase2_tnc", FALSE, charon->name))
 	{
@@ -121,6 +125,9 @@ static status_t start_phase2_tnc(private_eap_ttls_server_t *this)
 			DBG1(DBG_IKE, "%N method not available", eap_type_names, EAP_TNC);
 			return FAILED;
 		}
+		inner_method = (eap_inner_method_t *)this->method;
+		inner_method->set_auth_type(inner_method, auth_type);
+
 		this->start_phase2_tnc = FALSE;
 		if (this->method->initiate(this->method, &this->out) == NEED_MORE)
 		{
@@ -237,7 +244,7 @@ METHOD(tls_application_t, process, status_t,
 		if (lib->settings->get_bool(lib->settings,
 				"%s.plugins.eap-ttls.request_peer_auth", FALSE, charon->name))
 		{
-			return start_phase2_tnc(this);
+			return start_phase2_tnc(this, EAP_TLS);
 		}
 		else
 		{
@@ -265,7 +272,7 @@ METHOD(tls_application_t, process, status_t,
 			this->method = NULL;
 
 			/* continue phase2 with EAP-TNC? */
-			return start_phase2_tnc(this);
+			return start_phase2_tnc(this, type);
 		case NEED_MORE:
 			break;
 		case FAILED:

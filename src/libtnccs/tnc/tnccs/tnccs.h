@@ -82,8 +82,19 @@ struct tnccs_t {
 
 	/**
 	 * Set underlying TNC IF-T transport protocol
+
 	 */
 	void (*set_transport)(tnccs_t *this, tnc_ift_type_t transport);
+
+	/**
+	 * Get type of TNC Client authentication
+	 */
+	u_int32_t (*get_auth_type)(tnccs_t *this);
+
+	/**
+	 * Set type of TNC Client authentication
+	 */
+	void (*set_auth_type)(tnccs_t *this, u_int32_t auth_type);
 
 };
 

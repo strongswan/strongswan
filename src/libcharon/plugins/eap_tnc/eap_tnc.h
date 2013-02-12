@@ -23,7 +23,7 @@
 
 typedef struct eap_tnc_t eap_tnc_t;
 
-#include <sa/eap/eap_method.h>
+#include <sa/eap/eap_inner_method.h>
 
 /**
  * Implementation of the eap_method_t interface using EAP-TNC.
@@ -31,9 +31,9 @@ typedef struct eap_tnc_t eap_tnc_t;
 struct eap_tnc_t {
 
 	/**
-	 * Implemented eap_method_t interface.
+	 * Implemented eap_inner_method_t interface.
 	 */
-	eap_method_t eap_method;
+	eap_inner_method_t eap_inner_method;
 };
 
 /**

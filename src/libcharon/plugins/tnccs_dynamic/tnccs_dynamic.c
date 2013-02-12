@@ -51,6 +51,11 @@ struct private_tnccs_dynamic_t {
 	 */
 	tnc_ift_type_t transport;
 
+	/**
+	 * Type of TNC client authentication
+	 */
+	u_int32_t auth_type;
+
 };
 
 /**
@@ -82,6 +87,7 @@ METHOD(tls_t, process, status_t,
 	private_tnccs_dynamic_t *this, void *buf, size_t buflen)
 {
 	tnccs_type_t type;
+	tnccs_t *tnccs;
 
 	if (!this->tls)
 	{
@@ -92,13 +98,15 @@ METHOD(tls_t, process, status_t,
 		type = determine_tnccs_protocol(*(char*)buf);
 		DBG1(DBG_TNC, "%N protocol detected dynamically",
 					   tnccs_type_names, type);
-		this->tls = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, type, TRUE,
-									this->server, this->peer, this->transport);
-		if (!this->tls)
+		tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, TRUE,
+							this->server, this->peer, this->transport);
+		if (!tnccs)
 		{
 			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);
 			return FAILED;
 		}
+		tnccs->set_auth_type(tnccs, this->auth_type);
+		this->tls = &tnccs->tls;
 	}
 	return this->tls->process(this->tls, buf, buflen);
 }
@@ -166,6 +174,18 @@ METHOD(tnccs_t, set_transport, void,
 	this->transport = transport;
 }
 
+METHOD(tnccs_t, get_auth_type, u_int32_t,
+	private_tnccs_dynamic_t *this)
+{
+	return this->auth_type;
+}
+
+METHOD(tnccs_t, set_auth_type, void,
+	private_tnccs_dynamic_t *this, u_int32_t auth_type)
+{
+	this->auth_type = auth_type;
+}
+
 /**
  * See header
  */
@@ -191,6 +211,8 @@ tnccs_t* tnccs_dynamic_create(bool is_server,
 			},
 			.get_transport = _get_transport,
 			.set_transport = _set_transport,
+			.get_auth_type = _get_auth_type,
+			.set_auth_type = _set_auth_type,
 		},
 		.server = server->clone(server),
 		.peer = peer->clone(peer),

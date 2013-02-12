@@ -712,15 +712,15 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 		case TNC_ATTRIBUTEID_AR_IDENTITIES:
 		{
 			linked_list_t *list;
-			tls_t *tnccs;
 			identification_t *peer;
+			tnccs_t *tnccs;
 			tncif_identity_t *tnc_id;
 			u_int32_t id_type, subject_type;
 			TNC_Result result;
 
 			list = linked_list_create();
-			tnccs = &entry->tnccs->tls;
-			peer = tnccs->get_peer_id(tnccs);
+			tnccs = entry->tnccs;
+			peer = tnccs->tls.get_peer_id(&tnccs->tls);
 			if (peer)
 			{
 				switch (peer->get_type(peer))
@@ -759,7 +759,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 								pen_type_create(PEN_TCG, id_type),
 								peer->get_encoding(peer),
 								pen_type_create(PEN_TCG, subject_type),
-								pen_type_create(PEN_TCG, TNC_AUTH_UNKNOWN));
+								pen_type_create(PEN_TCG,
+												tnccs->get_auth_type(tnccs)));
 					list->insert_last(list, tnc_id);
 				}
 			}

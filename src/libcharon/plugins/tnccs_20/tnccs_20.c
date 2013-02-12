@@ -73,6 +73,11 @@ struct private_tnccs_20_t {
 	tnc_ift_type_t transport;
 
 	/**
+	 * Type of TNC client authentication
+	 */
+	u_int32_t auth_type;
+
+	/**
 	 * PB-TNC State Machine
 	 */
 	pb_tnc_state_machine_t *state_machine;
@@ -840,6 +845,18 @@ METHOD(tnccs_t, set_transport, void,
 	this->transport = transport;
 }
 
+METHOD(tnccs_t, get_auth_type, u_int32_t,
+	private_tnccs_20_t *this)
+{
+	return this->auth_type;
+}
+
+METHOD(tnccs_t, set_auth_type, void,
+	private_tnccs_20_t *this, u_int32_t auth_type)
+{
+	this->auth_type = auth_type;
+}
+
 /**
  * See header
  */
@@ -865,6 +882,8 @@ tnccs_t* tnccs_20_create(bool is_server,
 			},
 			.get_transport = _get_transport,
 			.set_transport = _set_transport,
+			.get_auth_type = _get_auth_type,
+			.set_auth_type = _set_auth_type,
 		},
 		.is_server = is_server,
 		.server = server->clone(server),
