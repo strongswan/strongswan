@@ -43,9 +43,9 @@ typedef struct private_tnccs_11_t private_tnccs_11_t;
 struct private_tnccs_11_t {
 
 	/**
-	 * Public tls_t interface.
+	 * Public tnccs_t interface.
 	 */
-	tls_t public;
+	tnccs_t public;
 
 	/**
 	 * TNCC if TRUE, TNCS if FALSE
@@ -61,6 +61,11 @@ struct private_tnccs_11_t {
 	 * Client identity
 	 */
 	identification_t *peer;
+
+	/**
+	 * Underlying TNC IF-T transport protocol
+	 */
+	tnc_ift_type_t transport;
 
 	/**
 	 * Connection ID assigned to this TNCCS connection
@@ -557,29 +562,48 @@ METHOD(tls_t, destroy, void,
 	free(this);
 }
 
+METHOD(tnccs_t, get_transport, tnc_ift_type_t,
+	private_tnccs_11_t *this)
+{
+	return this->transport;
+}
+
+METHOD(tnccs_t, set_transport, void,
+	private_tnccs_11_t *this, tnc_ift_type_t transport)
+{
+	this->transport = transport;
+}
+
 /**
  * See header
  */
-tls_t *tnccs_11_create(bool is_server, identification_t *server,
-					   identification_t *peer)
+tnccs_t* tnccs_11_create(bool is_server,
+						 identification_t *server,
+						 identification_t *peer,
+						 tnc_ift_type_t transport)
 {
 	private_tnccs_11_t *this;
 
 	INIT(this,
 		.public = {
-			.process = _process,
-			.build = _build,
-			.is_server = _is_server,
-			.get_server_id = _get_server_id,
-			.get_peer_id = _get_peer_id,
-			.get_purpose = _get_purpose,
-			.is_complete = _is_complete,
-			.get_eap_msk = _get_eap_msk,
-			.destroy = _destroy,
+			.tls = {
+				.process = _process,
+				.build = _build,
+				.is_server = _is_server,
+				.get_server_id = _get_server_id,
+				.get_peer_id = _get_peer_id,
+				.get_purpose = _get_purpose,
+				.is_complete = _is_complete,
+				.get_eap_msk = _get_eap_msk,
+				.destroy = _destroy,
+			},
+			.get_transport = _get_transport,
+			.set_transport = _set_transport,
 		},
 		.is_server = is_server,
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
+		.transport = transport,
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.max_msg_len = lib->settings->get_int(lib->settings,
 								"%s.plugins.tnccs-11.max_message_size", 45000,

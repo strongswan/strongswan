@@ -4,7 +4,8 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon \
 	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libtnccs
+	-I$(top_srcdir)/src/libtnccs \
+	-I$(top_srcdir)/src/libtls
 
 AM_CFLAGS = -rdynamic
 

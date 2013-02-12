@@ -27,9 +27,9 @@ typedef struct private_tnccs_dynamic_t private_tnccs_dynamic_t;
 struct private_tnccs_dynamic_t {
 
 	/**
-	 * Public tls_t interface.
+	 * Public tnccs_t interface.
 	 */
-	tls_t public;
+	tnccs_t public;
 
 	/**
 	 * Server identity
@@ -45,6 +45,12 @@ struct private_tnccs_dynamic_t {
 	 * Detected TNC IF-TNCCS stack
 	 */
 	tls_t *tls;
+
+	/**
+	 * Underlying TNC IF-T transport protocol
+	 */
+	tnc_ift_type_t transport;
+
 };
 
 /**
@@ -87,7 +93,7 @@ METHOD(tls_t, process, status_t,
 		DBG1(DBG_TNC, "%N protocol detected dynamically",
 					   tnccs_type_names, type);
 		this->tls = (tls_t*)tnc->tnccs->create_instance(tnc->tnccs, type, TRUE,
-													this->server, this->peer);
+									this->server, this->peer, this->transport);
 		if (!this->tls)
 		{
 			DBG1(DBG_TNC, "N% protocol not supported", tnccs_type_names, type);
@@ -148,28 +154,47 @@ METHOD(tls_t, destroy, void,
 	free(this);
 }
 
+METHOD(tnccs_t, get_transport, tnc_ift_type_t,
+	private_tnccs_dynamic_t *this)
+{
+	return this->transport;
+}
+
+METHOD(tnccs_t, set_transport, void,
+	private_tnccs_dynamic_t *this, tnc_ift_type_t transport)
+{
+	this->transport = transport;
+}
+
 /**
  * See header
  */
-tls_t *tnccs_dynamic_create(bool is_server, identification_t *server,
-							identification_t *peer)
+tnccs_t* tnccs_dynamic_create(bool is_server,
+							  identification_t *server,
+							  identification_t *peer,
+							  tnc_ift_type_t transport)
 {
 	private_tnccs_dynamic_t *this;
 
 	INIT(this,
 		.public = {
-			.process = _process,
-			.build = _build,
-			.is_server = _is_server,
-			.get_server_id = _get_server_id,
-			.get_peer_id = _get_peer_id,
-			.get_purpose = _get_purpose,
-			.is_complete = _is_complete,
-			.get_eap_msk = _get_eap_msk,
-			.destroy = _destroy,
+			.tls = {
+				.process = _process,
+				.build = _build,
+				.is_server = _is_server,
+				.get_server_id = _get_server_id,
+				.get_peer_id = _get_peer_id,
+				.get_purpose = _get_purpose,
+				.is_complete = _is_complete,
+				.get_eap_msk = _get_eap_msk,
+				.destroy = _destroy,
+			},
+			.get_transport = _get_transport,
+			.set_transport = _set_transport,
 		},
 		.server = server->clone(server),
 		.peer = peer->clone(peer),
+		.transport = transport,
 	);
 
 	return &this->public;

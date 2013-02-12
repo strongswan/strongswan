@@ -26,6 +26,7 @@
 
 typedef struct tnccs_t tnccs_t;
 typedef enum tnccs_type_t tnccs_type_t;
+typedef enum tnc_ift_type_t tnc_ift_type_t;
 
 #include <tncif.h>
 #include <tncifimc.h>
@@ -33,6 +34,8 @@ typedef enum tnccs_type_t tnccs_type_t;
 
 #include <library.h>
 #include <plugins/plugin.h>
+
+#include <tls.h>
 
 /**
  * Type of TNC Client/Server protocol
@@ -46,9 +49,43 @@ enum tnccs_type_t {
 };
 
 /**
+ * Type of TNC Transport protocol
+ */
+enum tnc_ift_type_t {
+	TNC_IFT_UNKNOWN,
+	TNC_IFT_EAP_1_0,
+	TNC_IFT_EAP_1_1,
+	TNC_IFT_EAP_2_0,
+	TNC_IFT_TLS_1_0,
+	TNC_IFT_TLS_2_0
+};
+
+/**
  * enum names for tnccs_type_t.
  */
 extern enum_name_t *tnccs_type_names;
+
+/**
+ * TNCCS public interface
+ */
+struct tnccs_t {
+
+	/**
+	 * Implements tls_t
+	 */
+	tls_t tls;
+
+	/**
+	 * Get underlying TNC IF-T transport protocol
+	 */
+	tnc_ift_type_t (*get_transport)(tnccs_t *this);
+
+	/**
+	 * Set underlying TNC IF-T transport protocol
+	 */
+	void (*set_transport)(tnccs_t *this, tnc_ift_type_t transport);
+
+};
 
 /**
  * Constructor definition for a pluggable TNCCS protocol implementation.
@@ -56,11 +93,13 @@ extern enum_name_t *tnccs_type_names;
  * @param is_server		TRUE if TNC Server, FALSE if TNC Client
  * @param server		Server identity
  * @param peer			Client identity
+ * @param transport		Underlying TNC IF-T transport protocol used
  * @return				implementation of the tnccs_t interface
  */
 typedef tnccs_t *(*tnccs_constructor_t)(bool is_server,
 										identification_t *server,
-										identification_t *peer);
+										identification_t *peer,
+										tnc_ift_type_t transport);
 
 /**
  * Callback function adding a message to a TNCCS batch

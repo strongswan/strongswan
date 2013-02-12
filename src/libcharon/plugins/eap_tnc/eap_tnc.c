@@ -173,10 +173,10 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		return NULL;
 	}
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, type, is_server,
-										server, peer);
-	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs,
-											 EAP_TNC_MAX_MESSAGE_LEN,
-											 max_msg_count, FALSE);
+										server, peer, TNC_IFT_EAP_1_1);
+	this->tls_eap = tls_eap_create(EAP_TNC, &tnccs->tls,
+								   EAP_TNC_MAX_MESSAGE_LEN,
+								   max_msg_count, FALSE);
 	if (!this->tls_eap)
 	{
 		free(this);

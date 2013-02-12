@@ -165,7 +165,8 @@ METHOD(tnccs_manager_t, remove_method, void,
 
 METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	private_tnc_tnccs_manager_t *this, tnccs_type_t type, bool is_server,
-	identification_t *server, identification_t *peer)
+	identification_t *server, identification_t *peer,
+	tnc_ift_type_t transport)
 {
 	enumerator_t *enumerator;
 	tnccs_entry_t *entry;
@@ -177,7 +178,7 @@ METHOD(tnccs_manager_t, create_instance, tnccs_t*,
 	{
 		if (type == entry->type)
 		{
-			protocol = entry->constructor(is_server, server, peer);
+			protocol = entry->constructor(is_server, server, peer, transport);
 			if (protocol)
 			{
 				break;
@@ -662,15 +663,52 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 					version = "1.0";
 					break;
 				default:
-				return TNC_RESULT_INVALID_PARAMETER;
+					return TNC_RESULT_INVALID_PARAMETER;
 			}
 			return str_attribute(buffer_len, buffer, value_len, version);
 		}
 		case TNC_ATTRIBUTEID_IFT_PROTOCOL:
-			return str_attribute(buffer_len, buffer, value_len,
-										 "IF-T for Tunneled EAP");
+		{
+			char *protocol;
+
+			switch (entry->tnccs->get_transport(entry->tnccs))
+			{
+				case TNC_IFT_EAP_1_0:
+				case TNC_IFT_EAP_1_1:
+				case TNC_IFT_EAP_2_0:
+					protocol = "IF-T for Tunneled EAP";
+					break;
+				case TNC_IFT_TLS_1_0:
+				case TNC_IFT_TLS_2_0:
+					protocol = "IF-T for TLS";
+					break;
+				default:
+					return TNC_RESULT_INVALID_PARAMETER;
+			}
+			return str_attribute(buffer_len, buffer, value_len, protocol);
+		}
  		case TNC_ATTRIBUTEID_IFT_VERSION:
-			return str_attribute(buffer_len, buffer, value_len, "1.1");
+		{
+			char *version;
+
+			switch (entry->tnccs->get_transport(entry->tnccs))
+			{
+				case TNC_IFT_EAP_1_0:
+				case TNC_IFT_TLS_1_0:
+					version = "1.0";
+					break;
+				case TNC_IFT_EAP_1_1:
+					version = "1.1";
+					break;
+				case TNC_IFT_EAP_2_0:
+				case TNC_IFT_TLS_2_0:
+					version = "2.0";
+					break;
+				default:
+					return TNC_RESULT_INVALID_PARAMETER;
+			}
+			return str_attribute(buffer_len, buffer, value_len, version);
+		}
 		case TNC_ATTRIBUTEID_AR_IDENTITIES:
 		{
 			linked_list_t *list;
@@ -681,7 +719,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			TNC_Result result;
 
 			list = linked_list_create();
-			tnccs = (tls_t*)entry->tnccs;
+			tnccs = &entry->tnccs->tls;
 			peer = tnccs->get_peer_id(tnccs);
 			if (peer)
 			{

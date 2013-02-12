@@ -58,11 +58,13 @@ struct tnccs_manager_t {
 	 * @param is_server	  TRUE if TNC Server, FALSE if TNC Client
 	 * @param server	  Server identity
 	 * @param peer		  Client identity
+	 * @param transport	  Underlying TNC IF-T transport protocol used
 	 * @return			  TNCCS protocol instance, NULL if no constructor found
 	 */
 	tnccs_t* (*create_instance)(tnccs_manager_t *this, tnccs_type_t type,
 								bool is_server, identification_t *server,
-								identification_t *peer);
+								identification_t *peer,
+								tnc_ift_type_t transport);
 
 	/**
 	 * Create a TNCCS connection and assign a unique connection ID as well a
