@@ -451,7 +451,10 @@ METHOD(crypto_tester_t, test_aead, bool,
 failure:
 		aead->destroy(aead);
 		chunk_free(&cipher);
-		chunk_free(&plain);
+		if (plain.ptr != vector->plain)
+		{
+			chunk_free(&plain);
+		}
 		if (failed)
 		{
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
