@@ -516,11 +516,18 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 
-	group = enum_from_name(debug_names, msg->loglevel.type);
-	if ((int)group < 0)
+	if (strcaseeq(msg->loglevel.type, "any"))
 	{
-		fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
-		return;
+		group = DBG_ANY;
+	}
+	else
+	{
+		group = enum_from_name(debug_names, msg->loglevel.type);
+		if ((int)group < 0)
+		{
+			fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
+			return;
+		}
 	}
 	charon->set_level(charon, group, msg->loglevel.level);
 }
