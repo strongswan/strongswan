@@ -67,7 +67,9 @@ CONFIG_OPTS = \
 	--enable-xauth-generic \
 	--enable-xauth-eap \
 	--enable-pkcs8 \
-	--enable-unity
+	--enable-unity \
+	--enable-unbound \
+	--enable-ipseckey
 
 all: install
 
