@@ -151,8 +151,7 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
 	chunk_t keyEncoding = chunk_empty, keyInfo;
 	hasher_t *hasher;
-	bool msb_set;
-	u_char *pos;
+	int zeros = 0, msb_set = 0;
 
 	key->get_encoding(key, PUBKEY_ASN1_DER, &keyEncoding);
 
@@ -168,20 +167,27 @@ void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 	DESTROY_IF(hasher);
 	free(keyInfo.ptr);
 
-	/* is the most significant bit of the digest set? */
-	msb_set = (*digest.ptr & 0x80) == 0x80;
-
-	/* allocate space for the serialNumber */
-	serialNumber->len = msb_set + digest.len;
-	serialNumber->ptr = malloc(serialNumber->len);
-
-	/* the serial number as the two's complement of the digest */
-	pos = serialNumber->ptr;
+	/* the serialNumber should be valid ASN1 integer content:
+	 * remove leading zeros, add one if MSB is set (two's complement) */
+	while (zeros < digest.len)
+	{
+		if (digest.ptr[zeros])
+		{
+			if (digest.ptr[zeros] & 0x80)
+			{
+				msb_set = 1;
+			}
+			break;
+		}
+		zeros++;
+	}
+	*serialNumber = chunk_alloc(digest.len - zeros + msb_set);
 	if (msb_set)
 	{
-		*pos++ = 0x00;
+		serialNumber->ptr[0] = 0x00;
 	}
-	memcpy(pos, digest.ptr, digest.len);
+	memcpy(serialNumber->ptr + msb_set, digest.ptr + zeros,
+		   digest.len - zeros);
 
 	/* the transaction id is the serial number in hex format */
 	*transID = chunk_to_hex(digest, NULL, TRUE);
