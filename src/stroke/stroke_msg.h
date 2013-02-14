@@ -262,6 +262,7 @@ struct stroke_msg_t {
 			int close_action;
 			u_int32_t reqid;
 			u_int32_t tfc;
+			u_int8_t ikedscp;
 
 			crl_policy_t crl_policy;
 			int unique;

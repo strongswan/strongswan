@@ -97,6 +97,18 @@ METHOD(packet_t, set_data, void,
 	return this->packet->set_data(this->packet, data);
 }
 
+METHOD(packet_t, get_dscp, u_int8_t,
+	private_esp_packet_t *this)
+{
+	return this->packet->get_dscp(this->packet);
+}
+
+METHOD(packet_t, set_dscp, void,
+	private_esp_packet_t *this, u_int8_t value)
+{
+	this->packet->set_dscp(this->packet, value);
+}
+
 METHOD(packet_t, skip_bytes, void,
 	private_esp_packet_t *this, size_t bytes)
 {
@@ -411,6 +423,8 @@ static private_esp_packet_t *esp_packet_create_internal(packet_t *packet)
 				.get_destination = _get_destination,
 				.get_data = _get_data,
 				.set_data = _set_data,
+				.get_dscp = _get_dscp,
+				.set_dscp = _set_dscp,
 				.skip_bytes = _skip_bytes,
 				.clone = _clone,
 				.destroy = _destroy,

@@ -43,6 +43,7 @@ typedef enum {
 	KW_MOBIKE,
 	KW_FORCEENCAPS,
 	KW_FRAGMENTATION,
+	KW_IKEDSCP,
 	KW_IKELIFETIME,
 	KW_KEYLIFE,
 	KW_REKEYMARGIN,
@@ -186,4 +187,3 @@ typedef enum {
 } kw_token_t;
 
 #endif /* _KEYWORDS_H_ */
-

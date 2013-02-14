@@ -33,6 +33,7 @@ typedef enum {
 	ARG_TIME,
 	ARG_ULNG,
 	ARG_ULLI,
+	ARG_UBIN,
 	ARG_PCNT,
 	ARG_STR,
 	ARG_LST,
@@ -146,6 +147,7 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
 	{ ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
 	{ ARG_ENUM, offsetof(starter_conn_t, fragmentation), LST_fragmentation         },
+	{ ARG_UBIN, offsetof(starter_conn_t, ikedscp), NULL                            },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
@@ -394,6 +396,21 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			if (*endptr != '\0')
 			{
 				DBG1(DBG_APP, "# bad integer value: %s=%s", kw->entry->name,
+					 kw->value);
+				return FALSE;
+			}
+		}
+		break;
+	case ARG_UBIN:
+		{
+			char *endptr;
+			u_int *u = (u_int *)p;
+
+			*u = strtoul(kw->value, &endptr, 2);
+
+			if (*endptr != '\0')
+			{
+				DBG1(DBG_APP, "# bad binary value: %s=%s", kw->entry->name,
 					 kw->value);
 				return FALSE;
 			}

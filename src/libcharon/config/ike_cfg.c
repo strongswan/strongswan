@@ -95,6 +95,11 @@ struct private_ike_cfg_t {
 	fragmentation_t fragmentation;
 
 	/**
+	 * DSCP value to use on sent IKE packets
+	 */
+	u_int8_t dscp;
+
+	/**
 	 * List of proposals to use
 	 */
 	linked_list_t *proposals;
@@ -154,6 +159,12 @@ METHOD(ike_cfg_t, get_other_port, u_int16_t,
 	private_ike_cfg_t *this)
 {
 	return this->other_port;
+}
+
+METHOD(ike_cfg_t, get_dscp, u_int8_t,
+	private_ike_cfg_t *this)
+{
+	return this->dscp;
 }
 
 METHOD(ike_cfg_t, add_proposal, void,
@@ -312,7 +323,7 @@ METHOD(ike_cfg_t, destroy, void,
 ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  char *me, bool my_allow_any, u_int16_t my_port,
 						  char *other, bool other_allow_any, u_int16_t other_port,
-						  fragmentation_t fragmentation)
+						  fragmentation_t fragmentation, u_int8_t dscp)
 {
 	private_ike_cfg_t *this;
 
@@ -326,6 +337,7 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.get_other_addr = _get_other_addr,
 			.get_my_port = _get_my_port,
 			.get_other_port = _get_other_port,
+			.get_dscp = _get_dscp,
 			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
 			.select_proposal = _select_proposal,
@@ -345,6 +357,7 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 		.other_allow_any = other_allow_any,
 		.my_port = my_port,
 		.other_port = other_port,
+		.dscp = dscp,
 		.proposals = linked_list_create(),
 	);
 

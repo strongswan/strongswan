@@ -143,10 +143,9 @@ medsrv_config_t *medsrv_config_create(database_t *db)
 							  "0.0.0.0", FALSE,
 							  charon->socket->get_port(charon->socket, FALSE),
 							  "0.0.0.0", FALSE, IKEV2_UDP_PORT,
-							  FRAGMENTATION_NO),
+							  FRAGMENTATION_NO, 0),
 	);
 	this->ike->add_proposal(this->ike, proposal_create_default(PROTO_IKE));
 
 	return &this->public;
 }
-

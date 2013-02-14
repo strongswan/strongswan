@@ -55,6 +55,9 @@
 #ifndef SOL_IPV6
 #define SOL_IPV6 IPPROTO_IPV6
 #endif
+#ifndef IPV6_TCLASS
+#define IPV6_TCLASS 67
+#endif
 
 /* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
  * previously defined IPV6_PKTINFO */
@@ -111,6 +114,26 @@ struct private_socket_default_socket_t {
 	 * IPv6 socket for NAT-T (4500 or natt)
 	 */
 	int ipv6_natt;
+
+	/**
+	 * DSCP value set on IPv4 socket
+	 */
+	u_int8_t dscp4;
+
+	/**
+	 * DSCP value set on IPv4 socket for NAT-T (4500 or natt)
+	 */
+	u_int8_t dscp4_natt;
+
+	/**
+	 * DSCP value set on IPv6 socket (500 or port)
+	 */
+	u_int8_t dscp6;
+
+	/**
+	 * DSCP value set on IPv6 socket for NAT-T (4500 or natt)
+	 */
+	u_int8_t dscp6_natt;
 
 	/**
 	 * Maximum packet size to receive
@@ -310,6 +333,7 @@ METHOD(socket_t, sender, status_t,
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
 	struct iovec iov;
+	u_int8_t *dscp;
 
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
@@ -322,30 +346,77 @@ METHOD(socket_t, sender, status_t,
 	family = dst->get_family(dst);
 	if (sport == 0 || sport == this->port)
 	{
-		if (family == AF_INET)
+		switch (family)
 		{
-			skt = this->ipv4;
-		}
-		else
-		{
-			skt = this->ipv6;
+			case AF_INET:
+				skt = this->ipv4;
+				dscp = &this->dscp4;
+				break;
+			case AF_INET6:
+				skt = this->ipv6;
+				dscp = &this->dscp6;
+				break;
+			default:
+				return FAILED;
 		}
 	}
 	else if (sport == this->natt)
 	{
-		if (family == AF_INET)
+		switch (family)
 		{
-			skt = this->ipv4_natt;
-		}
-		else
-		{
-			skt = this->ipv6_natt;
+			case AF_INET:
+				skt = this->ipv4_natt;
+				dscp = &this->dscp4_natt;
+				break;
+			case AF_INET6:
+				skt = this->ipv6_natt;
+				dscp = &this->dscp6_natt;
+				break;
+			default:
+				return FAILED;
 		}
 	}
 	else
 	{
 		DBG1(DBG_NET, "unable to locate a send socket for port %d", sport);
 		return FAILED;
+	}
+
+	/* setting DSCP values per-packet in a cmsg seems not to be supported
+	 * on Linux. We instead setsockopt() before sending it, this should be
+	 * safe as only a single thread calls send(). */
+	if (*dscp != packet->get_dscp(packet))
+	{
+		if (family == AF_INET)
+		{
+			u_int8_t ds4;
+
+			ds4 = packet->get_dscp(packet) << 2;
+			if (setsockopt(skt, SOL_IP, IP_TOS, &ds4, sizeof(ds4)) == 0)
+			{
+				*dscp = packet->get_dscp(packet);
+			}
+			else
+			{
+				DBG1(DBG_NET, "unable to set IP_TOS on socket: %s",
+					 strerror(errno));
+			}
+		}
+		else
+		{
+			u_int ds6;
+
+			ds6 = packet->get_dscp(packet) << 2;
+			if (setsockopt(skt, SOL_IPV6, IPV6_TCLASS, &ds6, sizeof(ds6)) == 0)
+			{
+				*dscp = packet->get_dscp(packet);
+			}
+			else
+			{
+				DBG1(DBG_NET, "unable to set IPV6_TCLASS on socket: %s",
+					 strerror(errno));
+			}
+		}
 	}
 
 	memset(&msg, 0, sizeof(struct msghdr));
@@ -433,22 +504,24 @@ static int open_socket(private_socket_default_socket_t *this,
 					   int family, u_int16_t *port)
 {
 	int on = TRUE;
-	struct sockaddr_storage addr;
+	union {
+		struct sockaddr sockaddr;
+		struct sockaddr_in sin;
+		struct sockaddr_in6 sin6;
+	} addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
 	int skt;
 
 	memset(&addr, 0, sizeof(addr));
-	addr.ss_family = family;
+	addr.sockaddr.sa_family = family;
 	/* precalculate constants depending on address family */
 	switch (family)
 	{
 		case AF_INET:
-		{
-			struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
-			htoun32(&sin->sin_addr.s_addr, INADDR_ANY);
-			htoun16(&sin->sin_port, *port);
-			addrlen = sizeof(struct sockaddr_in);
+			addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
+			addr.sin.sin_port = htons(*port);
+			addrlen = sizeof(addr.sin);
 			sol = SOL_IP;
 #ifdef IP_PKTINFO
 			pktinfo = IP_PKTINFO;
@@ -456,17 +529,13 @@ static int open_socket(private_socket_default_socket_t *this,
 			pktinfo = IP_RECVDSTADDR;
 #endif
 			break;
-		}
 		case AF_INET6:
-		{
-			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
-			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
-			htoun16(&sin6->sin6_port, *port);
-			addrlen = sizeof(struct sockaddr_in6);
+			memcpy(&addr.sin6.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+			addr.sin6.sin6_port = htons(*port);
+			addrlen = sizeof(addr.sin6);
 			sol = SOL_IPV6;
 			pktinfo = IPV6_RECVPKTINFO;
 			break;
-		}
 		default:
 			return 0;
 	}
@@ -485,7 +554,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	}
 
 	/* bind the socket */
-	if (bind(skt, (struct sockaddr *)&addr, addrlen) < 0)
+	if (bind(skt, &addr.sockaddr, addrlen) < 0)
 	{
 		DBG1(DBG_NET, "unable to bind socket: %s", strerror(errno));
 		close(skt);
@@ -495,7 +564,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	/* retrieve randomly allocated port if needed */
 	if (*port == 0)
 	{
-		if (getsockname(skt, (struct sockaddr *)&addr, &addrlen) < 0)
+		if (getsockname(skt, &addr.sockaddr, &addrlen) < 0)
 		{
 			DBG1(DBG_NET, "unable to determine port: %s", strerror(errno));
 			close(skt);
@@ -504,17 +573,11 @@ static int open_socket(private_socket_default_socket_t *this,
 		switch (family)
 		{
 			case AF_INET:
-			{
-				struct sockaddr_in *sin = (struct sockaddr_in *)&addr;
-				*port = untoh16(&sin->sin_port);
+				*port = ntohs(addr.sin.sin_port);
 				break;
-			}
 			case AF_INET6:
-			{
-				struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
-				*port = untoh16(&sin6->sin6_port);
+				*port = ntohs(addr.sin6.sin6_port);
 				break;
-			}
 		}
 	}
 
@@ -642,4 +705,3 @@ socket_default_socket_t *socket_default_socket_create()
 
 	return &this->public;
 }
-
