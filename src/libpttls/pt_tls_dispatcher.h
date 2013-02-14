@@ -29,6 +29,15 @@
 typedef struct pt_tls_dispatcher_t pt_tls_dispatcher_t;
 
 /**
+ * Constructor callback to create TNCCS to use within PT-TLS.
+ *
+ * @param server			server identity
+ * @param peer				peer identity
+ */
+typedef tnccs_t* (pt_tls_tnccs_constructor_t)(identification_t *server,
+											  identification_t *peer);
+
+/**
  * PT-TLS dispatcher service, handles PT-TLS connections as a server.
  */
 struct pt_tls_dispatcher_t {
@@ -41,7 +50,8 @@ struct pt_tls_dispatcher_t {
 	 *
 	 * @param create		TNCCS constructor function to use
 	 */
-	void (*dispatch)(pt_tls_dispatcher_t *this, tnccs_t*(*create)());
+	void (*dispatch)(pt_tls_dispatcher_t *this,
+					 pt_tls_tnccs_constructor_t *create);
 
 	/**
 	 * Destroy a pt_tls_dispatcher_t.

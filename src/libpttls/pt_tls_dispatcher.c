@@ -47,9 +47,14 @@ struct private_pt_tls_dispatcher_t {
 	identification_t *server;
 
 	/**
+	 * Peer identity
+	 */
+	identification_t *peer;
+
+	/**
 	 * TNCCS protocol handler constructor
 	 */
-	tnccs_t*(*create)();
+	pt_tls_tnccs_constructor_t *create;
 };
 
 /**
@@ -111,7 +116,8 @@ static void cleanup(pt_tls_server_t *connection)
 }
 
 METHOD(pt_tls_dispatcher_t, dispatch, void,
-	private_pt_tls_dispatcher_t *this, tnccs_t*(*create)())
+	private_pt_tls_dispatcher_t *this,
+	pt_tls_tnccs_constructor_t *create)
 {
 	while (TRUE)
 	{
@@ -129,7 +135,7 @@ METHOD(pt_tls_dispatcher_t, dispatch, void,
 			continue;
 		}
 
-		tnccs = create();
+		tnccs = create(this->server, this->peer);
 		if (!tnccs)
 		{
 			close(fd);
@@ -157,6 +163,7 @@ METHOD(pt_tls_dispatcher_t, destroy, void,
 		close(this->fd);
 	}
 	this->server->destroy(this->server);
+	this->peer->destroy(this->peer);
 	free(this);
 }
 
@@ -174,6 +181,8 @@ pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
 			.destroy = _destroy,
 		},
 		.server = id,
+		/* we currently don't authenticate the peer, use %any identity */
+		.peer = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.fd = -1,
 	);
 
