@@ -187,7 +187,18 @@ struct bio_reader_t {
 
 /**
  * Create a bio_reader instance.
+ *
+ * @param data			data buffer, must survive lifetime of reader
+ * @return				reader
  */
 bio_reader_t *bio_reader_create(chunk_t data);
 
-#endif /** bio_reader_H_ @}*/
+/**
+ * Create a bio_reader instance owning buffer.
+ *
+ * @param data			data buffer, gets freed with destroy()
+ * @return				reader
+ */
+bio_reader_t *bio_reader_create_own(chunk_t data);
+
+#endif /** BIO_READER_H_ @}*/

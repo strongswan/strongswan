@@ -30,8 +30,6 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK(tnccs_method_register, tnccs_11_create),
 			PLUGIN_PROVIDE(CUSTOM, "tnccs-1.1"),
-				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
-				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-manager"),
 	};
 	*features = f;
@@ -61,4 +59,3 @@ plugin_t *tnccs_11_plugin_create()
 
 	return &this->plugin;
 }
-

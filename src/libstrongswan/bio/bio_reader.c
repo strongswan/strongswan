@@ -36,6 +36,11 @@ struct private_bio_reader_t {
 	 * Remaining data to process
 	 */
 	chunk_t buf;
+
+	/**
+	 * Optional data to free during destruction
+	 */
+	chunk_t cleanup;
 };
 
 METHOD(bio_reader_t, remaining, u_int32_t,
@@ -302,6 +307,7 @@ METHOD(bio_reader_t, read_data32, bool,
 METHOD(bio_reader_t, destroy, void,
 	private_bio_reader_t *this)
 {
+	free(this->cleanup.ptr);
 	free(this);
 }
 
@@ -336,6 +342,20 @@ bio_reader_t *bio_reader_create(chunk_t data)
 		},
 		.buf = data,
 	);
+
+	return &this->public;
+}
+
+/**
+ * See header
+ */
+bio_reader_t *bio_reader_create_own(chunk_t data)
+{
+	private_bio_reader_t *this;
+
+	this = (private_bio_reader_t*)bio_reader_create(data);
+
+	this->cleanup = data;
 
 	return &this->public;
 }

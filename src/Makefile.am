@@ -32,6 +32,10 @@ if USE_LIBTNCCS
   SUBDIRS += libtnccs
 endif
 
+if USE_LIBPTTLS
+  SUBDIRS += libpttls
+endif
+
 if USE_IMCV
   SUBDIRS += libimcv
 endif

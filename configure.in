@@ -1177,6 +1177,7 @@ AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$n
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
+AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
@@ -1275,6 +1276,7 @@ AC_CONFIG_FILES([
 	src/libradius/Makefile
 	src/libtncif/Makefile
 	src/libtnccs/Makefile
+	src/libpttls/Makefile
 	src/libpts/Makefile
 	src/libpts/plugins/imc_attestation/Makefile
 	src/libpts/plugins/imv_attestation/Makefile

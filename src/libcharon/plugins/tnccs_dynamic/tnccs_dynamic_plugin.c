@@ -32,8 +32,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CUSTOM, "tnccs-dynamic"),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-1.1"),
 				PLUGIN_DEPENDS(CUSTOM, "tnccs-2.0"),
-				PLUGIN_DEPENDS(EAP_SERVER, EAP_TNC),
-				PLUGIN_DEPENDS(EAP_PEER, EAP_TNC),
 	};
 	*features = f;
 	return countof(f);
@@ -62,4 +60,3 @@ plugin_t *tnccs_dynamic_plugin_create()
 
 	return &this->plugin;
 }
-
