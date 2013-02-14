@@ -376,9 +376,12 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 			lang_msg = (pb_language_preference_msg_t*)msg;
 			lang = lang_msg->get_language_preference(lang_msg);
 
-			DBG2(DBG_TNC, "setting language preference to '%.*s'",
-						   (int)lang.len, lang.ptr);
-			this->recs->set_preferred_language(this->recs, lang);
+			if (this->recs)
+			{
+				DBG2(DBG_TNC, "setting language preference to '%.*s'",
+					 (int)lang.len, lang.ptr);
+				this->recs->set_preferred_language(this->recs, lang);
+			}
 			break;
 		}
 		case PB_MSG_REASON_STRING:
