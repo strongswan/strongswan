@@ -190,8 +190,6 @@ METHOD(imc_agent_t, bind_functions, TNC_Result,
 	{
 		this->reserve_additional_id = NULL;
 	}
-	DBG2(DBG_IMC, "IMC %u \"%s\" provided with bind function",
-				  this->id, this->name);
 
 	if (this->report_message_types_long)
 	{
