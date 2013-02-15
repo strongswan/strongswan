@@ -1,7 +1,8 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${sysconfdir}\"
+
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-unbound.la

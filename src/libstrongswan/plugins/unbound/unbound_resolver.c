@@ -24,6 +24,10 @@
 #include "unbound_resolver.h"
 #include "unbound_response.h"
 
+/* DNS resolver configuration and DNSSEC trust anchors */
+#define RESOLV_CONF_FILE	"/etc/resolv.conf"
+#define TRUST_ANCHOR_FILE	IPSEC_CONFDIR "/ipsec.d/dnssec.keys"
+
 typedef struct private_resolver_t private_resolver_t;
 
 /**
@@ -64,11 +68,12 @@ METHOD(resolver_t, query, resolver_response_t*,
 	response = unbound_response_create_frm_libub_response(result);
 	if (!response)
 	{
-		DBG1(DBG_LIB, "unbound_resolver: Could not create response.");
+		DBG1(DBG_LIB, "unbound resolver failed to create response");
 		ub_resolve_free(result);
 		return NULL;
 	}
 	ub_resolve_free(result);
+
 	return (resolver_response_t*)response;
 }
 
@@ -85,10 +90,20 @@ METHOD(resolver_t, destroy, void,
 /*
  * Described in header.
  */
-resolver_t *unbound_resolver_create(char *resolv_conf, char *ta_file)
+resolver_t *unbound_resolver_create(void)
 {
 	private_resolver_t *this;
 	int ub_retval = 0;
+	char *resolv_conf_file;
+	char *trust_anchor_file;
+
+	resolv_conf_file = lib->settings->get_str(lib->settings,
+						"libstrongswan.plugins.unbound.resolv_conf",
+						RESOLV_CONF_FILE);
+
+	trust_anchor_file = lib->settings->get_str(lib->settings,
+						"libstrongswan.plugins.unbound.trust_anchors",
+						TRUST_ANCHOR_FILE);
 
 	INIT(this,
 		.public = {
@@ -97,35 +112,32 @@ resolver_t *unbound_resolver_create(char *resolv_conf, char *ta_file)
 		},
 	);
 
-	DBG1(DBG_LIB, "creating an unbound_resolver instance");
-
 	this->ctx = ub_ctx_create();
 	if (!this->ctx)
 	{
-		DBG1(DBG_LIB, "failed to create an unbound resolver context");
-		_destroy(this);
+		DBG1(DBG_LIB, "failed to create unbound resolver context");
+		destroy(this);
 		return NULL;
 	}
 
-	ub_retval = ub_ctx_resolvconf(this->ctx, resolv_conf);
+	DBG1(DBG_CFG, "loading unbound resolver config from '%s'", resolv_conf_file);
+	ub_retval = ub_ctx_resolvconf(this->ctx, resolv_conf_file);
 	if (ub_retval)
 	{
-		DBG1(DBG_LIB, "failed to read the resolver configuration file. "
-			 "Unbound error: %s. errno says: %s", ub_strerror(ub_retval),
-			 strerror(errno));
-		_destroy(this);
+		DBG1(DBG_CFG, "failed to read the resolver config: %s (%s)",
+					   ub_strerror(ub_retval), strerror(errno));
+		destroy(this);
 		return NULL;
 	}
 
-	ub_retval = ub_ctx_add_ta_file(this->ctx, ta_file);
+	DBG1(DBG_CFG, "loading unbound trust anchors from '%s'", trust_anchor_file);
+	ub_retval = ub_ctx_add_ta_file(this->ctx, trust_anchor_file);
 	if (ub_retval)
 	{
-		DBG1(DBG_LIB, "failed to load trusted anchors from file %s. "
-				"Unbound error: %s. errno says: %s",
-				ta_file, ub_strerror(ub_retval), strerror(errno));
+		DBG1(DBG_CFG, "failed to load trust anchors: %s (%s)",
+					   ub_strerror(ub_retval), strerror(errno));
 	}
 
-	DBG1(DBG_LIB, "unbound resolver instance created");
 	return &this->public;
 }
 

@@ -24,16 +24,9 @@
 typedef struct resolver_t resolver_t;
 
 /**
- * Constructor function which creates resolver instances.
- *
- * Creates a new DNS resolver with settings from the file resolv_conf and
- * keys from the file ta_file as DNSSEC trust anchor.
- *
- * @param resolv_conf	path to the file resolv.conf
- * @param ta_file		path to a file with the DNSSEC trust anchors
- * @return				resolver instance
+ * Constructor function which creates DNS resolver instances.
  */
-typedef resolver_t* (*resolver_constructor_t)(char *resolv_conf, char *ta_file);
+typedef resolver_t* (*resolver_constructor_t)(void);
 
 #include <resolver/resolver_response.h>
 #include <resolver/rr_set.h>

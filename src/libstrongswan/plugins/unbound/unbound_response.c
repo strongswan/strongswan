@@ -179,9 +179,8 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 
 		if (status != LDNS_STATUS_OK)
 		{
-			DBG1(DBG_LIB, "failed to create an unbound_response. "
-						  "Parsing of DNS packet failed.");
-			_destroy(this);
+			DBG1(DBG_LIB, "failed to parse DNS packet");
+			destroy(this);
 			return NULL;
 		}
 
@@ -210,7 +209,7 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 				}
 				else
 				{
-					DBG1(DBG_LIB, "unbound_response: RR creation failed.");
+					DBG1(DBG_LIB, "failed to create RR");
 				}
 			}
 
@@ -219,8 +218,7 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 				orig_rdf = ldns_rr_rrsig_typecovered(orig_rr);
 				if (!orig_rdf)
 				{
-					DBG1(DBG_LIB, "failed to get the type which is covered by "
-								  "a RRSIG");
+					DBG1(DBG_LIB, "failed to get the type covered by an RRSIG");
 				}
 				else if (ldns_rdf2native_int16(orig_rdf) == libub_response->qtype)
 				{
@@ -239,15 +237,13 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 					}
 					else
 					{
-						DBG1(DBG_LIB, "unbound_response: RRSIG creation "
-									  "failed.");
+						DBG1(DBG_LIB, "failed to create RRSIG");
 					}
 				}
 				else
 				{
-					DBG1(DBG_LIB, "Warning: Could not determine the type of "
-								  "Resource Records which is covered "
-								  "by a RRSIG RR");
+					DBG1(DBG_LIB, "failed to determine the RR type "
+								  "covered by RRSIG RR");
 				}
 			}
 		}

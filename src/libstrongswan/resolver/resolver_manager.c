@@ -56,20 +56,7 @@ METHOD(resolver_manager_t, remove_resolver, void,
 METHOD(resolver_manager_t, create, resolver_t*,
 	private_resolver_manager_t *this)
 {
-	char *resolv_conf;
-	char *trust_anchor_file;
-
-	resolv_conf = lib->settings->get_str(lib->settings,
-										 "libstrongswan.plugins.resolver."
-										 "resolv_conf",
-										 "/etc/resolv.conf");
-
-	trust_anchor_file = lib->settings->get_str(lib->settings,
-											   "libstrongswan.plugins.resolver."
-											   "trust_anchor",
-											   "/etc/trust.anchors");
-
-	return this->constructor(resolv_conf, trust_anchor_file);
+	return this->constructor();
 }
 
 METHOD(resolver_manager_t, destroy, void,
