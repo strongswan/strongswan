@@ -67,8 +67,6 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 	public_key_t * key = NULL;
 	bool supported_ipseckey_found = FALSE;
 
-	DBG1(DBG_CFG, "ipseckey_cred: Enumerating over IPSECKEY certificates");
-
 	/* Get the next supported IPSECKEY using the inner enumerator. */
 	while (this->inner->enumerate(this->inner, &cur_rr) &&
 		   !supported_ipseckey_found)
@@ -79,16 +77,14 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 
 		if (!cur_ipseckey)
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: Error while parsing an IPSECKEY. "
-						  "Skipping this key");
+			DBG1(DBG_CFG, "failed to parse ipseckey - skipping this key");
 			supported_ipseckey_found = FALSE;
 		}
 
 		if (cur_ipseckey &&
 			cur_ipseckey->get_algorithm(cur_ipseckey) != IPSECKEY_ALGORITHM_RSA)
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: Skipping an IPSECKEY which uses an "
-						  "unsupported algorithm");
+			DBG1(DBG_CFG, "unsupported ipseckey algorithm -skipping this key");
 			cur_ipseckey->destroy(cur_ipseckey);
 			supported_ipseckey_found = FALSE;
 		}
@@ -108,8 +104,7 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 
 		if (!key)
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: Failed to create a public key "
-						  "from the IPSECKEY");
+			DBG1(DBG_CFG, "failed to create public key from ipseckey");
 			cur_ipseckey->destroy(cur_ipseckey);
 			return FALSE;
 		}
@@ -155,18 +150,17 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 
 		if (0 >= asprintf(&fqdn, "%Y", id))
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: ID is empty");
+			DBG1(DBG_CFG, "empty FQDN string");
 			return enumerator_create_empty();
 		}
 
-		DBG1(DBG_CFG, "ipseckey_cred: Performing a DNS query for the IPSECKEY "
-					  "RRs of the domain %s", fqdn);
-
+		DBG1(DBG_CFG, "performing a DNS query for IPSECKEY RRs of '%s'",
+					   fqdn);
 		response = this->res->query(this->res, fqdn, RR_CLASS_IN,
 									RR_TYPE_IPSECKEY);
 		if (!response)
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: DNS query failed");
+			DBG1(DBG_CFG, "  query for IPSECKEY RRs failed");
 			free(fqdn);
 			return enumerator_create_empty();
 		}
@@ -174,8 +168,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		if (!response->has_data(response) ||
 			!response->query_name_exist(response))
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: Unable to retrieve IPSECKEY RRs "
-						  "for the domain %s from the DNS", fqdn);
+			DBG1(DBG_CFG, "  unable to retrieve IPSECKEY RRs from the DNS");
 			response->destroy(response);
 			free(fqdn);
 			return enumerator_create_empty();
@@ -183,9 +176,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 
 		if (!(response->get_security_state(response) == SECURE))
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: DNSSEC security state of the "
-						  "IPSECKEY RRs of the domain %s is not SECURE "
-						  "as required", fqdn);
+			DBG1(DBG_CFG, "  DNSSEC state of IPSECKEY RRs is not secure");
 			response->destroy(response);
 			free(fqdn);
 			return enumerator_create_empty();
@@ -196,38 +187,22 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		/** Determine the validity period of the retrieved IPSECKEYs
 		 *
 		 * We use the "Signature Inception" and "Signature Expiration" field
-		 * of the RRSIG resource record to determine the validity period of the
-		 * IPSECKEY RRs.
+		 * of the first RRSIG RR to determine the validity period of the
+		 * IPSECKEY RRs. TODO: Take multiple RRSIGs into account.
 		 */
 		rrset = response->get_rr_set(response);
 		rrsig_enum = rrset->create_rrsig_enumerator(rrset);
-		if (!rrsig_enum)
+		if (!rrsig_enum || !rrsig_enum->enumerate(rrsig_enum, &rrsig))
 		{
-			DBG1(DBG_CFG, "ipseckey_cred: Unable to determine the validity "
-						  "period of the RRs, because there are "
-						  "no RRSIGs present");
+			DBG1(DBG_CFG, "  unable to determine the validity period of "
+						  "IPSECKEY RRs because no RRSIGs are present");
+			DESTROY_IF(rrsig_enum);
 			response->destroy(response);
 			return enumerator_create_empty();
 		}
 
 		/**
-		 * Currently we use the first RRSIG of the IPSECKEY RRset
-		 * to determine the validity period of the IPSECKEYs.
-		 * TODO: Take multiple RRSIGs into account.
-		 */
-		if (!rrsig_enum->enumerate(rrsig_enum, &rrsig))
-		{
-			DBG1(DBG_CFG, "ipseckey_cred: Unable to determine the validity "
-						  "period of the IPSECKEY RRs, because there are "
-						  "no RRSIGs present");
-			rrsig_enum->destroy(rrsig_enum);
-			response->destroy(response);
-			return enumerator_create_empty();
-		}
-
-		/**
-		 * Parse the RRSIG for its validity period.
-		 * For the format of a RRSIG see RFC 4034.
+		 * Parse the RRSIG for its validity period (RFC 4034)
 		 */
 		reader = bio_reader_create(rrsig->get_rdata(rrsig));
 		reader->read_data(reader, 8, &ignore);
@@ -235,14 +210,14 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		reader->read_uint32(reader, &nBefore);
 		reader->destroy(reader);
 
-		/** Create and return an iterator over the retrieved IPSECKEYs */
+		/*Create and return an iterator over the retrieved IPSECKEYs */
 		INIT(e,
 			.public = {
 				.enumerate = (void*)_cert_enumerator_enumerate,
 				.destroy = _cert_enumerator_destroy,
 			},
 			.inner = response->get_rr_set(response)->create_rr_enumerator(
-												response->get_rr_set(response)),
+										  response->get_rr_set(response)),
 			.response = response,
 			.notBefore = nBefore,
 			.notAfter = nAfter,

@@ -118,7 +118,7 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 
 	if (rr->get_type(rr) != RR_TYPE_IPSECKEY)
 	{
-		DBG1(DBG_CFG, "unable to create an ipseckey out of a RR "
+		DBG1(DBG_CFG, "unable to create an ipseckey out of an RR "
 					  "whose type is not IPSECKEY");
 		free(this);
 		return NULL;
@@ -143,8 +143,8 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 		case IPSECKEY_GW_TP_IPV4:
 			if (!reader->read_data(reader, 4, &this->gateway))
 			{
-				DBG1(DBG_CFG, "ipseckey gateway field does not contain an IPv4 "
-							  "address as expected");
+				DBG1(DBG_CFG, "ipseckey gateway field does not contain an "
+							  "IPv4 address as expected");
 				reader->destroy(reader);
 				free(this);
 				return NULL;
@@ -155,8 +155,8 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 		case IPSECKEY_GW_TP_IPV6:
 			if (!reader->read_data(reader, 16, &this->gateway))
 			{
-				DBG1(DBG_CFG, "ipseckey gateway field does not contain an IPv6 "
-							  "address as expected");
+				DBG1(DBG_CFG, "ipseckey gateway field does not contain an "
+							  "IPv6 address as expected");
 				reader->destroy(reader);
 				free(this);
 				return NULL;
@@ -171,13 +171,13 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 			 * TODO: Currently we ignore wire encoded domain names.
 			 *
 			 */
-			while(reader->read_uint8(reader, &label) && label != 0 &&
-				  label < 192)
+			while (reader->read_uint8(reader, &label) &&
+				   label != 0 && label < 192)
 			{
-				if(!reader->read_data(reader, label, &tmp))
+				if (!reader->read_data(reader, label, &tmp))
 				{
-					DBG1(DBG_CFG, "ipseckey gateway field: Wire encoded "
-								  "domain name has the wrong format");
+					DBG1(DBG_CFG, "wrong wire encoded domain name format "
+								  "in ipseckey gateway field");
 					reader->destroy(reader);
 					free(this);
 					return NULL;
@@ -186,9 +186,7 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 			break;
 
 		default:
-			DBG1(DBG_CFG, "ipseckey gateway field: Unable to parse the "
-						  "ipseckey gateway field. The gateway type field "
-						  "indicates an unknown gateway type");
+			DBG1(DBG_CFG, "unable to parse ipseckey gateway field");
 			reader->destroy(reader);
 			free(this);
 			return NULL;
@@ -197,8 +195,7 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 	if (!reader->read_data(reader, reader->remaining(reader),
 						   &this->public_key))
 	{
-		DBG1(DBG_CFG, "ipseckey public key field: Failure while reading "
-					  "the public key");
+		DBG1(DBG_CFG, "failed to read ipseckey public key field");
 		reader->destroy(reader);
 		chunk_free(&this->gateway);
 		free(this);
