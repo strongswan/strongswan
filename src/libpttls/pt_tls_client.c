@@ -276,8 +276,11 @@ METHOD(pt_tls_client_t, destroy, void,
 {
 	if (this->tls)
 	{
-		close(this->tls->get_fd(this->tls));
+		int fd;
+
+		fd = this->tls->get_fd(this->tls);
 		this->tls->destroy(this->tls);
+		close(fd);
 	}
 	this->address->destroy(this->address);
 	this->id->destroy(this->id);
