@@ -999,14 +999,15 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 {
 	enumerator_t *enumerator;
 	auth_cfg_t *clone;
-	entry_t *entry;
+	auth_rule_t type;
+	void *value;
 
 	clone = auth_cfg_create();
 	/* this enumerator skips duplicates for rules we expect only once */
-	enumerator = this->entries->create_enumerator(this->entries);
-	while (enumerator->enumerate(enumerator, &entry))
+	enumerator = create_enumerator(this);
+	while (enumerator->enumerate(enumerator, &type, &value))
 	{
-		switch (entry->type)
+		switch (type)
 		{
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
@@ -1014,8 +1015,8 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_XAUTH_IDENTITY:
 			{
-				identification_t *id = (identification_t*)entry->value;
-				clone->add(clone, entry->type, id->clone(id));
+				identification_t *id = (identification_t*)value;
+				clone->add(clone, type, id->clone(id));
 				break;
 			}
 			case AUTH_RULE_CA_CERT:
@@ -1025,8 +1026,8 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_REVOCATION_CERT:
 			{
-				certificate_t *cert = (certificate_t*)entry->value;
-				clone->add(clone, entry->type, cert->get_ref(cert));
+				certificate_t *cert = (certificate_t*)value;
+				clone->add(clone, type, cert->get_ref(cert));
 				break;
 			}
 			case AUTH_RULE_XAUTH_BACKEND:
@@ -1034,7 +1035,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			{
-				clone->add(clone, entry->type, strdup(entry->value));
+				clone->add(clone, type, strdup(value));
 				break;
 			}
 			case AUTH_RULE_IDENTITY_LOOSE:
@@ -1046,7 +1047,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			case AUTH_RULE_SIGNATURE_SCHEME:
-				clone->add(clone, entry->type, (uintptr_t)entry->value);
+				clone->add(clone, type, (uintptr_t)value);
 				break;
 			case AUTH_RULE_MAX:
 				break;
