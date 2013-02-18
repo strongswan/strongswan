@@ -1782,6 +1782,7 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 		{
 			DBG1(DBG_IKE, "destroying duplicate IKE_SA for peer '%Y', "
 				 "received INITIAL_CONTACT", other);
+			charon->bus->ike_updown(charon->bus, duplicate, FALSE);
 			checkin_and_destroy(this, duplicate);
 			continue;
 		}
