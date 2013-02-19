@@ -311,7 +311,36 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 		}
 		case PB_MSG_REMEDIATION_PARAMETERS:
 		{
-			/* TODO : Remediation parameters message processing */
+			pb_remediation_parameters_msg_t *rem_msg;
+			pen_type_t parameters_type;
+			chunk_t parameters, string, lang_code;
+
+			rem_msg = (pb_remediation_parameters_msg_t*)msg;
+			parameters_type = rem_msg->get_parameters_type(rem_msg);
+			parameters = rem_msg->get_parameters(rem_msg);
+
+			if (parameters_type.vendor_id == PEN_IETF)
+			{
+				switch (parameters_type.type)
+				{
+					case PB_REMEDIATION_URI:
+						DBG1(DBG_TNC, "remediation uri: %.*s",
+									   parameters.len, parameters.ptr);
+						break;
+					case PB_REMEDIATION_STRING:
+						string = rem_msg->get_string(rem_msg, &lang_code);
+						DBG1(DBG_TNC, "remediation string: [%.*s]\n%.*s",
+									   lang_code.len, lang_code.ptr,
+									   string.len, string.ptr);
+						break;
+					default:
+						DBG1(DBG_TNC, "remediation parameters: %B", &parameters);
+				}
+			}
+			else
+			{
+				DBG1(DBG_TNC, "remediation parameters: %B", &parameters);
+			}
 			break;
 		}
 		case PB_MSG_ERROR:

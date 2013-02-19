@@ -194,14 +194,16 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			DBG1(DBG_TNC, "insufficient data for IETF remediation string");
 			goto end;
 		}
+		*offset += 4;
+
 		pos = memchr(this->string.ptr, '\0', this->string.len);
 		if (pos)
 		{
 			DBG1(DBG_TNC, "nul termination in IETF remediation string");
-			*offset += 1 + (pos - this->string.ptr);
+			*offset += (pos - this->string.ptr);
 			goto end;
 		}
-		*offset += 4 + this->string.len;
+		*offset += this->string.len;
 
 		if (!reader->read_data8(reader, &this->lang_code))
 		{
@@ -246,12 +248,6 @@ METHOD(ietf_attr_remediation_instr_t, get_parameters, chunk_t,
 	return this->parameters;
 }
 
-METHOD(ietf_attr_remediation_instr_t, get_uri, chunk_t,
-	private_ietf_attr_remediation_instr_t *this)
-{
-	return this->parameters;
-}
-
 METHOD(ietf_attr_remediation_instr_t, get_string, chunk_t,
 	private_ietf_attr_remediation_instr_t *this, chunk_t *lang_code)
 {
@@ -284,7 +280,7 @@ pa_tnc_attr_t *ietf_attr_remediation_instr_create(pen_type_t parameters_type,
 			},
 			.get_parameters_type = _get_parameters_type,
 			.get_parameters = _get_parameters,
-			.get_uri = _get_uri,
+			.get_uri = _get_parameters,
 			.get_string = _get_string,
 		},
 		.type = { PEN_IETF, IETF_ATTR_REMEDIATION_INSTRUCTIONS },
@@ -350,7 +346,7 @@ pa_tnc_attr_t *ietf_attr_remediation_instr_create_from_data(chunk_t data)
 			},
 			.get_parameters_type = _get_parameters_type,
 			.get_parameters = _get_parameters,
-			.get_uri = _get_uri,
+			.get_uri = _get_parameters,
 			.get_string = _get_string,
 		},
 		.type = { PEN_IETF, IETF_ATTR_REMEDIATION_INSTRUCTIONS },

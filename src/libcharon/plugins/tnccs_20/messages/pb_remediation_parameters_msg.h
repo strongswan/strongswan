@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@ typedef struct pb_remediation_parameters_msg_t pb_remediation_parameters_msg_t;
 
 #include "pb_tnc_msg.h"
 
+#include <pen/pen.h>
+
 /**
  * PB-TNC Remediation Parameter Types as defined in section 4.8.1 of RFC 5793
  */
@@ -50,41 +52,61 @@ struct pb_remediation_parameters_msg_t {
 	pb_tnc_msg_t pb_interface;
 
 	/**
-	 * Get Remediation Parameters Vendor ID and Type
+	 * Get the Remediation Parameters Type (Vendor ID and Type)
 	 *
-	 * @param type				Remediation Parameters Type
-	 * @return					Remediation Parameters Vendor ID
+	 * @return				Remediation Parameters Type
 	 */
-	u_int32_t (*get_vendor_id)(pb_remediation_parameters_msg_t *this,
-							   u_int32_t *type);
+	pen_type_t (*get_parameters_type)(pb_remediation_parameters_msg_t *this);
 
 	/**
-	 * Get Remediation String
+	 * Get the Remediation Parameters
 	 *
-	 * @return					Remediation String
+	 * @return				Remediation Parameters
 	 */
-	chunk_t (*get_remediation_string)(pb_remediation_parameters_msg_t *this);
+	chunk_t (*get_parameters)(pb_remediation_parameters_msg_t *this);
 
 	/**
-	 * Get Reason String Language Code
+	 * Get the Remediation URI
 	 *
-	 * @return					Language Code
+	 * @return				Remediation URI
 	 */
-	chunk_t (*get_language_code)(pb_remediation_parameters_msg_t *this);
+	chunk_t (*get_uri)(pb_remediation_parameters_msg_t *this);
+
+	/**
+	 * Get the Remediation String
+	 *
+	 * @param lang_code		Optional Language Code
+	 * @return				Remediation String
+	 */
+	chunk_t (*get_string)(pb_remediation_parameters_msg_t *this,
+						  chunk_t *lang_code);
+
 };
 
 /**
- * Create a PB-Remediation-Parameters message from parameters
+ * Create a general PB-Remediation-Parameters message
  *
- * @param vendor_id				Remediation Parameters Vendor ID
- * @param type					Remediation Parameters Type		
- * @param remediation_string	Remediation String
- * @param language_code			Language Code
+ * @param parameters_type	Remediation Parameters Type
+ * @param parameters		Remediation Parameters
  */
-pb_tnc_msg_t* pb_remediation_parameters_msg_create(u_int32_t vendor_id,
-												   u_int32_t type,
-												   chunk_t remediation_string,
-												   chunk_t language_code);
+pb_tnc_msg_t* pb_remediation_parameters_msg_create(pen_type_t parameters_type,
+												   chunk_t parameters);
+
+/**
+ * Create a PB-Remediation-Parameters message of IETF Type Remediation URI
+ *
+ * @param uri				Remediation URI
+ */
+pb_tnc_msg_t* pb_remediation_parameters_msg_create_from_uri(chunk_t uri);
+
+/**
+ * Create a PB-Remediation-Parameters message of IETF Type Remediation String
+ *
+ * @param string			Remediation String
+ * @param lang_code			Remediation String Language Code
+ */
+pb_tnc_msg_t* pb_remediation_parameters_msg_create_from_string(chunk_t string,
+															   chunk_t lang_code);
 
 /**
  * Create an unprocessed PB-Remediation-Parameters message from raw data
