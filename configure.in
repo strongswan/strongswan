@@ -222,6 +222,7 @@ ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
 ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
+ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([coupling],       [enable IKEv2 plugin to couple peer certificates permanently to authentication.])
@@ -971,6 +972,7 @@ ADD_PLUGIN([whitelist],            [c charon])
 ADD_PLUGIN([lookip],               [c charon])
 ADD_PLUGIN([error-notify],         [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
+ADD_PLUGIN([systime-fix],          [c charon])
 ADD_PLUGIN([led],                  [c charon])
 ADD_PLUGIN([duplicheck],           [c charon])
 ADD_PLUGIN([coupling],             [c charon])
@@ -1065,6 +1067,7 @@ AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
+AM_CONDITIONAL(USE_SYSTIME_FIX, test x$systime_fix = xtrue)
 AM_CONDITIONAL(USE_LED, test x$led = xtrue)
 AM_CONDITIONAL(USE_DUPLICHECK, test x$duplicheck = xtrue)
 AM_CONDITIONAL(USE_COUPLING, test x$coupling = xtrue)
@@ -1302,6 +1305,7 @@ AC_OUTPUT(
 	src/libcharon/plugins/lookip/Makefile
 	src/libcharon/plugins/error_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile
+	src/libcharon/plugins/systime_fix/Makefile
 	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/duplicheck/Makefile
 	src/libcharon/plugins/coupling/Makefile
