@@ -386,6 +386,13 @@ static status_t process_tnc_msg(private_pb_tnc_batch_t *this)
 	}
 	else
 	{
+		if (msg_type == PB_MSG_EXPERIMENTAL && noskip_flag)
+		{
+			DBG1(DBG_TNC, "reject PB-Experimental message with NOSKIP flag set");
+			msg = pb_error_msg_create_with_offset(TRUE, PEN_IETF,
+							PB_ERROR_UNSUPPORTED_MANDATORY_MSG, this->offset);
+			goto fatal;
+		}
 		if (pb_tnc_msg_infos[msg_type].has_noskip_flag != TRUE_OR_FALSE &&
 			pb_tnc_msg_infos[msg_type].has_noskip_flag != noskip_flag)
 		{
