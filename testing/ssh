@@ -1,0 +1,20 @@
+#!/bin/bash
+
+DIR=$(dirname `readlink -f $0`)
+. $DIR/testing.conf
+
+if [ $# == 0 ]
+then
+	echo "$0 <host>"
+	exit 1
+fi
+
+host=$1
+ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+if [ -z $ip ]
+then
+	echo "Host '$host' unknown"
+	exit 1
+fi
+
+exec ssh $SSHCONF -q root@$ip
