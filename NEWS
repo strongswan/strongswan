@@ -7,6 +7,10 @@ strongswan-5.0.3
   unbound plugin, which is based on libldns and libunbound.  Both plugins were
   created by Reto Guadagnini.
 
+- Implemented the TCG TNC IF-IMV 1.4 draft making access
+  requestor identities available to an IMV.
+
+
 strongswan-5.0.2
 ----------------
 
