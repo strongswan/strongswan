@@ -57,6 +57,10 @@ do
 		execute_chroot "rm -rf /var/lib/ldap/*" 0
 		execute_chroot "slapadd -l /etc/ldap/ldif.txt -f /etc/ldap/slapd.conf" 0
 		execute_chroot "chown -R openldap:openldap /var/lib/ldap" 0
+		execute_chroot "dnssec-signzone -K /etc/bind -o strongswan.org. /etc/bind/db.strongswan.org" 0
+		execute_chroot "dnssec-signzone -K /etc/bind -o org. /etc/bind/db.org" 0
+		execute_chroot "dnssec-signzone -K /etc/bind -o . /etc/bind/db.root" 0
+		execute_chroot "update-rc.d bind9 defaults" 0
 	fi
 	sync
 	execute "umount $LOOPDIR" 0

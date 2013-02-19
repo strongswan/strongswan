@@ -26,6 +26,7 @@ networking/host.c networking/host_resolver.c networking/packet.c \
 networking/tun_device.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
+resolver/resolver_manager.c resolver/rr_set.c \
 selectors/traffic_selector.c threading/thread.c threading/thread_value.c \
 threading/mutex.c threading/semaphore.c threading/rwlock.c threading/spinlock.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
@@ -63,6 +64,8 @@ database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h \
+resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
+resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h selectors/traffic_selector.h \
@@ -320,6 +323,13 @@ if USE_CURL
   SUBDIRS += plugins/curl
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/curl/libstrongswan-curl.la
+endif
+endif
+
+if USE_UNBOUND
+  SUBDIRS += plugins/unbound
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/unbound/libstrongswan-unbound.la
 endif
 endif
 

@@ -76,6 +76,17 @@ bool get_form(char *form, cred_encoding_type_t *enc, credential_type_t type)
 				return FALSE;
 		}
 	}
+	else if (streq(form, "dnskey"))
+	{
+		switch (type)
+		{
+			case CRED_PUBLIC_KEY:
+				*enc =PUBKEY_DNSKEY;
+				return TRUE;
+			default:
+				return FALSE;
+		}
+	}
 	return FALSE;
 }
 

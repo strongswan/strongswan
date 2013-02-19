@@ -39,8 +39,14 @@ enum dnskey_algorithm_t {
 	DNSKEY_ALG_RSA_MD5 = 1,
 	DNSKEY_ALG_DH = 2,
 	DNSKEY_ALG_DSA = 3,
-	DNSKEY_ALG_ECC = 4,
 	DNSKEY_ALG_RSA_SHA1 = 5,
+	DNSKEY_ALG_DSA_NSEC3_SHA1 = 6,
+	DNSKEY_ALG_RSA_SHA1_NSEC3_SHA1 = 7,
+	DNSKEY_ALG_RSA_SHA256 = 8,
+	DNSKEY_ALG_RSA_SHA512 = 10,
+	DNSKEY_ALG_ECC_GOST = 12,
+	DNSKEY_ALG_ECDSA_P256_SHA256 = 13,
+	DNSKEY_ALG_ECDSA_P384_SHA384 = 14
 };
 
 /**
@@ -59,7 +65,11 @@ static dnskey_public_key_t *parse_public_key(chunk_t blob)
 
 	switch (rr->algorithm)
 	{
+		case DNSKEY_ALG_RSA_MD5:
 		case DNSKEY_ALG_RSA_SHA1:
+		case DNSKEY_ALG_RSA_SHA1_NSEC3_SHA1:
+		case DNSKEY_ALG_RSA_SHA256:
+		case DNSKEY_ALG_RSA_SHA512:
 			return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 									  BUILD_BLOB_DNSKEY, blob, BUILD_END);
 		default:

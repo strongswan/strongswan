@@ -49,6 +49,9 @@
  * @defgroup fetcher fetcher
  * @ingroup libstrongswan
  *
+ * @defgroup resolver resolver
+ * @ingroup libstrongswan
+ *
  * @defgroup ipsec ipsec
  * @ingroup libstrongswan
  *
@@ -92,6 +95,7 @@
 #include "crypto/crypto_factory.h"
 #include "crypto/proposal/proposal_keywords.h"
 #include "fetcher/fetcher_manager.h"
+#include "resolver/resolver_manager.h"
 #include "database/database_factory.h"
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
@@ -160,6 +164,11 @@ struct library_t {
 	 * URL fetching facility
 	 */
 	fetcher_manager_t *fetcher;
+
+	/**
+	 * Manager for DNS resolvers
+	 */
+	 resolver_manager_t *resolver;
 
 	/**
 	 * database construction factory

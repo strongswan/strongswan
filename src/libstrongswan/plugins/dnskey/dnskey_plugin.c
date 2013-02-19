@@ -17,6 +17,7 @@
 
 #include <library.h>
 #include "dnskey_builder.h"
+#include "dnskey_encoder.h"
 
 typedef struct private_dnskey_plugin_t private_dnskey_plugin_t;
 
@@ -53,6 +54,8 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_dnskey_plugin_t *this)
 {
+	lib->encoding->remove_encoder(lib->encoding, dnskey_encoder_encode);
+
 	free(this);
 }
 
@@ -72,6 +75,8 @@ plugin_t *dnskey_plugin_create()
 			},
 		},
 	);
+
+	lib->encoding->add_encoder(lib->encoding, dnskey_encoder_encode);
 
 	return &this->public.plugin;
 }

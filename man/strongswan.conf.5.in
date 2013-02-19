@@ -569,6 +569,9 @@ Request peer authentication based on a client certificate
 .BR charon.plugins.ha.segment_count " [1]"
 
 .TP
+.BR charon.plugins.ipseckey.enable " [no]"
+Enable the fetching of IPSECKEY RRs from the DNS
+.TP
 .BR charon.plugins.led.activity_led
 
 .TP
@@ -776,6 +779,12 @@ File to read random bytes from, instead of @DEV_RANDOM@
 .TP
 .BR libstrongswan.plugins.random.urandom " [@DEV_URANDOM@]"
 File to read pseudo random bytes from, instead of @DEV_URANDOM@
+.TP
+.BR libstrongswan.plugins.unbound.resolv_conf " [/etc/resolv.conf]"
+File to read DNS resolver configuration from
+.TP
+.BR libstrongswan.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
+File to read DNSSEC trust anchors from (usually root zone KSK)
 .SS libtnccs section
 .TP
 .BR libtnccs.tnc_config " [/etc/tnc_config]"

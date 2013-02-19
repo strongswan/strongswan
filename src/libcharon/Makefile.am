@@ -212,6 +212,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_IPSECKEY
+  SUBDIRS += plugins/ipseckey
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/ipseckey/libstrongswan-ipseckey.la
+endif
+endif
+
 if USE_UPDOWN
   SUBDIRS += plugins/updown
 if MONOLITHIC
