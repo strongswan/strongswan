@@ -541,6 +541,10 @@ static bool check_certificate(private_credential_manager_t *this,
 	enumerator = this->validators->create_enumerator(this->validators);
 	while (enumerator->enumerate(enumerator, &validator))
 	{
+		if (!validator->validate)
+		{
+			continue;
+		}
 		if (!validator->validate(validator, subject, issuer,
 								 online, pathlen, trusted, auth))
 		{

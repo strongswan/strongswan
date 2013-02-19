@@ -43,6 +43,7 @@ struct cert_validator_t {
 	 * @param pathlen		the current length of the path bottom-up
 	 * @param anchor		is issuer trusted root anchor
 	 * @param auth			container for resulting authentication info
+	 * @return				TRUE if subject certificate valid
 	 */
 	bool (*validate)(cert_validator_t *this, certificate_t *subject,
 					 certificate_t *issuer, bool online, u_int pathlen,
