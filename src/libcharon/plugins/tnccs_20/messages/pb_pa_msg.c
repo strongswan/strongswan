@@ -166,6 +166,7 @@ METHOD(pb_tnc_msg_t, process, status_t,
 	{
 		DBG1(DBG_TNC, "PA Subtype 0x%08x is reserved", PA_RESERVED_SUBTYPE);
 		*offset = 4;
+		return FAILED;
 	}
 
 	return SUCCESS;
