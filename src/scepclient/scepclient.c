@@ -1351,7 +1351,7 @@ int main(int argc, char **argv)
 			poll_start = time_monotonic(NULL);
 			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc",
 									issuer->get_encoding(issuer),
-									subject);
+									subject->get_encoding(subject));
 		}
 		while (attrs.pkiStatus == SCEP_PENDING)
 		{
