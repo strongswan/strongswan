@@ -13,8 +13,10 @@
  * for more details.
  */
 
+#include <openssl/opensslv.h>
 #include <openssl/opensslconf.h>
 
+#if OPENSSL_VERSION_NUMBER >= 0x0090807fL
 #ifndef OPENSSL_NO_CMS
 
 #include "openssl_pkcs7.h"
@@ -788,3 +790,4 @@ pkcs7_t *openssl_pkcs7_load(container_type_t type, va_list args)
 }
 
 #endif /* OPENSSL_NO_CMS */
+#endif /* OPENSSL_VERSION_NUMBER */
