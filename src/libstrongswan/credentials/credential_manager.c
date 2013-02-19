@@ -515,26 +515,64 @@ static void cache_queue(private_credential_manager_t *this)
 }
 
 /**
+ * Use validators to check the lifetime of certificates
+ */
+static bool check_lifetime(private_credential_manager_t *this,
+						   certificate_t *cert, char *label,
+						   int pathlen, bool trusted, auth_cfg_t *auth)
+{
+	time_t not_before, not_after;
+	cert_validator_t *validator;
+	enumerator_t *enumerator;
+	status_t status = NEED_MORE;
+
+	enumerator = this->validators->create_enumerator(this->validators);
+	while (enumerator->enumerate(enumerator, &validator))
+	{
+		if (!validator->check_lifetime)
+		{
+			continue;
+		}
+		status = validator->check_lifetime(validator, cert,
+										   pathlen, trusted, auth);
+		if (status != NEED_MORE)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	switch (status)
+	{
+		case NEED_MORE:
+			if (!cert->get_validity(cert, NULL, &not_before, &not_after))
+			{
+				DBG1(DBG_CFG, "%s certificate invalid (valid from %T to %T)",
+					 label, &not_before, FALSE, &not_after, FALSE);
+				return FALSE;
+			}
+			return TRUE;
+		case SUCCESS:
+			return TRUE;
+		case FAILED:
+		default:
+			return FALSE;
+	}
+}
+
+/**
  * check a certificate for its lifetime
  */
 static bool check_certificate(private_credential_manager_t *this,
 				certificate_t *subject, certificate_t *issuer, bool online,
 				int pathlen, bool trusted, auth_cfg_t *auth)
 {
-	time_t not_before, not_after;
 	cert_validator_t *validator;
 	enumerator_t *enumerator;
 
-	if (!subject->get_validity(subject, NULL, &not_before, &not_after))
+	if (!check_lifetime(this, subject, "subject", pathlen, FALSE, auth) ||
+		!check_lifetime(this, issuer, "issuer", pathlen + 1, trusted, auth))
 	{
-		DBG1(DBG_CFG, "subject certificate invalid (valid from %T to %T)",
-			 &not_before, FALSE, &not_after, FALSE);
-		return FALSE;
-	}
-	if (!issuer->get_validity(issuer, NULL, &not_before, &not_after))
-	{
-		DBG1(DBG_CFG, "issuer certificate invalid (valid from %T to %T)",
-			 &not_before, FALSE, &not_after, FALSE);
 		return FALSE;
 	}
 
