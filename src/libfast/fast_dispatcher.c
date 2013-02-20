@@ -152,6 +152,10 @@ static fast_session_t* load_session(private_fast_dispatcher_t *this)
 		context = this->context_constructor(this->param);
 	}
 	session = fast_session_create(context);
+	if (!session)
+	{
+		return NULL;
+	}
 
 	enumerator = this->controllers->create_enumerator(this->controllers);
 	while (enumerator->enumerate(enumerator, &centry))
@@ -306,7 +310,7 @@ static void dispatch(private_fast_dispatcher_t *this)
 
 		if (request == NULL)
 		{
-			continue;
+			break;
 		}
 		now = time_monotonic(NULL);
 		sid = request->get_cookie(request, "SID");
