@@ -29,7 +29,9 @@
 
 #include <utils/debug.h>
 
-#if !defined(HAVE_GETPWNAM_R) || !defined(HAVE_GETGRNAM_R)
+#if !defined(HAVE_GETPWNAM_R) || \
+    !defined(HAVE_GETGRNAM_R) || \
+    !defined(HAVE_GETPWUID_R)
 # include <threading/mutex.h>
 # define EMULATE_R_FUNCS
 #endif
@@ -188,6 +190,34 @@ METHOD(capabilities_t, resolve_gid, bool,
 	return FALSE;
 }
 
+/**
+ * Initialize supplementary groups for unprivileged user
+ */
+static bool init_supplementary_groups(private_capabilities_t *this)
+{
+	struct passwd *pwp;
+	int res = -1;
+
+#ifdef HAVE_GETPWUID_R
+	struct passwd pwd;
+	char buf[1024];
+
+	if (getpwuid_r(this->uid, &pwd, buf, sizeof(buf), &pwp) == 0 && pwp)
+	{
+		res = initgroups(pwp->pw_name, this->gid);
+	}
+#else /* HAVE_GETPWUID_R */
+	this->mutex->lock(this->mutex);
+	pwp = getpwuid(this->uid);
+	if (pwp)
+	{
+		res = initgroups(pwp->pw_name, this->gid);
+	}
+	this->mutex->unlock(this->mutex);
+#endif /* HAVE_GETPWUID_R */
+	return res == 0;
+}
+
 METHOD(capabilities_t, drop, bool,
 	private_capabilities_t *this)
 {
@@ -195,6 +225,12 @@ METHOD(capabilities_t, drop, bool,
 	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
 #endif
 
+	if (!init_supplementary_groups(this))
+	{
+		DBG1(DBG_LIB, "initializing supplementary groups for %u failed",
+			 this->uid);
+		return FALSE;
+	}
 	if (this->gid && setgid(this->gid) != 0)
 	{
 		DBG1(DBG_LIB, "change to unprivileged group %u failed: %s",
