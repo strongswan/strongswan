@@ -1745,6 +1745,23 @@ METHOD(ike_sa_manager_t, create_id_enumerator, enumerator_t*,
 									 (void*)id_enumerator_cleanup, ids);
 }
 
+/**
+ * Move all CHILD_SAs from old to new
+ */
+static void adopt_children(ike_sa_t *old, ike_sa_t *new)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+
+	enumerator = old->create_child_sa_enumerator(old);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		old->remove_child_sa(old, enumerator);
+		new->add_child_sa(new, child_sa);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(ike_sa_manager_t, check_uniqueness, bool,
 	private_ike_sa_manager_t *this, ike_sa_t *ike_sa, bool force_replace)
 {
@@ -1796,6 +1813,10 @@ METHOD(ike_sa_manager_t, check_uniqueness, bool,
 					{
 						case UNIQUE_REPLACE:
 							charon->bus->alert(charon->bus, ALERT_UNIQUE_REPLACE);
+							if (duplicate->get_version(duplicate) == IKEV1)
+							{
+								adopt_children(duplicate, ike_sa);
+							}
 							DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer "
 									"'%Y' due to uniqueness policy", other);
 							status = duplicate->delete(duplicate);
