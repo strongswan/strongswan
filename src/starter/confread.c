@@ -298,6 +298,11 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			end->from_port = 0;
 			end->to_port = 0xffff;
 		}
+		else if (streq(port, "%opaque"))
+		{
+			end->from_port = 0xffff;
+			end->to_port = 0;
+		}
 		else
 		{
 			svc = getservbyname(port, NULL);
