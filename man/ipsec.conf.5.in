@@ -737,6 +737,14 @@ can be used to the same effect, e.g.
 .B leftprotoport=udp/%any
 or
 .BR leftprotoport=%any/53 .
+
+The port value can alternatively take the value
+.B %opaque
+for RFC 4301 OPAQUE selectors, or a numerical range in the form
+.BR 1024-65535 .
+None of the kernel backends currently supports opaque or port ranges and uses
+.B %any
+for policy installation instead.
 .TP
 .BR leftrsasigkey " = <raw rsa public key> | <path to public key>"
 the left participant's public key for RSA signature authentication, in RFC 2537
