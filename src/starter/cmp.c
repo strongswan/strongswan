@@ -27,7 +27,8 @@ static bool starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 		return FALSE;
 
 	VARCMP(modecfg);
-	VARCMP(port);
+	VARCMP(from_port);
+	VARCMP(to_port);
 	VARCMP(protocol);
 
 	return cmp_args(KW_END_FIRST, KW_END_LAST, (char *)c1, (char *)c2);
@@ -63,4 +64,3 @@ bool starter_cmp_ca(starter_ca_t *c1, starter_ca_t *c2)
 
 	return cmp_args(KW_CA_NAME, KW_CA_LAST, (char *)c1, (char *)c2);
 }
-

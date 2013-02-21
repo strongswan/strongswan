@@ -151,12 +151,14 @@ static int add_connection(char *name,
 	msg.add_conn.me.ikeport = 500;
 	msg.add_conn.me.subnets = push_string(&msg, my_nets);
 	msg.add_conn.me.sendcert = 1;
+	msg.add_conn.me.to_port = 65535;
 
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
 	msg.add_conn.other.ikeport = 500;
 	msg.add_conn.other.subnets = push_string(&msg, other_nets);
 	msg.add_conn.other.sendcert = 1;
+	msg.add_conn.other.to_port = 65535;
 
 	return send_stroke_msg(&msg);
 }

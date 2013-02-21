@@ -142,6 +142,9 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.left.ikeport = 500;
 	cfg->conn_default.right.ikeport = 500;
 
+	cfg->conn_default.left.to_port = 0xffff;
+	cfg->conn_default.right.to_port = 0xffff;
+
 	cfg->ca_default.seen = SEEN_NONE;
 }
 
@@ -292,14 +295,15 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 		}
 		if (streq(port, "%any"))
 		{
-			end->port = 0;
+			end->from_port = 0;
+			end->to_port = 0xffff;
 		}
 		else
 		{
 			svc = getservbyname(port, NULL);
 			if (svc)
 			{
-				end->port = ntohs(svc->s_port);
+				end->from_port = end->to_port = ntohs(svc->s_port);
 			}
 			else
 			{
@@ -309,7 +313,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					DBG1(DBG_APP, "# bad port: %s=%s", name, value);
 					goto err;
 				}
-				end->port = (u_int16_t)p;
+				end->from_port = end->to_port = (u_int16_t)p;
 			}
 		}
 		if (sep)

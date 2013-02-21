@@ -167,7 +167,8 @@ struct stroke_end_t {
 	int tohost;
 	int allow_any;
 	u_int8_t protocol;
-	u_int16_t port;
+	u_int16_t from_port;
+	u_int16_t to_port;
 };
 
 typedef struct stroke_msg_t stroke_msg_t;

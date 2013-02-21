@@ -146,7 +146,8 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->tohost = !conn_end->subnet;
 	msg_end->allow_any = conn_end->allow_any;
 	msg_end->protocol = conn_end->protocol;
-	msg_end->port = conn_end->port;
+	msg_end->from_port = conn_end->from_port;
+	msg_end->to_port = conn_end->to_port;
 }
 
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
@@ -330,4 +331,3 @@ int starter_stroke_configure(starter_config_t *cfg)
 	}
 	return 0;
 }
-
