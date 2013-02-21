@@ -312,6 +312,10 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 				written += print_in_hook(data, "%d", this->from_port);
 			}
 		}
+		else if (is_opaque(this))
+		{
+			written += print_in_hook(data, "OPAQUE");
+		}
 		else
 		{
 			written += print_in_hook(data, "%d-%d",
