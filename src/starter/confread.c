@@ -303,7 +303,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			end->from_port = 0xffff;
 			end->to_port = 0;
 		}
-		else
+		else if (*port)
 		{
 			svc = getservbyname(port, NULL);
 			if (svc)
@@ -313,12 +313,28 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 			else
 			{
 				p = strtol(port, &endptr, 0);
-				if ((*port && *endptr) || p < 0 || p > 0xffff)
+				if (p < 0 || p > 0xffff)
 				{
-					DBG1(DBG_APP, "# bad port: %s=%s", name, value);
+					DBG1(DBG_APP, "# bad port: %s=%s", name, port);
 					goto err;
 				}
-				end->from_port = end->to_port = (u_int16_t)p;
+				end->from_port = p;
+				if (*endptr == '-')
+				{
+					port = endptr + 1;
+					p = strtol(port, &endptr, 0);
+					if (p < 0 || p > 0xffff)
+					{
+						DBG1(DBG_APP, "# bad port: %s=%s", name, port);
+						goto err;
+					}
+				}
+				end->to_port = p;
+				if (*endptr)
+				{
+					DBG1(DBG_APP, "# bad port: %s=%s", name, port);
+					goto err;
+				}
 			}
 		}
 		if (sep)
