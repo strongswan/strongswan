@@ -174,7 +174,8 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 /**
  * internal generic constructor
  */
-static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port);
+static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
+						ts_type_t type, u_int16_t from_port, u_int16_t to_port);
 
 /**
  * Described in header.
@@ -305,11 +306,12 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	return written;
 }
 
-/**
- * Implements traffic_selector_t.get_subset
- */
-static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
+METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
+	private_traffic_selector_t *this, traffic_selector_t *other_public)
 {
+	private_traffic_selector_t *other;
+
+	other = (private_traffic_selector_t*)other_public;
 	if (this->dynamic || other->dynamic)
 	{	/* no set_address() applied, TS has no subset */
 		return NULL;
@@ -379,11 +381,12 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 	return NULL;
 }
 
-/**
- * Implements traffic_selector_t.equals
- */
-static bool equals(private_traffic_selector_t *this, private_traffic_selector_t *other)
+METHOD(traffic_selector_t, equals, bool,
+	private_traffic_selector_t *this, traffic_selector_t *other_public)
 {
+	private_traffic_selector_t *other;
+
+	other = (private_traffic_selector_t*)other_public;
 	if (this->type != other->type)
 	{
 		return FALSE;
@@ -535,11 +538,8 @@ METHOD(traffic_selector_t, set_address, void,
 	}
 }
 
-/**
- * Implements traffic_selector_t.is_contained_in.
- */
-static bool is_contained_in(private_traffic_selector_t *this,
-							private_traffic_selector_t *other)
+METHOD(traffic_selector_t, is_contained_in, bool,
+	private_traffic_selector_t *this, traffic_selector_t *other)
 {
 	private_traffic_selector_t *subset;
 	bool contained_in = FALSE;
@@ -548,7 +548,7 @@ static bool is_contained_in(private_traffic_selector_t *this,
 
 	if (subset)
 	{
-		if (equals(subset, this))
+		if (equals(subset, &this->public))
 		{
 			contained_in = TRUE;
 		}
@@ -859,8 +859,8 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 
 	INIT(this,
 		.public = {
-			.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset,
-			.equals = (bool(*)(traffic_selector_t*,traffic_selector_t*))equals,
+			.get_subset = _get_subset,
+			.equals = _equals,
 			.get_from_address = _get_from_address,
 			.get_to_address = _get_to_address,
 			.get_from_port = _get_from_port,
@@ -869,7 +869,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 			.get_protocol = _get_protocol,
 			.is_host = _is_host,
 			.is_dynamic = _is_dynamic,
-			.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in,
+			.is_contained_in = _is_contained_in,
 			.includes = _includes,
 			.set_address = _set_address,
 			.to_subnet = _to_subnet,
@@ -884,4 +884,3 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 
 	return this;
 }
-
