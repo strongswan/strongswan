@@ -178,6 +178,22 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 						ts_type_t type, u_int16_t from_port, u_int16_t to_port);
 
 /**
+ * Check if TS contains "opaque" ports
+ */
+static bool is_opaque(private_traffic_selector_t *this)
+{
+	return this->from_port == 0xffff && this->to_port == 0;
+}
+
+/**
+ * Check if TS contains "any" ports
+ */
+static bool is_any(private_traffic_selector_t *this)
+{
+	return this->from_port == 0 && this->to_port == 0xffff;
+}
+
+/**
  * Described in header.
  */
 int traffic_selector_printf_hook(printf_hook_data_t *data,
@@ -249,7 +265,7 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 
 	/* check if we have protocol and/or port selectors */
 	has_proto = this->protocol != 0;
-	has_ports = !(this->from_port == 0 && this->to_port == 0xFFFF);
+	has_ports = !is_any(this);
 
 	if (!has_proto && !has_ports)
 	{
@@ -348,12 +364,22 @@ METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 	/* select protocol, which is not zero */
 	protocol = max(this->protocol, other->protocol);
 
-	/* calculate the maximum port range allowed for both */
-	from_port = max(this->from_port, other->from_port);
-	to_port = min(this->to_port, other->to_port);
-	if (from_port > to_port)
+	if ((is_opaque(this) && is_opaque(other)) ||
+		(is_opaque(this) && is_any(other)) ||
+		(is_opaque(other) && is_any(this)))
 	{
-		return NULL;
+		from_port = 0xffff;
+		to_port = 0;
+	}
+	else
+	{
+		/* calculate the maximum port range allowed for both */
+		from_port = max(this->from_port, other->from_port);
+		to_port = min(this->to_port, other->to_port);
+		if (from_port > to_port)
+		{
+			return NULL;
+		}
 	}
 	/* get higher from-address */
 	if (memcmp(this->from, other->from, size) > 0)
