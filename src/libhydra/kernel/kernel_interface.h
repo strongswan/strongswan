@@ -47,6 +47,7 @@
 #define KERNEL_INTERFACE_H_
 
 typedef struct kernel_interface_t kernel_interface_t;
+typedef enum kernel_feature_t kernel_feature_t;
 
 #include <networking/host.h>
 #include <crypto/prf_plus.h>
@@ -54,6 +55,17 @@ typedef struct kernel_interface_t kernel_interface_t;
 #include <kernel/kernel_listener.h>
 #include <kernel/kernel_ipsec.h>
 #include <kernel/kernel_net.h>
+
+/**
+ * Bitfield of optional features a kernel backend supports.
+ *
+ * This feature-set is for both, kernel_ipsec_t and kernel_net_t. Each
+ * backend returns a subset of these features.
+ */
+enum kernel_feature_t {
+	/** IPsec can process ESPv3 (RFC 4303) TFC padded packets */
+	KERNEL_ESP_V3_TFC = (1<<0),
+};
 
 /**
  * Constructor function for ipsec kernel interface
@@ -72,6 +84,13 @@ typedef kernel_net_t* (*kernel_net_constructor_t)(void);
  * for SA and policy management and interface and IP address management.
  */
 struct kernel_interface_t {
+
+	/**
+	 * Get the feature set supported by the net and ipsec kernel backends.
+	 *
+	 * @return				ORed feature-set of backends
+	 */
+	kernel_feature_t (*get_features)(kernel_interface_t *this);
 
 	/**
 	 * Get a SPI from the kernel.

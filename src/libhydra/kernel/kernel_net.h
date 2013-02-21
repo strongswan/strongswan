@@ -28,6 +28,7 @@ typedef enum kernel_address_type_t kernel_address_type_t;
 #include <collections/enumerator.h>
 #include <networking/host.h>
 #include <plugins/plugin.h>
+#include <kernel/kernel_interface.h>
 
 /**
  * Type of addresses (e.g. when enumerating them)
@@ -54,6 +55,13 @@ enum kernel_address_type_t {
  * for interface and IP address management.
  */
 struct kernel_net_t {
+
+	/**
+	 * Get the feature set supported by this kernel backend.
+	 *
+	 * @return				ORed feature-set of backend
+	 */
+	kernel_feature_t (*get_features)(kernel_net_t *this);
 
 	/**
 	 * Get our outgoing source address for a destination.
