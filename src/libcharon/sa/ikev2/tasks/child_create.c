@@ -18,6 +18,7 @@
 #include "child_create.h"
 
 #include <daemon.h>
+#include <hydra.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/diffie_hellman.h>
 #include <credentials/certificates/x509.h>
@@ -615,6 +616,7 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 	nonce_payload_t *nonce_payload;
 	ke_payload_t *ke_payload;
 	ts_payload_t *ts_payload;
+	kernel_feature_t features;
 
 	/* add SA payload */
 	if (this->initiator)
@@ -660,6 +662,13 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 			break;
 		default:
 			break;
+	}
+
+	features = hydra->kernel_interface->get_features(hydra->kernel_interface);
+	if (!(features & KERNEL_ESP_V3_TFC))
+	{
+		message->add_notify(message, FALSE, ESP_TFC_PADDING_NOT_SUPPORTED,
+							chunk_empty);
 	}
 }
 
