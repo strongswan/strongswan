@@ -192,7 +192,8 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 		{
 			has_vip = TRUE;
 			child_cfg->add_traffic_selector(child_cfg, TRUE,
-				traffic_selector_create_from_subnet(host->clone(host), 32, 0, 0));
+				traffic_selector_create_from_subnet(host->clone(host),
+													32, 0, 0, 65535));
 		}
 		enumerator->destroy(enumerator);
 
@@ -200,7 +201,8 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 		{
 			host = ike_sa->get_my_host(ike_sa);
 			child_cfg->add_traffic_selector(child_cfg, TRUE,
-				traffic_selector_create_from_subnet(host->clone(host), 32, 0, 0));
+				traffic_selector_create_from_subnet(host->clone(host), 32, 0,
+													0, 65535));
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 

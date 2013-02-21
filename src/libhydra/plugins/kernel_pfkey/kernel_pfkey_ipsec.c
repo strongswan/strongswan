@@ -953,7 +953,8 @@ static traffic_selector_t* sadb_address2ts(struct sadb_address *address)
 	ts = traffic_selector_create_from_subnet(host,
 											 address->sadb_address_prefixlen,
 											 address->sadb_address_proto,
-											 host->get_port(host));
+											 host->get_port(host),
+											 host->get_port(host) ?: 65535);
 	return ts;
 }
 
@@ -2654,4 +2655,3 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 
 	return &this->public;
 }
-

@@ -776,12 +776,13 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  * see header
  */
 traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
-							u_int8_t netbits, u_int8_t protocol, u_int16_t port)
+							u_int8_t netbits, u_int8_t protocol,
+							u_int16_t from_port, u_int16_t to_port)
 {
 	private_traffic_selector_t *this;
 	chunk_t from;
 
-	this = traffic_selector_create(protocol, 0, 0, 65535);
+	this = traffic_selector_create(protocol, 0, from_port, to_port);
 
 	switch (net->get_family(net))
 	{
@@ -800,11 +801,6 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 	memcpy(this->from, from.ptr, from.len);
 	netbits = min(netbits, this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	calc_range(this, netbits);
-	if (port)
-	{
-		this->from_port = port;
-		this->to_port = port;
-	}
 	net->destroy(net);
 
 	return &this->public;
@@ -855,8 +851,9 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_cidr(char *string,
-									u_int8_t protocol, u_int16_t port)
+traffic_selector_t *traffic_selector_create_from_cidr(
+										char *string, u_int8_t protocol,
+										u_int16_t from_port, u_int16_t to_port)
 {
 	host_t *net;
 	int bits;
@@ -864,7 +861,8 @@ traffic_selector_t *traffic_selector_create_from_cidr(char *string,
 	net = host_create_from_subnet(string, &bits);
 	if (net)
 	{
-		return traffic_selector_create_from_subnet(net, bits, protocol, port);
+		return traffic_selector_create_from_subnet(net, bits, protocol,
+												   from_port, to_port);
 	}
 	return NULL;
 }

@@ -787,7 +787,7 @@ static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 	if (host)
 	{
 		return traffic_selector_create_from_subnet(host, prefixlen,
-												   sel->proto, port);
+											sel->proto, port, port ?: 65535);
 	}
 	return NULL;
 }
@@ -2822,4 +2822,3 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 
 	return &this->public;
 }
-

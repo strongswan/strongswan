@@ -369,7 +369,7 @@ static void add_ts(char *string, child_cfg_t *cfg, bool local)
 
 	if (string)
 	{
-		ts = traffic_selector_create_from_cidr(string, 0, 0);
+		ts = traffic_selector_create_from_cidr(string, 0, 0, 65535);
 		if (!ts)
 		{
 			DBG1(DBG_CFG, "parsing TS string '%s' failed", string);

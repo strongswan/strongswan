@@ -89,7 +89,7 @@ static traffic_selector_t *create_ts(char *string)
 	{
 		traffic_selector_t *ts;
 
-		ts = traffic_selector_create_from_cidr(string, 0, 0);
+		ts = traffic_selector_create_from_cidr(string, 0, 0, 65535);
 		if (ts)
 		{
 			return ts;
@@ -343,4 +343,3 @@ uci_config_t *uci_config_create(uci_parser_t *parser)
 
 	return &this->public;
 }
-

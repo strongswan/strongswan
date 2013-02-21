@@ -576,12 +576,12 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 	if (!tsi)
 	{
 		tsi = traffic_selector_create_from_subnet(hsi->clone(hsi),
-							hsi->get_family(hsi) == AF_INET ? 32 : 128, 0, 0);
+					hsi->get_family(hsi) == AF_INET ? 32 : 128, 0, 0, 65535);
 	}
 	if (!tsr)
 	{
 		tsr = traffic_selector_create_from_subnet(hsr->clone(hsr),
-							hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0);
+					hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0, 65535);
 	}
 	if (this->mode == MODE_TRANSPORT && this->udp &&
 	   (!tsi->is_host(tsi, hsi) || !tsr->is_host(tsr, hsr)))
