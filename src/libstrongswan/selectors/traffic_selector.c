@@ -284,8 +284,9 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	{
 		if (this->from_port == this->to_port)
 		{
-			struct servent *serv = getservbyport(htons(this->from_port), serv_proto);
+			struct servent *serv;
 
+			serv = getservbyport(htons(this->from_port), serv_proto);
 			if (serv)
 			{
 				written += print_in_hook(data, "%s", serv->s_name);
@@ -297,7 +298,8 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 		}
 		else
 		{
-			written += print_in_hook(data, "%d-%d", this->from_port, this->to_port);
+			written += print_in_hook(data, "%d-%d",
+									 this->from_port, this->to_port);
 		}
 	}
 
@@ -309,76 +311,81 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 	private_traffic_selector_t *this, traffic_selector_t *other_public)
 {
-	private_traffic_selector_t *other;
+	private_traffic_selector_t *other, *subset;
+	u_int16_t from_port, to_port;
+	u_char *from, *to;
+	u_int8_t protocol;
+	size_t size;
 
 	other = (private_traffic_selector_t*)other_public;
+
 	if (this->dynamic || other->dynamic)
 	{	/* no set_address() applied, TS has no subset */
 		return NULL;
 	}
-	if (this->type == other->type && (this->protocol == other->protocol ||
-								this->protocol == 0 || other->protocol == 0))
+
+	if (this->type != other->type)
 	{
-		u_int16_t from_port, to_port;
-		u_char *from, *to;
-		u_int8_t protocol;
-		size_t size;
-		private_traffic_selector_t *new_ts;
-
-		/* calculate the maximum port range allowed for both */
-		from_port = max(this->from_port, other->from_port);
-		to_port = min(this->to_port, other->to_port);
-		if (from_port > to_port)
-		{
-			return NULL;
-		}
-		/* select protocol, which is not zero */
-		protocol = max(this->protocol, other->protocol);
-
-		switch (this->type)
-		{
-			case TS_IPV4_ADDR_RANGE:
-				size = sizeof(this->from4);
-				break;
-			case TS_IPV6_ADDR_RANGE:
-				size = sizeof(this->from6);
-				break;
-			default:
-				return NULL;
-		}
-
-		/* get higher from-address */
-		if (memcmp(this->from, other->from, size) > 0)
-		{
-			from = this->from;
-		}
-		else
-		{
-			from = other->from;
-		}
-		/* get lower to-address */
-		if (memcmp(this->to, other->to, size) > 0)
-		{
-			to = other->to;
-		}
-		else
-		{
-			to = this->to;
-		}
-		/* if "from" > "to", we don't have a match */
-		if (memcmp(from, to, size) > 0)
-		{
-			return NULL;
-		}
-
-		/* we have a match in protocol, port, and address: return it... */
-		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port);
-		memcpy(new_ts->from, from, size);
-		memcpy(new_ts->to, to, size);
-		calc_netbits(new_ts);
-		return &new_ts->public;
+		return NULL;
 	}
-	return NULL;
+	switch (this->type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+			size = sizeof(this->from4);
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			size = sizeof(this->from6);
+			break;
+		default:
+			return NULL;
+	}
+
+	if (this->protocol != other->protocol &&
+		this->protocol != 0 && other->protocol != 0)
+	{
+		return NULL;
+	}
+	/* select protocol, which is not zero */
+	protocol = max(this->protocol, other->protocol);
+
+	/* calculate the maximum port range allowed for both */
+	from_port = max(this->from_port, other->from_port);
+	to_port = min(this->to_port, other->to_port);
+	if (from_port > to_port)
+	{
+		return NULL;
+	}
+	/* get higher from-address */
+	if (memcmp(this->from, other->from, size) > 0)
+	{
+		from = this->from;
+	}
+	else
+	{
+		from = other->from;
+	}
+	/* get lower to-address */
+	if (memcmp(this->to, other->to, size) > 0)
+	{
+		to = other->to;
+	}
+	else
+	{
+		to = this->to;
+	}
+	/* if "from" > "to", we don't have a match */
+	if (memcmp(from, to, size) > 0)
+	{
+		return NULL;
+	}
+
+	/* we have a match in protocol, port, and address: return it... */
+	subset = traffic_selector_create(protocol, this->type, from_port, to_port);
+	memcpy(subset->from, from, size);
+	memcpy(subset->to, to, size);
+	calc_netbits(subset);
+
+	return &subset->public;
 }
 
 METHOD(traffic_selector_t, equals, bool,
