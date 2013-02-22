@@ -900,7 +900,7 @@ METHOD(ike_sa_t, update_hosts, void,
 	else
 	{
 		/* update our address in any case */
-		if (!me->equals(me, this->my_host))
+		if (force && !me->equals(me, this->my_host))
 		{
 			set_my_host(this, me->clone(me));
 			update = TRUE;
@@ -909,7 +909,8 @@ METHOD(ike_sa_t, update_hosts, void,
 		if (!other->equals(other, this->other_host))
 		{
 			/* update others address if we are NOT NATed */
-			if (force || !has_condition(this, COND_NAT_HERE))
+			if ((has_condition(this, COND_NAT_THERE) &&
+				 !has_condition(this, COND_NAT_HERE)) || force )
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;
