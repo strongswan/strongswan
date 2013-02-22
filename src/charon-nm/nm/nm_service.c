@@ -87,11 +87,11 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	GValue *val;
 	GHashTable *config;
+	enumerator_t *enumerator;
 	host_t *me;
 	nm_handler_t *handler;
 
 	config = g_hash_table_new(g_str_hash, g_str_equal);
-	me = ike_sa->get_my_host(ike_sa);
 	handler = priv->handler;
 
 	/* NM requires a tundev, but netkey does not use one. Passing the physical
@@ -102,6 +102,15 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	g_value_set_string (val, priv->tun->get_name(priv->tun));
 	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
 
+	/* NM installs this IP address on the interface above, so we use the VIP if
+	 * we got one.
+	 */
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
+	if (!enumerator->enumerate(enumerator, &me))
+	{
+		me = ike_sa->get_my_host(ike_sa);
+	}
+	enumerator->destroy(enumerator);
 	val = g_slice_new0(GValue);
 	g_value_init(val, G_TYPE_UINT);
 	g_value_set_uint(val, *(u_int32_t*)me->get_address(me).ptr);
