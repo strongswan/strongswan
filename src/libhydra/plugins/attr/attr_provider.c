@@ -185,6 +185,7 @@ static void load_entries(private_attr_provider_t *this)
 		configuration_attribute_type_t type;
 		attribute_type_key_t *mapped = NULL;
 		attribute_entry_t *entry;
+		chunk_t data;
 		host_t *host;
 		char *pos;
 		int i, mask = -1, family;
@@ -218,34 +219,44 @@ static void load_entries(private_attr_provider_t *this)
 			host = host_create_from_string(token, 0);
 			if (!host)
 			{
-				DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
-				continue;
-			}
-			family = host->get_family(host);
-			entry = malloc_thing(attribute_entry_t);
-			entry->type = type ?: (family == AF_INET ? mapped->v4 : mapped->v6);
-			if (mask == -1)
-			{
-				entry->value = chunk_clone(host->get_address(host));
+				if (!type)
+				{
+					DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
+					continue;
+				}
+				/* store numeric attributes that are no IP addresses as strings */
+				data = chunk_clone(chunk_from_str(token));
 			}
 			else
 			{
-				if (family == AF_INET)
-				{	/* IPv4 attributes contain a subnet mask */
-					u_int32_t netmask;
-
-					mask = 32 - mask;
-					netmask = htonl((0xFFFFFFFF >> mask) << mask);
-					entry->value = chunk_cat("cc", host->get_address(host),
-											 chunk_from_thing(netmask));
+				family = host->get_family(host);
+				if (mask == -1)
+				{
+					data = chunk_clone(host->get_address(host));
 				}
 				else
-				{	/* IPv6 addresses the prefix only */
-					entry->value = chunk_cat("cc", host->get_address(host),
-											 chunk_from_chars(mask));
+				{
+					if (family == AF_INET)
+					{	/* IPv4 attributes contain a subnet mask */
+						u_int32_t netmask;
+
+						mask = 32 - mask;
+						netmask = htonl((0xFFFFFFFF >> mask) << mask);
+						data = chunk_cat("cc", host->get_address(host),
+										 chunk_from_thing(netmask));
+					}
+					else
+					{	/* IPv6 addresses the prefix only */
+						data = chunk_cat("cc", host->get_address(host),
+										 chunk_from_chars(mask));
+					}
 				}
+				host->destroy(host);
 			}
-			host->destroy(host);
+			INIT(entry,
+				.type = type ?: (family == AF_INET ? mapped->v4 : mapped->v6),
+				.value = data,
+			);
 			DBG2(DBG_CFG, "loaded attribute %N: %#B",
 				 configuration_attribute_type_names, entry->type, &entry->value);
 			this->attributes->insert_last(this->attributes, entry);
