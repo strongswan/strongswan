@@ -121,6 +121,14 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	g_value_set_uint(val, me->get_address(me).len * 8);
 	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
 
+	/* prevent NM from changing the default route. we set our own route in our
+	 * own routing table
+	 */
+	val = g_slice_new0(GValue);
+	g_value_init(val, G_TYPE_BOOLEAN);
+	g_value_set_boolean(val, TRUE);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_NEVER_DEFAULT, val);
+
 	val = handler_to_val(handler, INTERNAL_IP4_DNS);
 	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_DNS, val);
 
