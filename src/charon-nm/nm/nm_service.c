@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +23,7 @@
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
 #include <credentials/certificates/x509.h>
+#include <networking/tun_device.h>
 
 #include <stdio.h>
 
@@ -41,6 +43,8 @@ typedef struct {
 	nm_creds_t *creds;
 	/* attribute handler for DNS/NBNS server information */
 	nm_handler_t *handler;
+	/* dummy TUN device */
+	tun_device_t *tun;
 	/* name of the connection */
 	char *name;
 } NMStrongswanPluginPrivate;
@@ -80,6 +84,7 @@ static GValue* handler_to_val(nm_handler_t *handler,
 static void signal_ipv4_config(NMVPNPlugin *plugin,
 							   ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
+	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	GValue *val;
 	GHashTable *config;
 	host_t *me;
@@ -87,14 +92,14 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 
 	config = g_hash_table_new(g_str_hash, g_str_equal);
 	me = ike_sa->get_my_host(ike_sa);
-	handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
+	handler = priv->handler;
 
 	/* NM requires a tundev, but netkey does not use one. Passing the physical
-	 * interface does not work, as NM fiddles around with it. Passing the
-	 * loopback seems to work, though... */
+	 * interface does not work, as NM fiddles around with it. So we pass a dummy
+	 * TUN device along for NM to play with... */
 	val = g_slice_new0 (GValue);
 	g_value_init (val, G_TYPE_STRING);
-	g_value_set_string (val, "lo");
+	g_value_set_string (val, priv->tun->get_name(priv->tun));
 	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
 
 	val = g_slice_new0(GValue);
@@ -303,6 +308,13 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
+	if (!priv->tun)
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+					"Failed to create dummy TUN device.");
+		gateway->destroy(gateway);
+		return FALSE;
+	}
 	address = nm_setting_vpn_get_data_item(vpn, "address");
 	if (!address || !*address)
 	{
@@ -680,6 +692,25 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	memset(&priv->listener, 0, sizeof(listener_t));
 	priv->listener.child_updown = child_updown;
 	priv->listener.ike_rekey = ike_rekey;
+	priv->tun = tun_device_create(NULL);
+	priv->name = NULL;
+}
+
+/**
+ * Destructor
+ */
+static void nm_strongswan_plugin_dispose(GObject *obj)
+{
+	NMStrongswanPlugin *plugin;
+	NMStrongswanPluginPrivate *priv;
+
+	plugin = NM_STRONGSWAN_PLUGIN(obj);
+	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
+	if (priv->tun)
+	{
+		priv->tun->destroy(priv->tun);
+		priv->tun = NULL;
+	}
 }
 
 /**
@@ -695,6 +726,7 @@ static void nm_strongswan_plugin_class_init(
 	parent_class->connect = connect_;
 	parent_class->need_secrets = need_secrets;
 	parent_class->disconnect = disconnect;
+	G_OBJECT_CLASS(strongswan_class)->dispose = nm_strongswan_plugin_dispose;
 }
 
 /**
@@ -711,10 +743,10 @@ NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds,
 	{
 		NMStrongswanPluginPrivate *priv;
 
+		/* the rest of the initialization happened in _init above */
 		priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 		priv->creds = creds;
 		priv->handler = handler;
-		priv->name = NULL;
 	}
 	return plugin;
 }
