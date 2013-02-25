@@ -135,23 +135,12 @@ static status_t entry_destroy(entry_t *this)
  */
 static entry_t *entry_create()
 {
-	entry_t *this = malloc_thing(entry_t);
+	entry_t *this;
 
-	this->waiting_threads = 0;
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-
-	/* we set checkout flag when we really give it out */
-	this->checked_out = FALSE;
-	this->driveout_new_threads = FALSE;
-	this->driveout_waiting_threads = FALSE;
-	this->message_id = -1;
-	this->init_hash = chunk_empty;
-	this->other = NULL;
-	this->half_open = FALSE;
-	this->my_id = NULL;
-	this->other_id = NULL;
-	this->ike_sa_id = NULL;
-	this->ike_sa = NULL;
+	INIT(this,
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.message_id = -1,
+	);
 
 	return this;
 }
