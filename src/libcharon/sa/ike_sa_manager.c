@@ -108,9 +108,9 @@ struct entry_t {
 	identification_t *other_id;
 
 	/**
-	 * message ID currently processing, if any
+	 * message ID or hash of currently processing message, -1 if none
 	 */
-	u_int32_t message_id;
+	u_int32_t processing;
 };
 
 /**
@@ -139,7 +139,7 @@ static entry_t *entry_create()
 
 	INIT(this,
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
-		.message_id = -1,
+		.processing = -1,
 	);
 
 	return this;
@@ -1160,6 +1160,20 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	return ike_sa;
 }
 
+/**
+ * Get the message ID or message hash to detect early retransmissions
+ */
+static u_int32_t get_message_id_or_hash(message_t *message)
+{
+	/* Use the message ID, or the message hash in IKEv1 Main/Aggressive mode */
+	if (message->get_major_version(message) == IKEV1_MAJOR_VERSION &&
+		message->get_message_id(message) == 0)
+	{
+		return chunk_hash(message->get_packet_data(message));
+	}
+	return message->get_message_id(message);
+}
+
 METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 	private_ike_sa_manager_t* this, message_t *message)
 {
@@ -1235,7 +1249,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 						entry->checked_out = TRUE;
 						unlock_single_segment(this, segment);
 
-						entry->message_id = message->get_message_id(message);
+						entry->processing = get_message_id_or_hash(message);
 						entry->init_hash = hash;
 
 						DBG2(DBG_MGR, "created IKE_SA %s[%u]",
@@ -1279,12 +1293,11 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 
 	if (get_entry_by_id(this, id, &entry, &segment) == SUCCESS)
 	{
-		/* only check out in IKEv2 if we are not already processing it */
-		if (message->get_request(message) &&
-			message->get_message_id(message) == entry->message_id)
+		/* only check out if we are not already processing it. */
+		if (entry->processing == get_message_id_or_hash(message))
 		{
 			DBG1(DBG_MGR, "ignoring request with ID %u, already processing",
-				 entry->message_id);
+				 entry->processing);
 		}
 		else if (wait_for_entry(this, entry, segment))
 		{
@@ -1294,7 +1307,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 			entry->checked_out = TRUE;
 			if (message->get_first_payload_type(message) != FRAGMENT_V1)
 			{
-				entry->message_id = message->get_message_id(message);
+				entry->processing = get_message_id_or_hash(message);
 			}
 			if (ike_id->get_responder_spi(ike_id) == 0)
 			{
@@ -1553,7 +1566,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
-		entry->message_id = -1;
+		entry->processing = -1;
 		/* check if this SA is half-open */
 		if (entry->half_open && ike_sa->get_state(ike_sa) != IKE_CONNECTING)
 		{
