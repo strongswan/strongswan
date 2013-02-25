@@ -1471,6 +1471,21 @@ METHOD(task_manager_t, process_message, status_t,
 			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
 			return SUCCESS;
 		}
+
+		/* reject Main/Agressive Modes once established */
+		if (msg->get_exchange_type(msg) == ID_PROT ||
+			msg->get_exchange_type(msg) == AGGRESSIVE)
+		{
+			if (this->ike_sa->get_state(this->ike_sa) != IKE_CREATED &&
+				this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING &&
+				msg->get_first_payload_type(msg) != FRAGMENT_V1)
+			{
+				DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
+					 exchange_type_names, msg->get_exchange_type(msg));
+				return FAILED;
+			}
+		}
+
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
 			this->active_tasks->get_count(this->active_tasks))
 		{	/* main mode not yet complete, queue XAuth/Mode config tasks */
@@ -2030,4 +2045,3 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 
 	return &this->public;
 }
-
