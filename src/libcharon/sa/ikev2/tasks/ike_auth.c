@@ -319,7 +319,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 	{
 		if (this->peer_cfg)
 		{
-			bool complies = TRUE;
+			char *comply_error = NULL;
 			enumerator_t *e1, *e2, *tmp;
 			auth_cfg_t *c1, *c2;
 
@@ -336,22 +336,30 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			while (e1->enumerate(e1, &c1))
 			{
 				/* check if done authentications comply to configured ones */
-				if ((!e2->enumerate(e2, &c2)) ||
-					(!strict && !c1->complies(c1, c2, TRUE)) ||
-					(strict && !c2->complies(c2, c1, TRUE)))
+				if (!e2->enumerate(e2, &c2))
 				{
-					complies = FALSE;
+					comply_error = "insufficient authentication rounds";
+					break;
+				}
+				if (!strict && !c1->complies(c1, c2, TRUE))
+				{
+					comply_error = "non-matching authentication done";
+					break;
+				}
+				if (strict && !c2->complies(c2, c1, TRUE))
+				{
+					comply_error = "constraint checking failed";
 					break;
 				}
 			}
 			e1->destroy(e1);
 			e2->destroy(e2);
-			if (complies)
+			if (!comply_error)
 			{
 				break;
 			}
-			DBG1(DBG_CFG, "selected peer config '%s' inacceptable",
-				 this->peer_cfg->get_name(this->peer_cfg));
+			DBG1(DBG_CFG, "selected peer config '%s' inacceptable: %s",
+				 this->peer_cfg->get_name(this->peer_cfg), comply_error);
 			this->peer_cfg->destroy(this->peer_cfg);
 		}
 		if (this->candidates->remove_first(this->candidates,
