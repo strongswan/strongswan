@@ -173,6 +173,10 @@ void nm_backend_register()
 		PLUGIN_CALLBACK((plugin_feature_callback_t)nm_backend_cb, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "NetworkManager backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_ECDSA),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_ANY),
+				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
 	};
 	lib->plugins->add_static_features(lib->plugins, "nm-backend", features,
 									  countof(features), TRUE);
