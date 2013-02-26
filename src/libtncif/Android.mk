@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
 tncif.h tncifimc.h tncifimv.h tncif_names.h tncif_names.c \
+tncif_identity.h tncif_identity.c \
 tncif_pa_subtypes.h tncif_pa_subtypes.c
 
 # build libtncif ---------------------------------------------------------------
