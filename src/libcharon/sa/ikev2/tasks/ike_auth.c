@@ -980,7 +980,10 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		apply_auth_cfg(this, FALSE);
+		if (!mutual_eap)
+		{
+			apply_auth_cfg(this, FALSE);
+		}
 	}
 
 	if (this->my_auth)
@@ -989,6 +992,10 @@ METHOD(task_t, process_i, status_t,
 		{
 			case SUCCESS:
 				apply_auth_cfg(this, TRUE);
+				if (this->my_auth->is_mutual(this->my_auth))
+				{
+					apply_auth_cfg(this, FALSE);
+				}
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				this->do_another_auth = do_another_auth(this);
