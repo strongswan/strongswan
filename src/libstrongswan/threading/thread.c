@@ -129,7 +129,11 @@ static thread_value_t *current_thread;
 
 #ifndef HAVE_PTHREAD_CANCEL
 /* if pthread_cancel is not available, we emulate it using a signal */
+#ifdef ANDROID
+#define SIG_CANCEL SIGUSR2
+#else
 #define SIG_CANCEL (SIGRTMIN+7)
+#endif
 
 /* the signal handler for SIG_CANCEL uses pthread_exit to terminate the
  * "cancelled" thread */
