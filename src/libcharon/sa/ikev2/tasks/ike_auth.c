@@ -223,6 +223,18 @@ static auth_cfg_t *get_auth_cfg(private_ike_auth_t *this, bool local)
 }
 
 /**
+ * Move the currently active auth config to the auth configs completed
+ */
+static void apply_auth_cfg(private_ike_auth_t *this, bool local)
+{
+	auth_cfg_t *cfg;
+
+	cfg = auth_cfg_create();
+	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, local), local);
+	this->ike_sa->add_auth_cfg(this->ike_sa, local, cfg);
+}
+
+/**
  * Check if we have should initiate another authentication round
  */
 static bool do_another_auth(private_ike_auth_t *this)
@@ -464,10 +476,7 @@ METHOD(task_t, build_i, status_t,
 	switch (this->my_auth->build(this->my_auth, message))
 	{
 		case SUCCESS:
-			/* authentication step complete, reset authenticator */
-			cfg = auth_cfg_create();
-			cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE), TRUE);
-			this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+			apply_auth_cfg(this, TRUE);
 			this->my_auth->destroy(this->my_auth);
 			this->my_auth = NULL;
 			break;
@@ -640,10 +649,7 @@ METHOD(task_t, process_r, status_t,
 		return NEED_MORE;
 	}
 
-	/* store authentication information */
-	cfg = auth_cfg_create();
-	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
+	apply_auth_cfg(this, FALSE);
 
 	if (!update_cfg_candidates(this, FALSE))
 	{
@@ -778,10 +784,7 @@ METHOD(task_t, build_r, status_t,
 		switch (this->my_auth->build(this->my_auth, message))
 		{
 			case SUCCESS:
-				cfg = auth_cfg_create();
-				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
-						   TRUE);
-				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+				apply_auth_cfg(this, TRUE);
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				break;
@@ -969,10 +972,7 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		/* store authentication information, reset authenticator */
-		cfg = auth_cfg_create();
-		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
+		apply_auth_cfg(this, FALSE);
 	}
 
 	if (this->my_auth)
@@ -980,10 +980,7 @@ METHOD(task_t, process_i, status_t,
 		switch (this->my_auth->process(this->my_auth, message))
 		{
 			case SUCCESS:
-				cfg = auth_cfg_create();
-				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
-						   TRUE);
-				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+				apply_auth_cfg(this, TRUE);
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				this->do_another_auth = do_another_auth(this);
