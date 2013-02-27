@@ -16,6 +16,8 @@
 #include "pt_tls_server.h"
 #include "pt_tls.h"
 
+#include <sasl/sasl_mechanism.h>
+
 #include <utils/debug.h>
 
 typedef struct private_pt_tls_server_t private_pt_tls_server_t;
@@ -99,16 +101,246 @@ static bool negotiate_version(private_pt_tls_server_t *this)
 }
 
 /**
- * Authenticated PT-TLS session with SASL
+ * Process SASL data, send result
  */
-static bool authenticate(private_pt_tls_server_t *this)
+static status_t process_sasl(private_pt_tls_server_t *this,
+							 sasl_mechanism_t *sasl, chunk_t data)
 {
 	bio_writer_t *writer;
 
-	/* send empty SASL mechanims list to skip authentication */
-	writer = bio_writer_create(0);
+	switch (sasl->process(sasl, data))
+	{
+		case NEED_MORE:
+			return NEED_MORE;
+		case SUCCESS:
+			DBG1(DBG_TNC, "SASL %s authentication successful",
+				 sasl->get_name(sasl));
+			writer = bio_writer_create(1);
+			writer->write_uint8(writer, PT_TLS_SASL_RESULT_SUCCESS);
+			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
+							 this->identifier++))
+			{
+				return SUCCESS;
+			}
+			return FAILED;
+		case FAILED:
+		default:
+			DBG1(DBG_TNC, "SASL %s authentication failed",
+				 sasl->get_name(sasl));
+			writer = bio_writer_create(1);
+			/* sending abort does not allow the client to retry */
+			writer->write_uint8(writer, PT_TLS_SASL_RESULT_ABORT);
+			pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
+						 this->identifier++);
+			return FAILED;
+	}
+}
+
+/**
+ * Read a SASL message and process it
+ */
+static status_t read_sasl(private_pt_tls_server_t *this,
+						  sasl_mechanism_t *sasl)
+{
+	u_int32_t vendor, type, identifier;
+	bio_reader_t *reader;
+	status_t status;
+	chunk_t data;
+
+	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
+	if (!reader)
+	{
+		return FAILED;
+	}
+	if (vendor != 0 || type != PT_TLS_SASL_AUTH_DATA ||
+		!reader->read_data(reader, reader->remaining(reader), &data))
+	{
+		reader->destroy(reader);
+		return FAILED;
+	}
+	status = process_sasl(this, sasl, data);
+	reader->destroy(reader);
+	return status;
+}
+
+/**
+ * Build and write SASL message, or result message
+ */
+static status_t write_sasl(private_pt_tls_server_t *this,
+						   sasl_mechanism_t *sasl)
+{
+	bio_writer_t *writer;
+	chunk_t chunk;
+
+	switch (sasl->build(sasl, &chunk))
+	{
+		case NEED_MORE:
+			writer = bio_writer_create(chunk.len);
+			writer->write_data(writer, chunk);
+			free(chunk.ptr);
+			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_AUTH_DATA,
+							 this->identifier++))
+			{
+				return NEED_MORE;
+			}
+			return FAILED;
+		case SUCCESS:
+			DBG1(DBG_TNC, "SASL %s authentication successful",
+				 sasl->get_name(sasl));
+			writer = bio_writer_create(1 + chunk.len);
+			writer->write_uint8(writer, PT_TLS_SASL_RESULT_SUCCESS);
+			writer->write_data(writer, chunk);
+			free(chunk.ptr);
+			if (pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
+							 this->identifier++))
+			{
+				return SUCCESS;
+			}
+			return FAILED;
+		case FAILED:
+		default:
+			DBG1(DBG_TNC, "SASL %s authentication failed",
+				 sasl->get_name(sasl));
+			writer = bio_writer_create(1);
+			/* sending abort does not allow the client to retry */
+			writer->write_uint8(writer, PT_TLS_SASL_RESULT_ABORT);
+			pt_tls_write(this->tls, writer, PT_TLS_SASL_RESULT,
+						 this->identifier++);
+			return FAILED;
+	}
+}
+
+/**
+ * Send the list of supported SASL mechanisms
+ */
+static bool send_sasl_mechs(private_pt_tls_server_t *this)
+{
+	enumerator_t *enumerator;
+	bio_writer_t *writer = NULL;
+	char *name;
+
+	enumerator = sasl_mechanism_create_enumerator(TRUE);
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		if (!writer)
+		{
+			writer = bio_writer_create(32);
+		}
+		DBG1(DBG_TNC, "offering SASL %s", name);
+		writer->write_data8(writer, chunk_from_str(name));
+	}
+	enumerator->destroy(enumerator);
+
+	if (!writer)
+	{	/* no mechanisms available? */
+		return FALSE;
+	}
 	return pt_tls_write(this->tls, writer, PT_TLS_SASL_MECHS,
 						this->identifier++);
+}
+
+/**
+ * Read the selected SASL mechanism, and process piggybacked data
+ */
+static status_t read_sasl_mech_selection(private_pt_tls_server_t *this,
+										 sasl_mechanism_t **out)
+{
+	u_int32_t vendor, type, identifier;
+	sasl_mechanism_t *sasl;
+	bio_reader_t *reader;
+	chunk_t chunk;
+	u_int8_t len;
+	char buf[21];
+
+	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
+	if (!reader)
+	{
+		return FAILED;
+	}
+	if (vendor != 0 || type != PT_TLS_SASL_MECH_SELECTION ||
+		!reader->read_uint8(reader, &len) ||
+		!reader->read_data(reader, len & 0x1F, &chunk))
+	{
+		reader->destroy(reader);
+		return FAILED;
+	}
+	snprintf(buf, sizeof(buf), "%.*s", (int)chunk.len, chunk.ptr);
+
+	DBG1(DBG_TNC, "client starts SASL %s authentication", buf);
+
+	sasl = sasl_mechanism_create(buf, NULL);
+	if (!sasl)
+	{
+		reader->destroy(reader);
+		return FAILED;
+	}
+	/* initial SASL data piggybacked? */
+	if (reader->remaining(reader))
+	{
+		switch (process_sasl(this, sasl, reader->peek(reader)))
+		{
+			case NEED_MORE:
+				break;
+			case SUCCESS:
+				reader->destroy(reader);
+				*out = sasl;
+				return SUCCESS;
+			case FAILED:
+			default:
+				reader->destroy(reader);
+				sasl->destroy(sasl);
+				return FAILED;
+		}
+	}
+	reader->destroy(reader);
+	*out = sasl;
+	return NEED_MORE;
+}
+
+/**
+ * Do a single SASL exchange
+ */
+static bool do_sasl(private_pt_tls_server_t *this)
+{
+	sasl_mechanism_t *sasl;
+	status_t status;
+
+	if (!send_sasl_mechs(this))
+	{
+		return FALSE;
+	}
+	status = read_sasl_mech_selection(this, &sasl);
+	if (status == FAILED)
+	{
+		return FALSE;
+	}
+	while (status == NEED_MORE)
+	{
+		status = write_sasl(this, sasl);
+		if (status == NEED_MORE)
+		{
+			status = read_sasl(this, sasl);
+		}
+	}
+	sasl->destroy(sasl);
+	return status == SUCCESS;
+}
+
+/**
+ * Authenticated PT-TLS session with a single SASL method
+ */
+static bool authenticate(private_pt_tls_server_t *this)
+{
+	if (do_sasl(this))
+	{
+		/* complete SASL with emtpy mechanism list */
+		bio_writer_t *writer;
+
+		writer = bio_writer_create(0);
+		return pt_tls_write(this->tls, writer, PT_TLS_SASL_MECHS,
+							this->identifier++);
+	}
+	return FALSE;
 }
 
 /**
@@ -213,7 +445,6 @@ METHOD(pt_tls_server_t, handle, status_t,
 			this->state = PT_TLS_SERVER_AUTH;
 			break;
 		case PT_TLS_SERVER_AUTH:
-			DBG1(DBG_TNC, "sending empty mechanism list to skip SASL");
 			if (!authenticate(this))
 			{
 				return FAILED;
