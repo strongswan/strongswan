@@ -8,4 +8,5 @@ libpttls_la_SOURCES = pt_tls.c pt_tls.h \
 	pt_tls_client.c pt_tls_client.h \
 	pt_tls_server.c pt_tls_server.h \
 	pt_tls_dispatcher.c pt_tls_dispatcher.h \
+	sasl/sasl_plain/sasl_plain.c sasl/sasl_plain/sasl_plain.h \
 	sasl/sasl_mechanism.c sasl/sasl_mechanism.h

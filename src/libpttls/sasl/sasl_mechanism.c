@@ -15,6 +15,8 @@
 
 #include "sasl_mechanism.h"
 
+#include "sasl_plain/sasl_plain.h"
+
 /**
  * Available SASL mechanisms.
  */
@@ -23,6 +25,8 @@ static struct {
 	bool server;
 	sasl_mechanism_constructor_t create;
 } mechs[] = {
+	{ "PLAIN",		TRUE,	(sasl_mechanism_constructor_t)sasl_plain_create	},
+	{ "PLAIN",		FALSE,	(sasl_mechanism_constructor_t)sasl_plain_create	},
 };
 
 /**
