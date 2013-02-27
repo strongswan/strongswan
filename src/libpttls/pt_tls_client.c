@@ -48,7 +48,12 @@ struct private_pt_tls_client_t {
 	/**
 	 * Server identity
 	 */
-	identification_t *id;
+	identification_t *server;
+
+	/**
+	 * Client authentication identity
+	 */
+	identification_t *client;
 
 	/**
 	 * Current PT-TLS message identifier
@@ -77,7 +82,7 @@ static bool make_connection(private_pt_tls_client_t *this)
 		return FALSE;
 	}
 
-	this->tls = tls_socket_create(FALSE, this->id, NULL, fd, NULL);
+	this->tls = tls_socket_create(FALSE, this->server, this->client, fd, NULL);
 	if (!this->tls)
 	{
 		close(fd);
@@ -283,14 +288,16 @@ METHOD(pt_tls_client_t, destroy, void,
 		close(fd);
 	}
 	this->address->destroy(this->address);
-	this->id->destroy(this->id);
+	this->server->destroy(this->server);
+	this->client->destroy(this->client);
 	free(this);
 }
 
 /**
  * See header
  */
-pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id)
+pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *server,
+									  identification_t *client)
 {
 	private_pt_tls_client_t *this;
 
@@ -300,7 +307,8 @@ pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id)
 			.destroy = _destroy,
 		},
 		.address = address,
-		.id = id,
+		.server = server,
+		.client = client,
 	);
 
 	return &this->public;
