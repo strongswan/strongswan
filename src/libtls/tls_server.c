@@ -984,11 +984,7 @@ METHOD(tls_handshake_t, build, status_t,
 			}
 			/* otherwise fall through to next state */
 		case STATE_KEY_EXCHANGE_SENT:
-			if (this->peer)
-			{
-				return send_certificate_request(this, type, writer);
-			}
-			/* otherwise fall through to next state */
+			return send_certificate_request(this, type, writer);
 		case STATE_CERTREQ_SENT:
 			return send_hello_done(this, type, writer);
 		case STATE_CIPHERSPEC_CHANGED_OUT:
