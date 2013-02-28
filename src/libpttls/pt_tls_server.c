@@ -14,7 +14,6 @@
  */
 
 #include "pt_tls_server.h"
-#include "pt_tls.h"
 
 #include <sasl/sasl_mechanism.h>
 
@@ -36,6 +35,11 @@ struct private_pt_tls_server_t {
 	 * TLS protected socket
 	 */
 	tls_socket_t *tls;
+
+	/**
+	 * Client authentication requirements
+	 */
+	pt_tls_auth_t auth;
 
 	enum {
 		/* expecting version negotiation */
@@ -305,6 +309,37 @@ static bool do_sasl(private_pt_tls_server_t *this)
 	sasl_mechanism_t *sasl;
 	status_t status;
 
+	switch (this->auth)
+	{
+		case PT_TLS_AUTH_NONE:
+			return TRUE;
+		case PT_TLS_AUTH_TLS:
+			if (this->tls->get_peer_id(this->tls))
+			{
+				return TRUE;
+			}
+			DBG1(DBG_TNC, "requiring TLS certificate client authentication");
+			return FALSE;
+		case PT_TLS_AUTH_SASL:
+			break;
+		case PT_TLS_AUTH_TLS_OR_SASL:
+			if (this->tls->get_peer_id(this->tls))
+			{
+				DBG1(DBG_TNC, "skipping SASL, client authenticated with TLS "
+					 "certificate");
+				return TRUE;
+			}
+			break;
+		case PT_TLS_AUTH_TLS_AND_SASL:
+		default:
+			if (!this->tls->get_peer_id(this->tls))
+			{
+				DBG1(DBG_TNC, "requiring TLS certificate client authentication");
+				return FALSE;
+			}
+			break;
+	}
+
 	if (!send_sasl_mechs(this))
 	{
 		return FALSE;
@@ -482,7 +517,7 @@ METHOD(pt_tls_server_t, destroy, void,
  * See header
  */
 pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
-									  tnccs_t *tnccs)
+									  pt_tls_auth_t auth, tnccs_t *tnccs)
 {
 	private_pt_tls_server_t *this;
 
@@ -495,6 +530,7 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
 		.state = PT_TLS_SERVER_VERSION,
 		.tls = tls_socket_create(TRUE, server, NULL, fd, NULL),
 		.tnccs = (tls_t*)tnccs,
+		.auth = auth,
 	);
 
 	if (!this->tls)

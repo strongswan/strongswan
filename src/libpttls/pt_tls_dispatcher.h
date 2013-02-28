@@ -26,6 +26,8 @@
 
 #include <tnc/tnccs/tnccs.h>
 
+#include "pt_tls.h"
+
 typedef struct pt_tls_dispatcher_t pt_tls_dispatcher_t;
 
 /**
@@ -64,9 +66,10 @@ struct pt_tls_dispatcher_t {
  *
  * @param address		server address with port to listen on, gets owned
  * @param id			TLS server identity, gets owned
+ * @param auth			client authentication to perform
  * @return				dispatcher service
  */
 pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
-											  identification_t *id);
+									identification_t *id, pt_tls_auth_t auth);
 
 #endif /** PT_TLS_DISPATCHER_H_ @}*/
