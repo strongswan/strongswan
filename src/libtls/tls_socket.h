@@ -77,6 +77,20 @@ struct tls_socket_t {
 	int (*get_fd)(tls_socket_t *this);
 
 	/**
+	 * Return the server identity.
+	 *
+	 * @return			server identity
+	 */
+	identification_t* (*get_server_id)(tls_socket_t *this);
+
+	/**
+	 * Return the peer identity.
+	 *
+	 * @return			peer identity
+	 */
+	identification_t* (*get_peer_id)(tls_socket_t *this);
+
+	/**
 	 * Destroy a tls_socket_t.
 	 */
 	void (*destroy)(tls_socket_t *this);

@@ -378,6 +378,18 @@ METHOD(tls_socket_t, get_fd, int,
 	return this->fd;
 }
 
+METHOD(tls_socket_t, get_server_id, identification_t*,
+	private_tls_socket_t *this)
+{
+	return this->tls->get_server_id(this->tls);
+}
+
+METHOD(tls_socket_t, get_peer_id, identification_t*,
+	private_tls_socket_t *this)
+{
+	return this->tls->get_peer_id(this->tls);
+}
+
 METHOD(tls_socket_t, destroy, void,
 	private_tls_socket_t *this)
 {
@@ -403,6 +415,8 @@ tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
 			.write = _write_,
 			.splice = _splice,
 			.get_fd = _get_fd,
+			.get_server_id = _get_server_id,
+			.get_peer_id = _get_peer_id,
 			.destroy = _destroy,
 		},
 		.app = {
