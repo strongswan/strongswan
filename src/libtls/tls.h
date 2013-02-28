@@ -193,16 +193,16 @@ struct tls_t {
 	bool (*is_server)(tls_t *this);
 
 	/**
-	 * Return the server identity
+	 * Return the server identity.
 	 *
-	 * @return                     Server identity
+	 * @return			server identity
 	 */
 	identification_t* (*get_server_id)(tls_t *this);
 
 	/**
-	 * Return the peer identity
+	 * Return the peer identity.
 	 *
-	 * @return			Peer identity
+	 * @return			peer identity
 	 */
 	identification_t* (*get_peer_id)(tls_t *this);
 

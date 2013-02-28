@@ -367,6 +367,11 @@ static status_t process_certificate(private_tls_server_t *this,
 				DBG1(DBG_TLS, "received TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
+				if (this->peer == NULL)
+				{	/* apply identity to authenticate */
+					this->peer = cert->get_subject(cert);
+					this->peer = this->peer->clone(this->peer);
+				}
 			}
 			else
 			{
@@ -1045,11 +1050,25 @@ METHOD(tls_handshake_t, finished, bool,
 	return this->state == STATE_FINISHED_SENT;
 }
 
+METHOD(tls_handshake_t, get_peer_id, identification_t*,
+	private_tls_server_t *this)
+{
+	return this->peer;
+}
+
+METHOD(tls_handshake_t, get_server_id, identification_t*,
+	private_tls_server_t *this)
+{
+	return this->server;
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_server_t *this)
 {
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->dh);
+	DESTROY_IF(this->peer);
+	this->server->destroy(this->server);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
@@ -1075,14 +1094,16 @@ tls_server_t *tls_server_create(tls_t *tls,
 				.cipherspec_changed = _cipherspec_changed,
 				.change_cipherspec = _change_cipherspec,
 				.finished = _finished,
+				.get_peer_id = _get_peer_id,
+				.get_server_id = _get_server_id,
 				.destroy = _destroy,
 			},
 		},
 		.tls = tls,
 		.crypto = crypto,
 		.alert = alert,
-		.server = server,
-		.peer = peer,
+		.server = server->clone(server),
+		.peer = peer ? peer->clone(peer) : NULL,
 		.state = STATE_INIT,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),

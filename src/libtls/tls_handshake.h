@@ -84,6 +84,20 @@ struct tls_handshake_t {
 	bool (*finished)(tls_handshake_t *this);
 
 	/**
+	 * Get the peer identity authenticated/to authenticate during handshake.
+	 *
+	 * @return			peer identity
+	 */
+	identification_t* (*get_peer_id)(tls_handshake_t *this);
+
+	/**
+	 * Get the server identity authenticated/to authenticate during handshake.
+	 *
+	 * @return			server identity
+	 */
+	identification_t* (*get_server_id)(tls_handshake_t *this);
+
+	/**
 	 * Destroy a tls_handshake_t.
 	 */
 	void (*destroy)(tls_handshake_t *this);

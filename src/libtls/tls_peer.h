@@ -41,11 +41,15 @@ struct tls_peer_t {
 
 /**
  * Create a tls_peer instance.
-*
+ *
+ * If a peer identity is given, but the client does not get requested or is
+ * otherwise unable to perform client authentication, NULL is returned in
+ * tls_handshake_t.get_peer_id() instead of the peer identity.
+ *
  * @param tls		TLS stack
  * @param crypto	TLS crypto helper
  * @param alert		TLS alert handler
- * @param peer		peer identity
+ * @param peer		peer identity, NULL to skip client authentication
  * @param server	server identity
  */
 tls_peer_t *tls_peer_create(tls_t *tls, tls_crypto_t *crypto, tls_alert_t *alert,
