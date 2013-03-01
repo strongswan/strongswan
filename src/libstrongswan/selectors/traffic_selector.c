@@ -174,7 +174,24 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 /**
  * internal generic constructor
  */
-static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port);
+static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
+						ts_type_t type, u_int16_t from_port, u_int16_t to_port);
+
+/**
+ * Check if TS contains "opaque" ports
+ */
+static bool is_opaque(private_traffic_selector_t *this)
+{
+	return this->from_port == 0xffff && this->to_port == 0;
+}
+
+/**
+ * Check if TS contains "any" ports
+ */
+static bool is_any(private_traffic_selector_t *this)
+{
+	return this->from_port == 0 && this->to_port == 0xffff;
+}
 
 /**
  * Described in header.
@@ -248,7 +265,7 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 
 	/* check if we have protocol and/or port selectors */
 	has_proto = this->protocol != 0;
-	has_ports = !(this->from_port == 0 && this->to_port == 0xFFFF);
+	has_ports = !is_any(this);
 
 	if (!has_proto && !has_ports)
 	{
@@ -283,8 +300,9 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	{
 		if (this->from_port == this->to_port)
 		{
-			struct servent *serv = getservbyport(htons(this->from_port), serv_proto);
+			struct servent *serv;
 
+			serv = getservbyport(htons(this->from_port), serv_proto);
 			if (serv)
 			{
 				written += print_in_hook(data, "%s", serv->s_name);
@@ -294,9 +312,14 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 				written += print_in_hook(data, "%d", this->from_port);
 			}
 		}
+		else if (is_opaque(this))
+		{
+			written += print_in_hook(data, "OPAQUE");
+		}
 		else
 		{
-			written += print_in_hook(data, "%d-%d", this->from_port, this->to_port);
+			written += print_in_hook(data, "%d-%d",
+									 this->from_port, this->to_port);
 		}
 	}
 
@@ -305,24 +328,55 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	return written;
 }
 
-/**
- * Implements traffic_selector_t.get_subset
- */
-static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
+METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
+	private_traffic_selector_t *this, traffic_selector_t *other_public)
 {
+	private_traffic_selector_t *other, *subset;
+	u_int16_t from_port, to_port;
+	u_char *from, *to;
+	u_int8_t protocol;
+	size_t size;
+
+	other = (private_traffic_selector_t*)other_public;
+
 	if (this->dynamic || other->dynamic)
 	{	/* no set_address() applied, TS has no subset */
 		return NULL;
 	}
-	if (this->type == other->type && (this->protocol == other->protocol ||
-								this->protocol == 0 || other->protocol == 0))
-	{
-		u_int16_t from_port, to_port;
-		u_char *from, *to;
-		u_int8_t protocol;
-		size_t size;
-		private_traffic_selector_t *new_ts;
 
+	if (this->type != other->type)
+	{
+		return NULL;
+	}
+	switch (this->type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+			size = sizeof(this->from4);
+			break;
+		case TS_IPV6_ADDR_RANGE:
+			size = sizeof(this->from6);
+			break;
+		default:
+			return NULL;
+	}
+
+	if (this->protocol != other->protocol &&
+		this->protocol != 0 && other->protocol != 0)
+	{
+		return NULL;
+	}
+	/* select protocol, which is not zero */
+	protocol = max(this->protocol, other->protocol);
+
+	if ((is_opaque(this) && is_opaque(other)) ||
+		(is_opaque(this) && is_any(other)) ||
+		(is_opaque(other) && is_any(this)))
+	{
+		from_port = 0xffff;
+		to_port = 0;
+	}
+	else
+	{
 		/* calculate the maximum port range allowed for both */
 		from_port = max(this->from_port, other->from_port);
 		to_port = min(this->to_port, other->to_port);
@@ -330,60 +384,46 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		{
 			return NULL;
 		}
-		/* select protocol, which is not zero */
-		protocol = max(this->protocol, other->protocol);
-
-		switch (this->type)
-		{
-			case TS_IPV4_ADDR_RANGE:
-				size = sizeof(this->from4);
-				break;
-			case TS_IPV6_ADDR_RANGE:
-				size = sizeof(this->from6);
-				break;
-			default:
-				return NULL;
-		}
-
-		/* get higher from-address */
-		if (memcmp(this->from, other->from, size) > 0)
-		{
-			from = this->from;
-		}
-		else
-		{
-			from = other->from;
-		}
-		/* get lower to-address */
-		if (memcmp(this->to, other->to, size) > 0)
-		{
-			to = other->to;
-		}
-		else
-		{
-			to = this->to;
-		}
-		/* if "from" > "to", we don't have a match */
-		if (memcmp(from, to, size) > 0)
-		{
-			return NULL;
-		}
-
-		/* we have a match in protocol, port, and address: return it... */
-		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port);
-		memcpy(new_ts->from, from, size);
-		memcpy(new_ts->to, to, size);
-		calc_netbits(new_ts);
-		return &new_ts->public;
 	}
-	return NULL;
+	/* get higher from-address */
+	if (memcmp(this->from, other->from, size) > 0)
+	{
+		from = this->from;
+	}
+	else
+	{
+		from = other->from;
+	}
+	/* get lower to-address */
+	if (memcmp(this->to, other->to, size) > 0)
+	{
+		to = other->to;
+	}
+	else
+	{
+		to = this->to;
+	}
+	/* if "from" > "to", we don't have a match */
+	if (memcmp(from, to, size) > 0)
+	{
+		return NULL;
+	}
+
+	/* we have a match in protocol, port, and address: return it... */
+	subset = traffic_selector_create(protocol, this->type, from_port, to_port);
+	memcpy(subset->from, from, size);
+	memcpy(subset->to, to, size);
+	calc_netbits(subset);
+
+	return &subset->public;
 }
 
-/**
- * Implements traffic_selector_t.equals
- */
-static bool equals(private_traffic_selector_t *this, private_traffic_selector_t *other)
+METHOD(traffic_selector_t, equals, bool,
+	private_traffic_selector_t *this, traffic_selector_t *other_public)
 {
+	private_traffic_selector_t *other;
+
+	other = (private_traffic_selector_t*)other_public;
 	if (this->type != other->type)
 	{
 		return FALSE;
@@ -535,11 +575,8 @@ METHOD(traffic_selector_t, set_address, void,
 	}
 }
 
-/**
- * Implements traffic_selector_t.is_contained_in.
- */
-static bool is_contained_in(private_traffic_selector_t *this,
-							private_traffic_selector_t *other)
+METHOD(traffic_selector_t, is_contained_in, bool,
+	private_traffic_selector_t *this, traffic_selector_t *other)
 {
 	private_traffic_selector_t *subset;
 	bool contained_in = FALSE;
@@ -548,7 +585,7 @@ static bool is_contained_in(private_traffic_selector_t *this,
 
 	if (subset)
 	{
-		if (equals(subset, this))
+		if (equals(subset, &this->public))
 		{
 			contained_in = TRUE;
 		}
@@ -739,12 +776,13 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  * see header
  */
 traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
-							u_int8_t netbits, u_int8_t protocol, u_int16_t port)
+							u_int8_t netbits, u_int8_t protocol,
+							u_int16_t from_port, u_int16_t to_port)
 {
 	private_traffic_selector_t *this;
 	chunk_t from;
 
-	this = traffic_selector_create(protocol, 0, 0, 65535);
+	this = traffic_selector_create(protocol, 0, from_port, to_port);
 
 	switch (net->get_family(net))
 	{
@@ -763,11 +801,6 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 	memcpy(this->from, from.ptr, from.len);
 	netbits = min(netbits, this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	calc_range(this, netbits);
-	if (port)
-	{
-		this->from_port = port;
-		this->to_port = port;
-	}
 	net->destroy(net);
 
 	return &this->public;
@@ -818,8 +851,9 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_cidr(char *string,
-									u_int8_t protocol, u_int16_t port)
+traffic_selector_t *traffic_selector_create_from_cidr(
+										char *string, u_int8_t protocol,
+										u_int16_t from_port, u_int16_t to_port)
 {
 	host_t *net;
 	int bits;
@@ -827,7 +861,8 @@ traffic_selector_t *traffic_selector_create_from_cidr(char *string,
 	net = host_create_from_subnet(string, &bits);
 	if (net)
 	{
-		return traffic_selector_create_from_subnet(net, bits, protocol, port);
+		return traffic_selector_create_from_subnet(net, bits, protocol,
+												   from_port, to_port);
 	}
 	return NULL;
 }
@@ -859,8 +894,8 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 
 	INIT(this,
 		.public = {
-			.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset,
-			.equals = (bool(*)(traffic_selector_t*,traffic_selector_t*))equals,
+			.get_subset = _get_subset,
+			.equals = _equals,
 			.get_from_address = _get_from_address,
 			.get_to_address = _get_to_address,
 			.get_from_port = _get_from_port,
@@ -869,7 +904,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 			.get_protocol = _get_protocol,
 			.is_host = _is_host,
 			.is_dynamic = _is_dynamic,
-			.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in,
+			.is_contained_in = _is_contained_in,
 			.includes = _includes,
 			.set_address = _set_address,
 			.to_subnet = _to_subnet,
@@ -884,4 +919,3 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 
 	return this;
 }
-

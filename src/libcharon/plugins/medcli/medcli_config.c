@@ -63,7 +63,7 @@ static traffic_selector_t *ts_from_string(char *str)
 	{
 		traffic_selector_t *ts;
 
-		ts = traffic_selector_create_from_cidr(str, 0, 0);
+		ts = traffic_selector_create_from_cidr(str, 0, 0, 65535);
 		if (ts)
 		{
 			return ts;

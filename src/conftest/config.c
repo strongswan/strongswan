@@ -188,7 +188,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		enumerator = enumerator_create_token(token, ",", " ");
 		while (enumerator->enumerate(enumerator, &token))
 		{
-			ts = traffic_selector_create_from_cidr(token, 0, 0);
+			ts = traffic_selector_create_from_cidr(token, 0, 0, 65535);
 			if (ts)
 			{
 				child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -212,7 +212,7 @@ static child_cfg_t *load_child_config(private_config_t *this,
 		enumerator = enumerator_create_token(token, ",", " ");
 		while (enumerator->enumerate(enumerator, &token))
 		{
-			ts = traffic_selector_create_from_cidr(token, 0, 0);
+			ts = traffic_selector_create_from_cidr(token, 0, 0, 65535);
 			if (ts)
 			{
 				child_cfg->add_traffic_selector(child_cfg, FALSE, ts);

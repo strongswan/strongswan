@@ -115,7 +115,8 @@ struct starter_end {
 		bool            hostaccess;
 		bool            allow_any;
 		char            *updown;
-		u_int16_t       port;
+		u_int16_t       from_port;
+		u_int16_t       to_port;
 		u_int8_t        protocol;
 		char            *sourceip;
 		char            *dns;

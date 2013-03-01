@@ -878,7 +878,7 @@ static void add_ts(private_stroke_config_t *this,
 	if (end->tohost)
 	{
 		ts = traffic_selector_create_dynamic(end->protocol,
-					end->port ? end->port : 0, end->port ? end->port : 65535);
+											 end->from_port, end->to_port);
 		child_cfg->add_traffic_selector(child_cfg, local, ts);
 	}
 	else
@@ -891,7 +891,7 @@ static void add_ts(private_stroke_config_t *this,
 			if (net)
 			{
 				ts = traffic_selector_create_from_subnet(net, 0, end->protocol,
-														 end->port);
+												end->from_port, end->to_port);
 				child_cfg->add_traffic_selector(child_cfg, local, ts);
 			}
 		}
@@ -903,8 +903,8 @@ static void add_ts(private_stroke_config_t *this,
 			enumerator = enumerator_create_token(end->subnets, ",", " ");
 			while (enumerator->enumerate(enumerator, &subnet))
 			{
-				ts = traffic_selector_create_from_cidr(subnet,
-													end->protocol, end->port);
+				ts = traffic_selector_create_from_cidr(subnet, end->protocol,
+												end->from_port, end->to_port);
 				if (ts)
 				{
 					child_cfg->add_traffic_selector(child_cfg, local, ts);

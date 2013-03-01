@@ -238,11 +238,13 @@ traffic_selector_t *traffic_selector_create_from_string(
  *
  * @param string		CIDR string, such as 10.1.0.0/16
  * @param protocol		protocol for this ts, such as TCP or UDP
- * @param port			single port for this TS, 0 for any port
+ * @param from_port		start of allowed port range
+ * @param to_port		end of port range
  * @return				traffic selector, NULL if string invalid
  */
-traffic_selector_t *traffic_selector_create_from_cidr(char *string,
-									u_int8_t protocol, u_int16_t port);
+traffic_selector_t *traffic_selector_create_from_cidr(
+										char *string, u_int8_t protocol,
+										u_int16_t from_port, u_int16_t to_port);
 
 /**
  * Create a new traffic selector using data read from the net.
@@ -288,14 +290,15 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
  * @param protocol		protocol for this ts, such as TCP or UDP
- * @param port			port number, host order
+ * @param from_port		start of allowed port range
+ * @param to_port		end of port range
  * @return
  *						- traffic_selector_t object
  *						- NULL if address family of net not supported
  */
 traffic_selector_t *traffic_selector_create_from_subnet(
-									host_t *net, u_int8_t netbits,
-									u_int8_t protocol, u_int16_t port);
+							host_t *net, u_int8_t netbits, u_int8_t protocol,
+							u_int16_t from_port, u_int16_t to_port);
 
 /**
  * Create a traffic selector for host-to-host cases.
