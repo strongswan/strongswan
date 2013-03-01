@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperwsil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -555,14 +555,66 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 
 }
 
-METHOD(mem_cred_t, clear_secrets, void,
-	private_mem_cred_t *this)
+static void reset_secrets(private_mem_cred_t *this)
 {
-	this->lock->write_lock(this->lock);
 	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
 	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
 	this->keys = linked_list_create();
 	this->shared = linked_list_create();
+}
+
+METHOD(mem_cred_t, replace_secrets, void,
+	private_mem_cred_t *this, mem_cred_t *other_set, bool clone)
+{
+	private_mem_cred_t *other = (private_mem_cred_t*)other_set;
+	enumerator_t *enumerator;
+	shared_entry_t *entry, *new_entry;
+	private_key_t *key;
+
+	this->lock->write_lock(this->lock);
+
+	reset_secrets(this);
+
+	if (clone)
+	{
+		enumerator = other->keys->create_enumerator(other->keys);
+		while (enumerator->enumerate(enumerator, &key))
+		{
+			this->keys->insert_last(this->keys, key->get_ref(key));
+		}
+		enumerator->destroy(enumerator);
+		enumerator = other->shared->create_enumerator(other->shared);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			INIT(new_entry,
+				.shared = entry->shared->get_ref(entry->shared),
+				.owners = entry->owners->clone_offset(entry->owners,
+											offsetof(identification_t, clone)),
+			);
+			this->shared->insert_last(this->shared, new_entry);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		while (other->keys->remove_first(other->keys, (void**)&key) == SUCCESS)
+		{
+			this->keys->insert_last(this->keys, key);
+		}
+		while (other->shared->remove_first(other->shared,
+										  (void**)&entry) == SUCCESS)
+		{
+			this->shared->insert_last(this->shared, entry);
+		}
+	}
+	this->lock->unlock(this->lock);
+}
+
+METHOD(mem_cred_t, clear_secrets, void,
+	private_mem_cred_t *this)
+{
+	this->lock->write_lock(this->lock);
+	reset_secrets(this);
 	this->lock->unlock(this->lock);
 }
 
@@ -619,6 +671,7 @@ mem_cred_t *mem_cred_create()
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,
 			.add_cdp = _add_cdp,
+			.replace_secrets = _replace_secrets,
 			.clear = _clear_,
 			.clear_secrets = _clear_secrets,
 			.destroy = _destroy,

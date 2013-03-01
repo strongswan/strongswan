@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -99,6 +99,16 @@ struct mem_cred_t {
 	 */
 	void (*add_cdp)(mem_cred_t *this, certificate_type_t type,
 					identification_t *id, char *uri);
+
+	/**
+	 * Replace all secrets (private and shared keys) in this credential set
+	 * with those of another.
+	 *
+	 * @param other			credential set to get secrets from
+	 * @param clone			TRUE to clone secrets, FALSE to adopt them (they
+	 *						get removed from the other set)
+	 */
+	void (*replace_secrets)(mem_cred_t *this, mem_cred_t *other, bool clone);
 
 	/**
 	 * Clear all credentials from the credential set.
