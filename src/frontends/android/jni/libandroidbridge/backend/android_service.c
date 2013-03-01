@@ -167,6 +167,10 @@ static job_requeue_t handle_plain(private_android_service_t *this)
 
 	if (len < 0)
 	{
+		if (errno == EBADF)
+		{	/* the TUN device got closed just before calling select(), retry */
+			return JOB_REQUEUE_FAIR;
+		}
 		DBG1(DBG_DMN, "select on TUN device failed: %s", strerror(errno));
 		return JOB_REQUEUE_NONE;
 	}
