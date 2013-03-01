@@ -513,6 +513,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SYSTIME_FIX
+  SUBDIRS += plugins/systime_fix
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/systime_fix/libstrongswan-systime-fix.la
+endif
+endif
+
 if USE_LED
   SUBDIRS += plugins/led
 if MONOLITHIC

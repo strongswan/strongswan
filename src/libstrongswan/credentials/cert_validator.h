@@ -35,6 +35,22 @@ typedef struct cert_validator_t cert_validator_t;
 struct cert_validator_t {
 
 	/**
+	 * Check the lifetime of a certificate.
+	 *
+	 * If this function returns SUCCESS or FAILED, the certificate lifetime is
+	 * considered definitely (in-)valid, without asking other validators.
+	 * If all registered validaters return NEED_MORE, the default
+	 * lifetime check is performed.
+	 *
+	 * @param cert			certificate to check lifetime
+	 * @param pathlen		the current length of the path bottom-up
+	 * @param anchor		is certificate trusted root anchor?
+	 * @param auth			container for resulting authentication info
+	 * @return				SUCCESS, FAILED or NEED_MORE to ask next validator
+	 */
+	status_t (*check_lifetime)(cert_validator_t *this, certificate_t *cert,
+							   int pathlen, bool anchor, auth_cfg_t *auth);
+	/**
 	 * Validate a subject certificate in relation to its issuer.
 	 *
 	 * @param subject		subject certificate to check
@@ -43,6 +59,7 @@ struct cert_validator_t {
 	 * @param pathlen		the current length of the path bottom-up
 	 * @param anchor		is issuer trusted root anchor
 	 * @param auth			container for resulting authentication info
+	 * @return				TRUE if subject certificate valid
 	 */
 	bool (*validate)(cert_validator_t *this, certificate_t *subject,
 					 certificate_t *issuer, bool online, u_int pathlen,
