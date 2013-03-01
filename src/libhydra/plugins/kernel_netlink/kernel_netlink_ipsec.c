@@ -2202,14 +2202,15 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 
 	/* install a route, if:
 	 * - this is a forward policy (to just get one for each child)
-	 * - we are in tunnel/BEET mode
+	 * - we are in tunnel/BEET mode or install a bypass policy
 	 * - routing is not disabled via strongswan.conf
 	 */
-	if (policy->direction == POLICY_FWD &&
-		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
+	if (policy->direction == POLICY_FWD && this->install_routes &&
+		(mapping->type != POLICY_IPSEC || ipsec->cfg.mode != MODE_TRANSPORT))
 	{
 		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
 		route_entry_t *route;
+		host_t *iface;
 
 		INIT(route,
 			.prefixlen = policy->sel.prefixlen_s,
@@ -2225,9 +2226,17 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(route->dst_net.ptr, &policy->sel.saddr, route->dst_net.len);
 
+			/* get the interface to install the route for. If we have a local
+			 * address, use it. Otherwise (for shunt policies) use the
+			 * routes source address. */
+			iface = ipsec->dst;
+			if (iface->is_anyaddr(iface))
+			{
+				iface = route->src_ip;
+			}
 			/* install route via outgoing interface */
 			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												ipsec->dst, &route->if_name))
+														iface, &route->if_name))
 			{
 				this->mutex->unlock(this->mutex);
 				route_entry_destroy(route);

@@ -174,7 +174,6 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 	ike_sa_t *ike_sa;
 	char name[128];
 	host_t *host;
-	bool has_vip = FALSE;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
 													entry->sa, FALSE);
@@ -187,24 +186,20 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 									 FALSE, 0, 0, NULL, NULL, FALSE);
 		child_cfg->add_traffic_selector(child_cfg, FALSE,
 										entry->ts->clone(entry->ts));
+		host = ike_sa->get_my_host(ike_sa);
+		child_cfg->add_traffic_selector(child_cfg, TRUE,
+				traffic_selector_create_from_subnet(host->clone(host),
+													32, 0, 0, 65535));
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+
 		enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
 		while (enumerator->enumerate(enumerator, &host))
 		{
-			has_vip = TRUE;
 			child_cfg->add_traffic_selector(child_cfg, TRUE,
 				traffic_selector_create_from_subnet(host->clone(host),
 													32, 0, 0, 65535));
 		}
 		enumerator->destroy(enumerator);
-
-		if (!has_vip)
-		{
-			host = ike_sa->get_my_host(ike_sa);
-			child_cfg->add_traffic_selector(child_cfg, TRUE,
-				traffic_selector_create_from_subnet(host->clone(host), 32, 0,
-													0, 65535));
-		}
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 
 		charon->shunts->install(charon->shunts, child_cfg);
 		child_cfg->destroy(child_cfg);
