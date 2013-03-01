@@ -701,7 +701,7 @@ static shared_key_t* pin_cb(pin_cb_data_t *data, shared_key_type_t type,
 /**
  * Load a smartcard with a PIN
  */
-static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
+static bool load_pin(mem_cred_t *secrets, chunk_t line, int line_nr,
 					 FILE *prompt)
 {
 	chunk_t sc = chunk_empty, secret = chunk_empty;
@@ -796,7 +796,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	if (key)
 	{
 		DBG1(DBG_CFG, "  loaded private key from %.*s", (int)sc.len, sc.ptr);
-		this->creds->add_key(this->creds, key);
+		secrets->add_key(secrets, key);
 	}
 	return TRUE;
 }
@@ -804,7 +804,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 /**
  * Load a private key
  */
-static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
+static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 						 FILE *prompt, key_type_t key_type)
 {
 	char path[PATH_MAX];
@@ -894,7 +894,7 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	{
 		DBG1(DBG_CFG, "  loaded %N private key from '%s'",
 			 key_type_names, key->get_type(key), path);
-		this->creds->add_key(this->creds, key);
+		secrets->add_key(secrets, key);
 	}
 	else
 	{
@@ -906,7 +906,7 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 /**
  * Load a shared key
  */
-static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
+static bool load_shared(mem_cred_t *secrets, chunk_t line, int line_nr,
 						shared_key_type_t type, chunk_t ids)
 {
 	shared_key_t *shared_key;
@@ -961,15 +961,15 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		owners->insert_last(owners,
 					identification_create_from_encoding(ID_ANY, chunk_empty));
 	}
-	this->creds->add_shared_list(this->creds, shared_key, owners);
+	secrets->add_shared_list(secrets, shared_key, owners);
 	return TRUE;
 }
 
 /**
  * reload ipsec.secrets
  */
-static void load_secrets(private_stroke_cred_t *this, char *file, int level,
-						 FILE *prompt)
+static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
+						 char *file, int level, FILE *prompt)
 {
 	int line_nr = 0, fd;
 	chunk_t src, line;
@@ -1005,9 +1005,9 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	}
 	src = chunk_create(addr, sb.st_size);
 
-	if (level == 0)
-	{	/* flush secrets on non-recursive invocation */
-		this->creds->clear_secrets(this->creds);
+	if (!secrets)
+	{
+		secrets = mem_cred_create();
 	}
 
 	while (fetchline(&src, &line))
@@ -1077,14 +1077,15 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 				{
 					for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 					{
-						load_secrets(this, *expanded, level + 1, prompt);
+						load_secrets(this, secrets, *expanded, level + 1,
+									 prompt);
 					}
 				}
 				globfree(&buf);
 			}
 #else /* HAVE_GLOB_H */
 			/* if glob(3) is not available, try to load pattern directly */
-			load_secrets(this, pattern, level + 1, prompt);
+			load_secrets(this, secrets, pattern, level + 1, prompt);
 #endif /* HAVE_GLOB_H */
 			continue;
 		}
@@ -1114,7 +1115,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		}
 		if (match("RSA", &token) || match("ECDSA", &token))
 		{
-			if (!load_private(this, line, line_nr, prompt,
+			if (!load_private(secrets, line, line_nr, prompt,
 							  match("RSA", &token) ? KEY_RSA : KEY_ECDSA))
 			{
 				break;
@@ -1122,7 +1123,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		}
 		else if (match("PIN", &token))
 		{
-			if (!load_pin(this, line, line_nr, prompt))
+			if (!load_pin(secrets, line, line_nr, prompt))
 			{
 				break;
 			}
@@ -1132,7 +1133,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 				 (match("NTLM", &token) && (type = SHARED_NT_HASH)) ||
 				 (match("XAUTH", &token) && (type = SHARED_EAP)))
 		{
-			if (!load_shared(this, line, line_nr, type, ids))
+			if (!load_shared(secrets, line, line_nr, type, ids))
 			{
 				break;
 			}
@@ -1146,6 +1147,12 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	}
 	munmap(addr, sb.st_size);
 	close(fd);
+
+	if (level == 0)
+	{	/* replace secrets in active credential set */
+		this->creds->replace_secrets(this->creds, secrets, FALSE);
+		secrets->destroy(secrets);
+	}
 }
 
 /**
@@ -1180,7 +1187,7 @@ METHOD(stroke_cred_t, reread, void,
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
 		DBG1(DBG_CFG, "rereading secrets");
-		load_secrets(this, SECRETS_FILE, 0, prompt);
+		load_secrets(this, NULL, SECRETS_FILE, 0, prompt);
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
@@ -1263,7 +1270,7 @@ stroke_cred_t *stroke_cred_create()
 						FALSE, charon->name);
 
 	load_certs(this);
-	load_secrets(this, SECRETS_FILE, 0, NULL);
+	load_secrets(this, NULL, SECRETS_FILE, 0, NULL);
 
 	return &this->public;
 }
