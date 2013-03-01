@@ -305,6 +305,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
 #endif
 #endif /* OPENSSL_NO_HMAC */
+#if OPENSSL_VERSION_NUMBER >= 0x1000100fL
 #ifndef OPENSSL_NO_AES
 		/* AES GCM */
 		PLUGIN_REGISTER(AEAD, openssl_gcm_create),
@@ -318,6 +319,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
 #endif /* OPENSSL_NO_AES */
+#endif /* OPENSSL_VERSION_NUMBER */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
 		PLUGIN_REGISTER(DH, openssl_diffie_hellman_create),

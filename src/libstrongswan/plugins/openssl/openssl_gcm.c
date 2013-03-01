@@ -13,6 +13,10 @@
  * for more details.
  */
 
+#include <openssl/opensslv.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x1000100fL
+
 #include "openssl_gcm.h"
 
 #include <openssl/evp.h>
@@ -257,3 +261,5 @@ aead_t *openssl_gcm_create(encryption_algorithm_t algo, size_t key_size)
 
 	return &this->public;
 }
+
+#endif /* OPENSSL_VERSION_NUMBER */
