@@ -1036,6 +1036,12 @@ static job_requeue_t receive_events(private_kernel_netlink_ipsec_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
+METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
+	private_kernel_netlink_ipsec_t *this)
+{
+	return KERNEL_ESP_V3_TFC;
+}
+
 /**
  * Get an SPI for a specific protocol from the kernel.
  */
@@ -2734,6 +2740,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_spi = _get_spi,
 				.get_cpi = _get_cpi,
 				.add_sa  = _add_sa,
@@ -2822,4 +2829,3 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 
 	return &this->public;
 }
-

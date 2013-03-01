@@ -30,6 +30,7 @@ typedef struct kernel_ipsec_t kernel_ipsec_t;
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
 #include <plugins/plugin.h>
+#include <kernel/kernel_interface.h>
 
 /**
  * Interface to the ipsec subsystem of the kernel.
@@ -43,6 +44,13 @@ typedef struct kernel_ipsec_t kernel_ipsec_t;
  * when rekeying. Thats why we do reference counting of policies.
  */
 struct kernel_ipsec_t {
+
+	/**
+	 * Get the feature set supported by this kernel backend.
+	 *
+	 * @return				ORed feature-set of backend
+	 */
+	kernel_feature_t (*get_features)(kernel_ipsec_t *this);
 
 	/**
 	 * Get a SPI from the kernel.

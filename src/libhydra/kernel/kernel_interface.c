@@ -137,6 +137,22 @@ struct private_kernel_interface_t {
 	bool ifaces_exclude;
 };
 
+METHOD(kernel_interface_t, get_features, kernel_feature_t,
+	private_kernel_interface_t *this)
+{
+	kernel_feature_t features = 0;
+
+	if (this->ipsec && this->ipsec->get_features)
+	{
+		features |= this->ipsec->get_features(this->ipsec);
+	}
+	if (this->net && this->net->get_features)
+	{
+		features |= this->net->get_features(this->net);
+	}
+	return features;
+}
+
 METHOD(kernel_interface_t, get_spi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
@@ -682,6 +698,7 @@ kernel_interface_t *kernel_interface_create()
 
 	INIT(this,
 		.public = {
+			.get_features = _get_features,
 			.get_spi = _get_spi,
 			.get_cpi = _get_cpi,
 			.add_sa = _add_sa,
@@ -757,4 +774,3 @@ kernel_interface_t *kernel_interface_create()
 
 	return &this->public;
 }
-
