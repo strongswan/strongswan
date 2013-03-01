@@ -1123,6 +1123,18 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (mid == this->responding.mid)
 		{
+			/* reject initial messages once established */
+			if (msg->get_exchange_type(msg) == IKE_SA_INIT ||
+				msg->get_exchange_type(msg) == IKE_AUTH)
+			{
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CREATED &&
+					this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				{
+					DBG1(DBG_IKE, "ignoring %N in established IKE_SA state",
+						 exchange_type_names, msg->get_exchange_type(msg));
+					return FAILED;
+				}
+			}
 			if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
 				this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING ||
 				msg->get_exchange_type(msg) != IKE_SA_INIT)
