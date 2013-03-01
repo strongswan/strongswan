@@ -223,6 +223,18 @@ static auth_cfg_t *get_auth_cfg(private_ike_auth_t *this, bool local)
 }
 
 /**
+ * Move the currently active auth config to the auth configs completed
+ */
+static void apply_auth_cfg(private_ike_auth_t *this, bool local)
+{
+	auth_cfg_t *cfg;
+
+	cfg = auth_cfg_create();
+	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, local), local);
+	this->ike_sa->add_auth_cfg(this->ike_sa, local, cfg);
+}
+
+/**
  * Check if we have should initiate another authentication round
  */
 static bool do_another_auth(private_ike_auth_t *this)
@@ -307,7 +319,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 	{
 		if (this->peer_cfg)
 		{
-			bool complies = TRUE;
+			char *comply_error = NULL;
 			enumerator_t *e1, *e2, *tmp;
 			auth_cfg_t *c1, *c2;
 
@@ -324,22 +336,30 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			while (e1->enumerate(e1, &c1))
 			{
 				/* check if done authentications comply to configured ones */
-				if ((!e2->enumerate(e2, &c2)) ||
-					(!strict && !c1->complies(c1, c2, TRUE)) ||
-					(strict && !c2->complies(c2, c1, TRUE)))
+				if (!e2->enumerate(e2, &c2))
 				{
-					complies = FALSE;
+					comply_error = "insufficient authentication rounds";
+					break;
+				}
+				if (!strict && !c1->complies(c1, c2, TRUE))
+				{
+					comply_error = "non-matching authentication done";
+					break;
+				}
+				if (strict && !c2->complies(c2, c1, TRUE))
+				{
+					comply_error = "constraint checking failed";
 					break;
 				}
 			}
 			e1->destroy(e1);
 			e2->destroy(e2);
-			if (complies)
+			if (!comply_error)
 			{
 				break;
 			}
-			DBG1(DBG_CFG, "selected peer config '%s' inacceptable",
-				 this->peer_cfg->get_name(this->peer_cfg));
+			DBG1(DBG_CFG, "selected peer config '%s' inacceptable: %s",
+				 this->peer_cfg->get_name(this->peer_cfg), comply_error);
 			this->peer_cfg->destroy(this->peer_cfg);
 		}
 		if (this->candidates->remove_first(this->candidates,
@@ -464,10 +484,7 @@ METHOD(task_t, build_i, status_t,
 	switch (this->my_auth->build(this->my_auth, message))
 	{
 		case SUCCESS:
-			/* authentication step complete, reset authenticator */
-			cfg = auth_cfg_create();
-			cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE), TRUE);
-			this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+			apply_auth_cfg(this, TRUE);
 			this->my_auth->destroy(this->my_auth);
 			this->my_auth = NULL;
 			break;
@@ -640,10 +657,7 @@ METHOD(task_t, process_r, status_t,
 		return NEED_MORE;
 	}
 
-	/* store authentication information */
-	cfg = auth_cfg_create();
-	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
+	apply_auth_cfg(this, FALSE);
 
 	if (!update_cfg_candidates(this, FALSE))
 	{
@@ -778,10 +792,7 @@ METHOD(task_t, build_r, status_t,
 		switch (this->my_auth->build(this->my_auth, message))
 		{
 			case SUCCESS:
-				cfg = auth_cfg_create();
-				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
-						   TRUE);
-				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+				apply_auth_cfg(this, TRUE);
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				break;
@@ -969,10 +980,10 @@ METHOD(task_t, process_i, status_t,
 			goto peer_auth_failed;
 		}
 
-		/* store authentication information, reset authenticator */
-		cfg = auth_cfg_create();
-		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
+		if (!mutual_eap)
+		{
+			apply_auth_cfg(this, FALSE);
+		}
 	}
 
 	if (this->my_auth)
@@ -980,10 +991,11 @@ METHOD(task_t, process_i, status_t,
 		switch (this->my_auth->process(this->my_auth, message))
 		{
 			case SUCCESS:
-				cfg = auth_cfg_create();
-				cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, TRUE),
-						   TRUE);
-				this->ike_sa->add_auth_cfg(this->ike_sa, TRUE, cfg);
+				apply_auth_cfg(this, TRUE);
+				if (this->my_auth->is_mutual(this->my_auth))
+				{
+					apply_auth_cfg(this, FALSE);
+				}
 				this->my_auth->destroy(this->my_auth);
 				this->my_auth = NULL;
 				this->do_another_auth = do_another_auth(this);

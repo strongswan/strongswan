@@ -667,6 +667,16 @@ METHOD(authenticator_t, build_client, status_t,
 METHOD(authenticator_t, is_mutual, bool,
 	private_eap_authenticator_t *this)
 {
+	if (this->method)
+	{
+		u_int32_t vendor;
+
+		if (this->method->get_type(this->method, &vendor) != EAP_IDENTITY ||
+			vendor != 0)
+		{
+			return this->method->is_mutual(this->method);
+		}
+	}
 	/* we don't know yet, but insist on it after EAP is complete */
 	this->require_mutual = TRUE;
 	return TRUE;
