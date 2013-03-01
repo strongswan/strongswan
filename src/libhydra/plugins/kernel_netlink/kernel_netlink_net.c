@@ -1757,6 +1757,10 @@ METHOD(kernel_net_t, add_ip, status_t,
 				DBG2(DBG_KNL, "virtual IP %H installed on %s", virtual_ip,
 					 entry->iface->ifname);
 				this->lock->unlock(this->lock);
+				/* during IKEv1 reauthentication, children get moved from
+				 * old the new SA before the virtual IP is available. This
+				 * kills the route for our virtual IP, reinstall. */
+				queue_route_reinstall(this, entry->iface->ifname);
 				return SUCCESS;
 			}
 		}
