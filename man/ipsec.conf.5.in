@@ -618,6 +618,10 @@ connection. See ipsec.secrets(5) for details about smartcard definitions.
 is required only if selecting the certificate with
 .B leftid
 is not sufficient, for example if multiple certificates use the same subject.
+.br
+Multiple certificate paths or PKCS#11 backends can be specified in a comma
+separated list. The daemon chooses the certificate based on the received
+certificate requests if possible before enforcing the first.
 .TP
 .BR leftcert2 " = <path>"
 Same as
