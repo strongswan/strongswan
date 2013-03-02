@@ -51,7 +51,7 @@ METHOD(imv_reason_string_t, add_reason, void,
 	if (this->reasons.len)
 	{
 		/* append any further reasons */
-		this->reasons = chunk_cat("cm", this->reasons, chunk_from_chars('\n'),
+		this->reasons = chunk_cat("mcc", this->reasons, chunk_from_chars('\n'),
 								  chunk_create(s_reason, strlen(s_reason)));
 	}
 	else
