@@ -31,8 +31,23 @@
 #include "tcg/tcg_pts_attr_req_file_meta.h"
 #include "tcg/tcg_pts_attr_unix_file_meta.h"
 
-ENUM_BEGIN(tcg_attr_names,	TCG_PTS_REQ_FUNC_COMP_EVID,
+ENUM_BEGIN(tcg_attr_names,	TCG_SCAP_REFERENCES,
+							TCG_SCAP_SUMMARY_RESULTS,
+	"SCAP References",
+	"SCAP Capabilities and Inventory",
+	"SCAP Content",
+	"SCAP Assessment",
+	"SCAP Results",
+	"SCAP Summary Results");
+ENUM_NEXT(tcg_attr_names,	TCG_SWID_INVENTORY_REQUEST,
+							TCG_SWID_TAG_IDENTIFIER_RESPONSE,
+							TCG_SCAP_SUMMARY_RESULTS,
+	"SWID Inventory Request",
+	"SWID Tag Response",
+	"SWID Tag Identifier Response");
+ENUM_NEXT(tcg_attr_names,	TCG_PTS_REQ_FUNC_COMP_EVID,
 							TCG_PTS_REQ_FUNC_COMP_EVID,
+							TCG_SWID_TAG_IDENTIFIER_RESPONSE,
 	"Request Functional Component Evidence");
 ENUM_NEXT(tcg_attr_names,	TCG_PTS_GEN_ATTEST_EVID,
 							TCG_PTS_GEN_ATTEST_EVID,

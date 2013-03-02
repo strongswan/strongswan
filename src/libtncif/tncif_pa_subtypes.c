@@ -33,11 +33,13 @@ ENUM_NEXT(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY, PA_SUBTYPE_IETF_ANY,
 );
 ENUM_END(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY);
 
-ENUM_BEGIN(pa_subtype_tcg_names, PA_SUBTYPE_TCG_PTS, PA_SUBTYPE_TCG_PTS,
-	"PTS"
+ENUM_BEGIN(pa_subtype_tcg_names, PA_SUBTYPE_TCG_PTS, PA_SUBTYPE_TCG_SWID,
+	"PTS",
+	"SCAP",
+	"SWID"
 );
 ENUM_NEXT(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY, PA_SUBTYPE_TCG_ANY,
-								PA_SUBTYPE_TCG_PTS,
+								PA_SUBTYPE_TCG_SWID,
 	"ANY"
 );
 ENUM_END(pa_subtype_tcg_names, PA_SUBTYPE_TCG_ANY);

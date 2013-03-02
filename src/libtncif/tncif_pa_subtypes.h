@@ -54,6 +54,8 @@ extern enum_name_t *pa_subtype_ietf_names;
  */
  enum pa_subtype_tcg_t {
 	PA_SUBTYPE_TCG_PTS =				0x01,
+	PA_SUBTYPE_TCG_SCAP =				0x02,
+	PA_SUBTYPE_TCG_SWID =				0x03,
 	PA_SUBTYPE_TCG_ANY =				0xff
 };
 
