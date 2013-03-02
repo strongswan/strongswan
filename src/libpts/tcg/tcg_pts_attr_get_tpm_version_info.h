@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_get_tpm_version_info tcg_pts_attr_get_tpm_version_info
- * @{ @ingroup tcg_pts_attr_get_tpm_version_info
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_GET_TPM_VERSION_INFO_H_

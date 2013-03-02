@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup imv_msg imv_msg
- * @{ @ingroup libimcv
+ * @defgroup imv_msg_t imv_msg
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_MSG_H_
@@ -155,7 +155,6 @@ imv_msg_t* imv_msg_create_from_data(imv_agent_t *agent, imv_state_t *state,
  * @param connection_id			connection ID
  * @param src_id				source IMC ID
  * @param dst_id				destination IMV ID
- * @param msg_flags				PA-TNC message flags
  * @param msg_vid				PA-TNC message vendor ID
  * @param msg_subtype			PA-TNC subtype
  * @param msg					received PA-TNC message blob

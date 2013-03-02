@@ -14,9 +14,11 @@
  */
 
 /**
+ * @defgroup imc_attestation imc_attestation
+ * @ingroup libpts_plugins
  *
  * @defgroup imc_attestation_state_t imc_attestation_state
- * @{ @ingroup imc_attestation_state
+ * @{ @ingroup imc_attestation
  */
 
 #ifndef IMC_ATTESTATION_STATE_H_

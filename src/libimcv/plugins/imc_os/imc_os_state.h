@@ -14,9 +14,11 @@
  */
 
 /**
+ * @defgroup imc_os imc_os
+ * @ingroup libimcv_plugins
  *
  * @defgroup imc_os_state_t imc_os_state
- * @{ @ingroup imc_os_state
+ * @{ @ingroup imc_os
  */
 
 #ifndef IMC_OS_STATE_H_

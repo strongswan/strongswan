@@ -15,7 +15,16 @@
 /**
  * @defgroup libimcv libimcv
  *
- * @defgroup iplugins plugins
+ * @defgroup libimcv_imc imc
+ * @ingroup libimcv
+ *
+ * @defgroup libimcv_imv imv
+ * @ingroup libimcv
+ *
+ * @defgroup pa_tnc pa_tnc
+ * @ingroup libimcv
+ *
+ * @defgroup libimcv_plugins plugins
  * @ingroup libimcv
  *
  * @addtogroup libimcv

@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup hook hook
- * @{ @ingroup hooks
+ * @defgroup hook_t hook
+ * @{ @ingroup conftest
  */
 
 #ifndef HOOK_H_

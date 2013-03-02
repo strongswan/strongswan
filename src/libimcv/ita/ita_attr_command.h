@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ita_attr_commandt ita_attr_command
- * @{ @ingroup ita_attr_command
+ * @defgroup ita_attr_command ita_attr_command
+ * @{ @ingroup ita_attr
  */
 
 #ifndef ITA_ATTR_COMMAND_H_
@@ -54,7 +54,7 @@ pa_tnc_attr_t* ita_attr_command_create(char *command);
 /**
  * Creates an ita_attr_command_t object from received data
  *
- * @param command			ITA command string
+ * @param value				binary value blob
  */
 pa_tnc_attr_t* ita_attr_command_create_from_data(chunk_t value);
 

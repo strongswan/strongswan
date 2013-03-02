@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ikesa_controller ikesa_controller
- * @{ @ingroup controller
+ * @{ @ingroup manager_controller
  */
 
 #ifndef IKESA_CONTROLLER_H_

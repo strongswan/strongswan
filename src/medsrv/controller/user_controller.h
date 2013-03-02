@@ -16,7 +16,7 @@
 
 /**
  * @defgroup user_controller_server user_controller
- * @{ @ingroup controller_server
+ * @{ @ingroup medsrv
  */
 
 #ifndef USER_CONTROLLER_H_
@@ -45,4 +45,4 @@ struct user_controller_t {
  */
 controller_t *user_controller_create(user_t *user, database_t *db);
 
-#endif /* USER_CONTROLLER_H_ @} */
+#endif /** USER_CONTROLLER_H_ @}*/

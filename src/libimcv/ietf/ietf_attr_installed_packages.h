@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_installed_packagest ietf_attr_installed_packages
- * @{ @ingroup ietf_attr_installed_packages
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_INSTALLED_PACKAGES_H_

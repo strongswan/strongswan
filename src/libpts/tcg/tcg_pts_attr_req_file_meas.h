@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_req_file_meas tcg_pts_attr_req_file_meas
- * @{ @ingroup tcg_pts_attr_req_file_meas
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_REQ_FILE_MEAS_H_
@@ -36,7 +36,7 @@ struct tcg_pts_attr_req_file_meas_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get flag for PTS Request File Measurement
 	 *
@@ -50,7 +50,6 @@ struct tcg_pts_attr_req_file_meas_t {
 	 * @return				Request ID
 	 */
 	u_int16_t (*get_request_id)(tcg_pts_attr_req_file_meas_t *this);
-	
 
 	/**
 	 * Get Delimiter
@@ -58,19 +57,19 @@ struct tcg_pts_attr_req_file_meas_t {
 	 * @return				UTF-8 encoding of a Delimiter Character
 	 */
 	u_int32_t (*get_delimiter)(tcg_pts_attr_req_file_meas_t *this);
-	
+
 	/**
 	 * Get Fully Qualified File Pathname
 	 *
 	 * @return				Pathname
 	 */
 	char* (*get_pathname)(tcg_pts_attr_req_file_meas_t *this);
-	
+
 };
 
 /**
  * Creates an tcg_pts_attr_req_file_meas_t object
- * 
+ *
  * @param directory_flag	Directory Contents Flag
  * @param request_id		Request ID
  * @param delimiter			Delimiter Character

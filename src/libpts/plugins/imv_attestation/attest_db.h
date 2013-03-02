@@ -14,9 +14,8 @@
  */
 
 /**
- *
  * @defgroup attest_db_t attest_db
- * @{ @ingroup attest_db
+ * @{ @ingroup libpts
  */
 
 #ifndef ATTEST_DB_H_

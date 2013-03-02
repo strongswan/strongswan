@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ietf_attrt ietf_attr
- * @{ @ingroup ietf_attr
+ * @defgroup ietf_attr ietf_attr
+ * @{ @ingroup libimcv
  */
 
 #ifndef IETF_ATTR_H_

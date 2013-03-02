@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_dh_nonce_params_req tcg_pts_attr_dh_nonce_params_req
- * @{ @ingroup tcg_pts_attr_dh_nonce_params_req
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_DH_NONCE_PARAMS_REQ_H_

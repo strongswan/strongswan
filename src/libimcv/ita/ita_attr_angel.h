@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ita_attr_angelt ita_attr_angel
- * @{ @ingroup ita_attr_angel
+ * @defgroup ita_attr_angel ita_attr_angel
+ * @{ @ingroup ita_attr
  */
 
 #ifndef ITA_ATTR_ANGEL_H_

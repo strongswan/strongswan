@@ -15,7 +15,7 @@
 
 /**
  * @defgroup gateway_controller gateway_controller
- * @{ @ingroup controller
+ * @{ @ingroup manager_controller
  */
 
 #ifndef GATEWAY_CONTROLLER_H_

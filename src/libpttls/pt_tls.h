@@ -15,7 +15,9 @@
 
 /**
  * @defgroup pt_tls pt_tls
- * @{ @ingroup pt_tls
+ *
+ * @addtogroup pt_tls
+ * @{
  */
 
 #ifndef PT_TLS_H_

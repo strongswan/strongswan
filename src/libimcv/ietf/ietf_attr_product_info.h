@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_product_infot ietf_attr_product_info
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_PRODUCT_INFO_H_

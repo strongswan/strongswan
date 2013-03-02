@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup config config
+ * @defgroup config_t config
  * @{ @ingroup conftest
  */
 

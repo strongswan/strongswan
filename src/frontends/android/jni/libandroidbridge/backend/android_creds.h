@@ -49,7 +49,7 @@ struct android_creds_t {
 	/**
 	 * Load the user certificate and private key
 	 *
-	 * @preturn					loaded client certificate, NULL on failure
+	 * @return					loaded client certificate, NULL on failure
 	 */
 	certificate_t *(*load_user_certificate)(android_creds_t *this);
 

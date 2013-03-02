@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_attr_requestt ietf_attr_attr_request
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_ATTR_REQUEST_H_

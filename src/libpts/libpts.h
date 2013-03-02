@@ -15,7 +15,7 @@
 /**
  * @defgroup libpts libpts
  *
- * @defgroup iplugins plugins
+ * @defgroup libpts_plugins plugins
  * @ingroup libpts
  *
  * @addtogroup libpts

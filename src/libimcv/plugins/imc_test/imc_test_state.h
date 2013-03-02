@@ -13,9 +13,11 @@
  */
 
 /**
+ * @defgroup imc_test imc_test
+ * @ingroup libimcv_plugins
  *
  * @defgroup imc_test_state_t imc_test_state
- * @{ @ingroup imc_test_state
+ * @{ @ingroup imc_test
  */
 
 #ifndef IMC_TEST_STATE_H_

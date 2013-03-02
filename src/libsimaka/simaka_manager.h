@@ -279,11 +279,6 @@ struct simaka_manager_t {
 };
 
 /**
- * Dummy libsimaka initialization function needed for integrity test
- */
-void libsimaka_init(void);
-
-/**
  * Create an SIM/AKA manager to handle multiple (U)SIM cards/providers.
  *
  * @return			simaka_t object
@@ -311,5 +306,14 @@ typedef void* (*simaka_manager_register_cb_t)(plugin_t *plugin);
  */
 bool simaka_manager_register(plugin_t *plugin, plugin_feature_t *feature,
 							 bool reg, void *data);
+
+/**
+ * @}
+ * @addtogroup libsimaka
+ * @{
+ *
+ * Dummy libsimaka initialization function needed for integrity test
+ */
+void libsimaka_init(void);
 
 #endif /** SIMAKA_MANAGER_H_ @}*/

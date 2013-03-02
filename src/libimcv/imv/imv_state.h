@@ -16,7 +16,7 @@
 /**
  *
  * @defgroup imv_state_t imv_state
- * @{ @ingroup imv_state
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_STATE_H_
@@ -66,7 +66,7 @@ struct imv_state_t {
 	/**
 	 * Set the maximum size of a PA-TNC message for this TNCCS connection
 	 *
-	 * @max_msg_len			maximum size of a PA-TNC message
+	 * @param max_msg_len	maximum size of a PA-TNC message
 	 */
 	void (*set_max_msg_len)(imv_state_t *this, u_int32_t max_msg_len);
 

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup dnskey_encoder dnskey_encoder
- * @{ @ingroup dnskey
+ * @{ @ingroup dnskey_p
  */
 
 #ifndef DNSKEY_ENCODER_H_

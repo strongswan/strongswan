@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_default_pwd_enabled ietf_attr_default_pwd_enabled
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_PWD_ENABLED_H_

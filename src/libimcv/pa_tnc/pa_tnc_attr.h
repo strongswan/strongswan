@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pa_tnc_attr pa_tnc_attr
- * @{ @ingroup libimcv
+ * @{ @ingroup pa_tnc
  */
 
 #ifndef PA_TNC_ATTR_H_

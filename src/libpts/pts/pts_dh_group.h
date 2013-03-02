@@ -48,12 +48,12 @@ enum pts_dh_group_t {
  * Diffie-Hellman Group Values
  * see section 3.8.6 of PTS Protocol: Binding to TNC IF-M Specification
  *
- *					   1
- *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
+ *                       1
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |1|2|3|4|5|R|R|R|R|R|R|R|R|R|R|R|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 /**
@@ -90,8 +90,8 @@ bool pts_dh_group_update(char *dh_group, pts_dh_group_t *dh_groups);
  * @param offered_groups	set of offered DH groups
  * @return					selected DH group
  */
-pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_dh_groups,
-								   pts_dh_group_t offered_dh_groups);
+pts_dh_group_t pts_dh_group_select(pts_dh_group_t supported_groups,
+								   pts_dh_group_t offered_groups);
 
 /**
  * Convert pts_dh_group_t to diffie_hellman_group_t

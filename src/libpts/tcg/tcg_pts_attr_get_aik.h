@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_get_aik tcg_pts_attr_get_aik
- * @{ @ingroup tcg_pts_attr_get_aik
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_GET_AIK_H_

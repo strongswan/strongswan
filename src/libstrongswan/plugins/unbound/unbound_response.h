@@ -41,11 +41,11 @@ struct unbound_response_t {
 /**
  * Create an unbound_response instance from a response of the unbound library.
  *
- * @param		a response of the unbound library
- * @return		an unbound_response conforming to the resolver_response
- * 				interface, or NULL on failure
+ * @param	response	a response of the unbound library
+ * @return				an unbound_response conforming to the resolver_response
+ * 						interface, or NULL on failure
  */
 unbound_response_t *unbound_response_create_frm_libub_response(
-											struct ub_result *libub_response);
+													struct ub_result *response);
 
 #endif /** UNBOUND_RESPONSE_H_ @}*/

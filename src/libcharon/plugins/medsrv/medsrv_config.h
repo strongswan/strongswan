@@ -15,7 +15,7 @@
 
 /**
  * @defgroup medsrv_config_i medsrv_config
- * @{ @ingroup medsrv
+ * @{ @ingroup medsrv_p
  */
 
 #ifndef MEDSRV_CONFIG_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_fwd_enabled ietf_attr_fwd_enabled
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_FWD_ENABLED_H_

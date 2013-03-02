@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_dh_nonce_finish tcg_pts_attr_dh_nonce_finish
- * @{ @ingroup tcg_pts_attr_dh_nonce_finish
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_DH_NONCE_FINISH_H_
@@ -64,7 +64,7 @@ struct tcg_pts_attr_dh_nonce_finish_t {
 	 * @return				DH Initiator Nonce
 	 */
 	chunk_t (*get_initiator_nonce)(tcg_pts_attr_dh_nonce_finish_t *this);
-	
+
 };
 
 /**
@@ -76,7 +76,7 @@ struct tcg_pts_attr_dh_nonce_finish_t {
  */
 pa_tnc_attr_t* tcg_pts_attr_dh_nonce_finish_create(
 										pts_meas_algorithms_t hash_algo,
-   										chunk_t initiator_value,
+										chunk_t initiator_value,
 										chunk_t initiator_nonce);
 
 /**

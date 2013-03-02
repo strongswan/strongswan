@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_unix_file_meta tcg_pts_attr_unix_file_meta
- * @{ @ingroup tcg_pts_attr_unix_file_meta
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_UNIX_FILE_META_H_
@@ -38,19 +38,19 @@ struct tcg_pts_attr_file_meta_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get PTS File Metadata
 	 *
 	 * @return					PTS File Metadata
 	 */
 	pts_file_meta_t* (*get_metadata)(tcg_pts_attr_file_meta_t *this);
-	
+
 };
 
 /**
  * Creates an tcg_pts_attr_file_meta_t object
- * 
+ *
  * @param metadata			PTS File Metadata
  */
 pa_tnc_attr_t* tcg_pts_attr_unix_file_meta_create(pts_file_meta_t *metadata);

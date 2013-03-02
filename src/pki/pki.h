@@ -15,7 +15,9 @@
 
 /**
  * @defgroup pki pki
- * @{ @ingroup pki
+ *
+ * @addtogroup pki
+ * @{
  */
 
 #ifndef PKI_H_

@@ -16,7 +16,7 @@
 /**
  *
  * @defgroup imv_remediation_string_t imv_remediation_string
- * @{ @ingroup imv_remediation_string
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_REMEDIATION_STRING_H_

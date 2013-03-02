@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_op_statust ietf_attr_op_status
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_OP_STATUS_H_
@@ -40,7 +40,7 @@ enum op_status_t {
 };
 
 extern enum_name_t *op_status_names;
- 
+
 /**
  * Operational Result type
  */
@@ -92,7 +92,7 @@ struct ietf_attr_op_status_t {
  *
  * @param status			Operational Status
  * @param result			Operational Result
- * @param last_use			Time of last use 
+ * @param last_use			Time of last use
  */
 pa_tnc_attr_t* ietf_attr_op_status_create(u_int8_t status, u_int8_t result,
 										  time_t last_use);

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pa_tnc_attr_manager pa_tnc_attr_manager
- * @{ @ingroup libimcv
+ * @{ @ingroup pa_tnc
  */
 
 #ifndef PA_TNC_ATTR_MANAGER_H_
@@ -56,7 +56,7 @@ struct pa_tnc_attr_manager_t {
 	 * Return the PA-TNC attribute names for a given vendor ID
 	 *
 	 * @param vendor_id		Private Enterprise Number (PEN)
-	 * @return 				PA-TNC attribute names if found, NULL else
+	 * @return				PA-TNC attribute names if found, NULL else
 	 */
 	enum_name_t* (*get_names)(pa_tnc_attr_manager_t *this, pen_t vendor_id);
 
@@ -66,7 +66,7 @@ struct pa_tnc_attr_manager_t {
 	 * @param vendor_id		Private Enterprise Number (PEN)
 	 * @param type			PA-TNC attribute type
 	 * @param value			PA-TNC attribute value as encoded data
-	 * @return 				PA-TNC attribute object if supported, NULL else
+	 * @return				PA-TNC attribute object if supported, NULL else
 	 */
 	pa_tnc_attr_t* (*create)(pa_tnc_attr_manager_t *this, pen_t vendor_id,
 							 u_int32_t type, chunk_t value);

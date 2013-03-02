@@ -57,7 +57,7 @@ struct pts_file_meas_t {
 	/**
 	  * Create a PTS File Measurement enumerator
 	  *
-	  * @return				Enumerator returning filename and measurement 
+	  * @return				Enumerator returning filename and measurement
 	  */
 	enumerator_t* (*create_enumerator)(pts_file_meas_t *this);
 
@@ -76,7 +76,7 @@ struct pts_file_meas_t {
 	 * Verify stored hashes against PTS File Measurements
 	 *
 	 * @param e_hash		Hash enumerator
-	 * @paraem is_dir		TRUE for directory contents hashes
+	 * @param is_dir		TRUE for directory contents hashes
 	 * @return				TRUE if all hashes match a measurement
 	 */
 	bool (*verify)(pts_file_meas_t *this, enumerator_t *e_hash, bool is_dir);

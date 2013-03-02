@@ -16,7 +16,7 @@
 /**
  *
  * @defgroup imv_agent_t imv_agent
- * @{ @ingroup imv_agent
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_AGENT_H_

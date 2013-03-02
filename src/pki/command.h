@@ -92,4 +92,4 @@ int command_dispatch(int argc, char *argv[]);
  */
 int command_usage(char *error);
 
-#endif /* COMMAND_H_ @}*/
+#endif /** COMMAND_H_ @}*/

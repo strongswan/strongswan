@@ -14,9 +14,8 @@
  */
 
 /**
- *
  * @defgroup imv_os_database_t imv_os_database
- * @{ @ingroup imv_os_database
+ * @{ @ingroup imv_os
  */
 
 #ifndef IMV_OS_DATABASE_H_

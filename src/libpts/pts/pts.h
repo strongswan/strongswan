@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pts pts
- * @{ @ingroup pts
+ * @{ @ingroup libpts
  */
 
 #ifndef PTS_H_

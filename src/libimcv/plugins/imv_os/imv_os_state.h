@@ -14,9 +14,11 @@
  */
 
 /**
+ * @defgroup imv_os imv_os
+ * @ingroup libimcv_plugins
  *
  * @defgroup imv_os_state_t imv_os_state
- * @{ @ingroup imv_os_state
+ * @{ @ingroup imv_os
  */
 
 #ifndef IMV_OS_STATE_H_
@@ -61,7 +63,7 @@ struct imv_os_state_t {
 	 * @param type			OS type (enumerated)
 	 * @param name			OS name (string)
 	 * @param version		OS version
-	 * @return				OS name & version as a concatenated string 
+	 * @return				OS name & version as a concatenated string
 	 */
 	char* (*get_info)(imv_os_state_t *this, os_type_t *os_type,
 					  chunk_t *name, chunk_t *version);

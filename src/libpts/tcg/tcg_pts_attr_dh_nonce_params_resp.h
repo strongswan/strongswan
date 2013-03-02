@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_dh_nonce_params_resp tcg_pts_attr_dh_nonce_params_resp
- * @{ @ingroup tcg_pts_attr_dh_nonce_params_resp
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_DH_NONCE_PARAMS_RESP_H_
@@ -67,7 +67,7 @@ struct tcg_pts_attr_dh_nonce_params_resp_t {
 	 * @return				DH Responder Public Value
 	 */
 	chunk_t (*get_responder_value)(tcg_pts_attr_dh_nonce_params_resp_t *this);
-	
+
 };
 
 /**
@@ -76,11 +76,11 @@ struct tcg_pts_attr_dh_nonce_params_resp_t {
  * @param dh_group					Selected DH group
  * @param hash_algo_set				Set of supported hash algorithms
  * @param responder_nonce			DH Responder Nonce
- * @param responder_pub_val			DH Responder Public value
+ * @param responder_value			DH Responder Public value
  */
 pa_tnc_attr_t* tcg_pts_attr_dh_nonce_params_resp_create(pts_dh_group_t dh_group,
 											pts_meas_algorithms_t hash_algo_set,
-   											chunk_t responder_nonce,
+											chunk_t responder_nonce,
 											chunk_t responder_value);
 
 /**

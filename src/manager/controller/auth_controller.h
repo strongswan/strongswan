@@ -15,7 +15,7 @@
 
 /**
  * @defgroup auth_controller auth_controller
- * @{ @ingroup controller
+ * @{ @ingroup manager_controller
  */
 
 #ifndef AUTH_CONTROLLER_H_

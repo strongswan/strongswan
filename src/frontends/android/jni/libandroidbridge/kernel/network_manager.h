@@ -15,7 +15,7 @@
 
 /**
  * @defgroup network_manager network_manager
- * @{ @ingroup kernel_android
+ * @{ @ingroup android_kernel
  */
 
 #ifndef NETWORK_MANAGER_H_

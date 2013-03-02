@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_simple_evid_final tcg_pts_attr_simple_evid_final
- * @{ @ingroup tcg_pts_attr_simple_evid_final
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_SIMPLE_EVID_FINAL_H_
@@ -44,27 +44,29 @@ struct tcg_pts_attr_simple_evid_final_t {
 	 * @param comp_hash_algo	Optional Composite Hash Algorithm
 	 * @param pcr_comp			Optional PCR Composite
 	 * @param tpm_quote sig		Optional TPM Quote Signature
-	 * @return					PTS_SIMPLE_EVID_FINAL flags		
+	 * @return					PTS_SIMPLE_EVID_FINAL flags
 	 */
 	u_int8_t (*get_quote_info)(tcg_pts_attr_simple_evid_final_t *this,
 							   pts_meas_algorithms_t *comp_hash_algo,
 							   chunk_t *pcr_comp, chunk_t *tpm_quote_sig);
-	
+
 	/**
 	 * Get Optional Evidence Signature
 	 *
-	 * @evid_sig				Optional Evidence Signature
+	 * @param evid_sig			Optional Evidence Signature
 	 * @return					TRUE if Evidence Signature is available
 	 */
-	bool (*get_evid_sig)(tcg_pts_attr_simple_evid_final_t *this, chunk_t *evid_sig);
+	bool (*get_evid_sig)(tcg_pts_attr_simple_evid_final_t *this,
+						 chunk_t *evid_sig);
 
 	/**
 	 * Set Optional Evidence Signature
 	 *
-	 * @evid_sig				Optional Evidence Signature
+	 * @param vid_sig			Optional Evidence Signature
 	 */
-	void (*set_evid_sig)(tcg_pts_attr_simple_evid_final_t *this, chunk_t evid_sig);
-	
+	void (*set_evid_sig)(tcg_pts_attr_simple_evid_final_t *this,
+						 chunk_t evid_sig);
+
 };
 
 /**

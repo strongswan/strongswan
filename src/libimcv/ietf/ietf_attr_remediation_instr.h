@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_remediation_instrt ietf_attr_remediation_instr
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_REMEDIATION_INSTR_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_file_meas tcg_pts_attr_file_meas
- * @{ @ingroup tcg_pts_attr_file_meas
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_FILE_MEAS_H_
@@ -38,19 +38,19 @@ struct tcg_pts_attr_file_meas_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get PTS File Measurements
 	 *
 	 * @return					PTS File Measurements
 	 */
 	pts_file_meas_t* (*get_measurements)(tcg_pts_attr_file_meas_t *this);
-	
+
 };
 
 /**
  * Creates an tcg_pts_attr_file_meas_t object
- * 
+ *
  * @param measurements			PTS File Measurements
  */
 pa_tnc_attr_t* tcg_pts_attr_file_meas_create(pts_file_meas_t *measurements);

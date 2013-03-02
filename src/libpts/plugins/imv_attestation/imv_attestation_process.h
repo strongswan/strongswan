@@ -14,9 +14,8 @@
  */
 
 /**
- *
  * @defgroup imv_attestation_process_t imv_attestation_process
- * @{ @ingroup imv_attestation_process
+ * @{ @ingroup imv_attestation
  */
 
 #ifndef IMV_ATTESTATION_PROCESS_H_

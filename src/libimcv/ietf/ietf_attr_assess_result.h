@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_assess_resultt ietf_attr_assess_result
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_ASSESS_RESULT_H_

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_aik tcg_pts_attr_aik
- * @{ @ingroup tcg_pts_attr_aik
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_AIK_H_
@@ -38,7 +38,7 @@ struct tcg_pts_attr_aik_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get AIK
 	 *
@@ -50,7 +50,7 @@ struct tcg_pts_attr_aik_t {
 
 /**
  * Creates an tcg_pts_attr_aik_t object
- * 
+ *
  * @param aik				Attestation Identity Key
  */
 pa_tnc_attr_t* tcg_pts_attr_aik_create(certificate_t *aik);

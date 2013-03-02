@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_numeric_versiont ietf_attr_numeric_version
- * @{ @ingroup ietf
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_NUMERIC_VERSION_H_

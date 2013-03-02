@@ -14,11 +14,11 @@
  */
 
 /**
- * @defgroup medsrv medsrv
+ * @defgroup medsrv_p medsrv
  * @ingroup cplugins
  *
  * @defgroup medsrv_plugin medsrv_plugin
- * @{ @ingroup medsrv
+ * @{ @ingroup medsrv_p
  */
 
 #ifndef MEDSRV_PLUGIN_H_

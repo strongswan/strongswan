@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_tpm_version_info tcg_pts_attr_tpm_version_info
- * @{ @ingroup tcg_pts_attr_tpm_version_info
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_TPM_VERSION_INFO_H_
@@ -36,7 +36,7 @@ struct tcg_pts_attr_tpm_version_info_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get TPM Version Info
 	 *
@@ -55,7 +55,7 @@ struct tcg_pts_attr_tpm_version_info_t {
 
 /**
  * Creates an tcg_pts_attr_tpm_version_info_t object
- * 
+ *
  * @param tpm_version_info		TPM version info
  */
 pa_tnc_attr_t* tcg_pts_attr_tpm_version_info_create(chunk_t tpm_version_info);

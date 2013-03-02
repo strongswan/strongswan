@@ -95,7 +95,7 @@ struct pts_comp_func_name_t {
  *
  * @param vid				PTS Component Functional Name Vendor ID
  * @param name				PTS Component Functional Name
- * @param					PTS Component Functional Name Qualifier
+ * @param qualifier			PTS Component Functional Name Qualifier
  */
 pts_comp_func_name_t* pts_comp_func_name_create(u_int32_t vid, u_int32_t name,
 												u_int8_t qualifier);

@@ -16,7 +16,7 @@
 
 /**
  * @defgroup kernel_android_ipsec kernel_android_ipsec
- * @{ @ingroup kernel_android
+ * @{ @ingroup android_kernel
  */
 
 #ifndef KERNEL_ANDROID_IPSEC_H_

@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup tcg_attrt tcg_attr
- * @{ @ingroup tcg_attr
+ * @defgroup tcg_attr tcg_attr
+ * @{ @ingroup libpts
  */
 
 #ifndef TCG_ATTR_H_

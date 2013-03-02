@@ -16,7 +16,7 @@
 /**
  * @defgroup manager manager
  *
- * @defgroup controller controller
+ * @defgroup manager_controller controller
  * @ingroup manager
  *
  * @defgroup manager_i manager

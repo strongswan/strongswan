@@ -16,7 +16,7 @@
 
 /**
  * @defgroup peer_controller_server peer_controller
- * @{ @ingroup controller_server
+ * @{ @ingroup medsrv
  */
 
 #ifndef PEER_CONTROLLER_H_
@@ -45,4 +45,4 @@ struct peer_controller_t {
  */
 controller_t *peer_controller_create(user_t *user, database_t *db);
 
-#endif /* PEER_CONTROLLER_H_ @} */
+#endif /** PEER_CONTROLLER_H_ @}*/

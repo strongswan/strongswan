@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_req_func_comp_evid tcg_pts_attr_req_func_comp_evid
- * @{ @ingroup tcg_pts_attr_req_func_comp_evid
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_REQ_FUNC_COMP_EVID_H_
@@ -37,7 +37,7 @@ struct tcg_pts_attr_req_func_comp_evid_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Add a component to the Functional Component Evidence Request
 	 *
@@ -62,7 +62,7 @@ struct tcg_pts_attr_req_func_comp_evid_t {
 	 * @return					Entry enumerator
 	 */
 	enumerator_t* (*create_enumerator)(tcg_pts_attr_req_func_comp_evid_t *this);
-	
+
 };
 
 /**

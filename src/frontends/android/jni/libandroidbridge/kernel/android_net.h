@@ -15,7 +15,7 @@
 
 /**
  * @defgroup kernel_android_net kernel_android_net
- * @{ @ingroup kernel_android
+ * @{ @ingroup android_kernel
  */
 
 #ifndef KERNEL_ANDROID_NET_H_

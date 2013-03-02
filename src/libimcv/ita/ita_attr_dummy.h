@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ita_attr_dummyt ita_attr_dummy
- * @{ @ingroup ita_attr_dummy
+ * @defgroup ita_attr_dummy ita_attr_dummy
+ * @{ @ingroup ita_attr
  */
 
 #ifndef ITA_ATTR_DUMMY_H_
@@ -47,14 +47,14 @@ struct ita_attr_dummy_t {
 /**
  * Creates an ita_attr_dummy_t object with a given size
  *
- * @param size				size of dummy attribute value 
+ * @param size				size of dummy attribute value
  */
 pa_tnc_attr_t* ita_attr_dummy_create(int size);
 
 /**
  * Creates an ita_attr_dummy_t object from received data
  *
- * @param command			ITA command string
+ * @param value				binary value blob
  */
 pa_tnc_attr_t* ita_attr_dummy_create_from_data(chunk_t value);
 

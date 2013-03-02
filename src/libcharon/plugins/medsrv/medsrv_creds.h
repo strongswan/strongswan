@@ -15,7 +15,7 @@
 
 /**
  * @defgroup medsrv_creds_i medsrv_creds
- * @{ @ingroup medsrv
+ * @{ @ingroup medsrv_p
  */
 
 #ifndef MEDSRV_CREDS_H_

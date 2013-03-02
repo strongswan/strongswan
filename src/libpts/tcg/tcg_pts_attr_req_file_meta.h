@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_req_file_meta tcg_pts_attr_req_file_meta
- * @{ @ingroup tcg_pts_attr_req_file_meta
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_REQ_FILE_META_H_
@@ -36,7 +36,7 @@ struct tcg_pts_attr_req_file_meta_t {
 	 * Public PA-TNC attribute interface
 	 */
 	pa_tnc_attr_t pa_tnc_attribute;
-	
+
 	/**
 	 * Get directory flag for PTS Request File Metadata
 	 *
@@ -50,19 +50,19 @@ struct tcg_pts_attr_req_file_meta_t {
 	 * @return				UTF-8 encoding of a Delimiter Character
 	 */
 	u_int8_t (*get_delimiter)(tcg_pts_attr_req_file_meta_t *this);
-	
+
 	/**
 	 * Get Fully Qualified File Pathname
 	 *
 	 * @return				Pathname
 	 */
 	char* (*get_pathname)(tcg_pts_attr_req_file_meta_t *this);
-	
+
 };
 
 /**
  * Creates an tcg_pts_attr_req_file_meta_t object
- * 
+ *
  * @param directory_flag	Directory Contents Flag
  * @param delimiter			Delimiter Character
  * @param pathname			File Pathname

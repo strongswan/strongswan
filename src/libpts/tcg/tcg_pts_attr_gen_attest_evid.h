@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_gen_attest_evid tcg_pts_attr_gen_attest_evid
- * @{ @ingroup tcg_pts_attr_gen_attest_evid
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_GEN_ATTEST_EVID_H_

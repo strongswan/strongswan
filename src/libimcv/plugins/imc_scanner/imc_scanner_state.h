@@ -13,9 +13,11 @@
  */
 
 /**
+ * @defgroup imc_scanner imc_scanner
+ * @ingroup libimcv_plugins
  *
  * @defgroup imc_scanner_state_t imc_scanner_state
- * @{ @ingroup imc_scanner_state
+ * @{ @ingroup imc_scanner
  */
 
 #ifndef IMC_SCANNER_STATE_H_

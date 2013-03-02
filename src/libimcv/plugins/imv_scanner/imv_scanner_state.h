@@ -13,9 +13,11 @@
  */
 
 /**
+ * @defgroup imv_scanner imv_scanner
+ * @ingroup libimcv_plugins
  *
  * @defgroup imv_scanner_state_t imv_scanner_state
- * @{ @ingroup imv_scanner_state
+ * @{ @ingroup imv_scanner
  */
 
 #ifndef IMV_SCANNER_STATE_H_

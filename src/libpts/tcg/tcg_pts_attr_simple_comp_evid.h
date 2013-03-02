@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_simple_comp_evid tcg_pts_attr_simple_comp_evid
- * @{ @ingroup tcg_pts_attr_simple_comp_evid
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_SIMPLE_COMP_EVID_H_
@@ -24,7 +24,7 @@
 typedef struct tcg_pts_attr_simple_comp_evid_t tcg_pts_attr_simple_comp_evid_t;
 
 #include "tcg_attr.h"
-#include "pts/components/pts_comp_evidence.h" 
+#include "pts/components/pts_comp_evidence.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
 /**
@@ -44,12 +44,12 @@ struct tcg_pts_attr_simple_comp_evid_t {
 	 * @return					Component Evidence
 	 */
 	pts_comp_evidence_t* (*get_comp_evidence)(tcg_pts_attr_simple_comp_evid_t *this);
-	
+
 };
 
 /**
  * Creates an tcg_pts_attr_simple_comp_evid_t object
- * 
+ *
  * @param evid					Component Evidence
  */
 pa_tnc_attr_t* tcg_pts_attr_simple_comp_evid_create(pts_comp_evidence_t *evid);

@@ -13,6 +13,13 @@
  * for more details.
  */
 
+/**
+ * @defgroup medsrv medsrv
+ *
+ * @defgroup user user
+ * @{ @ingroup medsrv
+ */
+
 #ifndef USER_H_
 #define USER_H_
 
@@ -47,4 +54,4 @@ struct user_t {
  */
 user_t *user_create(void *param);
 
-#endif /* USER_H_ @} */
+#endif /** USER_H_ @} */

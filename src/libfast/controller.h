@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup controller_i controller
+ * @defgroup controller controller
  * @{ @ingroup libfast
  */
 

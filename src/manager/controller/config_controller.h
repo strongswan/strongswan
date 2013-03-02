@@ -15,7 +15,7 @@
 
 /**
  * @defgroup config_controller config_controller
- * @{ @ingroup controller
+ * @{ @ingroup manager_controller
  */
 
 #ifndef CONFIG_CONTROLLER_H_

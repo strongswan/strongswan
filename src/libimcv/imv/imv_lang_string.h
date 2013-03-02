@@ -16,7 +16,7 @@
 /**
  *
  * @defgroup imv_lang_string_t imv_lang_string
- * @{ @ingroup imv_lang_string
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_LANG_STRING_H_

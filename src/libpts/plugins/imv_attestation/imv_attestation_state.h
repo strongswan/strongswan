@@ -14,9 +14,11 @@
  */
 
 /**
+ * @defgroup imv_attestation imv_attestation
+ * @ingroup libpts_plugins
  *
  * @defgroup imv_attestation_state_t imv_attestation_state
- * @{ @ingroup imv_attestation_state
+ * @{ @ingroup imv_attestation
  */
 
 #ifndef IMV_ATTESTATION_STATE_H_
@@ -73,7 +75,7 @@ struct imv_attestation_state_t {
 	 */
 	imv_attestation_handshake_state_t (*get_handshake_state)(
 		imv_attestation_state_t *this);
-	
+
 	/**
 	 * Set state of the handshake
 	 *
@@ -133,7 +135,7 @@ struct imv_attestation_state_t {
 	/**
 	 * Get a Functional Component with a given name
 	 *
-	 * @param name			 	Name of the requested Functional Component
+	 * @param name				Name of the requested Functional Component
 	 * @return					Functional Component if found, NULL otherwise
 	 */
 	pts_component_t* (*get_component)(imv_attestation_state_t *this,

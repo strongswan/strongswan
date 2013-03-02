@@ -15,7 +15,7 @@
 
 /**
  * @defgroup ietf_attr_pa_tnc_errort ietf_attr_pa_tnc_error
- * @{ @ingroup ietf_attr_pa_tnc_error
+ * @{ @ingroup ietf_attr
  */
 
 #ifndef IETF_ATTR_PA_TNC_ERROR_H_
@@ -96,7 +96,7 @@ struct ietf_attr_pa_tnc_error_t {
  *
  * @param error_code		Vendor-specific PA-TNC error code
  * @param header			PA-TNC message header (first 8 bytes)
- * 
+ *
  */
 pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_type_t error_code,
 											 chunk_t header);
@@ -107,7 +107,7 @@ pa_tnc_attr_t* ietf_attr_pa_tnc_error_create(pen_type_t error_code,
  * @param error_code		Vendor-specifica PA-TNC error code
  * @param header			PA-TNC message header (first 8 bytes)
  * @param error_offset		PA-TNC error offset in bytes
- * 
+ *
  */
 pa_tnc_attr_t* ietf_attr_pa_tnc_error_create_with_offset(pen_type_t error_code,
 														 chunk_t header,

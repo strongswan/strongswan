@@ -15,7 +15,7 @@
 
 /**
  * @defgroup tcg_pts_attr_meas_algo tcg_pts_attr_meas_algo
- * @{ @ingroup tcg_pts_attr_meas_algo
+ * @{ @ingroup tcg_attr
  */
 
 #ifndef TCG_PTS_ATTR_MEAS_ALGO_H_

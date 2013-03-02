@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup ipseckey_cred_i ipseckey
+ * @defgroup ipseckey_i ipseckey
  * @{ @ingroup ipseckey
  */
 

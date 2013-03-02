@@ -16,7 +16,7 @@
 
 /**
  * @defgroup auth_filter_server auth_filter
- * @{ @ingroup filter_server
+ * @{ @ingroup medsrv
  */
 
 #ifndef AUTH_FILTER_H_
@@ -45,4 +45,4 @@ struct auth_filter_t {
  */
 filter_t *auth_filter_create(user_t *user, database_t *db);
 
-#endif /* AUTH_FILTER_H_  @}*/
+#endif /** AUTH_FILTER_H_  @}*/

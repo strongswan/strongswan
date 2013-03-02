@@ -14,9 +14,8 @@
  */
 
 /**
- *
  * @defgroup imc_attestation_process_t imc_attestation_process
- * @{ @ingroup imc_attestation_process
+ * @{ @ingroup imc_attestation
  */
 
 #ifndef IMC_ATTESTATION_PROCESS_H_

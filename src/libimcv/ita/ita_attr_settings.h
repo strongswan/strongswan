@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ita_attr_settingst ita_attr_settings
- * @{ @ingroup ita_attr_settings
+ * @defgroup ita_attr_settings ita_attr_settings
+ * @{ @ingroup ita_attr
  */
 
 #ifndef ITA_ATTR_SETTINGS_H_

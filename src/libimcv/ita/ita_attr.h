@@ -14,8 +14,8 @@
  */
 
 /**
- * @defgroup ita_attrt ita_attr
- * @{ @ingroup ita_attr
+ * @defgroup ita_attr ita_attr
+ * @{ @ingroup libimcv
  */
 
 #ifndef ITA_ATTR_H_

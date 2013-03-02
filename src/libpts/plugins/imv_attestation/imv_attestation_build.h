@@ -14,9 +14,8 @@
  */
 
 /**
- *
  * @defgroup imv_attestation_build_t imv_attestation_build
- * @{ @ingroup imv_attestation_build
+ * @{ @ingroup imv_attestation
  */
 
 #ifndef IMV_ATTESTATION_BUILD_H_

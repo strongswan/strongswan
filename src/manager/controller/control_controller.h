@@ -15,7 +15,7 @@
 
 /**
  * @defgroup control_controller control_controller
- * @{ @ingroup controller
+ * @{ @ingroup manager_controller
  */
 
 #ifndef CONTROL_CONTROLLER_H_

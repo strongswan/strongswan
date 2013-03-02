@@ -15,7 +15,7 @@
 
 /**
  * @defgroup pa_tnc_msg pa_tnc_msg
- * @{ @ingroup libimcv
+ * @{ @ingroup pa_tnc
  */
 
 #ifndef PA_TNC_MSG_H_

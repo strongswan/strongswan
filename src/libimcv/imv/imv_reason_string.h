@@ -16,7 +16,7 @@
 /**
  *
  * @defgroup imv_reason_string_t imv_reason_string
- * @{ @ingroup imv_reason_string
+ * @{ @ingroup libimcv_imv
  */
 
 #ifndef IMV_REASON_STRING_H_
