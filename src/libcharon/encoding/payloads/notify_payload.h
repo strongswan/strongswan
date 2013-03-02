@@ -140,9 +140,11 @@ enum notify_type_t {
 	IPSEC_REPLAY_COUNTER_SYNC = 16423,
 	/* Secure password methods, RFC 6467 */
 	SECURE_PASSWORD_METHOD = 16424,
-	/* PACE - draft-kuegler-ipsecme-pace-ikev2 */
+	/* PACE, RFC 6631 */
 	PSK_PERSIST = 16425,
 	PSK_CONFIRM = 16426,
+	/* EAP Re-authentication Extension, RFC 6867 */
+	ERX_SUPPORTED = 16427,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
