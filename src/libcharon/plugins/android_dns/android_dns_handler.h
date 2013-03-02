@@ -15,21 +15,21 @@
  */
 
 /**
- * @defgroup android_handler android_handler
- * @{ @ingroup android
+ * @defgroup android_dns_handler android_dns_handler
+ * @{ @ingroup android_dns
  */
 
-#ifndef ANDROID_HANDLER_H_
-#define ANDROID_HANDLER_H_
+#ifndef ANDROID_DNS_HANDLER_H_
+#define ANDROID_DNS_HANDLER_H_
 
 #include <attributes/attribute_handler.h>
 
-typedef struct android_handler_t android_handler_t;
+typedef struct android_dns_handler_t android_dns_handler_t;
 
 /**
  * Android specific DNS attribute handler.
  */
-struct android_handler_t {
+struct android_dns_handler_t {
 
 	/**
 	 * Implements attribute_handler_t.
@@ -37,16 +37,14 @@ struct android_handler_t {
 	attribute_handler_t handler;
 
 	/**
-	 * Destroy a android_handler_t.
+	 * Destroy a android_dns_handler_t.
 	 */
-	void (*destroy)(android_handler_t *this);
+	void (*destroy)(android_dns_handler_t *this);
 };
 
 /**
- * Create a android_handler instance.
- *
- * @param frontend		TRUE if the VPN frontend is used
+ * Create an android_dns_handler_t instance.
  */
-android_handler_t *android_handler_create(bool frontend);
+android_dns_handler_t *android_dns_handler_create();
 
-#endif /** ANDROID_HANDLER_H_ @}*/
+#endif /** ANDROID_DNS_HANDLER_H_ @}*/

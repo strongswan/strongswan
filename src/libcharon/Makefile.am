@@ -457,10 +457,10 @@ if MONOLITHIC
 endif
 endif
 
-if USE_ANDROID
-  SUBDIRS += plugins/android
+if USE_ANDROID_DNS
+  SUBDIRS += plugins/android_dns
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/android/libstrongswan-android.la
+  libcharon_la_LIBADD += plugins/android_dns/libstrongswan-android-dns.la
 endif
 endif
 

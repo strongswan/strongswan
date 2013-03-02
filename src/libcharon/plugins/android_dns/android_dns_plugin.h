@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Martin Willi
+ * Copyright (C) 2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup android android
+ * @defgroup android_dns android_dns
  * @ingroup cplugins
  *
- * @defgroup android_plugin android_plugin
- * @{ @ingroup android
+ * @defgroup android_dns_plugin android_dns_plugin
+ * @{ @ingroup android_dns
  */
 
-#ifndef ANDROID_PLUGIN_H_
-#define ANDROID_PLUGIN_H_
+#ifndef ANDROID_DNS_PLUGIN_H_
+#define ANDROID_DNS_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
-typedef struct android_plugin_t android_plugin_t;
+typedef struct android_dns_plugin_t android_dns_plugin_t;
 
 /**
- * Plugin providing functionality specific to the Android platform.
+ * Plugin providing an Android-specific handler for DNS servers.
  */
-struct android_plugin_t {
+struct android_dns_plugin_t {
 
 	/**
 	 * Implements plugin interface.
@@ -39,4 +39,4 @@ struct android_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /** ANDROID_PLUGIN_H_ @}*/
+#endif /** ANDROID_DNS_PLUGIN_H_ @}*/

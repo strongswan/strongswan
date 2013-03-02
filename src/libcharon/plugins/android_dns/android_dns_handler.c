@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,41 +14,35 @@
  * for more details.
  */
 
-#include "android_handler.h"
+#include "android_dns_handler.h"
 
 #include <networking/host.h>
 #include <collections/linked_list.h>
 
 #include <cutils/properties.h>
 
-typedef struct private_android_handler_t private_android_handler_t;
+typedef struct private_android_dns_handler_t private_android_dns_handler_t;
 
 /**
- * Private data of an android_handler_t object.
+ * Private data of an android_dns_handler_t object.
  */
-struct private_android_handler_t {
+struct private_android_dns_handler_t {
 
 	/**
-	 * Public android_handler_t interface.
+	 * Public interface
 	 */
-	android_handler_t public;
+	android_dns_handler_t public;
 
 	/**
 	 * List of registered DNS servers
 	 */
 	linked_list_t *dns;
-
-	/**
-	 * Whether the VPN frontend is used
-	 */
-	bool frontend;
 };
 
 /**
- * Prefixes to be used when installing DNS servers
+ * Prefix to be used when installing DNS servers
  */
 #define DNS_PREFIX_DEFAULT  "net"
-#define DNS_PREFIX_FRONTEND "vpn"
 
 /**
  * Struct to store a pair of old and installed DNS servers
@@ -63,7 +57,7 @@ typedef struct {
 /**
  * Destroy a pair of old and installed DNS servers
  */
-void destroy_dns_pair(dns_pair_t *this)
+static void destroy_dns_pair(dns_pair_t *this)
 {
 	DESTROY_IF(this->dns);
 	DESTROY_IF(this->old);
@@ -73,7 +67,7 @@ void destroy_dns_pair(dns_pair_t *this)
 /**
  * Filter pairs of DNS servers
  */
-bool filter_dns_pair(void *data, dns_pair_t **in, host_t **out)
+static bool filter_dns_pair(void *data, dns_pair_t **in, host_t **out)
 {
 	*out = (*in)->dns;
 	return TRUE;
@@ -82,11 +76,11 @@ bool filter_dns_pair(void *data, dns_pair_t **in, host_t **out)
 /**
  * Read DNS server property with a given index
  */
-host_t *get_dns_server(private_android_handler_t *this, int index)
+static host_t *get_dns_server(private_android_dns_handler_t *this, int index)
 {
 	host_t *dns = NULL;
 	char key[10], value[PROPERTY_VALUE_MAX],
-		 *prefix = this->frontend ? DNS_PREFIX_FRONTEND : DNS_PREFIX_DEFAULT;
+		 *prefix = DNS_PREFIX_DEFAULT;
 
 	if (snprintf(key, sizeof(key), "%s.dns%d", prefix, index) >= sizeof(key))
 	{
@@ -103,10 +97,11 @@ host_t *get_dns_server(private_android_handler_t *this, int index)
 /**
  * Set DNS server property with a given index
  */
-bool set_dns_server(private_android_handler_t *this, int index, host_t *dns)
+static bool set_dns_server(private_android_dns_handler_t *this, int index,
+						   host_t *dns)
 {
 	char key[10], value[PROPERTY_VALUE_MAX],
-		 *prefix = this->frontend ? DNS_PREFIX_FRONTEND : DNS_PREFIX_DEFAULT;
+		 *prefix = DNS_PREFIX_DEFAULT;
 
 	if (snprintf(key, sizeof(key), "%s.dns%d", prefix, index) >= sizeof(key))
 	{
@@ -133,7 +128,7 @@ bool set_dns_server(private_android_handler_t *this, int index, host_t *dns)
 }
 
 METHOD(attribute_handler_t, handle, bool,
-	private_android_handler_t *this, identification_t *id,
+	private_android_dns_handler_t *this, identification_t *id,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	switch (type)
@@ -163,7 +158,7 @@ METHOD(attribute_handler_t, handle, bool,
 }
 
 METHOD(attribute_handler_t, release, void,
-	private_android_handler_t *this, identification_t *server,
+	private_android_dns_handler_t *this, identification_t *server,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	if (type == INTERNAL_IP4_DNS)
@@ -197,7 +192,8 @@ METHOD(enumerator_t, enumerate_dns, bool,
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
-	android_handler_t *this, identification_t *id, linked_list_t *vips)
+	private_android_dns_handler_t *this, identification_t *id,
+	linked_list_t *vips)
 {
 	enumerator_t *enumerator;
 
@@ -208,8 +204,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 	return enumerator;
 }
 
-METHOD(android_handler_t, destroy, void,
-	private_android_handler_t *this)
+METHOD(android_dns_handler_t, destroy, void,
+	private_android_dns_handler_t *this)
 {
 	this->dns->destroy_function(this->dns, (void*)destroy_dns_pair);
 	free(this);
@@ -218,9 +214,9 @@ METHOD(android_handler_t, destroy, void,
 /**
  * See header
  */
-android_handler_t *android_handler_create(bool frontend)
+android_dns_handler_t *android_dns_handler_create()
 {
-	private_android_handler_t *this;
+	private_android_dns_handler_t *this;
 
 	INIT(this,
 		.public = {
@@ -232,7 +228,6 @@ android_handler_t *android_handler_create(bool frontend)
 			.destroy = _destroy,
 		},
 		.dns = linked_list_create(),
-		.frontend = frontend,
 	);
 
 	return &this->public;

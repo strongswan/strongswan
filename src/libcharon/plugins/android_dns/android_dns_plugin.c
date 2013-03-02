@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
- * Copyright (C) 2010 Martin Willi
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,66 +13,51 @@
  * for more details.
  */
 
-#include "android_plugin.h"
-#include "android_handler.h"
-#include "android_creds.h"
-#include "android_service.h"
+#include "android_dns_plugin.h"
+#include "android_dns_handler.h"
 
 #include <hydra.h>
 #include <daemon.h>
 
-typedef struct private_android_plugin_t private_android_plugin_t;
+typedef struct private_android_dns_plugin_t private_android_dns_plugin_t;
 
 /**
- * Private data of an android_plugin_t object.
+ * Private data of an android_dns_plugin_t object.
  */
-struct private_android_plugin_t {
+struct private_android_dns_plugin_t {
 
 	/**
-	 * Public android_plugin_t interface.
+	 * Public interface
 	 */
-	android_plugin_t public;
+	android_dns_plugin_t public;
 
 	/**
 	 * Android specific DNS handler
 	 */
-	android_handler_t *handler;
-
-	/**
-	 * Android specific credential set
-	 */
-	android_creds_t *creds;
-
-	/**
-	 * Service that interacts with the Android Settings frontend
-	 */
-	android_service_t *service;
+	android_dns_handler_t *handler;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_android_plugin_t *this)
+	private_android_dns_plugin_t *this)
 {
-	return "android";
+	return "android-dns";
 }
 
 METHOD(plugin_t, destroy, void,
-	private_android_plugin_t *this)
+	private_android_dns_plugin_t *this)
 {
 	hydra->attributes->remove_handler(hydra->attributes,
 									  &this->handler->handler);
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
-	DESTROY_IF(this->service);
 	free(this);
 }
 
 /**
  * See header
  */
-plugin_t *android_plugin_create()
+plugin_t *android_dns_plugin_create()
 {
-	private_android_plugin_t *this;
+	private_android_dns_plugin_t *this;
 
 	INIT(this,
 		.public = {
@@ -83,15 +67,10 @@ plugin_t *android_plugin_create()
 				.destroy = _destroy,
 			},
 		},
-		.creds = android_creds_create(),
+		.handler = android_dns_handler_create(),
 	);
 
-	this->service = android_service_create(this->creds);
-	this->handler = android_handler_create(this->service != NULL);
-
-	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
 
 	return &this->public.plugin;
 }
-
