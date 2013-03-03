@@ -152,6 +152,13 @@ struct imv_agent_t {
 	TNC_IMVID (*get_id)(imv_agent_t *this);
 
 	/**
+	 * Get Access Requestor ID
+	 *
+	 * return					Access Requestor ID
+	 */
+	identification_t* (*get_ar_id)(imv_agent_t *this);
+
+	/**
 	 * Reserve additional IMV IDs from TNCS
 	 *
 	 * @param count				number of additional IMV IDs to be assigned

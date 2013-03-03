@@ -804,26 +804,29 @@ METHOD(attest_db_t, list_components, void,
 METHOD(attest_db_t, list_devices, void,
 	private_attest_db_t *this)
 {
-	enumerator_t *e;
-	chunk_t value;
+	enumerator_t *e, *e_ar;
+	chunk_t value, ar_data;
 	char *product;
 	time_t timestamp;
-	int id, last_id = 0, device_count = 0;
+	int id, last_id = 0, iid = 0, last_iid = 0, device_count = 0;
 	int count, count_update, count_blacklist;
+	id_type_t ar_type;
+	identification_t *ar_id = NULL;
 	u_int tstamp, flags = 0;
 
 	e = this->db->query(this->db,
 			"SELECT d.id, d.value, i.time, i.count, i.count_update, "
-			"i.count_blacklist, i.flags, p.name FROM devices AS d "
+			"i.count_blacklist, i.flags, i.ar_id, p.name FROM devices AS d "
 			"JOIN device_infos AS i ON d.id = i.device "
 			"JOIN products AS p ON p.id = i.product "
 			"ORDER BY d.value, i.time DESC",
-			 DB_INT, DB_BLOB, DB_UINT, DB_INT, DB_INT, DB_INT, DB_UINT, DB_TEXT);
+			 DB_INT, DB_BLOB, DB_UINT, DB_INT, DB_INT, DB_INT, DB_UINT,
+			 DB_INT, DB_TEXT);
 
 	if (e)
 	{
 		while (e->enumerate(e, &id, &value, &tstamp, &count, &count_update,
-							   &count_blacklist, &flags, &product))
+							   &count_blacklist, &flags, &iid, &product))
 		{
 			if (id != last_id)
 			{
@@ -832,10 +835,35 @@ METHOD(attest_db_t, list_devices, void,
 				last_id = id;
 			}
 			timestamp = tstamp;
-			printf("      %T, %4d, %3d, %3d, %1u, '%s'\n", &timestamp, this->utc,
+			printf("      %T, %4d, %3d, %3d, %1u, '%s'", &timestamp, this->utc,
 				   count, count_update, count_blacklist, flags, product);
+			if (iid)
+			{
+				if (iid != last_iid)
+				{
+					DESTROY_IF(ar_id);
+					ar_id = NULL;
+
+					e_ar = this->db->query(this->db,
+								"SELECT type, data FROM identities "
+								"WHERE id = ?", DB_INT, iid, DB_INT, DB_BLOB);
+					if (e_ar->enumerate(e_ar, &ar_type, &ar_data))
+					{
+						ar_id = identification_create_from_encoding(ar_type,
+																	ar_data);
+					}
+					e_ar->destroy(e_ar);
+				}
+				if (ar_id)
+				{
+					printf(" %Y", ar_id);
+				}
+			}
+			printf("\n");
 		}
 		e->destroy(e);
+		DESTROY_IF(ar_id);
+
 		printf("%d device%s found\n", device_count,
 									 (device_count == 1) ? "" : "s");
 	}

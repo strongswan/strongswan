@@ -73,6 +73,11 @@ struct private_imv_agent_t {
 	rwlock_t *connection_lock;
 
 	/**
+	 * Access Requestor ID
+	 */
+	identification_t *ar_id;
+
+	/**
 	 * Inform a TNCS about the set of message types the IMV is able to receive
 	 *
 	 * @param imv_id			IMV ID assigned by TNCS
@@ -445,7 +450,6 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 		int tcg_id_type, tcg_subject_type, tcg_auth_type;
 		chunk_t id_value;
 		id_type_t ike_type;
-		identification_t *id;
 
 		id_type = tnc_id->get_identity_type(tnc_id);
 		id_value = tnc_id->get_identity_value(tnc_id);
@@ -468,11 +472,13 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 				ike_type = ID_IPV6_ADDR;
 				break;
 			case TNC_ID_FQDN:
-			case TNC_ID_USER_NAME:
 				ike_type = ID_FQDN;
 				break;
 			case TNC_ID_RFC822_ADDR:
 				ike_type = ID_RFC822_ADDR;
+				break;
+			case TNC_ID_USER_NAME:
+				ike_type = ID_USER_ID;
 				break;
 			case TNC_ID_DER_ASN1_DN:
 				ike_type = ID_DER_ASN1_DN;
@@ -486,11 +492,10 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 				break;
 		}
 
-		id = identification_create_from_encoding(ike_type, id_value);
-		DBG2(DBG_IMV, "%N identity '%Y' authenticated by %N",
-					   TNC_Subject_names, tcg_subject_type, id,
-					   TNC_Authentication_names, tcg_auth_type);
-		id->destroy(id);
+		this->ar_id = identification_create_from_encoding(ike_type, id_value);
+		DBG2(DBG_IMV, "  %N AR identity '%Y' authenticated by %N",
+			 TNC_Subject_names, tcg_subject_type, this->ar_id,
+			 TNC_Authentication_names, tcg_auth_type);
 	}
 	enumerator->destroy(enumerator);
 
@@ -591,6 +596,12 @@ METHOD(imv_agent_t, get_id, TNC_IMVID,
 	private_imv_agent_t *this)
 {
 	return	this->id;
+}
+
+METHOD(imv_agent_t, get_ar_id, identification_t*,
+	private_imv_agent_t *this)
+{
+	return	this->ar_id;
 }
 
 METHOD(imv_agent_t, reserve_additional_ids, TNC_Result,
@@ -782,6 +793,7 @@ METHOD(imv_agent_t, destroy, void,
 	private_imv_agent_t *this)
 {
 	DBG1(DBG_IMV, "IMV %u \"%s\" terminated", this->id, this->name);
+	DESTROY_IF(this->ar_id);
 	this->additional_ids->destroy(this->additional_ids);
 	this->connections->destroy_offset(this->connections,
 									  offsetof(imv_state_t, destroy));
@@ -816,6 +828,7 @@ imv_agent_t *imv_agent_create(const char *name,
 			.get_state = _get_state,
 			.get_name = _get_name,
 			.get_id = _get_id,
+			.get_ar_id = _get_ar_id,
 			.reserve_additional_ids = _reserve_additional_ids,
 			.count_additional_ids = _count_additional_ids,
 			.create_id_enumerator = _create_id_enumerator,

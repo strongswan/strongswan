@@ -49,10 +49,10 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
 	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_MYID, ID_KEY_ID,
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_USER_ID, ID_KEY_ID,
 	"ID_DER_ASN1_GN_URI",
-	"ID_MYID");
-ENUM_END(id_type_names, ID_MYID);
+	"ID_USER_ID");
+ENUM_END(id_type_names, ID_USER_ID);
 
 /**
  * coding of X.501 distinguished name
@@ -790,6 +790,7 @@ int identification_printf_hook(printf_hook_data_t *data,
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 		case ID_DER_ASN1_GN_URI:
+		case ID_USER_ID:
 			chunk_printable(this->encoded, &proper, '?');
 			snprintf(buf, sizeof(buf), "%.*s", (int)proper.len, proper.ptr);
 			chunk_free(&proper);
@@ -811,9 +812,6 @@ int identification_printf_hook(printf_hook_data_t *data,
 			{	/* not printable, hex dump */
 				snprintf(buf, sizeof(buf), "%#B", &this->encoded);
 			}
-			break;
-		case ID_MYID:
-			snprintf(buf, sizeof(buf), "%%myid");
 			break;
 		default:
 			snprintf(buf, sizeof(buf), "(unknown ID type: %d)", this->type);
@@ -873,6 +871,7 @@ static private_identification_t *identification_create(id_type_t type)
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
+		case ID_USER_ID:
 			this->public.matches = _matches_string;
 			this->public.equals = _equals_strcasecmp;
 			this->public.contains_wildcards = _contains_wildcards_memchr;
@@ -1023,9 +1022,16 @@ identification_t * identification_create_from_data(chunk_t data)
 {
 	char buf[data.len + 1];
 
-	/* use string constructor */
-	snprintf(buf, sizeof(buf), "%.*s", (int)data.len, data.ptr);
-	return identification_create_from_string(buf);
+	if (is_asn1(data))
+	{
+		return identification_create_from_encoding(ID_DER_ASN1_DN, data);
+	}
+	else
+	{
+		/* use string constructor */
+		snprintf(buf, sizeof(buf), "%.*s", (int)data.len, data.ptr);
+		return identification_create_from_string(buf);
+	}
 }
 
 /*

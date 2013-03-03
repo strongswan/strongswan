@@ -214,12 +214,14 @@ METHOD(imv_os_database_t, get_device_id, int,
 }
 
 METHOD(imv_os_database_t, set_device_info, void,
-	private_imv_os_database_t *this,  int device_id, char *os_info,
-	int count, int count_update, int count_blacklist, u_int flags)
+	private_imv_os_database_t *this,  int device_id, identification_t *ar_id,
+	char *os_info, int count, int count_update, int count_blacklist,
+	u_int flags)
 {
 	enumerator_t *e;
 	time_t last_time;
-	int pid = 0, last_pid = 0, last_count_update = 0, last_count_blacklist = 0;
+	int pid = 0, last_pid = 0, iid = 0, last_iid;
+	int last_count_update = 0, last_count_blacklist = 0;
 	u_int last_flags;
 	bool found = FALSE;
 
@@ -233,26 +235,47 @@ METHOD(imv_os_database_t, set_device_info, void,
 		e->destroy(e);
 	}
 
-	/* if OS ifo string has not been found - register it */
+	/* if OS info string has not been found - register it */
 	if (!pid)
 	{
 		this->db->execute(this->db, &pid,
 			"INSERT INTO products (name) VALUES (?)", DB_TEXT, os_info);
 	}
 
-	/* get latest device info record if it exists */
+	/* get primary key of AR identity if it exists */
 	e = this->db->query(this->db,
-			"SELECT time, product, count_update, count_blacklist, flags "
-			"FROM device_infos WHERE device = ? ORDER BY time DESC",
-			 DB_INT, device_id, DB_UINT, DB_INT, DB_INT, DB_INT, DB_UINT);
+			"SELECT id FROM identities WHERE type = ? AND data = ?",
+			 DB_INT,  ar_id->get_type(ar_id),
+			 DB_BLOB, ar_id->get_encoding(ar_id), DB_INT);
 	if (e)
 	{
-		found = e->enumerate(e, &last_time, &last_pid, &last_count_update,
-								&last_count_blacklist, &last_flags);
+		e->enumerate(e, &iid);
+		e->destroy(e);
+	}
+
+	/* if AR identity has not been found - register it */
+	if (!iid)
+	{
+		this->db->execute(this->db, &iid,
+			"INSERT INTO identities (type, data) VALUES (?, ?)",
+			 DB_INT,  ar_id->get_type(ar_id),
+			 DB_BLOB, ar_id->get_encoding(ar_id));
+	}
+
+	/* get latest device info record if it exists */
+	e = this->db->query(this->db,
+			"SELECT time, ar_id, product, count_update, count_blacklist, flags "
+			"FROM device_infos WHERE device = ? ORDER BY time DESC",
+			 DB_INT, device_id, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_UINT);
+	if (e)
+	{
+		found = e->enumerate(e, &last_time, &last_iid, &last_pid,
+								&last_count_update, &last_count_blacklist,
+								&last_flags);
 		e->destroy(e);
 	}
 	if (found && !last_count_update && !last_count_blacklist && !last_flags &&
-		pid == last_pid)
+		iid == last_iid && pid == last_pid)
 	{
 		/* update device info */
 		this->db->execute(this->db, NULL,
@@ -266,9 +289,10 @@ METHOD(imv_os_database_t, set_device_info, void,
 	{
 		/* insert device info */
 		this->db->execute(this->db, NULL,
-			"INSERT INTO device_infos (device, time, product, count, "
-			"count_update, count_blacklist, flags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			 DB_INT, device_id, DB_UINT, time(NULL), DB_INT, pid,
+			"INSERT INTO device_infos (device, time, ar_id, product, count, "
+			"count_update, count_blacklist, flags) "
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			 DB_INT, device_id, DB_UINT, time(NULL), DB_INT, iid, DB_INT, pid,
 			 DB_INT, count, DB_INT, count_update, DB_INT, count_blacklist,
 			 DB_UINT, flags);
 	}

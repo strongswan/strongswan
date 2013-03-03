@@ -126,13 +126,21 @@ CREATE INDEX devices_value ON devices (
 
 DROP TABLE IF EXISTS device_infos;
 CREATE TABLE device_infos (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   device INTEGER NOT NULL,
   time INTEGER NOT NULL,
+  ar_id INTEGER DEFAULT 0,
   product INTEGER DEFAULT 0,
   count INTEGER DEFAULT 0,
   count_update INTEGER DEFAULT 0,
   count_blacklist INTEGER DEFAULT 0,
-  flags INTEGER DEFAULT 0,
-  PRIMARY KEY (device, time)
+  flags INTEGER DEFAULT 0
 );
 
+DROP TABLE IF EXISTS identities;
+CREATE TABLE identities (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  type INTEGER NOT NULL,
+  data BLOB NOT NULL,
+  UNIQUE (type, data)
+);
