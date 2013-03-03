@@ -7,8 +7,12 @@ strongswan-5.0.3
   unbound plugin, which is based on libldns and libunbound.  Both plugins were
   created by Reto Guadagnini.
 
-- Implemented the TCG TNC IF-IMV 1.4 draft making access
-  requestor identities available to an IMV.
+- Implemented the TCG TNC IF-IMV 1.4 draft making access requestor identities
+  available to an IMV. The OS IMV stores the AR identity together with the
+  device ID in the attest database.
+
+- The openssl plugin now uses the AES-NI accelerated version of AES-GCM
+  if the hardware supports it.
 
 
 strongswan-5.0.2
@@ -61,6 +65,7 @@ strongswan-5.0.2
 
 - The integration test environment was updated and now uses KVM and reproducible
   guest images based on Debian.
+
 
 strongswan-5.0.1
 ----------------
@@ -134,6 +139,7 @@ strongswan-5.0.1
 
 - All crypto primitives gained return values for most operations, allowing
   crypto backends to fail, for example when using hardware accelerators.
+
 
 strongswan-5.0.0
 ----------------
