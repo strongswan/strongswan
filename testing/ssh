@@ -16,7 +16,15 @@ then
 	# assume we got an ip address
 	ip=$host
 else
-	ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+	pos='$1'
+	echo "$host" | grep -q ".*1$"
+	if [ $? -eq 0 ]
+	then
+		# {host}1, use second address
+		pos='$2'
+		host=`echo "$host" | sed -n -e "s/1$//p"`
+	fi
+	ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, "{ print ${pos} }" | awk '{ print $1 }'`"
 	if [ -z $ip ]
 	then
 		echo "Host '$host' unknown"
