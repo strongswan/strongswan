@@ -178,13 +178,18 @@ static void find_addr(bfd *abfd, asection *section, bfd_find_data_t *data)
 						fprintf(data->file, "    -> ");
 						if (function)
 						{
-							fprintf(data->file, "\e[34m%s() ", function);
+							fprintf(data->file, "%s%s() ",
+								tty_escape_get(fileno(data->file), TTY_FG_BLUE),
+								function);
 						}
 						if (source)
 						{
-							fprintf(data->file, "\e[32m@ %s:%d", source, line);
+							fprintf(data->file, "%s@ %s:%d",
+								tty_escape_get(fileno(data->file), TTY_FG_GREEN),
+								source, line);
 						}
-						fprintf(data->file, "\e[0m\n");
+						fprintf(data->file, "%s\n",
+							tty_escape_get(fileno(data->file), TTY_FG_DEF));
 					}
 				}
 			}
@@ -304,7 +309,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr)
 	output = popen(cmd, "r");
 	if (output)
 	{
-		fprintf(file, "    -> \e[32m");
+		fprintf(file, "    -> %s", tty_escape_get(fileno(file), TTY_FG_GREEN));
 		while (TRUE)
 		{
 			c = getc(output);
@@ -315,7 +320,7 @@ static void print_sourceline(FILE *file, char *filename, void *ptr)
 			fputc(c, file);
 		}
 		pclose(output);
-		fprintf(file, "\e[0m\n");
+		fprintf(file, "%s\n", tty_escape_get(fileno(file), TTY_FG_DEF));
 	}
 }
 
@@ -353,14 +358,19 @@ METHOD(backtrace_t, log_, void,
 			}
 			if (info.dli_sname)
 			{
-				fprintf(file, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%tx) [%p]\n",
-						info.dli_fname, info.dli_fbase, info.dli_sname,
-						this->frames[i] - info.dli_saddr, this->frames[i]);
+				fprintf(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]\n",
+					tty_escape_get(fileno(file), TTY_FG_YELLOW), info.dli_fname,
+					tty_escape_get(fileno(file), TTY_FG_DEF), info.dli_fbase,
+					tty_escape_get(fileno(file), TTY_FG_RED), info.dli_sname,
+					tty_escape_get(fileno(file), TTY_FG_DEF),
+					this->frames[i] - info.dli_saddr, this->frames[i]);
 			}
 			else
 			{
-				fprintf(file, "  \e[33m%s\e[0m @ %p [%p]\n", info.dli_fname,
-						info.dli_fbase, this->frames[i]);
+				fprintf(file, "  %s%s%s @ %p [%p]\n",
+					tty_escape_get(fileno(file), TTY_FG_YELLOW), info.dli_fname,
+					tty_escape_get(fileno(file), TTY_FG_DEF), info.dli_fbase,
+					this->frames[i]);
 			}
 			if (detailed)
 			{
@@ -516,4 +526,3 @@ void backtrace_dump(char *label, FILE *file, bool detailed)
 	backtrace->log(backtrace, file, detailed);
 	backtrace->destroy(backtrace);
 }
-
