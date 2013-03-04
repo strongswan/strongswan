@@ -17,4 +17,5 @@ then
 	exit 1
 fi
 
-exec ssh $SSHCONF -q root@$ip
+shift
+exec ssh $SSHCONF -q root@$ip $@
