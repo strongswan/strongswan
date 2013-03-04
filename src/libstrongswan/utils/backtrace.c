@@ -27,6 +27,8 @@
 
 #include "backtrace.h"
 
+#include <utils/debug.h>
+
 typedef struct private_backtrace_t private_backtrace_t;
 
 /**
@@ -49,6 +51,40 @@ struct private_backtrace_t {
 	 */
 	void *frames[];
 };
+
+/**
+ * Same as tty_escape_get(), but for a potentially NULL FILE*
+ */
+static char* esc(FILE *file, tty_escape_t escape)
+{
+	if (file)
+	{
+		return tty_escape_get(fileno(file), escape);
+	}
+	return "";
+}
+
+/**
+ * Write a format string with arguments to a FILE line, if it is NULL to DBG
+ */
+static void println(FILE *file, char *format, ...)
+{
+	char buf[512];
+	va_list args;
+
+	va_start(args, format);
+	if (file)
+	{
+		vfprintf(file, format, args);
+		fputs("\n", file);
+	}
+	else
+	{
+		vsnprintf(buf, sizeof(buf), format, args);
+		DBG1(DBG_LIB, "%s", buf);
+	}
+	va_end(args);
+}
 
 #ifdef HAVE_DLADDR
 #ifdef HAVE_BFD_H
@@ -158,6 +194,7 @@ static void find_addr(bfd *abfd, asection *section, bfd_find_data_t *data)
 	bfd_vma vma;
 	const char *source;
 	const char *function;
+	char fbuf[512] = "", sbuf[512] = "";
 	u_int line;
 
 	if (!data->found || (bfd_get_section_flags(abfd, section) & SEC_ALLOC) != 0)
@@ -175,21 +212,18 @@ static void find_addr(bfd *abfd, asection *section, bfd_find_data_t *data)
 				{
 					if (source || function)
 					{
-						fprintf(data->file, "    -> ");
 						if (function)
 						{
-							fprintf(data->file, "%s%s() ",
-								tty_escape_get(fileno(data->file), TTY_FG_BLUE),
-								function);
+							snprintf(fbuf, sizeof(fbuf), "%s%s() ",
+								esc(data->file, TTY_FG_BLUE), function);
 						}
 						if (source)
 						{
-							fprintf(data->file, "%s@ %s:%d",
-								tty_escape_get(fileno(data->file), TTY_FG_GREEN),
-								source, line);
+							snprintf(sbuf, sizeof(sbuf), "%s@ %s:%d",
+								esc(data->file, TTY_FG_GREEN), source, line);
 						}
-						fprintf(data->file, "%s\n",
-							tty_escape_get(fileno(data->file), TTY_FG_DEF));
+						println(data->file, "    -> %s%s%s", fbuf, sbuf,
+								esc(data->file, TTY_FG_DEF));
 					}
 				}
 			}
@@ -301,26 +335,28 @@ void backtrace_deinit() {}
  */
 static void print_sourceline(FILE *file, char *filename, void *ptr)
 {
-	char cmd[1024];
+	char buf[1024];
 	FILE *output;
-	int c;
+	int c, i = 0;
 
-	snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", filename, ptr);
-	output = popen(cmd, "r");
+	snprintf(buf, sizeof(buf), "addr2line -e %s %p", filename, ptr);
+	output = popen(buf, "r");
 	if (output)
 	{
-		fprintf(file, "    -> %s", tty_escape_get(fileno(file), TTY_FG_GREEN));
-		while (TRUE)
+		while (i < sizeof(buf))
 		{
 			c = getc(output);
 			if (c == '\n' || c == EOF)
 			{
+				buf[i++] = 0;
 				break;
 			}
-			fputc(c, file);
+			buf[i++] = c;
 		}
 		pclose(output);
-		fprintf(file, "%s\n", tty_escape_get(fileno(file), TTY_FG_DEF));
+
+		println(file, "    -> %s%s%s", esc(file, TTY_FG_GREEN), buf,
+				esc(file, TTY_FG_DEF));
 	}
 }
 
@@ -342,7 +378,7 @@ METHOD(backtrace_t, log_, void,
 
 	strings = backtrace_symbols(this->frames, this->frame_count);
 
-	fprintf(file, " dumping %d stack frame addresses:\n", this->frame_count);
+	println(file, " dumping %d stack frame addresses:", this->frame_count);
 	for (i = 0; i < this->frame_count; i++)
 	{
 #ifdef HAVE_DLADDR
@@ -358,19 +394,18 @@ METHOD(backtrace_t, log_, void,
 			}
 			if (info.dli_sname)
 			{
-				fprintf(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]\n",
-					tty_escape_get(fileno(file), TTY_FG_YELLOW), info.dli_fname,
-					tty_escape_get(fileno(file), TTY_FG_DEF), info.dli_fbase,
-					tty_escape_get(fileno(file), TTY_FG_RED), info.dli_sname,
-					tty_escape_get(fileno(file), TTY_FG_DEF),
-					this->frames[i] - info.dli_saddr, this->frames[i]);
+				println(file, "  %s%s%s @ %p (%s%s%s+0x%tx) [%p]",
+						esc(file, TTY_FG_YELLOW), info.dli_fname,
+						esc(file, TTY_FG_DEF), info.dli_fbase,
+						esc(file, TTY_FG_RED), info.dli_sname,
+						esc(file, TTY_FG_DEF), this->frames[i] - info.dli_saddr,
+						this->frames[i]);
 			}
 			else
 			{
-				fprintf(file, "  %s%s%s @ %p [%p]\n",
-					tty_escape_get(fileno(file), TTY_FG_YELLOW), info.dli_fname,
-					tty_escape_get(fileno(file), TTY_FG_DEF), info.dli_fbase,
-					this->frames[i]);
+				println(file, "  %s%s%s @ %p [%p]",
+						esc(file, TTY_FG_YELLOW), info.dli_fname,
+						esc(file, TTY_FG_DEF), info.dli_fbase, this->frames[i]);
 			}
 			if (detailed)
 			{
@@ -380,12 +415,12 @@ METHOD(backtrace_t, log_, void,
 		else
 #endif /* HAVE_DLADDR */
 		{
-			fprintf(file, "    %s\n", strings[i]);
+			println(file, "    %s", strings[i]);
 		}
 	}
 	free (strings);
 #else /* !HAVE_BACKTRACE */
-	fprintf(file, "C library does not support backtrace().\n");
+	println(file, "C library does not support backtrace().");
 #endif /* HAVE_BACKTRACE */
 }
 
@@ -521,7 +556,7 @@ void backtrace_dump(char *label, FILE *file, bool detailed)
 
 	if (label)
 	{
-		fprintf(file, "Debug backtrace: %s\n", label);
+		println(file, "Debug backtrace: %s", label);
 	}
 	backtrace->log(backtrace, file, detailed);
 	backtrace->destroy(backtrace);

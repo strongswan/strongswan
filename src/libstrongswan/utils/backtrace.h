@@ -35,7 +35,10 @@ struct backtrace_t {
 	/**
 	 * Log the backtrace to a FILE stream.
 	 *
-	 * @param file		FILE to log backtrace to
+	 * If no file pointer is given, the backtrace is reported over the debug
+	 * framework to the registered dbg() callback function.
+	 *
+	 * @param file		FILE to log backtrace to, NULL for dbg() function
 	 * @param detailed	TRUE to resolve line/file using addr2line (slow)
 	 */
 	void (*log)(backtrace_t *this, FILE *file, bool detailed);
@@ -81,7 +84,7 @@ backtrace_t *backtrace_create(int skip);
  * Create a backtrace, dump it and clean it up.
  *
  * @param label		description to print for this backtrace, or NULL
- * @param file		FILE to log backtrace to
+ * @param file		FILE to log backtrace to, NULL to dbg() function
  * @param detailed	TRUE to resolve line/file using addr2line (slow)
  */
 void backtrace_dump(char *label, FILE *file, bool detailed);
