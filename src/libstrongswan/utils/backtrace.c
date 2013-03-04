@@ -407,7 +407,7 @@ METHOD(backtrace_t, log_, void,
 						esc(file, TTY_FG_YELLOW), info.dli_fname,
 						esc(file, TTY_FG_DEF), info.dli_fbase, this->frames[i]);
 			}
-			if (detailed)
+			if (detailed && info.dli_fname[0])
 			{
 				print_sourceline(file, (char*)info.dli_fname, ptr);
 			}
