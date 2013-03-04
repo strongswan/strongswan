@@ -10,11 +10,18 @@ then
 fi
 
 host=$1
-ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-if [ -z $ip ]
+echo "$host" | grep -q "^\([0-9]\+\.\|[0-9a-fA-F]\+:\).*"
+if [ $? -eq 0 ]
 then
-	echo "Host '$host' unknown"
-	exit 1
+	# assume we got an ip address
+	ip=$host
+else
+	ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+	if [ -z $ip ]
+	then
+		echo "Host '$host' unknown"
+		exit 1
+	fi
 fi
 
 shift
