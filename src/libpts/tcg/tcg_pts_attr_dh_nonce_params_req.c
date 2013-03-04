@@ -117,7 +117,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint8 (writer, this->min_nonce_len);
 	writer->write_uint16(writer, this->dh_groups);
 
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

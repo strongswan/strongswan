@@ -154,7 +154,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint32(writer, this->parameters_type.type);
 	writer->write_data  (writer, this->parameters);
 
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

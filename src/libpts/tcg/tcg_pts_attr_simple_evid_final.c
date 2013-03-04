@@ -194,7 +194,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		writer->write_data (writer, this->evid_sig);
 	}
 
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

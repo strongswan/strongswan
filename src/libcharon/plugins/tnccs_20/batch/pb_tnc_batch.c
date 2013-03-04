@@ -201,7 +201,7 @@ METHOD(pb_tnc_batch_t, build, void,
 	}
 	enumerator->destroy(enumerator);
 
-	this->encoding = chunk_clone(writer->get_buf(writer));
+	this->encoding = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

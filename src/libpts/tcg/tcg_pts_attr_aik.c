@@ -123,9 +123,9 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_AIK_SIZE);
 	writer->write_uint8(writer, flags);
 	writer->write_data (writer, aik_blob);
-	this->value = chunk_clone(writer->get_buf(writer));
-	free(aik_blob.ptr);
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
+	free(aik_blob.ptr);
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,

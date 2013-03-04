@@ -143,7 +143,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_uint16(writer, this->request_id);
 	writer->write_uint32(writer, this->delimiter);
 	writer->write_data  (writer, pathname);
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

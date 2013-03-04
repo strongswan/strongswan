@@ -194,7 +194,7 @@ METHOD(pa_tnc_msg_t, build, bool,
 	enumerator->destroy(enumerator);
 
 	free(this->encoding.ptr);
-	this->encoding = chunk_clone(writer->get_buf(writer));
+	this->encoding = writer->extract_buf(writer);
 	writer->destroy(writer);
 
 	return TRUE;

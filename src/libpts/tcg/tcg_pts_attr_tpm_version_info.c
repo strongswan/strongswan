@@ -110,7 +110,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_TPM_VER_INFO_SIZE);
 	writer->write_data(writer, this->tpm_version_info);
 
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

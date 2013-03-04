@@ -109,7 +109,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer = bio_writer_create(PTS_MEAS_ALGO_SIZE);
 	writer->write_uint16(writer, PTS_MEAS_ALGO_RESERVED);
 	writer->write_uint16(writer, this->algorithms);
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 

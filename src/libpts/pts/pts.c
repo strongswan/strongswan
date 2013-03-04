@@ -1043,7 +1043,7 @@ METHOD(pts_t, get_quote_info, bool,
 	}
 
 	/* TPM Quote Info */
-	*out_quote_info = chunk_clone(writer->get_buf(writer));
+	*out_quote_info = writer->extract_buf(writer);
 	DBG3(DBG_PTS, "constructed TPM Quote Info: %B", out_quote_info);
 
 	writer->destroy(writer);

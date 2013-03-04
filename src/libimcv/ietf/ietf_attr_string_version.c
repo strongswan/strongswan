@@ -123,7 +123,7 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->write_data8(writer, this->build);
 	writer->write_data8(writer, this->config);
 
-	this->value = chunk_clone(writer->get_buf(writer));
+	this->value = writer->extract_buf(writer);
 	writer->destroy(writer);
 }
 
