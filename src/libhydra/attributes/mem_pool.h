@@ -89,7 +89,7 @@ struct mem_pool_t {
 	 *
 	 * @param id		the id to acquire an address for
 	 * @param requested	acquire this address, if possible
-	 * @param existing	TRUE to look for an existing lease, FALSE for a new one
+	 * @param operation	acquire operation to perform, see above
 	 * @return			the acquired address
 	 */
 	host_t* (*acquire_address)(mem_pool_t *this, identification_t *id,
@@ -128,9 +128,9 @@ struct mem_pool_t {
  *
  * @param name		name of this pool
  * @param base		base address of this pool, NULL to create an empty pool
- * @param bits		net mask
+ * @param bits		number of non-network bits in base, as in CIDR notation
+ * @return			memory pool instance
  */
 mem_pool_t *mem_pool_create(char *name, host_t *base, int bits);
 
 #endif /** MEM_POOL_H_ @} */
-
