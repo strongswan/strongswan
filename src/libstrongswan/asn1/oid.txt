@@ -213,7 +213,13 @@
               0x08           "timeStamping"
               0x09           "ocspSigning"				OID_OCSP_SIGNING
             0x08             "id-otherNames"
+              0x01           "personalData"
+              0x02           "userGroup"
+              0x03           "id-on-permanentIdentifier"
+              0x04           "id-on-hardwareModuleName"
               0x05           "xmppAddr"					OID_XMPP_ADDR
+              0x06           "id-on-SIM"
+              0x07           "id-on-dnsSRV"
             0x0A             "id-aca"
               0x01           "authenticationInfo"		OID_AUTHENTICATION_INFO
               0x02           "accessIdentity"			OID_ACCESS_IDENTITY
