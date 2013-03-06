@@ -80,6 +80,11 @@ struct private_tls_server_t {
 	identification_t *peer;
 
 	/**
+	 * Is it acceptable if we couldn't verify the peer certificate?
+	 */
+	bool peer_auth_optional;
+
+	/**
 	 * State we are in
 	 */
 	server_state_t state;
@@ -371,6 +376,7 @@ static status_t process_certificate(private_tls_server_t *this,
 				{	/* apply identity to authenticate */
 					this->peer = cert->get_subject(cert);
 					this->peer = this->peer->clone(this->peer);
+					this->peer_auth_optional = TRUE;
 				}
 			}
 			else
@@ -555,13 +561,22 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
 			 this->peer);
-		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
-		return NEED_MORE;
+		if (!this->peer_auth_optional)
+		{	/* client authentication is required */
+			this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+			return NEED_MORE;
+		}
+		/* reset peer identity, we couldn't authenticate it */
+		this->peer->destroy(this->peer);
+		this->peer = NULL;
+		this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	}
-
+	else
+	{
+		this->state = STATE_CERT_VERIFY_RECEIVED;
+	}
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CERTIFICATE_VERIFY, reader->peek(reader));
-	this->state = STATE_CERT_VERIFY_RECEIVED;
 	return NEED_MORE;
 }
 
