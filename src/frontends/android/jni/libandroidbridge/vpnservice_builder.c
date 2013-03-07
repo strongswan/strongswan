@@ -161,16 +161,12 @@ METHOD(vpnservice_builder_t, add_dns, bool,
 	JNIEnv *env;
 	jmethodID method_id;
 	jstring str;
-	char buf[INET_ADDRSTRLEN];
+	char buf[INET6_ADDRSTRLEN];
 
 	androidjni_attach_thread(&env);
 
 	DBG2(DBG_LIB, "builder: adding DNS server %H", dns);
 
-	if (dns->get_family(dns) != AF_INET)
-	{
-		goto failed;
-	}
 	if (snprintf(buf, sizeof(buf), "%H", dns) >= sizeof(buf))
 	{
 		goto failed;

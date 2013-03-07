@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -47,6 +47,9 @@ METHOD(attribute_handler_t, handle, bool,
 		case INTERNAL_IP4_DNS:
 			dns = host_create_from_chunk(AF_INET, data, 0);
 			break;
+		case INTERNAL_IP6_DNS:
+			dns = host_create_from_chunk(AF_INET6, data, 0);
+			break;
 		default:
 			return FALSE;
 	}
@@ -70,12 +73,21 @@ METHOD(attribute_handler_t, release, void,
 	/* DNS servers cannot be removed from an existing TUN device */
 }
 
-METHOD(enumerator_t, enumerate_dns, bool,
+METHOD(enumerator_t, enumerate_dns6, bool,
+	enumerator_t *this, configuration_attribute_type_t *type, chunk_t *data)
+{
+	*type = INTERNAL_IP6_DNS;
+	*data = chunk_empty;
+	this->enumerate = (void*)return_false;
+	return TRUE;
+}
+
+METHOD(enumerator_t, enumerate_dns4, bool,
 	enumerator_t *this, configuration_attribute_type_t *type, chunk_t *data)
 {
 	*type = INTERNAL_IP4_DNS;
 	*data = chunk_empty;
-	this->enumerate = (void*)return_false;
+	this->enumerate = (void*)_enumerate_dns6;
 	return TRUE;
 }
 
@@ -85,7 +97,7 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 	enumerator_t *enumerator;
 
 	INIT(enumerator,
-			.enumerate = (void*)_enumerate_dns,
+			.enumerate = (void*)_enumerate_dns4,
 			.destroy = (void*)free,
 	);
 	return enumerator;
