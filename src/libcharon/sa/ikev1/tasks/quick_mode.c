@@ -594,20 +594,27 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 
 	if (this->initiator)
 	{
+		traffic_selector_t *tsisub, *tsrsub;
+
 		/* check if peer selection is valid */
-		if (!tsr->is_contained_in(tsr, this->tsr) ||
-			!tsi->is_contained_in(tsi, this->tsi))
+		tsisub = this->tsi->get_subset(this->tsi, tsi);
+		tsrsub = this->tsr->get_subset(this->tsr, tsr);
+		if (!tsisub || !tsrsub)
 		{
 			DBG1(DBG_IKE, "peer selected invalid traffic selectors: "
 				 "%R for %R, %R for %R", tsi, this->tsi, tsr, this->tsr);
+			DESTROY_IF(tsisub);
+			DESTROY_IF(tsrsub);
 			tsi->destroy(tsi);
 			tsr->destroy(tsr);
 			return FALSE;
 		}
+		tsi->destroy(tsi);
+		tsr->destroy(tsr);
 		this->tsi->destroy(this->tsi);
 		this->tsr->destroy(this->tsr);
-		this->tsi = tsi;
-		this->tsr = tsr;
+		this->tsi = tsisub;
+		this->tsr = tsrsub;
 	}
 	else
 	{
