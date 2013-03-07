@@ -21,7 +21,7 @@
 #include <collections/linked_list.h>
 #include <threading/mutex.h>
 
-#define POOL_LIMIT (sizeof(uintptr_t)*8)
+#define POOL_LIMIT (sizeof(u_int)*8 - 1)
 
 typedef struct private_mem_pool_t private_mem_pool_t;
 
@@ -550,7 +550,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 			DBG1(DBG_CFG, "virtual IP pool too large, limiting to %H/%d",
 				 base, addr_bits - bits);
 		}
-		this->size = 1 << (bits);
+		this->size = 1 << bits;
 
 		if (this->size > 2)
 		{	/* do not use first and last addresses of a block */
