@@ -42,11 +42,16 @@ struct tls_server_t {
 /**
  * Create a tls_server instance.
  *
+ * If a peer identity is given, the client must authenticate with a valid
+ * certificate for this identity, or the connection fails. If peer is NULL,
+ * but the client authenticates nonetheless, the authenticated identity
+ * gets returned by tls_handshake_t.get_peer_id().
+ *
  * @param tls		TLS stack
  * @param crypto	TLS crypto helper
  * @param alert		TLS alert handler
  * @param server	server identity
- * @param peer		peer identity
+ * @param peer		peer identity, or NULL
  */
 tls_server_t *tls_server_create(tls_t *tls,
 						tls_crypto_t *crypto, tls_alert_t *alert,

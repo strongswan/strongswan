@@ -80,6 +80,11 @@ struct private_tls_server_t {
 	identification_t *peer;
 
 	/**
+	 * Is it acceptable if we couldn't verify the peer certificate?
+	 */
+	bool peer_auth_optional;
+
+	/**
 	 * State we are in
 	 */
 	server_state_t state;
@@ -367,6 +372,12 @@ static status_t process_certificate(private_tls_server_t *this,
 				DBG1(DBG_TLS, "received TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
+				if (this->peer == NULL)
+				{	/* apply identity to authenticate */
+					this->peer = cert->get_subject(cert);
+					this->peer = this->peer->clone(this->peer);
+					this->peer_auth_optional = TRUE;
+				}
 			}
 			else
 			{
@@ -550,13 +561,22 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
 			 this->peer);
-		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
-		return NEED_MORE;
+		if (!this->peer_auth_optional)
+		{	/* client authentication is required */
+			this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+			return NEED_MORE;
+		}
+		/* reset peer identity, we couldn't authenticate it */
+		this->peer->destroy(this->peer);
+		this->peer = NULL;
+		this->state = STATE_KEY_EXCHANGE_RECEIVED;
 	}
-
+	else
+	{
+		this->state = STATE_CERT_VERIFY_RECEIVED;
+	}
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CERTIFICATE_VERIFY, reader->peek(reader));
-	this->state = STATE_CERT_VERIFY_RECEIVED;
 	return NEED_MORE;
 }
 
@@ -979,11 +999,7 @@ METHOD(tls_handshake_t, build, status_t,
 			}
 			/* otherwise fall through to next state */
 		case STATE_KEY_EXCHANGE_SENT:
-			if (this->peer)
-			{
-				return send_certificate_request(this, type, writer);
-			}
-			/* otherwise fall through to next state */
+			return send_certificate_request(this, type, writer);
 		case STATE_CERTREQ_SENT:
 			return send_hello_done(this, type, writer);
 		case STATE_CIPHERSPEC_CHANGED_OUT:
@@ -1045,11 +1061,25 @@ METHOD(tls_handshake_t, finished, bool,
 	return this->state == STATE_FINISHED_SENT;
 }
 
+METHOD(tls_handshake_t, get_peer_id, identification_t*,
+	private_tls_server_t *this)
+{
+	return this->peer;
+}
+
+METHOD(tls_handshake_t, get_server_id, identification_t*,
+	private_tls_server_t *this)
+{
+	return this->server;
+}
+
 METHOD(tls_handshake_t, destroy, void,
 	private_tls_server_t *this)
 {
 	DESTROY_IF(this->private);
 	DESTROY_IF(this->dh);
+	DESTROY_IF(this->peer);
+	this->server->destroy(this->server);
 	this->peer_auth->destroy(this->peer_auth);
 	this->server_auth->destroy(this->server_auth);
 	free(this->hashsig.ptr);
@@ -1075,14 +1105,16 @@ tls_server_t *tls_server_create(tls_t *tls,
 				.cipherspec_changed = _cipherspec_changed,
 				.change_cipherspec = _change_cipherspec,
 				.finished = _finished,
+				.get_peer_id = _get_peer_id,
+				.get_server_id = _get_server_id,
 				.destroy = _destroy,
 			},
 		},
 		.tls = tls,
 		.crypto = crypto,
 		.alert = alert,
-		.server = server,
-		.peer = peer,
+		.server = server->clone(server),
+		.peer = peer ? peer->clone(peer) : NULL,
 		.state = STATE_INIT,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),

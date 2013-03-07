@@ -25,6 +25,8 @@
 
 #include <tnc/tnccs/tnccs.h>
 
+#include "pt_tls.h"
+
 typedef struct pt_tls_server_t pt_tls_server_t;
 
 /**
@@ -60,10 +62,11 @@ struct pt_tls_server_t {
  *
  * @param server	TLS server identity
  * @param fd		client connection socket
+ * @param auth		client authentication requirements
  * @param tnccs		inner TNCCS protocol handler to use for this connection
  * @return			PT-TLS server
  */
 pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
-									  tnccs_t *tnccs);
+									  pt_tls_auth_t auth, tnccs_t *tnccs);
 
 #endif /** PT_TLS_SERVER_H_ @}*/

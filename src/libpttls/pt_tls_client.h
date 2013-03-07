@@ -50,10 +50,16 @@ struct pt_tls_client_t {
 /**
  * Create a pt_tls_client instance.
  *
+ * The client identity is used for:
+ * - TLS authentication if an appropirate certificate is found
+ * - SASL authentication if requested from the server
+ *
  * @param address		address/port to run assessments against, gets owned
- * @param id			server identity to use for authentication, gets owned
+ * @param server		server identity to use for authentication, gets owned
+ * @param client		client identity to use for authentication, gets owned
  * @return				PT-TLS context
  */
-pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id);
+pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *server,
+									  identification_t *client);
 
 #endif /** PT_TLS_CLIENT_H_ @}*/

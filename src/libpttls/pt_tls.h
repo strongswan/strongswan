@@ -38,6 +38,8 @@
 #define PT_TLS_HEADER_LEN 16
 
 typedef enum pt_tls_message_type_t pt_tls_message_type_t;
+typedef enum pt_tls_sasl_result_t pt_tls_sasl_result_t;
+typedef enum pt_tls_auth_t pt_tls_auth_t;
 
 /**
  * Message types, as defined by NEA PT-TLS
@@ -52,6 +54,32 @@ enum pt_tls_message_type_t {
 	PT_TLS_SASL_RESULT = 6,
 	PT_TLS_PB_TNC_BATCH = 7,
 	PT_TLS_ERROR = 8,
+};
+
+/**
+ * Result code for a single SASL mechansim, as sent in PT_TLS_SASL_RESULT
+ */
+enum pt_tls_sasl_result_t {
+	PT_TLS_SASL_RESULT_SUCCESS = 0,
+	PT_TLS_SASL_RESULT_FAILURE = 1,
+	PT_TLS_SASL_RESULT_ABORT = 2,
+	PT_TLS_SASL_RESULT_MECH_FAILURE = 3,
+};
+
+/**
+ * Client authentication to require as PT-TLS server.
+ */
+enum pt_tls_auth_t {
+	/** don't require TLS client certificate or request SASL authentication */
+	PT_TLS_AUTH_NONE,
+	/** require TLS certificate authentication, no SASL */
+	PT_TLS_AUTH_TLS,
+	/** do SASL regardless of TLS certificate authentication */
+	PT_TLS_AUTH_SASL,
+	/* if client does not authenticate with a TLS certificate, request SASL */
+	PT_TLS_AUTH_TLS_OR_SASL,
+	/* require both, TLS certificate authentication and SASL */
+	PT_TLS_AUTH_TLS_AND_SASL,
 };
 
 /**

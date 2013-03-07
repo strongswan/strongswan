@@ -16,6 +16,8 @@
 #include "pt_tls_client.h"
 #include "pt_tls.h"
 
+#include <sasl/sasl_mechanism.h>
+
 #include <tls_socket.h>
 #include <utils/debug.h>
 
@@ -48,7 +50,12 @@ struct private_pt_tls_client_t {
 	/**
 	 * Server identity
 	 */
-	identification_t *id;
+	identification_t *server;
+
+	/**
+	 * Client authentication identity
+	 */
+	identification_t *client;
 
 	/**
 	 * Current PT-TLS message identifier
@@ -77,7 +84,7 @@ static bool make_connection(private_pt_tls_client_t *this)
 		return FALSE;
 	}
 
-	this->tls = tls_socket_create(FALSE, this->id, NULL, fd, NULL);
+	this->tls = tls_socket_create(FALSE, this->server, this->client, fd, NULL);
 	if (!this->tls)
 	{
 		close(fd);
@@ -128,33 +135,211 @@ static bool negotiate_version(private_pt_tls_client_t *this)
 }
 
 /**
- * Authenticate session using SASL
+ * Run a SASL mechanism
  */
-static bool authenticate(private_pt_tls_client_t *this)
+static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
+{
+	u_int32_t type, vendor, identifier;
+	u_int8_t result;
+	bio_reader_t *reader;
+	bio_writer_t *writer;
+	chunk_t data;
+
+	writer = bio_writer_create(32);
+	writer->write_data8(writer, chunk_from_str(sasl->get_name(sasl)));
+	switch (sasl->build(sasl, &data))
+	{
+		case INVALID_STATE:
+			break;
+		case NEED_MORE:
+			writer->write_data(writer, data);
+			free(data.ptr);
+			break;
+		case SUCCESS:
+			/* shouldn't happen */
+			free(data.ptr);
+			/* FALL */
+		case FAILED:
+		default:
+			writer->destroy(writer);
+			return FAILED;
+	}
+	if (!pt_tls_write(this->tls, writer, PT_TLS_SASL_MECH_SELECTION,
+					  this->identifier++))
+	{
+		return FAILED;
+	}
+	while (TRUE)
+	{
+		reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
+		if (!reader)
+		{
+			return FAILED;
+		}
+		if (vendor != 0)
+		{
+			reader->destroy(reader);
+			return FAILED;
+		}
+		switch (type)
+		{
+			case PT_TLS_SASL_AUTH_DATA:
+				switch (sasl->process(sasl, reader->peek(reader)))
+				{
+					case NEED_MORE:
+						reader->destroy(reader);
+						break;
+					case SUCCESS:
+						/* should not happen, as it would come in a RESULT */
+					case FAILED:
+					default:
+						reader->destroy(reader);
+						return FAILED;
+				}
+				break;
+			case PT_TLS_SASL_RESULT:
+				if (!reader->read_uint8(reader, &result))
+				{
+					reader->destroy(reader);
+					return FAILED;
+				}
+				switch (result)
+				{
+					case PT_TLS_SASL_RESULT_ABORT:
+						DBG1(DBG_TNC, "received SASL abort result");
+						reader->destroy(reader);
+						return FAILED;
+					case PT_TLS_SASL_RESULT_SUCCESS:
+						DBG1(DBG_TNC, "received SASL success result");
+						switch (sasl->process(sasl, reader->peek(reader)))
+						{
+							case SUCCESS:
+								reader->destroy(reader);
+								return SUCCESS;
+							case NEED_MORE:
+								/* inacceptable, it won't get more. FALL */
+							case FAILED:
+							default:
+								reader->destroy(reader);
+								return FAILED;
+						}
+						break;
+					case PT_TLS_SASL_RESULT_MECH_FAILURE:
+					case PT_TLS_SASL_RESULT_FAILURE:
+						DBG1(DBG_TNC, "received SASL failure result");
+						/* non-fatal failure, try again */
+						reader->destroy(reader);
+						return NEED_MORE;
+				}
+			default:
+				return FAILED;
+		}
+
+		writer = bio_writer_create(32);
+		switch (sasl->build(sasl, &data))
+		{
+			case INVALID_STATE:
+				break;
+			case SUCCESS:
+				/* shoudln't happen, continue until we get a result */
+			case NEED_MORE:
+				writer->write_data(writer, data);
+				free(data.ptr);
+				break;
+			case FAILED:
+			default:
+				writer->destroy(writer);
+				return FAILED;
+		}
+		if (!pt_tls_write(this->tls, writer, PT_TLS_SASL_AUTH_DATA,
+						  this->identifier++))
+		{
+			return FAILED;
+		}
+	}
+}
+
+/**
+ * Read SASL mechanism list, select and run mechanism
+ */
+static status_t select_and_do_sasl(private_pt_tls_client_t *this)
 {
 	bio_reader_t *reader;
+	sasl_mechanism_t *sasl = NULL;
 	u_int32_t type, vendor, identifier;
+	u_int8_t len;
+	chunk_t chunk;
+	char buf[21];
+	status_t status = NEED_MORE;
 
 	reader = pt_tls_read(this->tls, &vendor, &type, &identifier);
 	if (!reader)
 	{
-		return FALSE;
+		return FAILED;
 	}
 	if (vendor != 0 || type != PT_TLS_SASL_MECHS)
 	{
-		DBG1(DBG_TNC, "PT-TLS authentication failed");
 		reader->destroy(reader);
-		return FALSE;
+		return FAILED;
 	}
-
-	if (reader->remaining(reader))
-	{	/* mechanism list not empty, FAIL until we support it */
+	if (!reader->remaining(reader))
+	{	/* mechanism list empty, SASL completed */
+		DBG1(DBG_TNC, "PT-TLS authentication complete");
 		reader->destroy(reader);
-		return FALSE;
+		return SUCCESS;
 	}
-	DBG1(DBG_TNC, "PT-TLS authentication complete");
+	while (reader->remaining(reader))
+	{
+		if (!reader->read_uint8(reader, &len) ||
+			!reader->read_data(reader, len & 0x1F, &chunk))
+		{
+			reader->destroy(reader);
+			return FAILED;
+		}
+		snprintf(buf, sizeof(buf), "%.*s", (int)chunk.len, chunk.ptr);
+		sasl = sasl_mechanism_create(buf, this->client);
+		if (sasl)
+		{
+			break;
+		}
+	}
 	reader->destroy(reader);
-	return TRUE;
+
+	if (!sasl)
+	{
+		/* TODO: send PT-TLS error (5) */
+		return FAILED;
+	}
+	while (status == NEED_MORE)
+	{
+		status = do_sasl(this, sasl);
+	}
+	sasl->destroy(sasl);
+	if (status == SUCCESS)
+	{	/* continue until we receive empty SASL mechanism list */
+		return NEED_MORE;
+	}
+	return FAILED;
+}
+
+/**
+ * Authenticate session using SASL
+ */
+static bool authenticate(private_pt_tls_client_t *this)
+{
+	while (TRUE)
+	{
+		switch (select_and_do_sasl(this))
+		{
+			case NEED_MORE:
+				continue;
+			case SUCCESS:
+				return TRUE;
+			case FAILED:
+			default:
+				return FALSE;
+		}
+	}
 }
 
 /**
@@ -276,18 +461,23 @@ METHOD(pt_tls_client_t, destroy, void,
 {
 	if (this->tls)
 	{
-		close(this->tls->get_fd(this->tls));
+		int fd;
+
+		fd = this->tls->get_fd(this->tls);
 		this->tls->destroy(this->tls);
+		close(fd);
 	}
 	this->address->destroy(this->address);
-	this->id->destroy(this->id);
+	this->server->destroy(this->server);
+	this->client->destroy(this->client);
 	free(this);
 }
 
 /**
  * See header
  */
-pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id)
+pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *server,
+									  identification_t *client)
 {
 	private_pt_tls_client_t *this;
 
@@ -297,7 +487,8 @@ pt_tls_client_t *pt_tls_client_create(host_t *address, identification_t *id)
 			.destroy = _destroy,
 		},
 		.address = address,
-		.id = id,
+		.server = server,
+		.client = client,
 	);
 
 	return &this->public;

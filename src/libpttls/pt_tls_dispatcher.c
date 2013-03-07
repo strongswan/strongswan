@@ -42,6 +42,11 @@ struct private_pt_tls_dispatcher_t {
 	int fd;
 
 	/**
+	 * Client authentication requirements
+	 */
+	pt_tls_auth_t auth;
+
+	/**
 	 * Server identity
 	 */
 	identification_t *server;
@@ -141,7 +146,7 @@ METHOD(pt_tls_dispatcher_t, dispatch, void,
 			close(fd);
 			continue;
 		}
-		connection = pt_tls_server_create(this->server, fd, tnccs);
+		connection = pt_tls_server_create(this->server, fd, this->auth, tnccs);
 		if (!connection)
 		{
 			close(fd);
@@ -171,7 +176,7 @@ METHOD(pt_tls_dispatcher_t, destroy, void,
  * See header
  */
 pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
-											  identification_t *id)
+									identification_t *id, pt_tls_auth_t auth)
 {
 	private_pt_tls_dispatcher_t *this;
 
@@ -184,6 +189,7 @@ pt_tls_dispatcher_t *pt_tls_dispatcher_create(host_t *address,
 		/* we currently don't authenticate the peer, use %any identity */
 		.peer = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.fd = -1,
+		.auth = auth,
 	);
 
 	if (!open_socket(this, address))
