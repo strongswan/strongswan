@@ -196,7 +196,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	policy = ipsec->policies->find_by_packet(ipsec->policies, packet, FALSE);
 	if (!policy)
 	{
-		DBG1(DBG_ESP, "no matching outbound IPsec policy for %H == %H",
+		DBG2(DBG_ESP, "no matching outbound IPsec policy for %H == %H",
 			 packet->get_source(packet), packet->get_destination(packet));
 		packet->destroy(packet);
 		return JOB_REQUEUE_DIRECT;
