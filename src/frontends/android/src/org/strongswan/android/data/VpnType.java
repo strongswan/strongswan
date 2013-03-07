@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,7 +19,8 @@ public enum VpnType
 {
 	/* the order here must match the items in R.array.vpn_types */
 	IKEV2_EAP("ikev2-eap", true, false),
-	IKEV2_CERT("ikev2-cert", false, true);
+	IKEV2_CERT("ikev2-cert", false, true),
+	IKEV2_CERT_EAP("ikev2-cert-eap", true, true);
 
 	private String mIdentifier;
 	private boolean mCertificate;

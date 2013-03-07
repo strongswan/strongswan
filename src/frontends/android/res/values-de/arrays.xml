@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012-2013 Tobias Brunner
     Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -18,5 +18,6 @@
     <string-array name="vpn_types">
         <item>IKEv2 EAP (Benutzername/Passwort)</item>
         <item>IKEv2 Zertifikat</item>
+        <item>IKEv2 Zertifikat + EAP (Benutzername/Passwort)</item>
     </string-array>
 </resources>

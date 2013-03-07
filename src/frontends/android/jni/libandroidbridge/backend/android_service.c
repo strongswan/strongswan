@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Tobias Brunner
+ * Copyright (C) 2010-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -456,9 +456,49 @@ METHOD(listener_t, ike_reestablish, bool,
 	return TRUE;
 }
 
+static void add_auth_cfg_eap(private_android_service_t *this,
+							 peer_cfg_t *peer_cfg)
+{
+	identification_t *user;
+	auth_cfg_t *auth;
+
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+	user = identification_create_from_string(this->username);
+	auth->add(auth, AUTH_RULE_IDENTITY, user);
+
+	this->creds->add_username_password(this->creds, this->username,
+									   this->password);
+	memwipe(this->password, strlen(this->password));
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+}
+
+static bool add_auth_cfg_cert(private_android_service_t *this,
+							  peer_cfg_t *peer_cfg)
+{
+	certificate_t *cert;
+	identification_t *id;
+	auth_cfg_t *auth;
+
+	cert = this->creds->load_user_certificate(this->creds);
+	if (!cert)
+	{
+		return FALSE;
+	}
+
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
+
+	id = cert->get_subject(cert);
+	auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	return TRUE;
+}
+
 static job_requeue_t initiate(private_android_service_t *this)
 {
-	identification_t *gateway, *user;
+	identification_t *gateway;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -489,38 +529,21 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
 
 	/* local auth config */
-	if (streq("ikev2-eap", this->type))
+	if (streq("ikev2-cert", this->type) ||
+		streq("ikev2-cert-eap", this->type))
 	{
-		auth = auth_cfg_create();
-		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
-		user = identification_create_from_string(this->username);
-		auth->add(auth, AUTH_RULE_IDENTITY, user);
-
-		this->creds->add_username_password(this->creds, this->username,
-										   this->password);
-		memwipe(this->password, strlen(this->password));
-		peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
-	}
-	else if (streq("ikev2-cert", this->type))
-	{
-		certificate_t *cert;
-		identification_t *id;
-
-		cert = this->creds->load_user_certificate(this->creds);
-		if (!cert)
+		if (!add_auth_cfg_cert(this, peer_cfg))
 		{
 			peer_cfg->destroy(peer_cfg);
 			charonservice->update_status(charonservice,
 										 CHARONSERVICE_GENERIC_ERROR);
 			return JOB_REQUEUE_NONE;
-
 		}
-		auth = auth_cfg_create();
-		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-		auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
-		id = cert->get_subject(cert);
-		auth->add(auth, AUTH_RULE_IDENTITY, id->clone(id));
-		peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	}
+	if (streq("ikev2-eap", this->type) ||
+		streq("ikev2-cert-eap", this->type))
+	{
+		add_auth_cfg_eap(this, peer_cfg);
 	}
 
 	/* remote auth config */
