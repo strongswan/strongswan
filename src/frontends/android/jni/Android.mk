@@ -35,6 +35,8 @@ strongswan_CFLAGS := \
 	-DHAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY \
 	-DHAVE_IPSEC_MODE_BEET \
 	-DHAVE_IPSEC_DIR_FWD \
+	-DHAVE_IN6ADDR_ANY \
+	-DHAVE_NETINET_IP6_H \
 	-DOPENSSL_NO_CMS \
 	-DOPENSSL_NO_ENGINE \
 	-DCONFIG_H_INCLUDED \
@@ -50,10 +52,6 @@ strongswan_CFLAGS := \
 	-DVERSION=\"$(strongswan_VERSION)\" \
 	-DDEV_RANDOM=\"/dev/random\" \
 	-DDEV_URANDOM=\"/dev/urandom\"
-
-# only for Android 2.0+
-strongswan_CFLAGS += \
-	-DHAVE_IN6ADDR_ANY
 
 include $(addprefix $(LOCAL_PATH)/,$(addsuffix /Android.mk, \
 		vstr \

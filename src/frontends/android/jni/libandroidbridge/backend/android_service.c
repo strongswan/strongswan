@@ -209,13 +209,20 @@ static bool add_route(vpnservice_builder_t *builder, host_t *net,
 {
 	/* if route is 0.0.0.0/0, split it into two routes 0.0.0.0/1 and
 	 * 128.0.0.0/1 because otherwise it would conflict with the current default
-	 * route */
+	 * route.  likewise for IPv6 with ::/0. */
 	if (net->is_anyaddr(net) && prefix == 0)
 	{
 		bool success;
 
 		success = add_route(builder, net, 1);
-		net = host_create_from_string("128.0.0.0", 0);
+		if (net->get_family(net) == AF_INET)
+		{
+			net = host_create_from_string("128.0.0.0", 0);
+		}
+		else
+		{
+			net = host_create_from_string("8000::", 0);
+		}
 		success = success && add_route(builder, net, 1);
 		net->destroy(net);
 		return success;
@@ -526,7 +533,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 							   TRUE, FALSE, /* mobike, aggressive */
 							   0, 0, /* DPD delay, timeout */
 							   FALSE, NULL, NULL); /* mediation */
-	peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
+	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
 	/* local auth config */
 	if (streq("ikev2-cert", this->type) ||
@@ -561,11 +569,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 	 * libipsec, no PFS for now */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512"));
-	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "0.0.0.0",
-											 0, "255.255.255.255", 65535);
+	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "0.0.0.0",
-											 0, "255.255.255.255", 65535);
+	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
+	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
+	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -45,16 +45,14 @@ METHOD(vpnservice_builder_t, add_address, bool,
 	JNIEnv *env;
 	jmethodID method_id;
 	jstring str;
-	char buf[INET_ADDRSTRLEN];
+	char buf[INET6_ADDRSTRLEN];
+	int prefix;
 
 	androidjni_attach_thread(&env);
 
 	DBG2(DBG_LIB, "builder: adding interface address %H", addr);
 
-	if (addr->get_family(addr) != AF_INET)
-	{
-		goto failed;
-	}
+	prefix = addr->get_family(addr) == AF_INET ? 32 : 128;
 	if (snprintf(buf, sizeof(buf), "%H", addr) >= sizeof(buf))
 	{
 		goto failed;
@@ -71,7 +69,7 @@ METHOD(vpnservice_builder_t, add_address, bool,
 	{
 		goto failed;
 	}
-	if (!(*env)->CallBooleanMethod(env, this->builder, method_id, str, 32))
+	if (!(*env)->CallBooleanMethod(env, this->builder, method_id, str, prefix))
 	{
 		goto failed;
 	}
@@ -121,16 +119,12 @@ METHOD(vpnservice_builder_t, add_route, bool,
 	JNIEnv *env;
 	jmethodID method_id;
 	jstring str;
-	char buf[INET_ADDRSTRLEN];
+	char buf[INET6_ADDRSTRLEN];
 
 	androidjni_attach_thread(&env);
 
 	DBG2(DBG_LIB, "builder: adding route %+H/%d", net, prefix);
 
-	if (net->get_family(net) != AF_INET)
-	{
-		goto failed;
-	}
 	if (snprintf(buf, sizeof(buf), "%+H", net) >= sizeof(buf))
 	{
 		goto failed;
