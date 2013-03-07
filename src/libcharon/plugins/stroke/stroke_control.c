@@ -33,6 +33,11 @@ struct private_stroke_control_t {
 	 * public functions
 	 */
 	stroke_control_t public;
+
+	/**
+	 * Timeout for stroke commands, im ms
+	 */
+	u_int timeout;
 };
 
 
@@ -97,8 +102,8 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 /**
  * call the charon controller to initiate the connection
  */
-static void charon_initiate(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-							stroke_msg_t *msg, FILE *out)
+static void charon_initiate(private_stroke_control_t *this, peer_cfg_t *peer_cfg,
+							child_cfg_t *child_cfg, stroke_msg_t *msg, FILE *out)
 {
 	if (msg->output_verbosity < 0)
 	{
@@ -108,9 +113,27 @@ static void charon_initiate(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	else
 	{
 		stroke_log_info_t info = { msg->output_verbosity, out };
+		status_t status;
 
-		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
-									 (controller_cb_t)stroke_log, &info, 0);
+		status = charon->controller->initiate(charon->controller,
+							peer_cfg, child_cfg, (controller_cb_t)stroke_log,
+							&info, this->timeout);
+		switch (status)
+		{
+			case SUCCESS:
+				fprintf(out, "connection '%s' established successfully\n",
+						msg->initiate.name);
+				break;
+			case OUT_OF_RES:
+				fprintf(out, "connection '%s' not established after %dms, "
+						"detaching\n", msg->initiate.name, this->timeout);
+				break;
+			default:
+			case FAILED:
+				fprintf(out, "establishing connection '%s' failed\n",
+						msg->initiate.name);
+				break;
+		}
 	}
 }
 
@@ -133,7 +156,7 @@ METHOD(stroke_control_t, initiate, void,
 			while (enumerator->enumerate(enumerator, &child_cfg))
 			{
 				empty = FALSE;
-				charon_initiate(peer_cfg->get_ref(peer_cfg),
+				charon_initiate(this, peer_cfg->get_ref(peer_cfg),
 								child_cfg->get_ref(child_cfg), msg, out);
 			}
 			enumerator->destroy(enumerator);
@@ -169,7 +192,7 @@ METHOD(stroke_control_t, initiate, void,
 			return;
 		}
 	}
-	charon_initiate(peer_cfg, child_cfg, msg, out);
+	charon_initiate(this, peer_cfg, child_cfg, msg, out);
 }
 
 /**
@@ -239,6 +262,41 @@ static bool parse_specifier(char *string, u_int32_t *id,
 	return TRUE;
 }
 
+/**
+ * Report the result of a terminate() call to console
+ */
+static void report_terminate_status(private_stroke_control_t *this,
+						status_t status, FILE *out, u_int32_t id, bool child)
+{
+	char *prefix, *postfix;
+
+	if (child)
+	{
+		prefix = "CHILD_SA {";
+		postfix = "}";
+	}
+	else
+	{
+		prefix = "IKE_SA [";
+		postfix = "]";
+	}
+
+	switch (status)
+	{
+		case SUCCESS:
+			fprintf(out, "%s%d%s closed successfully\n", prefix, id, postfix);
+			break;
+		case OUT_OF_RES:
+			fprintf(out, "%s%d%s not closed after %dms, detaching\n",
+					prefix, id, postfix, this->timeout);
+			break;
+		default:
+		case FAILED:
+			fprintf(out, "closing %s%d%s failed\n", prefix, id, postfix);
+			break;
+	}
+}
+
 METHOD(stroke_control_t, terminate, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
@@ -250,6 +308,7 @@ METHOD(stroke_control_t, terminate, void,
 	linked_list_t *ike_list, *child_list;
 	stroke_log_info_t info;
 	uintptr_t del;
+	status_t status;
 
 	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
 	{
@@ -264,15 +323,15 @@ METHOD(stroke_control_t, terminate, void,
 	{
 		if (child)
 		{
-			charon->controller->terminate_child(charon->controller, id,
-									(controller_cb_t)stroke_log, &info, 0);
+			status = charon->controller->terminate_child(charon->controller, id,
+							(controller_cb_t)stroke_log, &info, this->timeout);
 		}
 		else
 		{
-			charon->controller->terminate_ike(charon->controller, id,
-									(controller_cb_t)stroke_log, &info, 0);
+			status = charon->controller->terminate_ike(charon->controller, id,
+							(controller_cb_t)stroke_log, &info, this->timeout);
 		}
-		return;
+		return report_terminate_status(this, status, out, id, child);
 	}
 
 	ike_list = linked_list_create();
@@ -320,16 +379,18 @@ METHOD(stroke_control_t, terminate, void,
 	enumerator = child_list->create_enumerator(child_list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
-		charon->controller->terminate_child(charon->controller, del,
-									(controller_cb_t)stroke_log, &info, 0);
+		status = charon->controller->terminate_child(charon->controller, del,
+							(controller_cb_t)stroke_log, &info, this->timeout);
+		report_terminate_status(this, status, out, del, TRUE);
 	}
 	enumerator->destroy(enumerator);
 
 	enumerator = ike_list->create_enumerator(ike_list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
-		charon->controller->terminate_ike(charon->controller, del,
-									(controller_cb_t)stroke_log, &info, 0);
+		status = charon->controller->terminate_ike(charon->controller, del,
+							(controller_cb_t)stroke_log, &info, this->timeout);
+		report_terminate_status(this, status, out, del, FALSE);
 	}
 	enumerator->destroy(enumerator);
 
@@ -487,6 +548,7 @@ METHOD(stroke_control_t, purge_ike, void,
 	linked_list_t *list;
 	uintptr_t del;
 	stroke_log_info_t info;
+	status_t status;
 
 	info.out = out;
 	info.level = msg->output_verbosity;
@@ -509,8 +571,9 @@ METHOD(stroke_control_t, purge_ike, void,
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &del))
 	{
-		charon->controller->terminate_ike(charon->controller, del,
-									(controller_cb_t)stroke_log, &info, 0);
+		status = charon->controller->terminate_ike(charon->controller, del,
+							(controller_cb_t)stroke_log, &info, this->timeout);
+		report_terminate_status(this, status, out, del, TRUE);
 	}
 	enumerator->destroy(enumerator);
 	list->destroy(list);
@@ -670,8 +733,9 @@ stroke_control_t *stroke_control_create()
 			.unroute = _unroute,
 			.destroy = _destroy,
 		},
+		.timeout = lib->settings->get_int(lib->settings,
+								"%s.plugins.stroke.timeout", 0, charon->name),
 	);
 
 	return &this->public;
 }
-
