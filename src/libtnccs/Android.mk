@@ -16,6 +16,7 @@ LOCAL_SRC_FILES := $(filter %.c,$(libtnccs_la_SOURCES))
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \
+	$(strongswan_PATH)/src/libtls \
 	$(strongswan_PATH)/src/libtncif \
 	$(strongswan_PATH)/src/libstrongswan
 
