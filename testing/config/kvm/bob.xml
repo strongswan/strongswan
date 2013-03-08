@@ -38,6 +38,7 @@
     <interface type='network'>
       <mac address='52:54:00:40:85:6b'/>
       <source network='vnet3'/>
+      <target dev='bob-eth0'/>
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>

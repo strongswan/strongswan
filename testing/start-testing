@@ -9,7 +9,7 @@ CONFDIR=$DIR/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
-MCASTBRS="virbr1 virbr2"
+MCASTBRS="test-br0 test-br1"
 
 echo "Starting test environment"
 
@@ -41,7 +41,7 @@ done
 for br in $MCASTBRS
 do
 	cd /sys/devices/virtual/net/$br/brif
-	for vnet in `find . -name "vnet*"`
+	for vnet in `find . -name "*eth?"`
 	do
 		echo 2 > $vnet/multicast_router
 	done
