@@ -53,18 +53,6 @@ struct private_backtrace_t {
 };
 
 /**
- * Same as tty_escape_get(), but for a potentially NULL FILE*
- */
-static char* esc(FILE *file, tty_escape_t escape)
-{
-	if (file)
-	{
-		return tty_escape_get(fileno(file), escape);
-	}
-	return "";
-}
-
-/**
  * Write a format string with arguments to a FILE line, if it is NULL to DBG
  */
 static void println(FILE *file, char *format, ...)
@@ -87,6 +75,19 @@ static void println(FILE *file, char *format, ...)
 }
 
 #ifdef HAVE_DLADDR
+
+/**
+ * Same as tty_escape_get(), but for a potentially NULL FILE*
+ */
+static char* esc(FILE *file, tty_escape_t escape)
+{
+	if (file)
+	{
+		return tty_escape_get(fileno(file), escape);
+	}
+	return "";
+}
+
 #ifdef HAVE_BFD_H
 
 #include <bfd.h>
