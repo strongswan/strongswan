@@ -3,16 +3,16 @@ include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
 LOCAL_SRC_FILES := \
-android_jni.c android_jni.h \
-backend/android_attr.c backend/android_attr.h \
-backend/android_creds.c backend/android_creds.h \
-backend/android_private_key.c backend/android_private_key.h \
-backend/android_service.c backend/android_service.h \
-charonservice.c charonservice.h \
-kernel/android_ipsec.c kernel/android_ipsec.h \
-kernel/android_net.c kernel/android_net.h \
-kernel/network_manager.c kernel/network_manager.h \
-vpnservice_builder.c vpnservice_builder.h
+android_jni.c \
+backend/android_attr.c \
+backend/android_creds.c \
+backend/android_private_key.c \
+backend/android_service.c \
+charonservice.c \
+kernel/android_ipsec.c \
+kernel/android_net.c \
+kernel/network_manager.c \
+vpnservice_builder.c
 
 # build libandroidbridge -------------------------------------------------------
 

@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
-LOCAL_SRC_FILES := \
+libipsec_la_SOURCES := \
 ipsec.c ipsec.h \
 esp_context.c esp_context.h \
 esp_packet.c esp_packet.h \
@@ -14,6 +14,8 @@ ipsec_policy_mgr.c ipsec_policy_mgr.h \
 ipsec_processor.c ipsec_processor.h \
 ipsec_sa.c ipsec_sa.h \
 ipsec_sa_mgr.c ipsec_sa_mgr.h
+
+LOCAL_SRC_FILES := $(filter %.c,$(libipsec_la_SOURCES))
 
 # build libipsec ---------------------------------------------------------------
 

@@ -2,10 +2,12 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
-LOCAL_SRC_FILES := \
+libtncif_la_SOURCES := \
 tncif.h tncifimc.h tncifimv.h tncif_names.h tncif_names.c \
 tncif_identity.h tncif_identity.c \
 tncif_pa_subtypes.h tncif_pa_subtypes.c
+
+LOCAL_SRC_FILES := $(filter %.c,$(libtncif_la_SOURCES))
 
 # build libtncif ---------------------------------------------------------------
 

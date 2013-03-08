@@ -2,8 +2,10 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
-LOCAL_SRC_FILES := \
+stroke_SOURCES := \
 stroke.c stroke_msg.h stroke_keywords.c stroke_keywords.h
+
+LOCAL_SRC_FILES := $(filter %.c,$(stroke_SOURCES))
 
 # build stroke -----------------------------------------------------------------
 

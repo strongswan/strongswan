@@ -2,8 +2,10 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
-LOCAL_SRC_FILES := \
+scepclient_SOURCES := \
 scepclient.c scep.c scep.h
+
+LOCAL_SRC_FILES := $(filter %.c,$(scepclient_SOURCES))
 
 # build scepclient -------------------------------------------------------------
 

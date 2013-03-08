@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # copy-n-paste from Makefile.am
-LOCAL_SRC_FILES := \
+libhydra_la_SOURCES := \
 hydra.c hydra.h \
 attributes/attributes.c attributes/attributes.h \
 attributes/attribute_provider.h attributes/attribute_handler.h \
@@ -12,6 +12,8 @@ kernel/kernel_interface.c kernel/kernel_interface.h \
 kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
 kernel/kernel_net.c kernel/kernel_net.h \
 kernel/kernel_listener.h
+
+LOCAL_SRC_FILES := $(filter %.c,$(libhydra_la_SOURCES))
 
 # adding the plugin source files
 
