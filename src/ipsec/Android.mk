@@ -18,13 +18,14 @@ $(GEN) : PRIVATE_CUSTOM_TOOL = sed \
 	-e "s:@IPSEC_NAME@:strongSwan:" \
 	-e "s:@IPSEC_DISTRO@::" \
 	-e "s:@IPSEC_DIR@:$(strongswan_DIR):" \
+	-e "s:@IPSEC_SCRIPT@:ipsec:" \
 	-e "s:@IPSEC_SBINDIR@:$(strongswan_SBINDIR):" \
 	-e "s:@IPSEC_CONFDIR@:$(strongswan_CONFDIR):" \
 	-e "s:@IPSEC_PIDDIR@:$(strongswan_PIDDIR):" \
 	$< > $@ && chmod +x $@
 
 $(GEN) : $(strongswan_PATH)/Android.mk
-$(GEN) : $(LOCAL_PATH)/ipsec.in
+$(GEN) : $(LOCAL_PATH)/_ipsec.in
 	$(transform-generated-source)
 
 LOCAL_GENERATED_SOURCES := $(GEN)
