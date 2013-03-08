@@ -431,6 +431,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		case AUTH_PSK:
 		case AUTH_XAUTH_INIT_PSK:
+		case AUTH_XAUTH_RESP_PSK:
 		{	/* SKEYID = prf(pre-shared-key, Ni_b | Nr_b) */
 			chunk_t psk;
 			if (!shared_key)
