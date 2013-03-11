@@ -1760,7 +1760,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 				/* during IKEv1 reauthentication, children get moved from
 				 * old the new SA before the virtual IP is available. This
 				 * kills the route for our virtual IP, reinstall. */
-				queue_route_reinstall(this, entry->iface->ifname);
+				queue_route_reinstall(this, strdup(entry->iface->ifname));
 				return SUCCESS;
 			}
 		}
