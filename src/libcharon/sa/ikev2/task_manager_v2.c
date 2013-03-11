@@ -1175,6 +1175,10 @@ METHOD(task_manager_t, process_message, status_t,
 		{
 			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
 				 mid, this->responding.mid);
+			if (msg->get_exchange_type(msg) == IKE_SA_INIT)
+			{	/* clean up IKE_SA state if IKE_SA_INIT has invalid msg ID */
+				return DESTROY_ME;
+			}
 		}
 	}
 	else
