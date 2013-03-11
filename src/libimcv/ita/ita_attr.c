@@ -20,13 +20,14 @@
 #include "ita/ita_attr_settings.h"
 #include "ita/ita_attr_angel.h"
 
-ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_STOP_ANGEL,
+ENUM(ita_attr_names, ITA_ATTR_COMMAND, ITA_ATTR_ECHO,
 	"Command",
 	"Dummy",
 	"Get Settings",
 	"Settings",
 	"Start Angel",
-	"Stop Angel"
+	"Stop Angel",
+	"Echo"
 );
 
 /**
