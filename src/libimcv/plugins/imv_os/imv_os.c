@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Andreas Steffen
+ * Copyright (C) 2012-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -390,7 +390,7 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 		device_id = os_state->get_device_id(os_state);
 		if (os_db && device_id)
 		{
-			os_db->set_device_info(os_db, device_id, imv_os->get_ar_id(imv_os),
+			os_db->set_device_info(os_db, device_id, state->get_ar_id(state),
 						os_state->get_info(os_state, NULL, NULL, NULL),
 						count, count_update, count_blacklist, os_settings);
 		}

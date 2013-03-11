@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -76,6 +76,20 @@ struct imv_state_t {
 	 * @return				maximum size of a PA-TNC message
 	 */
 	u_int32_t (*get_max_msg_len)(imv_state_t *this);
+
+	/**
+	 * Set Access Requestor ID
+	 *
+	 * @param ar_id			Access Requestor ID (is not going to be cloned)
+	 */
+	void (*set_ar_id)(imv_state_t *this, identification_t *ar_id);
+
+	/**
+	 * Get Access Requestor ID
+	 *
+	 * @return				Access Requestor ID
+	 */
+	identification_t* (*get_ar_id)(imv_state_t *this);
 
 	/**
 	 * Change the connection state

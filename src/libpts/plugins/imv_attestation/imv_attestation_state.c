@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -61,6 +62,11 @@ struct private_imv_attestation_state_t {
 	 * Maximum PA-TNC message size for this TNCCS connection
 	 */
 	u_int32_t max_msg_len;
+
+	/**
+	 * Access Requestor ID
+	 */
+	identification_t *ar_id;
 
 	/**
 	 * IMV Attestation handshake state
@@ -215,6 +221,19 @@ METHOD(imv_state_t, get_max_msg_len, u_int32_t,
 	return this->max_msg_len;
 }
 
+METHOD(imv_state_t, set_ar_id, void,
+	private_imv_attestation_state_t *this, identification_t *ar_id)
+{
+	/* no cloning, caller must not destroy object */
+	this->ar_id = ar_id;
+}
+
+METHOD(imv_state_t, get_ar_id, identification_t*,
+	private_imv_attestation_state_t *this)
+{
+	return this->ar_id;
+}
+
 METHOD(imv_state_t, change_state, void,
 	private_imv_attestation_state_t *this, TNC_ConnectionState new_state)
 {
@@ -288,6 +307,7 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
+	DESTROY_IF(this->ar_id);
 	DESTROY_IF(this->reason_string);
 	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
 	this->components->destroy_function(this->components, (void *)free_func_comp);
@@ -479,6 +499,8 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.set_flags = _set_flags,
 				.set_max_msg_len = _set_max_msg_len,
 				.get_max_msg_len = _get_max_msg_len,
+				.set_ar_id = _set_ar_id,
+				.get_ar_id = _get_ar_id,
 				.change_state = _change_state,
 				.get_recommendation = _get_recommendation,
 				.set_recommendation = _set_recommendation,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -150,13 +150,6 @@ struct imv_agent_t {
 	 * return					base IMV ID
 	 */
 	TNC_IMVID (*get_id)(imv_agent_t *this);
-
-	/**
-	 * Get Access Requestor ID
-	 *
-	 * return					Access Requestor ID
-	 */
-	identification_t* (*get_ar_id)(imv_agent_t *this);
 
 	/**
 	 * Reserve additional IMV IDs from TNCS
