@@ -513,12 +513,11 @@ METHOD(mem_pool_t, destroy, void,
 }
 
 /**
- * Described in header
+ * Generic constructor
  */
-mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
+static private_mem_pool_t *create_generic(char *name)
 {
 	private_mem_pool_t *this;
-	int addr_bits;
 
 	INIT(this,
 		.public = {
@@ -538,6 +537,18 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
+	return this;
+}
+
+/**
+ * Described in header
+ */
+mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
+{
+	private_mem_pool_t *this;
+	int addr_bits;
+
+	this = create_generic(name);
 	if (base)
 	{
 		addr_bits = base->get_family(base) == AF_INET ? 32 : 128;
@@ -563,3 +574,37 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 	return &this->public;
 }
 
+/**
+ * Described in header
+ */
+mem_pool_t *mem_pool_create_range(char *name, host_t *from, host_t *to)
+{
+	private_mem_pool_t *this;
+	chunk_t fromaddr, toaddr;
+	u_int32_t diff;
+
+	fromaddr = from->get_address(from);
+	toaddr = to->get_address(to);
+
+	if (from->get_family(from) != to->get_family(to) ||
+		fromaddr.len != toaddr.len || fromaddr.len < sizeof(diff) ||
+		memcmp(fromaddr.ptr, toaddr.ptr, toaddr.len) > 0)
+	{
+		DBG1(DBG_CFG, "invalid IP address range: %H-%H", from, to);
+		return NULL;
+	}
+	if (fromaddr.len > sizeof(diff) &&
+		!chunk_equals(chunk_create(fromaddr.ptr, fromaddr.len - sizeof(diff)),
+					  chunk_create(toaddr.ptr, toaddr.len - sizeof(diff))))
+	{
+		DBG1(DBG_CFG, "IP address range too large: %H-%H", from, to);
+		return NULL;
+	}
+	this = create_generic(name);
+	this->base = from->clone(from);
+	diff = untoh32(toaddr.ptr + toaddr.len - sizeof(diff)) -
+		   untoh32(fromaddr.ptr + fromaddr.len - sizeof(diff));
+	this->size = diff + 1;
+
+	return &this->public;
+}

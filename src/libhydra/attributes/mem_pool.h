@@ -133,4 +133,14 @@ struct mem_pool_t {
  */
 mem_pool_t *mem_pool_create(char *name, host_t *base, int bits);
 
+/**
+ * Create an in-memory IP address from a range.
+ *
+ * @param name		name of this pool
+ * @param from		start of ranged pool
+ * @param to		end of ranged pool
+ * @return			memory pool instance, NULL if range invalid
+ */
+mem_pool_t *mem_pool_create_range(char *name, host_t *from, host_t *to);
+
 #endif /** MEM_POOL_H_ @} */
