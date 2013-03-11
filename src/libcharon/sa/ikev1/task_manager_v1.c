@@ -1163,6 +1163,15 @@ static status_t process_response(private_task_manager_t *this,
 
 	if (message->get_exchange_type(message) != this->initiating.type)
 	{
+		/* Windows server sends a fourth quick mode message having an initial
+		 * contact notify. Ignore this message for compatibility. */
+		if (this->initiating.type == EXCHANGE_TYPE_UNDEFINED &&
+			message->get_exchange_type(message) == QUICK_MODE &&
+			message->get_notify(message, INITIAL_CONTACT))
+		{
+			DBG1(DBG_IKE, "ignoring fourth Quick Mode message");
+			return SUCCESS;
+		}
 		DBG1(DBG_IKE, "received %N response, but expected %N",
 			 exchange_type_names, message->get_exchange_type(message),
 			 exchange_type_names, this->initiating.type);
