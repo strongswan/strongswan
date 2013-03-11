@@ -205,31 +205,75 @@ static bool equals(host_t *a, host_t *b)
  */
 static void load_addrs(private_load_tester_config_t *this)
 {
-	enumerator_t *enumerator;
-	host_t *net;
+	enumerator_t *enumerator, *tokens;
+	host_t *from, *to;
 	int bits;
-	char *iface, *cidr;
+	char *iface, *token, *pos;
 	mem_pool_t *pool;
-
 
 	this->prefix = lib->settings->get_int(lib->settings,
 						"%s.plugins.load-tester.addrs_prefix", 16, charon->name);
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
 						"%s.plugins.load-tester.addrs", charon->name);
-	while (enumerator->enumerate(enumerator, &iface, &cidr))
+	while (enumerator->enumerate(enumerator, &iface, &token))
 	{
-		net = host_create_from_subnet(cidr, &bits);
-		if (net)
+		tokens = enumerator_create_token(token, ",", " ");
+		while (tokens->enumerate(tokens, &token))
 		{
-			DBG1(DBG_CFG, "loaded load-tester addresses %s", cidr);
-			pool = mem_pool_create(iface, net, bits);
-			net->destroy(net);
-			this->pools->insert_last(this->pools, pool);
+			pos = strchr(token, '-');
+			if (pos)
+			{	/* range */
+				*(pos++) = '\0';
+				/* trim whitespace */
+				while (*pos == ' ')
+				{
+					pos++;
+				}
+				while (token[strlen(token) - 1] == ' ')
+				{
+					token[strlen(token) - 1] = '\0';
+				}
+				from = host_create_from_string(token, 0);
+				to = host_create_from_string(pos, 0);
+				if (from && to)
+				{
+					pool = mem_pool_create_range(iface, from, to);
+					if (pool)
+					{
+						DBG1(DBG_CFG, "loaded load-tester address range "
+							 "%H-%H on %s", from, to, iface);
+						this->pools->insert_last(this->pools, pool);
+					}
+					from->destroy(from);
+					to->destroy(to);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "parsing load-tester address range %s-%s "
+						 "failed, skipped", token, pos);
+					DESTROY_IF(from);
+					DESTROY_IF(to);
+				}
+			}
+			else
+			{	/* subnet */
+				from = host_create_from_subnet(token, &bits);
+				if (from)
+				{
+					DBG1(DBG_CFG, "loaded load-tester address pool %H/%d on %s",
+						 from, bits, iface);
+					pool = mem_pool_create(iface, from, bits);
+					from->destroy(from);
+					this->pools->insert_last(this->pools, pool);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "parsing load-tester address %s failed, "
+						 "skipped", token);
+				}
+			}
 		}
-		else
-		{
-			DBG1(DBG_CFG, "parsing load-tester addresses %s failed", cidr);
-		}
+		tokens->destroy(tokens);
 	}
 	enumerator->destroy(enumerator);
 }
