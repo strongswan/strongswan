@@ -21,6 +21,7 @@
 #ifndef EAP_RADIUS_PROVIDER_H_
 #define EAP_RADIUS_PROVIDER_H_
 
+#include <attributes/attributes.h>
 #include <attributes/attribute_provider.h>
 
 typedef struct eap_radius_provider_t eap_radius_provider_t;
@@ -43,6 +44,16 @@ struct eap_radius_provider_t {
 	 */
 	void (*add_framed_ip)(eap_radius_provider_t *this, identification_t *id,
 						  host_t *ip);
+
+	/**
+	 * Add a configuration attribute received from RADIUS to forward.
+	 *
+	 * @param id			client identity
+	 * @param type			attribute type
+	 * @param data			attribute data
+	 */
+	void (*add_attribute)(eap_radius_provider_t *this, identification_t *id,
+						  configuration_attribute_type_t type, chunk_t data);
 
 	/**
 	 * Destroy a eap_radius_provider_t.

@@ -336,12 +336,14 @@ static void process_cfg_attributes(private_eap_radius_t *this,
 {
 	eap_radius_provider_t *provider;
 	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
 	host_t *host;
 	chunk_t data;
-	int type;
+	int type, vendor;
 
+	ike_sa = charon->bus->get_sa(charon->bus);
 	provider = eap_radius_provider_get();
-	if (provider)
+	if (provider && ike_sa)
 	{
 		enumerator = msg->create_enumerator(msg);
 		while (enumerator->enumerate(enumerator, &type, &data))
@@ -352,6 +354,28 @@ static void process_cfg_attributes(private_eap_radius_t *this,
 				if (host)
 				{
 					provider->add_framed_ip(provider, this->peer, host);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		enumerator = msg->create_vendor_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &vendor, &type, &data))
+		{
+			if (vendor == PEN_ALTIGA /* aka Cisco VPN3000 */)
+			{
+				switch (type)
+				{
+					case 15: /* CVPN3000-IPSec-Banner1 */
+					case 36: /* CVPN3000-IPSec-Banner2 */
+						if (ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
+						{
+							provider->add_attribute(provider, this->peer,
+													UNITY_BANNER, data);
+						}
+						break;
+					default:
+						break;
 				}
 			}
 		}

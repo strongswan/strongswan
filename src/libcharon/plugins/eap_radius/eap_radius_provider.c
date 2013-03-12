@@ -70,13 +70,34 @@ struct private_eap_radius_provider_t {
 static eap_radius_provider_t *singleton = NULL;
 
 /**
- * Hashtable entry with leases
+ * Configuration attribute in an entry
+ */
+typedef struct {
+	/** type of attribute */
+	configuration_attribute_type_t type;
+	/** attribute data */
+	chunk_t data;
+} attr_t;
+
+/**
+ * Destroy an attr_t
+ */
+static void destroy_attr(attr_t *this)
+{
+	free(this->data.ptr);
+	free(this);
+}
+
+/**
+ * Hashtable entry with leases and attributes
  */
 typedef struct {
 	/** identity we assigned the IP lease */
 	identification_t *id;
 	/** list of IP leases received from AAA, as host_t */
 	linked_list_t *addrs;
+	/** list of configuration attributes, as attr_t */
+	linked_list_t *attrs;
 } entry_t;
 
 /**
@@ -86,6 +107,7 @@ static void destroy_entry(entry_t *this)
 {
 	this->id->destroy(this->id);
 	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
+	this->attrs->destroy_function(this->attrs, (void*)destroy_attr);
 	free(this);
 }
 
@@ -102,6 +124,7 @@ static entry_t* get_or_create_entry(hashtable_t *hashtable, identification_t *id
 		INIT(entry,
 			.id = id->clone(id),
 			.addrs = linked_list_create(),
+			.attrs = linked_list_create(),
 		);
 		hashtable->put(hashtable, entry->id, entry);
 	}
@@ -113,7 +136,8 @@ static entry_t* get_or_create_entry(hashtable_t *hashtable, identification_t *id
  */
 static void put_or_destroy_entry(hashtable_t *hashtable, entry_t *entry)
 {
-	if (entry->addrs->get_count(entry->addrs) > 0)
+	if (entry->addrs->get_count(entry->addrs) > 0 ||
+		entry->attrs->get_count(entry->attrs) > 0)
 	{
 		hashtable->put(hashtable, entry->id, entry);
 	}
@@ -167,6 +191,36 @@ static host_t* remove_addr(private_eap_radius_provider_t *this,
 		put_or_destroy_entry(hashtable, entry);
 	}
 	return addr;
+}
+
+/**
+ * Insert an attribute entry to a locked claimed/unclaimed hashtable
+ */
+static void add_attr(private_eap_radius_provider_t *this,
+					 hashtable_t *hashtable, identification_t *id, attr_t *attr)
+{
+	entry_t *entry;
+
+	entry = get_or_create_entry(hashtable, id);
+	entry->attrs->insert_last(entry->attrs, attr);
+}
+
+/**
+ * Remove the next attribute from the locked hashtable stored for given id
+ */
+static attr_t* remove_attr(private_eap_radius_provider_t *this,
+						   hashtable_t *hashtable, identification_t *id)
+{
+	entry_t *entry;
+	attr_t *attr = NULL;
+
+	entry = hashtable->remove(hashtable, id);
+	if (entry)
+	{
+		entry->attrs->remove_first(entry->attrs, (void**)&attr);
+		put_or_destroy_entry(hashtable, entry);
+	}
+	return attr;
 }
 
 /**
@@ -276,11 +330,77 @@ METHOD(attribute_provider_t, release_address, bool,
 	return FALSE;
 }
 
+/**
+ * Enumerator implementation over attributes
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** list of attributes to enumerate */
+	linked_list_t *list;
+	/** currently enumerating attribute */
+	attr_t *current;
+} attribute_enumerator_t;
+
+
+METHOD(enumerator_t, attribute_enumerate, bool,
+	attribute_enumerator_t *this, configuration_attribute_type_t *type,
+	chunk_t *data)
+{
+	if (this->current)
+	{
+		destroy_attr(this->current);
+		this->current = NULL;
+	}
+	if (this->list->remove_first(this->list, (void**)&this->current) == SUCCESS)
+	{
+		*type = this->current->type;
+		*data = this->current->data;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(enumerator_t, attribute_destroy, void,
+	attribute_enumerator_t *this)
+{
+	if (this->current)
+	{
+		destroy_attr(this->current);
+	}
+	this->list->destroy_function(this->list, (void*)destroy_attr);
+	free(this);
+}
+
 METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	private_eap_radius_provider_t *this, linked_list_t *pools,
 	identification_t *id, linked_list_t *vips)
 {
-	return enumerator_create_empty();
+	attribute_enumerator_t *enumerator;
+	attr_t *attr;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_attribute_enumerate,
+			.destroy = _attribute_destroy,
+		},
+		.list = linked_list_create(),
+	);
+
+	/* we forward attributes regardless of pool configurations */
+	this->listener.mutex->lock(this->listener.mutex);
+	while (TRUE)
+	{
+		attr = remove_attr(this, this->listener.unclaimed, id);
+		if (!attr)
+		{
+			break;
+		}
+		enumerator->list->insert_last(enumerator->list, attr);
+	}
+	this->listener.mutex->unlock(this->listener.mutex);
+
+	return &enumerator->public;
 }
 
 METHOD(eap_radius_provider_t, add_framed_ip, void,
@@ -288,6 +408,21 @@ METHOD(eap_radius_provider_t, add_framed_ip, void,
 {
 	this->listener.mutex->lock(this->listener.mutex);
 	add_addr(this, this->listener.unclaimed, id, ip);
+	this->listener.mutex->unlock(this->listener.mutex);
+}
+
+METHOD(eap_radius_provider_t, add_attribute, void,
+	private_eap_radius_provider_t *this, identification_t *id,
+	configuration_attribute_type_t type, chunk_t data)
+{
+	attr_t *attr;
+
+	INIT(attr,
+		.type = type,
+		.data = chunk_clone(data),
+	);
+	this->listener.mutex->lock(this->listener.mutex);
+	add_attr(this, this->listener.unclaimed, id, attr);
 	this->listener.mutex->unlock(this->listener.mutex);
 }
 
@@ -319,6 +454,7 @@ eap_radius_provider_t *eap_radius_provider_create()
 					.create_attribute_enumerator = _create_attribute_enumerator,
 				},
 				.add_framed_ip = _add_framed_ip,
+				.add_attribute = _add_attribute,
 				.destroy = _destroy,
 			},
 			.listener = {
