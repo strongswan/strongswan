@@ -19,11 +19,13 @@
 #include "eap_radius_accounting.h"
 #include "eap_radius_dae.h"
 #include "eap_radius_forward.h"
+#include "eap_radius_provider.h"
 
 #include <radius_client.h>
 #include <radius_config.h>
 
 #include <daemon.h>
+#include <hydra.h>
 #include <threading/rwlock.h>
 
 /**
@@ -62,6 +64,11 @@ struct private_eap_radius_plugin_t {
 	 * RADIUS sessions for accounting
 	 */
 	eap_radius_accounting_t *accounting;
+
+	/**
+	 * IKE attribute provider
+	 */
+	eap_radius_provider_t *provider;
 
 	/**
 	 * Dynamic authorization extensions
@@ -207,6 +214,9 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
+	hydra->attributes->remove_provider(hydra->attributes,
+									   &this->provider->provider);
+	this->provider->destroy(this->provider);
 	if (this->forward)
 	{
 		charon->bus->remove_listener(charon->bus, &this->forward->listener);
@@ -242,6 +252,7 @@ plugin_t *eap_radius_plugin_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.accounting = eap_radius_accounting_create(),
 		.forward = eap_radius_forward_create(),
+		.provider = eap_radius_provider_create(),
 	);
 
 	load_configs(this);
@@ -261,6 +272,8 @@ plugin_t *eap_radius_plugin_create()
 	{
 		charon->bus->add_listener(charon->bus, &this->forward->listener);
 	}
+	hydra->attributes->add_provider(hydra->attributes,
+									&this->provider->provider);
 
 	return &this->public.plugin;
 }
@@ -307,4 +320,3 @@ radius_client_t *eap_radius_create_client()
 	}
 	return NULL;
 }
-

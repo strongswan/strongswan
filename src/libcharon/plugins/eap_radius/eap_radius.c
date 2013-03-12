@@ -16,6 +16,7 @@
 #include "eap_radius.h"
 #include "eap_radius_plugin.h"
 #include "eap_radius_forward.h"
+#include "eap_radius_provider.h"
 
 #include <radius_message.h>
 #include <radius_client.h>
@@ -327,6 +328,37 @@ static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
 	enumerator->destroy(enumerator);
 }
 
+/**
+ * Handle Framed-IP-Address and other IKE configuration attributes
+ */
+static void process_cfg_attributes(private_eap_radius_t *this,
+								   radius_message_t *msg)
+{
+	eap_radius_provider_t *provider;
+	enumerator_t *enumerator;
+	host_t *host;
+	chunk_t data;
+	int type;
+
+	provider = eap_radius_provider_get();
+	if (provider)
+	{
+		enumerator = msg->create_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &type, &data))
+		{
+			if (type == RAT_FRAMED_IP_ADDRESS && data.len == 4)
+			{
+				host = host_create_from_chunk(AF_INET, data, 0);
+				if (host)
+				{
+					provider->add_framed_ip(provider, this->peer, host);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+}
+
 METHOD(eap_method_t, process, status_t,
 	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
@@ -373,6 +405,7 @@ METHOD(eap_method_t, process, status_t,
 					process_filter_id(this, response);
 				}
 				process_timeout(this, response);
+				process_cfg_attributes(this, response);
 				DBG1(DBG_IKE, "RADIUS authentication of '%Y' successful",
 					 this->peer);
 				status = SUCCESS;
@@ -490,4 +523,3 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->server = server->clone(server);
 	return &this->public;
 }
-
