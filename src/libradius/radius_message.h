@@ -27,6 +27,7 @@
 #define RADIUS_MESSAGE_H_
 
 #include <library.h>
+#include <pen/pen.h>
 
 #define MAX_RADIUS_ATTRIBUTE_SIZE	253
 
@@ -203,6 +204,16 @@ struct radius_message_t {
 	 * @return				enumerator over (int type, chunk_t data)
 	 */
 	enumerator_t* (*create_enumerator)(radius_message_t *this);
+
+	/**
+	 * Create an enumerator over contained RADIUS Vendor-ID attributes.
+	 *
+	 * This enumerator parses only vendor specific attributes in the format
+	 * recommended in RFC2865.
+	 *
+	 * @return				enumerator over (int vendor, int type, chunk_t data)
+	 */
+	enumerator_t* (*create_vendor_enumerator)(radius_message_t *this);
 
 	/**
 	 * Add a RADIUS attribute to the message.

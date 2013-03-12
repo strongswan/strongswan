@@ -16,6 +16,7 @@
 #include "radius_message.h"
 
 #include <utils/debug.h>
+#include <bio/bio_reader.h>
 #include <crypto/hashers/hasher.h>
 
 typedef struct private_radius_message_t private_radius_message_t;
@@ -271,6 +272,85 @@ METHOD(radius_message_t, create_enumerator, enumerator_t*,
 	return &e->public;
 }
 
+/**
+ * Vendor attribute enumerator implementation
+ */
+typedef struct {
+	/** implements enumerator interface */
+	enumerator_t public;
+	/** inner attribute enumerator */
+	enumerator_t *inner;
+	/** current vendor ID */
+	u_int32_t vendor;
+	/** reader for current vendor ID */
+	bio_reader_t *reader;
+} vendor_enumerator_t;
+
+METHOD(enumerator_t, vendor_enumerate, bool,
+	vendor_enumerator_t *this, int *vendor, int *type, chunk_t *data)
+{
+	chunk_t inner_data;
+	int inner_type;
+	u_int8_t type8, len;
+
+	while (TRUE)
+	{
+		if (this->reader)
+		{
+			if (this->reader->remaining(this->reader) >= 2 &&
+				this->reader->read_uint8(this->reader, &type8) &&
+				this->reader->read_uint8(this->reader, &len) && len >= 2 &&
+				this->reader->read_data(this->reader, len - 2, data))
+			{
+				*vendor = this->vendor;
+				*type = type8;
+				return TRUE;
+			}
+			this->reader->destroy(this->reader);
+			this->reader = NULL;
+		}
+		if (this->inner->enumerate(this->inner, &inner_type, &inner_data))
+		{
+			if (inner_type == RAT_VENDOR_SPECIFIC)
+			{
+				this->reader = bio_reader_create(inner_data);
+				if (!this->reader->read_uint32(this->reader, &this->vendor))
+				{
+					this->reader->destroy(this->reader);
+					this->reader = NULL;
+				}
+			}
+		}
+		else
+		{
+			return FALSE;
+		}
+	}
+}
+METHOD(enumerator_t, vendor_destroy, void,
+	vendor_enumerator_t *this)
+{
+	DESTROY_IF(this->reader);
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(radius_message_t, create_vendor_enumerator, enumerator_t*,
+	private_radius_message_t *this)
+{
+	vendor_enumerator_t *e;
+
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_vendor_enumerate,
+			.destroy = _vendor_destroy,
+		},
+		.inner = create_enumerator(this),
+	);
+
+	return &e->public;
+}
+
 METHOD(radius_message_t, add, void,
 	private_radius_message_t *this, radius_attribute_type_t type, chunk_t data)
 {
@@ -474,6 +554,7 @@ static private_radius_message_t *radius_message_create_empty()
 	INIT(this,
 		.public = {
 			.create_enumerator = _create_enumerator,
+			.create_vendor_enumerator = _create_vendor_enumerator,
 			.add = _add,
 			.get_code = _get_code,
 			.get_identifier = _get_identifier,
