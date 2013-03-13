@@ -53,6 +53,30 @@ struct private_eap_radius_accounting_t {
 };
 
 /**
+ * Acct-Terminate-Cause
+ */
+typedef enum {
+	ACCT_CAUSE_USER_REQUEST = 1,
+	ACCT_CAUSE_LOST_CARRIER = 2,
+	ACCT_CAUSE_LOST_SERVICE = 3,
+	ACCT_CAUSE_IDLE_TIMEOUT = 4,
+	ACCT_CAUSE_SESSION_TIMEOUT = 5,
+	ACCT_CAUSE_ADMIN_RESET = 6,
+	ACCT_CAUSE_ADMIN_REBOOT = 7,
+	ACCT_CAUSE_PORT_ERROR = 8,
+	ACCT_CAUSE_NAS_ERROR = 9,
+	ACCT_CAUSE_NAS_REQUEST = 10,
+	ACCT_CAUSE_NAS_REBOOT = 11,
+	ACCT_CAUSE_PORT_UNNEEDED = 12,
+	ACCT_CAUSE_PORT_PREEMPTED = 13,
+	ACCT_CAUSE_PORT_SUSPENDED = 14,
+	ACCT_CAUSE_SERVICE_UNAVAILABLE = 15,
+	ACCT_CAUSE_CALLBACK = 16,
+	ACCT_CAUSE_USER_ERROR = 17,
+	ACCT_CAUSE_HOST_REQUEST = 18,
+} radius_acct_terminate_cause_t;
+
+/**
  * Hashtable entry with usage stats
  */
 typedef struct {
@@ -65,6 +89,8 @@ typedef struct {
 	} bytes, packets;
 	/** session creation time */
 	time_t created;
+	/** terminate cause */
+	radius_acct_terminate_cause_t cause;
 } entry_t;
 
 /**
@@ -225,6 +251,8 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	id = ike_sa->get_unique_id(ike_sa);
 	INIT(entry,
 		.created = time_monotonic(NULL),
+		/* default terminate cause, if none other catched */
+		.cause = ACCT_CAUSE_USER_REQUEST,
 	);
 	snprintf(entry->sid, sizeof(entry->sid), "%u-%u", this->prefix, id);
 
@@ -291,10 +319,43 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		value = htonl(time_monotonic(NULL) - entry->created);
 		message->add(message, RAT_ACCT_SESSION_TIME, chunk_from_thing(value));
 
+
+		value = htonl(entry->cause);
+		message->add(message, RAT_ACCT_TERMINATE_CAUSE, chunk_from_thing(value));
+
 		send_message(this, message);
 		message->destroy(message);
 		free(entry);
 	}
+}
+
+METHOD(listener_t, alert, bool,
+	private_eap_radius_accounting_t *this, ike_sa_t *ike_sa, alert_t alert,
+	va_list args)
+{
+	radius_acct_terminate_cause_t cause;
+	entry_t *entry;
+
+	switch (alert)
+	{
+		case ALERT_IKE_SA_EXPIRED:
+			cause = ACCT_CAUSE_SESSION_TIMEOUT;
+			break;
+		case ALERT_RETRANSMIT_SEND_TIMEOUT:
+			cause = ACCT_CAUSE_LOST_SERVICE;
+			break;
+		default:
+			return TRUE;
+	}
+	this->mutex->lock(this->mutex);
+	entry = this->sessions->get(this->sessions,
+								(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+	if (entry)
+	{
+		entry->cause = cause;
+	}
+	this->mutex->unlock(this->mutex);
+	return TRUE;
 }
 
 METHOD(listener_t, ike_updown, bool,
@@ -400,6 +461,7 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.alert = _alert,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.message = _message_hook,
