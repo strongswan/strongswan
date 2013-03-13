@@ -153,14 +153,43 @@ static bool send_message(private_eap_radius_accounting_t *this,
 static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
-	host_t *vip;
+	host_t *vip, *host;
 	char buf[64];
 	chunk_t data;
+	u_int32_t value;
+
+	/* virtual NAS-Port-Type */
+	value = htonl(5);
+	message->add(message, RAT_NAS_PORT_TYPE, chunk_from_thing(value));
+	/* framed ServiceType */
+	value = htonl(2);
+	message->add(message, RAT_SERVICE_TYPE, chunk_from_thing(value));
+
+	value = htonl(ike_sa->get_unique_id(ike_sa));
+	message->add(message, RAT_NAS_PORT, chunk_from_thing(value));
+	message->add(message, RAT_NAS_PORT_ID,
+				 chunk_from_str(ike_sa->get_name(ike_sa)));
+
+	host = ike_sa->get_my_host(ike_sa);
+	data = host->get_address(host);
+	switch (host->get_family(host))
+	{
+		case AF_INET:
+			message->add(message, RAT_NAS_IP_ADDRESS, data);
+			break;
+		case AF_INET6:
+			message->add(message, RAT_NAS_IPV6_ADDRESS, data);
+		default:
+			break;
+	}
+	snprintf(buf, sizeof(buf), "%#H", host);
+	message->add(message, RAT_CALLED_STATION_ID, chunk_from_str(buf));
+	host = ike_sa->get_other_host(ike_sa);
+	snprintf(buf, sizeof(buf), "%#H", host);
+	message->add(message, RAT_CALLING_STATION_ID, chunk_from_str(buf));
 
 	snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
-	message->add(message, RAT_USER_NAME, chunk_create(buf, strlen(buf)));
-	snprintf(buf, sizeof(buf), "%#H", ike_sa->get_other_host(ike_sa));
-	message->add(message, RAT_CALLING_STATION_ID, chunk_create(buf, strlen(buf)));
+	message->add(message, RAT_USER_NAME, chunk_from_str(buf));
 
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
 	while (enumerator->enumerate(enumerator, &vip))
