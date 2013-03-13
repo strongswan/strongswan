@@ -68,7 +68,7 @@ METHOD(job_t, execute, job_requeue_t,
 		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (enumerator->enumerate(enumerator, &child_sa))
 		{
-			child_sa->get_usestats(child_sa, TRUE, &current, NULL);
+			child_sa->get_usestats(child_sa, TRUE, &current, NULL, NULL);
 			use_time = max(use_time, current);
 		}
 		enumerator->destroy(enumerator);

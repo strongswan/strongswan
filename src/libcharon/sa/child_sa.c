@@ -524,7 +524,8 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 }
 
 METHOD(child_sa_t, get_usestats, void,
-	   private_child_sa_t *this, bool inbound, time_t *time, u_int64_t *bytes)
+	private_child_sa_t *this, bool inbound,
+	time_t *time, u_int64_t *bytes, u_int64_t *packets)
 {
 	if (update_usebytes(this, inbound) != FAILED)
 	{
@@ -540,6 +541,10 @@ METHOD(child_sa_t, get_usestats, void,
 	if (bytes)
 	{
 		*bytes = inbound ? this->my_usebytes : this->other_usebytes;
+	}
+	if (packets)
+	{
+		*packets = inbound ? this->my_usepackets : this->other_usepackets;
 	}
 }
 

@@ -273,14 +273,14 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 				}
 			}
 
-			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in);
+			child_sa->get_usestats(child_sa, TRUE, &use_in, &bytes_in, NULL);
 			fprintf(out, ", %" PRIu64 " bytes_i", bytes_in);
 			if (use_in)
 			{
 				fprintf(out, " (%" PRIu64 "s ago)", (u_int64_t)(now - use_in));
 			}
 
-			child_sa->get_usestats(child_sa, FALSE, &use_out, &bytes_out);
+			child_sa->get_usestats(child_sa, FALSE, &use_out, &bytes_out, NULL);
 			fprintf(out, ", %" PRIu64 " bytes_o", bytes_out);
 			if (use_out)
 			{
@@ -1541,4 +1541,3 @@ stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 
 	return &this->public;
 }
-

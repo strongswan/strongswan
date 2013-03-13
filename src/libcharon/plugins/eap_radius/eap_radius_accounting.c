@@ -102,8 +102,8 @@ static void update_usage(private_eap_radius_accounting_t *this,
 	u_int64_t sent, received;
 	entry_t *entry;
 
-	child_sa->get_usestats(child_sa, FALSE, NULL, &sent);
-	child_sa->get_usestats(child_sa, TRUE, NULL, &received);
+	child_sa->get_usestats(child_sa, FALSE, NULL, &sent, NULL);
+	child_sa->get_usestats(child_sa, TRUE, NULL, &received, NULL);
 
 	this->mutex->lock(this->mutex);
 	entry = this->sessions->get(this->sessions,

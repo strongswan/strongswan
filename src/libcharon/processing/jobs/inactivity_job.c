@@ -75,8 +75,8 @@ METHOD(job_t, execute, job_requeue_t,
 			{
 				time_t in, out, diff;
 
-				child_sa->get_usestats(child_sa, TRUE, &in, NULL);
-				child_sa->get_usestats(child_sa, FALSE, &out, NULL);
+				child_sa->get_usestats(child_sa, TRUE, &in, NULL, NULL);
+				child_sa->get_usestats(child_sa, FALSE, &out, NULL, NULL);
 
 				diff = time_monotonic(NULL) - max(in, out);
 
@@ -155,4 +155,3 @@ inactivity_job_t *inactivity_job_create(u_int32_t reqid, u_int32_t timeout,
 
 	return &this->public;
 }
-

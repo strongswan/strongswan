@@ -270,9 +270,10 @@ struct child_sa_t {
 	 * @param inbound		TRUE for inbound traffic, FALSE for outbound
 	 * @param[out] time		time of last use in seconds (NULL to ignore)
 	 * @param[out] bytes	number of processed bytes (NULL to ignore)
+	 * @param[out] packets	number of processed packets (NULL to ignore)
 	 */
 	void (*get_usestats)(child_sa_t *this, bool inbound, time_t *time,
-						 u_int64_t *bytes);
+						 u_int64_t *bytes, u_int64_t *packets);
 
 	/**
 	 * Get the mark used with this CHILD_SA.

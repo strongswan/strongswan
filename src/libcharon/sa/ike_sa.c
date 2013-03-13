@@ -285,7 +285,7 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
-		child_sa->get_usestats(child_sa, inbound, &current, NULL);
+		child_sa->get_usestats(child_sa, inbound, &current, NULL, NULL);
 		use_time = max(use_time, current);
 	}
 	enumerator->destroy(enumerator);
