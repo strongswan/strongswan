@@ -58,10 +58,11 @@ struct private_eap_radius_accounting_t {
 typedef struct {
 	/** RADIUS accounting session ID */
 	char sid[16];
-	/** number of octets sent */
-	u_int64_t sent;
-	/** number of octets received */
-	u_int64_t received;
+	/** number of sent/received octets/packets */
+	struct {
+		u_int64_t sent;
+		u_int64_t received;
+	} bytes, packets;
 	/** session creation time */
 	time_t created;
 } entry_t;
@@ -99,19 +100,21 @@ static bool equals(uintptr_t a, uintptr_t b)
 static void update_usage(private_eap_radius_accounting_t *this,
 						 ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
-	u_int64_t sent, received;
+	u_int64_t bytes_in, bytes_out, packets_in, packets_out;
 	entry_t *entry;
 
-	child_sa->get_usestats(child_sa, FALSE, NULL, &sent, NULL);
-	child_sa->get_usestats(child_sa, TRUE, NULL, &received, NULL);
+	child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out, &packets_out);
+	child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in, &packets_in);
 
 	this->mutex->lock(this->mutex);
 	entry = this->sessions->get(this->sessions,
 								(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
 	if (entry)
 	{
-		entry->sent += sent;
-		entry->received += received;
+		entry->bytes.sent += bytes_out;
+		entry->bytes.received += bytes_in;
+		entry->packets.sent += packets_out;
+		entry->packets.received += packets_in;
 	}
 	this->mutex->unlock(this->mutex);
 }
@@ -233,22 +236,29 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		add_ike_sa_parameters(message, ike_sa);
-		value = htonl(entry->sent);
+
+		value = htonl(entry->bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(entry->sent >> 32);
+		value = htonl(entry->bytes.sent >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_OUTPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
-		value = htonl(entry->received);
+		value = htonl(entry->packets.sent);
+		message->add(message, RAT_ACCT_OUTPUT_PACKETS, chunk_from_thing(value));
+
+		value = htonl(entry->bytes.received);
 		message->add(message, RAT_ACCT_INPUT_OCTETS, chunk_from_thing(value));
-		value = htonl(entry->received >> 32);
+		value = htonl(entry->bytes.received >> 32);
 		if (value)
 		{
 			message->add(message, RAT_ACCT_INPUT_GIGAWORDS,
 						 chunk_from_thing(value));
 		}
+		value = htonl(entry->packets.received);
+		message->add(message, RAT_ACCT_INPUT_PACKETS, chunk_from_thing(value));
+
 		value = htonl(time_monotonic(NULL) - entry->created);
 		message->add(message, RAT_ACCT_SESSION_TIME, chunk_from_thing(value));
 
