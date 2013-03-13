@@ -810,7 +810,7 @@ static kernel_algorithm_t compression_algs[] = {
 static int lookup_algorithm(transform_type_t type, int ikev2)
 {
 	kernel_algorithm_t *list;
-	int alg = 0;
+	u_int16_t alg = 0;
 
 	switch (type)
 	{
