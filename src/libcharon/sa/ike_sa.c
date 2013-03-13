@@ -1445,6 +1445,10 @@ METHOD(ike_sa_t, delete_, status_t,
 			}
 			/* FALL */
 		case IKE_ESTABLISHED:
+			if (time_monotonic(NULL) >= this->stats[STAT_DELETE])
+			{	/* IKE_SA hard lifetime hit */
+				charon->bus->alert(charon->bus, ALERT_IKE_SA_EXPIRED);
+			}
 			this->task_manager->queue_ike_delete(this->task_manager);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:

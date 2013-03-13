@@ -130,6 +130,8 @@ enum alert_t {
 	ALERT_VIP_FAILURE,
 	/** an authorize() hook failed, no argument */
 	ALERT_AUTHORIZATION_FAILED,
+	/** IKE_SA hit the hard lifetime limit before it could be rekeyed */
+	ALERT_IKE_SA_EXPIRED,
 };
 
 /**
