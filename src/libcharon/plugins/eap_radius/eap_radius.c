@@ -156,17 +156,67 @@ static bool radius2ike(private_eap_radius_t *this,
 	return FALSE;
 }
 
+/**
+ * Add a set of RADIUS attributes to a request message
+ */
+static void add_radius_request_attrs(private_eap_radius_t *this,
+									 radius_message_t *request)
+{
+	ike_sa_t *ike_sa;
+	host_t *host;
+	char buf[40];
+	u_int32_t value;
+	chunk_t chunk;
+
+	chunk = chunk_from_str(this->id_prefix);
+	chunk = chunk_cata("cc", chunk, this->peer->get_encoding(this->peer));
+	request->add(request, RAT_USER_NAME, chunk);
+
+	/* virtual NAS-Port-Type */
+	value = htonl(5);
+	request->add(request, RAT_NAS_PORT_TYPE, chunk_from_thing(value));
+	/* framed ServiceType */
+	value = htonl(2);
+	request->add(request, RAT_SERVICE_TYPE, chunk_from_thing(value));
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
+	{
+		value = htonl(ike_sa->get_unique_id(ike_sa));
+		request->add(request, RAT_NAS_PORT, chunk_from_thing(value));
+		request->add(request, RAT_NAS_PORT_ID,
+					 chunk_from_str(ike_sa->get_name(ike_sa)));
+
+		host = ike_sa->get_my_host(ike_sa);
+		chunk = host->get_address(host);
+		switch (host->get_family(host))
+		{
+			case AF_INET:
+				request->add(request, RAT_NAS_IP_ADDRESS, chunk);
+				break;
+			case AF_INET6:
+				request->add(request, RAT_NAS_IPV6_ADDRESS, chunk);
+			default:
+				break;
+		}
+		snprintf(buf, sizeof(buf), "%#H", host);
+		request->add(request, RAT_CALLED_STATION_ID, chunk_from_str(buf));
+		host = ike_sa->get_other_host(ike_sa);
+		snprintf(buf, sizeof(buf), "%#H", host);
+		request->add(request, RAT_CALLING_STATION_ID, chunk_from_str(buf));
+	}
+
+	eap_radius_forward_from_ike(request);
+}
+
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_radius_t *this, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
-	chunk_t username;
 
 	request = radius_message_create(RMC_ACCESS_REQUEST);
-	username = chunk_create(this->id_prefix, strlen(this->id_prefix));
-	username = chunk_cata("cc", username, this->peer->get_encoding(this->peer));
-	request->add(request, RAT_USER_NAME, username);
+	add_radius_request_attrs(this, request);
 
 	if (this->eap_start)
 	{
@@ -176,7 +226,6 @@ METHOD(eap_method_t, initiate, status_t,
 	{
 		add_eap_identity(this, request);
 	}
-	eap_radius_forward_from_ike(request);
 
 	response = this->client->request(this->client, request);
 	if (response)
@@ -391,7 +440,8 @@ METHOD(eap_method_t, process, status_t,
 	chunk_t data;
 
 	request = radius_message_create(RMC_ACCESS_REQUEST);
-	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
+	add_radius_request_attrs(this, request);
+
 	data = in->get_data(in);
 	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
 
@@ -404,7 +454,6 @@ METHOD(eap_method_t, process, status_t,
 	}
 	request->add(request, RAT_EAP_MESSAGE, data);
 
-	eap_radius_forward_from_ike(request);
 	response = this->client->request(this->client, request);
 	if (response)
 	{
