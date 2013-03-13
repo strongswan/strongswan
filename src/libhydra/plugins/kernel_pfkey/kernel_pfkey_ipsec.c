@@ -1767,7 +1767,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark,
+	u_int64_t *bytes, u_int64_t *packets)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1816,7 +1817,15 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 		free(out);
 		return FAILED;
 	}
-	*bytes = response.lft_current->sadb_lifetime_bytes;
+	if (bytes)
+	{
+		*bytes = response.lft_current->sadb_lifetime_bytes;
+	}
+	if (packets)
+	{
+		/* not supported by PF_KEY */
+		*packets = 0;
+	}
 
 	free(out);
 	return SUCCESS;
