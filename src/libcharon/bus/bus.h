@@ -103,7 +103,7 @@ enum alert_t {
 	ALERT_PARSE_ERROR_BODY,
 	/** sending a retransmit for a message, argument is packet_t */
 	ALERT_RETRANSMIT_SEND,
-	/** sending retransmits timed out, argument is packet_t */
+	/** sending retransmits timed out, argument is packet_t, if available */
 	ALERT_RETRANSMIT_SEND_TIMEOUT,
 	/** received a retransmit for a message, argument is message_t */
 	ALERT_RETRANSMIT_RECEIVE,
