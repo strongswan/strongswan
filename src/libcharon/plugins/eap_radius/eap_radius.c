@@ -17,6 +17,7 @@
 #include "eap_radius_plugin.h"
 #include "eap_radius_forward.h"
 #include "eap_radius_provider.h"
+#include "eap_radius_accounting.h"
 
 #include <radius_message.h>
 #include <radius_client.h>
@@ -353,7 +354,7 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 }
 
 /**
- * Handle Session-Timeout attribte
+ * Handle Session-Timeout attribte and Interim updates
  */
 static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
 {
@@ -362,19 +363,23 @@ static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
 	chunk_t data;
 	int type;
 
-	enumerator = msg->create_enumerator(msg);
-	while (enumerator->enumerate(enumerator, &type, &data))
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
 	{
-		if (type == RAT_SESSION_TIMEOUT && data.len == 4)
+		enumerator = msg->create_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &type, &data))
 		{
-			ike_sa = charon->bus->get_sa(charon->bus);
-			if (ike_sa)
+			if (type == RAT_SESSION_TIMEOUT && data.len == 4)
 			{
 				ike_sa->set_auth_lifetime(ike_sa, untoh32(data.ptr));
 			}
+			else if (type == RAT_ACCT_INTERIM_INTERVAL && data.len == 4)
+			{
+				eap_radius_accounting_start_interim(ike_sa, untoh32(data.ptr));
+			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**

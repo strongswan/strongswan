@@ -23,6 +23,7 @@
 #include <daemon.h>
 #include <collections/hashtable.h>
 #include <threading/mutex.h>
+#include <processing/jobs/callback_job.h>
 
 typedef struct private_eap_radius_accounting_t private_eap_radius_accounting_t;
 
@@ -37,7 +38,7 @@ struct private_eap_radius_accounting_t {
 	eap_radius_accounting_t public;
 
 	/**
-	 * Hashtable with sessions, IKE_SA unique id => entry_t
+	 * Hashtable with sessions, ike_sa_id_t => entry_t
 	 */
 	hashtable_t *sessions;
 
@@ -51,6 +52,11 @@ struct private_eap_radius_accounting_t {
 	 */
 	u_int32_t prefix;
 };
+
+/**
+ * Singleton instance of accounting
+ */
+static private_eap_radius_accounting_t *singleton = NULL;
 
 /**
  * Acct-Terminate-Cause
@@ -80,6 +86,8 @@ typedef enum {
  * Hashtable entry with usage stats
  */
 typedef struct {
+	/** IKE_SA identifier this entry is stored under */
+	ike_sa_id_t *id;
 	/** RADIUS accounting session ID */
 	char sid[16];
 	/** number of sent/received octets/packets */
@@ -91,7 +99,23 @@ typedef struct {
 	time_t created;
 	/** terminate cause */
 	radius_acct_terminate_cause_t cause;
+	/* interim interval and timestamp of last update */
+	struct {
+		u_int32_t interval;
+		time_t last;
+	} interim;
+	/** did we send Accounting-Start */
+	bool start_sent;
 } entry_t;
+
+/**
+ * Destroy an entry_t
+ */
+static void destroy_entry(entry_t *this)
+{
+	this->id->destroy(this->id);
+	free(this);
+}
 
 /**
  * Accounting message status types
@@ -107,17 +131,17 @@ typedef enum {
 /**
  * Hashtable hash function
  */
-static u_int hash(uintptr_t key)
+static u_int hash(ike_sa_id_t *key)
 {
-	return key;
+	return key->get_responder_spi(key);
 }
 
 /**
  * Hashtable equals function
  */
-static bool equals(uintptr_t a, uintptr_t b)
+static bool equals(ike_sa_id_t *a, ike_sa_id_t *b)
 {
-	return a == b;
+	return a->equals(a, b);
 }
 
 /**
@@ -133,8 +157,7 @@ static void update_usage(private_eap_radius_accounting_t *this,
 	child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in, &packets_in);
 
 	this->mutex->lock(this->mutex);
-	entry = this->sessions->get(this->sessions,
-								(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
 	if (entry)
 	{
 		entry->bytes.sent += bytes_out;
@@ -236,40 +259,207 @@ static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 }
 
 /**
+ * Get an existing or create a new entry from the locked session table
+ */
+static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
+									ike_sa_t *ike_sa)
+{
+	ike_sa_id_t *id;
+	entry_t *entry;
+	time_t now;
+
+	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
+	if (!entry)
+	{
+		now = time_monotonic(NULL);
+		id = ike_sa->get_id(ike_sa);
+
+		INIT(entry,
+			.id = id->clone(id),
+			.created = now,
+			.interim = {
+				.last = now,
+			},
+			/* default terminate cause, if none other catched */
+			.cause = ACCT_CAUSE_USER_REQUEST,
+		);
+		snprintf(entry->sid, sizeof(entry->sid), "%u-%u",
+				 this->prefix, ike_sa->get_unique_id(ike_sa));
+		this->sessions->put(this->sessions, entry->id, entry);
+	}
+	return entry;
+}
+
+/* forward declaration */
+static void schedule_interim(private_eap_radius_accounting_t *this,
+							 entry_t *entry);
+
+/**
+ * Data passed to send_interim() using callback job
+ */
+typedef struct {
+	/** reference to radius accounting */
+	private_eap_radius_accounting_t *this;
+	/** IKE_SA identifier to send interim update to */
+	ike_sa_id_t *id;
+} interim_data_t;
+
+/**
+ * Clean up interim data
+ */
+void destroy_interim_data(interim_data_t *this)
+{
+	this->id->destroy(this->id);
+	free(this);
+}
+
+/**
+ * Send an interim update for entry of given IKE_SA identifier
+ */
+static job_requeue_t send_interim(interim_data_t *data)
+{
+	private_eap_radius_accounting_t *this = data->this;
+	u_int64_t bytes_in = 0, bytes_out = 0, packets_in = 0, packets_out = 0;
+	u_int64_t bytes, packets;
+	radius_message_t *message = NULL;
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	u_int32_t value;
+
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, data->id);
+	if (!ike_sa)
+	{
+		return JOB_REQUEUE_NONE;
+	}
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &child_sa))
+	{
+		child_sa->get_usestats(child_sa, FALSE, NULL, &bytes, &packets);
+		bytes_out += bytes;
+		packets_out += packets;
+		child_sa->get_usestats(child_sa, TRUE, NULL, &bytes, &packets);
+		bytes_in += bytes;
+		packets_in += packets;
+	}
+	enumerator->destroy(enumerator);
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+
+	/* avoid any races by returning IKE_SA before acquiring lock */
+
+	this->mutex->lock(this->mutex);
+	entry = this->sessions->get(this->sessions, data->id);
+	if (entry)
+	{
+		entry->interim.last = time_monotonic(NULL);
+
+		bytes_in += entry->bytes.received;
+		bytes_out += entry->bytes.sent;
+		packets_in += entry->packets.received;
+		packets_out += entry->packets.sent;
+
+		message = radius_message_create(RMC_ACCOUNTING_REQUEST);
+		value = htonl(ACCT_STATUS_INTERIM_UPDATE);
+		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
+		message->add(message, RAT_ACCT_SESSION_ID,
+					 chunk_create(entry->sid, strlen(entry->sid)));
+		add_ike_sa_parameters(message, ike_sa);
+
+		value = htonl(bytes_out);
+		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
+		value = htonl(bytes_out >> 32);
+		if (value)
+		{
+			message->add(message, RAT_ACCT_OUTPUT_GIGAWORDS,
+						 chunk_from_thing(value));
+		}
+		value = htonl(packets_out);
+		message->add(message, RAT_ACCT_OUTPUT_PACKETS, chunk_from_thing(value));
+
+		value = htonl(bytes_in);
+		message->add(message, RAT_ACCT_INPUT_OCTETS, chunk_from_thing(value));
+		value = htonl(bytes_in >> 32);
+		if (value)
+		{
+			message->add(message, RAT_ACCT_INPUT_GIGAWORDS,
+						 chunk_from_thing(value));
+		}
+		value = htonl(packets_in);
+		message->add(message, RAT_ACCT_INPUT_PACKETS, chunk_from_thing(value));
+
+		value = htonl(entry->interim.last - entry->created);
+		message->add(message, RAT_ACCT_SESSION_TIME, chunk_from_thing(value));
+
+		schedule_interim(this, entry);
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (message)
+	{
+		if (!send_message(this, message))
+		{
+			eap_radius_handle_timeout(data->id);
+		}
+		message->destroy(message);
+	}
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Schedule interim update for given entry
+ */
+static void schedule_interim(private_eap_radius_accounting_t *this,
+							 entry_t *entry)
+{
+	if (entry->interim.interval)
+	{
+		interim_data_t *data;
+		timeval_t tv = {
+			.tv_sec = entry->interim.last + entry->interim.interval,
+		};
+
+		INIT(data,
+			.this = this,
+			.id = entry->id->clone(entry->id),
+		);
+		lib->scheduler->schedule_job_tv(lib->scheduler,
+			(job_t*)callback_job_create_with_prio(
+				(callback_job_cb_t)send_interim,
+				data, (void*)destroy_interim_data,
+				(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL), tv);
+	}
+}
+
+/**
  * Send an accounting start message
  */
 static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 {
 	radius_message_t *message;
 	entry_t *entry;
-	u_int32_t id, value;
+	u_int32_t value;
 
-	id = ike_sa->get_unique_id(ike_sa);
-	INIT(entry,
-		.created = time_monotonic(NULL),
-		/* default terminate cause, if none other catched */
-		.cause = ACCT_CAUSE_USER_REQUEST,
-	);
-	snprintf(entry->sid, sizeof(entry->sid), "%u-%u", this->prefix, id);
+	this->mutex->lock(this->mutex);
+
+	entry = get_or_create_entry(this, ike_sa);
+	entry->start_sent = TRUE;
 
 	message = radius_message_create(RMC_ACCOUNTING_REQUEST);
 	value = htonl(ACCT_STATUS_START);
 	message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 	message->add(message, RAT_ACCT_SESSION_ID,
 				 chunk_create(entry->sid, strlen(entry->sid)));
+
+	schedule_interim(this, entry);
+	this->mutex->unlock(this->mutex);
+
 	add_ike_sa_parameters(message, ike_sa);
-	if (send_message(this, message))
-	{
-		this->mutex->lock(this->mutex);
-		entry = this->sessions->put(this->sessions, (void*)(uintptr_t)id, entry);
-		this->mutex->unlock(this->mutex);
-	}
-	else
+	if (!send_message(this, message))
 	{
 		eap_radius_handle_timeout(ike_sa->get_id(ike_sa));
 	}
 	message->destroy(message);
-	free(entry);
 }
 
 /**
@@ -283,10 +473,15 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 
 	id = ike_sa->get_unique_id(ike_sa);
 	this->mutex->lock(this->mutex);
-	entry = this->sessions->remove(this->sessions, (void*)(uintptr_t)id);
+	entry = this->sessions->remove(this->sessions, ike_sa->get_id(ike_sa));
 	this->mutex->unlock(this->mutex);
 	if (entry)
 	{
+		if (!entry->start_sent)
+		{	/* we tried to authenticate this peer, but never sent a start */
+			destroy_entry(entry);
+			return;
+		}
 		message = radius_message_create(RMC_ACCOUNTING_REQUEST);
 		value = htonl(ACCT_STATUS_STOP);
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
@@ -328,7 +523,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 			eap_radius_handle_timeout(NULL);
 		}
 		message->destroy(message);
-		free(entry);
+		destroy_entry(entry);
 	}
 }
 
@@ -351,8 +546,7 @@ METHOD(listener_t, alert, bool,
 			return TRUE;
 	}
 	this->mutex->lock(this->mutex);
-	entry = this->sessions->get(this->sessions,
-								(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+	entry = this->sessions->get(this->sessions, ike_sa->get_id(ike_sa));
 	if (entry)
 	{
 		entry->cause = cause;
@@ -410,15 +604,20 @@ METHOD(listener_t, ike_rekey, bool,
 	entry_t *entry;
 
 	this->mutex->lock(this->mutex);
-	entry = this->sessions->remove(this->sessions,
-							(void*)(uintptr_t)old->get_unique_id(old));
+	entry = this->sessions->remove(this->sessions, old->get_id(old));
 	if (entry)
 	{
-		entry = this->sessions->put(this->sessions,
-							(void*)(uintptr_t)new->get_unique_id(new), entry);
+		/* update IKE_SA identifier */
+		entry->id->destroy(entry->id);
+		entry->id = new->get_id(new);
+		entry->id = entry->id->clone(entry->id);
+		/* fire new interim update job, old gets invalid */
+		schedule_interim(this, entry);
+
+		entry = this->sessions->put(this->sessions, entry->id, entry);
 		if (entry)
 		{
-			free(entry);
+			destroy_entry(entry);
 		}
 	}
 	this->mutex->unlock(this->mutex);
@@ -449,6 +648,7 @@ METHOD(listener_t, child_updown, bool,
 METHOD(eap_radius_accounting_t, destroy, void,
 	private_eap_radius_accounting_t *this)
 {
+	singleton = NULL;
 	this->mutex->destroy(this->mutex);
 	this->sessions->destroy(this->sessions);
 	free(this);
@@ -480,5 +680,23 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
+	singleton = this;
 	return &this->public;
+}
+
+/**
+ * See header
+ */
+void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, u_int32_t interval)
+{
+	if (singleton)
+	{
+		entry_t *entry;
+
+		DBG1(DBG_CFG, "scheduling RADIUS Interim-Updates every %us", interval);
+		singleton->mutex->lock(singleton->mutex);
+		entry = get_or_create_entry(singleton, ike_sa);
+		entry->interim.interval = interval;
+		singleton->mutex->unlock(singleton->mutex);
+	}
 }

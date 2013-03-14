@@ -46,4 +46,11 @@ struct eap_radius_accounting_t {
  */
 eap_radius_accounting_t *eap_radius_accounting_create();
 
+/**
+ * Schedule Accounting interim updates for the given IKE_SA unique identifer.
+ *
+ * @param			IKE_SA unique identifier
+ */
+void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, u_int32_t interval);
+
 #endif /** EAP_RADIUS_ACCOUNTING_H_ @}*/
