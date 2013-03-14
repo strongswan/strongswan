@@ -164,10 +164,6 @@ static bool send_message(private_eap_radius_accounting_t *this,
 			ack = response->get_code(response) == RMC_ACCOUNTING_RESPONSE;
 			response->destroy(response);
 		}
-		else
-		{
-			charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
-		}
 		client->destroy(client);
 	}
 	return ack;
@@ -268,6 +264,10 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		entry = this->sessions->put(this->sessions, (void*)(uintptr_t)id, entry);
 		this->mutex->unlock(this->mutex);
 	}
+	else
+	{
+		eap_radius_handle_timeout(ike_sa->get_id(ike_sa));
+	}
 	message->destroy(message);
 	free(entry);
 }
@@ -323,7 +323,10 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		value = htonl(entry->cause);
 		message->add(message, RAT_ACCT_TERMINATE_CAUSE, chunk_from_thing(value));
 
-		send_message(this, message);
+		if (!send_message(this, message))
+		{
+			eap_radius_handle_timeout(NULL);
+		}
 		message->destroy(message);
 		free(entry);
 	}

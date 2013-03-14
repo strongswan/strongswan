@@ -253,7 +253,7 @@ METHOD(eap_method_t, initiate, status_t,
 	}
 	else
 	{
-		charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
+		eap_radius_handle_timeout(NULL);
 	}
 	request->destroy(request);
 	return status;
