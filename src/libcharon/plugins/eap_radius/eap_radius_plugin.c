@@ -227,7 +227,6 @@ METHOD(plugin_t, destroy, void,
 	this->configs->destroy_offset(this->configs,
 								  offsetof(radius_config_t, destroy));
 	this->lock->destroy(this->lock);
-	charon->bus->remove_listener(charon->bus, &this->accounting->listener);
 	this->accounting->destroy(this->accounting);
 	free(this);
 	instance = NULL;
@@ -259,11 +258,6 @@ plugin_t *eap_radius_plugin_create()
 	load_configs(this);
 	instance = this;
 
-	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
-	{
-		charon->bus->add_listener(charon->bus, &this->accounting->listener);
-	}
 	if (lib->settings->get_bool(lib->settings,
 					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
 	{

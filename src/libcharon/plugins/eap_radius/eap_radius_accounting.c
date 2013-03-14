@@ -648,6 +648,7 @@ METHOD(listener_t, child_updown, bool,
 METHOD(eap_radius_accounting_t, destroy, void,
 	private_eap_radius_accounting_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->public.listener);
 	singleton = NULL;
 	this->mutex->destroy(this->mutex);
 	this->sessions->destroy(this->sessions);
@@ -680,7 +681,12 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
-	singleton = this;
+	if (lib->settings->get_bool(lib->settings,
+					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
+	{
+		singleton = this;
+		charon->bus->add_listener(charon->bus, &this->public.listener);
+	}
 	return &this->public;
 }
 
