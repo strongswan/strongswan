@@ -292,7 +292,7 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 {
 	struct rtattr *rta;
 
-	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(data.len) > buflen)
+	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_LENGTH(data.len) > buflen)
 	{
 		DBG1(DBG_KNL, "unable to add attribute, buffer too small");
 		return;
