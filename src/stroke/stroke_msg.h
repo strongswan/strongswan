@@ -67,10 +67,8 @@ enum list_flag_t {
 	LIST_ALGS =			0x0400,
 	/** list plugin information */
 	LIST_PLUGINS =		0x0800,
-	/** list IKE counters */
-	LIST_COUNTERS =		0x1000,
 	/** all list options */
-	LIST_ALL =			0x1FFF,
+	LIST_ALL =			0x0FFF,
 };
 
 typedef enum reread_flag_t reread_flag_t;
@@ -225,6 +223,8 @@ struct stroke_msg_t {
 		STR_MEMUSAGE,
 		/* set username and password for a connection */
 		STR_USER_CREDS,
+		/* print counters */
+		STR_COUNTERS,
 		/* more to come */
 	} type;
 
@@ -354,6 +354,11 @@ struct stroke_msg_t {
 			char *username;
 			char *password;
 		} user_creds;
+
+		/* data for STR_COUNTERS */
+		struct {
+			char *name;
+		} counters;
 	};
 	char buffer[STROKE_BUF_LEN];
 };

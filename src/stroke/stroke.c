@@ -266,7 +266,6 @@ static int list_flags[] = {
 	LIST_OCSP,
 	LIST_ALGS,
 	LIST_PLUGINS,
-	LIST_COUNTERS,
 	LIST_ALL
 };
 
@@ -365,6 +364,16 @@ static int user_credentials(char *name, char *user, char *pass)
 	return send_stroke_msg(&msg);
 }
 
+static int counters(char *name)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_COUNTERS;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.counters.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
+}
+
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
@@ -419,7 +428,7 @@ static void exit_usage(char *error)
 	printf("  Show list of authority and attribute certificates:\n");
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
-	printf("    stroke listcerts|listcainfos|listcrls|listcounters|listall\n");
+	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
 	printf("  Show list of supported algorithms:\n");
 	printf("    stroke listalgs\n");
 	printf("  Reload authority and attribute certificates:\n");
@@ -445,6 +454,8 @@ static void exit_usage(char *error)
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
 	printf("           USERNAME is the username\n");
 	printf("           PASSWORD is the optional password, you'll be asked to enter it if not given\n");
+	printf("  Show IKE counters:\n");
+	printf("    stroke listcounters [connection-name]\n");
 	exit_error(error);
 }
 
@@ -553,7 +564,6 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALGS:
 		case STROKE_LIST_PLUGINS:
-		case STROKE_LIST_COUNTERS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;
@@ -593,6 +603,16 @@ int main(int argc, char *argv[])
 						   "username and optionally a password");
 			}
 			res = user_credentials(argv[2], argv[3], argc > 4 ? argv[4] : NULL);
+			break;
+		case STROKE_COUNTERS:
+			if (argc > 2)
+			{
+				res = counters(argv[2]);
+			}
+			else
+			{
+				res = counters(NULL);
+			}
 			break;
 		default:
 			exit_usage(NULL);
