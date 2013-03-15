@@ -1743,11 +1743,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	bool old_encap, bool new_encap, mark_t mark)
 {
 	netlink_buf_t request;
-	u_char *pos;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *out_sa = NULL, *sa;
-	size_t len, newlen;
+	size_t len;
 	struct rtattr *rta;
 	size_t rtasize;
 	struct xfrm_encap_tmpl* tmpl = NULL;
@@ -1831,11 +1830,11 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 				   ntohl(spi), src, dst, new_src, new_dst);
 	/* copy over the SA from out to request */
 	hdr = (struct nlmsghdr*)request;
-	memcpy(hdr, out, min(out->nlmsg_len, sizeof(request)));
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	sa = NLMSG_DATA(hdr);
+	memcpy(sa, NLMSG_DATA(out), sizeof(struct xfrm_usersa_info));
 	sa->family = new_dst->get_family(new_dst);
 
 	if (!src->ip_equals(src, new_src))
@@ -1849,7 +1848,6 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 	rta = XFRM_RTA(out, struct xfrm_usersa_info);
 	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
-	pos = (u_char*)XFRM_RTA(hdr, struct xfrm_usersa_info);
 	while (RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
@@ -1857,14 +1855,13 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
-				tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+				tmpl = RTA_DATA(rta);
 				tmpl->encap_sport = ntohs(new_src->get_port(new_src));
 				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
 			}
-			memcpy(pos, rta, rta->rta_len);
-			newlen = NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(rta->rta_len);
-			pos += newlen - hdr->nlmsg_len;
-			hdr->nlmsg_len = newlen;
+			netlink_add_attribute(hdr, rta->rta_type,
+								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
+								  sizeof(request));
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
