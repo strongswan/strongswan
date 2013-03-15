@@ -76,4 +76,15 @@ netlink_socket_t *netlink_socket_create(int protocol);
 void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 						   size_t buflen);
 
+/**
+ * Reserve space in a netlink message for given size and type, returning buffer.
+ *
+ * @param hdr			netlink message
+ * @param buflen		size of full netlink buffer
+ * @param type			RTA type
+ * @param len			length of RTA data
+ * @return				buffer to len bytes of attribute data, NULL on error
+ */
+void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len);
+
 #endif /* KERNEL_NETLINK_SHARED_H_ */
