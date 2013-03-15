@@ -176,8 +176,6 @@ ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_REPLAY_ESN_VAL,
 	"XFRMA_REPLAY_ESN_VAL",
 );
 
-#define END_OF_LIST -1
-
 /**
  * Algorithms for encryption
  */
@@ -208,7 +206,6 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
 	{ENCR_SERPENT_CBC,			"serpent"			},
 	{ENCR_TWOFISH_CBC,			"twofish"			},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -226,7 +223,6 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -237,7 +233,6 @@ static kernel_algorithm_t compression_algs[] = {
 	{IPCOMP_DEFLATE,			"deflate"			},
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -246,33 +241,39 @@ static kernel_algorithm_t compression_algs[] = {
 static char* lookup_algorithm(transform_type_t type, int ikev2)
 {
 	kernel_algorithm_t *list;
-	char *name = NULL;
+	int i, count;
+	char *name;
 
 	switch (type)
 	{
 		case ENCRYPTION_ALGORITHM:
 			list = encryption_algs;
+			count = countof(encryption_algs);
 			break;
 		case INTEGRITY_ALGORITHM:
 			list = integrity_algs;
+			count = countof(integrity_algs);
 			break;
 		case COMPRESSION_ALGORITHM:
 			list = compression_algs;
+			count = countof(compression_algs);
 			break;
 		default:
 			return NULL;
 	}
-	while (list->ikev2 != END_OF_LIST)
+	for (i = 0; i < count; i++)
 	{
-		if (list->ikev2 == ikev2)
+		if (list[i].ikev2 == ikev2)
 		{
-			return list->name;
+			return list[i].name;
 		}
-		list++;
 	}
-	hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface, ikev2,
-											  type, NULL, &name);
-	return name;
+	if (hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface,
+												  ikev2, type, NULL, &name))
+	{
+		return name;
+	}
+	return NULL;
 }
 
 typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
