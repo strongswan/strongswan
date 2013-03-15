@@ -509,7 +509,14 @@ static void stroke_counters(private_stroke_socket_t *this,
 {
 	pop_string(msg, &msg->counters.name);
 
-	this->counter->print(this->counter, out, msg->counters.name);
+	if (msg->counters.reset)
+	{
+		this->counter->reset(this->counter, msg->counters.name);
+	}
+	else
+	{
+		this->counter->print(this->counter, out, msg->counters.name);
+	}
 }
 
 /**
@@ -675,6 +682,7 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_COUNTERS:
 			stroke_counters(this, msg, out);
+			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
 			break;

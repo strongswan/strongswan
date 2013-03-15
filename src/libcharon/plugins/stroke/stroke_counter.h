@@ -92,6 +92,13 @@ struct stroke_counter_t {
 	void (*print)(stroke_counter_t *this, FILE *out, char *name);
 
 	/**
+	 * Reset global or connection specific counters.
+	 *
+	 * @param name		name of connection counters to reset, NULL for global
+	 */
+	void (*reset)(stroke_counter_t *this, char *name);
+
+	/**
 	 * Destroy a stroke_counter_t.
 	 */
 	void (*destroy)(stroke_counter_t *this);

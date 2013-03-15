@@ -336,6 +336,27 @@ METHOD(stroke_counter_t, print, void,
 	}
 }
 
+METHOD(stroke_counter_t, reset, void,
+	private_stroke_counter_t *this, char *name)
+{
+	this->lock->lock(this->lock);
+	if (name)
+	{
+		entry_t *entry;
+
+		entry = this->conns->remove(this->conns, name);
+		if (entry)
+		{
+			destroy_entry(entry);
+		}
+	}
+	else
+	{
+		memset(&this->counter, 0, sizeof(this->counter));
+	}
+	this->lock->unlock(this->lock);
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
@@ -370,6 +391,7 @@ stroke_counter_t *stroke_counter_create()
 				.message = _message_hook,
 			},
 			.print = _print,
+			.reset = _reset,
 			.destroy = _destroy,
 		},
 		.conns = hashtable_create((hashtable_hash_t)hash,

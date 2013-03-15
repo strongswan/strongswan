@@ -364,13 +364,15 @@ static int user_credentials(char *name, char *user, char *pass)
 	return send_stroke_msg(&msg);
 }
 
-static int counters(char *name)
+static int counters(int reset, char *name)
 {
 	stroke_msg_t msg;
 
 	msg.type = STR_COUNTERS;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.counters.name = push_string(&msg, name);
+	msg.counters.reset = reset;
+
 	return send_stroke_msg(&msg);
 }
 
@@ -605,14 +607,9 @@ int main(int argc, char *argv[])
 			res = user_credentials(argv[2], argv[3], argc > 4 ? argv[4] : NULL);
 			break;
 		case STROKE_COUNTERS:
-			if (argc > 2)
-			{
-				res = counters(argv[2]);
-			}
-			else
-			{
-				res = counters(NULL);
-			}
+		case STROKE_COUNTERS_RESET:
+			res = counters(token->kw == STROKE_COUNTERS_RESET,
+						   argc > 2 ? argv[2] : NULL);
 			break;
 		default:
 			exit_usage(NULL);

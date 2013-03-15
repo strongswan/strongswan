@@ -66,3 +66,4 @@ leases,          STROKE_LEASES
 memusage,        STROKE_MEMUSAGE
 user-creds,      STROKE_USER_CREDS
 listcounters,    STROKE_COUNTERS
+resetcounters,   STROKE_COUNTERS_RESET

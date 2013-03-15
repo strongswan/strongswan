@@ -223,7 +223,7 @@ struct stroke_msg_t {
 		STR_MEMUSAGE,
 		/* set username and password for a connection */
 		STR_USER_CREDS,
-		/* print counters */
+		/* print/reset counters */
 		STR_COUNTERS,
 		/* more to come */
 	} type;
@@ -357,6 +357,8 @@ struct stroke_msg_t {
 
 		/* data for STR_COUNTERS */
 		struct {
+			/* reset or print counters? */
+			int reset;
 			char *name;
 		} counters;
 	};
