@@ -143,7 +143,7 @@ void mysql_database_deinit()
 {
 	initialized->destroy(initialized);
 	mysql_thread_end();
-	/* mysql_library_end(); would be the clean way, however, it hangs... */
+	mysql_library_end();
 }
 
 /**
