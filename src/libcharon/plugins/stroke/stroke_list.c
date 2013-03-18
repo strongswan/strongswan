@@ -1246,7 +1246,7 @@ static void list_algs(FILE *out)
 	int len;
 
 	fprintf(out, "\n");
-	fprintf(out, "List of registered IKEv2 Algorithms:\n");
+	fprintf(out, "List of registered IKE algorithms:\n");
 	fprintf(out, "\n  encryption:");
 	len = 13;
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
