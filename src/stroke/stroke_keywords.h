@@ -42,7 +42,6 @@ typedef enum {
 	STROKE_LIST_OCSP,
 	STROKE_LIST_ALGS,
 	STROKE_LIST_PLUGINS,
-	STROKE_LIST_COUNTERS,
 	STROKE_LIST_ALL,
 	STROKE_REREAD_SECRETS,
 	STROKE_REREAD_CACERTS,
@@ -59,6 +58,8 @@ typedef enum {
 	STROKE_LEASES,
 	STROKE_MEMUSAGE,
 	STROKE_USER_CREDS,
+	STROKE_COUNTERS,
+	STROKE_COUNTERS_RESET,
 } stroke_keyword_t;
 
 #define STROKE_LIST_FIRST		STROKE_LIST_PUBKEYS
@@ -71,4 +72,3 @@ typedef struct stroke_token stroke_token_t;
 extern const stroke_token_t* in_word_set(register const char *str, register unsigned int len);
 
 #endif /* _STROKE_KEYWORDS_H_ */
-

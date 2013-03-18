@@ -87,8 +87,16 @@ struct stroke_counter_t {
 	 * Print counter values to an output stream.
 	 *
 	 * @param out		output stream to write to
+	 * @param name		connection name to get counters for, NULL for global
 	 */
-	void (*print)(stroke_counter_t *this, FILE *out);
+	void (*print)(stroke_counter_t *this, FILE *out, char *name);
+
+	/**
+	 * Reset global or connection specific counters.
+	 *
+	 * @param name		name of connection counters to reset, NULL for global
+	 */
+	void (*reset)(stroke_counter_t *this, char *name);
 
 	/**
 	 * Destroy a stroke_counter_t.

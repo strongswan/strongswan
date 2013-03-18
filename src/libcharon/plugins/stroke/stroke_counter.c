@@ -16,6 +16,7 @@
 #include "stroke_counter.h"
 
 #include <threading/spinlock.h>
+#include <collections/hashtable.h>
 
 ENUM(stroke_counter_type_names,
 	COUNTER_INIT_IKE_SA_REKEY, COUNTER_OUT_INFORMATIONAL_RSP,
@@ -55,15 +56,110 @@ struct private_stroke_counter_t {
 	stroke_counter_t public;
 
 	/**
-	 * Counter values
+	 * Global counter values
 	 */
 	u_int64_t counter[COUNTER_MAX];
+
+	/**
+	 * Counters for specific connection names, char* => entry_t
+	 */
+	hashtable_t *conns;
 
 	/**
 	 * Lock for counter values
 	 */
 	spinlock_t *lock;
 };
+
+/**
+ * Counters for a specific connection name
+ */
+typedef struct {
+	/** connection name */
+	char *name;
+	/** counter values for connection */
+	u_int64_t counter[COUNTER_MAX];
+} entry_t;
+
+/**
+ * Destroy named entry
+ */
+static void destroy_entry(entry_t *this)
+{
+	free(this->name);
+	free(this);
+}
+
+/**
+ * Hashtable hash function
+ */
+static u_int hash(char *name)
+{
+	return chunk_hash(chunk_from_str(name));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals(char *a, char *b)
+{
+	return streq(a, b);
+}
+
+/**
+ * Get the name of an IKE_SA, but return NULL if it is not known yet
+ */
+static char *get_ike_sa_name(ike_sa_t *ike_sa)
+{
+	peer_cfg_t *peer_cfg;
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	if (peer_cfg)
+	{
+		return peer_cfg->get_name(peer_cfg);
+	}
+	return NULL;
+}
+
+/**
+ * Increase a counter for a named entry
+ */
+static void count_named(private_stroke_counter_t *this,
+						ike_sa_t *ike_sa, stroke_counter_type_t type)
+{
+	entry_t *entry;
+	char *name;
+
+	name = get_ike_sa_name(ike_sa);
+	if (name)
+	{
+		entry = this->conns->get(this->conns, name);
+		if (!entry)
+		{
+			INIT(entry,
+				.name = strdup(name),
+			);
+			this->conns->put(this->conns, entry->name, entry);
+		}
+		entry->counter[type]++;
+	}
+}
+
+/**
+ * Get a counter value for a specific connection name
+ */
+static u_int64_t get_named_count(private_stroke_counter_t *this,
+								 char *name, stroke_counter_type_t type)
+{
+	entry_t *entry;
+
+	entry = this->conns->get(this->conns, name);
+	if (entry)
+	{
+		return entry->counter[type];
+	}
+	return 0;
+}
 
 METHOD(listener_t, alert, bool,
 	private_stroke_counter_t *this, ike_sa_t *ike_sa,
@@ -86,6 +182,7 @@ METHOD(listener_t, alert, bool,
 
 	this->lock->lock(this->lock);
 	this->counter[type]++;
+	count_named(this, ike_sa, type);
 	this->lock->unlock(this->lock);
 
 	return TRUE;
@@ -109,6 +206,7 @@ METHOD(listener_t, ike_rekey, bool,
 
 	this->lock->lock(this->lock);
 	this->counter[type]++;
+	count_named(this, old, type);
 	this->lock->unlock(this->lock);
 
 	return TRUE;
@@ -120,6 +218,7 @@ METHOD(listener_t, child_rekey, bool,
 {
 	this->lock->lock(this->lock);
 	this->counter[COUNTER_CHILD_SA_REKEY]++;
+	count_named(this, ike_sa, COUNTER_CHILD_SA_REKEY);
 	this->lock->unlock(this->lock);
 
 	return TRUE;
@@ -194,13 +293,14 @@ METHOD(listener_t, message_hook, bool,
 
 	this->lock->lock(this->lock);
 	this->counter[type]++;
+	count_named(this, ike_sa, type);
 	this->lock->unlock(this->lock);
 
 	return TRUE;
 }
 
 METHOD(stroke_counter_t, print, void,
-	private_stroke_counter_t *this, FILE *out)
+	private_stroke_counter_t *this, FILE *out, char *name)
 {
 	u_int64_t counter[COUNTER_MAX];
 	int i;
@@ -209,11 +309,25 @@ METHOD(stroke_counter_t, print, void,
 	this->lock->lock(this->lock);
 	for (i = 0; i < countof(this->counter); i++)
 	{
-		counter[i] = this->counter[i];
+		if (name)
+		{
+			counter[i] = get_named_count(this, name, i);
+		}
+		else
+		{
+			counter[i] = this->counter[i];
+		}
 	}
 	this->lock->unlock(this->lock);
 
-	fprintf(out, "\nList of IKE counters:\n\n");
+	if (name)
+	{
+		fprintf(out, "\nList of IKE counters for '%s':\n\n", name);
+	}
+	else
+	{
+		fprintf(out, "\nList of IKE counters:\n\n");
+	}
 
 	/* but do blocking write without the lock. */
 	for (i = 0; i < countof(this->counter); i++)
@@ -222,9 +336,41 @@ METHOD(stroke_counter_t, print, void,
 	}
 }
 
+METHOD(stroke_counter_t, reset, void,
+	private_stroke_counter_t *this, char *name)
+{
+	this->lock->lock(this->lock);
+	if (name)
+	{
+		entry_t *entry;
+
+		entry = this->conns->remove(this->conns, name);
+		if (entry)
+		{
+			destroy_entry(entry);
+		}
+	}
+	else
+	{
+		memset(&this->counter, 0, sizeof(this->counter));
+	}
+	this->lock->unlock(this->lock);
+}
+
 METHOD(stroke_counter_t, destroy, void,
 	private_stroke_counter_t *this)
 {
+	enumerator_t *enumerator;
+	char *name;
+	entry_t *entry;
+
+	enumerator = this->conns->create_enumerator(this->conns);
+	while (enumerator->enumerate(enumerator, &name, &entry))
+	{
+		destroy_entry(entry);
+	}
+	enumerator->destroy(enumerator);
+	this->conns->destroy(this->conns);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -245,8 +391,11 @@ stroke_counter_t *stroke_counter_create()
 				.message = _message_hook,
 			},
 			.print = _print,
+			.reset = _reset,
 			.destroy = _destroy,
 		},
+		.conns = hashtable_create((hashtable_hash_t)hash,
+								  (hashtable_equals_t)equals, 4),
 		.lock = spinlock_create(),
 	);
 

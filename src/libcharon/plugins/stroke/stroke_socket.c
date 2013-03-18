@@ -388,17 +388,14 @@ static void stroke_status(private_stroke_socket_t *this,
 /**
  * list various information
  */
-static void stroke_list(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+static void stroke_list(private_stroke_socket_t *this, stroke_msg_t *msg,
+						FILE *out)
 {
 	if (msg->list.flags & LIST_CAINFOS)
 	{
 		this->ca->list(this->ca, msg, out);
 	}
 	this->list->list(this->list, msg, out);
-	if (msg->list.flags & LIST_COUNTERS)
-	{
-		this->counter->print(this->counter, out);
-	}
 }
 
 /**
@@ -502,6 +499,24 @@ static void stroke_user_creds(private_stroke_socket_t *this,
 	DBG1(DBG_CFG, "received stroke: user-creds '%s'", msg->user_creds.name);
 
 	this->config->set_user_credentials(this->config, msg, out);
+}
+
+/**
+ * Print stroke counter values
+ */
+static void stroke_counters(private_stroke_socket_t *this,
+							  stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->counters.name);
+
+	if (msg->counters.reset)
+	{
+		this->counter->reset(this->counter, msg->counters.name);
+	}
+	else
+	{
+		this->counter->print(this->counter, out, msg->counters.name);
+	}
 }
 
 /**
@@ -671,6 +686,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_USER_CREDS:
 			stroke_user_creds(this, msg, out);
+			break;
+		case STR_COUNTERS:
+			stroke_counters(this, msg, out);
 			break;
 		default:
 			DBG1(DBG_CFG, "received unknown stroke");
@@ -862,4 +880,3 @@ stroke_socket_t *stroke_socket_create()
 
 	return &this->public;
 }
-
