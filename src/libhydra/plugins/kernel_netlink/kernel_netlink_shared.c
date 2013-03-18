@@ -292,7 +292,7 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 {
 	struct rtattr *rta;
 
-	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(data.len) > buflen)
+	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_LENGTH(data.len) > buflen)
 	{
 		DBG1(DBG_KNL, "unable to add attribute, buffer too small");
 		return;
@@ -303,4 +303,25 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 	rta->rta_len = RTA_LENGTH(data.len);
 	memcpy(RTA_DATA(rta), data.ptr, data.len);
 	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+}
+
+/**
+ * Described in header.
+ */
+void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
+{
+	struct rtattr *rta;
+
+	if (NLMSG_ALIGN(hdr->nlmsg_len) + RTA_LENGTH(len) > buflen)
+	{
+		DBG1(DBG_KNL, "unable to add attribute, buffer too small");
+		return NULL;
+	}
+
+	rta = ((void*)hdr) + NLMSG_ALIGN(hdr->nlmsg_len);
+	rta->rta_type = type;
+	rta->rta_len = RTA_LENGTH(len);
+	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+
+	return RTA_DATA(rta);
 }

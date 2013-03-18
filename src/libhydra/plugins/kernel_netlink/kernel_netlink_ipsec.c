@@ -95,12 +95,6 @@
 #define XFRM_RTA(nlh, x) ((struct rtattr*)(NLMSG_DATA(nlh) + \
 										   NLMSG_ALIGN(sizeof(x))))
 /**
- * Returns a pointer to the next rtattr following rta.
- * !!! Do not use this to parse messages. Use RTA_NEXT and RTA_OK instead !!!
- */
-#define XFRM_RTA_NEXT(rta) ((struct rtattr*)(((char*)(rta)) + \
-											 RTA_ALIGN((rta)->rta_len)))
-/**
  * Returns the total size of attached rta data
  * (after 'usual' netlink data x like 'struct xfrm_usersa_info')
  */
@@ -176,8 +170,6 @@ ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_REPLAY_ESN_VAL,
 	"XFRMA_REPLAY_ESN_VAL",
 );
 
-#define END_OF_LIST -1
-
 /**
  * Algorithms for encryption
  */
@@ -208,7 +200,6 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
 	{ENCR_SERPENT_CBC,			"serpent"			},
 	{ENCR_TWOFISH_CBC,			"twofish"			},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -226,7 +217,6 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -237,7 +227,6 @@ static kernel_algorithm_t compression_algs[] = {
 	{IPCOMP_DEFLATE,			"deflate"			},
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
-	{END_OF_LIST,				NULL				}
 };
 
 /**
@@ -246,33 +235,39 @@ static kernel_algorithm_t compression_algs[] = {
 static char* lookup_algorithm(transform_type_t type, int ikev2)
 {
 	kernel_algorithm_t *list;
-	char *name = NULL;
+	int i, count;
+	char *name;
 
 	switch (type)
 	{
 		case ENCRYPTION_ALGORITHM:
 			list = encryption_algs;
+			count = countof(encryption_algs);
 			break;
 		case INTEGRITY_ALGORITHM:
 			list = integrity_algs;
+			count = countof(integrity_algs);
 			break;
 		case COMPRESSION_ALGORITHM:
 			list = compression_algs;
+			count = countof(compression_algs);
 			break;
 		default:
 			return NULL;
 	}
-	while (list->ikev2 != END_OF_LIST)
+	for (i = 0; i < count; i++)
 	{
-		if (list->ikev2 == ikev2)
+		if (list[i].ikev2 == ikev2)
 		{
-			return list->name;
+			return list[i].name;
 		}
-		list++;
 	}
-	hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface, ikev2,
-											  type, NULL, &name);
-	return name;
+	if (hydra->kernel_interface->lookup_algorithm(hydra->kernel_interface,
+												  ikev2, type, NULL, &name))
+	{
+		return name;
+	}
+	return NULL;
 }
 
 typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
@@ -1150,6 +1145,26 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 	return SUCCESS;
 }
 
+/**
+ * Add a XFRM mark to message if required
+ */
+static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
+{
+	if (mark.value)
+	{
+		struct xfrm_mark *xmrk;
+
+		xmrk = netlink_reserve(hdr, buflen, XFRMA_MARK, sizeof(*xmrk));
+		if (!xmrk)
+		{
+			return FALSE;
+		}
+		xmrk->v = mark.value;
+		xmrk->m = mark.mask;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
@@ -1222,8 +1237,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->lft.soft_use_expires_seconds = 0;
 	sa->lft.hard_use_expires_seconds = 0;
 
-	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_info);
-
 	switch (enc_alg)
 	{
 		case ENCR_UNDEFINED:
@@ -1256,23 +1269,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 
-			rthdr->rta_type = XFRMA_ALG_AEAD;
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) +
-										enc_key.len);
-			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-			if (hdr->nlmsg_len > sizeof(request))
+			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AEAD,
+								   sizeof(*algo) + enc_key.len);
+			if (!algo)
 			{
 				goto failed;
 			}
-
-			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
-
-			rthdr = XFRM_RTA_NEXT(rthdr);
 			break;
 		}
 		default:
@@ -1289,21 +1296,16 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 
-			rthdr->rta_type = XFRMA_ALG_CRYPT;
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
-			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-			if (hdr->nlmsg_len > sizeof(request))
+			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_CRYPT,
+								   sizeof(*algo) + enc_key.len);
+			if (!algo)
 			{
 				goto failed;
 			}
-
-			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
-
-			rthdr = XFRM_RTA_NEXT(rthdr);
 		}
 	}
 
@@ -1341,17 +1343,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			/* the kernel uses SHA256 with 96 bit truncation by default,
 			 * use specified truncation size supported by newer kernels.
 			 * also use this for untruncated MD5 and SHA1. */
-			rthdr->rta_type = XFRMA_ALG_AUTH_TRUNC;
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_auth) +
-										int_key.len);
-
-			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-			if (hdr->nlmsg_len > sizeof(request))
+			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH_TRUNC,
+								   sizeof(*algo) + int_key.len);
+			if (!algo)
 			{
 				goto failed;
 			}
-
-			algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
 			algo->alg_key_len = int_key.len * 8;
 			algo->alg_trunc_len = trunc_len;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
@@ -1362,27 +1359,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			struct xfrm_algo* algo;
 
-			rthdr->rta_type = XFRMA_ALG_AUTH;
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_key.len);
-
-			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-			if (hdr->nlmsg_len > sizeof(request))
+			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH,
+								   sizeof(*algo) + int_key.len);
+			if (!algo)
 			{
 				goto failed;
 			}
-
-			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = int_key.len * 8;
 			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
 			memcpy(algo->alg_key, int_key.ptr, int_key.len);
 		}
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
 	if (ipcomp != IPCOMP_NONE)
 	{
-		rthdr->rta_type = XFRMA_ALG_COMP;
+		struct xfrm_algo* algo;
+
 		alg_name = lookup_algorithm(COMPRESSION_ALGORITHM, ipcomp);
 		if (alg_name == NULL)
 		{
@@ -1393,35 +1386,26 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		DBG2(DBG_KNL, "  using compression algorithm %N",
 			 ipcomp_transform_names, ipcomp);
 
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_COMP,
+							   sizeof(*algo));
+		if (!algo)
 		{
 			goto failed;
 		}
-
-		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 		algo->alg_key_len = 0;
 		strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
 		algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
-
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
 	if (encap)
 	{
 		struct xfrm_encap_tmpl *tmpl;
 
-		rthdr->rta_type = XFRMA_ENCAP;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
-
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP, sizeof(*tmpl));
+		if (!tmpl)
 		{
 			goto failed;
 		}
-
-		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
 		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
 		tmpl->encap_sport = htons(src->get_port(src));
 		tmpl->encap_dport = htons(dst->get_port(dst));
@@ -1436,44 +1420,24 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		 * No. The reason the kernel ignores NAT-OA is that it recomputes
 		 * (or, rather, just ignores) the checksum. If packets pass the IPsec
 		 * checks it marks them "checksum ok" so OA isn't needed. */
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			goto failed;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
-		rthdr = XFRM_RTA_NEXT(rthdr);
+		goto failed;
 	}
 
 	if (tfc)
 	{
 		u_int32_t *tfcpad;
 
-		rthdr->rta_type = XFRMA_TFCPAD;
-		rthdr->rta_len = RTA_LENGTH(sizeof(u_int32_t));
-
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		tfcpad = netlink_reserve(hdr, sizeof(request), XFRMA_TFCPAD,
+								 sizeof(*tfcpad));
+		if (!tfcpad)
 		{
 			goto failed;
 		}
-
-		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
 		*tfcpad = tfc;
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
 	if (protocol != IPPROTO_COMP)
@@ -1484,24 +1448,18 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
 			struct xfrm_replay_state_esn *replay;
 
-			rthdr->rta_type = XFRMA_REPLAY_ESN_VAL;
-			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
-										(this->replay_window + 7) / 8);
-
-			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-			if (hdr->nlmsg_len > sizeof(request))
+			replay = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
+							sizeof(*replay) + (this->replay_window + 7) / 8);
+			if (!replay)
 			{
 				goto failed;
 			}
-
-			replay = (struct xfrm_replay_state_esn*)RTA_DATA(rthdr);
 			/* bmp_len contains number uf __u32's */
 			replay->bmp_len = this->replay_bmp;
 			replay->replay_window = this->replay_window;
 			DBG2(DBG_KNL, "  using replay window of %u packets",
 				 this->replay_window);
 
-			rthdr = XFRM_RTA_NEXT(rthdr);
 			if (esn)
 			{
 				DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
@@ -1573,22 +1531,9 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	aevent_id->sa_id.proto = protocol;
 	aevent_id->sa_id.family = dst->get_family(dst);
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_aevent_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return;
 	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -1674,22 +1619,9 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return FAILED;
 	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -1777,22 +1709,9 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return FAILED;
 	}
 
 	switch (this->socket_xfrm->send_ack(this->socket_xfrm, hdr))
@@ -1824,7 +1743,6 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	bool old_encap, bool new_encap, mark_t mark)
 {
 	netlink_buf_t request;
-	u_char *pos;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *out_sa = NULL, *sa;
@@ -1859,22 +1777,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa_id->proto = protocol;
 	sa_id->family = dst->get_family(dst);
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return FAILED;
 	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -1925,11 +1830,11 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 				   ntohl(spi), src, dst, new_src, new_dst);
 	/* copy over the SA from out to request */
 	hdr = (struct nlmsghdr*)request;
-	memcpy(hdr, out, min(out->nlmsg_len, sizeof(request)));
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	sa = NLMSG_DATA(hdr);
+	memcpy(sa, NLMSG_DATA(out), sizeof(struct xfrm_usersa_info));
 	sa->family = new_dst->get_family(new_dst);
 
 	if (!src->ip_equals(src, new_src))
@@ -1943,75 +1848,60 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 	rta = XFRM_RTA(out, struct xfrm_usersa_info);
 	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
-	pos = (u_char*)XFRM_RTA(hdr, struct xfrm_usersa_info);
-	while(RTA_OK(rta, rtasize))
+	while (RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
 		if (rta->rta_type != XFRMA_ENCAP || new_encap)
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
-				tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+				tmpl = RTA_DATA(rta);
 				tmpl->encap_sport = ntohs(new_src->get_port(new_src));
 				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
 			}
-			memcpy(pos, rta, rta->rta_len);
-			pos += RTA_ALIGN(rta->rta_len);
-			hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
+			netlink_add_attribute(hdr, rta->rta_type,
+								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
+								  sizeof(request));
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
 
-	rta = (struct rtattr*)pos;
 	if (tmpl == NULL && new_encap)
 	{	/* add tmpl if we are enabling it */
-		rta->rta_type = XFRMA_ENCAP;
-		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
-
-		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP, sizeof(*tmpl));
+		if (!tmpl)
 		{
 			goto failed;
 		}
-
-		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
 		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
 		tmpl->encap_sport = ntohs(new_src->get_port(new_src));
 		tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
 		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
-
-		rta = XFRM_RTA_NEXT(rta);
 	}
 
 	if (replay_esn)
 	{
-		rta->rta_type = XFRMA_REPLAY_ESN_VAL;
-		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
-								  this->replay_bmp);
+		struct xfrm_replay_state_esn *state;
 
-		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
+								sizeof(*state) + this->replay_bmp);
+		if (!state)
 		{
 			goto failed;
 		}
-		memcpy(RTA_DATA(rta), replay_esn,
-			   sizeof(struct xfrm_replay_state_esn) + this->replay_bmp);
-
-		rta = XFRM_RTA_NEXT(rta);
+		memcpy(state, replay_esn, sizeof(*state) + this->replay_bmp);
 	}
 	else if (replay)
 	{
-		rta->rta_type = XFRMA_REPLAY_VAL;
-		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
+		struct xfrm_replay_state *state;
 
-		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
+		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_VAL,
+								sizeof(*state));
+		if (!state)
 		{
 			goto failed;
 		}
-		memcpy(RTA_DATA(rta), replay, sizeof(struct xfrm_replay_state));
-
-		rta = XFRM_RTA_NEXT(rta);
+		memcpy(state, replay, sizeof(*state));
 	}
 	else
 	{
@@ -2108,11 +1998,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_info->lft.soft_use_expires_seconds = 0;
 	policy_info->lft.hard_use_expires_seconds = 0;
 
-	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
-
 	if (mapping->type == POLICY_IPSEC)
 	{
-		struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
+		struct xfrm_user_tmpl *tmpl;
 		struct {
 			u_int8_t proto;
 			bool use;
@@ -2122,9 +2010,22 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			{ IPPROTO_AH, ipsec->cfg.ah.use },
 		};
 		ipsec_mode_t proto_mode = ipsec->cfg.mode;
+		int count = 0;
 
-		rthdr->rta_type = XFRMA_TMPL;
-		rthdr->rta_len = 0; /* actual length is set below */
+		for (i = 0; i < countof(protos); i++)
+		{
+			if (protos[i].use)
+			{
+				count++;
+			}
+		}
+		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_TMPL,
+							   count * sizeof(*tmpl));
+		if (!tmpl)
+		{
+			this->mutex->unlock(this->mutex);
+			return FAILED;
+		}
 
 		for (i = 0; i < countof(protos); i++)
 		{
@@ -2132,15 +2033,6 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			{
 				continue;
 			}
-
-			rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-			hdr->nlmsg_len += RTA_ALIGN(RTA_LENGTH(sizeof(struct xfrm_user_tmpl)));
-			if (hdr->nlmsg_len > sizeof(request))
-			{
-				this->mutex->unlock(this->mutex);
-				return FAILED;
-			}
-
 			tmpl->reqid = ipsec->cfg.reqid;
 			tmpl->id.proto = protos[i].proto;
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
@@ -2160,27 +2052,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			/* use transport mode for other SAs */
 			proto_mode = MODE_TRANSPORT;
 		}
-
-		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
-	if (ipsec->mark.value)
+	if (!add_mark(hdr, sizeof(request), ipsec->mark))
 	{
-		struct xfrm_mark *mrk;
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			this->mutex->unlock(this->mutex);
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = ipsec->mark.value;
-		mrk->m = ipsec->mark.mask;
+		this->mutex->unlock(this->mutex);
+		return FAILED;
 	}
 	this->mutex->unlock(this->mutex);
 
@@ -2407,23 +2284,9 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	policy_id->sel = ts2selector(src_ts, dst_ts);
 	policy_id->dir = direction;
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return FAILED;
 	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
@@ -2579,23 +2442,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_id->sel = current->sel;
 	policy_id->dir = direction;
 
-	if (mark.value)
+	if (!add_mark(hdr, sizeof(request), mark))
 	{
-		struct xfrm_mark *mrk;
-		struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_id);
-
-		rthdr->rta_type = XFRMA_MARK;
-		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
-		if (hdr->nlmsg_len > sizeof(request))
-		{
-			this->mutex->unlock(this->mutex);
-			return FAILED;
-		}
-
-		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
-		mrk->v = mark.value;
-		mrk->m = mark.mask;
+		return FAILED;
 	}
 
 	if (current->route)
