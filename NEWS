@@ -43,6 +43,14 @@ strongswan-5.0.3
   any authentication.  Therefore, to use this backend it has to be selected
   explicitly with rightauth2=xauth-noauth.
 
+- The new charon-tkm IKEv2 daemon delegates security critical operations to a
+  separate process. This has the benefit that the network facing daemon has no
+  knowledge of keying material used to protect child SAs. Thus subverting
+  charon-tkm does not result in the compromise of cryptographic keys.
+  The extracted functionality has been implemented from scratch in a minimal TCB
+  (trusted computing base) in the Ada programming language. Further information
+  can be found at http://www.codelabs.ch/tkm/.
+
 strongswan-5.0.2
 ----------------
 
