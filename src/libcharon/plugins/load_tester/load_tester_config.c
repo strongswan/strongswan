@@ -64,6 +64,11 @@ struct private_load_tester_config_t {
 	proposal_t *proposal;
 
 	/**
+	 * ESP proposal
+	 */
+	proposal_t *esp;
+
+	/**
 	 * Authentication method(s) to use/expect from initiator
 	 */
 	char *initiator_auth;
@@ -494,7 +499,6 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	peer_cfg_t *peer_cfg;
-	proposal_t *proposal;
 	char local[32], *remote;
 	host_t *addr;
 	lifetime_cfg_t lifetime = {
@@ -576,8 +580,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE, MODE_TUNNEL,
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
-	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
-	child_cfg->add_proposal(child_cfg, proposal);
+	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp));
 
 	if (num)
 	{	/* initiator */
@@ -662,6 +665,7 @@ METHOD(load_tester_config_t, destroy, void,
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));
 	this->peer_cfg->destroy(this->peer_cfg);
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->esp);
 	DESTROY_IF(this->vip);
 	free(this);
 }
@@ -711,6 +715,15 @@ load_tester_config_t *load_tester_config_create()
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
+	this->esp = proposal_create_from_string(PROTO_ESP,
+			lib->settings->get_str(lib->settings,
+				"%s.plugins.load-tester.esp", "aes128-sha1",
+				charon->name));
+	if (!this->esp)
+	{	/* fallback */
+		this->esp = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
+	}
+
 	this->ike_rekey = lib->settings->get_int(lib->settings,
 			"%s.plugins.load-tester.ike_rekey", 0, charon->name);
 	this->child_rekey = lib->settings->get_int(lib->settings,
