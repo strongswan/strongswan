@@ -129,8 +129,9 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 	const host_t * const src, const host_t * const dst, const u_int32_t spi,
 	const u_int8_t proto)
 {
-
+	status_t result;
 	sad_entry_t *new_entry;
+
 	INIT(new_entry,
 		 .esa_id = esa_id,
 		 .src = (host_t *)src,
@@ -140,9 +141,9 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 	);
 
 	this->mutex->lock(this->mutex);
-	const status_t result = this->data->find_first(this->data,
-												   (linked_list_match_t)sad_entry_equal,
-												   NULL, new_entry);
+	result = this->data->find_first(this->data,
+									(linked_list_match_t)sad_entry_equal, NULL,
+									new_entry);
 	if (result == NOT_FOUND)
 	{
 		DBG3(DBG_KNL, "inserting SAD entry (esa: %llu, src: %H, dst: %H, "
@@ -192,8 +193,10 @@ METHOD(tkm_kernel_sad_t, _remove, bool,
 {
 	sad_entry_t *current;
 	bool removed = FALSE;
+	enumerator_t *enumerator;
+
 	this->mutex->lock(this->mutex);
-	enumerator_t *enumerator = this->data->create_enumerator(this->data);
+	enumerator = this->data->create_enumerator(this->data);
 	while (enumerator->enumerate(enumerator, (void **)&current))
 	{
 		if (current->esa_id == esa_id)

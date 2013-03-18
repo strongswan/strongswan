@@ -94,9 +94,11 @@ static void aead_create_from_keys(aead_t **in, aead_t **out,
 	   const u_int16_t key_size, bool initiator)
 {
 	*in = *out = NULL;
+	signer_t *signer_i, *signer_r;
+	crypter_t *crypter_i, *crypter_r;
 
-	signer_t * const signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
-	signer_t * const signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
+	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
+	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
 	if (signer_i == NULL || signer_r == NULL)
 	{
 		DBG1(DBG_IKE, "%N %N not supported!",
@@ -104,10 +106,8 @@ static void aead_create_from_keys(aead_t **in, aead_t **out,
 			 integrity_algorithm_names, int_alg);
 		return;
 	}
-	crypter_t * const crypter_i = lib->crypto->create_crypter(lib->crypto,
-			enc_alg, key_size);
-	crypter_t * const crypter_r = lib->crypto->create_crypter(lib->crypto,
-			enc_alg, key_size);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, key_size);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, key_size);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
 		signer_i->destroy(signer_i);
@@ -174,41 +174,50 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	/* Check encryption and integrity algorithms */
 	u_int16_t enc_alg, int_alg, key_size;
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg, &key_size))
+	u_int64_t nc_id, spi_loc, spi_rem;
+	chunk_t *nonce, c_ai, c_ar, c_ei, c_er;
+	tkm_diffie_hellman_t *tkm_dh;
+	dh_id_type dh_id;
+	nonce_type nonce_rem;
+	result_type res;
+	key_type sk_ai, sk_ar, sk_ei, sk_er;
+
+	/* Check encryption and integrity algorithms */
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg,
+								 &key_size))
 	{
 		DBG1(DBG_IKE, "no %N selected", transform_type_names,
-				ENCRYPTION_ALGORITHM);
+			 ENCRYPTION_ALGORITHM);
 		return FALSE;
 	}
 	if (encryption_algorithm_is_aead(enc_alg))
 	{
 		DBG1(DBG_IKE, "AEAD algorithm %N not supported",
-			   encryption_algorithm_names, enc_alg);
+			 encryption_algorithm_names, enc_alg);
 		return FALSE;
 	}
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg, NULL))
 	{
 		DBG1(DBG_IKE, "no %N selected", transform_type_names,
-				INTEGRITY_ALGORITHM);
+			 INTEGRITY_ALGORITHM);
 		return FALSE;
 	}
 	if (!(enc_alg == ENCR_AES_CBC && key_size == 256 &&
-			int_alg == AUTH_HMAC_SHA2_512_256))
+		  int_alg == AUTH_HMAC_SHA2_512_256))
 	{
-		DBG1(DBG_IKE, "the TKM only supports aes256-sha512 at the moment, please"
-				" update your configuration");
+		DBG1(DBG_IKE, "the TKM only supports aes256-sha512 at the moment, "
+			 "please update your configuration");
 		return FALSE;
 	}
 
 	DBG2(DBG_IKE, "using %N for encryption, %N for integrity",
-			encryption_algorithm_names, enc_alg,
-			integrity_algorithm_names, int_alg);
+		 encryption_algorithm_names, enc_alg, integrity_algorithm_names,
+		 int_alg);
 
 	/* Acquire nonce context id */
-	chunk_t * const nonce = this->initiator ? &nonce_i : &nonce_r;
-	const uint64_t nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
+	nonce = this->initiator ? &nonce_i : &nonce_r;
+	nc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce);
 	if (!nc_id)
 	{
 		DBG1(DBG_IKE, "unable to acquire context id for nonce");
@@ -216,11 +225,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 
 	/* Get DH context id */
-	tkm_diffie_hellman_t * const tkm_dh = (tkm_diffie_hellman_t *)dh;
-	const dh_id_type dh_id = tkm_dh->get_id(tkm_dh);
-
-	nonce_type nonce_rem;
-	u_int64_t spi_loc, spi_rem;
+	tkm_dh = (tkm_diffie_hellman_t *)dh;
+	dh_id = tkm_dh->get_id(tkm_dh);
 
 	if (this->initiator)
 	{
@@ -235,8 +241,6 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		spi_rem = id->get_initiator_spi(id);
 	}
 
-	result_type res;
-	key_type sk_ai, sk_ar, sk_ei, sk_er;
 	if (rekey_function == PRF_UNDEFINED)
 	{
 		this->ae_ctx_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_AE);
@@ -253,12 +257,14 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 	else
 	{
+		isa_info_t isa_info;
+
 		if (rekey_skd.ptr == NULL || rekey_skd.len != sizeof(isa_info_t))
 		{
 			DBG1(DBG_IKE, "unable to retrieve parent isa info");
 			return FALSE;
 		}
-		const isa_info_t isa_info = *((isa_info_t *)(rekey_skd.ptr));
+		isa_info = *((isa_info_t *)(rekey_skd.ptr));
 		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: %llu,"
 			 "dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
 			 isa_info.ae_id, nc_id, dh_id, spi_loc, spi_rem);
@@ -276,15 +282,14 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	chunk_t c_ai, c_ar, c_ei, c_er;
 	sequence_to_chunk(sk_ai.data, sk_ai.size, &c_ai);
 	sequence_to_chunk(sk_ar.data, sk_ar.size, &c_ar);
 	sequence_to_chunk(sk_ei.data, sk_ei.size, &c_ei);
 	sequence_to_chunk(sk_er.data, sk_er.size, &c_er);
 
-	aead_create_from_keys(&this->aead_in, &this->aead_out,
-			&c_ai, &c_ar, &c_ei, &c_er,
-			enc_alg, int_alg, key_size / 8, this->initiator);
+	aead_create_from_keys(&this->aead_in, &this->aead_out, &c_ai, &c_ar, &c_ei,
+						  &c_er, enc_alg, int_alg, key_size / 8,
+						  this->initiator);
 
 	chunk_clear(&c_ai);
 	chunk_clear(&c_ar);
@@ -315,8 +320,8 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	esa_info_t *esa_info_i, *esa_info_r;
-
 	dh_id_type dh_id = 0;
+
 	if (dh)
 	{
 		dh_id = ((tkm_diffie_hellman_t *)dh)->get_id((tkm_diffie_hellman_t *)dh);
@@ -362,6 +367,8 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
 {
+	sign_info_t *sign;
+
 	if (verify)
 	{
 		/* store peer init message for authentication step */
@@ -370,7 +377,6 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 		return TRUE;
 	}
 
-	sign_info_t *sign;
 	INIT(sign,
 		 .isa_id = this->isa_ctx_id,
 		 .init_message = chunk_clone(ike_sa_init),

@@ -62,6 +62,8 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
+	bool result;
+
 	if (!this->rng)
 	{
 		this->rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
@@ -73,8 +75,8 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	}
 
 	DBG1(DBG_KNL, "getting SPI for reqid {%u}", reqid);
-	const bool result = this->rng->get_bytes(this->rng, sizeof(u_int32_t),
-											 (u_int8_t *)spi);
+	result = this->rng->get_bytes(this->rng, sizeof(u_int32_t),
+								  (u_int8_t *)spi);
 	return result ? SUCCESS : FAILED;
 }
 
@@ -93,12 +95,21 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
+	esa_info_t esa;
+	bool initiator;
+	esp_spi_type spi_loc, spi_rem;
+	host_t *local, *peer;
+	chunk_t *nonce_loc, *nonce_rem;
+	nc_id_type nonce_loc_id;
+	esa_id_type esa_id;
+	nonce_type nc_rem;
+
 	if (enc_key.ptr == NULL)
 	{
 		DBG1(DBG_KNL, "Unable to get ESA information");
 		return FAILED;
 	}
-	esa_info_t esa = *(esa_info_t *)(enc_key.ptr);
+	esa = *(esa_info_t *)(enc_key.ptr);
 
 	/* only handle the case where we have both distinct ESP spi's available */
 	if (esa.spi_r == spi)
@@ -109,11 +120,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	/* Initiator if encr_r is passed as enc_key to the inbound add_sa call */
-	const bool initiator = esa.is_encr_r && inbound;
-
-	esp_spi_type spi_loc, spi_rem;
-	host_t *local, *peer;
-	chunk_t *nonce_loc, *nonce_rem;
+	initiator = esa.is_encr_r && inbound;
 	if (initiator)
 	{
 		spi_loc = spi;
@@ -133,10 +140,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		nonce_rem = &esa.nonce_i;
 	}
 
-	const nc_id_type nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map,
-														   nonce_loc);
-
-	const esa_id_type esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
+	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
 	if (!this->sad->insert(this->sad, esa_id, peer, local, spi_loc, protocol))
 	{
 		DBG1(DBG_KNL, "unable to add entry (%llu) to SAD", esa_id);
@@ -147,6 +151,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	 * creation of first CHILD SA:
 	 * no nonce and no dh contexts because the ones from the IKE SA are re-used
 	 */
+	nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce_loc);
 	if (nonce_loc_id == 0 && esa.dh_id == 0)
 	{
 		if (ike_esa_create_first(esa_id, esa.isa_id, reqid, 1, spi_loc, spi_rem)
@@ -159,7 +164,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	/* creation of child SA without PFS: no dh context */
 	else if (nonce_loc_id != 0 && esa.dh_id == 0)
 	{
-		nonce_type nc_rem;
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
 		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, reqid, 1, nonce_loc_id,
 								  nc_rem, initiator, spi_loc, spi_rem)
@@ -173,7 +177,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	/* creation of subsequent child SA with PFS: nonce and dh context are set */
 	else
 	{
-		nonce_type nc_rem;
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
 		if (ike_esa_create(esa_id, esa.isa_id, reqid, 1, esa.dh_id, nonce_loc_id,
 						   nc_rem, initiator, spi_loc, spi_rem) != TKM_OK)
@@ -222,8 +225,9 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
-	const esa_id_type esa_id = this->sad->get_esa_id(this->sad, src, dst, spi,
-													 protocol);
+	esa_id_type esa_id;
+
+	esa_id = this->sad->get_esa_id(this->sad, src, dst, spi, protocol);
 	if (esa_id)
 	{
 		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
@@ -314,14 +318,14 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-					   strerror(errno));
+			 strerror(errno));
 		return FALSE;
 	}
 	policy.dir = XFRM_POLICY_IN;
 	if (setsockopt(fd, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		DBG1(DBG_KNL, "unable to set IPSEC_POLICY on socket: %s",
-					   strerror(errno));
+			 strerror(errno));
 		return FALSE;
 	}
 	return TRUE;

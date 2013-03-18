@@ -26,18 +26,19 @@ struct sequence_type {
 typedef struct sequence_type sequence_type;
 
 void sequence_to_chunk(const byte_t * const first, const uint32_t len,
-		chunk_t * const chunk)
+					   chunk_t * const chunk)
 {
 	*chunk = chunk_alloc(len);
 	memcpy(chunk->ptr, first, len);
 }
 
 void chunk_to_sequence(const chunk_t * const chunk, void *sequence,
-		const uint32_t typelen)
+					   const uint32_t typelen)
 {
 	const uint32_t seqlenmax = typelen - sizeof(uint32_t);
-	memset(sequence, 0, typelen);
 	sequence_type *seq = sequence;
+
+	memset(sequence, 0, typelen);
 	if (chunk->len > seqlenmax)
 	{
 		DBG1(DBG_LIB, "chunk too large to fit into sequence %d > %d, limiting"

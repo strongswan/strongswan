@@ -56,7 +56,9 @@ static ri_id_type get_remote_identity_id(peer_cfg_t *peer)
 {
 	ri_id_type remote_id = 0;
 	child_cfg_t *child;
-	enumerator_t* children = peer->create_child_cfg_enumerator(peer);
+	enumerator_t* children;
+
+	children = peer->create_child_cfg_enumerator(peer);
 
 	/* pick the reqid of the first child, no need to enumerate all children. */
 	children->enumerate(children, &child);
@@ -76,20 +78,26 @@ static ri_id_type get_remote_identity_id(peer_cfg_t *peer)
  */
 static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 {
-	DBG1(DBG_IKE, "building certificate chain context %llu for IKE SA %s",
-		 cc_id, ike_sa->get_name((ike_sa_t *)ike_sa));
-
 	auth_cfg_t *auth;
 	certificate_t *cert;
 	enumerator_t *rounds;
+
+	DBG1(DBG_IKE, "building certificate chain context %llu for IKE SA %s",
+		 cc_id, ike_sa->get_name((ike_sa_t *)ike_sa));
+
 	rounds = ike_sa->create_auth_cfg_enumerator((ike_sa_t *)ike_sa, FALSE);
 	while (rounds->enumerate(rounds, &auth))
 	{
 		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
 		if (cert)
 		{
-			/* set user certificate */
 			chunk_t enc_user_cert;
+			ri_id_type ri_id;
+			certificate_type user_cert;
+			auth_rule_t rule;
+			enumerator_t *enumerator;
+
+			/* set user certificate */
 			if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_user_cert))
 			{
 				DBG1(DBG_IKE, "unable to extract encoded user certificate");
@@ -97,10 +105,8 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 				return FALSE;
 			}
 
-			ri_id_type ri_id = get_remote_identity_id(ike_sa->get_peer_cfg((ike_sa_t *)ike_sa));
-			certificate_type user_cert;
-			chunk_to_sequence(&enc_user_cert, &user_cert,
-							  sizeof(certificate_type));
+			ri_id = get_remote_identity_id(ike_sa->get_peer_cfg((ike_sa_t *)ike_sa));
+			chunk_to_sequence(&enc_user_cert, &user_cert, sizeof(certificate_type));
 			chunk_free(&enc_user_cert);
 			if (ike_cc_set_user_certificate(cc_id, ri_id, 1, user_cert) != TKM_OK)
 			{
@@ -111,23 +117,23 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 			}
 
 			/* process intermediate CA certificates */
-			auth_rule_t rule;
-			enumerator_t *enumerator = auth->create_enumerator(auth);
+			enumerator = auth->create_enumerator(auth);
 			while (enumerator->enumerate(enumerator, &rule, &cert))
 			{
 				if (rule == AUTH_RULE_IM_CERT)
 				{
 					chunk_t enc_im_cert;
+					certificate_type im_cert;
+
 					if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_im_cert))
 					{
 						DBG1(DBG_IKE, "unable to extract encoded intermediate CA"
-							" certificate");
+							 " certificate");
 						rounds->destroy(rounds);
 						enumerator->destroy(enumerator);
 						return FALSE;
 					}
 
-					certificate_type im_cert;
 					chunk_to_sequence(&enc_im_cert, &im_cert,
 									  sizeof(certificate_type));
 					chunk_free(&enc_im_cert);
@@ -147,7 +153,10 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 			cert = auth->get(auth, AUTH_RULE_CA_CERT);
 			if (cert)
 			{
+				const ca_id_type ca_id = 1;
+				certificate_type ca_cert;
 				chunk_t enc_ca_cert;
+
 				if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_ca_cert))
 				{
 					DBG1(DBG_IKE, "unable to extract encoded CA certificate");
@@ -155,8 +164,6 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 					return FALSE;
 				}
 
-				const ca_id_type ca_id = 1;
-				certificate_type ca_cert;
 				chunk_to_sequence(&enc_ca_cert, &ca_cert,
 								  sizeof(certificate_type));
 				chunk_free(&enc_ca_cert);
@@ -200,8 +207,12 @@ METHOD(listener_t, alert, bool,
 {
 	if (alert == ALERT_KEEP_ON_CHILD_SA_FAILURE)
 	{
-		tkm_keymat_t * const keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
-		const isa_id_type isa_id = keymat->get_isa_id(keymat);
+		tkm_keymat_t *keymat;
+		isa_id_type isa_id;
+
+		keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
+		isa_id = keymat->get_isa_id(keymat);
+
 		DBG1(DBG_IKE, "TKM alert listener called for ISA context %llu", isa_id);
 		if (ike_isa_skip_create_first(isa_id) != TKM_OK)
 		{
@@ -217,47 +228,51 @@ METHOD(listener_t, authorize, bool,
 	private_tkm_listener_t *this, ike_sa_t *ike_sa,
 	bool final, bool *success)
 {
+	tkm_keymat_t *keymat;
+	isa_id_type isa_id;
+	cc_id_type cc_id;
+	chunk_t *auth, *other_init_msg;
+	signature_type signature;
+	init_message_type init_msg;
+
 	if (!final)
 	{
 		return TRUE;
 	}
 
-	tkm_keymat_t * const keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
-	const isa_id_type isa_id = keymat->get_isa_id(keymat);
+	keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
+	isa_id = keymat->get_isa_id(keymat);
 	DBG1(DBG_IKE, "TKM authorize listener called for ISA context %llu", isa_id);
 
-	const cc_id_type cc_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_CC);
+	cc_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_CC);
 	if (!cc_id)
 	{
 		DBG1(DBG_IKE, "unable to acquire CC context id");
 		*success = FALSE;
 		return TRUE;
 	}
-	const bool cc_success = build_cert_chain(ike_sa, cc_id);
-	if (!cc_success)
+	if (!build_cert_chain(ike_sa, cc_id))
 	{
 		DBG1(DBG_IKE, "unable to build certificate chain");
 		*success = FALSE;
 		return TRUE;
 	}
 
-	const chunk_t * const auth = keymat->get_auth_payload(keymat);
+	auth = keymat->get_auth_payload(keymat);
 	if (!auth->ptr)
 	{
 		DBG1(DBG_IKE, "no AUTHENTICATION data available");
 		*success = FALSE;
 	}
 
-	const chunk_t * const other_init_msg = keymat->get_peer_init_msg(keymat);
+	other_init_msg = keymat->get_peer_init_msg(keymat);
 	if (!other_init_msg->ptr)
 	{
 		DBG1(DBG_IKE, "no peer init message available");
 		*success = FALSE;
 	}
 
-	signature_type signature;
 	chunk_to_sequence(auth, &signature, sizeof(signature_type));
-	init_message_type init_msg;
 	chunk_to_sequence(other_init_msg, &init_msg, sizeof(init_message_type));
 
 	if (ike_isa_auth(isa_id, cc_id, init_msg, signature) != TKM_OK)
@@ -280,21 +295,27 @@ METHOD(listener_t, message, bool,
 	private_tkm_listener_t *this, ike_sa_t *ike_sa,
 	message_t *message, bool incoming, bool plain)
 {
+	tkm_keymat_t *keymat;
+	isa_id_type isa_id;
+	auth_payload_t *auth_payload;
+
 	if (!incoming || !plain || message->get_exchange_type(message) != IKE_AUTH)
 	{
 		return TRUE;
 	}
 
-	tkm_keymat_t * const keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
-	const isa_id_type isa_id = keymat->get_isa_id(keymat);
+	keymat = (tkm_keymat_t*)ike_sa->get_keymat(ike_sa);
+	isa_id = keymat->get_isa_id(keymat);
 	DBG1(DBG_IKE, "saving AUTHENTICATION payload for authorize hook"
-		   " (ISA context %llu)", isa_id);
+	     " (ISA context %llu)", isa_id);
 
-	auth_payload_t * const auth_payload =
-		(auth_payload_t*)message->get_payload(message, AUTHENTICATION);
+	auth_payload = (auth_payload_t*)message->get_payload(message,
+														 AUTHENTICATION);
 	if (auth_payload)
 	{
-		const chunk_t auth_data = auth_payload->get_data(auth_payload);
+		chunk_t auth_data;
+
+		auth_data = auth_payload->get_data(auth_payload);
 		keymat->set_auth_payload(keymat, &auth_data);
 	}
 	else

@@ -43,6 +43,7 @@ METHOD(nonce_gen_t, get_nonce, bool,
 	private_tkm_nonceg_t *this, size_t size, u_int8_t *buffer)
 {
 	nonce_type nonce;
+
 	if (ike_nc_create(this->context_id, size, &nonce) != TKM_OK)
 	{
 		return FALSE;

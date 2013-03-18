@@ -52,23 +52,16 @@ tkm_t *tkm = NULL;
 bool tkm_init()
 {
 	private_tkm_t *this;
-
 	active_requests_type max_requests;
-	nc_id_type nc;
-	dh_id_type dh;
-	cc_id_type cc;
-	ae_id_type ae;
-	isa_id_type isa;
-	esa_id_type esa;
+	char *ikesock, *eessock;
+	tkm_limits_t limits;
 
 	/* initialize TKM client library */
 	tkmlib_init();
 	ehandler_init();
 
-	const char * const ikesock = lib->settings->get_str(lib->settings,
-														"%s.ike_socket",
-														IKE_SOCKET,
-														charon->name);
+	ikesock = lib->settings->get_str(lib->settings, "%s.ike_socket", IKE_SOCKET,
+									 charon->name);
 	if (ike_init(ikesock) != TKM_OK)
 	{
 		tkmlib_final();
@@ -76,10 +69,8 @@ bool tkm_init()
 	}
 	DBG1(DBG_DMN, "connected to TKM via socket '%s'", ikesock);
 
-	const char * const eessock = lib->settings->get_str(lib->settings,
-														"%s.ees_socket",
-														EES_SOCKET,
-														charon->name);
+	eessock = lib->settings->get_str(lib->settings, "%s.ees_socket", EES_SOCKET,
+									 charon->name);
 	ees_server_init(eessock);
 	DBG1(DBG_DMN, "serving EES requests on socket '%s'", eessock);
 
@@ -91,14 +82,14 @@ bool tkm_init()
 	}
 
 	/* get limits from tkm */
-	if (ike_tkm_limits(&max_requests, &nc, &dh, &cc, &ae, &isa, &esa) != TKM_OK)
+	if (ike_tkm_limits(&max_requests, &limits[TKM_CTX_NONCE], &limits[TKM_CTX_DH],
+					   &limits[TKM_CTX_CC], &limits[TKM_CTX_AE],
+					   &limits[TKM_CTX_ISA], &limits[TKM_CTX_ESA]) != TKM_OK)
 	{
 		ees_server_finalize();
 		tkmlib_final();
 		return FALSE;
 	}
-
-	const tkm_limits_t limits = {nc, dh, cc, isa, ae, esa};
 
 	INIT(this,
 		.public = {

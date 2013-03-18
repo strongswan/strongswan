@@ -63,16 +63,18 @@ METHOD(private_key_t, sign, bool,
 {
 	signature_type sig;
 	init_message_type msg;
+	sign_info_t sign;
+	isa_id_type isa_id;
 
 	if (data.ptr == NULL)
 	{
 		DBG1(DBG_LIB, "unable to get signature information");
 		return FALSE;
 	}
-	sign_info_t sign = *(sign_info_t *)(data.ptr);
+	sign = *(sign_info_t *)(data.ptr);
 
 	chunk_to_sequence(&sign.init_message, &msg, sizeof(init_message_type));
-	const isa_id_type isa_id = sign.isa_id;
+	isa_id = sign.isa_id;
 	chunk_free(&sign.init_message);
 
 	if (ike_isa_sign(isa_id, 1, msg, &sig) != TKM_OK)
@@ -141,6 +143,8 @@ METHOD(private_key_t, destroy, void,
 tkm_private_key_t *tkm_private_key_init(identification_t * const id)
 {
 	private_tkm_private_key_t *this;
+	certificate_t *cert;
+	public_key_t *pubkey;
 
 	INIT(this,
 		.public = {
@@ -164,7 +168,6 @@ tkm_private_key_t *tkm_private_key_init(identification_t * const id)
 	);
 
 	/* get key type from associated public key */
-	certificate_t *cert;
 	cert = lib->credmgr->get_cert(lib->credmgr, CERT_ANY, KEY_ANY, id, FALSE);
 	if (!cert)
 	{
@@ -172,7 +175,7 @@ tkm_private_key_t *tkm_private_key_init(identification_t * const id)
 		return NULL;
 	}
 
-	public_key_t *pubkey = cert->get_public_key(cert);
+	pubkey = cert->get_public_key(cert);
 	if (!pubkey)
 	{
 		cert->destroy(cert);

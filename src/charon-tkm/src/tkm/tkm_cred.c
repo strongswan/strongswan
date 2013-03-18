@@ -54,20 +54,22 @@ struct private_tkm_cred_t {
 METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	private_tkm_cred_t *this, key_type_t type, identification_t *id)
 {
+	identification_t *entry;
+
 	if (!id)
 	{
 		return this->known_keys->create_enumerator(this->known_keys);
 	}
 
-	identification_t *entry;
 	this->lock->write_lock(this->lock);
 	entry = this->known_keys->get(this->known_keys, id);
 
 	if (!entry)
 	{
 		identification_t *clone = id->clone(id);
-		DBG1(DBG_CFG, "adding private key proxy for id '%Y'", clone);
 		tkm_private_key_t *key = tkm_private_key_init(id);
+
+		DBG1(DBG_CFG, "adding private key proxy for id '%Y'", clone);
 		if (!key)
 		{
 			DBG1(DBG_CFG, "unable to create private key for id '%Y'", clone);

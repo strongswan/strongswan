@@ -81,7 +81,7 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	if (!is_valid_kind(kind))
 	{
 		DBG1(DBG_LIB, "tried to acquire id for invalid context kind '%d'",
-					  kind);
+			 kind);
 		return 0;
 	}
 
@@ -99,8 +99,8 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 
 	if (!id)
 	{
-		DBG1(DBG_LIB, "acquiring %N context id failed",
-					  tkm_context_kind_names, kind);
+		DBG1(DBG_LIB, "acquiring %N context id failed",	tkm_context_kind_names,
+			 kind);
 	}
 
 	return id;
@@ -115,7 +115,7 @@ METHOD(tkm_id_manager_t, release_id, bool,
 	if (!is_valid_kind(kind))
 	{
 		DBG1(DBG_LIB, "tried to release id %d for invalid context kind '%d'",
-					  id, kind);
+			 id, kind);
 		return FALSE;
 	}
 
@@ -160,8 +160,8 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 		this->limits[i] = limits[i];
 		this->ctxids[i] = calloc(limits[i], sizeof(bool));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
-		DBG2(DBG_LIB, "%N initialized, %llu slot(s)",
-				tkm_context_kind_names, i, limits[i]);
+		DBG2(DBG_LIB, "%N initialized, %llu slot(s)", tkm_context_kind_names, i,
+			 limits[i]);
 	}
 
 	return &this->public;

@@ -39,7 +39,7 @@ struct tkm_chunk_map_t {
 	 * @param id	id associated with data
 	 */
 	void (*insert)(tkm_chunk_map_t * const this, const chunk_t * const data,
-			const uint64_t id);
+				   const uint64_t id);
 
 	/**
 	 * Get id for given chunk.
