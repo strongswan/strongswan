@@ -19,12 +19,15 @@
 #include "eap_radius_accounting.h"
 #include "eap_radius_dae.h"
 #include "eap_radius_forward.h"
+#include "eap_radius_provider.h"
 
 #include <radius_client.h>
 #include <radius_config.h>
 
-#include <daemon.h>
+#include <hydra.h>
 #include <threading/rwlock.h>
+#include <processing/jobs/callback_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
 
 /**
  * Default RADIUS server port for authentication
@@ -62,6 +65,11 @@ struct private_eap_radius_plugin_t {
 	 * RADIUS sessions for accounting
 	 */
 	eap_radius_accounting_t *accounting;
+
+	/**
+	 * IKE attribute provider
+	 */
+	eap_radius_provider_t *provider;
 
 	/**
 	 * Dynamic authorization extensions
@@ -207,6 +215,9 @@ METHOD(plugin_t, reload, bool,
 METHOD(plugin_t, destroy, void,
 	private_eap_radius_plugin_t *this)
 {
+	hydra->attributes->remove_provider(hydra->attributes,
+									   &this->provider->provider);
+	this->provider->destroy(this->provider);
 	if (this->forward)
 	{
 		charon->bus->remove_listener(charon->bus, &this->forward->listener);
@@ -216,7 +227,6 @@ METHOD(plugin_t, destroy, void,
 	this->configs->destroy_offset(this->configs,
 								  offsetof(radius_config_t, destroy));
 	this->lock->destroy(this->lock);
-	charon->bus->remove_listener(charon->bus, &this->accounting->listener);
 	this->accounting->destroy(this->accounting);
 	free(this);
 	instance = NULL;
@@ -242,16 +252,12 @@ plugin_t *eap_radius_plugin_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.accounting = eap_radius_accounting_create(),
 		.forward = eap_radius_forward_create(),
+		.provider = eap_radius_provider_create(),
 	);
 
 	load_configs(this);
 	instance = this;
 
-	if (lib->settings->get_bool(lib->settings,
-					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
-	{
-		charon->bus->add_listener(charon->bus, &this->accounting->listener);
-	}
 	if (lib->settings->get_bool(lib->settings,
 					"%s.plugins.eap-radius.dae.enable", FALSE, charon->name))
 	{
@@ -261,6 +267,8 @@ plugin_t *eap_radius_plugin_create()
 	{
 		charon->bus->add_listener(charon->bus, &this->forward->listener);
 	}
+	hydra->attributes->add_provider(hydra->attributes,
+									&this->provider->provider);
 
 	return &this->public.plugin;
 }
@@ -308,3 +316,47 @@ radius_client_t *eap_radius_create_client()
 	return NULL;
 }
 
+/**
+ * Job to delete all active IKE_SAs
+ */
+static job_requeue_t delete_all_async(void *data)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+
+	enumerator = charon->ike_sa_manager->create_enumerator(
+												charon->ike_sa_manager, TRUE);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		lib->processor->queue_job(lib->processor,
+				(job_t*)delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
+	}
+	enumerator->destroy(enumerator);
+
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * See header.
+ */
+void eap_radius_handle_timeout(ike_sa_id_t *id)
+{
+	charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
+
+	if (lib->settings->get_bool(lib->settings,
+								"%s.plugins.eap-radius.close_all_on_timeout",
+								FALSE, charon->name))
+	{
+		DBG1(DBG_CFG, "deleting all IKE_SAs after RADIUS timeout");
+		lib->processor->queue_job(lib->processor,
+				(job_t*)callback_job_create_with_prio(
+						(callback_job_cb_t)delete_all_async, NULL, NULL,
+						(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	}
+	else if (id)
+	{
+		DBG1(DBG_CFG, "deleting IKE_SA after RADIUS timeout");
+		lib->processor->queue_job(lib->processor,
+				(job_t*)delete_ike_sa_job_create(id, TRUE));
+	}
+}

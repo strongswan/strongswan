@@ -264,8 +264,8 @@ static void log_children(private_child_delete_t *this)
 		}
 		else
 		{
-			child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in);
-			child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out);
+			child_sa->get_usestats(child_sa, TRUE, NULL, &bytes_in, NULL);
+			child_sa->get_usestats(child_sa, FALSE, NULL, &bytes_out, NULL);
 
 			DBG0(DBG_IKE, "closing CHILD_SA %s{%d} with SPIs %.8x_i "
 				 "(%llu bytes) %.8x_o (%llu bytes) and TS %#R=== %#R",

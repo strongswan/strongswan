@@ -68,7 +68,7 @@ METHOD(job_t, execute, job_requeue_t,
 		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (enumerator->enumerate(enumerator, &child_sa))
 		{
-			child_sa->get_usestats(child_sa, TRUE, &current, NULL);
+			child_sa->get_usestats(child_sa, TRUE, &current, NULL, NULL);
 			use_time = max(use_time, current);
 		}
 		enumerator->destroy(enumerator);
@@ -77,6 +77,7 @@ METHOD(job_t, execute, job_requeue_t,
 		if (use_time < this->check)
 		{
 			DBG1(DBG_JOB, "DPD check timed out, enforcing DPD action");
+			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT, NULL);
 			charon->bus->ike_updown(charon->bus, ike_sa, FALSE);
 			ike_sa->reestablish(ike_sa);
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,

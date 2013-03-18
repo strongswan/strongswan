@@ -182,6 +182,16 @@ struct private_child_sa_t {
 	 * last number of outbound bytes
 	 */
 	u_int64_t other_usebytes;
+
+	/**
+	 * last number of inbound packets
+	 */
+	u_int64_t my_usepackets;
+
+	/**
+	 * last number of outbound bytes
+	 */
+	u_int64_t other_usepackets;
 };
 
 /**
@@ -413,7 +423,7 @@ METHOD(child_sa_t, create_policy_enumerator, enumerator_t*,
 static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
-	u_int64_t bytes;
+	u_int64_t bytes, packets;
 
 	if (inbound)
 	{
@@ -422,12 +432,13 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->other_addr, this->my_addr, this->my_spi,
 							proto_ike2ip(this->protocol), this->mark_in,
-							&bytes);
+							&bytes, &packets);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
 				{
 					this->my_usebytes = bytes;
+					this->my_usepackets = packets;
 					return SUCCESS;
 				}
 				return FAILED;
@@ -441,12 +452,13 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->my_addr, this->other_addr, this->other_spi,
 							proto_ike2ip(this->protocol), this->mark_out,
-							&bytes);
+							&bytes, &packets);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
 				{
 					this->other_usebytes = bytes;
+					this->other_usepackets = packets;
 					return SUCCESS;
 				}
 				return FAILED;
@@ -512,7 +524,8 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 }
 
 METHOD(child_sa_t, get_usestats, void,
-	   private_child_sa_t *this, bool inbound, time_t *time, u_int64_t *bytes)
+	private_child_sa_t *this, bool inbound,
+	time_t *time, u_int64_t *bytes, u_int64_t *packets)
 {
 	if (update_usebytes(this, inbound) != FAILED)
 	{
@@ -528,6 +541,10 @@ METHOD(child_sa_t, get_usestats, void,
 	if (bytes)
 	{
 		*bytes = inbound ? this->my_usebytes : this->other_usebytes;
+	}
+	if (packets)
+	{
+		*packets = inbound ? this->my_usepackets : this->other_usepackets;
 	}
 }
 

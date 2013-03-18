@@ -1594,7 +1594,8 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark,
+	u_int64_t *bytes, u_int64_t *packets)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1671,7 +1672,14 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	}
 	else
 	{
-		*bytes = sa->curlft.bytes;
+		if (bytes)
+		{
+			*bytes = sa->curlft.bytes;
+		}
+		if (packets)
+		{
+			*packets = sa->curlft.packets;
+		}
 		status = SUCCESS;
 	}
 	memwipe(out, len);

@@ -16,6 +16,8 @@
 #include "eap_radius.h"
 #include "eap_radius_plugin.h"
 #include "eap_radius_forward.h"
+#include "eap_radius_provider.h"
+#include "eap_radius_accounting.h"
 
 #include <radius_message.h>
 #include <radius_client.h>
@@ -155,17 +157,67 @@ static bool radius2ike(private_eap_radius_t *this,
 	return FALSE;
 }
 
+/**
+ * Add a set of RADIUS attributes to a request message
+ */
+static void add_radius_request_attrs(private_eap_radius_t *this,
+									 radius_message_t *request)
+{
+	ike_sa_t *ike_sa;
+	host_t *host;
+	char buf[40];
+	u_int32_t value;
+	chunk_t chunk;
+
+	chunk = chunk_from_str(this->id_prefix);
+	chunk = chunk_cata("cc", chunk, this->peer->get_encoding(this->peer));
+	request->add(request, RAT_USER_NAME, chunk);
+
+	/* virtual NAS-Port-Type */
+	value = htonl(5);
+	request->add(request, RAT_NAS_PORT_TYPE, chunk_from_thing(value));
+	/* framed ServiceType */
+	value = htonl(2);
+	request->add(request, RAT_SERVICE_TYPE, chunk_from_thing(value));
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
+	{
+		value = htonl(ike_sa->get_unique_id(ike_sa));
+		request->add(request, RAT_NAS_PORT, chunk_from_thing(value));
+		request->add(request, RAT_NAS_PORT_ID,
+					 chunk_from_str(ike_sa->get_name(ike_sa)));
+
+		host = ike_sa->get_my_host(ike_sa);
+		chunk = host->get_address(host);
+		switch (host->get_family(host))
+		{
+			case AF_INET:
+				request->add(request, RAT_NAS_IP_ADDRESS, chunk);
+				break;
+			case AF_INET6:
+				request->add(request, RAT_NAS_IPV6_ADDRESS, chunk);
+			default:
+				break;
+		}
+		snprintf(buf, sizeof(buf), "%#H", host);
+		request->add(request, RAT_CALLED_STATION_ID, chunk_from_str(buf));
+		host = ike_sa->get_other_host(ike_sa);
+		snprintf(buf, sizeof(buf), "%#H", host);
+		request->add(request, RAT_CALLING_STATION_ID, chunk_from_str(buf));
+	}
+
+	eap_radius_forward_from_ike(request);
+}
+
 METHOD(eap_method_t, initiate, status_t,
 	private_eap_radius_t *this, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
-	chunk_t username;
 
 	request = radius_message_create(RMC_ACCESS_REQUEST);
-	username = chunk_create(this->id_prefix, strlen(this->id_prefix));
-	username = chunk_cata("cc", username, this->peer->get_encoding(this->peer));
-	request->add(request, RAT_USER_NAME, username);
+	add_radius_request_attrs(this, request);
 
 	if (this->eap_start)
 	{
@@ -175,7 +227,6 @@ METHOD(eap_method_t, initiate, status_t,
 	{
 		add_eap_identity(this, request);
 	}
-	eap_radius_forward_from_ike(request);
 
 	response = this->client->request(this->client, request);
 	if (response)
@@ -203,7 +254,7 @@ METHOD(eap_method_t, initiate, status_t,
 	}
 	else
 	{
-		charon->bus->alert(charon->bus, ALERT_RADIUS_NOT_RESPONDING);
+		eap_radius_handle_timeout(NULL);
 	}
 	request->destroy(request);
 	return status;
@@ -303,7 +354,7 @@ static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
 }
 
 /**
- * Handle Session-Timeout attribte
+ * Handle Session-Timeout attribte and Interim updates
  */
 static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
 {
@@ -312,19 +363,78 @@ static void process_timeout(private_eap_radius_t *this, radius_message_t *msg)
 	chunk_t data;
 	int type;
 
-	enumerator = msg->create_enumerator(msg);
-	while (enumerator->enumerate(enumerator, &type, &data))
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (ike_sa)
 	{
-		if (type == RAT_SESSION_TIMEOUT && data.len == 4)
+		enumerator = msg->create_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &type, &data))
 		{
-			ike_sa = charon->bus->get_sa(charon->bus);
-			if (ike_sa)
+			if (type == RAT_SESSION_TIMEOUT && data.len == 4)
 			{
 				ike_sa->set_auth_lifetime(ike_sa, untoh32(data.ptr));
 			}
+			else if (type == RAT_ACCT_INTERIM_INTERVAL && data.len == 4)
+			{
+				eap_radius_accounting_start_interim(ike_sa, untoh32(data.ptr));
+			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
+}
+
+/**
+ * Handle Framed-IP-Address and other IKE configuration attributes
+ */
+static void process_cfg_attributes(private_eap_radius_t *this,
+								   radius_message_t *msg)
+{
+	eap_radius_provider_t *provider;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	host_t *host;
+	chunk_t data;
+	int type, vendor;
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	provider = eap_radius_provider_get();
+	if (provider && ike_sa)
+	{
+		enumerator = msg->create_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &type, &data))
+		{
+			if (type == RAT_FRAMED_IP_ADDRESS && data.len == 4)
+			{
+				host = host_create_from_chunk(AF_INET, data, 0);
+				if (host)
+				{
+					provider->add_framed_ip(provider, this->peer, host);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		enumerator = msg->create_vendor_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &vendor, &type, &data))
+		{
+			if (vendor == PEN_ALTIGA /* aka Cisco VPN3000 */)
+			{
+				switch (type)
+				{
+					case 15: /* CVPN3000-IPSec-Banner1 */
+					case 36: /* CVPN3000-IPSec-Banner2 */
+						if (ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
+						{
+							provider->add_attribute(provider, this->peer,
+													UNITY_BANNER, data);
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 }
 
 METHOD(eap_method_t, process, status_t,
@@ -335,7 +445,8 @@ METHOD(eap_method_t, process, status_t,
 	chunk_t data;
 
 	request = radius_message_create(RMC_ACCESS_REQUEST);
-	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
+	add_radius_request_attrs(this, request);
+
 	data = in->get_data(in);
 	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
 
@@ -348,7 +459,6 @@ METHOD(eap_method_t, process, status_t,
 	}
 	request->add(request, RAT_EAP_MESSAGE, data);
 
-	eap_radius_forward_from_ike(request);
 	response = this->client->request(this->client, request);
 	if (response)
 	{
@@ -373,6 +483,7 @@ METHOD(eap_method_t, process, status_t,
 					process_filter_id(this, response);
 				}
 				process_timeout(this, response);
+				process_cfg_attributes(this, response);
 				DBG1(DBG_IKE, "RADIUS authentication of '%Y' successful",
 					 this->peer);
 				status = SUCCESS;
@@ -490,4 +601,3 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	this->server = server->clone(server);
 	return &this->public;
 }
-

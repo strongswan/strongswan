@@ -1910,7 +1910,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_klips_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, u_int8_t protocol, mark_t mark, u_int64_t *bytes)
+	u_int32_t spi, u_int8_t protocol, mark_t mark,
+	u_int64_t *bytes, u_int64_t *packets)
 {
 	return NOT_SUPPORTED;  /* TODO */
 }
@@ -2648,4 +2649,3 @@ kernel_klips_ipsec_t *kernel_klips_ipsec_create()
 
 	return &this->public;
 }
-

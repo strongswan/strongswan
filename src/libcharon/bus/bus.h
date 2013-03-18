@@ -103,7 +103,7 @@ enum alert_t {
 	ALERT_PARSE_ERROR_BODY,
 	/** sending a retransmit for a message, argument is packet_t */
 	ALERT_RETRANSMIT_SEND,
-	/** sending retransmits timed out, argument is packet_t */
+	/** sending retransmits timed out, argument is packet_t, if available */
 	ALERT_RETRANSMIT_SEND_TIMEOUT,
 	/** received a retransmit for a message, argument is message_t */
 	ALERT_RETRANSMIT_RECEIVE,
@@ -130,6 +130,8 @@ enum alert_t {
 	ALERT_VIP_FAILURE,
 	/** an authorize() hook failed, no argument */
 	ALERT_AUTHORIZATION_FAILED,
+	/** IKE_SA hit the hard lifetime limit before it could be rekeyed */
+	ALERT_IKE_SA_EXPIRED,
 };
 
 /**

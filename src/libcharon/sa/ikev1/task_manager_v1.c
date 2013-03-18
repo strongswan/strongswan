@@ -411,7 +411,7 @@ static bool send_fragment(private_task_manager_t *this, bool request,
 static bool send_packet(private_task_manager_t *this, bool request,
 						packet_t *packet)
 {
-	fragmentation_t fragmentation = FRAGMENTATION_NO;
+	bool use_frags = FALSE;
 	ike_cfg_t *ike_cfg;
 	host_t *src, *dst;
 	chunk_t data;
@@ -419,12 +419,21 @@ static bool send_packet(private_task_manager_t *this, bool request,
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (ike_cfg)
 	{
-		fragmentation = ike_cfg->fragmentation(ike_cfg);
+		switch (ike_cfg->fragmentation(ike_cfg))
+		{
+			case FRAGMENTATION_FORCE:
+				use_frags = TRUE;
+				break;
+			case FRAGMENTATION_YES:
+				use_frags = this->ike_sa->supports_extension(this->ike_sa,
+														EXT_IKE_FRAGMENTATION);
+				break;
+			default:
+				break;
+		}
 	}
 	data = packet->get_data(packet);
-	if (data.len > this->frag.size && (fragmentation == FRAGMENTATION_FORCE ||
-	   (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_FRAGMENTATION) &&
-		fragmentation == FRAGMENTATION_YES)))
+	if (data.len > this->frag.size && use_frags)
 	{
 		fragment_payload_t *fragment;
 		u_int8_t num, count;

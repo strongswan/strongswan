@@ -27,6 +27,7 @@
 #include <plugins/plugin.h>
 
 #include <radius_client.h>
+#include <daemon.h>
 
 typedef struct eap_radius_plugin_t eap_radius_plugin_t;
 
@@ -50,5 +51,15 @@ struct eap_radius_plugin_t {
  * @return			RADIUS client
  */
 radius_client_t *eap_radius_create_client();
+
+/**
+ * Handle a RADIUS request timeout.
+ *
+ * If an IKE_SA is given, it gets deleted (unless the policy says to delete
+ * any established IKE_SA).
+ *
+ * @param id		associated IKE_SA where timeout happened, or NULL
+ */
+void eap_radius_handle_timeout(ike_sa_id_t *id);
 
 #endif /** EAP_RADIUS_PLUGIN_H_ @}*/
