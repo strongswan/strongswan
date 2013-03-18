@@ -363,7 +363,10 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, 0, NULL, NULL) == SUCCESS)
 	{
-		listener->status = SUCCESS;
+		if (!listener->logger.callback)
+		{
+			listener->status = SUCCESS;
+		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
@@ -454,7 +457,10 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	}
 	else
 	{
-		listener->status = SUCCESS;
+		if (!listener->logger.callback)
+		{
+			listener->status = SUCCESS;
+		}
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 													ike_sa);
 	}
@@ -561,7 +567,10 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 					child_sa->get_spi(child_sa, TRUE), FALSE) != DESTROY_ME)
 	{
-		listener->status = SUCCESS;
+		if (!listener->logger.callback)
+		{
+			listener->status = SUCCESS;
+		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
@@ -657,4 +666,3 @@ controller_t *controller_create(void)
 
 	return &this->public;
 }
-
