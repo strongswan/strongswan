@@ -333,6 +333,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 
 	message = ha_message_create(HA_STATUS);
 
+	this->mutex->lock(this->mutex);
 	for (i = 1; i <= this->count; i++)
 	{
 		if (this->active & SEGMENTS_BIT(i))
@@ -340,6 +341,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 			message->add_attribute(message, HA_SEGMENT, i);
 		}
 	}
+	this->mutex->unlock(this->mutex);
 
 	this->socket->push(this->socket, message);
 	message->destroy(message);
