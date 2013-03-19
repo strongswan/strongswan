@@ -289,12 +289,13 @@ static void start_watchdog(private_ha_segments_t *this)
 METHOD(ha_segments_t, handle_status, void,
 	private_ha_segments_t *this, segment_mask_t mask)
 {
-	segment_mask_t missing;
+	segment_mask_t missing, twice;
 	int i;
 
 	this->mutex->lock(this->mutex);
 
 	missing = ~(this->active | mask);
+	twice = this->active & mask;
 
 	for (i = 1; i <= this->count; i++)
 	{
@@ -308,6 +309,19 @@ METHOD(ha_segments_t, handle_status, void,
 			else
 			{
 				DBG1(DBG_CFG, "HA segment %d was not handled, dropping", i);
+				enable_disable(this, i, FALSE, TRUE);
+			}
+		}
+		if (twice & SEGMENTS_BIT(i))
+		{
+			if (this->node == i % 2)
+			{
+				DBG1(DBG_CFG, "HA segment %d was handled twice, taking", i);
+				enable_disable(this, i, TRUE, TRUE);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "HA segment %d was handled twice, dropping", i);
 				enable_disable(this, i, FALSE, TRUE);
 			}
 		}
