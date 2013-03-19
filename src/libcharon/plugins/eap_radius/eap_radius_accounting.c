@@ -469,9 +469,8 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 {
 	radius_message_t *message;
 	entry_t *entry;
-	u_int32_t id, value;
+	u_int32_t value;
 
-	id = ike_sa->get_unique_id(ike_sa);
 	this->mutex->lock(this->mutex);
 	entry = this->sessions->remove(this->sessions, ike_sa->get_id(ike_sa));
 	this->mutex->unlock(this->mutex);
