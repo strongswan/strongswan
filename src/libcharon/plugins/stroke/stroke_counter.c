@@ -113,10 +113,13 @@ static char *get_ike_sa_name(ike_sa_t *ike_sa)
 {
 	peer_cfg_t *peer_cfg;
 
-	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	if (peer_cfg)
+	if (ike_sa)
 	{
-		return peer_cfg->get_name(peer_cfg);
+		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+		if (peer_cfg)
+		{
+			return peer_cfg->get_name(peer_cfg);
+		}
 	}
 	return NULL;
 }
