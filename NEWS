@@ -37,6 +37,12 @@ strongswan-5.0.3
 - The "ikedscp" ipsec.conf option can set DiffServ code points on outgoing
   IKE packets.
 
+- The new xauth-noauth plugin allows to use basic RSA or PSK authentication with
+  clients that cannot be configured without XAuth authentication.  The plugin
+  simply concludes the XAuth exchange successfully without actually performing
+  any authentication.  Therefore, to use this backend it has to be selected
+  explicitly with rightauth2=xauth-noauth.
+
 strongswan-5.0.2
 ----------------
 
