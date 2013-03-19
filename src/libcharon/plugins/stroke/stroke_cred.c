@@ -991,6 +991,11 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		close(fd);
 		return;
 	}
+	if (sb.st_size == 0)
+	{	/* skip empty files, as mmap() complains */
+		close(fd);
+		return;
+	}
 	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (addr == MAP_FAILED)
 	{
@@ -1262,4 +1267,3 @@ stroke_cred_t *stroke_cred_create()
 
 	return &this->public;
 }
-
