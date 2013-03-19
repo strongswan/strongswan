@@ -348,6 +348,16 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	return JOB_RESCHEDULE_MS(this->heartbeat_delay);
 }
 
+/**
+ * Start the heartbeat sending task
+ */
+static void start_heartbeat(private_ha_segments_t *this)
+{
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio((callback_job_cb_t)send_status,
+			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+}
+
 METHOD(ha_segments_t, is_active, bool,
 	private_ha_segments_t *this, u_int segment)
 {
@@ -401,10 +411,9 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 	{
 		DBG1(DBG_CFG, "starting HA heartbeat, delay %dms, timeout %dms",
 			 this->heartbeat_delay, this->heartbeat_timeout);
-		send_status(this);
+		start_heartbeat(this);
 		start_watchdog(this);
 	}
 
 	return &this->public;
 }
-
