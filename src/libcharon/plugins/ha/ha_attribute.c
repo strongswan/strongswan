@@ -174,7 +174,7 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 	host_t *requested)
 {
 	enumerator_t *enumerator;
-	pool_t *pool;
+	pool_t *pool = NULL;
 	int offset = -1, byte, bit;
 	host_t *address;
 	char *name;
