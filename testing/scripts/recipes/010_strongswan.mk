@@ -69,7 +69,10 @@ CONFIG_OPTS = \
 	--enable-pkcs8 \
 	--enable-unity \
 	--enable-unbound \
-	--enable-ipseckey
+	--enable-ipseckey \
+	--enable-tkm
+
+export ADA_PROJECT_PATH=/root/libraries/lib/gnat
 
 all: install
 

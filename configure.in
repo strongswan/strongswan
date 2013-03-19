@@ -236,6 +236,8 @@ ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADI
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
+ARG_ENABL_SET([unit-tests],     [enable unit tests using the check test framework.])
+ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 
 # ===================================
 #  option to disable default options
@@ -258,6 +260,8 @@ if test -z "$CFLAGS"; then
 	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign"
 fi
 AC_PROG_CC
+AM_PROG_CC_C_O
+
 AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
@@ -894,6 +898,16 @@ AC_SUBST(dev_headers)
 
 CFLAGS="$CFLAGS -include `pwd`/config.h"
 
+if test x$tkm = xtrue; then
+	AC_PATH_PROG([GPRBUILD], [gprbuild], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+fi
+
+if test x$unit_tests = xtrue; then
+	PKG_CHECK_MODULES(CHECK, [check >= 0.9.4])
+	AC_SUBST(CHECK_CFLAGS)
+	AC_SUBST(CHECK_LIBS)
+fi
+
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
@@ -1190,9 +1204,9 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue)
-AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue)
-AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$nm = xtrue -o x$tkm = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue)
 AM_CONDITIONAL(USE_LIBIPSEC, test x$libipsec = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
@@ -1208,6 +1222,8 @@ AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_PTS, test x$pts = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss = xtrousers)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
+AM_CONDITIONAL(UNITTESTS, test x$unit_tests = xtrue)
+AM_CONDITIONAL(USE_TKM, test x$tkm = xtrue)
 
 # ========================
 #  set global definitions
@@ -1309,6 +1325,7 @@ AC_CONFIG_FILES([
 	src/libimcv/plugins/imv_os/Makefile
 	src/charon/Makefile
 	src/charon-nm/Makefile
+	src/charon-tkm/Makefile
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile

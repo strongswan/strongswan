@@ -100,6 +100,10 @@ if USE_INTEGRITY_TEST
   SUBDIRS += checksum
 endif
 
+if USE_TKM
+  SUBDIRS += charon-tkm
+endif
+
 EXTRA_DIST = strongswan.conf
 
 install-exec-local :

@@ -18,6 +18,9 @@
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
 export PATH
 
+# set daemon name
+[ -z "$DAEMON_NAME" ] && DAEMON_NAME="charon"
+
 # name and version of the ipsec implementation
 OS_NAME=`uname -s`
 IPSEC_NAME="@IPSEC_NAME@"
@@ -30,8 +33,8 @@ IPSEC_CONFDIR="@IPSEC_CONFDIR@"
 IPSEC_PIDDIR="@IPSEC_PIDDIR@"
 IPSEC_SCRIPT="@IPSEC_SCRIPT@"
 
-IPSEC_STARTER_PID="${IPSEC_PIDDIR}/starter.pid"
-IPSEC_CHARON_PID="${IPSEC_PIDDIR}/charon.pid"
+IPSEC_STARTER_PID="${IPSEC_PIDDIR}/starter.${DAEMON_NAME}.pid"
+IPSEC_CHARON_PID="${IPSEC_PIDDIR}/${DAEMON_NAME}.pid"
 
 IPSEC_STROKE="${IPSEC_DIR}/stroke"
 IPSEC_STARTER="${IPSEC_DIR}/starter"
@@ -220,7 +223,7 @@ start)
 	if [ -d /var/lock/subsys ]; then
 		touch /var/lock/subsys/ipsec
 	fi
-	exec $IPSEC_STARTER "$@"
+	exec $IPSEC_STARTER --daemon $DAEMON_NAME "$@"
 	;;
 status|statusall)
 	op="$1"

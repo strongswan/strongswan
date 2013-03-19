@@ -190,7 +190,7 @@ static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 	/* verify the executables are actually available */
 #ifdef START_CHARON
 	cfg->setup.charonstart = cfg->setup.charonstart &&
-							 daemon_exists("charon", CHARON_CMD);
+							 daemon_exists(daemon_name, cmd);
 #else
 	cfg->setup.charonstart = FALSE;
 #endif
