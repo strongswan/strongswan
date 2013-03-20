@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -15,6 +18,7 @@
 
 #include "farp_listener.h"
 
+#include <daemon.h>
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
@@ -34,6 +38,12 @@ struct private_farp_listener_t {
 	 * List with entry_t
 	 */
 	linked_list_t *entries;
+
+	/**
+	 * List with connection names for which ARP packets should be faked,
+	 * NULL to enable it for all SAs
+	 */
+	linked_list_t *only_for;
 
 	/**
 	 * RWlock for IP list
@@ -62,6 +72,13 @@ METHOD(listener_t, child_updown, bool,
 
 	if (up)
 	{
+		if (this->only_for &&
+			this->only_for->find_first(this->only_for, (void*)streq, NULL,
+									   child_sa->get_name(child_sa)) != SUCCESS)
+		{
+			return TRUE;
+		}
+
 		INIT(entry,
 			.local = child_sa->get_traffic_selectors(child_sa, TRUE),
 			.remote = child_sa->get_traffic_selectors(child_sa, FALSE),
@@ -134,6 +151,7 @@ METHOD(farp_listener_t, has_tunnel, bool,
 METHOD(farp_listener_t, destroy, void,
 	private_farp_listener_t *this)
 {
+	DESTROY_FUNCTION_IF(this->only_for, (void*)free);
 	this->entries->destroy(this->entries);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -145,6 +163,7 @@ METHOD(farp_listener_t, destroy, void,
 farp_listener_t *farp_listener_create()
 {
 	private_farp_listener_t *this;
+	char *names;
 
 	INIT(this,
 		.public = {
@@ -157,6 +176,25 @@ farp_listener_t *farp_listener_create()
 		.entries = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
+
+	names = lib->settings->get_str(lib->settings, "%s.plugins.farp.only_for",
+								   NULL, charon->name);
+	if (names)
+	{
+		enumerator_t *enumerator;
+		char *name;
+
+		enumerator = enumerator_create_token(names, ",", " ");
+		while (enumerator->enumerate(enumerator, &name))
+		{
+			if (!this->only_for)
+			{
+				this->only_for = linked_list_create();
+			}
+			this->only_for->insert_last(this->only_for, strdup(name));
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	return &this->public;
 }

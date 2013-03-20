@@ -542,6 +542,11 @@ Request peer authentication based on a client certificate
 .BR charon.plugins.farp.enable " [yes]"
 Enable faking of ARP responses for remote IP addresses of established CHILD_SAs
 .TP
+.BR charon.plugins.farp.only_for
+A comma-separated list of connection names for which ARP responses should be
+faked.  If not configured ARP responses will be generated for remote IP
+addresses of all established CHILD_SAs.
+.TP
 .BR charon.plugins.ha.fifo_interface " [yes]"
 
 .TP
