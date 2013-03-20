@@ -539,6 +539,9 @@ Start phase2 EAP TNC protocol after successful client authentication
 .BR charon.plugins.eap-ttls.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
 .TP
+.BR charon.plugins.farp.enable " [yes]"
+Enable faking of ARP responses for remote IP addresses of established CHILD_SAs
+.TP
 .BR charon.plugins.ha.fifo_interface " [yes]"
 
 .TP

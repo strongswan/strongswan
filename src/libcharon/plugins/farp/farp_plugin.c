@@ -65,6 +65,12 @@ plugin_t *farp_plugin_create()
 {
 	private_farp_plugin_t *this;
 
+	if (!lib->settings->get_bool(lib->settings, "%s.plugins.farp.enable", TRUE,
+								 charon->name))
+	{
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
