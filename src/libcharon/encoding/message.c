@@ -62,7 +62,7 @@
 /**
  * Max number of NAT-D payloads per IKEv1 message
  */
-#define MAX_NAT_D_PAYLOADS 5
+#define MAX_NAT_D_PAYLOADS 10
 
 /**
  * A payload rule defines the rules for a payload
