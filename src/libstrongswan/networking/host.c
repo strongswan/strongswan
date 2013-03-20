@@ -54,6 +54,15 @@ struct private_host_t {
 	socklen_t socklen;
 };
 
+/**
+ * Update the sockaddr internal sa_len option, if available
+ */
+static inline void update_sa_len(private_host_t *this)
+{
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+	this->address.sa_len = this->socklen;
+#endif /* HAVE_STRUCT_SOCKADDR_SA_LEN */
+}
 
 METHOD(host_t, get_sockaddr, sockaddr_t*,
 	private_host_t *this)
@@ -419,6 +428,7 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 			memcpy(&this->address4, (struct sockaddr_in*)sockaddr,
 				   sizeof(struct sockaddr_in));
 			this->socklen = sizeof(struct sockaddr_in);
+			update_sa_len(this);
 			return &this->public;
 		}
 		case AF_INET6:
@@ -426,6 +436,7 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 			memcpy(&this->address6, (struct sockaddr_in6*)sockaddr,
 				   sizeof(struct sockaddr_in6));
 			this->socklen = sizeof(struct sockaddr_in6);
+			update_sa_len(this);
 			return &this->public;
 		}
 		default:
@@ -508,6 +519,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 			this->socklen = sizeof(struct sockaddr_in6);
 			break;
 	}
+	update_sa_len(this);
 	return &this->public;
 }
 
@@ -610,11 +622,13 @@ host_t *host_create_any(int family)
 		case AF_INET:
 		{
 			this->socklen = sizeof(struct sockaddr_in);
+			update_sa_len(this);
 			return &(this->public);
 		}
 		case AF_INET6:
 		{
 			this->socklen = sizeof(struct sockaddr_in6);
+			update_sa_len(this);
 			return &this->public;
 		}
 		default:
