@@ -159,6 +159,11 @@ struct private_load_tester_config_t {
 	int prefix;
 
 	/**
+	 * Keep addresses until shutdown?
+	 */
+	bool keep;
+
+	/**
 	 * Hashtable with leases in "pools", host_t => entry_t
 	 */
 	hashtable_t *leases;
@@ -216,6 +221,8 @@ static void load_addrs(private_load_tester_config_t *this)
 	char *iface, *token, *pos;
 	mem_pool_t *pool;
 
+	this->keep = lib->settings->get_bool(lib->settings,
+						"%s.plugins.load-tester.addrs_keep", FALSE, charon->name);
 	this->prefix = lib->settings->get_int(lib->settings,
 						"%s.plugins.load-tester.addrs_prefix", 16, charon->name);
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
@@ -636,6 +643,11 @@ METHOD(load_tester_config_t, delete_ip, void,
 	mem_pool_t *pool;
 	entry_t *entry;
 
+	if (this->keep)
+	{
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 	entry = this->leases->remove(this->leases, ip);
 	this->mutex->unlock(this->mutex);
@@ -657,9 +669,47 @@ METHOD(load_tester_config_t, delete_ip, void,
 	}
 }
 
+/**
+ * Clean up leases for allocated external addresses, if have been kept
+ */
+static void cleanup_leases(private_load_tester_config_t *this)
+{
+	enumerator_t *pools, *leases;
+	mem_pool_t *pool;
+	identification_t *id;
+	host_t *addr;
+	entry_t *entry;
+	bool online;
+
+	pools = this->pools->create_enumerator(this->pools);
+	while (pools->enumerate(pools, &pool))
+	{
+		leases = pool->create_lease_enumerator(pool);
+		while (leases->enumerate(leases, &id, &addr, &online))
+		{
+			if (online)
+			{
+				hydra->kernel_interface->del_ip(hydra->kernel_interface,
+												addr, this->prefix, FALSE);
+				entry = this->leases->remove(this->leases, addr);
+				if (entry)
+				{
+					entry_destroy(entry);
+				}
+			}
+		}
+		leases->destroy(leases);
+	}
+	pools->destroy(pools);
+}
+
 METHOD(load_tester_config_t, destroy, void,
 	private_load_tester_config_t *this)
 {
+	if (this->keep)
+	{
+		cleanup_leases(this);
+	}
 	this->mutex->destroy(this->mutex);
 	this->leases->destroy(this->leases);
 	this->pools->destroy_offset(this->pools, offsetof(mem_pool_t, destroy));

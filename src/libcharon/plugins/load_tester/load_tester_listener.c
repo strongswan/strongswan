@@ -133,4 +133,3 @@ load_tester_listener_t *load_tester_listener_create(u_int shutdown_on,
 
 	return &this->public;
 }
-
