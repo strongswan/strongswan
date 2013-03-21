@@ -107,13 +107,6 @@ bool libimcv_init(void)
 			return FALSE;
 		}
 
-		if (!lib->plugins->load(lib->plugins, NULL,
-							"sha1 sha2 random nonce gmp pubkey x509"))
-		{
-			library_deinit();
-			return FALSE;
-		}
-
 		/* set the debug level and stderr output */
 		imcv_debug_level =  lib->settings->get_int(lib->settings,
 									"libimcv.debug_level", IMCV_DEBUG_LEVEL);
@@ -123,6 +116,13 @@ bool libimcv_init(void)
 		/* activate the imcv debugging hook */
 		dbg = imcv_dbg;
 		openlog("imcv", 0, LOG_DAEMON);
+
+		if (!lib->plugins->load(lib->plugins, NULL,
+							"sha1 sha2 random nonce gmp pubkey x509"))
+		{
+			library_deinit();
+			return FALSE;
+		}
 	}
 	ref_get(&libstrongswan_ref);
 
