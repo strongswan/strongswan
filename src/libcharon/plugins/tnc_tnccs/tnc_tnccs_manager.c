@@ -719,6 +719,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			tncif_identity_t *tnc_id;
 			u_int32_t id_type, subject_type;
 			chunk_t id_value;
+			char *id_str;
 			TNC_Result result;
 
 			list = linked_list_create();
@@ -752,9 +753,10 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						id_type = TNC_ID_UNKNOWN;
 						subject_type = TNC_SUBJECT_UNKNOWN;
 				}
-				if (id_type != TNC_ID_UNKNOWN)
+				if (id_type != TNC_ID_UNKNOWN &&
+					asprintf(&id_str, "%Y", peer) >= 0)
 				{
-					id_value.len = asprintf(&id_value.ptr, "%Y", peer);
+					id_value = chunk_from_str(id_str);
 					tnc_id = tncif_identity_create(
 								pen_type_create(PEN_TCG, id_type), id_value,
 								pen_type_create(PEN_TCG, subject_type),
