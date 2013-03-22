@@ -17,6 +17,7 @@
 DIR=$(dirname `readlink -f $0`)
 . $DIR/testing.conf
 . $DIR/scripts/function.sh
+SSHCONF="-F $DIR/ssh_config"
 
 [ -d $DIR/hosts ] || die "Directory 'hosts' not found"
 [ -d $DIR/tests ] || die "Directory 'tests' not found"

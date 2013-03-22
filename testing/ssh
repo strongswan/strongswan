@@ -2,6 +2,7 @@
 
 DIR=$(dirname `readlink -f $0`)
 . $DIR/testing.conf
+SSHCONF="-F $DIR/ssh_config"
 
 if [ $# == 0 ]
 then

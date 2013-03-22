@@ -17,6 +17,7 @@
 DIR=$(dirname `readlink -f $0`)
 . $DIR/../testing.conf
 . $DIR/function.sh
+SSHCONF="-F $DIR/../ssh_config"
 
 testname=$1
 
