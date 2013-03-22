@@ -278,8 +278,9 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			fprintf(out, ", %" PRIu64 " bytes_i", bytes_in);
 			if (use_in)
 			{
-				fprintf(out, " (%" PRIu64 " pkts, %" PRIu64 "s ago)",
-						packets_in, (u_int64_t)(now - use_in));
+				fprintf(out, " (%" PRIu64 " pkt%s, %" PRIu64 "s ago)",
+						packets_in, (packets_in == 1) ? "": "s",
+						(u_int64_t)(now - use_in));
 			}
 
 			child_sa->get_usestats(child_sa, FALSE,
@@ -287,8 +288,9 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			fprintf(out, ", %" PRIu64 " bytes_o", bytes_out);
 			if (use_out)
 			{
-				fprintf(out, " (%" PRIu64 " pkts, %" PRIu64 "s ago)",
-						packets_out, (u_int64_t)(now - use_out));
+				fprintf(out, " (%" PRIu64 " pkt%s, %" PRIu64 "s ago)",
+						packets_out, (packets_out == 1) ? "": "s",
+						(u_int64_t)(now - use_out));
 			}
 			fprintf(out, ", rekeying ");
 
