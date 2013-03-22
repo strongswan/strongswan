@@ -20,7 +20,6 @@ INC=$INC,gnat,gprbuild,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
 INC=$INC,libalog0.4.1-base-dev,hostapd
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9"
 INC=$INC,${SERVICES// /,}
-EXC=iptables
 
 CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
@@ -67,7 +66,7 @@ execute "mount -o bind $CACHEDIR $APTCACHE"
 do_on_exit graceful_umount $APTCACHE
 
 log_action "Running debootstrap ($BASEIMGSUITE, $BASEIMGARCH)"
-execute "debootstrap --arch=$BASEIMGARCH --include=$INC --exclude $EXC $BASEIMGSUITE $LOOPDIR $BASEIMGMIRROR"
+execute "debootstrap --arch=$BASEIMGARCH --include=$INC $BASEIMGSUITE $LOOPDIR $BASEIMGMIRROR"
 
 execute "mount -t proc none $LOOPDIR/proc"
 do_on_exit graceful_umount $LOOPDIR/proc
