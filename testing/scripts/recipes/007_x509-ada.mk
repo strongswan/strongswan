@@ -4,6 +4,8 @@ PKG = x509-ada
 SRC = http://git.codelabs.ch/git/$(PKG).git
 REV = v0.1
 
+PREFIX = /usr/local/ada
+
 all: install
 
 .$(PKG)-cloned:
@@ -16,4 +18,4 @@ all: install
 	@touch $@
 
 install: .$(PKG)-built
-	cd $(PKG) && make install
+	cd $(PKG) && make PREFIX=$(PREFIX) install

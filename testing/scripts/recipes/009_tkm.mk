@@ -4,7 +4,7 @@ PKG = tkm
 SRC = http://git.codelabs.ch/git/$(PKG).git
 REV = v0.1
 
-export ADA_PROJECT_PATH=/root/libraries/lib/gnat
+export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
 all: install
 

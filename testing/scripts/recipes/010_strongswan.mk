@@ -72,7 +72,7 @@ CONFIG_OPTS = \
 	--enable-ipseckey \
 	--enable-tkm
 
-export ADA_PROJECT_PATH=/root/libraries/lib/gnat
+export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
 all: install
 

@@ -4,7 +4,9 @@ PKG = tkm-rpc
 SRC = http://git.codelabs.ch/git/$(PKG).git
 REV = v0.1
 
-export ADA_PROJECT_PATH=/root/libraries/lib/gnat
+PREFIX = /usr/local/ada
+
+export ADA_PROJECT_PATH=$(PREFIX)/lib/gnat
 
 all: install
 
@@ -18,4 +20,4 @@ all: install
 	@touch $@
 
 install: .$(PKG)-built
-	cd $(PKG) && make install
+	cd $(PKG) && make PREFIX=$(PREFIX) install
