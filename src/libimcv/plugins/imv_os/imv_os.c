@@ -378,6 +378,8 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 	{
 		int device_id, count, count_update, count_blacklist, count_ok;
 		u_int os_settings;
+		u_int32_t id_type;
+		chunk_t id_value;
 
 		os_settings = os_state->get_os_settings(os_state);
 		os_state->get_count(os_state, &count, &count_update, &count_blacklist,
@@ -388,9 +390,10 @@ static TNC_Result receive_message(imv_state_t *state, imv_msg_t *in_msg)
 
 		/* Store device information in database */
 		device_id = os_state->get_device_id(os_state);
+		id_value = state->get_ar_id(state, &id_type);
 		if (os_db && device_id)
 		{
-			os_db->set_device_info(os_db, device_id, state->get_ar_id(state),
+			os_db->set_device_info(os_db, device_id, id_type, id_value,
 						os_state->get_info(os_state, NULL, NULL, NULL),
 						count, count_update, count_blacklist, os_settings);
 		}

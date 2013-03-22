@@ -214,9 +214,9 @@ METHOD(imv_os_database_t, get_device_id, int,
 }
 
 METHOD(imv_os_database_t, set_device_info, void,
-	private_imv_os_database_t *this,  int device_id, identification_t *ar_id,
-	char *os_info, int count, int count_update, int count_blacklist,
-	u_int flags)
+	private_imv_os_database_t *this,  int device_id, u_int32_t ar_id_type,
+	chunk_t ar_id_value, char *os_info, int count, int count_update,
+	int count_blacklist, u_int flags)
 {
 	enumerator_t *e;
 	time_t last_time;
@@ -245,8 +245,7 @@ METHOD(imv_os_database_t, set_device_info, void,
 	/* get primary key of AR identity if it exists */
 	e = this->db->query(this->db,
 			"SELECT id FROM identities WHERE type = ? AND data = ?",
-			 DB_INT,  ar_id->get_type(ar_id),
-			 DB_BLOB, ar_id->get_encoding(ar_id), DB_INT);
+			 DB_INT,  ar_id_type, DB_BLOB, ar_id_value, DB_INT);
 	if (e)
 	{
 		e->enumerate(e, &iid);
@@ -258,8 +257,7 @@ METHOD(imv_os_database_t, set_device_info, void,
 	{
 		this->db->execute(this->db, &iid,
 			"INSERT INTO identities (type, data) VALUES (?, ?)",
-			 DB_INT,  ar_id->get_type(ar_id),
-			 DB_BLOB, ar_id->get_encoding(ar_id));
+			 DB_INT, ar_id_type, DB_BLOB, ar_id_value);
 	}
 
 	/* get latest device info record if it exists */

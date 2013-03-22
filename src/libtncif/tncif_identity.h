@@ -100,7 +100,7 @@ tncif_identity_t* tncif_identity_create_empty(void);
  * Create an TNC Identity object from its components
  *
  * @param identity_type			TNC Identity Type
- * @param identity_value		TNC Identity Value
+ * @param identity_value		TNC Identity Value (not cloned by constructor)
  * @param subject_type			TNC Subject Type
  * @param auth_type				TNC Authentication Type
  */

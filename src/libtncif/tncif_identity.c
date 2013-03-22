@@ -196,7 +196,7 @@ tncif_identity_t *tncif_identity_create(pen_type_t identity_type,
 
 	this = (private_tncif_identity_t*)tncif_identity_create_empty();
 	this->identity_type = identity_type;
-	this->identity_value = chunk_clone(identity_value);
+	this->identity_value = identity_value;
 	this->subject_type = subject_type;
 	this->auth_type = auth_type;
 

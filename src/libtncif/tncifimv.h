@@ -218,9 +218,8 @@ typedef TNC_Result (*TNC_IMV_ProvideBindFunctionPointer)(
 #define TNC_ID_IPV6_ADDR 2
 #define TNC_ID_FQDN 3
 #define TNC_ID_RFC822_ADDR 4
-#define TNC_ID_USER_NAME 5
-#define TNC_ID_DER_ASN1_DN 6
-#define TNC_ID_DER_ASN1_GN 7
+#define TNC_ID_USERNAME 5
+#define TNC_ID_ASN1_DN 6
 
 /* TNC Subject Types */
 

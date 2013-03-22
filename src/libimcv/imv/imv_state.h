@@ -80,16 +80,19 @@ struct imv_state_t {
 	/**
 	 * Set Access Requestor ID
 	 *
-	 * @param ar_id			Access Requestor ID (is not going to be cloned)
+	 * @param id_type		Access Requestor TCG Standard ID Type
+	 * @param id_value		Access Requestor TCG Standard ID Value
+	 *
 	 */
-	void (*set_ar_id)(imv_state_t *this, identification_t *ar_id);
+	void (*set_ar_id)(imv_state_t *this, u_int32_t id_type, chunk_t id_value);
 
 	/**
 	 * Get Access Requestor ID
 	 *
-	 * @return				Access Requestor ID
+	 * @param id_type		Access Requestor TCG Standard ID Type
+	 * @return				Access Requestor TCG Standard ID Value
 	 */
-	identification_t* (*get_ar_id)(imv_state_t *this);
+	chunk_t (*get_ar_id)(imv_state_t *this, u_int32_t *id_type);
 
 	/**
 	 * Change the connection state

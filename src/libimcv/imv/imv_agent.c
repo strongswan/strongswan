@@ -442,10 +442,8 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 	while (enumerator->enumerate(enumerator, &tnc_id))
 	{
 		pen_type_t id_type, subject_type, auth_type;
-		int tcg_id_type, tcg_subject_type, tcg_auth_type;
+		u_int32_t tcg_id_type, tcg_subject_type, tcg_auth_type;
 		chunk_t id_value;
-		identification_t *ar_id;
-		id_type_t ike_type;
 
 		id_type = tnc_id->get_identity_type(tnc_id);
 		id_value = tnc_id->get_identity_value(tnc_id);
@@ -459,40 +457,12 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 		tcg_auth_type =    (auth_type.vendor_id == PEN_TCG) ?
 							auth_type.type : TNC_AUTH_UNKNOWN;
 
-		switch (tcg_id_type)
-		{
-			case TNC_ID_IPV4_ADDR:
-				ike_type = ID_IPV4_ADDR;
-				break;
-			case TNC_ID_IPV6_ADDR:
-				ike_type = ID_IPV6_ADDR;
-				break;
-			case TNC_ID_FQDN:
-				ike_type = ID_FQDN;
-				break;
-			case TNC_ID_RFC822_ADDR:
-				ike_type = ID_RFC822_ADDR;
-				break;
-			case TNC_ID_USER_NAME:
-				ike_type = ID_USER_ID;
-				break;
-			case TNC_ID_DER_ASN1_DN:
-				ike_type = ID_DER_ASN1_DN;
-				break;
-			case TNC_ID_DER_ASN1_GN:
-				ike_type = ID_IPV4_ADDR;
-				break;
-			case TNC_ID_UNKNOWN:
-			default:
-				ike_type = ID_KEY_ID;
-				break;
-		}
 
-		ar_id = identification_create_from_encoding(ike_type, id_value);
-		DBG2(DBG_IMV, "  %N AR identity '%Y' authenticated by %N",
-			 TNC_Subject_names, tcg_subject_type, ar_id,
+		DBG2(DBG_IMV, "  %N AR identity '%.*s' authenticated by %N",
+			 TNC_Subject_names, tcg_subject_type,
+			 id_value.len, id_value.ptr,
 			 TNC_Authentication_names, tcg_auth_type);
-		state->set_ar_id(state, ar_id);
+		state->set_ar_id(state, tcg_id_type, id_value);
 	}
 	enumerator->destroy(enumerator);
 

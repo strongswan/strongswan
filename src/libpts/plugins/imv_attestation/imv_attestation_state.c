@@ -64,9 +64,14 @@ struct private_imv_attestation_state_t {
 	u_int32_t max_msg_len;
 
 	/**
-	 * Access Requestor ID
+	 * Access Requestor ID Type
 	 */
-	identification_t *ar_id;
+	u_int32_t ar_id_type;
+
+	/**
+	 * Access Requestor ID Value
+	 */
+	chunk_t ar_id_value;
 
 	/**
 	 * IMV Attestation handshake state
@@ -222,16 +227,20 @@ METHOD(imv_state_t, get_max_msg_len, u_int32_t,
 }
 
 METHOD(imv_state_t, set_ar_id, void,
-	private_imv_attestation_state_t *this, identification_t *ar_id)
+	private_imv_attestation_state_t *this, u_int32_t id_type, chunk_t id_value)
 {
-	/* no cloning, caller must not destroy object */
-	this->ar_id = ar_id;
+	this->ar_id_type = id_type;
+	this->ar_id_value = chunk_clone(id_value);
 }
 
-METHOD(imv_state_t, get_ar_id, identification_t*,
-	private_imv_attestation_state_t *this)
+METHOD(imv_state_t, get_ar_id, chunk_t,
+	private_imv_attestation_state_t *this, u_int32_t *id_type)
 {
-	return this->ar_id;
+	if (id_type)
+	{
+		*id_type = this->ar_id_type;
+	}
+	return this->ar_id_value;
 }
 
 METHOD(imv_state_t, change_state, void,
@@ -307,11 +316,11 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 METHOD(imv_state_t, destroy, void,
 	private_imv_attestation_state_t *this)
 {
-	DESTROY_IF(this->ar_id);
 	DESTROY_IF(this->reason_string);
 	this->file_meas_requests->destroy_function(this->file_meas_requests, free);
 	this->components->destroy_function(this->components, (void *)free_func_comp);
 	this->pts->destroy(this->pts);
+	free(this->ar_id_value.ptr);
 	free(this);
 }
 

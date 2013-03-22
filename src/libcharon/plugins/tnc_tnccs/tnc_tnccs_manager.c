@@ -30,6 +30,8 @@
 #include <collections/linked_list.h>
 #include <threading/rwlock.h>
 
+#include <stdio.h>
+
 typedef struct private_tnc_tnccs_manager_t private_tnc_tnccs_manager_t;
 typedef struct tnccs_entry_t tnccs_entry_t;
 typedef struct tnccs_connection_entry_t tnccs_connection_entry_t;
@@ -716,6 +718,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 			tnccs_t *tnccs;
 			tncif_identity_t *tnc_id;
 			u_int32_t id_type, subject_type;
+			chunk_t id_value;
 			TNC_Result result;
 
 			list = linked_list_create();
@@ -734,7 +737,7 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						subject_type = TNC_SUBJECT_MACHINE;
 						break;
 					case ID_FQDN:
-						id_type = TNC_ID_USER_NAME;
+						id_type = TNC_ID_USERNAME;
 						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_RFC822_ADDR:
@@ -742,12 +745,8 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 						subject_type = TNC_SUBJECT_USER;
 						break;
 					case ID_DER_ASN1_DN:
-						id_type = TNC_ID_DER_ASN1_DN;
+						id_type = TNC_ID_ASN1_DN;
 						subject_type = TNC_SUBJECT_USER;
-						break;
-					case ID_DER_ASN1_GN:
-						id_type = TNC_ID_DER_ASN1_GN;
-						subject_type = TNC_SUBJECT_UNKNOWN;
 						break;
 					default:
 						id_type = TNC_ID_UNKNOWN;
@@ -755,9 +754,9 @@ METHOD(tnccs_manager_t, get_attribute, TNC_Result,
 				}
 				if (id_type != TNC_ID_UNKNOWN)
 				{
+					id_value.len = asprintf(&id_value.ptr, "%Y", peer);
 					tnc_id = tncif_identity_create(
-								pen_type_create(PEN_TCG, id_type),
-								peer->get_encoding(peer),
+								pen_type_create(PEN_TCG, id_type), id_value,
 								pen_type_create(PEN_TCG, subject_type),
 								pen_type_create(PEN_TCG,
 												tnccs->get_auth_type(tnccs)));

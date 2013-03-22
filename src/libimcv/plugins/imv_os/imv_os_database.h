@@ -52,7 +52,8 @@ struct imv_os_database_t {
 	* Set health infos for a given  device
 	*
 	* @param device_id				Device ID primary key
-	* @param ar_id					Access Requestor ID
+	* @param ar_id_type				Access Requestor ID Type
+	* @param ar_id_value			Access Requestor ID Value
 	* @param os_info				OS info string
 	* @param count					Number of installed packages
 	* @param count_update			Number of packages to be updated
@@ -60,9 +61,9 @@ struct imv_os_database_t {
 	* @param flags					Various flags, e.g. illegal OS settings
 	*/
 	void (*set_device_info)(imv_os_database_t *this, int device_id,
-							identification_t *ar_id, char *os_info,
-							int count, int count_update, int count_blacklist,
-							u_int flags);
+							u_int32_t ar_id_type, chunk_t ar_id_value,
+							char *os_info, int count, int count_update,
+							int count_blacklist, u_int flags);
 
 	/**
 	* Destroys an imv_os_database_t object.
