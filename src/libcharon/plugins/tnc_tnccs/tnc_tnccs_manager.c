@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for asprintf() */
+
 #include "tnc_tnccs_manager.h"
 
 #include <tnc/tnc.h>
