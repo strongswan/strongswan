@@ -176,6 +176,12 @@ static job_requeue_t accept_(private_error_notify_socket_t *this)
 METHOD(error_notify_socket_t, destroy, void,
 	private_error_notify_socket_t *this)
 {
+	uintptr_t fd;
+
+	while (this->connected->remove_last(this->connected, (void*)&fd) == SUCCESS)
+	{
+		close(fd);
+	}
 	this->connected->destroy(this->connected);
 	this->mutex->destroy(this->mutex);
 	close(this->socket);
