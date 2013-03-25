@@ -231,7 +231,9 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 						reader->destroy(reader);
 						return NEED_MORE;
 				}
+				/* fall-through */
 			default:
+				reader->destroy(reader);
 				return FAILED;
 		}
 
