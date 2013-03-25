@@ -254,7 +254,7 @@ METHOD(listener_t, message_hook, bool,
 			 message->get_exchange_type(message) == IKE_AUTH))
 		{
 			/* if the addresses have not been claimed yet, they won't. Release
-			 * these ressources. */
+			 * these resources. */
 			release_unclaimed(this, ike_sa);
 		}
 	}
@@ -267,7 +267,7 @@ METHOD(listener_t, ike_updown, bool,
 	if (!up)
 	{
 		/* if the message hook does not apply because of a failed exchange
-		 * or something, make sure we release any ressources now */
+		 * or something, make sure we release any resources now */
 		release_unclaimed(this, ike_sa);
 	}
 	return TRUE;

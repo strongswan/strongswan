@@ -52,7 +52,7 @@ struct tkm_chunk_map_t {
 	/**
 	 * Remove mapping for given chunk.
 	 *
-	 * @param data	data specifiying the mapping to remove
+	 * @param data	data specifying the mapping to remove
 	 * @return		TRUE if mapping was removed, FALSE otherwise
 	 */
 	bool (*remove)(tkm_chunk_map_t * const this, chunk_t *data);

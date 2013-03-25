@@ -95,7 +95,7 @@ struct tkm_t {
 /**
  * Initialize trusted key manager, creates "tkm" instance.
  *
- * @return				FALSE if initialization error occured
+ * @return				FALSE if initialization error occurred
  */
 bool tkm_init();
 

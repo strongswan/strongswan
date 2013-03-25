@@ -1490,7 +1490,7 @@ METHOD(task_manager_t, process_message, status_t,
 			return SUCCESS;
 		}
 
-		/* reject Main/Agressive Modes once established */
+		/* reject Main/Aggressive Modes once established */
 		if (msg->get_exchange_type(msg) == ID_PROT ||
 			msg->get_exchange_type(msg) == AGGRESSIVE)
 		{
