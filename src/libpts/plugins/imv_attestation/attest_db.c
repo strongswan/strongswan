@@ -852,7 +852,7 @@ METHOD(attest_db_t, list_devices, void,
 				}
 				if (ar_id_value.len)
 				{
-					printf(" %.*s", ar_id_value.len, ar_id_value.ptr);
+					printf(" %.*s", (int)ar_id_value.len, ar_id_value.ptr);
 				}
 			}
 			printf("\n");
