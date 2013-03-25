@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
+		aead->destroy(aead);
 	}
 	else
 	{
@@ -120,6 +121,7 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
+		crypter->destroy(crypter);
 	}
 	return 0;
 }
