@@ -131,6 +131,7 @@ static void process_packages(char *filename, char *product, bool update)
 	char *uri, line[12288], *pos;
 	int count = 0, errored = 0, vulnerable = 0, new_packages = 0;
 	int new_versions = 0, updated_versions = 0, deleted_versions = 0;
+	time_t gen_time;
 	u_int32_t pid = 0;
 	enumerator_t *e;
 	database_t *db;
@@ -192,7 +193,7 @@ static void process_packages(char *filename, char *product, bool update)
 		bool security, add_version = TRUE;
 		int cur_security, security_update = 0, security_delete = 0;
 		u_int32_t gid = 0, vid = 0, vid_update = 0, vid_delete = 0;
-		time_t gen_time, cur_time;
+		time_t cur_time;
 
 		count++;
 		if (count == 1)
