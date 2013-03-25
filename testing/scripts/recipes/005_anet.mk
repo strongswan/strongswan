@@ -14,7 +14,7 @@ all: install
 	@touch $@
 
 .$(PKG)-built: .$(PKG)-cloned
-	cd $(PKG) && make tests && make LIBRARY_KIND=static
+	cd $(PKG) && make LIBRARY_KIND=static
 	@touch $@
 
 install: .$(PKG)-built
