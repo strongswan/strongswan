@@ -133,6 +133,7 @@ ipseckey_t *ipseckey_create_frm_rr(rr_t *rr)
 		DBG1(DBG_CFG, "ipseckey RR has a wrong format");
 		reader->destroy(reader);
 		free(this);
+		return NULL;
 	}
 
 	switch (this->gateway_type)
