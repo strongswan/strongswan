@@ -16,9 +16,12 @@
  */
 
 #include <stdio.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 #include <ctype.h>
 
 #include "chunk.h"
@@ -698,15 +701,56 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key)
 }
 
 /**
- * Key used for chunk_hash.
+ * Secret key allocated randomly during first use.
  */
 static u_char key[16];
+
+/**
+ * Only allocate the key once
+ */
+static pthread_once_t key_allocated = PTHREAD_ONCE_INIT;
+
+/**
+ * Allocate a key on first use, we do this manually to avoid dependencies on
+ * plugins.
+ */
+static void allocate_key()
+{
+	ssize_t len;
+	size_t done = 0;
+	int fd;
+
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd >= 0)
+	{
+		while (done < sizeof(key))
+		{
+			len = read(fd, key + done, sizeof(key) - done);
+			if (len < 0)
+			{
+				break;
+			}
+			done += len;
+		}
+		close(fd);
+	}
+	/* on error we use random() to generate the key (better than nothing) */
+	if (done < sizeof(key))
+	{
+		srandom(time(NULL) + getpid());
+		for (; done < sizeof(key); done++)
+		{
+			key[done] = (u_char)random();
+		}
+	}
+}
 
 /**
  * Described in header.
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
+	pthread_once(&key_allocated, allocate_key);
 	/* we could use a mac of the previous hash, but this is faster */
 	return chunk_mac_inc(chunk, key, ((u_int64_t)hash) << 32 | hash);
 }
@@ -716,6 +760,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
  */
 u_int32_t chunk_hash(chunk_t chunk)
 {
+	pthread_once(&key_allocated, allocate_key);
 	return chunk_mac(chunk, key);
 }
 
