@@ -32,6 +32,8 @@ enum cmd_option_type_t {
 	CMD_OPT_VERSION,
 	CMD_OPT_HOST,
 	CMD_OPT_IDENTITY,
+	CMD_OPT_CERT,
+	CMD_OPT_RSA,
 
 	CMD_OPT_COUNT
 };
