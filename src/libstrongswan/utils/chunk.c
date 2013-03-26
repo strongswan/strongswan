@@ -24,16 +24,6 @@
 #include "chunk.h"
 #include "debug.h"
 
-/* required for chunk_hash */
-#undef get16bits
-#if (defined(__GNUC__) && defined(__i386__))
-#define get16bits(d) (*((const u_int16_t*)(d)))
-#endif
-#if !defined (get16bits)
-#define get16bits(d) ((((u_int32_t)(((const u_int8_t*)(d))[1])) << 8)\
-                      + (u_int32_t)(((const u_int8_t*)(d))[0]) )
-#endif
-
 /**
  * Empty chunk.
  */
@@ -659,11 +649,11 @@ static inline u_int64_t siplast(size_t len, u_char *pos)
 }
 
 /**
- * Described in header.
+ * Caculate SipHash-2-4 with an optional first block given as argument.
  */
-u_int64_t chunk_mac(chunk_t chunk, u_char *key)
+static u_int64_t chunk_mac_inc(chunk_t chunk, u_char *key, u_int64_t m)
 {
-	u_int64_t v0, v1, v2, v3, k0, k1, m;
+	u_int64_t v0, v1, v2, v3, k0, k1;
 	size_t len = chunk.len;
 	u_char *pos = chunk.ptr, *end;
 
@@ -676,6 +666,11 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key)
 	v1 = k1 ^ 0x646f72616e646f6dULL;
 	v2 = k0 ^ 0x6c7967656e657261ULL;
 	v3 = k1 ^ 0x7465646279746573ULL;
+
+	if (m)
+	{
+		sipcompress(&v0, &v1, &v2, &v3, m);
+	}
 
 	/* compression with c = 2 */
 	for (; pos != end; pos += 8)
@@ -696,71 +691,24 @@ u_int64_t chunk_mac(chunk_t chunk, u_char *key)
 
 /**
  * Described in header.
- *
- * The implementation is based on Paul Hsieh's SuperFastHash:
- *	 http://www.azillionmonkeys.com/qed/hash.html
+ */
+u_int64_t chunk_mac(chunk_t chunk, u_char *key)
+{
+	return chunk_mac_inc(chunk, key, 0);
+}
+
+/**
+ * Key used for chunk_hash.
+ */
+static u_char key[16];
+
+/**
+ * Described in header.
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
-	u_char *data = chunk.ptr;
-	size_t len = chunk.len;
-	u_int32_t tmp;
-	int rem;
-
-	if (!len || data == NULL)
-	{
-		return 0;
-	}
-
-	rem = len & 3;
-	len >>= 2;
-
-	/* Main loop */
-	for (; len > 0; --len)
-	{
-		hash += get16bits(data);
-		tmp   = (get16bits(data + 2) << 11) ^ hash;
-		hash  = (hash << 16) ^ tmp;
-		data += 2 * sizeof(u_int16_t);
-		hash += hash >> 11;
-	}
-
-	/* Handle end cases */
-	switch (rem)
-	{
-		case 3:
-		{
-			hash += get16bits(data);
-			hash ^= hash << 16;
-			hash ^= data[sizeof(u_int16_t)] << 18;
-			hash += hash >> 11;
-			break;
-		}
-		case 2:
-		{
-			hash += get16bits(data);
-			hash ^= hash << 11;
-			hash += hash >> 17;
-			break;
-		}
-		case 1:
-		{
-			hash += *data;
-			hash ^= hash << 10;
-			hash += hash >> 1;
-			break;
-		}
-	}
-
-	/* Force "avalanching" of final 127 bits */
-	hash ^= hash << 3;
-	hash += hash >> 5;
-	hash ^= hash << 4;
-	hash += hash >> 17;
-	hash ^= hash << 25;
-	hash += hash >> 6;
-
-	return hash;
+	/* we could use a mac of the previous hash, but this is faster */
+	return chunk_mac_inc(chunk, key, ((u_int64_t)hash) << 32 | hash);
 }
 
 /**
@@ -768,7 +716,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
  */
 u_int32_t chunk_hash(chunk_t chunk)
 {
-	return chunk_hash_inc(chunk, chunk.len);
+	return chunk_mac(chunk, key);
 }
 
 /**

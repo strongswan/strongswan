@@ -301,12 +301,20 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 
 /**
  * Computes a 32 bit hash of the given chunk.
+ *
  * @note This hash is only intended for hash tables not for cryptographic purposes.
+ *
+ * @param chunk			data to hash
+ * @return				hash value
  */
 u_int32_t chunk_hash(chunk_t chunk);
 
 /**
  * Incremental version of chunk_hash. Use this to hash two or more chunks.
+ *
+ * @param chunk			data to hash
+ * @param hash			previous hash value
+ * @return				hash value
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
 
