@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -301,7 +301,7 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 
 /**
  * Computes a 32 bit hash of the given chunk.
- * Note: This hash is only intended for hash tables not for cryptographic purposes.
+ * @note This hash is only intended for hash tables not for cryptographic purposes.
  */
 u_int32_t chunk_hash(chunk_t chunk);
 
@@ -309,6 +309,20 @@ u_int32_t chunk_hash(chunk_t chunk);
  * Incremental version of chunk_hash. Use this to hash two or more chunks.
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
+
+/**
+ * Computes a quick MAC from the given chunk and key using SipHash.
+ *
+ * The key must have a length of 128-bit (16 bytes).
+ *
+ * @note While SipHash has strong features using it for cryptographic purposes
+ * is not recommended (in particular because of the rather short output size).
+ *
+ * @param chunk			data to process
+ * @param key			key to use
+ * @return				MAC for given input and key
+ */
+u_int64_t chunk_mac(chunk_t chunk, u_char *key);
 
 /**
  * printf hook function for chunk_t.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -576,6 +576,122 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
 		}
 	}
 	return printable;
+}
+
+/**
+ * Helper functions for chunk_mac()
+ */
+static inline u_int64_t sipget(u_char *in)
+{
+	u_int64_t v = 0;
+	int i;
+
+	for (i = 0; i < 64; i += 8, ++in)
+	{
+		v |= ((u_int64_t)*in) << i;
+	}
+	return v;
+}
+
+static inline u_int64_t siprotate(u_int64_t v, int shift)
+{
+        return (v << shift) | (v >> (64 - shift));
+}
+
+static inline void sipround(u_int64_t *v0, u_int64_t *v1, u_int64_t *v2,
+							u_int64_t *v3)
+{
+	*v0 += *v1;
+	*v1 = siprotate(*v1, 13);
+	*v1 ^= *v0;
+	*v0 = siprotate(*v0, 32);
+
+	*v2 += *v3;
+	*v3 = siprotate(*v3, 16);
+	*v3 ^= *v2;
+
+	*v2 += *v1;
+	*v1 = siprotate(*v1, 17);
+	*v1 ^= *v2;
+	*v2 = siprotate(*v2, 32);
+
+	*v0 += *v3;
+	*v3 = siprotate(*v3, 21);
+	*v3 ^= *v0;
+}
+
+static inline void sipcompress(u_int64_t *v0, u_int64_t *v1, u_int64_t *v2,
+							   u_int64_t *v3, u_int64_t m)
+{
+	*v3 ^= m;
+	sipround(v0, v1, v2, v3);
+	sipround(v0, v1, v2, v3);
+	*v0 ^= m;
+}
+
+static inline u_int64_t siplast(size_t len, u_char *pos)
+{
+	u_int64_t b;
+	int rem = len & 7;
+
+	b = ((u_int64_t)len) << 56;
+	switch (rem)
+	{
+		case 7:
+			b |= ((u_int64_t)pos[6]) << 48;
+		case 6:
+			b |= ((u_int64_t)pos[5]) << 40;
+		case 5:
+			b |= ((u_int64_t)pos[4]) << 32;
+		case 4:
+			b |= ((u_int64_t)pos[3]) << 24;
+		case 3:
+			b |= ((u_int64_t)pos[2]) << 16;
+		case 2:
+			b |= ((u_int64_t)pos[1]) <<  8;
+		case 1:
+			b |= ((u_int64_t)pos[0]);
+			break;
+		case 0:
+			break;
+	}
+	return b;
+}
+
+/**
+ * Described in header.
+ */
+u_int64_t chunk_mac(chunk_t chunk, u_char *key)
+{
+	u_int64_t v0, v1, v2, v3, k0, k1, m;
+	size_t len = chunk.len;
+	u_char *pos = chunk.ptr, *end;
+
+	end = chunk.ptr + len - (len % 8);
+
+	k0 = sipget(key);
+	k1 = sipget(key + 8);
+
+	v0 = k0 ^ 0x736f6d6570736575ULL;
+	v1 = k1 ^ 0x646f72616e646f6dULL;
+	v2 = k0 ^ 0x6c7967656e657261ULL;
+	v3 = k1 ^ 0x7465646279746573ULL;
+
+	/* compression with c = 2 */
+	for (; pos != end; pos += 8)
+	{
+		m = sipget(pos);
+		sipcompress(&v0, &v1, &v2, &v3, m);
+	}
+	sipcompress(&v0, &v1, &v2, &v3, siplast(len, pos));
+
+	/* finalization with d = 4 */
+	v2 ^= 0xff;
+	sipround(&v0, &v1, &v2, &v3);
+	sipround(&v0, &v1, &v2, &v3);
+	sipround(&v0, &v1, &v2, &v3);
+	sipround(&v0, &v1, &v2, &v3);
+	return v0 ^ v1 ^ v2  ^ v3;
 }
 
 /**
