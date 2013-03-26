@@ -32,6 +32,8 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 
+#include "cmd/cmd_options.h"
+
 /**
  * Loglevel configuration
  */
@@ -159,36 +161,16 @@ static void segv_handler(int signal)
 }
 
 /**
- * Command line arguments, similar to "struct option", but with descriptions
- */
-static struct {
-	/** long option name */
-	const char *lng;
-	/** short option name */
-	const char shrt;
-	/** takes argument */
-	int has_arg;
-	/** decription of argument */
-	const char *arg;
-	/** description to option */
-	const char *desc;
-} options[] = {
-	{ "help", 'h', no_argument, "",
-	  "print this usage information and exit" },
-	{ "version", 'v', no_argument, "",
-	  "show version information and exit" },
-};
-
-/**
  * Print command line usage and exit
  */
 static void usage(FILE *out, char *msg, char *binary)
 {
 	int i, pre, post, padto = 0, spacing = 2;
 
-	for (i = 0; i < countof(options); i++)
+	for (i = 0; i < CMD_OPT_COUNT; i++)
 	{
-		padto = max(padto, strlen(options[i].lng) + strlen(options[i].arg));
+		padto = max(padto, strlen(cmd_options[i].name) +
+						   strlen(cmd_options[i].arg));
 	}
 	padto += spacing;
 
@@ -197,9 +179,9 @@ static void usage(FILE *out, char *msg, char *binary)
 		fprintf(out, "%s\n", msg);
 	}
 	fprintf(out, "Usage: %s\n", binary);
-	for (i = 0; i < countof(options); i++)
+	for (i = 0; i < CMD_OPT_COUNT; i++)
 	{
-		switch (options[i].has_arg)
+		switch (cmd_options[i].has_arg)
 		{
 			case required_argument:
 				pre = '<';
@@ -214,11 +196,11 @@ static void usage(FILE *out, char *msg, char *binary)
 				pre = post = ' ';
 				break;
 		}
-		fprintf(out, "  --%s (-%-c) %c%s%c %-*s%s\n",
-			options[i].lng, options[i].shrt,
-			pre, options[i].arg, post,
-			padto - strlen(options[i].lng) - strlen(options[i].arg), "",
-			options[i].desc);
+		fprintf(out, "  --%s %c%s%c %-*s%s\n",
+			cmd_options[i].name,
+			pre, cmd_options[i].arg, post,
+			padto - strlen(cmd_options[i].name) - strlen(cmd_options[i].arg), "",
+			cmd_options[i].desc);
 	}
 }
 
@@ -229,38 +211,24 @@ static void handle_arguments(int argc, char *argv[])
 {
 	while (TRUE)
 	{
-		struct option long_opts[countof(options) + 1] = {};
-		char optstring[countof(options) * 3 + 1] = {};
-		int i, pos = 0;
+		struct option long_opts[CMD_OPT_COUNT + 1] = {};
+		int i;
 
-		for (i = 0; i < countof(options); i++)
+		for (i = 0; i < CMD_OPT_COUNT; i++)
 		{
-			long_opts[i].name = options[i].lng;
-			long_opts[i].val = options[i].shrt;
-			long_opts[i].has_arg = options[i].has_arg;
-			optstring[pos++] = options[i].shrt;
-			switch (options[i].has_arg)
-			{
-				case optional_argument:
-					optstring[pos++] = ':';
-					/* FALL */
-				case required_argument:
-					optstring[pos++] = ':';
-					/* FALL */
-				case no_argument:
-				default:
-					break;
-			}
+			long_opts[i].name = cmd_options[i].name;
+			long_opts[i].val = cmd_options[i].id;
+			long_opts[i].has_arg = cmd_options[i].has_arg;
 		}
 
-		switch (getopt_long(argc, argv, optstring, long_opts, NULL))
+		switch (getopt_long(argc, argv, "", long_opts, NULL))
 		{
 			case EOF:
 				break;
-			case 'h':
+			case CMD_OPT_HELP:
 				usage(stdout, NULL, argv[0]);
 				exit(0);
-			case 'v':
+			case CMD_OPT_VERSION:
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
 			default:
