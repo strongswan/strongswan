@@ -1,0 +1,15 @@
+TESTS = test_runner
+
+check_PROGRAMS = $(TESTS)
+
+test_runner_SOURCES = \
+  test_runner.c test_runner.h
+
+
+test_runner_CFLAGS = \
+  -I$(top_srcdir)/src/libstrongswan \
+  @CHECK_CFLAGS@
+
+test_runner_LDADD = \
+  $(top_builddir)/src/libstrongswan/libstrongswan.la \
+  @CHECK_LIBS@

@@ -455,3 +455,10 @@ if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/test_vectors/libstrongswan-test-vectors.la
 endif
 endif
+
+if UNITTESTS
+if MONOLITHIC
+  SUBDIRS += .
+endif
+  SUBDIRS += tests
+endif

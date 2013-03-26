@@ -1320,6 +1320,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/gcm/Makefile
 	src/libstrongswan/plugins/af_alg/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
+	src/libstrongswan/tests/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
 	src/libhydra/plugins/attr_sql/Makefile
