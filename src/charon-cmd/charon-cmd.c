@@ -33,11 +33,17 @@
 #include <threading/thread.h>
 
 #include "cmd/cmd_options.h"
+#include "cmd/cmd_connection.h"
 
 /**
  * Loglevel configuration
  */
 static level_t levels[DBG_MAX];
+
+/**
+ * Connection to initiate
+ */
+static cmd_connection_t *conn;
 
 /**
  * hook in library for debugging messages
@@ -62,17 +68,26 @@ static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
 }
 
 /**
+ * Clean up connection definition atexit()
+ */
+static void cleanup_conn()
+{
+	DESTROY_IF(conn);
+}
+
+/**
  * Run the daemon and handle unix signals
  */
-static void run()
+static int run()
 {
 	sigset_t set;
 
-	/* handle SIGINT, SIGHUP ans SIGTERM in this handler */
+	/* handle SIGINT, SIGHUP and SIGTERM in this handler */
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGHUP);
 	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGUSR1);
 	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	while (TRUE)
@@ -84,7 +99,7 @@ static void run()
 		if (error)
 		{
 			DBG1(DBG_DMN, "error %d while waiting for a signal", error);
-			return;
+			return 1;
 		}
 		switch (sig)
 		{
@@ -107,13 +122,18 @@ static void run()
 			{
 				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
-				return;
+				return 0;
 			}
 			case SIGTERM:
 			{
 				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
-				return;
+				return 0;
+			}
+			case SIGUSR1:
+			{	/* an error occured */
+				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
+				return 1;
 			}
 			default:
 			{
@@ -212,7 +232,7 @@ static void handle_arguments(int argc, char *argv[])
 	while (TRUE)
 	{
 		struct option long_opts[CMD_OPT_COUNT + 1] = {};
-		int i;
+		int i, opt;
 
 		for (i = 0; i < CMD_OPT_COUNT; i++)
 		{
@@ -221,7 +241,8 @@ static void handle_arguments(int argc, char *argv[])
 			long_opts[i].has_arg = cmd_options[i].has_arg;
 		}
 
-		switch (getopt_long(argc, argv, "", long_opts, NULL))
+		opt = getopt_long(argc, argv, "", long_opts, NULL);
+		switch (opt)
 		{
 			case EOF:
 				break;
@@ -232,6 +253,10 @@ static void handle_arguments(int argc, char *argv[])
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
 			default:
+				if (conn->handle(conn, opt, optarg))
+				{
+					continue;
+				}
 				usage(stderr, NULL, argv[0]);
 				exit(1);
 		}
@@ -275,6 +300,8 @@ int main(int argc, char *argv[])
 	{
 		levels[group] = LEVEL_CTRL;
 	}
+	conn = cmd_connection_create();
+	atexit(cleanup_conn);
 
 	handle_arguments(argc, argv);
 
@@ -320,7 +347,5 @@ int main(int argc, char *argv[])
 	/* start daemon with thread-pool */
 	charon->start(charon);
 	/* wait for signal */
-	run();
-
-	return 0;
+	return run();
 }
