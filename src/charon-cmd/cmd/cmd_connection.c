@@ -48,6 +48,11 @@ struct private_cmd_connection_t {
 	 * Local identity
 	 */
 	char *identity;
+
+	/**
+	 * Is a private key configured
+	 */
+	bool key_seen;
 };
 
 /**
@@ -93,9 +98,18 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 static void add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 {
 	auth_cfg_t *auth;
+	auth_class_t class;
 
+	if (this->key_seen)
+	{
+		class = AUTH_CLASS_PUBKEY;
+	}
+	else
+	{
+		class = AUTH_CLASS_EAP;
+	}
 	auth = auth_cfg_create();
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
 	auth->add(auth, AUTH_RULE_IDENTITY,
 			  identification_create_from_string(this->identity));
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
@@ -182,6 +196,9 @@ METHOD(cmd_connection_t, handle, bool,
 			break;
 		case CMD_OPT_IDENTITY:
 			this->identity = arg;
+			break;
+		case CMD_OPT_RSA:
+			this->key_seen = TRUE;
 			break;
 		default:
 			return FALSE;
