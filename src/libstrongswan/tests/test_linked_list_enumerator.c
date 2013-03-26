@@ -1,0 +1,305 @@
+/*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+
+#include <check.h>
+
+#include <collections/linked_list.h>
+
+/*******************************************************************************
+ * test fixture
+ */
+
+static linked_list_t *list;
+
+static void setup_list()
+{
+	list = linked_list_create_with_items((void*)1, (void*)2, (void*)3, (void*)4,
+									 (void*)5, NULL);
+	ck_assert_int_eq(list->get_count(list), 5);
+}
+
+static void teardown_list()
+{
+	list->destroy(list);
+}
+
+/*******************************************************************************
+ * enumeration
+ */
+
+START_TEST(test_enumerate)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	ck_assert_int_eq(round, 6);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_reset_enumerator)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+	}
+	list->reset_enumerator(list, enumerator);
+	round = 1;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	ck_assert_int_eq(round, 6);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_has_more)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+		if (x == 2)
+		{
+			break;
+		}
+	}
+	ck_assert(list->has_more(list, enumerator));
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	ck_assert(!list->has_more(list, enumerator));
+	ck_assert_int_eq(round, 6);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+/*******************************************************************************
+ * insert before
+ */
+
+START_TEST(test_insert_before)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+		if (x == 2)
+		{
+			list->insert_before(list, enumerator, (void*)6);
+		}
+	}
+	ck_assert_int_eq(list->get_count(list), 6);
+	list->reset_enumerator(list, enumerator);
+	round = 1;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		if (round == 2 && x != 2)
+		{
+			ck_assert_int_eq(6, x);
+		}
+		else
+		{
+			ck_assert_int_eq(round, x);
+			round++;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_insert_before_ends)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	enumerator = list->create_enumerator(list);
+	list->insert_before(list, enumerator, (void*)0);
+	ck_assert_int_eq(list->get_count(list), 6);
+	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 0);
+	round = 0;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	list->insert_before(list, enumerator, (void*)6);
+	ck_assert_int_eq(list->get_count(list), 7);
+	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 6);
+	ck_assert(!list->has_more(list, enumerator));
+	ck_assert(!enumerator->enumerate(enumerator, &x));
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_insert_before_empty)
+{
+	enumerator_t *enumerator;
+	int x;
+
+	list->destroy(list);
+	list = linked_list_create();
+	enumerator = list->create_enumerator(list);
+	list->insert_before(list, enumerator, (void*)1);
+	ck_assert_int_eq(list->get_count(list), 1);
+	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 1);
+	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 1);
+	ck_assert(list->has_more(list, enumerator));
+	ck_assert(enumerator->enumerate(enumerator, &x));
+	ck_assert_int_eq(x, 1);
+	ck_assert(!list->has_more(list, enumerator));
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+/*******************************************************************************
+ * replace / remove_at
+ */
+
+START_TEST(test_replace)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		list->replace(list, enumerator, (void*)(uintptr_t)(6 - round));
+		round++;
+	}
+	list->reset_enumerator(list, enumerator);
+	round = 5;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round--;
+	}
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_remove_at)
+{
+	enumerator_t *enumerator;
+	int round, x;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		if (round == 2)
+		{
+			list->remove_at(list, enumerator);
+		}
+		round++;
+	}
+	ck_assert_int_eq(list->get_count(list), 4);
+	list->reset_enumerator(list, enumerator);
+	round = 1;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		if (round == 2)
+		{	/* skip removed item */
+			round++;
+		}
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_remove_at_ends)
+{
+	enumerator_t *enumerator;
+	int x;
+
+	enumerator = list->create_enumerator(list);
+	list->remove_at(list, enumerator);
+	ck_assert_int_eq(list->get_count(list), 5);
+	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 1);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+	}
+	list->remove_at(list, enumerator);
+	ck_assert_int_eq(list->get_count(list), 5);
+	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 5);
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+Suite *linked_list_enumerator_suite_create()
+{
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("linked list and enumerators");
+
+	tc = tcase_create("enumerate");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_enumerate);
+	tcase_add_test(tc, test_reset_enumerator);
+	tcase_add_test(tc, test_has_more);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("insert_before()");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_insert_before);
+	tcase_add_test(tc, test_insert_before_ends);
+	tcase_add_test(tc, test_insert_before_empty);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("modify");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_replace);
+	tcase_add_test(tc, test_remove_at);
+	tcase_add_test(tc, test_remove_at_ends);
+	suite_add_tcase(s, tc);
+
+	return s;
+}

@@ -20,5 +20,6 @@
 
 Suite *enumerator_suite_create();
 Suite *linked_list_suite_create();
+Suite *linked_list_enumerator_suite_create();
 
 #endif /** TEST_RUNNER_H_ */
