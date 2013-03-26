@@ -18,7 +18,6 @@
  * @{ @ingroup unit_tester
  */
 
-DEFINE_TEST("hashtable_t->remove_at()", test_hashtable_remove_at, FALSE)
 DEFINE_TEST("auth cfg", test_auth_cfg, FALSE)
 DEFINE_TEST("CURL get", test_curl_get, FALSE)
 DEFINE_TEST("MySQL operations", test_mysql, FALSE)

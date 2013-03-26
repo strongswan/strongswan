@@ -35,6 +35,7 @@ int main()
 	srunner_add_suite(sr, enumerator_suite_create());
 	srunner_add_suite(sr, linked_list_suite_create());
 	srunner_add_suite(sr, linked_list_enumerator_suite_create());
+	srunner_add_suite(sr, hashtable_suite_create());
 	srunner_add_suite(sr, identification_suite_create());
 
 	srunner_run_all(sr, CK_NORMAL);

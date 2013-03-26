@@ -22,7 +22,6 @@ libstrongswan_unit_tester_la_SOURCES = \
 	tests/test_med_db.c \
 	tests/test_chunk.c \
 	tests/test_pool.c \
-	tests/test_agent.c \
-	tests/test_hashtable.c
+	tests/test_agent.c
 
 libstrongswan_unit_tester_la_LDFLAGS = -module -avoid-version
