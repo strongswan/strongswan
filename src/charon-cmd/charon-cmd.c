@@ -243,18 +243,17 @@ static void usage(FILE *out, char *msg, char *binary)
  */
 static void handle_arguments(int argc, char *argv[])
 {
+	struct option long_opts[CMD_OPT_COUNT + 1] = {};
+	int i, opt;
+
+	for (i = 0; i < CMD_OPT_COUNT; i++)
+	{
+		long_opts[i].name = cmd_options[i].name;
+		long_opts[i].val = cmd_options[i].id;
+		long_opts[i].has_arg = cmd_options[i].has_arg;
+	}
 	while (TRUE)
 	{
-		struct option long_opts[CMD_OPT_COUNT + 1] = {};
-		int i, opt;
-
-		for (i = 0; i < CMD_OPT_COUNT; i++)
-		{
-			long_opts[i].name = cmd_options[i].name;
-			long_opts[i].val = cmd_options[i].id;
-			long_opts[i].has_arg = cmd_options[i].has_arg;
-		}
-
 		opt = getopt_long(argc, argv, "", long_opts, NULL);
 		switch (opt)
 		{
