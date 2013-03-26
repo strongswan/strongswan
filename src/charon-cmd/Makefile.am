@@ -1,7 +1,8 @@
 sbin_PROGRAMS = charon-cmd
 
 charon_cmd_SOURCES = \
-charon-cmd.c
+	cmd/cmd_options.h cmd/cmd_options.c \
+	charon-cmd.c
 
 charon-cmd.o :	$(top_builddir)/config.status
 
