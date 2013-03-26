@@ -82,6 +82,7 @@ struct linked_list_t {
 	 * current position.
 	 *
 	 * @param enumerator	enumerator to check
+	 * @return				TRUE if more elements follow after the current item
 	 */
 	bool (*has_more)(linked_list_t *this, enumerator_t *enumerator);
 
@@ -180,7 +181,8 @@ struct linked_list_t {
 	 */
 	status_t (*get_last) (linked_list_t *this, void **item);
 
-	/** Find the first matching element in the list.
+	/**
+	 * Find the first matching element in the list.
 	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
@@ -200,7 +202,8 @@ struct linked_list_t {
 	status_t (*find_first) (linked_list_t *this, linked_list_match_t match,
 							void **item, ...);
 
-	/** Find the last matching element in the list.
+	/**
+	 * Find the last matching element in the list.
 	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
