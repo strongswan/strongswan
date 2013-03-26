@@ -32,6 +32,7 @@ int main()
 	library_init(NULL);
 
 	sr = srunner_create(NULL);
+	srunner_add_suite(sr, chunk_suite_create());
 	srunner_add_suite(sr, enumerator_suite_create());
 	srunner_add_suite(sr, linked_list_suite_create());
 	srunner_add_suite(sr, linked_list_enumerator_suite_create());

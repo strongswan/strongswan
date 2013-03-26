@@ -27,7 +27,6 @@ DEFINE_TEST("RSA key generation", test_rsa_gen, FALSE)
 DEFINE_TEST("RSA subjectPublicKeyInfo loading", test_rsa_load_any, FALSE)
 DEFINE_TEST("X509 certificate", test_cert_x509, FALSE)
 DEFINE_TEST("Mediation database key fetch", test_med_db, FALSE)
-DEFINE_TEST("Base64 converter", test_chunk_base64, FALSE)
 DEFINE_TEST("IP pool", test_pool, FALSE)
 DEFINE_TEST("SSH agent", test_agent, FALSE)
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,13 +14,16 @@
  * for more details.
  */
 
-#include <library.h>
-#include <daemon.h>
+
+#include <check.h>
+
+#include <utils/chunk.h>
 
 /*******************************************************************************
- * Base64 encoding/decoding test
- ******************************************************************************/
-bool test_chunk_base64()
+ * BASE64 encoding test
+ */
+
+START_TEST(test_base64)
 {
 	/* test vectors from RFC4648:
 	 *
@@ -31,7 +35,6 @@ bool test_chunk_base64()
 	 * BASE64("fooba") = "Zm9vYmE="
 	 * BASE64("foobar") = "Zm9vYmFy"
 	 */
-
 	typedef struct {
 		char *in;
 		char *out;
@@ -53,13 +56,7 @@ bool test_chunk_base64()
 		chunk_t out;
 
 		out = chunk_to_base64(chunk_create(test[i].in, strlen(test[i].in)), NULL);
-
-		if (!streq(out.ptr, test[i].out))
-		{
-			DBG1(DBG_CFG, "base64 conversion error - should %s, is %s",
-				test[i].out, out.ptr);
-			return FALSE;
-		}
+		ck_assert_str_eq(out.ptr, test[i].out);
 		free(out.ptr);
 	}
 
@@ -68,15 +65,24 @@ bool test_chunk_base64()
 		chunk_t out;
 
 		out = chunk_from_base64(chunk_create(test[i].out, strlen(test[i].out)), NULL);
-
-		if (!strneq(out.ptr, test[i].in, out.len))
-		{
-			DBG1(DBG_CFG, "base64 conversion error - should %s, is %#B",
-				test[i].in, &out);
-			return FALSE;
-		}
+		fail_unless(strneq(out.ptr, test[i].in, out.len),
+					"base64 conversion error - should '%s', is %#B",
+					test[i].in, &out);
 		free(out.ptr);
 	}
-	return TRUE;
 }
+END_TEST
 
+Suite *chunk_suite_create()
+{
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("chunk");
+
+	tc = tcase_create("base64");
+	tcase_add_test(tc, test_base64);
+	suite_add_tcase(s, tc);
+
+	return s;
+}
