@@ -254,6 +254,8 @@ static void handle_arguments(int argc, char *argv[])
 	}
 	while (TRUE)
 	{
+		bool handled = FALSE;
+
 		opt = getopt_long(argc, argv, "", long_opts, NULL);
 		switch (opt)
 		{
@@ -266,8 +268,9 @@ static void handle_arguments(int argc, char *argv[])
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
 			default:
-				if (conn->handle(conn, opt, optarg) ||
-					creds->handle(creds, opt, optarg))
+				handled |= conn->handle(conn, opt, optarg);
+				handled |= creds->handle(creds, opt, optarg);
+				if (handled)
 				{
 					continue;
 				}
