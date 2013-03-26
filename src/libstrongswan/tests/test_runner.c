@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#include <unistd.h>
+
 #include "test_runner.h"
 
 #include <library.h>
@@ -24,6 +26,8 @@ int main()
 
 	/* if a test fails there is no cleanup, so disable leak detective */
 	setenv("LEAK_DETECTIVE_DISABLE", "1", 1);
+	/* redirect all output to stderr (to redirect make's stdout to /dev/null) */
+	dup2(2, 1);
 
 	library_init(NULL);
 
