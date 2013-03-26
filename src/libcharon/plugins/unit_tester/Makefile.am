@@ -12,7 +12,6 @@ endif
 
 libstrongswan_unit_tester_la_SOURCES = \
 	unit_tester.c unit_tester.h tests.h \
-	tests/test_enumerator.c \
 	tests/test_auth_info.c \
 	tests/test_curl.c \
 	tests/test_mysql.c \

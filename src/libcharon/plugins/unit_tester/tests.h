@@ -18,12 +18,7 @@
  * @{ @ingroup unit_tester
  */
 
-DEFINE_TEST("linked_list_t->remove()", test_list_remove, FALSE)
 DEFINE_TEST("hashtable_t->remove_at()", test_hashtable_remove_at, FALSE)
-DEFINE_TEST("simple enumerator", test_enumerate, FALSE)
-DEFINE_TEST("nested enumerator", test_enumerate_nested, FALSE)
-DEFINE_TEST("filtered enumerator", test_enumerate_filtered, FALSE)
-DEFINE_TEST("token enumerator", test_enumerate_token, FALSE)
 DEFINE_TEST("auth cfg", test_auth_cfg, FALSE)
 DEFINE_TEST("CURL get", test_curl_get, FALSE)
 DEFINE_TEST("MySQL operations", test_mysql, FALSE)
