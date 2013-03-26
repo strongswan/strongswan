@@ -29,4 +29,8 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "DNS name or address to connect to" },
 	{ CMD_OPT_IDENTITY, "identity", required_argument, "identity",
 	  "identity the client uses for the IKE exchange" },
+	{ CMD_OPT_CERT, "cert", required_argument, "path",
+	  "trusted certificate, for authentication or trust chain validation" },
+	{ CMD_OPT_RSA, "rsa", required_argument, "path",
+	  "RSA private key to use for authentication" },
 };

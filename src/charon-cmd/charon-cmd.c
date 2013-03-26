@@ -34,6 +34,7 @@
 
 #include "cmd/cmd_options.h"
 #include "cmd/cmd_connection.h"
+#include "cmd/cmd_creds.h"
 
 /**
  * Loglevel configuration
@@ -44,6 +45,11 @@ static level_t levels[DBG_MAX];
  * Connection to initiate
  */
 static cmd_connection_t *conn;
+
+/**
+ * Credential backend
+ */
+static cmd_creds_t *creds;
 
 /**
  * hook in library for debugging messages
@@ -73,6 +79,14 @@ static void dbg_stderr(debug_t group, level_t level, char *fmt, ...)
 static void cleanup_conn()
 {
 	DESTROY_IF(conn);
+}
+
+/**
+ * Clean up credentials atexit()
+ */
+static void cleanup_creds()
+{
+	DESTROY_IF(creds);
 }
 
 /**
@@ -253,7 +267,8 @@ static void handle_arguments(int argc, char *argv[])
 				printf("%s, strongSwan %s\n", "charon-cmd", VERSION);
 				exit(0);
 			default:
-				if (conn->handle(conn, opt, optarg))
+				if (conn->handle(conn, opt, optarg) ||
+					creds->handle(creds, opt, optarg))
 				{
 					continue;
 				}
@@ -300,24 +315,12 @@ int main(int argc, char *argv[])
 	{
 		levels[group] = LEVEL_CTRL;
 	}
-	conn = cmd_connection_create();
-	atexit(cleanup_conn);
-
-	handle_arguments(argc, argv);
+	charon->load_loggers(charon, levels, TRUE);
 
 	if (!lookup_uid_gid())
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	charon->load_loggers(charon, levels, TRUE);
-
-	if (uname(&utsname) != 0)
-	{
-		memset(&utsname, 0, sizeof(utsname));
-	}
-	DBG1(DBG_DMN, "Starting charon-cmd IKE client (strongSwan %s, %s %s, %s)",
-		 VERSION, utsname.sysname, utsname.release, utsname.machine);
-
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-cmd.load", PLUGINS)))
 	{
@@ -327,6 +330,20 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+
+	conn = cmd_connection_create();
+	atexit(cleanup_conn);
+	creds = cmd_creds_create();
+	atexit(cleanup_creds);
+
+	handle_arguments(argc, argv);
+
+	if (uname(&utsname) != 0)
+	{
+		memset(&utsname, 0, sizeof(utsname));
+	}
+	DBG1(DBG_DMN, "Starting charon-cmd IKE client (strongSwan %s, %s %s, %s)",
+		 VERSION, utsname.sysname, utsname.release, utsname.machine);
 
 	/* add handler for SEGV and ILL,
 	 * INT, TERM and HUP are handled by sigwait() in run() */
