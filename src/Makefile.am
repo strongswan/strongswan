@@ -104,6 +104,10 @@ if USE_TKM
   SUBDIRS += charon-tkm
 endif
 
+if USE_CMD
+  SUBDIRS += charon-cmd
+endif
+
 EXTRA_DIST = strongswan.conf
 
 install-exec-local :

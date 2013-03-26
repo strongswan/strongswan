@@ -84,6 +84,10 @@ if !MONOLITHIC
 endif
 endif
 
+if USE_CMD
+  exes += $(top_builddir)/src/charon-cmd/.libs/charon-cmd
+endif
+
 if USE_TOOLS
   exes += $(top_builddir)/src/openac/.libs/openac
   exes += $(top_builddir)/src/pki/.libs/pki
