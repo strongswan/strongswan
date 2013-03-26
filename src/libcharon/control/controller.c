@@ -412,6 +412,7 @@ METHOD(controller_t, initiate, status_t,
 		.refcount = 1,
 	);
 	job->listener.logger.listener = &job->listener;
+	thread_cleanup_push((void*)destroy_job, job);
 
 	if (callback == NULL)
 	{
@@ -425,7 +426,7 @@ METHOD(controller_t, initiate, status_t,
 		}
 	}
 	status = job->listener.status;
-	destroy_job(job);
+	thread_cleanup_pop(TRUE);
 	return status;
 }
 
@@ -500,6 +501,7 @@ METHOD(controller_t, terminate_ike, status_t,
 		.refcount = 1,
 	);
 	job->listener.logger.listener = &job->listener;
+	thread_cleanup_push((void*)destroy_job, job);
 
 	if (callback == NULL)
 	{
@@ -513,7 +515,7 @@ METHOD(controller_t, terminate_ike, status_t,
 		}
 	}
 	status = job->listener.status;
-	destroy_job(job);
+	thread_cleanup_pop(TRUE);
 	return status;
 }
 
@@ -615,6 +617,7 @@ METHOD(controller_t, terminate_child, status_t,
 		.refcount = 1,
 	);
 	job->listener.logger.listener = &job->listener;
+	thread_cleanup_push((void*)destroy_job, job);
 
 	if (callback == NULL)
 	{
@@ -628,7 +631,7 @@ METHOD(controller_t, terminate_child, status_t,
 		}
 	}
 	status = job->listener.status;
-	destroy_job(job);
+	thread_cleanup_pop(TRUE);
 	return status;
 }
 
