@@ -15,8 +15,11 @@
 
 #include "cmd_creds.h"
 
+#include <unistd.h>
+
 #include <utils/debug.h>
 #include <credentials/sets/mem_cred.h>
+#include <credentials/sets/callback_cred.h>
 
 typedef struct private_cmd_creds_t private_cmd_creds_t;
 
@@ -34,7 +37,49 @@ struct private_cmd_creds_t {
 	 * Reused in-memory credential set
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * Callback credential set to get secrets
+	 */
+	callback_cred_t *cb;
+
+	/**
+	 * Already prompted for password?
+	 */
+	bool prompted;
 };
+
+/**
+ * Callback function to prompt for secret
+ */
+static shared_key_t* callback_shared(private_cmd_creds_t *this,
+								shared_key_type_t type,
+								identification_t *me, identification_t *other,
+								id_match_t *match_me, id_match_t *match_other)
+{
+	char *label, *pwd;
+
+	if (this->prompted)
+	{
+		return NULL;
+	}
+	switch (type)
+	{
+		case SHARED_EAP:
+			label = "EAP password: ";
+			break;
+		default:
+			return NULL;
+	}
+	pwd = getpass(label);
+	if (!pwd || strlen(pwd) == 0)
+	{
+		return NULL;
+	}
+	this->prompted = TRUE;
+	*match_me = *match_other = ID_MATCH_PERFECT;
+	return shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+}
 
 /**
  * Load a trusted certificate from path
@@ -92,7 +137,9 @@ METHOD(cmd_creds_t, destroy, void,
 	private_cmd_creds_t *this)
 {
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	lib->credmgr->remove_set(lib->credmgr, &this->cb->set);
 	this->creds->destroy(this->creds);
+	this->cb->destroy(this->cb);
 	free(this);
 }
 
@@ -110,8 +157,10 @@ cmd_creds_t *cmd_creds_create()
 		},
 		.creds = mem_cred_create(),
 	);
+	this->cb = callback_cred_create_shared((void*)callback_shared, this);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->cb->set);
 
 	return &this->public;
 }
