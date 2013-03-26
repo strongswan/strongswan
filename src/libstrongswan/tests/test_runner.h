@@ -18,4 +18,6 @@
 
 #include <check.h>
 
+Suite *enumerator_suite_create();
+
 #endif /** TEST_RUNNER_H_ */

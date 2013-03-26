@@ -3,7 +3,8 @@ TESTS = test_runner
 check_PROGRAMS = $(TESTS)
 
 test_runner_SOURCES = \
-  test_runner.c test_runner.h
+  test_runner.c test_runner.h \
+  test_enumerator.c
 
 
 test_runner_CFLAGS = \
