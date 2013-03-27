@@ -20,7 +20,7 @@
 /**
  * Encode an RSA public key in DNSKEY format (RFC 3110)
  */
-bool build_pub(chunk_t *encoding, va_list args)
+static bool build_pub(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e, pubkey;
 	size_t exp_len;
@@ -53,7 +53,7 @@ bool build_pub(chunk_t *encoding, va_list args)
 			pubkey = chunk_alloc(exp_len + e.len + n.len);
 			pubkey.ptr[0] = 0x00;
 			htoun16(pubkey.ptr + 1, e.len);
-		}			
+		}
 		else
 		{
 			/* exponent length is too large */

@@ -22,7 +22,7 @@
 /**
  * Encode a public key in PKCS#1/ASN.1 DER
  */
-bool build_pub(chunk_t *encoding, va_list args)
+static bool build_pub(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
 
@@ -40,7 +40,7 @@ bool build_pub(chunk_t *encoding, va_list args)
 /**
  * Encode a public key in PKCS#1/ASN.1 DER, contained in subjectPublicKeyInfo
  */
-bool build_pub_info(chunk_t *encoding, va_list args)
+static bool build_pub_info(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e;
 
@@ -61,7 +61,7 @@ bool build_pub_info(chunk_t *encoding, va_list args)
 /**
  * Encode a private key in PKCS#1/ASN.1 DER
  */
-bool build_priv(chunk_t *encoding, va_list args)
+static bool build_priv(chunk_t *encoding, va_list args)
 {
 	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 
