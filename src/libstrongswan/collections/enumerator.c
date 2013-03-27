@@ -264,7 +264,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 		}
 	}
 
-	/* trim trailing characters/separators */
+	/* trim trailing characters */
 	pos--;
 	while (pos >= *token)
 	{
@@ -278,17 +278,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 			}
 			trim++;
 		}
-		sep = this->sep;
-		while (*sep)
-		{
-			if (*sep == *pos)
-			{
-				*(pos--) = '\0';
-				break;
-			}
-			sep++;
-		}
-		if (!*trim && !*sep)
+		if (!*trim)
 		{
 			break;
 		}
