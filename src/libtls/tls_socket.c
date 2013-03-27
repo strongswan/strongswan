@@ -67,7 +67,7 @@ struct private_tls_application_t {
 	chunk_t cache;
 
 	/**
-	 * Bytes cosnumed in cache
+	 * Bytes consumed in cache
 	 */
 	size_t cache_done;
 
