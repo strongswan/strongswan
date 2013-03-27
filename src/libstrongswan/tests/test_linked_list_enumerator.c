@@ -219,7 +219,7 @@ END_TEST
 START_TEST(test_replace)
 {
 	enumerator_t *enumerator;
-	intptr_t x;
+	intptr_t x, y;
 	int round;
 
 	round = 1;
@@ -227,7 +227,8 @@ START_TEST(test_replace)
 	while (enumerator->enumerate(enumerator, &x))
 	{
 		ck_assert_int_eq(round, x);
-		list->replace(list, enumerator, (void*)(uintptr_t)(6 - round));
+		y = (intptr_t)list->replace(list, enumerator, (void*)(intptr_t)(6 - round));
+		ck_assert_int_eq(round, y);
 		round++;
 	}
 	list->reset_enumerator(list, enumerator);
@@ -237,6 +238,20 @@ START_TEST(test_replace)
 		ck_assert_int_eq(round, x);
 		round--;
 	}
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
+START_TEST(test_replace_first)
+{
+	enumerator_t *enumerator;
+	intptr_t x;
+
+	enumerator = list->create_enumerator(list);
+	x = (intptr_t)list->replace(list, enumerator, (void*)6);
+	ck_assert_int_eq(x, 0);
+	ck_assert(enumerator->enumerate(enumerator, &x));
+	ck_assert_int_eq(x, 1);
 	enumerator->destroy(enumerator);
 }
 END_TEST
@@ -350,6 +365,7 @@ Suite *linked_list_enumerator_suite_create()
 	tc = tcase_create("modify");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_replace);
+	tcase_add_test(tc, test_replace_first);
 	tcase_add_test(tc, test_remove_at);
 	tcase_add_test(tc, test_remove_at_ends);
 	suite_add_tcase(s, tc);
