@@ -137,9 +137,8 @@ END_TEST
  * remove
  */
 
-START_TEST(test_remove)
+static void do_remove(char *k1, char *k2, char *k3)
 {
-	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
 
 	ht->put(ht, k1, v1);
@@ -163,6 +162,26 @@ START_TEST(test_remove)
 	ck_assert(ht->get(ht, k1) == NULL);
 	ck_assert(ht->get(ht, k2) == NULL);
 	ck_assert(ht->get(ht, k3) == NULL);
+}
+
+START_TEST(test_remove)
+{
+	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
+
+	do_remove(k1, k2, k3);
+}
+END_TEST
+
+START_TEST(test_remove_one_bucket)
+{
+	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+
+	ht->destroy(ht);
+	/* set a capacity to avoid rehashing, which would change the items' order */
+	ht = hashtable_create((hashtable_hash_t)hash_match,
+						  (hashtable_equals_t)equals, 8);
+
+	do_remove(k1, k2, k3);
 }
 END_TEST
 
@@ -195,6 +214,15 @@ START_TEST(test_enumerator)
 	enumerator->destroy(enumerator);
 	ck_assert_int_eq(count, 3);
 
+	count = 0;
+	enumerator = ht->create_enumerator(ht);
+	while (enumerator->enumerate(enumerator, NULL, NULL))
+	{
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 3);
+
 	value = ht->remove(ht, k1);
 	value = ht->remove(ht, k2);
 	value = ht->remove(ht, k3);
@@ -214,10 +242,9 @@ END_TEST
  * remove_at
  */
 
-START_TEST(test_remove_at)
+static void do_remove_at(char *k1, char *k2, char *k3)
 {
-	char *k1 = "key1", *k2 = "key2", *k3 = "key3", *key;
-	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value, *key;
 	enumerator_t *enumerator;
 
 	ht->put(ht, k1, v1);
@@ -225,6 +252,7 @@ START_TEST(test_remove_at)
 	ht->put(ht, k3, v3);
 
 	enumerator = ht->create_enumerator(ht);
+	ht->remove_at(ht, enumerator);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		if (streq(key, k2))
@@ -258,6 +286,25 @@ START_TEST(test_remove_at)
 	ck_assert(ht->get(ht, k2) == NULL);
 	ck_assert(ht->get(ht, k3) == NULL);
 }
+
+START_TEST(test_remove_at)
+{
+	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
+
+	do_remove_at(k1, k2, k3);
+}
+END_TEST
+
+START_TEST(test_remove_at_one_bucket)
+{
+	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+
+	ht->destroy(ht);
+	/* set a capacity to avoid rehashing, which would change the items' order */
+	ht = hashtable_create((hashtable_hash_t)hash_match,
+						  (hashtable_equals_t)equals, 8);
+	do_remove_at(k1, k2, k3);
+}
 END_TEST
 
 Suite *hashtable_suite_create()
@@ -279,6 +326,7 @@ Suite *hashtable_suite_create()
 	tc = tcase_create("remove");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
 	tcase_add_test(tc, test_remove);
+	tcase_add_test(tc, test_remove_one_bucket);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("enumerator");
@@ -289,6 +337,7 @@ Suite *hashtable_suite_create()
 	tc = tcase_create("remove_at");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
 	tcase_add_test(tc, test_remove_at);
+	tcase_add_test(tc, test_remove_at_one_bucket);
 	suite_add_tcase(s, tc);
 
 	return s;
