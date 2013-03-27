@@ -254,6 +254,138 @@ START_TEST(test_find_callback)
 }
 END_TEST
 
+/*******************************************************************************
+ * invoke
+ */
+
+typedef struct invoke_t invoke_t;
+
+struct invoke_t {
+	int val;
+	void (*invoke)(invoke_t *item, void *a, void *b, void *c, void *d, int *sum);
+};
+
+static void invoke(intptr_t item, void *a, void *b, void *c, void *d, int *sum)
+{
+	ck_assert(a == (void*)1);
+	ck_assert(b == (void*)2);
+	ck_assert(c == (void*)3);
+	ck_assert(d == (void*)4);
+	*sum += item;
+}
+
+static void invoke_offset(invoke_t *item, void *a, void *b, void *c, void *d, int *sum)
+{
+	invoke(item->val, a, b, c, d, sum);
+}
+
+START_TEST(test_invoke_function)
+{
+	int sum = 0;
+
+	list->insert_last(list, (void*)1);
+	list->insert_last(list, (void*)2);
+	list->insert_last(list, (void*)3);
+	list->insert_last(list, (void*)4);
+	list->insert_last(list, (void*)5);
+	list->invoke_function(list, (linked_list_invoke_t)invoke, 1, 2, 3, 4, &sum);
+	ck_assert_int_eq(sum, 15);
+}
+END_TEST
+
+START_TEST(test_invoke_offset)
+{
+	invoke_t items[] = {
+		{ .val = 1, .invoke = invoke_offset, },
+		{ .val = 2, .invoke = invoke_offset, },
+		{ .val = 3, .invoke = invoke_offset, },
+		{ .val = 4, .invoke = invoke_offset, },
+		{ .val = 5, .invoke = invoke_offset, },
+	};
+	int i, sum = 0;
+
+	for (i = 0; i < countof(items); i++)
+	{
+		list->insert_last(list, &items[i]);
+	}
+	list->invoke_offset(list, offsetof(invoke_t, invoke), 1, 2, 3, 4, &sum);
+	ck_assert_int_eq(sum, 15);
+}
+END_TEST
+
+/*******************************************************************************
+ * clone
+ */
+
+typedef struct clone_t clone_t;
+
+struct clone_t {
+	void *val;
+	void *(*clone)(clone_t *item);
+};
+
+static void *clone(void *item)
+{
+	return item;
+}
+
+static void *clone_offset(clone_t *item)
+{
+	return clone(item->val);
+}
+
+static void test_clone(linked_list_t *list)
+{
+	intptr_t x;
+	int round = 1;
+
+	ck_assert_int_eq(list->get_count(list), 5);
+	while (list->remove_first(list, (void*)&x) == SUCCESS)
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	ck_assert_int_eq(round, 6);
+}
+
+START_TEST(test_clone_function)
+{
+	linked_list_t *other;
+
+	list->insert_last(list, (void*)1);
+	list->insert_last(list, (void*)2);
+	list->insert_last(list, (void*)3);
+	list->insert_last(list, (void*)4);
+	list->insert_last(list, (void*)5);
+
+	other = list->clone_function(list, clone);
+	test_clone(other);
+	other->destroy(other);
+}
+END_TEST
+
+START_TEST(test_clone_offset)
+{
+	linked_list_t *other;
+	clone_t items[] = {
+		{ .val = (void*)1, .clone = clone_offset, },
+		{ .val = (void*)2, .clone = clone_offset, },
+		{ .val = (void*)3, .clone = clone_offset, },
+		{ .val = (void*)4, .clone = clone_offset, },
+		{ .val = (void*)5, .clone = clone_offset, },
+	};
+	int i;
+
+	for (i = 0; i < countof(items); i++)
+	{
+		list->insert_last(list, &items[i]);
+	}
+	other = list->clone_offset(list, offsetof(clone_t, clone));
+	test_clone(other);
+	other->destroy(other);
+}
+END_TEST
+
 Suite *linked_list_suite_create()
 {
 	Suite *s;
@@ -279,6 +411,18 @@ Suite *linked_list_suite_create()
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_find);
 	tcase_add_test(tc, test_find_callback);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("invoke");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_invoke_function);
+	tcase_add_test(tc, test_invoke_offset);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("clone");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_clone_function);
+	tcase_add_test(tc, test_clone_offset);
 	suite_add_tcase(s, tc);
 
 	return s;
