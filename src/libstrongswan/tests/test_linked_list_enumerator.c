@@ -79,6 +79,21 @@ START_TEST(test_reset_enumerator)
 }
 END_TEST
 
+START_TEST(test_has_more_empty)
+{
+	enumerator_t *enumerator;
+	intptr_t x;
+
+	list->destroy(list);
+	list = linked_list_create();
+	enumerator = list->create_enumerator(list);
+	ck_assert(!list->has_more(list, enumerator));
+	ck_assert(!enumerator->enumerate(enumerator, &x));
+	ck_assert(!list->has_more(list, enumerator));
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
 START_TEST(test_has_more)
 {
 	enumerator_t *enumerator;
@@ -280,6 +295,36 @@ START_TEST(test_remove_at_ends)
 }
 END_TEST
 
+/*******************************************************************************
+ * create list from enumerator
+ */
+
+START_TEST(test_create_from_enumerator)
+{
+	enumerator_t *enumerator, *enumerator_other;
+	linked_list_t *other;
+	intptr_t x, y;
+	int count = 0;
+
+	enumerator = list->create_enumerator(list);
+	other = linked_list_create_from_enumerator(enumerator);
+	ck_assert_int_eq(other->get_count(list), 5);
+
+	enumerator = list->create_enumerator(list);
+	enumerator_other = other->create_enumerator(other);
+	while (enumerator->enumerate(enumerator, &x) &&
+		   enumerator_other->enumerate(enumerator_other, &y))
+	{
+		ck_assert_int_eq(x, y);
+		count++;
+	}
+	ck_assert_int_eq(count, 5);
+	enumerator_other->destroy(enumerator_other);
+	enumerator->destroy(enumerator);
+	other->destroy(other);
+}
+END_TEST
+
 Suite *linked_list_enumerator_suite_create()
 {
 	Suite *s;
@@ -291,6 +336,7 @@ Suite *linked_list_enumerator_suite_create()
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_enumerate);
 	tcase_add_test(tc, test_reset_enumerator);
+	tcase_add_test(tc, test_has_more_empty);
 	tcase_add_test(tc, test_has_more);
 	suite_add_tcase(s, tc);
 
@@ -306,6 +352,11 @@ Suite *linked_list_enumerator_suite_create()
 	tcase_add_test(tc, test_replace);
 	tcase_add_test(tc, test_remove_at);
 	tcase_add_test(tc, test_remove_at_ends);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("create_from_enumerator");
+	tcase_add_checked_fixture(tc, setup_list, teardown_list);
+	tcase_add_test(tc, test_create_from_enumerator);
 	suite_add_tcase(s, tc);
 
 	return s;
