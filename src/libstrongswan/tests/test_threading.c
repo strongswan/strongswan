@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,41 +14,43 @@
  * for more details.
  */
 
-#include <library.h>
-#include <threading/mutex.h>
-
-#include <unistd.h>
+#include <check.h>
 #include <sched.h>
 #include <pthread.h>
 
+#include <threading/mutex.h>
+
+/*******************************************************************************
+ * recursive mutex test
+ */
+
+#define THREADS 20
 
 static mutex_t *mutex;
 
-static int locked = 0;
+static pthread_barrier_t mutex_barrier;
 
-static bool failed = FALSE;
+static int mutex_locked = 0;
 
-static pthread_barrier_t barrier;
-
-static void* run(void* null)
+static void *mutex_run(void *data)
 {
 	int i;
 
 	/* wait for all threads before getting in action */
-	pthread_barrier_wait(&barrier);
+	pthread_barrier_wait(&mutex_barrier);
 
 	for (i = 0; i < 100; i++)
 	{
 		mutex->lock(mutex);
 		mutex->lock(mutex);
 		mutex->lock(mutex);
-		locked++;
+		mutex_locked++;
 		sched_yield();
-		if (locked > 1)
+		if (mutex_locked > 1)
 		{
-			failed = TRUE;
+			fail("two threads locked the mutex concurrently");
 		}
-		locked--;
+		mutex_locked--;
 		mutex->unlock(mutex);
 		mutex->unlock(mutex);
 		mutex->unlock(mutex);
@@ -55,15 +58,10 @@ static void* run(void* null)
 	return NULL;
 }
 
-#define THREADS 20
-
-/*******************************************************************************
- * mutex test
- ******************************************************************************/
-bool test_mutex()
+START_TEST(test_mutex)
 {
-	int i;
 	pthread_t threads[THREADS];
+	int i;
 
 	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 
@@ -81,20 +79,31 @@ bool test_mutex()
 		mutex->unlock(mutex);
 	}
 
-	pthread_barrier_init(&barrier, NULL, THREADS);
-
+	pthread_barrier_init(&mutex_barrier, NULL, THREADS);
 	for (i = 0; i < THREADS; i++)
 	{
-		pthread_create(&threads[i], NULL, run, NULL);
+		pthread_create(&threads[i], NULL, mutex_run, NULL);
 	}
 	for (i = 0; i < THREADS; i++)
 	{
 		pthread_join(threads[i], NULL);
 	}
-	pthread_barrier_destroy(&barrier);
+	pthread_barrier_destroy(&mutex_barrier);
 
 	mutex->destroy(mutex);
-
-	return !failed;
 }
+END_TEST
 
+Suite *threading_suite_create()
+{
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("threading");
+
+	tc = tcase_create("recursive mutex");
+	tcase_add_test(tc, test_mutex);
+	suite_add_tcase(s, tc);
+
+	return s;
+}
