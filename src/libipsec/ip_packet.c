@@ -19,6 +19,7 @@
 #include <library.h>
 #include <utils/debug.h>
 
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #ifdef HAVE_NETINET_IP6_H
