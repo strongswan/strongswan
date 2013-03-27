@@ -124,7 +124,7 @@ START_TEST(test_insert_before)
 	{
 		ck_assert_int_eq(round, x);
 		round++;
-		if (x == 2)
+		if (x == _i)
 		{
 			list->insert_before(list, enumerator, (void*)6);
 		}
@@ -134,7 +134,7 @@ START_TEST(test_insert_before)
 	round = 1;
 	while (enumerator->enumerate(enumerator, &x))
 	{
-		if (round == 2 && x != 2)
+		if (round == _i && x != _i)
 		{
 			ck_assert_int_eq(6, x);
 		}
@@ -296,7 +296,7 @@ Suite *linked_list_enumerator_suite_create()
 
 	tc = tcase_create("insert_before()");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
-	tcase_add_test(tc, test_insert_before);
+	tcase_add_loop_test(tc, test_insert_before, 1, 5);
 	tcase_add_test(tc, test_insert_before_ends);
 	tcase_add_test(tc, test_insert_before_empty);
 	suite_add_tcase(s, tc);
