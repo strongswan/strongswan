@@ -1178,7 +1178,7 @@ AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 #  hydra plugins
 # ---------------
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
-AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
