@@ -8,9 +8,9 @@ test_runner_SOURCES = \
   test_chunk.c test_hashtable.c test_identification.c \
   test_threading.c test_utils.c
 
-
 test_runner_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
+  @COVERAGE_CFLAGS@ \
   @CHECK_CFLAGS@
 
 test_runner_LDFLAGS = @COVERAGE_LDFLAGS@
