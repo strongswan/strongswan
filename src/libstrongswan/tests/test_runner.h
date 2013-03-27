@@ -25,5 +25,6 @@ Suite *linked_list_enumerator_suite_create();
 Suite *hashtable_suite_create();
 Suite *identification_suite_create();
 Suite *threading_suite_create();
+Suite *utils_suite_create();
 
 #endif /** TEST_RUNNER_H_ */
