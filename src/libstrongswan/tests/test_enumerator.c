@@ -77,12 +77,25 @@ START_TEST(test_token)
 END_TEST
 
 /*******************************************************************************
- * utility for filtered and nested tests
+ * utilities for filtered, nested and cleaner tests
  */
+
+static int destroy_data_called;
+
+static void setup_destroy_data()
+{
+	destroy_data_called = 0;
+}
+
+static void teardown_destroy_data()
+{
+	ck_assert_int_eq(destroy_data_called, 1);
+}
 
 static void destroy_data(void *data)
 {
 	fail_if(data != (void*)101, "data does not match '101' in destructor");
+	destroy_data_called++;
 }
 
 /*******************************************************************************
@@ -101,6 +114,13 @@ static bool filter(void *data, int *v, int *vo, int *w, int *wo,
 	*zo = val++;
 	fail_if(data != (void*)101, "data does not match '101' in filter function");
 	return TRUE;
+}
+
+static bool filter_odd(void *data, int *item, int *out)
+{
+	fail_if(data != (void*)101, "data does not match '101' in filter function");
+	*out = *item;
+	return *item % 2 == 0;
 }
 
 START_TEST(test_filtered)
@@ -125,6 +145,33 @@ START_TEST(test_filtered)
 		round++;
 	}
 	enumerator->destroy(enumerator);
+	ck_assert_int_eq(round, 6);
+
+	list->destroy(list);
+}
+END_TEST
+
+START_TEST(test_filtered_filter)
+{
+	int count, x;
+	linked_list_t *list;
+	enumerator_t *enumerator;
+
+	list = linked_list_create_with_items((void*)1, (void*)2, (void*)3, (void*)4,
+										 (void*)5, NULL);
+
+	count = 0;
+	/* should also work without destructor, so set this manually */
+	destroy_data_called = 1;
+	enumerator = enumerator_create_filter(list->create_enumerator(list),
+										 (void*)filter_odd, (void*)101, NULL);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert(x % 2 == 0);
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 2);
 
 	list->destroy(list);
 }
@@ -140,12 +187,19 @@ static enumerator_t* create_inner(linked_list_t *outer, void *data)
 	return outer->create_enumerator(outer);
 }
 
+static enumerator_t* create_inner_null(void *outer, void *data)
+{
+	ck_assert(outer == (void*)1);
+	fail_if(data != (void*)101, "data does not match '101' in nested constr.");
+	return NULL;
+}
+
 START_TEST(test_nested)
 {
-	intptr_t x;
-	int round;
 	linked_list_t *list, *l1, *l2, *l3;
 	enumerator_t *enumerator;
+	intptr_t x;
+	int round;
 
 	l1 = linked_list_create_with_items((void*)1, (void*)2, NULL);
 	l2 = linked_list_create();
@@ -154,18 +208,163 @@ START_TEST(test_nested)
 
 	round = 1;
 	enumerator = enumerator_create_nested(list->create_enumerator(list),
-					(void*)create_inner, (void*)101, destroy_data);
+								(void*)create_inner, (void*)101, destroy_data);
 	while (enumerator->enumerate(enumerator, &x))
 	{
 		ck_assert_int_eq(round, x);
 		round++;
 	}
 	enumerator->destroy(enumerator);
+	ck_assert_int_eq(round, 6);
 
 	list->destroy(list);
 	l1->destroy(l1);
 	l2->destroy(l2);
 	l3->destroy(l3);
+}
+END_TEST
+
+START_TEST(test_nested_reset)
+{
+	linked_list_t *list, *l1, *l2, *l3;
+	enumerator_t *outer, *enumerator;
+	intptr_t x;
+	int count = 0;
+
+	l1 = linked_list_create_with_items((void*)1, (void*)2, NULL);
+	l2 = linked_list_create();
+	l3 = linked_list_create_with_items((void*)3, (void*)4, (void*)5, NULL);
+	list = linked_list_create_with_items(l1, l2, l3, NULL);
+
+	outer = list->create_enumerator(list);
+	enumerator = enumerator_create_nested(outer, (void*)create_inner,
+										 (void*)101, destroy_data);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		count++;
+	}
+	ck_assert_int_eq(count, 5);
+
+	list->reset_enumerator(list, outer);
+	ck_assert(enumerator->enumerate(enumerator, &x));
+	ck_assert_int_eq(x, 1);
+	enumerator->destroy(enumerator);
+
+	list->destroy(list);
+	l1->destroy(l1);
+	l2->destroy(l2);
+	l3->destroy(l3);
+}
+END_TEST
+
+START_TEST(test_nested_empty)
+{
+	linked_list_t *list;
+	enumerator_t *enumerator;
+	intptr_t x;
+	int count;
+
+	list = linked_list_create();
+	count = 0;
+	enumerator = enumerator_create_nested(list->create_enumerator(list),
+								(void*)create_inner, (void*)101, destroy_data);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 0);
+
+	list->destroy(list);
+}
+END_TEST
+
+START_TEST(test_nested_null)
+{
+	linked_list_t *list;
+	enumerator_t *enumerator;
+	intptr_t x;
+	int count;
+
+	list = linked_list_create_with_items((void*)1, NULL);
+
+	count = 0;
+	/* should also work without destructor, so set this manually */
+	destroy_data_called = 1;
+	enumerator = enumerator_create_nested(list->create_enumerator(list),
+									(void*)create_inner_null, (void*)101, NULL);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 0);
+
+	list->destroy(list);
+}
+END_TEST
+
+/*******************************************************************************
+ * cleaner test
+ */
+
+START_TEST(test_cleaner)
+{
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	intptr_t x;
+	int round;
+
+	list = linked_list_create_with_items((void*)1, (void*)2, NULL);
+
+	round = 1;
+	enumerator = enumerator_create_cleaner(list->create_enumerator(list),
+										   destroy_data, (void*)101);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		round++;
+	}
+	ck_assert_int_eq(round, 3);
+	enumerator->destroy(enumerator);
+	list->destroy(list);
+}
+END_TEST
+
+/*******************************************************************************
+ * single test
+ */
+
+static void single_cleanup(void *data)
+{
+	ck_assert_int_eq((intptr_t)data, 1);
+}
+
+static void do_test_single(enumerator_t *enumerator)
+{
+	intptr_t x;
+
+	ck_assert(enumerator->enumerate(enumerator, &x));
+	ck_assert_int_eq(x, 1);
+	ck_assert(!enumerator->enumerate(enumerator, &x));
+	enumerator->destroy(enumerator);
+}
+
+START_TEST(test_single)
+{
+	enumerator_t *enumerator;
+
+	enumerator = enumerator_create_single((void*)1, NULL);
+	do_test_single(enumerator);
+}
+END_TEST
+
+START_TEST(test_single_cleanup)
+{
+	enumerator_t *enumerator;
+
+	enumerator = enumerator_create_single((void*)1, single_cleanup);
+	do_test_single(enumerator);
 }
 END_TEST
 
@@ -181,11 +380,27 @@ Suite *enumerator_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("filtered");
+	tcase_add_checked_fixture(tc, setup_destroy_data, teardown_destroy_data);
 	tcase_add_test(tc, test_filtered);
+	tcase_add_test(tc, test_filtered_filter);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("nested");
+	tcase_add_checked_fixture(tc, setup_destroy_data, teardown_destroy_data);
 	tcase_add_test(tc, test_nested);
+	tcase_add_test(tc, test_nested_reset);
+	tcase_add_test(tc, test_nested_empty);
+	tcase_add_test(tc, test_nested_null);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("cleaner");
+	tcase_add_checked_fixture(tc, setup_destroy_data, teardown_destroy_data);
+	tcase_add_test(tc, test_cleaner);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("single");
+	tcase_add_test(tc, test_single);
+	tcase_add_test(tc, test_single_cleanup);
 	suite_add_tcase(s, tc);
 
 	return s;
