@@ -34,3 +34,7 @@ apidoc/
 *.tar.bz2
 *.tar.gz
 .DS_Store
+coverage/
+*.gcno
+*.gcda
+*.gcov

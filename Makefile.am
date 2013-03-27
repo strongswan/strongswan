@@ -37,5 +37,33 @@ Doxyfile :	Doxyfile.in
 apidoc :	Doxyfile
 		doxygen
 
+if COVERAGE
+cov-reset:
+		@rm -rf $(top_builddir)/coverage
+		@find $(top_builddir) -name "*.gcda" -delete
+		@lcov --zerocounters --directory $(top_builddir)
+
+cov-report:
+		@mkdir $(top_builddir)/coverage
+		lcov -c -o $(top_builddir)/coverage/coverage.info -d $(top_builddir)
+		genhtml --num-spaces 4 --legend \
+				-t "$(PACKAGE_STRING)" \
+				-o $(top_builddir)/coverage/html \
+				-p `readlink -m $(abs_top_srcdir)`/src \
+				$(top_builddir)/coverage/coverage.info
+		@echo "Coverage Report at $(top_builddir)/coverage/html" >&2
+
+coverage:
+		@$(MAKE) cov-reset
+		@$(MAKE) check
+		@$(MAKE) cov-report
+else
+cov-reset:
+
+coverage:
+		@echo "reconfigure with --enable-coverage"
+endif
+
 clean-local:
+		@$(MAKE) cov-reset
 		rm -rf apidoc
