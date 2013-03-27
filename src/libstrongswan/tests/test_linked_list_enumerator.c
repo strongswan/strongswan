@@ -42,7 +42,8 @@ static void teardown_list()
 START_TEST(test_enumerate)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	round = 1;
 	enumerator = list->create_enumerator(list);
@@ -59,7 +60,8 @@ END_TEST
 START_TEST(test_reset_enumerator)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &x))
@@ -80,7 +82,8 @@ END_TEST
 START_TEST(test_has_more)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	round = 1;
 	enumerator = list->create_enumerator(list);
@@ -112,7 +115,8 @@ END_TEST
 START_TEST(test_insert_before)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	round = 1;
 	enumerator = list->create_enumerator(list);
@@ -147,7 +151,8 @@ END_TEST
 START_TEST(test_insert_before_ends)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	enumerator = list->create_enumerator(list);
 	list->insert_before(list, enumerator, (void*)0);
@@ -173,7 +178,7 @@ END_TEST
 START_TEST(test_insert_before_empty)
 {
 	enumerator_t *enumerator;
-	int x;
+	intptr_t x;
 
 	list->destroy(list);
 	list = linked_list_create();
@@ -199,7 +204,8 @@ END_TEST
 START_TEST(test_replace)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	round = 1;
 	enumerator = list->create_enumerator(list);
@@ -223,7 +229,8 @@ END_TEST
 START_TEST(test_remove_at)
 {
 	enumerator_t *enumerator;
-	int round, x;
+	intptr_t x;
+	int round;
 
 	round = 1;
 	enumerator = list->create_enumerator(list);
@@ -255,7 +262,7 @@ END_TEST
 START_TEST(test_remove_at_ends)
 {
 	enumerator_t *enumerator;
-	int x;
+	intptr_t x;
 
 	enumerator = list->create_enumerator(list);
 	list->remove_at(list, enumerator);

@@ -142,7 +142,8 @@ static enumerator_t* create_inner(linked_list_t *outer, void *data)
 
 START_TEST(test_nested)
 {
-	int round, x;
+	intptr_t x;
+	int round;
 	linked_list_t *list, *l1, *l2, *l3;
 	enumerator_t *enumerator;
 
