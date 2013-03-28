@@ -191,9 +191,9 @@ static inline void chunk_clear(chunk_t *chunk)
 #define chunk_from_thing(thing) chunk_create((char*)&(thing), sizeof(thing))
 
 /**
- * Initialize a chunk from a static string, not containing 0-terminator
+ * Initialize a chunk from a string, not containing 0-terminator
  */
-#define chunk_from_str(str) chunk_create(str, strlen(str))
+#define chunk_from_str(str) ({char *x = (str); chunk_create(x, strlen(x));})
 
 /**
  * Allocate a chunk on the heap
