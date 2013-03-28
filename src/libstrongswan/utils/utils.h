@@ -376,11 +376,6 @@ typedef struct timespec timespec_t;
 typedef struct sockaddr sockaddr_t;
 
 /**
- * Clone a data to a newly allocated buffer
- */
-void *clalloc(void *pointer, size_t size);
-
-/**
  * Same as memcpy, but XORs src into dst instead of copy
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
