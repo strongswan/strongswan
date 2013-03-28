@@ -102,7 +102,12 @@ void memwipe_noinline(void *ptr, size_t n)
 void *memstr(const void *haystack, const char *needle, size_t n)
 {
 	unsigned const char *pos = haystack;
-	size_t l = strlen(needle);
+	size_t l;
+
+	if (!haystack || !needle || (l = strlen(needle)) == 0)
+	{
+		return NULL;
+	}
 	for (; n >= l; ++pos, --n)
 	{
 		if (memeq(pos, needle, l))
