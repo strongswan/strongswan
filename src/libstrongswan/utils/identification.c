@@ -915,7 +915,7 @@ identification_t *identification_create_from_string(char *string)
 		else
 		{
 			this = identification_create(ID_KEY_ID);
-			this->encoded = chunk_clone(chunk_create(string, strlen(string)));
+			this->encoded = chunk_from_str(strdup(string));
 		}
 		return &this->public;
 	}
@@ -948,11 +948,7 @@ identification_t *identification_create_from_string(char *string)
 				else
 				{	/* not IPv4, mostly FQDN */
 					this = identification_create(ID_FQDN);
-					this->encoded.len = strlen(string);
-					if (this->encoded.len)
-					{
-						this->encoded.ptr = strdup(string);
-					}
+					this->encoded = chunk_from_str(strdup(string));
 				}
 				return &this->public;
 			}
@@ -969,11 +965,7 @@ identification_t *identification_create_from_string(char *string)
 				else
 				{	/* not IPv4/6 fallback to KEY_ID */
 					this = identification_create(ID_KEY_ID);
-					this->encoded.len = strlen(string);
-					if (this->encoded.len)
-					{
-						this->encoded.ptr = strdup(string);
-					}
+					this->encoded = chunk_from_str(strdup(string));
 				}
 				return &this->public;
 			}
@@ -997,7 +989,7 @@ identification_t *identification_create_from_string(char *string)
 				string += 1;
 				this->encoded.len = strlen(string);
 				if (this->encoded.len)
-				{
+				{	/* if we only got an @ */
 					this->encoded.ptr = strdup(string);
 				}
 				return &this->public;
@@ -1006,11 +998,7 @@ identification_t *identification_create_from_string(char *string)
 		else
 		{
 			this = identification_create(ID_RFC822_ADDR);
-			this->encoded.len = strlen(string);
-			if (this->encoded.len)
-			{
-				this->encoded.ptr = strdup(string);
-			}
+			this->encoded = chunk_from_str(strdup(string));
 			return &this->public;
 		}
 	}
