@@ -169,11 +169,11 @@ ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verif
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actually verify or even request any credentials.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module.])
-ARG_ENABL_SET([tnc-ifmap2],     [enable TNC IF-MAP v2 module.])
+ARG_ENABL_SET([tnc-ifmap2],     [enable TNC IF-MAP v2 module. Requires libxml])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
-ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
+ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module. Requires libxml])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
 ARG_ENABL_SET([imc-test],       [enable IMC test module.])
@@ -339,7 +339,7 @@ if test x$fips_prf = xtrue; then
 	fi
 fi
 
-if test x$smp = xtrue -o x$tnccs_11 = xtrue; then
+if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap2 = xtrue; then
 	xml=true
 fi
 
