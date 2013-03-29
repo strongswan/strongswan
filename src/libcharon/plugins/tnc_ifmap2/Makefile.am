@@ -20,7 +20,8 @@ libstrongswan_tnc_ifmap2_la_LIBADD = \
 libstrongswan_tnc_ifmap2_la_SOURCES = \
 	tnc_ifmap2_plugin.h tnc_ifmap2_plugin.c \
 	tnc_ifmap2_listener.h tnc_ifmap2_listener.c \
-	tnc_ifmap2_soap.h tnc_ifmap2_soap.c
+	tnc_ifmap2_soap.h tnc_ifmap2_soap.c \
+	tnc_ifmap2_soap_msg.h tnc_ifmap2_soap_msg.c
 
 libstrongswan_tnc_ifmap2_la_LDFLAGS = -module -avoid-version
 
