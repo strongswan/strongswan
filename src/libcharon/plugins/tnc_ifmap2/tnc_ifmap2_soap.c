@@ -212,6 +212,30 @@ static xmlNodePtr create_identity(private_tnc_ifmap2_soap_t *this,
 }
 
 /**
+ * Create enforcement-report metadata
+ */
+static xmlNodePtr create_enforcement_report(private_tnc_ifmap2_soap_t *this,
+											xmlChar *action, xmlChar *reason)
+{
+	xmlNodePtr node, node2, node3;
+
+	node = xmlNewNode(NULL, "metadata");
+	node2 = xmlNewNode(this->ns_meta, "enforcement-report");
+	xmlAddChild(node, node2);
+	xmlNewProp(node2, "ifmap-cardinality", "multiValue");
+
+	node3 = xmlNewNode(NULL, "enforcement-action");
+	xmlAddChild(node2, node3);
+	xmlNodeAddContent(node3, action);
+
+	node3 = xmlNewNode(NULL, "enforcement-reason");
+	xmlAddChild(node2, node3);
+	xmlNodeAddContent(node3, reason);
+
+    return node;
+}
+
+/**
  * Create delete filter
  */
 static xmlNodePtr create_delete_filter(private_tnc_ifmap2_soap_t *this,
@@ -523,17 +547,45 @@ METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
 	private_tnc_ifmap2_soap_t *this, host_t *host, char *action, char *reason)
 {
-	/* send publish request and receive publishReceived */
-	/* return send_receive(this, "publish", request, "publishReceived", NULL); */
-	return FALSE;
+	tnc_ifmap2_soap_msg_t *soap_msg;
+	xmlNodePtr request, update;
+	bool success;
+
+	/* build publish update request */
+	request = create_publish_request(this);
+	update = xmlNewNode(NULL, "update");
+	xmlAddChild(request, update);
+
+	/* add ip-address and metadata */
+	xmlAddChild(update, create_ip_address(this, host));
+	xmlAddChild(update, create_device(this));
+	xmlAddChild(update, create_enforcement_report(this, action, reason));
+
+	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
+	soap_msg->destroy(soap_msg);
+
+	return success;
 }
 
 METHOD(tnc_ifmap2_soap_t, endSession, bool,
 	private_tnc_ifmap2_soap_t *this)
 {
-	/* send endSession request and receive end SessionResult */
-	/* return send_receive(this, "endSession", request, "endSessionResult", NULL); */
-	return FALSE;
+	tnc_ifmap2_soap_msg_t *soap_msg;
+	xmlNodePtr request;
+	bool success;
+
+	/* build endSession request */
+	request = xmlNewNode(NULL, "endSession");
+	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
+	xmlSetNs(request, this->ns);
+	xmlNewProp(request, "session-id", this->session_id);
+
+	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	success = soap_msg->post(soap_msg, request, "endSessionResult", NULL);
+	soap_msg->destroy(soap_msg);
+
+	return success;
 }
 
 METHOD(tnc_ifmap2_soap_t, destroy, void,
