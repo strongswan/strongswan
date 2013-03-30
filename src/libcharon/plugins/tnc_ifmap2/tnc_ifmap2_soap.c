@@ -149,6 +149,87 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 }
 
 /**
+ * Create an access-request based on device_name and ike_sa_id
+ */
+static xmlNodePtr create_access_request(private_tnc_ifmap2_soap_t *this,
+										u_int32_t id)
+{
+	xmlNodePtr node;
+	char buf[BUF_LEN];
+
+	node = xmlNewNode(NULL, "access-request");
+
+	snprintf(buf, BUF_LEN, "%s:%d", this->device_name, id);
+	xmlNewProp(node, "name", buf);
+
+	return node;
+}
+
+/**
+ * Create an identity
+ */
+static xmlNodePtr create_identity(private_tnc_ifmap2_soap_t *this,
+								  identification_t *id, bool is_user)
+{
+	xmlNodePtr node;
+	char buf[BUF_LEN], *id_type;
+
+	node = xmlNewNode(NULL, "identity");
+
+	snprintf(buf, BUF_LEN, "%Y", id);
+	xmlNewProp(node, "name", buf);
+
+	switch (id->get_type(id))
+	{
+		case ID_IPV4_ADDR:
+			id_type = "other";
+			xmlNewProp(node, "other-type-definition", "36906:ipv4-address");
+			break;
+		case ID_FQDN:
+			id_type = is_user ? "username" : "dns-name";
+			break;
+		case ID_RFC822_ADDR:
+			id_type = "email-address";
+			break;
+		case ID_IPV6_ADDR:
+			id_type = "other";
+			xmlNewProp(node, "other-type-definition", "36906:ipv6-address");
+			break;
+		case ID_DER_ASN1_DN:
+			id_type = "distinguished-name";
+			break;
+		case ID_KEY_ID:
+			id_type = "other";
+			xmlNewProp(node, "other-type-definition", "36906:key-id");
+			break;
+		default:
+			id_type = "other";
+			xmlNewProp(node, "other-type-definition", "36906:other");
+	}
+	xmlNewProp(node, "type", id_type);
+
+	return node;
+}
+
+/**
+ * Create delete filter
+ */
+static xmlNodePtr create_delete_filter(private_tnc_ifmap2_soap_t *this,
+									   char *metadata)
+{
+	xmlNodePtr node;
+	char buf[BUF_LEN];
+
+	node = xmlNewNode(NULL, "delete");
+
+	snprintf(buf, BUF_LEN, "meta:%s[@ifmap-publisher-id='%s']",
+			 metadata, this->ifmap_publisher_id);
+	xmlNewProp(node, "filter", buf);
+
+	return node;
+}
+
+/**
  * Create a publish request
  */
 static xmlNodePtr create_publish_request(private_tnc_ifmap2_soap_t *this)
@@ -220,8 +301,8 @@ static xmlNodePtr create_ip_address(private_tnc_ifmap2_soap_t *this,
 		snprintf(buf, BUF_LEN, "%H", host);
 	}
 
-	xmlSetProp(node, "value", buf);
-	xmlSetProp(node, "type", host->get_family(host) == AF_INET ? "IPv4" : "IPv6");
+	xmlNewProp(node, "value", buf);
+	xmlNewProp(node, "type", host->get_family(host) == AF_INET ? "IPv4" : "IPv6");
 
 	return node;
 }
@@ -237,7 +318,30 @@ static xmlNodePtr create_metadata(private_tnc_ifmap2_soap_t *this,
 	node = xmlNewNode(NULL, "metadata");
 	node2 = xmlNewNode(this->ns_meta, metadata);
 	xmlAddChild(node, node2);
-	xmlSetProp(node2, "ifmap-cardinality", "singleValue");
+	xmlNewProp(node2, "ifmap-cardinality", "singleValue");
+
+	return node;
+}
+
+/**
+ * Create capability metadata
+ */
+static xmlNodePtr create_capability(private_tnc_ifmap2_soap_t *this,
+									identification_t *name)
+{
+	xmlNodePtr node, node2;
+	char buf[BUF_LEN];
+
+	node = xmlNewNode(this->ns_meta, "capability");
+	xmlNewProp(node, "ifmap-cardinality", "multiValue");
+
+	node2 = xmlNewNode(NULL, "name");
+	xmlAddChild(node, node2);
+	snprintf(buf, BUF_LEN, "%Y", name);
+	xmlNodeAddContent(node2, this->device_name);
+
+	node2 = xmlNewNode(NULL, "administrative-domain");
+	xmlNodeAddContent(node2, "strongswan");
 
 	return node;
 }
@@ -245,9 +349,151 @@ static xmlNodePtr create_metadata(private_tnc_ifmap2_soap_t *this,
 METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
 	private_tnc_ifmap2_soap_t *this, ike_sa_t *ike_sa, bool up)
 {
-	/* send publish request and receive publishReceived */
-	/* return send_receive(this, "publish", request, "publishReceived", NULL); */
-	return FALSE;
+	tnc_ifmap2_soap_msg_t *soap_msg;
+	xmlNodePtr request, node, node2 = NULL;
+	enumerator_t *e1, *e2;
+	auth_rule_t type;
+	identification_t *id, *eap_id, *group;
+	host_t *host;
+	auth_cfg_t *auth;
+	u_int32_t ike_sa_id;
+	bool is_user = FALSE, first = TRUE, success;
+
+	/* extract relevant data from IKE_SA*/
+	ike_sa_id = ike_sa->get_unique_id(ike_sa);
+	id = ike_sa->get_other_id(ike_sa);
+	eap_id = ike_sa->get_other_eap_id(ike_sa);
+	host = ike_sa->get_other_host(ike_sa);
+
+	/* in the presence of an EAP Identity, treat it as a username */
+	if (!id->equals(id, eap_id))
+	{
+		is_user = TRUE;
+		id = eap_id;
+	}
+
+	/* build publish request */
+	request = create_publish_request(this);
+
+	/* delete any existing enforcement reports */
+	if (up)
+	{
+		node = create_delete_filter(this, "enforcement-report");
+		xmlAddChild(request, node);
+		xmlAddChild(node, create_ip_address(this, host));
+		xmlAddChild(node, create_device(this));
+	}
+
+	/**
+	 * update or delete authenticated-as metadata
+	 */
+	if (up)
+	{
+		node = xmlNewNode(NULL, "update");
+	}
+	else
+	{
+		node = create_delete_filter(this, "authenticated-as");
+	}
+	xmlAddChild(request, node);
+
+	/* add access-request, identity and [if up] metadata */
+	xmlAddChild(node, create_access_request(this, ike_sa_id));
+	xmlAddChild(node, create_identity(this, id, is_user));
+	if (up)
+	{
+		xmlAddChild(node, create_metadata(this, "authenticated-as"));
+	}
+
+	/**
+	 * update or delete access-request-ip metadata
+	 */
+	if (up)
+	{
+		node = xmlNewNode(NULL, "update");
+	}
+	else
+	{
+		node = create_delete_filter(this, "access-request-ip");
+	}
+	xmlAddChild(request, node);
+
+	/* add access-request, ip-address and [if up] metadata */
+	xmlAddChild(node, create_access_request(this, ike_sa_id));
+	xmlAddChild(node, create_ip_address(this, host));
+	if (up)
+	{
+		xmlAddChild(node, create_metadata(this, "access-request-ip"));
+	}
+
+	/**
+	 * update or delete authenticated-by metadata
+	 */
+	if (up)
+	{
+		node = xmlNewNode(NULL, "update");
+	}
+	else
+	{
+		node = create_delete_filter(this, "authenticated-by");
+	}
+	xmlAddChild(request, node);
+
+	/* add access-request, device and [if up] metadata */
+	xmlAddChild(node, create_access_request(this, ike_sa_id));
+	xmlAddChild(node, create_device(this));
+	if (up)
+	{
+		xmlAddChild(node, create_metadata(this, "authenticated-by"));
+	}
+
+	/**
+	 * update or delete capability metadata
+	 */
+	e1 = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
+	while (e1->enumerate(e1, &auth) && (first || up))
+	{
+		e2 = auth->create_enumerator(auth);
+		while (e2->enumerate(e2, &type, &group))
+		{
+			/* look for group memberships */
+			if (type == AUTH_RULE_GROUP)
+			{
+				if (first)
+				{
+					first = FALSE;
+
+					if (up)
+					{
+						node = xmlNewNode(NULL, "update");
+					}
+					else
+					{
+						node = create_delete_filter(this, "capability");
+					}
+					xmlAddChild(request, node);
+
+					/* add access-request */
+					xmlAddChild(node, create_access_request(this, ike_sa_id));
+					if (!up)
+					{
+						break;
+					}
+					node2 = xmlNewNode(NULL, "metadata");
+					xmlAddChild(node, node2);
+				}
+				xmlAddChild(node2, create_capability(this, group));
+			}
+		}
+		e2->destroy(e2);
+	}
+	e1->destroy(e1);
+
+	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
+	soap_msg->destroy(soap_msg);
+
+	return success;
 }
 
 METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
