@@ -51,8 +51,8 @@ struct private_tnc_ifmap2_soap_msg_t {
 /**
  * Send HTTP POST request and receive HTTP response
  */
-static bool http_send_receive(private_tnc_ifmap2_soap_msg_t *this,
-							  chunk_t out, chunk_t *in)
+static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
+														   chunk_t *in)
 {
 	char header[] =
 		 "POST /ifmap HTTP/1.1\r\n"
@@ -150,9 +150,9 @@ METHOD(tnc_ifmap2_soap_msg_t, post, bool,
 	char *result_name, xmlNodePtr *result)
 {
 	xmlDocPtr doc;
-	xmlNodePtr env, body, cur;
+	xmlNodePtr env, body, cur, response;
 	xmlNsPtr ns;
-	xmlChar *xml;
+	xmlChar *xml, *errorCode, *errorString;
 	int len;
 	chunk_t in, out;
 
@@ -176,8 +176,8 @@ METHOD(tnc_ifmap2_soap_msg_t, post, bool,
 	DBG3(DBG_TNC, "%.*s", len, xml);
 	out = chunk_create(xml, len);
 
-	/* Send SOAP-XML request via HTTP */
-	if (!http_send_receive(this, out, &in))
+	/* Send SOAP-XML request via HTTP POST */
+	if (!http_post(this, out, &in))
 	{
 		xmlFree(xml);
 		return FALSE;
@@ -217,16 +217,39 @@ METHOD(tnc_ifmap2_soap_msg_t, post, bool,
 	}
 
 	/* get IF-MAP response */
-	cur = find_child(cur, "response");
-	if (!cur)
+	response = find_child(cur, "response");
+	if (!response)
 	{
 		return FALSE;
 	}
 
 	/* get IF-MAP result */
-	cur = find_child(cur, result_name);
+	cur = find_child(response, result_name);
 	if (!cur)
 	{
+		cur = find_child(response, "errorResult");
+		if (cur)
+		{
+			DBG1(DBG_TNC, "received errorResult");
+
+			errorCode = xmlGetProp(cur, "errorCode");
+			if (errorCode)
+			{
+				DBG1(DBG_TNC, "  %s", errorCode);
+				xmlFree(errorCode);
+			}
+
+			cur = find_child(cur, "errorString");
+			if (cur)
+			{
+				errorString = xmlNodeGetContent(cur);
+				if (errorString)
+				{
+					DBG1(DBG_TNC, "  %s", errorString);
+					xmlFree(errorString);
+				}
+			}
+		}
 		return FALSE;
 	}
 
