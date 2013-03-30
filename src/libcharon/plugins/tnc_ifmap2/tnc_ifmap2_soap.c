@@ -48,12 +48,22 @@ struct private_tnc_ifmap2_soap_t {
 	/**
 	 * SOAP Session ID
 	 */
-	char *session_id;
+	xmlChar *session_id;
 
 	/**
 	 * IF-MAP Publisher ID
 	 */
-	char *ifmap_publisher_id;
+	xmlChar *ifmap_publisher_id;
+
+	/**
+	 * IF-MAP namespace
+	 */
+	xmlNsPtr ns;
+
+	/**
+	 * IF-MAP metadata namespace
+	 */
+	xmlNsPtr ns_meta;
 
 	/**
 	 * PEP and PDP device name
@@ -87,12 +97,11 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 {
 	tnc_ifmap2_soap_msg_t *soap_msg;
 	xmlNodePtr request, result;
-	xmlNsPtr ns;
 
 	/*build newSession request */
 	request = xmlNewNode(NULL, "newSession");
-	ns = xmlNewNs(request, IFMAP_NS, "ifmap");
-	xmlSetNs(request, ns);
+	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
+	xmlSetNs(request, this->ns);
 
 	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
 	if (!soap_msg->post(soap_msg, "newSession", request,
@@ -124,13 +133,12 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 {
 	tnc_ifmap2_soap_msg_t *soap_msg;
 	xmlNodePtr request;
-	xmlNsPtr ns;
 	bool success;
 
 	/* build purgePublisher request */
 	request = xmlNewNode(NULL, "purgePublisher");
-	ns = xmlNewNs(request, IFMAP_NS, "ifmap");
-	xmlSetNs(request, ns);
+	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
+	xmlSetNs(request, this->ns);
 	xmlNewProp(request, "session-id", this->session_id);
 	xmlNewProp(request, "ifmap-publisher-id", this->ifmap_publisher_id);
 
@@ -140,6 +148,100 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 	soap_msg->destroy(soap_msg);
 
 	return success;
+}
+
+/**
+ * Create a publish request
+ */
+static xmlNodePtr create_publish_request(private_tnc_ifmap2_soap_t *this)
+{
+	xmlNodePtr request;
+
+	request = xmlNewNode(NULL, "publish");
+	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
+	xmlSetNs(request, this->ns);
+	this->ns_meta = xmlNewNs(request, IFMAP_META_NS, "meta");
+	xmlNewProp(request, "session-id", this->session_id);
+
+	return request;
+}
+
+/**
+ * Create a device
+ */
+static xmlNodePtr create_device(private_tnc_ifmap2_soap_t *this)
+{
+	xmlNodePtr node, node2;
+
+	node = xmlNewNode(NULL, "device");
+	node2 = xmlNewNode(NULL, "name");
+	xmlAddChild(node, node2);
+	xmlNodeAddContent(node2, this->device_name);
+
+	return node;
+}
+
+/**
+ * Create an ip-address
+ */
+static xmlNodePtr create_ip_address(private_tnc_ifmap2_soap_t *this,
+									host_t *host)
+{
+	xmlNodePtr node;
+	char buf[BUF_LEN];
+
+	node = xmlNewNode(NULL, "ip-address");
+
+	if (host->get_family(host) == AF_INET6)
+	{
+		chunk_t address;
+		int len, written, i;
+		char *pos;
+		bool first = TRUE;
+
+		/* output IPv6 address in canonical IF-MAP 2.0 format */
+		address = host->get_address(host);
+		pos = buf;
+		len = sizeof(buf);
+
+		for (i = 0; i < address.len; i = i + 2)
+		{
+			written = snprintf(pos, len, "%s%x", first ? "" : ":",
+							   256*address.ptr[i] +  address.ptr[i+1]);
+			if (written < 0 || written >= len)
+			{
+				break;
+			}
+			pos += written;
+			len -= written;
+			first = FALSE;
+		}
+	}
+	else
+	{
+		snprintf(buf, BUF_LEN, "%H", host);
+	}
+
+	xmlSetProp(node, "value", buf);
+	xmlSetProp(node, "type", host->get_family(host) == AF_INET ? "IPv4" : "IPv6");
+
+	return node;
+}
+
+/**
+ * Create metadata
+ */
+static xmlNodePtr create_metadata(private_tnc_ifmap2_soap_t *this,
+								  xmlChar *metadata)
+{
+	xmlNodePtr node, node2;
+
+	node = xmlNewNode(NULL, "metadata");
+	node2 = xmlNewNode(this->ns_meta, metadata);
+	xmlAddChild(node, node2);
+	xmlSetProp(node2, "ifmap-cardinality", "singleValue");
+
+	return node;
 }
 
 METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
@@ -153,9 +255,26 @@ METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
 METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 	private_tnc_ifmap2_soap_t *this, host_t *host)
 {
-	/* send publish request and receive publishReceived */
-	/* return send_receive(this, "publish", request, "publishReceived", NULL); */
-	return FALSE;
+	tnc_ifmap2_soap_msg_t *soap_msg;
+	xmlNodePtr request, update;
+	bool success;
+
+	/* build publish update request */
+	request = create_publish_request(this);
+	update = xmlNewNode(NULL, "update");
+	xmlAddChild(request, update);
+
+	/* add device, ip-address and metadata */
+	xmlAddChild(update, create_device(this));
+	xmlAddChild(update, create_ip_address(this, host));
+	xmlAddChild(update, create_metadata(this, "device-ip"));
+
+	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	success = soap_msg->post(soap_msg, "publish", request,
+									   "publishReceived", NULL);
+	soap_msg->destroy(soap_msg);
+
+	return success;
 }
 
 METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
@@ -180,8 +299,8 @@ METHOD(tnc_ifmap2_soap_t, destroy, void,
 	if (this->session_id)
 	{
 		endSession(this);
-		free(this->session_id);
-		free(this->ifmap_publisher_id);
+		xmlFree(this->session_id);
+		xmlFree(this->ifmap_publisher_id);
 		free(this->device_name);
 	}
 	DESTROY_IF(this->tls);
