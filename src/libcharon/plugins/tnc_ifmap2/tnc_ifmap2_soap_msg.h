@@ -36,13 +36,11 @@ struct tnc_ifmap2_soap_msg_t {
 	/**
 	 * Post an IF-MAP request in a SOAP-XML message and return a result
 	 *
-	 * @param request_name	name of the IF-MAP request
 	 * @param request		XML-encoded IF-MAP request
 	 * @param result_name	name of the IF-MAP result
 	 * @param result		XML-encoded IF-MAP result
 	 */
-	bool (*post)(tnc_ifmap2_soap_msg_t *this,
-				 char *request_name, xmlNodePtr request,
+	bool (*post)(tnc_ifmap2_soap_msg_t *this, xmlNodePtr request,
 				 char *result_name, xmlNodePtr* result);
 
 	/**

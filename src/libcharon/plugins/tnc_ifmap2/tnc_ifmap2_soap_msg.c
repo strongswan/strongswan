@@ -146,8 +146,8 @@ static xmlNodePtr find_child(xmlNodePtr parent, const xmlChar* name)
 }
 
 METHOD(tnc_ifmap2_soap_msg_t, post, bool,
-	private_tnc_ifmap2_soap_msg_t *this, char *request_name, xmlNodePtr request,
-	char *result_name, xmlNodePtr *result)
+	private_tnc_ifmap2_soap_msg_t *this, xmlNodePtr request, char *result_name,
+	xmlNodePtr *result)
 {
 	xmlDocPtr doc;
 	xmlNodePtr env, body, cur, response;
@@ -156,7 +156,7 @@ METHOD(tnc_ifmap2_soap_msg_t, post, bool,
 	int len;
 	chunk_t in, out;
 
-	DBG2(DBG_TNC, "sending ifmap %s", request_name);
+	DBG2(DBG_TNC, "sending ifmap %s", request->name);
 
 	/* Generate XML Document containing SOAP Envelope */
 	doc = xmlNewDoc("1.0");

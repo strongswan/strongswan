@@ -104,8 +104,7 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 	xmlSetNs(request, this->ns);
 
 	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
-	if (!soap_msg->post(soap_msg, "newSession", request,
-								  "newSessionResult", &result))
+	if (!soap_msg->post(soap_msg, request, "newSessionResult", &result))
 	{
 		soap_msg->destroy(soap_msg);
 		return FALSE;
@@ -143,8 +142,7 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 	xmlNewProp(request, "ifmap-publisher-id", this->ifmap_publisher_id);
 
 	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
-	success = soap_msg->post(soap_msg, "purgePublisher", request,
-									   "purgePublisherReceived", NULL);
+	success = soap_msg->post(soap_msg, request, "purgePublisherReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
@@ -270,8 +268,7 @@ METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 	xmlAddChild(update, create_metadata(this, "device-ip"));
 
 	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
-	success = soap_msg->post(soap_msg, "publish", request,
-									   "publishReceived", NULL);
+	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
