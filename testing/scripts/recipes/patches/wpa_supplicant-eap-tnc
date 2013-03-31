@@ -1,6 +1,18 @@
-diff -urN wpa_supplicant-2.0/wpa_supplicant/defconfig wpa_supplicant-2.0-patched/wpa_supplicant/defconfig
---- wpa_supplicant-2.0/wpa_supplicant/defconfig	2013-01-12 16:42:53.000000000 +0100
-+++ wpa_supplicant-2.0-patched/wpa_supplicant/defconfig	2013-03-11 10:19:58.012981151 +0100
+diff -urN wpa_supplicant-2.0.ori/src/eap_peer/tncc.c wpa_supplicant-2.0/src/eap_peer/tncc.c
+--- wpa_supplicant-2.0.ori/src/eap_peer/tncc.c	2013-01-12 16:42:53.000000000 +0100
++++ wpa_supplicant-2.0/src/eap_peer/tncc.c	2013-03-23 13:10:22.151059154 +0100
+@@ -465,7 +465,7 @@
+ 		return -1;
+ 	}
+ #else /* CONFIG_NATIVE_WINDOWS */
+-	imc->dlhandle = dlopen(imc->path, RTLD_LAZY);
++	imc->dlhandle = dlopen(imc->path, RTLD_LAZY | RTLD_GLOBAL);
+ 	if (imc->dlhandle == NULL) {
+ 		wpa_printf(MSG_ERROR, "TNC: Failed to open IMC '%s' (%s): %s",
+ 			   imc->name, imc->path, dlerror());
+diff -urN wpa_supplicant-2.0.ori/wpa_supplicant/defconfig wpa_supplicant-2.0/wpa_supplicant/defconfig
+--- wpa_supplicant-2.0.ori/wpa_supplicant/defconfig	2013-01-12 16:42:53.000000000 +0100
++++ wpa_supplicant-2.0/wpa_supplicant/defconfig	2013-03-23 13:06:08.759052370 +0100
 @@ -86,7 +86,7 @@
  CONFIG_DRIVER_WEXT=y
  
@@ -19,9 +31,9 @@ diff -urN wpa_supplicant-2.0/wpa_supplicant/defconfig wpa_supplicant-2.0-patched
  
  # Wi-Fi Protected Setup (WPS)
  #CONFIG_WPS=y
-diff -urN wpa_supplicant-2.0/wpa_supplicant/Makefile wpa_supplicant-2.0-patched/wpa_supplicant/Makefile
---- wpa_supplicant-2.0/wpa_supplicant/Makefile	2013-01-12 16:42:53.000000000 +0100
-+++ wpa_supplicant-2.0-patched/wpa_supplicant/Makefile	2013-03-11 10:38:03.020998741 +0100
+diff -urN wpa_supplicant-2.0.ori/wpa_supplicant/Makefile wpa_supplicant-2.0/wpa_supplicant/Makefile
+--- wpa_supplicant-2.0.ori/wpa_supplicant/Makefile	2013-01-12 16:42:53.000000000 +0100
++++ wpa_supplicant-2.0/wpa_supplicant/Makefile	2013-03-23 13:06:08.759052370 +0100
 @@ -6,8 +6,8 @@
  CFLAGS = -MMD -O2 -Wall -g
  endif

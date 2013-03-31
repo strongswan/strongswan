@@ -46,3 +46,6 @@ do
 		echo 2 > $vnet/multicast_router
 	done
 done
+
+echo 0x08 > /sys/devices/virtual/net/test-br0/bridge/group_fwd_mask
+
