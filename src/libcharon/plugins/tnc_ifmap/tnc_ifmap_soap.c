@@ -371,9 +371,10 @@ static xmlNodePtr create_capability(private_tnc_ifmap_soap_t *this,
 	node2 = xmlNewNode(NULL, "name");
 	xmlAddChild(node, node2);
 	snprintf(buf, BUF_LEN, "%Y", name);
-	xmlNodeAddContent(node2, this->device_name);
+	xmlNodeAddContent(node2, buf);
 
 	node2 = xmlNewNode(NULL, "administrative-domain");
+	xmlAddChild(node, node2);
 	xmlNodeAddContent(node2, "strongswan");
 
 	return node;
