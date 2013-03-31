@@ -37,6 +37,11 @@ struct private_tnc_ifmap2_soap_msg_t {
 	tnc_ifmap2_soap_msg_t public;
 
 	/**
+	 * HTTPS Server URI with https:// prefix removed
+	 */
+	char *uri;
+
+	/**
 	 * TLS Socket
 	 */
 	tls_socket_t *tls;
@@ -54,21 +59,40 @@ struct private_tnc_ifmap2_soap_msg_t {
 static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
 														   chunk_t *in)
 {
-	char header[] =
-		 "POST /ifmap HTTP/1.1\r\n"
-		 "Content-Type: application/soap+xml;charset=utf-8\r\n"
-		 "Content-Length: ";
-	char *request, response[2048];
+	char *host, *path, *request, response[2048];
 	chunk_t line, http, parameter;
 	int len, code, content_len = 0;
 
+	/* Duplicate host[/path] string since we are going to manipulate it */
+	len = strlen(this->uri) + 2;
+	host = malloc(len);
+	memset(host, '\0', len);
+	strcpy(host, this->uri);
+
+	/* Extract appended path or set to root */
+	path = strchr(host, '/');
+	if (!path)
+	{
+		path = host + len - 2;
+		*path = '/';
+	}
+
 	/* Write HTTP POST request */
-	len = asprintf(&request, "%s%d\r\n\r\n%.*s", header, out.len,
-				   out.len, out.ptr);
+	len = asprintf(&request,
+			"POST %s HTTP/1.1\r\n"
+			"Host: %.*s\r\n"
+			"Content-Type: application/soap+xml;charset=utf-8\r\n"
+			"Content-Length: %d\r\n"
+			"\r\n"
+			"%.*s", path, (path-host), host, out.len, out.len, out.ptr);
+	free(host);
 	if (len == -1)
 	{
 		return FALSE;
 	}
+	http = chunk_create(request, len);
+	DBG3(DBG_TLS, "%B", &http);
+
 	this->tls->write(this->tls, request, len);
 	free(request);
 
@@ -273,7 +297,7 @@ METHOD(tnc_ifmap2_soap_msg_t, destroy, void,
 /**
  * See header
  */
-tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(tls_socket_t *tls)
+tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, tls_socket_t *tls)
 {
 	private_tnc_ifmap2_soap_msg_t *this;
 
@@ -282,6 +306,7 @@ tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(tls_socket_t *tls)
 			.post = _post,
 			.destroy = _destroy,
 		},
+		.uri = uri,
 		.tls = tls,
 	);
 

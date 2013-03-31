@@ -29,8 +29,7 @@
 
 #define IFMAP_NS		"http://www.trustedcomputinggroup.org/2010/IFMAP/2"
 #define IFMAP_META_NS	"http://www.trustedcomputinggroup.org/2010/IFMAP-METADATA/2"
-#define IFMAP_LOGFILE	"strongswan_ifmap.log"
-#define IFMAP_SERVER	"https://localhost:8443/"
+#define IFMAP_URI		"https://localhost:8444/imap"
 #define IFMAP_NO_FD		-1
 
 typedef struct private_tnc_ifmap2_soap_t private_tnc_ifmap2_soap_t;
@@ -71,7 +70,12 @@ struct private_tnc_ifmap2_soap_t {
 	char *device_name;
 
 	/**
-	 * IF-MAP Server host
+	 * HTTPS Server URI with https:// prefix removed
+	 */
+	char *uri;
+
+	/**
+	 * IF-MAP Server (IP address and port)
 	 */
 	host_t *host;
 
@@ -103,7 +107,7 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
 	xmlSetNs(request, this->ns);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	if (!soap_msg->post(soap_msg, request, "newSessionResult", &result))
 	{
 		soap_msg->destroy(soap_msg);
@@ -141,7 +145,7 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 	xmlNewProp(request, "session-id", this->session_id);
 	xmlNewProp(request, "ifmap-publisher-id", this->ifmap_publisher_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	success = soap_msg->post(soap_msg, request, "purgePublisherReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -513,7 +517,7 @@ METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
 	}
 	e1->destroy(e1);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -537,7 +541,7 @@ METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 	xmlAddChild(update, create_ip_address(this, host));
 	xmlAddChild(update, create_metadata(this, "device-ip"));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -561,7 +565,7 @@ METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
 	xmlAddChild(update, create_device(this));
 	xmlAddChild(update, create_enforcement_report(this, action, reason));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -581,7 +585,7 @@ METHOD(tnc_ifmap2_soap_t, endSession, bool,
 	xmlSetNs(request, this->ns);
 	xmlNewProp(request, "session-id", this->session_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
 	success = soap_msg->post(soap_msg, request, "endSessionResult", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -612,16 +616,28 @@ METHOD(tnc_ifmap2_soap_t, destroy, void,
 
 static bool soap_init(private_tnc_ifmap2_soap_t *this)
 {
-	char *server, *server_cert, *client_cert, *client_key;
+	char *server_uri, *server_str, *port_str, *uri_str;
+	char *server_cert, *client_cert, *client_key, *username, *password;
+	int port;
 	certificate_t *cert;
 	private_key_t *key;
 	identification_t *server_id, *client_id;
 
-	/**
-	 * Load [self-signed] MAP server certificate
-	 */
+	/* getting configuration parameters from strongswan.conf */
+	server_uri =  lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap2.server_uri", IFMAP_URI, charon->name);
 	server_cert = lib->settings->get_str(lib->settings,
 					"%s.plugins.tnc-ifmap2.server_cert", NULL, charon->name);
+	client_cert = lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap2.client_cert", NULL, charon->name);
+	client_key =  lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap2.client_key", NULL, charon->name);
+	username =    lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap.username", NULL, charon->name);
+	password =    lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap.password", NULL, charon->name);
+
+	/* load [self-signed] MAP server certificate */
 	if (!server_cert)
 	{
 		DBG1(DBG_TNC, "MAP server certificate not defined");
@@ -639,11 +655,7 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 	server_id = cert->get_subject(cert);
 	this->creds->add_cert(this->creds, TRUE, cert);
 
-	/**
-	 * Load MAP client certificate
-	 */
-	client_cert = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.client_cert", NULL, charon->name);
+	/* load MAP client certificate */
 	if (!client_cert)
 	{
 		DBG1(DBG_TNC, "MAP client certificate not defined");
@@ -661,11 +673,7 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 	client_id = cert->get_subject(cert);
 	this->creds->add_cert(this->creds, TRUE, cert);
 
-	/**
-	 * Load MAP client private key
-	 */
-	client_key = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.client_key", NULL, charon->name);
+	/* load MAP client private key */
 	if (!client_key)
 	{
 		DBG1(DBG_TNC, "MAP client private key not defined");
@@ -682,16 +690,48 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 	DBG1(DBG_TNC, "loaded MAP client RSA private key from '%s'", client_key);
 	this->creds->add_key(this->creds, key);
 
-	/**
-	 * Open TCP socket and connect to MAP server
-	 */
-	server = "127.0.0.1";
-	this->host = host_create_from_dns(server, 0, 8444);
+	/* remove HTTPS prefix if any */
+	if (strlen(server_uri) >= 8 && strncaseeq(server_uri, "https://", 8))
+	{
+		server_uri += 8;
+	}
+	this->uri = server_uri;
+
+	/* duplicate server string since we are going to manipulate it */
+	server_str = strdup(server_uri);
+
+	/* extract server name and port from server URI */
+	port_str = strchr(server_str, ':');
+	if (port_str)
+	{
+		*port_str++ = '\0';
+		if (sscanf(port_str, "%d", &port) != 1)
+		{
+			DBG1(DBG_TNC, "parsing server port %s failed", port_str);
+			free(server_str);
+			return FALSE;
+		}
+	}
+	else
+	{
+		/* use default https port */
+		port = 443;
+		uri_str = strchr(server_str, '/');
+		if (uri_str)
+		{
+			*uri_str = '\0';
+		}
+	}
+
+	/* open TCP socket and connect to MAP server */
+	this->host = host_create_from_dns(server_str, 0, port);
 	if (!this->host)
 	{
-		DBG1(DBG_TNC, "resolving hostname %s failed", server);
+		DBG1(DBG_TNC, "resolving hostname %s failed", server_str);
+		free(server_str);
 		return FALSE;
 	}
+	free(server_str);
 
 	this->fd = socket(this->host->get_family(this->host), SOCK_STREAM, 0);
 	if (this->fd == IFMAP_NO_FD)
@@ -708,9 +748,7 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 		return FALSE;
 	}
 
-	/**
-	 * Open TLS socket
-	 */
+	/* open TLS socket */
 	this->tls = tls_socket_create(FALSE, server_id, client_id, this->fd, NULL);
 	if (!this->tls)
 	{

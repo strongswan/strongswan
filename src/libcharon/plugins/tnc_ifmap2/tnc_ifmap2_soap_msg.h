@@ -52,8 +52,9 @@ struct tnc_ifmap2_soap_msg_t {
 /**
  * Create a tnc_ifmap2_soap_msg instance.
  *
+ * @param uri	HTTPS URI with https:// prefix removed
  * @param tls	TLS socket protecting the SOAP message
  */
-tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(tls_socket_t *tls);
+tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, tls_socket_t *tls);
 
 #endif /** TNC_IFMAP2_SOAP_MSG_H_ @}*/
