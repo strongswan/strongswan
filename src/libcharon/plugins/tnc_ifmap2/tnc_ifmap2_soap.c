@@ -75,6 +75,11 @@ struct private_tnc_ifmap2_soap_t {
 	char *uri;
 
 	/**
+	 * Optional base64-encoded username:password for HTTP Basic Authentication
+	 */
+	chunk_t user_pass;
+
+	/**
 	 * IF-MAP Server (IP address and port)
 	 */
 	host_t *host;
@@ -107,7 +112,7 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
 	xmlSetNs(request, this->ns);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	if (!soap_msg->post(soap_msg, request, "newSessionResult", &result))
 	{
 		soap_msg->destroy(soap_msg);
@@ -145,7 +150,7 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 	xmlNewProp(request, "session-id", this->session_id);
 	xmlNewProp(request, "ifmap-publisher-id", this->ifmap_publisher_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "purgePublisherReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -517,7 +522,7 @@ METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
 	}
 	e1->destroy(e1);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -541,7 +546,7 @@ METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 	xmlAddChild(update, create_ip_address(this, host));
 	xmlAddChild(update, create_metadata(this, "device-ip"));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -565,7 +570,7 @@ METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
 	xmlAddChild(update, create_device(this));
 	xmlAddChild(update, create_enforcement_report(this, action, reason));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -585,7 +590,7 @@ METHOD(tnc_ifmap2_soap_t, endSession, bool,
 	xmlSetNs(request, this->ns);
 	xmlNewProp(request, "session-id", this->session_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->tls);
+	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "endSessionResult", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -611,17 +616,18 @@ METHOD(tnc_ifmap2_soap_t, destroy, void,
 	}
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
+	free(this->user_pass.ptr);
 	free(this);
 }
 
 static bool soap_init(private_tnc_ifmap2_soap_t *this)
 {
 	char *server_uri, *server_str, *port_str, *uri_str;
-	char *server_cert, *client_cert, *client_key, *username, *password;
+	char *server_cert, *client_cert, *client_key, *user_pass;
 	int port;
 	certificate_t *cert;
 	private_key_t *key;
-	identification_t *server_id, *client_id;
+	identification_t *server_id, *client_id = NULL;
 
 	/* getting configuration parameters from strongswan.conf */
 	server_uri =  lib->settings->get_str(lib->settings,
@@ -632,10 +638,8 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 					"%s.plugins.tnc-ifmap2.client_cert", NULL, charon->name);
 	client_key =  lib->settings->get_str(lib->settings,
 					"%s.plugins.tnc-ifmap2.client_key", NULL, charon->name);
-	username =    lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.username", NULL, charon->name);
-	password =    lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap.password", NULL, charon->name);
+	user_pass =   lib->settings->get_str(lib->settings,
+					"%s.plugins.tnc-ifmap2.username_password", NULL, charon->name);
 
 	/* load [self-signed] MAP server certificate */
 	if (!server_cert)
@@ -655,40 +659,48 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 	server_id = cert->get_subject(cert);
 	this->creds->add_cert(this->creds, TRUE, cert);
 
-	/* load MAP client certificate */
-	if (!client_cert)
+	/* check availability of client credentials */
+	if (!((client_cert && client_key) || user_pass))
 	{
-		DBG1(DBG_TNC, "MAP client certificate not defined");
+		DBG1(DBG_TNC, "neither MAP client certificate and private key "
+					  "nor username:password defined");
 		return FALSE;
 	}
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_FROM_FILE, client_cert, BUILD_END);
-	if (!cert)
-	{
-		DBG1(DBG_TNC, "loading MAP client certificate from '%s' failed",
-					   client_cert);
-		return FALSE;
-	}
-	DBG1(DBG_TNC, "loaded MAP client certificate from '%s'", client_cert);
-	client_id = cert->get_subject(cert);
-	this->creds->add_cert(this->creds, TRUE, cert);
 
-	/* load MAP client private key */
-	if (!client_key)
+	if (client_cert)
 	{
-		DBG1(DBG_TNC, "MAP client private key not defined");
-		return FALSE;
+		/* load MAP client certificate */
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, client_cert, BUILD_END);
+		if (!cert)
+		{
+			DBG1(DBG_TNC, "loading MAP client certificate from '%s' failed",
+						   client_cert);
+			return FALSE;
+		}
+		DBG1(DBG_TNC, "loaded MAP client certificate from '%s'", client_cert);
+		this->creds->add_cert(this->creds, TRUE, cert);
+
+		/* load MAP client private key */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+								  BUILD_FROM_FILE, client_key, BUILD_END);
+		if (!key)
+		{
+			DBG1(DBG_TNC, "loading MAP client private key from '%s' failed",
+						   client_key);
+			return FALSE;
+		}
+		DBG1(DBG_TNC, "loaded MAP client RSA private key from '%s'", client_key);
+		this->creds->add_key(this->creds, key);
+
+		/* set client ID to certificate distinguished name */
+		client_id = cert->get_subject(cert);
 	}
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							  BUILD_FROM_FILE, client_key, BUILD_END);
-	if (!key)
+	else
 	{
-		DBG1(DBG_TNC, "loading MAP client private key from '%s' failed",
-					   client_key);
-		return FALSE;
+		/* set base64-encoded username:password for HTTP Basic Authentication */
+		this->user_pass = chunk_to_base64(chunk_from_str(user_pass), NULL);
 	}
-	DBG1(DBG_TNC, "loaded MAP client RSA private key from '%s'", client_key);
-	this->creds->add_key(this->creds, key);
 
 	/* remove HTTPS prefix if any */
 	if (strlen(server_uri) >= 8 && strncaseeq(server_uri, "https://", 8))

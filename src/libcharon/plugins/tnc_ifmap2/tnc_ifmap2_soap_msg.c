@@ -42,6 +42,11 @@ struct private_tnc_ifmap2_soap_msg_t {
 	char *uri;
 
 	/**
+	 * Optional base64-encoded username:password for HTTP Basic Authentication
+	 */
+	chunk_t user_pass;
+
+	/**
 	 * TLS Socket
 	 */
 	tls_socket_t *tls;
@@ -59,7 +64,7 @@ struct private_tnc_ifmap2_soap_msg_t {
 static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
 														   chunk_t *in)
 {
-	char *host, *path, *request, response[2048];
+	char *host, *path, *request, buf[2048];
 	chunk_t line, http, parameter;
 	int len, code, content_len = 0;
 
@@ -77,15 +82,28 @@ static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
 		*path = '/';
 	}
 
+	/* Use Basic Authentication? */
+	if (this->user_pass.len)
+	{
+		snprintf(buf, sizeof(buf), "Authorization: Basic %.*s\r\n",
+				 this->user_pass.len, this->user_pass.ptr);
+	}
+	else
+	{
+		*buf = '\0';
+	}
+
 	/* Write HTTP POST request */
 	len = asprintf(&request,
 			"POST %s HTTP/1.1\r\n"
 			"Host: %.*s\r\n"
+			"%s"
 			"Content-Type: application/soap+xml;charset=utf-8\r\n"
 			"Content-Length: %d\r\n"
 			"\r\n"
-			"%.*s", path, (path-host), host, out.len, out.len, out.ptr);
+			"%.*s", path, (path-host), host, buf, out.len, out.len, out.ptr);
 	free(host);
+
 	if (len == -1)
 	{
 		return FALSE;
@@ -97,12 +115,12 @@ static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
 	free(request);
 
 	/* Read HTTP response */
-	len = this->tls->read(this->tls, response, sizeof(response), TRUE);
+	len = this->tls->read(this->tls, buf, sizeof(buf), TRUE);
 	if (len == -1)
 	{
 		return FALSE;
 	}
-	*in = chunk_create(response, len);
+	*in = chunk_create(buf, len);
 
 	/* Process HTTP protocol version */
 	if (!fetchline(in, &line) || !extract_token(&http, ' ', &line) ||
@@ -297,7 +315,8 @@ METHOD(tnc_ifmap2_soap_msg_t, destroy, void,
 /**
  * See header
  */
-tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, tls_socket_t *tls)
+tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, chunk_t user_pass,
+												  tls_socket_t *tls)
 {
 	private_tnc_ifmap2_soap_msg_t *this;
 
@@ -307,6 +326,7 @@ tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, tls_socket_t *tls)
 			.destroy = _destroy,
 		},
 		.uri = uri,
+		.user_pass = user_pass,
 		.tls = tls,
 	);
 
