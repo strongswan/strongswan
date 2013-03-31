@@ -13,44 +13,44 @@
  * for more details.
  */
 
-#include "tnc_ifmap2_plugin.h"
-#include "tnc_ifmap2_listener.h"
+#include "tnc_ifmap_plugin.h"
+#include "tnc_ifmap_listener.h"
 
 #include <daemon.h>
  
-typedef struct private_tnc_ifmap2_plugin_t private_tnc_ifmap2_plugin_t;
+typedef struct private_tnc_ifmap_plugin_t private_tnc_ifmap_plugin_t;
 
 /**
- * private data of tnc_ifmap2 plugin
+ * private data of tnc_ifmap plugin
  */
-struct private_tnc_ifmap2_plugin_t {
+struct private_tnc_ifmap_plugin_t {
 
 	/**
 	 * implements plugin interface
 	 */
-	tnc_ifmap2_plugin_t public;
+	tnc_ifmap_plugin_t public;
 
 	/**
 	 * Listener interface, listens to CHILD_SA state changes
 	 */
-	tnc_ifmap2_listener_t *listener;
+	tnc_ifmap_listener_t *listener;
 };
 
 METHOD(plugin_t, get_name, char*,
-	private_tnc_ifmap2_plugin_t *this)
+	private_tnc_ifmap_plugin_t *this)
 {
-	return "tnc-ifmap2";
+	return "tnc-ifmap";
 }
 
 /**
- * Register tnc_ifmap2 plugin features
+ * Register tnc_ifmap plugin features
  */
-static bool register_tnc_ifmap2(private_tnc_ifmap2_plugin_t *this,
+static bool register_tnc_ifmap(private_tnc_ifmap_plugin_t *this,
 								plugin_feature_t *feature, bool reg, void *data)
 {
 	if (reg)
 	{
-		this->listener = tnc_ifmap2_listener_create(FALSE);
+		this->listener = tnc_ifmap_listener_create(FALSE);
 		if (!this->listener)
 		{
 			return FALSE;
@@ -69,10 +69,10 @@ static bool register_tnc_ifmap2(private_tnc_ifmap2_plugin_t *this,
 }
 
 METHOD(plugin_t, get_features, int,
-	tnc_ifmap2_plugin_t *this, plugin_feature_t *features[])
+	tnc_ifmap_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_CALLBACK((plugin_feature_callback_t)register_tnc_ifmap2, NULL),
+		PLUGIN_CALLBACK((plugin_feature_callback_t)register_tnc_ifmap, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "tnc-ifmap-2.1"),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
 				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
@@ -82,7 +82,7 @@ METHOD(plugin_t, get_features, int,
 }
 
 METHOD(plugin_t, reload, bool,
-	private_tnc_ifmap2_plugin_t *this)
+	private_tnc_ifmap_plugin_t *this)
 {
 	if (this->listener)
 	{
@@ -90,7 +90,7 @@ METHOD(plugin_t, reload, bool,
 		this->listener->destroy(this->listener);
 	}
 
-	this->listener = tnc_ifmap2_listener_create(TRUE);
+	this->listener = tnc_ifmap_listener_create(TRUE);
 	if (!this->listener)
 	{
 		return FALSE;
@@ -101,7 +101,7 @@ METHOD(plugin_t, reload, bool,
 }
 
 METHOD(plugin_t, destroy, void,
-	private_tnc_ifmap2_plugin_t *this)
+	private_tnc_ifmap_plugin_t *this)
 {
 	free(this);
 }
@@ -109,9 +109,9 @@ METHOD(plugin_t, destroy, void,
 /*
  * see header file
  */
-plugin_t *tnc_ifmap2_plugin_create()
+plugin_t *tnc_ifmap_plugin_create()
 {
-	private_tnc_ifmap2_plugin_t *this;
+	private_tnc_ifmap_plugin_t *this;
 
 	INIT(this,
 		.public = {

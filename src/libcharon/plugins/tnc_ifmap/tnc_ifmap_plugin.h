@@ -14,38 +14,29 @@
  */
 
 /**
- * @defgroup tnc_ifmap2_listener tnc_ifmap2_listener
- * @{ @ingroup tnc_ifmap2 
+ * @defgroup tnc_ifmap tnc_ifmap
+ * @ingroup cplugins
+ *
+ * @defgroup tnc_ifmap_plugin tnc_ifmap_plugin
+ * @{ @ingroup tnc_ifmap
  */
 
-#ifndef TNC_IFMAP2_LISTENER_H_
-#define TNC_IFMAP2_LISTENER_H_
+#ifndef TNC_IFMAP_PLUGIN_H_
+#define TNC_IFMAP_PLUGIN_H_
 
-#include <bus/bus.h>
+#include <plugins/plugin.h>
 
-typedef struct tnc_ifmap2_listener_t tnc_ifmap2_listener_t;
+typedef struct tnc_ifmap_plugin_t tnc_ifmap_plugin_t;
 
 /**
- * Listener which collects information on IKE_SAs
+ * TNC IF-MAP plugin
  */
-struct tnc_ifmap2_listener_t {
+struct tnc_ifmap_plugin_t {
 
 	/**
-	 * Implements listener_t.
+	 * implements plugin interface
 	 */
-	listener_t listener;
-
-	/**
-	 * Destroy a tnc_ifmap2_listener_t.
-	 */
-	void (*destroy)(tnc_ifmap2_listener_t *this);
+	plugin_t plugin;
 };
 
-/**
- * Create a tnc_ifmap2_listener instance.
- *
- * @param reload	reload all IKE_SA metadata
- */
-tnc_ifmap2_listener_t *tnc_ifmap2_listener_create(bool reload);
-
-#endif /** TNC_IFMAP2_LISTENER_H_ @}*/
+#endif /** TNC_IFMAP_PLUGIN_H_ @}*/

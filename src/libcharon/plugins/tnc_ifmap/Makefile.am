@@ -1,0 +1,27 @@
+
+INCLUDES = \
+	-I$(top_srcdir)/src/libstrongswan \
+	-I$(top_srcdir)/src/libtls \
+	-I$(top_srcdir)/src/libhydra \
+	-I$(top_srcdir)/src/libcharon \
+	${xml_CFLAGS}
+
+AM_CFLAGS = -rdynamic
+
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-tnc-ifmap.la
+else
+plugin_LTLIBRARIES = libstrongswan-tnc-ifmap.la
+endif
+
+libstrongswan_tnc_ifmap_la_LIBADD = \
+	$(top_builddir)/src/libtls/libtls.la ${xml_LIBS}
+
+libstrongswan_tnc_ifmap_la_SOURCES = \
+	tnc_ifmap_plugin.h tnc_ifmap_plugin.c \
+	tnc_ifmap_listener.h tnc_ifmap_listener.c \
+	tnc_ifmap_soap.h tnc_ifmap_soap.c \
+	tnc_ifmap_soap_msg.h tnc_ifmap_soap_msg.c
+
+libstrongswan_tnc_ifmap_la_LDFLAGS = -module -avoid-version
+

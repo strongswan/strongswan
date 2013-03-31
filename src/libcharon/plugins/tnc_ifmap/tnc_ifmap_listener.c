@@ -13,36 +13,36 @@
  * for more details.
  */
 
-#include "tnc_ifmap2_listener.h"
-#include "tnc_ifmap2_soap.h"
+#include "tnc_ifmap_listener.h"
+#include "tnc_ifmap_soap.h"
 
 #include <daemon.h>
 #include <hydra.h>
 #include <utils/debug.h>
 
-typedef struct private_tnc_ifmap2_listener_t private_tnc_ifmap2_listener_t;
+typedef struct private_tnc_ifmap_listener_t private_tnc_ifmap_listener_t;
 
 /**
- * Private data of an tnc_ifmap2_listener_t object.
+ * Private data of an tnc_ifmap_listener_t object.
  */
-struct private_tnc_ifmap2_listener_t {
+struct private_tnc_ifmap_listener_t {
 
 	/**
-	 * Public tnc_ifmap2_listener_t interface.
+	 * Public tnc_ifmap_listener_t interface.
 	 */
-	tnc_ifmap2_listener_t public;
+	tnc_ifmap_listener_t public;
 
 	/**
 	 * TNC IF-MAP 2.0 SOAP interface
 	 */
-	tnc_ifmap2_soap_t *ifmap;
+	tnc_ifmap_soap_t *ifmap;
 
 };
 
 /**
  * Publish PEP device-ip metadata
  */
-static bool publish_device_ip_addresses(private_tnc_ifmap2_listener_t *this)
+static bool publish_device_ip_addresses(private_tnc_ifmap_listener_t *this)
 {
 	enumerator_t *enumerator;
 	host_t *host;
@@ -66,7 +66,7 @@ static bool publish_device_ip_addresses(private_tnc_ifmap2_listener_t *this)
 /**
  * Publish all IKE_SA metadata
  */
-static bool reload_metadata(private_tnc_ifmap2_listener_t *this)
+static bool reload_metadata(private_tnc_ifmap_listener_t *this)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -92,7 +92,7 @@ static bool reload_metadata(private_tnc_ifmap2_listener_t *this)
 }
 
 METHOD(listener_t, ike_updown, bool,
-	private_tnc_ifmap2_listener_t *this, ike_sa_t *ike_sa, bool up)
+	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, bool up)
 {
 	if (ike_sa->get_state(ike_sa) != IKE_CONNECTING)
 	{
@@ -102,7 +102,7 @@ METHOD(listener_t, ike_updown, bool,
 }
 
 METHOD(listener_t, alert, bool,
-	private_tnc_ifmap2_listener_t *this, ike_sa_t *ike_sa, alert_t alert,
+	private_tnc_ifmap_listener_t *this, ike_sa_t *ike_sa, alert_t alert,
 	va_list args)
 {
 	if (alert == ALERT_PEER_AUTH_FAILED)
@@ -114,8 +114,8 @@ METHOD(listener_t, alert, bool,
 	return TRUE;
 }
 
-METHOD(tnc_ifmap2_listener_t, destroy, void,
-	private_tnc_ifmap2_listener_t *this)
+METHOD(tnc_ifmap_listener_t, destroy, void,
+	private_tnc_ifmap_listener_t *this)
 {
 	DESTROY_IF(this->ifmap);
 	free(this);
@@ -124,9 +124,9 @@ METHOD(tnc_ifmap2_listener_t, destroy, void,
 /**
  * See header
  */
-tnc_ifmap2_listener_t *tnc_ifmap2_listener_create(bool reload)
+tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 {
-	private_tnc_ifmap2_listener_t *this;
+	private_tnc_ifmap_listener_t *this;
 
 	INIT(this,
 		.public = {
@@ -136,7 +136,7 @@ tnc_ifmap2_listener_t *tnc_ifmap2_listener_create(bool reload)
 			},
 			.destroy = _destroy,
 		},
-		.ifmap = tnc_ifmap2_soap_create(),
+		.ifmap = tnc_ifmap_soap_create(),
 	);
 
 	if (!this->ifmap)

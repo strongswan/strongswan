@@ -168,7 +168,7 @@ ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actually verify or even request any credentials.])
-ARG_ENABL_SET([tnc-ifmap2],     [enable TNC IF-MAP v2 module. Requires libxml])
+ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
 ARG_ENABL_SET([tnc-pdp],        [enable TNC policy decision point module.])
 ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
@@ -338,7 +338,7 @@ if test x$fips_prf = xtrue; then
 	fi
 fi
 
-if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap2 = xtrue; then
+if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
 	xml=true
 fi
 
@@ -1006,7 +1006,7 @@ ADD_PLUGIN([xauth-generic],        [c charon])
 ADD_PLUGIN([xauth-eap],            [c charon])
 ADD_PLUGIN([xauth-pam],            [c charon])
 ADD_PLUGIN([xauth-noauth],         [c charon])
-ADD_PLUGIN([tnc-ifmap2],           [c charon])
+ADD_PLUGIN([tnc-ifmap],            [c charon])
 ADD_PLUGIN([tnc-pdp],              [c charon])
 ADD_PLUGIN([tnc-imc],              [c charon])
 ADD_PLUGIN([tnc-imv],              [c charon])
@@ -1147,7 +1147,7 @@ AM_CONDITIONAL(USE_XAUTH_GENERIC, test x$xauth_generic = xtrue)
 AM_CONDITIONAL(USE_XAUTH_EAP, test x$xauth_eap = xtrue)
 AM_CONDITIONAL(USE_XAUTH_PAM, test x$xauth_pam = xtrue)
 AM_CONDITIONAL(USE_XAUTH_NOAUTH, test x$xauth_noauth = xtrue)
-AM_CONDITIONAL(USE_TNC_IFMAP2, test x$tnc_ifmap2 = xtrue)
+AM_CONDITIONAL(USE_TNC_IFMAP, test x$tnc_ifmap = xtrue)
 AM_CONDITIONAL(USE_TNC_PDP, test x$tnc_pdp = xtrue)
 AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
@@ -1343,7 +1343,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/xauth_eap/Makefile
 	src/libcharon/plugins/xauth_pam/Makefile
 	src/libcharon/plugins/xauth_noauth/Makefile
-	src/libcharon/plugins/tnc_ifmap2/Makefile
+	src/libcharon/plugins/tnc_ifmap/Makefile
 	src/libcharon/plugins/tnc_pdp/Makefile
 	src/libcharon/plugins/tnc_imc/Makefile
 	src/libcharon/plugins/tnc_imv/Makefile

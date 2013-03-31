@@ -15,7 +15,7 @@
 
 #define _GNU_SOURCE /* for asprintf() */
 
-#include "tnc_ifmap2_soap_msg.h"
+#include "tnc_ifmap_soap_msg.h"
 
 #include <utils/debug.h>
 #include <utils/lexparser.h>
@@ -24,17 +24,17 @@
 
 #define SOAP_NS		"http://www.w3.org/2003/05/soap-envelope"
 
-typedef struct private_tnc_ifmap2_soap_msg_t private_tnc_ifmap2_soap_msg_t;
+typedef struct private_tnc_ifmap_soap_msg_t private_tnc_ifmap_soap_msg_t;
 
 /**
- * Private data of an tnc_ifmap2_soap_msg_t object.
+ * Private data of an tnc_ifmap_soap_msg_t object.
  */
-struct private_tnc_ifmap2_soap_msg_t {
+struct private_tnc_ifmap_soap_msg_t {
 
 	/**
-	 * Public tnc_ifmap2_soap_msg_t interface.
+	 * Public tnc_ifmap_soap_msg_t interface.
 	 */
-	tnc_ifmap2_soap_msg_t public;
+	tnc_ifmap_soap_msg_t public;
 
 	/**
 	 * HTTPS Server URI with https:// prefix removed
@@ -61,7 +61,7 @@ struct private_tnc_ifmap2_soap_msg_t {
 /**
  * Send HTTP POST request and receive HTTP response
  */
-static bool http_post(private_tnc_ifmap2_soap_msg_t *this, chunk_t out,
+static bool http_post(private_tnc_ifmap_soap_msg_t *this, chunk_t out,
 														   chunk_t *in)
 {
 	char *host, *path, *request, buf[2048];
@@ -187,8 +187,8 @@ static xmlNodePtr find_child(xmlNodePtr parent, const xmlChar* name)
 	return NULL;
 }
 
-METHOD(tnc_ifmap2_soap_msg_t, post, bool,
-	private_tnc_ifmap2_soap_msg_t *this, xmlNodePtr request, char *result_name,
+METHOD(tnc_ifmap_soap_msg_t, post, bool,
+	private_tnc_ifmap_soap_msg_t *this, xmlNodePtr request, char *result_name,
 	xmlNodePtr *result)
 {
 	xmlDocPtr doc;
@@ -302,8 +302,8 @@ METHOD(tnc_ifmap2_soap_msg_t, post, bool,
 	return TRUE;
 }
 
-METHOD(tnc_ifmap2_soap_msg_t, destroy, void,
-	private_tnc_ifmap2_soap_msg_t *this)
+METHOD(tnc_ifmap_soap_msg_t, destroy, void,
+	private_tnc_ifmap_soap_msg_t *this)
 {
 	if (this->doc)
 	{
@@ -315,10 +315,10 @@ METHOD(tnc_ifmap2_soap_msg_t, destroy, void,
 /**
  * See header
  */
-tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, chunk_t user_pass,
-												  tls_socket_t *tls)
+tnc_ifmap_soap_msg_t *tnc_ifmap_soap_msg_create(char *uri, chunk_t user_pass,
+												tls_socket_t *tls)
 {
-	private_tnc_ifmap2_soap_msg_t *this;
+	private_tnc_ifmap_soap_msg_t *this;
 
 	INIT(this,
 		.public = {

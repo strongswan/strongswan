@@ -14,37 +14,37 @@
  */
 
 /**
- * @defgroup tnc_ifmap2_soap tnc_ifmap2_soap
- * @{ @ingroup tnc_ifmap2
+ * @defgroup tnc_ifmap_soap tnc_ifmap_soap
+ * @{ @ingroup tnc_ifmap
  */
 
-#ifndef TNC_IFMAP2_SOAP_H_
-#define TNC_IFMAP2_SOAP_H_
+#ifndef TNC_IFMAP_SOAP_H_
+#define TNC_IFMAP_SOAP_H_
 
 #include <library.h>
 #include <networking/host.h>
 #include <sa/ike_sa.h>
 
-typedef struct tnc_ifmap2_soap_t tnc_ifmap2_soap_t;
+typedef struct tnc_ifmap_soap_t tnc_ifmap_soap_t;
 
 /**
  * Implements the TNC IF-MAP 2.0 SOAP Binding
  */
-struct tnc_ifmap2_soap_t {
+struct tnc_ifmap_soap_t {
 
 	/**
 	 * Creates a new IF-MAP session
 	 *
 	 * @return				TRUE if command was successful
 	 */
-	bool (*newSession)(tnc_ifmap2_soap_t *this);
+	bool (*newSession)(tnc_ifmap_soap_t *this);
 
 	/**
 	 * Purges all metadata published by this publisher
 	 *
 	 * @return				TRUE if command was successful
 	 */
-	bool (*purgePublisher)(tnc_ifmap2_soap_t *this);
+	bool (*purgePublisher)(tnc_ifmap_soap_t *this);
 
 	/**
 	 * Publish metadata about established/deleted IKE_SAs
@@ -53,7 +53,7 @@ struct tnc_ifmap2_soap_t {
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
 	 * @return				TRUE if command was successful
 	 */
-	bool (*publish_ike_sa)(tnc_ifmap2_soap_t *this, ike_sa_t *ike_sa, bool up);
+	bool (*publish_ike_sa)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up);
 
 	/**
 	 * Publish PEP device-ip metadata
@@ -61,7 +61,7 @@ struct tnc_ifmap2_soap_t {
 	 * @param host			IP address of local endpoint
 	 * @return				TRUE if command was successful
 	 */
-	bool (*publish_device_ip)(tnc_ifmap2_soap_t *this, host_t *host);
+	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
 
 	/**
 	 * Publish enforcement-report metadata
@@ -71,7 +71,7 @@ struct tnc_ifmap2_soap_t {
 	 * @param reason		Enforcement reason
 	 * @return				TRUE if command was successful
 	 */
-	bool (*publish_enforcement_report)(tnc_ifmap2_soap_t *this, host_t *host,
+	bool (*publish_enforcement_report)(tnc_ifmap_soap_t *this, host_t *host,
 									   char *action, char *reason);
 
 	/**
@@ -79,17 +79,17 @@ struct tnc_ifmap2_soap_t {
 	 *
 	 * @return				TRUE if command was successful
 	 */
-	bool (*endSession)(tnc_ifmap2_soap_t *this);
+	bool (*endSession)(tnc_ifmap_soap_t *this);
 
 	/**
-	 * Destroy a tnc_ifmap2_soap_t.
+	 * Destroy a tnc_ifmap_soap_t.
 	 */
-	void (*destroy)(tnc_ifmap2_soap_t *this);
+	void (*destroy)(tnc_ifmap_soap_t *this);
 };
 
 /**
- * Create a tnc_ifmap2_soap instance.
+ * Create a tnc_ifmap_soap instance.
  */
-tnc_ifmap2_soap_t *tnc_ifmap2_soap_create();
+tnc_ifmap_soap_t *tnc_ifmap_soap_create();
 
-#endif /** TNC_IFMAP2_SOAP_H_ @}*/
+#endif /** TNC_IFMAP_SOAP_H_ @}*/

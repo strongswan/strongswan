@@ -13,8 +13,8 @@
  * for more details.
  */
 
-#include "tnc_ifmap2_soap.h"
-#include "tnc_ifmap2_soap_msg.h"
+#include "tnc_ifmap_soap.h"
+#include "tnc_ifmap_soap_msg.h"
 
 #include <utils/debug.h>
 #include <credentials/sets/mem_cred.h>
@@ -32,17 +32,17 @@
 #define IFMAP_URI		"https://localhost:8444/imap"
 #define IFMAP_NO_FD		-1
 
-typedef struct private_tnc_ifmap2_soap_t private_tnc_ifmap2_soap_t;
+typedef struct private_tnc_ifmap_soap_t private_tnc_ifmap_soap_t;
 
 /**
- * Private data of an tnc_ifmap2_soap_t object.
+ * Private data of an tnc_ifmap_soap_t object.
  */
-struct private_tnc_ifmap2_soap_t {
+struct private_tnc_ifmap_soap_t {
 
 	/**
-	 * Public tnc_ifmap2_soap_t interface.
+	 * Public tnc_ifmap_soap_t interface.
 	 */
-	tnc_ifmap2_soap_t public;
+	tnc_ifmap_soap_t public;
 
 	/**
 	 * SOAP Session ID
@@ -101,10 +101,10 @@ struct private_tnc_ifmap2_soap_t {
 
 };
 
-METHOD(tnc_ifmap2_soap_t, newSession, bool,
-	private_tnc_ifmap2_soap_t *this)
+METHOD(tnc_ifmap_soap_t, newSession, bool,
+	private_tnc_ifmap_soap_t *this)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, result;
 
 	/*build newSession request */
@@ -112,7 +112,7 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
 	xmlSetNs(request, this->ns);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	if (!soap_msg->post(soap_msg, request, "newSessionResult", &result))
 	{
 		soap_msg->destroy(soap_msg);
@@ -129,17 +129,17 @@ METHOD(tnc_ifmap2_soap_t, newSession, bool,
 
 	/* set PEP and PDP device name (defaults to IF-MAP Publisher ID) */
 	this->device_name = lib->settings->get_str(lib->settings,
-									"%s.plugins.tnc-ifmap2.device_name",
+									"%s.plugins.tnc-ifmap.device_name",
 									 this->ifmap_publisher_id, charon->name);
 	this->device_name = strdup(this->device_name);
 
     return this->session_id && this->ifmap_publisher_id;
 }
 
-METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
-	private_tnc_ifmap2_soap_t *this)
+METHOD(tnc_ifmap_soap_t, purgePublisher, bool,
+	private_tnc_ifmap_soap_t *this)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request;
 	bool success;
 
@@ -150,7 +150,7 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 	xmlNewProp(request, "session-id", this->session_id);
 	xmlNewProp(request, "ifmap-publisher-id", this->ifmap_publisher_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "purgePublisherReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
@@ -160,7 +160,7 @@ METHOD(tnc_ifmap2_soap_t, purgePublisher, bool,
 /**
  * Create an access-request based on device_name and ike_sa_id
  */
-static xmlNodePtr create_access_request(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_access_request(private_tnc_ifmap_soap_t *this,
 										u_int32_t id)
 {
 	xmlNodePtr node;
@@ -177,7 +177,7 @@ static xmlNodePtr create_access_request(private_tnc_ifmap2_soap_t *this,
 /**
  * Create an identity
  */
-static xmlNodePtr create_identity(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_identity(private_tnc_ifmap_soap_t *this,
 								  identification_t *id, bool is_user)
 {
 	xmlNodePtr node;
@@ -223,7 +223,7 @@ static xmlNodePtr create_identity(private_tnc_ifmap2_soap_t *this,
 /**
  * Create enforcement-report metadata
  */
-static xmlNodePtr create_enforcement_report(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_enforcement_report(private_tnc_ifmap_soap_t *this,
 											xmlChar *action, xmlChar *reason)
 {
 	xmlNodePtr node, node2, node3;
@@ -247,7 +247,7 @@ static xmlNodePtr create_enforcement_report(private_tnc_ifmap2_soap_t *this,
 /**
  * Create delete filter
  */
-static xmlNodePtr create_delete_filter(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_delete_filter(private_tnc_ifmap_soap_t *this,
 									   char *metadata)
 {
 	xmlNodePtr node;
@@ -265,7 +265,7 @@ static xmlNodePtr create_delete_filter(private_tnc_ifmap2_soap_t *this,
 /**
  * Create a publish request
  */
-static xmlNodePtr create_publish_request(private_tnc_ifmap2_soap_t *this)
+static xmlNodePtr create_publish_request(private_tnc_ifmap_soap_t *this)
 {
 	xmlNodePtr request;
 
@@ -281,7 +281,7 @@ static xmlNodePtr create_publish_request(private_tnc_ifmap2_soap_t *this)
 /**
  * Create a device
  */
-static xmlNodePtr create_device(private_tnc_ifmap2_soap_t *this)
+static xmlNodePtr create_device(private_tnc_ifmap_soap_t *this)
 {
 	xmlNodePtr node, node2;
 
@@ -296,7 +296,7 @@ static xmlNodePtr create_device(private_tnc_ifmap2_soap_t *this)
 /**
  * Create an ip-address
  */
-static xmlNodePtr create_ip_address(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_ip_address(private_tnc_ifmap_soap_t *this,
 									host_t *host)
 {
 	xmlNodePtr node;
@@ -343,7 +343,7 @@ static xmlNodePtr create_ip_address(private_tnc_ifmap2_soap_t *this,
 /**
  * Create metadata
  */
-static xmlNodePtr create_metadata(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_metadata(private_tnc_ifmap_soap_t *this,
 								  xmlChar *metadata)
 {
 	xmlNodePtr node, node2;
@@ -359,7 +359,7 @@ static xmlNodePtr create_metadata(private_tnc_ifmap2_soap_t *this,
 /**
  * Create capability metadata
  */
-static xmlNodePtr create_capability(private_tnc_ifmap2_soap_t *this,
+static xmlNodePtr create_capability(private_tnc_ifmap_soap_t *this,
 									identification_t *name)
 {
 	xmlNodePtr node, node2;
@@ -379,10 +379,10 @@ static xmlNodePtr create_capability(private_tnc_ifmap2_soap_t *this,
 	return node;
 }
 
-METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
-	private_tnc_ifmap2_soap_t *this, ike_sa_t *ike_sa, bool up)
+METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
+	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool up)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, node, node2 = NULL;
 	enumerator_t *e1, *e2;
 	auth_rule_t type;
@@ -522,17 +522,17 @@ METHOD(tnc_ifmap2_soap_t, publish_ike_sa, bool,
 	}
 	e1->destroy(e1);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
 }
 
-METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
-	private_tnc_ifmap2_soap_t *this, host_t *host)
+METHOD(tnc_ifmap_soap_t, publish_device_ip, bool,
+	private_tnc_ifmap_soap_t *this, host_t *host)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, update;
 	bool success;
 
@@ -546,17 +546,17 @@ METHOD(tnc_ifmap2_soap_t, publish_device_ip, bool,
 	xmlAddChild(update, create_ip_address(this, host));
 	xmlAddChild(update, create_metadata(this, "device-ip"));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
 }
 
-METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
-	private_tnc_ifmap2_soap_t *this, host_t *host, char *action, char *reason)
+METHOD(tnc_ifmap_soap_t, publish_enforcement_report, bool,
+	private_tnc_ifmap_soap_t *this, host_t *host, char *action, char *reason)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, update;
 	bool success;
 
@@ -570,17 +570,17 @@ METHOD(tnc_ifmap2_soap_t, publish_enforcement_report, bool,
 	xmlAddChild(update, create_device(this));
 	xmlAddChild(update, create_enforcement_report(this, action, reason));
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
 }
 
-METHOD(tnc_ifmap2_soap_t, endSession, bool,
-	private_tnc_ifmap2_soap_t *this)
+METHOD(tnc_ifmap_soap_t, endSession, bool,
+	private_tnc_ifmap_soap_t *this)
 {
-	tnc_ifmap2_soap_msg_t *soap_msg;
+	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request;
 	bool success;
 
@@ -590,15 +590,15 @@ METHOD(tnc_ifmap2_soap_t, endSession, bool,
 	xmlSetNs(request, this->ns);
 	xmlNewProp(request, "session-id", this->session_id);
 
-	soap_msg = tnc_ifmap2_soap_msg_create(this->uri, this->user_pass, this->tls);
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "endSessionResult", NULL);
 	soap_msg->destroy(soap_msg);
 
 	return success;
 }
 
-METHOD(tnc_ifmap2_soap_t, destroy, void,
-	private_tnc_ifmap2_soap_t *this)
+METHOD(tnc_ifmap_soap_t, destroy, void,
+	private_tnc_ifmap_soap_t *this)
 {
 	if (this->session_id)
 	{
@@ -620,7 +620,7 @@ METHOD(tnc_ifmap2_soap_t, destroy, void,
 	free(this);
 }
 
-static bool soap_init(private_tnc_ifmap2_soap_t *this)
+static bool soap_init(private_tnc_ifmap_soap_t *this)
 {
 	char *server_uri, *server_str, *port_str, *uri_str;
 	char *server_cert, *client_cert, *client_key, *user_pass;
@@ -631,15 +631,15 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 
 	/* getting configuration parameters from strongswan.conf */
 	server_uri =  lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.server_uri", IFMAP_URI, charon->name);
+					"%s.plugins.tnc-ifmap.server_uri", IFMAP_URI, charon->name);
 	server_cert = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.server_cert", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.server_cert", NULL, charon->name);
 	client_cert = lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.client_cert", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.client_cert", NULL, charon->name);
 	client_key =  lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.client_key", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.client_key", NULL, charon->name);
 	user_pass =   lib->settings->get_str(lib->settings,
-					"%s.plugins.tnc-ifmap2.username_password", NULL, charon->name);
+					"%s.plugins.tnc-ifmap.username_password", NULL, charon->name);
 
 	/* load [self-signed] MAP server certificate */
 	if (!server_cert)
@@ -774,9 +774,9 @@ static bool soap_init(private_tnc_ifmap2_soap_t *this)
 /**
  * See header
  */
-tnc_ifmap2_soap_t *tnc_ifmap2_soap_create()
+tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 {
-	private_tnc_ifmap2_soap_t *this;
+	private_tnc_ifmap_soap_t *this;
 
 	INIT(this,
 		.public = {

@@ -14,24 +14,24 @@
  */
 
 /**
- * @defgroup tnc_ifmap2_soap_msg tnc_ifmap2_soap_msg
- * @{ @ingroup tnc_ifmap2 
+ * @defgroup tnc_ifmap_soap_msg tnc_ifmap_soap_msg
+ * @{ @ingroup tnc_ifmap 
  */
 
-#ifndef TNC_IFMAP2_SOAP_MSG_H_
-#define TNC_IFMAP2_SOAP_MSG_H_
+#ifndef TNC_IFMAP_SOAP_MSG_H_
+#define TNC_IFMAP_SOAP_MSG_H_
 
 #include <library.h>
 #include <tls_socket.h>
 
 #include <libxml/parser.h>
 
-typedef struct tnc_ifmap2_soap_msg_t tnc_ifmap2_soap_msg_t;
+typedef struct tnc_ifmap_soap_msg_t tnc_ifmap_soap_msg_t;
 
 /**
  * Interface for sending and receiving SOAP-XML messages
  */
-struct tnc_ifmap2_soap_msg_t {
+struct tnc_ifmap_soap_msg_t {
 
 	/**
 	 * Post an IF-MAP request in a SOAP-XML message and return a result
@@ -40,23 +40,23 @@ struct tnc_ifmap2_soap_msg_t {
 	 * @param result_name	name of the IF-MAP result
 	 * @param result		XML-encoded IF-MAP result
 	 */
-	bool (*post)(tnc_ifmap2_soap_msg_t *this, xmlNodePtr request,
+	bool (*post)(tnc_ifmap_soap_msg_t *this, xmlNodePtr request,
 				 char *result_name, xmlNodePtr* result);
 
 	/**
-	 * Destroy a tnc_ifmap2_soap_msg_t object.
+	 * Destroy a tnc_ifmap_soap_msg_t object.
 	 */
-	void (*destroy)(tnc_ifmap2_soap_msg_t *this);
+	void (*destroy)(tnc_ifmap_soap_msg_t *this);
 };
 
 /**
- * Create a tnc_ifmap2_soap_msg instance.
+ * Create a tnc_ifmap_soap_msg instance.
  *
  * @param uri			HTTPS URI with https:// prefix removed
  * @param user_pass		Optional username:password for HTTP Basic Authentication
  * @param tls			TLS socket protecting the SOAP message
  */
-tnc_ifmap2_soap_msg_t *tnc_ifmap2_soap_msg_create(char *uri, chunk_t user_pass,
-												  tls_socket_t *tls);
+tnc_ifmap_soap_msg_t *tnc_ifmap_soap_msg_create(char *uri, chunk_t user_pass,
+												tls_socket_t *tls);
 
-#endif /** TNC_IFMAP2_SOAP_MSG_H_ @}*/
+#endif /** TNC_IFMAP_SOAP_MSG_H_ @}*/
