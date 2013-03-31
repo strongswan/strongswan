@@ -628,23 +628,23 @@ Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
 .BR charon.plugins.tnccs-20.max_message_size " [65490]"
 Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
 .TP
-.BR charon.plugins.tnc-ifmap.device_name
-Unique name of strongSwan as a PEP and/or PDP device
-.TP
-.BR charon.plugins.tnc-ifmap.key_file
-Concatenated client certificate and private key
-.TP
-.BR charon.plugins.tnc-ifmap.password
-Authentication password of strongSwan MAP client
+.BR charon.plugins.tnc-ifmap.server_uri " [https://localhost:8444/imap]
+URI of the form [https://]servername[:port][/uri]
 .TP
 .BR charon.plugins.tnc-ifmap.server_cert
-Certificate of MAP server
+Path to X.509 certficate file of IF-MAP server
 .TP
-.BR charon.plugins.tnc-ifmap.ssl_passphrase
-Passphrase protecting the private key
+.BR charon.plugins.tnc-ifmap.client_cert
+Path to X.509 certificate file of IF-MAP client
 .TP
-.BR charon.plugins.tnc-ifmap.username
-Authentication username of strongSwan MAP client
+.BR charon.plugins.tnc-ifmap.client_key
+Path to private key file of IF-MAP client
+.TP
+.BR charon.plugins.tnc-ifmap.username_password
+Credentials of IF-MAP client of the form username:password
+.TP
+.BR charon.plugins.tnc-ifmap.device_name
+Unique name of strongSwan server as a PEP and/or PDP device
 .TP
 .BR charon.plugins.tnc-imc.dlclose " [yes]"
 Unload IMC after use
