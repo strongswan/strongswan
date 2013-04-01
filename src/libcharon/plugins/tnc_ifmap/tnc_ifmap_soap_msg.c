@@ -66,7 +66,7 @@ static bool http_post(private_tnc_ifmap_soap_msg_t *this, chunk_t out,
 {
 	char *host, *path, *request, buf[2048];
 	chunk_t line, http, parameter;
-	int len, code, content_len = 0;
+	int len, written, code, content_len = 0;
 
 	/* Duplicate host[/path] string since we are going to manipulate it */
 	len = strlen(this->uri) + 2;
@@ -111,12 +111,16 @@ static bool http_post(private_tnc_ifmap_soap_msg_t *this, chunk_t out,
 	http = chunk_create(request, len);
 	DBG3(DBG_TLS, "%B", &http);
 
-	this->tls->write(this->tls, request, len);
+	written = this->tls->write(this->tls, request, len);
 	free(request);
+	if (written != len)
+	{
+		return FALSE;
+	}
 
 	/* Read HTTP response */
 	len = this->tls->read(this->tls, buf, sizeof(buf), TRUE);
-	if (len == -1)
+	if (len <= 0)
 	{
 		return FALSE;
 	}
