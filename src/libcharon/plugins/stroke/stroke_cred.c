@@ -284,12 +284,30 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 {
 	certificate_t *cert;
 	char path[PATH_MAX];
+	builder_part_t build_part;
+	key_type_t build_type = KEY_ANY;
 
 	if (streq(filename, "%dns"))
 	{
-
+		return NULL;
 	}
-	else if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
+	if (strncaseeq(filename, "dns:", 4))
+	{	/* RFC 3110 format */
+		build_part = BUILD_BLOB_DNSKEY;
+		/* not a complete RR */
+		build_type = KEY_RSA;
+		filename += 4;
+	}
+	else if (strncaseeq(filename, "ssh:", 4))
+	{	/* SSH key */
+		build_part = BUILD_BLOB_SSHKEY;
+		filename += 4;
+	}
+	else
+	{	/* try PKCS#1 by default */
+		build_part = BUILD_BLOB_ASN1_DER;
+	}
+	if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
 	{
 		chunk_t printable_key, raw_key;
 		public_key_t *key;
@@ -298,16 +316,8 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 		raw_key = strncaseeq(filename, "0x", 2) ?
 								 chunk_from_hex(printable_key, NULL) :
 								 chunk_from_base64(printable_key, NULL);
-		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-								 BUILD_BLOB_ASN1_DER, raw_key,
-								 BUILD_END);
-		if (!key)
-		{	/* try RFC 3110 format (as it accepts nearly any blob, the above has
-			 * to be tried first) */
-			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-									 BUILD_BLOB_DNSKEY, raw_key,
-									 BUILD_END);
-		}
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, build_type,
+								 build_part, raw_key, BUILD_END);
 		chunk_free(&raw_key);
 		if (key)
 		{
