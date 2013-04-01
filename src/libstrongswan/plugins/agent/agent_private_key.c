@@ -49,9 +49,14 @@ struct private_agent_private_key_t {
 	int socket;
 
 	/**
-	 * key identity blob in ssh format
+	 * public key encoded in SSH format
 	 */
 	chunk_t key;
+
+	/**
+	 * public key
+	 */
+	public_key_t *pubkey;
 
 	/**
 	 * keysize in bytes
@@ -163,7 +168,7 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 {
 	int len;
 	char buf[2048];
-	chunk_t blob, key, type, n;
+	chunk_t blob, key;
 
 	len = htonl(1);
 	buf[0] = SSH_AGENT_ID_REQUEST;
@@ -193,32 +198,38 @@ static bool read_key(private_agent_private_key_t *this, public_key_t *pubkey)
 		{
 			break;
 		}
-		this->key = key;
-		type = read_string(&key);
-		if (!type.len || !strneq("ssh-rsa", type.ptr, type.len))
-		{
-			break;
-		}
-		read_string(&key);
-		n = read_string(&key);
-		if (n.len <= 512/8)
-		{
-			break;;
-		}
-		if (pubkey && !private_key_belongs_to(&this->public.key, pubkey))
+		this->pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+										  BUILD_BLOB_SSHKEY, key, BUILD_END);
+		if (!this->pubkey)
 		{
 			continue;
 		}
-		this->key_size = n.len;
-		if (n.ptr[0] == 0)
+		if (pubkey && !private_key_belongs_to(&this->public.key, pubkey))
 		{
-			this->key_size--;
+			this->pubkey->destroy(this->pubkey);
+			this->pubkey = NULL;
+			continue;
 		}
-		this->key = chunk_clone(this->key);
+		this->key = chunk_clone(key);
 		return TRUE;
 	}
-	this->key = chunk_empty;
 	return FALSE;
+}
+
+static bool scheme_supported(private_agent_private_key_t *this,
+							signature_scheme_t scheme)
+{
+	switch (this->pubkey->get_type(this->pubkey))
+	{
+		case KEY_RSA:
+			return scheme == SIGN_RSA_EMSA_PKCS1_SHA1;
+		case KEY_ECDSA:
+			return scheme == SIGN_ECDSA_256 ||
+				   scheme == SIGN_ECDSA_384 ||
+				   scheme == SIGN_ECDSA_521;
+		default:
+			return FALSE;
+	}
 }
 
 METHOD(private_key_t, sign, bool,
@@ -229,7 +240,7 @@ METHOD(private_key_t, sign, bool,
 	char buf[2048];
 	chunk_t blob;
 
-	if (scheme != SIGN_RSA_EMSA_PKCS1_SHA1)
+	if (!scheme_supported(this, scheme))
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by ssh-agent",
 			 signature_scheme_names, scheme);
@@ -279,23 +290,40 @@ METHOD(private_key_t, sign, bool,
 	}
 	/* parse length */
 	blob = read_string(&blob);
-	/* skip sig type */
-	read_string(&blob);
-	/* parse length */
-	blob = read_string(&blob);
-	if (!blob.len)
-	{
-		DBG1(DBG_LIB, "received invalid ssh-agent signature response");
-		return FALSE;
+	/* check sig type */
+	if (chunk_equals(read_string(&blob), chunk_from_str("ssh-rsa")))
+	{	/* for RSA the signature has no special encoding */
+		blob = read_string(&blob);
+		if (blob.len)
+		{
+			*signature = chunk_clone(blob);
+			return TRUE;
+		}
 	}
-	*signature =  chunk_clone(blob);
-	return TRUE;
+	else
+	{	/* anything else is treated as ECSDA for now */
+		blob = read_string(&blob);
+		if (blob.len)
+		{
+			chunk_t r, s;
+
+			r = read_string(&blob);
+			s = read_string(&blob);
+			if (r.len && s.len)
+			{
+				*signature = chunk_cat("cc", r, s);
+				return TRUE;
+			}
+		}
+	}
+	DBG1(DBG_LIB, "received invalid ssh-agent signature response");
+	return FALSE;
 }
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_agent_private_key_t *this)
 {
-	return KEY_RSA;
+	return this->pubkey->get_type(this->pubkey);
 }
 
 METHOD(private_key_t, decrypt, bool,
@@ -309,21 +337,13 @@ METHOD(private_key_t, decrypt, bool,
 METHOD(private_key_t, get_keysize, int,
 	private_agent_private_key_t *this)
 {
-	return this->key_size * 8;
+	return this->pubkey->get_keysize(this->pubkey);
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,
 	private_agent_private_key_t *this)
 {
-	chunk_t key, n, e;
-
-	key = this->key;
-	read_string(&key);
-	e = read_string(&key);
-	n = read_string(&key);
-
-	return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
+	return this->pubkey->get_ref(this->pubkey);
 }
 
 METHOD(private_key_t, get_encoding, bool,
@@ -336,19 +356,7 @@ METHOD(private_key_t, get_encoding, bool,
 METHOD(private_key_t, get_fingerprint, bool,
 	private_agent_private_key_t *this, cred_encoding_type_t type, chunk_t *fp)
 {
-	chunk_t n, e, key;
-
-	if (lib->encoding->get_cache(lib->encoding, type, this, fp))
-	{
-		return TRUE;
-	}
-	key = this->key;
-	read_string(&key);
-	e = read_string(&key);
-	n = read_string(&key);
-
-	return lib->encoding->encode(lib->encoding, type, this, fp,
-			CRED_PART_RSA_MODULUS, n, CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
+	return this->pubkey->get_fingerprint(this->pubkey, type, fp);
 }
 
 METHOD(private_key_t, get_ref, private_key_t*,
@@ -364,8 +372,8 @@ METHOD(private_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		close(this->socket);
-		free(this->key.ptr);
-		lib->encoding->clear_cache(lib->encoding, this);
+		chunk_free(&this->key);
+		DESTROY_IF(this->pubkey);
 		free(this);
 	}
 }

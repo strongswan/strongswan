@@ -42,7 +42,9 @@ METHOD(plugin_t, get_features, int,
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_REGISTER(PRIVKEY, agent_private_key_open, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
 	};
 	*features = f;
 	return countof(f);

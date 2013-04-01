@@ -148,7 +148,7 @@ static void load_agent(private_cmd_creds_t *this)
 	}
 
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								 KEY_RSA, BUILD_AGENT_SOCKET, agent, BUILD_END);
+								 KEY_ANY, BUILD_AGENT_SOCKET, agent, BUILD_END);
 	if (!privkey)
 	{
 		DBG1(DBG_CFG, "failed to load private key from ssh-agent");
@@ -200,6 +200,8 @@ METHOD(cmd_creds_t, handle, bool,
 	if (this->agent && this->identity)
 	{
 		load_agent(this);
+		/* only do this once */
+		this->agent = FALSE;
 	}
 	return TRUE;
 }
