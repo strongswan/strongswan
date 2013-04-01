@@ -96,7 +96,8 @@ leftauth,          KW_LEFTAUTH
 leftauth2,         KW_LEFTAUTH2
 leftid,            KW_LEFTID
 leftid2,           KW_LEFTID2
-leftrsasigkey,     KW_LEFTRSASIGKEY
+leftsigkey,        KW_LEFTSIGKEY
+leftrsasigkey,     KW_LEFTSIGKEY
 leftcert,          KW_LEFTCERT
 leftcert2,         KW_LEFTCERT2
 leftcertpolicy,    KW_LEFTCERTPOLICY
@@ -120,7 +121,8 @@ rightauth,         KW_RIGHTAUTH
 rightauth2,        KW_RIGHTAUTH2
 rightid,           KW_RIGHTID
 rightid2,          KW_RIGHTID2
-rightrsasigkey,    KW_RIGHTRSASIGKEY
+rightsigkey,       KW_RIGHTSIGKEY
+rightrsasigkey,    KW_RIGHTSIGKEY
 rightcert,         KW_RIGHTCERT
 rightcert2,        KW_RIGHTCERT2
 rightcertpolicy,   KW_RIGHTCERTPOLICY
