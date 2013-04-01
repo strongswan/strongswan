@@ -16,6 +16,7 @@
 #include "sshkey_plugin.h"
 
 #include <library.h>
+#include "sshkey_builder.h"
 
 typedef struct private_sshkey_plugin_t private_sshkey_plugin_t;
 
@@ -40,6 +41,8 @@ METHOD(plugin_t, get_features, int,
 	private_sshkey_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PUBKEY, sshkey_public_key_load, FALSE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 	};
 	*features = f;
 	return countof(f);
