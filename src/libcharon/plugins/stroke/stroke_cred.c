@@ -291,17 +291,24 @@ METHOD(stroke_cred_t, load_pubkey, certificate_t*,
 	}
 	else if (strncaseeq(filename, "0x", 2) || strncaseeq(filename, "0s", 2))
 	{
-		chunk_t printable_key, rfc3110_key;
+		chunk_t printable_key, raw_key;
 		public_key_t *key;
 
 		printable_key = chunk_create(filename + 2, strlen(filename) - 2);
-		rfc3110_key = strncaseeq(filename, "0x", 2) ?
+		raw_key = strncaseeq(filename, "0x", 2) ?
 								 chunk_from_hex(printable_key, NULL) :
 								 chunk_from_base64(printable_key, NULL);
-		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-								 BUILD_BLOB_DNSKEY, rfc3110_key,
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+								 BUILD_BLOB_ASN1_DER, raw_key,
 								 BUILD_END);
-		free(rfc3110_key.ptr);
+		if (!key)
+		{	/* try RFC 3110 format (as it accepts nearly any blob, the above has
+			 * to be tried first) */
+			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+									 BUILD_BLOB_DNSKEY, raw_key,
+									 BUILD_END);
+		}
+		chunk_free(&raw_key);
 		if (key)
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
