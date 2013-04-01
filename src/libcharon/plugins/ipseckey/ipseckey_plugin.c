@@ -60,7 +60,7 @@ METHOD(plugin_t, destroy, void,
 	{
 		lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 	}
-	this->res->destroy(this->res);
+	DESTROY_IF(this->res);
 	DESTROY_IF(this->cred);
 	free(this);
 }
@@ -87,8 +87,7 @@ plugin_t *ipseckey_plugin_create()
 
 	if (!this->res)
 	{
-		DBG1(DBG_CFG, "ipseckey_plugin: Failed to create"
-					  "a DNS resolver instance");
+		DBG1(DBG_CFG, "failed to create a DNS resolver instance");
 		destroy(this);
 		return NULL;
 	}

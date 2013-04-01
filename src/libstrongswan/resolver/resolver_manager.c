@@ -56,7 +56,11 @@ METHOD(resolver_manager_t, remove_resolver, void,
 METHOD(resolver_manager_t, create, resolver_t*,
 	private_resolver_manager_t *this)
 {
-	return this->constructor();
+	if (this->constructor)
+	{
+		return this->constructor();
+	}
+	return NULL;
 }
 
 METHOD(resolver_manager_t, destroy, void,
