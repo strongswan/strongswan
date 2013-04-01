@@ -47,6 +47,16 @@ struct private_cmd_creds_t {
 	 * Already prompted for password?
 	 */
 	bool prompted;
+
+	/**
+	 * Provide keys via ssh-agent
+	 */
+	bool agent;
+
+	/**
+	 * Local identity
+	 */
+	char *identity;
 };
 
 /**
@@ -119,6 +129,54 @@ static void load_key(private_cmd_creds_t *this, key_type_t type, char *path)
 	this->creds->add_key(this->creds, privkey);
 }
 
+/**
+ * Load a private and public key via ssh-agent
+ */
+static void load_agent(private_cmd_creds_t *this)
+{
+	private_key_t *privkey;
+	public_key_t *pubkey;
+	identification_t *id;
+	certificate_t *cert;
+	char *agent;
+
+	agent = getenv("SSH_AUTH_SOCK");
+	if (!agent)
+	{
+		DBG1(DBG_CFG, "ssh-agent socket not found");
+		exit(1);
+	}
+
+	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+								 KEY_RSA, BUILD_AGENT_SOCKET, agent, BUILD_END);
+	if (!privkey)
+	{
+		DBG1(DBG_CFG, "failed to load private key from ssh-agent");
+		exit(1);
+	}
+	pubkey = privkey->get_public_key(privkey);
+	if (!pubkey)
+	{
+		DBG1(DBG_CFG, "failed to load public key from ssh-agent");
+		privkey->destroy(privkey);
+		exit(1);
+	}
+	id = identification_create_from_string(this->identity);
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							  CERT_TRUSTED_PUBKEY, BUILD_PUBLIC_KEY, pubkey,
+							  BUILD_SUBJECT, id, BUILD_END);
+	pubkey->destroy(pubkey);
+	id->destroy(id);
+	if (!cert)
+	{
+		DBG1(DBG_CFG, "failed to create certificate for ssh-agent public key");
+		privkey->destroy(privkey);
+		exit(1);
+	}
+	this->creds->add_cert(this->creds, TRUE, cert);
+	this->creds->add_key(this->creds, privkey);
+}
+
 METHOD(cmd_creds_t, handle, bool,
 	private_cmd_creds_t *this, cmd_option_type_t opt, char *arg)
 {
@@ -130,8 +188,18 @@ METHOD(cmd_creds_t, handle, bool,
 		case CMD_OPT_RSA:
 			load_key(this, KEY_RSA, arg);
 			break;
+		case CMD_OPT_IDENTITY:
+			this->identity = arg;
+			break;
+		case CMD_OPT_AGENT:
+			this->agent = TRUE;
+			break;
 		default:
 			return FALSE;
+	}
+	if (this->agent && this->identity)
+	{
+		load_agent(this);
 	}
 	return TRUE;
 }

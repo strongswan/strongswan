@@ -387,6 +387,7 @@ METHOD(cmd_connection_t, handle, bool,
 			this->identity = arg;
 			break;
 		case CMD_OPT_RSA:
+		case CMD_OPT_AGENT:
 			this->key_seen = TRUE;
 			break;
 		case CMD_OPT_LOCAL_TS:
