@@ -76,6 +76,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CUSTOM, "tnc-ifmap-2.1"),
 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
 				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+				PLUGIN_SDEPEND(CUSTOM, "stroke"),
 	};
 	*features = f;
 	return countof(f);

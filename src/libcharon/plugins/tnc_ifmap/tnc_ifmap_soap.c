@@ -626,6 +626,7 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 	char *server_uri, *server_str, *port_str, *uri_str;
 	char *server_cert, *client_cert, *client_key, *user_pass;
 	int port;
+	auth_cfg_t *auth;
 	certificate_t *cert;
 	private_key_t *key;
 	identification_t *server_id, *client_id = NULL;
@@ -661,9 +662,9 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 	this->creds->add_cert(this->creds, TRUE, cert);
 
 	/* check availability of client credentials */
-	if (!((client_cert && client_key) || user_pass))
+	if (!client_cert && !user_pass)
 	{
-		DBG1(DBG_TNC, "neither MAP client certificate and private key "
+		DBG1(DBG_TNC, "neither MAP client certificate "
 					  "nor username:password defined");
 		return FALSE;
 	}
@@ -683,19 +684,34 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 		this->creds->add_cert(this->creds, TRUE, cert);
 
 		/* load MAP client private key */
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-								  BUILD_FROM_FILE, client_key, BUILD_END);
-		if (!key)
+		if (client_key)
 		{
-			DBG1(DBG_TNC, "loading MAP client private key from '%s' failed",
+			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									  BUILD_FROM_FILE, client_key, BUILD_END);
+			if (!key)
+			{
+				DBG1(DBG_TNC, "loading MAP client private key from '%s' failed",
+							   client_key);
+				return FALSE;
+			}
+			DBG1(DBG_TNC, "loaded MAP client RSA private key from '%s'",
 						   client_key);
-			return FALSE;
+			this->creds->add_key(this->creds, key);
 		}
-		DBG1(DBG_TNC, "loaded MAP client RSA private key from '%s'", client_key);
-		this->creds->add_key(this->creds, key);
 
 		/* set client ID to certificate distinguished name */
 		client_id = cert->get_subject(cert);
+
+		/* check if we have a private key matching the certificate */
+		auth = auth_cfg_create();
+		auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert);
+		key = lib->credmgr->get_private(lib->credmgr, KEY_RSA, client_id, auth);
+		auth->destroy(auth);
+		if (!key)
+		{
+			DBG1(DBG_TNC, "no RSA private key matching MAP client certificate");
+			return FALSE;
+		}
 	}
 	else
 	{
