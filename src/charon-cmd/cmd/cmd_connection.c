@@ -180,6 +180,7 @@ static void add_auth_cfg(private_cmd_connection_t *this, peer_cfg_t *peer_cfg,
 		{
 			id = identification_create_from_string(this->host);
 		}
+		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, local);
