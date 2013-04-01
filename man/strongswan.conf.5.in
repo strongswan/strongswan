@@ -1,4 +1,4 @@
-.TH STRONGSWAN.CONF 5 "2013-01-25" "@IPSEC_VERSION@" "strongSwan"
+.TH STRONGSWAN.CONF 5 "2013-04-01" "@IPSEC_VERSION@" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -416,6 +416,10 @@ is compared to the groups specified in the
 option in
 .B ipsec.conf (5).
 .TP
+.BR charon.plugins.eap-radius.close_all_on_timeout " [no]"
+Closes all IKE_SAs if communication with the RADIUS server times out. If it is
+not set only the current IKE_SA is closed.
+.TP
 .BR charon.plugins.eap-radius.dae.enable " [no]"
 Enables support for the Dynamic Authorization Extension (RFC 5176)
 .TP
@@ -539,6 +543,10 @@ Start phase2 EAP TNC protocol after successful client authentication
 .BR charon.plugins.eap-ttls.request_peer_auth " [no]"
 Request peer authentication based on a client certificate
 .TP
+.BR charon.plugins.ha.autobalance " [0]"
+Interval in seconds to automatically balance handled segments between nodes.
+Set to 0 to disable.
+.TP
 .BR charon.plugins.ha.fifo_interface " [yes]"
 
 .TP
@@ -619,6 +627,21 @@ certificates even if they don't contain a CA basic constraint.
 .BR charon.plugins.stroke.max_concurrent " [4]"
 Maximum number of stroke messages handled concurrently
 .TP
+.BR charon.plugins.stroke.timeout " [0]"
+Timeout in ms for any stroke command. Use 0 to disable the timeout
+.TP
+.BR charon.plugins.systime-fix.interval " [0]"
+Interval in seconds to check system time for validity. 0 disables the check
+.TP
+.BR charon.plugins.systime-fix.reauth " [no]"
+Whether to use reauth or delete if an invalid cert lifetime is detected
+.TP
+.BR charon.plugins.systime-fix.threshold
+Threshold date where system time is considered valid. Disabled if not specified
+.TP
+.BR charon.plugins.systime-fix.threshold_format " [%Y]"
+strptime(3) format used to parse threshold option
+.TP
 .BR charon.plugins.tnccs-11.max_message_size " [45000]"
 Maximum size of a PA-TNC message (XML & Base64 encoding)
 .TP
@@ -628,23 +651,23 @@ Maximum size of a PB-TNC batch (upper limit via PT-EAP = 65529)
 .BR charon.plugins.tnccs-20.max_message_size " [65490]"
 Maximum size of a PA-TNC message (upper limit via PT-EAP = 65497)
 .TP
-.BR charon.plugins.tnc-ifmap.server_uri " [https://localhost:8444/imap]
-URI of the form [https://]servername[:port][/uri]
-.TP
-.BR charon.plugins.tnc-ifmap.server_cert
-Path to X.509 certficate file of IF-MAP server
-.TP
 .BR charon.plugins.tnc-ifmap.client_cert
 Path to X.509 certificate file of IF-MAP client
 .TP
 .BR charon.plugins.tnc-ifmap.client_key
 Path to private key file of IF-MAP client
 .TP
-.BR charon.plugins.tnc-ifmap.username_password
-Credentials of IF-MAP client of the form username:password
-.TP
 .BR charon.plugins.tnc-ifmap.device_name
 Unique name of strongSwan server as a PEP and/or PDP device
+.TP
+.BR charon.plugins.tnc-ifmap.server_uri " [https://localhost:8444/imap]
+URI of the form [https://]servername[:port][/path]
+.TP
+.BR charon.plugins.tnc-ifmap.server_cert
+Path to X.509 certificate file of IF-MAP server
+.TP
+.BR charon.plugins.tnc-ifmap.username_password
+Credentials of IF-MAP client of the form username:password
 .TP
 .BR charon.plugins.tnc-imc.dlclose " [yes]"
 Unload IMC after use
@@ -666,6 +689,9 @@ Shared RADIUS secret between strongSwan PDP and NAS
 .TP
 .BR charon.plugins.tnc-pdp.server
 Name of the strongSwan PDP as contained in the AAA certificate
+.TP
+.BR charon.plugins.tnc-pdp.timeout
+Timeout in seconds before closing incomplete connections
 .TP
 .BR charon.plugins.updown.dns_handler " [no]"
 Whether the updown script should handle DNS serves assigned via IKEv1 Mode
@@ -1308,6 +1334,9 @@ preconfigured credentials and allows an attacker to authenticate as any user.
 Subsection that contains key/value pairs with address pools (in CIDR notation)
 to use for a specific network interface e.g. eth0 = 10.10.0.0/16
 .TP
+.BR charon.plugins.load-tester.addrs_keep " [no]"
+Whether to keep dynamic addresses even after the associated SA got terminated
+.TP
 .BR charon.plugins.load-tester.addrs_prefix " [16]"
 Network prefix length to use when installing dynamic addresses. If set to -1 the
 full address is used (i.e. 32 or 128)
@@ -1338,6 +1367,9 @@ EAP secret to use in load test
 .TP
 .BR charon.plugins.load-tester.enable " [no]"
 Enable the load testing plugin
+.TP
+.BR charon.plugins.load-tester.esp " [aes128-sha1]"
+CHILD_SA proposal to use for load tests
 .TP
 .BR charon.plugins.load-tester.fake_kernel " [no]"
 Fake the kernel interface to allow load-testing against self
