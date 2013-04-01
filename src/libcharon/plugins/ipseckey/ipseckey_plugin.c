@@ -82,7 +82,7 @@ plugin_t *ipseckey_plugin_create()
 		},
 		.res = lib->resolver->create(lib->resolver),
 		.enabled = lib->settings->get_bool(lib->settings,
-								"charon.plugins.ipseckey.enable", FALSE),
+							"%s.plugins.ipseckey.enable", FALSE, charon->name),
 	);
 
 	if (!this->res)
