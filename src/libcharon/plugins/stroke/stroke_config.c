@@ -485,6 +485,17 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			identity = identity->clone(identity);
 		}
 	}
+	/* add raw RSA public key */
+	pubkey = end->rsakey;
+	if (pubkey && !streq(pubkey, "") && !streq(pubkey, "%cert"))
+	{
+		certificate = this->cred->load_pubkey(this->cred, KEY_RSA, pubkey,
+											  identity);
+		if (certificate)
+		{
+			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
+		}
+	}
 	if (identity->get_type(identity) != ID_ANY)
 	{
 		cfg->add(cfg, AUTH_RULE_IDENTITY, identity);
@@ -496,18 +507,6 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 	else
 	{
 		identity->destroy(identity);
-	}
-
-	/* add raw RSA public key */
-	pubkey = end->rsakey;
-	if (pubkey && !streq(pubkey, "") && !streq(pubkey, "%cert"))
-	{
-		certificate = this->cred->load_pubkey(this->cred, KEY_RSA, pubkey,
-											  identity);
-		if (certificate)
-		{
-			cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
-		}
 	}
 
 	/* CA constraint */
