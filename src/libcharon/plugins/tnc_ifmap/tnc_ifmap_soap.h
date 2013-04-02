@@ -40,6 +40,13 @@ struct tnc_ifmap_soap_t {
 	bool (*newSession)(tnc_ifmap_soap_t *this);
 
 	/**
+	 * Check if the IF-MAP session is still active
+	 *
+	 * @return				TRUE if command was successful
+	 */
+	bool (*renewSession)(tnc_ifmap_soap_t *this);
+
+	/**
 	 * Purges all metadata published by this publisher
 	 *
 	 * @return				TRUE if command was successful

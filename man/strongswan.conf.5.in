@@ -660,7 +660,10 @@ Path to private key file of IF-MAP client
 .BR charon.plugins.tnc-ifmap.device_name
 Unique name of strongSwan server as a PEP and/or PDP device
 .TP
-.BR charon.plugins.tnc-ifmap.server_uri " [https://localhost:8444/imap]
+.BR charon.plugins.tnc-ifmap.renew_session_interval " [150]"
+Interval in seconds between periodic IF-MAP RenewSession requests
+.TP
+.BR charon.plugins.tnc-ifmap.server_uri " [https://localhost:8444/imap]"
 URI of the form [https://]servername[:port][/path]
 .TP
 .BR charon.plugins.tnc-ifmap.server_cert

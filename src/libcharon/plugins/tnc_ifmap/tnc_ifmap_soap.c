@@ -136,6 +136,26 @@ METHOD(tnc_ifmap_soap_t, newSession, bool,
     return this->session_id && this->ifmap_publisher_id;
 }
 
+METHOD(tnc_ifmap_soap_t, renewSession, bool,
+	private_tnc_ifmap_soap_t *this)
+{
+	tnc_ifmap_soap_msg_t *soap_msg;
+	xmlNodePtr request;
+	bool success;
+
+	/* build renewSession request */
+	request = xmlNewNode(NULL, "renewSession");
+	this->ns = xmlNewNs(request, IFMAP_NS, "ifmap");
+	xmlSetNs(request, this->ns);
+	xmlNewProp(request, "session-id", this->session_id);
+
+	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
+	success = soap_msg->post(soap_msg, request, "renewSessionResult", NULL);
+	soap_msg->destroy(soap_msg);
+
+	return success;
+}
+
 METHOD(tnc_ifmap_soap_t, purgePublisher, bool,
 	private_tnc_ifmap_soap_t *this)
 {
@@ -798,6 +818,7 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 	INIT(this,
 		.public = {
 			.newSession = _newSession,
+			.renewSession = _renewSession,
 			.purgePublisher = _purgePublisher,
 			.publish_ike_sa = _publish_ike_sa,
 			.publish_device_ip = _publish_device_ip,
