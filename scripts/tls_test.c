@@ -33,15 +33,59 @@
 static void usage(FILE *out, char *cmd)
 {
 	fprintf(out, "usage:\n");
-	fprintf(out, "  %s --connect <address> --port <port> [--cert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "  %s --connect <address> --port <port> [--key <key] [--cert <file>]+ [--times <n>]\n", cmd);
 	fprintf(out, "  %s --listen <address> --port <port> --key <key> [--cert <file>]+ [--times <n>]\n", cmd);
+}
+
+/**
+ * Check, as client, if we have a client certificate with private key
+ */
+static identification_t *find_client_id()
+{
+	identification_t *client = NULL, *keyid;
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	public_key_t *pubkey;
+	private_key_t *privkey;
+	chunk_t chunk;
+
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+											CERT_X509, KEY_ANY, NULL, FALSE);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		pubkey = cert->get_public_key(cert);
+		if (pubkey)
+		{
+			if (pubkey->get_fingerprint(pubkey, KEYID_PUBKEY_SHA1, &chunk))
+			{
+				keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
+				privkey = lib->credmgr->get_private(lib->credmgr,
+									pubkey->get_type(pubkey), keyid, NULL);
+				keyid->destroy(keyid);
+				if (privkey)
+				{
+					client = cert->get_subject(cert);
+					client = client->clone(client);
+					privkey->destroy(privkey);
+				}
+			}
+			pubkey->destroy(pubkey);
+		}
+		if (client)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return client;
 }
 
 /**
  * Client routine
  */
-static int client(host_t *host, identification_t *server,
-				  int times, tls_cache_t *cache)
+static int run_client(host_t *host, identification_t *server,
+					  identification_t *client, int times, tls_cache_t *cache)
 {
 	tls_socket_t *tls;
 	int fd, res;
@@ -61,7 +105,7 @@ static int client(host_t *host, identification_t *server,
 			close(fd);
 			return 1;
 		}
-		tls = tls_socket_create(FALSE, server, NULL, fd, cache);
+		tls = tls_socket_create(FALSE, server, client, fd, cache);
 		if (!tls)
 		{
 			close(fd);
@@ -224,7 +268,7 @@ int main(int argc, char *argv[])
 	char *address = NULL;
 	bool listen = FALSE;
 	int port = 0, times = -1, res;
-	identification_t *server;
+	identification_t *server, *client;
 	tls_cache_t *cache;
 	host_t *host;
 
@@ -307,11 +351,12 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		res = client(host, server, times, cache);
+		client = find_client_id();
+		res = run_client(host, server, client, times, cache);
+		DESTROY_IF(client);
 	}
 	cache->destroy(cache);
 	host->destroy(host);
 	server->destroy(server);
 	return res;
 }
-
