@@ -99,6 +99,11 @@ struct memory_header_t {
 	backtrace_t *backtrace;
 
 	/**
+	 * Padding to make sizeof(memory_header_t) == 32
+	 */
+	u_int32_t padding[sizeof(void*) == sizeof(u_int32_t) ? 3 : 0];
+
+	/**
 	 * Number of bytes following after the header
 	 */
 	u_int32_t bytes;
