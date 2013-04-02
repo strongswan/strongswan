@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.0.3rc1])
+AC_INIT([strongSwan],[5.0.3])
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
