@@ -27,6 +27,7 @@
 #include <netdb.h>
 #include <locale.h>
 #include <dlfcn.h>
+#include <time.h>
 
 #include "leak_detective.h"
 
@@ -283,12 +284,6 @@ char *whitelist[] = {
 	"pthread_setspecific",
 	"__pthread_setspecific",
 	/* glibc functions */
-	"mktime",
-	"ctime",
-	"__gmtime_r",
-	"localtime_r",
-	"tzset",
-	"time_printf_hook",
 	"inet_ntoa",
 	"strerror",
 	"getprotobyname",
@@ -366,6 +361,14 @@ char *whitelist[] = {
 	"gnutls_global_init",
 };
 
+/**
+ * Some functions are hard to whitelist, as they don't use a symbol directly.
+ * Use some static initialization to suppress them on leak reports
+ */
+static void init_static_allocations()
+{
+	tzset();
+}
 
 /**
  * Hashtable hash function
@@ -747,6 +750,8 @@ leak_detective_t *leak_detective_create()
 
 	lock = spinlock_create();
 	thread_disabled = thread_value_create(NULL);
+
+	init_static_allocations();
 
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
