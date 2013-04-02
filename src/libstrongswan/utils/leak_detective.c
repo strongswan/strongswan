@@ -71,10 +71,6 @@ struct private_leak_detective_t {
  */
 #define MEMORY_ALLOC_PATTERN 0xEE
 
-static u_int count_malloc = 0;
-static u_int count_free = 0;
-static u_int count_realloc = 0;
-
 typedef struct memory_header_t memory_header_t;
 typedef struct memory_tail_t memory_tail_t;
 
@@ -546,7 +542,6 @@ void* malloc(size_t bytes)
 		return real_malloc(bytes);
 	}
 
-	count_malloc++;
 	hdr = real_malloc(sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
 	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
 	/* set to something which causes crashes */
@@ -612,7 +607,6 @@ void free(void *ptr)
 	hdr = ptr - sizeof(memory_header_t);
 	tail = ptr + hdr->bytes;
 
-	count_free++;
 	before = enable_thread(FALSE);
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
@@ -688,7 +682,6 @@ void* realloc(void *old, size_t bytes)
 	hdr = old - sizeof(memory_header_t);
 	tail = old + hdr->bytes;
 
-	count_realloc++;
 	if (hdr->magic != MEMORY_HEADER_MAGIC ||
 		tail->magic != MEMORY_TAIL_MAGIC)
 	{
