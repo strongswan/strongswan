@@ -46,6 +46,7 @@ struct private_tnc_ifmap_renew_session_job_t {
 METHOD(job_t, destroy, void,
 	private_tnc_ifmap_renew_session_job_t *this)
 {
+	this->ifmap->destroy(this->ifmap);
 	free(this);
 }
 
@@ -59,7 +60,6 @@ METHOD(job_t, execute, job_requeue_t,
 		session_id = this->ifmap->get_session_id(this->ifmap);
 		DBG2(DBG_TNC, "removing orphaned ifmap renewSession job for '%s'",
 					   session_id);
-		this->ifmap->destroy(this->ifmap);
 		return JOB_REQUEUE_NONE;
 	}
 	else
