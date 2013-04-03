@@ -120,7 +120,14 @@ METHOD(listener_t, alert, bool,
 METHOD(tnc_ifmap_listener_t, destroy, void,
 	private_tnc_ifmap_listener_t *this)
 {
-	DESTROY_IF(this->ifmap);
+	if (this->ifmap)
+	{
+		if (this->ifmap->get_session_id(this->ifmap))
+		{
+			this->ifmap->endSession(this->ifmap);
+		}
+		this->ifmap->destroy(this->ifmap);
+	}
 	free(this);
 }
 
@@ -178,7 +185,8 @@ tnc_ifmap_listener_t *tnc_ifmap_listener_create(bool reload)
 						"%s.plugins.tnc-ifmap.renew_session_interval",
 						 IFMAP_RENEW_SESSION_INTERVAL, charon->name);
 
-	job = (job_t*)tnc_ifmap_renew_session_job_create(this->ifmap, reschedule);
+	job = (job_t*)tnc_ifmap_renew_session_job_create(
+						this->ifmap->get_ref(this->ifmap), reschedule);
 	lib->scheduler->schedule_job(lib->scheduler, job, reschedule);
 
 	return &this->public;

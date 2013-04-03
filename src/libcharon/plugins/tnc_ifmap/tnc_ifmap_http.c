@@ -98,7 +98,7 @@ METHOD(tnc_ifmap_http_t, build, status_t,
 		return FAILED;
 	}
 	*out = chunk_create(request, len);
-	DBG3(DBG_TLS, "sending HTML POST request %B", out);
+	DBG3(DBG_TLS, "sending HTTP POST request %B", out);
 
 	return SUCCESS;
 }

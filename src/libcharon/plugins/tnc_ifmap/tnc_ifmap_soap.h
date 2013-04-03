@@ -89,6 +89,27 @@ struct tnc_ifmap_soap_t {
 	bool (*endSession)(tnc_ifmap_soap_t *this);
 
 	/**
+	 * Get ID of IF-MAP session
+	 *
+	 * @return				IF-MAP session ID
+	 */
+	char* (*get_session_id)(tnc_ifmap_soap_t *this);
+
+	/**
+	 * Check for an orphaned IF-MAP session
+	 *
+	 * @return				TRUE if IF-MAP session is orphaned
+	 */
+	bool (*orphaned)(tnc_ifmap_soap_t *this);
+
+	/**
+	 * Get a reference to an IF-MAP session
+	 *
+	 * @return				referenced IF-MAP session
+	 */
+	tnc_ifmap_soap_t* (*get_ref)(tnc_ifmap_soap_t *this);
+
+	/**
 	 * Destroy a tnc_ifmap_soap_t.
 	 */
 	void (*destroy)(tnc_ifmap_soap_t *this);

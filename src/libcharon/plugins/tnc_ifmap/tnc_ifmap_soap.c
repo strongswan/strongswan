@@ -99,6 +99,11 @@ struct private_tnc_ifmap_soap_t {
 	 */
 	mem_cred_t *creds;
 
+	/**
+	 * reference count
+	 */
+	refcount_t ref;
+
 };
 
 METHOD(tnc_ifmap_soap_t, newSession, bool,
@@ -124,7 +129,7 @@ METHOD(tnc_ifmap_soap_t, newSession, bool,
 	this->ifmap_publisher_id = xmlGetProp(result, "ifmap-publisher-id");
 	soap_msg->destroy(soap_msg);
 
-	DBG1(DBG_TNC, "session-id: %s, ifmap-publisher-id: %s",
+	DBG1(DBG_TNC, "created ifmap session '%s' as publisher '%s'",
 				   this->session_id, this->ifmap_publisher_id);
 
 	/* set PEP and PDP device name (defaults to IF-MAP Publisher ID) */
@@ -415,9 +420,9 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 
 	/* extract relevant data from IKE_SA*/
 	ike_sa_id = ike_sa->get_unique_id(ike_sa);
+	host = ike_sa->get_other_host(ike_sa);
 	id = ike_sa->get_other_id(ike_sa);
 	eap_id = ike_sa->get_other_eap_id(ike_sa);
-	host = ike_sa->get_other_host(ike_sa);
 
 	/* in the presence of an EAP Identity, treat it as a username */
 	if (!id->equals(id, eap_id))
@@ -460,7 +465,7 @@ METHOD(tnc_ifmap_soap_t, publish_ike_sa, bool,
 	}
 
 	/**
-	 * update or delete access-request-ip metadata
+	 * update or delete access-request-ip metadata for physical IP address
 	 */
 	if (up)
 	{
@@ -615,30 +620,54 @@ METHOD(tnc_ifmap_soap_t, endSession, bool,
 	success = soap_msg->post(soap_msg, request, "endSessionResult", NULL);
 	soap_msg->destroy(soap_msg);
 
+	DBG1(DBG_TNC, "ended ifmap session '%s' as publisher '%s'",
+				   this->session_id, this->ifmap_publisher_id);
+
 	return success;
+}
+
+METHOD(tnc_ifmap_soap_t, get_session_id, char*,
+	private_tnc_ifmap_soap_t *this)
+{
+	return this->session_id;
+}
+
+METHOD(tnc_ifmap_soap_t, orphaned, bool,
+	private_tnc_ifmap_soap_t *this)
+{
+	return this->ref == 1;
+}
+
+METHOD(tnc_ifmap_soap_t, get_ref, tnc_ifmap_soap_t*,
+	private_tnc_ifmap_soap_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public;
 }
 
 METHOD(tnc_ifmap_soap_t, destroy, void,
 	private_tnc_ifmap_soap_t *this)
 {
-	if (this->session_id)
+	if (ref_put(&this->ref))
 	{
-		endSession(this);
-		xmlFree(this->session_id);
-		xmlFree(this->ifmap_publisher_id);
-		free(this->device_name);
-	}
-	DESTROY_IF(this->tls);
-	DESTROY_IF(this->host);
+		if (this->session_id)
+		{
+			xmlFree(this->session_id);
+			xmlFree(this->ifmap_publisher_id);
+			free(this->device_name);
+		}
+		DESTROY_IF(this->tls);
+		DESTROY_IF(this->host);
 
-	if (this->fd != IFMAP_NO_FD)
-	{
-		close(this->fd);
+		if (this->fd != IFMAP_NO_FD)
+		{
+			close(this->fd);
+		}
+		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+		this->creds->destroy(this->creds);
+		free(this->user_pass.ptr);
+		free(this);
 	}
-	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
-	this->creds->destroy(this->creds);
-	free(this->user_pass.ptr);
-	free(this);
 }
 
 static bool soap_init(private_tnc_ifmap_soap_t *this)
@@ -824,10 +853,14 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			.publish_device_ip = _publish_device_ip,
 			.publish_enforcement_report = _publish_enforcement_report,
 			.endSession = _endSession,
+			.get_session_id = _get_session_id,
+			.orphaned = _orphaned,
+			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
 		.fd = IFMAP_NO_FD,
 		.creds = mem_cred_create(),
+		.ref = 1,
 	);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
