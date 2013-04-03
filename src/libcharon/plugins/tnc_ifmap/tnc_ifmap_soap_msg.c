@@ -13,14 +13,10 @@
  * for more details.
  */
 
-#define _GNU_SOURCE /* for asprintf() */
-
 #include "tnc_ifmap_soap_msg.h"
+#include "tnc_ifmap_http.h"
 
 #include <utils/debug.h>
-#include <utils/lexparser.h>
-
-#include <stdio.h>
 
 #define SOAP_NS		"http://www.w3.org/2003/05/soap-envelope"
 
@@ -37,17 +33,12 @@ struct private_tnc_ifmap_soap_msg_t {
 	tnc_ifmap_soap_msg_t public;
 
 	/**
-	 * HTTPS Server URI with https:// prefix removed
+	 * HTTP POST request builder and response processing
 	 */
-	char *uri;
+	tnc_ifmap_http_t *http;
 
 	/**
-	 * Optional base64-encoded username:password for HTTP Basic Authentication
-	 */
-	chunk_t user_pass;
-
-	/**
-	 * TLS Socket
+	 * TLS socket
 	 */
 	tls_socket_t *tls;
 
@@ -57,118 +48,6 @@ struct private_tnc_ifmap_soap_msg_t {
 	xmlDocPtr doc;
 
 };
-
-/**
- * Send HTTP POST request and receive HTTP response
- */
-static bool http_post(private_tnc_ifmap_soap_msg_t *this, chunk_t out,
-														   chunk_t *in)
-{
-	char *host, *path, *request, buf[2048];
-	chunk_t line, http, parameter;
-	int len, written, code, content_len = 0;
-
-	/* Duplicate host[/path] string since we are going to manipulate it */
-	len = strlen(this->uri) + 2;
-	host = malloc(len);
-	memset(host, '\0', len);
-	strcpy(host, this->uri);
-
-	/* Extract appended path or set to root */
-	path = strchr(host, '/');
-	if (!path)
-	{
-		path = host + len - 2;
-		*path = '/';
-	}
-
-	/* Use Basic Authentication? */
-	if (this->user_pass.len)
-	{
-		snprintf(buf, sizeof(buf), "Authorization: Basic %.*s\r\n",
-				 this->user_pass.len, this->user_pass.ptr);
-	}
-	else
-	{
-		*buf = '\0';
-	}
-
-	/* Write HTTP POST request */
-	len = asprintf(&request,
-			"POST %s HTTP/1.1\r\n"
-			"Host: %.*s\r\n"
-			"%s"
-			"Content-Type: application/soap+xml;charset=utf-8\r\n"
-			"Content-Length: %d\r\n"
-			"\r\n"
-			"%.*s", path, (path-host), host, buf, out.len, out.len, out.ptr);
-	free(host);
-
-	if (len == -1)
-	{
-		return FALSE;
-	}
-	http = chunk_create(request, len);
-	DBG3(DBG_TLS, "%B", &http);
-
-	written = this->tls->write(this->tls, request, len);
-	free(request);
-	if (written != len)
-	{
-		return FALSE;
-	}
-
-	/* Read HTTP response */
-	len = this->tls->read(this->tls, buf, sizeof(buf), TRUE);
-	if (len <= 0)
-	{
-		return FALSE;
-	}
-	*in = chunk_create(buf, len);
-
-	/* Process HTTP protocol version */
-	if (!fetchline(in, &line) || !extract_token(&http, ' ', &line) ||
-		!match("HTTP/1.1", &http) || sscanf(line.ptr, "%d", &code) != 1)
-	{
-		DBG1(DBG_TNC, "malformed http response header");
-		return FALSE;
-	}
-	if (code != 200)
-	{
-		DBG1(DBG_TNC, "http response returns error code %d", code);
-		return FALSE;
-	}	
-
-	/* Process HTTP header line by line until the HTTP body is reached */
-	while (fetchline(in, &line))
-	{
-		if (line.len == 0)
-		{
-			break;
-		}
-
-		if (extract_token(&parameter, ':', &line) &&
-			match("Content-Length", &parameter) &&
-			sscanf(line.ptr, "%d", &len) == 1)
-	 	{
-			content_len = len;
-		}
-	}
-
-	/* Found Content-Length parameter and check size of HTTP body */
-	if (content_len)
-	{
-		if (content_len > in->len)
-		{
-			DBG1(DBG_TNC, "http body is smaller than content length");
-			return FALSE;
-		}
-		in->len = content_len;
-	}
-	*in = chunk_clone(*in);
-
-	return TRUE;
-}
 
 /**
  * Find a child node with a given name
@@ -198,9 +77,11 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	xmlDocPtr doc;
 	xmlNodePtr env, body, cur, response;
 	xmlNsPtr ns;
-	xmlChar *xml, *errorCode, *errorString;
-	int len;
-	chunk_t in, out;
+	xmlChar *xml_str, *errorCode, *errorString;
+	int xml_len, len, written;
+	chunk_t xml, http;
+	char buf[4096];
+	status_t status;
 
 	DBG2(DBG_TNC, "sending ifmap %s", request->name);
 
@@ -217,22 +98,58 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	xmlAddChild(env, body);
 
 	/* Convert XML Document into a character string */
-	xmlDocDumpFormatMemory(doc, &xml, &len, 1);
+	xmlDocDumpFormatMemory(doc, &xml_str, &xml_len, 1);
 	xmlFreeDoc(doc);
-	DBG3(DBG_TNC, "%.*s", len, xml);
-	out = chunk_create(xml, len);
+	DBG3(DBG_TNC, "%.*s", xml_len, xml_str);
+	xml = chunk_create(xml_str, xml_len);
 
-	/* Send SOAP-XML request via HTTP POST */
-	if (!http_post(this, out, &in))
+	/* Send SOAP-XML request via HTTPS POST */
+	do
 	{
-		xmlFree(xml);
+		status = this->http->build(this->http, &xml, &http);
+		if (status == FAILED)
+		{
+			break;
+		}
+		written = this->tls->write(this->tls, http.ptr, http.len);
+		free(http.ptr);
+		if (written != http.len)
+		{
+			status = FAILED;
+			break;
+		}
+	}
+	while (status == NEED_MORE);
+
+	xmlFree(xml_str);
+	if (status != SUCCESS)
+	{
 		return FALSE;
 	}
-	xmlFree(xml);
 
-	DBG3(DBG_TNC, "%B", &in);
-	this->doc = xmlParseMemory(in.ptr, in.len);
-	free(in.ptr);
+	/* Receive SOAP-XML response via [chunked] HTTPS */
+	xml = chunk_empty;
+	do
+	{
+		len = this->tls->read(this->tls, buf, sizeof(buf), TRUE);
+		if (len <= 0)
+		{
+			return FALSE;
+		}
+		http = chunk_create(buf, len);
+
+		status = this->http->process(this->http, &http, &xml);
+		if (status == FAILED)
+		{
+			free(xml.ptr);
+			return FALSE;
+		}
+	}
+	while (status == NEED_MORE);
+
+	DBG3(DBG_TNC, "parsing XML message %B", &xml);
+	this->doc = xmlParseMemory(xml.ptr, xml.len);
+	free(xml.ptr);
 	
 	if (!this->doc)
 	{
@@ -309,6 +226,7 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 METHOD(tnc_ifmap_soap_msg_t, destroy, void,
 	private_tnc_ifmap_soap_msg_t *this)
 {
+	this->http->destroy(this->http);
 	if (this->doc)
 	{
 		xmlFreeDoc(this->doc);
@@ -329,8 +247,7 @@ tnc_ifmap_soap_msg_t *tnc_ifmap_soap_msg_create(char *uri, chunk_t user_pass,
 			.post = _post,
 			.destroy = _destroy,
 		},
-		.uri = uri,
-		.user_pass = user_pass,
+		.http = tnc_ifmap_http_create(uri, user_pass),
 		.tls = tls,
 	);
 
