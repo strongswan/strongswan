@@ -475,6 +475,7 @@ METHOD(task_manager_t, initiate, status_t,
 				break;
 			case FAILED:
 			default:
+				this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
 				{
 					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);

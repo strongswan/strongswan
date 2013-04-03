@@ -87,6 +87,24 @@ struct private_child_rekey_t {
 };
 
 /**
+ * Schedule a retry if rekeying temporary failed
+ */
+static void schedule_delayed_rekey(private_child_rekey_t *this)
+{
+	u_int32_t retry;
+	job_t *job;
+
+	retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+	job = (job_t*)rekey_child_sa_job_create(
+						this->child_sa->get_reqid(this->child_sa),
+						this->child_sa->get_protocol(this->child_sa),
+						this->child_sa->get_spi(this->child_sa, TRUE));
+	DBG1(DBG_IKE, "CHILD_SA rekeying failed, trying again in %d seconds", retry);
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	lib->scheduler->schedule_job(lib->scheduler, job, retry);
+}
+
+/**
  * Implementation of task_t.build for initiator, after rekeying
  */
 static status_t build_i_delete(private_child_rekey_t *this, message_t *message)
@@ -166,8 +184,13 @@ METHOD(task_t, build_i, status_t,
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
-	this->child_create->task.build(&this->child_create->task, message);
 
+	if (this->child_create->task.build(&this->child_create->task,
+									   message) != NEED_MORE)
+	{
+		schedule_delayed_rekey(this);
+		return FAILED;
+	}
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 
 	return NEED_MORE;
@@ -316,17 +339,7 @@ METHOD(task_t, process_i, status_t,
 		if (!(this->collision &&
 			  this->collision->get_type(this->collision) == TASK_CHILD_DELETE))
 		{
-			job_t *job;
-			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
-
-			job = (job_t*)rekey_child_sa_job_create(
-								this->child_sa->get_reqid(this->child_sa),
-								this->child_sa->get_protocol(this->child_sa),
-								this->child_sa->get_spi(this->child_sa, TRUE));
-			DBG1(DBG_IKE, "CHILD_SA rekeying failed, "
-								"trying again in %d seconds", retry);
-			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-			lib->scheduler->schedule_job(lib->scheduler, job, retry);
+			schedule_delayed_rekey(this);
 		}
 		return SUCCESS;
 	}
