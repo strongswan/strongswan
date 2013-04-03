@@ -148,22 +148,6 @@ static void count_named(private_stroke_counter_t *this,
 	}
 }
 
-/**
- * Get a counter value for a specific connection name
- */
-static u_int64_t get_named_count(private_stroke_counter_t *this,
-								 char *name, stroke_counter_type_t type)
-{
-	entry_t *entry;
-
-	entry = this->conns->get(this->conns, name);
-	if (entry)
-	{
-		return entry->counter[type];
-	}
-	return 0;
-}
-
 METHOD(listener_t, alert, bool,
 	private_stroke_counter_t *this, ike_sa_t *ike_sa,
 	alert_t alert, va_list args)
@@ -302,41 +286,115 @@ METHOD(listener_t, message_hook, bool,
 	return TRUE;
 }
 
-METHOD(stroke_counter_t, print, void,
-	private_stroke_counter_t *this, FILE *out, char *name)
+/**
+ * Print a single counter value to out
+ */
+static void print_counter(FILE *out, stroke_counter_type_t type,
+						  u_int64_t counter)
+{
+	fprintf(out, "%-18N %12llu\n", stroke_counter_type_names, type, counter);
+}
+
+/**
+ * Print IKE counters for a specific connection
+ */
+static void print_one(private_stroke_counter_t *this, FILE *out, char *name)
 {
 	u_int64_t counter[COUNTER_MAX];
+	entry_t *entry;
 	int i;
 
-	/* Take a snapshot to have congruent results, */
 	this->lock->lock(this->lock);
-	for (i = 0; i < countof(this->counter); i++)
+	entry = this->conns->get(this->conns, name);
+	if (entry)
 	{
-		if (name)
+		for (i = 0; i < countof(this->counter); i++)
 		{
-			counter[i] = get_named_count(this, name, i);
-		}
-		else
-		{
-			counter[i] = this->counter[i];
+			counter[i] = entry->counter[i];
 		}
 	}
 	this->lock->unlock(this->lock);
 
-	if (name)
+	if (entry)
 	{
 		fprintf(out, "\nList of IKE counters for '%s':\n\n", name);
+		for (i = 0; i < countof(this->counter); i++)
+		{
+			print_counter(out, i, counter[i]);
+		}
 	}
 	else
 	{
-		fprintf(out, "\nList of IKE counters:\n\n");
+		fprintf(out, "No IKE counters found for '%s'\n", name);
 	}
+}
 
-	/* but do blocking write without the lock. */
+/**
+ * Print counters for all connections
+ */
+static void print_all(private_stroke_counter_t *this, FILE *out)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	linked_list_t *list;
+	char *name;
+
+	list = linked_list_create();
+
+	this->lock->lock(this->lock);
+	enumerator = this->conns->create_enumerator(this->conns);
+	while (enumerator->enumerate(enumerator, &name, &entry))
+	{
+		list->insert_last(list, strdup(name));
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		print_one(this, out, name);
+	}
+	enumerator->destroy(enumerator);
+
+	list->destroy_function(list, free);
+}
+
+/**
+ * Print global counters
+ */
+static void print_global(private_stroke_counter_t *this, FILE *out)
+{
+	u_int64_t counter[COUNTER_MAX];
+	int i;
+
+	this->lock->lock(this->lock);
 	for (i = 0; i < countof(this->counter); i++)
 	{
-		fprintf(out, "%-18N %12llu\n", stroke_counter_type_names, i, counter[i]);
+		counter[i] = this->counter[i];
 	}
+	this->lock->unlock(this->lock);
+
+	fprintf(out, "\nList of IKE counters:\n\n");
+
+	for (i = 0; i < countof(this->counter); i++)
+	{
+		print_counter(out, i, counter[i]);
+	}
+}
+
+METHOD(stroke_counter_t, print, void,
+	private_stroke_counter_t *this, FILE *out, char *name)
+{
+	if (name)
+	{
+		if (streq(name, "all"))
+		{
+			return print_all(this, out);
+		}
+		return print_one(this, out, name);
+	}
+	return print_global(this, out);
 }
 
 METHOD(stroke_counter_t, reset, void,
