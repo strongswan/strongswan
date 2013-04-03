@@ -925,7 +925,8 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (this->reqid == 0 && enumerator->enumerate(enumerator, &child_sa))
 	{
-		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
+		if ((child_sa->get_state(child_sa) == CHILD_INSTALLED ||
+			 child_sa->get_state(child_sa) == CHILD_REKEYING) &&
 			streq(child_sa->get_name(child_sa),
 				  this->config->get_name(this->config)))
 		{
