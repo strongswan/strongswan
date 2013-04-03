@@ -921,31 +921,37 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 	enumerator_t *enumerator, *policies;
 	traffic_selector_t *local, *remote;
 	child_sa_t *child_sa;
+	proposal_t *proposal;
+	char *name;
 
+	name = this->config->get_name(this->config);
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (this->reqid == 0 && enumerator->enumerate(enumerator, &child_sa))
 	{
-		if ((child_sa->get_state(child_sa) == CHILD_INSTALLED ||
-			 child_sa->get_state(child_sa) == CHILD_REKEYING) &&
-			streq(child_sa->get_name(child_sa),
-				  this->config->get_name(this->config)))
+		if (streq(child_sa->get_name(child_sa), name))
 		{
-			policies = child_sa->create_policy_enumerator(child_sa);
-			if (policies->enumerate(policies, &local, &remote))
+			proposal = child_sa->get_proposal(child_sa);
+			switch (child_sa->get_state(child_sa))
 			{
-				if (local->equals(local, this->tsr) &&
-					remote->equals(remote, this->tsi) &&
-					this->proposal->equals(this->proposal,
-										   child_sa->get_proposal(child_sa)))
-				{
-					this->reqid = child_sa->get_reqid(child_sa);
-					this->rekey = child_sa->get_spi(child_sa, TRUE);
-					child_sa->set_state(child_sa, CHILD_REKEYING);
-					DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
-						 child_sa->get_name(child_sa), this->reqid);
-				}
+				case CHILD_INSTALLED:
+				case CHILD_REKEYING:
+					policies = child_sa->create_policy_enumerator(child_sa);
+					if (policies->enumerate(policies, &local, &remote) &&
+						local->equals(local, this->tsr) &&
+						remote->equals(remote, this->tsi) &&
+						this->proposal->equals(this->proposal, proposal))
+					{
+						this->reqid = child_sa->get_reqid(child_sa);
+						this->rekey = child_sa->get_spi(child_sa, TRUE);
+						child_sa->set_state(child_sa, CHILD_REKEYING);
+						DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
+							 child_sa->get_name(child_sa), this->reqid);
+					}
+					policies->destroy(policies);
+				break;
+			default:
+				break;
 			}
-			policies->destroy(policies);
 		}
 	}
 	enumerator->destroy(enumerator);
