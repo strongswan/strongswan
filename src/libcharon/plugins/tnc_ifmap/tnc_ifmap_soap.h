@@ -56,7 +56,7 @@ struct tnc_ifmap_soap_t {
 	/**
 	 * Publish metadata about established/deleted IKE_SAs
 	 *
-	 * @param ike_sa		IKE_SA for which metadate is published
+	 * @param ike_sa		IKE_SA for which metadata is published
 	 * @param up			TRUE if IKE_SEA is up, FALSE if down
 	 * @return				TRUE if command was successful
 	 */
@@ -69,6 +69,17 @@ struct tnc_ifmap_soap_t {
 	 * @return				TRUE if command was successful
 	 */
 	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
+
+	/**
+	 * Publish Virtual IP  access-request-ip metadata
+	 *
+	 * @param ike_sa		IKE_SA for which metadata is published
+	 * @param vip			Virtual IP address of peer
+	 * @param assign		TRUE if assigned, FALSE if removed
+	 * @return				TRUE if command was successful
+	 */
+	bool (*publish_virtual_ip)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa,
+							   host_t *vip, bool assign);
 
 	/**
 	 * Publish enforcement-report metadata

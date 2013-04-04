@@ -766,6 +766,7 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 	else
 	{
 		this->other_vips->insert_last(this->other_vips, ip->clone(ip));
+		charon->bus->assign_vip(charon->bus, &this->public, ip, TRUE);
 	}
 }
 
@@ -782,6 +783,10 @@ METHOD(ike_sa_t, clear_virtual_ips, void,
 		{
 			hydra->kernel_interface->del_ip(hydra->kernel_interface,
 											vip, -1, TRUE);
+		}
+		else
+		{
+			charon->bus->assign_vip(charon->bus, &this->public, vip, FALSE);
 		}
 		vip->destroy(vip);
 	}
@@ -2119,6 +2124,7 @@ METHOD(ike_sa_t, destroy, void,
 			hydra->attributes->release_address(hydra->attributes, pools, vip, id);
 			pools->destroy(pools);
 		}
+		charon->bus->assign_vip(charon->bus, &this->public, vip, FALSE);
 		vip->destroy(vip);
 	}
 	this->other_vips->destroy(this->other_vips);

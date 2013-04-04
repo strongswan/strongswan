@@ -759,6 +759,34 @@ METHOD(bus_t, narrow, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, assign_vip, void,
+	private_bus_t *this, ike_sa_t *ike_sa, host_t *vip, bool assign)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->assign_vip)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->assign_vip(entry->listener, ike_sa,
+											vip, assign);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, destroy, void,
 	private_bus_t *this)
 {
@@ -807,6 +835,7 @@ bus_t *bus_create()
 			.child_rekey = _child_rekey,
 			.authorize = _authorize,
 			.narrow = _narrow,
+			.assign_vip = _assign_vip,
 			.destroy = _destroy,
 		},
 		.listeners = linked_list_create(),
