@@ -60,8 +60,8 @@ struct private_duplicheck_listener_t {
 typedef struct {
 	/** peer identity */
 	identification_t *id;
-	/** IKE_SA identifier */
-	ike_sa_id_t *sa;
+	/** list of IKE_SA identifiers, ike_sa_id_t */
+	linked_list_t *sas;
 } entry_t;
 
 /**
@@ -70,7 +70,7 @@ typedef struct {
 static void entry_destroy(entry_t *this)
 {
 	this->id->destroy(this->id);
-	this->sa->destroy(this->sa);
+	this->sas->destroy_offset(this->sas, offsetof(ike_sa_id_t, destroy));
 	free(this);
 }
 
@@ -90,27 +90,101 @@ static bool equals(identification_t *a, identification_t *b)
 	return a->equals(a, b);
 }
 
+/**
+ * Put an IKE_SA identifier to hashtable
+ */
+static void put(hashtable_t *table, identification_t *id, ike_sa_id_t *sa)
+{
+	entry_t *entry;
+
+	entry = table->get(table, id);
+	if (!entry)
+	{
+		INIT(entry,
+			.id = id->clone(id),
+			.sas = linked_list_create(),
+		);
+		table->put(table, entry->id, entry);
+	}
+	entry->sas->insert_last(entry->sas, sa->clone(sa));
+}
+
+/**
+ * Purge an entry from table if it has no IKE_SA identifiers
+ */
+static void remove_if_empty(hashtable_t *table, entry_t *entry)
+{
+	if (entry->sas->get_count(entry->sas) == 0)
+	{
+		entry = table->remove(table, entry->id);
+		if (entry)
+		{
+			entry_destroy(entry);
+		}
+	}
+}
+
+/**
+ * Remove the first entry found in the table for the given id
+ */
+static ike_sa_id_t *remove_first(hashtable_t *table, identification_t *id)
+{
+	ike_sa_id_t *sa = NULL;
+	entry_t *entry;
+
+	entry = table->get(table, id);
+	if (entry)
+	{
+		entry->sas->remove_first(entry->sas, (void**)&sa);
+		remove_if_empty(table, entry);
+	}
+	return sa;
+}
+
+/**
+ * Remove a specific IKE_SA ID for the given identity
+ */
+static bool remove_specific(hashtable_t *table, identification_t *id,
+							ike_sa_id_t *sa)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	entry_t *entry;
+	ike_sa_id_t *current;
+
+	entry = table->get(table, id);
+	if (entry)
+	{
+		enumerator = entry->sas->create_enumerator(entry->sas);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (sa->equals(sa, current))
+			{
+				entry->sas->remove_at(entry->sas, enumerator);
+				current->destroy(current);
+				found = TRUE;
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (found)
+		{
+			remove_if_empty(table, entry);
+		}
+	}
+	return found;
+}
+
 METHOD(listener_t, ike_rekey, bool,
 	private_duplicheck_listener_t *this, ike_sa_t *old, ike_sa_t *new)
 {
-	identification_t *id;
-	ike_sa_id_t *sa;
-	entry_t *entry;
-
-	sa = new->get_id(new);
-	id = new->get_other_id(new);
-
-	INIT(entry,
-		.id = id->clone(id),
-		.sa = sa->clone(sa),
-	);
 	this->mutex->lock(this->mutex);
-	entry = this->active->put(this->active, entry->id, entry);
+
+	remove_specific(this->active, old->get_other_id(old), old->get_id(old));
+	put(this->active, new->get_other_id(new), new->get_id(new));
+
 	this->mutex->unlock(this->mutex);
-	if (entry)
-	{
-		entry_destroy(entry);
-	}
+
 	return TRUE;
 }
 
@@ -119,58 +193,41 @@ METHOD(listener_t, ike_updown, bool,
 {
 	identification_t *id;
 	ike_sa_id_t *sa;
-	entry_t *entry;
-	job_t *job;
 
-	sa = ike_sa->get_id(ike_sa);
 	id = ike_sa->get_other_id(ike_sa);
 
+	this->mutex->lock(this->mutex);
 	if (up)
 	{
-		INIT(entry,
-			.id = id->clone(id),
-			.sa = sa->clone(sa),
-		);
-		this->mutex->lock(this->mutex);
-		entry = this->active->put(this->active, entry->id, entry);
-		this->mutex->unlock(this->mutex);
-		if (entry)
+		/* another IKE_SA for this identity active? */
+		sa = remove_first(this->active, id);
+		if (sa)
 		{
 			DBG1(DBG_CFG, "detected duplicate IKE_SA for '%Y', "
 				 "triggering delete for old IKE_SA", id);
-			job = (job_t*)delete_ike_sa_job_create(entry->sa, TRUE);
-			this->mutex->lock(this->mutex);
-			entry = this->checking->put(this->checking, entry->id, entry);
-			this->mutex->unlock(this->mutex);
-			lib->processor->queue_job(lib->processor, job);
-			if (entry)
-			{
-				entry_destroy(entry);
-			}
+			put(this->checking, id, sa);
+			lib->processor->queue_job(lib->processor,
+								(job_t*)delete_ike_sa_job_create(sa, TRUE));
+			sa->destroy(sa);
 		}
+		/* register IKE_SA as the new active */
+		sa = ike_sa->get_id(ike_sa);
+		put(this->active, id, sa);
 	}
 	else
 	{
-		this->mutex->lock(this->mutex);
-		entry = this->checking->remove(this->checking, id);
-		this->mutex->unlock(this->mutex);
-		if (entry)
+		sa = ike_sa->get_id(ike_sa);
+		/* check if closing an IKE_SA currently in checking state */
+		if (remove_specific(this->checking, id, sa))
 		{
 			DBG1(DBG_CFG, "delete for duplicate IKE_SA '%Y' timed out, "
 				 "keeping new IKE_SA", id);
-			entry_destroy(entry);
 		}
-		else
-		{
-			this->mutex->lock(this->mutex);
-			entry = this->active->remove(this->active, id);
-			this->mutex->unlock(this->mutex);
-			if (entry)
-			{
-				entry_destroy(entry);
-			}
-		}
+		/* check normal close of IKE_SA */
+		remove_specific(this->active, id, sa);
 	}
+	this->mutex->unlock(this->mutex);
+
 	return TRUE;
 }
 
@@ -181,28 +238,31 @@ METHOD(listener_t, message_hook, bool,
 	if (incoming && plain && !message->get_request(message))
 	{
 		identification_t *id;
-		entry_t *entry;
+		ike_sa_id_t *sa;
 
 		id = ike_sa->get_other_id(ike_sa);
+		sa = ike_sa->get_id(ike_sa);
+
 		this->mutex->lock(this->mutex);
-		entry = this->checking->remove(this->checking, id);
-		this->mutex->unlock(this->mutex);
-		if (entry)
+		if (remove_specific(this->checking, id, sa))
 		{
 			DBG1(DBG_CFG, "got a response on a duplicate IKE_SA for '%Y', "
 				 "deleting new IKE_SA", id);
 			charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
-			entry_destroy(entry);
-			this->mutex->lock(this->mutex);
-			entry = this->active->remove(this->active, id);
-			this->mutex->unlock(this->mutex);
-			if (entry)
+			sa = remove_first(this->active, id);
+			if (sa)
 			{
 				lib->processor->queue_job(lib->processor,
-						(job_t*)delete_ike_sa_job_create(entry->sa, TRUE));
-				entry_destroy(entry);
+								(job_t*)delete_ike_sa_job_create(sa, TRUE));
+				sa->destroy(sa);
 			}
+			this->mutex->unlock(this->mutex);
+
 			this->notify->send(this->notify, id);
+		}
+		else
+		{
+			this->mutex->unlock(this->mutex);
 		}
 	}
 	return TRUE;
