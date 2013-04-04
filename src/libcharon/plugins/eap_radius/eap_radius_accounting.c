@@ -51,6 +51,11 @@ struct private_eap_radius_accounting_t {
 	 * Session ID prefix
 	 */
 	u_int32_t prefix;
+
+	/**
+	 * Format string we use for Called/Calling-Station-Id for a host
+	 */
+	char *station_id_fmt;
 };
 
 /**
@@ -195,7 +200,8 @@ static bool send_message(private_eap_radius_accounting_t *this,
 /**
  * Add common IKE_SA parameters to RADIUS account message
  */
-static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
+static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
+								  radius_message_t *message, ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	host_t *vip, *host;
@@ -227,10 +233,10 @@ static void add_ike_sa_parameters(radius_message_t *message, ike_sa_t *ike_sa)
 		default:
 			break;
 	}
-	snprintf(buf, sizeof(buf), "%#H", host);
+	snprintf(buf, sizeof(buf), this->station_id_fmt, host);
 	message->add(message, RAT_CALLED_STATION_ID, chunk_from_str(buf));
 	host = ike_sa->get_other_host(ike_sa);
-	snprintf(buf, sizeof(buf), "%#H", host);
+	snprintf(buf, sizeof(buf), this->station_id_fmt, host);
 	message->add(message, RAT_CALLING_STATION_ID, chunk_from_str(buf));
 
 	snprintf(buf, sizeof(buf), "%Y", ike_sa->get_other_eap_id(ike_sa));
@@ -364,7 +370,7 @@ static job_requeue_t send_interim(interim_data_t *data)
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
-		add_ike_sa_parameters(message, ike_sa);
+		add_ike_sa_parameters(this, message, ike_sa);
 
 		value = htonl(bytes_out);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
@@ -454,7 +460,7 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	schedule_interim(this, entry);
 	this->mutex->unlock(this->mutex);
 
-	add_ike_sa_parameters(message, ike_sa);
+	add_ike_sa_parameters(this, message, ike_sa);
 	if (!send_message(this, message))
 	{
 		eap_radius_handle_timeout(ike_sa->get_id(ike_sa));
@@ -486,7 +492,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
-		add_ike_sa_parameters(message, ike_sa);
+		add_ike_sa_parameters(this, message, ike_sa);
 
 		value = htonl(entry->bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
@@ -679,7 +685,15 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 									 (hashtable_equals_t)equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
-
+	if (lib->settings->get_bool(lib->settings,
+			"%s.plugins.eap-radius.station_id_with_port", TRUE, charon->name))
+	{
+		this->station_id_fmt = "%#H";
+	}
+	else
+	{
+		this->station_id_fmt = "%H";
+	}
 	if (lib->settings->get_bool(lib->settings,
 					"%s.plugins.eap-radius.accounting", FALSE, charon->name))
 	{

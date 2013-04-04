@@ -85,6 +85,11 @@ struct private_eap_radius_t {
 	 * Handle the Filter-Id attribute as IPsec CHILD_SA name?
 	 */
 	bool filter_id;
+
+	/**
+	 * Format string we use for Called/Calling-Station-Id for a host
+	 */
+	char *station_id_fmt;
 };
 
 /**
@@ -200,10 +205,10 @@ static void add_radius_request_attrs(private_eap_radius_t *this,
 			default:
 				break;
 		}
-		snprintf(buf, sizeof(buf), "%#H", host);
+		snprintf(buf, sizeof(buf), this->station_id_fmt, host);
 		request->add(request, RAT_CALLED_STATION_ID, chunk_from_str(buf));
 		host = ike_sa->get_other_host(ike_sa);
-		snprintf(buf, sizeof(buf), "%#H", host);
+		snprintf(buf, sizeof(buf), this->station_id_fmt, host);
 		request->add(request, RAT_CALLING_STATION_ID, chunk_from_str(buf));
 	}
 
@@ -591,6 +596,15 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 									"%s.plugins.eap-radius.filter_id", FALSE,
 									charon->name),
 	);
+	if (lib->settings->get_bool(lib->settings,
+			"%s.plugins.eap-radius.station_id_with_port", TRUE, charon->name))
+	{
+		this->station_id_fmt = "%#H";
+	}
+	else
+	{
+		this->station_id_fmt = "%H";
+	}
 	this->client = eap_radius_create_client();
 	if (!this->client)
 	{
