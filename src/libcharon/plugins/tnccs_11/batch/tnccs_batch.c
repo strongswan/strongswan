@@ -23,6 +23,10 @@
 
 #include <libxml/parser.h>
 
+#define TNCCS_NS	"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#"
+#define SCHEMA_NS	"http://www.w3.org/2001/XMLSchema-instance"
+#define TNCCS_XSD	"https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd"
+
 typedef struct private_tnccs_batch_t private_tnccs_batch_t;
 
 /**
@@ -91,7 +95,7 @@ METHOD(tnccs_batch_t, build, void,
 	int buf_size;
 
 	xmlDocDumpFormatMemory(this->doc, &xmlbuf, &buf_size, 1);
-	this->encoding = chunk_create((u_char*)xmlbuf, buf_size);
+	this->encoding = chunk_create(xmlbuf, buf_size);
 	this->encoding = chunk_clone(this->encoding);
 	xmlFree(xmlbuf);
 }
@@ -125,8 +129,7 @@ METHOD(tnccs_batch_t, process, status_t,
 	}
 
 	/* check TNCCS namespace */
-	ns = xmlSearchNsByHref(this->doc, cur, (const xmlChar*)
-				"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#");
+	ns = xmlSearchNsByHref(this->doc, cur, TNCCS_NS);
 	if (!ns)
 	{
 		error_type = TNCCS_ERROR_MALFORMED_BATCH;
@@ -135,7 +138,7 @@ METHOD(tnccs_batch_t, process, status_t,
 	}
 
 	/* check XML document type */
-	if (xmlStrcmp(cur->name, (const xmlChar*)"TNCCS-Batch"))
+	if (xmlStrcmp(cur->name, "TNCCS-Batch"))
 	{
 		error_type = TNCCS_ERROR_MALFORMED_BATCH;
 		error_msg = buf;
@@ -145,7 +148,7 @@ METHOD(tnccs_batch_t, process, status_t,
 	}
 
 	/* check presence of BatchID property */
-	batchid = xmlGetProp(cur, (const xmlChar*)"BatchId");
+	batchid = xmlGetProp(cur, "BatchId");
 	if (!batchid)
 	{
 		error_type = TNCCS_ERROR_INVALID_BATCH_ID;
@@ -166,7 +169,7 @@ METHOD(tnccs_batch_t, process, status_t,
 	}
 
 	/* check presence of Recipient property */
-	recipient = xmlGetProp(cur, (const xmlChar*)"Recipient");
+	recipient = xmlGetProp(cur, "Recipient");
 	if (!recipient)
 	{
 		error_type = TNCCS_ERROR_INVALID_RECIPIENT_TYPE;
@@ -175,12 +178,12 @@ METHOD(tnccs_batch_t, process, status_t,
 	}
 
 	/* check recipient */
-	if (!streq((char*)recipient, this->is_server ? "TNCS" : "TNCC"))
+	if (!streq(recipient, this->is_server ? "TNCS" : "TNCC"))
 	{
 		error_type = TNCCS_ERROR_INVALID_RECIPIENT_TYPE;
 		error_msg =	buf;
 		snprintf(buf, BUF_LEN, "message recipient expected '%s', got '%s'",
-				 this->is_server ? "TNCS" : "TNCC", (char*)recipient);
+				 this->is_server ? "TNCS" : "TNCC", recipient);
 		xmlFree(recipient);
 		goto fatal;
 	}
@@ -201,7 +204,7 @@ METHOD(tnccs_batch_t, process, status_t,
 		if (cur->ns != ns)
 		{
 			DBG1(DBG_TNC, "ignoring message node '%s' having wrong namespace",
-						  (char*)cur->name);
+						  cur->name);
 			continue;
 		}
 
@@ -260,8 +263,8 @@ tnccs_batch_t* tnccs_batch_create(bool is_server, int batch_id)
 {
 	private_tnccs_batch_t *this;
 	xmlNodePtr n;
+	xmlNsPtr ns_xsi;
 	char buf[12];
-	const char *recipient;
 
 	INIT(this,
 		.public = {
@@ -277,19 +280,17 @@ tnccs_batch_t* tnccs_batch_create(bool is_server, int batch_id)
 		.messages = linked_list_create(),
 		.errors = linked_list_create(),
 		.batch_id = batch_id,
-		.doc = xmlNewDoc(BAD_CAST "1.0"),
+		.doc = xmlNewDoc("1.0"),
 	);
 
 	DBG2(DBG_TNC, "creating TNCCS Batch #%d", this->batch_id);
-	n = xmlNewNode(NULL, BAD_CAST "TNCCS-Batch");
+	n = xmlNewNode(NULL, "TNCCS-Batch");
+	xmlNewNs(n, TNCCS_NS, NULL);
+	ns_xsi = xmlNewNs(n, SCHEMA_NS, "xsi");
 	snprintf(buf, sizeof(buf), "%d", batch_id);
-	recipient = this->is_server ? "TNCC" : "TNCS";
-	xmlNewProp(n, BAD_CAST "BatchId", BAD_CAST buf);
-	xmlNewProp(n, BAD_CAST "Recipient", BAD_CAST recipient);
-	xmlNewProp(n, BAD_CAST "xmlns", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#");
-	xmlNewProp(n, BAD_CAST "xmlns:xsi", BAD_CAST "http://www.w3.org/2001/XMLSchema-instance");
-	xmlNewProp(n, BAD_CAST "xsi:schemaLocation", BAD_CAST "http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS# "
-														  "https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd");
+	xmlNewProp(n, "BatchId", buf);
+	xmlNewProp(n, "Recipient", this->is_server ? "TNCC" : "TNCS");
+	xmlNewNsProp(n, ns_xsi, "schemaLocation", TNCCS_NS " " TNCCS_XSD);
 	xmlDocSetRootElement(this->doc, n);
 
 	return &this->public;

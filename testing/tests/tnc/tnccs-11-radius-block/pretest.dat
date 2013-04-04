@@ -6,8 +6,8 @@ alice::ln -s /etc/freeradius/sites-available/inner-tunnel-second /etc/freeradius
 alice::cat /etc/freeradius/sites-enabled/inner-tunnel-second
 alice::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties radiusd
 moon::ipsec start
-carol::LEAK_DETECTIVE_DISABLE=1 ipsec start
-dave::LEAK_DETECTIVE_DISABLE=1 ipsec start
+carol::ipsec start
+dave::ipsec start
 carol::sleep 1
 carol::ipsec up home
 dave::ipsec up home

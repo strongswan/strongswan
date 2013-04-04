@@ -97,20 +97,20 @@ tnccs_msg_t *tnccs_tncs_contact_info_msg_create(void)
 			},
 		},
 		.type = TNCCS_MSG_TNCS_CONTACT_INFO,
-		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
+		.node =  xmlNewNode(NULL, "TNCC-TNCS-Message"),
 	);
 
 	/* add the message type number in hex */
-	n = xmlNewNode(NULL, BAD_CAST "Type");
-	xmlNodeSetContent(n, BAD_CAST "00000005");
+	n = xmlNewNode(NULL, "Type");
+	xmlNodeSetContent(n, "00000005");
 	xmlAddChild(this->node, n);
 
-	n = xmlNewNode(NULL, BAD_CAST "XML");
+	n = xmlNewNode(NULL, "XML");
 	xmlAddChild(this->node, n);
 
 /* TODO
-	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNodeSetContent(n2, BAD_CAST language);
+	n2 = xmlNewNode(NULL, enum_to_name(tnccs_msg_type_names, this->type));
+	xmlNodeSetContent(n2, language);
 	xmlAddChild(n, n2);
 */
 

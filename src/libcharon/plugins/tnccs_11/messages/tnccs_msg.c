@@ -57,15 +57,15 @@ tnccs_msg_t* tnccs_msg_create_from_node(xmlNodePtr node, linked_list_t *errors)
 
 		while (cur)
 		{
-			if (streq((char*)cur->name, "Type") && cur->ns == ns)
+			if (streq(cur->name, "Type") && cur->ns == ns)
 			{
 				xmlChar *content = xmlNodeGetContent(cur);
 
-				type = strtol((char*)content, NULL, 16);
+				type = strtol(content, NULL, 16);
 				xmlFree(content);
 				found = TRUE;
 			}
-			else if (streq((char*)cur->name, "XML") && cur->ns == ns)
+			else if (streq(cur->name, "XML") && cur->ns == ns)
 			{
 				xml_msg_node = cur->xmlChildrenNode;
 			}

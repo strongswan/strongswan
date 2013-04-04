@@ -181,16 +181,16 @@ tnccs_msg_t *imc_imv_msg_create_from_node(xmlNodePtr node, linked_list_t *errors
 	cur = node->xmlChildrenNode;
 	while (cur)
 	{
-		if (streq((char*)cur->name, "Type") && cur->ns == ns)
+		if (streq(cur->name, "Type") && cur->ns == ns)
 		{
 			content = xmlNodeGetContent(cur);
-			this->msg_type = strtoul((char*)content, NULL, 16);
+			this->msg_type = strtoul(content, NULL, 16);
 			xmlFree(content);
 		}
-		else if (streq((char*)cur->name, "Base64") && cur->ns == ns)
+		else if (streq(cur->name, "Base64") && cur->ns == ns)
 		{
 			content = xmlNodeGetContent(cur);
-			b64_body = chunk_create((char*)content, strlen((char*)content));
+			b64_body = chunk_create(content, strlen(content));
 			this->msg_body = decode_base64(b64_body);
 			xmlFree(content);
 		}
@@ -221,21 +221,21 @@ tnccs_msg_t *imc_imv_msg_create(TNC_MessageType msg_type, chunk_t msg_body)
 			.get_msg_body = _get_msg_body,
 		},
 		.type = IMC_IMV_MSG,
-		.node = xmlNewNode(NULL, BAD_CAST "IMC-IMV-Message"),
+		.node = xmlNewNode(NULL, "IMC-IMV-Message"),
 		.msg_type = msg_type,
 		.msg_body = chunk_clone(msg_body),
 	);
 
 	/* add the message type number in hex */
-	n = xmlNewNode(NULL, BAD_CAST "Type");
+	n = xmlNewNode(NULL, "Type");
 	snprintf(buf, 10, "%08x", this->msg_type);
-	xmlNodeSetContent(n, BAD_CAST buf);
+	xmlNodeSetContent(n, buf);
 	xmlAddChild(this->node, n);
 
 	/* encode the message as a Base64 node */
-	n = xmlNewNode(NULL, BAD_CAST "Base64");
+	n = xmlNewNode(NULL, "Base64");
 	b64_body = encode_base64(this->msg_body);
-	xmlNodeSetContent(n, BAD_CAST b64_body.ptr);
+	xmlNodeSetContent(n, b64_body.ptr);
 	xmlAddChild(this->node, n);
 	free(b64_body.ptr);
 

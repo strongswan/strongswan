@@ -8,8 +8,8 @@ alice::cat /etc/tnc_config
 carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 moon::ipsec start
-carol::LEAK_DETECTIVE_DISABLE=1 ipsec start
-dave::LEAK_DETECTIVE_DISABLE=1 ipsec start
+carol::ipsec start
+dave::ipsec start
 carol::sleep 1
 carol::ipsec up home
 dave::ipsec up home

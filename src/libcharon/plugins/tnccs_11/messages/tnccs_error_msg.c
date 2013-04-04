@@ -125,11 +125,11 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 		.error_type = TNCCS_ERROR_OTHER,
 	);
 
-	error_type_name = xmlGetProp(node, (const xmlChar*)"type");
+	error_type_name = xmlGetProp(node, "type");
 	if (error_type_name)
 	{
 		this->error_type = enum_from_name(tnccs_error_type_names,
-										  (char*)error_type_name);
+										  error_type_name);
 		if (this->error_type == -1)
 		{
 			this->error_type = TNCCS_ERROR_OTHER;
@@ -140,7 +140,7 @@ tnccs_msg_t *tnccs_error_msg_create_from_node(xmlNodePtr node)
 	error_msg = xmlNodeGetContent(node);
 	if (error_msg)
 	{
-		this->error_msg = strdup((char*)error_msg);
+		this->error_msg = strdup(error_msg);
 		xmlFree(error_msg);
 	}
 
@@ -167,24 +167,23 @@ tnccs_msg_t *tnccs_error_msg_create(tnccs_error_type_t type, char *msg)
 		},
 		.type = TNCCS_MSG_ERROR,
 		.ref = 1,
-		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
+		.node =  xmlNewNode(NULL, "TNCC-TNCS-Message"),
 		.error_type = type,
 		.error_msg  = strdup(msg),
 	);
 
 	DBG1(DBG_TNC, "%s", msg);
 
-	n = xmlNewNode(NULL, BAD_CAST "Type");
-	xmlNodeSetContent(n, BAD_CAST "00000002");
+	n = xmlNewNode(NULL, "Type");
+	xmlNodeSetContent(n, "00000002");
 	xmlAddChild(this->node, n);
 
-	n = xmlNewNode(NULL, BAD_CAST "XML");
+	n = xmlNewNode(NULL, "XML");
 	xmlAddChild(this->node, n);
 
-	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNewProp(n2, BAD_CAST "type",
-				   BAD_CAST enum_to_name(tnccs_error_type_names, type));
-	xmlNodeSetContent(n2, BAD_CAST msg);
+	n2 = xmlNewNode(NULL, enum_to_name(tnccs_msg_type_names, this->type));
+	xmlNewProp(n2, "type", enum_to_name(tnccs_error_type_names, type));
+	xmlNodeSetContent(n2, msg);
 	xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;

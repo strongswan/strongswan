@@ -93,7 +93,7 @@ tnccs_msg_t *tnccs_preferred_language_msg_create_from_node(xmlNodePtr node,
 	);
 
 	language = xmlNodeGetContent(node);
-	this->preferred_language = strdup((char*)language);
+	this->preferred_language = strdup(language);
 	xmlFree(language);
 
 	return &this->public.tnccs_msg_interface;
@@ -117,20 +117,20 @@ tnccs_msg_t *tnccs_preferred_language_msg_create(char *language)
 			.get_preferred_language = _get_preferred_language,
 		},
 		.type = TNCCS_MSG_PREFERRED_LANGUAGE,
-		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
+		.node =  xmlNewNode(NULL, "TNCC-TNCS-Message"),
 		.preferred_language = strdup(language),
 	);
 
 	/* add the message type number in hex */
-	n = xmlNewNode(NULL, BAD_CAST "Type");
-	xmlNodeSetContent(n, BAD_CAST "00000003");
+	n = xmlNewNode(NULL, "Type");
+	xmlNodeSetContent(n, "00000003");
 	xmlAddChild(this->node, n);
 
-	n = xmlNewNode(NULL, BAD_CAST "XML");
+	n = xmlNewNode(NULL, "XML");
 	xmlAddChild(this->node, n);
 
-	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNodeSetContent(n2, BAD_CAST language);
+	n2 = xmlNewNode(NULL, enum_to_name(tnccs_msg_type_names, this->type));
+	xmlNodeSetContent(n2, language);
 	xmlAddChild(n, n2);
 
 	return &this->public.tnccs_msg_interface;

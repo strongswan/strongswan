@@ -104,7 +104,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 		.node = node,
 	);
 
-	if (xmlStrcmp(node->name, (const xmlChar*)"TNCCS-ReasonStrings"))
+	if (xmlStrcmp(node->name, "TNCCS-ReasonStrings"))
 	{
 		error_msg = "TNCCS-ReasonStrings tag expected";
 		goto fatal;
@@ -118,7 +118,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 			child = child->next;
 			continue;
 		}
-		if (xmlStrcmp(child->name, (const xmlChar*)"ReasonString"))
+		if (xmlStrcmp(child->name, "ReasonString"))
 		{
 			error_msg = "ReasonString tag expected";
 			goto fatal;
@@ -126,15 +126,17 @@ tnccs_msg_t *tnccs_reason_strings_msg_create_from_node(xmlNodePtr node,
 		break;
 	}
 
-	lang_string = (char*)xmlGetProp(child, (const xmlChar*)"lang");
+	lang_string = xmlGetProp(child, "lang");
 	if (!lang_string)
 	{
-		lang_string = "";
+		lang_string = strdup("");
 	}
-	this->language = chunk_create(strdup(lang_string), strlen(lang_string));
+	this->language = chunk_clone(chunk_from_str(lang_string));
+	xmlFree(lang_string);
 
-	reason_string = (char*)xmlNodeGetContent(child);
-	this->reason = chunk_create(strdup(reason_string), strlen(reason_string));
+	reason_string = xmlNodeGetContent(child);
+	this->reason = chunk_clone(chunk_from_str(reason_string));
+	xmlFree(reason_string);
 
 	return &this->public.tnccs_msg_interface;
 
@@ -163,7 +165,7 @@ tnccs_msg_t *tnccs_reason_strings_msg_create(chunk_t reason, chunk_t language)
 			.get_reason = _get_reason,
 		},
 		.type = TNCCS_MSG_REASON_STRINGS,
-		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
+		.node =  xmlNewNode(NULL, "TNCC-TNCS-Message"),
 		.reason = chunk_create_clone(malloc(reason.len + 1), reason),
 		.language = chunk_create_clone(malloc(language.len + 1), language),
 	);
@@ -173,20 +175,20 @@ tnccs_msg_t *tnccs_reason_strings_msg_create(chunk_t reason, chunk_t language)
 	this->language.ptr[this->language.len] = '\0';
 
 	/* add the message type number in hex */
-	n = xmlNewNode(NULL, BAD_CAST "Type");
-	xmlNodeSetContent(n, BAD_CAST "00000004");
+	n = xmlNewNode(NULL, "Type");
+	xmlNodeSetContent(n, "00000004");
 	xmlAddChild(this->node, n);
 
-	n = xmlNewNode(NULL, BAD_CAST "XML");
+	n = xmlNewNode(NULL, "XML");
 	xmlAddChild(this->node, n);
 
-	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
+	n2 = xmlNewNode(NULL, enum_to_name(tnccs_msg_type_names, this->type));
 
 	/* could add multiple reasons here, if we had them */
 
-	n3 = xmlNewNode(NULL, BAD_CAST "ReasonString");
-	xmlNewProp(n3, BAD_CAST "xml:lang", BAD_CAST this->language.ptr);
-	xmlNodeSetContent(n3, BAD_CAST this->reason.ptr);
+	n3 = xmlNewNode(NULL, "ReasonString");
+	xmlNewProp(n3, "xml:lang", this->language.ptr);
+	xmlNodeSetContent(n3, this->reason.ptr);
 	xmlAddChild(n2, n3);
 	xmlAddChild(n, n2);
 

@@ -6,9 +6,9 @@ carol::cat /etc/tnc_config
 dave::cat /etc/tnc_config
 carol::cat /etc/tnc/dummyimc.file
 dave::cat /etc/tnc/dummyimc.file
-moon::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
-carol::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
-dave::LEAK_DETECTIVE_DISABLE=1 LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
+moon::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
+carol::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
+dave::LOG4CXX_CONFIGURATION=/etc/tnc/log4cxx.properties ipsec start
 carol::sleep 1
 carol::ipsec up home
 dave::ipsec up home

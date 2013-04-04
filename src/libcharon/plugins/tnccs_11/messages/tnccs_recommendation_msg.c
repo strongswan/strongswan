@@ -95,21 +95,21 @@ tnccs_msg_t *tnccs_recommendation_msg_create_from_node(xmlNodePtr node,
 		.node = node,
 	);
 
-	rec_string = xmlGetProp(node, (const xmlChar*)"type");
+	rec_string = xmlGetProp(node, "type");
 	if (!rec_string)
 	{
 		error_msg = "type property in TNCCS-Recommendation is missing";
 		goto fatal;
 	}
-	else if (streq((char*)rec_string, "allow"))
+	else if (streq(rec_string, "allow"))
 	{
 		this->rec = TNC_IMV_ACTION_RECOMMENDATION_ALLOW;
 	}
-	else if (streq((char*)rec_string, "isolate"))
+	else if (streq(rec_string, "isolate"))
 	{
 		this->rec = TNC_IMV_ACTION_RECOMMENDATION_ISOLATE;
 	}
-	else if (streq((char*)rec_string, "none"))
+	else if (streq(rec_string, "none"))
 	{
 		this->rec = TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS;
 	}
@@ -151,16 +151,16 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 			.get_recommendation = _get_recommendation,
 		},
 		.type = TNCCS_MSG_RECOMMENDATION,
-		.node =  xmlNewNode(NULL, BAD_CAST "TNCC-TNCS-Message"),
+		.node =  xmlNewNode(NULL, "TNCC-TNCS-Message"),
 		.rec = rec,
 	);
 
 	/* add the message type number in hex */
-	n = xmlNewNode(NULL, BAD_CAST "Type");
-	xmlNodeSetContent(n, BAD_CAST "00000001");
+	n = xmlNewNode(NULL, "Type");
+	xmlNodeSetContent(n, "00000001");
 	xmlAddChild(this->node, n);
 
-	n = xmlNewNode(NULL, BAD_CAST "XML");
+	n = xmlNewNode(NULL, "XML");
 	xmlAddChild(this->node, n);
 
 	switch (rec)
@@ -177,8 +177,8 @@ tnccs_msg_t *tnccs_recommendation_msg_create(TNC_IMV_Action_Recommendation rec)
 			rec_string = "none";
 	}
 
-	n2 = xmlNewNode(NULL, BAD_CAST enum_to_name(tnccs_msg_type_names, this->type));
-	xmlNewProp(n2, BAD_CAST "type", BAD_CAST rec_string);
+	n2 = xmlNewNode(NULL, enum_to_name(tnccs_msg_type_names, this->type));
+	xmlNewProp(n2, BAD_CAST "type", rec_string);
 	xmlNodeSetContent(n2, "");
 	xmlAddChild(n, n2);
 
