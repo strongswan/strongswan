@@ -9,6 +9,7 @@ dh_speed
 pubkey_speed
 crypt_burn
 hash_burn
+malloc_speed
 tls_test
 fetch
 dnssec
