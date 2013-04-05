@@ -373,7 +373,7 @@ void backtrace_deinit() {}
 METHOD(backtrace_t, log_, void,
 	private_backtrace_t *this, FILE *file, bool detailed)
 {
-#ifdef HAVE_BACKTRACE
+#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H)
 	size_t i;
 	char **strings;
 
@@ -420,9 +420,9 @@ METHOD(backtrace_t, log_, void,
 		}
 	}
 	free (strings);
-#else /* !HAVE_BACKTRACE */
-	println(file, "C library does not support backtrace().");
-#endif /* HAVE_BACKTRACE */
+#else /* !HAVE_BACKTRACE && !HAVE_LIBUNWIND_H */
+	println(file, "no support for backtrace()/libunwind");
+#endif /* HAVE_BACKTRACE/HAVE_LIBUNWIND_H */
 }
 
 METHOD(backtrace_t, contains_function, bool,
@@ -518,6 +518,33 @@ METHOD(backtrace_t, destroy, void,
 	free(this);
 }
 
+#ifdef HAVE_LIBUNWIND_H
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+
+/**
+ * libunwind variant for glibc backtrace()
+ */
+static inline int backtrace_unwind(void **frames, int count)
+{
+	unw_context_t context;
+	unw_cursor_t cursor;
+	unw_word_t ip;
+	int depth = 0;
+
+	unw_getcontext(&context);
+	unw_init_local(&cursor, &context);
+	do
+	{
+		unw_get_reg(&cursor, UNW_REG_IP, &ip);
+		frames[depth++] = (void*)ip;
+	}
+	while (depth < count && unw_step(&cursor) > 0);
+
+	return depth;
+}
+#endif /* HAVE_UNWIND */
+
 /**
  * See header
  */
@@ -527,7 +554,9 @@ backtrace_t *backtrace_create(int skip)
 	void *frames[50];
 	int frame_count = 0;
 
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_LIBUNWIND_H
+	frame_count = backtrace_unwind(frames, countof(frames));
+#elif defined(HAVE_BACKTRACE)
 	frame_count = backtrace(frames, countof(frames));
 #endif /* HAVE_BACKTRACE */
 	frame_count = max(frame_count - skip, 0);

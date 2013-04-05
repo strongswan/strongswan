@@ -238,6 +238,7 @@ ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADI
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
+ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([unit-tests],     [enable unit tests using the check test framework.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 
@@ -884,6 +885,14 @@ if test x$bfd_backtraces = xtrue; then
 		[AC_MSG_ERROR([binutils bfd.h header not found!])])
 	BFDLIB="-lbfd"
 	AC_SUBST(BFDLIB)
+fi
+
+if test x$unwind_backtraces = xtrue; then
+	AC_CHECK_LIB([unwind],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([libunwind not found!])],[])
+	AC_CHECK_HEADER([libunwind.h],[AC_DEFINE([HAVE_LIBUNWIND_H],,[have libunwind.h])],
+		[AC_MSG_ERROR([libunwind.h header not found!])])
+	UNWINDLIB="-lunwind"
+	AC_SUBST(UNWINDLIB)
 fi
 
 AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])
