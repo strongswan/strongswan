@@ -190,8 +190,6 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 		child_cfg->add_traffic_selector(child_cfg, TRUE,
 				traffic_selector_create_from_subnet(host->clone(host),
 													32, 0, 0, 65535));
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-
 		enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
 		while (enumerator->enumerate(enumerator, &host))
 		{
@@ -200,6 +198,7 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 													32, 0, 0, 65535));
 		}
 		enumerator->destroy(enumerator);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 
 		charon->shunts->install(charon->shunts, child_cfg);
 		child_cfg->destroy(child_cfg);
