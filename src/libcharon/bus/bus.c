@@ -53,6 +53,11 @@ struct private_bus_t {
 	level_t max_level[DBG_MAX + 1];
 
 	/**
+	 * Same as max level, but for loggers using the vlog() method.
+	 */
+	level_t max_vlevel[DBG_MAX + 1];
+
+	/**
 	 * Mutex for the list of listeners, recursively.
 	 */
 	mutex_t *mutex;
@@ -166,7 +171,14 @@ static inline void register_logger(private_bus_t *this, debug_t group,
 	loggers->insert_before(loggers, enumerator, entry);
 	enumerator->destroy(enumerator);
 
-	this->max_level[group] = max(this->max_level[group], level);
+	if (entry->logger->log)
+	{
+		this->max_level[group] = max(this->max_level[group], level);
+	}
+	if (entry->logger->vlog)
+	{
+		this->max_vlevel[group] = max(this->max_vlevel[group], level);
+	}
 }
 
 /**
@@ -194,6 +206,7 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 	if (found)
 	{
 		debug_t group;
+
 		for (group = 0; group < DBG_MAX; group++)
 		{
 			if (found->levels[group] > LEVEL_SILENT)
@@ -202,9 +215,11 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 				loggers->remove(loggers, found, NULL);
 
 				this->max_level[group] = LEVEL_SILENT;
+				this->max_vlevel[group] = LEVEL_SILENT;
 				if (loggers->get_first(loggers, (void**)&entry) == SUCCESS)
 				{
 					this->max_level[group] = entry->levels[group];
+					this->max_vlevel[group] = entry->levels[group];
 				}
 			}
 		}
@@ -268,8 +283,10 @@ typedef struct {
 	debug_t group;
 	/** debug level */
 	level_t level;
-	/** message */
+	/** message/fmt */
 	char *message;
+	/** argument list if message is a format string for vlog() */
+	va_list args;
 } log_data_t;
 
 /**
@@ -277,24 +294,41 @@ typedef struct {
  */
 static void log_cb(log_entry_t *entry, log_data_t *data)
 {
-	if (entry->levels[data->group] < data->level)
+	if (entry->logger->log && entry->levels[data->group] >= data->level)
 	{
-		return;
+		entry->logger->log(entry->logger, data->group, data->level,
+						   data->thread, data->ike_sa, data->message);
 	}
-	entry->logger->log(entry->logger, data->group, data->level,
-					   data->thread, data->ike_sa, data->message);
+}
+
+/**
+ * logger->vlog() invocation as a invoke_function callback
+ */
+static void vlog_cb(log_entry_t *entry, log_data_t *data)
+{
+	if (entry->logger->vlog && entry->levels[data->group] >= data->level)
+	{
+		va_list copy;
+
+		va_copy(copy, data->args);
+		entry->logger->vlog(entry->logger, data->group, data->level,
+							data->thread, data->ike_sa, data->message, copy);
+		va_end(copy);
+	}
 }
 
 METHOD(bus_t, vlog, void,
 	private_bus_t *this, debug_t group, level_t level,
 	char* format, va_list args)
 {
+	linked_list_t *loggers;
+	log_data_t data;
+
 	this->log_lock->read_lock(this->log_lock);
+	loggers = this->loggers[group];
+
 	if (this->max_level[group] >= level)
 	{
-		linked_list_t *loggers = this->loggers[group];
-		log_data_t data;
-		va_list copy;
 		char buf[1024];
 		ssize_t len;
 
@@ -304,9 +338,9 @@ METHOD(bus_t, vlog, void,
 		data.level = level;
 		data.message = buf;
 
-		va_copy(copy, args);
-		len = vsnprintf(data.message, sizeof(buf), format, copy);
-		va_end(copy);
+		va_copy(data.args, args);
+		len = vsnprintf(data.message, sizeof(buf), format, data.args);
+		va_end(data.args);
 		if (len >= sizeof(buf))
 		{
 			len++;
@@ -323,6 +357,19 @@ METHOD(bus_t, vlog, void,
 			free(data.message);
 		}
 	}
+	if (this->max_vlevel[group] >= level)
+	{
+		data.ike_sa = this->thread_sa->get(this->thread_sa);
+		data.thread = thread_current_id();
+		data.group = group;
+		data.level = level;
+		data.message = format;
+
+		va_copy(data.args, args);
+		loggers->invoke_function(loggers, (linked_list_invoke_t)vlog_cb, &data);
+		va_end(data.args);
+	}
+
 	this->log_lock->unlock(this->log_lock);
 }
 
@@ -847,8 +894,8 @@ bus_t *bus_create()
 	{
 		this->loggers[group] = linked_list_create();
 		this->max_level[group] = LEVEL_SILENT;
+		this->max_vlevel[group] = LEVEL_SILENT;
 	}
 
 	return &this->public;
 }
-
