@@ -14,6 +14,9 @@
  */
 
 /**
+ * @defgroup sasl sasl
+ * @ingroup pt_tls
+ *
  * @defgroup sasl_mechanism sasl_mechanism
  * @{ @ingroup sasl
  */
