@@ -71,15 +71,14 @@ struct tnc_ifmap_soap_t {
 	bool (*publish_device_ip)(tnc_ifmap_soap_t *this, host_t *host);
 
 	/**
-	 * Publish Virtual IP  access-request-ip metadata
+	 * Publish Virtual IP access-request-ip metadata
 	 *
-	 * @param ike_sa		IKE_SA for which metadata is published
-	 * @param vip			Virtual IP address of peer
+	 * @param ike_sa		IKE_SA for which Virtual IP metadata is published
 	 * @param assign		TRUE if assigned, FALSE if removed
 	 * @return				TRUE if command was successful
 	 */
-	bool (*publish_virtual_ip)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa,
-							   host_t *vip, bool assign);
+	bool (*publish_virtual_ips)(tnc_ifmap_soap_t *this, ike_sa_t *ike_sa,
+								bool assign);
 
 	/**
 	 * Publish enforcement-report metadata

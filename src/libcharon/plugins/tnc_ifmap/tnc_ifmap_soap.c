@@ -579,12 +579,14 @@ METHOD(tnc_ifmap_soap_t, publish_device_ip, bool,
 	return success;
 }
 
-METHOD(tnc_ifmap_soap_t, publish_virtual_ip, bool,
-	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, host_t *vip, bool assign)
+METHOD(tnc_ifmap_soap_t, publish_virtual_ips, bool,
+	private_tnc_ifmap_soap_t *this, ike_sa_t *ike_sa, bool assign)
 {
 	tnc_ifmap_soap_msg_t *soap_msg;
 	xmlNodePtr request, node;
 	u_int32_t ike_sa_id;
+	enumerator_t *enumerator;
+	host_t *vip;
 	bool success;
 
 	/* extract relevant data from IKE_SA*/
@@ -593,26 +595,31 @@ METHOD(tnc_ifmap_soap_t, publish_virtual_ip, bool,
 	/* build publish request */
 	request = create_publish_request(this);
 
-	/**
-	 * update or delete access-request-ip metadata for a virtual IP address
-	 */
-	if (assign)
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &vip))
 	{
-		node = xmlNewNode(NULL, "update");
-	}
-	else
-	{
-		node = create_delete_filter(this, "access-request-ip");
-	}
-	xmlAddChild(request, node);
+		/**
+		 * update or delete access-request-ip metadata for a virtual IP address
+		 */
+		if (assign)
+		{
+			node = xmlNewNode(NULL, "update");
+		}
+		else
+		{
+			node = create_delete_filter(this, "access-request-ip");
+		}
+		xmlAddChild(request, node);
 
-	/* add access-request, virtual ip-address and [if assign] metadata */
-	xmlAddChild(node, create_access_request(this, ike_sa_id));
-	xmlAddChild(node, create_ip_address(this, vip));
-	if (assign)
-	{
-		xmlAddChild(node, create_metadata(this, "access-request-ip"));
+		/* add access-request, virtual ip-address and [if assign] metadata */
+			xmlAddChild(node, create_access_request(this, ike_sa_id));
+			xmlAddChild(node, create_ip_address(this, vip));
+			if (assign)
+		{
+			xmlAddChild(node, create_metadata(this, "access-request-ip"));
+		}
 	}
+	enumerator->destroy(enumerator);
 
 	soap_msg = tnc_ifmap_soap_msg_create(this->uri, this->user_pass, this->tls);
 	success = soap_msg->post(soap_msg, request, "publishReceived", NULL);
@@ -893,7 +900,7 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			.purgePublisher = _purgePublisher,
 			.publish_ike_sa = _publish_ike_sa,
 			.publish_device_ip = _publish_device_ip,
-			.publish_virtual_ip = _publish_virtual_ip,
+			.publish_virtual_ips = _publish_virtual_ips,
 			.publish_enforcement_report = _publish_enforcement_report,
 			.endSession = _endSession,
 			.get_session_id = _get_session_id,

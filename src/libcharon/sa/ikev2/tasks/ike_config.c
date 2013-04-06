@@ -387,6 +387,8 @@ METHOD(task_t, build_r, status_t,
 			pools->destroy(pools);
 			return SUCCESS;
 		}
+		charon->bus->assign_vips(charon->bus, this->ike_sa, TRUE);
+
 		if (pools->get_count(pools) && !this->vips->get_count(this->vips))
 		{
 			DBG1(DBG_IKE, "expected a virtual IP request, sending %N",

@@ -388,11 +388,10 @@ struct bus_t {
 	/**
 	 * Virtual IP assignment hook.
 	 *
-	 * @param ike_sa	IKE_SA the VIP is assigned to
-	 * @param vip		Virtual IPv4 or IV6 address
+	 * @param ike_sa	IKE_SA the VIPs are assigned to
 	 * @param assign	TRUE if assigned to IKE_SA, FALSE if released
 	 */
-	void (*assign_vip)(bus_t *this, ike_sa_t *ike_sa, host_t *vip, bool assign);
+	void (*assign_vips)(bus_t *this, ike_sa_t *ike_sa, bool assign);
 
 	/**
 	 * Destroy the event bus.

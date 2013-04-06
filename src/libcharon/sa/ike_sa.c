@@ -766,7 +766,6 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 	else
 	{
 		this->other_vips->insert_last(this->other_vips, ip->clone(ip));
-		charon->bus->assign_vip(charon->bus, &this->public, ip, TRUE);
 	}
 }
 
@@ -777,16 +776,16 @@ METHOD(ike_sa_t, clear_virtual_ips, void,
 	linked_list_t *vips = local ? this->my_vips : this->other_vips;
 	host_t *vip;
 
+	if (!local && vips->get_count(vips))
+	{
+		charon->bus->assign_vips(charon->bus, &this->public, FALSE);
+	}
 	while (vips->remove_first(vips, (void**)&vip) == SUCCESS)
 	{
 		if (local)
 		{
 			hydra->kernel_interface->del_ip(hydra->kernel_interface,
 											vip, -1, TRUE);
-		}
-		else
-		{
-			charon->bus->assign_vip(charon->bus, &this->public, vip, FALSE);
 		}
 		vip->destroy(vip);
 	}
@@ -2110,6 +2109,10 @@ METHOD(ike_sa_t, destroy, void,
 		vip->destroy(vip);
 	}
 	this->my_vips->destroy(this->my_vips);
+	if (this->other_vips->get_count(this->other_vips))
+	{
+		charon->bus->assign_vips(charon->bus, &this->public, FALSE);
+	}
 	while (this->other_vips->remove_last(this->other_vips,
 										 (void**)&vip) == SUCCESS)
 	{
@@ -2124,7 +2127,6 @@ METHOD(ike_sa_t, destroy, void,
 			hydra->attributes->release_address(hydra->attributes, pools, vip, id);
 			pools->destroy(pools);
 		}
-		charon->bus->assign_vip(charon->bus, &this->public, vip, FALSE);
 		vip->destroy(vip);
 	}
 	this->other_vips->destroy(this->other_vips);

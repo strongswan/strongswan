@@ -197,13 +197,11 @@ struct listener_t {
 	 * This hook gets invoked when a a Virtual IP address is assigned to an
 	 * IKE_SA (assign = TRUE) and again when it is released (assign = FALSE)
 	 *
-	 * @param ike_sa	IKE_SA the VIP is assigned to
-	 * @param vip		Virtual IPv4 or IV6 address
+	 * @param ike_sa	IKE_SA the VIPs are assigned to
 	 * @param assign	TRUE if assigned to IKE_SA, FALSE if released
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
-	bool (*assign_vip)(listener_t *this, ike_sa_t *ike_sa, host_t *vip,
-					   bool assign);
+	bool (*assign_vips)(listener_t *this, ike_sa_t *ike_sa, bool assign);
 
 };
 
