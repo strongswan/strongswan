@@ -347,26 +347,6 @@ METHOD(pkcs5_t, decrypt, bool,
 }
 
 /**
- * Converts an ASN.1 INTEGER object to an u_int64_t. If the INTEGER is longer
- * than 8 bytes only the 8 LSBs are returned.
- *
- * @param blob		body of an ASN.1 coded integer object
- * @return			converted integer
- */
-static u_int64_t parse_asn1_integer_uint64(chunk_t blob)
-{
-	u_int64_t val = 0;
-	int i;
-
-	for (i = 0; i < blob.len; i++)
-	{	/* if it is longer than 8 bytes, we just use the 8 LSBs */
-		val <<= 8;
-		val |= (u_int64_t)blob.ptr[i];
-	}
-	return val;
-}
-
-/**
  * ASN.1 definition of a PBEParameter structure
  */
 static const asn1Object_t pbeParameterObjects[] = {
@@ -402,7 +382,7 @@ static bool parse_pbes1_params(private_pkcs5_t *this, chunk_t blob, int level0)
 			}
 			case PBEPARAM_ITERATION_COUNT:
 			{
-				this->iterations = parse_asn1_integer_uint64(object);
+				this->iterations = asn1_parse_integer_uint64(object);
 				break;
 			}
 		}
@@ -458,12 +438,12 @@ static bool parse_pbkdf2_params(private_pkcs5_t *this, chunk_t blob, int level0)
 			}
 			case PBKDF2_ITERATION_COUNT:
 			{
-				this->iterations = parse_asn1_integer_uint64(object);
+				this->iterations = asn1_parse_integer_uint64(object);
 				break;
 			}
 			case PBKDF2_KEYLENGTH:
 			{
-				this->keylen = (size_t)parse_asn1_integer_uint64(object);
+				this->keylen = (size_t)asn1_parse_integer_uint64(object);
 				break;
 			}
 			case PBKDF2_PRF:
