@@ -16,25 +16,47 @@
 #include <stdio.h>
 
 #include <library.h>
+#include <utils/debug.h>
+
+/**
+ * Define debug level
+ */
+static level_t dbg_level = 1;
+
+static void dbg_dnssec(debug_t group, level_t level, char *fmt, ...)
+{
+	if ((level <= dbg_level) || level <= 1)
+	{
+		va_list args;
+
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
+}
 
 int main(int argc, char *argv[])
 {
 	resolver_t *resolver;
 	resolver_response_t *response;
 	enumerator_t *enumerator;
+	chunk_t rdata;
 	rr_set_t *rrset;
 	rr_t *rr;
-	chunk_t chunk;
 
 	library_init(NULL);
 	atexit(library_deinit);
+
+	dbg = dbg_dnssec;
+
 	if (!lib->plugins->load(lib->plugins, NULL, PLUGINS))
 	{
 		return 1;
 	}
 	if (argc != 2)
 	{
-		fprintf(stderr, "usage: %s <name>\n", argv[0]);
+		fprintf(stderr, "usage: dnssec <name>\n");
 		return 1;
 	}
 
@@ -93,13 +115,10 @@ int main(int argc, char *argv[])
 		printf("  RRSIGs for the RRset:\n");
 		while (enumerator->enumerate(enumerator, &rr))
 		{
-			printf("    name: ");
-			printf(rr->get_name(rr));
-			printf("\n    RDATA: ");
-			chunk = rr->get_rdata(rr);
-			chunk = chunk_to_hex(chunk, NULL, TRUE);
-			printf(chunk.ptr);
-			printf("\n");
+			rdata = rr->get_rdata(rr);
+
+			printf("    name: %s\n", rr->get_name(rr));
+			printf("    RDATA: %#B\n", &rdata);
 		}
 	}
 
