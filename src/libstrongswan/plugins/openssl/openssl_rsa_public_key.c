@@ -48,8 +48,6 @@ struct private_openssl_rsa_public_key_t {
 	refcount_t ref;
 };
 
-
-
 /**
  * Verification of an EMPSA PKCS1 signature described in PKCS#1
  */
@@ -67,12 +65,17 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 
 	if (type == NID_undef)
 	{
-		chunk_t hash = chunk_alloc(rsa_size);
+		char *buf;
+		int len;
 
-		hash.len = RSA_public_decrypt(signature.len, signature.ptr, hash.ptr,
-									  this->rsa, RSA_PKCS1_PADDING);
-		valid = chunk_equals(data, hash);
-		free(hash.ptr);
+		buf = malloc(rsa_size);
+		len = RSA_public_decrypt(signature.len, signature.ptr, buf, this->rsa,
+								 RSA_PKCS1_PADDING);
+		if (len != -1)
+		{
+			valid = chunk_equals(data, chunk_create(buf, len));
+		}
+		free(buf);
 	}
 	else
 	{
