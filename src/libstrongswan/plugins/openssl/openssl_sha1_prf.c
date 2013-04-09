@@ -42,7 +42,14 @@ struct private_openssl_sha1_prf_t {
 METHOD(prf_t, get_bytes, bool,
 	private_openssl_sha1_prf_t *this, chunk_t seed, u_int8_t *bytes)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	if (!SHA1_Update(&this->ctx, seed.ptr, seed.len))
+	{
+		return FALSE;
+	}
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
 	SHA1_Update(&this->ctx, seed.ptr, seed.len);
+#endif
 
 	if (bytes)
 	{
@@ -84,7 +91,14 @@ METHOD(prf_t, get_key_size, size_t,
 METHOD(prf_t, set_key, bool,
 	private_openssl_sha1_prf_t *this, chunk_t key)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	if (!SHA1_Init(&this->ctx))
+	{
+		return FALSE;
+	}
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
 	SHA1_Init(&this->ctx);
+#endif
 
 	if (key.len % 4)
 	{
