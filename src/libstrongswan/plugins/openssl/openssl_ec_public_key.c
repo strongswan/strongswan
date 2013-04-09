@@ -124,7 +124,7 @@ static bool verify_der_signature(private_openssl_ec_public_key_t *this,
 	if (openssl_hash_chunk(nid_hash, data, &hash))
 	{
 		valid = ECDSA_verify(0, hash.ptr, hash.len,
-							 signature.ptr, signature.len, this->ec);
+							 signature.ptr, signature.len, this->ec) == 1;
 		free(hash.ptr);
 	}
 	return valid;
