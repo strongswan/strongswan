@@ -16,6 +16,47 @@
 #include "test_suite.h"
 
 /**
+ * Signature schemes to test
+ */
+static struct {
+	/* key size for scheme, 0 for any */
+	int key_size;
+	signature_scheme_t scheme;
+} schemes[] = {
+	{ 0, SIGN_ECDSA_WITH_SHA1_DER },
+	{ 0, SIGN_ECDSA_WITH_SHA256_DER },
+	{ 0, SIGN_ECDSA_WITH_SHA384_DER },
+	{ 0, SIGN_ECDSA_WITH_SHA512_DER },
+	{ 0, SIGN_ECDSA_WITH_NULL },
+	{ 256, SIGN_ECDSA_256 },
+	{ 384, SIGN_ECDSA_384 },
+	{ 521, SIGN_ECDSA_521 },
+};
+
+/**
+ * Perform a signature verification "good" test having a keypair
+ */
+static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
+{
+	chunk_t sig, data = chunk_from_chars(0x01,0x02,0x03,0xFD,0xFE,0xFF);
+	int i;
+
+	for (i = 0; i < countof(schemes); i++)
+	{
+		if (schemes[i].key_size != 0 &&
+			schemes[i].scheme != privkey->get_keysize(privkey))
+		{
+			continue;
+		}
+		fail_unless(privkey->sign(privkey, schemes[i].scheme, data, &sig),
+					"sign %N", signature_scheme_names, schemes[i].scheme);
+		fail_unless(pubkey->verify(pubkey, schemes[i].scheme, data, sig),
+					"verify %N", signature_scheme_names, schemes[i].scheme);
+		free(sig.ptr);
+	}
+}
+
+/**
  * ECDSA key sizes to test
  */
 static int key_sizes[] = {
@@ -32,6 +73,9 @@ START_TEST(test_gen)
 	ck_assert(privkey != NULL);
 	pubkey = privkey->get_public_key(privkey);
 	ck_assert(pubkey != NULL);
+
+	test_good_sig(privkey, pubkey);
+
 	pubkey->destroy(pubkey);
 	privkey->destroy(privkey);
 }
@@ -89,6 +133,9 @@ START_TEST(test_load)
 	ck_assert(privkey != NULL);
 	pubkey = privkey->get_public_key(privkey);
 	ck_assert(pubkey != NULL);
+
+	test_good_sig(privkey, pubkey);
+
 	pubkey->destroy(pubkey);
 	privkey->destroy(privkey);
 }
