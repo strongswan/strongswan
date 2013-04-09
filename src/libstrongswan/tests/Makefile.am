@@ -10,6 +10,7 @@ test_runner_SOURCES = \
 
 test_runner_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
+  -DPLUGINS=\""${s_plugins}\"" \
   @COVERAGE_CFLAGS@ \
   @CHECK_CFLAGS@
 
