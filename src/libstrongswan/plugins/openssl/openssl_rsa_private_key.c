@@ -428,7 +428,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 	if (blob.ptr)
 	{
 		this->rsa = d2i_RSAPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-		if (this->rsa && RSA_check_key(this->rsa))
+		if (this->rsa && RSA_check_key(this->rsa) == 1)
 		{
 			return &this->public;
 		}
@@ -450,7 +450,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 			this->rsa->dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
 		}
 		this->rsa->iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
-		if (RSA_check_key(this->rsa))
+		if (RSA_check_key(this->rsa) == 1)
 		{
 			return &this->public;
 		}
