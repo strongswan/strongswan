@@ -162,9 +162,9 @@ struct crypto_factory_t {
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_crypter)(crypto_factory_t *this, encryption_algorithm_t algo,
+	bool (*add_crypter)(crypto_factory_t *this, encryption_algorithm_t algo,
 						const char *plugin_name, crypter_constructor_t create);
 
 	/**
@@ -187,9 +187,9 @@ struct crypto_factory_t {
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
+	bool (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
 					 const char *plugin_name, aead_constructor_t create);
 
 	/**
@@ -198,9 +198,9 @@ struct crypto_factory_t {
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_signer)(crypto_factory_t *this, integrity_algorithm_t algo,
+	bool (*add_signer)(crypto_factory_t *this, integrity_algorithm_t algo,
 					    const char *plugin_name, signer_constructor_t create);
 
 	/**
@@ -219,9 +219,9 @@ struct crypto_factory_t {
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_hasher)(crypto_factory_t *this, hash_algorithm_t algo,
+	bool (*add_hasher)(crypto_factory_t *this, hash_algorithm_t algo,
 					   const char *plugin_name, hasher_constructor_t create);
 
 	/**
@@ -237,9 +237,9 @@ struct crypto_factory_t {
 	 * @param algo			algorithm to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_prf)(crypto_factory_t *this, pseudo_random_function_t algo,
+	bool (*add_prf)(crypto_factory_t *this, pseudo_random_function_t algo,
 					const char *plugin_name, prf_constructor_t create);
 
 	/**
@@ -255,8 +255,9 @@ struct crypto_factory_t {
 	 * @param quality		quality of randomness this RNG serves
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for such a quality
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_rng)(crypto_factory_t *this, rng_quality_t quality,
+	bool (*add_rng)(crypto_factory_t *this, rng_quality_t quality,
 					const char *plugin_name, rng_constructor_t create);
 
 	/**
@@ -271,8 +272,9 @@ struct crypto_factory_t {
 	 *
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that nonce generator
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_nonce_gen)(crypto_factory_t *this, const char *plugin_name,
+	bool (*add_nonce_gen)(crypto_factory_t *this, const char *plugin_name,
 						  nonce_gen_constructor_t create);
 
 	/**
@@ -289,9 +291,9 @@ struct crypto_factory_t {
 	 * @param group			dh group to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
-	 * @return
+	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	void (*add_dh)(crypto_factory_t *this, diffie_hellman_group_t group,
+	bool (*add_dh)(crypto_factory_t *this, diffie_hellman_group_t group,
 				   const char *plugin_name, dh_constructor_t create);
 
 	/**
@@ -365,6 +367,16 @@ struct crypto_factory_t {
 	 */
 	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type,
 							void *vector);
+
+	/**
+	 * Get the number of test vector failures encountered during add.
+	 *
+	 * This counter gets incremented only if transforms get tested during
+	 * registration.
+	 *
+	 * @return				number of failed test vectors
+	 */
+	u_int (*get_test_vector_failures)(crypto_factory_t *this);
 
 	/**
 	 * Destroy a crypto_factory instance.
