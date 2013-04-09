@@ -83,6 +83,10 @@ int main()
 	srunner_add_suite(sr, threading_suite_create());
 	srunner_add_suite(sr, utils_suite_create());
 	srunner_add_suite(sr, vectors_suite_create());
+	if (has_feature(PLUGIN_DEPENDS(PRIVKEY_GEN, KEY_ECDSA)))
+	{
+		srunner_add_suite(sr, ecdsa_suite_create());
+	}
 
 	srunner_run_all(sr, CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
