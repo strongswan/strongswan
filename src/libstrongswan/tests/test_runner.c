@@ -18,6 +18,38 @@
 #include "test_runner.h"
 
 #include <library.h>
+#include <plugins/plugin_feature.h>
+
+/**
+ * Check if the plugin configuration provides a specific feature
+ */
+static bool has_feature(plugin_feature_t feature)
+{
+	enumerator_t *plugins, *features;
+	plugin_t *plugin;
+	linked_list_t *list;
+	plugin_feature_t *current;
+	bool found = FALSE;
+
+	plugins = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (plugins->enumerate(plugins, &plugin, &list))
+	{
+		features = list->create_enumerator(list);
+		while (features->enumerate(features, &current))
+		{
+			if (plugin_feature_matches(&feature, current))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		features->destroy(features);
+		list->destroy(list);
+	}
+	plugins->destroy(plugins);
+
+	return found;
+}
 
 int main()
 {
