@@ -104,9 +104,7 @@ int main(int argc, char *argv[])
 	enumerator = rrset->create_rr_enumerator(rrset);
 	while (enumerator->enumerate(enumerator, &rr))
 	{
-		printf("    name: ");
-		printf(rr->get_name(rr));
-		printf("\n");
+		printf("    name: %s\n", rr->get_name(rr));
 	}
 
 	enumerator = rrset->create_rrsig_enumerator(rrset);
