@@ -57,7 +57,7 @@ METHOD(rng_t, get_bytes, bool,
 	{
 		ret = RAND_pseudo_bytes((char*)buffer, bytes);
 	}
-	return ret != 0;
+	return ret == 1;
 }
 
 METHOD(rng_t, allocate_bytes, bool,
