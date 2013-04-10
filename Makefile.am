@@ -4,6 +4,10 @@ if USE_SCRIPTS
   SUBDIRS += scripts
 endif
 
+if USE_SILENT_RULES
+  AM_MAKEFLAGS = -s
+endif
+
 ACLOCAL_AMFLAGS = -I m4/config
 
 EXTRA_DIST = Doxyfile.in LICENSE Android.common.mk.in Android.common.mk Android.mk
