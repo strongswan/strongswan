@@ -42,6 +42,7 @@ if USE_TOOLS
 endif
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
+		$(AM_V_GEN) \
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
 
 install-exec-local :
@@ -55,4 +56,3 @@ install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
 		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
-
