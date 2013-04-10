@@ -17,11 +17,13 @@ nodist_config_include_HEADERS = config.h
 endif
 
 Android.common.mk :	Android.common.mk.in configure.in
+		$(AM_V_GEN) \
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
 		$(srcdir)/$@.in > $@
 
 Doxyfile :	Doxyfile.in
+		$(AM_V_GEN) \
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \
 		-e "s:\@PACKAGE_NAME\@:$(PACKAGE_NAME):" \

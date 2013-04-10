@@ -5,9 +5,9 @@ CLEANFILES = ipsec.conf.5 ipsec.secrets.5 strongswan.conf.5
 SUFFIXES = .in
 
 .in:
+	$(AM_V_GEN) \
 	sed \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
 	-e "s:@DEV_URANDOM@:$(urandom_device):" \
 	-e "s:@DEV_RANDOM@:$(random_device):" \
 	$(srcdir)/$@.in > $@
-

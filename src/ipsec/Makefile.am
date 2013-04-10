@@ -4,6 +4,7 @@ dist_man8_MANS = _ipsec.8
 EXTRA_DIST = _ipsec.in _ipsec.8.in Android.mk
 
 _ipsec.8 : _ipsec.8.in
+	$(AM_V_GEN) \
 	sed \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
 	-e "s:@IPSEC_SCRIPT@:$(ipsec_script):g" \
@@ -11,6 +12,7 @@ _ipsec.8 : _ipsec.8.in
 	$(srcdir)/$@.in > $@
 
 _ipsec : _ipsec.in
+	$(AM_V_GEN) \
 	sed \
 	-e "s:@IPSEC_SHELL@:/bin/sh:" \
 	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \

@@ -20,8 +20,8 @@ libstrongswan_maemo_la_LIBADD  = ${maemo_LIBS}
 dbusservice_DATA = org.strongswan.charon.service
 
 org.strongswan.charon.service: $(srcdir)/org.strongswan.charon.service.in
+	$(AM_V_GEN) \
 	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' $< >$@
 
 EXTRA_DIST = org.strongswan.charon.service.in
 CLEANFILES = $(dbusservice_DATA)
-
