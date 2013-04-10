@@ -175,6 +175,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_RC2
+  SUBDIRS += plugins/rc2
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/rc2/libstrongswan-rc2.la
+endif
+endif
+
 if USE_MD4
   SUBDIRS += plugins/md4
 if MONOLITHIC

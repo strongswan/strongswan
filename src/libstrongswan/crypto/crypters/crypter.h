@@ -60,7 +60,9 @@ enum encryption_algorithm_t {
 	ENCR_UNDEFINED =        1024,
 	ENCR_DES_ECB =          1025,
 	ENCR_SERPENT_CBC =      1026,
-	ENCR_TWOFISH_CBC =      1027
+	ENCR_TWOFISH_CBC =      1027,
+	/* see macros below to handle RC2 (effective) key length */
+	ENCR_RC2_CBC =          1028,
 };
 
 #define DES_BLOCK_SIZE			 8
@@ -69,6 +71,15 @@ enum encryption_algorithm_t {
 #define CAMELLIA_BLOCK_SIZE		16
 #define SERPENT_BLOCK_SIZE		16
 #define TWOFISH_BLOCK_SIZE		16
+
+/**
+ * For RC2, if the effective key size in bits is not key_size * 8, it should
+ * be encoded with the macro below. It can be decoded with the other two macros.
+ * After decoding the value should be validated.
+ */
+#define RC2_KEY_SIZE(kl, eff) ((kl) | ((eff) << 8))
+#define RC2_EFFECTIVE_KEY_LEN(ks) ((ks) >> 8)
+#define RC2_KEY_LEN(ks) ((ks) & 0xff)
 
 /**
  * enum name for encryption_algorithm_t.
