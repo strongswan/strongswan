@@ -124,9 +124,11 @@ $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
 $(srcdir)/crypto/proposal/proposal_keywords_static.c
 
 $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		$(AM_V_GEN) \
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
 
 $(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		$(AM_V_GEN) \
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
 
 $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/proposal_keywords_static.txt \
