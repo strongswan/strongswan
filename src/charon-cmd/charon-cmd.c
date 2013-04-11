@@ -323,6 +323,8 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+	lib->settings->set_default_str(lib->settings, "charon-cmd.port", "0");
+	lib->settings->set_default_str(lib->settings, "charon-cmd.port_nat_t", "0");
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-cmd.load", PLUGINS)))
 	{
