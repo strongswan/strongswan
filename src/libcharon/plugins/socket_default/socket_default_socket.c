@@ -329,7 +329,7 @@ METHOD(socket_t, receiver, status_t,
 METHOD(socket_t, sender, status_t,
 	private_socket_default_socket_t *this, packet_t *packet)
 {
-	int sport, skt, family;
+	int sport, skt = -1, family;
 	ssize_t bytes_sent;
 	chunk_t data;
 	host_t *src, *dst;
@@ -379,9 +379,10 @@ METHOD(socket_t, sender, status_t,
 				return FAILED;
 		}
 	}
-	else
+	if (skt == -1)
 	{
-		DBG1(DBG_NET, "unable to locate a send socket for port %d", sport);
+		DBG1(DBG_NET, "no socket found to send IPv%d packet from port %d",
+			 family == AF_INET ? 4 : 6, sport);
 		return FAILED;
 	}
 
