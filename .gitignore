@@ -33,3 +33,4 @@ apidoc/
 *.diff
 *.tar.bz2
 *.tar.gz
+.DS_Store
