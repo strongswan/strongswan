@@ -644,6 +644,26 @@ METHOD(settings_t, set_time, void,
 	va_end(args);
 }
 
+METHOD(settings_t, set_default_str, bool,
+	   private_settings_t *this, char *key, char *value, ...)
+{
+	char *old;
+	va_list args;
+
+	va_start(args, value);
+	old = find_value(this, this->top, key, args);
+	va_end(args);
+
+	if (!old)
+	{
+		va_start(args, value);
+		set_value(this, this->top, key, args, value);
+		va_end(args);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 /**
  * Enumerate section names, not sections
  */
@@ -1209,6 +1229,7 @@ settings_t *settings_create(char *file)
 			.set_double = _set_double,
 			.set_time = _set_time,
 			.set_bool = _set_bool,
+			.set_default_str = _set_default_str,
 			.create_section_enumerator = _create_section_enumerator,
 			.create_key_value_enumerator = _create_key_value_enumerator,
 			.load_files = _load_files,
