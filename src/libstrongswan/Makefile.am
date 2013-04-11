@@ -15,7 +15,7 @@ credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c \
-credentials/containers/container.c \
+credentials/containers/container.c credentials/containers/pkcs12.c \
 credentials/ietf_attributes/ietf_attributes.c credentials/credential_manager.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
@@ -55,6 +55,7 @@ credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h \
 credentials/certificates/pgp_certificate.h \
 credentials/containers/container.h credentials/containers/pkcs7.h \
+credentials/containers/pkcs12.h \
 credentials/ietf_attributes/ietf_attributes.h \
 credentials/credential_manager.h credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.h credentials/sets/cert_cache.h \
