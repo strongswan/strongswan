@@ -154,6 +154,17 @@ hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
 												 size_t *length);
 
 /**
+ * Conversion of hash algorithm to integrity algorithm (if based on a hash).
+ *
+ * @param alg			hash algorithm
+ * @param length		length of the signature
+ * @return				integrity algorithm, AUTH_UNDEFINED if none is known
+ * 						based on the given hash function
+ */
+integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
+													size_t length);
+
+/**
  * Conversion of hash algorithm into ASN.1 OID.
  *
  * @param alg			hash algorithm

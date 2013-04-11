@@ -180,6 +180,72 @@ hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
 /*
  * Described in header.
  */
+integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
+													size_t length)
+{
+	switch (alg)
+	{
+		case HASH_MD5:
+			switch (length)
+			{
+				case 12:
+					return AUTH_HMAC_MD5_96;
+				case 16:
+					return AUTH_HMAC_MD5_128;
+			}
+			break;
+		case HASH_SHA1:
+		case HASH_PREFERRED:
+			switch (length)
+			{
+				case 12:
+					return AUTH_HMAC_SHA1_96;
+				case 16:
+					return AUTH_HMAC_SHA1_128;
+				case 20:
+					return AUTH_HMAC_SHA1_160;
+			}
+			break;
+		case HASH_SHA256:
+			switch (length)
+			{
+				case 12:
+					return AUTH_HMAC_SHA2_256_96;
+				case 16:
+					return AUTH_HMAC_SHA2_256_128;
+				case 32:
+					return AUTH_HMAC_SHA2_256_256;
+			}
+			break;
+		case HASH_SHA384:
+			switch (length)
+			{
+				case 24:
+					return AUTH_HMAC_SHA2_384_192;
+				case 48:
+					return AUTH_HMAC_SHA2_384_384;
+
+			}
+			break;
+		case HASH_SHA512:
+			switch (length)
+			{
+				case 32:
+					return AUTH_HMAC_SHA2_512_256;
+			}
+			break;
+		case HASH_MD2:
+		case HASH_MD4:
+		case HASH_SHA224:
+		case HASH_UNKNOWN:
+			break;
+	}
+	return AUTH_UNDEFINED;
+}
+
+/*
+ * Described in header.
+ */
 int hasher_algorithm_to_oid(hash_algorithm_t alg)
 {
 	int oid;
