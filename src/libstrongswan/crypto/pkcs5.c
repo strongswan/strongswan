@@ -64,6 +64,7 @@ struct private_pkcs5_t {
 	enum {
 		PKCS5_SCHEME_PBES1,
 		PKCS5_SCHEME_PBES2,
+		PKCS5_SCHEME_PKCS12,
 	} scheme;
 
 	/**
@@ -157,6 +158,159 @@ static bool decrypt_generic(private_pkcs5_t *this, chunk_t password,
 	}
 	chunk_free(decrypted);
 	return FALSE;
+}
+
+/**
+ * v * ceiling(len/v)
+ */
+#define PKCS12_LEN(len, v) (((len) + v-1) & ~(v-1))
+
+/**
+ * Copy src to dst as many times as possible
+ */
+static inline void pkcs12_copy_chunk(chunk_t dst, chunk_t src)
+{
+	size_t i;
+
+	for (i = 0; i < dst.len; i++)
+	{
+		dst.ptr[i] = src.ptr[i % src.len];
+	}
+}
+
+/**
+ * Treat two chunks as integers in network order and add them together.
+ * The result is stored in the first chunk, if the second chunk is longer or the
+ * result overflows this is ignored.
+ */
+static void pkcs12_add_chunks(chunk_t a, chunk_t b)
+{
+	u_int16_t sum;
+	u_int8_t rem = 0;
+	ssize_t i, j;
+
+	for (i = a.len - 1, j = b.len -1; i >= 0 && j >= 0; i--, j--)
+	{
+		sum = a.ptr[i] + b.ptr[j] + rem;
+		a.ptr[i] = (u_char)sum;
+		rem = sum >> 8;
+	}
+	for (; i >= 0 && rem; i--)
+	{
+		sum = a.ptr[i] + rem;
+		a.ptr[i] = (u_char)sum;
+		rem = sum >> 8;
+	}
+}
+
+/**
+ * Do the actual key derivation with the given password and id
+ * id is 1 for encryption keys, 2 for IVs, 3 for MAC keys.
+ */
+static bool pkcs12_derive(private_pkcs5_t *this, chunk_t unicode,
+						  char id, chunk_t result)
+{
+	chunk_t out = result, D, S, P = chunk_empty, I, Ai, B, Ij;
+	hasher_t *hasher;
+	size_t Slen, v, u;
+	u_int64_t i;
+
+	switch (this->data.pbes1.hash)
+	{
+		case HASH_MD2:
+		case HASH_MD5:
+		case HASH_SHA1:
+		case HASH_SHA224:
+		case HASH_SHA256:
+			v = 64;
+			break;
+		case HASH_SHA384:
+		case HASH_SHA512:
+			v = 128;
+			break;
+		default:
+			return FALSE;
+	}
+	hasher = this->data.pbes1.hasher;
+	u = hasher->get_hash_size(hasher);
+
+	D = chunk_alloca(v);
+	memset(D.ptr, id, D.len);
+
+	Slen = PKCS12_LEN(this->salt.len, v);
+	I = chunk_alloca(Slen + PKCS12_LEN(unicode.len, v));
+	S = chunk_create(I.ptr, Slen);
+	P = chunk_create(I.ptr + Slen, I.len - Slen);
+	pkcs12_copy_chunk(S, this->salt);
+	pkcs12_copy_chunk(P, unicode);
+
+	Ai = chunk_alloca(u);
+	B = chunk_alloca(v);
+
+	while (TRUE)
+	{
+		if (!hasher->get_hash(hasher, D, NULL) ||
+			!hasher->get_hash(hasher, I, Ai.ptr))
+		{
+			return FALSE;
+		}
+		for (i = 1; i < this->iterations; i++)
+		{
+			if (!hasher->get_hash(hasher, Ai, Ai.ptr))
+			{
+				return FALSE;
+			}
+		}
+		memcpy(out.ptr, Ai.ptr, min(out.len, Ai.len));
+		out = chunk_skip(out, Ai.len);
+		if (!out.len)
+		{
+			break;
+		}
+		pkcs12_copy_chunk(B, Ai);
+		/* B = B+1 */
+		pkcs12_add_chunks(B, chunk_from_chars(0x01));
+		Ij = chunk_create(I.ptr, v);
+		while (Ij.len)
+		{	/* Ij = Ij + B + 1 */
+			pkcs12_add_chunks(Ij, B);
+			Ij = chunk_skip(Ij, v);
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * KDF defined in PKCS#12
+ */
+static bool pkcs12_kdf(private_pkcs5_t *this, chunk_t password, chunk_t keymat)
+{
+	chunk_t unicode = chunk_empty, key, iv;
+	int i;
+
+	if (password.len)
+	{	/* convert the password to UTF-16BE (without BOM) with 0 terminator */
+		unicode = chunk_alloca(password.len * 2 + 2);
+		for (i = 0; i < password.len; i++)
+		{
+			unicode.ptr[i * 2] = 0;
+			unicode.ptr[i * 2 + 1] = password.ptr[i];
+		}
+		unicode.ptr[i * 2] = 0;
+		unicode.ptr[i * 2 + 1] = 0;
+	}
+
+	key = chunk_create(keymat.ptr, this->keylen);
+	iv = chunk_create(keymat.ptr + this->keylen, keymat.len - this->keylen);
+
+	if (!pkcs12_derive(this, unicode, 1, key) ||
+		!pkcs12_derive(this, unicode, 2, iv))
+	{
+		memwipe(unicode.ptr, unicode.len);
+		return FALSE;
+	}
+	memwipe(unicode.ptr, unicode.len);
+	return TRUE;
 }
 
 /**
@@ -272,6 +426,7 @@ static bool ensure_crypto_primitives(private_pkcs5_t *this, chunk_t data)
 	switch (this->scheme)
 	{
 		case PKCS5_SCHEME_PBES1:
+		case PKCS5_SCHEME_PKCS12:
 		{
 			if (!this->data.pbes1.hasher)
 			{
@@ -325,13 +480,18 @@ METHOD(pkcs5_t, decrypt, bool,
 	{
 		return FALSE;
 	}
+	kdf = pbkdf1;
 	switch (this->scheme)
 	{
+		case PKCS5_SCHEME_PKCS12:
+			kdf = pkcs12_kdf;
+			/* fall-through */
 		case PKCS5_SCHEME_PBES1:
-			kdf = pbkdf1;
-			keymat = chunk_alloca(this->keylen * 2);
+			keymat = chunk_alloca(this->keylen +
+								  this->crypter->get_iv_size(this->crypter));
 			key = chunk_create(keymat.ptr, this->keylen);
-			iv = chunk_create(keymat.ptr + this->keylen, this->keylen);
+			iv = chunk_create(keymat.ptr + this->keylen,
+							  keymat.len - this->keylen);
 			break;
 		case PKCS5_SCHEME_PBES2:
 			kdf = pbkdf2;
@@ -539,6 +699,7 @@ METHOD(pkcs5_t, destroy, void,
 	switch (this->scheme)
 	{
 		case PKCS5_SCHEME_PBES1:
+		case PKCS5_SCHEME_PKCS12:
 			DESTROY_IF(this->data.pbes1.hasher);
 			break;
 		case PKCS5_SCHEME_PBES2:
@@ -579,6 +740,12 @@ pkcs5_t *pkcs5_from_algorithmIdentifier(chunk_t blob, int level0)
 			this->encr = ENCR_DES;
 			this->data.pbes1.hash = HASH_SHA1;
 			break;
+		case OID_PBE_SHA1_RC2_CBC_40:
+			this->scheme = PKCS5_SCHEME_PKCS12;
+			this->keylen = 5;
+			this->encr = ENCR_RC2_CBC;
+			this->data.pbes1.hash = HASH_SHA1;
+			break;
 		case OID_PBES2:
 			this->scheme = PKCS5_SCHEME_PBES2;
 			break;
@@ -590,6 +757,7 @@ pkcs5_t *pkcs5_from_algorithmIdentifier(chunk_t blob, int level0)
 	switch (this->scheme)
 	{
 		case PKCS5_SCHEME_PBES1:
+		case PKCS5_SCHEME_PKCS12:
 			if (!parse_pbes1_params(this, params, level0))
 			{
 				goto failure;
