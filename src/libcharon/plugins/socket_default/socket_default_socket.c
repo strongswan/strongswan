@@ -162,23 +162,26 @@ METHOD(socket_t, receiver, status_t,
 
 	FD_ZERO(&rfds);
 
-	if (this->ipv4)
+	if (this->ipv4 != -1)
 	{
 		FD_SET(this->ipv4, &rfds);
+		max_fd = max(max_fd, this->ipv4);
 	}
-	if (this->ipv4_natt)
+	if (this->ipv4_natt != -1)
 	{
 		FD_SET(this->ipv4_natt, &rfds);
+		max_fd = max(max_fd, this->ipv4_natt);
 	}
-	if (this->ipv6)
+	if (this->ipv6 != -1)
 	{
 		FD_SET(this->ipv6, &rfds);
+		max_fd = max(max_fd, this->ipv6);
 	}
-	if (this->ipv6_natt)
+	if (this->ipv6_natt != -1)
 	{
 		FD_SET(this->ipv6_natt, &rfds);
+		max_fd = max(max_fd, this->ipv6_natt);
 	}
-	max_fd = max(max(this->ipv4, this->ipv4_natt), max(this->ipv6, this->ipv6_natt));
 
 	DBG2(DBG_NET, "waiting for data on sockets");
 	oldstate = thread_cancelability(TRUE);
@@ -537,20 +540,20 @@ static int open_socket(private_socket_default_socket_t *this,
 			pktinfo = IPV6_RECVPKTINFO;
 			break;
 		default:
-			return 0;
+			return -1;
 	}
 
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
 		DBG1(DBG_NET, "could not open socket: %s", strerror(errno));
-		return 0;
+		return -1;
 	}
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
 		DBG1(DBG_NET, "unable to set SO_REUSEADDR on socket: %s", strerror(errno));
 		close(skt);
-		return 0;
+		return -1;
 	}
 
 	/* bind the socket */
@@ -558,7 +561,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	{
 		DBG1(DBG_NET, "unable to bind socket: %s", strerror(errno));
 		close(skt);
-		return 0;
+		return -1;
 	}
 
 	/* retrieve randomly allocated port if needed */
@@ -568,7 +571,7 @@ static int open_socket(private_socket_default_socket_t *this,
 		{
 			DBG1(DBG_NET, "unable to determine port: %s", strerror(errno));
 			close(skt);
-			return 0;
+			return -1;
 		}
 		switch (family)
 		{
@@ -588,7 +591,7 @@ static int open_socket(private_socket_default_socket_t *this,
 		{
 			DBG1(DBG_NET, "unable to set IP_PKTINFO on socket: %s", strerror(errno));
 			close(skt);
-			return 0;
+			return -1;
 		}
 	}
 
@@ -613,19 +616,19 @@ static int open_socket(private_socket_default_socket_t *this,
 METHOD(socket_t, destroy, void,
 	private_socket_default_socket_t *this)
 {
-	if (this->ipv4)
+	if (this->ipv4 != -1)
 	{
 		close(this->ipv4);
 	}
-	if (this->ipv4_natt)
+	if (this->ipv4_natt != -1)
 	{
 		close(this->ipv4_natt);
 	}
-	if (this->ipv6)
+	if (this->ipv6 != -1)
 	{
 		close(this->ipv6);
 	}
-	if (this->ipv6_natt)
+	if (this->ipv6_natt != -1)
 	{
 		close(this->ipv6_natt);
 	}
@@ -669,34 +672,34 @@ socket_default_socket_t *socket_default_socket_create()
 	/* we allocate IPv6 sockets first as that will reserve randomly allocated
 	 * ports also for IPv4 */
 	this->ipv6 = open_socket(this, AF_INET6, &this->port);
-	if (this->ipv6 == 0)
+	if (this->ipv6 == -1)
 	{
 		DBG1(DBG_NET, "could not open IPv6 socket, IPv6 disabled");
 	}
 	else
 	{
 		this->ipv6_natt = open_socket(this, AF_INET6, &this->natt);
-		if (this->ipv6_natt == 0)
+		if (this->ipv6_natt == -1)
 		{
 			DBG1(DBG_NET, "could not open IPv6 NAT-T socket");
 		}
 	}
 
 	this->ipv4 = open_socket(this, AF_INET, &this->port);
-	if (this->ipv4 == 0)
+	if (this->ipv4 == -1)
 	{
 		DBG1(DBG_NET, "could not open IPv4 socket, IPv4 disabled");
 	}
 	else
 	{
 		this->ipv4_natt = open_socket(this, AF_INET, &this->natt);
-		if (this->ipv4_natt == 0)
+		if (this->ipv4_natt == -1)
 		{
 			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
 
-	if (!this->ipv4 && !this->ipv6)
+	if (this->ipv4 == -1 && this->ipv6 == -1)
 	{
 		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
