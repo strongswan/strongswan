@@ -614,6 +614,27 @@ static int open_socket(private_socket_default_socket_t *this,
 	return skt;
 }
 
+/**
+ * Open a socket pair (normal an NAT traversal) for a given address family
+ */
+static void open_socketpair(private_socket_default_socket_t *this, int family,
+							int *skt, int *skt_natt, char *label)
+{
+	*skt = open_socket(this, family, &this->port);
+	if (*skt == -1)
+	{
+		DBG1(DBG_NET, "could not open %s socket, %s disabled", label, label);
+	}
+	else
+	{
+		*skt_natt = open_socket(this, family, &this->natt);
+		if (*skt_natt == -1)
+		{
+			DBG1(DBG_NET, "could not open %s NAT-T socket", label);
+		}
+	}
+}
+
 METHOD(socket_t, destroy, void,
 	private_socket_default_socket_t *this)
 {
@@ -672,33 +693,8 @@ socket_default_socket_t *socket_default_socket_create()
 
 	/* we allocate IPv6 sockets first as that will reserve randomly allocated
 	 * ports also for IPv4 */
-	this->ipv6 = open_socket(this, AF_INET6, &this->port);
-	if (this->ipv6 == -1)
-	{
-		DBG1(DBG_NET, "could not open IPv6 socket, IPv6 disabled");
-	}
-	else
-	{
-		this->ipv6_natt = open_socket(this, AF_INET6, &this->natt);
-		if (this->ipv6_natt == -1)
-		{
-			DBG1(DBG_NET, "could not open IPv6 NAT-T socket");
-		}
-	}
-
-	this->ipv4 = open_socket(this, AF_INET, &this->port);
-	if (this->ipv4 == -1)
-	{
-		DBG1(DBG_NET, "could not open IPv4 socket, IPv4 disabled");
-	}
-	else
-	{
-		this->ipv4_natt = open_socket(this, AF_INET, &this->natt);
-		if (this->ipv4_natt == -1)
-		{
-			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
-		}
-	}
+	open_socketpair(this, AF_INET6, &this->ipv6, &this->ipv6_natt, "IPv6");
+	open_socketpair(this, AF_INET, &this->ipv4, &this->ipv4_natt, "IPv4");
 
 	if (this->ipv4 == -1 && this->ipv6 == -1)
 	{
