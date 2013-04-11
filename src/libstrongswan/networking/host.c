@@ -111,7 +111,7 @@ int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	{
 		snprintf(buffer, sizeof(buffer), "(null)");
 	}
-	else if (is_anyaddr(this) && !spec->plus)
+	else if (is_anyaddr(this) && !spec->plus && !spec->hash)
 	{
 		snprintf(buffer, sizeof(buffer), "%%any%s",
 				 this->address.sa_family == AF_INET6 ? "6" : "");
