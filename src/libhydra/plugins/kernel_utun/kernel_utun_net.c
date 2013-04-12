@@ -16,6 +16,20 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <net/if.h>
+#include <net/if_utun.h>
+#include <net/if_utun_crypto.h>
+#include <net/if_utun_crypto_ipsec.h>
+#include <netinet/in_var.h>
+#include <sys/kern_control.h>
 
 #include "kernel_utun_net.h"
 
@@ -102,6 +116,31 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
+/**
+ * Enable IPsec crypt extension on utun device
+ */
+static bool enable_crypto(tun_device_t *tun)
+{
+	utun_crypto_args_t args = {
+		.ver = UTUN_CRYPTO_VER_1,
+		.type = UTUN_CRYPTO_TYPE_IPSEC,
+		.args_ulen = sizeof(utun_crypto_ipsec_args_v1_t),
+		.u = {
+			.ipsec_v1 = {
+				/* nothing to set */
+			},
+		},
+	};
+	if (setsockopt(tun->get_fd(tun), SYSPROTO_CONTROL, UTUN_OPT_ENABLE_CRYPTO,
+				   &args, sizeof(args)) < 0)
+	{
+		DBG1(DBG_KNL, "enabling crypto on %s failed: %s",
+			 tun->get_name(tun), strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface_name)
@@ -127,7 +166,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		return FAILED;
 	}
-	if (!tun->set_address(tun, virtual_ip, prefix))
+	if (!tun->set_address(tun, virtual_ip, prefix) || !enable_crypto(tun))
 	{
 		tun->destroy(tun);
 		return FAILED;
