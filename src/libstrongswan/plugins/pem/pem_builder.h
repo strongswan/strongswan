@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,6 +26,7 @@
 #include <credentials/credential_factory.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/containers/container.h>
 
 /**
  * Load PEM encoded private keys.
@@ -52,6 +54,15 @@ public_key_t *pem_public_key_load(key_type_t type, va_list args);
  * @return 			certificate, NULL if failed
  */
 certificate_t *pem_certificate_load(certificate_type_t type, va_list args);
+
+/**
+ * Build PEM encoded containers.
+ *
+ * @param type		type of the container
+ * @param args		builder_part_t argument list
+ * @return 			container, NULL if failed
+ */
+container_t *pem_container_load(container_type_t type, va_list args);
 
 #endif /** PEM_BUILDER_H_ @}*/
 
