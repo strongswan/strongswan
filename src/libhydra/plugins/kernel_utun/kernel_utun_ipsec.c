@@ -14,10 +14,28 @@
  */
 
 #include "kernel_utun_ipsec.h"
+#include "kernel_utun_net.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <net/if_utun.h>
+#include <net/if_utun_crypto.h>
+#include <net/if_utun_crypto_ipsec.h>
+#include <netinet/in_var.h>
+#include <sys/kern_control.h>
 
 #include <hydra.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
+#include <networking/tun_device.h>
 
 typedef struct private_kernel_utun_ipsec_t private_kernel_utun_ipsec_t;
 
@@ -66,6 +84,148 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 	return FAILED;
 }
 
+/**
+ * Integrity IKEv2 identifiers => utun identifiers
+ */
+static struct {
+	integrity_algorithm_t alg;
+	if_utun_crypto_ipsec_auth_t utun;
+} int_alg_map[] = {
+	{ AUTH_HMAC_MD5_96,				IF_UTUN_CRYPTO_IPSEC_AUTH_MD5			},
+	{ AUTH_HMAC_SHA1_96,			IF_UTUN_CRYPTO_IPSEC_AUTH_SHA1			},
+	{ AUTH_HMAC_SHA2_256_128,		IF_UTUN_CRYPTO_IPSEC_AUTH_SHA256		},
+	{ AUTH_HMAC_SHA2_384_192,		IF_UTUN_CRYPTO_IPSEC_AUTH_SHA384		},
+	{ AUTH_HMAC_SHA2_512_256,		IF_UTUN_CRYPTO_IPSEC_AUTH_SHA512		},
+};
+
+/**
+ * Mapping function for integrity algs
+ */
+static if_utun_crypto_ipsec_auth_t map_int_alg(integrity_algorithm_t alg)
+{
+	int i;
+
+	for (i = 0; i < countof(int_alg_map); i++)
+	{
+		if (int_alg_map[i].alg == alg)
+		{
+			return int_alg_map[i].utun;
+		}
+	}
+	return IF_UTUN_CRYPTO_IPSEC_AUTH_NONE;
+}
+
+/**
+ * Encryption IKEv2 identifiers => utun identifiers
+ */
+static struct {
+	encryption_algorithm_t alg;
+	int key_size;
+	if_utun_crypto_ipsec_enc_t utun;
+} enc_alg_map[] = {
+	{ ENCR_DES,					 0,	IF_UTUN_CRYPTO_IPSEC_ENC_DES			},
+	{ ENCR_3DES,				 0,	IF_UTUN_CRYPTO_IPSEC_ENC_3DES			},
+	{ ENCR_AES_CBC,				16,	IF_UTUN_CRYPTO_IPSEC_ENC_AES128			},
+	{ ENCR_AES_CBC,				32,	IF_UTUN_CRYPTO_IPSEC_ENC_AES256			},
+};
+
+/**
+ * Mapping function for encryption algs
+ */
+static if_utun_crypto_ipsec_enc_t map_enc_alg(encryption_algorithm_t alg,
+											  int key_size)
+{
+	int i;
+
+	for (i = 0; i < countof(int_alg_map); i++)
+	{
+		if (enc_alg_map[i].alg == alg)
+		{
+			if (enc_alg_map[i].key_size == 0 ||
+				enc_alg_map[i].key_size == key_size)
+			{
+				return enc_alg_map[i].utun;
+			}
+		}
+	}
+	return IF_UTUN_CRYPTO_IPSEC_ENC_NONE;
+}
+
+/**
+ * Install an SA to a crypto-enabled utun device
+ */
+static status_t add_sa_tun(private_kernel_utun_ipsec_t *this, tun_device_t *tun,
+	host_t *src, host_t *dst, u_int32_t spi, u_int32_t reqid,
+	u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg, chunk_t int_key,
+	bool encap, bool inbound, u_int64_t hard, u_int64_t soft)
+{
+	struct __attribute__((__packed__)){
+		utun_crypto_keys_args_t args;
+		u_int8_t auth[int_key.len];
+		u_int8_t enc[enc_key.len];
+	} keys;
+
+	keys.args = (utun_crypto_keys_args_t) {
+		.ver = UTUN_CRYPTO_VER_1,
+		.type = UTUN_CRYPTO_TYPE_IPSEC,
+		.dir = inbound ? UTUN_CRYPTO_DIR_IN : UTUN_CRYPTO_DIR_OUT,
+		.args_ulen = sizeof(utun_crypto_keys_ipsec_args_v1_t),
+		.varargs_buflen = int_key.len + enc_key.len,
+		.u = {
+			.ipsec_v1 = {
+				.proto = IF_UTUN_CRYPTO_IPSEC_PROTO_ESP,
+				.mode = IF_UTUN_CRYPTO_IPSEC_MODE_TUNNEL,
+				.alg_auth = map_int_alg(int_alg),
+				.alg_enc = map_enc_alg(enc_alg, enc_key.len),
+				.keepalive = IF_UTUN_CRYPTO_IPSEC_KEEPALIVE_NONE,
+				.natd = IF_UTUN_CRYPTO_IPSEC_NATD_NONE,
+				.replay = 32,
+				.key_auth_len = int_key.len * 8,
+				.key_enc_len = enc_key.len * 8,
+				.spi = spi,
+				.pid = getpid(),
+				.reqid = reqid,
+				.lifetime_hard = hard,
+				.lifetime_soft = soft,
+			},
+		},
+	};
+
+	if (keys.args.u.ipsec_v1.alg_auth == IF_UTUN_CRYPTO_IPSEC_AUTH_NONE)
+	{
+		DBG1(DBG_KNL, "%N integrity not supported by utun",
+			 integrity_algorithm_names, int_alg);
+		return NOT_SUPPORTED;
+	}
+	if (keys.args.u.ipsec_v1.alg_enc == IF_UTUN_CRYPTO_IPSEC_ENC_NONE)
+	{
+		DBG1(DBG_KNL, "%N encryption not supported by utun",
+			 encryption_algorithm_names, enc_alg);
+		return NOT_SUPPORTED;
+	}
+
+	if (encap)
+	{
+		keys.args.u.ipsec_v1.natd = IF_UTUN_CRYPTO_IPSEC_NATD_MINE;
+		keys.args.u.ipsec_v1.keepalive = IF_UTUN_CRYPTO_IPSEC_KEEPALIVE_NATT;
+	}
+	memcpy(keys.auth, int_key.ptr, int_key.len);
+	memcpy(keys.enc, enc_key.ptr, enc_key.len);
+	memcpy(&keys.args.u.ipsec_v1.src_addr,
+		   src->get_sockaddr(src), *src->get_sockaddr_len(src));
+	memcpy(&keys.args.u.ipsec_v1.dst_addr,
+		   dst->get_sockaddr(dst), *dst->get_sockaddr_len(dst));
+
+	if (setsockopt(tun->get_fd(tun), SYSPROTO_CONTROL,
+				   UTUN_OPT_CONFIG_CRYPTO_KEYS, &keys, sizeof(keys)) < 0)
+	{
+		DBG1(DBG_KNL, "adding SA to %s failed: %s",
+			 tun->get_name(tun), strerror(errno));
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_utun_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
@@ -74,7 +234,33 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	tun_device_t *tun;
+	traffic_selector_t *ts;
+	status_t status = NOT_FOUND;
+	host_t *host;
+
+	if (protocol != IPPROTO_ESP || mode != MODE_TUNNEL || esn)
+	{
+		return NOT_SUPPORTED;
+	}
+
+	ts = inbound ? dst_ts : src_ts;
+	enumerator = kernel_utun_create_enumerator();
+	while (enumerator->enumerate(enumerator, &tun))
+	{
+		host = tun->get_address(tun, NULL);
+		if (host && ts->includes(ts, host))
+		{
+			status = add_sa_tun(this, tun, src, dst, spi, reqid,
+							enc_alg, enc_key, int_alg, int_key, encap, inbound,
+							lifetime->time.life, lifetime->time.rekey);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return status;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
@@ -112,7 +298,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t priority)
 {
-	return FAILED;
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
