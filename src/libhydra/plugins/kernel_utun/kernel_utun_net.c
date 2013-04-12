@@ -184,13 +184,20 @@ METHOD(kernel_net_t, del_route, status_t,
 	return FAILED;
 }
 
+/**
+ * Globally referencable instance of kernek_utun_net instance
+ */
+static private_kernel_utun_net_t *singleton;
+
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
+	singleton = NULL;
 	this->tuns->destroy_offset(this->tuns, offsetof(tun_device_t, destroy));
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
+
 
 /*
  * Described in header.
@@ -217,5 +224,21 @@ kernel_utun_net_t *kernel_utun_net_create()
 		.tuns = linked_list_create(),
 	);
 
+	singleton = this;
 	return &this->public;
+}
+
+/**
+ * See header.
+ */
+enumerator_t *kernel_utun_create_enumerator()
+{
+	if (singleton)
+	{
+		singleton->mutex->lock(singleton->mutex);
+		return enumerator_create_cleaner(
+					singleton->tuns->create_enumerator(singleton->tuns),
+					(void*)singleton->mutex->unlock, singleton->mutex);
+	}
+	return enumerator_create_empty();
 }

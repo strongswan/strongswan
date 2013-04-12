@@ -43,4 +43,11 @@ struct kernel_utun_net_t {
  */
 kernel_utun_net_t *kernel_utun_net_create();
 
+/**
+ * Create an enumerator over all known utun interfaces.
+ *
+ * @return			enumerator over tun_device_t
+ */
+enumerator_t *kernel_utun_create_enumerator();
+
 #endif /** KERNEL_UTUN_NET_H_ @}*/
