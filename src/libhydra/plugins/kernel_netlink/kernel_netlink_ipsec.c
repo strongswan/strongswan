@@ -2638,13 +2638,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
 													(sizeof(u_int32_t) * 8);
 
-	if (streq(hydra->daemon, "pluto"))
-	{	/* no routes for pluto, they are installed via updown script */
-		this->install_routes = FALSE;
-		/* no policy history for pluto */
-		this->policy_history = FALSE;
-	}
-	else if (streq(hydra->daemon, "starter"))
+	if (streq(hydra->daemon, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
 	}
