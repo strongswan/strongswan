@@ -37,10 +37,80 @@ struct private_kernel_utun_net_t {
 	kernel_utun_net_t public;
 };
 
+typedef struct {
+	/** implements enumerator */
+	enumerator_t public;
+	/** ifaddrs to free on cleanup */
+	struct ifaddrs *orig;
+	/** currently enumerating ifaddr */
+	struct ifaddrs *current;
+	/** current host */
+	host_t *host;
+} addr_enumerator_t;
+
+METHOD(enumerator_t, addr_enumerate, bool,
+	addr_enumerator_t *this, host_t **addr)
+{
+	while (TRUE)
+	{
+		DESTROY_IF(this->host);
+		this->host = NULL;
+		if (this->current)
+		{
+			this->current = this->current->ifa_next;
+		}
+		else
+		{
+			this->current = this->orig;
+		}
+		if (!this->current)
+		{
+			return FALSE;
+		}
+		if (!this->current->ifa_addr)
+		{
+			return FALSE;
+		}
+		/* TODO: filter based on "which" */
+		this->host = host_create_from_sockaddr(this->current->ifa_addr);
+		if (!this->host)
+		{
+			continue;
+		}
+		*addr = this->host;
+		return TRUE;
+	}
+}
+
+METHOD(enumerator_t, addr_destroy, void,
+	addr_enumerator_t *this)
+{
+	if (this->orig)
+	{
+		freeifaddrs(this->orig);
+	}
+	DESTROY_IF(this->host);
+	free(this);
+}
+
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_utun_net_t *this, kernel_address_type_t which)
 {
-	return enumerator_create_empty();
+	addr_enumerator_t *enumerator;
+	struct ifaddrs *ifa;
+
+	if (getifaddrs(&ifa) != 0)
+	{
+		return enumerator_create_empty();
+	}
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_addr_enumerate,
+			.destroy = _addr_destroy,
+		},
+		.orig = ifa,
+	);
+	return &enumerator->public;
 }
 
 METHOD(kernel_net_t, get_interface_name, bool,
