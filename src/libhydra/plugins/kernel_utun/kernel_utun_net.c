@@ -21,6 +21,8 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
+#include <collections/linked_list.h>
+#include <threading/mutex.h>
 #include <networking/tun_device.h>
 
 typedef struct private_kernel_utun_net_t private_kernel_utun_net_t;
@@ -36,9 +38,14 @@ struct private_kernel_utun_net_t {
 	kernel_utun_net_t public;
 
 	/**
-	 * Active utun interface
+	 * Mutex to access tun list
 	 */
-	tun_device_t *tun;
+	mutex_t *mutex;
+
+	/**
+	 * List of tun devices, as tun_device_t
+	 */
+	linked_list_t *tuns;
 };
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
@@ -99,10 +106,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface_name)
 {
-	if (this->tun)
-	{	/* only one for now */
-		return FAILED;
-	}
+	tun_device_t *tun;
+
 	if (prefix == -1)
 	{
 		switch (virtual_ip->get_family(virtual_ip))
@@ -117,17 +122,19 @@ METHOD(kernel_net_t, add_ip, status_t,
 				return NOT_SUPPORTED;
 		}
 	}
-	this->tun = tun_device_create(NULL);
-	if (!this->tun)
+	tun = tun_device_create(NULL);
+	if (!tun)
 	{
 		return FAILED;
 	}
-	if (!this->tun->set_address(this->tun, virtual_ip, prefix))
+	if (!tun->set_address(tun, virtual_ip, prefix))
 	{
-		this->tun->destroy(this->tun);
-		this->tun = NULL;
+		tun->destroy(tun);
 		return FAILED;
 	}
+	this->mutex->lock(this->mutex);
+	this->tuns->insert_last(this->tuns, tun);
+	this->mutex->unlock(this->mutex);
 	return SUCCESS;
 }
 
@@ -135,7 +142,32 @@ METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	bool wait)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	tun_device_t *tun;
+	host_t *host;
+	bool found;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->tuns->create_enumerator(this->tuns);
+	while (enumerator->enumerate(enumerator, &tun))
+	{
+		host = tun->get_address(tun, NULL);
+		if (host && host->ip_equals(host, virtual_ip))
+		{
+			this->tuns->remove_at(this->tuns, enumerator);
+			tun->destroy(tun);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	if (found)
+	{
+		return SUCCESS;
+	}
+	return NOT_FOUND;
 }
 
 METHOD(kernel_net_t, add_route, status_t,
@@ -155,10 +187,8 @@ METHOD(kernel_net_t, del_route, status_t,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
-	if (this->tun)
-	{
-		this->tun->destroy(this->tun);
-	}
+	this->tuns->destroy_offset(this->tuns, offsetof(tun_device_t, destroy));
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -183,6 +213,8 @@ kernel_utun_net_t *kernel_utun_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.tuns = linked_list_create(),
 	);
 
 	return &this->public;
