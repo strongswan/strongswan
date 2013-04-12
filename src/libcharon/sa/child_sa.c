@@ -668,21 +668,18 @@ METHOD(child_sa_t, install, status_t,
 		lifetime->time.rekey = 0;
 	}
 
-	if (this->mode == MODE_BEET || this->mode == MODE_TRANSPORT)
+	/* BEET requires the bound address from the traffic selectors.
+	 * TODO: We add just the first traffic selector for now, as the
+	 * kernel accepts a single TS per SA only */
+	if (inbound)
 	{
-		/* BEET requires the bound address from the traffic selectors.
-		 * TODO: We add just the first traffic selector for now, as the
-		 * kernel accepts a single TS per SA only */
-		if (inbound)
-		{
-			my_ts->get_first(my_ts, (void**)&dst_ts);
-			other_ts->get_first(other_ts, (void**)&src_ts);
-		}
-		else
-		{
-			my_ts->get_first(my_ts, (void**)&src_ts);
-			other_ts->get_first(other_ts, (void**)&dst_ts);
-		}
+		my_ts->get_first(my_ts, (void**)&dst_ts);
+		other_ts->get_first(other_ts, (void**)&src_ts);
+	}
+	else
+	{
+		my_ts->get_first(my_ts, (void**)&src_ts);
+		other_ts->get_first(other_ts, (void**)&dst_ts);
 	}
 
 	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
