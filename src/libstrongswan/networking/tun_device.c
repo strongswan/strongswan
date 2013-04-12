@@ -192,6 +192,12 @@ METHOD(tun_device_t, get_name, char*,
 	return this->if_name;
 }
 
+METHOD(tun_device_t, get_fd, int,
+	private_tun_device_t *this)
+{
+	return this->tunfd;
+}
+
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
@@ -398,6 +404,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.get_mtu = _get_mtu,
 			.set_mtu = _set_mtu,
 			.get_name = _get_name,
+			.get_fd = _get_fd,
 			.set_address = _set_address,
 			.up = _up,
 			.destroy = _destroy,
