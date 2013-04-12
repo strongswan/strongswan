@@ -73,6 +73,16 @@ struct private_tun_device_t {
 	 * The current MTU
 	 */
 	int mtu;
+
+	/**
+	 * Associated address
+	 */
+	host_t *address;
+
+	/**
+	 * Netmask for address
+	 */
+	u_int8_t netmask;
 };
 
 METHOD(tun_device_t, set_address, bool,
@@ -117,7 +127,19 @@ METHOD(tun_device_t, set_address, bool,
 			 this->if_name, strerror(errno));
 		return FALSE;
 	}
+	this->address = addr->clone(addr);
+	this->netmask = netmask;
 	return TRUE;
+}
+
+METHOD(tun_device_t, get_address, host_t*,
+	private_tun_device_t *this, u_int8_t *netmask)
+{
+	if (netmask && this->address)
+	{
+		*netmask = this->netmask;
+	}
+	return this->address;
 }
 
 METHOD(tun_device_t, up, bool,
@@ -277,6 +299,7 @@ METHOD(tun_device_t, destroy, void,
 	{
 		close(this->sock);
 	}
+	DESTROY_IF(this->address);
 	free(this);
 }
 
@@ -406,6 +429,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.get_name = _get_name,
 			.get_fd = _get_fd,
 			.set_address = _set_address,
+			.get_address = _get_address,
 			.up = _up,
 			.destroy = _destroy,
 		},
