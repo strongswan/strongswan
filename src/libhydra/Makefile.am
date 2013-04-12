@@ -72,6 +72,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_KERNEL_UTUN
+  SUBDIRS += plugins/kernel_utun
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/kernel_utun/libstrongswan-kernel-utun.la
+endif
+endif
+
 if USE_RESOLVE
   SUBDIRS += plugins/resolve
 if MONOLITHIC

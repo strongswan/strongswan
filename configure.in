@@ -187,6 +187,7 @@ ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_ENABL_SET([kernel-utun],    [enable the OS X kernel interface using crypto-enabled utun devices.])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
@@ -978,6 +979,7 @@ ADD_PLUGIN([kernel-pfkey],         [h charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [h charon starter nm cmd])
 ADD_PLUGIN([kernel-klips],         [h charon starter])
 ADD_PLUGIN([kernel-netlink],       [h charon starter nm cmd])
+ADD_PLUGIN([kernel-utun],          [h charon starter nm cmd])
 ADD_PLUGIN([resolve],              [h charon cmd])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
@@ -1180,6 +1182,7 @@ AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
+AM_CONDITIONAL(USE_KERNEL_UTUN, test x$kernel_utun = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 #  other options
@@ -1303,6 +1306,7 @@ AC_CONFIG_FILES([
 	src/libhydra/plugins/kernel_netlink/Makefile
 	src/libhydra/plugins/kernel_pfkey/Makefile
 	src/libhydra/plugins/kernel_pfroute/Makefile
+	src/libhydra/plugins/kernel_utun/Makefile
 	src/libhydra/plugins/resolve/Makefile
 	src/libipsec/Makefile
 	src/libsimaka/Makefile
