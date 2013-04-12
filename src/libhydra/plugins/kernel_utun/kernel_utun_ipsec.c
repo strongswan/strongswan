@@ -17,6 +17,7 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
+#include <threading/mutex.h>
 
 typedef struct private_kernel_utun_ipsec_t private_kernel_utun_ipsec_t;
 
@@ -29,6 +30,16 @@ struct private_kernel_utun_ipsec_t {
 	 * Public part of the kernel_utun_t object
 	 */
 	kernel_utun_ipsec_t public;
+
+	/**
+	 * Mutex to access shared objects
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Next SPI to allocate
+	 */
+	u_int32_t spi;
 };
 
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
@@ -41,7 +52,11 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_utun_ipsec_t *this, host_t *src, host_t *dst,
 	u_int8_t protocol, u_int32_t reqid, u_int32_t *spi)
 {
-	return FAILED;
+	this->mutex->lock(this->mutex);
+	*spi = this->spi++;
+	this->mutex->unlock(this->mutex);
+
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, get_cpi, status_t,
@@ -138,6 +153,7 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_utun_ipsec_t *this)
 {
+	this->mutex->destroy(this->mutex);
 	free(this);
 }
 
@@ -168,6 +184,9 @@ kernel_utun_ipsec_t *kernel_utun_ipsec_create()
 				.destroy = _destroy,
 			},
 		},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		/* initialize to "charon-style" SPIs with a leading "c" */
+		.spi = 0xc0000000,
 	);
 	return &this->public;
 }
