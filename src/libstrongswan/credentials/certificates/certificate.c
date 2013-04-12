@@ -18,7 +18,7 @@
 #include <utils/debug.h>
 #include <credentials/certificates/x509.h>
 
-ENUM(certificate_type_names, CERT_ANY, CERT_PLUTO_CRL,
+ENUM(certificate_type_names, CERT_ANY, CERT_GPG,
 	"ANY",
 	"X509",
 	"X509_CRL",
@@ -28,9 +28,6 @@ ENUM(certificate_type_names, CERT_ANY, CERT_PLUTO_CRL,
 	"TRUSTED_PUBKEY",
 	"PKCS10_REQUEST",
 	"PGP",
-	"PLUTO_CERT",
-	"PLUTO_AC",
-	"PLUTO_CRL",
 );
 
 ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,

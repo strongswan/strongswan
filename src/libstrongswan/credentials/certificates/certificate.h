@@ -52,10 +52,6 @@ enum certificate_type_t {
 	CERT_PKCS10_REQUEST,
 	/** PGP certificate */
 	CERT_GPG,
-	/** Pluto cert_t (not a certificate_t), either x509 or PGP */
-	CERT_PLUTO_CERT,
-	/** Pluto x509crl_t (not a certificate_t), certificate revocation list */
-	CERT_PLUTO_CRL,
 };
 
 /**
