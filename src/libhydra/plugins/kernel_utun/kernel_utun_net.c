@@ -17,27 +17,12 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <net/if.h>
-#include <net/if.h>
-#include <net/if_utun.h>
-#include <net/if_utun_crypto.h>
-#include <net/if_utun_crypto_ipsec.h>
-#include <netinet/in_var.h>
-#include <sys/kern_control.h>
 
 #include "kernel_utun_net.h"
+#include "kernel_utun_ipsec.h"
 
 #include <hydra.h>
 #include <utils/debug.h>
-#include <collections/linked_list.h>
-#include <threading/mutex.h>
-#include <networking/tun_device.h>
 
 typedef struct private_kernel_utun_net_t private_kernel_utun_net_t;
 
@@ -50,16 +35,6 @@ struct private_kernel_utun_net_t {
 	 * Public part of the kernel_utun_net_t object.
 	 */
 	kernel_utun_net_t public;
-
-	/**
-	 * Mutex to access tun list
-	 */
-	mutex_t *mutex;
-
-	/**
-	 * List of tun devices, as tun_device_t
-	 */
-	linked_list_t *tuns;
 };
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
@@ -116,97 +91,32 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
-/**
- * Enable IPsec crypt extension on utun device
- */
-static bool enable_crypto(tun_device_t *tun)
-{
-	utun_crypto_args_t args = {
-		.ver = UTUN_CRYPTO_VER_1,
-		.type = UTUN_CRYPTO_TYPE_IPSEC,
-		.args_ulen = sizeof(utun_crypto_ipsec_args_v1_t),
-		.u = {
-			.ipsec_v1 = {
-				/* nothing to set */
-			},
-		},
-	};
-	if (setsockopt(tun->get_fd(tun), SYSPROTO_CONTROL, UTUN_OPT_ENABLE_CRYPTO,
-				   &args, sizeof(args)) < 0)
-	{
-		DBG1(DBG_KNL, "enabling crypto on %s failed: %s",
-			 tun->get_name(tun), strerror(errno));
-		return FALSE;
-	}
-	return TRUE;
-}
-
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface_name)
 {
-	tun_device_t *tun;
+	kernel_utun_ipsec_t *ipsec;
 
-	if (prefix == -1)
+	ipsec = kernel_utun_ipsec_get();
+	if (ipsec)
 	{
-		switch (virtual_ip->get_family(virtual_ip))
-		{
-			case AF_INET:
-				prefix = 32;
-				break;
-			case AF_INET6:
-				prefix = 128;
-				break;
-			default:
-				return NOT_SUPPORTED;
-		}
+		return ipsec->add_ip(ipsec, virtual_ip, prefix);
 	}
-	tun = tun_device_create(NULL);
-	if (!tun)
-	{
-		return FAILED;
-	}
-	if (!tun->set_address(tun, virtual_ip, prefix) || !enable_crypto(tun))
-	{
-		tun->destroy(tun);
-		return FAILED;
-	}
-	this->mutex->lock(this->mutex);
-	this->tuns->insert_last(this->tuns, tun);
-	this->mutex->unlock(this->mutex);
-	return SUCCESS;
+	return FAILED;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	bool wait)
 {
-	enumerator_t *enumerator;
-	tun_device_t *tun;
-	host_t *host;
-	bool found;
+	kernel_utun_ipsec_t *ipsec;
 
-	this->mutex->lock(this->mutex);
-	enumerator = this->tuns->create_enumerator(this->tuns);
-	while (enumerator->enumerate(enumerator, &tun))
+	ipsec = kernel_utun_ipsec_get();
+	if (ipsec)
 	{
-		host = tun->get_address(tun, NULL);
-		if (host && host->ip_equals(host, virtual_ip))
-		{
-			this->tuns->remove_at(this->tuns, enumerator);
-			tun->destroy(tun);
-			found = TRUE;
-			break;
-		}
+		return ipsec->del_ip(ipsec, virtual_ip, prefix);
 	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
-
-	if (found)
-	{
-		return SUCCESS;
-	}
-	return NOT_FOUND;
+	return FAILED;
 }
 
 METHOD(kernel_net_t, add_route, status_t,
@@ -223,20 +133,11 @@ METHOD(kernel_net_t, del_route, status_t,
 	return FAILED;
 }
 
-/**
- * Globally referencable instance of kernek_utun_net instance
- */
-static private_kernel_utun_net_t *singleton;
-
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
-	singleton = NULL;
-	this->tuns->destroy_offset(this->tuns, offsetof(tun_device_t, destroy));
-	this->mutex->destroy(this->mutex);
 	free(this);
 }
-
 
 /*
  * Described in header.
@@ -259,25 +160,7 @@ kernel_utun_net_t *kernel_utun_net_create()
 				.destroy = _destroy,
 			},
 		},
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.tuns = linked_list_create(),
 	);
 
-	singleton = this;
 	return &this->public;
-}
-
-/**
- * See header.
- */
-enumerator_t *kernel_utun_create_enumerator()
-{
-	if (singleton)
-	{
-		singleton->mutex->lock(singleton->mutex);
-		return enumerator_create_cleaner(
-					singleton->tuns->create_enumerator(singleton->tuns),
-					(void*)singleton->mutex->unlock, singleton->mutex);
-	}
-	return enumerator_create_empty();
 }

@@ -34,6 +34,24 @@ struct kernel_utun_ipsec_t {
 	 * Implements kernel_ipsec_t interface
 	 */
 	kernel_ipsec_t interface;
+
+	/**
+	 * Add a virtual IP to the prefiously created utun device.
+	 *
+	 * @param vip			virtual IP
+	 * @param prefix		network prefix
+	 * @reuturn				SUCCESS if IP added
+	 */
+	status_t (*add_ip)(kernel_utun_ipsec_t *this, host_t *vip, int prefix);
+
+	/**
+	 * Remove a virtual IP from an utun device.
+	 *
+	 * @param vip			virtual IP
+	 * @param prefix		network prefix
+	 * @reuturn				SUCCESS if IP deleted
+	 */
+	status_t (*del_ip)(kernel_utun_ipsec_t *this, host_t *vip, int prefix);
 };
 
 /**
@@ -42,5 +60,12 @@ struct kernel_utun_ipsec_t {
  * @return			kernel_utun_ipsec_t instance
  */
 kernel_utun_ipsec_t *kernel_utun_ipsec_create();
+
+/**
+ * Get the single instance of kernel_utun_ipsec_t, once created.
+ *
+ * @return			single instance of utun_ipsec
+ */
+kernel_utun_ipsec_t *kernel_utun_ipsec_get();
 
 #endif /** KERNEL_UTUN_IPSEC_H_ @}*/
