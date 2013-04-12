@@ -96,7 +96,14 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		return NULL;
 	}
 	this->prompted = TRUE;
-	*match_me = *match_other = ID_MATCH_PERFECT;
+	if (match_me)
+	{
+		*match_me = ID_MATCH_PERFECT;
+	}
+	if (match_other)
+	{
+		*match_other = ID_MATCH_PERFECT;
+	}
 	return shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
 }
 
