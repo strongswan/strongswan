@@ -38,6 +38,10 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "trusted certificate, for authentication or trust chain validation", {}},
 	{ CMD_OPT_RSA, "rsa", required_argument, "path",
 	  "RSA private key to use for authentication", {}},
+	{ CMD_OPT_PKCS12, "p12", required_argument, "path",
+	  "PKCS#12 file with private key and certificates to use for ", {
+		"authentication and trust chain validation"
+	}},
 	{ CMD_OPT_AGENT, "agent", optional_argument, "socket",
 	  "use SSH agent for authentication. If socket is not specified", {
 		"it is read from the SSH_AUTH_SOCK environment variable",

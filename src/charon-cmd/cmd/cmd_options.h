@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -35,6 +38,7 @@ enum cmd_option_type_t {
 	CMD_OPT_REMOTE_IDENTITY,
 	CMD_OPT_CERT,
 	CMD_OPT_RSA,
+	CMD_OPT_PKCS12,
 	CMD_OPT_AGENT,
 	CMD_OPT_LOCAL_TS,
 	CMD_OPT_REMOTE_TS,
