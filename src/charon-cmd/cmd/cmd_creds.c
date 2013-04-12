@@ -84,6 +84,9 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		case SHARED_IKE:
 			label = "Preshared Key: ";
 			break;
+		case SHARED_PRIVATE_KEY_PASS:
+			label = "Password: ";
+			break;
 		default:
 			return NULL;
 	}
