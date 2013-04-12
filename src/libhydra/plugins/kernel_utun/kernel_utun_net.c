@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
 
 #include "kernel_utun_net.h"
 
@@ -41,7 +44,37 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_utun_net_t *this, host_t* ip, char **name)
 {
-	return FALSE;
+	struct ifaddrs *ifa, *current;
+	host_t *host;
+	bool found = FALSE;
+
+	if (getifaddrs(&ifa) != 0)
+	{
+		return FALSE;
+	}
+	for (current = ifa; current; current = current->ifa_next)
+	{
+		if (current->ifa_addr)
+		{
+			host = host_create_from_sockaddr(current->ifa_addr);
+			if (host)
+			{
+				if (ip->ip_equals(ip, host))
+				{
+					*name = strdup(current->ifa_name);
+					found = TRUE;
+				}
+				host->destroy(host);
+			}
+		}
+		if (found)
+		{
+			break;
+		}
+	}
+	freeifaddrs(ifa);
+
+	return found;
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
