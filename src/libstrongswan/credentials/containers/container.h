@@ -44,6 +44,8 @@ enum container_type_t {
 	CONTAINER_PKCS7_ENVELOPED_DATA,
 	/** PKCS#7/CMS "encrypted-data" */
 	CONTAINER_PKCS7_ENCRYPTED_DATA,
+	/** A PKCS#12 container */
+	CONTAINER_PKCS12,
 };
 
 /**

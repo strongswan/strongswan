@@ -121,6 +121,9 @@
                 0x08         "unstructuredAddress"		OID_UNSTRUCTURED_ADDRESS
                 0x0E         "extensionRequest"			OID_EXTENSION_REQUEST
                 0x0F         "S/MIME Capabilities"
+                0x16         "certTypes"
+                  0x01       "X.509"					OID_X509_CERTIFICATE
+                  0x02       "SDSI"
               0x0c           "PKCS-12"
                 0x01         "pbeIds"
                   0x01       "pbeWithSHAAnd128BitRC4"	OID_PBE_SHA1_RC4_128
@@ -129,6 +132,14 @@
                   0x04       "pbeWithSHAAnd2-KeyTripleDES-CBC"	OID_PBE_SHA1_3DES_2KEY_CBC
                   0x05       "pbeWithSHAAnd128BitRC2-CBC"		OID_PBE_SHA1_RC2_CBC_128
                   0x06       "pbeWithSHAAnd40BitRC2-CBC"		OID_PBE_SHA1_RC2_CBC_40
+                0x0a         "PKCS-12v1"
+                  0x01       "bagIds"
+                    0x01     "keyBag"					OID_P12_KEY_BAG
+                    0x02     "pkcs8ShroudedKeyBag"		OID_P12_PKCS8_KEY_BAG
+                    0x03     "certBag"					OID_P12_CERT_BAG
+                    0x04     "crlBag"					OID_P12_CRL_BAG
+                    0x05     "secretBag"
+                    0x06     "safeContentsBag"
             0x02             "digestAlgorithm"
               0x02           "md2"						OID_MD2
               0x05           "md5"						OID_MD5

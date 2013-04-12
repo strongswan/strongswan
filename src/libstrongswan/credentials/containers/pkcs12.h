@@ -21,9 +21,11 @@
 #ifndef PKCS12_H_
 #define PKCS12_H_
 
+#include <credentials/containers/container.h>
 #include <crypto/hashers/hasher.h>
 
 typedef enum pkcs12_key_type_t pkcs12_key_type_t;
+typedef struct pkcs12_t pkcs12_t;
 
 /**
  * The types of password based keys used by PKCS#12.
@@ -32,6 +34,31 @@ enum pkcs12_key_type_t {
 	PKCS12_KEY_ENCRYPTION = 1,
 	PKCS12_KEY_IV = 2,
 	PKCS12_KEY_MAC = 3,
+};
+
+/**
+ * PKCS#12/PFX container type.
+ */
+struct pkcs12_t {
+
+	/**
+	 * Implements container_t.
+	 */
+	container_t container;
+
+	/**
+	 * Create an enumerator over extracted certificates.
+	 *
+	 * @return			enumerator over certificate_t
+	 */
+	enumerator_t* (*create_cert_enumerator)(pkcs12_t *this);
+
+	/**
+	 * Create an enumerator over extracted private keys.
+	 *
+	 * @return			enumerator over private_key_t
+	 */
+	enumerator_t* (*create_key_enumerator)(pkcs12_t *this);
 };
 
 /**
