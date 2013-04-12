@@ -141,6 +141,9 @@ hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
 			case AUTH_HMAC_SHA2_384_384:
 				*length = 48;
 				break;
+			case AUTH_HMAC_SHA2_512_512:
+				*length = 64;
+				break;
 			default:
 				break;
 		}
@@ -163,6 +166,7 @@ hash_algorithm_t hasher_algorithm_from_integrity(integrity_algorithm_t alg,
 		case AUTH_HMAC_SHA2_384_384:
 			return HASH_SHA384;
 		case AUTH_HMAC_SHA2_512_256:
+		case AUTH_HMAC_SHA2_512_512:
 			return HASH_SHA512;
 		case AUTH_AES_CMAC_96:
 		case AUTH_AES_128_GMAC:
@@ -232,6 +236,8 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 			{
 				case 32:
 					return AUTH_HMAC_SHA2_512_256;
+				case 64:
+					return AUTH_HMAC_SHA2_512_512;
 			}
 			break;
 		case HASH_MD2:
