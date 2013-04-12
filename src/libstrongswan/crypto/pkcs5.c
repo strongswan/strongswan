@@ -613,8 +613,9 @@ pkcs5_t *pkcs5_from_algorithmIdentifier(chunk_t blob, int level0)
 			this->data.pbes1.hash = HASH_SHA1;
 			break;
 		case OID_PBE_SHA1_RC2_CBC_40:
+		case OID_PBE_SHA1_RC2_CBC_128:
 			this->scheme = PKCS5_SCHEME_PKCS12;
-			this->keylen = 5;
+			this->keylen = (oid == OID_PBE_SHA1_RC2_CBC_40) ? 5 : 16;
 			this->encr = ENCR_RC2_CBC;
 			this->data.pbes1.hash = HASH_SHA1;
 			break;
