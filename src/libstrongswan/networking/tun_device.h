@@ -95,6 +95,13 @@ struct tun_device_t {
 	char *(*get_name)(tun_device_t *this);
 
 	/**
+	 * Get the underlying tun file descriptor.
+	 *
+	 * @return				file descriptor of this tun device
+	 */
+	int (*get_fd)(tun_device_t *this);
+
+	/**
 	 * Destroy a tun_device_t
 	 */
 	void (*destroy)(tun_device_t *this);
