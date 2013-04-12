@@ -21,6 +21,7 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
+#include <networking/tun_device.h>
 
 typedef struct private_kernel_utun_net_t private_kernel_utun_net_t;
 
@@ -33,6 +34,11 @@ struct private_kernel_utun_net_t {
 	 * Public part of the kernel_utun_net_t object.
 	 */
 	kernel_utun_net_t public;
+
+	/**
+	 * Active utun interface
+	 */
+	tun_device_t *tun;
 };
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
@@ -93,7 +99,36 @@ METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_utun_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface_name)
 {
-	return FAILED;
+	if (this->tun)
+	{	/* only one for now */
+		return FAILED;
+	}
+	if (prefix == -1)
+	{
+		switch (virtual_ip->get_family(virtual_ip))
+		{
+			case AF_INET:
+				prefix = 32;
+				break;
+			case AF_INET6:
+				prefix = 128;
+				break;
+			default:
+				return NOT_SUPPORTED;
+		}
+	}
+	this->tun = tun_device_create(NULL);
+	if (!this->tun)
+	{
+		return FAILED;
+	}
+	if (!this->tun->set_address(this->tun, virtual_ip, prefix))
+	{
+		this->tun->destroy(this->tun);
+		this->tun = NULL;
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
@@ -120,6 +155,10 @@ METHOD(kernel_net_t, del_route, status_t,
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
+	if (this->tun)
+	{
+		this->tun->destroy(this->tun);
+	}
 	free(this);
 }
 
