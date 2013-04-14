@@ -148,6 +148,12 @@ struct private_receiver_t {
 	 * Delay response messages?
 	 */
 	bool receive_delay_response;
+
+	/**
+	 * Endpoint is allowed to act as an initiator only
+	 */
+	bool initiator_only;
+
 };
 
 /**
@@ -541,7 +547,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	if (message->get_request(message) &&
 		message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		if (drop_ike_sa_init(this, message))
+		if (this->initiator_only || drop_ike_sa_init(this, message))
 		{
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
@@ -552,7 +558,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	{
 		id = message->get_ike_sa_id(message);
 		if (id->get_responder_spi(id) == 0 &&
-			drop_ike_sa_init(this, message))
+		   (this->initiator_only || drop_ike_sa_init(this, message)))
 		{
 			message->destroy(message);
 			return JOB_REQUEUE_DIRECT;
@@ -650,6 +656,8 @@ receiver_t *receiver_create()
 				"%s.receive_delay_request", TRUE, charon->name),
 	this->receive_delay_response = lib->settings->get_bool(lib->settings,
 				"%s.receive_delay_response", TRUE, charon->name),
+	this->initiator_only = lib->settings->get_bool(lib->settings,
+				"%s.initiator_only", FALSE, charon->name),
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (!this->hasher)

@@ -203,6 +203,9 @@ IKE_SA_INIT DROPPING).
 Limit new connections based on the number of jobs currently queued for
 processing (see IKE_SA_INIT DROPPING).
 .TP
+.BR charon.initiator_only " [no]"
+Causes charon daemon to ignore IKE initiation requests.
+.TP
 .BR charon.install_routes " [yes]"
 Install routes into a separate routing table for established IPsec tunnels
 .TP
