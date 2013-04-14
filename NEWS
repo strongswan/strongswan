@@ -1,3 +1,23 @@
+strongswan-5.0.4
+----------------
+
+- Fixed a security vulnerability in the openssl plugin which was reported by
+  Kevin Wojtysiak. The vulnerability has been registered as CVE-2013-2944.
+  Before the fix, if the openssl plugin's ECDSA signature verification was used,
+  due to a misinterpretation of the error code returned by the OpenSSL
+  ECDSA_verify() function, an empty or zeroed signature was accepted as a
+  legitimate one.
+
+- The handling of a couple of other non-security relevant openssl return codes
+  was fixed as well.
+
+- The tnc_ifmap plugin now publishes virtual IPv4 and IPv6 addresses via its
+  TCG TNC IF-MAP 2.1 interface.
+
+- The charon.initiator_only option causes charon to ignore IKE initiation
+  requests.
+
+
 strongswan-5.0.3
 ----------------
 
