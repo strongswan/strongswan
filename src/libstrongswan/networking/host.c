@@ -265,26 +265,6 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 }
 
 /**
- * Implements host_t.get_differences
- */
-static host_diff_t get_differences(host_t *this, host_t *other)
-{
-	host_diff_t ret = HOST_DIFF_NONE;
-
-	if (!this->ip_equals(this, other))
-	{
-		ret |= HOST_DIFF_ADDR;
-	}
-
-	if (this->get_port(this) != other->get_port(other))
-	{
-		ret |= HOST_DIFF_PORT;
-	}
-
-	return ret;
-}
-
-/**
  * Implements host_t.equals
  */
 static bool equals(private_host_t *this, private_host_t *other)
@@ -332,7 +312,6 @@ static private_host_t *host_create_empty(void)
 			.get_address = _get_address,
 			.get_port = _get_port,
 			.set_port = _set_port,
-			.get_differences = get_differences,
 			.ip_equals = (bool (*)(host_t *,host_t *))ip_equals,
 			.equals = (bool (*)(host_t *,host_t *)) equals,
 			.is_anyaddr = _is_anyaddr,
