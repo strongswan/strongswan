@@ -87,6 +87,13 @@ static bool enable_crypto(tun_device_t *tun)
 			 tun->get_name(tun), strerror(errno));
 		return FALSE;
 	}
+	if (setsockopt(tun->get_fd(tun), SYSPROTO_CONTROL,
+				   UTUN_OPT_START_CRYPTO_DATA_TRAFFIC, &args, sizeof(args)) < 0)
+	{
+		DBG1(DBG_KNL, "starting crypto traffic on %s failed: %s",
+			 tun->get_name(tun), strerror(errno));
+		return FALSE;
+	}
 	return TRUE;
 }
 
