@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
+#include <net/if.h>
 #include <errno.h>
 
 #include "kernel_utun_net.h"
@@ -46,6 +47,8 @@ typedef struct {
 	struct ifaddrs *current;
 	/** current host */
 	host_t *host;
+	/** which address types to filter */
+	kernel_address_type_t which;
 } addr_enumerator_t;
 
 METHOD(enumerator_t, addr_enumerate, bool,
@@ -71,7 +74,21 @@ METHOD(enumerator_t, addr_enumerate, bool,
 		{
 			return FALSE;
 		}
-		/* TODO: filter based on "which" */
+		if (!(this->which & ADDR_TYPE_LOOPBACK) &&
+			(this->current->ifa_flags & IFF_LOOPBACK))
+		{	/* ignore loopback devices */
+			continue;
+		}
+		if (!(this->which & ADDR_TYPE_DOWN) &&
+			!(this->current->ifa_flags & IFF_UP))
+		{	/* skip interfaces not up */
+			continue;
+		}
+		if (!(this->which & ADDR_TYPE_VIRTUAL) &&
+			strneq(this->current->ifa_name, "utun", strlen("utun")))
+		{	/* skip virtual IPs on utun devices */
+			continue;
+		}
 		this->host = host_create_from_sockaddr(this->current->ifa_addr);
 		if (!this->host)
 		{
@@ -109,6 +126,7 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 			.destroy = _addr_destroy,
 		},
 		.orig = ifa,
+		.which = which,
 	);
 	return &enumerator->public;
 }
