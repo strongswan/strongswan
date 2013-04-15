@@ -445,7 +445,9 @@ METHOD(kernel_utun_ipsec_t, add_ip, status_t,
 	this->mutex->lock(this->mutex);
 	if (this->tuns->get_last(this->tuns, (void**)&tun) == SUCCESS)
 	{
-		added = tun->set_address(tun, vip, prefix);
+		added = tun->set_address(tun, vip, prefix) &&
+				tun->set_mtu(tun, 1280) &&
+				tun->up(tun);
 	}
 	this->mutex->unlock(this->mutex);
 
