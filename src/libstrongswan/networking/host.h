@@ -37,16 +37,6 @@ typedef struct host_t host_t;
 #include <utils/chunk.h>
 
 /**
- * Differences between two hosts. They differ in
- * address, port, or both.
- */
-enum host_diff_t {
-	HOST_DIFF_NONE = 0,
-	HOST_DIFF_ADDR = 1,
-	HOST_DIFF_PORT = 2,
-};
-
-/**
  * Representates a Host
  *
  * Host object, identifies a address:port pair and defines some
@@ -135,14 +125,6 @@ struct host_t {
 	 * @return		TRUE if addresses and ports are equal.
 	 */
 	bool (*equals) (host_t *this, host_t *other);
-
-	/**
-	 * Compare two hosts and return the differences.
-	 *
-	 * @param other	the other to compare
-	 * @return		differences in a combination of host_diff_t's
-	 */
-	host_diff_t (*get_differences) (host_t *this, host_t *other);
 
 	/**
 	 * Destroy this host object.
