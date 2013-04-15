@@ -17,7 +17,7 @@ INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libxerces-c2-dev,libltdl-dev
 INC=$INC,liblog4cxx10-dev,libboost-thread-dev,libboost-system-dev,git-core
 INC=$INC,less,acpid,acpi-support-base,libldns-dev,libunbound-dev,dnsutils,screen
 INC=$INC,gnat,gprbuild,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
-INC=$INC,libalog0.4.1-base-dev,hostapd
+INC=$INC,libalog0.4.1-base-dev,hostapd,libsoup2.4-dev
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9"
 INC=$INC,${SERVICES// /,}
 

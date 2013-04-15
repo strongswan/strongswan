@@ -12,6 +12,7 @@ CONFIG_OPTS = \
 	--with-random-device=/dev/urandom \
 	--disable-load-warning \
 	--enable-curl \
+	--enable-soup \
 	--enable-ldap \
 	--enable-eap-aka \
 	--enable-eap-aka-3gpp2 \
