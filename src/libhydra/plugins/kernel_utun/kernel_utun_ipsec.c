@@ -290,6 +290,7 @@ static status_t add_sa_tun(private_kernel_utun_ipsec_t *this, tun_device_t *tun,
 
 	if (encap)
 	{
+		keys.args.u.ipsec_v1.natt_port = dst->get_port(dst);
 		keys.args.u.ipsec_v1.natd = IF_UTUN_CRYPTO_IPSEC_NATD_MINE;
 		keys.args.u.ipsec_v1.keepalive = IF_UTUN_CRYPTO_IPSEC_KEEPALIVE_NATT;
 	}
