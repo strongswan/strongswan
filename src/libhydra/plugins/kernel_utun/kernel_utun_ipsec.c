@@ -420,7 +420,7 @@ METHOD(kernel_ipsec_t, bypass_socket, bool,
 METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 	private_kernel_utun_ipsec_t *this, int fd, int family, u_int16_t port)
 {
-	return FALSE;
+	return TRUE;
 }
 
 METHOD(kernel_utun_ipsec_t, add_ip, status_t,
