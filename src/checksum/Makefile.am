@@ -18,7 +18,7 @@ INCLUDES = \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
 AM_CFLAGS = \
-	-DPLUGINDIR=\"${plugindir}\" \
+	-DPLUGINDIR=\"${DESTDIR}${plugindir}\" \
 	-rdynamic
 
 # we keep track of build dependencies in deps and use libs to store the paths
