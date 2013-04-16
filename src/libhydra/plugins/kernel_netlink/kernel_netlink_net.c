@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -436,6 +436,11 @@ struct private_kernel_netlink_net_t {
 	bool process_route;
 
 	/**
+	 * whether to trigger roam events
+	 */
+	bool roam_events;
+
+	/**
 	 * whether to actually install virtual IPs
 	 */
 	bool install_virtual_ip;
@@ -702,6 +707,11 @@ static void fire_roam_event(private_kernel_netlink_net_t *this, bool address)
 {
 	timeval_t now;
 	job_t *job;
+
+	if (!this->roam_events)
+	{
+		return;
+	}
 
 	time_monotonic(&now);
 	this->roam_lock->lock(this->roam_lock);
@@ -2235,6 +2245,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 				"%s.install_virtual_ip", TRUE, hydra->daemon),
 		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
 				"%s.install_virtual_ip_on", NULL, hydra->daemon),
+		.roam_events = lib->settings->get_bool(lib->settings,
+				"%s.plugins.kernel-netlink.roam_events", TRUE, hydra->daemon),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
