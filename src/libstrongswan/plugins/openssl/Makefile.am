@@ -1,7 +1,7 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS = -rdynamic -DFIPS_MODE=${fips_mode}
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-openssl.la

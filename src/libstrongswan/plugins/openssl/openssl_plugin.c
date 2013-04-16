@@ -457,6 +457,25 @@ METHOD(plugin_t, destroy, void,
 plugin_t *openssl_plugin_create()
 {
 	private_openssl_plugin_t *this;
+	int fips_mode;
+
+	fips_mode = lib->settings->get_int(lib->settings,
+						"libstrongswan.plugins.openssl.fips_mode", FIPS_MODE);
+#ifdef OPENSSL_FIPS
+	if (!FIPS_mode_set(fips_mode))
+	{
+		DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d)", fips_mode);
+		return NULL;
+	}
+	DBG1(DBG_LIB, "openssl FIPS mode(%d) - %sabled ",fips_mode,
+				   fips_mode ? "en" : "dis");
+#else
+	DBG1(DBG_LIB, "openssl FIPS mode(%d) unavailable", fips_mode);
+	if (fips_mode)
+	{
+		return NULL;
+	}
+#endif
 
 	INIT(this,
 		.public = {
