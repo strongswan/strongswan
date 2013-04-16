@@ -40,29 +40,11 @@ typedef struct network_manager_t network_manager_t;
 typedef void (*connectivity_cb_t)(void *data, bool disconnected);
 
 /**
- * NetworkManager, used to listen for network changes and retrieve local IP
- * addresses.
+ * NetworkManager, used to listen for network changes.
  *
  * Communicates with NetworkManager via JNI
  */
 struct network_manager_t {
-
-	/**
-	 * Get a local address
-	 *
-	 * @param ipv4				TRUE to get an IPv4 address
-	 * @return					the address or NULL if none available
-	 */
-	host_t *(*get_local_address)(network_manager_t *this, bool ipv4);
-
-	/**
-	 * Get the name of the interface on which the given IP address is installed
-	 *
-	 * @param ip				the IP address to look for
-	 * @param name				returns the name of the interface (optional)
-	 * @return					TRUE if found
-	 */
-	bool (*get_interface)(network_manager_t *this, host_t *ip, char **name);
 
 	/**
 	 * Register a callback that is called if connectivity changes

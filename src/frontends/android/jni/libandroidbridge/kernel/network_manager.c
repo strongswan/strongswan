@@ -52,79 +52,6 @@ struct private_network_manager_t {
 	mutex_t *mutex;
 };
 
-METHOD(network_manager_t, get_local_address, host_t*,
-	private_network_manager_t *this, bool ipv4)
-{
-	JNIEnv *env;
-	jmethodID method_id;
-	jstring jaddr;
-	char *addr;
-	host_t *host;
-
-	androidjni_attach_thread(&env);
-	method_id = (*env)->GetMethodID(env, this->cls, "getLocalAddress",
-									"(Z)Ljava/lang/String;");
-	if (!method_id)
-	{
-		goto failed;
-	}
-	jaddr = (*env)->CallObjectMethod(env, this->obj, method_id, ipv4);
-	if (!jaddr || androidjni_exception_occurred(env))
-	{
-		goto failed;
-	}
-	addr = androidjni_convert_jstring(env, jaddr);
-	androidjni_detach_thread();
-	host = host_create_from_string(addr, 0);
-	free(addr);
-	return host;
-
-failed:
-	androidjni_exception_occurred(env);
-	androidjni_detach_thread();
-	return NULL;
-}
-
-METHOD(network_manager_t, get_interface, bool,
-	private_network_manager_t *this, host_t *ip, char **name)
-{
-	JNIEnv *env;
-	jmethodID method_id;
-	jbyteArray jaddr;
-	jstring jinterface;
-
-	if (ip->is_anyaddr(ip))
-	{
-		return FALSE;
-	}
-
-	androidjni_attach_thread(&env);
-
-	method_id = (*env)->GetMethodID(env, this->cls, "getInterface",
-									"([B)Ljava/lang/String;");
-	if (!method_id)
-	{
-		goto failed;
-	}
-	jaddr = byte_array_from_chunk(env, ip->get_address(ip));
-	jinterface = (*env)->CallObjectMethod(env, this->obj, method_id, jaddr);
-	if (!jinterface || androidjni_exception_occurred(env))
-	{
-		goto failed;
-	}
-	if (name)
-	{
-		*name = androidjni_convert_jstring(env, jinterface);
-	}
-	androidjni_detach_thread();
-	return TRUE;
-
-failed:
-	androidjni_exception_occurred(env);
-	androidjni_detach_thread();
-	return FALSE;
-}
-
 JNI_METHOD(NetworkManager, networkChanged, void,
 	bool disconnected)
 {
@@ -245,8 +172,6 @@ network_manager_t *network_manager_create(jobject context)
 
 	INIT(this,
 		.public = {
-			.get_local_address = _get_local_address,
-			.get_interface = _get_interface,
 			.add_connectivity_cb = _add_connectivity_cb,
 			.remove_connectivity_cb = _remove_connectivity_cb,
 			.destroy = _destroy,
