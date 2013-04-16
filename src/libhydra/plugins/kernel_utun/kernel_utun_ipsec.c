@@ -381,13 +381,93 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 	return FAILED;
 }
 
+/**
+ * Add/Remove a policy to/from a given utun
+ */
+static status_t manage_policy_tun(private_kernel_utun_ipsec_t *this, bool add,
+								tun_device_t *tun, chunk_t net, u_int8_t mask)
+{
+	/* split default route to two separate routes */
+	if (mask == 0)
+	{
+		status_t status;
+		chunk_t half;
+
+		half = chunk_clonea(net);
+		half.ptr[0] |= 0x80;
+		mask = 1;
+		status = manage_policy_tun(this, add, tun, half, mask);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+	}
+	if (add)
+	{
+		return hydra->kernel_interface->add_route(hydra->kernel_interface,
+									net, mask, NULL, NULL, tun->get_name(tun));
+	}
+	return hydra->kernel_interface->del_route(hydra->kernel_interface,
+									net, mask, NULL, NULL, tun->get_name(tun));
+}
+
+/**
+ * Add/Remove a policy
+ */
+static status_t manage_policy(private_kernel_utun_ipsec_t *this, bool add,
+						traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+{
+	host_t *host, *net;
+	u_int8_t mask;
+	enumerator_t *enumerator;
+	tun_device_t *tun;
+	status_t status = NOT_FOUND;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->tuns->create_enumerator(this->tuns);
+	while (enumerator->enumerate(enumerator, &tun))
+	{
+		host = tun->get_address(tun, NULL);
+		if (host && src_ts->includes(src_ts, host))
+		{
+			if (dst_ts->to_subnet(dst_ts, &net, &mask))
+			{
+				status = manage_policy_tun(this, add, tun,
+										   net->get_address(net), mask);
+				net->destroy(net);
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return status;
+}
+
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_utun_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, policy_type_t type, ipsec_sa_cfg_t *sa,
 	mark_t mark, policy_priority_t priority)
 {
-	return SUCCESS;
+	if (sa->mode != MODE_TUNNEL || sa->ah.use || !sa->esp.use)
+	{
+		return NOT_SUPPORTED;
+	}
+	if (type != POLICY_IPSEC)
+	{
+		if (priority == POLICY_PRIORITY_FALLBACK)
+		{	/* we don't support fallback policies, ignore silently */
+			return SUCCESS;
+		}
+		return NOT_SUPPORTED;
+	}
+	if (direction != POLICY_OUT)
+	{	/* needed for out policy only */
+		return SUCCESS;
+	}
+	return manage_policy(this, TRUE, src_ts, dst_ts);
 }
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
@@ -403,7 +483,11 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t reqid,
 	mark_t mark, policy_priority_t prio)
 {
-	return FAILED;
+	if (direction != POLICY_OUT || prio == POLICY_PRIORITY_FALLBACK)
+	{	/* has not been installed */
+		return SUCCESS;
+	}
+	return manage_policy(this, FALSE, src_ts, dst_ts);
 }
 
 METHOD(kernel_ipsec_t, flush_policies, status_t,
