@@ -410,6 +410,13 @@ static void set_options(char *logfile)
 	 * information */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.set_source", FALSE);
+	/* don't install virtual IPs via kernel-netlink */
+	lib->settings->set_bool(lib->settings,
+					"charon.install_virtual_ip", FALSE);
+	/* ignore tun devices (it's mostly tun0 but it may already be taken, ignore
+	 * some others too) */
+	lib->settings->set_str(lib->settings,
+					"charon.interfaces_ignore", "tun0, tun1, tun2, tun3, tun4");
 }
 
 /**
@@ -419,8 +426,6 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
-		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
-			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
 		PLUGIN_CALLBACK(kernel_ipsec_register, kernel_android_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 		PLUGIN_CALLBACK((plugin_feature_callback_t)charonservice_register, NULL),
