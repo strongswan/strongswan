@@ -68,6 +68,14 @@
 /** maximum recursion when searching for addresses in get_route() */
 #define MAX_ROUTE_RECURSION 2
 
+#ifndef ROUTING_TABLE
+#define ROUTING_TABLE 0
+#endif
+
+#ifndef ROUTING_TABLE_PRIO
+#define ROUTING_TABLE_PRIO 0
+#endif
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
