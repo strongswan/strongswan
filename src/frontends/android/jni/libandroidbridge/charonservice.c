@@ -425,9 +425,11 @@ static void set_options(char *logfile)
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.kernel-netlink.roam_events", FALSE);
 	/* ignore tun devices (it's mostly tun0 but it may already be taken, ignore
-	 * some others too) */
+	 * some others too), also ignore lo as a default route points to it when
+	 * no connectivity is available */
 	lib->settings->set_str(lib->settings,
-					"charon.interfaces_ignore", "tun0, tun1, tun2, tun3, tun4");
+					"charon.interfaces_ignore", "lo, tun0, tun1, tun2, tun3, "
+					"tun4");
 }
 
 /**
