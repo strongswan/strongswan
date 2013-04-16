@@ -780,6 +780,9 @@ Use faster random numbers in gcrypt; for testing only, produces weak keys!
 .BR libstrongswan.plugins.openssl.engine_id " [pkcs11]"
 ENGINE ID to use in the OpenSSL plugin
 .TP
+.BR libstrongswan.plugins.openssl.fips_mode " [0]"
+Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2)
+.TP
 .BR libstrongswan.plugins.pkcs11.modules
 List of available PKCS#11 modules
 .TP
