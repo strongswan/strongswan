@@ -559,6 +559,55 @@ host_t *host_create_from_subnet(char *string, int *bits)
 }
 
 /*
+ * See header.
+ */
+host_t *host_create_netmask(int family, int netbits)
+{
+	private_host_t *this;
+	int bits, bytes, len = 0;
+	char *target;
+
+	switch (family)
+	{
+		case AF_INET:
+			if (netbits < 0 || netbits > 32)
+			{
+				return NULL;
+			}
+			this = host_create_empty();
+			this->socklen = sizeof(struct sockaddr_in);
+			target = (char*)&this->address4.sin_addr;
+			len = 4;
+			break;
+		case AF_INET6:
+			if (netbits < 0 || netbits > 128)
+			{
+				return NULL;
+			}
+			this = host_create_empty();
+			this->socklen = sizeof(struct sockaddr_in6);
+			target = (char*)&this->address6.sin6_addr;
+			len = 16;
+			break;
+		default:
+			return NULL;
+	}
+
+	memset(&this->address_max, 0, sizeof(struct sockaddr_storage));
+	this->address.sa_family = family;
+	update_sa_len(this);
+
+	bytes = (netbits + 7) / 8;
+	bits = (bytes * 8) - netbits;
+
+	memset(target, 0xff, bytes);
+	memset(target + bytes, 0x00, len - bytes);
+	target[bytes - 1] = bits ? (u_int8_t)(0xff << bits) : 0xff;
+
+	return &this->public;
+}
+
+/*
  * Described in header.
  */
 host_t *host_create_any(int family)
