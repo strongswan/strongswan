@@ -17,7 +17,10 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <net/if_dl.h>
+#include <net/route.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "kernel_utun_net.h"
 #include "kernel_utun_ipsec.h"
@@ -36,6 +39,16 @@ struct private_kernel_utun_net_t {
 	 * Public part of the kernel_utun_net_t object.
 	 */
 	kernel_utun_net_t public;
+
+	/**
+	 * PF_ROUTE socket
+	 */
+	int pfr;
+
+	/**
+	 * sequence numbers for PF_ROUTE messages
+	 */
+	int seq;
 };
 
 typedef struct {
@@ -207,23 +220,144 @@ METHOD(kernel_net_t, del_ip, status_t,
 	return FAILED;
 }
 
+/**
+ * Append a sockaddr_in/in6 of given type to routing message
+ */
+static void add_rt_addr(struct rt_msghdr *hdr, int type, host_t *addr)
+{
+	if (addr)
+	{
+		int len;
+
+		len = *addr->get_sockaddr_len(addr);
+		memcpy((char*)hdr + hdr->rtm_msglen, addr->get_sockaddr(addr), len);
+		hdr->rtm_msglen += len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Append a subnet mask sockaddr using the given prefix to routing message
+ */
+static void add_rt_mask(struct rt_msghdr *hdr, int type, int family, int prefix)
+{
+	host_t *mask;
+
+	mask = host_create_netmask(family, prefix);
+	if (mask)
+	{
+		add_rt_addr(hdr, type, mask);
+		mask->destroy(mask);
+	}
+}
+
+/**
+ * Append an interface name sockaddr_dl to routing message
+ */
+static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
+{
+	struct sockaddr_dl sdl = {
+		.sdl_len = sizeof(struct sockaddr_dl),
+		.sdl_family = AF_LINK,
+		.sdl_nlen = strlen(name),
+	};
+
+	if (strlen(name) <= sizeof(sdl.sdl_data))
+	{
+		memcpy(sdl.sdl_data, name, sdl.sdl_nlen);
+		memcpy((char*)hdr + hdr->rtm_msglen, &sdl, sdl.sdl_len);
+		hdr->rtm_msglen += sdl.sdl_len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Add or remove a route
+ */
+static status_t manage_route(private_kernel_utun_net_t *this, int op,
+							 chunk_t dst_net, u_int8_t prefixlen,
+							 host_t *gateway, char *if_name)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg = {
+		.hdr = {
+			.rtm_version = RTM_VERSION,
+			.rtm_type = op,
+			.rtm_flags = RTF_UP | RTF_STATIC,
+			.rtm_pid = getpid(),
+			.rtm_seq = ++this->seq,
+		},
+	};
+	host_t *dst;
+	int i;
+
+	dst = host_create_from_chunk(AF_UNSPEC, dst_net, 0);
+	if (!dst)
+	{
+		return FAILED;
+	}
+
+	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
+	for (i = 0; i < RTAX_MAX; i++)
+	{
+		switch (i)
+		{
+			case RTAX_DST:
+				add_rt_addr(&msg.hdr, RTA_DST, dst);
+				break;
+			case RTAX_NETMASK:
+				add_rt_mask(&msg.hdr, RTA_NETMASK,
+							dst->get_family(dst), prefixlen);
+				break;
+			case RTAX_GATEWAY:
+				/* interface name seems to replace gateway on OS X */
+				if (if_name)
+				{
+					add_rt_ifname(&msg.hdr, RTA_GATEWAY, if_name);
+				}
+				else if (gateway)
+				{
+					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	dst->destroy(dst);
+
+	if (send(this->pfr, &msg, msg.hdr.rtm_msglen, 0) != msg.hdr.rtm_msglen)
+	{
+		DBG1(DBG_KNL, "%s PF_ROUTE route failed: %s",
+			 op == RTM_ADD ? "adding" : "deleting", strerror(errno));
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_utun_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_ADD, dst_net, prefixlen, gateway, if_name);
 }
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_utun_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
 }
 
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
+	if (this->pfr != -1)
+	{
+		close(this->pfr);
+	}
 	free(this);
 }
 
@@ -249,6 +383,19 @@ kernel_utun_net_t *kernel_utun_net_create()
 			},
 		},
 	);
+
+	this->pfr = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
+	if (this->pfr < 0)
+	{
+		DBG1(DBG_KNL, "creating PF_ROUTE socket failed: %s", strerror(errno));
+		destroy(this);
+		return NULL;
+	}
+	/* disable events on socket */
+	if (shutdown(this->pfr, SHUT_RD) != 0)
+	{
+		DBG1(DBG_KNL, "shutdown PF_ROUTE socket failed: %s", strerror(errno));
+	}
 
 	return &this->public;
 }
