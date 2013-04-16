@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,36 +14,33 @@
  */
 
 /**
- * @defgroup kernel_android_net kernel_android_net
+ * @defgroup android_net android_net
  * @{ @ingroup android_kernel
  */
 
-#ifndef KERNEL_ANDROID_NET_H_
-#define KERNEL_ANDROID_NET_H_
+#ifndef ANDROID_NET_H_
+#define ANDROID_NET_H_
 
 #include <library.h>
-#include <kernel/kernel_net.h>
 
-typedef struct kernel_android_net_t kernel_android_net_t;
+typedef struct android_net_t android_net_t;
 
 /**
- * Implementation of the kernel-net interface.  This currently consists of only
- * noops because a kernel_net_t implementation is required and we can't use
- * kernel_netlink_net_t at the moment.
+ * Handle connectivity events from NetworkManager
  */
-struct kernel_android_net_t {
+struct android_net_t {
 
 	/**
-	 * Implements kernel_net_t interface
+	 * Destroy an android_net_t instance.
 	 */
-	kernel_net_t interface;
+	void (*destroy)(android_net_t *this);
 };
 
 /**
- * Create a android net interface instance.
+ * Create an android_net_t instance.
  *
- * @return			kernel_android_net_t instance
+ * @return			android_net_t instance
  */
-kernel_android_net_t *kernel_android_net_create();
+android_net_t *android_net_create();
 
-#endif /** KERNEL_ANDROID_NET_H_ @}*/
+#endif /** ANDROID_NET_H_ @}*/

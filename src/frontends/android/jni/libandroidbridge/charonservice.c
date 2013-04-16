@@ -1,7 +1,7 @@
 /*
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Copyright (C) 2012 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -77,6 +77,11 @@ struct private_charonservice_t {
 	 * NetworkManager instance (accessed via JNI)
 	 */
 	network_manager_t *network_manager;
+
+	/**
+	 * Handle network events
+	 */
+	android_net_t *net_handler;
 
 	/**
 	 * CharonVpnService reference
@@ -358,12 +363,14 @@ static bool charonservice_register(void *plugin, plugin_feature_t *feature,
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 	if (reg)
 	{
+		this->net_handler = android_net_create();
 		lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 		hydra->attributes->add_handler(hydra->attributes,
 									   &this->attr->handler);
 	}
 	else
 	{
+		this->net_handler->destroy(this->net_handler);
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 		hydra->attributes->remove_handler(hydra->attributes,
 										  &this->attr->handler);
@@ -413,6 +420,10 @@ static void set_options(char *logfile)
 	/* don't install virtual IPs via kernel-netlink */
 	lib->settings->set_bool(lib->settings,
 					"charon.install_virtual_ip", FALSE);
+	/* kernel-netlink should not trigger roam events, we use Android's
+	 * ConnectivityManager for that, much less noise */
+	lib->settings->set_bool(lib->settings,
+					"charon.plugins.kernel-netlink.roam_events", FALSE);
 	/* ignore tun devices (it's mostly tun0 but it may already be taken, ignore
 	 * some others too) */
 	lib->settings->set_str(lib->settings,

@@ -16,21 +16,20 @@
 
 #include "../charonservice.h"
 #include <hydra.h>
-#include <utils/debug.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/mutex.h>
 
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
-typedef struct private_kernel_android_net_t private_kernel_android_net_t;
+typedef struct private_android_net_t private_android_net_t;
 
-struct private_kernel_android_net_t {
+struct private_android_net_t {
 
 	/**
 	 * Public kernel interface
 	 */
-	kernel_android_net_t public;
+	android_net_t public;
 
 	/**
 	 * Reference to NetworkManager object
@@ -62,7 +61,7 @@ static job_requeue_t roam_event()
 /**
  * Listen for connectivity change events and queue a roam event
  */
-static void connectivity_cb(private_kernel_android_net_t *this,
+static void connectivity_cb(private_android_net_t *this,
 							bool disconnected)
 {
 	timeval_t now;
@@ -84,30 +83,8 @@ static void connectivity_cb(private_kernel_android_net_t *this,
 	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
 }
 
-METHOD(kernel_net_t, get_source_addr, host_t*,
-	private_kernel_android_net_t *this, host_t *dest, host_t *src)
-{
-	return this->network_manager->get_local_address(this->network_manager,
-											dest->get_family(dest) == AF_INET);
-}
-
-METHOD(kernel_net_t, get_interface, bool,
-	private_kernel_android_net_t *this, host_t *host, char **name)
-{
-	return this->network_manager->get_interface(this->network_manager, host,
-												name);
-}
-
-METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_android_net_t *this, host_t *virtual_ip, int prefix,
-	char *iface)
-{
-	/* we get the IP from the IKE_SA once the CHILD_SA is established */
-	return SUCCESS;
-}
-
-METHOD(kernel_net_t, destroy, void,
-	private_kernel_android_net_t *this)
+METHOD(android_net_t, destroy, void,
+	private_android_net_t *this)
 {
 	this->network_manager->remove_connectivity_cb(this->network_manager,
 												 (void*)connectivity_cb);
@@ -118,23 +95,13 @@ METHOD(kernel_net_t, destroy, void,
 /*
  * Described in header.
  */
-kernel_android_net_t *kernel_android_net_create()
+android_net_t *android_net_create()
 {
-	private_kernel_android_net_t *this;
+	private_android_net_t *this;
 
 	INIT(this,
 		.public = {
-			.interface = {
-				.get_source_addr = _get_source_addr,
-				.get_nexthop = (void*)return_null,
-				.get_interface = _get_interface,
-				.create_address_enumerator = (void*)enumerator_create_empty,
-				.add_ip = _add_ip,
-				.del_ip = (void*)return_failed,
-				.add_route = (void*)return_failed,
-				.del_route = (void*)return_failed,
-				.destroy = _destroy,
-			},
+			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.network_manager = charonservice->get_network_manager(charonservice),
