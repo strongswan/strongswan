@@ -192,6 +192,14 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 host_t *host_create_from_subnet(char *string, int *bits);
 
 /**
+ * Create a netmask host having the first netbits bits set.
+ *
+ * @param netbits		number of leading bits set in the host
+ * @return				netmask host
+ */
+host_t *host_create_netmask(int family, int netbits);
+
+/**
  * Create a host without an address, a "any" host.
  *
  * @param family		family of the any host
