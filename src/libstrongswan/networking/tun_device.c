@@ -75,61 +75,16 @@ struct private_tun_device_t {
 	int mtu;
 };
 
-/**
- * Set the sockaddr_t from the given netmask
- */
-static void set_netmask(struct ifreq *ifr, int family, u_int8_t netmask)
-{
-	int len, bytes, bits;
-	char *target;
-
-	switch (family)
-	{
-		case AF_INET:
-		{
-			struct sockaddr_in *addr = (struct sockaddr_in*)&ifr->ifr_addr;
-			target = (char*)&addr->sin_addr;
-			len = 4;
-			break;
-		}
-		case AF_INET6:
-		{
-			struct sockaddr_in6 *addr = (struct sockaddr_in6*)&ifr->ifr_addr;
-			target = (char*)&addr->sin6_addr;
-			len = 16;
-			break;
-		}
-		default:
-			return;
-	}
-
-	ifr->ifr_addr.sa_family = family;
-
-	bytes = (netmask + 7) / 8;
-	bits = (bytes * 8) - netmask;
-
-	memset(target, 0xff, bytes);
-	memset(target + bytes, 0x00, len - bytes);
-	target[bytes - 1] = bits ? (u_int8_t)(0xff << bits) : 0xff;
-}
-
 METHOD(tun_device_t, set_address, bool,
 	private_tun_device_t *this, host_t *addr, u_int8_t netmask)
 {
 	struct ifreq ifr;
-	int family;
-
-	family = addr->get_family(addr);
-	if ((netmask > 32 && family == AF_INET) || netmask > 128)
-	{
-		DBG1(DBG_LIB, "failed to set address on %s: invalid netmask",
-			 this->if_name);
-		return FALSE;
-	}
+	host_t *mask;
 
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, this->if_name, IFNAMSIZ);
-	memcpy(&ifr.ifr_addr, addr->get_sockaddr(addr), sizeof(sockaddr_t));
+	memcpy(&ifr.ifr_addr, addr->get_sockaddr(addr),
+		   *addr->get_sockaddr_len(addr));
 
 	if (ioctl(this->sock, SIOCSIFADDR, &ifr) < 0)
 	{
@@ -146,7 +101,15 @@ METHOD(tun_device_t, set_address, bool,
 	}
 #endif /* __APPLE__ */
 
-	set_netmask(&ifr, family, netmask);
+	mask = host_create_netmask(addr->get_family(addr), netmask);
+	if (!mask)
+	{
+		DBG1(DBG_LIB, "invalid netmask: %d", netmask);
+		return FALSE;
+	}
+	memcpy(&ifr.ifr_addr, mask->get_sockaddr(mask),
+		   *mask->get_sockaddr_len(mask));
+	mask->destroy(mask);
 
 	if (ioctl(this->sock, SIOCSIFNETMASK, &ifr) < 0)
 	{
