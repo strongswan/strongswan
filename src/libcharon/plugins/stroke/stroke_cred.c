@@ -600,6 +600,8 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
  * Data for passphrase callback
  */
 typedef struct {
+	/** cached passphrases */
+	mem_cred_t *cache;
 	/** socket we use for prompting */
 	FILE *prompt;
 	/** type of secret to unlock */
@@ -618,6 +620,7 @@ static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
 								   identification_t *other, id_match_t *match_me,
 								   id_match_t *match_other)
 {
+	shared_key_t *shared;
 	chunk_t secret;
 	char buf[256];
 
@@ -654,7 +657,10 @@ static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
 			{
 				*match_other = ID_MATCH_NONE;
 			}
-			return shared_key_create(SHARED_PRIVATE_KEY_PASS, chunk_clone(secret));
+			shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
+									   chunk_clone(secret));
+			data->cache->add_shared(data->cache, shared->get_ref(shared), NULL);
+			return shared;
 		}
 	}
 	return NULL;
@@ -885,6 +891,10 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 			*result = NULL;
 			return TRUE;
 		}
+		/* add cache first so if valid passphrases are needed multiple times
+		 * the callback is not called anymore */
+		pp_data.cache = mem_cred_create();
+		lib->credmgr->add_local_set(lib->credmgr, &pp_data.cache->set, FALSE);
 		/* use callback credential set to prompt for the passphrase */
 		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
@@ -894,6 +904,8 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 
 		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
 		cb->destroy(cb);
+		lib->credmgr->remove_local_set(lib->credmgr, &pp_data.cache->set);
+		pp_data.cache->destroy(pp_data.cache);
 	}
 	else
 	{
