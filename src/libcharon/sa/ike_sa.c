@@ -2094,21 +2094,11 @@ METHOD(ike_sa_t, destroy, void,
 		free(entry->data.ptr);
 		free(entry);
 	}
-	this->attributes->destroy(this->attributes);
-
-	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
-
-	/* unset SA after here to avoid usage by the listeners */
-	charon->bus->set_sa(charon->bus, NULL);
-
-	DESTROY_IF(this->keymat);
-
 	while (this->my_vips->remove_last(this->my_vips, (void**)&vip) == SUCCESS)
 	{
 		hydra->kernel_interface->del_ip(hydra->kernel_interface, vip, -1, TRUE);
 		vip->destroy(vip);
 	}
-	this->my_vips->destroy(this->my_vips);
 	if (this->other_vips->get_count(this->other_vips))
 	{
 		charon->bus->assign_vips(charon->bus, &this->public, FALSE);
@@ -2129,6 +2119,14 @@ METHOD(ike_sa_t, destroy, void,
 		}
 		vip->destroy(vip);
 	}
+
+	/* unset SA after here to avoid usage by the listeners */
+	charon->bus->set_sa(charon->bus, NULL);
+
+	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
+	DESTROY_IF(this->keymat);
+	this->attributes->destroy(this->attributes);
+	this->my_vips->destroy(this->my_vips);
 	this->other_vips->destroy(this->other_vips);
 	this->peer_addresses->destroy_offset(this->peer_addresses,
 										 offsetof(host_t, destroy));
