@@ -304,6 +304,12 @@ static status_t manage_route(private_kernel_utun_net_t *this, int op,
 		return FAILED;
 	}
 
+	if ((dst->get_family(dst) == AF_INET && prefixlen == 32) ||
+		(dst->get_family(dst) == AF_INET6 && prefixlen == 128))
+	{
+		msg.hdr.rtm_flags |= RTF_HOST | RTF_GATEWAY;
+	}
+
 	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
 	for (i = 0; i < RTAX_MAX; i++)
 	{
@@ -313,8 +319,11 @@ static status_t manage_route(private_kernel_utun_net_t *this, int op,
 				add_rt_addr(&msg.hdr, RTA_DST, dst);
 				break;
 			case RTAX_NETMASK:
-				add_rt_mask(&msg.hdr, RTA_NETMASK,
-							dst->get_family(dst), prefixlen);
+				if (!(msg.hdr.rtm_flags & RTF_HOST))
+				{
+					add_rt_mask(&msg.hdr, RTA_NETMASK,
+								dst->get_family(dst), prefixlen);
+				}
 				break;
 			case RTAX_GATEWAY:
 				/* interface name seems to replace gateway on OS X */
