@@ -602,6 +602,8 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 typedef struct {
 	/** socket we use for prompting */
 	FILE *prompt;
+	/** type of secret to unlock */
+	int type;
 	/** private key file */
 	char *path;
 	/** number of tries */
@@ -609,12 +611,12 @@ typedef struct {
 } passphrase_cb_data_t;
 
 /**
- * Callback function to receive Passphrases
+ * Callback function to receive passphrases
  */
 static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
-								shared_key_type_t type,
-								identification_t *me, identification_t *other,
-								id_match_t *match_me, id_match_t *match_other)
+								   shared_key_type_t type, identification_t *me,
+								   identification_t *other, id_match_t *match_me,
+								   id_match_t *match_other)
 {
 	chunk_t secret;
 	char buf[256];
@@ -628,13 +630,15 @@ static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
 	{
 		if (data->try > 5)
 		{
-			fprintf(data->prompt, "PIN invalid, giving up.\n");
+			fprintf(data->prompt, "Passphrase invalid, giving up.\n");
 			return NULL;
 		}
-		fprintf(data->prompt, "PIN invalid!\n");
+		fprintf(data->prompt, "Passphrase invalid!\n");
 	}
 	data->try++;
-	fprintf(data->prompt, "Private key '%s' is encrypted.\n", data->path);
+	fprintf(data->prompt, "%s '%s' is encrypted.\n",
+			data->type == CRED_PRIVATE_KEY ? "Private key" : "PKCS#12 file",
+			data->path);
 	fprintf(data->prompt, "Passphrase:\n");
 	if (fgets(buf, sizeof(buf), data->prompt))
 	{
@@ -867,9 +871,10 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 	}
 	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
 	{
-		callback_cred_t *cb = NULL;
+		callback_cred_t *cb;
 		passphrase_cb_data_t pp_data = {
 			.prompt = prompt,
+			.type = type,
 			.path = path,
 			.try = 1,
 		};
@@ -881,9 +886,6 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 			return TRUE;
 		}
 		/* use callback credential set to prompt for the passphrase */
-		pp_data.prompt = prompt;
-		pp_data.path = path;
-		pp_data.try = 1;
 		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 
