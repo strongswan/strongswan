@@ -475,7 +475,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		}
 	}
 
-	if (len < sizeof(msg->rtm_msglen) || len < msg->rtm_msglen ||
+	if (len < sizeof(*msg) || len < msg->rtm_msglen ||
 		msg->rtm_version != RTM_VERSION)
 	{
 		DBG2(DBG_KNL, "received corrupted PF_ROUTE message");
