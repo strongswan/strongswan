@@ -27,6 +27,10 @@
 
 #include <hydra.h>
 #include <utils/debug.h>
+#include <threading/thread.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
+#include <processing/jobs/callback_job.h>
 
 typedef struct private_kernel_utun_net_t private_kernel_utun_net_t;
 
@@ -54,6 +58,26 @@ struct private_kernel_utun_net_t {
 	 * process id we use for all messages
 	 */
 	pid_t pid;
+
+	/**
+	 * To sequentially do queries on PF_ROUTE
+	 */
+	mutex_t *mutex;
+
+	/**
+	 * Signalled when response from kernel received
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * Sequence number a query is waiting for
+	 */
+	int waiting_seq;
+
+	/**
+	 * Allocated reply message from kernel
+	 */
+	struct rt_msghdr *reply;
 };
 
 typedef struct {
@@ -365,6 +389,55 @@ METHOD(kernel_net_t, del_route, status_t,
 	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
 }
 
+/**
+ * Receive PF_ROUTE messages from kernel
+ */
+static job_requeue_t receive_events(private_kernel_utun_net_t *this)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg;
+	int len;
+	bool oldstate;
+
+	oldstate = thread_cancelability(TRUE);
+	len = recv(this->pfr, &msg, sizeof(msg), 0);
+	thread_cancelability(oldstate);
+
+	if (len < 0)
+	{
+		switch (errno)
+		{
+			case EINTR:
+			case EAGAIN:
+				return JOB_REQUEUE_DIRECT;
+			default:
+				DBG1(DBG_KNL, "reading from PF_ROUTE socket failed: %s",
+					 strerror(errno));
+				sleep(1);
+				return JOB_REQUEUE_FAIR;
+		}
+	}
+	if (len < sizeof(msg.hdr) || len < msg.hdr.rtm_msglen ||
+		msg.hdr.rtm_version != RTM_VERSION)
+	{
+		DBG2(DBG_KNL, "received invalid PF_ROUTE message");
+		return JOB_REQUEUE_DIRECT;
+	}
+
+	this->mutex->lock(this->mutex);
+	if (msg.hdr.rtm_pid == this->pid && msg.hdr.rtm_seq == this->waiting_seq)
+	{
+		/* seems like the message someone is waiting for, deliver */
+		this->reply = realloc(this->reply, msg.hdr.rtm_msglen);
+		memcpy(this->reply, &msg, msg.hdr.rtm_msglen);
+		this->condvar->signal(this->condvar);
+	}
+	this->mutex->unlock(this->mutex);
+	return JOB_REQUEUE_DIRECT;
+}
+
 METHOD(kernel_net_t, destroy, void,
 	private_kernel_utun_net_t *this)
 {
@@ -372,6 +445,9 @@ METHOD(kernel_net_t, destroy, void,
 	{
 		close(this->pfr);
 	}
+	this->mutex->destroy(this->mutex);
+	this->condvar->destroy(this->condvar);
+	free(this->reply);
 	free(this);
 }
 
@@ -397,6 +473,8 @@ kernel_utun_net_t *kernel_utun_net_create()
 			},
 		},
 		.pid = getpid(),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
 
 	this->pfr = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
@@ -406,11 +484,11 @@ kernel_utun_net_t *kernel_utun_net_create()
 		destroy(this);
 		return NULL;
 	}
-	/* disable events on socket */
-	if (shutdown(this->pfr, SHUT_RD) != 0)
-	{
-		DBG1(DBG_KNL, "shutdown PF_ROUTE socket failed: %s", strerror(errno));
-	}
+
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create_with_prio(
+				(callback_job_cb_t)receive_events, this, NULL,
+				(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }
