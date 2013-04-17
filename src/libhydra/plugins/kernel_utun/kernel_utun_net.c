@@ -49,6 +49,11 @@ struct private_kernel_utun_net_t {
 	 * sequence numbers for PF_ROUTE messages
 	 */
 	int seq;
+
+	/**
+	 * process id we use for all messages
+	 */
+	pid_t pid;
 };
 
 typedef struct {
@@ -286,7 +291,7 @@ static status_t manage_route(private_kernel_utun_net_t *this, int op,
 			.rtm_version = RTM_VERSION,
 			.rtm_type = op,
 			.rtm_flags = RTF_UP | RTF_STATIC,
-			.rtm_pid = getpid(),
+			.rtm_pid = this->pid,
 			.rtm_seq = ++this->seq,
 		},
 	};
@@ -382,6 +387,7 @@ kernel_utun_net_t *kernel_utun_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.pid = getpid(),
 	);
 
 	this->pfr = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
