@@ -42,6 +42,7 @@
 #include "openssl_x509.h"
 #include "openssl_crl.h"
 #include "openssl_pkcs7.h"
+#include "openssl_pkcs12.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
 #include "openssl_gcm.h"
@@ -394,6 +395,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS7),
 #endif /* OPENSSL_NO_CMS */
 #endif /* OPENSSL_VERSION_NUMBER */
+		PLUGIN_REGISTER(CONTAINER_DECODE, openssl_pkcs12_load, TRUE),
+			PLUGIN_PROVIDE(CONTAINER_DECODE, CONTAINER_PKCS12),
 #ifndef OPENSSL_NO_ECDH
 		/* EC DH groups */
 		PLUGIN_REGISTER(DH, openssl_ec_diffie_hellman_create),
