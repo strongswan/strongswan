@@ -299,7 +299,7 @@ static bfd_entry_t *get_bfd_entry(char *filename)
 /**
  * Print the source file with line number to file, libbfd variant
  */
-static void print_sourceline(FILE *file, char *filename, void *ptr)
+static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
 {
 	bfd_entry_t *entry;
 	bfd_find_data_t data = {
@@ -334,13 +334,20 @@ void backtrace_deinit() {}
 /**
  * Print the source file with line number to file, slow addr2line variant
  */
-static void print_sourceline(FILE *file, char *filename, void *ptr)
+static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 {
 	char buf[1024];
 	FILE *output;
 	int c, i = 0;
 
+#ifdef __APPLE__
+	snprintf(buf, sizeof(buf), "atos -o %s -l %p %p 2>&1 | tail -n1",
+			 filename, base, ptr);
+#else /* !__APPLE__ */
 	snprintf(buf, sizeof(buf), "addr2line -e %s %p", filename, ptr);
+#endif /* __APPLE__ */
+
+
 	output = popen(buf, "r");
 	if (output)
 	{
@@ -410,7 +417,8 @@ METHOD(backtrace_t, log_, void,
 			}
 			if (detailed && info.dli_fname[0])
 			{
-				print_sourceline(file, (char*)info.dli_fname, ptr);
+				print_sourceline(file, (char*)info.dli_fname,
+								 ptr, info.dli_fbase);
 			}
 		}
 		else
