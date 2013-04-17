@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -32,6 +32,7 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ac.h>
+#include <credentials/containers/pkcs12.h>
 #include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
 #include <collections/linked_list.h>
@@ -72,7 +73,7 @@ struct private_stroke_cred_t {
 
 	/**
 	 * ignore missing CA basic constraint (i.e. treat all certificates in
-	 * ipsec.conf ca sections and ipsec.d/cacert as CA certificates)
+	 * ipsec.conf ca sections and ipsec.d/cacerts as CA certificates)
 	 */
 	bool force_ca_cert;
 
@@ -225,7 +226,7 @@ METHOD(stroke_cred_t, load_ca, certificate_t*,
 			cert->destroy(cert);
 			return NULL;
 		}
-		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s",
+		DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
 			 cert->get_subject(cert), filename);
 		return this->creds->add_cert_ref(this->creds, TRUE, cert);
 	}
@@ -821,15 +822,14 @@ static bool load_pin(mem_cred_t *secrets, chunk_t line, int line_nr,
 }
 
 /**
- * Load a private key
+ * Load a private key or PKCS#12 container from a file
  */
-static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
-						 FILE *prompt, key_type_t key_type)
+static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
+						   char *path, int type, int subtype,
+						   void **result)
 {
-	char path[PATH_MAX];
 	chunk_t filename;
 	chunk_t secret = chunk_empty;
-	private_key_t *key;
 
 	err_t ugh = extract_value(&filename, &line);
 
@@ -846,12 +846,12 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 	if (*filename.ptr == '/')
 	{
 		/* absolute path name */
-		snprintf(path, sizeof(path), "%.*s", (int)filename.len, filename.ptr);
+		snprintf(path, PATH_MAX, "%.*s", (int)filename.len, filename.ptr);
 	}
 	else
 	{
 		/* relative path name */
-		snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
+		snprintf(path, PATH_MAX, "%s/%.*s", PRIVATE_KEY_DIR,
 				 (int)filename.len, filename.ptr);
 	}
 
@@ -877,6 +877,7 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 		free(secret.ptr);
 		if (!prompt)
 		{
+			*result = NULL;
 			return TRUE;
 		}
 		/* use callback credential set to prompt for the passphrase */
@@ -886,8 +887,8 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-								 BUILD_FROM_FILE, path, BUILD_END);
+		*result = lib->creds->create(lib->creds, type, subtype,
+									 BUILD_FROM_FILE, path, BUILD_END);
 
 		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
 		cb->destroy(cb);
@@ -903,11 +904,28 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 		mem->add_shared(mem, shared, NULL);
 		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-								 BUILD_FROM_FILE, path, BUILD_END);
+		*result = lib->creds->create(lib->creds, type, subtype,
+									 BUILD_FROM_FILE, path, BUILD_END);
 
 		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
 		mem->destroy(mem);
+	}
+	return TRUE;
+}
+
+/**
+ * Load a private key
+ */
+static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
+						 FILE *prompt, key_type_t key_type)
+{
+	char path[PATH_MAX];
+	private_key_t *key;
+
+	if (!load_from_file(line, line_nr, prompt, path, CRED_PRIVATE_KEY,
+						key_type, (void**)&key))
+	{
+		return FALSE;
 	}
 	if (key)
 	{
@@ -919,6 +937,58 @@ static bool load_private(mem_cred_t *secrets, chunk_t line, int line_nr,
 	{
 		DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
 	}
+	return TRUE;
+}
+
+/**
+ * Load a PKCS#12 container
+ */
+static bool load_pkcs12(mem_cred_t *secrets, chunk_t line, int line_nr,
+						FILE *prompt)
+{
+	enumerator_t *enumerator;
+	char path[PATH_MAX];
+	certificate_t *cert;
+	private_key_t *key;
+	pkcs12_t *pkcs12;
+
+	if (!load_from_file(line, line_nr, prompt, path, CRED_CONTAINER,
+						CONTAINER_PKCS12, (void**)&pkcs12))
+	{
+		return FALSE;
+	}
+	if (!pkcs12)
+	{
+		DBG1(DBG_CFG, "  loading credentials from '%s' failed", path);
+		return TRUE;
+	}
+	enumerator = pkcs12->create_cert_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &cert))
+	{
+		x509_t *x509 = (x509_t*)cert;
+
+		if (x509->get_flags(x509) & X509_CA)
+		{
+			DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
+				 cert->get_subject(cert), path);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
+				 cert->get_subject(cert), path);
+		}
+		secrets->add_cert(secrets, TRUE, cert->get_ref(cert));
+	}
+	enumerator->destroy(enumerator);
+	enumerator = pkcs12->create_key_enumerator(pkcs12);
+	while (enumerator->enumerate(enumerator, &key))
+	{
+		DBG1(DBG_CFG, "  loaded %N private key from '%s'",
+			 key_type_names, key->get_type(key), path);
+		secrets->add_key(secrets, key->get_ref(key));
+	}
+	enumerator->destroy(enumerator);
+	pkcs12->container.destroy(&pkcs12->container);
 	return TRUE;
 }
 
@@ -1140,6 +1210,13 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 				break;
 			}
 		}
+		else if (match("P12", &token))
+		{
+			if (!load_pkcs12(secrets, line, line_nr, prompt))
+			{
+				break;
+			}
+		}
 		else if (match("PIN", &token))
 		{
 			if (!load_pin(secrets, line, line_nr, prompt))
@@ -1160,7 +1237,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either "
-				 "RSA, ECDSA, PSK, EAP, XAUTH or PIN", line_nr);
+				 "RSA, ECDSA, P12, PIN, PSK, EAP, XAUTH or NTLM", line_nr);
 			break;
 		}
 	}
