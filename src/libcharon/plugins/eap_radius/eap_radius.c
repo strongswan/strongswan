@@ -412,7 +412,8 @@ static void process_cfg_attributes(private_eap_radius_t *this,
 				host = host_create_from_chunk(AF_INET, data, 0);
 				if (host)
 				{
-					provider->add_framed_ip(provider, this->peer, host);
+					provider->add_framed_ip(provider,
+									ike_sa->get_unique_id(ike_sa), host);
 				}
 			}
 		}
@@ -429,8 +430,9 @@ static void process_cfg_attributes(private_eap_radius_t *this,
 					case 36: /* CVPN3000-IPSec-Banner2 */
 						if (ike_sa->supports_extension(ike_sa, EXT_CISCO_UNITY))
 						{
-							provider->add_attribute(provider, this->peer,
-													UNITY_BANNER, data);
+							provider->add_attribute(provider,
+												ike_sa->get_unique_id(ike_sa),
+												UNITY_BANNER, data);
 						}
 						break;
 					default:

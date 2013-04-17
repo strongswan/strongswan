@@ -92,8 +92,8 @@ static void destroy_attr(attr_t *this)
  * Hashtable entry with leases and attributes
  */
 typedef struct {
-	/** identity we assigned the IP lease */
-	identification_t *id;
+	/** IKE_SA uniqe id we assign the IP lease */
+	uintptr_t id;
 	/** list of IP leases received from AAA, as host_t */
 	linked_list_t *addrs;
 	/** list of configuration attributes, as attr_t */
@@ -105,7 +105,6 @@ typedef struct {
  */
 static void destroy_entry(entry_t *this)
 {
-	this->id->destroy(this->id);
 	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
 	this->attrs->destroy_function(this->attrs, (void*)destroy_attr);
 	free(this);
@@ -114,19 +113,19 @@ static void destroy_entry(entry_t *this)
 /**
  * Get or create an entry from a locked hashtable
  */
-static entry_t* get_or_create_entry(hashtable_t *hashtable, identification_t *id)
+static entry_t* get_or_create_entry(hashtable_t *hashtable, uintptr_t id)
 {
 	entry_t *entry;
 
-	entry = hashtable->get(hashtable, id);
+	entry = hashtable->get(hashtable, (void*)id);
 	if (!entry)
 	{
 		INIT(entry,
-			.id = id->clone(id),
+			.id = id,
 			.addrs = linked_list_create(),
 			.attrs = linked_list_create(),
 		);
-		hashtable->put(hashtable, entry->id, entry);
+		hashtable->put(hashtable, (void*)id, entry);
 	}
 	return entry;
 }
@@ -139,7 +138,7 @@ static void put_or_destroy_entry(hashtable_t *hashtable, entry_t *entry)
 	if (entry->addrs->get_count(entry->addrs) > 0 ||
 		entry->attrs->get_count(entry->attrs) > 0)
 	{
-		hashtable->put(hashtable, entry->id, entry);
+		hashtable->put(hashtable, (void*)entry->id, entry);
 	}
 	else
 	{
@@ -150,24 +149,24 @@ static void put_or_destroy_entry(hashtable_t *hashtable, entry_t *entry)
 /**
  * Hashtable hash function
  */
-static u_int hash(identification_t *id)
+static u_int hash(uintptr_t id)
 {
-	return chunk_hash_inc(id->get_encoding(id), id->get_type(id));
+	return id;
 }
 
 /**
  * Hashtable equals function
  */
-static bool equals(identification_t *a, identification_t *b)
+static bool equals(uintptr_t a, uintptr_t b)
 {
-	return a->equals(a, b);
+	return a == b;
 }
 
 /**
  * Insert an address entry to a locked claimed/unclaimed hashtable
  */
 static void add_addr(private_eap_radius_provider_t *this,
-					 hashtable_t *hashtable, identification_t *id, host_t *host)
+					 hashtable_t *hashtable, uintptr_t id, host_t *host)
 {
 	entry_t *entry;
 
@@ -179,12 +178,12 @@ static void add_addr(private_eap_radius_provider_t *this,
  * Remove the next address from the locked hashtable stored for given id
  */
 static host_t* remove_addr(private_eap_radius_provider_t *this,
-						   hashtable_t *hashtable, identification_t *id)
+						   hashtable_t *hashtable, uintptr_t id)
 {
 	entry_t *entry;
 	host_t *addr = NULL;
 
-	entry = hashtable->remove(hashtable, id);
+	entry = hashtable->remove(hashtable, (void*)id);
 	if (entry)
 	{
 		entry->addrs->remove_first(entry->addrs, (void**)&addr);
@@ -197,7 +196,7 @@ static host_t* remove_addr(private_eap_radius_provider_t *this,
  * Insert an attribute entry to a locked claimed/unclaimed hashtable
  */
 static void add_attr(private_eap_radius_provider_t *this,
-					 hashtable_t *hashtable, identification_t *id, attr_t *attr)
+					 hashtable_t *hashtable, uintptr_t id, attr_t *attr)
 {
 	entry_t *entry;
 
@@ -209,12 +208,12 @@ static void add_attr(private_eap_radius_provider_t *this,
  * Remove the next attribute from the locked hashtable stored for given id
  */
 static attr_t* remove_attr(private_eap_radius_provider_t *this,
-						   hashtable_t *hashtable, identification_t *id)
+						   hashtable_t *hashtable, uintptr_t id)
 {
 	entry_t *entry;
 	attr_t *attr = NULL;
 
-	entry = hashtable->remove(hashtable, id);
+	entry = hashtable->remove(hashtable, (void*)id);
 	if (entry)
 	{
 		entry->attrs->remove_first(entry->attrs, (void**)&attr);
@@ -228,12 +227,12 @@ static attr_t* remove_attr(private_eap_radius_provider_t *this,
  */
 static void release_unclaimed(private_listener_t *this, ike_sa_t *ike_sa)
 {
-	identification_t *id;
+	uintptr_t id;
 	entry_t *entry;
 
-	id = ike_sa->get_other_eap_id(ike_sa);
+	id = ike_sa->get_unique_id(ike_sa);
 	this->mutex->lock(this->mutex);
-	entry = this->unclaimed->remove(this->unclaimed, id);
+	entry = this->unclaimed->remove(this->unclaimed, (void*)id);
 	this->mutex->unlock(this->mutex);
 	if (entry)
 	{
@@ -273,13 +272,59 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+/**
+ * Migrate an entry in hashtable from old to new id
+ */
+static void migrate_entry(hashtable_t *table, uintptr_t old, uintptr_t new)
+{
+	entry_t *entry;
+
+	entry = table->remove(table, (void*)old);
+	if (entry)
+	{
+		entry->id = new;
+		entry = table->put(table, (void*)new, entry);
+		if (entry)
+		{	/* shouldn't happen */
+			destroy_entry(entry);
+		}
+	}
+}
+
+METHOD(listener_t, ike_rekey, bool,
+	private_listener_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	uintptr_t old_id, new_id;
+
+	old_id = old->get_unique_id(old);
+	new_id = new->get_unique_id(new);
+
+	this->mutex->lock(this->mutex);
+
+	migrate_entry(this->unclaimed, old_id, new_id);
+	migrate_entry(this->claimed, old_id, new_id);
+
+	this->mutex->unlock(this->mutex);
+
+	return TRUE;
+}
+
 METHOD(attribute_provider_t, acquire_address, host_t*,
 	private_eap_radius_provider_t *this, linked_list_t *pools,
 	identification_t *id, host_t *requested)
 {
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
+	ike_sa_t *ike_sa;
+	uintptr_t sa;
 	char *name;
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa)
+	{
+		return NULL;
+	}
+	sa = ike_sa->get_unique_id(ike_sa);
 
 	enumerator = pools->create_enumerator(pools);
 	while (enumerator->enumerate(enumerator, &name))
@@ -287,10 +332,10 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 		if (streq(name, "radius"))
 		{
 			this->listener.mutex->lock(this->listener.mutex);
-			addr = remove_addr(this, this->listener.unclaimed, id);
+			addr = remove_addr(this, this->listener.unclaimed, sa);
 			if (addr)
 			{
-				add_addr(this, this->listener.claimed, id, addr->clone(addr));
+				add_addr(this, this->listener.claimed, sa, addr->clone(addr));
 			}
 			this->listener.mutex->unlock(this->listener.mutex);
 			break;
@@ -307,7 +352,16 @@ METHOD(attribute_provider_t, release_address, bool,
 {
 	enumerator_t *enumerator;
 	host_t *found = NULL;
+	ike_sa_t *ike_sa;
+	uintptr_t sa;
 	char *name;
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa)
+	{
+		return FALSE;
+	}
+	sa = ike_sa->get_unique_id(ike_sa);
 
 	enumerator = pools->create_enumerator(pools);
 	while (enumerator->enumerate(enumerator, &name))
@@ -315,7 +369,7 @@ METHOD(attribute_provider_t, release_address, bool,
 		if (streq(name, "radius"))
 		{
 			this->listener.mutex->lock(this->listener.mutex);
-			found = remove_addr(this, this->listener.claimed, id);
+			found = remove_addr(this, this->listener.claimed, sa);
 			this->listener.mutex->unlock(this->listener.mutex);
 			break;
 		}
@@ -378,6 +432,15 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 {
 	attribute_enumerator_t *enumerator;
 	attr_t *attr;
+	ike_sa_t *ike_sa;
+	uintptr_t sa;
+
+	ike_sa = charon->bus->get_sa(charon->bus);
+	if (!ike_sa)
+	{
+		return NULL;
+	}
+	sa = ike_sa->get_unique_id(ike_sa);
 
 	INIT(enumerator,
 		.public = {
@@ -391,7 +454,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	this->listener.mutex->lock(this->listener.mutex);
 	while (TRUE)
 	{
-		attr = remove_attr(this, this->listener.unclaimed, id);
+		attr = remove_attr(this, this->listener.unclaimed, sa);
 		if (!attr)
 		{
 			break;
@@ -404,7 +467,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 }
 
 METHOD(eap_radius_provider_t, add_framed_ip, void,
-	private_eap_radius_provider_t *this, identification_t *id, host_t *ip)
+	private_eap_radius_provider_t *this, uintptr_t id, host_t *ip)
 {
 	this->listener.mutex->lock(this->listener.mutex);
 	add_addr(this, this->listener.unclaimed, id, ip);
@@ -412,7 +475,7 @@ METHOD(eap_radius_provider_t, add_framed_ip, void,
 }
 
 METHOD(eap_radius_provider_t, add_attribute, void,
-	private_eap_radius_provider_t *this, identification_t *id,
+	private_eap_radius_provider_t *this, uintptr_t id,
 	configuration_attribute_type_t type, chunk_t data)
 {
 	attr_t *attr;
@@ -460,6 +523,7 @@ eap_radius_provider_t *eap_radius_provider_create()
 			.listener = {
 				.public = {
 					.ike_updown = _ike_updown,
+					.ike_rekey = _ike_rekey,
 					.message = _message_hook,
 				},
 				.claimed = hashtable_create((hashtable_hash_t)hash,
