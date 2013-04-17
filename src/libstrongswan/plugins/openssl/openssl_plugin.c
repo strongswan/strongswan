@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/conf.h>
 #include <openssl/rand.h>
@@ -445,11 +446,15 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+	CONF_modules_free();
+	OBJ_cleanup();
+	EVP_cleanup();
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
 #endif /* OPENSSL_NO_ENGINE */
-	EVP_cleanup();
-	CONF_modules_free();
+	CRYPTO_cleanup_all_ex_data();
+	ERR_remove_thread_state(NULL);
+	ERR_free_strings();
 
 	threading_cleanup();
 
