@@ -51,6 +51,9 @@
 #       PLUTO_REQID
 #              is the requid of the ESP policy
 #
+#       PLUTO_UNIQUEID
+#              is the unique identifier of the associated IKE_SA
+#
 #       PLUTO_ME
 #              is the IP address of our host.
 #

@@ -312,6 +312,7 @@ METHOD(listener_t, child_updown, bool,
 				"PLUTO_CONNECTION='%s' "
 				"PLUTO_INTERFACE='%s' "
 				"PLUTO_REQID='%u' "
+				"PLUTO_UNIQUEID='%u' "
 				"PLUTO_ME='%H' "
 				"PLUTO_MY_ID='%Y' "
 				"PLUTO_MY_CLIENT='%H/%u' "
@@ -336,6 +337,7 @@ METHOD(listener_t, child_updown, bool,
 				 config->get_name(config),
 				 iface ? iface : "unknown",
 				 child_sa->get_reqid(child_sa),
+				 ike_sa->get_unique_id(ike_sa),
 				 me, ike_sa->get_my_id(ike_sa),
 				 my_client, my_client_mask,
 				 my_ts->get_from_port(my_ts),
@@ -426,4 +428,3 @@ updown_listener_t *updown_listener_create(updown_handler_t *handler)
 
 	return &this->public;
 }
-
