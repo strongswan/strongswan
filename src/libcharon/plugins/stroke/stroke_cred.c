@@ -921,6 +921,19 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS, secret);
 		mem = mem_cred_create();
 		mem->add_shared(mem, shared, NULL);
+		if (eat_whitespace(&line))
+		{	/* if there is a second passphrase add that too, could be needed for
+			 * PKCS#12 files using different passwords for MAC and encryption */
+			ugh = extract_secret(&secret, &line);
+			if (ugh != NULL)
+			{
+				DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
+				mem->destroy(mem);
+				return FALSE;
+			}
+			shared = shared_key_create(SHARED_PRIVATE_KEY_PASS, secret);
+			mem->add_shared(mem, shared, NULL);
+		}
 		lib->credmgr->add_local_set(lib->credmgr, &mem->set, FALSE);
 
 		*result = lib->creds->create(lib->creds, type, subtype,
