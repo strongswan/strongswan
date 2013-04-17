@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2013 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -142,6 +142,13 @@ static unsigned long id_function(void)
 	return 1 + (unsigned long)thread_current_id();
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+static void threadid_function(CRYPTO_THREADID *threadid)
+{
+	CRYPTO_THREADID_set_numeric(threadid, id_function());
+}
+#endif /* OPENSSL_VERSION_NUMBER */
+
 /**
  * initialize OpenSSL for multi-threaded use
  */
@@ -149,7 +156,12 @@ static void threading_init()
 {
 	int i, num_locks;
 
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+	CRYPTO_THREADID_set_callback(threadid_function);
+#else
 	CRYPTO_set_id_callback(id_function);
+#endif
+
 	CRYPTO_set_locking_callback(locking_function);
 
 	CRYPTO_set_dynlock_create_callback(create_function);
@@ -162,6 +174,22 @@ static void threading_init()
 	{
 		mutex[i] = mutex_create(MUTEX_TYPE_DEFAULT);
 	}
+}
+
+/**
+ * cleanup OpenSSL threading locks
+ */
+static void threading_cleanup()
+{
+	int i, num_locks;
+
+	num_locks = CRYPTO_num_locks();
+	for (i = 0; i < num_locks; i++)
+	{
+		mutex[i]->destroy(mutex[i]);
+	}
+	free(mutex);
+	mutex = NULL;
 }
 
 /**
@@ -191,22 +219,6 @@ static bool seed_rng()
 	}
 	DESTROY_IF(rng);
 	return TRUE;
-}
-
-/**
- * cleanup OpenSSL threading locks
- */
-static void threading_cleanup()
-{
-	int i, num_locks;
-
-	num_locks = CRYPTO_num_locks();
-	for (i = 0; i < num_locks; i++)
-	{
-		mutex[i]->destroy(mutex[i]);
-	}
-	free(mutex);
-	mutex = NULL;
 }
 
 METHOD(plugin_t, get_name, char*,
