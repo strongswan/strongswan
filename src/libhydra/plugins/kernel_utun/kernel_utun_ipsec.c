@@ -59,7 +59,125 @@ struct private_kernel_utun_ipsec_t {
 	 * List of tun devices, as tun_device_t
 	 */
 	linked_list_t *tuns;
+
+	/**
+	 * List of exclude routes we have installed, as exclude_route_t
+	 */
+	linked_list_t *excludes;
 };
+
+typedef struct {
+	/** destination address of exclude */
+	host_t *dst;
+	/** nexthop exclude has been installed */
+	host_t *gtw;
+	/** references to this route */
+	int refs;
+} exclude_route_t;
+
+/**
+ * clean up a route exclude entry
+ */
+static void exclude_route_destroy(exclude_route_t *this)
+{
+	this->dst->destroy(this->dst);
+	this->gtw->destroy(this->gtw);
+	free(this);
+}
+
+/**
+ * Add an explicit exclude route to dst using the current (default) gateway
+ */
+static void add_exclude_route(private_kernel_utun_ipsec_t *this,
+							  host_t *src, host_t *dst)
+{
+	enumerator_t *enumerator;
+	exclude_route_t *route;
+	host_t *gtw;
+	bool found = FALSE;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->excludes->create_enumerator(this->excludes);
+	while (enumerator->enumerate(enumerator, &route))
+	{
+		if (dst->ip_equals(dst, route->dst))
+		{
+			found = TRUE;
+			route->refs++;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		gtw = hydra->kernel_interface->get_nexthop(hydra->kernel_interface,
+												   dst, NULL);
+		if (gtw)
+		{
+			if (hydra->kernel_interface->add_route(hydra->kernel_interface,
+									dst->get_address(dst),
+									dst->get_family(dst) == AF_INET ? 32 : 128,
+									gtw, src, NULL) == SUCCESS)
+			{
+				INIT(route,
+					.dst = dst->clone(dst),
+					.gtw = gtw->clone(gtw),
+					.refs = 1,
+				);
+				this->excludes->insert_last(this->excludes, route);
+			}
+			else
+			{
+				DBG1(DBG_KNL, "installing bypass route for %H failed", dst);
+			}
+			gtw->destroy(gtw);
+		}
+		else
+		{
+			DBG1(DBG_KNL, "gateway lookup for for %H failed", dst);
+		}
+	}
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Remove an exclude route to dst
+ */
+static void remove_exclude_route(private_kernel_utun_ipsec_t *this,
+								 host_t *src, host_t *dst)
+{
+	enumerator_t *enumerator;
+	exclude_route_t *route, *removed = NULL;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->excludes->create_enumerator(this->excludes);
+	while (enumerator->enumerate(enumerator, &route))
+	{
+		if (dst->ip_equals(dst, route->dst))
+		{
+			if (--route->refs == 0)
+			{
+				this->excludes->remove_at(this->excludes, enumerator);
+				removed = route;
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (removed)
+	{
+		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+									dst->get_address(dst),
+									dst->get_family(dst) == AF_INET ? 32 : 128,
+									removed->gtw, src, NULL) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "uninstalling bypass route for %H failed", dst);
+		}
+		exclude_route_destroy(removed);
+	}
+	this->mutex->unlock(this->mutex);
+}
 
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_utun_ipsec_t *this)
@@ -349,6 +467,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 
+	if (!inbound && status == SUCCESS)
+	{
+		add_exclude_route(this, src, dst);
+	}
 	return status;
 }
 
@@ -364,7 +486,9 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_utun_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int16_t cpi, mark_t mark)
 {
-	return FAILED;
+	remove_exclude_route(this, src, dst);
+	/* TODO: we currently do not delete SAs, as they drop along with utun */
+	return SUCCESS;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
@@ -629,6 +753,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 {
 	singleton = NULL;
 	this->tuns->destroy_offset(this->tuns, offsetof(tun_device_t, destroy));
+	this->excludes->destroy(this->excludes);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -663,6 +788,7 @@ kernel_utun_ipsec_t *kernel_utun_ipsec_create()
 			.del_ip = _del_ip,
 		},
 		.tuns = linked_list_create(),
+		.excludes = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 	singleton = &this->public;
