@@ -420,6 +420,25 @@ METHOD(task_t, build_r, status_t,
 	return SUCCESS;
 }
 
+/**
+ * Raise alerts for received notify errors
+ */
+static void raise_alerts(private_ike_init_t *this, notify_type_t type)
+{
+	linked_list_t *list;
+
+	switch (type)
+	{
+		case NO_PROPOSAL_CHOSEN:
+			list = this->config->get_proposals(this->config);
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE, list);
+			list->destroy_offset(list, offsetof(proposal_t, destroy));
+			break;
+		default:
+			break;
+	}
+}
+
 METHOD(task_t, process_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {
@@ -482,6 +501,7 @@ METHOD(task_t, process_i, status_t,
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						enumerator->destroy(enumerator);
+						raise_alerts(this, type);
 						return FAILED;
 					}
 					DBG2(DBG_IKE, "received %N notify",
