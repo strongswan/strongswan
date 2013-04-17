@@ -620,6 +620,7 @@ static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
 								   identification_t *other, id_match_t *match_me,
 								   id_match_t *match_other)
 {
+	static const int max_tries = 3;
 	shared_key_t *shared;
 	chunk_t secret;
 	char buf[256];
@@ -629,16 +630,20 @@ static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
 		return NULL;
 	}
 
+	data->try++;
+	if (data->try > max_tries + 1)
+	{	/* another builder might call this after we gave up, fail silently */
+		return NULL;
+	}
+	if (data->try > max_tries)
+	{
+		fprintf(data->prompt, "Passphrase invalid, giving up.\n");
+		return NULL;
+	}
 	if (data->try > 1)
 	{
-		if (data->try > 5)
-		{
-			fprintf(data->prompt, "Passphrase invalid, giving up.\n");
-			return NULL;
-		}
 		fprintf(data->prompt, "Passphrase invalid!\n");
 	}
-	data->try++;
 	fprintf(data->prompt, "%s '%s' is encrypted.\n",
 			data->type == CRED_PRIVATE_KEY ? "Private key" : "PKCS#12 file",
 			data->path);
@@ -700,12 +705,12 @@ static shared_key_t* pin_cb(pin_cb_data_t *data, shared_key_type_t type,
 		return NULL;
 	}
 
+	data->try++;
 	if (data->try > 1)
 	{
 		fprintf(data->prompt, "PIN invalid, aborting.\n");
 		return NULL;
 	}
-	data->try++;
 	fprintf(data->prompt, "Login to '%s' required\n", data->card);
 	fprintf(data->prompt, "PIN:\n");
 	if (fgets(buf, sizeof(buf), data->prompt))
@@ -794,7 +799,7 @@ static bool load_pin(mem_cred_t *secrets, chunk_t line, int line_nr,
 		pin_data.prompt = prompt;
 		pin_data.card = smartcard;
 		pin_data.keyid = chunk;
-		pin_data.try = 1;
+		pin_data.try = 0;
 		cb = callback_cred_create_shared((void*)pin_cb, &pin_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 	}
@@ -882,7 +887,7 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 			.prompt = prompt,
 			.type = type,
 			.path = path,
-			.try = 1,
+			.try = 0,
 		};
 
 		free(secret.ptr);
