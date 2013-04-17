@@ -56,6 +56,11 @@ struct private_eap_radius_accounting_t {
 	 * Format string we use for Called/Calling-Station-Id for a host
 	 */
 	char *station_id_fmt;
+
+	/**
+	 * Disable accounting unless IKE_SA has at least one virtual IP
+	 */
+	bool acct_req_vip;
 };
 
 /**
@@ -438,6 +443,22 @@ static void schedule_interim(private_eap_radius_accounting_t *this,
 }
 
 /**
+ * Check if an IKE_SA has assigned a virtual IP (to peer)
+ */
+static bool has_vip(ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	host_t *host;
+	bool found;
+
+	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, FALSE);
+	found = enumerator->enumerate(enumerator, &host);
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
+/**
  * Send an accounting start message
  */
 static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
@@ -445,6 +466,11 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	radius_message_t *message;
 	entry_t *entry;
 	u_int32_t value;
+
+	if (this->acct_req_vip && !has_vip(ike_sa))
+	{
+		return;
+	}
 
 	this->mutex->lock(this->mutex);
 
@@ -700,6 +726,10 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 		singleton = this;
 		charon->bus->add_listener(charon->bus, &this->public.listener);
 	}
+	this->acct_req_vip = lib->settings->get_bool(lib->settings,
+							"%s.plugins.eap-radius.accounting_requires_vip",
+							FALSE, charon->name);
+
 	return &this->public;
 }
 
