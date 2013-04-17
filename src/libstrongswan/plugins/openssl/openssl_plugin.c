@@ -29,6 +29,7 @@
 #include <utils/debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/thread_value.h>
 #include "openssl_util.h"
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
@@ -133,16 +134,46 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
 }
 
 /**
+ * Thread-local value used to cleanup thread-specific error buffers
+ */
+static thread_value_t *cleanup;
+
+/**
+ * Called when a thread is destroyed. Avoid recursion by setting the thread id
+ * explicitly.
+ */
+static void cleanup_thread(void *arg)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+	CRYPTO_THREADID tid;
+
+	CRYPTO_THREADID_set_numeric(&tid, (u_long)(uintptr_t)arg);
+	ERR_remove_thread_state(&tid);
+#else
+	ERR_remove_state((u_long)(uintptr_t)arg);
+#endif
+}
+
+/**
  * Thread-ID callback function
  */
-static unsigned long id_function(void)
+static u_long id_function(void)
 {
+	u_long id;
+
 	/* ensure the thread ID is never zero, otherwise OpenSSL might try to
 	 * acquire locks recursively */
-	return 1 + (unsigned long)thread_current_id();
+	id = 1 + (u_long)thread_current_id();
+
+	/* cleanup a thread's state later if OpenSSL interacted with it */
+	cleanup->set(cleanup, (void*)(uintptr_t)id);
+	return id;
 }
 
 #if OPENSSL_VERSION_NUMBER >= 0x1000000fL
+/**
+ * Callback for thread ID
+ */
 static void threadid_function(CRYPTO_THREADID *threadid)
 {
 	CRYPTO_THREADID_set_numeric(threadid, id_function());
@@ -155,6 +186,8 @@ static void threadid_function(CRYPTO_THREADID *threadid)
 static void threading_init()
 {
 	int i, num_locks;
+
+	cleanup = thread_value_create(cleanup_thread);
 
 #if OPENSSL_VERSION_NUMBER >= 0x1000000fL
 	CRYPTO_THREADID_set_callback(threadid_function);
@@ -190,6 +223,8 @@ static void threading_cleanup()
 	}
 	free(mutex);
 	mutex = NULL;
+
+	cleanup->destroy(cleanup);
 }
 
 /**
@@ -468,10 +503,8 @@ METHOD(plugin_t, destroy, void,
 	ENGINE_cleanup();
 #endif /* OPENSSL_NO_ENGINE */
 	CRYPTO_cleanup_all_ex_data();
-	ERR_remove_thread_state(NULL);
-	ERR_free_strings();
-
 	threading_cleanup();
+	ERR_free_strings();
 
 	free(this);
 }
