@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -212,28 +212,27 @@ METHOD(esp_packet_t, decrypt, status_t,
 {
 	bio_reader_t *reader;
 	u_int32_t spi, seq;
-	chunk_t data, iv, icv, ciphertext, plaintext;
-	crypter_t *crypter;
-	signer_t *signer;
+	chunk_t data, iv, icv, aad, ciphertext, plaintext;
+	aead_t *aead;
 
 	DESTROY_IF(this->payload);
 	this->payload = NULL;
 
 	data = this->packet->get_data(this->packet);
-	crypter = esp_context->get_crypter(esp_context);
-	signer = esp_context->get_signer(esp_context);
+	aead = esp_context->get_aead(esp_context);
 
 	reader = bio_reader_create(data);
 	if (!reader->read_uint32(reader, &spi) ||
 		!reader->read_uint32(reader, &seq) ||
-		!reader->read_data(reader, crypter->get_iv_size(crypter), &iv) ||
-		!reader->read_data_end(reader, signer->get_block_size(signer), &icv) ||
-		reader->remaining(reader) % crypter->get_block_size(crypter))
+		!reader->read_data(reader, aead->get_iv_size(aead), &iv) ||
+		!reader->read_data_end(reader, aead->get_icv_size(aead), &icv) ||
+		reader->remaining(reader) % aead->get_block_size(aead))
 	{
 		DBG1(DBG_ESP, "ESP decryption failed: invalid length");
 		return PARSE_ERROR;
 	}
 	ciphertext = reader->peek(reader);
+	ciphertext.len += icv.len;
 	reader->destroy(reader);
 
 	if (!esp_context->verify_seqno(esp_context, seq))
@@ -246,20 +245,15 @@ METHOD(esp_packet_t, decrypt, status_t,
 	DBG3(DBG_ESP, "ESP decryption:\n  SPI %.8x [seq %u]\n  IV %B\n  "
 		 "encrypted %B\n  ICV %B", spi, seq, &iv, &ciphertext, &icv);
 
-	if (!signer->get_signature(signer, chunk_create(data.ptr, 8), NULL) ||
-		!signer->get_signature(signer, iv, NULL) ||
-		!signer->verify_signature(signer, ciphertext, icv))
+	/* aad = spi + seq */
+	aad = chunk_create(data.ptr, 8);
+
+	if (!aead->decrypt(aead, ciphertext, aad, iv, &plaintext))
 	{
-		DBG1(DBG_ESP, "ICV verification failed!");
+		DBG1(DBG_ESP, "ESP decryption or ICV verification failed");
 		return FAILED;
 	}
 	esp_context->set_authenticated_seqno(esp_context, seq);
-
-	if (!crypter->decrypt(crypter, ciphertext, iv, &plaintext))
-	{
-		DBG1(DBG_ESP, "ESP decryption failed");
-		return FAILED;
-	}
 
 	if (!remove_padding(this, plaintext))
 	{
@@ -284,12 +278,11 @@ static void generate_padding(chunk_t padding)
 METHOD(esp_packet_t, encrypt, status_t,
 	private_esp_packet_t *this, esp_context_t *esp_context, u_int32_t spi)
 {
-	chunk_t iv, icv, padding, payload, ciphertext, auth_data;
+	chunk_t iv, icv, aad, padding, payload, ciphertext;
 	bio_writer_t *writer;
 	u_int32_t next_seqno;
 	size_t blocksize, plainlen;
-	crypter_t *crypter;
-	signer_t *signer;
+	aead_t *aead;
 	rng_t *rng;
 
 	this->packet->set_data(this->packet, chunk_empty);
@@ -306,12 +299,11 @@ METHOD(esp_packet_t, encrypt, status_t,
 		DBG1(DBG_ESP, "ESP encryption failed: could not find RNG");
 		return NOT_FOUND;
 	}
-	crypter = esp_context->get_crypter(esp_context);
-	signer = esp_context->get_signer(esp_context);
+	aead = esp_context->get_aead(esp_context);
 
-	blocksize = crypter->get_block_size(crypter);
-	iv.len = crypter->get_iv_size(crypter);
-	icv.len = signer->get_block_size(signer);
+	blocksize = aead->get_block_size(aead);
+	iv.len = aead->get_iv_size(aead);
+	icv.len = aead->get_icv_size(aead);
 
 	/* plaintext = payload, padding, pad_length, next_header */
 	payload = this->payload ? this->payload->get_encoding(this->payload)
@@ -349,24 +341,19 @@ METHOD(esp_packet_t, encrypt, status_t,
 	writer->write_uint8(writer, padding.len);
 	writer->write_uint8(writer, this->next_header);
 
+	/* aad = spi + seq */
+	aad = writer->get_buf(writer);
+	aad.len = 8;
+	icv = writer->skip(writer, icv.len);
+
 	DBG3(DBG_ESP, "ESP before encryption:\n  payload = %B\n  padding = %B\n  "
 		 "padding length = %hhu, next header = %hhu", &payload, &padding,
 		 (u_int8_t)padding.len, this->next_header);
 
-	/* encrypt the content inline */
-	if (!crypter->encrypt(crypter, ciphertext, iv, NULL))
+	/* encrypt/authenticate the content inline */
+	if (!aead->encrypt(aead, ciphertext, aad, iv, NULL))
 	{
-		DBG1(DBG_ESP, "ESP encryption failed");
-		writer->destroy(writer);
-		return FAILED;
-	}
-
-	/* calculate signature */
-	auth_data = writer->get_buf(writer);
-	icv = writer->skip(writer, icv.len);
-	if (!signer->get_signature(signer, auth_data, icv.ptr))
-	{
-		DBG1(DBG_ESP, "ESP encryption failed: signature generation failed");
+		DBG1(DBG_ESP, "ESP encryption or ICV generation failed");
 		writer->destroy(writer);
 		return FAILED;
 	}

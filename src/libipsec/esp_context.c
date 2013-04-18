@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -22,8 +22,6 @@
 
 #include <library.h>
 #include <utils/debug.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
 
 /**
  * Should be a multiple of 8
@@ -43,14 +41,9 @@ struct private_esp_context_t {
 	esp_context_t public;
 
 	/**
-	 * Crypter used to encrypt/decrypt ESP packets
+	 * AEAD wrapper or method to encrypt/decrypt/authenticate ESP packets
 	 */
-	crypter_t *crypter;
-
-	/**
-	 * Signer to authenticate ESP packets
-	 */
-	signer_t *signer;
+	aead_t *aead;
 
 	/**
 	 * The highest sequence number that was successfully verified
@@ -197,25 +190,81 @@ METHOD(esp_context_t, next_seqno, bool,
 	return TRUE;
 }
 
-METHOD(esp_context_t, get_signer, signer_t *,
-		private_esp_context_t *this)
+METHOD(esp_context_t, get_aead, aead_t*,
+	private_esp_context_t *this)
 {
-	return this->signer;
-}
-
-METHOD(esp_context_t, get_crypter, crypter_t *,
-		private_esp_context_t *this)
-{
-	return this->crypter;
+	return this->aead;
 }
 
 METHOD(esp_context_t, destroy, void,
-		private_esp_context_t *this)
+	private_esp_context_t *this)
 {
 	chunk_free(&this->window);
-	DESTROY_IF(this->crypter);
-	DESTROY_IF(this->signer);
+	DESTROY_IF(this->aead);
 	free(this);
+}
+
+/**
+ * Create AEAD wrapper around traditional encryption/integrity algorithms
+ */
+static bool create_traditional(private_esp_context_t *this, int enc_alg,
+							   chunk_t enc_key, int int_alg, chunk_t int_key)
+{
+	crypter_t *crypter = NULL;
+	signer_t *signer = NULL;
+
+	switch (enc_alg)
+	{
+		case ENCR_AES_CBC:
+			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg,
+												  enc_key.len);
+			break;
+		default:
+			break;
+	}
+	if (!crypter)
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: unsupported encryption "
+			 "algorithm");
+		goto failed;
+	}
+	if (!crypter->set_key(crypter, enc_key))
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: setting encryption key "
+			 "failed");
+		goto failed;
+	}
+
+	switch (int_alg)
+	{
+		case AUTH_HMAC_SHA1_96:
+		case AUTH_HMAC_SHA2_256_128:
+		case AUTH_HMAC_SHA2_384_192:
+		case AUTH_HMAC_SHA2_512_256:
+			signer = lib->crypto->create_signer(lib->crypto, int_alg);
+			break;
+		default:
+			break;
+	}
+	if (!signer)
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: unsupported integrity "
+			 "algorithm");
+		goto failed;
+	}
+	if (!signer->set_key(signer, int_key))
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: setting signature key "
+			 "failed");
+		goto failed;
+	}
+	this->aead = aead_create(crypter, signer);
+	return TRUE;
+
+failed:
+	DESTROY_IF(crypter);
+	DESTROY_IF(signer);
+	return FALSE;
 }
 
 /**
@@ -228,8 +277,7 @@ esp_context_t *esp_context_create(int enc_alg, chunk_t enc_key,
 
 	INIT(this,
 		.public = {
-			.get_crypter = _get_crypter,
-			.get_signer = _get_signer,
+			.get_aead = _get_aead,
 			.get_seqno = _get_seqno,
 			.next_seqno = _next_seqno,
 			.verify_seqno = _verify_seqno,
@@ -240,52 +288,8 @@ esp_context_t *esp_context_create(int enc_alg, chunk_t enc_key,
 		.window_size = ESP_DEFAULT_WINDOW_SIZE,
 	);
 
-	switch(enc_alg)
+	if (!create_traditional(this, enc_alg, enc_key, int_alg, int_key))
 	{
-		case ENCR_AES_CBC:
-			this->crypter = lib->crypto->create_crypter(lib->crypto, enc_alg,
-														enc_key.len);
-			break;
-		default:
-			break;
-	}
-	if (!this->crypter)
-	{
-		DBG1(DBG_ESP, "failed to create ESP context: unsupported encryption "
-			 "algorithm");
-		destroy(this);
-		return NULL;
-	}
-	if (!this->crypter->set_key(this->crypter, enc_key))
-	{
-		DBG1(DBG_ESP, "failed to create ESP context: setting encryption key "
-			 "failed");
-		destroy(this);
-		return NULL;
-	}
-
-	switch(int_alg)
-	{
-		case AUTH_HMAC_SHA1_96:
-		case AUTH_HMAC_SHA2_256_128:
-		case AUTH_HMAC_SHA2_384_192:
-		case AUTH_HMAC_SHA2_512_256:
-			this->signer = lib->crypto->create_signer(lib->crypto, int_alg);
-			break;
-		default:
-			break;
-	}
-	if (!this->signer)
-	{
-		DBG1(DBG_ESP, "failed to create ESP context: unsupported integrity "
-			 "algorithm");
-		destroy(this);
-		return NULL;
-	}
-	if (!this->signer->set_key(this->signer, int_key))
-	{
-		DBG1(DBG_ESP, "failed to create ESP context: setting signature key "
-			 "failed");
 		destroy(this);
 		return NULL;
 	}
@@ -297,5 +301,3 @@ esp_context_t *esp_context_create(int enc_alg, chunk_t enc_key,
 	}
 	return &this->public;
 }
-
-

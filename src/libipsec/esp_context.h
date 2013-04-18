@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -24,8 +24,7 @@
 #define ESP_CONTEXT_H_
 
 #include <library.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <crypto/aead.h>
 
 typedef struct esp_context_t esp_context_t;
 
@@ -35,18 +34,11 @@ typedef struct esp_context_t esp_context_t;
 struct esp_context_t {
 
 	/**
-	 * Get the crypter.
+	 * Get AEAD wrapper or method to encrypt/decrypt/authenticate ESP packets.
 	 *
-	 * @return				crypter
+	 * @return				AEAD wrapper of method
 	 */
-	crypter_t *(*get_crypter)(esp_context_t *this);
-
-	/**
-	 * Get the signer.
-	 *
-	 * @return				signer
-	 */
-	signer_t *(*get_signer)(esp_context_t *this);
+	aead_t *(*get_aead)(esp_context_t *this);
 
 	/**
 	 * Get the current outbound ESP sequence number or the highest authenticated
