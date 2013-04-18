@@ -2548,8 +2548,10 @@ METHOD(kernel_ipsec_t, enable_udp_decap, bool,
 		return FALSE;
 	}
 #else /* __APPLE__ */
-	if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &port,
-					 sizeof(port)) != 0)
+	int intport = port;
+
+	if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &intport,
+					 sizeof(intport)) != 0)
 	{
 		DBG1(DBG_KNL, "could not set net.inet.ipsec.esp_port to %d: %s",
 			 port, strerror(errno));
