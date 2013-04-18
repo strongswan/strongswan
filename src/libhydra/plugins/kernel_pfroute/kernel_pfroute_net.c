@@ -207,11 +207,6 @@ struct private_kernel_pfroute_net_t
 	int socket;
 
 	/**
-	 * PF_ROUTE socket to receive events
-	 */
-	int socket_events;
-
-	/**
 	 * sequence number for messages sent to the kernel
 	 */
 	int seq;
@@ -455,7 +450,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 	bool oldstate;
 
 	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket_events, buf, sizeof(buf), 0, NULL, 0);
+	len = recvfrom(this->socket, buf, sizeof(buf), 0, NULL, 0);
 	thread_cancelability(oldstate);
 
 	if (len < 0)
@@ -760,13 +755,9 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator_t *enumerator;
 	addr_entry_t *addr;
 
-	if (this->socket > 0)
+	if (this->socket != -1)
 	{
 		close(this->socket);
-	}
-	if (this->socket_events)
-	{
-		close(this->socket_events);
 	}
 	enumerator = this->addrs->create_enumerator(this->addrs);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
@@ -787,7 +778,6 @@ METHOD(kernel_net_t, destroy, void,
 kernel_pfroute_net_t *kernel_pfroute_net_create()
 {
 	private_kernel_pfroute_net_t *this;
-	bool register_for_events = TRUE;
 
 	INIT(this,
 		.public = {
@@ -811,37 +801,31 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
-	if (streq(hydra->daemon, "starter"))
-	{   /* starter has no threads, so we do not register for kernel events */
-		register_for_events = FALSE;
-	}
-
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-	if (this->socket < 0)
+	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create PF_ROUTE socket");
 		destroy(this);
 		return NULL;
 	}
 
-	if (register_for_events)
+	if (streq(hydra->daemon, "starter"))
 	{
-		/* create a PF_ROUTE socket to receive events */
-		this->socket_events = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
-		if (this->socket_events < 0)
+		/* starter has no threads, so we do not register for kernel events */
+		if (shutdown(this->socket, SHUT_RD) != 0)
 		{
-			DBG1(DBG_KNL, "unable to create PF_ROUTE event socket");
-			destroy(this);
-			return NULL;
+			DBG1(DBG_KNL, "closing read end of PF_ROUTE socket failed: %s",
+				 strerror(errno));
 		}
-
+	}
+	else
+	{
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio(
 					(callback_job_cb_t)receive_events, this, NULL,
 					(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
-
 	if (init_address_list(this) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get interface list");
