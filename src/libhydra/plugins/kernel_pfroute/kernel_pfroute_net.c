@@ -357,11 +357,11 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 
 			if (!found && ifa->ifam_type == RTM_NEWADDR)
 			{
+				INIT(addr,
+					.ip = host->clone(host),
+					.refcount = 1,
+				);
 				changed = TRUE;
-				addr = malloc_thing(addr_entry_t);
-				addr->ip = host->clone(host);
-				addr->virtual = FALSE;
-				addr->refcount = 1;
 				iface->addrs->insert_last(iface->addrs, addr);
 				addr_map_entry_add(this, addr, iface);
 				if (iface->usable)
@@ -573,9 +573,12 @@ static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	private_kernel_pfroute_net_t *this, kernel_address_type_t which)
 {
-	address_enumerator_t *data = malloc_thing(address_enumerator_t);
-	data->this = this;
-	data->which = which;
+	address_enumerator_t *data;
+
+	INIT(data,
+		.this = this,
+		.which = which,
+	);
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
@@ -706,22 +709,23 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 
 				if (!iface)
 				{
-					iface = malloc_thing(iface_entry_t);
+					INIT(iface,
+						.ifindex = if_nametoindex(ifa->ifa_name),
+						.flags = ifa->ifa_flags,
+						.addrs = linked_list_create(),
+						.usable = hydra->kernel_interface->is_interface_usable(
+										hydra->kernel_interface, ifa->ifa_name),
+					);
 					memcpy(iface->ifname, ifa->ifa_name, IFNAMSIZ);
-					iface->ifindex = if_nametoindex(ifa->ifa_name);
-					iface->flags = ifa->ifa_flags;
-					iface->addrs = linked_list_create();
-					iface->usable = hydra->kernel_interface->is_interface_usable(
-										hydra->kernel_interface, ifa->ifa_name);
 					this->ifaces->insert_last(this->ifaces, iface);
 				}
 
 				if (ifa->ifa_addr->sa_family != AF_LINK)
 				{
-					addr = malloc_thing(addr_entry_t);
-					addr->ip = host_create_from_sockaddr(ifa->ifa_addr);
-					addr->virtual = FALSE;
-					addr->refcount = 1;
+					INIT(addr,
+						.ip = host_create_from_sockaddr(ifa->ifa_addr),
+						.refcount = 1,
+					);
 					iface->addrs->insert_last(iface->addrs, addr);
 					addr_map_entry_add(this, addr, iface);
 				}
