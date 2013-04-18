@@ -150,6 +150,51 @@ static bool equals(char *a, char *b)
 	return streq(a, b);
 }
 
+/**
+ * Write magic to memory, and try to clear it with memwipe()
+ */
+__attribute__((noinline))
+static void do_magic(int magic, int **stack)
+{
+	int buf[32], i;
+
+	/* tell caller where callee stack is (but don't point to buf) */
+	*stack = &i;
+	for (i = 0; i < countof(buf); i++)
+	{
+		buf[i] = magic;
+	}
+	/* passing buf to dbg should make sure the compiler can't optimize out buf.
+	 * we use directly dbg(3), as DBG3() might be stripped with DEBUG_LEVEL. */
+	dbg(DBG_LIB, 3, "memwipe() pre: %b", buf, sizeof(buf));
+	memwipe(buf, sizeof(buf));
+}
+
+/**
+ * Check if memwipe works as expected
+ */
+static bool check_memwipe()
+{
+	int magic = 0xCAFEBABE, *ptr, *deeper, i, stackdir = 1;
+
+	do_magic(magic, &deeper);
+
+	ptr = &magic;
+	if (deeper < ptr)
+	{	/* stack grows down */
+		stackdir = -1;
+	}
+	for (i = 0; i < 128; i++)
+	{
+		ptr = ptr + stackdir;
+		if (*ptr == magic)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /*
  * see header file
  */
@@ -221,6 +266,12 @@ bool library_init(char *settings)
 	this->public.scheduler = scheduler_create();
 	this->public.plugins = plugin_loader_create();
 
+	if (!check_memwipe())
+	{
+		DBG1(DBG_LIB, "memwipe() check failed");
+		return FALSE;
+	}
+
 	if (lib->settings->get_bool(lib->settings,
 								"libstrongswan.integrity_test", FALSE))
 	{
@@ -239,4 +290,3 @@ bool library_init(char *settings)
 
 	return !this->integrity_failed;
 }
-
