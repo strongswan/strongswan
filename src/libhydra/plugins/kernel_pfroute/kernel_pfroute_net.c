@@ -40,9 +40,6 @@
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
-/** buffer size for PF_ROUTE messages */
-#define PFROUTE_BUFFER_SIZE 4096
-
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -291,32 +288,90 @@ static void fire_roam_event(private_kernel_pfroute_net_t *this, bool address)
 }
 
 /**
+ * Data for enumerator over rtmsg sockaddrs
+ */
+typedef struct {
+	/** implements enumerator */
+	enumerator_t public;
+	/** copy of attribute bitfield */
+	int types;
+	/** bytes remaining in buffer */
+	int remaining;
+	/** next sockaddr to enumerate */
+	struct sockaddr *addr;
+} rt_enumerator_t;
+
+METHOD(enumerator_t, rt_enumerate, bool,
+	rt_enumerator_t *this, int *xtype, struct sockaddr **addr)
+{
+	int i, type;
+
+	if (this->remaining < sizeof(this->addr->sa_len) ||
+		this->remaining < this->addr->sa_len)
+	{
+		return FALSE;
+	}
+	for (i = 0; i < RTAX_MAX; i++)
+	{
+		type = (1 << i);
+		if (this->types & type)
+		{
+			this->types &= ~type;
+			*addr = this->addr;
+			*xtype = i;
+			this->remaining -= this->addr->sa_len;
+			this->addr = (void*)this->addr + this->addr->sa_len;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Create a safe enumerator over sockaddrs in ifa/ifam/rt_msg
+ */
+static enumerator_t *create_rtmsg_enumerator(void *hdr, size_t hdrlen)
+{
+	struct rt_msghdr *rthdr = hdr;
+	rt_enumerator_t *this;
+
+	INIT(this,
+		.public = {
+			.enumerate = (void*)_rt_enumerate,
+			.destroy = (void*)free,
+		},
+		.types = rthdr->rtm_addrs,
+		.remaining = rthdr->rtm_msglen - hdrlen,
+		.addr = hdr + hdrlen,
+	);
+	return &this->public;
+}
+
+/**
  * Process an RTM_*ADDR message from the kernel
  */
 static void process_addr(private_kernel_pfroute_net_t *this,
-						 struct rt_msghdr *msg)
+						 struct ifa_msghdr *ifa)
 {
-	struct ifa_msghdr *ifa = (struct ifa_msghdr*)msg;
-	sockaddr_t *sockaddr = (sockaddr_t*)(ifa + 1);
+	struct sockaddr *sockaddr;
 	host_t *host = NULL;
 	enumerator_t *ifaces, *addrs;
 	iface_entry_t *iface;
 	addr_entry_t *addr;
 	bool found = FALSE, changed = FALSE, roam = FALSE;
-	int i;
+	enumerator_t *enumerator;
+	int type;
 
-	for (i = 1; i < (1 << RTAX_MAX); i <<= 1)
+	enumerator = create_rtmsg_enumerator(ifa, sizeof(*ifa));
+	while (enumerator->enumerate(enumerator, &type, &sockaddr))
 	{
-		if (ifa->ifam_addrs & i)
+		if (type == RTAX_IFA)
 		{
-			if (RTA_IFA & i)
-			{
-				host = host_create_from_sockaddr(sockaddr);
-				break;
-			}
-			sockaddr = (sockaddr_t*)((char*)sockaddr + sockaddr->sa_len);
+			host = host_create_from_sockaddr(sockaddr);
+			break;
 		}
 	}
+	enumerator->destroy(enumerator);
 
 	if (!host)
 	{
@@ -391,9 +446,8 @@ static void process_addr(private_kernel_pfroute_net_t *this,
  * Process an RTM_IFINFO message from the kernel
  */
 static void process_link(private_kernel_pfroute_net_t *this,
-						 struct rt_msghdr *hdr)
+						 struct if_msghdr *msg)
 {
-	struct if_msghdr *msg = (struct if_msghdr*)hdr;
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
 	bool roam = FALSE;
@@ -440,17 +494,23 @@ static void process_route(private_kernel_pfroute_net_t *this,
 }
 
 /**
- * Receives events from kernel
+ * Receives PF_ROUTE messages from kernel
  */
 static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 {
-	unsigned char buf[PFROUTE_BUFFER_SIZE];
-	struct rt_msghdr *msg = (struct rt_msghdr*)buf;
-	int len;
+	struct {
+		union {
+			struct rt_msghdr rtm;
+			struct if_msghdr ifm;
+			struct ifa_msghdr ifam;
+		};
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg;
+	int len, hdrlen;
 	bool oldstate;
 
 	oldstate = thread_cancelability(TRUE);
-	len = recvfrom(this->socket, buf, sizeof(buf), 0, NULL, 0);
+	len = recv(this->socket, &msg, sizeof(msg), 0);
 	thread_cancelability(oldstate);
 
 	if (len < 0)
@@ -458,10 +518,7 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		switch (errno)
 		{
 			case EINTR:
-				/* interrupted, try again */
-				return JOB_REQUEUE_DIRECT;
 			case EAGAIN:
-				/* no data ready, select again */
 				return JOB_REQUEUE_DIRECT;
 			default:
 				DBG1(DBG_KNL, "unable to receive from PF_ROUTE event socket");
@@ -470,30 +527,55 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		}
 	}
 
-	if (len < sizeof(*msg) || len < msg->rtm_msglen ||
-		msg->rtm_version != RTM_VERSION)
+	if (len < offsetof(struct rt_msghdr, rtm_flags) || len < msg.rtm.rtm_msglen)
 	{
-		DBG2(DBG_KNL, "received corrupted PF_ROUTE message");
+		DBG1(DBG_KNL, "received invalid PF_ROUTE message");
 		return JOB_REQUEUE_DIRECT;
 	}
-
-	switch (msg->rtm_type)
+	if (msg.rtm.rtm_version != RTM_VERSION)
+	{
+		DBG1(DBG_KNL, "received PF_ROUTE message with unsupported version: %d",
+			 msg.rtm.rtm_version);
+		return JOB_REQUEUE_DIRECT;
+	}
+	switch (msg.rtm.rtm_type)
 	{
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
-			process_addr(this, msg);
+			hdrlen = sizeof(msg.ifam);
 			break;
 		case RTM_IFINFO:
-		/*case RTM_IFANNOUNCE <- what about this*/
-			process_link(this, msg);
+			hdrlen = sizeof(msg.ifm);
 			break;
 		case RTM_ADD:
 		case RTM_DELETE:
-			process_route(this, msg);
+		case RTM_GET:
+			hdrlen = sizeof(msg.rtm);
+			break;
+		default:
+			return JOB_REQUEUE_DIRECT;
+	}
+	if (msg.rtm.rtm_msglen < hdrlen)
+	{
+		DBG1(DBG_KNL, "ignoring short PF_ROUTE message");
+		return JOB_REQUEUE_DIRECT;
+	}
+	switch (msg.rtm.rtm_type)
+	{
+		case RTM_NEWADDR:
+		case RTM_DELADDR:
+			process_addr(this, &msg.ifam);
+			break;
+		case RTM_IFINFO:
+			process_link(this, &msg.ifm);
+			break;
+		case RTM_ADD:
+		case RTM_DELETE:
+			process_route(this, &msg.rtm);
+			break;
 		default:
 			break;
 	}
-
 	return JOB_REQUEUE_DIRECT;
 }
 
