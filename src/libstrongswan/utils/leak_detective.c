@@ -28,6 +28,16 @@
 #include <locale.h>
 #include <dlfcn.h>
 #include <time.h>
+#include <errno.h>
+
+#ifdef __APPLE__
+#include <sys/mman.h>
+#include <malloc/malloc.h>
+/* overload some of our types clashing with mach */
+#define host_t strongswan_host_t
+#define processor_t strongswan_processor_t
+#define thread_t strongswan_thread_t
+#endif /* __APPLE__ */
 
 #include "leak_detective.h"
 
@@ -176,6 +186,124 @@ static bool enable_thread(bool enable)
 	return before;
 }
 
+#ifdef __APPLE__
+
+/**
+ * Copy of original default zone, with functions we call in hooks
+ */
+static malloc_zone_t original;
+
+/**
+ * Call original malloc()
+ */
+static void* real_malloc(size_t size)
+{
+	return original.malloc(malloc_default_zone(), size);
+}
+
+/**
+ * Call original free()
+ */
+static void real_free(void *ptr)
+{
+	original.free(malloc_default_zone(), ptr);
+}
+
+/**
+ * Call original realloc()
+ */
+static void* real_realloc(void *ptr, size_t size)
+{
+	return original.realloc(malloc_default_zone(), ptr, size);
+}
+
+/**
+ * Hook definition: static function with _hook suffix, takes additional zone
+ */
+#define HOOK(ret, name, ...) \
+	static ret name ## _hook(malloc_zone_t *_z, __VA_ARGS__)
+
+/**
+ * forward declaration of hooks
+ */
+HOOK(void*, malloc, size_t bytes);
+HOOK(void*, calloc, size_t nmemb, size_t size);
+HOOK(void*, valloc, size_t size);
+HOOK(void, free, void *ptr);
+HOOK(void*, realloc, void *old, size_t bytes);
+
+/**
+ * malloc zone size(), must consider the memory header prepended
+ */
+HOOK(size_t, size, const void *ptr)
+{
+	bool before;
+	size_t size;
+
+	if (enabled)
+	{
+		before = enable_thread(FALSE);
+		if (before)
+		{
+			ptr -= sizeof(memory_header_t);
+		}
+	}
+	size = original.size(malloc_default_zone(), ptr);
+	if (enabled)
+	{
+		enable_thread(before);
+	}
+	return size;
+}
+
+/**
+ * Version of malloc zones we currently support
+ */
+#define MALLOC_ZONE_VERSION 8 /* Snow Leopard */
+
+/**
+ * Hook-in our malloc functions into the default zone
+ */
+static bool register_hooks()
+{
+	malloc_zone_t *zone;
+	void *page;
+
+	zone = malloc_default_zone();
+	if (zone->version != MALLOC_ZONE_VERSION)
+	{
+		DBG1(DBG_CFG, "malloc zone version %d unsupported (requiring %d)",
+			 zone->version, MALLOC_ZONE_VERSION);
+		return FALSE;
+	}
+
+	original = *zone;
+
+	page = (void*)((uintptr_t)zone / getpagesize() * getpagesize());
+	if (mprotect(page, getpagesize(), PROT_WRITE | PROT_READ) != 0)
+	{
+		DBG1(DBG_CFG, "malloc zone unprotection failed: %s", strerror(errno));
+		return FALSE;
+	}
+
+	zone->size = size_hook;
+	zone->malloc = malloc_hook;
+	zone->calloc = calloc_hook;
+	zone->valloc = valloc_hook;
+	zone->free = free_hook;
+	zone->realloc = realloc_hook;
+
+	/* those other functions can be NULLed out to not use them */
+	zone->batch_malloc = NULL;
+	zone->batch_free = NULL;
+	zone->memalign = NULL;
+	zone->free_definite_size = NULL;
+
+	return TRUE;
+}
+
+#else /* !__APPLE__ */
+
 /**
  * dlsym() might do a malloc(), but we can't do one before we get the malloc()
  * function pointer. Use this minimalistic malloc implementation instead.
@@ -269,6 +397,21 @@ static void* real_realloc(void *ptr, size_t size)
 	}
 	return fn(ptr, size);
 }
+
+/**
+ * Hook definition: plain function overloading existing malloc calls
+ */
+#define HOOK(ret, name, ...) ret name(__VA_ARGS__)
+
+/**
+ * Hook initialization when not using hooks
+ */
+static bool register_hooks()
+{
+	return TRUE;
+}
+
+#endif /* !__APPLE__ */
 
 /**
  * Leak report white list
@@ -531,7 +674,7 @@ METHOD(leak_detective_t, usage, void,
 /**
  * Wrapped malloc() function
  */
-void* malloc(size_t bytes)
+HOOK(void*, malloc, size_t bytes)
 {
 	memory_header_t *hdr;
 	memory_tail_t *tail;
@@ -573,7 +716,7 @@ void* malloc(size_t bytes)
 /**
  * Wrapped calloc() function
  */
-void* calloc(size_t nmemb, size_t size)
+HOOK(void*, calloc, size_t nmemb, size_t size)
 {
 	void *ptr;
 
@@ -585,9 +728,18 @@ void* calloc(size_t nmemb, size_t size)
 }
 
 /**
+ * Wrapped valloc(), TODO: currently not supported
+ */
+HOOK(void*, valloc, size_t size)
+{
+	DBG1(DBG_LIB, "valloc() used, but leak-detective hook missing");
+	return NULL;
+}
+
+/**
  * Wrapped free() function
  */
-void free(void *ptr)
+HOOK(void, free, void *ptr)
 {
 	memory_header_t *hdr, *current;
 	memory_tail_t *tail;
@@ -662,7 +814,7 @@ void free(void *ptr)
 /**
  * Wrapped realloc() function
  */
-void* realloc(void *old, size_t bytes)
+HOOK(void*, realloc, void *old, size_t bytes)
 {
 	memory_header_t *hdr;
 	memory_tail_t *tail;
@@ -753,7 +905,10 @@ leak_detective_t *leak_detective_create()
 
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
-		enable_leak_detective();
+		if (register_hooks())
+		{
+			enable_leak_detective();
+		}
 	}
 	return &this->public;
 }
