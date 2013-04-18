@@ -746,12 +746,6 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 	return NULL;
 }
 
-METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
-{
-	return NULL;
-}
-
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
 	char *iface)
@@ -904,6 +898,79 @@ METHOD(kernel_net_t, del_route, status_t,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
+}
+
+METHOD(kernel_net_t, get_nexthop, host_t*,
+	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg = {
+		.hdr = {
+			.rtm_version = RTM_VERSION,
+			.rtm_type = RTM_GET,
+			.rtm_pid = this->pid,
+			.rtm_seq = ++this->seq,
+		},
+	};
+	host_t *hop = NULL;
+	enumerator_t *enumerator;
+	struct sockaddr *addr;
+	int type;
+
+	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
+	for (type = 0; type < RTAX_MAX; type++)
+	{
+		switch (type)
+		{
+			case RTAX_DST:
+				add_rt_addr(&msg.hdr, RTA_DST, dest);
+				break;
+			case RTAX_IFA:
+				add_rt_addr(&msg.hdr, RTA_IFA, src);
+				break;
+			default:
+				break;
+		}
+	}
+	this->mutex->lock(this->mutex);
+
+	this->waiting_seq = msg.hdr.rtm_seq;
+	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) == msg.hdr.rtm_msglen)
+	{
+		while (TRUE)
+		{
+			if (this->condvar->timed_wait(this->condvar, this->mutex, 1000))
+			{	/* timed out? */
+				break;
+			}
+			if (this->reply->rtm_msglen < sizeof(*this->reply) ||
+				msg.hdr.rtm_seq != this->reply->rtm_seq)
+			{
+				continue;
+			}
+			enumerator = create_rtmsg_enumerator(this->reply,
+												 sizeof(*this->reply));
+			while (enumerator->enumerate(enumerator, &type, &addr))
+			{
+				if (type == RTAX_GATEWAY)
+				{
+					hop = host_create_from_sockaddr(addr);
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+			break;
+		}
+	}
+	else
+	{
+		DBG1(DBG_KNL, "PF_ROUTE lookup failed: %s", strerror(errno));
+	}
+	this->mutex->unlock(this->mutex);
+
+	return hop;
 }
 
 /**
