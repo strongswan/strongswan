@@ -28,6 +28,7 @@
 #include <networking/host.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
+#include <threading/condvar.h>
 #include <threading/rwlock.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
@@ -194,9 +195,19 @@ struct private_kernel_pfroute_net_t
 	hashtable_t *addrs;
 
 	/**
-	 * mutex to lock access to the PF_ROUTE socket
+	 * mutex to communicate exclusively with PF_KEY
 	 */
-	mutex_t *mutex_pfroute;
+	mutex_t *mutex;
+
+	/**
+	 * condvar to signal if PF_KEY query got a response
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * pid to send PF_ROUTE messages with
+	 */
+	pid_t pid;
 
 	/**
 	 * PF_ROUTE socket to communicate with the kernel
@@ -207,6 +218,16 @@ struct private_kernel_pfroute_net_t
 	 * sequence number for messages sent to the kernel
 	 */
 	int seq;
+
+	/**
+	 * Sequence number a query is waiting for
+	 */
+	int waiting_seq;
+
+	/**
+	 * Allocated reply message from kernel
+	 */
+	struct rt_msghdr *reply;
 
 	/**
 	 * time of last roam event
@@ -576,6 +597,17 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		default:
 			break;
 	}
+
+	this->mutex->lock(this->mutex);
+	if (msg.rtm.rtm_pid == this->pid && msg.rtm.rtm_seq == this->waiting_seq)
+	{
+		/* seems like the message someone is waiting for, deliver */
+		this->reply = realloc(this->reply, msg.rtm.rtm_msglen);
+		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
+		this->condvar->signal(this->condvar);
+	}
+	this->mutex->unlock(this->mutex);
+
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -854,7 +886,9 @@ METHOD(kernel_net_t, destroy, void,
 	this->addrs->destroy(this->addrs);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	this->lock->destroy(this->lock);
-	this->mutex_pfroute->destroy(this->mutex_pfroute);
+	this->mutex->destroy(this->mutex);
+	this->condvar->destroy(this->condvar);
+	free(this->reply);
 	free(this);
 }
 
@@ -879,12 +913,14 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 				.destroy = _destroy,
 			},
 		},
+		.pid = getpid(),
 		.ifaces = linked_list_create(),
 		.addrs = hashtable_create(
 								(hashtable_hash_t)addr_map_entry_hash,
 								(hashtable_equals_t)addr_map_entry_equals, 16),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		.mutex_pfroute = mutex_create(MUTEX_TYPE_DEFAULT),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
