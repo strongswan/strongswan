@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <ifaddrs.h>
 #include <net/route.h>
 #include <unistd.h>
@@ -765,18 +766,144 @@ METHOD(kernel_net_t, del_ip, status_t,
 	return FAILED;
 }
 
+/**
+ * Append a sockaddr_in/in6 of given type to routing message
+ */
+static void add_rt_addr(struct rt_msghdr *hdr, int type, host_t *addr)
+{
+	if (addr)
+	{
+		int len;
+
+		len = *addr->get_sockaddr_len(addr);
+		memcpy((char*)hdr + hdr->rtm_msglen, addr->get_sockaddr(addr), len);
+		hdr->rtm_msglen += len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Append a subnet mask sockaddr using the given prefix to routing message
+ */
+static void add_rt_mask(struct rt_msghdr *hdr, int type, int family, int prefix)
+{
+	host_t *mask;
+
+	mask = host_create_netmask(family, prefix);
+	if (mask)
+	{
+		add_rt_addr(hdr, type, mask);
+		mask->destroy(mask);
+	}
+}
+
+/**
+ * Append an interface name sockaddr_dl to routing message
+ */
+static void add_rt_ifname(struct rt_msghdr *hdr, int type, char *name)
+{
+	struct sockaddr_dl sdl = {
+		.sdl_len = sizeof(struct sockaddr_dl),
+		.sdl_family = AF_LINK,
+		.sdl_nlen = strlen(name),
+	};
+
+	if (strlen(name) <= sizeof(sdl.sdl_data))
+	{
+		memcpy(sdl.sdl_data, name, sdl.sdl_nlen);
+		memcpy((char*)hdr + hdr->rtm_msglen, &sdl, sdl.sdl_len);
+		hdr->rtm_msglen += sdl.sdl_len;
+		hdr->rtm_addrs |= type;
+	}
+}
+
+/**
+ * Add or remove a route
+ */
+static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
+							 chunk_t dst_net, u_int8_t prefixlen,
+							 host_t *gateway, char *if_name)
+{
+	struct {
+		struct rt_msghdr hdr;
+		char buf[sizeof(struct sockaddr_storage) * RTAX_MAX];
+	} msg = {
+		.hdr = {
+			.rtm_version = RTM_VERSION,
+			.rtm_type = op,
+			.rtm_flags = RTF_UP | RTF_STATIC,
+			.rtm_pid = this->pid,
+			.rtm_seq = ++this->seq,
+		},
+	};
+	host_t *dst;
+	int type;
+
+	dst = host_create_from_chunk(AF_UNSPEC, dst_net, 0);
+	if (!dst)
+	{
+		return FAILED;
+	}
+
+	if ((dst->get_family(dst) == AF_INET && prefixlen == 32) ||
+		(dst->get_family(dst) == AF_INET6 && prefixlen == 128))
+	{
+		msg.hdr.rtm_flags |= RTF_HOST | RTF_GATEWAY;
+	}
+
+	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
+	for (type = 0; type < RTAX_MAX; type++)
+	{
+		switch (type)
+		{
+			case RTAX_DST:
+				add_rt_addr(&msg.hdr, RTA_DST, dst);
+				break;
+			case RTAX_NETMASK:
+				if (!(msg.hdr.rtm_flags & RTF_HOST))
+				{
+					add_rt_mask(&msg.hdr, RTA_NETMASK,
+								dst->get_family(dst), prefixlen);
+				}
+				break;
+			case RTAX_GATEWAY:
+				/* interface name seems to replace gateway on OS X */
+				if (if_name)
+				{
+					add_rt_ifname(&msg.hdr, RTA_GATEWAY, if_name);
+				}
+				else if (gateway)
+				{
+					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	dst->destroy(dst);
+
+	if (send(this->socket, &msg, msg.hdr.rtm_msglen, 0) != msg.hdr.rtm_msglen)
+	{
+		DBG1(DBG_KNL, "%s PF_ROUTE route failed: %s",
+			 op == RTM_ADD ? "adding" : "deleting", strerror(errno));
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_ADD, dst_net, prefixlen, gateway, if_name);
 }
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, u_int8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
-	return FAILED;
+	return manage_route(this, RTM_DELETE, dst_net, prefixlen, gateway, if_name);
 }
 
 /**
