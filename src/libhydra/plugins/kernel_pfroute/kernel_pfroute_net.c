@@ -823,8 +823,11 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 
 METHOD(kernel_net_t, add_ip, status_t,
 	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
-	char *iface)
+	char *ifname)
 {
+	enumerator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	tun_device_t *tun;
 	bool timeout = FALSE;
 
@@ -860,6 +863,26 @@ METHOD(kernel_net_t, add_ip, status_t,
 
 	this->lock->write_lock(this->lock);
 	this->tuns->insert_last(this->tuns, tun);
+
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (streq(iface->ifname, tun->get_name(tun)))
+		{
+			addrs = iface->addrs->create_enumerator(iface->addrs);
+			while (addrs->enumerate(addrs, &addr))
+			{
+				if (addr->ip->ip_equals(addr->ip, vip))
+				{
+					addr->virtual = TRUE;
+					addr->refcount = 1;
+				}
+			}
+			addrs->destroy(addrs);
+		}
+	}
+	ifaces->destroy(ifaces);
+
 	this->lock->unlock(this->lock);
 
 	return SUCCESS;
