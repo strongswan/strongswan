@@ -55,9 +55,6 @@ struct addr_entry_t {
 
 	/** virtual IP managed by us */
 	bool virtual;
-
-	/** Number of times this IP is used, if virtual */
-	u_int refcount;
 };
 
 /**
@@ -430,10 +427,6 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 						addr_map_entry_remove(addr, iface, this);
 						addr_entry_destroy(addr);
 					}
-					else if (ifa->ifam_type == RTM_NEWADDR && addr->virtual)
-					{
-						addr->refcount = 1;
-					}
 				}
 			}
 			addrs->destroy(addrs);
@@ -442,7 +435,6 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 			{
 				INIT(addr,
 					.ip = host->clone(host),
-					.refcount = 1,
 				);
 				changed = TRUE;
 				iface->addrs->insert_last(iface->addrs, addr);
@@ -497,7 +489,6 @@ static void repopulate_iface(private_kernel_pfroute_net_t *this,
 					case AF_INET6:
 						INIT(addr,
 							.ip = host_create_from_sockaddr(ifa->ifa_addr),
-							.refcount = 1,
 						);
 						iface->addrs->insert_last(iface->addrs, addr);
 						addr_map_entry_add(this, addr, iface);
@@ -875,7 +866,6 @@ METHOD(kernel_net_t, add_ip, status_t,
 				if (addr->ip->ip_equals(addr->ip, vip))
 				{
 					addr->virtual = TRUE;
-					addr->refcount = 1;
 				}
 			}
 			addrs->destroy(addrs);
@@ -1222,7 +1212,6 @@ static status_t init_address_list(private_kernel_pfroute_net_t *this)
 				{
 					INIT(addr,
 						.ip = host_create_from_sockaddr(ifa->ifa_addr),
-						.refcount = 1,
 					);
 					iface->addrs->insert_last(iface->addrs, addr);
 					addr_map_entry_add(this, addr, iface);
