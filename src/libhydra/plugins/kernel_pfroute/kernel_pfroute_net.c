@@ -897,6 +897,21 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 	host_t *dst;
 	int type;
 
+	if (prefixlen == 0 && dst_net.len)
+	{
+		status_t status;
+		chunk_t half;
+
+		half = chunk_clonea(dst_net);
+		half.ptr[0] |= 0x80;
+		prefixlen = 1;
+		status = manage_route(this, op, half, prefixlen, gateway, if_name);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+	}
+
 	dst = host_create_from_chunk(AF_UNSPEC, dst_net, 0);
 	if (!dst)
 	{
