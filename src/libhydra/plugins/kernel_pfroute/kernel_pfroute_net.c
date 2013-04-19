@@ -40,6 +40,13 @@
 #error Cannot compile this plugin on systems where 'struct sockaddr' has no sa_len member.
 #endif
 
+#ifdef __APPLE__
+/* It seems that the OS X kernel does not send PF_ROUTE event messages reliably
+ * if there is only one PF_ROUTE sockets. Opening some additional PF_ROUTE
+ * sockets seems to help. */
+#define DUMMY_SOCKETS 3
+#endif /* __APPLE__ */
+
 /** delay before firing roam events (ms) */
 #define ROAM_DELAY 100
 
@@ -217,6 +224,13 @@ struct private_kernel_pfroute_net_t
 	 * PF_ROUTE socket to communicate with the kernel
 	 */
 	int socket;
+
+#ifdef DUMMY_SOCKETS
+	/**
+	 * Some unused dummy PF_ROUTE socket, required to get event messages
+	 */
+	int dummy[DUMMY_SOCKETS];
+#endif /* DUMMY_SOCKETS */
 
 	/**
 	 * sequence number for messages sent to the kernel
@@ -1263,6 +1277,19 @@ METHOD(kernel_net_t, destroy, void,
 	{
 		close(this->socket);
 	}
+#ifdef DUMMY_SOCKETS
+	{
+		int i;
+
+		for (i = 0; i < countof(this->dummy); i++)
+		{
+			if (this->dummy[i] != -1)
+			{
+				close(this->dummy[i]);
+			}
+		}
+	}
+#endif /* DUMMY_SOCKETS */
 	enumerator = this->addrs->create_enumerator(this->addrs);
 	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
 	{
@@ -1312,7 +1339,20 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
 
-	/* create a PF_ROUTE socket to communicate with the kernel */
+#ifdef DUMMY_SOCKETS
+	{
+		int i;
+
+		for (i = 0; i < countof(this->dummy); i++)
+		{
+			this->dummy[i] = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
+			if (this->dummy[i] != -1)
+			{
+				shutdown(this->dummy[i], SHUT_RDWR);
+			}
+		}
+	}
+#endif /* DUMMY_SOCKETS */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
 	if (this->socket == -1)
 	{
