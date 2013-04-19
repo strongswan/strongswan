@@ -472,7 +472,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 {
 	enumerator_t *enumerator;
 	iface_entry_t *iface;
-	bool roam = FALSE;
+	bool roam = FALSE, found = FALSE;;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -494,10 +494,31 @@ static void process_link(private_kernel_pfroute_net_t *this,
 				}
 			}
 			iface->flags = msg->ifm_flags;
+			found = TRUE;
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (!found)
+	{
+		INIT(iface,
+			.ifindex = msg->ifm_index,
+			.flags = msg->ifm_flags,
+			.addrs = linked_list_create(),
+		);
+		if (if_indextoname(iface->ifindex, iface->ifname))
+		{
+			DBG1(DBG_KNL, "interface %s appeared", iface->ifname);
+			iface->usable = hydra->kernel_interface->is_interface_usable(
+										hydra->kernel_interface, iface->ifname);
+			this->ifaces->insert_last(this->ifaces, iface);
+		}
+		else
+		{
+			free(iface);
+		}
+	}
 	this->lock->unlock(this->lock);
 
 	if (roam)
