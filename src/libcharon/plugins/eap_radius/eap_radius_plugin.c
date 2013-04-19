@@ -105,7 +105,7 @@ static void load_configs(private_eap_radius_plugin_t *this)
 					"%s.plugins.eap-radius.secret", NULL, charon->name);
 		if (!secret)
 		{
-			DBG1(DBG_CFG, "no RADUIS secret defined");
+			DBG1(DBG_CFG, "no RADIUS secret defined");
 			return;
 		}
 		nas_identifier = lib->settings->get_str(lib->settings,
