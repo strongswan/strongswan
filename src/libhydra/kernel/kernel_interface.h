@@ -451,10 +451,11 @@ struct kernel_interface_t {
 	 *
 	 * @param ts			traffic selector
 	 * @param ip			returned IP address (has to be destroyed)
+	 * @param vip			set to TRUE if returned address is a virtual IP
 	 * @return				SUCCESS if address found
 	 */
 	status_t (*get_address_by_ts)(kernel_interface_t *this,
-								  traffic_selector_t *ts, host_t **ip);
+								  traffic_selector_t *ts, host_t **ip, bool *vip);
 
 	/**
 	 * Register an ipsec kernel interface constructor on the manager.

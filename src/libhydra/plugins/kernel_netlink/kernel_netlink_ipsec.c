@@ -2102,7 +2102,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		);
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				fwd->dst_ts, &route->src_ip) == SUCCESS)
+				fwd->dst_ts, &route->src_ip, NULL) == SUCCESS)
 		{
 			/* get the nexthop to src (src as we are in POLICY_FWD) */
 			route->gateway = hydra->kernel_interface->get_nexthop(

@@ -415,7 +415,8 @@ METHOD(kernel_interface_t, all_interfaces_usable, bool,
 }
 
 METHOD(kernel_interface_t, get_address_by_ts, status_t,
-	private_kernel_interface_t *this, traffic_selector_t *ts, host_t **ip)
+	private_kernel_interface_t *this, traffic_selector_t *ts,
+	host_t **ip, bool *vip)
 {
 	enumerator_t *addrs;
 	host_t *host;
@@ -446,17 +447,40 @@ METHOD(kernel_interface_t, get_address_by_ts, status_t,
 	}
 	host->destroy(host);
 
-	addrs = create_address_enumerator(this, ADDR_TYPE_ALL);
+	addrs = create_address_enumerator(this, ADDR_TYPE_VIRTUAL);
 	while (addrs->enumerate(addrs, (void**)&host))
 	{
 		if (ts->includes(ts, host))
 		{
 			found = TRUE;
 			*ip = host->clone(host);
+			if (vip)
+			{
+				*vip = TRUE;
+			}
 			break;
 		}
 	}
 	addrs->destroy(addrs);
+
+	if (!found)
+	{
+		addrs = create_address_enumerator(this, ADDR_TYPE_REGULAR);
+		while (addrs->enumerate(addrs, (void**)&host))
+		{
+			if (ts->includes(ts, host))
+			{
+				found = TRUE;
+				*ip = host->clone(host);
+				if (vip)
+				{
+					*vip = FALSE;
+				}
+				break;
+			}
+		}
+		addrs->destroy(addrs);
+	}
 
 	if (!found)
 	{

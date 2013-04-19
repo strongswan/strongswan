@@ -2118,7 +2118,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			this->install_routes)
 		{
 			hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-													   src_ts, &route->src_ip);
+												src_ts, &route->src_ip, NULL);
 		}
 
 		if (!route->src_ip)

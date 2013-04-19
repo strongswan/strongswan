@@ -1925,7 +1925,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	host_t *host, *src, *dst;
 
 	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-												in->dst_ts, &host) != SUCCESS)
+										in->dst_ts, &host, NULL) != SUCCESS)
 	{
 		return FALSE;
 	}
