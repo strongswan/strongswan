@@ -27,6 +27,7 @@
 #include <hydra.h>
 #include <utils/debug.h>
 #include <networking/host.h>
+#include <networking/tun_device.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include <threading/condvar.h>
@@ -194,6 +195,11 @@ struct private_kernel_pfroute_net_t
 	 * Map for IP addresses to iface_entry_t objects (addr_map_entry_t)
 	 */
 	hashtable_t *addrs;
+
+	/**
+	 * List of tun devices we installed for virtual IPs
+	 */
+	linked_list_t *tuns;
 
 	/**
 	 * mutex to communicate exclusively with PF_KEY
@@ -669,8 +675,9 @@ static job_requeue_t receive_events(private_kernel_pfroute_net_t *this)
 		/* seems like the message someone is waiting for, deliver */
 		this->reply = realloc(this->reply, msg.rtm.rtm_msglen);
 		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
-		this->condvar->signal(this->condvar);
 	}
+	/* signal on any event, add_ip()/del_ip() might wait for it */
+	this->condvar->signal(this->condvar);
 	this->mutex->unlock(this->mutex);
 
 	return JOB_REQUEUE_DIRECT;
@@ -815,17 +822,94 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 }
 
 METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
+	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
 	char *iface)
 {
-	return FAILED;
+	tun_device_t *tun;
+	bool timeout = FALSE;
+
+	tun = tun_device_create(NULL);
+	if (!tun)
+	{
+		return FAILED;
+	}
+	if (prefix == -1)
+	{
+		prefix = vip->get_address(vip).len * 8;
+	}
+	if (!tun->set_address(tun, vip, prefix) || !tun->up(tun))
+	{
+		tun->destroy(tun);
+		return FAILED;
+	}
+
+	/* wait until address appears */
+	this->mutex->lock(this->mutex);
+	while (!timeout && !get_interface_name(this, vip, NULL))
+	{
+		timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+	}
+	this->mutex->unlock(this->mutex);
+	if (timeout)
+	{
+		DBG1(DBG_KNL, "virtual IP %H did not appear on %s",
+			 vip, tun->get_name(tun));
+		tun->destroy(tun);
+		return FAILED;
+	}
+
+	this->lock->write_lock(this->lock);
+	this->tuns->insert_last(this->tuns, tun);
+	this->lock->unlock(this->lock);
+
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_pfroute_net_t *this, host_t *virtual_ip, int prefix,
+	private_kernel_pfroute_net_t *this, host_t *vip, int prefix,
 	bool wait)
 {
-	return FAILED;
+	enumerator_t *enumerator;
+	tun_device_t *tun;
+	host_t *addr;
+	bool timeout = FALSE, found = FALSE;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->tuns->create_enumerator(this->tuns);
+	while (enumerator->enumerate(enumerator, &tun))
+	{
+		addr = tun->get_address(tun, NULL);
+		if (addr && addr->ip_equals(addr, vip))
+		{
+			this->tuns->remove_at(this->tuns, enumerator);
+			tun->destroy(tun);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	if (!found)
+	{
+		return NOT_FOUND;
+	}
+	/* wait until address disappears */
+	if (wait)
+	{
+		this->mutex->lock(this->mutex);
+		while (!timeout && get_interface_name(this, vip, NULL))
+		{
+			timeout = this->condvar->timed_wait(this->condvar, this->mutex, 1000);
+		}
+		this->mutex->unlock(this->mutex);
+		if (timeout)
+		{
+			DBG1(DBG_KNL, "virtual IP %H did not disappear from tun", vip);
+			return FAILED;
+		}
+	}
+	return SUCCESS;
 }
 
 /**
@@ -1162,6 +1246,7 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->addrs->destroy(this->addrs);
 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
+	this->tuns->destroy(this->tuns);
 	this->lock->destroy(this->lock);
 	this->mutex->destroy(this->mutex);
 	this->condvar->destroy(this->condvar);
@@ -1195,6 +1280,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.addrs = hashtable_create(
 								(hashtable_hash_t)addr_map_entry_hash,
 								(hashtable_equals_t)addr_map_entry_equals, 16),
+		.tuns = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
