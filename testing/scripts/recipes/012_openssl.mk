@@ -2,25 +2,12 @@
 
 PV  = 1.0.1e
 PKG = openssl-$(PV)
-TAR = $(PKG).tar.gz
-SRC = http://www.openssl.org/source/$(TAR)
+SRC = http://download.strongswan.org/testing/openssl-fips/
 
-CONFIG_OPTS = \
-	--prefix=/usr
 all: install
 
-$(TAR):
-	wget $(SRC)
+$(PKG):
+	wget -r $(SRC) --no-directories --directory-prefix $(PKG) --accept deb
 
-$(PKG): $(TAR)
-	tar xfz $(TAR)
-
-configure: $(PKG)
-	cd $(PKG) && ./config fips shared $(CONFIG_OPTS)
-
-build: configure
-	cd $(PKG) && make
-
-install: build
-	cd $(PKG) && make install
-
+install: $(PKG)
+	cd $(PKG) && dpkg -i *.deb
