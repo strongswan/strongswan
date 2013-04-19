@@ -17,6 +17,8 @@ strongswan-5.0.4
 - The charon.initiator_only option causes charon to ignore IKE initiation
   requests.
 
+- The openssl plugin can now use the openssl-fips library.
+
 
 strongswan-5.0.3
 ----------------
