@@ -465,6 +465,47 @@ static void process_addr(private_kernel_pfroute_net_t *this,
 }
 
 /**
+ * Re-initialize address list of an interface if it changes state
+ */
+static void repopulate_iface(private_kernel_pfroute_net_t *this,
+							 iface_entry_t *iface)
+{
+	struct ifaddrs *ifap, *ifa;
+	addr_entry_t *addr;
+
+	while (iface->addrs->remove_last(iface->addrs, (void**)&addr) == SUCCESS)
+	{
+		addr_map_entry_remove(addr, iface, this);
+		addr_entry_destroy(addr);
+	}
+
+	if (getifaddrs(&ifap) == 0)
+	{
+		for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
+		{
+			if (ifa->ifa_addr && streq(ifa->ifa_name, iface->ifname))
+			{
+				switch (ifa->ifa_addr->sa_family)
+				{
+					case AF_INET:
+					case AF_INET6:
+						INIT(addr,
+							.ip = host_create_from_sockaddr(ifa->ifa_addr),
+							.refcount = 1,
+						);
+						iface->addrs->insert_last(iface->addrs, addr);
+						addr_map_entry_add(this, addr, iface);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		freeifaddrs(ifap);
+	}
+}
+
+/**
  * Process an RTM_IFINFO message from the kernel
  */
 static void process_link(private_kernel_pfroute_net_t *this,
@@ -494,6 +535,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 				}
 			}
 			iface->flags = msg->ifm_flags;
+			repopulate_iface(this, iface);
 			found = TRUE;
 			break;
 		}
@@ -512,6 +554,7 @@ static void process_link(private_kernel_pfroute_net_t *this,
 			DBG1(DBG_KNL, "interface %s appeared", iface->ifname);
 			iface->usable = hydra->kernel_interface->is_interface_usable(
 										hydra->kernel_interface, iface->ifname);
+			repopulate_iface(this, iface);
 			this->ifaces->insert_last(this->ifaces, iface);
 		}
 		else
