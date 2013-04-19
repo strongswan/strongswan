@@ -704,6 +704,10 @@ static bool filter_addresses(address_enumerator_t *data,
 	{   /* skip virtual interfaces added by us */
 		return FALSE;
 	}
+	if (!(data->which & ADDR_TYPE_REGULAR) && !(*in)->virtual)
+	{	/* address is regular, but not requested */
+		return FALSE;
+	}
 	ip = (*in)->ip;
 	if (ip->get_family(ip) == AF_INET6)
 	{
