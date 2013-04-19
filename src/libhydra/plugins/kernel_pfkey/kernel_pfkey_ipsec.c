@@ -1923,9 +1923,10 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 {
 	route_entry_t *route, *old;
 	host_t *host, *src, *dst;
+	bool is_virtual;
 
 	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-										in->dst_ts, &host, NULL) != SUCCESS)
+									in->dst_ts, &host, &is_virtual) != SUCCESS)
 	{
 		return FALSE;
 	}
@@ -1941,6 +1942,14 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 											hydra->kernel_interface, dst, src),
 		.dst_net = chunk_clone(policy->src.net->get_address(policy->src.net)),
 	);
+
+	/* if the IP is virtual, we install the route over the interface it has
+	 * been installed on. Otherwise we use the interface we use for IKE, as
+	 * this is required for example on Linux. */
+	if (is_virtual)
+	{
+		src = route->src_ip;
+	}
 
 	/* get interface for route, using source address */
 	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
