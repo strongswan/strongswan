@@ -1916,6 +1916,86 @@ METHOD(kernel_ipsec_t, flush_sas, status_t,
 }
 
 /**
+ * Try to install a route to the given inbound policy
+ */
+static bool install_route(private_kernel_pfkey_ipsec_t *this,
+						  policy_entry_t *policy, policy_sa_in_t *in)
+{
+	route_entry_t *route, *old;
+	host_t *host, *src, *dst;
+
+	if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
+												in->dst_ts, &host) != SUCCESS)
+	{
+		return FALSE;
+	}
+
+	/* switch src/dst, as we handle an IN policy */
+	src = in->generic.sa->dst;
+	dst = in->generic.sa->src;
+
+	INIT(route,
+		.prefixlen = policy->src.mask,
+		.src_ip = host,
+		.gateway = hydra->kernel_interface->get_nexthop(
+											hydra->kernel_interface, dst, src),
+		.dst_net = chunk_clone(policy->src.net->get_address(policy->src.net)),
+	);
+
+	/* get interface for route, using source address */
+	if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
+												src, &route->if_name))
+	{
+		route_entry_destroy(route);
+		return FALSE;
+	}
+
+	if (policy->route)
+	{
+		old = policy->route;
+
+		if (route_entry_equals(old, route))
+		{	/* such a route already exists */
+			route_entry_destroy(route);
+			return TRUE;
+		}
+		/* uninstall previously installed route */
+		if (hydra->kernel_interface->del_route(hydra->kernel_interface,
+									old->dst_net, old->prefixlen, old->gateway,
+									old->src_ip, old->if_name) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+				 "%R === %R %N", in->src_ts, in->dst_ts,
+				policy_dir_names, policy->direction);
+		}
+		route_entry_destroy(old);
+		policy->route = NULL;
+	}
+
+	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
+		 in->src_ts, route->gateway, route->src_ip, route->if_name);
+
+	switch (hydra->kernel_interface->add_route(hydra->kernel_interface,
+							route->dst_net, route->prefixlen, route->gateway,
+							route->src_ip, route->if_name))
+	{
+		case ALREADY_DONE:
+			/* route exists, do not uninstall */
+			route_entry_destroy(route);
+			return TRUE;
+		case SUCCESS:
+			/* cache the installed route */
+			policy->route = route;
+			return TRUE;
+		default:
+			DBG1(DBG_KNL, "installing route failed: %R via %H src %H dev %s",
+				 in->src_ts, route->gateway, route->src_ip, route->if_name);
+			route_entry_destroy(route);
+			return FALSE;
+	}
+}
+
+/**
  * Add or update a policy in the kernel.
  *
  * Note: The mutex has to be locked when entering this function.
@@ -2031,80 +2111,7 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	if (policy->direction == POLICY_IN &&
 		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
-		policy_sa_in_t *in = (policy_sa_in_t*)mapping;
-		route_entry_t *route;
-
-		INIT(route,
-			.prefixlen = policy->src.mask,
-		);
-
-		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				in->dst_ts, &route->src_ip) == SUCCESS)
-		{
-			/* get the nexthop to src (src as we are in POLICY_IN).*/
-			route->gateway = hydra->kernel_interface->get_nexthop(
-											hydra->kernel_interface, ipsec->src,
-											ipsec->dst);
-			route->dst_net = chunk_clone(policy->src.net->get_address(
-											policy->src.net));
-
-			/* install route via outgoing interface */
-			if (!hydra->kernel_interface->get_interface(hydra->kernel_interface,
-												ipsec->dst, &route->if_name))
-			{
-				this->mutex->unlock(this->mutex);
-				route_entry_destroy(route);
-				return SUCCESS;
-			}
-
-			if (policy->route)
-			{
-				route_entry_t *old = policy->route;
-				if (route_entry_equals(old, route))
-				{
-					this->mutex->unlock(this->mutex);
-					route_entry_destroy(route);
-					return SUCCESS;
-				}
-				/* uninstall previously installed route */
-				if (hydra->kernel_interface->del_route(hydra->kernel_interface,
-						old->dst_net, old->prefixlen, old->gateway,
-						old->src_ip, old->if_name) != SUCCESS)
-				{
-					DBG1(DBG_KNL, "error uninstalling route installed with "
-								  "policy %R === %R %N", in->src_ts,
-								   in->dst_ts, policy_dir_names,
-								   policy->direction);
-				}
-				route_entry_destroy(old);
-				policy->route = NULL;
-			}
-
-			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
-				 in->src_ts, route->gateway, route->src_ip, route->if_name);
-			switch (hydra->kernel_interface->add_route(
-								hydra->kernel_interface, route->dst_net,
-								route->prefixlen, route->gateway,
-								route->src_ip, route->if_name))
-			{
-				default:
-					DBG1(DBG_KNL, "unable to install source route for %H",
-								   route->src_ip);
-					/* FALL */
-				case ALREADY_DONE:
-					/* route exists, do not uninstall */
-					route_entry_destroy(route);
-					break;
-				case SUCCESS:
-					/* cache the installed route */
-					policy->route = route;
-					break;
-			}
-		}
-		else
-		{
-			free(route);
-		}
+		install_route(this, policy, (policy_sa_in_t*)mapping);
 	}
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;
