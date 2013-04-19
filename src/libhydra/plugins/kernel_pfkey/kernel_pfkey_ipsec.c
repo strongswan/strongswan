@@ -339,7 +339,7 @@ static void ipsec_sa_destroy(private_kernel_pfkey_ipsec_t *this,
 }
 
 typedef struct policy_sa_t policy_sa_t;
-typedef struct policy_sa_fwd_t policy_sa_fwd_t;
+typedef struct policy_sa_in_t policy_sa_in_t;
 
 /**
  * Mapping between a policy and an IPsec SA.
@@ -356,10 +356,10 @@ struct policy_sa_t {
 };
 
 /**
- * For forward policies we also cache the traffic selectors in order to install
+ * For input policies we also cache the traffic selectors in order to install
  * the route.
  */
-struct policy_sa_fwd_t {
+struct policy_sa_in_t {
 	/** Generic interface */
 	policy_sa_t generic;
 
@@ -371,7 +371,7 @@ struct policy_sa_fwd_t {
 };
 
 /**
- * Create a policy_sa(_fwd)_t object
+ * Create a policy_sa(_in)_t object
  */
 static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
@@ -379,14 +379,14 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 {
 	policy_sa_t *policy;
 
-	if (dir == POLICY_FWD)
+	if (dir == POLICY_IN)
 	{
-		policy_sa_fwd_t *fwd;
-		INIT(fwd,
+		policy_sa_in_t *in;
+		INIT(in,
 			.src_ts = src_ts->clone(src_ts),
 			.dst_ts = dst_ts->clone(dst_ts),
 		);
-		policy = &fwd->generic;
+		policy = &in->generic;
 	}
 	else
 	{
@@ -398,16 +398,16 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 }
 
 /**
- * Destroy a policy_sa(_fwd)_t object
+ * Destroy a policy_sa(_in)_t object
  */
 static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
 							  private_kernel_pfkey_ipsec_t *this)
 {
-	if (*dir == POLICY_FWD)
+	if (*dir == POLICY_IN)
 	{
-		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)policy;
-		fwd->src_ts->destroy(fwd->src_ts);
-		fwd->dst_ts->destroy(fwd->dst_ts);
+		policy_sa_in_t *in = (policy_sa_in_t*)policy;
+		in->src_ts->destroy(in->src_ts);
+		in->dst_ts->destroy(in->dst_ts);
 	}
 	ipsec_sa_destroy(this, policy->sa);
 	free(policy);
@@ -2027,10 +2027,10 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	 * - we are in tunnel mode
 	 * - routing is not disabled via strongswan.conf
 	 */
-	if (policy->direction == POLICY_FWD &&
+	if (policy->direction == POLICY_IN &&
 		ipsec->cfg.mode != MODE_TRANSPORT && this->install_routes)
 	{
-		policy_sa_fwd_t *fwd = (policy_sa_fwd_t*)mapping;
+		policy_sa_in_t *in = (policy_sa_in_t*)mapping;
 		route_entry_t *route;
 
 		INIT(route,
@@ -2038,9 +2038,9 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 		);
 
 		if (hydra->kernel_interface->get_address_by_ts(hydra->kernel_interface,
-				fwd->dst_ts, &route->src_ip) == SUCCESS)
+				in->dst_ts, &route->src_ip) == SUCCESS)
 		{
-			/* get the nexthop to src (src as we are in POLICY_FWD).*/
+			/* get the nexthop to src (src as we are in POLICY_IN).*/
 			route->gateway = hydra->kernel_interface->get_nexthop(
 											hydra->kernel_interface, ipsec->src,
 											ipsec->dst);
@@ -2071,8 +2071,8 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 						old->src_ip, old->if_name) != SUCCESS)
 				{
 					DBG1(DBG_KNL, "error uninstalling route installed with "
-								  "policy %R === %R %N", fwd->src_ts,
-								   fwd->dst_ts, policy_dir_names,
+								  "policy %R === %R %N", in->src_ts,
+								   in->dst_ts, policy_dir_names,
 								   policy->direction);
 				}
 				route_entry_destroy(old);
@@ -2080,7 +2080,7 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 			}
 
 			DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
-				 fwd->src_ts, route->gateway, route->src_ip, route->if_name);
+				 in->src_ts, route->gateway, route->src_ip, route->if_name);
 			switch (hydra->kernel_interface->add_route(
 								hydra->kernel_interface, route->dst_net,
 								route->prefixlen, route->gateway,
