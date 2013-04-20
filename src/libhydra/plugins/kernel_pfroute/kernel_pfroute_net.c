@@ -770,6 +770,12 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 				(void*)address_enumerator_destroy);
 }
 
+METHOD(kernel_net_t, get_features, kernel_feature_t,
+	private_kernel_pfroute_net_t *this)
+{
+	return KERNEL_REQUIRE_EXCLUDE_ROUTE;
+}
+
 METHOD(kernel_net_t, get_interface_name, bool,
 	private_kernel_pfroute_net_t *this, host_t* ip, char **name)
 {
@@ -1276,6 +1282,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_interface = _get_interface_name,
 				.create_address_enumerator = _create_address_enumerator,
 				.get_source_addr = _get_source_addr,

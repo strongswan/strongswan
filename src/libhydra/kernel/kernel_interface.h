@@ -65,6 +65,8 @@ typedef enum kernel_feature_t kernel_feature_t;
 enum kernel_feature_t {
 	/** IPsec can process ESPv3 (RFC 4303) TFC padded packets */
 	KERNEL_ESP_V3_TFC = (1<<0),
+	/** Networking requires an "exclude" route for IKE/ESP packets */
+	KERNEL_REQUIRE_EXCLUDE_ROUTE = (1<<1),
 };
 
 /**
