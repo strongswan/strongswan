@@ -1126,7 +1126,7 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 		}
 		if (msg->sadb_msg_seq != this->seq)
 		{
-			DBG1(DBG_KNL, "received PF_KEY message with unexpected sequence "
+			DBG2(DBG_KNL, "received PF_KEY message with unexpected sequence "
 						  "number, was %d expected %d", msg->sadb_msg_seq,
 						  this->seq);
 			if (msg->sadb_msg_seq == 0)
