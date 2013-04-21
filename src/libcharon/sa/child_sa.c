@@ -527,12 +527,15 @@ METHOD(child_sa_t, get_usestats, void,
 	private_child_sa_t *this, bool inbound,
 	time_t *time, u_int64_t *bytes, u_int64_t *packets)
 {
-	if (update_usebytes(this, inbound) != FAILED)
+	if ((!bytes && !packets) || update_usebytes(this, inbound) != FAILED)
 	{
 		/* there was traffic since last update or the kernel interface
 		 * does not support querying the number of usebytes.
 		 */
-		update_usetime(this, inbound);
+		if (time)
+		{
+			update_usetime(this, inbound);
+		}
 	}
 	if (time)
 	{
