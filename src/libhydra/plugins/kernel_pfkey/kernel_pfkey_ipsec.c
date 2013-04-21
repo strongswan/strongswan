@@ -1804,7 +1804,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1861,6 +1861,18 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	{
 		/* not supported by PF_KEY */
 		*packets = 0;
+	}
+	if (time)
+	{
+#ifdef __APPLE__
+		/* OS X uses the "last" time of use in usetime */
+		*time = response.lft_current->sadb_lifetime_usetime;
+#else /* !__APPLE__ */
+		/* on Linux, sadb_lifetime_usetime is set to the "first" time of use,
+		 * which is actually correct according to PF_KEY. We have to query
+		 * policies for the last usetime. */
+		*time = 0;
+#endif /* !__APPLE__ */
 	}
 
 	free(out);
@@ -2435,7 +2447,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	}
 	else if (response.lft_current == NULL)
 	{
-		DBG1(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
+		DBG2(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
 					  "use time", src_ts, dst_ts, policy_dir_names, direction);
 		free(out);
 		return FAILED;

@@ -208,14 +208,14 @@ METHOD(kernel_interface_t, update_sa, status_t,
 METHOD(kernel_interface_t, query_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->query_sa(this->ipsec, src, dst, spi, protocol, mark,
-								 bytes, packets);
+								 bytes, packets, time);
 }
 
 METHOD(kernel_interface_t, del_sa, status_t,

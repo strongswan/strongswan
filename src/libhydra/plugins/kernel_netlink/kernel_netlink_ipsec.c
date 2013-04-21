@@ -1595,7 +1595,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, mark_t mark,
-	u_int64_t *bytes, u_int64_t *packets)
+	u_int64_t *bytes, u_int64_t *packets, u_int32_t *time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -1679,6 +1679,12 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 		if (packets)
 		{
 			*packets = sa->curlft.packets;
+		}
+		if (time)
+		{	/* curlft contains an "use" time, but that contains a timestamp
+			 * of the first use, not the last. Last use time must be queried
+			 * on the policy on Linux */
+			*time = 0;
 		}
 		status = SUCCESS;
 	}

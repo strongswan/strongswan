@@ -424,6 +424,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 {
 	status_t status = FAILED;
 	u_int64_t bytes, packets;
+	u_int32_t time;
 
 	if (inbound)
 	{
@@ -432,13 +433,17 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->other_addr, this->my_addr, this->my_spi,
 							proto_ike2ip(this->protocol), this->mark_in,
-							&bytes, &packets);
+							&bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->my_usebytes)
 				{
 					this->my_usebytes = bytes;
 					this->my_usepackets = packets;
+					if (time)
+					{
+						this->my_usetime = time;
+					}
 					return SUCCESS;
 				}
 				return FAILED;
@@ -452,13 +457,17 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 			status = hydra->kernel_interface->query_sa(hydra->kernel_interface,
 							this->my_addr, this->other_addr, this->other_spi,
 							proto_ike2ip(this->protocol), this->mark_out,
-							&bytes, &packets);
+							&bytes, &packets, &time);
 			if (status == SUCCESS)
 			{
 				if (bytes > this->other_usebytes)
 				{
 					this->other_usebytes = bytes;
 					this->other_usepackets = packets;
+					if (time)
+					{
+						this->other_usetime = time;
+					}
 					return SUCCESS;
 				}
 				return FAILED;
@@ -471,7 +480,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 /**
  * updates the cached usetime
  */
-static void update_usetime(private_child_sa_t *this, bool inbound)
+static bool update_usetime(private_child_sa_t *this, bool inbound)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
@@ -511,7 +520,7 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 
 	if (last_use == 0)
 	{
-		return;
+		return FALSE;
 	}
 	if (inbound)
 	{
@@ -521,6 +530,7 @@ static void update_usetime(private_child_sa_t *this, bool inbound)
 	{
 		this->other_usetime = last_use;
 	}
+	return TRUE;
 }
 
 METHOD(child_sa_t, get_usestats, void,
@@ -534,7 +544,11 @@ METHOD(child_sa_t, get_usestats, void,
 		 */
 		if (time)
 		{
-			update_usetime(this, inbound);
+			if (!update_usetime(this, inbound) && !bytes && !packets)
+			{
+				/* if policy query did not yield a usetime, query SAs instead */
+				update_usebytes(this, inbound);
+			}
 		}
 	}
 	if (time)
