@@ -233,10 +233,24 @@ METHOD(host_resolver_t, resolve, host_t*,
 		.family = family,
 	};
 	host_t *result;
+	struct in_addr addr;
 
-	if (family == AF_INET && strchr(name, ':'))
-	{	/* do not try to convert v6 addresses for v4 family */
-		return NULL;
+	switch (family)
+	{
+		case AF_INET:
+			/* do not try to convert v6 addresses for v4 family */
+			if (strchr(name, ':'))
+			{
+				return NULL;
+			}
+			break;
+		case AF_INET6:
+			/* do not try to convert v4 addresses for v6 family */
+			if (inet_pton(AF_INET, name, &addr) == 1)
+			{
+				return NULL;
+			}
+			break;
 	}
 	this->mutex->lock(this->mutex);
 	if (this->disabled)
