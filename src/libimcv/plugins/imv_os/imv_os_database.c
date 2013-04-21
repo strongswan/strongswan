@@ -206,6 +206,7 @@ METHOD(imv_os_database_t, get_device_id, int,
 		e->destroy(e);
 		return id;
 	}
+	e->destroy(e);
 
 	/* register new device ID in database and return primary key */
 	return (this->db->execute(this->db, &id,
