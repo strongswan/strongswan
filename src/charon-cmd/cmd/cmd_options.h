@@ -34,6 +34,8 @@ enum cmd_option_type_t {
 	CMD_OPT_IDENTITY,
 	CMD_OPT_CERT,
 	CMD_OPT_RSA,
+	CMD_OPT_LOCAL_TS,
+	CMD_OPT_REMOTE_TS,
 
 	CMD_OPT_COUNT
 };

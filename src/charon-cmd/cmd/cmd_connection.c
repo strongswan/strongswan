@@ -40,6 +40,16 @@ struct private_cmd_connection_t {
 	pid_t pid;
 
 	/**
+	 * List of local traffic selectors
+	 */
+	linked_list_t *local_ts;
+
+	/**
+	 * List of remote traffic selectors
+	 */
+	linked_list_t *remote_ts;
+
+	/**
 	 * Hostname to connect to
 	 */
 	char *host;
@@ -141,11 +151,22 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this)
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
 								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	ts = traffic_selector_create_dynamic(0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
+	while (this->local_ts->remove_first(this->local_ts, (void**)&ts) == SUCCESS)
+	{
+		child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
+	}
+	if (this->remote_ts->get_count(this->remote_ts) == 0)
+	{
+		/* add a 0.0.0.0/0 TS for remote side if none given */
+		ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
 									"0.0.0.0", 0, "255.255.255.255", 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		this->remote_ts->insert_last(this->remote_ts, ts);
+	}
+	while (this->remote_ts->remove_first(this->remote_ts,
+										 (void**)&ts) == SUCCESS)
+	{
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	}
 
 	return child_cfg;
 }
@@ -186,6 +207,23 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
+/**
+ * Create a traffic selector from string, add to list
+ */
+static void add_ts(private_cmd_connection_t *this,
+				   linked_list_t *list, char *string)
+{
+	traffic_selector_t *ts;
+
+	ts = traffic_selector_create_from_cidr(string, 0, 0, 65535);
+	if (!ts)
+	{
+		DBG1(DBG_CFG, "invalid traffic selector: %s", string);
+		exit(1);
+	}
+	list->insert_last(list, ts);
+}
+
 METHOD(cmd_connection_t, handle, bool,
 	private_cmd_connection_t *this, cmd_option_type_t opt, char *arg)
 {
@@ -200,6 +238,12 @@ METHOD(cmd_connection_t, handle, bool,
 		case CMD_OPT_RSA:
 			this->key_seen = TRUE;
 			break;
+		case CMD_OPT_LOCAL_TS:
+			add_ts(this, this->local_ts, arg);
+			break;
+		case CMD_OPT_REMOTE_TS:
+			add_ts(this, this->remote_ts, arg);
+			break;
 		default:
 			return FALSE;
 	}
@@ -209,6 +253,10 @@ METHOD(cmd_connection_t, handle, bool,
 METHOD(cmd_connection_t, destroy, void,
 	private_cmd_connection_t *this)
 {
+	this->local_ts->destroy_offset(this->local_ts,
+								offsetof(traffic_selector_t, destroy));
+	this->remote_ts->destroy_offset(this->remote_ts,
+								offsetof(traffic_selector_t, destroy));
 	free(this);
 }
 
@@ -225,7 +273,13 @@ cmd_connection_t *cmd_connection_create()
 			.destroy = _destroy,
 		},
 		.pid = getpid(),
+		.local_ts = linked_list_create(),
+		.remote_ts = linked_list_create(),
 	);
+
+	/* always include the virtual IP in traffic selector list */
+	this->local_ts->insert_last(this->local_ts,
+								traffic_selector_create_dynamic(0, 0, 65535));
 
 	/* queue job, gets initiated as soon as we are up and running */
 	lib->processor->queue_job(lib->processor,
