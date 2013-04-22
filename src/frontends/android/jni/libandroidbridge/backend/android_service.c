@@ -568,6 +568,12 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* create an ESP proposal with the algorithms currently supported by
 	 * libipsec, no PFS for now */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128gcm16-aes256gcm16"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes128-sha256"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
+							"aes256-sha384"));
+	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512"));
 	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
