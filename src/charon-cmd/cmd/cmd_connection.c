@@ -20,9 +20,35 @@
 
 #include <utils/debug.h>
 #include <processing/jobs/callback_job.h>
+#include <threading/thread.h>
 #include <daemon.h>
 
+typedef enum profile_t profile_t;
 typedef struct private_cmd_connection_t private_cmd_connection_t;
+
+/**
+ * Connection profiles we support
+ */
+enum profile_t {
+	PROF_UNDEF,
+	PROF_V2_PUB,
+	PROF_V2_EAP,
+	PROF_V2_PUB_EAP,
+	PROF_V1_PUB,
+	PROF_V1_XAUTH,
+	PROF_V1_XAUTH_PSK,
+	PROF_V1_HYBRID,
+};
+
+ENUM(profile_names, PROF_V2_PUB, PROF_V1_HYBRID,
+	"ikev2-pub",
+	"ikev2-eap",
+	"ikev2-pub-eap",
+	"ikev1-pub",
+	"ikev1-xauth",
+	"ikev1-xauth-psk",
+	"ikev1-hybrid",
+);
 
 /**
  * Private data of an cmd_connection_t object.
@@ -63,6 +89,11 @@ struct private_cmd_connection_t {
 	 * Is a private key configured
 	 */
 	bool key_seen;
+
+	/**
+	 * Selected connection profile
+	 */
+	profile_t profile;
 };
 
 /**
@@ -81,13 +112,30 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	u_int16_t local_port, remote_port = IKEV2_UDP_PORT;
+	ike_version_t version = IKE_ANY;
+
+	switch (this->profile)
+	{
+		case PROF_UNDEF:
+		case PROF_V2_PUB:
+		case PROF_V2_EAP:
+		case PROF_V2_PUB_EAP:
+			version = IKEV2;
+			break;
+		case PROF_V1_PUB:
+		case PROF_V1_XAUTH:
+		case PROF_V1_XAUTH_PSK:
+		case PROF_V1_HYBRID:
+			version = IKEV1;
+			break;
+	}
 
 	local_port = charon->socket->get_port(charon->socket, FALSE);
 	if (local_port != IKEV2_UDP_PORT)
 	{
 		remote_port = IKEV2_NATT_PORT;
 	}
-	ike_cfg = ike_cfg_create(IKEV2, TRUE, FALSE, "0.0.0.0", FALSE, local_port,
+	ike_cfg = ike_cfg_create(version, TRUE, FALSE, "0.0.0.0", FALSE, local_port,
 					this->host, FALSE, remote_port, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	peer_cfg = peer_cfg_create("cmd", ike_cfg,
@@ -103,32 +151,98 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 }
 
 /**
- * Attach authentication configs to peer config
+ * Add a single auth cfg of given class to peer cfg
  */
-static void add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
+static void add_auth_cfg(private_cmd_connection_t *this, peer_cfg_t *peer_cfg,
+						 bool local, auth_class_t class)
 {
+	identification_t *id;
 	auth_cfg_t *auth;
-	auth_class_t class;
 
-	if (this->key_seen)
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
+	if (local)
 	{
-		class = AUTH_CLASS_PUBKEY;
+		id = identification_create_from_string(this->identity);
 	}
 	else
 	{
-		class = AUTH_CLASS_EAP;
+		id = identification_create_from_string(this->host);
 	}
-	auth = auth_cfg_create();
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
-	auth->add(auth, AUTH_RULE_IDENTITY,
-			  identification_create_from_string(this->identity));
-	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, local);
+}
 
-	auth = auth_cfg_create();
+/**
+ * Attach authentication configs to peer config
+ */
+static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
+{
+	if (this->profile == PROF_UNDEF)
+	{
+		if (this->key_seen)
+		{
+			this->profile = PROF_V2_PUB;
+		}
+		else
+		{
+			this->profile = PROF_V2_EAP;
+		}
+	}
+	switch (this->profile)
+	{
+		case PROF_V2_PUB:
+		case PROF_V2_PUB_EAP:
+		case PROF_V1_PUB:
+		case PROF_V1_XAUTH:
+			if (!this->key_seen)
+			{
+				DBG1(DBG_CFG, "missing private key for profile %N",
+					 profile_names, this->profile);
+				return FALSE;
+			}
+			break;
+		default:
+			break;
+	}
 
-	auth->add(auth, AUTH_RULE_IDENTITY,
-			  identification_create_from_string(this->host));
-	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+	switch (this->profile)
+	{
+		case PROF_V2_PUB:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_ANY);
+			break;
+		case PROF_V2_EAP:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_EAP);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_ANY);
+			break;
+		case PROF_V2_PUB_EAP:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_EAP);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_ANY);
+			break;
+		case PROF_V1_PUB:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
+			break;
+		case PROF_V1_XAUTH:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
+			break;
+		case PROF_V1_XAUTH_PSK:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PSK);
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PSK);
+			break;
+		case PROF_V1_HYBRID:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_XAUTH);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PUBKEY);
+			break;
+		default:
+			return FALSE;
+	}
+	return TRUE;
 }
 
 /**
@@ -194,7 +308,12 @@ static job_requeue_t initiate(private_cmd_connection_t *this)
 
 	peer_cfg = create_peer_cfg(this);
 
-	add_auth_cfgs(this, peer_cfg);
+	if (!add_auth_cfgs(this, peer_cfg))
+	{
+		peer_cfg->destroy(peer_cfg);
+		terminate(this);
+		return JOB_REQUEUE_NONE;
+	}
 
 	child_cfg = create_child_cfg(this);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg->get_ref(child_cfg));
@@ -224,6 +343,22 @@ static void add_ts(private_cmd_connection_t *this,
 	list->insert_last(list, ts);
 }
 
+/**
+ * Parse profile name identifier
+ */
+static void set_profile(private_cmd_connection_t *this, char *name)
+{
+	int profile;
+
+	profile = enum_from_name(profile_names, name);
+	if (profile == -1)
+	{
+		DBG1(DBG_CFG, "unknown connection profile: %s", name);
+		exit(1);
+	}
+	this->profile = profile;
+}
+
 METHOD(cmd_connection_t, handle, bool,
 	private_cmd_connection_t *this, cmd_option_type_t opt, char *arg)
 {
@@ -243,6 +378,9 @@ METHOD(cmd_connection_t, handle, bool,
 			break;
 		case CMD_OPT_REMOTE_TS:
 			add_ts(this, this->remote_ts, arg);
+			break;
+		case CMD_OPT_PROFILE:
+			set_profile(this, arg);
 			break;
 		default:
 			return FALSE;
@@ -275,6 +413,7 @@ cmd_connection_t *cmd_connection_create()
 		.pid = getpid(),
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
+		.profile = PROF_UNDEF,
 	);
 
 	/* always include the virtual IP in traffic selector list */

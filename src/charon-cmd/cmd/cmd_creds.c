@@ -68,6 +68,9 @@ static shared_key_t* callback_shared(private_cmd_creds_t *this,
 		case SHARED_EAP:
 			label = "EAP password: ";
 			break;
+		case SHARED_IKE:
+			label = "Preshared Key: ";
+			break;
 		default:
 			return NULL;
 	}

@@ -37,4 +37,14 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "additional traffic selector to propose for our side" },
 	{ CMD_OPT_REMOTE_TS, "remote-ts", required_argument, "subnet",
 	  "remote traffic selector to propose for remote side" },
+	{ CMD_OPT_PROFILE, "profile", required_argument, "name",
+	  "authentication profile to use, where name is one of:", {
+		"ikev2-pub:       IKEv2 with public key client authentication",
+		"ikev2-eap:       IKEv2 with client EAP",
+		"ikev2-pub-eap:   IKEv2 with public key client authentication + client EAP",
+		"ikev1-pub:       IKEv1 public key authentication",
+		"ikev1-xauth:     IKEv1 public key authentication + initiator XAuth",
+		"ikev1-xauth-psk: IKEv1 PSK authentication + initiator XAuth (INSECURE!)",
+		"ikev1-hybrid:    IKEv1 public key responder only + initiator XAuth",
+	}},
 };
