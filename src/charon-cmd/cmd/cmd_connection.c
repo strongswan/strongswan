@@ -81,6 +81,11 @@ struct private_cmd_connection_t {
 	char *host;
 
 	/**
+	 * Server identity, or NULL to use host
+	 */
+	char *server;
+
+	/**
 	 * Local identity
 	 */
 	char *identity;
@@ -167,7 +172,14 @@ static void add_auth_cfg(private_cmd_connection_t *this, peer_cfg_t *peer_cfg,
 	}
 	else
 	{
-		id = identification_create_from_string(this->host);
+		if (this->server)
+		{
+			id = identification_create_from_string(this->server);
+		}
+		else
+		{
+			id = identification_create_from_string(this->host);
+		}
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, local);
@@ -366,6 +378,9 @@ METHOD(cmd_connection_t, handle, bool,
 	{
 		case CMD_OPT_HOST:
 			this->host = arg;
+			break;
+		case CMD_OPT_REMOTE_IDENTITY:
+			this->server = arg;
 			break;
 		case CMD_OPT_IDENTITY:
 			this->identity = arg;
