@@ -205,6 +205,37 @@ METHOD(esp_context_t, destroy, void,
 }
 
 /**
+ * Create an AEAD algorithm
+ */
+static bool create_aead(private_esp_context_t *this, int alg,
+						chunk_t key)
+{
+	switch (alg)
+	{
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
+			/* the key includes a 4 byte salt */
+			this->aead = lib->crypto->create_aead(lib->crypto, alg, key.len-4);
+			break;
+		default:
+			break;
+	}
+	if (!this->aead)
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: unsupported AEAD "
+			 "algorithm");
+		return FALSE;
+	}
+	if (!this->aead->set_key(this->aead, key))
+	{
+		DBG1(DBG_ESP, "failed to create ESP context: setting AEAD key failed");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Create AEAD wrapper around traditional encryption/integrity algorithms
  */
 static bool create_traditional(private_esp_context_t *this, int enc_alg,
@@ -288,10 +319,21 @@ esp_context_t *esp_context_create(int enc_alg, chunk_t enc_key,
 		.window_size = ESP_DEFAULT_WINDOW_SIZE,
 	);
 
-	if (!create_traditional(this, enc_alg, enc_key, int_alg, int_key))
+	if (encryption_algorithm_is_aead(enc_alg))
 	{
-		destroy(this);
-		return NULL;
+		if (!create_aead(this, enc_alg, enc_key))
+		{
+			destroy(this);
+			return NULL;
+		}
+	}
+	else
+	{
+		if (!create_traditional(this, enc_alg, enc_key, int_alg, int_key))
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 
 	if (inbound)
