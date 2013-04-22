@@ -1,14 +1,24 @@
 /* PTS SQLite database */
 
+DROP TABLE IF EXISTS directories;
+CREATE TABLE directories (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  path TEXT NOT NULL
+);
+DROP INDEX IF EXISTS directories_path;
+CREATE INDEX directories_path ON directories (
+  path
+);
+
 DROP TABLE IF EXISTS files;
 CREATE TABLE files (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  type INTEGER NOT NULL,
-  path TEXT NOT NULL
+  dir INTEGER DEFAULT 0,
+  name TEXT NOT NULL
 );
-DROP INDEX IF EXISTS files_path;
-CREATE INDEX files_path ON files (
-  path
+DROP INDEX IF EXISTS files_name;
+CREATE INDEX files_name ON files (
+  name
 );
 
 DROP TABLE IF EXISTS products;
@@ -21,39 +31,20 @@ CREATE INDEX products_name ON products (
   name
 );
 
-DROP TABLE IF EXISTS product_file;
-CREATE TABLE product_file (
-  product INTEGER NOT NULL,
-  file INTEGER NOT NULL,
-  measurement INTEGER DEFAULT 0,
-  metadata INTEGER DEFAULT 0,
-  PRIMARY KEY (product, file)
+DROP TABLE IF EXISTS algorithms;
+CREATE TABLE algorithms (
+  id INTEGER PRIMARY KEY,
+  name TEXT not NULL
 );
 
 DROP TABLE IF EXISTS file_hashes;
 CREATE TABLE file_hashes (
-  file INTEGER NOT NULL,
-  directory INTEGER DEFAULT 0,
-  product INTEGER NOT NULL,
-  key INTEGER DEFAULT 0,
-  algo INTEGER NOT NULL,
-  hash BLOB NOT NULL,
-  PRIMARY KEY(file, directory, product, algo)
-);
-
-DROP TABLE IF EXISTS keys;
-CREATE TABLE keys (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  keyid BLOB NOT NULL,
-  owner TEXT NOT NULL
-);
-DROP INDEX IF EXISTS keys_keyid;
-CREATE INDEX keys_keyid ON keys (
-  keyid
-);
-DROP INDEX IF EXISTS keys_owner;
-CREATE INDEX keys_owner ON keys (
-  owner
+  file INTEGER NOT NULL,
+  product INTEGER NOT NULL,
+  device INTEGER DEFAULT 0,
+  algo INTEGER NOT NULL,
+  hash BLOB NOT NULL
 );
 
 DROP TABLE IF EXISTS components;

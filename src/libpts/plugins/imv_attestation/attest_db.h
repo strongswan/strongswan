@@ -193,6 +193,11 @@ struct attest_db_t {
 	void (*list_products)(attest_db_t *this);
 
 	/**
+	 * List all directories stored in the database
+	 */
+	void (*list_directories)(attest_db_t *this);
+
+	/**
 	 * List selected files stored in the database
 	 */
 	void (*list_files)(attest_db_t *this);

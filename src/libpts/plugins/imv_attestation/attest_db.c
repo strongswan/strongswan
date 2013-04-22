@@ -63,11 +63,6 @@ struct private_attest_db_t {
 	int did;
 
 	/**
-	 * TRUE if directory has been set
-	 */
-	bool dir_set;
-
-	/**
 	 * Measurement file to be queried
 	 */
 	char *file;
@@ -76,11 +71,6 @@ struct private_attest_db_t {
 	 * Primary key of measurement file to be queried
 	 */
 	int fid;
-
-	/**
-	 * TRUE if file has been set
-	 */
-	bool file_set;
 
 	/**
 	 *  AIK to be queried
@@ -304,35 +294,35 @@ METHOD(attest_db_t, set_directory, bool,
 	private_attest_db_t *this, char *dir, bool create)
 {
 	enumerator_t *e;
+	int did;
 	size_t len;
 
-	if (this->dir_set)
+	if (this->did)
 	{
 		printf("directory has already been set\n");
 		return FALSE;
 	}
-	free(this->dir);
 
-	/* remove trailing '/' character */
+	/* remove trailing '/' character if not root directory */
 	len = strlen(dir);
-	if (len && dir[len-1] == '/')
+	if (len > 1 && dir[len-1] == '/')
 	{
 		dir[len-1] = '\0';
 	}
 	this->dir = strdup(dir);
 
 	e = this->db->query(this->db,
-						"SELECT id FROM files WHERE type = 1 AND path = ?",
+						"SELECT id FROM directories WHERE path = ?",
 						DB_TEXT, dir, DB_INT);
 	if (e)
 	{
-		if (e->enumerate(e, &this->did))
+		if (e->enumerate(e, &did))
 		{
-			this->dir_set = TRUE;
+			this->did = did;
 		}
 		e->destroy(e);
 	}
-	if (this->dir_set)
+	if (this->did)
 	{
 		return TRUE;
 	}
@@ -344,14 +334,15 @@ METHOD(attest_db_t, set_directory, bool,
 	}
 
 	/* Add a new database entry */
-	this->dir_set = this->db->execute(this->db, &this->did,
-								"INSERT INTO files (type, path) VALUES (1, ?)",
-								DB_TEXT, dir) == 1;
-
+	if (1 == this->db->execute(this->db, &did,
+				"INSERT INTO directories (path) VALUES (?)", DB_TEXT, dir))
+	{
+		this->did = did;
+	}
 	printf("directory '%s' %sinserted into database\n", dir,
-		   this->dir_set ? "" : "could not be ");
+			this->did ? "" : "could not be ");
 
-	return this->dir_set;
+	return this->did > 0;
 }
 
 METHOD(attest_db_t, set_did, bool,
@@ -360,22 +351,20 @@ METHOD(attest_db_t, set_did, bool,
 	enumerator_t *e;
 	char *dir;
 
-	if (this->dir_set)
+	if (this->did)
 	{
 		printf("directory has already been set\n");
 		return FALSE;
 	}
-	this->did = did;
 
-	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
+	e = this->db->query(this->db, "SELECT path FROM directories WHERE id = ?",
 						DB_UINT, did, DB_TEXT);
 	if (e)
 	{
 		if (e->enumerate(e, &dir))
 		{
-			free(this->dir);
 			this->dir = strdup(dir);
-			this->dir_set = TRUE;
+			this->did = did;
 		}
 		else
 		{
@@ -383,76 +372,88 @@ METHOD(attest_db_t, set_did, bool,
 		}
 		e->destroy(e);
 	}
-	return this->dir_set;
+	return this->did > 0;
 }
 
 METHOD(attest_db_t, set_file, bool,
 	private_attest_db_t *this, char *file, bool create)
 {
+	int fid;
+	char *sep;
 	enumerator_t *e;
-	char *filename;
 
-	if (this->file_set)
+	if (this->file)
 	{
 		printf("file has already been set\n");
 		return FALSE;
 	}
 	this->file = strdup(file);
-	filename = this->relative ? basename(file) : file;
 
-	e = this->db->query(this->db, "SELECT id FROM files WHERE path = ?",
-						DB_TEXT, filename, DB_INT);
+	if (!this->did)
+	{
+		return TRUE;
+	}
+	sep = streq(this->dir, "/") ? "" : "/";
+	e = this->db->query(this->db, "SELECT id FROM files "
+						"WHERE dir = ? AND name = ?",
+						DB_INT, this->did, DB_TEXT, file, DB_INT);
 	if (e)
 	{
-		if (e->enumerate(e, &this->fid))
+		if (e->enumerate(e, &fid))
 		{
-			this->file_set = TRUE;
+			this->fid = fid;
 		}
 		e->destroy(e);
 	}
-	if (this->file_set)
+	if (this->fid)
 	{
 		return TRUE;
 	}
 
 	if (!create)
 	{
-		printf("file '%s' not found in database\n", file);
+		printf("file '%s%s%s' not found in database\n", this->dir, sep, file);
 		return FALSE;
 	}
 
 	/* Add a new database entry */
-	this->file_set = this->db->execute(this->db, &this->fid,
-								"INSERT INTO files (type, path) VALUES (0, ?)",
-								DB_TEXT, filename) == 1;
+	if (1 == this->db->execute(this->db, &fid,
+							   "INSERT INTO files (dir, name) VALUES (?, ?)",
+							   DB_INT, this->did, DB_TEXT, file))
+	{
+		this->fid = fid;
+	}
+	printf("file '%s%s%s' %sinserted into database\n", this->dir, sep, file,
+		   this->fid ? "" : "could not be ");
 
-	printf("file '%s' %sinserted into database\n", filename,
-		   this->file_set ? "" : "could not be ");
-
-	return this->file_set;
+	return this->fid > 0;
 }
 
 METHOD(attest_db_t, set_fid, bool,
 	private_attest_db_t *this, int fid)
 {
 	enumerator_t *e;
+	int did;
 	char *file;
 
-	if (this->file_set)
+	if (this->fid)
 	{
 		printf("file has already been set\n");
 		return FALSE;
 	}
-	this->fid = fid;
 
-	e = this->db->query(this->db, "SELECT path FROM files WHERE id = ?",
-						DB_UINT, fid, DB_TEXT);
+	e = this->db->query(this->db, "SELECT dir, name FROM files WHERE id = ?",
+						DB_UINT, fid, DB_INT, DB_TEXT);
 	if (e)
 	{
-		if (e->enumerate(e, &file))
+		if (e->enumerate(e, &did, &file))
 		{
+			if (did)
+			{
+				set_did(this, did);
+			}
 			this->file = strdup(file);
-			this->file_set = TRUE;
+			this->fid = fid;
 		}
 		else
 		{
@@ -460,7 +461,7 @@ METHOD(attest_db_t, set_fid, bool,
 		}
 		e->destroy(e);
 	}
-	return this->file_set;
+	return this->fid > 0;
 }
 
 METHOD(attest_db_t, set_key, bool,
@@ -920,53 +921,92 @@ METHOD(attest_db_t, list_files, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e;
-	char *file, *file_type[] = { " ", "d", "r" };
-	int fid, type, meas, meta, count = 0;
+	char *dir, *file;
+	int did, last_did = 0, fid, count = 0;
 
-	if (this->pid)
+	if (this->did)
 	{
 		e = this->db->query(this->db,
-				"SELECT f.id, f.type, f.path, pf.measurement, pf.metadata "
-				"FROM files AS f "
-				"JOIN product_file AS pf ON f.id = pf.file "
-				"WHERE pf.product = ? ORDER BY f.path",
-				DB_UINT, this->pid, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
+				"SELECT id, name FROM files WHERE dir = ? ORDER BY name",
+				DB_INT, this->did, DB_INT, DB_TEXT);
 		if (e)
 		{
-			while (e->enumerate(e, &fid, &type, &file, &meas, &meta))
+			while (e->enumerate(e, &fid, &file))
 			{
-				type = (type < 0 || type > 2) ? 0 : type;
-				printf("%4d: |%s%s| %s %s\n", fid, meas ? "M":" ", meta ? "T":" ",
-											  file_type[type], file);
+				printf("%4d: %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
 		}
+		printf("%d file%s found in directory '%s'\n", count,
+			  (count == 1) ? "" : "s", this->dir);
 	}
 	else
 	{
 		e = this->db->query(this->db,
-				"SELECT id, type, path FROM files "
-				"ORDER BY path",
-				DB_INT, DB_INT, DB_TEXT);
+				"SELECT d.id, d.path, f.id, f.name FROM files AS f "
+				"JOIN directories AS d ON f.dir = d.id "
+				"ORDER BY d.path, f.name",
+				DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
-			while (e->enumerate(e, &fid, &type, &file))
+			while (e->enumerate(e, &did, &dir, &fid, &file))
 			{
-				type = (type < 0 || type > 2) ? 0 : type;
-				printf("%4d: %s %s\n", fid, file_type[type], file);
+				if (did != last_did)
+				{
+					printf("%4d: %s\n", did, dir);
+					last_did = did;
+				}
+				printf("%4d:   %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
 		}
+		printf("%d file%s found\n", count, (count == 1) ? "" : "s");
 	}
+}
 
-	printf("%d file%s found", count, (count == 1) ? "" : "s");
-	if (this->product_set)
+METHOD(attest_db_t, list_directories, void,
+	private_attest_db_t *this)
+{
+	enumerator_t *e;
+	char *dir;
+	int did, count = 0;
+
+	if (this->file)
 	{
-		printf(" for product '%s'", this->product);
+		e = this->db->query(this->db,
+				"SELECT d.id, d.path FROM directories AS d "
+				"JOIN files AS f ON f.dir = d.id WHERE f.name = ? "
+				"ORDER BY path", DB_TEXT, this->file, DB_INT, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &did, &dir))
+			{
+				printf("%4d: %s\n", did, dir);
+				count++;
+			}
+			e->destroy(e);
+		}
+		printf("%d director%s found containing file '%s'\n", count,
+			  (count == 1) ? "y" : "ies", this->file);
 	}
-	printf("\n");
+	else
+	{
+		e = this->db->query(this->db,
+				"SELECT id, path FROM directories ORDER BY path",
+				DB_INT, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &did, &dir))
+			{
+				printf("%4d: %s\n", did, dir);
+				count++;
+			}
+			e->destroy(e);
+		}
+		printf("%d director%s found\n", count, (count == 1) ? "y" : "ies");
+	}
 }
 
 METHOD(attest_db_t, list_packages, void,
@@ -1077,7 +1117,7 @@ METHOD(attest_db_t, list_products, void,
 	}
 
 	printf("%d product%s found", count, (count == 1) ? "" : "s");
-	if (this->file_set)
+	if (this->fid)
 	{
 		printf(" for file '%s'", this->file);
 	}
@@ -1607,6 +1647,9 @@ METHOD(attest_db_t, delete, bool,
 	private_attest_db_t *this)
 {
 	bool success;
+	int id, count = 0;
+	char *name;
+	enumerator_t *e;
 
 	/* delete a file measurement hash for a given product */
 	if (this->algo && this->pid && this->fid)
@@ -1667,24 +1710,44 @@ METHOD(attest_db_t, delete, bool,
 		return success;
 	}
 
-	if (this->did)
-	{
-		success = this->db->execute(this->db, NULL,
-								"DELETE FROM files WHERE type = 1 AND id = ?",
-								DB_UINT, this->did) > 0;
-
-		printf("directory '%s' %sdeleted from database\n", this->dir,
-			   success ? "" : "could not be ");
-		return success;
-	}
-
 	if (this->fid)
 	{
 		success = this->db->execute(this->db, NULL,
 								"DELETE FROM files WHERE id = ?",
 								DB_UINT, this->fid) > 0;
 
-		printf("file '%s' %sdeleted from database\n", this->file,
+		printf("file '%s%s%s' %sdeleted from database\n", this->dir,
+			   streq(this->dir, "/") ? "" : "/", this->file,
+			   success ? "" : "could not be ");
+		return success;
+	}
+
+	if (this->did)
+	{
+		e = this->db->query(this->db,
+				"SELECT id, name FROM files WHERE dir = ? ORDER BY name",
+				DB_INT, this->did, DB_INT, DB_TEXT);
+		if (e)
+		{
+			while (e->enumerate(e, &id, &name))
+			{
+				printf("%4d: %s\n", id, name);
+				count++;
+			}
+			e->destroy(e);
+
+			if (count)
+			{
+				printf("%d dependent file%s found, "
+					   "directory '%s' could not deleted\n",
+					   count, (count == 1) ? "" : "s", this->dir);
+				return FALSE;
+			}
+		}
+		success = this->db->execute(this->db, NULL,
+								"DELETE FROM directories WHERE id = ?",
+								DB_UINT, this->did) > 0;
+		printf("directory '%s' %sdeleted from database\n", this->dir,
 			   success ? "" : "could not be ");
 		return success;
 	}
@@ -1760,6 +1823,7 @@ attest_db_t *attest_db_create(char *uri)
 			.list_packages = _list_packages,
 			.list_products = _list_products,
 			.list_files = _list_files,
+			.list_directories = _list_directories,
 			.list_components = _list_components,
 			.list_devices = _list_devices,
 			.list_keys = _list_keys,
@@ -1769,7 +1833,6 @@ attest_db_t *attest_db_create(char *uri)
 			.delete = _delete,
 			.destroy = _destroy,
 		},
-		.dir = strdup(""),
 		.db = lib->db->create(lib->db, uri),
 	);
 

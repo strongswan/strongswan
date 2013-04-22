@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Andreas Steffen
+ * Copyright (C) 2011-2013 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
+#include <libgen.h>
 
 #include <library.h>
 #include <utils/debug.h>
@@ -81,6 +82,7 @@ static void attest_dbg(debug_t group, level_t level, char *fmt, ...)
  */
 attest_db_t *attest;
 
+
 /**
  * atexit handler to close db on shutdown
  */
@@ -100,6 +102,7 @@ static void do_args(int argc, char *argv[])
 		OP_KEYS,
 		OP_COMPONENTS,
 		OP_DEVICES,
+		OP_DIRECTORIES,
 		OP_FILES,
 		OP_HASHES,
 		OP_MEASUREMENTS,
@@ -120,6 +123,8 @@ static void do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "components", no_argument, NULL, 'c' },
 			{ "devices", no_argument, NULL, 'e' },
+			{ "directories", no_argument, NULL, 'd' },
+			{ "dirs", no_argument, NULL, 'd' },
 			{ "files", no_argument, NULL, 'f' },
 			{ "keys", no_argument, NULL, 'k' },
 			{ "packages", no_argument, NULL, 'g' },
@@ -127,8 +132,9 @@ static void do_args(int argc, char *argv[])
 			{ "hashes", no_argument, NULL, 'H' },
 			{ "measurements", no_argument, NULL, 'm' },
 			{ "add", no_argument, NULL, 'a' },
-			{ "delete", no_argument, NULL, 'd' },
-			{ "del", no_argument, NULL, 'd' },
+			{ "delete", no_argument, NULL, 'r' },
+			{ "del", no_argument, NULL, 'r' },
+			{ "remove", no_argument, NULL, 'r' },
 			{ "aik", required_argument, NULL, 'A' },
 			{ "blacklist", no_argument, NULL, 'B' },
 			{ "component", required_argument, NULL, 'C' },
@@ -171,6 +177,9 @@ static void do_args(int argc, char *argv[])
 			case 'c':
 				op = OP_COMPONENTS;
 				continue;
+			case 'd':
+				op = OP_DIRECTORIES;
+				continue;
 			case 'e':
 				op = OP_DEVICES;
 				continue;
@@ -195,7 +204,7 @@ static void do_args(int argc, char *argv[])
 			case 'a':
 				op = OP_ADD;
 				continue;
-			case 'd':
+			case 'r':
 				op = OP_DEL;
 				continue;
 			case 'A':
@@ -251,11 +260,26 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 'F':
-				if (!attest->set_file(attest, optarg, op == OP_ADD))
+			{
+				char *path = strdup(optarg);
+				char *dir = dirname(path);
+				char *file = basename(optarg);
+
+				if (*dir != '.')
+				{
+					if (!attest->set_directory(attest, dir, op == OP_ADD))
+					{
+						free(path);
+						exit(EXIT_FAILURE);
+					}
+				}
+				free(path);
+				if (!attest->set_file(attest, file, op == OP_ADD))
 				{
 					exit(EXIT_FAILURE);
 				}
 				continue;
+			}
 			case 'G':
 				if (!attest->set_package(attest, optarg, op == OP_ADD))
 				{
@@ -371,6 +395,9 @@ static void do_args(int argc, char *argv[])
 			break;
 		case OP_DEVICES:
 			attest->list_devices(attest);
+			break;
+		case OP_DIRECTORIES:
+			attest->list_directories(attest);
 			break;
 		case OP_FILES:
 			attest->list_files(attest);
