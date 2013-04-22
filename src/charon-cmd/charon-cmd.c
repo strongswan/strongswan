@@ -199,7 +199,7 @@ static void segv_handler(int signal)
  */
 static void usage(FILE *out, char *msg, char *binary)
 {
-	int i, pre, post, padto = 0, spacing = 2;
+	int i, line, pre, post, padto = 0, spacing = 2;
 
 	for (i = 0; i < CMD_OPT_COUNT; i++)
 	{
@@ -235,6 +235,14 @@ static void usage(FILE *out, char *msg, char *binary)
 			pre, cmd_options[i].arg, post,
 			padto - strlen(cmd_options[i].name) - strlen(cmd_options[i].arg), "",
 			cmd_options[i].desc);
+		for (line = 0; line < countof(cmd_options[i].lines); line++)
+		{
+			if (cmd_options[i].lines[line])
+			{
+				fprintf(out, "%-*s        %s\n",
+						padto, "", cmd_options[i].lines[line]);
+			}
+		}
 	}
 }
 
