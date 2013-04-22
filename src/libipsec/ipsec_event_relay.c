@@ -118,6 +118,7 @@ static job_requeue_t handle_events(private_ipsec_event_relay_t *this)
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
+	free(event);
 	return JOB_REQUEUE_DIRECT;
 }
 
