@@ -38,3 +38,7 @@ coverage/
 *.gcno
 *.gcda
 *.gcov
+.cproject
+.project
+.metadata/
+.settings/
