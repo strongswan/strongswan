@@ -799,7 +799,7 @@ int identification_printf_hook(printf_hook_data_t *data,
 			dntoa(this->encoded, buf, sizeof(buf));
 			break;
 		case ID_DER_ASN1_GN:
-			snprintf(buf, sizeof(buf), "(ASN.1 general Name");
+			snprintf(buf, sizeof(buf), "(ASN.1 general name)");
 			break;
 		case ID_KEY_ID:
 			if (chunk_printable(this->encoded, NULL, '?') &&
