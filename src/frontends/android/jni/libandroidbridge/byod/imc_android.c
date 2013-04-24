@@ -15,6 +15,7 @@
  */
 
 #include "imc_android_state.h"
+#include "../android_jni.h"
 
 #include <tnc/tnc.h>
 #include <libpts.h>
@@ -44,6 +45,16 @@ static pen_type_t msg_types[] = {
 };
 
 static imc_agent_t *imc_android;
+
+/**
+ * AndroidImc object accessed via JNI
+ */
+static jobject android_imc;
+
+/**
+ * AndroidImc class object
+ */
+static jclass android_imc_cls;
 
 /**
  * see section 3.8.1 of TCG TNC IF-IMC Specification 1.3
@@ -382,13 +393,59 @@ TNC_Result TNC_IMC_ProvideBindFunction(TNC_IMCID imc_id,
 bool imc_android_register(plugin_t *plugin, plugin_feature_t *feature,
 						  bool reg, void *data)
 {
+	JNIEnv *env;
+	jmethodID method_id;
+	jobject obj, context = (jobject)data;
+	jclass cls;
+	bool success = TRUE;
+
+	androidjni_attach_thread(&env);
 	if (reg)
 	{
-		return tnc->imcs->load_from_functions(tnc->imcs, "android",
+		cls = (*env)->FindClass(env, JNI_PACKAGE_STRING "/imc/AndroidImc");
+		if (!cls)
+		{
+			goto failed;
+		}
+		android_imc_cls = (*env)->NewGlobalRef(env, cls);
+		method_id = (*env)->GetMethodID(env, cls, "<init>",
+										"(Landroid/content/Context;)V");
+		if (!method_id)
+		{
+			goto failed;
+		}
+		obj = (*env)->NewObject(env, cls, method_id, context);
+		if (!obj)
+		{
+			goto failed;
+		}
+		android_imc = (*env)->NewGlobalRef(env, obj);
+		androidjni_detach_thread();
+
+		if (tnc->imcs->load_from_functions(tnc->imcs, "Android",
 							TNC_IMC_Initialize, TNC_IMC_NotifyConnectionChange,
 							TNC_IMC_BeginHandshake, TNC_IMC_ReceiveMessage,
 							TNC_IMC_ReceiveMessageLong, TNC_IMC_BatchEnding,
-							TNC_IMC_Terminate, TNC_IMC_ProvideBindFunction);
+							TNC_IMC_Terminate, TNC_IMC_ProvideBindFunction))
+		{
+			return TRUE;
+		}
+failed:
+		DBG1(DBG_IMC, "initialization of Android IMC failed");
+		androidjni_exception_occurred(env);
+		success = FALSE;
 	}
-	return TRUE;
+
+	if (android_imc)
+	{
+		(*env)->DeleteGlobalRef(env, android_imc);
+		android_imc = NULL;
+	}
+	if (android_imc_cls)
+	{
+		(*env)->DeleteGlobalRef(env, android_imc_cls);
+		android_imc_cls = NULL;
+	}
+	androidjni_detach_thread();
+	return success;
 }

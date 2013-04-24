@@ -462,14 +462,6 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
 	};
-#ifdef USE_BYOD
-	static plugin_feature_t byod_features[] = {
-		PLUGIN_CALLBACK(imc_android_register, NULL),
-			PLUGIN_PROVIDE(CUSTOM, "android-imc"),
-				PLUGIN_DEPENDS(CUSTOM, "android-backend"),
-				PLUGIN_DEPENDS(CUSTOM, "imc-manager"),
-	};
-#endif
 
 	INIT(this,
 		.public = {
@@ -494,8 +486,17 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder)
 									  countof(features), TRUE);
 
 #ifdef USE_BYOD
-	lib->plugins->add_static_features(lib->plugins, "android-byod",
+	{
+		plugin_feature_t byod_features[] = {
+			PLUGIN_CALLBACK(imc_android_register, this->vpn_service),
+				PLUGIN_PROVIDE(CUSTOM, "android-imc"),
+					PLUGIN_DEPENDS(CUSTOM, "android-backend"),
+					PLUGIN_DEPENDS(CUSTOM, "imc-manager"),
+		};
+
+		lib->plugins->add_static_features(lib->plugins, "android-byod",
 								byod_features, countof(byod_features), TRUE);
+	}
 #endif
 }
 
