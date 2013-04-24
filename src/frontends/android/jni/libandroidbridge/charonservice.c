@@ -444,6 +444,8 @@ static void set_options(char *logfile)
 					"charon.plugins.eap-tnc.protocol", "tnccs-2.0");
 	lib->settings->set_bool(lib->settings,
 					"android.imc.send_os_info", TRUE);
+	lib->settings->set_str(lib->settings,
+					"libtnccs.tnc_config", "");
 #endif
 }
 
