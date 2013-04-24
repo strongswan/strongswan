@@ -100,6 +100,11 @@ static bool load_imcvs_from_config(char *filename, bool is_imc)
 	void *addr;
 	char *label;
 
+	if (!filename || !*filename)
+	{
+		return TRUE;
+	}
+
 	label = is_imc ? "IMC" : "IMV";
 
 	DBG1(DBG_TNC, "loading %ss from '%s'", label, filename);
