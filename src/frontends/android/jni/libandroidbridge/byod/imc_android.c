@@ -17,6 +17,7 @@
 #include "imc_android_state.h"
 
 #include <tnc/tnc.h>
+#include <libpts.h>
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
 #include <pa_tnc/pa_tnc_msg.h>
@@ -63,6 +64,8 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 	{
 		return TNC_RESULT_FATAL;
 	}
+
+	libpts_init();
 
 	if (min_version > TNC_IFIMC_VERSION_1 || max_version < TNC_IFIMC_VERSION_1)
 	{
@@ -352,6 +355,8 @@ TNC_Result TNC_IMC_Terminate(TNC_IMCID imc_id)
 		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
 		return TNC_RESULT_NOT_INITIALIZED;
 	}
+	/* has to be done before destroying the agent / deinitializing libimcv */
+	libpts_deinit();
 	imc_android->destroy(imc_android);
 	imc_android = NULL;
 	return TNC_RESULT_SUCCESS;
