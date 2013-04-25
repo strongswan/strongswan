@@ -15,6 +15,11 @@
 
 package org.strongswan.android.logic.imc;
 
+import org.strongswan.android.logic.imc.attributes.Attribute;
+import org.strongswan.android.logic.imc.attributes.AttributeType;
+import org.strongswan.android.logic.imc.collectors.Collector;
+import org.strongswan.android.logic.imc.collectors.StringVersionCollector;
+
 import android.content.Context;
 
 public class AndroidImc
@@ -36,6 +41,25 @@ public class AndroidImc
 	 */
 	public byte[] getMeasurement(int vendor, int type)
 	{
+		AttributeType attributeType = AttributeType.fromValues(vendor, type);
+		Collector collector = null;
+
+		switch (attributeType)
+		{
+			case IETF_STRING_VERSION:
+				collector = new StringVersionCollector();
+				break;
+			default:
+				break;
+		}
+		if (collector != null)
+		{
+			Attribute attribute = collector.getMeasurement();
+			if (attribute != null)
+			{
+				return attribute.getEncoding();
+			}
+		}
 		return null;
 	}
 }
