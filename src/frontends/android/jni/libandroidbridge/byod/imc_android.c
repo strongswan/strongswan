@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012 Christoph Buehler
+ * Copyright (C) 2012 Patrick Loetscher
  * Copyright (C) 2011-2012 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,6 +21,7 @@
 
 #include <tnc/tnc.h>
 #include <libpts.h>
+#include <imcv.h>
 #include <imc/imc_agent.h>
 #include <imc/imc_msg.h>
 #include <pa_tnc/pa_tnc_msg.h>
@@ -123,47 +126,99 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 }
 
 /**
- * Add IETF Product Information attribute to the send queue
+ * Get a measurement for the given attribute type from the Android IMC.
+ * NULL is returned if no measurement is available or an error occurred.
  */
-static void add_product_info(imc_msg_t *msg)
+static pa_tnc_attr_t *get_measurement(pen_type_t attr_type)
 {
+	JNIEnv *env;
 	pa_tnc_attr_t *attr;
-	chunk_t android_os = { "Android", 7 };
+	jmethodID method_id;
+	jbyteArray jmeasurement;
+	chunk_t data;
 
-	attr = ietf_attr_product_info_create(PEN_IETF, 0, android_os);
-	msg->add_attribute(msg, attr);
+	androidjni_attach_thread(&env);
+	method_id = (*env)->GetMethodID(env, android_imc_cls, "getMeasurement",
+									"(II)[B");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jmeasurement = (*env)->CallObjectMethod(env, android_imc, method_id,
+											attr_type.vendor_id, attr_type.type);
+	if (!jmeasurement || androidjni_exception_occurred(env))
+	{
+		goto failed;
+	}
+	data = chunk_create((*env)->GetByteArrayElements(env, jmeasurement, NULL),
+						(*env)->GetArrayLength(env, jmeasurement));
+	if (!data.ptr)
+	{
+		goto failed;
+	}
+	attr = imcv_pa_tnc_attributes->create(imcv_pa_tnc_attributes,
+										  attr_type.vendor_id, attr_type.type,
+										  data);
+	(*env)->ReleaseByteArrayElements(env, jmeasurement, data.ptr, JNI_ABORT);
+	androidjni_detach_thread();
+	return attr;
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return NULL;
 }
 
 /**
- * Add IETF String Version attribute to the send queue
+ * Add the measurement for the requested attribute type.
  */
-static void add_string_version(imc_msg_t *msg)
+static void add_measurement(pen_type_t attr_type, imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
-	chunk_t android_version = { "4.x", 3 };
+	enum_name_t *pa_attr_names;
 
-	attr = ietf_attr_string_version_create(android_version, chunk_empty,
-										   chunk_empty);
-	msg->add_attribute(msg, attr);
+	attr = get_measurement(attr_type);
+	if (attr)
+	{
+		msg->add_attribute(msg, attr);
+		return;
+	}
+	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  attr_type.vendor_id);
+	if (pa_attr_names)
+	{
+		DBG1(DBG_IMC, "no measurement available for PA-TNC attribute type "
+			 "'%N/%N' 0x%06x/0x%08x", pen_names, attr_type.vendor_id,
+			 pa_attr_names, attr_type.type, attr_type.vendor_id, attr_type.type);
+	}
+	else
+	{
+		DBG1(DBG_IMC, "no measurement available for PA-TNC attribute type '%N' "
+			 "0x%06x/0x%08x", pen_names, attr_type.vendor_id,
+			 attr_type.vendor_id, attr_type.type);
+	}
 }
 
 /**
- * Add an IETF Installed Packages attribute to the send queue
+ * Handle an IETF attribute
  */
-static void add_installed_packages(imc_msg_t *msg)
+static void handle_ietf_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
+								  imc_msg_t *out_msg)
 {
-	pa_tnc_attr_t *attr;
-	ietf_attr_installed_packages_t *attr_cast;
-	chunk_t libc_name = { "libc-bin", 8 };
-	chunk_t libc_version = { "2.15-0ubuntu10.2", 16 };
-	chunk_t selinux_name =  { "selinux", 7 };
-	chunk_t selinux_version = { "1:0.11", 6 };
+	if (attr_type.type == IETF_ATTR_ATTRIBUTE_REQUEST)
+	{
+		ietf_attr_attr_request_t *attr_cast;
+		pen_type_t *entry;
+		enumerator_t *enumerator;
 
-	attr = ietf_attr_installed_packages_create();
-	attr_cast = (ietf_attr_installed_packages_t*)attr;
-	attr_cast->add(attr_cast, libc_name, libc_version);
-	attr_cast->add(attr_cast, selinux_name, selinux_version);
-	msg->add_attribute(msg, attr);
+		attr_cast = (ietf_attr_attr_request_t*)attr;
+		enumerator = attr_cast->create_enumerator(attr_cast);
+		while (enumerator->enumerate(enumerator, &entry))
+		{
+			add_measurement(*entry, out_msg);
+		}
+		enumerator->destroy(enumerator);
+	}
 }
 
 /**
@@ -190,9 +245,10 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 	{
 		out_msg = imc_msg_create(imc_android, state, connection_id, imc_id,
 								 TNC_IMVID_ANY, msg_types[0]);
-		add_product_info(out_msg);
-		add_string_version(out_msg);
-
+		add_measurement((pen_type_t){ PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION },
+						out_msg);
+		add_measurement((pen_type_t){ PEN_IETF, IETF_ATTR_STRING_VERSION },
+						out_msg);
 		/* send PA-TNC message with the excl flag not set */
 		result = out_msg->send(out_msg, FALSE);
 		out_msg->destroy(out_msg);
@@ -224,41 +280,13 @@ static TNC_Result receive_message(imc_msg_t *in_msg)
 	{
 		attr_type = attr->get_type(attr);
 
-		if (attr_type.vendor_id != PEN_IETF)
+		switch (attr_type.vendor_id)
 		{
-			continue;
-		}
-		if (attr_type.type == IETF_ATTR_ATTRIBUTE_REQUEST)
-		{
-			ietf_attr_attr_request_t *attr_cast;
-			pen_type_t *entry;
-			enumerator_t *e;
-
-			attr_cast = (ietf_attr_attr_request_t*)attr;
-
-			e = attr_cast->create_enumerator(attr_cast);
-			while (e->enumerate(e, &entry))
-			{
-				if (entry->vendor_id != PEN_IETF)
-				{
-					continue;
-				}
-				switch (entry->type)
-				{
-					case IETF_ATTR_PRODUCT_INFORMATION:
-						add_product_info(out_msg);
-						break;
-					case IETF_ATTR_STRING_VERSION:
-						add_string_version(out_msg);
-						break;
-					case IETF_ATTR_INSTALLED_PACKAGES:
-						add_installed_packages(out_msg);
-						break;
-					default:
-						break;
-				}
-			}
-			e->destroy(e);
+			case PEN_IETF:
+				handle_ietf_attribute(attr_type, attr, out_msg);
+				/* fall-through */
+			default:
+				continue;
 		}
 	}
 	enumerator->destroy(enumerator);

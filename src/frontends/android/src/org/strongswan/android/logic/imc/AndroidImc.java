@@ -25,4 +25,17 @@ public class AndroidImc
 	{
 		mContext = context;
 	}
+
+	/**
+	 * Get a measurement (the binary encoding of the requested attribute) for
+	 * the given vendor specific attribute type.
+	 *
+	 * @param vendor vendor ID
+	 * @param type vendor specific attribute type
+	 * @return encoded attribute, or null if not available or failed
+	 */
+	public byte[] getMeasurement(int vendor, int type)
+	{
+		return null;
+	}
 }
