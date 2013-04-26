@@ -127,26 +127,84 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 }
 
 /**
+ * Convert the native C strings in the enumerator to a Java String array.
+ * The given enumerator gets destroyed.
+ */
+static jobjectArray string_array_create(JNIEnv *env, enumerator_t *enumerator)
+{
+	linked_list_t *list;
+	jobjectArray jarray;
+	jstring jstring;
+	char *native;
+	jclass cls;
+	int i = 0;
+
+	cls = (*env)->FindClass(env, "java/lang/String");
+	list = linked_list_create_from_enumerator(enumerator);
+	jarray = (*env)->NewObjectArray(env, list->get_count(list), cls, NULL);
+	if (!jarray)
+	{
+		goto failed;
+	}
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, (void**)&native))
+	{
+		jstring = (*env)->NewStringUTF(env, native);
+		if (!jstring)
+		{
+			enumerator->destroy(enumerator);
+			goto failed;
+		}
+		(*env)->SetObjectArrayElement(env, jarray, i++, jstring);
+	}
+	enumerator->destroy(enumerator);
+	list->destroy(list);
+	return jarray;
+
+failed:
+	androidjni_exception_occurred(env);
+	list->destroy(list);
+	return NULL;
+}
+
+/**
  * Get a measurement for the given attribute type from the Android IMC.
  * NULL is returned if no measurement is available or an error occurred.
+ *
+ * The optional args is an enumerator over char* (gets destroyed).
  */
-static pa_tnc_attr_t *get_measurement(pen_type_t attr_type)
+static pa_tnc_attr_t *get_measurement(pen_type_t attr_type, enumerator_t *args)
 {
 	JNIEnv *env;
 	pa_tnc_attr_t *attr;
 	jmethodID method_id;
 	jbyteArray jmeasurement;
+	jobjectArray jargs = NULL;
 	chunk_t data;
 
 	androidjni_attach_thread(&env);
-	method_id = (*env)->GetMethodID(env, android_imc_cls, "getMeasurement",
-									"(II)[B");
+	if (args)
+	{
+		jargs = string_array_create(env, args);
+		if (!jargs)
+		{
+			goto failed;
+		}
+		method_id = (*env)->GetMethodID(env, android_imc_cls, "getMeasurement",
+										"(II[Ljava/lang/String;)[B");
+	}
+	else
+	{
+		method_id = (*env)->GetMethodID(env, android_imc_cls, "getMeasurement",
+										"(II)[B");
+	}
 	if (!method_id)
 	{
 		goto failed;
 	}
 	jmeasurement = (*env)->CallObjectMethod(env, android_imc, method_id,
-											attr_type.vendor_id, attr_type.type);
+											attr_type.vendor_id, attr_type.type,
+											jargs);
 	if (!jmeasurement || androidjni_exception_occurred(env))
 	{
 		goto failed;
@@ -171,14 +229,16 @@ failed:
 }
 
 /**
- * Add the measurement for the requested attribute type.
+ * Add the measurement for the requested attribute type with optional
+ * arguments (enumerator over char*, gets destroyed).
  */
-static void add_measurement(pen_type_t attr_type, imc_msg_t *msg)
+static void add_measurement(pen_type_t attr_type, imc_msg_t *msg,
+							enumerator_t *args)
 {
 	pa_tnc_attr_t *attr;
 	enum_name_t *pa_attr_names;
 
-	attr = get_measurement(attr_type);
+	attr = get_measurement(attr_type, args);
 	if (attr)
 	{
 		msg->add_attribute(msg, attr);
@@ -216,7 +276,7 @@ static void handle_ietf_attribute(pen_type_t attr_type, pa_tnc_attr_t *attr,
 		enumerator = attr_cast->create_enumerator(attr_cast);
 		while (enumerator->enumerate(enumerator, &entry))
 		{
-			add_measurement(*entry, out_msg);
+			add_measurement(*entry, out_msg, NULL);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -247,9 +307,9 @@ TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
 		out_msg = imc_msg_create(imc_android, state, connection_id, imc_id,
 								 TNC_IMVID_ANY, msg_types[0]);
 		add_measurement((pen_type_t){ PEN_IETF, IETF_ATTR_PRODUCT_INFORMATION },
-						out_msg);
+						out_msg, NULL);
 		add_measurement((pen_type_t){ PEN_IETF, IETF_ATTR_STRING_VERSION },
-						out_msg);
+						out_msg, NULL);
 		/* send PA-TNC message with the excl flag not set */
 		result = out_msg->send(out_msg, FALSE);
 		out_msg->destroy(out_msg);

@@ -44,6 +44,20 @@ public class AndroidImc
 	 */
 	public byte[] getMeasurement(int vendor, int type)
 	{
+		return getMeasurement(vendor, type, null);
+	}
+
+	/**
+	 * Get a measurement (the binary encoding of the requested attribute) for
+	 * the given vendor specific attribute type.
+	 *
+	 * @param vendor vendor ID
+	 * @param type vendor specific attribute type
+	 * @param args optional arguments for a measurement
+	 * @return encoded attribute, or null if not available or failed
+	 */
+	public byte[] getMeasurement(int vendor, int type, String[] args)
+	{
 		AttributeType attributeType = AttributeType.fromValues(vendor, type);
 		Collector collector = null;
 
